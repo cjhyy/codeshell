@@ -1,0 +1,304 @@
+/**
+ * OpenAI GPT provider using openai SDK.
+ */
+
+import OpenAI from "openai";
+import type { LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
+import type { CreateMessageOptions } from "../types.js";
+import { LLMClientBase } from "../client-base.js";
+import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
+
+export class OpenAIClient extends LLMClientBase {
+  private _client: OpenAI | null = null;
+
+  constructor(config: LLMConfig) {
+    super(config);
+  }
+
+  protected initClient(): void {
+    // Lazy init — client created on first use
+  }
+
+  private get client(): OpenAI {
+    if (!this._client) {
+      this._client = new OpenAI({
+        apiKey: this.config.apiKey ?? process.env.OPENAI_API_KEY,
+        ...(this.config.baseUrl ? { baseURL: this.config.baseUrl } : {}),
+        timeout: this.timeout,
+      });
+    }
+    return this._client;
+  }
+
+  async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
+    return this.withRetry(async () => {
+      const messages = this.buildMessages(options.systemPrompt, options.messages);
+      const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
+
+      if (options.stream && options.onChunk) {
+        return this.streamMessage(options, messages, tools);
+      }
+
+      return this.nonStreamMessage(options, messages, tools);
+    });
+  }
+
+  private async nonStreamMessage(
+    options: CreateMessageOptions,
+    messages: OpenAI.ChatCompletionMessageParam[],
+    tools?: OpenAI.ChatCompletionTool[],
+  ): Promise<LLMResponse> {
+    try {
+      const response = await this.client.chat.completions.create(
+        {
+          model: this.model,
+          max_tokens: options.maxTokens ?? this.maxTokens,
+          messages,
+          ...(tools ? { tools } : {}),
+          ...(options.temperature !== undefined
+            ? { temperature: options.temperature }
+            : { temperature: this.temperature }),
+        },
+        { signal: options.signal },
+      );
+
+      const choice = response.choices[0];
+      if (!choice) throw new LLMError("No response from OpenAI", "openai");
+
+      const usage: TokenUsage = {
+        promptTokens: response.usage?.prompt_tokens ?? 0,
+        completionTokens: response.usage?.completion_tokens ?? 0,
+        totalTokens: response.usage?.total_tokens ?? 0,
+      };
+      this.recordUsage(usage);
+
+      return this.processChoice(choice, usage);
+    } catch (err) {
+      this.handleApiError(err);
+      throw err;
+    }
+  }
+
+  private async streamMessage(
+    options: CreateMessageOptions,
+    messages: OpenAI.ChatCompletionMessageParam[],
+    tools?: OpenAI.ChatCompletionTool[],
+  ): Promise<LLMResponse> {
+    try {
+      const stream = await this.client.chat.completions.create(
+        {
+          model: this.model,
+          max_tokens: options.maxTokens ?? this.maxTokens,
+          messages,
+          stream: true,
+          stream_options: { include_usage: true },
+          ...(tools ? { tools } : {}),
+          ...(options.temperature !== undefined
+            ? { temperature: options.temperature }
+            : { temperature: this.temperature }),
+        },
+        { signal: options.signal },
+      );
+
+      let text = "";
+      const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
+      let streamUsage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
+
+      for await (const chunk of stream) {
+        // Capture usage from the final chunk
+        if ((chunk as any).usage) {
+          streamUsage = (chunk as any).usage;
+        }
+
+        const delta = chunk.choices[0]?.delta;
+        if (!delta) continue;
+
+        if (delta.content) {
+          text += delta.content;
+          options.onChunk?.({ type: "text", text: delta.content });
+        }
+
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index;
+            if (!toolCallsMap.has(idx)) {
+              toolCallsMap.set(idx, { id: tc.id ?? "", name: tc.function?.name ?? "", args: "" });
+              options.onChunk?.({
+                type: "tool_use_start",
+                toolCall: { id: tc.id, toolName: tc.function?.name },
+              });
+            }
+            const existing = toolCallsMap.get(idx)!;
+            if (tc.id) existing.id = tc.id;
+            if (tc.function?.name) existing.name = tc.function.name;
+            if (tc.function?.arguments) existing.args += tc.function.arguments;
+          }
+        }
+
+        if (chunk.choices[0]?.finish_reason) {
+          options.onChunk?.({ type: "stop", stopReason: chunk.choices[0].finish_reason });
+        }
+      }
+
+      const toolCalls: ToolCall[] = [];
+      for (const [, tc] of toolCallsMap) {
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(tc.args || "{}");
+        } catch {}
+        toolCalls.push({ id: tc.id, toolName: tc.name, args });
+      }
+
+      const usage: TokenUsage = {
+        promptTokens: streamUsage?.prompt_tokens ?? 0,
+        completionTokens: streamUsage?.completion_tokens ?? 0,
+        totalTokens: streamUsage?.total_tokens ?? 0,
+      };
+      this.recordUsage(usage);
+
+      return { text, toolCalls, usage, stopReason: "stop" };
+    } catch (err) {
+      this.handleApiError(err);
+      throw err;
+    }
+  }
+
+  private processChoice(
+    choice: OpenAI.ChatCompletion.Choice,
+    usage: TokenUsage,
+  ): LLMResponse {
+    const text = choice.message.content ?? "";
+    const toolCalls: ToolCall[] = [];
+
+    if (choice.message.tool_calls) {
+      for (const tc of choice.message.tool_calls) {
+        let args: Record<string, unknown> = {};
+        try {
+          args = JSON.parse(tc.function.arguments || "{}");
+        } catch {}
+        toolCalls.push({
+          id: tc.id,
+          toolName: tc.function.name,
+          args,
+        });
+      }
+    }
+
+    return { text, toolCalls, usage, stopReason: choice.finish_reason ?? undefined };
+  }
+
+  private buildMessages(
+    systemPrompt: string,
+    messages: import("../../types.js").Message[],
+  ): OpenAI.ChatCompletionMessageParam[] {
+    const result: OpenAI.ChatCompletionMessageParam[] = [
+      { role: "system", content: systemPrompt },
+    ];
+
+    for (const msg of messages) {
+      if (msg.role === "system") continue;
+
+      if (msg.role === "assistant") {
+        if (typeof msg.content === "string") {
+          result.push({ role: "assistant", content: msg.content });
+        } else {
+          const textParts: string[] = [];
+          const toolCalls: OpenAI.ChatCompletionMessageToolCall[] = [];
+
+          for (const block of msg.content) {
+            if (block.type === "text" && block.text) {
+              textParts.push(block.text);
+            } else if (block.type === "tool_use" && block.id && block.name) {
+              toolCalls.push({
+                id: block.id,
+                type: "function",
+                function: {
+                  name: block.name,
+                  arguments: JSON.stringify(block.input ?? {}),
+                },
+              });
+            }
+          }
+
+          const param: OpenAI.ChatCompletionAssistantMessageParam = { role: "assistant" };
+          if (textParts.length) param.content = textParts.join("\n");
+          if (toolCalls.length) param.tool_calls = toolCalls;
+          result.push(param);
+        }
+      } else if (msg.role === "tool") {
+        result.push({
+          role: "tool",
+          tool_call_id: msg.tool_call_id ?? "",
+          content: typeof msg.content === "string" ? msg.content : "",
+        });
+      } else {
+        // user messages — may contain tool_result blocks mixed with text
+        if (typeof msg.content === "string") {
+          result.push({ role: "user", content: msg.content });
+        } else {
+          // Separate tool_result blocks from text blocks
+          const textParts: string[] = [];
+          const toolResults: { tool_use_id: string; content: string }[] = [];
+
+          for (const block of msg.content) {
+            if (block.type === "tool_result" && block.tool_use_id) {
+              toolResults.push({
+                tool_use_id: block.tool_use_id,
+                content: typeof block.content === "string" ? block.content : "",
+              });
+            } else if (block.type === "text" && block.text) {
+              textParts.push(block.text);
+            }
+          }
+
+          // Emit tool_result blocks as separate tool messages
+          for (const tr of toolResults) {
+            result.push({
+              role: "tool",
+              tool_call_id: tr.tool_use_id,
+              content: tr.content,
+            });
+          }
+
+          // Emit remaining text as user message
+          if (textParts.length > 0) {
+            result.push({ role: "user", content: textParts.join("\n") });
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  private convertTools(tools: ToolDefinition[]): OpenAI.ChatCompletionTool[] {
+    return tools.map((t) => ({
+      type: "function" as const,
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.inputSchema,
+      },
+    }));
+  }
+
+  private handleApiError(err: unknown): never {
+    if (err instanceof OpenAI.APIError) {
+      if (err.status === 429) {
+        throw new LLMRateLimitError("openai");
+      }
+      const msg = (err.message ?? "").toLowerCase();
+      if (
+        msg.includes("context_length_exceeded") ||
+        msg.includes("maximum context length") ||
+        msg.includes("too many tokens") ||
+        msg.includes("prompt is too long") ||
+        (err.status === 400 && msg.includes("provider returned error"))
+      ) {
+        throw new ContextLimitError("openai");
+      }
+      throw new LLMError(`OpenAI API error: ${err.message}`, "openai", { status: err.status });
+    }
+    throw err;
+  }
+}

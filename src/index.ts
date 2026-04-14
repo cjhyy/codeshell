@@ -1,0 +1,234 @@
+/**
+ * code-shell — general-purpose agent orchestration framework
+ *
+ * Public API exports.
+ */
+
+export const VERSION = "0.1.0";
+
+// ─── Types ───────────────────────────────────────────────────────
+
+export type {
+  Message,
+  ContentBlock,
+  ToolDefinition,
+  ToolCall,
+  ToolResult,
+  RegisteredTool,
+  TranscriptEvent,
+  TranscriptEventType,
+  SessionState,
+  TokenUsage,
+  CompiledInput,
+  PermissionDecision,
+  PermissionMode,
+  PermissionRule,
+  TurnPhase,
+  TurnResult,
+  TerminalReason,
+  StreamEvent,
+  StreamCallback,
+  LLMConfig,
+  LLMResponse,
+  Settings,
+  MCPServerConfig,
+} from "./types.js";
+
+// ─── Exceptions ──────────────────────────────────────────────────
+
+export {
+  FrameworkError,
+  LLMError,
+  LLMRateLimitError,
+  ContextLimitError,
+  ToolError,
+  ToolNotFoundError,
+  ToolExecutionError,
+  ToolTimeoutError,
+  PermissionDeniedError,
+  SessionError,
+  TranscriptError,
+  ConfigError,
+} from "./exceptions.js";
+
+// ─── Engine (primary API) ────────────────────────────────────────
+
+export { Engine } from "./engine/engine.js";
+export type { EngineConfig, EngineResult } from "./engine/engine.js";
+
+// ─── LLM ─────────────────────────────────────────────────────────
+
+export { LLMClientBase } from "./llm/client-base.js";
+export { createLLMClient, registerProvider } from "./llm/client-factory.js";
+export { AnthropicClient } from "./llm/providers/anthropic.js";
+export { OpenAIClient } from "./llm/providers/openai.js";
+export { ModelPool, type ModelEntry } from "./llm/model-pool.js";
+
+// ─── Tools ───────────────────────────────────────────────────────
+
+export { ToolRegistry } from "./tool/registry.js";
+export { ToolExecutor } from "./tool/executor.js";
+export { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend } from "./tool/permission.js";
+export type { ApprovalBackend } from "./tool/permission.js";
+export { BUILTIN_TOOLS } from "./tool/builtin/index.js";
+export { MCPManager } from "./tool/mcp-manager.js";
+export type { AskUserFn } from "./tool/builtin/ask-user.js";
+export { taskManager } from "./tool/builtin/task.js";
+export type { Task, TaskStatus } from "./tool/builtin/task.js";
+
+// ─── Hooks ───────────────────────────────────────────────────────
+
+export { HookRegistry } from "./hooks/registry.js";
+export type { HookEventName, HookContext, HookResult } from "./hooks/events.js";
+
+// ─── Session ─────────────────────────────────────────────────────
+
+export { Transcript } from "./session/transcript.js";
+export { SessionManager } from "./session/session-manager.js";
+export { FileHistory } from "./session/file-history.js";
+export { MemoryManager } from "./session/memory.js";
+export type { MemoryEntry } from "./session/memory.js";
+export type { FileSnapshot } from "./session/file-history.js";
+
+// ─── Prompt ──────────────────────────────────────────────────────
+
+export { PromptComposer } from "./prompt/composer.js";
+export { SectionCache } from "./prompt/section-cache.js";
+export { scanInstructions, combineInstructions } from "./prompt/instruction-scanner.js";
+
+// ─── Presets ─────────────────────────────────────────────────────
+
+export {
+  BUILTIN_AGENT_PRESETS,
+  DEFAULT_AGENT_PRESET,
+  DEFAULT_CLI_PRESET,
+  resolveAgentPreset,
+  resolveBuiltinToolNames,
+  buildPresetSystemPrompt,
+  registerPreset,
+  listPresetNames,
+} from "./preset/index.js";
+export type { AgentPreset, AgentPresetName } from "./preset/index.js";
+export { loadSection, loadSections, availableSections, registerSection } from "./prompt/section-loader.js";
+
+// ─── Context ─────────────────────────────────────────────────────
+
+export { ContextManager } from "./context/manager.js";
+export {
+  estimateTokens,
+  microcompact,
+  windowCompact,
+  truncateToolResult,
+  buildSummarizationPrompt,
+  applySummaryCompaction,
+} from "./context/compaction.js";
+export type { SummarizeFn } from "./context/manager.js";
+
+// ─── Skills ──────────────────────────────────────────────────────
+
+export { scanSkills, matchSkillsByInput, matchSkillsByTool, buildSkillListing } from "./skills/index.js";
+export type { SkillDefinition, MatchResult } from "./skills/index.js";
+
+// ─── Arena ───────────────────────────────────────────────────────
+
+export { Arena } from "./arena/arena.js";
+export { MODEL_PRESETS, getMaxOutputTokens } from "./arena/model-presets.js";
+export type { ModelPreset } from "./arena/model-presets.js";
+export { detectArenaMode } from "./arena/detect-mode.js";
+export { getStrategy, ReviewStrategy, DiscussionStrategy, PlanningStrategy } from "./arena/strategies/index.js";
+export { resolveIntent } from "./arena/intent-resolver.js";
+export { resolveScope } from "./arena/scope-resolver.js";
+export { collectSharedFacts } from "./arena/context/shared-facts.js";
+export type {
+  ArenaConfig,
+  ArenaMode,
+  ArenaModeDetection,
+  ArenaResultV2,
+  ArenaStrategy,
+  ArenaParticipant,
+  ArenaIntentSpec,
+  ArenaScopeSpec,
+  ArenaBaseContext,
+  ArenaFinding,
+  FindingReview,
+  ParticipantReport,
+  ArenaConsensus,
+  ArenaConsensusItem,
+  ArenaProgressEvent,
+  FindingKind,
+  PeerVerdict,
+} from "./arena/types.js";
+
+// ─── Run (Managed Agent Lifecycle) ──────────────────────────────
+
+export {
+  // Manager
+  RunManager,
+  type RunManagerConfig,
+  // Store
+  type RunStore,
+  FileRunStore,
+  // Queue
+  RunQueue,
+  // Runner
+  EngineRunner,
+  type EngineRunnerConfig,
+  type RunExecutionHandle,
+  type RunExecutor,
+  type CustomToolEntry,
+  // Approval / Input adapters
+  RunApprovalBackend,
+  createRunAskUserFn,
+  type RunLifecycleHooks,
+  // Checkpoint & Artifacts
+  CheckpointWriter,
+  ArtifactTracker,
+  // Hardening
+  RunLock,
+  Heartbeat,
+  // Evaluator
+  NoopEvaluator,
+  CompositeEvaluator,
+  type Evaluator,
+  type EvaluatorResult,
+  type EvaluatorContext,
+  // Types
+  type RunStatus,
+  type RunSnapshot,
+  type RunEvent,
+  type RunCheckpoint,
+  type RunApproval,
+  type RunArtifactRef,
+  type SubmitRunInput,
+  type ResumeRunInput,
+  type ListRunsQuery,
+  type RunStreamEvent,
+  type RunStreamCallback,
+  type DetachFn,
+  VALID_TRANSITIONS,
+  // Factory
+  createRunManager,
+  type CreateRunManagerOptions,
+} from "./run/index.js";
+
+// ─── Product (Domain-Specific Agents) ────────────────────────────
+
+export {
+  defineProduct,
+  type ProductDefinition,
+  type ProductPreset,
+  type ProductAdapter,
+  type ProductContract,
+  type CustomTool,
+  type ProductRuntimeOptions,
+  type ProductInstance,
+} from "./product/index.js";
+
+// ─── Logging ─────────────────────────────────────────────────────
+
+export { logger } from "./logging/logger.js";
+
+// ─── Settings ────────────────────────────────────────────────────
+
+export { SettingsManager } from "./settings/manager.js";
+export { SettingsSchema, validateSettings } from "./settings/schema.js";

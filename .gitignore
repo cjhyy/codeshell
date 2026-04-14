@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+logs/
+*.log
+.DS_Store
+coverage/
+.vscode/
+.idea/
+pnpm-lock.yaml
+restored-src/

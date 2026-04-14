@@ -1,0 +1,14 @@
+{
+  "name": "prd-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PRD 生成 Agent — 基于 CodeShell 编排框架的示例产品",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/main.ts",
+    "chat": "bun run src/chat.ts"
+  },
+  "dependencies": {
+    "code-shell": "link:../../"
+  }
+}

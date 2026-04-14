@@ -1,0 +1,434 @@
+/**
+ * Built-in tool registration.
+ */
+
+import type { RegisteredTool } from "../../types.js";
+import { readToolDef, readTool } from "./read.js";
+import { writeToolDef, writeTool } from "./write.js";
+import { editToolDef, editTool } from "./edit.js";
+import { globToolDef, globTool } from "./glob.js";
+import { grepToolDef, grepTool } from "./grep.js";
+import { bashToolDef, bashTool } from "./bash.js";
+import { webSearchToolDef, webSearchTool } from "./web-search.js";
+import { webFetchToolDef, webFetchTool } from "./web-fetch.js";
+import { askUserToolDef, askUserTool } from "./ask-user.js";
+import { agentToolDef, agentTool } from "./agent.js";
+import { enterPlanModeToolDef, enterPlanModeTool, exitPlanModeToolDef, exitPlanModeTool } from "./plan.js";
+import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
+import {
+  taskCreateToolDef, taskCreateTool,
+  taskListToolDef, taskListTool,
+  taskUpdateToolDef, taskUpdateTool,
+  taskStopToolDef, taskStopTool,
+  taskGetToolDef, taskGetTool,
+  taskOutputToolDef, taskOutputTool,
+} from "./task.js";
+import { enterWorktreeToolDef, enterWorktreeTool, exitWorktreeToolDef, exitWorktreeTool } from "./worktree.js";
+import { sendMessageToolDef, sendMessageTool } from "./send-message.js";
+import { sleepToolDef, sleepTool } from "./sleep.js";
+import { configToolDef, configTool } from "./config.js";
+import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
+import { lspToolDef, lspTool } from "./lsp.js";
+import { cronCreateToolDef, cronCreateTool, cronDeleteToolDef, cronDeleteTool, cronListToolDef, cronListTool } from "./cron.js";
+import { skillToolDef, skillTool } from "./skill.js";
+import { mcpToolDef, mcpToolExecute, listMcpResourcesToolDef, listMcpResourcesTool, readMcpResourceToolDef, readMcpResourceTool } from "./mcp-tools.js";
+import { remoteTriggerToolDef, remoteTriggerTool } from "./remote-trigger.js";
+import { replToolDef, replTool } from "./repl.js";
+import { todoWriteToolDef, todoWriteTool } from "./todo-write.js";
+import { briefToolDef, briefTool } from "./brief.js";
+import { powershellToolDef, powershellTool } from "./powershell.js";
+
+export type BuiltinToolFn = (args: Record<string, unknown>) => Promise<string>;
+
+export interface BuiltinTool {
+  definition: RegisteredTool;
+  execute: BuiltinToolFn;
+}
+
+export const BUILTIN_TOOLS: BuiltinTool[] = [
+  {
+    definition: {
+      ...readToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: readTool,
+  },
+  {
+    definition: {
+      ...writeToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: writeTool,
+  },
+  {
+    definition: {
+      ...editToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: editTool,
+  },
+  {
+    definition: {
+      ...globToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: globTool,
+  },
+  {
+    definition: {
+      ...grepToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: grepTool,
+  },
+  {
+    definition: {
+      ...bashToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: bashTool,
+  },
+  {
+    definition: {
+      ...webSearchToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: webSearchTool,
+  },
+  {
+    definition: {
+      ...webFetchToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: webFetchTool,
+  },
+  {
+    definition: {
+      ...askUserToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+    },
+    execute: askUserTool,
+  },
+  {
+    definition: {
+      ...agentToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: agentTool,
+  },
+  {
+    definition: {
+      ...enterPlanModeToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+    },
+    execute: enterPlanModeTool,
+  },
+  {
+    definition: {
+      ...exitPlanModeToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+    },
+    execute: exitPlanModeTool,
+  },
+  {
+    definition: {
+      ...toolSearchToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: toolSearchTool,
+  },
+  {
+    definition: {
+      ...taskCreateToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: taskCreateTool,
+  },
+  {
+    definition: {
+      ...taskListToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: taskListTool,
+  },
+  {
+    definition: {
+      ...taskUpdateToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: taskUpdateTool,
+  },
+  {
+    definition: {
+      ...taskStopToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: taskStopTool,
+  },
+  {
+    definition: {
+      ...taskGetToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: taskGetTool,
+  },
+  {
+    definition: {
+      ...taskOutputToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: taskOutputTool,
+  },
+  // ─── Phase 4: Multi-Agent + Worktree ───────────────────────────
+  {
+    definition: {
+      ...enterWorktreeToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: enterWorktreeTool,
+  },
+  {
+    definition: {
+      ...exitWorktreeToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: exitWorktreeTool,
+  },
+  {
+    definition: {
+      ...sendMessageToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: true,
+    },
+    execute: sendMessageTool,
+  },
+  // ─── Phase 5: Utility Tools ────────────────────────────────────
+  {
+    definition: {
+      ...sleepToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: sleepTool,
+  },
+  {
+    definition: {
+      ...configToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: configTool,
+  },
+  {
+    definition: {
+      ...notebookEditToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: notebookEditTool,
+  },
+  // ─── Phase 6: LSP ─────────────────────────────────────────────
+  {
+    definition: {
+      ...lspToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: lspTool,
+  },
+  // ─── Cron Tools ────────────────────────────────────────────────
+  {
+    definition: {
+      ...cronCreateToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: cronCreateTool,
+  },
+  {
+    definition: {
+      ...cronDeleteToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: cronDeleteTool,
+  },
+  {
+    definition: {
+      ...cronListToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: cronListTool,
+  },
+  // ─── Phase 7: Missing tools from restored-src ─────────────────
+  {
+    definition: {
+      ...skillToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: skillTool,
+  },
+  {
+    definition: {
+      ...mcpToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: true,
+    },
+    execute: mcpToolExecute,
+  },
+  {
+    definition: {
+      ...listMcpResourcesToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: listMcpResourcesTool,
+  },
+  {
+    definition: {
+      ...readMcpResourceToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: readMcpResourceTool,
+  },
+  {
+    definition: {
+      ...remoteTriggerToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: remoteTriggerTool,
+  },
+  {
+    definition: {
+      ...replToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: replTool,
+  },
+  {
+    definition: {
+      ...todoWriteToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: todoWriteTool,
+  },
+  {
+    definition: {
+      ...briefToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: briefTool,
+  },
+  {
+    definition: {
+      ...powershellToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: powershellTool,
+  },
+];
