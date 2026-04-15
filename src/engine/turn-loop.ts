@@ -9,7 +9,7 @@ import type { Message, ToolCall, ToolResult, StreamCallback, TerminalReason, Con
 import type { TurnState } from "./turn-state.js";
 import { initialTurnState } from "./turn-state.js";
 import { ModelFacade } from "./model-facade.js";
-import { ToolExecutor } from "../tool/executor.js";
+import { ToolExecutor } from "../tool-system/executor.js";
 import { ContextManager } from "../context/manager.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { Transcript } from "../session/transcript.js";

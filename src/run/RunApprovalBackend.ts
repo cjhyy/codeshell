@@ -12,8 +12,8 @@
  */
 
 import type { ApprovalRequest, ApprovalResult } from "../types.js";
-import type { ApprovalBackend } from "../tool/permission.js";
-import type { AskUserFn } from "../tool/builtin/ask-user.js";
+import type { ApprovalBackend } from "../tool-system/permission.js";
+import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 
 // ─── Pending request tracking ────────────────────────────────────
 

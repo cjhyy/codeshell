@@ -12,7 +12,7 @@
  */
 
 import type { ToolCall, ToolResult } from "../types.js";
-import type { ToolExecutor } from "../tool/executor.js";
+import type { ToolExecutor } from "../tool-system/executor.js";
 
 export class StreamingToolQueue {
   private readonly executor: ToolExecutor;

@@ -66,15 +66,15 @@ export { ModelPool, type ModelEntry } from "./llm/model-pool.js";
 
 // ─── Tools ───────────────────────────────────────────────────────
 
-export { ToolRegistry } from "./tool/registry.js";
-export { ToolExecutor } from "./tool/executor.js";
-export { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend } from "./tool/permission.js";
-export type { ApprovalBackend } from "./tool/permission.js";
-export { BUILTIN_TOOLS } from "./tool/builtin/index.js";
-export { MCPManager } from "./tool/mcp-manager.js";
-export type { AskUserFn } from "./tool/builtin/ask-user.js";
-export { taskManager } from "./tool/builtin/task.js";
-export type { Task, TaskStatus } from "./tool/builtin/task.js";
+export { ToolRegistry } from "./tool-system/registry.js";
+export { ToolExecutor } from "./tool-system/executor.js";
+export { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend } from "./tool-system/permission.js";
+export type { ApprovalBackend } from "./tool-system/permission.js";
+export { BUILTIN_TOOLS } from "./tool-system/builtin/index.js";
+export { MCPManager } from "./tool-system/mcp-manager.js";
+export type { AskUserFn } from "./tool-system/builtin/ask-user.js";
+export { taskManager } from "./tool-system/builtin/task.js";
+export type { Task, TaskStatus } from "./tool-system/builtin/task.js";
 
 // ─── Hooks ───────────────────────────────────────────────────────
 

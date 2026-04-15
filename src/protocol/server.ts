@@ -27,10 +27,10 @@ import {
 } from "./types.js";
 import type { Engine } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent } from "../types.js";
-import { setInPlanMode, isInPlanMode } from "../tool/builtin/plan.js";
-import { setRuntimeBypass, isRuntimeBypass } from "../tool/permission.js";
-import { setAskUserFn } from "../tool/builtin/ask-user.js";
-import { setInteractiveApprovalFn } from "../tool/permission.js";
+import { setInPlanMode, isInPlanMode } from "../tool-system/builtin/plan.js";
+import { setRuntimeBypass, isRuntimeBypass } from "../tool-system/permission.js";
+import { setAskUserFn } from "../tool-system/builtin/ask-user.js";
+import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { nanoid } from "nanoid";
 
 export interface AgentServerOptions {

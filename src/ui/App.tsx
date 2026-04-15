@@ -24,7 +24,7 @@ import {
   ThinkingMessage,
 } from "./components/MessageContent.js";
 import { AgentClient } from "../protocol/client.js";
-import { taskManager } from "../tool/builtin/task.js";
+import { taskManager } from "../tool-system/builtin/task.js";
 import { costTracker } from "../cli/cost-tracker.js";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { CommandRegistry } from "../cli/commands/registry.js";

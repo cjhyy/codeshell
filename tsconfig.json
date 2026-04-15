@@ -64,7 +64,7 @@
     "src/skills/index.ts",
     "src/skills/loader.ts",
     "src/skills/types.ts",
-    "src/tool/**/*.ts",
+    "src/tool-system/**/*.ts",
     "src/ui/**/*.ts",
     "src/ui/**/*.tsx",
     "src/utils/debug.ts",

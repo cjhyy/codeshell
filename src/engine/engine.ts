@@ -4,9 +4,9 @@
 
 import type { Message, LLMConfig, Settings, StreamCallback, TerminalReason, TokenUsage } from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
-import { ToolRegistry } from "../tool/registry.js";
-import { ToolExecutor } from "../tool/executor.js";
-import { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend, type ApprovalBackend } from "../tool/permission.js";
+import { ToolRegistry } from "../tool-system/registry.js";
+import { ToolExecutor } from "../tool-system/executor.js";
+import { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend, type ApprovalBackend } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { ContextManager } from "../context/manager.js";
 import { PromptComposer } from "../prompt/composer.js";
@@ -16,13 +16,13 @@ import { ModelFacade } from "./model-facade.js";
 import { costTracker } from "../cli/cost-tracker.js";
 import { logger } from "../logging/logger.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
-import { setAskUserFn, type AskUserFn } from "../tool/builtin/ask-user.js";
-import { setSubAgentConfig } from "../tool/builtin/agent.js";
-import { MCPManager } from "../tool/mcp-manager.js";
-import { isInPlanMode } from "../tool/builtin/plan.js";
+import { setAskUserFn, type AskUserFn } from "../tool-system/builtin/ask-user.js";
+import { setSubAgentConfig } from "../tool-system/builtin/agent.js";
+import { MCPManager } from "../tool-system/mcp-manager.js";
+import { isInPlanMode } from "../tool-system/builtin/plan.js";
 import { SettingsManager } from "../settings/manager.js";
 import { FileHistory } from "../session/file-history.js";
-import { setToolSearchRegistry } from "../tool/builtin/tool-search.js";
+import { setToolSearchRegistry } from "../tool-system/builtin/tool-search.js";
 import {
   resolveAgentPreset,
   resolveBuiltinToolNames,

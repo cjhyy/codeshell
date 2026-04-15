@@ -26,7 +26,7 @@ Prettier is the formatter — see `.prettierrc`:
 ## Architecture Gotchas
 
 - **Ink/React UI**: The terminal UI uses Ink (React renderer for CLI). Components in `src/ui/` are `.tsx` files using React patterns — not browser React.
-- **Tool system**: Tools are defined in `src/tool/builtin/`. Each tool exports a definition object with name, description, parameters schema, and execute function.
+- **Tool system**: The tool framework (registry, executor, permissions) lives in `src/tool-system/`. Built-in tool definitions are in `src/tool-system/builtin/`. Individual tool implementations are in `src/tools/`.
 - **Preset system**: `src/preset/` defines built-in agent presets that choose the default system prompt, builtin tool set, and permission shortcuts.
 - **Engine**: `src/engine/` handles the conversation loop and LLM interaction.
 - **`restored-src/`**: Legacy/reference code imported for feature parity. Do not modify files here without understanding their origin.
