@@ -490,7 +490,7 @@ export const extraCommands: SlashCommand[] = [
     name: "/plan",
     description: "Toggle plan mode (read-only exploration, plan output as text)",
     execute: (_arg, ctx) => {
-      const { isInPlanMode, setInPlanMode } = require("../../../tool/builtin/plan.js");
+      const { isInPlanMode, setInPlanMode } = require("../../../tool-system/builtin/plan.js");
       const current = isInPlanMode();
       setInPlanMode(!current);
       if (!current) {

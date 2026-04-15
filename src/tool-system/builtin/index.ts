@@ -37,6 +37,7 @@ import { replToolDef, replTool } from "./repl.js";
 import { todoWriteToolDef, todoWriteTool } from "./todo-write.js";
 import { briefToolDef, briefTool } from "./brief.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
+import { arenaToolDef, arenaTool } from "./arena.js";
 
 export type BuiltinToolFn = (args: Record<string, unknown>) => Promise<string>;
 
@@ -430,5 +431,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: powershellTool,
+  },
+  // ─── Arena: Multi-Model Collaborative Analysis ────────────────
+  {
+    definition: {
+      ...arenaToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+    },
+    execute: arenaTool,
   },
 ];
