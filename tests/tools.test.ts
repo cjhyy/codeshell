@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { readTool } from "../src/tool/builtin/read.js";
-import { writeTool } from "../src/tool/builtin/write.js";
-import { editTool } from "../src/tool/builtin/edit.js";
-import { globTool } from "../src/tool/builtin/glob.js";
-import { grepTool } from "../src/tool/builtin/grep.js";
-import { webFetchTool } from "../src/tool/builtin/web-fetch.js";
-import { askUserTool, setAskUserFn } from "../src/tool/builtin/ask-user.js";
-import { enterPlanModeTool, exitPlanModeTool, resetPlanMode } from "../src/tool/builtin/plan.js";
+import { readTool } from "../src/tool-system/builtin/read.js";
+import { writeTool } from "../src/tool-system/builtin/write.js";
+import { editTool } from "../src/tool-system/builtin/edit.js";
+import { globTool } from "../src/tool-system/builtin/glob.js";
+import { grepTool } from "../src/tool-system/builtin/grep.js";
+import { webFetchTool } from "../src/tool-system/builtin/web-fetch.js";
+import { askUserTool, setAskUserFn } from "../src/tool-system/builtin/ask-user.js";
+import { enterPlanModeTool, exitPlanModeTool, resetPlanMode } from "../src/tool-system/builtin/plan.js";
 import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -132,7 +132,7 @@ describe("Grep tool", () => {
   it("shows content with output_mode content", async () => {
     const result = await grepTool({
       pattern: "ToolRegistry",
-      path: "src/tool/registry.ts",
+      path: "src/tool-system/registry.ts",
       output_mode: "content",
     });
     expect(result).toContain("ToolRegistry");

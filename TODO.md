@@ -13,7 +13,7 @@
 - [ ] macOS: 基于 `sandbox-exec` (Seatbelt) 实现文件系统/网络隔离
 - [ ] Linux: 基于 Landlock / bubblewrap 实现沙箱
 - [ ] 定义 `SandboxPolicy` 类型（allowed paths read/write、network access）
-- [ ] 在 `src/tool/builtin/bash.ts` 中集成沙箱包装
+- [ ] 在 `src/tool-system/builtin/bash.ts` 中集成沙箱包装
 - [ ] 沙箱失败时优雅降级（提示用户手动确认）
 - [ ] 配置项：`sandbox.enabled`、`sandbox.allowNetworkFor` 白名单
 
@@ -28,7 +28,7 @@
 - [ ] 可配置：`memories.maxAge`、`memories.maxCount`、`memories.extractionModel`
 
 ### 🔧 权限系统增强
-当前权限系统（`src/tool/permission.ts`）已有基础，但缺少持久化和精细控制。
+当前权限系统（`src/tool-system/permission.ts`）已有基础，但缺少持久化和精细控制。
 
 - [ ] 权限规则持久化到 `~/.codeshell/settings.json`
 - [ ] 支持路径级别的权限规则（如 "允许写入 src/ 下的文件"）

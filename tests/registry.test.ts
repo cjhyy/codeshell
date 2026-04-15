@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { ToolRegistry } from "../src/tool/registry.js";
+import { ToolRegistry } from "../src/tool-system/registry.js";
 import { HookRegistry } from "../src/hooks/registry.js";
-import { ToolExecutor } from "../src/tool/executor.js";
-import { PermissionClassifier } from "../src/tool/permission.js";
+import { ToolExecutor } from "../src/tool-system/executor.js";
+import { PermissionClassifier } from "../src/tool-system/permission.js";
 import { ContextManager } from "../src/context/manager.js";
 import { SettingsManager } from "../src/settings/manager.js";
 import { mkdtempSync, rmSync } from "node:fs";
