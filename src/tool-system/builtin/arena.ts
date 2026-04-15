@@ -53,9 +53,37 @@ export const arenaToolDef: ToolDefinition = {
 };
 
 /**
+ * Read the runtime LLM base config (baseUrl, apiKey) from settings or env.
+ * Arena participants inherit these so they route through the same API gateway
+ * (e.g. OpenRouter) that the main model uses.
+ */
+function getBaseLLMConfig(): { baseUrl?: string; apiKey?: string } {
+  // Try settings file first (.code-shell/settings.json)
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    const settingsPath = path.join(process.cwd(), ".code-shell", "settings.json");
+    const raw = fs.readFileSync(settingsPath, "utf-8");
+    const settings = JSON.parse(raw);
+    if (settings.model?.baseUrl) {
+      return {
+        baseUrl: settings.model.baseUrl,
+        apiKey: settings.model.apiKey ?? process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY,
+      };
+    }
+  } catch {
+    // Fall through to env
+  }
+  return {
+    baseUrl: process.env.OPENAI_BASE_URL,
+    apiKey: process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY,
+  };
+}
+
+/**
  * Resolve a preset name or model path into an ArenaParticipant.
  */
-function resolveParticipant(nameOrPath: string): ArenaParticipant {
+function resolveParticipant(nameOrPath: string, baseLLM: { baseUrl?: string; apiKey?: string }): ArenaParticipant {
   const preset = MODEL_PRESETS[nameOrPath];
   if (preset) {
     return {
@@ -64,6 +92,8 @@ function resolveParticipant(nameOrPath: string): ArenaParticipant {
         provider: preset.provider,
         model: preset.model,
         maxTokens: preset.maxOutputTokens,
+        baseUrl: baseLLM.baseUrl,
+        apiKey: baseLLM.apiKey,
       },
     };
   }
@@ -74,6 +104,8 @@ function resolveParticipant(nameOrPath: string): ArenaParticipant {
       provider: "openai",
       model: nameOrPath,
       maxTokens: getMaxOutputTokens(nameOrPath),
+      baseUrl: baseLLM.baseUrl,
+      apiKey: baseLLM.apiKey,
     },
   };
 }
@@ -106,8 +138,9 @@ export async function arenaTool(args: Record<string, unknown>): Promise<string> 
     return "Arena session cancelled by user.";
   }
 
-  // Resolve participants
-  const participants = participantNames.map(resolveParticipant);
+  // Resolve participants (inherit baseUrl/apiKey from runtime config)
+  const baseLLM = getBaseLLMConfig();
+  const participants = participantNames.map((n) => resolveParticipant(n, baseLLM));
 
   try {
     const arena = new Arena({
