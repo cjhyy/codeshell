@@ -7,12 +7,21 @@
 
 import type {
   ArenaStrategy,
+  ArenaStrategyV2,
   ArenaBaseContext,
   ParticipantReport,
   FindingReview,
   ArenaConsensus,
   FindingKind,
+  ClaimRecord,
+  ClaimChallenge,
+  ClaimAdjudication,
+  ClaimStatusSummary,
+  DebateTurn,
+  DebateRound,
+  RoundResearchDigest,
 } from "../types.js";
+import { isStrategyV2 } from "../types.js";
 
 /**
  * Detect whether the topic is primarily non-English.
@@ -86,5 +95,38 @@ export function withLanguage(strategy: ArenaStrategy, topic: string): ArenaStrat
     preferredFindingKinds(): FindingKind[] {
       return strategy.preferredFindingKinds();
     },
+
+    // ─── V2 forwarding (conditional) ─────────────────────────────
+    ...(isStrategyV2(strategy) ? {
+      verificationReviewUserPrompt(
+        topic: string, myReport: ParticipantReport, claims: ClaimRecord[], digest: RoundResearchDigest,
+      ): string {
+        return (strategy as ArenaStrategyV2).verificationReviewUserPrompt(topic, myReport, claims, digest);
+      },
+      parseVerificationReviewResponse(reviewer: string, text: string): ClaimChallenge[] {
+        return (strategy as ArenaStrategyV2).parseVerificationReviewResponse(reviewer, text);
+      },
+      debateTurnUserPrompt(
+        topic: string, claim: ClaimRecord, priorTurns: DebateTurn[], digest: RoundResearchDigest,
+      ): string {
+        return (strategy as ArenaStrategyV2).debateTurnUserPrompt(topic, claim, priorTurns, digest);
+      },
+      parseDebateTurnResponse(participant: string, text: string): DebateTurn {
+        return (strategy as ArenaStrategyV2).parseDebateTurnResponse(participant, text);
+      },
+      adjudicationUserPrompt(
+        topic: string, claim: ClaimRecord, rounds: DebateRound[], digest: RoundResearchDigest,
+      ): string {
+        return (strategy as ArenaStrategyV2).adjudicationUserPrompt(topic, claim, rounds, digest);
+      },
+      parseAdjudicationResponse(text: string): ClaimAdjudication {
+        return (strategy as ArenaStrategyV2).parseAdjudicationResponse(text);
+      },
+      claimAwareConsensusUserPrompt(
+        topic: string, reports: ParticipantReport[], reviews: FindingReview[], claimSummary: ClaimStatusSummary,
+      ): string {
+        return (strategy as ArenaStrategyV2).claimAwareConsensusUserPrompt(topic, reports, reviews, claimSummary);
+      },
+    } : {}),
   };
 }

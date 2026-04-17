@@ -17,6 +17,7 @@ import { costTracker } from "../cli/cost-tracker.js";
 import { logger } from "../logging/logger.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import { setAskUserFn, type AskUserFn } from "../tool-system/builtin/ask-user.js";
+import { setArenaLLMConfig } from "../tool-system/builtin/arena.js";
 import { setSubAgentConfig } from "../tool-system/builtin/agent.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { isInPlanMode } from "../tool-system/builtin/plan.js";
@@ -132,6 +133,9 @@ export class Engine {
 
     // Wire up AskUserQuestion tool
     setAskUserFn(this.config.askUser);
+
+    // Wire up Arena tool (inherit baseUrl/apiKey from engine config)
+    setArenaLLMConfig(this.config.llm);
 
     // Wire up ToolSearch
     setToolSearchRegistry(this.toolRegistry);

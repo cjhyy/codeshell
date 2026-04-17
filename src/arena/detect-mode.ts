@@ -5,7 +5,14 @@
  * Falls back to "review" (safest default) when confidence is low.
  */
 
-import type { ArenaMode, ArenaModeDetection } from "./types.js";
+import type { ArenaMode } from "./types.js";
+
+/** Result of heuristic mode detection */
+export interface ArenaModeDetection {
+  mode: ArenaMode;
+  confidence: "high" | "low";
+  reason: string;
+}
 
 // ─── Keyword patterns per mode ──────────────────────────────────
 

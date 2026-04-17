@@ -1,9 +1,12 @@
 /**
  * ConsensusBuilder — aggregates findings + peer reviews into structured consensus.
  *
- * 1. Program aggregates finding + review data
- * 2. Moderator LLM organizes into final consensus output
- * 3. Moderator must faithfully reflect aggregated results (no new unsourced conclusions)
+ * V1: Program aggregates finding + review data, moderator LLM organizes.
+ * V2: When claim data is available, uses claim-aware prompts that distinguish
+ *     verified/unresolved/rejected claims.
+ *
+ * In both paths, the moderator must faithfully reflect aggregated results
+ * (no new unsourced conclusions).
  */
 
 import { createLLMClient } from "../../llm/client-factory.js";
@@ -14,8 +17,11 @@ import type {
   ParticipantReport,
   FindingReview,
   ArenaConsensus,
+  ClaimStatusSummary,
   ArenaProgressEvent,
 } from "../types.js";
+import { isStrategyV2 } from "../types.js";
+import type { ArenaStrategyV2 } from "../types.js";
 
 interface ConsensusOptions {
   /** The participant that acts as moderator/concluder */
@@ -24,14 +30,18 @@ interface ConsensusOptions {
   topic: string;
   reports: ParticipantReport[];
   reviews: FindingReview[];
+  /** Claim status summary — when provided, enables claim-aware consensus (V2) */
+  claimSummary?: ClaimStatusSummary;
+  signal?: AbortSignal;
   onProgress?: (event: ArenaProgressEvent) => void;
 }
 
 /**
- * Build structured consensus from participant reports and cross-reviews.
+ * Build structured consensus from participant reports, cross-reviews,
+ * and optionally adjudicated claim data.
  */
 export async function buildConsensus(options: ConsensusOptions): Promise<ArenaConsensus> {
-  const { concluder, strategy, topic, reports, reviews, onProgress } = options;
+  const { concluder, strategy, topic, reports, reviews, claimSummary, signal, onProgress } = options;
 
   onProgress?.({ type: "consensus_start" });
 
@@ -41,11 +51,29 @@ export async function buildConsensus(options: ConsensusOptions): Promise<ArenaCo
   });
 
   const systemPrompt = strategy.consensusSystemPrompt();
-  const userContent = strategy.consensusUserPrompt(topic, reports, reviews);
+
+  // Choose user prompt: claim-aware (V2) or standard (V1)
+  let userContent: string;
+  const v2 = isStrategyV2(strategy);
+
+  if (v2 && claimSummary) {
+    userContent = (strategy as ArenaStrategyV2)
+      .claimAwareConsensusUserPrompt(topic, reports, reviews, claimSummary);
+
+    logger.info("arena.consensus_claim_aware", {
+      verified: claimSummary.verified.length,
+      unresolved: claimSummary.unresolved.length,
+      contested: claimSummary.contested.length,
+      rejected: claimSummary.rejected.length,
+    });
+  } else {
+    userContent = strategy.consensusUserPrompt(topic, reports, reviews);
+  }
 
   const response = await client.createMessage({
     systemPrompt,
     messages: [{ role: "user", content: userContent }],
+    signal,
   });
 
   logger.info("arena.consensus_raw_response", {
@@ -72,6 +100,7 @@ export async function buildConsensus(options: ConsensusOptions): Promise<ArenaCo
             "Keep all sections but use shorter summaries. Respond ONLY with the complete JSON object.",
         },
       ],
+      signal,
     });
 
     logger.info("arena.consensus_retry_response", {

@@ -136,6 +136,10 @@ Design principles:
 - Secure by default: permission-gated actions and explicit approval flow
 - Long-running ready: tasks, cron, sleep, and sub-agents are first-class
 
+## Further Reading
+
+- [CodeShell 当前架构与定位说明](docs/codeshell-repo-architecture.md)
+
 ## Project structure
 
 ```text

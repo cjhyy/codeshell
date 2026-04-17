@@ -73,6 +73,7 @@ const TERMINAL_CODING_EXTRA_TOOLS = [
   "NotebookEdit",
   "LSP",
   "Brief",
+  "Arena",
 ] as const;
 
 // ─── Permission rules ────────────────────────────────────────────

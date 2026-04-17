@@ -79,8 +79,11 @@ export class ToolRegistry {
       throw new ToolExecutionError(name, "No executor registered for this tool");
     }
 
-    const LONG_RUNNING_TOOLS = new Set(["Agent"]);
-    const defaultTimeout = LONG_RUNNING_TOOLS.has(name) ? 600_000 : 120_000;
+    // Tools that run for an extended period use a generous timeout (30 min)
+    // instead of the default 2 min, but never truly infinite.
+    const LONG_TIMEOUT_TOOLS = new Set(["Agent", "Arena"]);
+    const isLongRunning = LONG_TIMEOUT_TOOLS.has(name);
+    const defaultTimeout = isLongRunning ? 1_800_000 : 120_000;
     const timeout = options?.timeoutMs ?? defaultTimeout;
     const parentSignal = options?.signal;
     const id = `tool_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -97,7 +100,9 @@ export class ToolRegistry {
 
     // Create a child AbortController that aborts on timeout OR parent abort
     const childController = new AbortController();
-    const timerId = setTimeout(() => childController.abort(new ToolTimeoutError(name, timeout)), timeout);
+    const timerId = timeout > 0
+      ? setTimeout(() => childController.abort(new ToolTimeoutError(name, timeout)), timeout)
+      : undefined;
 
     // Cascade parent abort to child
     const onParentAbort = () => childController.abort(parentSignal?.reason);

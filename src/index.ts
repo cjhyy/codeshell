@@ -135,28 +135,52 @@ export { Arena } from "./arena/arena.js";
 export { MODEL_PRESETS, getMaxOutputTokens } from "./arena/model-presets.js";
 export type { ModelPreset } from "./arena/model-presets.js";
 export { detectArenaMode } from "./arena/detect-mode.js";
-export { getStrategy, ReviewStrategy, DiscussionStrategy, PlanningStrategy } from "./arena/strategies/index.js";
-export { resolveIntent } from "./arena/intent-resolver.js";
-export { resolveScope } from "./arena/scope-resolver.js";
-export { collectSharedFacts } from "./arena/context/shared-facts.js";
+export { getStrategy, getStrategyForPlan, ReviewStrategy, DiscussionStrategy, PlanningStrategy } from "./arena/strategies/index.js";
+export { planArena } from "./arena/planner.js";
+export { collectEvidence } from "./arena/providers/index.js";
+export { selectTools, hasTools } from "./arena/tools/selector.js";
+export { ArenaLedger } from "./arena/ledger.js";
+export { registerClaims, selectClaimsForReview } from "./arena/phases/claim-registry.js";
+export { buildDigest, formatDigest } from "./arena/digest-builder.js";
+export { transitionClaim, resolveClaimStatus, markUnderReview, applyReviewResult, markUnresolved, isTerminal, validTransitions } from "./arena/transitions.js";
 export type {
   ArenaConfig,
   ArenaMode,
-  ArenaModeDetection,
   ArenaResultV2,
   ArenaStrategy,
   ArenaParticipant,
-  ArenaIntentSpec,
-  ArenaScopeSpec,
   ArenaBaseContext,
   ArenaFinding,
   FindingReview,
   ParticipantReport,
   ArenaConsensus,
   ArenaConsensusItem,
+  ArenaRoadmapPhase,
   ArenaProgressEvent,
+  ArenaPlan,
+  ArenaLens,
+  ArenaLensName,
+  ArenaSourceKind,
+  ArenaArtifact,
+  ArenaQuickFact,
   FindingKind,
   PeerVerdict,
+  // Evidence-Driven types
+  ToolTrace,
+  EvidencePacket,
+  FindingEvidenceLink,
+  ResearchDossier,
+  ClaimStatus,
+  ClaimRecord,
+  ClaimChallenge,
+  ClaimAdjudication,
+  RequestedCheck,
+  DebateRound,
+  DebateTurn,
+  TargetedCheckTask,
+  SharedResearchLedger,
+  RoundResearchDigest,
+  ArenaExecutionLimits,
 } from "./arena/types.js";
 
 // ─── Run (Managed Agent Lifecycle) ──────────────────────────────

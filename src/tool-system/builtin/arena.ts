@@ -4,36 +4,38 @@
  * Launches an arena session where multiple LLM participants independently
  * research a topic, cross-review each other's findings, and build consensus.
  *
- * The tool asks the user for confirmation before starting (via AskUserQuestion)
- * because arena sessions consume significant tokens across multiple models.
+ * The LLM config (baseUrl, apiKey) is injected at runtime by the Engine via
+ * setArenaLLMConfig(), following the same pattern as setAskUserFn() and
+ * setSubAgentConfig().
  */
 
-import type { ToolDefinition } from "../../types.js";
+import type { ToolDefinition, LLMConfig } from "../../types.js";
 import { Arena, MODEL_PRESETS, getMaxOutputTokens } from "../../arena/index.js";
-import { formatArenaResult } from "../../arena/render/terminal.js";
+import { formatArenaResult, createProgressRenderer } from "../../arena/render/terminal.js";
 import type { ArenaMode, ArenaParticipant } from "../../arena/types.js";
-import { askUserTool } from "./ask-user.js";
 
 export const arenaToolDef: ToolDefinition = {
   name: "Arena",
   description:
     "Launch a multi-model collaborative analysis session. " +
-    "Multiple LLM participants independently research a topic, cross-review each other's findings, " +
-    "and produce a structured consensus with strengths, improvements, risks, and action items. " +
-    "Modes: 'review' (code review), 'discussion' (open-ended analysis), 'planning' (roadmap/architecture). " +
-    "Use model preset names (e.g. 'claude', 'gpt', 'gemini', 'deepseek') or full model paths. " +
-    "This tool will ask the user for confirmation before starting because it consumes significant tokens.",
+    "Arena automatically detects the mode, analysis perspective (lens), and evidence sources from the user's natural language request. " +
+    "Supports: code review, PRD/document review, architecture planning, product discussions, open-ended debates, and more. " +
+    "Multiple LLM participants independently research the topic, cross-review findings, and produce structured consensus. " +
+    "Use model preset names (e.g. 'claude', 'gpt', 'gemini', 'deepseek') or full model paths.",
   inputSchema: {
     type: "object",
     properties: {
       topic: {
         type: "string",
-        description: "The topic or question to analyze (e.g. 'review the auth middleware changes', 'discuss the migration strategy')",
+        description:
+          "The topic or question to analyze in natural language. Arena auto-detects mode/lens/sources. " +
+          "Examples: 'review my latest changes', 'review 这个 PRD 是否完整', '讨论 arena 的产品定位', " +
+          "'规划通用化重构方案', 'discuss whether we should productize arena'",
       },
       mode: {
         type: "string",
         enum: ["review", "discussion", "planning"],
-        description: "Arena mode. 'review' for code review, 'discussion' for open analysis, 'planning' for roadmaps. Default: auto-detected from topic.",
+        description: "Arena mode override. Usually auto-detected from topic. 'review' for structured review, 'discussion' for open analysis, 'planning' for roadmaps.",
       },
       participants: {
         type: "array",
@@ -52,38 +54,32 @@ export const arenaToolDef: ToolDefinition = {
   },
 };
 
+// ─── Runtime LLM config injection ───────────────────────────────
+
+let _arenaLLMConfig: LLMConfig | undefined;
+
 /**
- * Read the runtime LLM base config (baseUrl, apiKey) from settings or env.
- * Arena participants inherit these so they route through the same API gateway
- * (e.g. OpenRouter) that the main model uses.
+ * Inject the engine's LLM config so Arena participants inherit baseUrl/apiKey.
+ * Called by Engine.run() alongside setAskUserFn(), setSubAgentConfig(), etc.
  */
-function getBaseLLMConfig(): { baseUrl?: string; apiKey?: string } {
-  // Try settings file first (.code-shell/settings.json)
-  try {
-    const fs = require("fs");
-    const path = require("path");
-    const settingsPath = path.join(process.cwd(), ".code-shell", "settings.json");
-    const raw = fs.readFileSync(settingsPath, "utf-8");
-    const settings = JSON.parse(raw);
-    if (settings.model?.baseUrl) {
-      return {
-        baseUrl: settings.model.baseUrl,
-        apiKey: settings.model.apiKey ?? process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY,
-      };
-    }
-  } catch {
-    // Fall through to env
-  }
-  return {
-    baseUrl: process.env.OPENAI_BASE_URL,
-    apiKey: process.env.OPENAI_API_KEY ?? process.env.OPENROUTER_API_KEY,
-  };
+export function setArenaLLMConfig(config: LLMConfig | undefined): void {
+  _arenaLLMConfig = config;
 }
 
 /**
- * Resolve a preset name or model path into an ArenaParticipant.
+ * Resolve a preset name or model path into an ArenaParticipant,
+ * inheriting baseUrl/apiKey from the engine's LLM config.
  */
-function resolveParticipant(nameOrPath: string, baseLLM: { baseUrl?: string; apiKey?: string }): ArenaParticipant {
+/**
+ * Arena uses a lower temperature than the default conversation model
+ * to produce more deterministic, evidence-grounded analysis.
+ */
+const ARENA_TEMPERATURE = 0.3;
+
+function resolveParticipant(nameOrPath: string): ArenaParticipant {
+  const baseUrl = _arenaLLMConfig?.baseUrl;
+  const apiKey = _arenaLLMConfig?.apiKey;
+
   const preset = MODEL_PRESETS[nameOrPath];
   if (preset) {
     return {
@@ -92,8 +88,11 @@ function resolveParticipant(nameOrPath: string, baseLLM: { baseUrl?: string; api
         provider: preset.provider,
         model: preset.model,
         maxTokens: preset.maxOutputTokens,
-        baseUrl: baseLLM.baseUrl,
-        apiKey: baseLLM.apiKey,
+        baseUrl,
+        apiKey,
+        temperature: ARENA_TEMPERATURE,
+        // Arena uses non-streaming request/response for structured output
+        enableStreaming: false,
       },
     };
   }
@@ -104,8 +103,10 @@ function resolveParticipant(nameOrPath: string, baseLLM: { baseUrl?: string; api
       provider: "openai",
       model: nameOrPath,
       maxTokens: getMaxOutputTokens(nameOrPath),
-      baseUrl: baseLLM.baseUrl,
-      apiKey: baseLLM.apiKey,
+      baseUrl,
+      apiKey,
+      temperature: ARENA_TEMPERATURE,
+      enableStreaming: false,
     },
   };
 }
@@ -113,6 +114,9 @@ function resolveParticipant(nameOrPath: string, baseLLM: { baseUrl?: string; api
 export async function arenaTool(args: Record<string, unknown>): Promise<string> {
   const topic = args.topic as string;
   if (!topic) return "Error: topic is required";
+
+  const signal = args.__signal as AbortSignal | undefined;
+  if (signal?.aborted) return "Arena aborted before starting.";
 
   const participantNames = (args.participants as string[] | undefined) ?? ["claude", "gpt"];
   if (participantNames.length < 2) {
@@ -122,25 +126,17 @@ export async function arenaTool(args: Record<string, unknown>): Promise<string> 
   const mode = args.mode as ArenaMode | undefined;
   const concluder = args.concluder as string | undefined;
 
-  // Ask user for confirmation before starting
-  const participantList = participantNames.join(", ");
-  const modeLabel = mode ?? "auto-detect";
-  const confirmQuestion =
-    `Ready to start an Arena session:\n` +
-    `  Topic: ${topic}\n` +
-    `  Mode: ${modeLabel}\n` +
-    `  Participants: ${participantList}\n\n` +
-    `This will send requests to multiple models. Proceed? (yes/no)`;
-
-  const answer = await askUserTool({ question: confirmQuestion });
-  const normalized = answer.toLowerCase().trim();
-  if (normalized !== "yes" && normalized !== "y" && normalized !== "是") {
-    return "Arena session cancelled by user.";
+  if (!_arenaLLMConfig) {
+    return "Error: Arena LLM config not initialized. This is a bug — the engine should inject it via setArenaLLMConfig().";
   }
 
-  // Resolve participants (inherit baseUrl/apiKey from runtime config)
-  const baseLLM = getBaseLLMConfig();
-  const participants = participantNames.map((n) => resolveParticipant(n, baseLLM));
+  const participants = participantNames.map((n) => resolveParticipant(n));
+
+  // Collect progress for inclusion in the final tool result.
+  const progressLog: string[] = [];
+  const progressRenderer = createProgressRenderer((text) => {
+    progressLog.push(text);
+  });
 
   try {
     const arena = new Arena({
@@ -148,11 +144,20 @@ export async function arenaTool(args: Record<string, unknown>): Promise<string> 
       mode,
       concluder,
       enableContextTools: true,
+      onProgress: progressRenderer,
+      signal,
     });
 
     const result = await arena.run(topic);
-    return formatArenaResult(result);
+    const formattedResult = formatArenaResult(result);
+
+    // Prepend a condensed progress summary so the LLM can see what was done
+    const progressSummary = progressLog.length > 0
+      ? "── Arena Progress ──\n" + progressLog.join("\n") + "\n\n"
+      : "";
+    return progressSummary + formattedResult;
   } catch (err) {
+    if (signal?.aborted) return "Arena aborted.";
     return `Arena error: ${(err as Error).message}`;
   }
 }
