@@ -11,4 +11,3 @@ coverage/
 .vscode/
 .idea/
 pnpm-lock.yaml
-restored-src/

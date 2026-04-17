@@ -74,5 +74,5 @@
     "src/types.ts",
     "src/react-compiler-runtime-shim.ts"
   ],
-  "exclude": ["node_modules", "dist", "tests", "restored-src", "legacy"]
+  "exclude": ["node_modules", "dist", "tests"]
 }
