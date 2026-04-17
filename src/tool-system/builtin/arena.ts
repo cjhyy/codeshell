@@ -11,7 +11,8 @@
 
 import type { ToolDefinition, LLMConfig } from "../../types.js";
 import { Arena, MODEL_PRESETS, getMaxOutputTokens } from "../../arena/index.js";
-import { formatArenaResult, createProgressRenderer } from "../../arena/render/terminal.js";
+import { createProgressRenderer } from "../../arena/render/terminal.js";
+import { formatArenaResultForSession } from "../../arena/render/session.js";
 import type { ArenaMode, ArenaParticipant } from "../../arena/types.js";
 
 export const arenaToolDef: ToolDefinition = {
@@ -111,6 +112,12 @@ function resolveParticipant(nameOrPath: string): ArenaParticipant {
   };
 }
 
+/** Strip ANSI escape codes from chalk-styled text */
+function stripAnsi(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
 export async function arenaTool(args: Record<string, unknown>): Promise<string> {
   const topic = args.topic as string;
   if (!topic) return "Error: topic is required";
@@ -133,9 +140,10 @@ export async function arenaTool(args: Record<string, unknown>): Promise<string> 
   const participants = participantNames.map((n) => resolveParticipant(n));
 
   // Collect progress for inclusion in the final tool result.
+  // Strip ANSI codes from progress since tool results are plain text/markdown.
   const progressLog: string[] = [];
   const progressRenderer = createProgressRenderer((text) => {
-    progressLog.push(text);
+    progressLog.push(stripAnsi(text));
   });
 
   try {
@@ -149,13 +157,23 @@ export async function arenaTool(args: Record<string, unknown>): Promise<string> 
     });
 
     const result = await arena.run(topic);
-    const formattedResult = formatArenaResult(result);
+
+    // Use session renderer (markdown, no ANSI) for tool results.
+    // Terminal renderer (chalk) is only for direct stdout printing.
+    const formattedResult = formatArenaResultForSession(result);
 
     // Prepend a condensed progress summary so the LLM can see what was done
     const progressSummary = progressLog.length > 0
       ? "── Arena Progress ──\n" + progressLog.join("\n") + "\n\n"
       : "";
-    return progressSummary + formattedResult;
+
+    // Cap total output to prevent context overflow
+    const MAX_TOOL_OUTPUT = 30_000;
+    const full = progressSummary + formattedResult;
+    if (full.length > MAX_TOOL_OUTPUT) {
+      return full.slice(0, MAX_TOOL_OUTPUT) + "\n\n... (truncated, total " + full.length + " chars)";
+    }
+    return full;
   } catch (err) {
     if (signal?.aborted) return "Arena aborted.";
     return `Arena error: ${(err as Error).message}`;
