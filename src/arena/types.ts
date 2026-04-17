@@ -424,63 +424,6 @@ export interface ArenaResultV2 {
   consensus: ArenaConsensus;
 }
 
-// ─── Legacy Phase Outputs (kept for transition) ────────────────
-
-/** An initial opinion from one participant (generic across all modes) */
-export interface Opinion {
-  participant: string;
-  opinion: string;
-  score?: number;
-  issues: string[];
-  suggestions: string[];
-}
-
-/** Backward-compatible alias */
-export type ReviewOpinion = Opinion;
-
-/** A discussion message between participants */
-export interface DiscussionMessage {
-  participant: string;
-  content: string;
-  round: number;
-  replyTo?: string;
-}
-
-/** Final consensus from the arena (review / discussion mode) */
-export interface ArenaConclusion {
-  summary: string;
-  agreed: string[];
-  disagreed: string[];
-  finalScore?: number;
-  recommendation: "approve" | "revise" | "reject";
-  actionItems: string[];
-}
-
-/** Final output for planning mode */
-export interface ArenaPlanConclusion {
-  summary: string;
-  agreed: string[];
-  disagreed: string[];
-  roadmap: ArenaPlanItem[];
-  risks: string[];
-}
-
-/** A single item in a planning roadmap */
-export interface ArenaPlanItem {
-  title: string;
-  priority: "high" | "medium" | "low";
-  description: string;
-  dependencies?: string[];
-}
-
-/** Union conclusion type — the arena returns whichever matches the mode */
-export type ArenaConclusionUnion = ArenaConclusion | ArenaPlanConclusion;
-
-/** Type guard: is the conclusion a plan? */
-export function isPlanConclusion(c: ArenaConclusionUnion): c is ArenaPlanConclusion {
-  return "roadmap" in c;
-}
-
 // ─── Strategy ───────────────────────────────────────────────────
 
 /**

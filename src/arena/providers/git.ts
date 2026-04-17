@@ -1,8 +1,11 @@
 /**
  * GitProvider — collects evidence from git: diffs, commit logs, changed files.
+ *
+ * Security: All git commands use execFileSync with argument arrays
+ * to prevent shell injection. Git refs are sanitized before use.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import type { ArenaPlan, ArenaArtifact, ArenaContextProvider } from "../types.js";
 import { logger } from "../../logging/logger.js";
 
@@ -20,7 +23,7 @@ export const gitProvider: ArenaContextProvider = {
     const isCompare = !!baseRef;
 
     // Current branch
-    const currentBranch = git("git rev-parse --abbrev-ref HEAD");
+    const currentBranch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
     if (currentBranch) {
       artifacts.push({
         id: "git-branch",
@@ -32,10 +35,10 @@ export const gitProvider: ArenaContextProvider = {
     }
 
     // Commit log
-    const logCmd = isCompare
-      ? `git log --oneline ${baseRef}..${headRef} --max-count=20`
-      : "git log --oneline -10";
-    const log = git(logCmd);
+    const logArgs = isCompare
+      ? ["log", "--oneline", `${baseRef}..${headRef}`, "--max-count=20"]
+      : ["log", "--oneline", "-10"];
+    const log = git(logArgs);
     if (log) {
       artifacts.push({
         id: "git-log",
@@ -47,11 +50,11 @@ export const gitProvider: ArenaContextProvider = {
     }
 
     // Diff stat
-    const statCmd = isCompare
-      ? `git diff --stat ${baseRef}...${headRef}`
-      : "git diff --stat HEAD";
-    let stat = git(statCmd);
-    if (!stat && !isCompare) stat = git("git diff --stat --cached");
+    const statArgs = isCompare
+      ? ["diff", "--stat", `${baseRef}...${headRef}`]
+      : ["diff", "--stat", "HEAD"];
+    let stat = git(statArgs);
+    if (!stat && !isCompare) stat = git(["diff", "--stat", "--cached"]);
     if (stat) {
       artifacts.push({
         id: "git-diffstat",
@@ -63,11 +66,11 @@ export const gitProvider: ArenaContextProvider = {
     }
 
     // Changed files
-    const filesCmd = isCompare
-      ? `git diff --name-status ${baseRef}...${headRef}`
-      : "git diff --name-status HEAD";
-    let changedFiles = git(filesCmd);
-    if (!changedFiles && !isCompare) changedFiles = git("git diff --name-status --cached");
+    const filesArgs = isCompare
+      ? ["diff", "--name-status", `${baseRef}...${headRef}`]
+      : ["diff", "--name-status", "HEAD"];
+    let changedFiles = git(filesArgs);
+    if (!changedFiles && !isCompare) changedFiles = git(["diff", "--name-status", "--cached"]);
     if (changedFiles) {
       const allChanged = changedFiles.split("\n").filter(Boolean);
       const limited = allChanged.slice(0, MAX_CHANGED_FILES);
@@ -98,11 +101,11 @@ export const gitProvider: ArenaContextProvider = {
     }
 
     // Truncated diff
-    const diffCmd = isCompare
-      ? `git diff ${baseRef}...${headRef}`
-      : "git diff HEAD";
-    let diff = git(diffCmd);
-    if (!diff && !isCompare) diff = git("git diff --cached");
+    const diffArgs = isCompare
+      ? ["diff", `${baseRef}...${headRef}`]
+      : ["diff", "HEAD"];
+    let diff = git(diffArgs);
+    if (!diff && !isCompare) diff = git(["diff", "--cached"]);
     if (diff) {
       const truncated = diff.length > MAX_DIFF_CHARS;
       const preview = truncated
@@ -122,7 +125,7 @@ export const gitProvider: ArenaContextProvider = {
 
     // Fallback: git status
     if (!diff && !stat) {
-      const status = git("git status --short");
+      const status = git(["status", "--short"]);
       if (status) {
         artifacts.push({
           id: "git-status",
@@ -143,9 +146,16 @@ export const gitProvider: ArenaContextProvider = {
   },
 };
 
-function git(cmd: string): string {
+/**
+ * Execute a git command safely using execFileSync (no shell interpretation).
+ */
+function git(args: string[]): string {
   try {
-    return execSync(cmd, { encoding: "utf-8", maxBuffer: 1024 * 1024, timeout: 10_000 }).trim();
+    return execFileSync("git", args, {
+      encoding: "utf-8",
+      maxBuffer: 1024 * 1024,
+      timeout: 10_000,
+    }).trim();
   } catch {
     return "";
   }

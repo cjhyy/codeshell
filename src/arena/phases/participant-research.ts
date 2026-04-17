@@ -83,8 +83,19 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
     const evidencePackets: EvidencePacket[] = [];
 
     // ── Tool-use loop ──────────────────────────────────────────
+    const MAX_MESSAGES = 30; // Cap messages to prevent token overflow
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
       totalRounds = round;
+
+      // Safety: prevent unbounded message growth
+      if (messages.length >= MAX_MESSAGES) {
+        logger.warn("arena.research_message_limit", {
+          participant: p.name,
+          messageCount: messages.length,
+          round,
+        });
+        break;
+      }
 
       const response = await client.createMessage({
         systemPrompt: strategy.researchSystemPrompt(p.name),

@@ -2,16 +2,21 @@
  * Context tools — read-only tools that arena participants can use
  * to fetch additional source context during research.
  *
- * Extracted from arena.ts and enhanced for the V2 pipeline.
+ * Security: All shell commands use execFileSync with argument arrays
+ * to prevent command injection. File paths are validated against the
+ * repository boundary to prevent path traversal.
  */
 
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
-import { execSync } from "node:child_process";
-import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { resolve, join } from "node:path";
 import type { ToolDefinition, ToolCall } from "../../types.js";
 
 export const MAX_TOOL_RESULT = 15_000; // chars per tool call
 export const MAX_TOOL_ROUNDS = 5;
+
+/** Repository root boundary — all file access is restricted to this directory */
+const REPO_ROOT = resolve(".");
 
 export const CONTEXT_TOOLS: ToolDefinition[] = [
   {
@@ -107,8 +112,21 @@ export function executeContextTool(tc: ToolCall): string {
   }
 }
 
+/**
+ * Validate that a file path resolves within the repository root.
+ * Returns the resolved absolute path, or null if outside the boundary.
+ */
+function validatePath(filePath: string): string | null {
+  const resolved = resolve(filePath);
+  if (resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + "/")) {
+    return resolved;
+  }
+  return null;
+}
+
 function executeReadFile(args: Record<string, unknown>): string {
   const filePath = args.path as string;
+  if (!validatePath(filePath)) return `Error: path outside repository: ${filePath}`;
   if (!existsSync(filePath)) return `Error: file not found: ${filePath}`;
   const raw = readFileSync(filePath, "utf-8");
   const lines = raw.split("\n");
@@ -122,35 +140,96 @@ function executeReadFile(args: Record<string, unknown>): string {
 function executeGrepCode(args: Record<string, unknown>): string {
   const pattern = args.pattern as string;
   const glob = args.glob as string | undefined;
-  const includeFlag = glob ? `--include=${JSON.stringify(glob)}` : "--include='*'";
-  const cmd = `grep -rn ${includeFlag} -E ${JSON.stringify(pattern)} . 2>/dev/null | head -80`;
-  const result = shell(cmd);
+
+  const grepArgs = ["-rn", "-E", "--"];
+  if (glob) {
+    grepArgs.splice(1, 0, `--include=${glob}`);
+  }
+  grepArgs.push(pattern, ".");
+
+  const result = execFileSafe("grep", grepArgs, 80);
   return result || "No matches found.";
 }
 
 function executeListFiles(args: Record<string, unknown>): string {
   const dir = (args.path as string) || ".";
-  const result = shell(`ls -la ${JSON.stringify(dir)} 2>/dev/null | head -50`);
-  return result || `Directory not found: ${dir}`;
+  if (!validatePath(dir)) return `Error: path outside repository: ${dir}`;
+
+  try {
+    const entries = readdirSync(dir);
+    const lines: string[] = [];
+    for (const entry of entries.slice(0, 50)) {
+      const fullPath = join(dir, entry);
+      try {
+        const st = statSync(fullPath);
+        const type = st.isDirectory() ? "d" : "-";
+        const size = st.isDirectory() ? "" : ` ${st.size}`;
+        lines.push(`${type} ${entry}${size}`);
+      } catch {
+        lines.push(`? ${entry}`);
+      }
+    }
+    return lines.join("\n") || `Empty directory: ${dir}`;
+  } catch {
+    return `Directory not found: ${dir}`;
+  }
 }
 
 function executeGitShow(args: Record<string, unknown>): string {
-  const ref = args.ref as string;
-  const result = shell(`git show ${JSON.stringify(ref)} 2>/dev/null | head -200`);
+  const ref = sanitizeGitRef(args.ref as string);
+  if (!ref) return "Error: invalid git ref";
+
+  const result = execFileSafe("git", ["show", "--", ref], 200);
   return truncateResult(result || `Could not resolve: ${ref}`);
 }
 
 function executeGitBlame(args: Record<string, unknown>): string {
   const filePath = args.path as string;
+  if (!validatePath(filePath)) return `Error: path outside repository: ${filePath}`;
+
   const lines = args.lines as string | undefined;
-  const lineFlag = lines ? `-L ${lines}` : "";
-  const result = shell(`git blame ${lineFlag} ${JSON.stringify(filePath)} 2>/dev/null | head -50`);
+  const gitArgs = ["blame"];
+  if (lines && /^\d+,\d+$/.test(lines)) {
+    gitArgs.push(`-L`, lines);
+  }
+  gitArgs.push("--", filePath);
+
+  const result = execFileSafe("git", gitArgs, 50);
   return result || `Could not blame: ${filePath}`;
 }
 
-function shell(cmd: string): string {
+/**
+ * Sanitize a git ref string from LLM output.
+ * Only allows safe git ref characters.
+ */
+function sanitizeGitRef(ref: string): string | null {
+  if (!ref || ref.length > 200) return null;
+  // Only allow alphanumeric, /, -, _, ~, ^, ., :
+  const cleaned = ref.replace(/[^a-zA-Z0-9/_\-~^.:]/g, "");
+  // Block shell metacharacters and path traversal attempts
+  if (/\.\.\/|;\s|&&|\|\||`|\$\(/.test(cleaned)) return null;
+  return cleaned || null;
+}
+
+/**
+ * Execute a command safely using execFileSync (no shell interpretation).
+ * Optionally limits output to maxLines.
+ */
+function execFileSafe(cmd: string, args: string[], maxLines?: number): string {
   try {
-    return execSync(cmd, { encoding: "utf-8", maxBuffer: 512 * 1024, timeout: 10_000 }).trim();
+    const raw = execFileSync(cmd, args, {
+      encoding: "utf-8",
+      maxBuffer: 512 * 1024,
+      timeout: 10_000,
+    }).trim();
+
+    if (maxLines) {
+      const lines = raw.split("\n");
+      if (lines.length > maxLines) {
+        return lines.slice(0, maxLines).join("\n") + `\n... (${lines.length - maxLines} more lines)`;
+      }
+    }
+    return raw;
   } catch {
     return "";
   }

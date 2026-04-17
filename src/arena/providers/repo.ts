@@ -5,7 +5,7 @@
 
 import { existsSync, readdirSync, statSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { execSync, execFileSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import type { ArenaPlan, ArenaArtifact, ArenaContextProvider } from "../types.js";
 import { logger } from "../../logging/logger.js";
 
@@ -100,7 +100,7 @@ export const repoProvider: ArenaContextProvider = {
     // Recent git activity — only if git source is not already active (avoids duplicate)
     const hasGitSource = plan.sources.some((s) => s.kind === "git");
     if (!hasGitSource) {
-      const recentLog = shell("git log --oneline -10");
+      const recentLog = gitLog();
       if (recentLog) {
         artifacts.push({
           id: "repo-recent-activity",
@@ -187,9 +187,13 @@ function safeGrep(pattern: string): string {
   }
 }
 
-function shell(cmd: string): string {
+function gitLog(): string {
   try {
-    return execSync(cmd, { encoding: "utf-8", maxBuffer: 1024 * 1024, timeout: 10_000 }).trim();
+    return execFileSync("git", ["log", "--oneline", "-10"], {
+      encoding: "utf-8",
+      maxBuffer: 1024 * 1024,
+      timeout: 10_000,
+    }).trim();
   } catch {
     return "";
   }

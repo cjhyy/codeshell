@@ -101,7 +101,7 @@ export async function planArena(
 
     const response = await client.createMessage({
       systemPrompt: PLANNER_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: `User request: "${topic}"` }],
+      messages: [{ role: "user", content: `<user_request>\n${topic}\n</user_request>\n\nAnalyze the user request above and output the arena plan as JSON.` }],
       maxTokens: 1024,
       signal,
     });

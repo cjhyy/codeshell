@@ -39,16 +39,18 @@ export function transitionClaim(claim: ClaimRecord, to: ClaimStatus): boolean {
  * Determine the next status for a claim based on its challenges.
  *
  * Rules:
+ * - No challenges → stays as-is (unreviewed is NOT verified)
  * - Any "disagree" → contested
  * - Any "needs_evidence" → contested
- * - All "agree" (with possible "refine") and no pending checks → verified
- * - No challenges yet → stays as-is
+ * - Pending checks exist → contested
+ * - At least one explicit "agree" and all others "agree"/"refine" → verified
  */
 export function resolveClaimStatus(
   claim: ClaimRecord,
   challenges: ClaimChallenge[],
   hasPendingChecks: boolean,
 ): ClaimStatus {
+  // No challenges = no review happened — do not auto-verify
   if (challenges.length === 0) return claim.status;
 
   const verdicts = challenges.map((c) => c.verdict);
@@ -61,8 +63,14 @@ export function resolveClaimStatus(
     return "contested";
   }
 
-  // All agree or refine — verified
-  return "verified";
+  // Require at least one explicit "agree" to mark as verified
+  // (not just all "refine" with no agreement)
+  if (verdicts.includes("agree")) {
+    return "verified";
+  }
+
+  // All "refine" without any "agree" — keep under review, not yet verified
+  return claim.status;
 }
 
 /**
