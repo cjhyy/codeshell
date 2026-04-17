@@ -154,7 +154,7 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
           toolName: tc.toolName,
           args: tc.args,
           resultRef: buildResultRef(tc),
-          keptAsEvidence: result.length > 0 && !result.startsWith("Error:"),
+          keptAsEvidence: result.length > 50 && !result.startsWith("Error:") && !result.startsWith("Tool error:") && !result.startsWith("Unknown tool:"),
         };
         toolTraces.push(trace);
 

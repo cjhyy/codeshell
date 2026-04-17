@@ -85,7 +85,25 @@ export function buildDigest(ledger: ArenaLedger, options: DigestOptions): RoundR
 }
 
 /**
+ * Sanitize text from LLM output before re-injecting into a prompt.
+ * Strips patterns that could be interpreted as prompt-level instructions.
+ */
+function sanitize(text: string): string {
+  if (!text) return "";
+  return text
+    // Strip fake system/assistant role tags
+    .replace(/<\/?(?:system|assistant|user|system-reminder)[^>]*>/gi, "")
+    // Strip instruction-like prefixes (case-insensitive)
+    .replace(/^(?:IGNORE|DISREGARD|FORGET|OVERRIDE|SYSTEM|INSTRUCTION)[:\s].*/gim, "")
+    // Collapse excessive whitespace
+    .replace(/\n{3,}/g, "\n\n")
+    // Limit length per field
+    .slice(0, 2000);
+}
+
+/**
  * Format a digest into a text block suitable for prompt injection.
+ * All LLM-originated text is sanitized before inclusion.
  */
 export function formatDigest(digest: RoundResearchDigest): string {
   const sections: string[] = [];
@@ -96,11 +114,11 @@ export function formatDigest(digest: RoundResearchDigest): string {
   if (digest.evidencePackets.length > 0) {
     sections.push("\n### Evidence");
     for (const packet of digest.evidencePackets) {
-      sections.push(`- [${packet.packetId}] ${packet.title} (${packet.source})`);
-      sections.push(`  ${packet.summary}`);
+      sections.push(`- [${packet.packetId}] ${sanitize(packet.title)} (${packet.source})`);
+      sections.push(`  ${sanitize(packet.summary)}`);
       for (const excerpt of packet.excerpts.slice(0, 3)) {
-        sections.push(`  > ${excerpt.ref}: ${excerpt.snippet}`);
-        if (excerpt.note) sections.push(`    Note: ${excerpt.note}`);
+        sections.push(`  > ${excerpt.ref}: ${sanitize(excerpt.snippet)}`);
+        if (excerpt.note) sections.push(`    Note: ${sanitize(excerpt.note)}`);
       }
     }
   }
@@ -108,7 +126,7 @@ export function formatDigest(digest: RoundResearchDigest): string {
   if (digest.recentChallenges.length > 0) {
     sections.push("\n### Challenges");
     for (const c of digest.recentChallenges) {
-      sections.push(`- [${c.reviewer}] on ${c.claimId}: ${c.verdict} — ${c.reason}`);
+      sections.push(`- [${c.reviewer}] on ${c.claimId}: ${c.verdict} — ${sanitize(c.reason)}`);
     }
   }
 
@@ -116,14 +134,14 @@ export function formatDigest(digest: RoundResearchDigest): string {
     sections.push("\n### Requested Checks");
     for (const check of digest.requestedChecks) {
       const pri = check.priority ? ` (${check.priority})` : "";
-      sections.push(`- [${check.requestId}]${pri}: ${check.description}`);
+      sections.push(`- [${check.requestId}]${pri}: ${sanitize(check.description)}`);
     }
   }
 
   if (digest.priorAdjudications.length > 0) {
     sections.push("\n### Prior Adjudications");
     for (const adj of digest.priorAdjudications) {
-      sections.push(`- ${adj.claimId}: ${adj.outcome} — ${adj.rationale}`);
+      sections.push(`- ${adj.claimId}: ${adj.outcome} — ${sanitize(adj.rationale)}`);
     }
   }
 

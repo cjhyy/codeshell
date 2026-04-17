@@ -18,6 +18,12 @@ import type {
   RequestedCheck,
   ClaimAdjudication,
 } from "./types.js";
+import { logger } from "../logging/logger.js";
+
+/** Thresholds for memory warnings */
+const WARN_CLAIMS = 50;
+const WARN_PACKETS = 200;
+const WARN_CHALLENGES = 100;
 
 /** Index for fast lookups into the append-only ledger */
 interface LedgerIndex {
@@ -53,6 +59,17 @@ export class ArenaLedger {
 
   // ─── Append operations ──────────────────────────────────────
 
+  /** Check if ledger is approaching memory limits and log warnings */
+  private checkGrowth(): void {
+    const claims = this.ledger.claims.length;
+    const packets = this.ledger.evidencePackets.length;
+    const challenges = this.ledger.challenges.length;
+
+    if (claims === WARN_CLAIMS || packets === WARN_PACKETS || challenges === WARN_CHALLENGES) {
+      logger.warn("arena.ledger_growth", { claims, packets, challenges, toolTraces: this.ledger.toolTraces.length });
+    }
+  }
+
   appendDossier(dossier: ResearchDossier): void {
     this.ledger.dossiers.push(dossier);
 
@@ -75,6 +92,7 @@ export class ArenaLedger {
   appendClaim(claim: ClaimRecord): void {
     this.ledger.claims.push(claim);
     this.index.claimsById.set(claim.claimId, claim);
+    this.checkGrowth();
   }
 
   appendChallenge(challenge: ClaimChallenge): void {
@@ -85,6 +103,8 @@ export class ArenaLedger {
     if (claim) {
       claim.challenges.push(challenge);
     }
+
+    this.checkGrowth();
 
     // Register any requested checks
     if (challenge.requestedChecks) {

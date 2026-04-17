@@ -20,6 +20,26 @@ import type {
 } from "../types.js";
 import { logger } from "../../logging/logger.js";
 
+/** Coerce a value to string — handles cases where LLM returns number/object instead of string */
+function asString(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v == null) return "";
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  return "";
+}
+
+/**
+ * Sanitize LLM-originated text before re-injecting into a prompt.
+ * Strips patterns that could be interpreted as prompt-level instructions.
+ */
+function sanitizeForPrompt(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/<\/?(?:system|assistant|user|system-reminder)[^>]*>/gi, "")
+    .replace(/^(?:IGNORE|DISREGARD|FORGET|OVERRIDE|SYSTEM|INSTRUCTION)[:\s].*/gim, "")
+    .slice(0, 3000);
+}
+
 /** Extract JSON from text that might have markdown fences or surrounding text */
 export function extractJSON(text: string): string {
   // Try fenced code blocks — use GREEDY match to handle nested backticks
@@ -156,10 +176,10 @@ export function parseReport(participant: string, text: string): ParticipantRepor
 
 function parseFinding(raw: any, index: number): ArenaFinding {
   return {
-    id: raw.id ?? `f${index + 1}`,
+    id: asString(raw.id) || `f${index + 1}`,
     kind: validateFindingKind(raw.kind),
-    title: raw.title ?? "Untitled",
-    summary: raw.summary ?? "",
+    title: asString(raw.title) || "Untitled",
+    summary: asString(raw.summary),
     severity: raw.severity || undefined,
     confidence: typeof raw.confidence === "number" ? raw.confidence : 0.5,
     evidence: Array.isArray(raw.evidence)
@@ -287,9 +307,14 @@ export function parseConsensus(text: string): ArenaConsensus {
   try {
     const json = extractJSON(text);
     const parsed = JSON.parse(json);
+
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error("parsed JSON is not an object");
+    }
+
     return {
-      summary: parsed.summary ?? "",
-      subjectSummary: parsed.subjectSummary || parsed.changeSummary || undefined,
+      summary: asString(parsed.summary),
+      subjectSummary: asString(parsed.subjectSummary || parsed.changeSummary) || undefined,
       strengths: parseConsensusItems(parsed.strengths),
       improvements: parseConsensusItems(parsed.improvements),
       risks: parseConsensusItems(parsed.risks),
@@ -320,7 +345,7 @@ export function parseConsensus(text: string): ArenaConsensus {
 function parseConsensusItems(arr: unknown): ArenaConsensusItem[] {
   if (!Array.isArray(arr)) return [];
   return arr.map((item: any) => ({
-    title: item.title ?? "",
+    title: asString(item.title),
     summary: item.summary ?? "",
     support: Array.isArray(item.support) ? item.support : [],
     challenge: Array.isArray(item.challenge) ? item.challenge : [],
@@ -368,8 +393,8 @@ export function formatClaimsForReview(claims: ClaimRecord[]): string {
       : "";
     return (
       `- [${c.claimId}] (${f.kind}${f.severity ? `, ${f.severity}` : ""}, status: ${c.status})\n` +
-      `    ${f.title}\n` +
-      `    ${f.summary}` +
+      `    ${sanitizeForPrompt(f.title)}\n` +
+      `    ${sanitizeForPrompt(f.summary)}` +
       evidence +
       packets +
       `\n    Confidence: ${f.confidence}`
@@ -394,7 +419,7 @@ export function formatClaimSummaryForConsensus(summary: ClaimStatusSummary): str
     sections.push(
       `### Verified Claims (${summary.verified.length})\n` +
       summary.verified.map((c) =>
-        `- [${c.claimId}] ${c.finding.title} (${c.finding.kind}, confidence: ${c.finding.confidence})`
+        `- [${c.claimId}] ${sanitizeForPrompt(c.finding.title)} (${c.finding.kind}, confidence: ${c.finding.confidence})`
       ).join("\n")
     );
   }
@@ -403,7 +428,7 @@ export function formatClaimSummaryForConsensus(summary: ClaimStatusSummary): str
     sections.push(
       `### Unresolved Claims (${summary.unresolved.length})\n` +
       summary.unresolved.map((c) =>
-        `- [${c.claimId}] ${c.finding.title} — ${c.challenges.length} challenge(s), no consensus reached`
+        `- [${c.claimId}] ${sanitizeForPrompt(c.finding.title)} — ${c.challenges.length} challenge(s), no consensus reached`
       ).join("\n")
     );
   }
@@ -412,7 +437,7 @@ export function formatClaimSummaryForConsensus(summary: ClaimStatusSummary): str
     sections.push(
       `### Still Contested (${summary.contested.length})\n` +
       summary.contested.map((c) =>
-        `- [${c.claimId}] ${c.finding.title} — ${c.challenges.length} challenge(s)`
+        `- [${c.claimId}] ${sanitizeForPrompt(c.finding.title)} — ${c.challenges.length} challenge(s)`
       ).join("\n")
     );
   }
@@ -421,7 +446,7 @@ export function formatClaimSummaryForConsensus(summary: ClaimStatusSummary): str
     sections.push(
       `### Rejected Claims (${summary.rejected.length})\n` +
       summary.rejected.map((c) =>
-        `- [${c.claimId}] ${c.finding.title} — rejected: ${c.adjudication?.rationale ?? "no rationale"}`
+        `- [${c.claimId}] ${sanitizeForPrompt(c.finding.title)} — rejected: ${sanitizeForPrompt(c.adjudication?.rationale ?? "no rationale")}`
       ).join("\n")
     );
   }
@@ -437,9 +462,9 @@ export function formatDigestForPrompt(digest: RoundResearchDigest): string {
   if (digest.evidencePackets.length > 0) {
     sections.push("\nEvidence:");
     for (const p of digest.evidencePackets) {
-      sections.push(`  [${p.packetId}] ${p.title} (${p.source}): ${p.summary}`);
+      sections.push(`  [${p.packetId}] ${sanitizeForPrompt(p.title)} (${p.source}): ${sanitizeForPrompt(p.summary)}`);
       for (const e of p.excerpts.slice(0, 2)) {
-        sections.push(`    > ${e.ref}: ${e.snippet}`);
+        sections.push(`    > ${e.ref}: ${sanitizeForPrompt(e.snippet)}`);
       }
     }
   }
@@ -447,7 +472,7 @@ export function formatDigestForPrompt(digest: RoundResearchDigest): string {
   if (digest.recentChallenges.length > 0) {
     sections.push("\nPrior challenges:");
     for (const c of digest.recentChallenges) {
-      sections.push(`  [${c.reviewer}] on ${c.claimId}: ${c.verdict} — ${c.reason}`);
+      sections.push(`  [${c.reviewer}] on ${c.claimId}: ${c.verdict} — ${sanitizeForPrompt(c.reason)}`);
     }
   }
 
@@ -478,9 +503,9 @@ export function parseChallenges(reviewer: string, text: string): ClaimChallenge[
 function parseChallenge(reviewer: string, raw: any): ClaimChallenge {
   return {
     reviewer,
-    claimId: raw.claimId ?? raw.claim_id ?? "",
+    claimId: asString(raw.claimId ?? raw.claim_id),
     verdict: validateVerdict(raw.verdict),
-    reason: raw.reason ?? "",
+    reason: asString(raw.reason),
     supportingEvidenceRefs: Array.isArray(raw.supportingEvidenceRefs)
       ? raw.supportingEvidenceRefs
       : undefined,
@@ -535,8 +560,8 @@ export function parseAdjudication(claimId: string, text: string): ClaimAdjudicat
     return {
       claimId,
       outcome: validateAdjudicationOutcome(parsed.outcome),
-      rationale: parsed.rationale ?? "",
-      finalSummary: parsed.finalSummary ?? parsed.summary ?? "",
+      rationale: asString(parsed.rationale),
+      finalSummary: asString(parsed.finalSummary ?? parsed.summary),
       supportingEvidenceRefs: Array.isArray(parsed.supportingEvidenceRefs)
         ? parsed.supportingEvidenceRefs
         : [],
@@ -564,9 +589,14 @@ export function parseDetailExpansion(text: string): ArenaRoadmapPhaseDetail {
   try {
     const json = extractJSON(text);
     const parsed = JSON.parse(json);
+
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error("parsed JSON is not an object");
+    }
+
     return {
-      phaseTitle: parsed.phaseTitle ?? "",
-      objective: parsed.objective ?? "",
+      phaseTitle: asString(parsed.phaseTitle),
+      objective: asString(parsed.objective),
       targetFiles: toStringArray(parsed.targetFiles),
       codeChanges: toStringArray(parsed.codeChanges),
       interfaces: toStringArray(parsed.interfaces),
