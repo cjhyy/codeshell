@@ -11,3 +11,7 @@ coverage/
 .vscode/
 .idea/
 pnpm-lock.yaml
+
+# Agent run artifacts
+examples/prd-agent/output/*
+!examples/prd-agent/output/.gitkeep
