@@ -10,6 +10,7 @@ import { AgentServer } from "../../protocol/server.js";
 import { AgentClient } from "../../protocol/client.js";
 import { createInProcessTransport } from "../../protocol/transport.js";
 import { SettingsManager } from "../../settings/manager.js";
+import { costTracker } from "../cost-tracker.js";
 import type { LLMConfig, PermissionMode } from "../../types.js";
 import { startInkRepl } from "../../ui/index.js";
 import type { AgentPresetName } from "../../preset/index.js";
@@ -100,6 +101,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     maxTurns,
     maxContextTokens,
     sessionStorageDir: settings.session.storageDir,
+    costStore: costTracker,
     mcpServers: settings.mcpServers,
   });
 

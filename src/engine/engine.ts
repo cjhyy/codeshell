@@ -13,7 +13,7 @@ import { PromptComposer } from "../prompt/composer.js";
 import { SessionManager, type SessionBundle } from "../session/session-manager.js";
 import { Transcript } from "../session/transcript.js";
 import { ModelFacade } from "./model-facade.js";
-import { costTracker } from "../cli/cost-tracker.js";
+import type { CostStateStore } from "./cost-store.js";
 import { logger } from "../logging/logger.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import { setAskUserFn, type AskUserFn } from "../tool-system/builtin/ask-user.js";
@@ -50,6 +50,13 @@ export interface EngineConfig {
   approvalBackend?: ApprovalBackend;
   askUser?: AskUserFn;
   mcpServers?: Record<string, import("../types.js").MCPServerConfig>;
+  /**
+   * Optional opaque store for per-session cost/usage state. When provided,
+   * Engine calls `restore()` on session resume and `serialize()` at the end
+   * of each `run()` and stores the blob on the session. Without this the
+   * Engine doesn't persist cost state — it's a UI concern.
+   */
+  costStore?: CostStateStore;
 }
 
 export interface EngineResult {
@@ -170,9 +177,9 @@ export class Engine {
     if (options?.sessionId) {
       session = this.sessionManager.resume(options.sessionId);
       messages = session.transcript.toMessages();
-      // Restore cost state from previous session
-      if (session.state.costState) {
-        costTracker.restore(session.state.costState as any);
+      // Restore cost state from previous session, if the caller injected a store
+      if (session.state.costState && this.config.costStore) {
+        this.config.costStore.restore(session.state.costState);
       }
       // Append new user message
       const userMsg: Message = { role: "user", content: task };
@@ -390,7 +397,9 @@ export class Engine {
       completionTokens: usage.totalCompletionTokens,
       totalTokens: usage.totalTokens,
     };
-    session.state.costState = costTracker.serialize() as unknown as Record<string, unknown>;
+    if (this.config.costStore) {
+      session.state.costState = this.config.costStore.serialize() as Record<string, unknown>;
+    }
     this.sessionManager.saveState(session.state);
 
     // Hook: agent end

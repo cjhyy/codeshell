@@ -55,6 +55,7 @@ export {
 
 export { Engine } from "./engine/engine.js";
 export type { EngineConfig, EngineResult } from "./engine/engine.js";
+export type { CostStateStore, CostStateSnapshot } from "./engine/cost-store.js";
 
 // ─── LLM ─────────────────────────────────────────────────────────
 
