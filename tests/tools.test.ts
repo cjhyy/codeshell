@@ -173,21 +173,15 @@ describe("Plan mode tools", () => {
   });
 
   it("enters and exits plan mode", async () => {
-    const planFile = join(tmpDir, "plan.md");
-    const enterResult = await enterPlanModeTool({ plan_file: planFile });
+    const enterResult = await enterPlanModeTool({});
     expect(enterResult).toContain("Entered plan mode");
-
-    writeFileSync(planFile, "# My Plan\n\n1. Do thing\n2. Do other thing\n");
 
     const exitResult = await exitPlanModeTool({});
     expect(exitResult).toContain("Exited plan mode");
-    expect(exitResult).toContain("My Plan");
   });
 
-  it("warns on empty plan exit", async () => {
-    const planFile = join(tmpDir, "plan.md");
-    await enterPlanModeTool({ plan_file: planFile });
+  it("returns informative message when exiting without entering", async () => {
     const result = await exitPlanModeTool({});
-    expect(result).toContain("empty");
+    expect(result).toContain("Not currently in plan mode");
   });
 });

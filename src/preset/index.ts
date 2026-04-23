@@ -63,7 +63,6 @@ const GENERAL_BUILTIN_TOOLS = [
   "ReadMcpResource",
   "RemoteTrigger",
   "REPL",
-  "TodoWrite",
   "PowerShell",
 ] as const;
 
@@ -100,7 +99,6 @@ const GENERAL_PERMISSION_RULES: PermissionRule[] = [
   { tool: "Skill", decision: "allow" },
   { tool: "ListMcpResources", decision: "allow" },
   { tool: "ReadMcpResource", decision: "allow" },
-  { tool: "TodoWrite", decision: "allow" },
 ];
 
 // ─── Preset definitions ──────────────────────────────────────────

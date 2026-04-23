@@ -106,14 +106,14 @@ export class ModelFacade {
     addAPIDuration(latencyMs);
     const u = response.usage;
     if (u) {
-      addInputTokens(u.inputTokens ?? 0);
-      addOutputTokens(u.outputTokens ?? 0);
+      addInputTokens(u.promptTokens ?? 0);
+      addOutputTokens(u.completionTokens ?? 0);
       addToModelUsage(
-        this.client.modelName ?? "unknown",
-        u.inputTokens ?? 0,
-        u.outputTokens ?? 0,
+        this.client.model ?? "unknown",
+        u.promptTokens ?? 0,
+        u.completionTokens ?? 0,
         u.cacheReadTokens ?? 0,
-        u.cacheWriteTokens ?? 0,
+        u.cacheCreationTokens ?? 0,
       );
     }
   }

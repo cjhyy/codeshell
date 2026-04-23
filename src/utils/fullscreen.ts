@@ -132,7 +132,7 @@ export async function maybeGetTmuxMouseHint(): Promise<string | null> {
   const { stdout, code } = await execFileNoThrow(
     'tmux',
     ['show', '-Av', 'mouse'],
-    { useCwd: false, timeout: 2000 },
+    { timeout: 2000 },
   )
   if (code !== 0 || stdout.trim() === 'on') return null
   return "tmux detected · scroll with PgUp/PgDn · or add 'set -g mouse on' to ~/.tmux.conf for wheel scroll"

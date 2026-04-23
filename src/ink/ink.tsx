@@ -268,6 +268,7 @@ export default class Ink {
     // onRecoverableError
     noop // onDefaultTransitionIndicator
     );
+    // eslint-disable-next-line no-constant-condition
     if ("production" === 'development') {
       reconciler.injectIntoDevTools({
         bundleType: 0,

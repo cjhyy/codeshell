@@ -62,7 +62,7 @@ export function getGlobalClaudeFile(filename: string): string | undefined {
 // ─── Runtime / Package Manager ──────────────────────────────────────
 
 export function getRuntime(): "bun" | "deno" | "node" {
-  if (typeof Bun !== "undefined") return "bun";
+  if (typeof (globalThis as any).Bun !== "undefined") return "bun";
   if (typeof (globalThis as any).Deno !== "undefined") return "deno";
   return "node";
 }

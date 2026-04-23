@@ -34,7 +34,6 @@ import { skillToolDef, skillTool } from "./skill.js";
 import { mcpToolDef, mcpToolExecute, listMcpResourcesToolDef, listMcpResourcesTool, readMcpResourceToolDef, readMcpResourceTool } from "./mcp-tools.js";
 import { remoteTriggerToolDef, remoteTriggerTool } from "./remote-trigger.js";
 import { replToolDef, replTool } from "./repl.js";
-import { todoWriteToolDef, todoWriteTool } from "./todo-write.js";
 import { briefToolDef, briefTool } from "./brief.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
 import { arenaToolDef, arenaTool } from "./arena.js";
@@ -401,16 +400,6 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: replTool,
-  },
-  {
-    definition: {
-      ...todoWriteToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: todoWriteTool,
   },
   {
     definition: {

@@ -95,7 +95,6 @@ export async function tmuxLoadBuffer(text: string): Promise<boolean> {
       : ['load-buffer', '-w', '-']
   const { code } = await execFileNoThrow('tmux', args, {
     input: text,
-    useCwd: false,
     timeout: 2000,
   })
   return code === 0
