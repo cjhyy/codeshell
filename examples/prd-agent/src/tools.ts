@@ -7,7 +7,7 @@
  *   - 搜索竞品信息（模拟）
  */
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import type { CustomTool } from "../../src/index.js";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -30,7 +30,11 @@ export const loadTemplateTool: CustomTool = {
   },
   execute: async (args) => {
     const name = (args.template_name as string) || "prd-template";
-    const path = join(ROOT, "templates", `${name}.md`);
+    const templatesDir = resolve(ROOT, "templates");
+    const path = resolve(templatesDir, `${name}.md`);
+    if (!path.startsWith(templatesDir + sep)) {
+      return `Error: template name '${name}' escapes templates directory`;
+    }
     if (!existsSync(path)) {
       return `Error: Template '${name}' not found at ${path}`;
     }
@@ -62,7 +66,14 @@ export const savePRDTool: CustomTool = {
   execute: async (args) => {
     const filename = args.filename as string;
     const content = args.content as string;
-    const outPath = join(ROOT, "output", filename);
+    if (!filename || typeof filename !== "string") {
+      return "Error: filename is required";
+    }
+    const outDir = resolve(ROOT, "output");
+    const outPath = resolve(outDir, filename);
+    if (!outPath.startsWith(outDir + sep)) {
+      return `Error: filename '${filename}' escapes output directory`;
+    }
     writeFileSync(outPath, content, "utf-8");
     return `PRD saved to ${outPath} (${content.length} chars)`;
   },

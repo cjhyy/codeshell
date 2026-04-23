@@ -137,6 +137,16 @@ export class TurnLoop {
         }
       }
 
+      // Feed actual token usage back to the context manager so subsequent
+      // compaction decisions use hybrid (actual + delta) estimation rather than
+      // pure heuristics. Without this the manager falls back to char/4 estimates.
+      if (response!.usage?.promptTokens !== undefined) {
+        this.deps.contextManager.recordActualUsage(
+          response!.usage.promptTokens,
+          messages.length,
+        );
+      }
+
       // Handle max_output_tokens: if response was truncated, do continuation (up to 3 times)
       if (response.stopReason === "max_tokens" && response.toolCalls.length === 0 && response.text) {
         let combinedText = response.text;

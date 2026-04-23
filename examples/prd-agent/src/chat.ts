@@ -23,14 +23,20 @@ if (!apiKey) {
   process.exit(1);
 }
 
+// Default model depends on the provider:
+//  - OpenRouter routes models by "<provider>/<model>" slugs. We pick
+//    gpt-4.1-mini because gpt-4o-mini's OpenRouter Azure route frequently
+//    rejects function-calling requests with 401.
+//  - Direct OpenAI API uses the unprefixed model id.
+const isOpenRouter = !!process.env.OPENROUTER_API_KEY;
+const defaultModel = isOpenRouter ? "openai/gpt-4.1-mini" : "gpt-4o-mini";
+
 const engineConfig: EngineConfig = {
   llm: {
     provider: "openai",
-    model: process.env.MODEL ?? "gpt-4o-mini",
+    model: process.env.MODEL ?? defaultModel,
     apiKey,
-    baseUrl: process.env.OPENROUTER_API_KEY
-      ? "https://openrouter.ai/api/v1"
-      : undefined,
+    baseUrl: isOpenRouter ? "https://openrouter.ai/api/v1" : undefined,
     enableStreaming: true,
   },
   cwd: process.cwd(),

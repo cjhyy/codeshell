@@ -94,7 +94,31 @@ export class MCPManager {
       throw new Error(`MCP server "${name}": unsupported transport "${transportType}"`);
     }
 
-    await client.connect(transport);
+    // Prevent a misbehaving MCP server from hanging `connectAll()` forever.
+    // On timeout, best-effort close the transport so we don't leak the stdio
+    // child / socket when connect() is still pending in the background.
+    const CONNECT_TIMEOUT_MS = 15_000;
+    let timeoutHandle: NodeJS.Timeout | undefined;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new Error(`MCP server "${name}" connect timed out after ${CONNECT_TIMEOUT_MS}ms`));
+        }, CONNECT_TIMEOUT_MS);
+        client.connect(transport).then(
+          () => resolve(),
+          (err) => reject(err),
+        );
+      });
+    } catch (err) {
+      try {
+        await transport.close?.();
+      } catch {
+        // ignore cleanup errors
+      }
+      throw err;
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
 
     this.connections.set(name, { client, serverName: name, transport });
 

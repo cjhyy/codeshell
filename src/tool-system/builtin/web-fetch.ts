@@ -29,19 +29,56 @@ export const webFetchToolDef: ToolDefinition = {
 const MAX_OUTPUT = 100_000;
 const DEFAULT_MAX = 50_000;
 
+// Header names that must not be overridable via args.headers (SSRF / auth injection)
+const BLOCKED_REQUEST_HEADERS = new Set([
+  "host", "authorization", "cookie", "proxy-authorization",
+  "x-forwarded-for", "x-real-ip", "x-forwarded-host",
+]);
+
+// Hostname patterns that block SSRF to internal/metadata services
+const BLOCKED_HOST_PATTERNS: RegExp[] = [
+  /^localhost$/i,
+  /^127\./,
+  /^0\.0\.0\.0$/,
+  /^10\./,
+  /^169\.254\./,         // link-local + AWS/GCP metadata (169.254.169.254)
+  /^192\.168\./,
+  /^172\.(1[6-9]|2[0-9]|3[01])\./,  // 172.16.0.0/12
+  /^::1$/,
+  /^fc00:/i, /^fd00:/i,  // IPv6 ULA
+  /^fe80:/i,             // IPv6 link-local
+];
+
+function isBlockedHost(hostname: string): boolean {
+  return BLOCKED_HOST_PATTERNS.some((re) => re.test(hostname));
+}
+
 export async function webFetchTool(args: Record<string, unknown>): Promise<string> {
   const url = args.url as string;
   if (!url) return "Error: url is required";
 
-  // Basic URL validation
+  // Validate URL and protocol
+  let parsed: URL;
   try {
-    new URL(url);
+    parsed = new URL(url);
   } catch {
     return `Error: invalid URL "${url}"`;
   }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return `Error: only http(s) URLs are allowed, got "${parsed.protocol}"`;
+  }
+  if (isBlockedHost(parsed.hostname)) {
+    return `Error: refusing to fetch internal/loopback host "${parsed.hostname}"`;
+  }
 
   const maxLength = Math.min((args.max_length as number) || DEFAULT_MAX, MAX_OUTPUT);
-  const customHeaders = (args.headers as Record<string, string>) ?? {};
+  const rawHeaders = (args.headers as Record<string, string>) ?? {};
+  const customHeaders: Record<string, string> = {};
+  for (const [k, v] of Object.entries(rawHeaders)) {
+    if (!BLOCKED_REQUEST_HEADERS.has(k.toLowerCase())) {
+      customHeaders[k] = v;
+    }
+  }
 
   try {
     const res = await fetch(url, {

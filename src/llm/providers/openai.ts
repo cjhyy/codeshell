@@ -292,10 +292,25 @@ export class OpenAIClient extends LLMClientBase {
         msg.includes("context_length_exceeded") ||
         msg.includes("maximum context length") ||
         msg.includes("too many tokens") ||
-        msg.includes("prompt is too long") ||
-        (err.status === 400 && msg.includes("provider returned error"))
+        msg.includes("prompt is too long")
       ) {
         throw new ContextLimitError("openai");
+      }
+      // OpenRouter and other compatible endpoints often return 401 "Provider
+      // returned error" when the routed backend disables function calling for
+      // the selected model. A real auth failure is also possible — surface
+      // both possibilities so users don't blindly swap models.
+      if (err.status === 401 && msg.includes("provider returned error")) {
+        throw new LLMError(
+          `OpenAI-compatible endpoint returned 401 "Provider returned error". ` +
+            `Two likely causes: (1) the API key is invalid/revoked, or ` +
+            `(2) the upstream provider rejects tool calls for this model ` +
+            `(common on OpenRouter's gpt-4o-mini route). Verify the key, ` +
+            `then try a tool-capable model such as openai/gpt-4.1-mini or ` +
+            `anthropic/claude-3.5-haiku.`,
+          "openai",
+          { status: err.status },
+        );
       }
       throw new LLMError(`OpenAI API error: ${err.message}`, "openai", { status: err.status });
     }

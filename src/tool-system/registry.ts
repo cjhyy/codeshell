@@ -131,9 +131,12 @@ export class ToolRegistry {
 
       // Always return error as ToolResult, never throw
       let errorMsg: string;
+      const isAbort =
+        (err as Error)?.name === "AbortError" ||
+        parentSignal?.aborted === true;
       if (err instanceof ToolTimeoutError) {
         errorMsg = `Tool timed out after ${timeout}ms: ${name}`;
-      } else if ((err as Error).name === "AbortError" || String(err).includes("abort")) {
+      } else if (isAbort) {
         errorMsg = `Tool aborted: ${name}`;
       } else {
         errorMsg = (err as Error).message;

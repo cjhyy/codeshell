@@ -44,13 +44,17 @@ export class LSPClient extends EventEmitter {
     });
 
     this.process.stdout?.on("data", (data: Buffer) => this.handleData(data.toString()));
-    this.process.stderr?.on("data", (data: Buffer) => {
+    this.process.stderr?.on("data", (_data: Buffer) => {
       // LSP servers often log to stderr — ignore
     });
     this.process.on("exit", (code) => {
       this.emit("exit", code);
       this.rejectAll(new Error(`LSP server exited with code ${code}`));
     });
+
+    // Don't keep the event loop alive solely for the LSP child.
+    // Call after listeners are wired so event registration doesn't re-ref.
+    this.process.unref();
   }
 
   async initialize(rootUri: string): Promise<unknown> {
@@ -84,16 +88,20 @@ export class LSPClient extends EventEmitter {
     const header = `Content-Length: ${Buffer.byteLength(content)}\r\n\r\n`;
 
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.process!.stdin!.write(header + content);
-
-      // Timeout after 30 seconds
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         if (this.pending.has(id)) {
           this.pending.delete(id);
           reject(new Error(`LSP request "${method}" timed out`));
         }
       }, 30000);
+      // Don't let the timer keep the event loop alive by itself
+      timer.unref?.();
+
+      this.pending.set(id, {
+        resolve: (value) => { clearTimeout(timer); resolve(value); },
+        reject: (err) => { clearTimeout(timer); reject(err); },
+      });
+      this.process!.stdin!.write(header + content);
     });
   }
 
@@ -113,8 +121,16 @@ export class LSPClient extends EventEmitter {
     } catch {
       // Force kill
     }
+    this.process.stdout?.removeAllListeners();
+    this.process.stderr?.removeAllListeners();
+    this.process.removeAllListeners();
     this.process.kill();
     this.process = undefined;
+    // Drain pending requests
+    for (const { reject } of this.pending.values()) {
+      reject(new Error("LSP server shut down"));
+    }
+    this.pending.clear();
   }
 
   get isInitialized(): boolean {

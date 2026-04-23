@@ -141,6 +141,13 @@ export class ToolExecutor {
 
   private isReadOnlyBashCommand(args: Record<string, unknown>): boolean {
     const cmd = String(args.command ?? "").trim();
+
+    // Reject shell metacharacters that could chain a write command after a
+    // read-only prefix: ; && || ` $(...) redirections. A single pipe (|) is
+    // still allowed — the per-part whitelist further down validates it.
+    const DANGEROUS = /;|&&|\|\||`|\$\(|>/;
+    if (DANGEROUS.test(cmd)) return false;
+
     // Extract the base command (first word, ignoring env vars like VAR=val)
     const baseCmd = cmd.replace(/^(\w+=\S+\s+)*/, "").split(/\s/)[0];
 
@@ -152,18 +159,21 @@ export class ToolExecutor {
       "uname", "hostname", "id", "groups", "locale", "uptime",
     ]);
 
+    // Whitelisted read-only git/tool subcommands.
+    // Deliberately exclude `node -e`, `python -c`, `sed -n`, etc. — those can
+    // execute arbitrary code even though they "look read-only".
     const readOnlyPrefixes = [
       "git log", "git status", "git diff", "git branch", "git show", "git blame",
       "git remote", "git tag", "git stash list", "git rev-parse",
-      "node -e", "node --eval", "npx tsc --noEmit",
-      "sed -n", "python -c", "python3 -c",
+      "npx tsc --noEmit",
     ];
 
     if (readOnlyCommands.has(baseCmd)) return true;
     if (readOnlyPrefixes.some((p) => cmd.startsWith(p))) return true;
 
-    // Allow piped commands if all parts are read-only
-    if (cmd.includes("|") && !cmd.includes(">") && !cmd.includes(">>")) {
+    // Allow piped commands if all parts are read-only. Redirections were
+    // already rejected above, so a bare `|` here is a real pipeline.
+    if (cmd.includes("|")) {
       const parts = cmd.split("|").map((p) => p.trim());
       return parts.every((part) => {
         const partBase = part.replace(/^(\w+=\S+\s+)*/, "").split(/\s/)[0];

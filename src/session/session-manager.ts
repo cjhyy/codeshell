@@ -2,7 +2,7 @@
  * Session lifecycle manager.
  */
 
-import { mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { nanoid } from "nanoid";
@@ -77,7 +77,12 @@ export class SessionManager {
   saveState(state: SessionState): void {
     const sessionDir = join(this.sessionsDir, state.sessionId);
     mkdirSync(sessionDir, { recursive: true });
-    writeFileSync(join(sessionDir, "state.json"), JSON.stringify(state, null, 2), "utf-8");
+    // Atomic write: stage to .tmp, then rename. Protects against two processes
+    // clobbering each other's state.json mid-write.
+    const target = join(sessionDir, "state.json");
+    const tmp = `${target}.${process.pid}.${Date.now()}.tmp`;
+    writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
+    renameSync(tmp, target);
   }
 
   /**
