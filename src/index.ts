@@ -184,6 +184,39 @@ export type {
   ArenaExecutionLimits,
 } from "./arena/types.js";
 
+// ─── Arena: Iterate mode ────────────────────────────────────────
+// Multi-model authoring loop (tournament v1 → critique-revise rounds).
+// Use IterativeArena to produce a draft from scratch (code, PRD, design doc);
+// use Arena (above) to review an existing artifact.
+export {
+  IterativeArena,
+  defaultIterateConvergence,
+  iterateDiffRatio,
+  iterateCodeFormat,
+  iterateDocumentFormat,
+  getIterateFormat,
+} from "./arena/index.js";
+export type {
+  IterateConfig,
+  IterateResult,
+  IterateSubject,
+  IterateFormat,
+  IterateProgressEvent,
+  IterateFormatPack,
+  Draft,
+  DraftCandidate,
+  Critique,
+  CritiqueCategory,
+  CritiqueSeverity,
+  ConvergenceSignal,
+  Round,
+  AuthorRotation,
+  StoppedReason,
+  CheckpointFn,
+  CheckpointContext,
+  CheckpointAction,
+} from "./arena/index.js";
+
 // ─── Run (Managed Agent Lifecycle) ──────────────────────────────
 
 export {

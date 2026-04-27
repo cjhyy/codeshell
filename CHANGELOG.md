@@ -9,6 +9,18 @@ breaking.
 ## [Unreleased]
 
 ### Added
+- **`IterativeArena` — multi-model authoring loop.** Pipeline: tournament v1
+  (every participant writes a draft, the author merges anonymized drafts into
+  v1) → critique-revise rounds (parallel critics produce anchored critiques
+  with severity/category, author rewrites). Two formats out of the box: `code`
+  and `document`. Configurable convergence (default: stop when no blockers
+  remain and either all critiques are minor/praise or the draft barely moved),
+  optional `humanCheckpoint` for interactive use, and `authorRotation` of
+  `fixed` / `round-robin` / `best-critic`. Public API exported from
+  `src/index.ts`. New types: `IterateConfig`, `IterateResult`, `Draft`,
+  `Critique`, `ConvergenceSignal`, `Round`, etc.
+  - Use `IterativeArena` to **produce** a draft from scratch (PRD, design doc,
+    code module). Use the existing `Arena` to **review** an existing artifact.
 - `eslint.config.js` (ESLint v9 flat config) with typescript-eslint preset.
 - `LICENSE` (MIT) and `CHANGELOG.md` at the repository root.
 - `prepublishOnly` script to run typecheck + tests + build before publish.
@@ -62,3 +74,11 @@ breaking.
 - `TodoWrite` tool. It was a 6-line wrapper around `TaskCreate` and its
   presence confused models into using two equivalent interfaces. Use the
   `Task*` family (`TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`, etc.).
+
+### Changed
+- Arena research-phase prompts no longer hard-cap output at "exactly 3 to 6
+  findings". The new instruction asks for "as many findings as the topic
+  warrants — typically 5-15", with each `summary` field expected to be 80+
+  words with concrete evidence. Debate-turn prompts likewise replaced
+  "Be concise" with a 150-300 word target. This addresses persistent reports
+  that Arena output was too thin for non-trivial topics.

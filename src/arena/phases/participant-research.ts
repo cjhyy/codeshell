@@ -190,8 +190,10 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
             content:
               "You have gathered enough context. " +
               "Based on ALL the tool results above, output your findings NOW.\n\n" +
-              "Respond ONLY with JSON — 3 to 6 highest-confidence findings. " +
-              "Do NOT request any more tools. Do NOT apologize or explain. Just output the JSON.",
+              "Respond ONLY with JSON — output your highest-confidence findings " +
+              "(typically 5-15 for a substantive topic; each finding's `summary` " +
+              "should be 80+ words with concrete evidence). " +
+              "Do NOT request any more tools. Just output the JSON.",
           },
         ],
       });

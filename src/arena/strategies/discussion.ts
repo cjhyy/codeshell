@@ -43,7 +43,9 @@ export class DiscussionStrategy implements ArenaStrategyV2 {
       `The base context is intentionally lean — use tools as needed.\n\n` +
       `IMPORTANT RULES:\n` +
       `- Limit yourself to 3-5 tool rounds. Do NOT exhaustively read every file.\n` +
-      `- Output exactly 3 to 6 findings, ranked by confidence.\n` +
+      `- Output as many findings as the topic warrants — typically 5-15 for a non-trivial subject. ` +
+      `Each finding's "summary" should be 80+ words with concrete evidence and rationale, not a one-liner. ` +
+      `Rank by confidence.\n` +
       `- Focus on trade-offs, risks, and open questions. Strengths are optional.\n\n` +
       `Respond ONLY with JSON (no markdown fences):\n` +
       `{"contextSummary": "what you investigated and your overall take",` +

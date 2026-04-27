@@ -47,7 +47,9 @@ export class ReviewStrategy implements ArenaStrategyV2 {
       `IMPORTANT RULES:\n` +
       `- Limit yourself to 3-5 tool rounds. Do NOT exhaustively read every file.\n` +
       `- Focus on the HIGHEST-IMPACT findings. Quality over quantity.\n` +
-      `- Output exactly 3 to 6 findings, ranked by confidence.\n` +
+      `- Output as many findings as the topic warrants — typically 5-15 for a non-trivial subject. ` +
+      `Each finding's "summary" should be 80+ words with concrete evidence and rationale, not a one-liner. ` +
+      `Rank by confidence.\n` +
       `- Prioritize: risks > improvements > questions. Strengths are optional.\n\n` +
       `When ready, respond ONLY with JSON (no markdown fences):\n` +
       `{"contextSummary": "brief summary of what you investigated",` +
@@ -187,7 +189,9 @@ export class ReviewStrategy implements ArenaStrategyV2 {
       `Evidence: ${claim.evidenceRefs.join(", ") || "none"}\n\n` +
       `## Prior Debate\n${formatDebateHistory(priorTurns)}\n\n` +
       `## Evidence Digest\n${formatDigestForPrompt(digest)}\n\n` +
-      `State your position on this claim. Be concise and evidence-based.\n` +
+      `State your position on this claim. Build on prior turns: cite specific evidence, ` +
+      `acknowledge counter-arguments, and explain your reasoning in 150-300 words. ` +
+      `Brevity here means missed nuance — depth wins.\n` +
       `Respond ONLY with JSON:\n` +
       `{"stance": "support|oppose|narrow|uncertain", "summary": "your argument", "newEvidenceRefs": ["optional"]}`
     );

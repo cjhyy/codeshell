@@ -229,7 +229,9 @@ function buildFallbackDebatePrompt(
     `## Contested Claim\n` +
     `[${claim.claimId}] ${claim.finding.title}\n${claim.finding.summary}\n\n` +
     `## Prior Debate\n${turnsText}\n\n` +
-    `State your position on this claim. Be concise and evidence-based.\n` +
+    `State your position on this claim. Build on prior turns: cite specific evidence, ` +
+    `acknowledge counter-arguments, and explain your reasoning in 150-300 words. ` +
+    `Brevity here means missed nuance — depth wins.\n` +
     `Respond ONLY with JSON:\n` +
     `{"stance": "support|oppose|narrow|uncertain", "summary": "your argument", "newEvidenceRefs": ["optional"]}`
   );

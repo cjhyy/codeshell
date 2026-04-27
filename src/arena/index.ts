@@ -80,3 +80,37 @@ export type {
   ArenaExecutionLimits,
 } from "./types.js";
 export { isStrategyV2 } from "./types.js";
+
+// ─── Iterate Mode ────────────────────────────────────────────────
+//
+// Iterative authoring loop: tournament v1 → critique-revise rounds.
+// Use this for "produce a thing from scratch" (code, PRD, design doc).
+// For "review an existing thing" use the regular Arena class above.
+export { IterativeArena } from "./iterate/index.js";
+export {
+  defaultConvergence as defaultIterateConvergence,
+  diffRatio as iterateDiffRatio,
+  codeFormat as iterateCodeFormat,
+  documentFormat as iterateDocumentFormat,
+  getFormat as getIterateFormat,
+} from "./iterate/index.js";
+export type {
+  AuthorRotation,
+  CheckpointAction,
+  CheckpointContext,
+  CheckpointFn,
+  ConvergenceSignal,
+  Critique,
+  CritiqueCategory,
+  CritiqueSeverity,
+  Draft,
+  DraftCandidate,
+  IterateConfig,
+  IterateFormat,
+  IterateProgressEvent,
+  IterateResult,
+  IterateSubject,
+  Round,
+  StoppedReason,
+  FormatPack as IterateFormatPack,
+} from "./iterate/index.js";
