@@ -35,19 +35,19 @@ The important part is that the core is no longer tied to software engineering. T
 
 ```bash
 # Default CLI preset: terminal coding assistant
-npx code-shell
+npx @cjhyy/code-shell
 
 # Run the same framework as a general orchestrator
-npx code-shell --preset general
+npx @cjhyy/code-shell --preset general
 
 # One-shot execution with the general preset
-npx code-shell run --preset general "Create a long-running research plan and track it with tasks"
+npx @cjhyy/code-shell run --preset general "Create a long-running research plan and track it with tasks"
 ```
 
 ## Programmatic API
 
 ```ts
-import { Engine } from "code-shell";
+import { Engine } from "@cjhyy/code-shell";
 
 const generalEngine = new Engine({
   llm: {
@@ -68,13 +68,23 @@ const codingEngine = new Engine({
 });
 ```
 
+### Subpath imports
+
+Pull only what you need:
+
+```ts
+import { RunManager, FileRunStore } from "@cjhyy/code-shell/run";
+import { Arena, IterativeArena }     from "@cjhyy/code-shell/arena";
+import { defineProduct }             from "@cjhyy/code-shell/product";
+```
+
 ## Configuration
 
 CLI preset selection:
 
 ```bash
-npx code-shell --preset general
-npx code-shell --preset terminal-coding
+npx @cjhyy/code-shell --preset general
+npx @cjhyy/code-shell --preset terminal-coding
 ```
 
 Settings-based configuration:

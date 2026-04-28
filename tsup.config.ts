@@ -1,11 +1,17 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts", "src/cli/main.ts"],
+  entry: [
+    "src/index.ts",
+    "src/cli/main.ts",
+    "src/run/index.ts",
+    "src/arena/index.ts",
+    "src/product/index.ts",
+  ],
   format: ["esm", "cjs"],
   dts: false, // DTS disabled: @types/lodash portability issues in src/utils/
   splitting: true,
-  sourcemap: true,
+  sourcemap: false,
   clean: true,
   target: "node20",
   outDir: "dist",
