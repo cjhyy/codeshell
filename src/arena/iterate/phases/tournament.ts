@@ -26,10 +26,14 @@ export async function runTournamentCandidates(args: {
     signal?.throwIfAborted();
     const client = await createLLMClient({ ...p.llm, enableStreaming: false });
     const prompt = format.draftPrompt(subject, minDraftLength);
+    // Long-form generation needs a high output ceiling; the default 8k from
+    // LLMClientBase is too low for a substantive PRD or design doc and
+    // results in mid-sentence truncation that breaks downstream parsing.
     const resp = await client.createMessage({
       systemPrompt: prompt,
       messages: [{ role: "user", content: `Write your draft now.` }],
       tools: [],
+      maxTokens: 32_000,
       signal,
     });
     const content = resp.text.trim();
@@ -92,6 +96,7 @@ export async function mergeCandidatesToV1(args: {
     systemPrompt: prompt,
     messages: [{ role: "user", content: `Produce v1 now.` }],
     tools: [],
+    maxTokens: 32_000,
     signal,
   });
 
@@ -128,6 +133,7 @@ export async function singleAuthorV1(args: {
     systemPrompt: prompt,
     messages: [{ role: "user", content: `Write your draft now.` }],
     tools: [],
+    maxTokens: 32_000,
     signal,
   });
   return {

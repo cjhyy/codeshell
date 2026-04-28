@@ -82,3 +82,28 @@ breaking.
   words with concrete evidence. Debate-turn prompts likewise replaced
   "Be concise" with a 150-300 word target. This addresses persistent reports
   that Arena output was too thin for non-trivial topics.
+- IterativeArena critics can now use web search via the `enableWebSearch`
+  config flag. When enabled (and a SERPER_API_KEY / TAVILY_API_KEY /
+  SEARXNG_URL is configured), each critic runs a tool-use loop and may call
+  `web_search` / `web_fetch` up to `maxArgueToolRounds` times before
+  emitting critiques. New `Critique.evidence` field carries the URLs they
+  consulted. New `fabrication` value in `CritiqueCategory`. Format prompts
+  (draft / merge / revise / argue, both `code` and `document`) now ban
+  invented numbers, citations, and URLs; unknowable specifics must be
+  marked `[需调研]` / `[TBD: ...]`.
+
+### Fixed
+- IterativeArena: `extractTag` now tolerates LLM responses where the
+  closing `</v1_content>` / `</v_next_content>` marker is missing (e.g. due
+  to max_tokens truncation). Previously the parser fell back to "use the
+  whole response as content", which left literal `<v1_content>` text at the
+  start of v1.md.
+- IterativeArena: tournament draft / merge / single-author v1 / revise all
+  now request `maxTokens: 32000`. The previous 8k default truncated
+  long-form drafts mid-sentence and broke downstream parsing.
+- IterativeArena: convergence no longer treats "zero critiques" as
+  "all_minor_or_praise". Zero is almost always a parsing or timeout
+  failure on the critic side, not a sign the draft is done. The loop now
+  continues to the next round (and naturally stops at `maxRounds`).
+  Convergence also requires at least 3 critiques before declaring success
+  on the "no blockers / no majors" branch.

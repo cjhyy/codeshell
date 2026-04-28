@@ -102,6 +102,7 @@ export type {
   ConvergenceSignal,
   Critique,
   CritiqueCategory,
+  CritiqueEvidence,
   CritiqueSeverity,
   Draft,
   DraftCandidate,

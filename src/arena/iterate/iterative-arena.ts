@@ -101,6 +101,8 @@ export class IterativeArena {
         draft: currentDraft,
         critics: this.criticsForRound(r),
         round: r,
+        enableWebSearch: config.enableWebSearch,
+        maxToolRounds: config.maxArgueToolRounds,
         signal,
         onProgress: config.onProgress,
       });

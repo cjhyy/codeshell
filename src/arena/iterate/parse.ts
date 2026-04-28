@@ -9,11 +9,30 @@
 
 import type { Critique } from "./types.js";
 
-/** Extract content between `<tag>` and `</tag>`. Forgiving: trims whitespace; case-insensitive. */
+/**
+ * Extract content between `<tag>` and `</tag>`.
+ *
+ * Forgiving in two ways:
+ *  - Case-insensitive on the tag name.
+ *  - If the closing tag is missing (LLM hit max_tokens mid-output), we still
+ *    return everything after the opening tag, stopping at the next sibling
+ *    tag (e.g. the `<merge_rationale>` block) if present, otherwise EOF.
+ */
 export function extractTag(text: string, tag: string): string | null {
-  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, "i");
-  const m = text.match(re);
-  return m ? m[1].trim() : null;
+  // First try the well-formed case (open + close).
+  const closed = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, "i");
+  const closedMatch = text.match(closed);
+  if (closedMatch) return closedMatch[1].trim();
+
+  // Fall back to "open tag without close" — find <tag> and return content
+  // until the next opening tag of any kind, or EOF.
+  const opener = new RegExp(`<${tag}>`, "i");
+  const openMatch = opener.exec(text);
+  if (!openMatch) return null;
+  const after = text.slice(openMatch.index + openMatch[0].length);
+  const nextTag = after.search(/<[a-z_][\w]*>/i);
+  const body = nextTag >= 0 ? after.slice(0, nextTag) : after;
+  return body.trim();
 }
 
 /** Parse merge response: extract v1 content + rationale. Falls back to whole text if markers are missing. */
@@ -84,8 +103,19 @@ export function parseCritiquesResponse(text: string, criticName: string, idPrefi
 
   const out: Critique[] = [];
   for (let i = 0; i < arr.length; i++) {
-    const c = arr[i] as Partial<Critique>;
+    const c = arr[i] as Partial<Critique> & { evidence?: unknown };
     if (!c.anchor || !c.comment) continue;
+    let evidence: Critique["evidence"];
+    if (Array.isArray(c.evidence)) {
+      evidence = c.evidence
+        .filter((e): e is { url: string; snippet?: string } => {
+          if (typeof e !== "object" || e === null) return false;
+          const obj = e as { url?: unknown };
+          return typeof obj.url === "string";
+        })
+        .map((e) => ({ url: e.url, snippet: e.snippet }));
+      if (evidence.length === 0) evidence = undefined;
+    }
     out.push({
       id: `${idPrefix}-${criticName}-${i + 1}`,
       critic: criticName,
@@ -94,6 +124,7 @@ export function parseCritiquesResponse(text: string, criticName: string, idPrefi
       category: (c.category as Critique["category"]) ?? "other",
       comment: String(c.comment),
       suggestion: c.suggestion ? String(c.suggestion) : undefined,
+      evidence,
     });
   }
   return out;

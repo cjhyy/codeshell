@@ -26,6 +26,20 @@ Hard rules:
 - No "...", "(continued)", "see above", "TBD", or placeholders.
 - Don't pad with filler. Every section must carry information.
 - Length is a floor, not a target — go beyond it if the topic warrants.
+
+Factual discipline (CRITICAL — fabrication = blocker-level defect):
+- Do NOT invent specific numbers, percentages, dollar amounts, market sizes,
+  user-research counts, or "industry averages" you cannot verify.
+- Do NOT invent URLs, report IDs, document numbers, citation references.
+- Do NOT invent named people, companies, or product code-names.
+- For unknowable specifics, write a placeholder with the exact form:
+    [需调研: 具体说明]    e.g.  "[需调研: 实际行业流失率基准]"
+    [TBD: short reason]   e.g.  "[TBD: confirm Stripe rate limits]"
+  These placeholders are EXPECTED. Reviewers will not fault you for them.
+- General qualitative claims are fine ("annual growth typically in the
+  double digits"); specific numbers without a verifiable source are NOT.
+- If you have web-search tools available, USE them before stating any
+  specific number or citing any source.
 `;
 
 function formatCritiquesForPrompt(critiques: Critique[]): string {
@@ -97,12 +111,25 @@ Output format (literally — these markers will be parsed):
   argueSystem() {
     return `You are reviewing a code artifact. Find every meaningful issue.
 
+You may have access to a web_search tool — USE IT to verify any specific
+claim, library version, API behavior, or external reference made in the
+draft before deciding whether it's a fabrication.
+
 For each issue:
 - "anchor": quote 5-15 words verbatim from the draft to locate the issue.
 - "severity": "blocker" (must fix), "major" (should fix), "minor" (nice to fix), "nit" (style), or "praise" (good — don't gut this).
-- "category": "correctness" | "completeness" | "clarity" | "evidence" | "structure" | "style" | "other".
-- "comment": what's wrong and what you'd do.
+- "category": "correctness" | "completeness" | "clarity" | "evidence" | "structure" | "style" | "fabrication" | "other".
+- "comment": what's wrong and what you'd do. If you used web_search, cite the URL.
 - "suggestion": optional concrete fix.
+- "evidence": optional array of {url, snippet} pairs supporting your critique.
+
+FABRICATION DETECTION (top priority):
+Any specific number, citation, URL, version string, API endpoint, library
+function, or named entity that you cannot verify is a "fabrication"
+critique with severity = "blocker". Be especially suspicious of:
+- "Industry average is X%" / "Surveys show N=..."
+- Documentation URLs with suspiciously generic paths
+- Library/API names that "sound right" but you can't confirm exist
 
 Aim for 8-20 critiques. Include PRAISE for parts that are genuinely good — this prevents the author from accidentally gutting them in the next revision.
 
@@ -209,12 +236,29 @@ Output format (literally — these markers will be parsed):
   argueSystem() {
     return `You are reviewing a long-form document. Find every meaningful issue.
 
+You may have access to a web_search tool — USE IT to verify any specific
+number, citation, market figure, named survey, or external reference
+before deciding whether it's a fabrication.
+
 For each issue:
 - "anchor": quote 5-15 words verbatim from the document to locate the issue.
 - "severity": "blocker" | "major" | "minor" | "nit" | "praise".
-- "category": "correctness" | "completeness" | "clarity" | "evidence" | "structure" | "style" | "other".
-- "comment": what's wrong / missing / weak.
+- "category": "correctness" | "completeness" | "clarity" | "evidence" | "structure" | "style" | "fabrication" | "other".
+- "comment": what's wrong / missing / weak. If you used web_search, cite the URL.
 - "suggestion": optional concrete fix or content to add.
+- "evidence": optional array of {url, snippet} pairs supporting your critique.
+
+FABRICATION DETECTION (top priority):
+The document is far more likely to fail because of fabricated facts than
+because of missing sections. Treat every specific number / report ID /
+URL / dollar figure / "industry average" / named survey as suspect until
+verified. Mark as severity = "blocker" if:
+- The number cannot be found via web_search.
+- The cited URL doesn't resolve to the claimed source.
+- The "report ID" / "document number" appears made up.
+- The named survey / interviewee count cannot be traced.
+A draft full of citations that don't check out is worse than a draft
+that honestly writes "[需调研: ...]". Reward the latter.
 
 Aim for 8-20 critiques. Don't be polite — depth, missing sections, weak claims, and structural issues matter more than typos. Include PRAISE for genuinely strong parts so the author doesn't gut them on revision.
 

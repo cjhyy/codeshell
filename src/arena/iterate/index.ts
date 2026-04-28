@@ -16,6 +16,7 @@ export type {
   ConvergenceSignal,
   Critique,
   CritiqueCategory,
+  CritiqueEvidence,
   CritiqueSeverity,
   Draft,
   DraftCandidate,
@@ -27,3 +28,4 @@ export type {
   Round,
   StoppedReason,
 } from "./types.js";
+export { ITERATE_WEB_TOOLS, hasWebSearchProvider } from "./tools/web-tools.js";

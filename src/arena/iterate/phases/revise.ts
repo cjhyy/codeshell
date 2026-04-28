@@ -28,6 +28,7 @@ export async function runRevise(args: {
     systemPrompt: prompt,
     messages: [{ role: "user", content: `Produce v${previous.version + 1} now.` }],
     tools: [],
+    maxTokens: 32_000,
     signal,
   });
 

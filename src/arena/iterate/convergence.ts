@@ -61,8 +61,24 @@ export function defaultConvergence(args: {
     };
   }
 
+  // Special case: zero critiques is almost always a parsing/timeout failure
+  // on the critic side, NOT a sign of convergence. Treat as "running" so
+  // the next round has a chance — the loop will naturally stop at maxRounds.
+  if (totalCritiques === 0) {
+    return {
+      blockerCount,
+      majorCount,
+      totalCritiques,
+      diffFromPrevious,
+      shouldStop: false,
+      reason: "running",
+    };
+  }
+
   // Hard floor: no blockers AND no majors → all that's left is polish.
-  if (blockerCount === 0 && majorCount === 0) {
+  // Require at least 3 critiques so a single low-effort response can't
+  // declare false convergence.
+  if (blockerCount === 0 && majorCount === 0 && totalCritiques >= 3) {
     return {
       blockerCount,
       majorCount,

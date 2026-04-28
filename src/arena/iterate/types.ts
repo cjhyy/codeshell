@@ -61,7 +61,13 @@ export type CritiqueCategory =
   | "evidence"
   | "structure"
   | "style"
+  | "fabrication"
   | "other";
+
+export interface CritiqueEvidence {
+  url: string;
+  snippet?: string;
+}
 
 export interface Critique {
   id: string;
@@ -73,6 +79,8 @@ export interface Critique {
   comment: string;
   /** Optional concrete suggestion. */
   suggestion?: string;
+  /** Optional URLs the critic consulted to back up the critique. */
+  evidence?: CritiqueEvidence[];
 }
 
 // ─── Round ──────────────────────────────────────────────────────
@@ -163,6 +171,18 @@ export interface IterateConfig {
 
   /** Minimum content length per draft (chars). Used both as length budget hint and to retry-on-shrinkage. Default 800 for document, 200 for code. */
   minDraftLength?: number;
+
+  /**
+   * Whether critics get web_search/web_fetch tools during the argue phase.
+   * Requires SERPER_API_KEY / TAVILY_API_KEY / SEARXNG_URL in env. Default false.
+   * When true, each argue call becomes a tool-use loop (critics may search
+   * before producing critiques) — significantly more tokens and time, but
+   * dramatically reduces fabrication.
+   */
+  enableWebSearch?: boolean;
+
+  /** Cap tool-use rounds per critic per argue phase. Default 8. */
+  maxArgueToolRounds?: number;
 
   signal?: AbortSignal;
   onProgress?: (event: IterateProgressEvent) => void;

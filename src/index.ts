@@ -207,6 +207,7 @@ export type {
   DraftCandidate,
   Critique,
   CritiqueCategory,
+  CritiqueEvidence,
   CritiqueSeverity,
   ConvergenceSignal,
   Round,
