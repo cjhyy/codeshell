@@ -8,24 +8,24 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./run": {
+      "types": "./dist/run/index.d.ts",
       "import": "./dist/run/index.js",
-      "require": "./dist/run/index.cjs",
-      "types": "./dist/run/index.d.ts"
+      "require": "./dist/run/index.cjs"
     },
     "./arena": {
+      "types": "./dist/arena/index.d.ts",
       "import": "./dist/arena/index.js",
-      "require": "./dist/arena/index.cjs",
-      "types": "./dist/arena/index.d.ts"
+      "require": "./dist/arena/index.cjs"
     },
     "./product": {
+      "types": "./dist/product/index.d.ts",
       "import": "./dist/product/index.js",
-      "require": "./dist/product/index.cjs",
-      "types": "./dist/product/index.d.ts"
+      "require": "./dist/product/index.cjs"
     },
     "./package.json": "./package.json"
   },
