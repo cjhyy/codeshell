@@ -14,6 +14,7 @@ import { costTracker } from "../cost-tracker.js";
 import type { LLMConfig, PermissionMode } from "../../types.js";
 import { startInkRepl } from "../../ui/index.js";
 import type { AgentPresetName } from "../../preset/index.js";
+import { getInteractiveApprovalBackend } from "../../tool-system/permission.js";
 
 export type EffortLevel = "low" | "medium" | "high" | "max";
 
@@ -103,6 +104,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     sessionStorageDir: settings.session.storageDir,
     costStore: costTracker,
     mcpServers: settings.mcpServers,
+    approvalBackend: getInteractiveApprovalBackend(),
   });
 
   // 2. Create in-process transport pair

@@ -56,6 +56,10 @@ export interface RunManagerConfig {
   staleLockMs?: number;
   /** Optional evaluator to run on completion. Default: NoopEvaluator */
   evaluator?: Evaluator;
+  /** Tags applied to every submitted run unless already present. */
+  defaultTags?: string[];
+  /** Metadata merged into every submitted run. Submit input wins on conflicts. */
+  defaultMetadata?: Record<string, unknown>;
 }
 
 export class RunManager {
@@ -65,6 +69,8 @@ export class RunManager {
   private readonly lock: RunLock;
   private readonly heartbeat: Heartbeat;
   private readonly evaluator: Evaluator;
+  private readonly defaultTags: string[];
+  private readonly defaultMetadata: Record<string, unknown>;
   private readonly subscribers = new Map<string, Set<RunStreamCallback>>();
   private readonly abortControllers = new Map<string, AbortController>();
   /** Active execution handles — used to resolve pending approvals/input while Engine is suspended */
@@ -86,6 +92,8 @@ export class RunManager {
       intervalMs: config.heartbeatIntervalMs,
     });
     this.evaluator = config.evaluator ?? new NoopEvaluator();
+    this.defaultTags = config.defaultTags ?? [];
+    this.defaultMetadata = config.defaultMetadata ?? {};
 
     // Wire queue executor
     this.queue.setExecutor((runId) => this.executeRun(runId));
@@ -115,8 +123,8 @@ export class RunManager {
       latestApprovalId: null,
       summary: null,
       error: null,
-      tags: input.tags ?? [],
-      metadata: input.metadata ?? {},
+      tags: [...new Set([...this.defaultTags, ...(input.tags ?? [])])],
+      metadata: { ...this.defaultMetadata, ...(input.metadata ?? {}) },
     };
 
     await this.store.create(snapshot);

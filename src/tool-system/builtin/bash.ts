@@ -20,7 +20,7 @@ export const bashToolDef: ToolDefinition = {
       command: { type: "string", description: "The shell command to execute" },
       timeout: {
         type: "number",
-        description: "Timeout in milliseconds (default: 120000, max: 600000)",
+        description: "Timeout in milliseconds (default: 120000). Outer registry caps at 1h.",
       },
       description: {
         type: "string",
@@ -37,7 +37,7 @@ export async function bashTool(args: Record<string, unknown>): Promise<string> {
   const command = args.command as string;
   if (!command) return "Error: command is required";
 
-  const timeout = Math.min((args.timeout as number) || 120_000, 600_000);
+  const timeout = (args.timeout as number) || 120_000;
 
   try {
     const { stdout, stderr } = await execAsync(command, {

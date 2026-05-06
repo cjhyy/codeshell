@@ -6,6 +6,13 @@ import type { RegisteredTool, ToolDefinition, ToolResult } from "../types.js";
 import { ConfigError, ToolNotFoundError, ToolExecutionError, ToolTimeoutError } from "../exceptions.js";
 import { BUILTIN_TOOLS, type BuiltinToolFn } from "./builtin/index.js";
 
+/**
+ * Default execution timeout for any tool that does not declare its own
+ * timeoutMs at registration time. Tools that need to run longer (Agent,
+ * Arena, Bash, custom long-running tools) should set timeoutMs explicitly.
+ */
+export const DEFAULT_TOOL_TIMEOUT_MS = 120_000;
+
 export interface ToolRegistryOptions {
   builtinTools?: readonly string[];
 }
@@ -79,12 +86,10 @@ export class ToolRegistry {
       throw new ToolExecutionError(name, "No executor registered for this tool");
     }
 
-    // Tools that run for an extended period use a generous timeout (30 min)
-    // instead of the default 2 min, but never truly infinite.
-    const LONG_TIMEOUT_TOOLS = new Set(["Agent", "Arena"]);
-    const isLongRunning = LONG_TIMEOUT_TOOLS.has(name);
-    const defaultTimeout = isLongRunning ? 1_800_000 : 120_000;
-    const timeout = options?.timeoutMs ?? defaultTimeout;
+    // Tool timeout precedence:
+    //   options.timeoutMs (per-call override) > tool.timeoutMs (declared at registration) > default 120s.
+    // To run longer, declare timeoutMs on the tool (e.g. Agent/Arena: 30min, Bash: 1h).
+    const timeout = options?.timeoutMs ?? tool.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS;
     const parentSignal = options?.signal;
     const id = `tool_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 

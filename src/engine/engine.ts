@@ -8,6 +8,8 @@ import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend, type ApprovalBackend } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
+import type { HookEventName } from "../hooks/events.js";
+import type { HookHandler } from "../hooks/registry.js";
 import { ContextManager } from "../context/manager.js";
 import { PromptComposer } from "../prompt/composer.js";
 import { SessionManager, type SessionBundle } from "../session/session-manager.js";
@@ -48,6 +50,7 @@ export interface EngineConfig {
   sessionStorageDir?: string;
   maxContextTokens?: number;
   approvalBackend?: ApprovalBackend;
+  hooks?: EngineHookConfig[];
   askUser?: AskUserFn;
   mcpServers?: Record<string, import("../types.js").MCPServerConfig>;
   /**
@@ -57,6 +60,13 @@ export interface EngineConfig {
    * Engine doesn't persist cost state — it's a UI concern.
    */
   costStore?: CostStateStore;
+}
+
+export interface EngineHookConfig {
+  event: HookEventName;
+  handler: HookHandler;
+  priority?: number;
+  name?: string;
 }
 
 export interface EngineResult {
@@ -85,6 +95,9 @@ export class Engine {
       }),
     });
     this.hooks = new HookRegistry();
+    for (const hook of config.hooks ?? []) {
+      this.hooks.register(hook.event, hook.handler, hook.priority, hook.name);
+    }
     this.sessionManager = new SessionManager(config.sessionStorageDir);
 
     // Initialize model pool from settings
@@ -176,7 +189,9 @@ export class Engine {
 
     if (options?.sessionId) {
       session = this.sessionManager.resume(options.sessionId);
-      messages = session.transcript.toMessages();
+      messages = this.compactedMessagesBySession.get(options.sessionId)
+        ? [...this.compactedMessagesBySession.get(options.sessionId)!]
+        : session.transcript.toMessages();
       // Restore cost state from previous session, if the caller injected a store
       if (session.state.costState && this.config.costStore) {
         this.config.costStore.restore(session.state.costState);
@@ -236,7 +251,7 @@ export class Engine {
           ? "approve-all"
           : mode === "dontAsk"
             ? "deny-all"
-            : "approve-all",
+            : "deny-all",
       );
     }
 
@@ -298,6 +313,8 @@ export class Engine {
     if (userContextMsg) {
       messages.unshift(userContextMsg);
     }
+    this.lastSessionId = session.state.sessionId;
+    this.lastMessages = messages;
 
     // Wire up LLM summarization for context compaction
     // Uses a lightweight call without tools
@@ -380,6 +397,11 @@ export class Engine {
     );
 
     const result = await turnLoop.run(messages);
+    this.lastMessages = result.messages;
+    this.compactedMessagesBySession.set(
+      session.state.sessionId,
+      this.stripUserContextMessage(result.messages, userContextMsg),
+    );
 
     logger.info("engine.done", {
       sessionId: session.state.sessionId,
@@ -480,18 +502,34 @@ export class Engine {
    * Returns token stats before/after.
    */
   forceCompact(): { before: number; after: number; strategy: string } {
-    if (!this.lastContextManager || !this.lastMessages) {
+    const sessionId = this.lastSessionId;
+    if (!this.lastContextManager || !sessionId) {
       return { before: 0, after: 0, strategy: "none (no active session)" };
     }
     const { estimateTokens } = require("../context/compaction.js");
-    const before = estimateTokens(this.lastMessages);
-    this.lastMessages = this.lastContextManager.manage(this.lastMessages);
-    const after = estimateTokens(this.lastMessages);
+    const sourceMessages =
+      this.compactedMessagesBySession.get(sessionId) ??
+      this.sessionManager.resume(sessionId).transcript.toMessages();
+    const before = estimateTokens(sourceMessages);
+    const compacted = this.lastContextManager.manage(sourceMessages);
+    const after = estimateTokens(compacted);
+    this.compactedMessagesBySession.set(sessionId, compacted);
+    this.lastMessages = compacted;
     return {
       before,
       after,
       strategy: before === after ? "no compaction needed" : "compacted",
     };
+  }
+
+  private stripUserContextMessage(
+    messages: Message[],
+    userContextMsg: Message | null,
+  ): Message[] {
+    if (!userContextMsg || messages[0] !== userContextMsg) {
+      return [...messages];
+    }
+    return messages.slice(1);
   }
 
   /**
@@ -513,5 +551,7 @@ export class Engine {
 
   /** Track last context manager and messages for /compact support. */
   private lastContextManager: ContextManager | undefined;
-  private lastMessages: import("../types.js").Message[] | undefined;
+  private lastMessages: Message[] | undefined;
+  private lastSessionId: string | undefined;
+  private compactedMessagesBySession = new Map<string, Message[]>();
 }

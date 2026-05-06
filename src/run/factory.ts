@@ -21,7 +21,7 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { LLMConfig, PermissionMode } from "../types.js";
-import type { EngineConfig } from "../engine/engine.js";
+import type { EngineConfig, EngineHookConfig } from "../engine/engine.js";
 import type { Evaluator } from "./Evaluator.js";
 import { RunManager } from "./RunManager.js";
 import { FileRunStore } from "./FileRunStore.js";
@@ -68,6 +68,15 @@ export interface CreateRunManagerOptions {
 
   /** Optional evaluator for run completion. */
   evaluator?: Evaluator;
+
+  /** Hooks registered into each Engine instance before run execution. */
+  hooks?: EngineHookConfig[];
+
+  /** Tags applied to every submitted run unless already present. */
+  defaultTags?: string[];
+
+  /** Metadata merged into every submitted run. Submit input wins on conflicts. */
+  defaultMetadata?: Record<string, unknown>;
 }
 
 /**
@@ -91,9 +100,12 @@ export function createRunManager(options: CreateRunManagerOptions): RunManager {
       disabledBuiltinTools: options.disabledBuiltinTools,
       customSystemPrompt: options.customSystemPrompt,
       appendSystemPrompt: options.appendSystemPrompt,
+      hooks: options.hooks,
     },
     concurrency: options.concurrency ?? 1,
     runsDir,
     evaluator: options.evaluator,
+    defaultTags: options.defaultTags,
+    defaultMetadata: options.defaultMetadata,
   });
 }

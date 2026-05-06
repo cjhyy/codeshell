@@ -36,6 +36,12 @@ export interface TurnLoopDeps {
   tools: import("../types.js").ToolDefinition[];
 }
 
+export interface TurnLoopResult {
+  text: string;
+  reason: TerminalReason;
+  messages: Message[];
+}
+
 export class TurnLoop {
   private turnCount = 0;
   /** Tool IDs already emitted as tool_use_start during streaming (to avoid duplicates). */
@@ -49,7 +55,7 @@ export class TurnLoop {
   /**
    * Run the multi-turn agent loop until completion.
    */
-  async run(initialMessages: Message[]): Promise<{ text: string; reason: TerminalReason }> {
+  async run(initialMessages: Message[]): Promise<TurnLoopResult> {
     let messages = [...initialMessages];
     let finalText = "";
     let consecutiveToolOnlyTurns = 0;
@@ -121,19 +127,19 @@ export class TurnLoop {
             } catch (retryErr) {
               if (!(retryErr instanceof ContextLimitError)) {
                 this.config.onStream?.({ type: "error", error: (retryErr as Error).message });
-                return { text: finalText, reason: "model_error" };
+                return { text: finalText, reason: "model_error", messages };
               }
             }
           }
           if (!recovered) {
             this.patchOrphanedToolUses(messages);
             this.config.onStream?.({ type: "error", error: "Context limit exceeded after 3 recovery attempts" });
-            return { text: finalText, reason: "prompt_too_long" };
+            return { text: finalText, reason: "prompt_too_long", messages };
           }
         } else {
           this.patchOrphanedToolUses(messages);
           this.config.onStream?.({ type: "error", error: (err as Error).message });
-          return { text: finalText, reason: "model_error" };
+          return { text: finalText, reason: "model_error", messages };
         }
       }
 
@@ -179,7 +185,7 @@ export class TurnLoop {
 
       // Aborted?
       if (this.config.signal?.aborted) {
-        return { text: finalText, reason: "aborted_streaming" };
+        return { text: finalText, reason: "aborted_streaming", messages };
       }
 
       // Accumulate text
@@ -205,7 +211,8 @@ export class TurnLoop {
           turnNumber: this.turnCount,
           hasToolUse: false,
         });
-        return { text: finalText, reason: "completed" };
+        messages.push({ role: "assistant", content: finalText });
+        return { text: finalText, reason: "completed", messages };
       }
 
       // Tool execution phase
@@ -290,7 +297,8 @@ export class TurnLoop {
           type: "assistant_message",
           message: { role: "assistant", content: finalText },
         });
-        return { text: finalText, reason: "completed" };
+        messages.push({ role: "assistant", content: finalText });
+        return { text: finalText, reason: "completed", messages };
       }
       if (budgetDecision === "nudge") {
         messages.push({
@@ -341,9 +349,10 @@ export class TurnLoop {
         type: "assistant_message",
         message: { role: "assistant", content: finalText },
       });
+      messages.push({ role: "assistant", content: finalText });
     }
     this.config.onStream?.({ type: "turn_complete", reason: "max_turns" });
-    return { text: finalText, reason: "max_turns" };
+    return { text: finalText, reason: "max_turns", messages };
   }
 
   /**

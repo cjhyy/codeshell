@@ -5,6 +5,7 @@ import { ToolExecutor } from "../src/tool-system/executor.js";
 import { PermissionClassifier } from "../src/tool-system/permission.js";
 import { ContextManager } from "../src/context/manager.js";
 import { SettingsManager } from "../src/settings/manager.js";
+import { Engine } from "../src/engine/engine.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -90,6 +91,26 @@ describe("HookRegistry", () => {
     const result = await hr.emit("on_turn_start");
     expect(order).toEqual([1]); // second hook not called
     expect(result.stop).toBe(true);
+  });
+});
+
+describe("Engine hooks", () => {
+  it("registers configured hooks on construction", () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "engine-hooks-"));
+    const engine = new Engine({
+      llm: { provider: "openai", model: "test", apiKey: "test" },
+      sessionStorageDir: tmpDir,
+      hooks: [
+        {
+          event: "on_agent_start",
+          handler: async () => ({ messages: ["started"] }),
+          name: "test_hook",
+        },
+      ],
+    });
+
+    expect(engine.getHookRegistry().countHandlers("on_agent_start")).toBe(1);
+    rmSync(tmpDir, { recursive: true, force: true });
   });
 });
 

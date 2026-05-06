@@ -160,11 +160,14 @@ export function defineProduct(
       disabledBuiltinTools: adapter?.disableTools,
       customSystemPrompt: presetDef.customPrompt,
       appendSystemPrompt: presetDef.appendPrompt,
+      hooks: adapter?.hooks,
       customTools: customToolEntries.length > 0 ? customToolEntries : undefined,
     },
     concurrency: contract?.concurrency ?? 1,
     runsDir,
     evaluator,
+    defaultTags: contract?.defaultTags,
+    defaultMetadata: contract?.defaultMetadata,
   });
 
   return { manager, preset: agentPreset, customTools };

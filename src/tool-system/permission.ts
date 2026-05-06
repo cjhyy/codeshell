@@ -116,9 +116,10 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     if (toolRule === "allow") return { approved: true };
     if (toolRule === "deny") return { approved: false };
 
-    // If no prompt function, fall back to auto-approve for safety
+    // If no prompt function is wired, fail closed. Interactive backends are
+    // used by UIs that must explicitly provide a prompt callback.
     if (!this.promptFn) {
-      return { approved: true };
+      return { approved: false, reason: "interactive approval backend has no prompt function" };
     }
 
     const result = await this.promptFn(req);

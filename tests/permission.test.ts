@@ -3,6 +3,7 @@ import {
   PermissionClassifier,
   HeadlessApprovalBackend,
   AutoApprovalBackend,
+  InteractiveApprovalBackend,
 } from "../src/tool-system/permission.js";
 
 describe("PermissionClassifier", () => {
@@ -115,5 +116,19 @@ describe("AutoApprovalBackend", () => {
       riskLevel: "high",
     });
     expect(r.approved).toBe(false);
+  });
+});
+
+describe("InteractiveApprovalBackend", () => {
+  it("fails closed when no prompt function is configured", async () => {
+    const b = new InteractiveApprovalBackend();
+    const r = await b.requestApproval({
+      toolName: "Bash",
+      args: { command: "rm -rf /" },
+      description: "Dangerous",
+      riskLevel: "high",
+    });
+    expect(r.approved).toBe(false);
+    expect(r.reason).toContain("no prompt function");
   });
 });

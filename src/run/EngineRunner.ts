@@ -9,7 +9,7 @@
  *   - Return execution result (does NOT manage run state transitions)
  */
 
-import { Engine, type EngineConfig, type EngineResult } from "../engine/engine.js";
+import { Engine, type EngineConfig, type EngineHookConfig, type EngineResult } from "../engine/engine.js";
 import type { LLMConfig, StreamCallback, RegisteredTool } from "../types.js";
 import type { RunSnapshot, RunExecutionContext, RunExecutionResult } from "./types.js";
 import {
@@ -78,6 +78,8 @@ export interface EngineRunnerConfig {
   mcpServers?: EngineConfig["mcpServers"];
   /** Custom tools registered by the product adapter. */
   customTools?: CustomToolEntry[];
+  /** Hooks registered into each Engine instance before run execution. */
+  hooks?: EngineHookConfig[];
 }
 
 // ─── EngineRunner (built-in RunExecutor) ────────────────────────
@@ -134,6 +136,7 @@ export class EngineRunner implements RunExecutor {
       appendSystemPrompt: this.config.appendSystemPrompt,
       sessionStorageDir: this.config.sessionStorageDir,
       mcpServers: this.config.mcpServers,
+      hooks: this.config.hooks,
       approvalBackend,
       askUser: askUserFn,
       ...context.engineConfigOverrides,

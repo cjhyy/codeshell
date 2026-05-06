@@ -8,6 +8,45 @@ breaking.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.1] - 2026-04-30
+
+### Changed (breaking)
+- **Tool timeout system rewritten.** Removed the hardcoded
+  `LEGACY_LONG_TIMEOUT_TOOLS = {Agent, Arena}` whitelist in
+  `tool-system/registry.ts`. Tools now declare their own timeout via
+  `RegisteredTool.timeoutMs` at registration time. Precedence:
+  `executeTool(opts.timeoutMs)` > `tool.timeoutMs` > `DEFAULT_TOOL_TIMEOUT_MS`
+  (120s). Custom long-running tools registered via `engine.registerCustomTool`
+  can now set a higher timeout instead of being silently capped at 120s.
+- **Bash internal 600s cap removed.** `bash.ts` no longer clamps the
+  user-supplied `timeout` argument. The outer registry caps via the tool's
+  declared `timeoutMs` (default 1h for Bash). Long-running shell loops
+  (`until cond; do ...; done`) are now feasible.
+- **Agent `max_turns` upper bound (30) removed.** Sub-agents that need to do
+  more turns (deep research, large refactors) are no longer artificially
+  capped. Default remains 15.
+- **Sub-agent LLM call timeout (60s) removed.** `agent.ts` no longer clamps
+  `subAgentConfig.llm.timeout` to 60s, which was breaking slow models
+  (e.g. extended thinking).
+
+### Added
+- **`Agent(run_in_background: true)`** — fire-and-forget sub-agents. Returns
+  an `agent_id` immediately instead of blocking the parent turn. The agent
+  runs detached in the same process; restarting loses its state.
+- **`AgentStatus(agent_id?)`** — query background agent state
+  (running / completed / failed / cancelled), or list all when `agent_id` is
+  omitted. Returns the result text once completed.
+- **`AgentCancel(agent_id)`** — abort a running background agent.
+- New module `src/tool-system/builtin/agent-registry.ts` — in-process
+  registry for async agent handles.
+
+### Notes
+- Cross-process / restart-survivable long tasks still belong to `RunManager`
+  in `@cjhyy/code-shell/run`, not to `Agent(run_in_background)`. The split
+  mirrors Claude Code's REPL/Agent-tool/Routines architecture.
+
+## [0.1.0-alpha.0] - 2026-04-28
+
 ### Added
 - **`IterativeArena` — multi-model authoring loop.** Pipeline: tournament v1
   (every participant writes a draft, the author merges anonymized drafts into

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { FileRunStore } from "../src/run/FileRunStore.js";
 import { RunQueue } from "../src/run/RunQueue.js";
+import { RunManager } from "../src/run/RunManager.js";
 import { VALID_TRANSITIONS } from "../src/run/types.js";
 import type { RunSnapshot, RunStatus } from "../src/run/types.js";
 
@@ -112,6 +113,52 @@ describe("RunQueue", () => {
     const cancelled = queue.cancel("a");
     expect(cancelled).toBe(true);
     expect(queue.isPending("a")).toBe(false);
+  });
+});
+
+describe("RunManager defaults", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "run-manager-defaults-"));
+  });
+
+  afterEach(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+  it("applies default tags and metadata on submit", async () => {
+    const store = new FileRunStore(tmpDir);
+    const manager = new RunManager({
+      store,
+      runsDir: tmpDir,
+      defaultTags: ["product", "prd"],
+      defaultMetadata: { owner: "platform", priority: "normal" },
+      executor: {
+        execute: async () => ({
+          result: {
+            text: "ok",
+            reason: "completed",
+            sessionId: "session-test",
+            turnCount: 1,
+          },
+          handle: {
+            resolveApproval: () => false,
+            resolveInput: () => false,
+            hasPendingApproval: () => false,
+            hasPendingInput: () => false,
+          },
+        }),
+      },
+    });
+
+    const run = await manager.submit({
+      objective: "test defaults",
+      tags: ["prd", "urgent"],
+      metadata: { priority: "high" },
+    });
+
+    expect(run.tags).toEqual(["product", "prd", "urgent"]);
+    expect(run.metadata).toEqual({ owner: "platform", priority: "high" });
+    await manager.shutdown();
   });
 });
 

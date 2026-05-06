@@ -56,6 +56,12 @@ export interface RegisteredTool {
   permissionDefault: PermissionDecision;
   isConcurrencySafe?: boolean;
   isReadOnly?: boolean;
+  /**
+   * Override the default tool execution timeout (ms).
+   * Falls back to DEFAULT_TOOL_TIMEOUT_MS (120s) if unset.
+   * The caller of executeTool() can still override via options.timeoutMs.
+   */
+  timeoutMs?: number;
 }
 
 // ─── Transcript Events ────────────────────────────────────────────

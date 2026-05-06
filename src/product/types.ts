@@ -21,8 +21,8 @@
 
 import type { PermissionRule, MCPServerConfig } from "../types.js";
 import type { Evaluator } from "../run/Evaluator.js";
-import type { HookEventName } from "../hooks/events.js";
 import type { RegisteredTool } from "../types.js";
+import type { EngineHookConfig } from "../engine/engine.js";
 
 // ─── 1. Preset (brain) ──────────────────────────────────────────
 
@@ -91,12 +91,7 @@ export interface ProductAdapter {
    * Hooks to register for this product.
    * Key: hook event name, Value: handler function.
    */
-  hooks?: Array<{
-    event: HookEventName;
-    handler: (context: Record<string, unknown>) => Promise<Record<string, unknown>>;
-    priority?: number;
-    name?: string;
-  }>;
+  hooks?: EngineHookConfig[];
 }
 
 // ─── 3. Contract (quality) ───────────────────────────────────────

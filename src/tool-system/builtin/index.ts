@@ -12,7 +12,11 @@ import { bashToolDef, bashTool } from "./bash.js";
 import { webSearchToolDef, webSearchTool } from "./web-search.js";
 import { webFetchToolDef, webFetchTool } from "./web-fetch.js";
 import { askUserToolDef, askUserTool } from "./ask-user.js";
-import { agentToolDef, agentTool } from "./agent.js";
+import {
+  agentToolDef, agentTool,
+  agentStatusToolDef, agentStatusTool,
+  agentCancelToolDef, agentCancelTool,
+} from "./agent.js";
 import { enterPlanModeToolDef, enterPlanModeTool, exitPlanModeToolDef, exitPlanModeTool } from "./plan.js";
 import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
 import {
@@ -103,6 +107,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       permissionDefault: "ask",
       isReadOnly: false,
       isConcurrencySafe: false,
+      timeoutMs: 3_600_000, // 1h — supports long-running shell loops (e.g. `until` polling)
     },
     execute: bashTool,
   },
@@ -143,8 +148,29 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       permissionDefault: "allow",
       isReadOnly: true,
       isConcurrencySafe: true,
+      timeoutMs: 1_800_000, // 30min — sub-agent runs may execute many tool calls
     },
     execute: agentTool,
+  },
+  {
+    definition: {
+      ...agentStatusToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: agentStatusTool,
+  },
+  {
+    definition: {
+      ...agentCancelToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: agentCancelTool,
   },
   {
     definition: {
@@ -429,6 +455,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       permissionDefault: "ask",
       isReadOnly: true,
       isConcurrencySafe: false,
+      timeoutMs: 1_800_000, // 30min — multi-model debate rounds take time
     },
     execute: arenaTool,
   },
