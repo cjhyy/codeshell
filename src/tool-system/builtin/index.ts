@@ -6,6 +6,7 @@ import type { RegisteredTool } from "../../types.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
 import { editToolDef, editTool } from "./edit.js";
+import { applyPatchToolDef, applyPatchTool } from "./apply-patch/index.js";
 import { globToolDef, globTool } from "./glob.js";
 import { grepToolDef, grepTool } from "./grep.js";
 import { bashToolDef, bashTool } from "./bash.js";
@@ -79,6 +80,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: editTool,
+  },
+  {
+    definition: {
+      ...applyPatchToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: applyPatchTool,
   },
   {
     definition: {

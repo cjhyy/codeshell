@@ -175,3 +175,11 @@ bun run tsc --noEmit
 ```
 
 `bun run tsc --noEmit` currently reports many pre-existing repo-wide issues outside the preset/framework changes, so treat typecheck as a global health signal rather than a clean gate for just this slice.
+
+## Acknowledgments
+
+The `ApplyPatch` tool (`src/tool-system/builtin/apply-patch/`) is adapted from
+[OpenAI Codex `codex-rs/apply-patch`](https://github.com/openai/codex/tree/main/codex-rs/apply-patch),
+licensed under the Apache License 2.0. See `NOTICE.md` and `LICENSE-codex` in
+that directory for details, including the intentional behavioral divergence
+where our applier rolls back partial writes on failure.

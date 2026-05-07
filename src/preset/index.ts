@@ -35,6 +35,7 @@ const GENERAL_BUILTIN_TOOLS = [
   "Read",
   "Write",
   "Edit",
+  "ApplyPatch",
   "Glob",
   "Grep",
   "Bash",

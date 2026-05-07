@@ -161,7 +161,7 @@ CLI
 
 ## 5. 目录分层建议
 
-为了避免仓库继续“主干”和“遗留大应用层”混在一起，建议用下面的视角看目录。
+建议用下面的视角看目录。
 
 ### 5.1 Active Core
 
@@ -190,62 +190,30 @@ CLI
 
 这些目录可以保留，但更适合被看作扩展能力，而不是产品身份本身：
 
-- `src/services/mcp`
-- `src/server`
 - `src/remote`
 - `src/git`
-- `src/entrypoints/sdk`
+- `src/agent`
+- `src/cron`
+- `src/lsp`
+- `src/plugins`
+- `src/hooks`
+- `src/voice`
+- `src/native-ts`
 
 它们有价值，但不应反过来主导项目定位。
 
-### 5.3 Transition Or Legacy
-
-这部分目录目前更像另一个更重的应用层、旧体系或尚未收敛的代码岛：
-
-- `src/entrypoints/cli.tsx`
-- `src/commands.ts`
-- 大体量的 `src/components/`
-- 大体量的 `src/screens/`
-- `src/state/`
-- `src/tasks/`
-- 大量 `src/hooks/`
-- `src/tools/`
-- `src/services/tools/`
-- `src/bridge/`
-- `src/buddy/`
-
-这些目录不一定都是“死代码”，但它们明显不属于当前最小可解释主路径。
-
-比较稳妥的判断是：
-
-- 它们可能来自更完整的桌面/富交互 CLI 体系
-- 它们贡献了大量类型噪音和理解成本
-- 在没有重新纳入主入口之前，不应把它们当作当前架构核心
+> 注：早期版本中存在的 `src/components/`、`src/screens/`、`src/state/`、`src/tasks/`、`src/tools/`、`src/services/tools/`、`src/bridge/`、`src/buddy/`、`src/entrypoints/` 等遗留目录已在 alpha.1 之前的清理过程中移除。
 
 ## 6. 当前仓库健康度
 
-从当前仓库状态看，CodeShell 主干已经具备可运行性，但全仓还没有完全收敛。
+CodeShell 主干已经收敛，分层清晰、可构建可执行。
 
-### 6.1 好消息
+### 6.1 现状
 
-- `build` 可以通过
-- 主 CLI 路径是连通的
-- 测试大多数可以通过
-
-这说明“当前主路径”不是概念设计，而是已经可以构建和执行。
-
-### 6.2 风险点
-
-- `typecheck` 还没有收敛
-- 旧入口、feature-gated 路径、Bun 宏相关代码仍然很多
-- `tsconfig` 里还引用了部分已不存在的文件
-- 仓库里存在两套工具体系和两套 UI/应用层痕迹
-
-这意味着：
-
-- 运行主干已经可用
-- 但仓库边界还不够清晰
-- 现在最大的风险不是“主干不可行”，而是“定位清楚但代码未分层清楚”
+- `build` 通过
+- 主 CLI 路径连通
+- 主要测试通过
+- 早期遗留目录已基本清理完毕，仓库边界明确
 
 ## 7. 对外定位建议
 
@@ -267,15 +235,11 @@ CodeShell 是一个面向终端与无头场景的通用 AI Agent 编排框架，
 
 这些说法要么把它说重了，要么把它说窄了。
 
-## 8. 后续重构建议
+## 8. 后续演进方向
 
-如果后面要继续收敛仓库，优先级建议如下：
-
-1. 明确 `core / preset / legacy` 三层边界
-2. 让 `tsconfig` 和当前主干目录重新对齐
-3. 为当前主路径补一份最小架构图和模块依赖说明
-4. 把旧的大应用层入口从主干叙事中剥离
-5. 最终让 `general` preset 成为真正的一等公民，而不是只停留在 README 的定位里
+1. 让 `general` preset 成为真正的一等公民，而不是只停留在 README 的定位里
+2. 为当前主路径补一份最小架构图和模块依赖说明
+3. 持续收窄 Arena 公共 API 表面，区分 stable 与 experimental
 
 ## 9. 一句话总结
 
