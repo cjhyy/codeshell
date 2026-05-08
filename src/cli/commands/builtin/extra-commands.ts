@@ -164,6 +164,54 @@ export const extraCommands: SlashCommand[] = [
     },
   },
 
+  // ─── /arena-status — show what Arena would do right now ──────
+  // Renamed from /arena to avoid shadowing the launcher in core-commands.
+
+  {
+    name: "/arena-status",
+    aliases: ["/arena?"],
+    group: "config",
+    description: "Show Arena's current configuration (participants, endpoint, compatibility)",
+    usage: "/arena-status",
+    execute: async (_arg, ctx) => {
+      try {
+        const result = await ctx.client.query("arena_status");
+        const status = result.data as {
+          endpoint?: string;
+          poolSize: number;
+          defaultParticipants: Array<{
+            name: string;
+            model: string;
+            source: "pool" | "preset" | "raw";
+            compatible: boolean;
+            reason?: string;
+          }>;
+        };
+
+        const lines: string[] = [];
+        lines.push(`Endpoint: ${status.endpoint ?? chalk.dim("(none)")}`);
+        lines.push(`Pool size: ${status.poolSize}`);
+        lines.push("");
+        lines.push("Default participants (used when 'participants' is not specified):");
+        if (status.defaultParticipants.length === 0) {
+          lines.push(chalk.dim("  (none)"));
+        } else {
+          for (const p of status.defaultParticipants) {
+            const tag = p.compatible
+              ? chalk.green("ok")
+              : chalk.red(`incompatible: ${p.reason ?? "unknown"}`);
+            lines.push(`  ${chalk.cyan(p.name.padEnd(16))} ${p.model.padEnd(40)} [${p.source}] ${tag}`);
+          }
+        }
+        lines.push("");
+        lines.push(chalk.dim("Override at call time: Arena({ participants: [\"key1\", \"key2\"], ... })"));
+        ctx.addStatus(lines.join("\n"));
+      } catch (err) {
+        ctx.addStatus(`Error: ${(err as Error).message}`);
+      }
+    },
+  },
+
   // ─── /login /logout — API key management ───────────────────────
 
   {
@@ -189,14 +237,13 @@ export const extraCommands: SlashCommand[] = [
         ctx.addStatus("✓ API key 已保存。重启 code-shell 生效。");
         return;
       }
-      // Interactive mode: run full onboarding wizard
-      ctx.addStatus("启动配置向导... (完成后需要重启 code-shell)");
-      try {
-        const { reconfigure } = await import("../../onboarding.js");
-        await reconfigure();
-        ctx.addStatus("✓ 配置完成。请重启 code-shell 以使新配置生效。");
-      } catch (err) {
-        ctx.addStatus(`配置失败: ${(err as Error).message}`);
+      // Interactive mode: open the Ink-rendered wizard inside the REPL.
+      // Falls back with a message if the host UI didn't wire up the hook
+      // (e.g. when running outside the Ink App).
+      if (ctx.startOnboarding) {
+        ctx.startOnboarding();
+      } else {
+        ctx.addStatus("配置向导仅在 REPL 中可用。请重启 code-shell 重新进入。");
       }
     },
   },
@@ -501,6 +548,39 @@ export const extraCommands: SlashCommand[] = [
       } else {
         ctx.addStatus("Plan mode OFF — the agent can now write and edit files.");
       }
+    },
+  },
+
+  // ─── /sync-models — refresh OpenRouter model catalog ──────────
+
+  {
+    name: "/sync-models",
+    group: "config",
+    description: "Refresh the OpenRouter model catalog snapshot (built-in fallback used if offline)",
+    execute: async (_arg, ctx) => {
+      ctx.setIsRunning(true);
+      try {
+        const { syncOpenRouterCatalog, getOpenRouterSnapshot } = await import(
+          "../../../data/openrouter-sync.js"
+        );
+        ctx.addStatus("Fetching openrouter.ai/api/v1/models …");
+        const result = await syncOpenRouterCatalog();
+        if (result.ok) {
+          ctx.addStatus(
+            `✓ Synced ${result.count} models (cached in-process for this session).\n` +
+              `  To persist, run: bun run sync-models  (then rebuild)`,
+          );
+        } else {
+          const snap = getOpenRouterSnapshot();
+          ctx.addStatus(
+            `⚠ Sync failed: ${result.error}\n` +
+              `  Falling back to bundled snapshot (${snap.count} models, fetched ${snap.fetchedAt || "unknown"}).`,
+          );
+        }
+      } catch (err) {
+        ctx.addStatus(`Error: ${(err as Error).message}`);
+      }
+      ctx.setIsRunning(false);
     },
   },
 ];

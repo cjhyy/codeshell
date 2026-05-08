@@ -13,7 +13,12 @@ import { resolve, join } from "node:path";
 import type { ToolDefinition, ToolCall } from "../../types.js";
 
 export const MAX_TOOL_RESULT = 15_000; // chars per tool call
-export const MAX_TOOL_ROUNDS = 5;
+// 5 was too generous for thinking-mode models — they'd spend the
+// entire budget on read_file with textLen=0, then need an
+// expensive force_conclude round to actually emit findings (logs
+// consistently showed 5/5 rounds + 70-150s force_conclude). Capping
+// at 3 makes the participant commit to a conclusion much sooner.
+export const MAX_TOOL_ROUNDS = 3;
 
 /** Repository root boundary — all file access is restricted to this directory */
 const REPO_ROOT = resolve(".");

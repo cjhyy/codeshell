@@ -10,9 +10,12 @@ import { PermissionDeniedError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
 import { isInPlanMode } from "./builtin/plan.js";
 import { validateToolArgs } from "./validation.js";
+import type { ToolContext } from "./context.js";
 
 export class ToolExecutor {
   private signal?: AbortSignal;
+  /** Per-Engine ToolContext injected for every tool call. */
+  private toolCtx?: ToolContext;
 
   constructor(
     private readonly registry: ToolRegistry,
@@ -23,6 +26,11 @@ export class ToolExecutor {
   /** Set the abort signal for cascading cancellation. */
   setSignal(signal?: AbortSignal): void {
     this.signal = signal;
+  }
+
+  /** Set the per-Engine ToolContext (askUser, llmConfig, modelPool, etc.). */
+  setContext(ctx: ToolContext | undefined): void {
+    this.toolCtx = ctx;
   }
 
   /** Check if a tool is safe for concurrent execution (read-only). */
@@ -108,7 +116,10 @@ export class ToolExecutor {
 
     // 3. Execute
     logger.info("tool.exec", { tool: call.toolName, args: JSON.stringify(call.args).slice(0, 200) });
-    const result = await this.registry.executeTool(call.toolName, call.args, { signal: this.signal });
+    const result = await this.registry.executeTool(call.toolName, call.args, {
+      signal: this.signal,
+      ctx: this.toolCtx,
+    });
     result.id = call.id;
     logger.info("tool.done", { tool: call.toolName, ok: !result.error, chars: (result.result ?? result.error ?? "").length });
 

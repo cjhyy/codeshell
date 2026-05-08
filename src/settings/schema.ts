@@ -89,7 +89,7 @@ export const SettingsSchema = z.object({
     .object({
       fileName: z.string().default("CODESHELL.md"),
       scanDirs: z.array(z.string()).default([]),
-      compatFileNames: z.array(z.string()).default(["CLAUDE.md"]),
+      compatFileNames: z.array(z.string()).default(["CLAUDE.md", "AGENTS.md"]),
       ignoreGitBoundary: z.boolean().default(false),
     })
     .default({}),

@@ -3,23 +3,33 @@
  * directory trees, key files, grep results.
  */
 
-import { existsSync, readdirSync, statSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { ArenaPlan, ArenaArtifact, ArenaContextProvider } from "../types.js";
 import { logger } from "../../logging/logger.js";
 
 const MAX_FILE_CHARS = 8_000;
+// Per-grep ceiling. We run up to 5 hints in parallel, so the worst-case
+// wall time is ~3s rather than the previous 5×10s = 50s in series.
+const GREP_TIMEOUT_MS = 3_000;
+// Hard cap on tree-walk work — large monorepos (or recursive symlinks)
+// could otherwise blow up readdirSync/statSync time.
+const MAX_TREE_NODES = 400;
+
+const execFileAsync = promisify(execFile);
 
 export const repoProvider: ArenaContextProvider = {
   kind: "repo",
 
-  collect(plan: ArenaPlan, topic: string): ArenaArtifact[] {
+  async collect(plan: ArenaPlan, topic: string): Promise<ArenaArtifact[]> {
     const artifacts: ArenaArtifact[] = [];
     const targets = plan.sources.find((s) => s.kind === "repo")?.targets ?? [];
 
     // Project tree overview
-    const tree = buildTree(".", 2);
+    const tree = await buildTree(".", 2);
     if (tree) {
       artifacts.push({
         id: "repo-tree",
@@ -35,7 +45,7 @@ export const repoProvider: ArenaContextProvider = {
       if (!existsSync(target)) continue;
       const st = statSync(target);
       if (st.isDirectory()) {
-        const dirTree = buildTree(target, 3);
+        const dirTree = await buildTree(target, 3);
         if (dirTree) {
           artifacts.push({
             id: `repo-tree-${target}`,
@@ -46,7 +56,7 @@ export const repoProvider: ArenaContextProvider = {
           });
         }
         // Read entry files
-        for (const file of collectEntryFiles(target).slice(0, 3)) {
+        for (const file of (await collectEntryFiles(target)).slice(0, 3)) {
           const content = safeReadFile(file);
           if (content) {
             artifacts.push({
@@ -74,24 +84,27 @@ export const repoProvider: ArenaContextProvider = {
       }
     }
 
-    // Search for topic-related files if no specific targets
+    // Search for topic-related files if no specific targets.
+    // Fan out hints in parallel — the previous serial loop was the
+    // single biggest contributor to Arena's startup latency.
     if (targets.length === 0) {
-      const hints = extractSearchHints(topic);
-      for (const hint of hints.slice(0, 5)) {
-        const grepResult = safeGrep(hint);
-        if (grepResult) {
-          const files = grepResult.split("\n").filter(Boolean).slice(0, 10);
-          for (const file of files) {
-            if (!artifacts.some((a) => a.ref === file)) {
-              artifacts.push({
-                id: `repo-grep-${hint}-${file}`,
-                kind: "grep",
-                source: "repo",
-                title: `Match: ${hint} → ${file}`,
-                ref: file,
-                preview: file,
-              });
-            }
+      const hints = extractSearchHints(topic).slice(0, 5);
+      const grepResults = await Promise.all(hints.map((h) => safeGrep(h)));
+      for (let i = 0; i < hints.length; i++) {
+        const hint = hints[i]!;
+        const result = grepResults[i] ?? "";
+        if (!result) continue;
+        const files = result.split("\n").filter(Boolean).slice(0, 10);
+        for (const file of files) {
+          if (!artifacts.some((a) => a.ref === file)) {
+            artifacts.push({
+              id: `repo-grep-${hint}-${file}`,
+              kind: "grep",
+              source: "repo",
+              title: `Match: ${hint} → ${file}`,
+              ref: file,
+              preview: file,
+            });
           }
         }
       }
@@ -100,7 +113,7 @@ export const repoProvider: ArenaContextProvider = {
     // Recent git activity — only if git source is not already active (avoids duplicate)
     const hasGitSource = plan.sources.some((s) => s.kind === "git");
     if (!hasGitSource) {
-      const recentLog = gitLog();
+      const recentLog = await gitLog();
       if (recentLog) {
         artifacts.push({
           id: "repo-recent-activity",
@@ -117,31 +130,51 @@ export const repoProvider: ArenaContextProvider = {
   },
 };
 
-function buildTree(dir: string, maxDepth: number, depth = 0, prefix = ""): string {
-  if (depth >= maxDepth) return "";
+async function buildTree(dir: string, maxDepth: number): Promise<string> {
+  // Async + node-capped walk. The previous *Sync variant blocked the
+  // event loop while the new collectEvidence runs providers in
+  // parallel, partially defeating the parallelism win.
+  const lines: string[] = [];
+  const counter = { n: 0 };
+  await walkTree(dir, maxDepth, 0, "", lines, counter);
+  return lines.filter(Boolean).join("\n");
+}
+
+async function walkTree(
+  dir: string,
+  maxDepth: number,
+  depth: number,
+  prefix: string,
+  out: string[],
+  counter: { n: number },
+): Promise<void> {
+  if (depth >= maxDepth) return;
+  if (counter.n >= MAX_TREE_NODES) return;
+  let entries: string[];
   try {
-    const entries = readdirSync(dir).filter(
+    entries = (await readdir(dir)).filter(
       (e) => !e.startsWith(".") && e !== "node_modules" && e !== "dist" && e !== "__pycache__",
     );
-    const lines: string[] = [];
-    for (const entry of entries.slice(0, 30)) {
-      const fullPath = join(dir, entry);
-      const isDir = statSync(fullPath).isDirectory();
-      lines.push(`${prefix}${isDir ? "/" : ""} ${entry}`);
-      if (isDir && depth < maxDepth - 1) {
-        lines.push(buildTree(fullPath, maxDepth, depth + 1, prefix + "  "));
-      }
-    }
-    return lines.filter(Boolean).join("\n");
   } catch {
-    return "";
+    return;
+  }
+  for (const entry of entries.slice(0, 30)) {
+    if (counter.n >= MAX_TREE_NODES) return;
+    counter.n++;
+    const fullPath = join(dir, entry);
+    let isDir = false;
+    try { isDir = (await stat(fullPath)).isDirectory(); } catch { continue; }
+    out.push(`${prefix}${isDir ? "/" : ""} ${entry}`);
+    if (isDir && depth < maxDepth - 1) {
+      await walkTree(fullPath, maxDepth, depth + 1, prefix + "  ", out, counter);
+    }
   }
 }
 
-function collectEntryFiles(dir: string): string[] {
+async function collectEntryFiles(dir: string): Promise<string[]> {
   const files: string[] = [];
   try {
-    const entries = readdirSync(dir);
+    const entries = await readdir(dir);
     const priority = ["index.ts", "index.js", "main.ts", "main.js", "mod.ts", "__init__.py"];
     for (const p of priority) {
       if (entries.includes(p)) files.push(join(dir, p));
@@ -174,26 +207,40 @@ function truncate(content: string): string {
   return t.slice(0, lastNl) + `\n... (truncated, ${content.length} chars total)`;
 }
 
-function safeGrep(pattern: string): string {
+async function safeGrep(pattern: string): Promise<string> {
   try {
-    const result = execFileSync("grep", [
+    const { stdout } = await execFileAsync("grep", [
       "-rl",
       "--include=*.ts", "--include=*.js", "--include=*.py", "--include=*.md",
       "-i", pattern, ".",
-    ], { encoding: "utf-8", maxBuffer: 1024 * 1024, timeout: 10_000 });
-    return result.trim();
-  } catch {
+    ], { encoding: "utf-8", maxBuffer: 1024 * 1024, timeout: GREP_TIMEOUT_MS });
+    return stdout.trim();
+  } catch (err) {
+    // grep exits 1 when there are no matches — that's the expected
+    // "no hits" path. Anything else (signal kill on timeout, ENOENT
+    // because grep isn't installed, permission denied, etc.) is a
+    // real failure that the caller should know about, otherwise
+    // Arena silently degrades with zero artifacts.
+    const e = err as { code?: number | string; killed?: boolean; signal?: string };
+    if (e?.code === 1) return "";
+    logger.warn("arena.provider.grep_failed", {
+      pattern,
+      code: e?.code,
+      killed: e?.killed,
+      signal: e?.signal,
+    });
     return "";
   }
 }
 
-function gitLog(): string {
+async function gitLog(): Promise<string> {
   try {
-    return execFileSync("git", ["log", "--oneline", "-10"], {
+    const { stdout } = await execFileAsync("git", ["log", "--oneline", "-10"], {
       encoding: "utf-8",
       maxBuffer: 1024 * 1024,
       timeout: 10_000,
-    }).trim();
+    });
+    return stdout.trim();
   } catch {
     return "";
   }

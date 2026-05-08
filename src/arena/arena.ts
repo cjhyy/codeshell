@@ -96,8 +96,27 @@ export class Arena {
     signal?.throwIfAborted();
 
     // ─── Phase 1: Collect Evidence ────────────────────────────
-    const { artifacts, quickFacts } = collectEvidence(plan, topic);
-    this.config.onProgress?.({ type: "evidence_collected", artifacts });
+    // Bridge collectEvidence's lifecycle events to the public
+    // ArenaProgressEvent stream so the UI sees "collecting from
+    // repo..." instead of a silent pause.
+    const onProgress = this.config.onProgress;
+    const { artifacts, quickFacts } = await collectEvidence(plan, topic, {
+      signal,
+      onProgress: (e) => {
+        if (e.type === "evidence_started") {
+          onProgress?.({ type: "evidence_started", source: e.source });
+        } else {
+          onProgress?.({
+            type: "evidence_source_done",
+            source: e.source,
+            count: e.count ?? 0,
+            durationMs: e.durationMs ?? 0,
+            timedOut: e.timedOut ?? false,
+          });
+        }
+      },
+    });
+    onProgress?.({ type: "evidence_collected", artifacts });
     logger.info("arena.evidence", {
       artifactCount: artifacts.length,
       sources: plan.sources.map((s) => s.kind),

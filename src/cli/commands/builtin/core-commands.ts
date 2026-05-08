@@ -66,13 +66,19 @@ export const coreCommands: SlashCommand[] = [
 
   {
     name: "/model",
-    description: "Show or switch model",
-    usage: "/model [key]  — switch to model by key, or show current + available",
+    aliases: ["/m"],
+    description: "Switch model (interactive picker if no key given)",
+    usage: "/model [key]  — opens picker when no key, or switches directly",
     execute: async (arg, ctx) => {
       const key = arg.trim();
 
       if (!key) {
-        // Show current model + available models from pool
+        // No arg → open the Ink picker. Fallback to text listing if the host
+        // didn't wire up the selector (e.g. running outside the Ink App).
+        if (ctx.openModelSelector) {
+          ctx.openModelSelector();
+          return;
+        }
         try {
           const result = await ctx.client.query("models");
           const models = (result.data as any[]) ?? [];

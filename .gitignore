@@ -15,3 +15,6 @@ pnpm-lock.yaml
 # Agent run artifacts
 examples/prd-agent/output/*
 !examples/prd-agent/output/.gitkeep
+examples/prismo-agent/output/
+examples/*/.runs/
+.code-shell/

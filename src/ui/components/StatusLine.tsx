@@ -72,8 +72,11 @@ export function StatusLine({
         </>
       )}
 
-      {/* Model */}
+      {/* Model — alt+m switches; only show hint when terminal has room */}
       <Text dim>{modelShort}</Text>
+      {(process.stdout.columns ?? 80) >= 100 && (
+        <Text dim>{" (alt+m)"}</Text>
+      )}
 
       {/* Context bar */}
       <Text dim> │ </Text>

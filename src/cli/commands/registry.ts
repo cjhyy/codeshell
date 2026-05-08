@@ -41,6 +41,10 @@ export interface CommandContext {
   chatLog: unknown[];
   /** Load restored chat entries into the UI (used by /resume). */
   loadChatEntries?: (entries: RestoredChatEntry[]) => void;
+  /** Open the Ink onboarding wizard (used by /login). */
+  startOnboarding?: () => void;
+  /** Open the Ink model selector (used by /model with no args). */
+  openModelSelector?: () => void;
 }
 
 export type CommandGroup = "core" | "git" | "context" | "config" | "advanced";

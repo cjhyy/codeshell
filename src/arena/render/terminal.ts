@@ -256,6 +256,16 @@ export function createProgressRenderer(sink: OutputSink): (event: ArenaProgressE
         ));
         break;
 
+      case "evidence_started":
+        sink(chalk.dim(`  · collecting from ${event.source}…`));
+        break;
+
+      case "evidence_source_done": {
+        const tag = event.timedOut ? chalk.yellow(" (timed out)") : "";
+        sink(chalk.dim(`  · ${event.source}: ${event.count} artifacts in ${event.durationMs}ms${tag}`));
+        break;
+      }
+
       case "evidence_collected":
         sink(chalk.dim(`Evidence: ${event.artifacts.length} artifacts collected`));
         break;

@@ -8,7 +8,7 @@
  */
 
 import type { ToolDefinition, StreamCallback } from "../../types.js";
-import type { AgentPresetName } from "../../preset/index.js";
+import type { ToolContext, SubAgentSpawner } from "../context.js";
 import { isInPlanMode, resetPlanMode, restorePlanMode } from "./plan.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
 import { nanoid } from "nanoid";
@@ -48,90 +48,49 @@ export const agentToolDef: ToolDefinition = {
   },
 };
 
-export interface SubAgentConfig {
-  llm: import("../../types.js").LLMConfig;
-  cwd: string;
-  permissionMode: string;
-  preset?: AgentPresetName;
-  enabledBuiltinTools?: string[];
-  disabledBuiltinTools?: string[];
-  customSystemPrompt?: string;
-  appendSystemPrompt?: string;
-  maxContextTokens: number;
-  sessionStorageDir?: string;
-  onStream?: StreamCallback;
-  createEngine: (config: Record<string, unknown>) => {
-    run(task: string, options?: { signal?: AbortSignal; onStream?: StreamCallback }): Promise<{ text: string; reason: string }>;
-  };
-}
-
-let _subAgentConfig: SubAgentConfig | undefined;
-
-export function setSubAgentConfig(config: SubAgentConfig | undefined): void {
-  _subAgentConfig = config;
-}
-
 /**
  * Build and run a sub-agent. Returns the produced text or throws.
  * Used by both the synchronous and background paths.
  */
-async function runSubAgent(opts: {
-  agentId: string;
-  description: string;
-  prompt: string;
-  maxTurns: number;
-  signal: AbortSignal;
-  parentStream: StreamCallback | undefined;
-}): Promise<string> {
-  if (!_subAgentConfig) throw new Error("Agent tool is not configured.");
-
-  const { agentId, description, prompt, maxTurns, signal, parentStream } = opts;
+async function runSubAgent(
+  spawner: SubAgentSpawner,
+  opts: {
+    agentId: string;
+    description: string;
+    prompt: string;
+    maxTurns: number;
+    signal: AbortSignal;
+  },
+): Promise<string> {
+  const { agentId, description } = opts;
+  const parentStream = spawner.parentStream;
 
   parentStream?.({ type: "agent_start", agentId, description });
-
-  const childStream: StreamCallback = (event) => {
-    if (!parentStream) return;
-    const tagged = { ...event, agentId } as any;
-    parentStream(tagged);
-  };
 
   const parentWasInPlanMode = isInPlanMode();
   if (parentWasInPlanMode) resetPlanMode();
 
   try {
-    const engine = _subAgentConfig.createEngine({
-      llm: {
-        ..._subAgentConfig.llm,
-        retryMaxAttempts: 2,
-      },
-      cwd: _subAgentConfig.cwd,
-      permissionMode: _subAgentConfig.permissionMode,
-      preset: _subAgentConfig.preset,
-      enabledBuiltinTools: _subAgentConfig.enabledBuiltinTools,
-      disabledBuiltinTools: _subAgentConfig.disabledBuiltinTools,
-      customSystemPrompt: _subAgentConfig.customSystemPrompt,
-      appendSystemPrompt: _subAgentConfig.appendSystemPrompt,
-      maxTurns,
-      maxContextTokens: _subAgentConfig.maxContextTokens,
-      sessionStorageDir: _subAgentConfig.sessionStorageDir,
-    });
-
-    const result = await engine.run(prompt, { signal, onStream: childStream });
+    const text = await spawner.spawn(opts);
     parentStream?.({ type: "agent_end", agentId, description });
-    return result.text || `Agent completed (${result.reason}) but produced no text output.`;
+    return text || `Agent completed but produced no text output.`;
   } finally {
     if (parentWasInPlanMode) restorePlanMode();
   }
 }
 
-export async function agentTool(args: Record<string, unknown>): Promise<string> {
+export async function agentTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const prompt = args.prompt as string;
   const description = (args.description as string) || "sub-agent";
   if (!prompt) return "Error: prompt is required";
 
-  if (!_subAgentConfig) {
-    return "Error: Agent tool is not configured.";
+  if (!ctx?.subAgentSpawner) {
+    return "Error: Agent tool is not configured (no subAgentSpawner in ctx).";
   }
+  const spawner = ctx.subAgentSpawner;
 
   const parentSignal = args.__signal as AbortSignal | undefined;
   if (parentSignal?.aborted) {
@@ -141,7 +100,7 @@ export async function agentTool(args: Record<string, unknown>): Promise<string> 
   const maxTurns = (args.max_turns as number) || 15;
   const runInBackground = args.run_in_background === true;
   const agentId = nanoid(8);
-  const parentStream = _subAgentConfig.onStream;
+  const parentStream = spawner.parentStream;
 
   // ─── Background path ───────────────────────────────────────────
   // Register the agent, kick off execution detached from the current turn,
@@ -159,13 +118,12 @@ export async function agentTool(args: Record<string, unknown>): Promise<string> 
     });
 
     // Run detached. Errors are captured into the registry.
-    void runSubAgent({
+    void runSubAgent(spawner, {
       agentId,
       description,
       prompt,
       maxTurns,
       signal: controller.signal,
-      parentStream,
     })
       .then((text) => asyncAgentRegistry.markCompleted(agentId, text))
       .catch((err: Error) => {
@@ -188,13 +146,12 @@ export async function agentTool(args: Record<string, unknown>): Promise<string> 
 
   // ─── Synchronous path ──────────────────────────────────────────
   try {
-    return await runSubAgent({
+    return await runSubAgent(spawner, {
       agentId,
       description,
       prompt,
       maxTurns,
       signal: parentSignal ?? new AbortController().signal,
-      parentStream,
     });
   } catch (err) {
     parentStream?.({ type: "agent_end", agentId, description, error: (err as Error).message });

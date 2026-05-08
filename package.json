@@ -44,8 +44,9 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun run tsup && bun run build:dts",
+    "build": "bun run sync-models && bun run tsup && bun run build:dts",
     "build:dts": "tsc --emitDeclarationOnly --declaration --outDir dist || true",
+    "sync-models": "bun run scripts/sync-models.ts",
     "dev": "bun run src/cli/main.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",

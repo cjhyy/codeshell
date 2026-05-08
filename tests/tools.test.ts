@@ -5,7 +5,8 @@ import { editTool } from "../src/tool-system/builtin/edit.js";
 import { globTool } from "../src/tool-system/builtin/glob.js";
 import { grepTool } from "../src/tool-system/builtin/grep.js";
 import { webFetchTool } from "../src/tool-system/builtin/web-fetch.js";
-import { askUserTool, setAskUserFn } from "../src/tool-system/builtin/ask-user.js";
+import { askUserTool } from "../src/tool-system/builtin/ask-user.js";
+import type { ToolContext } from "../src/tool-system/context.js";
 import { enterPlanModeTool, exitPlanModeTool, resetPlanMode } from "../src/tool-system/builtin/plan.js";
 import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -145,17 +146,20 @@ describe("Grep tool", () => {
 });
 
 describe("AskUserQuestion tool", () => {
-  afterEach(() => setAskUserFn(undefined));
-
-  it("returns error in headless mode", async () => {
-    setAskUserFn(undefined);
+  it("returns error in headless mode (no ctx)", async () => {
     const result = await askUserTool({ question: "test?" });
     expect(result).toContain("not available");
   });
 
-  it("uses injected function", async () => {
-    setAskUserFn(async (q) => "user answer");
-    const result = await askUserTool({ question: "test?" });
+  it("returns error when ctx has no askUser", async () => {
+    const ctx = { askUser: undefined } as unknown as ToolContext;
+    const result = await askUserTool({ question: "test?" }, ctx);
+    expect(result).toContain("not available");
+  });
+
+  it("uses askUser from ctx", async () => {
+    const ctx = { askUser: async (_q: string) => "user answer" } as unknown as ToolContext;
+    const result = await askUserTool({ question: "test?" }, ctx);
     expect(result).toBe("user answer");
   });
 });

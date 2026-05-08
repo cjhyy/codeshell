@@ -33,6 +33,7 @@
     "src/context/token-counter.ts",
     "src/context/manager.ts",
     "src/cron/*.ts",
+    "src/data/*.ts",
     "src/engine/*.ts",
     "src/git/*.ts",
     "src/hooks/events.ts",

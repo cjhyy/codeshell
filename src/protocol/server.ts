@@ -25,12 +25,13 @@ import {
   createNotification,
   isRequest,
 } from "./types.js";
-import type { Engine } from "../engine/engine.js";
+import type { Engine, EngineConfig } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent } from "../types.js";
 import { setInPlanMode, isInPlanMode } from "../tool-system/builtin/plan.js";
 import { setRuntimeBypass, isRuntimeBypass } from "../tool-system/permission.js";
-import { setAskUserFn } from "../tool-system/builtin/ask-user.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
+import { getArenaStatus } from "../tool-system/builtin/arena.js";
+import { taskManager } from "../tool-system/builtin/task.js";
 import { nanoid } from "nanoid";
 
 export interface AgentServerOptions {
@@ -71,8 +72,9 @@ export class AgentServer {
       return this.requestApprovalFromClient(request);
     });
 
-    // Wire askUser: engine asks server, server asks client via approval-like flow
-    setAskUserFn((question: string) => {
+    // Wire askUser: install a protocol-backed askUser handler on the engine
+    // (replaces the legacy setAskUserFn module singleton).
+    this.engine.setAskUser((question: string) => {
       return this.requestAskUserFromClient(question);
     });
 
@@ -131,13 +133,22 @@ export class AgentServer {
     this.abortController = new AbortController();
     this.notify(Methods.Status, { status: "running" });
 
+    const streamToClient = (event: StreamEvent) => {
+      this.notify(Methods.StreamEvent, { event });
+    };
+
+    // Wire the global TaskManager into this run's stream so TaskCreate /
+    // TaskUpdate calls — from the main agent OR any spawned sub-agent —
+    // surface as task_update events the UI's top panel listens for.
+    // The manager is a module singleton, so a single registration here
+    // covers nested engine.run() calls; we tear it down in finally.
+    taskManager.setStreamCallback(streamToClient);
+
     try {
       const result = await this.engine.run(params.task, {
         sessionId: params.sessionId,
         signal: this.abortController!.signal,
-        onStream: (event: StreamEvent) => {
-          this.notify(Methods.StreamEvent, { event });
-        },
+        onStream: streamToClient,
       });
 
       const runResult: RunResult = {
@@ -154,6 +165,7 @@ export class AgentServer {
         createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
       );
     } finally {
+      taskManager.setStreamCallback(undefined);
       this.running = false;
       this.abortController = null;
       this.notify(Methods.Status, { status: "ready" });
@@ -313,7 +325,7 @@ export class AgentServer {
       }
       case "models": {
         const pool = this.engine.getModelPool();
-        const models = pool.list().map((m) => ({
+        const models: import("./types.js").ProtocolModelEntry[] = pool.list().map((m) => ({
           key: m.key,
           label: m.label ?? m.key,
           model: m.model,
@@ -323,6 +335,14 @@ export class AgentServer {
         this.transport.send(createResponse(req.id, { type: "models", data: models }));
         break;
       }
+      case "arena_status": {
+        // Returns what Arena would do if invoked right now: which
+        // participants it would default to, against which endpoint,
+        // and whether each one looks compatible.
+        const status = getArenaStatus();
+        this.transport.send(createResponse(req.id, { type: "arena_status", data: status }));
+        break;
+      }
       case "config_set": {
         // Update a settings key
         try {
@@ -330,6 +350,25 @@ export class AgentServer {
           if (!key) throw new Error("key is required for config_set");
           this.engine.updateConfig(key, value);
           this.transport.send(createResponse(req.id, { type: "config_set", data: { key, value } }));
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
+      case "permission_set": {
+        try {
+          const value = params.value as string | undefined;
+          const valid = ["default", "acceptEdits", "dontAsk", "bypassPermissions", "auto", "plan"];
+          if (!value || !valid.includes(value)) {
+            throw new Error(`invalid permission mode: ${value}`);
+          }
+          this.engine.setPermissionMode(value as NonNullable<EngineConfig["permissionMode"]>);
+          this.transport.send(createResponse(req.id, {
+            type: "permission_set",
+            data: { mode: value },
+          }));
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -398,7 +437,7 @@ export class AgentServer {
       this.pendingApprovals.set(requestId, (result: ApprovalResult) => {
         this.clearApprovalTimer(requestId);
         if (result.approved) {
-          resolve((result as any).answer ?? "");
+          resolve(result.answer ?? "");
         } else {
           resolve(result.reason ?? "(user declined to answer)");
         }

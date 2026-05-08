@@ -7,6 +7,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from "react";
 import { Box, Text, useApp, useInput } from "../ink/index.js";
 import { Banner } from "./components/Banner.js";
+import { WelcomeTips } from "./components/WelcomeTips.js";
 import { CommandInput } from "./components/CommandInput.js";
 import { ToolCallStart, ToolCallRunning, ToolCallResult } from "./components/ToolCall.js";
 import { AgentBlockStart, AgentBlockEnd } from "./components/AgentBlock.js";
@@ -27,6 +28,10 @@ import { AgentClient } from "../protocol/client.js";
 import { taskManager } from "../tool-system/builtin/task.js";
 import { costTracker } from "../cli/cost-tracker.js";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
+import { AskUserPrompt } from "./components/AskUserPrompt.js";
+import { OnboardingPrompt } from "./components/OnboardingPrompt.js";
+import { ModelSelector, type ModelEntry } from "./components/ModelSelector.js";
+import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
@@ -94,6 +99,12 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
     description: string;
     riskLevel: string;
   } | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<{
+    requestId: string;
+    question: string;
+  } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [modelEntries, setModelEntries] = useState<ModelEntry[] | null>(null);
 
   // Track streaming chars in a ref — no App-level re-render per tick.
   // StatusLine reads these refs directly via its own internal interval.
@@ -149,14 +160,12 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
   useEffect(() => {
     // Handle approval requests from the server
     const handleApproval = (requestId: string, request: ApprovalRequest) => {
-      // Special case: __ask_user__ is a question, not a tool approval
+      // __ask_user__ is a question, not a tool approval — routed to the
+      // text-input prompt instead of the y/n permission dialog.
       if (request.toolName === "__ask_user__") {
-        // For now, treat as approval with the question as description
-        setPendingApproval({
+        setPendingQuestion({
           requestId,
-          toolName: request.toolName,
-          description: request.description,
-          riskLevel: request.riskLevel,
+          question: request.description,
         });
         return;
       }
@@ -253,6 +262,12 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
         }
         flushTextBuffer();
 
+        // Hide sub-agent tool calls from the conversation feed — the
+        // user only wants to see what the *main* agent is doing plus
+        // task statuses, not every Read/Grep a child fires off. The
+        // sub-agent's text output and the task panel still surface.
+        if (agentId !== undefined) break;
+
         const tc = event.toolCall;
         chatStore.update((prev) => {
           const updated = prev
@@ -276,14 +291,37 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       }
 
       case "tool_result": {
+        // See note in tool_use_start: hide sub-agent tool I/O.
+        if (agentId !== undefined) break;
+
         const r = event.result;
+        // Arena routinely fails on the first attempt while the
+        // model is still discovering valid `participants` for the
+        // active endpoint (e.g. defaulting to "claude" on a
+        // DeepSeek-only session). The endpoint check fails fast
+        // now, so the retry loop is healthy — but visually it
+        // shows up as several scary "Arena error:" cards in a row.
+        // Mark those as compact so the feed reads "Arena …
+        // retrying" instead of "Arena exploded three times."
+        const looksLikeArenaRetry =
+          r.toolName === "Arena" &&
+          typeof r.result === "string" &&
+          r.result.startsWith("Arena error:");
+
         chatStore.update((prev) => {
           const filtered = prev.filter(
             (e) => !(e.type === "tool_running" && e.agentId === agentId),
           );
           return [
             ...filtered,
-            entry({ type: "tool_result", toolName: r.toolName, result: r.result, error: r.error, agentId }),
+            entry({
+              type: "tool_result",
+              toolName: r.toolName,
+              result: r.result,
+              error: r.error,
+              agentId,
+              compact: looksLikeArenaRetry,
+            } as any),
           ];
         });
         break;
@@ -342,6 +380,24 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
     return () => client.offStreamEvent(handleStreamEvent);
   }, [client, handleStreamEvent]);
 
+  // Open the model selector by querying the pool from the server.
+  // Re-entry is already guarded by the useInput dispatcher (it checks
+  // !modelEntries before calling), and addStatus only mutates the chat
+  // store (no closure over local state), so we deliberately keep this
+  // callback's deps to [client] for a stable reference.
+  const openModelSelector = useCallback(async () => {
+    try {
+      const result = await client.query("models");
+      const list = (result.data as ModelEntry[]) ?? [];
+      setModelEntries(list);
+    } catch (err) {
+      chatStore.update((prev) => [
+        ...prev,
+        entry({ type: "status", reason: `Failed to load models: ${(err as Error).message}` }),
+      ]);
+    }
+  }, [client]);
+
   useInput((ch, key) => {
     if (key.ctrl && ch === "c") {
       if (isRunning) {
@@ -397,6 +453,13 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       client.cancel().catch(() => {});
       // Undo the last history entry since the request was interrupted
       removeLastFromHistory();
+    }
+
+    // Alt+M / Esc+M — open model selector. (Ctrl+M is unusable: terminals
+    // alias it to Enter, so it would collide with submitting the input.)
+    if (key.meta && ch === "m" && !isRunning && !showOnboarding && !modelEntries) {
+      openModelSelector();
+      return;
     }
 
     // P1.6: Ctrl+O — toggle transcript mode
@@ -576,6 +639,8 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       tasks,
       clearChat: () => { chatStore.clear(); setTasks([]); },
       chatLog,
+      startOnboarding: () => setShowOnboarding(true),
+      openModelSelector,
       loadChatEntries: (entries: RestoredChatEntry[]) => {
         const chatEntries: ChatEntry[] = entries.map((e) => {
           switch (e.type) {
@@ -598,7 +663,7 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       },
     };
     commandRegistry.dispatch(cmd, cmdCtx);
-  }, [client, cwd, model, setModel, sessionId, currentEffort, tasks, chatLog, exit]);
+  }, [client, cwd, model, setModel, sessionId, currentEffort, tasks, chatLog, exit, openModelSelector]);
 
   const addStatus = (reason: string) => {
     chatStore.update((prev) => [...prev, entry({ type: "status", reason })]);
@@ -645,7 +710,10 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
   const scrollableContent = (
     <>
       {showBanner && (
-        <Banner model={model} effort={currentEffort} maxTurns={maxTurns} cwd={cwd} />
+        <>
+          <Banner model={model} effort={currentEffort} maxTurns={maxTurns} cwd={cwd} />
+          {!initialSessionId && <WelcomeTips cwd={cwd} />}
+        </>
       )}
 
       {/* Chat log — virtualized for large conversations */}
@@ -702,6 +770,48 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
             <Text dim>{" · selected: "}{cursorIdx + 1}</Text>
           )}
         </Box>
+      ) : showOnboarding ? (
+        <OnboardingPrompt
+          onComplete={(result: OnboardingResult) => {
+            setShowOnboarding(false);
+            addStatus(`✓ 配置已保存 (${result.model})。重启 code-shell 以加载新配置。`);
+          }}
+          onCancel={() => {
+            setShowOnboarding(false);
+            addStatus("已取消配置。");
+          }}
+        />
+      ) : modelEntries ? (
+        <ModelSelector
+          entries={modelEntries}
+          onSelect={async (key) => {
+            setModelEntries(null);
+            try {
+              const result = await client.configure({ model: key });
+              const data = result as { model?: string };
+              const newModel = data?.model ?? key;
+              setModel(newModel);
+              addStatus(`✓ 切换到: ${key} (${newModel})`);
+            } catch (err) {
+              addStatus(`切换失败: ${(err as Error).message}`);
+            }
+          }}
+          onCancel={() => setModelEntries(null)}
+        />
+      ) : pendingQuestion ? (
+        <AskUserPrompt
+          question={pendingQuestion.question}
+          onAnswer={(answer) => {
+            const { requestId } = pendingQuestion;
+            setPendingQuestion(null);
+            client.approve(requestId, { approved: true, answer }).catch(() => {});
+          }}
+          onCancel={() => {
+            const { requestId } = pendingQuestion;
+            setPendingQuestion(null);
+            client.approve(requestId, { approved: false, reason: "(user declined to answer)" }).catch(() => {});
+          }}
+        />
       ) : (
         !pendingApproval && (
           <CommandInput

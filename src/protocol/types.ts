@@ -110,11 +110,20 @@ export interface ConfigureParams {
 
 /** Query server state. */
 export interface QueryParams {
-  type: "sessions" | "tools" | "config" | "session_detail" | "compact" | "config_set" | "models";
+  type:
+    | "sessions"
+    | "tools"
+    | "config"
+    | "session_detail"
+    | "compact"
+    | "config_set"
+    | "permission_set"
+    | "models"
+    | "arena_status";
   sessionId?: string;
-  /** Used by config_set: dotted key path */
+  /** Used by config_set / permission_set: dotted key path or mode field */
   key?: string;
-  /** Used by config_set: new value */
+  /** Used by config_set / permission_set: new value */
   value?: unknown;
 }
 
@@ -140,6 +149,15 @@ export interface ToolListResult {
     name: string;
     description: string;
   }>;
+}
+
+/** Shape of a model-pool entry returned by query("models"). */
+export interface ProtocolModelEntry {
+  key: string;
+  label: string;
+  model: string;
+  provider: string;
+  active: boolean;
 }
 
 export interface ConfigResult {

@@ -43,7 +43,20 @@ import { briefToolDef, briefTool } from "./brief.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
 import { arenaToolDef, arenaTool } from "./arena.js";
 
-export type BuiltinToolFn = (args: Record<string, unknown>) => Promise<string>;
+/**
+ * Tool executor signature.
+ *
+ * Tools may inspect ctx for runtime services (askUser, llmConfig, modelPool,
+ * toolRegistry, subAgentSpawner). Tools that don't need any of these — Read,
+ * Write, Bash, Edit, Glob, Grep, etc. — may simply ignore the second arg.
+ *
+ * ctx is optional in the signature so legacy call sites (and tests) that
+ * pass only args still type-check; ToolRegistry always passes ctx at runtime.
+ */
+export type BuiltinToolFn = (
+  args: Record<string, unknown>,
+  ctx?: import("../context.js").ToolContext,
+) => Promise<string>;
 
 export interface BuiltinTool {
   definition: RegisteredTool;

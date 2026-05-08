@@ -1,0 +1,13 @@
+{
+  "name": "prismo-agent-example",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prismo Artifact Agent — fixture-driven example showing how Prismo will integrate CodeShell.",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/main.ts"
+  },
+  "dependencies": {
+    "code-shell": "link:../../"
+  }
+}

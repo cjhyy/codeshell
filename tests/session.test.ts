@@ -114,7 +114,7 @@ describe("MemoryManager", () => {
 
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "memory-test-"));
-    mm = new MemoryManager(tmpDir);
+    mm = new MemoryManager({ baseDir: tmpDir });
   });
 
   afterEach(() => rmSync(tmpDir, { recursive: true, force: true }));
@@ -158,5 +158,44 @@ describe("MemoryManager", () => {
     const index = mm.getIndex();
     expect(index).toContain("entry1");
     expect(index).toContain("entry2");
+  });
+
+  it("writes under baseDir, not home", () => {
+    mm.save({ name: "scoped", description: "x", type: "user", content: "y" });
+    const dir = mm.getMemoryDir();
+    expect(dir.startsWith(tmpDir)).toBe(true);
+    expect(dir).toContain("memory");
+  });
+
+  it("scopes by projectDir under baseDir", () => {
+    const scoped = new MemoryManager({ baseDir: tmpDir, projectDir: "/some/project" });
+    expect(scoped.getMemoryDir().startsWith(tmpDir)).toBe(true);
+    expect(scoped.getMemoryDir()).toContain("projects");
+  });
+
+  it("falls back to CODE_SHELL_HOME env when no baseDir given", () => {
+    const prev = process.env.CODE_SHELL_HOME;
+    const envDir = mkdtempSync(join(tmpdir(), "memory-env-"));
+    process.env.CODE_SHELL_HOME = envDir;
+    try {
+      const envMm = new MemoryManager();
+      expect(envMm.getMemoryDir().startsWith(envDir)).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.CODE_SHELL_HOME;
+      else process.env.CODE_SHELL_HOME = prev;
+      rmSync(envDir, { recursive: true, force: true });
+    }
+  });
+
+  it("baseDir option overrides env", () => {
+    const prev = process.env.CODE_SHELL_HOME;
+    process.env.CODE_SHELL_HOME = "/tmp/should-not-be-used-xyz";
+    try {
+      const overrideMm = new MemoryManager({ baseDir: tmpDir });
+      expect(overrideMm.getMemoryDir().startsWith(tmpDir)).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.CODE_SHELL_HOME;
+      else process.env.CODE_SHELL_HOME = prev;
+    }
   });
 });

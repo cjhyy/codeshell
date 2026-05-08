@@ -101,6 +101,7 @@ export class OpenAIClient extends LLMClientBase {
       );
 
       let text = "";
+      let reasoningContent = "";
       const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
       let streamUsage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
 
@@ -112,6 +113,13 @@ export class OpenAIClient extends LLMClientBase {
 
         const delta = chunk.choices[0]?.delta;
         if (!delta) continue;
+
+        // DeepSeek thinking-mode streams reasoning as a separate delta
+        // field. Accumulate it so we can echo it back next turn.
+        const reasoningDelta = (delta as Record<string, unknown>).reasoning_content;
+        if (typeof reasoningDelta === "string" && reasoningDelta.length > 0) {
+          reasoningContent += reasoningDelta;
+        }
 
         if (delta.content) {
           text += delta.content;
@@ -156,7 +164,13 @@ export class OpenAIClient extends LLMClientBase {
       };
       this.recordUsage(usage);
 
-      return { text, toolCalls, usage, stopReason: "stop" };
+      return {
+        text,
+        toolCalls,
+        usage,
+        stopReason: "stop",
+        ...(reasoningContent ? { reasoningContent } : {}),
+      };
     } catch (err) {
       this.handleApiError(err);
       throw err;
@@ -184,7 +198,17 @@ export class OpenAIClient extends LLMClientBase {
       }
     }
 
-    return { text, toolCalls, usage, stopReason: choice.finish_reason ?? undefined };
+    const reasoningContent = extractReasoningContent(
+      choice.message as unknown as Record<string, unknown>,
+    );
+
+    return {
+      text,
+      toolCalls,
+      usage,
+      stopReason: choice.finish_reason ?? undefined,
+      ...(reasoningContent ? { reasoningContent } : {}),
+    };
   }
 
   private buildMessages(
@@ -195,12 +219,23 @@ export class OpenAIClient extends LLMClientBase {
       { role: "system", content: systemPrompt },
     ];
 
+    // DeepSeek thinking-mode contract: every assistant turn we send
+    // back must carry reasoning_content. Pre-thinking-fix transcripts
+    // (and any assistant turn we synthesized ourselves, e.g. injected
+    // hints) won't have one, so we backfill an empty placeholder for
+    // those turns. The endpoint accepts an empty string here; what it
+    // refuses is the field being entirely absent.
+    const needsReasoningBackfill = isDeepSeekThinkingModel(this.model);
+
     for (const msg of messages) {
       if (msg.role === "system") continue;
 
       if (msg.role === "assistant") {
+        const param: OpenAI.ChatCompletionAssistantMessageParam = { role: "assistant" };
+        let reasoningContent: string | undefined;
+
         if (typeof msg.content === "string") {
-          result.push({ role: "assistant", content: msg.content });
+          param.content = msg.content;
         } else {
           const textParts: string[] = [];
           const toolCalls: OpenAI.ChatCompletionMessageToolCall[] = [];
@@ -217,14 +252,32 @@ export class OpenAIClient extends LLMClientBase {
                   arguments: JSON.stringify(block.input ?? {}),
                 },
               });
+            } else if (block.type === "reasoning" && block.reasoningContent) {
+              reasoningContent = block.reasoningContent;
+            }
+            // Reasoning may also ride alongside another block (e.g. on a
+            // text block) — pick it up wherever it appears so we never
+            // silently drop it.
+            if (!reasoningContent && block.reasoningContent) {
+              reasoningContent = block.reasoningContent;
             }
           }
 
-          const param: OpenAI.ChatCompletionAssistantMessageParam = { role: "assistant" };
           if (textParts.length) param.content = textParts.join("\n");
           if (toolCalls.length) param.tool_calls = toolCalls;
-          result.push(param);
         }
+
+        if (!reasoningContent && needsReasoningBackfill) {
+          reasoningContent = "";
+        }
+        if (reasoningContent !== undefined) {
+          // Non-standard field required by DeepSeek thinking mode.
+          // Standard OpenAI endpoints ignore unknown fields, so this
+          // is safe to send unconditionally on the OpenAI-compatible
+          // transport.
+          (param as unknown as Record<string, unknown>).reasoning_content = reasoningContent;
+        }
+        result.push(param);
       } else if (msg.role === "tool") {
         result.push({
           role: "tool",
@@ -316,4 +369,31 @@ export class OpenAIClient extends LLMClientBase {
     }
     throw err;
   }
+}
+
+/**
+ * Pull a non-empty reasoning payload out of a provider message.
+ *
+ * DeepSeek thinking mode emits this on the assistant message; the
+ * spec requires that the same value be echoed back on the next
+ * request. Some routers also surface it under `reasoning`.
+ */
+function extractReasoningContent(msg: Record<string, unknown>): string | undefined {
+  const candidate = msg.reasoning_content ?? msg.reasoning;
+  return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
+}
+
+/**
+ * DeepSeek's V4 thinking models require every assistant message in
+ * the request history to carry a `reasoning_content` field — even an
+ * empty string is accepted; the field being entirely absent is what
+ * the endpoint refuses with HTTP 400.
+ *
+ * Scoped narrowly to the V4 family (`deepseek-v4-pro`,
+ * `deepseek-v4-flash`, etc.). Other DeepSeek namings — e.g. the
+ * OpenRouter-style `deepseek/deepseek-v3.2`, or the standalone `r1`
+ * line — don't enforce this contract and shouldn't get the backfill.
+ */
+function isDeepSeekThinkingModel(model: string): boolean {
+  return /^deepseek-v4(?:-|$)/i.test(model);
 }

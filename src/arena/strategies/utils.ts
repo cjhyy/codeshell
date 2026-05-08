@@ -123,7 +123,12 @@ export function formatFindingReviews(reviews: FindingReview[]): string {
   ).join("\n");
 }
 
-/** Parse a ParticipantReport from LLM JSON output */
+/**
+ * Parse a ParticipantReport. The research prompt now asks for an
+ * XML <report> element because thinking-mode models (DeepSeek V4)
+ * produced malformed JSON often enough to derail the loop. We try
+ * XML first, then JSON, then a free-text salvage.
+ */
 export function parseReport(participant: string, text: string): ParticipantReport {
   if (!text || text.trim().length === 0) {
     logger.warn("arena.parse_report_empty", { participant });
@@ -134,14 +139,17 @@ export function parseReport(participant: string, text: string): ParticipantRepor
     };
   }
 
+  // (1) XML — preferred output format.
+  const xmlReport = tryParseReportXml(participant, text);
+  if (xmlReport && xmlReport.findings.length > 0) return xmlReport;
+
+  // (2) JSON — older prompts, or models that still default to JSON.
   try {
     const json = extractJSON(text);
     const parsed = JSON.parse(json);
 
-    // Handle case where LLM wrapped findings in unexpected structure
     let findings = parsed.findings;
     if (!Array.isArray(findings) && parsed.contextSummary === undefined) {
-      // Maybe the entire response IS a single finding object
       if (parsed.kind && parsed.title) {
         findings = [parsed];
       }
@@ -153,25 +161,110 @@ export function parseReport(participant: string, text: string): ParticipantRepor
       findings: Array.isArray(findings) ? findings.map(parseFinding) : [],
     };
 
-    if (report.findings.length === 0) {
-      logger.warn("arena.parse_report_no_findings", {
-        participant,
-        textPreview: text.slice(0, 200),
-      });
-    }
-
-    return report;
+    if (report.findings.length > 0) return report;
   } catch (err) {
     logger.warn("arena.parse_report_json_fail", {
       participant,
       error: (err as Error).message,
       textLength: text.length,
-      text: text.slice(0, 2000),
+      text: text.slice(0, 500),
     });
-
-    // Fallback: split free-text into paragraph-based findings
-    return extractFindingsFromFreeText(participant, text);
   }
+
+  // (3) If XML had a contextSummary but zero findings, prefer that
+  // skeleton over a free-text salvage — the model committed to the
+  // schema but came up empty.
+  if (xmlReport) {
+    logger.warn("arena.parse_report_no_findings", {
+      participant,
+      textPreview: text.slice(0, 200),
+    });
+    return xmlReport;
+  }
+
+  // (4) Last resort.
+  return extractFindingsFromFreeText(participant, text);
+}
+
+/**
+ * Tolerant XML parser scoped to <report>…</report>. Built by hand
+ * (no full XML library) because the LLM output we accept is
+ * shallow and well-known: <report><contextSummary/><findings>
+ * <finding attrs…><title/><summary/><evidence/>* <affectedFiles/>?
+ * <suggestedChange/>?</finding>*</findings></report>. Returns
+ * undefined if no <report> root is present.
+ */
+function tryParseReportXml(participant: string, text: string): ParticipantReport | undefined {
+  const reportMatch = text.match(/<report\b[^>]*>([\s\S]*?)<\/report>/i);
+  if (!reportMatch) return undefined;
+  const body = reportMatch[1];
+
+  const contextSummary = decodeXmlText(extractTag(body, "contextSummary") ?? "");
+
+  const findingsBlock = extractTag(body, "findings") ?? "";
+  const findings: ArenaFinding[] = [];
+  let i = 0;
+  for (const match of findingsBlock.matchAll(/<finding\b([^>]*)>([\s\S]*?)<\/finding>/gi)) {
+    const attrs = parseAttrs(match[1]);
+    const inner = match[2];
+    const title = decodeXmlText(extractTag(inner, "title") ?? "");
+    const summary = decodeXmlText(extractTag(inner, "summary") ?? "");
+    const evidence: ArenaFinding["evidence"] = [];
+    for (const ev of inner.matchAll(/<evidence\b([^>]*)>([\s\S]*?)<\/evidence>/gi)) {
+      const evAttrs = parseAttrs(ev[1]);
+      evidence.push({
+        type: (evAttrs.type ?? "doc") as ArenaFinding["evidence"][number]["type"],
+        ref: evAttrs.ref ?? "",
+        note: decodeXmlText(ev[2].trim()),
+      });
+    }
+    const affectedFilesBlock = extractTag(inner, "affectedFiles") ?? "";
+    const affectedFiles: string[] = [];
+    for (const f of affectedFilesBlock.matchAll(/<file>([\s\S]*?)<\/file>/gi)) {
+      affectedFiles.push(decodeXmlText(f[1].trim()));
+    }
+    const suggestedChange = decodeXmlText(extractTag(inner, "suggestedChange") ?? "").trim();
+    const confidence = Number(attrs.confidence);
+    findings.push({
+      id: attrs.id || `f${i + 1}`,
+      kind: validateFindingKind(attrs.kind),
+      title: title || "Untitled",
+      summary,
+      severity: (attrs.severity as ArenaFinding["severity"]) || undefined,
+      confidence: Number.isFinite(confidence) ? confidence : 0.5,
+      evidence,
+      affectedFiles,
+      suggestedChange: suggestedChange || undefined,
+    });
+    i++;
+  }
+
+  return { participant, contextSummary, findings };
+}
+
+function extractTag(xml: string, tag: string): string | undefined {
+  const re = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
+  const m = xml.match(re);
+  return m?.[1];
+}
+
+function parseAttrs(attrString: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of attrString.matchAll(/(\w+)\s*=\s*"([^"]*)"/g)) {
+    out[m[1]] = m[2];
+  }
+  return out;
+}
+
+function decodeXmlText(s: string): string {
+  return s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .trim();
 }
 
 function parseFinding(raw: any, index: number): ArenaFinding {

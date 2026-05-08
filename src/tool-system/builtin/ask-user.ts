@@ -1,8 +1,13 @@
 /**
  * Built-in AskUserQuestion tool — ask the user a question during execution.
+ *
+ * The actual prompt-the-user implementation is provided per-Engine via
+ * ToolContext.askUser. Headless mode (no UI wired up) leaves askUser
+ * undefined and the tool reports back asking the LLM to assume.
  */
 
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 
 export const askUserToolDef: ToolDefinition = {
   name: "AskUserQuestion",
@@ -19,28 +24,21 @@ export const askUserToolDef: ToolDefinition = {
   },
 };
 
-/**
- * Factory: the actual executor is injected at runtime by the Engine,
- * because it depends on the CLI/UI layer to collect user input.
- */
 export type AskUserFn = (question: string) => Promise<string>;
 
-let _askUserFn: AskUserFn | undefined;
-
-export function setAskUserFn(fn: AskUserFn | undefined): void {
-  _askUserFn = fn;
-}
-
-export async function askUserTool(args: Record<string, unknown>): Promise<string> {
+export async function askUserTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const question = args.question as string;
   if (!question) return "Error: question is required";
 
-  if (!_askUserFn) {
+  if (!ctx?.askUser) {
     return "Error: AskUserQuestion is not available in headless mode. Make a reasonable assumption and proceed.";
   }
 
   try {
-    const answer = await _askUserFn(question);
+    const answer = await ctx.askUser(question);
     return answer || "(user provided empty response)";
   } catch (err) {
     return `Error asking user: ${(err as Error).message}`;

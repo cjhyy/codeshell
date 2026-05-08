@@ -1,7 +1,12 @@
 /**
  * Memory system — persistent cross-session memory.
  *
- * Stores structured memory entries in ~/.code-shell/memory/ as individual markdown files.
+ * Stores structured memory entries as individual markdown files under a base
+ * directory. Resolution order for the base directory:
+ *   1. explicit `baseDir` constructor arg
+ *   2. CODE_SHELL_HOME env var
+ *   3. ~/.code-shell
+ *
  * MEMORY.md is the index file.
  */
 
@@ -17,18 +22,42 @@ export interface MemoryEntry {
   fileName: string;
 }
 
+export interface MemoryManagerOptions {
+  /** Project root path; when set, memories are scoped under projects/<hash>/memory. */
+  projectDir?: string;
+  /** Override the base directory (~/.code-shell by default). Takes precedence over env. */
+  baseDir?: string;
+}
+
+export function resolveMemoryBaseDir(override?: string): string {
+  if (override) return override;
+  const fromEnv = process.env.CODE_SHELL_HOME;
+  if (fromEnv && fromEnv.length > 0) return fromEnv;
+  return join(homedir(), ".code-shell");
+}
+
 export class MemoryManager {
+  private readonly baseDir: string;
   private readonly memoryDir: string;
   private readonly indexPath: string;
+  // Per-instance cache of {fileName -> {name, description}} so the
+  // index can be rewritten without re-reading every memory file
+  // every time a single entry is saved/deleted (the previous code
+  // path called loadAll() on every save, giving O(N²) total I/O).
+  // null = "not initialized yet, fall back to disk on next access."
+  private indexCache: Map<string, { name: string; description: string }> | null = null;
 
-  constructor(projectDir?: string) {
-    // Project-scoped memory: ~/.code-shell/projects/<hash>/memory/
-    const baseDir = join(homedir(), ".code-shell");
-    if (projectDir) {
-      const projectHash = projectDir.replace(/[/\\:]/g, "-").replace(/^-/, "");
-      this.memoryDir = join(baseDir, "projects", projectHash, "memory");
+  constructor(options?: MemoryManagerOptions | string) {
+    // Back-compat: old signature was `new MemoryManager(projectDir?: string)`.
+    const opts: MemoryManagerOptions =
+      typeof options === "string" ? { projectDir: options } : (options ?? {});
+
+    this.baseDir = resolveMemoryBaseDir(opts.baseDir);
+    if (opts.projectDir) {
+      const projectHash = opts.projectDir.replace(/[/\\:]/g, "-").replace(/^-/, "");
+      this.memoryDir = join(this.baseDir, "projects", projectHash, "memory");
     } else {
-      this.memoryDir = join(baseDir, "memory");
+      this.memoryDir = join(this.baseDir, "memory");
     }
     this.indexPath = join(this.memoryDir, "MEMORY.md");
     mkdirSync(this.memoryDir, { recursive: true });
@@ -52,7 +81,13 @@ export class MemoryManager {
       `${entry.content}\n`;
 
     writeFileSync(filePath, content, "utf-8");
-    this.updateIndex();
+
+    // Incremental index update. Initialize the cache on first
+    // save by paying one loadAll() — every save after that just
+    // mutates the cache and rewrites MEMORY.md.
+    const cache = this.ensureIndexCache();
+    cache.set(fileName, { name: entry.name, description: entry.description });
+    this.writeIndex(cache);
     return fileName;
   }
 
@@ -111,7 +146,9 @@ export class MemoryManager {
 
     try {
       unlinkSync(join(this.memoryDir, entry.fileName));
-      this.updateIndex();
+      const cache = this.ensureIndexCache();
+      cache.delete(entry.fileName);
+      this.writeIndex(cache);
       return true;
     } catch {
       return false;
@@ -141,20 +178,33 @@ export class MemoryManager {
       `# Persistent Memory\n\n` +
       `The following memories from previous sessions may be relevant:\n\n` +
       lines.join("\n") +
-      `\n\nTo read a specific memory, check ~/.code-shell/memory/`
+      `\n\nTo read a specific memory, check ${this.memoryDir}/`
     );
   }
 
-  private updateIndex(): void {
-    const entries = this.loadAll();
-    const lines = entries.map(
-      (e) => `- [${e.name}](${e.fileName}) — ${e.description}`,
-    );
+  /**
+   * Lazy-build the in-memory index from disk on first use, then
+   * keep it in sync incrementally via save/delete. Avoids the
+   * O(N²) re-read of every memory file on every save.
+   */
+  private ensureIndexCache(): Map<string, { name: string; description: string }> {
+    if (this.indexCache !== null) return this.indexCache;
+    const cache = new Map<string, { name: string; description: string }>();
+    for (const entry of this.loadAll()) {
+      cache.set(entry.fileName, { name: entry.name, description: entry.description });
+    }
+    this.indexCache = cache;
+    return cache;
+  }
 
+  private writeIndex(cache: Map<string, { name: string; description: string }>): void {
+    const lines: string[] = [];
+    for (const [fileName, meta] of cache) {
+      lines.push(`- [${meta.name}](${fileName}) — ${meta.description}`);
+    }
     const content = lines.length > 0
       ? lines.join("\n") + "\n"
       : "(no memories stored)\n";
-
     writeFileSync(this.indexPath, content, "utf-8");
   }
 

@@ -11,6 +11,8 @@ import { App } from "./App.js";
 import { ThemeProvider } from "./theme.js";
 import type { AgentClient } from "../protocol/client.js";
 import { initHistory, flushHistorySync } from "./input-history.js";
+import { getOpenRouterSnapshot } from "../data/openrouter-models.js";
+import { syncOpenRouterCatalog } from "../data/openrouter-sync.js";
 
 export interface InkReplOptions {
   client: AgentClient;
@@ -27,6 +29,17 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
   // Initialize input history with session and project context
   const sessionId = options.sessionId ?? `session-${Date.now()}`;
   initHistory(sessionId, options.cwd);
+
+  // Background-refresh the OpenRouter catalog if the bundled snapshot is
+  // older than 24h. Fire-and-forget — failures fall back to the bundled
+  // snapshot silently. Disable with CODESHELL_NO_MODEL_SYNC=1.
+  if (process.env.CODESHELL_NO_MODEL_SYNC !== "1") {
+    const snap = getOpenRouterSnapshot();
+    const ageMs = snap.fetchedAt ? Date.now() - new Date(snap.fetchedAt).getTime() : Infinity;
+    if (ageMs > 24 * 60 * 60 * 1000) {
+      void syncOpenRouterCatalog().catch(() => {});
+    }
+  }
 
   // Keep the event loop alive until Ink's useInput effect calls stdin.ref().
   // Without this, the process can exit before React effects fire —

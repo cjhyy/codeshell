@@ -5,6 +5,7 @@
 import type { RegisteredTool, ToolDefinition, ToolResult } from "../types.js";
 import { ConfigError, ToolNotFoundError, ToolExecutionError, ToolTimeoutError } from "../exceptions.js";
 import { BUILTIN_TOOLS, type BuiltinToolFn } from "./builtin/index.js";
+import type { ToolContext } from "./context.js";
 
 /**
  * Default execution timeout for any tool that does not declare its own
@@ -74,7 +75,7 @@ export class ToolRegistry {
   async executeTool(
     name: string,
     args: Record<string, unknown>,
-    options?: { timeoutMs?: number; signal?: AbortSignal },
+    options?: { timeoutMs?: number; signal?: AbortSignal; ctx?: ToolContext },
   ): Promise<ToolResult> {
     const tool = this.tools.get(name);
     if (!tool) {
@@ -116,9 +117,14 @@ export class ToolRegistry {
     // Inject the abort signal into args so tools (like Agent) can use it
     const argsWithSignal = { ...args, __signal: childController.signal };
 
+    // Build per-call ctx: caller's ctx (if any) + this call's signal
+    const ctx: ToolContext | undefined = options?.ctx
+      ? { ...options.ctx, signal: childController.signal }
+      : undefined;
+
     try {
       const result = await Promise.race([
-        executor(argsWithSignal),
+        executor(argsWithSignal, ctx),
         new Promise<never>((_, reject) => {
           childController.signal.addEventListener("abort", () => {
             const reason = childController.signal.reason;

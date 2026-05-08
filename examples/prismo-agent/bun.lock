@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "prismo-agent-example",
+      "dependencies": {
+        "code-shell": "link:../../",
+      },
+    },
+  },
+  "packages": {
+    "code-shell": ["@cjhyy/code-shell@link:../../", { "bin": { "code-shell": "dist/cli/main.js" } }],
+  }
+}

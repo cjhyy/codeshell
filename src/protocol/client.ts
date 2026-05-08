@@ -101,6 +101,11 @@ export class AgentClient {
       params.value = extra[0];
       delete params.sessionId;
     }
+    // Support permission_set: query("permission_set", mode)
+    if (type === "permission_set") {
+      params.value = sessionId;
+      delete params.sessionId;
+    }
     return this.request(Methods.Query, params) as Promise<QueryResult>;
   }
 

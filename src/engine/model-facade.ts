@@ -125,8 +125,21 @@ export class ModelFacade {
   getOutputTokens?(): number;
 
   private recordResponse(response: LLMResponse): void {
-    if (response.text || response.toolCalls.length > 0) {
+    if (response.text || response.toolCalls.length > 0 || response.reasoningContent) {
       const contentBlocks: import("../types.js").ContentBlock[] = [];
+
+      // DeepSeek V4 thinking-mode contract: the API rejects the next
+      // turn unless the prior assistant's reasoning_content is echoed
+      // back. Persist it as a dedicated block so transcript -> message
+      // round-tripping preserves it without mixing into displayable
+      // text. Goes first so it sits adjacent to the assistant turn it
+      // belongs to even after compaction.
+      if (response.reasoningContent) {
+        contentBlocks.push({
+          type: "reasoning",
+          reasoningContent: response.reasoningContent,
+        });
+      }
 
       if (response.text) {
         contentBlocks.push({ type: "text", text: response.text });

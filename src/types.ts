@@ -5,7 +5,7 @@
 // ─── Content & Messages ───────────────────────────────────────────
 
 export interface ContentBlock {
-  type: "text" | "tool_use" | "tool_result" | "image";
+  type: "text" | "tool_use" | "tool_result" | "image" | "reasoning";
   text?: string;
   id?: string;
   name?: string;
@@ -13,6 +13,9 @@ export interface ContentBlock {
   content?: string | ContentBlock[];
   tool_use_id?: string;
   source?: { type: "base64"; media_type: string; data: string };
+  // DeepSeek thinking-mode payload that must be echoed back verbatim
+  // on the next request, alongside the assistant's content/tool_calls.
+  reasoningContent?: string;
 }
 
 export interface Message {
@@ -170,7 +173,7 @@ export interface ApprovalRequest {
 }
 
 export type ApprovalResult =
-  | { approved: true; permanent?: boolean; always?: boolean }
+  | { approved: true; permanent?: boolean; always?: boolean; /** Used by AskUserQuestion to carry the user's free-text answer. */ answer?: string }
   | { approved: false; reason?: string; always?: boolean };
 
 // ─── Turn Loop ────────────────────────────────────────────────────
@@ -249,6 +252,10 @@ export interface LLMResponse {
   toolCalls: ToolCall[];
   usage?: TokenUsage;
   stopReason?: string;
+  // Provider-side reasoning payload (e.g. DeepSeek V4 thinking mode).
+  // Must be threaded back into the next request unchanged or the
+  // upstream API rejects the call with HTTP 400.
+  reasoningContent?: string;
 }
 
 export interface LLMStreamChunk {

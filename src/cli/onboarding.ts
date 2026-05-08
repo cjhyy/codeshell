@@ -13,15 +13,16 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { createInterface } from "node:readline";
+import { getOpenRouterModels } from "../data/openrouter-models.js";
 
-interface OnboardingResult {
+export interface OnboardingResult {
   provider: string;
   model: string;
   apiKey: string;
   baseUrl: string;
 }
 
-interface ProviderDef {
+export interface ProviderDef {
   id: string;
   name: string;
   envKey: string;
@@ -31,9 +32,11 @@ interface ProviderDef {
   keyUrl: string;
   keyPrefix: string;
   models: string[];
+  /** When true, skip API key prompt (e.g. local providers like Ollama). */
+  noKey?: boolean;
 }
 
-const PROVIDERS: ProviderDef[] = [
+export const PROVIDERS: ProviderDef[] = [
   {
     id: "openrouter",
     name: "OpenRouter (推荐 — 支持所有模型)",
@@ -44,21 +47,20 @@ const PROVIDERS: ProviderDef[] = [
     keyUrl: "https://openrouter.ai/keys",
     keyPrefix: "sk-or-",
     models: [
-      "anthropic/claude-opus-4.6",
+      "anthropic/claude-opus-4.7",
       "anthropic/claude-sonnet-4.6",
       "anthropic/claude-haiku-4.5",
-      "openai/gpt-5.4",
+      "openai/gpt-5",
+      "openai/gpt-5-mini",
       "openai/gpt-4o",
       "openai/o4-mini",
-      "google/gemini-3.1-pro-preview",
-      "google/gemini-3-flash-preview",
+      "openai/o3",
       "google/gemini-2.5-pro",
-      "deepseek/deepseek-v3.2",
-      "deepseek/deepseek-r1",
+      "google/gemini-2.5-flash",
+      "deepseek/deepseek-chat",
+      "deepseek/deepseek-reasoner",
       "qwen/qwen3-coder",
-      "qwen/qwen3-235b-a22b",
       "meta-llama/llama-4-maverick",
-      "mistralai/devstral-medium",
     ],
   },
   {
@@ -71,7 +73,7 @@ const PROVIDERS: ProviderDef[] = [
     keyUrl: "https://console.anthropic.com/settings/keys",
     keyPrefix: "sk-ant-",
     models: [
-      "claude-opus-4-6",
+      "claude-opus-4-7",
       "claude-sonnet-4-6",
       "claude-haiku-4-5",
     ],
@@ -82,10 +84,48 @@ const PROVIDERS: ProviderDef[] = [
     envKey: "OPENAI_API_KEY",
     provider: "openai",
     baseUrl: "https://api.openai.com/v1",
-    defaultModel: "gpt-5.4",
+    defaultModel: "gpt-5",
     keyUrl: "https://platform.openai.com/api-keys",
     keyPrefix: "sk-",
-    models: ["gpt-5.4", "gpt-5.4-mini", "gpt-4o", "o4-mini", "o3"],
+    models: ["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "o4-mini", "o3"],
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek (官方直连)",
+    envKey: "DEEPSEEK_API_KEY",
+    provider: "openai",
+    baseUrl: "https://api.deepseek.com/v1",
+    defaultModel: "deepseek-v4-pro",
+    keyUrl: "https://platform.deepseek.com/api_keys",
+    keyPrefix: "sk-",
+    models: ["deepseek-v4-pro", "deepseek-v4-flash"],
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini (官方直连)",
+    envKey: "GEMINI_API_KEY",
+    provider: "openai",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    defaultModel: "gemini-2.5-pro",
+    keyUrl: "https://aistudio.google.com/apikey",
+    keyPrefix: "",
+    models: [
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+    ],
+  },
+  {
+    id: "ollama",
+    name: "Ollama (本地，无需 Key)",
+    envKey: "",
+    provider: "openai",
+    baseUrl: "http://localhost:11434/v1",
+    defaultModel: "llama3.1",
+    keyUrl: "https://ollama.com/library",
+    keyPrefix: "",
+    models: ["llama3.1", "qwen2.5-coder", "deepseek-r1", "mistral", "gemma3"],
+    noKey: true,
   },
   {
     id: "custom",
@@ -99,6 +139,58 @@ const PROVIDERS: ProviderDef[] = [
     models: [],
   },
 ];
+
+// ─── Dynamic model list (OpenRouter snapshot) ────────────────────
+
+/**
+ * Curated vendors and how many of their newest models to surface in the
+ * onboarding picker. Order matters — first vendors appear first.
+ * Tweak this if a new vendor becomes worth exposing in the picker.
+ */
+const OPENROUTER_VENDORS: Array<{ prefix: string; take: number }> = [
+  { prefix: "anthropic/", take: 4 },
+  { prefix: "openai/", take: 5 },
+  { prefix: "google/", take: 3 },
+  { prefix: "deepseek/", take: 3 },
+  { prefix: "x-ai/", take: 2 },
+  { prefix: "qwen/", take: 2 },
+  { prefix: "meta-llama/", take: 2 },
+  { prefix: "mistralai/", take: 1 },
+];
+
+/**
+ * Build the OpenRouter model picker list from the bundled snapshot.
+ * Filters out `:free`/preview variants for the default picker (still
+ * reachable via /models add). Returns the hardcoded list as fallback
+ * when the snapshot is empty (e.g. fresh checkout before first build).
+ */
+function buildOpenRouterModelList(fallback: string[]): string[] {
+  const all = getOpenRouterModels();
+  if (all.length === 0) return fallback;
+
+  const skip = /(?:-guard|-embedding|-rerank|-vision-only|:free)/i;
+  const out: string[] = [];
+  for (const { prefix, take } of OPENROUTER_VENDORS) {
+    const candidates = all
+      .filter((m) => m.id.startsWith(prefix))
+      .filter((m) => !skip.test(m.id) && !m.id.includes("-preview"))
+      .slice(0, take);
+    out.push(...candidates.map((m) => m.id));
+  }
+  return out.length > 0 ? out : fallback;
+}
+
+/**
+ * Resolve the model list a provider should expose right now. For
+ * OpenRouter this comes from the snapshot; for direct providers it
+ * stays hardcoded (snapshot doesn't carry their native IDs).
+ */
+export function resolveProviderModels(provider: ProviderDef): string[] {
+  if (provider.id === "openrouter") {
+    return buildOpenRouterModelList(provider.models);
+  }
+  return provider.models;
+}
 
 // ─── Sentinel for "go back" ────────────────────────────────────────
 
@@ -285,9 +377,39 @@ async function confirm(question: string): Promise<MaybeBack<boolean>> {
   return result === "yes";
 }
 
+// ─── Env var detection ─────────────────────────────────────────────
+
+export interface DetectedEnvKey {
+  provider: ProviderDef;
+  envKey: string;
+  apiKey: string;
+}
+
+/**
+ * Scan environment for known provider API keys.
+ * Returns one entry per provider that has its envKey set.
+ */
+export function detectEnvKeys(): DetectedEnvKey[] {
+  const found: DetectedEnvKey[] = [];
+  for (const p of PROVIDERS) {
+    if (!p.envKey) continue;
+    const v = process.env[p.envKey];
+    if (v && v.trim()) {
+      found.push({ provider: p, envKey: p.envKey, apiKey: v.trim() });
+    }
+  }
+  return found;
+}
+
+/** Mask a key for display: "sk-517f...b594" */
+export function maskKey(key: string): string {
+  if (key.length <= 12) return key.slice(0, 2) + "***";
+  return `${key.slice(0, 6)}...${key.slice(-4)}`;
+}
+
 // ─── API key validation ────────────────────────────────────────────
 
-async function validateApiKey(baseUrl: string, apiKey: string): Promise<boolean> {
+export async function validateApiKey(baseUrl: string, apiKey: string): Promise<boolean> {
   try {
     if (baseUrl.includes("openrouter")) {
       const res = await fetch("https://openrouter.ai/api/v1/auth/key", {
@@ -309,10 +431,9 @@ async function validateApiKey(baseUrl: string, apiKey: string): Promise<boolean>
 // ─── Public API ────────────────────────────────────────────────────
 
 export function hasApiKey(): boolean {
-  if (process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY) {
-    return true;
-  }
-
+  // Env variables alone are NOT enough to skip onboarding — they're surfaced
+  // as a one-click option on the provider page instead. We only skip when the
+  // user has explicitly persisted a config (settings.json with model.apiKey).
   const settingsPaths = [
     join(homedir(), ".code-shell", "settings.json"),
     join(homedir(), ".claude", "settings.json"),
@@ -351,12 +472,38 @@ export async function runOnboarding(): Promise<OnboardingResult> {
       // ─── Step 1: Provider ────────────────────────────────────
       case "provider": {
         console.log();
+
+        // Detect API keys already set in the environment, surface them as
+        // top-of-list options the user can pick (still requires confirmation).
+        const detected = detectEnvKeys();
+        const ENV_PREFIX = "env:";
+        const detectedOptions: SelectOption[] = detected.map((d) => ({
+          label: `使用环境变量 ${d.envKey} → ${d.provider.name}`,
+          value: ENV_PREFIX + d.provider.id,
+          hint: `(${maskKey(d.apiKey)})`,
+        }));
+        const providerOptions: SelectOption[] = PROVIDERS.map((p) => ({
+          label: p.name,
+          value: p.id,
+        }));
+
         const providerId = await arrowSelect(
-          PROVIDERS.map((p) => ({ label: p.name, value: p.id })),
+          [...detectedOptions, ...providerOptions],
           "选择 API 提供商 (↑↓ 移动, Enter 确认):",
           { allowBack: false }, // first step, no back
         );
         if (providerId === BACK) break;
+
+        // Branch: user picked a detected env key — skip apikey step.
+        if (providerId.startsWith(ENV_PREFIX)) {
+          const id = providerId.slice(ENV_PREFIX.length);
+          const hit = detected.find((d) => d.provider.id === id)!;
+          selected = hit.provider;
+          apiKey = hit.apiKey;
+          console.log(chalk.green(`  ✓ 使用环境变量 ${hit.envKey}`));
+          step = "model_pool";
+          break;
+        }
 
         selected = PROVIDERS.find((p) => p.id === providerId)!;
 
@@ -366,6 +513,13 @@ export async function runOnboarding(): Promise<OnboardingResult> {
           saveSettings(customResult);
           printSuccess(selected.name, customResult.model);
           return customResult;
+        }
+
+        // Local providers (Ollama / LM Studio) skip API key entry.
+        if (selected.noKey) {
+          apiKey = "ollama";
+          step = "model_pool";
+          break;
         }
 
         step = "apikey";
@@ -404,8 +558,9 @@ export async function runOnboarding(): Promise<OnboardingResult> {
 
       // ─── Step 3: Model Pool — select which models to enable ──
       case "model_pool": {
-        if (selected.models.length <= 1) {
-          poolModels = [...selected.models];
+        const availableModels = resolveProviderModels(selected);
+        if (availableModels.length <= 1) {
+          poolModels = [...availableModels];
           model = selected.defaultModel;
           step = "arena_ask";
           break;
@@ -414,8 +569,14 @@ export async function runOnboarding(): Promise<OnboardingResult> {
         console.log();
         console.log(chalk.dim("  选择要加入模型池的模型 (模型池中的模型可通过 /model 随时切换)"));
 
-        const poolResult = await selectModelPool(selected.models, selected.defaultModel);
-        if (poolResult === BACK) { step = "apikey"; break; }
+        const poolResult = await selectModelPool(availableModels, selected.defaultModel);
+        if (poolResult === BACK) {
+          // If we got here without prompting for a key (noKey provider, or
+          // env-detected key), go back to provider; otherwise back to apikey.
+          const skippedApikey = selected.noKey || detectEnvKeys().some((d) => d.apiKey === apiKey);
+          step = skippedApikey ? "provider" : "apikey";
+          break;
+        }
 
         poolModels = poolResult;
         if (poolModels.length === 0) {
@@ -677,41 +838,66 @@ async function configureCustomProvider(): Promise<MaybeBack<OnboardingResult>> {
 
 /** Known max output tokens for common models. */
 const KNOWN_MAX_OUTPUT: Record<string, number> = {
-  "anthropic/claude-opus-4.6": 32000,
-  "anthropic/claude-opus-4-6": 32000,
-  "claude-opus-4-6": 32000,
+  "anthropic/claude-opus-4.7": 32000,
+  "anthropic/claude-opus-4-7": 32000,
+  "claude-opus-4-7": 32000,
   "anthropic/claude-sonnet-4.6": 16000,
   "anthropic/claude-sonnet-4-6": 16000,
   "claude-sonnet-4-6": 16000,
   "anthropic/claude-haiku-4.5": 8192,
   "anthropic/claude-haiku-4-5": 8192,
   "claude-haiku-4-5": 8192,
-  "openai/gpt-5.4": 32000,
-  "gpt-5.4": 32000,
+  "openai/gpt-5": 32000,
+  "openai/gpt-5-mini": 32000,
+  "openai/gpt-5-nano": 16000,
+  "gpt-5": 32000,
+  "gpt-5-mini": 32000,
+  "gpt-5-nano": 16000,
   "openai/gpt-4o": 16384,
   "gpt-4o": 16384,
   "openai/o4-mini": 100000,
   "o4-mini": 100000,
   "openai/o3": 100000,
   "o3": 100000,
-  "google/gemini-3.1-pro-preview": 65536,
-  "google/gemini-3-flash-preview": 65536,
   "google/gemini-2.5-pro": 65536,
+  "google/gemini-2.5-flash": 65536,
+  "gemini-2.5-pro": 65536,
+  "gemini-2.5-flash": 65536,
+  "gemini-2.0-flash": 8192,
   "deepseek/deepseek-v3.2": 8192,
   "deepseek/deepseek-r1": 8192,
+  "deepseek-v4-flash": 8192,
+  "deepseek-v4-pro": 65536,
   "qwen/qwen3-coder": 16384,
-  "qwen/qwen3-235b-a22b": 8192,
   "meta-llama/llama-4-maverick": 32000,
-  "mistralai/devstral-medium": 24000,
 };
 
 /**
- * Derive a short key from a model path.
- * "anthropic/claude-opus-4.6" → "claude-opus"
- * "openai/gpt-5.4" → "gpt"
- * "deepseek/deepseek-v3.2" → "deepseek"
+ * Resolve a model's max-output-token budget. Lookup order:
+ *   1. KNOWN_MAX_OUTPUT (covers direct providers like Anthropic/DeepSeek
+ *      whose IDs aren't in the OpenRouter snapshot)
+ *   2. OpenRouter snapshot (covers `vendor/model` style IDs)
+ *   3. undefined — caller falls back to its own default
+ *
+ * Returns undefined (not 0) when nothing is known, so callers can use
+ * `?? defaultValue` semantics.
  */
-function modelKey(model: string): string {
+export function resolveMaxOutput(model: string): number | undefined {
+  if (KNOWN_MAX_OUTPUT[model]) return KNOWN_MAX_OUTPUT[model];
+  if (model.includes("/")) {
+    const hit = getOpenRouterModels().find((m) => m.id === model);
+    if (hit && hit.maxOutputTokens > 0) return hit.maxOutputTokens;
+  }
+  return undefined;
+}
+
+/**
+ * Derive a short key from a model path.
+ * "anthropic/claude-opus-4.7" → "claude-opus"
+ * "openai/gpt-5" → "gpt"
+ * "deepseek/deepseek-chat" → "deepseek"
+ */
+export function modelKey(model: string): string {
   const slash = model.lastIndexOf("/");
   const base = slash >= 0 ? model.slice(slash + 1) : model;
   // claude models: "claude-opus-4.6" → "claude-opus", "claude-sonnet-4.6" → "claude-sonnet"
@@ -719,7 +905,7 @@ function modelKey(model: string): string {
     const parts = base.split("-");
     return parts.length >= 2 ? `${parts[0]}-${parts[1]}` : parts[0]!;
   }
-  // gpt: "gpt-5.4" → "gpt", "gpt-4o" → "gpt4o"
+  // gpt: "gpt-5" → "gpt", "gpt-4o" → "gpt4o"
   if (base.startsWith("gpt-")) {
     const rest = base.slice(4);
     if (/^\d/.test(rest)) return "gpt";
@@ -754,24 +940,25 @@ function modelKey(model: string): string {
 /**
  * Build model pool entries from a provider's model list.
  */
-function buildModelPool(
+export function buildModelPool(
   provider: ProviderDef,
   apiKey: string,
 ): Array<{ key: string; label: string; provider: string; model: string; baseUrl: string; apiKey: string; maxOutputTokens?: number }> {
-  return provider.models.map((m) => ({
+  const models = resolveProviderModels(provider);
+  return models.map((m) => ({
     key: modelKey(m),
     label: modelDisplayName(m),
     provider: provider.provider,
     model: m,
     baseUrl: provider.baseUrl,
     apiKey,
-    maxOutputTokens: KNOWN_MAX_OUTPUT[m],
+    maxOutputTokens: resolveMaxOutput(m),
   }));
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
-function modelDisplayName(model: string): string {
+export function modelDisplayName(model: string): string {
   const slash = model.lastIndexOf("/");
   const base = slash >= 0 ? model.slice(slash + 1) : model;
   const parts = base.split("-");
@@ -793,7 +980,7 @@ function printSuccess(providerName: string, model: string): void {
   console.log();
 }
 
-function saveSettings(result: OnboardingResult, providerDef?: ProviderDef, poolModels?: string[]): void {
+export function saveSettings(result: OnboardingResult, providerDef?: ProviderDef, poolModels?: string[]): void {
   const dir = join(homedir(), ".code-shell");
   const file = join(dir, "settings.json");
   mkdirSync(dir, { recursive: true });
@@ -826,7 +1013,7 @@ function saveSettings(result: OnboardingResult, providerDef?: ProviderDef, poolM
 
 // saveArenaSettings removed — replaced by saveArenaSettingsByKeys
 
-function saveArenaSettingsByKeys(keys: string[]): void {
+export function saveArenaSettingsByKeys(keys: string[]): void {
   const dir = join(homedir(), ".code-shell");
   const file = join(dir, "settings.json");
 

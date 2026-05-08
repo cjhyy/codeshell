@@ -78,12 +78,28 @@ interface ToolCallResultProps {
   nested?: boolean;
   /** When true, show full output instead of collapsed preview. */
   expanded?: boolean;
+  /**
+   * When true, render as a single dim line — used for transient
+   * "this attempt failed and was retried" cases (e.g. Arena's
+   * fail-fast endpoint check) so the feed isn't swamped with scary
+   * red error cards for what was just a parameter fix-up.
+   */
+  compact?: boolean;
 }
 
-export function ToolCallResult({ toolName, result, error, nested, expanded: forceExpand }: ToolCallResultProps) {
+export function ToolCallResult({ toolName, result, error, nested, expanded: forceExpand, compact }: ToolCallResultProps) {
   const [localExpanded, setLocalExpanded] = useState(false);
   const expanded = forceExpand || localExpanded;
   const ml = nested ? 3 : 0;
+
+  if (compact) {
+    const summary = singleLine(result ?? error ?? "");
+    return (
+      <Box marginLeft={ml}>
+        <Text dim>{"  · "}{toolName}{" retried — "}{truncate(summary, 90)}</Text>
+      </Box>
+    );
+  }
 
   if (error) {
     return (

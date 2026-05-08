@@ -88,7 +88,11 @@ export interface ArenaToolPack {
 /** Context provider interface — collects evidence from a source */
 export interface ArenaContextProvider {
   kind: ArenaSourceKind;
-  collect(plan: ArenaPlan, topic: string): ArenaArtifact[];
+  // Allowed to return synchronously or async — providers that do
+  // pure in-memory work (none, simple git plumbing) keep their
+  // sync signature; ones that fan out to subprocesses (repo's
+  // recursive grep) return a Promise so we can parallelize them.
+  collect(plan: ArenaPlan, topic: string): ArenaArtifact[] | Promise<ArenaArtifact[]>;
 }
 
 /** Quick fact — high-signal summary entry */
@@ -598,6 +602,8 @@ export interface ArenaConfig {
 
 export type ArenaProgressEvent =
   | { type: "plan_resolved"; plan: ArenaPlan }
+  | { type: "evidence_started"; source: ArenaSourceKind }
+  | { type: "evidence_source_done"; source: ArenaSourceKind; count: number; durationMs: number; timedOut: boolean }
   | { type: "evidence_collected"; artifacts: ArenaArtifact[] }
   | { type: "research_start"; participant: string }
   | { type: "research_done"; participant: string; report: ParticipantReport }

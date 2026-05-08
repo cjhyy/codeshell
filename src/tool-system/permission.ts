@@ -308,10 +308,21 @@ export class PermissionClassifier {
   private denialTracker = new DenialTracker();
 
   constructor(
-    private readonly rules: PermissionRule[],
-    private readonly defaultMode: PermissionMode = "default",
-    private readonly approvalBackend: ApprovalBackend = new HeadlessApprovalBackend("deny-all"),
+    private rules: PermissionRule[],
+    private defaultMode: PermissionMode = "default",
+    private approvalBackend: ApprovalBackend = new HeadlessApprovalBackend("deny-all"),
   ) {}
+
+  /** Replace mode + backend in place so live tool execution sees the change. */
+  reconfigure(mode: PermissionMode, approvalBackend: ApprovalBackend, rules?: PermissionRule[]): void {
+    this.defaultMode = mode;
+    this.approvalBackend = approvalBackend;
+    if (rules) this.rules = rules;
+  }
+
+  getMode(): PermissionMode {
+    return this.defaultMode;
+  }
 
   classify(toolName: string, args: Record<string, unknown>): PermissionDecision {
     // Runtime bypass overrides everything

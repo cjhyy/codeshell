@@ -18,14 +18,12 @@ import { ModelFacade } from "./model-facade.js";
 import type { CostStateStore } from "./cost-store.js";
 import { logger } from "../logging/logger.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
-import { setAskUserFn, type AskUserFn } from "../tool-system/builtin/ask-user.js";
-import { setArenaLLMConfig } from "../tool-system/builtin/arena.js";
-import { setSubAgentConfig } from "../tool-system/builtin/agent.js";
+import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { isInPlanMode } from "../tool-system/builtin/plan.js";
 import { SettingsManager } from "../settings/manager.js";
 import { FileHistory } from "../session/file-history.js";
-import { setToolSearchRegistry } from "../tool-system/builtin/tool-search.js";
+import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
   resolveAgentPreset,
   resolveBuiltinToolNames,
@@ -139,6 +137,15 @@ export class Engine {
   }
 
   /**
+   * Inject the askUser handler after construction. Used by AgentServer
+   * to wire its protocol-backed askUser into an Engine that was created
+   * before the server existed (chicken-and-egg: server takes engine in ctor).
+   */
+  setAskUser(fn: AskUserFn | undefined): void {
+    this.config.askUser = fn;
+  }
+
+  /**
    * Run a task from start to finish.
    */
   async run(
@@ -151,30 +158,46 @@ export class Engine {
   ): Promise<EngineResult> {
     const cwd = this.config.cwd ?? process.cwd();
 
-    // Wire up AskUserQuestion tool
-    setAskUserFn(this.config.askUser);
+    // Build the per-Engine ToolContext that will be threaded through every
+    // tool call. Replaces the old module-level singletons (setAskUserFn,
+    // setArenaLLMConfig, setSubAgentConfig, setToolSearchRegistry).
+    const subAgentSpawner: SubAgentSpawner = {
+      parentStream: options?.onStream,
+      describe: () => ({
+        cwd,
+        preset: this.preset.name,
+        permissionMode: this.config.permissionMode ?? "acceptEdits",
+      }),
+      spawn: async (req) => {
+        const child = new Engine({
+          llm: { ...this.config.llm, retryMaxAttempts: 2 },
+          cwd,
+          permissionMode: this.config.permissionMode,
+          preset: this.preset.name,
+          enabledBuiltinTools: this.config.enabledBuiltinTools,
+          disabledBuiltinTools: this.config.disabledBuiltinTools,
+          customSystemPrompt: this.config.customSystemPrompt,
+          appendSystemPrompt: this.config.appendSystemPrompt,
+          maxTurns: req.maxTurns,
+          maxContextTokens: this.config.maxContextTokens ?? 200_000,
+          sessionStorageDir: this.config.sessionStorageDir,
+        });
+        const childStream: StreamCallback | undefined = options?.onStream
+          ? (event) => options.onStream!({ ...event, agentId: req.agentId } as typeof event)
+          : undefined;
+        const result = await child.run(req.prompt, { signal: req.signal, onStream: childStream });
+        return result.text;
+      },
+    };
 
-    // Wire up Arena tool (inherit baseUrl/apiKey from engine config)
-    setArenaLLMConfig(this.config.llm);
-
-    // Wire up ToolSearch
-    setToolSearchRegistry(this.toolRegistry);
-
-    // Wire up Agent tool (sub-agent spawning)
-    setSubAgentConfig({
-      llm: this.config.llm,
+    const toolCtx: ToolContext = {
       cwd,
-      permissionMode: this.config.permissionMode ?? "acceptEdits",
-      preset: this.preset.name,
-      enabledBuiltinTools: this.config.enabledBuiltinTools,
-      disabledBuiltinTools: this.config.disabledBuiltinTools,
-      customSystemPrompt: this.config.customSystemPrompt,
-      appendSystemPrompt: this.config.appendSystemPrompt,
-      maxContextTokens: this.config.maxContextTokens ?? 200_000,
-      sessionStorageDir: this.config.sessionStorageDir,
-      onStream: options?.onStream,
-      createEngine: (cfg) => new Engine(cfg as unknown as EngineConfig),
-    });
+      llmConfig: this.config.llm,
+      modelPool: this.modelPool,
+      toolRegistry: this.toolRegistry,
+      askUser: this.config.askUser,
+      subAgentSpawner,
+    };
 
     logger.info("engine.run", {
       task: task.slice(0, 200),
@@ -212,55 +235,18 @@ export class Engine {
     // Kick off LLM client creation early (network handshake)
     const llmClientPromise = createLLMClient(this.config.llm);
 
-    // Default permission rules for the selected preset
-    const defaultRules: import("../types.js").PermissionRule[] = [
-      ...this.preset.defaultPermissionRules,
-    ];
-
-    // acceptEdits: also allow Write and Edit
     const mode = this.config.permissionMode ?? "acceptEdits";
-    if (mode === "acceptEdits" || mode === "bypassPermissions") {
-      defaultRules.push({ tool: "Write", decision: "allow" });
-      defaultRules.push({ tool: "Edit", decision: "allow" });
-    }
-    if (mode === "bypassPermissions") {
-      defaultRules.push({ tool: "Bash", decision: "allow" });
-    }
-
-    // Merge settings-defined permission rules (higher priority than defaults)
-    try {
-      const settingsManager = new SettingsManager(cwd);
-      const settings = settingsManager.get();
-      if (settings.permissions?.rules?.length) {
-        defaultRules.unshift(...settings.permissions.rules);
-      }
-    } catch {
-      // Settings not available — use defaults only
-    }
-
-    let approvalBackend: ApprovalBackend;
-    if (this.config.approvalBackend) {
-      approvalBackend = mode === "auto"
-        ? new AutoApprovalBackend(this.config.approvalBackend)
-        : this.config.approvalBackend;
-    } else if (mode === "auto") {
-      approvalBackend = new AutoApprovalBackend();
-    } else {
-      approvalBackend = new HeadlessApprovalBackend(
-        mode === "bypassPermissions"
-          ? "approve-all"
-          : mode === "dontAsk"
-            ? "deny-all"
-            : "deny-all",
-      );
-    }
+    const { rules: defaultRules, backend: approvalBackend } =
+      this.buildPermissionConfig(mode, cwd);
 
     const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
+    this.activePermission = permission;
 
     const toolExecutor = new ToolExecutor(this.toolRegistry, permission, this.hooks);
 
-    // Wire abort signal for cascading cancellation
+    // Wire abort signal for cascading cancellation + per-Engine ToolContext
     toolExecutor.setSignal(options?.signal);
+    toolExecutor.setContext(toolCtx);
 
     const contextManager = new ContextManager({
       maxTokens: this.config.maxContextTokens ?? 200_000,
@@ -554,4 +540,68 @@ export class Engine {
   private lastMessages: Message[] | undefined;
   private lastSessionId: string | undefined;
   private compactedMessagesBySession = new Map<string, Message[]>();
+  /** PermissionClassifier from the current/most-recent run, for live mode switching. */
+  private activePermission: PermissionClassifier | undefined;
+
+  private buildPermissionConfig(
+    mode: NonNullable<EngineConfig["permissionMode"]>,
+    cwd: string,
+  ): { rules: import("../types.js").PermissionRule[]; backend: ApprovalBackend } {
+    const rules: import("../types.js").PermissionRule[] = [...this.preset.defaultPermissionRules];
+
+    if (mode === "acceptEdits" || mode === "bypassPermissions") {
+      rules.push({ tool: "Write", decision: "allow" });
+      rules.push({ tool: "Edit", decision: "allow" });
+    }
+    if (mode === "bypassPermissions") {
+      rules.push({ tool: "Bash", decision: "allow" });
+    }
+
+    try {
+      const settingsManager = new SettingsManager(cwd);
+      const settings = settingsManager.get();
+      if (settings.permissions?.rules?.length) {
+        rules.unshift(...settings.permissions.rules);
+      }
+    } catch {
+      // Settings not available — defaults only
+    }
+
+    let backend: ApprovalBackend;
+    if (this.config.approvalBackend) {
+      backend = mode === "auto"
+        ? new AutoApprovalBackend(this.config.approvalBackend)
+        : this.config.approvalBackend;
+    } else if (mode === "auto") {
+      backend = new AutoApprovalBackend();
+    } else {
+      backend = new HeadlessApprovalBackend(
+        mode === "bypassPermissions"
+          ? "approve-all"
+          : mode === "dontAsk"
+            ? "deny-all"
+            : "deny-all",
+      );
+    }
+    return { rules, backend };
+  }
+
+  /**
+   * Switch permission mode at runtime. Takes effect immediately for any
+   * in-flight ToolExecutor (which holds a reference to the same classifier),
+   * and the new mode is used for any subsequent run() calls.
+   * Session-only — does not persist to settings.
+   */
+  setPermissionMode(mode: NonNullable<EngineConfig["permissionMode"]>): void {
+    this.config = { ...this.config, permissionMode: mode };
+    if (this.activePermission) {
+      const cwd = this.config.cwd ?? process.cwd();
+      const { rules, backend } = this.buildPermissionConfig(mode, cwd);
+      this.activePermission.reconfigure(mode, backend, rules);
+    }
+  }
+
+  getPermissionMode(): NonNullable<EngineConfig["permissionMode"]> {
+    return this.config.permissionMode ?? "acceptEdits";
+  }
 }

@@ -8,6 +8,7 @@
 
 import type { ToolDefinition, RegisteredTool } from "../../types.js";
 import type { ToolRegistry } from "../registry.js";
+import type { ToolContext } from "../context.js";
 
 export const toolSearchToolDef: ToolDefinition = {
   name: "ToolSearch",
@@ -32,35 +33,30 @@ export const toolSearchToolDef: ToolDefinition = {
   },
 };
 
-let _registry: ToolRegistry | undefined;
-
-export function setToolSearchRegistry(registry: ToolRegistry): void {
-  _registry = registry;
-}
-
-export async function toolSearchTool(args: Record<string, unknown>): Promise<string> {
+export async function toolSearchTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const query = args.query as string;
   if (!query) return "Error: query is required";
-  if (!_registry) return "Error: ToolSearch is not configured";
+  if (!ctx?.toolRegistry) return "Error: ToolSearch is not configured (no registry in ctx)";
 
   const maxResults = Math.min((args.max_results as number) || 5, 20);
 
   // "select:Name1,Name2" → exact match
   if (query.startsWith("select:")) {
     const names = query.slice(7).split(",").map((n) => n.trim());
-    return matchExact(names);
+    return matchExact(ctx.toolRegistry, names);
   }
 
   // Keyword search
-  return searchByKeyword(query, maxResults);
+  return searchByKeyword(ctx.toolRegistry, query, maxResults);
 }
 
-function matchExact(names: string[]): string {
-  if (!_registry) return "Error: registry not available";
-
+function matchExact(registry: ToolRegistry, names: string[]): string {
   const results: string[] = [];
   for (const name of names) {
-    const tool = _registry.getTool(name);
+    const tool = registry.getTool(name);
     if (tool) {
       results.push(formatTool(tool));
     } else {
@@ -70,10 +66,8 @@ function matchExact(names: string[]): string {
   return results.join("\n\n---\n\n");
 }
 
-function searchByKeyword(query: string, maxResults: number): string {
-  if (!_registry) return "Error: registry not available";
-
-  const allTools = _registry.listToolsDetailed();
+function searchByKeyword(registry: ToolRegistry, query: string, maxResults: number): string {
+  const allTools = registry.listToolsDetailed();
   const queryLower = query.toLowerCase();
   const keywords = queryLower.split(/\s+/);
 

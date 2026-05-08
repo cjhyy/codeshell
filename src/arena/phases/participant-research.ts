@@ -170,6 +170,27 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
           content: result,
         });
       }
+
+      // ── Anti-loop hard nudge ───────────────────────────────────
+      // Thinking-mode models (DeepSeek V4 in particular) will
+      // otherwise spend every available round on read_file with
+      // textLen=0, then need a separate force_conclude pass to emit
+      // findings. We prepend the directive to the user turn so it
+      // appears BEFORE the tool results — trailing text after
+      // tool_result blocks gets ignored by some implementations.
+      const remaining = MAX_TOOL_ROUNDS - round;
+      const isLastAllowedRound = remaining <= 0;
+      const isPenultimate = remaining === 1;
+      if (isLastAllowedRound || isPenultimate) {
+        const directive = isLastAllowedRound
+          ? "STOP. You have used your tool budget. Your NEXT response MUST be the findings JSON. Do NOT call any more tools — any further tool_use will be discarded."
+          : "FINAL ROUND. Use the tool results below plus any prior context to output the findings JSON in your NEXT response. Do not call more tools.";
+        resultBlocks.unshift({
+          type: "text" as const,
+          text: `[arena-research:${p.name}] ${directive}`,
+        });
+      }
+
       messages.push({ role: "user", content: resultBlocks });
     }
 
@@ -190,10 +211,10 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
             content:
               "You have gathered enough context. " +
               "Based on ALL the tool results above, output your findings NOW.\n\n" +
-              "Respond ONLY with JSON — output your highest-confidence findings " +
-              "(typically 5-15 for a substantive topic; each finding's `summary` " +
-              "should be 80+ words with concrete evidence). " +
-              "Do NOT request any more tools. Just output the JSON.",
+              "Respond ONLY with the <report> XML element specified in the system prompt — " +
+              "output your highest-confidence findings (typically 5-15 for a substantive topic; " +
+              "each <summary> should be 80+ words with concrete evidence). " +
+              "Do NOT request any more tools. No prose outside the XML.",
           },
         ],
       });

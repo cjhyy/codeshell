@@ -49,11 +49,11 @@ export const permissionsCommand: SlashCommand = {
       return;
     }
 
-    // Note: This only affects the display — the actual mode is set in engine config
-    // and would need engine restart or a mutable config to take effect mid-session.
-    ctx.addStatus(
-      `Permission mode: ${currentMode} → ${newMode}\n` +
-        `Note: Mode change takes full effect on next session. Use /init to persist.`,
-    );
+    try {
+      await ctx.client.query("permission_set", newMode);
+      ctx.addStatus(`Permission mode: ${currentMode} → ${newMode} (live)`);
+    } catch (err) {
+      ctx.addStatus(`Failed to switch mode: ${(err as Error).message}`);
+    }
   },
 };

@@ -45,19 +45,31 @@ export class ReviewStrategy implements ArenaStrategyV2 {
       `You may have access to read-only tools to fetch additional context. ` +
       `The base context is intentionally lean — use tools to inspect details as needed.\n\n` +
       `IMPORTANT RULES:\n` +
-      `- Limit yourself to 3-5 tool rounds. Do NOT exhaustively read every file.\n` +
+      `- Limit yourself to AT MOST 3 tool rounds. Do NOT exhaustively read every file.\n` +
       `- Focus on the HIGHEST-IMPACT findings. Quality over quantity.\n` +
       `- Output as many findings as the topic warrants — typically 5-15 for a non-trivial subject. ` +
-      `Each finding's "summary" should be 80+ words with concrete evidence and rationale, not a one-liner. ` +
+      `Each <summary> should be 80+ words with concrete evidence and rationale, not a one-liner. ` +
       `Rank by confidence.\n` +
       `- Prioritize: risks > improvements > questions. Strengths are optional.\n\n` +
-      `When ready, respond ONLY with JSON (no markdown fences):\n` +
-      `{"contextSummary": "brief summary of what you investigated",` +
-      ` "findings": [{"id": "unique-id", "kind": "risk|improvement|question|strength",` +
-      ` "title": "short title", "summary": "detailed explanation",` +
-      ` "severity": "high|medium|low", "confidence": 0.0-1.0,` +
-      ` "evidence": [{"type": "file|diff|grep|git|doc", "ref": "path", "note": "what it shows"}],` +
-      ` "affectedFiles": ["paths"], "suggestedChange": "optional"}]}`
+      `When ready, respond ONLY with the following XML structure (no markdown fences, no commentary outside the root element):\n\n` +
+      `<report>\n` +
+      `  <contextSummary>brief summary of what you investigated</contextSummary>\n` +
+      `  <findings>\n` +
+      `    <finding id="unique-id" kind="risk|improvement|question|strength" severity="high|medium|low" confidence="0.0-1.0">\n` +
+      `      <title>short title</title>\n` +
+      `      <summary>detailed explanation, 80+ words, citing specific files/lines</summary>\n` +
+      `      <evidence type="file|diff|grep|git|doc" ref="path">what it shows</evidence>\n` +
+      `      <evidence type="file" ref="another/path">…</evidence>\n` +
+      `      <affectedFiles>\n` +
+      `        <file>src/foo.ts</file>\n` +
+      `        <file>src/bar.ts</file>\n` +
+      `      </affectedFiles>\n` +
+      `      <suggestedChange>optional concrete fix</suggestedChange>\n` +
+      `    </finding>\n` +
+      `    <!-- repeat <finding> blocks as needed -->\n` +
+      `  </findings>\n` +
+      `</report>\n\n` +
+      `XML is preferred over JSON because thinking-mode models produce more reliable output here. Do not wrap the XML in code fences. Do not include text outside <report>…</report>.`
     );
   }
 
@@ -65,7 +77,7 @@ export class ReviewStrategy implements ArenaStrategyV2 {
     return (
       `## Review Topic\n${topic}\n\n` +
       `${formatBaseContext(baseContext)}\n\n` +
-      `Use tools to read specific files from the diff. Then output 3-6 highest-confidence findings as JSON.`
+      `Use tools to read specific files from the diff. Then output 3-6 highest-confidence findings as a single <report> XML element.`
     );
   }
 
@@ -225,7 +237,12 @@ export class ReviewStrategy implements ArenaStrategyV2 {
       claim.challenges.map((c) => `[${c.reviewer}] ${c.verdict}: ${c.reason}`).join("\n") + "\n\n" +
       `## Debate\n${debateSummary}\n\n` +
       `## Evidence Digest\n${formatDigestForPrompt(digest)}\n\n` +
-      `As moderator, adjudicate this claim based on all available evidence.\n` +
+      `As moderator, you MUST issue a verdict — "unresolved" is reserved ONLY for the rare case where the debate produced genuinely irreconcilable interpretations of the same evidence. Default to deciding.\n\n` +
+      `Decision rule:\n` +
+      `- "accepted": claim is correct as stated AND has direct evidence (file/line refs).\n` +
+      `- "accepted_with_revision": core insight is correct but the challenge surfaced a real refinement (scope/severity/wording). Issue a corrected finalSummary.\n` +
+      `- "rejected": the challenger demonstrated the claim is factually wrong or already addressed in the code under review.\n` +
+      `- "unresolved": ONLY when no amount of further evidence could break the tie — e.g., taste-level disagreement on design philosophy. Using this on a verifiable code claim is a failure of adjudication.\n\n` +
       `Respond ONLY with JSON:\n` +
       `{"outcome": "accepted|accepted_with_revision|rejected|unresolved", "rationale": "...", ` +
       `"finalSummary": "revised claim summary if needed", "supportingEvidenceRefs": ["..."]}`
