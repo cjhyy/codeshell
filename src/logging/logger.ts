@@ -37,9 +37,13 @@ function isLocalDev(): boolean {
   if (process.env.CODE_SHELL_DEV === "1") return true;
   if (process.argv.includes("--debug") || process.argv.includes("-d")) return true;
   if (process.argv.some((a) => a.startsWith("--debug="))) return true;
+  // Don't silently raise the level under tests — they have their own
+  // diagnostic story and shouldn't spam the daily log file.
+  if (process.env.NODE_ENV === "test" || process.env.BUN_TEST === "1") return false;
+  if (process.argv.some((a) => a.includes("/tests/") || a.endsWith(".test.ts"))) return false;
   // Running directly from src/ (bun run src/cli/main.ts) — not a packaged install.
   const entry = process.argv[1] ?? "";
-  if (entry.includes(`${"/"}src${"/"}`) || entry.endsWith(".ts")) return true;
+  if (entry.includes(`${"/"}src${"/"}`)) return true;
   return false;
 }
 
@@ -196,8 +200,12 @@ class Logger {
     if (LEVEL_ORDER[level] < LEVEL_ORDER[this.minLevel]) return;
 
     const cat = (data?.cat as string | undefined) ?? this.context.cat;
-    if (this.categoryFilter && cat && !this.categoryFilter.has(cat.toLowerCase())) return;
-    if (this.categoryFilter && !cat) return;
+    // Category filter narrows the *debug* firehose only — info/warn/error
+    // always go through so a `--debug=mcp` invocation doesn't accidentally
+    // swallow unrelated errors.
+    if (level === "debug" && this.categoryFilter) {
+      if (!cat || !this.categoryFilter.has(cat.toLowerCase())) return;
+    }
 
     const t = new Date().toISOString();
     const entry: Record<string, unknown> = { t, l: level, msg, ...this.context };

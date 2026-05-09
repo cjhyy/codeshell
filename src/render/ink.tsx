@@ -10,7 +10,7 @@ import { onExit } from 'signal-exit';
 import { flushInteractionTime } from 'src/bootstrap/state.js';
 import { getYogaCounters } from 'src/native-ts/yoga-layout/index.js';
 import { logForDebugging } from 'src/utils/debug.js';
-import { logError } from 'src/utils/log.js';
+import { logger } from 'src/logging/logger.js';
 import { format } from 'util';
 import { colorize } from './colorize.js';
 import App from './components/App.js';
@@ -1575,7 +1575,7 @@ export default class Ink {
     const con = console;
     const originals: Partial<Record<keyof Console, Console[keyof Console]>> = {};
     const toDebug = (...args: unknown[]) => logForDebugging(`console.log: ${format(...args)}`);
-    const toError = (...args: unknown[]) => logError(new Error(`console.error: ${format(...args)}`));
+    const toError = (...args: unknown[]) => logger.error(new Error(`console.error: ${format(...args)}`));
     for (const m of CONSOLE_STDOUT_METHODS) {
       originals[m] = con[m];
       con[m] = toDebug;

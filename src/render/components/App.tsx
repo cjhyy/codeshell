@@ -5,7 +5,7 @@ import { logForDebugging } from '../../utils/debug.js';
 import { stopCapturingEarlyInput } from '../../utils/earlyInput.js';
 import { isEnvTruthy } from '../../utils/envUtils.js';
 import { isMouseClicksDisabled } from '../../utils/fullscreen.js';
-import { logError } from '../../utils/log.js';
+import { logger } from '../../logging/logger.js';
 import { EventEmitter } from '../events/emitter.js';
 import { InputEvent } from '../events/input-event.js';
 import { TerminalFocusEvent } from '../events/terminal-focus-event.js';
@@ -351,7 +351,7 @@ export default class App extends PureComponent<Props, State> {
       // permanently wedge the stream: data stays buffered and 'readable'
       // never re-emits. Catching here ensures the stream stays healthy so
       // subsequent keystrokes are still delivered.
-      logError(error);
+      logger.error(error);
 
       // Re-attach the listener in case the exception detached it.
       // Bun may remove the listener after an error; without this,
