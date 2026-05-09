@@ -28,6 +28,28 @@ export interface ModelEntry {
   baseUrl?: string;
   apiKey?: string;
   maxOutputTokens?: number;
+  /** Per-model context window size. Falls back to config.maxContextTokens → 200_000. */
+  maxContextTokens?: number;
+}
+
+// ─── Built-in context windows ────────────────────────────────────
+// Known max input tokens for well-known model names. Used as a fallback
+// when a settings entry doesn't specify maxContextTokens, so users don't
+// have to hand-fill it for common models.
+//
+// Patterns are matched against the full `model` string (case-insensitive).
+// First match wins — order from most specific to most generic.
+const BUILTIN_CONTEXT_WINDOWS: Array<[RegExp, number]> = [
+  // DeepSeek V4 family — 1M context (api-docs.deepseek.com)
+  [/^deepseek-v4(?:-|$)/i, 1_000_000],
+  [/(?:^|\/)deepseek-v4(?:-|$)/i, 1_000_000],
+];
+
+function lookupBuiltinContextWindow(model: string): number | undefined {
+  for (const [re, tokens] of BUILTIN_CONTEXT_WINDOWS) {
+    if (re.test(model)) return tokens;
+  }
+  return undefined;
 }
 
 // ─── ModelPool ───────────────────────────────────────────────────
@@ -43,7 +65,7 @@ export class ModelPool {
   constructor(entries?: ModelEntry[], defaultKey?: string) {
     if (entries) {
       for (const e of entries) {
-        this.models.set(e.key, e);
+        this.models.set(e.key, this.withBuiltinDefaults(e));
       }
     }
     if (defaultKey && this.models.has(defaultKey)) {
@@ -55,10 +77,18 @@ export class ModelPool {
 
   /** Register a model at runtime. */
   register(entry: ModelEntry): void {
-    this.models.set(entry.key, entry);
+    this.models.set(entry.key, this.withBuiltinDefaults(entry));
     if (!this.activeKey) {
       this.activeKey = entry.key;
     }
+  }
+
+  /** Fill in known defaults (e.g. context window for DeepSeek V4) when the entry doesn't specify them. */
+  private withBuiltinDefaults(entry: ModelEntry): ModelEntry {
+    if (entry.maxContextTokens != null) return entry;
+    const builtin = lookupBuiltinContextWindow(entry.model);
+    if (builtin == null) return entry;
+    return { ...entry, maxContextTokens: builtin };
   }
 
   /** Switch the active model. Throws if key not found. */

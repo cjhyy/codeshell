@@ -5,6 +5,7 @@
 import type { LLMConfig, LLMResponse, TokenUsage } from "../types.js";
 import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
 import { LLMError, ContextLimitError, LLMRateLimitError } from "../exceptions.js";
+import { logger } from "../logging/logger.js";
 
 export abstract class LLMClientBase {
   readonly provider: string;
@@ -73,13 +74,41 @@ export abstract class LLMClientBase {
 
         if (err instanceof LLMRateLimitError) {
           const waitMs = (err.retryAfter ?? attempt * 2) * 1000;
+          logger.warn("llm.retry", {
+            cat: "llm",
+            provider: this.provider,
+            model: this.model,
+            attempt,
+            of: attempts,
+            reason: "rate_limit",
+            waitMs,
+          });
           await new Promise((r) => setTimeout(r, waitMs));
           continue;
         }
 
-        if (attempt === attempts) break;
+        if (attempt === attempts) {
+          logger.error("llm.exhausted", {
+            cat: "llm",
+            provider: this.provider,
+            model: this.model,
+            attempts,
+            error: (err as Error).message,
+          });
+          break;
+        }
 
         const backoff = Math.min(1000 * Math.pow(2, attempt - 1), 30_000);
+        logger.warn("llm.retry", {
+          cat: "llm",
+          provider: this.provider,
+          model: this.model,
+          attempt,
+          of: attempts,
+          reason: "error",
+          error: (err as Error).message,
+          backoffMs: backoff,
+        });
         await new Promise((r) => setTimeout(r, backoff));
       }
     }

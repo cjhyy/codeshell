@@ -14,7 +14,14 @@
  * Disable entirely: CODE_SHELL_LOG=0
  */
 
-import { appendFileSync, mkdirSync, existsSync, readdirSync, unlinkSync, readFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  existsSync,
+  readdirSync,
+  unlinkSync,
+  readFileSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 
@@ -67,7 +74,10 @@ function resolveCategoryFilter(): Set<string> | null {
   }
   if (!raw) return null;
   const set = new Set(
-    raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
+    raw
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
   );
   return set.size > 0 ? set : null;
 }
@@ -160,9 +170,15 @@ class Logger {
     return getCurrentSid();
   }
 
-  debug(msg: string, data?: Record<string, unknown>): void { this.write("debug", msg, data); }
-  info(msg: string, data?: Record<string, unknown>): void { this.write("info", msg, data); }
-  warn(msg: string, data?: Record<string, unknown>): void { this.write("warn", msg, data); }
+  debug(msg: string, data?: Record<string, unknown>): void {
+    this.write("debug", msg, data);
+  }
+  info(msg: string, data?: Record<string, unknown>): void {
+    this.write("info", msg, data);
+  }
+  warn(msg: string, data?: Record<string, unknown>): void {
+    this.write("warn", msg, data);
+  }
 
   error(msgOrErr: string | Error | unknown, data?: Record<string, unknown> | Error): void {
     let msg: string;
@@ -235,17 +251,49 @@ class Logger {
     }
   }
 
-  getMinLevel(): LogLevel { return this.minLevel; }
+  getMinLevel(): LogLevel {
+    return this.minLevel;
+  }
   isCategoryActive(cat: string): boolean {
     return !this.categoryFilter || this.categoryFilter.has(cat.toLowerCase());
   }
+
+  /**
+   * Open a span: writes a `<name>.begin` debug entry now and returns a handle
+   * whose `end()` writes `<name>.end` with `duration_ms` populated. Use for
+   * any "I want begin → end + how long" pattern (tool exec, LLM request,
+   * permission ask, etc.) so the begin/end pair is grouped under one cat
+   * and the duration is computed once instead of by hand from timestamps.
+   */
+  span(name: string, data?: Record<string, unknown>): LogSpan {
+    const startedAt = Date.now();
+    this.write("debug", `${name}.begin`, data);
+    return {
+      end: (extra?: Record<string, unknown>) => {
+        const duration_ms = Date.now() - startedAt;
+        this.write("info", `${name}.end`, { ...data, ...extra, duration_ms });
+      },
+      fail: (err: unknown, extra?: Record<string, unknown>) => {
+        const duration_ms = Date.now() - startedAt;
+        const message = err instanceof Error ? err.message : String(err);
+        this.write("error", `${name}.fail`, { ...data, ...extra, duration_ms, error: message });
+      },
+    };
+  }
+}
+
+export interface LogSpan {
+  end(extra?: Record<string, unknown>): void;
+  fail(err: unknown, extra?: Record<string, unknown>): void;
 }
 
 export const logger = new Logger();
 
 // ─── Maintenance helpers ───────────────────────────────────────────
 
-export function getLogsDir(): string { return LOGS_DIR; }
+export function getLogsDir(): string {
+  return LOGS_DIR;
+}
 
 export function getRecentLogs(n = 50): string[] {
   const file = join(LOGS_DIR, `${new Date().toISOString().slice(0, 10)}.log`);
@@ -261,10 +309,16 @@ export function getRecentLogs(n = 50): string[] {
 export function rotateLogs(): void {
   try {
     if (!existsSync(LOGS_DIR)) return;
-    const files = readdirSync(LOGS_DIR).filter((f) => f.endsWith(".log")).sort();
+    const files = readdirSync(LOGS_DIR)
+      .filter((f) => f.endsWith(".log"))
+      .sort();
     if (files.length <= MAX_LOG_FILES) return;
     for (const f of files.slice(0, files.length - MAX_LOG_FILES)) {
-      try { unlinkSync(join(LOGS_DIR, f)); } catch { /* ignore */ }
+      try {
+        unlinkSync(join(LOGS_DIR, f));
+      } catch {
+        /* ignore */
+      }
     }
   } catch {
     // Best-effort.

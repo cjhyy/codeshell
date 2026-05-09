@@ -166,6 +166,23 @@ export const coreCommands: SlashCommand[] = [
   },
 
   {
+    // Tiny utility separate from /session so it works mid-turn (see the
+    // READ_ONLY_WHILE_RUNNING allow-list in App.tsx) and is short enough
+    // to type without thinking. Pairs with `/log sid <id>` for filtered
+    // log lookup.
+    name: "/sid",
+    group: "core",
+    description: "Print the current session ID",
+    execute: (_arg, ctx) => {
+      if (ctx.sessionId) {
+        ctx.addStatus(`Session ID: ${ctx.sessionId}`);
+      } else {
+        ctx.addStatus("No session yet (no run has started).");
+      }
+    },
+  },
+
+  {
     name: "/session",
     description:
       "Session management: /session, /session list, /session tag <name>, /session resume <id>",
@@ -413,14 +430,15 @@ export const coreCommands: SlashCommand[] = [
                 // surface text + reasoning here. Reasoning is shown inline
                 // with a tag prefix since the UI has no dedicated entry type.
                 if (role === "user") {
-                  const text = typeof content === "string"
-                    ? content
-                    : Array.isArray(content)
+                  const text =
+                    typeof content === "string"
                       ? content
-                          .filter((b: { type?: string }) => b?.type === "text")
-                          .map((b: { text?: string }) => b.text ?? "")
-                          .join("")
-                      : "";
+                      : Array.isArray(content)
+                        ? content
+                            .filter((b: { type?: string }) => b?.type === "text")
+                            .map((b: { text?: string }) => b.text ?? "")
+                            .join("")
+                        : "";
                   if (text) entries.push({ type: "user", text });
                 } else if (role === "assistant") {
                   const parts: string[] = [];

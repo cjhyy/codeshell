@@ -7,6 +7,7 @@ import type { LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } fro
 import type { CreateMessageOptions } from "../types.js";
 import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
+import { logger } from "../../logging/logger.js";
 
 export class AnthropicClient extends LLMClientBase {
   private _client: Anthropic | null = null;
@@ -35,11 +36,35 @@ export class AnthropicClient extends LLMClientBase {
       const messages = this.buildMessages(options.messages);
       const tools = options.tools ? this.convertTools(options.tools) : undefined;
 
-      if (options.stream && options.onChunk) {
-        return this.streamMessage(options, messages, tools);
+      // One span per outbound LLM request. Begin emits debug-level so the
+      // info log isn't spammed during normal operation; end emits info with
+      // duration_ms + usage so `--debug=llm` already gives a quick latency
+      // histogram even at info level.
+      const span = logger.span("llm.request", {
+        cat: "llm",
+        provider: this.provider,
+        model: this.model,
+        stream: !!(options.stream && options.onChunk),
+        messageCount: messages.length,
+        toolCount: tools?.length ?? 0,
+      });
+      try {
+        const response =
+          options.stream && options.onChunk
+            ? await this.streamMessage(options, messages, tools)
+            : await this.nonStreamMessage(options, messages, tools);
+        span.end({
+          stopReason: response.stopReason,
+          promptTokens: response.usage?.promptTokens,
+          completionTokens: response.usage?.completionTokens,
+          cacheReadTokens: response.usage?.cacheReadTokens,
+          cacheCreationTokens: response.usage?.cacheCreationTokens,
+        });
+        return response;
+      } catch (err) {
+        span.fail(err);
+        throw err;
       }
-
-      return this.nonStreamMessage(options, messages, tools);
     });
   }
 
@@ -116,7 +141,21 @@ export class AnthropicClient extends LLMClientBase {
       let currentToolId = "";
       let currentToolInput = "";
 
+      // Time-to-first-byte: log exactly once per stream so streaming-latency
+      // questions ("model felt slow tonight") get a clean number per request.
+      const streamStartedAt = Date.now();
+      let firstByteLogged = false;
+
       stream.on("text", (text) => {
+        if (!firstByteLogged) {
+          firstByteLogged = true;
+          logger.debug("llm.first_byte", {
+            cat: "llm",
+            provider: this.provider,
+            model: this.model,
+            ttft_ms: Date.now() - streamStartedAt,
+          });
+        }
         currentText += text;
         options.onChunk?.({ type: "text", text });
       });
@@ -224,7 +263,11 @@ export class AnthropicClient extends LLMClientBase {
               type: "image",
               source: {
                 type: "base64",
-                media_type: block.source.media_type as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+                media_type: block.source.media_type as
+                  | "image/jpeg"
+                  | "image/png"
+                  | "image/gif"
+                  | "image/webp",
                 data: block.source.data,
               },
             });

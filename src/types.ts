@@ -231,6 +231,10 @@ export interface TaskInfo {
 }
 
 export type StreamEvent =
+  // Emitted once per run() as soon as the Engine has resolved the session
+  // id (resume vs. create). Lets the client know the authoritative sid
+  // *before* run() resolves, which matters for mid-turn `/sid` lookups.
+  | { type: "session_started"; sessionId: string }
   | { type: "stream_request_start"; turnNumber: number; agentId?: string }
   | { type: "text_delta"; text: string; agentId?: string }
   | { type: "tool_use_start"; toolCall: ToolCall; agentId?: string }

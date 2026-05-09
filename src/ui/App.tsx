@@ -238,6 +238,14 @@ export function App({
       const agentId = (event as any).agentId as string | undefined;
 
       switch (event.type) {
+        case "session_started":
+          // Server tells us the authoritative sid up-front so /sid works
+          // mid-turn. setSessionId at run-completion (line ~672) still runs
+          // but is now redundant for the first run; resumed runs already
+          // had the sid from initialSessionId.
+          setSessionId(event.sessionId);
+          break;
+
         case "stream_request_start":
           setStreamMode("thinking");
           setThinkingContent(null);
@@ -613,11 +621,23 @@ export function App({
   const handleSubmit = useCallback(
     async (value: string) => {
       const trimmed = value.trim();
-      if (!trimmed || isRunning) return;
+      if (!trimmed) return;
 
-      setInput("");
-      setShowBanner(false);
-      onScrollToBottom(); // Repin unseen divider on submit
+      // Read-only slash commands that work even while a turn is in flight.
+      // They don't talk to the server or mutate run state — they print
+      // client-side info, so blocking them on isRunning would force the
+      // user to cancel a turn just to see their session id.
+      const head = trimmed.split(/\s+/)[0]?.toLowerCase();
+      const READ_ONLY_WHILE_RUNNING = new Set(["/sid", "/help"]);
+      if (isRunning && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) return;
+      if (!isRunning) {
+        setInput("");
+        setShowBanner(false);
+        onScrollToBottom(); // Repin unseen divider on submit
+      } else {
+        // Still clear the input so the user sees their command was accepted.
+        setInput("");
+      }
 
       if (trimmed.startsWith("/")) {
         handleSlashCommand(trimmed);

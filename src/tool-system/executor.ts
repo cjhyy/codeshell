@@ -7,15 +7,23 @@ import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier } from "./permission.js";
 import { PermissionDeniedError } from "../exceptions.js";
-import { logger } from "../logging/logger.js";
+import { logger as rootLogger } from "../logging/logger.js";
 import { isInPlanMode } from "./builtin/plan.js";
 import { validateToolArgs } from "./validation.js";
 import type { ToolContext } from "./context.js";
+
+type Logger = typeof rootLogger;
 
 export class ToolExecutor {
   private signal?: AbortSignal;
   /** Per-Engine ToolContext injected for every tool call. */
   private toolCtx?: ToolContext;
+  /**
+   * Turn-scoped logger set by TurnLoop at the top of each iteration.
+   * Falls back to the root logger so executor calls outside the turn loop
+   * (tests, ad-hoc tool runs) still write log lines, just without turn tags.
+   */
+  private log: Logger = rootLogger;
 
   constructor(
     private readonly registry: ToolRegistry,
@@ -33,6 +41,12 @@ export class ToolExecutor {
     this.toolCtx = ctx;
   }
 
+  /** Inject a turn-scoped logger so tool-execution lines carry turn/turnId. */
+  setLogger(log: Logger): void {
+    this.log = log;
+    this.permission.setLogger(log);
+  }
+
   /** Check if a tool is safe for concurrent execution (read-only). */
   isConcurrencySafe(toolName: string): boolean {
     const tool = this.registry.getTool(toolName);
@@ -43,11 +57,20 @@ export class ToolExecutor {
     // 0. Plan mode: only allow read-only tools — no file writes at all
     if (isInPlanMode()) {
       const allowedInPlan = new Set([
-        "EnterPlanMode", "ExitPlanMode",
-        "Read", "Glob", "Grep",
-        "WebSearch", "WebFetch",
-        "AskUserQuestion", "Agent", "ToolSearch",
-        "TaskCreate", "TaskUpdate", "TaskList", "TaskGet",
+        "EnterPlanMode",
+        "ExitPlanMode",
+        "Read",
+        "Glob",
+        "Grep",
+        "WebSearch",
+        "WebFetch",
+        "AskUserQuestion",
+        "Agent",
+        "ToolSearch",
+        "TaskCreate",
+        "TaskUpdate",
+        "TaskList",
+        "TaskGet",
       ]);
 
       if (!allowedInPlan.has(call.toolName)) {
@@ -69,7 +92,12 @@ export class ToolExecutor {
     if (toolDef?.inputSchema) {
       const validationError = validateToolArgs(call.toolName, call.args, toolDef.inputSchema);
       if (validationError) {
-        return { id: call.id, toolName: call.toolName, error: `Invalid input: ${validationError}`, isError: true };
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error: `Invalid input: ${validationError}`,
+          isError: true,
+        };
       }
     }
 
@@ -80,11 +108,22 @@ export class ToolExecutor {
       toolCallId: call.id,
     });
     if (hookResult.decision === "deny") {
-      return { id: call.id, toolName: call.toolName, error: `Blocked by pre_tool_use hook: ${hookResult.messages?.join(", ") ?? "denied"}`, isError: true };
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Blocked by pre_tool_use hook: ${hookResult.messages?.join(", ") ?? "denied"}`,
+        isError: true,
+      };
     }
 
     // 1. Permission check
     const decision = this.permission.classify(call.toolName, call.args);
+    this.log.info("permission.classify", {
+      cat: "permission",
+      tool: call.toolName,
+      decision,
+      mode: this.permission.getMode(),
+    });
 
     if (decision === "deny") {
       return {
@@ -114,14 +153,37 @@ export class ToolExecutor {
       toolCallId: call.id,
     });
 
-    // 3. Execute
-    logger.info("tool.exec", { tool: call.toolName, args: JSON.stringify(call.args).slice(0, 200) });
-    const result = await this.registry.executeTool(call.toolName, call.args, {
-      signal: this.signal,
-      ctx: this.toolCtx,
+    // 3. Execute. Use a span so begin/end share one cat and end carries
+    // duration_ms; widen args truncation from 200→2000 so Edit/Write payloads
+    // (file_path + a chunk of code) actually show what was changed instead of
+    // just the path. End-event also records a result snippet on failure for
+    // post-mortem without having to crack the full transcript.
+    const span = this.log.span("tool.exec", {
+      cat: "tool",
+      tool: call.toolName,
+      toolCallId: call.id,
+      args: JSON.stringify(call.args).slice(0, 2000),
     });
+    let result: ToolResult;
+    try {
+      result = await this.registry.executeTool(call.toolName, call.args, {
+        signal: this.signal,
+        ctx: this.toolCtx,
+      });
+    } catch (err) {
+      span.fail(err);
+      throw err;
+    }
     result.id = call.id;
-    logger.info("tool.done", { tool: call.toolName, ok: !result.error, chars: (result.result ?? result.error ?? "").length });
+    const payload = result.result ?? result.error ?? "";
+    span.end({
+      ok: !result.error,
+      chars: payload.length,
+      // Snippet only on failure — successful tool output can be huge and is
+      // already on the transcript. Failures are rare and the first 500 chars
+      // usually contain the message we need.
+      ...(result.error ? { errorSnippet: payload.slice(0, 500) } : {}),
+    });
 
     // 4. Post-tool hook
     await this.hooks.emit("on_tool_end", {
@@ -163,19 +225,60 @@ export class ToolExecutor {
     const baseCmd = cmd.replace(/^(\w+=\S+\s+)*/, "").split(/\s/)[0];
 
     const readOnlyCommands = new Set([
-      "ls", "find", "cat", "head", "tail", "wc", "file", "stat",
-      "tree", "du", "df", "pwd", "echo", "which", "type", "env", "printenv",
-      "grep", "rg", "ag", "awk", "less", "more", "sort", "uniq", "diff",
-      "readlink", "realpath", "basename", "dirname", "date", "whoami",
-      "uname", "hostname", "id", "groups", "locale", "uptime",
+      "ls",
+      "find",
+      "cat",
+      "head",
+      "tail",
+      "wc",
+      "file",
+      "stat",
+      "tree",
+      "du",
+      "df",
+      "pwd",
+      "echo",
+      "which",
+      "type",
+      "env",
+      "printenv",
+      "grep",
+      "rg",
+      "ag",
+      "awk",
+      "less",
+      "more",
+      "sort",
+      "uniq",
+      "diff",
+      "readlink",
+      "realpath",
+      "basename",
+      "dirname",
+      "date",
+      "whoami",
+      "uname",
+      "hostname",
+      "id",
+      "groups",
+      "locale",
+      "uptime",
     ]);
 
     // Whitelisted read-only git/tool subcommands.
     // Deliberately exclude `node -e`, `python -c`, `sed -n`, etc. — those can
     // execute arbitrary code even though they "look read-only".
     const readOnlyPrefixes = [
-      "git log", "git status", "git diff", "git branch", "git show", "git blame",
-      "git remote", "git tag", "git stash list", "git rev-parse",
+      "git log",
+      "git status",
+      "git diff",
+      "git branch",
+      "git show",
+      "git blame",
+      "git remote",
+      "git tag",
+      "git stash list",
+      "git rev-parse",
       "npx tsc --noEmit",
     ];
 
@@ -236,9 +339,7 @@ export class ToolExecutor {
       blocks.push({
         type: "tool_result",
         tool_use_id: result.id,
-        content: result.error
-          ? `Error: ${result.error}`
-          : result.result ?? "(no output)",
+        content: result.error ? `Error: ${result.error}` : (result.result ?? "(no output)"),
       });
     }
 

@@ -146,8 +146,8 @@ export const extraCommands: SlashCommand[] = [
     name: "/log",
     aliases: ["/logs"],
     group: "config",
-    description: "Show recent log entries",
-    usage: "/log [n]  — show last n entries (default: 20)",
+    description: "Show recent log entries; filter by sid / turn / cat",
+    usage: "/log [n] | /log sid <id> [n] | /log turn <id> [n] | /log cat <name> [n]",
     execute: (arg, ctx) => {
       const logDir = join(homedir(), ".code-shell", "logs");
       const dateStr = new Date().toISOString().slice(0, 10);
@@ -158,46 +158,104 @@ export const extraCommands: SlashCommand[] = [
         return;
       }
 
+      // Parse: "[mode value] [n]". Modes: sid|turn|cat. Defaults: tail mode + 20.
+      const parts = arg.trim().split(/\s+/).filter(Boolean);
+      let mode: "tail" | "sid" | "turn" | "cat" = "tail";
+      let value: string | null = null;
+      let countArg: string | undefined;
+      if (parts[0] === "sid" || parts[0] === "turn" || parts[0] === "cat") {
+        mode = parts[0];
+        value = parts[1] ?? null;
+        countArg = parts[2];
+        if (!value) {
+          ctx.addStatus(`Usage: /log ${mode} <value> [n]`);
+          return;
+        }
+      } else {
+        countArg = parts[0];
+      }
+      // Filtered queries can scan up to 2000 entries; tail caps at 200 to
+      // keep the chat output readable.
+      const cap = mode === "tail" ? 200 : 2000;
+      const count = Math.max(1, Math.min(parseInt(countArg ?? "") || 20, cap));
+
       try {
         const content = readFileSync(logFile, "utf-8");
         const lines = content
           .trim()
           .split("\n")
           .filter((l) => l.trim());
-        const count = Math.max(1, Math.min(parseInt(arg.trim()) || 20, 200));
-        const recent = lines.slice(-count);
 
-        const formatted = recent.map((line) => {
+        // Filter by mode. We parse JSON once and reuse it for the formatter
+        // so we don't pay JSON.parse twice per matched line.
+        type Entry = {
+          t?: string;
+          l?: string;
+          msg?: string;
+          cat?: string;
+          sid?: string;
+          turn?: number;
+          turnId?: string;
+          d?: {
+            latencyMs?: number;
+            duration_ms?: number;
+            usage?: { totalTokens?: number };
+            tool?: string;
+            stopReason?: string;
+            decision?: string;
+            approved?: boolean;
+            ttft_ms?: number;
+            error?: string;
+          };
+        };
+        const matched: Array<{ raw: string; e: Entry | null }> = [];
+        for (const line of lines) {
+          let e: Entry | null = null;
           try {
-            const e = JSON.parse(line) as {
-              t?: string;
-              l?: string;
-              msg?: string;
-              d?: {
-                latencyMs?: number;
-                usage?: { totalTokens?: number };
-                tool?: string;
-                stopReason?: string;
-              };
-            };
-            const time = e.t?.split("T")[1]?.slice(0, 8) ?? "";
-            const level = (e.l ?? "").toUpperCase().padEnd(5);
-            const msg = e.msg ?? "";
-            let detail = "";
-            const d = e.d;
-            if (d) {
-              if (d.latencyMs) detail += ` ${d.latencyMs}ms`;
-              if (d.usage?.totalTokens) detail += ` ${d.usage.totalTokens}tok`;
-              if (d.tool) detail += ` ${d.tool}`;
-              if (d.stopReason) detail += ` [${d.stopReason}]`;
-            }
-            return `  ${time} ${level} ${msg}${detail}`;
+            e = JSON.parse(line) as Entry;
           } catch {
-            return `  ${line.slice(0, 120)}`;
+            // Non-JSON line — only keep it for unfiltered tail mode.
+            if (mode === "tail") matched.push({ raw: line, e: null });
+            continue;
           }
+          if (mode === "sid" && e.sid !== value) continue;
+          if (mode === "turn" && e.turnId !== value) continue;
+          if (mode === "cat" && e.cat !== value) continue;
+          matched.push({ raw: line, e });
+        }
+
+        const recent = matched.slice(-count);
+        const formatted = recent.map(({ raw, e }) => {
+          if (!e) return `  ${raw.slice(0, 120)}`;
+          const time = e.t?.split("T")[1]?.slice(0, 12) ?? "";
+          const level = (e.l ?? "").toUpperCase().padEnd(5);
+          const msg = e.msg ?? "";
+          let head = `  ${time} ${level}`;
+          // Always surface turn ID inline for filtered views so the user
+          // sees boundaries between turns at a glance.
+          if (mode !== "turn" && e.turnId) head += ` [t#${e.turn}/${e.turnId}]`;
+          if (mode === "tail" && e.cat) head += ` ${e.cat}`;
+          let detail = "";
+          const d = e.d;
+          if (d) {
+            if (d.duration_ms !== undefined) detail += ` ${d.duration_ms}ms`;
+            else if (d.latencyMs !== undefined) detail += ` ${d.latencyMs}ms`;
+            if (d.ttft_ms !== undefined) detail += ` ttft=${d.ttft_ms}ms`;
+            if (d.usage?.totalTokens) detail += ` ${d.usage.totalTokens}tok`;
+            if (d.tool) detail += ` tool=${d.tool}`;
+            if (d.decision) detail += ` decision=${d.decision}`;
+            if (d.approved !== undefined) detail += ` approved=${d.approved}`;
+            if (d.stopReason) detail += ` [${d.stopReason}]`;
+            if (d.error) detail += ` err=${d.error.slice(0, 80)}`;
+          }
+          return `${head} ${msg}${detail}`;
         });
 
-        ctx.addStatus(`Recent logs (${recent.length}/${lines.length}):\n${formatted.join("\n")}`);
+        const header =
+          mode === "tail"
+            ? `Recent logs (${recent.length}/${lines.length})`
+            : `Logs filtered by ${mode}=${value} (${recent.length}/${matched.length}, scanned ${lines.length})`;
+        ctx.addStatus(`${header}:\n${formatted.join("\n")}`);
       } catch (err) {
         ctx.addStatus(`Error reading logs: ${(err as Error).message}`);
       }

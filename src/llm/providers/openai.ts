@@ -7,6 +7,7 @@ import type { LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } fro
 import type { CreateMessageOptions } from "../types.js";
 import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
+import { logger } from "../../logging/logger.js";
 
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
@@ -35,11 +36,31 @@ export class OpenAIClient extends LLMClientBase {
       const messages = this.buildMessages(options.systemPrompt, options.messages);
       const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
 
-      if (options.stream && options.onChunk) {
-        return this.streamMessage(options, messages, tools);
+      const span = logger.span("llm.request", {
+        cat: "llm",
+        provider: this.provider,
+        model: this.model,
+        stream: !!(options.stream && options.onChunk),
+        messageCount: messages.length,
+        toolCount: tools?.length ?? 0,
+      });
+      try {
+        const response =
+          options.stream && options.onChunk
+            ? await this.streamMessage(options, messages, tools)
+            : await this.nonStreamMessage(options, messages, tools);
+        span.end({
+          stopReason: response.stopReason,
+          promptTokens: response.usage?.promptTokens,
+          completionTokens: response.usage?.completionTokens,
+          cacheReadTokens: response.usage?.cacheReadTokens,
+          cacheCreationTokens: response.usage?.cacheCreationTokens,
+        });
+        return response;
+      } catch (err) {
+        span.fail(err);
+        throw err;
       }
-
-      return this.nonStreamMessage(options, messages, tools);
     });
   }
 
@@ -103,7 +124,15 @@ export class OpenAIClient extends LLMClientBase {
       let text = "";
       let reasoningContent = "";
       const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
-      let streamUsage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined;
+      let streamUsage:
+        | { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+        | undefined;
+
+      // TTFT — first chunk that actually carried text. Tool-call-only chunks
+      // earlier in the stream don't count: the user-visible "text starts now"
+      // moment is what we want to compare across providers.
+      const streamStartedAt = Date.now();
+      let firstByteLogged = false;
 
       for await (const chunk of stream) {
         // Capture usage from the final chunk
@@ -122,6 +151,15 @@ export class OpenAIClient extends LLMClientBase {
         }
 
         if (delta.content) {
+          if (!firstByteLogged) {
+            firstByteLogged = true;
+            logger.debug("llm.first_byte", {
+              cat: "llm",
+              provider: this.provider,
+              model: this.model,
+              ttft_ms: Date.now() - streamStartedAt,
+            });
+          }
           text += delta.content;
           options.onChunk?.({ type: "text", text: delta.content });
         }
@@ -193,10 +231,7 @@ export class OpenAIClient extends LLMClientBase {
     }
   }
 
-  private processChoice(
-    choice: OpenAI.ChatCompletion.Choice,
-    usage: TokenUsage,
-  ): LLMResponse {
+  private processChoice(choice: OpenAI.ChatCompletion.Choice, usage: TokenUsage): LLMResponse {
     const text = choice.message.content ?? "";
     const toolCalls: ToolCall[] = [];
 
@@ -231,9 +266,7 @@ export class OpenAIClient extends LLMClientBase {
     systemPrompt: string,
     messages: import("../../types.js").Message[],
   ): OpenAI.ChatCompletionMessageParam[] {
-    const result: OpenAI.ChatCompletionMessageParam[] = [
-      { role: "system", content: systemPrompt },
-    ];
+    const result: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: systemPrompt }];
 
     // DeepSeek thinking-mode contract: every assistant turn we send
     // back must carry reasoning_content. Pre-thinking-fix transcripts

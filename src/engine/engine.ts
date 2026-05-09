@@ -109,6 +109,11 @@ export class Engine {
   private compactedMessagesBySession = new Map<string, Message[]>();
   private activePermission: PermissionClassifier | undefined;
 
+  private resolveMaxContextTokens(): number {
+    const modelEntry = this.modelPool.get();
+    return modelEntry?.maxContextTokens ?? this.config.maxContextTokens ?? 200_000;
+  }
+
   constructor(private config: EngineConfig) {
     this.preset = resolveAgentPreset(config.preset);
     this.toolRegistry = new ToolRegistry({
@@ -139,6 +144,7 @@ export class Engine {
             baseUrl: m.baseUrl,
             apiKey: m.apiKey,
             maxOutputTokens: m.maxOutputTokens,
+            maxContextTokens: m.maxContextTokens,
           });
         }
         // Set active to the current config model
@@ -263,6 +269,11 @@ export class Engine {
     // protocol — is filterable by `sid` in ~/.code-shell/logs/.
     logger.setSid(session.state.sessionId);
 
+    // Tell the client the sid *now* instead of waiting for run() to resolve.
+    // The user wants `/sid` to work mid-turn; without this, the client only
+    // learns the sid when the run completes.
+    options?.onStream?.({ type: "session_started", sessionId: session.state.sessionId });
+
     // Kick off LLM client creation early (network handshake)
     const llmClientPromise = createLLMClient(this.config.llm);
 
@@ -294,7 +305,7 @@ export class Engine {
     toolExecutor.setContext(toolCtx);
 
     const contextManager = new ContextManager({
-      maxTokens: this.config.maxContextTokens ?? 200_000,
+      maxTokens: this.resolveMaxContextTokens(),
     });
     this.lastContextManager = contextManager;
 

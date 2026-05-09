@@ -5,9 +5,16 @@
  * pre_check → model_call → post_check → tool_exec → context_mgmt → hook_notify → next turn
  */
 
-import type { Message, ToolCall, ToolResult, StreamCallback, TerminalReason, ContentBlock } from "../types.js";
+import type {
+  Message,
+  ToolCall,
+  ToolResult,
+  StreamCallback,
+  TerminalReason,
+  ContentBlock,
+} from "../types.js";
 import type { TurnState } from "./turn-state.js";
-import { initialTurnState } from "./turn-state.js";
+import { initialTurnState, newTurnId } from "./turn-state.js";
 import { ModelFacade } from "./model-facade.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { ContextManager } from "../context/manager.js";
@@ -46,6 +53,13 @@ export class TurnLoop {
   private turnCount = 0;
   /** Tool IDs already emitted as tool_use_start during streaming (to avoid duplicates). */
   private streamedToolIds = new Set<string>();
+  /**
+   * Turn-scoped child logger set at the top of each loop iteration. Class
+   * methods invoked inside the iteration (callModelWithFallback,
+   * executeToolCall, ...) read it instead of using the root `logger`, so
+   * every line they write is tagged with the current turn/turnId.
+   */
+  private currentTurnLog: ReturnType<typeof logger.child> = logger;
 
   constructor(
     private readonly deps: TurnLoopDeps,
@@ -64,8 +78,21 @@ export class TurnLoop {
       this.turnCount++;
       const state = initialTurnState(this.turnCount);
 
-      // Emit turn start
-      logger.info("turn.start", { turn: this.turnCount, messageCount: messages.length });
+      // Per-turn correlation ID. Every log written through `tlog` (or any
+      // child derived from it) is stamped with `turn` + `turnId`, so
+      // `jq 'select(.turnId == "...")'` reconstructs one turn's timeline.
+      // Span is *not* used for the loop itself because there are 6+ early
+      // returns; instead, each return-causing branch logs its own terminal
+      // event (model_error, completed, etc.).
+      const turnId = newTurnId();
+      const tlog = logger.child({ turn: this.turnCount, turnId });
+      this.currentTurnLog = tlog;
+
+      const turnStartedAt = Date.now();
+      tlog.info("turn.start", { cat: "turn", messageCount: messages.length });
+
+      // Tag downstream tool-exec / permission lines with this turn's IDs.
+      this.deps.toolExecutor.setLogger(tlog);
       this.config.onStream?.({ type: "stream_request_start", turnNumber: this.turnCount });
       await this.deps.hooks.emit("on_turn_start", { turnNumber: this.turnCount });
 
@@ -104,7 +131,7 @@ export class TurnLoop {
           const { dropOldestRounds } = await import("../context/compaction.js");
           let recovered = false;
           for (let retry = 1; retry <= 3; retry++) {
-            logger.warn("turn.ptl_recovery", { retry, roundsToDrop: retry });
+            tlog.warn("turn.ptl_recovery", { cat: "turn", retry, roundsToDrop: retry });
             messages = dropOldestRounds(messages, retry);
             try {
               response = await this.callModelWithFallback(messages);
@@ -119,7 +146,10 @@ export class TurnLoop {
           }
           if (!recovered) {
             this.patchOrphanedToolUses(messages);
-            this.config.onStream?.({ type: "error", error: "Context limit exceeded after 3 recovery attempts" });
+            this.config.onStream?.({
+              type: "error",
+              error: "Context limit exceeded after 3 recovery attempts",
+            });
             return { text: finalText, reason: "prompt_too_long", messages };
           }
         } else {
@@ -133,21 +163,26 @@ export class TurnLoop {
       // compaction decisions use hybrid (actual + delta) estimation rather than
       // pure heuristics. Without this the manager falls back to char/4 estimates.
       if (response!.usage?.promptTokens !== undefined) {
-        this.deps.contextManager.recordActualUsage(
-          response!.usage.promptTokens,
-          messages.length,
-        );
+        this.deps.contextManager.recordActualUsage(response!.usage.promptTokens, messages.length);
       }
 
       // Handle max_output_tokens: if response was truncated, do continuation (up to 3 times)
-      if (response.stopReason === "max_tokens" && response.toolCalls.length === 0 && response.text) {
+      if (
+        response.stopReason === "max_tokens" &&
+        response.toolCalls.length === 0 &&
+        response.text
+      ) {
         let combinedText = response.text;
         for (let retry = 0; retry < 3; retry++) {
-          logger.info("turn.max_tokens_continuation", { retry: retry + 1 });
+          tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
           const contMessages = [
             ...messages,
             { role: "assistant" as const, content: combinedText },
-            { role: "user" as const, content: "<system-reminder>Your previous response was truncated due to length. Please continue from where you left off.</system-reminder>" },
+            {
+              role: "user" as const,
+              content:
+                "<system-reminder>Your previous response was truncated due to length. Please continue from where you left off.</system-reminder>",
+            },
           ];
           try {
             const contResponse = await this.deps.model.call(
@@ -195,7 +230,7 @@ export class TurnLoop {
       }
 
       // Tool execution phase
-      logger.info("turn.tool_use", { turn: this.turnCount, tools: response.toolCalls.map(t => t.toolName) });
+      tlog.info("turn.tool_use", { cat: "turn", tools: response.toolCalls.map((t) => t.toolName) });
       const toolCalls = response.toolCalls.slice(0, this.config.maxToolCallsPerTurn);
 
       // Add assistant message with tool_use blocks to messages
@@ -229,9 +264,7 @@ export class TurnLoop {
       // Record results in transcript and stream
       const resultBlocks: ContentBlock[] = [];
       for (const result of results) {
-        const content = result.error
-          ? `Error: ${result.error}`
-          : result.result ?? "(no output)";
+        const content = result.error ? `Error: ${result.error}` : (result.result ?? "(no output)");
 
         resultBlocks.push({
           type: "tool_result",
@@ -271,7 +304,11 @@ export class TurnLoop {
         budgetTracker,
       );
       if (budgetDecision === "stop") {
-        logger.info("turn.budget_stop", { outputTokens: totalOutputTokens, budget: this.config.tokenBudget });
+        tlog.info("turn.budget_stop", {
+          cat: "turn",
+          outputTokens: totalOutputTokens,
+          budget: this.config.tokenBudget,
+        });
         this.config.onStream?.({
           type: "assistant_message",
           message: { role: "assistant", content: finalText },
@@ -282,7 +319,8 @@ export class TurnLoop {
       if (budgetDecision === "nudge") {
         messages.push({
           role: "user",
-          content: "<system-reminder>You are approaching the token budget limit. Please start wrapping up your work and provide a summary.</system-reminder>",
+          content:
+            "<system-reminder>You are approaching the token budget limit. Please start wrapping up your work and provide a summary.</system-reminder>",
         });
       }
 
@@ -295,10 +333,20 @@ export class TurnLoop {
 
       // Record turn boundary
       this.deps.transcript.appendTurnBoundary();
+
+      tlog.info("turn.end", {
+        cat: "turn",
+        duration_ms: Date.now() - turnStartedAt,
+        outcome: "continue",
+      });
     }
 
     // Max turns reached — do one final summarization call (no tools)
-    logger.warn("turn.max_turns_reached", { maxTurns: this.config.maxTurns, turnCount: this.turnCount });
+    logger.warn("turn.max_turns_reached", {
+      cat: "turn",
+      maxTurns: this.config.maxTurns,
+      turnCount: this.turnCount,
+    });
 
     messages = this.deps.contextManager.manage(messages);
     messages.push({
@@ -320,7 +368,7 @@ export class TurnLoop {
       }
     } catch {
       // If even summary fails, just return what we have
-      logger.warn("turn.summary_failed");
+      this.currentTurnLog.warn("turn.summary_failed", { cat: "turn" });
     }
 
     if (finalText) {
@@ -354,7 +402,8 @@ export class TurnLoop {
           // log a warning (actual compaction happens between turns)
           if (streamingResponseTokens > 0 && streamingResponseTokens % 2000 === 0) {
             if (this.deps.contextManager.shouldReactiveCompact(messages, streamingResponseTokens)) {
-              logger.warn("turn.reactive_compact_warning", {
+              this.currentTurnLog.warn("turn.reactive_compact_warning", {
+                cat: "turn",
                 responseTokens: streamingResponseTokens,
                 turn: this.turnCount,
               });
@@ -378,7 +427,10 @@ export class TurnLoop {
 
       // Streaming might have partially emitted — send tombstone to revoke
       this.config.onStream?.({ type: "tombstone", messageId: `turn_${this.turnCount}` });
-      logger.warn("turn.streaming_fallback", { error: (err as Error).message });
+      this.currentTurnLog.warn("turn.streaming_fallback", {
+        cat: "turn",
+        error: (err as Error).message,
+      });
 
       // Retry without streaming
       return await this.deps.model.callWithoutStreaming(
@@ -423,9 +475,7 @@ export class TurnLoop {
     // - unsafe tools sequentially (but started at the same time as safe group)
     const resultMap = new Map<string, ToolResult>();
 
-    const safePromise = Promise.all(
-      safe.map((c) => this.deps.toolExecutor.executeSingle(c)),
-    );
+    const safePromise = Promise.all(safe.map((c) => this.deps.toolExecutor.executeSingle(c)));
 
     const unsafePromise = (async () => {
       const results: ToolResult[] = [];
@@ -487,7 +537,10 @@ export class TurnLoop {
         content: "Error: Tool execution was cancelled because the previous API call failed.",
       }));
       messages.push({ role: "user", content: errorBlocks });
-      logger.warn("turn.patched_orphaned_tool_uses", { count: orphanedIds.length });
+      this.currentTurnLog.warn("turn.patched_orphaned_tool_uses", {
+        cat: "turn",
+        count: orphanedIds.length,
+      });
       return; // Only patch the most recent orphaned set
     }
   }

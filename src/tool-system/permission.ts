@@ -9,6 +9,7 @@ import type {
   ApprovalRequest,
   ApprovalResult,
 } from "../types.js";
+import { logger as rootPermLogger } from "../logging/logger.js";
 
 export interface ApprovalBackend {
   requestApproval(request: ApprovalRequest): Promise<ApprovalResult>;
@@ -205,9 +206,19 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
           );
           if (!dup) this.savedProjectRules.push(rule);
           this.onProjectRules?.(this.savedProjectRules);
+          rootPermLogger.info("permission.persist", {
+            cat: "permission",
+            tool: rule.tool,
+            decision: rule.decision,
+            totalProjectRules: this.savedProjectRules.length,
+            duplicate: dup,
+          });
         } catch (err) {
-          // Persistence failure shouldn't block the decision — the user
-          // still gets a session-scope effect via the live classifier.
+          rootPermLogger.error("permission.persist_failed", {
+            cat: "permission",
+            tool: rule.tool,
+            error: (err as Error).message,
+          });
           // eslint-disable-next-line no-console
           console.error("Failed to persist project permission rule:", (err as Error).message);
         }
@@ -457,12 +468,22 @@ export function isRuntimeBypass(): boolean {
 
 export class PermissionClassifier {
   private denialTracker = new DenialTracker();
+  /**
+   * Turn-scoped logger so permission events (ask/decision/auto-deny) are
+   * tagged with the current turn/turnId. Falls back to the root logger so
+   * tests and ad-hoc usages still write log lines.
+   */
+  private log: typeof rootPermLogger = rootPermLogger;
 
   constructor(
     private rules: PermissionRule[],
     private defaultMode: PermissionMode = "default",
     private approvalBackend: ApprovalBackend = new HeadlessApprovalBackend("deny-all"),
   ) {}
+
+  setLogger(log: typeof rootPermLogger): void {
+    this.log = log;
+  }
 
   /** Replace mode + backend in place so live tool execution sees the change. */
   reconfigure(
@@ -519,26 +540,66 @@ export class PermissionClassifier {
   }
 
   async handleAsk(toolName: string, args: Record<string, unknown>): Promise<boolean> {
-    if (this.defaultMode === "dontAsk") return false;
-    if (this.defaultMode === "bypassPermissions") return true;
+    if (this.defaultMode === "dontAsk") {
+      this.log.info("permission.auto_deny", {
+        cat: "permission",
+        tool: toolName,
+        reason: "dontAsk_mode",
+      });
+      return false;
+    }
+    if (this.defaultMode === "bypassPermissions") {
+      this.log.info("permission.auto_allow", {
+        cat: "permission",
+        tool: toolName,
+        reason: "bypassPermissions_mode",
+      });
+      return true;
+    }
 
     // Check denial tracker — if too many denials, auto-deny
     if (this.denialTracker.shouldWarn(toolName)) {
+      this.log.warn("permission.auto_deny", {
+        cat: "permission",
+        tool: toolName,
+        reason: "denial_tracker_threshold",
+      });
       return false;
     }
 
-    const result = await this.approvalBackend.requestApproval({
-      toolName,
-      args,
-      description: this.describeToolCall(toolName, args),
-      riskLevel: this.assessRisk(toolName, args),
+    const riskLevel = this.assessRisk(toolName, args);
+    const span = this.log.span("permission.ask", {
+      cat: "permission",
+      tool: toolName,
+      riskLevel,
     });
+    let result: ApprovalResult;
+    try {
+      result = await this.approvalBackend.requestApproval({
+        toolName,
+        args,
+        description: this.describeToolCall(toolName, args),
+        riskLevel,
+      });
+    } catch (err) {
+      span.fail(err, { tool: toolName });
+      throw err;
+    }
 
     if (result.approved) {
       this.denialTracker.recordSuccess(toolName);
     } else {
       this.denialTracker.record(toolName);
     }
+
+    span.end({
+      tool: toolName,
+      approved: result.approved,
+      // `scope` is set by the interactive backend when the user picks
+      // "for this session" / "for this project"; absent for one-shot answers.
+      scope: (result as { scope?: string }).scope,
+      reason: !result.approved ? (result as { reason?: string }).reason : undefined,
+    });
 
     return result.approved;
   }
