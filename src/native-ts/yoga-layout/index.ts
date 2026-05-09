@@ -1,10 +1,10 @@
 /**
  * Pure-TypeScript port of yoga-layout (Meta's flexbox engine).
  *
- * This matches the `yoga-layout/load` API surface used by src/ink/layout/yoga.ts.
+ * This matches the `yoga-layout/load` API surface used by src/render/layout/yoga.ts.
  * The upstream C++ source is ~2500 lines in CalculateLayout.cpp alone; this port
  * is a simplified single-pass flexbox implementation that covers the subset of
- * features Ink actually uses:
+ * features the render engine actually uses:
  *   - flex-direction (row/column + reverse)
  *   - flex-grow / flex-shrink / flex-basis
  *   - align-items / align-self (stretch, flex-start, center, flex-end)
