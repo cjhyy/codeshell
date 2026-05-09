@@ -13,6 +13,7 @@ import type { AgentClient } from "../protocol/client.js";
 import { initHistory, flushHistorySync } from "./input-history.js";
 import { getOpenRouterSnapshot } from "../data/openrouter-models.js";
 import { syncOpenRouterCatalog } from "../data/openrouter-sync.js";
+import { logger } from "../logging/logger.js";
 
 export interface InkReplOptions {
   client: AgentClient;
@@ -29,6 +30,9 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
   // Initialize input history with session and project context
   const sessionId = options.sessionId ?? `session-${Date.now()}`;
   initHistory(sessionId, options.cwd);
+  // Stamp the logger so any pre-run log lines carry this sid. Engine.run
+  // will overwrite with the authoritative server-resolved id once known.
+  logger.setSid(sessionId);
 
   // Background-refresh the OpenRouter catalog if the bundled snapshot is
   // older than 24h. Fire-and-forget — failures fall back to the bundled

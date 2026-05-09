@@ -48,8 +48,11 @@ export function ToolCallStart({ toolName, args, nested }: ToolCallStartProps) {
   return (
     <Box marginLeft={ml} marginTop={nested ? 0 : 1}>
       <Text color={dotColor}>{"  ●"}</Text>
-      <Text bold>{" "}{toolName}</Text>
-      <Text dim>{"  "}{argsStr}</Text>
+      <Text bold> {toolName}</Text>
+      <Text dim>
+        {"  "}
+        {argsStr}
+      </Text>
     </Box>
   );
 }
@@ -90,7 +93,14 @@ interface ToolCallResultProps {
   compact?: boolean;
 }
 
-export function ToolCallResult({ toolName, result, error, nested, expanded: forceExpand, compact }: ToolCallResultProps) {
+export function ToolCallResult({
+  toolName,
+  result,
+  error,
+  nested,
+  expanded: forceExpand,
+  compact,
+}: ToolCallResultProps) {
   const [localExpanded, setLocalExpanded] = useState(false);
   const expanded = forceExpand || localExpanded;
   const ml = nested ? 3 : 0;
@@ -99,7 +109,12 @@ export function ToolCallResult({ toolName, result, error, nested, expanded: forc
     const summary = singleLine(result ?? error ?? "");
     return (
       <Box marginLeft={ml}>
-        <Text dim>{"  · "}{toolName}{" retried — "}{truncate(summary, 90)}</Text>
+        <Text dim>
+          {"  · "}
+          {toolName}
+          {" retried — "}
+          {truncate(summary, 90)}
+        </Text>
       </Box>
     );
   }
@@ -132,7 +147,7 @@ export function ToolCallResult({ toolName, result, error, nested, expanded: forc
       <Box>
         <Text color="ansi:green">{"  ✓ "}</Text>
         <Text dim>{toolName}</Text>
-        {rendered.summary ? <Text dim>{" "}{rendered.summary}</Text> : null}
+        {rendered.summary ? <Text dim> {rendered.summary}</Text> : null}
       </Box>
       {rendered.lines.length > 0 && (
         <Box flexDirection="column">
@@ -145,7 +160,12 @@ export function ToolCallResult({ toolName, result, error, nested, expanded: forc
           {rendered.hiddenCount > 0 && (
             <Box>
               <Text dim>{"  ⎿  "}</Text>
-              <Text dim>{"… +"}{rendered.hiddenCount}{" lines"}{!forceExpand ? " (ctrl+o to expand)" : ""}</Text>
+              <Text dim>
+                {"… +"}
+                {rendered.hiddenCount}
+                {" lines"}
+                {!forceExpand ? " (ctrl+o to expand)" : ""}
+              </Text>
             </Box>
           )}
         </Box>
@@ -169,7 +189,11 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
   switch (toolName) {
     case "Read": {
       // Read: show summary only (no preview lines)
-      return { summary: `${totalLines} lines, ${formatBytes(content.length)}`, lines: [], hiddenCount: 0 };
+      return {
+        summary: `${totalLines} lines, ${formatBytes(content.length)}`,
+        lines: [],
+        hiddenCount: 0,
+      };
     }
 
     case "Write": {
@@ -181,15 +205,23 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
     }
 
     case "Glob": {
-      const files = rawLines.filter((l) => l.trim());
+      // Strip the "N files matched:" header glob.ts emits so the count is accurate.
+      const files = rawLines
+        .filter((l) => l.trim())
+        .filter((l) => !/^\d+\s+files?\s+matched/i.test(l));
       const count = files.length;
       if (expanded) {
+        return { summary: `${count} files`, lines: files, hiddenCount: 0 };
+      }
+      // Few results: show them inline — making the user ctrl+o for a 2-file
+      // match was a regression. Many results: summary + first N + "+M lines".
+      if (count <= COLLAPSED_LINES) {
         return { summary: `${count} files`, lines: files, hiddenCount: 0 };
       }
       return {
         summary: `${count} files`,
         lines: files.slice(0, COLLAPSED_LINES),
-        hiddenCount: Math.max(0, count - COLLAPSED_LINES),
+        hiddenCount: count - COLLAPSED_LINES,
       };
     }
 
@@ -197,12 +229,15 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
       const matches = rawLines.filter((l) => l.trim());
       const count = matches.length;
       if (expanded) {
-        return { summary: `${count} matches`, lines: matches, hiddenCount: 0 };
+        return { summary: `${count} results`, lines: matches, hiddenCount: 0 };
+      }
+      if (count <= COLLAPSED_LINES) {
+        return { summary: `${count} results`, lines: matches, hiddenCount: 0 };
       }
       return {
-        summary: `${count} matches`,
+        summary: `${count} results`,
         lines: matches.slice(0, COLLAPSED_LINES),
-        hiddenCount: Math.max(0, count - COLLAPSED_LINES),
+        hiddenCount: count - COLLAPSED_LINES,
       };
     }
 

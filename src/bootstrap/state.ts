@@ -9,6 +9,8 @@
 
 // ─── Types ──────────────────────────────────────────────────────────
 
+import { logger } from "../logging/logger.js";
+
 export type AttributedCounter = { add(value: number, attrs?: Record<string, string>): void };
 export type ChannelEntry = { name: string; enabled: boolean };
 
@@ -20,8 +22,14 @@ let _projectRoot = process.cwd();
 let _isNonInteractive = false;
 let _sessionTrustAccepted = false;
 
+// Seed the logger so logs written before any run start carry a stable sid.
+logger.setSid(_sessionId);
+
 export function getSessionId(): string { return _sessionId; }
-export function switchSession(id: string): void { _sessionId = id; }
+export function switchSession(id: string): void {
+  _sessionId = id;
+  logger.setSid(id);
+}
 export function getOriginalCwd(): string { return _originalCwd; }
 export function setOriginalCwd(cwd: string): void { _originalCwd = cwd; }
 export function getProjectRoot(): string { return _projectRoot; }

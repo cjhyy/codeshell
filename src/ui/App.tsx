@@ -31,6 +31,7 @@ import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { AskUserPrompt } from "./components/AskUserPrompt.js";
 import { OnboardingPrompt } from "./components/OnboardingPrompt.js";
 import { ModelSelector, type ModelEntry } from "./components/ModelSelector.js";
+import { ModelManager, type ArenaParticipantEntry } from "./components/ModelManager.js";
 import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
 import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
@@ -44,7 +45,6 @@ import { extraCommands } from "../cli/commands/builtin/extra-commands.js";
 import { moreCommands } from "../cli/commands/builtin/more-commands.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent, TaskInfo } from "../types.js";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
-import { SessionManager, type SessionBundle } from "../session/session-manager.js";
 import { formatDuration, formatTokens } from "../utils/format.js";
 import { removeLastFromHistory } from "./input-history.js";
 
@@ -76,7 +76,16 @@ interface AppProps {
   prefill?: string;
 }
 
-export function App({ client, model: initialModel, effort, maxTurns, cwd, maxContextTokens, sessionId: initialSessionId, prefill }: AppProps) {
+export function App({
+  client,
+  model: initialModel,
+  effort,
+  maxTurns,
+  cwd,
+  maxContextTokens,
+  sessionId: initialSessionId,
+  prefill,
+}: AppProps) {
   const { exit } = useApp();
   const [input, setInput] = useState(prefill ?? "");
   const chatLog = useSyncExternalStore(
@@ -87,7 +96,10 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
   const tasksTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "stopped")) {
+    if (
+      tasks.length > 0 &&
+      tasks.every((t) => t.status === "completed" || t.status === "stopped")
+    ) {
       tasksTimerRef.current = setTimeout(() => setTasks([]), 3000);
     }
     return () => {
@@ -119,6 +131,11 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [modelEntries, setModelEntries] = useState<ModelEntry[] | null>(null);
   const [sessionEntries, setSessionEntries] = useState<SessionPickerEntry[] | null>(null);
+  const [modelManager, setModelManager] = useState<{
+    entries: ModelEntry[];
+    snapshot: { count: number; fetchedAt: string };
+    arenaParticipants: ArenaParticipantEntry[];
+  } | null>(null);
 
   // Track streaming chars in a ref — no App-level re-render per tick.
   // StatusLine reads these refs directly via its own internal interval.
@@ -132,36 +149,13 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
   // P1.8: Message selector cursor
   const [cursorIdx, setCursorIdx] = useState<number | null>(null);
 
-  // ─── Session persistence ──────────────────────────────────────
-  const sessionBundleRef = useRef<SessionBundle | null>(null);
-
-  // Create or attach session on mount
-  useEffect(() => {
-    const sm = new SessionManager();
-    if (initialSessionId) {
-      try {
-        sessionBundleRef.current = sm.resume(initialSessionId);
-      } catch {
-        // Session not found — create fresh
-        sessionBundleRef.current = sm.create(cwd, model, "openai");
-      }
-    } else {
-      sessionBundleRef.current = sm.create(cwd, model, "openai");
-    }
-
-    // Mark completed on unmount
-    return () => {
-      const bundle = sessionBundleRef.current;
-      if (bundle) {
-        bundle.state.status = "completed";
-        sm.saveState(bundle.state);
-      }
-    };
-  }, []); // mount-only
+  // Session persistence is owned by the server-side Engine; the client only
+  // tracks `sessionId` for display and for re-passing on subsequent runs.
 
   // Unseen message divider tracking
-  const { dividerIndex, showPill, unseenCount, onScrollToBottom } =
-    useUnseenDivider(chatLog.length);
+  const { dividerIndex, showPill, unseenCount, onScrollToBottom } = useUnseenDivider(
+    chatLog.length,
+  );
 
   useEffect(() => {
     if (isRunning) {
@@ -239,168 +233,194 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
 
   // ─── Stream event handler (wired to client) ───────────────────
 
-  const handleStreamEvent = useCallback((event: StreamEvent) => {
-    const agentId = (event as any).agentId as string | undefined;
+  const handleStreamEvent = useCallback(
+    (event: StreamEvent) => {
+      const agentId = (event as any).agentId as string | undefined;
 
-    switch (event.type) {
-      case "stream_request_start":
-        setStreamMode("thinking");
-        setThinkingContent(null);
-        chatStore.update((prev) => {
-          const filtered = prev.filter(
-            (e) => !(e.type === "thinking" && e.agentId === agentId),
+      switch (event.type) {
+        case "stream_request_start":
+          setStreamMode("thinking");
+          setThinkingContent(null);
+          chatStore.update((prev) => {
+            const filtered = prev.filter((e) => !(e.type === "thinking" && e.agentId === agentId));
+            return [...filtered, entry({ type: "thinking", agentId })];
+          });
+          break;
+
+        case "thinking_delta":
+          setThinkingContent((prev) => (prev ?? "") + event.text);
+          break;
+
+        case "text_delta": {
+          setStreamMode("responding");
+          const existing = textBufferRef.current.get(agentId) ?? "";
+          textBufferRef.current.set(agentId, existing + event.text);
+          streamingCharsRef.current += event.text.length;
+          if (!flushTimerRef.current) {
+            flushTimerRef.current = setTimeout(flushTextBuffer, 50);
+          }
+          break;
+        }
+
+        case "tool_use_start": {
+          setStreamMode("tool-use");
+          if (flushTimerRef.current) {
+            clearTimeout(flushTimerRef.current);
+            flushTimerRef.current = null;
+          }
+          flushTextBuffer();
+
+          // Hide sub-agent tool calls from the conversation feed — the
+          // user only wants to see what the *main* agent is doing plus
+          // task statuses, not every Read/Grep a child fires off. The
+          // sub-agent's text output and the task panel still surface.
+          if (agentId !== undefined) break;
+
+          const tc = event.toolCall;
+          chatStore.update((prev) => {
+            const updated = prev
+              .map((e) =>
+                e.type === "assistant_text" && e.streaming && e.agentId === agentId
+                  ? { ...e, streaming: false }
+                  : e,
+              )
+              .filter(
+                (e) =>
+                  !(e.type === "thinking" && e.agentId === agentId) &&
+                  !(e.type === "tool_running" && e.agentId === agentId),
+              );
+            return [
+              ...updated,
+              entry({
+                type: "tool_start",
+                toolName: tc.toolName,
+                args: tc.args,
+                toolCallId: tc.id,
+                agentId,
+              }),
+              entry({ type: "tool_running", toolName: tc.toolName, agentId }),
+            ];
+          });
+          break;
+        }
+
+        case "tool_use_args_delta": {
+          if (agentId !== undefined) break;
+          const { toolCallId, args } = event;
+          chatStore.update((prev) =>
+            prev.map((e) =>
+              e.type === "tool_start" && e.toolCallId === toolCallId ? { ...e, args } : e,
+            ),
           );
-          return [...filtered, entry({ type: "thinking", agentId })];
-        });
-        break;
-
-      case "thinking_delta":
-        setThinkingContent((prev) => (prev ?? "") + event.text);
-        break;
-
-      case "text_delta": {
-        setStreamMode("responding");
-        const existing = textBufferRef.current.get(agentId) ?? "";
-        textBufferRef.current.set(agentId, existing + event.text);
-        streamingCharsRef.current += event.text.length;
-        if (!flushTimerRef.current) {
-          flushTimerRef.current = setTimeout(flushTextBuffer, 50);
+          break;
         }
-        break;
-      }
 
-      case "tool_use_start": {
-        setStreamMode("tool-use");
-        if (flushTimerRef.current) {
-          clearTimeout(flushTimerRef.current);
-          flushTimerRef.current = null;
+        case "tool_result": {
+          // See note in tool_use_start: hide sub-agent tool I/O.
+          if (agentId !== undefined) break;
+
+          const r = event.result;
+          // Arena routinely fails on the first attempt while the
+          // model is still discovering valid `participants` for the
+          // active endpoint (e.g. defaulting to "claude" on a
+          // DeepSeek-only session). The endpoint check fails fast
+          // now, so the retry loop is healthy — but visually it
+          // shows up as several scary "Arena error:" cards in a row.
+          // Mark those as compact so the feed reads "Arena …
+          // retrying" instead of "Arena exploded three times."
+          const looksLikeArenaRetry =
+            r.toolName === "Arena" &&
+            typeof r.result === "string" &&
+            r.result.startsWith("Arena error:");
+
+          chatStore.update((prev) => {
+            const filtered = prev.filter(
+              (e) => !(e.type === "tool_running" && e.agentId === agentId),
+            );
+            return [
+              ...filtered,
+              entry({
+                type: "tool_result",
+                toolName: r.toolName,
+                result: r.result,
+                error: r.error,
+                agentId,
+                compact: looksLikeArenaRetry,
+              } as any),
+            ];
+          });
+          break;
         }
-        flushTextBuffer();
 
-        // Hide sub-agent tool calls from the conversation feed — the
-        // user only wants to see what the *main* agent is doing plus
-        // task statuses, not every Read/Grep a child fires off. The
-        // sub-agent's text output and the task panel still surface.
-        if (agentId !== undefined) break;
+        case "agent_start": {
+          const ev = event as Extract<StreamEvent, { type: "agent_start" }>;
+          chatStore.update((prev) => [
+            ...prev,
+            entry({ type: "agent_start", agentId: ev.agentId, description: ev.description }),
+          ]);
+          break;
+        }
 
-        const tc = event.toolCall;
-        chatStore.update((prev) => {
-          const updated = prev
-            .map((e) =>
-              e.type === "assistant_text" && e.streaming && e.agentId === agentId
-                ? { ...e, streaming: false }
-                : e,
-            )
-            .filter(
+        case "agent_end": {
+          const ev = event as Extract<StreamEvent, { type: "agent_end" }>;
+          chatStore.update((prev) => {
+            const filtered = prev.filter(
+              (e) =>
+                !(
+                  (e as any).agentId === ev.agentId &&
+                  (e.type === "thinking" || e.type === "tool_running")
+                ),
+            );
+            return [
+              ...filtered,
+              entry({
+                type: "agent_end",
+                agentId: ev.agentId,
+                description: ev.description,
+                error: ev.error,
+              }),
+            ];
+          });
+          break;
+        }
+
+        case "task_update": {
+          const taskEvent = event as any;
+          if (taskEvent.tasks) setTasks(taskEvent.tasks);
+          break;
+        }
+
+        case "context_compact": {
+          const ev = event as Extract<StreamEvent, { type: "context_compact" }>;
+          const dropped = ev.before - ev.after;
+          const pct = ev.before > 0 ? Math.round((dropped / ev.before) * 100) : 0;
+          const text = `── context compacted (${ev.strategy}, ${formatTokens(ev.before)} → ${formatTokens(ev.after)}, -${pct}%) ──`;
+          chatStore.update((prev) => [
+            ...prev,
+            entry({ type: "system", subtype: "compact_boundary", text }),
+          ]);
+          // Reset the displayed base so the live ctx bar reflects the new (smaller) prompt.
+          setContextTokens(ev.after);
+          break;
+        }
+
+        case "error": {
+          const errorText = event.error;
+          const errorKind = classifyError(errorText);
+          chatStore.update((prev) => {
+            const filtered = prev.filter(
               (e) =>
                 !(e.type === "thinking" && e.agentId === agentId) &&
                 !(e.type === "tool_running" && e.agentId === agentId),
             );
-          return [
-            ...updated,
-            entry({ type: "tool_start", toolName: tc.toolName, args: tc.args, toolCallId: tc.id, agentId }),
-            entry({ type: "tool_running", toolName: tc.toolName, agentId }),
-          ];
-        });
-        break;
+            return [...filtered, entry({ type: "error", error: errorText, errorKind, agentId })];
+          });
+          break;
+        }
       }
-
-      case "tool_use_args_delta": {
-        if (agentId !== undefined) break;
-        const { toolCallId, args } = event;
-        chatStore.update((prev) =>
-          prev.map((e) =>
-            e.type === "tool_start" && e.toolCallId === toolCallId
-              ? { ...e, args }
-              : e,
-          ),
-        );
-        break;
-      }
-
-      case "tool_result": {
-        // See note in tool_use_start: hide sub-agent tool I/O.
-        if (agentId !== undefined) break;
-
-        const r = event.result;
-        // Arena routinely fails on the first attempt while the
-        // model is still discovering valid `participants` for the
-        // active endpoint (e.g. defaulting to "claude" on a
-        // DeepSeek-only session). The endpoint check fails fast
-        // now, so the retry loop is healthy — but visually it
-        // shows up as several scary "Arena error:" cards in a row.
-        // Mark those as compact so the feed reads "Arena …
-        // retrying" instead of "Arena exploded three times."
-        const looksLikeArenaRetry =
-          r.toolName === "Arena" &&
-          typeof r.result === "string" &&
-          r.result.startsWith("Arena error:");
-
-        chatStore.update((prev) => {
-          const filtered = prev.filter(
-            (e) => !(e.type === "tool_running" && e.agentId === agentId),
-          );
-          return [
-            ...filtered,
-            entry({
-              type: "tool_result",
-              toolName: r.toolName,
-              result: r.result,
-              error: r.error,
-              agentId,
-              compact: looksLikeArenaRetry,
-            } as any),
-          ];
-        });
-        break;
-      }
-
-      case "agent_start": {
-        const ev = event as Extract<StreamEvent, { type: "agent_start" }>;
-        chatStore.update((prev) => [
-          ...prev,
-          entry({ type: "agent_start", agentId: ev.agentId, description: ev.description }),
-        ]);
-        break;
-      }
-
-      case "agent_end": {
-        const ev = event as Extract<StreamEvent, { type: "agent_end" }>;
-        chatStore.update((prev) => {
-          const filtered = prev.filter(
-            (e) =>
-              !((e as any).agentId === ev.agentId &&
-                (e.type === "thinking" || e.type === "tool_running")),
-          );
-          return [
-            ...filtered,
-            entry({ type: "agent_end", agentId: ev.agentId, description: ev.description, error: ev.error }),
-          ];
-        });
-        break;
-      }
-
-      case "task_update": {
-        const taskEvent = event as any;
-        if (taskEvent.tasks) setTasks(taskEvent.tasks);
-        break;
-      }
-
-      case "error": {
-        const errorText = event.error;
-        const errorKind = classifyError(errorText);
-        chatStore.update((prev) => {
-          const filtered = prev.filter(
-            (e) =>
-              !(e.type === "thinking" && e.agentId === agentId) &&
-              !(e.type === "tool_running" && e.agentId === agentId),
-          );
-          return [...filtered, entry({ type: "error", error: errorText, errorKind, agentId })];
-        });
-        break;
-      }
-    }
-  }, [flushTextBuffer]);
+    },
+    [flushTextBuffer],
+  );
 
   // Wire stream events from client
   useEffect(() => {
@@ -450,6 +470,48 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
     }
   }, [client]);
 
+  const openModelManager = useCallback(async () => {
+    try {
+      const [modelsRes, arenaRes, snapMod] = await Promise.all([
+        client.query("models"),
+        client.query("config_get", "arena.participants"),
+        import("../data/openrouter-models.js"),
+      ]);
+      const entries = (modelsRes.data as ModelEntry[]) ?? [];
+      const snap = snapMod.getOpenRouterSnapshot();
+
+      // arena.participants: Array<string | { name, model, ... }>. Strings are
+      // editable in-place; object entries surface as read-only labels so a
+      // hand-crafted settings.json round-trips intact.
+      const raw = (arenaRes.data as { value?: unknown })?.value;
+      const arenaParticipants: ArenaParticipantEntry[] = Array.isArray(raw)
+        ? raw.map((item: unknown): ArenaParticipantEntry => {
+            if (typeof item === "string") return { kind: "key", value: item };
+            if (item && typeof item === "object") {
+              const obj = item as { name?: string; model?: string };
+              const label = obj.name ?? obj.model ?? "(未命名)";
+              return { kind: "object", label };
+            }
+            return { kind: "object", label: String(item) };
+          })
+        : [];
+
+      setModelManager({
+        entries,
+        snapshot: { count: snap.count, fetchedAt: snap.fetchedAt },
+        arenaParticipants,
+      });
+    } catch (err) {
+      chatStore.update((prev) => [
+        ...prev,
+        entry({
+          type: "status",
+          reason: `Failed to open model manager: ${(err as Error).message}`,
+        }),
+      ]);
+    }
+  }, [client]);
+
   useInput((ch, key) => {
     if (key.ctrl && ch === "c") {
       if (isRunning) {
@@ -479,10 +541,12 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
         const next = modes[(modes.indexOf(prev) + 1) % modes.length];
 
         // Notify server of mode change
-        client.configure({
-          planMode: next === "plan",
-          bypassPermissions: next === "bypass",
-        }).catch(() => {});
+        client
+          .configure({
+            planMode: next === "plan",
+            bypassPermissions: next === "bypass",
+          })
+          .catch(() => {});
 
         return next;
       });
@@ -509,7 +573,7 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
 
     // Alt+M / Esc+M — open model selector. (Ctrl+M is unusable: terminals
     // alias it to Enter, so it would collide with submitting the input.)
-    if (key.meta && ch === "m" && !isRunning && !showOnboarding && !modelEntries) {
+    if (key.meta && ch === "m" && !isRunning && !showOnboarding && !modelEntries && !modelManager) {
       openModelSelector();
       return;
     }
@@ -546,178 +610,194 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
     }
   });
 
+  const handleSubmit = useCallback(
+    async (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed || isRunning) return;
 
-  const handleSubmit = useCallback(async (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed || isRunning) return;
+      setInput("");
+      setShowBanner(false);
+      onScrollToBottom(); // Repin unseen divider on submit
 
-    setInput("");
-    setShowBanner(false);
-    onScrollToBottom(); // Repin unseen divider on submit
-
-    if (trimmed.startsWith("/")) {
-      handleSlashCommand(trimmed);
-      return;
-    }
-
-    chatStore.update((prev) => [...prev, entry({ type: "user", text: trimmed })]);
-    setIsRunning(true);
-    streamingCharsRef.current = 0;
-    taskManager.reset();
-
-    try {
-      // If a slash command (e.g. /arena) stored context, prepend it to
-      // the user message so the engine LLM can see it.
-      let engineMessage = trimmed;
-      if (pendingContextRef.current) {
-        engineMessage = `<context>\n${pendingContextRef.current}\n</context>\n\n${trimmed}`;
-        pendingContextRef.current = null;
+      if (trimmed.startsWith("/")) {
+        handleSlashCommand(trimmed);
+        return;
       }
 
-      // Stream events are handled via the client event listener above
-      const result = await client.run(engineMessage, sessionId);
+      chatStore.update((prev) => [...prev, entry({ type: "user", text: trimmed })]);
+      setIsRunning(true);
+      streamingCharsRef.current = 0;
+      taskManager.reset();
 
-      // Flush any remaining buffered text
-      if (flushTimerRef.current) {
-        clearTimeout(flushTimerRef.current);
-        flushTimerRef.current = null;
-      }
-      flushTextBuffer();
-
-      // Finalize all streaming text
-      chatStore.update((prev) =>
-        prev
-          .filter((e) => e.type !== "thinking" && e.type !== "tool_running")
-          .map((e) =>
-            e.type === "assistant_text" && e.streaming ? { ...e, streaming: false } : e,
-          ),
-      );
-
-      setSessionId(result.sessionId);
-
-      // Token recording happens centrally via LLMClientBase.onUsage —
-      // we just refresh the displayed totals here.
-      if (result.usage && result.usage.totalTokens > 0) {
-        setContextTokens(result.usage.promptTokens);
-      }
-      setTotalTokens(costTracker.getTotalTokens().total);
-      setTotalCost(costTracker.getEstimatedCost());
-
-      // P0.3 + P0.4: Turn duration + cost message
-      const elapsed = Date.now() - runStartRef.current;
-      const turnCost = result.usage ? costTracker.estimateForTokens(model, result.usage.promptTokens, result.usage.completionTokens) : 0;
-      const parts: string[] = [formatDuration(elapsed)];
-      if (result.usage && result.usage.totalTokens > 0) {
-        parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);
-        if (result.usage.cacheReadTokens) {
-          parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);
+      try {
+        // If a slash command (e.g. /arena) stored context, prepend it to
+        // the user message so the engine LLM can see it.
+        let engineMessage = trimmed;
+        if (pendingContextRef.current) {
+          engineMessage = `<context>\n${pendingContextRef.current}\n</context>\n\n${trimmed}`;
+          pendingContextRef.current = null;
         }
-      }
-      if (turnCost > 0) parts.push(`$${turnCost.toFixed(4)}`);
-      chatStore.update((prev) => [
-        ...prev,
-        entry({ type: "system", subtype: "turn_duration", text: parts.join(" · ") }),
-      ]);
 
-      if (result.reason !== "completed") {
-        chatStore.update((prev) => [...prev, entry({ type: "status", reason: result.reason })]);
-      }
+        // Stream events are handled via the client event listener above
+        const result = await client.run(engineMessage, sessionId);
 
-      // P0.1: Session persistence — write turn to disk
-      const bundle = sessionBundleRef.current;
-      if (bundle) {
-        bundle.transcript.appendMessage("user", trimmed);
-        // Capture assistant text from the finalized chatLog
-        const currentLog = chatStore.getEntries();
-        const assistantTexts = currentLog
-          .filter((e) => e.type === "assistant_text" && !e.streaming && !(e as any).agentId)
-          .map((e) => (e as any).text as string);
-        if (assistantTexts.length > 0) {
-          bundle.transcript.appendMessage("assistant", assistantTexts[assistantTexts.length - 1]);
+        // Flush any remaining buffered text
+        if (flushTimerRef.current) {
+          clearTimeout(flushTimerRef.current);
+          flushTimerRef.current = null;
         }
-        // Write tool uses and results
-        for (const e of currentLog) {
-          if (e.type === "tool_start" && !(e as any).agentId) {
-            bundle.transcript.appendToolUse(e.toolName, e.id, e.args);
-          } else if (e.type === "tool_result" && !(e as any).agentId) {
-            bundle.transcript.appendToolResult(e.id, e.toolName, e.result, e.error);
+        flushTextBuffer();
+
+        // Finalize all streaming text
+        chatStore.update((prev) =>
+          prev
+            .filter((e) => e.type !== "thinking" && e.type !== "tool_running")
+            .map((e) =>
+              e.type === "assistant_text" && e.streaming ? { ...e, streaming: false } : e,
+            ),
+        );
+
+        setSessionId(result.sessionId);
+
+        // Token recording happens centrally via LLMClientBase.onUsage —
+        // we just refresh the displayed totals here.
+        if (result.usage && result.usage.totalTokens > 0) {
+          setContextTokens(result.usage.promptTokens);
+        }
+        setTotalTokens(costTracker.getTotalTokens().total);
+        setTotalCost(costTracker.getEstimatedCost());
+
+        // P0.3 + P0.4: Turn duration + cost message
+        const elapsed = Date.now() - runStartRef.current;
+        const turnCost = result.usage
+          ? costTracker.estimateForTokens(
+              model,
+              result.usage.promptTokens,
+              result.usage.completionTokens,
+            )
+          : 0;
+        const parts: string[] = [formatDuration(elapsed)];
+        if (result.usage && result.usage.totalTokens > 0) {
+          parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);
+          if (result.usage.cacheReadTokens) {
+            parts.push(`${formatTokens(result.usage.cacheReadTokens)} cached`);
           }
         }
-        bundle.transcript.appendTurnBoundary();
-        bundle.state.turnCount = result.turnCount;
-        bundle.state.sessionId = result.sessionId;
-        bundle.state.tokenUsage = {
-          promptTokens: (bundle.state.tokenUsage?.promptTokens ?? 0) + (result.usage?.promptTokens ?? 0),
-          completionTokens: (bundle.state.tokenUsage?.completionTokens ?? 0) + (result.usage?.completionTokens ?? 0),
-          totalTokens: (bundle.state.tokenUsage?.totalTokens ?? 0) + (result.usage?.totalTokens ?? 0),
-        };
-        new SessionManager().saveState(bundle.state);
+        if (turnCost > 0) parts.push(`$${turnCost.toFixed(4)}`);
+        chatStore.update((prev) => [
+          ...prev,
+          entry({ type: "system", subtype: "turn_duration", text: parts.join(" · ") }),
+        ]);
+
+        if (result.reason !== "completed") {
+          chatStore.update((prev) => [...prev, entry({ type: "status", reason: result.reason })]);
+        }
+      } catch (err) {
+        chatStore.update((prev) => [
+          ...prev,
+          entry({ type: "error", error: (err as Error).message }),
+        ]);
       }
-    } catch (err) {
-      chatStore.update((prev) => [...prev, entry({ type: "error", error: (err as Error).message })]);
-    }
 
-    setIsRunning(false);
-    setStreamMode("thinking");
-    setThinkingContent(null);
-  }, [client, sessionId, model, isRunning, flushTextBuffer]);
+      setIsRunning(false);
+      setStreamMode("thinking");
+      setThinkingContent(null);
+    },
+    [client, sessionId, model, isRunning, flushTextBuffer],
+  );
 
-  const handleSlashCommand = useCallback((cmd: string) => {
-    if (cmd.trim().toLowerCase() === "/help") {
-      addStatus(commandRegistry.helpText());
-      return;
-    }
+  const handleSlashCommand = useCallback(
+    (cmd: string) => {
+      if (cmd.trim().toLowerCase() === "/help") {
+        addStatus(commandRegistry.helpText());
+        return;
+      }
 
-    const cmdCtx = {
+      const cmdCtx = {
+        client,
+        cwd,
+        model,
+        setModel,
+        sessionId,
+        setSessionId,
+        setIsRunning,
+        addStatus,
+        addMessage,
+        setNextContext: (text: string) => {
+          pendingContextRef.current = text;
+        },
+        exit,
+        effort: currentEffort,
+        setEffort: setCurrentEffort,
+        tasks,
+        clearChat: () => {
+          chatStore.clear();
+          setTasks([]);
+        },
+        chatLog,
+        startOnboarding: () => setShowOnboarding(true),
+        openModelSelector,
+        openSessionPicker,
+        openModelManager,
+        loadChatEntries: (entries: RestoredChatEntry[]) => {
+          const chatEntries: ChatEntry[] = entries
+            .map((e) => {
+              switch (e.type) {
+                case "user":
+                  return entry({ type: "user", text: e.text ?? "" });
+                case "assistant_text":
+                  return entry({ type: "assistant_text", text: e.text ?? "", streaming: false });
+                case "tool_start":
+                  return entry({
+                    type: "tool_start",
+                    toolName: e.toolName ?? "",
+                    args: e.args ?? {},
+                  });
+                case "tool_result":
+                  return entry({
+                    type: "tool_result",
+                    toolName: e.toolName ?? "",
+                    result: e.result,
+                    error: e.error,
+                  });
+                case "status":
+                  return entry({ type: "status", reason: e.text ?? "" });
+                default:
+                  return entry({ type: "status", reason: "" });
+              }
+            })
+            .filter((e) => !(e.type === "status" && (e as any).reason === ""));
+          chatStore.setEntries(chatEntries);
+          setTasks([]);
+        },
+      };
+      commandRegistry.dispatch(cmd, cmdCtx);
+    },
+    [
       client,
       cwd,
       model,
       setModel,
       sessionId,
-      setSessionId,
-      setIsRunning,
-      addStatus,
-      addMessage,
-      setNextContext: (text: string) => { pendingContextRef.current = text; },
-      exit,
-      effort: currentEffort,
-      setEffort: setCurrentEffort,
+      currentEffort,
       tasks,
-      clearChat: () => { chatStore.clear(); setTasks([]); },
       chatLog,
-      startOnboarding: () => setShowOnboarding(true),
+      exit,
       openModelSelector,
       openSessionPicker,
-      loadChatEntries: (entries: RestoredChatEntry[]) => {
-        const chatEntries: ChatEntry[] = entries.map((e) => {
-          switch (e.type) {
-            case "user":
-              return entry({ type: "user", text: e.text ?? "" });
-            case "assistant_text":
-              return entry({ type: "assistant_text", text: e.text ?? "", streaming: false });
-            case "tool_start":
-              return entry({ type: "tool_start", toolName: e.toolName ?? "", args: e.args ?? {} });
-            case "tool_result":
-              return entry({ type: "tool_result", toolName: e.toolName ?? "", result: e.result, error: e.error });
-            case "status":
-              return entry({ type: "status", reason: e.text ?? "" });
-            default:
-              return entry({ type: "status", reason: "" });
-          }
-        }).filter((e) => !(e.type === "status" && (e as any).reason === ""));
-        chatStore.setEntries(chatEntries);
-        setTasks([]);
-      },
-    };
-    commandRegistry.dispatch(cmd, cmdCtx);
-  }, [client, cwd, model, setModel, sessionId, currentEffort, tasks, chatLog, exit, openModelSelector, openSessionPicker]);
+      openModelManager,
+    ],
+  );
 
   const addStatus = (reason: string) => {
     chatStore.update((prev) => [...prev, entry({ type: "status", reason })]);
   };
 
   const addMessage = (text: string) => {
-    chatStore.update((prev) => [...prev, entry({ type: "assistant_text", text, streaming: false })]);
+    chatStore.update((prev) => [
+      ...prev,
+      entry({ type: "assistant_text", text, streaming: false }),
+    ]);
   };
 
   const commandDefs = useMemo(() => commandRegistry.listCommands(), []);
@@ -746,7 +826,16 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       const rendered = renderEntry(e, key, isTranscript);
       if (!isSelected || !rendered) return rendered;
       return (
-        <Box key={key} borderStyle="single" borderColor="ansi:cyan" borderLeft borderRight={false} borderTop={false} borderBottom={false} paddingLeft={1}>
+        <Box
+          key={key}
+          borderStyle="single"
+          borderColor="ansi:cyan"
+          borderLeft
+          borderRight={false}
+          borderTop={false}
+          borderBottom={false}
+          paddingLeft={1}
+        >
           {rendered}
         </Box>
       );
@@ -793,13 +882,20 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       riskLevel={pendingApproval.riskLevel}
       args={pendingApproval.args}
       cwd={cwd}
-      onDecision={(approved, always) => {
+      onDecision={(approved, scope) => {
         const { requestId } = pendingApproval;
         setPendingApproval(null);
-        client.approve(requestId, approved
-          ? { approved: true, always }
-          : { approved: false, always },
-        ).catch(() => {});
+        // Map scope to backend fields:
+        //   once    → approve/deny just this call
+        //   session → set always so session rules pick it up
+        //   project → set always + scope so backend persists to settings
+        const always = scope !== "once";
+        client
+          .approve(
+            requestId,
+            approved ? { approved: true, always, scope } : { approved: false, always, scope },
+          )
+          .catch(() => {});
       }}
     />
   ) : undefined;
@@ -816,7 +912,10 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
         <Box marginLeft={2}>
           <Text dim>{"Transcript mode · ctrl+o to return · ↑↓ navigate"}</Text>
           {cursorIdx !== null && (
-            <Text dim>{" · selected: "}{cursorIdx + 1}</Text>
+            <Text dim>
+              {" · selected: "}
+              {cursorIdx + 1}
+            </Text>
           )}
         </Box>
       ) : showOnboarding ? (
@@ -859,6 +958,50 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
           }}
           onCancel={() => setSessionEntries(null)}
         />
+      ) : modelManager ? (
+        <ModelManager
+          entries={modelManager.entries}
+          snapshot={modelManager.snapshot}
+          arenaParticipants={modelManager.arenaParticipants}
+          onSaveArena={async (list) => {
+            await client.query("config_set", "arena.participants", list);
+            setModelManager((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    arenaParticipants: list.map((k) => ({ kind: "key", value: k })),
+                  }
+                : prev,
+            );
+          }}
+          onSwitch={async (key) => {
+            const result = await client.configure({ model: key });
+            const newModel = (result as { model?: string })?.model ?? key;
+            setModel(newModel);
+            // Mutate the local panel state so the active marker updates
+            // without re-fetching from the server.
+            setModelManager((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    entries: prev.entries.map((e) => ({ ...e, active: e.key === key })),
+                  }
+                : prev,
+            );
+          }}
+          onSync={async () => {
+            const mod = await import("../data/openrouter-sync.js");
+            const r = await mod.syncOpenRouterCatalog();
+            // Refresh the snapshot info shown in the panel header.
+            const snapMod = await import("../data/openrouter-models.js");
+            const snap = snapMod.getOpenRouterSnapshot();
+            setModelManager((prev) =>
+              prev ? { ...prev, snapshot: { count: snap.count, fetchedAt: snap.fetchedAt } } : prev,
+            );
+            return r;
+          }}
+          onClose={() => setModelManager(null)}
+        />
       ) : pendingQuestion ? (
         <AskUserPrompt
           question={pendingQuestion.question}
@@ -870,7 +1013,9 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
           onCancel={() => {
             const { requestId } = pendingQuestion;
             setPendingQuestion(null);
-            client.approve(requestId, { approved: false, reason: "(user declined to answer)" }).catch(() => {});
+            client
+              .approve(requestId, { approved: false, reason: "(user declined to answer)" })
+              .catch(() => {});
           }}
         />
       ) : (
@@ -889,9 +1034,7 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
 
       <Box wrap="truncate">
         <ModeIndicator mode={permMode} />
-        {screen === "transcript" && (
-          <Text color="ansi:magenta">{" TRANSCRIPT "}</Text>
-        )}
+        {screen === "transcript" && <Text color="ansi:magenta">{" TRANSCRIPT "}</Text>}
         <Box flexGrow={1} />
         <StatusLine
           model={model}
@@ -899,7 +1042,8 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
           tokens={totalTokens}
           cost={totalCost}
           sessionId={sessionId}
-          contextPercent={contextTokens > 0 ? Math.min((contextTokens / maxContextTokens) * 100, 100) : 0}
+          baseContextTokens={contextTokens}
+          maxContextTokens={maxContextTokens}
           isRunning={isRunning}
           streamingCharsRef={streamingCharsRef}
           runStartRef={runStartRef}
@@ -933,8 +1077,8 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
       if (nested) {
         return (
           <Box key={key} marginLeft={1}>
-            <Text dim>│  ⎿  </Text>
-            <MessageContent text={entry.text} streaming={entry.streaming} />
+            <Text dim>│ ⎿ </Text>
+            <MessageContent text={entry.text} streaming={entry.streaming} nested />
           </Box>
         );
       }
@@ -946,13 +1090,15 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
       if (!nested) return null;
       return (
         <Box key={key} marginLeft={1}>
-          <Text dim>│  ⎿  </Text>
-          <ThinkingMessage content={entry.content} collapsed={!expanded} />
+          <Text dim>│ ⎿ </Text>
+          <ThinkingMessage content={entry.content} collapsed={!expanded} nested />
         </Box>
       );
 
     case "tool_start":
-      return <ToolCallStart key={key} toolName={entry.toolName} args={entry.args} nested={nested} />;
+      return (
+        <ToolCallStart key={key} toolName={entry.toolName} args={entry.args} nested={nested} />
+      );
 
     case "tool_running":
       return <ToolCallRunning key={key} toolName={entry.toolName} nested={nested} />;
@@ -985,8 +1131,8 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
       }
       return (
         <Box key={key} marginLeft={nested ? 1 : 0}>
-          {nested && <Text dim>│  ⎿  </Text>}
-          <ErrorMessage error={entry.error} />
+          {nested && <Text dim>│ ⎿ </Text>}
+          <ErrorMessage error={entry.error} nested={nested} />
         </Box>
       );
     }
@@ -995,14 +1141,14 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
       const sysEntry = entry as ChatEntry & { type: "system" };
       if (sysEntry.subtype === "compact_boundary") {
         return (
-          <Box key={key} marginLeft={1}>
-            <Text dim>{"── context compacted ──"}</Text>
+          <Box key={key} marginLeft={1} marginTop={1}>
+            <Text dim>{sysEntry.text ?? "── context compacted ──"}</Text>
           </Box>
         );
       }
       if (sysEntry.subtype === "memory_saved") {
         return (
-          <Box key={key} marginLeft={1}>
+          <Box key={key} marginLeft={1} marginTop={1}>
             <Text color="ansi:magenta">{"✦ "}</Text>
             <Text dim>{sysEntry.text ?? "Memory saved"}</Text>
           </Box>
@@ -1010,13 +1156,13 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
       }
       if (sysEntry.subtype === "turn_duration") {
         return (
-          <Box key={key} marginLeft={1}>
+          <Box key={key} marginLeft={1} marginTop={1}>
             <Text dim>{sysEntry.text}</Text>
           </Box>
         );
       }
       return (
-        <Box key={key} marginLeft={1}>
+        <Box key={key} marginLeft={1} marginTop={1}>
           <Text dim>{sysEntry.text ?? ""}</Text>
         </Box>
       );
@@ -1024,7 +1170,7 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
 
     case "status":
       return (
-        <Box key={key} marginLeft={1} marginY={0}>
+        <Box key={key} marginLeft={1} marginTop={1}>
           <Text dim>{entry.reason}</Text>
         </Box>
       );
@@ -1043,7 +1189,7 @@ function findLastIndex<T>(arr: T[], predicate: (item: T) => boolean): number {
 // ─── Mode Indicator ─────────────────────────────────────────────
 
 const MODE_DISPLAY: Record<string, { symbol: string; title: string; color: string }> = {
-  plan:   { symbol: "⏵  ", title: "plan  read-only", color: "ansi:yellow" },
+  plan: { symbol: "⏵  ", title: "plan  read-only", color: "ansi:yellow" },
   normal: { symbol: "⏵⏵ ", title: "auto-accept edits", color: "ansi:cyan" },
   bypass: { symbol: "⏵⏵⏵", title: "bypass permissions", color: "ansi:red" },
 };
@@ -1063,13 +1209,23 @@ function ModeIndicator({ mode }: { mode: "plan" | "normal" | "bypass" }) {
 
 function classifyError(error: string): import("./store.js").ErrorKind {
   const lower = error.toLowerCase();
-  if (lower.includes("rate limit") || lower.includes("429") || lower.includes("too many requests")) {
+  if (
+    lower.includes("rate limit") ||
+    lower.includes("429") ||
+    lower.includes("too many requests")
+  ) {
     return "rate_limit";
   }
-  if (lower.includes("context") && (lower.includes("limit") || lower.includes("too long") || lower.includes("too many tokens"))) {
+  if (
+    lower.includes("context") &&
+    (lower.includes("limit") || lower.includes("too long") || lower.includes("too many tokens"))
+  ) {
     return "context_limit";
   }
-  if (lower.includes("invalid") && (lower.includes("api key") || lower.includes("api_key") || lower.includes("authentication"))) {
+  if (
+    lower.includes("invalid") &&
+    (lower.includes("api key") || lower.includes("api_key") || lower.includes("authentication"))
+  ) {
     return "invalid_api_key";
   }
   if (lower.includes("timeout") || lower.includes("timed out")) {

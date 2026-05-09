@@ -57,7 +57,10 @@ export class AutoApprovalBackend implements ApprovalBackend {
       if (this.delegate) {
         return this.delegate.requestApproval(req);
       }
-      return { approved: false, reason: "auto mode: high-risk operation denied (no interactive approval available)" };
+      return {
+        approved: false,
+        reason: "auto mode: high-risk operation denied (no interactive approval available)",
+      };
     }
 
     // Medium risk: delegate if available, otherwise approve
@@ -74,7 +77,11 @@ export class AutoApprovalBackend implements ApprovalBackend {
     if (toolName === "Write" || toolName === "Edit") {
       const filePath = String(args.file_path ?? "");
       // Allow writes to source code, tests, config, docs
-      if (/\.(ts|js|tsx|jsx|py|rs|go|java|c|cpp|h|css|html|json|yaml|yml|toml|md|txt|sh)$/.test(filePath)) {
+      if (
+        /\.(ts|js|tsx|jsx|py|rs|go|java|c|cpp|h|css|html|json|yaml|yml|toml|md|txt|sh)$/.test(
+          filePath,
+        )
+      ) {
         return true;
       }
     }
@@ -83,11 +90,34 @@ export class AutoApprovalBackend implements ApprovalBackend {
     if (toolName === "Bash") {
       const cmd = String(args.command ?? "");
       const safePrefixes = [
-        "git ", "npm ", "pnpm ", "yarn ", "npx ", "node ",
-        "tsc ", "eslint ", "prettier ", "vitest ", "jest ",
-        "cargo ", "go ", "python ", "pip ", "make ",
-        "ls ", "cat ", "head ", "tail ", "wc ", "echo ",
-        "mkdir ", "touch ", "pwd", "whoami", "date", "which ",
+        "git ",
+        "npm ",
+        "pnpm ",
+        "yarn ",
+        "npx ",
+        "node ",
+        "tsc ",
+        "eslint ",
+        "prettier ",
+        "vitest ",
+        "jest ",
+        "cargo ",
+        "go ",
+        "python ",
+        "pip ",
+        "make ",
+        "ls ",
+        "cat ",
+        "head ",
+        "tail ",
+        "wc ",
+        "echo ",
+        "mkdir ",
+        "touch ",
+        "pwd",
+        "whoami",
+        "date",
+        "which ",
       ];
       if (safePrefixes.some((p) => cmd.startsWith(p))) {
         return true;
@@ -100,14 +130,45 @@ export class AutoApprovalBackend implements ApprovalBackend {
 
 /**
  * Interactive approval backend — prompts the user via a callback.
- * Supports "always allow" rules that persist for the session.
+ *
+ * Stores "always allow" decisions at two scopes:
+ *   - session: in-memory map, lost when the process exits
+ *   - project: persisted to <cwd>/.code-shell/settings.local.json so the
+ *              same project remembers the rule across REPL restarts
+ *
+ * The classifier reads project rules from settings on session start (see
+ * Engine.buildPermissionConfig), so persisted rules become "auto-allow"
+ * the next time the user opens the project.
  */
 export class InteractiveApprovalBackend implements ApprovalBackend {
   private sessionRules = new Map<string, "allow" | "deny">();
   private promptFn: ((request: ApprovalRequest) => Promise<ApprovalResult>) | null = null;
+  private cwd: string | null = null;
+  // Project rules saved during this session. Kept in-memory (not re-read from
+  // settings.local.json) so a stream of approvals all stay applied — the
+  // previous version passed only the freshly-added rule to the classifier,
+  // which silently dropped earlier approvals from the live classifier within
+  // the same session. We accumulate here and hand the full list to the callback.
+  private savedProjectRules: PermissionRule[] = [];
+  private onProjectRules: ((rules: PermissionRule[]) => void) | null = null;
 
   setPromptFn(fn: (request: ApprovalRequest) => Promise<ApprovalResult>): void {
     this.promptFn = fn;
+  }
+
+  /** Inject the project root so persistence writes to the right settings file. */
+  setCwd(cwd: string): void {
+    this.cwd = cwd;
+  }
+
+  /**
+   * Inject a callback fired when the user approves "for this project". The
+   * callback receives the *full* accumulated list of project rules saved in
+   * this session, so the classifier can be reconfigured without losing
+   * earlier approvals.
+   */
+  setOnProjectRules(fn: (rules: PermissionRule[]) => void): void {
+    this.onProjectRules = fn;
   }
 
   async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
@@ -116,30 +177,120 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     if (toolRule === "allow") return { approved: true };
     if (toolRule === "deny") return { approved: false };
 
-    // If no prompt function is wired, fail closed. Interactive backends are
-    // used by UIs that must explicitly provide a prompt callback.
     if (!this.promptFn) {
       return { approved: false, reason: "interactive approval backend has no prompt function" };
     }
 
     const result = await this.promptFn(req);
+    const scope = result.scope ?? (result.always ? "session" : "once");
 
-    // Store "always" decisions
-    if (result.always && result.approved) {
+    if (scope === "session" && result.always) {
+      this.sessionRules.set(req.toolName, result.approved ? "allow" : "deny");
+    } else if (scope === "project" && result.approved) {
+      // Project-scope: persist a PermissionRule to settings.local.json.
+      // We only persist allow rules — denies stay session-only because a
+      // persisted deny is harder to recover from than a session deny.
+      const rule = buildProjectRule(req.toolName, req.args);
+      if (rule && this.cwd) {
+        try {
+          persistProjectRule(this.cwd, rule);
+          // Dedup against the in-memory list using the same equality used by
+          // persistProjectRule so re-prompts on the same tool/argsPattern
+          // don't bloat the live rule set.
+          const dup = this.savedProjectRules.some(
+            (r) =>
+              r.tool === rule.tool &&
+              r.decision === rule.decision &&
+              JSON.stringify(r.argsPattern) === JSON.stringify(rule.argsPattern),
+          );
+          if (!dup) this.savedProjectRules.push(rule);
+          this.onProjectRules?.(this.savedProjectRules);
+        } catch (err) {
+          // Persistence failure shouldn't block the decision — the user
+          // still gets a session-scope effect via the live classifier.
+          // eslint-disable-next-line no-console
+          console.error("Failed to persist project permission rule:", (err as Error).message);
+        }
+      }
+      // Also seed session map so the rest of this REPL session benefits
+      // even if the classifier path doesn't pick the rule up immediately.
       this.sessionRules.set(req.toolName, "allow");
-    } else if (result.always && !result.approved) {
-      this.sessionRules.set(req.toolName, "deny");
     }
 
     return result;
   }
+}
 
-  private ruleKeyFromArgs(args: Record<string, unknown>): string {
-    // For file tools, use the file path
-    if (args.file_path) return String(args.file_path);
-    if (args.command) return String(args.command).slice(0, 50);
-    return "";
+/**
+ * Build a PermissionRule from a single approval. Bash narrows to the head
+ * command (first whitespace token) so "git status" → allow all `git ...`.
+ * Other tools currently allow at tool granularity — file-level whitelists
+ * could be added later by extending argsPattern.
+ */
+function buildProjectRule(toolName: string, args: Record<string, unknown>): PermissionRule | null {
+  if (toolName === "Bash") {
+    const cmd = String(args.command ?? "").trim();
+    const head = cmd.split(/\s+/)[0];
+    if (!head) return null;
+    return {
+      tool: "Bash",
+      argsPattern: { command: `^${escapeRegex(head)}(\\s|$)` },
+      decision: "allow",
+      reason: `Allowed via permission prompt: ${head}`,
+    };
   }
+  return {
+    tool: toolName,
+    decision: "allow",
+    reason: "Allowed via permission prompt",
+  };
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Append a rule to <cwd>/.code-shell/settings.local.json. Local file because
+ * permission grants are per-developer and shouldn't be checked into git.
+ * Idempotent: skips if an equivalent rule is already present.
+ */
+function persistProjectRule(cwd: string, rule: PermissionRule): void {
+  const dir = `${cwd}/.code-shell`;
+  const file = `${dir}/settings.local.json`;
+  // Lazy node imports — keep permission.ts free of fs at module load time
+  // so it can be used in non-Node contexts (tests, browsers via shim).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require("node:fs") as typeof import("node:fs");
+
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+  let settings: { permissions?: { rules?: PermissionRule[] } } = {};
+  if (fs.existsSync(file)) {
+    try {
+      settings = JSON.parse(fs.readFileSync(file, "utf-8"));
+    } catch {
+      /* start fresh on parse error */
+    }
+  }
+  if (!settings.permissions) settings.permissions = {};
+  if (!settings.permissions.rules) settings.permissions.rules = [];
+
+  // Dedup: same tool + same argsPattern.command (or no pattern) is a match
+  const exists = settings.permissions.rules.some(
+    (r) =>
+      r.tool === rule.tool &&
+      r.decision === "allow" &&
+      JSON.stringify(r.argsPattern) === JSON.stringify(rule.argsPattern),
+  );
+  if (exists) return;
+
+  settings.permissions.rules.push(rule);
+  // Atomic write: stage to .tmp, then rename, so a crash mid-write can't
+  // truncate settings.local.json and lose every saved permission grant.
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+  fs.renameSync(tmp, file);
 }
 
 // Singleton interactive backend for use by the UI
@@ -314,7 +465,11 @@ export class PermissionClassifier {
   ) {}
 
   /** Replace mode + backend in place so live tool execution sees the change. */
-  reconfigure(mode: PermissionMode, approvalBackend: ApprovalBackend, rules?: PermissionRule[]): void {
+  reconfigure(
+    mode: PermissionMode,
+    approvalBackend: ApprovalBackend,
+    rules?: PermissionRule[],
+  ): void {
     this.defaultMode = mode;
     this.approvalBackend = approvalBackend;
     if (rules) this.rules = rules;
@@ -341,7 +496,10 @@ export class PermissionClassifier {
       if (this.defaultMode === "bypassPermissions") return "allow";
       if (level === "dangerous") return "ask";
       if (level === "safe-read") return "allow";
-      if (level === "safe-write" && (this.defaultMode === "acceptEdits" || this.defaultMode === "auto")) {
+      if (
+        level === "safe-write" &&
+        (this.defaultMode === "acceptEdits" || this.defaultMode === "auto")
+      ) {
         return "allow";
       }
       if (level === "unsafe") return "ask";

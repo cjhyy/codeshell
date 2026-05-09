@@ -1,0 +1,440 @@
+/**
+ * ModelManager — Ink-rendered model + arena management panel.
+ *
+ * Two tabs (Tab key cycles):
+ *   - Models: switch active model, sync OpenRouter snapshot.
+ *   - Arena:  edit arena.participants list (add from pool / delete / save).
+ *
+ * Distinct from ModelSelector (Ctrl+M / /model — pure switcher). Stays
+ * presentational: parent owns side effects and passes async handlers in.
+ */
+import { useState } from "react";
+import { Box, Text, useInput } from "../../render/index.js";
+import type { ProtocolModelEntry } from "../../protocol/types.js";
+
+interface SnapshotInfo {
+  count: number;
+  fetchedAt: string;
+}
+
+/**
+ * Settings stores arena.participants as Array<string | object>. The panel
+ * surfaces strings (pool keys); object-form entries are shown read-only so
+ * we don't clobber a user's hand-edited config.
+ */
+export type ArenaParticipantEntry =
+  | { kind: "key"; value: string }
+  | { kind: "object"; label: string };
+
+interface ModelManagerProps {
+  entries: ProtocolModelEntry[];
+  snapshot: SnapshotInfo;
+  arenaParticipants: ArenaParticipantEntry[];
+  /** Activate a model. */
+  onSwitch: (key: string) => Promise<void>;
+  /** Trigger an OpenRouter snapshot refresh. */
+  onSync: () => Promise<{ ok: boolean; count: number; error?: string }>;
+  /** Persist updated participant list (string[]) to settings. */
+  onSaveArena: (participants: string[]) => Promise<void>;
+  onClose: () => void;
+}
+
+type Banner =
+  | { kind: "idle" }
+  | { kind: "info"; text: string }
+  | { kind: "error"; text: string }
+  | { kind: "busy"; text: string };
+
+type Tab = "models" | "arena";
+
+export function ModelManager({
+  entries,
+  snapshot,
+  arenaParticipants,
+  onSwitch,
+  onSync,
+  onSaveArena,
+  onClose,
+}: ModelManagerProps) {
+  const [tab, setTab] = useState<Tab>("models");
+  const [cursor, setCursor] = useState(() =>
+    Math.max(0, entries.findIndex((e) => e.active)),
+  );
+  const [banner, setBanner] = useState<Banner>({ kind: "idle" });
+
+  // Local arena state — only persisted on [w]rite. Object-form entries are
+  // preserved verbatim so hand-edited settings survive a round-trip.
+  const [arena, setArena] = useState<ArenaParticipantEntry[]>(arenaParticipants);
+  const [arenaCursor, setArenaCursor] = useState(0);
+  const [picker, setPicker] = useState<{ idx: number } | null>(null);
+  const [dirty, setDirty] = useState(false);
+  // Two-step Esc to discard unsaved changes. Tracked separately from `dirty`
+  // so that if the panel unmounts (e.g. user sends a message) before the
+  // second Esc, `dirty` is still true and the warning state is preserved.
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  useInput(async (ch, key) => {
+    if (banner.kind === "busy") return;
+
+    // Any non-Esc input after the discard warning means the user changed
+    // their mind — reset the confirmation so the next Esc warns again.
+    if (confirmDiscard && !key.escape && ch !== "q") {
+      setConfirmDiscard(false);
+    }
+
+    // Tab cycles between panes. Esc/q closes (warns if unsaved).
+    if (key.tab) {
+      setTab((t) => (t === "models" ? "arena" : "models"));
+      setBanner({ kind: "idle" });
+      return;
+    }
+    if (key.escape || ch === "q") {
+      if (dirty && !confirmDiscard) {
+        setBanner({ kind: "error", text: "未保存改动 — 按 [w] 保存或再次按 Esc 放弃" });
+        setConfirmDiscard(true);
+        return;
+      }
+      onClose();
+      return;
+    }
+
+    if (tab === "models") {
+      await handleModelsInput(ch, key);
+      return;
+    }
+    await handleArenaInput(ch, key);
+  });
+
+  async function handleModelsInput(ch: string, key: { upArrow?: boolean; downArrow?: boolean; return?: boolean }): Promise<void> {
+    if (entries.length === 0) {
+      if (ch === "s") await runSync();
+      return;
+    }
+    if (key.upArrow) {
+      setCursor((c) => (c > 0 ? c - 1 : entries.length - 1));
+      return;
+    }
+    if (key.downArrow) {
+      setCursor((c) => (c < entries.length - 1 ? c + 1 : 0));
+      return;
+    }
+    if (key.return) {
+      const target = entries[cursor];
+      if (!target || target.active) {
+        setBanner({ kind: "info", text: `已经是当前模型: ${target?.key ?? ""}` });
+        return;
+      }
+      setBanner({ kind: "busy", text: `切换到 ${target.key}…` });
+      try {
+        await onSwitch(target.key);
+        setBanner({ kind: "info", text: `✓ 已切换到 ${target.key}` });
+      } catch (err) {
+        setBanner({ kind: "error", text: `切换失败: ${(err as Error).message}` });
+      }
+      return;
+    }
+    if (ch === "s") {
+      await runSync();
+      return;
+    }
+  }
+
+  async function handleArenaInput(ch: string, key: { upArrow?: boolean; downArrow?: boolean; return?: boolean }): Promise<void> {
+    if (picker) {
+      // Picker mode: choose a pool entry to add.
+      if (key.upArrow) {
+        setPicker({ idx: picker.idx > 0 ? picker.idx - 1 : entries.length - 1 });
+        return;
+      }
+      if (key.downArrow) {
+        setPicker({ idx: picker.idx < entries.length - 1 ? picker.idx + 1 : 0 });
+        return;
+      }
+      if (key.return) {
+        const chosen = entries[picker.idx];
+        if (chosen) {
+          setArena((prev) => [...prev, { kind: "key", value: chosen.key }]);
+          setDirty(true);
+          setBanner({ kind: "info", text: `已加入: ${chosen.key} (未保存)` });
+        }
+        setPicker(null);
+        return;
+      }
+      // Any other key cancels picker.
+      setPicker(null);
+      return;
+    }
+
+    if (key.upArrow) {
+      setArenaCursor((c) => Math.max(0, c - 1));
+      return;
+    }
+    if (key.downArrow) {
+      setArenaCursor((c) => (arena.length === 0 ? 0 : Math.min(arena.length - 1, c + 1)));
+      return;
+    }
+    if (ch === "a") {
+      if (entries.length === 0) {
+        setBanner({ kind: "error", text: "模型池为空 — 先在 Models tab 同步快照" });
+        return;
+      }
+      setPicker({ idx: 0 });
+      setBanner({ kind: "info", text: "选一个模型加入 (Enter 确认, 任意键取消)" });
+      return;
+    }
+    if (ch === "d") {
+      if (arena.length === 0) return;
+      const removed = arena[arenaCursor];
+      setArena((prev) => prev.filter((_, i) => i !== arenaCursor));
+      setArenaCursor((c) => Math.max(0, Math.min(arena.length - 2, c)));
+      setDirty(true);
+      const label = removed?.kind === "key" ? removed.value : removed?.label ?? "";
+      setBanner({ kind: "info", text: `已移除: ${label} (未保存)` });
+      return;
+    }
+    if (ch === "w") {
+      // Object-form entries can't round-trip through this string-only panel
+      // (we'd need a richer editor). Refuse rather than silently drop them.
+      const objs = arena.filter((p) => p.kind === "object");
+      if (objs.length > 0) {
+        setBanner({
+          kind: "error",
+          text: `存在 ${objs.length} 个对象形式条目，请直接编辑 settings.json 后重启`,
+        });
+        return;
+      }
+      const list = arena.map((p) => (p as { kind: "key"; value: string }).value);
+      setBanner({ kind: "busy", text: "保存中…" });
+      try {
+        await onSaveArena(list);
+        setBanner({ kind: "info", text: `✓ 已保存 (${list.length} 个 participant)` });
+        setDirty(false);
+      } catch (err) {
+        setBanner({ kind: "error", text: `保存失败: ${(err as Error).message}` });
+      }
+      return;
+    }
+  }
+
+  async function runSync(): Promise<void> {
+    setBanner({ kind: "busy", text: "正在拉取 OpenRouter 模型清单…" });
+    try {
+      const r = await onSync();
+      if (r.ok) {
+        setBanner({ kind: "info", text: `✓ 已同步 ${r.count} 个模型 (本进程内生效)` });
+      } else {
+        setBanner({ kind: "error", text: `同步失败: ${r.error ?? "未知错误"}` });
+      }
+    } catch (err) {
+      setBanner({ kind: "error", text: `同步失败: ${(err as Error).message}` });
+    }
+  }
+
+  return (
+    <Box flexDirection="column" marginLeft={1}>
+      <Box>
+        <Text color="ansi:cyan" bold>{"✦ 模型管理"}</Text>
+        <Text dim>{"  (Tab 切换面板, q/Esc 关闭)"}</Text>
+      </Box>
+
+      <Box marginLeft={2} marginTop={1}>
+        <Text color={tab === "models" ? "ansi:cyan" : undefined} bold={tab === "models"}>
+          {tab === "models" ? "● Models" : "○ Models"}
+        </Text>
+        <Text>{"   "}</Text>
+        <Text color={tab === "arena" ? "ansi:cyan" : undefined} bold={tab === "arena"}>
+          {tab === "arena" ? "● Arena" : "○ Arena"}
+        </Text>
+      </Box>
+
+      {tab === "models" ? (
+        <ModelsPane entries={entries} cursor={cursor} snapshot={snapshot} />
+      ) : (
+        <ArenaPane
+          arena={arena}
+          cursor={arenaCursor}
+          picker={picker}
+          poolEntries={entries}
+          dirty={dirty}
+        />
+      )}
+
+      {banner.kind !== "idle" && (
+        <Box marginLeft={2} marginTop={1}>
+          <Text
+            color={
+              banner.kind === "error"
+                ? "ansi:red"
+                : banner.kind === "busy"
+                  ? "ansi:yellow"
+                  : "ansi:green"
+            }
+          >
+            {banner.text}
+          </Text>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+// ─── Panes ───────────────────────────────────────────────────────
+
+function ModelsPane({
+  entries,
+  cursor,
+  snapshot,
+}: {
+  entries: ProtocolModelEntry[];
+  cursor: number;
+  snapshot: SnapshotInfo;
+}) {
+  const keyWidth = entries.length
+    ? Math.min(Math.max(...entries.map((e) => e.key.length)), 16)
+    : 0;
+
+  return (
+    <>
+      <Box marginLeft={2} marginTop={1}>
+        <Text dim>{"快照: "}</Text>
+        <Text>{`${snapshot.count} 个模型`}</Text>
+        <Text dim>{snapshot.fetchedAt ? ` · ${formatFreshness(snapshot.fetchedAt)}` : " · 未拉取"}</Text>
+      </Box>
+
+      <Box marginLeft={2} marginTop={1}>
+        <Text bold>{`模型池 (${entries.length}):`}</Text>
+      </Box>
+
+      {entries.length === 0 ? (
+        <Box marginLeft={4}>
+          <Text dim>{"未配置模型池。按 [s] 拉取最新清单，再用 /login 选择。"}</Text>
+        </Box>
+      ) : (
+        entries.map((e, i) => {
+          const focused = i === cursor;
+          const prefix = focused ? "❯ " : "  ";
+          const activeMark = e.active ? "  ← active" : "";
+          return (
+            <Box key={e.key} marginLeft={2}>
+              <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                {prefix}
+                {e.key.padEnd(keyWidth)}
+              </Text>
+              <Text>{"  "}{e.model}</Text>
+              <Text color="ansi:green">{activeMark}</Text>
+            </Box>
+          );
+        })
+      )}
+
+      <Box marginLeft={2} marginTop={1}>
+        <Text dim>
+          {"操作: "}
+          <Text color="ansi:cyan">{"[Enter]"}</Text>
+          {" 切换  "}
+          <Text color="ansi:cyan">{"[s]"}</Text>
+          {" 同步快照"}
+        </Text>
+      </Box>
+    </>
+  );
+}
+
+function ArenaPane({
+  arena,
+  cursor,
+  picker,
+  poolEntries,
+  dirty,
+}: {
+  arena: ArenaParticipantEntry[];
+  cursor: number;
+  picker: { idx: number } | null;
+  poolEntries: ProtocolModelEntry[];
+  dirty: boolean;
+}) {
+  return (
+    <>
+      <Box marginLeft={2} marginTop={1}>
+        <Text bold>{`Arena 参与者 (${arena.length})`}</Text>
+        {dirty && <Text color="ansi:yellow">{"  • 未保存"}</Text>}
+      </Box>
+
+      {arena.length === 0 ? (
+        <Box marginLeft={4}>
+          <Text dim>{"未配置 — Arena 将回退到默认参与者。按 [a] 添加。"}</Text>
+        </Box>
+      ) : (
+        arena.map((p, i) => {
+          const focused = i === cursor;
+          const prefix = focused ? "❯ " : "  ";
+          if (p.kind === "key") {
+            const pool = poolEntries.find((e) => e.key === p.value);
+            return (
+              <Box key={`k-${i}`} marginLeft={2}>
+                <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                  {prefix}
+                  {p.value}
+                </Text>
+                {pool && <Text dim>{"  "}{pool.model}</Text>}
+                {!pool && <Text color="ansi:yellow">{"  (不在当前模型池)"}</Text>}
+              </Box>
+            );
+          }
+          return (
+            <Box key={`o-${i}`} marginLeft={2}>
+              <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                {prefix}
+                {p.label}
+              </Text>
+              <Text dim>{"  (对象形式 · 只读)"}</Text>
+            </Box>
+          );
+        })
+      )}
+
+      {picker && (
+        <Box flexDirection="column" marginLeft={2} marginTop={1}>
+          <Text bold>{"从模型池选择:"}</Text>
+          {poolEntries.map((e, i) => {
+            const focused = i === picker.idx;
+            const prefix = focused ? "❯ " : "  ";
+            return (
+              <Box key={e.key} marginLeft={2}>
+                <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                  {prefix}
+                  {e.key}
+                </Text>
+                <Text dim>{"  "}{e.model}</Text>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+
+      <Box marginLeft={2} marginTop={1}>
+        <Text dim>
+          {"操作: "}
+          <Text color="ansi:cyan">{"[a]"}</Text>
+          {" 添加  "}
+          <Text color="ansi:cyan">{"[d]"}</Text>
+          {" 删除  "}
+          <Text color="ansi:cyan">{"[w]"}</Text>
+          {" 保存"}
+        </Text>
+      </Box>
+    </>
+  );
+}
+
+function formatFreshness(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return iso;
+  const ageMs = Date.now() - t;
+  const ageHr = Math.floor(ageMs / 3_600_000);
+  if (ageHr < 1) return "几分钟前";
+  if (ageHr < 24) return `${ageHr} 小时前`;
+  const ageDay = Math.floor(ageHr / 24);
+  if (ageDay < 7) return `${ageDay} 天前`;
+  return new Date(iso).toLocaleDateString();
+}

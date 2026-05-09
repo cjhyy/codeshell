@@ -1,6 +1,6 @@
 /**
  * Extra slash commands — /login, /logout, /mcp (config & auth);
- * /skills, /log (read-only inspection).
+ * /skills, /log (read-only inspection); /models (interactive panel).
  */
 
 import type { SlashCommand } from "../registry.js";
@@ -24,7 +24,9 @@ export const extraCommands: SlashCommand[] = [
 
         let settings: Record<string, any> = {};
         if (existsSync(settingsFile)) {
-          try { settings = JSON.parse(readFileSync(settingsFile, "utf-8")); } catch {}
+          try {
+            settings = JSON.parse(readFileSync(settingsFile, "utf-8"));
+          } catch {}
         }
         if (!settings.model) settings.model = {};
         settings.model.apiKey = key;
@@ -87,8 +89,8 @@ export const extraCommands: SlashCommand[] = [
       if (names.length === 0) {
         ctx.addStatus(
           "No MCP servers configured.\n" +
-          "Add to .code-shell/settings.json:\n" +
-          '  "mcpServers": { "name": { "command": "...", "args": [...] } }',
+            "Add to .code-shell/settings.json:\n" +
+            '  "mcpServers": { "name": { "command": "...", "args": [...] } }',
         );
         return;
       }
@@ -100,6 +102,19 @@ export const extraCommands: SlashCommand[] = [
         return `  ${name} [${transport}] — ${cmd}`;
       });
       ctx.addStatus(`MCP Servers (${names.length}):\n${lines.join("\n")}`);
+    },
+  },
+
+  {
+    name: "/models",
+    group: "config",
+    description: "Open the model management panel (list, switch, sync)",
+    execute: (_arg, ctx) => {
+      if (ctx.openModelManager) {
+        ctx.openModelManager();
+      } else {
+        ctx.addStatus("Model manager only available in REPL mode. Use /model <key> to switch.");
+      }
     },
   },
 
@@ -119,9 +134,7 @@ export const extraCommands: SlashCommand[] = [
           );
           return;
         }
-        const lines = skills.map(
-          (s) => `  ${s.name} — ${s.description || "(no description)"}`,
-        );
+        const lines = skills.map((s) => `  ${s.name} — ${s.description || "(no description)"}`);
         ctx.addStatus(`Skills (${skills.length}):\n${lines.join("\n")}`);
       } catch (err) {
         ctx.addStatus(`Failed to scan skills: ${(err as Error).message}`);
@@ -147,7 +160,10 @@ export const extraCommands: SlashCommand[] = [
 
       try {
         const content = readFileSync(logFile, "utf-8");
-        const lines = content.trim().split("\n").filter((l) => l.trim());
+        const lines = content
+          .trim()
+          .split("\n")
+          .filter((l) => l.trim());
         const count = Math.max(1, Math.min(parseInt(arg.trim()) || 20, 200));
         const recent = lines.slice(-count);
 
@@ -157,7 +173,12 @@ export const extraCommands: SlashCommand[] = [
               t?: string;
               l?: string;
               msg?: string;
-              d?: { latencyMs?: number; usage?: { totalTokens?: number }; tool?: string; stopReason?: string };
+              d?: {
+                latencyMs?: number;
+                usage?: { totalTokens?: number };
+                tool?: string;
+                stopReason?: string;
+              };
             };
             const time = e.t?.split("T")[1]?.slice(0, 8) ?? "";
             const level = (e.l ?? "").toUpperCase().padEnd(5);
@@ -176,9 +197,7 @@ export const extraCommands: SlashCommand[] = [
           }
         });
 
-        ctx.addStatus(
-          `Recent logs (${recent.length}/${lines.length}):\n${formatted.join("\n")}`,
-        );
+        ctx.addStatus(`Recent logs (${recent.length}/${lines.length}):\n${formatted.join("\n")}`);
       } catch (err) {
         ctx.addStatus(`Error reading logs: ${(err as Error).message}`);
       }

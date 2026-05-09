@@ -8,6 +8,7 @@
 
 import chalk from "chalk";
 import type { PermissionMode } from "../types.js";
+import { rotateLogs, logger } from "../logging/logger.js";
 
 export interface SetupOptions {
   cwd: string;
@@ -17,6 +18,10 @@ export interface SetupOptions {
 
 export async function setup(options: SetupOptions): Promise<void> {
   const { cwd, permissionMode } = options;
+
+  // 0. Trim old log files (keep last 7 days), then mark startup.
+  rotateLogs();
+  logger.info("setup.start", { cwd, permissionMode, level: logger.getMinLevel() });
 
   // 1. Node.js version check (require >= 18)
   const nodeVersion = process.version.match(/^v(\d+)\./)?.[1];

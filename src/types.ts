@@ -172,9 +172,24 @@ export interface ApprovalRequest {
   riskLevel: "low" | "medium" | "high";
 }
 
+/**
+ * Scope of an "always allow" decision.
+ *   "once"    — this single call only (default when always not set)
+ *   "session" — remembered for the rest of the REPL session (in-memory)
+ *   "project" — persisted to <cwd>/.code-shell/settings.local.json so it
+ *               survives restart for the current project. Not committed.
+ */
+export type ApprovalScope = "once" | "session" | "project";
+
 export type ApprovalResult =
-  | { approved: true; permanent?: boolean; always?: boolean; /** Used by AskUserQuestion to carry the user's free-text answer. */ answer?: string }
-  | { approved: false; reason?: string; always?: boolean };
+  | {
+      approved: true;
+      permanent?: boolean;
+      always?: boolean;
+      scope?: ApprovalScope;
+      /** Used by AskUserQuestion to carry the user's free-text answer. */ answer?: string;
+    }
+  | { approved: false; reason?: string; always?: boolean; scope?: ApprovalScope };
 
 // ─── Turn Loop ────────────────────────────────────────────────────
 
@@ -219,7 +234,12 @@ export type StreamEvent =
   | { type: "stream_request_start"; turnNumber: number; agentId?: string }
   | { type: "text_delta"; text: string; agentId?: string }
   | { type: "tool_use_start"; toolCall: ToolCall; agentId?: string }
-  | { type: "tool_use_args_delta"; toolCallId: string; args: Record<string, unknown>; agentId?: string }
+  | {
+      type: "tool_use_args_delta";
+      toolCallId: string;
+      args: Record<string, unknown>;
+      agentId?: string;
+    }
   | { type: "tool_result"; result: ToolResult; agentId?: string }
   | { type: "assistant_message"; message: Message; agentId?: string }
   | { type: "turn_complete"; reason: TerminalReason; agentId?: string }
@@ -229,7 +249,14 @@ export type StreamEvent =
   | { type: "thinking_delta"; text: string; agentId?: string }
   | { type: "agent_start"; agentId: string; description: string }
   | { type: "agent_end"; agentId: string; description: string; error?: string }
-  | { type: "tool_summary"; summary: string };
+  | { type: "tool_summary"; summary: string }
+  | {
+      type: "context_compact";
+      strategy: "summary" | "window" | "snip" | "emergency";
+      before: number;
+      after: number;
+      agentId?: string;
+    };
 
 export type StreamCallback = (event: StreamEvent) => void | Promise<void>;
 

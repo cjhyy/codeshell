@@ -4,8 +4,8 @@
  * Priority: CLI flags > local > project > user > managed
  */
 
-import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { validateSettings, type ValidatedSettings } from "./schema.js";
 
@@ -73,6 +73,51 @@ export class SettingsManager {
     this.merged = null;
   }
 
+  /**
+   * Persist a single setting (dotted key path) to the user-level config file
+   * at ~/.code-shell/settings.json. Other sources (project / local /
+   * managed) are intentionally untouched: writing back to project/local
+   * would surprise version control, and managed is read-only.
+   *
+   * The merged cache is invalidated so the next get() picks up the change.
+   */
+  saveUserSetting(key: string, value: unknown): void {
+    const path = join(homedir(), ".code-shell", "settings.json");
+    let current: Record<string, unknown> = {};
+    if (existsSync(path)) {
+      try {
+        const raw = readFileSync(path, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          current = parsed;
+        }
+      } catch {
+        // Corrupt file — overwrite rather than crash.
+      }
+    }
+
+    const parts = key.split(".");
+    let target: Record<string, unknown> = current;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const seg = parts[i]!;
+      const next = target[seg];
+      if (!next || typeof next !== "object" || Array.isArray(next)) {
+        target[seg] = {};
+      }
+      target = target[seg] as Record<string, unknown>;
+    }
+    target[parts[parts.length - 1]!] = value;
+
+    mkdirSync(dirname(path), { recursive: true });
+    // Atomic write: stage to .tmp, then rename, so a concurrent read can't
+    // catch a half-written file.
+    const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
+    writeFileSync(tmp, JSON.stringify(current, null, 2), "utf-8");
+    renameSync(tmp, path);
+
+    this.invalidate();
+  }
+
   private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {
     if (!existsSync(path)) return;
     try {
@@ -95,7 +140,10 @@ export class SettingsManager {
   }
 }
 
-function merge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
+function merge(
+  base: Record<string, unknown>,
+  override: Record<string, unknown>,
+): Record<string, unknown> {
   const result = { ...base };
 
   for (const [key, value] of Object.entries(override)) {
@@ -108,10 +156,7 @@ function merge(base: Record<string, unknown>, override: Record<string, unknown>)
       !Array.isArray(result[key]) &&
       result[key] !== null
     ) {
-      result[key] = merge(
-        result[key] as Record<string, unknown>,
-        value as Record<string, unknown>,
-      );
+      result[key] = merge(result[key] as Record<string, unknown>, value as Record<string, unknown>);
     } else {
       result[key] = value;
     }

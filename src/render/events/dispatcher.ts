@@ -5,7 +5,7 @@ import {
   DiscreteEventPriority,
   NoEventPriority,
 } from 'react-reconciler/constants.js'
-import { logError } from '../../utils/log.js'
+import { logger } from '../../logging/logger.js'
 import { HANDLER_FOR_EVENT } from './event-handlers.js'
 import type { EventTarget, TerminalEvent } from './terminal-event.js'
 
@@ -107,7 +107,7 @@ function processDispatchQueue(
     try {
       handler(event)
     } catch (error) {
-      logError(error)
+      logger.error(error)
     }
 
     previousNode = node

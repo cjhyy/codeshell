@@ -24,13 +24,13 @@ export function AgentBlockStart({ description, running, isLast }: AgentBlockStar
   const continueLine = isLast ? "   " : "│  ";
 
   return (
-    <Box flexDirection="column" marginLeft={1} marginTop={0}>
+    <Box flexDirection="column" marginLeft={1} marginTop={1}>
       <Box>
         <Text dim>{treeChar} </Text>
         {running ? (
           <>
             <Spinner label="" color="ansi:cyan" />
-            <Text bold>{" "}{description}</Text>
+            <Text bold> {description}</Text>
           </>
         ) : (
           <>
@@ -40,7 +40,7 @@ export function AgentBlockStart({ description, running, isLast }: AgentBlockStar
       </Box>
       {running && (
         <Box>
-          <Text dim>{continueLine}⎿  </Text>
+          <Text dim>{continueLine}⎿ </Text>
           <Text dim>Initializing…</Text>
         </Box>
       )}
@@ -68,7 +68,7 @@ export function AgentBlockEnd({ description, error, isLast }: AgentBlockEndProps
           <Text color="ansi:red">Error</Text>
         </Box>
         <Box>
-          <Text dim>{continueLine}⎿  </Text>
+          <Text dim>{continueLine}⎿ </Text>
           <Text color="ansi:red">{error.slice(0, 80)}</Text>
         </Box>
       </Box>
@@ -90,7 +90,13 @@ export function AgentBlockEnd({ description, error, isLast }: AgentBlockEndProps
 /**
  * Tree line prefix for nested content under an agent.
  */
-export function NestedPrefix({ children, isLast }: { children: React.ReactNode; isLast?: boolean }) {
+export function NestedPrefix({
+  children,
+  isLast,
+}: {
+  children: React.ReactNode;
+  isLast?: boolean;
+}) {
   const line = isLast ? "   " : "│  ";
   return (
     <Box marginLeft={1}>

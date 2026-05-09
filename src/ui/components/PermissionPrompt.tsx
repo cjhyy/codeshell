@@ -2,29 +2,32 @@
  * PermissionPrompt — interactive tool permission dialog (Claude Code-style).
  *
  * Layout:
- *   ╭─ Bash command ─────────────────────────────╮
- *   │                                            │
- *   │   git push --force                         │
- *   │   Force-push current branch                │
- *   │   cwd: ~/.../codeshell                     │
- *   │                                            │
- *   │  Do you want to proceed?                   │
- *   │  ❯ 1. Yes                                  │
- *   │    2. Yes, and don't ask again for `git`   │
- *   │    3. No (esc)                             │
- *   ╰────────────────────────────────────────────╯
+ *   ╭─ Bash command ─────────────────────────────────────────╮
+ *   │                                                        │
+ *   │   git push --force                                     │
+ *   │   Force-push current branch                            │
+ *   │   cwd: ~/.../codeshell                                 │
+ *   │                                                        │
+ *   │  Do you want to proceed?                               │
+ *   │  ❯ 1. Yes                                              │
+ *   │    2. Yes, allow `git` for this session                │
+ *   │    3. Yes, allow `git` for this project (saved)        │
+ *   │    4. No (esc)                                         │
+ *   ╰────────────────────────────────────────────────────────╯
  *
  * Keys:
  *   ↑/↓        navigate
  *   Enter      confirm
- *   1/2/3      jump to option
+ *   1/2/3/4    jump to option
  *   y          shortcut for "Yes"
- *   a          shortcut for "Always allow"
+ *   a          shortcut for "Yes, session"
+ *   p          shortcut for "Yes, project"
  *   n / Esc    "No"
  */
 import { useState } from "react";
 import { homedir } from "node:os";
 import { Box, Text, useInput } from "../../render/index.js";
+import type { ApprovalScope } from "../../types.js";
 
 interface PermissionPromptProps {
   toolName: string;
@@ -32,7 +35,7 @@ interface PermissionPromptProps {
   riskLevel: string;
   args: Record<string, unknown>;
   cwd: string;
-  onDecision: (approved: boolean, always: boolean) => void;
+  onDecision: (approved: boolean, scope: ApprovalScope) => void;
 }
 
 export function PermissionPrompt({
@@ -45,11 +48,12 @@ export function PermissionPrompt({
 }: PermissionPromptProps) {
   const [cursor, setCursor] = useState(0);
   const detail = describeArgs(toolName, args);
-  const alwaysScope = scopeLabel(toolName, args);
-  const options = [
-    { label: "Yes" },
-    { label: `Yes, and don't ask again for ${alwaysScope} this session` },
-    { label: "No (esc)" },
+  const scope = scopeLabel(toolName, args);
+  const options: Array<{ label: string; scope: ApprovalScope; approved: boolean }> = [
+    { label: "Yes", scope: "once", approved: true },
+    { label: `Yes, allow ${scope} for this session`, scope: "session", approved: true },
+    { label: `Yes, allow ${scope} for this project (saved)`, scope: "project", approved: true },
+    { label: "No (esc)", scope: "once", approved: false },
   ];
 
   useInput((input, key) => {
@@ -66,19 +70,19 @@ export function PermissionPrompt({
       return;
     }
     if (key.escape) {
-      onDecision(false, false);
+      onDecision(false, "once");
       return;
     }
     const ch = input.toLowerCase();
     if (ch === "1" || ch === "y") decide(0);
     else if (ch === "2" || ch === "a") decide(1);
-    else if (ch === "3" || ch === "n") decide(2);
+    else if (ch === "3" || ch === "p") decide(2);
+    else if (ch === "4" || ch === "n") decide(3);
   });
 
   function decide(idx: number) {
-    if (idx === 0) onDecision(true, false);
-    else if (idx === 1) onDecision(true, true);
-    else onDecision(false, false);
+    const opt = options[idx]!;
+    onDecision(opt.approved, opt.scope);
   }
 
   const borderColor =
@@ -96,7 +100,9 @@ export function PermissionPrompt({
       marginY={0}
     >
       <Box>
-        <Text color={borderColor} bold>{title}</Text>
+        <Text color={borderColor} bold>
+          {title}
+        </Text>
         {riskLevel === "high" && <Text color="ansi:red">{"  ⚠ high risk"}</Text>}
       </Box>
 
@@ -105,7 +111,10 @@ export function PermissionPrompt({
           <Text key={i}>{line}</Text>
         ))}
         <Text dim>{description}</Text>
-        <Text dim>{"cwd: "}{cwdShort}</Text>
+        <Text dim>
+          {"cwd: "}
+          {cwdShort}
+        </Text>
       </Box>
 
       <Box marginTop={1}>
@@ -114,9 +123,7 @@ export function PermissionPrompt({
       <Box flexDirection="column" marginLeft={1}>
         {options.map((opt, i) => (
           <Box key={i}>
-            <Text color={i === cursor ? "ansi:cyan" : undefined}>
-              {i === cursor ? "❯ " : "  "}
-            </Text>
+            <Text color={i === cursor ? "ansi:cyan" : undefined}>{i === cursor ? "❯ " : "  "}</Text>
             <Text dim>{i + 1}. </Text>
             <Text bold={i === cursor}>{opt.label}</Text>
           </Box>
@@ -130,13 +137,20 @@ export function PermissionPrompt({
 
 function toolTitle(toolName: string): string {
   switch (toolName) {
-    case "Bash": return "Bash command";
-    case "Edit": return "Edit file";
-    case "Write": return "Write file";
-    case "Read": return "Read file";
-    case "WebFetch": return "Fetch URL";
-    case "Agent": return "Launch sub-agent";
-    default: return toolName;
+    case "Bash":
+      return "Bash command";
+    case "Edit":
+      return "Edit file";
+    case "Write":
+      return "Write file";
+    case "Read":
+      return "Read file";
+    case "WebFetch":
+      return "Fetch URL";
+    case "Agent":
+      return "Launch sub-agent";
+    default:
+      return toolName;
   }
 }
 

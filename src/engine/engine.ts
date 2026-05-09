@@ -2,11 +2,24 @@
  * Engine — the main facade that wires all components together.
  */
 
-import type { Message, LLMConfig, Settings, StreamCallback, TerminalReason, TokenUsage } from "../types.js";
+import type {
+  Message,
+  LLMConfig,
+  Settings,
+  StreamCallback,
+  TerminalReason,
+  TokenUsage,
+} from "../types.js";
 import { createLLMClient } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
-import { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend, type ApprovalBackend } from "../tool-system/permission.js";
+import {
+  PermissionClassifier,
+  HeadlessApprovalBackend,
+  AutoApprovalBackend,
+  InteractiveApprovalBackend,
+  type ApprovalBackend,
+} from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
@@ -82,6 +95,19 @@ export class Engine {
   private sessionManager: SessionManager;
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
+
+  // Lazy SettingsManager — reused across updateConfig/readSetting so we
+  // don't re-read 6+ JSON files on every /model, /login, etc. The manager
+  // handles its own cache invalidation in saveUserSetting().
+  private settingsManager: SettingsManager | undefined;
+
+  // Live state from the current/most-recent run, retained for /compact and
+  // for live-mutating PermissionClassifier on permission-mode switch.
+  private lastContextManager: ContextManager | undefined;
+  private lastMessages: Message[] | undefined;
+  private lastSessionId: string | undefined;
+  private compactedMessagesBySession = new Map<string, Message[]>();
+  private activePermission: PermissionClassifier | undefined;
 
   constructor(private config: EngineConfig) {
     this.preset = resolveAgentPreset(config.preset);
@@ -232,15 +258,34 @@ export class Engine {
       this.sessionManager.saveState(session.state);
     }
 
+    // Stamp the resolved session id onto the process-wide logger so every
+    // subsequent log line — engine, tool exec, MCP, context manager,
+    // protocol — is filterable by `sid` in ~/.code-shell/logs/.
+    logger.setSid(session.state.sessionId);
+
     // Kick off LLM client creation early (network handshake)
     const llmClientPromise = createLLMClient(this.config.llm);
 
     const mode = this.config.permissionMode ?? "acceptEdits";
-    const { rules: defaultRules, backend: approvalBackend } =
-      this.buildPermissionConfig(mode, cwd);
+    const { rules: defaultRules, backend: approvalBackend } = this.buildPermissionConfig(mode, cwd);
 
     const permission = new PermissionClassifier(defaultRules, mode, approvalBackend);
     this.activePermission = permission;
+
+    // If the backend is the interactive one, wire it for project-scope
+    // persistence: it needs cwd to find settings.local.json, and a callback
+    // to apply newly-saved rules to the live classifier so subsequent calls
+    // in this same session don't re-prompt. Headless/auto backends skip
+    // this — they don't prompt, so there are no project rules to persist.
+    if (approvalBackend instanceof InteractiveApprovalBackend) {
+      approvalBackend.setCwd(cwd);
+      approvalBackend.setOnProjectRules((rules) => {
+        // Prepend the *full* accumulated list of session-saved project rules
+        // so user approvals win over defaults and earlier approvals aren't
+        // dropped when later ones come in.
+        permission.reconfigure(mode, approvalBackend, [...rules, ...defaultRules]);
+      });
+    }
 
     const toolExecutor = new ToolExecutor(this.toolRegistry, permission, this.hooks);
 
@@ -276,11 +321,20 @@ export class Engine {
 
     // In plan mode, only expose read-only tools so the model won't attempt writes
     const planModeAllowed = new Set([
-      "EnterPlanMode", "ExitPlanMode",
-      "Read", "Glob", "Grep",
-      "WebSearch", "WebFetch",
-      "AskUserQuestion", "Agent", "ToolSearch",
-      "TaskCreate", "TaskUpdate", "TaskList", "TaskGet",
+      "EnterPlanMode",
+      "ExitPlanMode",
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "AskUserQuestion",
+      "Agent",
+      "ToolSearch",
+      "TaskCreate",
+      "TaskUpdate",
+      "TaskList",
+      "TaskGet",
       "Bash", // Bash is included but executor filters non-read-only commands
     ]);
     const toolDefs = isInPlanMode()
@@ -361,6 +415,11 @@ export class Engine {
       sessionId: session.state.sessionId,
       task,
       model: this.config.llm.model,
+    });
+
+    // Surface compaction events to the UI so the user knows when context was trimmed.
+    contextManager.setOnCompact((info) => {
+      options?.onStream?.({ type: "context_compact", ...info });
     });
 
     // Run turn loop
@@ -508,40 +567,41 @@ export class Engine {
     };
   }
 
-  private stripUserContextMessage(
-    messages: Message[],
-    userContextMsg: Message | null,
-  ): Message[] {
+  private stripUserContextMessage(messages: Message[], userContextMsg: Message | null): Message[] {
     if (!userContextMsg || messages[0] !== userContextMsg) {
       return [...messages];
     }
     return messages.slice(1);
   }
 
+  private getSettingsManager(): SettingsManager {
+    if (!this.settingsManager) {
+      this.settingsManager = new SettingsManager(this.config.cwd);
+    }
+    return this.settingsManager;
+  }
+
   /**
    * Update a config setting at runtime.
    */
   updateConfig(key: string, value: unknown): void {
-    const sm = new (require("../settings/manager.js").SettingsManager)(this.config.cwd);
-    const settings = sm.get();
-    // Support dotted keys: "model.name", "model.apiKey", etc.
-    const parts = key.split(".");
-    let target: any = settings;
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (!target[parts[i]]) target[parts[i]] = {};
-      target = target[parts[i]];
-    }
-    target[parts[parts.length - 1]] = value;
-    sm.save(settings);
+    this.getSettingsManager().saveUserSetting(key, value);
   }
 
-  /** Track last context manager and messages for /compact support. */
-  private lastContextManager: ContextManager | undefined;
-  private lastMessages: Message[] | undefined;
-  private lastSessionId: string | undefined;
-  private compactedMessagesBySession = new Map<string, Message[]>();
-  /** PermissionClassifier from the current/most-recent run, for live mode switching. */
-  private activePermission: PermissionClassifier | undefined;
+  /**
+   * Read a settings value by dotted key (e.g. "arena.participants").
+   * Returns undefined if any segment is missing.
+   */
+  readSetting(key: string): unknown {
+    const settings = this.getSettingsManager().get() as Record<string, any>;
+    const parts = key.split(".");
+    let target: any = settings;
+    for (const p of parts) {
+      if (target == null || typeof target !== "object") return undefined;
+      target = target[p];
+    }
+    return target;
+  }
 
   private buildPermissionConfig(
     mode: NonNullable<EngineConfig["permissionMode"]>,
@@ -569,18 +629,15 @@ export class Engine {
 
     let backend: ApprovalBackend;
     if (this.config.approvalBackend) {
-      backend = mode === "auto"
-        ? new AutoApprovalBackend(this.config.approvalBackend)
-        : this.config.approvalBackend;
+      backend =
+        mode === "auto"
+          ? new AutoApprovalBackend(this.config.approvalBackend)
+          : this.config.approvalBackend;
     } else if (mode === "auto") {
       backend = new AutoApprovalBackend();
     } else {
       backend = new HeadlessApprovalBackend(
-        mode === "bypassPermissions"
-          ? "approve-all"
-          : mode === "dontAsk"
-            ? "deny-all"
-            : "deny-all",
+        mode === "bypassPermissions" ? "approve-all" : mode === "dontAsk" ? "deny-all" : "deny-all",
       );
     }
     return { rules, backend };

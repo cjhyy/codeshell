@@ -87,15 +87,29 @@ export const coreCommands: SlashCommand[] = [
     execute: (_arg, ctx) => {
       const tasks = ctx.tasks ?? [];
       if (tasks.length === 0) {
-        ctx.addStatus("No active tasks. Tasks are created automatically when the agent begins multi-step work.");
+        ctx.addStatus(
+          "No active tasks. Tasks are created automatically when the agent begins multi-step work.",
+        );
         return;
       }
-      const statusOrder: Record<string, number> = { in_progress: 0, pending: 1, completed: 2, stopped: 3 };
+      const statusOrder: Record<string, number> = {
+        in_progress: 0,
+        pending: 1,
+        completed: 2,
+        stopped: 3,
+      };
       const sorted = [...tasks].sort(
         (a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9),
       );
       for (const t of sorted) {
-        const icon = t.status === "completed" ? "✓" : t.status === "in_progress" ? "●" : t.status === "stopped" ? "✗" : "○";
+        const icon =
+          t.status === "completed"
+            ? "✓"
+            : t.status === "in_progress"
+              ? "●"
+              : t.status === "stopped"
+                ? "✗"
+                : "○";
         ctx.addStatus(`  ${icon} ${t.subject ?? t.id} (${t.status})`);
       }
     },
@@ -120,14 +134,18 @@ export const coreCommands: SlashCommand[] = [
           const result = await ctx.client.query("models");
           const models = (result.data as any[]) ?? [];
           if (models.length === 0) {
-            ctx.addStatus(`Model: ${ctx.model}\n  (No model pool configured. Add "models" to settings.json)`);
+            ctx.addStatus(
+              `Model: ${ctx.model}\n  (No model pool configured. Add "models" to settings.json)`,
+            );
             return;
           }
           const lines = models.map((m: any) => {
             const marker = m.active ? " ← active" : "";
             return `  ${m.key.padEnd(16)} ${m.model}${marker}`;
           });
-          ctx.addStatus(`Model: ${ctx.model}\n\nAvailable models (/model <key> to switch):\n${lines.join("\n")}`);
+          ctx.addStatus(
+            `Model: ${ctx.model}\n\nAvailable models (/model <key> to switch):\n${lines.join("\n")}`,
+          );
         } catch {
           ctx.addStatus(`Model: ${ctx.model}`);
         }
@@ -149,7 +167,8 @@ export const coreCommands: SlashCommand[] = [
 
   {
     name: "/session",
-    description: "Session management: /session, /session list, /session tag <name>, /session resume <id>",
+    description:
+      "Session management: /session, /session list, /session tag <name>, /session resume <id>",
     usage: "/session [list|tag <name>|resume <id>]",
     aliases: ["/sessions"],
     execute: async (arg, ctx) => {
@@ -172,13 +191,18 @@ export const coreCommands: SlashCommand[] = [
               const summary = s.summary ? `  "${s.summary}"` : "";
               return `  ${i + 1}. ${date}  turns:${s.turnCount}${marker}${summary}`;
             });
-            ctx.addStatus("Recent Sessions (use /resume <number> or /resume <query>):\n" + lines.join("\n"));
+            ctx.addStatus(
+              "Recent Sessions (use /resume <number> or /resume <query>):\n" + lines.join("\n"),
+            );
           }
         } catch (err) {
           ctx.addStatus(`Error: ${(err as Error).message}`);
         }
       } else if (sub === "tag") {
-        if (!rest) { ctx.addStatus("Usage: /session tag <name>"); return; }
+        if (!rest) {
+          ctx.addStatus("Usage: /session tag <name>");
+          return;
+        }
         try {
           await ctx.client.run(`/tag ${rest}`, ctx.sessionId);
           ctx.addStatus(`Session tagged: ${rest}`);
@@ -186,7 +210,10 @@ export const coreCommands: SlashCommand[] = [
           ctx.addStatus("Tagging not available. Use /tag command if registered.");
         }
       } else if (sub === "resume") {
-        if (!rest) { ctx.addStatus("Usage: /session resume <session-id>"); return; }
+        if (!rest) {
+          ctx.addStatus("Usage: /session resume <session-id>");
+          return;
+        }
         ctx.addStatus(`Use /resume ${rest} to resume that session.`);
       } else {
         ctx.addStatus("Usage: /session [show|list|tag <name>|resume <id>]");
@@ -203,7 +230,9 @@ export const coreCommands: SlashCommand[] = [
       try {
         const result = await ctx.client.query("tools");
         const tools = (result.data as any[]) ?? [];
-        ctx.addStatus(`Available Tools (${tools.length}):\n  ${tools.map((t: any) => t.name).join(", ")}`);
+        ctx.addStatus(
+          `Available Tools (${tools.length}):\n  ${tools.map((t: any) => t.name).join(", ")}`,
+        );
       } catch (err) {
         ctx.addStatus(`Error: ${(err as Error).message}`);
       }
@@ -228,16 +257,20 @@ export const coreCommands: SlashCommand[] = [
           if (entries.length === 0) {
             ctx.addStatus("No memories stored. Use /memory add <name> <content> to create one.");
           } else {
-            const lines = entries.map((e: any, i: number) =>
-              `  ${i + 1}. [${e.type}] ${e.name} — ${e.description}`,
+            const lines = entries.map(
+              (e: any, i: number) => `  ${i + 1}. [${e.type}] ${e.name} — ${e.description}`,
             );
-            ctx.addStatus("Memories:\n" + lines.join("\n") + "\n\nUse /memory delete <name> to remove.");
+            ctx.addStatus(
+              "Memories:\n" + lines.join("\n") + "\n\nUse /memory delete <name> to remove.",
+            );
           }
         } else if (sub === "add") {
           const name = parts[1];
           const content = parts.slice(2).join(" ");
           if (!name || !content) {
-            ctx.addStatus("Usage: /memory add <name> <content>\nExample: /memory add user_role I am a backend engineer");
+            ctx.addStatus(
+              "Usage: /memory add <name> <content>\nExample: /memory add user_role I am a backend engineer",
+            );
             return;
           }
           mm.save({
@@ -249,7 +282,10 @@ export const coreCommands: SlashCommand[] = [
           ctx.addStatus(`Memory "${name}" saved.`);
         } else if (sub === "delete" || sub === "rm") {
           const name = parts[1];
-          if (!name) { ctx.addStatus("Usage: /memory delete <name>"); return; }
+          if (!name) {
+            ctx.addStatus("Usage: /memory delete <name>");
+            return;
+          }
           const deleted = mm.delete(name);
           ctx.addStatus(deleted ? `Memory "${name}" deleted.` : `Memory "${name}" not found.`);
         } else if (sub === "open") {
@@ -275,7 +311,9 @@ export const coreCommands: SlashCommand[] = [
         const result = await ctx.client.query("compact");
         const data = result.data as any;
         if (data.before === data.after) {
-          ctx.addStatus(`Context is already compact (${data.before} tokens). No compaction needed.`);
+          ctx.addStatus(
+            `Context is already compact (${data.before} tokens). No compaction needed.`,
+          );
         } else {
           const saved = data.before - data.after;
           const pct = ((saved / data.before) * 100).toFixed(0);
@@ -289,50 +327,6 @@ export const coreCommands: SlashCommand[] = [
     },
   },
 
-  {
-    name: "/arena",
-    description: "Multi-model review arena",
-    usage: "/arena <topic>",
-    execute: async (arg, ctx) => {
-      if (!arg) {
-        ctx.addStatus("Usage: /arena <topic>\nExample: /arena review my latest changes\n  /arena --models claude,gpt4o review the auth module\n  /arena --mode discussion should we use REST or GraphQL");
-        return;
-      }
-      ctx.addStatus(`Starting arena: ${arg}`);
-      ctx.setIsRunning(true);
-      try {
-        const configResult = await ctx.client.query("config");
-        const config = configResult.data as any;
-        const { runArenaReview, formatArenaResultForSession } = await import("../arena.js");
-        const result = await runArenaReview(arg, {
-          llm: {
-            provider: config.llm.provider ?? "openai",
-            model: config.llm.model,
-            apiKey: config.llm.apiKey,
-            baseUrl: config.llm.baseUrl ?? "https://openrouter.ai/api/v1",
-            temperature: config.llm.temperature ?? 0.3,
-            maxTokens: config.llm.maxTokens,
-            enableStreaming: false,
-          },
-        }, {
-          // Progress goes through addStatus (dim text),
-          // final result goes through addMessage (full markdown rendering).
-          output: (text: string) => ctx.addStatus(text),
-          outputMessage: (text: string) => ctx.addMessage(text),
-        });
-        if (result) {
-          // Store arena result as context for the next user message,
-          // so the LLM can reference it (e.g. "帮我翻译").
-          const sessionResult = formatArenaResultForSession(result);
-          ctx.setNextContext(sessionResult);
-        }
-      } catch (err) {
-        ctx.addStatus(`Arena error: ${(err as Error).message}`);
-      }
-      ctx.setIsRunning(false);
-    },
-  },
-
   // ─── New commands ───────────────────────────────────────────────
 
   {
@@ -341,19 +335,33 @@ export const coreCommands: SlashCommand[] = [
     usage: "/resume [number|query]",
     execute: async (arg, ctx) => {
       if (!arg) {
+        // No args: open the interactive SessionPicker panel (filters out
+        // empty sessions and shows time / turns / first-message preview).
+        // Falls back to a text listing in non-REPL contexts.
+        if (ctx.openSessionPicker) {
+          ctx.openSessionPicker();
+          return;
+        }
         try {
           const result = await ctx.client.query("sessions");
-          const sessions = (result.data as any[]) ?? [];
+          const sessions =
+            (result.data as Array<{
+              startedAt: number;
+              turnCount: number;
+              preview?: string;
+            }>) ?? [];
           if (sessions.length === 0) {
             ctx.addStatus("No sessions to resume.");
             return;
           }
-          const lines = sessions.slice(0, 10).map((s: any, i: number) => {
+          const lines = sessions.slice(0, 10).map((s, i) => {
             const date = new Date(s.startedAt).toLocaleString();
-            const summary = s.summary ? `  "${s.summary}"` : "";
-            return `  ${i + 1}. ${date}  turns:${s.turnCount}${summary}`;
+            const preview = s.preview ? `  "${s.preview.slice(0, 60)}"` : "";
+            return `  ${i + 1}. ${date}  turns:${s.turnCount}${preview}`;
           });
-          ctx.addStatus("Recent sessions (use /resume <number> or /resume <query>):\n" + lines.join("\n"));
+          ctx.addStatus(
+            "Recent sessions (use /resume <number> or /resume <query>):\n" + lines.join("\n"),
+          );
         } catch (err) {
           ctx.addStatus(`Error: ${(err as Error).message}`);
         }
@@ -372,11 +380,13 @@ export const coreCommands: SlashCommand[] = [
         if (!isNaN(num) && num >= 1 && num <= allSessions.length) {
           sessionId = allSessions[num - 1].sessionId;
         } else {
-          // Try query matching against summary, fallback to raw input as ID
+          // Try query matching against the first-user-message preview,
+          // fallback to raw input as session ID prefix.
           const query = input.toLowerCase();
-          const match = allSessions.find((s: any) =>
-            (s.summary && s.summary.toLowerCase().includes(query)) ||
-            s.sessionId.startsWith(input),
+          const match = allSessions.find(
+            (s: any) =>
+              (s.preview && s.preview.toLowerCase().includes(query)) ||
+              s.sessionId.startsWith(input),
           );
           if (match) sessionId = match.sessionId;
         }
@@ -396,10 +406,37 @@ export const coreCommands: SlashCommand[] = [
               case "message": {
                 const role = event.data.role as string;
                 const content = event.data.content;
-                if (role === "user" && typeof content === "string") {
-                  entries.push({ type: "user", text: content });
-                } else if (role === "assistant" && typeof content === "string") {
-                  entries.push({ type: "assistant_text", text: content });
+                // Assistant content is stored as a block array
+                // ([{type:"text"|"reasoning"|"tool_use", ...}, ...]). User
+                // content is a plain string. tool_use blocks are emitted
+                // separately via the outer "tool_use" event, so we only
+                // surface text + reasoning here. Reasoning is shown inline
+                // with a tag prefix since the UI has no dedicated entry type.
+                if (role === "user") {
+                  const text = typeof content === "string"
+                    ? content
+                    : Array.isArray(content)
+                      ? content
+                          .filter((b: { type?: string }) => b?.type === "text")
+                          .map((b: { text?: string }) => b.text ?? "")
+                          .join("")
+                      : "";
+                  if (text) entries.push({ type: "user", text });
+                } else if (role === "assistant") {
+                  const parts: string[] = [];
+                  if (typeof content === "string") {
+                    if (content) parts.push(content);
+                  } else if (Array.isArray(content)) {
+                    for (const b of content as Array<{ type?: string; text?: string }>) {
+                      if (b?.type === "reasoning" && b.text) {
+                        parts.push(`[thinking]\n${b.text}\n[/thinking]`);
+                      } else if (b?.type === "text" && b.text) {
+                        parts.push(b.text);
+                      }
+                    }
+                  }
+                  const text = parts.join("\n\n");
+                  if (text) entries.push({ type: "assistant_text", text });
                 }
                 break;
               }
@@ -460,7 +497,9 @@ export const coreCommands: SlashCommand[] = [
           timeout: 10000,
         }).trim();
 
-        ctx.addStatus(`${stat}\n\n${diff.slice(0, 5000)}${diff.length > 5000 ? "\n... (truncated)" : ""}`);
+        ctx.addStatus(
+          `${stat}\n\n${diff.slice(0, 5000)}${diff.length > 5000 ? "\n... (truncated)" : ""}`,
+        );
       } catch {
         ctx.addStatus("Not a git repository or git not available.");
       }
@@ -469,7 +508,8 @@ export const coreCommands: SlashCommand[] = [
 
   {
     name: "/status",
-    description: "Show system status; /status env for environment info, /status doctor for diagnostics",
+    description:
+      "Show system status; /status env for environment info, /status doctor for diagnostics",
     usage: "/status [env|doctor]",
     execute: async (arg, ctx) => {
       if (arg === "env" || arg === "environment") {
@@ -486,9 +526,7 @@ export const coreCommands: SlashCommand[] = [
         try {
           const configResult = await ctx.client.query("config");
           const config = configResult.data as any;
-          const checks: string[] = [
-            `Runtime:  ${process.version} — OK`,
-          ];
+          const checks: string[] = [`Runtime:  ${process.version} — OK`];
           try {
             const gv = execSync("git --version", { encoding: "utf-8", timeout: 5000 }).trim();
             checks.push(`Git:      ${gv} — OK`);
@@ -510,7 +548,10 @@ export const coreCommands: SlashCommand[] = [
           } catch {
             checks.push(`gh CLI:   not found`);
           }
-          const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY;
+          const apiKey =
+            process.env.ANTHROPIC_API_KEY ||
+            process.env.OPENAI_API_KEY ||
+            process.env.DEEPSEEK_API_KEY;
           checks.push(`API key:  ${apiKey ? "configured" : "NOT SET"}`);
           ctx.addStatus("Diagnostics:\n  " + checks.join("\n  "));
         } catch (err) {
@@ -531,9 +572,15 @@ export const coreCommands: SlashCommand[] = [
             `Tools:       ${tools.length} registered`,
           ];
           try {
-            const branch = execSync("git branch --show-current", { cwd: ctx.cwd, encoding: "utf-8", timeout: 5000 }).trim();
+            const branch = execSync("git branch --show-current", {
+              cwd: ctx.cwd,
+              encoding: "utf-8",
+              timeout: 5000,
+            }).trim();
             lines.push(`Git branch:  ${branch}`);
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
           const t = costTracker.getTotalTokens();
           if (t.total > 0) {
             lines.push(`Tokens:      ${t.total} (in: ${t.prompt}, out: ${t.completion})`);
@@ -621,17 +668,27 @@ export const coreCommands: SlashCommand[] = [
           ctx.addStatus(JSON.stringify(settings, null, 2));
         } else if (sub === "get") {
           const key = parts[1];
-          if (!key) { ctx.addStatus("Usage: /config get <key>  (e.g. model.name)"); return; }
+          if (!key) {
+            ctx.addStatus("Usage: /config get <key>  (e.g. model.name)");
+            return;
+          }
           const settings = sm.get();
           const val = key.split(".").reduce((o: any, k) => o?.[k], settings);
           ctx.addStatus(`${key} = ${JSON.stringify(val)}`);
         } else if (sub === "set") {
           const key = parts[1];
           const value = parts.slice(2).join(" ");
-          if (!key || !value) { ctx.addStatus("Usage: /config set <key> <value>  (e.g. model.name claude-opus-4-6)"); return; }
+          if (!key || !value) {
+            ctx.addStatus("Usage: /config set <key> <value>  (e.g. model.name claude-opus-4-6)");
+            return;
+          }
           // Try to parse JSON values (booleans, numbers, objects)
           let parsed: unknown = value;
-          try { parsed = JSON.parse(value); } catch { /* keep as string */ }
+          try {
+            parsed = JSON.parse(value);
+          } catch {
+            /* keep as string */
+          }
           await ctx.client.query("config_set", key, parsed);
           ctx.addStatus(`Set ${key} = ${JSON.stringify(parsed)}`);
         } else {
@@ -653,11 +710,23 @@ export const coreCommands: SlashCommand[] = [
       const configFile = join(configDir, "settings.json");
       if (!existsSync(configFile)) {
         mkdirSync(configDir, { recursive: true });
-        writeFileSync(configFile, JSON.stringify({
-          model: { provider: "openai", name: "anthropic/claude-opus-4-6", baseUrl: "https://openrouter.ai/api/v1" },
-          permissions: { defaultMode: "acceptEdits", rules: [] },
-          mcpServers: {},
-        }, null, 2), "utf-8");
+        writeFileSync(
+          configFile,
+          JSON.stringify(
+            {
+              model: {
+                provider: "openai",
+                name: "anthropic/claude-opus-4-6",
+                baseUrl: "https://openrouter.ai/api/v1",
+              },
+              permissions: { defaultMode: "acceptEdits", rules: [] },
+              mcpServers: {},
+            },
+            null,
+            2,
+          ),
+          "utf-8",
+        );
       }
 
       ctx.addStatus("Analyzing codebase and generating CODESHELL.md...");
@@ -670,9 +739,10 @@ export const coreCommands: SlashCommand[] = [
       const hasAgents = existsSync(join(ctx.cwd, "AGENTS.md"));
 
       try {
-        const migrationNote = (hasClaude || hasAgents)
-          ? `\nIMPORTANT: This project has existing AI tool configs:${hasClaude ? "\n- CLAUDE.md (Claude Code)" : ""}${hasAgents ? "\n- AGENTS.md (Codex)" : ""}\nRead them and incorporate their relevant rules into CODESHELL.md. Do not duplicate — absorb and improve.`
-          : "";
+        const migrationNote =
+          hasClaude || hasAgents
+            ? `\nIMPORTANT: This project has existing AI tool configs:${hasClaude ? "\n- CLAUDE.md (Claude Code)" : ""}${hasAgents ? "\n- AGENTS.md (Codex)" : ""}\nRead them and incorporate their relevant rules into CODESHELL.md. Do not duplicate — absorb and improve.`
+            : "";
 
         const prompt = `Set up a CODESHELL.md for this repo. CODESHELL.md is loaded into every Code Shell session, so it must be concise — only include what would cause mistakes without it.
 ${migrationNote}
@@ -694,7 +764,9 @@ Detect:
 - Formatter configuration (prettier, biome, ruff, black, gofmt, rustfmt)
 - Non-obvious gotchas, required env vars, or workflow quirks
 
-${hasExisting ? `## Phase 2: Improve existing CODESHELL.md
+${
+  hasExisting
+    ? `## Phase 2: Improve existing CODESHELL.md
 
 CODESHELL.md already exists at ${instrFile}. Read it, then propose specific improvements:
 - Add missing build/test/lint commands
@@ -702,7 +774,8 @@ CODESHELL.md already exists at ${instrFile}. Read it, then propose specific impr
 - Add gotchas or conventions found in the codebase but missing
 - Incorporate relevant rules from other AI tool configs (CLAUDE.md, AGENTS.md, .cursor/rules, etc.)
 
-Show proposed changes as diffs and explain why each change helps. Do not silently overwrite.` : `## Phase 2: Write CODESHELL.md
+Show proposed changes as diffs and explain why each change helps. Do not silently overwrite.`
+    : `## Phase 2: Write CODESHELL.md
 
 Write a minimal CODESHELL.md at: ${instrFile}
 
@@ -731,7 +804,8 @@ Exclude:
 - Commands obvious from manifest files (e.g., standard "npm test", "cargo test")
 - Information that changes frequently — use @path/to/file syntax to reference it
 
-Be specific: "Use 2-space indentation in TypeScript" > "Format code properly."`}
+Be specific: "Use 2-space indentation in TypeScript" > "Format code properly."`
+}
 
 ## Phase 3: Set up rules directory
 
@@ -767,6 +841,4 @@ Recap what was created. Remind the user to review and tweak — these files are 
       ctx.setIsRunning(false);
     },
   },
-
 ];
-

@@ -247,7 +247,7 @@ interface StableBlock {
   rendered: ReactNode;
 }
 
-function StreamingMarkdown({ text }: { text: string }) {
+function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean }) {
   // Mutable ref persists across renders so we don't re-parse blocks that
   // already settled. Resets implicitly when the component unmounts (i.e.
   // when this assistant_text entry is removed from the chat list).
@@ -306,11 +306,9 @@ function StreamingMarkdown({ text }: { text: string }) {
   }, [unstableText]);
 
   return (
-    <Box flexDirection="column" marginLeft={1}>
+    <Box flexDirection="column" marginLeft={1} marginTop={nested ? 0 : 1}>
       {stableRef.current.rendered}
-      {unstableRendered ? (
-        <Box flexDirection="column">{unstableRendered}</Box>
-      ) : null}
+      {unstableRendered ? <Box flexDirection="column">{unstableRendered}</Box> : null}
       <Text dim>{"▌"}</Text>
     </Box>
   );
@@ -321,22 +319,24 @@ function StreamingMarkdown({ text }: { text: string }) {
 interface MessageContentProps {
   text: string;
   streaming?: boolean;
+  /** When rendered inside an agent block, suppress the leading message gap. */
+  nested?: boolean;
 }
 
-export function MessageContent({ text, streaming }: MessageContentProps) {
+export function MessageContent({ text, streaming, nested }: MessageContentProps) {
   if (!text) return null;
 
   if (streaming) {
-    return <StreamingMarkdown text={text} />;
+    return <StreamingMarkdown text={text} nested={nested} />;
   }
 
-  return <FinalMarkdown text={text} />;
+  return <FinalMarkdown text={text} nested={nested} />;
 }
 
-function FinalMarkdown({ text }: { text: string }) {
+function FinalMarkdown({ text, nested }: { text: string; nested?: boolean }) {
   const rendered = useMemo(() => renderHybrid(text), [text]);
   return (
-    <Box flexDirection="column" marginLeft={1}>
+    <Box flexDirection="column" marginLeft={1} marginTop={nested ? 0 : 1}>
       {rendered}
     </Box>
   );
@@ -359,11 +359,12 @@ export function UserMessage({ text }: UserMessageProps) {
 
 interface ErrorMessageProps {
   error: string;
+  nested?: boolean;
 }
 
-export function ErrorMessage({ error }: ErrorMessageProps) {
+export function ErrorMessage({ error, nested }: ErrorMessageProps) {
   return (
-    <Box marginLeft={1}>
+    <Box marginLeft={1} marginTop={nested ? 0 : 1}>
       <Text color="ansi:red" bold>
         {"✗ "}
       </Text>
@@ -376,9 +377,11 @@ export function ErrorMessage({ error }: ErrorMessageProps) {
 
 export function RateLimitMessage({ text }: { text: string }) {
   return (
-    <Box flexDirection="column" marginLeft={1}>
+    <Box flexDirection="column" marginLeft={1} marginTop={1}>
       <Box>
-        <Text color="ansi:yellow" bold>{"⚠ "}</Text>
+        <Text color="ansi:yellow" bold>
+          {"⚠ "}
+        </Text>
         <Text color="ansi:yellow">Rate limit reached</Text>
       </Box>
       <Box marginLeft={2}>
@@ -395,9 +398,11 @@ export function RateLimitMessage({ text }: { text: string }) {
 
 export function ContextLimitMessage() {
   return (
-    <Box flexDirection="column" marginLeft={1}>
+    <Box flexDirection="column" marginLeft={1} marginTop={1}>
       <Box>
-        <Text color="ansi:yellow" bold>{"⚠ "}</Text>
+        <Text color="ansi:yellow" bold>
+          {"⚠ "}
+        </Text>
         <Text color="ansi:yellow">Context limit reached</Text>
       </Box>
       <Box marginLeft={2}>
@@ -411,18 +416,31 @@ export function ContextLimitMessage() {
   );
 }
 
-export function ThinkingMessage({ content, collapsed }: { content?: string; collapsed?: boolean }) {
+export function ThinkingMessage({
+  content,
+  collapsed,
+  nested,
+}: {
+  content?: string;
+  collapsed?: boolean;
+  nested?: boolean;
+}) {
+  const mt = nested ? 0 : 1;
   if (collapsed || !content) {
     return (
-      <Box marginLeft={1}>
-        <Text dim italic>{"∴ Thinking"}</Text>
+      <Box marginLeft={1} marginTop={mt}>
+        <Text dim italic>
+          {"∴ Thinking"}
+        </Text>
       </Box>
     );
   }
 
   return (
-    <Box flexDirection="column" marginLeft={1}>
-      <Text dim italic>{"∴ Thinking…"}</Text>
+    <Box flexDirection="column" marginLeft={1} marginTop={mt}>
+      <Text dim italic>
+        {"∴ Thinking…"}
+      </Text>
       <Box marginLeft={2}>
         <Text dim>{content}</Text>
       </Box>

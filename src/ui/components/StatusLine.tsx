@@ -14,7 +14,9 @@ interface StatusLineProps {
   tokens: number;
   cost: number;
   sessionId?: string;
-  contextPercent?: number;
+  /** Last known prompt tokens from completed turn. Live streaming is added on top. */
+  baseContextTokens?: number;
+  maxContextTokens?: number;
   gitBranch?: string;
   isRunning?: boolean;
   streamingCharsRef?: MutableRefObject<number>;
@@ -27,31 +29,41 @@ export function StatusLine({
   tokens,
   cost,
   sessionId,
-  contextPercent,
+  baseContextTokens,
+  maxContextTokens,
   gitBranch,
   isRunning,
   streamingCharsRef,
   runStartRef,
 }: StatusLineProps) {
   const modelShort = shortModel(model);
-  const ctxPct = contextPercent ?? 0;
-  const ctxColor = ctxPct > 80 ? "ansi:red" : ctxPct > 60 ? "ansi:yellow" : "ansi:green";
 
   // Own 1s interval — only this component re-renders, not App
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    if (!isRunning) { setTick(0); return; }
+    if (!isRunning) {
+      setTick(0);
+      return;
+    }
     const timer = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(timer);
   }, [isRunning]);
-
-  const elapsed = isRunning && runStartRef
-    ? Math.floor((Date.now() - runStartRef.current) / 1000)
-    : 0;
-  const streamingTokens = isRunning && streamingCharsRef
-    ? Math.round(streamingCharsRef.current / 4)
-    : 0;
   void tick;
+
+  const elapsed =
+    isRunning && runStartRef ? Math.floor((Date.now() - runStartRef.current) / 1000) : 0;
+  const streamingTokens =
+    isRunning && streamingCharsRef ? Math.round(streamingCharsRef.current / 4) : 0;
+
+  // Live ctx: base prompt tokens + currently-streaming output. The next turn's
+  // prompt will roughly equal this, so showing it during streaming gives the
+  // user real-time feedback instead of a stuck percentage.
+  const liveContextTokens = (baseContextTokens ?? 0) + (isRunning ? streamingTokens : 0);
+  const ctxPct =
+    maxContextTokens && maxContextTokens > 0
+      ? Math.min((liveContextTokens / maxContextTokens) * 100, 100)
+      : 0;
+  const ctxColor = ctxPct > 80 ? "ansi:red" : ctxPct > 60 ? "ansi:yellow" : "ansi:green";
 
   // Context mini-bar (8 chars)
   const barWidth = 8;
@@ -65,18 +77,14 @@ export function StatusLine({
         <>
           <Text color="ansi:cyan">{"● "}</Text>
           <Text color="ansi:cyan">{formatElapsed(elapsed)}</Text>
-          {streamingTokens > 0 && (
-            <Text dim>{" "}{formatNumber(streamingTokens)} tok</Text>
-          )}
+          {streamingTokens > 0 && <Text dim> {formatNumber(streamingTokens)} tok</Text>}
           <Text dim> │ </Text>
         </>
       )}
 
       {/* Model — alt+m switches; only show hint when terminal has room */}
       <Text dim>{modelShort}</Text>
-      {(process.stdout.columns ?? 80) >= 100 && (
-        <Text dim>{" (alt+m)"}</Text>
-      )}
+      {(process.stdout.columns ?? 80) >= 100 && <Text dim>{" (alt+m)"}</Text>}
 
       {/* Context bar */}
       <Text dim> │ </Text>

@@ -47,6 +47,8 @@ export interface CommandContext {
   openModelSelector?: () => void;
   /** Open the Ink session picker (used by /resume with no args). */
   openSessionPicker?: () => void;
+  /** Open the Ink model management panel (used by /models). */
+  openModelManager?: () => void;
 }
 
 export type CommandGroup = "core" | "git" | "context" | "config" | "advanced";
@@ -113,10 +115,7 @@ export class CommandRegistry {
       groups.get(g)!.push(cmd);
     }
 
-    const lines: string[] = [
-      "Available Commands:",
-      "",
-    ];
+    const lines: string[] = ["Available Commands:", ""];
 
     for (const [groupKey, label] of Object.entries(groupLabels)) {
       const cmds = groups.get(groupKey);

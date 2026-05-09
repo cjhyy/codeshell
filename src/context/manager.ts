@@ -39,6 +39,13 @@ const DEFAULT_CONFIG: ContextManagerConfig = {
  */
 export type SummarizeFn = (prompt: string) => Promise<string>;
 
+export type CompactStrategy = "summary" | "window" | "snip" | "emergency";
+export type OnCompactFn = (info: {
+  strategy: CompactStrategy;
+  before: number;
+  after: number;
+}) => void;
+
 export class ContextManager {
   private config: ContextManagerConfig;
   private toolCallHashes = new Map<string, { count: number; lastResult: string }>();
@@ -51,9 +58,15 @@ export class ContextManager {
   private lastActualAtMessageCount: number | undefined;
   /** Path to session transcript — passed to summary compaction for on-demand access. */
   private transcriptPath: string | undefined;
+  /** Notified whenever a non-trivial compaction tier fires (skips microcompact). */
+  private onCompact: OnCompactFn | undefined;
 
   constructor(config?: Partial<ContextManagerConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  setOnCompact(fn: OnCompactFn): void {
+    this.onCompact = fn;
   }
 
   /**
@@ -112,27 +125,41 @@ export class ContextManager {
     // Tier 1: Always apply microcompact
     result = microcompact(result);
 
+    // Hybrid token estimation walks every message; we cache it across the
+    // tier checks below and only recompute after a compaction shrinks `result`.
+    let tokens = this.estimateTokensHybrid(result);
+
     // Tier 2 sync fallback: window compact if approaching limit
-    if (this.estimateTokensHybrid(result) > this.config.maxTokens * this.config.compactAtRatio) {
-      // If we have a cached summary, use it
+    if (tokens > this.config.maxTokens * this.config.compactAtRatio) {
+      const before = tokens;
       if (this.lastSummary) {
         const keepN = Math.max(8, Math.floor(result.length * 0.3));
         result = applySummaryCompaction(result, this.lastSummary, keepN, this.transcriptPath);
         this.lastSummary = undefined;
+        tokens = this.estimateTokensHybrid(result);
+        this.onCompact?.({ strategy: "summary", before, after: tokens });
       } else {
         const keepN = Math.max(10, Math.floor(result.length * 0.4));
         result = windowCompact(result, keepN);
+        tokens = this.estimateTokensHybrid(result);
+        this.onCompact?.({ strategy: "window", before, after: tokens });
       }
     }
 
     // Tier 2b: Snip compact — keep first+last, drop middle (less aggressive than window)
-    if (this.estimateTokensHybrid(result) > this.config.maxTokens * 0.7) {
+    if (tokens > this.config.maxTokens * 0.7) {
+      const before = tokens;
       result = snipCompact(result, 3, 8);
+      tokens = this.estimateTokensHybrid(result);
+      this.onCompact?.({ strategy: "snip", before, after: tokens });
     }
 
     // Tier 3: Emergency — aggressive window if still too large
-    if (this.estimateTokensHybrid(result) > this.config.maxTokens * this.config.summarizeAtRatio) {
+    if (tokens > this.config.maxTokens * this.config.summarizeAtRatio) {
+      const before = tokens;
       result = windowCompact(result, 6);
+      tokens = this.estimateTokensHybrid(result);
+      this.onCompact?.({ strategy: "emergency", before, after: tokens });
     }
 
     return result;
@@ -158,7 +185,11 @@ export class ContextManager {
     const ratio = tokens / this.config.maxTokens;
 
     // Tier 2: LLM summary if approaching limit
-    if (ratio >= this.config.compactAtRatio && this.summarizeFn && this.consecutiveSummaryFailures < 3) {
+    if (
+      ratio >= this.config.compactAtRatio &&
+      this.summarizeFn &&
+      this.consecutiveSummaryFailures < 3
+    ) {
       try {
         const keepRecentN = Math.max(8, Math.floor(result.length * 0.3));
         const messagesToSummarize = result.slice(1, -keepRecentN); // skip first (userContext) and recent
@@ -171,11 +202,13 @@ export class ContextManager {
             result = applySummaryCompaction(result, summary, keepRecentN, this.transcriptPath);
             this.consecutiveSummaryFailures = 0;
             this.lastSummary = summary;
+            const after = estimateTokens(result);
             logger.info("context.summary_compact", {
               before: tokens,
-              after: estimateTokens(result),
+              after,
               summaryLen: summary.length,
             });
+            this.onCompact?.({ strategy: "summary", before: tokens, after });
             return result;
           }
         }
@@ -188,20 +221,34 @@ export class ContextManager {
       }
     }
 
+    // Reuse the `tokens` we already computed above for the LLM-summary tier
+    // check, then refresh it after each compaction. Avoids re-walking every
+    // message 5–6 times per call.
+    let live = tokens;
+
     // Tier 2 fallback: window compact
-    if (this.estimateTokensHybrid(result) > this.config.maxTokens * this.config.compactAtRatio) {
+    if (live > this.config.maxTokens * this.config.compactAtRatio) {
+      const before = live;
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
+      live = this.estimateTokensHybrid(result);
+      this.onCompact?.({ strategy: "window", before, after: live });
     }
 
     // Tier 2b: Snip compact
-    if (this.estimateTokensHybrid(result) > this.config.maxTokens * 0.7) {
+    if (live > this.config.maxTokens * 0.7) {
+      const before = live;
       result = snipCompact(result, 3, 8);
+      live = this.estimateTokensHybrid(result);
+      this.onCompact?.({ strategy: "snip", before, after: live });
     }
 
     // Tier 3: Emergency
-    if (this.estimateTokensHybrid(result) > this.config.maxTokens * this.config.summarizeAtRatio) {
+    if (live > this.config.maxTokens * this.config.summarizeAtRatio) {
+      const before = live;
       result = windowCompact(result, 6);
+      live = this.estimateTokensHybrid(result);
+      this.onCompact?.({ strategy: "emergency", before, after: live });
     }
 
     return result;
@@ -267,9 +314,7 @@ export class ContextManager {
   /**
    * Deduplicate tool calls by hashing arguments.
    */
-  deduplicateToolCalls(
-    calls: Array<{ toolName: string; args: Record<string, unknown> }>,
-  ): {
+  deduplicateToolCalls(calls: Array<{ toolName: string; args: Record<string, unknown> }>): {
     toExecute: typeof calls;
     cached: Array<{ toolName: string; args: Record<string, unknown>; result: string }>;
   } {

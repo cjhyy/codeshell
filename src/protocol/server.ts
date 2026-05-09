@@ -180,7 +180,11 @@ export class AgentServer {
 
     if (!resolve) {
       this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InvalidParams, `No pending approval: ${params.requestId}`),
+        createErrorResponse(
+          req.id,
+          ErrorCodes.InvalidParams,
+          `No pending approval: ${params.requestId}`,
+        ),
       );
       return;
     }
@@ -227,7 +231,9 @@ export class AgentServer {
     if (params.model !== undefined) {
       try {
         const entry = this.engine.switchModel(params.model);
-        this.transport.send(createResponse(req.id, { ok: true, model: entry.model, key: entry.key }));
+        this.transport.send(
+          createResponse(req.id, { ok: true, model: entry.model, key: entry.key }),
+        );
         return;
       } catch (err) {
         this.transport.send(
@@ -252,9 +258,12 @@ export class AgentServer {
         const registry = this.engine.getToolRegistry();
         // listToolsDetailed() returns objects with name/description,
         // listTools() returns just names — use detailed if available
-        const tools = typeof registry.listToolsDetailed === "function"
-          ? registry.listToolsDetailed().map((t: any) => ({ name: t.name, description: t.description ?? "" }))
-          : registry.listTools().map((name: string) => ({ name, description: "" }));
+        const tools =
+          typeof registry.listToolsDetailed === "function"
+            ? registry
+                .listToolsDetailed()
+                .map((t: any) => ({ name: t.name, description: t.description ?? "" }))
+            : registry.listTools().map((name: string) => ({ name, description: "" }));
         this.transport.send(createResponse(req.id, { type: "tools", data: tools }));
         break;
       }
@@ -265,26 +274,28 @@ export class AgentServer {
       }
       case "config": {
         const config = this.engine.getConfig();
-        this.transport.send(createResponse(req.id, {
-          type: "config",
-          data: {
-            permissionMode: config.permissionMode ?? "default",
-            planMode: isInPlanMode(),
-            preset: config.preset,
-            model: config.llm.model,
-            cwd: config.cwd,
-            maxContextTokens: config.maxContextTokens,
-            llm: {
-              provider: config.llm.provider,
+        this.transport.send(
+          createResponse(req.id, {
+            type: "config",
+            data: {
+              permissionMode: config.permissionMode ?? "default",
+              planMode: isInPlanMode(),
+              preset: config.preset,
               model: config.llm.model,
-              apiKey: config.llm.apiKey,
-              baseUrl: config.llm.baseUrl,
-              temperature: config.llm.temperature,
-              maxTokens: config.llm.maxTokens,
-              enableStreaming: config.llm.enableStreaming,
+              cwd: config.cwd,
+              maxContextTokens: config.maxContextTokens,
+              llm: {
+                provider: config.llm.provider,
+                model: config.llm.model,
+                apiKey: config.llm.apiKey,
+                baseUrl: config.llm.baseUrl,
+                temperature: config.llm.temperature,
+                maxTokens: config.llm.maxTokens,
+                enableStreaming: config.llm.enableStreaming,
+              },
             },
-          },
-        }));
+          }),
+        );
         break;
       }
       case "session_detail": {
@@ -303,7 +314,11 @@ export class AgentServer {
           }
         } else {
           this.transport.send(
-            createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId required for session_detail"),
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              "sessionId required for session_detail",
+            ),
           );
         }
         break;
@@ -312,10 +327,12 @@ export class AgentServer {
         // Force context compaction and return stats
         try {
           const result = this.engine.forceCompact();
-          this.transport.send(createResponse(req.id, {
-            type: "compact",
-            data: result,
-          }));
+          this.transport.send(
+            createResponse(req.id, {
+              type: "compact",
+              data: result,
+            }),
+          );
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -357,6 +374,19 @@ export class AgentServer {
         }
         break;
       }
+      case "config_get": {
+        try {
+          const { key } = params;
+          if (!key) throw new Error("key is required for config_get");
+          const value = this.engine.readSetting(key);
+          this.transport.send(createResponse(req.id, { type: "config_get", data: { key, value } }));
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
       case "permission_set": {
         try {
           const value = params.value as string | undefined;
@@ -365,10 +395,12 @@ export class AgentServer {
             throw new Error(`invalid permission mode: ${value}`);
           }
           this.engine.setPermissionMode(value as NonNullable<EngineConfig["permissionMode"]>);
-          this.transport.send(createResponse(req.id, {
-            type: "permission_set",
-            data: { mode: value },
-          }));
+          this.transport.send(
+            createResponse(req.id, {
+              type: "permission_set",
+              data: { mode: value },
+            }),
+          );
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -378,7 +410,11 @@ export class AgentServer {
       }
       default:
         this.transport.send(
-          createErrorResponse(req.id, ErrorCodes.InvalidParams, `Unknown query type: ${params.type}`),
+          createErrorResponse(
+            req.id,
+            ErrorCodes.InvalidParams,
+            `Unknown query type: ${params.type}`,
+          ),
         );
     }
   }

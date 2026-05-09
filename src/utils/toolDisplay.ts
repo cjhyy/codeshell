@@ -99,6 +99,17 @@ export function formatToolArgs(toolName: string, args: Record<string, unknown>):
       parts.push(truncate(s, max));
     }
   }
+  // Read often pages large files via offset/limit — show a range suffix so
+  // back-to-back reads of the same file are visually distinguishable.
+  if (toolName === "Read") {
+    const offset = typeof args.offset === "number" ? args.offset : undefined;
+    const limit = typeof args.limit === "number" ? args.limit : undefined;
+    if (offset !== undefined || limit !== undefined) {
+      const start = offset ?? 1;
+      const end = limit !== undefined ? start + limit - 1 : undefined;
+      parts.push(end !== undefined ? `:${start}-${end}` : `:${start}-`);
+    }
+  }
   return parts.length > 0 ? parts.join(" ") : truncate(JSON.stringify(args), 80);
 }
 
@@ -136,11 +147,19 @@ export function compactOutput(toolName: string, content: string): CompactResult 
 
   switch (toolName) {
     case "Read":
-      return { summary: `${totalLines} lines, ${formatBytes(content.length)}`, preview: [], moreLines: 0 };
+      return {
+        summary: `${totalLines} lines, ${formatBytes(content.length)}`,
+        preview: [],
+        moreLines: 0,
+      };
 
     case "Bash": {
       if (totalLines <= MAX_PREVIEW_LINES) {
-        return { summary: "", preview: lines.map((l) => truncate(l, MAX_LINE_WIDTH)), moreLines: 0 };
+        return {
+          summary: "",
+          preview: lines.map((l) => truncate(l, MAX_LINE_WIDTH)),
+          moreLines: 0,
+        };
       }
       return {
         summary: `${totalLines} lines output`,

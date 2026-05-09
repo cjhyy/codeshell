@@ -27,6 +27,7 @@ import {
 } from "./types.js";
 import type { StreamEvent, ApprovalRequest, ApprovalResult } from "../types.js";
 import { EventEmitter } from "node:events";
+import { logger } from "../logging/logger.js";
 
 // ─── Event Types ────────────────────────────────────────────────────
 
@@ -41,10 +42,13 @@ export interface AgentClientEvents {
 export class AgentClient {
   private transport: Transport;
   private emitter = new EventEmitter();
-  private pendingRequests = new Map<string | number, {
-    resolve: (result: unknown) => void;
-    reject: (error: Error) => void;
-  }>();
+  private pendingRequests = new Map<
+    string | number,
+    {
+      resolve: (result: unknown) => void;
+      reject: (error: Error) => void;
+    }
+  >();
 
   constructor(options: { transport: Transport }) {
     this.transport = options.transport;
@@ -66,14 +70,28 @@ export class AgentClient {
    */
   async run(task: string, sessionId?: string): Promise<RunResult> {
     const params: RunParams = { task, sessionId };
-    return this.request(Methods.Run, params as unknown as Record<string, unknown>) as Promise<RunResult>;
+    // If the caller provided a session id, stamp it on the logger eagerly
+    // so client-side log lines emitted during this run (before the server
+    // response arrives) carry the right sid. The server-resolved id from
+    // the response below takes precedence — they only differ on the
+    // first call of a brand-new session, when sessionId is undefined.
+    if (sessionId) logger.setSid(sessionId);
+    const result = (await this.request(
+      Methods.Run,
+      params as unknown as Record<string, unknown>,
+    )) as RunResult;
+    if (result.sessionId) logger.setSid(result.sessionId);
+    return result;
   }
 
   /**
    * Respond to an approval request from the server.
    */
   async approve(requestId: string, decision: ApprovalResult): Promise<void> {
-    await this.request(Methods.Approve, { requestId, decision } as unknown as Record<string, unknown>);
+    await this.request(Methods.Approve, { requestId, decision } as unknown as Record<
+      string,
+      unknown
+    >);
   }
 
   /**
@@ -87,18 +105,29 @@ export class AgentClient {
    * Update runtime configuration on the server.
    */
   async configure(params: ConfigureParams): Promise<Record<string, unknown>> {
-    return this.request(Methods.Configure, params as unknown as Record<string, unknown>) as Promise<Record<string, unknown>>;
+    return this.request(Methods.Configure, params as unknown as Record<string, unknown>) as Promise<
+      Record<string, unknown>
+    >;
   }
 
   /**
    * Query server state.
    */
-  async query(type: QueryParams["type"], sessionId?: string, ...extra: unknown[]): Promise<QueryResult> {
+  async query(
+    type: QueryParams["type"],
+    sessionId?: string,
+    ...extra: unknown[]
+  ): Promise<QueryResult> {
     const params: Record<string, unknown> = { type, sessionId };
     // Support config_set: query("config_set", key, value)
     if (type === "config_set" && extra.length >= 1) {
       params.key = sessionId;
       params.value = extra[0];
+      delete params.sessionId;
+    }
+    // Support config_get: query("config_get", key)
+    if (type === "config_get") {
+      params.key = sessionId;
       delete params.sessionId;
     }
     // Support permission_set: query("permission_set", mode)

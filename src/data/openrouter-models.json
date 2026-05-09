@@ -1,8 +1,20 @@
 {
-  "fetchedAt": "2026-05-08T10:41:56.172Z",
+  "fetchedAt": "2026-05-09T07:45:26.143Z",
   "source": "https://openrouter.ai/api/v1/models",
   "count": 367,
   "models": [
+    {
+      "id": "inclusionai/ring-2.6-1t:free",
+      "name": "inclusionAI: Ring-2.6-1T (free)",
+      "created": 1778247440,
+      "contextLength": 262144,
+      "maxOutputTokens": 65536,
+      "inputPricePerMillion": 0,
+      "outputPricePerMillion": 0,
+      "modalities": [
+        "text"
+      ]
+    },
     {
       "id": "google/gemini-3.1-flash-lite",
       "name": "Google: Gemini 3.1 Flash Lite",
@@ -366,13 +378,13 @@
       ]
     },
     {
-      "id": "tencent/hy3-preview:free",
-      "name": "Tencent: Hy3 preview (free)",
+      "id": "tencent/hy3-preview",
+      "name": "Tencent: Hy3 preview",
       "created": 1776878150,
       "contextLength": 262144,
       "maxOutputTokens": 262144,
-      "inputPricePerMillion": 0,
-      "outputPricePerMillion": 0,
+      "inputPricePerMillion": 0.06599999999999999,
+      "outputPricePerMillion": 0.26,
       "modalities": [
         "text"
       ]
@@ -382,7 +394,7 @@
       "name": "Xiaomi: MiMo-V2.5-Pro",
       "created": 1776874273,
       "contextLength": 1048576,
-      "maxOutputTokens": 131072,
+      "maxOutputTokens": 16384,
       "inputPricePerMillion": 1,
       "outputPricePerMillion": 3,
       "modalities": [
@@ -727,8 +739,8 @@
       "name": "MiniMax: MiniMax M2.7",
       "created": 1773836697,
       "contextLength": 196608,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.3,
+      "maxOutputTokens": 131072,
+      "inputPricePerMillion": 0.29900000000000004,
       "outputPricePerMillion": 1.2,
       "modalities": [
         "text"
@@ -1411,8 +1423,8 @@
       "created": 1765731308,
       "contextLength": 262144,
       "maxOutputTokens": 65536,
-      "inputPricePerMillion": 0.09,
-      "outputPricePerMillion": 0.29,
+      "inputPricePerMillion": 0.09999999999999999,
+      "outputPricePerMillion": 0.3,
       "modalities": [
         "text"
       ]
@@ -2891,18 +2903,6 @@
       ]
     },
     {
-      "id": "tngtech/deepseek-r1t2-chimera",
-      "name": "TNG: DeepSeek R1T2 Chimera",
-      "created": 1751986985,
-      "contextLength": 163840,
-      "maxOutputTokens": 163840,
-      "inputPricePerMillion": 0.3,
-      "outputPricePerMillion": 1.1,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "morph/morph-v3-large",
       "name": "Morph: Morph V3 Large",
       "created": 1751910858,
@@ -3245,9 +3245,9 @@
       "name": "Qwen: Qwen3 32B",
       "created": 1745875945,
       "contextLength": 40960,
-      "maxOutputTokens": 40960,
+      "maxOutputTokens": 16384,
       "inputPricePerMillion": 0.08,
-      "outputPricePerMillion": 0.24,
+      "outputPricePerMillion": 0.28,
       "modalities": [
         "text"
       ]
@@ -3671,7 +3671,7 @@
       "id": "google/gemini-2.0-flash-001",
       "name": "Google: Gemini 2.0 Flash",
       "created": 1738769413,
-      "contextLength": 1048576,
+      "contextLength": 1000000,
       "maxOutputTokens": 8192,
       "inputPricePerMillion": 0.09999999999999999,
       "outputPricePerMillion": 0.39999999999999997,

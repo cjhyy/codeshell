@@ -117,6 +117,7 @@ export interface QueryParams {
     | "session_detail"
     | "compact"
     | "config_set"
+    | "config_get"
     | "permission_set"
     | "models"
     | "arena_status";
@@ -218,11 +219,19 @@ export function createResponse(id: string | number, result: unknown): RpcRespons
   return { jsonrpc: "2.0", id, result };
 }
 
-export function createErrorResponse(id: string | number, code: number, message: string, data?: unknown): RpcResponse {
+export function createErrorResponse(
+  id: string | number,
+  code: number,
+  message: string,
+  data?: unknown,
+): RpcResponse {
   return { jsonrpc: "2.0", id, error: { code, message, data } };
 }
 
-export function createNotification(method: string, params?: Record<string, unknown>): RpcNotification {
+export function createNotification(
+  method: string,
+  params?: Record<string, unknown>,
+): RpcNotification {
   return { jsonrpc: "2.0", method, params };
 }
 
