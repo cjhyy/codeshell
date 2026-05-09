@@ -54,21 +54,51 @@ export const extraCommands: SlashCommand[] = [
       }
       try {
         const settings = JSON.parse(readFileSync(settingsFile, "utf-8"));
-        let removed = false;
+        const cleared: string[] = [];
         if (settings.model?.apiKey) {
           delete settings.model.apiKey;
-          removed = true;
+          cleared.push("model.apiKey");
+        }
+        if (Array.isArray(settings.models)) {
+          let n = 0;
+          for (const m of settings.models) {
+            if (m && typeof m === "object" && m.apiKey) {
+              delete m.apiKey;
+              n++;
+            }
+          }
+          if (n > 0) cleared.push(`models[].apiKey (${n})`);
         }
         if (settings.arena) {
           delete settings.arena;
-          removed = true;
+          cleared.push("arena");
         }
-        if (removed) {
-          writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf-8");
-          ctx.addStatus("✓ API key and Arena config cleared. Restart to re-enter onboarding.");
-        } else {
-          ctx.addStatus("No saved API key.");
+
+        // Detect provider env vars that would silently override a "logged out"
+        // state on next startup, so the user knows /logout alone isn't enough.
+        const ENV_KEYS = [
+          "ANTHROPIC_API_KEY",
+          "OPENAI_API_KEY",
+          "OPENROUTER_API_KEY",
+          "DEEPSEEK_API_KEY",
+        ];
+        const activeEnv = ENV_KEYS.filter((k) => process.env[k]);
+
+        if (cleared.length === 0) {
+          const envNote = activeEnv.length
+            ? `\nNote: env var(s) still set: ${activeEnv.join(", ")} — unset to fully log out.`
+            : "";
+          ctx.addStatus(`No saved API key.${envNote}`);
+          return;
         }
+
+        writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf-8");
+        const envNote = activeEnv.length
+          ? `\n⚠ Env var(s) still set: ${activeEnv.join(", ")} — unset to fully log out.`
+          : "";
+        ctx.addStatus(
+          `✓ Cleared: ${cleared.join(", ")}. Restart to re-enter onboarding.${envNote}`,
+        );
       } catch (err) {
         ctx.addStatus(`Failed: ${(err as Error).message}`);
       }

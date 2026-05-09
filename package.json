@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Code Shell — general-purpose agent orchestration framework with a terminal coding preset",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -44,6 +44,7 @@
     "access": "public"
   },
   "scripts": {
+    "preinstall": "node scripts/check-node.cjs",
     "build": "bun run sync-models && bun run tsup && bun run build:dts",
     "build:dts": "tsc --emitDeclarationOnly --declaration --outDir dist || true",
     "sync-models": "bun run scripts/sync-models.ts",
@@ -56,10 +57,11 @@
     "prepublishOnly": "bun run build"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.10"
   },
   "files": [
     "dist",
+    "scripts/check-node.cjs",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
