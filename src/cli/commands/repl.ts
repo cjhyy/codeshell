@@ -95,7 +95,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   baseUrl = baseUrl ?? "https://openrouter.ai/api/v1";
   const effort: EffortLevel = options.effort ?? "high";
   const effortConfig = getEffortConfig(effort);
-  const maxTurns = options.maxTurns ?? 30;
+  const maxTurns = options.maxTurns ?? 100;
 
   const llmConfig: LLMConfig = {
     provider,

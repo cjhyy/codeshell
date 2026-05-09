@@ -58,7 +58,6 @@ export class TurnLoop {
   async run(initialMessages: Message[]): Promise<TurnLoopResult> {
     let messages = [...initialMessages];
     let finalText = "";
-    let consecutiveToolOnlyTurns = 0;
     const budgetTracker = createBudgetTracker();
 
     while (this.turnCount < this.config.maxTurns) {
@@ -86,19 +85,6 @@ export class TurnLoop {
             "<system-reminder>This is your LAST turn. You MUST respond with a final text summary now. " +
             "Do NOT call any tools. Summarize what you have accomplished and list any remaining work.</system-reminder>",
         });
-      }
-
-      // Anti-loop: if too many consecutive tool-only turns, inject a nudge
-      if (consecutiveToolOnlyTurns >= 8) {
-        logger.warn("turn.anti_loop", { consecutiveToolOnlyTurns });
-        messages.push({
-          role: "user",
-          content:
-            "<system-reminder>You have used tools for many consecutive turns without providing a text response to the user. " +
-            "You MUST now respond with text to answer the user's original question or summarize what you've done. " +
-            "Do NOT call any more tools.</system-reminder>",
-        });
-        consecutiveToolOnlyTurns = 0;
       }
 
       // Pre-check: context management (async — may trigger LLM summarization)
@@ -191,13 +177,6 @@ export class TurnLoop {
       // Accumulate text
       if (response.text) {
         finalText = response.text;
-      }
-
-      // Track consecutive tool-only turns
-      if (response.toolCalls.length > 0) {
-        consecutiveToolOnlyTurns++;
-      } else {
-        consecutiveToolOnlyTurns = 0;
       }
 
       // Post-check: tool calls?

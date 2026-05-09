@@ -30,7 +30,7 @@ function addCommonOptions(cmd: Command): Command {
     .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")
     .option("--permission-mode <mode>", "Permission mode (default, acceptEdits, bypassPermissions)")
     .option("-o, --output <format>", "Output format (text, json, jsonl, stream-json)", "text")
-    .option("--max-turns <n>", "Maximum turns", "30")
+    .option("--max-turns <n>", "Maximum turns", "100")
     .option("--effort <level>", "Reasoning effort (low, medium, high, max)", "high");
 }
 
@@ -138,7 +138,7 @@ program
   .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")
   .option("--permission-mode <mode>", "Permission mode (default, acceptEdits, bypassPermissions)")
   .option("-o, --output <format>", "Output format (text, json, jsonl, stream-json)", "text")
-  .option("--max-turns <n>", "Maximum turns", "30")
+  .option("--max-turns <n>", "Maximum turns", "100")
   .option("--effort <level>", "Reasoning effort (low, medium, high, max)", "high")
   .option("--resume <sessionId>", "Resume a previous session")
   .option("--prefill <text>", "Pre-fill the input box without submitting")

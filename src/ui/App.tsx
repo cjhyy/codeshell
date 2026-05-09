@@ -5,7 +5,7 @@
  * All engine interaction goes through the client-server protocol.
  */
 import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from "react";
-import { Box, Text, useApp, useInput } from "../ink/index.js";
+import { Box, Text, useApp, useInput } from "../render/index.js";
 import { Banner } from "./components/Banner.js";
 import { WelcomeTips } from "./components/WelcomeTips.js";
 import { CommandInput } from "./components/CommandInput.js";
@@ -31,6 +31,7 @@ import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { AskUserPrompt } from "./components/AskUserPrompt.js";
 import { OnboardingPrompt } from "./components/OnboardingPrompt.js";
 import { ModelSelector, type ModelEntry } from "./components/ModelSelector.js";
+import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
 import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
@@ -117,6 +118,7 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
   } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [modelEntries, setModelEntries] = useState<ModelEntry[] | null>(null);
+  const [sessionEntries, setSessionEntries] = useState<SessionPickerEntry[] | null>(null);
 
   // Track streaming chars in a ref — no App-level re-render per tick.
   // StatusLine reads these refs directly via its own internal interval.
@@ -424,6 +426,30 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
     }
   }, [client]);
 
+  // Open the resume picker. Filters out empty (no-message) sessions so the
+  // list is always meaningful — see SessionManager.list() for the preview
+  // field used as the row caption.
+  const openSessionPicker = useCallback(async () => {
+    try {
+      const result = await client.query("sessions");
+      const all = (result.data as Array<SessionPickerEntry & { preview?: string }>) ?? [];
+      const filtered = all.filter((s) => (s.preview ?? "").trim().length > 0);
+      if (filtered.length === 0) {
+        chatStore.update((prev) => [
+          ...prev,
+          entry({ type: "status", reason: "No sessions to resume." }),
+        ]);
+        return;
+      }
+      setSessionEntries(filtered);
+    } catch (err) {
+      chatStore.update((prev) => [
+        ...prev,
+        entry({ type: "status", reason: `Failed to load sessions: ${(err as Error).message}` }),
+      ]);
+    }
+  }, [client]);
+
   useInput((ch, key) => {
     if (key.ctrl && ch === "c") {
       if (isRunning) {
@@ -661,6 +687,7 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       chatLog,
       startOnboarding: () => setShowOnboarding(true),
       openModelSelector,
+      openSessionPicker,
       loadChatEntries: (entries: RestoredChatEntry[]) => {
         const chatEntries: ChatEntry[] = entries.map((e) => {
           switch (e.type) {
@@ -683,7 +710,7 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       },
     };
     commandRegistry.dispatch(cmd, cmdCtx);
-  }, [client, cwd, model, setModel, sessionId, currentEffort, tasks, chatLog, exit, openModelSelector]);
+  }, [client, cwd, model, setModel, sessionId, currentEffort, tasks, chatLog, exit, openModelSelector, openSessionPicker]);
 
   const addStatus = (reason: string) => {
     chatStore.update((prev) => [...prev, entry({ type: "status", reason })]);
@@ -819,6 +846,18 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
             }
           }}
           onCancel={() => setModelEntries(null)}
+        />
+      ) : sessionEntries ? (
+        <SessionPicker
+          entries={sessionEntries}
+          onSelect={(id) => {
+            setSessionEntries(null);
+            // Reuse the existing /resume <id> command path so transcript
+            // restoration logic (loadChatEntries, sessionId, status line)
+            // stays in one place.
+            handleSlashCommand(`/resume ${id}`);
+          }}
+          onCancel={() => setSessionEntries(null)}
         />
       ) : pendingQuestion ? (
         <AskUserPrompt

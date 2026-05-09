@@ -117,20 +117,22 @@ export class SessionManager {
     return newBundle;
   }
 
-  list(limit = 20): SessionState[] {
+  list(limit = 20): SessionListEntry[] {
     if (!existsSync(this.sessionsDir)) return [];
 
     const dirs = readdirSync(this.sessionsDir, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .map((d) => d.name);
 
-    const sessions: SessionState[] = [];
+    const sessions: SessionListEntry[] = [];
     for (const dir of dirs) {
       const stateFile = join(this.sessionsDir, dir, "state.json");
       if (!existsSync(stateFile)) continue;
       try {
         const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-        sessions.push(state);
+        const transcriptFile = join(this.sessionsDir, dir, "transcript.jsonl");
+        const preview = readFirstUserMessage(transcriptFile);
+        sessions.push({ ...state, preview });
       } catch {
         // Skip corrupted sessions
       }
@@ -140,4 +142,35 @@ export class SessionManager {
       .sort((a, b) => b.startedAt - a.startedAt)
       .slice(0, limit);
   }
+}
+
+export type SessionListEntry = SessionState & { preview?: string };
+
+/**
+ * Scan a transcript.jsonl for the first user message and return a short
+ * preview. Stops at the first match so cost is bounded by the position of
+ * the user's opening line, not the file size.
+ *
+ * Returns undefined if the session has no user messages yet (e.g. the user
+ * launched the REPL but never sent anything before exiting).
+ */
+function readFirstUserMessage(transcriptFile: string): string | undefined {
+  if (!existsSync(transcriptFile)) return undefined;
+  const raw = readFileSync(transcriptFile, "utf-8");
+  for (const line of raw.split("\n")) {
+    if (!line) continue;
+    let event: { type?: string; data?: { role?: string; content?: unknown } };
+    try { event = JSON.parse(line); } catch { continue; }
+    if (event.type !== "message") continue;
+    if (event.data?.role !== "user") continue;
+    const content = event.data.content;
+    const text = typeof content === "string"
+      ? content
+      : Array.isArray(content)
+        ? content.find((b: { type?: string; text?: string }) => b.type === "text")?.text ?? ""
+        : "";
+    if (!text.trim()) continue;
+    return text.replace(/\s+/g, " ").trim();
+  }
+  return undefined;
 }

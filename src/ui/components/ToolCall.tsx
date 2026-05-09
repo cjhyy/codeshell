@@ -16,7 +16,7 @@
  * Formatting logic shared with cli/output/renderer.ts via utils/toolDisplay.ts.
  */
 import { useState } from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 import {
   TOOL_DOT_COLORS,
   formatToolArgs,
@@ -47,8 +47,8 @@ export function ToolCallStart({ toolName, args, nested }: ToolCallStartProps) {
   // Nested (under Agent) stays tight because the agent block already groups.
   return (
     <Box marginLeft={ml} marginTop={nested ? 0 : 1}>
-      <Text color={dotColor}>{"  ● "}</Text>
-      <Text bold>{toolName}</Text>
+      <Text color={dotColor}>{"  ●"}</Text>
+      <Text bold>{" "}{toolName}</Text>
       <Text dim>{"  "}{argsStr}</Text>
     </Box>
   );

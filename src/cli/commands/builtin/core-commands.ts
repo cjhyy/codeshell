@@ -27,17 +27,42 @@ export const coreCommands: SlashCommand[] = [
 
   {
     name: "/cost",
-    description: "Show token usage and cost",
-    execute: (_arg, ctx) => {
+    description: "Show token usage and cost (/cost stats for summary, /cost detail for breakdown)",
+    usage: "/cost [stats|detail]",
+    execute: (arg, ctx) => {
       if (costTracker.getRequestCount() === 0) {
         ctx.addStatus("No API requests yet.");
+        return;
+      }
+      const t = costTracker.getTotalTokens();
+      const cost = costTracker.getEstimatedCost();
+      const requests = costTracker.getRequestCount();
+
+      if (arg === "stats" || arg === "summary") {
+        ctx.addStatus(costTracker.formatSummary());
+      } else if (arg === "detail" || arg === "usage") {
+        const avgTokensPerReq = Math.round(t.total / requests);
+        const avgCostPerReq = (cost / requests).toFixed(4);
+        const fmt = (n: number) => n.toLocaleString();
+        ctx.addStatus(
+          [
+            "API Usage:",
+            `  Requests:         ${requests}`,
+            `  Total tokens:     ${fmt(t.total)}`,
+            `    Prompt:         ${fmt(t.prompt)}`,
+            `    Completion:     ${fmt(t.completion)}`,
+            `  Estimated cost:   ${cost.toFixed(4)}`,
+            `  Avg tokens/req:   ${fmt(avgTokensPerReq)}`,
+            `  Avg cost/req:     ${avgCostPerReq}`,
+            `  Model:            ${ctx.model}`,
+          ].join("\n"),
+        );
       } else {
-        const t = costTracker.getTotalTokens();
         ctx.addStatus(
           `Tokens: ${t.total} (in: ${t.prompt}, out: ${t.completion}) | ` +
-            `Cost: $${costTracker.getEstimatedCost().toFixed(4)} | ` +
-            `Requests: ${costTracker.getRequestCount()}`,
+            `Cost: ${cost.toFixed(4)} | Requests: ${requests}`,
         );
+        ctx.addStatus("Use /cost stats or /cost detail for more info.");
       }
     },
   },
@@ -60,7 +85,19 @@ export const coreCommands: SlashCommand[] = [
     name: "/tasks",
     description: "Show task list",
     execute: (_arg, ctx) => {
-      if (ctx.tasks.length === 0) ctx.addStatus("No tasks.");
+      const tasks = ctx.tasks ?? [];
+      if (tasks.length === 0) {
+        ctx.addStatus("No active tasks. Tasks are created automatically when the agent begins multi-step work.");
+        return;
+      }
+      const statusOrder: Record<string, number> = { in_progress: 0, pending: 1, completed: 2, stopped: 3 };
+      const sorted = [...tasks].sort(
+        (a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9),
+      );
+      for (const t of sorted) {
+        const icon = t.status === "completed" ? "✓" : t.status === "in_progress" ? "●" : t.status === "stopped" ? "✗" : "○";
+        ctx.addStatus(`  ${icon} ${t.subject ?? t.id} (${t.status})`);
+      }
     },
   },
 
@@ -112,33 +149,52 @@ export const coreCommands: SlashCommand[] = [
 
   {
     name: "/session",
-    description: "Show current session ID",
-    execute: (_arg, ctx) => ctx.addStatus(`Session: ${ctx.sessionId ?? "none"}`),
-  },
+    description: "Session management: /session, /session list, /session tag <name>, /session resume <id>",
+    usage: "/session [list|tag <name>|resume <id>]",
+    aliases: ["/sessions"],
+    execute: async (arg, ctx) => {
+      const parts = arg.trim().split(/\s+/);
+      const sub = parts[0] || "show";
+      const rest = parts.slice(1).join(" ");
 
-  {
-    name: "/sessions",
-    description: "List recent sessions",
-    execute: async (_arg, ctx) => {
-      try {
-        const result = await ctx.client.query("sessions");
-        const sessions = (result.data as any[]) ?? [];
-        if (sessions.length === 0) {
-          ctx.addStatus("No sessions.");
-        } else {
-          const lines = sessions.slice(0, 10).map((s: any, i: number) => {
-            const date = new Date(s.startedAt).toLocaleString();
-            const marker = s.sessionId === ctx.sessionId ? " ← current" : "";
-            const summary = s.summary ? `  "${s.summary}"` : "";
-            return `  ${i + 1}. ${date}  turns:${s.turnCount}${marker}${summary}`;
-          });
-          ctx.addStatus("Recent Sessions (use /resume <number> or /resume <query>):\n" + lines.join("\n"));
+      if (sub === "show" || !arg.trim()) {
+        ctx.addStatus(`Session: ${ctx.sessionId ?? "none"}`);
+      } else if (sub === "list") {
+        try {
+          const result = await ctx.client.query("sessions");
+          const sessions = (result.data as any[]) ?? [];
+          if (sessions.length === 0) {
+            ctx.addStatus("No sessions.");
+          } else {
+            const lines = sessions.slice(0, 10).map((s: any, i: number) => {
+              const date = new Date(s.startedAt).toLocaleString();
+              const marker = s.sessionId === ctx.sessionId ? " ← current" : "";
+              const summary = s.summary ? `  "${s.summary}"` : "";
+              return `  ${i + 1}. ${date}  turns:${s.turnCount}${marker}${summary}`;
+            });
+            ctx.addStatus("Recent Sessions (use /resume <number> or /resume <query>):\n" + lines.join("\n"));
+          }
+        } catch (err) {
+          ctx.addStatus(`Error: ${(err as Error).message}`);
         }
-      } catch (err) {
-        ctx.addStatus(`Error: ${(err as Error).message}`);
+      } else if (sub === "tag") {
+        if (!rest) { ctx.addStatus("Usage: /session tag <name>"); return; }
+        try {
+          await ctx.client.run(`/tag ${rest}`, ctx.sessionId);
+          ctx.addStatus(`Session tagged: ${rest}`);
+        } catch {
+          ctx.addStatus("Tagging not available. Use /tag command if registered.");
+        }
+      } else if (sub === "resume") {
+        if (!rest) { ctx.addStatus("Usage: /session resume <session-id>"); return; }
+        ctx.addStatus(`Use /resume ${rest} to resume that session.`);
+      } else {
+        ctx.addStatus("Usage: /session [show|list|tag <name>|resume <id>]");
       }
     },
   },
+
+  /* Merged into /session above; alias handles old invocations */
 
   {
     name: "/tools",
@@ -206,19 +262,6 @@ export const coreCommands: SlashCommand[] = [
       } catch (err) {
         ctx.addStatus(`Memory error: ${(err as Error).message}`);
       }
-    },
-  },
-
-  {
-    name: "/fork",
-    description: "Fork current session",
-    execute: async (_arg, ctx) => {
-      if (!ctx.sessionId) {
-        ctx.addStatus("No active session to fork.");
-        return;
-      }
-      // Fork still needs server-side query for session detail
-      ctx.addStatus("Fork is not yet supported via client protocol.");
     },
   },
 
@@ -426,45 +469,80 @@ export const coreCommands: SlashCommand[] = [
 
   {
     name: "/status",
-    description: "Show system status",
-    execute: async (_arg, ctx) => {
-      try {
-        const configResult = await ctx.client.query("config");
-        const config = configResult.data as any;
-        const toolsResult = await ctx.client.query("tools");
-        const tools = (toolsResult.data as any[]) ?? [];
-
-        const lines = [
-          `Model:       ${ctx.model}`,
-          `Effort:      ${ctx.effort}`,
-          `Permission:  ${config.permissionMode ?? "acceptEdits"}`,
-          `Session:     ${ctx.sessionId ?? "none"}`,
-          `CWD:         ${ctx.cwd}`,
-          `Tools:       ${tools.length} registered`,
-        ];
-
-        // Git info
+    description: "Show system status; /status env for environment info, /status doctor for diagnostics",
+    usage: "/status [env|doctor]",
+    execute: async (arg, ctx) => {
+      if (arg === "env" || arg === "environment") {
+        ctx.addStatus(
+          [
+            `Runtime:  ${process.version}`,
+            `Platform: ${process.platform} ${process.arch}`,
+            `CWD:      ${ctx.cwd}`,
+            `Shell:    ${process.env.SHELL ?? "unknown"}`,
+            `Session:  ${ctx.sessionId ?? "none"}`,
+          ].join("\n"),
+        );
+      } else if (arg === "doctor" || arg === "diagnostic") {
         try {
-          const branch = execSync("git branch --show-current", {
-            cwd: ctx.cwd,
-            encoding: "utf-8",
-            timeout: 5000,
-          }).trim();
-          lines.push(`Git branch:  ${branch}`);
-        } catch {
-          // not a git repo
+          const configResult = await ctx.client.query("config");
+          const config = configResult.data as any;
+          const checks: string[] = [
+            `Runtime:  ${process.version} — OK`,
+          ];
+          try {
+            const gv = execSync("git --version", { encoding: "utf-8", timeout: 5000 }).trim();
+            checks.push(`Git:      ${gv} — OK`);
+          } catch {
+            checks.push(`Git:      NOT FOUND`);
+          }
+          checks.push(`Model:    ${config.model ?? ctx.model}`);
+          checks.push(`CWD:      ${config.cwd ?? ctx.cwd}`);
+          try {
+            const toolsResult = await ctx.client.query("tools");
+            checks.push(`Tools:    ${((toolsResult.data as any[]) ?? []).length} registered`);
+          } catch {
+            checks.push(`Tools:    unknown`);
+          }
+          checks.push(`Session:  ${ctx.sessionId ?? "none"}`);
+          try {
+            execSync("gh --version", { encoding: "utf-8", timeout: 5000 });
+            checks.push(`gh CLI:   available`);
+          } catch {
+            checks.push(`gh CLI:   not found`);
+          }
+          const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY;
+          checks.push(`API key:  ${apiKey ? "configured" : "NOT SET"}`);
+          ctx.addStatus("Diagnostics:\n  " + checks.join("\n  "));
+        } catch (err) {
+          ctx.addStatus(`Diagnostics error: ${(err as Error).message}`);
         }
-
-        // Token usage
-        const t = costTracker.getTotalTokens();
-        if (t.total > 0) {
-          lines.push(`Tokens:      ${t.total} (in: ${t.prompt}, out: ${t.completion})`);
-          lines.push(`Cost:        $${costTracker.getEstimatedCost().toFixed(4)}`);
+      } else {
+        try {
+          const configResult = await ctx.client.query("config");
+          const config = configResult.data as any;
+          const toolsResult = await ctx.client.query("tools");
+          const tools = (toolsResult.data as any[]) ?? [];
+          const lines = [
+            `Model:       ${ctx.model}`,
+            `Effort:      ${ctx.effort}`,
+            `Permission:  ${config.permissionMode ?? "acceptEdits"}`,
+            `Session:     ${ctx.sessionId ?? "none"}`,
+            `CWD:         ${ctx.cwd}`,
+            `Tools:       ${tools.length} registered`,
+          ];
+          try {
+            const branch = execSync("git branch --show-current", { cwd: ctx.cwd, encoding: "utf-8", timeout: 5000 }).trim();
+            lines.push(`Git branch:  ${branch}`);
+          } catch { /* ignore */ }
+          const t = costTracker.getTotalTokens();
+          if (t.total > 0) {
+            lines.push(`Tokens:      ${t.total} (in: ${t.prompt}, out: ${t.completion})`);
+            lines.push(`Cost:        ${costTracker.getEstimatedCost().toFixed(4)}`);
+          }
+          ctx.addStatus(lines.join("\n"));
+        } catch (err) {
+          ctx.addStatus(`Error: ${(err as Error).message}`);
         }
-
-        ctx.addStatus(lines.join("\n"));
-      } catch (err) {
-        ctx.addStatus(`Error: ${(err as Error).message}`);
       }
     },
   },
@@ -690,84 +768,5 @@ Recap what was created. Remind the user to review and tweak — these files are 
     },
   },
 
-  {
-    name: "/doctor",
-    description: "Run diagnostic checks",
-    execute: async (_arg, ctx) => {
-      const checks: string[] = [];
-
-      // Runtime
-      const isBun = typeof (globalThis as any).Bun !== "undefined";
-      if (isBun) {
-        checks.push(`Runtime: Bun ${(globalThis as any).Bun.version}`);
-      } else {
-        checks.push(`Runtime: Node ${process.version}`);
-      }
-      checks.push(`Platform: ${process.platform} ${process.arch}`);
-
-      // Git
-      try {
-        const gitVersion = execSync("git --version", { encoding: "utf-8", timeout: 5000 }).trim();
-        checks.push(`Git:     ${gitVersion}`);
-      } catch {
-        checks.push(`Git:     ✗ not found`);
-      }
-
-      // Query config from server
-      try {
-        const configResult = await ctx.client.query("config");
-        const config = configResult.data as any;
-        checks.push(`Model:   ${config.model}`);
-        checks.push(`CWD:     ${config.cwd}`);
-      } catch {
-        checks.push(`Model:   ${ctx.model}`);
-      }
-
-      // Tools
-      try {
-        const toolsResult = await ctx.client.query("tools");
-        const tools = (toolsResult.data as any[]) ?? [];
-        checks.push(`Tools:   ${tools.length} registered`);
-      } catch {
-        checks.push(`Tools:   unknown`);
-      }
-
-      // Settings file
-      const localConfig = join(ctx.cwd, ".code-shell", "settings.json");
-      checks.push(`Config:  ${existsSync(localConfig) ? localConfig : "none (using defaults)"}`);
-
-      // CODESHELL.md / CLAUDE.md
-      const instrFile = join(ctx.cwd, "CODESHELL.md");
-      const claudeMd = join(ctx.cwd, "CLAUDE.md");
-      if (existsSync(instrFile)) {
-        checks.push(`Instructions: ✓ CODESHELL.md found`);
-      } else if (existsSync(claudeMd)) {
-        checks.push(`Instructions: ✓ CLAUDE.md found (compat)`);
-      } else {
-        checks.push(`Instructions: not found`);
-      }
-
-      // Session storage
-      const sessionDir = join(homedir(), ".code-shell", "sessions");
-      checks.push(`Sessions: ${sessionDir}`);
-
-      // gh CLI
-      try {
-        execSync("gh --version", { encoding: "utf-8", timeout: 5000 });
-        checks.push(`gh CLI:  ✓ available`);
-      } catch {
-        checks.push(`gh CLI:  ✗ not found (needed for PR commands)`);
-      }
-
-      ctx.addStatus("Diagnostics:\n" + checks.map((c) => `  ${c}`).join("\n"));
-    },
-  },
-
-  {
-    name: "/help",
-    description: "Show help",
-    execute: (_arg, ctx) => {
-      ctx.addStatus("Use /help to see available commands.");
-    },
-  },
 ];
+

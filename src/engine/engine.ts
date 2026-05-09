@@ -375,7 +375,7 @@ export class Engine {
         tools: toolDefs,
       },
       {
-        maxTurns: this.config.maxTurns ?? 30,
+        maxTurns: this.config.maxTurns ?? 100,
         maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 10,
         onStream: options?.onStream,
         signal: options?.signal,

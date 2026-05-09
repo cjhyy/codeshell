@@ -45,6 +45,8 @@ export interface CommandContext {
   startOnboarding?: () => void;
   /** Open the Ink model selector (used by /model with no args). */
   openModelSelector?: () => void;
+  /** Open the Ink session picker (used by /resume with no args). */
+  openSessionPicker?: () => void;
 }
 
 export type CommandGroup = "core" | "git" | "context" | "config" | "advanced";
