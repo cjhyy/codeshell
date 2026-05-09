@@ -7,11 +7,11 @@
  * - Table rendering as React flexbox components
  * - Streaming text shown as plain text with cursor
  */
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import { Box, Text } from "../../ink/index.js";
 import { Ansi } from "../../ink/Ansi.js";
 import chalk from "chalk";
-import { Marked } from "marked";
+import { Marked, lexer as markedLexer } from "marked";
 import { markedTerminal } from "marked-terminal";
 
 // ─── LRU Token Cache ────────────────────────────────────────────
@@ -222,6 +222,100 @@ function renderHybrid(text: string): ReactNode[] {
   return parts;
 }
 
+// ─── Streaming Markdown ─────────────────────────────────────────
+//
+// Block-boundary split rendering, ported from Claude Code's StreamingMarkdown
+// (see restored-src/src/components/Markdown.tsx). Without this, in-flight
+// assistant text shows raw markdown source (`**bold**`, `* item`) until the
+// turn completes — then snaps to the rendered form. The trick:
+//
+//   1. Run `marked.lexer()` over the accumulated stream text.
+//   2. Everything up to the last non-space token is "stable" (a complete
+//      block — paragraph, heading, list, code fence). Render once, memoize,
+//      never re-parse.
+//   3. The final trailing token is the "unstable suffix" still being
+//      written. Re-parse only this on every delta.
+//
+// Cost per delta is O(unstable suffix), not O(total text), so even long
+// answers stay snappy. The lexer correctly keeps unclosed code fences and
+// block quotes as single tokens, so the split aligns with semantic blocks.
+
+interface StableBlock {
+  /** Concatenated raw text of all completed blocks. Acts as the cache key. */
+  text: string;
+  /** Pre-rendered ANSI / React for the stable region. */
+  rendered: ReactNode;
+}
+
+function StreamingMarkdown({ text }: { text: string }) {
+  // Mutable ref persists across renders so we don't re-parse blocks that
+  // already settled. Resets implicitly when the component unmounts (i.e.
+  // when this assistant_text entry is removed from the chat list).
+  const stableRef = useRef<StableBlock>({ text: "", rendered: null });
+
+  let stableText = stableRef.current.text;
+  let unstableText = text.slice(stableText.length);
+
+  // If the incoming text is shorter than our cached prefix (e.g. session
+  // restart, edit, retry), drop the cache and re-derive from scratch.
+  if (!text.startsWith(stableText)) {
+    stableRef.current = { text: "", rendered: null };
+    stableText = "";
+    unstableText = text;
+  }
+
+  // Lex only the unstable region — cheap, since stable blocks already settled.
+  let advance = 0;
+  try {
+    const tokens = markedLexer(unstableText);
+    let lastContentIdx = tokens.length - 1;
+    while (lastContentIdx >= 0 && tokens[lastContentIdx]!.type === "space") {
+      lastContentIdx--;
+    }
+    // All tokens *before* the last content token are complete → promote them.
+    for (let i = 0; i < lastContentIdx; i++) {
+      advance += tokens[i]!.raw.length;
+    }
+  } catch {
+    // Lexer failure (malformed input mid-stream) — leave stable boundary alone
+    // and render everything as unstable for this tick. It'll settle next delta.
+  }
+
+  if (advance > 0) {
+    const newStableText = stableText + unstableText.slice(0, advance);
+    // Re-render the stable region with full markdown (tables + ANSI hybrid).
+    // Only happens when the boundary advances, so total parses across a turn
+    // ≈ number of blocks, not number of chunks.
+    stableRef.current = {
+      text: newStableText,
+      rendered: renderHybrid(newStableText),
+    };
+    stableText = newStableText;
+    unstableText = text.slice(stableText.length);
+  }
+
+  // Cheap render for the trailing in-progress block. We avoid the
+  // hybrid/table extraction here because tables can't matter mid-block,
+  // and we want the render to be fast.
+  const unstableRendered = useMemo<ReactNode>(() => {
+    if (!unstableText) return null;
+    if (!hasMarkdownSyntax(unstableText)) {
+      return <Ansi>{unstableText}</Ansi>;
+    }
+    return <Ansi>{cachedRender(unstableText, renderMarkdown)}</Ansi>;
+  }, [unstableText]);
+
+  return (
+    <Box flexDirection="column" marginLeft={1}>
+      {stableRef.current.rendered}
+      {unstableRendered ? (
+        <Box flexDirection="column">{unstableRendered}</Box>
+      ) : null}
+      <Text dim>{"▌"}</Text>
+    </Box>
+  );
+}
+
 // ─── Main Components ────────────────────────────────────────────
 
 interface MessageContentProps {
@@ -232,23 +326,15 @@ interface MessageContentProps {
 export function MessageContent({ text, streaming }: MessageContentProps) {
   if (!text) return null;
 
-  const rendered = useMemo(() => {
-    if (streaming) return null;
-    return renderHybrid(text);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streaming, text]);
-
   if (streaming) {
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        <Text>
-          {text}
-          <Text dim>{"▌"}</Text>
-        </Text>
-      </Box>
-    );
+    return <StreamingMarkdown text={text} />;
   }
 
+  return <FinalMarkdown text={text} />;
+}
+
+function FinalMarkdown({ text }: { text: string }) {
+  const rendered = useMemo(() => renderHybrid(text), [text]);
   return (
     <Box flexDirection="column" marginLeft={1}>
       {rendered}

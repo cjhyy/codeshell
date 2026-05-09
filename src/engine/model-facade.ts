@@ -44,6 +44,12 @@ export class ModelFacade {
               args: chunk.toolCall.args ?? {},
             },
           });
+        } else if (chunk.type === "tool_use_delta" && chunk.toolCall?.id) {
+          onStream({
+            type: "tool_use_args_delta",
+            toolCallId: chunk.toolCall.id,
+            args: chunk.toolCall.args ?? {},
+          });
         }
       },
       signal,

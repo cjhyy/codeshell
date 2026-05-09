@@ -4,9 +4,24 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { resolve, sep } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * Strip the cwd prefix from each line so results display as relative
+ * paths (e.g. "src/ui/App.tsx" instead of an absolute path). Lines that
+ * don't start with the cwd are left untouched.
+ */
+function relativizeOutput(stdout: string, cwd: string): string {
+  const root = resolve(cwd);
+  const prefix = root.endsWith(sep) ? root : root + sep;
+  return stdout
+    .split("\n")
+    .map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line))
+    .join("\n");
+}
 
 /** rg and grep exit with code 1 when no matches found — that's not an error */
 function isNoMatchExit(err: unknown): boolean {
@@ -99,7 +114,7 @@ async function runRipgrep(
     timeout: 30_000,
   });
 
-  const result = stdout.trim();
+  const result = relativizeOutput(stdout, path).trim();
   if (!result) return "No matches found.";
 
   // Limit output lines
@@ -141,7 +156,7 @@ async function runGrep(
     timeout: 30_000,
   });
 
-  const result = stdout.trim();
+  const result = relativizeOutput(stdout, path).trim();
   if (!result) return "No matches found.";
 
   const lines = result.split("\n");

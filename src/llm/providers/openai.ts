@@ -139,7 +139,23 @@ export class OpenAIClient extends LLMClientBase {
             const existing = toolCallsMap.get(idx)!;
             if (tc.id) existing.id = tc.id;
             if (tc.function?.name) existing.name = tc.function.name;
-            if (tc.function?.arguments) existing.args += tc.function.arguments;
+            if (tc.function?.arguments) {
+              existing.args += tc.function.arguments;
+              // Best-effort partial-JSON parse: succeeds once a complete
+              // top-level object has streamed in (typical for short args)
+              // and silently waits otherwise.
+              if (existing.id) {
+                try {
+                  const parsed = JSON.parse(existing.args || "{}");
+                  options.onChunk?.({
+                    type: "tool_use_delta",
+                    toolCall: { id: existing.id, toolName: existing.name, args: parsed },
+                  });
+                } catch {
+                  // partial JSON — wait for more deltas
+                }
+              }
+            }
           }
         }
 

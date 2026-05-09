@@ -7,7 +7,7 @@
  * - Emacs bindings: Ctrl+A/E (home/end), Ctrl+K (kill to end), Ctrl+U (kill to start)
  * - ANSI inverse-video cursor
  */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Box, Text, useInput } from "../../ink/index.js";
 import { Ansi } from "../../ink/Ansi.js";
 
@@ -50,11 +50,15 @@ export default function TextInput({
   placeholder,
   focus = true,
 }: TextInputProps) {
-  const [cursorOffset, setCursorOffset] = useState(value.length);
-
-  useEffect(() => {
-    setCursorOffset(value.length);
-  }, [value]);
+  // Cursor is owned by this component. We previously had a `useEffect` that
+  // snapped cursorOffset back to `value.length` whenever `value` changed —
+  // it broke mid-string typing (cursor jumped to end after each char) and
+  // post-paste display (cursor "disappeared" because the effect raced the
+  // keypress handler and clamped past the just-inserted text). All cursor
+  // movement now flows through the keyboard branches below; if it drifts
+  // out of bounds we clamp at render time.
+  const [rawCursor, setCursorOffset] = useState(value.length);
+  const cursorOffset = Math.min(Math.max(0, rawCursor), value.length);
 
   const isMultiline = value.includes("\n");
   const lineCount = isMultiline ? value.split("\n").length : 0;
@@ -153,12 +157,19 @@ export default function TextInput({
       return;
     }
 
-    // Regular character input (including pasted multi-char strings with newlines)
+    // Regular character input (including pasted multi-char strings with newlines).
+    // Strip control bytes that aren't `\n` or `\t` so a pasted terminal diff
+    // (which carries raw `\x1b[…m` color codes) can't break the inverse-video
+    // cursor renderer below — without this, the cursor visually disappears
+    // after a paste because the embedded ESC closes our INV_ON sequence.
     if (input && !key.ctrl && !key.meta) {
+      // eslint-disable-next-line no-control-regex
+      const cleaned = input.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
+      if (!cleaned) return;
       const before = value.slice(0, cursorOffset);
       const after = value.slice(cursorOffset);
-      onChange(before + input + after);
-      setCursorOffset(cursorOffset + input.length);
+      onChange(before + cleaned + after);
+      setCursorOffset(cursorOffset + cleaned.length);
     }
   });
 

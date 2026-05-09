@@ -1,12 +1,13 @@
 /**
  * OnboardingPrompt — Ink-rendered API key / provider configuration wizard.
  *
- * Replaces the console-based runOnboarding() flow when triggered from inside
- * the REPL (/login). Mirrors the same six-step state machine but renders into
- * the bottom slot of the layout, so it does not collide with Ink's frame
- * buffer or intercept keystrokes destined for the main App.
+ * Used both for first-run onboarding (mounted standalone via
+ * src/ui/onboarding-runner.tsx) and for /login inside the REPL. Renders into
+ * the bottom slot of the layout, so when embedded it does not collide with
+ * Ink's frame buffer or intercept keystrokes destined for the main App.
  *
  * Steps: provider → apikey → model_pool → default_model → arena_ask → arena_config
+ *        (custom provider path: provider → custom_baseurl → custom_apikey → custom_model)
  */
 import { useState } from "react";
 import { Box, Text, useInput } from "../../ink/index.js";
@@ -27,6 +28,9 @@ import {
 type Step =
   | "provider"
   | "apikey"
+  | "custom_baseurl"
+  | "custom_apikey"
+  | "custom_model"
   | "model_pool"
   | "default_model"
   | "arena_ask"
@@ -60,6 +64,11 @@ export function OnboardingPrompt({ onComplete, onCancel }: OnboardingPromptProps
   const [defaultModel, setDefaultModel] = useState("");
   const [arenaParticipants, setArenaParticipants] = useState<Set<string>>(new Set());
   const [arenaAction, setArenaAction] = useState<"menu" | "add">("menu");
+  // Custom provider (OpenAI-compatible) inputs
+  const [customBaseUrl, setCustomBaseUrl] = useState("");
+  const [customBaseUrlInput, setCustomBaseUrlInput] = useState("");
+  const [customApiKeyInput, setCustomApiKeyInput] = useState("");
+  const [customModelInput, setCustomModelInput] = useState("");
 
   const detected = detectEnvKeys();
   const providerOptions: ProviderOption[] = [
@@ -96,8 +105,8 @@ export function OnboardingPrompt({ onComplete, onCancel }: OnboardingPromptProps
           setApiKey("ollama");
           enterPoolStep(provider);
         } else if (provider.id === "custom") {
-          // Custom provider not supported in Ink wizard — fallback message
-          setErrorMsg("自定义 provider 暂只在首次启动向导支持，请用 /logout 后重启。");
+          setStep("custom_baseurl");
+          setCustomBaseUrlInput("");
         } else {
           setStep("apikey");
           setApiKeyInput("");
@@ -109,6 +118,21 @@ export function OnboardingPrompt({ onComplete, onCancel }: OnboardingPromptProps
     } else if (step === "apikey") {
       if (key.escape) {
         setStep("provider");
+        setErrorMsg(null);
+      }
+    } else if (step === "custom_baseurl") {
+      if (key.escape) {
+        setStep("provider");
+        setErrorMsg(null);
+      }
+    } else if (step === "custom_apikey") {
+      if (key.escape) {
+        setStep("custom_baseurl");
+        setErrorMsg(null);
+      }
+    } else if (step === "custom_model") {
+      if (key.escape) {
+        setStep("custom_apikey");
         setErrorMsg(null);
       }
     } else if (step === "model_pool") {
@@ -319,6 +343,56 @@ export function OnboardingPrompt({ onComplete, onCancel }: OnboardingPromptProps
     });
   }
 
+  function submitCustomBaseUrl(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setErrorMsg("请输入 Base URL (Esc 返回)");
+      return;
+    }
+    setCustomBaseUrl(trimmed);
+    setErrorMsg(null);
+    setCustomApiKeyInput("");
+    setStep("custom_apikey");
+  }
+
+  function submitCustomApiKey(_value: string) {
+    // Custom providers may legitimately have no key (e.g. local proxies);
+    // we accept empty input. The actual value is read from customApiKeyInput
+    // in submitCustomModel — setApiKey() is async, so we cannot rely on it
+    // having flushed by the time the next step runs.
+    setErrorMsg(null);
+    setCustomModelInput("");
+    setStep("custom_model");
+  }
+
+  function submitCustomModel(value: string) {
+    const model = value.trim() || "gpt-4o";
+    const finalKey = customApiKeyInput.trim();
+    // Build a synthetic ProviderDef for the custom selection so save logic
+    // and finalize() can stay uniform. The single-element model list also
+    // skips the pool/arena UI by short-circuiting the flow.
+    const customProvider: ProviderDef = {
+      id: "custom",
+      name: "自定义",
+      envKey: "",
+      provider: "openai",
+      baseUrl: customBaseUrl,
+      defaultModel: model,
+      keyUrl: "",
+      keyPrefix: "",
+      models: [model],
+    };
+    setSelected(customProvider);
+    setApiKey(finalKey);
+    saveSettings(
+      { provider: "openai", model, apiKey: finalKey, baseUrl: customBaseUrl },
+      customProvider,
+      [model],
+    );
+    setStep("done");
+    onComplete({ provider: "openai", model, apiKey: finalKey, baseUrl: customBaseUrl });
+  }
+
   async function submitApiKey(value: string) {
     const trimmed = value.trim();
     if (!trimmed) {
@@ -380,6 +454,66 @@ export function OnboardingPrompt({ onComplete, onCancel }: OnboardingPromptProps
             onSubmit={submitApiKey}
             placeholder={validating ? "验证中..." : "粘贴你的 API Key, Enter 确认"}
             focus={!validating}
+          />
+        </Box>
+        {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}
+      </Box>
+    );
+  }
+
+  if (step === "custom_baseurl") {
+    return (
+      <Box flexDirection="column" marginLeft={1}>
+        {Header}
+        <Box marginLeft={2}><Text dim>自定义 OpenAI 兼容 API</Text></Box>
+        <Box marginLeft={2}>
+          <Text color="ansi:cyan">{"Base URL: "}</Text>
+          <TextInput
+            value={customBaseUrlInput}
+            onChange={setCustomBaseUrlInput}
+            onSubmit={submitCustomBaseUrl}
+            placeholder="如 http://localhost:11434/v1"
+            focus
+          />
+        </Box>
+        {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}
+      </Box>
+    );
+  }
+
+  if (step === "custom_apikey") {
+    return (
+      <Box flexDirection="column" marginLeft={1}>
+        {Header}
+        <Box marginLeft={2}><Text dim>{customBaseUrl}</Text></Box>
+        <Box marginLeft={2}>
+          <Text color="ansi:cyan">{"API Key: "}</Text>
+          <TextInput
+            value={customApiKeyInput}
+            onChange={setCustomApiKeyInput}
+            onSubmit={submitCustomApiKey}
+            placeholder="可留空 (本地服务通常不需要)"
+            focus
+          />
+        </Box>
+        {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}
+      </Box>
+    );
+  }
+
+  if (step === "custom_model") {
+    return (
+      <Box flexDirection="column" marginLeft={1}>
+        {Header}
+        <Box marginLeft={2}><Text dim>{customBaseUrl}</Text></Box>
+        <Box marginLeft={2}>
+          <Text color="ansi:cyan">{"模型名称: "}</Text>
+          <TextInput
+            value={customModelInput}
+            onChange={setCustomModelInput}
+            onSubmit={submitCustomModel}
+            placeholder="如 gpt-4o (留空使用默认)"
+            focus
           />
         </Box>
         {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}

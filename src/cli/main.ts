@@ -8,8 +8,8 @@ import { Command } from "commander";
 import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { setup } from "../bootstrap/setup.js";
-import { costTracker } from "./cost-tracker.js";
-import { hasApiKey, runOnboarding } from "./onboarding.js";
+import { costTracker, installCostTracking } from "./cost-tracker.js";
+import { hasApiKey } from "./onboarding.js";
 import type { AgentPresetName } from "../preset/index.js";
 
 const program = new Command();
@@ -171,33 +171,15 @@ function resolveOpts(opts: Record<string, string | undefined>) {
 
 // ─── Initialization ──────────────────────────────────────────────
 
-// PreAction hook: run setup + onboarding before any command executes
+// PreAction hook: shared setup before any command executes.
+//
+// Onboarding is no longer driven from here. REPL-style commands render the
+// Ink-based OnboardingPrompt themselves when no API key is configured;
+// headless commands (run, arena) check for a key in their own action and
+// error out if missing. This keeps the input stack unified on Ink and
+// avoids the raw-mode/Ink stdin handoff we used to have to do.
 program.hook("preAction", async (thisCommand) => {
-  const cmdName = thisCommand.name();
   const opts = thisCommand.opts();
-
-  // Skip onboarding for info-only commands
-  const skipOnboarding = ["sessions", "help", "version"].includes(cmdName);
-
-  // Run first-time setup if no API key is found
-  if (!skipOnboarding && !opts.apiKey && !hasApiKey()) {
-    if (!process.stdin.isTTY) {
-      process.stderr.write(
-        "Error: No API key configured and stdin is not a TTY.\n" +
-        "Set an API key via environment variable (e.g. OPENROUTER_API_KEY) " +
-        "or run Code Shell interactively to complete onboarding.\n",
-      );
-      process.exit(1);
-    }
-    const result = await runOnboarding();
-    // Inject into command opts so downstream action picks them up.
-    // Also saved to ~/.code-shell/settings.json for future runs.
-    thisCommand.setOptionValue("apiKey", result.apiKey);
-    if (!opts.model) thisCommand.setOptionValue("model", result.model);
-    if (!opts.provider) thisCommand.setOptionValue("provider", result.provider);
-    if (!opts.baseUrl) thisCommand.setOptionValue("baseUrl", result.baseUrl);
-  }
-
   await setup({
     cwd: process.cwd(),
     permissionMode: (opts.permissionMode ?? "acceptEdits") as import("../types.js").PermissionMode,
@@ -214,4 +196,8 @@ process.on("exit", () => {
 
 // ─── Parse ────────────────────────────────────────────────────────
 
+// Funnel every LLM call through the singleton cost tracker before any
+// command runs. Awaited so an early sub-agent can't fire before the hook
+// is installed.
+await installCostTracking();
 program.parse();

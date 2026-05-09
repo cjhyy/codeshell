@@ -83,6 +83,17 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
     chatStore.getEntries.bind(chatStore),
   );
   const [tasks, setTasks] = useState<TaskInfo[]>([]);
+  const tasksTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "stopped")) {
+      tasksTimerRef.current = setTimeout(() => setTasks([]), 3000);
+    }
+    return () => {
+      if (tasksTimerRef.current) clearTimeout(tasksTimerRef.current);
+    };
+  }, [tasks]);
+
   const [isRunning, setIsRunning] = useState(false);
   const [sessionId, setSessionId] = useState(initialSessionId);
   const [model, setModel] = useState(initialModel);
@@ -98,6 +109,7 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
     toolName: string;
     description: string;
     riskLevel: string;
+    args: Record<string, unknown>;
   } | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<{
     requestId: string;
@@ -175,6 +187,7 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
         toolName: request.toolName,
         description: request.description,
         riskLevel: request.riskLevel,
+        args: request.args,
       });
     };
 
@@ -283,10 +296,23 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
             );
           return [
             ...updated,
-            entry({ type: "tool_start", toolName: tc.toolName, args: tc.args, agentId }),
+            entry({ type: "tool_start", toolName: tc.toolName, args: tc.args, toolCallId: tc.id, agentId }),
             entry({ type: "tool_running", toolName: tc.toolName, agentId }),
           ];
         });
+        break;
+      }
+
+      case "tool_use_args_delta": {
+        if (agentId !== undefined) break;
+        const { toolCallId, args } = event;
+        chatStore.update((prev) =>
+          prev.map((e) =>
+            e.type === "tool_start" && e.toolCallId === toolCallId
+              ? { ...e, args }
+              : e,
+          ),
+        );
         break;
       }
 
@@ -543,15 +569,9 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
 
       setSessionId(result.sessionId);
 
+      // Token recording happens centrally via LLMClientBase.onUsage —
+      // we just refresh the displayed totals here.
       if (result.usage && result.usage.totalTokens > 0) {
-        costTracker.record(
-          model,
-          result.usage.promptTokens,
-          result.usage.completionTokens,
-          false,
-          result.usage.cacheReadTokens ?? 0,
-          result.usage.cacheCreationTokens ?? 0,
-        );
         setContextTokens(result.usage.promptTokens);
       }
       setTotalTokens(costTracker.getTotalTokens().total);
@@ -744,6 +764,8 @@ export function App({ client, model: initialModel, effort, maxTurns, cwd, maxCon
       toolName={pendingApproval.toolName}
       description={pendingApproval.description}
       riskLevel={pendingApproval.riskLevel}
+      args={pendingApproval.args}
+      cwd={cwd}
       onDecision={(approved, always) => {
         const { requestId } = pendingApproval;
         setPendingApproval(null);

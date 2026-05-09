@@ -42,8 +42,11 @@ export function ToolCallStart({ toolName, args, nested }: ToolCallStartProps) {
   const dotColor = TOOL_DOT_COLORS[toolName] ?? "ansi:cyan";
   const ml = nested ? 3 : 0;
 
+  // Top-level tool blocks get a blank line above them so back-to-back tool
+  // calls don't visually fuse into one wall (matches Claude Code's spacing).
+  // Nested (under Agent) stays tight because the agent block already groups.
   return (
-    <Box marginLeft={ml}>
+    <Box marginLeft={ml} marginTop={nested ? 0 : 1}>
       <Text color={dotColor}>{"  ● "}</Text>
       <Text bold>{toolName}</Text>
       <Text dim>{"  "}{argsStr}</Text>

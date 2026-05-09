@@ -9,7 +9,7 @@
 type ChatEntryData =
   | { type: "user"; text: string }
   | { type: "assistant_text"; text: string; streaming: boolean; agentId?: string }
-  | { type: "tool_start"; toolName: string; args: Record<string, unknown>; agentId?: string }
+  | { type: "tool_start"; toolName: string; args: Record<string, unknown>; toolCallId?: string; agentId?: string }
   | { type: "tool_running"; toolName: string; agentId?: string }
   | { type: "tool_result"; toolName: string; result?: string; error?: string; agentId?: string }
   | { type: "thinking"; agentId?: string; content?: string }

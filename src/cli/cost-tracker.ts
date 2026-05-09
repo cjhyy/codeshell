@@ -3,6 +3,7 @@
  */
 
 import chalk from "chalk";
+import { findOpenRouterModel } from "../data/openrouter-models.js";
 
 // Pricing per 1M tokens (USD) — common models via OpenRouter/direct
 // cacheRead = price for cached input tokens (typically 90% cheaper than input)
@@ -76,6 +77,40 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
 // Default fallback pricing
 const DEFAULT_PRICING: ModelPricing = pricing(3, 15);
 
+/**
+ * Resolve pricing for a model. Lookup order:
+ *   1. OpenRouter snapshot (when the ID looks like vendor/model)
+ *   2. MODEL_PRICING by canonical name (strips provider prefix)
+ *   3. MODEL_PRICING by raw name
+ *   4. DEFAULT_PRICING fallback
+ *
+ * Returns { pricing, source } so callers can flag unknown-model warnings
+ * accurately (the snapshot path counts as known even if MODEL_PRICING misses).
+ */
+function lookupPricing(model: string): { pricing: ModelPricing; known: boolean } {
+  if (model.includes("/")) {
+    const hit = findOpenRouterModel(model);
+    if (hit && (hit.inputPricePerMillion > 0 || hit.outputPricePerMillion > 0)) {
+      const input = hit.inputPricePerMillion;
+      const output = hit.outputPricePerMillion;
+      return {
+        pricing: {
+          input,
+          output,
+          // Snapshot doesn't carry cache pricing; use the same heuristic as pricing() helper
+          cacheRead: input * 0.1,
+          cacheWrite: input * 1.25,
+        },
+        known: true,
+      };
+    }
+  }
+  const canonical = getCanonicalName(model);
+  const hit = MODEL_PRICING[canonical] ?? MODEL_PRICING[model];
+  if (hit) return { pricing: hit, known: true };
+  return { pricing: DEFAULT_PRICING, known: false };
+}
+
 export interface UsageRecord {
   model: string;
   promptTokens: number;
@@ -110,7 +145,7 @@ export class CostTracker {
     cacheWriteTokens = 0,
   ): void {
     const canonical = getCanonicalName(model);
-    if (!MODEL_PRICING[canonical] && !MODEL_PRICING[model]) {
+    if (!lookupPricing(model).known && !lookupPricing(canonical).known) {
       this._hasUnknownModel = true;
     }
     this.records.push({
@@ -138,7 +173,7 @@ export class CostTracker {
   getEstimatedCost(): number {
     let totalCost = 0;
     for (const r of this.records) {
-      const p = MODEL_PRICING[r.model] ?? DEFAULT_PRICING;
+      const { pricing: p } = lookupPricing(r.model);
       // promptTokens includes cache tokens — subtract them to avoid double billing
       const uncachedInput = Math.max(0, r.promptTokens - r.cacheReadTokens - r.cacheWriteTokens);
       totalCost += (uncachedInput / 1_000_000) * p.input;
@@ -165,8 +200,7 @@ export class CostTracker {
     cacheReadTokens = 0,
     cacheWriteTokens = 0,
   ): number {
-    const canonical = getCanonicalName(model);
-    const p = MODEL_PRICING[canonical] ?? MODEL_PRICING[model] ?? DEFAULT_PRICING;
+    const { pricing: p } = lookupPricing(model);
     const uncachedInput = Math.max(0, promptTokens - cacheReadTokens - cacheWriteTokens);
     return (
       (uncachedInput / 1_000_000) * p.input +
@@ -230,7 +264,7 @@ export class CostTracker {
       lines.push("");
       lines.push(`    ${chalk.dim("By model:")}`);
       for (const [model, stats] of modelMap) {
-        const p = MODEL_PRICING[model] ?? DEFAULT_PRICING;
+        const { pricing: p } = lookupPricing(model);
         const uncachedInput = Math.max(0, stats.prompt - stats.cacheRead - stats.cacheWrite);
         const modelCost =
           (uncachedInput / 1_000_000) * p.input +
@@ -322,3 +356,22 @@ function formatDuration(ms: number): string {
 
 // Singleton for the current session
 export const costTracker = new CostTracker();
+
+/**
+ * Wire the LLM base-class usage hook into the singleton cost tracker.
+ * Called once from main.ts so every LLM call (REPL, run, arena, sub-agents)
+ * records into a single tracker without each call site having to remember.
+ */
+export async function installCostTracking(): Promise<void> {
+  const { LLMClientBase } = await import("../llm/client-base.js");
+  LLMClientBase.onUsage = (model, usage) => {
+    costTracker.record(
+      model,
+      usage.promptTokens,
+      usage.completionTokens,
+      false,
+      usage.cacheReadTokens ?? 0,
+      usage.cacheCreationTokens ?? 0,
+    );
+  };
+}

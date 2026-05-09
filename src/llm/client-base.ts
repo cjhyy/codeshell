@@ -15,6 +15,14 @@ export abstract class LLMClientBase {
   readonly retryMaxAttempts: number;
   readonly enableStreaming: boolean;
 
+  /**
+   * Process-wide hook fired on every LLM response. The CLI installs this in
+   * main.ts to feed the cost tracker; lives on the base class so every code
+   * path (REPL, run, arena, sub-agents) reports through one funnel without
+   * each call site needing to remember.
+   */
+  static onUsage?: (model: string, usage: TokenUsage) => void;
+
   protected usage: LLMUsageTracker = {
     records: [],
     totalPromptTokens: 0,
@@ -44,6 +52,7 @@ export abstract class LLMClientBase {
     this.usage.totalCompletionTokens += usage.completionTokens;
     this.usage.totalTokens += usage.totalTokens;
     this.usage.requestCount++;
+    LLMClientBase.onUsage?.(this.model, usage);
   }
 
   getUsage(): LLMUsageTracker {

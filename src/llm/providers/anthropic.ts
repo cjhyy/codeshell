@@ -135,6 +135,16 @@ export class AnthropicClient extends LLMClientBase {
 
       stream.on("inputJson", (_delta, snapshot) => {
         currentToolInput = JSON.stringify(snapshot);
+        if (currentToolId) {
+          options.onChunk?.({
+            type: "tool_use_delta",
+            toolCall: {
+              id: currentToolId,
+              toolName: currentToolName,
+              args: (snapshot ?? {}) as Record<string, unknown>,
+            },
+          });
+        }
       });
 
       const finalMessage = await stream.finalMessage();

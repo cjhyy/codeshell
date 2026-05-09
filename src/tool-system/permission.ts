@@ -426,16 +426,21 @@ export class PermissionClassifier {
     return "low";
   }
 
+  /**
+   * Short, human-friendly subtitle. The UI shows this under the tool title;
+   * full args (command bodies, diffs, etc.) come from the args field, so this
+   * stays compact — no truncation here, just a label.
+   */
   private describeToolCall(toolName: string, args: Record<string, unknown>): string {
     switch (toolName) {
       case "Bash":
-        return `Run command: ${String(args.command ?? "").slice(0, 200)}`;
+        return String(args.description ?? "Run shell command");
       case "Write":
-        return `Write to: ${args.file_path}`;
+        return `Create or overwrite ${args.file_path}`;
       case "Edit":
-        return `Edit file: ${args.file_path}`;
+        return `Modify ${args.file_path}`;
       default:
-        return `${toolName}(${JSON.stringify(args).slice(0, 100)})`;
+        return toolName;
     }
   }
 }

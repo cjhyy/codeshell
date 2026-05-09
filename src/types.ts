@@ -219,6 +219,7 @@ export type StreamEvent =
   | { type: "stream_request_start"; turnNumber: number; agentId?: string }
   | { type: "text_delta"; text: string; agentId?: string }
   | { type: "tool_use_start"; toolCall: ToolCall; agentId?: string }
+  | { type: "tool_use_args_delta"; toolCallId: string; args: Record<string, unknown>; agentId?: string }
   | { type: "tool_result"; result: ToolResult; agentId?: string }
   | { type: "assistant_message"; message: Message; agentId?: string }
   | { type: "turn_complete"; reason: TerminalReason; agentId?: string }

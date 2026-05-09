@@ -6,9 +6,31 @@
  * - cli/output/renderer.ts (headless text output)
  */
 
+import { sep } from "node:path";
+
 /** Maximum preview lines for tool output. */
 export const MAX_PREVIEW_LINES = 4;
 export const MAX_LINE_WIDTH = 88;
+
+/**
+ * Argument keys that carry filesystem paths. Values for these keys are
+ * relativized against process.cwd() before display so users see
+ * "src/ui/App.tsx" instead of "/Users/.../codeshell/src/ui/App.tsx".
+ */
+const PATH_ARG_KEYS = new Set(["file_path", "path", "directory", "cwd"]);
+
+/**
+ * Strip the cwd prefix from a path string for display. Paths outside
+ * cwd, relative paths, and non-string values are returned unchanged.
+ */
+function relativizePath(value: string): string {
+  if (!value || !value.startsWith("/")) return value;
+  const cwd = process.cwd();
+  const prefix = cwd.endsWith(sep) ? cwd : cwd + sep;
+  if (value === cwd) return ".";
+  if (value.startsWith(prefix)) return value.slice(prefix.length);
+  return value;
+}
 
 /** Tool name → display color for the dot indicator. */
 export const TOOL_DOT_COLORS: Record<string, string> = {
@@ -49,15 +71,32 @@ const TOOL_ARG_KEYS: Record<string, string[]> = {
 };
 
 /**
+ * Strip a leading `cd <dir> && ` (or `; `) so the visible command is the
+ * thing the user actually cares about. The cwd prefix is mechanical noise
+ * that otherwise eats the entire truncation budget on long absolute paths.
+ */
+function stripCdPrefix(cmd: string): string {
+  // Matches: cd <path> && rest   |   cd "<path with spaces>" && rest   |   cd '...'; rest
+  const m = cmd.match(/^\s*cd\s+(?:"[^"]*"|'[^']*'|\S+)\s*(?:&&|;)\s*(.+)$/s);
+  return m ? m[1]!.trim() : cmd;
+}
+
+/**
  * Format tool arguments into a compact one-line summary.
  */
 export function formatToolArgs(toolName: string, args: Record<string, unknown>): string {
   const keys = TOOL_ARG_KEYS[toolName] ?? Object.keys(args).slice(0, 2);
   const parts: string[] = [];
   for (const k of keys) {
-    const v = args[k];
+    let v = args[k];
     if (v !== undefined && !k.startsWith("__")) {
-      parts.push(truncate(String(v), 60));
+      let s = String(v);
+      if (toolName === "Bash" && k === "command") s = stripCdPrefix(s);
+      else if (PATH_ARG_KEYS.has(k)) s = relativizePath(s);
+      // Bash commands deserve more room than other args — the truncation
+      // budget here used to swallow `git diff …` after a long cd prefix.
+      const max = toolName === "Bash" && k === "command" ? MAX_LINE_WIDTH : 60;
+      parts.push(truncate(s, max));
     }
   }
   return parts.length > 0 ? parts.join(" ") : truncate(JSON.stringify(args), 80);
