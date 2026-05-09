@@ -2,7 +2,7 @@
  * SpinnerWithVerb — animated spinner with random verbs, elapsed time, and token count.
  */
 import { useState, useEffect, useRef, type MutableRefObject } from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 function getDefaultCharacters(): string[] {
   if (process.env.TERM === 'xterm-ghostty') {

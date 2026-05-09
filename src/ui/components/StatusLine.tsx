@@ -6,7 +6,7 @@
  * Manages its own 1s interval so the parent App doesn't re-render.
  */
 import React, { useState, useEffect, type MutableRefObject } from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 interface StatusLineProps {
   model: string;

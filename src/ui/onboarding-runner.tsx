@@ -6,7 +6,7 @@
  * onboarding and the main REPL share a single (Ink-based) input stack.
  */
 import React from "react";
-import render, { type Instance } from "../ink/root.js";
+import render, { type Instance } from "../render/root.js";
 import { ThemeProvider } from "./theme.js";
 import { OnboardingPrompt } from "./components/OnboardingPrompt.js";
 import type { OnboardingResult } from "../cli/onboarding.js";

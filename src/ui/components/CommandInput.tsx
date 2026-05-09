@@ -5,7 +5,7 @@
  * Arrow keys navigate, Tab/Enter selects, Esc dismisses.
  */
 import { useState, useMemo, useEffect, useRef } from "react";
-import { Box, Text, useInput } from "../../ink/index.js";
+import { Box, Text, useInput } from "../../render/index.js";
 import TextInput from "./TextInput.js";
 import { createHistoryNavigator, addToHistory } from "../input-history.js";
 

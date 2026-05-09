@@ -21,7 +21,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { Box, Text, useStdout, useInput } from "../../ink/index.js";
+import { Box, Text, useStdout, useInput } from "../../render/index.js";
 
 export interface ScrollViewHandle {
   scrollTo: (y: number) => void;

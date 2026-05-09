@@ -10,7 +10,7 @@
  *        (custom provider path: provider → custom_baseurl → custom_apikey → custom_model)
  */
 import { useState } from "react";
-import { Box, Text, useInput } from "../../ink/index.js";
+import { Box, Text, useInput } from "../../render/index.js";
 import TextInput from "./TextInput.js";
 import {
   PROVIDERS,

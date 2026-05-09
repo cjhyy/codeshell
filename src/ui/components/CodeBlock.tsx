@@ -2,7 +2,7 @@
  * CodeBlock — syntax-highlighted code block with language tag and optional line numbers.
  */
 import React from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 interface CodeBlockProps {
   code: string;

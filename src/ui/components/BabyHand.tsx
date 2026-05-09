@@ -9,7 +9,7 @@
  * Frame 12+: 气泡消失，静止
  */
 import { useState, useEffect } from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 const H = "rgb(40,30,25)";
 const S = "rgb(240,200,160)";

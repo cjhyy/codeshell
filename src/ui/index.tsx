@@ -1,12 +1,12 @@
 /**
- * REPL entry point — uses the custom ink engine (src/ink/) for rendering.
+ * REPL entry point — uses the in-tree render engine (src/render/) for rendering.
  *
  * Renders in normal terminal mode (not alternate screen) so the terminal's
  * native scrollback buffer provides scrolling. Content flows naturally
  * downward; the input prompt is always at the bottom.
  */
 import React from "react";
-import render, { type Instance } from "../ink/root.js";
+import render, { type Instance } from "../render/root.js";
 import { App } from "./App.js";
 import { ThemeProvider } from "./theme.js";
 import type { AgentClient } from "../protocol/client.js";

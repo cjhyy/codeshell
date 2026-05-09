@@ -24,7 +24,7 @@
  */
 import { useState } from "react";
 import { homedir } from "node:os";
-import { Box, Text, useInput } from "../../ink/index.js";
+import { Box, Text, useInput } from "../../render/index.js";
 
 interface PermissionPromptProps {
   toolName: string;

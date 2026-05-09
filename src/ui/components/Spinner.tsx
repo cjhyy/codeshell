@@ -6,7 +6,7 @@
  * position to jump back to the top of the terminal.
  */
 import { useState, useEffect, useRef } from "react";
-import { Text } from "../../ink/index.js";
+import { Text } from "../../render/index.js";
 
 const FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 

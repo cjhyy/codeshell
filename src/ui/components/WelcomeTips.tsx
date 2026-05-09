@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 interface WelcomeTipsProps {
   cwd: string;

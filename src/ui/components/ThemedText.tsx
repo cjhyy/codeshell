@@ -7,7 +7,7 @@
  * version uses the lightweight ui/theme.ts context.
  */
 import React from "react";
-import { Text } from "../../ink/index.js";
+import { Text } from "../../render/index.js";
 import { useTheme, resolveColor } from "../theme.js";
 import type { Theme } from "../../utils/theme.js";
 

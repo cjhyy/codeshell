@@ -7,7 +7,7 @@
  *   ▜▄▄▛
  *    ▀▀
  */
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 const HAIR = "rgb(40,30,25)";
 const SKIN = "rgb(240,200,160)";

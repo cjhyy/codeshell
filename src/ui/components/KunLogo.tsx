@@ -4,7 +4,7 @@
  * 动画流程：运球 → 身体右倾靠肩 → 回正 → 循环
  */
 import { useState, useEffect } from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 const H = "rgb(40,30,25)";        // Hair
 const S = "rgb(240,200,160)";     // Skin

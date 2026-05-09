@@ -6,7 +6,7 @@
  *              Model (effort) · billing
  *              ~/path/to/cwd
  */
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 import { DogLogo } from "./DogLogo.js";
 import { KunLogo } from "./KunLogo.js";
 import { KunHead } from "./KunHead.js";

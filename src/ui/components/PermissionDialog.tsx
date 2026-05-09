@@ -4,7 +4,7 @@
  * Shown when a tool needs user approval (permission decision = "ask").
  */
 import React, { useState } from "react";
-import { Box, Text, useInput } from "../../ink/index.js";
+import { Box, Text, useInput } from "../../render/index.js";
 
 interface PermissionDialogProps {
   toolName: string;

@@ -2,7 +2,7 @@
  * ContextUsageBar — shows context window usage as a progress bar.
  */
 import React from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 interface ContextUsageBarProps {
   usedTokens: number;

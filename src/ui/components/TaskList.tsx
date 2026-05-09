@@ -2,7 +2,7 @@
  * Task list display component.
  */
 import React from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 import { Spinner } from "./Spinner.js";
 import type { TaskInfo } from "../../types.js";
 

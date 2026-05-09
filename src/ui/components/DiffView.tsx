@@ -2,7 +2,7 @@
  * DiffView — Ink component for rendering git diffs with color coding.
  */
 import React from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 interface DiffViewProps {
   diff: string;

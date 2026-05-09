@@ -6,7 +6,7 @@
  * via client.query("models")) so this component stays purely presentational.
  */
 import { useState } from "react";
-import { Box, Text, useInput } from "../../ink/index.js";
+import { Box, Text, useInput } from "../../render/index.js";
 import type { ProtocolModelEntry } from "../../protocol/types.js";
 
 /** Re-export under the UI name for convenience. */

@@ -10,7 +10,7 @@
  *
  * 9 cols wide × 5 rows tall, similar footprint to Clawd.
  */
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 // Papillon colors
 const BLK  = "rgb(45,42,40)";        // Black fur

@@ -11,7 +11,7 @@
  * scrolls away and new messages arrive.
  */
 import React, { useMemo, useRef, useEffect, useCallback, type ReactNode } from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 import type { ChatEntry } from "../store.js";
 
 const VIRTUALIZE_THRESHOLD = 100;

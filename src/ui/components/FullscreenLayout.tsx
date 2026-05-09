@@ -17,7 +17,7 @@
  * - Modal pane for slash-command dialogs
  */
 import React, { useState, useRef, useEffect, useCallback, type RefObject, type ReactNode } from "react";
-import { Box, Text, useInput } from "../../ink/index.js";
+import { Box, Text, useInput } from "../../render/index.js";
 
 interface FullscreenLayoutProps {
   /** Main scrollable content (messages). */

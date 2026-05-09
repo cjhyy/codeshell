@@ -3,7 +3,7 @@
  * with side-by-side or unified view.
  */
 import React from "react";
-import { Box, Text } from "../../ink/index.js";
+import { Box, Text } from "../../render/index.js";
 
 interface StructuredDiffProps {
   filePath: string;
