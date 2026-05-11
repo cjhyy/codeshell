@@ -10,6 +10,7 @@ import { replCommand } from "./commands/repl.js";
 import { setup } from "../bootstrap/setup.js";
 import { costTracker, installCostTracking } from "./cost-tracker.js";
 import { hasApiKey } from "./onboarding.js";
+import { getCurrentVersion } from "./updater.js";
 import type { AgentPresetName } from "../preset/index.js";
 
 const program = new Command();
@@ -17,7 +18,7 @@ const program = new Command();
 program
   .name("code-shell")
   .description("Code Shell — general orchestration framework with a terminal coding assistant preset")
-  .version("0.1.0");
+  .version(getCurrentVersion());
 
 // ─── Shared options ───────────────────────────────────────────────
 

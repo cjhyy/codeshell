@@ -8,6 +8,24 @@ breaking.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-09
+
+### Fixed
+- **Multi-model `apiKey` ignored on startup.** When `settings.json` defined
+  a model in `models[]` (with its own `apiKey`/`baseUrl`) and the top-level
+  `model.apiKey` was empty, the runtime fell through to
+  `OPENROUTER_API_KEY` env, producing 401s against non-OpenRouter
+  endpoints (e.g. DeepSeek direct). Engine constructor now merges the
+  active pool entry's `apiKey`/`baseUrl` back into `config.llm` —
+  matching the existing `/model` switch path.
+- **Banner version hardcoded.** `Banner.tsx`, `printBanner`, and
+  `commander.version()` all displayed `v0.1.0` regardless of
+  `package.json`. Now read dynamically via `getCurrentVersion()`.
+- **`updater.ts` ESM crash.** `require("../../package.json")` is unavailable
+  in ESM builds. Replaced with a walk-up + `createRequire` fallback that
+  works in both ESM and CJS bundles. Also corrected the npm package name
+  used by the update check (`@cjhyy/code-shell`, not `code-shell`).
+
 ## [0.1.0-alpha.1] - 2026-04-30
 
 ### Changed (breaking)

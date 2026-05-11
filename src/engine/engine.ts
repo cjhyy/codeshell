@@ -147,10 +147,19 @@ export class Engine {
             maxContextTokens: m.maxContextTokens,
           });
         }
-        // Set active to the current config model
+        // Set active to the current config model and inherit its
+        // apiKey/baseUrl into config.llm — otherwise the first run() uses
+        // whatever fallback (e.g. OPENROUTER_API_KEY env) repl.ts resolved
+        // before the pool existed, which mismatches the model's endpoint.
         const currentModel = config.llm.model;
         const match = settings.models.find((m: any) => m.model === currentModel);
-        if (match) this.modelPool.switch(match.key);
+        if (match) {
+          const entry = this.modelPool.switch(match.key);
+          this.config = {
+            ...this.config,
+            llm: this.modelPool.toLLMConfig(entry, this.config.llm),
+          };
+        }
       }
     } catch {
       // Settings not available — pool stays empty

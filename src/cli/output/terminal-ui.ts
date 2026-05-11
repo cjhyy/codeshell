@@ -8,6 +8,7 @@ import { Marked } from "marked";
 // @ts-ignore — marked-terminal has no up-to-date type declarations
 import { markedTerminal } from "marked-terminal";
 import { highlight } from "cli-highlight";
+import { getCurrentVersion } from "../updater.js";
 
 // ─── Markdown Renderer ───────────────────────────────────────────
 
@@ -100,7 +101,7 @@ export function printBanner(lines: { label: string; value: string }[]): void {
 
   // Title
   const title = "  Code Shell";
-  const version = "v0.1.0";
+  const version = `v${getCurrentVersion()}`;
   const titleLine = `   ${chalk.bold.cyan(title)} ${chalk.dim(version)}`;
   const pad = width - stripAnsi(titleLine).length + 4;
   console.log(`  ${chalk.dim("│")}${titleLine}${" ".repeat(Math.max(pad, 0))}${chalk.dim("│")}`);
