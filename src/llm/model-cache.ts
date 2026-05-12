@@ -7,6 +7,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
 export interface CachedModel {
@@ -58,10 +59,5 @@ export function isStale(file: ModelCacheFile, now: number = Date.now()): boolean
 }
 
 export function defaultCacheDir(): string {
-  return join(
-    process.env.HOME ?? process.env.USERPROFILE ?? ".",
-    ".code-shell",
-    "cache",
-    "models",
-  );
+  return join(homedir(), ".code-shell", "cache", "models");
 }
