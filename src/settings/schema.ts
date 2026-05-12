@@ -23,21 +23,50 @@ export const SettingsSchema = z
         apiKey: z.string().optional(),
         baseUrl: z.string().default("https://openrouter.ai/api/v1"),
         temperature: z.number().min(0).max(2).default(0.3),
-        maxTokens: z.number().default(8192),
+        // No default — leaving it undefined lets callers prefer effort presets
+        // (or model-specific limits) over a one-size-fits-all 8192 cap. Users
+        // who want an explicit cap set it here.
+        maxTokens: z.number().optional(),
       })
       .default({}),
+
+    providers: z
+      .array(
+        z.object({
+          key: z.string(),
+          label: z.string().optional(),
+          kind: z.enum([
+            "openai",
+            "anthropic",
+            "deepseek",
+            "xai",
+            "mistral",
+            "groq",
+            "google",
+            "openrouter",
+            "ollama",
+            "custom",
+          ]),
+          baseUrl: z.string(),
+          apiKey: z.string().optional(),
+          protocol: z.enum(["openai-compat", "anthropic-style"]).optional(),
+          modelsPath: z.string().optional(),
+        }),
+      )
+      .default([]),
 
     models: z
       .array(
         z.object({
           key: z.string(),
           label: z.string().optional(),
-          provider: z.string(),
+          providerKey: z.string().optional(),
           model: z.string(),
-          baseUrl: z.string().optional(),
-          apiKey: z.string().optional(),
           maxOutputTokens: z.number().optional(),
           maxContextTokens: z.number().optional(),
+          provider: z.string().optional(),
+          baseUrl: z.string().optional(),
+          apiKey: z.string().optional(),
         }),
       )
       .default([]),
