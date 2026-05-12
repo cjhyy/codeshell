@@ -119,7 +119,7 @@ function buildModelPool(engineConfig: EngineConfig): ModelPool {
         pool.register({
           key: m.key,
           label: m.label,
-          provider: m.provider,
+          provider: m.provider ?? "",
           model: m.model,
           baseUrl: m.baseUrl ?? engineConfig.llm.baseUrl,
           apiKey: m.apiKey ?? engineConfig.llm.apiKey,

@@ -147,7 +147,7 @@ export class Engine {
           this.modelPool.register({
             key: m.key,
             label: m.label,
-            provider: m.provider,
+            provider: m.provider ?? "",
             model: m.model,
             baseUrl: m.baseUrl,
             apiKey: m.apiKey,
