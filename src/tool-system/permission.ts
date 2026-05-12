@@ -624,8 +624,26 @@ export class PermissionClassifier {
         const argVal = String(args[key] ?? "");
         if (pattern instanceof RegExp) {
           if (!pattern.test(argVal)) return false;
-        } else {
-          if (!argVal.includes(pattern)) return false;
+        } else if (typeof pattern === "string") {
+          // Rules persisted in settings.local.json lose their RegExp type
+          // through JSON round-trip — they come back as strings. buildProjectRule
+          // produces regex sources like `^cd(\\s|$)`; treat any string with
+          // regex metacharacters as a pattern and only fall back to substring
+          // match for plain literals (kept for backward compat with hand-edited
+          // settings files that used plain substrings).
+          const looksLikeRegex = /[\\^$.*+?()[\]|{}]/.test(pattern);
+          if (looksLikeRegex) {
+            let re: RegExp;
+            try {
+              re = new RegExp(pattern);
+            } catch {
+              if (!argVal.includes(pattern)) return false;
+              continue;
+            }
+            if (!re.test(argVal)) return false;
+          } else if (!argVal.includes(pattern)) {
+            return false;
+          }
         }
       }
     }
