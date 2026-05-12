@@ -23,10 +23,7 @@ export const SettingsSchema = z
         apiKey: z.string().optional(),
         baseUrl: z.string().default("https://openrouter.ai/api/v1"),
         temperature: z.number().min(0).max(2).default(0.3),
-        // No default — leaving it undefined lets callers prefer effort presets
-        // (or model-specific limits) over a one-size-fits-all 8192 cap. Users
-        // who want an explicit cap set it here.
-        maxTokens: z.number().optional(),
+        maxTokens: z.number().default(8192),
       })
       .default({}),
 
