@@ -15,6 +15,7 @@ import { Command } from "commander";
 import { FileRunStore } from "../../run/FileRunStore.js";
 import { RunManager } from "../../run/RunManager.js";
 import { SettingsManager } from "../../settings/manager.js";
+import { resolveApiKey } from "../onboarding.js";
 import type { LLMConfig, PermissionMode } from "../../types.js";
 import type { AgentPresetName } from "../../preset/index.js";
 import type { RunStatus } from "../../run/types.js";
@@ -25,11 +26,7 @@ function createRunManager(): RunManager {
   const cwd = process.cwd();
   const settings = new SettingsManager(cwd).get();
 
-  const apiKey =
-    process.env.OPENROUTER_API_KEY ??
-    process.env.ANTHROPIC_API_KEY ??
-    process.env.OPENAI_API_KEY ??
-    settings.model.apiKey;
+  const apiKey = resolveApiKey(undefined, settings.model.apiKey);
 
   const llm: LLMConfig = {
     provider: settings.model.provider ?? "openai",

@@ -13,6 +13,7 @@ import type {
 import { createLLMClient } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
+import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import {
   PermissionClassifier,
   HeadlessApprovalBackend,
@@ -30,6 +31,7 @@ import { Transcript } from "../session/transcript.js";
 import { ModelFacade } from "./model-facade.js";
 import type { CostStateStore } from "./cost-store.js";
 import { logger } from "../logging/logger.js";
+import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
@@ -44,6 +46,7 @@ import {
   type AgentPresetName,
 } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
+import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -109,6 +112,11 @@ export class Engine {
   private compactedMessagesBySession = new Map<string, Message[]>();
   private activePermission: PermissionClassifier | undefined;
 
+  /** Public accessor so UI/clients can read the resolved per-model window. */
+  get maxContextTokens(): number {
+    return this.resolveMaxContextTokens();
+  }
+
   private resolveMaxContextTokens(): number {
     const modelEntry = this.modelPool.get();
     return modelEntry?.maxContextTokens ?? this.config.maxContextTokens ?? 200_000;
@@ -152,7 +160,13 @@ export class Engine {
         // whatever fallback (e.g. OPENROUTER_API_KEY env) repl.ts resolved
         // before the pool existed, which mismatches the model's endpoint.
         const currentModel = config.llm.model;
-        const match = settings.models.find((m: any) => m.model === currentModel);
+        // OpenRouter stores entries as "provider/model-name"; the top-level
+        // settings.model.name is just "model-name".  Match on either form.
+        const match = settings.models.find(
+          (m: any) =>
+            m.model === currentModel ||
+            (currentModel && m.model?.endsWith(`/${currentModel}`)),
+        );
         if (match) {
           const entry = this.modelPool.switch(match.key);
           this.config = {
@@ -198,6 +212,22 @@ export class Engine {
     },
   ): Promise<EngineResult> {
     const cwd = this.config.cwd ?? process.cwd();
+
+    const noise = detectPastedNoise(task);
+    if (noise.isNoise) {
+      const hint =
+        `Your input looks like pasted terminal output (${noise.reason}). ` +
+        `I didn't start a task. What would you like to ask?` +
+        (noise.cleaned ? `\n\nExtracted text: ${noise.cleaned.slice(0, 200)}` : "");
+      logger.info("engine.run.rejected", { reason: noise.reason, len: task.length });
+      return {
+        text: hint,
+        reason: "completed",
+        sessionId: options?.sessionId ?? "noise-rejected",
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    }
 
     // Build the per-Engine ToolContext that will be threaded through every
     // tool call. Replaces the old module-level singletons (setAskUserFn,
@@ -264,6 +294,12 @@ export class Engine {
       const userMsg: Message = { role: "user", content: task };
       messages.push(userMsg);
       session.transcript.appendMessage("user", task);
+      // Flush "active" status to disk immediately. resume() set it in memory
+      // (session-manager.ts), but without this write the on-disk state.json
+      // still shows the previous run's terminal reason — so any external
+      // observer (another CLI process, /sid, the session list) would think
+      // the session is still errored/aborted while we're actually running.
+      this.sessionManager.saveState(session.state);
     } else {
       session = this.sessionManager.create(cwd, this.config.llm.model, this.config.llm.provider);
       messages = [{ role: "user", content: task }];
@@ -277,6 +313,15 @@ export class Engine {
     // subsequent log line — engine, tool exec, MCP, context manager,
     // protocol — is filterable by `sid` in ~/.code-shell/logs/.
     logger.setSid(session.state.sessionId);
+
+    recordSessionStart(session.state.sessionId, {
+      task,
+      cwd,
+      model: this.config.llm.model,
+      provider: this.config.llm.provider,
+      permissionMode: this.config.permissionMode ?? "acceptEdits",
+      resumed: !!options?.sessionId,
+    });
 
     // Tell the client the sid *now* instead of waiting for run() to resolve.
     // The user wants `/sid` to work mid-turn; without this, the client only
@@ -308,6 +353,8 @@ export class Engine {
     }
 
     const toolExecutor = new ToolExecutor(this.toolRegistry, permission, this.hooks);
+    const investigationGuard = new InvestigationGuard();
+    toolExecutor.setInvestigationGuard(investigationGuard);
 
     // Wire abort signal for cascading cancellation + per-Engine ToolContext
     toolExecutor.setSignal(options?.signal);
@@ -458,6 +505,26 @@ export class Engine {
         maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 10,
         onStream: options?.onStream,
         signal: options?.signal,
+        // Heartbeat: flush turnCount + tokens to state.json after every turn
+        // so external observers (other CLI processes, /sid, the session list)
+        // see live progress instead of a stale snapshot from the last
+        // completed run.
+        onTurnBoundary: (turnCount) => {
+          session.state.turnCount = turnCount;
+          const u = modelFacade.getUsage();
+          session.state.tokenUsage = {
+            promptTokens: u.totalPromptTokens,
+            completionTokens: u.totalCompletionTokens,
+            totalTokens: u.totalTokens,
+          };
+          if (this.config.costStore) {
+            session.state.costState = this.config.costStore.serialize() as Record<
+              string,
+              unknown
+            >;
+          }
+          this.sessionManager.saveState(session.state);
+        },
       },
     );
 
@@ -474,10 +541,19 @@ export class Engine {
       turns: turnLoop.currentTurn,
       tokens: modelFacade.getUsage().totalTokens,
     });
+    recordSessionEnd(session.state.sessionId, {
+      reason: result.reason,
+      turns: turnLoop.currentTurn,
+      cost: modelFacade.getUsage(),
+    });
 
-    // Update session state
+    // Update session state. Persist the raw terminal reason as the status so
+    // callers can distinguish user-cancelled (aborted_streaming) from real
+    // failures (model_error, prompt_too_long, ...) — previously every
+    // non-completed outcome collapsed to "errored", which threw away the
+    // distinction and misled anyone reading state.json.
     session.state.turnCount = turnLoop.currentTurn;
-    session.state.status = result.reason === "completed" ? "completed" : "errored";
+    session.state.status = result.reason;
     const usage = modelFacade.getUsage();
     session.state.tokenUsage = {
       promptTokens: usage.totalPromptTokens,

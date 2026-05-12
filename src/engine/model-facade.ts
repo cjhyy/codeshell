@@ -5,8 +5,19 @@
 import type { LLMClientBase } from "../llm/client-base.js";
 import type { Message, ToolDefinition, LLMResponse, StreamCallback } from "../types.js";
 import { Transcript } from "../session/transcript.js";
-import { logger } from "../logging/logger.js";
+import { logger, getCurrentSid } from "../logging/logger.js";
+import {
+  recordLLMError,
+  recordLLMRequest,
+  recordLLMResponse,
+} from "../logging/session-recorder.js";
 import { addAPIDuration, addToModelUsage, addInputTokens, addOutputTokens } from "../bootstrap/state.js";
+
+let _reqSeq = 0;
+function nextReqId(): string {
+  _reqSeq += 1;
+  return `r${_reqSeq.toString(36)}`;
+}
 
 export class ModelFacade {
   constructor(
@@ -24,36 +35,57 @@ export class ModelFacade {
     const startMs = Date.now();
     const msgCount = messages.length;
 
-    const response = await this.client.createMessage({
-      systemPrompt,
-      messages,
-      tools,
-      stream: true,
-      onChunk: (chunk) => {
-        if (!onStream) return;
-        if (chunk.type === "text" && chunk.text) {
-          onStream({ type: "text_delta", text: chunk.text });
-        } else if (chunk.type === "tool_use_start" && chunk.toolCall) {
-          // Forward tool_use_start immediately so the UI can show progress
-          // while JSON args are still streaming
-          onStream({
-            type: "tool_use_start",
-            toolCall: {
-              id: chunk.toolCall.id ?? "",
-              toolName: chunk.toolCall.toolName ?? "",
-              args: chunk.toolCall.args ?? {},
-            },
-          });
-        } else if (chunk.type === "tool_use_delta" && chunk.toolCall?.id) {
-          onStream({
-            type: "tool_use_args_delta",
-            toolCallId: chunk.toolCall.id,
-            args: chunk.toolCall.args ?? {},
-          });
-        }
+    const sid = getCurrentSid();
+    const reqId = nextReqId();
+    recordLLMRequest(
+      sid,
+      {
+        provider: this.client.provider ?? "?",
+        model: this.client.model ?? "?",
+        stream: true,
+        messages,
+        tools,
+        systemPrompt,
       },
-      signal,
-    });
+      reqId,
+    );
+
+    let response: LLMResponse;
+    try {
+      response = await this.client.createMessage({
+        systemPrompt,
+        messages,
+        tools,
+        stream: true,
+        onChunk: (chunk) => {
+          if (!onStream) return;
+          if (chunk.type === "text" && chunk.text) {
+            onStream({ type: "text_delta", text: chunk.text });
+          } else if (chunk.type === "tool_use_start" && chunk.toolCall) {
+            // Forward tool_use_start immediately so the UI can show progress
+            // while JSON args are still streaming
+            onStream({
+              type: "tool_use_start",
+              toolCall: {
+                id: chunk.toolCall.id ?? "",
+                toolName: chunk.toolCall.toolName ?? "",
+                args: chunk.toolCall.args ?? {},
+              },
+            });
+          } else if (chunk.type === "tool_use_delta" && chunk.toolCall?.id) {
+            onStream({
+              type: "tool_use_args_delta",
+              toolCallId: chunk.toolCall.id,
+              args: chunk.toolCall.args ?? {},
+            });
+          }
+        },
+        signal,
+      });
+    } catch (err) {
+      recordLLMError(sid, reqId, err, Date.now() - startMs);
+      throw err;
+    }
 
     const latencyMs = Date.now() - startMs;
     logger.info("llm.request", {
@@ -65,6 +97,17 @@ export class ModelFacade {
       textLen: response.text?.length ?? 0,
       usage: response.usage,
     });
+    recordLLMResponse(
+      sid,
+      {
+        text: response.text,
+        toolCalls: response.toolCalls,
+        stopReason: response.stopReason,
+        usage: response.usage,
+        durationMs: latencyMs,
+      },
+      reqId,
+    );
 
     this.recordUsage(response, latencyMs);
     this.recordResponse(response);
@@ -83,13 +126,34 @@ export class ModelFacade {
     const startMs = Date.now();
     const msgCount = messages.length;
 
-    const response = await this.client.createMessage({
-      systemPrompt,
-      messages,
-      tools,
-      stream: false,
-      signal,
-    });
+    const sid = getCurrentSid();
+    const reqId = nextReqId();
+    recordLLMRequest(
+      sid,
+      {
+        provider: this.client.provider ?? "?",
+        model: this.client.model ?? "?",
+        stream: false,
+        messages,
+        tools,
+        systemPrompt,
+      },
+      reqId,
+    );
+
+    let response: LLMResponse;
+    try {
+      response = await this.client.createMessage({
+        systemPrompt,
+        messages,
+        tools,
+        stream: false,
+        signal,
+      });
+    } catch (err) {
+      recordLLMError(sid, reqId, err, Date.now() - startMs);
+      throw err;
+    }
 
     const latencyMs = Date.now() - startMs;
     logger.info("llm.request", {
@@ -101,6 +165,17 @@ export class ModelFacade {
       textLen: response.text?.length ?? 0,
       usage: response.usage,
     });
+    recordLLMResponse(
+      sid,
+      {
+        text: response.text,
+        toolCalls: response.toolCalls,
+        stopReason: response.stopReason,
+        usage: response.usage,
+        durationMs: latencyMs,
+      },
+      reqId,
+    );
 
     this.recordUsage(response, latencyMs);
     this.recordResponse(response);

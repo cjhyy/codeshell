@@ -10,6 +10,7 @@ import { AgentServer } from "../../protocol/server.js";
 import { AgentClient } from "../../protocol/client.js";
 import { createInProcessTransport } from "../../protocol/transport.js";
 import { SettingsManager } from "../../settings/manager.js";
+import { resolveApiKey } from "../onboarding.js";
 import { costTracker } from "../cost-tracker.js";
 import { createRenderer, type OutputFormat } from "../output/renderer.js";
 import type { LLMConfig, PermissionMode } from "../../types.js";
@@ -36,12 +37,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
   const settings = settingsManager.get();
 
   // Resolve API key
-  const apiKey =
-    options.apiKey ??
-    settings.model.apiKey ??
-    process.env.OPENROUTER_API_KEY ??
-    process.env.ANTHROPIC_API_KEY ??
-    process.env.OPENAI_API_KEY;
+  const apiKey = resolveApiKey(options.apiKey, settings.model.apiKey);
 
   if (!apiKey) {
     console.error(

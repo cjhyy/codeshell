@@ -8,6 +8,7 @@ import { execSync } from "node:child_process";
 import { existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { resolveApiKey } from "../../onboarding.js";
 
 export const coreCommands: SlashCommand[] = [
   // ─── Existing (migrated from App.tsx) ───────────────────────────
@@ -566,10 +567,7 @@ export const coreCommands: SlashCommand[] = [
           } catch {
             checks.push(`gh CLI:   not found`);
           }
-          const apiKey =
-            process.env.ANTHROPIC_API_KEY ||
-            process.env.OPENAI_API_KEY ||
-            process.env.DEEPSEEK_API_KEY;
+          const apiKey = resolveApiKey();
           checks.push(`API key:  ${apiKey ? "configured" : "NOT SET"}`);
           ctx.addStatus("Diagnostics:\n  " + checks.join("\n  "));
         } catch (err) {
@@ -647,20 +645,18 @@ export const coreCommands: SlashCommand[] = [
           writeFileSync(outPath, JSON.stringify(events, null, 2), "utf-8");
           ctx.addStatus(`Exported ${events.length} events to ${outPath}`);
         } else {
-          const lines: string[] = [`# Session ${ctx.sessionId}\n`];
-          for (const ev of events) {
-            if (ev.type === "message") {
-              const role = ev.data.role as string;
-              const content =
-                typeof ev.data.content === "string"
-                  ? ev.data.content
-                  : JSON.stringify(ev.data.content);
-              lines.push(`## ${role}\n\n${content}\n`);
-            }
-          }
+          const { renderSessionMarkdown } = await import("./export-md.js");
+          const { md, sidecars } = renderSessionMarkdown(ctx.sessionId, events, ctx.cwd);
           const outPath = join(ctx.cwd, `session-${ctx.sessionId}.md`);
-          writeFileSync(outPath, lines.join("\n"), "utf-8");
-          ctx.addStatus(`Exported to ${outPath}`);
+          writeFileSync(outPath, md, "utf-8");
+          if (sidecars.length) {
+            const { mkdirSync } = await import("node:fs");
+            const { dirname } = await import("node:path");
+            mkdirSync(dirname(sidecars[0].path), { recursive: true });
+            for (const sc of sidecars) writeFileSync(sc.path, sc.content, "utf-8");
+          }
+          const tail = sidecars.length ? ` (+${sidecars.length} sidecar files)` : "";
+          ctx.addStatus(`Exported to ${outPath}${tail}`);
         }
       } catch (err) {
         ctx.addStatus(`Export failed: ${(err as Error).message}`);

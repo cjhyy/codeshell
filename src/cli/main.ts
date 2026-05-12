@@ -9,9 +9,30 @@ import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { setup } from "../bootstrap/setup.js";
 import { costTracker, installCostTracking } from "./cost-tracker.js";
-import { hasApiKey } from "./onboarding.js";
+import { hasApiKey, resolveApiKey } from "./onboarding.js";
 import { getCurrentVersion } from "./updater.js";
 import type { AgentPresetName } from "../preset/index.js";
+import type { SessionStatus } from "../types.js";
+
+function formatSessionStatus(s: SessionStatus): string {
+  switch (s) {
+    case "completed":
+      return "done";
+    case "aborted_streaming":
+    case "aborted_tools":
+      return "aborted";
+    case "prompt_too_long":
+      return "ptl";
+    case "model_error":
+    case "image_error":
+      return "error";
+    case "stop_hook_prevented":
+    case "hook_stopped":
+      return "hook_stop";
+    default:
+      return s;
+  }
+}
 
 const program = new Command();
 
@@ -77,7 +98,7 @@ program
 
     for (const s of sessions) {
       const date = new Date(s.startedAt).toLocaleString();
-      const status = s.status === "completed" ? "done" : s.status;
+      const status = formatSessionStatus(s.status);
       console.log(`  ${s.sessionId}  ${date}  ${status}  ${s.model}  turns:${s.turnCount}`);
     }
   });
@@ -97,8 +118,7 @@ addCommonOptions(
     const { runArenaReview } = await import("./commands/arena.js");
     const { SettingsManager } = await import("../settings/manager.js");
     const settings = new SettingsManager(process.cwd()).get();
-    const apiKey = resolved.apiKey ?? settings.model.apiKey ??
-      process.env.OPENROUTER_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? process.env.OPENAI_API_KEY;
+    const apiKey = resolveApiKey(resolved.apiKey, settings.model.apiKey);
     if (!apiKey) {
       console.error("Error: No API key provided.");
       process.exit(1);

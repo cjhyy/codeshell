@@ -91,7 +91,14 @@ export interface TranscriptEvent {
 
 // ─── Session ──────────────────────────────────────────────────────
 
-export type SessionStatus = "active" | "paused" | "completed" | "errored";
+/**
+ * Session lifecycle state persisted in state.json. `"active"` means a run is
+ * currently in flight (or was, at the moment of the last heartbeat). All other
+ * values match the {@link TerminalReason} the last run returned, so callers
+ * can distinguish a user-cancelled session (`"aborted_streaming"`) from an
+ * actual error (`"model_error"`, `"prompt_too_long"`, ...).
+ */
+export type SessionStatus = "active" | "paused" | TerminalReason;
 
 export interface SessionState {
   sessionId: string;
@@ -259,6 +266,11 @@ export type StreamEvent =
       strategy: "summary" | "window" | "snip" | "emergency";
       before: number;
       after: number;
+      agentId?: string;
+    }
+  | {
+      type: "usage_update";
+      promptTokens: number;
       agentId?: string;
     };
 

@@ -8,6 +8,42 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+- **Investigation guard.** Runtime enforcement of the "investigation has a
+  budget" rule from `coding.md`: re-reading the same target prepends a
+  reminder; a third re-read is hard-blocked. Four+ consecutive read-only
+  calls (or three+ silent turns) inject a strategy-change reminder.
+- **Per-session verbose recorder.** Dev-only JSONL trace under `log/<date>/
+  session-<sid>.jsonl` capturing every LLM request/response, tool call, and
+  engine event. Gated on `CODE_SHELL_DEV=1` / `--debug` / running from src.
+  7-day retention, argv secrets redacted, per-record output clipped to 256 KB.
+- **Pasted-noise sanitizer.** Engine rejects tasks that are >70% ANSI/box
+  characters (typical pasted terminal output) instead of running on them.
+- **Slimmer `/export markdown`.** Reasoning blocks are collapsible, tool_use
+  shows tool name + formatted args, tool_result over 2 KB spills to a
+  sidecar file alongside the markdown.
+- **Live session heartbeat.** `state.json` is now flushed every turn with
+  current `turnCount` and token usage, so external observers see live
+  progress instead of a stale snapshot from the last completed run.
+
+### Changed (breaking)
+- `SessionStatus` is now `"active" | "paused" | TerminalReason` instead of
+  `"active" | "paused" | "completed" | "errored"`. `state.json` records the
+  raw terminal reason (e.g. `aborted_streaming`, `model_error`,
+  `prompt_too_long`) so callers can distinguish user cancellation from real
+  failures. Downstream code that narrows the old four-value union will
+  need to widen its match.
+
+### Changed
+- API key resolution centralized into `resolveApiKey()` (one canonical
+  fallback chain: option → settings → all provider env vars). Replaces five
+  drifting copies in `repl.ts`, `run.ts`, `runs.ts`, `main.ts`,
+  `core-commands.ts`. Side effect: `runs` and `/doctor` now also pick up
+  provider env vars they previously ignored (e.g. `OPENROUTER_API_KEY`).
+- Refreshed `openrouter-models.json` (367 → 365; dropped retired Claude 3.7
+  Sonnet variants; corrected Kimi K2.5 / Pareto Code / MiniMax M2.5 context
+  windows).
+
 ## [0.1.4] - 2026-05-09
 
 ### Fixed

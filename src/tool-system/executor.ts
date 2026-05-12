@@ -7,10 +7,12 @@ import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier } from "./permission.js";
 import { PermissionDeniedError } from "../exceptions.js";
-import { logger as rootLogger } from "../logging/logger.js";
+import { logger as rootLogger, getCurrentSid } from "../logging/logger.js";
+import { recordToolCall, recordToolResult } from "../logging/session-recorder.js";
 import { isInPlanMode } from "./builtin/plan.js";
 import { validateToolArgs } from "./validation.js";
 import type { ToolContext } from "./context.js";
+import type { InvestigationGuard } from "./investigation-guard.js";
 
 type Logger = typeof rootLogger;
 
@@ -24,12 +26,21 @@ export class ToolExecutor {
    * (tests, ad-hoc tool runs) still write log lines, just without turn tags.
    */
   private log: Logger = rootLogger;
+  private guard?: InvestigationGuard;
 
   constructor(
     private readonly registry: ToolRegistry,
     private readonly permission: PermissionClassifier,
     private readonly hooks: HookRegistry,
   ) {}
+
+  setInvestigationGuard(guard: InvestigationGuard | undefined): void {
+    this.guard = guard;
+  }
+
+  getInvestigationGuard(): InvestigationGuard | undefined {
+    return this.guard;
+  }
 
   /** Set the abort signal for cascading cancellation. */
   setSignal(signal?: AbortSignal): void {
@@ -116,6 +127,20 @@ export class ToolExecutor {
       };
     }
 
+    // 0.7. Investigation guard — block redundant reads and tag soft reminders
+    // onto results. See investigation-guard.ts for the rules; they enforce the
+    // soft prompt guidance in coding.md ("never re-read", "3-call budget").
+    const guardDecision = this.guard?.preToolCheck(call);
+    if (guardDecision?.block) {
+      this.log.info("guard.block", { cat: "guard", tool: call.toolName, reason: guardDecision.block.slice(0, 200) });
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: guardDecision.block,
+        isError: true,
+      };
+    }
+
     // 1. Permission check
     const decision = this.permission.classify(call.toolName, call.args);
     this.log.info("permission.classify", {
@@ -164,6 +189,9 @@ export class ToolExecutor {
       toolCallId: call.id,
       args: JSON.stringify(call.args).slice(0, 2000),
     });
+    const sid = getCurrentSid();
+    recordToolCall(sid, { id: call.id, toolName: call.toolName, args: call.args });
+    const toolStartedAt = Date.now();
     let result: ToolResult;
     try {
       result = await this.registry.executeTool(call.toolName, call.args, {
@@ -172,9 +200,21 @@ export class ToolExecutor {
       });
     } catch (err) {
       span.fail(err);
+      recordToolResult(sid, {
+        id: call.id,
+        toolName: call.toolName,
+        ok: false,
+        durationMs: Date.now() - toolStartedAt,
+        error: err instanceof Error ? err.stack ?? err.message : String(err),
+      });
       throw err;
     }
     result.id = call.id;
+    // Prepend any non-blocking guard reminder onto a successful result so the
+    // model sees it on its next turn alongside the content it just fetched.
+    if (guardDecision?.prepend && !result.error && result.result) {
+      result.result = `${guardDecision.prepend}\n${result.result}`;
+    }
     const payload = result.result ?? result.error ?? "";
     span.end({
       ok: !result.error,
@@ -183,6 +223,14 @@ export class ToolExecutor {
       // already on the transcript. Failures are rare and the first 500 chars
       // usually contain the message we need.
       ...(result.error ? { errorSnippet: payload.slice(0, 500) } : {}),
+    });
+    recordToolResult(sid, {
+      id: call.id,
+      toolName: call.toolName,
+      ok: !result.error,
+      durationMs: Date.now() - toolStartedAt,
+      output: result.error ? undefined : result.result,
+      error: result.error,
     });
 
     // 4. Post-tool hook

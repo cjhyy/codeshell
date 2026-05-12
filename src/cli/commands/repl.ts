@@ -10,6 +10,7 @@ import { AgentServer } from "../../protocol/server.js";
 import { AgentClient } from "../../protocol/client.js";
 import { createInProcessTransport } from "../../protocol/transport.js";
 import { SettingsManager } from "../../settings/manager.js";
+import { resolveApiKey } from "../onboarding.js";
 import { costTracker } from "../cost-tracker.js";
 import type { LLMConfig, PermissionMode } from "../../types.js";
 import { startInkRepl } from "../../ui/index.js";
@@ -53,12 +54,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   let settings = new SettingsManager(cwd).get();
 
   // Resolve API key — env vars take precedence over the wizard
-  let apiKey =
-    options.apiKey ??
-    settings.model.apiKey ??
-    process.env.OPENROUTER_API_KEY ??
-    process.env.ANTHROPIC_API_KEY ??
-    process.env.OPENAI_API_KEY;
+  let apiKey = resolveApiKey(options.apiKey, settings.model.apiKey);
 
   let model = options.model ?? settings.model.name;
   let provider = options.provider ?? settings.model.provider;
@@ -144,7 +140,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     effort,
     maxTurns,
     cwd,
-    maxContextTokens,
+    maxContextTokens: engine.maxContextTokens,
     sessionId: options.resume,
     prefill: options.prefill,
   });

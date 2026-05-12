@@ -13,7 +13,12 @@ export const readToolDef: ToolDefinition = {
     "Read a file from the local filesystem. Returns the file content with line numbers. " +
     "By default reads up to 2000 lines from the beginning. " +
     "Use offset and limit to read specific portions of large files. " +
-    "For large files, consider using Grep first to find the relevant lines.",
+    "For large files, consider using Grep first to find the relevant lines.\n\n" +
+    "Do NOT re-read a file you just edited to verify — Edit/Write would have errored " +
+    "if the change failed.\n" +
+    "Do NOT re-read a file (or the same range of a file) you've already read earlier in " +
+    "this conversation. The content is already in your context. If you need a different " +
+    "part of the file, read a different offset; otherwise decide with what you have.",
   inputSchema: {
     type: "object",
     properties: {

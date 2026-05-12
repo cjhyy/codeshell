@@ -240,6 +240,24 @@ export async function validateApiKey(baseUrl: string, apiKey: string): Promise<b
 
 // ─── Public API ────────────────────────────────────────────────────
 
+/**
+ * Resolve an API key from the canonical fallback chain.
+ * Priority: 1) command-line option  2) settings.json  3) all provider env vars
+ */
+export function resolveApiKey(
+  optionsApiKey?: string,
+  settingsApiKey?: string,
+): string | undefined {
+  if (optionsApiKey) return optionsApiKey;
+  if (settingsApiKey) return settingsApiKey;
+  for (const p of PROVIDERS) {
+    if (!p.envKey) continue;
+    const v = process.env[p.envKey];
+    if (v && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
 export function hasApiKey(): boolean {
   // Env variables alone are NOT enough to skip onboarding — they're surfaced
   // as a one-click option on the provider page instead. We only skip when the

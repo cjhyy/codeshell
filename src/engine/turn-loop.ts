@@ -31,6 +31,12 @@ export interface TurnLoopConfig {
   tokenBudget?: number;
   onStream?: StreamCallback;
   signal?: AbortSignal;
+  /**
+   * Fired after each turn boundary is recorded. Lets the engine flush an
+   * up-to-date snapshot to state.json mid-run, so a long run doesn't leave
+   * the on-disk turnCount/status frozen at the last completion.
+   */
+  onTurnBoundary?: (turnCount: number) => void;
 }
 
 export interface TurnLoopDeps {
@@ -159,6 +165,14 @@ export class TurnLoop {
         }
       }
 
+      // Send real-time token usage to UI so the ctx bar updates per-response
+      if (response!.usage?.promptTokens !== undefined) {
+        this.config.onStream?.({
+          type: "usage_update",
+          promptTokens: response!.usage.promptTokens,
+        });
+      }
+
       // Feed actual token usage back to the context manager so subsequent
       // compaction decisions use hybrid (actual + delta) estimation rather than
       // pure heuristics. Without this the manager falls back to char/4 estimates.
@@ -202,6 +216,14 @@ export class TurnLoop {
           }
         }
         response = { ...response, text: combinedText };
+      }
+
+      // After any continuation, send latest usage so ctx bar reflects real context
+      if (response.usage?.promptTokens !== undefined) {
+        this.config.onStream?.({
+          type: "usage_update",
+          promptTokens: response.usage.promptTokens,
+        });
       }
 
       // Aborted?
@@ -324,6 +346,19 @@ export class TurnLoop {
         });
       }
 
+      // Investigation guard: end-of-turn check. If too many consecutive
+      // read-only turns went by without any user-visible text or side-effecting
+      // tool, inject a reminder that will land at the top of the next turn.
+      const guard = this.deps.toolExecutor.getInvestigationGuard();
+      if (guard) {
+        guard.noteText(response.text);
+        const turnReminder = guard.turnEnded(this.turnCount);
+        if (turnReminder) {
+          messages.push({ role: "user", content: turnReminder });
+          tlog.info("guard.silent_turn", { cat: "guard", turn: this.turnCount });
+        }
+      }
+
       // Hook: turn end
       await this.deps.hooks.emit("on_turn_end", {
         turnNumber: this.turnCount,
@@ -333,6 +368,7 @@ export class TurnLoop {
 
       // Record turn boundary
       this.deps.transcript.appendTurnBoundary();
+      this.config.onTurnBoundary?.(this.turnCount);
 
       tlog.info("turn.end", {
         cat: "turn",
