@@ -12,7 +12,11 @@
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { getKindMeta, type ProviderKindName } from "./provider-kinds.js";
+import {
+  getKindMeta,
+  type ProviderKindName,
+  type ProviderProtocol,
+} from "./provider-kinds.js";
 import {
   readCache,
   writeCache,
@@ -23,7 +27,7 @@ import {
 
 export interface FetcherProvider {
   key: string;
-  kind: ProviderKindName | string;
+  kind: ProviderKindName;
   baseUrl: string;
   apiKey: string | undefined;
   modelsPath?: string;
@@ -55,7 +59,7 @@ interface RawOllamaShape {
   models?: Array<{ name: string }>;
 }
 interface RawAnthropicShape {
-  data?: Array<{ id: string; context_window?: number }>;
+  data?: Array<{ id: string; context_window?: number; max_output_tokens?: number }>;
 }
 interface RawGeminiShape {
   models?: Array<{ name: string; inputTokenLimit?: number; outputTokenLimit?: number }>;
@@ -79,15 +83,15 @@ export async function fetchModelList(
     return loadOpenRouterSnapshot(provider.key, opts.cacheDir);
   }
 
-  const path = provider.modelsPath ?? meta.modelsPath;
-  const url = new URL(joinUrl(provider.baseUrl, path));
-  const headers = meta.authHeader(provider.apiKey ?? "");
-  if (meta.authQuery) {
-    const q = meta.authQuery(provider.apiKey ?? "");
-    for (const [k, v] of Object.entries(q)) url.searchParams.set(k, v);
-  }
-
   try {
+    const path = provider.modelsPath ?? meta.modelsPath;
+    const url = new URL(joinUrl(provider.baseUrl, path));
+    const headers = meta.authHeader(provider.apiKey ?? "");
+    if (meta.authQuery) {
+      const q = meta.authQuery(provider.apiKey ?? "");
+      for (const [k, v] of Object.entries(q)) url.searchParams.set(k, v);
+    }
+
     const res = await fetch(url.toString(), {
       headers: { Accept: "application/json", ...headers },
       signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
@@ -106,33 +110,40 @@ export async function fetchModelList(
   }
 }
 
-function normalize(payload: unknown, protocol: string): CachedModel[] {
-  if (protocol === "ollama") {
-    const p = payload as RawOllamaShape;
-    return (p.models ?? []).map((m) => ({ id: m.name, contextLength: 0, maxOutputTokens: 0 }));
+function normalize(payload: unknown, protocol: ProviderProtocol): CachedModel[] {
+  switch (protocol) {
+    case "ollama": {
+      const p = payload as RawOllamaShape;
+      return (p.models ?? []).map((m) => ({ id: m.name, contextLength: 0, maxOutputTokens: 0 }));
+    }
+    case "anthropic-style": {
+      const p = payload as RawAnthropicShape;
+      return (p.data ?? []).map((m) => ({
+        id: m.id,
+        contextLength: m.context_window ?? 200_000,
+        maxOutputTokens: m.max_output_tokens ?? 0,
+      }));
+    }
+    case "gemini": {
+      const p = payload as RawGeminiShape;
+      return (p.models ?? []).map((m) => ({
+        id: m.name.replace(/^models\//, ""),
+        contextLength: m.inputTokenLimit ?? 0,
+        maxOutputTokens: m.outputTokenLimit ?? 0,
+      }));
+    }
+    case "openai-compat": {
+      const p = payload as RawOpenAIShape;
+      return (p.data ?? []).map((m) => ({
+        id: m.id,
+        contextLength: m.context_window ?? m.context_length ?? 0,
+        maxOutputTokens: m.max_completion_tokens ?? 0,
+      }));
+    }
   }
-  if (protocol === "anthropic-style") {
-    const p = payload as RawAnthropicShape;
-    return (p.data ?? []).map((m) => ({
-      id: m.id,
-      contextLength: m.context_window ?? 200_000,
-      maxOutputTokens: 0,
-    }));
-  }
-  if (protocol === "gemini") {
-    const p = payload as RawGeminiShape;
-    return (p.models ?? []).map((m) => ({
-      id: m.name.replace(/^models\//, ""),
-      contextLength: m.inputTokenLimit ?? 0,
-      maxOutputTokens: m.outputTokenLimit ?? 0,
-    }));
-  }
-  const p = payload as RawOpenAIShape;
-  return (p.data ?? []).map((m) => ({
-    id: m.id,
-    contextLength: m.context_window ?? m.context_length ?? 0,
-    maxOutputTokens: m.max_completion_tokens ?? 0,
-  }));
+  // exhaustiveness: TS error if a new ProviderProtocol is added.
+  const _exhaustive: never = protocol;
+  return _exhaustive;
 }
 
 function loadOpenRouterSnapshot(providerKey: string, cacheDir: string): FetchResult {
