@@ -39,7 +39,7 @@ import {
 import { AddProviderWizard } from "./components/AddProviderWizard.js";
 import { AddModelWizard } from "./components/AddModelWizard.js";
 import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
-import type { OnboardingResult } from "../cli/onboarding.js";
+import { modelKey, type OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
@@ -656,8 +656,10 @@ export function App({
       return;
     }
 
-    // P1.6: Ctrl+O — toggle transcript mode
-    if (key.ctrl && ch === "o" && !isRunning) {
+    // P1.6: Ctrl+O — toggle transcript mode. Browsing is read-only, so allow
+    // it while a turn is in flight; gating on !isRunning made this silently
+    // no-op whenever a streaming response or background task held the flag.
+    if (key.ctrl && ch === "o") {
       setScreen((prev) => {
         if (prev === "transcript") {
           setCursorIdx(null);
@@ -665,6 +667,7 @@ export function App({
         }
         return "transcript";
       });
+      return;
     }
 
     // P1.8: Message selector in transcript mode
@@ -823,6 +826,7 @@ export function App({
         clearChat: () => {
           chatStore.clear();
           setTasks([]);
+          setShowBanner(true);
         },
         chatLog,
         startOnboarding: () => setShowOnboarding(true),
@@ -1010,9 +1014,26 @@ export function App({
         </Box>
       ) : showOnboarding ? (
         <OnboardingPrompt
-          onComplete={(result: OnboardingResult) => {
+          onComplete={async (result: OnboardingResult) => {
             setShowOnboarding(false);
-            addStatus(`✓ 配置已保存 (${result.model})。重启 code-shell 以加载新配置。`);
+            // Hot-swap into the engine without a process restart:
+            // reloadModels picks up the providers[]/models[] the wizard just
+            // wrote to settings.json; the subsequent model switch activates
+            // the chosen default. Falls back to the legacy "please restart"
+            // message if anything goes wrong.
+            try {
+              const key = modelKey(result.model);
+              const res = (await client.configure({ reloadModels: true, model: key })) as {
+                model?: string;
+              };
+              const activeModel = res?.model ?? result.model;
+              setModel(activeModel);
+              addStatus(`✓ 配置已保存,已切换到: ${key} (${activeModel})`);
+            } catch (err) {
+              addStatus(
+                `✓ 配置已保存 (${result.model})。热加载失败,请重启 code-shell: ${(err as Error).message}`,
+              );
+            }
           }}
           onCancel={() => {
             setShowOnboarding(false);
@@ -1052,16 +1073,14 @@ export function App({
         <AddProviderWizard
           existingKeys={modelManager.providers.map((p) => p.key)}
           onSave={async (cfg) => {
-            // TODO(task-12): the "provider_add" verb isn't in the protocol
-            // QueryParams union yet. The cast lets the UI compile now and
-            // Task 12 will land the typed handler. The try/catch keeps the
-            // UI alive if the server doesn't recognize the verb.
             try {
-              await client.query("provider_add" as never, cfg as never);
+              await client.query("provider_add", { provider: cfg } as never);
             } catch {
               /* swallow — handler may not be wired yet */
             }
             setWizard(null);
+            // Reload the engine's pool so wizard adds become visible without restart
+            try { await client.configure({ reloadModels: true }); } catch { /* best-effort */ }
             await refreshModelManagerState();
           }}
           onCancel={() => setWizard(null)}
@@ -1079,13 +1098,13 @@ export function App({
           }))}
           existingModelKeys={modelManager.entries.map((e) => e.key)}
           onSave={async (modelEntry) => {
-            // TODO(task-12): see comment above re: "provider_add".
             try {
-              await client.query("model_add" as never, modelEntry as never);
+              await client.query("model_add", { model: modelEntry } as never);
             } catch {
               /* swallow — handler may not be wired yet */
             }
             setWizard(null);
+            try { await client.configure({ reloadModels: true }); } catch { /* best-effort */ }
             await refreshModelManagerState();
           }}
           onCancel={() => setWizard(null)}

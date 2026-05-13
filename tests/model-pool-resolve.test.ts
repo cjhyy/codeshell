@@ -36,4 +36,33 @@ describe("ModelPool credential resolution", () => {
     const cfg = pool.resolveLLMConfig("m");
     expect(cfg?.apiKey).toBe("fromEntry");
   });
+
+  it("maps non-anthropic kinds to openai client provider", () => {
+    // client-factory only registers "anthropic" and "openai"; every other
+    // kind (deepseek/openrouter/xai/mistral/groq/google/ollama/custom) is
+    // OpenAI-compatible at the HTTP level and must resolve to "openai".
+    for (const kind of ["deepseek", "openrouter", "xai", "mistral", "groq", "google", "ollama", "custom"] as const) {
+      const cat = new ProviderCatalog([
+        { key: kind, kind, baseUrl: "https://x", apiKey: "k" },
+      ]);
+      const pool = new ModelPool([
+        { key: "m", provider: "", model: "x", providerKey: kind } as never,
+      ]);
+      pool.setProviderCatalog(cat);
+      const cfg = pool.resolveLLMConfig("m");
+      expect(cfg?.provider).toBe("openai");
+    }
+  });
+
+  it("maps anthropic kind to anthropic client provider", () => {
+    const cat = new ProviderCatalog([
+      { key: "anthropic", kind: "anthropic", baseUrl: "https://x", apiKey: "k" },
+    ]);
+    const pool = new ModelPool([
+      { key: "m", provider: "", model: "claude-opus-4-6", providerKey: "anthropic" } as never,
+    ]);
+    pool.setProviderCatalog(cat);
+    const cfg = pool.resolveLLMConfig("m");
+    expect(cfg?.provider).toBe("anthropic");
+  });
 });

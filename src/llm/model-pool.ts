@@ -171,8 +171,19 @@ export class ModelPool {
       entry.providerKey && this.providerCatalog
         ? this.providerCatalog.get(entry.providerKey)
         : undefined;
+    // Map provider-kind → client-factory name. client-factory only registers
+    // "anthropic" and "openai" (everything else is anthropic- or openai-
+    // compatible), so kinds outside that pair must collapse to one of them.
+    const kindToClientProvider = (kind: string | undefined): string => {
+      if (!kind) return "openai";
+      if (kind === "anthropic") return "anthropic";
+      return "openai";
+    };
     return {
-      provider: entry.provider || fromCat?.kind || "openai",
+      provider:
+        entry.provider ||
+        kindToClientProvider(fromCat?.kind) ||
+        "openai",
       model: entry.model,
       apiKey: entry.apiKey ?? fromCat?.apiKey ?? base?.apiKey,
       baseUrl: entry.baseUrl ?? fromCat?.baseUrl ?? base?.baseUrl,
