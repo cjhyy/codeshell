@@ -1021,6 +1021,14 @@ export function App({
         </Box>
       ) : showOnboarding ? (
         <OnboardingPrompt
+          existingProviders={(modelManager?.providers ?? []).map((p) => ({
+            key: p.key,
+            label: p.label ?? p.key,
+            kind: p.kind as never,
+            baseUrl: p.baseUrl ?? "",
+            apiKey: p.apiKey,
+          }))}
+          existingModelKeys={(modelManager?.entries ?? []).map((e) => e.key)}
           onComplete={async (result: OnboardingResult) => {
             setShowOnboarding(false);
             // Hot-swap into the engine without a process restart:
