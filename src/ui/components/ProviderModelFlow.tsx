@@ -84,10 +84,54 @@ export function validateAlias(alias: string, used: string[]): string | null {
 type Step = "kind" | "key" | "baseUrl" | "fetch" | "alias";
 
 interface KindEntry {
-  type: "existing" | "kind";
+  type: "existing" | "env" | "kind";
   label: string;
+  hint?: string;
   providerIdx?: number;
+  envIdx?: number;
   kind?: ProviderKindName;
+}
+
+// Friendly labels + ordering. Mirrors the old onboarding's PROVIDERS array.
+// OpenRouter first because it unlocks all models with one key.
+const KIND_ORDER: ProviderKindName[] = [
+  "openrouter",
+  "anthropic",
+  "openai",
+  "deepseek",
+  "xai",
+  "google",
+  "mistral",
+  "groq",
+  "ollama",
+  "custom",
+];
+const KIND_LABEL_OVERRIDES: Partial<Record<ProviderKindName, string>> = {
+  openrouter: "OpenRouter (推荐 — 支持所有模型)",
+  anthropic: "Anthropic (直连 Claude API)",
+  openai: "OpenAI",
+  deepseek: "DeepSeek (官方直连)",
+  xai: "xAI (Grok)",
+  google: "Google Gemini",
+  mistral: "Mistral",
+  groq: "Groq",
+  ollama: "Ollama (本地,无需 key)",
+  custom: "自定义 (OpenAI-兼容)",
+};
+const KIND_KEY_URLS: Partial<Record<ProviderKindName, string>> = {
+  openrouter: "https://openrouter.ai/keys",
+  anthropic: "https://console.anthropic.com/settings/keys",
+  openai: "https://platform.openai.com/api-keys",
+  deepseek: "https://platform.deepseek.com/api_keys",
+  xai: "https://console.x.ai",
+  google: "https://aistudio.google.com/apikey",
+  mistral: "https://console.mistral.ai/api-keys",
+  groq: "https://console.groq.com/keys",
+};
+
+function maskKey(k: string): string {
+  if (k.length <= 8) return "••••";
+  return `${k.slice(0, 4)}••••${k.slice(-4)}`;
 }
 
 export function ProviderModelFlow({
@@ -98,20 +142,26 @@ export function ProviderModelFlow({
   onFinish,
   onCancel,
 }: ProviderModelFlowProps) {
-  const kindList = Object.entries(PROVIDER_KINDS) as Array<
-    [ProviderKindName, { label: string; defaultBaseUrl: string }]
-  >;
-
-  // Build the kind-step menu: existing providers first, then kinds.
+  // Build the kind-step menu in the priority order from the legacy onboarding:
+  //   1. Env-detected keys (one-click "use $OPENROUTER_API_KEY")
+  //   2. Already-configured providers ("Use existing")
+  //   3. All provider kinds, OpenRouter first
   const kindEntries: KindEntry[] = [
+    ...detectedEnvKeys.map((d, i) => ({
+      type: "env" as const,
+      label: `使用环境变量 ${d.envKey} → ${KIND_LABEL_OVERRIDES[d.kindHint] ?? PROVIDER_KINDS[d.kindHint]?.label ?? d.kindHint}`,
+      hint: `(${maskKey(d.apiKey)})`,
+      envIdx: i,
+    })),
     ...existingProviders.map((p, i) => ({
       type: "existing" as const,
-      label: `Use existing: ${p.label ?? p.key} (${p.kind})`,
+      label: `使用已有: ${p.label ?? p.key}`,
+      hint: `(${p.kind})`,
       providerIdx: i,
     })),
-    ...kindList.map(([k, m]) => ({
+    ...KIND_ORDER.map((k) => ({
       type: "kind" as const,
-      label: m.label,
+      label: KIND_LABEL_OVERRIDES[k] ?? PROVIDER_KINDS[k]?.label ?? k,
       kind: k,
     })),
   ];
@@ -258,6 +308,12 @@ export function ProviderModelFlow({
         if (entry.type === "existing") {
           const provider = existingProviders[entry.providerIdx!]!;
           setUseExistingProvider(provider);
+          setStep("fetch");
+        } else if (entry.type === "env") {
+          const env = detectedEnvKeys[entry.envIdx!]!;
+          setSelectedKind(env.kindHint);
+          setApiKey(env.apiKey);
+          setBaseUrl(PROVIDER_KINDS[env.kindHint].defaultBaseUrl);
           setStep("fetch");
         } else {
           const kind = entry.kind!;
@@ -429,21 +485,26 @@ export function ProviderModelFlow({
   });
 
   // ─── render ─────────────────────────────────────────────────────
-  const title = useExistingProvider ? "Add models" : "Add provider + models";
+  const title = useExistingProvider ? "✦ 添加模型" : "✦ 添加 provider + 模型";
 
   return (
-    <Box flexDirection="column" padding={1} borderStyle="round">
-      <Text bold>{title}</Text>
-      <Text dimColor>Esc to cancel.</Text>
+    <Box flexDirection="column" marginLeft={1}>
+      <Box>
+        <Text color="cyan" bold>{title}</Text>
+        <Text dimColor>  (Esc 取消)</Text>
+      </Box>
 
       {step === "kind" && (
         <Box flexDirection="column" marginTop={1}>
-          <Text>Pick a provider:</Text>
+          <Text dimColor>选择 API 提供商:</Text>
           {kindEntries.map((e, i) => (
-            <Text key={`${e.type}-${i}`} color={i === kindIdx ? "cyan" : undefined}>
-              {i === kindIdx ? "› " : "  "}
-              {e.label}
-            </Text>
+            <Box key={`${e.type}-${i}`}>
+              <Text color={i === kindIdx ? "cyan" : undefined} bold={i === kindIdx}>
+                {i === kindIdx ? "❯ " : "  "}
+                {e.label}
+              </Text>
+              {e.hint && <Text dimColor> {e.hint}</Text>}
+            </Box>
           ))}
         </Box>
       )}
@@ -452,25 +513,28 @@ export function ProviderModelFlow({
         (() => {
           const hint = envHintForKind(selectedKind);
           const showMenu = hint && !keyMenuDone;
+          const friendlyName = KIND_LABEL_OVERRIDES[selectedKind] ?? PROVIDER_KINDS[selectedKind].label;
+          const keyUrl = KIND_KEY_URLS[selectedKind];
           return (
             <Box flexDirection="column" marginTop={1}>
-              <Text>API key for {PROVIDER_KINDS[selectedKind].label}:</Text>
+              <Text dimColor>{friendlyName}</Text>
+              {keyUrl && <Text dimColor>获取 Key: {keyUrl}</Text>}
               {showMenu ? (
                 <Box flexDirection="column" marginTop={1}>
-                  <Text color={keyMenuIdx === 0 ? "cyan" : undefined}>
-                    {keyMenuIdx === 0 ? "› " : "  "}
-                    Use ${hint!.envKey} (••••{hint!.apiKey.slice(-4)})
+                  <Text color={keyMenuIdx === 0 ? "cyan" : undefined} bold={keyMenuIdx === 0}>
+                    {keyMenuIdx === 0 ? "❯ " : "  "}
+                    使用环境变量 ${hint!.envKey} ({maskKey(hint!.apiKey)})
                   </Text>
-                  <Text color={keyMenuIdx === 1 ? "cyan" : undefined}>
-                    {keyMenuIdx === 1 ? "› " : "  "}
-                    Paste new key
+                  <Text color={keyMenuIdx === 1 ? "cyan" : undefined} bold={keyMenuIdx === 1}>
+                    {keyMenuIdx === 1 ? "❯ " : "  "}
+                    粘贴新 key
                   </Text>
                 </Box>
               ) : (
-                <>
-                  <Text color="cyan">{apiKey.replace(/./g, "•")}</Text>
-                  <Text dimColor>Enter when done.</Text>
-                </>
+                <Box flexDirection="column" marginTop={1}>
+                  <Text>API Key: <Text color="cyan">{apiKey.replace(/./g, "•")}</Text></Text>
+                  <Text dimColor>粘贴你的 API Key,Enter 确认</Text>
+                </Box>
               )}
             </Box>
           );
