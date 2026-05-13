@@ -93,14 +93,25 @@ export const utilityCommands: SlashCommand[] = [
     description: "Check for and install updates",
     execute: async (_arg, ctx) => {
       try {
-        const { getCurrentVersion, getUpdateAvailable } = await import("../../updater.js");
+        const { getCurrentVersion, getUpdateAvailable, getAutoUpdateDisabledReason } =
+          await import("../../updater.js");
         const current = getCurrentVersion();
-        const available = getUpdateAvailable();
+        const info = getUpdateAvailable();
+        const disabledReason = getAutoUpdateDisabledReason();
 
-        if (available) {
-          ctx.addStatus(`Update available: ${current} → ${available}\nRun: npm install -g code-shell`);
+        if (!info) {
+          const tail = disabledReason ? `\nAuto-update is off: ${disabledReason}` : "";
+          ctx.addStatus(`code-shell v${current} is up to date.${tail}`);
+          return;
+        }
+
+        const head = `Update available: ${current} → ${info.latestVersion}`;
+        if (info.canAutoInstall) {
+          ctx.addStatus(
+            `${head}\nWill install on exit. (Or run now: npm install -g @cjhyy/code-shell@${info.latestVersion})`,
+          );
         } else {
-          ctx.addStatus(`code-shell v${current} is up to date.`);
+          ctx.addStatus(`${head}\nRun: sudo npm install -g @cjhyy/code-shell@${info.latestVersion}`);
         }
       } catch (err) {
         ctx.addStatus(`Update check failed: ${(err as Error).message}`);
