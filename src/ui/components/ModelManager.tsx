@@ -1,9 +1,10 @@
 /**
- * ModelManager — Ink-rendered model + arena management panel.
+ * ModelManager — Ink-rendered model + provider + arena management panel.
  *
- * Two tabs (Tab key cycles):
- *   - Models: switch active model, sync OpenRouter snapshot.
- *   - Arena:  edit arena.participants list (add from pool / delete / save).
+ * Three tabs (Tab key cycles):
+ *   - Models:    switch active model, sync OpenRouter snapshot, [A]dd model.
+ *   - Providers: list configured providers, [a]dd / [r]efresh / [d]elete.
+ *   - Arena:     edit arena.participants list (add from pool / delete / save).
  *
  * Distinct from ModelSelector (Ctrl+M / /model — pure switcher). Stays
  * presentational: parent owns side effects and passes async handlers in.
@@ -26,16 +27,42 @@ export type ArenaParticipantEntry =
   | { kind: "key"; value: string }
   | { kind: "object"; label: string };
 
+/**
+ * Row data shown in the Providers tab. Counts/timestamps are derived by the
+ * parent from settings.providers[] + the model cache so this component stays
+ * presentational.
+ */
+export interface ProviderManagerEntry {
+  key: string;
+  label: string;
+  kind: string;
+  modelCount: number;
+  cachedModels?: number;
+  cachedAt?: string;
+}
+
 interface ModelManagerProps {
   entries: ProtocolModelEntry[];
   snapshot: SnapshotInfo;
   arenaParticipants: ArenaParticipantEntry[];
+  /** Providers configured in settings.providers[] (Task 11+). */
+  providers?: ProviderManagerEntry[];
   /** Activate a model. */
   onSwitch: (key: string) => Promise<void>;
   /** Trigger an OpenRouter snapshot refresh. */
   onSync: () => Promise<{ ok: boolean; count: number; error?: string }>;
   /** Persist updated participant list (string[]) to settings. */
   onSaveArena: (participants: string[]) => Promise<void>;
+  /** Open the parent-rendered AddProviderWizard modal. */
+  onAddProvider?: () => void;
+  /** Open the parent-rendered AddModelWizard modal. */
+  onAddModel?: () => void;
+  /** Force-refresh a provider's cached model list. */
+  onRefreshProvider?: (key: string) => Promise<{ count: number; error?: string }>;
+  /** Delete a provider (blocked if any model references it). */
+  onDeleteProvider?: (key: string) => Promise<{ ok: boolean; error?: string }>;
+  /** Delete a model entry. */
+  onDeleteModel?: (key: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -45,21 +72,29 @@ type Banner =
   | { kind: "error"; text: string }
   | { kind: "busy"; text: string };
 
-type Tab = "models" | "arena";
+type Tab = "models" | "providers" | "arena";
 
 export function ModelManager({
   entries,
   snapshot,
   arenaParticipants,
+  providers,
   onSwitch,
   onSync,
   onSaveArena,
+  onAddProvider,
+  onAddModel,
+  onRefreshProvider,
+  onDeleteProvider,
+  onDeleteModel,
   onClose,
 }: ModelManagerProps) {
+  const providerRows = providers ?? [];
   const [tab, setTab] = useState<Tab>("models");
   const [cursor, setCursor] = useState(() =>
     Math.max(0, entries.findIndex((e) => e.active)),
   );
+  const [providerCursor, setProviderCursor] = useState(0);
   const [banner, setBanner] = useState<Banner>({ kind: "idle" });
 
   // Local arena state — only persisted on [w]rite. Object-form entries are
@@ -82,9 +117,10 @@ export function ModelManager({
       setConfirmDiscard(false);
     }
 
-    // Tab cycles between panes. Esc/q closes (warns if unsaved).
+    // Tab cycles models → providers → arena → models. Esc/q closes
+    // (warns if unsaved).
     if (key.tab) {
-      setTab((t) => (t === "models" ? "arena" : "models"));
+      setTab((t) => (t === "models" ? "providers" : t === "providers" ? "arena" : "models"));
       setBanner({ kind: "idle" });
       return;
     }
@@ -102,10 +138,20 @@ export function ModelManager({
       await handleModelsInput(ch, key);
       return;
     }
+    if (tab === "providers") {
+      await handleProvidersInput(ch, key);
+      return;
+    }
     await handleArenaInput(ch, key);
   });
 
   async function handleModelsInput(ch: string, key: { upArrow?: boolean; downArrow?: boolean; return?: boolean }): Promise<void> {
+    // Capital-A opens the AddModelWizard at any time, even with an empty
+    // pool — that's the whole point of the wizard.
+    if (ch === "A") {
+      if (onAddModel) onAddModel();
+      return;
+    }
     if (entries.length === 0) {
       if (ch === "s") await runSync();
       return;
@@ -133,8 +179,72 @@ export function ModelManager({
       }
       return;
     }
+    if (ch === "x") {
+      if (!onDeleteModel) return;
+      const target = entries[cursor];
+      if (!target) return;
+      setBanner({ kind: "busy", text: `删除 ${target.key}…` });
+      try {
+        await onDeleteModel(target.key);
+        setBanner({ kind: "info", text: `✓ 已删除 ${target.key}` });
+      } catch (err) {
+        setBanner({ kind: "error", text: `删除失败: ${(err as Error).message}` });
+      }
+      return;
+    }
     if (ch === "s") {
       await runSync();
+      return;
+    }
+  }
+
+  async function handleProvidersInput(ch: string, key: { upArrow?: boolean; downArrow?: boolean; return?: boolean }): Promise<void> {
+    if (ch === "a") {
+      if (onAddProvider) onAddProvider();
+      return;
+    }
+    if (providerRows.length === 0) return;
+    if (key.upArrow) {
+      setProviderCursor((c) => (c > 0 ? c - 1 : providerRows.length - 1));
+      return;
+    }
+    if (key.downArrow) {
+      setProviderCursor((c) => (c < providerRows.length - 1 ? c + 1 : 0));
+      return;
+    }
+    if (ch === "r") {
+      if (!onRefreshProvider) return;
+      const target = providerRows[providerCursor];
+      if (!target) return;
+      setBanner({ kind: "busy", text: `刷新 ${target.key} 模型清单…` });
+      try {
+        const r = await onRefreshProvider(target.key);
+        if (r.error) setBanner({ kind: "error", text: `刷新失败: ${r.error}` });
+        else setBanner({ kind: "info", text: `✓ 已缓存 ${r.count} 个模型` });
+      } catch (err) {
+        setBanner({ kind: "error", text: `刷新失败: ${(err as Error).message}` });
+      }
+      return;
+    }
+    if (ch === "d") {
+      if (!onDeleteProvider) return;
+      const target = providerRows[providerCursor];
+      if (!target) return;
+      if (target.modelCount > 0) {
+        setBanner({
+          kind: "error",
+          text: `无法删除: 仍有 ${target.modelCount} 个模型引用 ${target.key}`,
+        });
+        return;
+      }
+      setBanner({ kind: "busy", text: `删除 ${target.key}…` });
+      try {
+        const r = await onDeleteProvider(target.key);
+        if (!r.ok) setBanner({ kind: "error", text: `删除失败: ${r.error ?? "未知错误"}` });
+        else setBanner({ kind: "info", text: `✓ 已删除 ${target.key}` });
+      } catch (err) {
+        setBanner({ kind: "error", text: `删除失败: ${(err as Error).message}` });
+      }
       return;
     }
   }
@@ -242,6 +352,10 @@ export function ModelManager({
           {tab === "models" ? "● Models" : "○ Models"}
         </Text>
         <Text>{"   "}</Text>
+        <Text color={tab === "providers" ? "ansi:cyan" : undefined} bold={tab === "providers"}>
+          {tab === "providers" ? "● Providers" : "○ Providers"}
+        </Text>
+        <Text>{"   "}</Text>
         <Text color={tab === "arena" ? "ansi:cyan" : undefined} bold={tab === "arena"}>
           {tab === "arena" ? "● Arena" : "○ Arena"}
         </Text>
@@ -249,6 +363,8 @@ export function ModelManager({
 
       {tab === "models" ? (
         <ModelsPane entries={entries} cursor={cursor} snapshot={snapshot} />
+      ) : tab === "providers" ? (
+        <ProvidersPane providers={providerRows} cursor={providerCursor} />
       ) : (
         <ArenaPane
           arena={arena}
@@ -332,8 +448,66 @@ function ModelsPane({
           {"操作: "}
           <Text color="ansi:cyan">{"[Enter]"}</Text>
           {" 切换  "}
+          <Text color="ansi:cyan">{"[A]"}</Text>
+          {" 添加  "}
+          <Text color="ansi:cyan">{"[x]"}</Text>
+          {" 删除  "}
           <Text color="ansi:cyan">{"[s]"}</Text>
           {" 同步快照"}
+        </Text>
+      </Box>
+    </>
+  );
+}
+
+function ProvidersPane({
+  providers,
+  cursor,
+}: {
+  providers: ProviderManagerEntry[];
+  cursor: number;
+}) {
+  return (
+    <>
+      <Box marginLeft={2} marginTop={1}>
+        <Text bold>{`Providers (${providers.length})`}</Text>
+      </Box>
+
+      {providers.length === 0 ? (
+        <Box marginLeft={4}>
+          <Text dim>{"尚未配置任何 provider。按 [a] 添加。"}</Text>
+        </Box>
+      ) : (
+        providers.map((p, i) => {
+          const focused = i === cursor;
+          const prefix = focused ? "❯ " : "  ";
+          const cached =
+            p.cachedModels !== undefined
+              ? `${p.cachedModels} 缓存${p.cachedAt ? ` · ${formatFreshness(p.cachedAt)}` : ""}`
+              : "未拉取";
+          return (
+            <Box key={p.key} marginLeft={2}>
+              <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                {prefix}
+                {p.label || p.key}
+              </Text>
+              <Text dim>{`  (${p.kind})  `}</Text>
+              <Text>{`${p.modelCount} 模型  `}</Text>
+              <Text dim>{cached}</Text>
+            </Box>
+          );
+        })
+      )}
+
+      <Box marginLeft={2} marginTop={1}>
+        <Text dim>
+          {"操作: "}
+          <Text color="ansi:cyan">{"[a]"}</Text>
+          {" 添加  "}
+          <Text color="ansi:cyan">{"[r]"}</Text>
+          {" 刷新  "}
+          <Text color="ansi:cyan">{"[d]"}</Text>
+          {" 删除"}
         </Text>
       </Box>
     </>

@@ -31,7 +31,13 @@ import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { AskUserPrompt } from "./components/AskUserPrompt.js";
 import { OnboardingPrompt } from "./components/OnboardingPrompt.js";
 import { ModelSelector, type ModelEntry } from "./components/ModelSelector.js";
-import { ModelManager, type ArenaParticipantEntry } from "./components/ModelManager.js";
+import {
+  ModelManager,
+  type ArenaParticipantEntry,
+  type ProviderManagerEntry,
+} from "./components/ModelManager.js";
+import { AddProviderWizard } from "./components/AddProviderWizard.js";
+import { AddModelWizard } from "./components/AddModelWizard.js";
 import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
 import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
@@ -135,7 +141,12 @@ export function App({
     entries: ModelEntry[];
     snapshot: { count: number; fetchedAt: string };
     arenaParticipants: ArenaParticipantEntry[];
+    providers: ProviderManagerEntry[];
   } | null>(null);
+  // Which modal wizard is on top of the ModelManager (provider/model add).
+  // Both wizards re-fetch the manager state on save so the list updates
+  // without closing the manager.
+  const [wizard, setWizard] = useState<"provider" | "model" | null>(null);
 
   // Track streaming chars in a ref — no App-level re-render per tick.
   // StatusLine reads these refs directly via its own internal interval.
@@ -478,37 +489,79 @@ export function App({
     }
   }, [client]);
 
+  // Shared fetch path used by both the initial open and the post-wizard
+  // refresh (so adding a provider/model lights up the list without
+  // closing the manager).
+  const fetchModelManagerState = useCallback(async (): Promise<{
+    entries: ModelEntry[];
+    snapshot: { count: number; fetchedAt: string };
+    arenaParticipants: ArenaParticipantEntry[];
+    providers: ProviderManagerEntry[];
+  }> => {
+    const [modelsRes, arenaRes, providersRes, snapMod] = await Promise.all([
+      client.query("models"),
+      client.query("config_get", "arena.participants"),
+      client.query("config_get", "providers"),
+      import("../data/openrouter-models.js"),
+    ]);
+    const entries = (modelsRes.data as ModelEntry[]) ?? [];
+    const snap = snapMod.getOpenRouterSnapshot();
+
+    // arena.participants: Array<string | { name, model, ... }>. Strings are
+    // editable in-place; object entries surface as read-only labels so a
+    // hand-crafted settings.json round-trips intact.
+    const raw = (arenaRes.data as { value?: unknown })?.value;
+    const arenaParticipants: ArenaParticipantEntry[] = Array.isArray(raw)
+      ? raw.map((item: unknown): ArenaParticipantEntry => {
+          if (typeof item === "string") return { kind: "key", value: item };
+          if (item && typeof item === "object") {
+            const obj = item as { name?: string; model?: string };
+            const label = obj.name ?? obj.model ?? "(未命名)";
+            return { kind: "object", label };
+          }
+          return { kind: "object", label: String(item) };
+        })
+      : [];
+
+    // providers: settings.providers[]. We derive modelCount client-side by
+    // counting how many of the loaded model entries reference each provider.
+    // cachedModels/cachedAt are not yet exposed by the server (Task 12 will
+    // pipe them through) — leave them undefined and the pane shows "未拉取".
+    const providersRaw = (providersRes.data as { value?: unknown })?.value;
+    const providerList = Array.isArray(providersRaw) ? providersRaw : [];
+    const referenceCounts = new Map<string, number>();
+    for (const e of entries) {
+      const pk = (e as ModelEntry & { providerKey?: string }).providerKey;
+      if (!pk) continue;
+      referenceCounts.set(pk, (referenceCounts.get(pk) ?? 0) + 1);
+    }
+    const providers: ProviderManagerEntry[] = providerList
+      .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+      .map((p) => {
+        const key = typeof p.key === "string" ? p.key : "";
+        const label = typeof p.label === "string" ? p.label : key;
+        const kind = typeof p.kind === "string" ? p.kind : "unknown";
+        return {
+          key,
+          label,
+          kind,
+          modelCount: referenceCounts.get(key) ?? 0,
+        };
+      })
+      .filter((p) => p.key.length > 0);
+
+    return {
+      entries,
+      snapshot: { count: snap.count, fetchedAt: snap.fetchedAt },
+      arenaParticipants,
+      providers,
+    };
+  }, [client]);
+
   const openModelManager = useCallback(async () => {
     try {
-      const [modelsRes, arenaRes, snapMod] = await Promise.all([
-        client.query("models"),
-        client.query("config_get", "arena.participants"),
-        import("../data/openrouter-models.js"),
-      ]);
-      const entries = (modelsRes.data as ModelEntry[]) ?? [];
-      const snap = snapMod.getOpenRouterSnapshot();
-
-      // arena.participants: Array<string | { name, model, ... }>. Strings are
-      // editable in-place; object entries surface as read-only labels so a
-      // hand-crafted settings.json round-trips intact.
-      const raw = (arenaRes.data as { value?: unknown })?.value;
-      const arenaParticipants: ArenaParticipantEntry[] = Array.isArray(raw)
-        ? raw.map((item: unknown): ArenaParticipantEntry => {
-            if (typeof item === "string") return { kind: "key", value: item };
-            if (item && typeof item === "object") {
-              const obj = item as { name?: string; model?: string };
-              const label = obj.name ?? obj.model ?? "(未命名)";
-              return { kind: "object", label };
-            }
-            return { kind: "object", label: String(item) };
-          })
-        : [];
-
-      setModelManager({
-        entries,
-        snapshot: { count: snap.count, fetchedAt: snap.fetchedAt },
-        arenaParticipants,
-      });
+      const state = await fetchModelManagerState();
+      setModelManager(state);
     } catch (err) {
       chatStore.update((prev) => [
         ...prev,
@@ -518,7 +571,24 @@ export function App({
         }),
       ]);
     }
-  }, [client]);
+  }, [fetchModelManagerState]);
+
+  // Re-fetch the manager state after a wizard saves. Caller has already
+  // closed the wizard; this just refreshes the underlying list.
+  const refreshModelManagerState = useCallback(async () => {
+    try {
+      const state = await fetchModelManagerState();
+      setModelManager(state);
+    } catch (err) {
+      chatStore.update((prev) => [
+        ...prev,
+        entry({
+          type: "status",
+          reason: `Failed to refresh model manager: ${(err as Error).message}`,
+        }),
+      ]);
+    }
+  }, [fetchModelManagerState]);
 
   useInput((ch, key) => {
     if (key.ctrl && ch === "c") {
@@ -978,11 +1048,55 @@ export function App({
           }}
           onCancel={() => setSessionEntries(null)}
         />
+      ) : wizard === "provider" && modelManager ? (
+        <AddProviderWizard
+          existingKeys={modelManager.providers.map((p) => p.key)}
+          onSave={async (cfg) => {
+            // TODO(task-12): the "provider_add" verb isn't in the protocol
+            // QueryParams union yet. The cast lets the UI compile now and
+            // Task 12 will land the typed handler. The try/catch keeps the
+            // UI alive if the server doesn't recognize the verb.
+            try {
+              await client.query("provider_add" as never, cfg as never);
+            } catch {
+              /* swallow — handler may not be wired yet */
+            }
+            setWizard(null);
+            await refreshModelManagerState();
+          }}
+          onCancel={() => setWizard(null)}
+        />
+      ) : wizard === "model" && modelManager ? (
+        <AddModelWizard
+          providers={modelManager.providers.map((p) => ({
+            key: p.key,
+            label: p.label,
+            // The wizard's typing wants ProviderKindName; we only pass it
+            // through to render the kind label and to call fetchModelList.
+            // Cast here so the manager doesn't need to import the kind enum.
+            kind: p.kind as never,
+            baseUrl: "",
+          }))}
+          existingModelKeys={modelManager.entries.map((e) => e.key)}
+          onSave={async (modelEntry) => {
+            // TODO(task-12): see comment above re: "provider_add".
+            try {
+              await client.query("model_add" as never, modelEntry as never);
+            } catch {
+              /* swallow — handler may not be wired yet */
+            }
+            setWizard(null);
+            await refreshModelManagerState();
+          }}
+          onCancel={() => setWizard(null)}
+          onAddProvider={() => setWizard("provider")}
+        />
       ) : modelManager ? (
         <ModelManager
           entries={modelManager.entries}
           snapshot={modelManager.snapshot}
           arenaParticipants={modelManager.arenaParticipants}
+          providers={modelManager.providers}
           onSaveArena={async (list) => {
             await client.query("config_set", "arena.participants", list);
             setModelManager((prev) =>
@@ -1019,6 +1133,23 @@ export function App({
               prev ? { ...prev, snapshot: { count: snap.count, fetchedAt: snap.fetchedAt } } : prev,
             );
             return r;
+          }}
+          onAddProvider={() => setWizard("provider")}
+          onAddModel={() => setWizard("model")}
+          // TODO(task-12): wire these to real protocol handlers once they
+          // land. Returning a placeholder error keeps the UI honest about
+          // what isn't ready yet rather than silently no-oping.
+          onRefreshProvider={async (_key) => ({
+            count: 0,
+            error: "not implemented in Task 11 — see Task 12",
+          })}
+          onDeleteProvider={async (_key) => ({
+            ok: false,
+            error: "not implemented in Task 11 — see Task 12",
+          })}
+          onDeleteModel={async (_key) => {
+            // TODO(task-12): protocol handler not yet wired.
+            throw new Error("not implemented in Task 11 — see Task 12");
           }}
           onClose={() => setModelManager(null)}
         />
