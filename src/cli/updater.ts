@@ -390,18 +390,15 @@ function isAutoUpdaterDisabled(): string | null {
  * matches what SettingsManager loads at user scope.
  */
 function readAutoUpdatesFlagFromDisk(): boolean | undefined {
-  const candidates = [
-    join(userHome(), ".code-shell", "settings.json"),
-    join(userHome(), ".claude", "settings.json"),
-  ];
-  for (const path of candidates) {
-    try {
-      const raw = readFileSync(path, "utf8");
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      if (typeof parsed.autoUpdates === "boolean") return parsed.autoUpdates;
-    } catch {
-      // missing / invalid JSON / wrong type — keep trying
-    }
+  // ~/.code-shell/ only — Claude Code compat path was dropped from settings
+  // loading (their `model` field is a string, ours is an object).
+  const path = join(userHome(), ".code-shell", "settings.json");
+  try {
+    const raw = readFileSync(path, "utf8");
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed.autoUpdates === "boolean") return parsed.autoUpdates;
+  } catch {
+    // missing / invalid JSON / wrong type — fall through to undefined
   }
   return undefined;
 }

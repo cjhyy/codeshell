@@ -29,6 +29,14 @@ breaking.
   fixes "no API key found" false negatives for users on the new shape.
 - Read-only filesystem (CI containers) no longer floods the log with
   `tool_result.persist_failed` warnings — demoted to debug.
+- **Boot crash on machines with Claude Code installed.** Settings loader
+  previously merged `~/.claude/settings.json` into our own config for
+  "zero-migration from Claude Code", but CC's schema diverges (`model` is
+  a string there, an object here) and the merge crashed startup before
+  the onboarding wizard could even render. Dropped the cross-read in
+  `SettingsManager`, `hasApiKey()`, and the updater's autoUpdates probe.
+  File-level compat (CLAUDE.md scanning, `.claude/skills/` discovery) is
+  unaffected — only the settings.json cross-read is removed.
 
 ## [0.1.5] - 2026-05-13
 

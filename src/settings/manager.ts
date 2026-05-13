@@ -51,17 +51,19 @@ export class SettingsManager {
     // 1. Managed (lowest priority)
     this.loadJsonFile(join(userHome(), ".code-shell", "settings.managed.json"), "managed", 0);
 
-    // 2. User — check both ~/.code-shell/ and ~/.claude/ (compat)
+    // 2. User — only ~/.code-shell/. We used to also read ~/.claude/settings.json
+    // for "zero-migration from Claude Code", but Claude Code's schema diverges
+    // (e.g. `model` is a string there, an object here). Merging caused boot
+    // crashes on machines that had Claude Code installed but never ran us.
+    // File-level compat (CLAUDE.md, .claude/skills/) is kept elsewhere — only
+    // the settings.json read is dropped.
     this.loadJsonFile(join(userHome(), ".code-shell", "settings.json"), "user", 1);
-    this.loadJsonFile(join(userHome(), ".claude", "settings.json"), "user", 1);
 
     // 3. Project
     this.loadJsonFile(join(this.cwd, ".code-shell", "settings.json"), "project", 2);
-    this.loadJsonFile(join(this.cwd, ".claude", "settings.json"), "project", 2);
 
     // 4. Local
     this.loadJsonFile(join(this.cwd, ".code-shell", "settings.local.json"), "local", 3);
-    this.loadJsonFile(join(this.cwd, ".claude", "settings.local.json"), "local", 3);
 
     // 5. CLI flags (highest priority)
     if (flagOverrides && Object.keys(flagOverrides).length > 0) {

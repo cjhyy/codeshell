@@ -360,20 +360,15 @@ export function hasApiKey(): boolean {
   // Env variables alone are NOT enough to skip onboarding — they're surfaced
   // as a one-click option on the provider page instead. We only skip when the
   // user has explicitly persisted a config (settings.json with model.apiKey).
-  const settingsPaths = [
-    join(homedir(), ".code-shell", "settings.json"),
-    join(homedir(), ".claude", "settings.json"),
-  ];
-
-  for (const p of settingsPaths) {
-    if (existsSync(p)) {
-      try {
-        const data = JSON.parse(readFileSync(p, "utf-8"));
-        if (data?.model?.apiKey) return true;
-      } catch { /* ignore */ }
-    }
+  // Reads ~/.code-shell/ only — ~/.claude/ compat was dropped because Claude
+  // Code's settings schema diverges and merging broke boot.
+  const p = join(homedir(), ".code-shell", "settings.json");
+  if (existsSync(p)) {
+    try {
+      const data = JSON.parse(readFileSync(p, "utf-8"));
+      if (data?.model?.apiKey) return true;
+    } catch { /* ignore */ }
   }
-
   return false;
 }
 
