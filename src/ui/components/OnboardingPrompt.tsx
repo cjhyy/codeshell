@@ -2,11 +2,10 @@
  * OnboardingPrompt — first-run / /login wizard.
  *
  * Thin wrapper around ProviderModelFlow:
- *   1. Welcome screen (one Enter to continue, Esc to cancel)
- *   2. <ProviderModelFlow switchToNewModelOnFinish={true} />
- *   3. Optional Arena participant multi-select over the newly-added aliases
+ *   1. <ProviderModelFlow switchToNewModelOnFinish={true} />  (Esc cancels)
+ *   2. Optional Arena participant multi-select over the newly-added aliases
  *      (skipped when only one model was added)
- *   4. Append everything to settings.json and resolve via onComplete
+ *   3. Append everything to settings.json and resolve via onComplete
  *
  * Append-only: re-running /login adds providers/models on top of what's
  * already there. To start over the user runs /logout first.
@@ -23,7 +22,7 @@ import {
 } from "../../cli/onboarding.js";
 import type { ProviderConfig } from "../../llm/provider-catalog.js";
 
-type Step = "welcome" | "flow" | "arena";
+type Step = "flow" | "arena";
 
 interface OnboardingPromptProps {
   onComplete: (result: OnboardingResult) => void;
@@ -41,21 +40,11 @@ export function OnboardingPrompt({
   existingProviders = [],
   existingModelKeys = [],
 }: OnboardingPromptProps) {
-  const [step, setStep] = useState<Step>("welcome");
+  const [step, setStep] = useState<Step>("flow");
   const [flowResult, setFlowResult] = useState<FlowResult | null>(null);
   // Arena: which newly-added model aliases participate.
   const [arenaPicks, setArenaPicks] = useState<Set<string>>(new Set());
   const [arenaIdx, setArenaIdx] = useState(0);
-
-  // ─── Welcome step input ────────────────────────────────────────────
-  useInput((_input, key) => {
-    if (step !== "welcome") return;
-    if (key.escape) {
-      onCancel();
-      return;
-    }
-    if (key.return) setStep("flow");
-  });
 
   // ─── Arena step input ──────────────────────────────────────────────
   useInput((input, key) => {
@@ -174,23 +163,6 @@ export function OnboardingPrompt({
   }
 
   // ─── Render ────────────────────────────────────────────────────────
-  if (step === "welcome") {
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        <Box>
-          <Text color="ansi:cyan" bold>
-            {"✦ Code Shell — Setup"}
-          </Text>
-        </Box>
-        <Box marginTop={1} marginLeft={2}>
-          <Text>This wizard adds a provider and one or more models.</Text>
-        </Box>
-        <Box marginLeft={2}>
-          <Text dim>Press Enter to start · Esc to cancel.</Text>
-        </Box>
-      </Box>
-    );
-  }
 
   if (step === "flow") {
     return (
