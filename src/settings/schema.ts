@@ -16,6 +16,24 @@ export const SettingsSchema = z
       })
       .default({}),
 
+    /**
+     * Primary source of truth for the active model is settings.activeKey
+     * (points at models[].key). settings.model is a derived mirror of that
+     * entry kept in sync for legacy boot paths (cli/main.ts, repl.ts, etc.)
+     * which read provider/name/apiKey/baseUrl directly. Writers must update
+     * both — appendOnboardingResult does this in one shot.
+     */
+    activeKey: z.string().optional(),
+
+    /**
+     * Toggle background auto-update. When true (default), code-shell checks
+     * npm for newer versions and — if the npm global prefix is writable —
+     * installs the update in the background on process exit so the next
+     * launch picks it up.
+     * Can also be disabled via env var `DISABLE_AUTOUPDATER=1`.
+     */
+    autoUpdates: z.boolean().default(true),
+
     model: z
       .object({
         provider: z.string().default("openai"),
@@ -54,17 +72,36 @@ export const SettingsSchema = z
 
     models: z
       .array(
-        z.object({
-          key: z.string(),
-          label: z.string().optional(),
-          providerKey: z.string().optional(),
-          model: z.string(),
-          maxOutputTokens: z.number().optional(),
-          maxContextTokens: z.number().optional(),
-          provider: z.string().optional(),
-          baseUrl: z.string().optional(),
-          apiKey: z.string().optional(),
-        }),
+        z
+          .object({
+            key: z.string(),
+            label: z.string().optional(),
+            providerKey: z.string().optional(),
+            model: z.string(),
+            maxOutputTokens: z.number().optional(),
+            maxContextTokens: z.number().optional(),
+            /**
+             * Which LLM client to use ("openai" or "anthropic"). New name —
+             * the legacy field is `provider`, which we still accept and
+             * fold into `protocol` below so old configs keep working.
+             * NOT the brand/vendor — that's providerKey above.
+             */
+            protocol: z.string().optional(),
+            provider: z.string().optional(),
+            baseUrl: z.string().optional(),
+            apiKey: z.string().optional(),
+          })
+          .transform((m) => {
+            // Normalize: prefer `protocol`; fall back to legacy `provider`.
+            // We keep `provider` populated as a mirror because engine code
+            // and a few downstream readers still query it directly.
+            const effective = m.protocol ?? m.provider;
+            return {
+              ...m,
+              protocol: effective,
+              provider: effective,
+            };
+          }),
       )
       .default([]),
 

@@ -5,10 +5,11 @@
 import type { SlashCommand } from "../registry.js";
 import { costTracker } from "../../cost-tracker.js";
 import { execSync } from "node:child_process";
-import { existsSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { resolveApiKey } from "../../onboarding.js";
+import { initCommand } from "./init/index.js";
 
 export const coreCommands: SlashCommand[] = [
   // ─── Existing (migrated from App.tsx) ───────────────────────────
@@ -153,13 +154,21 @@ export const coreCommands: SlashCommand[] = [
         return;
       }
 
-      // Switch model
+      // Switch model. The server returns { ok, model, key } on success and
+      // rejects on failure (handled by catch). Only update local state from
+      // the server's confirmed model id so we don't claim a switch the
+      // backend didn't actually perform.
       try {
-        const result = await ctx.client.configure({ model: key });
-        const data = result as any;
-        const newModel = data?.model ?? key;
-        ctx.setModel(newModel);
-        ctx.addStatus(`Switched to: ${key} (${newModel})`);
+        const result = (await ctx.client.configure({ model: key })) as {
+          ok?: boolean;
+          model?: string;
+        };
+        if (!result?.ok || !result.model) {
+          ctx.addStatus(`Failed to switch model: server did not confirm switch`);
+          return;
+        }
+        ctx.setModel(result.model);
+        ctx.addStatus(`Switched to: ${key} (${result.model})`);
       } catch (err) {
         ctx.addStatus(`Failed to switch model: ${(err as Error).message}`);
       }
@@ -714,145 +723,5 @@ export const coreCommands: SlashCommand[] = [
     },
   },
 
-  {
-    name: "/init",
-    group: "config",
-    description: "Initialize CODESHELL.md with codebase documentation",
-    execute: async (_arg, ctx) => {
-      // Create .code-shell/settings.json if missing
-      const configDir = join(ctx.cwd, ".code-shell");
-      const configFile = join(configDir, "settings.json");
-      if (!existsSync(configFile)) {
-        mkdirSync(configDir, { recursive: true });
-        writeFileSync(
-          configFile,
-          JSON.stringify(
-            {
-              model: {
-                provider: "openai",
-                name: "anthropic/claude-opus-4-6",
-                baseUrl: "https://openrouter.ai/api/v1",
-              },
-              permissions: { defaultMode: "acceptEdits", rules: [] },
-              mcpServers: {},
-            },
-            null,
-            2,
-          ),
-          "utf-8",
-        );
-      }
-
-      ctx.addStatus("Analyzing codebase and generating CODESHELL.md...");
-      ctx.setIsRunning(true);
-
-      const instrFile = join(ctx.cwd, "CODESHELL.md");
-      const hasExisting = existsSync(instrFile);
-      // Also check for CLAUDE.md / AGENTS.md to migrate from
-      const hasClaude = existsSync(join(ctx.cwd, "CLAUDE.md"));
-      const hasAgents = existsSync(join(ctx.cwd, "AGENTS.md"));
-
-      try {
-        const migrationNote =
-          hasClaude || hasAgents
-            ? `\nIMPORTANT: This project has existing AI tool configs:${hasClaude ? "\n- CLAUDE.md (Claude Code)" : ""}${hasAgents ? "\n- AGENTS.md (Codex)" : ""}\nRead them and incorporate their relevant rules into CODESHELL.md. Do not duplicate — absorb and improve.`
-            : "";
-
-        const prompt = `Set up a CODESHELL.md for this repo. CODESHELL.md is loaded into every Code Shell session, so it must be concise — only include what would cause mistakes without it.
-${migrationNote}
-## Phase 1: Explore the codebase
-
-Survey the project by reading key files:
-- Manifest files: package.json, Cargo.toml, pyproject.toml, go.mod, pom.xml, etc.
-- README.md
-- Build configs: Makefile, tsconfig.json, webpack.config, vite.config, etc.
-- CI config: .github/workflows/, .gitlab-ci.yml, etc.
-- Existing AI tool configs: CLAUDE.md, AGENTS.md, .cursor/rules, .cursorrules, .github/copilot-instructions.md, .windsurfrules, .clinerules
-- .codeshell/rules/ directory
-
-Detect:
-- Build, test, and lint commands (especially non-standard ones)
-- Languages, frameworks, and package manager
-- Project structure (monorepo, multi-module, or single project)
-- Code style rules that differ from language defaults
-- Formatter configuration (prettier, biome, ruff, black, gofmt, rustfmt)
-- Non-obvious gotchas, required env vars, or workflow quirks
-
-${
-  hasExisting
-    ? `## Phase 2: Improve existing CODESHELL.md
-
-CODESHELL.md already exists at ${instrFile}. Read it, then propose specific improvements:
-- Add missing build/test/lint commands
-- Remove generic advice the model already knows
-- Add gotchas or conventions found in the codebase but missing
-- Incorporate relevant rules from other AI tool configs (CLAUDE.md, AGENTS.md, .cursor/rules, etc.)
-
-Show proposed changes as diffs and explain why each change helps. Do not silently overwrite.`
-    : `## Phase 2: Write CODESHELL.md
-
-Write a minimal CODESHELL.md at: ${instrFile}
-
-Every line must pass this test: "Would removing this cause the model to make mistakes?" If no, cut it.
-
-Prefix with:
-\`\`\`
-# CODESHELL.md
-
-This file provides guidance to Code Shell when working with code in this repository.
-\`\`\`
-
-Include:
-- Build/test/lint commands the model can't guess (non-standard scripts, flags, sequences)
-- Code style rules that DIFFER from language defaults
-- Testing instructions and quirks (e.g., "run single test with: pytest -k 'test_name'")
-- Repo etiquette (branch naming, PR conventions, commit style)
-- Required env vars or setup steps
-- Non-obvious gotchas or architectural decisions
-- Important parts from existing AI tool configs (CLAUDE.md, AGENTS.md, .cursor/rules, etc.)
-
-Exclude:
-- File-by-file structure or component lists (discoverable by reading code)
-- Standard language conventions the model already knows
-- Generic advice ("write clean code", "handle errors")
-- Commands obvious from manifest files (e.g., standard "npm test", "cargo test")
-- Information that changes frequently — use @path/to/file syntax to reference it
-
-Be specific: "Use 2-space indentation in TypeScript" > "Format code properly."`
-}
-
-## Phase 3: Set up rules directory
-
-If the project has multiple concerns, create focused rule files in .codeshell/rules/:
-- code-style.md — formatting, naming, patterns
-- testing.md — how to run tests, test conventions
-
-Each rule file can have frontmatter to scope it:
-\`\`\`yaml
----
-description: TypeScript code style rules
-globs: "**/*.ts"
----
-\`\`\`
-
-Only create rules that are specific and useful. Skip if the project is simple enough for a single CODESHELL.md.
-
-## Phase 4: Summary
-
-Recap what was created. Remind the user to review and tweak — these files are a starting point.`;
-
-        const result = await ctx.client.run(prompt, ctx.sessionId);
-        ctx.setSessionId(result.sessionId);
-
-        if (existsSync(instrFile)) {
-          ctx.addStatus(`CODESHELL.md ${hasExisting ? "updated" : "created"} at ${instrFile}`);
-        } else {
-          ctx.addStatus("Init completed. Check output above for details.");
-        }
-      } catch (err) {
-        ctx.addStatus(`Init failed: ${(err as Error).message}`);
-      }
-      ctx.setIsRunning(false);
-    },
-  },
+  initCommand,
 ];

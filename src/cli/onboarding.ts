@@ -11,6 +11,13 @@ import { homedir } from "node:os";
 import { getOpenRouterModels } from "../data/openrouter-models.js";
 
 export interface OnboardingResult {
+  /**
+   * Pool alias key (e.g. "deepseek-v4-pro"). The engine uses this to switch
+   * the active model — callers should NOT re-derive an alias from `model`
+   * (the old modelKey() helper folded multiple model ids to one key, which
+   * silently shadowed entries in the pool).
+   */
+  key: string;
   provider: string;
   model: string;
   apiKey: string;
@@ -458,49 +465,36 @@ export function resolveContextWindow(model: string): number | undefined {
 }
 
 /**
- * Derive a short key from a model path.
- * "anthropic/claude-opus-4.7" → "claude-opus"
- * "openai/gpt-5" → "gpt"
- * "deepseek/deepseek-chat" → "deepseek"
+ * Derive a pool key in `provider-model` form. Single source of truth for
+ * model alias generation — replaces the old modelKey() function which
+ * folded same-family models to one key (e.g. v4-flash and v4-pro both
+ * collapsed to "deepseek"), causing the pool to silently shadow entries.
+ *
+ *   ("deepseek", "deepseek-v4-pro")  → "deepseek-v4-pro"
+ *   ("openai",   "openai/gpt-5")      → "openai-gpt-5"
+ *   ("anthropic","claude-opus-4-7")   → "anthropic-claude-opus-4-7"
+ *
+ * If the model id already starts with `<provider>-` (e.g. "deepseek-v4-pro"
+ * under provider "deepseek"), the prefix isn't duplicated.
+ *
+ * `used` is a set of already-taken keys; collisions are resolved with a
+ * `-2`, `-3`, ... suffix.
  */
-export function modelKey(model: string): string {
-  const slash = model.lastIndexOf("/");
-  const base = slash >= 0 ? model.slice(slash + 1) : model;
-  // claude models: "claude-opus-4.6" → "claude-opus", "claude-sonnet-4.6" → "claude-sonnet"
-  if (base.startsWith("claude-")) {
-    const parts = base.split("-");
-    return parts.length >= 2 ? `${parts[0]}-${parts[1]}` : parts[0]!;
+export function deriveModelPoolKey(
+  providerKind: string,
+  modelId: string,
+  used: string[] = [],
+): string {
+  const slash = modelId.lastIndexOf("/");
+  const base = slash >= 0 ? modelId.slice(slash + 1) : modelId;
+  const prefix = providerKind.toLowerCase();
+  const candidate = base.toLowerCase().startsWith(`${prefix}-`) ? base : `${prefix}-${base}`;
+  const set = new Set(used);
+  if (!set.has(candidate)) return candidate;
+  for (let i = 2; ; i++) {
+    const k = `${candidate}-${i}`;
+    if (!set.has(k)) return k;
   }
-  // gpt: "gpt-5" → "gpt", "gpt-4o" → "gpt4o"
-  if (base.startsWith("gpt-")) {
-    const rest = base.slice(4);
-    if (/^\d/.test(rest)) return "gpt";
-    return `gpt${rest.split("-")[0]}`;
-  }
-  // gemini: "gemini-3.1-pro-preview" → "gemini-pro", "gemini-3-flash-preview" → "gemini-flash"
-  if (base.startsWith("gemini-")) {
-    if (base.includes("flash")) return "gemini-flash";
-    if (base.includes("pro")) return "gemini-pro";
-    return "gemini";
-  }
-  // deepseek: "deepseek-v3.2" → "deepseek", "deepseek-r1" → "deepseek-r1"
-  if (base.startsWith("deepseek-")) {
-    if (base.includes("r1")) return "deepseek-r1";
-    return "deepseek";
-  }
-  // qwen: "qwen3-coder" → "qwen-coder", "qwen3-235b-a22b" → "qwen"
-  if (base.startsWith("qwen")) {
-    if (base.includes("coder")) return "qwen-coder";
-    return "qwen";
-  }
-  // o4-mini, o3
-  if (/^o\d/.test(base)) return base.split("-")[0]!;
-  // llama-4-maverick → "llama"
-  if (base.startsWith("llama")) return "llama";
-  // devstral-medium → "devstral"
-  if (base.startsWith("devstral")) return "devstral";
-  // fallback: first segment
-  return base.split("-")[0] ?? base;
 }
 
 /**
@@ -511,16 +505,21 @@ export function buildModelPool(
   apiKey: string,
 ): Array<{ key: string; label: string; provider: string; model: string; baseUrl: string; apiKey: string; maxOutputTokens?: number; maxContextTokens?: number }> {
   const models = resolveProviderModels(provider);
-  return models.map((m) => ({
-    key: modelKey(m),
-    label: modelDisplayName(m),
-    provider: provider.provider,
-    model: m,
-    baseUrl: provider.baseUrl,
-    apiKey,
-    maxOutputTokens: resolveMaxOutput(m),
-    maxContextTokens: resolveContextWindow(m),
-  }));
+  const used: string[] = [];
+  return models.map((m) => {
+    const key = deriveModelPoolKey(provider.id, m, used);
+    used.push(key);
+    return {
+      key,
+      label: modelDisplayName(m),
+      provider: provider.provider,
+      model: m,
+      baseUrl: provider.baseUrl,
+      apiKey,
+      maxOutputTokens: resolveMaxOutput(m),
+      maxContextTokens: resolveContextWindow(m),
+    };
+  });
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -581,22 +580,24 @@ export function saveSettings(result: OnboardingResult, providerDef?: ProviderDef
 /**
  * Append-only persistence for the new ProviderModelFlow-based onboarding.
  *
- * Unlike saveSettings (which replaces the current provider's slice of
- * settings.models[]), this function only APPENDS new entries and never
- * removes existing ones. /login uses it; users clear state via /logout.
+ * Writes the new shape:
+ *   - settings.activeKey      — primary source of truth for active model
+ *   - settings.models[]       — self-describing entries (key, provider,
+ *                                model, baseUrl, apiKey, maxOutput, maxContext)
+ *   - settings.providers[]    — credential source for the wizard
+ *   - settings.model.*        — legacy mirror of the active entry, kept in
+ *                                sync so legacy boot paths (cli/main.ts,
+ *                                repl.ts, run.ts) keep working without
+ *                                each having to learn about activeKey
  *
- *   - settings.providers[] — append addedProvider if it's not already
- *     present (matched by key).
- *   - settings.models[]    — append addedModels, skipping any entry whose
- *     key already exists (last-writer-wins on collision is avoided
- *     intentionally: the caller derives unique aliases before getting here).
- *   - settings.model.{provider,name,apiKey,baseUrl} — set to the active
- *     model so the engine boots into the user's chosen default.
- *
- * Writes atomically via tmp+rename to avoid torn JSON on crash.
+ * Append-only: never removes existing entries. To start over use /logout.
+ * Writes atomically via tmp+rename.
  */
 export function appendOnboardingResult(opts: {
-  active: { provider: string; model: string; apiKey: string; baseUrl: string };
+  /** Alias key the engine should switch to after writing. Matches one of addedModels[].key. */
+  activeKey: string;
+  /** Active entry's fields, used to mirror into the legacy settings.model.* block. */
+  activeMirror: { provider: string; model: string; apiKey: string; baseUrl: string };
   addedProvider?: {
     key: string;
     label?: string;
@@ -608,8 +609,15 @@ export function appendOnboardingResult(opts: {
   };
   addedModels: Array<{
     key: string;
-    providerKey: string;
+    label?: string;
+    providerKey?: string;
+    /** LLM client/protocol ("openai"/"anthropic"). New canonical name. */
+    protocol?: string;
+    /** Legacy mirror of `protocol`. Both are written so legacy readers keep working. */
+    provider?: string;
     model: string;
+    baseUrl: string;
+    apiKey?: string;
     maxContextTokens?: number;
     maxOutputTokens?: number;
   }>;
@@ -637,7 +645,10 @@ export function appendOnboardingResult(opts: {
     if (!has) providersOut = [...existingProviders, opts.addedProvider];
   }
 
-  // Append models (skip entries whose key already exists).
+  // Append models (skip entries whose key already exists — the wizard
+  // already derives unique keys via deriveModelPoolKey, so a collision
+  // means the user re-added the exact same alias and we leave the older
+  // entry alone rather than silently overwriting credentials).
   const existingModels = Array.isArray((existing as any).models)
     ? ((existing as any).models as Array<Record<string, unknown>>)
     : [];
@@ -646,12 +657,13 @@ export function appendOnboardingResult(opts: {
 
   const updated: Record<string, unknown> = {
     ...existing,
+    activeKey: opts.activeKey,
     model: {
       ...(typeof existing.model === "object" && existing.model ? existing.model : {}),
-      provider: opts.active.provider,
-      name: opts.active.model,
-      apiKey: opts.active.apiKey,
-      baseUrl: opts.active.baseUrl,
+      provider: opts.activeMirror.provider,
+      name: opts.activeMirror.model,
+      apiKey: opts.activeMirror.apiKey,
+      baseUrl: opts.activeMirror.baseUrl,
     },
     providers: providersOut,
     models: [...existingModels, ...modelsToAppend],

@@ -263,7 +263,7 @@ export type StreamEvent =
   | { type: "tool_summary"; summary: string }
   | {
       type: "context_compact";
-      strategy: "summary" | "window" | "snip" | "emergency";
+      strategy: "micro" | "summary" | "window" | "snip" | "emergency";
       before: number;
       after: number;
       agentId?: string;

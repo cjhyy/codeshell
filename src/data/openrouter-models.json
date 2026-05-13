@@ -1,8 +1,36 @@
 {
-  "fetchedAt": "2026-05-11T08:06:22.578Z",
+  "fetchedAt": "2026-05-13T06:13:51.804Z",
   "source": "https://openrouter.ai/api/v1/models",
-  "count": 365,
+  "count": 363,
   "models": [
+    {
+      "id": "anthropic/claude-opus-4.7-fast",
+      "name": "Anthropic: Claude Opus 4.7 (Fast)",
+      "created": 1778613011,
+      "contextLength": 1000000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 30,
+      "outputPricePerMillion": 150,
+      "modalities": [
+        "text",
+        "image",
+        "file"
+      ]
+    },
+    {
+      "id": "perceptron/perceptron-mk1",
+      "name": "Perceptron: Perceptron Mk1",
+      "created": 1778597029,
+      "contextLength": 32768,
+      "maxOutputTokens": 8192,
+      "inputPricePerMillion": 0.15,
+      "outputPricePerMillion": 1.5,
+      "modalities": [
+        "text",
+        "image",
+        "video"
+      ]
+    },
     {
       "id": "inclusionai/ring-2.6-1t:free",
       "name": "inclusionAI: Ring-2.6-1T (free)",
@@ -155,8 +183,9 @@
       "inputPricePerMillion": 1,
       "outputPricePerMillion": 5,
       "modalities": [
+        "text",
         "image",
-        "text"
+        "file"
       ]
     },
     {
@@ -193,9 +222,9 @@
       "id": "~moonshotai/kimi-latest",
       "name": "MoonshotAI Kimi Latest",
       "created": 1777318428,
-      "contextLength": 262144,
-      "maxOutputTokens": 16384,
-      "inputPricePerMillion": 0.75,
+      "contextLength": 262142,
+      "maxOutputTokens": 262142,
+      "inputPricePerMillion": 0.74,
       "outputPricePerMillion": 3.5,
       "modalities": [
         "text",
@@ -228,7 +257,8 @@
       "outputPricePerMillion": 15,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -452,7 +482,8 @@
       "outputPricePerMillion": 25,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -484,9 +515,9 @@
       "id": "moonshotai/kimi-k2.6",
       "name": "MoonshotAI: Kimi K2.6",
       "created": 1776699402,
-      "contextLength": 262144,
-      "maxOutputTokens": 16384,
-      "inputPricePerMillion": 0.75,
+      "contextLength": 262142,
+      "maxOutputTokens": 262142,
+      "inputPricePerMillion": 0.74,
       "outputPricePerMillion": 3.5,
       "modalities": [
         "text",
@@ -503,7 +534,8 @@
       "outputPricePerMillion": 25,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -516,7 +548,8 @@
       "outputPricePerMillion": 150,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -579,8 +612,8 @@
       "created": 1775148486,
       "contextLength": 262144,
       "maxOutputTokens": 16384,
-      "inputPricePerMillion": 0.13,
-      "outputPricePerMillion": 0.38,
+      "inputPricePerMillion": 0.12,
+      "outputPricePerMillion": 0.37,
       "modalities": [
         "image",
         "text",
@@ -613,6 +646,18 @@
         "image",
         "text",
         "video"
+      ]
+    },
+    {
+      "id": "arcee-ai/trinity-large-thinking:free",
+      "name": "Arcee AI: Trinity Large Thinking (free)",
+      "created": 1775058318,
+      "contextLength": 262144,
+      "maxOutputTokens": 80000,
+      "inputPricePerMillion": 0,
+      "outputPricePerMillion": 0,
+      "modalities": [
+        "text"
       ]
     },
     {
@@ -739,8 +784,8 @@
       "name": "MiniMax: MiniMax M2.7",
       "created": 1773836697,
       "contextLength": 196608,
-      "maxOutputTokens": 131072,
-      "inputPricePerMillion": 0.29900000000000004,
+      "maxOutputTokens": 0,
+      "inputPricePerMillion": 0.28,
       "outputPricePerMillion": 1.2,
       "modalities": [
         "text"
@@ -1084,7 +1129,8 @@
       "outputPricePerMillion": 15,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -1173,7 +1219,8 @@
       "outputPricePerMillion": 25,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -1232,7 +1279,7 @@
       "contextLength": 262144,
       "maxOutputTokens": 262144,
       "inputPricePerMillion": 0.39999999999999997,
-      "outputPricePerMillion": 1.9800000000000002,
+      "outputPricePerMillion": 1.9,
       "modalities": [
         "text",
         "image"
@@ -1965,8 +2012,9 @@
       "inputPricePerMillion": 1,
       "outputPricePerMillion": 5,
       "modalities": [
+        "text",
         "image",
-        "text"
+        "file"
       ]
     },
     {
@@ -2453,10 +2501,10 @@
       "id": "deepseek/deepseek-chat-v3.1",
       "name": "DeepSeek: DeepSeek V3.1",
       "created": 1755779628,
-      "contextLength": 32768,
-      "maxOutputTokens": 7168,
-      "inputPricePerMillion": 0.15,
-      "outputPricePerMillion": 0.75,
+      "contextLength": 163840,
+      "maxOutputTokens": 32768,
+      "inputPricePerMillion": 0.21,
+      "outputPricePerMillion": 0.7899999999999999,
       "modalities": [
         "text"
       ]
@@ -3643,7 +3691,7 @@
       "id": "google/gemini-2.0-flash-001",
       "name": "Google: Gemini 2.0 Flash",
       "created": 1738769413,
-      "contextLength": 1000000,
+      "contextLength": 1048576,
       "maxOutputTokens": 8192,
       "inputPricePerMillion": 0.09999999999999999,
       "outputPricePerMillion": 0.39999999999999997,
@@ -3653,19 +3701,6 @@
         "file",
         "audio",
         "video"
-      ]
-    },
-    {
-      "id": "qwen/qwen-vl-plus",
-      "name": "Qwen: Qwen VL Plus",
-      "created": 1738731255,
-      "contextLength": 131072,
-      "maxOutputTokens": 8192,
-      "inputPricePerMillion": 0.1365,
-      "outputPricePerMillion": 0.40950000000000003,
-      "modalities": [
-        "text",
-        "image"
       ]
     },
     {
@@ -3705,31 +3740,6 @@
       ]
     },
     {
-      "id": "qwen/qwen-vl-max",
-      "name": "Qwen: Qwen VL Max",
-      "created": 1738434304,
-      "contextLength": 131072,
-      "maxOutputTokens": 32768,
-      "inputPricePerMillion": 0.52,
-      "outputPricePerMillion": 2.08,
-      "modalities": [
-        "text",
-        "image"
-      ]
-    },
-    {
-      "id": "qwen/qwen-turbo",
-      "name": "Qwen: Qwen-Turbo",
-      "created": 1738410974,
-      "contextLength": 131072,
-      "maxOutputTokens": 8192,
-      "inputPricePerMillion": 0.0325,
-      "outputPricePerMillion": 0.13,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "qwen/qwen2.5-vl-72b-instruct",
       "name": "Qwen: Qwen2.5 VL 72B Instruct",
       "created": 1738410311,
@@ -3750,18 +3760,6 @@
       "maxOutputTokens": 32768,
       "inputPricePerMillion": 0.26,
       "outputPricePerMillion": 0.78,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
-      "id": "qwen/qwen-max",
-      "name": "Qwen: Qwen-Max ",
-      "created": 1738402289,
-      "contextLength": 32768,
-      "maxOutputTokens": 8192,
-      "inputPricePerMillion": 1.04,
-      "outputPricePerMillion": 4.16,
       "modalities": [
         "text"
       ]
@@ -4102,8 +4100,8 @@
       ]
     },
     {
-      "id": "inflection/inflection-3-productivity",
-      "name": "Inflection: Inflection 3 Productivity",
+      "id": "inflection/inflection-3-pi",
+      "name": "Inflection: Inflection 3 Pi",
       "created": 1728604800,
       "contextLength": 8000,
       "maxOutputTokens": 1024,
@@ -4114,8 +4112,8 @@
       ]
     },
     {
-      "id": "inflection/inflection-3-pi",
-      "name": "Inflection: Inflection 3 Pi",
+      "id": "inflection/inflection-3-productivity",
+      "name": "Inflection: Inflection 3 Productivity",
       "created": 1728604800,
       "contextLength": 8000,
       "maxOutputTokens": 1024,
@@ -4133,6 +4131,18 @@
       "maxOutputTokens": 32768,
       "inputPricePerMillion": 0.16999999999999998,
       "outputPricePerMillion": 0.43,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "meta-llama/llama-3.2-1b-instruct",
+      "name": "Meta: Llama 3.2 1B Instruct",
+      "created": 1727222400,
+      "contextLength": 60000,
+      "maxOutputTokens": 0,
+      "inputPricePerMillion": 0.027,
+      "outputPricePerMillion": 0.19999999999999998,
       "modalities": [
         "text"
       ]
@@ -4157,18 +4167,6 @@
       "maxOutputTokens": 0,
       "inputPricePerMillion": 0.051,
       "outputPricePerMillion": 0.33999999999999997,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
-      "id": "meta-llama/llama-3.2-1b-instruct",
-      "name": "Meta: Llama 3.2 1B Instruct",
-      "created": 1727222400,
-      "contextLength": 60000,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.027,
-      "outputPricePerMillion": 0.19999999999999998,
       "modalities": [
         "text"
       ]
@@ -4333,8 +4331,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4o-mini-2024-07-18",
-      "name": "OpenAI: GPT-4o-mini (2024-07-18)",
+      "id": "openai/gpt-4o-mini",
+      "name": "OpenAI: GPT-4o-mini",
       "created": 1721260800,
       "contextLength": 128000,
       "maxOutputTokens": 16384,
@@ -4347,8 +4345,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4o-mini",
-      "name": "OpenAI: GPT-4o-mini",
+      "id": "openai/gpt-4o-mini-2024-07-18",
+      "name": "OpenAI: GPT-4o-mini (2024-07-18)",
       "created": 1721260800,
       "contextLength": 128000,
       "maxOutputTokens": 16384,
@@ -4397,20 +4395,6 @@
       ]
     },
     {
-      "id": "openai/gpt-4o-2024-05-13",
-      "name": "OpenAI: GPT-4o (2024-05-13)",
-      "created": 1715558400,
-      "contextLength": 128000,
-      "maxOutputTokens": 4096,
-      "inputPricePerMillion": 5,
-      "outputPricePerMillion": 15,
-      "modalities": [
-        "text",
-        "image",
-        "file"
-      ]
-    },
-    {
       "id": "openai/gpt-4o",
       "name": "OpenAI: GPT-4o",
       "created": 1715558400,
@@ -4418,6 +4402,20 @@
       "maxOutputTokens": 16384,
       "inputPricePerMillion": 2.5,
       "outputPricePerMillion": 10,
+      "modalities": [
+        "text",
+        "image",
+        "file"
+      ]
+    },
+    {
+      "id": "openai/gpt-4o-2024-05-13",
+      "name": "OpenAI: GPT-4o (2024-05-13)",
+      "created": 1715558400,
+      "contextLength": 128000,
+      "maxOutputTokens": 4096,
+      "inputPricePerMillion": 5,
+      "outputPricePerMillion": 15,
       "modalities": [
         "text",
         "image",
@@ -4511,18 +4509,6 @@
       ]
     },
     {
-      "id": "openai/gpt-4-turbo-preview",
-      "name": "OpenAI: GPT-4 Turbo Preview",
-      "created": 1706140800,
-      "contextLength": 128000,
-      "maxOutputTokens": 4096,
-      "inputPricePerMillion": 10,
-      "outputPricePerMillion": 30,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "openai/gpt-3.5-turbo-0613",
       "name": "OpenAI: GPT-3.5 Turbo (older v0613)",
       "created": 1706140800,
@@ -4535,13 +4521,13 @@
       ]
     },
     {
-      "id": "alpindale/goliath-120b",
-      "name": "Goliath 120B",
-      "created": 1699574400,
-      "contextLength": 6144,
-      "maxOutputTokens": 1024,
-      "inputPricePerMillion": 3.75,
-      "outputPricePerMillion": 7.5,
+      "id": "openai/gpt-4-turbo-preview",
+      "name": "OpenAI: GPT-4 Turbo Preview",
+      "created": 1706140800,
+      "contextLength": 128000,
+      "maxOutputTokens": 4096,
+      "inputPricePerMillion": 10,
+      "outputPricePerMillion": 30,
       "modalities": [
         "text"
       ]
@@ -4575,18 +4561,6 @@
       ]
     },
     {
-      "id": "openai/gpt-3.5-turbo-instruct",
-      "name": "OpenAI: GPT-3.5 Turbo Instruct",
-      "created": 1695859200,
-      "contextLength": 4095,
-      "maxOutputTokens": 4096,
-      "inputPricePerMillion": 1.5,
-      "outputPricePerMillion": 2,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "mistralai/mistral-7b-instruct-v0.1",
       "name": "Mistral: Mistral 7B Instruct v0.1",
       "created": 1695859200,
@@ -4594,6 +4568,18 @@
       "maxOutputTokens": 0,
       "inputPricePerMillion": 0.11,
       "outputPricePerMillion": 0.19,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "openai/gpt-3.5-turbo-instruct",
+      "name": "OpenAI: GPT-3.5 Turbo Instruct",
+      "created": 1695859200,
+      "contextLength": 4095,
+      "maxOutputTokens": 4096,
+      "inputPricePerMillion": 1.5,
+      "outputPricePerMillion": 2,
       "modalities": [
         "text"
       ]
@@ -4647,8 +4633,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4-0314",
-      "name": "OpenAI: GPT-4 (older v0314)",
+      "id": "openai/gpt-4",
+      "name": "OpenAI: GPT-4",
       "created": 1685232000,
       "contextLength": 8191,
       "maxOutputTokens": 4096,
@@ -4659,8 +4645,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4",
-      "name": "OpenAI: GPT-4",
+      "id": "openai/gpt-4-0314",
+      "name": "OpenAI: GPT-4 (older v0314)",
       "created": 1685232000,
       "contextLength": 8191,
       "maxOutputTokens": 4096,

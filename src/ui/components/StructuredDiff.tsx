@@ -1,9 +1,11 @@
 /**
  * StructuredDiff — renders file edit diffs (old_string → new_string)
- * with side-by-side or unified view.
+ * with side-by-side or unified view. Row rendering delegates to the
+ * shared <DiffLine> so styling stays consistent across the app.
  */
 import React from "react";
 import { Box, Text } from "../../render/index.js";
+import { DiffLine } from "./DiffLine.js";
 
 interface StructuredDiffProps {
   filePath: string;
@@ -35,26 +37,26 @@ export function StructuredDiff({ filePath, oldString, newString, replaceAll }: S
 
 type DiffLineType = "same" | "add" | "remove" | "header";
 
-interface DiffLine {
+interface DiffEntry {
   type: DiffLineType;
   text: string;
 }
 
-function DiffLineComponent({ line }: { line: DiffLine }) {
+function DiffLineComponent({ line }: { line: DiffEntry }) {
   switch (line.type) {
     case "add":
-      return <Text color="ansi:green">{`+ ${line.text}`}</Text>;
+      return <DiffLine kind="add" text={line.text} />;
     case "remove":
-      return <Text color="ansi:red">{`- ${line.text}`}</Text>;
+      return <DiffLine kind="remove" text={line.text} />;
     case "header":
-      return <Text color="ansi:cyan">{line.text}</Text>;
+      return <DiffLine kind="hunk" text={line.text} />;
     case "same":
-      return <Text dim>{`  ${line.text}`}</Text>;
+      return <DiffLine kind="context" text={line.text} />;
   }
 }
 
-function computeUnifiedDiff(oldLines: string[], newLines: string[]): DiffLine[] {
-  const result: DiffLine[] = [];
+function computeUnifiedDiff(oldLines: string[], newLines: string[]): DiffEntry[] {
+  const result: DiffEntry[] = [];
 
   // Simple LCS-based diff
   const lcs = longestCommonSubsequence(oldLines, newLines);

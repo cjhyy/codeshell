@@ -162,6 +162,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       permissionDefault: "allow",
       isReadOnly: true,
       isConcurrencySafe: false,
+      timeoutMs: 0, // 纯等待用户操作 — 不设超时，由用户 Esc/取消
     },
     execute: askUserTool,
   },

@@ -106,6 +106,12 @@ export interface ConfigureParams {
   effort?: string;
   /** Switch active model by pool key (e.g. "sonnet", "haiku", "gpt"). */
   model?: string;
+  /**
+   * Re-read settings (providers[]/models[]) into the engine's ModelPool before
+   * any model switch. Set after onboarding/login persists new entries so the
+   * running engine picks them up without a process restart.
+   */
+  reloadModels?: boolean;
 }
 
 /** Query server state. */
@@ -120,6 +126,7 @@ export interface QueryParams {
     | "config_get"
     | "permission_set"
     | "models"
+    | "providers"
     | "arena_status"
     | "provider_add"
     | "provider_refresh"
@@ -166,8 +173,24 @@ export interface ProtocolModelEntry {
   key: string;
   label: string;
   model: string;
-  provider: string;
+  /**
+   * Protocol the LLM client speaks ("openai" or "anthropic"). DeepSeek,
+   * Mistral, etc. all use "openai" since they're OpenAI-compatible.
+   * NOT the brand/vendor — that's providerKey below.
+   */
+  protocol: string;
+  /**
+   * Pool entry's reference into settings.providers[]. Used by ModelManager
+   * to derive each provider's modelCount client-side ("how many models
+   * point at me"). Optional because auto-populated entries (autoPopulatePool)
+   * don't go through the wizard and have no providers[] row.
+   */
+  providerKey?: string;
   active: boolean;
+  /** Max output tokens (0 or undefined = unknown). */
+  maxOutputTokens?: number;
+  /** Max context window size (0 or undefined = unknown). */
+  maxContextTokens?: number;
 }
 
 export interface ProtocolProviderEntry {

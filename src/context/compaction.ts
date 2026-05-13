@@ -128,44 +128,188 @@ export function windowCompact(messages: Message[], keepLastN: number): Message[]
 }
 
 /**
- * Remove old tool_result content (microcompact).
- * Replaces tool_result content with "[Old tool result cleared]" for messages
- * older than keepRecentN tool rounds.
+ * Tools whose results are safe to clear during microcompact.
+ *
+ * Tracks the CC `COMPACTABLE_TOOLS` set: only "data-fetching" tools where the
+ * result is reconstructible (re-Read, re-Glob, re-Bash). Orchestration tools
+ * (TaskCreate / TaskUpdate / Agent / Skill / etc.) are excluded — their
+ * results carry conversation state the model needs to keep referencing.
  */
-export function microcompact(messages: Message[], keepRecentN = 3): Message[] {
-  // Count tool_result messages from the end
-  let toolResultCount = 0;
-  const indices: number[] = [];
+export const COMPACTABLE_TOOL_NAMES: ReadonlySet<string> = new Set([
+  "Read",
+  "Glob",
+  "Grep",
+  "Bash",
+  "PowerShell",
+  "NotebookEdit",
+  "WebFetch",
+  "WebSearch",
+  "REPL",
+]);
 
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i];
-    if (Array.isArray(msg.content)) {
-      const hasToolResult = msg.content.some((b) => b.type === "tool_result");
-      if (hasToolResult) {
-        toolResultCount++;
-        if (toolResultCount > keepRecentN) {
-          indices.push(i);
-        }
+/**
+ * Build a tool_use_id → tool name map from the assistant messages preceding
+ * the tool_results. tool_use always appears before its tool_result, so this
+ * walk lets us decide per-result whether it's compactable.
+ */
+function buildToolUseIdToNameMap(messages: Message[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const msg of messages) {
+    if (!Array.isArray(msg.content)) continue;
+    for (const block of msg.content) {
+      if (block.type === "tool_use" && block.id && block.name) {
+        map.set(block.id, block.name);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Short fingerprint of the original call so cleared results still tell the
+ * model what was here. Picks the most useful arg keys per tool, falls back
+ * to a generic JSON preview. Caps total length so we don't reintroduce bulk.
+ */
+function summarizeToolCallArgs(
+  toolName: string | undefined,
+  input: Record<string, unknown> | undefined,
+): string {
+  if (!input || typeof input !== "object") return "";
+  const pick = (keys: string[]): string => {
+    const parts: string[] = [];
+    for (const key of keys) {
+      const v = (input as Record<string, unknown>)[key];
+      if (typeof v === "string" && v.length > 0) {
+        parts.push(`${key}=${v.length > 80 ? v.slice(0, 77) + "..." : v}`);
+      }
+    }
+    return parts.join(" ");
+  };
+
+  switch (toolName) {
+    case "Read":
+    case "Write":
+    case "Edit":
+    case "NotebookEdit":
+      return pick(["file_path", "path", "notebook_path"]);
+    case "Glob":
+    case "Grep":
+      return pick(["pattern", "path", "glob"]);
+    case "Bash":
+    case "PowerShell":
+    case "REPL":
+      return pick(["command"]);
+    case "WebFetch":
+    case "WebSearch":
+      return pick(["url", "query"]);
+    default: {
+      const json = JSON.stringify(input);
+      return json.length > 100 ? json.slice(0, 97) + "..." : json;
+    }
+  }
+}
+
+export interface MicrocompactOptions {
+  /** Keep this many most-recent compactable tool-result rounds untouched. */
+  keepRecentN?: number;
+  /** Tool names whose results may be cleared. Defaults to COMPACTABLE_TOOL_NAMES. */
+  compactableTools?: ReadonlySet<string>;
+  /** Optional callback invoked once when any clearing actually happened. */
+  onClear?: (info: { clearedRounds: number; toolNames: string[] }) => void;
+}
+
+/**
+ * Remove old tool_result content (microcompact).
+ *
+ * For each tool_result block older than the most-recent N compactable rounds,
+ * replaces its content with a short fingerprint of the originating call
+ * (e.g. `[Old tool result cleared — Read file_path=/.../foo.ts]`) so the
+ * model can decide whether it's worth re-running the tool instead of
+ * guessing what it had seen.
+ *
+ * Behavior changes vs. earlier versions:
+ *  - Only clears whitelisted tool names (Read/Glob/Bash/...). Orchestration
+ *    tool results (TaskCreate/TaskUpdate/Agent/etc.) are left intact.
+ *  - "Round" count is per *compactable* result, not per message with any
+ *    tool_result. A round containing only TaskUpdate doesn't count toward N.
+ *  - Replacement string includes tool name + key args so the model isn't
+ *    forced into blind re-Reads (which then trip the Investigation guard).
+ */
+export function microcompact(
+  messages: Message[],
+  options: MicrocompactOptions = {},
+): Message[] {
+  const keepRecentN = options.keepRecentN ?? 5;
+  const compactable = options.compactableTools ?? COMPACTABLE_TOOL_NAMES;
+
+  const idToName = buildToolUseIdToNameMap(messages);
+  const idToInput = new Map<string, Record<string, unknown> | undefined>();
+  for (const msg of messages) {
+    if (!Array.isArray(msg.content)) continue;
+    for (const block of msg.content) {
+      if (block.type === "tool_use" && block.id) {
+        idToInput.set(block.id, block.input);
       }
     }
   }
 
-  if (indices.length === 0) return messages;
+  // Walk back, counting only compactable rounds. A round is a message that
+  // contains at least one *eligible* tool_result we haven't cleared yet.
+  let compactableRoundCount = 0;
+  const indicesToTouch: number[] = [];
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (!Array.isArray(msg.content)) continue;
+    const hasEligible = msg.content.some(
+      (b) =>
+        b.type === "tool_result" &&
+        b.tool_use_id != null &&
+        compactable.has(idToName.get(b.tool_use_id) ?? "") &&
+        typeof b.content === "string" &&
+        !b.content.startsWith("[Old tool result cleared"),
+    );
+    if (!hasEligible) continue;
+    compactableRoundCount++;
+    if (compactableRoundCount > keepRecentN) {
+      indicesToTouch.push(i);
+    }
+  }
 
-  return messages.map((msg, i) => {
-    if (!indices.includes(i)) return msg;
-    if (!Array.isArray(msg.content)) return msg;
+  if (indicesToTouch.length === 0) return messages;
 
+  const touchSet = new Set(indicesToTouch);
+  const clearedToolNames = new Set<string>();
+  let clearedBlocks = 0;
+
+  const result = messages.map((msg, i) => {
+    if (!touchSet.has(i) || !Array.isArray(msg.content)) return msg;
     return {
       ...msg,
       content: msg.content.map((block) => {
-        if (block.type === "tool_result") {
-          return { ...block, content: "[Old tool result content cleared]" };
-        }
-        return block;
+        if (block.type !== "tool_result" || !block.tool_use_id) return block;
+        const toolName = idToName.get(block.tool_use_id);
+        if (!toolName || !compactable.has(toolName)) return block;
+        if (typeof block.content !== "string") return block;
+        if (block.content.startsWith("[Old tool result cleared")) return block;
+        const argsSummary = summarizeToolCallArgs(toolName, idToInput.get(block.tool_use_id));
+        const fingerprint = argsSummary
+          ? `[Old tool result cleared — ${toolName} ${argsSummary}]`
+          : `[Old tool result cleared — ${toolName}]`;
+        clearedToolNames.add(toolName);
+        clearedBlocks++;
+        return { ...block, content: fingerprint };
       }),
     };
   });
+
+  if (clearedBlocks > 0) {
+    options.onClear?.({
+      clearedRounds: indicesToTouch.length,
+      toolNames: [...clearedToolNames].sort(),
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -210,11 +354,12 @@ export function applyToolResultBudget(messages: Message[], maxTotalChars = 100_0
     const newContent = msg.content.map((block, i) => {
       if (!toTruncate.has(i)) return block;
       const preview = typeof block.content === "string" ? block.content.slice(0, 500) : "";
+      const sizeKb = ((block.content as string).length / 1000).toFixed(0);
       return {
         ...block,
         content:
-          `Output too large (${((block.content as string).length / 1000).toFixed(0)}KB). ` +
-          `Full output saved to session transcript. Use Read tool to view the source file if needed.\n\n` +
+          `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. ` +
+          `Re-run the originating tool if you need the full output.\n\n` +
           `Preview (first 500 chars):\n${preview}`,
       };
     });

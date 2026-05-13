@@ -170,14 +170,17 @@ export function ModelManager({
     }
     if (key.return) {
       const target = entries[cursor];
-      if (!target || target.active) {
-        setBanner({ kind: "info", text: `已经是当前模型: ${target?.key ?? ""}` });
-        return;
-      }
+      if (!target) return;
+      // Always call onSwitch — even on the row already marked active. The
+      // in-memory active mark can disagree with settings.activeKey on disk
+      // (e.g. an earlier switch in this process didn't persist), and
+      // re-invoking the switch is idempotent and ensures the disk catches
+      // up. After the call, close so we land on the input box — mirrors
+      // ModelSelector (Ctrl+M / /model) UX.
       setBanner({ kind: "busy", text: `切换到 ${target.key}…` });
       try {
         await onSwitch(target.key);
-        setBanner({ kind: "info", text: `✓ 已切换到 ${target.key}` });
+        onClose();
       } catch (err) {
         setBanner({ kind: "error", text: `切换失败: ${(err as Error).message}` });
       }
@@ -398,6 +401,26 @@ export function ModelManager({
   );
 }
 
+/** Format a token count into a human-readable string. */
+function fmtTokens(n: number | undefined): string {
+  if (!n || n <= 0) return "?";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return `${n}`;
+}
+
+/** Derive capability tags from model key/name. */
+function modelTags(key: string, model: string): string[] {
+  const tags: string[] = [];
+  const lower = `${key} ${model}`.toLowerCase();
+  if (/coder|code|devstral/i.test(lower)) tags.push("coding");
+  if (/reason|think|r1|o3|o4|pro/i.test(lower)) tags.push("reasoning");
+  if (/flash|mini|haiku|fast|small|nano/i.test(lower)) tags.push("fast");
+  if (/cheap|free/i.test(lower)) tags.push("cheap");
+  if (/large|max|ultra|opus|big/i.test(lower)) tags.push("powerful");
+  return tags;
+}
+
 // ─── Panes ───────────────────────────────────────────────────────
 
 function ModelsPane({
@@ -411,6 +434,9 @@ function ModelsPane({
 }) {
   const keyWidth = entries.length
     ? Math.min(Math.max(...entries.map((e) => e.key.length)), 16)
+    : 0;
+  const ctxWidth = entries.length
+    ? Math.min(Math.max(...entries.map((e) => fmtTokens(e.maxContextTokens).length)), 8)
     : 0;
 
   return (
@@ -430,21 +456,33 @@ function ModelsPane({
           <Text dim>{"未配置模型池。按 [s] 拉取最新清单，再用 /login 选择。"}</Text>
         </Box>
       ) : (
-        entries.map((e, i) => {
-          const focused = i === cursor;
-          const prefix = focused ? "❯ " : "  ";
-          const activeMark = e.active ? "  ← active" : "";
-          return (
-            <Box key={e.key} marginLeft={2}>
-              <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
-                {prefix}
-                {e.key.padEnd(keyWidth)}
-              </Text>
-              <Text>{"  "}{e.model}</Text>
-              <Text color="ansi:green">{activeMark}</Text>
-            </Box>
-          );
-        })
+        <>
+          <Box marginLeft={2}>
+            <Text dim>
+              {"  ".padEnd(keyWidth + 2)}模型路径{" ".repeat(28)}上下文{"  "}标签
+            </Text>
+          </Box>
+          {entries.map((e, i) => {
+            const focused = i === cursor;
+            const prefix = focused ? "❯ " : "  ";
+            const activeMark = e.active ? "  ← active" : "";
+            const tags = modelTags(e.key, e.model);
+            const tagStr = tags.length > 0 ? tags.join(", ") : "";
+            return (
+              <Box key={e.key} marginLeft={2}>
+                <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                  {prefix}
+                  {e.key.padEnd(keyWidth)}
+                </Text>
+                <Text>{"  "}{e.model.padEnd(32)}</Text>
+                <Text dim>{fmtTokens(e.maxContextTokens).padStart(ctxWidth)}</Text>
+                <Text>{"  "}</Text>
+                <Text color="ansi:green">{tagStr}</Text>
+                <Text color="ansi:green">{activeMark}</Text>
+              </Box>
+            );
+          })}
+        </>
       )}
 
       <Box marginLeft={2} marginTop={1}>

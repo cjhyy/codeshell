@@ -162,9 +162,16 @@ export default function TextInput({
     // (which carries raw `\x1b[…m` color codes) can't break the inverse-video
     // cursor renderer below — without this, the cursor visually disappears
     // after a paste because the embedded ESC closes our INV_ON sequence.
+    //
+    // Also normalize CR / CRLF → LF before the control-byte sweep: macOS
+    // pastes (and most cross-platform clipboards) carry `\r` line separators,
+    // which the regex would otherwise scrub entirely — collapsing a multi-line
+    // paste into one long line that overflows the prompt and "loses" the
+    // cursor visually as the inline render scrolls off-screen.
     if (input && !key.ctrl && !key.meta) {
+      const normalized = input.replace(/\r\n?/g, "\n");
       // eslint-disable-next-line no-control-regex
-      const cleaned = input.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
+      const cleaned = normalized.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "");
       if (!cleaned) return;
       const before = value.slice(0, cursorOffset);
       const after = value.slice(cursorOffset);

@@ -13,6 +13,14 @@ export interface CreateMessageOptions {
   stream?: boolean;
   onChunk?: (chunk: LLMStreamChunk) => void;
   signal?: AbortSignal;
+  /**
+   * If false, this call's usage is excluded from the client's usage tracker
+   * and from the process-wide onUsage hook. Used for auxiliary sub-calls
+   * (tool-summary, future helper prompts) that should not appear in
+   * session_end.cost or skew turn/requestCount semantics.
+   * @default true
+   */
+  recordUsage?: boolean;
 }
 
 export interface LLMUsageTracker {

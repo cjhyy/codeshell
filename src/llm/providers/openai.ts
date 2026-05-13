@@ -91,7 +91,7 @@ export class OpenAIClient extends LLMClientBase {
         completionTokens: response.usage?.completion_tokens ?? 0,
         totalTokens: response.usage?.total_tokens ?? 0,
       };
-      this.recordUsage(usage);
+      this.recordUsage(usage, options);
 
       return this.processChoice(choice, usage);
     } catch (err) {
@@ -216,7 +216,7 @@ export class OpenAIClient extends LLMClientBase {
         completionTokens: streamUsage?.completion_tokens ?? 0,
         totalTokens: streamUsage?.total_tokens ?? 0,
       };
-      this.recordUsage(usage);
+      this.recordUsage(usage, options);
 
       return {
         text,

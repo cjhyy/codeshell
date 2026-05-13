@@ -15,7 +15,11 @@ describe("migrateModels", () => {
     expect(out.providers).toHaveLength(2);
     expect(out.providers.find((p) => p.kind === "deepseek")).toBeTruthy();
     expect(out.providers.find((p) => p.kind === "openai")).toBeTruthy();
-    expect(out.models.every((m) => m.providerKey && !(m as any).apiKey && !(m as any).baseUrl)).toBe(true);
+    // Self-describing entries: every model carries providerKey AND the
+    // legacy credentials so the engine can read them without a catalog
+    // round-trip. (This is the explicit format choice — models[] is the
+    // single source of truth; providers[] only feeds the wizard.)
+    expect(out.models.every((m) => m.providerKey && m.apiKey && m.baseUrl)).toBe(true);
   });
 
   it("infers kind from baseUrl", () => {

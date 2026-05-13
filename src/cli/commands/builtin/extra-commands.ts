@@ -31,7 +31,16 @@ export const extraCommands: SlashCommand[] = [
         if (!settings.model) settings.model = {};
         settings.model.apiKey = key;
         writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf-8");
-        ctx.addStatus("✓ API key saved. Restart code-shell to apply.");
+        // Hot-reload the model pool so the new key takes effect without a
+        // restart — matches the onboarding flow's behavior.
+        try {
+          await ctx.client.configure({ reloadModels: true });
+          ctx.addStatus("✓ API key saved and applied.");
+        } catch (err) {
+          ctx.addStatus(
+            `✓ API key saved. Hot-reload failed, please restart code-shell: ${(err as Error).message}`,
+          );
+        }
         return;
       }
       if (ctx.startOnboarding) {

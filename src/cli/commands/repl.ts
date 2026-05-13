@@ -99,7 +99,11 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     apiKey,
     baseUrl,
     temperature: effortConfig.temperature ?? settings.model.temperature ?? 0.3,
-    maxTokens: effortConfig.maxTokens ?? settings.model.maxTokens ?? 8192,
+    // Priority: user-configured settings.model.maxTokens > effort preset > 8192.
+    // Previously this was `effortConfig.maxTokens ?? settings.model.maxTokens`,
+    // which silently ignored the user's setting because effortConfig is always
+    // populated.
+    maxTokens: settings.model.maxTokens ?? effortConfig.maxTokens ?? 8192,
     enableStreaming: true,
   };
 

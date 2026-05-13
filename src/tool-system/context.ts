@@ -17,8 +17,39 @@ import type { ModelPool } from "../llm/model-pool.js";
 import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
 
-/** Function the host UI / server uses to ask the user a question. */
-export type AskUserFn = (question: string) => Promise<string>;
+/** One choice in a multiple-choice AskUserQuestion. */
+export interface AskUserChoice {
+  label: string;
+  description: string;
+}
+
+/**
+ * Optional rendering hints / multiple-choice options carried alongside the
+ * question. Implementations may ignore unknown fields — they're additive.
+ */
+export interface AskUserOptions {
+  /** Short chip-style label (≤12 chars) shown above the question. */
+  header?: string;
+  /** Multiple-choice options. When omitted, the UI falls back to free-text. */
+  options?: AskUserChoice[];
+  /** Allow the user to pick more than one option. Defaults to false. */
+  multiSelect?: boolean;
+}
+
+/**
+ * Function the host UI / server uses to ask the user a question.
+ *
+ * Second argument is optional for backwards compatibility — callers that
+ * only need free text can omit it; backends that don't support options
+ * should ignore the field and prompt for free text.
+ *
+ * Return value:
+ *   - Free-text mode: the user's typed answer (or "(user declined to answer)").
+ *   - Multiple-choice mode: the selected label, or comma-separated labels for
+ *     multiSelect, or "Other: <typed>" when the user picks the implicit
+ *     Other... entry.
+ */
+export type AskUserFn = (question: string, opts?: AskUserOptions) => Promise<string>;
 
 /** Spawn a sub-agent. Returns the produced text or throws. */
 export interface SubAgentSpawnRequest {

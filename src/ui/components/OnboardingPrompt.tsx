@@ -32,6 +32,9 @@ interface OnboardingPromptProps {
   existingProviders?: ProviderConfig[];
   /** Existing model aliases — used by the flow to derive unique aliases. */
   existingModelKeys?: string[];
+  /** Model ids already in settings.models[] — used by the flow to disable
+   *  rows for models the user has already added. */
+  existingModelIds?: string[];
 }
 
 export function OnboardingPrompt({
@@ -39,6 +42,7 @@ export function OnboardingPrompt({
   onCancel,
   existingProviders = [],
   existingModelKeys = [],
+  existingModelIds = [],
 }: OnboardingPromptProps) {
   const [step, setStep] = useState<Step>("flow");
   const [flowResult, setFlowResult] = useState<FlowResult | null>(null);
@@ -83,42 +87,29 @@ export function OnboardingPrompt({
       return;
     }
     // Active model: prefer the user's pick from the flow; else the first added.
+    // Wizard emits self-describing entries (already include baseUrl/apiKey/
+    // provider) so we don't need to re-resolve credentials through the
+    // existing-provider table — that path was the source of the v4-pro
+    // selection silently falling back to v4-flash.
     const active =
       result.addedModels.find((m) => m.key === result.activeModelKey) ?? result.addedModels[0]!;
 
-    // Resolve baseUrl + apiKey for the active model:
-    //   - if a new provider was added, use its credentials
-    //   - otherwise the model attached to an existing provider — find it
-    let baseUrl = "";
-    let apiKey = "";
-    let providerKind = "openai";
-    if (result.addedProvider) {
-      baseUrl = result.addedProvider.baseUrl;
-      apiKey = result.addedProvider.apiKey ?? "";
-      providerKind = result.addedProvider.kind;
-    } else {
-      const existing = existingProviders.find((p) => p.key === active.providerKey);
-      if (existing) {
-        baseUrl = existing.baseUrl;
-        apiKey = existing.apiKey ?? "";
-        providerKind = existing.kind;
-      }
-    }
-
-    // Legacy OnboardingResult.provider is one of "openai"/"anthropic" so the
-    // engine can pick the right client. Map non-Anthropic kinds to "openai"
-    // (everything else speaks OpenAI-compatible JSON).
-    const legacyProvider = providerKind === "anthropic" ? "anthropic" : "openai";
-
     const onboardingResult: OnboardingResult = {
-      provider: legacyProvider,
+      key: active.key,
+      provider: active.provider,
       model: active.model,
-      apiKey,
-      baseUrl,
+      apiKey: active.apiKey ?? "",
+      baseUrl: active.baseUrl,
     };
 
     appendOnboardingResult({
-      active: onboardingResult,
+      activeKey: active.key,
+      activeMirror: {
+        provider: onboardingResult.provider,
+        model: onboardingResult.model,
+        apiKey: onboardingResult.apiKey,
+        baseUrl: onboardingResult.baseUrl,
+      },
       addedProvider: result.addedProvider
         ? {
             key: result.addedProvider.key,
@@ -130,13 +121,7 @@ export function OnboardingPrompt({
             modelsPath: result.addedProvider.modelsPath,
           }
         : undefined,
-      addedModels: result.addedModels.map((m) => ({
-        key: m.key,
-        providerKey: m.providerKey,
-        model: m.model,
-        maxContextTokens: m.maxContextTokens,
-        maxOutputTokens: m.maxOutputTokens,
-      })),
+      addedModels: result.addedModels,
     });
 
     if (picks.size >= 2) {
@@ -169,6 +154,7 @@ export function OnboardingPrompt({
       <ProviderModelFlow
         existingProviders={existingProviders}
         existingModelKeys={existingModelKeys}
+        existingModelIds={existingModelIds}
         detectedEnvKeys={detectEnvKeys().map((d) => ({
           envKey: d.envKey,
           apiKey: d.apiKey,

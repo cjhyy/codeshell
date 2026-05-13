@@ -55,6 +55,13 @@ import {
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 
 export interface EngineConfig {
   llm: LLMConfig;
@@ -145,8 +152,18 @@ export class Engine {
 
     // Initialize model pool from settings
     this.modelPool = new ModelPool();
+    this.populateModelPoolFromSettings();
+  }
+
+  /**
+   * Load models[] / providers[] from settings into the active ModelPool and
+   * resync this.config.llm with the matching entry. Called from the ctor and
+   * from reloadModelPool() (e.g. after onboarding writes new entries to disk).
+   */
+  private populateModelPoolFromSettings(): void {
     try {
-      const sm = new SettingsManager(config.cwd);
+      const sm = this.getSettingsManager();
+      sm.invalidate();
       const settings = sm.get();
       if (settings.models?.length) {
         for (const m of settings.models) {
@@ -171,18 +188,28 @@ export class Engine {
         }
         this.modelPool.setCacheDir(defaultCacheDir());
         this.modelPool.reloadCachedContextWindows();
-        // Set active to the current config model and inherit its
-        // apiKey/baseUrl into config.llm — otherwise the first run() uses
-        // whatever fallback (e.g. OPENROUTER_API_KEY env) repl.ts resolved
-        // before the pool existed, which mismatches the model's endpoint.
-        const currentModel = config.llm.model;
-        // OpenRouter stores entries as "provider/model-name"; the top-level
-        // settings.model.name is just "model-name".  Match on either form.
-        const match = settings.models.find(
-          (m: any) =>
-            m.model === currentModel ||
-            (currentModel && m.model?.endsWith(`/${currentModel}`)),
-        );
+        // Resolve active entry. Priority:
+        //   1. settings.activeKey — primary source of truth (new shape).
+        //   2. Match settings.model.name against models[].model — legacy
+        //      pre-activeKey configs and the migration path.
+        // We then switch the pool and write the resolved entry's credentials
+        // into config.llm, so the first run() uses the right endpoint instead
+        // of whatever env-derived fallback repl.ts seeded earlier.
+        const activeKey = (settings as { activeKey?: string }).activeKey;
+        let match: (typeof settings.models)[number] | undefined;
+        if (activeKey) {
+          match = settings.models.find((m: any) => m.key === activeKey);
+        }
+        if (!match) {
+          const currentModel = this.config.llm.model;
+          // OpenRouter stores entries as "provider/model-name"; the top-level
+          // settings.model.name is just "model-name". Match either form.
+          match = settings.models.find(
+            (m: any) =>
+              m.model === currentModel ||
+              (currentModel && m.model?.endsWith(`/${currentModel}`)),
+          );
+        }
         if (match) {
           const entry = this.modelPool.switch(match.key);
           this.config = {
@@ -190,15 +217,25 @@ export class Engine {
             llm: this.modelPool.toLLMConfig(entry, this.config.llm),
           };
         }
-      } else if (config.llm.apiKey) {
+      } else if (this.config.llm.apiKey) {
         // Auto-populate pool from the configured API key when models[] is empty.
         // This lets users who only set model.apiKey (without models[]) still
         // use /model to switch between the provider's available models.
-        this.autoPopulatePool(config.llm.apiKey, config.llm.baseUrl);
+        this.autoPopulatePool(this.config.llm.apiKey, this.config.llm.baseUrl);
       }
     } catch {
       // Settings not available — pool stays empty
     }
+  }
+
+  /**
+   * Re-read settings and refresh the model pool. Used after onboarding /login
+   * writes new providers[] / models[] to disk so the running engine picks them
+   * up without a process restart. Existing pool entries are kept (re-registering
+   * the same key overwrites them), so callers don't need to clear first.
+   */
+  reloadModelPool(): void {
+    this.populateModelPoolFromSettings();
   }
 
   /**
@@ -213,18 +250,18 @@ export class Engine {
     for (const e of entries) {
       this.modelPool.register(e);
     }
-    // Switch to the provider's default model
-    const defaultKey = provider.defaultModel
-      ? `${provider.id}:${provider.defaultModel}`
-      : entries[0]?.key;
-    if (defaultKey) {
-      const entry = this.modelPool.switch(defaultKey);
-      if (entry) {
-        this.config = {
-          ...this.config,
-          llm: this.modelPool.toLLMConfig(entry, this.config.llm),
-        };
-      }
+    // Switch to the provider's default model. buildModelPool emits keys in
+    // `<provider>-<model-id>` form (deriveModelPoolKey), so the default
+    // key matches the first entry whose `model` field equals defaultModel.
+    const defaultEntry = provider.defaultModel
+      ? entries.find((e) => e.model === provider.defaultModel)
+      : entries[0];
+    if (defaultEntry) {
+      const entry = this.modelPool.switch(defaultEntry.key);
+      this.config = {
+        ...this.config,
+        llm: this.modelPool.toLLMConfig(entry, this.config.llm),
+      };
     }
   }
 
@@ -511,6 +548,16 @@ export class Engine {
         maxTokens: 256,
         recordUsage: false,
       });
+      logger.debug("summarize.call", {
+        sysPromptLen: sysPrompt.length,
+        userMsgLen: userMsg.length,
+        userMsgPreview: userMsg.slice(0, 300),
+        completionLen: resp.text.length,
+        completionPreview: resp.text.slice(0, 300),
+        stopReason: resp.stopReason,
+        promptTokens: resp.usage?.promptTokens,
+        completionTokens: resp.usage?.completionTokens,
+      });
       return resp.text;
     };
 
@@ -653,15 +700,74 @@ export class Engine {
   /**
    * Switch the active model by pool key. Takes effect on the next run() call.
    * Returns the new model entry.
+   *
+   * Persists settings.activeKey (and a legacy settings.model.* mirror) so the
+   * next process startup defaults to the same model — without this, switches
+   * only live in memory and every restart reverts to the previously persisted
+   * activeKey.
    */
   switchModel(key: string): ModelEntry {
     const entry = this.modelPool.switch(key);
-    // Update LLM config so the next run() creates the right client
-    this.config = {
-      ...this.config,
-      llm: this.modelPool.toLLMConfig(entry, this.config.llm),
-    };
+    const nextLlm = this.modelPool.toLLMConfig(entry, this.config.llm);
+    this.config = { ...this.config, llm: nextLlm };
+    this.persistActiveModel(entry, nextLlm);
     return entry;
+  }
+
+  /**
+   * Write the active model selection to ~/.code-shell/settings.json.
+   *
+   * We mirror into the legacy settings.model.* block (provider/name/apiKey/
+   * baseUrl) because boot paths in cli/main.ts, repl.ts, run.ts still read it.
+   * The mirror uses resolved llm values (not raw entry.*) so credentials that
+   * live on settings.providers[] flow through correctly — entry.apiKey is
+   * undefined when the entry resolves via providerCatalog.
+   */
+  private persistActiveModel(entry: ModelEntry, llm: LLMConfig): void {
+    try {
+      const dir = join(homedir(), ".code-shell");
+      const file = join(dir, "settings.json");
+      mkdirSync(dir, { recursive: true });
+
+      let existing: Record<string, unknown> = {};
+      if (existsSync(file)) {
+        try {
+          existing = JSON.parse(readFileSync(file, "utf-8"));
+        } catch {
+          // corrupt file — bail rather than clobber the user's config
+          return;
+        }
+      }
+
+      const prevModel =
+        typeof existing.model === "object" && existing.model
+          ? (existing.model as Record<string, unknown>)
+          : {};
+      const updated: Record<string, unknown> = {
+        ...existing,
+        activeKey: entry.key,
+        model: {
+          ...prevModel,
+          provider: llm.provider,
+          name: entry.model,
+          apiKey: llm.apiKey,
+          baseUrl: llm.baseUrl,
+        },
+      };
+
+      const tmp = `${file}.${process.pid}.tmp`;
+      const payload = JSON.stringify(updated, null, 2) + "\n";
+      writeFileSync(tmp, payload, "utf-8");
+      try {
+        renameSync(tmp, file);
+      } catch {
+        writeFileSync(file, payload, "utf-8");
+      }
+    } catch (err) {
+      logger.warn(
+        `persistActiveModel failed: ${(err as Error).message}`,
+      );
+    }
   }
 
   /** Get the model pool. */

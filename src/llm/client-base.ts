@@ -47,7 +47,8 @@ export abstract class LLMClientBase {
 
   abstract createMessage(options: CreateMessageOptions): Promise<LLMResponse>;
 
-  protected recordUsage(usage: TokenUsage): void {
+  protected recordUsage(usage: TokenUsage, options?: CreateMessageOptions): void {
+    if (options?.recordUsage === false) return;
     this.usage.records.push(usage);
     this.usage.totalPromptTokens += usage.promptTokens;
     this.usage.totalCompletionTokens += usage.completionTokens;

@@ -7,6 +7,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from "react";
 import { Box, Text, useApp, useInput } from "../render/index.js";
 import { Banner } from "./components/Banner.js";
+import { UpdateBanner } from "./components/UpdateBanner.js";
 import { WelcomeTips } from "./components/WelcomeTips.js";
 import { CommandInput } from "./components/CommandInput.js";
 import { ToolCallStart, ToolCallRunning, ToolCallResult } from "./components/ToolCall.js";
@@ -38,7 +39,7 @@ import {
 } from "./components/ModelManager.js";
 import { ProviderModelFlow } from "./components/ProviderModelFlow.js";
 import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
-import { modelKey, type OnboardingResult } from "../cli/onboarding.js";
+import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
@@ -132,6 +133,9 @@ export function App({
   const [pendingQuestion, setPendingQuestion] = useState<{
     requestId: string;
     question: string;
+    header?: string;
+    options?: { label: string; description: string }[];
+    multiSelect?: boolean;
   } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [modelEntries, setModelEntries] = useState<ModelEntry[] | null>(null);
@@ -179,11 +183,30 @@ export function App({
     // Handle approval requests from the server
     const handleApproval = (requestId: string, request: ApprovalRequest) => {
       // __ask_user__ is a question, not a tool approval — routed to the
-      // text-input prompt instead of the y/n permission dialog.
+      // text-input prompt instead of the y/n permission dialog. Optional
+      // multiple-choice metadata travels along in the request args.
       if (request.toolName === "__ask_user__") {
+        const args = request.args ?? {};
+        const rawOptions = (args as { options?: unknown }).options;
+        const options =
+          Array.isArray(rawOptions) &&
+          rawOptions.every(
+            (o) =>
+              typeof o === "object" &&
+              o !== null &&
+              typeof (o as { label?: unknown }).label === "string" &&
+              typeof (o as { description?: unknown }).description === "string",
+          )
+            ? (rawOptions as { label: string; description: string }[])
+            : undefined;
         setPendingQuestion({
           requestId,
           question: request.description,
+          header: typeof (args as { header?: unknown }).header === "string"
+            ? ((args as { header: string }).header)
+            : undefined,
+          options,
+          multiSelect: (args as { multiSelect?: unknown }).multiSelect === true,
         });
         return;
       }
@@ -500,7 +523,7 @@ export function App({
     const [modelsRes, arenaRes, providersRes, snapMod] = await Promise.all([
       client.query("models"),
       client.query("config_get", "arena.participants"),
-      client.query("config_get", "providers"),
+      client.query("providers"),
       import("../data/openrouter-models.js"),
     ]);
     const entries = (modelsRes.data as ModelEntry[]) ?? [];
@@ -522,20 +545,13 @@ export function App({
         })
       : [];
 
-    // providers: settings.providers[]. We derive modelCount client-side by
-    // counting how many of the loaded model entries reference each provider.
-    // cachedModels/cachedAt are not yet exposed by the server (Task 12 will
-    // pipe them through) — leave them undefined and the pane shows "未拉取".
-    const providersRaw = (providersRes.data as { value?: unknown })?.value;
-    const providerList = Array.isArray(providersRaw) ? providersRaw : [];
-    const referenceCounts = new Map<string, number>();
-    for (const e of entries) {
-      const pk = (e as ModelEntry & { providerKey?: string }).providerKey;
-      if (!pk) continue;
-      referenceCounts.set(pk, (referenceCounts.get(pk) ?? 0) + 1);
-    }
+    // providers: server-enriched payload includes modelCount + cachedModels
+    // + cachedAt alongside the raw settings.providers[] fields. We don't
+    // re-derive modelCount client-side — keeping the source-of-truth on the
+    // server side avoids drift when reloadModelPool is called.
+    const providerList = Array.isArray(providersRes.data) ? providersRes.data : [];
     const providers: ProviderManagerEntry[] = providerList
-      .filter((p): p is Record<string, unknown> => !!p && typeof p === "object")
+      .filter((p: unknown): p is Record<string, unknown> => !!p && typeof p === "object")
       .map((p) => {
         const key = typeof p.key === "string" ? p.key : "";
         const label = typeof p.label === "string" ? p.label : key;
@@ -548,7 +564,9 @@ export function App({
           key,
           label,
           kind,
-          modelCount: referenceCounts.get(key) ?? 0,
+          modelCount: typeof p.modelCount === "number" ? p.modelCount : 0,
+          cachedModels: typeof p.cachedModels === "number" ? p.cachedModels : undefined,
+          cachedAt: typeof p.cachedAt === "string" ? p.cachedAt : undefined,
           baseUrl,
           apiKey,
           protocol,
@@ -597,6 +615,27 @@ export function App({
     }
   }, [fetchModelManagerState]);
 
+  // Open onboarding (/login). Always re-fetch existing providers/models first
+  // so the wizard's "Use existing" branch reflects current settings.json — the
+  // wizard reads from `modelManager` state, which would otherwise be stale
+  // (or empty on first run) and silently hide existing providers.
+  const startOnboarding = useCallback(async () => {
+    try {
+      const state = await fetchModelManagerState();
+      setModelManager(state);
+    } catch (err) {
+      // Non-fatal: onboarding still works with empty lists (first-run case).
+      chatStore.update((prev) => [
+        ...prev,
+        entry({
+          type: "status",
+          reason: `Could not load existing config (continuing with empty list): ${(err as Error).message}`,
+        }),
+      ]);
+    }
+    setShowOnboarding(true);
+  }, [fetchModelManagerState]);
+
   useInput((ch, key) => {
     if (key.ctrl && ch === "c") {
       if (isRunning) {
@@ -637,8 +676,21 @@ export function App({
       });
     }
 
-    // ESC — cancel running request (same as Ctrl+C) or clear input
-    if (key.escape && isRunning) {
+    // ESC — cancel running request (same as Ctrl+C) or clear input.
+    // Skip when ANY modal/overlay is open: those components handle Esc
+    // themselves (e.g. ProviderModelFlow steps back one screen on Esc).
+    // The root handler must not preempt them, or Esc would dismiss the
+    // whole overlay instead of stepping back.
+    if (
+      key.escape &&
+      isRunning &&
+      !pendingQuestion &&
+      !pendingApproval &&
+      !showOnboarding &&
+      !modelEntries &&
+      !modelManager &&
+      !sessionEntries
+    ) {
       if (flushTimerRef.current) {
         clearTimeout(flushTimerRef.current);
         flushTimerRef.current = null;
@@ -836,7 +888,7 @@ export function App({
           setShowBanner(true);
         },
         chatLog,
-        startOnboarding: () => setShowOnboarding(true),
+        startOnboarding,
         openModelSelector,
         openSessionPicker,
         openModelManager,
@@ -884,6 +936,7 @@ export function App({
       tasks,
       chatLog,
       exit,
+      startOnboarding,
       openModelSelector,
       openSessionPicker,
       openModelManager,
@@ -949,6 +1002,7 @@ export function App({
       {showBanner && (
         <>
           <Banner model={model} effort={currentEffort} maxTurns={maxTurns} cwd={cwd} />
+          <UpdateBanner />
           {!initialSessionId && <WelcomeTips cwd={cwd} />}
         </>
       )}
@@ -961,8 +1015,10 @@ export function App({
         unseenCount={unseenCount}
       />
 
-      {/* Spinner with verb (when loading) */}
-      {isRunning && (
+      {/* Spinner with verb (when loading).
+          Hidden while waiting on user input (AskUser / approval) — the elapsed
+          counter would otherwise keep climbing while we're idle on the user. */}
+      {isRunning && !pendingQuestion && !pendingApproval && (
         <SpinnerWithVerb
           mode={streamMode}
           streamingCharsRef={streamingCharsRef}
@@ -1029,21 +1085,32 @@ export function App({
             apiKey: p.apiKey,
           }))}
           existingModelKeys={(modelManager?.entries ?? []).map((e) => e.key)}
+          existingModelIds={(modelManager?.entries ?? []).map((e) => e.model)}
           onComplete={async (result: OnboardingResult) => {
             setShowOnboarding(false);
+            // startOnboarding pre-loaded modelManager state so the wizard
+            // could surface "Use existing providers" — that state was only
+            // for the wizard's existingProviders prop, not to actually
+            // open the manager panel. Tear it down on exit so the user
+            // lands back in chat, not on the ModelManager fallback.
+            setModelManager(null);
             // Hot-swap into the engine without a process restart:
             // reloadModels picks up the providers[]/models[] the wizard just
             // wrote to settings.json; the subsequent model switch activates
             // the chosen default. Falls back to the legacy "please restart"
             // message if anything goes wrong.
             try {
-              const key = modelKey(result.model);
-              const res = (await client.configure({ reloadModels: true, model: key })) as {
-                model?: string;
-              };
+              // The wizard already gave us the exact pool alias the user
+              // picked — use it as-is. Re-deriving with modelKey() collapsed
+              // same-family ids (v4-flash + v4-pro → "deepseek") and silently
+              // switched to whichever entry happened to claim the alias first.
+              const res = (await client.configure({
+                reloadModels: true,
+                model: result.key,
+              })) as { model?: string };
               const activeModel = res?.model ?? result.model;
               setModel(activeModel);
-              addStatus(`✓ 配置已保存,已切换到: ${key} (${activeModel})`);
+              addStatus(`✓ 配置已保存,已切换到: ${result.key} (${activeModel})`);
             } catch (err) {
               addStatus(
                 `✓ 配置已保存 (${result.model})。热加载失败,请重启 code-shell: ${(err as Error).message}`,
@@ -1052,6 +1119,8 @@ export function App({
           }}
           onCancel={() => {
             setShowOnboarding(false);
+            // Same teardown as onComplete — see comment above.
+            setModelManager(null);
             addStatus("已取消配置。");
           }}
         />
@@ -1099,6 +1168,7 @@ export function App({
             modelsPath: p.modelsPath,
           }))}
           existingModelKeys={modelManager.entries.map((e) => e.key)}
+          existingModelIds={modelManager.entries.map((e) => e.model)}
           detectedEnvKeys={[]}
           switchToNewModelOnFinish={false}
           onFinish={async (result) => {
@@ -1182,6 +1252,9 @@ export function App({
       ) : pendingQuestion ? (
         <AskUserPrompt
           question={pendingQuestion.question}
+          header={pendingQuestion.header}
+          options={pendingQuestion.options}
+          multiSelect={pendingQuestion.multiSelect}
           onAnswer={(answer) => {
             const { requestId } = pendingQuestion;
             setPendingQuestion(null);

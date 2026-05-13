@@ -17,6 +17,13 @@ import {
   applySummaryCompaction,
   applyToolResultBudget,
 } from "./compaction.js";
+import {
+  type ContentReplacementState,
+  applyToolResultPersistence,
+  createContentReplacementState,
+  reconstructContentReplacementState,
+  resolveToolResultsDir,
+} from "./tool-result-storage.js";
 import { logger } from "../logging/logger.js";
 
 export interface ContextManagerConfig {
@@ -24,14 +31,42 @@ export interface ContextManagerConfig {
   compactAtRatio: number;
   summarizeAtRatio: number;
   maxToolResultChars: number;
+  /**
+   * Lower bound, as a ratio of maxTokens, below which microcompact will not
+   * run. CC's external (non-cache-edit) path is "autocompact handles context
+   * pressure"; mirror that by leaving early-turn context alone so a model
+   * with a 1M window doesn't see its first-3-rounds Read results wiped at
+   * 23k tokens. Raising the floor also keeps prompt-cache prefixes warm in
+   * short sessions.
+   */
+  microcompactFloorRatio: number;
+  /**
+   * Most-recent compactable rounds microcompact keeps untouched. Auto-derived
+   * from maxTokens when not set explicitly: bigger window → keep more.
+   */
+  microcompactKeepRecent?: number;
 }
 
 const DEFAULT_CONFIG: ContextManagerConfig = {
+  // 0.85 ≈ effectiveContextWindow − reserved-output buffer (CC's
+  // autoCompactThreshold pattern: window − 13k buffer − 20k output budget
+  // ≈ 0.83 on a 200k window, 0.97 on 1M). 0.6 was wasting 40% of any model
+  // with a window over ~150k.
   maxTokens: 200_000,
-  compactAtRatio: 0.6,
-  summarizeAtRatio: 0.8,
+  compactAtRatio: 0.85,
+  summarizeAtRatio: 0.92,
   maxToolResultChars: 30_000,
+  microcompactFloorRatio: 0.3,
 };
+
+/**
+ * Default keepRecent for microcompact, scaled to the model's context window.
+ * Mirrors CC's "keep recent 5" baseline but lets a 1M-window model retain
+ * proportionally more tool_result detail before clearing kicks in.
+ */
+function defaultKeepRecent(maxTokens: number): number {
+  return Math.max(5, Math.floor(maxTokens / 100_000));
+}
 
 /**
  * Async function type for LLM summarization calls.
@@ -39,7 +74,7 @@ const DEFAULT_CONFIG: ContextManagerConfig = {
  */
 export type SummarizeFn = (prompt: string) => Promise<string>;
 
-export type CompactStrategy = "summary" | "window" | "snip" | "emergency";
+export type CompactStrategy = "micro" | "summary" | "window" | "snip" | "emergency";
 export type OnCompactFn = (info: {
   strategy: CompactStrategy;
   before: number;
@@ -58,8 +93,15 @@ export class ContextManager {
   private lastActualAtMessageCount: number | undefined;
   /** Path to session transcript — passed to summary compaction for on-demand access. */
   private transcriptPath: string | undefined;
-  /** Notified whenever a non-trivial compaction tier fires (skips microcompact). */
+  /** Notified whenever any compaction tier fires, including microcompact. */
   private onCompact: OnCompactFn | undefined;
+  /**
+   * Tool-result persistence state. Created lazily once we know where to
+   * write files (i.e. once setTranscriptPath has been called).
+   * `null` = persistence has been explicitly disabled.
+   */
+  private replacementState: ContentReplacementState | undefined;
+  private toolResultsDir: string | undefined;
 
   constructor(config?: Partial<ContextManagerConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -103,10 +145,24 @@ export class ContextManager {
   }
 
   /**
-   * Set the transcript path so compaction can reference it.
+   * Set the transcript path so compaction can reference it. The
+   * tool-results directory lives alongside the transcript file:
+   *   <transcriptDir>/tool-results/<toolUseId>.txt
    */
   setTranscriptPath(path: string): void {
     this.transcriptPath = path;
+    this.toolResultsDir = resolveToolResultsDir(path);
+  }
+
+  /**
+   * Initialize tool-result-persistence state from already-loaded messages.
+   * Call this once per session, after setTranscriptPath, when resuming so
+   * the manager re-enters the same "frozen decision" state it had on the
+   * previous run. Without this, a resumed session would re-evaluate
+   * every result against the current threshold and might flip choices.
+   */
+  initReplacementStateFromMessages(messages: Message[]): void {
+    this.replacementState = reconstructContentReplacementState(messages);
   }
 
   /**
@@ -116,21 +172,71 @@ export class ContextManager {
   manage(messages: Message[]): Message[] {
     let result = messages;
 
-    // Tier 0: Truncate oversized tool results
+    // Tier 0a: Persist large tool_results to disk + replace with preview.
+    // Runs before any in-context truncation so the model gets a real
+    // filepath it can Read back, not a silent head/tail truncation.
+    result = this.persistLargeToolResults(result);
+
+    // Tier 0b: Hard truncate any oversized tool_result that survived
+    // persistence (e.g. persistence disabled, FS write failed, or a
+    // block was already frozen "don't persist" on a prior pass).
     result = this.truncateToolResults(result);
 
-    // Tier 0b: Aggregate tool result budget (per-message)
+    // Tier 0c: Aggregate tool result budget (per-message) — char-level
+    // backstop for messages still over the limit after persistence.
     result = applyToolResultBudget(result);
 
-    // Tier 1: Always apply microcompact
-    result = microcompact(result);
+    // Tier 1: microcompact — fingerprint old whitelisted tool_results.
+    // Only runs above the floor ratio: under-pressure context keeps full
+    // detail so the model isn't forced to re-Read files it just looked at.
+    const preTier1Tokens = this.estimateTokensHybrid(result);
+    if (preTier1Tokens > this.config.maxTokens * this.config.microcompactFloorRatio) {
+      const keepRecentN =
+        this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);
+      // Capture rounds/tools synchronously from microcompact's onClear, but
+      // defer the token re-estimate until AFTER `result` has been reassigned
+      // to the compacted array — onClear fires before microcompact returns,
+      // so reading `result` inside it would see the pre-compact reference.
+      let clearedInfo: { clearedRounds: number; toolNames: string[] } | null = null;
+      result = microcompact(result, {
+        keepRecentN,
+        onClear: (info) => {
+          clearedInfo = info;
+        },
+      });
+      if (clearedInfo) {
+        const after = this.estimateTokensHybrid(result);
+        logger.info("context.microcompact", {
+          before: preTier1Tokens,
+          after,
+          keepRecentN,
+          clearedRounds: (clearedInfo as { clearedRounds: number }).clearedRounds,
+          toolNames: (clearedInfo as { toolNames: string[] }).toolNames,
+        });
+        this.onCompact?.({ strategy: "micro", before: preTier1Tokens, after });
+      }
+    }
 
     // Hybrid token estimation walks every message; we cache it across the
     // tier checks below and only recompute after a compaction shrinks `result`.
     let tokens = this.estimateTokensHybrid(result);
 
-    // Tier 2 sync fallback: window compact if approaching limit
-    if (tokens > this.config.maxTokens * this.config.compactAtRatio) {
+    // Tiers run in increasing severity. Each tier short-circuits its own
+    // arm but the next tier still runs if we're still above the next gate
+    // — a single pass can escalate micro → summary-replay → snip → window
+    //  → emergency when the model just dumped a flood of tool_results.
+    //
+    // Severity gates (fractions of maxTokens):
+    //   compactAtRatio       — start non-micro compaction (try summary first,
+    //                          else snip; snip is the cheapest sync option)
+    //   compactAtRatio + 0.05 — snip wasn't enough, do a window compact
+    //   summarizeAtRatio      — emergency window (smallest keep-tail)
+    const snipGate = this.config.maxTokens * this.config.compactAtRatio;
+    const windowGate = this.config.maxTokens * (this.config.compactAtRatio + 0.05);
+    const emergencyGate = this.config.maxTokens * this.config.summarizeAtRatio;
+
+    // Tier 2: prefer replaying a cached summary; otherwise snip
+    if (tokens > snipGate) {
       const before = tokens;
       if (this.lastSummary) {
         const keepN = Math.max(8, Math.floor(result.length * 0.3));
@@ -139,23 +245,24 @@ export class ContextManager {
         tokens = this.estimateTokensHybrid(result);
         this.onCompact?.({ strategy: "summary", before, after: tokens });
       } else {
-        const keepN = Math.max(10, Math.floor(result.length * 0.4));
-        result = windowCompact(result, keepN);
+        result = snipCompact(result, 3, 8);
         tokens = this.estimateTokensHybrid(result);
-        this.onCompact?.({ strategy: "window", before, after: tokens });
+        this.onCompact?.({ strategy: "snip", before, after: tokens });
       }
     }
 
-    // Tier 2b: Snip compact — keep first+last, drop middle (less aggressive than window)
-    if (tokens > this.config.maxTokens * 0.7) {
+    // Tier 2b: snip didn't free enough — fall back to window compact
+    if (tokens > windowGate) {
       const before = tokens;
-      result = snipCompact(result, 3, 8);
+      const keepN = Math.max(10, Math.floor(result.length * 0.4));
+      result = windowCompact(result, keepN);
       tokens = this.estimateTokensHybrid(result);
-      this.onCompact?.({ strategy: "snip", before, after: tokens });
+      this.onCompact?.({ strategy: "window", before, after: tokens });
     }
 
-    // Tier 3: Emergency — aggressive window if still too large
-    if (tokens > this.config.maxTokens * this.config.summarizeAtRatio) {
+    // Tier 3: emergency window with a tiny tail — last resort before the
+    // request would otherwise blow the model's context.
+    if (tokens > emergencyGate) {
       const before = tokens;
       result = windowCompact(result, 6);
       tokens = this.estimateTokensHybrid(result);
@@ -172,14 +279,42 @@ export class ContextManager {
   async manageAsync(messages: Message[]): Promise<Message[]> {
     let result = messages;
 
-    // Tier 0: Truncate oversized tool results
+    // Tier 0a: Persist large tool_results to disk + replace with preview.
+    result = this.persistLargeToolResults(result);
+
+    // Tier 0b: Hard truncate oversized tool_result blocks that weren't
+    // persisted (persistence disabled, FS error, or already frozen).
     result = this.truncateToolResults(result);
 
-    // Tier 0b: Aggregate tool result budget (per-message)
+    // Tier 0c: Aggregate tool result budget (per-message)
     result = applyToolResultBudget(result);
 
-    // Tier 1: microcompact
-    result = microcompact(result);
+    // Tier 1: microcompact — see manage() for the rationale on the floor.
+    const preTier1Tokens = this.estimateTokensHybrid(result);
+    if (preTier1Tokens > this.config.maxTokens * this.config.microcompactFloorRatio) {
+      const keepRecentN =
+        this.config.microcompactKeepRecent ?? defaultKeepRecent(this.config.maxTokens);
+      // See manage(): onClear fires synchronously before microcompact returns,
+      // so defer the token re-estimate until result is reassigned.
+      let clearedInfo: { clearedRounds: number; toolNames: string[] } | null = null;
+      result = microcompact(result, {
+        keepRecentN,
+        onClear: (info) => {
+          clearedInfo = info;
+        },
+      });
+      if (clearedInfo) {
+        const after = this.estimateTokensHybrid(result);
+        logger.info("context.microcompact", {
+          before: preTier1Tokens,
+          after,
+          keepRecentN,
+          clearedRounds: (clearedInfo as { clearedRounds: number }).clearedRounds,
+          toolNames: (clearedInfo as { toolNames: string[] }).toolNames,
+        });
+        this.onCompact?.({ strategy: "micro", before: preTier1Tokens, after });
+      }
+    }
 
     const tokens = this.estimateTokensHybrid(result);
     const ratio = tokens / this.config.maxTokens;
@@ -221,13 +356,24 @@ export class ContextManager {
       }
     }
 
-    // Reuse the `tokens` we already computed above for the LLM-summary tier
-    // check, then refresh it after each compaction. Avoids re-walking every
-    // message 5–6 times per call.
+    // Reuse the `tokens` we already computed above. We only get here if the
+    // LLM summary path didn't fire (no summarizeFn, too many failures, or it
+    // threw) — fall back to the same severity ladder as manage().
     let live = tokens;
+    const snipGate = this.config.maxTokens * this.config.compactAtRatio;
+    const windowGate = this.config.maxTokens * (this.config.compactAtRatio + 0.05);
+    const emergencyGate = this.config.maxTokens * this.config.summarizeAtRatio;
 
-    // Tier 2 fallback: window compact
-    if (live > this.config.maxTokens * this.config.compactAtRatio) {
+    // Tier 2 fallback: snip first (cheapest sync option)
+    if (live > snipGate) {
+      const before = live;
+      result = snipCompact(result, 3, 8);
+      live = this.estimateTokensHybrid(result);
+      this.onCompact?.({ strategy: "snip", before, after: live });
+    }
+
+    // Tier 2b: window compact when snip didn't free enough
+    if (live > windowGate) {
       const before = live;
       const keepN = Math.max(10, Math.floor(result.length * 0.4));
       result = windowCompact(result, keepN);
@@ -235,16 +381,8 @@ export class ContextManager {
       this.onCompact?.({ strategy: "window", before, after: live });
     }
 
-    // Tier 2b: Snip compact
-    if (live > this.config.maxTokens * 0.7) {
-      const before = live;
-      result = snipCompact(result, 3, 8);
-      live = this.estimateTokensHybrid(result);
-      this.onCompact?.({ strategy: "snip", before, after: live });
-    }
-
     // Tier 3: Emergency
-    if (live > this.config.maxTokens * this.config.summarizeAtRatio) {
+    if (live > emergencyGate) {
       const before = live;
       result = windowCompact(result, 6);
       live = this.estimateTokensHybrid(result);
@@ -252,6 +390,25 @@ export class ContextManager {
     }
 
     return result;
+  }
+
+  /**
+   * Persist large tool_result blocks to disk and replace them with a
+   * preview + filepath. No-op when transcript path hasn't been set
+   * (e.g. unit tests that exercise compaction directly without a session).
+   */
+  private persistLargeToolResults(messages: Message[]): Message[] {
+    if (!this.toolResultsDir) return messages;
+    if (!this.replacementState) {
+      this.replacementState = createContentReplacementState();
+    }
+    return applyToolResultPersistence(messages, {
+      toolResultsDir: this.toolResultsDir,
+      state: this.replacementState,
+      onPersist: (info) => {
+        logger.info("context.tool_result_persisted", info);
+      },
+    });
   }
 
   /**
@@ -288,8 +445,9 @@ export class ContextManager {
   shouldReactiveCompact(messages: Message[], currentResponseTokens: number): boolean {
     const msgTokens = this.estimateTokensHybrid(messages);
     const total = msgTokens + currentResponseTokens;
-    // Trigger at 90% of max — leaves 10% headroom for the response to finish
-    return total > this.config.maxTokens * 0.9;
+    // Trigger at the same gate as the emergency tier — keeps the streaming
+    // reactive check aligned with the post-turn ladder.
+    return total > this.config.maxTokens * this.config.summarizeAtRatio;
   }
 
   /**

@@ -5,6 +5,8 @@
  * so that LLM output is not prematurely truncated.
  */
 
+import { resolveMaxOutput } from "../cli/onboarding.js";
+
 export interface ModelPreset {
   provider: string;
   model: string;
@@ -30,13 +32,22 @@ export const MODEL_PRESETS: Record<string, ModelPreset> = {
   devstral: { provider: "openai", model: "mistralai/devstral-medium", maxOutputTokens: 24000 },
 };
 
-/** Look up max output tokens for a model string, falling back to a safe default. */
+/**
+ * Look up max output tokens for a model string, falling back to a safe default.
+ *
+ * Lookup order:
+ *   1. Arena preset key (e.g. "claude", "gpt") — short aliases used in arena UX
+ *   2. Arena preset model path (e.g. "anthropic/claude-opus-4.6")
+ *   3. resolveMaxOutput — the canonical table in onboarding.ts that also covers
+ *      direct-provider IDs (deepseek-v4-pro, …) and OpenRouter snapshot
+ *   4. 8192 — final safe fallback
+ */
 export function getMaxOutputTokens(model: string): number {
-  // Check by preset key first
   const byKey = MODEL_PRESETS[model];
   if (byKey) return byKey.maxOutputTokens;
 
-  // Check by full model path
   const byModel = Object.values(MODEL_PRESETS).find((p) => p.model === model);
-  return byModel?.maxOutputTokens ?? 8192;
+  if (byModel) return byModel.maxOutputTokens;
+
+  return resolveMaxOutput(model) ?? 8192;
 }

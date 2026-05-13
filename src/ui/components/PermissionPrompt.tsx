@@ -28,6 +28,7 @@ import { useState } from "react";
 import { homedir } from "node:os";
 import { Box, Text, useInput } from "../../render/index.js";
 import type { ApprovalScope } from "../../types.js";
+import { DiffLine } from "./DiffLine.js";
 
 interface PermissionPromptProps {
   toolName: string;
@@ -38,6 +39,8 @@ interface PermissionPromptProps {
   onDecision: (approved: boolean, scope: ApprovalScope) => void;
 }
 
+const PREVIEW_MAX_LINES = 40;
+
 export function PermissionPrompt({
   toolName,
   description,
@@ -47,7 +50,8 @@ export function PermissionPrompt({
   onDecision,
 }: PermissionPromptProps) {
   const [cursor, setCursor] = useState(0);
-  const detail = describeArgs(toolName, args);
+  const previewKind = previewKindFor(toolName);
+  const detail = previewKind === "generic" ? describeArgs(toolName, args) : { body: [] };
   const scope = scopeLabel(toolName, args);
   const options: Array<{ label: string; scope: ApprovalScope; approved: boolean }> = [
     { label: "Yes", scope: "once", approved: true },
@@ -107,9 +111,20 @@ export function PermissionPrompt({
       </Box>
 
       <Box marginTop={1} flexDirection="column" marginLeft={1}>
-        {detail.body.map((line, i) => (
-          <Text key={i}>{line}</Text>
-        ))}
+        {previewKind === "write" ? (
+          <WritePreview
+            filePath={String(args.file_path ?? "")}
+            content={String(args.content ?? "")}
+          />
+        ) : previewKind === "edit" ? (
+          <EditPreview
+            filePath={String(args.file_path ?? "")}
+            oldString={String(args.old_string ?? "")}
+            newString={String(args.new_string ?? "")}
+          />
+        ) : (
+          detail.body.map((line, i) => <Text key={i}>{line}</Text>)
+        )}
         <Text dim>{description}</Text>
         <Text dim>
           {"cwd: "}
@@ -128,6 +143,78 @@ export function PermissionPrompt({
             <Text bold={i === cursor}>{opt.label}</Text>
           </Box>
         ))}
+      </Box>
+    </Box>
+  );
+}
+
+// ─── Preview components ────────────────────────────────────────────
+
+type PreviewKind = "write" | "edit" | "generic";
+
+function previewKindFor(toolName: string): PreviewKind {
+  if (toolName === "Write") return "write";
+  if (toolName === "Edit") return "edit";
+  return "generic";
+}
+
+function WritePreview({ filePath, content }: { filePath: string; content: string }) {
+  const lines = content.split("\n");
+  const truncated = lines.length > PREVIEW_MAX_LINES;
+  const shown = truncated ? lines.slice(0, PREVIEW_MAX_LINES) : lines;
+  const home = homedir();
+  const shortPath = filePath.startsWith(home) ? "~" + filePath.slice(home.length) : filePath;
+  return (
+    <Box flexDirection="column">
+      <Text bold>{shortPath}</Text>
+      <Box marginTop={1} flexDirection="column">
+        {shown.map((line, i) => (
+          <DiffLine key={i} kind="add" text={line} />
+        ))}
+        {truncated && (
+          <Text dim>{`  … ${lines.length - PREVIEW_MAX_LINES} more lines`}</Text>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
+function EditPreview({
+  filePath,
+  oldString,
+  newString,
+}: {
+  filePath: string;
+  oldString: string;
+  newString: string;
+}) {
+  const oldLines = oldString.split("\n");
+  const newLines = newString.split("\n");
+  const total = oldLines.length + newLines.length;
+  const home = homedir();
+  const shortPath = filePath.startsWith(home) ? "~" + filePath.slice(home.length) : filePath;
+
+  let shownOld = oldLines;
+  let shownNew = newLines;
+  let omitted = 0;
+  if (total > PREVIEW_MAX_LINES) {
+    const halfBudget = Math.floor(PREVIEW_MAX_LINES / 2);
+    shownOld = oldLines.slice(0, halfBudget);
+    shownNew = newLines.slice(0, halfBudget);
+    omitted = total - (shownOld.length + shownNew.length);
+  }
+
+  return (
+    <Box flexDirection="column">
+      <Text bold>{shortPath}</Text>
+      <Box marginTop={1} flexDirection="column">
+        {shownOld.map((line, i) => (
+          <DiffLine key={`o${i}`} kind="remove" text={line} />
+        ))}
+        {shownNew.map((line, i) => (
+          <DiffLine key={`n${i}`} kind="add" text={line} />
+        ))}
+        {omitted > 0 && <Text dim>{`  … ${omitted} more lines`}</Text>}
       </Box>
     </Box>
   );

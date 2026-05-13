@@ -101,7 +101,7 @@ export class AnthropicClient extends LLMClientBase {
         cacheReadTokens: (response.usage as any).cache_read_input_tokens,
         cacheCreationTokens: (response.usage as any).cache_creation_input_tokens,
       };
-      this.recordUsage(usage);
+      this.recordUsage(usage, options);
 
       return this.processResponse(response, usage);
     } catch (err) {
@@ -195,7 +195,7 @@ export class AnthropicClient extends LLMClientBase {
         cacheReadTokens: (finalMessage.usage as any).cache_read_input_tokens,
         cacheCreationTokens: (finalMessage.usage as any).cache_creation_input_tokens,
       };
-      this.recordUsage(usage);
+      this.recordUsage(usage, options);
 
       options.onChunk?.({ type: "stop", stopReason: finalMessage.stop_reason ?? undefined });
 

@@ -122,8 +122,26 @@ export {
   truncateToolResult,
   buildSummarizationPrompt,
   applySummaryCompaction,
+  COMPACTABLE_TOOL_NAMES,
 } from "./context/compaction.js";
-export type { SummarizeFn } from "./context/manager.js";
+export type { MicrocompactOptions } from "./context/compaction.js";
+export type {
+  SummarizeFn,
+  CompactStrategy,
+  OnCompactFn,
+  ContextManagerConfig,
+} from "./context/manager.js";
+export {
+  applyToolResultPersistence,
+  createContentReplacementState,
+  reconstructContentReplacementState,
+  resolveToolResultsDir,
+  isPersistedReplacement,
+  DEFAULT_PERSIST_THRESHOLD,
+  PER_MESSAGE_AGGREGATE_CAP,
+  PREVIEW_SIZE,
+} from "./context/tool-result-storage.js";
+export type { ContentReplacementState } from "./context/tool-result-storage.js";
 
 // ─── Skills ──────────────────────────────────────────────────────
 

@@ -2,41 +2,33 @@
 
 This file provides guidance to Code Shell when working with code in this repository.
 
-## Project Overview
-
-Code Shell is now positioned as a general-purpose agent orchestration framework with a built-in `terminal-coding` preset. The core engine is domain-agnostic; coding behavior comes from preset/configuration. Ink (React for CLI) powers the terminal UI.
-
-## Build & Dev Commands
+## Build & Test
 
 ```bash
-npm run build        # Build with tsup (output: dist/)
-npm run dev          # Watch mode dev build
-npm start            # Run the built CLI
-npm test             # Run tests with vitest
-npx vitest run -t 'test name'  # Run a single test by name
+bun run build          # sync-models → tsup → tsc declarations
+bun run dev            # CODE_SHELL_DEV=1 bun run src/cli/main.ts
+bun test               # bun test runner (not vitest/jest)
+bun test -- -t 'name'  # run a single test by pattern
+bun run typecheck      # tsc --noEmit
+bun run lint           # eslint src/
 ```
 
 ## Code Style
 
-Prettier is the formatter — see `.prettierrc`:
-- **Double quotes**, semicolons, trailing commas (`all`)
-- 2-space indentation, 100 char print width
-- No ESLint — rely on Prettier + TypeScript compiler
+- **Prettier**: double quotes, semicolons always, trailing commas (`all`), 2-space indent, 100 print width
+- **ESLint**: unused vars must be prefixed with `_`; `no-explicit-any` is off
+- **tsconfig**: `strict: true` but `noImplicitAny: false` — implicit `any` is tolerated
 
 ## Architecture Gotchas
 
-- **Ink/React UI**: The terminal UI uses Ink (React renderer for CLI). Components in `src/ui/` are `.tsx` files using React patterns — not browser React.
-- **Tool system**: The tool framework (registry, executor, permissions) lives in `src/tool-system/`. Built-in tool definitions are in `src/tool-system/builtin/`. Individual tool implementations are in `src/tools/`.
-- **Preset system**: `src/preset/` defines built-in agent presets that choose the default system prompt, builtin tool set, and permission shortcuts.
-- **Engine**: `src/engine/` handles the conversation loop and LLM interaction.
-- **`restored-src/`**: Legacy/reference code imported for feature parity. Do not modify files here without understanding their origin.
-
-## Testing
-
-- Framework: **vitest** (not Jest)
-- Test files live in `tests/` directory with `.test.ts` extension
-- Use `describe`/`it`/`expect` from vitest
+- **Package manager is `bun`**, not npm/yarn/pnpm. Use `bun install`, `bun run`, `bun test`.
+- **Terminal UI is Ink** (React for CLI). Components in `src/ui/` are `.tsx` React components — not browser DOM.
+- **Build depends on sync-models**: `bun run build` runs `sync-models` first to fetch model data from OpenRouter before bundling. Skipping this produces incomplete output.
+- **Typecheck is not a clean gate**: `bun run typecheck` reports pre-existing errors across the repo. Don't treat it as a blocker for your changes.
+- **`@/*` path alias** maps to `src/*` (configured in tsconfig paths and tsup).
+- **Custom ESLint rules are stubbed** (`no-sync-fs`, `no-top-level-side-effects`, `no-process-exit`, `no-process-cwd`, `no-process-env-top-level`) — they declare intent but don't actually lint.
+- **Engine requires Node >= 20.10**.
 
 ## Commit Style
 
-Use conventional commits: `feat:`, `fix:`, `style:`, `refactor:`, `test:`, `chore:`
+Use conventional commits: `feat:`, `fix:`, `style:`, `refactor:`, `test:`, `chore:`, `docs:`

@@ -74,8 +74,8 @@ export class AgentServer {
 
     // Wire askUser: install a protocol-backed askUser handler on the engine
     // (replaces the legacy setAskUserFn module singleton).
-    this.engine.setAskUser((question: string) => {
-      return this.requestAskUserFromClient(question);
+    this.engine.setAskUser((question, opts) => {
+      return this.requestAskUserFromClient(question, opts);
     });
 
     // Notify client we're ready
@@ -228,6 +228,18 @@ export class AgentServer {
     if (params.bypassPermissions !== undefined) {
       setRuntimeBypass(params.bypassPermissions);
     }
+    if (params.reloadModels) {
+      // Pick up newly persisted providers[]/models[] (e.g. from /login)
+      // before any model-key switch below tries to find them.
+      try {
+        this.engine.reloadModelPool();
+      } catch (err) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+        );
+        return;
+      }
+    }
     if (params.model !== undefined) {
       try {
         const entry = this.engine.switchModel(params.model);
@@ -346,10 +358,60 @@ export class AgentServer {
           key: m.key,
           label: m.label ?? m.key,
           model: m.model,
-          provider: m.provider,
+          // `protocol` is the engine-internal "which client speaks for this
+          // model" flag ("openai"/"anthropic"). ModelEntry.provider holds it
+          // legacy-style; we map it through here so the protocol surface
+          // doesn't leak the misleading name.
+          protocol: m.provider,
+          providerKey: m.providerKey,
           active: m.key === pool.getActiveKey(),
+          maxOutputTokens: m.maxOutputTokens,
+          maxContextTokens: m.maxContextTokens,
         }));
         this.transport.send(createResponse(req.id, { type: "models", data: models }));
+        break;
+      }
+      case "providers": {
+        // Wraps config_get("providers") with two extras the ModelManager
+        // panel needs:
+        //   - modelCount: how many models[] entries reference this provider
+        //   - cachedModels/cachedAt: from <cacheDir>/<providerKey>.json
+        // Without these, the panel shows "0 模型 · 未拉取" even when the
+        // wizard has already pulled the model list.
+        try {
+          const providersRaw = this.engine.readSetting("providers") as unknown;
+          const modelsRaw = this.engine.readSetting("models") as unknown;
+          const providerList = Array.isArray(providersRaw)
+            ? (providersRaw as Array<Record<string, unknown>>)
+            : [];
+          const modelsList = Array.isArray(modelsRaw)
+            ? (modelsRaw as Array<Record<string, unknown>>)
+            : [];
+          const counts = new Map<string, number>();
+          for (const m of modelsList) {
+            const pk = typeof m.providerKey === "string" ? m.providerKey : "";
+            if (!pk) continue;
+            counts.set(pk, (counts.get(pk) ?? 0) + 1);
+          }
+          const { readCache } = await import("../llm/model-cache.js");
+          const { defaultCacheDir } = await import("../llm/model-cache.js");
+          const cacheDir = defaultCacheDir();
+          const enriched = providerList.map((p) => {
+            const key = typeof p.key === "string" ? p.key : "";
+            const cache = key ? readCache(cacheDir, key) : undefined;
+            return {
+              ...p,
+              modelCount: counts.get(key) ?? 0,
+              cachedModels: cache ? cache.models.length : undefined,
+              cachedAt: cache ? cache.fetchedAt : undefined,
+            };
+          });
+          this.transport.send(createResponse(req.id, { type: "providers", data: enriched }));
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
         break;
       }
       case "arena_status": {
@@ -584,9 +646,14 @@ export class AgentServer {
 
   /**
    * Ask the client to answer a question from the agent.
-   * Reuses the approval flow with a synthetic request.
+   * Reuses the approval flow with a synthetic request. Optional `opts`
+   * carry multiple-choice options / header / multiSelect hints that the
+   * client UI may use to render a picker instead of a text input.
    */
-  private requestAskUserFromClient(question: string): Promise<string> {
+  private requestAskUserFromClient(
+    question: string,
+    opts?: import("../tool-system/context.js").AskUserOptions,
+  ): Promise<string> {
     return new Promise((resolve) => {
       const requestId = nanoid(12);
       this.pendingApprovals.set(requestId, (result: ApprovalResult) => {
@@ -607,11 +674,18 @@ export class AgentServer {
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
 
+      // Pass options through the synthetic request's `args` — clients that
+      // don't know about them ignore the extra fields and still see `question`.
+      const args: Record<string, unknown> = { question };
+      if (opts?.header !== undefined) args.header = opts.header;
+      if (opts?.options !== undefined) args.options = opts.options;
+      if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
+
       this.notify(Methods.ApprovalRequest, {
         requestId,
         request: {
           toolName: "__ask_user__",
-          args: { question },
+          args,
           description: question,
           riskLevel: "low" as const,
         },

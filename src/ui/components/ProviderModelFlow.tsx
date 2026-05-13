@@ -23,10 +23,23 @@ export interface EnvKeyHint {
 
 export interface FlowResult {
   addedProvider?: ProviderConfig;
+  /**
+   * Self-describing model entries — credentials are duplicated from the
+   * provider on purpose. The engine reads these without a ProviderCatalog
+   * round-trip; providers[] is kept only as a credential source for the
+   * wizard's future "add model to existing provider" flow.
+   */
   addedModels: Array<{
     key: string;
+    label?: string;
     providerKey: string;
+    /** LLM client/protocol ("openai"/"anthropic"). */
+    protocol: string;
+    /** Legacy mirror of `protocol` for downstream readers that still query it. */
+    provider: string;
     model: string;
+    baseUrl: string;
+    apiKey?: string;
     maxContextTokens?: number;
     maxOutputTokens?: number;
   }>;
@@ -36,6 +49,14 @@ export interface FlowResult {
 export interface ProviderModelFlowProps {
   existingProviders: ProviderConfig[];
   existingModelKeys: string[];
+  /**
+   * Model ids (e.g. "deepseek-v4-pro") already present in settings.models[]
+   * under SOME provider. The fetch step uses this to disable rows for
+   * models the user has already added — keeps the menu informative (shows
+   * the full catalog) without letting the user re-add duplicates that
+   * appendOnboardingResult would silently drop.
+   */
+  existingModelIds?: string[];
   detectedEnvKeys?: EnvKeyHint[];
   switchToNewModelOnFinish: boolean;
   onFinish: (r: FlowResult) => void;
@@ -44,13 +65,27 @@ export interface ProviderModelFlowProps {
 
 // ─── Pure helpers (exported for testing) ──────────────────────────
 
-export function deriveModelAlias(modelId: string, used: string[]): string {
-  let base = modelId.split("/").pop() ?? modelId;
-  base = base.replace(/^deepseek-/, "");
+/**
+ * Pool-key generator for wizard-added models. Format is `provider-model` so
+ * the alias self-identifies (e.g. "deepseek-v4-pro", not just "v4-pro" or
+ * "deepseek"). Collisions get a numeric suffix.
+ *
+ * If the model id already starts with `<provider>-`, we don't duplicate.
+ */
+export function deriveModelAlias(
+  modelId: string,
+  used: string[],
+  providerKind = "",
+): string {
+  const slash = modelId.lastIndexOf("/");
+  const base = slash >= 0 ? modelId.slice(slash + 1) : modelId;
+  const prefix = providerKind.toLowerCase();
+  const candidate =
+    prefix && !base.toLowerCase().startsWith(`${prefix}-`) ? `${prefix}-${base}` : base;
   const set = new Set(used);
-  if (!set.has(base)) return base;
+  if (!set.has(candidate)) return candidate;
   for (let i = 2; ; i++) {
-    const k = `${base}-${i}`;
+    const k = `${candidate}-${i}`;
     if (!set.has(k)) return k;
   }
 }
@@ -85,12 +120,9 @@ export function validateAlias(alias: string, used: string[]): string | null {
 type Step = "kind" | "key" | "baseUrl" | "fetch" | "alias";
 
 interface KindEntry {
-  type: "existing" | "env" | "kind";
+  type: "kind";
   label: string;
-  hint?: string;
-  providerIdx?: number;
-  envIdx?: number;
-  kind?: ProviderKindName;
+  kind: ProviderKindName;
 }
 
 // Friendly labels + ordering. Mirrors the old onboarding's PROVIDERS array.
@@ -138,34 +170,23 @@ function maskKey(k: string): string {
 export function ProviderModelFlow({
   existingProviders,
   existingModelKeys,
+  existingModelIds = [],
   detectedEnvKeys = [],
   switchToNewModelOnFinish,
   onFinish,
   onCancel,
 }: ProviderModelFlowProps) {
-  // Build the kind-step menu in the priority order from the legacy onboarding:
-  //   1. Env-detected keys (one-click "use $OPENROUTER_API_KEY")
-  //   2. Already-configured providers ("Use existing")
-  //   3. All provider kinds, OpenRouter first
-  const kindEntries: KindEntry[] = [
-    ...detectedEnvKeys.map((d, i) => ({
-      type: "env" as const,
-      label: `使用环境变量 ${d.envKey} → ${KIND_LABEL_OVERRIDES[d.kindHint] ?? PROVIDER_KINDS[d.kindHint]?.label ?? d.kindHint}`,
-      hint: `(${maskKey(d.apiKey)})`,
-      envIdx: i,
-    })),
-    ...existingProviders.map((p, i) => ({
-      type: "existing" as const,
-      label: `使用已有: ${p.label ?? p.key}`,
-      hint: `(${p.kind})`,
-      providerIdx: i,
-    })),
-    ...KIND_ORDER.map((k) => ({
-      type: "kind" as const,
-      label: KIND_LABEL_OVERRIDES[k] ?? PROVIDER_KINDS[k]?.label ?? k,
-      kind: k,
-    })),
-  ];
+  const existingModelIdSet = new Set(existingModelIds);
+  // Kind step is now PURE category selection — no env-var or "use existing"
+  // shortcuts at this level. Those are credential choices, not category
+  // choices, and surface in the key step instead so the UX is:
+  //   1. "Which kind of provider?"  (kind step)
+  //   2. "Which credentials?"        (key step — existing provider / env / paste)
+  const kindEntries: KindEntry[] = KIND_ORDER.map((k) => ({
+    type: "kind" as const,
+    label: KIND_LABEL_OVERRIDES[k] ?? PROVIDER_KINDS[k]?.label ?? k,
+    kind: k,
+  }));
 
   const existingProviderKeys = existingProviders.map((p) => p.key);
 
@@ -195,6 +216,31 @@ export function ProviderModelFlow({
 
   const envHintForKind = (kind: ProviderKindName): EnvKeyHint | undefined =>
     detectedEnvKeys.find((e) => e.kindHint === kind);
+
+  // Existing providers whose `kind` matches the just-selected category. These
+  // become "Use existing" rows in the key step, so the user doesn't have to
+  // re-enter credentials for a provider they already saved.
+  const matchingExistingProviders = (kind: ProviderKindName): ProviderConfig[] =>
+    existingProviders.filter((p) => p.kind === kind);
+
+  // Credential-choice rows shown in the key step. Order:
+  //   1. Use existing provider (one row per matching saved provider)
+  //   2. Use detected env var (if any)
+  //   3. Paste a new key (always available as a fallback)
+  type KeyChoice =
+    | { type: "existing"; provider: ProviderConfig }
+    | { type: "env"; hint: EnvKeyHint }
+    | { type: "paste" };
+  const keyChoicesFor = (kind: ProviderKindName): KeyChoice[] => {
+    const rows: KeyChoice[] = matchingExistingProviders(kind).map((p) => ({
+      type: "existing",
+      provider: p,
+    }));
+    const hint = envHintForKind(kind);
+    if (hint) rows.push({ type: "env", hint });
+    rows.push({ type: "paste" });
+    return rows;
+  };
 
   // ─── fetch on step entry ────────────────────────────────────────
   useEffect(() => {
@@ -235,8 +281,12 @@ export function ProviderModelFlow({
   function enterAliasStep(pickedModels: CachedModel[]): void {
     const aliasesInit: string[] = [];
     const used = [...existingModelKeys];
+    // For existing-provider branch, use that provider's kind; for new-provider,
+    // use the kind the user picked. Custom defaults to empty prefix so the
+    // user keeps full control over the alias (model id stays as-is).
+    const kind = useExistingProvider?.kind ?? (selectedKind === "custom" ? "" : selectedKind);
     for (const m of pickedModels) {
-      const a = deriveModelAlias(m.id, used);
+      const a = deriveModelAlias(m.id, used, kind);
       aliasesInit.push(a);
       used.push(a);
     }
@@ -282,12 +332,30 @@ export function ProviderModelFlow({
           label: PROVIDER_KINDS[selectedKind].label,
         };
     const providerKey = useExistingProvider?.key ?? newProvider!.key;
+    // Resolve credentials to embed in each model entry. Self-describing
+    // model entries mean the engine doesn't need a ProviderCatalog lookup
+    // at runtime, and `cat settings.json` is enough to debug a config.
+    // providers[] is still kept as a credential source for the wizard.
+    const effectiveBaseUrl = useExistingProvider?.baseUrl ?? newProvider!.baseUrl;
+    const effectiveApiKey = useExistingProvider?.apiKey ?? newProvider!.apiKey;
+    const effectiveKind = useExistingProvider?.kind ?? selectedKind;
+    // Pick the LLM client/protocol. Only anthropic uses its own SDK;
+    // everything else (DeepSeek, OpenAI, OpenRouter, Mistral, ...) speaks
+    // OpenAI-compatible JSON. Settings.json carries both `protocol` (new
+    // canonical name) and `provider` (legacy mirror for engine readers).
+    const protocol = effectiveKind === "anthropic" ? "anthropic" : "openai";
+
     const addedModels = pickedModels.map((m, i) => ({
       key: aliases[i]!,
+      label: m.id,
       providerKey,
+      protocol,
+      provider: protocol, // legacy mirror — see schema transform
       model: m.id,
-      maxContextTokens: m.contextLength || undefined,
-      maxOutputTokens: m.maxOutputTokens || undefined,
+      baseUrl: effectiveBaseUrl,
+      apiKey: effectiveApiKey,
+      maxContextTokens: m.contextLength && m.contextLength > 0 ? m.contextLength : undefined,
+      maxOutputTokens: m.maxOutputTokens && m.maxOutputTokens > 0 ? m.maxOutputTokens : undefined,
     }));
     onFinish({
       addedProvider: newProvider,
@@ -298,7 +366,54 @@ export function ProviderModelFlow({
 
   // ─── input handling ─────────────────────────────────────────────
   useInput((input, key) => {
-    if (key.escape) return onCancel();
+    // Esc behaves as "back one step", not "exit the whole wizard". Only the
+    // first step (kind) cancels outright. Inside multi-state steps (e.g. the
+    // key step's text-input sub-state, or fetch's manual-id mode) Esc backs
+    // out of that sub-state first.
+    if (key.escape) {
+      if (step === "kind") {
+        onCancel();
+        return;
+      }
+      if (step === "key") {
+        // If we're in the paste-text sub-state, back to the credential menu.
+        // Otherwise we're already on the menu — back to the kind step.
+        if (keyMenuDone) {
+          setKeyMenuDone(false);
+          setApiKey("");
+        } else {
+          setStep("kind");
+        }
+        return;
+      }
+      if (step === "baseUrl") {
+        setStep("key");
+        return;
+      }
+      if (step === "fetch") {
+        if (manualMode) {
+          setManualMode(false);
+          setManualId("");
+          return;
+        }
+        // Reusing an existing provider skips the key step entirely, so the
+        // natural "back" target is the kind step. Likewise for Ollama (no
+        // credentials needed). Otherwise back to the credential menu.
+        if (useExistingProvider || selectedKind === "ollama") {
+          setUseExistingProvider(undefined);
+          setStep("kind");
+        } else {
+          setKeyMenuDone(false);
+          setStep("key");
+        }
+        return;
+      }
+      if (step === "alias") {
+        setStep("fetch");
+        return;
+      }
+      return;
+    }
 
     if (step === "kind") {
       if (key.upArrow) setKindIdx((i) => Math.max(0, i - 1));
@@ -306,46 +421,51 @@ export function ProviderModelFlow({
       else if (key.return) {
         const entry = kindEntries[kindIdx];
         if (!entry) return;
-        if (entry.type === "existing") {
-          const provider = existingProviders[entry.providerIdx!]!;
-          setUseExistingProvider(provider);
+        const kind = entry.kind!;
+        setSelectedKind(kind);
+        setBaseUrl(PROVIDER_KINDS[kind].defaultBaseUrl);
+        setKeyMenuIdx(0);
+        if (kind === "ollama") {
+          // Local Ollama needs no credentials at all — skip the key step.
+          setApiKey("");
+          setUseExistingProvider(undefined);
           setStep("fetch");
-        } else if (entry.type === "env") {
-          const env = detectedEnvKeys[entry.envIdx!]!;
-          setSelectedKind(env.kindHint);
-          setApiKey(env.apiKey);
-          setBaseUrl(PROVIDER_KINDS[env.kindHint].defaultBaseUrl);
-          setStep("fetch");
-        } else {
-          const kind = entry.kind!;
-          setSelectedKind(kind);
-          setBaseUrl(PROVIDER_KINDS[kind].defaultBaseUrl);
-          setKeyMenuDone(false);
-          setKeyMenuIdx(0);
-          if (kind === "ollama") {
-            setApiKey("");
-            setStep("fetch");
-          } else {
-            setStep("key");
-          }
+          return;
         }
+        // If the only credential choice is "paste new key" (no existing
+        // provider of this kind, no env hint), skip the one-item menu and
+        // jump straight into the text input — saves one Enter press.
+        const rows = keyChoicesFor(kind);
+        const onlyPaste = rows.length === 1 && rows[0]?.type === "paste";
+        setKeyMenuDone(onlyPaste);
+        setStep("key");
       }
       return;
     }
 
     if (step === "key") {
-      const hint = envHintForKind(selectedKind);
-      // env-key picker first; only this branch needs keyboard handling here.
-      // Text-input branch is rendered with <TextInput>, which owns its keys.
-      if (hint && !keyMenuDone) {
-        if (key.upArrow) setKeyMenuIdx(0);
-        else if (key.downArrow) setKeyMenuIdx(1);
+      // Credential-choice menu first. The text-input branch is rendered with
+      // <TextInput>, which owns its own keys, so we only handle navigation
+      // for the menu itself.
+      if (!keyMenuDone) {
+        const rows = keyChoicesFor(selectedKind);
+        if (rows.length === 0) return;
+        if (key.upArrow) setKeyMenuIdx((i) => Math.max(0, i - 1));
+        else if (key.downArrow) setKeyMenuIdx((i) => Math.min(rows.length - 1, i + 1));
         else if (key.return) {
-          if (keyMenuIdx === 0) {
-            setApiKey(hint.apiKey);
+          const chosen = rows[keyMenuIdx];
+          if (!chosen) return;
+          if (chosen.type === "existing") {
+            // Reuse a saved provider's credentials directly — skip straight
+            // to model fetch. baseUrl/apiKey come from the existing record.
+            setUseExistingProvider(chosen.provider);
+            setStep("fetch");
+          } else if (chosen.type === "env") {
+            setApiKey(chosen.hint.apiKey);
             if (selectedKind === "custom") setStep("baseUrl");
             else setStep("fetch");
           } else {
+            // "Paste new key" — fall through to the TextInput on next render.
             setKeyMenuDone(true);
           }
         }
@@ -404,6 +524,10 @@ export function ProviderModelFlow({
       else if (input === " ") {
         const m = fetchResult.models[modelIdx];
         if (!m) return;
+        // Already in settings.models[] — silently ignore the toggle so the
+        // user can't queue up duplicates that appendOnboardingResult would
+        // discard later anyway.
+        if (existingModelIdSet.has(m.id)) return;
         const next = new Set(picked);
         if (next.has(m.id)) {
           next.delete(m.id);
@@ -482,20 +606,19 @@ export function ProviderModelFlow({
   return (
     <Box flexDirection="column" marginLeft={1}>
       <Box>
-        <Text color="cyan" bold>{title}</Text>
-        <Text dimColor>  (Esc 取消)</Text>
+        <Text color="ansi:cyan" bold>{title}</Text>
+        <Text dim>{"  (Esc 取消)"}</Text>
       </Box>
 
       {step === "kind" && (
         <Box flexDirection="column" marginTop={1}>
-          <Text dimColor>选择 API 提供商:</Text>
+          <Text dim>选择 API 提供商:</Text>
           {kindEntries.map((e, i) => (
-            <Box key={`${e.type}-${i}`}>
-              <Text color={i === kindIdx ? "cyan" : undefined} bold={i === kindIdx}>
+            <Box key={e.kind}>
+              <Text color={i === kindIdx ? "ansi:cyan" : undefined} bold={i === kindIdx}>
                 {i === kindIdx ? "❯ " : "  "}
                 {e.label}
               </Text>
-              {e.hint && <Text dimColor> {e.hint}</Text>}
             </Box>
           ))}
         </Box>
@@ -503,24 +626,50 @@ export function ProviderModelFlow({
 
       {step === "key" &&
         (() => {
-          const hint = envHintForKind(selectedKind);
-          const showMenu = hint && !keyMenuDone;
           const friendlyName = KIND_LABEL_OVERRIDES[selectedKind] ?? PROVIDER_KINDS[selectedKind].label;
           const keyUrl = KIND_KEY_URLS[selectedKind];
+          const rows = keyChoicesFor(selectedKind);
+          // If the user picked "Paste new key", we're in the text-input
+          // sub-state — render the TextInput. Otherwise render the
+          // credential-choice menu.
+          const showMenu = !keyMenuDone;
           return (
             <Box flexDirection="column" marginTop={1}>
-              <Text dimColor>{friendlyName}</Text>
-              {keyUrl && <Text dimColor>获取 Key: {keyUrl}</Text>}
+              <Text dim>{friendlyName}</Text>
+              {keyUrl && <Text dim>获取 Key: {keyUrl}</Text>}
               {showMenu ? (
                 <Box flexDirection="column" marginTop={1}>
-                  <Text color={keyMenuIdx === 0 ? "cyan" : undefined} bold={keyMenuIdx === 0}>
-                    {keyMenuIdx === 0 ? "❯ " : "  "}
-                    使用环境变量 ${hint!.envKey} ({maskKey(hint!.apiKey)})
-                  </Text>
-                  <Text color={keyMenuIdx === 1 ? "cyan" : undefined} bold={keyMenuIdx === 1}>
-                    {keyMenuIdx === 1 ? "❯ " : "  "}
-                    粘贴新 key
-                  </Text>
+                  {rows.map((row, i) => {
+                    const focused = i === keyMenuIdx;
+                    const prefix = focused ? "❯ " : "  ";
+                    if (row.type === "existing") {
+                      return (
+                        <Box key={`existing-${row.provider.key}`}>
+                          <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                            {prefix}使用已有: {row.provider.label ?? row.provider.key}
+                          </Text>
+                          <Text dim>{`  (${row.provider.kind})`}</Text>
+                        </Box>
+                      );
+                    }
+                    if (row.type === "env") {
+                      return (
+                        <Box key={`env-${row.hint.envKey}`}>
+                          <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                            {prefix}使用环境变量 ${row.hint.envKey}
+                          </Text>
+                          <Text dim>{`  (${maskKey(row.hint.apiKey)})`}</Text>
+                        </Box>
+                      );
+                    }
+                    return (
+                      <Box key="paste">
+                        <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                          {prefix}粘贴新 key
+                        </Text>
+                      </Box>
+                    );
+                  })}
                 </Box>
               ) : (
                 <Box marginTop={1}>
@@ -558,20 +707,23 @@ export function ProviderModelFlow({
 
       {step === "fetch" && (
         <Box flexDirection="column" marginTop={1}>
-          {fetchLoading && <Text dimColor>Loading…</Text>}
+          {fetchLoading && <Text dim>Loading…</Text>}
           {!fetchLoading && fetchResult?.error && fetchResult.models.length === 0 && (
             <Box flexDirection="column">
               <Text color="red">Error: {fetchResult.error}</Text>
-              <Text dimColor>Press r to retry · m for manual id · Esc to cancel</Text>
+              <Text dim>Press r to retry · m for manual id · Esc to cancel</Text>
             </Box>
           )}
           {!fetchLoading && fetchResult && fetchResult.models.length > 0 && !manualMode && (
             <Box flexDirection="column">
-              <Text dimColor>
+              <Text dim>
                 Pick models (Space to toggle, Enter when done) — {picked.size} selected
+                {existingModelIds.length > 0
+                  ? ` · ${existingModelIds.length} 已添加 (灰色不可选)`
+                  : ""}
               </Text>
               {fetchResult.fromCache && (
-                <Text dimColor>
+                <Text dim>
                   Cached at {new Date(fetchResult.fetchedAt).toLocaleString()} · press r to refresh
                 </Text>
               )}
@@ -580,12 +732,28 @@ export function ProviderModelFlow({
                 .map((m, i) => {
                   const realIdx = Math.max(0, modelIdx - 8) + i;
                   const checked = picked.has(m.id);
+                  const alreadyAdded = existingModelIdSet.has(m.id);
+                  // Already in settings.models[]: dim, locked checkbox,
+                  // "(已添加)" tag. Cursor can still land here so the user
+                  // can see why the row isn't selectable.
+                  if (alreadyAdded) {
+                    return (
+                      <Box key={m.id}>
+                        <Text dim>
+                          {realIdx === modelIdx ? "› " : "  "}
+                          [✓] {m.id}
+                          {m.contextLength ? `  (${m.contextLength.toLocaleString()} ctx)` : ""}
+                          {"  (已添加)"}
+                        </Text>
+                      </Box>
+                    );
+                  }
                   return (
-                    <Text key={m.id} color={realIdx === modelIdx ? "cyan" : undefined}>
+                    <Text key={m.id} color={realIdx === modelIdx ? "ansi:cyan" : undefined}>
                       {realIdx === modelIdx ? "› " : "  "}
                       [{checked ? "x" : " "}] {m.id}
                       {m.contextLength ? (
-                        <Text dimColor>  ({m.contextLength.toLocaleString()} ctx)</Text>
+                        <Text dim>  ({m.contextLength.toLocaleString()} ctx)</Text>
                       ) : null}
                     </Text>
                   );
@@ -595,8 +763,8 @@ export function ProviderModelFlow({
           {manualMode && (
             <Box flexDirection="column">
               <Text>Manual model id:</Text>
-              <Text color="cyan">{manualId}</Text>
-              <Text dimColor>Enter when done.</Text>
+              <Text color="ansi:cyan">{manualId}</Text>
+              <Text dim>Enter when done.</Text>
             </Box>
           )}
         </Box>
@@ -610,13 +778,13 @@ export function ProviderModelFlow({
             const focused = !activePickerFocused && i === aliasFocus;
             return (
               <Box key={m.id} flexDirection="column" marginTop={1}>
-                <Text dimColor>{m.id}</Text>
+                <Text dim>{m.id}</Text>
                 <Text color={focused ? "cyan" : undefined}>
                   {focused ? "› " : "  "}
                   {aliases[i] ?? ""}
                 </Text>
                 {focused && err && <Text color="red">{err}</Text>}
-                {!focused && err && <Text color="red" dimColor>{err}</Text>}
+                {!focused && err && <Text color="red" dim>{err}</Text>}
               </Box>
             );
           })}
@@ -635,7 +803,7 @@ export function ProviderModelFlow({
               ))}
             </Box>
           )}
-          <Text dimColor>Tab/↓ to next field · Enter to finish</Text>
+          <Text dim>Tab/↓ to next field · Enter to finish</Text>
         </Box>
       )}
     </Box>

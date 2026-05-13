@@ -25,6 +25,7 @@ import {
   formatBytes,
   MAX_LINE_WIDTH,
 } from "../../utils/toolDisplay.js";
+import { DiffLine, classifyDiffLine } from "./DiffLine.js";
 
 /** Max visible output lines in collapsed mode (matches CC's MAX_LINES_TO_SHOW). */
 const COLLAPSED_LINES = 3;
@@ -152,10 +153,7 @@ export function ToolCallResult({
       {rendered.lines.length > 0 && (
         <Box flexDirection="column">
           {rendered.lines.map((line, i) => (
-            <Box key={i}>
-              <Text dim>{"  ⎿  "}</Text>
-              <Text>{clampLine(line)}</Text>
-            </Box>
+            <DiffOrPlainRow key={i} line={clampLine(line)} />
           ))}
           {rendered.hiddenCount > 0 && (
             <Box>
@@ -182,7 +180,17 @@ interface RenderedOutput {
   hiddenCount: number;
 }
 
+/**
+ * Strip <system-reminder>…</system-reminder> blocks from tool output before
+ * rendering. The InvestigationGuard prepends these to nudge the LLM mid-loop;
+ * they're context for the model, not status for the user.
+ */
+function stripSystemReminders(content: string): string {
+  return content.replace(/<system-reminder>[\s\S]*?<\/system-reminder>\s*/g, "");
+}
+
 function renderToolOutput(toolName: string, content: string, expanded: boolean): RenderedOutput {
+  content = stripSystemReminders(content);
   const rawLines = content.split("\n");
   const totalLines = rawLines.length;
 
@@ -197,11 +205,33 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
     }
 
     case "Write": {
-      return { summary: singleLine(content).slice(0, 60), lines: [], hiddenCount: 0 };
+      // Write returns the raw file content. Show only the first-line summary
+      // when collapsed; the rest of the body isn't useful inline — the user
+      // can re-read the file if they need it.
+      const summary = singleLine(rawLines[0] ?? "").slice(0, 80);
+      return { summary, lines: [], hiddenCount: 0 };
     }
 
     case "Edit": {
-      return { summary: singleLine(content).slice(0, 70), lines: [], hiddenCount: 0 };
+      // Edit tool returns "Successfully edited <file>\n<diff>" where the
+      // diff is a `  - …` / `  + …` block (see edit.ts generateCompactDiff).
+      // Show the summary collapsed; expose the full diff in expanded /
+      // transcript mode so additions/removals get DiffColoredLine treatment.
+      const [summaryLine, ...rest] = rawLines;
+      const summary = singleLine(summaryLine ?? "").slice(0, 80);
+      const diffLines = rest.filter((l) => l.length > 0);
+      if (expanded) {
+        return { summary, lines: diffLines, hiddenCount: 0 };
+      }
+      if (diffLines.length === 0) {
+        return { summary, lines: [], hiddenCount: 0 };
+      }
+      const previewCount = Math.min(diffLines.length, COLLAPSED_LINES);
+      return {
+        summary,
+        lines: diffLines.slice(0, previewCount),
+        hiddenCount: Math.max(0, diffLines.length - previewCount),
+      };
     }
 
     case "Glob": {
@@ -310,4 +340,33 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
 
 function clampLine(s: string): string {
   return s.length > MAX_LINE_WIDTH ? s.slice(0, MAX_LINE_WIDTH - 1) + "…" : s;
+}
+
+/**
+ * Renders one line of tool output. Diff lines (Edit / ApplyPatch / `git diff`
+ * output) delegate to the shared <DiffLine> so every diff surface in the app
+ * (PermissionPrompt previews, DiffView, ToolCall expansions) looks identical.
+ *
+ * Plain (non-diff) rows keep the `⎿` gutter so the result body still groups
+ * visually under the `✓ ToolName` header.
+ */
+function DiffOrPlainRow({ line }: { line: string }) {
+  const classified = classifyDiffLine(line);
+  if (classified.kind === "add" || classified.kind === "remove") {
+    return <DiffLine kind={classified.kind} text={classified.text} gutter={"  ⎿  "} />;
+  }
+  if (classified.kind === "hunk") {
+    return (
+      <Box>
+        <Text dim>{"  ⎿  "}</Text>
+        <Text color="ansi:cyan">{classified.text}</Text>
+      </Box>
+    );
+  }
+  return (
+    <Box>
+      <Text dim>{"  ⎿  "}</Text>
+      <Text>{line}</Text>
+    </Box>
+  );
 }
