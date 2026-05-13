@@ -47,6 +47,11 @@ import {
 } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { ProviderCatalog } from "../llm/provider-catalog.js";
+import { defaultCacheDir } from "../llm/model-cache.js";
+import {
+  detectProviderFromApiKey,
+  buildModelPool,
+} from "../cli/onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -164,6 +169,8 @@ export class Engine {
             new ProviderCatalog(settings.providers as never),
           );
         }
+        this.modelPool.setCacheDir(defaultCacheDir());
+        this.modelPool.reloadCachedContextWindows();
         // Set active to the current config model and inherit its
         // apiKey/baseUrl into config.llm — otherwise the first run() uses
         // whatever fallback (e.g. OPENROUTER_API_KEY env) repl.ts resolved
@@ -183,9 +190,41 @@ export class Engine {
             llm: this.modelPool.toLLMConfig(entry, this.config.llm),
           };
         }
+      } else if (config.llm.apiKey) {
+        // Auto-populate pool from the configured API key when models[] is empty.
+        // This lets users who only set model.apiKey (without models[]) still
+        // use /model to switch between the provider's available models.
+        this.autoPopulatePool(config.llm.apiKey, config.llm.baseUrl);
       }
     } catch {
       // Settings not available — pool stays empty
+    }
+  }
+
+  /**
+   * Auto-populate the model pool when settings.models[] is empty but
+   * the user has configured an API key. Detects the provider from the
+   * key prefix / baseUrl and registers all its known models.
+   */
+  private autoPopulatePool(apiKey: string, baseUrl?: string): void {
+    const provider = detectProviderFromApiKey(apiKey, baseUrl);
+    if (!provider) return;
+    const entries = buildModelPool(provider, apiKey);
+    for (const e of entries) {
+      this.modelPool.register(e);
+    }
+    // Switch to the provider's default model
+    const defaultKey = provider.defaultModel
+      ? `${provider.id}:${provider.defaultModel}`
+      : entries[0]?.key;
+    if (defaultKey) {
+      const entry = this.modelPool.switch(defaultKey);
+      if (entry) {
+        this.config = {
+          ...this.config,
+          llm: this.modelPool.toLLMConfig(entry, this.config.llm),
+        };
+      }
     }
   }
 
@@ -435,6 +474,12 @@ export class Engine {
     // Wire up LLM summarization for context compaction
     // Uses a lightweight call without tools
     contextManager.setTranscriptPath(session.transcript.getFilePath());
+    // Re-derive frozen persistence decisions from the messages we just
+    // loaded. Skipped on cold start (messages == [userContextMsg] only).
+    // Critical for resume — otherwise a result that was persisted last
+    // run would be evaluated fresh and might get a different replacement
+    // string than the one already in the message, breaking idempotency.
+    contextManager.initReplacementStateFromMessages(messages);
     contextManager.setSummarizeFn(async (prompt: string) => {
       const summaryResponse = await llmClient.createMessage({
         systemPrompt: "You are a conversation summarizer. Be concise and factual.",
@@ -454,13 +499,17 @@ export class Engine {
       return usage.totalCompletionTokens;
     };
 
-    // Wire summarize for tool use summaries (uses lightweight call)
+    // Wire summarize for tool use summaries (uses lightweight call).
+    // recordUsage=false keeps these auxiliary sub-calls out of the main usage
+    // tracker so session_end.cost reflects only the user-facing turns and
+    // turns/requestCount stay aligned.
     modelFacade.summarize = async (sysPrompt: string, userMsg: string) => {
       const resp = await llmClient.createMessage({
         systemPrompt: sysPrompt,
         messages: [{ role: "user", content: userMsg }],
         tools: [],
         maxTokens: 256,
+        recordUsage: false,
       });
       return resp.text;
     };
@@ -641,10 +690,22 @@ export class Engine {
    * Inject context into a session's transcript without triggering a LLM turn.
    * The injected content appears as an assistant message so the LLM can see it
    * in subsequent conversations. The transcript auto-flushes to disk.
+   *
+   * Also updates the in-memory compacted message cache so the next
+   * engine.run() call for this session picks up the injected content
+   * instead of a stale snapshot from the previous run.
    */
   injectContext(sessionId: string, content: string): void {
     const session = this.sessionManager.resume(sessionId);
     session.transcript.appendMessage("assistant", content);
+
+    // Keep the compacted cache in sync so the next engine.run() call
+    // (which reads from compactedMessagesBySession first) sees the
+    // injected content rather than a stale pre-inject snapshot.
+    const cached = this.compactedMessagesBySession.get(sessionId);
+    if (cached) {
+      cached.push({ role: "assistant", content });
+    }
   }
 
   /**

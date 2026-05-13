@@ -14,6 +14,7 @@
  */
 
 import type { LLMConfig } from "../types.js";
+import { readCache } from "./model-cache.js";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -61,9 +62,33 @@ export class ModelPool {
   private models = new Map<string, ModelEntry>();
   private activeKey: string | undefined;
   private providerCatalog: import("./provider-catalog.js").ProviderCatalog | undefined;
+  private cacheDir: string | undefined;
 
   setProviderCatalog(cat: import("./provider-catalog.js").ProviderCatalog): void {
     this.providerCatalog = cat;
+  }
+
+  setCacheDir(dir: string): void {
+    this.cacheDir = dir;
+  }
+
+  /**
+   * For each entry in the pool that lacks an explicit maxContextTokens
+   * but has a providerKey, look up the contextLength from the cached
+   * model list and patch it in.
+   */
+  reloadCachedContextWindows(): void {
+    if (!this.cacheDir) return;
+    for (const [key, entry] of this.models) {
+      if (entry.maxContextTokens != null) continue;
+      if (!entry.providerKey) continue;
+      const file = readCache(this.cacheDir, entry.providerKey);
+      if (!file) continue;
+      const match = file.models.find((m) => m.id === entry.model);
+      if (match?.contextLength) {
+        this.models.set(key, { ...entry, maxContextTokens: match.contextLength });
+      }
+    }
   }
 
   /**
