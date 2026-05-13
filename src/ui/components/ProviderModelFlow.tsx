@@ -532,8 +532,14 @@ export function ProviderModelFlow({
                 </Box>
               ) : (
                 <Box flexDirection="column" marginTop={1}>
-                  <Text>API Key: <Text color="cyan">{apiKey.replace(/./g, "•")}</Text></Text>
-                  <Text dimColor>粘贴你的 API Key,Enter 确认</Text>
+                  <Box>
+                    <Text color="cyan">API Key: </Text>
+                    {apiKey.length > 0 ? (
+                      <Text>{apiKey.replace(/./g, "•")}</Text>
+                    ) : (
+                      <Text dimColor>粘贴你的 API Key,Enter 确认</Text>
+                    )}
+                  </Box>
                 </Box>
               )}
             </Box>
