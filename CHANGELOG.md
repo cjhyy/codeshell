@@ -8,7 +8,30 @@ breaking.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-05-13
+
 ### Added
+- **Auto-installing updater.** Background update check probes `npm config get
+  prefix` for write permission; if writable, registers a detached `npm i -g`
+  on process exit so the next launch picks up the new version. File lock at
+  `~/.code-shell/.update.lock` (5min stale-takeover) prevents concurrent
+  installs from corrupting each other. Disable with `DISABLE_AUTOUPDATER=1`,
+  `settings.autoUpdates: false`, or dev mode. New `UpdateBanner` UI
+  surfaces "will install on exit" or the manual `sudo` command.
+- **Provider/model two-layer redesign.** `providers[]` is now the source of
+  credentials/baseUrl; `models[]` references a provider by key. Legacy
+  flat `models[]` config auto-migrates on startup (with `.bak` snapshot).
+  New `ProviderModelFlow` unifies `/login` onboarding and the
+  ModelManager's add/refresh flows.
+- **Per-provider model fetcher + cache.** `model-fetcher.ts` queries each
+  provider's models endpoint with a 20s timeout; `model-cache.ts` persists
+  results with a 7-day TTL under `~/.code-shell/cache/`.
+- **/init redesign.** New per-scenario templates (create / improve /
+  migrate / empty / rules-scaffold) driven by a repo-state detector.
+- **Tool-result-storage.** Content-addressed store keeps large tool outputs
+  out of in-memory history while remaining retrievable.
+- **AskUser options.** The `__ask_user__` tool now supports header /
+  multi-choice options / multiSelect, rendered as an option picker.
 - **Investigation guard.** Runtime enforcement of the "investigation has a
   budget" rule from `coding.md`: re-reading the same target prepends a
   reminder; a third re-read is hard-blocked. Four+ consecutive read-only
