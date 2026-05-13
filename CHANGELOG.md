@@ -8,6 +8,28 @@ breaking.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-05-13
+
+### Added
+- **Built-in skills bundled with the package.** The skill scanner now also
+  reads `skills-builtin/` shipped inside the installed npm package. First
+  built-in is `codeshell-help` — answers questions about code-shell itself
+  (slash commands, provider/model setup, settings keys, hooks, MCP,
+  debugging flags) so a fresh install can self-document without the user
+  having to write their own help skill.
+- **Headless mode in Engine.** New `headless: true` config flag (set by the
+  `run` command) puts InvestigationGuard into soft mode: the third re-read
+  of the same target turns into a stronger reminder instead of a hard
+  block, since unattended automations have no human to retry the task.
+
+### Fixed
+- `code-shell run` now resolves API keys / baseUrl / model from
+  `settings.providers[]` and `settings.models[]` in addition to the legacy
+  `settings.model.*` mirror — matches what Engine reconciles at startup,
+  fixes "no API key found" false negatives for users on the new shape.
+- Read-only filesystem (CI containers) no longer floods the log with
+  `tool_result.persist_failed` warnings — demoted to debug.
+
 ## [0.1.5] - 2026-05-13
 
 ### Added

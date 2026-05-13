@@ -35,22 +35,36 @@ describe("scanSkills", () => {
     );
 
     const skills = scanSkills(tmpDir);
-    expect(skills).toHaveLength(1);
-    expect(skills[0].name).toBe("my-skill");
-    expect(skills[0].description).toBe("does things");
-    expect(skills[0].triggers.keywords).toContain("deploy");
-    expect(skills[0].content).toContain("Deploy instructions");
+    const mine = skills.find((s) => s.name === "my-skill");
+    expect(mine).toBeDefined();
+    expect(mine!.description).toBe("does things");
+    expect(mine!.triggers.keywords).toContain("deploy");
+    expect(mine!.content).toContain("Deploy instructions");
   });
 
-  it("returns empty for dir with no skills", () => {
-    expect(scanSkills(tmpDir)).toHaveLength(0);
+  it("returns only built-in skills for dir with no user/project skills", () => {
+    // Built-in skills are always scanned; user/project dirs add to them.
+    const skills = scanSkills(tmpDir);
+    expect(skills.every((s) => s.filePath.includes("skills-builtin"))).toBe(true);
   });
 
   it("skips files without frontmatter", () => {
     const skillsDir = join(tmpDir, ".code-shell", "skills");
     mkdirSync(skillsDir, { recursive: true });
     writeFileSync(join(skillsDir, "bad.md"), "no frontmatter here");
-    expect(scanSkills(tmpDir)).toHaveLength(0);
+    // Note: the built-in skills directory is still scanned, so we only assert
+    // that this malformed file did not produce a skill of its own.
+    const skills = scanSkills(tmpDir);
+    expect(skills.find((s) => s.filePath.endsWith("bad.md"))).toBeUndefined();
+  });
+
+  it("discovers the built-in codeshell-help skill shipped with the package", () => {
+    // No project-level skills set up — only the package built-in should appear.
+    const skills = scanSkills(tmpDir);
+    const help = skills.find((s) => s.name === "codeshell-help");
+    expect(help).toBeDefined();
+    expect(help!.description).toMatch(/code-shell/i);
+    expect(help!.filePath).toContain("skills-builtin");
   });
 });
 

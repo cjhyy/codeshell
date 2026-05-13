@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Code Shell — general-purpose agent orchestration framework with a terminal coding preset",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -62,6 +62,7 @@
   "files": [
     "dist",
     "scripts/check-node.cjs",
+    "skills-builtin",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
