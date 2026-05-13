@@ -52,7 +52,7 @@ export const PROVIDER_KINDS: Record<ProviderKindName, ProviderKindMeta> = {
     defaultBaseUrl: "https://api.anthropic.com/v1",
     modelsPath: "/models",
     protocol: "anthropic-style",
-    authHeader: (k) =>
+    authHeader: (k): Record<string, string> =>
       k
         ? { "x-api-key": k, "anthropic-version": "2023-06-01" }
         : { "anthropic-version": "2023-06-01" },
@@ -96,7 +96,7 @@ export const PROVIDER_KINDS: Record<ProviderKindName, ProviderKindMeta> = {
     modelsPath: "/models",
     protocol: "gemini",
     authHeader: () => ({}),
-    authQuery: (k) => (k ? { key: k } : {}),
+    authQuery: (k): Record<string, string> => (k ? { key: k } : {}),
     chatFilter: (id) => isChatLike(id) && /gemini/i.test(id),
   },
   openrouter: {
