@@ -46,6 +46,7 @@ import {
   type AgentPresetName,
 } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
+import { ProviderCatalog } from "../llm/provider-catalog.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -153,7 +154,15 @@ export class Engine {
             apiKey: m.apiKey,
             maxOutputTokens: m.maxOutputTokens,
             maxContextTokens: m.maxContextTokens,
+            providerKey: m.providerKey,
           });
+        }
+        // Build catalog from settings.providers[] and attach to the pool
+        // so model entries can resolve baseUrl/apiKey from their provider.
+        if (settings.providers?.length) {
+          this.modelPool.setProviderCatalog(
+            new ProviderCatalog(settings.providers as never),
+          );
         }
         // Set active to the current config model and inherit its
         // apiKey/baseUrl into config.llm — otherwise the first run() uses

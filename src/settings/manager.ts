@@ -4,10 +4,29 @@
  * Priority: CLI flags > local > project > user > managed
  */
 
-import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
+import {
+  readFileSync,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  renameSync,
+  copyFileSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { validateSettings, type ValidatedSettings } from "./schema.js";
+import { migrateModels } from "../cli/migrate-models.js";
+
+/**
+ * Resolve the user's home directory. Prefers `process.env.HOME` so that
+ * runtime env overrides (set after process start, e.g. in tests) actually
+ * take effect — on some runtimes (e.g. Bun on macOS) `os.homedir()` is
+ * cached from the user database at process startup and ignores later
+ * `process.env.HOME` mutations.
+ */
+function userHome(): string {
+  return process.env.HOME ?? homedir();
+}
 
 export type SettingsSourceName = "managed" | "user" | "project" | "local" | "flag";
 
@@ -30,11 +49,11 @@ export class SettingsManager {
     this.sources = [];
 
     // 1. Managed (lowest priority)
-    this.loadJsonFile(join(homedir(), ".code-shell", "settings.managed.json"), "managed", 0);
+    this.loadJsonFile(join(userHome(), ".code-shell", "settings.managed.json"), "managed", 0);
 
     // 2. User — check both ~/.code-shell/ and ~/.claude/ (compat)
-    this.loadJsonFile(join(homedir(), ".code-shell", "settings.json"), "user", 1);
-    this.loadJsonFile(join(homedir(), ".claude", "settings.json"), "user", 1);
+    this.loadJsonFile(join(userHome(), ".code-shell", "settings.json"), "user", 1);
+    this.loadJsonFile(join(userHome(), ".claude", "settings.json"), "user", 1);
 
     // 3. Project
     this.loadJsonFile(join(this.cwd, ".code-shell", "settings.json"), "project", 2);
@@ -54,6 +73,40 @@ export class SettingsManager {
 
     // Deep merge
     const raw = this.deepMerge();
+
+    // Auto-migrate legacy models[] in the user settings file. Runs directly
+    // on the user-scope file (not the merged result), because the merge
+    // collapses provenance and the migration needs to write back to a
+    // single physical file.
+    const userPath = join(userHome(), ".code-shell", "settings.json");
+    if (existsSync(userPath)) {
+      try {
+        const userRaw = JSON.parse(readFileSync(userPath, "utf-8")) as Record<string, unknown>;
+        const result = migrateModels({
+          providers: (userRaw.providers as never) ?? [],
+          models: (userRaw.models as never) ?? [],
+        });
+        if (result.changed) {
+          copyFileSync(userPath, `${userPath}.bak`);
+          const migrated = {
+            ...userRaw,
+            providers: result.providers,
+            models: result.models,
+          };
+          writeFileSync(userPath, JSON.stringify(migrated, null, 2), "utf-8");
+          // Re-deep-merge with the migrated user data so the validate
+          // call sees the new shape rather than the legacy one.
+          const userSource = this.sources.find((s) => s.name === "user");
+          if (userSource) userSource.data = migrated;
+          const remerged = this.deepMerge();
+          this.merged = validateSettings(remerged);
+          return this.merged;
+        }
+      } catch {
+        // Migration is best-effort — fall through to normal validate.
+      }
+    }
+
     this.merged = validateSettings(raw);
     return this.merged;
   }
@@ -82,7 +135,7 @@ export class SettingsManager {
    * The merged cache is invalidated so the next get() picks up the change.
    */
   saveUserSetting(key: string, value: unknown): void {
-    const path = join(homedir(), ".code-shell", "settings.json");
+    const path = join(userHome(), ".code-shell", "settings.json");
     let current: Record<string, unknown> = {};
     if (existsSync(path)) {
       try {
