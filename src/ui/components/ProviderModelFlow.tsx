@@ -8,6 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
+import TextInput from "./TextInput.js";
 import { PROVIDER_KINDS, type ProviderKindName } from "../../llm/provider-kinds.js";
 import { fetchModelList, type FetchResult } from "../../llm/model-fetcher.js";
 import { defaultCacheDir } from "../../llm/model-cache.js";
@@ -334,35 +335,26 @@ export function ProviderModelFlow({
 
     if (step === "key") {
       const hint = envHintForKind(selectedKind);
-      // env-key picker first
+      // env-key picker first; only this branch needs keyboard handling here.
+      // Text-input branch is rendered with <TextInput>, which owns its keys.
       if (hint && !keyMenuDone) {
         if (key.upArrow) setKeyMenuIdx(0);
         else if (key.downArrow) setKeyMenuIdx(1);
         else if (key.return) {
           if (keyMenuIdx === 0) {
             setApiKey(hint.apiKey);
-            // skip text input — go to next step
             if (selectedKind === "custom") setStep("baseUrl");
             else setStep("fetch");
           } else {
             setKeyMenuDone(true);
           }
         }
-        return;
       }
-      // text input
-      if (key.backspace || key.delete) setApiKey((s) => s.slice(0, -1));
-      else if (key.return) {
-        if (selectedKind === "custom") setStep("baseUrl");
-        else setStep("fetch");
-      } else if (input && !key.ctrl) setApiKey((s) => s + input);
       return;
     }
 
     if (step === "baseUrl") {
-      if (key.backspace || key.delete) setBaseUrl((s) => s.slice(0, -1));
-      else if (key.return) setStep("fetch");
-      else if (input && !key.ctrl) setBaseUrl((s) => s + input);
+      // baseUrl text-input handled by <TextInput> in the render block.
       return;
     }
 
@@ -531,21 +523,18 @@ export function ProviderModelFlow({
                   </Text>
                 </Box>
               ) : (
-                <Box flexDirection="column" marginTop={1}>
-                  <Box>
-                    <Text color="cyan" bold>API Key: </Text>
-                    {apiKey.length > 0 ? (
-                      <>
-                        <Text>{apiKey.replace(/./g, "•")}</Text>
-                        <Text color="cyan">▍</Text>
-                      </>
-                    ) : (
-                      <>
-                        <Text color="cyan">▍</Text>
-                        <Text dimColor> 粘贴你的 API Key,Enter 确认</Text>
-                      </>
-                    )}
-                  </Box>
+                <Box marginTop={1}>
+                  <Text color="ansi:cyan">API Key: </Text>
+                  <TextInput
+                    value={apiKey}
+                    onChange={setApiKey}
+                    onSubmit={() => {
+                      if (selectedKind === "custom") setStep("baseUrl");
+                      else setStep("fetch");
+                    }}
+                    placeholder="粘贴你的 API Key, Enter 确认"
+                    focus
+                  />
                 </Box>
               )}
             </Box>
@@ -555,11 +544,15 @@ export function ProviderModelFlow({
       {step === "baseUrl" && (
         <Box flexDirection="column" marginTop={1}>
           <Box>
-            <Text color="cyan" bold>Base URL: </Text>
-            <Text>{baseUrl}</Text>
-            <Text color="cyan">▍</Text>
+            <Text color="ansi:cyan">Base URL: </Text>
+            <TextInput
+              value={baseUrl}
+              onChange={setBaseUrl}
+              onSubmit={() => setStep("fetch")}
+              placeholder="含 /v1, Enter 确认"
+              focus
+            />
           </Box>
-          <Text dimColor>含 /v1,Enter 确认</Text>
         </Box>
       )}
 
