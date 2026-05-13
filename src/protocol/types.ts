@@ -120,12 +120,21 @@ export interface QueryParams {
     | "config_get"
     | "permission_set"
     | "models"
-    | "arena_status";
+    | "arena_status"
+    | "provider_add"
+    | "provider_refresh"
+    | "provider_delete"
+    | "model_add"
+    | "model_delete";
   sessionId?: string;
   /** Used by config_set / permission_set: dotted key path or mode field */
   key?: string;
   /** Used by config_set / permission_set: new value */
   value?: unknown;
+  /** Used by provider_add: full ProviderConfig payload */
+  provider?: unknown;
+  /** Used by model_add: the new model entry */
+  model?: unknown;
 }
 
 export interface QueryResult {
@@ -159,6 +168,15 @@ export interface ProtocolModelEntry {
   model: string;
   provider: string;
   active: boolean;
+}
+
+export interface ProtocolProviderEntry {
+  key: string;
+  label: string;
+  kind: string;
+  modelCount: number;
+  cachedModels?: number;
+  cachedAt?: string;
 }
 
 export interface ConfigResult {

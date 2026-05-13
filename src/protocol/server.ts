@@ -250,7 +250,7 @@ export class AgentServer {
 
   // ─── Query ──────────────────────────────────────────────────────
 
-  private handleQuery(req: RpcRequest): void {
+  private async handleQuery(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as QueryParams;
 
     switch (params.type) {
@@ -400,6 +400,125 @@ export class AgentServer {
               type: "permission_set",
               data: { mode: value },
             }),
+          );
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
+      case "provider_add": {
+        try {
+          const cfg = params.provider as Record<string, unknown> | undefined;
+          if (
+            !cfg ||
+            typeof cfg.key !== "string" ||
+            typeof cfg.kind !== "string" ||
+            typeof cfg.baseUrl !== "string"
+          ) {
+            throw new Error("provider_add: requires {key, kind, baseUrl, ...}");
+          }
+          const current = (this.engine.readSetting("providers") as unknown[] | undefined) ?? [];
+          const next = [...current, cfg];
+          this.engine.updateConfig("providers", next);
+          this.transport.send(
+            createResponse(req.id, { type: "provider_add", data: { ok: true, key: cfg.key } }),
+          );
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
+      case "provider_refresh": {
+        try {
+          const key = params.key;
+          if (!key) throw new Error("provider_refresh: key required");
+          const providers =
+            (this.engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ??
+            [];
+          const p = providers.find((x) => x.key === key);
+          if (!p) throw new Error(`provider not found: ${key}`);
+          const { fetchModelList } = await import("../llm/model-fetcher.js");
+          const { defaultCacheDir } = await import("../llm/model-cache.js");
+          const res = await fetchModelList(
+            {
+              key: p.key as string,
+              kind: p.kind as never,
+              baseUrl: p.baseUrl as string,
+              apiKey: p.apiKey as string | undefined,
+            },
+            { cacheDir: defaultCacheDir(), refresh: true },
+          );
+          this.transport.send(
+            createResponse(req.id, {
+              type: "provider_refresh",
+              data: { count: res.models.length, error: res.error },
+            }),
+          );
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
+      case "provider_delete": {
+        try {
+          const key = params.key;
+          if (!key) throw new Error("provider_delete: key required");
+          const models =
+            (this.engine.readSetting("models") as Array<Record<string, unknown>> | undefined) ?? [];
+          const refs = models.filter((m) => m.providerKey === key).map((m) => m.key as string);
+          if (refs.length > 0) {
+            throw new Error(`provider ${key} referenced by models: ${refs.join(", ")}`);
+          }
+          const providers =
+            (this.engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ??
+            [];
+          const next = providers.filter((p) => p.key !== key);
+          this.engine.updateConfig("providers", next);
+          this.transport.send(
+            createResponse(req.id, { type: "provider_delete", data: { ok: true } }),
+          );
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
+      case "model_add": {
+        try {
+          const entry = params.model as Record<string, unknown> | undefined;
+          if (!entry || typeof entry.key !== "string" || typeof entry.model !== "string") {
+            throw new Error("model_add: requires {key, model, providerKey}");
+          }
+          const current = (this.engine.readSetting("models") as unknown[] | undefined) ?? [];
+          const next = [...current, entry];
+          this.engine.updateConfig("models", next);
+          this.transport.send(
+            createResponse(req.id, { type: "model_add", data: { ok: true, key: entry.key } }),
+          );
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+          );
+        }
+        break;
+      }
+      case "model_delete": {
+        try {
+          const key = params.key;
+          if (!key) throw new Error("model_delete: key required");
+          const current =
+            (this.engine.readSetting("models") as Array<Record<string, unknown>> | undefined) ?? [];
+          const next = current.filter((m) => m.key !== key);
+          this.engine.updateConfig("models", next);
+          this.transport.send(
+            createResponse(req.id, { type: "model_delete", data: { ok: true } }),
           );
         } catch (err) {
           this.transport.send(
