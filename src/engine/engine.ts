@@ -87,6 +87,13 @@ export interface EngineConfig {
    * Engine doesn't persist cost state — it's a UI concern.
    */
   costStore?: CostStateStore;
+  /**
+   * True when the Engine runs in a no-UI / one-shot context (e.g. the `run`
+   * command). Currently controls InvestigationGuard soft-mode: in headless
+   * we never hard-block a tool call because there is no human to retry.
+   * Defaults to false.
+   */
+  headless?: boolean;
 }
 
 export interface EngineHookConfig {
@@ -439,6 +446,7 @@ export class Engine {
 
     const toolExecutor = new ToolExecutor(this.toolRegistry, permission, this.hooks);
     const investigationGuard = new InvestigationGuard();
+    if (this.config.headless) investigationGuard.setSoftMode(true);
     toolExecutor.setInvestigationGuard(investigationGuard);
 
     // Wire abort signal for cascading cancellation + per-Engine ToolContext

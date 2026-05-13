@@ -15,6 +15,14 @@
  * Concurrency: multiple `code-shell` processes can run at once. A file lock
  * at `~/.code-shell/.update.lock` prevents both from launching `npm i -g`
  * simultaneously (which corrupts the install).
+ *
+ * Headless safety: `checkForUpdate()` and `scheduleAutoInstallOnExit()` are
+ * only invoked from the Ink-based UpdateBanner component, never from the
+ * `run` / `arena` headless code paths. Keep it that way — wiring the updater
+ * into bare CLI commands would surprise CI users with background `npm i -g`
+ * on every short-lived `code-shell run …` invocation. If you need updater
+ * behavior in a new headless entry point, gate it on something explicit
+ * (e.g. `--auto-update` flag) rather than calling it unconditionally.
  */
 
 import { execFile, spawn } from "node:child_process";

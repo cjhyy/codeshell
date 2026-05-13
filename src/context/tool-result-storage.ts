@@ -119,7 +119,13 @@ function persistToFile(dir: string, toolUseId: string, content: string): string 
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== "EEXIST") {
-      logger.warn("tool_result.persist_failed", {
+      // Read-only FS (CI containers, ephemeral runtimes) hits EROFS/EACCES/
+      // ENOENT here on every large tool_result. The caller already catches
+      // and marks the id as seen so we don't re-attempt; degrade to debug
+      // so a headless run on a read-only FS doesn't flood the log with
+      // warnings. The block is left in-place untouched, which is the
+      // correct user-facing behavior.
+      logger.debug("tool_result.persist_failed", {
         toolUseId,
         code,
         error: (err as Error).message,

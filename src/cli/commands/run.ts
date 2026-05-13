@@ -16,6 +16,70 @@ import { createRenderer, type OutputFormat } from "../output/renderer.js";
 import type { LLMConfig, PermissionMode } from "../../types.js";
 import type { AgentPresetName } from "../../preset/index.js";
 
+/**
+ * Shape of a settings.models[] entry. Mirrors the zod schema in
+ * src/settings/schema.ts:73 — declared inline here because the Settings
+ * interface in src/types.ts predates the multi-model rollout and doesn't
+ * expose this field yet.
+ */
+type ModelPoolEntry = {
+  key: string;
+  providerKey?: string;
+  provider?: string;
+  model: string;
+  baseUrl?: string;
+  apiKey?: string;
+  maxOutputTokens?: number;
+  maxContextTokens?: number;
+};
+
+/**
+ * Resolve the active model[] entry using settings.activeKey, with a name-
+ * match fallback (matches Engine.populateModelPoolFromSettings). Returns
+ * undefined when settings.models[] is empty or the active key doesn't
+ * resolve — callers fall back to the legacy settings.model.* mirror.
+ *
+ * Takes `unknown` because the Settings interface in src/types.ts predates
+ * the multi-model rollout (no activeKey/models/providers fields), while
+ * the runtime zod schema does have them. Casting locally avoids polluting
+ * the canonical type until that gap is fixed.
+ */
+function findActiveModelEntry(settings: unknown): ModelPoolEntry | undefined {
+  const s = settings as {
+    activeKey?: string;
+    models?: ModelPoolEntry[];
+    model?: { name?: string };
+  };
+  if (!s.models?.length) return undefined;
+  if (s.activeKey) {
+    const hit = s.models.find((m) => m.key === s.activeKey);
+    if (hit) return hit;
+  }
+  // Legacy match: settings.model.name against models[].model. Mirrors the
+  // engine-side fallback for pre-activeKey configs.
+  const legacyName = s.model?.name;
+  if (legacyName) {
+    return s.models.find(
+      (m) => m.model === legacyName || m.model?.endsWith(`/${legacyName}`),
+    );
+  }
+  return undefined;
+}
+
+/**
+ * Look up an API key on settings.providers[<providerKey>]. Used when a
+ * models[] entry has no inline apiKey because credentials live on the
+ * provider record (the ProviderCatalog pattern).
+ */
+function findProviderApiKey(
+  settings: unknown,
+  providerKey: string | undefined,
+): string | undefined {
+  if (!providerKey) return undefined;
+  const s = settings as { providers?: Array<{ key: string; apiKey?: string }> };
+  return s.providers?.find((p) => p.key === providerKey)?.apiKey;
+}
+
 export interface RunOptions {
   task: string;
   model?: string;
@@ -36,8 +100,18 @@ export async function runCommand(options: RunOptions): Promise<void> {
   const settingsManager = new SettingsManager(cwd);
   const settings = settingsManager.get();
 
-  // Resolve API key
-  const apiKey = resolveApiKey(options.apiKey, settings.model.apiKey);
+  // Resolve API key. Headless used to only consult settings.model.apiKey
+  // (legacy mirror), which gave a false-negative when the user's key lives
+  // only on settings.models[<active>].apiKey or settings.providers[].apiKey
+  // — those are written by the newer ProviderModelFlow but not always
+  // mirrored. Engine reconciles all three at startup; mirror that priority
+  // here so the pre-Engine bail-out doesn't reject a valid config.
+  const activeModelEntry = findActiveModelEntry(settings);
+  const fallbackApiKey =
+    settings.model?.apiKey ??
+    activeModelEntry?.apiKey ??
+    findProviderApiKey(settings, activeModelEntry?.providerKey);
+  const apiKey = resolveApiKey(options.apiKey, fallbackApiKey);
 
   if (!apiKey) {
     console.error(
@@ -46,14 +120,26 @@ export async function runCommand(options: RunOptions): Promise<void> {
     process.exit(1);
   }
 
-  // Build LLM config
+  // Build LLM config. Note: Engine.populateModelPoolFromSettings will
+  // re-resolve via settings.activeKey and overwrite these fields with the
+  // active pool entry, so this is just the bootstrap fallback for users
+  // who only have legacy settings.model.* populated.
   const llmConfig: LLMConfig = {
-    provider: options.provider ?? settings.model.provider ?? "openai",
-    model: options.model ?? settings.model.name ?? "anthropic/claude-opus-4-6",
+    provider:
+      options.provider ?? activeModelEntry?.provider ?? settings.model?.provider ?? "openai",
+    model:
+      options.model ??
+      activeModelEntry?.model ??
+      settings.model?.name ??
+      "anthropic/claude-opus-4-6",
     apiKey,
-    baseUrl: options.baseUrl ?? settings.model.baseUrl ?? "https://openrouter.ai/api/v1",
-    temperature: settings.model.temperature,
-    maxTokens: settings.model.maxTokens ?? 8192,
+    baseUrl:
+      options.baseUrl ??
+      activeModelEntry?.baseUrl ??
+      settings.model?.baseUrl ??
+      "https://openrouter.ai/api/v1",
+    temperature: settings.model?.temperature,
+    maxTokens: activeModelEntry?.maxOutputTokens ?? settings.model?.maxTokens ?? 8192,
     enableStreaming: true,
   };
 
@@ -71,6 +157,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
     sessionStorageDir: settings.session.storageDir,
     costStore: costTracker,
     mcpServers: settings.mcpServers,
+    headless: true,
   });
 
   // Wire through protocol layer

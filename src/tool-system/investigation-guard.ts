@@ -46,6 +46,18 @@ export class InvestigationGuard {
   private turnHasText = false;
   private turnHasSideEffect = false;
   private lastReminderSilent = -1;
+  /**
+   * Soft mode replaces hard blocks (3rd-read dedupe) with a stronger
+   * reminder. Used in headless runs (`code-shell run …`) where there is
+   * no human to retry the task, so an unattended automation should not
+   * be killed by the guard — it should still get the signal to change
+   * strategy, but the tool call goes through.
+   */
+  private softMode = false;
+
+  setSoftMode(soft: boolean): void {
+    this.softMode = soft;
+  }
 
   preToolCheck(call: ToolCall): GuardDecision | undefined {
     const tool = call.toolName;
@@ -70,13 +82,20 @@ export class InvestigationGuard {
     const prependParts: string[] = [];
 
     if (hits >= 3) {
-      return {
-        block:
-          `Investigation guard: ${tool} on this exact target has been called ${hits} times in this session. ` +
-          `Re-reading the same content will not produce new information. ` +
-          `Switch strategy: run a command with side effects (Bash, debug log, repro), make a code change, or ask the user a specific question. ` +
-          `If you genuinely need this content, summarize what you already know about it from prior reads instead of re-fetching.`,
-      };
+      const message =
+        `Investigation guard: ${tool} on this exact target has been called ${hits} times in this session. ` +
+        `Re-reading the same content will not produce new information. ` +
+        `Switch strategy: run a command with side effects (Bash, debug log, repro), make a code change, or ask the user a specific question. ` +
+        `If you genuinely need this content, summarize what you already know about it from prior reads instead of re-fetching.`;
+      if (this.softMode) {
+        // Soft mode (headless): deliver the same signal as a prepend so the
+        // model still sees it, but allow the tool call to proceed. Hard-
+        // blocking an unattended `code-shell run …` would dead-end the task
+        // with no human to retry.
+        prependParts.push(`<system-reminder>${message}</system-reminder>`);
+      } else {
+        return { block: message };
+      }
     }
     if (hits === 2) {
       prependParts.push(
