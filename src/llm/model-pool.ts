@@ -30,6 +30,9 @@ export interface ModelEntry {
   maxOutputTokens?: number;
   /** Per-model context window size. Falls back to config.maxContextTokens → 200_000. */
   maxContextTokens?: number;
+  /** Optional reference into ProviderCatalog. When set, baseUrl/apiKey
+   *  come from the catalog unless the entry overrides them. */
+  providerKey?: string;
 }
 
 // ─── Built-in context windows ────────────────────────────────────
@@ -57,6 +60,11 @@ function lookupBuiltinContextWindow(model: string): number | undefined {
 export class ModelPool {
   private models = new Map<string, ModelEntry>();
   private activeKey: string | undefined;
+  private providerCatalog: import("./provider-catalog.js").ProviderCatalog | undefined;
+
+  setProviderCatalog(cat: import("./provider-catalog.js").ProviderCatalog): void {
+    this.providerCatalog = cat;
+  }
 
   /**
    * Build a pool from an array of model entries.
@@ -134,11 +142,15 @@ export class ModelPool {
    * (inherits apiKey, baseUrl, etc. from the base if not set on the entry).
    */
   toLLMConfig(entry: ModelEntry, base?: Partial<LLMConfig>): LLMConfig {
+    const fromCat =
+      entry.providerKey && this.providerCatalog
+        ? this.providerCatalog.get(entry.providerKey)
+        : undefined;
     return {
-      provider: entry.provider,
+      provider: entry.provider || fromCat?.kind || "openai",
       model: entry.model,
-      apiKey: entry.apiKey ?? base?.apiKey,
-      baseUrl: entry.baseUrl ?? base?.baseUrl,
+      apiKey: entry.apiKey ?? fromCat?.apiKey ?? base?.apiKey,
+      baseUrl: entry.baseUrl ?? fromCat?.baseUrl ?? base?.baseUrl,
       temperature: base?.temperature ?? 0.3,
       maxTokens: entry.maxOutputTokens ?? base?.maxTokens ?? 8192,
       enableStreaming: base?.enableStreaming ?? true,
