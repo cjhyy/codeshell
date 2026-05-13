@@ -39,6 +39,13 @@ export interface ProviderManagerEntry {
   modelCount: number;
   cachedModels?: number;
   cachedAt?: string;
+  // Full provider config fields (populated by App.tsx from settings.providers[])
+  // so that ProviderModelFlow's "use existing" branch can fetch model lists
+  // without an extra round-trip to the server.
+  baseUrl?: string;
+  apiKey?: string;
+  protocol?: string;
+  modelsPath?: string;
 }
 
 interface ModelManagerProps {
@@ -53,10 +60,8 @@ interface ModelManagerProps {
   onSync: () => Promise<{ ok: boolean; count: number; error?: string }>;
   /** Persist updated participant list (string[]) to settings. */
   onSaveArena: (participants: string[]) => Promise<void>;
-  /** Open the parent-rendered AddProviderWizard modal. */
-  onAddProvider?: () => void;
-  /** Open the parent-rendered AddModelWizard modal. */
-  onAddModel?: () => void;
+  /** Open the parent-rendered ProviderModelFlow (covers both add-provider and add-model). */
+  onOpenFlow?: () => void;
   /** Force-refresh a provider's cached model list. */
   onRefreshProvider?: (key: string) => Promise<{ count: number; error?: string }>;
   /** Delete a provider (blocked if any model references it). */
@@ -82,8 +87,7 @@ export function ModelManager({
   onSwitch,
   onSync,
   onSaveArena,
-  onAddProvider,
-  onAddModel,
+  onOpenFlow,
   onRefreshProvider,
   onDeleteProvider,
   onDeleteModel,
@@ -146,10 +150,10 @@ export function ModelManager({
   });
 
   async function handleModelsInput(ch: string, key: { upArrow?: boolean; downArrow?: boolean; return?: boolean }): Promise<void> {
-    // Capital-A opens the AddModelWizard at any time, even with an empty
-    // pool — that's the whole point of the wizard.
+    // Capital-A opens the unified ProviderModelFlow at any time, even with
+    // an empty pool — that's the whole point of the flow.
     if (ch === "A") {
-      if (onAddModel) onAddModel();
+      if (onOpenFlow) onOpenFlow();
       return;
     }
     if (entries.length === 0) {
@@ -200,7 +204,7 @@ export function ModelManager({
 
   async function handleProvidersInput(ch: string, key: { upArrow?: boolean; downArrow?: boolean; return?: boolean }): Promise<void> {
     if (ch === "a") {
-      if (onAddProvider) onAddProvider();
+      if (onOpenFlow) onOpenFlow();
       return;
     }
     if (providerRows.length === 0) return;
@@ -449,7 +453,7 @@ function ModelsPane({
           <Text color="ansi:cyan">{"[Enter]"}</Text>
           {" 切换  "}
           <Text color="ansi:cyan">{"[A]"}</Text>
-          {" 添加  "}
+          {" 添加 provider+模型  "}
           <Text color="ansi:cyan">{"[x]"}</Text>
           {" 删除  "}
           <Text color="ansi:cyan">{"[s]"}</Text>
@@ -503,7 +507,7 @@ function ProvidersPane({
         <Text dim>
           {"操作: "}
           <Text color="ansi:cyan">{"[a]"}</Text>
-          {" 添加  "}
+          {" 添加 provider+模型  "}
           <Text color="ansi:cyan">{"[r]"}</Text>
           {" 刷新  "}
           <Text color="ansi:cyan">{"[d]"}</Text>

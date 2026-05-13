@@ -36,8 +36,7 @@ import {
   type ArenaParticipantEntry,
   type ProviderManagerEntry,
 } from "./components/ModelManager.js";
-import { AddProviderWizard } from "./components/AddProviderWizard.js";
-import { AddModelWizard } from "./components/AddModelWizard.js";
+import { ProviderModelFlow } from "./components/ProviderModelFlow.js";
 import { SessionPicker, type SessionPickerEntry } from "./components/SessionPicker.js";
 import { modelKey, type OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
@@ -143,10 +142,10 @@ export function App({
     arenaParticipants: ArenaParticipantEntry[];
     providers: ProviderManagerEntry[];
   } | null>(null);
-  // Which modal wizard is on top of the ModelManager (provider/model add).
-  // Both wizards re-fetch the manager state on save so the list updates
+  // Whether the unified ProviderModelFlow is on top of the ModelManager.
+  // The flow re-fetches the manager state on finish so the list updates
   // without closing the manager.
-  const [wizard, setWizard] = useState<"provider" | "model" | null>(null);
+  const [wizard, setWizard] = useState<"flow" | null>(null);
 
   // Track streaming chars in a ref — no App-level re-render per tick.
   // StatusLine reads these refs directly via its own internal interval.
@@ -541,11 +540,19 @@ export function App({
         const key = typeof p.key === "string" ? p.key : "";
         const label = typeof p.label === "string" ? p.label : key;
         const kind = typeof p.kind === "string" ? p.kind : "unknown";
+        const baseUrl = typeof p.baseUrl === "string" ? p.baseUrl : undefined;
+        const apiKey = typeof p.apiKey === "string" ? p.apiKey : undefined;
+        const protocol = typeof p.protocol === "string" ? p.protocol : undefined;
+        const modelsPath = typeof p.modelsPath === "string" ? p.modelsPath : undefined;
         return {
           key,
           label,
           kind,
           modelCount: referenceCounts.get(key) ?? 0,
+          baseUrl,
+          apiKey,
+          protocol,
+          modelsPath,
         };
       })
       .filter((p) => p.key.length > 0);
@@ -1069,46 +1076,39 @@ export function App({
           }}
           onCancel={() => setSessionEntries(null)}
         />
-      ) : wizard === "provider" && modelManager ? (
-        <AddProviderWizard
-          existingKeys={modelManager.providers.map((p) => p.key)}
-          onSave={async (cfg) => {
-            try {
-              await client.query("provider_add", { provider: cfg } as never);
-            } catch {
-              /* swallow — handler may not be wired yet */
-            }
-            setWizard(null);
-            // Reload the engine's pool so wizard adds become visible without restart
-            try { await client.configure({ reloadModels: true }); } catch { /* best-effort */ }
-            await refreshModelManagerState();
-          }}
-          onCancel={() => setWizard(null)}
-        />
-      ) : wizard === "model" && modelManager ? (
-        <AddModelWizard
-          providers={modelManager.providers.map((p) => ({
+      ) : wizard === "flow" && modelManager ? (
+        <ProviderModelFlow
+          existingProviders={modelManager.providers.map((p) => ({
             key: p.key,
-            label: p.label,
-            // The wizard's typing wants ProviderKindName; we only pass it
-            // through to render the kind label and to call fetchModelList.
-            // Cast here so the manager doesn't need to import the kind enum.
+            label: p.label ?? p.key,
+            // ProviderModelFlow expects ProviderConfig (with ProviderKindName).
+            // We forward the string verbatim; the flow only uses it for
+            // labelling and to drive fetchModelList.
             kind: p.kind as never,
-            baseUrl: "",
+            baseUrl: p.baseUrl ?? "",
+            apiKey: p.apiKey,
+            protocol: p.protocol as never,
+            modelsPath: p.modelsPath,
           }))}
           existingModelKeys={modelManager.entries.map((e) => e.key)}
-          onSave={async (modelEntry) => {
+          detectedEnvKeys={[]}
+          switchToNewModelOnFinish={false}
+          onFinish={async (result) => {
             try {
-              await client.query("model_add", { model: modelEntry } as never);
+              if (result.addedProvider) {
+                await client.query("provider_add", { provider: result.addedProvider } as never);
+              }
+              for (const m of result.addedModels) {
+                await client.query("model_add", { model: m } as never);
+              }
             } catch {
-              /* swallow — handler may not be wired yet */
+              /* best-effort; refresh below will surface anything missing */
             }
             setWizard(null);
             try { await client.configure({ reloadModels: true }); } catch { /* best-effort */ }
             await refreshModelManagerState();
           }}
           onCancel={() => setWizard(null)}
-          onAddProvider={() => setWizard("provider")}
         />
       ) : modelManager ? (
         <ModelManager
@@ -1153,8 +1153,7 @@ export function App({
             );
             return r;
           }}
-          onAddProvider={() => setWizard("provider")}
-          onAddModel={() => setWizard("model")}
+          onOpenFlow={() => setWizard("flow")}
           // TODO(task-12): wire these to real protocol handlers once they
           // land. Returning a placeholder error keeps the UI honest about
           // what isn't ready yet rather than silently no-oping.
