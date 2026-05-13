@@ -533,11 +533,17 @@ export function ProviderModelFlow({
               ) : (
                 <Box flexDirection="column" marginTop={1}>
                   <Box>
-                    <Text color="cyan">API Key: </Text>
+                    <Text color="cyan" bold>API Key: </Text>
                     {apiKey.length > 0 ? (
-                      <Text>{apiKey.replace(/./g, "•")}</Text>
+                      <>
+                        <Text>{apiKey.replace(/./g, "•")}</Text>
+                        <Text color="cyan">▍</Text>
+                      </>
                     ) : (
-                      <Text dimColor>粘贴你的 API Key,Enter 确认</Text>
+                      <>
+                        <Text color="cyan">▍</Text>
+                        <Text dimColor> 粘贴你的 API Key,Enter 确认</Text>
+                      </>
                     )}
                   </Box>
                 </Box>
@@ -548,9 +554,12 @@ export function ProviderModelFlow({
 
       {step === "baseUrl" && (
         <Box flexDirection="column" marginTop={1}>
-          <Text>Base URL (with /v1):</Text>
-          <Text color="cyan">{baseUrl}</Text>
-          <Text dimColor>Enter when done.</Text>
+          <Box>
+            <Text color="cyan" bold>Base URL: </Text>
+            <Text>{baseUrl}</Text>
+            <Text color="cyan">▍</Text>
+          </Box>
+          <Text dimColor>含 /v1,Enter 确认</Text>
         </Box>
       )}
 
