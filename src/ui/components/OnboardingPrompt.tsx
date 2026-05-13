@@ -1,673 +1,244 @@
 /**
- * OnboardingPrompt — Ink-rendered API key / provider configuration wizard.
+ * OnboardingPrompt — first-run / /login wizard.
  *
- * Used both for first-run onboarding (mounted standalone via
- * src/ui/onboarding-runner.tsx) and for /login inside the REPL. Renders into
- * the bottom slot of the layout, so when embedded it does not collide with
- * Ink's frame buffer or intercept keystrokes destined for the main App.
+ * Thin wrapper around ProviderModelFlow:
+ *   1. Welcome screen (one Enter to continue, Esc to cancel)
+ *   2. <ProviderModelFlow switchToNewModelOnFinish={true} />
+ *   3. Optional Arena participant multi-select over the newly-added aliases
+ *      (skipped when only one model was added)
+ *   4. Append everything to settings.json and resolve via onComplete
  *
- * Steps: provider → apikey → model_pool → default_model → arena_ask → arena_config
- *        (custom provider path: provider → custom_baseurl → custom_apikey → custom_model)
+ * Append-only: re-running /login adds providers/models on top of what's
+ * already there. To start over the user runs /logout first.
  */
 import { useState } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
-import TextInput from "./TextInput.js";
+import { ProviderModelFlow, type FlowResult } from "./ProviderModelFlow.js";
+import type { ProviderKindName } from "../../llm/provider-kinds.js";
 import {
-  PROVIDERS,
-  type ProviderDef,
   type OnboardingResult,
   detectEnvKeys,
-  maskKey,
-  validateApiKey,
-  saveSettings,
+  appendOnboardingResult,
   saveArenaSettingsByKeys,
-  modelKey,
-  modelDisplayName,
 } from "../../cli/onboarding.js";
+import type { ProviderConfig } from "../../llm/provider-catalog.js";
 
-type Step =
-  | "provider"
-  | "apikey"
-  | "custom_baseurl"
-  | "custom_apikey"
-  | "custom_model"
-  | "model_pool"
-  | "default_model"
-  | "arena_ask"
-  | "arena_config"
-  | "done";
+type Step = "welcome" | "flow" | "arena";
 
 interface OnboardingPromptProps {
   onComplete: (result: OnboardingResult) => void;
   onCancel: () => void;
+  /** Existing providers — surfaces "Use existing" in the flow's first step.
+   *  Optional: empty by default (first-run case). */
+  existingProviders?: ProviderConfig[];
+  /** Existing model aliases — used by the flow to derive unique aliases. */
+  existingModelKeys?: string[];
 }
 
-interface ProviderOption {
-  kind: "env" | "provider";
-  envIndex?: number;
-  providerIndex: number;
-  label: string;
-  hint?: string;
-}
+export function OnboardingPrompt({
+  onComplete,
+  onCancel,
+  existingProviders = [],
+  existingModelKeys = [],
+}: OnboardingPromptProps) {
+  const [step, setStep] = useState<Step>("welcome");
+  const [flowResult, setFlowResult] = useState<FlowResult | null>(null);
+  // Arena: which newly-added model aliases participate.
+  const [arenaPicks, setArenaPicks] = useState<Set<string>>(new Set());
+  const [arenaIdx, setArenaIdx] = useState(0);
 
-export function OnboardingPrompt({ onComplete, onCancel }: OnboardingPromptProps) {
-  const [step, setStep] = useState<Step>("provider");
-  const [cursor, setCursor] = useState(0);
-  const [selected, setSelected] = useState<ProviderDef>(PROVIDERS[0]!);
-  const [apiKey, setApiKey] = useState("");
-  const [apiKeyInput, setApiKeyInput] = useState("");
-  const [validating, setValidating] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [poolModels, setPoolModels] = useState<string[]>([]);
-  const [poolDraft, setPoolDraft] = useState<Set<string>>(new Set());
-  const [poolAction, setPoolAction] = useState<"menu" | "add" | "remove">("menu");
-  const [defaultModel, setDefaultModel] = useState("");
-  const [arenaParticipants, setArenaParticipants] = useState<Set<string>>(new Set());
-  const [arenaAction, setArenaAction] = useState<"menu" | "add">("menu");
-  // Custom provider (OpenAI-compatible) inputs
-  const [customBaseUrl, setCustomBaseUrl] = useState("");
-  const [customBaseUrlInput, setCustomBaseUrlInput] = useState("");
-  const [customApiKeyInput, setCustomApiKeyInput] = useState("");
-  const [customModelInput, setCustomModelInput] = useState("");
+  // ─── Welcome step input ────────────────────────────────────────────
+  useInput((_input, key) => {
+    if (step !== "welcome") return;
+    if (key.escape) {
+      onCancel();
+      return;
+    }
+    if (key.return) setStep("flow");
+  });
 
-  const detected = detectEnvKeys();
-  const providerOptions: ProviderOption[] = [
-    ...detected.map((d, i) => ({
-      kind: "env" as const,
-      envIndex: i,
-      providerIndex: PROVIDERS.findIndex((p) => p.id === d.provider.id),
-      label: `使用环境变量 ${d.envKey} → ${d.provider.name}`,
-      hint: `(${maskKey(d.apiKey)})`,
-    })),
-    ...PROVIDERS.map((p, i) => ({
-      kind: "provider" as const,
-      providerIndex: i,
-      label: p.name,
-    })),
-  ];
-
-  // ─── Provider step ────────────────────────────────────────────────
-  useInput((_ch, key) => {
-    if (step === "provider") {
-      if (key.upArrow) setCursor((c) => (c > 0 ? c - 1 : providerOptions.length - 1));
-      else if (key.downArrow) setCursor((c) => (c < providerOptions.length - 1 ? c + 1 : 0));
-      else if (key.return) {
-        const opt = providerOptions[cursor]!;
-        const provider = PROVIDERS[opt.providerIndex]!;
-        setSelected(provider);
-        setErrorMsg(null);
-
-        if (opt.kind === "env") {
-          const det = detected[opt.envIndex!]!;
-          setApiKey(det.apiKey);
-          enterPoolStep(provider);
-        } else if (provider.noKey) {
-          setApiKey("ollama");
-          enterPoolStep(provider);
-        } else if (provider.id === "custom") {
-          setStep("custom_baseurl");
-          setCustomBaseUrlInput("");
-        } else {
-          setStep("apikey");
-          setApiKeyInput("");
-        }
-        setCursor(0);
-      } else if (key.escape) {
-        onCancel();
-      }
-    } else if (step === "apikey") {
-      if (key.escape) {
-        setStep("provider");
-        setErrorMsg(null);
-      }
-    } else if (step === "custom_baseurl") {
-      if (key.escape) {
-        setStep("provider");
-        setErrorMsg(null);
-      }
-    } else if (step === "custom_apikey") {
-      if (key.escape) {
-        setStep("custom_baseurl");
-        setErrorMsg(null);
-      }
-    } else if (step === "custom_model") {
-      if (key.escape) {
-        setStep("custom_apikey");
-        setErrorMsg(null);
-      }
-    } else if (step === "model_pool") {
-      handlePoolInput(key);
-    } else if (step === "default_model") {
-      const opts = poolModels;
-      if (key.upArrow) setCursor((c) => (c > 0 ? c - 1 : opts.length - 1));
-      else if (key.downArrow) setCursor((c) => (c < opts.length - 1 ? c + 1 : 0));
-      else if (key.return) {
-        const m = opts[cursor]!;
-        setDefaultModel(m);
-        saveSettings(
-          { provider: selected.provider, model: m, apiKey, baseUrl: selected.baseUrl },
-          selected,
-          poolModels,
-        );
-        if (poolModels.length < 2) {
-          finalize(m);
-        } else {
-          setStep("arena_ask");
-          setCursor(0);
-        }
-      } else if (key.escape) {
-        setStep("model_pool");
-        setPoolAction("menu");
-        setCursor(0);
-      }
-    } else if (step === "arena_ask") {
-      if (key.upArrow || key.downArrow) setCursor((c) => (c === 0 ? 1 : 0));
-      else if (key.return) {
-        if (cursor === 0) {
-          setStep("arena_config");
-          setArenaAction("menu");
-          setCursor(0);
-        } else {
-          finalize(defaultModel);
-        }
-      } else if (key.escape) {
-        setStep("default_model");
-        setCursor(poolModels.indexOf(defaultModel));
-      }
-    } else if (step === "arena_config") {
-      handleArenaInput(key);
+  // ─── Arena step input ──────────────────────────────────────────────
+  useInput((input, key) => {
+    if (step !== "arena" || !flowResult) return;
+    const aliases = flowResult.addedModels.map((m) => m.key);
+    if (key.escape) {
+      finish(flowResult, new Set());
+      return;
+    }
+    if (input === "s" || input === "S") {
+      finish(flowResult, new Set());
+      return;
+    }
+    if (key.upArrow) {
+      setArenaIdx((i) => Math.max(0, i - 1));
+    } else if (key.downArrow) {
+      setArenaIdx((i) => Math.min(aliases.length - 1, i + 1));
+    } else if (input === " ") {
+      const k = aliases[arenaIdx];
+      if (!k) return;
+      setArenaPicks((prev) => {
+        const next = new Set(prev);
+        if (next.has(k)) next.delete(k);
+        else next.add(k);
+        return next;
+      });
+    } else if (key.return) {
+      finish(flowResult, arenaPicks);
     }
   });
 
-  function enterPoolStep(provider: ProviderDef) {
-    if (provider.models.length <= 1) {
-      const m = provider.defaultModel;
-      setPoolModels([...provider.models]);
-      setDefaultModel(m);
-      saveSettings(
-        { provider: provider.provider, model: m, apiKey, baseUrl: provider.baseUrl },
-        provider,
-        provider.models,
-      );
-      finalize(m);
+  // ─── Persist & resolve ─────────────────────────────────────────────
+  function finish(result: FlowResult, picks: Set<string>): void {
+    if (result.addedModels.length === 0) {
+      onCancel();
       return;
     }
-    const draft = new Set<string>([provider.defaultModel]);
-    setPoolDraft(draft);
-    setPoolAction("menu");
-    setStep("model_pool");
-    setCursor(0);
-  }
+    // Active model: prefer the user's pick from the flow; else the first added.
+    const active =
+      result.addedModels.find((m) => m.key === result.activeModelKey) ?? result.addedModels[0]!;
 
-  function poolMenuOptions(): string[] {
-    const opts: string[] = [];
-    const notInPool = selected.models.filter((m) => !poolDraft.has(m));
-    if (notInPool.length > 0) opts.push("add");
-    if (poolDraft.size > 0) opts.push("remove");
-    opts.push("done");
-    return opts;
-  }
-
-  function handlePoolInput(key: { upArrow?: boolean; downArrow?: boolean; return?: boolean; escape?: boolean }) {
-    if (poolAction === "menu") {
-      const opts = poolMenuOptions();
-      if (key.upArrow) setCursor((c) => (c > 0 ? c - 1 : opts.length - 1));
-      else if (key.downArrow) setCursor((c) => (c < opts.length - 1 ? c + 1 : 0));
-      else if (key.return) {
-        const action = opts[cursor]!;
-        if (action === "done") {
-          const list = poolDraft.size > 0 ? [...poolDraft] : [selected.defaultModel];
-          setPoolModels(list);
-          if (list.length === 1) {
-            const m = list[0]!;
-            setDefaultModel(m);
-            saveSettings(
-              { provider: selected.provider, model: m, apiKey, baseUrl: selected.baseUrl },
-              selected,
-              list,
-            );
-            finalize(m);
-          } else {
-            setStep("default_model");
-            const idx = list.indexOf(selected.defaultModel);
-            setCursor(idx >= 0 ? idx : 0);
-          }
-        } else if (action === "add") {
-          setPoolAction("add");
-          setCursor(0);
-        } else if (action === "remove") {
-          setPoolAction("remove");
-          setCursor(0);
-        }
-      } else if (key.escape) {
-        if (selected.noKey || detected.some((d) => d.apiKey === apiKey)) {
-          setStep("provider");
-        } else {
-          setStep("apikey");
-        }
-        setCursor(0);
-      }
-    } else if (poolAction === "add") {
-      const opts = selected.models.filter((m) => !poolDraft.has(m));
-      if (opts.length === 0) { setPoolAction("menu"); setCursor(0); return; }
-      if (key.upArrow) setCursor((c) => (c > 0 ? c - 1 : opts.length - 1));
-      else if (key.downArrow) setCursor((c) => (c < opts.length - 1 ? c + 1 : 0));
-      else if (key.return) {
-        const m = opts[cursor]!;
-        const next = new Set(poolDraft); next.add(m);
-        setPoolDraft(next);
-        setPoolAction("menu");
-        setCursor(0);
-      } else if (key.escape) {
-        setPoolAction("menu");
-        setCursor(0);
-      }
-    } else if (poolAction === "remove") {
-      const opts = [...poolDraft];
-      if (opts.length === 0) { setPoolAction("menu"); setCursor(0); return; }
-      if (key.upArrow) setCursor((c) => (c > 0 ? c - 1 : opts.length - 1));
-      else if (key.downArrow) setCursor((c) => (c < opts.length - 1 ? c + 1 : 0));
-      else if (key.return) {
-        const m = opts[cursor]!;
-        const next = new Set(poolDraft); next.delete(m);
-        setPoolDraft(next);
-        setPoolAction("menu");
-        setCursor(0);
-      } else if (key.escape) {
-        setPoolAction("menu");
-        setCursor(0);
+    // Resolve baseUrl + apiKey for the active model:
+    //   - if a new provider was added, use its credentials
+    //   - otherwise the model attached to an existing provider — find it
+    let baseUrl = "";
+    let apiKey = "";
+    let providerKind = "openai";
+    if (result.addedProvider) {
+      baseUrl = result.addedProvider.baseUrl;
+      apiKey = result.addedProvider.apiKey ?? "";
+      providerKind = result.addedProvider.kind;
+    } else {
+      const existing = existingProviders.find((p) => p.key === active.providerKey);
+      if (existing) {
+        baseUrl = existing.baseUrl;
+        apiKey = existing.apiKey ?? "";
+        providerKind = existing.kind;
       }
     }
-  }
 
-  function arenaMenuOptions(): string[] {
-    const opts: string[] = [];
-    const notInArena = poolModels.filter((m) => !arenaParticipants.has(m));
-    if (notInArena.length > 0) opts.push("add");
-    if (arenaParticipants.size > 0) opts.push("remove_last");
-    opts.push("done");
-    return opts;
-  }
+    // Legacy OnboardingResult.provider is one of "openai"/"anthropic" so the
+    // engine can pick the right client. Map non-Anthropic kinds to "openai"
+    // (everything else speaks OpenAI-compatible JSON).
+    const legacyProvider = providerKind === "anthropic" ? "anthropic" : "openai";
 
-  function handleArenaInput(key: { upArrow?: boolean; downArrow?: boolean; return?: boolean; escape?: boolean }) {
-    if (arenaAction === "menu") {
-      const opts = arenaMenuOptions();
-      if (key.upArrow) setCursor((c) => (c > 0 ? c - 1 : opts.length - 1));
-      else if (key.downArrow) setCursor((c) => (c < opts.length - 1 ? c + 1 : 0));
-      else if (key.return) {
-        const action = opts[cursor]!;
-        if (action === "done") {
-          if (arenaParticipants.size >= 2) {
-            const keys = [...arenaParticipants].map((m) => modelKey(m));
-            saveArenaSettingsByKeys(keys);
-          }
-          finalize(defaultModel);
-        } else if (action === "add") {
-          setArenaAction("add");
-          setCursor(0);
-        } else if (action === "remove_last") {
-          const arr = [...arenaParticipants];
-          arr.pop();
-          setArenaParticipants(new Set(arr));
-          setCursor(0);
-        }
-      } else if (key.escape) {
-        setStep("arena_ask");
-        setCursor(0);
-      }
-    } else if (arenaAction === "add") {
-      const opts = poolModels.filter((m) => !arenaParticipants.has(m));
-      if (opts.length === 0) { setArenaAction("menu"); setCursor(0); return; }
-      if (key.upArrow) setCursor((c) => (c > 0 ? c - 1 : opts.length - 1));
-      else if (key.downArrow) setCursor((c) => (c < opts.length - 1 ? c + 1 : 0));
-      else if (key.return) {
-        const m = opts[cursor]!;
-        const next = new Set(arenaParticipants); next.add(m);
-        setArenaParticipants(next);
-        setArenaAction("menu");
-        setCursor(0);
-      } else if (key.escape) {
-        setArenaAction("menu");
-        setCursor(0);
-      }
-    }
-  }
-
-  function finalize(model: string) {
-    setStep("done");
-    onComplete({
-      provider: selected.provider,
-      model,
+    const onboardingResult: OnboardingResult = {
+      provider: legacyProvider,
+      model: active.model,
       apiKey,
-      baseUrl: selected.baseUrl,
-    });
-  }
-
-  function submitCustomBaseUrl(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setErrorMsg("请输入 Base URL (Esc 返回)");
-      return;
-    }
-    setCustomBaseUrl(trimmed);
-    setErrorMsg(null);
-    setCustomApiKeyInput("");
-    setStep("custom_apikey");
-  }
-
-  function submitCustomApiKey(_value: string) {
-    // Custom providers may legitimately have no key (e.g. local proxies);
-    // we accept empty input. The actual value is read from customApiKeyInput
-    // in submitCustomModel — setApiKey() is async, so we cannot rely on it
-    // having flushed by the time the next step runs.
-    setErrorMsg(null);
-    setCustomModelInput("");
-    setStep("custom_model");
-  }
-
-  function submitCustomModel(value: string) {
-    const model = value.trim() || "gpt-4o";
-    const finalKey = customApiKeyInput.trim();
-    // Build a synthetic ProviderDef for the custom selection so save logic
-    // and finalize() can stay uniform. The single-element model list also
-    // skips the pool/arena UI by short-circuiting the flow.
-    const customProvider: ProviderDef = {
-      id: "custom",
-      name: "自定义",
-      envKey: "",
-      provider: "openai",
-      baseUrl: customBaseUrl,
-      defaultModel: model,
-      keyUrl: "",
-      keyPrefix: "",
-      models: [model],
+      baseUrl,
     };
-    setSelected(customProvider);
-    setApiKey(finalKey);
-    saveSettings(
-      { provider: "openai", model, apiKey: finalKey, baseUrl: customBaseUrl },
-      customProvider,
-      [model],
-    );
-    setStep("done");
-    onComplete({ provider: "openai", model, apiKey: finalKey, baseUrl: customBaseUrl });
+
+    appendOnboardingResult({
+      active: onboardingResult,
+      addedProvider: result.addedProvider
+        ? {
+            key: result.addedProvider.key,
+            label: result.addedProvider.label,
+            kind: result.addedProvider.kind,
+            baseUrl: result.addedProvider.baseUrl,
+            apiKey: result.addedProvider.apiKey,
+            protocol: result.addedProvider.protocol,
+            modelsPath: result.addedProvider.modelsPath,
+          }
+        : undefined,
+      addedModels: result.addedModels.map((m) => ({
+        key: m.key,
+        providerKey: m.providerKey,
+        model: m.model,
+        maxContextTokens: m.maxContextTokens,
+        maxOutputTokens: m.maxOutputTokens,
+      })),
+    });
+
+    if (picks.size >= 2) {
+      saveArenaSettingsByKeys([...picks]);
+    }
+
+    onComplete(onboardingResult);
   }
 
-  async function submitApiKey(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setErrorMsg("请输入 API Key (Esc 返回)");
+  // ─── Flow handoff ──────────────────────────────────────────────────
+  function handleFlowFinish(r: FlowResult): void {
+    setFlowResult(r);
+    if (r.addedModels.length === 0) {
+      // Flow short-circuited with nothing added — treat as cancel.
+      onCancel();
       return;
     }
-    setValidating(true);
-    setErrorMsg(null);
-    const valid = await validateApiKey(selected.baseUrl, trimmed);
-    setValidating(false);
-    if (!valid) {
-      setErrorMsg("API Key 验证失败 (Esc 返回上一步)");
+    if (r.addedModels.length === 1) {
+      // Only one model — Arena needs ≥2, so skip the picker entirely.
+      finish(r, new Set());
       return;
     }
-    setApiKey(trimmed);
-    enterPoolStep(selected);
+    setStep("arena");
   }
 
-  // ─── Render ───────────────────────────────────────────────────────
-
-  const Header = (
-    <Box>
-      <Text color="ansi:cyan" bold>{"✦ Code Shell — 配置向导"}</Text>
-      <Text dim>{"  (Esc 返回 / 取消)"}</Text>
-    </Box>
-  );
-
-  if (step === "provider") {
+  // ─── Render ────────────────────────────────────────────────────────
+  if (step === "welcome") {
     return (
       <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>选择 API 提供商:</Text></Box>
-        {providerOptions.map((opt, i) => (
-          <Box key={i} marginLeft={2}>
-            <Text color={i === cursor ? "ansi:cyan" : undefined} bold={i === cursor}>
-              {i === cursor ? "❯ " : "  "}{opt.label}
-            </Text>
-            {opt.hint && <Text dim>{" "}{opt.hint}</Text>}
-          </Box>
-        ))}
-        {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}
-      </Box>
-    );
-  }
-
-  if (step === "apikey") {
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>{selected.name}</Text></Box>
-        {selected.keyUrl && (
-          <Box marginLeft={2}><Text dim>获取 Key: {selected.keyUrl}</Text></Box>
-        )}
-        <Box marginLeft={2}>
-          <Text color="ansi:cyan">{selected.envKey || "API Key"}{": "}</Text>
-          <TextInput
-            value={apiKeyInput}
-            onChange={setApiKeyInput}
-            onSubmit={submitApiKey}
-            placeholder={validating ? "验证中..." : "粘贴你的 API Key, Enter 确认"}
-            focus={!validating}
-          />
+        <Box>
+          <Text color="ansi:cyan" bold>
+            {"✦ Code Shell — Setup"}
+          </Text>
         </Box>
-        {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}
+        <Box marginTop={1} marginLeft={2}>
+          <Text>This wizard adds a provider and one or more models.</Text>
+        </Box>
+        <Box marginLeft={2}>
+          <Text dim>Press Enter to start · Esc to cancel.</Text>
+        </Box>
       </Box>
     );
   }
 
-  if (step === "custom_baseurl") {
+  if (step === "flow") {
+    return (
+      <ProviderModelFlow
+        existingProviders={existingProviders}
+        existingModelKeys={existingModelKeys}
+        detectedEnvKeys={detectEnvKeys().map((d) => ({
+          envKey: d.envKey,
+          apiKey: d.apiKey,
+          // ProviderDef.id matches ProviderKindName values for the known
+          // kinds we surface; "openrouter"/"openai"/"anthropic"/etc. all line up.
+          kindHint: (d.provider.id as ProviderKindName) ?? "openai",
+        }))}
+        switchToNewModelOnFinish={true}
+        onFinish={handleFlowFinish}
+        onCancel={onCancel}
+      />
+    );
+  }
+
+  if (step === "arena" && flowResult) {
+    const aliases = flowResult.addedModels;
     return (
       <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>自定义 OpenAI 兼容 API</Text></Box>
-        <Box marginLeft={2}>
-          <Text color="ansi:cyan">{"Base URL: "}</Text>
-          <TextInput
-            value={customBaseUrlInput}
-            onChange={setCustomBaseUrlInput}
-            onSubmit={submitCustomBaseUrl}
-            placeholder="如 http://localhost:11434/v1"
-            focus
-          />
+        <Box>
+          <Text color="ansi:cyan" bold>
+            {"✦ Arena participants"}
+          </Text>
         </Box>
-        {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}
-      </Box>
-    );
-  }
-
-  if (step === "custom_apikey") {
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>{customBaseUrl}</Text></Box>
-        <Box marginLeft={2}>
-          <Text color="ansi:cyan">{"API Key: "}</Text>
-          <TextInput
-            value={customApiKeyInput}
-            onChange={setCustomApiKeyInput}
-            onSubmit={submitCustomApiKey}
-            placeholder="可留空 (本地服务通常不需要)"
-            focus
-          />
+        <Box marginTop={1} marginLeft={2}>
+          <Text dim>Space toggles · Enter finishes · s skips · Esc cancels.</Text>
         </Box>
-        {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}
-      </Box>
-    );
-  }
-
-  if (step === "custom_model") {
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>{customBaseUrl}</Text></Box>
         <Box marginLeft={2}>
-          <Text color="ansi:cyan">{"模型名称: "}</Text>
-          <TextInput
-            value={customModelInput}
-            onChange={setCustomModelInput}
-            onSubmit={submitCustomModel}
-            placeholder="如 gpt-4o (留空使用默认)"
-            focus
-          />
+          <Text dim>Pick at least 2 to enable /arena, or skip.</Text>
         </Box>
-        {errorMsg && <Box marginLeft={2}><Text color="ansi:yellow">{errorMsg}</Text></Box>}
-      </Box>
-    );
-  }
-
-  if (step === "model_pool") {
-    if (poolAction === "menu") {
-      const opts = poolMenuOptions();
-      const labels: Record<string, string> = {
-        add: "添加模型",
-        remove: "移除模型",
-        done: poolDraft.size > 0 ? `✓ 确认 (${poolDraft.size} 个模型)` : "跳过",
-      };
-      return (
-        <Box flexDirection="column" marginLeft={1}>
-          {Header}
-          <Box marginLeft={2}><Text dim>当前模型池:</Text></Box>
-          {poolDraft.size === 0 ? (
-            <Box marginLeft={4}><Text dim>(空)</Text></Box>
-          ) : (
-            [...poolDraft].map((m) => (
-              <Box key={m} marginLeft={4}><Text color="ansi:cyan">✓</Text><Text>{" "}{m}</Text></Box>
-            ))
-          )}
-          <Box marginLeft={2}><Text dim>操作:</Text></Box>
-          {opts.map((a, i) => (
-            <Box key={a} marginLeft={2}>
-              <Text color={i === cursor ? "ansi:cyan" : undefined} bold={i === cursor}>
-                {i === cursor ? "❯ " : "  "}{labels[a]}
+        {aliases.map((m, i) => {
+          const focused = i === arenaIdx;
+          const checked = arenaPicks.has(m.key);
+          return (
+            <Box key={m.key} marginLeft={2}>
+              <Text color={focused ? "ansi:cyan" : undefined} bold={focused}>
+                {focused ? "❯ " : "  "}
+                {`[${checked ? "x" : " "}] ${m.key}`}
               </Text>
+              <Text dim>{"  "}{m.model}</Text>
             </Box>
-          ))}
-        </Box>
-      );
-    }
-    if (poolAction === "add") {
-      const opts = selected.models.filter((m) => !poolDraft.has(m));
-      return (
-        <Box flexDirection="column" marginLeft={1}>
-          {Header}
-          <Box marginLeft={2}><Text dim>添加到模型池:</Text></Box>
-          {opts.map((m, i) => (
-            <Box key={m} marginLeft={2}>
-              <Text color={i === cursor ? "ansi:cyan" : undefined} bold={i === cursor}>
-                {i === cursor ? "❯ " : "  "}{m}
-              </Text>
-              {m === selected.defaultModel && <Text dim>{" (推荐)"}</Text>}
-            </Box>
-          ))}
-        </Box>
-      );
-    }
-    // remove
-    const opts = [...poolDraft];
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>从模型池移除:</Text></Box>
-        {opts.map((m, i) => (
-          <Box key={m} marginLeft={2}>
-            <Text color={i === cursor ? "ansi:cyan" : undefined} bold={i === cursor}>
-              {i === cursor ? "❯ " : "  "}{m}
-            </Text>
-          </Box>
-        ))}
-      </Box>
-    );
-  }
-
-  if (step === "default_model") {
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>选择默认模型 (日常对话使用):</Text></Box>
-        {poolModels.map((m, i) => (
-          <Box key={m} marginLeft={2}>
-            <Text color={i === cursor ? "ansi:cyan" : undefined} bold={i === cursor}>
-              {i === cursor ? "❯ " : "  "}{m}
-            </Text>
-            {m === selected.defaultModel && <Text dim>{" (推荐)"}</Text>}
-          </Box>
-        ))}
-      </Box>
-    );
-  }
-
-  if (step === "arena_ask") {
-    const labels = ["是", "否"];
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>是否配置 Arena 多模型对比?</Text></Box>
-        {labels.map((l, i) => (
-          <Box key={l} marginLeft={2}>
-            <Text color={i === cursor ? "ansi:cyan" : undefined} bold={i === cursor}>
-              {i === cursor ? "❯ " : "  "}{l}
-            </Text>
-          </Box>
-        ))}
-      </Box>
-    );
-  }
-
-  if (step === "arena_config") {
-    if (arenaAction === "menu") {
-      const opts = arenaMenuOptions();
-      const labels: Record<string, string> = {
-        add: "从模型池添加",
-        remove_last: "移除最后添加的",
-        done: arenaParticipants.size >= 2
-          ? `✓ 完成配置 (${arenaParticipants.size} 个模型)`
-          : "跳过 (至少需要 2 个模型)",
-      };
-      return (
-        <Box flexDirection="column" marginLeft={1}>
-          {Header}
-          <Box marginLeft={2}><Text dim>Arena 阵容:</Text></Box>
-          {arenaParticipants.size === 0 ? (
-            <Box marginLeft={4}><Text dim>(空)</Text></Box>
-          ) : (
-            [...arenaParticipants].map((m, i) => (
-              <Box key={m} marginLeft={4}>
-                <Text dim>{i + 1}. </Text>
-                <Text color="ansi:cyan">{modelDisplayName(m)}</Text>
-                <Text dim>{" ("}{m}{")"}</Text>
-              </Box>
-            ))
-          )}
-          <Box marginLeft={2}><Text dim>操作:</Text></Box>
-          {opts.map((a, i) => (
-            <Box key={a} marginLeft={2}>
-              <Text color={i === cursor ? "ansi:cyan" : undefined} bold={i === cursor}>
-                {i === cursor ? "❯ " : "  "}{labels[a]}
-              </Text>
-            </Box>
-          ))}
-        </Box>
-      );
-    }
-    const opts = poolModels.filter((m) => !arenaParticipants.has(m));
-    return (
-      <Box flexDirection="column" marginLeft={1}>
-        {Header}
-        <Box marginLeft={2}><Text dim>选择模型加入 Arena:</Text></Box>
-        {opts.map((m, i) => (
-          <Box key={m} marginLeft={2}>
-            <Text color={i === cursor ? "ansi:cyan" : undefined} bold={i === cursor}>
-              {i === cursor ? "❯ " : "  "}{modelDisplayName(m)}
-            </Text>
-            <Text dim>{"  "}{m}</Text>
-          </Box>
-        ))}
+          );
+        })}
       </Box>
     );
   }
