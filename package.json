@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Code Shell — general-purpose agent orchestration framework with a terminal coding preset",
   "type": "module",
   "main": "./dist/index.js",
