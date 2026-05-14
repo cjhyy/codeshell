@@ -256,25 +256,34 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
     }
 
     case "Grep": {
-      // Trim "path:line:content" → "path:line". The matched line itself is
-      // noise in the UI list; users only need the location to navigate.
-      const matches = rawLines
-        .filter((l) => l.trim())
-        .map((l) => {
-          const m = l.match(/^([^:]+:\d+)(?::|$)/);
-          return m ? m[1] : l;
-        });
-      const count = matches.length;
-      if (expanded) {
-        return { summary: `${count} results`, lines: matches, hiddenCount: 0 };
+      // Dedupe to unique file paths. ripgrep emits one line per match, so a
+      // file with 24 matches produces 24 lines — rendering each one is noise
+      // since users just want to know which files matched.
+      const seen = new Set<string>();
+      const files: string[] = [];
+      let matchCount = 0;
+      for (const l of rawLines) {
+        if (!l.trim()) continue;
+        matchCount++;
+        const m = l.match(/^(.+?)[:-]\d+(?:[:-]|$)/);
+        const path = m ? m[1] : l;
+        if (!seen.has(path)) {
+          seen.add(path);
+          files.push(path);
+        }
       }
-      if (count <= COLLAPSED_LINES) {
-        return { summary: `${count} results`, lines: matches, hiddenCount: 0 };
+      const fileCount = files.length;
+      const summary =
+        matchCount === fileCount
+          ? `${fileCount} ${fileCount === 1 ? "file" : "files"}`
+          : `${matchCount} matches in ${fileCount} ${fileCount === 1 ? "file" : "files"}`;
+      if (expanded || fileCount <= COLLAPSED_LINES) {
+        return { summary, lines: files, hiddenCount: 0 };
       }
       return {
-        summary: `${count} results`,
-        lines: matches.slice(0, COLLAPSED_LINES),
-        hiddenCount: count - COLLAPSED_LINES,
+        summary,
+        lines: files.slice(0, COLLAPSED_LINES),
+        hiddenCount: fileCount - COLLAPSED_LINES,
       };
     }
 

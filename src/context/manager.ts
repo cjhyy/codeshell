@@ -16,6 +16,7 @@ import {
   buildSummarizationPrompt,
   applySummaryCompaction,
   applyToolResultBudget,
+  extractAnchoredSummary,
 } from "./compaction.js";
 import {
   type ContentReplacementState,
@@ -56,7 +57,13 @@ const DEFAULT_CONFIG: ContextManagerConfig = {
   compactAtRatio: 0.85,
   summarizeAtRatio: 0.92,
   maxToolResultChars: 30_000,
-  microcompactFloorRatio: 0.3,
+  // 0.5 leaves micro idle until the prompt is ~half-full. Below this we let
+  // tool_results stay intact: under-pressure context doesn't need micro and
+  // wiping early Read/Bash output just forces the model to re-fetch the same
+  // files later. CC's external path is time-based (~N minutes); we approximate
+  // with this ratio. Was 0.3 — fine on 200k but too eager on 1M-context
+  // models (started clearing at 300k tokens, well below danger).
+  microcompactFloorRatio: 0.5,
 };
 
 /**
@@ -330,7 +337,13 @@ export class ContextManager {
         const messagesToSummarize = result.slice(1, -keepRecentN); // skip first (userContext) and recent
 
         if (messagesToSummarize.length > 3) {
-          const prompt = buildSummarizationPrompt(messagesToSummarize);
+          // Rolling summary: if a prior summary is already anchored in the
+          // messages (from an earlier compaction in this session or in a
+          // resumed session), feed it back so the LLM merges-updates rather
+          // than re-summarizes from scratch — preserves info that would
+          // otherwise erode across successive compactions.
+          const priorSummary = extractAnchoredSummary(result) ?? this.lastSummary;
+          const prompt = buildSummarizationPrompt(messagesToSummarize, priorSummary);
           const summary = await this.summarizeFn(prompt);
 
           if (summary && summary.length > 50) {
@@ -342,6 +355,7 @@ export class ContextManager {
               before: tokens,
               after,
               summaryLen: summary.length,
+              rolling: priorSummary !== undefined,
             });
             this.onCompact?.({ strategy: "summary", before: tokens, after });
             return result;

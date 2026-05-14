@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-05-14T01:23:47.195Z",
+  "fetchedAt": "2026-05-14T07:47:36.405Z",
   "source": "https://openrouter.ai/api/v1/models",
   "count": 364,
   "models": [
@@ -796,8 +796,8 @@
       "name": "MiniMax: MiniMax M2.7",
       "created": 1773836697,
       "contextLength": 196608,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.28,
+      "maxOutputTokens": 131072,
+      "inputPricePerMillion": 0.27899999999999997,
       "outputPricePerMillion": 1.2,
       "modalities": [
         "text"

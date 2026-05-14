@@ -56,6 +56,8 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
   "gemini-3-flash-preview": pricing(0.15, 0.6),
   "gemini-2.0-flash": pricing(0.1, 0.4),
   // DeepSeek
+  "deepseek-v4-flash": pricing(0.126, 0.252),
+  "deepseek-v4-pro": pricing(0.5, 2),
   "deepseek-v3.2": pricing(0.14, 0.28),
   "deepseek-chat": pricing(0.14, 0.28),
   "deepseek-r1": pricing(0.55, 2.19),
@@ -77,33 +79,51 @@ const MODEL_PRICING: Record<string, ModelPricing> = {
 // Default fallback pricing
 const DEFAULT_PRICING: ModelPricing = pricing(3, 15);
 
+/** Build a ModelPricing from an OpenRouter snapshot entry. */
+function openRouterPricing(hit: { inputPricePerMillion: number; outputPricePerMillion: number }): {
+  pricing: ModelPricing;
+  known: boolean;
+} {
+  const input = hit.inputPricePerMillion;
+  const output = hit.outputPricePerMillion;
+  return {
+    pricing: {
+      input,
+      output,
+      // Snapshot doesn't carry cache pricing; use the same heuristic as pricing() helper
+      cacheRead: input * 0.1,
+      cacheWrite: input * 1.25,
+    },
+    known: true,
+  };
+}
+
 /**
  * Resolve pricing for a model. Lookup order:
- *   1. OpenRouter snapshot (when the ID looks like vendor/model)
- *   2. MODEL_PRICING by canonical name (strips provider prefix)
- *   3. MODEL_PRICING by raw name
- *   4. DEFAULT_PRICING fallback
+ *   1. OpenRouter snapshot (by full ID like "deepseek/deepseek-v4-flash")
+ *   2. OpenRouter snapshot (by short name like "deepseek-v4-flash" → tries common vendors)
+ *   3. MODEL_PRICING by canonical name (strips provider prefix)
+ *   4. MODEL_PRICING by raw name
+ *   5. DEFAULT_PRICING fallback
  *
  * Returns { pricing, source } so callers can flag unknown-model warnings
  * accurately (the snapshot path counts as known even if MODEL_PRICING misses).
  */
 function lookupPricing(model: string): { pricing: ModelPricing; known: boolean } {
+  // Try OpenRouter snapshot lookup for models with vendor/ prefix
   if (model.includes("/")) {
     const hit = findOpenRouterModel(model);
     if (hit && (hit.inputPricePerMillion > 0 || hit.outputPricePerMillion > 0)) {
-      const input = hit.inputPricePerMillion;
-      const output = hit.outputPricePerMillion;
-      return {
-        pricing: {
-          input,
-          output,
-          // Snapshot doesn't carry cache pricing; use the same heuristic as pricing() helper
-          cacheRead: input * 0.1,
-          cacheWrite: input * 1.25,
-        },
-        known: true,
-      };
+      return openRouterPricing(hit);
     }
+  }
+  // Also try OpenRouter for short names (e.g. "deepseek-v4-flash" → "deepseek/deepseek-v4-flash")
+  // by matching on the model part after the slash
+  const orHit = findOpenRouterModel(`deepseek/${model}`) ??
+    findOpenRouterModel(`openai/${model}`) ??
+    findOpenRouterModel(`anthropic/${model}`);
+  if (orHit && (orHit.inputPricePerMillion > 0 || orHit.outputPricePerMillion > 0)) {
+    return openRouterPricing(orHit);
   }
   const canonical = getCanonicalName(model);
   const hit = MODEL_PRICING[canonical] ?? MODEL_PRICING[model];

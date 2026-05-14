@@ -24,6 +24,7 @@ import { ContextLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
 import { checkTokenBudget, type BudgetTracker, createBudgetTracker } from "./token-budget.js";
 import { StreamingToolQueue } from "./streaming-tool-queue.js";
+import { estimateTokens } from "../context/compaction.js";
 
 export interface TurnLoopConfig {
   maxTurns: number;
@@ -39,6 +40,12 @@ export interface TurnLoopConfig {
   onTurnBoundary?: (turnCount: number) => void;
 }
 
+export interface CtxOverheadStore {
+  /** Tokens for system prompt + tool defs, derived from provider's promptTokens. */
+  get(sid: string): number;
+  set(sid: string, tokens: number): void;
+}
+
 export interface TurnLoopDeps {
   model: ModelFacade;
   toolExecutor: ToolExecutor;
@@ -47,6 +54,10 @@ export interface TurnLoopDeps {
   transcript: Transcript;
   systemPrompt: string;
   tools: import("../types.js").ToolDefinition[];
+  /** Per-sid overhead cache so the ctx bar doesn't drop between turns. */
+  ctxOverheadStore: CtxOverheadStore;
+  /** Current session id, used to key the overhead store. */
+  sessionId: string;
 }
 
 export interface TurnLoopResult {
@@ -67,10 +78,61 @@ export class TurnLoop {
    */
   private currentTurnLog: ReturnType<typeof logger.child> = logger;
 
+  /** Last emitted ctx token estimate; used to skip no-op usage_update events. */
+  private lastCtxEmit = -1;
+
   constructor(
     private readonly deps: TurnLoopDeps,
     private readonly config: TurnLoopConfig,
   ) {}
+
+  /**
+   * Emit a usage_update so the UI ctx bar reflects current message-array
+   * size. Called at every point where messages mutate: after a tool_result
+   * is appended, after context management (which may shrink), and after an
+   * LLM response (which we also feed through with the provider's authoritative
+   * promptTokens to override our estimate).
+   */
+  private emitCtxFromMessages(messages: Message[]): void {
+    if (!this.config.onStream) return;
+    // Messages-only estimate is missing system prompt + tool defs (typically
+    // ~16k tokens). Pull the cached overhead derived from the previous LLM
+    // response to keep the ctx bar in the same ballpark as the real prompt.
+    // Without this, the bar drops to ~1k every time tool results land.
+    const msgsEstimate = estimateTokens(messages);
+    const overhead = this.deps.ctxOverheadStore.get(this.deps.sessionId);
+    const ctx = msgsEstimate + overhead;
+    this.currentTurnLog.info("debug.ctx.emit", {
+      src: "messages",
+      value: ctx,
+      msgsEstimate,
+      overhead,
+      msgCount: messages.length,
+      prev: this.lastCtxEmit,
+    });
+    if (ctx === this.lastCtxEmit) return;
+    this.lastCtxEmit = ctx;
+    this.config.onStream({ type: "usage_update", promptTokens: ctx });
+  }
+
+  private emitCtxFromUsage(promptTokens: number, messages: Message[]): void {
+    if (!this.config.onStream) return;
+    // Reverse-derive overhead from this authoritative reading so the next
+    // estimate-based emit (post-tool-result) is calibrated.
+    const msgsEstimate = estimateTokens(messages);
+    const overhead = Math.max(0, promptTokens - msgsEstimate);
+    this.deps.ctxOverheadStore.set(this.deps.sessionId, overhead);
+    this.currentTurnLog.info("debug.ctx.emit", {
+      src: "usage",
+      value: promptTokens,
+      msgsEstimate,
+      derivedOverhead: overhead,
+      prev: this.lastCtxEmit,
+    });
+    if (promptTokens === this.lastCtxEmit) return;
+    this.lastCtxEmit = promptTokens;
+    this.config.onStream({ type: "usage_update", promptTokens });
+  }
 
   /**
    * Run the multi-turn agent loop until completion.
@@ -122,6 +184,11 @@ export class TurnLoop {
 
       // Pre-check: context management (async — may trigger LLM summarization)
       messages = await this.deps.contextManager.manageAsync(messages);
+      // No pre-llm ctx emit here: the messages-only estimate would be ~16k
+      // smaller than the real prompt (system + tools not included), making
+      // the bar visibly drop on every submit. Post-llm/post-tool-result
+      // events carry an accurate value; if compaction shrank the array, the
+      // dedicated context_compact event has already informed the UI.
 
       // Model call (with streaming fallback and max_output_tokens continuation)
       // Track tool IDs streamed during this turn to avoid duplicate UI events
@@ -165,12 +232,9 @@ export class TurnLoop {
         }
       }
 
-      // Send real-time token usage to UI so the ctx bar updates per-response
+      // UI ctx bar: prefer the provider's authoritative promptTokens.
       if (response!.usage?.promptTokens !== undefined) {
-        this.config.onStream?.({
-          type: "usage_update",
-          promptTokens: response!.usage.promptTokens,
-        });
+        this.emitCtxFromUsage(response!.usage.promptTokens, messages);
       }
 
       // Feed actual token usage back to the context manager so subsequent
@@ -220,10 +284,7 @@ export class TurnLoop {
 
       // After any continuation, send latest usage so ctx bar reflects real context
       if (response.usage?.promptTokens !== undefined) {
-        this.config.onStream?.({
-          type: "usage_update",
-          promptTokens: response.usage.promptTokens,
-        });
+        this.emitCtxFromUsage(response.usage.promptTokens, messages);
       }
 
       // Aborted?
@@ -317,6 +378,9 @@ export class TurnLoop {
       }
 
       messages.push({ role: "user", content: resultBlocks });
+      // Tool results just pushed; recompute ctx so the bar updates *before*
+      // the next model round-trip — large tool outputs can move it sharply.
+      this.emitCtxFromMessages(messages);
 
       // Token budget check
       const totalOutputTokens = this.deps.model.getOutputTokens?.() ?? 0;
@@ -359,6 +423,19 @@ export class TurnLoop {
         }
       }
 
+      // Task guard: nudge the model if it has an in_progress task that
+      // hasn't moved in several turns. TaskCreate is sticky in working
+      // memory for the first few turns only; without this, the spinner
+      // runs forever on tasks the model has mentally finished.
+      const taskGuard = this.deps.toolExecutor.getTaskGuard();
+      if (taskGuard) {
+        const taskReminder = taskGuard.turnEnded(this.turnCount);
+        if (taskReminder) {
+          messages.push({ role: "user", content: taskReminder });
+          tlog.info("guard.stale_task", { cat: "guard", turn: this.turnCount });
+        }
+      }
+
       // Hook: turn end
       await this.deps.hooks.emit("on_turn_end", {
         turnNumber: this.turnCount,
@@ -390,6 +467,7 @@ export class TurnLoop {
       content:
         "<system-reminder>Turn limit reached. Provide a final summary of what you accomplished and what remains to be done. Do NOT call any tools.</system-reminder>",
     });
+    this.emitCtxFromMessages(messages);
 
     try {
       const summaryResponse = await this.deps.model.call(

@@ -392,7 +392,10 @@ export function truncateToolResult(result: string, maxChars = 30_000): string {
  * Build a structured summarization prompt from messages to be compacted.
  * Produces a 9-section summary preserving key details.
  */
-export function buildSummarizationPrompt(messagesToSummarize: Message[]): string {
+export function buildSummarizationPrompt(
+  messagesToSummarize: Message[],
+  priorSummary?: string,
+): string {
   const parts: string[] = [];
 
   for (const msg of messagesToSummarize) {
@@ -413,9 +416,7 @@ export function buildSummarizationPrompt(messagesToSummarize: Message[]): string
     }
   }
 
-  return (
-    "Summarize the following conversation into these sections. " +
-    "Be factual. Preserve file paths, function names, and error messages exactly.\n\n" +
+  const sectionList =
     "1. **Primary Request**: What the user originally asked for\n" +
     "2. **Key Concepts**: Important technical terms, patterns, file paths\n" +
     "3. **Files Referenced**: List of files read/edited with key content\n" +
@@ -424,10 +425,61 @@ export function buildSummarizationPrompt(messagesToSummarize: Message[]): string
     "6. **User Messages**: All distinct user requests (verbatim if short)\n" +
     "7. **Pending Tasks**: Anything started but not finished\n" +
     "8. **Current State**: Where things stand right now\n" +
-    "9. **Next Steps**: What should happen next\n\n" +
-    "Conversation:\n\n" +
+    "9. **Next Steps**: What should happen next\n";
+
+  if (priorSummary) {
+    return (
+      "You are updating an anchored conversation summary. A prior summary is " +
+      "shown first, followed by NEW conversation that occurred after that " +
+      "summary was produced. Produce an UPDATED summary that:\n" +
+      "- Preserves every critical fact from the prior summary (file paths, " +
+      "decisions, the user's original intent, errors that were fixed)\n" +
+      "- Merges in new facts from the new conversation\n" +
+      "- Resolves contradictions in favor of the newer information\n" +
+      "- Stays in the same 9-section structure below\n" +
+      "- Is factual; preserves file paths, function names, and error " +
+      "messages exactly\n\n" +
+      sectionList +
+      "\n=== Prior summary ===\n" +
+      priorSummary +
+      "\n\n=== New conversation ===\n\n" +
+      parts.join("\n")
+    );
+  }
+
+  return (
+    "Summarize the following conversation into these sections. " +
+    "Be factual. Preserve file paths, function names, and error messages exactly.\n\n" +
+    sectionList +
+    "\nConversation:\n\n" +
     parts.join("\n")
   );
+}
+
+// ─── Anchored summary marker ────────────────────────────────────────
+//
+// applySummaryCompaction wraps the LLM-generated summary in these tags so the
+// next compaction pass can grep it out and ask the LLM to merge-update it
+// (rolling summary), instead of re-summarizing from scratch each time. The
+// marker also survives session resume: messages persist via the session
+// transcript, so a process restart can still recover the latest summary
+// without needing a side-channel state file.
+
+const ANCHORED_OPEN = "<anchored-summary>";
+const ANCHORED_CLOSE = "</anchored-summary>";
+
+export function extractAnchoredSummary(messages: Message[]): string | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    const content = typeof msg.content === "string" ? msg.content : "";
+    if (!content) continue;
+    const start = content.indexOf(ANCHORED_OPEN);
+    if (start < 0) continue;
+    const end = content.indexOf(ANCHORED_CLOSE, start + ANCHORED_OPEN.length);
+    if (end <= start) continue;
+    return content.slice(start + ANCHORED_OPEN.length, end).trim();
+  }
+  return undefined;
 }
 
 /**
@@ -460,7 +512,7 @@ export function applySummaryCompaction(
   let body =
     `This session is being continued from a previous conversation that ran out of context. ` +
     `The summary below covers the earlier portion of the conversation.\n\n` +
-    `${summary}`;
+    `${ANCHORED_OPEN}\n${summary}\n${ANCHORED_CLOSE}`;
 
   if (transcriptPath) {
     body +=

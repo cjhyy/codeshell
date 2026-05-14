@@ -164,6 +164,26 @@ describe.if(IS_MAC)("Seatbelt — real sandbox-exec", () => {
   // slow under disk pressure.
   const TIMEOUT = 4000;
 
+  // Regression: wrap() used to mkdtempSync a per-command profile dir and
+  // never delete it — a long REPL session leaked hundreds of /tmp dirs.
+  // The backend now returns a cleanup() the Bash tool fires from its close
+  // handler. Verify the dir actually disappears.
+  it("wrap().cleanup removes the temp profile dir", async () => {
+    const backend = await resolveSandboxBackend(
+      defaultSandboxConfig("seatbelt"),
+      process.cwd(),
+    );
+    const wrapped = backend.wrap("true", { cwd: process.cwd(), shell: "/bin/bash" });
+    // args[1] is the profile path: ["-f", "/path/to/profile.sb", shell, "-c", cmd]
+    expect(wrapped.args[0]).toBe("-f");
+    const profilePath = wrapped.args[1];
+    const profileDir = profilePath.replace(/\/profile\.sb$/, "");
+    expect(existsSync(profileDir)).toBe(true);
+    expect(typeof wrapped.cleanup).toBe("function");
+    wrapped.cleanup!();
+    expect(existsSync(profileDir)).toBe(false);
+  });
+
   it("blocks reads of each existing deniedRead path", async () => {
     const cfg = defaultSandboxConfig("seatbelt");
     const backend = await resolveSandboxBackend(cfg, process.cwd());

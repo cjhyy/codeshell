@@ -7,6 +7,11 @@
  */
 import React, { useState, useEffect, type MutableRefObject } from "react";
 import { Box, Text } from "../../render/index.js";
+import { logger } from "../../logging/logger.js";
+import { recordUIEvent } from "../../logging/session-recorder.js";
+
+// UI-scoped — routes to ui-ink-*.log.
+const uiLog = logger.child({ cat: "ui" });
 
 interface StatusLineProps {
   model: string;
@@ -14,7 +19,11 @@ interface StatusLineProps {
   tokens: number;
   cost: number;
   sessionId?: string;
-  /** Last known prompt tokens from completed turn. Live streaming is added on top. */
+  /**
+   * Authoritative live context size. The engine emits `usage_update` at every
+   * message-array mutation (post-tool-result, post-compact, post-LLM), so this
+   * tracks the real prompt token count without UI-side accumulation.
+   */
   baseContextTokens?: number;
   maxContextTokens?: number;
   gitBranch?: string;
@@ -54,15 +63,26 @@ export function StatusLine({
     isRunning && runStartRef ? Math.floor((Date.now() - runStartRef.current) / 1000) : 0;
   const streamingTokens =
     isRunning && streamingTokensRef ? streamingTokensRef.current : 0;
+  void streamingTokens;
 
-  // Live ctx: base prompt tokens + currently-streaming output. The next turn's
-  // prompt will roughly equal this, so showing it during streaming gives the
-  // user real-time feedback instead of a stuck percentage.
-  const liveContextTokens = (baseContextTokens ?? 0) + (isRunning ? streamingTokens : 0);
+  // ctx bar reflects what the engine has actually built: usage_update events
+  // are emitted after every mutation (tool result append, compact, LLM resp),
+  // so this is the same number the context manager will use to decide on
+  // compaction. No UI-side adders — those caused 750k phantom readings.
   const ctxPct =
     maxContextTokens && maxContextTokens > 0
-      ? Math.min((liveContextTokens / maxContextTokens) * 100, 100)
+      ? Math.min(((baseContextTokens ?? 0) / maxContextTokens) * 100, 100)
       : 0;
+
+  useEffect(() => {
+    const payload = {
+      baseContextTokens: baseContextTokens ?? 0,
+      maxContextTokens: maxContextTokens ?? 0,
+      pct: Math.round(ctxPct),
+    };
+    uiLog.info("debug.ctx.render", payload);
+    recordUIEvent(sessionId, "ui.ctx.render", payload);
+  }, [baseContextTokens, maxContextTokens, ctxPct, sessionId]);
   const ctxColor = ctxPct > 80 ? "ansi:red" : ctxPct > 60 ? "ansi:yellow" : "ansi:green";
 
   // Context mini-bar (8 chars)

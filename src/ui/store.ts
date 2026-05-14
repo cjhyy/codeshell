@@ -66,7 +66,15 @@ class ChatStore {
 
   /** Functional update — same API as setState(fn). */
   update(fn: (prev: ChatEntry[]) => ChatEntry[]): void {
+    const before = this.entries.length;
     this.entries = fn(this.entries);
+    const after = this.entries.length;
+    // Debug: track suspicious "still updating after run completed" loops.
+    // Counts listener notifications too so we can see render fan-out.
+    if (process.env.CODE_SHELL_DEBUG_CHAT) {
+      // eslint-disable-next-line no-console
+      console.error(`[chatStore.update] ${before} -> ${after}, listeners=${this.listeners.size}`);
+    }
     this.notify();
   }
 

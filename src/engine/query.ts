@@ -94,6 +94,9 @@ export async function* query(
     signal,
   };
 
+  // Local overhead store — query() is a standalone entry point without a real
+  // session id, so per-call in-memory state is enough.
+  let localOverhead = 0;
   const loopDeps: TurnLoopDeps = {
     model: deps.model,
     toolExecutor: deps.toolExecutor,
@@ -102,6 +105,13 @@ export async function* query(
     transcript: deps.transcript,
     systemPrompt,
     tools,
+    sessionId: "query",
+    ctxOverheadStore: {
+      get: () => localOverhead,
+      set: (_s, n) => {
+        localOverhead = n;
+      },
+    },
   };
 
   const loop = new TurnLoop(loopDeps, config);

@@ -77,6 +77,11 @@ export type SpinnerMode = "responding" | "tool-use" | "thinking";
 
 interface SpinnerWithVerbProps {
   mode: SpinnerMode;
+  /**
+   * Per-turn streamed token count — used purely as a "still alive" signal so
+   * the user sees activity. NOT a measure of context size; that's in the
+   * StatusLine ctx bar.
+   */
   streamingTokensRef?: MutableRefObject<number>;
   runStartRef?: MutableRefObject<number>;
   thinkingContent?: string;

@@ -41,7 +41,17 @@ export interface SandboxBackend {
   wrap(
     command: string,
     opts: { cwd: string; shell: string },
-  ): { file: string; args: string[] };
+  ): {
+    file: string;
+    args: string[];
+    /**
+     * Optional callback the Bash tool calls after the child process exits.
+     * Backends that allocate per-command resources (e.g. seatbelt writes a
+     * profile file to a fresh temp dir) hang their cleanup here so a long
+     * session doesn't leak hundreds of temp dirs in /tmp.
+     */
+    cleanup?: () => void;
+  };
   /**
    * If `stderr` looks like a sandbox denial, return a short hint string that
    * the Bash tool will append to its result so the model understands why.
@@ -212,11 +222,50 @@ export async function resolveSandboxBackend(
     }
     case "seatbelt": {
       const { createSeatbeltBackend } = await import("./seatbelt.js");
+      // Same footgun as bwrap below: seatbelt's `(subpath "...")` rule for
+      // a non-existent path silently matches nothing, so a typo in
+      // writableRoots presents as "my sandbox blocks all writes" with no
+      // diagnostic. Warn so the user notices the dropped path up front.
+      warnMissingWritableRoots(expanded.writableRoots);
       return createSeatbeltBackend(expanded);
     }
     case "bwrap": {
       const { createBwrapBackend } = await import("./bwrap.js");
+      // bwrap's --bind-try silently skips paths that don't exist on the
+      // host. That's the right default (e.g. /private/tmp doesn't exist on
+      // Linux) but turns into invisible footguns for typos: a user adds
+      // "/work/important" to writableRoots, mistypes it as "/wrok/...", and
+      // every write looks blocked-by-sandbox with no diagnostic. Warn here
+      // so the user sees the path got dropped before the first command.
+      warnMissingWritableRoots(expanded.writableRoots);
       return createBwrapBackend(expanded);
+    }
+  }
+}
+
+/**
+ * Warn once per session for each writableRoot that doesn't exist on the
+ * host. Keyed by absolute path so a long session doesn't repeat the same
+ * warning across many Engine.run() calls.
+ */
+const missingWritableWarned = new Set<string>();
+function warnMissingWritableRoots(roots: string[]): void {
+  if (process.env.CODE_SHELL_SANDBOX_QUIET === "1") return;
+  for (const root of roots) {
+    if (missingWritableWarned.has(root)) continue;
+    let exists = false;
+    try {
+      accessSync(root, constants.F_OK);
+      exists = true;
+    } catch {
+      // doesn't exist
+    }
+    if (!exists) {
+      missingWritableWarned.add(root);
+      process.stderr.write(
+        `[code-shell] sandbox.writableRoots includes "${root}" which doesn't exist on this host — ` +
+          `writes there will be blocked. Check for typos in settings.json (silence with CODE_SHELL_SANDBOX_QUIET=1).\n`,
+      );
     }
   }
 }

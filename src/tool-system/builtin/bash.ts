@@ -98,7 +98,8 @@ export async function bashTool(
   const cwd = ctx?.cwd ?? process.cwd();
   const shell = process.env.SHELL || "/bin/bash";
   const backend = ctx?.sandbox ?? createOffBackend();
-  const { file, args: spawnArgs } = backend.wrap(command, { cwd, shell });
+  const wrapped = backend.wrap(command, { cwd, shell });
+  const { file, args: spawnArgs, cleanup } = wrapped;
   const env = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
 
   return new Promise<string>((resolve) => {
@@ -106,6 +107,14 @@ export async function bashTool(
     const finish = (output: string) => {
       if (settled) return;
       settled = true;
+      // Backend-allocated per-command resources (seatbelt's tmp profile
+      // dir, etc.) are released here. cleanup is best-effort and must
+      // never throw — see the seatbelt backend for rationale.
+      try {
+        cleanup?.();
+      } catch {
+        // ignore
+      }
       resolve(output);
     };
 

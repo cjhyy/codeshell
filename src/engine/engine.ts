@@ -14,6 +14,8 @@ import { createLLMClient } from "../llm/client-factory.js";
 import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { InvestigationGuard } from "../tool-system/investigation-guard.js";
+import { TaskGuard } from "../tool-system/task-guard.js";
+import { taskManager } from "../tool-system/builtin/task.js";
 import {
   PermissionClassifier,
   HeadlessApprovalBackend,
@@ -142,6 +144,22 @@ export class Engine {
   private lastMessages: Message[] | undefined;
   private lastSessionId: string | undefined;
   private compactedMessagesBySession = new Map<string, Message[]>();
+  /**
+   * SIDs whose ctx-bar seed we've already emitted in this process. The seed
+   * is a rough char/4 estimate; only useful before the first real
+   * usage_update arrives (cold start or cross-process resume). On subsequent
+   * turns the UI already shows the previous turn's accurate ctx — re-seeding
+   * would visibly drop the bar on every submit.
+   */
+  private ctxSeedSent = new Set<string>();
+  /**
+   * Per-sid cache of "non-messages overhead" (system prompt + tool defs, in
+   * tokens). Survives across turns so each fresh TurnLoop instance can seed
+   * its first pre-llm emit with the right offset — without this the ctx bar
+   * visibly drops on every user submit (e.g. from ~20k → 3k) until the next
+   * LLM response arrives.
+   */
+  private ctxOverheadBySid = new Map<string, number>();
   private activePermission: PermissionClassifier | undefined;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
@@ -360,7 +378,27 @@ export class Engine {
           sandbox: this.config.sandbox,
         });
         const childStream: StreamCallback | undefined = options?.onStream
-          ? (event) => options.onStream!({ ...event, agentId: req.agentId } as typeof event)
+          ? (event) => {
+              // Filter ctx-bar signals: the bar tracks the main conversation's
+              // prompt size, and a sub-agent's own session emits would clobber
+              // it (its sid is new, its messages are tiny, the rough char/4
+              // seed lands the bar at <1% mid-turn). Sub-agent token accounting
+              // lives in CostTracker (recordUsage), not the ctx bar.
+              //
+              // - session_started: would seed main ctx with sub-agent's prompt
+              // - usage_update: would overwrite main ctx with sub-agent's prompt
+              // - context_compact: would reset main ctx to sub-agent's post-compact
+              //   value AND print a misleading "context compacted" boundary in
+              //   the main chat (the main session didn't compact).
+              if (
+                event.type === "usage_update" ||
+                event.type === "session_started" ||
+                event.type === "context_compact"
+              ) {
+                return;
+              }
+              options.onStream!({ ...event, agentId: req.agentId } as typeof event);
+            }
           : undefined;
         const result = await child.run(req.prompt, { signal: req.signal, onStream: childStream });
         return result.text;
@@ -452,20 +490,29 @@ export class Engine {
     });
 
     // Rough token estimate of the full prompt so the UI's ctx bar isn't 0%
-    // on resume. The authoritative count comes from `usage.promptTokens` after
-    // the first LLM response — this is just a display-friendly approximation
-    // so the user sees a meaningful progress bar from the first frame.
-    const roughPromptTokens = messages.reduce((sum, m) => {
-      const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
-      return sum + Math.ceil(text.length / 4);
-    }, 0);
+    // before the first real usage_update arrives. The authoritative count
+    // comes from `usage.promptTokens` after the first LLM response — this is
+    // just a display-friendly approximation for the first frame.
+    //
+    // Only seed once per (process, sid). On subsequent turns the UI already
+    // shows the previous turn's accurate ctx; overwriting it with this rough
+    // char/4 estimate would make the bar visibly drop on every submit.
+    const sid = session.state.sessionId;
+    const needsCtxSeed = !this.ctxSeedSent.has(sid);
+    const roughPromptTokens = needsCtxSeed
+      ? messages.reduce((sum, m) => {
+          const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+          return sum + Math.ceil(text.length / 4);
+        }, 0)
+      : 0;
+    if (needsCtxSeed) this.ctxSeedSent.add(sid);
 
     // Tell the client the sid *now* instead of waiting for run() to resolve.
     // The user wants `/sid` to work mid-turn; without this, the client only
     // learns the sid when the run completes.
     options?.onStream?.({
       type: "session_started",
-      sessionId: session.state.sessionId,
+      sessionId: sid,
       promptTokens: roughPromptTokens,
     });
 
@@ -497,6 +544,7 @@ export class Engine {
     const investigationGuard = new InvestigationGuard();
     if (this.config.headless) investigationGuard.setSoftMode(true);
     toolExecutor.setInvestigationGuard(investigationGuard);
+    toolExecutor.setTaskGuard(new TaskGuard(() => taskManager.list()));
 
     // Wire abort signal for cascading cancellation + per-Engine ToolContext
     toolExecutor.setSignal(options?.signal);
@@ -661,6 +709,13 @@ export class Engine {
         transcript: session.transcript,
         systemPrompt: fullSystemPrompt,
         tools: toolDefs,
+        sessionId: sid,
+        ctxOverheadStore: {
+          get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
+          set: (s, n) => {
+            this.ctxOverheadBySid.set(s, n);
+          },
+        },
       },
       {
         maxTurns: this.config.maxTurns ?? 100,

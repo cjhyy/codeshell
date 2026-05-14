@@ -523,7 +523,7 @@ export default class Output {
     const totalCells = blitCells + writeCells
     if (totalCells > 1000 && writeCells > blitCells) {
       logForDebugging(
-        `High write ratio: blit=${blitCells}, write=${writeCells} (${((writeCells / totalCells) * 100).toFixed(1)}% writes), screen=${screenHeight}x${screenWidth}`,
+        `[ink] High write ratio: blit=${blitCells}, write=${writeCells} (${((writeCells / totalCells) * 100).toFixed(1)}% writes), screen=${screenHeight}x${screenWidth}`,
       )
     }
 

@@ -1,9 +1,16 @@
 /**
  * Per-session verbose recorder for local-dev runs.
  *
- * Writes a JSON-lines trace to <repo>/log/<YYYY-MM-DD>/session-<sid>.jsonl
- * containing every step: user input, system prompt, each LLM request+response
- * (full bodies), each tool call's args and result, and engine decision events.
+ * Layout (per day, split by bucket):
+ *   <repo>/log/<YYYY-MM-DD>/engine/session-<sid>.jsonl
+ *     — unified timeline: LLM, tools, session events, AND UI events
+ *       (UI events are dual-written so this file is the full story.)
+ *   <repo>/log/<YYYY-MM-DD>/ui/session-<sid>.jsonl
+ *     — UI-only events (stream events received, ctx renders, chatStore
+ *       mutations). Open when chasing a display bug.
+ *
+ * Same sid → same filename in both folders. Diff/merge by sid to align
+ * "what the model said" with "what the UI did about it."
  *
  * Why a separate sink from logger.ts?
  *   - logger.ts is the terse process-wide log (~/.code-shell/logs/) and stays
@@ -100,7 +107,13 @@ function redactArgv(argv: string[]): string[] {
   return out;
 }
 
-type SidState = { path: string; startedAt: number };
+type Bucket = "engine" | "ui";
+type SidState = {
+  dir: string;
+  engineFile: string;
+  uiFile: string;
+  startedAt: number;
+};
 const states = new Map<string, SidState>();
 let rotated = false;
 
@@ -137,23 +150,39 @@ function ensureState(sid: string): SidState | null {
   if (st) return st;
   const dateStr = todayStr();
   const dayDir = join(LOG_ROOT, dateStr);
-  const path = join(dayDir, `session-${sid}.jsonl`);
+  const engineDir = join(dayDir, "engine");
+  const uiDir = join(dayDir, "ui");
+  const fileName = `session-${sid}.jsonl`;
   try {
-    if (!existsSync(dayDir)) mkdirSync(dayDir, { recursive: true });
+    if (!existsSync(engineDir)) mkdirSync(engineDir, { recursive: true });
+    if (!existsSync(uiDir)) mkdirSync(uiDir, { recursive: true });
   } catch {
     return null;
   }
-  st = { path, startedAt: Date.now() };
+  st = {
+    dir: dayDir,
+    engineFile: join(engineDir, fileName),
+    uiFile: join(uiDir, fileName),
+    startedAt: Date.now(),
+  };
   states.set(sid, st);
   return st;
 }
 
-function write(sid: string, event: Record<string, unknown>): void {
+function write(sid: string, bucket: Bucket, event: Record<string, unknown>): void {
   const st = ensureState(sid);
   if (!st) return;
   const record = { t: new Date().toISOString(), sid, ...event };
+  const line = JSON.stringify(record) + "\n";
   try {
-    appendFileSync(st.path, JSON.stringify(record) + "\n", "utf-8");
+    // Engine file is the unified timeline — every event lands here so a
+    // single `cat engine.jsonl` shows the complete story.
+    appendFileSync(st.engineFile, line, "utf-8");
+    // UI bucket also gets its own focused file for display-bug debugging
+    // without engine noise.
+    if (bucket === "ui") {
+      appendFileSync(st.uiFile, line, "utf-8");
+    }
   } catch {
     /* best-effort */
   }
@@ -181,7 +210,7 @@ export function recordSessionStart(
   },
 ): void {
   if (!ENABLED) return;
-  write(sid, {
+  write(sid, "engine", {
     type: "session_start",
     pid: process.pid,
     argv: redactArgv(process.argv.slice(1)),
@@ -207,7 +236,7 @@ export type RecordLLMRequest = {
 
 export function recordLLMRequest(sid: string, req: RecordLLMRequest, reqId: string): void {
   if (!ENABLED) return;
-  write(sid, {
+  write(sid, "engine", {
     type: "llm.request",
     reqId,
     provider: req.provider,
@@ -234,7 +263,7 @@ export type RecordLLMResponse = {
 
 export function recordLLMResponse(sid: string, resp: RecordLLMResponse, reqId: string): void {
   if (!ENABLED) return;
-  write(sid, {
+  write(sid, "engine", {
     type: "llm.response",
     reqId,
     stopReason: resp.stopReason,
@@ -249,7 +278,7 @@ export function recordLLMResponse(sid: string, resp: RecordLLMResponse, reqId: s
 
 export function recordLLMError(sid: string, reqId: string, err: unknown, durationMs: number): void {
   if (!ENABLED) return;
-  write(sid, {
+  write(sid, "engine", {
     type: "llm.error",
     reqId,
     durationMs,
@@ -263,7 +292,7 @@ export function recordToolCall(
   call: { id: string; toolName: string; args: unknown },
 ): void {
   if (!ENABLED) return;
-  write(sid, {
+  write(sid, "engine", {
     type: "tool.call",
     toolCallId: call.id,
     toolName: call.toolName,
@@ -283,7 +312,7 @@ export function recordToolResult(
   },
 ): void {
   if (!ENABLED) return;
-  write(sid, {
+  write(sid, "engine", {
     type: "tool.result",
     toolCallId: result.id,
     toolName: result.toolName,
@@ -301,7 +330,22 @@ export function recordEvent(
   data?: Record<string, unknown>,
 ): void {
   if (!ENABLED) return;
-  write(sid, { type: name, ...(data ?? {}) });
+  write(sid, "engine", { type: name, ...(data ?? {}) });
+}
+
+/**
+ * Record a UI-side event. Goes into both engine.jsonl (unified timeline) and
+ * ui.jsonl (focused view). Use from the UI when chasing display bugs — pass
+ * the current sessionId.
+ */
+export function recordUIEvent(
+  sid: string | undefined,
+  name: string,
+  data?: Record<string, unknown>,
+): void {
+  if (!ENABLED) return;
+  if (!sid) return;
+  write(sid, "ui", { type: name, ...(data ?? {}) });
 }
 
 export function recordSessionEnd(
@@ -309,7 +353,7 @@ export function recordSessionEnd(
   info: { reason?: string; turns?: number; cost?: unknown; durationMs?: number },
 ): void {
   if (!ENABLED) return;
-  write(sid, {
+  write(sid, "engine", {
     type: "session_end",
     reason: info.reason,
     turns: info.turns,

@@ -15,7 +15,7 @@
  * working OS-level sandbox on macOS and is what Codex CLI / Cursor use today.
  */
 
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SandboxBackend, SandboxConfig } from "./index.js";
@@ -31,6 +31,18 @@ export function createSeatbeltBackend(config: SandboxConfig): SandboxBackend {
       return {
         file: "/usr/bin/sandbox-exec",
         args: ["-f", profilePath, opts.shell, "-c", command],
+        cleanup: () => {
+          // sandbox-exec has already exited (this runs from Bash tool's
+          // child `close` handler), so removing the profile file is safe.
+          // force=true swallows ENOENT in case the dir was already cleaned
+          // up out-of-band (e.g. system tmpwatch).
+          try {
+            rmSync(dir, { recursive: true, force: true });
+          } catch {
+            // Best-effort. A leftover dir is recoverable; throwing here
+            // would mask the actual command output we just sent back.
+          }
+        },
       };
     },
     hintForBlockedOutput(stderr) {

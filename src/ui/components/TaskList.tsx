@@ -13,16 +13,6 @@ interface TaskListProps {
 export function TaskList({ tasks }: TaskListProps) {
   if (tasks.length === 0) return null;
 
-  // Single task: skip the "Tasks" header and indented block — the lone
-  // row reads cleaner inline. Multi-task keeps the header for grouping.
-  if (tasks.length === 1) {
-    return (
-      <Box marginLeft={1} marginTop={1}>
-        <TaskItem task={tasks[0]!} indent={false} />
-      </Box>
-    );
-  }
-
   return (
     <Box flexDirection="column" marginLeft={1} marginTop={1}>
       <Text bold color="ansi:cyan">Tasks</Text>
@@ -46,7 +36,10 @@ function TaskItem({ task, indent = true }: { task: TaskInfo; indent?: boolean })
     case "in_progress":
       return (
         <Box marginLeft={ml}>
-          <Spinner label={task.activeForm ?? task.subject} />
+          <Spinner label={task.subject} />
+          {task.activeForm && task.activeForm !== task.subject && (
+            <Text dim>{" · "}{task.activeForm}</Text>
+          )}
         </Box>
       );
     case "stopped":

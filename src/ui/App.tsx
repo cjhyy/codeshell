@@ -53,6 +53,15 @@ import type { ApprovalRequest, ApprovalResult, StreamEvent, TaskInfo } from "../
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
 import { formatDuration, formatTokens } from "../utils/format.js";
 import { removeLastFromHistory } from "./input-history.js";
+import { logger } from "../logging/logger.js";
+import { recordUIEvent } from "../logging/session-recorder.js";
+
+// UI-scoped child logger — system-log lines route to ui-ink-*.log so engine
+// traces aren't drowned by 200ms spinner ticks and per-stream-event logs.
+// Per-session UI events go through recordUIEvent (writes to ui.jsonl + the
+// unified engine.jsonl) so display bugs can be aligned with LLM responses
+// by sid.
+const uiLog = logger.child({ cat: "ui" });
 
 // ─── Global command registry ────────────────────────────────────
 
@@ -115,6 +124,12 @@ export function App({
 
   const [isRunning, setIsRunning] = useState(false);
   const [sessionId, setSessionId] = useState(initialSessionId);
+  // Mirror of sessionId for synchronous reads inside event handlers.
+  // recordUIEvent needs the current sid every time it fires, but
+  // handleStreamEvent is memoized without sessionId in its deps; reading from
+  // a ref avoids re-creating the handler on every session change.
+  const sidRef = useRef<string | undefined>(initialSessionId);
+  useEffect(() => { sidRef.current = sessionId; }, [sessionId]);
   const [model, setModel] = useState(initialModel);
   const pendingContextRef = useRef<string | null>(null);
   const [showBanner, setShowBanner] = useState(true);
@@ -270,6 +285,12 @@ export function App({
   const handleStreamEvent = useCallback(
     (event: StreamEvent) => {
       const agentId = (event as any).agentId as string | undefined;
+      uiLog.info("debug.stream.event", { type: event.type, agentId });
+      // session_started carries the authoritative sid; use it directly so the
+      // record lands in the correct dir even before sidRef has caught up.
+      const eventSid =
+        event.type === "session_started" ? event.sessionId : sidRef.current;
+      recordUIEvent(eventSid, "ui.stream_event", { type: event.type, agentId });
 
       switch (event.type) {
         case "session_started":
@@ -278,8 +299,13 @@ export function App({
           // but is now redundant for the first run; resumed runs already
           // had the sid from initialSessionId.
           setSessionId(event.sessionId);
-          // Resume: set the prompt token baseline so the ctx bar isn't 0%.
+          // Engine only sends promptTokens > 0 on the first turn of a sid
+          // (cold start / cross-process resume). On subsequent turns it sends
+          // 0 to avoid clobbering the accurate value we already have from the
+          // previous turn's usage_update.
           if (event.promptTokens > 0) {
+            uiLog.info("debug.ctx.set", { from: "session_started", value: event.promptTokens });
+            recordUIEvent(event.sessionId, "ui.ctx.set", { from: "session_started", value: event.promptTokens });
             setContextTokens(event.promptTokens);
           }
           break;
@@ -287,6 +313,9 @@ export function App({
         case "stream_request_start":
           setStreamMode("thinking");
           setThinkingContent(null);
+          // Reset the spinner's "alive" counter at the top of each LLM call.
+          // Tracks output of the current call only; ctx size is the bar's job.
+          streamingTokensRef.current = 0;
           chatStore.update((prev) => {
             const filtered = prev.filter((e) => !(e.type === "thinking" && e.agentId === agentId));
             return [...filtered, entry({ type: "thinking", agentId })];
@@ -446,7 +475,19 @@ export function App({
             entry({ type: "system", subtype: "compact_boundary", text }),
           ]);
           // Reset the displayed base so the live ctx bar reflects the new (smaller) prompt.
+          uiLog.info("debug.ctx.set", { from: "context_compact", value: ev.after });
+          recordUIEvent(sidRef.current, "ui.ctx.set", { from: "context_compact", value: ev.after });
           setContextTokens(ev.after);
+          break;
+        }
+
+        case "usage_update": {
+          // Engine emits this after every messages-array mutation, so the
+          // ctx bar always reflects the real (next-prompt) size — including
+          // after tool_result append, post-compaction, and LLM response.
+          uiLog.info("debug.ctx.usage_update", { promptTokens: event.promptTokens });
+          recordUIEvent(sidRef.current, "ui.ctx.usage_update", { promptTokens: event.promptTokens });
+          if (event.promptTokens > 0) setContextTokens(event.promptTokens);
           break;
         }
 
@@ -817,10 +858,10 @@ export function App({
         setSessionId(result.sessionId);
 
         // Token recording happens centrally via LLMClientBase.onUsage —
-        // we just refresh the displayed totals here.
-        if (result.usage && result.usage.totalTokens > 0) {
-          setContextTokens(result.usage.promptTokens);
-        }
+        // we just refresh the displayed totals here. Note: result.usage.promptTokens
+        // is a session-lifetime sum, not the last request's window — using it here
+        // would jump the ctx bar to a fake percentage. The streaming usage_update
+        // events already keep contextTokens accurate.
         setTotalTokens(costTracker.getTotalTokens().total);
         setTotalCost(costTracker.getEstimatedCost());
 

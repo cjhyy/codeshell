@@ -1,7 +1,15 @@
 /**
  * Unified file logger for code-shell.
  *
- * Single sink: ~/.code-shell/logs/YYYY-MM-DD.log (JSON Lines).
+ * Sinks (JSON Lines), routed by `cat`:
+ *   ~/.code-shell/logs/ui-ink-YYYY-MM-DD.log
+ *     — UI/ink chatter: stream events, ctx render, ink screen diffs.
+ *   ~/.code-shell/logs/engine-YYYY-MM-DD.log
+ *     — everything else: engine, llm, tool, context, mcp, sandbox, ...
+ *
+ * Routing is by entry `cat`: cat ∈ {ui, ink, render, stream} → ui-ink bucket;
+ * anything else → engine bucket. Run scripts/logs.sh to query both at once
+ * (merge sorted by timestamp, filter by sid, etc).
  *
  * Level defaults:
  *   - Local dev (CODE_SHELL_DEV=1, or running from src/, or --debug)   → "debug"
@@ -9,7 +17,7 @@
  *   - CODE_SHELL_LOG_LEVEL overrides everything.
  *
  * Category filter (--debug=mcp,api or CODE_SHELL_DEBUG=mcp,api):
- *   When set, only logs whose `cat` matches are written.
+ *   When set, only debug logs whose `cat` matches are written.
  *
  * Disable entirely: CODE_SHELL_LOG=0
  */
@@ -37,6 +45,26 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 const LOGS_DIR = join(homedir(), ".code-shell", "logs");
 const MAX_LOG_FILES = 7;
 const MAX_IN_MEMORY_ERRORS = 100;
+
+/**
+ * Map a log entry's `cat` to a file bucket: "ui-ink" for UI/render logs,
+ * "engine" for everything else (engine, llm, tool, context, mcp, ...).
+ * Buckets are date-suffixed: ui-ink-2026-05-14.log / engine-2026-05-14.log.
+ *
+ * UI/ink lives in its own file because it's the chattiest (200ms spinner
+ * ticks, every stream event) and was drowning out engine traces. Keeping
+ * both date-suffixed lets one `grep "sid":"<id>"` over both files
+ * reconstruct a full session timeline if needed.
+ */
+const INK_CATS = new Set(["ui", "ink", "render", "stream"]);
+function routeBucket(
+  cat: string | undefined,
+  fallbackCat: string | undefined,
+): "ui-ink" | "engine" {
+  const c = (cat ?? fallbackCat ?? "").toLowerCase();
+  if (INK_CATS.has(c)) return "ui-ink";
+  return "engine";
+}
 
 // ─── Local-dev detection ───────────────────────────────────────────
 
@@ -245,7 +273,14 @@ class Logger {
         this.dirReady = true;
       }
       const dateStr = t.slice(0, 10);
-      appendFileSync(join(LOGS_DIR, `${dateStr}.log`), line, "utf-8");
+      // Route to per-area file. UI / ink events go to ui-ink-*.log so the
+      // engine log isn't drowned by 200ms spinner ticks and per-event traces.
+      // Everything else lands in engine-*.log (engine, turn-loop, llm, tool,
+      // context, mcp, sandbox, settings, ...). One-line grep across both with
+      // scripts/logs.sh.
+      const bucket = routeBucket(cat, this.context.cat as string | undefined);
+      const file = join(LOGS_DIR, `${bucket}-${dateStr}.log`);
+      appendFileSync(file, line, "utf-8");
     } catch {
       // Best-effort.
     }
@@ -296,14 +331,26 @@ export function getLogsDir(): string {
 }
 
 export function getRecentLogs(n = 50): string[] {
-  const file = join(LOGS_DIR, `${new Date().toISOString().slice(0, 10)}.log`);
-  if (!existsSync(file)) return [];
-  try {
-    const lines = readFileSync(file, "utf-8").split("\n").filter(Boolean);
-    return lines.slice(-n);
-  } catch {
-    return [];
+  const dateStr = new Date().toISOString().slice(0, 10);
+  // Merge across all buckets (engine + ui-ink) for the day, sort by
+  // timestamp so the tail represents a real chronological tail.
+  const all: Array<{ t: string; line: string }> = [];
+  for (const bucket of ["engine", "ui-ink"]) {
+    const file = join(LOGS_DIR, `${bucket}-${dateStr}.log`);
+    if (!existsSync(file)) continue;
+    try {
+      for (const line of readFileSync(file, "utf-8").split("\n")) {
+        if (!line) continue;
+        // Cheap timestamp extraction: lines start with {"t":"<iso>",...
+        const m = line.match(/^\{"t":"([^"]+)"/);
+        all.push({ t: m?.[1] ?? "", line });
+      }
+    } catch {
+      /* ignore */
+    }
   }
+  all.sort((a, b) => a.t.localeCompare(b.t));
+  return all.slice(-n).map((x) => x.line);
 }
 
 export function rotateLogs(): void {

@@ -13,6 +13,7 @@ import { isInPlanMode } from "./builtin/plan.js";
 import { validateToolArgs } from "./validation.js";
 import type { ToolContext } from "./context.js";
 import type { InvestigationGuard } from "./investigation-guard.js";
+import type { TaskGuard } from "./task-guard.js";
 
 type Logger = typeof rootLogger;
 
@@ -27,6 +28,7 @@ export class ToolExecutor {
    */
   private log: Logger = rootLogger;
   private guard?: InvestigationGuard;
+  private taskGuard?: TaskGuard;
 
   constructor(
     private readonly registry: ToolRegistry,
@@ -40,6 +42,14 @@ export class ToolExecutor {
 
   getInvestigationGuard(): InvestigationGuard | undefined {
     return this.guard;
+  }
+
+  setTaskGuard(guard: TaskGuard | undefined): void {
+    this.taskGuard = guard;
+  }
+
+  getTaskGuard(): TaskGuard | undefined {
+    return this.taskGuard;
   }
 
   /** Set the abort signal for cascading cancellation. */

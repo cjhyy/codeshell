@@ -16,6 +16,7 @@
 - [ ] **P1 WebFetch SSRF：重定向后未重新校验目标主机。** 初始 URL 会检查 loopback/RFC1918/metadata host，但 `redirect: "follow"` 后没有对最终 URL 再检查，仍可能被外部 302 带到内网地址。
 - [ ] **P2 RunManager：approval/input resume 有竞态。** `RunApprovalBackend` 和 `createRunAskUserFn()` 都是先通知 lifecycle hook，再设置 pending promise；外部系统很快 `resume()` 时可能 resolve 失败且返回值被忽略。
 - [ ] **P2 发布/API：public `VERSION` 与 package version 漂移。** `package.json` 是 `0.1.6`，`src/index.ts` 仍导出 `VERSION = "0.1.0"`；另外 `build:dts` 使用 `|| true`，声明文件失败不会阻断发布。
+- [ ] **P3 性能：`resolveSandboxBackend` 每 turn 都重 resolve。** `Engine.run()` 每次调用都跑 `detectSandboxCapabilities()` + 动态 import backend 模块——一个 session 几百个 turn 就重做几百次。功能正确，纯性能问题：把 backend 选择移到 Engine 构造器或加 per-session 缓存即可。
 
 ---
 
