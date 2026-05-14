@@ -64,23 +64,18 @@ export const extraCommands: SlashCommand[] = [
       try {
         const settings = JSON.parse(readFileSync(settingsFile, "utf-8"));
         const cleared: string[] = [];
-        if (settings.model?.apiKey) {
-          delete settings.model.apiKey;
-          cleared.push("model.apiKey");
-        }
-        if (Array.isArray(settings.models)) {
-          let n = 0;
-          for (const m of settings.models) {
-            if (m && typeof m === "object" && m.apiKey) {
-              delete m.apiKey;
-              n++;
-            }
+        // Wipe the entire auth/model surface. Leaving model/providers
+        // structure behind (even with apiKey deleted) put the user in a
+        // half-configured state where onboarding's "use existing" branch
+        // still listed the cleared providers — making /logout look like a
+        // no-op. Mirrors Anthropic's own logout: next launch starts the
+        // onboarding wizard from scratch.
+        const AUTH_KEYS = ["model", "models", "providers", "arena", "activeKey"];
+        for (const k of AUTH_KEYS) {
+          if (settings[k] !== undefined) {
+            delete settings[k];
+            cleared.push(k);
           }
-          if (n > 0) cleared.push(`models[].apiKey (${n})`);
-        }
-        if (settings.arena) {
-          delete settings.arena;
-          cleared.push("arena");
         }
 
         // Detect provider env vars that would silently override a "logged out"

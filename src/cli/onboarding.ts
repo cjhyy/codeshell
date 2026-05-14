@@ -359,7 +359,11 @@ export function loadSavedModelsForProvider(provider: ProviderDef): string[] {
 export function hasApiKey(): boolean {
   // Env variables alone are NOT enough to skip onboarding — they're surfaced
   // as a one-click option on the provider page instead. We only skip when the
-  // user has explicitly persisted a config (settings.json with model.apiKey).
+  // user has explicitly persisted a config. Checks all three locations the
+  // wizard might write to: top-level model.apiKey (legacy), models[].apiKey
+  // (per-pool-entry), providers[].apiKey (per-provider — what the current
+  // ProviderModelFlow actually writes). Missing any one of these made
+  // /logout look like a no-op when the others still held credentials.
   // Reads ~/.code-shell/ only — ~/.claude/ compat was dropped because Claude
   // Code's settings schema diverges and merging broke boot.
   const p = join(homedir(), ".code-shell", "settings.json");
@@ -367,6 +371,8 @@ export function hasApiKey(): boolean {
     try {
       const data = JSON.parse(readFileSync(p, "utf-8"));
       if (data?.model?.apiKey) return true;
+      if (Array.isArray(data?.models) && data.models.some((m: any) => m?.apiKey)) return true;
+      if (Array.isArray(data?.providers) && data.providers.some((p: any) => p?.apiKey)) return true;
     } catch { /* ignore */ }
   }
   return false;

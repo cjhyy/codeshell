@@ -53,8 +53,20 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   // Load settings
   let settings = new SettingsManager(cwd).get();
 
-  // Resolve API key — env vars take precedence over the wizard
-  let apiKey = resolveApiKey(options.apiKey, settings.model.apiKey);
+  // Resolve API key.
+  //
+  // Onboarding gate: env vars alone are NOT enough to skip onboarding —
+  // saved settings (model/models[]/providers[]) must be present. Otherwise
+  // `/logout` looks like a no-op whenever the user has a provider env var
+  // set (very common: OPENROUTER_API_KEY, ANTHROPIC_API_KEY). The wizard
+  // itself surfaces detected env keys (OnboardingPrompt.detectEnvKeys) so
+  // the user can opt-in to using them — not have them silently chosen.
+  const hasSavedAuth =
+    !!options.apiKey ||
+    !!settings.model?.apiKey ||
+    (Array.isArray(settings.models) && settings.models.some((m) => m?.apiKey)) ||
+    (Array.isArray(settings.providers) && settings.providers.some((p) => p?.apiKey));
+  let apiKey = hasSavedAuth ? resolveApiKey(options.apiKey, settings.model.apiKey) : undefined;
 
   let model = options.model ?? settings.model.name;
   let provider = options.provider ?? settings.model.provider;
