@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-05-13T11:03:55.492Z",
+  "fetchedAt": "2026-05-14T01:23:47.195Z",
   "source": "https://openrouter.ai/api/v1/models",
-  "count": 363,
+  "count": 364,
   "models": [
     {
       "id": "anthropic/claude-opus-4.7-fast",
@@ -384,13 +384,25 @@
       ]
     },
     {
+      "id": "deepseek/deepseek-v4-flash:free",
+      "name": "DeepSeek: DeepSeek V4 Flash (free)",
+      "created": 1777000666,
+      "contextLength": 256000,
+      "maxOutputTokens": 256000,
+      "inputPricePerMillion": 0,
+      "outputPricePerMillion": 0,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
       "id": "deepseek/deepseek-v4-flash",
       "name": "DeepSeek: DeepSeek V4 Flash",
       "created": 1777000666,
       "contextLength": 1048576,
-      "maxOutputTokens": 384000,
-      "inputPricePerMillion": 0.14,
-      "outputPricePerMillion": 0.28,
+      "maxOutputTokens": 131072,
+      "inputPricePerMillion": 0.126,
+      "outputPricePerMillion": 0.252,
       "modalities": [
         "text"
       ]
@@ -2166,10 +2178,10 @@
       "id": "z-ai/glm-4.6",
       "name": "Z.ai: GLM 4.6",
       "created": 1759235576,
-      "contextLength": 204800,
-      "maxOutputTokens": 204800,
-      "inputPricePerMillion": 0.39,
-      "outputPricePerMillion": 1.9,
+      "contextLength": 202752,
+      "maxOutputTokens": 131072,
+      "inputPricePerMillion": 0.43,
+      "outputPricePerMillion": 1.74,
       "modalities": [
         "text"
       ]
@@ -2443,8 +2455,8 @@
       "created": 1757021147,
       "contextLength": 262144,
       "maxOutputTokens": 262144,
-      "inputPricePerMillion": 0.39999999999999997,
-      "outputPricePerMillion": 2,
+      "inputPricePerMillion": 0.6,
+      "outputPricePerMillion": 2.5,
       "modalities": [
         "text"
       ]

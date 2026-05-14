@@ -8,6 +8,7 @@ import type { CreateMessageOptions } from "../types.js";
 import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
+import { countTokens } from "../token-counter.js";
 
 export class AnthropicClient extends LLMClientBase {
   private _client: Anthropic | null = null;
@@ -157,7 +158,7 @@ export class AnthropicClient extends LLMClientBase {
           });
         }
         currentText += text;
-        options.onChunk?.({ type: "text", text });
+        options.onChunk?.({ type: "text", text, tokens: countTokens(text) });
       });
 
       stream.on("contentBlock", (block) => {

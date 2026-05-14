@@ -241,9 +241,9 @@ export type StreamEvent =
   // Emitted once per run() as soon as the Engine has resolved the session
   // id (resume vs. create). Lets the client know the authoritative sid
   // *before* run() resolves, which matters for mid-turn `/sid` lookups.
-  | { type: "session_started"; sessionId: string }
+  | { type: "session_started"; sessionId: string; promptTokens: number }
   | { type: "stream_request_start"; turnNumber: number; agentId?: string }
-  | { type: "text_delta"; text: string; agentId?: string }
+  | { type: "text_delta"; text: string; tokens?: number; agentId?: string }
   | { type: "tool_use_start"; toolCall: ToolCall; agentId?: string }
   | {
       type: "tool_use_args_delta";
@@ -305,6 +305,8 @@ export interface LLMResponse {
 export interface LLMStreamChunk {
   type: "text" | "tool_use_start" | "tool_use_delta" | "tool_use_end" | "stop";
   text?: string;
+  /** Token count for this text delta, when provider can compute it. */
+  tokens?: number;
   toolCall?: Partial<ToolCall>;
   stopReason?: string;
 }

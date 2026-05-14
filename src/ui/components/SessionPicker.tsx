@@ -1,9 +1,10 @@
 /**
  * SessionPicker — Ink-rendered session resume picker.
  *
- * Each row shows: relative time · turn count · first-user-message preview.
- * ↑↓ moves cursor, Enter selects, Esc cancels. Empty (no-message) sessions
- * are filtered upstream so the list is always meaningful.
+ * Each row shows: relative time (last activity) · turn count ·
+ * last-user-message preview. ↑↓ moves cursor, Enter selects, Esc cancels.
+ * Empty (no-message) sessions are filtered upstream so the list is always
+ * meaningful.
  */
 import { useState } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
@@ -11,6 +12,8 @@ import { Box, Text, useInput } from "../../render/index.js";
 export interface SessionPickerEntry {
   sessionId: string;
   startedAt: number;
+  /** Last activity time — used to sort and display the row. */
+  lastActiveAt?: number;
   turnCount: number;
   preview?: string;
   cwd?: string;
@@ -56,7 +59,8 @@ export function SessionPicker({ entries, onSelect, onCancel }: SessionPickerProp
   }
 
   // Column widths — time fixed-ish, turns fixed, preview fills the rest.
-  const timeWidth = Math.max(...entries.map((e) => relativeTime(e.startedAt).length));
+  const timeOf = (e: SessionPickerEntry) => e.lastActiveAt ?? e.startedAt;
+  const timeWidth = Math.max(...entries.map((e) => relativeTime(timeOf(e)).length));
   const turnsWidth = Math.max(...entries.map((e) => `${e.turnCount} turns`.length));
 
   return (
@@ -68,7 +72,7 @@ export function SessionPicker({ entries, onSelect, onCancel }: SessionPickerProp
       {entries.map((e, i) => {
         const focused = i === cursor;
         const prefix = focused ? "❯ " : "  ";
-        const time = relativeTime(e.startedAt).padEnd(timeWidth);
+        const time = relativeTime(timeOf(e)).padEnd(timeWidth);
         const turns = `${e.turnCount} turns`.padEnd(turnsWidth);
         const preview = e.preview
           ? truncate(e.preview, 60)

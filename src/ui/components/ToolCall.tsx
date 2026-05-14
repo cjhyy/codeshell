@@ -256,7 +256,14 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
     }
 
     case "Grep": {
-      const matches = rawLines.filter((l) => l.trim());
+      // Trim "path:line:content" → "path:line". The matched line itself is
+      // noise in the UI list; users only need the location to navigate.
+      const matches = rawLines
+        .filter((l) => l.trim())
+        .map((l) => {
+          const m = l.match(/^([^:]+:\d+)(?::|$)/);
+          return m ? m[1] : l;
+        });
       const count = matches.length;
       if (expanded) {
         return { summary: `${count} results`, lines: matches, hiddenCount: 0 };

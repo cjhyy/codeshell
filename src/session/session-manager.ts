@@ -2,7 +2,7 @@
  * Session lifecycle manager.
  */
 
-import { mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
+import { mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync, renameSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { nanoid } from "nanoid";
@@ -131,33 +131,41 @@ export class SessionManager {
       try {
         const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
         const transcriptFile = join(this.sessionsDir, dir, "transcript.jsonl");
-        const preview = readFirstUserMessage(transcriptFile);
-        sessions.push({ ...state, preview });
+        const preview = readLastUserMessage(transcriptFile);
+        const lastActiveAt = existsSync(transcriptFile)
+          ? statSync(transcriptFile).mtimeMs
+          : state.startedAt;
+        sessions.push({ ...state, preview, lastActiveAt });
       } catch {
         // Skip corrupted sessions
       }
     }
 
     return sessions
-      .sort((a, b) => b.startedAt - a.startedAt)
+      .sort((a, b) => b.lastActiveAt - a.lastActiveAt)
       .slice(0, limit);
   }
 }
 
-export type SessionListEntry = SessionState & { preview?: string };
+export type SessionListEntry = SessionState & {
+  preview?: string;
+  /** Last activity time — transcript mtime, falling back to startedAt. */
+  lastActiveAt: number;
+};
 
 /**
- * Scan a transcript.jsonl for the first user message and return a short
- * preview. Stops at the first match so cost is bounded by the position of
- * the user's opening line, not the file size.
+ * Scan a transcript.jsonl for the LAST user message and return a short
+ * preview. Walks the file from the bottom so cost is bounded by how recent
+ * the user's last line is, not the total file size.
  *
- * Returns undefined if the session has no user messages yet (e.g. the user
- * launched the REPL but never sent anything before exiting).
+ * Returns undefined if the session has no user messages yet.
  */
-function readFirstUserMessage(transcriptFile: string): string | undefined {
+function readLastUserMessage(transcriptFile: string): string | undefined {
   if (!existsSync(transcriptFile)) return undefined;
   const raw = readFileSync(transcriptFile, "utf-8");
-  for (const line of raw.split("\n")) {
+  const lines = raw.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
     if (!line) continue;
     let event: { type?: string; data?: { role?: string; content?: unknown } };
     try { event = JSON.parse(line); } catch { continue; }

@@ -16,6 +16,7 @@ import type { LLMConfig, StreamCallback } from "../types.js";
 import type { ModelPool } from "../llm/model-pool.js";
 import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
+import type { SandboxBackend } from "./sandbox/index.js";
 
 /** One choice in a multiple-choice AskUserQuestion. */
 export interface AskUserChoice {
@@ -92,6 +93,12 @@ export interface ToolContext {
   askUser?: AskUserFn;
   /** Sub-agent spawner (Agent tool). Undefined → Agent tool unavailable. */
   subAgentSpawner?: SubAgentSpawner;
+  /**
+   * Active sandbox backend for the Bash tool. Undefined falls back to "off"
+   * (plain spawn). Headless runs default to an OS-level sandbox; the REPL
+   * defaults to off because a human is in the loop to approve commands.
+   */
+  sandbox?: SandboxBackend;
   /** Optional cancellation signal for the whole turn. */
   signal?: AbortSignal;
 }

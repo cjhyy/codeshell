@@ -19,7 +19,7 @@ interface StatusLineProps {
   maxContextTokens?: number;
   gitBranch?: string;
   isRunning?: boolean;
-  streamingCharsRef?: MutableRefObject<number>;
+  streamingTokensRef?: MutableRefObject<number>;
   runStartRef?: MutableRefObject<number>;
 }
 
@@ -33,7 +33,7 @@ export function StatusLine({
   maxContextTokens,
   gitBranch,
   isRunning,
-  streamingCharsRef,
+  streamingTokensRef,
   runStartRef,
 }: StatusLineProps) {
   const modelShort = shortModel(model);
@@ -53,7 +53,7 @@ export function StatusLine({
   const elapsed =
     isRunning && runStartRef ? Math.floor((Date.now() - runStartRef.current) / 1000) : 0;
   const streamingTokens =
-    isRunning && streamingCharsRef ? Math.round(streamingCharsRef.current / 4) : 0;
+    isRunning && streamingTokensRef ? streamingTokensRef.current : 0;
 
   // Live ctx: base prompt tokens + currently-streaming output. The next turn's
   // prompt will roughly equal this, so showing it during streaming gives the

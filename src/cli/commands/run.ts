@@ -15,6 +15,7 @@ import { costTracker } from "../cost-tracker.js";
 import { createRenderer, type OutputFormat } from "../output/renderer.js";
 import type { LLMConfig, PermissionMode } from "../../types.js";
 import type { AgentPresetName } from "../../preset/index.js";
+import { defaultSandboxConfig, type SandboxConfig } from "../../tool-system/sandbox/index.js";
 
 /**
  * Shape of a settings.models[] entry. Mirrors the zod schema in
@@ -143,6 +144,8 @@ export async function runCommand(options: RunOptions): Promise<void> {
     enableStreaming: true,
   };
 
+  const sandboxConfig = mergeSandboxConfig(settings.sandbox, "auto");
+
   const engine = new Engine({
     llm: llmConfig,
     cwd,
@@ -158,6 +161,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
     costStore: costTracker,
     mcpServers: settings.mcpServers,
     headless: true,
+    sandbox: sandboxConfig,
   });
 
   // Wire through protocol layer
@@ -181,4 +185,23 @@ export async function runCommand(options: RunOptions): Promise<void> {
   client.close();
 
   process.exit(result.reason === "completed" ? 0 : 1);
+}
+
+/**
+ * Build the sandbox config Engine sees. Users only need to set the parts
+ * they care about; missing fields fall back to defaults that include the
+ * sensitive-path deny list. `defaultMode` is the headless-vs-REPL default.
+ */
+function mergeSandboxConfig(
+  user: { mode?: string; writableRoots?: string[]; deniedReads?: string[]; network?: string } | undefined,
+  defaultMode: SandboxConfig["mode"],
+): SandboxConfig {
+  const base = defaultSandboxConfig(defaultMode);
+  if (!user) return base;
+  return {
+    mode: (user.mode as SandboxConfig["mode"]) ?? base.mode,
+    writableRoots: user.writableRoots ?? base.writableRoots,
+    deniedReads: user.deniedReads ?? base.deniedReads,
+    network: (user.network as SandboxConfig["network"]) ?? base.network,
+  };
 }

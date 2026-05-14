@@ -5,6 +5,20 @@
 
 ---
 
+## Review Notes — 2026-05-14
+
+> 先记录，不一定立即优化。来源：repo-wide review（安全、架构、LLM 正确性、发布/API、测试信号）。
+
+- [ ] **P0 权限：Bash safe-read 分类可被 shell 元字符绕过。** 当前 `classifyBashCommand()` 仍会把 `echo x > file`、`git status && touch file`、`cat package.json | sh` 这类命令判为 safe-read；需要统一拒绝重定向、链式执行、危险管道，或复用 `ToolExecutor.isReadOnlyBashCommand()` 的更严格逻辑。
+- [ ] **P0 权限：`acceptEdits` 对非 Bash 工具过宽。** 默认 CLI 模式是 `acceptEdits`，但 PermissionClassifier fallback 会 allow 所有未匹配工具，导致 `Config`、`CronCreate`、`MCPTool`、`RemoteTrigger`、`REPL`、`PowerShell` 等 `permissionDefault: "ask"` 的工具也被放行。
+- [ ] **P1 cwd 一致性：EngineConfig.cwd 没有贯穿到所有工具执行。** `Bash`、`Glob`、`Grep`、`Config` 等工具仍默认使用 `process.cwd()` 或未注入的 `__cwd`，RunManager/SDK 传入非当前进程 cwd 时，模型看到的 cwd 和实际工具 cwd 可能不一致。
+- [ ] **P1 LLM 正确性：OpenAI 截断续写触发条件不匹配。** TurnLoop 只识别 `stopReason === "max_tokens"`，但 OpenAI chat completion 常见截断 finish_reason 是 `"length"`；流式路径还把最终 `stopReason` 硬编码成 `"stop"`。
+- [ ] **P1 WebFetch SSRF：重定向后未重新校验目标主机。** 初始 URL 会检查 loopback/RFC1918/metadata host，但 `redirect: "follow"` 后没有对最终 URL 再检查，仍可能被外部 302 带到内网地址。
+- [ ] **P2 RunManager：approval/input resume 有竞态。** `RunApprovalBackend` 和 `createRunAskUserFn()` 都是先通知 lifecycle hook，再设置 pending promise；外部系统很快 `resume()` 时可能 resolve 失败且返回值被忽略。
+- [ ] **P2 发布/API：public `VERSION` 与 package version 漂移。** `package.json` 是 `0.1.6`，`src/index.ts` 仍导出 `VERSION = "0.1.0"`；另外 `build:dts` 使用 `|| true`，声明文件失败不会阻断发布。
+
+---
+
 ## P0 — 核心安全与体验基石
 
 ### ⬜ 沙箱执行系统（Sandbox）

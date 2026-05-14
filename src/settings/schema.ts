@@ -195,6 +195,21 @@ export const SettingsSchema = z
         format: z.enum(["text", "json", "jsonl", "stream-json"]).default("text"),
       })
       .default({}),
+
+    /**
+     * OS-level sandbox for shell-tool execution. "auto" picks per platform:
+     * Seatbelt on macOS, bubblewrap on Linux when installed, otherwise off.
+     * Defaults are applied per Engine run depending on headless vs REPL —
+     * see Engine.run() and run.ts.
+     */
+    sandbox: z
+      .object({
+        mode: z.enum(["off", "auto", "seatbelt", "bwrap"]).optional(),
+        writableRoots: z.array(z.string()).optional(),
+        deniedReads: z.array(z.string()).optional(),
+        network: z.enum(["allow", "deny"]).optional(),
+      })
+      .optional(),
   })
   .passthrough();
 

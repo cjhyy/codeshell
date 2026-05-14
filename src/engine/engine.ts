@@ -40,6 +40,11 @@ import { SettingsManager } from "../settings/manager.js";
 import { FileHistory } from "../session/file-history.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
+  defaultSandboxConfig,
+  resolveSandboxBackend,
+  type SandboxConfig,
+} from "../tool-system/sandbox/index.js";
+import {
   resolveAgentPreset,
   resolveBuiltinToolNames,
   type AgentPreset,
@@ -94,6 +99,13 @@ export interface EngineConfig {
    * Defaults to false.
    */
   headless?: boolean;
+  /**
+   * Sandbox configuration for shell-tool execution. When omitted, headless
+   * runs default to "auto" (Seatbelt on macOS / bwrap on Linux when
+   * available) and interactive runs default to "off" because a human is in
+   * the loop to approve commands.
+   */
+  sandbox?: SandboxConfig;
 }
 
 export interface EngineHookConfig {
@@ -344,6 +356,8 @@ export class Engine {
           maxTurns: req.maxTurns,
           maxContextTokens: this.config.maxContextTokens ?? 200_000,
           sessionStorageDir: this.config.sessionStorageDir,
+          headless: this.config.headless,
+          sandbox: this.config.sandbox,
         });
         const childStream: StreamCallback | undefined = options?.onStream
           ? (event) => options.onStream!({ ...event, agentId: req.agentId } as typeof event)
@@ -353,6 +367,27 @@ export class Engine {
       },
     };
 
+    const sandboxConfig =
+      this.config.sandbox ??
+      defaultSandboxConfig(this.config.headless ? "auto" : "off");
+    // resolveSandboxBackend throws on an explicit but unavailable mode
+    // (e.g. mode=seatbelt on Linux). That fast-fail is right at startup,
+    // but here we're inside a hot turn — a misconfig shouldn't kill the
+    // turn, just downgrade. Fall back to "off" with a one-shot warning.
+    let sandboxBackend;
+    try {
+      sandboxBackend = await resolveSandboxBackend(sandboxConfig, cwd);
+    } catch (err) {
+      logger.warn("engine.sandbox_resolve_failed", {
+        mode: sandboxConfig.mode,
+        error: (err as Error).message,
+      });
+      sandboxBackend = await resolveSandboxBackend(
+        { ...sandboxConfig, mode: "off" },
+        cwd,
+      );
+    }
+
     const toolCtx: ToolContext = {
       cwd,
       llmConfig: this.config.llm,
@@ -360,6 +395,7 @@ export class Engine {
       toolRegistry: this.toolRegistry,
       askUser: this.config.askUser,
       subAgentSpawner,
+      sandbox: sandboxBackend,
     };
 
     logger.info("engine.run", {
@@ -415,10 +451,23 @@ export class Engine {
       resumed: !!options?.sessionId,
     });
 
+    // Rough token estimate of the full prompt so the UI's ctx bar isn't 0%
+    // on resume. The authoritative count comes from `usage.promptTokens` after
+    // the first LLM response — this is just a display-friendly approximation
+    // so the user sees a meaningful progress bar from the first frame.
+    const roughPromptTokens = messages.reduce((sum, m) => {
+      const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
+      return sum + Math.ceil(text.length / 4);
+    }, 0);
+
     // Tell the client the sid *now* instead of waiting for run() to resolve.
     // The user wants `/sid` to work mid-turn; without this, the client only
     // learns the sid when the run completes.
-    options?.onStream?.({ type: "session_started", sessionId: session.state.sessionId });
+    options?.onStream?.({
+      type: "session_started",
+      sessionId: session.state.sessionId,
+      promptTokens: roughPromptTokens,
+    });
 
     // Kick off LLM client creation early (network handshake)
     const llmClientPromise = createLLMClient(this.config.llm);

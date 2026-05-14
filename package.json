@@ -3,29 +3,25 @@
   "version": "0.1.6",
   "description": "Code Shell — general-purpose agent orchestration framework with a terminal coding preset",
   "type": "module",
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     },
     "./run": {
       "types": "./dist/run/index.d.ts",
-      "import": "./dist/run/index.js",
-      "require": "./dist/run/index.cjs"
+      "import": "./dist/run/index.js"
     },
     "./arena": {
       "types": "./dist/arena/index.d.ts",
-      "import": "./dist/arena/index.js",
-      "require": "./dist/arena/index.cjs"
+      "import": "./dist/arena/index.js"
     },
     "./product": {
       "types": "./dist/product/index.d.ts",
-      "import": "./dist/product/index.js",
-      "require": "./dist/product/index.cjs"
+      "import": "./dist/product/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -95,6 +91,7 @@
     "emoji-regex": "^10.6.0",
     "get-east-asian-width": "^1.5.0",
     "glob": "^11.0.0",
+    "gpt-tokenizer": "^3.4.0",
     "indent-string": "^5.0.0",
     "lodash-es": "^4.17.23",
     "marked": "^17.0.5",

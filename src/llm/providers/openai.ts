@@ -8,6 +8,7 @@ import type { CreateMessageOptions } from "../types.js";
 import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
+import { countTokens } from "../token-counter.js";
 
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
@@ -161,7 +162,11 @@ export class OpenAIClient extends LLMClientBase {
             });
           }
           text += delta.content;
-          options.onChunk?.({ type: "text", text: delta.content });
+          options.onChunk?.({
+            type: "text",
+            text: delta.content,
+            tokens: countTokens(delta.content),
+          });
         }
 
         if (delta.tool_calls) {

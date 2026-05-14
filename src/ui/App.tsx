@@ -151,9 +151,10 @@ export function App({
   // without closing the manager.
   const [wizard, setWizard] = useState<"flow" | null>(null);
 
-  // Track streaming chars in a ref — no App-level re-render per tick.
-  // StatusLine reads these refs directly via its own internal interval.
-  const streamingCharsRef = useRef(0);
+  // Track live streamed token count in a ref — no App-level re-render per tick.
+  // Provider emits tokens per text delta (real cl100k_base count, not chars/4).
+  // StatusLine reads this ref directly via its own internal interval.
+  const streamingTokensRef = useRef(0);
   const runStartRef = useRef(0);
   const [streamMode, setStreamMode] = useState<"responding" | "tool-use" | "thinking">("thinking");
   const [thinkingContent, setThinkingContent] = useState<string | null>(null);
@@ -277,6 +278,10 @@ export function App({
           // but is now redundant for the first run; resumed runs already
           // had the sid from initialSessionId.
           setSessionId(event.sessionId);
+          // Resume: set the prompt token baseline so the ctx bar isn't 0%.
+          if (event.promptTokens > 0) {
+            setContextTokens(event.promptTokens);
+          }
           break;
 
         case "stream_request_start":
@@ -296,7 +301,7 @@ export function App({
           setStreamMode("responding");
           const existing = textBufferRef.current.get(agentId) ?? "";
           textBufferRef.current.set(agentId, existing + event.text);
-          streamingCharsRef.current += event.text.length;
+          streamingTokensRef.current += event.tokens ?? 0;
           if (!flushTimerRef.current) {
             flushTimerRef.current = setTimeout(flushTextBuffer, 50);
           }
@@ -778,7 +783,7 @@ export function App({
 
       chatStore.update((prev) => [...prev, entry({ type: "user", text: trimmed })]);
       setIsRunning(true);
-      streamingCharsRef.current = 0;
+      streamingTokensRef.current = 0;
       taskManager.reset();
 
       try {
@@ -1021,7 +1026,7 @@ export function App({
       {isRunning && !pendingQuestion && !pendingApproval && (
         <SpinnerWithVerb
           mode={streamMode}
-          streamingCharsRef={streamingCharsRef}
+          streamingTokensRef={streamingTokensRef}
           runStartRef={runStartRef}
           thinkingContent={thinkingContent ?? undefined}
         />
@@ -1295,7 +1300,7 @@ export function App({
           baseContextTokens={contextTokens}
           maxContextTokens={maxContextTokens}
           isRunning={isRunning}
-          streamingCharsRef={streamingCharsRef}
+          streamingTokensRef={streamingTokensRef}
           runStartRef={runStartRef}
         />
       </Box>
