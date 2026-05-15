@@ -14,6 +14,7 @@ import { initHistory, flushHistorySync } from "./input-history.js";
 import { getOpenRouterSnapshot } from "../data/openrouter-models.js";
 import { syncOpenRouterCatalog } from "../data/openrouter-sync.js";
 import { logger } from "../logging/logger.js";
+import { recordInkFrame } from "./perf-probes.js";
 
 export interface InkReplOptions {
   client: AgentClient;
@@ -69,6 +70,18 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
       stderr: process.stderr,
       exitOnCtrlC: true,
       patchConsole: false,
+      onFrame: (event) => {
+        const p = event.phases;
+        recordInkFrame({
+          durationMs: event.durationMs,
+          phases: {
+            diff: p?.diff ?? 0,
+            write: p?.write ?? 0,
+            yoga: p?.yoga ?? 0,
+            patches: p?.patches ?? 0,
+          },
+        });
+      },
     },
   );
 

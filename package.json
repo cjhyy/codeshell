@@ -44,7 +44,7 @@
     "build": "bun run sync-models && bun run tsup && bun run build:dts",
     "build:dts": "tsc --emitDeclarationOnly --declaration --outDir dist || true",
     "sync-models": "bun run scripts/sync-models.ts",
-    "dev": "CODE_SHELL_DEV=1 bun run src/cli/main.ts",
+    "dev": "CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 bun run src/cli/main.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "lint": "eslint src/",

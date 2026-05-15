@@ -55,6 +55,12 @@ import { formatDuration, formatTokens } from "../utils/format.js";
 import { removeLastFromHistory } from "./input-history.js";
 import { logger } from "../logging/logger.js";
 import { recordUIEvent } from "../logging/session-recorder.js";
+import {
+  recordAppRender,
+  recordStreamEvent,
+  startAllPerfProbes,
+  stopAllPerfProbes,
+} from "./perf-probes.js";
 
 // UI-scoped child logger — system-log lines route to ui-ink-*.log so engine
 // traces aren't drowned by 200ms spinner ticks and per-stream-event logs.
@@ -101,6 +107,10 @@ export function App({
   sessionId: initialSessionId,
   prefill,
 }: AppProps) {
+  // Perf probe: count every App body invocation. Pairs with the 1s
+  // aggregator in perf-probes.ts to expose re-render storms.
+  recordAppRender();
+
   const { exit } = useApp();
   const [input, setInput] = useState(prefill ?? "");
   const chatLog = useSyncExternalStore(
@@ -191,7 +201,17 @@ export function App({
     if (isRunning) {
       runStartRef.current = Date.now();
     }
+    uiLog.info("debug.app.isRunning_change", {
+      isRunning,
+      runStartRef: runStartRef.current,
+    });
   }, [isRunning]);
+
+  // Perf probes — mount once, kill on unmount.
+  useEffect(() => {
+    startAllPerfProbes();
+    return () => stopAllPerfProbes();
+  }, []);
 
   // ─── Wire client events ───────────────────────────────────────
 
@@ -286,6 +306,7 @@ export function App({
     (event: StreamEvent) => {
       const agentId = (event as any).agentId as string | undefined;
       uiLog.info("debug.stream.event", { type: event.type, agentId });
+      recordStreamEvent(event.type, agentId);
       // session_started carries the authoritative sid; use it directly so the
       // record lands in the correct dir even before sidRef has caught up.
       const eventSid =
