@@ -403,11 +403,19 @@ export function App({
         case "tool_use_args_delta": {
           if (agentId !== undefined) break;
           const { toolCallId, args } = event;
-          chatStore.update((prev) =>
-            prev.map((e) =>
-              e.type === "tool_start" && e.toolCallId === toolCallId ? { ...e, args } : e,
-            ),
-          );
+          chatStore.update((prev) => {
+            const idx = prev.findIndex(
+              (e) => e.type === "tool_start" && e.toolCallId === toolCallId,
+            );
+            // No matching tool_start yet (out-of-order event) — drop.
+            if (idx < 0) return prev;
+            // Mirror flushTextBuffer's pattern: clone the array and reseat
+            // ONLY the targeted entry. Sibling references stay stable so
+            // MessageRow.memo (Task 3) can bail for them.
+            const next = [...prev];
+            next[idx] = { ...prev[idx], args } as ChatEntry;
+            return next;
+          });
           break;
         }
 
