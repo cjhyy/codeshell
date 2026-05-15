@@ -30,3 +30,8 @@ export {
   searchSessionMemories,
   buildSessionMemoryPrompt,
 } from "./session-memory.js";
+export {
+  MemoryOrchestrator,
+  type MemoryOrchestratorOptions,
+  type MemoryOrchestratorResult,
+} from "./memory-orchestrator.js";

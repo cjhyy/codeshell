@@ -1,5 +1,5 @@
 {
-  "fetchedAt": "2026-05-14T12:07:21.669Z",
+  "fetchedAt": "2026-05-15T08:06:30.658Z",
   "source": "https://openrouter.ai/api/v1/models",
   "count": 364,
   "models": [
@@ -120,7 +120,8 @@
       "outputPricePerMillion": 7.5,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -224,8 +225,8 @@
       "created": 1777318428,
       "contextLength": 262142,
       "maxOutputTokens": 262142,
-      "inputPricePerMillion": 0.74,
-      "outputPricePerMillion": 3.5,
+      "inputPricePerMillion": 0.73,
+      "outputPricePerMillion": 3.49,
       "modalities": [
         "text",
         "image"
@@ -281,8 +282,8 @@
       "created": 1777261368,
       "contextLength": 1000000,
       "maxOutputTokens": 65536,
-      "inputPricePerMillion": 0.39999999999999997,
-      "outputPricePerMillion": 2.4,
+      "inputPricePerMillion": 0.3,
+      "outputPricePerMillion": 1.7999999999999998,
       "modalities": [
         "text",
         "image",
@@ -295,8 +296,8 @@
       "created": 1777261362,
       "contextLength": 1000000,
       "maxOutputTokens": 65536,
-      "inputPricePerMillion": 0.25,
-      "outputPricePerMillion": 1.5,
+      "inputPricePerMillion": 0.1875,
+      "outputPricePerMillion": 1.125,
       "modalities": [
         "text",
         "image",
@@ -387,8 +388,8 @@
       "id": "deepseek/deepseek-v4-flash:free",
       "name": "DeepSeek: DeepSeek V4 Flash (free)",
       "created": 1777000666,
-      "contextLength": 256000,
-      "maxOutputTokens": 256000,
+      "contextLength": 1048576,
+      "maxOutputTokens": 384000,
       "inputPricePerMillion": 0,
       "outputPricePerMillion": 0,
       "modalities": [
@@ -478,8 +479,8 @@
       "created": 1776795886,
       "contextLength": 262144,
       "maxOutputTokens": 32768,
-      "inputPricePerMillion": 0.08,
-      "outputPricePerMillion": 0.24,
+      "inputPricePerMillion": 0.01,
+      "outputPricePerMillion": 0.03,
       "modalities": [
         "text"
       ]
@@ -511,13 +512,13 @@
       ]
     },
     {
-      "id": "baidu/qianfan-ocr-fast:free",
-      "name": "Baidu: Qianfan-OCR-Fast (free)",
+      "id": "baidu/qianfan-ocr-fast",
+      "name": "Baidu: Qianfan-OCR-Fast",
       "created": 1776707472,
       "contextLength": 65536,
       "maxOutputTokens": 28672,
-      "inputPricePerMillion": 0,
-      "outputPricePerMillion": 0,
+      "inputPricePerMillion": 0.6799999999999999,
+      "outputPricePerMillion": 2.81,
       "modalities": [
         "image",
         "text"
@@ -529,8 +530,8 @@
       "created": 1776699402,
       "contextLength": 262142,
       "maxOutputTokens": 262142,
-      "inputPricePerMillion": 0.74,
-      "outputPricePerMillion": 3.5,
+      "inputPricePerMillion": 0.73,
+      "outputPricePerMillion": 3.49,
       "modalities": [
         "text",
         "image"
@@ -569,9 +570,9 @@
       "name": "Z.ai: GLM 5.1",
       "created": 1775578025,
       "contextLength": 202752,
-      "maxOutputTokens": 65535,
-      "inputPricePerMillion": 1.0499999999999998,
-      "outputPricePerMillion": 3.5,
+      "maxOutputTokens": 0,
+      "inputPricePerMillion": 0.98,
+      "outputPricePerMillion": 3.08,
       "modalities": [
         "text"
       ]
@@ -796,8 +797,8 @@
       "name": "MiniMax: MiniMax M2.7",
       "created": 1773836697,
       "contextLength": 196608,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.26,
+      "maxOutputTokens": 131072,
+      "inputPricePerMillion": 0.27899999999999997,
       "outputPricePerMillion": 1.2,
       "modalities": [
         "text"
@@ -1563,7 +1564,8 @@
       "inputPricePerMillion": 0.39999999999999997,
       "outputPricePerMillion": 2,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -1705,7 +1707,8 @@
       "outputPricePerMillion": 1.5,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -1923,7 +1926,8 @@
       "outputPricePerMillion": 0.3,
       "modalities": [
         "text",
-        "audio"
+        "audio",
+        "file"
       ]
     },
     {
@@ -2544,7 +2548,8 @@
       "outputPricePerMillion": 2,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -2724,7 +2729,8 @@
       "inputPricePerMillion": 0.3,
       "outputPricePerMillion": 0.8999999999999999,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -2909,7 +2915,8 @@
       "inputPricePerMillion": 0.39999999999999997,
       "outputPricePerMillion": 2,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -2921,7 +2928,8 @@
       "inputPricePerMillion": 0.09999999999999999,
       "outputPricePerMillion": 0.3,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -3183,7 +3191,8 @@
       "outputPricePerMillion": 2,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -3294,7 +3303,7 @@
       "created": 1745876478,
       "contextLength": 40960,
       "maxOutputTokens": 40960,
-      "inputPricePerMillion": 0.06,
+      "inputPricePerMillion": 0.09999999999999999,
       "outputPricePerMillion": 0.24,
       "modalities": [
         "text"
@@ -3671,7 +3680,8 @@
       "inputPricePerMillion": 0.19999999999999998,
       "outputPricePerMillion": 0.6,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -4022,7 +4032,8 @@
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 6,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -4034,7 +4045,8 @@
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 6,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -4047,7 +4059,8 @@
       "outputPricePerMillion": 6,
       "modalities": [
         "text",
-        "image"
+        "image",
+        "file"
       ]
     },
     {
@@ -4112,8 +4125,8 @@
       ]
     },
     {
-      "id": "inflection/inflection-3-pi",
-      "name": "Inflection: Inflection 3 Pi",
+      "id": "inflection/inflection-3-productivity",
+      "name": "Inflection: Inflection 3 Productivity",
       "created": 1728604800,
       "contextLength": 8000,
       "maxOutputTokens": 1024,
@@ -4124,8 +4137,8 @@
       ]
     },
     {
-      "id": "inflection/inflection-3-productivity",
-      "name": "Inflection: Inflection 3 Productivity",
+      "id": "inflection/inflection-3-pi",
+      "name": "Inflection: Inflection 3 Pi",
       "created": 1728604800,
       "contextLength": 8000,
       "maxOutputTokens": 1024,
@@ -4307,18 +4320,6 @@
       ]
     },
     {
-      "id": "meta-llama/llama-3.1-8b-instruct",
-      "name": "Meta: Llama 3.1 8B Instruct",
-      "created": 1721692800,
-      "contextLength": 16384,
-      "maxOutputTokens": 16384,
-      "inputPricePerMillion": 0.02,
-      "outputPricePerMillion": 0.049999999999999996,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "meta-llama/llama-3.1-70b-instruct",
       "name": "Meta: Llama 3.1 70B Instruct",
       "created": 1721692800,
@@ -4326,6 +4327,18 @@
       "maxOutputTokens": 16384,
       "inputPricePerMillion": 0.39999999999999997,
       "outputPricePerMillion": 0.39999999999999997,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "meta-llama/llama-3.1-8b-instruct",
+      "name": "Meta: Llama 3.1 8B Instruct",
+      "created": 1721692800,
+      "contextLength": 16384,
+      "maxOutputTokens": 16384,
+      "inputPricePerMillion": 0.02,
+      "outputPricePerMillion": 0.049999999999999996,
       "modalities": [
         "text"
       ]
@@ -4343,8 +4356,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4o-mini",
-      "name": "OpenAI: GPT-4o-mini",
+      "id": "openai/gpt-4o-mini-2024-07-18",
+      "name": "OpenAI: GPT-4o-mini (2024-07-18)",
       "created": 1721260800,
       "contextLength": 128000,
       "maxOutputTokens": 16384,
@@ -4357,8 +4370,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4o-mini-2024-07-18",
-      "name": "OpenAI: GPT-4o-mini (2024-07-18)",
+      "id": "openai/gpt-4o-mini",
+      "name": "OpenAI: GPT-4o-mini",
       "created": 1721260800,
       "contextLength": 128000,
       "maxOutputTokens": 16384,
@@ -4467,7 +4480,8 @@
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 6,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -4517,7 +4531,8 @@
       "inputPricePerMillion": 2,
       "outputPricePerMillion": 6,
       "modalities": [
-        "text"
+        "text",
+        "file"
       ]
     },
     {
@@ -4645,8 +4660,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4",
-      "name": "OpenAI: GPT-4",
+      "id": "openai/gpt-4-0314",
+      "name": "OpenAI: GPT-4 (older v0314)",
       "created": 1685232000,
       "contextLength": 8191,
       "maxOutputTokens": 4096,
@@ -4657,8 +4672,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4-0314",
-      "name": "OpenAI: GPT-4 (older v0314)",
+      "id": "openai/gpt-4",
+      "name": "OpenAI: GPT-4",
       "created": 1685232000,
       "contextLength": 8191,
       "maxOutputTokens": 4096,

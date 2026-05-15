@@ -60,6 +60,7 @@ import {
   buildModelPool,
 } from "../cli/onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
+import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -767,6 +768,11 @@ export class Engine {
       cost: modelFacade.getUsage(),
     });
 
+    // Fire-and-forget memory pipeline: extract durable memories from the
+    // transcript, save a session summary, and conditionally trigger
+    // auto-dream consolidation. Doesn't block the Engine result.
+    void this.runMemoryPipeline(session.transcript, session.state.sessionId, cwd, llmClient);
+
     // Update session state. Persist the raw terminal reason as the status so
     // callers can distinguish user-cancelled (aborted_streaming) from real
     // failures (model_error, prompt_too_long, ...) — previously every
@@ -806,6 +812,56 @@ export class Engine {
         totalTokens: usage.totalTokens,
       },
     };
+  }
+
+  /**
+   * Run the end-of-session memory pipeline as a fire-and-forget background
+   * task. Extracts durable memories from the transcript, saves a session
+   * summary, and conditionally triggers auto-dream consolidation.
+   */
+  private async runMemoryPipeline(
+    transcript: import("../session/transcript.js").Transcript,
+    sessionId: string,
+    cwd: string,
+    llmClient: Awaited<ReturnType<typeof createLLMClient>>,
+  ): Promise<void> {
+    try {
+      // Only run memory extraction for meaningful sessions (>2 turns)
+      const messages = transcript.toMessages().filter(
+        (m) => m.role === "user" || m.role === "assistant",
+      );
+      if (messages.length < 4) return;
+
+      const plainMessages = messages.map((m) => ({
+        role: m.role,
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      }));
+
+      const orchestrator = new MemoryOrchestrator({
+        callLLM: async (sysPrompt, userMsg) => {
+          // Use a lightweight auxiliary call (no tools, no streaming, no
+          // reasoning tokens).
+          const resp = await llmClient.createMessage({
+            systemPrompt: sysPrompt,
+            messages: [{ role: "user", content: userMsg }],
+            tools: [],
+            maxTokens: 1024,
+            recordUsage: false,
+            thinking: "disabled",
+          });
+          return resp.text;
+        },
+        projectDir: cwd,
+      });
+
+      await orchestrator.run(plainMessages, sessionId);
+    } catch (err) {
+      // Memory pipeline is best-effort — never surface errors to the user.
+      logger.warn("engine.memory_pipeline_failed", {
+        sessionId,
+        error: (err as Error).message,
+      });
+    }
   }
 
   getToolRegistry(): ToolRegistry {
