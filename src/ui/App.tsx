@@ -1049,28 +1049,16 @@ export function App({
 
   const isTranscript = screen === "transcript";
 
-  const renderEntryWithCursor = useCallback(
-    (e: ChatEntry, key: string) => {
-      const isSelected = selectedEntryId === e.id;
-      const rendered = renderEntry(e, key, isTranscript);
-      if (!isSelected || !rendered) return rendered;
-      return (
-        <Box
-          key={key}
-          borderStyle="single"
-          borderColor="ansi:cyan"
-          borderLeft
-          borderRight={false}
-          borderTop={false}
-          borderBottom={false}
-          paddingLeft={1}
-        >
-          {rendered}
-        </Box>
-      );
-    },
-    [selectedEntryId, isTranscript],
-  );
+  // Id of the entry currently receiving stream deltas — drives MessageRow's
+  // isStreaming flag so that one row escapes memo while siblings bail.
+  // Computed from chatLog so it stays in sync without an extra subscription.
+  const streamingEntryId = useMemo(() => {
+    for (let i = chatLog.length - 1; i >= 0; i--) {
+      const e = chatLog[i]!;
+      if (e.type === "assistant_text" && e.streaming) return e.id;
+    }
+    return null;
+  }, [chatLog]);
 
   const scrollableContent = (
     <>
@@ -1082,10 +1070,17 @@ export function App({
         </>
       )}
 
-      {/* Chat log — virtualized for large conversations */}
+      {/* Chat log — virtualized for large conversations.
+          Cursor outline + isStreaming/expanded gating is handled inside
+          VirtualMessageList; renderEntry stays cursor-agnostic so its
+          closure identity doesn't matter for MessageRow memo. */}
       <VirtualMessageList
         entries={chatLog}
-        renderEntry={renderEntryWithCursor}
+        renderEntry={renderEntry}
+        columns={process.stdout.columns ?? 80}
+        streamingEntryId={streamingEntryId}
+        selectedEntryId={selectedEntryId}
+        expanded={isTranscript}
         dividerIndex={dividerIndex}
         unseenCount={unseenCount}
       />
