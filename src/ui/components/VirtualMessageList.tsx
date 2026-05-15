@@ -1,29 +1,31 @@
 /**
- * VirtualMessageList — renders chat entries with a memo boundary per row.
+ * VirtualMessageList — ScrollBox + viewport-windowed chat rendering.
  *
- * Each entry is wrapped in <MessageRow>, which is React.memo'd with a
- * hand-written comparator. Entries whose object reference doesn't change
- * (stable history) skip re-render entirely; only the streaming row,
- * cursor selection, and width changes invalidate.
+ * Owns its own ScrollBox + useVirtualScroll. Only items in the viewport
+ * (+ overscan) are mounted as React fibers / Yoga nodes; the rest live
+ * as height-equivalent topSpacer / bottomSpacer boxes. ScrollBox handles
+ * sticky-bottom, wheel/key scroll, render-time clamping.
  *
- * Cursor-outline decoration is applied OUTSIDE the memo boundary so the
- * inner render closure (renderEntry) doesn't need to know about selection
- * state — keeping it stable across cursor moves.
+ * Each rendered item is wrapped in <MessageRow> (React.memo) so historical
+ * entries skip re-render entirely on stream ticks. Cursor-outline decoration
+ * is applied OUTSIDE the memo boundary so the render closure stays cursor-
+ * agnostic.
  *
- * For >VIRTUALIZE_THRESHOLD conversations the head is dropped to keep
- * react reconciliation bounded — Task 4 (P3) replaces this with proper
- * ScrollBox-based virtual scrolling.
- *
- * Also provides an unseen message divider ("── N new ──") when the user
- * scrolls away and new messages arrive.
+ * Auto-stick: when entries grow while ScrollBox is "sticky" (default + after
+ * scrollToBottom), the view follows the tail. User scrolling up breaks
+ * stickiness; clicking the "N new messages" pill should call onJumpToNew
+ * which ultimately invokes scrollToBottom (wired via the imperative handle).
  */
-import React, { type ReactNode } from "react";
-import { Box, Text } from "../../render/index.js";
+import React, { forwardRef, useImperativeHandle, useMemo, useRef, type ReactNode } from "react";
+import {
+  Box,
+  Text,
+  ScrollBox,
+  type ScrollBoxHandle,
+} from "../../render/index.js";
 import type { ChatEntry } from "../store.js";
 import { MessageRow } from "./MessageRow.js";
-
-const VIRTUALIZE_THRESHOLD = 100;
-const OVERSCAN = 10;
+import { useVirtualScroll } from "../hooks/useVirtualScroll.js";
 
 interface VirtualMessageListProps {
   entries: ChatEntry[];
@@ -40,6 +42,10 @@ interface VirtualMessageListProps {
   dividerIndex?: number | null;
   /** Count of unseen messages to show in divider. */
   unseenCount?: number;
+}
+
+export interface VirtualMessageListHandle {
+  scrollToBottom: () => void;
 }
 
 /**
@@ -63,89 +69,76 @@ function CursorOutline({ active, children }: { active: boolean; children: ReactN
   );
 }
 
-function renderRow(
-  e: ChatEntry,
-  renderEntry: (entry: ChatEntry, key: string, expanded: boolean) => ReactNode,
-  columns: number,
-  streamingEntryId: string | null,
-  selectedEntryId: string | null,
-  expanded: boolean,
-): ReactNode {
-  const isSelected = selectedEntryId === e.id;
-  return (
-    <CursorOutline active={isSelected}>
-      <MessageRow
-        entry={e}
-        columns={columns}
-        isStreaming={streamingEntryId === e.id}
-        isSelected={isSelected}
-        expanded={expanded}
-        // render closure captures `expanded`; it's only invoked on memo
-        // miss, which the comparator triggers when `expanded` changes —
-        // so the captured value is always fresh.
-        render={(en) => renderEntry(en, en.id, expanded)}
-      />
-    </CursorOutline>
-  );
-}
+export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMessageListProps>(
+  function VirtualMessageList(
+    {
+      entries,
+      renderEntry,
+      columns,
+      streamingEntryId = null,
+      selectedEntryId = null,
+      expanded = false,
+      dividerIndex,
+      unseenCount = 0,
+    },
+    ref,
+  ) {
+    const scrollRef = useRef<ScrollBoxHandle | null>(null);
 
-export function VirtualMessageList({
-  entries,
-  renderEntry,
-  columns,
-  streamingEntryId = null,
-  selectedEntryId = null,
-  expanded = false,
-  dividerIndex,
-  unseenCount = 0,
-}: VirtualMessageListProps) {
-  // For small conversations, render everything.
-  if (entries.length < VIRTUALIZE_THRESHOLD) {
+    useImperativeHandle(ref, () => ({
+      scrollToBottom: () => scrollRef.current?.scrollToBottom(),
+    }));
+
+    // Stable, identity-preserving array of keys. Recomputed only when entries
+    // identity changes (Task 2 guarantees that's only when content changed).
+    const keys = useMemo(() => entries.map((e) => e.id), [entries]);
+
+    const {
+      range,
+      topSpacer,
+      bottomSpacer,
+      measureRef,
+      spacerRef,
+    } = useVirtualScroll(scrollRef, keys, columns);
+
+    const [start, end] = range;
+
     return (
-      <Box flexDirection="column">
-        {entries.map((e, i) => (
-          <React.Fragment key={e.id}>
-            {dividerIndex !== null && dividerIndex === i && unseenCount > 0 && (
-              <UnseenDivider count={unseenCount} />
-            )}
-            {renderRow(e, renderEntry, columns, streamingEntryId, selectedEntryId, expanded)}
-          </React.Fragment>
-        ))}
-      </Box>
+      <ScrollBox ref={scrollRef} flexGrow={1} flexDirection="column" stickyScroll>
+        {/* Topspacer: hold layout for unrendered items above. spacerRef
+            lets useVirtualScroll read listOrigin via Yoga computedTop. */}
+        <Box ref={spacerRef} height={topSpacer} flexShrink={0} />
+
+        {entries.slice(start, end).map((e, i) => {
+          const globalIdx = start + i;
+          const isSelected = selectedEntryId === e.id;
+          return (
+            <React.Fragment key={e.id}>
+              {dividerIndex !== null && dividerIndex === globalIdx && unseenCount > 0 && (
+                <UnseenDivider count={unseenCount} />
+              )}
+              <Box ref={measureRef(e.id)} flexDirection="column" flexShrink={0}>
+                <CursorOutline active={isSelected}>
+                  <MessageRow
+                    entry={e}
+                    columns={columns}
+                    isStreaming={streamingEntryId === e.id}
+                    isSelected={isSelected}
+                    expanded={expanded}
+                    render={(en) => renderEntry(en, en.id, expanded)}
+                  />
+                </CursorOutline>
+              </Box>
+            </React.Fragment>
+          );
+        })}
+
+        {/* Bottom spacer: hold layout for unrendered items below. */}
+        <Box height={bottomSpacer} flexShrink={0} />
+      </ScrollBox>
     );
-  }
-
-  // Virtualized: only render tail (most recent messages).
-  // In a terminal REPL, the user is almost always at the bottom,
-  // so we optimize for the tail-render case.
-  const start = Math.max(0, entries.length - VIRTUALIZE_THRESHOLD - OVERSCAN);
-  const visibleEntries = entries.slice(start);
-  const hiddenCount = start;
-
-  return (
-    <Box flexDirection="column">
-      {/* Top spacer for hidden messages */}
-      {hiddenCount > 0 && (
-        <Box marginLeft={1}>
-          <Text dim>{"── "}{hiddenCount}{" earlier messages ──"}</Text>
-        </Box>
-      )}
-
-      {/* Visible messages */}
-      {visibleEntries.map((e, i) => {
-        const globalIdx = start + i;
-        return (
-          <React.Fragment key={e.id}>
-            {dividerIndex !== null && dividerIndex === globalIdx && unseenCount > 0 && (
-              <UnseenDivider count={unseenCount} />
-            )}
-            {renderRow(e, renderEntry, columns, streamingEntryId, selectedEntryId, expanded)}
-          </React.Fragment>
-        );
-      })}
-    </Box>
-  );
-}
+  },
+);
 
 function UnseenDivider({ count }: { count: number }) {
   return (

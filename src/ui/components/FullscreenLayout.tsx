@@ -45,11 +45,12 @@ export function FullscreenLayout({
   return (
     <AlternateScreen>
       <Box flexDirection="column" flexGrow={1}>
-        {/* Scrollable area — alt-screen has no terminal scrollback, so we
-            clip overflow inside the viewport here. Task 4 replaces this
-            with a real ScrollBox; until then, content beyond the viewport
-            is hidden rather than corrupting the screen. */}
-        <Box flexDirection="column" flexGrow={1} overflow="hidden">
+        {/* Scrollable area — VirtualMessageList owns its own ScrollBox
+            (Task 4), so we just give it space to grow. Don't wrap in
+            an overflow-hidden Box: ScrollBox needs to read its own
+            viewport height via Yoga, and an outer clip can confuse the
+            measurement on resize. */}
+        <Box flexDirection="column" flexGrow={1}>
           {scrollable}
           {overlay}
         </Box>

@@ -16,7 +16,7 @@ import { TaskList } from "./components/TaskList.js";
 import { SpinnerWithVerb } from "./components/SpinnerWithVerb.js";
 import { StatusLine } from "./components/StatusLine.js";
 import { FullscreenLayout, useUnseenDivider } from "./components/FullscreenLayout.js";
-import { VirtualMessageList } from "./components/VirtualMessageList.js";
+import { VirtualMessageList, type VirtualMessageListHandle } from "./components/VirtualMessageList.js";
 import {
   MessageContent,
   UserMessage,
@@ -193,9 +193,16 @@ export function App({
   // tracks `sessionId` for display and for re-passing on subsequent runs.
 
   // Unseen message divider tracking
-  const { dividerIndex, showPill, unseenCount, onScrollToBottom } = useUnseenDivider(
-    chatLog.length,
-  );
+  const { dividerIndex, showPill, unseenCount, onScrollToBottom: clearUnseen } =
+    useUnseenDivider(chatLog.length);
+  // Imperative handle on VirtualMessageList so we can scroll the list to
+  // the bottom when the user dismisses the "N new messages" pill or
+  // submits a new turn.
+  const listRef = useRef<VirtualMessageListHandle | null>(null);
+  const onScrollToBottom = useCallback(() => {
+    clearUnseen();
+    listRef.current?.scrollToBottom();
+  }, [clearUnseen]);
 
   useEffect(() => {
     if (isRunning) {
@@ -1075,6 +1082,7 @@ export function App({
           VirtualMessageList; renderEntry stays cursor-agnostic so its
           closure identity doesn't matter for MessageRow memo. */}
       <VirtualMessageList
+        ref={listRef}
         entries={chatLog}
         renderEntry={renderEntry}
         columns={process.stdout.columns ?? 80}
