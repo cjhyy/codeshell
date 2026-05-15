@@ -17,7 +17,7 @@
  * - Modal pane for slash-command dialogs
  */
 import React, { useState, useRef, useEffect, useCallback, type RefObject, type ReactNode } from "react";
-import { Box, Text, useInput } from "../../render/index.js";
+import { Box, Text, useInput, AlternateScreen } from "../../render/index.js";
 
 interface FullscreenLayoutProps {
   /** Main scrollable content (messages). */
@@ -43,31 +43,36 @@ export function FullscreenLayout({
   showPill = false,
 }: FullscreenLayoutProps) {
   return (
-    <Box flexDirection="column" flexGrow={1}>
-      {/* Scrollable area — takes all available space */}
+    <AlternateScreen>
       <Box flexDirection="column" flexGrow={1}>
-        {scrollable}
-        {overlay}
-      </Box>
-
-      {/* Unseen messages pill */}
-      {showPill && newMessageCount > 0 && (
-        <Box justifyContent="center" marginY={0}>
-          <Text
-            color="ansi:black"
-            backgroundColor="ansi:cyanBright"
-            bold
-          >
-            {` ↓ ${newMessageCount} new message${newMessageCount > 1 ? "s" : ""} `}
-          </Text>
+        {/* Scrollable area — alt-screen has no terminal scrollback, so we
+            clip overflow inside the viewport here. Task 4 replaces this
+            with a real ScrollBox; until then, content beyond the viewport
+            is hidden rather than corrupting the screen. */}
+        <Box flexDirection="column" flexGrow={1} overflow="hidden">
+          {scrollable}
+          {overlay}
         </Box>
-      )}
 
-      {/* Bottom pinned area */}
-      <Box flexDirection="column" flexShrink={0}>
-        {bottom}
+        {/* Unseen messages pill */}
+        {showPill && newMessageCount > 0 && (
+          <Box justifyContent="center" marginY={0}>
+            <Text
+              color="ansi:black"
+              backgroundColor="ansi:cyanBright"
+              bold
+            >
+              {` ↓ ${newMessageCount} new message${newMessageCount > 1 ? "s" : ""} `}
+            </Text>
+          </Box>
+        )}
+
+        {/* Bottom pinned area */}
+        <Box flexDirection="column" flexShrink={0}>
+          {bottom}
+        </Box>
       </Box>
-    </Box>
+    </AlternateScreen>
   );
 }
 
