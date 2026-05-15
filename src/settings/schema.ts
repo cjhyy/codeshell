@@ -54,6 +54,7 @@ export const SettingsSchema = z
             "openai",
             "anthropic",
             "deepseek",
+            "zai",
             "xai",
             "mistral",
             "groq",
@@ -66,6 +67,13 @@ export const SettingsSchema = z
           apiKey: z.string().optional(),
           protocol: z.enum(["openai-compat", "anthropic-style"]).optional(),
           modelsPath: z.string().optional(),
+          /**
+           * DeepSeek V4 thinking-mode default for this provider. "enabled"
+           * matches endpoint default; "disabled" makes V4 calls run in
+           * non-thinking mode (faster, cheaper). Ignored by every provider
+           * other than DeepSeek V4. Per-call overrides still win.
+           */
+          thinking: z.enum(["enabled", "disabled"]).optional(),
         }),
       )
       .default([]),
@@ -90,6 +98,13 @@ export const SettingsSchema = z
             provider: z.string().optional(),
             baseUrl: z.string().optional(),
             apiKey: z.string().optional(),
+            /**
+             * Per-model thinking override. Wins over the provider-level
+             * setting (settings.providers[].thinking). Use this when
+             * different models under the same provider need different
+             * defaults — e.g. DeepSeek V4 Pro off (faster) but V4 Flash on.
+             */
+            thinking: z.enum(["enabled", "disabled"]).optional(),
           })
           .transform((m) => {
             // Normalize: prefer `protocol`; fall back to legacy `provider`.

@@ -1,0 +1,67 @@
+{
+  "fetchedAt": "2026-05-15",
+  "source": "https://ai.google.dev/gemini-api/docs/models + https://ai.google.dev/gemini-api/docs/gemini-3",
+  "count": 6,
+  "models": [
+    {
+      "id": "gemini-3.1-pro-preview",
+      "name": "Gemini 3.1 Pro (preview)",
+      "contextLength": 1048576,
+      "maxOutputTokens": 65536,
+      "modalities": ["text", "image", "audio", "video"],
+      "thinking": true
+    },
+    {
+      "id": "gemini-3-pro-preview",
+      "name": "Gemini 3 Pro (preview)",
+      "contextLength": 1048576,
+      "maxOutputTokens": 65536,
+      "modalities": ["text", "image", "audio", "video"],
+      "thinking": true
+    },
+    {
+      "id": "gemini-3.1-flash-lite",
+      "name": "Gemini 3.1 Flash-Lite",
+      "contextLength": 1048576,
+      "maxOutputTokens": 65536,
+      "modalities": ["text", "image", "audio", "video"],
+      "thinking": true
+    },
+    {
+      "id": "gemini-3-flash-preview",
+      "name": "Gemini 3 Flash (preview)",
+      "contextLength": 1048576,
+      "maxOutputTokens": 65536,
+      "modalities": ["text", "image", "audio", "video"],
+      "thinking": true
+    },
+    {
+      "id": "gemini-2.5-pro",
+      "name": "Gemini 2.5 Pro",
+      "contextLength": 1048576,
+      "maxOutputTokens": 65536,
+      "inputPricePerMillion": 1.25,
+      "outputPricePerMillion": 10.0,
+      "modalities": ["text", "image", "audio", "video"],
+      "thinking": true
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "name": "Gemini 2.5 Flash",
+      "contextLength": 1000000,
+      "maxOutputTokens": 65536,
+      "inputPricePerMillion": 0.3,
+      "outputPricePerMillion": 2.5,
+      "modalities": ["text", "image", "audio", "video"],
+      "thinking": true
+    },
+    {
+      "id": "gemini-2.5-flash-lite",
+      "name": "Gemini 2.5 Flash-Lite",
+      "contextLength": 1000000,
+      "maxOutputTokens": 65536,
+      "modalities": ["text", "image", "audio", "video"],
+      "thinking": true
+    }
+  ]
+}

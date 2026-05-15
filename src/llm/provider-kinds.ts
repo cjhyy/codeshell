@@ -11,6 +11,7 @@ export type ProviderKindName =
   | "openai"
   | "anthropic"
   | "deepseek"
+  | "zai"
   | "xai"
   | "mistral"
   | "groq"
@@ -31,10 +32,32 @@ export interface ProviderKindMeta {
   authQuery?: (apiKey: string) => Record<string, string>;
 }
 
+// Models we want to hide from the picker — none of these speak the
+// vanilla chat-completions protocol the engine uses:
+//   embedding / whisper / tts / audio / image / dall-e / moderation
+//   rerank / guard / vision-only      — non-text outputs
+//   realtime / transcribe             — different endpoints (WS / audio)
+//   search-preview / search-api       — web-search wrappers
+//   sora / computer-use               — non-chat task APIs
+//   deep-research                     — async research API
+//   codex                             — IDE-integration specific
+//   chat-latest                       — moving alias (we'd rather pin a version)
 const NON_CHAT_PATTERNS =
-  /(?:^|[-_/])(?:embed(?:ding)?|whisper|tts|audio|image|dall-?e|moderation|rerank|guard|vision-only)(?:$|[-_/])/i;
+  /(?:^|[-_/])(?:embed(?:ding)?|whisper|tts|audio|image|dall-?e|moderation|rerank|guard|vision-only|realtime|transcribe|search-preview|search-api|sora|computer-use|deep-research|codex|chat-latest)(?:$|[-_/])/i;
 
-const isChatLike = (id: string): boolean => !NON_CHAT_PATTERNS.test(id);
+// User-specific fine-tuned ids look like "ft:<base>:<org>::<hash>" —
+// keeping them out of the default picker; people who want them can
+// add manually.
+const isFineTunedId = (id: string): boolean => id.startsWith("ft:");
+
+// "Dated snapshot" ids end with -YYYY-MM-DD. They're the immutable
+// pin behind the floating alias (`gpt-5.4` ⇨ `gpt-5.4-2026-03-05`).
+// Hide them by default — the floating alias covers the same model
+// and avoids picker noise.
+const isDatedSnapshotId = (id: string): boolean => /-\d{4}-\d{2}-\d{2}$/.test(id);
+
+const isChatLike = (id: string): boolean =>
+  !NON_CHAT_PATTERNS.test(id) && !isFineTunedId(id) && !isDatedSnapshotId(id);
 
 const bearer = (k: string): Record<string, string> => (k ? { Authorization: `Bearer ${k}` } : {});
 
@@ -66,6 +89,14 @@ export const PROVIDER_KINDS: Record<ProviderKindName, ProviderKindMeta> = {
     authHeader: bearer,
     chatFilter: isChatLike,
   },
+  zai: {
+    label: "Z.AI (GLM)",
+    defaultBaseUrl: "https://api.z.ai/api/paas/v4",
+    modelsPath: "/models",
+    protocol: "openai-compat",
+    authHeader: bearer,
+    chatFilter: isChatLike,
+  },
   xai: {
     label: "xAI (Grok)",
     defaultBaseUrl: "https://api.x.ai/v1",
@@ -92,10 +123,16 @@ export const PROVIDER_KINDS: Record<ProviderKindName, ProviderKindMeta> = {
   },
   google: {
     label: "Google Gemini",
-    defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta",
-    modelsPath: "/models",
+    // OpenAI-compat endpoint — chat completions go to `<baseUrl>/chat/completions`.
+    // For the model list we override the path to escape back to /v1beta/models,
+    // which is where the native (key=...) listing lives.
+    defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    // Absolute URL — escape the /openai segment so /models hits the
+    // native listing endpoint (the OpenAI-compat /openai/models exists
+    // but returns a thinner response).
+    modelsPath: "https://generativelanguage.googleapis.com/v1beta/models",
     protocol: "gemini",
-    authHeader: () => ({}),
+    authHeader: bearer,
     authQuery: (k): Record<string, string> => (k ? { key: k } : {}),
     chatFilter: (id) => isChatLike(id) && /gemini/i.test(id),
   },

@@ -15,6 +15,8 @@ export interface ProviderConfig {
   apiKey?: string;
   protocol?: "openai-compat" | "anthropic-style";
   modelsPath?: string;
+  /** Default DeepSeek V4 thinking-mode for this provider. See LLMConfig. */
+  thinking?: "enabled" | "disabled";
 }
 
 export class ProviderCatalog {

@@ -287,12 +287,9 @@ export class Engine {
     for (const e of entries) {
       this.modelPool.register(e);
     }
-    // Switch to the provider's default model. buildModelPool emits keys in
-    // `<provider>-<model-id>` form (deriveModelPoolKey), so the default
-    // key matches the first entry whose `model` field equals defaultModel.
-    const defaultEntry = provider.defaultModel
-      ? entries.find((e) => e.model === provider.defaultModel)
-      : entries[0];
+    // Activate the first registered model as the zero-config default.
+    // Users override via the onboarding wizard or `/model`.
+    const defaultEntry = entries[0];
     if (defaultEntry) {
       const entry = this.modelPool.switch(defaultEntry.key);
       this.config = {
@@ -628,6 +625,10 @@ export class Engine {
         messages: [{ role: "user", content: prompt }],
         tools: [],
         maxTokens: 1024,
+        // Auxiliary call — no need to burn reasoning tokens. On DeepSeek V4
+        // this flips thinking off (~3x faster, fewer tokens); on every other
+        // OpenAI-compatible provider the field is ignored.
+        thinking: "disabled",
       });
       return summaryResponse.text;
     });
@@ -652,6 +653,8 @@ export class Engine {
         tools: [],
         maxTokens: 256,
         recordUsage: false,
+        // Auxiliary call — see contextManager.setSummarizeFn above.
+        thinking: "disabled",
       });
       logger.debug("summarize.call", {
         sysPromptLen: sysPrompt.length,

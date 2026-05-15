@@ -1,5 +1,11 @@
 /**
  * OpenAI GPT provider using openai SDK.
+ *
+ * Serves every OpenAI-compatible endpoint we support (OpenAI, DeepSeek,
+ * OpenRouter, Z.AI, xAI, Mistral, Groq, Gemini-OpenAI-compat, Ollama,
+ * custom). Per-(provider, model) request-shape divergence — token-limit
+ * field name, rejected sampling params, thinking knob, reasoning echo —
+ * is resolved through `capabilitiesFor()`, not hardcoded.
  */
 
 import OpenAI from "openai";
@@ -9,9 +15,16 @@ import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
+import { capabilitiesFor, type Capability } from "../capabilities/index.js";
+import type { ProviderKindName } from "../provider-kinds.js";
 
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
+  // Sticky override: once the endpoint tells us `max_tokens` is rejected for
+  // this model, switch to `max_completion_tokens` for the lifetime of the
+  // client. Cheaper and more reliable than re-deriving from the model id when
+  // a new variant ships before our regex knows about it.
+  private _forceMaxCompletionTokens = false;
 
   constructor(config: LLMConfig) {
     super(config);
@@ -32,9 +45,32 @@ export class OpenAIClient extends LLMClientBase {
     return this._client;
   }
 
+  /**
+   * Resolve the capability descriptor for the current (provider kind, model)
+   * pair. Cached for the lifetime of the client — model never changes
+   * mid-client. `providerKind` defaults to "openai" because legacy LLMConfig
+   * paths (arena, env-derived) don't always populate it; for those, the
+   * built-in rules table treats them as plain OpenAI.
+   */
+  private _capability: Capability | null = null;
+  private get capability(): Capability {
+    if (!this._capability) {
+      const kind = (this.config.providerKind ?? "openai") as ProviderKindName;
+      this._capability = capabilitiesFor(kind, this.model);
+    }
+    return this._capability;
+  }
+
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     return this.withRetry(async () => {
-      const messages = this.buildMessages(options.systemPrompt, options.messages);
+      // Per-call thinking wins; otherwise fall back to provider default
+      // (settings.providers[].thinking, threaded through LLMConfig).
+      const thinking = options.thinking ?? this.config.thinking;
+      const messages = this.buildMessages(
+        options.systemPrompt,
+        options.messages,
+        thinking,
+      );
       const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
 
       const span = logger.span("llm.request", {
@@ -48,8 +84,8 @@ export class OpenAIClient extends LLMClientBase {
       try {
         const response =
           options.stream && options.onChunk
-            ? await this.streamMessage(options, messages, tools)
-            : await this.nonStreamMessage(options, messages, tools);
+            ? await this.streamMessage(options, messages, tools, thinking)
+            : await this.nonStreamMessage(options, messages, tools, thinking);
         span.end({
           stopReason: response.stopReason,
           promptTokens: response.usage?.promptTokens,
@@ -65,22 +101,100 @@ export class OpenAIClient extends LLMClientBase {
     });
   }
 
+  /**
+   * Build the request body honoring the model's capability descriptor.
+   * Centralized so both streaming and non-streaming paths agree on the
+   * exact shape.
+   */
+  private buildRequestBody(
+    options: CreateMessageOptions,
+    messages: OpenAI.ChatCompletionMessageParam[],
+    tools: OpenAI.ChatCompletionTool[] | undefined,
+    thinking: "enabled" | "disabled" | undefined,
+    stream: boolean,
+  ): Record<string, unknown> {
+    const cap = this.capability;
+    const maxTokens = options.maxTokens ?? this.maxTokens;
+
+    // Token-limit field — capability picks `max_tokens` vs `max_completion_tokens`.
+    // Sticky fallback (set by handleApiError on a 400) overrides the rule for
+    // ids the regex hasn't learned about yet.
+    const useCompletion =
+      this._forceMaxCompletionTokens || cap.tokenLimitField === "max_completion_tokens";
+    const tokenLimit: Record<string, number> = useCompletion
+      ? { max_completion_tokens: maxTokens }
+      : { max_tokens: maxTokens };
+
+    // Sampling params — only include if the model accepts them.
+    const sampling: Record<string, number> = {};
+    if (!cap.rejectedParams.has("temperature")) {
+      sampling.temperature =
+        options.temperature !== undefined ? options.temperature : this.temperature;
+    }
+
+    // Reasoning shape — different vendors, different fields, never combine.
+    // We treat `options.thinking` as the user's intent ("enabled"/"disabled")
+    // and translate to whichever wire shape the model expects.
+    const reasoning: Record<string, unknown> = {};
+    if (thinking) {
+      switch (cap.reasoning.kind) {
+        case "deepseek-thinking":
+          // DeepSeek V4, Z.AI GLM-4.5+ — top-level {thinking: {type}}.
+          reasoning.thinking = { type: thinking };
+          break;
+        case "openai-effort":
+          // OpenAI o-series, gpt-5+, Gemini OpenAI-compat, xAI grok-4.3,
+          // Mistral magistral, Groq reasoning models — `reasoning_effort`.
+          // "enabled" → "medium" (safe middle). "disabled" → the capability's
+          // `disabledEffort` value; defaults to "minimal" (OpenAI), but xAI
+          // uses "low" (no minimal) and Mistral uses "none" (only high|none).
+          reasoning.reasoning_effort =
+            thinking === "disabled"
+              ? (cap.reasoning.disabledEffort ?? "minimal")
+              : "medium";
+          break;
+        case "openrouter-reasoning":
+          // OpenRouter normalized shape — {reasoning: {effort, exclude}}.
+          reasoning.reasoning =
+            thinking === "disabled"
+              ? { effort: "minimal", exclude: true }
+              : { effort: "medium" };
+          break;
+        case "anthropic-budget":
+        case "anthropic-adaptive":
+        case "none":
+          // OpenAI client doesn't serve Anthropic-direct; nothing to do.
+          // `none` means the model doesn't expose a knob — skip silently.
+          break;
+      }
+    }
+
+    return {
+      model: this.model,
+      messages,
+      ...tokenLimit,
+      ...sampling,
+      ...reasoning,
+      ...(tools ? { tools } : {}),
+      ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
+    };
+  }
+
   private async nonStreamMessage(
     options: CreateMessageOptions,
     messages: OpenAI.ChatCompletionMessageParam[],
     tools?: OpenAI.ChatCompletionTool[],
+    thinking?: "enabled" | "disabled",
   ): Promise<LLMResponse> {
     try {
       const response = await this.client.chat.completions.create(
-        {
-          model: this.model,
-          max_tokens: options.maxTokens ?? this.maxTokens,
+        this.buildRequestBody(
+          options,
           messages,
-          ...(tools ? { tools } : {}),
-          ...(options.temperature !== undefined
-            ? { temperature: options.temperature }
-            : { temperature: this.temperature }),
-        },
+          tools,
+          thinking,
+          false,
+        ) as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
         { signal: options.signal },
       );
 
@@ -105,20 +219,17 @@ export class OpenAIClient extends LLMClientBase {
     options: CreateMessageOptions,
     messages: OpenAI.ChatCompletionMessageParam[],
     tools?: OpenAI.ChatCompletionTool[],
+    thinking?: "enabled" | "disabled",
   ): Promise<LLMResponse> {
     try {
       const stream = await this.client.chat.completions.create(
-        {
-          model: this.model,
-          max_tokens: options.maxTokens ?? this.maxTokens,
+        this.buildRequestBody(
+          options,
           messages,
-          stream: true,
-          stream_options: { include_usage: true },
-          ...(tools ? { tools } : {}),
-          ...(options.temperature !== undefined
-            ? { temperature: options.temperature }
-            : { temperature: this.temperature }),
-        },
+          tools,
+          thinking,
+          true,
+        ) as unknown as OpenAI.ChatCompletionCreateParamsStreaming,
         { signal: options.signal },
       );
 
@@ -270,16 +381,30 @@ export class OpenAIClient extends LLMClientBase {
   private buildMessages(
     systemPrompt: string,
     messages: import("../../types.js").Message[],
+    thinking?: "enabled" | "disabled",
   ): OpenAI.ChatCompletionMessageParam[] {
     const result: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: systemPrompt }];
 
-    // DeepSeek thinking-mode contract: every assistant turn we send
-    // back must carry reasoning_content. Pre-thinking-fix transcripts
-    // (and any assistant turn we synthesized ourselves, e.g. injected
-    // hints) won't have one, so we backfill an empty placeholder for
-    // those turns. The endpoint accepts an empty string here; what it
-    // refuses is the field being entirely absent.
-    const needsReasoningBackfill = isDeepSeekThinkingModel(this.model);
+    // Reasoning-content echo-back contract — driven by capability:
+    //   "when-tools"  : backfill an empty placeholder if the prior assistant
+    //                   turn doesn't carry one (DeepSeek V4 + tools 400s
+    //                   otherwise). Skip when thinking is explicitly disabled,
+    //                   because empty-string in that mode can degenerate into
+    //                   an empty reply on the *next* turn.
+    //   "never"       : drop any reasoning_content (deepseek-reasoner 400s
+    //                   if input messages contain it).
+    //   "optional"    : pass through when we have it, never synthesize.
+    const cap = this.capability;
+    const hasTools = messages.some(
+      (m) =>
+        Array.isArray(m.content) &&
+        m.content.some((b) => b.type === "tool_use" || b.type === "tool_result"),
+    );
+    const needsReasoningBackfill =
+      thinking !== "disabled" &&
+      cap.echoReasoning === "when-tools" &&
+      hasTools;
+    const stripReasoning = cap.echoReasoning === "never";
 
     for (const msg of messages) {
       if (msg.role === "system") continue;
@@ -321,14 +446,14 @@ export class OpenAIClient extends LLMClientBase {
           if (toolCalls.length) param.tool_calls = toolCalls;
         }
 
-        if (!reasoningContent && needsReasoningBackfill) {
+        if (stripReasoning) {
+          // Some endpoints (deepseek-reasoner) 400 if reasoning_content
+          // appears in input history. Don't attach the field at all.
+          reasoningContent = undefined;
+        } else if (!reasoningContent && needsReasoningBackfill) {
           reasoningContent = "";
         }
         if (reasoningContent !== undefined) {
-          // Non-standard field required by DeepSeek thinking mode.
-          // Standard OpenAI endpoints ignore unknown fields, so this
-          // is safe to send unconditionally on the OpenAI-compatible
-          // transport.
           (param as unknown as Record<string, unknown>).reasoning_content = reasoningContent;
         }
         result.push(param);
@@ -395,6 +520,20 @@ export class OpenAIClient extends LLMClientBase {
         throw new LLMRateLimitError("openai");
       }
       const msg = (err.message ?? "").toLowerCase();
+      // o-series / gpt-5+ reject `max_tokens` and demand
+      // `max_completion_tokens`. The id-based regex catches the common
+      // cases; this is the belt-and-suspenders path for ids that ship
+      // before the regex knows about them (e.g. new `gpt-5.x` variants
+      // routed via OpenAI-compatible proxies). Flip a sticky flag so the
+      // next request — including `withRetry`'s next attempt — sends the
+      // right field, instead of looping on the same 400.
+      if (
+        err.status === 400 &&
+        msg.includes("max_tokens") &&
+        msg.includes("max_completion_tokens")
+      ) {
+        this._forceMaxCompletionTokens = true;
+      }
       if (
         msg.includes("context_length_exceeded") ||
         msg.includes("maximum context length") ||
@@ -437,17 +576,3 @@ function extractReasoningContent(msg: Record<string, unknown>): string | undefin
   return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
 }
 
-/**
- * DeepSeek's V4 thinking models require every assistant message in
- * the request history to carry a `reasoning_content` field — even an
- * empty string is accepted; the field being entirely absent is what
- * the endpoint refuses with HTTP 400.
- *
- * Scoped narrowly to the V4 family (`deepseek-v4-pro`,
- * `deepseek-v4-flash`, etc.). Other DeepSeek namings — e.g. the
- * OpenRouter-style `deepseek/deepseek-v3.2`, or the standalone `r1`
- * line — don't enforce this contract and shouldn't get the backfill.
- */
-function isDeepSeekThinkingModel(model: string): boolean {
-  return /^deepseek-v4(?:-|$)/i.test(model);
-}

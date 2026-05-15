@@ -1,0 +1,56 @@
+{
+  "fetchedAt": "2026-05-14",
+  "source": "https://docs.z.ai/guides/llm/glm-5.1 + https://docs.z.ai/guides/overview/pricing",
+  "count": 5,
+  "models": [
+    {
+      "id": "glm-5.1",
+      "name": "GLM-5.1",
+      "contextLength": 200000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 1.4,
+      "outputPricePerMillion": 4.4,
+      "modalities": ["text"],
+      "thinking": true
+    },
+    {
+      "id": "glm-4.6",
+      "name": "GLM-4.6",
+      "contextLength": 200000,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 0.6,
+      "outputPricePerMillion": 2.2,
+      "modalities": ["text"],
+      "thinking": true
+    },
+    {
+      "id": "glm-4.5",
+      "name": "GLM-4.5",
+      "contextLength": 128000,
+      "maxOutputTokens": 96000,
+      "inputPricePerMillion": 0.6,
+      "outputPricePerMillion": 2.2,
+      "modalities": ["text"],
+      "thinking": true
+    },
+    {
+      "id": "glm-4.5-air",
+      "name": "GLM-4.5 Air",
+      "contextLength": 128000,
+      "maxOutputTokens": 96000,
+      "inputPricePerMillion": 0.2,
+      "outputPricePerMillion": 1.1,
+      "modalities": ["text"],
+      "thinking": true
+    },
+    {
+      "id": "glm-4.5-flash",
+      "name": "GLM-4.5 Flash (free tier)",
+      "contextLength": 128000,
+      "maxOutputTokens": 96000,
+      "inputPricePerMillion": 0,
+      "outputPricePerMillion": 0,
+      "modalities": ["text"]
+    }
+  ]
+}

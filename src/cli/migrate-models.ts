@@ -49,6 +49,7 @@ export interface MigrationOutput {
 
 const BASEURL_KIND_PATTERNS: Array<[RegExp, ProviderKindName]> = [
   [/deepseek\.com/i, "deepseek"],
+  [/z\.ai/i, "zai"],
   [/anthropic\.com/i, "anthropic"],
   [/openai\.com/i, "openai"],
   [/x\.ai/i, "xai"],

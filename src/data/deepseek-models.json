@@ -1,0 +1,46 @@
+{
+  "fetchedAt": "2026-05-14",
+  "source": "https://api-docs.deepseek.com/quick_start/pricing",
+  "count": 4,
+  "models": [
+    {
+      "id": "deepseek-v4-pro",
+      "name": "DeepSeek V4 Pro",
+      "contextLength": 1000000,
+      "maxOutputTokens": 384000,
+      "inputPricePerMillion": 1.74,
+      "outputPricePerMillion": 3.48,
+      "modalities": ["text"],
+      "thinking": true
+    },
+    {
+      "id": "deepseek-v4-flash",
+      "name": "DeepSeek V4 Flash",
+      "contextLength": 1000000,
+      "maxOutputTokens": 384000,
+      "inputPricePerMillion": 0.14,
+      "outputPricePerMillion": 0.28,
+      "modalities": ["text"],
+      "thinking": true
+    },
+    {
+      "id": "deepseek-chat",
+      "name": "DeepSeek Chat (legacy, deprecating)",
+      "contextLength": 128000,
+      "maxOutputTokens": 8192,
+      "inputPricePerMillion": 0.14,
+      "outputPricePerMillion": 0.28,
+      "modalities": ["text"]
+    },
+    {
+      "id": "deepseek-reasoner",
+      "name": "DeepSeek Reasoner (legacy, deprecating)",
+      "contextLength": 128000,
+      "maxOutputTokens": 8192,
+      "inputPricePerMillion": 0.14,
+      "outputPricePerMillion": 0.28,
+      "modalities": ["text"],
+      "thinking": true
+    }
+  ]
+}

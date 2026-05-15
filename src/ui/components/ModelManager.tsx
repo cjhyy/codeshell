@@ -112,8 +112,13 @@ export function ModelManager({
   // second Esc, `dirty` is still true and the warning state is preserved.
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  useInput(async (ch, key) => {
+  useInput(async (raw, key) => {
     if (banner.kind === "busy") return;
+
+    // Normalize letter shortcuts to lowercase so Shift+A == a, etc. — users
+    // shouldn't have to guess which case a hotkey expects. Non-letter input
+    // (digits, punctuation, "?") passes through unchanged.
+    const ch = raw && raw.length === 1 && /[A-Za-z]/.test(raw) ? raw.toLowerCase() : raw;
 
     // Any non-Esc input after the discard warning means the user changed
     // their mind — reset the confirmation so the next Esc warns again.
@@ -150,9 +155,10 @@ export function ModelManager({
   });
 
   async function handleModelsInput(ch: string, key: { upArrow?: boolean; downArrow?: boolean; return?: boolean }): Promise<void> {
-    // Capital-A opens the unified ProviderModelFlow at any time, even with
-    // an empty pool — that's the whole point of the flow.
-    if (ch === "A") {
+    // 'a' opens the unified ProviderModelFlow at any time, even with an empty
+    // pool — that's the whole point of the flow. (ch is already lowercased by
+    // the dispatcher so Shift+A also works.)
+    if (ch === "a") {
       if (onOpenFlow) onOpenFlow();
       return;
     }
@@ -490,7 +496,7 @@ function ModelsPane({
           {"操作: "}
           <Text color="ansi:cyan">{"[Enter]"}</Text>
           {" 切换  "}
-          <Text color="ansi:cyan">{"[A]"}</Text>
+          <Text color="ansi:cyan">{"[a]"}</Text>
           {" 添加 provider+模型  "}
           <Text color="ansi:cyan">{"[x]"}</Text>
           {" 删除  "}

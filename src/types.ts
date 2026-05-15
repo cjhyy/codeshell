@@ -289,6 +289,19 @@ export interface LLMConfig {
   timeout?: number;
   retryMaxAttempts?: number;
   enableStreaming?: boolean;
+  /**
+   * Default thinking-mode for DeepSeek V4. Per-call `options.thinking`
+   * (e.g. summarize sub-calls) overrides this. Ignored on other providers.
+   */
+  thinking?: "enabled" | "disabled";
+  /**
+   * The provider's `kind` (deepseek/openai/zai/openrouter/...). Used by
+   * the capability layer to look up per-(kind, model) request-shape rules
+   * (token-limit field, rejected sampling params, thinking shape, etc.).
+   * Distinct from `provider` above, which is the protocol family
+   * ("openai" or "anthropic") that picks which client class to use.
+   */
+  providerKind?: string;
 }
 
 export interface LLMResponse {

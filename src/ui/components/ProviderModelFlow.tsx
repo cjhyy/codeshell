@@ -132,6 +132,7 @@ const KIND_ORDER: ProviderKindName[] = [
   "anthropic",
   "openai",
   "deepseek",
+  "zai",
   "xai",
   "google",
   "mistral",
@@ -144,6 +145,7 @@ const KIND_LABEL_OVERRIDES: Partial<Record<ProviderKindName, string>> = {
   anthropic: "Anthropic (直连 Claude API)",
   openai: "OpenAI",
   deepseek: "DeepSeek (官方直连)",
+  zai: "Z.AI (GLM 官方)",
   xai: "xAI (Grok)",
   google: "Google Gemini",
   mistral: "Mistral",
@@ -156,6 +158,7 @@ const KIND_KEY_URLS: Partial<Record<ProviderKindName, string>> = {
   anthropic: "https://console.anthropic.com/settings/keys",
   openai: "https://platform.openai.com/api-keys",
   deepseek: "https://platform.deepseek.com/api_keys",
+  zai: "https://z.ai/manage-apikey/apikey-list",
   xai: "https://console.x.ai",
   google: "https://aistudio.google.com/apikey",
   mistral: "https://console.mistral.ai/api-keys",
@@ -243,10 +246,13 @@ export function ProviderModelFlow({
   };
 
   // ─── fetch on step entry ────────────────────────────────────────
+  // Onboarding always fetches fresh: the user just configured an API key
+  // and expects to see the live catalog (e.g. newly released models).
+  // Caches are for `/model` browsing later, not for the first-look picker.
   useEffect(() => {
     if (step !== "fetch") return;
     if (fetchResult || fetchLoading) return;
-    void runFetch(false);
+    void runFetch(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 

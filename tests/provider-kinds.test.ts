@@ -15,6 +15,7 @@ describe("PROVIDER_KINDS", () => {
       "openai",
       "openrouter",
       "xai",
+      "zai",
     ]);
   });
 

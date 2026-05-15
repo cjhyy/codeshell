@@ -1218,19 +1218,35 @@ export function App({
           detectedEnvKeys={[]}
           switchToNewModelOnFinish={false}
           onFinish={async (result) => {
+            const failures: string[] = [];
             try {
               if (result.addedProvider) {
-                await client.query("provider_add", { provider: result.addedProvider } as never);
+                await client.query("provider_add", {
+                  provider: result.addedProvider,
+                } as never);
               }
-              for (const m of result.addedModels) {
+            } catch (err) {
+              failures.push(`provider ${result.addedProvider?.key}: ${(err as Error).message}`);
+            }
+            for (const m of result.addedModels) {
+              try {
                 await client.query("model_add", { model: m } as never);
+              } catch (err) {
+                failures.push(`model ${m.key}: ${(err as Error).message}`);
               }
-            } catch {
-              /* best-effort; refresh below will surface anything missing */
             }
             setWizard(null);
             try { await client.configure({ reloadModels: true }); } catch { /* best-effort */ }
             await refreshModelManagerState();
+            if (failures.length > 0) {
+              chatStore.update((prev) => [
+                ...prev,
+                entry({
+                  type: "status",
+                  reason: `添加部分失败: ${failures.join("; ")}`,
+                }),
+              ]);
+            }
           }}
           onCancel={() => setWizard(null)}
         />
@@ -1278,20 +1294,30 @@ export function App({
             return r;
           }}
           onOpenFlow={() => setWizard("flow")}
-          // TODO(task-12): wire these to real protocol handlers once they
-          // land. Returning a placeholder error keeps the UI honest about
-          // what isn't ready yet rather than silently no-oping.
-          onRefreshProvider={async (_key) => ({
-            count: 0,
-            error: "not implemented in Task 11 — see Task 12",
-          })}
-          onDeleteProvider={async (_key) => ({
-            ok: false,
-            error: "not implemented in Task 11 — see Task 12",
-          })}
-          onDeleteModel={async (_key) => {
-            // TODO(task-12): protocol handler not yet wired.
-            throw new Error("not implemented in Task 11 — see Task 12");
+          onRefreshProvider={async (key) => {
+            try {
+              const res = (await client.query("provider_refresh", { key } as never)) as {
+                count?: number;
+                error?: string;
+              };
+              await refreshModelManagerState();
+              return { count: res?.count ?? 0, ...(res?.error ? { error: res.error } : {}) };
+            } catch (err) {
+              return { count: 0, error: (err as Error).message };
+            }
+          }}
+          onDeleteProvider={async (key) => {
+            try {
+              await client.query("provider_delete", { key } as never);
+              await refreshModelManagerState();
+              return { ok: true };
+            } catch (err) {
+              return { ok: false, error: (err as Error).message };
+            }
+          }}
+          onDeleteModel={async (key) => {
+            await client.query("model_delete", { key } as never);
+            await refreshModelManagerState();
           }}
           onClose={() => setModelManager(null)}
         />

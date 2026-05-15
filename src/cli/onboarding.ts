@@ -30,9 +30,14 @@ export interface ProviderDef {
   envKey: string;
   provider: string;
   baseUrl: string;
-  defaultModel: string;
   keyUrl: string;
   keyPrefix: string;
+  /**
+   * The catalog of model IDs to register for this provider. The first
+   * entry doubles as the zero-config default — auto-activated when the
+   * user boots with just an env key (no onboarding). Users override by
+   * picking in the wizard or running `/model`.
+   */
   models: string[];
   /** When true, skip API key prompt (e.g. local providers like Ollama). */
   noKey?: boolean;
@@ -45,12 +50,15 @@ export const PROVIDERS: ProviderDef[] = [
     envKey: "OPENROUTER_API_KEY",
     provider: "openai",
     baseUrl: "https://openrouter.ai/api/v1",
-    defaultModel: "anthropic/claude-sonnet-4.6",
     keyUrl: "https://openrouter.ai/keys",
     keyPrefix: "sk-or-",
+    // First entry is the zero-config default (auto-activated when the
+    // user starts with only an env key, no onboarding). Sonnet beats Opus
+    // here because it's ~5x cheaper and a safer pick for someone who
+    // hasn't picked yet — Opus stays one slot away for anyone who wants it.
     models: [
-      "anthropic/claude-opus-4.7",
       "anthropic/claude-sonnet-4.6",
+      "anthropic/claude-opus-4.7",
       "anthropic/claude-haiku-4.5",
       "openai/gpt-5",
       "openai/gpt-5-mini",
@@ -71,12 +79,11 @@ export const PROVIDERS: ProviderDef[] = [
     envKey: "ANTHROPIC_API_KEY",
     provider: "anthropic",
     baseUrl: "https://api.anthropic.com",
-    defaultModel: "claude-sonnet-4-6",
     keyUrl: "https://console.anthropic.com/settings/keys",
     keyPrefix: "sk-ant-",
     models: [
-      "claude-opus-4-7",
       "claude-sonnet-4-6",
+      "claude-opus-4-7",
       "claude-haiku-4-5",
     ],
   },
@@ -86,7 +93,6 @@ export const PROVIDERS: ProviderDef[] = [
     envKey: "OPENAI_API_KEY",
     provider: "openai",
     baseUrl: "https://api.openai.com/v1",
-    defaultModel: "gpt-5",
     keyUrl: "https://platform.openai.com/api-keys",
     keyPrefix: "sk-",
     models: ["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "o4-mini", "o3"],
@@ -97,10 +103,19 @@ export const PROVIDERS: ProviderDef[] = [
     envKey: "DEEPSEEK_API_KEY",
     provider: "openai",
     baseUrl: "https://api.deepseek.com/v1",
-    defaultModel: "deepseek-v4-pro",
     keyUrl: "https://platform.deepseek.com/api_keys",
     keyPrefix: "sk-",
     models: ["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat"],
+  },
+  {
+    id: "zai",
+    name: "Z.AI (GLM 官方)",
+    envKey: "ZAI_API_KEY",
+    provider: "openai",
+    baseUrl: "https://api.z.ai/api/paas/v4",
+    keyUrl: "https://z.ai/manage-apikey/apikey-list",
+    keyPrefix: "",
+    models: ["glm-5.1", "glm-4.6", "glm-4.5-air"],
   },
   {
     id: "gemini",
@@ -108,7 +123,6 @@ export const PROVIDERS: ProviderDef[] = [
     envKey: "GEMINI_API_KEY",
     provider: "openai",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-    defaultModel: "gemini-2.5-pro",
     keyUrl: "https://aistudio.google.com/apikey",
     keyPrefix: "",
     models: [
@@ -123,7 +137,6 @@ export const PROVIDERS: ProviderDef[] = [
     envKey: "",
     provider: "openai",
     baseUrl: "http://localhost:11434/v1",
-    defaultModel: "llama3.1",
     keyUrl: "https://ollama.com/library",
     keyPrefix: "",
     models: ["llama3.1", "qwen2.5-coder", "deepseek-r1", "mistral", "gemma3"],
@@ -135,7 +148,6 @@ export const PROVIDERS: ProviderDef[] = [
     envKey: "",
     provider: "openai",
     baseUrl: "",
-    defaultModel: "",
     keyUrl: "",
     keyPrefix: "",
     models: [],
@@ -335,7 +347,7 @@ export function findSavedKeyForProvider(
  * Return the list of model IDs previously saved under this provider
  * (matched by baseUrl). Used by the onboarding wizard to pre-populate the
  * "model pool" step with the user's prior choices instead of resetting to
- * just provider.defaultModel.
+ * just the provider's first model.
  */
 export function loadSavedModelsForProvider(provider: ProviderDef): string[] {
   const file = join(homedir(), ".code-shell", "settings.json");

@@ -115,25 +115,36 @@ export class AgentClient {
    */
   async query(
     type: QueryParams["type"],
-    sessionId?: string,
+    arg?: string | Record<string, unknown>,
     ...extra: unknown[]
   ): Promise<QueryResult> {
-    const params: Record<string, unknown> = { type, sessionId };
-    // Support config_set: query("config_set", key, value)
+    const params: Record<string, unknown> = { type };
+    // Per-type argument mapping. The second positional param overloads:
+    //   - "models" / "sessions" / "providers" / "permission_state": (sessionId?)
+    //   - "config_set": (key, value)
+    //   - "config_get": (key)
+    //   - "permission_set": (mode) — server reads `params.value`
+    //   - "provider_add" / "model_add" / "provider_refresh" /
+    //     "provider_delete" / "model_delete": ({ ...payload }) — the object
+    //     is spread into the top-level params so the server can read
+    //     `params.key` / `params.provider` / `params.model` directly.
     if (type === "config_set" && extra.length >= 1) {
-      params.key = sessionId;
+      params.key = arg;
       params.value = extra[0];
-      delete params.sessionId;
-    }
-    // Support config_get: query("config_get", key)
-    if (type === "config_get") {
-      params.key = sessionId;
-      delete params.sessionId;
-    }
-    // Support permission_set: query("permission_set", mode)
-    if (type === "permission_set") {
-      params.value = sessionId;
-      delete params.sessionId;
+    } else if (type === "config_get") {
+      params.key = arg;
+    } else if (type === "permission_set") {
+      params.value = arg;
+    } else if (
+      type === "provider_add" ||
+      type === "model_add" ||
+      type === "provider_refresh" ||
+      type === "provider_delete" ||
+      type === "model_delete"
+    ) {
+      if (arg && typeof arg === "object") Object.assign(params, arg);
+    } else {
+      params.sessionId = arg as string | undefined;
     }
     return this.request(Methods.Query, params) as Promise<QueryResult>;
   }

@@ -34,6 +34,13 @@ export interface ModelEntry {
   /** Optional reference into ProviderCatalog. When set, baseUrl/apiKey
    *  come from the catalog unless the entry overrides them. */
   providerKey?: string;
+  /**
+   * Per-model thinking override. Wins over the provider-level setting
+   * (ProviderCatalog entry's `thinking`). Useful when models in the same
+   * provider need different defaults — e.g. DeepSeek V4 Pro off but
+   * V4 Flash on.
+   */
+  thinking?: "enabled" | "disabled";
 }
 
 // ─── Built-in context windows ────────────────────────────────────
@@ -190,6 +197,17 @@ export class ModelPool {
       temperature: base?.temperature ?? 0.3,
       maxTokens: entry.maxOutputTokens ?? base?.maxTokens ?? 8192,
       enableStreaming: base?.enableStreaming ?? true,
+      // thinking precedence: model entry > provider catalog > base.
+      // Model-level wins so users can hold one default for "deepseek"
+      // and still override a single model (e.g. v4-pro off).
+      ...(entry.thinking || fromCat?.thinking || base?.thinking
+        ? { thinking: entry.thinking ?? fromCat?.thinking ?? base?.thinking }
+        : {}),
+      // Carry the catalog kind through so the capability layer can pick
+      // per-(kind, model) request-shape rules. Defaults below cover the
+      // unusual case where an entry has a provider but no providerKey
+      // (legacy / arena-injected models).
+      ...(fromCat?.kind ? { providerKind: fromCat.kind } : {}),
     };
   }
 
