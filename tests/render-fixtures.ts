@@ -42,6 +42,12 @@ export function mount(
   const stdin = new PassThrough();
   const stdout = new PassThrough();
   (stdin as unknown as { isTTY: boolean }).isTTY = true;
+  // App.tsx calls stdin.setRawMode(), stdin.ref(), and stdin.unref() when
+  // isTTY is true. PassThrough lacks these TTY methods, so add no-op stubs
+  // so that useInput hooks work in tests without throwing "not a function".
+  (stdin as unknown as { setRawMode: (mode: boolean) => void }).setRawMode = () => {};
+  (stdin as unknown as { ref: () => void }).ref = () => {};
+  (stdin as unknown as { unref: () => void }).unref = () => {};
   (stdout as unknown as { isTTY: boolean; columns: number; rows: number }).isTTY = true;
   (stdout as unknown as { columns: number }).columns = opts.columns ?? 80;
   (stdout as unknown as { rows: number }).rows = opts.rows ?? 24;

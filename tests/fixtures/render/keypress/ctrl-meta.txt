@@ -1,3 +1,5 @@
-# xterm: Ctrl+A then Meta+B (ESC-prefix style)
+# xterm: Ctrl+A then Meta+E (ESC-prefix style)
+# Meta+B is overridden as Alt+Left by the iTerm rule in parse-keypress.ts;
+# use Meta+E for a clean meta=true event with input "e".
 "\u0001"
-"\u001bb"
+"\u001be"
