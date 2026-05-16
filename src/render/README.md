@@ -92,6 +92,31 @@ the re-export from `index.ts`, not the deep path.
 There is also `src/arena/render/` (Arena session rendering — business logic).
 The two are unrelated despite the shared name.
 
+## Perf baselines
+
+Local bench results, recorded 2026-05-16. Numbers are machine-specific — treat
+them as a regression anchor, not absolute SLOs. Re-record on similar reference
+machines as needed.
+
+Host: MacBook, macOS 15.6.1 (Darwin 24.6.0 arm64), bun 1.3.11.
+
+| Scenario                  | per iter ms | bytes written | frames |
+| ------------------------- | ----------- | ------------- | ------ |
+| `tail-10k-mount`          | 0.053       | 98 912        | 2      |
+| `streaming-200-deltas`    | 12.574      | 49 828        | 33     |
+| `spinner-60-ticks`        | 16.161      | 49 402        | 19     |
+| `wheel-100-steps`         | 0.061       | 418           | 2      |
+
+The `tail-10k-mount` "per iter" is the single mount cost (iters=1) and reflects
+how cheaply a 10 000-row tree reaches the first commit. The `streaming` /
+`spinner` rows total elapsed time for the scenario after warm mount; `frames`
+counts stdout chunks written during the streamed/ticking phase. Low `frames`
+relative to event count = batching is working.
+
+To re-record: `bun run bench:render`. To collect under live perf logging:
+`CODESHELL_RENDER_DEBUG=1 bun run bench:render`, then read
+`~/.code-shell/logs/ui-ink/render-perf.log`.
+
 ## How to evolve this
 
 When changing `src/render/`:
