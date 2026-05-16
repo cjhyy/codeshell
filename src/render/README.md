@@ -94,26 +94,31 @@ The two are unrelated despite the shared name.
 
 ## Perf baselines
 
-Local bench results, recorded 2026-05-16. Numbers are machine-specific — treat
+Local bench results, recorded 2026-05-17. Numbers are machine-specific — treat
 them as a regression anchor, not absolute SLOs. Re-record on similar reference
 machines as needed.
 
 Host: MacBook, macOS 15.6.1 (Darwin 24.6.0 arm64), bun 1.3.11.
 
-The `tail-10k-mount` "per iter" row is post-mount settle latency, not mount cost. Component-level mount time is reflected by `bytes_written` and `frames` rather than `per iter ms`.
+The `tail-10k-mount (settle)` "per iter" is post-mount settle latency, not mount
+cost. Component-level mount work is reflected by `bytes_written` and `frames`
+rather than `per iter ms`. `wheel-100-steps` per-iter includes the 20 ms render
+settle wait per step (16 ms ScrollBox throttle + flush); the bench drives real
+renders rather than measuring queueMicrotask latency.
 
 | Scenario                         | per iter ms | bytes written | frames |
 | -------------------------------- | ----------- | ------------- | ------ |
-| `tail-10k-mount (settle)`        | 0.053       | 98 912        | 2      |
-| `streaming-200-deltas`           | 12.574      | 49 828        | 33     |
-| `spinner-60-ticks`               | 16.161      | 49 402        | 19     |
-| `wheel-100-steps`                | 0.061       | 418           | 2      |
+| `tail-10k-mount (settle)`        | 0.065       | 98 912        | 2      |
+| `streaming-200-deltas`           | 15.438      | 49 856        | 34     |
+| `spinner-60-ticks`               | 18.789      | 49 374        | 18     |
+| `wheel-100-steps`                | 20.470      | 186 143       | 461    |
 
-The `tail-10k-mount` "per iter" is the single mount cost (iters=1) and reflects
-how cheaply a 10 000-row tree reaches the first commit. The `streaming` /
-`spinner` rows total elapsed time for the scenario after warm mount; `frames`
-counts stdout chunks written during the streamed/ticking phase. Low `frames`
-relative to event count = batching is working.
+The `streaming` / `spinner` rows total elapsed time for the scenario after
+warm mount; `frames` counts stdout chunks written during the streamed/ticking
+phase. Low `frames` relative to event count = batching is working. For
+`wheel-100-steps` the inverse: ~4.6 frames per scroll step is expected because
+each ScrollBox commit emits multiple stdout chunks (cursor moves, style
+transitions, line redraws).
 
 To re-record: `bun run bench:render`. To collect under live perf logging:
 `CODESHELL_RENDER_DEBUG=1 bun run bench:render`, then read
