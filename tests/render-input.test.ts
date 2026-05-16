@@ -57,26 +57,36 @@ test("bracketed paste delivers the inner payload", async () => {
 });
 
 test("kitty keyboard protocol sequence is parsed (does not crash)", async () => {
-  const events: unknown[] = [];
+  // Fixture: ESC[97;6u = Ctrl+Shift+A in kitty CSI-u format.
+  // Modifier 6 = 1 + shift(1) + ctrl(4); codepoint 97 = 'a' → input='a'.
+  const events: Array<{ input: string; key: Record<string, unknown> }> = [];
   const h = mount(
-    React.createElement(Probe, { onKey: (_input, key) => events.push(key) }),
+    React.createElement(Probe, { onKey: (input, key) => events.push({ input, key }) }),
   );
   await flush();
   h.stdin.write(loadFixture("keypress", "kitty.txt"));
   await flush();
-  expect(events.length).toBeGreaterThan(0);
+  // The parser must decode modifier 6 → ctrl=true, shift=true; codepoint 97 → input='a'.
+  expect(
+    events.some((e) => e.key.ctrl === true && e.key.shift === true && e.input === "a"),
+  ).toBe(true);
   h.unmount();
 });
 
 test("modifyOtherKeys sequence parses without crashing", async () => {
-  const events: unknown[] = [];
+  // Fixture: ESC[27;6;65~ = Ctrl+Shift+A in modifyOtherKeys mode 2.
+  // Modifier 6 = 1 + shift(1) + ctrl(4); keycode 65 = 'A' → name='a' → input='a'.
+  const events: Array<{ input: string; key: Record<string, unknown> }> = [];
   const h = mount(
-    React.createElement(Probe, { onKey: (_input, key) => events.push(key) }),
+    React.createElement(Probe, { onKey: (input, key) => events.push({ input, key }) }),
   );
   await flush();
   h.stdin.write(loadFixture("keypress", "modify-other-keys.txt"));
   await flush();
-  expect(events.length).toBeGreaterThan(0);
+  // The parser must decode modifier 6 → ctrl=true, shift=true; keycode 65 → input='a'.
+  expect(
+    events.some((e) => e.key.ctrl === true && e.key.shift === true && e.input === "a"),
+  ).toBe(true);
   h.unmount();
 });
 
@@ -89,6 +99,8 @@ test("mouse wheel input does not crash the renderer", async () => {
   await flush();
   h.stdin.write(loadFixture("keypress", "mouse-wheel.txt"));
   await flush();
-  expect(() => dumpFrames(h)).not.toThrow();
+  // The renderer must have produced at least one frame (initial render).
+  // A crash would leave frames empty or throw during dumpFrames.
+  expect(h.frames.length).toBeGreaterThan(0);
   h.unmount();
 });

@@ -1,2 +1,2 @@
-# kitty keyboard protocol: F1 with shift modifier
-"\u001b[1;2P"
+# kitty keyboard protocol: Ctrl+Shift+A (CSI-u format)
+"\u001b[97;6u"
