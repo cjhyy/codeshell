@@ -1,5 +1,6 @@
 import { test, expect, beforeEach, afterEach } from "bun:test";
 import { osc, OSC, wrapForMultiplexer, getClipboardPath } from "../src/render/termio/osc.js";
+import { env } from "../src/utils/env.js";
 
 // Use `Object.defineProperty` so re-assigning process.platform works.
 const ORIG_PLATFORM = process.platform;
@@ -25,12 +26,22 @@ function restoreEnv() {
   }
 }
 
+// env.terminal is frozen at module-load time from TERM_PROGRAM, so patching
+// process.env.TERM_PROGRAM in tests has no effect on osc()'s terminator choice.
+// Instead we snapshot/restore the mutable env object directly.
+let savedTerminal: string;
+
 beforeEach(() => {
   clearEnv();
+  savedTerminal = env.terminal;
+  // Force a non-kitty terminal so osc() always emits BEL, regardless of what
+  // TERM_PROGRAM was set to when the test process started.
+  env.terminal = "xterm";
 });
 afterEach(() => {
   restoreEnv();
   restorePlatform();
+  env.terminal = savedTerminal;
 });
 
 test("OSC 52 raw sequence: ESC ] 52 ; c ; <b64> BEL", () => {
