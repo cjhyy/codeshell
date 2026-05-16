@@ -98,3 +98,28 @@ the Recommendation table above. For exact status (`supported` / `experimental`
 - 不在 `src/render` 内做 Electron、Tauri、SwiftUI 或 Web GUI。
 - 不让 `src/render` 直接理解 RunManager、Arena、ModelManager 这些业务概念。
 - 不急着发布成独立通用 TUI 框架；先服务 CodeShell 产品稳定性。
+
+## Public component primitives (decision log)
+
+### 2026-05-16 — Button / Link / RawAnsi promoted to supported
+
+Reason: each has been stable in use by `src/ui/` and presents a thin,
+purely-presentational API surface. No business binding.
+
+### 2026-05-16 — TextInput stays in `src/ui/components/`
+
+`TextInput` bundles:
+- controlled value + cursor model,
+- bracketed paste handling that interacts with the slash-command parser,
+- history navigation (per-session, persisted),
+- completion / autocomplete hooks.
+
+Items 2–4 are CodeShell business logic, not generic renderer concerns.
+Moving the whole component into `src/render/` would either drag this logic
+into the generic layer (bad) or split into a partial primitive + a wrapper
+(churn for little gain — there is no second consumer that would benefit).
+
+Decision: `TextInput` remains a `src/ui/` component. If a future product
+need calls for a primitive text input shared across two consumers, revisit
+by extracting the controlled-value + cursor primitive into `src/render/`
+and keeping the history / completion behavior in the wrapper.
