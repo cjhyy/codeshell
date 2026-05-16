@@ -30,5 +30,17 @@ export { AlternateScreen } from "./components/AlternateScreen.js";
 // Re-export Ansi
 export { Ansi } from "./Ansi.js";
 
+// Re-export NoSelect (supported)
+export { NoSelect } from "./components/NoSelect.js";
+
+// Re-export Button (experimental)
+export { default as Button } from "./components/Button.js";
+
+// Re-export Link (experimental)
+export { default as Link } from "./components/Link.js";
+
+// Re-export RawAnsi (experimental)
+export { RawAnsi } from "./components/RawAnsi.js";
+
 // render function
 export { default as render, renderSync, createRoot, type RenderOptions, type Instance } from "./root.js";
