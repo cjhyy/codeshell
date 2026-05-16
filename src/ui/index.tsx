@@ -16,6 +16,7 @@ import { getOpenRouterSnapshot } from "../data/openrouter-models.js";
 import { syncOpenRouterCatalog } from "../data/openrouter-sync.js";
 import { logger } from "../logging/logger.js";
 import { recordInkFrame } from "./perf-probes.js";
+import { renderDevtools } from "../render/devtools.js";
 
 export interface InkReplOptions {
   client: AgentClient;
@@ -83,6 +84,7 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
             patches: p?.patches ?? 0,
           },
         });
+        renderDevtools.recordFrame(event);
       },
     },
   );
