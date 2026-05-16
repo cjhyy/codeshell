@@ -108,16 +108,20 @@ purely-presentational API surface. No business binding.
 
 ### 2026-05-16 — TextInput stays in `src/ui/components/`
 
-`TextInput` bundles:
-- controlled value + cursor model,
-- bracketed paste handling that interacts with the slash-command parser,
-- history navigation (per-session, persisted),
-- completion / autocomplete hooks.
+`TextInput` is a thin presentational component (controlled value + cursor
+model). It has one consumer: `CommandInput` (`src/ui/components/CommandInput.tsx`),
+which is where the CodeShell-specific behavior actually lives:
 
-Items 2–4 are CodeShell business logic, not generic renderer concerns.
-Moving the whole component into `src/render/` would either drag this logic
-into the generic layer (bad) or split into a partial primitive + a wrapper
-(churn for little gain — there is no second consumer that would benefit).
+- slash-command autocomplete (detects `/`-prefixed input, filters the
+  command list, keyboard-navigates the dropdown),
+- history navigation via `createHistoryNavigator` / `addToHistory`
+  (`src/ui/input-history.ts`), bound to ↑ / ↓.
+
+Because `TextInput`'s controlled-value + cursor model is tightly consumed by
+`CommandInput`, splitting `TextInput` out alone would yield a primitive with
+exactly one consumer and zero reuse benefit. The business logic in
+`CommandInput` is CodeShell-specific and does not belong in the generic
+renderer layer.
 
 Decision: `TextInput` remains a `src/ui/` component. If a future product
 need calls for a primitive text input shared across two consumers, revisit
