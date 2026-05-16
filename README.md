@@ -150,6 +150,8 @@ Design principles:
 
 - [CodeShell architecture documentation set](docs/architecture/README.md)
 - [CodeShell architecture diagrams](docs/architecture/10-architecture-diagrams.md)
+- [TUI Render 能力规划](docs/architecture/11-render-tui-capability-plan.md)
+- [mac 端可视化客户端调研](docs/architecture/12-mac-visual-client-research.md)
 - [CodeShell 当前架构与定位说明](docs/codeshell-repo-architecture.md)
 
 ## Project structure

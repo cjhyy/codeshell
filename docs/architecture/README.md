@@ -1,6 +1,6 @@
 # CodeShell Architecture Docs
 
-> Generated on 2026-05-15 from the current repository tree.
+> Generated on 2026-05-16 from the current repository tree.
 
 This directory is the current architecture documentation set for CodeShell. It is organized as a reading path rather than one giant document, so each file can stay focused and easier to update when a subsystem moves.
 
@@ -18,6 +18,8 @@ This directory is the current architecture documentation set for CodeShell. It i
 | 8 | [Extension Points](08-extension-points.md) | Presets, products, hooks, skills, MCP, custom tools, Arena, RunManager |
 | 9 | [Build, Test, and Operations](09-build-test-ops.md) | Build pipeline, package exports, test coverage, logging, sandboxing, operational notes |
 | 10 | [Architecture Diagrams](10-architecture-diagrams.md) | Overview and module detail SVG diagrams |
+| 11 | [TUI Render Capability Plan](11-render-tui-capability-plan.md) | What the custom TUI renderer must support and what is still missing |
+| 12 | [mac Visual Client Research](12-mac-visual-client-research.md) | Electron/Tauri/SwiftUI options, Codex desktop evidence, and recommended mac client architecture |
 
 ## One-Screen Summary
 
@@ -46,6 +48,7 @@ The current source tree supports two primary usage modes:
 - Tool registry/executor: [`src/tool-system/registry.ts`](../../src/tool-system/registry.ts), [`src/tool-system/executor.ts`](../../src/tool-system/executor.ts)
 - Protocol layer: [`src/protocol/types.ts`](../../src/protocol/types.ts)
 - REPL app: [`src/ui/App.tsx`](../../src/ui/App.tsx)
+- Terminal renderer: [`src/render/README.md`](../../src/render/README.md), [`src/render/index.ts`](../../src/render/index.ts)
 - Model pool: [`src/llm/model-pool.ts`](../../src/llm/model-pool.ts)
 - Run lifecycle: [`src/run/RunManager.ts`](../../src/run/RunManager.ts)
 - Arena: [`src/arena/arena.ts`](../../src/arena/arena.ts)
