@@ -36,9 +36,9 @@ Three states:
 | `AlternateScreen`  | supported     | Enter alt-screen + mouse tracking + raw input.   |
 | `Ansi`             | supported     | Embed a pre-rendered ANSI string.                |
 | `NoSelect`         | supported     | Mark a region non-selectable in fullscreen copy. |
-| `Button`           | experimental  | Click/keyboard activatable region.               |
-| `Link`             | experimental  | OSC 8 hyperlink wrapper.                         |
-| `RawAnsi`          | experimental  | Like `Ansi` but bypasses width measurement.      |
+| `Button`           | supported     | Click/keyboard activatable region.               |
+| `Link`             | supported     | OSC 8 hyperlink wrapper.                         |
+| `RawAnsi`          | supported     | Like `Ansi` but bypasses width measurement.      |
 
 ### Hooks
 
