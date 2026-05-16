@@ -8,8 +8,7 @@
  * - Streaming text shown as plain text with cursor
  */
 import { useMemo, useRef, type ReactNode } from "react";
-import { Box, Text } from "../../render/index.js";
-import { Ansi } from "../../render/Ansi.js";
+import { Ansi, Box, Text } from "../../render/index.js";
 import chalk from "chalk";
 import { Marked, lexer as markedLexer } from "marked";
 import { markedTerminal } from "marked-terminal";

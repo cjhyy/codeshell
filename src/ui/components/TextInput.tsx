@@ -8,8 +8,7 @@
  * - ANSI inverse-video cursor
  */
 import { useState } from "react";
-import { Box, Text, useInput } from "../../render/index.js";
-import { Ansi } from "../../render/Ansi.js";
+import { Ansi, Box, Text, useInput } from "../../render/index.js";
 
 interface TextInputProps {
   value: string;
