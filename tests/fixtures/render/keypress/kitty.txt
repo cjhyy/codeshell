@@ -1,0 +1,2 @@
+# kitty keyboard protocol: F1 with shift modifier
+"\u001b[1;2P"

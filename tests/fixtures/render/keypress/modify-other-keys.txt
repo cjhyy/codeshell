@@ -1,0 +1,2 @@
+# modifyOtherKeys mode 2: Ctrl+Shift+A
+"\u001b[27;6;65~"

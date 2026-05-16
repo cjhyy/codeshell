@@ -1,0 +1,3 @@
+# SGR mouse: wheel-up at col 10 row 5, then wheel-down
+"\u001b[<64;10;5M"
+"\u001b[<65;10;5M"

@@ -1,0 +1,3 @@
+# xterm: Ctrl+A then Meta+B (ESC-prefix style)
+"\u0001"
+"\u001bb"

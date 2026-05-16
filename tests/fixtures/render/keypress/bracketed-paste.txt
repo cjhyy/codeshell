@@ -1,0 +1,2 @@
+# bracketed paste of "hi\nthere"
+"\u001b[200~hi\nthere\u001b[201~"
