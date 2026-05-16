@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">状态、配置与存储细节图</title>
+  <desc id="desc">CodeShell 的运行状态主要是文件系统可恢复状态</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <style>
+    .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .box-title { font: 700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .box-caption { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .group-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .edge-label { font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; paint-order: stroke; stroke: #f8fafc; stroke-width: 5px; }
+    .note-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .note { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+  </style>
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <text x="48" y="54" class="title">状态、配置与存储细节图</text>
+  <text x="48" y="84" class="subtitle">CodeShell 的运行状态主要是文件系统可恢复状态</text>
+  <g filter="url(#shadow)">
+  
+    <path d="M 330 207.5 C 370 207.5, 370 207.5, 410 207.5" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 640 207.5 C 680 207.5, 680 207.5, 720 207.5" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 940 207.5 C 995 207.5, 995 180, 1050 180" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1290 180 C 1305 180, 1305 180, 1320 180" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1290 180 C 1305 180, 1305 315, 1320 315" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 960 434 C 1140 434, 1140 450, 1320 450" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1140" y="434" text-anchor="middle" class="edge-label">persist large result</text>
+
+    <path d="M 960 434 C 1140 434, 1140 315, 1320 315" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1140" y="366.5" text-anchor="middle" class="edge-label">compact markers</text>
+
+    <path d="M 830 260 C 835 260, 835 380, 840 380" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 830 260 C 677.5 260, 677.5 585, 525 585" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="677.5" y="414.5" text-anchor="middle" class="edge-label">JSONL traces</text>
+
+    <path d="M 830 260 C 835 260, 835 585, 840 585" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="835" y="414.5" text-anchor="middle" class="edge-label">post-session</text>
+
+    <path d="M 525 260 C 847.5 260, 847.5 585, 1170 585" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="847.5" y="414.5" text-anchor="middle" class="edge-label">models/providers</text>
+
+    <path d="M 830 260 C 515 260, 515 585, 200 585" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="515" y="414.5" text-anchor="middle" class="edge-label">managed runs</text>
+
+    <g id="sources">
+      <rect x="70" y="155" width="260" height="105" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="200" y="183" text-anchor="middle" class="box-title">Settings Sources</text>
+      <text x="200" y="211" text-anchor="middle" class="box-caption">managed -&gt; user -&gt; project</text><text x="200" y="228" text-anchor="middle" class="box-caption">-&gt; local -&gt; flags</text>
+    </g>
+
+    <g id="schema">
+      <rect x="410" y="155" width="230" height="105" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="525" y="183" text-anchor="middle" class="box-title">Settings Schema</text>
+      <text x="525" y="211" text-anchor="middle" class="box-caption">agent、model、context</text><text x="525" y="228" text-anchor="middle" class="box-caption">permissions、sandbox</text>
+    </g>
+
+    <g id="engine">
+      <rect x="720" y="155" width="220" height="105" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="830" y="183" text-anchor="middle" class="box-title">Engine Config</text>
+      <text x="830" y="211" text-anchor="middle" class="box-caption">LLM、preset、tools</text><text x="830" y="228" text-anchor="middle" class="box-caption">mcp、session dir</text>
+    </g>
+
+    <g id="session">
+      <rect x="1050" y="135" width="240" height="90" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="1170" y="163" text-anchor="middle" class="box-title">Session Store</text>
+      <text x="1170" y="191" text-anchor="middle" class="box-caption">~/.code-shell/sessions</text>
+    </g>
+
+    <g id="state">
+      <rect x="1320" y="135" width="200" height="90" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="1420" y="163" text-anchor="middle" class="box-title">state.json</text>
+      <text x="1420" y="191" text-anchor="middle" class="box-caption">status、usage</text><text x="1420" y="208" text-anchor="middle" class="box-caption">turnCount</text>
+    </g>
+
+    <g id="transcript">
+      <rect x="1320" y="270" width="200" height="90" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="1420" y="298" text-anchor="middle" class="box-title">transcript.jsonl</text>
+      <text x="1420" y="326" text-anchor="middle" class="box-caption">message、tool_use</text><text x="1420" y="343" text-anchor="middle" class="box-caption">turn_boundary</text>
+    </g>
+
+    <g id="toolres">
+      <rect x="1320" y="405" width="200" height="90" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="1420" y="433" text-anchor="middle" class="box-title">tool-results/</text>
+      <text x="1420" y="461" text-anchor="middle" class="box-caption">大结果落盘</text><text x="1420" y="478" text-anchor="middle" class="box-caption">preview 入上下文</text>
+    </g>
+
+    <g id="context">
+      <rect x="720" y="380" width="240" height="108" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="840" y="408" text-anchor="middle" class="box-title">ContextManager</text>
+      <text x="840" y="436" text-anchor="middle" class="box-caption">persist -&gt; truncate</text><text x="840" y="453" text-anchor="middle" class="box-caption">micro -&gt; summary</text><text x="840" y="470" text-anchor="middle" class="box-caption">snip/window/emergency</text>
+    </g>
+
+    <g id="runs">
+      <rect x="70" y="585" width="260" height="110" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="200" y="613" text-anchor="middle" class="box-title">Run Store</text>
+      <text x="200" y="641" text-anchor="middle" class="box-caption">~/.code-shell/runs</text><text x="200" y="658" text-anchor="middle" class="box-caption">run.json + events.jsonl</text><text x="200" y="675" text-anchor="middle" class="box-caption">checkpoints / approvals</text>
+    </g>
+
+    <g id="logs">
+      <rect x="410" y="585" width="230" height="110" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+      <text x="525" y="613" text-anchor="middle" class="box-title">Logs</text>
+      <text x="525" y="641" text-anchor="middle" class="box-caption">engine-YYYY-MM-DD</text><text x="525" y="658" text-anchor="middle" class="box-caption">ui-ink-YYYY-MM-DD</text><text x="525" y="675" text-anchor="middle" class="box-caption">sid 贯穿</text>
+    </g>
+
+    <g id="memory">
+      <rect x="720" y="585" width="240" height="110" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="840" y="613" text-anchor="middle" class="box-title">Memory</text>
+      <text x="840" y="641" text-anchor="middle" class="box-caption">project/user memories</text><text x="840" y="658" text-anchor="middle" class="box-caption">session summary</text><text x="840" y="675" text-anchor="middle" class="box-caption">auto-dream</text>
+    </g>
+
+    <g id="cache">
+      <rect x="1050" y="585" width="240" height="110" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="1170" y="613" text-anchor="middle" class="box-title">Model Cache</text>
+      <text x="1170" y="641" text-anchor="middle" class="box-caption">provider model list</text><text x="1170" y="658" text-anchor="middle" class="box-caption">contextLength</text><text x="1170" y="675" text-anchor="middle" class="box-caption">sync-models</text>
+    </g>
+  </g>
+</svg>

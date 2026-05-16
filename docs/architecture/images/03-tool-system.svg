@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">Tool System 细节图</title>
+  <desc id="desc">模型工具调用在这里变成受控的真实操作</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <style>
+    .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .box-title { font: 700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .box-caption { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .group-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .edge-label { font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; paint-order: stroke; stroke: #f8fafc; stroke-width: 5px; }
+    .note-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .note { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+  </style>
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <text x="48" y="54" class="title">Tool System 细节图</text>
+  <text x="48" y="84" class="subtitle">模型工具调用在这里变成受控的真实操作</text>
+  <g filter="url(#shadow)">
+  
+    <path d="M 270 216 C 305 216, 305 171, 340 171" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 455 207 C 455 207, 455 240, 455 240" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 455 312 C 455 312, 455 345, 455 345" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 455 417 C 455 417, 455 450, 455 450" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 570 486 C 615 486, 615 333, 660 333" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 775 290 C 865 290, 865 214, 955 214" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="865" y="244" text-anchor="middle" class="edge-label">ask</text>
+
+    <path d="M 1070 258 C 922.5 258, 922.5 290, 775 290" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="922.5" y="266" text-anchor="middle" class="edge-label">decision</text>
+
+    <path d="M 890 333 C 922.5 333, 922.5 424, 955 424" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="922.5" y="370.5" text-anchor="middle" class="edge-label">allow</text>
+
+    <path d="M 1185 424 C 1222.5 424, 1222.5 260, 1260 260" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1185 424 C 1222.5 424, 1222.5 405, 1260 405" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1185 424 C 1222.5 424, 1222.5 550, 1260 550" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1222.5" y="479" text-anchor="middle" class="edge-label">Bash</text>
+
+    <path d="M 1070 468 C 1070 468, 1070 630, 1070 630" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1185 675 C 1037.5 675, 1037.5 675, 890 675" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 890 675 C 730 675, 730 675, 570 675" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <g id="call">
+      <rect x="70" y="175" width="200" height="82" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="170" y="203" text-anchor="middle" class="box-title">ToolCall</text>
+      <text x="170" y="231" text-anchor="middle" class="box-caption">name + args + id</text>
+    </g>
+
+    <g id="plan">
+      <rect x="340" y="135" width="230" height="72" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="455" y="163" text-anchor="middle" class="box-title">Plan Mode Filter</text>
+      <text x="455" y="191" text-anchor="middle" class="box-caption">只允许读/规划工具</text>
+    </g>
+
+    <g id="validate">
+      <rect x="340" y="240" width="230" height="72" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="455" y="268" text-anchor="middle" class="box-title">Arg Validation</text>
+      <text x="455" y="296" text-anchor="middle" class="box-caption">inputSchema</text>
+    </g>
+
+    <g id="hooks1">
+      <rect x="340" y="345" width="230" height="72" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="455" y="373" text-anchor="middle" class="box-title">pre_tool_use</text>
+      <text x="455" y="401" text-anchor="middle" class="box-caption">hook 可拒绝</text>
+    </g>
+
+    <g id="guards">
+      <rect x="340" y="450" width="230" height="72" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="455" y="478" text-anchor="middle" class="box-title">Guards</text>
+      <text x="455" y="506" text-anchor="middle" class="box-caption">重复读取 / stale task</text>
+    </g>
+
+    <g id="perm">
+      <rect x="660" y="290" width="230" height="86" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+      <text x="775" y="318" text-anchor="middle" class="box-title">PermissionClassifier</text>
+      <text x="775" y="346" text-anchor="middle" class="box-caption">rules、bash 风险</text><text x="775" y="363" text-anchor="middle" class="box-caption">ask / allow / deny</text>
+    </g>
+
+    <g id="approve">
+      <rect x="955" y="170" width="230" height="88" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="1070" y="198" text-anchor="middle" class="box-title">ApprovalBackend</text>
+      <text x="1070" y="226" text-anchor="middle" class="box-caption">interactive</text><text x="1070" y="243" text-anchor="middle" class="box-caption">headless / auto</text>
+    </g>
+
+    <g id="registry">
+      <rect x="955" y="380" width="230" height="88" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="1070" y="408" text-anchor="middle" class="box-title">ToolRegistry</text>
+      <text x="1070" y="436" text-anchor="middle" class="box-caption">builtin + custom + MCP</text><text x="1070" y="453" text-anchor="middle" class="box-caption">executor lookup</text>
+    </g>
+
+    <g id="builtin">
+      <rect x="1260" y="215" width="230" height="90" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="1375" y="243" text-anchor="middle" class="box-title">Builtin Tools</text>
+      <text x="1375" y="271" text-anchor="middle" class="box-caption">Read、Edit、Bash</text><text x="1375" y="288" text-anchor="middle" class="box-caption">Task、Agent、Skill</text>
+    </g>
+
+    <g id="mcp">
+      <rect x="1260" y="360" width="230" height="90" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="1375" y="388" text-anchor="middle" class="box-title">MCP Tools</text>
+      <text x="1375" y="416" text-anchor="middle" class="box-caption">mcp_server_tool</text><text x="1375" y="433" text-anchor="middle" class="box-caption">resources</text>
+    </g>
+
+    <g id="sandbox">
+      <rect x="1260" y="505" width="230" height="90" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="1375" y="533" text-anchor="middle" class="box-title">Sandbox</text>
+      <text x="1375" y="561" text-anchor="middle" class="box-caption">off / auto</text><text x="1375" y="578" text-anchor="middle" class="box-caption">seatbelt / bwrap</text>
+    </g>
+
+    <g id="result">
+      <rect x="955" y="630" width="230" height="90" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="1070" y="658" text-anchor="middle" class="box-title">ToolResult</text>
+      <text x="1070" y="686" text-anchor="middle" class="box-caption">result or error</text><text x="1070" y="703" text-anchor="middle" class="box-caption">record + stream</text>
+    </g>
+
+    <g id="transcript">
+      <rect x="660" y="630" width="230" height="90" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="775" y="658" text-anchor="middle" class="box-title">Transcript</text>
+      <text x="775" y="686" text-anchor="middle" class="box-caption">tool_use</text><text x="775" y="703" text-anchor="middle" class="box-caption">tool_result</text>
+    </g>
+
+    <g id="stream">
+      <rect x="340" y="630" width="230" height="90" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="455" y="658" text-anchor="middle" class="box-title">Stream Event</text>
+      <text x="455" y="686" text-anchor="middle" class="box-caption">tool_use_start</text><text x="455" y="703" text-anchor="middle" class="box-caption">tool_result</text>
+    </g>
+
+    <g>
+      <text x="80" y="840" class="note-title">并发策略</text>
+      <text x="80" y="862" class="note">isConcurrencySafe=true 的读取类工具可并发启动；写入、shell、审批类工具按顺序 drain，</text><text x="80" y="880" class="note">同时 ToolRegistry 为每次调用加 timeout 与 abort signal。</text>
+    </g>
+  </g>
+</svg>

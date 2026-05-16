@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">Engine 与 TurnLoop 细节图</title>
+  <desc id="desc">Engine 负责装配，TurnLoop 负责多轮状态机</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <style>
+    .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .box-title { font: 700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .box-caption { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .group-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .edge-label { font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; paint-order: stroke; stroke: #f8fafc; stroke-width: 5px; }
+    .note-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .note { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+  </style>
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <text x="48" y="54" class="title">Engine 与 TurnLoop 细节图</text>
+  <text x="48" y="84" class="subtitle">Engine 负责装配，TurnLoop 负责多轮状态机</text>
+  <g filter="url(#shadow)">
+  
+    <g>
+      <rect x="70" y="135" width="500" height="710" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
+      <text x="88" y="163" class="group-title">Engine.run 装配区</text>
+    </g>
+
+    <g>
+      <rect x="660" y="135" width="850" height="710" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
+      <text x="678" y="163" class="group-title">TurnLoop 循环区</text>
+    </g>
+
+    <path d="M 310 229 C 325 229, 325 229, 340 229" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 215 268 C 215 268, 215 330, 215 330" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 430 268 C 430 268, 430 330, 430 330" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 215 412 C 215 412, 215 475, 215 475" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 430 412 C 430 412, 430 475, 430 475" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 215 561 C 270 561, 270 650, 325 650" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 430 561 C 377.5 561, 377.5 650, 325 650" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 415 694 C 565 694, 565 257, 715 257" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 885 257 C 922.5 257, 922.5 257, 960 257" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1130 257 C 1167.5 257, 1167.5 257, 1205 257" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1290 294 C 1302.5 294, 1302.5 390, 1315 390" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1302.5" y="334" text-anchor="middle" class="edge-label">no tools</text>
+
+    <path d="M 1290 294 C 1167.5 294, 1167.5 390, 1045 390" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1167.5" y="334" text-anchor="middle" class="edge-label">tools</text>
+
+    <path d="M 1130 428 C 1007.5 428, 1007.5 428, 885 428" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 800 466 C 820 466, 820 606, 840 606" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1030 606 C 1060 606, 1060 606, 1090 606" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1185 565 C 992.5 565, 992.5 294, 800 294" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="992.5" y="421.5" text-anchor="middle" class="edge-label">next turn</text>
+
+    <path d="M 1045 294 C 1045 294, 1045 725, 1045 725" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1045 725 C 1045 725, 1045 294, 1045 294" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <g id="input">
+      <rect x="120" y="190" width="190" height="78" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="215" y="218" text-anchor="middle" class="box-title">User Task</text>
+      <text x="215" y="246" text-anchor="middle" class="box-caption">task + optional sessionId</text>
+    </g>
+
+    <g id="ctx">
+      <rect x="340" y="190" width="180" height="78" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="430" y="218" text-anchor="middle" class="box-title">ToolContext</text>
+      <text x="430" y="246" text-anchor="middle" class="box-caption">cwd、LLM、sandbox</text><text x="430" y="263" text-anchor="middle" class="box-caption">askUser、subAgent</text>
+    </g>
+
+    <g id="session">
+      <rect x="120" y="330" width="190" height="82" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="215" y="358" text-anchor="middle" class="box-title">Session</text>
+      <text x="215" y="386" text-anchor="middle" class="box-caption">create / resume</text><text x="215" y="403" text-anchor="middle" class="box-caption">append user msg</text>
+    </g>
+
+    <g id="perm">
+      <rect x="340" y="330" width="180" height="82" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+      <text x="430" y="358" text-anchor="middle" class="box-title">Permission</text>
+      <text x="430" y="386" text-anchor="middle" class="box-caption">rules + backend</text><text x="430" y="403" text-anchor="middle" class="box-caption">interactive/headless</text>
+    </g>
+
+    <g id="prompt">
+      <rect x="120" y="475" width="190" height="86" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="215" y="503" text-anchor="middle" class="box-title">PromptComposer</text>
+      <text x="215" y="531" text-anchor="middle" class="box-caption">tools + preset</text><text x="215" y="548" text-anchor="middle" class="box-caption">instructions + memory</text>
+    </g>
+
+    <g id="deps">
+      <rect x="340" y="475" width="180" height="86" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="430" y="503" text-anchor="middle" class="box-title">Deps</text>
+      <text x="430" y="531" text-anchor="middle" class="box-caption">ModelFacade + ToolExecutor</text><text x="430" y="548" text-anchor="middle" class="box-caption">ContextManager</text>
+    </g>
+
+    <g id="turn">
+      <rect x="235" y="650" width="180" height="88" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="325" y="678" text-anchor="middle" class="box-title">TurnLoop</text>
+      <text x="325" y="706" text-anchor="middle" class="box-caption">constructed per run</text>
+    </g>
+
+    <g id="pre">
+      <rect x="715" y="220" width="170" height="74" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="800" y="248" text-anchor="middle" class="box-title">pre_check</text>
+      <text x="800" y="276" text-anchor="middle" class="box-caption">manage context</text>
+    </g>
+
+    <g id="model">
+      <rect x="960" y="220" width="170" height="74" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="1045" y="248" text-anchor="middle" class="box-title">model_call</text>
+      <text x="1045" y="276" text-anchor="middle" class="box-caption">stream + fallback</text>
+    </g>
+
+    <g id="post">
+      <rect x="1205" y="220" width="170" height="74" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="1290" y="248" text-anchor="middle" class="box-title">post_check</text>
+      <text x="1290" y="276" text-anchor="middle" class="box-caption">text or tools?</text>
+    </g>
+
+    <g id="complete">
+      <rect x="1230" y="390" width="170" height="76" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="1315" y="418" text-anchor="middle" class="box-title">complete</text>
+      <text x="1315" y="446" text-anchor="middle" class="box-caption">assistant_message</text>
+    </g>
+
+    <g id="exec">
+      <rect x="960" y="390" width="170" height="76" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+      <text x="1045" y="418" text-anchor="middle" class="box-title">tool_exec</text>
+      <text x="1045" y="446" text-anchor="middle" class="box-caption">queue + executor</text>
+    </g>
+
+    <g id="append">
+      <rect x="715" y="390" width="170" height="76" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="800" y="418" text-anchor="middle" class="box-title">append results</text>
+      <text x="800" y="446" text-anchor="middle" class="box-caption">tool_result blocks</text>
+    </g>
+
+    <g id="guards">
+      <rect x="840" y="565" width="190" height="82" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="935" y="593" text-anchor="middle" class="box-title">guards</text>
+      <text x="935" y="621" text-anchor="middle" class="box-caption">token budget</text><text x="935" y="638" text-anchor="middle" class="box-caption">investigation/task</text>
+    </g>
+
+    <g id="compact">
+      <rect x="1090" y="565" width="190" height="82" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="1185" y="593" text-anchor="middle" class="box-title">context_mgmt</text>
+      <text x="1185" y="621" text-anchor="middle" class="box-caption">usage update</text><text x="1185" y="638" text-anchor="middle" class="box-caption">compact event</text>
+    </g>
+
+    <g id="recovery">
+      <rect x="930" y="725" width="230" height="84" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="1045" y="753" text-anchor="middle" class="box-title">recovery paths</text>
+      <text x="1045" y="781" text-anchor="middle" class="box-caption">context retry + continuation</text><text x="1045" y="798" text-anchor="middle" class="box-caption">orphan tool patch</text>
+    </g>
+  </g>
+</svg>

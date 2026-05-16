@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">Arena 与扩展点细节图</title>
+  <desc id="desc">多模型证据驱动分析，以及框架可插拔能力</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <style>
+    .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .box-title { font: 700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .box-caption { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .group-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .edge-label { font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; paint-order: stroke; stroke: #f8fafc; stroke-width: 5px; }
+    .note-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .note { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+  </style>
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <text x="48" y="54" class="title">Arena 与扩展点细节图</text>
+  <text x="48" y="84" class="subtitle">多模型证据驱动分析，以及框架可插拔能力</text>
+  <g filter="url(#shadow)">
+  
+    <g>
+      <rect x="60" y="130" width="1010" height="600" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
+      <text x="78" y="158" class="group-title">Arena Pipeline</text>
+    </g>
+
+    <g>
+      <rect x="1130" y="130" width="390" height="600" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
+      <text x="1148" y="158" class="group-title">Extension Points</text>
+    </g>
+
+    <path d="M 270 231 C 295 231, 295 231, 320 231" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 490 231 C 515 231, 515 231, 540 231" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 710 231 C 735 231, 735 231, 760 231" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 845 267 C 575 267, 575 365, 305 365" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 400 408 C 435 408, 435 408, 470 408" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 660 408 C 695 408, 695 408, 730 408" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 825 451 C 625 451, 625 540, 425 540" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 520 583 C 555 583, 555 583, 590 583" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 780 583 C 815 583, 815 583, 850 583" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1175 445 C 942.5 445, 942.5 231, 710 231" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="942.5" y="330" text-anchor="middle" class="edge-label">tools</text>
+
+    <path d="M 1175 225 C 1052.5 225, 1052.5 231, 930 231" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1052.5" y="220" text-anchor="middle" class="edge-label">prompt</text>
+
+    <path d="M 1175 555 C 1047.5 555, 1047.5 408, 920 408" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1047.5" y="473.5" text-anchor="middle" class="edge-label">policy</text>
+
+    <path d="M 1320 630 C 1320 630, 1320 260, 1320 260" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1175 335 C 1052.5 335, 1052.5 231, 930 231" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1052.5" y="275" text-anchor="middle" class="edge-label">guidance</text>
+
+    <g id="topic">
+      <rect x="100" y="195" width="170" height="72" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="185" y="223" text-anchor="middle" class="box-title">Topic</text>
+      <text x="185" y="251" text-anchor="middle" class="box-caption">自然语言请求</text>
+    </g>
+
+    <g id="planner">
+      <rect x="320" y="195" width="170" height="72" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="405" y="223" text-anchor="middle" class="box-title">Planner</text>
+      <text x="405" y="251" text-anchor="middle" class="box-caption">mode / lenses / sources</text>
+    </g>
+
+    <g id="evidence">
+      <rect x="540" y="195" width="170" height="72" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="625" y="223" text-anchor="middle" class="box-title">Evidence</text>
+      <text x="625" y="251" text-anchor="middle" class="box-caption">git / repo / docs / web</text>
+    </g>
+
+    <g id="strategy">
+      <rect x="760" y="195" width="170" height="72" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="845" y="223" text-anchor="middle" class="box-title">Strategy + Lens</text>
+      <text x="845" y="251" text-anchor="middle" class="box-caption">review / discussion / planning</text>
+    </g>
+
+    <g id="research">
+      <rect x="210" y="365" width="190" height="86" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="305" y="393" text-anchor="middle" class="box-title">Participant Research</text>
+      <text x="305" y="421" text-anchor="middle" class="box-caption">多模型并行</text><text x="305" y="438" text-anchor="middle" class="box-caption">独立 dossier</text>
+    </g>
+
+    <g id="claims">
+      <rect x="470" y="365" width="190" height="86" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="565" y="393" text-anchor="middle" class="box-title">Claim Registry</text>
+      <text x="565" y="421" text-anchor="middle" class="box-caption">findings -&gt; claims</text><text x="565" y="438" text-anchor="middle" class="box-caption">ledger</text>
+    </g>
+
+    <g id="review">
+      <rect x="730" y="365" width="190" height="86" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+      <text x="825" y="393" text-anchor="middle" class="box-title">Cross Review</text>
+      <text x="825" y="421" text-anchor="middle" class="box-caption">agree / refine</text><text x="825" y="438" text-anchor="middle" class="box-caption">disagree / needs_evidence</text>
+    </g>
+
+    <g id="debate">
+      <rect x="330" y="540" width="190" height="86" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="425" y="568" text-anchor="middle" class="box-title">Debate</text>
+      <text x="425" y="596" text-anchor="middle" class="box-caption">contested claims</text><text x="425" y="613" text-anchor="middle" class="box-caption">structured rounds</text>
+    </g>
+
+    <g id="adjudicate">
+      <rect x="590" y="540" width="190" height="86" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="685" y="568" text-anchor="middle" class="box-title">Adjudication</text>
+      <text x="685" y="596" text-anchor="middle" class="box-caption">verified / rejected</text><text x="685" y="613" text-anchor="middle" class="box-caption">unresolved</text>
+    </g>
+
+    <g id="consensus">
+      <rect x="850" y="540" width="170" height="86" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="935" y="568" text-anchor="middle" class="box-title">Consensus</text>
+      <text x="935" y="596" text-anchor="middle" class="box-caption">final report</text><text x="935" y="613" text-anchor="middle" class="box-caption">roadmap / verdict</text>
+    </g>
+
+    <g id="presets">
+      <rect x="1175" y="190" width="290" height="70" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="1320" y="218" text-anchor="middle" class="box-title">Presets</text>
+      <text x="1320" y="246" text-anchor="middle" class="box-caption">general / terminal-coding / custom</text>
+    </g>
+
+    <g id="skills">
+      <rect x="1175" y="300" width="290" height="70" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="1320" y="328" text-anchor="middle" class="box-title">Skills</text>
+      <text x="1320" y="356" text-anchor="middle" class="box-caption">.code-shell/skills + builtins</text>
+    </g>
+
+    <g id="mcp">
+      <rect x="1175" y="410" width="290" height="70" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="1320" y="438" text-anchor="middle" class="box-title">MCP / Custom Tools</text>
+      <text x="1320" y="466" text-anchor="middle" class="box-caption">external capabilities</text>
+    </g>
+
+    <g id="hooks">
+      <rect x="1175" y="520" width="290" height="70" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="1320" y="548" text-anchor="middle" class="box-title">Hooks</text>
+      <text x="1320" y="576" text-anchor="middle" class="box-caption">pre/post tool, turn events</text>
+    </g>
+
+    <g id="product">
+      <rect x="1175" y="630" width="290" height="70" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="1320" y="658" text-anchor="middle" class="box-title">Product API</text>
+      <text x="1320" y="686" text-anchor="middle" class="box-caption">preset + adapter + contract</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">RunManager 与 Product API 细节图</title>
+  <desc id="desc">把一次 Engine.run 封装成长任务生命周期和领域产品</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <style>
+    .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .box-title { font: 700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .box-caption { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .group-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .edge-label { font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; paint-order: stroke; stroke: #f8fafc; stroke-width: 5px; }
+    .note-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .note { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+  </style>
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <text x="48" y="54" class="title">RunManager 与 Product API 细节图</text>
+  <text x="48" y="84" class="subtitle">把一次 Engine.run 封装成长任务生命周期和领域产品</text>
+  <g filter="url(#shadow)">
+  
+    <path d="M 320 225 C 355 225, 355 165, 390 165" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 320 225 C 355 225, 355 300, 390 300" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 320 225 C 355 225, 355 435, 390 435" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 610 165 C 655 165, 655 292.5, 700 292.5" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 610 300 C 655 300, 655 292.5, 700 292.5" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 610 435 C 655 435, 655 292.5, 700 292.5" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 930 292.5 C 970 292.5, 970 163, 1010 163" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 930 292.5 C 970 292.5, 970 293, 1010 293" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 930 292.5 C 970 292.5, 970 423, 1010 423" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 930 292.5 C 970 292.5, 970 553, 1010 553" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1220 163 C 1265 163, 1265 300, 1310 300" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1420 350 C 1420 350, 1420 430, 1420 430" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1310 480 C 1120 480, 1120 292.5, 930 292.5" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1120" y="378.25" text-anchor="middle" class="edge-label">stream/result</text>
+
+    <path d="M 815 345 C 812.5 345, 812.5 620, 810 620" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <g id="product">
+      <rect x="80" y="170" width="240" height="110" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="200" y="198" text-anchor="middle" class="box-title">defineProduct()</text>
+      <text x="200" y="226" text-anchor="middle" class="box-caption">external repo</text><text x="200" y="243" text-anchor="middle" class="box-caption">组装领域 agent</text>
+    </g>
+
+    <g id="preset">
+      <rect x="390" y="120" width="220" height="90" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="500" y="148" text-anchor="middle" class="box-title">ProductPreset</text>
+      <text x="500" y="176" text-anchor="middle" class="box-caption">sections / prompt</text><text x="500" y="193" text-anchor="middle" class="box-caption">injectGitStatus</text>
+    </g>
+
+    <g id="adapter">
+      <rect x="390" y="255" width="220" height="90" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="500" y="283" text-anchor="middle" class="box-title">ProductAdapter</text>
+      <text x="500" y="311" text-anchor="middle" class="box-caption">custom tools</text><text x="500" y="328" text-anchor="middle" class="box-caption">MCP、hooks、rules</text>
+    </g>
+
+    <g id="contract">
+      <rect x="390" y="390" width="220" height="90" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="500" y="418" text-anchor="middle" class="box-title">ProductContract</text>
+      <text x="500" y="446" text-anchor="middle" class="box-caption">evaluator</text><text x="500" y="463" text-anchor="middle" class="box-caption">tags、metadata</text><text x="500" y="480" text-anchor="middle" class="box-caption">limits</text>
+    </g>
+
+    <g id="manager">
+      <rect x="700" y="240" width="230" height="105" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="815" y="268" text-anchor="middle" class="box-title">RunManager</text>
+      <text x="815" y="296" text-anchor="middle" class="box-caption">submit / start</text><text x="815" y="313" text-anchor="middle" class="box-caption">resume / cancel</text><text x="815" y="330" text-anchor="middle" class="box-caption">attach</text>
+    </g>
+
+    <g id="queue">
+      <rect x="1010" y="120" width="210" height="86" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="1115" y="148" text-anchor="middle" class="box-title">RunQueue</text>
+      <text x="1115" y="176" text-anchor="middle" class="box-caption">concurrency</text><text x="1115" y="193" text-anchor="middle" class="box-caption">pending / active</text>
+    </g>
+
+    <g id="store">
+      <rect x="1010" y="250" width="210" height="86" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="1115" y="278" text-anchor="middle" class="box-title">FileRunStore</text>
+      <text x="1115" y="306" text-anchor="middle" class="box-caption">run.json</text><text x="1115" y="323" text-anchor="middle" class="box-caption">events.jsonl</text>
+    </g>
+
+    <g id="approval">
+      <rect x="1010" y="380" width="210" height="86" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+      <text x="1115" y="408" text-anchor="middle" class="box-title">Approvals</text>
+      <text x="1115" y="436" text-anchor="middle" class="box-caption">waiting_approval</text><text x="1115" y="453" text-anchor="middle" class="box-caption">resume decision</text>
+    </g>
+
+    <g id="checkpoint">
+      <rect x="1010" y="510" width="210" height="86" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="1115" y="538" text-anchor="middle" class="box-title">Checkpoints</text>
+      <text x="1115" y="566" text-anchor="middle" class="box-caption">phase、summary</text><text x="1115" y="583" text-anchor="middle" class="box-caption">nextAction</text>
+    </g>
+
+    <g id="runner">
+      <rect x="1310" y="250" width="220" height="100" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="1420" y="278" text-anchor="middle" class="box-title">EngineRunner</text>
+      <text x="1420" y="306" text-anchor="middle" class="box-caption">build EngineConfig</text><text x="1420" y="323" text-anchor="middle" class="box-caption">register custom tools</text>
+    </g>
+
+    <g id="engine">
+      <rect x="1310" y="430" width="220" height="100" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="1420" y="458" text-anchor="middle" class="box-title">Engine.run</text>
+      <text x="1420" y="486" text-anchor="middle" class="box-caption">linked session</text><text x="1420" y="503" text-anchor="middle" class="box-caption">stream events</text>
+    </g>
+
+    <g id="states">
+      <rect x="640" y="620" width="340" height="125" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="810" y="648" text-anchor="middle" class="box-title">Run State Machine</text>
+      <text x="810" y="676" text-anchor="middle" class="box-caption">queued -&gt; running</text><text x="810" y="693" text-anchor="middle" class="box-caption">waiting_input / waiting_approval / blocked</text><text x="810" y="710" text-anchor="middle" class="box-caption">completed / failed / cancelled</text>
+    </g>
+  </g>
+</svg>

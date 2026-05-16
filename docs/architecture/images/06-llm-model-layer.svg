@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">LLM 与模型层细节图</title>
+  <desc id="desc">ModelPool 负责选择模型，Provider 客户端负责统一不同 API 形状</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <style>
+    .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .box-title { font: 700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .box-caption { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .group-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .edge-label { font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; paint-order: stroke; stroke: #f8fafc; stroke-width: 5px; }
+    .note-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .note { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+  </style>
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <text x="48" y="54" class="title">LLM 与模型层细节图</text>
+  <text x="48" y="84" class="subtitle">ModelPool 负责选择模型，Provider 客户端负责统一不同 API 形状</text>
+  <g filter="url(#shadow)">
+  
+    <path d="M 300 216 C 335 216, 335 190, 370 190" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 300 216 C 335 216, 335 338, 370 338" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 485 235 C 485 235, 485 290, 485 290" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 600 338 C 640 338, 640 268, 680 268" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 900 268 C 940 268, 940 268, 980 268" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1200 268 C 1240 268, 1240 178, 1280 178" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1200 268 C 1240 268, 1240 338, 1280 338" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1395 226 C 1297.5 226, 1297.5 507, 1200 507" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 1200 507 C 1050 507, 1050 507, 900 507" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 900 507 C 750 507, 750 543, 600 543" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 790 559 C 790 559, 790 660, 790 660" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 485 386 C 732.5 386, 732.5 704, 980 704" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="732.5" y="537" text-anchor="middle" class="edge-label">participants</text>
+
+    <path d="M 300 543 C 335 543, 335 338, 370 338" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="335" y="432.5" text-anchor="middle" class="edge-label">context windows</text>
+
+    <g id="settings">
+      <rect x="70" y="170" width="230" height="92" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="185" y="198" text-anchor="middle" class="box-title">settings</text>
+      <text x="185" y="226" text-anchor="middle" class="box-caption">activeKey</text><text x="185" y="243" text-anchor="middle" class="box-caption">providers[]</text><text x="185" y="260" text-anchor="middle" class="box-caption">models[]</text>
+    </g>
+
+    <g id="catalog">
+      <rect x="370" y="145" width="230" height="90" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="485" y="173" text-anchor="middle" class="box-title">ProviderCatalog</text>
+      <text x="485" y="201" text-anchor="middle" class="box-caption">kind、baseUrl</text><text x="485" y="218" text-anchor="middle" class="box-caption">apiKey、thinking</text>
+    </g>
+
+    <g id="pool">
+      <rect x="370" y="290" width="230" height="96" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="485" y="318" text-anchor="middle" class="box-title">ModelPool</text>
+      <text x="485" y="346" text-anchor="middle" class="box-caption">register / switch / get</text><text x="485" y="363" text-anchor="middle" class="box-caption">context window cache</text>
+    </g>
+
+    <g id="config">
+      <rect x="680" y="220" width="220" height="96" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="790" y="248" text-anchor="middle" class="box-title">LLMConfig</text>
+      <text x="790" y="276" text-anchor="middle" class="box-caption">provider、model</text><text x="790" y="293" text-anchor="middle" class="box-caption">baseUrl、maxTokens</text><text x="790" y="310" text-anchor="middle" class="box-caption">providerKind</text>
+    </g>
+
+    <g id="factory">
+      <rect x="980" y="220" width="220" height="96" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="1090" y="248" text-anchor="middle" class="box-title">Client Factory</text>
+      <text x="1090" y="276" text-anchor="middle" class="box-caption">openai or anthropic</text><text x="1090" y="293" text-anchor="middle" class="box-caption">registerProvider</text>
+    </g>
+
+    <g id="openai">
+      <rect x="1280" y="130" width="230" height="96" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="1395" y="158" text-anchor="middle" class="box-title">OpenAIClient</text>
+      <text x="1395" y="186" text-anchor="middle" class="box-caption">OpenAI-compatible</text><text x="1395" y="203" text-anchor="middle" class="box-caption">DeepSeek、OpenRouter</text><text x="1395" y="220" text-anchor="middle" class="box-caption">Z.AI、Groq、xAI...</text>
+    </g>
+
+    <g id="anthropic">
+      <rect x="1280" y="290" width="230" height="96" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="1395" y="318" text-anchor="middle" class="box-title">AnthropicClient</text>
+      <text x="1395" y="346" text-anchor="middle" class="box-caption">Anthropic SDK</text><text x="1395" y="363" text-anchor="middle" class="box-caption">messages + tools</text>
+    </g>
+
+    <g id="cap">
+      <rect x="980" y="455" width="220" height="104" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+      <text x="1090" y="483" text-anchor="middle" class="box-title">Capabilities</text>
+      <text x="1090" y="511" text-anchor="middle" class="box-caption">max_tokens 字段</text><text x="1090" y="528" text-anchor="middle" class="box-caption">reasoning shape</text><text x="1090" y="545" text-anchor="middle" class="box-caption">rejected params</text>
+    </g>
+
+    <g id="facade">
+      <rect x="680" y="455" width="220" height="104" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="790" y="483" text-anchor="middle" class="box-title">ModelFacade</text>
+      <text x="790" y="511" text-anchor="middle" class="box-caption">stream / fallback</text><text x="790" y="528" text-anchor="middle" class="box-caption">summarize</text><text x="790" y="545" text-anchor="middle" class="box-caption">usage accounting</text>
+    </g>
+
+    <g id="turn">
+      <rect x="370" y="500" width="230" height="86" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="485" y="528" text-anchor="middle" class="box-title">TurnLoop</text>
+      <text x="485" y="556" text-anchor="middle" class="box-caption">model_call</text><text x="485" y="573" text-anchor="middle" class="box-caption">continuation</text>
+    </g>
+
+    <g id="usage">
+      <rect x="680" y="660" width="220" height="88" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="790" y="688" text-anchor="middle" class="box-title">Usage + Cost</text>
+      <text x="790" y="716" text-anchor="middle" class="box-caption">tokens、latency</text><text x="790" y="733" text-anchor="middle" class="box-caption">ctx bar、cost store</text>
+    </g>
+
+    <g id="arena">
+      <rect x="980" y="660" width="220" height="88" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="1090" y="688" text-anchor="middle" class="box-title">Arena Participants</text>
+      <text x="1090" y="716" text-anchor="middle" class="box-caption">pool key -&gt; preset</text><text x="1090" y="733" text-anchor="middle" class="box-caption">-&gt; raw model path</text>
+    </g>
+
+    <g id="cache">
+      <rect x="70" y="500" width="230" height="86" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="185" y="528" text-anchor="middle" class="box-title">Model Cache</text>
+      <text x="185" y="556" text-anchor="middle" class="box-caption">fetchModelList</text><text x="185" y="573" text-anchor="middle" class="box-caption">contextLength</text>
+    </g>
+  </g>
+</svg>

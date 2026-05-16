@@ -148,21 +148,27 @@ Design principles:
 
 ## Further Reading
 
+- [CodeShell architecture documentation set](docs/architecture/README.md)
+- [CodeShell architecture diagrams](docs/architecture/10-architecture-diagrams.md)
 - [CodeShell 当前架构与定位说明](docs/codeshell-repo-architecture.md)
 
 ## Project structure
 
 ```text
 src/
-├── cli/              # CLI entrypoints and terminal UI
+├── cli/              # CLI entrypoints, commands, onboarding, and output modes
 ├── context/          # Context compaction and window management
 ├── engine/           # Turn loop orchestration
 ├── hooks/            # Hook chain
 ├── llm/              # Model providers
 ├── preset/           # Built-in agent presets
 ├── prompt/           # Prompt composition
+├── protocol/         # Agent client/server protocol
+├── render/           # Custom Ink-like terminal renderer
+├── run/              # Managed run lifecycle
 ├── session/          # Session persistence and memory
-├── tool/             # Tool registry, execution, permissions, MCP
+├── tool-system/      # Tool registry, execution, permissions, MCP
+├── ui/               # Terminal UI components
 └── index.ts          # Public API exports
 ```
 

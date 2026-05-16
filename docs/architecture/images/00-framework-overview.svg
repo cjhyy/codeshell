@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title desc">
+  <title id="title">CodeShell 框架粗略介绍图</title>
+  <desc id="desc">通用 Agent 编排内核 + 终端编码预设 + 长任务与多模型扩展</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-20%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <style>
+    .title { font: 700 34px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .subtitle { font: 500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .box-title { font: 700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .box-caption { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+    .group-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .edge-label { font: 600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; paint-order: stroke; stroke: #f8fafc; stroke-width: 5px; }
+    .note-title { font: 700 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0f172a; }
+    .note { font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+  </style>
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <text x="48" y="54" class="title">CodeShell 框架粗略介绍图</text>
+  <text x="48" y="84" class="subtitle">通用 Agent 编排内核 + 终端编码预设 + 长任务与多模型扩展</text>
+  <g filter="url(#shadow)">
+  
+    <g>
+      <rect x="40" y="120" width="320" height="700" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
+      <text x="58" y="148" class="group-title">入口</text>
+    </g>
+
+    <g>
+      <rect x="410" y="120" width="410" height="700" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
+      <text x="428" y="148" class="group-title">编排核心</text>
+    </g>
+
+    <g>
+      <rect x="870" y="120" width="650" height="700" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="8 8"/>
+      <text x="888" y="148" class="group-title">能力与基础设施</text>
+    </g>
+
+    <path d="M 200 262 C 200 262, 200 320, 200 320" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="200" y="283" text-anchor="middle" class="edge-label">启动</text>
+
+    <path d="M 200 410 C 200 410, 200 470, 200 470" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="200" y="432" text-anchor="middle" class="edge-label">统一请求</text>
+
+    <path d="M 310 518 C 392.5 518, 392.5 265, 475 265" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="392.5" y="383.5" text-anchor="middle" class="edge-label">agent/run</text>
+
+    <path d="M 610 325 C 610 325, 610 395, 610 395" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 610 495 C 610 495, 610 575, 610 575" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    
+
+    <path d="M 745 630 C 832.5 630, 832.5 225, 920 225" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="832.5" y="419.5" text-anchor="middle" class="edge-label">tool calls</text>
+
+    <path d="M 745 630 C 987.5 630, 987.5 225, 1230 225" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="987.5" y="419.5" text-anchor="middle" class="edge-label">model calls</text>
+
+    <path d="M 745 265 C 832.5 265, 832.5 412.5, 920 412.5" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="832.5" y="330.75" text-anchor="middle" class="edge-label">persist</text>
+
+    <path d="M 200 566 C 200 566, 200 640, 200 640" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="200" y="595" text-anchor="middle" class="edge-label">stream events</text>
+
+    <path d="M 745 265 C 987.5 265, 987.5 412.5, 1230 412.5" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="987.5" y="330.75" text-anchor="middle" class="edge-label">managed lifecycle</text>
+
+    <path d="M 1040 275 C 1040 275, 1040 555, 1040 555" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1040" y="407" text-anchor="middle" class="edge-label">Arena tool</text>
+
+    <path d="M 1350 555 C 1350 555, 1350 465, 1350 465" fill="none" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+    <text x="1350" y="502" text-anchor="middle" class="edge-label">wraps</text>
+
+    <g id="user">
+      <rect x="90" y="180" width="220" height="82" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="200" y="208" text-anchor="middle" class="box-title">用户 / SDK</text>
+      <text x="200" y="236" text-anchor="middle" class="box-caption">CLI、库调用、外部产品</text>
+    </g>
+
+    <g id="cli">
+      <rect x="90" y="320" width="220" height="90" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="200" y="348" text-anchor="middle" class="box-title">CLI</text>
+      <text x="200" y="376" text-anchor="middle" class="box-caption">repl / run / arena / runs</text>
+    </g>
+
+    <g id="protocol">
+      <rect x="90" y="470" width="220" height="96" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="200" y="498" text-anchor="middle" class="box-title">Agent Protocol</text>
+      <text x="200" y="526" text-anchor="middle" class="box-caption">Client / Server</text><text x="200" y="543" text-anchor="middle" class="box-caption">stream、approval、query</text>
+    </g>
+
+    <g id="ui">
+      <rect x="90" y="640" width="220" height="92" rx="10" fill="#e2e8f0" stroke="#334155" stroke-width="2"/>
+      <text x="200" y="668" text-anchor="middle" class="box-title">UI / Renderer</text>
+      <text x="200" y="696" text-anchor="middle" class="box-caption">交互 REPL 或 headless 输出</text>
+    </g>
+
+    <g id="engine">
+      <rect x="475" y="205" width="270" height="120" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="610" y="233" text-anchor="middle" class="box-title">Engine</text>
+      <text x="610" y="261" text-anchor="middle" class="box-caption">连接 prompt、模型、工具、会话</text>
+    </g>
+
+    <g id="preset">
+      <rect x="475" y="395" width="270" height="100" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="610" y="423" text-anchor="middle" class="box-title">Preset + Prompt</text>
+      <text x="610" y="451" text-anchor="middle" class="box-caption">general / terminal-coding</text><text x="610" y="468" text-anchor="middle" class="box-caption">sections + instructions</text>
+    </g>
+
+    <g id="loop">
+      <rect x="475" y="575" width="270" height="110" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="2"/>
+      <text x="610" y="603" text-anchor="middle" class="box-title">TurnLoop</text>
+      <text x="610" y="631" text-anchor="middle" class="box-caption">model_call -&gt; tool_exec</text><text x="610" y="648" text-anchor="middle" class="box-caption">context_mgmt -&gt; next turn</text>
+    </g>
+
+    <g id="tools">
+      <rect x="920" y="175" width="240" height="100" rx="10" fill="#fee2e2" stroke="#b91c1c" stroke-width="2"/>
+      <text x="1040" y="203" text-anchor="middle" class="box-title">Tool System</text>
+      <text x="1040" y="231" text-anchor="middle" class="box-caption">builtin、custom、MCP</text><text x="1040" y="248" text-anchor="middle" class="box-caption">permission + sandbox</text>
+    </g>
+
+    <g id="llm">
+      <rect x="1230" y="175" width="240" height="100" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+      <text x="1350" y="203" text-anchor="middle" class="box-title">LLM Layer</text>
+      <text x="1350" y="231" text-anchor="middle" class="box-caption">ModelPool、ProviderCatalog</text><text x="1350" y="248" text-anchor="middle" class="box-caption">OpenAI-compatible / Anthropic</text>
+    </g>
+
+    <g id="state">
+      <rect x="920" y="360" width="240" height="105" rx="10" fill="#dcfce7" stroke="#15803d" stroke-width="2"/>
+      <text x="1040" y="388" text-anchor="middle" class="box-title">State &amp; Storage</text>
+      <text x="1040" y="416" text-anchor="middle" class="box-caption">settings、sessions、runs</text><text x="1040" y="433" text-anchor="middle" class="box-caption">logs、memories</text>
+    </g>
+
+    <g id="run">
+      <rect x="1230" y="360" width="240" height="105" rx="10" fill="#cffafe" stroke="#0e7490" stroke-width="2"/>
+      <text x="1350" y="388" text-anchor="middle" class="box-title">RunManager</text>
+      <text x="1350" y="416" text-anchor="middle" class="box-caption">queue、checkpoint</text><text x="1350" y="433" text-anchor="middle" class="box-caption">approval、artifact</text>
+    </g>
+
+    <g id="arena">
+      <rect x="920" y="555" width="240" height="110" rx="10" fill="#ede9fe" stroke="#6d28d9" stroke-width="2"/>
+      <text x="1040" y="583" text-anchor="middle" class="box-title">Arena</text>
+      <text x="1040" y="611" text-anchor="middle" class="box-caption">多模型 research</text><text x="1040" y="628" text-anchor="middle" class="box-caption">review、discussion、planning</text>
+    </g>
+
+    <g id="product">
+      <rect x="1230" y="555" width="240" height="110" rx="10" fill="#fce7f3" stroke="#be185d" stroke-width="2"/>
+      <text x="1350" y="583" text-anchor="middle" class="box-title">Product API</text>
+      <text x="1350" y="611" text-anchor="middle" class="box-caption">defineProduct</text><text x="1350" y="628" text-anchor="middle" class="box-caption">preset + adapter + contract</text>
+    </g>
+
+    <g>
+      <text x="82" y="865" class="note-title">一句话</text>
+      <text x="82" y="887" class="note">CodeShell 把 Agent 的通用编排能力沉到 Engine / Tool / Context / LLM 内核，</text><text x="82" y="905" class="note">再用 preset、UI、RunManager、Arena 和 Product API 组合成不同产品形态。</text>
+    </g>
+  </g>
+</svg>
