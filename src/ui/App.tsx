@@ -797,6 +797,31 @@ export function App({
       return;
     }
 
+    // Wheel + PageUp/PageDown — viewport scroll on the chat list.
+    // Wheel ticks: terminals emit 3–5 events per notch; 3 rows/tick ≈ 1 line
+    // per notch-step, matching iTerm/Claude Code feel. PageUp/PageDown step
+    // by viewport-2 so two rows stay visible across the jump (browser/editor
+    // convention). Skip while modals/overlays are open — those own their
+    // own input. Wheel works in transcript mode too (viewport pan independent
+    // of entry-cursor up/down). PageUp/Down also work in both modes.
+    const overlayOpen =
+      pendingQuestion ||
+      pendingApproval ||
+      showOnboarding ||
+      modelEntries ||
+      modelManager ||
+      sessionEntries;
+    if (!overlayOpen && (key.wheelUp || key.wheelDown)) {
+      listRef.current?.scrollBy(key.wheelUp ? -3 : 3);
+      return;
+    }
+    if (!overlayOpen && (key.pageUp || key.pageDown)) {
+      const vh = listRef.current?.getViewportHeight() ?? 0;
+      const step = Math.max(1, vh - 2);
+      listRef.current?.scrollBy(key.pageUp ? -step : step);
+      return;
+    }
+
     // P1.6: Ctrl+O — toggle transcript mode. Browsing is read-only, so allow
     // it while a turn is in flight; gating on !isRunning made this silently
     // no-op whenever a streaming response or background task held the flag.

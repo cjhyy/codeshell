@@ -46,6 +46,8 @@ interface VirtualMessageListProps {
 
 export interface VirtualMessageListHandle {
   scrollToBottom: () => void;
+  scrollBy: (dy: number) => void;
+  getViewportHeight: () => number;
 }
 
 /**
@@ -87,6 +89,8 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
 
     useImperativeHandle(ref, () => ({
       scrollToBottom: () => scrollRef.current?.scrollToBottom(),
+      scrollBy: (dy) => scrollRef.current?.scrollBy(dy),
+      getViewportHeight: () => scrollRef.current?.getViewportHeight() ?? 0,
     }));
 
     // Stable, identity-preserving array of keys. Recomputed only when entries
