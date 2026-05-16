@@ -65,13 +65,19 @@ function getStream(): WriteStream | null {
   return stream;
 }
 
-const window: FrameSample[] = [];
+const frameBuf: FrameSample[] = [];
 let windowStart = Date.now();
 
 export function recordFrame(event: FrameEvent): void {
   if (MODE === "off") return;
   const p = event.phases;
   if (!p) return; // phases optional; skip if not populated
+  // Reset the window start time on the first sample after idle so that
+  // windowMs reflects the actual observation window, not the wall-clock gap
+  // since module load or last flush (which could be minutes).
+  if (frameBuf.length === 0) {
+    windowStart = Date.now();
+  }
   const s: FrameSample = {
     durMs: event.durationMs,
     dirtyNodes: p.yogaVisited,
@@ -83,7 +89,7 @@ export function recordFrame(event: FrameEvent): void {
     write({ t: Date.now(), kind: "frame", ...s });
     return;
   }
-  window.push(s);
+  frameBuf.push(s);
   const now = Date.now();
   if (now - windowStart >= 1000) {
     flushSummary(now);
@@ -91,11 +97,11 @@ export function recordFrame(event: FrameEvent): void {
 }
 
 function flushSummary(now: number) {
-  if (window.length === 0) {
+  if (frameBuf.length === 0) {
     windowStart = now;
     return;
   }
-  const sum = window.reduce(
+  const sum = frameBuf.reduce(
     (a, b) => ({
       durMs: a.durMs + b.durMs,
       dirtyNodes: a.dirtyNodes + b.dirtyNodes,
@@ -105,7 +111,7 @@ function flushSummary(now: number) {
     }),
     { durMs: 0, dirtyNodes: 0, patches: 0, yogaCacheHits: 0, yogaLive: 0 },
   );
-  const frames = window.length;
+  const frames = frameBuf.length;
   const cacheRatio = sum.dirtyNodes === 0 ? 0 : sum.yogaCacheHits / sum.dirtyNodes;
   write({
     t: now,
@@ -118,7 +124,7 @@ function flushSummary(now: number) {
     cacheHitRatio: Number(cacheRatio.toFixed(3)),
     yogaLive: sum.yogaLive,
   });
-  window.length = 0;
+  frameBuf.length = 0;
   windowStart = now;
 }
 
