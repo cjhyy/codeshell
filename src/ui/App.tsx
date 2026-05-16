@@ -17,6 +17,7 @@ import { SpinnerWithVerb } from "./components/SpinnerWithVerb.js";
 import { StatusLine } from "./components/StatusLine.js";
 import { FullscreenLayout, useUnseenDivider } from "./components/FullscreenLayout.js";
 import { VirtualMessageList, type VirtualMessageListHandle } from "./components/VirtualMessageList.js";
+import { FULLSCREEN_MODE } from "./fullscreen-mode.js";
 import {
   MessageContent,
   UserMessage,
@@ -798,12 +799,14 @@ export function App({
     }
 
     // Wheel + PageUp/PageDown — viewport scroll on the chat list.
-    // Wheel ticks: terminals emit 3–5 events per notch; 3 rows/tick ≈ 1 line
-    // per notch-step, matching iTerm/Claude Code feel. PageUp/PageDown step
-    // by viewport-2 so two rows stay visible across the jump (browser/editor
-    // convention). Skip while modals/overlays are open — those own their
-    // own input. Wheel works in transcript mode too (viewport pan independent
-    // of entry-cursor up/down). PageUp/Down also work in both modes.
+    // PageUp/PageDown step by viewport-2 so two rows stay visible across the
+    // jump (browser/editor convention). Skip while modals/overlays are open
+    // — those own their own input. Wheel works in transcript mode too
+    // (viewport pan independent of entry-cursor up/down). PageUp/Down also
+    // work in both modes.
+    //
+    // Flow mode (CODESHELL_FULLSCREEN=0): bypass entirely so the terminal's
+    // native scrollback handles wheel + PgUp/PgDn.
     const overlayOpen =
       pendingQuestion ||
       pendingApproval ||
@@ -811,11 +814,11 @@ export function App({
       modelEntries ||
       modelManager ||
       sessionEntries;
-    if (!overlayOpen && (key.wheelUp || key.wheelDown)) {
-      listRef.current?.scrollBy(key.wheelUp ? -3 : 3);
+    if (FULLSCREEN_MODE && !overlayOpen && (key.wheelUp || key.wheelDown)) {
+      listRef.current?.scrollBy(key.wheelUp ? -1 : 1);
       return;
     }
-    if (!overlayOpen && (key.pageUp || key.pageDown)) {
+    if (FULLSCREEN_MODE && !overlayOpen && (key.pageUp || key.pageDown)) {
       const vh = listRef.current?.getViewportHeight() ?? 0;
       const step = Math.max(1, vh - 2);
       listRef.current?.scrollBy(key.pageUp ? -step : step);

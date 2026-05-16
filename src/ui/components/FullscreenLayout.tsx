@@ -18,6 +18,7 @@
  */
 import React, { useState, useRef, useEffect, useCallback, type RefObject, type ReactNode } from "react";
 import { Box, Text, useInput, AlternateScreen } from "../../render/index.js";
+import { FULLSCREEN_MODE } from "../fullscreen-mode.js";
 
 interface FullscreenLayoutProps {
   /** Main scrollable content (messages). */
@@ -42,39 +43,40 @@ export function FullscreenLayout({
   onJumpToNew,
   showPill = false,
 }: FullscreenLayoutProps) {
-  return (
-    <AlternateScreen>
-      <Box flexDirection="column" flexGrow={1}>
-        {/* Scrollable area — VirtualMessageList owns its own ScrollBox
-            (Task 4), so we just give it space to grow. Don't wrap in
-            an overflow-hidden Box: ScrollBox needs to read its own
-            viewport height via Yoga, and an outer clip can confuse the
-            measurement on resize. */}
-        <Box flexDirection="column" flexGrow={1}>
-          {scrollable}
-          {overlay}
-        </Box>
-
-        {/* Unseen messages pill */}
-        {showPill && newMessageCount > 0 && (
-          <Box justifyContent="center" marginY={0}>
-            <Text
-              color="ansi:black"
-              backgroundColor="ansi:cyanBright"
-              bold
-            >
-              {` ↓ ${newMessageCount} new message${newMessageCount > 1 ? "s" : ""} `}
-            </Text>
-          </Box>
-        )}
-
-        {/* Bottom pinned area */}
-        <Box flexDirection="column" flexShrink={0}>
-          {bottom}
-        </Box>
+  // In flow mode (FULLSCREEN_MODE=false): no alt-screen, no flexGrow on the
+  // outer columns, no "new messages" pill (there is no scroll-away state to
+  // pill about — content has already flowed into the terminal's scrollback).
+  const body = (
+    <Box flexDirection="column" flexGrow={FULLSCREEN_MODE ? 1 : 0}>
+      {/* Scrollable area — VirtualMessageList owns its own ScrollBox in
+          fullscreen mode. Don't wrap in an overflow-hidden Box: ScrollBox
+          needs to read its own viewport height via Yoga, and an outer clip
+          can confuse the measurement on resize. */}
+      <Box flexDirection="column" flexGrow={FULLSCREEN_MODE ? 1 : 0}>
+        {scrollable}
+        {overlay}
       </Box>
-    </AlternateScreen>
+
+      {FULLSCREEN_MODE && showPill && newMessageCount > 0 && (
+        <Box justifyContent="center" marginY={0}>
+          <Text
+            color="ansi:black"
+            backgroundColor="ansi:cyanBright"
+            bold
+          >
+            {` ↓ ${newMessageCount} new message${newMessageCount > 1 ? "s" : ""} `}
+          </Text>
+        </Box>
+      )}
+
+      {/* Bottom pinned area */}
+      <Box flexDirection="column" flexShrink={0}>
+        {bottom}
+      </Box>
+    </Box>
   );
+
+  return FULLSCREEN_MODE ? <AlternateScreen>{body}</AlternateScreen> : body;
 }
 
 /**

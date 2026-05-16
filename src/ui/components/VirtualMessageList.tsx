@@ -26,6 +26,7 @@ import {
 import type { ChatEntry } from "../store.js";
 import { MessageRow } from "./MessageRow.js";
 import { useVirtualScroll } from "../hooks/useVirtualScroll.js";
+import { FULLSCREEN_MODE, TAIL_ENTRY_LIMIT } from "../fullscreen-mode.js";
 
 interface VirtualMessageListProps {
   entries: ChatEntry[];
@@ -95,6 +96,8 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
 
     // Stable, identity-preserving array of keys. Recomputed only when entries
     // identity changes (Task 2 guarantees that's only when content changed).
+    // Computed in both modes so React hook order stays stable across the
+    // FULLSCREEN_MODE branch below.
     const keys = useMemo(() => entries.map((e) => e.id), [entries]);
 
     const {
@@ -104,6 +107,42 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
       measureRef,
       spacerRef,
     } = useVirtualScroll(scrollRef, keys, columns);
+
+    // Flow mode: no ScrollBox, no virtual windowing, no measureRef wiring.
+    // Render only the most recent TAIL_ENTRY_LIMIT entries; older content
+    // is in the terminal's scrollback. The Box flows downward; the terminal
+    // (iTerm/Ghostty/tmux) owns scrolling.
+    if (!FULLSCREEN_MODE) {
+      const tailStart = Math.max(0, entries.length - TAIL_ENTRY_LIMIT);
+      const tail = entries.slice(tailStart);
+      return (
+        <Box flexDirection="column">
+          {tail.map((e, i) => {
+            const globalIdx = tailStart + i;
+            const isSelected = selectedEntryId === e.id;
+            return (
+              <React.Fragment key={e.id}>
+                {dividerIndex !== null && dividerIndex === globalIdx && unseenCount > 0 && (
+                  <UnseenDivider count={unseenCount} />
+                )}
+                <Box flexDirection="column" flexShrink={0}>
+                  <CursorOutline active={isSelected}>
+                    <MessageRow
+                      entry={e}
+                      columns={columns}
+                      isStreaming={streamingEntryId === e.id}
+                      isSelected={isSelected}
+                      expanded={expanded}
+                      render={(en) => renderEntry(en, en.id, expanded)}
+                    />
+                  </CursorOutline>
+                </Box>
+              </React.Fragment>
+            );
+          })}
+        </Box>
+      );
+    }
 
     const [start, end] = range;
 
