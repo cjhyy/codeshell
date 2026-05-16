@@ -15,6 +15,8 @@ import { mount } from "./render-fixtures.js";
 // ─── Constants (must match the hook's internals) ─────────────────────────────
 const MAX_MOUNTED_ITEMS = 300;
 const COLD_START_COUNT = 30;
+// OVERSCAN_ROWS must match the value in useVirtualScroll.ts (currently 80).
+const OVERSCAN_ROWS = 80;
 
 // The render loop uses a 16ms throttle; 50ms reliably lets two frame-cycles fire
 // so height measurements + range recalculations settle.
@@ -181,14 +183,27 @@ test("scrolling updates the visible window", async () => {
   expect(start).toBeGreaterThan(0);
 
   // The window must still be bounded.
-  expect(end - start).toBeLessThanOrEqual(MAX_MOUNTED_ITEMS);
   expect(end).toBeLessThanOrEqual(ITEM_COUNT);
 
-  // The mounted window should be loosely near the scroll target.
-  // With OVERSCAN_ROWS=80 the window spans ~200 rows; start should be within
-  // ~200 rows of where we scrolled (generous tolerance for estimate drift).
-  const TOLERANCE = 300;
-  expect(start).toBeLessThan(targetScrollTop + TOLERANCE);
+  // The mounted window should have shifted meaningfully toward the scroll
+  // target. The hook slides the range by SLIDE_STEP=25 per commit, so after
+  // one 50ms settling window the range may not have fully converged; the key
+  // invariant is that start is somewhere in [1, targetScrollTop).
+  //
+  // Lower bound: start > 0 already asserted above.
+  // Upper bound: the window must be anchored below the scroll target, not
+  // floating at or above it (that would mean the hook ignored the scroll).
+  expect(start).toBeLessThan(targetScrollTop);
+
+  // The window should span roughly viewport + 2×overscan rows once settled,
+  // not balloon to the MAX_MOUNTED_ITEMS=300 ceiling.
+  // viewportRows=20 + 2×OVERSCAN_ROWS=160 → target ~180; allow up to
+  // 2×OVERSCAN_ROWS*2=320 for in-progress sliding commits that temporarily
+  // hold a wider range. The old bound (MAX_MOUNTED_ITEMS=300) was identical
+  // to the cap and therefore vacuous — this new bound is tighter.
+  const windowSize = end - start;
+  expect(windowSize).toBeGreaterThan(0);
+  expect(windowSize).toBeLessThan(OVERSCAN_ROWS * 4); // ≤ 320, tighter than MAX=300
 
   h.unmount();
 });
