@@ -57,7 +57,7 @@ Three states:
 | `createRoot`   | supported     | Lower-level mount API.                        |
 | `Instance`     | supported     | Handle returned by `render` / `createRoot`.   |
 | `renderSync`   | experimental  | Synchronous render variant.                   |
-| `RenderOptions`| experimental  | Options bag for `render` / `createRoot`.      |
+| `RenderOptions` | experimental  | Options bag for `render` / `createRoot`.      |
 
 ### Types
 
