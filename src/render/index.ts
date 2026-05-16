@@ -27,7 +27,7 @@ export { default as ScrollBox, type ScrollBoxHandle, type ScrollBoxProps } from 
 // Re-export AlternateScreen
 export { AlternateScreen } from "./components/AlternateScreen.js";
 
-// Ansi — pre-rendered ANSI string into the React tree
+// Re-export Ansi
 export { Ansi } from "./Ansi.js";
 
 // render function
