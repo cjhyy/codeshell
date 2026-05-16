@@ -11,6 +11,7 @@ import { App } from "./App.js";
 import { ThemeProvider } from "./theme.js";
 import type { AgentClient } from "../protocol/client.js";
 import { initHistory, flushHistorySync } from "./input-history.js";
+import { applyDevSeed } from "./dev-seed.js";
 import { getOpenRouterSnapshot } from "../data/openrouter-models.js";
 import { syncOpenRouterCatalog } from "../data/openrouter-sync.js";
 import { logger } from "../logging/logger.js";
@@ -31,6 +32,7 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
   // Initialize input history with session and project context
   const sessionId = options.sessionId ?? `session-${Date.now()}`;
   initHistory(sessionId, options.cwd);
+  applyDevSeed();
   // Stamp the logger so any pre-run log lines carry this sid. Engine.run
   // will overwrite with the authoritative server-resolved id once known.
   logger.setSid(sessionId);
