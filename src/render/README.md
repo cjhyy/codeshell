@@ -100,12 +100,14 @@ machines as needed.
 
 Host: MacBook, macOS 15.6.1 (Darwin 24.6.0 arm64), bun 1.3.11.
 
-| Scenario                  | per iter ms | bytes written | frames |
-| ------------------------- | ----------- | ------------- | ------ |
-| `tail-10k-mount`          | 0.053       | 98 912        | 2      |
-| `streaming-200-deltas`    | 12.574      | 49 828        | 33     |
-| `spinner-60-ticks`        | 16.161      | 49 402        | 19     |
-| `wheel-100-steps`         | 0.061       | 418           | 2      |
+The `tail-10k-mount` "per iter" row is post-mount settle latency, not mount cost. Component-level mount time is reflected by `bytes_written` and `frames` rather than `per iter ms`.
+
+| Scenario                         | per iter ms | bytes written | frames |
+| -------------------------------- | ----------- | ------------- | ------ |
+| `tail-10k-mount (settle)`        | 0.053       | 98 912        | 2      |
+| `streaming-200-deltas`           | 12.574      | 49 828        | 33     |
+| `spinner-60-ticks`               | 16.161      | 49 402        | 19     |
+| `wheel-100-steps`                | 0.061       | 418           | 2      |
 
 The `tail-10k-mount` "per iter" is the single mount cost (iters=1) and reflects
 how cheaply a 10 000-row tree reaches the first commit. The `streaming` /
