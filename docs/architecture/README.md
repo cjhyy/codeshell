@@ -20,6 +20,7 @@ This directory is the current architecture documentation set for CodeShell. It i
 | 10 | [Architecture Diagrams](10-architecture-diagrams.md) | Overview and module detail SVG diagrams |
 | 11 | [TUI Render Capability Plan](11-render-tui-capability-plan.md) | What the custom TUI renderer must support and what is still missing |
 | 12 | [mac Visual Client Research](12-mac-visual-client-research.md) | Electron/Tauri/SwiftUI options, Codex desktop evidence, and recommended mac client architecture |
+| 13 | [LLM/UI Decoupling](../superpowers/specs/2026-05-17-llm-ui-decoupling-design.md) | Four-layer architecture borrowed from Claude Code: stream-idle watchdog, QueryGuard sync state machine, partial-text preservation on Esc, and background-agent dock. Implementation [plan](../superpowers/plans/2026-05-17-llm-ui-decoupling.md). |
 
 ## One-Screen Summary
 
