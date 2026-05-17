@@ -454,6 +454,7 @@ export default class Ink {
    */
   private flushStaticNodes(): void {
     const width = this.options.stdout.columns || 80;
+    let wroteAny = false;
     walkForStatic(this.rootNode, node => {
       const el = node.pendingStaticElement;
       if (!el) return;
@@ -464,6 +465,7 @@ export default class Ink {
         if (screen.height > 0) {
           const ansi = screenToAnsi(screen, this.stylePool);
           this.options.stdout.write(ansi);
+          wroteAny = true;
         }
       } catch (err) {
         // Don't let a Static render error crash the whole render loop.
@@ -479,6 +481,24 @@ export default class Ink {
         dom.removeChildNode(node, child);
       }
     });
+
+    // After Static directly wrote N rows to stdout, the terminal cursor has
+    // advanced N lines BUT ink's log-update still thinks the previous frame
+    // occupied K lines starting at the original cursor row. The next frame's
+    // "erase previous frame" path (\x1b[<K>A + \x1b[K × K) would walk up
+    // through Static-written rows and overwrite them — and meanwhile the
+    // active frame is drawn from the wrong starting row, producing the
+    // overlapping-status-line / split-separator artifacts seen in flow mode.
+    //
+    // Drop log-update's previousOutput so the next frame is treated as a
+    // first paint: no erase, draw at the current cursor position (which IS
+    // where Static left it). Also mark prevFrameContaminated so the cell-
+    // buffer blit path doesn't try to reuse a stale buffer. Worst case: one
+    // full repaint of the active region per Static flush — visually fine.
+    if (wroteAny) {
+      this.log.reset();
+      this.prevFrameContaminated = true;
+    }
   }
 
   onRender() {
