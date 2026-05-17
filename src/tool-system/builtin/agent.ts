@@ -11,6 +11,7 @@ import type { ToolDefinition, StreamCallback } from "../../types.js";
 import type { ToolContext, SubAgentSpawner } from "../context.js";
 import { isInPlanMode, resetPlanMode, restorePlanMode } from "./plan.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
+import type { AgentTranscriptEntry } from "./agent-registry.js";
 import { nanoid } from "nanoid";
 
 export const agentToolDef: ToolDefinition = {
@@ -117,8 +118,24 @@ export async function agentTool(
       abort: () => controller.abort(),
     });
 
+    // Route this background agent's stream events into its own transcript,
+    // NOT the parent chatStore (the parent gave up its stream slot when it
+    // chose background mode).
+    const transcriptSink: StreamCallback = (event) => {
+      asyncAgentRegistry.appendToTranscript(agentId, {
+        id: `bg-${agentId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type: event.type,
+        ...event,
+      } as AgentTranscriptEntry);
+    };
+
+    const bgSpawner: SubAgentSpawner = {
+      ...spawner,
+      parentStream: transcriptSink,
+    };
+
     // Run detached. Errors are captured into the registry.
-    void runSubAgent(spawner, {
+    void runSubAgent(bgSpawner, {
       agentId,
       description,
       prompt,
