@@ -410,7 +410,9 @@ export class OpenAIClient extends LLMClientBase {
       };
 
       await runStreamWithWatchdog(stream, {
-        idleTimeoutMs: STREAM_WATCHDOG_CONFIG.idleTimeoutMs,
+        idleTimeoutMs: STREAM_WATCHDOG_CONFIG.enabled
+          ? STREAM_WATCHDOG_CONFIG.idleTimeoutMs
+          : undefined,
         requestId,
         onChunk: handleChunk,
       });
