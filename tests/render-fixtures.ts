@@ -80,3 +80,34 @@ export function dumpFrames(h: TestHarness): string {
 export function flush(): Promise<void> {
   return new Promise((r) => setImmediate(r));
 }
+
+/**
+ * Strip ANSI escape sequences and convert cursor-movement codes to spaces,
+ * yielding plain readable text suitable for assertions.
+ *
+ * Ink's layout engine emits CSI n C (cursor-forward-n) to position characters
+ * rather than writing literal spaces, so raw `dumpFrames` output is not
+ * directly string-searchable when Text components carry color/dim props.
+ * This helper normalises that output.
+ */
+export function plainText(h: TestHarness): string {
+  const raw = dumpFrames(h);
+  return (
+    raw
+      // Cursor-forward (CSI n C) → n spaces
+      .replace(/\x1b\[(\d+)C/g, (_m, n) => " ".repeat(Number(n)))
+      // Strip all remaining CSI sequences (ESC [ ... final-byte)
+      .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, "")
+      // Strip OSC sequences (ESC ] ... ST or BEL)
+      .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
+      // Strip any remaining lone ESC
+      .replace(/\x1b/g, "")
+      // Collapse \r\n and \n line-breaks into a single space so that
+      // content that wraps across display lines is still searchable
+      // as a single token (e.g. "+2 more" may be split by line-wrap).
+      .replace(/\r?\n/g, " ")
+      // Collapse runs of spaces into one so adjacent tokens remain
+      // joinable regardless of display-column padding.
+      .replace(/ {2,}/g, " ")
+  );
+}

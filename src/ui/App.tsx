@@ -48,6 +48,8 @@ import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
+import { AgentDock } from "./components/AgentDock.js";
+import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
 import { gitCommands } from "../cli/commands/builtin/git-commands.js";
 import { permissionsCommand } from "../cli/commands/builtin/permissions-command.js";
@@ -154,9 +156,11 @@ export function App({
     queryGuard.subscribe,
     queryGuard.getSnapshot,
   );
-  // Keep the `isRunning` identifier so the rest of App.tsx works unchanged.
-  // In Phase 4 this will become `isQueryActive || hasRunningBgAgents`.
-  const isRunning = isQueryActive;
+  const hasRunningBgAgents = useSyncExternalStore(
+    asyncAgentRegistry.subscribe,
+    asyncAgentRegistry.hasRunning,
+  );
+  const isRunning = isQueryActive || hasRunningBgAgents;
   const [sessionId, setSessionId] = useState(initialSessionId);
   // Mirror of sessionId for synchronous reads inside event handlers.
   // recordUIEvent needs the current sid every time it fires, but
@@ -1276,6 +1280,7 @@ export function App({
 
   const bottomContent = (
     <Box flexDirection="column" marginTop={0}>
+      <AgentDock />
       <Text dim>{separator}</Text>
 
       {screen === "transcript" ? (
