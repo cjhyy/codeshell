@@ -1063,15 +1063,18 @@ export function App({
             entry({ type: "error", error: friendlyError((err as Error).message) }),
           ]);
         }
+      } finally {
+        // end() is idempotent — safe to call even if forceEnd already released
+        // the guard (ESC/Ctrl+C path).
+        queryGuard.end();
       }
 
       // If ESC/Ctrl+C already flipped us to idle, leave state alone — a new
       // turn may have started in the meantime.
       if (!cancelledRef.current) {
-        queryGuard.end();
         setStreamMode("thinking");
         setThinkingContent(null);
-      clearThinkingBuffer();
+        clearThinkingBuffer();
       }
     },
     [client, sessionId, model, isRunning, flushTextBuffer],
