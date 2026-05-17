@@ -792,13 +792,11 @@ export function App({
           flushTimerRef.current = null;
         }
         flushTextBuffer();
-        chatStore.update((prev) =>
-          prev
-            .filter((e) => e.type !== "thinking" && e.type !== "tool_running")
-            .map((e) =>
-              e.type === "assistant_text" && e.streaming ? { ...e, streaming: false } : e,
-            ),
-        );
+        // Drop tool_running (no semantic meaning post-cancel); commit the
+        // streaming entry with the user-cancel marker so the transcript
+        // shows what the model had produced before Esc.
+        chatStore.update((prev) => prev.filter((e) => e.type !== "tool_running"));
+        chatStore.commitInterruptedStreaming("\n\n[Request interrupted by user]");
         queryGuard.forceEnd("user-cancel");
         client.cancel().catch(() => {});
         // Same optimistic-cancel path as ESC — see cancelledRef comment.
@@ -849,13 +847,8 @@ export function App({
         flushTimerRef.current = null;
       }
       flushTextBuffer();
-      chatStore.update((prev) =>
-        prev
-          .filter((e) => e.type !== "thinking" && e.type !== "tool_running")
-          .map((e) =>
-            e.type === "assistant_text" && e.streaming ? { ...e, streaming: false } : e,
-          ),
-      );
+      chatStore.update((prev) => prev.filter((e) => e.type !== "tool_running"));
+      chatStore.commitInterruptedStreaming("\n\n[Request interrupted by user]");
       queryGuard.forceEnd("user-cancel");
       client.cancel().catch(() => {});
       // Optimistic UI: flip back to idle immediately. The server-side abort
