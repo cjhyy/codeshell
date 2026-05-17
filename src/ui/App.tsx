@@ -357,6 +357,7 @@ export function App({
   useEffect(() => {
     return () => {
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+      if (thinkingFlushTimerRef.current) clearTimeout(thinkingFlushTimerRef.current);
     };
   }, []);
 
