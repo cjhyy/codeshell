@@ -96,6 +96,30 @@ class ChatStore {
     this.notify();
   }
 
+  /**
+   * Commit the in-flight streaming assistant entry as a final (non-streaming)
+   * message, optionally appending a suffix (e.g., "[Request interrupted by user]").
+   * Drops any thinking entries — model scratch, no user value after interruption.
+   * No-op if there is no streaming entry.
+   *
+   * Empty-text streaming entry is finalized in place (streaming=false) without
+   * suffix — keeps the store transition consistent without persisting noise.
+   */
+  commitInterruptedStreaming(suffix: string): void {
+    this.entries = this.entries
+      .filter((e) => e.type !== "thinking")
+      .map((e) => {
+        if (e.type !== "assistant_text" || !e.streaming) return e;
+        const hasText = e.text.trim().length > 0;
+        return {
+          ...e,
+          streaming: false,
+          text: hasText ? e.text + suffix : e.text,
+        };
+      });
+    this.notify();
+  }
+
   clear(): void {
     this.entries = [];
     this.notify();
