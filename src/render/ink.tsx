@@ -22,18 +22,18 @@ import { FocusManager } from './focus.js';
 import { emptyFrame, type Frame, type FrameEvent } from './frame.js';
 import { dispatchClick, dispatchHover } from './hit-test.js';
 import instances from './instances.js';
-import { LogUpdate } from './log-update.js';
+import { LogUpdate, screenToAnsi } from './log-update.js';
 import { nodeCache } from './node-cache.js';
 import { optimize } from './optimizer.js';
 import Output from './output.js';
 import type { ParsedKey } from './parse-keypress.js';
 import reconciler, { dispatcher, getLastCommitMs, getLastYogaMs, isDebugRepaintsEnabled, recordYogaMs, resetProfileCounters } from './reconciler.js';
 import renderNodeToOutput, { consumeFollowScroll, didLayoutShift } from './render-node-to-output.js';
-import { applyPositionedHighlight, type MatchPosition, scanPositions } from './render-to-screen.js';
+import { applyPositionedHighlight, type MatchPosition, renderToScreen, scanPositions } from './render-to-screen.js';
 import createRenderer, { type Renderer } from './renderer.js';
 import { CellWidth, CharPool, cellAt, createScreen, HyperlinkPool, isEmptyCellAt, migrateScreenPools, StylePool } from './screen.js';
 import { applySearchHighlight } from './searchHighlight.js';
-import { applySelectionOverlay, captureScrolledRows, clearSelection, createSelectionState, extendSelection, type FocusMove, findPlainTextUrlAt, getSelectedText, hasSelection, moveFocus, type SelectionState, selectLineAt, selectWordAt, shiftAnchor, shiftSelection, shiftSelectionForFollow, startSelection, updateSelection } from './selection.js';
+import { applySelectionOverlay, captureScrolledRows, clearSelection, createSelectionState, extendSelection, type FocusMove, findPlainTextUrlAt, getSelectedText, hasSelection, moveFocus, type SelectionState, selectLineAt, selectWordAt, shiftAnchor, shiftSelection, startSelection, updateSelection } from './selection.js';
 import { SYNC_OUTPUT_SUPPORTED, supportsExtendedKeys, type Terminal, writeDiffToTerminal } from './terminal.js';
 import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABLE_MODIFY_OTHER_KEYS, ENABLE_KITTY_KEYBOARD, ENABLE_MODIFY_OTHER_KEYS, ERASE_SCREEN } from './termio/csi.js';
 import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN, SHOW_CURSOR } from './termio/dec.js';
@@ -65,6 +65,25 @@ function makeAltScreenParkPatch(terminalRows: number) {
     content: cursorPosition(terminalRows, 1)
   });
 }
+/**
+ * DFS walk of the DOM tree invoking `callback` for every 'ink-static' node.
+ * Used by flushStaticNodes to find pending static content before each render.
+ */
+function walkForStatic(
+  node: dom.DOMElement,
+  callback: (node: dom.DOMElement) => void,
+): void {
+  if (node.nodeName === 'ink-static') {
+    callback(node);
+    return; // ink-static nodes are leaf-like (no paintable sub-tree to recurse)
+  }
+  for (const child of node.childNodes) {
+    if (child.nodeName !== '#text') {
+      walkForStatic(child as dom.DOMElement, callback);
+    }
+  }
+}
+
 export type Options = {
   stdout: NodeJS.WriteStream;
   stdin: NodeJS.ReadStream;
@@ -236,7 +255,11 @@ export default class Ink {
     this.rootNode.focusManager = this.focusManager;
     this.renderer = createRenderer(this.rootNode, this.stylePool);
     this.rootNode.onRender = this.scheduleRender;
-    this.rootNode.onImmediateRender = this.onRender;
+    // onImmediateRender is called synchronously from resetAfterCommit in test
+    // mode. Defer via queueMicrotask so React's commit cycle completes before
+    // we call renderToScreen (Static flush) — calling the reconciler
+    // re-entrantly from within resetAfterCommit corrupts yoga layout state.
+    this.rootNode.onImmediateRender = () => queueMicrotask(this.onRender);
     this.rootNode.onComputeLayout = () => {
       // Calculate layout during React's commit phase so useLayoutEffect hooks
       // have access to fresh layout data
@@ -419,6 +442,45 @@ export default class Ink {
     // without the pop we'd accumulate depth on each editor round-trip).
     this.options.stdout.write('\x1b[?1004h' + (supportsExtendedKeys() ? DISABLE_KITTY_KEYBOARD + ENABLE_KITTY_KEYBOARD + ENABLE_MODIFY_OTHER_KEYS : ''));
   }
+  /**
+   * Walk the DOM tree looking for 'ink-static' nodes that have a pending
+   * React element to flush. For each such node, render the element via
+   * renderToScreen, convert the resulting Screen to an ANSI string, and
+   * write it directly to stdout. Children are then detached from the node
+   * so they don't appear in the next frame's cell buffer.
+   *
+   * Called at the start of onRender, before the main renderer runs, so the
+   * diff engine never sees the static content.
+   */
+  private flushStaticNodes(): void {
+    const width = this.options.stdout.columns || 80;
+    walkForStatic(this.rootNode, node => {
+      const el = node.pendingStaticElement;
+      if (!el) return;
+      node.pendingStaticElement = undefined;
+
+      try {
+        const { screen } = renderToScreen(el, width);
+        if (screen.height > 0) {
+          const ansi = screenToAnsi(screen, this.stylePool);
+          this.options.stdout.write(ansi);
+        }
+      } catch (err) {
+        // Don't let a Static render error crash the whole render loop.
+        // Log it for debugging; the static content is silently dropped.
+        logForDebugging(`[Static] render error: ${err}`);
+      }
+
+      // Detach any DOM children the reconciler may have added to the node.
+      // The Static component passes its children as pendingStaticElement (a
+      // React element for renderToScreen's isolated root), NOT via the DOM
+      // child list — so this is a safety net for future changes.
+      for (const child of [...node.childNodes]) {
+        dom.removeChildNode(node, child);
+      }
+    });
+  }
+
   onRender() {
     if (this.isUnmounted || this.isPaused) {
       return;
@@ -436,6 +498,11 @@ export default class Ink {
     // Done before the render to avoid dirtying state that would trigger
     // an extra React re-render cycle.
     flushInteractionTime();
+
+    // Flush any pending <Static> items to stdout BEFORE the main renderer
+    // runs. This ensures detached children don't appear in the frame buffer.
+    this.flushStaticNodes();
+
     const renderStart = performance.now();
     const terminalWidth = this.options.stdout.columns || 80;
     const terminalRows = this.options.stdout.rows || 24;
@@ -484,7 +551,13 @@ export default class Ink {
       // each shift branch so the pairing can't be broken by a new guard.
       if (this.selection.isDragging) {
         if (hasSelection(this.selection)) {
-          captureScrolledRows(this.selection, this.frontFrame.screen, viewportTop, viewportTop + delta - 1, 'above');
+          // delta>0: viewport moves DOWN, top rows leave (capture 'above').
+          // delta<0: viewport moves UP, bottom rows leave (capture 'below').
+          if (delta > 0) {
+            captureScrolledRows(this.selection, this.frontFrame.screen, viewportTop, viewportTop + delta - 1, 'above');
+          } else {
+            captureScrolledRows(this.selection, this.frontFrame.screen, viewportBottom + delta + 1, viewportBottom, 'below');
+          }
         }
         shiftAnchor(this.selection, -delta, viewportTop, viewportBottom);
       } else if (
@@ -502,15 +575,19 @@ export default class Ink {
       // is correct there even when focus is in the footer).
       !this.selection.focus || this.selection.focus.row >= viewportTop && this.selection.focus.row <= viewportBottom) {
         if (hasSelection(this.selection)) {
-          captureScrolledRows(this.selection, this.frontFrame.screen, viewportTop, viewportTop + delta - 1, 'above');
+          if (delta > 0) {
+            captureScrolledRows(this.selection, this.frontFrame.screen, viewportTop, viewportTop + delta - 1, 'above');
+          } else {
+            captureScrolledRows(this.selection, this.frontFrame.screen, viewportBottom + delta + 1, viewportBottom, 'below');
+          }
         }
-        const cleared = shiftSelectionForFollow(this.selection, -delta, viewportTop, viewportBottom);
-        // Auto-clear (both ends overshot minRow) must notify React-land
-        // so useHasSelection re-renders and the footer copy/escape hint
-        // disappears. notifySelectionChange() would recurse into onRender;
-        // fire the listeners directly — they schedule a React update for
-        // LATER, they don't re-enter this frame.
-        if (cleared) for (const cb of this.selectionListeners) cb();
+        // Post-release follow uses shiftSelection (not shiftSelectionForFollow)
+        // so virtualAnchorRow/virtualFocusRow track pre-clamp positions —
+        // wheel-up past the top followed by wheel-down restores the original
+        // highlight instead of clearing it. shiftSelectionForFollow was
+        // designed for sticky-bottom auto-follow (one-way drift) and clears
+        // when both ends pass minRow, which broke round-trip wheel scrolling.
+        shiftSelection(this.selection, -delta, viewportTop, viewportBottom, this.frontFrame.screen.width, false);
       }
     }
 
@@ -1252,6 +1329,16 @@ export default class Ink {
     for (const cb of this.selectionListeners) cb();
   }
 
+  // Called by App.tsx at every drag-release path (mouseup, lost-release
+  // fallbacks, focus-out). Equivalent to notifySelectionChange + auto-copy
+  // when a selection exists. copySelectionNoClear is fire-and-forget (the
+  // setClipboard promise schedules pbcopy synchronously and writes OSC 52
+  // to stdout when it resolves) so this stays non-blocking.
+  private notifySelectionFinish(): void {
+    if (hasSelection(this.selection)) this.copySelectionNoClear();
+    this.notifySelectionChange();
+  }
+
   /**
    * Hit-test the rendered DOM tree at (col, row) and bubble a ClickEvent
    * from the deepest hit node up through ancestors with onClick handlers.
@@ -1443,7 +1530,7 @@ export default class Ink {
   };
   render(node: ReactNode): void {
     this.currentNode = node;
-    const tree = <App stdin={this.options.stdin} stdout={this.options.stdout} stderr={this.options.stderr} exitOnCtrlC={this.options.exitOnCtrlC} onExit={this.unmount} terminalColumns={this.terminalColumns} terminalRows={this.terminalRows} selection={this.selection} onSelectionChange={this.notifySelectionChange} onClickAt={this.dispatchClick} onHoverAt={this.dispatchHover} getHyperlinkAt={this.getHyperlinkAt} onOpenHyperlink={this.openHyperlink} onMultiClick={this.handleMultiClick} onSelectionDrag={this.handleSelectionDrag} onStdinResume={this.reassertTerminalModes} onCursorDeclaration={this.setCursorDeclaration} dispatchKeyboardEvent={this.dispatchKeyboardEvent}>
+    const tree = <App stdin={this.options.stdin} stdout={this.options.stdout} stderr={this.options.stderr} exitOnCtrlC={this.options.exitOnCtrlC} onExit={this.unmount} terminalColumns={this.terminalColumns} terminalRows={this.terminalRows} selection={this.selection} onSelectionChange={this.notifySelectionChange} onSelectionFinish={this.notifySelectionFinish} onClickAt={this.dispatchClick} onHoverAt={this.dispatchHover} getHyperlinkAt={this.getHyperlinkAt} onOpenHyperlink={this.openHyperlink} onMultiClick={this.handleMultiClick} onSelectionDrag={this.handleSelectionDrag} onStdinResume={this.reassertTerminalModes} onCursorDeclaration={this.setCursorDeclaration} dispatchKeyboardEvent={this.dispatchKeyboardEvent}>
         <TerminalWriteProvider value={this.writeRaw}>
           {node}
         </TerminalWriteProvider>

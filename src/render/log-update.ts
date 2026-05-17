@@ -749,6 +749,57 @@ function needsWidthCompensation(char: string): boolean {
   return false
 }
 
+/**
+ * Convert a Screen buffer to a plain ANSI string suitable for direct stdout
+ * write. Each row is rendered with style transitions and separated by \r\n.
+ * Trailing blank cells (spaces without background) are trimmed per row to
+ * avoid leaking background colors into the terminal's natural line length.
+ * Ends with a final style reset so the caller's terminal state is clean.
+ *
+ * Used by the <Static> flush path in ink.tsx to commit finalized items to
+ * terminal scrollback without going through the diff engine.
+ */
+export function screenToAnsi(screen: Screen, stylePool: StylePool): string {
+  const { width, height } = screen
+  let result = ''
+
+  for (let y = 0; y < height; y++) {
+    // Find the last column that has non-blank content so we can trim trailing
+    // spaces. A cell with a visible-on-space style (bit 0 set: background,
+    // inverse, underline) is considered non-blank even if the char is ' '.
+    let lastNonSpaceX = -1
+    for (let x = width - 1; x >= 0; x--) {
+      const cell = cellAt(screen, x, y)
+      if (!cell || cell.width === CellWidth.SpacerTail || cell.width === CellWidth.SpacerHead) {
+        continue
+      }
+      if (cell.char !== ' ' || (cell.styleId & 1) !== 0) {
+        lastNonSpaceX = x
+        break
+      }
+    }
+
+    // Render cells up to lastNonSpaceX with incremental style transitions.
+    let rowStr = ''
+    let rowStyle = stylePool.none
+    for (let x = 0; x <= lastNonSpaceX; x++) {
+      const cell = cellAt(screen, x, y)
+      if (!cell || cell.width === CellWidth.SpacerTail || cell.width === CellWidth.SpacerHead) {
+        continue
+      }
+      const styleStr = stylePool.transition(rowStyle, cell.styleId)
+      rowStr += styleStr + cell.char
+      rowStyle = cell.styleId
+    }
+    // Reset styles after row content so colors don't bleed into the next line.
+    rowStr += stylePool.transition(rowStyle, stylePool.none)
+
+    result += rowStr + '\r\n'
+  }
+
+  return result
+}
+
 class VirtualScreen {
   // Public for direct mutation by writeCellWithStyleStr (avoids txn overhead).
   // File-private class — not exposed outside log-update.ts.

@@ -14,6 +14,7 @@ declare module 'react' {
       'ink-link': any;
       'ink-raw-ansi': any;
       'ink-progress': any;
+      'ink-static': any;
     }
   }
 }

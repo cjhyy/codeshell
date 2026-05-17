@@ -14,9 +14,11 @@ export interface StreamWatchdogOptions {
   onTimeout: () => void;
   /**
    * Called at idleTimeoutMs/2 (or warningMs if provided). Logging only —
-   * the watchdog does not abort on warning.
+   * the watchdog does not abort on warning. The argument is the configured
+   * warning threshold (NOT real-time elapsed) so callers can format the log
+   * without re-deriving it.
    */
-  onWarning?: (idleMsSoFar: number) => void;
+  onWarning?: (warnThresholdMs: number) => void;
   /** Override the warning trigger; defaults to idleTimeoutMs / 2. */
   warningMs?: number;
 }
@@ -49,10 +51,12 @@ export function createStreamWatchdog(opts: StreamWatchdogOptions): StreamWatchdo
     if (disposed) return;
     if (opts.onWarning) {
       warnTimer = setTimeout(() => {
+        if (disposed) return;
         opts.onWarning?.(warnMs);
       }, warnMs);
     }
     idleTimer = setTimeout(() => {
+      if (disposed) return;
       opts.onTimeout();
     }, opts.idleTimeoutMs);
   }

@@ -135,6 +135,13 @@ function applyProp(node: DOMElement, key: string, value: unknown): void {
     return
   }
 
+  if (key === 'pendingStaticElement') {
+    // React element to flush to stdout; stored directly on the node (not as a
+    // DOMNodeAttribute) so the flush path in ink.tsx can retrieve it.
+    node.pendingStaticElement = value
+    return
+  }
+
   if (EVENT_HANDLER_PROPS.has(key)) {
     setEventHandler(node, key, value)
     return
@@ -442,6 +449,12 @@ const reconciler = createReconciler<
 
         if (key === 'textStyles') {
           setTextStyles(node, value as TextStyles)
+          continue
+        }
+
+        if (key === 'pendingStaticElement') {
+          // Same as in applyProp: store directly on the node, not as an attribute.
+          node.pendingStaticElement = value
           continue
         }
 

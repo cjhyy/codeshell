@@ -42,5 +42,8 @@ export { default as Link } from "./components/Link.js";
 // Re-export RawAnsi
 export { RawAnsi } from "./components/RawAnsi.js";
 
+// Re-export Static
+export { Static } from "./components/Static.js";
+
 // render function
 export { default as render, renderSync, createRoot, type RenderOptions, type Instance } from "./root.js";

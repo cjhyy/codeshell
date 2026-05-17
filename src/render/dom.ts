@@ -24,6 +24,7 @@ export type ElementNames =
   | 'ink-link'
   | 'ink-progress'
   | 'ink-raw-ansi'
+  | 'ink-static'
 
 export type NodeNames = ElementNames | TextName
 
@@ -88,6 +89,12 @@ export type DOMElement = {
   // CLAUDE_CODE_DEBUG_REPAINTS is set. Used by findOwnerChainAtRow to
   // attribute scrollback-diff full-resets to the component that caused them.
   debugOwnerChain?: string[]
+
+  // Only set on 'ink-static' nodes. Holds the React element to be rendered
+  // and flushed to stdout on the next onRender call. Set by the <Static>
+  // component via the pendingStaticElement prop; cleared after flush.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pendingStaticElement?: any
 } & InkNode
 
 export type TextNode = {
@@ -111,7 +118,8 @@ export const createNode = (nodeName: ElementNames): DOMElement => {
   const needsYogaNode =
     nodeName !== 'ink-virtual-text' &&
     nodeName !== 'ink-link' &&
-    nodeName !== 'ink-progress'
+    nodeName !== 'ink-progress' &&
+    nodeName !== 'ink-static'
   const node: DOMElement = {
     nodeName,
     style: {},
