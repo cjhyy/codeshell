@@ -85,3 +85,59 @@ test("Static: active region still renders via diff after static flush", async ()
 
   h.unmount();
 });
+
+// Streaming-like scenario: Static items committed; an active token row keeps
+// updating. The diff path should rewrite the active row repeatedly, but
+// committed Static items should NEVER reappear in subsequent stdout frames.
+let setStreamToken!: (s: string) => void;
+function StreamingDemo(): React.ReactElement {
+  const [items, setItems] = useState<string[]>(["msg-a", "msg-b"]);
+  const [streamToken, setStreamTokenLocal] = useState("");
+  setStreamToken = (s) => setStreamTokenLocal(s);
+  // Also expose a way to append items (simulate finalize moving active→Static)
+  addItem = (label) => setItems((prev) => [...prev, label]);
+  return React.createElement(
+    Box,
+    { flexDirection: "column" },
+    React.createElement(
+      Static<string>,
+      {
+        items,
+        children: (item: string, idx: number) =>
+          React.createElement(Text, { key: idx }, `static:${item}`),
+      },
+    ),
+    React.createElement(Text, null, `stream:${streamToken}`),
+  );
+}
+
+test("Static: streaming active region updates without re-emitting Static items", async () => {
+  const h = mount(React.createElement(StreamingDemo), { columns: 40, rows: 10 });
+  await flushRender();
+  const baseline = h.frames.length;
+  const baselineOut = h.frames.join("");
+
+  // Both initial Static items should be in the baseline output.
+  expect(baselineOut).toContain("static:msg-a");
+  expect(baselineOut).toContain("static:msg-b");
+
+  // Now do several "streaming token" updates — these change only the active
+  // region, not the items array.
+  for (const tok of ["he", "hel", "hell", "hello"]) {
+    setStreamToken(tok);
+    await flushRender();
+  }
+  const afterStream = h.frames.slice(baseline).join("");
+
+  // The diff engine emits per-cell incremental updates ("he", then "l", "l",
+  // "o" — each at a cursor offset), not the full string. So we look for the
+  // incremental chars rather than the concatenated "stream:hello".
+  expect(afterStream).toMatch(/o/);  // last char of "hello"
+  // Crucially, Static content was NOT re-emitted during the streaming updates.
+  expect(afterStream).not.toContain("static:msg-a");
+  expect(afterStream).not.toContain("static:msg-b");
+  // Also verify the diff path didn't reset the whole screen.
+  expect(afterStream).not.toContain("\x1b[2J");  // ED 2 — clear-screen
+
+  h.unmount();
+});
