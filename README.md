@@ -108,6 +108,19 @@ Supported `agent` settings:
 - `customSystemPrompt`
 - `appendSystemPrompt`
 
+### Stream Idle Watchdog (opt-in)
+
+When `CODESHELL_ENABLE_STREAM_WATCHDOG=1`, the openai provider aborts any LLM
+stream that has gone `CODESHELL_STREAM_IDLE_TIMEOUT_MS` ms (default `90000`)
+without receiving a chunk. The engine then retries via the existing
+`withRetry` policy, capped by `CODESHELL_STREAM_WATCHDOG_RETRIES` (default
+`2`) attempts with exponential backoff.
+
+This bounds upstream hangs at ~90 s instead of indefinitely. User-initiated
+aborts (Esc / Ctrl+C) are never retried.
+
+Disabled by default — set the flag explicitly to opt in.
+
 ## Built-in presets
 
 | Preset | Purpose | Extra tools |
