@@ -482,21 +482,34 @@ export default class Ink {
       }
     });
 
-    // After Static directly wrote N rows to stdout, the terminal cursor has
-    // advanced N lines BUT ink's log-update still thinks the previous frame
-    // occupied K lines starting at the original cursor row. The next frame's
-    // "erase previous frame" path (\x1b[<K>A + \x1b[K × K) would walk up
-    // through Static-written rows and overwrite them — and meanwhile the
-    // active frame is drawn from the wrong starting row, producing the
-    // overlapping-status-line / split-separator artifacts seen in flow mode.
+    // After Static directly wrote rows to stdout, the terminal cursor has
+    // advanced N rows but ink's frontFrame / log-update state still describe
+    // the previous frame at the OLD cursor position. The next render's diff
+    // would compute "erase previous frame" relative to the old row, walking
+    // up through the Static-written rows — visible as the status line
+    // overlapping the assistant reply, separators drawn at half-width, and
+    // banner content split across spinner rows.
     //
-    // Drop log-update's previousOutput so the next frame is treated as a
-    // first paint: no erase, draw at the current cursor position (which IS
-    // where Static left it). Also mark prevFrameContaminated so the cell-
-    // buffer blit path doesn't try to reuse a stale buffer. Worst case: one
-    // full repaint of the active region per Static flush — visually fine.
+    // Equivalent of the SIGCONT resume path: forget the previous frame
+    // entirely so the next render is treated as a fresh first paint at the
+    // current cursor row (which is where Static left it).
     if (wroteAny) {
+      this.frontFrame = emptyFrame(
+        this.frontFrame.viewport.height,
+        this.frontFrame.viewport.width,
+        this.stylePool,
+        this.charPool,
+        this.hyperlinkPool,
+      );
+      this.backFrame = emptyFrame(
+        this.backFrame.viewport.height,
+        this.backFrame.viewport.width,
+        this.stylePool,
+        this.charPool,
+        this.hyperlinkPool,
+      );
       this.log.reset();
+      this.displayCursor = null;
       this.prevFrameContaminated = true;
     }
   }
