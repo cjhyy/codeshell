@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { Box, Text } from "../../render/index.js";
-import { asyncAgentRegistry } from "../../tool-system/builtin/agent-registry.js";
+import {
+  asyncAgentRegistry,
+  type AsyncAgentEntry,
+} from "../../tool-system/builtin/agent-registry.js";
 
 const MAX_VISIBLE = 5;
 
@@ -10,7 +13,15 @@ const MAX_VISIBLE = 5;
  * elapsed-time text once per second; the local interval is scoped to this
  * component (no app-wide re-render).
  */
-export function AgentDock(): React.ReactElement | null {
+export type DockViewMode = { kind: "main" } | { kind: "agent"; agentId: string };
+
+export interface AgentDockProps {
+  viewMode?: DockViewMode;
+}
+
+export function AgentDock({
+  viewMode = { kind: "main" },
+}: AgentDockProps): React.ReactElement | null {
   const agents = useSyncExternalStore(
     asyncAgentRegistry.subscribe,
     asyncAgentRegistry.getSnapshot,
@@ -33,18 +44,27 @@ export function AgentDock(): React.ReactElement | null {
   const overflow = running.length - visible.length;
   const now = Date.now();
 
+  const isActive = (a: AsyncAgentEntry) =>
+    viewMode.kind === "agent" && viewMode.agentId === a.agentId;
+
   return (
     <Box flexDirection="row" gap={1} paddingX={1}>
       <Text dim>agents:</Text>
       {visible.map((a, i) => {
         const elapsedSec = Math.floor((now - a.startedAt) / 1000);
+        const active = isActive(a);
         return (
-          <Text key={a.agentId} color="ansi:cyan">
+          <Text
+            key={a.agentId}
+            color={active ? "ansi:cyanBright" : "ansi:cyan"}
+            bold={active}
+          >
             [{i + 1}] {a.description} {elapsedSec}s
           </Text>
         );
       })}
       {overflow > 0 && <Text dim>+{overflow} more</Text>}
+      {viewMode.kind === "agent" && <Text dim>(Ctrl-0 to return)</Text>}
     </Box>
   );
 }

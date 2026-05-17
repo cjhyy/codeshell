@@ -161,6 +161,23 @@ export function App({
     asyncAgentRegistry.hasRunning,
   );
   const isRunning = isQueryActive || hasRunningBgAgents;
+
+  type ViewMode = { kind: "main" } | { kind: "agent"; agentId: string };
+  const [viewMode, setViewMode] = useState<ViewMode>({ kind: "main" });
+
+  const agentsSnapshot = useSyncExternalStore(
+    asyncAgentRegistry.subscribe,
+    asyncAgentRegistry.getSnapshot,
+  );
+  useEffect(() => {
+    if (viewMode.kind === "agent") {
+      const exists = agentsSnapshot.some(
+        (a) => a.agentId === viewMode.agentId && a.status === "running",
+      );
+      if (!exists) setViewMode({ kind: "main" });
+    }
+  }, [agentsSnapshot, viewMode]);
+
   const [sessionId, setSessionId] = useState(initialSessionId);
   // Mirror of sessionId for synchronous reads inside event handlers.
   // recordUIEvent needs the current sid every time it fires, but
@@ -788,6 +805,23 @@ export function App({
   }, [fetchModelManagerState]);
 
   useInput((ch, key) => {
+    // Ctrl-0 → main view; Ctrl-1..5 → switch to nth running background agent
+    if (key.ctrl && ch && ch >= "0" && ch <= "5") {
+      const n = parseInt(ch, 10);
+      if (n === 0) {
+        setViewMode({ kind: "main" });
+        return;
+      }
+      const running = asyncAgentRegistry
+        .getSnapshot()
+        .filter((a) => a.status === "running");
+      const target = running[n - 1];
+      if (target) {
+        setViewMode({ kind: "agent", agentId: target.agentId });
+      }
+      return;
+    }
+
     if (key.ctrl && ch === "c") {
       if (isRunning) {
         // P0.5: Preserve already-streamed text before cancelling
@@ -1207,6 +1241,12 @@ export function App({
     return null;
   }, [chatLog]);
 
+  const renderedEntries = (() => {
+    if (viewMode.kind === "main") return chatLog;
+    const agent = agentsSnapshot.find((a) => a.agentId === viewMode.agentId);
+    return (agent?.transcript ?? []) as typeof chatLog;
+  })();
+
   const scrollableContent = (
     <>
       {showBanner && (
@@ -1223,7 +1263,7 @@ export function App({
           closure identity doesn't matter for MessageRow memo. */}
       <VirtualMessageList
         ref={listRef}
-        entries={chatLog}
+        entries={renderedEntries}
         renderEntry={renderEntry}
         columns={process.stdout.columns ?? 80}
         streamingEntryId={streamingEntryId}
@@ -1280,7 +1320,7 @@ export function App({
 
   const bottomContent = (
     <Box flexDirection="column" marginTop={0}>
-      <AgentDock />
+      <AgentDock viewMode={viewMode} />
       <Text dim>{separator}</Text>
 
       {screen === "transcript" ? (
