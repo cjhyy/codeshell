@@ -17,7 +17,11 @@ import { SpinnerWithVerb } from "./components/SpinnerWithVerb.js";
 import { StatusLine } from "./components/StatusLine.js";
 import { FullscreenLayout, useUnseenDivider } from "./components/FullscreenLayout.js";
 import { VirtualMessageList, type VirtualMessageListHandle } from "./components/VirtualMessageList.js";
-import { FULLSCREEN_MODE } from "./fullscreen-mode.js";
+import {
+  FullscreenModeContext,
+  INITIAL_FULLSCREEN_MODE,
+  useFullscreenMode,
+} from "./fullscreen-mode.js";
 import {
   MessageContent,
   UserMessage,
@@ -113,6 +117,17 @@ export function App({
   recordAppRender();
 
   const { exit } = useApp();
+  // Fullscreen toggle — driven by /fullscreen at runtime. Initial value from
+  // CODESHELL_FULLSCREEN env. Provided to subtree via FullscreenModeContext.
+  const [fullscreen, setFullscreenState] = useState<boolean>(INITIAL_FULLSCREEN_MODE);
+  const fullscreenModeValue = useMemo(
+    () => ({
+      fullscreen,
+      setFullscreen: (next: boolean) => setFullscreenState(next),
+      toggleFullscreen: () => setFullscreenState((p) => !p),
+    }),
+    [fullscreen],
+  );
   const [input, setInput] = useState(prefill ?? "");
   const chatLog = useSyncExternalStore(
     chatStore.subscribe.bind(chatStore),
@@ -184,6 +199,12 @@ export function App({
   const runStartRef = useRef(0);
   const [streamMode, setStreamMode] = useState<"responding" | "tool-use" | "thinking">("thinking");
   const [thinkingContent, setThinkingContent] = useState<string | null>(null);
+  // Optimistic-cancel guard — set true on ESC so the in-flight `await
+  // client.run()` resolution (which can arrive 1–7s later, after the LLM
+  // SDK tears down its socket) does NOT push a duplicate "aborted" /
+  // turn-duration / status entry into chat. Cleared at the top of each new
+  // submit.
+  const cancelledRef = useRef(false);
 
   // P1.6: Transcript mode — toggle between prompt and read-only transcript view
   const [screen, setScreen] = useState<"prompt" | "transcript">("prompt");
@@ -529,6 +550,10 @@ export function App({
         }
 
         case "error": {
+          // ESC took us through the optimistic-cancel path; suppress the
+          // late stream "error" event that the LLM SDK fires after socket
+          // teardown so the chat stays clean.
+          if (cancelledRef.current) break;
           const errorText = event.error;
           const errorKind = classifyError(errorText);
           chatStore.update((prev) => {
@@ -537,7 +562,10 @@ export function App({
                 !(e.type === "thinking" && e.agentId === agentId) &&
                 !(e.type === "tool_running" && e.agentId === agentId),
             );
-            return [...filtered, entry({ type: "error", error: errorText, errorKind, agentId })];
+            return [
+              ...filtered,
+              entry({ type: "error", error: friendlyError(errorText), errorKind, agentId }),
+            ];
           });
           break;
         }
@@ -736,6 +764,11 @@ export function App({
             ),
         );
         client.cancel().catch(() => {});
+        // Same optimistic-cancel path as ESC — see cancelledRef comment.
+        cancelledRef.current = true;
+        setIsRunning(false);
+        setStreamMode("thinking");
+        setThinkingContent(null);
       } else {
         exit();
       }
@@ -787,6 +820,15 @@ export function App({
           ),
       );
       client.cancel().catch(() => {});
+      // Optimistic UI: flip back to idle immediately. The server-side abort
+      // still propagates through the LLM SDK in the background (1–7s for
+      // socket teardown), and the awaited client.run() in handleSubmit will
+      // eventually resolve/reject — cancelledRef tells that path to skip the
+      // late "aborted" error / turn-duration entries.
+      cancelledRef.current = true;
+      setIsRunning(false);
+      setStreamMode("thinking");
+      setThinkingContent(null);
       // Undo the last history entry since the request was interrupted
       removeLastFromHistory();
     }
@@ -814,11 +856,11 @@ export function App({
       modelEntries ||
       modelManager ||
       sessionEntries;
-    if (FULLSCREEN_MODE && !overlayOpen && (key.wheelUp || key.wheelDown)) {
+    if (fullscreen && !overlayOpen && (key.wheelUp || key.wheelDown)) {
       listRef.current?.scrollBy(key.wheelUp ? -1 : 1);
       return;
     }
-    if (FULLSCREEN_MODE && !overlayOpen && (key.pageUp || key.pageDown)) {
+    if (fullscreen && !overlayOpen && (key.pageUp || key.pageDown)) {
       const vh = listRef.current?.getViewportHeight() ?? 0;
       const step = Math.max(1, vh - 2);
       listRef.current?.scrollBy(key.pageUp ? -step : step);
@@ -889,6 +931,8 @@ export function App({
       chatStore.update((prev) => [...prev, entry({ type: "user", text: trimmed })]);
       setIsRunning(true);
       streamingTokensRef.current = 0;
+      // Fresh turn — drop any stale optimistic-cancel flag from a prior ESC.
+      cancelledRef.current = false;
       taskManager.reset();
 
       try {
@@ -902,6 +946,13 @@ export function App({
 
         // Stream events are handled via the client event listener above
         const result = await client.run(engineMessage, sessionId);
+
+        // ESC / Ctrl+C took us through the optimistic-cancel path — UI is
+        // already idle, history rewound. Don't append turn-duration / status
+        // entries from this resolution (would arrive 1–7s after ESC).
+        if (cancelledRef.current) {
+          return;
+        }
 
         // Flush any remaining buffered text
         if (flushTimerRef.current) {
@@ -952,18 +1003,30 @@ export function App({
         ]);
 
         if (result.reason !== "completed") {
-          chatStore.update((prev) => [...prev, entry({ type: "status", reason: result.reason })]);
+          chatStore.update((prev) => [
+            ...prev,
+            entry({ type: "status", reason: friendlyReason(result.reason) }),
+          ]);
         }
       } catch (err) {
-        chatStore.update((prev) => [
-          ...prev,
-          entry({ type: "error", error: (err as Error).message }),
-        ]);
+        // Suppress the late "Request was aborted." error that the LLM SDK
+        // surfaces 1–7s after ESC — UI is already idle from the optimistic
+        // cancel path.
+        if (!cancelledRef.current) {
+          chatStore.update((prev) => [
+            ...prev,
+            entry({ type: "error", error: friendlyError((err as Error).message) }),
+          ]);
+        }
       }
 
-      setIsRunning(false);
-      setStreamMode("thinking");
-      setThinkingContent(null);
+      // If ESC/Ctrl+C already flipped us to idle, leave state alone — a new
+      // turn may have started in the meantime.
+      if (!cancelledRef.current) {
+        setIsRunning(false);
+        setStreamMode("thinking");
+        setThinkingContent(null);
+      }
     },
     [client, sessionId, model, isRunning, flushTextBuffer],
   );
@@ -1002,6 +1065,9 @@ export function App({
         openModelSelector,
         openSessionPicker,
         openModelManager,
+        fullscreen,
+        setFullscreen: fullscreenModeValue.setFullscreen,
+        toggleFullscreen: fullscreenModeValue.toggleFullscreen,
         loadChatEntries: (entries: RestoredChatEntry[]) => {
           const chatEntries: ChatEntry[] = entries
             .map((e) => {
@@ -1435,14 +1501,16 @@ export function App({
   );
 
   return (
-    <FullscreenLayout
-      scrollable={scrollableContent}
-      bottom={bottomContent}
-      overlay={overlayContent}
-      newMessageCount={unseenCount}
-      showPill={showPill}
-      onJumpToNew={onScrollToBottom}
-    />
+    <FullscreenModeContext.Provider value={fullscreenModeValue}>
+      <FullscreenLayout
+        scrollable={scrollableContent}
+        bottom={bottomContent}
+        overlay={overlayContent}
+        newMessageCount={unseenCount}
+        showPill={showPill}
+        onJumpToNew={onScrollToBottom}
+      />
+    </FullscreenModeContext.Provider>
   );
 }
 
@@ -1566,6 +1634,61 @@ function findLastIndex<T>(arr: T[], predicate: (item: T) => boolean): number {
     if (predicate(arr[i])) return i;
   }
   return -1;
+}
+
+/**
+ * Map a TerminalReason (or raw SDK error string) to a user-facing line.
+ * Keep the technical name in parentheses so logs / bug reports stay
+ * grep-able, but lead with something a human can act on.
+ */
+function friendlyReason(reason: string): string {
+  switch (reason) {
+    case "aborted_streaming":
+    case "aborted_tools":
+      return "已中断";
+    case "model_error":
+      return "模型调用失败 — 检查网络 / API key / 配额后重试";
+    case "prompt_too_long":
+      return "上下文超长 — 用 /compact 压缩,或开新会话";
+    case "max_turns":
+      return "达到最大回合数 — 可继续输入推进";
+    case "hook_stopped":
+    case "stop_hook_prevented":
+      return "被 hook 拦截 — 检查 settings.json 中的 hook 配置";
+    case "image_error":
+      return "图片处理失败";
+    case "completed":
+      return "";
+    default:
+      return reason;
+  }
+}
+
+/**
+ * Friendlify an SDK error message. Catches the common patterns
+ * ("OpenAI API error: Request was aborted.", auth, rate-limit, network)
+ * and rewrites them; leaves anything unrecognized intact so we never hide
+ * a real bug.
+ */
+function friendlyError(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("aborted") || m.includes("abort")) return "已中断";
+  if (m.includes("401") || m.includes("unauthorized") || m.includes("invalid api key")) {
+    return "API key 无效或已过期 — 检查 /providers";
+  }
+  if (m.includes("429") || m.includes("rate limit") || m.includes("quota")) {
+    return "触发限流 / 配额耗尽 — 稍后再试,或切换模型";
+  }
+  if (m.includes("timeout") || m.includes("etimedout") || m.includes("econnreset")) {
+    return "网络超时 — 检查连接后重试";
+  }
+  if (m.includes("enotfound") || m.includes("getaddrinfo")) {
+    return "无法解析模型服务地址 — 检查 DNS / 代理设置";
+  }
+  if (m.includes("context length") || m.includes("maximum context") || m.includes("too long")) {
+    return "上下文超长 — 用 /compact 压缩,或开新会话";
+  }
+  return msg;
 }
 
 // ─── Mode Indicator ─────────────────────────────────────────────

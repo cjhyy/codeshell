@@ -26,7 +26,7 @@ import {
 import type { ChatEntry } from "../store.js";
 import { MessageRow } from "./MessageRow.js";
 import { useVirtualScroll } from "../hooks/useVirtualScroll.js";
-import { FULLSCREEN_MODE, TAIL_ENTRY_LIMIT } from "../fullscreen-mode.js";
+import { useFullscreenMode, TAIL_ENTRY_LIMIT } from "../fullscreen-mode.js";
 
 interface VirtualMessageListProps {
   entries: ChatEntry[];
@@ -108,11 +108,13 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
       spacerRef,
     } = useVirtualScroll(scrollRef, keys, columns);
 
+    const { fullscreen } = useFullscreenMode();
+
     // Flow mode: no ScrollBox, no virtual windowing, no measureRef wiring.
     // Render only the most recent TAIL_ENTRY_LIMIT entries; older content
     // is in the terminal's scrollback. The Box flows downward; the terminal
     // (iTerm/Ghostty/tmux) owns scrolling.
-    if (!FULLSCREEN_MODE) {
+    if (!fullscreen) {
       const tailStart = Math.max(0, entries.length - TAIL_ENTRY_LIMIT);
       const tail = entries.slice(tailStart);
       return (

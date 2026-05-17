@@ -1,24 +1,41 @@
 /**
- * Fullscreen mode flag — read once at process start.
+ * Fullscreen mode — controllable at runtime via /fullscreen.
  *
- *   CODESHELL_FULLSCREEN=1 (default) — alt-screen + ScrollBox + wheel/PgUp/PgDn
- *     intercepts. Long sessions use viewport-windowed React mount.
- *   CODESHELL_FULLSCREEN=0           — no alt-screen, no wheel intercept.
- *     Transcript flows downward naturally; terminal scrollback owns history.
- *     VirtualMessageList renders only the most recent TAIL_ENTRY_LIMIT entries
- *     since older content lives in the terminal's scrollback buffer.
+ * Initial value: CODESHELL_FULLSCREEN env var ("0" = flow, anything else
+ * including unset = fullscreen). Runtime switch goes through React Context
+ * so subscribers re-render on toggle.
  *
- * Module-level constant so React components can branch synchronously and
- * tree-shake the unused path.
+ *   fullscreen=true  — AlternateScreen + ScrollBox + virtual-scroll +
+ *     wheel/PgUp/PgDn intercepts. Default behavior.
+ *   fullscreen=false — flow mode: no alt-screen, no wheel intercept;
+ *     transcript flows downward and the terminal's scrollback owns history.
+ *     VirtualMessageList renders only the most recent TAIL_ENTRY_LIMIT
+ *     entries.
+ *
+ * On transition fullscreen→flow, FullscreenLayout flushes the current
+ * transcript to stdout so older entries land in the terminal scrollback
+ * before the alt-screen exits and React re-mounts the flow tree.
  */
-export const FULLSCREEN_MODE = process.env.CODESHELL_FULLSCREEN !== "0";
+import { createContext, useContext } from "react";
 
-/**
- * In flow mode (fullscreen off), only the most recent N entries are mounted
- * as React fibers. Older entries are assumed to have scrolled out of the
- * visible region; the user reaches them via terminal scrollback (wheel
- * inside iTerm/Ghostty/tmux, NOT inside CodeShell). 500 is enough to cover
- * a few screenfuls of mixed user/assistant/tool output without paying the
- * full O(N) React reconcile cost on every state update in a long session.
- */
 export const TAIL_ENTRY_LIMIT = 500;
+
+export const INITIAL_FULLSCREEN_MODE = process.env.CODESHELL_FULLSCREEN !== "0";
+
+export interface FullscreenModeValue {
+  fullscreen: boolean;
+  setFullscreen: (next: boolean) => void;
+  toggleFullscreen: () => void;
+}
+
+// Default value matches initial env state; runtime overrides via the Provider
+// inserted at the top of App.
+export const FullscreenModeContext = createContext<FullscreenModeValue>({
+  fullscreen: INITIAL_FULLSCREEN_MODE,
+  setFullscreen: () => {},
+  toggleFullscreen: () => {},
+});
+
+export function useFullscreenMode(): FullscreenModeValue {
+  return useContext(FullscreenModeContext);
+}

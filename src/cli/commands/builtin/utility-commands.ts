@@ -89,6 +89,34 @@ export const utilityCommands: SlashCommand[] = [
   },
 
   {
+    name: "/fullscreen",
+    description: "Toggle fullscreen UI mode (alt-screen + ScrollBox) vs flow mode (native terminal scrollback)",
+    usage: "/fullscreen [on|off|toggle]",
+    execute: (arg, ctx) => {
+      if (ctx.fullscreen === undefined || !ctx.setFullscreen) {
+        ctx.addStatus("Fullscreen toggle is not wired in this build.");
+        return;
+      }
+      const a = (arg ?? "").trim().toLowerCase();
+      let next: boolean;
+      if (a === "on" || a === "1" || a === "true") next = true;
+      else if (a === "off" || a === "0" || a === "false") next = false;
+      else if (a === "" || a === "toggle") next = !ctx.fullscreen;
+      else {
+        ctx.addStatus(`/fullscreen: unknown arg "${arg}". Use on | off | toggle.`);
+        return;
+      }
+      if (next === ctx.fullscreen) {
+        ctx.addStatus(`Fullscreen is already ${next ? "on" : "off"}.`);
+        return;
+      }
+      ctx.setFullscreen(next);
+      // Don't addStatus the new mode — the React re-render is what users
+      // see. A status line would just add noise to the scrollback.
+    },
+  },
+
+  {
     name: "/update",
     description: "Check for and install updates",
     execute: async (_arg, ctx) => {

@@ -49,6 +49,12 @@ export interface CommandContext {
   openSessionPicker?: () => void;
   /** Open the Ink model management panel (used by /models). */
   openModelManager?: () => void;
+  /** Current fullscreen mode (used by /fullscreen status check). */
+  fullscreen?: boolean;
+  /** Set fullscreen mode explicitly (used by /fullscreen on|off). */
+  setFullscreen?: (next: boolean) => void;
+  /** Toggle fullscreen mode (used by bare /fullscreen). */
+  toggleFullscreen?: () => void;
 }
 
 export type CommandGroup = "core" | "git" | "context" | "config" | "advanced";
