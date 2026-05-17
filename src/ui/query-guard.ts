@@ -30,7 +30,15 @@ export class QueryGuard {
   getSnapshot = (): boolean => this.state !== "idle";
 
   private notify(): void {
-    for (const cb of this.listeners) cb();
+    for (const cb of this.listeners) {
+      try {
+        cb();
+      } catch {
+        // listener errors must not block subsequent listeners or callers;
+        // React's useSyncExternalStore scheduler should not throw, but
+        // defensive isolation makes guard robust to listener bugs
+      }
+    }
   }
 
   /** Reserve a slot synchronously before the AbortController exists. */
@@ -67,11 +75,12 @@ export class QueryGuard {
 
   /** Hard abort: abort the controller AND clean up. */
   forceEnd(reason: string = "force-end"): void {
+    if (this.state === "idle") return;
     if (this.state === "running" && this.controller) {
       try {
         this.controller.abort(reason);
       } catch {
-        // swallow — listener errors must not block state transition
+        // abort() can throw if already aborted in some environments
       }
     }
     this.state = "idle";

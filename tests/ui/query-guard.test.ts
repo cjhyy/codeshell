@@ -77,3 +77,26 @@ test("cancelReservation rolls back reserve()", () => {
   // Should be reservable again
   expect(g.reserve()).toBe(true);
 });
+
+test("forceEnd() on idle is a no-op (no notify)", () => {
+  const g = new QueryGuard();
+  const cb = mock(() => {});
+  g.subscribe(cb);
+  g.forceEnd("user-cancel");  // already idle
+  expect(cb).not.toHaveBeenCalled();
+  expect(g.getSnapshot()).toBe(false);
+});
+
+test("a throwing listener does not block other listeners or state changes", () => {
+  const g = new QueryGuard();
+  let secondCalled = false;
+  g.subscribe(() => {
+    throw new Error("listener boom");
+  });
+  g.subscribe(() => {
+    secondCalled = true;
+  });
+  expect(() => g.reserve()).not.toThrow();
+  expect(secondCalled).toBe(true);
+  expect(g.getSnapshot()).toBe(true);
+});
