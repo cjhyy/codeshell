@@ -406,6 +406,15 @@ function renderNodeToOutput(
     inheritedBackgroundColor?: Color
   },
 ): void {
+  // ink-static nodes have no yogaNode and are never painted to the screen
+  // buffer — they are flushed to stdout directly by ink.tsx before the diff
+  // engine runs. After the flush their children are detached; on the next
+  // render the node has no children and nothing to do here.
+  if (node.nodeName === 'ink-static') {
+    node.dirty = false
+    return
+  }
+
   const { yogaNode } = node
 
   if (yogaNode) {
