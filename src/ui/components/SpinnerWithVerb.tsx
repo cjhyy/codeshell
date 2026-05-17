@@ -1,7 +1,7 @@
 /**
  * SpinnerWithVerb — animated spinner with random verbs, elapsed time, and token count.
  */
-import { useState, useEffect, useRef, type MutableRefObject } from "react";
+import { useState, useEffect, useRef, memo, type MutableRefObject } from "react";
 import { Box, Text } from "../../render/index.js";
 
 function getDefaultCharacters(): string[] {
@@ -91,7 +91,7 @@ function pickRandom(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function SpinnerWithVerb({
+function SpinnerWithVerbImpl({
   mode,
   streamingTokensRef,
   runStartRef,
@@ -121,7 +121,13 @@ export function SpinnerWithVerb({
 
   const verb = verbRef.current;
   const color = mode === "thinking" ? "ansi:magenta" : "ansi:cyan";
+  const thinkingLine = thinkingContent ? truncateThinking(thinkingContent) : "";
 
+  // Both rows live in a single column with fixed shape (two rows always when
+  // thinking is on) so the Box never grows/shrinks between renders. A height
+  // change here triggers Yoga's layout-shift damage and a full-screen repaint,
+  // which is the visible "flicker" — keeping the slot occupied with at least
+  // a space avoids that.
   return (
     <Box flexDirection="column" marginLeft={2} marginY={1}>
       <Box>
@@ -130,16 +136,50 @@ export function SpinnerWithVerb({
         {elapsed > 0 && <Text dim>{"  "}{elapsed}s</Text>}
         {tokens > 0 && <Text dim>{" · "}{formatTokens(tokens)}</Text>}
       </Box>
-      {thinkingContent && (
+      {thinkingContent !== undefined && (
         <Box marginLeft={4}>
           <Text dim italic>
-            {truncateThinking(thinkingContent)}
+            {thinkingLine || " "}
           </Text>
         </Box>
       )}
     </Box>
   );
 }
+
+/**
+ * Memo so App-level re-renders (chatStore subscribe firing on every
+ * text_delta flush, StatusLine 1s tick, etc.) do not redundantly re-commit
+ * the spinner subtree. The component owns its own 200ms tick internally;
+ * everything visible from outside is in props.
+ *
+ * Comparator:
+ *   mode               — string literal, compare by value.
+ *   streamingTokensRef — mutable ref (live token counter); React identity
+ *                        is stable, but the live value changes constantly.
+ *                        We DON'T want to re-render for token-counter
+ *                        ticks (the spinner's own setInterval picks them
+ *                        up on the next 200ms frame). Ignore.
+ *   runStartRef        — same shape; reference-stable. Ignore.
+ *   thinkingContent    — changes ~every 50ms during thinking. We DO want
+ *                        the thinking line to update, but only when the
+ *                        truncated tail (last ~80 chars) actually changes.
+ *                        Compare truncated form to avoid re-renders that
+ *                        produce identical output.
+ */
+function spinnerPropsEqual(
+  prev: SpinnerWithVerbProps,
+  next: SpinnerWithVerbProps,
+): boolean {
+  if (prev.mode !== next.mode) return false;
+  const prevLine = prev.thinkingContent ? truncateThinking(prev.thinkingContent) : "";
+  const nextLine = next.thinkingContent ? truncateThinking(next.thinkingContent) : "";
+  if (prevLine !== nextLine) return false;
+  // Refs themselves are stable; ignoring their live values is the whole point.
+  return true;
+}
+
+export const SpinnerWithVerb = memo(SpinnerWithVerbImpl, spinnerPropsEqual);
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M tokens";
