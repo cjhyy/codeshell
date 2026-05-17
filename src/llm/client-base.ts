@@ -6,7 +6,6 @@ import type { LLMConfig, LLMResponse, TokenUsage } from "../types.js";
 import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
 import { LLMError, ContextLimitError, LLMRateLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
-import { isRetryable } from "./retry.js";
 
 export abstract class LLMClientBase {
   readonly provider: string;
@@ -88,11 +87,6 @@ export abstract class LLMClientBase {
           await new Promise((r) => setTimeout(r, waitMs));
           continue;
         }
-
-        // Only retry errors the classifier approves; everything else is
-        // re-thrown immediately so non-retryable failures (e.g. bad prompts,
-        // user aborts) don't burn pointless attempts.
-        if (!isRetryable(err)) throw err;
 
         if (attempt === attempts) {
           logger.error("llm.exhausted", {
