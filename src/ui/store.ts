@@ -42,6 +42,24 @@ export function createEntry(data: ChatEntryData): ChatEntry {
   return { ...data, id: `e${++entryIdCounter}` };
 }
 
+/**
+ * "Finalized" = entry's content is stable; further stream events will not
+ * mutate it in place. Used by VirtualMessageList flow mode to route entries
+ * into <Static> (append-only, never re-rendered) vs. the active region (kept
+ * in React tree and re-rendered on each delta).
+ *
+ *   assistant_text  → final once streaming flips to false
+ *   tool_running    → transient, always replaced by tool_result; not final
+ *   thinking        → transient, filtered out on next tool_use_start
+ *   everything else → final on append
+ */
+export function isEntryFinalized(e: ChatEntry): boolean {
+  if (e.type === "assistant_text") return !e.streaming;
+  if (e.type === "tool_running") return false;
+  if (e.type === "thinking") return false;
+  return true;
+}
+
 type Listener = () => void;
 
 class ChatStore {

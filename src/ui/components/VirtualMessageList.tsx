@@ -21,12 +21,13 @@ import {
   Box,
   Text,
   ScrollBox,
+  Static,
   type ScrollBoxHandle,
 } from "../../render/index.js";
-import type { ChatEntry } from "../store.js";
+import { type ChatEntry, isEntryFinalized } from "../store.js";
 import { MessageRow } from "./MessageRow.js";
 import { useVirtualScroll } from "../hooks/useVirtualScroll.js";
-import { useFullscreenMode, TAIL_ENTRY_LIMIT } from "../fullscreen-mode.js";
+import { useFullscreenMode } from "../fullscreen-mode.js";
 
 interface VirtualMessageListProps {
   entries: ChatEntry[];
@@ -110,38 +111,63 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
 
     const { fullscreen } = useFullscreenMode();
 
-    // Flow mode: no ScrollBox, no virtual windowing, no measureRef wiring.
-    // Render only the most recent TAIL_ENTRY_LIMIT entries; older content
-    // is in the terminal's scrollback. The Box flows downward; the terminal
-    // (iTerm/Ghostty/tmux) owns scrolling.
+    // Flow mode: no ScrollBox, no virtual windowing. Partition entries into:
+    //   - committed (finalized + not currently streaming) → <Static> so they
+    //     are appended to stdout once and skipped by future diff cycles.
+    //   - active tail (last entry if still streaming + any trailing
+    //     non-finalized rows) → normal React tree, redrawn each frame.
+    // This is CC's playbook: append-only history + a tiny live region.
+    // The terminal's scrollback owns the committed content; the diff engine
+    // only ever rewrites the active rows, so no flicker / no scroll-to-top.
     if (!fullscreen) {
-      const tailStart = Math.max(0, entries.length - TAIL_ENTRY_LIMIT);
-      const tail = entries.slice(tailStart);
+      // Walk from the end to find the start of the active region. Anything
+      // not finalized (streaming assistant_text, tool_running, thinking)
+      // OR matching streamingEntryId belongs to the active region.
+      let activeStart = entries.length;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const e = entries[i];
+        const isActive = !isEntryFinalized(e) || streamingEntryId === e.id;
+        if (isActive) {
+          activeStart = i;
+        } else {
+          // Once we hit a finalized entry, everything before is committed.
+          break;
+        }
+      }
+      const committed = entries.slice(0, activeStart);
+      const active = entries.slice(activeStart);
+      const activeBaseIdx = activeStart;
+
+      const renderRow = (e: ChatEntry, globalIdx: number): ReactNode => {
+        const isSelected = selectedEntryId === e.id;
+        return (
+          <React.Fragment key={e.id}>
+            {dividerIndex !== null && dividerIndex === globalIdx && unseenCount > 0 && (
+              <UnseenDivider count={unseenCount} />
+            )}
+            <Box flexDirection="column" flexShrink={0}>
+              <CursorOutline active={isSelected}>
+                <MessageRow
+                  entry={e}
+                  columns={columns}
+                  isStreaming={streamingEntryId === e.id}
+                  isSelected={isSelected}
+                  expanded={expanded}
+                  render={(en) => renderEntry(en, en.id, expanded)}
+                />
+              </CursorOutline>
+            </Box>
+          </React.Fragment>
+        );
+      };
+
       return (
         <Box flexDirection="column">
-          {tail.map((e, i) => {
-            const globalIdx = tailStart + i;
-            const isSelected = selectedEntryId === e.id;
-            return (
-              <React.Fragment key={e.id}>
-                {dividerIndex !== null && dividerIndex === globalIdx && unseenCount > 0 && (
-                  <UnseenDivider count={unseenCount} />
-                )}
-                <Box flexDirection="column" flexShrink={0}>
-                  <CursorOutline active={isSelected}>
-                    <MessageRow
-                      entry={e}
-                      columns={columns}
-                      isStreaming={streamingEntryId === e.id}
-                      isSelected={isSelected}
-                      expanded={expanded}
-                      render={(en) => renderEntry(en, en.id, expanded)}
-                    />
-                  </CursorOutline>
-                </Box>
-              </React.Fragment>
-            );
-          })}
+          <Static<ChatEntry>
+            items={committed}
+            children={(e, i) => renderRow(e, i)}
+          />
+          {active.map((e, i) => renderRow(e, activeBaseIdx + i))}
         </Box>
       );
     }
