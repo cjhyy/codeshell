@@ -47,6 +47,7 @@ import { SessionPicker, type SessionPickerEntry } from "./components/SessionPick
 import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
+import { QueryGuard } from "./query-guard.js";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
 import { gitCommands } from "../cli/commands/builtin/git-commands.js";
 import { permissionsCommand } from "../cli/commands/builtin/permissions-command.js";
@@ -148,7 +149,14 @@ export function App({
     };
   }, [tasks]);
 
-  const [isRunning, setIsRunning] = useState(false);
+  const queryGuard = useRef(new QueryGuard()).current;
+  const isQueryActive = useSyncExternalStore(
+    queryGuard.subscribe,
+    queryGuard.getSnapshot,
+  );
+  // Keep the `isRunning` identifier so the rest of App.tsx works unchanged.
+  // In Phase 4 this will become `isQueryActive || hasRunningBgAgents`.
+  const isRunning = isQueryActive;
   const [sessionId, setSessionId] = useState(initialSessionId);
   // Mirror of sessionId for synchronous reads inside event handlers.
   // recordUIEvent needs the current sid every time it fires, but
@@ -292,6 +300,29 @@ export function App({
   // ─── Text delta buffering ──────────────────────────────────────
   const textBufferRef = useRef<Map<string | undefined, string>>(new Map());
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Thinking delta buffer — same shape as textBuffer. Without this, every
+  // thinking token (50–200/s on some providers) triggered a synchronous
+  // setThinkingContent → App re-render → spinner subtree re-commit. The
+  // memoized SpinnerWithVerb couldn't help because its comparator on
+  // truncateThinking() flipped on most tokens. Coalesce to 50 ms so the
+  // spinner Box only re-renders ~20×/s regardless of token rate.
+  const thinkingBufferRef = useRef<string>("");
+  const thinkingFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushThinkingBuffer = useCallback(() => {
+    thinkingFlushTimerRef.current = null;
+    if (thinkingBufferRef.current.length === 0) return;
+    const pending = thinkingBufferRef.current;
+    thinkingBufferRef.current = "";
+    setThinkingContent((prev) => (prev ?? "") + pending);
+  }, []);
+  /** Drop any pending thinking buffer + timer. Pair with setThinkingContent(null). */
+  const clearThinkingBuffer = useCallback(() => {
+    thinkingBufferRef.current = "";
+    if (thinkingFlushTimerRef.current) {
+      clearTimeout(thinkingFlushTimerRef.current);
+      thinkingFlushTimerRef.current = null;
+    }
+  }, []);
 
   const flushTextBuffer = useCallback(() => {
     flushTimerRef.current = null;
@@ -363,6 +394,7 @@ export function App({
         case "stream_request_start":
           setStreamMode("thinking");
           setThinkingContent(null);
+      clearThinkingBuffer();
           // Reset the spinner's "alive" counter at the top of each LLM call.
           // Tracks output of the current call only; ctx size is the bar's job.
           streamingTokensRef.current = 0;
@@ -373,7 +405,10 @@ export function App({
           break;
 
         case "thinking_delta":
-          setThinkingContent((prev) => (prev ?? "") + event.text);
+          thinkingBufferRef.current += event.text;
+          if (!thinkingFlushTimerRef.current) {
+            thinkingFlushTimerRef.current = setTimeout(flushThinkingBuffer, 50);
+          }
           break;
 
         case "text_delta": {
@@ -763,12 +798,13 @@ export function App({
               e.type === "assistant_text" && e.streaming ? { ...e, streaming: false } : e,
             ),
         );
+        queryGuard.forceEnd("user-cancel");
         client.cancel().catch(() => {});
         // Same optimistic-cancel path as ESC — see cancelledRef comment.
         cancelledRef.current = true;
-        setIsRunning(false);
         setStreamMode("thinking");
         setThinkingContent(null);
+      clearThinkingBuffer();
       } else {
         exit();
       }
@@ -819,6 +855,7 @@ export function App({
             e.type === "assistant_text" && e.streaming ? { ...e, streaming: false } : e,
           ),
       );
+      queryGuard.forceEnd("user-cancel");
       client.cancel().catch(() => {});
       // Optimistic UI: flip back to idle immediately. The server-side abort
       // still propagates through the LLM SDK in the background (1–7s for
@@ -826,9 +863,9 @@ export function App({
       // eventually resolve/reject — cancelledRef tells that path to skip the
       // late "aborted" error / turn-duration entries.
       cancelledRef.current = true;
-      setIsRunning(false);
       setStreamMode("thinking");
       setThinkingContent(null);
+      clearThinkingBuffer();
       // Undo the last history entry since the request was interrupted
       removeLastFromHistory();
     }
@@ -929,11 +966,18 @@ export function App({
       }
 
       chatStore.update((prev) => [...prev, entry({ type: "user", text: trimmed })]);
-      setIsRunning(true);
+      if (!queryGuard.reserve()) return; // already busy → ignore concurrent submit
       streamingTokensRef.current = 0;
       // Fresh turn — drop any stale optimistic-cancel flag from a prior ESC.
       cancelledRef.current = false;
       taskManager.reset();
+
+      const abortController = new AbortController();
+      if (!queryGuard.tryStart(abortController)) {
+        // Race-safety check — should be unreachable since reserve just succeeded
+        queryGuard.cancelReservation();
+        return;
+      }
 
       try {
         // If a slash command (e.g. /arena) stored context, prepend it to
@@ -1023,9 +1067,10 @@ export function App({
       // If ESC/Ctrl+C already flipped us to idle, leave state alone — a new
       // turn may have started in the meantime.
       if (!cancelledRef.current) {
-        setIsRunning(false);
+        queryGuard.end();
         setStreamMode("thinking");
         setThinkingContent(null);
+      clearThinkingBuffer();
       }
     },
     [client, sessionId, model, isRunning, flushTextBuffer],
@@ -1045,7 +1090,7 @@ export function App({
         setModel,
         sessionId,
         setSessionId,
-        setIsRunning,
+        queryGuard,
         addStatus,
         addMessage,
         setNextContext: (text: string) => {

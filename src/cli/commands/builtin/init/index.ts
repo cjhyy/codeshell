@@ -107,7 +107,12 @@ export const initCommand: SlashCommand = {
     ctx.addStatus(summarize(d));
     ctx.addStatus(statusForIntent(intent));
 
-    ctx.setIsRunning(true);
+    if (!ctx.queryGuard.reserve()) {
+      ctx.addStatus("Busy — wait for current turn to finish.");
+      return;
+    }
+    const ac = new AbortController();
+    ctx.queryGuard.tryStart(ac);
     try {
       const result = await ctx.client.run(buildPrompt(intent, d, ctx.cwd), ctx.sessionId);
       ctx.setSessionId(result.sessionId);
@@ -148,7 +153,7 @@ export const initCommand: SlashCommand = {
     } catch (err) {
       ctx.addStatus(`Init failed during ${intent} phase: ${(err as Error).message}`);
     } finally {
-      ctx.setIsRunning(false);
+      ctx.queryGuard.end();
     }
   },
 };

@@ -101,7 +101,12 @@ export const moreCommands: SlashCommand[] = [
           return;
         }
 
-        ctx.setIsRunning(true);
+        if (!ctx.queryGuard.reserve()) {
+          ctx.addStatus("Busy — wait for current turn to finish.");
+          return;
+        }
+        const ac = new AbortController();
+        ctx.queryGuard.tryStart(ac);
         const prompt = `You are a senior security engineer. Review the pending diff for security issues.
 
 GIT STATUS:
@@ -118,12 +123,17 @@ Focus on: SQL/Command injection, auth bypass, hardcoded secrets, XSS, path trave
 For each finding provide: file:line, severity (HIGH/MEDIUM), description, exploit scenario, fix.
 If no issues found, say so clearly.`;
 
-        const result = await ctx.client.run(prompt, ctx.sessionId);
-        ctx.setSessionId(result.sessionId);
+        try {
+          const result = await ctx.client.run(prompt, ctx.sessionId);
+          ctx.setSessionId(result.sessionId);
+        } catch (err) {
+          ctx.addStatus(`Security review failed: ${(err as Error).message}`);
+        } finally {
+          ctx.queryGuard.end();
+        }
       } catch (err) {
         ctx.addStatus(`Security review failed: ${(err as Error).message}`);
       }
-      ctx.setIsRunning(false);
     },
   },
 

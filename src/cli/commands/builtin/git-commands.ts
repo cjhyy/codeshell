@@ -54,7 +54,12 @@ export const gitCommands: SlashCommand[] = [
       }
 
       // Otherwise, send diff to model to generate commit message
-      ctx.setIsRunning(true);
+      if (!ctx.queryGuard.reserve()) {
+        ctx.addStatus("Busy — wait for current turn to finish.");
+        return;
+      }
+      const ac = new AbortController();
+      ctx.queryGuard.tryStart(ac);
       try {
         const stat = getGitDiffStat(ctx.cwd);
         const diff = getGitDiff(ctx.cwd);
@@ -81,8 +86,9 @@ export const gitCommands: SlashCommand[] = [
         }
       } catch (err) {
         ctx.addStatus(`Commit failed: ${(err as Error).message}`);
+      } finally {
+        ctx.queryGuard.end();
       }
-      ctx.setIsRunning(false);
     },
   },
 
@@ -128,7 +134,12 @@ export const gitCommands: SlashCommand[] = [
         return;
       }
 
-      ctx.setIsRunning(true);
+      if (!ctx.queryGuard.reserve()) {
+        ctx.addStatus("Busy — wait for current turn to finish.");
+        return;
+      }
+      const ac = new AbortController();
+      ctx.queryGuard.tryStart(ac);
       try {
         const diff = arg
           ? getGitDiff(ctx.cwd, { file: arg })
@@ -136,7 +147,6 @@ export const gitCommands: SlashCommand[] = [
 
         if (!diff) {
           ctx.addStatus("No changes to review.");
-          ctx.setIsRunning(false);
           return;
         }
 
@@ -152,8 +162,9 @@ export const gitCommands: SlashCommand[] = [
         ctx.setSessionId(result.sessionId);
       } catch (err) {
         ctx.addStatus(`Review failed: ${(err as Error).message}`);
+      } finally {
+        ctx.queryGuard.end();
       }
-      ctx.setIsRunning(false);
     },
   },
 
@@ -199,12 +210,16 @@ export const gitCommands: SlashCommand[] = [
         return;
       }
 
-      ctx.setIsRunning(true);
+      if (!ctx.queryGuard.reserve()) {
+        ctx.addStatus("Busy — wait for current turn to finish.");
+        return;
+      }
+      const ac = new AbortController();
+      ctx.queryGuard.tryStart(ac);
       try {
         const comments = ghPrComments(ctx.cwd, arg.trim());
         if (!comments) {
           ctx.addStatus("No review comments found.");
-          ctx.setIsRunning(false);
           return;
         }
 
@@ -218,8 +233,9 @@ export const gitCommands: SlashCommand[] = [
         ctx.setSessionId(result.sessionId);
       } catch (err) {
         ctx.addStatus(`Autofix failed: ${(err as Error).message}`);
+      } finally {
+        ctx.queryGuard.end();
       }
-      ctx.setIsRunning(false);
     },
   },
 ];

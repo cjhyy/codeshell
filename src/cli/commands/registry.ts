@@ -26,7 +26,7 @@ export interface CommandContext {
   setModel: (model: string) => void;
   sessionId: string | undefined;
   setSessionId: (id: string) => void;
-  setIsRunning: (running: boolean) => void;
+  queryGuard: import("../../ui/query-guard.js").QueryGuard;
   addStatus: (msg: string) => void;
   /** Add a message that renders with full markdown formatting (like assistant output). */
   addMessage: (text: string) => void;
