@@ -78,3 +78,32 @@ test("unsubscribe stops future notifications", () => {
   });
   expect(cb).not.toHaveBeenCalled();
 });
+
+test("appendToTranscript stores entries on the agent and notifies", () => {
+  asyncAgentRegistry.reset();
+  asyncAgentRegistry.register({
+    agentId: "a1",
+    description: "x",
+    status: "running",
+    startedAt: Date.now(),
+    abort: () => {},
+  });
+  const cb = mock(() => {});
+  asyncAgentRegistry.subscribe(cb);
+  asyncAgentRegistry.appendToTranscript("a1", {
+    id: "t1",
+    type: "assistant_text",
+    text: "agent thinking",
+    streaming: false,
+  } as any);
+  const e = asyncAgentRegistry.get("a1");
+  expect(e?.transcript?.length).toBe(1);
+  expect(cb).toHaveBeenCalledTimes(1);
+});
+
+test("appendToTranscript on unknown agent is a no-op", () => {
+  asyncAgentRegistry.reset();
+  expect(() =>
+    asyncAgentRegistry.appendToTranscript("ghost", { id: "x" } as any),
+  ).not.toThrow();
+});

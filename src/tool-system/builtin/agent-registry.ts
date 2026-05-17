@@ -14,6 +14,18 @@
 
 export type AsyncAgentStatus = "running" | "completed" | "failed" | "cancelled";
 
+/**
+ * Minimal structural shape for an entry in an agent's transcript. We avoid
+ * importing the UI's `ChatEntry` here to prevent a tool-system → ui import
+ * direction. Consumers (the UI dock) widen this type via `as ChatEntry[]`
+ * at their boundary.
+ */
+export interface AgentTranscriptEntry {
+  id: string;
+  type: string;
+  [key: string]: unknown;
+}
+
 export interface AsyncAgentEntry {
   agentId: string;
   description: string;
@@ -23,6 +35,8 @@ export interface AsyncAgentEntry {
   result?: string;
   error?: string;
   abort: () => void;
+  /** Stream events recorded by run_in_background agents for UI view-switching. */
+  transcript?: AgentTranscriptEntry[];
 }
 
 class AsyncAgentRegistry {
@@ -62,6 +76,14 @@ class AsyncAgentRegistry {
 
   register(entry: AsyncAgentEntry): void {
     this.agents.set(entry.agentId, entry);
+    this.notify();
+  }
+
+  appendToTranscript(agentId: string, entry: AgentTranscriptEntry): void {
+    const e = this.agents.get(agentId);
+    if (!e) return;
+    if (!e.transcript) e.transcript = [];
+    e.transcript.push(entry);
     this.notify();
   }
 
