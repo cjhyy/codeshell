@@ -27,9 +27,42 @@ export interface AsyncAgentEntry {
 
 class AsyncAgentRegistry {
   private agents = new Map<string, AsyncAgentEntry>();
+  private listeners = new Set<() => void>();
+  private snapshot: AsyncAgentEntry[] = [];
+
+  // ── observer API (React useSyncExternalStore compatible) ──────────────
+
+  subscribe = (cb: () => void): (() => void) => {
+    this.listeners.add(cb);
+    return () => {
+      this.listeners.delete(cb);
+    };
+  };
+
+  getSnapshot = (): AsyncAgentEntry[] => {
+    return this.snapshot;
+  };
+
+  hasRunning = (): boolean => {
+    return this.snapshot.some((e) => e.status === "running");
+  };
+
+  private notify(): void {
+    this.snapshot = [...this.agents.values()];
+    for (const cb of this.listeners) {
+      try {
+        cb();
+      } catch {
+        // isolate per-listener errors
+      }
+    }
+  }
+
+  // ── mutators ──────────────────────────────────────────────────────────
 
   register(entry: AsyncAgentEntry): void {
     this.agents.set(entry.agentId, entry);
+    this.notify();
   }
 
   get(agentId: string): AsyncAgentEntry | undefined {
@@ -47,6 +80,7 @@ class AsyncAgentRegistry {
     e.status = "completed";
     e.result = result;
     e.finishedAt = Date.now();
+    this.notify();
   }
 
   markFailed(agentId: string, error: string): void {
@@ -56,6 +90,7 @@ class AsyncAgentRegistry {
     e.status = "failed";
     e.error = error;
     e.finishedAt = Date.now();
+    this.notify();
   }
 
   cancel(agentId: string): boolean {
@@ -69,6 +104,7 @@ class AsyncAgentRegistry {
     }
     e.status = "cancelled";
     e.finishedAt = Date.now();
+    this.notify();
     return true;
   }
 
@@ -83,6 +119,7 @@ class AsyncAgentRegistry {
       }
     }
     this.agents.clear();
+    this.notify();
   }
 }
 
