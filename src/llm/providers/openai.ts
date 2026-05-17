@@ -17,6 +17,94 @@ import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
 import { capabilitiesFor, type Capability } from "../capabilities/index.js";
 import type { ProviderKindName } from "../provider-kinds.js";
+import {
+  STREAM_WATCHDOG_CONFIG,
+  StreamIdleTimeoutError,
+} from "../stream-watchdog.js";
+
+interface RunStreamOpts {
+  idleTimeoutMs?: number;
+  requestId?: string;
+  /**
+   * Per-chunk handler — invoked synchronously with the raw chunk for the
+   * provider to do its own parsing. Returns the text delta (or "") for
+   * the watchdog-side text accumulator used in tests.
+   */
+  onChunk?: (chunk: any) => string;
+}
+
+/**
+ * Consume an async iterable of stream chunks with an idle watchdog.
+ * Returns the accumulated text — either from onChunk return values, or
+ * by extracting choices[0].delta.content from raw chunks (useful in tests
+ * that call runStreamWithWatchdog directly without an onChunk handler).
+ *
+ * The watchdog is active whenever opts.idleTimeoutMs is explicitly provided,
+ * or when STREAM_WATCHDOG_CONFIG.enabled is true. When active, each call to
+ * iterator.next() races against an idle deadline; if the deadline fires first
+ * the function rejects with StreamIdleTimeoutError.
+ */
+export async function runStreamWithWatchdog<T = any>(
+  stream: AsyncIterable<T>,
+  opts: RunStreamOpts = {},
+): Promise<string> {
+  const watchdogActive =
+    STREAM_WATCHDOG_CONFIG.enabled || opts.idleTimeoutMs !== undefined;
+  const idleTimeoutMs =
+    opts.idleTimeoutMs ?? STREAM_WATCHDOG_CONFIG.idleTimeoutMs;
+  let text = "";
+
+  // Fast path: watchdog disabled AND caller did not override → no overhead.
+  if (!watchdogActive) {
+    for await (const chunk of stream) {
+      if (opts.onChunk) {
+        text += opts.onChunk(chunk) ?? "";
+      } else {
+        text += (chunk as any)?.choices?.[0]?.delta?.content ?? "";
+      }
+    }
+    return text;
+  }
+
+  // Watchdog path: race each iterator.next() against a per-chunk idle timer.
+  // This ensures the for-await cannot block forever between chunks.
+  const iterator = stream[Symbol.asyncIterator]();
+  try {
+    while (true) {
+      const nextPromise = iterator.next();
+
+      // Build a timeout promise that rejects if no chunk arrives in time.
+      let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new StreamIdleTimeoutError(idleTimeoutMs, opts.requestId));
+        }, idleTimeoutMs);
+      });
+
+      let result: IteratorResult<T>;
+      try {
+        result = await Promise.race([nextPromise, timeoutPromise]);
+      } finally {
+        if (timeoutHandle !== null) clearTimeout(timeoutHandle);
+      }
+
+      if (result.done) break;
+
+      const chunk = result.value;
+      if (opts.onChunk) {
+        text += opts.onChunk(chunk) ?? "";
+      } else {
+        text += (chunk as any)?.choices?.[0]?.delta?.content ?? "";
+      }
+    }
+  } finally {
+    // Best-effort cleanup: signal iterator to stop. Do NOT await — if the
+    // generator is stuck (e.g., wedged HTTP stream), awaiting return() would
+    // itself hang. Fire-and-forget is intentional here.
+    iterator.return?.();
+  }
+  return text;
+}
 
 export class OpenAIClient extends LLMClientBase {
   private _client: OpenAI | null = null;
@@ -246,14 +334,15 @@ export class OpenAIClient extends LLMClientBase {
       const streamStartedAt = Date.now();
       let firstByteLogged = false;
 
-      for await (const chunk of stream) {
+      const requestId = (stream as any).request_id;
+      const handleChunk = (chunk: any): string => {
         // Capture usage from the final chunk
         if ((chunk as any).usage) {
           streamUsage = (chunk as any).usage;
         }
 
         const delta = chunk.choices[0]?.delta;
-        if (!delta) continue;
+        if (!delta) return "";
 
         // DeepSeek thinking-mode streams reasoning as a separate delta
         // field. Accumulate it so we can echo it back next turn.
@@ -316,7 +405,15 @@ export class OpenAIClient extends LLMClientBase {
         if (chunk.choices[0]?.finish_reason) {
           options.onChunk?.({ type: "stop", stopReason: chunk.choices[0].finish_reason });
         }
-      }
+
+        return delta.content ?? "";
+      };
+
+      await runStreamWithWatchdog(stream, {
+        idleTimeoutMs: STREAM_WATCHDOG_CONFIG.idleTimeoutMs,
+        requestId,
+        onChunk: handleChunk,
+      });
 
       const toolCalls: ToolCall[] = [];
       for (const [, tc] of toolCallsMap) {
