@@ -820,21 +820,27 @@ export function App({
     // returns early on each one, so they never reach the cancel-Esc or
     // transcript handlers below.
     if (dockFocusIdx !== null) {
-      const running = getVisibleAgents(
+      const visible = getVisibleAgents(
         asyncAgentRegistry.getSnapshot(),
         Date.now(),
       );
       if (key.upArrow) {
-        if (dockFocusIdx === 0) setDockFocusIdx(null);
-        else setDockFocusIdx(dockFocusIdx - 1);
+        setDockFocusIdx((cur) => {
+          if (cur === null) return cur;
+          if (cur === 0) return null;
+          return cur - 1;
+        });
         return;
       }
       if (key.downArrow) {
-        setDockFocusIdx(Math.min(running.length - 1, dockFocusIdx + 1));
+        setDockFocusIdx((cur) => {
+          if (cur === null) return cur;
+          return Math.min(visible.length - 1, cur + 1);
+        });
         return;
       }
       if (key.return) {
-        const target = running[dockFocusIdx];
+        const target = visible[dockFocusIdx];
         if (target) setViewMode({ kind: "agent", agentId: target.agentId });
         setDockFocusIdx(null);
         return;
