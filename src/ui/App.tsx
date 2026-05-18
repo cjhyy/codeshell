@@ -830,9 +830,8 @@ export function App({
         asyncAgentRegistry.getSnapshot(),
         Date.now(),
       );
-      // 0 = main row; 1..agentRows = agents.
-      const agentRows = Math.min(MAX_VISIBLE, visible.length);
-      const maxIdx = agentRows;
+      // 0 = main row; 1..maxIdx = agents.
+      const maxIdx = Math.min(MAX_VISIBLE, visible.length);
 
       if (key.upArrow) {
         setDockFocusIdx((cur) => {

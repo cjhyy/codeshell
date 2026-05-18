@@ -54,14 +54,16 @@ const DockHost = forwardRef<
   );
 
   useInput((_ch, key) => {
+    // KEEP IN SYNC with App.tsx's dock-focus branch (src/ui/App.tsx useInput).
+    // If you change one, change the other — the fixture tests guard the shape,
+    // not the production wiring.
     if (dockFocusIdx !== null) {
       const visible = getVisibleAgents(
         asyncAgentRegistry.getSnapshot(),
         Date.now(),
       );
-      // 0 = main row, 1..agentRows = agents.
-      const agentRows = Math.min(MAX_VISIBLE, visible.length);
-      const maxIdx = agentRows;
+      // 0 = main row, 1..maxIdx = agents.
+      const maxIdx = Math.min(MAX_VISIBLE, visible.length);
 
       if (key.upArrow) {
         if (dockFocusIdx === 0) setDockFocusIdx(null);
