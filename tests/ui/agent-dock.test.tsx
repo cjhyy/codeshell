@@ -211,3 +211,40 @@ test("agent rows have visual separation (blank line between them)", async () => 
   expect(foundGap).toBe(true);
   h.unmount();
 });
+
+test("dock with running agent renders main row above agent row", async () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "a1",
+    description: "review module",
+    status: "running",
+    startedAt: 10,
+    abort: () => {},
+  });
+  const h = mount(
+    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
+    { columns: 80 },
+  );
+  await flush();
+  const out = plainText(h);
+  expect(out).toContain("main");
+  expect(out).toContain("◆");
+  // main appears before the agent description in the rendered output.
+  const mainIdx = out.indexOf("main");
+  const agentIdx = out.indexOf("review module");
+  expect(mainIdx).toBeGreaterThanOrEqual(0);
+  expect(agentIdx).toBeGreaterThan(mainIdx);
+  h.unmount();
+});
+
+test("dock with no agents renders nothing (no orphan main row)", async () => {
+  reset();
+  const h = mount(
+    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
+  );
+  await flush();
+  const out = plainText(h);
+  expect(out).not.toContain("main");
+  expect(out).not.toContain("◆");
+  h.unmount();
+});

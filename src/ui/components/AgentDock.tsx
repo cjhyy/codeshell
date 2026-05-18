@@ -54,6 +54,10 @@ export function AgentDock({
   return (
     <Box flexDirection="column" paddingX={1}>
       <Text dim>agents</Text>
+      <MainDockRow
+        focused={false}
+        active={viewMode.kind === "main"}
+      />
       {rows.map((a, i) => (
         <AgentDockRow
           key={a.agentId}
@@ -107,6 +111,29 @@ function AgentDockRow({
       </Text>
       <Box flexGrow={1} />
       <Text dim>{elapsed}</Text>
+    </Box>
+  );
+}
+
+function MainDockRow({
+  focused,
+  active,
+}: {
+  focused: boolean;
+  active: boolean;
+}) {
+  return (
+    <Box flexDirection="row">
+      <Text color={focused ? "ansi:cyanBright" : undefined} bold={focused}>
+        {focused ? ">" : " "}
+      </Text>
+      <Text color="ansi:magenta">{" ◆ "}</Text>
+      <Text
+        color={focused ? "ansi:cyanBright" : active ? "ansi:magenta" : undefined}
+        bold={focused}
+      >
+        main
+      </Text>
     </Box>
   );
 }
