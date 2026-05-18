@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
 import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
+import { getVisibleAgents } from "../../src/ui/components/AgentDock.js";
 
 function reset() {
   asyncAgentRegistry.reset();
@@ -81,4 +82,31 @@ test("cancel sets finishedFadeAt", () => {
   asyncAgentRegistry.cancel("f3");
   const a = asyncAgentRegistry.getSnapshot().find((x) => x.agentId === "f3");
   expect(a?.finishedFadeAt).toBe((a?.finishedAt ?? 0) + 30_000);
+});
+
+test("getVisibleAgents returns rows sorted by startedAt ascending", () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "third",
+    description: "third spawn",
+    status: "running",
+    startedAt: 30,
+    abort: () => {},
+  });
+  asyncAgentRegistry.register({
+    agentId: "first",
+    description: "first spawn",
+    status: "running",
+    startedAt: 10,
+    abort: () => {},
+  });
+  asyncAgentRegistry.register({
+    agentId: "second",
+    description: "second spawn",
+    status: "running",
+    startedAt: 20,
+    abort: () => {},
+  });
+  const visible = getVisibleAgents(asyncAgentRegistry.getSnapshot(), 1_000_000);
+  expect(visible.map((a) => a.agentId)).toEqual(["first", "second", "third"]);
 });

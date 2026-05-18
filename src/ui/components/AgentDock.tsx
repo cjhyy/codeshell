@@ -120,11 +120,13 @@ export function getVisibleAgents(
   all: AsyncAgentEntry[],
   now: number,
 ): AsyncAgentEntry[] {
-  return all.filter(
-    (a) =>
-      a.status === "running" ||
-      (a.finishedFadeAt !== undefined && now < a.finishedFadeAt),
-  );
+  return all
+    .filter(
+      (a) =>
+        a.status === "running" ||
+        (a.finishedFadeAt !== undefined && now < a.finishedFadeAt),
+    )
+    .sort((a, b) => a.startedAt - b.startedAt);
 }
 
 /**
