@@ -5,6 +5,7 @@ import { Box, Text, useInput } from "../../src/render/index.js";
 import {
   AgentDock,
   getVisibleAgents,
+  MAX_VISIBLE,
   type DockViewMode,
 } from "../../src/ui/components/AgentDock.js";
 import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
@@ -63,7 +64,8 @@ const DockHost = forwardRef<
         return;
       }
       if (key.downArrow) {
-        setDockFocusIdx(Math.min(visible.length - 1, dockFocusIdx + 1));
+        const maxIdx = Math.min(MAX_VISIBLE, visible.length) - 1;
+        setDockFocusIdx(Math.min(maxIdx, dockFocusIdx + 1));
         return;
       }
       if (key.return) {
@@ -274,5 +276,28 @@ test("viewMode=main + Esc with no dock focus → cancel branch fires", async () 
   send(h, ESC);
   await settleEsc();
   expect(cancelled).toBe(true);
+  h.unmount();
+});
+
+test("focus does not advance past MAX_VISIBLE-1 when there are more agents", async () => {
+  reset();
+  for (let i = 0; i < 7; i++) {
+    asyncAgentRegistry.register({
+      agentId: `a${i}`,
+      description: `agent-${i}`,
+      status: "running",
+      startedAt: Date.now(),
+      abort: () => {},
+    });
+  }
+  const ref = React.createRef<DockHostHandle>();
+  const h = mount(React.createElement(DockHost, { ref }), { columns: 200 });
+  await settle();
+  // ↓ 8 times: first press moves null→0, then 0→1→2→3→4, then clamped at 4.
+  for (let i = 0; i < 8; i++) {
+    send(h, DOWN);
+    await settle();
+  }
+  expect(ref.current?.getState().dockFocusIdx).toBe(4);
   h.unmount();
 });

@@ -5,7 +5,7 @@ import {
   type AsyncAgentEntry,
 } from "../../tool-system/builtin/agent-registry.js";
 
-const MAX_VISIBLE = 5;
+export const MAX_VISIBLE = 5;
 const NAME_MAX = 40;
 
 export type DockViewMode =

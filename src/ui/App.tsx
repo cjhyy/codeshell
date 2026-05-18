@@ -48,7 +48,7 @@ import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
-import { AgentDock, getVisibleAgents } from "./components/AgentDock.js";
+import { AgentDock, getVisibleAgents, MAX_VISIBLE } from "./components/AgentDock.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
 import { gitCommands } from "../cli/commands/builtin/git-commands.js";
@@ -184,8 +184,12 @@ export function App({
   useEffect(() => {
     if (dockFocusIdx === null) return;
     const len = getVisibleAgents(agentsSnapshot, Date.now()).length;
-    if (len === 0) setDockFocusIdx(null);
-    else if (dockFocusIdx >= len) setDockFocusIdx(len - 1);
+    if (len === 0) {
+      setDockFocusIdx(null);
+      return;
+    }
+    const maxIdx = Math.min(MAX_VISIBLE, len) - 1;
+    if (dockFocusIdx > maxIdx) setDockFocusIdx(maxIdx);
   }, [agentsSnapshot, dockFocusIdx]);
 
   const [sessionId, setSessionId] = useState(initialSessionId);
@@ -835,7 +839,8 @@ export function App({
       if (key.downArrow) {
         setDockFocusIdx((cur) => {
           if (cur === null) return cur;
-          return Math.min(visible.length - 1, cur + 1);
+          const maxIdx = Math.min(MAX_VISIBLE, visible.length) - 1;
+          return Math.min(maxIdx, cur + 1);
         });
         return;
       }
