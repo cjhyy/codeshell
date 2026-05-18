@@ -48,7 +48,7 @@ import type { OnboardingResult } from "../cli/onboarding.js";
 import { CommandRegistry } from "../cli/commands/registry.js";
 import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
-import { AgentDock } from "./components/AgentDock.js";
+import { AgentDock, getVisibleAgents } from "./components/AgentDock.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
 import { gitCommands } from "../cli/commands/builtin/git-commands.js";
@@ -164,6 +164,7 @@ export function App({
 
   type ViewMode = { kind: "main" } | { kind: "agent"; agentId: string };
   const [viewMode, setViewMode] = useState<ViewMode>({ kind: "main" });
+  const [dockFocusIdx, setDockFocusIdx] = useState<number | null>(null);
 
   const agentsSnapshot = useSyncExternalStore(
     asyncAgentRegistry.subscribe,
@@ -172,11 +173,20 @@ export function App({
   useEffect(() => {
     if (viewMode.kind === "agent") {
       const exists = agentsSnapshot.some(
-        (a) => a.agentId === viewMode.agentId && a.status === "running",
+        (a) => a.agentId === viewMode.agentId,
       );
       if (!exists) setViewMode({ kind: "main" });
     }
   }, [agentsSnapshot, viewMode]);
+
+  // Clamp dockFocusIdx whenever the visible dock shrinks (an agent finishes
+  // and its fade window expires, or the list empties entirely).
+  useEffect(() => {
+    if (dockFocusIdx === null) return;
+    const len = getVisibleAgents(agentsSnapshot, Date.now()).length;
+    if (len === 0) setDockFocusIdx(null);
+    else if (dockFocusIdx >= len) setDockFocusIdx(len - 1);
+  }, [agentsSnapshot, dockFocusIdx]);
 
   const [sessionId, setSessionId] = useState(initialSessionId);
   // Mirror of sessionId for synchronous reads inside event handlers.
@@ -805,20 +815,50 @@ export function App({
   }, [fetchModelManagerState]);
 
   useInput((ch, key) => {
-    // Ctrl-0 → main view; Ctrl-1..5 → switch to nth running background agent
-    if (key.ctrl && ch && ch >= "0" && ch <= "5") {
-      const n = parseInt(ch, 10);
-      if (n === 0) {
-        setViewMode({ kind: "main" });
+    // Dock keyboard branch — highest priority among non-overlay keys.
+    // When dockFocusIdx is non-null the dock owns ↑/↓/Enter/Esc and
+    // returns early on each one, so they never reach the cancel-Esc or
+    // transcript handlers below.
+    if (dockFocusIdx !== null) {
+      const running = getVisibleAgents(
+        asyncAgentRegistry.getSnapshot(),
+        Date.now(),
+      );
+      if (key.upArrow) {
+        if (dockFocusIdx === 0) setDockFocusIdx(null);
+        else setDockFocusIdx(dockFocusIdx - 1);
         return;
       }
-      const running = asyncAgentRegistry
-        .getSnapshot()
-        .filter((a) => a.status === "running");
-      const target = running[n - 1];
-      if (target) {
-        setViewMode({ kind: "agent", agentId: target.agentId });
+      if (key.downArrow) {
+        setDockFocusIdx(Math.min(running.length - 1, dockFocusIdx + 1));
+        return;
       }
+      if (key.return) {
+        const target = running[dockFocusIdx];
+        if (target) setViewMode({ kind: "agent", agentId: target.agentId });
+        setDockFocusIdx(null);
+        return;
+      }
+      if (key.escape) {
+        setDockFocusIdx(null);
+        return;
+      }
+    }
+
+    // viewMode === 'agent' → Esc returns to main BEFORE the cancel branch.
+    // Mirrors the overlay gating below so Esc in modals still belongs to
+    // them, not to us.
+    if (
+      key.escape &&
+      viewMode.kind === "agent" &&
+      !pendingQuestion &&
+      !pendingApproval &&
+      !showOnboarding &&
+      !modelEntries &&
+      !modelManager &&
+      !sessionEntries
+    ) {
+      setViewMode({ kind: "main" });
       return;
     }
 
@@ -1320,7 +1360,7 @@ export function App({
 
   const bottomContent = (
     <Box flexDirection="column" marginTop={0}>
-      <AgentDock viewMode={viewMode} />
+      <AgentDock viewMode={viewMode} focusedIndex={dockFocusIdx} />
       <Text dim>{separator}</Text>
 
       {screen === "transcript" ? (
@@ -1561,6 +1601,14 @@ export function App({
             onSubmit={handleSubmit}
             commands={commandDefs}
             placeholder={isRunning ? "Interrupt… (Ctrl+C to cancel)" : undefined}
+            onArrowOut={(dir) => {
+              if (dir !== "down") return;
+              const visible = getVisibleAgents(
+                asyncAgentRegistry.getSnapshot(),
+                Date.now(),
+              );
+              if (visible.length > 0) setDockFocusIdx(0);
+            }}
           />
         )
       )}
