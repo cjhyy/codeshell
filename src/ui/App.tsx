@@ -1619,6 +1619,7 @@ export function App({
             onSubmit={handleSubmit}
             commands={commandDefs}
             placeholder={isRunning ? "Interrupt… (Ctrl+C to cancel)" : undefined}
+            disabled={dockFocusIdx !== null}
             onArrowOut={(dir) => {
               if (dir !== "down") return;
               const visible = getVisibleAgents(
