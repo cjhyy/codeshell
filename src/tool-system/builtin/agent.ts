@@ -123,9 +123,8 @@ export async function agentTool(
     // chose background mode).
     const transcriptSink: StreamCallback = (event) => {
       asyncAgentRegistry.appendToTranscript(agentId, {
-        id: `bg-${agentId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        type: event.type,
         ...event,
+        id: `bg-${agentId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       } as AgentTranscriptEntry);
     };
 
