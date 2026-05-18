@@ -23,6 +23,10 @@ interface CommandInputProps {
   /** Fired when ↓ is pressed and input is empty and history is exhausted.
    *  Used by App.tsx to move keyboard focus into the AgentDock.  */
   onArrowOut?: (direction: "down") => void;
+  /** When true, skip ALL key handling. Used while another part of the UI
+   *  (e.g. the AgentDock) owns the keyboard. The text input still renders;
+   *  only the useInput body short-circuits. */
+  disabled?: boolean;
 }
 
 const MAX_VISIBLE = 8;
@@ -34,6 +38,7 @@ export function CommandInput({
   commands,
   placeholder,
   onArrowOut,
+  disabled,
 }: CommandInputProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const historyRef = useRef(createHistoryNavigator());
@@ -66,6 +71,7 @@ export function CommandInput({
   }, [filtered.length, selectedIndex]);
 
   useInput((ch, key) => {
+    if (disabled) return;
     // Autocomplete navigation takes priority
     if (showAutocomplete && filtered.length > 0) {
       if (key.upArrow) {
@@ -189,6 +195,7 @@ export function CommandInput({
             onChange={handleChange}
             onSubmit={handleSubmit}
             placeholder={placeholder ?? "Ask anything… (/ for commands, ↑ for history)"}
+            focus={!disabled}
           />
         </Box>
       </Box>

@@ -9,6 +9,7 @@ import {
   type DockViewMode,
 } from "../../src/ui/components/AgentDock.js";
 import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
+import { CommandInput } from "../../src/ui/components/CommandInput.js";
 
 /**
  * The keyboard branch lives inline in App.tsx, but the behaviour is small
@@ -276,6 +277,38 @@ test("viewMode=main + Esc with no dock focus → cancel branch fires", async () 
   send(h, ESC);
   await settleEsc();
   expect(cancelled).toBe(true);
+  h.unmount();
+});
+
+test("disabled CommandInput swallows all keys", async () => {
+  let changed = 0;
+  let submitted = 0;
+  const h = mount(
+    React.createElement(CommandInput, {
+      value: "",
+      onChange: () => {
+        changed += 1;
+      },
+      onSubmit: () => {
+        submitted += 1;
+      },
+      commands: [],
+      disabled: true,
+    }),
+    { columns: 80 },
+  );
+  await flush();
+  // Send a few keys: up arrow, down arrow, a letter, Enter.
+  h.stdin.write(UP);
+  await flush();
+  h.stdin.write(DOWN);
+  await flush();
+  h.stdin.write("x");
+  await flush();
+  h.stdin.write(ENTER);
+  await flush();
+  expect(changed).toBe(0);
+  expect(submitted).toBe(0);
   h.unmount();
 });
 
