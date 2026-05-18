@@ -94,7 +94,7 @@ function AgentDockRow({
   const name = truncate(entry.description, NAME_MAX);
 
   return (
-    <Box flexDirection="row">
+    <Box flexDirection="row" marginTop={1}>
       <Text color={focused ? "ansi:cyanBright" : undefined} bold={focused}>
         {cursor}
       </Text>

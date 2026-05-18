@@ -164,3 +164,50 @@ test("formatElapsed covers s, m s, h m s boundaries", () => {
   expect(formatElapsed(60 * 60_000)).toBe("1h 0m 0s");
   expect(formatElapsed(3_600_000 + 4 * 60_000 + 23_000)).toBe("1h 4m 23s");
 });
+
+test("agent rows have visual separation (blank line between them)", async () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "a1",
+    description: "first agent",
+    status: "running",
+    startedAt: 10,
+    abort: () => {},
+  });
+  asyncAgentRegistry.register({
+    agentId: "a2",
+    description: "second agent",
+    status: "running",
+    startedAt: 20,
+    abort: () => {},
+  });
+  const h = mount(
+    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
+    { columns: 80, rows: 30 },
+  );
+  await flush();
+  // Use dumpFrames (raw output) + ANSI strip, then split into display lines.
+  const raw = h.frames.join("");
+  const stripped = raw
+    .replace(/\x1b\[(\d+)C/g, (_m, n) => " ".repeat(Number(n)))
+    .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, "")
+    .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
+    .replace(/\x1b/g, "");
+  const lines = stripped.split(/\r?\n/);
+  const i1 = lines.findIndex((l) => l.includes("first agent"));
+  const i2 = lines.findIndex((l) => l.includes("second agent"));
+  expect(i1).toBeGreaterThanOrEqual(0);
+  expect(i2).toBeGreaterThan(i1);
+  // At least one blank-ish line between the two agent rows (marginTop=1).
+  // "blank-ish" = no agent description text.
+  let foundGap = false;
+  for (let j = i1 + 1; j < i2; j++) {
+    const trimmed = lines[j].trim();
+    if (trimmed === "" || (!trimmed.includes("first agent") && !trimmed.includes("second agent") && !trimmed.includes("●"))) {
+      foundGap = true;
+      break;
+    }
+  }
+  expect(foundGap).toBe(true);
+  h.unmount();
+});
