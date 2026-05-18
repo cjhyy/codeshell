@@ -21,13 +21,13 @@ import {
   Box,
   Text,
   ScrollBox,
-  Static,
   type ScrollBoxHandle,
 } from "../../render/index.js";
-import { type ChatEntry, isEntryFinalized } from "../store.js";
+import { type ChatEntry } from "../store.js";
 import { MessageRow } from "./MessageRow.js";
 import { useVirtualScroll } from "../hooks/useVirtualScroll.js";
 import { useFullscreenMode } from "../fullscreen-mode.js";
+import { computeSliceStart, type AnchorRef } from "../slice-anchor.js";
 
 interface VirtualMessageListProps {
   entries: ChatEntry[];
@@ -88,6 +88,10 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
     ref,
   ) {
     const scrollRef = useRef<ScrollBoxHandle | null>(null);
+    // Persistent slice anchor for flow mode. Defined at the top level so React
+    // hook order stays stable across the fullscreen / flow branch below — the
+    // ref is harmlessly unused in fullscreen.
+    const sliceAnchorRef = useRef<AnchorRef["current"]>(null);
 
     useImperativeHandle(ref, () => ({
       scrollToBottom: () => scrollRef.current?.scrollToBottom(),
@@ -111,32 +115,27 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
 
     const { fullscreen } = useFullscreenMode();
 
-    // Flow mode: no ScrollBox, no virtual windowing. Partition entries into:
-    //   - committed (finalized + not currently streaming) → <Static> so they
-    //     are appended to stdout once and skipped by future diff cycles.
-    //   - active tail (last entry if still streaming + any trailing
-    //     non-finalized rows) → normal React tree, redrawn each frame.
-    // This is CC's playbook: append-only history + a tiny live region.
-    // The terminal's scrollback owns the committed content; the diff engine
-    // only ever rewrites the active rows, so no flicker / no scroll-to-top.
+    // Flow mode: all entries render through the normal React/Ink diff path,
+    // with a UUID-anchored slice cap to keep yoga layout and the screen
+    // buffer bounded. Older entries dropped from this slice live in the
+    // terminal's native scrollback — users can scroll up natively.
+    //
+    // The slice anchor is the key to avoiding per-turn flicker: a naive
+    // entries.slice(-CAP) shifts the head by one on every append, and
+    // log-update's diff sees changes at scrollback rows it can't reach,
+    // forcing a fullResetSequence. UUID anchoring keeps the head pinned
+    // until length exceeds CAP+STEP — flicker happens once per STEP
+    // appends instead of once per append.
+    //
+    // <Static> is intentionally NOT used here: it appends ANSI at the
+    // current physical cursor (parked inside the prompt input mid-session),
+    // which corrupts the prompt area and produces overwrite artifacts.
+    // Kept as an ink primitive (src/render/components/Static.tsx) for
+    // future use cases, but not used by this list.
     if (!fullscreen) {
-      // Walk from the end to find the start of the active region. Anything
-      // not finalized (streaming assistant_text, tool_running, thinking)
-      // OR matching streamingEntryId belongs to the active region.
-      let activeStart = entries.length;
-      for (let i = entries.length - 1; i >= 0; i--) {
-        const e = entries[i];
-        const isActive = !isEntryFinalized(e) || streamingEntryId === e.id;
-        if (isActive) {
-          activeStart = i;
-        } else {
-          // Once we hit a finalized entry, everything before is committed.
-          break;
-        }
-      }
-      const committed = entries.slice(0, activeStart);
-      const active = entries.slice(activeStart);
-      const activeBaseIdx = activeStart;
+      const sliceStart = computeSliceStart(entries, sliceAnchorRef);
+      const visible = sliceStart > 0 ? entries.slice(sliceStart) : entries;
+      const sliceBase = sliceStart;
 
       const renderRow = (e: ChatEntry, globalIdx: number): ReactNode => {
         const isSelected = selectedEntryId === e.id;
@@ -163,11 +162,7 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
 
       return (
         <Box flexDirection="column">
-          <Static<ChatEntry>
-            items={committed}
-            children={(e, i) => renderRow(e, i)}
-          />
-          {active.map((e, i) => renderRow(e, activeBaseIdx + i))}
+          {visible.map((e, i) => renderRow(e, sliceBase + i))}
         </Box>
       );
     }
