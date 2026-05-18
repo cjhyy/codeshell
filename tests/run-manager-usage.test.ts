@@ -98,6 +98,7 @@ describe("场景 1：基本 submit + 查询", () => {
     // 提交一个 run
     const run = await manager.submit({
       objective: "重构 auth 模块，提取 JWT 验证为独立服务",
+      cwd: tmpDir,
       tags: ["refactor", "auth"],
       metadata: { priority: "high", assignee: "maki" },
     });
@@ -179,9 +180,12 @@ describe("场景 2：attach 实时订阅", () => {
     const { manager } = createTestManager({ tmpDir });
     const events: RunStreamEvent[] = [];
 
-    // 先 submit
+    // 先 submit. cwd 必须固定到 tmpDir — RunManager 默认 process.cwd()，
+    // 如果 EngineRunner 真的把 objective 跑出来（环境里有 OPENAI_API_KEY 兜底
+    // 时会发生），Write 工具会落到 repo 根，泄漏出 hello.ts 之类的产物。
     const run = await manager.submit({
       objective: "写一个 hello world",
+      cwd: tmpDir,
     });
 
     // 订阅这个 run 的实时流
@@ -268,6 +272,7 @@ describe("场景 4：事件溯源", () => {
 
     const run = await manager.submit({
       objective: "Add unit tests for the payment module",
+      cwd: tmpDir,
     });
 
     // 等执行（会因为 mock 失败而变成 blocked）
