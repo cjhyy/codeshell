@@ -171,11 +171,10 @@ export function App({
     asyncAgentRegistry.getSnapshot,
   );
   useEffect(() => {
-    if (viewMode.kind === "agent") {
-      const exists = agentsSnapshot.some(
-        (a) => a.agentId === viewMode.agentId,
-      );
-      if (!exists) setViewMode({ kind: "main" });
+    if (viewMode.kind !== "agent") return;
+    const entry = agentsSnapshot.find((a) => a.agentId === viewMode.agentId);
+    if (!entry || entry.status !== "running") {
+      setViewMode({ kind: "main" });
     }
   }, [agentsSnapshot, viewMode]);
 
