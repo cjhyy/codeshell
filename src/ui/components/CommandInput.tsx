@@ -20,6 +20,9 @@ interface CommandInputProps {
   onSubmit: (value: string) => void;
   commands: CommandDef[];
   placeholder?: string;
+  /** Fired when ↓ is pressed and input is empty and history is exhausted.
+   *  Used by App.tsx to move keyboard focus into the AgentDock.  */
+  onArrowOut?: (direction: "down") => void;
 }
 
 const MAX_VISIBLE = 8;
@@ -30,6 +33,7 @@ export function CommandInput({
   onSubmit,
   commands,
   placeholder,
+  onArrowOut,
 }: CommandInputProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const historyRef = useRef(createHistoryNavigator());
@@ -96,6 +100,11 @@ export function CommandInput({
       if (next !== null) {
         setFromHistory(true);
         onChange(next);
+        return;
+      }
+      // History exhausted AND input is empty → let parent handle (dock focus).
+      if (value.length === 0) {
+        onArrowOut?.("down");
       }
     }
   });
