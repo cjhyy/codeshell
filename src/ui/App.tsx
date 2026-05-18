@@ -1366,7 +1366,6 @@ export function App({
 
   const bottomContent = (
     <Box flexDirection="column" marginTop={0}>
-      <AgentDock viewMode={viewMode} focusedIndex={dockFocusIdx} />
       <Text dim>{separator}</Text>
 
       {screen === "transcript" ? (
@@ -1638,6 +1637,10 @@ export function App({
           runStartRef={runStartRef}
         />
       </Box>
+
+      {/* Dock at the very bottom — below StatusLine. Renders null when
+          no running or recently-finished agents. */}
+      <AgentDock viewMode={viewMode} focusedIndex={dockFocusIdx} />
     </Box>
   );
 
