@@ -473,6 +473,10 @@ export function shiftSelection(
   minRow: number,
   maxRow: number,
   width: number,
+  // Wheel-follow needs to keep virtualRow on full overshoot so a reverse
+  // wheel restores the selection. PgUp/PgDn keeps the default (clear) so
+  // a deliberate page-jump past the selection drops it on the floor.
+  clearOnFullOvershoot: boolean = true,
 ): void {
   if (!s.anchor || !s.focus) return
   // Virtual rows track pre-clamp positions so reverse scrolls restore
@@ -481,8 +485,9 @@ export function shiftSelection(
   const vAnchor = (s.virtualAnchorRow ?? s.anchor.row) + dRow
   const vFocus = (s.virtualFocusRow ?? s.focus.row) + dRow
   if (
-    (vAnchor < minRow && vFocus < minRow) ||
-    (vAnchor > maxRow && vFocus > maxRow)
+    clearOnFullOvershoot &&
+    ((vAnchor < minRow && vFocus < minRow) ||
+      (vAnchor > maxRow && vFocus > maxRow))
   ) {
     clearSelection(s)
     return

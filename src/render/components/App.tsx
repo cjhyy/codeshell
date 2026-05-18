@@ -49,6 +49,11 @@ type Props = {
   // so the handler is always wired but dormant until tracking is on.
   readonly selection: SelectionState;
   readonly onSelectionChange: () => void;
+  // Same as onSelectionChange but also fires copySelectionNoClear when a
+  // selection exists. Call after finishSelection(sel) at every mouseup /
+  // lost-release path so the visible highlight matches what's on the
+  // clipboard (OSC 52 + pbcopy via setClipboard).
+  readonly onSelectionFinish: () => void;
   // Dispatch a click at (col, row) — hit-tests the DOM tree and bubbles
   // onClick handlers. Returns true if a DOM handler consumed the click.
   // No-op (returns false) outside fullscreen mode (Ink.dispatchClick
@@ -485,7 +490,7 @@ function processKeysInBatch(app: App, items: ParsedInput[], _unused1: undefined,
       // boundary is hit.
       if (app.props.selection.isDragging) {
         finishSelection(app.props.selection);
-        app.props.onSelectionChange();
+        app.props.onSelectionFinish();
       }
       const event = new TerminalFocusEvent('terminalblur');
       app.internal_eventEmitter.emit('terminalblur', event);
@@ -561,7 +566,7 @@ export function handleMouseEvent(app: App, m: ParsedMouse): void {
     // hit the no-button-motion recovery above instead, so this is rare.
     if (sel.isDragging) {
       finishSelection(sel);
-      app.props.onSelectionChange();
+      app.props.onSelectionFinish();
     }
     // Fresh left press. Detect multi-click HERE (not on release) so the
     // word/line highlight appears immediately and a subsequent drag can
@@ -605,7 +610,7 @@ export function handleMouseEvent(app: App, m: ParsedMouse): void {
   if (baseButton !== 0) {
     if (!sel.isDragging) return;
     finishSelection(sel);
-    app.props.onSelectionChange();
+    app.props.onSelectionFinish();
     return;
   }
   finishSelection(sel);
@@ -654,5 +659,5 @@ export function handleMouseEvent(app: App, m: ParsedMouse): void {
       }
     }
   }
-  app.props.onSelectionChange();
+  app.props.onSelectionFinish();
 }
