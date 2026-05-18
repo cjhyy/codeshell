@@ -34,15 +34,18 @@ export function AgentDock({
     asyncAgentRegistry.getSnapshot,
   );
 
-  // 1 Hz tick — refreshes elapsed text and re-evaluates the fade window.
   const [, tick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const now = Date.now();
   const visible = getVisibleAgents(agents, now);
+
+  // 1 Hz tick — refreshes elapsed text for running rows and re-evaluates
+  // the fade window so completed/failed rows drop out after 30 s.
+  useEffect(() => {
+    if (visible.length === 0) return;
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [visible.length === 0]);
+
   if (visible.length === 0) return null;
 
   const rows = visible.slice(0, MAX_VISIBLE);
