@@ -793,15 +793,9 @@ function renderNodeToOutput(
             node.stickyScroll = true
           }
         }
-        const followDelta = (node.scrollTop ?? 0) - scrollTopBeforeFollow
-        if (followDelta > 0) {
-          const vpTop = node.scrollViewportTop ?? 0
-          followScroll = {
-            delta: followDelta,
-            viewportTop: vpTop,
-            viewportBottom: vpTop + innerHeight - 1,
-          }
-        }
+        // followScroll emission moved below to AFTER wheel-drain so the
+        // net frame delta (sticky + wheel) is captured in one shot —
+        // negative deltas (wheel-up) now translate the selection too.
         // Drain pendingScrollDelta. Native terminals (proportional burst
         // events) use proportional drain; xterm.js (VS Code, sparse events +
         // app-side accel curve) uses adaptive small-step drain. isXtermJs()
@@ -856,6 +850,23 @@ function renderNodeToOutput(
         // only after clamp so a wasted no-op frame isn't scheduled.
         if (scrollTop !== cur) node.pendingScrollDelta = undefined
         if (node.pendingScrollDelta !== undefined) scrollDrainNode = node
+        // followScroll = total scrollTop drift this frame (sticky follow +
+        // wheel drain). The legacy emit just before drain only fired on
+        // delta>0; re-emit here so wheel-up (delta<0) and wheel-down both
+        // translate the active text selection in ink.tsx. Native terminal
+        // behavior: highlight stays glued to its text as the viewport pans
+        // under it. ink.tsx's wheel-follow branch passes -delta into
+        // shiftSelection with clearOnFullOvershoot=false so reverse-wheel
+        // restores a selection that scrolled off-screen.
+        const netDelta = scrollTop - scrollTopBeforeFollow
+        if (netDelta !== 0) {
+          const vpTop = node.scrollViewportTop ?? 0
+          followScroll = {
+            delta: netDelta,
+            viewportTop: vpTop,
+            viewportBottom: vpTop + innerHeight - 1,
+          }
+        }
         scrollTop = clamped
 
         if (content && contentYoga) {
