@@ -39,3 +39,46 @@ test("getSnapshot identity changes when transcript appended", () => {
   const after = asyncAgentRegistry.getSnapshot();
   expect(before).not.toBe(after);
 });
+
+test("markCompleted sets finishedFadeAt to finishedAt + 30000", () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "f1",
+    description: "x",
+    status: "running",
+    startedAt: Date.now(),
+    abort: () => {},
+  });
+  asyncAgentRegistry.markCompleted("f1", "result");
+  const a = asyncAgentRegistry.getSnapshot().find((x) => x.agentId === "f1");
+  expect(a?.finishedAt).toBeDefined();
+  expect(a?.finishedFadeAt).toBe((a?.finishedAt ?? 0) + 30_000);
+});
+
+test("markFailed sets finishedFadeAt", () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "f2",
+    description: "x",
+    status: "running",
+    startedAt: Date.now(),
+    abort: () => {},
+  });
+  asyncAgentRegistry.markFailed("f2", "boom");
+  const a = asyncAgentRegistry.getSnapshot().find((x) => x.agentId === "f2");
+  expect(a?.finishedFadeAt).toBe((a?.finishedAt ?? 0) + 30_000);
+});
+
+test("cancel sets finishedFadeAt", () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "f3",
+    description: "x",
+    status: "running",
+    startedAt: Date.now(),
+    abort: () => {},
+  });
+  asyncAgentRegistry.cancel("f3");
+  const a = asyncAgentRegistry.getSnapshot().find((x) => x.agentId === "f3");
+  expect(a?.finishedFadeAt).toBe((a?.finishedAt ?? 0) + 30_000);
+});

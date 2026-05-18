@@ -32,6 +32,8 @@ export interface AsyncAgentEntry {
   status: AsyncAgentStatus;
   startedAt: number;
   finishedAt?: number;
+  /** finishedAt + 30_000. Dock filters rows past this. */
+  finishedFadeAt?: number;
   result?: string;
   error?: string;
   abort: () => void;
@@ -102,6 +104,7 @@ class AsyncAgentRegistry {
     e.status = "completed";
     e.result = result;
     e.finishedAt = Date.now();
+    e.finishedFadeAt = e.finishedAt + 30_000;
     this.notify();
   }
 
@@ -112,6 +115,7 @@ class AsyncAgentRegistry {
     e.status = "failed";
     e.error = error;
     e.finishedAt = Date.now();
+    e.finishedFadeAt = e.finishedAt + 30_000;
     this.notify();
   }
 
@@ -126,6 +130,7 @@ class AsyncAgentRegistry {
     }
     e.status = "cancelled";
     e.finishedAt = Date.now();
+    e.finishedFadeAt = e.finishedAt + 30_000;
     this.notify();
     return true;
   }
