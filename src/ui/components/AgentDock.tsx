@@ -6,65 +6,137 @@ import {
 } from "../../tool-system/builtin/agent-registry.js";
 
 const MAX_VISIBLE = 5;
+const NAME_MAX = 40;
 
-/**
- * AgentDock — a bottom-bar strip showing the running `run_in_background`
- * sub-agents. Only renders when at least one agent is running. Updates the
- * elapsed-time text once per second; the local interval is scoped to this
- * component (no app-wide re-render).
- */
-export type DockViewMode = { kind: "main" } | { kind: "agent"; agentId: string };
+export type DockViewMode =
+  | { kind: "main" }
+  | { kind: "agent"; agentId: string };
 
 export interface AgentDockProps {
-  viewMode?: DockViewMode;
+  viewMode: DockViewMode;
+  /** null = dock is not the keyboard target; integer = focused row index. */
+  focusedIndex: number | null;
 }
 
+/**
+ * AgentDock — vertical list of running and recently-finished sub-agents,
+ * pinned at the very bottom of the UI. Updates elapsed text once per
+ * second; redraws are local to this subtree (no app-wide re-render).
+ *
+ * See docs/superpowers/specs/2026-05-18-subagent-dock-revisions-design.md.
+ */
 export function AgentDock({
-  viewMode = { kind: "main" },
+  viewMode,
+  focusedIndex,
 }: AgentDockProps): React.ReactElement | null {
   const agents = useSyncExternalStore(
     asyncAgentRegistry.subscribe,
     asyncAgentRegistry.getSnapshot,
   );
-  const running = agents.filter((a) => a.status === "running");
 
-  // Local 1 Hz tick to refresh elapsed-time text. Only runs while there is
-  // at least one running agent — idle dock writes zero frames. Local
-  // useState forceUpdate keeps the re-render scoped to this subtree.
+  // 1 Hz tick — refreshes elapsed text and re-evaluates the fade window.
   const [, tick] = useState(0);
   useEffect(() => {
-    if (running.length === 0) return;
     const id = setInterval(() => tick((n) => n + 1), 1000);
     return () => clearInterval(id);
-  }, [running.length === 0]);
+  }, []);
 
-  if (running.length === 0) return null;
-
-  const visible = running.slice(0, MAX_VISIBLE);
-  const overflow = running.length - visible.length;
   const now = Date.now();
+  const visible = getVisibleAgents(agents, now);
+  if (visible.length === 0) return null;
 
-  const isActive = (a: AsyncAgentEntry) =>
-    viewMode.kind === "agent" && viewMode.agentId === a.agentId;
+  const rows = visible.slice(0, MAX_VISIBLE);
+  const overflow = visible.length - rows.length;
 
   return (
-    <Box flexDirection="row" gap={1} paddingX={1}>
-      <Text dim>agents:</Text>
-      {visible.map((a, i) => {
-        const elapsedSec = Math.floor((now - a.startedAt) / 1000);
-        const active = isActive(a);
-        return (
-          <Text
-            key={a.agentId}
-            color={active ? "ansi:cyanBright" : "ansi:cyan"}
-            bold={active}
-          >
-            [{i + 1}] {a.description} {elapsedSec}s
-          </Text>
-        );
-      })}
-      {overflow > 0 && <Text dim>+{overflow} more</Text>}
-      {viewMode.kind === "agent" && <Text dim>(Ctrl-0 to return)</Text>}
+    <Box flexDirection="column" paddingX={1}>
+      <Text dim>agents</Text>
+      {rows.map((a, i) => (
+        <AgentDockRow
+          key={a.agentId}
+          entry={a}
+          focused={focusedIndex === i}
+          active={viewMode.kind === "agent" && viewMode.agentId === a.agentId}
+          now={now}
+        />
+      ))}
+      {overflow > 0 && <Text dim>{`... +${overflow} more`}</Text>}
     </Box>
   );
+}
+
+function AgentDockRow({
+  entry,
+  focused,
+  active,
+  now,
+}: {
+  entry: AsyncAgentEntry;
+  focused: boolean;
+  active: boolean;
+  now: number;
+}) {
+  const cursor = focused ? ">" : " ";
+  const dotColor =
+    entry.status === "running"
+      ? "ansi:cyan"
+      : entry.status === "completed"
+        ? "ansi:green"
+        : entry.status === "cancelled"
+          ? "ansi:yellow"
+          : "ansi:red"; /* failed */
+  const elapsed = formatElapsed(
+    (entry.finishedAt ?? now) - entry.startedAt,
+  );
+  const name = truncate(entry.description, NAME_MAX);
+
+  return (
+    <Box flexDirection="row">
+      <Text color={focused ? "ansi:cyanBright" : undefined} bold={focused}>
+        {cursor}
+      </Text>
+      <Text color={dotColor}>{" ● "}</Text>
+      <Text
+        color={focused ? "ansi:cyanBright" : active ? "ansi:cyan" : undefined}
+        bold={focused}
+      >
+        {name}
+      </Text>
+      <Box flexGrow={1} />
+      <Text dim>{elapsed}</Text>
+    </Box>
+  );
+}
+
+/**
+ * Filter the registry snapshot down to rows the dock should show:
+ * running agents + recently-finished agents still inside the 30 s fade
+ * window. Exported so App.tsx's keyboard handler shares the same predicate.
+ */
+export function getVisibleAgents(
+  all: AsyncAgentEntry[],
+  now: number,
+): AsyncAgentEntry[] {
+  return all.filter(
+    (a) =>
+      a.status === "running" ||
+      (a.finishedFadeAt !== undefined && now < a.finishedFadeAt),
+  );
+}
+
+/**
+ * Format an elapsed-millisecond duration as "23s" / "4m 23s" / "1h 4m 23s".
+ */
+export function formatElapsed(ms: number): string {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  if (totalSec < 60) return `${totalSec}s`;
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  if (m < 60) return `${m}m ${s}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m ${s}s`;
+}
+
+function truncate(s: string, n: number): string {
+  return s.length <= n ? s : s.slice(0, n - 1) + "…";
 }
