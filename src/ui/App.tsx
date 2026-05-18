@@ -180,7 +180,9 @@ export function App({
   }, [agentsSnapshot, viewMode]);
 
   // Clamp dockFocusIdx whenever the visible dock shrinks (an agent finishes
-  // and its fade window expires, or the list empties entirely).
+  // and its fade window expires, or the list empties entirely). maxIdx is
+  // INCLUSIVE: index 0 is the main row (always valid when len > 0), and
+  // 1..min(MAX_VISIBLE, len) are agent rows.
   useEffect(() => {
     if (dockFocusIdx === null) return;
     const len = getVisibleAgents(agentsSnapshot, Date.now()).length;
@@ -188,7 +190,7 @@ export function App({
       setDockFocusIdx(null);
       return;
     }
-    const maxIdx = Math.min(MAX_VISIBLE, len) - 1;
+    const maxIdx = Math.min(MAX_VISIBLE, len);
     if (dockFocusIdx > maxIdx) setDockFocusIdx(maxIdx);
   }, [agentsSnapshot, dockFocusIdx]);
 
@@ -828,6 +830,10 @@ export function App({
         asyncAgentRegistry.getSnapshot(),
         Date.now(),
       );
+      // 0 = main row; 1..agentRows = agents.
+      const agentRows = Math.min(MAX_VISIBLE, visible.length);
+      const maxIdx = agentRows;
+
       if (key.upArrow) {
         setDockFocusIdx((cur) => {
           if (cur === null) return cur;
@@ -839,14 +845,17 @@ export function App({
       if (key.downArrow) {
         setDockFocusIdx((cur) => {
           if (cur === null) return cur;
-          const maxIdx = Math.min(MAX_VISIBLE, visible.length) - 1;
           return Math.min(maxIdx, cur + 1);
         });
         return;
       }
       if (key.return) {
-        const target = visible[dockFocusIdx];
-        if (target) setViewMode({ kind: "agent", agentId: target.agentId });
+        if (dockFocusIdx === 0) {
+          setViewMode({ kind: "main" });
+        } else {
+          const target = visible[dockFocusIdx - 1];
+          if (target) setViewMode({ kind: "agent", agentId: target.agentId });
+        }
         setDockFocusIdx(null);
         return;
       }

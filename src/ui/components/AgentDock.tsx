@@ -55,14 +55,14 @@ export function AgentDock({
     <Box flexDirection="column" paddingX={1}>
       <Text dim>agents</Text>
       <MainDockRow
-        focused={false}
+        focused={focusedIndex === 0}
         active={viewMode.kind === "main"}
       />
       {rows.map((a, i) => (
         <AgentDockRow
           key={a.agentId}
           entry={a}
-          focused={focusedIndex === i}
+          focused={focusedIndex === i + 1}
           active={viewMode.kind === "agent" && viewMode.agentId === a.agentId}
           now={now}
         />

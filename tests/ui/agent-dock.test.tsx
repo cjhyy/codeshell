@@ -47,20 +47,20 @@ test("one running agent → row shows name and elapsed, no tool name", async () 
   h.unmount();
 });
 
-test("focusedIndex 0 shows '>' cursor on first row", async () => {
+test("focusedIndex 0 shows '>' cursor on main row", async () => {
   reset();
   asyncAgentRegistry.register({
     agentId: "a1",
     description: "first agent",
     status: "running",
-    startedAt: Date.now(),
+    startedAt: 10,
     abort: () => {},
   });
   asyncAgentRegistry.register({
     agentId: "a2",
     description: "second agent",
     status: "running",
-    startedAt: Date.now(),
+    startedAt: 20,
     abort: () => {},
   });
   const h = mount(
@@ -69,7 +69,36 @@ test("focusedIndex 0 shows '>' cursor on first row", async () => {
   );
   await flush();
   const out = plainText(h);
+  expect(out).toMatch(/>\s*◆\s*main/);
+  expect(out).not.toMatch(/>\s*●\s*first agent/);
+  expect(out).not.toMatch(/>\s*●\s*second agent/);
+  h.unmount();
+});
+
+test("focusedIndex 1 shows '>' cursor on first agent row", async () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "a1",
+    description: "first agent",
+    status: "running",
+    startedAt: 10,
+    abort: () => {},
+  });
+  asyncAgentRegistry.register({
+    agentId: "a2",
+    description: "second agent",
+    status: "running",
+    startedAt: 20,
+    abort: () => {},
+  });
+  const h = mount(
+    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: 1 }),
+    { columns: 80 },
+  );
+  await flush();
+  const out = plainText(h);
   expect(out).toMatch(/>\s*●\s*first agent/);
+  expect(out).not.toMatch(/>\s*◆\s*main/);
   expect(out).not.toMatch(/>\s*●\s*second agent/);
   h.unmount();
 });

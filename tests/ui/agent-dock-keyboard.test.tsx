@@ -59,19 +59,26 @@ const DockHost = forwardRef<
         asyncAgentRegistry.getSnapshot(),
         Date.now(),
       );
+      // 0 = main row, 1..agentRows = agents.
+      const agentRows = Math.min(MAX_VISIBLE, visible.length);
+      const maxIdx = agentRows;
+
       if (key.upArrow) {
         if (dockFocusIdx === 0) setDockFocusIdx(null);
         else setDockFocusIdx(dockFocusIdx - 1);
         return;
       }
       if (key.downArrow) {
-        const maxIdx = Math.min(MAX_VISIBLE, visible.length) - 1;
         setDockFocusIdx(Math.min(maxIdx, dockFocusIdx + 1));
         return;
       }
       if (key.return) {
-        const target = visible[dockFocusIdx];
-        if (target) setViewMode({ kind: "agent", agentId: target.agentId });
+        if (dockFocusIdx === 0) {
+          setViewMode({ kind: "main" });
+        } else {
+          const target = visible[dockFocusIdx - 1];
+          if (target) setViewMode({ kind: "agent", agentId: target.agentId });
+        }
         setDockFocusIdx(null);
         return;
       }
@@ -177,7 +184,7 @@ test("dockFocusIdx 0 + ↑ → returns to null", async () => {
   h.unmount();
 });
 
-test("dockFocusIdx 0 + ↓ → 1, clamped at len-1", async () => {
+test("dockFocusIdx 0 + ↓ → advances, clamped at agentRows", async () => {
   reset();
   asyncAgentRegistry.register({
     agentId: "a1", description: "first", status: "running",
@@ -190,17 +197,18 @@ test("dockFocusIdx 0 + ↓ → 1, clamped at len-1", async () => {
   const ref = React.createRef<DockHostHandle>();
   const h = mount(React.createElement(DockHost, { ref }), { columns: 80 });
   await settle();
+  // null → 0 (main) → 1 (a1) → 2 (a2), clamped at 2.
   send(h, DOWN);
   await settle();
   send(h, DOWN);
   await settle();
   send(h, DOWN);
   await settle();
-  expect(ref.current?.getState().dockFocusIdx).toBe(1);
+  expect(ref.current?.getState().dockFocusIdx).toBe(2);
   h.unmount();
 });
 
-test("dockFocusIdx + Enter → setViewMode agent, focus released", async () => {
+test("dockFocusIdx 1 + Enter → setViewMode agent, focus released", async () => {
   reset();
   asyncAgentRegistry.register({
     agentId: "the-target", description: "first", status: "running",
@@ -208,6 +216,9 @@ test("dockFocusIdx + Enter → setViewMode agent, focus released", async () => {
   });
   const ref = React.createRef<DockHostHandle>();
   const h = mount(React.createElement(DockHost, { ref }), { columns: 80 });
+  await settle();
+  // null → 0 (main) → 1 (the-target), then ENTER activates the agent.
+  send(h, DOWN);
   await settle();
   send(h, DOWN);
   await settle();
@@ -312,7 +323,73 @@ test("disabled CommandInput swallows all keys", async () => {
   h.unmount();
 });
 
-test("focus does not advance past MAX_VISIBLE-1 when there are more agents", async () => {
+test("↓ from input with 2 agents → dockFocusIdx 0 (main row)", async () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "a1", description: "first", status: "running",
+    startedAt: 10, abort: () => {},
+  });
+  asyncAgentRegistry.register({
+    agentId: "a2", description: "second", status: "running",
+    startedAt: 20, abort: () => {},
+  });
+  const ref = React.createRef<DockHostHandle>();
+  const h = mount(React.createElement(DockHost, { ref }), { columns: 80 });
+  await settle();
+  send(h, DOWN);
+  await settle();
+  expect(ref.current?.getState().dockFocusIdx).toBe(0);
+  h.unmount();
+});
+
+test("dockFocusIdx 0 + Enter → setViewMode main, focus released", async () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "a1", description: "first", status: "running",
+    startedAt: 10, abort: () => {},
+  });
+  const ref = React.createRef<DockHostHandle>();
+  const h = mount(
+    React.createElement(DockHost, {
+      ref,
+      initialViewMode: { kind: "agent", agentId: "a1" },
+    }),
+    { columns: 80 },
+  );
+  await settle();
+  send(h, DOWN); // null → 0 (main row)
+  await settle();
+  send(h, ENTER);
+  await settle();
+  const s = ref.current?.getState();
+  expect(s?.dockFocusIdx).toBe(null);
+  expect(s?.viewMode.kind).toBe("main");
+  h.unmount();
+});
+
+test("dockFocusIdx N (last agent) + ↓ → still N", async () => {
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "a1", description: "first", status: "running",
+    startedAt: 10, abort: () => {},
+  });
+  asyncAgentRegistry.register({
+    agentId: "a2", description: "second", status: "running",
+    startedAt: 20, abort: () => {},
+  });
+  const ref = React.createRef<DockHostHandle>();
+  const h = mount(React.createElement(DockHost, { ref }), { columns: 80 });
+  await settle();
+  // null → 0 (main) → 1 (a1) → 2 (a2) → 2 (clamped).
+  for (let i = 0; i < 4; i++) {
+    send(h, DOWN);
+    await settle();
+  }
+  expect(ref.current?.getState().dockFocusIdx).toBe(2);
+  h.unmount();
+});
+
+test("focus does not advance past MAX_VISIBLE when there are more agents", async () => {
   reset();
   for (let i = 0; i < 7; i++) {
     asyncAgentRegistry.register({
@@ -326,11 +403,11 @@ test("focus does not advance past MAX_VISIBLE-1 when there are more agents", asy
   const ref = React.createRef<DockHostHandle>();
   const h = mount(React.createElement(DockHost, { ref }), { columns: 200 });
   await settle();
-  // ↓ 8 times: first press moves null→0, then 0→1→2→3→4, then clamped at 4.
+  // ↓ 8 times: null→0 (main), 0→1→2→3→4→5 (five agent rows), then clamped at 5.
   for (let i = 0; i < 8; i++) {
     send(h, DOWN);
     await settle();
   }
-  expect(ref.current?.getState().dockFocusIdx).toBe(4);
+  expect(ref.current?.getState().dockFocusIdx).toBe(5);
   h.unmount();
 });
