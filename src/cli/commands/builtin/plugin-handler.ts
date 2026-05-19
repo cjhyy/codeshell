@@ -4,8 +4,6 @@
  * string the slash command can pass to ctx.addStatus.
  */
 
-import { isAbsolute, basename } from "node:path";
-import type { MarketplaceSource } from "../../../plugins/types.js";
 import {
   parseMarketplaceInput,
   deriveMarketplaceName,
@@ -21,23 +19,6 @@ import {
   listInstalled,
 } from "../../../plugins/pluginInstaller.js";
 import { invalidateSkillCache } from "../../../skills/scanner.js";
-
-/**
- * Recognize a local filesystem path to a git repository (bare or
- * working tree) that ends in `.git`. Useful for dev workflows where
- * the marketplace lives on disk rather than at a URL. parseMarketplaceInput
- * intentionally only covers remote forms; the CLI accepts the broader
- * set since `git clone` itself accepts local paths.
- */
-function parseLocalGitPath(input: string): MarketplaceSource | null {
-  if (!isAbsolute(input)) return null;
-  if (!input.endsWith(".git")) return null;
-  return { source: "git", url: input };
-}
-
-function deriveLocalName(input: string): string {
-  return basename(input).replace(/\.git$/, "").toLowerCase();
-}
 
 const USAGE = [
   "Usage:",
@@ -66,12 +47,11 @@ export async function runPluginCommand(rawArg: string): Promise<string> {
     if (op === "add") {
       const input = args.slice(2).join(" ").trim();
       if (!input) return "Usage: /plugin marketplace add <git-url-or-owner/repo>";
-      const localSource = parseLocalGitPath(input);
-      const source = localSource ?? parseMarketplaceInput(input);
+      const source = parseMarketplaceInput(input);
       if (!source) {
-        return `Cannot parse "${input}" as a marketplace source.\nSupported forms: owner/repo, https://...git, git@host:owner/repo[.git]`;
+        return `Cannot parse "${input}" as a marketplace source.\nSupported forms: owner/repo, https://...git, git@host:owner/repo[.git], /abs/path/to/repo.git`;
       }
-      const name = localSource ? deriveLocalName(input) : deriveMarketplaceName(source);
+      const name = deriveMarketplaceName(source);
       const r = await addMarketplace(name, source);
       if (!r.ok) return `Failed to add marketplace "${name}": ${r.error}`;
       const lines = [

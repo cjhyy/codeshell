@@ -102,3 +102,35 @@ describe("deriveMarketplaceName", () => {
     );
   });
 });
+
+describe("parseMarketplaceInput - local path", () => {
+  it("accepts an absolute path ending in .git", () => {
+    expect(parseMarketplaceInput("/tmp/fixture/src.git")).toEqual({
+      source: "git",
+      url: "/tmp/fixture/src.git",
+    });
+  });
+
+  it("rejects an absolute path without .git suffix", () => {
+    expect(parseMarketplaceInput("/tmp/fixture/src")).toBeNull();
+  });
+
+  it("rejects a relative path even with .git", () => {
+    expect(parseMarketplaceInput("./repo.git")).toBeNull();
+  });
+
+  it("Windows-style absolute paths with .git", () => {
+    expect(parseMarketplaceInput("C:\\repo.git")).toEqual({
+      source: "git",
+      url: "C:\\repo.git",
+    });
+  });
+});
+
+describe("deriveMarketplaceName - local path", () => {
+  it("derives name from /abs/path/to/repo.git", () => {
+    expect(
+      deriveMarketplaceName({ source: "git", url: "/tmp/fixture/src.git" }),
+    ).toBe("src");
+  });
+});

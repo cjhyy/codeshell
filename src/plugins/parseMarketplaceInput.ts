@@ -1,7 +1,7 @@
 /**
  * Parse a user-typed marketplace identifier into a MarketplaceSource.
  * MVP subset of Claude Code's utils/plugins/parseMarketplaceInput.ts —
- * only github shorthand, https git URLs, and ssh git URLs.
+ * local absolute paths, github shorthand, https git URLs, and ssh git URLs.
  */
 
 import type { MarketplaceSource } from "./types.js";
@@ -13,6 +13,16 @@ import type { MarketplaceSource } from "./types.js";
 export function parseMarketplaceInput(input: string): MarketplaceSource | null {
   const trimmed = input.trim();
   if (trimmed === "") return null;
+
+  // Absolute local path to a git repository (bare or with .git suffix).
+  // Useful for dev workflows where the marketplace lives on disk rather
+  // than at a remote URL. git clone itself accepts the same form.
+  if (
+    (trimmed.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(trimmed)) &&
+    trimmed.endsWith(".git")
+  ) {
+    return { source: "git", url: trimmed };
+  }
 
   // SSH: user@host:path[.git]
   // Username can contain alphanumeric, dots, underscores, hyphens.
@@ -61,7 +71,9 @@ export function deriveMarketplaceName(source: MarketplaceSource): string {
     const parts = source.repo.split("/");
     return parts[parts.length - 1]!.toLowerCase();
   }
-  // git: strip protocol, strip trailing .git, take last segment
+  // git: strip protocol, strip trailing .git, take last segment.
+  // Local path /tmp/foo/skills.git → name "skills"
+  // Local path /tmp/skills.git     → name "skills"
   const stripped = source.url.replace(/\.git$/, "");
   const segments = stripped.split(/[/:]/).filter(Boolean);
   const tail = segments[segments.length - 1] ?? "marketplace";
