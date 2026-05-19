@@ -6,9 +6,7 @@
  */
 
 import { Engine } from "../../engine/engine.js";
-import { AgentServer } from "../../protocol/server.js";
-import { AgentClient } from "../../protocol/client.js";
-import { createInProcessTransport } from "../../protocol/transport.js";
+import { createInProcessClient } from "../../protocol/helpers.js";
 import { SettingsManager } from "../../settings/manager.js";
 import { resolveApiKey } from "../onboarding.js";
 import { costTracker } from "../cost-tracker.js";
@@ -164,27 +162,26 @@ export async function runCommand(options: RunOptions): Promise<void> {
     sandbox: sandboxConfig,
   });
 
-  // Wire through protocol layer
-  const [serverTransport, clientTransport] = createInProcessTransport();
-  const _server = new AgentServer({ engine, transport: serverTransport });
-  const client = new AgentClient({ transport: clientTransport });
-
   const outputFormat = options.output ?? (settings.output.format as OutputFormat) ?? "text";
   const renderer = createRenderer(outputFormat);
 
-  // Forward stream events to renderer
-  client.onStreamEvent((event) => renderer.onEvent(event));
-
-  const result = await client.run(options.task, options.resume);
-
-  renderer.onComplete(result.text, result.reason, {
-    sessionId: result.sessionId,
-    turnCount: result.turnCount,
+  // Wire engine through the protocol layer; renderer consumes stream events.
+  const { client, close } = createInProcessClient(engine, {
+    onStream: (event) => renderer.onEvent(event),
   });
 
-  client.close();
+  try {
+    const result = await client.run(options.task, options.resume);
 
-  process.exit(result.reason === "completed" ? 0 : 1);
+    renderer.onComplete(result.text, result.reason, {
+      sessionId: result.sessionId,
+      turnCount: result.turnCount,
+    });
+
+    process.exit(result.reason === "completed" ? 0 : 1);
+  } finally {
+    close();
+  }
 }
 
 /**
