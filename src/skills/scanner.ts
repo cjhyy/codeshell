@@ -1,160 +1,127 @@
 /**
- * Skills scanner — discovers SKILL.md files and parses their metadata.
- *
- * Skills are markdown files with YAML frontmatter:
- * ---
- * name: skill-name
- * description: what it does
- * triggers:
- *   keywords: [word1, word2]
- *   tools: [ToolName]
- * when_to_use: description of when to invoke
- * ---
- * <skill content>
+ * Skill scanner — discovers <base>/<name>/SKILL.md files. Mirrors Claude Code's
+ * `loadSkillsFromSkillsDir` (skills/loadSkillsDir.ts:407) so community skill
+ * repositories drop in without modification.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { homedir } from "node:os";
-import { fileURLToPath } from "node:url";
+import memoize from "lodash-es/memoize.js";
+import { parseFrontmatter, coerceDescription } from "./frontmatter.js";
 
 export interface SkillDefinition {
+  /** Directory name; authoritative regardless of frontmatter.name. */
   name: string;
+  /** From frontmatter.description, coerced. Empty string if absent or invalid. */
   description: string;
-  triggers: {
-    keywords?: string[];
-    tools?: string[];
-    intents?: string[];
-  };
-  whenToUse: string;
+  /** SKILL.md body with frontmatter stripped. */
   content: string;
+  /** Absolute path to the SKILL.md file. */
   filePath: string;
+  /** Where the skill was loaded from. */
+  source: "project" | "user";
 }
 
-/**
- * Scan for SKILL.md files in standard locations.
- */
-export function scanSkills(cwd: string): SkillDefinition[] {
-  const skills: SkillDefinition[] = [];
+interface ScanBase {
+  dir: string;
+  source: "project" | "user";
+}
+
+function userHome(): string {
+  // Honor process.env.HOME so tests (and shell overrides) can redirect the
+  // user-skills lookup. node:os homedir() reads from getpwuid and ignores
+  // later mutations of process.env.HOME, which is what the test suite relies
+  // on. Falls back to homedir() when HOME is unset.
+  return process.env.HOME ?? homedir();
+}
+
+function bases(cwd: string): ScanBase[] {
+  return [
+    { dir: join(cwd, ".code-shell", "skills"), source: "project" },
+    { dir: join(userHome(), ".code-shell", "skills"), source: "user" },
+  ];
+}
+
+function isENOENT(e: unknown): boolean {
+  return (
+    typeof e === "object" && e !== null && "code" in e && (e as { code?: string }).code === "ENOENT"
+  );
+}
+
+function isInaccessible(e: unknown): boolean {
+  if (typeof e !== "object" || e === null || !("code" in e)) return false;
+  const code = (e as { code?: string }).code;
+  return code === "EACCES" || code === "EPERM" || code === "EIO";
+}
+
+function scanOnce(cwd: string): SkillDefinition[] {
+  const results: SkillDefinition[] = [];
   const seen = new Set<string>();
 
-  const builtin = resolveBuiltinSkillsDir();
-
-  const dirs = [
-    // Project-level
-    join(cwd, ".code-shell", "skills"),
-    join(cwd, ".claude", "skills"),
-    // User-level
-    join(homedir(), ".code-shell", "skills"),
-    join(homedir(), ".claude", "skills"),
-    // Built-in (shipped inside the npm package). Listed last so user/project
-    // skills with the same filename win deduplication on filePath.
-    ...(builtin ? [builtin] : []),
-  ];
-
-  for (const dir of dirs) {
+  for (const { dir, source } of bases(cwd)) {
     if (!existsSync(dir)) continue;
 
+    let entries: { name: string; isDirectory: () => boolean; isSymbolicLink: () => boolean }[];
     try {
-      const files = readdirSync(dir).filter(
-        (f) => f.endsWith(".md") && statSync(join(dir, f)).isFile(),
-      );
-
-      for (const file of files) {
-        const filePath = resolve(join(dir, file));
-        if (seen.has(filePath)) continue;
-        seen.add(filePath);
-
-        const skill = parseSkillFile(filePath);
-        if (skill) skills.push(skill);
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch (e) {
+      if (isInaccessible(e)) {
+        // eslint-disable-next-line no-console
+        console.warn(`[skills] cannot read ${dir}: ${(e as Error).message}`);
+        continue;
       }
-    } catch {
-      // Skip unreadable directories
+      throw e;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
+      if (seen.has(entry.name)) continue;
+
+      const skillFile = join(dir, entry.name, "SKILL.md");
+      let raw: string;
+      try {
+        raw = readFileSync(skillFile, "utf-8");
+      } catch (e) {
+        if (isENOENT(e)) continue;
+        if (isInaccessible(e)) {
+          // eslint-disable-next-line no-console
+          console.warn(`[skills] cannot read ${skillFile}: ${(e as Error).message}`);
+          continue;
+        }
+        throw e;
+      }
+
+      const { frontmatter, body } = parseFrontmatter(raw);
+      const fmName = typeof frontmatter.name === "string" ? frontmatter.name : undefined;
+      if (fmName !== undefined && fmName !== entry.name) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[skills] frontmatter.name "${fmName}" in ${skillFile} does not match directory name "${entry.name}"; using directory name`,
+        );
+      }
+      const description = coerceDescription(frontmatter.description);
+
+      results.push({
+        name: entry.name,
+        description,
+        content: body,
+        filePath: skillFile,
+        source,
+      });
+      seen.add(entry.name);
     }
   }
 
-  return skills;
+  return results;
 }
 
-/**
- * Locate the `skills-builtin/` directory shipped with the npm package.
- * Walks up from this module file (`dist/...` after build, or `src/skills/...`
- * in dev) until it finds a `package.json` whose `name` is the package, then
- * looks for a sibling `skills-builtin/` folder.
- */
-function resolveBuiltinSkillsDir(): string | null {
-  let here: string;
-  try {
-    here =
-      typeof import.meta !== "undefined" && import.meta.url
-        ? dirname(fileURLToPath(import.meta.url))
-        : __dirname;
-  } catch {
-    return null;
-  }
+const memoized = memoize(scanOnce);
 
-  let dir = here;
-  for (let i = 0; i < 6; i++) {
-    const pkgPath = join(dir, "package.json");
-    try {
-      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
-      if (pkg?.name === "@cjhyy/code-shell") {
-        const candidate = join(dir, "skills-builtin");
-        return existsSync(candidate) ? candidate : null;
-      }
-    } catch {
-      // not here, walk up
-    }
-    const parent = dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
-  }
-  return null;
+export function scanSkills(cwd: string): SkillDefinition[] {
+  return memoized(cwd);
 }
 
-/**
- * Parse a single SKILL.md file.
- */
-function parseSkillFile(filePath: string): SkillDefinition | null {
-  try {
-    const raw = readFileSync(filePath, "utf-8");
-    const match = raw.match(/^---\n([\s\S]*?)\n---\n\n?([\s\S]*)$/);
-    if (!match) return null;
-
-    const frontmatter = match[1];
-    const content = match[2].trim();
-
-    const name = extractField(frontmatter, "name");
-    if (!name) return null;
-
-    const description = extractField(frontmatter, "description") ?? "";
-    const whenToUse = extractField(frontmatter, "when_to_use") ?? "";
-
-    // Parse triggers
-    const keywords = extractList(frontmatter, "keywords");
-    const tools = extractList(frontmatter, "tools");
-    const intents = extractList(frontmatter, "intents");
-
-    return {
-      name,
-      description,
-      triggers: { keywords, tools, intents },
-      whenToUse,
-      content,
-      filePath,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function extractField(frontmatter: string, field: string): string | undefined {
-  const match = frontmatter.match(new RegExp(`^${field}:\\s*(.+)$`, "m"));
-  return match?.[1]?.trim();
-}
-
-function extractList(frontmatter: string, field: string): string[] {
-  const match = frontmatter.match(new RegExp(`${field}:\\s*\\[([^\\]]+)\\]`));
-  if (!match) return [];
-  return match[1].split(",").map((s) => s.trim().replace(/^['"]|['"]$/g, ""));
+export function invalidateSkillCache(): void {
+  memoized.cache.clear?.();
 }

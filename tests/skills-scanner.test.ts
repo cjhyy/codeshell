@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import {
   parseFrontmatter,
   quoteProblematicValues,
@@ -95,5 +95,163 @@ describe("coerceDescription", () => {
   it("returns empty string for arrays and objects", () => {
     expect(coerceDescription(["a", "b"])).toBe("");
     expect(coerceDescription({ a: 1 })).toBe("");
+  });
+});
+
+import { scanSkills, invalidateSkillCache } from "../src/skills/scanner.js";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+function makeSkillDir(base: string, name: string, frontmatter: string, body: string) {
+  const dir = join(base, name);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "SKILL.md"), `---\n${frontmatter}\n---\n${body}`);
+  return dir;
+}
+
+describe("scanSkills - directory layout", () => {
+  let projectRoot: string;
+  let originalHome: string | undefined;
+  let fakeHome: string;
+
+  beforeEach(() => {
+    invalidateSkillCache();
+    projectRoot = mkdtempSync(join(tmpdir(), "skills-proj-"));
+    fakeHome = mkdtempSync(join(tmpdir(), "skills-home-"));
+    originalHome = process.env.HOME;
+    process.env.HOME = fakeHome;
+  });
+
+  afterEach(() => {
+    invalidateSkillCache();
+    rmSync(projectRoot, { recursive: true, force: true });
+    rmSync(fakeHome, { recursive: true, force: true });
+    if (originalHome !== undefined) process.env.HOME = originalHome;
+    else delete process.env.HOME;
+  });
+
+  it("discovers <user>/<name>/SKILL.md", () => {
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    makeSkillDir(userBase, "pdf", "name: pdf\ndescription: handle PDFs", "PDF body");
+    const skills = scanSkills(projectRoot);
+    const pdf = skills.find((s) => s.name === "pdf");
+    expect(pdf).toBeDefined();
+    expect(pdf!.description).toBe("handle PDFs");
+    expect(pdf!.source).toBe("user");
+    expect(pdf!.content).toBe("PDF body");
+  });
+
+  it("discovers <project>/<name>/SKILL.md", () => {
+    const projBase = join(projectRoot, ".code-shell", "skills");
+    makeSkillDir(projBase, "deploy", "name: deploy\ndescription: deployment helper", "deploy body");
+    const skills = scanSkills(projectRoot);
+    const dep = skills.find((s) => s.name === "deploy");
+    expect(dep).toBeDefined();
+    expect(dep!.source).toBe("project");
+  });
+
+  it("project skill shadows user skill of the same name", () => {
+    makeSkillDir(join(fakeHome, ".code-shell", "skills"), "shared", "description: from user", "user body");
+    makeSkillDir(join(projectRoot, ".code-shell", "skills"), "shared", "description: from project", "project body");
+    const skills = scanSkills(projectRoot);
+    const matches = skills.filter((s) => s.name === "shared");
+    expect(matches).toHaveLength(1);
+    expect(matches[0].source).toBe("project");
+    expect(matches[0].description).toBe("from project");
+  });
+
+  it("skips subdirectory missing SKILL.md", () => {
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    mkdirSync(join(userBase, "empty"), { recursive: true });
+    const skills = scanSkills(projectRoot);
+    expect(skills.find((s) => s.name === "empty")).toBeUndefined();
+  });
+
+  it("ignores flat .md files in base dir (subdir-only)", () => {
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    mkdirSync(userBase, { recursive: true });
+    writeFileSync(join(userBase, "loose.md"), "---\nname: loose\n---\nbody");
+    const skills = scanSkills(projectRoot);
+    expect(skills.find((s) => s.name === "loose")).toBeUndefined();
+  });
+
+  it("follows symlinked directories", () => {
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    mkdirSync(userBase, { recursive: true });
+    const realDir = mkdtempSync(join(tmpdir(), "real-skill-"));
+    writeFileSync(join(realDir, "SKILL.md"), "---\ndescription: linked\n---\nbody");
+    symlinkSync(realDir, join(userBase, "linked"));
+    const skills = scanSkills(projectRoot);
+    expect(skills.find((s) => s.name === "linked")).toBeDefined();
+    rmSync(realDir, { recursive: true, force: true });
+  });
+
+  it("returns [] when no base dirs exist", () => {
+    const skills = scanSkills(projectRoot);
+    expect(skills).toEqual([]);
+  });
+
+  it("uses directory name as authoritative skill name (frontmatter.name mismatched)", () => {
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    makeSkillDir(userBase, "actual-name", "name: different-name\ndescription: x", "body");
+    const skills = scanSkills(projectRoot);
+    expect(skills.find((s) => s.name === "actual-name")).toBeDefined();
+    expect(skills.find((s) => s.name === "different-name")).toBeUndefined();
+  });
+
+  it("registers skill with empty description when frontmatter is missing", () => {
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    mkdirSync(join(userBase, "raw"), { recursive: true });
+    writeFileSync(join(userBase, "raw", "SKILL.md"), "no frontmatter just body");
+    const skills = scanSkills(projectRoot);
+    const raw = skills.find((s) => s.name === "raw");
+    expect(raw).toBeDefined();
+    expect(raw!.description).toBe("");
+    expect(raw!.content).toBe("no frontmatter just body");
+  });
+});
+
+describe("scanSkills - memoization", () => {
+  let projectRoot: string;
+  let fakeHome: string;
+  let originalHome: string | undefined;
+
+  beforeEach(() => {
+    invalidateSkillCache();
+    projectRoot = mkdtempSync(join(tmpdir(), "skills-memo-"));
+    fakeHome = mkdtempSync(join(tmpdir(), "skills-memo-home-"));
+    originalHome = process.env.HOME;
+    process.env.HOME = fakeHome;
+  });
+
+  afterEach(() => {
+    invalidateSkillCache();
+    rmSync(projectRoot, { recursive: true, force: true });
+    rmSync(fakeHome, { recursive: true, force: true });
+    if (originalHome !== undefined) process.env.HOME = originalHome;
+    else delete process.env.HOME;
+  });
+
+  it("returns the same array reference on the second call for the same cwd", () => {
+    makeSkillDir(join(fakeHome, ".code-shell", "skills"), "cached", "description: c", "b");
+    const a = scanSkills(projectRoot);
+    const b = scanSkills(projectRoot);
+    expect(a).toBe(b);
+  });
+
+  it("invalidateSkillCache forces a re-scan that picks up new skills", () => {
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    makeSkillDir(userBase, "first", "description: 1", "b");
+    const before = scanSkills(projectRoot);
+    expect(before.find((s) => s.name === "second")).toBeUndefined();
+
+    makeSkillDir(userBase, "second", "description: 2", "b");
+    const stillCached = scanSkills(projectRoot);
+    expect(stillCached.find((s) => s.name === "second")).toBeUndefined();
+
+    invalidateSkillCache();
+    const fresh = scanSkills(projectRoot);
+    expect(fresh.find((s) => s.name === "second")).toBeDefined();
   });
 });
