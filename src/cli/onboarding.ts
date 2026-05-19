@@ -9,6 +9,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from "
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { getOpenRouterModels } from "../data/openrouter-models.js";
+import { sanitizeApiKey } from "../llm/api-key-sanitize.js";
 
 export interface OnboardingResult {
   /**
@@ -223,8 +224,14 @@ export function detectEnvKeys(): DetectedEnvKey[] {
   for (const p of PROVIDERS) {
     if (!p.envKey) continue;
     const v = process.env[p.envKey];
-    if (v && v.trim()) {
-      found.push({ provider: p, envKey: p.envKey, apiKey: v.trim() });
+    if (!v) continue;
+    // Env-sourced keys frequently carry CRLF/BOM/quotes from how the user set
+    // them (cmd `set FOO=...`, dotenv files with stray spaces, Windows clipboards
+    // pasted into a shell). Sanitize once at the boundary so downstream code
+    // never sees a dirty value.
+    const cleaned = sanitizeApiKey(v).value;
+    if (cleaned) {
+      found.push({ provider: p, envKey: p.envKey, apiKey: cleaned });
     }
   }
   return found;
@@ -258,7 +265,7 @@ export function detectProviderFromApiKey(
   for (const p of PROVIDERS) {
     if (!p.envKey) continue;
     const v = process.env[p.envKey];
-    if (v && v.trim() === apiKey) return p;
+    if (v && sanitizeApiKey(v).value === apiKey) return p;
   }
   return undefined;
 }

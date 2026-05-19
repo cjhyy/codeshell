@@ -6,7 +6,7 @@
  *
  * Steps: kind → key → fetch+pick → alias+(active?) → onFinish.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
 import TextInput from "./TextInput.js";
 import { PROVIDER_KINDS, type ProviderKindName } from "../../llm/provider-kinds.js";
@@ -14,6 +14,10 @@ import { fetchModelList, type FetchResult } from "../../llm/model-fetcher.js";
 import { defaultCacheDir } from "../../llm/model-cache.js";
 import type { ProviderConfig } from "../../llm/provider-catalog.js";
 import type { CachedModel } from "../../llm/model-cache.js";
+import {
+  sanitizeApiKey,
+  hasNonAsciiPrintable,
+} from "../../llm/api-key-sanitize.js";
 
 export interface EnvKeyHint {
   envKey: string;
@@ -198,6 +202,11 @@ export function ProviderModelFlow({
   const [useExistingProvider, setUseExistingProvider] = useState<ProviderConfig | undefined>();
   const [selectedKind, setSelectedKind] = useState<ProviderKindName>("openai");
   const [apiKey, setApiKey] = useState("");
+  const [apiKeyNotice, setApiKeyNotice] = useState<string | null>(null);
+  // Tracks whether the user has already seen + acknowledged a non-ASCII
+  // warning. Reset whenever the input changes — ref to avoid an extra
+  // re-render on each keystroke.
+  const apiKeyForceRef = useRef(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [keyMenuIdx, setKeyMenuIdx] = useState(0); // 0 = use env, 1 = paste new
   const [keyMenuDone, setKeyMenuDone] = useState(false);
@@ -467,7 +476,11 @@ export function ProviderModelFlow({
             setUseExistingProvider(chosen.provider);
             setStep("fetch");
           } else if (chosen.type === "env") {
-            setApiKey(chosen.hint.apiKey);
+            // Env-sourced keys can carry CRLF/BOM/quotes from how the user
+            // set them (cmd `set FOO=...`, dotenv files with stray spaces).
+            // Sanitize on the way in so the rest of the flow sees a clean key.
+            const { value } = sanitizeApiKey(chosen.hint.apiKey);
+            setApiKey(value);
             if (selectedKind === "custom") setStep("baseUrl");
             else setStep("fetch");
           } else {
@@ -682,14 +695,55 @@ export function ProviderModelFlow({
                   <Text color="ansi:cyan">API Key: </Text>
                   <TextInput
                     value={apiKey}
-                    onChange={setApiKey}
+                    onChange={(v) => {
+                      setApiKey(v);
+                      // Any keystroke invalidates a prior "press Enter again"
+                      // confirmation: the user changed their mind.
+                      apiKeyForceRef.current = false;
+                      if (apiKeyNotice) setApiKeyNotice(null);
+                    }}
                     onSubmit={() => {
+                      const { value, changed, warnings } = sanitizeApiKey(apiKey);
+                      if (!value) {
+                        setApiKeyNotice("API Key 不能为空");
+                        return;
+                      }
+                      // First Enter on a dirty paste: clean the field and
+                      // require an explicit second Enter so the user can
+                      // eyeball what was actually pasted.
+                      if (changed) {
+                        setApiKey(value);
+                        setApiKeyNotice(
+                          (warnings.length > 0
+                            ? `已自动清理粘贴字符: ${warnings.join("、")}`
+                            : "已自动清理粘贴字符") + ",再按 Enter 确认",
+                        );
+                        return;
+                      }
+                      // Field is already clean (or user re-Entered the cleaned
+                      // value). If it still contains non-ASCII printable chars,
+                      // it's almost certainly a wrong paste — warn once, then
+                      // let the next Enter through.
+                      if (hasNonAsciiPrintable(value) && !apiKeyForceRef.current) {
+                        apiKeyForceRef.current = true;
+                        setApiKeyNotice(
+                          "Key 含非 ASCII 字符,可能粘错了。再按 Enter 强制使用",
+                        );
+                        return;
+                      }
+                      setApiKeyNotice(null);
+                      apiKeyForceRef.current = false;
                       if (selectedKind === "custom") setStep("baseUrl");
                       else setStep("fetch");
                     }}
                     placeholder="粘贴你的 API Key, Enter 确认"
                     focus
                   />
+                  {apiKeyNotice && (
+                    <Box marginLeft={1}>
+                      <Text color="ansi:yellow">⚠ {apiKeyNotice}</Text>
+                    </Box>
+                  )}
                 </Box>
               )}
             </Box>
