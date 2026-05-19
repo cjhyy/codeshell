@@ -1,27 +1,28 @@
 /**
- * SkillTool — invoke custom skills/plugins by name.
+ * SkillTool — load a skill's SKILL.md body and return it as the tool result.
+ * The scanner is the single source of truth; this tool never reads the disk
+ * directly. Matches Claude Code's tools/SkillTool/SkillTool.ts pattern.
  */
 
 import type { ToolDefinition } from "../../types.js";
-import { readdirSync, readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
+import { scanSkills } from "../../skills/scanner.js";
 
 export const skillToolDef: ToolDefinition = {
   name: "Skill",
   description:
-    "Execute a skill within the main conversation. Skills provide specialized capabilities " +
-    "and domain knowledge. Use this tool with the skill name and optional arguments.",
+    "Execute a skill within the main conversation. Skills provide specialized " +
+    "capabilities and domain knowledge. Use this tool with the skill name and " +
+    "optional arguments.",
   inputSchema: {
     type: "object",
     properties: {
       skill: {
         type: "string",
-        description: "The skill name to invoke (e.g., 'commit', 'review-pr', 'pdf')",
+        description: "The skill name to invoke (e.g., 'pdf', 'brainstorming')",
       },
       args: {
         type: "string",
-        description: "Optional arguments for the skill",
+        description: "Optional arguments substituted into $ARGUMENTS / {args} placeholders",
       },
     },
     required: ["skill"],
@@ -36,30 +37,14 @@ export async function skillTool(args: Record<string, unknown>): Promise<string> 
     return "Error: skill name is required.";
   }
 
-  // Search for skill in known directories
-  const searchDirs = [
-    join(process.cwd(), ".code-shell", "skills"),
-    join(homedir(), ".code-shell", "skills"),
-  ];
+  const skills = scanSkills(process.cwd());
+  const found = skills.find((s) => s.name === skillName);
 
-  for (const dir of searchDirs) {
-    if (!existsSync(dir)) continue;
-
-    const files = readdirSync(dir).filter((f) => f.endsWith(".md"));
-    for (const file of files) {
-      const name = file.replace(/\.md$/, "");
-      if (name === skillName || name === skillName.replace(/^\//, "")) {
-        const content = readFileSync(join(dir, file), "utf-8");
-        // Parse frontmatter
-        const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
-        const body = fmMatch ? fmMatch[2].trim() : content.trim();
-
-        // Replace $ARGUMENTS placeholder
-        const processed = body.replace(/\$ARGUMENTS/g, skillArgs).replace(/\{args\}/g, skillArgs);
-        return `Skill "${skillName}" loaded:\n\n${processed}`;
-      }
-    }
+  if (!found) {
+    return `Skill "${skillName}" not found. Run /skills to list available skills.`;
   }
 
-  return `Skill "${skillName}" not found. Available skills can be found in .code-shell/skills/ or ~/.code-shell/skills/`;
+  return found.content
+    .replace(/\$ARGUMENTS/g, skillArgs)
+    .replace(/\{args\}/g, skillArgs);
 }
