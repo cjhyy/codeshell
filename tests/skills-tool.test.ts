@@ -62,4 +62,39 @@ describe("skillTool", () => {
     const out = await skillTool({ skill: "" });
     expect(out.toLowerCase()).toContain("required");
   });
+
+  it("prepends a base-directory header pointing at the skill dir", async () => {
+    const dir = join(fakeHome, ".code-shell", "skills", "withbase");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "SKILL.md"), "---\ndescription: d\n---\nhello");
+
+    const out = await skillTool({ skill: "withbase" });
+    expect(out).toContain("Base directory for this skill:");
+    expect(out).toContain(dir);
+    expect(out).toContain("hello");
+  });
+
+  it("substitutes ${CODESHELL_SKILL_DIR} in the body", async () => {
+    const dir = join(fakeHome, ".code-shell", "skills", "varsub");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "SKILL.md"),
+      "---\ndescription: d\n---\nrun ${CODESHELL_SKILL_DIR}/scripts/foo.py",
+    );
+    const out = await skillTool({ skill: "varsub" });
+    expect(out).toContain(`run ${dir}/scripts/foo.py`);
+    expect(out).not.toContain("${CODESHELL_SKILL_DIR}");
+  });
+
+  it("substitutes ${CLAUDE_SKILL_DIR} for CC-compatible SKILL.md", async () => {
+    const dir = join(fakeHome, ".code-shell", "skills", "ccvar");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "SKILL.md"),
+      "---\ndescription: d\n---\ncd ${CLAUDE_SKILL_DIR} && ls",
+    );
+    const out = await skillTool({ skill: "ccvar" });
+    expect(out).toContain(`cd ${dir} && ls`);
+    expect(out).not.toContain("${CLAUDE_SKILL_DIR}");
+  });
 });

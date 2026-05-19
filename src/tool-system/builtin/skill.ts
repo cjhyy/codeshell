@@ -4,6 +4,7 @@
  * directly. Matches Claude Code's tools/SkillTool/SkillTool.ts pattern.
  */
 
+import { dirname } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import { scanSkills } from "../../skills/scanner.js";
 
@@ -44,7 +45,11 @@ export async function skillTool(args: Record<string, unknown>): Promise<string> 
     return `Skill "${skillName}" not found. Run /skills to list available skills.`;
   }
 
-  return found.content
+  const skillDir = dirname(found.filePath);
+  const body = found.content
     .replace(/\$ARGUMENTS/g, skillArgs)
-    .replace(/\{args\}/g, skillArgs);
+    .replace(/\{args\}/g, skillArgs)
+    .replace(/\$\{CODESHELL_SKILL_DIR\}/g, skillDir)
+    .replace(/\$\{CLAUDE_SKILL_DIR\}/g, skillDir);
+  return `Base directory for this skill: ${skillDir}\n\n${body}`;
 }
