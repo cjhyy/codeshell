@@ -210,6 +210,23 @@ describe("scanSkills - directory layout", () => {
     expect(raw!.description).toBe("");
     expect(raw!.content).toBe("no frontmatter just body");
   });
+
+  it("does not double-process a base when project and user bases share an inode", () => {
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    const projBaseParent = join(projectRoot, ".code-shell");
+    mkdirSync(userBase, { recursive: true });
+    makeSkillDir(userBase, "linked-skill", "description: L", "body");
+
+    // Symlink the entire project skills dir to the user skills dir.
+    mkdirSync(projBaseParent, { recursive: true });
+    symlinkSync(userBase, join(projBaseParent, "skills"));
+
+    const skills = scanSkills(projectRoot);
+    const matches = skills.filter((s) => s.name === "linked-skill");
+    expect(matches).toHaveLength(1);
+    // First base (project) wins — but the dedupe ensures we don't process twice.
+    expect(matches[0].source).toBe("project");
+  });
 });
 
 describe("scanSkills - memoization", () => {
@@ -253,5 +270,23 @@ describe("scanSkills - memoization", () => {
     invalidateSkillCache();
     const fresh = scanSkills(projectRoot);
     expect(fresh.find((s) => s.name === "second")).toBeDefined();
+  });
+
+  it("treats a changed HOME as a fresh cache entry", () => {
+    const altHome = mkdtempSync(join(tmpdir(), "skills-alt-home-"));
+    try {
+      makeSkillDir(join(fakeHome, ".code-shell", "skills"), "from-first", "description: f", "b");
+      makeSkillDir(join(altHome, ".code-shell", "skills"), "from-second", "description: g", "b");
+
+      const first = scanSkills(projectRoot);
+      expect(first.find((s) => s.name === "from-first")).toBeDefined();
+
+      process.env.HOME = altHome;
+      const second = scanSkills(projectRoot);
+      expect(second.find((s) => s.name === "from-second")).toBeDefined();
+      expect(second.find((s) => s.name === "from-first")).toBeUndefined();
+    } finally {
+      rmSync(altHome, { recursive: true, force: true });
+    }
   });
 });

@@ -4,7 +4,7 @@
  * repositories drop in without modification.
  */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import memoize from "lodash-es/memoize.js";
@@ -58,9 +58,20 @@ function isInaccessible(e: unknown): boolean {
 function scanOnce(cwd: string): SkillDefinition[] {
   const results: SkillDefinition[] = [];
   const seen = new Set<string>();
+  const seenBaseDirs = new Set<string>();
 
   for (const { dir, source } of bases(cwd)) {
     if (!existsSync(dir)) continue;
+
+    let realDir: string;
+    try {
+      realDir = realpathSync(dir);
+    } catch {
+      // dir disappeared between existsSync and realpathSync, or unreadable
+      continue;
+    }
+    if (seenBaseDirs.has(realDir)) continue;
+    seenBaseDirs.add(realDir);
 
     let entries: { name: string; isDirectory: () => boolean; isSymbolicLink: () => boolean }[];
     try {
@@ -116,7 +127,7 @@ function scanOnce(cwd: string): SkillDefinition[] {
   return results;
 }
 
-const memoized = memoize(scanOnce);
+const memoized = memoize(scanOnce, (cwd: string) => `${cwd}\0${userHome()}`);
 
 export function scanSkills(cwd: string): SkillDefinition[] {
   return memoized(cwd);
