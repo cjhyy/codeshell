@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-05-15T08:06:30.658Z",
+  "fetchedAt": "2026-05-19T08:12:19.055Z",
   "source": "https://openrouter.ai/api/v1/models",
-  "count": 364,
+  "count": 356,
   "models": [
     {
       "id": "anthropic/claude-opus-4.7-fast",
@@ -32,13 +32,13 @@
       ]
     },
     {
-      "id": "inclusionai/ring-2.6-1t:free",
-      "name": "inclusionAI: Ring-2.6-1T (free)",
+      "id": "inclusionai/ring-2.6-1t",
+      "name": "inclusionAI: Ring-2.6-1T",
       "created": 1778247440,
       "contextLength": 262144,
       "maxOutputTokens": 65536,
-      "inputPricePerMillion": 0,
-      "outputPricePerMillion": 0,
+      "inputPricePerMillion": 0.075,
+      "outputPricePerMillion": 0.625,
       "modalities": [
         "text"
       ]
@@ -400,10 +400,10 @@
       "id": "deepseek/deepseek-v4-flash",
       "name": "DeepSeek: DeepSeek V4 Flash",
       "created": 1777000666,
-      "contextLength": 1048576,
-      "maxOutputTokens": 131072,
-      "inputPricePerMillion": 0.126,
-      "outputPricePerMillion": 0.252,
+      "contextLength": 1048575,
+      "maxOutputTokens": 0,
+      "inputPricePerMillion": 0.112,
+      "outputPricePerMillion": 0.224,
       "modalities": [
         "text"
       ]
@@ -1799,20 +1799,6 @@
       ]
     },
     {
-      "id": "x-ai/grok-4.1-fast",
-      "name": "xAI: Grok 4.1 Fast",
-      "created": 1763587502,
-      "contextLength": 2000000,
-      "maxOutputTokens": 30000,
-      "inputPricePerMillion": 0.19999999999999998,
-      "outputPricePerMillion": 0.5,
-      "modalities": [
-        "text",
-        "image",
-        "file"
-      ]
-    },
-    {
       "id": "deepcogito/cogito-v2.1-671b",
       "name": "Deep Cogito: Cogito v2.1 671B",
       "created": 1763071233,
@@ -1986,9 +1972,9 @@
       "name": "IBM: Granite 4.0 Micro",
       "created": 1760927695,
       "contextLength": 131000,
-      "maxOutputTokens": 0,
+      "maxOutputTokens": 131000,
       "inputPricePerMillion": 0.017,
-      "outputPricePerMillion": 0.11,
+      "outputPricePerMillion": 0.112,
       "modalities": [
         "text"
       ]
@@ -2332,20 +2318,6 @@
       ]
     },
     {
-      "id": "x-ai/grok-4-fast",
-      "name": "xAI: Grok 4 Fast",
-      "created": 1758240090,
-      "contextLength": 2000000,
-      "maxOutputTokens": 30000,
-      "inputPricePerMillion": 0.19999999999999998,
-      "outputPricePerMillion": 0.5,
-      "modalities": [
-        "text",
-        "image",
-        "file"
-      ]
-    },
-    {
       "id": "alibaba/tongyi-deepresearch-30b-a3b",
       "name": "Tongyi DeepResearch 30B A3B",
       "created": 1758210804,
@@ -2473,18 +2445,6 @@
       "maxOutputTokens": 131072,
       "inputPricePerMillion": 0.08,
       "outputPricePerMillion": 0.39999999999999997,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
-      "id": "x-ai/grok-code-fast-1",
-      "name": "xAI: Grok Code Fast 1",
-      "created": 1756238927,
-      "contextLength": 256000,
-      "maxOutputTokens": 10000,
-      "inputPricePerMillion": 0.19999999999999998,
-      "outputPricePerMillion": 1.5,
       "modalities": [
         "text"
       ]
@@ -2945,20 +2905,6 @@
       ]
     },
     {
-      "id": "x-ai/grok-4",
-      "name": "xAI: Grok 4",
-      "created": 1752087689,
-      "contextLength": 256000,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 3,
-      "outputPricePerMillion": 15,
-      "modalities": [
-        "image",
-        "text",
-        "file"
-      ]
-    },
-    {
       "id": "tencent/hunyuan-a13b-instruct",
       "name": "Tencent: Hunyuan A13B Instruct",
       "created": 1751987664,
@@ -3088,30 +3034,6 @@
         "text",
         "file",
         "image"
-      ]
-    },
-    {
-      "id": "x-ai/grok-3-mini",
-      "name": "xAI: Grok 3 Mini",
-      "created": 1749583245,
-      "contextLength": 131072,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.3,
-      "outputPricePerMillion": 0.5,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
-      "id": "x-ai/grok-3",
-      "name": "xAI: Grok 3",
-      "created": 1749582908,
-      "contextLength": 131072,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 3,
-      "outputPricePerMillion": 15,
-      "modalities": [
-        "text"
       ]
     },
     {
@@ -3430,30 +3352,6 @@
       ]
     },
     {
-      "id": "x-ai/grok-3-mini-beta",
-      "name": "xAI: Grok 3 Mini Beta",
-      "created": 1744240195,
-      "contextLength": 131072,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.3,
-      "outputPricePerMillion": 0.5,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
-      "id": "x-ai/grok-3-beta",
-      "name": "xAI: Grok 3 Beta",
-      "created": 1744240068,
-      "contextLength": 131072,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 3,
-      "outputPricePerMillion": 15,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "meta-llama/llama-4-maverick",
       "name": "Meta: Llama 4 Maverick",
       "created": 1743881822,
@@ -3510,9 +3408,9 @@
       "name": "Mistral: Mistral Small 3.1 24B",
       "created": 1742238937,
       "contextLength": 128000,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.35,
-      "outputPricePerMillion": 0.56,
+      "maxOutputTokens": 128000,
+      "inputPricePerMillion": 0.351,
+      "outputPricePerMillion": 0.5549999999999999,
       "modalities": [
         "text",
         "image"
@@ -3689,8 +3587,8 @@
       "name": "Llama Guard 3 8B",
       "created": 1739401318,
       "contextLength": 131072,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.48,
+      "maxOutputTokens": 131072,
+      "inputPricePerMillion": 0.48400000000000004,
       "outputPricePerMillion": 0.03,
       "modalities": [
         "text"
@@ -4068,7 +3966,7 @@
       "name": "Qwen2.5 Coder 32B Instruct",
       "created": 1731368400,
       "contextLength": 32768,
-      "maxOutputTokens": 0,
+      "maxOutputTokens": 32768,
       "inputPricePerMillion": 0.66,
       "outputPricePerMillion": 1,
       "modalities": [
@@ -4125,8 +4023,8 @@
       ]
     },
     {
-      "id": "inflection/inflection-3-productivity",
-      "name": "Inflection: Inflection 3 Productivity",
+      "id": "inflection/inflection-3-pi",
+      "name": "Inflection: Inflection 3 Pi",
       "created": 1728604800,
       "contextLength": 8000,
       "maxOutputTokens": 1024,
@@ -4137,8 +4035,8 @@
       ]
     },
     {
-      "id": "inflection/inflection-3-pi",
-      "name": "Inflection: Inflection 3 Pi",
+      "id": "inflection/inflection-3-productivity",
+      "name": "Inflection: Inflection 3 Productivity",
       "created": 1728604800,
       "contextLength": 8000,
       "maxOutputTokens": 1024,
@@ -4165,11 +4063,24 @@
       "name": "Meta: Llama 3.2 1B Instruct",
       "created": 1727222400,
       "contextLength": 60000,
-      "maxOutputTokens": 0,
+      "maxOutputTokens": 60000,
       "inputPricePerMillion": 0.027,
-      "outputPricePerMillion": 0.19999999999999998,
+      "outputPricePerMillion": 0.201,
       "modalities": [
         "text"
+      ]
+    },
+    {
+      "id": "meta-llama/llama-3.2-11b-vision-instruct",
+      "name": "Meta: Llama 3.2 11B Vision Instruct",
+      "created": 1727222400,
+      "contextLength": 131072,
+      "maxOutputTokens": 16384,
+      "inputPricePerMillion": 0.245,
+      "outputPricePerMillion": 0.245,
+      "modalities": [
+        "text",
+        "image"
       ]
     },
     {
@@ -4189,24 +4100,11 @@
       "name": "Meta: Llama 3.2 3B Instruct",
       "created": 1727222400,
       "contextLength": 80000,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.051,
-      "outputPricePerMillion": 0.33999999999999997,
+      "maxOutputTokens": 80000,
+      "inputPricePerMillion": 0.0509,
+      "outputPricePerMillion": 0.335,
       "modalities": [
         "text"
-      ]
-    },
-    {
-      "id": "meta-llama/llama-3.2-11b-vision-instruct",
-      "name": "Meta: Llama 3.2 11B Vision Instruct",
-      "created": 1727222400,
-      "contextLength": 131072,
-      "maxOutputTokens": 16384,
-      "inputPricePerMillion": 0.245,
-      "outputPricePerMillion": 0.245,
-      "modalities": [
-        "text",
-        "image"
       ]
     },
     {
@@ -4222,18 +4120,6 @@
       ]
     },
     {
-      "id": "cohere/command-r-plus-08-2024",
-      "name": "Cohere: Command R+ (08-2024)",
-      "created": 1724976000,
-      "contextLength": 128000,
-      "maxOutputTokens": 4000,
-      "inputPricePerMillion": 2.5,
-      "outputPricePerMillion": 10,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "cohere/command-r-08-2024",
       "name": "Cohere: Command R (08-2024)",
       "created": 1724976000,
@@ -4241,6 +4127,18 @@
       "maxOutputTokens": 4000,
       "inputPricePerMillion": 0.15,
       "outputPricePerMillion": 0.6,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "cohere/command-r-plus-08-2024",
+      "name": "Cohere: Command R+ (08-2024)",
+      "created": 1724976000,
+      "contextLength": 128000,
+      "maxOutputTokens": 4000,
+      "inputPricePerMillion": 2.5,
+      "outputPricePerMillion": 10,
       "modalities": [
         "text"
       ]
@@ -4320,18 +4218,6 @@
       ]
     },
     {
-      "id": "meta-llama/llama-3.1-70b-instruct",
-      "name": "Meta: Llama 3.1 70B Instruct",
-      "created": 1721692800,
-      "contextLength": 131072,
-      "maxOutputTokens": 16384,
-      "inputPricePerMillion": 0.39999999999999997,
-      "outputPricePerMillion": 0.39999999999999997,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "meta-llama/llama-3.1-8b-instruct",
       "name": "Meta: Llama 3.1 8B Instruct",
       "created": 1721692800,
@@ -4339,6 +4225,18 @@
       "maxOutputTokens": 16384,
       "inputPricePerMillion": 0.02,
       "outputPricePerMillion": 0.049999999999999996,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "meta-llama/llama-3.1-70b-instruct",
+      "name": "Meta: Llama 3.1 70B Instruct",
+      "created": 1721692800,
+      "contextLength": 131072,
+      "maxOutputTokens": 16384,
+      "inputPricePerMillion": 0.39999999999999997,
+      "outputPricePerMillion": 0.39999999999999997,
       "modalities": [
         "text"
       ]
@@ -4356,8 +4254,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4o-mini-2024-07-18",
-      "name": "OpenAI: GPT-4o-mini (2024-07-18)",
+      "id": "openai/gpt-4o-mini",
+      "name": "OpenAI: GPT-4o-mini",
       "created": 1721260800,
       "contextLength": 128000,
       "maxOutputTokens": 16384,
@@ -4370,8 +4268,8 @@
       ]
     },
     {
-      "id": "openai/gpt-4o-mini",
-      "name": "OpenAI: GPT-4o-mini",
+      "id": "openai/gpt-4o-mini-2024-07-18",
+      "name": "OpenAI: GPT-4o-mini (2024-07-18)",
       "created": 1721260800,
       "contextLength": 128000,
       "maxOutputTokens": 16384,
@@ -4420,20 +4318,6 @@
       ]
     },
     {
-      "id": "openai/gpt-4o",
-      "name": "OpenAI: GPT-4o",
-      "created": 1715558400,
-      "contextLength": 128000,
-      "maxOutputTokens": 16384,
-      "inputPricePerMillion": 2.5,
-      "outputPricePerMillion": 10,
-      "modalities": [
-        "text",
-        "image",
-        "file"
-      ]
-    },
-    {
       "id": "openai/gpt-4o-2024-05-13",
       "name": "OpenAI: GPT-4o (2024-05-13)",
       "created": 1715558400,
@@ -4448,15 +4332,17 @@
       ]
     },
     {
-      "id": "meta-llama/llama-3-8b-instruct",
-      "name": "Meta: Llama 3 8B Instruct",
-      "created": 1713398400,
-      "contextLength": 8192,
-      "maxOutputTokens": 8192,
-      "inputPricePerMillion": 0.04,
-      "outputPricePerMillion": 0.04,
+      "id": "openai/gpt-4o",
+      "name": "OpenAI: GPT-4o",
+      "created": 1715558400,
+      "contextLength": 128000,
+      "maxOutputTokens": 16384,
+      "inputPricePerMillion": 2.5,
+      "outputPricePerMillion": 10,
       "modalities": [
-        "text"
+        "text",
+        "image",
+        "file"
       ]
     },
     {
@@ -4467,6 +4353,18 @@
       "maxOutputTokens": 8000,
       "inputPricePerMillion": 0.51,
       "outputPricePerMillion": 0.74,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "meta-llama/llama-3-8b-instruct",
+      "name": "Meta: Llama 3 8B Instruct",
+      "created": 1713398400,
+      "contextLength": 8192,
+      "maxOutputTokens": 8192,
+      "inputPricePerMillion": 0.04,
+      "outputPricePerMillion": 0.04,
       "modalities": [
         "text"
       ]
@@ -4536,18 +4434,6 @@
       ]
     },
     {
-      "id": "openai/gpt-3.5-turbo-0613",
-      "name": "OpenAI: GPT-3.5 Turbo (older v0613)",
-      "created": 1706140800,
-      "contextLength": 4095,
-      "maxOutputTokens": 4096,
-      "inputPricePerMillion": 1,
-      "outputPricePerMillion": 2,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "openai/gpt-4-turbo-preview",
       "name": "OpenAI: GPT-4 Turbo Preview",
       "created": 1706140800,
@@ -4555,6 +4441,18 @@
       "maxOutputTokens": 4096,
       "inputPricePerMillion": 10,
       "outputPricePerMillion": 30,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "openai/gpt-3.5-turbo-0613",
+      "name": "OpenAI: GPT-3.5 Turbo (older v0613)",
+      "created": 1706140800,
+      "contextLength": 4095,
+      "maxOutputTokens": 4096,
+      "inputPricePerMillion": 1,
+      "outputPricePerMillion": 2,
       "modalities": [
         "text"
       ]
@@ -4588,18 +4486,6 @@
       ]
     },
     {
-      "id": "mistralai/mistral-7b-instruct-v0.1",
-      "name": "Mistral: Mistral 7B Instruct v0.1",
-      "created": 1695859200,
-      "contextLength": 2824,
-      "maxOutputTokens": 0,
-      "inputPricePerMillion": 0.11,
-      "outputPricePerMillion": 0.19,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "openai/gpt-3.5-turbo-instruct",
       "name": "OpenAI: GPT-3.5 Turbo Instruct",
       "created": 1695859200,
@@ -4607,6 +4493,18 @@
       "maxOutputTokens": 4096,
       "inputPricePerMillion": 1.5,
       "outputPricePerMillion": 2,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "mistralai/mistral-7b-instruct-v0.1",
+      "name": "Mistral: Mistral 7B Instruct v0.1",
+      "created": 1695859200,
+      "contextLength": 2824,
+      "maxOutputTokens": 2824,
+      "inputPricePerMillion": 0.11,
+      "outputPricePerMillion": 0.19,
       "modalities": [
         "text"
       ]
@@ -4672,18 +4570,6 @@
       ]
     },
     {
-      "id": "openai/gpt-4",
-      "name": "OpenAI: GPT-4",
-      "created": 1685232000,
-      "contextLength": 8191,
-      "maxOutputTokens": 4096,
-      "inputPricePerMillion": 30,
-      "outputPricePerMillion": 60,
-      "modalities": [
-        "text"
-      ]
-    },
-    {
       "id": "openai/gpt-3.5-turbo",
       "name": "OpenAI: GPT-3.5 Turbo",
       "created": 1685232000,
@@ -4691,6 +4577,18 @@
       "maxOutputTokens": 4096,
       "inputPricePerMillion": 0.5,
       "outputPricePerMillion": 1.5,
+      "modalities": [
+        "text"
+      ]
+    },
+    {
+      "id": "openai/gpt-4",
+      "name": "OpenAI: GPT-4",
+      "created": 1685232000,
+      "contextLength": 8191,
+      "maxOutputTokens": 4096,
+      "inputPricePerMillion": 30,
+      "outputPricePerMillion": 60,
       "modalities": [
         "text"
       ]
