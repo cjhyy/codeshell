@@ -125,3 +125,70 @@ requests).
 - Plan: `docs/superpowers/plans/2026-05-17-llm-ui-decoupling.md`
 - Reference: OpenAI Codex CLI `codex-app-server/src/in_process.rs`
   ("transport-local but not protocol-free")
+
+## Deferred: Client SDK extraction
+
+The protocol layer (`src/protocol/client.ts` + `transport.ts` + the
+serializable subset of `types.ts`) is **physically positioned** to be
+extracted into a standalone npm package (`@cjhyy/codeshell-client`) with
+zero codeshell-internal dependencies. We deliberately did **not** extract
+it during Phase 1 because there is no consumer that needs the
+separation today.
+
+### Why not now
+
+- Extracting a client SDK is justified only when a consumer cannot
+  import the main package — i.e., a browser, a VS Code extension
+  (binary size limits), a non-Node runtime, or a multi-client scenario
+  where the engine and frontend live in different processes.
+- Server-side / Node-side consumers (`Engine`, `RunManager`,
+  `defineProduct`, headless CLI, cron bots, GitHub Actions) can use the
+  main package directly. They do not benefit from a separate client
+  package.
+- "Submit-then-wait" web UIs (deep-research style, single result, no
+  intermediate event rendering) can be built today with `RunManager` +
+  a thin Express/Fastify wrapper. No SDK needed — see "Trigger
+  conditions" below.
+
+### Trigger conditions (when to extract)
+
+Extract the client SDK when **any** of these become true:
+
+1. **A VS Code extension is being built** that needs to talk to a
+   codeshell engine. Marketplace bundle-size limits forbid importing
+   the main package.
+2. **A browser-hosted UI is being built** that needs real-time
+   bidirectional interaction (approval responses, mid-run input
+   injection, Esc cancellation). The main package cannot run in a
+   browser (it depends on `node:fs`, `node:child_process`, native
+   yoga-layout).
+3. **A non-Node client** is being built (Python, Rust, native mobile).
+   The TypeScript SDK becomes a reference implementation for porting
+   the protocol to other languages.
+4. **Multi-client协作** is a product requirement (multiple frontends
+   observing or driving the same run).
+
+When any of the above is true:
+
+- Extract the SDK as a workspace member (`packages/codeshell-client/`)
+  and convert the main package to import it.
+- Strip the SDK's only non-pure-data dependency on codeshell's logger
+  (`client.ts:30`); accept the logger as an optional injection.
+- Estimated effort: 1–2 days (difficulty rated 3/10; protocol files are
+  already isolated from engine/llm/tool-system code).
+
+### What does NOT trigger extraction
+
+- A Node-side wrapper around `RunManager` for "submit job → poll for
+  result" web UIs. Use the existing public API:
+  ```ts
+  const runId = await manager.submit({ objective });
+  // ...later
+  const run = await manager.getRun(runId);
+  ```
+- Internal refactors of the protocol layer. As long as `src/protocol/`
+  stays self-contained, future SDK extraction remains a 1–2 day job.
+- Adding new RPC methods to the protocol. They can land in the main
+  package's `src/protocol/` first; the SDK absorbs them on extraction.
+
+Decision recorded 2026-05-19. Revisit when any trigger condition fires.
