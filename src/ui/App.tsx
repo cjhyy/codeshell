@@ -57,6 +57,7 @@ import { utilityCommands } from "../cli/commands/builtin/utility-commands.js";
 import { advancedCommands } from "../cli/commands/builtin/advanced-commands.js";
 import { extraCommands } from "../cli/commands/builtin/extra-commands.js";
 import { moreCommands } from "../cli/commands/builtin/more-commands.js";
+import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent, TaskInfo } from "../types.js";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
 import { formatDuration, formatTokens } from "../utils/format.js";
@@ -87,6 +88,7 @@ commandRegistry.registerAll(utilityCommands);
 commandRegistry.registerAll(advancedCommands);
 commandRegistry.registerAll(extraCommands);
 commandRegistry.registerAll(moreCommands);
+commandRegistry.registerAll(buildPluginSlashCommands());
 
 // ChatEntry types and createEntry() are in ./store.ts
 const entry = createEntry;
