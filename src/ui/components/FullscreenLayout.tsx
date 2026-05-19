@@ -92,10 +92,16 @@ export function FullscreenLayout({
       {/* Scrollable area — VirtualMessageList owns its own ScrollBox in
           fullscreen mode. Don't wrap in an overflow-hidden Box: ScrollBox
           needs to read its own viewport height via Yoga, and an outer clip
-          can confuse the measurement on resize. */}
+          can confuse the measurement on resize.
+
+          In flow mode the overlay rides inside the scroll column (it just
+          appears under the latest message). In fullscreen the scrollable
+          column has flexGrow=1, which crowds an inline overlay out of the
+          viewport — pin the overlay above `bottom` with flexShrink=0 so it
+          always stays visible. */}
       <Box flexDirection="column" flexGrow={fullscreen ? 1 : 0}>
         {scrollable}
-        {overlay}
+        {!fullscreen && overlay}
       </Box>
 
       {fullscreen && showPill && newMessageCount > 0 && (
@@ -107,6 +113,12 @@ export function FullscreenLayout({
           >
             {` ↓ ${newMessageCount} new message${newMessageCount > 1 ? "s" : ""} `}
           </Text>
+        </Box>
+      )}
+
+      {fullscreen && overlay && (
+        <Box flexDirection="column" flexShrink={0}>
+          {overlay}
         </Box>
       )}
 
