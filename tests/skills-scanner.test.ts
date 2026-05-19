@@ -290,3 +290,149 @@ describe("scanSkills - memoization", () => {
     }
   });
 });
+
+describe("scanSkills - plugin integration", () => {
+  let fakeHome: string;
+  let originalHome: string | undefined;
+  let projectRoot: string;
+
+  beforeEach(() => {
+    invalidateSkillCache();
+    fakeHome = mkdtempSync(join(tmpdir(), "scan-plugin-home-"));
+    projectRoot = mkdtempSync(join(tmpdir(), "scan-plugin-proj-"));
+    originalHome = process.env.HOME;
+    process.env.HOME = fakeHome;
+  });
+
+  afterEach(() => {
+    invalidateSkillCache();
+    rmSync(fakeHome, { recursive: true, force: true });
+    rmSync(projectRoot, { recursive: true, force: true });
+    if (originalHome !== undefined) process.env.HOME = originalHome;
+    else delete process.env.HOME;
+  });
+
+  function makePluginInstall(
+    pluginKey: string,
+    cacheDir: string,
+    skillName: string,
+    skillBody: string,
+  ) {
+    const skillDir = join(cacheDir, "skills", skillName);
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(
+      join(skillDir, "SKILL.md"),
+      `---\ndescription: ${skillName} desc\n---\n${skillBody}`,
+    );
+    // Write installed_plugins.json with a single entry.
+    const pluginsDir = join(fakeHome, ".code-shell", "plugins");
+    mkdirSync(pluginsDir, { recursive: true });
+    writeFileSync(
+      join(pluginsDir, "installed_plugins.json"),
+      JSON.stringify({
+        version: 2,
+        plugins: {
+          [pluginKey]: [
+            {
+              scope: "user",
+              installPath: cacheDir,
+              version: "abc123",
+              installedAt: "t",
+              lastUpdated: "t",
+            },
+          ],
+        },
+      }),
+    );
+  }
+
+  it("discovers a plugin skill with <plugin>:<skill> namespace", () => {
+    const cache = mkdtempSync(join(tmpdir(), "scan-plugin-cache-"));
+    try {
+      makePluginInstall("docs@mkt", cache, "pdf", "PDF body");
+      const skills = scanSkills(projectRoot);
+      const pdf = skills.find((s) => s.name === "docs:pdf");
+      expect(pdf).toBeDefined();
+      expect(pdf!.source).toBe("plugin");
+      expect(pdf!.description).toBe("pdf desc");
+      expect(pdf!.content).toBe("PDF body");
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("does not pull in a plugin skill that has no SKILL.md", () => {
+    const cache = mkdtempSync(join(tmpdir(), "scan-plugin-empty-"));
+    try {
+      // Plugin has a "skills/" dir with a subdir but no SKILL.md inside it.
+      const skillDir = join(cache, "skills", "broken");
+      mkdirSync(skillDir, { recursive: true });
+      const pluginsDir = join(fakeHome, ".code-shell", "plugins");
+      mkdirSync(pluginsDir, { recursive: true });
+      writeFileSync(
+        join(pluginsDir, "installed_plugins.json"),
+        JSON.stringify({
+          version: 2,
+          plugins: {
+            "p@m": [
+              {
+                scope: "user",
+                installPath: cache,
+                version: "v",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+          },
+        }),
+      );
+      const skills = scanSkills(projectRoot);
+      expect(skills.find((s) => s.name === "p:broken")).toBeUndefined();
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("plugin skill coexists with user skill of the same un-namespaced name", () => {
+    const cache = mkdtempSync(join(tmpdir(), "scan-plugin-coexist-"));
+    try {
+      // User-level skill named "pdf"
+      makeSkillDir(join(fakeHome, ".code-shell", "skills"), "pdf", "description: u-pdf", "user body");
+      // Plugin skill named "pdf" under plugin "docs"
+      makePluginInstall("docs@mkt", cache, "pdf", "plugin pdf body");
+
+      const skills = scanSkills(projectRoot);
+      const userPdf = skills.find((s) => s.name === "pdf");
+      const pluginPdf = skills.find((s) => s.name === "docs:pdf");
+      expect(userPdf).toBeDefined();
+      expect(userPdf!.source).toBe("user");
+      expect(pluginPdf).toBeDefined();
+      expect(pluginPdf!.source).toBe("plugin");
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("memoize invalidates when installed_plugins.json mtime changes", async () => {
+    const cache = mkdtempSync(join(tmpdir(), "scan-plugin-memo-"));
+    try {
+      const first = scanSkills(projectRoot);
+      expect(first.find((s) => s.name === "p:later")).toBeUndefined();
+
+      // Make a plugin install AFTER the first scan and ensure mtime changes.
+      // Bun's writeFileSync has 1ms granularity; sleep briefly before write.
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      makePluginInstall("p@m", cache, "later", "Late body");
+      const second = scanSkills(projectRoot);
+      expect(second.find((s) => s.name === "p:later")).toBeDefined();
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("handles missing installed_plugins.json (no plugins)", () => {
+    // No fakeHome plugins dir written — should still scan project/user clean.
+    const skills = scanSkills(projectRoot);
+    expect(skills).toEqual([]);
+  });
+});

@@ -1,14 +1,16 @@
 /**
- * Skill scanner — discovers <base>/<name>/SKILL.md files. Mirrors Claude Code's
- * `loadSkillsFromSkillsDir` (skills/loadSkillsDir.ts:407) so community skill
- * repositories drop in without modification.
+ * Skill scanner — discovers <base>/<name>/SKILL.md files from project + user
+ * directories AND from installed plugins. Mirrors Claude Code's
+ * `loadSkillsFromSkillsDir` (skills/loadSkillsDir.ts:407) plus plugin
+ * integration (utils/plugins/pluginLoader.ts).
  */
 
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import memoize from "lodash-es/memoize.js";
 import { parseFrontmatter, coerceDescription } from "./frontmatter.js";
+import { installedPluginsPath, readInstalledPlugins } from "../plugins/installedPlugins.js";
 
 export interface SkillDefinition {
   /** Directory name; authoritative regardless of frontmatter.name. */
@@ -20,7 +22,7 @@ export interface SkillDefinition {
   /** Absolute path to the SKILL.md file. */
   filePath: string;
   /** Where the skill was loaded from. */
-  source: "project" | "user";
+  source: "project" | "user" | "plugin";
 }
 
 interface ScanBase {
@@ -55,19 +57,53 @@ function isInaccessible(e: unknown): boolean {
   return code === "EACCES" || code === "EPERM" || code === "EIO";
 }
 
-function scanOnce(cwd: string): SkillDefinition[] {
-  const results: SkillDefinition[] = [];
-  const seen = new Set<string>();
-  const seenBaseDirs = new Set<string>();
+function readSkillFile(skillFile: string): string | null {
+  try {
+    return readFileSync(skillFile, "utf-8");
+  } catch (e) {
+    if (isENOENT(e)) return null;
+    if (isInaccessible(e)) {
+      // eslint-disable-next-line no-console
+      console.warn(`[skills] cannot read ${skillFile}: ${(e as Error).message}`);
+      return null;
+    }
+    throw e;
+  }
+}
 
-  for (const { dir, source } of bases(cwd)) {
+function buildSkillFromFile(
+  filePath: string,
+  defaultName: string,
+  source: "project" | "user" | "plugin",
+  raw: string,
+  namePrefix?: string,
+): SkillDefinition {
+  const { frontmatter, body } = parseFrontmatter(raw);
+  const fmName = typeof frontmatter.name === "string" ? frontmatter.name : undefined;
+  if (fmName !== undefined && fmName !== defaultName) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[skills] frontmatter.name "${fmName}" in ${filePath} does not match directory name "${defaultName}"; using directory name`,
+    );
+  }
+  const description = coerceDescription(frontmatter.description);
+  const name = namePrefix ? `${namePrefix}:${defaultName}` : defaultName;
+  return { name, description, content: body, filePath, source };
+}
+
+function scanDirBases(
+  bases: ScanBase[],
+  results: SkillDefinition[],
+  seen: Set<string>,
+  seenBaseDirs: Set<string>,
+): void {
+  for (const { dir, source } of bases) {
     if (!existsSync(dir)) continue;
 
     let realDir: string;
     try {
       realDir = realpathSync(dir);
     } catch {
-      // dir disappeared between existsSync and realpathSync, or unreadable
       continue;
     }
     if (seenBaseDirs.has(realDir)) continue;
@@ -90,44 +126,85 @@ function scanOnce(cwd: string): SkillDefinition[] {
       if (seen.has(entry.name)) continue;
 
       const skillFile = join(dir, entry.name, "SKILL.md");
-      let raw: string;
+      const raw = readSkillFile(skillFile);
+      if (raw === null) continue;
+
+      results.push(buildSkillFromFile(skillFile, entry.name, source, raw));
+      seen.add(entry.name);
+    }
+  }
+}
+
+function scanInstalledPlugins(results: SkillDefinition[]): void {
+  const data = readInstalledPlugins();
+  const pluginSeen = new Set<string>();
+
+  // Stable order so /skills output is deterministic.
+  const keys = Object.keys(data.plugins).sort();
+  for (const key of keys) {
+    const entries = data.plugins[key] ?? [];
+    // <plugin>@<marketplace>
+    const atIdx = key.lastIndexOf("@");
+    const pluginName = atIdx > 0 ? key.slice(0, atIdx) : key;
+
+    for (const entry of entries) {
+      const skillsDir = join(entry.installPath, "skills");
+      if (!existsSync(skillsDir)) continue;
+
+      let dirEntries: { name: string; isDirectory: () => boolean; isSymbolicLink: () => boolean }[];
       try {
-        raw = readFileSync(skillFile, "utf-8");
+        dirEntries = readdirSync(skillsDir, { withFileTypes: true });
       } catch (e) {
-        if (isENOENT(e)) continue;
         if (isInaccessible(e)) {
           // eslint-disable-next-line no-console
-          console.warn(`[skills] cannot read ${skillFile}: ${(e as Error).message}`);
+          console.warn(`[skills] cannot read ${skillsDir}: ${(e as Error).message}`);
           continue;
         }
         throw e;
       }
 
-      const { frontmatter, body } = parseFrontmatter(raw);
-      const fmName = typeof frontmatter.name === "string" ? frontmatter.name : undefined;
-      if (fmName !== undefined && fmName !== entry.name) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[skills] frontmatter.name "${fmName}" in ${skillFile} does not match directory name "${entry.name}"; using directory name`,
-        );
-      }
-      const description = coerceDescription(frontmatter.description);
+      for (const dirent of dirEntries) {
+        if (!dirent.isDirectory() && !dirent.isSymbolicLink()) continue;
+        const namespacedName = `${pluginName}:${dirent.name}`;
+        if (pluginSeen.has(namespacedName)) continue;
 
-      results.push({
-        name: entry.name,
-        description,
-        content: body,
-        filePath: skillFile,
-        source,
-      });
-      seen.add(entry.name);
+        const skillFile = join(skillsDir, dirent.name, "SKILL.md");
+        const raw = readSkillFile(skillFile);
+        if (raw === null) continue;
+
+        results.push(
+          buildSkillFromFile(skillFile, dirent.name, "plugin", raw, pluginName),
+        );
+        pluginSeen.add(namespacedName);
+      }
     }
   }
+}
+
+function scanOnce(cwd: string): SkillDefinition[] {
+  const results: SkillDefinition[] = [];
+  const seen = new Set<string>();
+  const seenBaseDirs = new Set<string>();
+
+  scanDirBases(bases(cwd), results, seen, seenBaseDirs);
+  scanInstalledPlugins(results);
 
   return results;
 }
 
-const memoized = memoize(scanOnce, (cwd: string) => `${cwd}\0${userHome()}`);
+function installedPluginsMtime(): string {
+  const p = installedPluginsPath();
+  try {
+    return statSync(p).mtimeMs.toString();
+  } catch {
+    return "0";
+  }
+}
+
+const memoized = memoize(
+  scanOnce,
+  (cwd: string) => `${cwd}\0${userHome()}\0${installedPluginsMtime()}`,
+);
 
 export function scanSkills(cwd: string): SkillDefinition[] {
   return memoized(cwd);
