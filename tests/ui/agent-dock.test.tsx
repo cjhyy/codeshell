@@ -103,20 +103,44 @@ test("focusedIndex 1 shows '>' cursor on first agent row", async () => {
   h.unmount();
 });
 
-test("completed agent within fade window → still visible", async () => {
+test("completed agent → removed from dock immediately", async () => {
+  // Spec: completed sub-agent's result text is already surfaced via
+  // agent_end in the main feed, so the dock row is redundant. Only
+  // running / failed / cancelled agents stay in the dock.
   reset();
-  const start = Date.now();
   asyncAgentRegistry.register({
-    agentId: "lingers",
-    description: "linger row",
+    agentId: "done-soon",
+    description: "completes fast",
     status: "running",
-    startedAt: start,
+    startedAt: Date.now(),
     abort: () => {},
   });
-  asyncAgentRegistry.markCompleted("lingers", "done");
+  asyncAgentRegistry.markCompleted("done-soon", "done");
+
+  const h = mount(
+    React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
+    { columns: 80 },
+  );
+  await flush();
+  const out = plainText(h);
+  expect(out).not.toContain("completes fast");
+  h.unmount();
+});
+
+test("failed agent lingers within finishedFadeAt window", async () => {
+  // Failures and cancellations linger in the dock so the user can investigate.
+  reset();
+  asyncAgentRegistry.register({
+    agentId: "fail-row",
+    description: "broken job",
+    status: "running",
+    startedAt: Date.now(),
+    abort: () => {},
+  });
+  asyncAgentRegistry.markFailed("fail-row", "boom");
   const a = asyncAgentRegistry
     .getSnapshot()
-    .find((x) => x.agentId === "lingers");
+    .find((x) => x.agentId === "fail-row");
   expect(a?.finishedFadeAt).toBeGreaterThan(Date.now());
 
   const h = mount(
@@ -125,11 +149,11 @@ test("completed agent within fade window → still visible", async () => {
   );
   await flush();
   const out = plainText(h);
-  expect(out).toContain("linger row");
+  expect(out).toContain("broken job");
   h.unmount();
 });
 
-test("getVisibleAgents filter excludes agents past finishedFadeAt", () => {
+test("getVisibleAgents filter excludes completed immediately and faded failures", () => {
   const now = 1_000_000;
   const all = [
     {
@@ -140,18 +164,27 @@ test("getVisibleAgents filter excludes agents past finishedFadeAt", () => {
       abort: () => {},
     },
     {
-      agentId: "linger",
-      description: "l",
+      agentId: "completed-immediate-drop",
+      description: "c",
       status: "completed",
+      startedAt: 0,
+      finishedAt: now - 100,
+      finishedFadeAt: now + 29_900,
+      abort: () => {},
+    },
+    {
+      agentId: "failed-lingers",
+      description: "fl",
+      status: "failed",
       startedAt: 0,
       finishedAt: now - 1_000,
       finishedFadeAt: now + 29_000,
       abort: () => {},
     },
     {
-      agentId: "gone",
-      description: "g",
-      status: "completed",
+      agentId: "failed-faded-out",
+      description: "ff",
+      status: "failed",
       startedAt: 0,
       finishedAt: now - 31_000,
       finishedFadeAt: now - 1_000,
@@ -159,7 +192,7 @@ test("getVisibleAgents filter excludes agents past finishedFadeAt", () => {
     },
   ] as any[];
   const visible = getVisibleAgents(all, now);
-  expect(visible.map((a) => a.agentId)).toEqual(["running", "linger"]);
+  expect(visible.map((a) => a.agentId)).toEqual(["running", "failed-lingers"]);
 });
 
 test("more than 5 agents → '+N more' overflow indicator", async () => {

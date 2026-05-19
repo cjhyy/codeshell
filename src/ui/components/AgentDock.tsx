@@ -95,19 +95,32 @@ function AgentDockRow({
   const elapsed = formatElapsed(
     (entry.finishedAt ?? now) - entry.startedAt,
   );
-  const name = truncate(entry.description, NAME_MAX);
+  const description = truncate(entry.description, NAME_MAX);
 
   return (
+    // marginTop=1 visually separates rows so a list of agents reads as
+    // distinct items rather than a wall of text. The first row inherits
+    // the dock container's own marginTop, so this only adds gaps BETWEEN
+    // rows in practice.
     <Box flexDirection="row" marginTop={1}>
       <Text color={focused ? "ansi:cyanBright" : undefined} bold={focused}>
         {cursor}
       </Text>
       <Text color={dotColor}>{" ● "}</Text>
+      {entry.name && (
+        <Text
+          color={focused ? "ansi:cyanBright" : active ? "ansi:cyan" : undefined}
+          bold={focused}
+        >
+          {entry.name + "  "}
+        </Text>
+      )}
       <Text
         color={focused ? "ansi:cyanBright" : active ? "ansi:cyan" : undefined}
         bold={focused}
+        dim={!focused && !active && !!entry.name}
       >
-        {name}
+        {description}
       </Text>
       <Box flexGrow={1} />
       <Text dim>{elapsed}</Text>
@@ -134,25 +147,35 @@ function MainDockRow({
       >
         main
       </Text>
+      {focused && (
+        <>
+          <Box flexGrow={1} />
+          <Text dim>↑/↓ to select · Enter to view</Text>
+        </>
+      )}
     </Box>
   );
 }
 
 /**
  * Filter the registry snapshot down to rows the dock should show:
- * running agents + recently-finished agents still inside the 30 s fade
- * window. Exported so App.tsx's keyboard handler shares the same predicate.
+ * running agents + recently-finished agents still inside the fade window.
+ * Successful completions are dropped immediately — their final text already
+ * surfaced via agent_end in the main feed, so the dock row is redundant.
+ * Failures and cancellations linger so the user can investigate.
+ *
+ * Exported so App.tsx's keyboard handler shares the same predicate.
  */
 export function getVisibleAgents(
   all: AsyncAgentEntry[],
   now: number,
 ): AsyncAgentEntry[] {
   return all
-    .filter(
-      (a) =>
-        a.status === "running" ||
-        (a.finishedFadeAt !== undefined && now < a.finishedFadeAt),
-    )
+    .filter((a) => {
+      if (a.status === "running") return true;
+      if (a.status === "completed") return false;
+      return a.finishedFadeAt !== undefined && now < a.finishedFadeAt;
+    })
     .sort((a, b) => a.startedAt - b.startedAt);
 }
 
