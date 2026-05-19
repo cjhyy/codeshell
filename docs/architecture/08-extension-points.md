@@ -43,7 +43,6 @@ Skills are local markdown files with frontmatter, discovered by [`scanSkills()`]
 <cwd>/.claude/skills
 ~/.code-shell/skills
 ~/.claude/skills
-skills-builtin/
 ```
 
 Skills are listed in the system prompt and can also be invoked through the `Skill` tool.

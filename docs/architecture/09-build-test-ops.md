@@ -55,7 +55,7 @@ The package publishes:
 - product API: `@cjhyy/code-shell/product`
 - CLI binary: `code-shell`
 
-The shipped file list includes `dist`, `scripts/check-node.cjs`, `skills-builtin`, README, LICENSE, and CHANGELOG.
+The shipped file list includes `dist`, `scripts/check-node.cjs`, README, LICENSE, and CHANGELOG.
 
 ## Tests
 
