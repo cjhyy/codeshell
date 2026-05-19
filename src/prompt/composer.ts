@@ -10,7 +10,8 @@ import type { ToolDefinition, Message } from "../types.js";
 import { SectionCache, type PromptSection } from "./section-cache.js";
 import { scanInstructions, combineInstructions, type ScanOptions } from "./instruction-scanner.js";
 import { MemoryManager } from "../session/memory.js";
-import { scanSkills, buildSkillListing } from "../skills/index.js";
+import { scanSkills } from "../skills/index.js";
+import { buildSkillListing } from "../tool-system/builtin/skill-prompt.js";
 import { resolveAgentPreset, buildPresetSystemPrompt, type AgentPreset } from "../preset/index.js";
 
 export interface ComposerOptions {
