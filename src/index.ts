@@ -145,8 +145,8 @@ export type { ContentReplacementState } from "./context/tool-result-storage.js";
 
 // ─── Skills ──────────────────────────────────────────────────────
 
-export { scanSkills, matchSkillsByInput, matchSkillsByTool, buildSkillListing } from "./skills/index.js";
-export type { SkillDefinition, MatchResult } from "./skills/index.js";
+export { scanSkills, invalidateSkillCache } from "./skills/index.js";
+export type { SkillDefinition } from "./skills/index.js";
 
 // ─── Arena ───────────────────────────────────────────────────────
 

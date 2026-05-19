@@ -1,8 +1,8 @@
 /**
- * Skills system — scan, match, and inject skills into prompts.
+ * Skills barrel. Phase A keeps the scanner only. Listing rendering lives in
+ * src/tool-system/builtin/skill-prompt.ts so the prompt-formatting layer can
+ * grow token-budget logic later without churn here.
  */
 
-export { scanSkills } from "./scanner.js";
+export { scanSkills, invalidateSkillCache } from "./scanner.js";
 export type { SkillDefinition } from "./scanner.js";
-export { matchSkillsByInput, matchSkillsByTool, buildSkillListing } from "./matcher.js";
-export type { MatchResult } from "./matcher.js";
