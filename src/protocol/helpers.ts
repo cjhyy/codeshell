@@ -63,12 +63,15 @@ export function createInProcessClient(
     close(): void {
       if (closed) return;
       closed = true;
-      // Order matters: client.close() rejects pending requests so the caller's
-      // awaited `client.run(...)` resolves (with rejection) before the server
-      // gets torn down. Doing it the other way would leak pending promises
-      // waiting on a server that no longer exists.
-      client.close();
+      // Order matters: server.close() aborts the in-flight run AND emits
+      // a final "shutdown" status notification through the still-open
+      // transport pair. Then client.close() drains/rejects any pending
+      // requests and tears down its transport end. Reversing this order
+      // would silently drop the "shutdown" notification because the
+      // client's transport would already be closed when server.notify
+      // tries to send.
       server.close();
+      client.close();
     },
   };
 }
