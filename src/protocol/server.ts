@@ -700,7 +700,20 @@ export class AgentServer {
   // ─── Lifecycle ──────────────────────────────────────────────────
 
   close(): void {
-    // Reject pending approvals
+    // Abort an in-flight engine.run so the awaited promise in handleRun
+    // settles and the finally block clears `this.running`. Without this,
+    // closing a server during an active run leaves the engine churning
+    // until natural completion, defeating the point of close().
+    if (this.abortController) {
+      try {
+        this.abortController.abort("server closing");
+      } catch {
+        // swallow — best-effort abort
+      }
+    }
+
+    // Reject pending approvals so any sub-agent or tool waiting on a
+    // user decision unblocks instead of hanging forever.
     for (const [, resolve] of this.pendingApprovals) {
       resolve({ approved: false, reason: "server closing" });
     }
