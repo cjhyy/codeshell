@@ -28,7 +28,7 @@ import { optimize } from './optimizer.js';
 import Output from './output.js';
 import type { ParsedKey } from './parse-keypress.js';
 import reconciler, { dispatcher, getLastCommitMs, getLastYogaMs, isDebugRepaintsEnabled, recordYogaMs, resetProfileCounters } from './reconciler.js';
-import renderNodeToOutput, { consumeFollowScroll, didLayoutShift } from './render-node-to-output.js';
+import renderNodeToOutput, { consumeFollowScroll, didLayoutShift, getScrollDrainNode, resetScrollDrainNode } from './render-node-to-output.js';
 import { applyPositionedHighlight, type MatchPosition, renderToScreen, scanPositions } from './render-to-screen.js';
 import createRenderer, { type Renderer } from './renderer.js';
 import { CellWidth, CharPool, cellAt, createScreen, HyperlinkPool, isEmptyCellAt, migrateScreenPools, StylePool } from './screen.js';
@@ -120,6 +120,12 @@ export default class Ink {
   private backFrame: Frame;
   private lastPoolResetTime = performance.now();
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
+  // Consecutive drain frames where scrollDrainPending stayed true. Used to
+  // break runaway loops: if we re-schedule onRender via the drain path more
+  // than DRAIN_RUNAWAY_LIMIT times in a row without any user-input frame in
+  // between, force-clear the trigger so the process doesn't melt under
+  // 1100-write/frame storms that have killed the runtime in the past.
+  private drainConsecutive = 0;
   private lastYogaCounters: {
     ms: number;
     visited: number;
@@ -867,7 +873,32 @@ export default class Ink {
     // quarter interval (~250fps, setTimeout practical floor) for max scroll
     // speed. Regular renders stay at FRAME_INTERVAL_MS via the throttle.
     if (frame.scrollDrainPending) {
-      this.drainTimer = setTimeout(() => this.onRender(), FRAME_INTERVAL_MS >> 2);
+      // Runaway guard. A 09:12 incident showed 30-49 ink frames/sec with
+      // 1100 stdout writes each persisting for 7s after the turn ended,
+      // until the process was killed (no graceful unmount, no error log).
+      // Symptoms point to a stuck ScrollBox whose pendingScrollDelta never
+      // reaches zero, so each drain frame re-schedules another. Without
+      // this guard the loop runs until something outside the process
+      // (OOM killer, terminal close) breaks it.
+      //
+      // Limit chosen empirically: ~15 frames at FRAME_INTERVAL_MS/4 ≈ 60ms
+      // budget, generous enough for a 1000-row PgUp/PgDn drain to finish
+      // but short enough that a stuck loop is visibly bounded.
+      this.drainConsecutive++;
+      if (this.drainConsecutive > 15) {
+        // Force-clear the trigger across all ScrollBox descendants by
+        // dropping the module-level scrollDrainNode reference. The next
+        // genuine input will re-establish drain if there's real pending
+        // delta to drain.
+        const stuck = getScrollDrainNode();
+        if (stuck) stuck.pendingScrollDelta = undefined;
+        resetScrollDrainNode();
+        this.drainConsecutive = 0;
+      } else {
+        this.drainTimer = setTimeout(() => this.onRender(), FRAME_INTERVAL_MS >> 2);
+      }
+    } else {
+      this.drainConsecutive = 0;
     }
     const yogaMs = getLastYogaMs();
     const commitMs = getLastCommitMs();
