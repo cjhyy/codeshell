@@ -183,9 +183,33 @@ export const extraCommands: SlashCommand[] = [
           );
           groups.push(`User skills (${user.length}):\n${lines.join("\n")}`);
         }
+        const plugin = skills.filter((s) => s.source === "plugin");
+        if (plugin.length > 0) {
+          const lines = plugin.map(
+            (s) => `  ${s.name} — ${s.description || "(no description)"}`,
+          );
+          groups.push(`Plugin skills (${plugin.length}):\n${lines.join("\n")}`);
+        }
         ctx.addStatus(groups.join("\n\n"));
       } catch (err) {
         ctx.addStatus(`Failed to scan skills: ${(err as Error).message}`);
+      }
+    },
+  },
+
+  {
+    name: "/plugin",
+    group: "config",
+    description: "Manage plugin marketplaces and installed plugins",
+    usage:
+      "/plugin marketplace add|remove|list ... | /plugin install|uninstall <p>@<mkt> | /plugin list",
+    execute: async (arg, ctx) => {
+      try {
+        const { runPluginCommand } = await import("./plugin-handler.js");
+        const out = await runPluginCommand(arg ?? "");
+        ctx.addStatus(out);
+      } catch (err) {
+        ctx.addStatus(`/plugin failed: ${(err as Error).message}`);
       }
     },
   },
