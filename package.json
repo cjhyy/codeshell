@@ -50,6 +50,7 @@
     "bench:render": "bun run bench/render-tail.bench.ts && bun run bench/render-streaming.bench.ts && bun run bench/render-spinner.bench.ts && bun run bench/render-wheel.bench.ts",
     "test:watch": "bun test --watch",
     "lint": "eslint src/",
+    "lint:engine-bypass": "bash scripts/check-no-engine-bypass.sh",
     "format": "prettier --write 'src/**/*.ts'",
     "typecheck": "bun run tsc --noEmit",
     "prepublishOnly": "bun run build"
