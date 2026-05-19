@@ -126,6 +126,12 @@ export default class Ink {
   // between, force-clear the trigger so the process doesn't melt under
   // 1100-write/frame storms that have killed the runtime in the past.
   private drainConsecutive = 0;
+  // Ring of pendingScrollDelta values from the last ≤20 drain frames.
+  // Sampled per frame while draining; dumped if the runaway guard fires
+  // so the log shows whether the value shrank, oscillated, or got
+  // re-bumped from elsewhere. Cleared whenever we exit the drain loop
+  // (either organically or via the guard).
+  private drainTrace: (number | null)[] = [];
   private lastYogaCounters: {
     ms: number;
     visited: number;
@@ -885,20 +891,48 @@ export default class Ink {
       // budget, generous enough for a 1000-row PgUp/PgDn drain to finish
       // but short enough that a stuck loop is visibly bounded.
       this.drainConsecutive++;
+      // Sample the stuck node every frame so guard-fire can show the
+      // pending value's trajectory (does it actually shrink? oscillate?
+      // stay flat? get re-bumped?). Cheap — just pushes a number.
+      const stuckNow = getScrollDrainNode();
+      this.drainTrace.push(stuckNow?.pendingScrollDelta ?? null);
+      if (this.drainTrace.length > 20) this.drainTrace.shift();
       if (this.drainConsecutive > 15) {
-        // Force-clear the trigger across all ScrollBox descendants by
-        // dropping the module-level scrollDrainNode reference. The next
-        // genuine input will re-establish drain if there's real pending
-        // delta to drain.
-        const stuck = getScrollDrainNode();
+        // Dump the runaway diagnostic before clearing. This is the one
+        // chance to learn what was stuck — once we reset, the evidence
+        // is gone. Fields chosen to answer: which node? what value? was
+        // it shrinking or being re-bumped? what's its scroll state?
+        const stuck = stuckNow;
+        logger.warn('render.scroll_drain_runaway', {
+          consecutive: this.drainConsecutive,
+          // pendingScrollDelta trajectory over the last 20 frames. If it
+          // monotonically shrinks → drain working, limit is too tight.
+          // If oscillating / flat / growing → genuine stuck loop.
+          pendingTrace: [...this.drainTrace],
+          stuck: stuck
+            ? {
+                pending: stuck.pendingScrollDelta,
+                scrollTop: stuck.scrollTop,
+                scrollHeight: stuck.scrollHeight,
+                scrollViewportHeight: stuck.scrollViewportHeight,
+                stickyScroll: stuck.stickyScroll,
+                scrollClampMin: stuck.scrollClampMin,
+                scrollClampMax: stuck.scrollClampMax,
+                hasAnchor: stuck.scrollAnchor !== undefined,
+              }
+            : null,
+          isRunning: !this.isPaused,
+        });
         if (stuck) stuck.pendingScrollDelta = undefined;
         resetScrollDrainNode();
         this.drainConsecutive = 0;
+        this.drainTrace.length = 0;
       } else {
         this.drainTimer = setTimeout(() => this.onRender(), FRAME_INTERVAL_MS >> 2);
       }
     } else {
       this.drainConsecutive = 0;
+      this.drainTrace.length = 0;
     }
     const yogaMs = getLastYogaMs();
     const commitMs = getLastCommitMs();

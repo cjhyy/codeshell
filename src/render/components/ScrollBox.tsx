@@ -2,12 +2,20 @@
 import React, { type PropsWithChildren, type Ref, useImperativeHandle, useRef, useState } from 'react';
 import type { Except } from 'type-fest';
 import { markScrollActivity } from '../../bootstrap/state.js';
+import { logger } from '../../logging/logger.js';
 import type { DOMElement } from '../dom.js';
 import { markDirty, scheduleRenderFrom } from '../dom.js';
 import { markCommitStart } from '../reconciler.js';
 import type { Styles } from '../styles.js';
 import '../global.d.ts';
 import Box from './Box.js';
+
+// Gate on CODESHELL_RENDER_DEBUG=verbose. Same env var the devtools
+// frame profiler uses. Enables stack-trace-bearing scrollBy log lines so
+// the 09:12 runaway-drain incident (and any future repro) can be traced
+// to whoever is bumping pendingScrollDelta after a turn ends. Computed
+// once at module load — no per-call env lookup.
+const SCROLLBY_TRACE = process.env.CODESHELL_RENDER_DEBUG === 'verbose';
 export type ScrollBoxHandle = {
   scrollTo: (y: number) => void;
   scrollBy: (dy: number) => void;
@@ -148,7 +156,20 @@ function ScrollBox({
       // Accumulate in pendingScrollDelta; renderer drains it at a capped
       // rate so fast flicks show intermediate frames. Pure accumulator:
       // scroll-up followed by scroll-down naturally cancels.
-      el.pendingScrollDelta = (el.pendingScrollDelta ?? 0) + Math.floor(dy);
+      const before = el.pendingScrollDelta ?? 0;
+      el.pendingScrollDelta = before + Math.floor(dy);
+      if (SCROLLBY_TRACE) {
+        // Stack trace pinpoints the caller. Trim the top frame (Error
+        // ctor + this function) so the first useful frame is at index 2.
+        const stack = new Error().stack?.split('\n').slice(2, 7).join('\n');
+        logger.debug('render.scrollBy', {
+          dy,
+          before,
+          after: el.pendingScrollDelta,
+          scrollTop: el.scrollTop,
+          stack,
+        });
+      }
       scrollMutated(el);
     },
     scrollToBottom() {
