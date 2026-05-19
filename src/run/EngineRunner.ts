@@ -9,14 +9,15 @@
  *   - Return execution result (does NOT manage run state transitions)
  */
 
-import { Engine, type EngineConfig, type EngineHookConfig, type EngineResult } from "../engine/engine.js";
-import type { LLMConfig, StreamCallback, RegisteredTool } from "../types.js";
+import { Engine, type EngineConfig, type EngineHookConfig } from "../engine/engine.js";
+import type { LLMConfig, RegisteredTool } from "../types.js";
 import type { RunSnapshot, RunExecutionContext, RunExecutionResult } from "./types.js";
 import {
   RunApprovalBackend,
   createRunAskUserFn,
   type RunLifecycleHooks,
 } from "./RunApprovalBackend.js";
+import { createInProcessClient } from "../protocol/helpers.js";
 
 // ─── RunExecutionHandle ─────────────────────────────────────────
 
@@ -151,24 +152,52 @@ export class EngineRunner implements RunExecutor {
       }
     }
 
-    const onStream: StreamCallback | undefined = context.onStream
-      ? async (event) => { await context.onStream!(event); }
-      : undefined;
-
-    const result: EngineResult = await engine.run(run.objective, {
-      onStream,
-      signal: context.signal,
-      sessionId: run.sessionId ?? undefined,
+    // Wrap the engine in an in-process AgentServer + AgentClient pair so
+    // the run path goes through the same protocol surface as REPL and
+    // headless CLI. Side effects unique to the server (TaskManager
+    // stream subscription, status notifications, in-process running
+    // lock) now apply to RunManager-launched runs too.
+    //
+    // Approval flow stays on the engineConfig.approvalBackend path that
+    // RunManager already wired — we don't subscribe client.onApprovalRequest
+    // because RunApprovalBackend intercepts approvals inside the engine
+    // before they reach the server's interactive-approval hook.
+    const { client, close } = createInProcessClient(engine, {
+      onStream: context.onStream,
     });
 
-    return {
-      result: {
-        text: result.text,
-        reason: result.reason,
-        sessionId: result.sessionId,
-        turnCount: result.turnCount,
-      },
-      handle,
+    // External AbortSignal → client.cancel. The signal is owned by
+    // RunManager (queue cancel, manual cancel); when it aborts we ask
+    // the server to stop the run, which aborts the underlying engine.run.
+    const onAbort = () => {
+      client.cancel().catch(() => {
+        // best-effort — server may already have torn down
+      });
     };
+    if (context.signal) {
+      if (context.signal.aborted) {
+        onAbort();
+      } else {
+        context.signal.addEventListener("abort", onAbort, { once: true });
+      }
+    }
+
+    try {
+      const result = await client.run(run.objective, run.sessionId ?? undefined);
+      return {
+        result: {
+          text: result.text,
+          reason: result.reason,
+          sessionId: result.sessionId,
+          turnCount: result.turnCount,
+        },
+        handle,
+      };
+    } finally {
+      if (context.signal) {
+        context.signal.removeEventListener("abort", onAbort);
+      }
+      close();
+    }
   }
 }
