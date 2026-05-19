@@ -19,3 +19,9 @@ examples/prd-agent/output/*
 examples/prismo-agent/output/
 examples/*/.runs/
 .code-shell/
+
+# Test outputs (AI news drafts, slides, codex research, PPT/PDF
+# artifacts). Tools like scripts/gen-recent-pptx.ts write here; the
+# contents are throwaway. Keep the directory marker so the path exists.
+docs/test-outputs/*
+!docs/test-outputs/.gitkeep
