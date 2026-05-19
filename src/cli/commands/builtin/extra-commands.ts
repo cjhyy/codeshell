@@ -162,14 +162,28 @@ export const extraCommands: SlashCommand[] = [
         if (skills.length === 0) {
           ctx.addStatus(
             "No skills found.\n" +
-              "Add .md files to one of:\n" +
-              "  .code-shell/skills/   .claude/skills/   (project)\n" +
-              "  ~/.code-shell/skills/   ~/.claude/skills/  (global)",
+              "Create skills in:\n" +
+              "  .code-shell/skills/<name>/SKILL.md   (project)\n" +
+              "  ~/.code-shell/skills/<name>/SKILL.md  (user)",
           );
           return;
         }
-        const lines = skills.map((s) => `  ${s.name} — ${s.description || "(no description)"}`);
-        ctx.addStatus(`Skills (${skills.length}):\n${lines.join("\n")}`);
+        const project = skills.filter((s) => s.source === "project");
+        const user = skills.filter((s) => s.source === "user");
+        const groups: string[] = [];
+        if (project.length > 0) {
+          const lines = project.map(
+            (s) => `  ${s.name} — ${s.description || "(no description)"}`,
+          );
+          groups.push(`Project skills (${project.length}):\n${lines.join("\n")}`);
+        }
+        if (user.length > 0) {
+          const lines = user.map(
+            (s) => `  ${s.name} — ${s.description || "(no description)"}`,
+          );
+          groups.push(`User skills (${user.length}):\n${lines.join("\n")}`);
+        }
+        ctx.addStatus(groups.join("\n\n"));
       } catch (err) {
         ctx.addStatus(`Failed to scan skills: ${(err as Error).message}`);
       }
