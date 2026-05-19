@@ -36,14 +36,14 @@ Use prompt sections for reusable instruction blocks. Use `customSystemPrompt` on
 
 ## Skills
 
-Skills are local markdown files with frontmatter, discovered by [`scanSkills()`](../../src/skills/scanner.ts) from:
+Skills are local markdown files with frontmatter, discovered by [`scanSkills()`](../../src/skills/scanner.ts) under `<base>/<name>/SKILL.md` from:
 
 ```text
-<cwd>/.code-shell/skills
-<cwd>/.claude/skills
-~/.code-shell/skills
-~/.claude/skills
+<cwd>/.code-shell/skills     (project source)
+~/.code-shell/skills         (user source)
 ```
+
+Layout is byte-compatible with Claude Code: drop `cp -r anthropic-skills/pdf ~/.code-shell/skills/pdf` and it works.
 
 Skills are listed in the system prompt and can also be invoked through the `Skill` tool.
 
