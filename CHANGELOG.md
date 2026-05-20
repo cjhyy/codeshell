@@ -8,6 +8,114 @@ breaking.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-20
+
+### Added
+
+#### Hook system — Claude Code parity
+
+The HookRegistry skeleton that landed earlier now has actual emit points,
+result consumption, and two new ways for users to register handlers.
+After this release, every event Claude Code exposes has a codeshell
+equivalent that is actually emitted, handler return values are fully
+consumed, and users can wire shell-command hooks via `settings.json` or
+plugin `hooks.json` files.
+
+- **New lifecycle emits.** `on_session_start`, `on_session_end`,
+  `user_prompt_submit`, `post_compact`, `on_permission_check`,
+  `notification`. The first three carry `messages`, `decision`, and
+  the new mutation fields into the conversation as a single
+  `<system-reminder>` block.
+- **Decision semantics complete.** `pre_tool_use` handlers can now
+  return `decision: "allow"` to skip the PermissionClassifier entirely,
+  or `decision: "ask"` to route through ApprovalBackend with the
+  handler's messages threaded into the prompt description.
+- **HookResult mutations.** New fields `updatedInput` (rewrite tool
+  args, re-validated against the schema), `additionalContext` (append
+  text to a successful tool's output), and `updatedPrompt` (replace the
+  user's prompt text on `user_prompt_submit`). Registry aggregation is
+  last-write-wins for input/prompt, newline-joined for additionalContext.
+- **`settings.json` shell hooks.** New `hooks: [{event, command,
+  matcher?, timeout_ms?, cwd?}]` schema. Engine spawns the command per
+  emit with the CC wire protocol — stdin is the HookContext JSON,
+  stdout is a HookResult JSON, exit 2 = deny with stderr surfaced to
+  the model. `CODESHELL_HOOK_EVENT` / `CODESHELL_HOOK_CWD` env vars
+  are passed to the child; default 60s timeout with SIGTERM → SIGKILL
+  cleanup.
+- **CC plugin `hooks.json` auto-load.** `loadPluginHooks` scans every
+  installed plugin's `hooks/hooks.json` and registers the
+  command-type entries. PascalCase event names (SessionStart,
+  UserPromptSubmit, PreToolUse, …) are mapped to codeshell's
+  snake_case. SubagentStop is dropped (codeshell doesn't surface that
+  event). `pluginCommandHook` normalizes the three known plugin
+  stdout shapes (`hookSpecificOutput.additionalContext`,
+  `additional_context`, `additionalContext`) into HookResult.messages.
+- **`varRewrite` at install time.** Plugin trees materialized through
+  `installPlugin` get `${CLAUDE_PLUGIN_ROOT}` rewritten to
+  `${CODESHELL_PLUGIN_ROOT}` across every text file, so CC-authored
+  plugin scripts that branch on host detection pick the codeshell
+  path. `InstallResult.varRewrite` reports counts and `/plugin
+  install` prints a `rewrote: N file(s)` line so the modification is
+  visible.
+- **`ToolContext.hooks`.** Tools that need to emit lifecycle events
+  (currently `notification` on background sub-agent terminal states)
+  reach the registry without going through Engine.
+- **User guide.** `docs/hooks.md` documents the full event surface,
+  HookResult fields, shell protocol, priority chain, and CC migration
+  notes.
+
+#### Arena
+
+- `/arena-status` now reads `settings.arena.participants` and uses it
+  when present, mirroring how the actual Arena execution path already
+  resolves participants. Fixes a divergence where the diagnostic
+  preview showed the auto-derived pool while real runs used the
+  curated list.
+
+### Changed
+
+- **`isSubAgent` auto-merged into hook ctx.data.** All Engine-side
+  emits go through `Engine.emitHook` / `TurnLoop.emitHook`, which
+  injects `isSubAgent` (and `sessionId` for turn-loop) into
+  `ctx.data` so handlers can skip noisy injections for spawned
+  children with one consistent check.
+- **`PermissionClassifier.handleAsk(toolName, args, reason?)`.** Third
+  arg is appended to the approval description so users see why a hook
+  asked for confirmation.
+- **`hooks/events.ts` comment block** rewritten to reflect the
+  actual emit surface and the reserved-vs-emitted split.
+- **`pluginCommandHook` child env strips `CLAUDE_PLUGIN_ROOT`.** A
+  CC-authored script that branches on `[ -n "$CLAUDE_PLUGIN_ROOT" ]`
+  now reliably picks the codeshell branch, regardless of whether the
+  parent shell happened to have that var set.
+
+### Removed
+
+- **In-tree superpowers injector** (`src/hooks/builtin/`). The CC
+  plugin `hooks.json` path is now authoritative: the superpowers
+  plugin's own `hooks/hooks.json` drives `SessionStart` injection of
+  the `using-superpowers` SKILL.md body. `preset.strictSkills` and the
+  `CODESHELL_STRICT_SKILLS` env switch are gone — toggle by uninstalling
+  the plugin or editing its `hooks.json`.
+
+### Fixed
+
+- **`agent-dock` test alignment.** The "blank-line between rows"
+  assertion was failing since the marginTop=1 was removed in favor of
+  a compact list; surviving invariants (both rows render, startedAt
+  order preserved) are kept.
+- **Intentional unicode regex literals.** `INVISIBLE_CHARS` and
+  `FULLWIDTH_SPACE` in `api-key-sanitize.ts` deliberately contain
+  zero-width / CJK characters; ESLint flagged them as
+  `no-irregular-whitespace` errors. Annotated with inline disables.
+
+## [0.2.0] - 2026-05-15
+
+Capability layer + per-(provider, model) request-shape adapter. No
+public API changes; meaningful enough architectural increment to
+warrant a minor bump. (CHANGELOG was not maintained for this release;
+see git log between v0.1.6 and v0.2.0 for the detailed change set.)
+
 ## [0.1.6] - 2026-05-13
 
 ### Added
