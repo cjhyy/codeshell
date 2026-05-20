@@ -36,8 +36,6 @@ export interface AsyncAgentEntry {
   finishedAt?: number;
   /** finishedAt + 30_000. Dock filters rows past this. */
   finishedFadeAt?: number;
-  result?: string;
-  error?: string;
   abort: () => void;
   /** Stream events recorded by run_in_background agents for UI view-switching. */
   transcript?: AgentTranscriptEntry[];
@@ -110,26 +108,26 @@ class AsyncAgentRegistry {
     return [...this.agents.values()];
   }
 
-  markCompleted(agentId: string, result: string): void {
+  private markFinished(agentId: string, status: "completed" | "failed" | "cancelled"): void {
     const e = this.agents.get(agentId);
     if (!e) return;
     if (e.status !== "running") return;
-    e.status = "completed";
-    e.result = result;
+    e.status = status;
     e.finishedAt = Date.now();
     e.finishedFadeAt = e.finishedAt + 30_000;
     this.notify();
   }
 
-  markFailed(agentId: string, error: string): void {
-    const e = this.agents.get(agentId);
-    if (!e) return;
-    if (e.status !== "running") return;
-    e.status = "failed";
-    e.error = error;
-    e.finishedAt = Date.now();
-    e.finishedFadeAt = e.finishedAt + 30_000;
-    this.notify();
+  markCompleted(agentId: string): void {
+    this.markFinished(agentId, "completed");
+  }
+
+  markFailed(agentId: string): void {
+    this.markFinished(agentId, "failed");
+  }
+
+  markCancelled(agentId: string): void {
+    this.markFinished(agentId, "cancelled");
   }
 
   cancel(agentId: string): boolean {
