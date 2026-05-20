@@ -1897,6 +1897,19 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
           </Box>
         );
       }
+      if (sysEntry.subtype === "bg_agent_notification") {
+        // Pre-formatted by buildNotificationSummary — already a multi-line
+        // string. Render each line with dim styling so it reads as a
+        // system marker, not as user content.
+        const lines = (sysEntry.text ?? "").split("\n");
+        return (
+          <Box key={key} flexDirection="column" marginLeft={1} marginTop={1}>
+            {lines.map((line, i) => (
+              <Text key={i} dim>{line}</Text>
+            ))}
+          </Box>
+        );
+      }
       return (
         <Box key={key} marginLeft={1} marginTop={1}>
           <Text dim>{sysEntry.text ?? ""}</Text>
