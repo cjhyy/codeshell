@@ -43,8 +43,13 @@ function pluginCacheDir(marketplace: string, plugin: string, version: string): s
   return join(pluginCacheRoot(), marketplace, plugin, version);
 }
 
+export interface VarRewriteReport {
+  filesScanned: number;
+  filesRewritten: number;
+}
+
 export type InstallResult =
-  | { ok: true; entry: PluginInstallEntry; freshlyCloned: boolean }
+  | { ok: true; entry: PluginInstallEntry; freshlyCloned: boolean; varRewrite: VarRewriteReport }
   | { ok: false; error: string };
 
 async function materializePath(
@@ -211,7 +216,7 @@ export async function installPlugin(
   // CODESHELL_PLUGIN_ROOT and host-detection branches in plugin scripts
   // pick the codeshell-native code path. The breadcrumb file dropped at
   // the root documents the rewrite for users debugging upstream diffs.
-  rewritePluginVars(mat.cacheDir);
+  const rewriteSummary = rewritePluginVars(mat.cacheDir);
 
   // Remove old install entries for the same key so we don't pile up
   // historical versions (Phase A: single-scope only).
@@ -229,7 +234,15 @@ export async function installPlugin(
   };
   appendInstallEntry(key, installEntry);
 
-  return { ok: true, entry: installEntry, freshlyCloned: true };
+  return {
+    ok: true,
+    entry: installEntry,
+    freshlyCloned: true,
+    varRewrite: {
+      filesScanned: rewriteSummary.filesScanned,
+      filesRewritten: rewriteSummary.filesRewritten,
+    },
+  };
 }
 
 export interface UninstallResult {

@@ -96,11 +96,19 @@ export async function runPluginCommand(rawArg: string): Promise<string> {
     const r = await installPlugin(parsed.plugin, parsed.marketplace);
     if (!r.ok) return `Failed to install ${target}: ${r.error}`;
     invalidateSkillCache();
-    return [
+    const lines = [
       `Installed ${target}`,
       `  version: ${r.entry.version}`,
       `  path:    ${r.entry.installPath}`,
-    ].join("\n");
+    ];
+    if (r.varRewrite.filesRewritten > 0) {
+      // Tell the user we modified plugin files in place so a later diff
+      // against upstream doesn't look like a mystery.
+      lines.push(
+        `  rewrote: ${r.varRewrite.filesRewritten} file(s) — \${CLAUDE_PLUGIN_ROOT} → \${CODESHELL_PLUGIN_ROOT}`,
+      );
+    }
+    return lines.join("\n");
   }
 
   if (sub === "uninstall") {
