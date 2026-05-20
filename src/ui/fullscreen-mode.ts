@@ -1,16 +1,22 @@
 /**
  * Fullscreen mode — controllable at runtime via /fullscreen.
  *
- * Initial value: CODESHELL_FULLSCREEN env var ("1" / "true" / "on" = fullscreen,
- * anything else including unset = flow). Default is FLOW mode, matching Claude
- * Code's behavior — output flows downward into the terminal scrollback. Users
- * who want the alt-screen + ScrollBox experience set CODESHELL_FULLSCREEN=1
- * or run /fullscreen on at runtime. The switch flips via React Context so
+ * Initial value: CODESHELL_FULLSCREEN env var.
+ *   "0" / "false" / "off" → flow mode
+ *   anything else (including unset) → fullscreen (default)
+ *
+ * Default is FULLSCREEN. Previously the default was flow mode, but flow had
+ * a real cost: terminal-side line wrap on resize left "duplicate content" in
+ * the user's scrollback because ERASE_SCREEN (CSI 2J) cannot reach rows the
+ * terminal has already pushed up. Alt-screen owns its own buffer, so resize
+ * repaints cleanly. Users who want the old behavior (transcript flushes into
+ * the terminal's native scrollback) set CODESHELL_FULLSCREEN=0 or run
+ * /fullscreen off at runtime. The switch flips via React Context so
  * subscribers re-render on toggle.
  *
  *   fullscreen=true  — AlternateScreen + ScrollBox + virtual-scroll +
- *     wheel/PgUp/PgDn intercepts.
- *   fullscreen=false — flow mode (default): no alt-screen, no wheel intercept;
+ *     wheel/PgUp/PgDn intercepts. Resize repaints cleanly.
+ *   fullscreen=false — flow mode: no alt-screen, no wheel intercept;
  *     transcript flows downward and the terminal's scrollback owns history.
  *     Committed entries are flushed once via <Static> into stdout; only the
  *     active streaming tail stays in the diff loop.
@@ -24,8 +30,13 @@ import { createContext, useContext } from "react";
 export const TAIL_ENTRY_LIMIT = 500;
 
 function parseFullscreenEnv(): boolean {
-  const v = (process.env.CODESHELL_FULLSCREEN ?? "").trim().toLowerCase();
-  return v === "1" || v === "true" || v === "on";
+  const raw = process.env.CODESHELL_FULLSCREEN;
+  // Unset → default (fullscreen).
+  if (raw === undefined) return true;
+  const v = raw.trim().toLowerCase();
+  // Explicit opt-out; anything else (including "1", "true", "on", "", "yes")
+  // → fullscreen.
+  return !(v === "0" || v === "false" || v === "off");
 }
 
 export const INITIAL_FULLSCREEN_MODE = parseFullscreenEnv();

@@ -108,6 +108,18 @@ Supported `agent` settings:
 - `customSystemPrompt`
 - `appendSystemPrompt`
 
+### Fullscreen Mode
+
+Codeshell defaults to **fullscreen** (alt-screen + ScrollBox). This is the
+mode where window resize repaints cleanly — flow mode can show duplicate
+content in the terminal's scrollback after a resize because the terminal
+pushes the old viewport up before codeshell can erase it.
+
+Opt out of fullscreen at startup with `CODESHELL_FULLSCREEN=0|false|off`,
+or toggle at runtime with `/fullscreen off`. Flow mode lets the transcript
+flow into the terminal's native scrollback (useful if you prefer keeping
+shell history above codeshell visible).
+
 ### Stream Idle Watchdog (opt-in)
 
 When `CODESHELL_ENABLE_STREAM_WATCHDOG=1`, the openai provider aborts any LLM
