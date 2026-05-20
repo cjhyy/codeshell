@@ -118,3 +118,20 @@ export function buildNotificationMessage(items: NotificationItem[]): string {
     "Above are results from background agents that finished while you were idle. Address them appropriately — summarize for the user, continue work, or ignore if no longer relevant.",
   ].join("\n");
 }
+
+/**
+ * One-line-per-agent human summary for the chat feed. The full result
+ * body goes to the LLM via buildNotificationMessage; the user sees only
+ * this terse marker plus an optional inline error preview, and can
+ * switch to the sub-agent's dock view if they want details.
+ */
+export function buildNotificationSummary(items: NotificationItem[]): string {
+  const header = "📨 background agents completed";
+  const rows = items.map((item) => {
+    const badge = item.status === "completed" ? "✓" : "✗";
+    const namePart = item.name ? `${item.name}  ·  ` : "";
+    const statusPart = item.status === "failed" ? `  ·  failed: ${item.error ?? "unknown"}` : "";
+    return `  └─ ${namePart}${item.description}  ·  ${badge}${statusPart}`;
+  });
+  return [header, ...rows].join("\n");
+}

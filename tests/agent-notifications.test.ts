@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach } from "bun:test";
-import { notificationQueue, buildNotificationMessage, type NotificationItem } from "../src/tool-system/builtin/agent-notifications.js";
+import { notificationQueue, buildNotificationMessage, buildNotificationSummary, type NotificationItem } from "../src/tool-system/builtin/agent-notifications.js";
 
 const fixture = (overrides: Partial<NotificationItem> = {}): NotificationItem => ({
   agentId: "abc12345",
@@ -173,5 +173,47 @@ describe("buildNotificationMessage", () => {
     expect(msg).toContain("X&lt;Y&gt;");
     // Quote escaped in attribute (name attribute is quoted with ")
     expect(msg).toMatch(/name="K&amp;R"/);
+  });
+});
+
+describe("buildNotificationSummary", () => {
+  test("single completed", () => {
+    const s = buildNotificationSummary([
+      { agentId: "a", name: "Explore", description: "调研 AI", status: "completed", finalText: "x", enqueuedAt: 0 },
+    ]);
+    expect(s).toMatch(/background agents completed/i);
+    expect(s).toContain("Explore");
+    expect(s).toContain("调研 AI");
+    expect(s).toContain("✓");
+  });
+
+  test("single failed includes error preview", () => {
+    const s = buildNotificationSummary([
+      { agentId: "a", description: "Plan migration", status: "failed", error: "Engine timed out", enqueuedAt: 0 },
+    ]);
+    expect(s).toContain("Plan migration");
+    expect(s).toContain("✗");
+    expect(s).toContain("failed");
+    expect(s).toContain("Engine timed out");
+  });
+
+  test("multiple items render one line each", () => {
+    const s = buildNotificationSummary([
+      { agentId: "a", name: "Explore", description: "task A", status: "completed", finalText: "ok", enqueuedAt: 0 },
+      { agentId: "b", name: "Plan", description: "task B", status: "failed", error: "boom", enqueuedAt: 0 },
+    ]);
+    const lines = s.split("\n");
+    // Header + 2 body lines
+    expect(lines.length).toBeGreaterThanOrEqual(3);
+    expect(s).toContain("task A");
+    expect(s).toContain("task B");
+  });
+
+  test("agent without name renders without name segment", () => {
+    const s = buildNotificationSummary([
+      { agentId: "a", description: "did stuff", status: "completed", finalText: "x", enqueuedAt: 0 },
+    ]);
+    expect(s).toContain("did stuff");
+    expect(s).not.toMatch(/^\s*·\s/m); // no leading orphan separator
   });
 });
