@@ -16,6 +16,7 @@ import { formatArenaResultForSession } from "../../arena/render/session.js";
 import type { ArenaMode, ArenaParticipant } from "../../arena/types.js";
 import type { ModelPool, ModelEntry } from "../../llm/model-pool.js";
 import type { ToolContext } from "../context.js";
+import { SettingsManager } from "../../settings/manager.js";
 
 export const arenaToolDef: ToolDefinition = {
   name: "Arena",
@@ -91,7 +92,11 @@ export interface ArenaStatus {
 export function getArenaStatus(): ArenaStatus {
   const baseUrl = _lastSeenLLMConfig?.baseUrl;
   const entries = _lastSeenModelPool?.list() ?? [];
-  const defaults = resolveDefaultParticipantNames(entries);
+  const fromSettings = readSettingsParticipants();
+  // Mirror arenaTool's resolution: settings is authoritative when
+  // present; otherwise fall back to the pool-derived preview so users
+  // can still see *something* in /arena-status before they configure.
+  const defaults = fromSettings.length >= 2 ? fromSettings : resolveDefaultParticipantNames(entries);
 
   const probed = defaults.map((name) => {
     const r = probeParticipant(name, entries, _lastSeenLLMConfig);
@@ -244,9 +249,34 @@ function participantWouldResolve(
 }
 
 /**
+ * Read the user's configured arena participants from settings.json.
+ * Returns the list of string-form pool keys (the most common shape).
+ * Object-form entries (full name/model/provider tuples) are currently
+ * only honored by the CLI entry point and are skipped here.
+ *
+ * Returns an empty array if no settings file exists or the field is empty.
+ */
+function readSettingsParticipants(): string[] {
+  try {
+    const settings = new SettingsManager(process.cwd()).get();
+    const raw = settings.arena?.participants ?? [];
+    return raw.filter((p): p is string => typeof p === "string");
+  } catch {
+    return [];
+  }
+}
+
+/**
  * If the user didn't explicitly pass `participants`, default to every
  * pool entry. With <2 entries, fall back to pre-existing behavior so
  * we don't regress installs that haven't filled out the pool yet.
+ *
+ * NOTE: this is now only used by getArenaStatus() for the diagnostic
+ * /arena-status preview. The actual execution path in arenaTool() reads
+ * from settings (readSettingsParticipants) and refuses to silently
+ * grab the whole pool — we hit a bug where the pool included a
+ * gemini-3.1-pro entry that the active endpoint couldn't serve, and
+ * the user's curated settings.arena.participants list was bypassed.
  */
 function resolveDefaultParticipantNames(poolEntries: ModelEntry[]): string[] {
   if (poolEntries.length >= 2) {
@@ -308,25 +338,22 @@ function inferEndpointVendor(baseUrl: string): string | null {
   return null;
 }
 
+type ParticipantSource = "explicit" | "settings" | "explicit-coerced-to-settings";
+
 function formatStartupBanner(
   participants: string[],
-  poolEntries: ModelEntry[],
-  userProvided: boolean,
   llmConfig: LLMConfig,
-  coercedFromExplicit = false,
+  source: ParticipantSource,
 ): string {
   const endpoint = llmConfig.baseUrl ?? "(none)";
   const lines: string[] = [];
   lines.push(`Arena: endpoint=${endpoint}`);
-  const sourceTag = coercedFromExplicit
-    ? "pool (auto-corrected from incompatible user picks)"
-    : userProvided
-      ? "user-specified"
-      : poolEntries.length >= 2
-        ? "pool"
-        : poolEntries.length === 1
-          ? "pool (singleton — running self-review)"
-          : "preset fallback";
+  const sourceTag =
+    source === "explicit-coerced-to-settings"
+      ? "settings (auto-corrected from incompatible user picks)"
+      : source === "explicit"
+        ? "user-specified"
+        : "settings";
   lines.push(`Arena: participants=${participants.join(", ")} (${sourceTag})`);
   return lines.join("\n");
 }
@@ -360,28 +387,54 @@ export async function arenaTool(
   const explicitParticipants = args.participants as string[] | undefined;
   const poolEntries = pool?.list() ?? [];
 
-  // The model is supposed to pick `participants` itself, but its prior
-  // doesn't include the user's actual endpoint, so it routinely picks
-  // hard-coded preset names like ["claude", "gpt"] that fail
-  // immediately on a single-vendor endpoint (e.g. DeepSeek direct).
-  // When that happens, override silently with the pool's defaults
-  // rather than burning a round-trip on the inevitable error.
-  // Honor explicit participants only when *every* one of them
-  // resolves on the current endpoint.
+  // Participant resolution order:
+  //   1. Explicit `participants` arg from the tool call — honored only
+  //      when every entry resolves on the current endpoint; otherwise
+  //      we coerce to settings (preferred) or pool defaults.
+  //   2. settings.arena.participants — the user's curated list. This
+  //      is the authoritative config; we never silently grab the whole
+  //      pool, because the pool can contain models that the active
+  //      endpoint can't serve (e.g. gemini-3.1-pro on Google direct).
+  //   3. No settings configured → return an actionable error pointing
+  //      the user at where to configure it. Previously we silently
+  //      defaulted to the entire pool, which caused 404/400 storms
+  //      when pool entries didn't match the active endpoint.
   let participantNames: string[];
-  let coercedFromExplicit = false;
+  let participantSource: ParticipantSource;
   if (explicitParticipants && explicitParticipants.length > 0) {
     const allCompatible = explicitParticipants.every((name) =>
       participantWouldResolve(name, poolEntries, llmConfig.baseUrl),
     );
     if (allCompatible) {
       participantNames = explicitParticipants;
+      participantSource = "explicit";
     } else {
-      coercedFromExplicit = true;
-      participantNames = resolveDefaultParticipantNames(poolEntries);
+      const fromSettings = readSettingsParticipants();
+      if (fromSettings.length >= 2) {
+        participantNames = fromSettings;
+        participantSource = "explicit-coerced-to-settings";
+      } else {
+        return (
+          "Error: Arena participants from the call are incompatible with the active endpoint, " +
+          `and no fallback is configured. Set "arena.participants" (≥2 model names) in ` +
+          "~/.code-shell/settings.json, or pass a compatible `participants` array."
+        );
+      }
     }
   } else {
-    participantNames = resolveDefaultParticipantNames(poolEntries);
+    const fromSettings = readSettingsParticipants();
+    if (fromSettings.length >= 2) {
+      participantNames = fromSettings;
+      participantSource = "settings";
+    } else {
+      return (
+        "Error: Arena requires at least 2 participants but none are configured. " +
+        `Add an "arena": { "participants": ["model-a", "model-b", ...] } block to ` +
+        "~/.code-shell/settings.json (each entry is a model pool key, e.g. " +
+        '"deepseek-v4-pro", "openrouter-claude-opus-4.7-fast"), or pass an explicit ' +
+        "`participants` array in the tool call."
+      );
+    }
   }
 
   if (participantNames.length < 2) {
@@ -403,10 +456,8 @@ export async function arenaTool(
   // previously this was invisible until something blew up.
   const configLine = formatStartupBanner(
     participantNames,
-    poolEntries,
-    explicitParticipants !== undefined,
     llmConfig,
-    coercedFromExplicit,
+    participantSource,
   );
   progressLog.push(configLine);
 
