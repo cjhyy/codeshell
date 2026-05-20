@@ -115,7 +115,7 @@ test("completed agent → removed from dock immediately", async () => {
     startedAt: Date.now(),
     abort: () => {},
   });
-  asyncAgentRegistry.markCompleted("done-soon", "done");
+  asyncAgentRegistry.markCompleted("done-soon");
 
   const h = mount(
     React.createElement(AgentDock, { viewMode: VIEW_MAIN, focusedIndex: null }),
@@ -137,7 +137,7 @@ test("failed agent lingers within finishedFadeAt window", async () => {
     startedAt: Date.now(),
     abort: () => {},
   });
-  asyncAgentRegistry.markFailed("fail-row", "boom");
+  asyncAgentRegistry.markFailed("fail-row");
   const a = asyncAgentRegistry
     .getSnapshot()
     .find((x) => x.agentId === "fail-row");

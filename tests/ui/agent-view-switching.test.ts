@@ -50,7 +50,7 @@ test("markCompleted sets finishedFadeAt to finishedAt + 30000", () => {
     startedAt: Date.now(),
     abort: () => {},
   });
-  asyncAgentRegistry.markCompleted("f1", "result");
+  asyncAgentRegistry.markCompleted("f1");
   const a = asyncAgentRegistry.getSnapshot().find((x) => x.agentId === "f1");
   expect(a?.finishedAt).toBeDefined();
   expect(a?.finishedFadeAt).toBe((a?.finishedAt ?? 0) + 30_000);
@@ -65,7 +65,7 @@ test("markFailed sets finishedFadeAt", () => {
     startedAt: Date.now(),
     abort: () => {},
   });
-  asyncAgentRegistry.markFailed("f2", "boom");
+  asyncAgentRegistry.markFailed("f2");
   const a = asyncAgentRegistry.getSnapshot().find((x) => x.agentId === "f2");
   expect(a?.finishedFadeAt).toBe((a?.finishedAt ?? 0) + 30_000);
 });

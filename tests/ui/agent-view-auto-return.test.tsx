@@ -65,7 +65,7 @@ test("viewMode falls back to main when focused agent leaves running", async () =
   // Still running → still in agent view.
   expect(ref.current?.viewMode.kind).toBe("agent");
 
-  asyncAgentRegistry.markCompleted("watch-me", "ok");
+  asyncAgentRegistry.markCompleted("watch-me");
   await settle();
 
   // The dock row lingers 30s, but viewMode flips immediately.
@@ -93,7 +93,7 @@ test("viewMode falls back to main on markFailed", async () => {
     }),
   );
   await settle();
-  asyncAgentRegistry.markFailed("boom", "nope");
+  asyncAgentRegistry.markFailed("boom");
   await settle();
   expect(ref.current?.viewMode.kind).toBe("main");
   h.unmount();

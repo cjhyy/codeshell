@@ -44,7 +44,7 @@ test("getSnapshot returns a NEW reference after notify", () => {
     abort: () => {},
   });
   const snap1 = asyncAgentRegistry.getSnapshot();
-  asyncAgentRegistry.markCompleted("a1", "done");
+  asyncAgentRegistry.markCompleted("a1");
   const snap2 = asyncAgentRegistry.getSnapshot();
   expect(snap1).not.toBe(snap2);
 });
@@ -60,7 +60,7 @@ test("hasRunning reflects active agents", () => {
     abort: () => {},
   });
   expect(asyncAgentRegistry.hasRunning()).toBe(true);
-  asyncAgentRegistry.markCompleted("a1", "done");
+  asyncAgentRegistry.markCompleted("a1");
   expect(asyncAgentRegistry.hasRunning()).toBe(false);
 });
 
