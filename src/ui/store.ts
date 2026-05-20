@@ -33,7 +33,8 @@ export type SystemSubtype =
   | "compact_boundary"
   | "memory_saved"
   | "turn_duration"
-  | "info";
+  | "info"
+  | "bg_agent_notification";
 
 export type ChatEntry = ChatEntryData & { id: string };
 
