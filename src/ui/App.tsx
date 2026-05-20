@@ -1071,39 +1071,24 @@ export function App({
     }
   });
 
-  const handleSubmit = useCallback(
-    async (value: string) => {
-      const trimmed = value.trim();
-      if (!trimmed) return;
-
-      // Read-only slash commands that work even while a turn is in flight.
-      // They don't talk to the server or mutate run state — they print
-      // client-side info, so blocking them on isRunning would force the
-      // user to cancel a turn just to see their session id.
-      // Gate on isQueryActive (not isRunning): a background agent still
-      // running must not freeze the input — the user has to be able to
-      // submit a new turn to the main agent while sub-agents work.
-      const head = trimmed.split(/\s+/)[0]?.toLowerCase();
-      const READ_ONLY_WHILE_RUNNING = new Set(["/sid", "/help"]);
-      if (isQueryActive && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) return;
-      if (!isQueryActive) {
-        setInput("");
-        setShowBanner(false);
-        onScrollToBottom(); // Repin unseen divider on submit
-      } else {
-        // Still clear the input so the user sees their command was accepted.
-        setInput("");
-      }
-
-      if (trimmed.startsWith("/")) {
-        handleSlashCommand(trimmed);
-        return;
-      }
-
-      chatStore.update((prev) => [...prev, entry({ type: "user", text: trimmed })]);
+  // Submits a message to the engine and runs the post-turn state-machine
+  // (streaming flush, finalize entries, post duration/cost system row,
+  // post status row, error capture, query-guard cleanup).
+  //
+  // Two input sources call this:
+  //   - handleSubmit: real user input. asInjection=false, the user's text
+  //     is appended as a "user" entry to chatStore.
+  //   - useNotificationProcessor (Task 8): background-agent completion
+  //     injection. asInjection=true, a "system" entry with subtype
+  //     "bg_agent_notification" is appended showing the terse summary;
+  //     the full XML payload still goes to the engine so the LLM sees it.
+  const submitToEngine = useCallback(
+    async (
+      message: string,
+      opts: { asInjection: boolean; chatSummary?: string },
+    ): Promise<void> => {
       if (!queryGuard.reserve()) return; // already busy → ignore concurrent submit
       streamingTokensRef.current = 0;
-      // Fresh turn — drop any stale optimistic-cancel flag from a prior ESC.
       cancelledRef.current = false;
       taskManager.reset();
 
@@ -1114,16 +1099,32 @@ export function App({
         return;
       }
 
+      // After reserving the engine slot, commit the chat entry. Appending
+      // before reserve would orphan an entry on contention with no engine
+      // response to follow it.
+      if (opts.asInjection) {
+        chatStore.update((prev) => [
+          ...prev,
+          entry({
+            type: "system",
+            subtype: "bg_agent_notification",
+            text: opts.chatSummary ?? "",
+          }),
+        ]);
+      } else {
+        chatStore.update((prev) => [...prev, entry({ type: "user", text: message })]);
+      }
+
       try {
-        // If a slash command (e.g. /arena) stored context, prepend it to
-        // the user message so the engine LLM can see it.
-        let engineMessage = trimmed;
-        if (pendingContextRef.current) {
-          engineMessage = `<context>\n${pendingContextRef.current}\n</context>\n\n${trimmed}`;
+        // For real user input: prepend pending /arena-style context if any.
+        // Injections do not honor pendingContext (it belongs to the user
+        // turn that staged it).
+        let engineMessage = message;
+        if (!opts.asInjection && pendingContextRef.current) {
+          engineMessage = `<context>\n${pendingContextRef.current}\n</context>\n\n${message}`;
           pendingContextRef.current = null;
         }
 
-        // Stream events are handled via the client event listener above
         const result = await client.run(engineMessage, sessionId);
 
         // ESC / Ctrl+C took us through the optimistic-cancel path — UI is
@@ -1133,14 +1134,12 @@ export function App({
           return;
         }
 
-        // Flush any remaining buffered text
         if (flushTimerRef.current) {
           clearTimeout(flushTimerRef.current);
           flushTimerRef.current = null;
         }
         flushTextBuffer();
 
-        // Finalize all streaming text
         chatStore.update((prev) =>
           prev
             .filter((e) => e.type !== "thinking" && e.type !== "tool_running")
@@ -1150,16 +1149,9 @@ export function App({
         );
 
         setSessionId(result.sessionId);
-
-        // Token recording happens centrally via LLMClientBase.onUsage —
-        // we just refresh the displayed totals here. Note: result.usage.promptTokens
-        // is a session-lifetime sum, not the last request's window — using it here
-        // would jump the ctx bar to a fake percentage. The streaming usage_update
-        // events already keep contextTokens accurate.
         setTotalTokens(costTracker.getTotalTokens().total);
         setTotalCost(costTracker.getEstimatedCost());
 
-        // P0.3 + P0.4: Turn duration + cost message
         const elapsed = Date.now() - runStartRef.current;
         const turnCost = result.usage
           ? costTracker.estimateForTokens(
@@ -1188,9 +1180,6 @@ export function App({
           ]);
         }
       } catch (err) {
-        // Suppress the late "Request was aborted." error that the LLM SDK
-        // surfaces 1–7s after ESC — UI is already idle from the optimistic
-        // cancel path.
         if (!cancelledRef.current) {
           chatStore.update((prev) => [
             ...prev,
@@ -1203,15 +1192,39 @@ export function App({
         queryGuard.end();
       }
 
-      // If ESC/Ctrl+C already flipped us to idle, leave state alone — a new
-      // turn may have started in the meantime.
       if (!cancelledRef.current) {
         setStreamMode("thinking");
         setThinkingContent(null);
         clearThinkingBuffer();
       }
     },
-    [client, sessionId, model, isQueryActive, flushTextBuffer],
+    [client, sessionId, model, flushTextBuffer, clearThinkingBuffer],
+  );
+
+  const handleSubmit = useCallback(
+    async (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed) return;
+
+      const head = trimmed.split(/\s+/)[0]?.toLowerCase();
+      const READ_ONLY_WHILE_RUNNING = new Set(["/sid", "/help"]);
+      if (isQueryActive && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) return;
+      if (!isQueryActive) {
+        setInput("");
+        setShowBanner(false);
+        onScrollToBottom();
+      } else {
+        setInput("");
+      }
+
+      if (trimmed.startsWith("/")) {
+        handleSlashCommand(trimmed);
+        return;
+      }
+
+      await submitToEngine(trimmed, { asInjection: false });
+    },
+    [isQueryActive, submitToEngine, onScrollToBottom],
   );
 
   const handleSlashCommand = useCallback(
