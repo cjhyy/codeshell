@@ -12,6 +12,7 @@ import type { ToolContext, SubAgentSpawner } from "../context.js";
 import { isInPlanMode, resetPlanMode, restorePlanMode } from "./plan.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
+import { notificationQueue } from "./agent-notifications.js";
 import { nanoid } from "nanoid";
 
 export const agentToolDef: ToolDefinition = {
@@ -188,13 +189,34 @@ export async function agentTool(
       parentStream,    // uiStream: agent_start/end → main feed
       transcriptSink,  // streamOverride: per-event detail → transcript
     )
-      .then((text) => asyncAgentRegistry.markCompleted(agentId, text))
+      .then((text) => {
+        asyncAgentRegistry.markCompleted(agentId);
+        notificationQueue.enqueue({
+          agentId,
+          name,
+          description,
+          status: "completed",
+          finalText: text,
+          enqueuedAt: Date.now(),
+        });
+      })
       .catch((err: Error) => {
         if (controller.signal.aborted) {
-          // cancellation was already recorded by AgentCancel
+          // User-initiated cancel: mark status but do NOT enqueue —
+          // the main agent doesn't need a follow-up turn. Dock still
+          // shows the "cancelled" badge for the fade window.
+          asyncAgentRegistry.markCancelled(agentId);
           return;
         }
-        asyncAgentRegistry.markFailed(agentId, err.message);
+        asyncAgentRegistry.markFailed(agentId);
+        notificationQueue.enqueue({
+          agentId,
+          name,
+          description,
+          status: "failed",
+          error: err.message,
+          enqueuedAt: Date.now(),
+        });
       });
 
     return [
@@ -268,10 +290,12 @@ export async function agentStatusTool(args: Record<string, unknown>): Promise<st
     `description: ${e.description}`,
     `duration: ${dur.toFixed(1)}s`,
   ];
-  if (e.status === "completed" && e.result) {
-    lines.push("", "── result ──", e.result);
-  } else if (e.status === "failed" && e.error) {
-    lines.push("", "── error ──", e.error);
+  if (e.status === "completed") {
+    lines.push("", "(completed — result was delivered to the conversation when the agent finished)");
+  } else if (e.status === "failed") {
+    lines.push("", "(failed — error was delivered to the conversation when the agent finished)");
+  } else if (e.status === "cancelled") {
+    lines.push("", "(cancelled — no result delivered)");
   } else if (e.status === "running") {
     lines.push("", "(still running — call AgentStatus again later)");
   }
