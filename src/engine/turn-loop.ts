@@ -19,6 +19,8 @@ import { ModelFacade } from "./model-facade.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { ContextManager } from "../context/manager.js";
 import { HookRegistry } from "../hooks/registry.js";
+import type { HookEventName, HookResult } from "../hooks/events.js";
+import { wrapHookMessages } from "../hooks/inject.js";
 import { Transcript } from "../session/transcript.js";
 import { ContextLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
@@ -58,6 +60,12 @@ export interface TurnLoopDeps {
   ctxOverheadStore: CtxOverheadStore;
   /** Current session id, used to key the overhead store. */
   sessionId: string;
+  /**
+   * Carried into every hook emit's `ctx.data.isSubAgent` so handlers can
+   * skip noisy injections for spawned children. Set by Engine from
+   * EngineConfig.isSubAgent (engine.ts:119).
+   */
+  isSubAgent?: boolean;
 }
 
 export interface TurnLoopResult {
@@ -85,6 +93,23 @@ export class TurnLoop {
     private readonly deps: TurnLoopDeps,
     private readonly config: TurnLoopConfig,
   ) {}
+
+  /**
+   * Emit a lifecycle hook with isSubAgent + sessionId auto-merged into data.
+   * Returns the aggregated HookResult so callers can consume `messages` /
+   * `decision` / `stop`. Use this instead of `deps.hooks.emit` directly so
+   * every emit carries the same context envelope.
+   */
+  private async emitHook(
+    event: HookEventName,
+    data: Record<string, unknown> = {},
+  ): Promise<HookResult> {
+    return this.deps.hooks.emit(event, {
+      ...data,
+      isSubAgent: this.deps.isSubAgent === true,
+      sessionId: this.deps.sessionId,
+    });
+  }
 
   /**
    * Emit a usage_update so the UI ctx bar reflects current message-array
@@ -162,7 +187,13 @@ export class TurnLoop {
       // Tag downstream tool-exec / permission lines with this turn's IDs.
       this.deps.toolExecutor.setLogger(tlog);
       this.config.onStream?.({ type: "stream_request_start", turnNumber: this.turnCount });
-      await this.deps.hooks.emit("on_turn_start", { turnNumber: this.turnCount });
+      const turnStartHook = await this.emitHook("on_turn_start", {
+        turnNumber: this.turnCount,
+      });
+      const turnStartInjection = wrapHookMessages(turnStartHook.messages);
+      if (turnStartInjection) {
+        messages.push(turnStartInjection);
+      }
 
       // Approaching max turns: inject a warning so the model can wrap up
       const turnsRemaining = this.config.maxTurns - this.turnCount;
@@ -304,7 +335,7 @@ export class TurnLoop {
           type: "assistant_message",
           message: { role: "assistant", content: finalText },
         });
-        await this.deps.hooks.emit("on_turn_end", {
+        await this.emitHook("on_turn_end", {
           turnNumber: this.turnCount,
           hasToolUse: false,
         });
@@ -437,7 +468,7 @@ export class TurnLoop {
       }
 
       // Hook: turn end
-      await this.deps.hooks.emit("on_turn_end", {
+      await this.emitHook("on_turn_end", {
         turnNumber: this.turnCount,
         hasToolUse: true,
         toolCallCount: toolCalls.length,

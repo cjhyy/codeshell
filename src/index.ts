@@ -81,6 +81,7 @@ export type { Task, TaskStatus } from "./tool-system/builtin/task.js";
 
 export { HookRegistry } from "./hooks/registry.js";
 export type { HookEventName, HookContext, HookResult } from "./hooks/events.js";
+export { wrapHookMessages } from "./hooks/inject.js";
 
 // ─── Session ─────────────────────────────────────────────────────
 

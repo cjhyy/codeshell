@@ -24,8 +24,10 @@ import {
   type ApprovalBackend,
 } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
-import type { HookEventName } from "../hooks/events.js";
+import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
+import { wrapHookMessages } from "../hooks/inject.js";
+import { registerBuiltinHooks } from "../hooks/builtin/index.js";
 import { ContextManager } from "../context/manager.js";
 import { PromptComposer } from "../prompt/composer.js";
 import { SessionManager, type SessionBundle } from "../session/session-manager.js";
@@ -181,6 +183,22 @@ export class Engine {
     return modelEntry?.maxContextTokens ?? this.config.maxContextTokens ?? 200_000;
   }
 
+  /**
+   * Emit a lifecycle hook with isSubAgent auto-merged into data so handlers
+   * can skip noisy injections for spawned children. All Engine-side hook
+   * emits should go through this wrapper to keep the context envelope
+   * uniform with TurnLoop.emitHook.
+   */
+  private async emitHook(
+    event: HookEventName,
+    data: Record<string, unknown> = {},
+  ): Promise<HookResult> {
+    return this.hooks.emit(event, {
+      ...data,
+      isSubAgent: this.config.isSubAgent === true,
+    });
+  }
+
   constructor(private config: EngineConfig) {
     this.preset = resolveAgentPreset(config.preset);
     this.toolRegistry = new ToolRegistry({
@@ -191,6 +209,13 @@ export class Engine {
       }),
     });
     this.hooks = new HookRegistry();
+    // Register built-in handlers (superpowers injector etc.) BEFORE
+    // user-supplied hooks so user handlers can post-process or stop the
+    // built-in chain via lower priority.
+    registerBuiltinHooks(this.hooks, {
+      cwd: config.cwd ?? process.cwd(),
+      strictSkills: this.preset.strictSkills === true,
+    });
     for (const hook of config.hooks ?? []) {
       this.hooks.register(hook.event, hook.handler, hook.priority, hook.name);
     }
@@ -540,6 +565,27 @@ export class Engine {
       resumed: !!options?.sessionId,
     });
 
+    // Session-level hook: fired once per Engine.run() entry, regardless of
+    // cold-start vs resume. Handlers can return `messages` to inject a
+    // <system-reminder> at the head of the conversation (between
+    // userContext and the new user prompt). Used by the built-in
+    // superpowers injector to surface the `using-superpowers` ruleset.
+    const sessionStartHook = await this.emitHook("on_session_start", {
+      sessionId: session.state.sessionId,
+      cwd,
+      resumed: !!options?.sessionId,
+    });
+
+    // Per-turn hook: fired every time a new user prompt enters the loop.
+    // Equivalent to CC's UserPromptSubmit. Handlers can inject lightweight
+    // reminders that should accompany each user turn (e.g. "skills
+    // available — check before acting").
+    const promptSubmitHook = await this.emitHook("user_prompt_submit", {
+      sessionId: session.state.sessionId,
+      prompt: task,
+      resumed: !!options?.sessionId,
+    });
+
     // Rough token estimate of the full prompt so the UI's ctx bar isn't 0%
     // before the first real usage_update arrives. The authoritative count
     // comes from `usage.promptTokens` after the first LLM response — this is
@@ -661,6 +707,20 @@ export class Engine {
     if (userContextMsg) {
       messages.unshift(userContextMsg);
     }
+
+    // Inject hook-supplied reminders just before the most recent user task.
+    // Combined into one <system-reminder> block so a noisy handler chain
+    // doesn't turn into 3+ separate user turns in the API request.
+    const lifecycleReminder = wrapHookMessages([
+      ...(sessionStartHook.messages ?? []),
+      ...(promptSubmitHook.messages ?? []),
+    ]);
+    if (lifecycleReminder) {
+      // messages[length - 1] is the user task we just pushed above. Insert
+      // the reminder immediately before it so the model reads: CLAUDE.md →
+      // reminder → user request.
+      messages.splice(messages.length - 1, 0, lifecycleReminder);
+    }
     this.lastSessionId = session.state.sessionId;
     this.lastMessages = messages;
 
@@ -745,7 +805,7 @@ export class Engine {
     );
 
     // Hook: agent start
-    await this.hooks.emit("on_agent_start", {
+    await this.emitHook("on_agent_start", {
       sessionId: session.state.sessionId,
       task,
       model: this.config.llm.model,
@@ -767,6 +827,7 @@ export class Engine {
         systemPrompt: fullSystemPrompt,
         tools: toolDefs,
         sessionId: sid,
+        isSubAgent: this.config.isSubAgent === true,
         ctxOverheadStore: {
           get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
           set: (s, n) => {
@@ -821,6 +882,16 @@ export class Engine {
       cost: modelFacade.getUsage(),
     });
 
+    // Session-level hook: fired symmetrically with on_session_start once
+    // the turn loop has resolved (completion, error, or abort). Handlers
+    // are notify-only — any returned messages are dropped because the run
+    // is already over and there's no next turn to inject into.
+    await this.emitHook("on_session_end", {
+      sessionId: session.state.sessionId,
+      reason: result.reason,
+      turnCount: turnLoop.currentTurn,
+    });
+
     // Fire-and-forget memory pipeline: extract durable memories from the
     // transcript, save a session summary, and conditionally trigger
     // auto-dream consolidation. Doesn't block the Engine result.
@@ -845,7 +916,7 @@ export class Engine {
     this.sessionManager.saveState(session.state);
 
     // Hook: agent end
-    await this.hooks.emit("on_agent_end", {
+    await this.emitHook("on_agent_end", {
       sessionId: session.state.sessionId,
       reason: result.reason,
       turnCount: turnLoop.currentTurn,

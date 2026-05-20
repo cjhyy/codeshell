@@ -27,6 +27,16 @@ export interface AgentPreset {
   injectGitStatus: boolean;
   builtinTools: string[];
   defaultPermissionRules: PermissionRule[];
+  /**
+   * When true (default for built-in presets), the engine registers the
+   * built-in superpowers injector that pushes the `using-superpowers`
+   * SKILL.md body into the conversation at session start and a short
+   * reminder at every user prompt — bringing skill-trigger discipline in
+   * line with Claude Code's SessionStart hook. Off-by-default for custom
+   * presets unless they opt in. Overridden at runtime by
+   * `CODESHELL_STRICT_SKILLS=0`.
+   */
+  strictSkills?: boolean;
 }
 
 // ─── Tool sets ───────────────────────────────────────────────────
@@ -118,6 +128,7 @@ export const BUILTIN_AGENT_PRESETS: Record<AgentPresetName, AgentPreset> = {
     injectGitStatus: false,
     builtinTools: [...GENERAL_BUILTIN_TOOLS],
     defaultPermissionRules: GENERAL_PERMISSION_RULES,
+    strictSkills: true,
   },
   "terminal-coding": {
     name: "terminal-coding",
@@ -131,6 +142,7 @@ export const BUILTIN_AGENT_PRESETS: Record<AgentPresetName, AgentPreset> = {
       { tool: "LSP", decision: "allow" },
       { tool: "Brief", decision: "allow" },
     ],
+    strictSkills: true,
   },
 };
 
