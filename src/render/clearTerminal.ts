@@ -53,19 +53,26 @@ function isModernWindowsTerminal(): boolean {
 }
 
 /**
- * Returns the ANSI escape sequence to clear the terminal including scrollback.
- * Automatically detects terminal capabilities.
+ * Returns the ANSI escape sequence to clear the terminal.
+ *
+ * `preserveScrollback=true` omits ERASE_SCROLLBACK (CSI 3J) so the user's
+ * scrollback buffer (and scroll position) survives a mid-stream fullReset.
+ * Used by log-update when emitting a flicker reset in flow mode — alt-screen
+ * has no user-visible scrollback so the default (clear it) is fine there.
  */
-export function getClearTerminalSequence(): string {
+export function getClearTerminalSequence(
+  options: { preserveScrollback?: boolean } = {},
+): string {
+  const preserve = options.preserveScrollback === true
   if (process.platform === 'win32') {
     if (isModernWindowsTerminal()) {
-      return ERASE_SCREEN + ERASE_SCROLLBACK + CURSOR_HOME
+      return ERASE_SCREEN + (preserve ? '' : ERASE_SCROLLBACK) + CURSOR_HOME
     } else {
       // Legacy Windows console - can't clear scrollback
       return ERASE_SCREEN + CURSOR_HOME_WINDOWS
     }
   }
-  return ERASE_SCREEN + ERASE_SCROLLBACK + CURSOR_HOME
+  return ERASE_SCREEN + (preserve ? '' : ERASE_SCROLLBACK) + CURSOR_HOME
 }
 
 /**

@@ -216,7 +216,9 @@ export function writeDiffToTerminal(
         }
         break
       case 'clearTerminal':
-        buffer += getClearTerminalSequence()
+        buffer += getClearTerminalSequence({
+          preserveScrollback: patch.preserveScrollback,
+        })
         break
       case 'cursorHide':
         buffer += HIDE_CURSOR

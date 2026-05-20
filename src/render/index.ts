@@ -3,6 +3,8 @@
  * UI components import from here instead of npm `ink`.
  */
 
+import instances from "./instances.js";
+
 export { default as Box, type Props as BoxProps } from "./components/Box.js";
 export { default as Text, type Props as TextProps } from "./components/Text.js";
 export { default as Spacer } from "./components/Spacer.js";
@@ -19,6 +21,21 @@ export function useStdout() {
     stdout: process.stdout,
     write: (data: string) => process.stdout.write(data),
   };
+}
+
+// Clear the visible terminal and force a full redraw.
+//
+// `clearScrollback` (CSI 3J) is used at view-boundary transitions where the
+// previous frame's content is a *different* conversation — e.g. switching
+// from a sub-agent transcript back to main. In flow mode log-update's
+// incremental shrink path only erases within the viewport, and content
+// that scrolled into native scrollback bleeds through as residue. Wiping
+// scrollback at the boundary gives a clean canvas.
+export function forceRedraw(
+  options: { stdout?: NodeJS.WriteStream; clearScrollback?: boolean } = {},
+): void {
+  const stdout = options.stdout ?? process.stdout;
+  instances.get(stdout)?.forceRedraw({ clearScrollback: options.clearScrollback });
 }
 
 // Re-export the ScrollBox for use in UI

@@ -133,6 +133,12 @@ export class LogUpdate {
     const startTime = performance.now()
     const stylePool = this.options.stylePool
 
+    // Flow mode (no alt-screen) routes the user's scroll history through
+    // the terminal's native scrollback. Without this guard, every
+    // fullReset would emit CSI 3J, wiping that scrollback AND yanking the
+    // viewport back to the top mid-stream — see frame.ts Patch.clearTerminal.
+    const preserveScrollback = !altScreen
+
     // Since we assume the cursor is at the bottom on the screen, we only need
     // to clear when the viewport gets shorter (i.e. the cursor position drifts)
     // or when it gets thinner (and text wraps). We _could_ figure out how to
@@ -143,7 +149,12 @@ export class LogUpdate {
       next.viewport.height < prev.viewport.height ||
       (prev.viewport.width !== 0 && next.viewport.width !== prev.viewport.width)
     ) {
-      return fullResetSequence_CAUSES_FLICKER(next, 'resize', stylePool)
+      return fullResetSequence_CAUSES_FLICKER(
+        next,
+        'resize',
+        stylePool,
+        preserveScrollback,
+      )
     }
 
     // DECSTBM scroll optimization: when a ScrollBox's scrollTop changed,
@@ -211,14 +222,38 @@ export class LogUpdate {
     // bring scrollback content into view, so we need a full reset.
     // Use <= (not <) because even when next height equals viewport height, the
     // scrollback depth from the previous render differs from a fresh render.
-    if (prevHadScrollback && nextFitsViewport && isShrinking) {
+    //
+    // Flow mode opts out of this fullReset: the user's scrollback is their
+    // history view, so we accept that the "should-be-visible" lines stay
+    // stuck in scrollback as residue. The viewport gets rewritten in place
+    // by the standard shrinking path below — no clearTerminal, no flicker,
+    // no viewport snap to top. Tradeoff: scrolling up shows duplicates of
+    // the pre-shrink frame's tail next to the viewport's new content.
+    if (
+      prevHadScrollback &&
+      nextFitsViewport &&
+      isShrinking &&
+      !preserveScrollback
+    ) {
       logForDebugging(
         `Full reset (shrink->below): prevHeight=${prev.screen.height}, nextHeight=${next.screen.height}, viewport=${prev.viewport.height}`,
       )
-      return fullResetSequence_CAUSES_FLICKER(next, 'offscreen', stylePool)
+      return fullResetSequence_CAUSES_FLICKER(
+        next,
+        'offscreen',
+        stylePool,
+        preserveScrollback,
+      )
     }
 
+    // Steady-state scrollback-diff check: only meaningful in alt-screen where
+    // the renderer must repaint the whole frame to fix scrollback corruption.
+    // In flow mode the diff cells that fall in scrollback rows can't be moved
+    // there by the cursor anyway — let them stay as residue. The main diff
+    // loop's per-cell y < viewportY skip (below) handles the same case
+    // incrementally without a fullReset.
     if (
+      !preserveScrollback &&
       prev.screen.height >= prev.viewport.height &&
       prev.screen.height > 0 &&
       cursorAtBottom &&
@@ -239,11 +274,17 @@ export class LogUpdate {
       if (scrollbackChangeY >= 0) {
         const prevLine = readLine(prev.screen, scrollbackChangeY)
         const nextLine = readLine(next.screen, scrollbackChangeY)
-        return fullResetSequence_CAUSES_FLICKER(next, 'offscreen', stylePool, {
-          triggerY: scrollbackChangeY,
-          prevLine,
-          nextLine,
-        })
+        return fullResetSequence_CAUSES_FLICKER(
+          next,
+          'offscreen',
+          stylePool,
+          preserveScrollback,
+          {
+            triggerY: scrollbackChangeY,
+            prevLine,
+            nextLine,
+          },
+        )
       }
     }
 
@@ -267,6 +308,7 @@ export class LogUpdate {
           next,
           'offscreen',
           this.options.stylePool,
+          preserveScrollback,
         )
       }
 
@@ -340,9 +382,18 @@ export class LogUpdate {
         return
       }
 
-      // If the cell outside the viewport range has changed, we need to reset
-      // because we can't move the cursor there to draw.
+      // If the cell outside the viewport range has changed, we can't move
+      // the cursor there to draw. In alt-screen we reset and repaint the
+      // whole frame. In flow mode the scrollback is the user's history
+      // view, so we accept that the cell stays stuck at its stale value —
+      // skip it and let the rest of the diff loop process visible cells.
+      // Tradeoff: scrolling up shows the pre-edit value of this cell;
+      // worse than fullReset for correctness, better than fullReset for
+      // not yanking the user's viewport to the top mid-stream.
       if (y < viewportY) {
+        if (preserveScrollback) {
+          return // skip this cell, keep going
+        }
         needsFullReset = true
         resetTriggerY = y
         return true // early exit
@@ -380,11 +431,17 @@ export class LogUpdate {
       }
     })
     if (needsFullReset) {
-      return fullResetSequence_CAUSES_FLICKER(next, 'offscreen', stylePool, {
-        triggerY: resetTriggerY,
-        prevLine: readLine(prev.screen, resetTriggerY),
-        nextLine: readLine(next.screen, resetTriggerY),
-      })
+      return fullResetSequence_CAUSES_FLICKER(
+        next,
+        'offscreen',
+        stylePool,
+        preserveScrollback,
+        {
+          triggerY: resetTriggerY,
+          prevLine: readLine(prev.screen, resetTriggerY),
+          nextLine: readLine(next.screen, resetTriggerY),
+        },
+      )
     }
 
     // Reset styles before rendering new rows (they'll set their own styles)
@@ -504,12 +561,16 @@ function fullResetSequence_CAUSES_FLICKER(
   frame: Frame,
   reason: FlickerReason,
   stylePool: StylePool,
+  preserveScrollback: boolean,
   debug?: { triggerY: number; prevLine: string; nextLine: string },
 ): Diff {
   // After clearTerminal, cursor is at (0, 0)
   const screen = new VirtualScreen({ x: 0, y: 0 }, frame.viewport.width)
   renderFrame(screen, frame, stylePool)
-  return [{ type: 'clearTerminal', reason, debug }, ...screen.diff]
+  return [
+    { type: 'clearTerminal', reason, debug, preserveScrollback },
+    ...screen.diff,
+  ]
 }
 
 function renderFrame(

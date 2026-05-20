@@ -35,7 +35,7 @@ import { CellWidth, CharPool, cellAt, createScreen, HyperlinkPool, isEmptyCellAt
 import { applySearchHighlight } from './searchHighlight.js';
 import { applySelectionOverlay, captureScrolledRows, clearSelection, createSelectionState, extendSelection, type FocusMove, findPlainTextUrlAt, getSelectedText, hasSelection, moveFocus, type SelectionState, selectLineAt, selectWordAt, shiftAnchor, shiftSelection, startSelection, updateSelection } from './selection.js';
 import { SYNC_OUTPUT_SUPPORTED, supportsExtendedKeys, type Terminal, writeDiffToTerminal } from './terminal.js';
-import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABLE_MODIFY_OTHER_KEYS, ENABLE_KITTY_KEYBOARD, ENABLE_MODIFY_OTHER_KEYS, ERASE_SCREEN } from './termio/csi.js';
+import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABLE_MODIFY_OTHER_KEYS, ENABLE_KITTY_KEYBOARD, ENABLE_MODIFY_OTHER_KEYS, ERASE_SCREEN, ERASE_SCROLLBACK } from './termio/csi.js';
 import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN, SHOW_CURSOR } from './termio/dec.js';
 import { CLEAR_ITERM2_PROGRESS, CLEAR_TAB_STATUS, setClipboard, supportsTabStatus, wrapForMultiplexer } from './termio/osc.js';
 import { TerminalWriteProvider } from './useTerminalNotification.js';
@@ -997,11 +997,20 @@ export default class Ink {
    * The traditional readline ctrl+l — clears the visible screen and
    * redraws the current content. Also the recovery path when the terminal
    * was cleared externally (macOS Cmd+K) and Ink's diff engine thinks
-   * unchanged cells don't need repainting. Scrollback is preserved.
+   * unchanged cells don't need repainting.
+   *
+   * `clearScrollback`: also emit CSI 3J (ERASE_SCROLLBACK) so the terminal's
+   * native scrollback buffer is wiped. Use at view-boundary transitions
+   * where the previous frame's content is unrelated to the next (e.g.
+   * switching from a sub-agent transcript back to main). Default false —
+   * scrollback preservation matches readline ctrl+l semantics.
    */
-  forceRedraw(): void {
+  forceRedraw(options: { clearScrollback?: boolean } = {}): void {
     if (!this.options.stdout.isTTY || this.isUnmounted || this.isPaused) return;
-    this.options.stdout.write(ERASE_SCREEN + CURSOR_HOME);
+    const clearSeq = options.clearScrollback
+      ? ERASE_SCREEN + ERASE_SCROLLBACK + CURSOR_HOME
+      : ERASE_SCREEN + CURSOR_HOME;
+    this.options.stdout.write(clearSeq);
     if (this.altScreenActive) {
       this.resetFramesForAltScreen();
     } else {

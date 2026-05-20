@@ -80,6 +80,13 @@ export type Patch =
       // ink.tsx uses triggerY with findOwnerChainAtRow to attribute the
       // flicker to its source React component.
       debug?: { triggerY: number; prevLine: string; nextLine: string }
+      // In flow mode (no alt-screen) the terminal's scrollback IS the
+      // history view — user expects to scroll up and see past frames.
+      // ERASE_SCROLLBACK (CSI 3J) wipes that and yanks the viewport to
+      // the top mid-stream. Set true to drop CSI 3J from the emitted
+      // sequence; the previous frame stays as scrollback "residue" but
+      // the user's scroll position is preserved.
+      preserveScrollback?: boolean
     }
   | { type: 'cursorHide' }
   | { type: 'cursorShow' }

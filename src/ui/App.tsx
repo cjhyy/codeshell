@@ -5,7 +5,7 @@
  * All engine interaction goes through the client-server protocol.
  */
 import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from "react";
-import { Box, Text, useApp, useInput } from "../render/index.js";
+import { Box, Text, useApp, useInput, forceRedraw } from "../render/index.js";
 import { Banner } from "./components/Banner.js";
 import { UpdateBanner } from "./components/UpdateBanner.js";
 import { WelcomeTips } from "./components/WelcomeTips.js";
@@ -179,6 +179,26 @@ export function App({
       setViewMode({ kind: "main" });
     }
   }, [agentsSnapshot, viewMode]);
+
+  // Switching viewMode swaps the entries array wholesale (main chat ↔ a
+  // sub-agent transcript). In flow mode log-update's shrinking path only
+  // erases within the viewport via eraseLines — if the prior view rendered
+  // more rows than the new view, the trailing rows (the "extra tail") stay
+  // on screen as residue. Force a viewport clear at the boundary so the
+  // new view starts on a blank viewport and naturally lays out from the
+  // top. Scrollback is preserved so the user can still scroll up to see
+  // earlier history of this or the prior view.
+  //
+  // Skip the initial mount: there's nothing rendered yet to clear.
+  const viewKey = viewMode.kind === "main" ? "main" : `agent:${viewMode.agentId}`;
+  const viewKeyMountedRef = useRef(false);
+  useEffect(() => {
+    if (!viewKeyMountedRef.current) {
+      viewKeyMountedRef.current = true;
+      return;
+    }
+    forceRedraw();
+  }, [viewKey]);
 
   // Clamp dockFocusIdx whenever the visible dock shrinks (an agent finishes
   // and its fade window expires, or the list empties entirely). maxIdx is
@@ -867,7 +887,9 @@ export function App({
           const target = visible[dockFocusIdx - 1];
           if (target) setViewMode({ kind: "agent", agentId: target.agentId });
         }
-        setDockFocusIdx(null);
+        // Keep the dock focused after switching views so ↑/↓ keep moving
+        // between agents instead of falling through to CommandInput's
+        // history navigation. Esc explicitly releases the dock.
         return;
       }
       if (key.escape) {
