@@ -95,10 +95,18 @@ export async function runPluginCommandHook(
   return new Promise<HookResult>((resolve) => {
     let child;
     try {
+      // Strip CLAUDE_PLUGIN_ROOT from the inherited env: a plugin script
+      // that branches on `[ -n "$CLAUDE_PLUGIN_ROOT" ]` must conclude
+      // "not Claude Code" and pick the codeshell branch. varRewrite.ts
+      // converted the literal `${CLAUDE_PLUGIN_ROOT}` references to the
+      // codeshell name; this drop closes the runtime side of the same
+      // story.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { CLAUDE_PLUGIN_ROOT: _stripped, ...parentEnv } = process.env;
       child = spawn(spec.command, [], {
         shell: true,
         env: {
-          ...process.env,
+          ...parentEnv,
           CODESHELL_PLUGIN_ROOT: spec.installPath,
           CODESHELL_HOOK_EVENT: ctx.eventName,
         },
