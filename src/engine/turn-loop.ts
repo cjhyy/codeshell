@@ -66,6 +66,18 @@ export interface TurnLoopDeps {
    * EngineConfig.isSubAgent (engine.ts:119).
    */
   isSubAgent?: boolean;
+  /**
+   * Reads/clears the most recent compaction event emitted by
+   * ContextManager since the last call. Returns `null` if no compaction
+   * fired since the previous check. The Engine wires this up so the
+   * turn loop can `post_compact` emit + inject hook messages without
+   * the ContextManager itself depending on HookRegistry.
+   */
+  consumePendingCompactInfo?: () => {
+    strategy: string;
+    before: number;
+    after: number;
+  } | null;
 }
 
 export interface TurnLoopResult {
@@ -220,6 +232,26 @@ export class TurnLoop {
       // the bar visibly drop on every submit. Post-llm/post-tool-result
       // events carry an accurate value; if compaction shrank the array, the
       // dedicated context_compact event has already informed the UI.
+
+      // post_compact hook: ContextManager just finished a manage() pass.
+      // If any non-micro tier fired, give handlers a chance to inject a
+      // <system-reminder> ("context was compacted — recall earlier
+      // decisions from the transcript") into THIS turn before the model
+      // call. Microcompact is lossless (just clearing redundant
+      // tool_results) so we suppress hook emits for it to keep token
+      // overhead down.
+      const pending = this.deps.consumePendingCompactInfo?.();
+      if (pending && pending.strategy !== "micro") {
+        const compactHook = await this.emitHook("post_compact", {
+          strategy: pending.strategy,
+          beforeTokens: pending.before,
+          afterTokens: pending.after,
+        });
+        const compactInjection = wrapHookMessages(compactHook.messages);
+        if (compactInjection) {
+          messages.push(compactInjection);
+        }
+      }
 
       // Model call (with streaming fallback and max_output_tokens continuation)
       // Track tool IDs streamed during this turn to avoid duplicate UI events

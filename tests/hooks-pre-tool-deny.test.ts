@@ -73,8 +73,7 @@ describe("pre_tool_use deny short-circuits the executor", () => {
     expect(result.error).toContain("denied");
   });
 
-  it("a non-deny decision (allow) does not short-circuit the executor", async () => {
-    const { hooks } = setup();
+  it("decision:'allow' overrides a classifier 'deny' rule (hook is authoritative)", async () => {
     let toolRan = false;
     const registry = new ToolRegistry({ builtinTools: ["Read"] });
     registry.registerTool(
@@ -84,12 +83,13 @@ describe("pre_tool_use deny short-circuits the executor", () => {
         return { id: "ok", toolName: "Read", content: "ran" };
       },
     );
+    // Classifier would normally deny — handler overrides.
     const exec = new ToolExecutor(
       registry,
-      new PermissionClassifier([{ tool: "Read", decision: "allow" }]),
-      hooks,
+      new PermissionClassifier([{ tool: "Read", decision: "deny" }]),
+      new HookRegistry(),
     );
-
+    const hooks = (exec as unknown as { hooks: HookRegistry }).hooks;
     hooks.register("pre_tool_use", () => ({ decision: "allow" }));
 
     const result = await exec.executeSingle({
@@ -100,5 +100,76 @@ describe("pre_tool_use deny short-circuits the executor", () => {
 
     expect(toolRan).toBe(true);
     expect(result.isError).toBeFalsy();
+  });
+
+  it("decision:'ask' approved by user runs the tool", async () => {
+    let toolRan = false;
+    let askReason: string | undefined;
+    const registry = new ToolRegistry({ builtinTools: ["Read"] });
+    registry.registerTool(
+      { name: "Read", description: "x", inputSchema: { type: "object" } },
+      async () => {
+        toolRan = true;
+        return { id: "ok", toolName: "Read", content: "ran" };
+      },
+    );
+    const permission = new PermissionClassifier(
+      [{ tool: "Read", decision: "allow" }],
+      "default",
+      // Stub backend approves all requests; capture the description so we
+      // can assert the hook's reason was threaded through.
+      {
+        requestApproval: async (req) => {
+          askReason = req.description;
+          return { approved: true };
+        },
+      },
+    );
+    const hooks = new HookRegistry();
+    const exec = new ToolExecutor(registry, permission, hooks);
+    hooks.register("pre_tool_use", () => ({
+      decision: "ask",
+      messages: ["this read crosses a sandbox boundary"],
+    }));
+
+    const result = await exec.executeSingle({
+      id: "call-4",
+      toolName: "Read",
+      args: { file_path: "/tmp/x" },
+    });
+
+    expect(toolRan).toBe(true);
+    expect(result.isError).toBeFalsy();
+    expect(askReason).toContain("sandbox boundary");
+  });
+
+  it("decision:'ask' rejected by user returns isError with rejection message", async () => {
+    let toolRan = false;
+    const registry = new ToolRegistry({ builtinTools: ["Read"] });
+    registry.registerTool(
+      { name: "Read", description: "x", inputSchema: { type: "object" } },
+      async () => {
+        toolRan = true;
+        return { id: "ok", toolName: "Read", content: "ran" };
+      },
+    );
+    const permission = new PermissionClassifier(
+      [{ tool: "Read", decision: "allow" }],
+      "default",
+      { requestApproval: async () => ({ approved: false, reason: "nope" }) },
+    );
+    const hooks = new HookRegistry();
+    const exec = new ToolExecutor(registry, permission, hooks);
+    hooks.register("pre_tool_use", () => ({ decision: "ask" }));
+
+    const result = await exec.executeSingle({
+      id: "call-5",
+      toolName: "Read",
+      args: { file_path: "/tmp/x" },
+    });
+
+    expect(toolRan).toBe(false);
+    expect(result.isError).toBe(true);
+    expect(result.error).toContain("pre_tool_use ask");
   });
 });

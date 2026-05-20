@@ -24,6 +24,7 @@ import {
   removeInstallEntries,
   writeInstalledPlugins,
 } from "./installedPlugins.js";
+import { rewritePluginVars } from "./varRewrite.js";
 import type {
   PluginEntrySource,
   PluginInstallEntry,
@@ -202,6 +203,15 @@ export async function installPlugin(
 
   const mat = await materialize(entry.source, km.installLocation, marketplaceName, pluginName);
   if (!mat.ok) return mat;
+
+  // Rewrite ${CLAUDE_PLUGIN_ROOT} → ${CODESHELL_PLUGIN_ROOT} across every
+  // text file in the materialized tree. Plugins authored against Claude
+  // Code's protocol bake CLAUDE_PLUGIN_ROOT into hooks.json and shell
+  // scripts; we normalize at install time so the runtime only ever sets
+  // CODESHELL_PLUGIN_ROOT and host-detection branches in plugin scripts
+  // pick the codeshell-native code path. The breadcrumb file dropped at
+  // the root documents the rewrite for users debugging upstream diffs.
+  rewritePluginVars(mat.cacheDir);
 
   // Remove old install entries for the same key so we don't pile up
   // historical versions (Phase A: single-scope only).

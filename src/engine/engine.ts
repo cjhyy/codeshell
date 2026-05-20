@@ -27,7 +27,8 @@ import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
-import { registerBuiltinHooks } from "../hooks/builtin/index.js";
+import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
+import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager } from "../context/manager.js";
 import { PromptComposer } from "../prompt/composer.js";
 import { SessionManager, type SessionBundle } from "../session/session-manager.js";
@@ -199,6 +200,35 @@ export class Engine {
     });
   }
 
+  /**
+   * Read settings.hooks and register a shell-runner wrapper handler per
+   * entry. Sub-agents skip shell hooks entirely — spawning child processes
+   * per emit for every sub-agent run would multiply token-side overhead
+   * for marginal value; explicit users who want sub-agent observability
+   * should register SDK-side handlers.
+   */
+  private registerSettingsHooks(): void {
+    if (this.config.isSubAgent === true) return;
+    let settings: ReturnType<SettingsManager["get"]>;
+    try {
+      settings = this.getSettingsManager().get();
+    } catch {
+      return;
+    }
+    const entries = settings.hooks ?? [];
+    for (const entry of entries) {
+      this.hooks.register(
+        entry.event as HookEventName,
+        async (ctx) => {
+          if (!shellHookMatches(entry, ctx)) return {};
+          return runShellHook(entry, ctx);
+        },
+        50,
+        `shell:${entry.event}:${entry.command.slice(0, 32)}`,
+      );
+    }
+  }
+
   constructor(private config: EngineConfig) {
     this.preset = resolveAgentPreset(config.preset);
     this.toolRegistry = new ToolRegistry({
@@ -209,13 +239,19 @@ export class Engine {
       }),
     });
     this.hooks = new HookRegistry();
-    // Register built-in handlers (superpowers injector etc.) BEFORE
-    // user-supplied hooks so user handlers can post-process or stop the
-    // built-in chain via lower priority.
-    registerBuiltinHooks(this.hooks, {
-      cwd: config.cwd ?? process.cwd(),
-      strictSkills: this.preset.strictSkills === true,
-    });
+    // Installed-plugin hooks — declared in each plugin's hooks/hooks.json.
+    // Registered first (priority 80) so user-authored hooks at lower
+    // priorities (settings: 50, SDK config: default 0) can post-process
+    // or stop a plugin's contribution. Sub-agents skip plugin hooks for
+    // the same reason they skip settings hooks: per-emit child-process
+    // overhead multiplied across sub-agents outweighs the value, and
+    // dispatched tasks should run with minimal surface area.
+    if (config.isSubAgent !== true) {
+      loadPluginHooks(this.hooks);
+    }
+    // settings.hooks → shell-command wrappers. Chain order:
+    // plugin (80) → shell (50) → code (default 0).
+    this.registerSettingsHooks();
     for (const hook of config.hooks ?? []) {
       this.hooks.register(hook.event, hook.handler, hook.priority, hook.name);
     }
@@ -498,6 +534,7 @@ export class Engine {
       subAgentSpawner,
       sandbox: sandboxBackend,
       isSubAgent: this.config.isSubAgent === true,
+      hooks: this.hooks,
     };
 
     logger.info("engine.run", {
@@ -585,6 +622,22 @@ export class Engine {
       prompt: task,
       resumed: !!options?.sessionId,
     });
+    // updatedPrompt: handler rewrote the user's prompt text. Replace the
+    // last user message we just pushed (cold-start: line ~511; resume:
+    // line ~500). Original prompt is in the transcript already — we log
+    // the rewrite so audit chains know a hook touched user input.
+    if (typeof promptSubmitHook.updatedPrompt === "string") {
+      const lastIdx = messages.length - 1;
+      const last = messages[lastIdx];
+      if (last && last.role === "user" && typeof last.content === "string") {
+        logger.info("hook.updated_prompt", {
+          sessionId: session.state.sessionId,
+          originalChars: last.content.length,
+          updatedChars: promptSubmitHook.updatedPrompt.length,
+        });
+        messages[lastIdx] = { role: "user", content: promptSubmitHook.updatedPrompt };
+      }
+    }
 
     // Rough token estimate of the full prompt so the UI's ctx bar isn't 0%
     // before the first real usage_update arrives. The authoritative count
@@ -812,7 +865,12 @@ export class Engine {
     });
 
     // Surface compaction events to the UI so the user knows when context was trimmed.
+    // Buffer the most recent event so TurnLoop can drain it and emit the
+    // post_compact hook on the next turn (ContextManager itself doesn't
+    // know about HookRegistry — the buffer is the seam).
+    let pendingCompactInfo: { strategy: string; before: number; after: number } | null = null;
     contextManager.setOnCompact((info) => {
+      pendingCompactInfo = info;
       options?.onStream?.({ type: "context_compact", ...info });
     });
 
@@ -828,6 +886,11 @@ export class Engine {
         tools: toolDefs,
         sessionId: sid,
         isSubAgent: this.config.isSubAgent === true,
+        consumePendingCompactInfo: () => {
+          const info = pendingCompactInfo;
+          pendingCompactInfo = null;
+          return info;
+        },
         ctxOverheadStore: {
           get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
           set: (s, n) => {

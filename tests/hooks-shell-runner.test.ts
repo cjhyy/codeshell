@@ -1,0 +1,142 @@
+import { describe, it, expect } from "bun:test";
+import { runShellHook, shellHookMatches } from "../src/hooks/shell-runner.js";
+import type { HookContext } from "../src/hooks/events.js";
+
+function ctx(extra: Partial<HookContext["data"]> = {}): HookContext {
+  return {
+    eventName: "pre_tool_use",
+    data: { toolName: "Edit", args: { file_path: "/x" }, ...extra },
+  };
+}
+
+describe("runShellHook — exit codes", () => {
+  it("exit 0 with valid JSON stdout becomes the HookResult", async () => {
+    const result = await runShellHook(
+      {
+        event: "pre_tool_use",
+        command: `echo '{"messages": ["hello"]}'`,
+      },
+      ctx(),
+    );
+    expect(result.messages).toEqual(["hello"]);
+  });
+
+  it("exit 0 with blank stdout returns {}", async () => {
+    const result = await runShellHook(
+      { event: "pre_tool_use", command: "true" },
+      ctx(),
+    );
+    expect(result).toEqual({});
+  });
+
+  it("exit 0 with malformed JSON returns {} (does NOT throw)", async () => {
+    const result = await runShellHook(
+      { event: "pre_tool_use", command: `echo 'not json'` },
+      ctx(),
+    );
+    expect(result).toEqual({});
+  });
+
+  it("exit 2 maps to decision:deny with stderr as reason", async () => {
+    const result = await runShellHook(
+      {
+        event: "pre_tool_use",
+        // Shell `&&` so stderr write happens before the non-zero exit.
+        command: `sh -c 'echo "sandbox violation" >&2 && exit 2'`,
+      },
+      ctx(),
+    );
+    expect(result.decision).toBe("deny");
+    expect(result.messages?.[0]).toContain("sandbox violation");
+  });
+
+  it("non-2 non-0 exit returns {} (handler error, swallowed)", async () => {
+    const result = await runShellHook(
+      { event: "pre_tool_use", command: "false" },
+      ctx(),
+    );
+    expect(result).toEqual({});
+  });
+});
+
+describe("runShellHook — protocol", () => {
+  it("writes ctx envelope on stdin so the script can read it", async () => {
+    // Round-trip: hook reads stdin and echoes a derived value.
+    const result = await runShellHook(
+      {
+        event: "pre_tool_use",
+        command: `cat | node -e '
+          const c = JSON.parse(require("fs").readFileSync(0, "utf8"));
+          process.stdout.write(JSON.stringify({ messages: ["received: " + c.data.toolName] }));
+        '`,
+      },
+      ctx(),
+    );
+    expect(result.messages).toEqual(["received: Edit"]);
+  });
+
+  it("passes CODESHELL_HOOK_EVENT in env", async () => {
+    const result = await runShellHook(
+      {
+        event: "pre_tool_use",
+        command: `node -e 'process.stdout.write(JSON.stringify({ messages: [process.env.CODESHELL_HOOK_EVENT] }))'`,
+      },
+      ctx(),
+    );
+    expect(result.messages).toEqual(["pre_tool_use"]);
+  });
+});
+
+describe("runShellHook — timeout", () => {
+  it("kills child after timeout_ms and returns {}", async () => {
+    const start = Date.now();
+    const result = await runShellHook(
+      {
+        event: "pre_tool_use",
+        command: "sleep 5",
+        timeout_ms: 200,
+      },
+      ctx(),
+    );
+    const elapsed = Date.now() - start;
+    expect(result).toEqual({});
+    // Sanity: must come back well under the 5s sleep — proves SIGTERM landed.
+    expect(elapsed).toBeLessThan(2000);
+  });
+});
+
+describe("shellHookMatches", () => {
+  it("returns true when matcher is absent", () => {
+    expect(shellHookMatches({ event: "x", command: "y" }, ctx())).toBe(true);
+  });
+
+  it("matches tool name against matcher regex", () => {
+    expect(
+      shellHookMatches(
+        { event: "x", command: "y", matcher: "Edit|Write" },
+        ctx({ toolName: "Edit" }),
+      ),
+    ).toBe(true);
+    expect(
+      shellHookMatches(
+        { event: "x", command: "y", matcher: "Edit|Write" },
+        ctx({ toolName: "Read" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("returns false when matcher is set but ctx has no toolName", () => {
+    expect(
+      shellHookMatches(
+        { event: "x", command: "y", matcher: ".*" },
+        { eventName: "on_session_start", data: { sessionId: "s" } },
+      ),
+    ).toBe(false);
+  });
+
+  it("returns false on invalid regex (no crash)", () => {
+    expect(
+      shellHookMatches({ event: "x", command: "y", matcher: "[unclosed" }, ctx()),
+    ).toBe(false);
+  });
+});

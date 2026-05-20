@@ -199,6 +199,17 @@ export async function agentTool(
           finalText: text,
           enqueuedAt: Date.now(),
         });
+        // notification hook: fire-and-forget. ctx.hooks may be absent in
+        // legacy callers; treat as opt-in observability rather than a
+        // required publish step. We deliberately do not await — bg-agent
+        // bookkeeping should never block on a slow handler.
+        void ctx?.hooks?.emit("notification", {
+          kind: "agent_completed",
+          agentId,
+          name,
+          description,
+          finalText: text,
+        });
       })
       .catch((err: Error) => {
         if (controller.signal.aborted) {
@@ -206,6 +217,12 @@ export async function agentTool(
           // the main agent doesn't need a follow-up turn. Dock still
           // shows the "cancelled" badge for the fade window.
           asyncAgentRegistry.markCancelled(agentId);
+          void ctx?.hooks?.emit("notification", {
+            kind: "agent_cancelled",
+            agentId,
+            name,
+            description,
+          });
           return;
         }
         asyncAgentRegistry.markFailed(agentId);
@@ -216,6 +233,13 @@ export async function agentTool(
           status: "failed",
           error: err.message,
           enqueuedAt: Date.now(),
+        });
+        void ctx?.hooks?.emit("notification", {
+          kind: "agent_failed",
+          agentId,
+          name,
+          description,
+          error: err.message,
         });
       });
 

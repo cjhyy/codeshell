@@ -340,6 +340,33 @@ export interface MCPServerConfig {
 
 // ─── Settings ─────────────────────────────────────────────────────
 
+/**
+ * Shell-hook configuration entry from settings.json. Each entry binds
+ * a hook event to a shell command. The command runs as a child process
+ * on every emit (filtered by `matcher` when present), receives ctx
+ * JSON on stdin, and returns a HookResult JSON on stdout. See
+ * src/hooks/shell-runner.ts for the protocol spec.
+ */
+export interface SettingsHookConfig {
+  event: string;
+  command: string;
+  /**
+   * Optional regex (matched with new RegExp(matcher).test(toolName)) to
+   * filter which tools fire this hook. Currently honored for
+   * pre_tool_use / post_tool_use / on_tool_start / on_tool_end /
+   * on_permission_check / file_changed. Ignored for events without a
+   * meaningful toolName (session/turn/prompt/notification/compact).
+   */
+  matcher?: string;
+  /** Per-hook timeout in milliseconds. Defaults to 60_000. */
+  timeout_ms?: number;
+  /**
+   * Optional working directory for the spawned command. Defaults to
+   * Engine.cwd. Useful for hooks that need to run in a sibling repo.
+   */
+  cwd?: string;
+}
+
 export interface Settings {
   model: {
     provider: string;
@@ -370,4 +397,10 @@ export interface Settings {
   output: {
     format: "text" | "json" | "jsonl" | "stream-json";
   };
+  /**
+   * Optional shell-hook entries. Engine reads on construction and
+   * registers a wrapper handler per entry that spawns the command and
+   * parses the HookResult. Empty / missing = no shell hooks.
+   */
+  hooks?: SettingsHookConfig[];
 }

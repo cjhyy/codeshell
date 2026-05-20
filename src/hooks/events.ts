@@ -29,6 +29,39 @@
  *                                          the call (executor.ts:131).
  *   - on_tool_start / on_tool_end          (executor.ts)
  *   - file_changed                         (executor.ts, Write/Edit only)
+ *   - on_permission_check                  (executor.ts) — fires after the
+ *                                          classifier runs and before its
+ *                                          decision is acted on. Handler can
+ *                                          override via `decision`; the
+ *                                          override is logged as
+ *                                          `permission.hook_override`. ctx.data
+ *                                          carries `classifierDecision` so
+ *                                          handlers can branch on the rule
+ *                                          set's verdict.
+ *   - post_compact                         (turn-loop.ts) — fires after
+ *                                          ContextManager.manageAsync() runs
+ *                                          a non-micro compaction. Handlers
+ *                                          may return `messages` to inject a
+ *                                          <system-reminder> into the same
+ *                                          turn before the model call. ctx.data
+ *                                          carries `strategy` (summary/snip/
+ *                                          window/emergency), `beforeTokens`,
+ *                                          `afterTokens`. Microcompact is
+ *                                          intentionally suppressed.
+ *   - notification                         (agent.ts) — fired when a background
+ *                                          sub-agent transitions to a terminal
+ *                                          state. ctx.data carries `kind`
+ *                                          ("agent_completed" / "agent_failed" /
+ *                                          "agent_cancelled"), `agentId`,
+ *                                          `name`, `description`, plus
+ *                                          `finalText` (completed) or `error`
+ *                                          (failed). Fired void — handler
+ *                                          latency does not block the main
+ *                                          loop. Not consumed by the engine
+ *                                          (bg-agent feed renders the same
+ *                                          info via notificationQueue);
+ *                                          intended for shell hooks (osascript
+ *                                          / desktop notifications).
  *
  * All Engine-side emits run through Engine.emitHook / TurnLoop.emitHook, which
  * auto-merge `isSubAgent` (and sessionId, for turn-loop) into ctx.data so
@@ -36,8 +69,9 @@
  *
  * **Reserved / not-yet-emitted** (defined so downstream can register handlers
  * in anticipation; wire the emitter before relying on them):
- *   - on_permission_check
- *   - pre_compact / post_compact / notification
+ *   - pre_compact   — would require pre-flight prediction inside
+ *                     ContextManager; current implementation only knows
+ *                     after-the-fact (use post_compact instead).
  */
 export type HookEventName =
   | "on_agent_start"
@@ -73,4 +107,27 @@ export interface HookResult {
   messages?: string[];
   /** Allow/deny/ask override for permission hooks */
   decision?: "allow" | "deny" | "ask";
+  /**
+   * For pre_tool_use: replace the tool's args before execution. Used by
+   * "sanitizer" handlers (e.g. redact secrets in Bash commands, normalize
+   * file paths, inject a default flag). Last handler in the chain wins.
+   * Args are re-validated against the tool's input schema before the
+   * tool runs, so a malformed updatedInput still surfaces as an
+   * "Invalid input" error rather than silently passing through.
+   */
+  updatedInput?: Record<string, unknown>;
+  /**
+   * For post_tool_use: text appended to the tool's content (visible to
+   * the model on the next LLM call). Used by linter/typecheck handlers
+   * to surface results without re-running the tool. Multiple handlers'
+   * additionalContext entries are joined with two newlines.
+   */
+  additionalContext?: string;
+  /**
+   * For user_prompt_submit: replace the most recent user message text
+   * with this string. Last handler wins. Used to auto-prepend project
+   * context, mask secrets, or rewrite shorthand prompts. The original
+   * prompt is logged at info level for audit purposes.
+   */
+  updatedPrompt?: string;
 }

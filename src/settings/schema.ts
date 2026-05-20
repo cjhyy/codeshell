@@ -225,6 +225,28 @@ export const SettingsSchema = z
         network: z.enum(["allow", "deny"]).optional(),
       })
       .optional(),
+
+    /**
+     * Shell-hook configuration. Each entry binds a HookEventName to a
+     * shell command; the command receives ctx JSON on stdin and returns
+     * a HookResult JSON on stdout (or exit 2 = deny with stderr as
+     * reason). See src/hooks/shell-runner.ts for the wire protocol.
+     *
+     * The event field is loose-typed here (z.string()) because adding
+     * new lifecycle events shouldn't force a schema bump; the runner
+     * silently ignores entries whose event isn't registered.
+     */
+    hooks: z
+      .array(
+        z.object({
+          event: z.string(),
+          command: z.string().min(1),
+          matcher: z.string().optional(),
+          timeout_ms: z.number().int().positive().optional(),
+          cwd: z.string().optional(),
+        }),
+      )
+      .optional(),
   })
   .passthrough();
 

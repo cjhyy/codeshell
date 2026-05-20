@@ -539,7 +539,11 @@ export class PermissionClassifier {
     }
   }
 
-  async handleAsk(toolName: string, args: Record<string, unknown>): Promise<boolean> {
+  async handleAsk(
+    toolName: string,
+    args: Record<string, unknown>,
+    reason?: string,
+  ): Promise<boolean> {
     if (this.defaultMode === "dontAsk") {
       this.log.info("permission.auto_deny", {
         cat: "permission",
@@ -575,10 +579,14 @@ export class PermissionClassifier {
     });
     let result: ApprovalResult;
     try {
+      const baseDescription = this.describeToolCall(toolName, args);
+      const description = reason
+        ? `${baseDescription}\n\nReason (from pre_tool_use hook): ${reason}`
+        : baseDescription;
       result = await this.approvalBackend.requestApproval({
         toolName,
         args,
-        description: this.describeToolCall(toolName, args),
+        description,
         riskLevel,
       });
     } catch (err) {

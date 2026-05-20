@@ -44,6 +44,21 @@ export class HookRegistry {
         if (result.decision) {
           aggregated.decision = result.decision;
         }
+        // Last-write-wins for input/prompt rewrites — the priority order
+        // already determined which handler "owns" the override.
+        if (result.updatedInput !== undefined) {
+          aggregated.updatedInput = result.updatedInput;
+        }
+        if (result.updatedPrompt !== undefined) {
+          aggregated.updatedPrompt = result.updatedPrompt;
+        }
+        // additionalContext is appended (multiple handlers' contributions
+        // are visible to the model with blank-line separators).
+        if (result.additionalContext !== undefined) {
+          aggregated.additionalContext = aggregated.additionalContext
+            ? `${aggregated.additionalContext}\n\n${result.additionalContext}`
+            : result.additionalContext;
+        }
         if (result.stop) {
           aggregated.stop = true;
           break;

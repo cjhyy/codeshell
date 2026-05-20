@@ -17,6 +17,7 @@ import type { ModelPool } from "../llm/model-pool.js";
 import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
 import type { SandboxBackend } from "./sandbox/index.js";
+import type { HookRegistry } from "../hooks/registry.js";
 
 /** One choice in a multiple-choice AskUserQuestion. */
 export interface AskUserChoice {
@@ -116,6 +117,13 @@ export interface ToolContext {
   sandbox?: SandboxBackend;
   /** Optional cancellation signal for the whole turn. */
   signal?: AbortSignal;
+  /**
+   * Engine-owned HookRegistry. Tools that emit lifecycle hooks
+   * (notification, file_changed for non-Write/Edit paths, custom
+   * tool-defined events) use this. Undefined for legacy callers /
+   * standalone tests; tools must tolerate absence.
+   */
+  hooks?: HookRegistry;
 }
 
 /**

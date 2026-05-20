@@ -74,7 +74,10 @@ export class ToolExecutor {
     return tool?.isConcurrencySafe ?? false;
   }
 
-  async executeSingle(call: ToolCall): Promise<ToolResult> {
+  async executeSingle(callIn: ToolCall): Promise<ToolResult> {
+    // Local `call` so we can rewrite args via pre_tool_use updatedInput
+    // without mutating the caller's object.
+    let call: ToolCall = callIn;
     // 0. Plan mode: only allow read-only tools — no file writes at all
     if (isInPlanMode()) {
       const allowedInPlan = new Set([
@@ -136,6 +139,57 @@ export class ToolExecutor {
         isError: true,
       };
     }
+    // pre_tool_use can rewrite the args for sanitizer / normalizer use
+    // cases. Re-validate against the schema so a malformed rewrite
+    // surfaces as the standard "Invalid input" error rather than
+    // silently corrupting downstream execution.
+    if (hookResult.updatedInput !== undefined) {
+      call = { ...call, args: hookResult.updatedInput };
+      if (toolDef?.inputSchema) {
+        const revalidation = validateToolArgs(call.toolName, call.args, toolDef.inputSchema);
+        if (revalidation) {
+          return {
+            id: call.id,
+            toolName: call.toolName,
+            error: `Invalid input (after pre_tool_use rewrite): ${revalidation}`,
+            isError: true,
+          };
+        }
+      }
+      this.log.info("hook.updated_input", {
+        cat: "tool",
+        tool: call.toolName,
+        toolCallId: call.id,
+      });
+    }
+
+    // pre_tool_use can pre-approve a tool, bypassing the PermissionClassifier.
+    // This is the dual of "deny" — handler overrides the rule set. We still
+    // run the investigation guard and the sandbox afterwards: those are
+    // independent safety layers, not permission decisions.
+    const hookAllowed = hookResult.decision === "allow";
+
+    // pre_tool_use can request interactive confirmation via decision: "ask".
+    // We invoke the same handleAsk path the classifier uses, but feed the
+    // hook's messages so the user sees the handler's reasoning.
+    if (hookResult.decision === "ask") {
+      const reason = hookResult.messages?.join("\n") ?? undefined;
+      const approved = await this.permission.handleAsk(
+        call.toolName,
+        call.args,
+        reason,
+      );
+      if (!approved) {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error: `Tool call denied by user (pre_tool_use ask).`,
+          isError: true,
+        };
+      }
+      // User approved — fall through, skipping the classifier (the hook
+      // and the user together have already decided).
+    }
 
     // 0.7. Investigation guard — block redundant reads and tag soft reminders
     // onto results. See investigation-guard.ts for the rules; they enforce the
@@ -151,34 +205,67 @@ export class ToolExecutor {
       };
     }
 
-    // 1. Permission check
-    const decision = this.permission.classify(call.toolName, call.args);
-    this.log.info("permission.classify", {
-      cat: "permission",
-      tool: call.toolName,
-      decision,
-      mode: this.permission.getMode(),
-    });
+    // 1. Permission check — skipped when the hook already approved.
+    if (!hookAllowed && hookResult.decision !== "ask") {
+      const classifierDecision = this.permission.classify(call.toolName, call.args);
+      this.log.info("permission.classify", {
+        cat: "permission",
+        tool: call.toolName,
+        decision: classifierDecision,
+        mode: this.permission.getMode(),
+      });
 
-    if (decision === "deny") {
-      return {
-        id: call.id,
+      // on_permission_check hook: lets handlers audit AND override the
+      // classifier decision (allow|deny|ask). Final priority order is:
+      //   pre_tool_use hook (deny/allow/ask above)  > classifier rules
+      //   on_permission_check hook (here)           > classifier rules
+      //   pre_tool_use already-decided cases skip both.
+      // If multiple handlers return decisions, the highest-priority wins
+      // (HookRegistry preserves last-write semantics — last handler's
+      // decision is the aggregated one).
+      const permHook = await this.hooks.emit("on_permission_check", {
         toolName: call.toolName,
-        error: `Permission denied for tool: ${call.toolName}`,
-        isError: true,
-      };
-    }
+        args: call.args,
+        toolCallId: call.id,
+        classifierDecision,
+      });
+      const decision = permHook.decision ?? classifierDecision;
+      if (decision !== classifierDecision) {
+        this.log.info("permission.hook_override", {
+          cat: "permission",
+          tool: call.toolName,
+          from: classifierDecision,
+          to: decision,
+        });
+      }
 
-    if (decision === "ask") {
-      const approved = await this.permission.handleAsk(call.toolName, call.args);
-      if (!approved) {
+      if (decision === "deny") {
         return {
           id: call.id,
           toolName: call.toolName,
-          error: `Permission denied by user for tool: ${call.toolName}`,
+          error: `Permission denied for tool: ${call.toolName}`,
           isError: true,
         };
       }
+
+      if (decision === "ask") {
+        const reason = permHook.messages?.join("\n");
+        const approved = await this.permission.handleAsk(call.toolName, call.args, reason);
+        if (!approved) {
+          return {
+            id: call.id,
+            toolName: call.toolName,
+            error: `Permission denied by user for tool: ${call.toolName}`,
+            isError: true,
+          };
+        }
+      }
+    } else {
+      this.log.info("permission.hook_override", {
+        cat: "permission",
+        tool: call.toolName,
+        decision: hookResult.decision,
+      });
     }
 
     // 2. Pre-tool hook
@@ -252,12 +339,29 @@ export class ToolExecutor {
     });
 
     // 5. Post-tool-use hook (after execution, can observe/modify result)
-    await this.hooks.emit("post_tool_use", {
+    const postHook = await this.hooks.emit("post_tool_use", {
       toolName: call.toolName,
       toolCallId: call.id,
       result: result.result,
       error: result.error,
     });
+    // Append handler-supplied context (linter output, type-check result,
+    // etc.) onto the tool result so the model sees it on the next turn.
+    // Tagged with a separator so the model can tell hook output from
+    // tool output. Skip when the tool errored — additional context on a
+    // failed tool would be confusing.
+    if (postHook.additionalContext && !result.error) {
+      const tag = "--- additional context from post_tool_use hook ---";
+      result.result = result.result
+        ? `${result.result}\n\n${tag}\n${postHook.additionalContext}`
+        : `${tag}\n${postHook.additionalContext}`;
+      this.log.info("hook.additional_context", {
+        cat: "tool",
+        tool: call.toolName,
+        toolCallId: call.id,
+        chars: postHook.additionalContext.length,
+      });
+    }
 
     // 6. file_changed hook for Write/Edit tools
     if ((call.toolName === "Write" || call.toolName === "Edit") && !result.error) {
