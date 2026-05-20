@@ -18,6 +18,10 @@
 - [ ] **P2 发布/API：public `VERSION` 与 package version 漂移。** `package.json` 是 `0.1.6`，`src/index.ts` 仍导出 `VERSION = "0.1.0"`；另外 `build:dts` 使用 `|| true`，声明文件失败不会阻断发布。
 - [ ] **P3 性能：`resolveSandboxBackend` 每 turn 都重 resolve。** `Engine.run()` 每次调用都跑 `detectSandboxCapabilities()` + 动态 import backend 模块——一个 session 几百个 turn 就重做几百次。功能正确，纯性能问题：把 backend 选择移到 Engine 构造器或加 per-session 缓存即可。
 
+## Review Notes — 2026-05-20
+
+- [ ] **P1 Plugin hooks 未接通 — 复用 Claude Code 兼容的 plugin SessionStart hook 机制。** 当前 codeshell 已经能扫描 `~/.code-shell/plugins/*/skills/*/SKILL.md`(实测 superpowers 14 个 + document-skills 17 个 skill 全识别),且 `SkillTool` 可加载全文。但 plugin 自带的 `hooks/hooks.json` (定义 SessionStart、PostToolUse 等事件 + 跑外部命令 + 读取 stdout JSON 的 `hookSpecificOutput.additionalContext` 注入 system prompt) 没有触发,导致:(a) superpowers 的 `using-superpowers` 强制注入 prompt 不生效,LLM 没有"必须用 skill"的硬约束;(b) 任何依赖 plugin hooks 的能力(skill auto-loading、telemetry、guardrails)都无法工作。**等 hook 系统整体补全时一起做**,不单独修。参考实现:`~/.claude/plugins/cache/superpowers-dev/superpowers/5.1.0/hooks/{hooks.json,session-start,run-hook.cmd}`。
+
 ---
 
 ## P0 — 核心安全与体验基石
