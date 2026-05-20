@@ -98,11 +98,7 @@ function AgentDockRow({
   const description = truncate(entry.description, NAME_MAX);
 
   return (
-    // marginTop=1 visually separates rows so a list of agents reads as
-    // distinct items rather than a wall of text. The first row inherits
-    // the dock container's own marginTop, so this only adds gaps BETWEEN
-    // rows in practice.
-    <Box flexDirection="row" marginTop={1}>
+    <Box flexDirection="row">
       <Text color={focused ? "ansi:cyanBright" : undefined} bold={focused}>
         {cursor}
       </Text>

@@ -431,6 +431,9 @@ export function App({
           break;
 
         case "stream_request_start":
+          // Sub-agent stream events surface via AgentDock + agent_start/end
+          // markers; don't add per-sub-agent thinking rows to the main feed.
+          if (agentId !== undefined) break;
           setStreamMode("thinking");
           setThinkingContent(null);
       clearThinkingBuffer();
@@ -451,6 +454,9 @@ export function App({
           break;
 
         case "text_delta": {
+          // Same rationale as stream_request_start: sub-agent assistant text
+          // is for the dock / detail view, not the main feed.
+          if (agentId !== undefined) break;
           setStreamMode("responding");
           const existing = textBufferRef.current.get(agentId) ?? "";
           textBufferRef.current.set(agentId, existing + event.text);
@@ -563,7 +569,7 @@ export function App({
           const ev = event as Extract<StreamEvent, { type: "agent_start" }>;
           chatStore.update((prev) => [
             ...prev,
-            entry({ type: "agent_start", agentId: ev.agentId, description: ev.description }),
+            entry({ type: "agent_start", agentId: ev.agentId, name: ev.name, description: ev.description }),
           ]);
           break;
         }
@@ -583,7 +589,9 @@ export function App({
               entry({
                 type: "agent_end",
                 agentId: ev.agentId,
+                name: ev.name,
                 description: ev.description,
+                text: ev.text,
                 error: ev.error,
               }),
             ];
@@ -628,6 +636,9 @@ export function App({
           // late stream "error" event that the LLM SDK fires after socket
           // teardown so the chat stays clean.
           if (cancelledRef.current) break;
+          // Sub-agent errors belong in the dock/detail view; don't pollute
+          // the main feed (see stream_request_start above).
+          if (agentId !== undefined) break;
           const errorText = event.error;
           const errorKind = classifyError(errorText);
           chatStore.update((prev) => {
@@ -897,6 +908,11 @@ export function App({
         chatStore.commitInterruptedStreaming("\n\n[Request interrupted by user]");
         queryGuard.forceEnd("user-cancel");
         client.cancel().catch(() => {});
+        // Ctrl+C = nuke everything: also cancel every running background agent
+        // so the user gets a clean idle state. ESC only stops the main query.
+        for (const a of asyncAgentRegistry.list()) {
+          if (a.status === "running") asyncAgentRegistry.cancel(a.agentId);
+        }
         // Same optimistic-cancel path as ESC — see cancelledRef comment.
         cancelledRef.current = true;
         setStreamMode("thinking");
@@ -925,14 +941,16 @@ export function App({
       });
     }
 
-    // ESC — cancel running request (same as Ctrl+C) or clear input.
-    // Skip when ANY modal/overlay is open: those components handle Esc
-    // themselves (e.g. ProviderModelFlow steps back one screen on Esc).
-    // The root handler must not preempt them, or Esc would dismiss the
-    // whole overlay instead of stepping back.
+    // ESC — cancel the main query only; background agents keep running.
+    // Gate on isQueryActive (not isRunning), otherwise ESC would be eaten by
+    // this branch whenever a background agent is still alive, even after the
+    // main query already ended. Skip when ANY modal/overlay is open: those
+    // components handle Esc themselves (e.g. ProviderModelFlow steps back
+    // one screen on Esc). The root handler must not preempt them, or Esc
+    // would dismiss the whole overlay instead of stepping back.
     if (
       key.escape &&
-      isRunning &&
+      isQueryActive &&
       !pendingQuestion &&
       !pendingApproval &&
       !showOnboarding &&
@@ -1040,10 +1058,13 @@ export function App({
       // They don't talk to the server or mutate run state — they print
       // client-side info, so blocking them on isRunning would force the
       // user to cancel a turn just to see their session id.
+      // Gate on isQueryActive (not isRunning): a background agent still
+      // running must not freeze the input — the user has to be able to
+      // submit a new turn to the main agent while sub-agents work.
       const head = trimmed.split(/\s+/)[0]?.toLowerCase();
       const READ_ONLY_WHILE_RUNNING = new Set(["/sid", "/help"]);
-      if (isRunning && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) return;
-      if (!isRunning) {
+      if (isQueryActive && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) return;
+      if (!isQueryActive) {
         setInput("");
         setShowBanner(false);
         onScrollToBottom(); // Repin unseen divider on submit
@@ -1168,7 +1189,7 @@ export function App({
         clearThinkingBuffer();
       }
     },
-    [client, sessionId, model, isRunning, flushTextBuffer],
+    [client, sessionId, model, isQueryActive, flushTextBuffer],
   );
 
   const handleSlashCommand = useCallback(
@@ -1345,8 +1366,11 @@ export function App({
         />
       )}
 
-      {/* Task list */}
-      {tasks.length > 0 && <TaskList tasks={tasks} />}
+      {/* Task list — hidden in sub-agent detail view: today's TaskCreate/Update
+          are a global singleton (no per-agent tagging), so showing them under
+          a sub-agent would mislead. When task ownership lands (TODO:
+          多代理增强), filter by ownerAgentId here instead. */}
+      {tasks.length > 0 && viewMode.kind === "main" && <TaskList tasks={tasks} />}
     </>
   );
 
@@ -1627,7 +1651,19 @@ export function App({
                 asyncAgentRegistry.getSnapshot(),
                 Date.now(),
               );
-              if (visible.length > 0) setDockFocusIdx(0);
+              if (visible.length === 0) return;
+              // Restore focus to the row we're currently viewing, so the
+              // user doesn't have to scroll back down to the agent they
+              // were just looking at. main row = idx 0, agents are 1..N.
+              if (viewMode.kind === "agent") {
+                const idx = visible.findIndex((a) => a.agentId === viewMode.agentId);
+                // Cap at MAX_VISIBLE since the dock only shows that many.
+                if (idx >= 0 && idx < MAX_VISIBLE) {
+                  setDockFocusIdx(idx + 1);
+                  return;
+                }
+              }
+              setDockFocusIdx(0);
             }}
           />
         )
@@ -1725,10 +1761,25 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
       );
 
     case "agent_start":
-      return <AgentBlockStart key={key} description={entry.description} running />;
+      return (
+        <AgentBlockStart
+          key={key}
+          name={entry.name}
+          description={entry.description}
+          running
+        />
+      );
 
     case "agent_end":
-      return <AgentBlockEnd key={key} description={entry.description} error={entry.error} />;
+      return (
+        <AgentBlockEnd
+          key={key}
+          name={entry.name}
+          description={entry.description}
+          text={entry.text}
+          error={entry.error}
+        />
+      );
 
     case "error": {
       const kind = (entry as any).errorKind;

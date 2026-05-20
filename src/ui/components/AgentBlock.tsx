@@ -14,12 +14,13 @@ import { Box, Text } from "../../render/index.js";
 import { Spinner } from "./Spinner.js";
 
 interface AgentBlockStartProps {
+  name?: string;
   description: string;
   running?: boolean;
   isLast?: boolean;
 }
 
-export function AgentBlockStart({ description, running, isLast }: AgentBlockStartProps) {
+export function AgentBlockStart({ name, description, running, isLast }: AgentBlockStartProps) {
   const treeChar = isLast ? "└─" : "├─";
   const continueLine = isLast ? "   " : "│  ";
 
@@ -30,13 +31,13 @@ export function AgentBlockStart({ description, running, isLast }: AgentBlockStar
         {running ? (
           <>
             <Spinner label="" color="ansi:cyan" />
-            <Text bold> {description}</Text>
+            <Text> </Text>
           </>
-        ) : (
-          <>
-            <Text bold>{description}</Text>
-          </>
-        )}
+        ) : null}
+        {name && <Text bold>{name + "  "}</Text>}
+        <Text bold={!name} dim={!!name}>
+          {description}
+        </Text>
       </Box>
       {running && (
         <Box>
@@ -49,12 +50,14 @@ export function AgentBlockStart({ description, running, isLast }: AgentBlockStar
 }
 
 interface AgentBlockEndProps {
+  name?: string;
   description: string;
+  text?: string;
   error?: string;
   isLast?: boolean;
 }
 
-export function AgentBlockEnd({ description, error, isLast }: AgentBlockEndProps) {
+export function AgentBlockEnd({ name, description, text, error, isLast }: AgentBlockEndProps) {
   const treeChar = isLast ? "└─" : "├─";
   const continueLine = isLast ? "   " : "│  ";
 
@@ -63,7 +66,10 @@ export function AgentBlockEnd({ description, error, isLast }: AgentBlockEndProps
       <Box flexDirection="column" marginLeft={1}>
         <Box>
           <Text dim>{treeChar} </Text>
-          <Text color="ansi:red">{description}</Text>
+          {name && <Text color="ansi:red" bold>{name + "  "}</Text>}
+          <Text color="ansi:red" dim={!!name}>
+            {description}
+          </Text>
           <Text dim> · </Text>
           <Text color="ansi:red">Error</Text>
         </Box>
@@ -79,10 +85,17 @@ export function AgentBlockEnd({ description, error, isLast }: AgentBlockEndProps
     <Box flexDirection="column" marginLeft={1}>
       <Box>
         <Text dim>{treeChar} </Text>
-        <Text>{description}</Text>
+        {name && <Text bold>{name + "  "}</Text>}
+        <Text dim={!!name}>{description}</Text>
         <Text dim> · </Text>
         <Text color="ansi:green">Done</Text>
       </Box>
+      {text && text.trim().length > 0 && (
+        <Box>
+          <Text dim>{continueLine}⎿ </Text>
+          <Text>{text}</Text>
+        </Box>
+      )}
     </Box>
   );
 }
