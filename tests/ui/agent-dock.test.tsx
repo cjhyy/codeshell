@@ -227,7 +227,11 @@ test("formatElapsed covers s, m s, h m s boundaries", () => {
   expect(formatElapsed(3_600_000 + 4 * 60_000 + 23_000)).toBe("1h 4m 23s");
 });
 
-test("agent rows have visual separation (blank line between them)", async () => {
+test("agent rows render in startedAt order with first above second", async () => {
+  // Compact-list product decision (commit removing marginTop=1): rows now
+  // pack tightly with no blank separator. Test guarantees the surviving
+  // invariants — both rows render, and startedAt order is preserved —
+  // but no longer asserts a blank line between them.
   reset();
   asyncAgentRegistry.register({
     agentId: "a1",
@@ -248,7 +252,6 @@ test("agent rows have visual separation (blank line between them)", async () => 
     { columns: 80, rows: 30 },
   );
   await flush();
-  // Use dumpFrames (raw output) + ANSI strip, then split into display lines.
   const raw = h.frames.join("");
   const stripped = raw
     .replace(/\x1b\[(\d+)C/g, (_m, n) => " ".repeat(Number(n)))
@@ -260,17 +263,6 @@ test("agent rows have visual separation (blank line between them)", async () => 
   const i2 = lines.findIndex((l) => l.includes("second agent"));
   expect(i1).toBeGreaterThanOrEqual(0);
   expect(i2).toBeGreaterThan(i1);
-  // At least one blank-ish line between the two agent rows (marginTop=1).
-  // "blank-ish" = no agent description text.
-  let foundGap = false;
-  for (let j = i1 + 1; j < i2; j++) {
-    const trimmed = lines[j].trim();
-    if (trimmed === "" || (!trimmed.includes("first agent") && !trimmed.includes("second agent") && !trimmed.includes("●"))) {
-      foundGap = true;
-      break;
-    }
-  }
-  expect(foundGap).toBe(true);
   h.unmount();
 });
 
