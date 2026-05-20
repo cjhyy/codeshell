@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach } from "bun:test";
-import { notificationQueue, type NotificationItem } from "../src/tool-system/builtin/agent-notifications.js";
+import { notificationQueue, buildNotificationMessage, type NotificationItem } from "../src/tool-system/builtin/agent-notifications.js";
 
 const fixture = (overrides: Partial<NotificationItem> = {}): NotificationItem => ({
   agentId: "abc12345",
@@ -82,5 +82,96 @@ describe("notificationQueue", () => {
     unsub();
     notificationQueue.enqueue(fixture());
     expect(calls).toBe(0);
+  });
+});
+
+describe("buildNotificationMessage", () => {
+  test("single completed item", () => {
+    const msg = buildNotificationMessage([
+      {
+        agentId: "abc12345",
+        name: "Explore",
+        description: "调研 AI 公司新闻",
+        status: "completed",
+        finalText: "Found 3 stories.",
+        enqueuedAt: 0,
+      },
+    ]);
+    expect(msg).toContain("<background-agents-completed>");
+    expect(msg).toContain(`<agent id="abc12345" name="Explore" status="completed">`);
+    expect(msg).toContain("<description>调研 AI 公司新闻</description>");
+    expect(msg).toContain("Found 3 stories.");
+    expect(msg).toContain("</background-agents-completed>");
+  });
+
+  test("single failed item with error", () => {
+    const msg = buildNotificationMessage([
+      {
+        agentId: "def67890",
+        description: "Plan migration",
+        status: "failed",
+        error: "Engine timed out after 60s",
+        enqueuedAt: 0,
+      },
+    ]);
+    expect(msg).toContain(`<agent id="def67890" status="failed">`);
+    expect(msg).toContain("<error>Engine timed out after 60s</error>");
+    expect(msg).not.toContain("<result>");
+  });
+
+  test("agent without name omits name attribute", () => {
+    const msg = buildNotificationMessage([
+      {
+        agentId: "x",
+        description: "d",
+        status: "completed",
+        finalText: "ok",
+        enqueuedAt: 0,
+      },
+    ]);
+    expect(msg).toContain(`<agent id="x" status="completed">`);
+    expect(msg).not.toContain(`name=`);
+  });
+
+  test("multiple items render as siblings", () => {
+    const msg = buildNotificationMessage([
+      { agentId: "a", description: "task A", status: "completed", finalText: "A done", enqueuedAt: 0 },
+      { agentId: "b", description: "task B", status: "failed", error: "boom", enqueuedAt: 0 },
+    ]);
+    const agentCount = (msg.match(/<agent /g) ?? []).length;
+    expect(agentCount).toBe(2);
+    expect(msg).toContain("A done");
+    expect(msg).toContain("boom");
+  });
+
+  test("trailing instructional sentence is present", () => {
+    const msg = buildNotificationMessage([
+      { agentId: "a", description: "d", status: "completed", finalText: "x", enqueuedAt: 0 },
+    ]);
+    expect(msg).toMatch(/Address them appropriately/);
+  });
+
+  test("escapes XML-special characters in user-provided fields", () => {
+    const msg = buildNotificationMessage([
+      {
+        agentId: "x",
+        name: "K&R",
+        description: "find <foo> and replace with \"bar\"",
+        status: "completed",
+        finalText: "AT&T merged with X<Y>",
+        enqueuedAt: 0,
+      },
+    ]);
+    // Tag scaffolding intact
+    expect(msg).toContain("<background-agents-completed>");
+    expect(msg).toContain("</background-agents-completed>");
+    // Ampersand escaped in attribute and body
+    expect(msg).toContain("K&amp;R");
+    expect(msg).toContain("AT&amp;T");
+    // Angle brackets escaped in body
+    expect(msg).toContain("find &lt;foo&gt;");
+    expect(msg).toContain("X&lt;Y&gt;");
+    // Quote escaped in attribute (name attribute is quoted with ")
+    expect(msg).toMatch(/name="K&amp;R"/);
   });
 });

@@ -72,3 +72,49 @@ class NotificationQueue {
 }
 
 export const notificationQueue = new NotificationQueue();
+
+/**
+ * Escape XML-special characters. We only emit a fixed handful of tags, so
+ * we can hand-roll this rather than pulling in a full encoder. Attribute
+ * values get the quote escape too; element bodies don't need it.
+ */
+function escapeXmlText(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function escapeXmlAttr(s: string): string {
+  return escapeXmlText(s).replace(/"/g, "&quot;");
+}
+
+/**
+ * Render a batch of completion notifications as the XML user-message
+ * body that the main agent's LLM will see. Format is stable — main
+ * agent prompts can rely on the `<background-agents-completed>` root
+ * tag as a signal that this turn is a system-injected notification,
+ * not a real user message.
+ */
+export function buildNotificationMessage(items: NotificationItem[]): string {
+  const agents = items
+    .map((item) => {
+      const nameAttr = item.name ? ` name="${escapeXmlAttr(item.name)}"` : "";
+      const opening = `  <agent id="${escapeXmlAttr(item.agentId)}"${nameAttr} status="${item.status}">`;
+      const desc = `    <description>${escapeXmlText(item.description)}</description>`;
+      const body =
+        item.status === "completed"
+          ? `    <result>\n${escapeXmlText(item.finalText ?? "")}\n    </result>`
+          : `    <error>${escapeXmlText(item.error ?? "")}</error>`;
+      return [opening, desc, body, "  </agent>"].join("\n");
+    })
+    .join("\n");
+
+  return [
+    "<background-agents-completed>",
+    agents,
+    "</background-agents-completed>",
+    "",
+    "Above are results from background agents that finished while you were idle. Address them appropriately — summarize for the user, continue work, or ignore if no longer relevant.",
+  ].join("\n");
+}
