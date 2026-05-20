@@ -13,9 +13,11 @@ const BRACKETED_PASTE_END = /\x1b\[201~$/;
 
 // Zero-width + BOM + word joiner. These render as nothing but break auth.
 // U+200B ZWSP, U+200C ZWNJ, U+200D ZWJ, U+2060 WORD JOINER, U+FEFF BOM.
+// eslint-disable-next-line no-irregular-whitespace
 const INVISIBLE_CHARS = /[​-‍⁠﻿]/g;
 
 // CJK full-width space (U+3000) — IME residue. Normal space is U+0020.
+// eslint-disable-next-line no-irregular-whitespace
 const FULLWIDTH_SPACE = /　/g;
 
 // Smart quotes — Word / web pages auto-convert ASCII quotes. Real keys
