@@ -140,11 +140,35 @@
 ### ⬜ 多代理增强
 当前 Agent 工具已实现基础子代理，需要增强。
 
+#### 🔥 P0 — logger `_currentSid` 在多 Engine 并发下被串扰（多代理基础设施）
+**所有 multi-agent 数据混乱的根因**。`src/logging/logger.ts` 的 sid resolution 用 process-global 单例；`engine.run()` 入口 `logger.setSid(session.state.sessionId)`，主 Engine 启动 child Engine 后，child 自己 setSid(child_sid)，主 Engine 后续的 turn **不会重新 setSid 回到主**。`session-recorder` 里 `recordLLMRequest` / `recordToolCall` / `recordLLMResponse` 都通过 `getCurrentSid()` 拿 sid 写日志，导致：(a) 主 session 的 LLM 请求被错记进子 session 的 log file，反之亦然；(b) `tool.call` 事件归属错乱，看似主 agent 调了一堆它实际没调的工具；(c) 用户切到子 agent 视图、`/sid` 命令、auto-injection 等任何依赖 currentSid 的功能都会拿到错值。
+**实证案例**：2026-05-19 session `v3KHFDkimhi3_ClO` 主 session log 里出现了 `messageCount=4 messages[1]=子 agent prompt` 的 r5 llm.request——其实是子 agent 9ZZ 的请求被错记到主 file。
+
+**已修复（2026-05-19）**：
+- `logger.ts` 加了 `AsyncLocalStorage<string>` 后端：`getCurrentSid()` 先查 ALS，回退到 module global `_currentSidFallback`。
+- 新增 `runWithSid(sid, fn)`：在 ALS sub-scope 里运行 `fn`，scope 退出时父 scope 的 sid binding 自动恢复——不会像 `_currentSid` 全局赋值那样被 awaited child engine 永久覆盖。
+- `Engine.run` 在 session 解析完后用 `return runWithSid(session.state.sessionId, async () => { ...body... })` 包住整个 body。每次 Engine.run 都开自己的 ALS scope，并发主 + 子 engine 各跑各的，互不串扰。
+- `setCurrentSid` 仍同步更新 module global 作为 ALS-外路径的 fallback（bootstrap、`/sid` 在 run 启动前等）。
+- 子 engine spawn 处不需要额外的 `runWithSid` wrap，因为 child.run 本身会建自己的 ALS scope。
+
+**可能的进一步加固（未做，必要时再上）**：把 `recordLLMRequest(sid, ...)` / `recordToolCall(sid, ...)` 的调用方（`model-facade.ts:38`、`executor.ts:202`）改成显式从 Engine 上下文拿 sid，彻底不依赖 ALS。但 ALS 方案在 Node.js 是 first-class 并发隔离手段，目前先这样。
+
+#### P0 — 后台 agent 完成通知机制（消灭 Sleep+AgentStatus 轮询）
+当前后台 agent 跑起来后，主 agent **只能 polling**（反复 `Sleep` + `AgentStatus`），因为：(a) Agent 工具 description 里就写着"Use AgentStatus to check progress"——LLM 字面照做；(b) 没有自动完成通知机制——LLM 不轮询就永远不知道结果；(c) prompt 没禁止 polling。CC 的做法：spawn 返回时 prompt LLM "Briefly tell the user what you launched and end your response. results will arrive in a subsequent message"，结束当前 turn；agent 跑完时**框架自动给主 session 注入一条消息**带结果，主 agent 下一个 turn 自然看到。落地依赖关系：(A) → (B) → (C) 是同一组改动一起上，(D)/(E) 是 follow-up。
+- [ ] **(A) 改 Agent 工具的 schema description + tool prompt**：照搬 CC 的措辞——"do NOT sleep, poll, or proactively check on its progress. You will be automatically notified when it completes. Continue with other work or end your response." 见 `~/Documents/个人学习/代码学习/claude-code-sourcemap/restored-src/src/tools/AgentTool/prompt.ts:263` 和 `AgentTool.tsx:87`。改 `src/tool-system/builtin/agent.ts:17-50` 的 schema。
+- [ ] **(B) 改 background spawn 的 tool_result 文本**：当前是 "Agent launched in background. agent_id: ... Use AgentStatus(...) to check progress"，改成 "Async agent launched. agent_id: ... The agent is working in the background. You will be notified automatically when it completes. Briefly tell the user what you launched and end your response. Do not generate any other text — agent results will arrive in a subsequent message." 见 `AgentTool.tsx:1328`。改 `src/tool-system/builtin/agent.ts:153-167`。
+- [ ] **(C) 实现"自动注入完成消息"机制**【关键，无此 A/B 只是画饼】：当 `asyncAgentRegistry.markCompleted(agentId, text)` / `markFailed` 触发时，把"Agent <description> completed: <text>"作为一条 user message 注入主 session 的下一个 turn 输入。难点：主 session 当时可能 idle（已 `turn_complete`）。需要打通 `RunManager` 或 `protocol/server.ts` 的 client 注入路径——参考现有 user input pipeline。可能需要在 UI 端拦截 markCompleted 信号、调 `client.submit(...)`。
+- [ ] **(D) outputFile 机制 + 删 AgentStatus**：每个 background agent 写 `~/.code-shell/agents/<agentId>.txt`（持续 append 它的 assistant_text/tool 输出）。主 agent 想看中途状态用现有的 `Read` / `Bash tail`，不需要专用工具。删 `AgentStatus` / `AgentCancel`（保留 cancel 工具但改名/重新设计）。见 `AgentTool.tsx:151, 1329`。
+- [ ] **(E) auto-background after 120s**：同步 `Agent(...)` 跑超过 120s 自动转后台，spawn turn 不阻塞主对话。见 `AgentTool.tsx:73-77`。
+
+#### 其他多代理增强
+- [ ] **对齐 CC 的 subagent_type / agents 目录机制**：当前 `Agent` 工具只接受自由文本 `name?` label（dock 用），主 agent 多数情况留空。CC 做法是 `subagent_type` 必填、从内置表（`general-purpose` / `Explore` / `Plan` / ...）+ `~/.claude/agents/<name>/agent.md` 自定义目录里选；每种 kind 自带 system prompt、工具子集白名单、可选模型覆盖。落地路径：(1) 新建 `~/.code-shell/agents/` loader（读 frontmatter + body）；(2) `Agent` 工具加 required `subagent_type`，schema enum 动态注入已 load 的 kind 名；(3) `runSubAgent` 用 kind 的 system prompt / tools 子集 / model override 覆盖默认；(4) `AsyncAgentEntry.name` 改成填 kind name；(5) 主 agent 系统 prompt 加 kind 选择指南。
 - [ ] Agent 角色预定义（在 config 中配置常用角色）
 - [ ] `max_depth` 嵌套深度限制
 - [ ] `max_threads` 并发线程数限制
 - [ ] `job_max_runtime_seconds` 超时控制
-- [ ] Agent 间通信增强（当前 SendMessage 已有基础）
+- [ ] Agent 间通信：评估 mailbox 路线（参考 CC `~/.claude/teams/<team>/inboxes/`，文件 + lockfile，tool round 间隙 readMailbox → 注入 user turn 的 `<teammate-message>` XML）。当前 `SendMessage` + `agentCoordinator` 是半成品死代码（register 从未被调用），下一次推进时一并决定：补齐 mailbox / 还是删掉
+- [ ] **task 加 agentId tag**：当前 `taskManager` 是全局 module-level singleton，所有 agent 共享同一个 `tasks: Map`，子 agent 创建 task 会混进主视图。具体改动：`Task` 类型加 `agentId?: string`；`taskManager.create` 接受 agentId（subagent Engine 启动时注入 ToolContext）；`emitUpdate` 按 agentId 路由 stream；UI 渲染按 viewMode 过滤。当前 workaround：App.tsx:1358 `viewMode.kind === "main"` 才显示 TaskList，子视图直接隐藏。
 - [ ] Agent 执行结果汇总视图
 
 ### ⬜ Model Provider 增强

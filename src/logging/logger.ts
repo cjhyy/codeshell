@@ -32,6 +32,7 @@ import {
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -110,26 +111,59 @@ function resolveCategoryFilter(): Set<string> | null {
   return set.size > 0 ? set : null;
 }
 
-// ─── Process-wide session id (overrides per-logger context.sid) ────
+// ─── Session id resolution ─────────────────────────────────────────
 //
-// The Engine calls setSid() with the authoritative session id once a run
-// has resolved it (resume vs. create). Every log line written after that
-// point — from any logger instance, including child loggers created
-// before the call — picks it up via _currentSid.
+// Two mechanisms, layered:
 //
-// Why a module-level value rather than per-instance state? Because
-// child loggers snapshot context at construction time; if we kept sid
-// on each instance, callers that imported the root logger early would
-// keep writing the stale tag forever.
+// 1. `runWithSid(sid, fn)` — preferred. Engine.run wraps its entire body
+//    in this AsyncLocalStorage scope, so every log line emitted inside the
+//    (possibly deeply async) call tree picks up the right sid. Concurrent
+//    parent + child Engines coexist because each `await` boundary preserves
+//    the ALS context — they don't trample each other like a single module
+//    global would.
+//
+// 2. `_currentSidFallback` — module-level mutable, written by `setCurrentSid`.
+//    Used only as a fallback when a code path runs outside any ALS scope
+//    (bootstrap, top-level CLI, sid-stamping for /sid command). Tools like
+//    `recordToolCall` reading `getCurrentSid()` inside an Engine.run will
+//    transparently get the ALS value first.
+//
+// Why both? Background sub-agents kick off detached via `void runSubAgent(...)`
+// — they're still inside the parent's ALS scope at spawn time and inherit
+// it correctly. But the *parent* Engine's later turns also need the parent
+// sid, which ALS gives us automatically (the parent's scope outlives the
+// child's). The module global is just a safety net for code that has no
+// scope, like the initial setup before any Engine has started.
 
-let _currentSid: string = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const _sidAls = new AsyncLocalStorage<string>();
+let _currentSidFallback: string = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export function setCurrentSid(sid: string): void {
-  _currentSid = sid;
+  _currentSidFallback = sid;
 }
 
 export function getCurrentSid(): string {
-  return _currentSid;
+  return _sidAls.getStore() ?? _currentSidFallback;
+}
+
+/**
+ * Run `fn` inside an ALS scope tagged with `sid`. All log lines emitted
+ * synchronously or via `await` inside `fn` resolve `getCurrentSid()` to
+ * this `sid` — concurrent Engine.run invocations no longer race on a
+ * module global.
+ */
+export function runWithSid<T>(sid: string, fn: () => T | Promise<T>): T | Promise<T> {
+  return _sidAls.run(sid, fn);
+}
+
+/**
+ * Bind `sid` to the *current* async context without needing a callback.
+ * The binding lasts until the current async stack unwinds; concurrent
+ * sibling async chains keep their own bindings. Engine.run uses this so
+ * we don't have to indent the entire (long) method body into a callback.
+ */
+export function enterSid(sid: string): void {
+  _sidAls.enterWith(sid);
 }
 
 // ─── In-memory error ring (for bug reports) ─────────────────────────
@@ -257,7 +291,7 @@ class Logger {
     // Stamp the current process-wide session id unless this logger's
     // own context overrode it (rare). Doing it at write time means
     // children created before Engine.run() still pick up the real sid.
-    if (entry.sid === undefined) entry.sid = _currentSid;
+    if (entry.sid === undefined) entry.sid = getCurrentSid();
     if (data) entry.d = data;
 
     const line = JSON.stringify(entry) + "\n";

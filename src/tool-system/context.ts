@@ -59,6 +59,14 @@ export interface SubAgentSpawnRequest {
   prompt: string;
   maxTurns: number;
   signal: AbortSignal;
+  /**
+   * Per-call override for where the spawned child Engine's stream events go.
+   * Defaults to `spawner.parentStream` (the parent UI). Background sub-agents
+   * pass a transcriptSink here so per-event detail is captured in the agent's
+   * transcript instead of leaking into the main feed; the main feed still
+   * gets `agent_start` / `agent_end` markers via `spawner.parentStream`.
+   */
+  streamOverride?: StreamCallback;
 }
 
 export interface SubAgentSpawner {
@@ -93,6 +101,13 @@ export interface ToolContext {
   askUser?: AskUserFn;
   /** Sub-agent spawner (Agent tool). Undefined → Agent tool unavailable. */
   subAgentSpawner?: SubAgentSpawner;
+  /**
+   * True when this Engine is itself a sub-agent. Set from EngineConfig.
+   * The Agent tool refuses to spawn when this is true — runtime check
+   * layered on top of the tool-list strip in Engine.spawn so a registry
+   * regression can't leak nested spawns.
+   */
+  isSubAgent?: boolean;
   /**
    * Active sandbox backend for the Bash tool. Undefined falls back to "off"
    * (plain spawn). Headless runs default to an OS-level sandbox; the REPL

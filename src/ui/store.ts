@@ -16,8 +16,8 @@ type ChatEntryData =
   | { type: "error"; error: string; errorKind?: ErrorKind; agentId?: string }
   | { type: "status"; reason: string }
   | { type: "system"; subtype: SystemSubtype; text?: string }
-  | { type: "agent_start"; agentId: string; description: string }
-  | { type: "agent_end"; agentId: string; description: string; error?: string };
+  | { type: "agent_start"; agentId: string; name?: string; description: string }
+  | { type: "agent_end"; agentId: string; name?: string; description: string; text?: string; error?: string };
 
 /** Specialized error kinds for smart rendering. */
 export type ErrorKind =

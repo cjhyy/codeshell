@@ -32,7 +32,7 @@ import { SessionManager, type SessionBundle } from "../session/session-manager.j
 import { Transcript } from "../session/transcript.js";
 import { ModelFacade } from "./model-facade.js";
 import type { CostStateStore } from "./cost-store.js";
-import { logger } from "../logging/logger.js";
+import { logger, setCurrentSid, runWithSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
@@ -109,6 +109,14 @@ export interface EngineConfig {
    * the loop to approve commands.
    */
   sandbox?: SandboxConfig;
+  /**
+   * True when this Engine is itself a sub-agent (spawned by another
+   * Engine's Agent tool). Threaded into ToolContext so the Agent tool can
+   * refuse re-entry — defense in depth against the tool-list strip in
+   * spawn(): if a tool registry regression ever leaks Agent into a child's
+   * pool, the runtime check still blocks the call.
+   */
+  isSubAgent?: boolean;
 }
 
 export interface EngineHookConfig {
@@ -360,13 +368,33 @@ export class Engine {
         permissionMode: this.config.permissionMode ?? "acceptEdits",
       }),
       spawn: async (req) => {
+        // No nested agents. Strip Agent / AgentStatus / AgentCancel from the
+        // child's tool pool so the LLM can't spawn grandchildren — matches
+        // Claude Code's ALL_AGENT_DISALLOWED_TOOLS approach. Without this
+        // guard a runaway model could fork-bomb sub-agents (token cost +
+        // background process explosion), and the sid / approval / dock
+        // model assumes a flat parent→children hierarchy. Layered with a
+        // runtime check in agent.ts as defense-in-depth.
+        const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel"];
+        const childDisabled = Array.from(
+          new Set([
+            ...(this.config.disabledBuiltinTools ?? []),
+            ...NESTED_AGENT_TOOLS,
+          ]),
+        );
+        // If enabledBuiltinTools is set (explicit allow-list mode), strip
+        // the nested-agent tools from it too so the disable above isn't
+        // contradicted by an explicit allow.
+        const childEnabled = this.config.enabledBuiltinTools?.filter(
+          (t) => !NESTED_AGENT_TOOLS.includes(t),
+        );
         const child = new Engine({
           llm: { ...this.config.llm, retryMaxAttempts: 2 },
           cwd,
           permissionMode: this.config.permissionMode,
           preset: this.preset.name,
-          enabledBuiltinTools: this.config.enabledBuiltinTools,
-          disabledBuiltinTools: this.config.disabledBuiltinTools,
+          enabledBuiltinTools: childEnabled,
+          disabledBuiltinTools: childDisabled,
           customSystemPrompt: this.config.customSystemPrompt,
           appendSystemPrompt: this.config.appendSystemPrompt,
           maxTurns: req.maxTurns,
@@ -374,8 +402,17 @@ export class Engine {
           sessionStorageDir: this.config.sessionStorageDir,
           headless: this.config.headless,
           sandbox: this.config.sandbox,
+          isSubAgent: true,
         });
-        const childStream: StreamCallback | undefined = options?.onStream
+        // Where the spawned child Engine's stream events go. AgentTool's
+        // background path passes a `streamOverride` (transcriptSink) so the
+        // per-event detail is captured into the agent's transcript instead
+        // of flooding the main feed. Sync calls leave streamOverride unset
+        // and we fall back to the parent UI's onStream so synchronous
+        // sub-agents still render inline.
+        const destStream: StreamCallback | undefined =
+          req.streamOverride ?? options?.onStream;
+        const childStream: StreamCallback | undefined = destStream
           ? (event) => {
               // Filter ctx-bar signals: the bar tracks the main conversation's
               // prompt size, and a sub-agent's own session emits would clobber
@@ -395,9 +432,12 @@ export class Engine {
               ) {
                 return;
               }
-              options.onStream!({ ...event, agentId: req.agentId } as typeof event);
+              destStream({ ...event, agentId: req.agentId } as typeof event);
             }
           : undefined;
+        // child.run() establishes its own runWithSid scope internally, so
+        // child log lines route to the child's sid and parent's ALS
+        // binding is unaffected when control returns here.
         const result = await child.run(req.prompt, { signal: req.signal, onStream: childStream });
         return result.text;
       },
@@ -432,6 +472,7 @@ export class Engine {
       askUser: this.config.askUser,
       subAgentSpawner,
       sandbox: sandboxBackend,
+      isSubAgent: this.config.isSubAgent === true,
     };
 
     logger.info("engine.run", {
@@ -473,10 +514,22 @@ export class Engine {
       this.sessionManager.saveState(session.state);
     }
 
-    // Stamp the resolved session id onto the process-wide logger so every
-    // subsequent log line — engine, tool exec, MCP, context manager,
-    // protocol — is filterable by `sid` in ~/.code-shell/logs/.
-    logger.setSid(session.state.sessionId);
+    // Stamp the resolved session id for downstream logging.
+    //
+    // `setCurrentSid` updates the module-level fallback so any code path
+    // running outside an ALS scope (bootstrap, /sid before a run starts)
+    // still sees the latest sid.
+    //
+    // The real isolation comes from wrapping the rest of `run` in
+    // `runWithSid(sid, async () => { ... })`: every `getCurrentSid()`
+    // call inside that closure — including those inside `await`ed child
+    // Engine.run() calls — reads sid from this scope's
+    // AsyncLocalStorage binding, not the module global. Sibling Engines
+    // running concurrently each get their own scope; an `enterSid` inside
+    // a child mutates that child's scope only and doesn't leak back to
+    // the parent's chain after `await child.run(...)` returns.
+    setCurrentSid(session.state.sessionId);
+    return runWithSid(session.state.sessionId, async () => {
 
     recordSessionStart(session.state.sessionId, {
       task,
@@ -812,6 +865,7 @@ export class Engine {
         totalTokens: usage.totalTokens,
       },
     };
+    });
   }
 
   /**

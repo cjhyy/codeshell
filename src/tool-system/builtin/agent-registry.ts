@@ -28,6 +28,8 @@ export interface AgentTranscriptEntry {
 
 export interface AsyncAgentEntry {
   agentId: string;
+  /** Short kind label shown in the dock (e.g. "Explore", "Plan"). */
+  name?: string;
   description: string;
   status: AsyncAgentStatus;
   startedAt: number;
@@ -86,6 +88,17 @@ class AsyncAgentRegistry {
     if (!e) return;
     if (!e.transcript) e.transcript = [];
     e.transcript.push(entry);
+    this.notify();
+  }
+
+  /**
+   * Re-emit the registry change signal after callers mutate an agent's
+   * transcript array in place (patching or filtering entries). Required
+   * because `notify` rebuilds the snapshot and tells React subscribers to
+   * re-read.
+   */
+  touchTranscript(agentId: string): void {
+    if (!this.agents.has(agentId)) return;
     this.notify();
   }
 

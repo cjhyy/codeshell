@@ -43,7 +43,9 @@ const GENERAL_BUILTIN_TOOLS = [
   "WebFetch",
   "AskUserQuestion",
   "Agent",
-  "AgentStatus",
+  // AgentStatus removed: background agents now write to ~/.code-shell/agents/
+  // <id>.txt — the parent agent can Read/Bash tail that file for live progress.
+  // The implementation is still in the registry for SDK consumers if needed.
   "AgentCancel",
   "EnterPlanMode",
   "ExitPlanMode",
@@ -54,7 +56,6 @@ const GENERAL_BUILTIN_TOOLS = [
   "TaskStop",
   "TaskGet",
   "TaskOutput",
-  "SendMessage",
   "Sleep",
   "Config",
   "CronCreate",

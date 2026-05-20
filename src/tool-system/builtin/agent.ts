@@ -11,7 +11,7 @@ import type { ToolDefinition, StreamCallback } from "../../types.js";
 import type { ToolContext, SubAgentSpawner } from "../context.js";
 import { isInPlanMode, resetPlanMode, restorePlanMode } from "./plan.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
-import type { AgentTranscriptEntry } from "./agent-registry.js";
+import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { nanoid } from "nanoid";
 
 export const agentToolDef: ToolDefinition = {
@@ -20,10 +20,23 @@ export const agentToolDef: ToolDefinition = {
     "Launch a sub-agent to handle a complex task autonomously. " +
     "The sub-agent has access to the same tools and runs independently. " +
     "Use this for tasks that can be delegated, parallelized, or require deep exploration. " +
-    "Provide a clear, complete description of what the agent should do.",
+    "Provide a clear, complete description of what the agent should do.\n\n" +
+    "When you launch multiple agents for independent work, send them in a single " +
+    "message with multiple tool uses so they run concurrently.\n\n" +
+    "You can optionally run agents in the background using the run_in_background " +
+    "parameter. When an agent runs in the background, you will be automatically " +
+    "notified when it completes — do NOT sleep, poll, or proactively check on its " +
+    "progress. Continue with other work or respond to the user instead.",
   inputSchema: {
     type: "object",
     properties: {
+      name: {
+        type: "string",
+        description:
+          "Short label for the agent kind (e.g. 'Explore', 'Plan', 'Research'). " +
+          "Shown in the agent dock to identify what kind of work this sub-agent is doing. " +
+          "Keep it 1-2 words. Defaults to 'Agent' if omitted.",
+      },
       description: {
         type: "string",
         description: "A short (3-5 word) description of the task",
@@ -39,10 +52,11 @@ export const agentToolDef: ToolDefinition = {
       run_in_background: {
         type: "boolean",
         description:
-          "If true, launch the sub-agent in the background and return an agent_id immediately " +
-          "instead of waiting for it to finish. Use AgentStatus(agent_id) to check progress " +
-          "and AgentCancel(agent_id) to stop it. The agent runs in this process; restarting " +
-          "loses its state. Default: false (synchronous wait).",
+          "Set to true to run this agent in the background. " +
+          "You will be notified automatically when it completes — do NOT sleep, poll, " +
+          "or proactively check on its progress. Use AgentCancel(agent_id) to stop it. " +
+          "The agent runs in this process; restarting loses its state. " +
+          "Default: false (synchronous wait).",
       },
     },
     required: ["description", "prompt"],
@@ -57,24 +71,41 @@ async function runSubAgent(
   spawner: SubAgentSpawner,
   opts: {
     agentId: string;
+    name?: string;
     description: string;
     prompt: string;
     maxTurns: number;
     signal: AbortSignal;
   },
+  /**
+   * Optional sink for the user-visible `agent_start` / `agent_end` markers.
+   * Background path passes the parent's real onStream here; sync calls leave
+   * it undefined and we fall back to `spawner.parentStream`.
+   */
+  uiStream?: StreamCallback,
+  /**
+   * Optional override for the spawned child Engine's per-event stream.
+   * Background path passes a transcriptSink here so per-event detail is
+   * captured into the agent's transcript rather than the main feed. Sync
+   * calls leave undefined; engine.ts falls back to `spawner.parentStream`
+   * (the parent UI), preserving the inline rendering of synchronous
+   * sub-agents.
+   */
+  streamOverride?: StreamCallback,
 ): Promise<string> {
-  const { agentId, description } = opts;
-  const parentStream = spawner.parentStream;
+  const { agentId, name, description } = opts;
+  const startEndSink = uiStream ?? spawner.parentStream;
 
-  parentStream?.({ type: "agent_start", agentId, description });
+  startEndSink?.({ type: "agent_start", agentId, name, description });
 
   const parentWasInPlanMode = isInPlanMode();
   if (parentWasInPlanMode) resetPlanMode();
 
   try {
-    const text = await spawner.spawn(opts);
-    parentStream?.({ type: "agent_end", agentId, description });
-    return text || `Agent completed but produced no text output.`;
+    const text = await spawner.spawn({ ...opts, streamOverride });
+    const finalText = text || `Agent completed but produced no text output.`;
+    startEndSink?.({ type: "agent_end", agentId, name, description, text: finalText });
+    return finalText;
   } finally {
     if (parentWasInPlanMode) restorePlanMode();
   }
@@ -86,10 +117,20 @@ export async function agentTool(
 ): Promise<string> {
   const prompt = args.prompt as string;
   const description = (args.description as string) || "sub-agent";
+  const rawName = (args.name as string | undefined)?.trim();
+  const name = rawName && rawName.length > 0 ? rawName : undefined;
   if (!prompt) return "Error: prompt is required";
 
   if (!ctx?.subAgentSpawner) {
     return "Error: Agent tool is not configured (no subAgentSpawner in ctx).";
+  }
+  // Belt-and-suspenders: the spawner already strips Agent / AgentStatus /
+  // AgentCancel from a child Engine's tool pool (see engine.ts spawn()), so
+  // a sub-agent's LLM should never see this tool. If it does call it anyway
+  // (registry regression, custom-tools injection, future refactor), refuse
+  // here — no grandchildren. Matches Claude Code's flat-hierarchy rule.
+  if (ctx.isSubAgent === true) {
+    return "Error: nested agents are not supported. Sub-agents cannot spawn their own sub-agents. Complete the task directly using your available tools.";
   }
   const spawner = ctx.subAgentSpawner;
 
@@ -112,35 +153,41 @@ export async function agentTool(
     const controller = new AbortController();
     asyncAgentRegistry.register({
       agentId,
+      name,
       description,
       status: "running",
       startedAt: Date.now(),
       abort: () => controller.abort(),
     });
 
-    // Route this background agent's stream events into its own transcript,
-    // NOT the parent chatStore (the parent gave up its stream slot when it
-    // chose background mode).
-    const transcriptSink: StreamCallback = (event) => {
-      asyncAgentRegistry.appendToTranscript(agentId, {
-        ...event,
-        id: `bg-${agentId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      } as AgentTranscriptEntry);
-    };
+    // Translate this background agent's per-event stream into ChatEntry-
+    // shaped rows inside its own transcript. The dock detail view reuses
+    // App.renderEntry which only understands ChatEntry types — storing
+    // raw StreamEvents would render as blanks. The translator mirrors
+    // App.tsx#handleStreamEvent's reduction but is scoped to one agent
+    // (per-instance closure state), so it doesn't interleave with other
+    // agents.
+    //
+    // Sub-agent runs detached from the parent turn — the parent feed only
+    // sees the agent_start / agent_end markers via `parentStream` (the
+    // 4th arg to runSubAgent); per-event detail goes through the
+    // `streamOverride` (5th arg → SubAgentSpawnRequest.streamOverride →
+    // engine.ts spawn closure routes to it instead of the main UI).
+    const transcriptSink: StreamCallback = createTranscriptTranslator(agentId);
 
-    const bgSpawner: SubAgentSpawner = {
-      ...spawner,
-      parentStream: transcriptSink,
-    };
-
-    // Run detached. Errors are captured into the registry.
-    void runSubAgent(bgSpawner, {
-      agentId,
-      description,
-      prompt,
-      maxTurns,
-      signal: controller.signal,
-    })
+    void runSubAgent(
+      spawner,
+      {
+        agentId,
+        name,
+        description,
+        prompt,
+        maxTurns,
+        signal: controller.signal,
+      },
+      parentStream,    // uiStream: agent_start/end → main feed
+      transcriptSink,  // streamOverride: per-event detail → transcript
+    )
       .then((text) => asyncAgentRegistry.markCompleted(agentId, text))
       .catch((err: Error) => {
         if (controller.signal.aborted) {
@@ -151,12 +198,13 @@ export async function agentTool(
       });
 
     return [
-      `Agent launched in background.`,
-      `agent_id: ${agentId}`,
+      `Async agent launched successfully.`,
+      `agent_id: ${agentId} (internal — do not show to user)`,
       `description: ${description}`,
       ``,
-      `Use AgentStatus(agent_id="${agentId}") to check progress or fetch the result.`,
-      `Use AgentCancel(agent_id="${agentId}") to stop it.`,
+      `The agent is working in the background. You will be notified automatically when it completes.`,
+      `Briefly tell the user what you launched and end your response. Do not generate any other text — agent results will arrive in a subsequent message.`,
+      `If you need to stop it: AgentCancel(agent_id="${agentId}").`,
     ].join("\n");
   }
 
@@ -164,16 +212,15 @@ export async function agentTool(
   try {
     return await runSubAgent(spawner, {
       agentId,
+      name,
       description,
       prompt,
       maxTurns,
       signal: parentSignal ?? new AbortController().signal,
     });
   } catch (err) {
-    parentStream?.({ type: "agent_end", agentId, description, error: (err as Error).message });
-    if (parentSignal?.aborted) {
-      return "Agent was aborted.";
-    }
+    parentStream?.({ type: "agent_end", agentId, name, description, error: (err as Error).message });
+    if (parentSignal?.aborted) return "Agent was aborted.";
     return `Agent error: ${(err as Error).message}`;
   }
 }
