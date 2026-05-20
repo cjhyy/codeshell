@@ -50,6 +50,11 @@ import type { RestoredChatEntry } from "../cli/commands/registry.js";
 import { QueryGuard } from "./query-guard.js";
 import { AgentDock, getVisibleAgents, MAX_VISIBLE } from "./components/AgentDock.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
+import {
+  notificationQueue,
+  buildNotificationMessage,
+  buildNotificationSummary,
+} from "../tool-system/builtin/agent-notifications.js";
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
 import { gitCommands } from "../cli/commands/builtin/git-commands.js";
 import { permissionsCommand } from "../cli/commands/builtin/permissions-command.js";
@@ -1018,13 +1023,6 @@ export function App({
     //
     // Flow mode (CODESHELL_FULLSCREEN=0): bypass entirely so the terminal's
     // native scrollback handles wheel + PgUp/PgDn.
-    const overlayOpen =
-      pendingQuestion ||
-      pendingApproval ||
-      showOnboarding ||
-      modelEntries ||
-      modelManager ||
-      sessionEntries;
     if (fullscreen && !overlayOpen && (key.wheelUp || key.wheelDown)) {
       listRef.current?.scrollBy(key.wheelUp ? -1 : 1);
       return;
@@ -1200,6 +1198,49 @@ export function App({
     },
     [client, sessionId, model, flushTextBuffer, clearThinkingBuffer],
   );
+
+  // Background sub-agent completion → main-agent turn injection.
+  //
+  // notificationQueue is filled by agent.ts when a background sub-agent
+  // finishes (completed or failed; cancelled never enqueues). This effect
+  // drains the queue and submits the contents as a new main-agent turn,
+  // but ONLY when nothing else is competing for the conversation slot:
+  //
+  //   * main agent must be idle (no in-flight LLM call)
+  //   * user must not be typing (input box empty)
+  //   * no modal / overlay must be open (the user is already busy)
+  //
+  // Any of those changing re-runs the effect and re-evaluates the guards,
+  // so notifications get delivered at the first idle moment naturally.
+  const overlayOpen =
+    pendingQuestion ||
+    pendingApproval ||
+    showOnboarding ||
+    modelEntries ||
+    modelManager ||
+    sessionEntries;
+  const notificationSnapshot = useSyncExternalStore(
+    notificationQueue.subscribe,
+    notificationQueue.getSnapshot,
+  );
+  useEffect(() => {
+    if (notificationSnapshot.length === 0) return;
+    if (isQueryActive) return;
+    if (input.trim() !== "") return;
+    if (overlayOpen) return;
+
+    const items = notificationQueue.drainAll();
+    if (items.length === 0) return;
+    const xml = buildNotificationMessage(items);
+    const summary = buildNotificationSummary(items);
+    void submitToEngine(xml, { asInjection: true, chatSummary: summary });
+  }, [
+    notificationSnapshot,
+    isQueryActive,
+    input,
+    overlayOpen,
+    submitToEngine,
+  ]);
 
   const handleSubmit = useCallback(
     async (value: string) => {
