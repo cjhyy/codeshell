@@ -145,14 +145,14 @@ export class CommandRegistry {
     return [...seen].sort();
   }
 
-  /** Return deduplicated list of { name, description } sorted by name. */
-  listCommands(): Array<{ name: string; description: string }> {
+  /** Return deduplicated list of { name, description, usage } sorted by name. */
+  listCommands(): Array<{ name: string; description: string; usage?: string }> {
     const seen = new Set<string>();
-    const result: Array<{ name: string; description: string }> = [];
+    const result: Array<{ name: string; description: string; usage?: string }> = [];
     for (const cmd of this.commands.values()) {
       if (seen.has(cmd.name)) continue;
       seen.add(cmd.name);
-      result.push({ name: cmd.name, description: cmd.description });
+      result.push({ name: cmd.name, description: cmd.description, usage: cmd.usage });
     }
     return result.sort((a, b) => a.name.localeCompare(b.name));
   }

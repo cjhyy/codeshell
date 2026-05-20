@@ -12,6 +12,20 @@ import { createHistoryNavigator, addToHistory } from "../input-history.js";
 interface CommandDef {
   name: string;
   description: string;
+  /** Optional usage string like "/fullscreen [on|off|toggle]" — the
+   *  bracketed portion is rendered dim after the command name once the
+   *  user has finished typing it. */
+  usage?: string;
+}
+
+/** Extract the args portion of a usage string for inline hinting.
+ *  "/fullscreen [on|off|toggle]" → "[on|off|toggle]"
+ *  "/sid"                        → ""                                  */
+function extractUsageHint(name: string, usage: string | undefined): string {
+  if (!usage) return "";
+  const trimmed = usage.trim();
+  if (!trimmed.startsWith(name)) return "";
+  return trimmed.slice(name.length).trim();
 }
 
 interface CommandInputProps {
@@ -45,6 +59,11 @@ export function CommandInput({
   // Track whether the current value came from history navigation —
   // if so, suppress the autocomplete menu so ↑↓ keep browsing history.
   const [fromHistory, setFromHistory] = useState(false);
+  // Bumped whenever we rewrite the input from outside (tab completion,
+  // history navigation, Enter-completion) so TextInput's internal cursor
+  // snaps to the end of the new value instead of staying at its old
+  // offset and landing in the middle.
+  const [cursorResetCounter, setCursorResetCounter] = useState(0);
 
   // Show autocomplete when input starts with "/" and no space yet (still typing cmd name),
   // but NOT when the value was filled by history navigation.
@@ -84,6 +103,7 @@ export function CommandInput({
         const cmd = filtered[selectedIndex];
         if (cmd) {
           onChange(cmd.name + " ");
+          setCursorResetCounter((n) => n + 1);
           setSelectedIndex(0);
         }
         return;
@@ -100,12 +120,14 @@ export function CommandInput({
       if (prev !== null) {
         setFromHistory(true);
         onChange(prev);
+        setCursorResetCounter((n) => n + 1);
       }
     } else if (key.downArrow) {
       const next = historyRef.current.down();
       if (next !== null) {
         setFromHistory(true);
         onChange(next);
+        setCursorResetCounter((n) => n + 1);
         return;
       }
       // History exhausted AND input is empty → let parent handle (dock focus).
@@ -140,6 +162,7 @@ export function CommandInput({
         }
         // Otherwise autocomplete
         onChange(cmd.name + " ");
+        setCursorResetCounter((n) => n + 1);
         setSelectedIndex(0);
         return;
       }
@@ -156,6 +179,22 @@ export function CommandInput({
   const start = Math.max(0, selectedIndex - MAX_VISIBLE + 1);
   const visible = filtered.slice(start, start + MAX_VISIBLE);
   const visibleStartIndex = start;
+
+  // Inline arg hint: only when the input is exactly "/<cmd> " (user just
+  // finished a tab-completion or typed the trailing space themselves) AND
+  // the matching command has a documented arg list. Once the user starts
+  // typing args the hint goes away — it would visually collide with
+  // their input.
+  const inlineHint = (() => {
+    if (!value.startsWith("/") || !value.endsWith(" ")) return undefined;
+    const head = value.trimEnd();
+    // Exactly one space after the command (no args typed yet).
+    if (value.length !== head.length + 1) return undefined;
+    const cmd = commands.find((c) => c.name === head);
+    if (!cmd) return undefined;
+    const hint = extractUsageHint(cmd.name, cmd.usage);
+    return hint || undefined;
+  })();
 
   return (
     <Box flexDirection="column">
@@ -196,6 +235,8 @@ export function CommandInput({
             onSubmit={handleSubmit}
             placeholder={placeholder ?? "Ask anything… (/ for commands, ↑ for history)"}
             focus={!disabled}
+            hint={inlineHint}
+            cursorResetCounter={cursorResetCounter}
           />
         </Box>
       </Box>

@@ -7,7 +7,7 @@
  * - Emacs bindings: Ctrl+A/E (home/end), Ctrl+K (kill to end), Ctrl+U (kill to start)
  * - ANSI inverse-video cursor
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Ansi, Box, Text, useInput } from "../../render/index.js";
 
 interface TextInputProps {
@@ -16,6 +16,14 @@ interface TextInputProps {
   onSubmit?: (value: string) => void;
   placeholder?: string;
   focus?: boolean;
+  /** Suffix rendered dim after the cursor — e.g. "on|off" arg hint for
+   *  a slash command. Not part of `value`; not editable. */
+  hint?: string;
+  /** Bumping this number snaps the cursor to value.length on the next
+   *  render. Use when the parent rewrites `value` externally (e.g. tab
+   *  completion) — the in-component cursor would otherwise stay at its
+   *  pre-rewrite offset and land in the middle of the new text. */
+  cursorResetCounter?: number;
 }
 
 const INV_ON = "\x1b[7m";
@@ -48,6 +56,8 @@ export default function TextInput({
   onSubmit,
   placeholder,
   focus = true,
+  hint,
+  cursorResetCounter,
 }: TextInputProps) {
   // Cursor is owned by this component. We previously had a `useEffect` that
   // snapped cursorOffset back to `value.length` whenever `value` changed —
@@ -58,6 +68,18 @@ export default function TextInput({
   // out of bounds we clamp at render time.
   const [rawCursor, setCursorOffset] = useState(value.length);
   const cursorOffset = Math.min(Math.max(0, rawCursor), value.length);
+
+  // Parent can request "snap to end" by bumping cursorResetCounter — used
+  // by tab-completion where the value is rewritten from outside the input
+  // and the cursor would otherwise stay at its pre-completion offset.
+  useEffect(() => {
+    if (cursorResetCounter === undefined) return;
+    setCursorOffset(value.length);
+    // value is intentionally NOT in deps — we only want to react to the
+    // explicit signal, not to every value change (which is the bug the
+    // commented-out useEffect above warns about).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursorResetCounter]);
 
   const isMultiline = value.includes("\n");
   const lineCount = isMultiline ? value.split("\n").length : 0;
@@ -233,8 +255,16 @@ export default function TextInput({
   const cursorChar = value[cursorOffset] ?? " ";
   const after = value.slice(cursorOffset + 1);
 
+  // Show hint only when cursor is at the end and there's no text after it.
+  // Mid-edit hints would visually collide with the rest of the input.
+  const showHint = focus && hint && cursorOffset === value.length;
+
   if (focus) {
-    return <Ansi>{before + INV_ON + cursorChar + INV_OFF + after}</Ansi>;
+    return (
+      <Ansi>
+        {before + INV_ON + cursorChar + INV_OFF + after + (showHint ? DIM_ON + hint + DIM_OFF : "")}
+      </Ansi>
+    );
   }
   return <Ansi>{value}</Ansi>;
 }
