@@ -57,11 +57,26 @@
         "typescript-eslint": "^8.59.0",
       },
     },
+    "packages/cli": {
+      "name": "@cjhyy/code-shell-cli",
+      "version": "0.4.0-poc.0",
+      "dependencies": {
+        "@cjhyy/code-shell-core": "workspace:*",
+      },
+    },
+    "packages/core": {
+      "name": "@cjhyy/code-shell-core",
+      "version": "0.4.0-poc.0",
+    },
   },
   "packages": {
     "@alcalzone/ansi-tokenize": ["@alcalzone/ansi-tokenize@0.3.0", "", { "dependencies": { "ansi-styles": "6.2.3", "is-fullwidth-code-point": "5.1.0" } }, "sha512-p+CMKJ93HFmLkjXKlXiVGlMQEuRb6H0MokBSwUsX+S6BRX8eV5naFZpQJFfJHjRZY0Hmnqy1/r6UWl3x+19zYA=="],
 
     "@anthropic-ai/sdk": ["@anthropic-ai/sdk@0.39.0", "", { "dependencies": { "@types/node": "18.19.130", "@types/node-fetch": "2.6.13", "abort-controller": "3.0.0", "agentkeepalive": "4.6.0", "form-data-encoder": "1.7.2", "formdata-node": "4.4.1", "node-fetch": "2.7.0" } }, "sha512-eMyDIPRZbt1CCLErRCi3exlAvNkBtRe+kW5vvJyef93PmNr/clstYgHhtvmkxN82nlKgzyGPCyGxrm0JQ1ZIdg=="],
+
+    "@cjhyy/code-shell-cli": ["@cjhyy/code-shell-cli@workspace:packages/cli"],
+
+    "@cjhyy/code-shell-core": ["@cjhyy/code-shell-core@workspace:packages/core"],
 
     "@colors/colors": ["@colors/colors@1.5.0", "", {}, "sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ=="],
 
