@@ -1,0 +1,29 @@
+{
+  "name": "@cjhyy/code-shell-desktop",
+  "version": "0.4.0-poc.0",
+  "private": true,
+  "description": "Electron desktop client for code-shell (POC).",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "^33.0.0",
+    "electron-vite": "^4.0.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.0",
+    "typescript": "^5.7.3",
+    "vite": "^7.0.0"
+  }
+}
