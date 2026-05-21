@@ -43,7 +43,28 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
   error: 3,
 };
 
-const LOGS_DIR = join(homedir(), ".code-shell", "logs");
+function defaultLogsDir(): string {
+  return join(homedir(), ".code-shell", "logs");
+}
+
+// Mutable so non-CLI hosts (Electron renderer, headless containers, tests)
+// can redirect writes without touching every callsite. Reads go through
+// getLogsDir() so a single setLogsDir() call propagates everywhere.
+let _logsDir: string | null = null;
+function logsDir(): string {
+  return _logsDir ?? defaultLogsDir();
+}
+
+/**
+ * Override the directory log files are written into. Pass `null` to
+ * revert to the default `~/.code-shell/logs`. Affects all future writes
+ * AND `getLogsDir()` / `getRecentLogs()` reads, so call this before any
+ * log activity if you want a clean redirected stream.
+ */
+export function setLogsDir(dir: string | null): void {
+  _logsDir = dir;
+}
+
 const MAX_LOG_FILES = 7;
 const MAX_IN_MEMORY_ERRORS = 100;
 
@@ -302,8 +323,9 @@ class Logger {
     }
 
     try {
+      const dir = logsDir();
       if (!this.dirReady) {
-        if (!existsSync(LOGS_DIR)) mkdirSync(LOGS_DIR, { recursive: true });
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
         this.dirReady = true;
       }
       const dateStr = t.slice(0, 10);
@@ -313,7 +335,7 @@ class Logger {
       // context, mcp, sandbox, settings, ...). One-line grep across both with
       // scripts/logs.sh.
       const bucket = routeBucket(cat, this.context.cat as string | undefined);
-      const file = join(LOGS_DIR, `${bucket}-${dateStr}.log`);
+      const file = join(dir, `${bucket}-${dateStr}.log`);
       appendFileSync(file, line, "utf-8");
     } catch {
       // Best-effort.
@@ -361,16 +383,17 @@ export const logger = new Logger();
 // ─── Maintenance helpers ───────────────────────────────────────────
 
 export function getLogsDir(): string {
-  return LOGS_DIR;
+  return logsDir();
 }
 
 export function getRecentLogs(n = 50): string[] {
   const dateStr = new Date().toISOString().slice(0, 10);
+  const dir = logsDir();
   // Merge across all buckets (engine + ui-ink) for the day, sort by
   // timestamp so the tail represents a real chronological tail.
   const all: Array<{ t: string; line: string }> = [];
   for (const bucket of ["engine", "ui-ink"]) {
-    const file = join(LOGS_DIR, `${bucket}-${dateStr}.log`);
+    const file = join(dir, `${bucket}-${dateStr}.log`);
     if (!existsSync(file)) continue;
     try {
       for (const line of readFileSync(file, "utf-8").split("\n")) {
@@ -389,14 +412,15 @@ export function getRecentLogs(n = 50): string[] {
 
 export function rotateLogs(): void {
   try {
-    if (!existsSync(LOGS_DIR)) return;
-    const files = readdirSync(LOGS_DIR)
+    const dir = logsDir();
+    if (!existsSync(dir)) return;
+    const files = readdirSync(dir)
       .filter((f) => f.endsWith(".log"))
       .sort();
     if (files.length <= MAX_LOG_FILES) return;
     for (const f of files.slice(0, files.length - MAX_LOG_FILES)) {
       try {
-        unlinkSync(join(LOGS_DIR, f));
+        unlinkSync(join(dir, f));
       } catch {
         /* ignore */
       }

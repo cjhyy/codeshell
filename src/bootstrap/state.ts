@@ -17,8 +17,14 @@ export type ChannelEntry = { name: string; enabled: boolean };
 // ─── Session / CWD ──────────────────────────────────────────────────
 
 let _sessionId = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-let _originalCwd = process.cwd();
-let _projectRoot = process.cwd();
+// CWD/projectRoot start as null and lazily fall back to process.cwd() on
+// read. This lets non-CLI hosts (Electron renderer, web client) override
+// via setOriginalCwd / setProjectRoot before any read happens, without
+// hitting a process API that may behave differently there. CLI startup
+// still works unchanged because the fallback path is identical to the
+// old eager `process.cwd()` initializer.
+let _originalCwd: string | null = null;
+let _projectRoot: string | null = null;
 let _isNonInteractive = false;
 let _sessionTrustAccepted = false;
 
@@ -30,12 +36,12 @@ export function switchSession(id: string): void {
   _sessionId = id;
   logger.setSid(id);
 }
-export function getOriginalCwd(): string { return _originalCwd; }
+export function getOriginalCwd(): string { return _originalCwd ?? process.cwd(); }
 export function setOriginalCwd(cwd: string): void { _originalCwd = cwd; }
-export function getProjectRoot(): string { return _projectRoot; }
+export function getProjectRoot(): string { return _projectRoot ?? process.cwd(); }
 export function setProjectRoot(root: string): void { _projectRoot = root; }
 export function getCwdState(): { originalCwd: string; projectRoot: string } {
-  return { originalCwd: _originalCwd, projectRoot: _projectRoot };
+  return { originalCwd: getOriginalCwd(), projectRoot: getProjectRoot() };
 }
 export function getIsInteractive(): boolean { return !_isNonInteractive; }
 export function getIsNonInteractiveSession(): boolean { return _isNonInteractive; }
