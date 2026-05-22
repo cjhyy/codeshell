@@ -1,0 +1,293 @@
+/**
+ * Install / uninstall plugins from a known marketplace. Mirrors Claude
+ * Code's installResolvedPlugin pattern at the MVP subset: four entry
+ * source types (path / git / github / git-subdir), no dependencies, no
+ * sparse-checkout, no npm/pip.
+ */
+
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+} from "node:fs";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { gitClone, gitRevParseHead, githubRepoToCloneUrl } from "./gitOps.js";
+import { loadMarketplace } from "./marketplaceManager.js";
+import { readKnownMarketplaces } from "./knownMarketplaces.js";
+import {
+  appendInstallEntry,
+  pluginInstallKey,
+  readInstalledPlugins,
+  removeInstallEntries,
+  writeInstalledPlugins,
+} from "./installedPlugins.js";
+import { rewritePluginVars } from "./varRewrite.js";
+import type {
+  PluginEntrySource,
+  PluginInstallEntry,
+  PluginMarketplaceEntry,
+} from "./types.js";
+
+function userHome(): string {
+  return process.env.HOME ?? homedir();
+}
+
+function pluginCacheRoot(): string {
+  return join(userHome(), ".code-shell", "plugins", "cache");
+}
+
+function pluginCacheDir(marketplace: string, plugin: string, version: string): string {
+  return join(pluginCacheRoot(), marketplace, plugin, version);
+}
+
+export interface VarRewriteReport {
+  filesScanned: number;
+  filesRewritten: number;
+}
+
+export type InstallResult =
+  | { ok: true; entry: PluginInstallEntry; freshlyCloned: boolean; varRewrite: VarRewriteReport }
+  | { ok: false; error: string };
+
+async function materializePath(
+  marketplaceInstallLocation: string,
+  relativePath: string,
+  cacheTarget: string,
+): Promise<{ ok: true; sha: string | undefined } | { ok: false; error: string }> {
+  const src = isAbsolute(relativePath)
+    ? relativePath
+    : resolve(marketplaceInstallLocation, relativePath);
+  if (!existsSync(src)) {
+    return { ok: false, error: `plugin source path "${relativePath}" not found in marketplace` };
+  }
+  mkdirSync(dirname(cacheTarget), { recursive: true });
+  if (existsSync(cacheTarget)) rmSync(cacheTarget, { recursive: true, force: true });
+  cpSync(src, cacheTarget, { recursive: true });
+  return { ok: true, sha: undefined };
+}
+
+async function materializeGit(
+  url: string,
+  ref: string | undefined,
+  cacheTarget: string,
+): Promise<{ ok: true; sha: string } | { ok: false; error: string }> {
+  mkdirSync(dirname(cacheTarget), { recursive: true });
+  if (existsSync(cacheTarget)) rmSync(cacheTarget, { recursive: true, force: true });
+  const clone = await gitClone(url, cacheTarget, ref ? { ref } : undefined);
+  if (!clone.ok) return { ok: false, error: clone.error };
+  const head = await gitRevParseHead(cacheTarget);
+  if (!head.ok) return { ok: false, error: head.error };
+  return { ok: true, sha: head.stdout };
+}
+
+async function materializeGitSubdir(
+  url: string,
+  subPath: string,
+  ref: string | undefined,
+  cacheTarget: string,
+): Promise<{ ok: true; sha: string } | { ok: false; error: string }> {
+  // Clone to a tempdir, then copy the subdir over.
+  const tmp = mkdtempSync(join(tmpdir(), "plugin-clone-"));
+  try {
+    const clone = await gitClone(url, tmp + "/repo", ref ? { ref } : undefined);
+    if (!clone.ok) return { ok: false, error: clone.error };
+    const head = await gitRevParseHead(tmp + "/repo");
+    if (!head.ok) return { ok: false, error: head.error };
+    const src = join(tmp, "repo", subPath);
+    if (!existsSync(src)) {
+      return {
+        ok: false,
+        error: `git-subdir path "${subPath}" not found in cloned repository`,
+      };
+    }
+    mkdirSync(dirname(cacheTarget), { recursive: true });
+    if (existsSync(cacheTarget)) rmSync(cacheTarget, { recursive: true, force: true });
+    cpSync(src, cacheTarget, { recursive: true });
+    return { ok: true, sha: head.stdout };
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+function shortSha(sha: string | undefined): string {
+  if (!sha) return "unknown";
+  return sha.slice(0, 12);
+}
+
+async function materialize(
+  source: PluginEntrySource,
+  marketplaceInstallLocation: string,
+  marketplace: string,
+  plugin: string,
+): Promise<
+  | { ok: true; cacheDir: string; version: string; sha: string | undefined }
+  | { ok: false; error: string }
+> {
+  // First pass: install into a placeholder dir, then rename to the SHA dir
+  // once we know it. For path sources there's no SHA — use "local".
+  const placeholder = pluginCacheDir(marketplace, plugin, "_pending_");
+
+  if (typeof source === "string") {
+    const r = await materializePath(marketplaceInstallLocation, source, placeholder);
+    if (!r.ok) return r;
+    const finalDir = pluginCacheDir(marketplace, plugin, "local");
+    if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true });
+    mkdirSync(dirname(finalDir), { recursive: true });
+    cpSync(placeholder, finalDir, { recursive: true });
+    rmSync(placeholder, { recursive: true, force: true });
+    return { ok: true, cacheDir: finalDir, version: "local", sha: undefined };
+  }
+
+  if (source.source === "git" || source.source === "github") {
+    const url = source.source === "github" ? githubRepoToCloneUrl(source.repo) : source.url;
+    const r = await materializeGit(url, source.ref, placeholder);
+    if (!r.ok) {
+      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      return r;
+    }
+    const version = shortSha(r.sha);
+    const finalDir = pluginCacheDir(marketplace, plugin, version);
+    if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true });
+    mkdirSync(dirname(finalDir), { recursive: true });
+    cpSync(placeholder, finalDir, { recursive: true });
+    rmSync(placeholder, { recursive: true, force: true });
+    return { ok: true, cacheDir: finalDir, version, sha: r.sha };
+  }
+
+  if (source.source === "git-subdir") {
+    const r = await materializeGitSubdir(source.url, source.path, source.ref, placeholder);
+    if (!r.ok) {
+      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      return r;
+    }
+    const version = shortSha(r.sha);
+    const finalDir = pluginCacheDir(marketplace, plugin, version);
+    if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true });
+    mkdirSync(dirname(finalDir), { recursive: true });
+    cpSync(placeholder, finalDir, { recursive: true });
+    rmSync(placeholder, { recursive: true, force: true });
+    return { ok: true, cacheDir: finalDir, version, sha: r.sha };
+  }
+
+  return { ok: false, error: `unsupported source type "${(source as { source?: string }).source}"` };
+}
+
+/**
+ * Install a plugin from a previously-added marketplace into the user
+ * cache. Idempotent within a process: re-installing replaces the
+ * cached files and updates the manifest entry.
+ */
+export async function installPlugin(
+  pluginName: string,
+  marketplaceName: string,
+): Promise<InstallResult> {
+  const known = readKnownMarketplaces();
+  const km = known[marketplaceName];
+  if (!km) {
+    return {
+      ok: false,
+      error: `marketplace "${marketplaceName}" not found. Run /plugin marketplace add first.`,
+    };
+  }
+  const manifest = loadMarketplace(marketplaceName);
+  if (!manifest) {
+    return {
+      ok: false,
+      error: `marketplace "${marketplaceName}" is registered but its manifest could not be loaded.`,
+    };
+  }
+  const entry: PluginMarketplaceEntry | undefined = manifest.plugins.find(
+    (p) => p.name === pluginName,
+  );
+  if (!entry) {
+    return { ok: false, error: `plugin "${pluginName}" not found in marketplace "${marketplaceName}".` };
+  }
+
+  const mat = await materialize(entry.source, km.installLocation, marketplaceName, pluginName);
+  if (!mat.ok) return mat;
+
+  // Rewrite ${CLAUDE_PLUGIN_ROOT} → ${CODESHELL_PLUGIN_ROOT} across every
+  // text file in the materialized tree. Plugins authored against Claude
+  // Code's protocol bake CLAUDE_PLUGIN_ROOT into hooks.json and shell
+  // scripts; we normalize at install time so the runtime only ever sets
+  // CODESHELL_PLUGIN_ROOT and host-detection branches in plugin scripts
+  // pick the codeshell-native code path. The breadcrumb file dropped at
+  // the root documents the rewrite for users debugging upstream diffs.
+  const rewriteSummary = rewritePluginVars(mat.cacheDir);
+
+  // Remove old install entries for the same key so we don't pile up
+  // historical versions (Phase A: single-scope only).
+  const key = pluginInstallKey(pluginName, marketplaceName);
+  removeInstallEntries(key);
+
+  const now = new Date().toISOString();
+  const installEntry: PluginInstallEntry = {
+    scope: "user",
+    installPath: mat.cacheDir,
+    version: mat.version,
+    installedAt: now,
+    lastUpdated: now,
+    ...(mat.sha ? { gitCommitSha: mat.sha } : {}),
+  };
+  appendInstallEntry(key, installEntry);
+
+  return {
+    ok: true,
+    entry: installEntry,
+    freshlyCloned: true,
+    varRewrite: {
+      filesScanned: rewriteSummary.filesScanned,
+      filesRewritten: rewriteSummary.filesRewritten,
+    },
+  };
+}
+
+export interface UninstallResult {
+  ok: boolean;
+  removedFromManifest: boolean;
+  removedFromDisk: boolean;
+}
+
+export function uninstallPlugin(
+  pluginName: string,
+  marketplaceName: string,
+): UninstallResult {
+  const key = pluginInstallKey(pluginName, marketplaceName);
+  const data = readInstalledPlugins();
+  const entries = data.plugins[key];
+  let removedFromDisk = false;
+  if (entries) {
+    for (const e of entries) {
+      if (e.installPath && existsSync(e.installPath)) {
+        rmSync(e.installPath, { recursive: true, force: true });
+        removedFromDisk = true;
+      }
+    }
+    // Also clean up the per-plugin parent if empty.
+    const pluginParent = join(pluginCacheRoot(), marketplaceName, pluginName);
+    try {
+      // rmdir succeeds only when empty; ignore failures.
+      const fs = require("node:fs") as typeof import("node:fs");
+      fs.rmdirSync(pluginParent);
+    } catch {
+      // not empty or doesn't exist — fine
+    }
+  }
+  const removedFromManifest = removeInstallEntries(key);
+  return { ok: removedFromManifest || removedFromDisk, removedFromManifest, removedFromDisk };
+}
+
+export function listInstalled(): { key: string; entry: PluginInstallEntry }[] {
+  const data = readInstalledPlugins();
+  const out: { key: string; entry: PluginInstallEntry }[] = [];
+  for (const [key, entries] of Object.entries(data.plugins)) {
+    for (const e of entries) {
+      out.push({ key, entry: e });
+    }
+  }
+  out.sort((a, b) => a.key.localeCompare(b.key));
+  return out;
+}
