@@ -363,6 +363,10 @@ export function App({
   // ─── Text delta buffering ──────────────────────────────────────
   const textBufferRef = useRef<Map<string | undefined, string>>(new Map());
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Throttle ref for "we dropped a sub-agent text_delta" log so it doesn't
+  // drown the bucket at 30/s. One sampled log per second is enough to see
+  // whether the deltas during a perceived stall are main or sub-agent.
+  const subAgentDeltaSampleRef = useRef<number>(0);
   // Thinking delta buffer — same shape as textBuffer. Without this, every
   // thinking token (50–200/s on some providers) triggered a synchronous
   // setThinkingContent → App re-render → spinner subtree re-commit. The
@@ -387,6 +391,13 @@ export function App({
     }
   }, []);
 
+  // Diagnostic: previous flush completion time. Records the gap between
+  // flushes so a stuck stream (text_delta arrives but the chatStore never
+  // updates) shows up as a long flushGap in the log. Lets us distinguish
+  // "model paused" (text_delta gap) from "UI froze" (text_delta keeps
+  // coming, but flush gap is long).
+  const lastFlushAtRef = useRef<number>(0);
+
   const flushTextBuffer = useCallback(() => {
     flushTimerRef.current = null;
     const buf = textBufferRef.current;
@@ -394,6 +405,19 @@ export function App({
 
     const pending = new Map(buf);
     buf.clear();
+
+    const now = Date.now();
+    const gap = lastFlushAtRef.current === 0 ? 0 : now - lastFlushAtRef.current;
+    lastFlushAtRef.current = now;
+    let pendingChars = 0;
+    for (const v of pending.values()) pendingChars += v.length;
+    // One line per flush — easy to grep, agentId tells us if the holdup
+    // is main-agent (undefined) or sub-agent only.
+    uiLog.info("debug.ui.flush", {
+      agents: Array.from(pending.keys()).map((k) => k ?? "(main)"),
+      chars: pendingChars,
+      gapSinceLastFlush_ms: gap,
+    });
 
     chatStore.update((prev) => {
       let next = prev;
@@ -480,8 +504,23 @@ export function App({
 
         case "text_delta": {
           // Same rationale as stream_request_start: sub-agent assistant text
-          // is for the dock / detail view, not the main feed.
-          if (agentId !== undefined) break;
+          // is for the dock / detail view, not the main feed. We log every
+          // delta we DROP (agentId != undefined) so a user's "main agent
+          // is stuck" report can be verified against agentId — if the log
+          // shows only sub-agent drops during the freeze, the main feed
+          // is correctly idle (sub-agent is doing the work). If main-agent
+          // deltas are present but flush gap is large, it's a real
+          // pipeline stall.
+          if (agentId !== undefined) {
+            // Sample at most once per second to keep the log readable.
+            const last = (subAgentDeltaSampleRef.current ?? 0);
+            const now = Date.now();
+            if (now - last > 1000) {
+              subAgentDeltaSampleRef.current = now;
+              uiLog.debug("debug.ui.text_delta_dropped", { agentId });
+            }
+            break;
+          }
           setStreamMode("responding");
           const existing = textBufferRef.current.get(agentId) ?? "";
           textBufferRef.current.set(agentId, existing + event.text);
