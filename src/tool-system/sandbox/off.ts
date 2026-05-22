@@ -1,10 +1,2 @@
-import type { SandboxBackend } from "./index.js";
-
-export function createOffBackend(): SandboxBackend {
-  return {
-    name: "off",
-    wrap(command, opts) {
-      return { file: opts.shell, args: ["-c", command] };
-    },
-  };
-}
+// Temporary stub during monorepo migration (spec §4.3.1). Removed in batch 8.
+export * from "../../../packages/core/src/tool-system/sandbox/off.js";

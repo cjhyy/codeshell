@@ -133,7 +133,7 @@ describe("Grep tool", () => {
   it("shows content with output_mode content", async () => {
     const result = await grepTool({
       pattern: "ToolRegistry",
-      path: "src/tool-system/registry.ts",
+      path: "packages/core/src/tool-system/registry.ts",
       output_mode: "content",
     });
     expect(result).toContain("ToolRegistry");

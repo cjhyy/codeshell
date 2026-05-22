@@ -1,4 +1,2 @@
-declare module "*.md" {
-  const content: string;
-  export default content;
-}
+// Temporary stub during monorepo migration (spec §4.3.1). Removed in batch 8.
+export * from "../../../packages/core/src/prompt/sections/md.d.js";
