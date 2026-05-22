@@ -3,28 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:" />
     <title>code-shell</title>
-    <style>
-      :root {
-        color-scheme: light dark;
-        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      }
-      html,
-      body,
-      #root {
-        margin: 0;
-        height: 100%;
-        background: #fafafa;
-      }
-      @media (prefers-color-scheme: dark) {
-        html,
-        body,
-        #root {
-          background: #0d0d0e;
-          color: #e7e7e7;
-        }
-      }
-    </style>
   </head>
   <body>
     <div id="root"></div>

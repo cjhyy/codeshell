@@ -11,14 +11,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": false,
-    "noEmit": true,
     "isolatedModules": true,
-    "types": ["node"],
-    "baseUrl": ".",
-    "paths": {
-      "@renderer/*": ["src/renderer/*"]
-    }
+    "noEmit": true,
+    "types": ["node"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts"]
 }

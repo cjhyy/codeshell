@@ -1,0 +1,28 @@
+:root {
+  color-scheme: light dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: #fafafa;
+  color: #111;
+}
+
+@media (prefers-color-scheme: dark) {
+  html, body, #root {
+    background: #1a1a1c;
+    color: #e7e7e7;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+code, pre, .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

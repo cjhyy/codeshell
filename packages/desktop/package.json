@@ -4,23 +4,22 @@
   "private": true,
   "description": "Electron desktop client for code-shell (POC).",
   "type": "module",
-  "main": "./out/main/index.js",
+  "main": "./out/main/index.mjs",
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "start": "electron-vite preview",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@electron-toolkit/preload": "^3.0.1",
-    "@electron-toolkit/utils": "^3.0.0"
+    "dev": "bun run scripts/dev.ts",
+    "build": "bun run scripts/build.ts",
+    "build:main": "esbuild src/main/index.ts --bundle --platform=node --format=esm --outfile=out/main/index.mjs --external:electron --loader:.md=text --banner:js=\"import { createRequire as __ccr } from 'node:module'; const require = __ccr(import.meta.url);\"",
+    "build:preload": "esbuild src/preload/index.ts --bundle --platform=node --format=cjs --outfile=out/preload/index.cjs --external:electron",
+    "build:renderer": "vite build",
+    "typecheck": "tsc --noEmit",
+    "start": "electron ."
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.0",
     "electron": "^33.0.0",
-    "electron-vite": "^4.0.0",
+    "esbuild": "^0.24.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.0",
     "typescript": "^5.7.3",
