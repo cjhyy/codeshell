@@ -526,6 +526,16 @@ export default class Output {
         `[ink] High write ratio: blit=${blitCells}, write=${writeCells} (${((writeCells / totalCells) * 100).toFixed(1)}% writes), screen=${screenHeight}x${screenWidth}`,
       )
     }
+    // Flicker investigation: log every full-blit-miss event (blit=0)
+    // independent of write threshold, so we can see frames that re-paint
+    // the whole screen even when write count is small. This is the
+    // signature of fullResetSequence_CAUSES_FLICKER firing per frame.
+    if (process.env.CODESHELL_FLICKER_DEBUG === '1' && blitCells === 0 && writeCells > 0) {
+      logForDebugging(
+        `[ink] full-blit-miss: write=${writeCells} screen=${screenHeight}x${screenWidth} hasAbsoluteClears=${absoluteClears.length}`,
+        { level: 'info' },
+      )
+    }
     // Always log a compact per-frame line under CODESHELL_DEBUG_DIRTY=1
     // so a dirty diagnostic log can be joined to its blit/write outcome
     // by adjacent timestamps. Cheap because logger.debug is no-op unless

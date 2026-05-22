@@ -4,9 +4,15 @@ import {
   asyncAgentRegistry,
   type AsyncAgentEntry,
 } from "../../tool-system/builtin/agent-registry.js";
+import { logger as uiLogger } from "../../logging/logger.js";
+import { stringWidth } from "../../render/stringWidth.js";
 
 export const MAX_VISIBLE = 5;
 const NAME_MAX = 40;
+// Width of the right-aligned elapsed column. Covers "99h 59m 59s" (11
+// cols) plus a safety pad. Fixed so the row's measured width is constant
+// across 1Hz ticks — see AgentDockRow comment for the flicker rationale.
+const ELAPSED_WIDTH = 12;
 
 export type DockViewMode =
   | { kind: "main" }
@@ -42,8 +48,22 @@ export function AgentDock({
   // the fade window so completed/failed rows drop out after 30 s.
   useEffect(() => {
     if (visible.length === 0) return;
+    uiLogger.info("flicker.dock_tick_start", {
+      cat: "flicker",
+      visibleCount: visible.length,
+      rows: visible.map((a) => ({
+        id: a.agentId,
+        name: a.name,
+        status: a.status,
+        startedAt: a.startedAt,
+        finishedAt: a.finishedAt,
+      })),
+    });
     const id = setInterval(() => tick((n) => n + 1), 1000);
-    return () => clearInterval(id);
+    return () => {
+      uiLogger.info("flicker.dock_tick_stop", { cat: "flicker" });
+      clearInterval(id);
+    };
   }, [visible.length === 0]);
 
   if (visible.length === 0) return null;
@@ -92,13 +112,27 @@ function AgentDockRow({
         : entry.status === "cancelled"
           ? "ansi:yellow"
           : "ansi:red"; /* failed */
-  const elapsed = formatElapsed(
-    (entry.finishedAt ?? now) - entry.startedAt,
+  // FLICKER FIX: pad elapsed to a fixed display width so the 1Hz tick
+  // that walks `1s → 2s → ... → 10s → ... → 1m 0s → 1h 0m 0s` never
+  // changes the row's overall length. Without this, every elapsed
+  // widening triggers a Yoga layout shift on this row — which in turn
+  // forces render-node-to-output's full-screen damage backstop and
+  // produces a visible flicker every second for any running agent.
+  // ELAPSED_WIDTH covers up to "99h 59m 59s" (11 cols) with room to
+  // spare — agents lasting longer than 99h aren't a real case.
+  const elapsed = padRightToWidth(
+    formatElapsed((entry.finishedAt ?? now) - entry.startedAt),
+    ELAPSED_WIDTH,
   );
-  const description = truncate(entry.description, NAME_MAX);
+  // Truncate AND pad description so the name column doesn't change
+  // width either (long descriptions truncate, short ones pad).
+  const description = padRightToWidth(
+    truncate(entry.description, NAME_MAX),
+    NAME_MAX,
+  );
 
   return (
-    <Box flexDirection="row">
+    <Box flexDirection="row" height={1} overflow="hidden">
       <Text color={focused ? "ansi:cyanBright" : undefined} bold={focused}>
         {cursor}
       </Text>
@@ -190,4 +224,30 @@ export function formatElapsed(ms: number): string {
 
 function truncate(s: string, n: number): string {
   return s.length <= n ? s : s.slice(0, n - 1) + "…";
+}
+
+/**
+ * Pad-or-truncate `s` so its terminal display width equals exactly `target`.
+ * Padding is added as trailing spaces; truncation drops codepoints from
+ * the end until the width fits. Stringwidth-aware so CJK characters
+ * count as 2 columns, matching what the renderer measures via Yoga.
+ *
+ * Used by the dock to keep row widths constant across 1Hz elapsed
+ * updates — see AgentDockRow flicker note.
+ */
+function padRightToWidth(s: string, target: number): string {
+  const w = stringWidth(s);
+  if (w === target) return s;
+  if (w < target) return s + " ".repeat(target - w);
+  const chars = Array.from(s);
+  let acc = "";
+  let accW = 0;
+  for (const c of chars) {
+    const cw = stringWidth(c);
+    if (accW + cw > target) break;
+    acc += c;
+    accW += cw;
+  }
+  if (accW < target) acc += " ".repeat(target - accW);
+  return acc;
 }

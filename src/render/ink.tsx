@@ -39,6 +39,34 @@ import { CURSOR_HOME, cursorMove, cursorPosition, DISABLE_KITTY_KEYBOARD, DISABL
 import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCREEN, EXIT_ALT_SCREEN, SHOW_CURSOR } from './termio/dec.js';
 import { CLEAR_ITERM2_PROGRESS, CLEAR_TAB_STATUS, setClipboard, supportsTabStatus, wrapForMultiplexer } from './termio/osc.js';
 import { TerminalWriteProvider } from './useTerminalNotification.js';
+import { logger as inkLogger } from '../logging/logger.js';
+
+// Flicker investigation: per-second aggregate of onRender invocations,
+// with a stack sample so the dominant caller is identifiable. Only fires
+// when CODESHELL_FLICKER_DEBUG=1 (cheap module-load gate elsewhere).
+let _flickerRenderCount = 0;
+let _flickerLastFlush = Date.now();
+let _flickerStackSample = '';
+function onRenderFlickerProbe(): void {
+  _flickerRenderCount++;
+  // Sample once per second so the log carries a hint of who's driving
+  // the render storm without flooding with stack traces.
+  if (_flickerStackSample === '') {
+    _flickerStackSample = new Error().stack?.split('\n').slice(2, 8).join(' | ') ?? '';
+  }
+  const now = Date.now();
+  if (now - _flickerLastFlush >= 1000) {
+    inkLogger.info('flicker.onRender_rate', {
+      cat: 'flicker',
+      renders: _flickerRenderCount,
+      window_ms: now - _flickerLastFlush,
+      stackSample: _flickerStackSample,
+    });
+    _flickerRenderCount = 0;
+    _flickerStackSample = '';
+    _flickerLastFlush = now;
+  }
+}
 
 // Alt-screen: renderer.ts sets cursor.visible = !isTTY || screen.height===0,
 // which is always false in alt-screen (TTY + content fills screen).
@@ -529,6 +557,12 @@ export default class Ink {
   onRender() {
     if (this.isUnmounted || this.isPaused) {
       return;
+    }
+    // Flicker investigation: aggregate per-second render count + a small
+    // sample of the call stack so a future "why is onRender firing at
+    // 50Hz with no streaming" question can be answered from the log alone.
+    if (process.env.CODESHELL_FLICKER_DEBUG === '1') {
+      onRenderFlickerProbe();
     }
     // Entering a render cancels any pending drain tick — this render will
     // handle the drain (and re-schedule below if needed). Prevents a

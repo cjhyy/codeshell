@@ -3,6 +3,8 @@
  */
 import { useState, useEffect, useRef, memo, type MutableRefObject } from "react";
 import { Box, Text } from "../../render/index.js";
+import { logger as uiLogger } from "../../logging/logger.js";
+import { stringWidth } from "../../render/stringWidth.js";
 
 function getDefaultCharacters(): string[] {
   if (process.env.TERM === 'xterm-ghostty') {
@@ -102,8 +104,15 @@ function SpinnerWithVerbImpl({
   const lastVerbChangeRef = useRef(Date.now());
 
   useEffect(() => {
+    uiLogger.info("flicker.spinner_mount", { cat: "flicker", mode });
     const timer = setInterval(() => setTick((t) => t + 1), 200);
-    return () => clearInterval(timer);
+    return () => {
+      uiLogger.info("flicker.spinner_unmount", { cat: "flicker" });
+      clearInterval(timer);
+    };
+    // Intentionally only on mount/unmount, not on `mode` changes — verb mode
+    // can flip per tool call and we want one log line per real lifecycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Change verb every ~8 seconds
@@ -144,11 +153,60 @@ function SpinnerWithVerbImpl({
     spinnerLine += `  · ${thinkingLine}`;
   }
 
+  // FLICKER FIX: pad to SPINNER_FIXED_WIDTH so the string's terminal
+  // width is constant across ticks. Without this, varying-width fields
+  // (elapsed 9s→10s; verb 8s rotation; thinking tail churn at 50ms
+  // intervals during thinking-mode) change the Text node's measured
+  // width every frame, Yoga reports a layout shift, didLayoutShift()
+  // flips on, and render-node-to-output forces a full-screen damage
+  // backstop. That backstop manifests as `blit=0 write=1500+` every
+  // 200ms — visible to the user as a uniform high-frequency flicker
+  // during long LLM thinking pauses.
+  //
+  // We compute *terminal* width via stringWidth (CJK = 2, control = 0)
+  // rather than .length, since the verb table includes CJK strings.
+  // Truncate if over budget so width stays exactly fixed; pad with
+  // trailing spaces if under.
+  spinnerLine = fitToFixedWidth(spinnerLine, SPINNER_FIXED_WIDTH);
+
+  // height=1 + overflow=hidden lock the Box's measured height to a single
+  // row regardless of terminal width. Without this, narrow terminals (<80
+  // columns) would wrap the fixed-width spinnerLine onto a second row, and
+  // every wrap-toggle would itself be a layout shift — defeating the
+  // padding fix above. Long spinner content is simply clipped at the
+  // viewport edge, which is fine: every relevant field (elapsed, verb,
+  // truncated thinking) sits at the start of the string anyway.
   return (
-    <Box marginLeft={2} marginY={1} width="100%" flexWrap="wrap">
+    <Box marginLeft={2} marginY={1} width="100%" height={1} overflow="hidden">
       <Text color={color}>{spinnerLine}</Text>
     </Box>
   );
+}
+
+/**
+ * Pad-or-truncate `s` so its terminal display width equals exactly `target`.
+ * Padding is added as trailing spaces (width 1 each). Truncation is
+ * codepoint-by-codepoint from the tail until width fits — slow but the
+ * input is at most ~80 chars and runs at most once per 200ms frame.
+ */
+function fitToFixedWidth(s: string, target: number): string {
+  const w = stringWidth(s);
+  if (w === target) return s;
+  if (w < target) return s + " ".repeat(target - w);
+  // Over budget — trim from the end. Use Array.from to split on grapheme
+  // boundaries (single CJK codepoint != single JS string index).
+  const chars = Array.from(s);
+  let acc = "";
+  let accW = 0;
+  for (const c of chars) {
+    const cw = stringWidth(c);
+    if (accW + cw > target) break;
+    acc += c;
+    accW += cw;
+  }
+  // Pad any small gap (e.g. dropped a width-2 char with 1 column left over)
+  if (accW < target) acc += " ".repeat(target - accW);
+  return acc;
 }
 
 /**

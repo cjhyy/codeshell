@@ -303,9 +303,28 @@ export function App({
     }
     uiLog.info("debug.app.isRunning_change", {
       isRunning,
+      isQueryActive,
+      hasRunningBgAgents,
       runStartRef: runStartRef.current,
     });
-  }, [isRunning]);
+  }, [isRunning, isQueryActive, hasRunningBgAgents]);
+
+  // Flicker investigation: log every change to the two sources of isRunning
+  // independently, so we can tell whether a phantom "running" state is the
+  // query path or a stuck background agent.
+  useEffect(() => {
+    uiLog.info("flicker.isQueryActive_change", { isQueryActive });
+  }, [isQueryActive]);
+  useEffect(() => {
+    uiLog.info("flicker.hasRunningBgAgents_change", {
+      hasRunningBgAgents,
+      agents: agentsSnapshot.map((a) => ({
+        id: a.agentId,
+        name: a.name,
+        status: a.status,
+      })),
+    });
+  }, [hasRunningBgAgents, agentsSnapshot]);
 
   // Perf probes — mount once, kill on unmount.
   useEffect(() => {
@@ -527,6 +546,15 @@ export function App({
           streamingTokensRef.current += event.tokens ?? 0;
           if (!flushTimerRef.current) {
             flushTimerRef.current = setTimeout(flushTextBuffer, 50);
+            // Flicker probe: count text-delta arrivals into the flush window
+            // so we can spot whether a runaway stream is jamming the
+            // renderer with high-rate setStates. Sampled (one log per
+            // arrival is harmless; ChatEntry buffer flush coalesces).
+            uiLog.info("flicker.text_delta_arrival", {
+              cat: "flicker",
+              chunkLen: event.text.length,
+              tokens: event.tokens ?? 0,
+            });
           }
           break;
         }

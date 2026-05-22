@@ -564,6 +564,15 @@ function fullResetSequence_CAUSES_FLICKER(
   preserveScrollback: boolean,
   debug?: { triggerY: number; prevLine: string; nextLine: string },
 ): Diff {
+  // Every visible flicker on screen passes through here. Always log the
+  // reason + caller-supplied trigger row so post-mortem can pinpoint which
+  // path forced the clear (resize / offscreen / scrollback-corruption /
+  // shrink-below). Cheap — fires only on the rare full-reset path.
+  logForDebugging(`[ink] fullReset reason=${reason}` +
+    (debug ? ` triggerY=${debug.triggerY} prev=${JSON.stringify(debug.prevLine.slice(0, 60))} next=${JSON.stringify(debug.nextLine.slice(0, 60))}` : '') +
+    ` preserveScrollback=${preserveScrollback} viewport=${frame.viewport.height}x${frame.viewport.width}`,
+  { level: 'info' })
+
   // After clearTerminal, cursor is at (0, 0)
   const screen = new VirtualScreen({ x: 0, y: 0 }, frame.viewport.width)
   renderFrame(screen, frame, stylePool)

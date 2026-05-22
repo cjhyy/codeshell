@@ -18,6 +18,37 @@ import Box from './Box.js';
 const SCROLLBY_TRACE =
   process.env.CODESHELL_RENDER_DEBUG === 'verbose' ||
   process.env.CODESHELL_DEBUG_DIRTY === '1';
+
+// Flicker investigation: counters for scroll-side mutations, flushed once
+// per second so the log stays readable but every scroll path is observed.
+// Set CODESHELL_FLICKER_DEBUG=1 to turn this on without the heavier
+// SCROLLBY_TRACE stack-trace logging.
+const FLICKER_DEBUG = process.env.CODESHELL_FLICKER_DEBUG === '1';
+let _scrollByCount = 0;
+let _scrollToCount = 0;
+let _scrollToBottomCount = 0;
+let _scrollMutCount = 0;
+let _scrollLastFlush = Date.now();
+function flickerCount(kind: 'by' | 'to' | 'bottom' | 'mut'): void {
+  if (!FLICKER_DEBUG) return;
+  if (kind === 'by') _scrollByCount++;
+  else if (kind === 'to') _scrollToCount++;
+  else if (kind === 'bottom') _scrollToBottomCount++;
+  else _scrollMutCount++;
+  const now = Date.now();
+  if (now - _scrollLastFlush >= 1000) {
+    logger.info('flicker.scroll_counts', {
+      cat: 'flicker',
+      scrollBy: _scrollByCount,
+      scrollTo: _scrollToCount,
+      scrollToBottom: _scrollToBottomCount,
+      scrollMutated: _scrollMutCount,
+      window_ms: now - _scrollLastFlush,
+    });
+    _scrollByCount = _scrollToCount = _scrollToBottomCount = _scrollMutCount = 0;
+    _scrollLastFlush = now;
+  }
+}
 export type ScrollBoxHandle = {
   scrollTo: (y: number) => void;
   scrollBy: (dy: number) => void;
@@ -112,6 +143,7 @@ function ScrollBox({
     for (const l of listenersRef.current) l();
   };
   function scrollMutated(el: DOMElement): void {
+    flickerCount('mut');
     // Signal background intervals (IDE poll, LSP poll, GCS fetch, orphan
     // check) to skip their next tick — they compete for the event loop and
     // contributed to 1402ms max frame gaps during scroll drain.
@@ -130,6 +162,7 @@ function ScrollBox({
     scrollTo(y: number) {
       const el = domRef.current;
       if (!el) return;
+      flickerCount('to');
       // Explicit false overrides the DOM attribute so manual scroll
       // breaks stickiness. Render code checks ?? precedence.
       el.stickyScroll = false;
@@ -152,6 +185,7 @@ function ScrollBox({
     scrollBy(dy: number) {
       const el = domRef.current;
       if (!el) return;
+      flickerCount('by');
       el.stickyScroll = false;
       // Wheel input cancels any in-flight anchor seek — user override.
       el.scrollAnchor = undefined;
@@ -177,6 +211,7 @@ function ScrollBox({
     scrollToBottom() {
       const el = domRef.current;
       if (!el) return;
+      flickerCount('bottom');
       el.pendingScrollDelta = undefined;
       el.stickyScroll = true;
       markDirty(el);
