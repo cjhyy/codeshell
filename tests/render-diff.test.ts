@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import React from "react";
-import { Box, Text, AlternateScreen } from "../src/render/index.js";
+import { Box, Text, AlternateScreen } from "../packages/tui/src/render/index.js";
 import { mount, flush } from "./render-fixtures";
 
 test("changing one cell triggers a write smaller than a full repaint", async () => {

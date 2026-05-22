@@ -7,8 +7,8 @@
  *    because the streaming flag is already cleared.
  */
 import { test, expect } from "bun:test";
-import { chatStore } from "../../src/ui/store.js";
-import { QueryGuard } from "../../src/ui/query-guard.js";
+import { chatStore } from "../../packages/tui/src/ui/store.js";
+import { QueryGuard } from "../../packages/tui/src/ui/query-guard.js";
 
 function reset() {
   chatStore.setEntries([]);

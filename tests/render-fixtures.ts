@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import React from "react";
-import { renderSync, type Instance } from "../src/render/index.js";
+import { renderSync, type Instance } from "../packages/tui/src/render/index.js";
 
 const FIXTURE_ROOT = join(__dirname, "fixtures", "render");
 

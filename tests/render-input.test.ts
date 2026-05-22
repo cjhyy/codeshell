@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import React from "react";
-import { Text, useInput } from "../src/render/index.js";
-import type { InputEvent } from "../src/render/events/input-event.js";
+import { Text, useInput } from "../packages/tui/src/render/index.js";
+import type { InputEvent } from "../packages/tui/src/render/events/input-event.js";
 import { mount, flush, loadFixture, dumpFrames } from "./render-fixtures";
 
 function Probe({ onKey }: { onKey: (input: string, key: Record<string, unknown>) => void }) {

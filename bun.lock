@@ -57,13 +57,6 @@
         "typescript-eslint": "^8.59.0",
       },
     },
-    "packages/cli": {
-      "name": "@cjhyy/code-shell-cli",
-      "version": "0.4.0-poc.0",
-      "dependencies": {
-        "@cjhyy/code-shell-core": "workspace:*",
-      },
-    },
     "packages/core": {
       "name": "@cjhyy/code-shell-core",
       "version": "0.4.0-poc.0",
@@ -81,6 +74,16 @@
         "react-dom": "^19.2.0",
         "typescript": "^5.7.3",
         "vite": "^7.0.0",
+      },
+    },
+    "packages/tui": {
+      "name": "@cjhyy/code-shell-tui",
+      "version": "0.4.0-poc.0",
+      "bin": {
+        "code-shell": "./dist/cli/main.js",
+      },
+      "dependencies": {
+        "@cjhyy/code-shell-core": "workspace:*",
       },
     },
   },
@@ -127,11 +130,11 @@
 
     "@babel/types": ["@babel/types@7.29.0", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A=="],
 
-    "@cjhyy/code-shell-cli": ["@cjhyy/code-shell-cli@workspace:packages/cli"],
-
     "@cjhyy/code-shell-core": ["@cjhyy/code-shell-core@workspace:packages/core"],
 
     "@cjhyy/code-shell-desktop": ["@cjhyy/code-shell-desktop@workspace:packages/desktop"],
+
+    "@cjhyy/code-shell-tui": ["@cjhyy/code-shell-tui@workspace:packages/tui"],
 
     "@colors/colors": ["@colors/colors@1.5.0", "", {}, "sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ=="],
 

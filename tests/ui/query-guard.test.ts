@@ -1,5 +1,5 @@
 import { test, expect, mock } from "bun:test";
-import { QueryGuard } from "../../src/ui/query-guard.js";
+import { QueryGuard } from "../../packages/tui/src/ui/query-guard.js";
 
 test("idle → reserve → tryStart → end happy path", () => {
   const g = new QueryGuard();

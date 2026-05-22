@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { areMessageRowPropsEqual, type MessageRowProps } from "../src/ui/components/MessageRow.js";
-import type { ChatEntry } from "../src/ui/store.js";
+import { areMessageRowPropsEqual, type MessageRowProps } from "../packages/tui/src/ui/components/MessageRow.js";
+import type { ChatEntry } from "../packages/tui/src/ui/store.js";
 
 function entry(over: Partial<ChatEntry> = {}): ChatEntry {
   return { id: "e1", type: "user", text: "x", ...(over as object) } as ChatEntry;

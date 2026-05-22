@@ -18,6 +18,7 @@ export type {
   TranscriptEvent,
   TranscriptEventType,
   SessionState,
+  SessionStatus,
   TokenUsage,
   CompiledInput,
   PermissionDecision,
@@ -326,3 +327,192 @@ export { logger } from "./logging/logger.js";
 
 export { SettingsManager } from "./settings/manager.js";
 export { SettingsSchema, validateSettings } from "./settings/schema.js";
+
+// ─── State (runtime singletons shared with TUI) ──────────────────
+
+export {
+  getSessionId,
+  switchSession,
+  getOriginalCwd,
+  setOriginalCwd,
+  getProjectRoot,
+  setProjectRoot,
+  getCwdState,
+  getIsInteractive,
+  updateLastInteractionTime,
+  flushInteractionTime,
+  markScrollActivity,
+  type AttributedCounter,
+  type ChannelEntry,
+} from "./state.js";
+
+// ─── Utils (shared primitives used by TUI) ───────────────────────
+
+export {
+  getGraphemeSegmenter,
+  firstGrapheme,
+  lastGrapheme,
+  getWordSegmenter,
+  getRelativeTimeFormat,
+  getTimeZone,
+  getSystemLocaleLanguage,
+} from "./utils/intl.js";
+
+export { env } from "./utils/env.js";
+export { default as sliceAnsi } from "./utils/sliceAnsi.js";
+export { execFileNoThrow } from "./utils/execFileNoThrow.js";
+export { gte } from "./utils/semver.js";
+export { logForDebugging } from "./utils/debug.js";
+export {
+  formatBytes,
+  formatToolArgs,
+  singleLine,
+  MAX_LINE_WIDTH,
+  TOOL_DOT_COLORS,
+} from "./utils/toolDisplay.js";
+export { formatDuration, formatTokens } from "./utils/format.js";
+export {
+  getTheme,
+  type Theme,
+  type ThemeName,
+  type ThemeSetting,
+} from "./utils/theme.js";
+export { resolveThemeSetting, type SystemTheme } from "./utils/systemTheme.js";
+
+// ─── Logging (extended) ──────────────────────────────────────────
+
+export { rotateLogs } from "./logging/logger.js";
+export { recordUIEvent } from "./logging/session-recorder.js";
+
+// ─── Cost Tracker ────────────────────────────────────────────────
+
+export { costTracker, installCostTracking } from "./cost-tracker.js";
+
+// ─── Onboarding ──────────────────────────────────────────────────
+
+export {
+  hasApiKey,
+  resolveApiKey,
+  appendOnboardingResult,
+  detectEnvKeys,
+  saveArenaSettingsByKeys,
+  type OnboardingResult,
+} from "./onboarding.js";
+
+// ─── Updater ─────────────────────────────────────────────────────
+
+export {
+  getCurrentVersion,
+  checkForUpdate,
+  scheduleAutoInstallOnExit,
+  getUpdateAvailable,
+  getAutoUpdateDisabledReason,
+  type UpdateInfo,
+} from "./updater.js";
+
+// ─── Git Utilities ───────────────────────────────────────────────
+
+export {
+  isGitRepo,
+  getCurrentBranch,
+  getGitStatus,
+  getGitDiff,
+  getGitDiffStat,
+  getGitLog,
+  gitAdd,
+  gitCommit,
+  gitListBranches,
+  gitCheckout,
+  ghAvailable,
+  ghPrComments,
+} from "./git/utils.js";
+
+// ─── Tool-system (extended for TUI) ─────────────────────────────
+
+export { getInteractiveApprovalBackend } from "./tool-system/permission.js";
+export {
+  defaultSandboxConfig,
+  type SandboxConfig,
+} from "./tool-system/sandbox/index.js";
+export {
+  buildNotificationMessage,
+  buildNotificationSummary,
+  notificationQueue,
+} from "./tool-system/builtin/agent-notifications.js";
+export {
+  asyncAgentRegistry,
+  type AsyncAgentEntry,
+} from "./tool-system/builtin/agent-registry.js";
+
+// ─── Protocol (extended for TUI) ────────────────────────────────
+
+export { createInProcessClient } from "./protocol/helpers.js";
+export type { ProtocolModelEntry } from "./protocol/types.js";
+
+// ─── Arena (extended for TUI) ───────────────────────────────────
+
+export {
+  formatArenaResult,
+  printArenaResult,
+  renderProgress,
+  createProgressRenderer,
+  type OutputSink,
+} from "./arena/render/terminal.js";
+export { formatArenaResultForSession } from "./arena/render/session.js";
+
+// ─── Plugins ─────────────────────────────────────────────────────
+
+export {
+  installPlugin,
+  uninstallPlugin,
+  listInstalled,
+} from "./plugins/pluginInstaller.js";
+export {
+  addMarketplace,
+  removeMarketplace,
+  listMarketplaces,
+} from "./plugins/marketplaceManager.js";
+export {
+  parseMarketplaceInput,
+  deriveMarketplaceName,
+} from "./plugins/parseMarketplaceInput.js";
+export {
+  scanPluginCommands,
+  type PluginCommand,
+} from "./plugins/pluginCommandsLoader.js";
+
+// ─── LLM (extended for TUI) ─────────────────────────────────────
+
+export {
+  type CachedModel,
+  defaultCacheDir,
+} from "./llm/model-cache.js";
+export {
+  fetchModelList,
+  type FetchResult,
+} from "./llm/model-fetcher.js";
+export {
+  sanitizeApiKey,
+  hasNonAsciiPrintable,
+} from "./llm/api-key-sanitize.js";
+export {
+  PROVIDER_KINDS,
+  type ProviderKindName,
+} from "./llm/provider-kinds.js";
+export { type ProviderConfig } from "./llm/provider-catalog.js";
+
+// ─── Data ────────────────────────────────────────────────────────
+
+export {
+  syncOpenRouterCatalog,
+  getOpenRouterSnapshot,
+} from "./data/openrouter-sync.js";
+
+// ─── Types (extended for TUI) ────────────────────────────────────
+
+export type {
+  ApprovalRequest,
+  ApprovalResult,
+  ApprovalScope,
+  TaskInfo,
+} from "./types.js";

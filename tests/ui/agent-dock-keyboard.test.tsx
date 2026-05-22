@@ -1,15 +1,15 @@
 import { test, expect } from "bun:test";
 import React, { useState, useImperativeHandle, forwardRef } from "react";
 import { mount, flush } from "../render-fixtures";
-import { Box, Text, useInput } from "../../src/render/index.js";
+import { Box, Text, useInput } from "../../packages/tui/src/render/index.js";
 import {
   AgentDock,
   getVisibleAgents,
   MAX_VISIBLE,
   type DockViewMode,
-} from "../../src/ui/components/AgentDock.js";
+} from "../../packages/tui/src/ui/components/AgentDock.js";
 import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
-import { CommandInput } from "../../src/ui/components/CommandInput.js";
+import { CommandInput } from "../../packages/tui/src/ui/components/CommandInput.js";
 
 /**
  * The keyboard branch lives inline in App.tsx, but the behaviour is small

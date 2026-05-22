@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { runPluginCommand } from "../src/cli/commands/builtin/plugin-handler.js";
+import { runPluginCommand } from "../packages/tui/src/cli/commands/builtin/plugin-handler.js";
 
 function bareRepoWithFiles(scratch: string, name: string, files: Record<string, string>): string {
   const work = join(scratch, `${name}-work`);

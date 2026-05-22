@@ -13,7 +13,7 @@ import {
   DEFAULT_CAP,
   DEFAULT_STEP,
   type AnchorRef,
-} from "../src/ui/slice-anchor.js";
+} from "../packages/tui/src/ui/slice-anchor.js";
 
 function mkEntries(n: number): { id: string }[] {
   return Array.from({ length: n }, (_, i) => ({ id: `e${i + 1}` }));

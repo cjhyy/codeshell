@@ -8,7 +8,7 @@
  */
 import { test, expect } from "bun:test";
 import React, { useState } from "react";
-import { Box, Text, Static } from "../src/render/index.js";
+import { Box, Text, Static } from "../packages/tui/src/render/index.js";
 import { mount, flush } from "./render-fixtures.js";
 
 function flushRender(): Promise<void> {

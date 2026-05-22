@@ -1,0 +1,727 @@
+/**
+ * Core slash commands — migrated from App.tsx switch-case + new essentials.
+ */
+
+import type { SlashCommand } from "../registry.js";
+import { costTracker } from "@cjhyy/code-shell-core";
+import { execSync } from "node:child_process";
+import { existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
+import { resolveApiKey } from "@cjhyy/code-shell-core";
+import { initCommand } from "./init/index.js";
+
+export const coreCommands: SlashCommand[] = [
+  // ─── Existing (migrated from App.tsx) ───────────────────────────
+
+  {
+    name: "/exit",
+    aliases: ["/quit"],
+    description: "Exit the REPL",
+    execute: (_arg, ctx) => ctx.exit(),
+  },
+
+  {
+    name: "/clear",
+    description: "Clear chat history",
+    execute: (_arg, ctx) => ctx.clearChat(),
+  },
+
+  {
+    name: "/cost",
+    description: "Show token usage and cost (/cost stats for summary, /cost detail for breakdown)",
+    usage: "/cost [stats|detail]",
+    execute: (arg, ctx) => {
+      if (costTracker.getRequestCount() === 0) {
+        ctx.addStatus("No API requests yet.");
+        return;
+      }
+      const t = costTracker.getTotalTokens();
+      const cost = costTracker.getEstimatedCost();
+      const requests = costTracker.getRequestCount();
+
+      if (arg === "stats" || arg === "summary") {
+        ctx.addStatus(costTracker.formatSummary());
+      } else if (arg === "detail" || arg === "usage") {
+        const avgTokensPerReq = Math.round(t.total / requests);
+        const avgCostPerReq = (cost / requests).toFixed(4);
+        const fmt = (n: number) => n.toLocaleString();
+        ctx.addStatus(
+          [
+            "API Usage:",
+            `  Requests:         ${requests}`,
+            `  Total tokens:     ${fmt(t.total)}`,
+            `    Prompt:         ${fmt(t.prompt)}`,
+            `    Completion:     ${fmt(t.completion)}`,
+            `  Estimated cost:   ${cost.toFixed(4)}`,
+            `  Avg tokens/req:   ${fmt(avgTokensPerReq)}`,
+            `  Avg cost/req:     ${avgCostPerReq}`,
+            `  Model:            ${ctx.model}`,
+          ].join("\n"),
+        );
+      } else {
+        ctx.addStatus(
+          `Tokens: ${t.total} (in: ${t.prompt}, out: ${t.completion}) | ` +
+            `Cost: ${cost.toFixed(4)} | Requests: ${requests}`,
+        );
+        ctx.addStatus("Use /cost stats or /cost detail for more info.");
+      }
+    },
+  },
+
+  {
+    name: "/effort",
+    description: "Set reasoning effort level",
+    usage: "/effort <low|medium|high|max>",
+    execute: (arg, ctx) => {
+      if (arg && ["low", "medium", "high", "max"].includes(arg)) {
+        ctx.setEffort(arg);
+        ctx.addStatus(`Effort set to: ${arg}`);
+      } else {
+        ctx.addStatus(`Current effort: ${ctx.effort}. Use /effort <low|medium|high|max>`);
+      }
+    },
+  },
+
+  {
+    name: "/tasks",
+    description: "Show task list",
+    execute: (_arg, ctx) => {
+      const tasks = ctx.tasks ?? [];
+      if (tasks.length === 0) {
+        ctx.addStatus(
+          "No active tasks. Tasks are created automatically when the agent begins multi-step work.",
+        );
+        return;
+      }
+      const statusOrder: Record<string, number> = {
+        in_progress: 0,
+        pending: 1,
+        completed: 2,
+        stopped: 3,
+      };
+      const sorted = [...tasks].sort(
+        (a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9),
+      );
+      for (const t of sorted) {
+        const icon =
+          t.status === "completed"
+            ? "✓"
+            : t.status === "in_progress"
+              ? "●"
+              : t.status === "stopped"
+                ? "✗"
+                : "○";
+        ctx.addStatus(`  ${icon} ${t.subject ?? t.id} (${t.status})`);
+      }
+    },
+  },
+
+  {
+    name: "/model",
+    aliases: ["/m"],
+    description: "Switch model (interactive picker if no key given)",
+    usage: "/model [key]  — opens picker when no key, or switches directly",
+    execute: async (arg, ctx) => {
+      const key = arg.trim();
+
+      if (!key) {
+        // No arg → open the Ink picker. Fallback to text listing if the host
+        // didn't wire up the selector (e.g. running outside the Ink App).
+        if (ctx.openModelSelector) {
+          ctx.openModelSelector();
+          return;
+        }
+        try {
+          const result = await ctx.client.query("models");
+          const models = (result.data as any[]) ?? [];
+          if (models.length === 0) {
+            ctx.addStatus(
+              `Model: ${ctx.model}\n  (No model pool configured. Add "models" to settings.json)`,
+            );
+            return;
+          }
+          const lines = models.map((m: any) => {
+            const marker = m.active ? " ← active" : "";
+            return `  ${m.key.padEnd(16)} ${m.model}${marker}`;
+          });
+          ctx.addStatus(
+            `Model: ${ctx.model}\n\nAvailable models (/model <key> to switch):\n${lines.join("\n")}`,
+          );
+        } catch {
+          ctx.addStatus(`Model: ${ctx.model}`);
+        }
+        return;
+      }
+
+      // Switch model. The server returns { ok, model, key } on success and
+      // rejects on failure (handled by catch). Only update local state from
+      // the server's confirmed model id so we don't claim a switch the
+      // backend didn't actually perform.
+      try {
+        const result = (await ctx.client.configure({ model: key })) as {
+          ok?: boolean;
+          model?: string;
+        };
+        if (!result?.ok || !result.model) {
+          ctx.addStatus(`Failed to switch model: server did not confirm switch`);
+          return;
+        }
+        ctx.setModel(result.model);
+        ctx.addStatus(`Switched to: ${key} (${result.model})`);
+      } catch (err) {
+        ctx.addStatus(`Failed to switch model: ${(err as Error).message}`);
+      }
+    },
+  },
+
+  {
+    // Tiny utility separate from /session so it works mid-turn (see the
+    // READ_ONLY_WHILE_RUNNING allow-list in App.tsx) and is short enough
+    // to type without thinking. Pairs with `/log sid <id>` for filtered
+    // log lookup.
+    name: "/sid",
+    group: "core",
+    description: "Print the current session ID",
+    execute: (_arg, ctx) => {
+      if (ctx.sessionId) {
+        ctx.addStatus(`Session ID: ${ctx.sessionId}`);
+      } else {
+        ctx.addStatus("No session yet (no run has started).");
+      }
+    },
+  },
+
+  {
+    name: "/session",
+    description:
+      "Session management: /session, /session list, /session tag <name>, /session resume <id>",
+    usage: "/session [list|tag <name>|resume <id>]",
+    aliases: ["/sessions"],
+    execute: async (arg, ctx) => {
+      const parts = arg.trim().split(/\s+/);
+      const sub = parts[0] || "show";
+      const rest = parts.slice(1).join(" ");
+
+      if (sub === "show" || !arg.trim()) {
+        ctx.addStatus(`Session: ${ctx.sessionId ?? "none"}`);
+      } else if (sub === "list") {
+        try {
+          const result = await ctx.client.query("sessions");
+          const sessions = (result.data as any[]) ?? [];
+          if (sessions.length === 0) {
+            ctx.addStatus("No sessions.");
+          } else {
+            const lines = sessions.slice(0, 10).map((s: any, i: number) => {
+              const date = new Date(s.startedAt).toLocaleString();
+              const marker = s.sessionId === ctx.sessionId ? " ← current" : "";
+              const summary = s.summary ? `  "${s.summary}"` : "";
+              return `  ${i + 1}. ${date}  turns:${s.turnCount}${marker}${summary}`;
+            });
+            ctx.addStatus(
+              "Recent Sessions (use /resume <number> or /resume <query>):\n" + lines.join("\n"),
+            );
+          }
+        } catch (err) {
+          ctx.addStatus(`Error: ${(err as Error).message}`);
+        }
+      } else if (sub === "tag") {
+        if (!rest) {
+          ctx.addStatus("Usage: /session tag <name>");
+          return;
+        }
+        try {
+          await ctx.client.run(`/tag ${rest}`, ctx.sessionId);
+          ctx.addStatus(`Session tagged: ${rest}`);
+        } catch {
+          ctx.addStatus("Tagging not available. Use /tag command if registered.");
+        }
+      } else if (sub === "resume") {
+        if (!rest) {
+          ctx.addStatus("Usage: /session resume <session-id>");
+          return;
+        }
+        ctx.addStatus(`Use /resume ${rest} to resume that session.`);
+      } else {
+        ctx.addStatus("Usage: /session [show|list|tag <name>|resume <id>]");
+      }
+    },
+  },
+
+  /* Merged into /session above; alias handles old invocations */
+
+  {
+    name: "/tools",
+    description: "List available tools",
+    execute: async (_arg, ctx) => {
+      try {
+        const result = await ctx.client.query("tools");
+        const tools = (result.data as any[]) ?? [];
+        ctx.addStatus(
+          `Available Tools (${tools.length}):\n  ${tools.map((t: any) => t.name).join(", ")}`,
+        );
+      } catch (err) {
+        ctx.addStatus(`Error: ${(err as Error).message}`);
+      }
+    },
+  },
+
+  {
+    name: "/memory",
+    group: "context",
+    description: "Manage persistent memories",
+    usage: "/memory [list | add <name> <content> | delete <name> | open]",
+    execute: async (arg, ctx) => {
+      const { MemoryManager } = await import("@cjhyy/code-shell-core");
+      const mm = new MemoryManager(ctx.cwd);
+
+      const parts = arg.trim().split(/\s+/);
+      const sub = parts[0] || "list";
+
+      try {
+        if (sub === "list" || !arg.trim()) {
+          const entries = mm.loadAll();
+          if (entries.length === 0) {
+            ctx.addStatus("No memories stored. Use /memory add <name> <content> to create one.");
+          } else {
+            const lines = entries.map(
+              (e: any, i: number) => `  ${i + 1}. [${e.type}] ${e.name} — ${e.description}`,
+            );
+            ctx.addStatus(
+              "Memories:\n" + lines.join("\n") + "\n\nUse /memory delete <name> to remove.",
+            );
+          }
+        } else if (sub === "add") {
+          const name = parts[1];
+          const content = parts.slice(2).join(" ");
+          if (!name || !content) {
+            ctx.addStatus(
+              "Usage: /memory add <name> <content>\nExample: /memory add user_role I am a backend engineer",
+            );
+            return;
+          }
+          mm.save({
+            name,
+            description: content.slice(0, 80),
+            type: "user",
+            content,
+          });
+          ctx.addStatus(`Memory "${name}" saved.`);
+        } else if (sub === "delete" || sub === "rm") {
+          const name = parts[1];
+          if (!name) {
+            ctx.addStatus("Usage: /memory delete <name>");
+            return;
+          }
+          const deleted = mm.delete(name);
+          ctx.addStatus(deleted ? `Memory "${name}" deleted.` : `Memory "${name}" not found.`);
+        } else if (sub === "open") {
+          const dir = mm.getMemoryDir();
+          const editor = process.env.EDITOR || process.env.VISUAL || "vi";
+          ctx.addStatus(`Memory directory: ${dir}\nOpen with: ${editor} ${dir}`);
+        } else {
+          ctx.addStatus("Usage: /memory [list | add <name> <content> | delete <name> | open]");
+        }
+      } catch (err) {
+        ctx.addStatus(`Memory error: ${(err as Error).message}`);
+      }
+    },
+  },
+
+  {
+    name: "/compact",
+    group: "context",
+    description: "Force context compaction now",
+    execute: async (_arg, ctx) => {
+      ctx.addStatus("Compacting context...");
+      try {
+        const result = await ctx.client.query("compact");
+        const data = result.data as any;
+        if (data.before === data.after) {
+          ctx.addStatus(
+            `Context is already compact (${data.before} tokens). No compaction needed.`,
+          );
+        } else {
+          const saved = data.before - data.after;
+          const pct = ((saved / data.before) * 100).toFixed(0);
+          ctx.addStatus(
+            `Compacted: ${data.before} → ${data.after} tokens (saved ${saved} tokens, ${pct}%)`,
+          );
+        }
+      } catch (err) {
+        ctx.addStatus(`Compaction failed: ${(err as Error).message}`);
+      }
+    },
+  },
+
+  // ─── New commands ───────────────────────────────────────────────
+
+  {
+    name: "/resume",
+    description: "Resume a previous session",
+    usage: "/resume [number|query]",
+    execute: async (arg, ctx) => {
+      if (!arg) {
+        // No args: open the interactive SessionPicker panel (filters out
+        // empty sessions and shows time / turns / first-message preview).
+        // Falls back to a text listing in non-REPL contexts.
+        if (ctx.openSessionPicker) {
+          ctx.openSessionPicker();
+          return;
+        }
+        try {
+          const result = await ctx.client.query("sessions");
+          const sessions =
+            (result.data as Array<{
+              startedAt: number;
+              turnCount: number;
+              preview?: string;
+            }>) ?? [];
+          if (sessions.length === 0) {
+            ctx.addStatus("No sessions to resume.");
+            return;
+          }
+          const lines = sessions.slice(0, 10).map((s, i) => {
+            const date = new Date(s.startedAt).toLocaleString();
+            const preview = s.preview ? `  "${s.preview.slice(0, 60)}"` : "";
+            return `  ${i + 1}. ${date}  turns:${s.turnCount}${preview}`;
+          });
+          ctx.addStatus(
+            "Recent sessions (use /resume <number> or /resume <query>):\n" + lines.join("\n"),
+          );
+        } catch (err) {
+          ctx.addStatus(`Error: ${(err as Error).message}`);
+        }
+        return;
+      }
+
+      try {
+        const input = arg.trim();
+        const sessResult = await ctx.client.query("sessions");
+        const allSessions = (sessResult.data as any[]) ?? [];
+
+        let sessionId: string = input;
+
+        // Try numeric index first (1-based)
+        const num = parseInt(input, 10);
+        if (!isNaN(num) && num >= 1 && num <= allSessions.length) {
+          sessionId = allSessions[num - 1].sessionId;
+        } else {
+          // Try query matching against the first-user-message preview,
+          // fallback to raw input as session ID prefix.
+          const query = input.toLowerCase();
+          const match = allSessions.find(
+            (s: any) =>
+              (s.preview && s.preview.toLowerCase().includes(query)) ||
+              s.sessionId.startsWith(input),
+          );
+          if (match) sessionId = match.sessionId;
+        }
+
+        // Get session detail to restore transcript
+        const detailResult = await ctx.client.query("session_detail", sessionId);
+        const session = detailResult.data as any;
+
+        ctx.setSessionId(sessionId);
+
+        if (ctx.loadChatEntries && session?.transcript) {
+          const events = session.transcript;
+          const entries: import("../registry.js").RestoredChatEntry[] = [];
+
+          for (const event of events) {
+            switch (event.type) {
+              case "message": {
+                const role = event.data.role as string;
+                const content = event.data.content;
+                // Assistant content is stored as a block array
+                // ([{type:"text"|"reasoning"|"tool_use", ...}, ...]). User
+                // content is a plain string. tool_use blocks are emitted
+                // separately via the outer "tool_use" event, so we only
+                // surface text + reasoning here. Reasoning is shown inline
+                // with a tag prefix since the UI has no dedicated entry type.
+                if (role === "user") {
+                  const text =
+                    typeof content === "string"
+                      ? content
+                      : Array.isArray(content)
+                        ? content
+                            .filter((b: { type?: string }) => b?.type === "text")
+                            .map((b: { text?: string }) => b.text ?? "")
+                            .join("")
+                        : "";
+                  if (text) entries.push({ type: "user", text });
+                } else if (role === "assistant") {
+                  const parts: string[] = [];
+                  if (typeof content === "string") {
+                    if (content) parts.push(content);
+                  } else if (Array.isArray(content)) {
+                    for (const b of content as Array<{ type?: string; text?: string }>) {
+                      if (b?.type === "reasoning" && b.text) {
+                        parts.push(`[thinking]\n${b.text}\n[/thinking]`);
+                      } else if (b?.type === "text" && b.text) {
+                        parts.push(b.text);
+                      }
+                    }
+                  }
+                  const text = parts.join("\n\n");
+                  if (text) entries.push({ type: "assistant_text", text });
+                }
+                break;
+              }
+              case "tool_use": {
+                entries.push({
+                  type: "tool_start",
+                  toolName: event.data.toolName as string,
+                  args: (event.data.args as Record<string, unknown>) ?? {},
+                });
+                break;
+              }
+              case "tool_result": {
+                entries.push({
+                  type: "tool_result",
+                  toolName: event.data.toolName as string,
+                  result: event.data.result as string | undefined,
+                  error: event.data.error as string | undefined,
+                });
+                break;
+              }
+            }
+          }
+
+          ctx.loadChatEntries(entries);
+        }
+
+        ctx.addStatus(
+          `Resumed session ${sessionId.slice(0, 8)}… (${session?.state?.turnCount ?? "?"} turns)`,
+        );
+      } catch (err) {
+        ctx.addStatus(`Resume failed: ${(err as Error).message}`);
+      }
+    },
+  },
+
+  {
+    name: "/diff",
+    group: "git",
+    description: "Show git diff",
+    usage: "/diff [file]",
+    execute: (_arg, ctx) => {
+      try {
+        const file = _arg || "";
+        const stat = execSync(`git diff --stat HEAD ${file}`, {
+          cwd: ctx.cwd,
+          encoding: "utf-8",
+          timeout: 10000,
+        }).trim();
+
+        if (!stat) {
+          ctx.addStatus("No changes.");
+          return;
+        }
+
+        const diff = execSync(`git diff HEAD ${file} --no-color`, {
+          cwd: ctx.cwd,
+          encoding: "utf-8",
+          timeout: 10000,
+        }).trim();
+
+        ctx.addStatus(
+          `${stat}\n\n${diff.slice(0, 5000)}${diff.length > 5000 ? "\n... (truncated)" : ""}`,
+        );
+      } catch {
+        ctx.addStatus("Not a git repository or git not available.");
+      }
+    },
+  },
+
+  {
+    name: "/status",
+    description:
+      "Show system status; /status env for environment info, /status doctor for diagnostics",
+    usage: "/status [env|doctor]",
+    execute: async (arg, ctx) => {
+      if (arg === "env" || arg === "environment") {
+        ctx.addStatus(
+          [
+            `Runtime:  ${process.version}`,
+            `Platform: ${process.platform} ${process.arch}`,
+            `CWD:      ${ctx.cwd}`,
+            `Shell:    ${process.env.SHELL ?? "unknown"}`,
+            `Session:  ${ctx.sessionId ?? "none"}`,
+          ].join("\n"),
+        );
+      } else if (arg === "doctor" || arg === "diagnostic") {
+        try {
+          const configResult = await ctx.client.query("config");
+          const config = configResult.data as any;
+          const checks: string[] = [`Runtime:  ${process.version} — OK`];
+          try {
+            const gv = execSync("git --version", { encoding: "utf-8", timeout: 5000 }).trim();
+            checks.push(`Git:      ${gv} — OK`);
+          } catch {
+            checks.push(`Git:      NOT FOUND`);
+          }
+          checks.push(`Model:    ${config.model ?? ctx.model}`);
+          checks.push(`CWD:      ${config.cwd ?? ctx.cwd}`);
+          try {
+            const toolsResult = await ctx.client.query("tools");
+            checks.push(`Tools:    ${((toolsResult.data as any[]) ?? []).length} registered`);
+          } catch {
+            checks.push(`Tools:    unknown`);
+          }
+          checks.push(`Session:  ${ctx.sessionId ?? "none"}`);
+          try {
+            execSync("gh --version", { encoding: "utf-8", timeout: 5000 });
+            checks.push(`gh CLI:   available`);
+          } catch {
+            checks.push(`gh CLI:   not found`);
+          }
+          const apiKey = resolveApiKey();
+          checks.push(`API key:  ${apiKey ? "configured" : "NOT SET"}`);
+          ctx.addStatus("Diagnostics:\n  " + checks.join("\n  "));
+        } catch (err) {
+          ctx.addStatus(`Diagnostics error: ${(err as Error).message}`);
+        }
+      } else {
+        try {
+          const configResult = await ctx.client.query("config");
+          const config = configResult.data as any;
+          const toolsResult = await ctx.client.query("tools");
+          const tools = (toolsResult.data as any[]) ?? [];
+          const lines = [
+            `Model:       ${ctx.model}`,
+            `Effort:      ${ctx.effort}`,
+            `Permission:  ${config.permissionMode ?? "acceptEdits"}`,
+            `Session:     ${ctx.sessionId ?? "none"}`,
+            `CWD:         ${ctx.cwd}`,
+            `Tools:       ${tools.length} registered`,
+          ];
+          try {
+            const branch = execSync("git branch --show-current", {
+              cwd: ctx.cwd,
+              encoding: "utf-8",
+              timeout: 5000,
+            }).trim();
+            lines.push(`Git branch:  ${branch}`);
+          } catch {
+            /* ignore */
+          }
+          const t = costTracker.getTotalTokens();
+          if (t.total > 0) {
+            lines.push(`Tokens:      ${t.total} (in: ${t.prompt}, out: ${t.completion})`);
+            lines.push(`Cost:        ${costTracker.getEstimatedCost().toFixed(4)}`);
+          }
+          ctx.addStatus(lines.join("\n"));
+        } catch (err) {
+          ctx.addStatus(`Error: ${(err as Error).message}`);
+        }
+      }
+    },
+  },
+
+  {
+    name: "/version",
+    description: "Show version",
+    execute: (_arg, ctx) => {
+      try {
+        const pkg = JSON.parse(
+          execSync("cat package.json", { cwd: ctx.cwd, encoding: "utf-8", timeout: 3000 }),
+        );
+        ctx.addStatus(`code-shell v${pkg.version ?? "0.1.0"}`);
+      } catch {
+        ctx.addStatus("code-shell v0.1.0");
+      }
+    },
+  },
+
+  {
+    name: "/export",
+    description: "Export session transcript",
+    usage: "/export [json|markdown]",
+    execute: async (arg, ctx) => {
+      if (!ctx.sessionId) {
+        ctx.addStatus("No active session to export.");
+        return;
+      }
+      const format = arg === "json" ? "json" : "markdown";
+      try {
+        const detailResult = await ctx.client.query("session_detail", ctx.sessionId);
+        const session = detailResult.data as any;
+        const events = session?.transcript ?? [];
+
+        if (format === "json") {
+          const outPath = join(ctx.cwd, `session-${ctx.sessionId}.json`);
+          writeFileSync(outPath, JSON.stringify(events, null, 2), "utf-8");
+          ctx.addStatus(`Exported ${events.length} events to ${outPath}`);
+        } else {
+          const { renderSessionMarkdown } = await import("./export-md.js");
+          const { md, sidecars } = renderSessionMarkdown(ctx.sessionId, events, ctx.cwd);
+          const outPath = join(ctx.cwd, `session-${ctx.sessionId}.md`);
+          writeFileSync(outPath, md, "utf-8");
+          if (sidecars.length) {
+            const { mkdirSync } = await import("node:fs");
+            const { dirname } = await import("node:path");
+            mkdirSync(dirname(sidecars[0].path), { recursive: true });
+            for (const sc of sidecars) writeFileSync(sc.path, sc.content, "utf-8");
+          }
+          const tail = sidecars.length ? ` (+${sidecars.length} sidecar files)` : "";
+          ctx.addStatus(`Exported to ${outPath}${tail}`);
+        }
+      } catch (err) {
+        ctx.addStatus(`Export failed: ${(err as Error).message}`);
+      }
+    },
+  },
+
+  {
+    name: "/config",
+    group: "config",
+    description: "View or update settings",
+    usage: "/config [show | set <key> <value> | get <key>]",
+    execute: async (arg, ctx) => {
+      const { SettingsManager } = await import("@cjhyy/code-shell-core");
+      const sm = new SettingsManager(ctx.cwd);
+
+      const parts = arg.trim().split(/\s+/);
+      const sub = parts[0] || "show";
+
+      try {
+        if (sub === "show" || !arg.trim()) {
+          const settings = sm.get();
+          ctx.addStatus(JSON.stringify(settings, null, 2));
+        } else if (sub === "get") {
+          const key = parts[1];
+          if (!key) {
+            ctx.addStatus("Usage: /config get <key>  (e.g. model.name)");
+            return;
+          }
+          const settings = sm.get();
+          const val = key.split(".").reduce((o: any, k) => o?.[k], settings);
+          ctx.addStatus(`${key} = ${JSON.stringify(val)}`);
+        } else if (sub === "set") {
+          const key = parts[1];
+          const value = parts.slice(2).join(" ");
+          if (!key || !value) {
+            ctx.addStatus("Usage: /config set <key> <value>  (e.g. model.name claude-opus-4-6)");
+            return;
+          }
+          // Try to parse JSON values (booleans, numbers, objects)
+          let parsed: unknown = value;
+          try {
+            parsed = JSON.parse(value);
+          } catch {
+            /* keep as string */
+          }
+          await ctx.client.query("config_set", key, parsed);
+          ctx.addStatus(`Set ${key} = ${JSON.stringify(parsed)}`);
+        } else {
+          ctx.addStatus("Usage: /config [show | set <key> <value> | get <key>]");
+        }
+      } catch (err) {
+        ctx.addStatus(`Config error: ${(err as Error).message}`);
+      }
+    },
+  },
+
+  initCommand,
+];

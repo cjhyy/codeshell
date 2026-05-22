@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { detect, pickIntent } from "../src/cli/commands/builtin/init/detect.js";
+import { detect, pickIntent } from "../packages/tui/src/cli/commands/builtin/init/detect.js";
 
 function makeTmp(): string {
   return mkdtempSync(join(tmpdir(), "init-detect-"));

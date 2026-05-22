@@ -3,7 +3,7 @@ import {
   deriveModelAlias,
   deriveProviderKey,
   validateAlias,
-} from "../src/ui/components/ProviderModelFlow.js";
+} from "../packages/tui/src/ui/components/ProviderModelFlow.js";
 
 describe("deriveModelAlias", () => {
   it("strips vendor prefix; without providerKind keeps base id", () => {

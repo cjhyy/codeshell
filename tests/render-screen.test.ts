@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import React from "react";
 import chalk from "chalk";
-import { Box, Text, NoSelect, Link } from "../src/render/index.js";
+import { Box, Text, NoSelect, Link } from "../packages/tui/src/render/index.js";
 import { mount, dumpFrames, flush } from "./render-fixtures";
 
 test("renders text inside a box", async () => {

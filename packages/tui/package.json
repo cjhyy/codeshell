@@ -1,0 +1,20 @@
+{
+  "name": "@cjhyy/code-shell-tui",
+  "version": "0.4.0-poc.0",
+  "description": "Terminal UI for code-shell — Ink-based REPL on top of @cjhyy/code-shell-core.",
+  "type": "module",
+  "main": "./dist/cli/main.js",
+  "bin": {
+    "code-shell": "./dist/cli/main.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

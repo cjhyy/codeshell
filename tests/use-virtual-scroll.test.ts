@@ -8,8 +8,8 @@
  */
 import { test, expect } from "bun:test";
 import React, { useRef } from "react";
-import { Box, Text, ScrollBox, type ScrollBoxHandle } from "../src/render/index.js";
-import { useVirtualScroll } from "../src/ui/hooks/useVirtualScroll.js";
+import { Box, Text, ScrollBox, type ScrollBoxHandle } from "../packages/tui/src/render/index.js";
+import { useVirtualScroll } from "../packages/tui/src/ui/hooks/useVirtualScroll.js";
 import { mount } from "./render-fixtures.js";
 
 // ─── Constants (must match the hook's internals) ─────────────────────────────

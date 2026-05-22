@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach } from "bun:test";
-import { chatStore } from "../src/ui/store.js";
+import { chatStore } from "../packages/tui/src/ui/store.js";
 
 beforeEach(() => {
   chatStore.clear();

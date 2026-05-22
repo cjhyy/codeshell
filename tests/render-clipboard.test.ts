@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach } from "bun:test";
-import { osc, OSC, wrapForMultiplexer, getClipboardPath } from "../src/render/termio/osc.js";
+import { osc, OSC, wrapForMultiplexer, getClipboardPath } from "../packages/tui/src/render/termio/osc.js";
 import { env } from "../src/utils/env.js";
 
 // Use `Object.defineProperty` so re-assigning process.platform works.

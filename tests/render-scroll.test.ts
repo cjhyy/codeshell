@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import React, { useRef, useEffect } from "react";
-import { Text, ScrollBox, Box, type ScrollBoxHandle } from "../src/render/index.js";
+import { Text, ScrollBox, Box, type ScrollBoxHandle } from "../packages/tui/src/render/index.js";
 import { mount } from "./render-fixtures.js";
 
 // ScrollBox needs flexGrow (not a fixed height) inside a constrained parent to

@@ -20,7 +20,7 @@ async function readInitial(envValue: string | undefined): Promise<boolean> {
   else process.env.CODESHELL_FULLSCREEN = envValue;
   try {
     // Cache-bust the module so parseFullscreenEnv re-reads process.env.
-    const url = `../../src/ui/fullscreen-mode.ts?cachebust=${Math.random()}`;
+    const url = `../../packages/tui/src/ui/fullscreen-mode.ts?cachebust=${Math.random()}`;
     const mod = (await import(url)) as { INITIAL_FULLSCREEN_MODE: boolean };
     return mod.INITIAL_FULLSCREEN_MODE;
   } finally {

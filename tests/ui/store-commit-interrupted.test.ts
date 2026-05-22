@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { chatStore } from "../../src/ui/store.js";
+import { chatStore } from "../../packages/tui/src/ui/store.js";
 
 function reset() {
   chatStore.setEntries([]);
