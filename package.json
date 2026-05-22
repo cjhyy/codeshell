@@ -4,12 +4,19 @@
   "description": "Code Shell — meta package. Installs @cjhyy/code-shell-core and @cjhyy/code-shell-tui.",
   "type": "module",
   "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "bin": {
-    "code-shell": "./node_modules/.bin/code-shell"
+    "code-shell": "./dist/cli.js"
   },
   "scripts": {
     "preinstall": "node scripts/check-node.cjs",
-    "build": "bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-tui' build && mkdir -p dist && printf 'export * from \"@cjhyy/code-shell-core\";\n' > dist/index.js && printf 'export * from \"@cjhyy/code-shell-core\";\n' > dist/index.d.ts",
+    "build": "bun run --filter '@cjhyy/code-shell-core' build && bun run --filter '@cjhyy/code-shell-tui' build && bun run scripts/build-meta.ts",
     "dev": "CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 bun run packages/tui/src/cli/main.ts",
     "dev:bigtranscript": "bun run scripts/render-bigtranscript-dev.ts",
     "test": "bun test",

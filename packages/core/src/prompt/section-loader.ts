@@ -1,22 +1,22 @@
 /**
  * Load prompt section markdown files.
  *
- * Sections are inlined as text strings at build time via tsup's .md loader,
- * so they work in both dev (tsx) and built output (dist/) without needing
- * to copy files. Custom sections registered at runtime are also supported.
+ * Sections are read from disk at module load. The package build copies these
+ * files to dist/prompt/sections so plain Node ESM can import core without a
+ * custom .md loader.
  */
 
-// Built-in sections — imported as text strings by the bundler (.md → text)
-import baseSection from "./sections/base.md";
-import orchestrationSection from "./sections/orchestration.md";
-import codingSection from "./sections/coding.md";
-import toneSection from "./sections/tone.md";
+import { readFileSync } from "node:fs";
+
+function readSectionFile(name: string): string {
+  return readFileSync(new URL(`./sections/${name}.md`, import.meta.url), "utf-8");
+}
 
 const BUILTIN_SECTIONS: Record<string, string> = {
-  base: baseSection,
-  orchestration: orchestrationSection,
-  coding: codingSection,
-  tone: toneSection,
+  base: readSectionFile("base"),
+  orchestration: readSectionFile("orchestration"),
+  coding: readSectionFile("coding"),
+  tone: readSectionFile("tone"),
 };
 
 /** Registry for custom sections added at runtime. */

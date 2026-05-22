@@ -22,19 +22,15 @@ import { join } from "node:path";
 import type { SlashCommand } from "../../registry.js";
 import { detect, pickIntent, summarize, type Detection, type Intent } from "./detect.js";
 
-// Templates are imported as text strings — tsup inlines them via the `.md`
-// loader configured in tsup.config.ts (same path as src/prompt/sections/*.md).
-//
-// Caveat: under Bun's dev runtime (`bun run dev`) imported `.md` files are
-// wrapped in HTML (<p>, <h2>, <strong>, ...) instead of staying raw markdown.
-// Built output (dist/) is pure text. The LLM reads both fine, so we accept the
-// dev/prod mismatch rather than adding a custom loader or runtime readFileSync
-// path — matches how src/prompt/sections/*.md already works.
-import createTemplate from "./templates/create.md";
-import migrateTemplate from "./templates/migrate.md";
-import improveTemplate from "./templates/improve.md";
-import emptyTemplate from "./templates/empty.md";
-import rulesScaffoldSuffix from "./templates/rules-scaffold-suffix.md";
+function readTemplate(name: string): string {
+  return readFileSync(new URL(`./templates/${name}.md`, import.meta.url), "utf-8");
+}
+
+const createTemplate = readTemplate("create");
+const migrateTemplate = readTemplate("migrate");
+const improveTemplate = readTemplate("improve");
+const emptyTemplate = readTemplate("empty");
+const rulesScaffoldSuffix = readTemplate("rules-scaffold-suffix");
 
 /**
  * Cap the inlined CODESHELL.md context so a freshly generated multi-thousand-

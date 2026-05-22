@@ -10,7 +10,9 @@
  * callers should fall back to hardcoded defaults.
  */
 
-import snapshotJson from "./openrouter-models.json";
+import { createRequire } from "node:module";
+
+const requireJson = createRequire(import.meta.url);
 
 export interface OpenRouterModel {
   id: string;
@@ -30,7 +32,7 @@ interface Snapshot {
   models: OpenRouterModel[];
 }
 
-const bundled: Snapshot = snapshotJson as Snapshot;
+const bundled: Snapshot = requireJson("./openrouter-models.json") as Snapshot;
 let runtimeOverride: Snapshot | null = null;
 
 function loadSnapshot(): Snapshot {

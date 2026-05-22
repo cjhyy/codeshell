@@ -11,11 +11,10 @@
  * scripts/sync-models.ts because OpenRouter exposes full metadata.
  */
 
-import deepseekJson from "./deepseek-models.json";
-import zaiJson from "./zai-models.json";
-import openaiJson from "./openai-models.json";
-import geminiJson from "./gemini-models.json";
+import { createRequire } from "node:module";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
+
+const requireJson = createRequire(import.meta.url);
 
 export interface StaticModel {
   id: string;
@@ -36,10 +35,10 @@ interface StaticCatalog {
 }
 
 const TABLES: Partial<Record<ProviderKindName, StaticCatalog>> = {
-  deepseek: deepseekJson as StaticCatalog,
-  zai: zaiJson as StaticCatalog,
-  openai: openaiJson as StaticCatalog,
-  google: geminiJson as StaticCatalog,
+  deepseek: requireJson("./deepseek-models.json") as StaticCatalog,
+  zai: requireJson("./zai-models.json") as StaticCatalog,
+  openai: requireJson("./openai-models.json") as StaticCatalog,
+  google: requireJson("./gemini-models.json") as StaticCatalog,
 };
 
 export function listStaticModels(kind: ProviderKindName): StaticModel[] {
