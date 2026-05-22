@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { migrateModels } from "../src/cli/migrate-models.js";
+import { migrateModels } from "../packages/core/src/migrate-models.js";
 
 describe("migrateModels", () => {
   it("groups by (provider, baseUrl, apiKey) into providers[]", () => {

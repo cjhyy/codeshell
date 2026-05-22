@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { FileRunStore } from "../src/run/FileRunStore.js";
-import { RunQueue } from "../src/run/RunQueue.js";
-import { RunManager } from "../src/run/RunManager.js";
-import { VALID_TRANSITIONS } from "../src/run/types.js";
-import type { RunSnapshot, RunStatus } from "../src/run/types.js";
+import { FileRunStore } from "../packages/core/src/run/FileRunStore.js";
+import { RunQueue } from "../packages/core/src/run/RunQueue.js";
+import { RunManager } from "../packages/core/src/run/RunManager.js";
+import { VALID_TRANSITIONS } from "../packages/core/src/run/types.js";
+import type { RunSnapshot, RunStatus } from "../packages/core/src/run/types.js";
 
 // ─── State Machine ───────────────────────────────────────────────
 

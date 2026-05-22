@@ -7,7 +7,7 @@ import type { DOMElement } from '../dom.js';
 import { markDirty, scheduleRenderFrom } from '../dom.js';
 import { markCommitStart } from '../reconciler.js';
 import type { Styles } from '../styles.js';
-import '../global.d.ts';
+// global.d.ts extends React.JSX.IntrinsicElements; no runtime import needed
 import Box from './Box.js';
 
 // Gate on CODESHELL_RENDER_DEBUG=verbose. Same env var the devtools

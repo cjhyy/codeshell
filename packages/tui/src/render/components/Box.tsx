@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
-import '../global.d.ts';
+// global.d.ts extends React.JSX.IntrinsicElements; no runtime import needed
 import React, { type PropsWithChildren, type Ref } from 'react';
 import type { Except } from 'type-fest';
 import type { DOMElement } from '../dom.js';

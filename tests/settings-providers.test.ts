@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { validateSettings } from "../src/settings/schema.js";
+import { validateSettings } from "../packages/core/src/settings/schema.js";
 
 describe("settings schema — providers", () => {
   it("accepts providers[] block", () => {

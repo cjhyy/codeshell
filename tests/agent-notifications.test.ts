@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach } from "bun:test";
-import { notificationQueue, buildNotificationMessage, buildNotificationSummary, type NotificationItem } from "../src/tool-system/builtin/agent-notifications.js";
+import { notificationQueue, buildNotificationMessage, buildNotificationSummary, type NotificationItem } from "../packages/core/src/tool-system/builtin/agent-notifications.js";
 
 const fixture = (overrides: Partial<NotificationItem> = {}): NotificationItem => ({
   agentId: "abc12345",

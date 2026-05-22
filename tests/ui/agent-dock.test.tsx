@@ -6,7 +6,7 @@ import {
   formatElapsed,
   getVisibleAgents,
 } from "../../packages/tui/src/ui/components/AgentDock.js";
-import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
+import { asyncAgentRegistry } from "../../packages/tui/node_modules/@cjhyy/code-shell-core/dist/index.js";
 
 function reset() {
   asyncAgentRegistry.reset();

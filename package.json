@@ -1,33 +1,27 @@
 {
   "name": "@cjhyy/code-shell",
-  "version": "0.3.0",
-  "description": "Code Shell — general-purpose agent orchestration framework with a terminal coding preset",
+  "version": "0.5.0-rc.0",
+  "description": "Code Shell — meta package. Installs @cjhyy/code-shell-core and @cjhyy/code-shell-tui.",
   "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./run": {
-      "types": "./dist/run/index.d.ts",
-      "import": "./dist/run/index.js"
-    },
-    "./arena": {
-      "types": "./dist/arena/index.d.ts",
-      "import": "./dist/arena/index.js"
-    },
-    "./product": {
-      "types": "./dist/product/index.d.ts",
-      "import": "./dist/product/index.js"
-    },
-    "./package.json": "./package.json"
-  },
   "bin": {
-    "code-shell": "dist/cli/main.js"
+    "code-shell": "./node_modules/.bin/code-shell"
   },
+  "scripts": {
+    "preinstall": "node scripts/check-node.cjs",
+    "build": "mkdir -p dist && printf 'export * from \"@cjhyy/code-shell-core\";\n' > dist/index.js && printf 'export * from \"@cjhyy/code-shell-core\";\n' > dist/index.d.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint packages/",
+    "format": "prettier --write 'packages/**/*.ts'"
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-core": "workspace:*",
+    "@cjhyy/code-shell-tui": "workspace:*"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/cjhyy/codeshell.git"
@@ -38,22 +32,6 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "scripts": {
-    "preinstall": "node scripts/check-node.cjs",
-    "build": "bun run sync-models && bun run tsup && bun run build:dts",
-    "build:dts": "tsc --emitDeclarationOnly --declaration --outDir dist || true",
-    "sync-models": "bun run scripts/sync-models.ts",
-    "dev": "CODE_SHELL_DEV=1 CODESHELL_UI_PERF=1 bun run src/cli/main.ts",
-    "dev:bigtranscript": "bun run scripts/render-bigtranscript-dev.ts",
-    "test": "bun test",
-    "bench:render": "bun run bench/render-tail.bench.ts && bun run bench/render-streaming.bench.ts && bun run bench/render-spinner.bench.ts && bun run bench/render-wheel.bench.ts",
-    "test:watch": "bun test --watch",
-    "lint": "eslint src/",
-    "lint:engine-bypass": "bash scripts/check-no-engine-bypass.sh",
-    "format": "prettier --write 'src/**/*.ts'",
-    "typecheck": "bun run tsc --noEmit",
-    "prepublishOnly": "bun run build"
   },
   "engines": {
     "node": ">=20.10"
@@ -77,45 +55,6 @@
   ],
   "author": "maki maki",
   "license": "MIT",
-  "dependencies": {
-    "@alcalzone/ansi-tokenize": "^0.3.0",
-    "@anthropic-ai/sdk": "^0.39.0",
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "asciichart": "^1.5.25",
-    "auto-bind": "^5.0.1",
-    "bidi-js": "^1.0.3",
-    "chalk": "^5.4.1",
-    "cli-boxes": "^4.0.1",
-    "cli-highlight": "^2.1.11",
-    "code-excerpt": "^4.0.0",
-    "commander": "^13.1.0",
-    "diff": "^8.0.4",
-    "emoji-regex": "^10.6.0",
-    "get-east-asian-width": "^1.5.0",
-    "glob": "^11.0.0",
-    "gpt-tokenizer": "^3.4.0",
-    "indent-string": "^5.0.0",
-    "lodash-es": "^4.17.23",
-    "marked": "^17.0.5",
-    "marked-terminal": "^7.3.0",
-    "nanoid": "^5.1.2",
-    "openai": "^4.82.0",
-    "ora": "^9.3.0",
-    "proper-lockfile": "^4.1.2",
-    "react": "^19.2.4",
-    "react-reconciler": "^0.33.0",
-    "semver": "^7.7.4",
-    "signal-exit": "^4.1.0",
-    "stack-utils": "^2.0.6",
-    "strip-ansi": "^7.2.0",
-    "supports-hyperlinks": "^4.4.0",
-    "type-fest": "^5.5.0",
-    "usehooks-ts": "^3.1.1",
-    "wrap-ansi": "^10.0.0",
-    "yaml": "^2.7.0",
-    "yoga-layout": "^3.2.1",
-    "zod": "^3.24.2"
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/lodash": "^4.17.24",
@@ -123,13 +62,11 @@
     "@types/node": "^22.12.0",
     "@types/react": "^19.2.14",
     "@types/semver": "^7.7.1",
+    "bun-types": "^1.3.14",
     "eslint": "^9.19.0",
     "prettier": "^3.4.2",
     "tsup": "^8.3.6",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.59.0"
-  },
-  "workspaces": [
-    "packages/*"
-  ]
+  }
 }

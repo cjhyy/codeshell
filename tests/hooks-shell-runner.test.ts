@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { runShellHook, shellHookMatches } from "../src/hooks/shell-runner.js";
-import type { HookContext } from "../src/hooks/events.js";
+import { runShellHook, shellHookMatches } from "../packages/core/src/hooks/shell-runner.js";
+import type { HookContext } from "../packages/core/src/hooks/events.js";
 
 function ctx(extra: Partial<HookContext["data"]> = {}): HookContext {
   return {

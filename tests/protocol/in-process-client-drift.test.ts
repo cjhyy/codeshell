@@ -16,10 +16,10 @@
  * `setAskUser(...)` — both are part of the public Engine API.
  */
 import { test, expect } from "bun:test";
-import { taskManager } from "../../src/tool-system/builtin/task.js";
-import { createInProcessClient } from "../../src/protocol/helpers.js";
-import type { Engine } from "../../src/engine/engine.js";
-import type { StreamCallback } from "../../src/types.js";
+import { taskManager } from "../../packages/core/src/tool-system/builtin/task.js";
+import { createInProcessClient } from "../../packages/core/src/protocol/helpers.js";
+import type { Engine } from "../../packages/core/src/engine/engine.js";
+import type { StreamCallback } from "../../packages/core/src/types.js";
 
 /**
  * Minimal Engine stand-in. Records the onStream callback so each test can

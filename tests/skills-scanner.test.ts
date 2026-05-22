@@ -3,7 +3,7 @@ import {
   parseFrontmatter,
   quoteProblematicValues,
   coerceDescription,
-} from "../src/skills/frontmatter.js";
+} from "../packages/core/src/skills/frontmatter.js";
 
 describe("parseFrontmatter", () => {
   it("parses standard name + description", () => {
@@ -98,7 +98,7 @@ describe("coerceDescription", () => {
   });
 });
 
-import { scanSkills, invalidateSkillCache } from "../src/skills/scanner.js";
+import { scanSkills, invalidateSkillCache } from "../packages/core/src/skills/scanner.js";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

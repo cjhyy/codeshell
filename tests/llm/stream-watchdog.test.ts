@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { createStreamWatchdog, StreamIdleTimeoutError } from "../../src/llm/stream-watchdog.js";
+import { createStreamWatchdog, StreamIdleTimeoutError } from "../../packages/core/src/llm/stream-watchdog.js";
 
 test("idle watchdog fires onTimeout after idleTimeoutMs with no resets", async () => {
   let timedOut = false;

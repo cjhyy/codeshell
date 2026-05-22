@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Engine } from "../src/engine/engine.js";
+import { Engine } from "../packages/core/src/engine/engine.js";
 
 function makeProjectWithSettings(settings: object): string {
   const cwd = mkdtempSync(join(tmpdir(), "engine-settings-hooks-"));

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { ProviderCatalog, type ProviderConfig } from "../src/llm/provider-catalog.js";
+import { ProviderCatalog, type ProviderConfig } from "../packages/core/src/llm/provider-catalog.js";
 
 const ds: ProviderConfig = {
   key: "deepseek",

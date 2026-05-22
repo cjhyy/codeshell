@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, type ReactNode, type ReactElement } from 'react';
-import '../global.d.ts';
+// global.d.ts extends React.JSX.IntrinsicElements; no runtime import needed
 
 interface StaticProps<T> {
   /** Stable array; only NEW items past the previously-emitted index get rendered. */

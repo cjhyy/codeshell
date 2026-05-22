@@ -10,10 +10,10 @@ import {
   listMarketplaces,
   marketplaceDir,
   marketplacesRoot,
-} from "../src/plugins/marketplaceManager.js";
+} from "../packages/core/src/plugins/marketplaceManager.js";
 import {
   readKnownMarketplaces,
-} from "../src/plugins/knownMarketplaces.js";
+} from "../packages/core/src/plugins/knownMarketplaces.js";
 
 function makeFakeMarketplaceRepo(repoRoot: string, manifest: object) {
   spawnSync("git", ["init", "-q", repoRoot]);

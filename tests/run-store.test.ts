@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { FileRunStore } from "../src/run/FileRunStore.js";
+import { FileRunStore } from "../packages/core/src/run/FileRunStore.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -9,7 +9,7 @@ import type {
   RunCheckpoint,
   RunApproval,
   RunArtifactRef,
-} from "../src/run/types.js";
+} from "../packages/core/src/run/types.js";
 
 describe("FileRunStore", () => {
   let tmpDir: string;

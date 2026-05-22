@@ -4,7 +4,7 @@ import { updateLastInteractionTime } from '@cjhyy/code-shell-core';
 import { logForDebugging } from "@cjhyy/code-shell-core";
 import { stopCapturingEarlyInput } from "@cjhyy/code-shell-core";
 import { isEnvTruthy } from "@cjhyy/code-shell-core";
-import { isMouseClicksDisabled } from "@cjhyy/code-shell-core";
+import { isMouseClicksDisabled } from "../../utils/fullscreen.js";
 import { logger } from "@cjhyy/code-shell-core";
 import { EventEmitter } from '../events/emitter.js';
 import { InputEvent } from '../events/input-event.js';

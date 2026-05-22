@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { ToolRegistry } from "../src/tool-system/registry.js";
-import { ToolExecutor } from "../src/tool-system/executor.js";
-import { PermissionClassifier } from "../src/tool-system/permission.js";
-import { HookRegistry } from "../src/hooks/registry.js";
+import { ToolRegistry } from "../packages/core/src/tool-system/registry.js";
+import { ToolExecutor } from "../packages/core/src/tool-system/executor.js";
+import { PermissionClassifier } from "../packages/core/src/tool-system/permission.js";
+import { HookRegistry } from "../packages/core/src/hooks/registry.js";
 
 // Covers the deny short-circuit at executor.ts:131 — pre_tool_use handlers
 // returning {decision: "deny"} must prevent the underlying tool from running

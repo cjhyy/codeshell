@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readCache, writeCache, isStale, type CachedModel } from "../src/llm/model-cache.js";
+import { readCache, writeCache, isStale, type CachedModel } from "../packages/core/src/llm/model-cache.js";
 
 let dir: string;
 beforeEach(() => {

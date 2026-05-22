@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { readTool } from "../src/tool-system/builtin/read.js";
-import { writeTool } from "../src/tool-system/builtin/write.js";
-import { editTool } from "../src/tool-system/builtin/edit.js";
-import { globTool } from "../src/tool-system/builtin/glob.js";
-import { grepTool } from "../src/tool-system/builtin/grep.js";
-import { webFetchTool } from "../src/tool-system/builtin/web-fetch.js";
-import { askUserTool } from "../src/tool-system/builtin/ask-user.js";
-import type { ToolContext } from "../src/tool-system/context.js";
-import { enterPlanModeTool, exitPlanModeTool, resetPlanMode } from "../src/tool-system/builtin/plan.js";
+import { readTool } from "../packages/core/src/tool-system/builtin/read.js";
+import { writeTool } from "../packages/core/src/tool-system/builtin/write.js";
+import { editTool } from "../packages/core/src/tool-system/builtin/edit.js";
+import { globTool } from "../packages/core/src/tool-system/builtin/glob.js";
+import { grepTool } from "../packages/core/src/tool-system/builtin/grep.js";
+import { webFetchTool } from "../packages/core/src/tool-system/builtin/web-fetch.js";
+import { askUserTool } from "../packages/core/src/tool-system/builtin/ask-user.js";
+import type { ToolContext } from "../packages/core/src/tool-system/context.js";
+import { enterPlanModeTool, exitPlanModeTool, resetPlanMode } from "../packages/core/src/tool-system/builtin/plan.js";
 import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -108,13 +108,13 @@ describe("Edit tool", () => {
 
 describe("Glob tool", () => {
   it("finds files matching pattern", async () => {
-    const result = await globTool({ pattern: "src/**/*.ts" });
+    const result = await globTool({ pattern: "packages/core/src/**/*.ts" });
     expect(result).toContain(".ts");
     expect(result).not.toContain("node_modules");
   });
 
   it("shows file sizes", async () => {
-    const result = await globTool({ pattern: "src/types.ts" });
+    const result = await globTool({ pattern: "packages/core/src/types.ts" });
     expect(result).toMatch(/\(\d+[BK]/);
   });
 
@@ -126,7 +126,7 @@ describe("Glob tool", () => {
 
 describe("Grep tool", () => {
   it("finds files with matches (default mode)", async () => {
-    const result = await grepTool({ pattern: "export class", path: "src/" });
+    const result = await grepTool({ pattern: "export class", path: "packages/core/src/" });
     expect(result).toContain(".ts");
   });
 
@@ -140,7 +140,7 @@ describe("Grep tool", () => {
   });
 
   it("returns no matches message", async () => {
-    const result = await grepTool({ pattern: "zzz_never_exists_xyz", path: "src/" });
+    const result = await grepTool({ pattern: "zzz_never_exists_xyz", path: "packages/core/src/" });
     expect(result).toContain("No matches");
   });
 });

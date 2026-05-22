@@ -8,7 +8,7 @@ import {
   writeKnownMarketplaces,
   upsertKnownMarketplace,
   removeKnownMarketplace,
-} from "../src/plugins/knownMarketplaces.js";
+} from "../packages/core/src/plugins/knownMarketplaces.js";
 import {
   installedPluginsPath,
   readInstalledPlugins,
@@ -16,7 +16,7 @@ import {
   appendInstallEntry,
   removeInstallEntries,
   pluginInstallKey,
-} from "../src/plugins/installedPlugins.js";
+} from "../packages/core/src/plugins/installedPlugins.js";
 
 describe("plugin persistence", () => {
   let fakeHome: string;

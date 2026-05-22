@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { loadPluginHooks } from "../src/plugins/loadPluginHooks.js";
-import { HookRegistry } from "../src/hooks/registry.js";
+import { loadPluginHooks } from "../packages/core/src/plugins/loadPluginHooks.js";
+import { HookRegistry } from "../packages/core/src/hooks/registry.js";
 
 let workDir: string;
 let savedHome: string | undefined;

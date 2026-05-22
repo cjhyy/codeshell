@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { runPluginCommandHook } from "../src/plugins/pluginCommandHook.js";
-import type { HookContext } from "../src/hooks/events.js";
+import { runPluginCommandHook } from "../packages/core/src/plugins/pluginCommandHook.js";
+import type { HookContext } from "../packages/core/src/hooks/events.js";
 
 function ctx(eventName: HookContext["eventName"] = "on_session_start"): HookContext {
   return { eventName, data: { source: "startup" } };

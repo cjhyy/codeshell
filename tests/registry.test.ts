@@ -1,11 +1,11 @@
 import { describe, it, expect } from "bun:test";
-import { ToolRegistry } from "../src/tool-system/registry.js";
-import { HookRegistry } from "../src/hooks/registry.js";
-import { ToolExecutor } from "../src/tool-system/executor.js";
-import { PermissionClassifier } from "../src/tool-system/permission.js";
-import { ContextManager } from "../src/context/manager.js";
-import { SettingsManager } from "../src/settings/manager.js";
-import { Engine } from "../src/engine/engine.js";
+import { ToolRegistry } from "../packages/core/src/tool-system/registry.js";
+import { HookRegistry } from "../packages/core/src/hooks/registry.js";
+import { ToolExecutor } from "../packages/core/src/tool-system/executor.js";
+import { PermissionClassifier } from "../packages/core/src/tool-system/permission.js";
+import { ContextManager } from "../packages/core/src/context/manager.js";
+import { SettingsManager } from "../packages/core/src/settings/manager.js";
+import { Engine } from "../packages/core/src/engine/engine.js";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";

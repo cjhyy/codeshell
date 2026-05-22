@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { rewritePluginVars } from "../src/plugins/varRewrite.js";
+import { rewritePluginVars } from "../packages/core/src/plugins/varRewrite.js";
 
 let workDir: string;
 

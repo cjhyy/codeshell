@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { CostTracker } from "../src/cli/cost-tracker.js";
+import { CostTracker } from "../packages/core/src/cost-tracker.js";
 
 describe("CostTracker", () => {
   it("should not double-bill cache tokens", () => {

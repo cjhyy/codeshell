@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, spyOn, mock } from "bun:te
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fetchModelList } from "../src/llm/model-fetcher.js";
+import { fetchModelList } from "../packages/core/src/llm/model-fetcher.js";
 
 let dir: string;
 beforeEach(() => {

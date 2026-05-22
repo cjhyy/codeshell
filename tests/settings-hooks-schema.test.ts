@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { validateSettings } from "../src/settings/schema.js";
+import { validateSettings } from "../packages/core/src/settings/schema.js";
 
 // Smoke tests for the settings.hooks schema added for P3-A.
 // Full Settings shape is exercised by settings-schema.test.ts;

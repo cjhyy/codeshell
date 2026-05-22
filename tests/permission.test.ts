@@ -4,7 +4,7 @@ import {
   HeadlessApprovalBackend,
   AutoApprovalBackend,
   InteractiveApprovalBackend,
-} from "../src/tool-system/permission.js";
+} from "../packages/core/src/tool-system/permission.js";
 
 describe("PermissionClassifier", () => {
   it("allows tools matching explicit rules", () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { ModelPool } from "../src/llm/model-pool.js";
-import { ProviderCatalog } from "../src/llm/provider-catalog.js";
+import { ModelPool } from "../packages/core/src/llm/model-pool.js";
+import { ProviderCatalog } from "../packages/core/src/llm/provider-catalog.js";
 
 describe("ModelPool credential resolution", () => {
   it("pulls baseUrl/apiKey from providerCatalog via providerKey", () => {

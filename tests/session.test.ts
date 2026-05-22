@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { SessionManager } from "../src/session/session-manager.js";
-import { FileHistory } from "../src/session/file-history.js";
-import { MemoryManager } from "../src/session/memory.js";
+import { SessionManager } from "../packages/core/src/session/session-manager.js";
+import { FileHistory } from "../packages/core/src/session/file-history.js";
+import { MemoryManager } from "../packages/core/src/session/memory.js";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { PROVIDER_KINDS, getKindMeta } from "../src/llm/provider-kinds.js";
+import { PROVIDER_KINDS, getKindMeta } from "../packages/core/src/llm/provider-kinds.js";
 
 describe("PROVIDER_KINDS", () => {
   it("includes all expected kinds", () => {

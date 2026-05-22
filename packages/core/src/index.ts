@@ -364,6 +364,27 @@ export { execFileNoThrow } from "./utils/execFileNoThrow.js";
 export { gte } from "./utils/semver.js";
 export { logForDebugging } from "./utils/debug.js";
 export {
+  isEnvTruthy,
+  isEnvDefinedFalsy,
+  getClaudeConfigHomeDir,
+  isBareMode,
+  parseEnvVars,
+  shouldMaintainProjectWorkingDir,
+  isRunningOnHomespace,
+  getAWSRegion,
+  getDefaultVertexRegion,
+  getVertexRegionForModel,
+  isInProtectedNamespace,
+} from "./utils/envUtils.js";
+export {
+  startCapturingEarlyInput,
+  stopCapturingEarlyInput,
+  consumeEarlyInput,
+  hasEarlyInput,
+  seedEarlyInput,
+  isCapturingEarlyInput,
+} from "./utils/earlyInput.js";
+export {
   formatBytes,
   formatToolArgs,
   singleLine,

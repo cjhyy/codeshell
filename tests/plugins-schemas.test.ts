@@ -3,7 +3,7 @@ import {
   validateMarketplace,
   validatePluginEntry,
   validatePluginEntrySource,
-} from "../src/plugins/schemas.js";
+} from "../packages/core/src/plugins/schemas.js";
 
 describe("validatePluginEntrySource", () => {
   it("accepts a non-empty string", () => {

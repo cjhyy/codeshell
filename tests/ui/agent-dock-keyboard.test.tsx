@@ -8,7 +8,7 @@ import {
   MAX_VISIBLE,
   type DockViewMode,
 } from "../../packages/tui/src/ui/components/AgentDock.js";
-import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
+import { asyncAgentRegistry } from "../../packages/core/src/tool-system/builtin/agent-registry.js";
 import { CommandInput } from "../../packages/tui/src/ui/components/CommandInput.js";
 
 /**

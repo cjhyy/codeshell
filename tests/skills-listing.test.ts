@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { buildSkillListing } from "../src/tool-system/builtin/skill-prompt.js";
-import type { SkillDefinition } from "../src/skills/scanner.js";
+import { buildSkillListing } from "../packages/core/src/tool-system/builtin/skill-prompt.js";
+import type { SkillDefinition } from "../packages/core/src/skills/scanner.js";
 
 function skill(over: Partial<SkillDefinition> = {}): SkillDefinition {
   return {

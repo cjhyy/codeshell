@@ -9,8 +9,8 @@ import {
   resolveToolResultsDir,
   isPersistedReplacement,
   DEFAULT_PERSIST_THRESHOLD,
-} from "../src/context/tool-result-storage.js";
-import type { Message } from "../src/types.js";
+} from "../packages/core/src/context/tool-result-storage.js";
+import type { Message } from "../packages/core/src/types.js";
 
 function bigContent(size: number, fill = "x"): string {
   return fill.repeat(size);

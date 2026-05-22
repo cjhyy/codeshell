@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { skillTool } from "../src/tool-system/builtin/skill.js";
-import { invalidateSkillCache } from "../src/skills/scanner.js";
+import { skillTool } from "../packages/core/src/tool-system/builtin/skill.js";
+import { invalidateSkillCache } from "../packages/core/src/skills/scanner.js";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";

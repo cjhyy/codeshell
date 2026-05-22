@@ -1,5 +1,5 @@
 import { test, expect, mock } from "bun:test";
-import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
+import { asyncAgentRegistry } from "../../packages/core/src/tool-system/builtin/agent-registry.js";
 
 function resetRegistry() {
   asyncAgentRegistry.reset();

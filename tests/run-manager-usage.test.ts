@@ -21,16 +21,16 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { FileRunStore } from "../src/run/FileRunStore.js";
-import { RunManager } from "../src/run/RunManager.js";
-import { RunQueue } from "../src/run/RunQueue.js";
+import { FileRunStore } from "../packages/core/src/run/FileRunStore.js";
+import { RunManager } from "../packages/core/src/run/RunManager.js";
+import { RunQueue } from "../packages/core/src/run/RunQueue.js";
 import type {
   RunSnapshot,
   RunEvent,
   RunStreamEvent,
   RunStreamCallback,
-} from "../src/run/types.js";
-import type { Evaluator, EvaluatorContext, EvaluatorResult } from "../src/run/Evaluator.js";
+} from "../packages/core/src/run/types.js";
+import type { Evaluator, EvaluatorContext, EvaluatorResult } from "../packages/core/src/run/Evaluator.js";
 
 // ─── Test Helpers ───────────────────────────────────────────────
 
@@ -597,7 +597,7 @@ describe("场景 7：磁盘存储结构", () => {
 describe("场景 8：RunApprovalBackend", () => {
   it("requestApproval 挂起直到 resolveApproval 被调用", async () => {
     // 直接测试 approval backend 的挂起/恢复机制
-    const { RunApprovalBackend } = await import("../src/run/RunApprovalBackend.js");
+    const { RunApprovalBackend } = await import("../packages/core/src/run/RunApprovalBackend.js");
 
     const backend = new RunApprovalBackend();
     let approvalReceived = false;
@@ -636,7 +636,7 @@ describe("场景 8：RunApprovalBackend", () => {
   });
 
   it("createRunAskUserFn 挂起直到 resolveInput 被调用", async () => {
-    const { createRunAskUserFn } = await import("../src/run/RunApprovalBackend.js");
+    const { createRunAskUserFn } = await import("../packages/core/src/run/RunApprovalBackend.js");
 
     const adapter = createRunAskUserFn({
       onApprovalNeeded: async () => ({ approvalId: "" }),
@@ -669,7 +669,7 @@ describe("场景 8：RunApprovalBackend", () => {
  * 并确保设置了 OPENROUTER_API_KEY 或 OPENAI_API_KEY 环境变量。
  *
  * ```ts
- * import { createRunManager } from "../src/run/index.js";
+ * import { createRunManager } from "../packages/core/src/run/index.js";
  *
  * describe("真实 LLM 集成", () => {
  *   it("完整的 submit → execute → complete 流程", async () => {

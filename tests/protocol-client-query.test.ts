@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { AgentClient } from "../src/protocol/client.js";
-import type { Transport } from "../src/protocol/transport.js";
-import type { RpcMessage, RpcRequest } from "../src/protocol/types.js";
+import { AgentClient } from "../packages/core/src/protocol/client.js";
+import type { Transport } from "../packages/core/src/protocol/transport.js";
+import type { RpcMessage, RpcRequest } from "../packages/core/src/protocol/types.js";
 
 /**
  * Capture-only fake transport: records every outgoing request so we can

@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { writeCache } from "../src/llm/model-cache.js";
-import { ModelPool } from "../src/llm/model-pool.js";
-import { ProviderCatalog } from "../src/llm/provider-catalog.js";
+import { writeCache } from "../packages/core/src/llm/model-cache.js";
+import { ModelPool } from "../packages/core/src/llm/model-pool.js";
+import { ProviderCatalog } from "../packages/core/src/llm/provider-catalog.js";
 
 let dir: string;
 beforeEach(() => {

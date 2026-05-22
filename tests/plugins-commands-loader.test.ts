@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
   scanPluginCommands,
   invalidatePluginCommandsCache,
-} from "../src/plugins/pluginCommandsLoader.js";
+} from "../packages/core/src/plugins/pluginCommandsLoader.js";
 
 describe("scanPluginCommands", () => {
   let fakeHome: string;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { capabilitiesFor } from "../src/llm/capabilities/index.js";
+import { capabilitiesFor } from "../packages/core/src/llm/capabilities/index.js";
 
 describe("capabilitiesFor", () => {
   // ─── OpenAI ─────────────────────────────────────────────────

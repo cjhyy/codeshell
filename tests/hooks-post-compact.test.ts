@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { HookRegistry } from "../src/hooks/registry.js";
-import { wrapHookMessages } from "../src/hooks/inject.js";
+import { HookRegistry } from "../packages/core/src/hooks/registry.js";
+import { wrapHookMessages } from "../packages/core/src/hooks/inject.js";
 
 // post_compact runs inside TurnLoop after ContextManager.manageAsync,
 // gated by a non-micro strategy. The TurnLoop side reads

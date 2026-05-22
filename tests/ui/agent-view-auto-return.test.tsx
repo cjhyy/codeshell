@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import React, { useState, useEffect, useSyncExternalStore, useImperativeHandle, forwardRef } from "react";
 import { Box } from "../../packages/tui/src/render/index.js";
 import { mount, flush } from "../render-fixtures";
-import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
+import { asyncAgentRegistry } from "../../packages/core/src/tool-system/builtin/agent-registry.js";
 
 type ViewMode = { kind: "main" } | { kind: "agent"; agentId: string };
 

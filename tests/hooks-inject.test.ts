@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { HookRegistry } from "../src/hooks/registry.js";
-import { wrapHookMessages } from "../src/hooks/inject.js";
+import { HookRegistry } from "../packages/core/src/hooks/registry.js";
+import { wrapHookMessages } from "../packages/core/src/hooks/inject.js";
 
 describe("wrapHookMessages", () => {
   it("returns null for empty / undefined / whitespace-only inputs", () => {

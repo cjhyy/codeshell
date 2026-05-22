@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import {
   parseMarketplaceInput,
   deriveMarketplaceName,
-} from "../src/plugins/parseMarketplaceInput.js";
+} from "../packages/core/src/plugins/parseMarketplaceInput.js";
 
 describe("parseMarketplaceInput", () => {
   it("github shorthand owner/repo", () => {

@@ -10,16 +10,16 @@ import {
 import { tmpdir, homedir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { addMarketplace } from "../src/plugins/marketplaceManager.js";
+import { addMarketplace } from "../packages/core/src/plugins/marketplaceManager.js";
 import {
   installPlugin,
   uninstallPlugin,
   listInstalled,
-} from "../src/plugins/pluginInstaller.js";
+} from "../packages/core/src/plugins/pluginInstaller.js";
 import {
   readInstalledPlugins,
   pluginInstallKey,
-} from "../src/plugins/installedPlugins.js";
+} from "../packages/core/src/plugins/installedPlugins.js";
 
 /**
  * Build a bare repo at `dest` whose contents are seeded with the given

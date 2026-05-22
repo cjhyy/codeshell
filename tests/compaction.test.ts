@@ -6,8 +6,8 @@ import {
   truncateToolResult,
   buildSummarizationPrompt,
   applySummaryCompaction,
-} from "../src/context/compaction.js";
-import type { Message } from "../src/types.js";
+} from "../packages/core/src/context/compaction.js";
+import type { Message } from "../packages/core/src/types.js";
 
 describe("estimateTokens", () => {
   it("estimates string messages", () => {

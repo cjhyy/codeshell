@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { gitClone, gitRevParseHead, githubRepoToCloneUrl } from "../src/plugins/gitOps.js";
+import { gitClone, gitRevParseHead, githubRepoToCloneUrl } from "../packages/core/src/plugins/gitOps.js";
 
 function makeBareRepo(dir: string) {
   // Create a local repo with one commit, then bare-clone it so gitClone can pull from it.

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SettingsManager } from "../src/settings/manager.js";
+import { SettingsManager } from "../packages/core/src/settings/manager.js";
 
 let tmpHome: string;
 let origHome: string | undefined;

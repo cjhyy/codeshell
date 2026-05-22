@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
-import { StreamIdleTimeoutError } from "../../src/llm/stream-watchdog.js";
-import { isRetryable } from "../../src/llm/retry.js";
+import { StreamIdleTimeoutError } from "../../packages/core/src/llm/stream-watchdog.js";
+import { isRetryable } from "../../packages/core/src/llm/retry.js";
 
 test("StreamIdleTimeoutError is retryable", () => {
   const err = new StreamIdleTimeoutError(90000, "req_x");

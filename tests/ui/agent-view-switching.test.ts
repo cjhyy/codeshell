@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { asyncAgentRegistry } from "../../src/tool-system/builtin/agent-registry.js";
+import { asyncAgentRegistry } from "../../packages/core/src/tool-system/builtin/agent-registry.js";
 import { getVisibleAgents } from "../../packages/tui/src/ui/components/AgentDock.js";
 
 function reset() {

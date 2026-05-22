@@ -10,6 +10,7 @@ export default [
       "*.config.js",
       "examples/**/output/**",
       "packages/desktop/out/**",
+      "packages/*/dist/**",
     ],
   },
   js.configs.recommended,
@@ -92,4 +93,40 @@ export default [
       "prefer-const": "warn",
     },
   },
+  {
+    files: ["packages/core/src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          {
+            group: ["@cjhyy/code-shell-tui", "@cjhyy/code-shell-tui/*"],
+            message: "core must not import tui"
+          },
+          {
+            group: ["**/packages/tui/**"],
+            message: "core must not import tui (relative path)"
+          }
+        ]
+      }]
+    }
+  },
+  {
+    files: ["packages/desktop/src/renderer/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          {
+            group: [
+              "@cjhyy/code-shell-core",
+              "@cjhyy/code-shell-core/*",
+              "@cjhyy/code-shell-tui",
+              "@cjhyy/code-shell-tui/*",
+              "@cjhyy/code-shell"
+            ],
+            message: "renderer must not import codeshell packages — talk to main via window.codeShell.*"
+          }
+        ]
+      }]
+    }
+  }
 ];

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { ToolRegistry } from "../src/tool-system/registry.js";
-import { ToolExecutor } from "../src/tool-system/executor.js";
-import { PermissionClassifier } from "../src/tool-system/permission.js";
-import { HookRegistry } from "../src/hooks/registry.js";
+import { ToolRegistry } from "../packages/core/src/tool-system/registry.js";
+import { ToolExecutor } from "../packages/core/src/tool-system/executor.js";
+import { PermissionClassifier } from "../packages/core/src/tool-system/permission.js";
+import { HookRegistry } from "../packages/core/src/hooks/registry.js";
 
 function setupExecutor(classifierRule: "allow" | "deny" | "ask") {
   const registry = new ToolRegistry({ builtinTools: ["Read"] });

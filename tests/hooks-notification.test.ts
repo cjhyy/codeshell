@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { HookRegistry } from "../src/hooks/registry.js";
+import { HookRegistry } from "../packages/core/src/hooks/registry.js";
 
 // `notification` is fired void from agent.ts when a background sub-agent
 // terminates. Wiring it end-to-end requires the full subAgentSpawner +

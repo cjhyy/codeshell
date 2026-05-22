@@ -25,8 +25,8 @@ import {
   expandConfig,
   expandPath,
   resolveSandboxBackend,
-} from "../src/tool-system/sandbox/index.js";
-import { createOffBackend } from "../src/tool-system/sandbox/off.js";
+} from "../packages/core/src/tool-system/sandbox/index.js";
+import { createOffBackend } from "../packages/core/src/tool-system/sandbox/off.js";
 
 const IS_MAC = process.platform === "darwin";
 

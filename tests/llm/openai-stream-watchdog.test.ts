@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { StreamIdleTimeoutError } from "../../src/llm/stream-watchdog.js";
+import { StreamIdleTimeoutError } from "../../packages/core/src/llm/stream-watchdog.js";
 
 /**
  * Drive a tiny consumer that hangs after the first chunk. The watchdog
@@ -10,7 +10,7 @@ test("watchdog aborts the for-await when stream hangs after first chunk", async 
   process.env.CODESHELL_ENABLE_STREAM_WATCHDOG = "1";
   process.env.CODESHELL_STREAM_IDLE_TIMEOUT_MS = "100";
 
-  const { runStreamWithWatchdog } = await import("../../src/llm/providers/openai.js");
+  const { runStreamWithWatchdog } = await import("../../packages/core/src/llm/providers/openai.js");
 
   async function* hangAfterFirst() {
     yield { choices: [{ delta: { content: "hello" } }] };
@@ -32,7 +32,7 @@ test("watchdog does not abort a fast stream", async () => {
     yield { choices: [{ delta: { content: "c" } }] };
   }
 
-  const { runStreamWithWatchdog } = await import("../../src/llm/providers/openai.js");
+  const { runStreamWithWatchdog } = await import("../../packages/core/src/llm/providers/openai.js");
   const text = await runStreamWithWatchdog(fast() as any, { idleTimeoutMs: 100 });
   expect(text).toBe("abc");
 });
@@ -41,7 +41,7 @@ test("watchdog is dormant when env flag is off and caller does not override", as
   // Explicitly ensure the env flag is off.
   delete process.env.CODESHELL_ENABLE_STREAM_WATCHDOG;
 
-  const { runStreamWithWatchdog } = await import("../../src/llm/providers/openai.js");
+  const { runStreamWithWatchdog } = await import("../../packages/core/src/llm/providers/openai.js");
 
   // Generator that yields one chunk, hangs 150ms, then yields another.
   // With the default 90s timeout the watchdog would NOT fire regardless —
