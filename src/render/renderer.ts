@@ -1,4 +1,5 @@
 import { logForDebugging } from 'src/utils/debug.js'
+import { beginFrame, endFrame } from './dirty-diag.js'
 import { type DOMElement, markDirty } from './dom.js'
 import type { Frame } from './frame.js'
 import { consumeAbsoluteRemovedFlag } from './node-cache.js'
@@ -127,12 +128,14 @@ export default function createRenderer(
     // node's pixels. hasRemovedChild only shields direct siblings.
     // Normal-flow removals don't paint cross-subtree and are fine.
     const absoluteRemoved = consumeAbsoluteRemovedFlag()
+    beginFrame()
     renderNodeToOutput(node, output, {
       prevScreen:
         absoluteRemoved || options.prevFrameContaminated
           ? undefined
           : prevScreen,
     })
+    endFrame()
 
     const renderedScreen = output.get()
 

@@ -172,8 +172,19 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
     return (
       <ScrollBox ref={scrollRef} flexGrow={1} flexDirection="column" stickyScroll>
         {/* Topspacer: hold layout for unrendered items above. spacerRef
-            lets useVirtualScroll read listOrigin via Yoga computedTop. */}
-        <Box ref={spacerRef} height={topSpacer} flexShrink={0} />
+            lets useVirtualScroll read listOrigin via Yoga computedTop.
+            overflow="hidden" is critical: every scroll bin crossing
+            rebuilds offsets and changes this Box's height, marking it
+            dirty. As the FIRST child of ScrollBox a plain dirty spacer
+            would cancel blit on every subsequent item (renderChildren
+            in render-node-to-output.ts:1306 short-circuits prevScreen
+            on the first non-clipped dirty sibling), forcing 100%
+            writes for the entire viewport and producing the scrolling
+            flicker we see in ui-ink logs as bursts of
+            `High write ratio: blit=0`. Marking the spacer clipsBothAxes
+            shunts its dirty into seenDirtyClipped, leaving the
+            siblings' blit path intact. */}
+        <Box ref={spacerRef} height={topSpacer} flexShrink={0} overflow="hidden" />
 
         {entries.slice(start, end).map((e, i) => {
           const globalIdx = start + i;
@@ -183,7 +194,26 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
               {dividerIndex !== null && dividerIndex === globalIdx && unseenCount > 0 && (
                 <UnseenDivider count={unseenCount} />
               )}
-              <Box ref={measureRef(e.id)} flexDirection="column" flexShrink={0}>
+              {/* overflow="hidden": each item is a clipsBothAxes child of
+                  ScrollBox, so when one item is dirty (newly mounted on a
+                  scroll-bin crossing, or re-rendered because heightCache
+                  bumped offsetVersion mid-frame) its dirty flag goes into
+                  seenDirtyClipped instead of seenDirtyChild — the next
+                  item still gets prevScreen and can blit. Without this,
+                  one dirty item poisons the blit path for every item
+                  below it (render-node-to-output.ts:1306) and we slide
+                  back into 100%-writes flicker on scroll. CC dodges this
+                  via React Compiler-driven element identity; we don't
+                  have that yet, so the overflow-clip shield is our
+                  equivalent. Item content is laid out vertically and
+                  never paints outside its computed bounds, so clipping
+                  is a no-op visually. */}
+              <Box
+                ref={measureRef(e.id)}
+                flexDirection="column"
+                flexShrink={0}
+                overflow="hidden"
+              >
                 <CursorOutline active={isSelected}>
                   <MessageRow
                     entry={e}
@@ -199,8 +229,20 @@ export const VirtualMessageList = forwardRef<VirtualMessageListHandle, VirtualMe
           );
         })}
 
-        {/* Bottom spacer: hold layout for unrendered items below. */}
-        <Box height={bottomSpacer} flexShrink={0} />
+        {/* Bottom spacer: conditional render to match CC's
+            VirtualMessageList:867. When bottomSpacer is 0 (scrolled to
+            the bottom — the steady state for streaming and most
+            interactions) leaving NO node here means totalHeight equals
+            sum(item heights), which keeps the renderer's DECSTBM
+            fast-path heightDelta check stable across spinner ticks
+            and message growth. Rendering an always-mounted spacer with
+            height={0} caused its height attribute to flip 0↔N every
+            heightCache mutation, breaking the safeForFastPath guard
+            (render-node-to-output.ts:937) and falling back to a full
+            viewport rewrite. */}
+        {bottomSpacer > 0 && (
+          <Box height={bottomSpacer} flexShrink={0} overflow="hidden" />
+        )}
       </ScrollBox>
     );
   },

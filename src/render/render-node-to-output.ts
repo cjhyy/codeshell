@@ -1,6 +1,7 @@
 import indentString from 'indent-string'
 import { applyTextStyles } from './colorize.js'
 import type { DOMElement } from './dom.js'
+import { noteDirty } from './dirty-diag.js'
 import getMaxWidth from './get-max-width.js'
 import type { Rectangle } from './layout/geometry.js'
 import { LayoutDisplay, LayoutEdge, type LayoutNode } from './layout/node.js'
@@ -1304,11 +1305,17 @@ function renderChildren(
       inheritedBackgroundColor,
     })
     if (wasDirty && !seenDirtyChild) {
-      if (!clipsBothAxes(childElem) || isAbsolute) {
+      const clipped = clipsBothAxes(childElem) && !isAbsolute
+      noteDirty(childElem, clipped)
+      if (!clipped) {
         seenDirtyChild = true
       } else {
         seenDirtyClipped = true
       }
+    } else if (wasDirty) {
+      // Already past a non-clipped dirty sibling; record for visibility
+      // but don't change blit state. clipped flag here is informational.
+      noteDirty(childElem, clipsBothAxes(childElem) && !isAbsolute)
     }
   }
 }

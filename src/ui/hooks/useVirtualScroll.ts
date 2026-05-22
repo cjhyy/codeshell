@@ -626,6 +626,15 @@ export function useVirtualScroll(
       return
     }
     let anyChanged = false
+    // When the dirty diagnostic is on, accumulate which item keys
+    // changed and by how much — this is the smoking gun for the
+    // "scroll feels janky" pattern. A real layout-shift bug looks
+    // like the same N keys reporting new heights on every scroll
+    // tick (= measurement vs estimate divergence forcing offset
+    // rebuilds and spacer height jumps); a one-shot warm-up looks
+    // like changes on first mount then silence.
+    const diagOn = process.env.CODESHELL_DEBUG_DIRTY === '1'
+    const changedSamples: string[] = []
     for (const [key, el] of itemRefs.current) {
       const yoga = el.yogaNode
       if (!yoga) continue
@@ -635,13 +644,27 @@ export function useVirtualScroll(
         if (prev !== h) {
           heightCache.current.set(key, h)
           anyChanged = true
+          if (diagOn && changedSamples.length < 5) {
+            changedSamples.push(`${key.slice(0, 8)}:${prev ?? '?'}→${h}`)
+          }
         }
       } else if (yoga.getComputedWidth() > 0 && prev !== 0) {
         heightCache.current.set(key, 0)
         anyChanged = true
+        if (diagOn && changedSamples.length < 5) {
+          changedSamples.push(`${key.slice(0, 8)}:${prev ?? '?'}→0`)
+        }
       }
     }
-    if (anyChanged) offsetVersionRef.current++
+    if (anyChanged) {
+      offsetVersionRef.current++
+      if (diagOn) {
+        // eslint-disable-next-line no-console
+        console.debug(
+          `[virtual-scroll] heightCache bump v=${offsetVersionRef.current} samples=[${changedSamples.join(' ')}]`,
+        )
+      }
+    }
   })
 
   // Stable per-key callback refs. React's ref-swap dance (old(null) then

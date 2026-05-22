@@ -87,19 +87,34 @@ export function FullscreenLayout({
   // In flow mode: no alt-screen, no flexGrow on the outer columns, no "new
   // messages" pill (there is no scroll-away state to pill about — content
   // has already flowed into the terminal's scrollback).
+  // Layout structure mirrors CC's FullscreenLayout
+  // (claude-code-sourcemap/.../FullscreenLayout.tsx:392, 414).
+  //
+  // overflow="hidden" on the scrollable wrapper is the critical bit:
+  // wheel events call ScrollBox.scrollBy → markDirty walks UP the
+  // parent chain marking every ancestor Box dirty (dom.ts:401). On
+  // the next frame, renderChildren sees that dirty wrapper and
+  // shields the bottom slot's sibling blit by clearing prevScreen
+  // (render-node-to-output.ts:1306) — every wheel tick rewrites the
+  // prompt input, spinner, TaskList from scratch. That's the user-
+  // visible scroll flicker, observable as `blit=0, write=N (100%)`
+  // bursts in ui-ink logs.
+  //
+  // Wrapping the scrollable column in overflow:hidden makes it
+  // clipsBothAxes — its dirty drops into seenDirtyClipped and the
+  // bottom slot's blit survives untouched. An earlier comment here
+  // warned against this on the theory that an outer clip would
+  // confuse ScrollBox's Yoga measurement, but CC ships exactly this
+  // structure and the measurement is stable: ScrollBox reads its own
+  // viewport height from the wrapping Box, which has the same height
+  // regardless of overflow.
   const body = (
     <Box flexDirection="column" flexGrow={fullscreen ? 1 : 0}>
-      {/* Scrollable area — VirtualMessageList owns its own ScrollBox in
-          fullscreen mode. Don't wrap in an overflow-hidden Box: ScrollBox
-          needs to read its own viewport height via Yoga, and an outer clip
-          can confuse the measurement on resize.
-
-          In flow mode the overlay rides inside the scroll column (it just
-          appears under the latest message). In fullscreen the scrollable
-          column has flexGrow=1, which crowds an inline overlay out of the
-          viewport — pin the overlay above `bottom` with flexShrink=0 so it
-          always stays visible. */}
-      <Box flexDirection="column" flexGrow={fullscreen ? 1 : 0}>
+      <Box
+        flexDirection="column"
+        flexGrow={fullscreen ? 1 : 0}
+        overflow={fullscreen ? "hidden" : undefined}
+      >
         {scrollable}
         {!fullscreen && overlay}
       </Box>
@@ -122,8 +137,15 @@ export function FullscreenLayout({
         </Box>
       )}
 
-      {/* Bottom pinned area */}
-      <Box flexDirection="column" flexShrink={0}>
+      {/* Bottom pinned area. overflow="hidden" matches CC's bottom
+          slot wrapping — the prompt's own dirty (cursor blink, char
+          typing) stays inside this box and doesn't poison ancestor
+          siblings on each keystroke. */}
+      <Box
+        flexDirection="column"
+        flexShrink={0}
+        overflow={fullscreen ? "hidden" : undefined}
+      >
         {bottom}
       </Box>
     </Box>

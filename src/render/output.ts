@@ -526,6 +526,15 @@ export default class Output {
         `[ink] High write ratio: blit=${blitCells}, write=${writeCells} (${((writeCells / totalCells) * 100).toFixed(1)}% writes), screen=${screenHeight}x${screenWidth}`,
       )
     }
+    // Always log a compact per-frame line under CODESHELL_DEBUG_DIRTY=1
+    // so a dirty diagnostic log can be joined to its blit/write outcome
+    // by adjacent timestamps. Cheap because logger.debug is no-op unless
+    // the bucket is enabled.
+    if (process.env.CODESHELL_DEBUG_DIRTY === '1') {
+      logForDebugging(
+        `[ink-frame] blit=${blitCells} write=${writeCells} screen=${screenHeight}x${screenWidth}`,
+      )
+    }
 
     return screen
   }

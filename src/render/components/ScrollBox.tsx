@@ -15,7 +15,9 @@ import Box from './Box.js';
 // the 09:12 runaway-drain incident (and any future repro) can be traced
 // to whoever is bumping pendingScrollDelta after a turn ends. Computed
 // once at module load — no per-call env lookup.
-const SCROLLBY_TRACE = process.env.CODESHELL_RENDER_DEBUG === 'verbose';
+const SCROLLBY_TRACE =
+  process.env.CODESHELL_RENDER_DEBUG === 'verbose' ||
+  process.env.CODESHELL_DEBUG_DIRTY === '1';
 export type ScrollBoxHandle = {
   scrollTo: (y: number) => void;
   scrollBy: (dy: number) => void;
