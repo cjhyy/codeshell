@@ -1,11 +1,2 @@
-export { AgentServer, type AgentServerOptions } from "./server.js";
-export { AgentClient } from "./client.js";
-export {
-  createInProcessTransport,
-  StdioTransport,
-  IpcTransport,
-  type Transport,
-  type IpcSink,
-  type IpcSubscribe,
-} from "./transport.js";
-export { Methods, ErrorCodes, type RpcMessage, type RunResult } from "./types.js";
+// Temporary stub during monorepo migration (spec §4.3.1). Removed in batch 8.
+export * from "../../packages/core/src/protocol/index.js";
