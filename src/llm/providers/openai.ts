@@ -555,6 +555,18 @@ export class OpenAIClient extends LLMClientBase {
         if (reasoningContent !== undefined) {
           (param as unknown as Record<string, unknown>).reasoning_content = reasoningContent;
         }
+        // OpenAI rejects { role: "assistant" } with no content AND no
+        // tool_calls ("Invalid assistant message: content or tool_calls
+        // must be set"). This shape can arise from a transcript where
+        // the assistant produced only reasoning blocks (no text, no tool
+        // calls) before the stream was cut off, or from a synthetic
+        // message left behind by an interrupted retry. Drop these so
+        // the API call doesn't 400 on a structurally-empty turn.
+        // reasoning_content alone does NOT satisfy OpenAI's requirement —
+        // it's an extension field and not counted as "content".
+        if (param.content === undefined && param.tool_calls === undefined) {
+          continue;
+        }
         result.push(param);
       } else if (msg.role === "tool") {
         result.push({
