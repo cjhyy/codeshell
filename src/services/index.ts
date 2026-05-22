@@ -21,7 +21,8 @@ export {
   shouldAutoDream,
   recordSession,
   recordDreamComplete,
-  buildDreamPrompt,
+  buildDreamSystemPrompt,
+  buildDreamUserPrompt,
 } from "./auto-dream.js";
 export {
   saveSessionMemory,

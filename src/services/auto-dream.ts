@@ -89,28 +89,64 @@ export function recordDreamComplete(): void {
 }
 
 /**
- * Build the consolidation prompt for auto-dream.
+ * System prompt for the auto-dream tool-call loop.
+ *
+ * Drives the LLM as a "memory consolidation assistant" that operates ONLY in
+ * the dream scope via the MemorySave/MemoryDelete tools. The user scope is
+ * read-only context — modifying it would need permission, which a background
+ * dream pass cannot obtain (no UI on the call path).
  */
-export function buildDreamPrompt(
-  memories: Array<{ name: string; type: string; description: string; content: string }>,
+export function buildDreamSystemPrompt(): string {
+  return [
+    "You are a memory consolidation assistant for the CodeShell memory system.",
+    "",
+    "Your job: clean up the `dream` scope by deduplicating, merging, removing stale, and improving descriptions.",
+    "",
+    "Tools available:",
+    "- MemoryList({ scope }): list memories in a scope",
+    "- MemoryRead({ scope, name }): read full content of an entry",
+    "- MemorySave({ scope: 'dream', ... }): create or overwrite a dream entry (auto-approved)",
+    "- MemoryDelete({ scope: 'dream', name }): soft-delete a dream entry (auto-approved, recoverable from trash)",
+    "",
+    "Rules — read carefully:",
+    "1. You may freely Save/Delete in the `dream` scope. These operations DO NOT prompt the user.",
+    "2. You may NOT Save/Delete in the `user` scope from this loop — those operations require interactive permission which is not available here. Treat user-scope entries as read-only context.",
+    "3. If you find user-scope entries that look stale, surface them in your final summary text — don't try to delete them.",
+    "4. Prefer fewer, higher-quality merged entries over many similar fragments.",
+    "5. When an entry has versioned variants (e.g. `*-v1`, `*-v2`, `*-v3`), keep only the latest.",
+    "6. Be conservative: if uncertain whether two entries are truly duplicates, leave them alone.",
+    "7. When you're done, stop calling tools and respond with a one-paragraph summary of what you changed.",
+  ].join("\n");
+}
+
+/**
+ * Initial user prompt for the dream loop — gives the LLM the lay of the land
+ * (entries in both scopes, by name + description) without dumping every entry
+ * body. The LLM uses MemoryRead to fetch bodies for entries it wants to act on.
+ */
+export function buildDreamUserPrompt(
+  userMemories: Array<{ name: string; type: string; description: string }>,
+  dreamMemories: Array<{ name: string; type: string; description: string }>,
 ): string {
-  if (memories.length === 0) return "";
+  const fmt = (m: { name: string; type: string; description: string }) =>
+    `  - [${m.type}] ${m.name}: ${m.description}`;
 
-  const memoryDump = memories
-    .map((m) => `## [${m.type}] ${m.name}\n${m.description}\n\n${m.content}`)
-    .join("\n\n---\n\n");
+  const sections: string[] = [];
+  sections.push(`User-scope memories (READ-ONLY context, ${userMemories.length} entries):`);
+  if (userMemories.length === 0) {
+    sections.push("  (none)");
+  } else {
+    sections.push(userMemories.map(fmt).join("\n"));
+  }
+  sections.push("");
+  sections.push(`Dream-scope memories (YOUR WORKSPACE, ${dreamMemories.length} entries):`);
+  if (dreamMemories.length === 0) {
+    sections.push("  (none — you may consolidate from user-scope by re-saving curated entries into dream)");
+  } else {
+    sections.push(dreamMemories.map(fmt).join("\n"));
+  }
+  sections.push("");
+  sections.push("Begin consolidation. Use MemoryRead to inspect any entries whose names suggest duplication or staleness, then MemorySave/MemoryDelete in dream scope to clean up.");
 
-  return `Analyze and consolidate the following persistent memories:
-
-${memoryDump}
-
-Tasks:
-1. Identify duplicate or near-duplicate memories — merge them
-2. Identify outdated or stale memories — flag for removal
-3. Consolidate related memories into cleaner entries
-4. Ensure each memory has a clear, specific description
-5. Re-categorize any mistyped memories
-
-For each change, explain what you'd update and why.
-Output the consolidated memory list as JSON.`;
+  return sections.join("\n");
 }

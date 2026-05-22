@@ -42,6 +42,12 @@ import { replToolDef, replTool } from "./repl.js";
 import { briefToolDef, briefTool } from "./brief.js";
 import { powershellToolDef, powershellTool } from "./powershell.js";
 import { arenaToolDef, arenaTool } from "./arena.js";
+import {
+  memoryListToolDef, memoryListTool,
+  memoryReadToolDef, memoryReadTool,
+  memorySaveToolDef, memorySaveTool,
+  memoryDeleteToolDef, memoryDeleteTool,
+} from "./memory.js";
 
 /**
  * Tool executor signature.
@@ -483,5 +489,50 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       timeoutMs: 1_800_000, // 30min — multi-model debate rounds take time
     },
     execute: arenaTool,
+  },
+  // ─── Memory tools (persistent cross-session memory) ────────────
+  // Save/Delete default to "ask" so user-scope modifications go through a
+  // permission prompt; dream-scope is whitelisted via a PermissionRule in
+  // Engine.buildPermissionConfig so the LLM can freely manage its own
+  // workspace without prompting.
+  {
+    definition: {
+      ...memoryListToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: memoryListTool,
+  },
+  {
+    definition: {
+      ...memoryReadToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: memoryReadTool,
+  },
+  {
+    definition: {
+      ...memorySaveToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: memorySaveTool,
+  },
+  {
+    definition: {
+      ...memoryDeleteToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: memoryDeleteTool,
   },
 ];

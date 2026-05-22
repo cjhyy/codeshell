@@ -7,12 +7,32 @@
  *   2. CODE_SHELL_HOME env var
  *   3. ~/.code-shell
  *
- * MEMORY.md is the index file.
+ * Two scopes are isolated on disk:
+ *   - user/    Things the user explicitly asked to remember, plus the legacy
+ *              auto-extracted entries (extract-memories output). LLM may
+ *              only modify these through permission-gated tool calls.
+ *   - dream/   The dream pipeline's workspace. The LLM is free to add /
+ *              merge / delete entries here; user/ is read-only to dream.
+ *
+ * MEMORY.md is the index file (one per scope).
+ *
+ * Deletes are SOFT — files are moved to <baseDir>/memory-trash/<ISO>/<scope>/
+ * rather than removed, so accidental deletions are recoverable.
  */
 
-import { mkdirSync, existsSync, readFileSync, writeFileSync, readdirSync, unlinkSync } from "node:fs";
+import {
+  mkdirSync,
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  renameSync,
+  statSync,
+} from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+
+export type MemoryScope = "user" | "dream";
 
 export interface MemoryEntry {
   name: string;
@@ -20,6 +40,7 @@ export interface MemoryEntry {
   type: "user" | "feedback" | "project" | "reference";
   content: string;
   fileName: string;
+  scope: MemoryScope;
 }
 
 export interface MemoryManagerOptions {
@@ -27,6 +48,8 @@ export interface MemoryManagerOptions {
   projectDir?: string;
   /** Override the base directory (~/.code-shell by default). Takes precedence over env. */
   baseDir?: string;
+  /** Which scope this manager operates on. Defaults to "user". */
+  scope?: MemoryScope;
 }
 
 export function resolveMemoryBaseDir(override?: string): string {
@@ -38,6 +61,10 @@ export function resolveMemoryBaseDir(override?: string): string {
 
 export class MemoryManager {
   private readonly baseDir: string;
+  /** Root containing both scope subdirs (the "memory" dir per project/global). */
+  private readonly memoryRoot: string;
+  private readonly scope: MemoryScope;
+  /** Scope-specific directory: <memoryRoot>/<scope>. */
   private readonly memoryDir: string;
   private readonly indexPath: string;
   // Per-instance cache of {fileName -> {name, description}} so the
@@ -53,22 +80,32 @@ export class MemoryManager {
       typeof options === "string" ? { projectDir: options } : (options ?? {});
 
     this.baseDir = resolveMemoryBaseDir(opts.baseDir);
+    this.scope = opts.scope ?? "user";
+
     if (opts.projectDir) {
       const projectHash = opts.projectDir.replace(/[/\\:]/g, "-").replace(/^-/, "");
-      this.memoryDir = join(this.baseDir, "projects", projectHash, "memory");
+      this.memoryRoot = join(this.baseDir, "projects", projectHash, "memory");
     } else {
-      this.memoryDir = join(this.baseDir, "memory");
+      this.memoryRoot = join(this.baseDir, "memory");
     }
+
+    this.memoryDir = join(this.memoryRoot, this.scope);
     this.indexPath = join(this.memoryDir, "MEMORY.md");
     mkdirSync(this.memoryDir, { recursive: true });
+
+    // One-shot migration: if memoryRoot contains *.md files directly (pre-scope
+    // layout), move them into user/. Idempotent — once migrated, the root has
+    // no flat .md files and this becomes a no-op.
+    this.migrateFlatLayout();
   }
 
   getMemoryDir(): string { return this.memoryDir; }
+  getScope(): MemoryScope { return this.scope; }
 
   /**
    * Save a memory entry. Creates the file and updates the index.
    */
-  save(entry: Omit<MemoryEntry, "fileName">): string {
+  save(entry: Omit<MemoryEntry, "fileName" | "scope">): string {
     const fileName = this.slugify(entry.name) + ".md";
     const filePath = join(this.memoryDir, fileName);
 
@@ -128,14 +165,16 @@ export class MemoryManager {
       const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
       const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
 
-      return { name, description, type, content, fileName };
+      return { name, description, type, content, fileName, scope: this.scope };
     } catch {
       return null;
     }
   }
 
   /**
-   * Delete a memory by name or filename.
+   * Soft-delete a memory by name or filename — moves the file into
+   * <baseDir>/memory-trash/<ISO>/<scope>/ instead of unlinking it. The user
+   * can recover by moving it back; we never hard-delete from this code path.
    */
   delete(nameOrFile: string): boolean {
     const entries = this.loadAll();
@@ -145,7 +184,10 @@ export class MemoryManager {
     if (!entry) return false;
 
     try {
-      unlinkSync(join(this.memoryDir, entry.fileName));
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const trashDir = join(this.baseDir, "memory-trash", stamp, this.scope);
+      mkdirSync(trashDir, { recursive: true });
+      renameSync(join(this.memoryDir, entry.fileName), join(trashDir, entry.fileName));
       const cache = this.ensureIndexCache();
       cache.delete(entry.fileName);
       this.writeIndex(cache);
@@ -164,22 +206,123 @@ export class MemoryManager {
   }
 
   /**
-   * Build a prompt-friendly summary of all memories.
+   * Build a prompt-friendly summary of all memories. Includes BOTH scopes
+   * (user + dream) regardless of the manager's own scope, since prompts
+   * should surface every memory the LLM might care about. Entries are
+   * tagged with their origin so the model can tell user-owned from
+   * dream-generated.
    */
   buildMemoryContext(): string {
-    const entries = this.loadAll();
-    if (entries.length === 0) return "";
+    const userEntries = this.scope === "user"
+      ? this.loadAll()
+      : this.loadScope("user");
+    const dreamEntries = this.scope === "dream"
+      ? this.loadAll()
+      : this.loadScope("dream");
 
-    const lines = entries.map(
-      (e) => `- [${e.type}] ${e.name}: ${e.description}`,
-    );
+    if (userEntries.length === 0 && dreamEntries.length === 0) return "";
+
+    const lines: string[] = [];
+    if (userEntries.length > 0) {
+      lines.push("## User memories (you own these — needs permission to modify)");
+      for (const e of userEntries) {
+        lines.push(`- [${e.type}] ${e.name}: ${e.description}`);
+      }
+    }
+    if (dreamEntries.length > 0) {
+      if (lines.length > 0) lines.push("");
+      lines.push("## Dream memories (auto-consolidated workspace — freely modifiable)");
+      for (const e of dreamEntries) {
+        lines.push(`- [${e.type}] ${e.name}: ${e.description}`);
+      }
+    }
 
     return (
       `# Persistent Memory\n\n` +
       `The following memories from previous sessions may be relevant:\n\n` +
       lines.join("\n") +
-      `\n\nTo read a specific memory, check ${this.memoryDir}/`
+      `\n\nTo read a specific memory, look under ${this.memoryRoot}/{user,dream}/`
     );
+  }
+
+  /**
+   * Load every entry belonging to the given scope, without changing the
+   * manager's own scope. Used by buildMemoryContext to merge user + dream
+   * in one pass and by tools that need cross-scope visibility.
+   */
+  loadScope(scope: MemoryScope): MemoryEntry[] {
+    const dir = join(this.memoryRoot, scope);
+    if (!existsSync(dir)) return [];
+    const files = readdirSync(dir).filter(
+      (f) => f.endsWith(".md") && f !== "MEMORY.md",
+    );
+    const entries: MemoryEntry[] = [];
+    for (const file of files) {
+      const e = this.loadFileFromDir(dir, file, scope);
+      if (e) entries.push(e);
+    }
+    return entries;
+  }
+
+  private loadFileFromDir(
+    dir: string,
+    fileName: string,
+    scope: MemoryScope,
+  ): MemoryEntry | null {
+    const filePath = join(dir, fileName);
+    if (!existsSync(filePath)) return null;
+    try {
+      const raw = readFileSync(filePath, "utf-8");
+      const frontmatterMatch = raw.match(/^---\n([\s\S]*?)\n---\n\n?([\s\S]*)$/);
+      if (!frontmatterMatch) return null;
+      const frontmatter = frontmatterMatch[1];
+      const content = frontmatterMatch[2].trim();
+      const name = frontmatter.match(/name:\s*(.+)/)?.[1]?.trim() ?? fileName;
+      const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
+      const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
+      return { name, description, type, content, fileName, scope };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Move pre-scope flat-layout entries (entries that lived directly under
+   * <memoryRoot>/ before user/dream split) into <memoryRoot>/user/. Runs at
+   * most once per directory — subsequent constructions find no flat .md
+   * files and return immediately.
+   */
+  private migrateFlatLayout(): void {
+    if (!existsSync(this.memoryRoot)) return;
+    let entries: string[];
+    try {
+      entries = readdirSync(this.memoryRoot);
+    } catch {
+      return;
+    }
+    const flatFiles = entries.filter((f) => {
+      if (!f.endsWith(".md")) return false;
+      try {
+        return statSync(join(this.memoryRoot, f)).isFile();
+      } catch {
+        return false;
+      }
+    });
+    if (flatFiles.length === 0) return;
+
+    const userDir = join(this.memoryRoot, "user");
+    mkdirSync(userDir, { recursive: true });
+    for (const file of flatFiles) {
+      const src = join(this.memoryRoot, file);
+      const dst = join(userDir, file);
+      if (existsSync(dst)) continue; // don't clobber
+      try {
+        renameSync(src, dst);
+      } catch {
+        // best-effort migration; partial failure leaves user with a hybrid
+        // layout but loadScope("user") will still pick up whatever moved.
+      }
+    }
   }
 
   /**

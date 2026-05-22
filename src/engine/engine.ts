@@ -1028,11 +1028,16 @@ export class Engine {
     llmClient: Awaited<ReturnType<typeof createLLMClient>>,
   ): Promise<void> {
     try {
-      // Only run memory extraction for meaningful sessions (>2 turns)
+      // Only run memory extraction for substantive sessions. The previous
+      // threshold of 4 user+assistant messages was low enough that two-line
+      // exchanges ("what's the time?" / "noon") triggered a full LLM
+      // extraction, which then padded the memory store with low-signal
+      // entries. 8 messages is roughly "more than a single back-and-forth"
+      // — substantive enough to be worth a durable note.
       const messages = transcript.toMessages().filter(
         (m) => m.role === "user" || m.role === "assistant",
       );
-      if (messages.length < 4) return;
+      if (messages.length < 8) return;
 
       const plainMessages = messages.map((m) => ({
         role: m.role,
@@ -1053,6 +1058,8 @@ export class Engine {
           });
           return resp.text;
         },
+        runDream: async ({ systemPrompt, userPrompt, projectDir }) =>
+          this.runDreamLoop({ systemPrompt, userPrompt, projectDir, llmClient, sessionId }),
         projectDir: cwd,
       });
 
@@ -1063,6 +1070,157 @@ export class Engine {
         sessionId,
         error: (err as Error).message,
       });
+    }
+  }
+
+  /**
+   * Drive the auto-dream tool-call loop.
+   *
+   * Runs the LLM with a whitelisted subset of memory tools (MemoryList,
+   * MemoryRead, MemorySave, MemoryDelete). The loop is intentionally small
+   * and offline:
+   *   - No streaming, no UI events — runs in the background after a session.
+   *   - No permission prompts — UI isn't attached, so we hard-reject any
+   *     attempt to Save/Delete in the "user" scope before dispatching. Dream
+   *     scope is the LLM's workspace and goes through freely.
+   *   - Capped at MAX_TURNS LLM round-trips and MAX_WRITES total
+   *     mutations to bound damage on misbehavior.
+   *
+   * Returns true if the loop ran (with or without writes); false if we
+   * bailed before the first LLM call (e.g. registry missing the tools).
+   */
+  private async runDreamLoop(opts: {
+    systemPrompt: string;
+    userPrompt: string;
+    projectDir?: string;
+    llmClient: Awaited<ReturnType<typeof createLLMClient>>;
+    sessionId: string;
+  }): Promise<boolean> {
+    const MAX_TURNS = 8;
+    const MAX_WRITES = 10;
+    const MEMORY_TOOL_NAMES = ["MemoryList", "MemoryRead", "MemorySave", "MemoryDelete"];
+
+    const memoryTools = MEMORY_TOOL_NAMES
+      .map((n) => this.toolRegistry.getTool(n))
+      .filter((t): t is NonNullable<typeof t> => t != null);
+    if (memoryTools.length < MEMORY_TOOL_NAMES.length) {
+      logger.warn("memory.auto_dream_missing_tools", {
+        sessionId: opts.sessionId,
+        found: memoryTools.map((t) => t.name),
+      });
+      return false;
+    }
+
+    // Strip RegisteredTool down to the shape createMessage expects.
+    const toolDefs = memoryTools.map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    }));
+
+    const toolCtx = {
+      cwd: opts.projectDir ?? process.cwd(),
+      llmConfig: this.config.llm,
+      toolRegistry: this.toolRegistry,
+    } as import("../tool-system/context.js").ToolContext;
+
+    const messages: Message[] = [{ role: "user", content: opts.userPrompt }];
+    let writeBudget = MAX_WRITES;
+
+    for (let turn = 0; turn < MAX_TURNS; turn++) {
+      const resp = await opts.llmClient.createMessage({
+        systemPrompt: opts.systemPrompt,
+        messages,
+        tools: toolDefs,
+        maxTokens: 2048,
+        recordUsage: false,
+        thinking: "disabled",
+      });
+
+      if (resp.toolCalls.length === 0) {
+        logger.info("memory.auto_dream_finished", {
+          sessionId: opts.sessionId,
+          turn,
+          finalText: resp.text.slice(0, 500),
+        });
+        return true;
+      }
+
+      // Echo the assistant turn back into the conversation so subsequent
+      // turns see the tool_use ids they need to reference.
+      const assistantContent: import("../types.js").ContentBlock[] = [];
+      if (resp.text) assistantContent.push({ type: "text", text: resp.text });
+      for (const tc of resp.toolCalls) {
+        assistantContent.push({
+          type: "tool_use",
+          id: tc.id,
+          name: tc.toolName,
+          input: tc.args,
+        });
+      }
+      messages.push({ role: "assistant", content: assistantContent });
+
+      // Dispatch every tool call requested in this turn.
+      const toolResults: import("../types.js").ContentBlock[] = [];
+      for (const tc of resp.toolCalls) {
+        const result = await this.dispatchDreamTool(tc, toolCtx, () => {
+          if (writeBudget <= 0) return false;
+          writeBudget--;
+          return true;
+        });
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: tc.id,
+          content: result,
+        });
+      }
+      messages.push({ role: "user", content: toolResults });
+    }
+
+    logger.warn("memory.auto_dream_hit_turn_cap", {
+      sessionId: opts.sessionId,
+      maxTurns: MAX_TURNS,
+    });
+    return true;
+  }
+
+  /**
+   * Execute one memory tool call inside the dream loop. Enforces the two
+   * dream-loop invariants the prompt also states:
+   *   - Only the 4 memory tools are dispatchable.
+   *   - Save/Delete in "user" scope is refused (returned as a tool error)
+   *     because dream runs without an interactive permission backend.
+   */
+  private async dispatchDreamTool(
+    tc: import("../types.js").ToolCall,
+    ctx: import("../tool-system/context.js").ToolContext,
+    consumeWriteBudget: () => boolean,
+  ): Promise<string> {
+    const allowed = new Set(["MemoryList", "MemoryRead", "MemorySave", "MemoryDelete"]);
+    if (!allowed.has(tc.toolName)) {
+      return `Error: tool "${tc.toolName}" is not available in the dream loop`;
+    }
+
+    const isWrite = tc.toolName === "MemorySave" || tc.toolName === "MemoryDelete";
+    if (isWrite) {
+      const scope = tc.args?.scope;
+      if (scope !== "dream") {
+        return (
+          `Error: dream loop may only write to scope "dream", got "${scope}". ` +
+          `User-scope changes require interactive permission, which is not available here.`
+        );
+      }
+      if (!consumeWriteBudget()) {
+        return "Error: dream write budget exhausted — stop calling write tools and summarize instead.";
+      }
+    }
+
+    try {
+      const result = await this.toolRegistry.executeTool(tc.toolName, tc.args, { ctx });
+      if (result.isError) return result.error ?? `Error executing ${tc.toolName}`;
+      return result.result ?? "";
+    } catch (err) {
+      return `Error executing ${tc.toolName}: ${(err as Error).message}`;
     }
   }
 
@@ -1253,6 +1411,24 @@ export class Engine {
     cwd: string,
   ): { rules: import("../types.js").PermissionRule[]; backend: ApprovalBackend } {
     const rules: import("../types.js").PermissionRule[] = [...this.preset.defaultPermissionRules];
+
+    // Memory tools: dream scope is the LLM's own workspace, so save/delete
+    // there go through without prompting. user-scope save/delete fall through
+    // to the tool's permissionDefault ("ask"), forcing the user to confirm
+    // any modification of memories they own. Read tools are listed in the
+    // tool definition as permissionDefault: "allow" — no rule needed here.
+    rules.push({
+      tool: "MemorySave",
+      argsPattern: { scope: "^dream$" },
+      decision: "allow",
+      reason: "Dream scope is the LLM's auto-consolidation workspace",
+    });
+    rules.push({
+      tool: "MemoryDelete",
+      argsPattern: { scope: "^dream$" },
+      decision: "allow",
+      reason: "Dream scope is the LLM's auto-consolidation workspace",
+    });
 
     if (mode === "acceptEdits" || mode === "bypassPermissions") {
       rules.push({ tool: "Write", decision: "allow" });
