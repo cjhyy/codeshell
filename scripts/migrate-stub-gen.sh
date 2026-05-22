@@ -8,11 +8,17 @@
 # migration.
 
 set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 <dirname|file.ts>" >&2
+  exit 1
+fi
+
 NAME="$1"
 
 if [[ -f "packages/core/src/$NAME" ]]; then
   # Single file at top level (e.g. types.ts, exceptions.ts)
-  rel="../packages/core/src/${NAME%.ts}.js"
+  rel="../packages/core/src/${NAME%.ts*}.js"
   mkdir -p "$(dirname "src/$NAME")"
   cat > "src/$NAME" <<EOF
 // Temporary stub during monorepo migration (spec §4.3.1). Removed in batch 8.
@@ -34,7 +40,10 @@ find "packages/core/src/$NAME" -type f \( -name "*.ts" -o -name "*.tsx" \) | whi
   target_path="src/$NAME/$rel_to_dir"
   target_dir="$(dirname "$target_path")"
   mkdir -p "$target_dir"
-  rel="../../packages/core/src/$NAME/${rel_to_dir%.ts*}.js"
+  depth=$(echo "$rel_to_dir" | tr -cd '/' | wc -c | tr -d ' ')
+  prefix=""
+  for ((i=0; i<depth+2; i++)); do prefix="../$prefix"; done
+  rel="${prefix}packages/core/src/$NAME/${rel_to_dir%.ts*}.js"
   cat > "$target_path" <<EOF
 // Temporary stub during monorepo migration (spec §4.3.1). Removed in batch 8.
 export * from "$rel";
