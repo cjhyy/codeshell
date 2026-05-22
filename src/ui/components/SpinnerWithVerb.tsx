@@ -123,29 +123,42 @@ function SpinnerWithVerbImpl({
   const color = mode === "thinking" ? "ansi:magenta" : "ansi:cyan";
   const thinkingLine = thinkingContent ? truncateThinking(thinkingContent) : "";
 
-  // Both rows live in a single column with fixed shape (two rows always when
-  // thinking is on) so the Box never grows/shrinks between renders. A height
-  // change here triggers Yoga's layout-shift damage and a full-screen repaint,
-  // which is the visible "flicker" — keeping the slot occupied with at least
-  // a space avoids that.
+  // Single-row layout — mirrors Claude Code's SpinnerAnimationRow
+  // (claude-code-sourcemap/.../Spinner/SpinnerAnimationRow.tsx:226).
+  // Earlier column layouts toggled the outer Box's height between
+  // 1 row and 2 rows when thinkingContent appeared/disappeared, which
+  // Yoga sees as a layout shift and Ink amplifies into a 100%-writes
+  // storm visible as ~700 ms freezes on `isRunning` flips. Folding
+  // everything into one row + flexWrap lets the thinking text grow
+  // and shrink in-place without ever changing the spinner's height.
+  //
+  // Format: `<frame>  <verb>…  <elapsed>s · <tokens>  · <thinking>`
+  // Thinking is appended at the tail so a long line wraps gracefully
+  // (flexWrap puts the overflow on the next visual row, but the Box's
+  // declared height is still 1; subsequent rows are flex-wrapped
+  // continuations of the same logical line, not new children).
+  let spinnerLine = `${frame}  ${verb}…`;
+  if (elapsed > 0) spinnerLine += `  ${elapsed}s`;
+  if (tokens > 0) spinnerLine += ` · ${formatTokens(tokens)}`;
+  if (thinkingContent !== undefined && thinkingLine) {
+    spinnerLine += `  · ${thinkingLine}`;
+  }
+
   return (
-    <Box flexDirection="column" marginLeft={2} marginY={1}>
-      <Box>
-        <Text color={color}>{frame}</Text>
-        <Text>{"  "}{verb}…</Text>
-        {elapsed > 0 && <Text dim>{"  "}{elapsed}s</Text>}
-        {tokens > 0 && <Text dim>{" · "}{formatTokens(tokens)}</Text>}
-      </Box>
-      {thinkingContent !== undefined && (
-        <Box marginLeft={4}>
-          <Text dim italic>
-            {thinkingLine || " "}
-          </Text>
-        </Box>
-      )}
+    <Box marginLeft={2} marginY={1} width="100%" flexWrap="wrap">
+      <Text color={color}>{spinnerLine}</Text>
     </Box>
   );
 }
+
+/**
+ * Width budget for the spinner subtree. Wide enough for the longest verb
+ * (~40 columns in CJK) plus `  120s · 99.9K tokens` suffix (~22 columns)
+ * with margin. If a future verb exceeds this, it will be clipped — that's
+ * better than flicker, and the truncation will be visible enough to
+ * prompt shortening the verb table.
+ */
+const SPINNER_FIXED_WIDTH = 80;
 
 /**
  * Memo so App-level re-renders (chatStore subscribe firing on every
