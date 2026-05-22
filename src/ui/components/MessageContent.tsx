@@ -7,7 +7,7 @@
  * - Table rendering as React flexbox components
  * - Streaming text shown as plain text with cursor
  */
-import { useMemo, useRef, type ReactNode } from "react";
+import { memo, useMemo, useRef, type ReactNode } from "react";
 import { Ansi, Box, Text } from "../../render/index.js";
 import chalk from "chalk";
 import { Marked, lexer as markedLexer } from "marked";
@@ -239,34 +239,48 @@ function renderHybrid(text: string): ReactNode[] {
 // answers stay snappy. The lexer correctly keeps unclosed code fences and
 // block quotes as single tokens, so the split aligns with semantic blocks.
 
-interface StableBlock {
-  /** Concatenated raw text of all completed blocks. Acts as the cache key. */
-  text: string;
-  /** Pre-rendered ANSI / React for the stable region. */
-  rendered: ReactNode;
-}
+/**
+ * StableBlockRenderer — memoized renderer for the settled portion of a
+ * streaming assistant message. Mirrors CC's `<Markdown>` (memoized) used
+ * inside `<StreamingMarkdown>`: when the `text` prop is identical across
+ * renders (the common case during streaming — the stable boundary only
+ * advances when the lexer sees a new block boundary), React.memo's
+ * `Object.is(prevProps.text, nextProps.text)` short-circuits and the
+ * `useMemo([text])` inside `Inner` never re-runs renderHybrid.
+ *
+ * Without this layer, the old StreamingMarkdown stored the pre-rendered
+ * ReactNode in a ref and re-ran renderHybrid(newStableText) every time
+ * the boundary advanced — the trip through marked.parse over the ENTIRE
+ * stable prefix took 1-3 s once the assistant's response grew past a few
+ * KB. The user-visible symptom was the "stream pauses 1-3 s, then dumps
+ * a paragraph all at once" stutter (see ui-ink flush logs: gap=2934ms,
+ * chars=199 in a single batch).
+ */
+const StableBlockRenderer = memo(function StableBlockInner({ text }: { text: string }) {
+  const rendered = useMemo(() => renderHybrid(text), [text]);
+  return <>{rendered}</>;
+});
 
 function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean }) {
   // Mutable ref persists across renders so we don't re-parse blocks that
   // already settled. Resets implicitly when the component unmounts (i.e.
   // when this assistant_text entry is removed from the chat list).
-  const stableRef = useRef<StableBlock>({ text: "", rendered: null });
+  const stablePrefixRef = useRef<string>("");
 
-  let stableText = stableRef.current.text;
-  let unstableText = text.slice(stableText.length);
+  let stableText = stablePrefixRef.current;
 
   // If the incoming text is shorter than our cached prefix (e.g. session
   // restart, edit, retry), drop the cache and re-derive from scratch.
   if (!text.startsWith(stableText)) {
-    stableRef.current = { text: "", rendered: null };
+    stablePrefixRef.current = "";
     stableText = "";
-    unstableText = text;
   }
 
   // Lex only the unstable region — cheap, since stable blocks already settled.
+  const unstableForLex = text.slice(stableText.length);
   let advance = 0;
   try {
-    const tokens = markedLexer(unstableText);
+    const tokens = markedLexer(unstableForLex);
     let lastContentIdx = tokens.length - 1;
     while (lastContentIdx >= 0 && tokens[lastContentIdx]!.type === "space") {
       lastContentIdx--;
@@ -281,17 +295,10 @@ function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean })
   }
 
   if (advance > 0) {
-    const newStableText = stableText + unstableText.slice(0, advance);
-    // Re-render the stable region with full markdown (tables + ANSI hybrid).
-    // Only happens when the boundary advances, so total parses across a turn
-    // ≈ number of blocks, not number of chunks.
-    stableRef.current = {
-      text: newStableText,
-      rendered: renderHybrid(newStableText),
-    };
-    stableText = newStableText;
-    unstableText = text.slice(stableText.length);
+    stablePrefixRef.current = stableText + unstableForLex.slice(0, advance);
+    stableText = stablePrefixRef.current;
   }
+  const unstableText = text.slice(stableText.length);
 
   // Cheap render for the trailing in-progress block. We avoid the
   // hybrid/table extraction here because tables can't matter mid-block,
@@ -306,7 +313,7 @@ function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean })
 
   return (
     <Box flexDirection="column" marginLeft={1} marginTop={nested ? 0 : 1}>
-      {stableRef.current.rendered}
+      {stableText && <StableBlockRenderer text={stableText} />}
       {unstableRendered ? <Box flexDirection="column">{unstableRendered}</Box> : null}
       <Text dim>{"▌"}</Text>
     </Box>

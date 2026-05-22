@@ -283,6 +283,49 @@ session. Each batch is one git commit that leaves the repo green.
 6. git add -A && git commit -m "chore(monorepo): move <X> to packages/core (batch N)"
 ```
 
+### 4.3.1 Stub template
+
+A directory with `index.ts`:
+
+```ts
+// src/<dir>/index.ts
+// Temporary stub during monorepo migration. Removed in batch 8.
+export * from "../../packages/core/src/<dir>/index.js";
+```
+
+A directory whose consumers import individual files (no `index.ts`):
+
+```ts
+// src/<dir>/<file>.ts (per file in the original dir)
+// Temporary stub during monorepo migration. Removed in batch 8.
+export * from "../../packages/core/src/<dir>/<file>.js";
+```
+
+A top-level single file (e.g. `src/types.ts`):
+
+```ts
+// src/types.ts
+// Temporary stub during monorepo migration. Removed in batch 8.
+export * from "../packages/core/src/types.js";
+```
+
+Per-batch precheck script generates these automatically; the engineer
+running the batch reviews them before commit.
+
+### 4.3.2 Test import rewrite (batch 8)
+
+The 124 `from "../src/<X>"` paths in `tests/` are rewritten to point
+at the new package location:
+
+```
+from "../src/engine/engine.js"       →  from "../packages/core/src/engine/engine.js"
+from "../src/hooks/inject.js"        →  from "../packages/core/src/hooks/inject.js"
+from "../src/ui/components/X.js"     →  from "../packages/tui/src/ui/components/X.js"
+```
+
+Rewrite is mechanical (sed-driven) using the per-dir classification
+from §2.
+
 ### 4.4 Risk register
 
 | Risk | Mitigation |
