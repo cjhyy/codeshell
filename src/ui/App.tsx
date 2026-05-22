@@ -416,27 +416,38 @@ export function App({
   // "model paused" (text_delta gap) from "UI froze" (text_delta keeps
   // coming, but flush gap is long).
   const lastFlushAtRef = useRef<number>(0);
+  // Wall-clock when the most recent setTimeout(flushTextBuffer, 50) was
+  // scheduled. flush handler reads this and reports `timerDelayOverSchedule_ms`
+  // = (actualFireTime - scheduleTime - 50). If that's >> 0 the event loop
+  // was blocked between scheduling and firing — typically by markdown
+  // parse running in a parent commit phase.
+  const flushScheduledAtRef = useRef<number>(0);
+  // Cumulative wall time spent inside chatStore.update's fn (the synchronous
+  // entries-array rebuild). Lets us see if the slowdown is in fn, in
+  // notify(), or somewhere else (React reconcile / Ink render).
+  const flushUpdateMsRef = useRef<number>(0);
 
   const flushTextBuffer = useCallback(() => {
+    const flushEnter = Date.now();
     flushTimerRef.current = null;
     const buf = textBufferRef.current;
-    if (buf.size === 0) return;
+    if (buf.size === 0) {
+      flushScheduledAtRef.current = 0;
+      return;
+    }
 
     const pending = new Map(buf);
     buf.clear();
 
-    const now = Date.now();
-    const gap = lastFlushAtRef.current === 0 ? 0 : now - lastFlushAtRef.current;
-    lastFlushAtRef.current = now;
+    const gap = lastFlushAtRef.current === 0 ? 0 : flushEnter - lastFlushAtRef.current;
+    const scheduledAt = flushScheduledAtRef.current;
+    const timerDelay = scheduledAt === 0 ? 0 : flushEnter - scheduledAt - 50; // 50 = setTimeout target
+    flushScheduledAtRef.current = 0;
+    lastFlushAtRef.current = flushEnter;
     let pendingChars = 0;
     for (const v of pending.values()) pendingChars += v.length;
-    // One line per flush — easy to grep, agentId tells us if the holdup
-    // is main-agent (undefined) or sub-agent only.
-    uiLog.info("debug.ui.flush", {
-      agents: Array.from(pending.keys()).map((k) => k ?? "(main)"),
-      chars: pendingChars,
-      gapSinceLastFlush_ms: gap,
-    });
+
+    const updateStart = performance.now();
 
     chatStore.update((prev) => {
       let next = prev;
@@ -457,6 +468,15 @@ export function App({
         }
       }
       return next;
+    });
+    flushUpdateMsRef.current = performance.now() - updateStart;
+
+    uiLog.info("debug.ui.flush", {
+      agents: Array.from(pending.keys()).map((k) => k ?? "(main)"),
+      chars: pendingChars,
+      gapSinceLastFlush_ms: gap,
+      timerDelayOverSchedule_ms: Math.max(0, timerDelay),
+      chatStoreUpdate_ms: Math.round(flushUpdateMsRef.current * 10) / 10,
     });
   }, []);
 
@@ -545,6 +565,7 @@ export function App({
           textBufferRef.current.set(agentId, existing + event.text);
           streamingTokensRef.current += event.tokens ?? 0;
           if (!flushTimerRef.current) {
+            flushScheduledAtRef.current = Date.now();
             flushTimerRef.current = setTimeout(flushTextBuffer, 50);
             // Flicker probe: count text-delta arrivals into the flush window
             // so we can spot whether a runaway stream is jamming the

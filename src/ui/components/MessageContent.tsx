@@ -12,11 +12,24 @@ import { Ansi, Box, Text } from "../../render/index.js";
 import chalk from "chalk";
 import { Marked, lexer as markedLexer } from "marked";
 import { markedTerminal } from "marked-terminal";
+import { logger } from "../../logging/logger.js";
+
+const streamLog = logger.child({ cat: "stream-md" });
 
 // ─── LRU Token Cache ────────────────────────────────────────────
 
 const TOKEN_CACHE_MAX = 500;
 const renderCache = new Map<string, string>();
+
+// Hit/miss counters surfaced via the streaming diag log. Reset by
+// StreamingMarkdown on each render so flush-aligned numbers show only
+// the work attributable to that delta. Module-level so renderHybrid's
+// internal cachedRender calls also contribute.
+const cacheStats = { hits: 0, misses: 0, missMs: 0 };
+// Default ON — the diag output is gated to "something interesting" so
+// it stays quiet on steady-state ticks. Set CODESHELL_DEBUG_STREAM=0 to
+// disable entirely (e.g. for perf benchmarks).
+const STREAM_DIAG_ON = process.env.CODESHELL_DEBUG_STREAM !== "0";
 
 function cachedRender(text: string, renderFn: (t: string) => string): string {
   const cached = renderCache.get(text);
@@ -24,9 +37,15 @@ function cachedRender(text: string, renderFn: (t: string) => string): string {
     // MRU promotion: delete + re-insert moves to end
     renderCache.delete(text);
     renderCache.set(text, cached);
+    if (STREAM_DIAG_ON) cacheStats.hits += 1;
     return cached;
   }
+  const t0 = STREAM_DIAG_ON ? performance.now() : 0;
   const result = renderFn(text);
+  if (STREAM_DIAG_ON) {
+    cacheStats.misses += 1;
+    cacheStats.missMs += performance.now() - t0;
+  }
   if (renderCache.size >= TOKEN_CACHE_MAX) {
     // Evict oldest (first) entry
     const first = renderCache.keys().next().value;
@@ -257,15 +276,50 @@ function renderHybrid(text: string): ReactNode[] {
  * chars=199 in a single batch).
  */
 const StableBlockRenderer = memo(function StableBlockInner({ text }: { text: string }) {
-  const rendered = useMemo(() => renderHybrid(text), [text]);
+  const rendered = useMemo(() => {
+    if (!STREAM_DIAG_ON) return renderHybrid(text);
+    const t0 = performance.now();
+    const out = renderHybrid(text);
+    const dt = performance.now() - t0;
+    if (dt > 5) {
+      streamLog.info("debug.md.stable_parse", {
+        ms: Math.round(dt * 10) / 10,
+        len: text.length,
+        cacheHits: cacheStats.hits,
+        cacheMiss: cacheStats.misses,
+        cacheMissMs: Math.round(cacheStats.missMs * 10) / 10,
+      });
+    }
+    return out;
+  }, [text]);
   return <>{rendered}</>;
 });
+
+// Per-render cumulative wall time spent in cachedRender misses for the
+// CURRENT entry (reset at the top of StreamingMarkdown each call). Used by
+// the diag log below so we can attribute the work of one React render to
+// one log line. NOT reset across entries — fine, the log emits before the
+// next render is reached.
+function resetCacheStats(): void {
+  if (!STREAM_DIAG_ON) return;
+  cacheStats.hits = 0;
+  cacheStats.misses = 0;
+  cacheStats.missMs = 0;
+}
 
 function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean }) {
   // Mutable ref persists across renders so we don't re-parse blocks that
   // already settled. Resets implicitly when the component unmounts (i.e.
   // when this assistant_text entry is removed from the chat list).
   const stablePrefixRef = useRef<string>("");
+  const renderCountRef = useRef(0);
+  const lastRenderAtRef = useRef(0);
+
+  // Wall-clock at the very top so we can log how long the whole render
+  // (lex + memo + parse) took in user-perceived terms.
+  const renderStart = STREAM_DIAG_ON ? performance.now() : 0;
+  resetCacheStats();
+  if (STREAM_DIAG_ON) renderCountRef.current += 1;
 
   let stableText = stablePrefixRef.current;
 
@@ -278,9 +332,12 @@ function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean })
 
   // Lex only the unstable region — cheap, since stable blocks already settled.
   const unstableForLex = text.slice(stableText.length);
+  const lexStart = STREAM_DIAG_ON ? performance.now() : 0;
   let advance = 0;
+  let tokenCount = 0;
   try {
     const tokens = markedLexer(unstableForLex);
+    tokenCount = tokens.length;
     let lastContentIdx = tokens.length - 1;
     while (lastContentIdx >= 0 && tokens[lastContentIdx]!.type === "space") {
       lastContentIdx--;
@@ -293,7 +350,9 @@ function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean })
     // Lexer failure (malformed input mid-stream) — leave stable boundary alone
     // and render everything as unstable for this tick. It'll settle next delta.
   }
+  const lexMs = STREAM_DIAG_ON ? performance.now() - lexStart : 0;
 
+  const prevStableLen = stableText.length;
   if (advance > 0) {
     stablePrefixRef.current = stableText + unstableForLex.slice(0, advance);
     stableText = stablePrefixRef.current;
@@ -310,6 +369,33 @@ function StreamingMarkdown({ text, nested }: { text: string; nested?: boolean })
     }
     return <Ansi>{cachedRender(unstableText, renderMarkdown)}</Ansi>;
   }, [unstableText]);
+
+  if (STREAM_DIAG_ON) {
+    const now = performance.now();
+    const sinceLast = lastRenderAtRef.current === 0 ? 0 : now - lastRenderAtRef.current;
+    lastRenderAtRef.current = now;
+    const totalMs = now - renderStart;
+    const advanced = stableText.length - prevStableLen;
+    // Only log when something interesting is happening — total > 5ms OR
+    // boundary advanced OR cache missed. Steady-state ticks that are pure
+    // memo hits are filtered to keep the log readable.
+    if (totalMs > 5 || advanced > 0 || cacheStats.misses > 0) {
+      streamLog.info("debug.md.render", {
+        n: renderCountRef.current,
+        totalMs: Math.round(totalMs * 10) / 10,
+        lexMs: Math.round(lexMs * 10) / 10,
+        tokens: tokenCount,
+        textLen: text.length,
+        stableLen: stableText.length,
+        advanced,
+        unstableLen: unstableText.length,
+        cacheHits: cacheStats.hits,
+        cacheMiss: cacheStats.misses,
+        cacheMissMs: Math.round(cacheStats.missMs * 10) / 10,
+        sinceLastMs: Math.round(sinceLast),
+      });
+    }
+  }
 
   return (
     <Box flexDirection="column" marginLeft={1} marginTop={nested ? 0 : 1}>

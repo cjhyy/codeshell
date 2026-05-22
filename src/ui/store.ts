@@ -6,6 +6,10 @@
  * slices via useSyncExternalStore.
  */
 
+import { logger } from "../logging/logger.js";
+
+const storeLog = logger.child({ cat: "chat-store" });
+
 type ChatEntryData =
   | { type: "user"; text: string }
   | { type: "assistant_text"; text: string; streaming: boolean; agentId?: string }
@@ -86,7 +90,9 @@ class ChatStore {
   /** Functional update — same API as setState(fn). */
   update(fn: (prev: ChatEntry[]) => ChatEntry[]): void {
     const before = this.entries.length;
+    const fnStart = process.env.CODESHELL_DEBUG_STREAM !== "0" ? performance.now() : 0;
     this.entries = fn(this.entries);
+    const fnMs = process.env.CODESHELL_DEBUG_STREAM !== "0" ? performance.now() - fnStart : 0;
     const after = this.entries.length;
     // Debug: track suspicious "still updating after run completed" loops.
     // Counts listener notifications too so we can see render fan-out.
@@ -94,7 +100,17 @@ class ChatStore {
       // eslint-disable-next-line no-console
       console.error(`[chatStore.update] ${before} -> ${after}, listeners=${this.listeners.size}`);
     }
+    const notifyStart = process.env.CODESHELL_DEBUG_STREAM !== "0" ? performance.now() : 0;
     this.notify();
+    const notifyMs = process.env.CODESHELL_DEBUG_STREAM !== "0" ? performance.now() - notifyStart : 0;
+    if (process.env.CODESHELL_DEBUG_STREAM !== "0" && (fnMs > 2 || notifyMs > 5)) {
+      storeLog.info("debug.chat_store.update", {
+        fnMs: Math.round(fnMs * 10) / 10,
+        notifyMs: Math.round(notifyMs * 10) / 10,
+        entries: after,
+        listeners: this.listeners.size,
+      });
+    }
   }
 
   /**
