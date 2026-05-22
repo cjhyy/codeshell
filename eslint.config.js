@@ -9,6 +9,7 @@ export default [
       "coverage/**",
       "*.config.js",
       "examples/**/output/**",
+      "packages/desktop/out/**",
     ],
   },
   js.configs.recommended,

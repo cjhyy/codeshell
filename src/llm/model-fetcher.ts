@@ -49,7 +49,7 @@ export interface FetchResult extends ModelCacheFile {
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OPENROUTER_SNAPSHOT = join(HERE, "..", "data", "openrouter-models.json");
+const OPENROUTER_SNAPSHOT = join(HERE, "..", "..", "packages", "core", "src", "data", "openrouter-models.json");
 
 interface RawOpenAIShape {
   data?: Array<{

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Fetch the latest model catalog from OpenRouter and write a slimmed
- * snapshot to src/data/openrouter-models.json.
+ * snapshot to packages/core/src/data/openrouter-models.json.
  *
  * Run via `bun run scripts/sync-models.ts` or implicitly during build
  * (see package.json `prebuild` hook). Network failures keep the existing
@@ -16,6 +16,8 @@ const ENDPOINT = "https://openrouter.ai/api/v1/models";
 const OUT_PATH = join(
   dirname(fileURLToPath(import.meta.url)),
   "..",
+  "packages",
+  "core",
   "src",
   "data",
   "openrouter-models.json",
