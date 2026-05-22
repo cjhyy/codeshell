@@ -1,15 +1,2 @@
-/**
- * NoneProvider — returns no external evidence.
- * Used for pure topic discussions, brainstorming, or debates
- * where no external context is needed.
- */
-
-import type { ArenaPlan, ArenaArtifact, ArenaContextProvider } from "../types.js";
-
-export const noneProvider: ArenaContextProvider = {
-  kind: "none",
-
-  collect(_plan: ArenaPlan, _topic: string): ArenaArtifact[] {
-    return [];
-  },
-};
+// Temporary stub during monorepo migration (spec §4.3.1). Removed in batch 8.
+export * from "../../../packages/core/src/arena/providers/none.js";
