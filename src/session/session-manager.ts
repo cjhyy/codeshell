@@ -2,7 +2,18 @@
  * Session lifecycle manager.
  */
 
-import { mkdirSync, existsSync, readdirSync, readFileSync, writeFileSync, renameSync, statSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { nanoid } from "nanoid";
@@ -124,26 +135,49 @@ export class SessionManager {
       .filter((d) => d.isDirectory())
       .map((d) => d.name);
 
-    const sessions: SessionListEntry[] = [];
+    // Two-pass scan. Pass 1: cheap stat to find each session's
+    // lastActiveAt, sort, take top `limit`. Pass 2: only for those
+    // winners do we open state.json + tail the transcript for a
+    // preview. With ~1 k sessions on disk the difference is ~1 s
+    // (preview-every) vs ~50 ms (preview-top-20).
+    type Candidate = { dir: string; lastActiveAt: number; transcriptFile: string; stateFile: string; transcriptExists: boolean };
+    const candidates: Candidate[] = [];
     for (const dir of dirs) {
       const stateFile = join(this.sessionsDir, dir, "state.json");
       if (!existsSync(stateFile)) continue;
+      const transcriptFile = join(this.sessionsDir, dir, "transcript.jsonl");
+      let lastActiveAt: number;
+      let transcriptExists = false;
       try {
-        const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
-        const transcriptFile = join(this.sessionsDir, dir, "transcript.jsonl");
-        const preview = readLastUserMessage(transcriptFile);
-        const lastActiveAt = existsSync(transcriptFile)
-          ? statSync(transcriptFile).mtimeMs
-          : state.startedAt;
-        sessions.push({ ...state, preview, lastActiveAt });
+        transcriptExists = existsSync(transcriptFile);
+        if (transcriptExists) {
+          lastActiveAt = statSync(transcriptFile).mtimeMs;
+        } else {
+          // Fall back to state.json mtime (cheaper than parsing it for
+          // state.startedAt and good enough for ordering).
+          lastActiveAt = statSync(stateFile).mtimeMs;
+        }
+      } catch {
+        continue;
+      }
+      candidates.push({ dir, lastActiveAt, transcriptFile, stateFile, transcriptExists });
+    }
+
+    candidates.sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+    const top = candidates.slice(0, limit);
+
+    const sessions: SessionListEntry[] = [];
+    for (const c of top) {
+      try {
+        const state = JSON.parse(readFileSync(c.stateFile, "utf-8")) as SessionState;
+        const preview = c.transcriptExists ? readLastUserMessage(c.transcriptFile) : undefined;
+        sessions.push({ ...state, preview, lastActiveAt: c.lastActiveAt });
       } catch {
         // Skip corrupted sessions
       }
     }
 
-    return sessions
-      .sort((a, b) => b.lastActiveAt - a.lastActiveAt)
-      .slice(0, limit);
+    return sessions;
   }
 }
 
@@ -155,30 +189,107 @@ export type SessionListEntry = SessionState & {
 
 /**
  * Scan a transcript.jsonl for the LAST user message and return a short
- * preview. Walks the file from the bottom so cost is bounded by how recent
- * the user's last line is, not the total file size.
+ * preview, reading the file from the END in 64 KiB chunks.
  *
- * Returns undefined if the session has no user messages yet.
+ * Why: SessionManager.list() calls this for every session in
+ * ~/.code-shell/sessions (hundreds to thousands at steady state). The
+ * earlier readFileSync-the-whole-file implementation made `/resume`
+ * scan ~64 MiB across nearly 1 k transcripts every time the list
+ * opened — visible as several seconds of UI freeze. The vast majority
+ * of transcripts have their last user message in the final few KiB, so
+ * tailing one chunk is usually enough and we never read more than we
+ * have to.
+ *
+ * Algorithm: open the file once, seek to the tail, read backwards one
+ * chunk at a time, splitting on newlines. Walk the lines we have so
+ * far from newest to oldest; the moment we find a `type:"message",
+ * role:"user"` event with non-empty text we close the fd and return.
+ * Keep a small "leftover" prefix between chunks so a JSON line straddling
+ * a chunk boundary still parses.
+ *
+ * Returns undefined if the session has no user messages, or on any IO
+ * error (caller treats the preview as optional).
  */
+const TAIL_CHUNK_SIZE = 64 * 1024;
+
 function readLastUserMessage(transcriptFile: string): string | undefined {
   if (!existsSync(transcriptFile)) return undefined;
-  const raw = readFileSync(transcriptFile, "utf-8");
-  const lines = raw.split("\n");
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i];
-    if (!line) continue;
-    let event: { type?: string; data?: { role?: string; content?: unknown } };
-    try { event = JSON.parse(line); } catch { continue; }
-    if (event.type !== "message") continue;
-    if (event.data?.role !== "user") continue;
-    const content = event.data.content;
-    const text = typeof content === "string"
+
+  let fd: number;
+  let fileSize: number;
+  try {
+    fd = openSync(transcriptFile, "r");
+    fileSize = statSync(transcriptFile).size;
+  } catch {
+    return undefined;
+  }
+  if (fileSize === 0) {
+    closeSync(fd);
+    return undefined;
+  }
+
+  try {
+    let position = fileSize;
+    // `leftover` holds bytes from the previous (later) chunk that we
+    // couldn't yet split on a newline — they're the partial start of a
+    // line whose end lives in the older chunk we just read.
+    let leftover = "";
+    const buf = Buffer.alloc(TAIL_CHUNK_SIZE);
+
+    while (position > 0) {
+      const readLen = Math.min(TAIL_CHUNK_SIZE, position);
+      position -= readLen;
+      const got = readSync(fd, buf, 0, readLen, position);
+      if (got <= 0) break;
+      const text = buf.toString("utf8", 0, got) + leftover;
+      const lines = text.split("\n");
+      // If we haven't reached the beginning of the file, the first
+      // element of `lines` may be a partial line; defer it to the next
+      // (older) chunk. Once position==0 we know the first element is a
+      // real complete line and we should process it too.
+      const start = position === 0 ? 0 : 1;
+      if (position > 0) leftover = lines[0] ?? "";
+      for (let i = lines.length - 1; i >= start; i--) {
+        const preview = parseUserPreview(lines[i]);
+        if (preview !== undefined) return preview;
+      }
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  } finally {
+    try {
+      closeSync(fd);
+    } catch {
+      /* already closed */
+    }
+  }
+}
+
+/**
+ * Parse one transcript line; return the preview string if it's a
+ * non-empty user message, otherwise undefined. Pulled out so the
+ * tail loop above stays focused on IO mechanics.
+ */
+function parseUserPreview(line: string | undefined): string | undefined {
+  if (!line) return undefined;
+  let event: { type?: string; data?: { role?: string; content?: unknown } };
+  try {
+    event = JSON.parse(line);
+  } catch {
+    return undefined;
+  }
+  if (event.type !== "message") return undefined;
+  if (event.data?.role !== "user") return undefined;
+  const content = event.data.content;
+  const text =
+    typeof content === "string"
       ? content
       : Array.isArray(content)
-        ? content.find((b: { type?: string; text?: string }) => b.type === "text")?.text ?? ""
+        ? (content.find(
+            (b: { type?: string; text?: string }) => b.type === "text",
+          )?.text ?? "")
         : "";
-    if (!text.trim()) continue;
-    return text.replace(/\s+/g, " ").trim();
-  }
-  return undefined;
+  if (!text.trim()) return undefined;
+  return text.replace(/\s+/g, " ").trim();
 }

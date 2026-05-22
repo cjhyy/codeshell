@@ -88,6 +88,22 @@ export abstract class LLMClientBase {
           continue;
         }
 
+        // 4xx (except 429, handled above as LLMRateLimitError) is a
+        // deterministic client-side mistake — bad message sequence,
+        // unauthorized, model not found, prompt too long. Retrying
+        // gives the same answer 3 times with growing backoff and
+        // burns ~9 s of user time. Surface immediately.
+        if (isClientError(err)) {
+          logger.warn("llm.client_error_no_retry", {
+            cat: "llm",
+            provider: this.provider,
+            model: this.model,
+            status: (err as { status?: number }).status,
+            error: (err as Error).message,
+          });
+          throw err;
+        }
+
         if (attempt === attempts) {
           logger.error("llm.exhausted", {
             cat: "llm",
@@ -116,4 +132,20 @@ export abstract class LLMClientBase {
 
     throw lastError ?? new LLMError("Unknown LLM error");
   }
+}
+
+/**
+ * Detect HTTP 4xx errors from provider SDKs so withRetry can bail
+ * without burning backoff time. OpenAI/Anthropic SDKs both attach a
+ * numeric `status` to their error objects; we treat 400-499 as
+ * non-retryable (429 is handled separately above as a rate-limit).
+ *
+ * Network errors and 5xx fall through and remain retryable.
+ */
+function isClientError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const status = (err as { status?: unknown }).status;
+  if (typeof status !== "number") return false;
+  if (status === 429) return false;
+  return status >= 400 && status < 500;
 }

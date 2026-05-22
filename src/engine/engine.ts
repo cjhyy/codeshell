@@ -28,6 +28,7 @@ import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
+import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager } from "../context/manager.js";
 import { PromptComposer } from "../prompt/composer.js";
@@ -553,6 +554,19 @@ export class Engine {
       messages = this.compactedMessagesBySession.get(options.sessionId)
         ? [...this.compactedMessagesBySession.get(options.sessionId)!]
         : session.transcript.toMessages();
+      // If the previous run was Ctrl+C'd or crashed between an assistant
+      // tool_use and the matching tool_result being persisted, the
+      // loaded sequence is invalid for OpenAI (which 400s on dangling
+      // tool_calls). Patch synthetic tool_results so the next API call
+      // doesn't fail before the turn even starts.
+      const patched = patchOrphanedToolUses(messages);
+      if (patched.gapsPatched > 0) {
+        logger.warn("engine.resume.patched_orphaned_tool_uses", {
+          sessionId: options.sessionId,
+          gaps: patched.gapsPatched,
+          toolResults: patched.toolResultsInjected,
+        });
+      }
       // Restore cost state from previous session, if the caller injected a store
       if (session.state.costState && this.config.costStore) {
         this.config.costStore.restore(session.state.costState);
