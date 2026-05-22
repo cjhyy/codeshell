@@ -83,6 +83,25 @@ export { HookRegistry } from "./hooks/registry.js";
 export type { HookEventName, HookContext, HookResult } from "./hooks/events.js";
 export { wrapHookMessages } from "./hooks/inject.js";
 
+// ─── Protocol (client/server + transports) ──────────────────────
+
+export { AgentServer, type AgentServerOptions } from "./protocol/server.js";
+export { AgentClient } from "./protocol/client.js";
+export {
+  createInProcessTransport,
+  StdioTransport,
+  IpcTransport,
+  type Transport,
+  type IpcSink,
+  type IpcSubscribe,
+} from "./protocol/transport.js";
+export {
+  Methods,
+  ErrorCodes,
+  type RpcMessage,
+  type RunResult,
+} from "./protocol/types.js";
+
 // ─── Session ─────────────────────────────────────────────────────
 
 export { Transcript } from "./session/transcript.js";
