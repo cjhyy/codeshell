@@ -6,9 +6,10 @@
 
 import { build as viteBuild } from "vite";
 import esbuild from "esbuild";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const cwd = resolve(import.meta.dir);
+const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
 
 async function buildMain(): Promise<void> {

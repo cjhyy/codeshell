@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-desktop",
-  "version": "0.4.0-poc.0",
+  "version": "0.5.0-rc.0",
   "private": true,
   "description": "Electron desktop client for code-shell (POC).",
   "type": "module",
@@ -13,6 +13,9 @@
     "build:renderer": "vite build",
     "typecheck": "tsc --noEmit",
     "start": "electron ."
+  },
+  "dependencies": {
+    "@cjhyy/code-shell-core": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

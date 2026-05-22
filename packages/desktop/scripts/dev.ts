@@ -17,9 +17,10 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createServer as createViteServer } from "vite";
 import esbuild from "esbuild";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const cwd = resolve(import.meta.dir);
+const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
 
 const VITE_URL = "http://localhost:5173";
