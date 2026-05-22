@@ -296,13 +296,3 @@ export function formatResetText(
   const dt = new Date(resetsAt)
   return `${formatResetTime(Math.floor(dt.getTime() / 1000), showTimezone, showTime)}`
 }
-
-// Back-compat: truncate helpers moved to ./truncate.ts (needs ink/stringWidth)
-export {
-  truncate,
-  truncatePathMiddle,
-  truncateStartToWidth,
-  truncateToWidth,
-  truncateToWidthNoEllipsis,
-  wrapText,
-} from './truncate.js'
