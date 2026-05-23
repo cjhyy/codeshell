@@ -15,6 +15,7 @@
 | 4 — Diff + Approval | `phase4-diff-approval` | git status/diff IPC, unified-diff viewer, ChangedFilesList, ApprovalQueue + ApprovalsView + RiskPill |
 | 5 — Settings/Sessions/Logs/MCP/Runs | `phase5-control-surfaces` | Settings JSON editor (user|project), SessionsView, LogsView (3 buckets), placeholder McpView/RunsView |
 | 6 — Native polish + Security | `phase6-native-polish` | App menu + recents, window state persistence, workspace trust gate, sandbox: true + CSP, Cmd+K palette, Cmd+F search, desktop notifications, electron-builder config |
+| 7 — Close remaining items | `phase7-close-remaining` | Per-code-block copy, multi-window (shared bridge), session rename + new-session, model selector / permission mode / MCP add-remove via settings.json |
 
 ## Checklist status (per gap analysis)
 
@@ -36,32 +37,33 @@
 - [x] Add selected tool inspector
 - [x] Replace smooth-scroll-every-update with stick-to-bottom
 
-### P1 — done where it depends only on desktop
+### P1 — all done
 
-- [x] Session list (read-only)
+- [x] Session list
 - [x] Session delete
-- [ ] Session create / rename — needs core RPC; UI hook in place via `listSessions`
+- [x] Session create — "新会话" button clears transcript; next agent/run yields a fresh `session_started` id
+- [x] Session rename — UI titles persisted to `~/.code-shell/desktop/session-titles.json` keyed by engine session id
 - [x] Transcript search (Cmd+F)
 - [x] Tool output copy buttons (Inspector)
-- [ ] Per-code-block copy buttons inside Markdown — TODO (overrides on react-markdown)
+- [x] Per-code-block copy buttons inside Markdown
 - [x] Diff viewer
 - [x] Approval center
-- [x] Settings view
-- [ ] Model selector — needs `listModels`/`setActiveModel` RPC from core
-- [ ] Permission mode control — needs `configure({permissionMode})` RPC
+- [x] Settings view (JSON tab + structured 模型/权限/MCP tabs)
+- [x] Model selector — picks from `providers[].models[]` in settings.json, writes `provider`/`model` keys
+- [x] Permission mode control — segmented control writes `permissionMode` (plan/default/accept_edits/bypass)
 - [x] Workspace trust UI
 
 ### P2 — done where desktop can act unilaterally
 
-- [ ] Runs dashboard — placeholder; needs `RunManager` RPCs
+- [ ] Runs dashboard — placeholder explains required core `RunManager` RPCs; UI scaffolding ready to wire
 - [x] Logs/perf viewer (tail by bucket)
-- [ ] MCP management UI — placeholder; needs core `listMcpServers` etc.
+- [x] MCP management UI — add/remove via settings.json; live connect/disconnect status still needs a `listMcpServers` RPC to display
 - [x] Command palette (Cmd+K)
-- [x] Native app menu (incl. dynamic Recent Projects)
+- [x] Native app menu (incl. dynamic Recent Projects + New Window)
 - [x] Desktop notifications (+ dock badge for pending approvals)
 - [x] Packaged app (`electron-builder` config: mac dmg+zip, win nsis, linux AppImage)
-- [ ] Auto-update — needs `electron-updater` + update server; left as TODO
-- [ ] Multi-window — left as TODO; single-window architecture is stable now
+- [ ] Auto-update — `electron-updater` package + update server credentials; genuinely needs external infra
+- [x] Multi-window — `New Window` (Cmd+Shift+N); single shared agent bridge broadcasts to all windows
 
 ## Build status
 
@@ -78,9 +80,15 @@ The gap analysis pushed Zustand and react-virtual for performance. We kept the e
 
 When the message list breaks 1000+ entries in production, that's the trigger to slot in `@tanstack/react-virtual` + a Zustand store. The shape of the reducer/message types is intentionally compatible with that migration.
 
-## Outstanding TODOs (external dependencies)
+## Outstanding TODOs (genuine external dependencies)
 
-1. **Core RPC surface.** Sessions create/rename, runs CRUD, MCP connect/disconnect, model list, settings round-trip via the agent worker — all require core to expose them on the JSON-RPC channel. The desktop side is wired (preload + IPC handlers + view scaffolding); plumbing is one PR per area.
-2. **Signing / notarize.** macOS distribution needs Apple credentials in CI before `dist` produces a runnable build. `electron-builder` config is otherwise complete.
-3. **Auto-update.** `electron-updater` package and an update server (S3/Squirrel/GitHub releases) needed.
-4. **Multi-window.** Architecturally straightforward (extract `createWindow` + per-window AgentBridge) but adds bookkeeping. Defer until product wants it.
+Only 2 items remain, both blocked on infra outside the desktop package:
+
+1. **Runs dashboard live data.** Needs core to expose `listRuns`/`getRun`/
+   `resumeRun`/`cancelRun` over the existing JSON-RPC channel. The view
+   is in place with an explanation; once the RPC lands it's one wire-up PR.
+2. **Auto-update.** Requires `electron-updater` plus an update channel
+   (S3 / GitHub releases / Squirrel server) with signed builds. macOS
+   distribution also needs Apple developer credentials for notarization.
+
+Everything else from the gap analysis ships in this branch series.
