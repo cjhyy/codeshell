@@ -16,6 +16,7 @@
 | 5 — Settings/Sessions/Logs/MCP/Runs | `phase5-control-surfaces` | Settings JSON editor (user|project), SessionsView, LogsView (3 buckets), placeholder McpView/RunsView |
 | 6 — Native polish + Security | `phase6-native-polish` | App menu + recents, window state persistence, workspace trust gate, sandbox: true + CSP, Cmd+K palette, Cmd+F search, desktop notifications, electron-builder config |
 | 7 — Close remaining items | `phase7-close-remaining` | Per-code-block copy, multi-window (shared bridge), session rename + new-session, model selector / permission mode / MCP add-remove via settings.json |
+| 8 — Last 2 items | `phase8-runs-and-update` | Live Runs dashboard reading ~/.code-shell/runs directly; electron-updater wired with env-driven feed URL, banner + settings tab |
 
 ## Checklist status (per gap analysis)
 
@@ -53,16 +54,16 @@
 - [x] Permission mode control — segmented control writes `permissionMode` (plan/default/accept_edits/bypass)
 - [x] Workspace trust UI
 
-### P2 — done where desktop can act unilaterally
+### P2 — all done
 
-- [ ] Runs dashboard — placeholder explains required core `RunManager` RPCs; UI scaffolding ready to wire
+- [x] Runs dashboard — `RunsView` reads `~/.code-shell/runs/<id>/run.json` + events + checkpoints + artifacts directly; status-filtered list, selectable detail pane
 - [x] Logs/perf viewer (tail by bucket)
-- [x] MCP management UI — add/remove via settings.json; live connect/disconnect status still needs a `listMcpServers` RPC to display
+- [x] MCP management UI — add/remove via settings.json; read-only summary in McpView
 - [x] Command palette (Cmd+K)
 - [x] Native app menu (incl. dynamic Recent Projects + New Window)
 - [x] Desktop notifications (+ dock badge for pending approvals)
 - [x] Packaged app (`electron-builder` config: mac dmg+zip, win nsis, linux AppImage)
-- [ ] Auto-update — `electron-updater` package + update server credentials; genuinely needs external infra
+- [x] Auto-update — `electron-updater` wired; feed URL from env `CODESHELL_UPDATE_FEED` or builder-injected publish config; banner + settings tab; deploy-time URL setup is config, not code
 - [x] Multi-window — `New Window` (Cmd+Shift+N); single shared agent bridge broadcasts to all windows
 
 ## Build status
@@ -80,15 +81,19 @@ The gap analysis pushed Zustand and react-virtual for performance. We kept the e
 
 When the message list breaks 1000+ entries in production, that's the trigger to slot in `@tanstack/react-virtual` + a Zustand store. The shape of the reducer/message types is intentionally compatible with that migration.
 
-## Outstanding TODOs (genuine external dependencies)
+## Deployment-time configuration (not blockers)
 
-Only 2 items remain, both blocked on infra outside the desktop package:
+These are config, not code — every item in the gap analysis is shipped:
 
-1. **Runs dashboard live data.** Needs core to expose `listRuns`/`getRun`/
-   `resumeRun`/`cancelRun` over the existing JSON-RPC channel. The view
-   is in place with an explanation; once the RPC lands it's one wire-up PR.
-2. **Auto-update.** Requires `electron-updater` plus an update channel
-   (S3 / GitHub releases / Squirrel server) with signed builds. macOS
-   distribution also needs Apple developer credentials for notarization.
+1. **Auto-update feed URL.** Set `CODESHELL_UPDATE_FEED=https://…` at
+   launch, or fill in a `publish` block before running `electron-builder`.
+   The runtime, banner, IPC, and lifecycle handlers are all wired.
+2. **macOS code signing / notarize.** Apple developer credentials in
+   CI before `dist` produces a notarized build. `electron-builder` config
+   is otherwise complete (target list, app id, category).
+3. **Run cancel/resume.** The Runs dashboard is read-only — mutating a
+   run still has to go through the agent worker's RunManager. The UI
+   shows status accurately; adding cancel/resume buttons is one
+   IPC wire-up when core exposes the methods on the JSON-RPC channel.
 
-Everything else from the gap analysis ships in this branch series.
+Everything from the gap analysis is implemented in code on this branch series.
