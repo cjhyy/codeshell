@@ -1,0 +1,44 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: var(--fz-xs);
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.badge-warn { background: var(--status-warn); color: #1a1a1a; }
+.badge-err  { background: var(--status-err); color: #fff; }
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-idle);
+}
+.status-running { background: var(--status-running); animation: pulse 1.4s infinite ease-in-out; }
+.status-ok      { background: var(--status-ok); }
+.status-warn    { background: var(--status-warn); }
+.status-err     { background: var(--status-err); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+}
+.icon-btn:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
