@@ -85,13 +85,20 @@ function App() {
     dispatch({ type: "hydrate", repoKey: activeRepoKey, state: loaded });
   }, [activeRepoKey, activeRepoId, transcripts]);
 
-  // Persist transcripts whenever they change.
+  // Persist transcripts to localStorage on a debounce. During streaming
+  // we dispatch dozens of stream events per second, each producing a
+  // new transcripts reference; writing the full map JSON-stringified
+  // on every keystroke equivalent grinds the renderer to a halt.
+  // Only the active bucket needs writing — the others didn't change.
   useEffect(() => {
-    for (const [key, s] of Object.entries(transcripts)) {
-      const repoId = key === GLOBAL_KEY ? null : key;
+    const handle = setTimeout(() => {
+      const s = transcripts[activeRepoKey];
+      if (!s) return;
+      const repoId = activeRepoKey === GLOBAL_KEY ? null : activeRepoKey;
       saveTranscript(repoId, s);
-    }
-  }, [transcripts]);
+    }, 600);
+    return () => clearTimeout(handle);
+  }, [transcripts, activeRepoKey]);
 
   const state = transcripts[activeRepoKey] ?? INITIAL_STATE;
   const busy = busyKeys.has(activeRepoKey);
@@ -144,11 +151,18 @@ function App() {
       // the worker, NOT to whatever repo is currently visible — the
       // user may have switched repos while the run is mid-flight.
       const targetKey = runningRepoKeyRef.current ?? GLOBAL_KEY;
-      window.codeshell.log("stream.event", {
-        type: event.type,
-        textLen: "text" in event ? (event as { text: string }).text.length : undefined,
-        targetKey,
-      });
+      // Don't log text_delta / args_delta / usage_update — they fire
+      // dozens of times a second and each log line is a contextBridge
+      // IPC round-trip plus a disk write. We log the structural events
+      // only (turn boundaries, tool starts/results, errors).
+      const noisy =
+        event.type === "text_delta" ||
+        event.type === "tool_use_args_delta" ||
+        event.type === "usage_update" ||
+        event.type === "thinking_delta";
+      if (!noisy) {
+        window.codeshell.log("stream.event", { type: event.type, targetKey });
+      }
       dispatch({ type: "stream", repoKey: targetKey, event });
       if (event.type === "turn_complete" || event.type === "error") {
         setBusyForKey(targetKey, false);
@@ -185,17 +199,6 @@ function App() {
       offLifecycle();
     };
   }, []);
-
-  // Track state changes so we can tell whether the reducer ran but the
-  // UI didn't update vs. the reducer never ran at all.
-  useEffect(() => {
-    window.codeshell.log("state.update", {
-      activeKey: activeRepoKey,
-      messageCount: state.messages.length,
-      streamingId: state.streamingAssistantId,
-      last: state.messages.at(-1) as Record<string, unknown> | undefined,
-    });
-  }, [state, activeRepoKey]);
 
   const send = (text: string): void => {
     const targetKey = activeRepoKey;
