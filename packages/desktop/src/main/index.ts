@@ -1,67 +1,50 @@
 /**
- * Electron main — boots a BrowserWindow and loads the renderer.
- *
- * What this file does NOT do yet:
- *   - instantiate Engine / AgentServer
- *   - bridge ipcMain to AgentServer.handleMessage
- *   - send stream events back to renderer
- *
- * Why: the renderer is a thin client by design — it talks to main only
- * over `window.codeShell.*` (preload-exposed named methods). The full
- * bridge needs:
- *   1. The monorepo split (@cjhyy/code-shell-core as its own package)
- *      so we can `import { Engine, AgentServer } from "@cjhyy/code-shell-core"`
- *      cleanly, without esbuild having to bundle all of root src/ from
- *      a relative path.
- *   2. preload to expose the codex-style named RPC surface
- *      (run / cancel / approve / onStream / ...).
- *
- * Until then, this file is intentionally minimal: enough Electron
- * scaffolding to prove the dev orchestrator (vite + esbuild + electron
- * launcher in scripts/dev.ts) is wired correctly. Opening the window
- * IS the milestone for this checkpoint.
+ * Electron main entry — broker between renderer (ipcMain) and the
+ * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
  */
 
 import { app, BrowserWindow } from "electron";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, resolve } from "node:path";
+import { AgentBridge } from "./agent-bridge.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const VITE_DEV_URL = process.env.VITE_DEV_URL;
+let bridge: AgentBridge | null = null;
+let mainWindow: BrowserWindow | null = null;
 
-function createWindow(): BrowserWindow {
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    title: "code-shell",
-    backgroundColor: "#1a1a1c",
+function createWindow(): void {
+  mainWindow = new BrowserWindow({
+    width: 1100,
+    height: 760,
     webPreferences: {
-      preload: join(__dirname, "../preload/index.cjs"),
+      preload: resolve(__dirname, "..", "preload", "index.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
     },
   });
 
-  if (VITE_DEV_URL) {
-    void win.loadURL(VITE_DEV_URL);
-    win.webContents.openDevTools({ mode: "detach" });
+  const devUrl = process.env.VITE_DEV_URL;
+  if (devUrl) {
+    mainWindow.loadURL(devUrl);
   } else {
-    void win.loadFile(join(__dirname, "../renderer/index.html"));
+    mainWindow.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
   }
 
-  return win;
+  bridge = new AgentBridge(mainWindow);
 }
 
-void app.whenReady().then(() => {
-  createWindow();
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-});
+app.whenReady().then(createWindow);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("before-quit", () => {
+  bridge?.kill();
+});
+
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });

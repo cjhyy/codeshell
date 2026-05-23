@@ -69,7 +69,7 @@ async function buildAndWatch(): Promise<void> {
     platform: "node",
     format: "esm",
     outfile: resolve(root, "out/main/index.mjs"),
-    external: ["electron"],
+    external: ["electron", "@cjhyy/code-shell-core"],
     loader: { ".md": "text" },
     sourcemap: "inline",
     logLevel: "info",
