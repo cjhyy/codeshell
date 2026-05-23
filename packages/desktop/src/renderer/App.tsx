@@ -11,6 +11,7 @@ import {
   INITIAL_STATE,
   type MessagesReducerState,
   type ApprovalState,
+  type ToolMessage,
 } from "./types";
 import { loadTranscript, saveTranscript } from "./transcripts";
 import type {
@@ -69,6 +70,7 @@ function App() {
   const [repos, setRepos] = useState<Repo[]>(() => loadRepos());
   const [activeRepoId, setActiveRepoId] = useState<string | null>(() => loadActiveRepoId());
   const [view, setView] = useState<ViewState>(() => loadView());
+  const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
 
   const activeRepoKey = bucketKey(activeRepoId);
   const runningRepoKeyRef = useRef<string | null>(null);
@@ -278,6 +280,8 @@ function App() {
               onStop={stop}
               busy={busy}
               activeRepoId={activeRepoId}
+              selectedToolId={selectedToolId}
+              onSelectTool={(m: ToolMessage) => setSelectedToolId(m.id)}
             />
           </>
         ) : (
@@ -290,7 +294,17 @@ function App() {
       </main>
 
       <div className="inspector-region">
-        <InspectorPanel collapsed={view.inspectorCollapsed} onToggle={toggleInspector} />
+        <InspectorPanel
+          collapsed={view.inspectorCollapsed}
+          onToggle={toggleInspector}
+          selectedTool={
+            selectedToolId
+              ? (state.messages.find(
+                  (m) => m.kind === "tool" && m.id === selectedToolId,
+                ) as ToolMessage | undefined) ?? null
+              : null
+          }
+        />
       </div>
     </div>
   );

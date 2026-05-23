@@ -8,6 +8,61 @@ breaking.
 
 ## [Unreleased]
 
+## [0.5.0-rc.0] - 2026-05-23
+
+> ⚠️ Breaking. The repo is now a monorepo with three published packages.
+> The single-package install path still works (`@cjhyy/code-shell` re-exports
+> everything from core), but direct deep imports into `src/...` are gone.
+> Migrate to the public package APIs before upgrading.
+
+### Changed
+
+#### Monorepo split — three packages
+
+The codebase was split into a Bun workspace with three publishable packages
+plus one private Electron POC:
+
+- **`@cjhyy/code-shell-core`** — the engine. Engine, AgentServer, hooks,
+  tool system, LLM clients, session, protocol types, presets. Zero UI
+  dependencies. Headless and embeddable in any host (TUI, Electron main,
+  server). No React, no Ink, no chalk.
+- **`@cjhyy/code-shell-tui`** — the terminal client. Owns the React/Ink
+  render layer, the `code-shell` CLI bin, themes, key bindings, all
+  terminal-only utilities. Imports core; nothing else imports it.
+- **`@cjhyy/code-shell`** (meta) — thin re-export shim. `import { Engine }
+  from "@cjhyy/code-shell"` still works for SDK users; the `code-shell`
+  bin loads the TUI CLI. Ships three files total: `index.js`, `index.d.ts`,
+  `cli.js`.
+- **`@cjhyy/code-shell-desktop`** (private) — Electron POC. Currently a
+  build-pipeline skeleton (main + preload + renderer + esbuild/vite
+  orchestration). Not published.
+
+Existing users on `@cjhyy/code-shell` see no API change; deep-import users
+(`@cjhyy/code-shell/src/...`) must migrate to the public surface.
+
+#### Core decoupled from chalk
+
+`@cjhyy/code-shell-core` no longer depends on `chalk`. ~70 chalk call sites
+across cost-tracker, arena render, theme, and CLI-shared modules were
+replaced with an injected `Colorizer` interface. Hosts pass a colorizer
+implementation (TUI uses chalk; Electron / headless use `NOOP_COLORIZER`).
+This removes core's last terminal-formatting dependency and lets non-TTY
+hosts render the same data structures with their own styling.
+
+### Added
+
+- ESLint architectural guards: renderer cannot import core directly;
+  no-engine-bypass check enforced.
+- `scripts/build-meta.ts` — produces the meta package's three-file dist.
+- `packages/desktop/scripts/{dev,build}.ts` — three-process orchestrator
+  (vite renderer + esbuild main + esbuild preload).
+
+### Removed
+
+- `chalk` dependency from `@cjhyy/code-shell-core`.
+- All deep-import paths under `src/...`. Use `@cjhyy/code-shell-core`'s
+  public surface (`@cjhyy/code-shell` for SDK users).
+
 ## [0.3.0] - 2026-05-20
 
 ### Added

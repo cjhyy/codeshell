@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MessageStream } from "./MessageStream";
-import type { Message } from "./types";
+import type { Message, ToolMessage } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
 
 interface Props {
@@ -9,11 +9,13 @@ interface Props {
   onStop: () => void;
   busy: boolean;
   activeRepoId: string | null;
+  selectedToolId?: string | null;
+  onSelectTool?: (m: ToolMessage) => void;
 }
 
 const MAX_TEXTAREA_PX = 200;
 
-export function ChatView({ messages, onSend, onStop, busy, activeRepoId }: Props) {
+export function ChatView({ messages, onSend, onStop, busy, activeRepoId, selectedToolId, onSelectTool }: Props) {
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
   /**
@@ -107,7 +109,11 @@ export function ChatView({ messages, onSend, onStop, busy, activeRepoId }: Props
 
   return (
     <div className="chat">
-      <MessageStream messages={messages} />
+      <MessageStream
+        messages={messages}
+        selectedToolId={selectedToolId ?? null}
+        onSelectTool={onSelectTool}
+      />
       <div className="input-row">
         <textarea
           ref={textareaRef}

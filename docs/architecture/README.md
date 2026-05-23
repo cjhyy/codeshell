@@ -1,6 +1,6 @@
 # CodeShell Architecture Docs
 
-> Generated on 2026-05-16 from the current repository tree.
+> Originally generated on 2026-05-16; entry points refreshed after the 2026-05-22 monorepo split.
 
 This directory is the current architecture documentation set for CodeShell. It is organized as a reading path rather than one giant document, so each file can stay focused and easier to update when a subsystem moves.
 
@@ -8,9 +8,10 @@ This directory is the current architecture documentation set for CodeShell. It i
 
 | # | Document | Use it for |
 |---|---|---|
+| 0 | [Current Repo Map and Decoupling Review](../repo-map-and-decoupling-review-2026-05-23.md) | Current `packages/*` layout, package-boundary review, coupling hotspots, and next-step plan after the monorepo split |
 | 1 | [System Overview](01-system-overview.md) | Product positioning, top-level layers, and the main architecture diagram |
 | 2 | [Runtime Flow](02-runtime-flow.md) | How CLI/headless/REPL requests become Engine turns and tool calls |
-| 3 | [Module Map](03-module-map.md) | What every important `src/` directory owns |
+| 3 | [Module Map](03-module-map.md) | Historical module ownership map; use document 0 for the current `packages/*` split |
 | 4 | [Tool System](04-tool-system.md) | Tool registration, execution, permission checks, MCP, guards, and concurrency |
 | 5 | [State, Config, and Storage](05-state-config-storage.md) | Settings merge order, sessions, transcripts, runs, logs, memories, and context persistence |
 | 6 | [UI, Protocol, and Rendering](06-ui-protocol-rendering.md) | Client/server protocol, custom terminal renderer, REPL app state, commands, approvals |
@@ -43,18 +44,19 @@ The current source tree supports two primary usage modes:
 ## Primary Source Anchors
 
 - Package shape: [`package.json`](../../package.json)
-- Public API: [`src/index.ts`](../../src/index.ts)
-- CLI entry: [`src/cli/main.ts`](../../src/cli/main.ts)
-- Engine facade: [`src/engine/engine.ts`](../../src/engine/engine.ts)
-- Turn loop: [`src/engine/turn-loop.ts`](../../src/engine/turn-loop.ts)
-- Tool registry/executor: [`src/tool-system/registry.ts`](../../src/tool-system/registry.ts), [`src/tool-system/executor.ts`](../../src/tool-system/executor.ts)
-- Protocol layer: [`src/protocol/types.ts`](../../src/protocol/types.ts)
-- REPL app: [`src/ui/App.tsx`](../../src/ui/App.tsx)
-- Terminal renderer: [`src/render/README.md`](../../src/render/README.md), [`src/render/index.ts`](../../src/render/index.ts)
-- Model pool: [`src/llm/model-pool.ts`](../../src/llm/model-pool.ts)
-- Run lifecycle: [`src/run/RunManager.ts`](../../src/run/RunManager.ts)
-- Arena: [`src/arena/arena.ts`](../../src/arena/arena.ts)
+- Core public API: [`packages/core/src/index.ts`](../../packages/core/src/index.ts)
+- TUI package entry: [`packages/tui/src/index.ts`](../../packages/tui/src/index.ts)
+- CLI entry: [`packages/tui/src/cli/main.ts`](../../packages/tui/src/cli/main.ts)
+- Engine facade: [`packages/core/src/engine/engine.ts`](../../packages/core/src/engine/engine.ts)
+- Turn loop: [`packages/core/src/engine/turn-loop.ts`](../../packages/core/src/engine/turn-loop.ts)
+- Tool registry/executor: [`packages/core/src/tool-system/registry.ts`](../../packages/core/src/tool-system/registry.ts), [`packages/core/src/tool-system/executor.ts`](../../packages/core/src/tool-system/executor.ts)
+- Protocol layer: [`packages/core/src/protocol/types.ts`](../../packages/core/src/protocol/types.ts)
+- REPL app: [`packages/tui/src/ui/App.tsx`](../../packages/tui/src/ui/App.tsx)
+- Terminal renderer: [`packages/tui/src/render/README.md`](../../packages/tui/src/render/README.md), [`packages/tui/src/render/index.ts`](../../packages/tui/src/render/index.ts)
+- Model pool: [`packages/core/src/llm/model-pool.ts`](../../packages/core/src/llm/model-pool.ts)
+- Run lifecycle: [`packages/core/src/run/RunManager.ts`](../../packages/core/src/run/RunManager.ts)
+- Arena: [`packages/core/src/arena/arena.ts`](../../packages/core/src/arena/arena.ts)
 
 ## Notes
 
-Older docs in [`docs/`](../) are still useful as history and design background, but this directory is intended to be the fresh, source-aligned architecture map for the current tree.
+Older docs in [`docs/`](../) are still useful as history and design background. Some architecture pages were written before the 2026-05-22 monorepo split and still use old `src/...` anchors; use the current repo map above as the package-aligned entry point for `packages/core`, `packages/tui`, and `packages/desktop`.
