@@ -11,9 +11,14 @@
       "import": "./dist/index.js"
     }
   },
+  "sideEffects": [
+    "./dist/data/*.json",
+    "./dist/prompt/sections/*.md"
+  ],
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && mkdir -p dist/prompt/sections dist/data && cp src/prompt/sections/*.md dist/prompt/sections/ && cp src/data/*.json dist/data/",
@@ -24,7 +29,6 @@
     "@modelcontextprotocol/sdk": "^1.12.1",
     "glob": "^11.0.0",
     "gpt-tokenizer": "^3.4.0",
-    "lodash-es": "^4.17.23",
     "nanoid": "^5.1.2",
     "openai": "^4.82.0",
     "proper-lockfile": "^4.1.2",
@@ -33,6 +37,34 @@
     "yaml": "^2.7.0",
     "zod": "^3.24.2"
   },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/cjhyy/codeshell/tree/main/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/cjhyy/codeshell/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agent",
+    "orchestration",
+    "agent-framework",
+    "claude-code",
+    "claude",
+    "openai",
+    "anthropic",
+    "mcp",
+    "llm",
+    "tool-use",
+    "function-calling",
+    "headless"
+  ],
   "publishConfig": {
     "access": "public"
   }
