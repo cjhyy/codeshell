@@ -183,38 +183,102 @@ pre { margin: 0; white-space: pre-wrap; font-family: monospace; }
   padding: 16px 20px;
 }
 
-.msg {
-  margin-bottom: 12px;
+/* Message rows — flex containers controlling alignment */
+.msg-row { display: flex; margin: 10px 16px; }
+.msg-row-user { justify-content: flex-end; }
+.msg-row-assistant { justify-content: flex-start; flex-direction: column; }
+.msg-row-system { justify-content: flex-start; }
+
+/* User: small grey bubble, right-aligned */
+.msg-user-bubble {
+  max-width: 70%;
+  background: #ececec;
+  color: #1a1a1a;
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Assistant: no bubble. Plain text body, generous left margin only. */
+.msg-row-assistant .md-body {
+  max-width: 720px;
+  color: #1a1a1a;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.msg-row-assistant.streaming .md-body { color: #444; }
+
+/* System (errors etc) — light red banner */
+.msg-system {
+  background: #fceeee;
+  color: #a33;
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 14px;
-  line-height: 1.55;
+  border-left: 3px solid #d66;
+  font-size: 13px;
 }
 
-.msg-user {
-  background: #e8e3d4;
-  align-self: flex-end;
-  max-width: 70%;
-  margin-left: auto;
-  border-radius: 12px 12px 2px 12px;
+/* Markdown body typography */
+.md-body p { margin: 0.5em 0; }
+.md-body h1 { font-size: 1.4em; margin: 0.8em 0 0.4em; }
+.md-body h2 { font-size: 1.25em; margin: 0.8em 0 0.4em; }
+.md-body h3 { font-size: 1.1em; margin: 0.7em 0 0.4em; }
+.md-body h4, .md-body h5, .md-body h6 { font-size: 1em; margin: 0.6em 0 0.3em; font-weight: 600; }
+.md-body ul, .md-body ol { padding-left: 24px; margin: 0.5em 0; }
+.md-body li { margin: 0.2em 0; }
+.md-body blockquote {
+  border-left: 3px solid #d6d2c5;
+  margin: 0.5em 0;
+  padding: 0.2em 0.8em;
+  color: #555;
 }
+.md-body a { color: #0066cc; text-decoration: none; }
+.md-body a:hover { text-decoration: underline; }
+.md-body code:not(pre code) {
+  background: #f0eee6;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.92em;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+.md-body pre {
+  background: #f6f6f4;
+  border: 1px solid #e6e3da;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0.6em 0;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+}
+.md-body pre code {
+  background: transparent !important;
+  padding: 0;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+.md-body table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  font-size: 13px;
+}
+.md-body th, .md-body td {
+  border: 1px solid #e0ddd0;
+  padding: 4px 8px;
+}
+.md-body th { background: #f0eee6; font-weight: 600; }
 
-.msg-assistant {
+/* Streaming placeholder — keep monospace look so it doesn't reflow */
+.md-streaming pre {
   background: transparent;
-  color: #1a1a1a;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.msg-assistant.streaming {
-  border-left: 2px solid #a89e8a;
-  padding-left: 10px;
-}
-
-.msg-system {
-  background: #fff0f0;
-  color: #c0392b;
-  border: 1px solid #f5c6c6;
+  border: none;
+  padding: 0;
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: inherit;
 }
 
 /* ── Tool blocks ── */

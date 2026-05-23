@@ -15,7 +15,11 @@
     "start": "electron ."
   },
   "dependencies": {
-    "@cjhyy/code-shell-core": "workspace:*"
+    "@cjhyy/code-shell-core": "workspace:*",
+    "highlight.js": "^11",
+    "react-markdown": "^9",
+    "rehype-highlight": "^7",
+    "remark-gfm": "^4"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
