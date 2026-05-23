@@ -20,7 +20,9 @@ export default defineConfig({
   base: "./",
   publicDir: false,
   server: {
-    port: 5173,
+    // Pick a port unlikely to collide with other vite projects (default 5173
+    // gets crowded fast). dev.ts hard-codes the same port.
+    port: 5273,
     strictPort: true,
   },
   build: {

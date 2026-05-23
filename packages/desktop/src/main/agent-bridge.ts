@@ -16,6 +16,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
 import { createRequire } from "node:module";
 import { BrowserWindow, ipcMain } from "electron";
+import { dlog } from "./desktop-logger.js";
 
 const require = createRequire(import.meta.url);
 const agentEntry = require.resolve(
@@ -25,6 +26,10 @@ const agentEntry = require.resolve(
 const RESTART_WINDOW_MS = 60_000;
 const RESTART_LIMIT = 3;
 
+function previewLine(s: string, max = 200): string {
+  return s.length > max ? s.slice(0, max) + `…(+${s.length - max} more)` : s;
+}
+
 export class AgentBridge {
   private child: ChildProcess | null = null;
   private restartCount = 0;
@@ -32,11 +37,13 @@ export class AgentBridge {
   private ipcListenerAttached = false;
 
   constructor(private window: BrowserWindow) {
+    dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
     this.spawnChild();
     this.attachIpcListener();
   }
 
   private spawnChild(): void {
+    dlog("bridge", "spawn.start", { restartCount: this.restartCount });
     this.child = spawn(process.execPath, [agentEntry], {
       env: {
         ...process.env,
@@ -45,29 +52,47 @@ export class AgentBridge {
       },
       stdio: ["pipe", "pipe", "pipe"],
     });
+    dlog("bridge", "spawn.ok", { pid: this.child.pid });
 
     if (!this.child.stdout || !this.child.stdin || !this.child.stderr) {
+      dlog("bridge", "spawn.error", { reason: "stdio not piped" });
       throw new Error("AgentBridge: child stdio not piped");
     }
 
     const rl = createInterface({ input: this.child.stdout });
     rl.on("line", (line) => {
       if (!line.trim()) return;
+      // Parse out method/id for a more useful summary; fall back to raw preview.
+      let summary: Record<string, unknown> = { raw: previewLine(line) };
+      try {
+        const m = JSON.parse(line) as { method?: string; id?: number };
+        if (m.method) summary = { method: m.method, raw: previewLine(line) };
+        else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
+      } catch {
+        /* keep raw */
+      }
+      dlog("bridge", "worker→renderer", summary);
       this.safeSend("agent:msg", line);
     });
 
-    // Mirror child stderr into the Electron main console so logs and
-    // crashes are visible during dev.
     this.child.stderr.on("data", (chunk: Buffer) => {
-      process.stderr.write(`[agent] ${chunk.toString()}`);
+      const text = chunk.toString();
+      // The worker writes structured logs to ~/.code-shell/logs/engine-*.log
+      // already. Anything coming through stderr is either an unhandled
+      // exception or our own deliberate fatal write — always interesting.
+      dlog("agent", "stderr", { text: previewLine(text, 800) });
+      process.stderr.write(`[agent] ${text}`);
     });
 
-    this.child.on("exit", (code) => {
+    this.child.on("exit", (code, signal) => {
+      dlog("bridge", "child.exit", { code, signal });
       this.safeSend("agent:lifecycle", { type: "exited", code });
       if (this.shouldRestart()) {
+        dlog("bridge", "restart.attempt", { restartCount: this.restartCount });
         this.spawnChild();
         this.safeSend("agent:lifecycle", { type: "restarted" });
       } else {
+        dlog("bridge", "restart.gave_up", { restartCount: this.restartCount });
         this.safeSend("agent:lifecycle", { type: "gave_up" });
       }
     });
@@ -86,9 +111,25 @@ export class AgentBridge {
   private attachIpcListener(): void {
     if (this.ipcListenerAttached) return;
     this.ipcListenerAttached = true;
+
     ipcMain.on("agent:msg", (_event, line: string) => {
-      if (!this.child?.stdin || this.child.stdin.destroyed) return;
+      if (!this.child?.stdin || this.child.stdin.destroyed) {
+        dlog("bridge", "renderer→worker.dropped", { reason: "stdin destroyed", raw: previewLine(line) });
+        return;
+      }
+      let summary: Record<string, unknown> = { raw: previewLine(line) };
+      try {
+        const m = JSON.parse(line) as { method?: string; id?: number };
+        if (m.method) summary = { method: m.method, id: m.id, raw: previewLine(line) };
+      } catch {
+        /* keep raw */
+      }
+      dlog("bridge", "renderer→worker", summary);
       this.child.stdin.write(line + "\n");
+    });
+
+    ipcMain.on("desktop:log", (_event, payload: { msg: string; data?: Record<string, unknown> }) => {
+      dlog("renderer", payload.msg, payload.data);
     });
   }
 
@@ -98,6 +139,7 @@ export class AgentBridge {
   }
 
   kill(): void {
+    dlog("bridge", "kill", { pid: this.child?.pid });
     this.child?.kill("SIGTERM");
   }
 }

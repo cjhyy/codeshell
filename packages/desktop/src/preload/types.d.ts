@@ -33,6 +33,8 @@ export type AgentLifecycleEvent =
 export type Unsubscribe = () => void;
 
 export interface CodeshellApi {
+  /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
+  log(msg: string, data?: Record<string, unknown>): void;
   run(prompt: string, opts?: Record<string, unknown>): Promise<RpcResponse>;
   cancel(): Promise<RpcResponse>;
   approve(id: string, decision: "approve" | "deny", reason?: string): Promise<RpcResponse>;

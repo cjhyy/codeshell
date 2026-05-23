@@ -37,10 +37,21 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   }
   // Notification: has method
   const method = msg.method as string | undefined;
-  const params = msg.params;
-  if (method === "agent/streamEvent") streamListeners.forEach((cb) => cb(params));
-  else if (method === "agent/approvalRequest") approvalListeners.forEach((cb) => cb(params));
-  else if (method === "agent/status") statusListeners.forEach((cb) => cb(params));
+  const params = msg.params as Record<string, unknown> | undefined;
+  if (method === "agent/streamEvent") {
+    // Worker wire format wraps the event: { params: { event: {...} } }.
+    // Strip that wrapper so renderer callbacks see the StreamEvent directly,
+    // matching the typed `onStreamEvent(cb: (event: StreamEvent) => void)`
+    // signature.
+    const event = params?.event;
+    streamListeners.forEach((cb) => cb(event));
+  } else if (method === "agent/approvalRequest") {
+    // Approval keeps the full envelope { requestId, request } intentionally —
+    // the renderer needs requestId to echo back via approve().
+    approvalListeners.forEach((cb) => cb(params));
+  } else if (method === "agent/status") {
+    statusListeners.forEach((cb) => cb(params));
+  }
 });
 
 ipcRenderer.on("agent:lifecycle", (_e: IpcRendererEvent, evt: unknown) => {
@@ -57,8 +68,11 @@ function rpc(method: string, params?: Record<string, unknown>): Promise<unknown>
 }
 
 contextBridge.exposeInMainWorld("codeshell", {
-  run: (prompt: string, opts?: Record<string, unknown>) =>
-    rpc("agent/run", { prompt, ...(opts ?? {}) }),
+  /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
+  log: (msg: string, data?: Record<string, unknown>) =>
+    ipcRenderer.send("desktop:log", { msg, data }),
+  run: (task: string, opts?: Record<string, unknown>) =>
+    rpc("agent/run", { task, ...(opts ?? {}) }),
   cancel: () => rpc("agent/cancel"),
   approve: (requestId: string, decision: "approve" | "deny", reason?: string) =>
     rpc("agent/approve", {

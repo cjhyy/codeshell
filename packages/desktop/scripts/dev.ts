@@ -1,7 +1,7 @@
 /**
  * Dev orchestrator — runs three concurrent things:
  *
- *   1. vite dev server on http://localhost:5173 (renderer with HMR)
+ *   1. vite dev server on http://localhost:5273 (renderer with HMR)
  *   2. esbuild watch on src/main/index.ts → out/main/index.cjs
  *   3. esbuild watch on src/preload/index.ts → out/preload/index.cjs
  *
@@ -23,13 +23,14 @@ import { fileURLToPath } from "node:url";
 const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
 
-const VITE_URL = "http://localhost:5173";
+const VITE_PORT = 5273;
+const VITE_URL = `http://localhost:${VITE_PORT}`;
 
 async function startVite(): Promise<void> {
   const server = await createViteServer({
     configFile: resolve(root, "vite.config.ts"),
   });
-  await server.listen(5173);
+  await server.listen(VITE_PORT);
   // eslint-disable-next-line no-console
   console.log(`[dev] vite dev server: ${VITE_URL}`);
 }
