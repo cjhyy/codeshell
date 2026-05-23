@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import type { Message } from "./types";
 import { ToolCallBlock } from "./ToolCallBlock";
 import { Markdown } from "./Markdown";
@@ -6,15 +6,17 @@ import { ThinkingMessageView } from "./messages/ThinkingMessageView";
 import { AgentMessageView } from "./messages/AgentMessageView";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
+import { useStickToBottom } from "./chat/stickToBottom";
 
 export function MessageStream({ messages }: { messages: Message[] }) {
-  const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages]);
+  // Stick-to-bottom: only auto-scroll when the user is already at
+  // the bottom. Releases as soon as they scroll up, re-engages when
+  // they return. Triggered by messages.length so per-delta text
+  // appends don't fire scroll on every keystroke-equivalent.
+  const ref = useStickToBottom<HTMLDivElement>(messages.length);
 
   return (
-    <div className="stream">
+    <div className="stream" ref={ref}>
       {messages.map((m) => {
         switch (m.kind) {
           case "tool":
@@ -56,7 +58,6 @@ export function MessageStream({ messages }: { messages: Message[] }) {
             );
         }
       })}
-      <div ref={endRef} />
     </div>
   );
 }
