@@ -71,6 +71,8 @@ export interface CodeshellApi {
   listSessionTitles(): Promise<Record<string, string>>;
   renameSession(id: string, title: string): Promise<void>;
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
+  listRuns(): Promise<RunSummary[]>;
+  getRun(runId: string): Promise<RunDetail | null>;
 
   // Phase 6 — native polish & security.
   getTrust(path: string): Promise<"trusted" | "untrusted" | "unknown">;
@@ -80,7 +82,20 @@ export interface CodeshellApi {
   setBadgeCount(count: number): Promise<void>;
   onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;
   newWindow(): Promise<void>;
+  checkForUpdate(): Promise<void>;
+  installUpdate(): Promise<void>;
+  getUpdaterStatus(): Promise<UpdaterStatus>;
+  onUpdaterStatus(cb: (status: UpdaterStatus) => void): Unsubscribe;
 }
+
+export type UpdaterStatus =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "available"; version: string }
+  | { kind: "not-available"; version: string }
+  | { kind: "downloading"; percent: number; transferred: number; total: number }
+  | { kind: "downloaded"; version: string }
+  | { kind: "error"; message: string };
 
 export interface DesktopSessionSummary {
   id: string;
@@ -88,6 +103,38 @@ export interface DesktopSessionSummary {
   size: number;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface RunSummary {
+  runId: string;
+  objective: string;
+  preset?: string;
+  cwd: string;
+  status: string;
+  createdAt: number;
+  updatedAt: number;
+  startedAt: number | null;
+  finishedAt: number | null;
+  sessionId: string | null;
+  error: string | null;
+  summary: string | null;
+}
+
+export interface RunDetail extends RunSummary {
+  attemptCount: number;
+  latestCheckpointId: string | null;
+  latestApprovalId: string | null;
+  tags: string[];
+  metadata: Record<string, unknown>;
+  events: Array<{ eventId: string; type: string; timestamp: number; data: Record<string, unknown> }>;
+  checkpoints: Array<{
+    checkpointId: string;
+    createdAt: number;
+    phase: string;
+    summary: string;
+    nextAction: string | null;
+  }>;
+  artifacts: string[];
 }
 
 declare global {

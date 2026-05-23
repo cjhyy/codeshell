@@ -38,6 +38,7 @@ import { RunsView } from "./runs/RunsView";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SearchBar } from "./shell/SearchBar";
 import { TrustGate } from "./workspace-trust/TrustGate";
+import { UpdaterBanner } from "./updater/UpdaterBanner";
 
 /**
  * Transcripts are keyed by repoId; null repoId uses a "global" bucket.
@@ -420,6 +421,7 @@ function App() {
       </div>
 
       <main className="main-region main">
+        <UpdaterBanner />
         <div className="main-toolbar">
           <IconButton label={view.sidebarCollapsed ? "展开侧栏" : "折叠侧栏"} onClick={toggleSidebar}>
             <PanelLeft size={14} />

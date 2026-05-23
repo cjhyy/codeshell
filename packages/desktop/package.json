@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",
+    "electron-updater": "^6.3.9",
     "highlight.js": "^11",
     "lucide-react": "^0.460.0",
     "react-markdown": "^9",

@@ -18,6 +18,8 @@ import { readSettings, writeSettings, type SettingsScope } from "./settings-serv
 import { listSessions, deleteSession } from "./sessions-service.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
+import { listRuns, getRun } from "./runs-service.js";
+import { initUpdater, checkForUpdate, quitAndInstall, getLastStatus } from "./updater.js";
 import { loadRecents, pushRecent } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import { getTrust, setTrust, type TrustLevel } from "./trust-store.js";
@@ -140,7 +142,12 @@ async function createWindow(): Promise<BrowserWindow> {
 
 app.whenReady().then(() => {
   void createWindow();
+  initUpdater();
 });
+
+ipcMain.handle("updater:check", async () => checkForUpdate());
+ipcMain.handle("updater:install", async () => quitAndInstall());
+ipcMain.handle("updater:status", async () => getLastStatus());
 
 ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string } | null> => {
   const res = await dialog.showOpenDialog({
@@ -208,6 +215,12 @@ ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
     throw new Error("invalid bucket");
   }
   return tailLog(bucket, lines);
+});
+
+ipcMain.handle("runs:list", async () => listRuns());
+ipcMain.handle("runs:get", async (_e, runId: string) => {
+  if (typeof runId !== "string") throw new Error("runId required");
+  return getRun(runId);
 });
 
 ipcMain.handle("trust:get", async (_e, p: string) => {

@@ -126,6 +126,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("sessions:rename", id, title),
   tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
     ipcRenderer.invoke("logs:tail", bucket, lines),
+  listRuns: () => ipcRenderer.invoke("runs:list"),
+  getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),
@@ -134,6 +136,14 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("notify:show", opts),
   setBadgeCount: (count: number) => ipcRenderer.invoke("badge:set", count),
   newWindow: () => ipcRenderer.invoke("window:new"),
+  checkForUpdate: () => ipcRenderer.invoke("updater:check"),
+  installUpdate: () => ipcRenderer.invoke("updater:install"),
+  getUpdaterStatus: () => ipcRenderer.invoke("updater:status"),
+  onUpdaterStatus: (cb: (status: unknown) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, status: unknown) => cb(status);
+    ipcRenderer.on("updater:status", h);
+    return () => ipcRenderer.removeListener("updater:status", h);
+  },
   onMenuEvent: (cb: (event: string, payload?: unknown) => void): (() => void) => {
     const wrap = (channel: string) => (_e: IpcRendererEvent, payload?: unknown) =>
       cb(channel.replace(/^menu:/, ""), payload);

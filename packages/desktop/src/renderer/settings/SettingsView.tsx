@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { ModelSection } from "./ModelSection";
 import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
+import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 
 type Scope = "user" | "project";
-type Tab = "model" | "permission" | "mcp" | "json";
+type Tab = "model" | "permission" | "mcp" | "update" | "json";
 
 interface Props {
   activeRepoPath: string | null;
@@ -73,7 +74,7 @@ export function SettingsView({ activeRepoPath }: Props) {
           </button>
         </div>
         <div className="settings-scope">
-          {(["model", "permission", "mcp", "json"] as Tab[]).map((t) => (
+          {(["model", "permission", "mcp", "update", "json"] as Tab[]).map((t) => (
             <button
               key={t}
               className={`logs-bucket${tab === t ? " active" : ""}`}
@@ -95,6 +96,7 @@ export function SettingsView({ activeRepoPath }: Props) {
       {tab === "model" && <ModelSection scope={scope} activeRepoPath={activeRepoPath} />}
       {tab === "permission" && <PermissionSection scope={scope} activeRepoPath={activeRepoPath} />}
       {tab === "mcp" && <McpSection scope={scope} activeRepoPath={activeRepoPath} />}
+      {tab === "update" && <UpdaterSettingsRow />}
       {tab === "json" && (
         <>
           <div className="settings-toolbar">
@@ -127,6 +129,7 @@ function tabLabel(t: Tab): string {
     case "model": return "模型";
     case "permission": return "权限";
     case "mcp": return "MCP";
+    case "update": return "更新";
     case "json": return "JSON";
   }
 }
