@@ -123,4 +123,24 @@ contextBridge.exposeInMainWorld("codeshell", {
   deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
   tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
     ipcRenderer.invoke("logs:tail", bucket, lines),
+  getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),
+  setTrust: (path: string, level: "trusted" | "untrusted") =>
+    ipcRenderer.invoke("trust:set", path, level),
+  recents: () => ipcRenderer.invoke("recents:list"),
+  notify: (opts: { title: string; body?: string; subtitle?: string }) =>
+    ipcRenderer.invoke("notify:show", opts),
+  setBadgeCount: (count: number) => ipcRenderer.invoke("badge:set", count),
+  onMenuEvent: (cb: (event: string, payload?: unknown) => void): (() => void) => {
+    const wrap = (channel: string) => (_e: IpcRendererEvent, payload?: unknown) =>
+      cb(channel.replace(/^menu:/, ""), payload);
+    const channels = ["menu:add-project", "menu:open-recent", "menu:find", "menu:palette", "menu:toggle-sidebar", "menu:toggle-inspector"];
+    const handlers = channels.map((c) => {
+      const h = wrap(c);
+      ipcRenderer.on(c, h);
+      return { c, h };
+    });
+    return () => {
+      handlers.forEach(({ c, h }) => ipcRenderer.removeListener(c, h));
+    };
+  },
 });

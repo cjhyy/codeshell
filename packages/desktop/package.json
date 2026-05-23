@@ -12,7 +12,34 @@
     "build:preload": "esbuild src/preload/index.ts --bundle --platform=node --format=cjs --outfile=out/preload/index.cjs --external:electron",
     "build:renderer": "vite build",
     "typecheck": "tsc --noEmit",
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.cjhyy.codeshell",
+    "productName": "code-shell",
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
+      ],
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Development"
+    }
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",
@@ -27,6 +54,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.0",
     "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
     "esbuild": "^0.24.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",

@@ -35,6 +35,9 @@ import { LogsView } from "./logs/LogsView";
 import { SettingsView } from "./settings/SettingsView";
 import { McpView } from "./mcp/McpView";
 import { RunsView } from "./runs/RunsView";
+import { CommandPalette, buildCommands } from "./shell/CommandPalette";
+import { SearchBar } from "./shell/SearchBar";
+import { TrustGate } from "./workspace-trust/TrustGate";
 
 /**
  * Transcripts are keyed by repoId; null repoId uses a "global" bucket.
@@ -86,6 +89,9 @@ function App() {
   const [activeRepoId, setActiveRepoId] = useState<string | null>(() => loadActiveRepoId());
   const [view, setView] = useState<ViewState>(() => loadView());
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const activeRepoKey = bucketKey(activeRepoId);
   const runningRepoKeyRef = useRef<string | null>(null);
@@ -252,6 +258,108 @@ function App() {
   const toggleInspector = (): void =>
     setView((p) => ({ ...p, inspectorCollapsed: !p.inspectorCollapsed }));
 
+  // Global keyboard shortcuts: Cmd/Ctrl+K palette, Cmd/Ctrl+F search,
+  // Cmd/Ctrl+B sidebar, Cmd/Ctrl+I inspector. Esc closes palette/search.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      } else if (mod && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setSearchOpen(true);
+      } else if (mod && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleSidebar();
+      } else if (mod && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        toggleInspector();
+      } else if (e.key === "Escape") {
+        if (paletteOpen) setPaletteOpen(false);
+        if (searchOpen) setSearchOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [paletteOpen, searchOpen]);
+
+  // Menu events from main process (File → 添加项目, View → 命令面板, etc).
+  useEffect(() => {
+    const off = window.codeshell.onMenuEvent((evt, payload) => {
+      switch (evt) {
+        case "add-project":
+          void handleAddRepo();
+          break;
+        case "open-recent": {
+          const p = payload as { path: string; name: string } | undefined;
+          if (!p) return;
+          const existing = repos.find((r) => r.path === p.path);
+          if (existing) setActiveRepoId(existing.id);
+          else {
+            const id = makeRepoId();
+            setRepos((prev) => [...prev, { id, name: p.name, path: p.path, addedAt: Date.now() }]);
+            setActiveRepoId(id);
+          }
+          break;
+        }
+        case "find":
+          setSearchOpen(true);
+          break;
+        case "palette":
+          setPaletteOpen(true);
+          break;
+        case "toggle-sidebar":
+          toggleSidebar();
+          break;
+        case "toggle-inspector":
+          toggleInspector();
+          break;
+      }
+    });
+    return off;
+  }, [repos]);
+
+  // Sync dock/taskbar badge with pending approvals count.
+  useEffect(() => {
+    void window.codeshell.setBadgeCount(approvalQueue.length);
+  }, [approvalQueue.length]);
+
+  // Notification when a background turn completes while window unfocused.
+  const prevBusyRef = useRef(busy);
+  useEffect(() => {
+    if (prevBusyRef.current && !busy && document.hidden) {
+      void window.codeshell.notify({
+        title: "code-shell",
+        body: activeRepo ? `${activeRepo.name} — 完成` : "agent 已完成",
+      });
+    }
+    prevBusyRef.current = busy;
+  }, [busy, activeRepo]);
+
+  const clearTranscript = (): void => {
+    dispatch({ type: "hydrate", repoKey: activeRepoKey, state: INITIAL_STATE });
+  };
+
+  const matchCount = searchQuery
+    ? state.messages.reduce((n, m) => {
+        const text =
+          m.kind === "user" || m.kind === "assistant" || m.kind === "thinking" || m.kind === "system"
+            ? m.text
+            : "";
+        if (!text) return n;
+        const q = searchQuery.toLowerCase();
+        let count = 0;
+        const lower = text.toLowerCase();
+        let idx = lower.indexOf(q);
+        while (idx !== -1) {
+          count++;
+          idx = lower.indexOf(q, idx + q.length);
+        }
+        return n + count;
+      }, 0)
+    : 0;
+
   return (
     <div
       className="app-grid"
@@ -344,8 +452,36 @@ function App() {
             <div className="view-placeholder-hint">该视图将在后续阶段实现</div>
           </div>
         )}
+        <SearchBar
+          open={searchOpen}
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onClose={() => setSearchOpen(false)}
+          matchCount={matchCount}
+        />
         {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
       </main>
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={buildCommands({
+          setViewMode,
+          toggleSidebar,
+          toggleInspector,
+          clearTranscript,
+          openSearch: () => setSearchOpen(true),
+        })}
+      />
+
+      <TrustGate
+        repoPath={activeRepo?.path ?? null}
+        onDecide={() => {
+          // No-op: TrustGate updates main-side trust store itself.
+          // Renderer state doesn't currently gate UI on trust, but the
+          // worker reads trust via settings/path in future versions.
+        }}
+      />
 
       <div className="inspector-region">
         <InspectorPanel

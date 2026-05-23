@@ -69,6 +69,14 @@ export interface CodeshellApi {
   listSessions(): Promise<DesktopSessionSummary[]>;
   deleteSession(id: string): Promise<void>;
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
+
+  // Phase 6 — native polish & security.
+  getTrust(path: string): Promise<"trusted" | "untrusted" | "unknown">;
+  setTrust(path: string, level: "trusted" | "untrusted"): Promise<void>;
+  recents(): Promise<{ path: string; name: string; lastOpenedAt: number }[]>;
+  notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;
+  setBadgeCount(count: number): Promise<void>;
+  onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;
 }
 
 export interface DesktopSessionSummary {
