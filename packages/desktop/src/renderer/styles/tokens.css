@@ -1,0 +1,94 @@
+/* Design tokens — single source of truth for colors, spacing, type.
+   Themes flip values via [data-theme="dark"] on <html>. */
+
+:root,
+[data-theme="light"] {
+  /* surface */
+  --bg-app:        #fafaf9;
+  --bg-sidebar:    #f0eee6;
+  --bg-inspector:  #f5f3ec;
+  --bg-elevated:   #ffffff;
+  --bg-hover:      #e8e3d4;
+  --bg-selected:   #e0dcc8;
+
+  /* text */
+  --fg-primary:    #1a1a1a;
+  --fg-secondary:  #555555;
+  --fg-muted:      #888888;
+  --fg-inverse:    #ffffff;
+
+  /* border */
+  --border-subtle: #e6e3da;
+  --border-strong: #cfcabc;
+
+  /* accent */
+  --accent:        #b85c2b;
+  --accent-hover:  #a04e22;
+  --accent-fg:     #ffffff;
+
+  /* status */
+  --status-running: #2b7fb8;
+  --status-ok:      #2f8a4d;
+  --status-warn:    #c48a18;
+  --status-err:     #b8392b;
+  --status-idle:    #888888;
+
+  /* radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* spacing */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* type */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SF Mono", Menlo, Consolas, monospace;
+  --fz-xs: 11px;
+  --fz-sm: 12px;
+  --fz-md: 13px;
+  --fz-lg: 14px;
+  --fz-xl: 16px;
+
+  /* shadows */
+  --shadow-1: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-2: 0 4px 12px rgba(0,0,0,0.10);
+
+  /* z */
+  --z-modal: 1000;
+  --z-popover: 900;
+  --z-tooltip: 1100;
+
+  /* topbar / sidebar widths */
+  --topbar-h: 38px;
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 48px;
+  --inspector-w: 320px;
+  --inspector-w-collapsed: 0px;
+}
+
+[data-theme="dark"] {
+  --bg-app:        #1c1b18;
+  --bg-sidebar:    #232220;
+  --bg-inspector:  #1f1e1b;
+  --bg-elevated:   #2a2926;
+  --bg-hover:      #2f2e2a;
+  --bg-selected:   #3a3833;
+
+  --fg-primary:    #e7e5dc;
+  --fg-secondary:  #b8b4a4;
+  --fg-muted:      #7e7a6e;
+  --fg-inverse:    #1a1a1a;
+
+  --border-subtle: #2f2e2a;
+  --border-strong: #45433d;
+
+  --accent:        #d77a4d;
+  --accent-hover:  #c46b40;
+  --accent-fg:     #1a1a1a;
+}
