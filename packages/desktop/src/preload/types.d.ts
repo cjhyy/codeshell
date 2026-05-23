@@ -6,6 +6,16 @@
 
 import type { StreamEvent, ApprovalRequest } from "@cjhyy/code-shell-core";
 
+/**
+ * The wire envelope the agent server sends for tool approvals. The
+ * outer requestId is what the renderer echoes back via approve();
+ * the inner request carries what the user actually needs to see.
+ */
+export interface ApprovalRequestEnvelope {
+  requestId: string;
+  request: ApprovalRequest;
+}
+
 export interface RpcResponse<T = unknown> {
   jsonrpc: "2.0";
   id: number;
@@ -27,7 +37,7 @@ export interface CodeshellApi {
   cancel(): Promise<RpcResponse>;
   approve(id: string, decision: "approve" | "deny", reason?: string): Promise<RpcResponse>;
   onStreamEvent(cb: (event: StreamEvent) => void): Unsubscribe;
-  onApprovalRequest(cb: (req: ApprovalRequest) => void): Unsubscribe;
+  onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
 }
