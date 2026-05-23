@@ -30,6 +30,11 @@ import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { PanelLeft } from "./ui/icons";
 import { IconButton } from "./ui/IconButton";
 import { ApprovalsView } from "./approvals/ApprovalsView";
+import { SessionsView } from "./sessions/SessionsView";
+import { LogsView } from "./logs/LogsView";
+import { SettingsView } from "./settings/SettingsView";
+import { McpView } from "./mcp/McpView";
+import { RunsView } from "./runs/RunsView";
 
 /**
  * Transcripts are keyed by repoId; null repoId uses a "global" bucket.
@@ -299,6 +304,16 @@ function App() {
             history={approvalHistory}
             onDecide={decideEnvelope}
           />
+        ) : view.viewMode === "sessions" ? (
+          <SessionsView />
+        ) : view.viewMode === "logs" ? (
+          <LogsView />
+        ) : view.viewMode === "settings" ? (
+          <SettingsView activeRepoPath={activeRepo?.path ?? null} />
+        ) : view.viewMode === "mcp" ? (
+          <McpView />
+        ) : view.viewMode === "runs" ? (
+          <RunsView />
         ) : view.viewMode === "chat" ? (
           <>
             {showWelcome && (

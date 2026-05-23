@@ -115,4 +115,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   getGitDiff: (cwd: string, file?: string) => ipcRenderer.invoke("git:diff", cwd, file),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
+  getSettings: (scope: "user" | "project", cwd?: string) =>
+    ipcRenderer.invoke("settings:get", scope, cwd),
+  updateSettings: (scope: "user" | "project", patch: Record<string, unknown>, cwd?: string) =>
+    ipcRenderer.invoke("settings:set", scope, patch, cwd),
+  listSessions: () => ipcRenderer.invoke("sessions:list"),
+  deleteSession: (id: string) => ipcRenderer.invoke("sessions:delete", id),
+  tailLog: (bucket: "ui-ink" | "engine" | "desktop", lines?: number) =>
+    ipcRenderer.invoke("logs:tail", bucket, lines),
 });

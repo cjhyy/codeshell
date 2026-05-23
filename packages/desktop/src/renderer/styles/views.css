@@ -1,0 +1,120 @@
+/* Shared chrome for sessions/logs/settings/mcp/runs views. */
+
+.sessions-view, .logs-view, .settings-view, .mcp-view, .runs-view {
+  padding: var(--sp-3);
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.view-loading, .view-error {
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+}
+.view-error { color: var(--status-err); }
+
+.sessions-toolbar, .logs-toolbar, .settings-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.sessions-filter {
+  flex: 1;
+  min-width: 160px;
+  padding: 4px var(--sp-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+}
+
+.sessions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fz-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.session-id {
+  flex: 1;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-primary);
+}
+.session-meta { color: var(--fg-muted); font-size: var(--fz-xs); white-space: nowrap; }
+.session-delete {
+  font-size: var(--fz-xs);
+  color: var(--status-err);
+  padding: 2px 6px;
+}
+.session-delete:hover { background: rgba(184,57,43,0.1); border-radius: var(--radius-sm); }
+
+.logs-buckets, .settings-scope {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+.logs-bucket {
+  padding: 3px var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+  color: var(--fg-secondary);
+}
+.logs-bucket:hover:not(:disabled) { background: var(--bg-hover); }
+.logs-bucket.active { background: var(--accent); color: var(--accent-fg); }
+.logs-bucket:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.logs-pane {
+  flex: 1;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-primary);
+  overflow: auto;
+  white-space: pre;
+  min-height: 0;
+}
+
+.settings-path {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.settings-editor {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+  background: var(--bg-app);
+  color: var(--fg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+  resize: none;
+  min-height: 240px;
+}

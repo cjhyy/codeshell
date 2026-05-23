@@ -14,6 +14,9 @@ import {
   openExternal,
   revealInFinder,
 } from "./desktop-services.js";
+import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
+import { listSessions, deleteSession } from "./sessions-service.js";
+import { tailLog, type LogBucket } from "./logs-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -91,6 +94,30 @@ ipcMain.handle("shell:openExternal", async (_e, url: string) => {
 ipcMain.handle("shell:revealInFinder", async (_e, p: string) => {
   if (typeof p !== "string") throw new Error("revealInFinder requires path");
   await revealInFinder(p);
+});
+
+ipcMain.handle("settings:get", async (_e, scope: SettingsScope, cwd?: string) => {
+  if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
+  return readSettings(scope, cwd);
+});
+
+ipcMain.handle("settings:set", async (_e, scope: SettingsScope, patch: Record<string, unknown>, cwd?: string) => {
+  if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
+  if (!patch || typeof patch !== "object") throw new Error("patch must be object");
+  await writeSettings(scope, patch, cwd);
+});
+
+ipcMain.handle("sessions:list", async () => listSessions());
+ipcMain.handle("sessions:delete", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("session id required");
+  await deleteSession(id);
+});
+
+ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {
+  if (bucket !== "ui-ink" && bucket !== "engine" && bucket !== "desktop") {
+    throw new Error("invalid bucket");
+  }
+  return tailLog(bucket, lines);
 });
 
 app.on("window-all-closed", () => {

@@ -62,6 +62,21 @@ export interface CodeshellApi {
   getGitDiff(cwd: string, file?: string): Promise<string>;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string): Promise<void>;
+
+  // Phase 5 — settings / sessions / logs.
+  getSettings(scope: "user" | "project", cwd?: string): Promise<Record<string, unknown> | null>;
+  updateSettings(scope: "user" | "project", patch: Record<string, unknown>, cwd?: string): Promise<void>;
+  listSessions(): Promise<DesktopSessionSummary[]>;
+  deleteSession(id: string): Promise<void>;
+  tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
+}
+
+export interface DesktopSessionSummary {
+  id: string;
+  file: string;
+  size: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 declare global {
