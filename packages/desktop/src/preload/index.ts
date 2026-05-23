@@ -1,27 +1,93 @@
 /**
- * Preload — exposes a minimal IPC surface to the renderer via
- * contextBridge. The renderer never sees ipcRenderer directly so
- * contextIsolation stays meaningful.
+ * Preload — bridges the renderer (browser context) to Electron main's
+ * ipcMain via contextBridge. The renderer never imports core; it sees
+ * only the typed `window.codeshell` surface defined here.
+ *
+ * Wire format on the IPC channel "agent:msg" is the full JSON-RPC
+ * line (string) we relay verbatim to/from the agent worker's stdio.
+ * That keeps the preload a true transparent transport — no protocol
+ * interpretation in main, only in here (to fan out to listeners).
  */
 
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
-const RPC_FROM_RENDERER = "code-shell:rpc:to-main";
-const RPC_TO_RENDERER = "code-shell:rpc:to-renderer";
+let nextRpcId = 1;
+const pending = new Map<number, (resp: unknown) => void>();
+const streamListeners: Array<(event: unknown) => void> = [];
+const approvalListeners: Array<(req: unknown) => void> = [];
+const statusListeners: Array<(evt: unknown) => void> = [];
+const lifecycleListeners: Array<(evt: unknown) => void> = [];
 
-type RpcMessage = unknown;
-type Listener = (msg: RpcMessage) => void;
+ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
+  let msg: Record<string, unknown>;
+  try {
+    msg = JSON.parse(line) as Record<string, unknown>;
+  } catch {
+    return; // malformed — skip
+  }
+  // Response: has id, no method
+  if ("id" in msg && !("method" in msg)) {
+    const id = msg.id as number;
+    const resolver = pending.get(id);
+    if (resolver) {
+      pending.delete(id);
+      resolver(msg);
+    }
+    return;
+  }
+  // Notification: has method
+  const method = msg.method as string | undefined;
+  const params = msg.params;
+  if (method === "agent/streamEvent") streamListeners.forEach((cb) => cb(params));
+  else if (method === "agent/approvalRequest") approvalListeners.forEach((cb) => cb(params));
+  else if (method === "agent/status") statusListeners.forEach((cb) => cb(params));
+});
 
-contextBridge.exposeInMainWorld("codeShell", {
-  sendRpc(msg: RpcMessage): void {
-    ipcRenderer.send(RPC_FROM_RENDERER, msg);
+ipcRenderer.on("agent:lifecycle", (_e: IpcRendererEvent, evt: unknown) => {
+  lifecycleListeners.forEach((cb) => cb(evt));
+});
+
+function rpc(method: string, params?: Record<string, unknown>): Promise<unknown> {
+  const id = nextRpcId++;
+  const line = JSON.stringify({ jsonrpc: "2.0", id, method, params });
+  return new Promise((resolve) => {
+    pending.set(id, resolve);
+    ipcRenderer.send("agent:msg", line);
+  });
+}
+
+contextBridge.exposeInMainWorld("codeshell", {
+  run: (prompt: string, opts?: Record<string, unknown>) =>
+    rpc("agent/run", { prompt, ...(opts ?? {}) }),
+  cancel: () => rpc("agent/cancel"),
+  approve: (id: string, decision: "approve" | "deny", reason?: string) =>
+    rpc("agent/approve", { id, decision, reason }),
+  onStreamEvent: (cb: (event: unknown) => void): (() => void) => {
+    streamListeners.push(cb);
+    return () => {
+      const i = streamListeners.indexOf(cb);
+      if (i >= 0) streamListeners.splice(i, 1);
+    };
   },
-  onRpc(listener: Listener): (event: unknown, msg: RpcMessage) => void {
-    const wrapped = (_event: unknown, msg: RpcMessage): void => listener(msg);
-    ipcRenderer.on(RPC_TO_RENDERER, wrapped);
-    return wrapped;
+  onApprovalRequest: (cb: (req: unknown) => void): (() => void) => {
+    approvalListeners.push(cb);
+    return () => {
+      const i = approvalListeners.indexOf(cb);
+      if (i >= 0) approvalListeners.splice(i, 1);
+    };
   },
-  removeRpcListener(wrapped: (event: unknown, msg: RpcMessage) => void): void {
-    ipcRenderer.removeListener(RPC_TO_RENDERER, wrapped);
+  onStatus: (cb: (evt: unknown) => void): (() => void) => {
+    statusListeners.push(cb);
+    return () => {
+      const i = statusListeners.indexOf(cb);
+      if (i >= 0) statusListeners.splice(i, 1);
+    };
+  },
+  onAgentLifecycle: (cb: (evt: unknown) => void): (() => void) => {
+    lifecycleListeners.push(cb);
+    return () => {
+      const i = lifecycleListeners.indexOf(cb);
+      if (i >= 0) lifecycleListeners.splice(i, 1);
+    };
   },
 });

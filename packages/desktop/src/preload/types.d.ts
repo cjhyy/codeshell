@@ -1,10 +1,41 @@
+/**
+ * Renderer-visible types for window.codeshell. Imports `type`-only from
+ * core; nothing at runtime crosses the boundary (the lint rule that bans
+ * core imports in renderer source explicitly allows `import type`).
+ */
+
+import type { StreamEvent, ApprovalRequest } from "@cjhyy/code-shell-core";
+
+export interface RpcResponse<T = unknown> {
+  jsonrpc: "2.0";
+  id: number;
+  result?: T;
+  error?: { code: number; message: string; data?: unknown };
+}
+
+export type AgentStatusEvent = { status: "ready" | "shutting_down" | string };
+
+export type AgentLifecycleEvent =
+  | { type: "exited"; code: number | null }
+  | { type: "restarted" }
+  | { type: "gave_up" };
+
+export type Unsubscribe = () => void;
+
+export interface CodeshellApi {
+  run(prompt: string, opts?: Record<string, unknown>): Promise<RpcResponse>;
+  cancel(): Promise<RpcResponse>;
+  approve(id: string, decision: "approve" | "deny", reason?: string): Promise<RpcResponse>;
+  onStreamEvent(cb: (event: StreamEvent) => void): Unsubscribe;
+  onApprovalRequest(cb: (req: ApprovalRequest) => void): Unsubscribe;
+  onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
+  onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
+}
+
 declare global {
   interface Window {
-    codeShell: {
-      sendRpc(msg: unknown): void;
-      onRpc(listener: (msg: unknown) => void): (event: unknown, msg: unknown) => void;
-      removeRpcListener(wrapped: (event: unknown, msg: unknown) => void): void;
-    };
+    codeshell: CodeshellApi;
   }
 }
+
 export {};
