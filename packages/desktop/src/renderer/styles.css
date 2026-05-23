@@ -281,55 +281,84 @@ pre { margin: 0; white-space: pre-wrap; font-family: monospace; }
   font-family: inherit;
 }
 
-/* ── Tool blocks ── */
-.msg-tool {
-  background: #f5f3ee;
+/* Tool call block — collapsed by default, expandable */
+.tool-block {
+  margin: 8px 16px;
   border: 1px solid #e6e3da;
   border-radius: 6px;
-  font-size: 13px;
+  background: #f6f6f4;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  overflow: hidden;
 }
+.tool-block.has-error { border-color: #d9b4b4; background: #fcf2f2; }
 
-.msg-tool-head {
+.tool-head {
   display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #6b6b6b;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
   padding: 6px 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: #555;
+}
+.tool-head:hover { background: #efeee9; }
+.tool-block.has-error .tool-head:hover { background: #f6e8e8; }
+
+.tool-chevron { color: #888; width: 12px; display: inline-block; }
+.tool-name { color: #1a1a1a; font-weight: 600; }
+.tool-summary {
+  color: #666;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tool-spin { color: #b89a3a; font-style: italic; font-size: 11.5px; }
+.tool-err-badge {
+  background: #c33;
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  font-style: normal;
 }
 
-.msg-tool-args {
-  background: #eeeae0;
-  padding: 6px 10px;
-  font-size: 12px;
-  margin-top: 0;
+.tool-body {
+  padding: 4px 12px 10px;
   border-top: 1px solid #e6e3da;
-  font-family: monospace;
-  color: #333;
+  background: #fbfaf6;
+}
+.tool-block.has-error .tool-body { background: #fcf6f6; border-top-color: #e8d4d4; }
+
+.tool-body-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 8px 0 4px;
 }
 
-.msg-tool-out {
-  background: #f0f5f0;
-  padding: 6px 10px;
+.tool-args, .tool-out, .tool-err {
+  margin: 0;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #ede9de;
+  border-radius: 4px;
   font-size: 12px;
-  margin-top: 0;
-  border-top: 1px solid #d9e8d9;
-  color: #2d5a27;
-  font-family: monospace;
+  line-height: 1.45;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
-
-.msg-tool-err {
-  background: #fff0f0;
-  padding: 6px 10px;
-  font-size: 12px;
-  margin-top: 0;
-  border-top: 1px solid #f5c6c6;
-  color: #c0392b;
-  font-family: monospace;
-}
-
-.msg-tool-spin {
-  color: #a07c30;
-}
+.tool-err { background: #fff5f5; border-color: #f0d6d6; color: #a33; }
+.tool-out { color: #1a1a1a; }
 
 /* ── Input row ── */
 .input-row {
