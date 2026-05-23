@@ -1,0 +1,39 @@
+.inspector {
+  height: 100%;
+  background: var(--bg-inspector);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+  height: var(--topbar-h);
+}
+.inspector-title {
+  font-weight: 600;
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+}
+.inspector-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-3);
+}
+.inspector-empty {
+  text-align: center;
+  color: var(--fg-muted);
+  padding: var(--sp-5) var(--sp-3);
+}
+.inspector-empty-title {
+  font-size: var(--fz-md);
+  margin-bottom: var(--sp-1);
+}
+.inspector-empty-hint {
+  font-size: var(--fz-sm);
+  line-height: 1.5;
+}

@@ -1,0 +1,38 @@
+.topbar {
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--sp-3);
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fz-md);
+  user-select: none;
+  gap: var(--sp-3);
+}
+.topbar-left, .topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.topbar-app { font-weight: 600; color: var(--fg-primary); }
+.topbar-sep { color: var(--fg-muted); }
+.topbar-repo, .topbar-session {
+  color: var(--fg-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.topbar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--fg-secondary);
+  font-size: var(--fz-sm);
+  border: 1px solid var(--border-subtle);
+}

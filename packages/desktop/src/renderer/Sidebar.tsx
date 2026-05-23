@@ -1,4 +1,7 @@
 import React from "react";
+import { X, Plus } from "./ui/icons";
+import { SidebarNav } from "./SidebarNav";
+import type { ViewMode } from "./view";
 
 interface SidebarProps {
   repos: { id: string; name: string }[];
@@ -6,26 +9,30 @@ interface SidebarProps {
   onSelectRepo: (id: string) => void;
   onAddRepo: () => void;
   onRemoveRepo: (id: string) => void;
+  viewMode: ViewMode;
+  onSelectView: (v: ViewMode) => void;
+  approvalsBadge?: number;
+  runsBadge?: number;
 }
 
-const MENU_ITEMS = [
-  { icon: "💬", label: "对话" },
-  { icon: "🔎", label: "搜索" },
-  { icon: "🧩", label: "插件" },
-  { icon: "⚙", label: "自动化" },
-];
-
-export function Sidebar({ repos, activeRepoId, onSelectRepo, onAddRepo, onRemoveRepo }: SidebarProps) {
+export function Sidebar({
+  repos,
+  activeRepoId,
+  onSelectRepo,
+  onAddRepo,
+  onRemoveRepo,
+  viewMode,
+  onSelectView,
+  approvalsBadge,
+  runsBadge,
+}: SidebarProps) {
   return (
     <aside className="sidebar">
-      <nav className="sidebar-menu">
-        {MENU_ITEMS.map((item) => (
-          <div key={item.label} className="sidebar-menu-item">
-            <span className="sidebar-menu-icon">{item.icon}</span>
-            <span>{item.label}</span>
-          </div>
-        ))}
-      </nav>
+      <SidebarNav
+        active={viewMode}
+        onSelect={onSelectView}
+        badges={{ approvals: approvalsBadge, runs: runsBadge }}
+      />
 
       <div className="sidebar-divider" />
 
@@ -38,24 +45,25 @@ export function Sidebar({ repos, activeRepoId, onSelectRepo, onAddRepo, onRemove
         {repos.map((repo) => (
           <div
             key={repo.id}
-            className={`sidebar-repo-item repo-row${activeRepoId === repo.id ? " selected" : ""}`}
+            className={`sidebar-repo-item${activeRepoId === repo.id ? " selected" : ""}`}
             onClick={() => onSelectRepo(repo.id)}
           >
             <span className="repo-name">{repo.name}</span>
             <button
               className="repo-remove"
+              aria-label="移除"
               title="移除"
               onClick={(e) => {
                 e.stopPropagation();
                 onRemoveRepo(repo.id);
               }}
             >
-              ×
+              <X size={12} />
             </button>
           </div>
         ))}
         <div className="sidebar-repo-item sidebar-add" onClick={onAddRepo}>
-          + 添加
+          <Plus size={12} /> 添加
         </div>
       </div>
     </aside>

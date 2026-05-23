@@ -3,6 +3,8 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import { ApprovalModal } from "./ApprovalModal";
 import { Sidebar } from "./Sidebar";
+import { TopBar } from "./TopBar";
+import { InspectorPanel } from "./InspectorPanel";
 import {
   applyStreamEvent,
   appendUserMessage,
@@ -23,6 +25,9 @@ import {
   makeRepoId,
   type Repo,
 } from "./repos";
+import { loadView, saveView, type ViewState, type ViewMode } from "./view";
+import { PanelLeft } from "./ui/icons";
+import { IconButton } from "./ui/IconButton";
 
 /**
  * Transcripts are keyed by repoId; null repoId uses a "global" bucket.
@@ -60,36 +65,24 @@ function App() {
   const [transcripts, dispatch] = useReducer(reducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
-  /** Repo keys currently waiting on the agent worker to finish a run. */
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
   const [repos, setRepos] = useState<Repo[]>(() => loadRepos());
   const [activeRepoId, setActiveRepoId] = useState<string | null>(() => loadActiveRepoId());
+  const [view, setView] = useState<ViewState>(() => loadView());
 
-  /**
-   * `activeRepoKey` is what we currently *show*. `runningRepoKey` is
-   * what the in-flight worker actually belongs to — set when send()
-   * fires, used to route incoming stream events back to the right
-   * bucket even if the user has since switched repos.
-   */
   const activeRepoKey = bucketKey(activeRepoId);
   const runningRepoKeyRef = useRef<string | null>(null);
 
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
+  useEffect(() => { saveView(view); }, [view]);
 
-  // Lazy-load a repo's transcript on first view, so cold start doesn't
-  // read every persisted bucket into memory upfront.
   useEffect(() => {
     if (transcripts[activeRepoKey]) return;
     const loaded = loadTranscript(activeRepoId);
     dispatch({ type: "hydrate", repoKey: activeRepoKey, state: loaded });
   }, [activeRepoKey, activeRepoId, transcripts]);
 
-  // Persist transcripts to localStorage on a debounce. During streaming
-  // we dispatch dozens of stream events per second, each producing a
-  // new transcripts reference; writing the full map JSON-stringified
-  // on every keystroke equivalent grinds the renderer to a halt.
-  // Only the active bucket needs writing — the others didn't change.
   useEffect(() => {
     const handle = setTimeout(() => {
       const s = transcripts[activeRepoKey];
@@ -102,7 +95,6 @@ function App() {
 
   const state = transcripts[activeRepoKey] ?? INITIAL_STATE;
   const busy = busyKeys.has(activeRepoKey);
-
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
 
   const setBusyForKey = (key: string, val: boolean): void => {
@@ -121,7 +113,6 @@ function App() {
     const picked = await window.codeshell.pickDir();
     if (!picked) return;
     if (repos.some((r) => r.path === picked.path)) {
-      // Already added — just select it instead of duplicating.
       const existing = repos.find((r) => r.path === picked.path);
       if (existing) setActiveRepoId(existing.id);
       return;
@@ -147,14 +138,7 @@ function App() {
     window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
 
     const offStream = window.codeshell.onStreamEvent((event: StreamEvent) => {
-      // Route every stream event back to the repo whose send() spawned
-      // the worker, NOT to whatever repo is currently visible — the
-      // user may have switched repos while the run is mid-flight.
       const targetKey = runningRepoKeyRef.current ?? GLOBAL_KEY;
-      // Don't log text_delta / args_delta / usage_update — they fire
-      // dozens of times a second and each log line is a contextBridge
-      // IPC round-trip plus a disk write. We log the structural events
-      // only (turn boundaries, tool starts/results, errors).
       const noisy =
         event.type === "text_delta" ||
         event.type === "tool_use_args_delta" ||
@@ -182,12 +166,8 @@ function App() {
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
       else if (evt.type === "gave_up") setLifecycle("Agent crashed too many times. Quit and reopen.");
       else if (evt.type === "exited") {
-        if (evt.code === 0) {
-          setLifecycle(null);
-        } else {
-          setLifecycle(`Agent exited (code ${evt.code}).`);
-        }
-        // Worker is gone — clear busy for whichever repo it was running.
+        if (evt.code === 0) setLifecycle(null);
+        else setLifecycle(`Agent exited (code ${evt.code}).`);
         if (runningKey) setBusyForKey(runningKey, false);
         runningRepoKeyRef.current = null;
       }
@@ -216,8 +196,6 @@ function App() {
   const stop = (): void => {
     window.codeshell.log("stop.click", {});
     void window.codeshell.cancel();
-    // Don't clear busy here — let turn_complete/error event do it,
-    // matching the existing run-complete code path.
   };
 
   const decide = (decision: "approve" | "deny", reason?: string): void => {
@@ -228,36 +206,107 @@ function App() {
 
   const showWelcome = state.messages.length === 0;
 
+  const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
+  const toggleSidebar = (): void =>
+    setView((p) => ({ ...p, sidebarCollapsed: !p.sidebarCollapsed }));
+  const toggleInspector = (): void =>
+    setView((p) => ({ ...p, inspectorCollapsed: !p.inspectorCollapsed }));
+
   return (
-    <div className="app-grid">
-      <Sidebar
-        repos={repos}
-        activeRepoId={activeRepoId}
-        onSelectRepo={setActiveRepoId}
-        onAddRepo={() => { void handleAddRepo(); }}
-        onRemoveRepo={handleRemoveRepo}
-      />
-      <main className="main">
+    <div
+      className="app-grid"
+      data-sidebar={view.sidebarCollapsed ? "collapsed" : "open"}
+      data-inspector={view.inspectorCollapsed ? "collapsed" : "open"}
+    >
+      <div className="topbar-region">
+        <TopBar
+          repoName={activeRepo?.name ?? null}
+          sessionTitle={null}
+          branch={null}
+          model={null}
+          permissionMode={null}
+          promptTokens={undefined}
+          busy={busy}
+        />
+      </div>
+
+      <div className="sidebar-region">
+        <Sidebar
+          repos={repos}
+          activeRepoId={activeRepoId}
+          onSelectRepo={setActiveRepoId}
+          onAddRepo={() => { void handleAddRepo(); }}
+          onRemoveRepo={handleRemoveRepo}
+          viewMode={view.viewMode}
+          onSelectView={setViewMode}
+          approvalsBadge={approval ? 1 : 0}
+          runsBadge={busy ? 1 : 0}
+        />
+      </div>
+
+      <main className="main-region main">
+        <div className="main-toolbar">
+          <IconButton label={view.sidebarCollapsed ? "展开侧栏" : "折叠侧栏"} onClick={toggleSidebar}>
+            <PanelLeft size={14} />
+          </IconButton>
+          <span className="main-toolbar-spacer" />
+          <IconButton
+            label={view.inspectorCollapsed ? "展开详情" : "折叠详情"}
+            onClick={toggleInspector}
+          >
+            <PanelLeft size={14} style={{ transform: "scaleX(-1)" }} />
+          </IconButton>
+        </div>
         {lifecycle && <div className="banner">{lifecycle}</div>}
-        {showWelcome && (
-          <div className="welcome">
-            <div className="welcome-title">
-              {activeRepo ? activeRepo.name : "code-shell"}
-            </div>
-            <div className="welcome-hint">
-              {activeRepoId === null
-                ? "先在左侧添加一个项目"
-                : "开始一个新对话 — 试试: 列出当前目录"}
-            </div>
+        {view.viewMode === "chat" ? (
+          <>
+            {showWelcome && (
+              <div className="welcome">
+                <div className="welcome-title">
+                  {activeRepo ? activeRepo.name : "code-shell"}
+                </div>
+                <div className="welcome-hint">
+                  {activeRepoId === null
+                    ? "先在左侧添加一个项目"
+                    : "开始一个新对话 — 试试: 列出当前目录"}
+                </div>
+              </div>
+            )}
+            <ChatView
+              messages={state.messages}
+              onSend={send}
+              onStop={stop}
+              busy={busy}
+              activeRepoId={activeRepoId}
+            />
+          </>
+        ) : (
+          <div className="view-placeholder">
+            <div className="view-placeholder-title">{viewLabel(view.viewMode)}</div>
+            <div className="view-placeholder-hint">该视图将在后续阶段实现</div>
           </div>
         )}
-        <ChatView messages={state.messages} onSend={send} onStop={stop} busy={busy} activeRepoId={activeRepoId} />
         {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
       </main>
+
+      <div className="inspector-region">
+        <InspectorPanel collapsed={view.inspectorCollapsed} onToggle={toggleInspector} />
+      </div>
     </div>
   );
 }
 
-// Named export for main.tsx which uses `import { App }`
+function viewLabel(v: ViewMode): string {
+  switch (v) {
+    case "sessions": return "会话";
+    case "approvals": return "审批";
+    case "runs": return "运行";
+    case "mcp": return "插件";
+    case "logs": return "日志";
+    case "settings": return "设置";
+    default: return v;
+  }
+}
+
 export { App };
 export default App;
