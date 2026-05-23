@@ -19,6 +19,7 @@ import {
   renderProgress,
   createProgressRenderer,
 } from "@cjhyy/code-shell-core";
+import { CHALK_COLORIZER } from "../../utils/colorizer.js";
 import type { OutputSink } from "@cjhyy/code-shell-core";
 import { formatArenaResultForSession } from "@cjhyy/code-shell-core";
 import type { ArenaMode, ArenaParticipant, ArenaResultV2 } from "@cjhyy/code-shell-core";
@@ -74,8 +75,8 @@ export async function runArenaReview(
 
   // Run arena with V2 pipeline
   const progressRenderer = opts?.output
-    ? createProgressRenderer(opts.output)
-    : renderProgress;
+    ? createProgressRenderer(opts.output, CHALK_COLORIZER)
+    : (event: Parameters<typeof renderProgress>[0]) => renderProgress(event, CHALK_COLORIZER);
 
   const arena = new Arena({
     participants,
@@ -96,7 +97,7 @@ export async function runArenaReview(
     if (resultSink) {
       resultSink(formatArenaResultForSession(result));
     } else {
-      printArenaResult(result);
+      printArenaResult(result, CHALK_COLORIZER);
     }
     return result;
   } catch (err) {

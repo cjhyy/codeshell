@@ -22,7 +22,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@modelcontextprotocol/sdk": "^1.12.1",
-    "chalk": "^5.4.1",
     "glob": "^11.0.0",
     "gpt-tokenizer": "^3.4.0",
     "lodash-es": "^4.17.23",

@@ -9,6 +9,7 @@ import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { setup } from "../bootstrap/setup.js";
 import { costTracker, installCostTracking, hasApiKey, resolveApiKey, getCurrentVersion } from "@cjhyy/code-shell-core";
+import { CHALK_COLORIZER } from "../utils/colorizer.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import type { SessionStatus } from "@cjhyy/code-shell-core";
 
@@ -209,7 +210,7 @@ program.hook("preAction", async (thisCommand) => {
 process.on("exit", () => {
   const tokens = costTracker.getTotalTokens();
   if (tokens.total > 0) {
-    process.stdout.write("\n" + costTracker.formatSummary() + "\n");
+    process.stdout.write("\n" + costTracker.formatSummary(CHALK_COLORIZER) + "\n");
   }
 });
 

@@ -2,7 +2,7 @@
  * Cost tracker — tracks token usage and calculates estimated costs.
  */
 
-import chalk from "chalk";
+import { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 import { findOpenRouterModel } from "./data/openrouter-models.js";
 
 // Pricing per 1M tokens (USD) — common models via OpenRouter/direct
@@ -246,7 +246,7 @@ export class CostTracker {
   /**
    * Format a styled cost summary for terminal display.
    */
-  formatSummary(): string {
+  formatSummary(c: Colorizer = NOOP_COLORIZER): string {
     const tokens = this.getTotalTokens();
     const cache = this.getCacheTokens();
     const cost = this.getEstimatedCost();
@@ -254,17 +254,17 @@ export class CostTracker {
     const duration = this.getSessionDuration();
 
     const lines: string[] = [];
-    lines.push(`  ${chalk.bold.cyan("Cost Summary")}`);
-    lines.push(chalk.dim("  ─".repeat(25)));
-    lines.push(`    ${chalk.dim("Requests:")}      ${chalk.white(String(requests))}`);
-    lines.push(`    ${chalk.dim("Input tokens:")}  ${chalk.white(formatNumber(tokens.prompt))}`);
-    lines.push(`    ${chalk.dim("Output tokens:")} ${chalk.white(formatNumber(tokens.completion))}`);
+    lines.push(`  ${c.boldCyan("Cost Summary")}`);
+    lines.push(c.dim("  ─".repeat(25)));
+    lines.push(`    ${c.dim("Requests:")}      ${c.white(String(requests))}`);
+    lines.push(`    ${c.dim("Input tokens:")}  ${c.white(formatNumber(tokens.prompt))}`);
+    lines.push(`    ${c.dim("Output tokens:")} ${c.white(formatNumber(tokens.completion))}`);
     if (cache.cacheRead > 0 || cache.cacheWrite > 0) {
-      lines.push(`    ${chalk.dim("Cache read:")}    ${chalk.white(formatNumber(cache.cacheRead))}`);
-      lines.push(`    ${chalk.dim("Cache write:")}   ${chalk.white(formatNumber(cache.cacheWrite))}`);
+      lines.push(`    ${c.dim("Cache read:")}    ${c.white(formatNumber(cache.cacheRead))}`);
+      lines.push(`    ${c.dim("Cache write:")}   ${c.white(formatNumber(cache.cacheWrite))}`);
     }
-    lines.push(`    ${chalk.dim("Total cost:")}    ${chalk.green(formatCost(cost))}`);
-    lines.push(`    ${chalk.dim("Duration:")}      ${chalk.white(formatDuration(duration))}`);
+    lines.push(`    ${c.dim("Total cost:")}    ${c.green(formatCost(cost))}`);
+    lines.push(`    ${c.dim("Duration:")}      ${c.white(formatDuration(duration))}`);
 
     // Per-model breakdown (always show)
     const modelMap = new Map<string, {
@@ -282,7 +282,7 @@ export class CostTracker {
 
     if (modelMap.size >= 1) {
       lines.push("");
-      lines.push(`    ${chalk.dim("By model:")}`);
+      lines.push(`    ${c.dim("By model:")}`);
       for (const [model, stats] of modelMap) {
         const { pricing: p } = lookupPricing(model);
         const uncachedInput = Math.max(0, stats.prompt - stats.cacheRead - stats.cacheWrite);
@@ -294,14 +294,14 @@ export class CostTracker {
         const tokenDetail = `${formatNumber(stats.prompt)} in, ${formatNumber(stats.completion)} out` +
           (stats.cacheRead > 0 ? `, ${formatNumber(stats.cacheRead)} cache` : "");
         lines.push(
-          `      ${chalk.dim(model)} — ${tokenDetail}, ${formatCost(modelCost)} (${stats.count} reqs)`,
+          `      ${c.dim(model)} — ${tokenDetail}, ${formatCost(modelCost)} (${stats.count} reqs)`,
         );
       }
     }
 
     if (this._hasUnknownModel) {
       lines.push("");
-      lines.push(chalk.dim("    (costs may be inaccurate due to usage of unknown models)"));
+      lines.push(c.dim("    (costs may be inaccurate due to usage of unknown models)"));
     }
 
     return lines.join("\n");
@@ -310,10 +310,10 @@ export class CostTracker {
   /**
    * Format a compact one-line cost display for the prompt footer.
    */
-  formatCompact(): string {
+  formatCompact(c: Colorizer = NOOP_COLORIZER): string {
     const tokens = this.getTotalTokens();
     const cost = this.getEstimatedCost();
-    return chalk.dim(
+    return c.dim(
       `tokens: ${formatNumber(tokens.total)} | cost: ${formatCost(cost)}`,
     );
   }

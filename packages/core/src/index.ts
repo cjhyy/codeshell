@@ -408,6 +408,7 @@ export { recordUIEvent } from "./logging/session-recorder.js";
 // ─── Cost Tracker ────────────────────────────────────────────────
 
 export { costTracker, installCostTracking } from "./cost-tracker.js";
+export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 
 // ─── Onboarding ──────────────────────────────────────────────────
 

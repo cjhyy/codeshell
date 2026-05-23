@@ -4,6 +4,7 @@
 
 import type { SlashCommand } from "../registry.js";
 import { costTracker } from "@cjhyy/code-shell-core";
+import { CHALK_COLORIZER } from "../../../utils/colorizer.js";
 import { execSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -41,7 +42,7 @@ export const coreCommands: SlashCommand[] = [
       const requests = costTracker.getRequestCount();
 
       if (arg === "stats" || arg === "summary") {
-        ctx.addStatus(costTracker.formatSummary());
+        ctx.addStatus(costTracker.formatSummary(CHALK_COLORIZER));
       } else if (arg === "detail" || arg === "usage") {
         const avgTokensPerReq = Math.round(t.total / requests);
         const avgCostPerReq = (cost / requests).toFixed(4);

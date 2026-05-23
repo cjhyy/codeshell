@@ -11,7 +11,7 @@
  * 4. Next Actions
  */
 
-import chalk from "chalk";
+import { NOOP_COLORIZER, type Colorizer } from "../../colorizer.js";
 import type {
   ArenaResultV2,
   ArenaConsensusItem,
@@ -27,12 +27,15 @@ export type OutputSink = (text: string) => void;
 /**
  * Format the full arena result as a styled string.
  */
-export function formatArenaResult(result: ArenaResultV2): string {
+export function formatArenaResult(
+  result: ArenaResultV2,
+  c: Colorizer = NOOP_COLORIZER,
+): string {
   const modeLabel = result.mode.charAt(0).toUpperCase() + result.mode.slice(1);
   const lines: string[] = [];
 
   lines.push("");
-  lines.push(chalk.bold(`  ═══ ${modeLabel} Conclusion ═══`));
+  lines.push(c.bold(`  ═══ ${modeLabel} Conclusion ═══`));
   lines.push("");
 
   // Summary
@@ -43,34 +46,34 @@ export function formatArenaResult(result: ArenaResultV2): string {
 
   // Roadmap first for planning scenes
   if (result.mode === "planning") {
-    lines.push(...formatRoadmapSection(result.consensus.roadmap));
+    lines.push(...formatRoadmapSection(result.consensus.roadmap, c));
     if (result.consensus.roadmapDetails && result.consensus.roadmapDetails.length > 0) {
-      lines.push(...formatRoadmapDetailsSection(result.consensus.roadmapDetails));
+      lines.push(...formatRoadmapDetailsSection(result.consensus.roadmapDetails, c));
     }
   }
 
   // Consensus sections ordered by output emphasis
-  for (const section of getOrderedConsensusSections(result)) {
-    lines.push(...formatConsensusSection(section.title, section.items, section.color, section.icon));
+  for (const section of getOrderedConsensusSections(result, c)) {
+    lines.push(...formatConsensusSection(section.title, section.items, section.color, section.icon, c));
   }
 
   // Roadmap after findings for non-planning scenes
   if (result.mode !== "planning") {
-    lines.push(...formatRoadmapSection(result.consensus.roadmap));
+    lines.push(...formatRoadmapSection(result.consensus.roadmap, c));
   }
 
   // Next Actions
   if (result.consensus.nextActions.length > 0) {
-    lines.push(chalk.bold.white("\n  Next Actions:"));
+    lines.push(c.boldWhite("\n  Next Actions:"));
     for (const action of result.consensus.nextActions) {
       const pri = action.priority === "high"
-        ? chalk.red("HIGH")
+        ? c.red("HIGH")
         : action.priority === "medium"
-          ? chalk.yellow("MED")
-          : chalk.dim("LOW");
-      lines.push(`    ${chalk.white("→")} [${pri}${chalk.white("]")} ${action.title}`);
+          ? c.yellow("MED")
+          : c.dim("LOW");
+      lines.push(`    ${c.white("→")} [${pri}${c.white("]")} ${action.title}`);
       if (action.rationale) {
-        lines.push(chalk.dim(`      ${action.rationale}`));
+        lines.push(c.dim(`      ${action.rationale}`));
       }
     }
   }
@@ -80,7 +83,7 @@ export function formatArenaResult(result: ArenaResultV2): string {
   const planInfo = result.plan
     ? ` | Lenses: ${result.plan.lenses.map((l) => l.name).join(", ")} | Sources: ${result.plan.sources.map((s) => s.kind).join(", ")}`
     : "";
-  lines.push(chalk.dim(
+  lines.push(c.dim(
     `  Mode: ${modeLabel} | ` +
     `Findings: ${countFindings(result)} | ` +
     `Models: ${result.participants.join(", ")}` +
@@ -95,8 +98,11 @@ export function formatArenaResult(result: ArenaResultV2): string {
  * Print the full arena result directly to stdout.
  * Used by the CLI `code-shell arena` command (non-REPL).
  */
-export function printArenaResult(result: ArenaResultV2): void {
-  console.log(formatArenaResult(result));
+export function printArenaResult(
+  result: ArenaResultV2,
+  c: Colorizer = NOOP_COLORIZER,
+): void {
+  console.log(formatArenaResult(result, c));
 }
 
 function formatConsensusSection(
@@ -104,6 +110,7 @@ function formatConsensusSection(
   items: ArenaConsensusItem[],
   color: (text: string) => string,
   icon: string,
+  c: Colorizer,
 ): string[] {
   if (items.length === 0) return [];
 
@@ -112,10 +119,10 @@ function formatConsensusSection(
   for (const item of items) {
     lines.push(color(`    ${icon} ${item.title}`));
     if (item.summary) {
-      lines.push(chalk.dim(`      ${item.summary}`));
+      lines.push(c.dim(`      ${item.summary}`));
     }
     if (item.challenge.length > 0) {
-      lines.push(chalk.dim(`      Challenged by: ${item.challenge.join(", ")}`));
+      lines.push(c.dim(`      Challenged by: ${item.challenge.join(", ")}`));
     }
   }
   return lines;
@@ -125,81 +132,81 @@ function countFindings(result: ArenaResultV2): number {
   return result.reports.reduce((sum, r) => sum + r.findings.length, 0);
 }
 
-function formatRoadmapSection(phases: ArenaRoadmapPhase[]): string[] {
+function formatRoadmapSection(phases: ArenaRoadmapPhase[], c: Colorizer): string[] {
   if (phases.length === 0) return [];
 
   const lines: string[] = [];
-  lines.push(chalk.bold.white("\n  Roadmap:"));
+  lines.push(c.boldWhite("\n  Roadmap:"));
   for (const [index, phase] of phases.entries()) {
     const pri = phase.priority === "high"
-      ? chalk.red("HIGH")
+      ? c.red("HIGH")
       : phase.priority === "medium"
-        ? chalk.yellow("MED")
-        : chalk.dim("LOW");
-    lines.push(`    ${chalk.white("→")} Phase ${index + 1}: ${phase.title} [${pri}${chalk.white("]")}`);
+        ? c.yellow("MED")
+        : c.dim("LOW");
+    lines.push(`    ${c.white("→")} Phase ${index + 1}: ${phase.title} [${pri}${c.white("]")}`);
     if (phase.goal) {
-      lines.push(chalk.dim(`      Goal: ${phase.goal}`));
+      lines.push(c.dim(`      Goal: ${phase.goal}`));
     }
     if (phase.scope.length > 0) {
-      lines.push(chalk.dim(`      Scope: ${phase.scope.join("; ")}`));
+      lines.push(c.dim(`      Scope: ${phase.scope.join("; ")}`));
     }
     if (phase.deliverables.length > 0) {
-      lines.push(chalk.dim(`      Deliverables: ${phase.deliverables.join("; ")}`));
+      lines.push(c.dim(`      Deliverables: ${phase.deliverables.join("; ")}`));
     }
     if (phase.dependencies.length > 0) {
-      lines.push(chalk.dim(`      Dependencies: ${phase.dependencies.join("; ")}`));
+      lines.push(c.dim(`      Dependencies: ${phase.dependencies.join("; ")}`));
     }
     if (phase.risks.length > 0) {
-      lines.push(chalk.dim(`      Risks: ${phase.risks.join("; ")}`));
+      lines.push(c.dim(`      Risks: ${phase.risks.join("; ")}`));
     }
     if (phase.successCriteria.length > 0) {
-      lines.push(chalk.dim(`      Success: ${phase.successCriteria.join("; ")}`));
+      lines.push(c.dim(`      Success: ${phase.successCriteria.join("; ")}`));
     }
   }
   return lines;
 }
 
-function formatRoadmapDetailsSection(details: ArenaRoadmapPhaseDetail[]): string[] {
+function formatRoadmapDetailsSection(details: ArenaRoadmapPhaseDetail[], c: Colorizer): string[] {
   const lines: string[] = [];
-  lines.push(chalk.bold.white("\n  Implementation Details:"));
+  lines.push(c.boldWhite("\n  Implementation Details:"));
   for (const detail of details) {
     const effort = detail.effort === "large"
-      ? chalk.red("L")
+      ? c.red("L")
       : detail.effort === "medium"
-        ? chalk.yellow("M")
-        : chalk.green("S");
-    lines.push(`\n    ${chalk.white("▸")} ${detail.phaseTitle} [${effort}]`);
+        ? c.yellow("M")
+        : c.green("S");
+    lines.push(`\n    ${c.white("▸")} ${detail.phaseTitle} [${effort}]`);
     if (detail.objective) {
-      lines.push(chalk.dim(`      ${detail.objective}`));
+      lines.push(c.dim(`      ${detail.objective}`));
     }
     if (detail.targetFiles.length > 0) {
-      lines.push(chalk.dim(`      Files: ${detail.targetFiles.join(", ")}`));
+      lines.push(c.dim(`      Files: ${detail.targetFiles.join(", ")}`));
     }
     if (detail.codeChanges.length > 0) {
       for (const change of detail.codeChanges) {
-        lines.push(chalk.dim(`      • ${change}`));
+        lines.push(c.dim(`      • ${change}`));
       }
     }
     if (detail.interfaces.length > 0) {
-      lines.push(chalk.dim(`      Interfaces: ${detail.interfaces.join("; ")}`));
+      lines.push(c.dim(`      Interfaces: ${detail.interfaces.join("; ")}`));
     }
     if (detail.migrationSteps.length > 0) {
-      lines.push(chalk.dim(`      Migration:`));
+      lines.push(c.dim(`      Migration:`));
       for (const [i, step] of detail.migrationSteps.entries()) {
-        lines.push(chalk.dim(`        ${i + 1}. ${step}`));
+        lines.push(c.dim(`        ${i + 1}. ${step}`));
       }
     }
     if (detail.validation.length > 0) {
-      lines.push(chalk.dim(`      Validation: ${detail.validation.join("; ")}`));
+      lines.push(c.dim(`      Validation: ${detail.validation.join("; ")}`));
     }
     if (detail.blockers.length > 0) {
-      lines.push(chalk.red(`      Blockers: ${detail.blockers.join("; ")}`));
+      lines.push(c.red(`      Blockers: ${detail.blockers.join("; ")}`));
     }
   }
   return lines;
 }
 
-function getOrderedConsensusSections(result: ArenaResultV2): Array<{
+function getOrderedConsensusSections(result: ArenaResultV2, c: Colorizer): Array<{
   kind: FindingKind;
   title: string;
   items: ArenaConsensusItem[];
@@ -215,13 +222,13 @@ function getOrderedConsensusSections(result: ArenaResultV2): Array<{
     .map((kind) => {
       switch (kind) {
         case "strength":
-          return { kind, title: "Strengths", items: result.consensus.strengths, color: chalk.green, icon: "✓" };
+          return { kind, title: "Strengths", items: result.consensus.strengths, color: c.green.bind(c), icon: "✓" };
         case "improvement":
-          return { kind, title: "Improvements", items: result.consensus.improvements, color: chalk.yellow, icon: "→" };
+          return { kind, title: "Improvements", items: result.consensus.improvements, color: c.yellow.bind(c), icon: "→" };
         case "risk":
-          return { kind, title: "Risks", items: result.consensus.risks, color: chalk.red, icon: "⚠" };
+          return { kind, title: "Risks", items: result.consensus.risks, color: c.red.bind(c), icon: "⚠" };
         case "question":
-          return { kind, title: "Open Questions", items: result.consensus.openQuestions, color: chalk.cyan, icon: "?" };
+          return { kind, title: "Open Questions", items: result.consensus.openQuestions, color: c.cyan.bind(c), icon: "?" };
       }
     })
     .filter((section): section is NonNullable<typeof section> => section != null)
@@ -244,11 +251,14 @@ function dedupeFindingKinds(kinds: FindingKind[]): FindingKind[] {
  * Create a progress renderer that sends output to a sink.
  * For REPL: pass ctx.addStatus. For CLI: pass console.log.
  */
-export function createProgressRenderer(sink: OutputSink): (event: ArenaProgressEvent) => void {
+export function createProgressRenderer(
+  sink: OutputSink,
+  c: Colorizer = NOOP_COLORIZER,
+): (event: ArenaProgressEvent) => void {
   return (event: ArenaProgressEvent) => {
     switch (event.type) {
       case "plan_resolved":
-        sink(chalk.dim(
+        sink(c.dim(
           `Plan: ${event.plan.mode} | ` +
           `lenses: ${event.plan.lenses.map((l) => l.name).join(", ")} | ` +
           `sources: ${event.plan.sources.map((s) => s.kind).join(", ")}` +
@@ -257,85 +267,85 @@ export function createProgressRenderer(sink: OutputSink): (event: ArenaProgressE
         break;
 
       case "evidence_started":
-        sink(chalk.dim(`  · collecting from ${event.source}…`));
+        sink(c.dim(`  · collecting from ${event.source}…`));
         break;
 
       case "evidence_source_done": {
-        const tag = event.timedOut ? chalk.yellow(" (timed out)") : "";
-        sink(chalk.dim(`  · ${event.source}: ${event.count} artifacts in ${event.durationMs}ms${tag}`));
+        const tag = event.timedOut ? c.yellow(" (timed out)") : "";
+        sink(c.dim(`  · ${event.source}: ${event.count} artifacts in ${event.durationMs}ms${tag}`));
         break;
       }
 
       case "evidence_collected":
-        sink(chalk.dim(`Evidence: ${event.artifacts.length} artifacts collected`));
+        sink(c.dim(`Evidence: ${event.artifacts.length} artifacts collected`));
         break;
 
       case "research_start":
-        sink(chalk.dim(`⏳ ${event.participant} researching...`));
+        sink(c.dim(`⏳ ${event.participant} researching...`));
         break;
 
       case "research_done": {
         const fCount = event.report.findings.length;
-        sink(`${event.participant}: ${chalk.green("done")} (${fCount} findings)`);
+        sink(`${event.participant}: ${c.green("done")} (${fCount} findings)`);
         break;
       }
 
       case "context_lookup":
         for (const t of event.tools) {
-          sink(chalk.dim(`  🔍 ${event.participant}: ${t}`));
+          sink(c.dim(`  🔍 ${event.participant}: ${t}`));
         }
         break;
 
       case "claims_registered":
-        sink(chalk.dim(`${event.claimCount} claims registered`));
+        sink(c.dim(`${event.claimCount} claims registered`));
         break;
 
       case "cross_review_start":
-        sink(chalk.dim("── Cross Review ──"));
+        sink(c.dim("── Cross Review ──"));
         break;
 
       case "cross_review_done":
-        sink(chalk.dim(`${event.reviews.length} peer reviews collected`));
+        sink(c.dim(`${event.reviews.length} peer reviews collected`));
         break;
 
       case "verification_start":
-        sink(chalk.dim("── Verification Review ──"));
+        sink(c.dim("── Verification Review ──"));
         break;
 
       case "verification_done":
-        sink(chalk.dim(`${event.challengeCount} challenges raised`));
+        sink(c.dim(`${event.challengeCount} challenges raised`));
         break;
 
       case "debate_round_start":
-        sink(chalk.dim(`── Debate Round ${event.round} (${event.claims.length} claims) ──`));
+        sink(c.dim(`── Debate Round ${event.round} (${event.claims.length} claims) ──`));
         break;
 
       case "debate_round_done":
-        sink(chalk.dim(`Round ${event.round}: ${event.resolved} resolved`));
+        sink(c.dim(`Round ${event.round}: ${event.resolved} resolved`));
         break;
 
       case "adjudication_done":
-        sink(chalk.dim(`Adjudication: ${event.accepted} accepted, ${event.unresolved} unresolved`));
+        sink(c.dim(`Adjudication: ${event.accepted} accepted, ${event.unresolved} unresolved`));
         break;
 
       case "planning_merge_review_start":
-        sink(chalk.dim("── Planning Merge Review ──"));
+        sink(c.dim("── Planning Merge Review ──"));
         break;
 
       case "planning_merge_review_done":
-        sink(chalk.dim(`${event.mergeCount} merge suggestions collected`));
+        sink(c.dim(`${event.mergeCount} merge suggestions collected`));
         break;
 
       case "roadmap_expansion_start":
-        sink(chalk.dim(`── Expanding ${event.phaseCount} roadmap phases ──`));
+        sink(c.dim(`── Expanding ${event.phaseCount} roadmap phases ──`));
         break;
 
       case "roadmap_expansion_done":
-        sink(chalk.dim(`${event.detailCount} phase details generated`));
+        sink(c.dim(`${event.detailCount} phase details generated`));
         break;
 
       case "consensus_start":
-        sink(chalk.dim("⏳ Building consensus..."));
+        sink(c.dim("⏳ Building consensus..."));
         break;
 
       case "consensus_done":
@@ -347,6 +357,9 @@ export function createProgressRenderer(sink: OutputSink): (event: ArenaProgressE
 /**
  * Legacy: direct console.log progress renderer for CLI mode.
  */
-export function renderProgress(event: ArenaProgressEvent): void {
-  createProgressRenderer((text) => console.log(`  ${text}`))(event);
+export function renderProgress(
+  event: ArenaProgressEvent,
+  c: Colorizer = NOOP_COLORIZER,
+): void {
+  createProgressRenderer((text) => console.log(`  ${text}`), c)(event);
 }

@@ -1,4 +1,3 @@
-import chalk, { Chalk } from 'chalk'
 import { env } from './env.js'
 
 export type Theme = {
@@ -612,16 +611,11 @@ export function getTheme(themeName: ThemeName): Theme {
   }
 }
 
-// Create a chalk instance with 256-color level for Apple Terminal
-// Apple Terminal doesn't handle 24-bit color escape sequences well
-const chalkForChart =
-  env.terminal === 'Apple_Terminal'
-    ? new Chalk({ level: 2 }) // 256 colors
-    : chalk
-
 /**
  * Converts a theme color to an ANSI escape sequence for use with asciichart.
- * Uses chalk to generate the escape codes, with 256-color mode for Apple Terminal.
+ *
+ * Apple Terminal doesn't handle 24-bit (true-color) escape sequences well, so
+ * on that terminal we downgrade to the nearest xterm-256 color index instead.
  */
 export function themeColorToAnsi(themeColor: string): string {
   const rgbMatch = themeColor.match(/rgb\(\s?(\d+),\s?(\d+),\s?(\d+)\s?\)/)
@@ -629,11 +623,34 @@ export function themeColorToAnsi(themeColor: string): string {
     const r = parseInt(rgbMatch[1]!, 10)
     const g = parseInt(rgbMatch[2]!, 10)
     const b = parseInt(rgbMatch[3]!, 10)
-    // Use chalk.rgb which auto-converts to 256 colors when level is 2
-    // Extract just the opening escape sequence by using a marker
-    const colored = chalkForChart.rgb(r, g, b)('X')
-    return colored.slice(0, colored.indexOf('X'))
+
+    if (env.terminal === 'Apple_Terminal') {
+      // Downgrade to xterm-256: SGR 38;5;<n>m
+      const idx = rgbToXterm256(r, g, b)
+      return `\x1b[38;5;${idx}m`
+    }
+    // True-color: SGR 38;2;<r>;<g>;<b>m
+    return `\x1b[38;2;${r};${g};${b}m`
   }
   // Fallback to magenta if parsing fails
   return '\x1b[35m'
+}
+
+/**
+ * Nearest xterm-256 color index for an RGB triple.
+ * Uses the 6×6×6 color cube (indices 16-231) plus the 24-step grayscale ramp
+ * (indices 232-255).
+ */
+function rgbToXterm256(r: number, g: number, b: number): number {
+  // Grayscale ramp: pick it when all channels are equal-ish
+  if (Math.abs(r - g) < 8 && Math.abs(g - b) < 8) {
+    if (r < 8) return 16
+    if (r > 248) return 231
+    return Math.round((r - 8) / 247 * 24) + 232
+  }
+  // 6×6×6 cube
+  const ri = Math.round(r / 255 * 5)
+  const gi = Math.round(g / 255 * 5)
+  const bi = Math.round(b / 255 * 5)
+  return 16 + 36 * ri + 6 * gi + bi
 }
