@@ -9,7 +9,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./bin/agent-server-stdio": "./dist/cli/agent-server-stdio.js"
   },
   "sideEffects": [
     "./dist/data/*.json",

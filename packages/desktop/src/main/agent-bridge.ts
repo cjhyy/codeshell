@@ -19,7 +19,7 @@ import { BrowserWindow, ipcMain } from "electron";
 
 const require = createRequire(import.meta.url);
 const agentEntry = require.resolve(
-  "@cjhyy/code-shell-core/dist/cli/agent-server-stdio.js",
+  "@cjhyy/code-shell-core/bin/agent-server-stdio",
 );
 
 const RESTART_WINDOW_MS = 60_000;
