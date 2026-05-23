@@ -68,6 +68,8 @@ export interface CodeshellApi {
   updateSettings(scope: "user" | "project", patch: Record<string, unknown>, cwd?: string): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;
   deleteSession(id: string): Promise<void>;
+  listSessionTitles(): Promise<Record<string, string>>;
+  renameSession(id: string, title: string): Promise<void>;
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
 
   // Phase 6 — native polish & security.
@@ -77,6 +79,7 @@ export interface CodeshellApi {
   notify(opts: { title: string; body?: string; subtitle?: string }): Promise<void>;
   setBadgeCount(count: number): Promise<void>;
   onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;
+  newWindow(): Promise<void>;
 }
 
 export interface DesktopSessionSummary {

@@ -118,3 +118,65 @@
   resize: none;
   min-height: 240px;
 }
+
+/* Sections under SettingsView */
+.settings-section { display: flex; flex-direction: column; gap: var(--sp-2); }
+.settings-section-title { margin: 0; font-size: var(--fz-md); color: var(--fg-primary); }
+.settings-section-help { margin: 0; color: var(--fg-secondary); font-size: var(--fz-sm); line-height: 1.6; }
+.settings-section-current {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: baseline;
+  font-size: var(--fz-sm);
+  color: var(--fg-secondary);
+}
+
+.model-list, .mcp-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1px; }
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+}
+.model-row:hover { background: var(--bg-hover); }
+.model-row.active { background: var(--bg-selected); border-color: var(--accent); }
+.model-provider {
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 90px;
+}
+.model-name { flex: 1; color: var(--fg-primary); font-family: var(--font-mono); }
+.model-active-badge {
+  font-size: var(--fz-xs);
+  color: var(--accent-fg);
+  background: var(--accent);
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.permission-modes { display: flex; gap: 2px; padding: 2px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); width: fit-content; }
+
+.mcp-row {
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.mcp-row-head { display: flex; align-items: center; gap: var(--sp-2); }
+.mcp-row-head strong { color: var(--fg-primary); }
+.mcp-row-detail { font-family: var(--font-mono); font-size: var(--fz-xs); color: var(--fg-secondary); }
+.mcp-add summary { cursor: pointer; padding: var(--sp-1) 0; color: var(--fg-secondary); }
+.mcp-add { margin-top: var(--sp-2); }

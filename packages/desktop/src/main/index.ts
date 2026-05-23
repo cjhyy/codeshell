@@ -16,6 +16,7 @@ import {
 } from "./desktop-services.js";
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
 import { listSessions, deleteSession } from "./sessions-service.js";
+import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import { loadRecents, pushRecent } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
@@ -26,13 +27,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: process.cwd() });
 
+/**
+ * The bridge is process-global: a single agent worker subprocess
+ * services every BrowserWindow we open. Per-window state lives in
+ * the renderer (transcripts, view, selection); the bridge just
+ * pipes stdio. Multi-window therefore means "extra views into the
+ * same worker" — not "extra concurrent agents".
+ */
 let bridge: AgentBridge | null = null;
-let mainWindow: BrowserWindow | null = null;
+let cspInstalled = false;
 
-async function createWindow(): Promise<void> {
+async function createWindow(): Promise<BrowserWindow> {
   const ws = await loadWindowState();
 
-  mainWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     width: ws.width,
     height: ws.height,
     x: ws.x,
@@ -41,104 +49,100 @@ async function createWindow(): Promise<void> {
       preload: resolve(__dirname, "..", "preload", "index.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
-      // sandbox: true requires preload to be CommonJS without node APIs.
-      // Our preload uses only ipcRenderer + contextBridge, which are both
-      // safe under the sandbox. If preload ever needs Node APIs, that
-      // logic must move into main.
       sandbox: true,
     },
   });
 
-  if (ws.maximized) mainWindow.maximize();
+  if (ws.maximized) win.maximize();
 
-  // Strict CSP. Inline styles are needed for highlight.js & some
-  // markdown libs; everything else stays local. No remote scripts.
-  session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
-    cb({
-      responseHeaders: {
-        ...details.responseHeaders,
-        "Content-Security-Policy": [
-          "default-src 'self'; " +
-          "script-src 'self'; " +
-          "style-src 'self' 'unsafe-inline'; " +
-          "img-src 'self' data:; " +
-          "font-src 'self' data:; " +
-          "connect-src 'self' ws: http://localhost:* http://127.0.0.1:*; " +
-          "object-src 'none'; " +
-          "base-uri 'none'; " +
-          "frame-ancestors 'none'",
-        ],
-      },
+  // Strict CSP installed once on the default session (a session is
+  // shared across windows, so re-installing per window would double
+  // the header).
+  if (!cspInstalled) {
+    cspInstalled = true;
+    session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+      cb({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [
+            "default-src 'self'; " +
+            "script-src 'self'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self' ws: http://localhost:* http://127.0.0.1:*; " +
+            "object-src 'none'; " +
+            "base-uri 'none'; " +
+            "frame-ancestors 'none'",
+          ],
+        },
+      });
     });
-  });
+  }
 
-  // Route external link clicks through shell.openExternal; never
-  // navigate the BrowserWindow itself away from the renderer.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/i.test(url)) {
-      void shell.openExternal(url);
-    }
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:/i.test(url)) void shell.openExternal(url);
     return { action: "deny" };
   });
-  mainWindow.webContents.on("will-navigate", (e, url) => {
+  win.webContents.on("will-navigate", (e, url) => {
     const devUrl = process.env.VITE_DEV_URL ?? "";
     if (devUrl && url.startsWith(devUrl)) return;
     e.preventDefault();
-    if (/^https?:/i.test(url)) {
-      void shell.openExternal(url);
-    }
+    if (/^https?:/i.test(url)) void shell.openExternal(url);
   });
 
   const devUrl = process.env.VITE_DEV_URL;
   if (devUrl) {
-    mainWindow.loadURL(devUrl);
-    mainWindow.webContents.openDevTools({ mode: "right" });
+    win.loadURL(devUrl);
+    win.webContents.openDevTools({ mode: "right" });
   } else {
-    mainWindow.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
-    if (!app.isPackaged) {
-      mainWindow.webContents.openDevTools({ mode: "right" });
-    }
+    win.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
+    if (!app.isPackaged) win.webContents.openDevTools({ mode: "right" });
   }
 
-  mainWindow.webContents.on("did-fail-load", (_e, code, desc, url) => {
+  win.webContents.on("did-fail-load", (_e, code, desc, url) => {
     dlog("main", "renderer.did-fail-load", { code, desc, url });
   });
-  mainWindow.webContents.on("render-process-gone", (_e, details) => {
+  win.webContents.on("render-process-gone", (_e, details) => {
     dlog("main", "renderer.render-process-gone", { details });
   });
-  mainWindow.webContents.on("preload-error", (_e, preloadPath, err) => {
+  win.webContents.on("preload-error", (_e, preloadPath, err) => {
     dlog("main", "renderer.preload-error", { preloadPath, message: err.message, stack: err.stack });
   });
-  mainWindow.webContents.on("console-message", (_e, level, message, line, sourceId) => {
+  win.webContents.on("console-message", (_e, level, message, line, sourceId) => {
     dlog("renderer", "console", { level, message, line, sourceId });
   });
 
-  // Persist window bounds + maximized on change.
   const persist = (): void => {
-    if (!mainWindow) return;
-    const b = mainWindow.getBounds();
+    if (win.isDestroyed()) return;
+    const b = win.getBounds();
     void saveWindowState({
       width: b.width,
       height: b.height,
       x: b.x,
       y: b.y,
-      maximized: mainWindow.isMaximized(),
+      maximized: win.isMaximized(),
     });
   };
-  mainWindow.on("close", persist);
-  mainWindow.on("resize", persist);
-  mainWindow.on("move", persist);
+  win.on("close", persist);
+  win.on("resize", persist);
+  win.on("move", persist);
 
-  bridge = new AgentBridge(mainWindow);
+  if (!bridge) {
+    bridge = new AgentBridge(win);
+  } else {
+    bridge.attachWindow(win);
+  }
 
-  await installAppMenu(mainWindow);
+  await installAppMenu(win);
+  return win;
 }
 
 app.whenReady().then(() => {
   void createWindow();
 });
 
-ipcMain.handle("dialog:pickDir", async (): Promise<{ path: string; name: string } | null> => {
+ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string } | null> => {
   const res = await dialog.showOpenDialog({
     title: "选择项目目录",
     properties: ["openDirectory", "createDirectory"],
@@ -147,8 +151,13 @@ ipcMain.handle("dialog:pickDir", async (): Promise<{ path: string; name: string 
   const path = res.filePaths[0];
   const result = { path, name: basename(path) };
   await pushRecent({ ...result, lastOpenedAt: Date.now() });
-  if (mainWindow) void refreshAppMenu(mainWindow);
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (win) void refreshAppMenu(win);
   return result;
+});
+
+ipcMain.handle("window:new", async () => {
+  await createWindow();
 });
 
 ipcMain.handle("git:status", async (_e, cwd: string) => {
@@ -186,6 +195,12 @@ ipcMain.handle("sessions:list", async () => listSessions());
 ipcMain.handle("sessions:delete", async (_e, id: string) => {
   if (typeof id !== "string") throw new Error("session id required");
   await deleteSession(id);
+});
+ipcMain.handle("sessions:titles", async () => listTitles());
+ipcMain.handle("sessions:rename", async (_e, id: string, title: string) => {
+  if (typeof id !== "string") throw new Error("session id required");
+  if (typeof title !== "string") throw new Error("title must be string");
+  await setTitle(id, title);
 });
 
 ipcMain.handle("logs:tail", async (_e, bucket: LogBucket, lines?: number) => {

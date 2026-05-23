@@ -41,10 +41,25 @@ export class AgentBridge {
   private restartCount = 0;
   private restartWindowStart = Date.now();
   private ipcListenerAttached = false;
+  /**
+   * All BrowserWindows we should broadcast worker events to. The bridge
+   * is process-global; each window registers via attachWindow(). When
+   * a window closes we detach it so we don't `webContents.send` to a
+   * destroyed window.
+   */
+  private windows = new Set<BrowserWindow>();
 
-  constructor(private window: BrowserWindow) {
+  constructor(window: BrowserWindow) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
+    this.windows.add(window);
+    window.on("closed", () => this.windows.delete(window));
     this.attachIpcListener();
+  }
+
+  /** Add another window to broadcast list (multi-window mode). */
+  attachWindow(window: BrowserWindow): void {
+    this.windows.add(window);
+    window.on("closed", () => this.windows.delete(window));
   }
 
   /**
@@ -155,8 +170,13 @@ export class AgentBridge {
   }
 
   private safeSend(channel: string, payload: unknown): void {
-    if (this.window.isDestroyed()) return;
-    this.window.webContents.send(channel, payload);
+    for (const w of this.windows) {
+      if (w.isDestroyed()) {
+        this.windows.delete(w);
+        continue;
+      }
+      w.webContents.send(channel, payload);
+    }
   }
 
   kill(): void {

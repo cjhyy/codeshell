@@ -14,11 +14,12 @@
  * background.
  */
 
-import React from "react";
+import React, { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.css";
+import { Copy } from "./ui/icons";
 
 interface Props {
   text: string;
@@ -31,9 +32,6 @@ export function Markdown({ text }: Props) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
-          // Open links in the user's default browser, not inside the
-          // electron renderer. The renderer has no chrome to navigate
-          // back from, so any link click would trap them.
           a: ({ href, children, ...rest }) => (
             <a
               href={href}
@@ -41,16 +39,64 @@ export function Markdown({ text }: Props) {
               onClick={(e) => {
                 if (!href) return;
                 e.preventDefault();
-                window.open(href, "_blank", "noopener,noreferrer");
+                if (/^https?:/i.test(href)) {
+                  void window.codeshell.openExternal(href);
+                }
               }}
             >
               {children}
             </a>
           ),
+          // Wrap multi-line code blocks with a header bar showing the
+          // language label (when react-markdown supplies a `language-*`
+          // class) and a copy button. Inline `code` (no language class
+          // and no newline) is left as-is.
+          pre: ({ children, ...rest }) => {
+            // The child should be a single <code> element whose
+            // className looks like "language-ts" when GFM/rehype-highlight
+            // resolved a language.
+            return <CodeBlock {...rest}>{children}</CodeBlock>;
+          },
         }}
       >
         {text}
       </ReactMarkdown>
+    </div>
+  );
+}
+
+function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) {
+  const preRef = useRef<HTMLPreElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  let lang = "";
+  // Read the language off the inner <code> className.
+  const child = React.Children.toArray(children)[0] as
+    | React.ReactElement<{ className?: string }>
+    | undefined;
+  if (child?.props?.className) {
+    const m = /language-([\w-]+)/.exec(child.props.className);
+    if (m) lang = m[1];
+  }
+
+  const onCopy = (): void => {
+    const text = preRef.current?.textContent ?? "";
+    void navigator.clipboard.writeText(text);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="md-code">
+      <div className="md-code-head">
+        {lang && <span className="md-code-lang">{lang}</span>}
+        <button className="md-code-copy" onClick={onCopy} aria-label="copy code">
+          <Copy size={11} /> {copied ? "copied" : "copy"}
+        </button>
+      </div>
+      <pre ref={preRef} {...rest}>
+        {children}
+      </pre>
     </div>
   );
 }

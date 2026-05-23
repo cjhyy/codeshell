@@ -35,6 +35,13 @@ export async function installAppMenu(win: BrowserWindow): Promise<void> {
       label: "文件",
       submenu: [
         {
+          label: "新窗口",
+          accelerator: "CmdOrCtrl+Shift+N",
+          click: () => {
+            win.webContents.send("menu:new-window");
+          },
+        },
+        {
           label: "添加项目…",
           accelerator: "CmdOrCtrl+O",
           click: () => {

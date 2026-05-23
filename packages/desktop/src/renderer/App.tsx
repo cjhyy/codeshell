@@ -92,6 +92,8 @@ function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [model, setModel] = useState<string | null>(null);
+  const [permissionMode, setPermissionMode] = useState<string | null>(null);
 
   const activeRepoKey = bucketKey(activeRepoId);
   const runningRepoKeyRef = useRef<string | null>(null);
@@ -315,10 +317,35 @@ function App() {
         case "toggle-inspector":
           toggleInspector();
           break;
+        case "new-window":
+          void window.codeshell.newWindow();
+          break;
       }
     });
     return off;
   }, [repos]);
+
+  // Pull model + permissionMode from settings on mount and after the
+  // settings view writes (we re-poll cheaply when viewMode flips).
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async (): Promise<void> => {
+      try {
+        const cwd = activeRepo?.path;
+        // Project settings override user settings when present.
+        const projectS = cwd ? (await window.codeshell.getSettings("project", cwd)) ?? {} : {};
+        const userS = (await window.codeshell.getSettings("user")) ?? {};
+        const merged: Record<string, unknown> = { ...userS, ...projectS };
+        if (cancelled) return;
+        setModel(typeof merged.model === "string" ? merged.model : null);
+        setPermissionMode(typeof merged.permissionMode === "string" ? merged.permissionMode : null);
+      } catch {
+        // ignore — likely no settings file yet.
+      }
+    };
+    void refresh();
+    return () => { cancelled = true; };
+  }, [activeRepo, view.viewMode]);
 
   // Sync dock/taskbar badge with pending approvals count.
   useEffect(() => {
@@ -371,8 +398,8 @@ function App() {
           repoName={activeRepo?.name ?? null}
           sessionTitle={state.sessionId ? state.sessionId.slice(0, 8) : null}
           branch={null}
-          model={null}
-          permissionMode={null}
+          model={model}
+          permissionMode={permissionMode}
           promptTokens={state.promptTokens > 0 ? state.promptTokens : undefined}
           busy={busy}
         />
@@ -413,7 +440,7 @@ function App() {
             onDecide={decideEnvelope}
           />
         ) : view.viewMode === "sessions" ? (
-          <SessionsView />
+          <SessionsView onNewSession={clearTranscript} />
         ) : view.viewMode === "logs" ? (
           <LogsView />
         ) : view.viewMode === "settings" ? (

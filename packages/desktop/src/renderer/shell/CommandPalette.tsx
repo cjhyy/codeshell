@@ -115,5 +115,13 @@ export function buildCommands(opts: {
     { id: "toggle.inspector", label: "切换 详情", hint: "Cmd+I", run: toggleInspector },
     { id: "transcript.clear", label: "清空当前 transcript", run: clearTranscript },
     { id: "search.open", label: "搜索当前 transcript", hint: "Cmd+F", run: openSearch },
+    {
+      id: "window.new",
+      label: "新窗口",
+      hint: "Cmd+Shift+N",
+      run: () => {
+        void window.codeshell.newWindow();
+      },
+    },
   ];
 }

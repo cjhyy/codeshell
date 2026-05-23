@@ -1,0 +1,44 @@
+/* Code blocks in markdown messages — header bar with lang + copy. */
+
+.md-code {
+  margin: var(--sp-2) 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-app);
+}
+.md-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px var(--sp-2);
+  background: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+}
+.md-code-lang {
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+  font-family: var(--font-mono);
+}
+.md-code-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+}
+.md-code-copy:hover { background: var(--bg-hover); color: var(--fg-primary); }
+
+.md-code pre {
+  padding: var(--sp-2);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+  line-height: 1.5;
+  background: var(--bg-app);
+  color: var(--fg-primary);
+}
