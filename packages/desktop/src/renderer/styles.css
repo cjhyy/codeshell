@@ -10,7 +10,8 @@ body {
 pre { margin: 0; white-space: pre-wrap; font-family: monospace; }
 
 /* ── Layout grid: two columns, sidebar left, main right, no topbar ── */
-#root {
+#root { height: 100vh; }
+.app-grid {
   display: grid;
   grid-template-columns: 240px 1fr;
   grid-template-rows: 1fr;

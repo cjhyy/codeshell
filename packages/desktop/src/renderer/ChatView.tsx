@@ -51,6 +51,17 @@ export function ChatView({ messages, onSend, onStop, busy, activeRepoId }: Props
         ? "agent is working… (Stop 中止)"
         : "要求或描述变更…";
 
+  // Render-time diagnostic so we can see why the textarea is disabled
+  // after a repo switch without asking the user to inspect state.
+  useEffect(() => {
+    window.codeshell.log("chatview.render", {
+      busy,
+      activeRepoId,
+      disabled,
+      draftLen: draft.length,
+    });
+  }, [busy, activeRepoId, disabled, draft.length]);
+
   const submit = (): void => {
     const text = draft.trim();
     if (!text || disabled) return;

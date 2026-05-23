@@ -10,6 +10,7 @@ import {
   type MessagesReducerState,
   type ApprovalState,
 } from "./types";
+import { loadTranscript, saveTranscript } from "./transcripts";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
@@ -23,46 +24,90 @@ import {
   type Repo,
 } from "./repos";
 
-type Action =
-  | { type: "user_message"; text: string }
-  | { type: "stream"; event: StreamEvent }
-  | { type: "reset" };
+/**
+ * Transcripts are keyed by repoId; null repoId uses a "global" bucket.
+ * Reducer is repo-aware: every dispatched action carries the repo it
+ * targets, so a stream event arriving after the user has switched
+ * repos still folds into the right bucket (won't poison the new repo's
+ * view, won't drop on the floor either).
+ */
+type TranscriptsMap = Record<string, MessagesReducerState>;
 
-function reducer(state: MessagesReducerState, action: Action): MessagesReducerState {
-  if (action.type === "user_message") return appendUserMessage(state, action.text);
-  if (action.type === "reset") return INITIAL_STATE;
-  return applyStreamEvent(state, action.event);
+const GLOBAL_KEY = "__global__";
+function bucketKey(repoId: string | null): string {
+  return repoId ?? GLOBAL_KEY;
+}
+
+type Action =
+  | { type: "user_message"; repoKey: string; text: string }
+  | { type: "stream"; repoKey: string; event: StreamEvent }
+  | { type: "hydrate"; repoKey: string; state: MessagesReducerState };
+
+function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
+  if (action.type === "hydrate") {
+    return { ...map, [action.repoKey]: action.state };
+  }
+  const current = map[action.repoKey] ?? INITIAL_STATE;
+  const next =
+    action.type === "user_message"
+      ? appendUserMessage(current, action.text)
+      : applyStreamEvent(current, action.event);
+  if (next === current) return map;
+  return { ...map, [action.repoKey]: next };
 }
 
 function App() {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [transcripts, dispatch] = useReducer(reducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  /** Repo keys currently waiting on the agent worker to finish a run. */
+  const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
   const [repos, setRepos] = useState<Repo[]>(() => loadRepos());
   const [activeRepoId, setActiveRepoId] = useState<string | null>(() => loadActiveRepoId());
+
+  /**
+   * `activeRepoKey` is what we currently *show*. `runningRepoKey` is
+   * what the in-flight worker actually belongs to — set when send()
+   * fires, used to route incoming stream events back to the right
+   * bucket even if the user has since switched repos.
+   */
+  const activeRepoKey = bucketKey(activeRepoId);
+  const runningRepoKeyRef = useRef<string | null>(null);
 
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
 
-  // Clear the conversation when the active repo changes. Each repo gets
-  // its own "fresh chat" — Phase 3b will replace this with real
-  // per-repo session persistence, but until then the right UX is to
-  // show that switching context = new conversation, not the old one
-  // dangling over the new repo. Skip on first mount (when both prev
-  // and curr come from localStorage and we're not switching anything).
-  const prevRepoIdRef = useRef<string | null | undefined>(undefined);
+  // Lazy-load a repo's transcript on first view, so cold start doesn't
+  // read every persisted bucket into memory upfront.
   useEffect(() => {
-    if (prevRepoIdRef.current !== undefined && prevRepoIdRef.current !== activeRepoId) {
-      dispatch({ type: "reset" });
-      setApproval(null);
-      setLifecycle(null);
-      void window.codeshell.cancel().catch(() => {/* worker may already be dead */});
+    if (transcripts[activeRepoKey]) return;
+    const loaded = loadTranscript(activeRepoId);
+    dispatch({ type: "hydrate", repoKey: activeRepoKey, state: loaded });
+  }, [activeRepoKey, activeRepoId, transcripts]);
+
+  // Persist transcripts whenever they change.
+  useEffect(() => {
+    for (const [key, s] of Object.entries(transcripts)) {
+      const repoId = key === GLOBAL_KEY ? null : key;
+      saveTranscript(repoId, s);
     }
-    prevRepoIdRef.current = activeRepoId;
-  }, [activeRepoId]);
+  }, [transcripts]);
+
+  const state = transcripts[activeRepoKey] ?? INITIAL_STATE;
+  const busy = busyKeys.has(activeRepoKey);
 
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
+
+  const setBusyForKey = (key: string, val: boolean): void => {
+    setBusyKeys((prev) => {
+      const had = prev.has(key);
+      if (val === had) return prev;
+      const next = new Set(prev);
+      if (val) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  };
 
   const handleAddRepo = async (): Promise<void> => {
     window.codeshell.log("sidebar.add_clicked", {});
@@ -95,13 +140,20 @@ function App() {
     window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
 
     const offStream = window.codeshell.onStreamEvent((event: StreamEvent) => {
+      // Route every stream event back to the repo whose send() spawned
+      // the worker, NOT to whatever repo is currently visible — the
+      // user may have switched repos while the run is mid-flight.
+      const targetKey = runningRepoKeyRef.current ?? GLOBAL_KEY;
       window.codeshell.log("stream.event", {
         type: event.type,
         textLen: "text" in event ? (event as { text: string }).text.length : undefined,
+        targetKey,
       });
-      dispatch({ type: "stream", event });
-      if (event.type === "turn_complete") setBusy(false);
-      if (event.type === "error") setBusy(false);
+      dispatch({ type: "stream", repoKey: targetKey, event });
+      if (event.type === "turn_complete" || event.type === "error") {
+        setBusyForKey(targetKey, false);
+        runningRepoKeyRef.current = null;
+      }
     });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", { requestId: env.requestId, toolName: env.request.toolName });
@@ -112,19 +164,18 @@ function App() {
     });
     const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
+      const runningKey = runningRepoKeyRef.current;
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
       else if (evt.type === "gave_up") setLifecycle("Agent crashed too many times. Quit and reopen.");
       else if (evt.type === "exited") {
-        // code=0 means the worker self-exited cleanly after a turn — that's
-        // the expected on-demand-spawn flow, not an error worth banner-ing.
-        // Anything else is a crash and the user should see it.
         if (evt.code === 0) {
           setLifecycle(null);
-          setBusy(false); // defensive: in case turn_complete somehow didn't fire
         } else {
           setLifecycle(`Agent exited (code ${evt.code}).`);
-          setBusy(false);
         }
+        // Worker is gone — clear busy for whichever repo it was running.
+        if (runningKey) setBusyForKey(runningKey, false);
+        runningRepoKeyRef.current = null;
       }
     });
     return () => {
@@ -139,19 +190,24 @@ function App() {
   // UI didn't update vs. the reducer never ran at all.
   useEffect(() => {
     window.codeshell.log("state.update", {
+      activeKey: activeRepoKey,
       messageCount: state.messages.length,
       streamingId: state.streamingAssistantId,
       last: state.messages.at(-1) as Record<string, unknown> | undefined,
     });
-  }, [state]);
+  }, [state, activeRepoKey]);
 
   const send = (text: string): void => {
-    window.codeshell.log("send", { textLen: text.length, repo: activeRepo?.name ?? null });
-    dispatch({ type: "user_message", text });
-    setBusy(true);
-    void window.codeshell.run(text, activeRepo ? { cwd: activeRepo.path } : undefined).then((r) =>
-      window.codeshell.log("run.resolved", { result: r as unknown as Record<string, unknown> }),
-    );
+    const targetKey = activeRepoKey;
+    window.codeshell.log("send", { textLen: text.length, repo: activeRepo?.name ?? null, targetKey });
+    dispatch({ type: "user_message", repoKey: targetKey, text });
+    setBusyForKey(targetKey, true);
+    runningRepoKeyRef.current = targetKey;
+    void window.codeshell
+      .run(text, activeRepo ? { cwd: activeRepo.path } : undefined)
+      .then((r) =>
+        window.codeshell.log("run.resolved", { result: r as unknown as Record<string, unknown> }),
+      );
   };
 
   const stop = (): void => {
