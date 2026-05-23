@@ -81,6 +81,13 @@ function App() {
     );
   };
 
+  const stop = (): void => {
+    window.codeshell.log("stop.click", {});
+    void window.codeshell.cancel();
+    // Don't clear busy here — let turn_complete/error event do it,
+    // matching the existing run-complete code path.
+  };
+
   const decide = (decision: "approve" | "deny", reason?: string): void => {
     if (!approval) return;
     void window.codeshell.approve(approval.requestId, decision, reason);
@@ -90,7 +97,7 @@ function App() {
   return (
     <>
       {lifecycle && <div className="banner">{lifecycle}</div>}
-      <ChatView messages={state.messages} onSend={send} busy={busy} />
+      <ChatView messages={state.messages} onSend={send} onStop={stop} busy={busy} />
       {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
     </>
   );

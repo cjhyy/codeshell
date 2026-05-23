@@ -38,6 +38,33 @@ export async function runAgentServerStdio(config: EngineConfig): Promise<void> {
   // notification. There is no separate start() — see protocol/server.ts.
   const server = new AgentServer({ engine, transport });
 
+  // Track whether a run has completed at least once. The agent server
+  // notifies Status:"ready" both at startup (in its constructor) and at
+  // the end of each handleRun() in a `finally` block. We exit cleanly
+  // after the second "ready" — i.e. one run completed.
+  //
+  // Implementation: wrap `transport.send` to peek at outgoing
+  // notifications. On the post-run "ready" we close + exit.
+  const originalSend = transport.send.bind(transport);
+  let runHasStarted = false;
+  let shuttingDown = false;
+  transport.send = (msg) => {
+    originalSend(msg);
+    if (shuttingDown) return;
+    if ("method" in msg && msg.method === "agent/status") {
+      const status = (msg.params as { status?: string })?.status;
+      if (status === "running") runHasStarted = true;
+      else if (status === "ready" && runHasStarted) {
+        shuttingDown = true;
+        // Let the response flush, then bail.
+        setImmediate(() => {
+          server.close();
+          process.exit(0);
+        });
+      }
+    }
+  };
+
   await new Promise<void>((resolve) => {
     const shutdown = () => {
       server.close();

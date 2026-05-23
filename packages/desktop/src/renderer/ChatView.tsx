@@ -5,10 +5,11 @@ import type { Message } from "./types";
 interface Props {
   messages: Message[];
   onSend: (text: string) => void;
+  onStop: () => void;
   busy: boolean;
 }
 
-export function ChatView({ messages, onSend, busy }: Props) {
+export function ChatView({ messages, onSend, onStop, busy }: Props) {
   const [draft, setDraft] = useState("");
 
   const submit = (): void => {
@@ -35,9 +36,11 @@ export function ChatView({ messages, onSend, busy }: Props) {
           rows={3}
           disabled={busy}
         />
-        <button onClick={submit} disabled={busy || !draft.trim()}>
-          Send
-        </button>
+        {busy ? (
+          <button onClick={onStop}>Stop</button>
+        ) : (
+          <button onClick={submit} disabled={!draft.trim()}>Send</button>
+        )}
       </div>
     </div>
   );

@@ -4,12 +4,16 @@
  * Responsibilities:
  *   - Spawn a Node subprocess running @cjhyy/code-shell-core's
  *     agent-server-stdio.js with ELECTRON_RUN_AS_NODE=1 so the
- *     Electron binary serves as the Node runtime.
+ *     Electron binary serves as the Node runtime. Worker is spawned
+ *     on-demand (when an agent/run request arrives) and exits cleanly
+ *     after each run completes.
  *   - Pipe child stdout (readline-split) → renderer via
  *     window.webContents.send("agent:msg", line).
  *   - Pipe ipcMain "agent:msg" lines from renderer → child stdin.
- *   - Watch for child exit. Auto-respawn up to 3 times per 60s window;
- *     emit "agent:lifecycle" events to the renderer.
+ *   - Watch for child exit. Differentiate clean exits (code=0) from
+ *     crashes. After a crash, track a 3×/60s restart cap and emit
+ *     lifecycle events; but DON'T pre-emptively respawn — next user
+ *     run will trigger a fresh spawn anyway.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
@@ -32,80 +36,88 @@ function previewLine(s: string, max = 200): string {
 
 export class AgentBridge {
   private child: ChildProcess | null = null;
+  /** Pending lines that arrived before the worker was spawned. */
+  private outbox: string[] = [];
   private restartCount = 0;
   private restartWindowStart = Date.now();
   private ipcListenerAttached = false;
 
   constructor(private window: BrowserWindow) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
-    this.spawnChild();
     this.attachIpcListener();
   }
 
-  private spawnChild(): void {
-    dlog("bridge", "spawn.start", { restartCount: this.restartCount });
+  /**
+   * Spawn the worker for a new run. `cwd` is the working directory the
+   * Engine will use (i.e. the repo root). Idempotent if a child is alive.
+   */
+  private spawnChild(cwd: string | undefined): void {
+    if (this.child) return;
+    dlog("bridge", "spawn.start", { cwd, restartCount: this.restartCount });
     this.child = spawn(process.execPath, [agentEntry], {
-      env: {
-        ...process.env,
-        ELECTRON_RUN_AS_NODE: "1",
-        CODESHELL_AGENT_STDIO: "1",
-      },
+      cwd,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", CODESHELL_AGENT_STDIO: "1" },
       stdio: ["pipe", "pipe", "pipe"],
     });
-    dlog("bridge", "spawn.ok", { pid: this.child.pid });
-
+    dlog("bridge", "spawn.ok", { pid: this.child.pid, cwd });
     if (!this.child.stdout || !this.child.stdin || !this.child.stderr) {
       dlog("bridge", "spawn.error", { reason: "stdio not piped" });
       throw new Error("AgentBridge: child stdio not piped");
     }
-
     const rl = createInterface({ input: this.child.stdout });
     rl.on("line", (line) => {
       if (!line.trim()) return;
-      // Parse out method/id for a more useful summary; fall back to raw preview.
       let summary: Record<string, unknown> = { raw: previewLine(line) };
       try {
         const m = JSON.parse(line) as { method?: string; id?: number };
         if (m.method) summary = { method: m.method, raw: previewLine(line) };
         else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
-      } catch {
-        /* keep raw */
-      }
+      } catch { /* keep raw */ }
       dlog("bridge", "worker→renderer", summary);
       this.safeSend("agent:msg", line);
     });
-
     this.child.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
-      // The worker writes structured logs to ~/.code-shell/logs/engine-*.log
-      // already. Anything coming through stderr is either an unhandled
-      // exception or our own deliberate fatal write — always interesting.
       dlog("agent", "stderr", { text: previewLine(text, 800) });
       process.stderr.write(`[agent] ${text}`);
     });
-
     this.child.on("exit", (code, signal) => {
-      dlog("bridge", "child.exit", { code, signal });
-      this.safeSend("agent:lifecycle", { type: "exited", code });
-      if (this.shouldRestart()) {
-        dlog("bridge", "restart.attempt", { restartCount: this.restartCount });
-        this.spawnChild();
-        this.safeSend("agent:lifecycle", { type: "restarted" });
-      } else {
-        dlog("bridge", "restart.gave_up", { restartCount: this.restartCount });
+      dlog("bridge", "child.exit", { code, signal, pid: this.child?.pid });
+      this.child = null;
+      this.outbox = []; // any queued messages were for the dead child; drop
+      if (code === 0 && signal === null) {
+        // Normal completion. Reset restart counter — clean exits don't count.
+        this.restartCount = 0;
+        this.safeSend("agent:lifecycle", { type: "exited", code });
+        return;
+      }
+      // Real crash. Note it but DON'T pre-emptively respawn — next user
+      // run will trigger a fresh spawn anyway. We just decide whether to
+      // declare "gave up" so the renderer can show a banner.
+      if (this.shouldDeclareGaveUp()) {
+        dlog("bridge", "crash.gave_up", { restartCount: this.restartCount });
         this.safeSend("agent:lifecycle", { type: "gave_up" });
+      } else {
+        dlog("bridge", "crash.tolerable", { restartCount: this.restartCount });
+        this.safeSend("agent:lifecycle", { type: "exited", code });
       }
     });
+    // Flush queued lines now that stdin exists.
+    for (const queued of this.outbox) {
+      this.child.stdin.write(queued + "\n");
+    }
+    this.outbox = [];
   }
 
-  private shouldRestart(): boolean {
+  /** Returns true after >= RESTART_LIMIT crashes in the current 60s window. */
+  private shouldDeclareGaveUp(): boolean {
     const now = Date.now();
     if (now - this.restartWindowStart > RESTART_WINDOW_MS) {
       this.restartWindowStart = now;
       this.restartCount = 0;
     }
     this.restartCount++;
-    return this.restartCount <= RESTART_LIMIT;
+    return this.restartCount > RESTART_LIMIT;
   }
 
   private attachIpcListener(): void {
@@ -113,18 +125,27 @@ export class AgentBridge {
     this.ipcListenerAttached = true;
 
     ipcMain.on("agent:msg", (_event, line: string) => {
+      // Inspect the message: an agent/run is the only one that can trigger
+      // a fresh spawn. Other messages (agent/approve, agent/cancel) only
+      // make sense if the worker is already alive.
+      let parsed: { method?: string; params?: { cwd?: string } } = {};
+      try { parsed = JSON.parse(line); } catch { /* fall through */ }
+
+      if (parsed.method === "agent/run") {
+        this.spawnChild(parsed.params?.cwd);
+      }
+
       if (!this.child?.stdin || this.child.stdin.destroyed) {
-        dlog("bridge", "renderer→worker.dropped", { reason: "stdin destroyed", raw: previewLine(line) });
+        // No live worker. For approve / cancel this is fine — drop.
+        // For run, spawnChild above should have created one; if it
+        // didn't, log and drop.
+        dlog("bridge", "renderer→worker.dropped", {
+          reason: this.child ? "stdin destroyed" : "no child",
+          method: parsed.method,
+        });
         return;
       }
-      let summary: Record<string, unknown> = { raw: previewLine(line) };
-      try {
-        const m = JSON.parse(line) as { method?: string; id?: number };
-        if (m.method) summary = { method: m.method, id: m.id, raw: previewLine(line) };
-      } catch {
-        /* keep raw */
-      }
-      dlog("bridge", "renderer→worker", summary);
+      dlog("bridge", "renderer→worker", { method: parsed.method, raw: previewLine(line) });
       this.child.stdin.write(line + "\n");
     });
 

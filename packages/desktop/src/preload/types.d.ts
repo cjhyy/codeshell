@@ -35,7 +35,7 @@ export type Unsubscribe = () => void;
 export interface CodeshellApi {
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
-  run(prompt: string, opts?: Record<string, unknown>): Promise<RpcResponse>;
+  run(prompt: string, opts?: { cwd?: string; sessionId?: string }): Promise<RpcResponse>;
   cancel(): Promise<RpcResponse>;
   approve(id: string, decision: "approve" | "deny", reason?: string): Promise<RpcResponse>;
   onStreamEvent(cb: (event: StreamEvent) => void): Unsubscribe;

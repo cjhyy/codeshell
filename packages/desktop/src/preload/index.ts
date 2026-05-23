@@ -71,7 +71,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),
-  run: (task: string, opts?: Record<string, unknown>) =>
+  run: (task: string, opts?: { cwd?: string; sessionId?: string } & Record<string, unknown>) =>
     rpc("agent/run", { task, ...(opts ?? {}) }),
   cancel: () => rpc("agent/cancel"),
   approve: (requestId: string, decision: "approve" | "deny", reason?: string) =>
