@@ -32,6 +32,17 @@ export type AgentLifecycleEvent =
 
 export type Unsubscribe = () => void;
 
+export interface GitStatusEntry {
+  code: string;
+  path: string;
+}
+
+export interface GitStatus {
+  branch: string | null;
+  entries: GitStatusEntry[];
+  clean: boolean;
+}
+
 export interface CodeshellApi {
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
@@ -44,6 +55,13 @@ export interface CodeshellApi {
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
   /** Show native folder picker. Resolves to null if user canceled. */
   pickDir(): Promise<{ path: string; name: string } | null>;
+
+  // Phase 4 — git / shell services (renderer never spawns child procs directly).
+  getGitStatus(cwd: string): Promise<GitStatus>;
+  /** Unified diff for the working tree (vs HEAD). file optional. */
+  getGitDiff(cwd: string, file?: string): Promise<string>;
+  openExternal(url: string): Promise<void>;
+  revealInFinder(path: string): Promise<void>;
 }
 
 declare global {

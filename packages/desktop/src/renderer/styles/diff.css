@@ -1,0 +1,125 @@
+.diff-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+}
+.diff-loading, .diff-empty, .diff-error {
+  padding: var(--sp-3);
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+}
+.diff-error { color: var(--status-err); }
+
+.diff-file {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-elevated);
+}
+.diff-file-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--bg-app);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.diff-file-status {
+  font-size: var(--fz-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--fg-secondary);
+}
+.diff-file-status-added { color: var(--status-ok); border-color: var(--status-ok); }
+.diff-file-status-deleted { color: var(--status-err); border-color: var(--status-err); }
+.diff-file-status-renamed { color: var(--status-warn); border-color: var(--status-warn); }
+.diff-file-path { color: var(--fg-primary); font-weight: 500; }
+
+.diff-hunk { padding: var(--sp-1) 0; border-top: 1px solid var(--border-subtle); }
+.diff-hunk:first-of-type { border-top: 0; }
+.diff-hunk-head {
+  padding: 2px var(--sp-2);
+  color: var(--fg-muted);
+  background: var(--bg-app);
+  font-size: var(--fz-xs);
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.diff-line { line-height: 1.45; }
+.diff-line-add    { background: rgba(47,138,77,0.10); }
+.diff-line-del    { background: rgba(184,57,43,0.10); }
+.diff-line-meta   { color: var(--fg-muted); font-style: italic; }
+
+.diff-lineno {
+  width: 40px;
+  padding: 0 var(--sp-1);
+  text-align: right;
+  color: var(--fg-muted);
+  user-select: none;
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.diff-marker {
+  width: 14px;
+  padding-left: var(--sp-1);
+  color: var(--fg-muted);
+  text-align: center;
+}
+.diff-line-add .diff-marker { color: var(--status-ok); }
+.diff-line-del .diff-marker { color: var(--status-err); }
+.diff-text {
+  padding: 0 var(--sp-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--fg-primary);
+}
+
+.changed-files {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.changed-file {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  font-size: var(--fz-sm);
+  color: var(--fg-secondary);
+}
+.changed-file:hover { background: var(--bg-hover); }
+.changed-file.selected { background: var(--bg-selected); color: var(--fg-primary); }
+.changed-file-status {
+  width: 22px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+}
+.changed-file-status.status-added { color: var(--status-ok); }
+.changed-file-status.status-deleted { color: var(--status-err); }
+.changed-file-status.status-renamed { color: var(--status-warn); }
+.changed-file-status.status-modified { color: var(--status-running); }
+.changed-file-status.status-untracked { color: var(--fg-muted); }
+.changed-file-path {
+  flex: 1;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

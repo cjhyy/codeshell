@@ -29,6 +29,7 @@ import {
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { PanelLeft } from "./ui/icons";
 import { IconButton } from "./ui/IconButton";
+import { ApprovalsView } from "./approvals/ApprovalsView";
 
 /**
  * Transcripts are keyed by repoId; null repoId uses a "global" bucket.
@@ -62,9 +63,18 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
   return { ...map, [action.repoKey]: next };
 }
 
+interface ApprovalHistoryEntry {
+  decision: "approve" | "deny";
+  envelope: ApprovalRequestEnvelope;
+  reason?: string;
+  at: number;
+}
+
 function App() {
   const [transcripts, dispatch] = useReducer(reducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
+  const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
+  const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
   const [repos, setRepos] = useState<Repo[]>(() => loadRepos());
@@ -157,7 +167,10 @@ function App() {
     });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", { requestId: env.requestId, toolName: env.request.toolName });
-      setApproval(env);
+      setApprovalQueue((q) => [...q, env]);
+      // First-in-queue also becomes the modal blocker so the existing
+      // blocking flow keeps working for the user looking at chat.
+      setApproval((cur) => cur ?? env);
     });
     const offStatus = window.codeshell.onStatus((evt) => {
       window.codeshell.log("status", evt as Record<string, unknown>);
@@ -200,10 +213,30 @@ function App() {
     void window.codeshell.cancel();
   };
 
+  const decideEnvelope = (
+    env: ApprovalRequestEnvelope,
+    decision: "approve" | "deny",
+    reason?: string,
+  ): void => {
+    void window.codeshell.approve(env.requestId, decision, reason);
+    setApprovalQueue((q) => q.filter((e) => e.requestId !== env.requestId));
+    setApprovalHistory((h) => [
+      ...h,
+      { decision, envelope: env, reason, at: Date.now() },
+    ]);
+    setApproval((cur) => {
+      if (!cur || cur.requestId === env.requestId) {
+        // Promote next queued envelope into modal (if any).
+        const next = approvalQueue.find((e) => e.requestId !== env.requestId);
+        return next ?? null;
+      }
+      return cur;
+    });
+  };
+
   const decide = (decision: "approve" | "deny", reason?: string): void => {
     if (!approval) return;
-    void window.codeshell.approve(approval.requestId, decision, reason);
-    setApproval(null);
+    decideEnvelope(approval, decision, reason);
   };
 
   const showWelcome = state.messages.length === 0;
@@ -241,7 +274,7 @@ function App() {
           onRemoveRepo={handleRemoveRepo}
           viewMode={view.viewMode}
           onSelectView={setViewMode}
-          approvalsBadge={approval ? 1 : 0}
+          approvalsBadge={approvalQueue.length}
           runsBadge={busy ? 1 : 0}
         />
       </div>
@@ -260,7 +293,13 @@ function App() {
           </IconButton>
         </div>
         {lifecycle && <div className="banner">{lifecycle}</div>}
-        {view.viewMode === "chat" ? (
+        {view.viewMode === "approvals" ? (
+          <ApprovalsView
+            queue={approvalQueue}
+            history={approvalHistory}
+            onDecide={decideEnvelope}
+          />
+        ) : view.viewMode === "chat" ? (
           <>
             {showWelcome && (
               <div className="welcome">

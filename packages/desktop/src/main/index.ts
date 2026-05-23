@@ -8,6 +8,12 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve, basename } from "node:path";
 import { AgentBridge } from "./agent-bridge.js";
 import { dlog } from "./desktop-logger.js";
+import {
+  getGitStatus,
+  getGitDiff,
+  openExternal,
+  revealInFinder,
+} from "./desktop-services.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -65,6 +71,26 @@ ipcMain.handle("dialog:pickDir", async (): Promise<{ path: string; name: string 
   if (res.canceled || res.filePaths.length === 0) return null;
   const path = res.filePaths[0];
   return { path, name: basename(path) };
+});
+
+ipcMain.handle("git:status", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:status requires cwd");
+  return getGitStatus(cwd);
+});
+
+ipcMain.handle("git:diff", async (_e, cwd: string, file?: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:diff requires cwd");
+  return getGitDiff(cwd, file);
+});
+
+ipcMain.handle("shell:openExternal", async (_e, url: string) => {
+  if (typeof url !== "string") throw new Error("openExternal requires url");
+  await openExternal(url);
+});
+
+ipcMain.handle("shell:revealInFinder", async (_e, p: string) => {
+  if (typeof p !== "string") throw new Error("revealInFinder requires path");
+  await revealInFinder(p);
 });
 
 app.on("window-all-closed", () => {
