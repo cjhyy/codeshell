@@ -15,12 +15,14 @@ import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
 } from "../preload/types";
-
-const DUMMY_REPOS = [
-  { id: "codeshell", name: "codeshell" },
-  { id: "tanka-fast-app", name: "tanka-fast-app" },
-  { id: "ai-test-platform", name: "ai-test-platform" },
-];
+import {
+  loadRepos,
+  saveRepos,
+  loadActiveRepoId,
+  saveActiveRepoId,
+  makeRepoId,
+  type Repo,
+} from "./repos";
 
 type Action =
   | { type: "user_message"; text: string }
@@ -36,7 +38,40 @@ function App() {
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [activeRepoId, setActiveRepoId] = useState<string | null>(null);
+  const [repos, setRepos] = useState<Repo[]>(() => loadRepos());
+  const [activeRepoId, setActiveRepoId] = useState<string | null>(() => loadActiveRepoId());
+
+  useEffect(() => { saveRepos(repos); }, [repos]);
+  useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
+
+  const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
+
+  const handleAddRepo = async (): Promise<void> => {
+    window.codeshell.log("sidebar.add_clicked", {});
+    const picked = await window.codeshell.pickDir();
+    if (!picked) return;
+    if (repos.some((r) => r.path === picked.path)) {
+      // Already added — just select it instead of duplicating.
+      const existing = repos.find((r) => r.path === picked.path);
+      if (existing) setActiveRepoId(existing.id);
+      return;
+    }
+    const next: Repo = {
+      id: makeRepoId(),
+      name: picked.name,
+      path: picked.path,
+      addedAt: Date.now(),
+    };
+    setRepos((prev) => [...prev, next]);
+    setActiveRepoId(next.id);
+    window.codeshell.log("repo.added", { id: next.id, path: next.path });
+  };
+
+  const handleRemoveRepo = (id: string): void => {
+    setRepos((prev) => prev.filter((r) => r.id !== id));
+    if (activeRepoId === id) setActiveRepoId(null);
+    window.codeshell.log("repo.removed", { id });
+  };
 
   useEffect(() => {
     window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
@@ -82,10 +117,10 @@ function App() {
   }, [state]);
 
   const send = (text: string): void => {
-    window.codeshell.log("send", { textLen: text.length, preview: text.slice(0, 60) });
+    window.codeshell.log("send", { textLen: text.length, repo: activeRepo?.name ?? null });
     dispatch({ type: "user_message", text });
     setBusy(true);
-    void window.codeshell.run(text).then((r) =>
+    void window.codeshell.run(text, activeRepo ? { cwd: activeRepo.path } : undefined).then((r) =>
       window.codeshell.log("run.resolved", { result: r as unknown as Record<string, unknown> }),
     );
   };
@@ -107,10 +142,11 @@ function App() {
     <div className="app-grid">
       <TopBar />
       <Sidebar
-        repos={DUMMY_REPOS}
+        repos={repos}
         activeRepoId={activeRepoId}
         onSelectRepo={setActiveRepoId}
-        onAddRepo={() => window.codeshell.log("sidebar.add_clicked", {})}
+        onAddRepo={() => { void handleAddRepo(); }}
+        onRemoveRepo={handleRemoveRepo}
       />
       <main className="main">
         {lifecycle && <div className="banner">{lifecycle}</div>}

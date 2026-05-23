@@ -3,9 +3,9 @@
  * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
  */
 
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, basename } from "node:path";
 import { AgentBridge } from "./agent-bridge.js";
 import { dlog } from "./desktop-logger.js";
 
@@ -56,6 +56,16 @@ function createWindow(): void {
 }
 
 app.whenReady().then(createWindow);
+
+ipcMain.handle("dialog:pickDir", async (): Promise<{ path: string; name: string } | null> => {
+  const res = await dialog.showOpenDialog({
+    title: "选择项目目录",
+    properties: ["openDirectory", "createDirectory"],
+  });
+  if (res.canceled || res.filePaths.length === 0) return null;
+  const path = res.filePaths[0];
+  return { path, name: basename(path) };
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

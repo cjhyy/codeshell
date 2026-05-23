@@ -42,6 +42,8 @@ export interface CodeshellApi {
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
+  /** Show native folder picker. Resolves to null if user canceled. */
+  pickDir(): Promise<{ path: string; name: string } | null>;
 }
 
 declare global {

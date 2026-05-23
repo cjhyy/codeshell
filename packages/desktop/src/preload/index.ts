@@ -109,4 +109,6 @@ contextBridge.exposeInMainWorld("codeshell", {
       if (i >= 0) lifecycleListeners.splice(i, 1);
     };
   },
+  pickDir: (): Promise<{ path: string; name: string } | null> =>
+    ipcRenderer.invoke("dialog:pickDir"),
 });

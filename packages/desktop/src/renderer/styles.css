@@ -135,6 +135,19 @@ pre { margin: 0; white-space: pre-wrap; font-family: monospace; }
   color: #1a1a1a;
 }
 
+.repo-row { display: flex; align-items: center; justify-content: space-between; }
+.repo-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repo-remove {
+  background: transparent; border: none; color: #888; font-size: 16px;
+  padding: 0 6px; cursor: pointer; opacity: 0;
+  transition: opacity 0.1s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.repo-row:hover .repo-remove { opacity: 1; }
+.repo-remove:hover { color: #c33; }
+.repo-empty { color: #999; font-size: 12px; padding: 8px 12px; }
+
 /* main content area */
 .main {
   grid-column: 2;

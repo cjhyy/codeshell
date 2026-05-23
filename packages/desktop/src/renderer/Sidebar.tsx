@@ -1,11 +1,11 @@
 import React from "react";
 
 interface SidebarProps {
-  /** Hard-coded for B8; B9 wires the real list. */
   repos: { id: string; name: string }[];
   activeRepoId: string | null;
   onSelectRepo: (id: string) => void;
   onAddRepo: () => void;
+  onRemoveRepo: (id: string) => void;
 }
 
 const MENU_ITEMS = [
@@ -15,7 +15,7 @@ const MENU_ITEMS = [
   { icon: "⚙", label: "自动化" },
 ];
 
-export function Sidebar({ repos, activeRepoId, onSelectRepo, onAddRepo }: SidebarProps) {
+export function Sidebar({ repos, activeRepoId, onSelectRepo, onAddRepo, onRemoveRepo }: SidebarProps) {
   return (
     <aside className="sidebar">
       <nav className="sidebar-menu">
@@ -32,13 +32,26 @@ export function Sidebar({ repos, activeRepoId, onSelectRepo, onAddRepo }: Sideba
       <div className="sidebar-section-label">项目</div>
 
       <div className="sidebar-repos">
+        {repos.length === 0 && (
+          <div className="repo-empty">点 + 添加你的第一个 repo</div>
+        )}
         {repos.map((repo) => (
           <div
             key={repo.id}
-            className={`sidebar-repo-item${activeRepoId === repo.id ? " selected" : ""}`}
+            className={`sidebar-repo-item repo-row${activeRepoId === repo.id ? " selected" : ""}`}
             onClick={() => onSelectRepo(repo.id)}
           >
-            {repo.name}
+            <span className="repo-name">{repo.name}</span>
+            <button
+              className="repo-remove"
+              title="移除"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemoveRepo(repo.id);
+              }}
+            >
+              ×
+            </button>
           </div>
         ))}
         <div className="sidebar-repo-item sidebar-add" onClick={onAddRepo}>
