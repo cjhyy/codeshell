@@ -2,6 +2,8 @@ import React, { useEffect, useReducer, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import { ApprovalModal } from "./ApprovalModal";
+import { TopBar } from "./TopBar";
+import { Sidebar } from "./Sidebar";
 import {
   applyStreamEvent,
   appendUserMessage,
@@ -13,6 +15,12 @@ import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
 } from "../preload/types";
+
+const DUMMY_REPOS = [
+  { id: "codeshell", name: "codeshell" },
+  { id: "tanka-fast-app", name: "tanka-fast-app" },
+  { id: "ai-test-platform", name: "ai-test-platform" },
+];
 
 type Action =
   | { type: "user_message"; text: string }
@@ -28,6 +36,7 @@ function App() {
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [activeRepoId, setActiveRepoId] = useState<string | null>(null);
 
   useEffect(() => {
     window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
@@ -95,11 +104,20 @@ function App() {
   };
 
   return (
-    <>
-      {lifecycle && <div className="banner">{lifecycle}</div>}
-      <ChatView messages={state.messages} onSend={send} onStop={stop} busy={busy} />
-      {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
-    </>
+    <div className="app-grid">
+      <TopBar />
+      <Sidebar
+        repos={DUMMY_REPOS}
+        activeRepoId={activeRepoId}
+        onSelectRepo={setActiveRepoId}
+        onAddRepo={() => window.codeshell.log("sidebar.add_clicked", {})}
+      />
+      <main className="main">
+        {lifecycle && <div className="banner">{lifecycle}</div>}
+        <ChatView messages={state.messages} onSend={send} onStop={stop} busy={busy} />
+        {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
+      </main>
+    </div>
   );
 }
 
