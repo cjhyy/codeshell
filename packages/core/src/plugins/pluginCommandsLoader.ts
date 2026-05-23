@@ -9,7 +9,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import memoize from "lodash-es/memoize.js";
+import { memoize } from "../utils/memoize.js";
 import { parseFrontmatter, coerceDescription } from "../skills/frontmatter.js";
 import { installedPluginsPath, readInstalledPlugins } from "./installedPlugins.js";
 

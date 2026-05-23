@@ -8,7 +8,7 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import memoize from "lodash-es/memoize.js";
+import { memoize } from "../utils/memoize.js";
 import { parseFrontmatter, coerceDescription } from "./frontmatter.js";
 import { installedPluginsPath, readInstalledPlugins } from "../plugins/installedPlugins.js";
 
