@@ -469,6 +469,7 @@ export {
 // ─── Protocol (extended for TUI) ────────────────────────────────
 
 export { createInProcessClient } from "./protocol/helpers.js";
+export { runAgentServerStdio, buildEngineConfigFromSettings } from "./cli/agent-server-stdio.js";
 export type { ProtocolModelEntry } from "./protocol/types.js";
 
 // ─── Arena (extended for TUI) ───────────────────────────────────
