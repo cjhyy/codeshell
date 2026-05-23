@@ -379,8 +379,12 @@ textarea {
   padding: 8px 10px;
   font: inherit;
   resize: none;
+  min-height: 36px;
+  max-height: 200px;
+  line-height: 1.5;
   outline: none;
   transition: border-color 0.15s;
+  overflow-y: auto;
 }
 
 textarea:focus {
@@ -497,3 +501,10 @@ button:disabled {
 .modal-actions input:focus {
   border-color: #a89e8a;
 }
+
+textarea:disabled {
+  background: #f4f3ee;
+  color: #aaa;
+  cursor: not-allowed;
+}
+.send-btn:disabled, .stop-btn:disabled { opacity: 0.5; cursor: not-allowed; }

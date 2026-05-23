@@ -150,7 +150,7 @@ function App() {
       />
       <main className="main">
         {lifecycle && <div className="banner">{lifecycle}</div>}
-        <ChatView messages={state.messages} onSend={send} onStop={stop} busy={busy} />
+        <ChatView messages={state.messages} onSend={send} onStop={stop} busy={busy} activeRepoId={activeRepoId} />
         {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
       </main>
     </div>
