@@ -40,6 +40,10 @@ export function loadTranscript(repoId: string | null): MessagesReducerState {
     return {
       messages: parsed.messages,
       streamingAssistantId: parsed.streamingAssistantId ?? null,
+      streamingThinkingId: parsed.streamingThinkingId ?? null,
+      sessionId: parsed.sessionId ?? null,
+      promptTokens: parsed.promptTokens ?? 0,
+      activeAgents: parsed.activeAgents ?? {},
     };
   } catch {
     return INITIAL_STATE;

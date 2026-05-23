@@ -221,11 +221,11 @@ function App() {
       <div className="topbar-region">
         <TopBar
           repoName={activeRepo?.name ?? null}
-          sessionTitle={null}
+          sessionTitle={state.sessionId ? state.sessionId.slice(0, 8) : null}
           branch={null}
           model={null}
           permissionMode={null}
-          promptTokens={undefined}
+          promptTokens={state.promptTokens > 0 ? state.promptTokens : undefined}
           busy={busy}
         />
       </div>
