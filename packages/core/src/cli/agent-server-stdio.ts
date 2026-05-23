@@ -12,6 +12,7 @@
  *   - third-party IDE/CLI integrators in the future
  */
 
+import { pathToFileURL } from "node:url";
 import { Engine, type EngineConfig } from "../engine/engine.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
@@ -73,8 +74,11 @@ export function buildEngineConfigFromSettings(): EngineConfig {
 }
 
 // Direct-execute entry: `node dist/cli/agent-server-stdio.js`.
-// Detect "I'm the main module" the ESM-safe way.
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Use pathToFileURL so paths with non-ASCII characters (e.g. CJK
+// install dirs) URL-encode the same way import.meta.url does — naive
+// `file://${argv[1]}` string-templating misses that and the guard
+// never fires.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = buildEngineConfigFromSettings();
   runAgentServerStdio(config).catch((err) => {
     process.stderr.write(`agent-server-stdio fatal: ${(err as Error).stack ?? err}\n`);
