@@ -1,55 +1,76 @@
-import React from "react";
+import React, { useEffect, useReducer, useState } from "react";
+import type { StreamEvent } from "@cjhyy/code-shell-core";
+import { ChatView } from "./ChatView";
+import { ApprovalModal } from "./ApprovalModal";
+import {
+  applyStreamEvent,
+  appendUserMessage,
+  INITIAL_STATE,
+  type MessagesReducerState,
+  type ApprovalState,
+} from "./types";
+import type {
+  AgentLifecycleEvent,
+  ApprovalRequestEnvelope,
+} from "../preload/types";
 
-/**
- * Placeholder renderer.
- *
- * Renderer is a "thin client" by design: it MUST NOT import any
- * codeshell source. All Engine / AgentServer logic lives in the main
- * process. The renderer will only talk to main through the
- * `window.codeShell.*` surface exposed by preload (see
- * src/preload/index.ts).
- *
- * That bridge is not wired yet — it depends on:
- *   1. The monorepo split landing (so `@cjhyy/code-shell-core` is a real
- *      package main can import without dragging Node modules into the
- *      renderer bundle).
- *   2. main.ts running `AgentServer(engine, ipcTransport)` and exposing
- *      run/cancel/approve over `ipcMain.handle`.
- *   3. preload.ts re-exposing those as named methods on
- *      `window.codeShell`.
- *
- * Until then the renderer shows this placeholder. The Electron window
- * opening at all is enough to prove the dev orchestrator (vite +
- * esbuild + electron) works end-to-end.
- */
-export function App(): React.ReactElement {
+type Action =
+  | { type: "user_message"; text: string }
+  | { type: "stream"; event: StreamEvent };
+
+function reducer(state: MessagesReducerState, action: Action): MessagesReducerState {
+  if (action.type === "user_message") return appendUserMessage(state, action.text);
+  return applyStreamEvent(state, action.event);
+}
+
+function App() {
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [approval, setApproval] = useState<ApprovalState>(null);
+  const [lifecycle, setLifecycle] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const offStream = window.codeshell.onStreamEvent((event: StreamEvent) => {
+      dispatch({ type: "stream", event });
+      if (event.type === "turn_complete") setBusy(false);
+      if (event.type === "error") setBusy(false);
+    });
+    const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
+      setApproval(env);
+    });
+    const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
+      if (evt.type === "restarted") setLifecycle("Agent restarted.");
+      else if (evt.type === "gave_up") setLifecycle("Agent crashed too many times. Quit and reopen.");
+      else if (evt.type === "exited") setLifecycle(`Agent exited (code ${evt.code}).`);
+    });
+    return () => {
+      offStream();
+      offApproval();
+      offLifecycle();
+    };
+  }, []);
+
+  const send = (text: string): void => {
+    dispatch({ type: "user_message", text });
+    setBusy(true);
+    void window.codeshell.run(text);
+  };
+
+  const decide = (decision: "approve" | "deny", reason?: string): void => {
+    if (!approval) return;
+    void window.codeshell.approve(approval.requestId, decision, reason);
+    setApproval(null);
+  };
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        gap: 12,
-        padding: 24,
-        fontFamily: "ui-sans-serif, system-ui, sans-serif",
-        textAlign: "center",
-      }}
-    >
-      <div style={{ fontSize: 22, fontWeight: 600 }}>code-shell · desktop</div>
-      <div style={{ opacity: 0.6, fontSize: 13, maxWidth: 460, lineHeight: 1.6 }}>
-        Renderer is a placeholder. Main process boots; IPC bridge to{" "}
-        <code className="mono">window.codeShell</code> lands after the monorepo
-        split.
-      </div>
-      <div style={{ marginTop: 16, fontSize: 12, opacity: 0.4 }}>
-        <code className="mono">
-          {typeof window !== "undefined" && (window as any).codeShell
-            ? "✓ preload bridge detected"
-            : "preload bridge: pending"}
-        </code>
-      </div>
-    </div>
+    <>
+      {lifecycle && <div className="banner">{lifecycle}</div>}
+      <ChatView messages={state.messages} onSend={send} busy={busy} />
+      {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
+    </>
   );
 }
+
+// Named export for main.tsx which uses `import { App }`
+export { App };
+export default App;
