@@ -9,44 +9,25 @@ body {
 
 pre { margin: 0; white-space: pre-wrap; font-family: monospace; }
 
-/* ── Layout grid ── */
+/* ── Layout grid: two columns, sidebar left, main right, no topbar ── */
 #root {
   display: grid;
-  grid-template-rows: 40px 1fr;
   grid-template-columns: 240px 1fr;
+  grid-template-rows: 1fr;
   height: 100vh;
   overflow: hidden;
 }
 
-/* topbar spans both columns */
-.topbar {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  background: #fafaf9;
-  border-bottom: 1px solid #e6e3da;
-  height: 40px;
-}
-
-.topbar-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1a1a1a;
-  letter-spacing: 0.01em;
-}
-
-/* sidebar */
+/* sidebar — full height on the left */
 .sidebar {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 1;
   background: #f0eee6;
   border-right: 1px solid #e6e3da;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+  padding: 12px 0;
 }
 
 .sidebar-menu {
@@ -151,12 +132,39 @@ pre { margin: 0; white-space: pre-wrap; font-family: monospace; }
 /* main content area */
 .main {
   grid-column: 2;
-  grid-row: 2;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: #fafaf9;
   position: relative;
+}
+
+/* welcome state — overlay on the main area, doesn't fight ChatView for flex.
+   Pointer-events:none lets the input row underneath stay clickable. */
+.welcome {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px 120px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+.welcome-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+.welcome-hint {
+  font-size: 14px;
+  color: #888;
 }
 
 /* ── Banner ── */

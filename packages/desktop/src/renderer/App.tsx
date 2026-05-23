@@ -1,8 +1,7 @@
-import React, { useEffect, useReducer, useState } from "react";
+import React, { useEffect, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import { ApprovalModal } from "./ApprovalModal";
-import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
 import {
   applyStreamEvent,
@@ -26,10 +25,12 @@ import {
 
 type Action =
   | { type: "user_message"; text: string }
-  | { type: "stream"; event: StreamEvent };
+  | { type: "stream"; event: StreamEvent }
+  | { type: "reset" };
 
 function reducer(state: MessagesReducerState, action: Action): MessagesReducerState {
   if (action.type === "user_message") return appendUserMessage(state, action.text);
+  if (action.type === "reset") return INITIAL_STATE;
   return applyStreamEvent(state, action.event);
 }
 
@@ -43,6 +44,23 @@ function App() {
 
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
+
+  // Clear the conversation when the active repo changes. Each repo gets
+  // its own "fresh chat" — Phase 3b will replace this with real
+  // per-repo session persistence, but until then the right UX is to
+  // show that switching context = new conversation, not the old one
+  // dangling over the new repo. Skip on first mount (when both prev
+  // and curr come from localStorage and we're not switching anything).
+  const prevRepoIdRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (prevRepoIdRef.current !== undefined && prevRepoIdRef.current !== activeRepoId) {
+      dispatch({ type: "reset" });
+      setApproval(null);
+      setLifecycle(null);
+      void window.codeshell.cancel().catch(() => {/* worker may already be dead */});
+    }
+    prevRepoIdRef.current = activeRepoId;
+  }, [activeRepoId]);
 
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
 
@@ -96,7 +114,18 @@ function App() {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
       else if (evt.type === "gave_up") setLifecycle("Agent crashed too many times. Quit and reopen.");
-      else if (evt.type === "exited") setLifecycle(`Agent exited (code ${evt.code}).`);
+      else if (evt.type === "exited") {
+        // code=0 means the worker self-exited cleanly after a turn — that's
+        // the expected on-demand-spawn flow, not an error worth banner-ing.
+        // Anything else is a crash and the user should see it.
+        if (evt.code === 0) {
+          setLifecycle(null);
+          setBusy(false); // defensive: in case turn_complete somehow didn't fire
+        } else {
+          setLifecycle(`Agent exited (code ${evt.code}).`);
+          setBusy(false);
+        }
+      }
     });
     return () => {
       offStream();
@@ -138,9 +167,10 @@ function App() {
     setApproval(null);
   };
 
+  const showWelcome = state.messages.length === 0;
+
   return (
     <div className="app-grid">
-      <TopBar />
       <Sidebar
         repos={repos}
         activeRepoId={activeRepoId}
@@ -150,6 +180,18 @@ function App() {
       />
       <main className="main">
         {lifecycle && <div className="banner">{lifecycle}</div>}
+        {showWelcome && (
+          <div className="welcome">
+            <div className="welcome-title">
+              {activeRepo ? activeRepo.name : "code-shell"}
+            </div>
+            <div className="welcome-hint">
+              {activeRepoId === null
+                ? "先在左侧添加一个项目"
+                : "开始一个新对话 — 试试: 列出当前目录"}
+            </div>
+          </div>
+        )}
         <ChatView messages={state.messages} onSend={send} onStop={stop} busy={busy} activeRepoId={activeRepoId} />
         {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
       </main>
