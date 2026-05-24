@@ -620,7 +620,34 @@ function App() {
             ? (pm as PermissionMode)
             : "default",
         );
-        setModelOptions(candidatesFromSettings(merged));
+        const baseOpts = candidatesFromSettings(merged);
+        setModelOptions(baseOpts);
+
+        // Resolve maxContextTokens for entries that didn't declare one
+        // via main-process model-meta-service (OpenRouter API → hardcoded
+        // table → fallback). Done out-of-band so the initial render
+        // doesn't wait on the network.
+        const providers = Array.isArray(merged.providers)
+          ? (merged.providers as Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>)
+          : [];
+        const rawModels = Array.isArray(merged.models)
+          ? (merged.models as Array<{
+              key: string;
+              model?: string;
+              providerKey?: string;
+              maxContextTokens?: number | null;
+            }>)
+          : [];
+        const meta = await window.codeshell.resolveModelMeta(rawModels, providers);
+        if (cancelled) return;
+        const byKey = new Map(meta.map((m) => [m.key, m]));
+        setModelOptions((prev) =>
+          prev.map((o) => {
+            const r = byKey.get(o.key);
+            if (!r) return o;
+            return { ...o, maxContextTokens: r.maxContextTokens };
+          }),
+        );
       } catch {
         // ignore
       }

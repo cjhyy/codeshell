@@ -81,6 +81,15 @@ export interface CodeshellApi {
   getRun(runId: string): Promise<RunDetail | null>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
   readSkillBody(filePath: string): Promise<string>;
+  resolveModelMeta(
+    models: Array<{ key: string; model?: string; providerKey?: string; maxContextTokens?: number | null }>,
+    providers: Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>,
+  ): Promise<Array<{
+    key: string;
+    maxContextTokens: number;
+    maxCompletionTokens?: number;
+    source: "settings" | "openrouter-api" | "hardcoded" | "fallback";
+  }>>;
 
   // Phase 6 — native polish & security.
   getTrust(path: string): Promise<"trusted" | "untrusted" | "unknown">;
