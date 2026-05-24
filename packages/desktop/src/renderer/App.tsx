@@ -114,13 +114,16 @@ function App() {
     return out;
   });
 
-  /** Ensure the active repo has at least one session; return its id. */
+  /**
+   * Create a fresh session on demand (lazy: only when the user actually
+   * sends a message). A null `activeSessionId` means "draft state" —
+   * chat surface shows the welcome, sidebar shows no row, no empty
+   * stub clutters the session list. Caller-owned setState so the new
+   * id can be threaded into a follow-up `touchSession` without two
+   * back-to-back setSessionIndices calls clobbering each other.
+   */
   const ensureActiveSession = (repoId: string | null): string => {
-    const key = repoKeyOf(repoId);
-    const idx = sessionIndices[key] ?? loadSessionIndex(repoId);
-    if (idx.activeSessionId) return idx.activeSessionId;
-    const { index, sessionId } = createSession(repoId);
-    setSessionIndices((prev) => ({ ...prev, [key]: index }));
+    const { sessionId } = createSession(repoId);
     return sessionId;
   };
 
@@ -135,11 +138,9 @@ function App() {
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
 
-  // Ensure the visible repo always has a session selected. Auto-creates
-  // one if the user just added a repo or switched to an empty index.
-  useEffect(() => {
-    if (!activeSessionId) ensureActiveSession(activeRepoId);
-  }, [activeRepoId, activeSessionId]);
+  // No auto-create here: a null activeSessionId is the legitimate
+  // "draft" state. A real session row only appears after the user
+  // actually sends a message (see `send` below).
 
   // Lazy-hydrate transcript on first view of a bucket.
   useEffect(() => {
@@ -230,14 +231,20 @@ function App() {
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
+  /**
+   * Enter draft state: clear activeSessionId so chat shows the welcome
+   * surface and no empty stub appears in the session list. A real
+   * session row only materializes when the user sends the first message
+   * (see `send` → ensureActiveSession + touchSession).
+   */
   const handleNewConversation = (): void => {
     const repoId = activeRepoId;
-    const { index, sessionId } = createSession(repoId);
-    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: index }));
+    setSessionIndices((prev) => ({
+      ...prev,
+      [repoKeyOf(repoId)]: setActiveSession(repoId, null),
+    }));
     setSelectedToolId(null);
     setView((v) => ({ ...v, viewMode: "chat" }));
-    // hydrate empty bucket so chat shows welcome state
-    dispatch({ type: "hydrate", bucket: bucketKey(repoId, sessionId), state: INITIAL_STATE });
   };
 
   const handleRenameSession = (
@@ -306,6 +313,8 @@ function App() {
   }, []);
 
   const send = (text: string): void => {
+    // createSession persists to localStorage synchronously, so reading
+    // it back via touchSession() right after sees the new entry.
     const sid = activeSessionId ?? ensureActiveSession(activeRepoId);
     const bucket = bucketKey(activeRepoId, sid);
     window.codeshell.log("send", { textLen: text.length, repo: activeRepo?.name ?? null, bucket });
@@ -314,6 +323,9 @@ function App() {
     runningBucketRef.current = bucket;
 
     // Touch session: bump updatedAt + adopt first user prompt as title.
+    // Single setSessionIndices: touchSession reads the just-persisted
+    // (possibly-just-created) index from localStorage, applies the
+    // title/updatedAt, and writes it back.
     setSessionIndices((prev) => ({
       ...prev,
       [repoKeyOf(activeRepoId)]: touchSession(activeRepoId, sid, text),
