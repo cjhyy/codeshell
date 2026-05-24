@@ -216,6 +216,17 @@
   color: var(--fg-secondary);
   font-size: var(--fz-sm);
 }
+.context-ring-tt-fallback {
+  margin-left: 4px;
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+}
+.context-ring-tt-note {
+  margin-top: 6px;
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  line-height: 1.4;
+}
 .context-ring-tt-sub {
   margin-top: 4px;
   color: var(--fg-muted);

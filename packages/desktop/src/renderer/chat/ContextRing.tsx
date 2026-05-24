@@ -2,27 +2,25 @@ import React, { useState } from "react";
 
 interface Props {
   used: number;
+  /**
+   * Active model's maxContextTokens, from settings.json. Undefined when
+   * the user's chosen model entry doesn't declare one (e.g. openai
+   * models in the default config). We fall back to FALLBACK_MAX and
+   * surface a note in the hover tooltip so users don't misread the
+   * ring as the wrong fullness.
+   */
   max?: number;
   /** True while an agent run is in flight — show breathing animation. */
   busy?: boolean;
 }
 
-/**
- * Compact context-usage indicator in the composer row.
- *
- * Three visual states:
- *   - Idle, no tokens yet (fresh session): ring grey, label "—".
- *     Without this users mistake "0%" for "history was wiped".
- *   - Idle with usage: ring filled, label "XX%".
- *   - Busy (agent running): label "·" with a gentle pulse so the user
- *     sees that token count is in flight and will land after the turn.
- *
- * Hover shows a popover with 已用 / 剩余 / 上限 and a thin progress bar.
- */
-export function ContextRing({ used, max = 200_000, busy }: Props) {
+const FALLBACK_MAX = 128_000;
+
+export function ContextRing({ used, max, busy }: Props) {
   const [hover, setHover] = useState(false);
 
-  const safeMax = max > 0 ? max : 200_000;
+  const hasDeclaredMax = typeof max === "number" && max > 0;
+  const safeMax = hasDeclaredMax ? (max as number) : FALLBACK_MAX;
   const ratio = Math.max(0, Math.min(1, used / safeMax));
   const pct = Math.round(ratio * 100);
   const remaining = Math.max(0, safeMax - used);
@@ -81,7 +79,10 @@ export function ContextRing({ used, max = 200_000, busy }: Props) {
           {!hasUsage ? (
             <div className="context-ring-tt-empty">
               {busy ? "已发送，等待引擎统计…" : "新会话，尚未消耗上下文"}
-              <div className="context-ring-tt-sub">上限 {formatTok(safeMax)}</div>
+              <div className="context-ring-tt-sub">
+                上限 {formatTok(safeMax)}
+                {!hasDeclaredMax && " (默认，模型未声明)"}
+              </div>
             </div>
           ) : (
             <>
@@ -95,11 +96,21 @@ export function ContextRing({ used, max = 200_000, busy }: Props) {
               </div>
               <div className="context-ring-tt-row">
                 <span className="context-ring-tt-label">上限</span>
-                <span className="context-ring-tt-val">{formatTok(safeMax)}</span>
+                <span className="context-ring-tt-val">
+                  {formatTok(safeMax)}
+                  {!hasDeclaredMax && (
+                    <span className="context-ring-tt-fallback"> 默认</span>
+                  )}
+                </span>
               </div>
               <div className="context-ring-tt-bar">
                 <div className="context-ring-tt-bar-fill" style={{ width: `${pct}%`, background: tone }} />
               </div>
+              {!hasDeclaredMax && (
+                <div className="context-ring-tt-note">
+                  当前模型未在 settings.json 声明 maxContextTokens，使用 128k 作为默认。
+                </div>
+              )}
             </>
           )}
         </div>
