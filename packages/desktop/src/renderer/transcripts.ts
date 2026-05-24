@@ -27,7 +27,7 @@ const TRANSCRIPT_MSG_CAP = 500;
 const GLOBAL_REPO = "__global__";
 
 export interface SessionSummary {
-  /** Local UI session id (NOT the engine session id; see types.ts `sessionId`). */
+  /** Local UI session id (NOT the engine session id; see `engineSessionId`). */
   id: string;
   title: string;
   createdAt: number;
@@ -35,6 +35,15 @@ export interface SessionSummary {
   /** True when the user has archived this session — hidden from the
    *  main list, accessible under a collapsed "已归档" group. */
   archived?: boolean;
+  /**
+   * Engine sessionId bound to this UI session. Empty until the first
+   * agent/run for this UI session completes (or session_started fires).
+   * On subsequent sends we MUST pass this value as `sessionId` so the
+   * worker resumes the right engine session instead of letting the
+   * engine auto-pick the last active one — that's the bug that made
+   * '新对话' resume the previous chat's context.
+   */
+  engineSessionId?: string;
 }
 
 export interface SessionIndex {
@@ -198,6 +207,23 @@ export function deleteSessionLocal(
   const next: SessionIndex = { sessions: remaining, activeSessionId: nextActive };
   saveSessionIndex(repoId, next);
   clearTranscript(repoId, sessionId);
+  return next;
+}
+
+/** Persist the engine sessionId on a UI session after the first run resolves. */
+export function bindEngineSession(
+  repoId: string | null,
+  sessionId: string,
+  engineSessionId: string,
+): SessionIndex {
+  const idx = loadSessionIndex(repoId);
+  const next: SessionIndex = {
+    ...idx,
+    sessions: idx.sessions.map((s) =>
+      s.id === sessionId ? { ...s, engineSessionId } : s,
+    ),
+  };
+  saveSessionIndex(repoId, next);
   return next;
 }
 

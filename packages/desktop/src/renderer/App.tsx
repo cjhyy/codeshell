@@ -24,6 +24,7 @@ import {
   deleteSessionLocal,
   renameSessionLocal,
   archiveSession,
+  bindEngineSession,
   touchSession,
   setActiveSession,
   type SessionIndex,
@@ -319,6 +320,25 @@ function App() {
         window.codeshell.log("stream.event", { type: event.type, bucket: target });
       }
       dispatch({ type: "stream", bucket: target, event });
+
+      // Bind engine sessionId back to the UI session on the first
+      // session_started for this run. Subsequent sends in the same UI
+      // session will pass this id explicitly so the worker resumes the
+      // right engine conversation instead of guessing.
+      if (event.type === "session_started") {
+        // target is "repoKey::uiSessionId"
+        const sep = target.indexOf("::");
+        if (sep > 0) {
+          const repoKey = target.slice(0, sep);
+          const uiSessionId = target.slice(sep + 2);
+          const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+          if (uiSessionId && uiSessionId !== "_none_") {
+            const nextIdx = bindEngineSession(repoId, uiSessionId, event.sessionId);
+            setSessionIndices((prev) => ({ ...prev, [repoKey]: nextIdx }));
+          }
+        }
+      }
+
       if (event.type === "turn_complete" || event.type === "error") {
         setBusyForKey(target, false);
         runningBucketRef.current = null;
@@ -400,16 +420,31 @@ function App() {
     runningBucketRef.current = bucket;
 
     // Touch session: bump updatedAt + adopt first user prompt as title.
-    // Single setSessionIndices: touchSession reads the just-persisted
-    // (possibly-just-created) index from localStorage, applies the
-    // title/updatedAt, and writes it back.
     setSessionIndices((prev) => ({
       ...prev,
       [repoKeyOf(activeRepoId)]: touchSession(activeRepoId, sid, text),
     }));
 
+    // Resolve the engine sessionId bound to this UI session, if any.
+    // First send of a UI session → undefined → core creates a fresh
+    // engine session and we'll capture its id from session_started.
+    // Without this, core silently resumes the last active engine
+    // session, which is why '新对话' was leaking the previous chat's
+    // context (it greeted itself with "我是新的对话...").
+    const repoKey = repoKeyOf(activeRepoId);
+    const summary =
+      sessionIndices[repoKey]?.sessions.find((s) => s.id === sid)
+      // fallback: ensureActiveSession just persisted but state may not have
+      // re-read yet — pull from localStorage to be safe.
+      ?? loadSessionIndex(activeRepoId).sessions.find((s) => s.id === sid);
+    const engineSessionId = summary?.engineSessionId;
+
+    const opts: { cwd?: string; sessionId?: string } = {};
+    if (activeRepo) opts.cwd = activeRepo.path;
+    if (engineSessionId) opts.sessionId = engineSessionId;
+
     void window.codeshell
-      .run(text, activeRepo ? { cwd: activeRepo.path } : undefined)
+      .run(text, opts)
       .then((r) =>
         window.codeshell.log("run.resolved", { result: r as unknown as Record<string, unknown> }),
       );
