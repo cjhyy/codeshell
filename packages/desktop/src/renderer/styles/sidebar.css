@@ -120,8 +120,42 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* No project-remove button anymore — repo deletion goes through
-   right-click → 移除项目 with a confirm() guard. */
+/* Repo deletion goes through the row's ··· menu or right-click. */
+
+/* Hover-revealed action icons on the right side of a project row. */
+.project-row-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.project-row:hover .project-row-actions { opacity: 1; }
+.project-row.selected .project-row-actions { opacity: 1; }
+.project-row-action {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+}
+.project-row-action:hover { background: var(--border-subtle); color: var(--fg-primary); }
+
+.project-pin-dot {
+  color: var(--accent);
+  font-weight: 700;
+  margin: 0 2px;
+  user-select: none;
+}
+.project-row.pinned .project-name { font-weight: 500; }
+
+/* No-repo "对话" section, pinned just below the project list. */
+.no-repo-section { margin-top: var(--sp-3); }
+.no-repo-label { padding-top: 0; padding-bottom: 4px; }
+.no-repo-list .session-row { padding-left: var(--sp-3); }
 
 /* Session list nested under a project */
 .session-list {

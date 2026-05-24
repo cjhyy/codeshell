@@ -28,6 +28,7 @@ import {
   bindEngineSession,
   touchSession,
   setActiveSession,
+  NO_REPO_KEY,
   type SessionIndex,
 } from "./transcripts";
 import type {
@@ -57,7 +58,10 @@ import { UpdaterBanner } from "./updater/UpdaterBanner";
 import type { PermissionMode } from "./chat/PermissionPill";
 import type { ModelOption } from "./chat/ModelPill";
 
-const GLOBAL_KEY = "__global__";
+// Bucket key for sessions without a project — re-exported from transcripts.
+// We use NO_REPO_KEY everywhere instead of a local const so the renderer
+// and the persistence layer can't drift apart.
+const GLOBAL_KEY = NO_REPO_KEY;
 function repoKeyOf(repoId: string | null): string {
   return repoId ?? GLOBAL_KEY;
 }
@@ -248,6 +252,41 @@ function App() {
       else next.add(id);
       return next;
     });
+  };
+
+  const handlePinRepo = (id: string, pinned: boolean): void => {
+    setRepos((prev) => prev.map((r) => (r.id === id ? { ...r, pinned } : r)));
+  };
+
+  const handleRenameRepo = (id: string, name: string): void => {
+    setRepos((prev) => prev.map((r) => (r.id === id ? { ...r, displayName: name } : r)));
+  };
+
+  const handleArchiveAllSessions = (id: string): void => {
+    setSessionIndices((prev) => {
+      const idx = prev[id];
+      if (!idx) return prev;
+      // Mutate every session via archiveSession() so the localStorage
+      // index stays consistent with state.
+      let working = idx;
+      for (const s of idx.sessions) {
+        if (!s.archived) working = archiveSession(id, s.id, true);
+      }
+      return { ...prev, [id]: working };
+    });
+  };
+
+  /**
+   * "新对话" anchored to a specific repo (used by the row's pen icon).
+   * Switches active repo if needed, then enters draft state.
+   */
+  const handleNewConversationForRepo = (repoId: string | null): void => {
+    if (activeRepoId !== repoId) setActiveRepoId(repoId);
+    setSessionIndices((prev) => ({
+      ...prev,
+      [repoKeyOf(repoId)]: setActiveSession(repoId, null),
+    }));
+    setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
   const handleSelectSession = (repoId: string | null, sessionId: string): void => {
@@ -676,6 +715,10 @@ function App() {
           onToggleRepo={handleToggleRepo}
           onAddRepo={() => { void handleAddRepo(); }}
           onRemoveRepo={handleRemoveRepo}
+          onPinRepo={handlePinRepo}
+          onRenameRepo={handleRenameRepo}
+          onArchiveAllSessions={handleArchiveAllSessions}
+          onNewConversationForRepo={handleNewConversationForRepo}
           onNewConversation={handleNewConversation}
           onOpenSearch={() => setSearchOpen(true)}
           onOpenAutomations={() => setViewMode("runs")}

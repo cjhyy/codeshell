@@ -8,13 +8,15 @@ import {
   ChevronRight,
   Folder,
   FolderPlus,
+  MoreHorizontal,
+  PenSquare,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
 import { SettingsMenu } from "./settings/SettingsMenu";
 import type { ViewMode } from "./view";
-import type { Repo } from "./repos";
-import type { SessionIndex, SessionSummary } from "./transcripts";
+import { repoLabel, sortRepos, type Repo } from "./repos";
+import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "./transcripts";
 
 interface SidebarProps {
   repos: Repo[];
@@ -24,11 +26,15 @@ interface SidebarProps {
   collapsedRepos: Set<string>;
   approvalsBadge?: number;
 
-  onSelectRepo: (id: string) => void;
+  onSelectRepo: (id: string | null) => void;
   onSelectSession: (repoId: string | null, sessionId: string) => void;
   onToggleRepo: (id: string) => void;
   onAddRepo: () => void;
   onRemoveRepo: (id: string) => void;
+  onPinRepo: (id: string, pinned: boolean) => void;
+  onRenameRepo: (id: string, name: string) => void;
+  onArchiveAllSessions: (id: string) => void;
+  onNewConversationForRepo: (id: string | null) => void;
 
   onNewConversation: () => void;
   onOpenSearch: () => void;
@@ -64,6 +70,10 @@ export function Sidebar({
   onToggleRepo,
   onAddRepo,
   onRemoveRepo,
+  onPinRepo,
+  onRenameRepo,
+  onArchiveAllSessions,
+  onNewConversationForRepo,
   onNewConversation,
   onOpenSearch,
   onOpenAutomations,
@@ -80,20 +90,51 @@ export function Sidebar({
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const closeMenu = (): void => setMenu(null);
 
+  // Pin sort (sortRepos: pinned first, then by addedAt asc).
+  const orderedRepos = useMemo(() => sortRepos(repos), [repos]);
+
+  // No-repo conversations live under the bottom 对话 section.
+  const noRepoIndex = sessions[NO_REPO_KEY];
+  const noRepoSessions = noRepoIndex?.sessions.filter((s) => !s.archived) ?? [];
+
   const repoMenu = (repo: Repo): ContextMenuItem[] => [
     {
-      label: collapsedRepos.has(repo.id) ? "展开" : "折叠",
-      onClick: () => onToggleRepo(repo.id),
+      label: repo.pinned ? "取消置顶" : "置顶项目",
+      onClick: () => onPinRepo(repo.id, !repo.pinned),
     },
     {
-      label: "在 Finder 中显示",
+      label: "在「访达」中打开",
       onClick: () => { void window.codeshell.revealInFinder(repo.path); },
     },
     {
-      label: "移除项目",
+      label: "创建永久工作树",
+      // Worktree wiring lands in a later batch; show the entry now so
+      // users see the intent, but no-op until the IPC is in place.
+      disabled: true,
+      onClick: () => undefined,
+    },
+    {
+      label: "重命名项目…",
+      onClick: () => {
+        const t = prompt("项目显示名称", repoLabel(repo));
+        if (t !== null && t.trim()) onRenameRepo(repo.id, t.trim());
+      },
+    },
+    {
+      label: "归档对话",
+      onClick: () => {
+        const live = sessions[repo.id]?.sessions.filter((s) => !s.archived).length ?? 0;
+        if (live === 0) return;
+        if (confirm(`归档「${repoLabel(repo)}」下所有 ${live} 条未归档会话？`)) {
+          onArchiveAllSessions(repo.id);
+        }
+      },
+    },
+    {
+      label: "移除",
       danger: true,
       onClick: () => {
-        if (confirm(`确定从侧栏移除 "${repo.name}" 吗？\n本地会话保留 — 重新添加同一目录可恢复。`)) {
+        if (confirm(`确定从侧栏移除「${repoLabel(repo)}」吗？\n本地会话保留 — 重新添加同一目录可恢复。`)) {
           onRemoveRepo(repo.id);
         }
       },
@@ -115,7 +156,7 @@ export function Sidebar({
       label: "删除",
       danger: true,
       onClick: () => {
-        if (confirm(`确定删除会话 "${s.title}" 吗？`)) onDeleteSession(repoId, s.id);
+        if (confirm(`确定删除会话「${s.title}」吗？`)) onDeleteSession(repoId, s.id);
       },
     },
   ];
@@ -149,10 +190,10 @@ export function Sidebar({
         </div>
 
         <div className="sidebar-projects">
-          {repos.length === 0 && (
+          {orderedRepos.length === 0 && noRepoSessions.length === 0 && (
             <div className="repo-empty">点 + 添加你的第一个 repo</div>
           )}
-          {repos.map((repo) => (
+          {orderedRepos.map((repo) => (
             <ProjectGroup
               key={repo.id}
               repo={repo}
@@ -163,6 +204,8 @@ export function Sidebar({
               onToggle={() => onToggleRepo(repo.id)}
               onSelectRepo={() => onSelectRepo(repo.id)}
               onSelectSession={(sid) => onSelectSession(repo.id, sid)}
+              onMenuClick={(x, y) => setMenu({ kind: "repo", x, y, repo })}
+              onNewChat={() => onNewConversationForRepo(repo.id)}
               onRepoContextMenu={(e) => {
                 e.preventDefault();
                 setMenu({ kind: "repo", x: e.clientX, y: e.clientY, repo });
@@ -173,6 +216,18 @@ export function Sidebar({
               }}
             />
           ))}
+
+          {noRepoSessions.length > 0 && (
+            <NoRepoSection
+              sessions={noRepoSessions}
+              activeSessionId={activeRepoId === null ? activeSessionId : null}
+              onSelectSession={(sid) => onSelectSession(null, sid)}
+              onSessionContextMenu={(e, s) => {
+                e.preventDefault();
+                setMenu({ kind: "session", x: e.clientX, y: e.clientY, repoId: null, session: s });
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -235,6 +290,8 @@ function ProjectGroup({
   onToggle,
   onSelectRepo,
   onSelectSession,
+  onMenuClick,
+  onNewChat,
   onRepoContextMenu,
   onSessionContextMenu,
 }: {
@@ -246,6 +303,8 @@ function ProjectGroup({
   onToggle: () => void;
   onSelectRepo: () => void;
   onSelectSession: (sid: string) => void;
+  onMenuClick: (x: number, y: number) => void;
+  onNewChat: () => void;
   onRepoContextMenu: (e: React.MouseEvent) => void;
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
 }) {
@@ -265,7 +324,7 @@ function ProjectGroup({
   return (
     <div className="project-group">
       <div
-        className={`project-row${isActiveRepo ? " selected" : ""}`}
+        className={`project-row${isActiveRepo ? " selected" : ""}${repo.pinned ? " pinned" : ""}`}
         onClick={() => {
           onSelectRepo();
           if (collapsed) onToggle();
@@ -283,7 +342,33 @@ function ProjectGroup({
           {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
         </button>
         <Folder size={13} className="project-icon" />
-        <span className="project-name">{repo.name}</span>
+        <span className="project-name">{repoLabel(repo)}</span>
+        {repo.pinned && <span className="project-pin-dot" title="已置顶">·</span>}
+        <span className="project-row-actions">
+          <button
+            className="project-row-action"
+            aria-label="更多"
+            title="更多"
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              onMenuClick(r.left, r.bottom + 2);
+            }}
+          >
+            <MoreHorizontal size={13} />
+          </button>
+          <button
+            className="project-row-action"
+            aria-label={`在 ${repoLabel(repo)} 中开始新对话`}
+            title={`在 ${repoLabel(repo)} 中开始新对话`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onNewChat();
+            }}
+          >
+            <PenSquare size={13} />
+          </button>
+        </span>
       </div>
 
       {!collapsed && (
@@ -342,6 +427,43 @@ function ProjectGroup({
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * No-repo "对话" section pinned at the bottom of the projects list.
+ * Sessions here ran without a cwd; we render them flat (no folder
+ * chrome) so users distinguish them at a glance from project sessions.
+ */
+function NoRepoSection({
+  sessions,
+  activeSessionId,
+  onSelectSession,
+  onSessionContextMenu,
+}: {
+  sessions: SessionSummary[];
+  activeSessionId: string | null;
+  onSelectSession: (sid: string) => void;
+  onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
+}) {
+  if (sessions.length === 0) return null;
+  return (
+    <div className="no-repo-section">
+      <div className="sidebar-section-label no-repo-label">对话</div>
+      <ul className="session-list no-repo-list">
+        {sessions.map((s) => (
+          <SessionRow
+            key={s.id}
+            s={s}
+            isActive={activeSessionId === s.id}
+            showKbd={false}
+            kbdIndex={0}
+            onClick={() => onSelectSession(s.id)}
+            onContextMenu={(e) => onSessionContextMenu(e, s)}
+          />
+        ))}
+      </ul>
     </div>
   );
 }
