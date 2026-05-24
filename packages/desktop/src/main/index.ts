@@ -73,8 +73,13 @@ async function createWindow(): Promise<BrowserWindow> {
     const isDev = Boolean(process.env.VITE_DEV_URL);
     const csp = isDev
       ? [
+          // Vite HMR reconnects through a SharedWorker whose script is a
+          // blob: URL. CSP's worker-src has no separate dev exception, so
+          // we list blob: under script-src (worker-src falls back to it)
+          // and add an explicit worker-src for clarity.
           "default-src 'self'; " +
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; " +
+          "worker-src 'self' blob:; " +
           "style-src 'self' 'unsafe-inline'; " +
           "img-src 'self' data: blob:; " +
           "font-src 'self' data:; " +
@@ -86,6 +91,7 @@ async function createWindow(): Promise<BrowserWindow> {
       : [
           "default-src 'self'; " +
           "script-src 'self'; " +
+          "worker-src 'self'; " +
           "style-src 'self' 'unsafe-inline'; " +
           "img-src 'self' data:; " +
           "font-src 'self' data:; " +
