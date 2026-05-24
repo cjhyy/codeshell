@@ -15,6 +15,34 @@
 
 import type { LLMConfig } from "../types.js";
 import { readCache } from "./model-cache.js";
+import { findOpenRouterModel } from "../data/openrouter-models.js";
+
+/**
+ * Last-resort context window when neither the provider's cached
+ * model list nor the OpenRouter snapshot knows the size. Picked
+ * to match the most common chat-model default in 2024–2026; better
+ * to truncate than to send a request the model will reject.
+ */
+const FALLBACK_CONTEXT_WINDOW = 200_000;
+
+/**
+ * Provider kind → OpenRouter vendor prefix. Mirrors the table in
+ * model-fetcher.ts so a missing context window on a direct-provider
+ * entry (e.g. OpenAI's `gpt-5.5`) can be patched from the bundled
+ * OpenRouter snapshot (`openai/gpt-5.5`). Kinds outside this map
+ * (groq/ollama/openrouter/custom) skip the snapshot lookup — the
+ * openrouter kind is handled separately since its ids already carry
+ * the vendor prefix.
+ */
+const OPENROUTER_VENDOR_BY_KIND: Record<string, string> = {
+  openai: "openai",
+  anthropic: "anthropic",
+  deepseek: "deepseek",
+  google: "google",
+  zai: "z-ai",
+  xai: "x-ai",
+  mistral: "mistralai",
+};
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -80,22 +108,55 @@ export class ModelPool {
   }
 
   /**
-   * For each entry in the pool that lacks an explicit maxContextTokens
-   * but has a providerKey, look up the contextLength from the cached
-   * model list and patch it in.
+   * For each entry that lacks an explicit maxContextTokens but has a
+   * providerKey, fill it in. Lookup order:
+   *   1. The provider's cached /v1/models response (most authoritative —
+   *      it's what the vendor itself returned at last sync).
+   *   2. The bundled OpenRouter snapshot, keyed by `<vendor>/<id>` — covers
+   *      the common case where a direct-provider model (e.g. `gpt-5.5`)
+   *      is also published on OpenRouter with full metadata.
+   *   3. A final 200k floor so unknown models still get *some* context
+   *      window rather than tripping max-token math downstream.
+   *
+   * Entries with an explicit maxContextTokens (set by the user in settings
+   * or by a prior code path) are left alone — we never overwrite what the
+   * user typed in.
    */
   reloadCachedContextWindows(): void {
-    if (!this.cacheDir) return;
     for (const [key, entry] of this.models) {
       if (entry.maxContextTokens != null) continue;
-      if (!entry.providerKey) continue;
-      const file = readCache(this.cacheDir, entry.providerKey);
-      if (!file) continue;
-      const match = file.models.find((m) => m.id === entry.model);
-      if (match?.contextLength) {
-        this.models.set(key, { ...entry, maxContextTokens: match.contextLength });
+      const resolved = this.resolveContextWindow(entry);
+      if (resolved != null) {
+        this.models.set(key, { ...entry, maxContextTokens: resolved });
       }
     }
+  }
+
+  private resolveContextWindow(entry: ModelEntry): number | undefined {
+    // 1. Per-provider /v1/models cache.
+    if (this.cacheDir && entry.providerKey) {
+      const file = readCache(this.cacheDir, entry.providerKey);
+      const match = file?.models.find((m) => m.id === entry.model);
+      if (match?.contextLength) return match.contextLength;
+    }
+    // 2. OpenRouter snapshot — translate the entry's provider kind to the
+    //    snapshot's `<vendor>/<id>` form.
+    const kind = entry.providerKey
+      ? this.providerCatalog?.get(entry.providerKey)?.kind
+      : undefined;
+    if (kind === "openrouter") {
+      const hit = findOpenRouterModel(entry.model);
+      if (hit?.contextLength) return hit.contextLength;
+    } else if (kind) {
+      const vendor = OPENROUTER_VENDOR_BY_KIND[kind];
+      if (vendor) {
+        const hit = findOpenRouterModel(`${vendor}/${entry.model}`);
+        if (hit?.contextLength) return hit.contextLength;
+      }
+    }
+    // 3. Final floor — better than leaving it undefined and reading
+    //    config.maxContextTokens (which may itself be unset).
+    return FALLBACK_CONTEXT_WINDOW;
   }
 
   /**

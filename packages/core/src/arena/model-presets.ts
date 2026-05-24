@@ -17,7 +17,7 @@ export const MODEL_PRESETS: Record<string, ModelPreset> = {
   claude: { provider: "openai", model: "anthropic/claude-opus-4.6", maxOutputTokens: 32000 },
   "claude-sonnet": { provider: "openai", model: "anthropic/claude-sonnet-4.6", maxOutputTokens: 16000 },
   "claude-haiku": { provider: "openai", model: "anthropic/claude-haiku-4.5", maxOutputTokens: 8192 },
-  gpt: { provider: "openai", model: "openai/gpt-5.4", maxOutputTokens: 32000 },
+  gpt: { provider: "openai", model: "openai/gpt-5.5", maxOutputTokens: 32000 },
   "gpt4o": { provider: "openai", model: "openai/gpt-4o", maxOutputTokens: 16384 },
   o4: { provider: "openai", model: "openai/o4-mini", maxOutputTokens: 100000 },
   o3: { provider: "openai", model: "openai/o3", maxOutputTokens: 100000 },

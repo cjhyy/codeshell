@@ -28,6 +28,7 @@ import {
   listStaticModels,
   hasStaticCatalog,
 } from "../data/static-catalogs.js";
+import { findOpenRouterModel } from "../data/openrouter-models.js";
 
 export interface FetcherProvider {
   key: string;
@@ -118,7 +119,8 @@ export async function fetchModelList(
     const filtered = raw.filter((m) => meta.chatFilter(m.id));
     const sorted = sortByRecency(filtered);
     const enriched = enrichFromStaticCatalog(provider.kind, sorted);
-    const file = writeCache(opts.cacheDir, provider.key, enriched);
+    const finalModels = enrichFromOpenRouterSnapshot(provider.kind, enriched);
+    const file = writeCache(opts.cacheDir, provider.key, finalModels);
     return file;
   } catch (err) {
     const msg = (err as Error).message || String(err);
@@ -160,6 +162,47 @@ function enrichFromStaticCatalog(kind: ProviderKindName, live: CachedModel[]): C
     }
   }
   return merged;
+}
+
+/**
+ * Provider kind → OpenRouter vendor prefix. OpenRouter ids are
+ * `<vendor>/<model>`; native providers return bare model ids
+ * (`gpt-5.5`, `claude-opus-4.6`). To cross-reference, we prepend
+ * the kind's vendor prefix. Kinds that don't map to a single
+ * OpenRouter vendor (groq is infra not a model vendor, ollama is
+ * local, openrouter is itself, custom is unknown) are omitted —
+ * fallback simply does nothing for them.
+ */
+const OPENROUTER_VENDOR_BY_KIND: Partial<Record<ProviderKindName, string>> = {
+  openai: "openai",
+  anthropic: "anthropic",
+  deepseek: "deepseek",
+  google: "google",
+  zai: "z-ai",
+  xai: "x-ai",
+  mistral: "mistralai",
+};
+
+/**
+ * Final fallback: any model still missing contextLength or
+ * maxOutputTokens after the per-provider static catalog merge
+ * gets cross-referenced against the bundled OpenRouter snapshot
+ * (`<vendor>/<id>`). Live values from the upstream `/models`
+ * call always win; this only fills zeros.
+ */
+function enrichFromOpenRouterSnapshot(kind: ProviderKindName, models: CachedModel[]): CachedModel[] {
+  const vendor = OPENROUTER_VENDOR_BY_KIND[kind];
+  if (!vendor) return models;
+  return models.map((m) => {
+    if (m.contextLength > 0 && m.maxOutputTokens > 0) return m;
+    const hit = findOpenRouterModel(`${vendor}/${m.id}`);
+    if (!hit) return m;
+    return {
+      id: m.id,
+      contextLength: m.contextLength > 0 ? m.contextLength : hit.contextLength,
+      maxOutputTokens: m.maxOutputTokens > 0 ? m.maxOutputTokens : hit.maxOutputTokens,
+    };
+  });
 }
 
 /**

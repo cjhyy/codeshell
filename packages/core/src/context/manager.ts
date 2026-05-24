@@ -57,13 +57,17 @@ const DEFAULT_CONFIG: ContextManagerConfig = {
   compactAtRatio: 0.85,
   summarizeAtRatio: 0.92,
   maxToolResultChars: 30_000,
-  // 0.5 leaves micro idle until the prompt is ~half-full. Below this we let
-  // tool_results stay intact: under-pressure context doesn't need micro and
-  // wiping early Read/Bash output just forces the model to re-fetch the same
-  // files later. CC's external path is time-based (~N minutes); we approximate
-  // with this ratio. Was 0.3 — fine on 200k but too eager on 1M-context
-  // models (started clearing at 300k tokens, well below danger).
-  microcompactFloorRatio: 0.5,
+  // 0.7 leaves micro idle until the prompt is ~70% full. Below this we
+  // let tool_results stay intact: under-pressure context doesn't need
+  // micro and wiping early Read/Bash output just forces the model to
+  // re-fetch the same files later. CC's external path triggers around
+  // 70-75% of the window; this matches it. Was 0.5 — on a 200k model
+  // that fired at 100k where a long-but-not-overloaded conversation
+  // (~130k tokens) tripped micro every single turn, with the cleared
+  // 8 rounds promptly replaced by 5 fresh ones so the next turn was
+  // back at 130k and the cycle repeated. 0.7 → 140k floor, leaving
+  // realistic headroom before we start churning.
+  microcompactFloorRatio: 0.7,
 };
 
 /**
