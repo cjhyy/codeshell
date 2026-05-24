@@ -1,0 +1,89 @@
+/* Full-page Settings layout (SettingsPage). */
+
+.settings-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+  overflow: hidden;
+}
+
+.settings-page-head {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-sidebar);
+  flex-shrink: 0;
+}
+.settings-page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+  color: var(--fg-secondary);
+}
+.settings-page-back:hover { background: var(--bg-hover); color: var(--fg-primary); }
+
+.settings-page-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-page-modules {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--sp-2);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+}
+.settings-page-module {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 30px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-md);
+  color: var(--fg-secondary);
+  text-align: left;
+}
+.settings-page-module:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.settings-page-module.active { background: var(--bg-selected); color: var(--fg-primary); font-weight: 500; }
+
+.settings-page-content {
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-3) var(--sp-5);
+  overflow-y: auto;
+}
+.settings-page-content-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.settings-page-content-title {
+  margin: 0;
+  font-size: var(--fz-xl);
+  color: var(--fg-primary);
+  flex: 1;
+}
+.settings-page-module-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  max-width: 720px;
+}
+
+.ps-section { gap: var(--sp-3); }

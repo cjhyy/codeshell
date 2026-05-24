@@ -48,7 +48,8 @@ import { PanelLeft } from "./ui/icons";
 import { IconButton } from "./ui/IconButton";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
-// SettingsView replaced by SettingsMenu + SettingsModal triggered from sidebar bottom.
+// Full-page Settings — driven by viewMode === 'settings_page'.
+import { SettingsPage } from "./settings/SettingsPage";
 import { McpView } from "./mcp/McpView";
 import { RunsView } from "./runs/RunsView";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
@@ -733,6 +734,7 @@ function App() {
           onOpenApprovals={() => setViewMode("approvals")}
           onOpenRuns={() => setViewMode("runs")}
           onOpenLogs={() => setViewMode("logs")}
+          onOpenSettingsPage={() => setViewMode("settings_page")}
           onRenameSession={handleRenameSession}
           onArchiveSession={handleArchiveSession}
           onDeleteSession={handleDeleteSession}
@@ -750,7 +752,12 @@ function App() {
           <span className="main-toolbar-spacer" />
         </div>
         {lifecycle && <div className="banner">{lifecycle}</div>}
-        {view.viewMode === "approvals" ? (
+        {view.viewMode === "settings_page" ? (
+          <SettingsPage
+            activeRepoPath={activeRepo?.path ?? null}
+            onBack={() => setViewMode("chat")}
+          />
+        ) : view.viewMode === "approvals" ? (
           <ApprovalsView
             queue={approvalQueue}
             history={approvalHistory}

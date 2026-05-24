@@ -43,6 +43,7 @@ interface SidebarProps {
   onOpenApprovals: () => void;
   onOpenRuns: () => void;
   onOpenLogs: () => void;
+  onOpenSettingsPage: () => void;
 
   onRenameSession: (repoId: string | null, sessionId: string, title: string) => void;
   onArchiveSession: (repoId: string | null, sessionId: string, archived: boolean) => void;
@@ -81,6 +82,7 @@ export function Sidebar({
   onOpenApprovals,
   onOpenRuns,
   onOpenLogs,
+  onOpenSettingsPage,
   onRenameSession,
   onArchiveSession,
   onDeleteSession,
@@ -237,6 +239,7 @@ export function Sidebar({
           onOpenApprovals={onOpenApprovals}
           onOpenRuns={onOpenRuns}
           onOpenLogs={onOpenLogs}
+          onOpenSettingsPage={onOpenSettingsPage}
         />
       </div>
 

@@ -3,13 +3,11 @@ import {
   Settings as SettingsIcon,
   Cpu,
   Lock,
-  Plug,
   Download,
   Activity,
   ScrollText,
   ShieldAlert,
-  Wrench,
-  ChevronRight,
+  ArrowRight,
 } from "lucide-react";
 import { SettingsModal } from "./SettingsModal";
 
@@ -23,39 +21,32 @@ export type SettingsSection =
   | "logs"
   | "json";
 
-const ITEMS: Array<{
-  id: SettingsSection;
-  label: string;
-  Icon: React.ComponentType<{ size?: number }>;
-}> = [
-  { id: "model", label: "模型", Icon: Cpu },
-  { id: "permission", label: "权限", Icon: Lock },
-  { id: "mcp", label: "MCP 插件", Icon: Plug },
-  { id: "update", label: "更新", Icon: Download },
-  { id: "approvals", label: "审批历史", Icon: ShieldAlert },
-  { id: "runs", label: "运行", Icon: Activity },
-  { id: "logs", label: "日志", Icon: ScrollText },
-  { id: "json", label: "settings.json", Icon: Wrench },
-];
-
 interface Props {
   activeRepoPath: string | null;
   onOpenApprovals: () => void;
   onOpenRuns: () => void;
   onOpenLogs: () => void;
+  /** Switch to the full-page Settings view. */
+  onOpenSettingsPage: () => void;
 }
 
 /**
- * Bottom-left settings entry: a button that opens a small upward
- * popover. The popover lists sub-sections (模型 / 权限 / MCP / …);
- * clicking one closes the popover and opens a focused SettingsModal
- * dialog containing just that section's form.
+ * Bottom-left settings entry.
  *
- * Routes that already have full-screen views (审批历史 / 运行 / 日志)
- * delegate to the parent via onOpenApprovals/onOpenRuns/onOpenLogs so
- * they keep using the existing viewMode surfaces.
+ * Clicking opens an upward popover with quick shortcuts. The full
+ * Settings page lives behind '打开设置…' at the bottom — clicking it
+ * navigates to viewMode === 'settings_page' (handled by App).
+ *
+ * Quick shortcuts (model / permission / update) open the legacy
+ * focused modal for speed; deep configuration lives on the page.
  */
-export function SettingsMenu({ activeRepoPath, onOpenApprovals, onOpenRuns, onOpenLogs }: Props) {
+export function SettingsMenu({
+  activeRepoPath,
+  onOpenApprovals,
+  onOpenRuns,
+  onOpenLogs,
+  onOpenSettingsPage,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState<SettingsSection | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -78,12 +69,24 @@ export function SettingsMenu({ activeRepoPath, onOpenApprovals, onOpenRuns, onOp
 
   const pick = (id: SettingsSection): void => {
     setOpen(false);
-    // Full-screen views delegate to parent; everything else opens the modal.
     if (id === "approvals") return onOpenApprovals();
     if (id === "runs") return onOpenRuns();
     if (id === "logs") return onOpenLogs();
     setModal(id);
   };
+
+  const quickItems: Array<{
+    id: SettingsSection;
+    label: string;
+    Icon: React.ComponentType<{ size?: number }>;
+  }> = [
+    { id: "model", label: "模型", Icon: Cpu },
+    { id: "permission", label: "权限", Icon: Lock },
+    { id: "update", label: "更新", Icon: Download },
+    { id: "approvals", label: "审批历史", Icon: ShieldAlert },
+    { id: "runs", label: "运行", Icon: Activity },
+    { id: "logs", label: "日志", Icon: ScrollText },
+  ];
 
   return (
     <div className="settings-menu" ref={ref}>
@@ -96,17 +99,24 @@ export function SettingsMenu({ activeRepoPath, onOpenApprovals, onOpenRuns, onOp
       </button>
       {open && (
         <ul className="settings-popover">
-          {ITEMS.map(({ id, label, Icon }) => (
-            <li
-              key={id}
-              className="settings-popover-item"
-              onClick={() => pick(id)}
-            >
+          {quickItems.map(({ id, label, Icon }) => (
+            <li key={id} className="settings-popover-item" onClick={() => pick(id)}>
               <Icon size={13} />
               <span>{label}</span>
-              <ChevronRight size={11} className="settings-popover-chevron" />
             </li>
           ))}
+          <li className="settings-popover-divider" />
+          <li
+            className="settings-popover-item settings-popover-primary"
+            onClick={() => {
+              setOpen(false);
+              onOpenSettingsPage();
+            }}
+          >
+            <SettingsIcon size={13} />
+            <span>打开设置…</span>
+            <ArrowRight size={11} className="settings-popover-chevron" />
+          </li>
         </ul>
       )}
       {modal && (
