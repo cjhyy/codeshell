@@ -1,0 +1,87 @@
+/* Cross-project session search overlay (SessionSearchModal). */
+
+.ssm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 16vh;
+}
+
+.ssm {
+  width: 560px;
+  max-width: 90vw;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ssm-search {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--fg-muted);
+}
+.ssm-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+}
+
+.ssm-section-label {
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ssm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 4px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.ssm-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+  cursor: pointer;
+}
+.ssm-item.cursor { background: var(--bg-selected); }
+.ssm-item-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ssm-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+}
+.ssm-item-repo {
+  font-family: var(--font-mono);
+}
+.ssm-item-time { font-variant-numeric: tabular-nums; }
+.ssm-empty {
+  padding: var(--sp-3);
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+  text-align: center;
+}

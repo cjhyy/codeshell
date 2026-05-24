@@ -52,6 +52,7 @@ import { LogsView } from "./logs/LogsView";
 import { McpView } from "./mcp/McpView";
 import { RunsView } from "./runs/RunsView";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
+import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
 import { TrustGate } from "./workspace-trust/TrustGate";
 import { UpdaterBanner } from "./updater/UpdaterBanner";
@@ -137,6 +138,8 @@ function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  /** Cmd+P / sidebar 搜索 — cross-project session picker (modal). */
+  const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   const [activeModelKey, setActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [permissionMode, setPermissionMode] = useState<PermissionMode | null>(null);
@@ -532,6 +535,9 @@ function App() {
       if (mod && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setPaletteOpen((o) => !o);
+      } else if (mod && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setSessionSearchOpen(true);
       } else if (mod && e.key.toLowerCase() === "f") {
         e.preventDefault();
         setSearchOpen(true);
@@ -550,6 +556,7 @@ function App() {
       } else if (e.key === "Escape") {
         if (paletteOpen) setPaletteOpen(false);
         if (searchOpen) setSearchOpen(false);
+        if (sessionSearchOpen) setSessionSearchOpen(false);
       }
     };
     window.addEventListener("keydown", handler);
@@ -720,7 +727,7 @@ function App() {
           onArchiveAllSessions={handleArchiveAllSessions}
           onNewConversationForRepo={handleNewConversationForRepo}
           onNewConversation={handleNewConversation}
-          onOpenSearch={() => setSearchOpen(true)}
+          onOpenSearch={() => setSessionSearchOpen(true)}
           onOpenAutomations={() => setViewMode("runs")}
           onOpenPlugins={() => setViewMode("mcp")}
           onOpenApprovals={() => setViewMode("approvals")}
@@ -813,6 +820,15 @@ function App() {
           clearTranscript,
           openSearch: () => setSearchOpen(true),
         })}
+      />
+
+      <SessionSearchModal
+        open={sessionSearchOpen}
+        onClose={() => setSessionSearchOpen(false)}
+        repos={repos}
+        sessions={sessionIndices}
+        activeRepoId={activeRepoId}
+        onPick={(repoId, sid) => handleSelectSession(repoId, sid)}
       />
 
       <TrustGate
