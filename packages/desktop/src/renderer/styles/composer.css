@@ -249,3 +249,100 @@
 /* Old input-row class still referenced by markdown stream styles; null
    it out so legacy left-overs don't fight the composer card. */
 .input-row { display: none; }
+
+/* Composer second row: project / mode / branch pills below textarea.
+   Renders below the main control row so the input area stays tall. */
+.composer-pills-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-top: 4px;
+  flex-wrap: wrap;
+}
+.composer-pills-row .composer-pill { font-weight: 400; }
+
+/* Project picker pill + dropdown */
+.project-picker { position: relative; }
+.project-picker-trigger {
+  max-width: 220px;
+}
+.project-picker-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-picker-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 260px;
+  max-width: 340px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  z-index: var(--z-popover);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+.project-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--sp-2);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--fg-muted);
+}
+.project-picker-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+}
+.project-picker-clear {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-muted);
+}
+.project-picker-clear:hover { background: var(--bg-hover); color: var(--fg-primary); }
+
+.project-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.project-picker-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 5px var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+  cursor: pointer;
+}
+.project-picker-item:hover { background: var(--bg-hover); }
+.project-picker-item.active { color: var(--accent); }
+.project-picker-item-icon { color: var(--fg-muted); flex-shrink: 0; }
+.project-picker-item.active .project-picker-item-icon { color: var(--accent); }
+.project-picker-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-picker-item-check { color: var(--accent); flex-shrink: 0; }
+.project-picker-empty {
+  padding: var(--sp-2);
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+}
+.project-picker-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}

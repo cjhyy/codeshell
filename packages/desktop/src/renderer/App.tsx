@@ -760,13 +760,15 @@ function App() {
             {showWelcome && (
               <div className="welcome">
                 <div className="welcome-title">
-                  {activeRepo ? activeRepo.name : "code-shell"}
+                  {activeRepo
+                    ? `要在 ${activeRepo.name} 中构建什么?`
+                    : `开始一个无项目对话`}
                 </div>
-                <div className="welcome-hint">
-                  {activeRepoId === null
-                    ? "先在左侧添加一个项目"
-                    : "开始一个新对话 — 试试: 列出当前目录"}
-                </div>
+                {!activeRepo && (
+                  <div className="welcome-hint">
+                    在下方选择一个项目，或直接在「不使用项目」模式开始
+                  </div>
+                )}
               </div>
             )}
             <ChatView
@@ -785,6 +787,9 @@ function App() {
               contextMax={
                 modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens
               }
+              repos={repos}
+              onSelectRepo={setActiveRepoId}
+              onAddRepo={() => { void handleAddRepo(); }}
             />
           </>
         )}

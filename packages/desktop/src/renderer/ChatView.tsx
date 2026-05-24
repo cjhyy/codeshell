@@ -6,9 +6,11 @@ import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
 import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { ContextRing } from "./chat/ContextRing";
+import { ProjectPicker } from "./chat/ProjectPicker";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import type { TaskListMessage, AskUserMessage } from "./types";
+import type { Repo } from "./repos";
 
 interface Props {
   messages: Message[];
@@ -26,6 +28,11 @@ interface Props {
   onModelChange: (opt: ModelOption) => void;
   contextTokens: number;
   contextMax?: number;
+
+  // Project picker (composer second row)
+  repos: Repo[];
+  onSelectRepo: (id: string | null) => void;
+  onAddRepo: () => void;
 }
 
 const MAX_TEXTAREA_PX = 200;
@@ -44,6 +51,9 @@ export function ChatView({
   onModelChange,
   contextTokens,
   contextMax,
+  repos,
+  onSelectRepo,
+  onAddRepo,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
@@ -66,13 +76,12 @@ export function ChatView({
     ta.style.height = next + "px";
   }, [draft]);
 
-  const disabled = busy || activeRepoId === null;
-  const placeholder =
-    activeRepoId === null
-      ? "先在左侧添加一个项目"
-      : busy
-        ? "agent is working… (Stop 中止)"
-        : "要求或描述变更…";
+  // No-repo conversations are legitimate now (see ProjectPicker's
+  // "不使用项目" option). Only `busy` truly blocks input.
+  const disabled = busy;
+  const placeholder = busy
+    ? "agent is working… (Stop 中止)"
+    : "可向 agent 询问任何事。输入 @ 使用插件或提及文件";
 
   const submit = (): void => {
     const text = draft.trim();
@@ -166,7 +175,7 @@ export function ChatView({
             onCompositionStart={() => setIsComposing(true)}
             onCompositionEnd={() => setIsComposing(false)}
             placeholder={placeholder}
-            disabled={activeRepoId === null}
+            disabled={busy}
             rows={1}
           />
         </div>
@@ -227,6 +236,24 @@ export function ChatView({
               </button>
             )}
           </div>
+        </div>
+
+        <div className="composer-pills-row">
+          <ProjectPicker
+            repos={repos}
+            activeRepoId={activeRepoId}
+            onSelect={onSelectRepo}
+            onAddRepo={onAddRepo}
+            disabled={busy}
+          />
+          {/* Mode + branch pills are reference-only for now; wiring lands
+              in a later batch alongside real mode/branch state. */}
+          <button type="button" className="composer-pill" disabled>
+            <span>本地模式</span>
+          </button>
+          <button type="button" className="composer-pill" disabled>
+            <span>main</span>
+          </button>
         </div>
       </div>
     </div>
