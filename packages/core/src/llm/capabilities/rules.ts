@@ -26,10 +26,31 @@
 import type { CapabilityRule } from "./types.js";
 
 export const RULES: ReadonlyArray<CapabilityRule> = [
-  // ─── OpenAI native ─────────────────────────────────────────────
+  // ─── OpenAI native — gpt-5.5+ (and presumably 5.6+) ────────────
+  // gpt-5.5 dropped 'minimal' from reasoning_effort and added 'xhigh'.
+  // Supported values are now {none, low, medium, high, xhigh}.
+  // Trying to send 'minimal' returns a 400 that the SDK surfaces as
+  // "Request was aborted". List this rule BEFORE the broader gpt-5
+  // rule so 5.5+ doesn't fall into the old shape.
   {
     kind: "openai",
-    // o1/o3/o4-mini + gpt-5/5.1/5.2/5.3/5.4/5.5 + future digits.
+    match: /^gpt-5\.(?:[5-9]|\d{2,})(?:[-.]|$)/i,
+    capability: {
+      tokenLimitField: "max_completion_tokens",
+      rejectedParams: new Set([
+        "temperature", "top_p", "presence_penalty",
+        "frequency_penalty", "logit_bias", "logprobs", "top_logprobs",
+      ]),
+      reasoning: { kind: "openai-effort", disabledEffort: "none" },
+      echoReasoning: "optional",
+    },
+    why: "OpenAI gpt-5.5+ accepts reasoning_effort none|low|medium|high|xhigh (no `minimal`).",
+  },
+
+  // ─── OpenAI native — o-series + gpt-5 through gpt-5.4 ──────────
+  {
+    kind: "openai",
+    // o1/o3/o4-mini + gpt-5/5.1/5.2/5.3/5.4 + future digits.
     // Anchored to start so OpenRouter-prefixed ids like `openai/gpt-5`
     // never match this rule (OpenRouter rule below handles those).
     match: /^(?:o[1-9]\d*|gpt-[5-9])(?:[-.]|$)/i,
@@ -42,7 +63,7 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
       reasoning: { kind: "openai-effort" },
       echoReasoning: "optional",
     },
-    why: "OpenAI o-series + gpt-5+ reject classic sampling params; use max_completion_tokens + reasoning_effort.",
+    why: "OpenAI o-series + gpt-5..5.4 reject classic sampling params; use max_completion_tokens + reasoning_effort.",
   },
 
   // ─── DeepSeek ──────────────────────────────────────────────────
