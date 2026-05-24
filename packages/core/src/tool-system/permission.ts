@@ -157,6 +157,17 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     this.promptFn = fn;
   }
 
+  /**
+   * Has someone installed a real prompt callback? Engine consults this
+   * to decide whether to use the interactive backend (= talk to a UI)
+   * or fall back to HeadlessApprovalBackend (= deny-all). Without it,
+   * the agent-server-stdio entry — which wires setInteractiveApprovalFn
+   * during server boot — would still fall through to deny-all because
+   * the engine couldn't tell the difference. */
+  hasPromptFn(): boolean {
+    return this.promptFn !== null;
+  }
+
   /** Inject the project root so persistence writes to the right settings file. */
   setCwd(cwd: string): void {
     this.cwd = cwd;

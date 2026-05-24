@@ -22,6 +22,7 @@ import {
   HeadlessApprovalBackend,
   AutoApprovalBackend,
   InteractiveApprovalBackend,
+  getInteractiveApprovalBackend,
   type ApprovalBackend,
 } from "../tool-system/permission.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -1496,9 +1497,20 @@ export class Engine {
     } else if (mode === "auto") {
       backend = new AutoApprovalBackend();
     } else {
-      backend = new HeadlessApprovalBackend(
-        mode === "bypassPermissions" ? "approve-all" : mode === "dontAsk" ? "deny-all" : "deny-all",
-      );
+      // If a host installed an InteractiveApprovalBackend prompt fn
+      // (agent-server-stdio does this on boot via setInteractiveApprovalFn),
+      // use it so the UI gets a chance to approve/deny. Without this,
+      // every `ask` permission silently fell through to deny-all and
+      // the user saw "Permission denied by user" with NO modal — exactly
+      // the bug that motivated this fix.
+      const interactive = getInteractiveApprovalBackend();
+      if (interactive.hasPromptFn()) {
+        backend = interactive;
+      } else {
+        backend = new HeadlessApprovalBackend(
+          mode === "bypassPermissions" ? "approve-all" : mode === "dontAsk" ? "deny-all" : "deny-all",
+        );
+      }
     }
     return { rules, backend };
   }
