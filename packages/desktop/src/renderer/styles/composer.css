@@ -194,6 +194,23 @@
   height: 100%;
   transition: width 0.2s ease;
 }
+.context-ring-tt-empty {
+  color: var(--fg-secondary);
+  font-size: var(--fz-sm);
+}
+.context-ring-tt-sub {
+  margin-top: 4px;
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+}
+
+.context-ring-wrap.busy .context-ring-pct {
+  animation: ring-breathe 1.4s ease-in-out infinite;
+}
+@keyframes ring-breathe {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
 
 /* Circular send/stop button on the far right */
 .composer-send {

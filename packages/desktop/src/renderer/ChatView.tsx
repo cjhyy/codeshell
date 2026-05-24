@@ -162,7 +162,7 @@ export function ChatView({
           </div>
 
           <div className="composer-controls-right">
-            <ContextRing used={contextTokens} max={contextMax} />
+            <ContextRing used={contextTokens} max={contextMax} busy={busy} />
             <ModelPill
               activeKey={activeModelKey}
               options={modelOptions}
