@@ -8,10 +8,13 @@ import { InspectorPanel } from "./InspectorPanel";
 import {
   applyStreamEvent,
   appendUserMessage,
+  appendAskUserMessage,
+  markAskUserAnswered,
   INITIAL_STATE,
   type MessagesReducerState,
   type ApprovalState,
   type ToolMessage,
+  type AskUserOption,
 } from "./types";
 import {
   loadTranscript,
@@ -65,17 +68,44 @@ type TranscriptsMap = Record<string, MessagesReducerState>;
 type Action =
   | { type: "user_message"; bucket: string; text: string }
   | { type: "stream"; bucket: string; event: StreamEvent }
-  | { type: "hydrate"; bucket: string; state: MessagesReducerState };
+  | { type: "hydrate"; bucket: string; state: MessagesReducerState }
+  | {
+      type: "ask_user";
+      bucket: string;
+      requestId: string;
+      question: string;
+      header?: string;
+      options?: AskUserOption[];
+      multiSelect: boolean;
+    }
+  | { type: "ask_user_answered"; bucket: string; requestId: string; answer: string };
 
 function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
   if (action.type === "hydrate") {
     return { ...map, [action.bucket]: action.state };
   }
   const current = map[action.bucket] ?? INITIAL_STATE;
-  const next =
-    action.type === "user_message"
-      ? appendUserMessage(current, action.text)
-      : applyStreamEvent(current, action.event);
+  let next: MessagesReducerState;
+  switch (action.type) {
+    case "user_message":
+      next = appendUserMessage(current, action.text);
+      break;
+    case "ask_user":
+      next = appendAskUserMessage(current, {
+        requestId: action.requestId,
+        question: action.question,
+        header: action.header,
+        options: action.options,
+        multiSelect: action.multiSelect,
+      });
+      break;
+    case "ask_user_answered":
+      next = markAskUserAnswered(current, action.requestId, action.answer);
+      break;
+    case "stream":
+      next = applyStreamEvent(current, action.event);
+      break;
+  }
   if (next === current) return map;
   return { ...map, [action.bucket]: next };
 }
@@ -286,6 +316,43 @@ function App() {
     });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", { requestId: env.requestId, toolName: env.request.toolName });
+      // AskUserQuestion is delivered through the same channel as tool
+      // approvals (toolName === "__ask_user__"). Route it into the chat
+      // stream as an inline AskUserMessage instead of the approval modal
+      // so the user picks an answer inline — much less disruptive than
+      // a blocking dialog.
+      if (env.request.toolName === "__ask_user__") {
+        const args = (env.request.args ?? {}) as Record<string, unknown>;
+        const question =
+          (typeof args.question === "string" && args.question) ||
+          env.request.description ||
+          "";
+        const header = typeof args.header === "string" ? args.header : undefined;
+        const multiSelect = args.multiSelect === true;
+        const options =
+          Array.isArray(args.options)
+            ? (args.options as unknown[])
+                .filter(
+                  (o): o is { label: string; description: string } =>
+                    !!o &&
+                    typeof o === "object" &&
+                    typeof (o as Record<string, unknown>).label === "string" &&
+                    typeof (o as Record<string, unknown>).description === "string",
+                )
+                .map((o) => ({ label: o.label, description: o.description }))
+            : undefined;
+        const bucket = runningBucketRef.current ?? activeBucket;
+        dispatch({
+          type: "ask_user",
+          bucket,
+          requestId: env.requestId,
+          question,
+          header,
+          options,
+          multiSelect,
+        });
+        return;
+      }
       setApprovalQueue((q) => [...q, env]);
       setApproval((cur) => cur ?? env);
     });
@@ -495,6 +562,16 @@ function App() {
     prevBusyRef.current = busy;
   }, [busy, activeRepo]);
 
+  const handleAskUserAnswer = (requestId: string, answer: string): void => {
+    void window.codeshell.approve(requestId, "approve", undefined, answer);
+    dispatch({
+      type: "ask_user_answered",
+      bucket: activeBucket,
+      requestId,
+      answer,
+    });
+  };
+
   const clearTranscript = (): void => {
     dispatch({ type: "hydrate", bucket: activeBucket, state: INITIAL_STATE });
   };
@@ -622,6 +699,7 @@ function App() {
               activeRepoId={activeRepoId}
               selectedToolId={selectedToolId}
               onSelectTool={(m: ToolMessage) => setSelectedToolId(m.id)}
+              onAskUserAnswer={handleAskUserAnswer}
               permissionMode={permissionMode}
               onPermissionChange={onPermissionChange}
               modelOptions={modelOptions}

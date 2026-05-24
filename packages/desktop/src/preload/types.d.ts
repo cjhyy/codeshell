@@ -48,7 +48,13 @@ export interface CodeshellApi {
   log(msg: string, data?: Record<string, unknown>): void;
   run(prompt: string, opts?: { cwd?: string; sessionId?: string }): Promise<RpcResponse>;
   cancel(): Promise<RpcResponse>;
-  approve(id: string, decision: "approve" | "deny", reason?: string): Promise<RpcResponse>;
+  approve(
+    id: string,
+    decision: "approve" | "deny",
+    reason?: string,
+    /** For AskUserQuestion: the user's selected/typed answer. */
+    answer?: string,
+  ): Promise<RpcResponse>;
   onStreamEvent(cb: (event: StreamEvent) => void): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;

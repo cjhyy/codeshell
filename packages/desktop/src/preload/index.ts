@@ -74,11 +74,18 @@ contextBridge.exposeInMainWorld("codeshell", {
   run: (task: string, opts?: { cwd?: string; sessionId?: string } & Record<string, unknown>) =>
     rpc("agent/run", { task, ...(opts ?? {}) }),
   cancel: () => rpc("agent/cancel"),
-  approve: (requestId: string, decision: "approve" | "deny", reason?: string) =>
+  approve: (
+    requestId: string,
+    decision: "approve" | "deny",
+    reason?: string,
+    answer?: string,
+  ) =>
     rpc("agent/approve", {
       requestId,
       decision: decision === "approve"
-        ? { approved: true }
+        ? answer !== undefined
+          ? { approved: true, answer }
+          : { approved: true }
         : { approved: false, reason },
     }),
   onStreamEvent: (cb: (event: unknown) => void): (() => void) => {

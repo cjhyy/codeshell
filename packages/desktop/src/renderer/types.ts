@@ -85,6 +85,31 @@ export interface SystemMessage {
   text: string;
 }
 
+export interface AskUserOption {
+  label: string;
+  description: string;
+}
+
+/**
+ * Inline AskUserQuestion prompt rendered as a message in the chat
+ * stream (NOT as an approval modal). Engine emits this through the
+ * approval channel with toolName "__ask_user__"; App routes it here
+ * instead of into the approval queue. Once the user answers we send
+ * `approve(requestId, "approve", undefined, answer)` and mark the
+ * message answered so it won't keep rendering as actionable.
+ */
+export interface AskUserMessage {
+  kind: "ask_user";
+  id: string;
+  requestId: string;
+  question: string;
+  header?: string;
+  options?: AskUserOption[];
+  multiSelect: boolean;
+  /** Set after the user answers; chat then renders as resolved. */
+  answer?: string;
+}
+
 export type Message =
   | UserMessage
   | AssistantMessage
@@ -93,7 +118,8 @@ export type Message =
   | TaskListMessage
   | AgentMessage
   | ContextBoundaryMessage
-  | SystemMessage;
+  | SystemMessage
+  | AskUserMessage;
 
 export interface AgentRuntime {
   agentId: string;
@@ -395,6 +421,34 @@ export function applyStreamEvent(
     default:
       return state; // unknown / unhandled events — ignore
   }
+}
+
+export function appendAskUserMessage(
+  state: MessagesReducerState,
+  payload: Omit<AskUserMessage, "kind" | "id">,
+): MessagesReducerState {
+  return {
+    ...state,
+    messages: [
+      ...state.messages,
+      { kind: "ask_user", id: freshId("ask"), ...payload },
+    ],
+  };
+}
+
+export function markAskUserAnswered(
+  state: MessagesReducerState,
+  requestId: string,
+  answer: string,
+): MessagesReducerState {
+  return {
+    ...state,
+    messages: state.messages.map((m) =>
+      m.kind === "ask_user" && m.requestId === requestId
+        ? { ...m, answer }
+        : m,
+    ),
+  };
 }
 
 export function appendUserMessage(

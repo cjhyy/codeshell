@@ -6,15 +6,17 @@ import { ThinkingMessageView } from "./messages/ThinkingMessageView";
 import { AgentMessageView } from "./messages/AgentMessageView";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
+import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { useStickToBottom } from "./chat/stickToBottom";
 
 interface Props {
   messages: Message[];
   selectedToolId?: string | null;
   onSelectTool?: (m: ToolMessage) => void;
+  onAskUserAnswer?: (requestId: string, answer: string) => void;
 }
 
-export function MessageStream({ messages, selectedToolId, onSelectTool }: Props) {
+export function MessageStream({ messages, selectedToolId, onSelectTool, onAskUserAnswer }: Props) {
   const ref = useStickToBottom<HTMLDivElement>(messages.length);
 
   return (
@@ -59,6 +61,14 @@ export function MessageStream({ messages, selectedToolId, onSelectTool }: Props)
             return <TaskListMessageView key={m.id} message={m} />;
           case "context_boundary":
             return <ContextBoundaryView key={m.id} message={m} />;
+          case "ask_user":
+            return (
+              <AskUserMessageView
+                key={m.id}
+                message={m}
+                onAnswer={onAskUserAnswer ?? (() => undefined)}
+              />
+            );
           case "system":
             return (
               <div key={m.id} className="msg-row msg-row-system">

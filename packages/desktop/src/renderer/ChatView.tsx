@@ -15,6 +15,7 @@ interface Props {
   activeRepoId: string | null;
   selectedToolId?: string | null;
   onSelectTool?: (m: ToolMessage) => void;
+  onAskUserAnswer?: (requestId: string, answer: string) => void;
 
   // Composer controls
   permissionMode: PermissionMode | null;
@@ -35,6 +36,7 @@ export function ChatView({
   activeRepoId,
   selectedToolId,
   onSelectTool,
+  onAskUserAnswer,
   permissionMode,
   onPermissionChange,
   modelOptions,
@@ -124,6 +126,7 @@ export function ChatView({
         messages={messages}
         selectedToolId={selectedToolId ?? null}
         onSelectTool={onSelectTool}
+        onAskUserAnswer={onAskUserAnswer}
       />
 
       <div className="composer">
