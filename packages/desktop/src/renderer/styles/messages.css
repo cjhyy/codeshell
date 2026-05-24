@@ -81,17 +81,67 @@
   border-radius: var(--radius-sm);
   padding: var(--sp-2) var(--sp-3);
   font-size: var(--fz-md);
-  max-width: 720px;
+  /* Full-width pinned panel — was capped at 720px which looked
+     narrow against the composer that fills the chat width. */
+  width: 100%;
 }
+/* When the tasks card sits inside the pinned-above-composer wrapper,
+   override the .msg-row outer margin so the card edges line up with
+   the composer card. */
+.pinned-above-composer .msg-tasks { margin: 0; }
 .msg-tasks-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: var(--fg-secondary);
+  margin: 0;
+}
+.msg-tasks-head:hover { color: var(--fg-primary); }
+.msg-tasks-title {
   font-weight: 600;
   font-size: var(--fz-sm);
-  color: var(--fg-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: var(--sp-1);
 }
-.msg-tasks-list { list-style: none; padding: 0; margin: 0; }
+.msg-tasks-count {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+}
+.msg-tasks-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--fg-primary);
+}
+.msg-tasks-current-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-task-marker.status-running { color: var(--status-running); }
+
+.msg-tasks-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--sp-1) 0 0;
+}
 .msg-task {
   display: flex;
   align-items: baseline;

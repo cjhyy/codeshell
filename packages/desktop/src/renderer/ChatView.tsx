@@ -238,23 +238,22 @@ export function ChatView({
           </div>
         </div>
 
-        <div className="composer-pills-row">
-          <ProjectPicker
-            repos={repos}
-            activeRepoId={activeRepoId}
-            onSelect={onSelectRepo}
-            onAddRepo={onAddRepo}
-            disabled={busy}
-          />
-          {/* Mode + branch pills are reference-only for now; wiring lands
-              in a later batch alongside real mode/branch state. */}
-          <button type="button" className="composer-pill" disabled>
-            <span>本地模式</span>
-          </button>
-          <button type="button" className="composer-pill" disabled>
-            <span>main</span>
-          </button>
-        </div>
+        {/* Project picker only appears for fresh conversations — once
+            the session has any messages, switching project mid-chat
+            would be confusing (cwd / context / engine sessionId are
+            already tied to the existing repo). Use the sidebar to
+            jump projects after a session has started. */}
+        {messages.length === 0 && (
+          <div className="composer-pills-row">
+            <ProjectPicker
+              repos={repos}
+              activeRepoId={activeRepoId}
+              onSelect={onSelectRepo}
+              onAddRepo={onAddRepo}
+              disabled={busy}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
