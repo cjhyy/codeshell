@@ -79,6 +79,8 @@ export interface CodeshellApi {
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
+  listSkills(cwd: string): Promise<SkillSummary[]>;
+  readSkillBody(filePath: string): Promise<string>;
 
   // Phase 6 — native polish & security.
   getTrust(path: string): Promise<"trusted" | "untrusted" | "unknown">;
@@ -109,6 +111,13 @@ export interface DesktopSessionSummary {
   size: number;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface SkillSummary {
+  name: string;
+  description: string;
+  source: "project" | "user" | "plugin";
+  filePath: string;
 }
 
 export interface RunSummary {

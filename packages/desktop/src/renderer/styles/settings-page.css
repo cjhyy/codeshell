@@ -87,3 +87,99 @@
 }
 
 .ps-section { gap: var(--sp-3); }
+
+/* Skills list */
+.skills-panel { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.skill-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.skill-row {
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.skill-row.disabled { opacity: 0.55; }
+.skill-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.skill-row-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  color: var(--fg-primary);
+}
+.skill-source {
+  font-size: var(--fz-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  color: var(--fg-muted);
+}
+.skill-source-project { color: var(--accent); border-color: var(--accent); }
+.skill-source-user    { color: var(--status-running); border-color: var(--status-running); }
+.skill-source-plugin  { color: var(--status-warn); border-color: var(--status-warn); }
+.skill-row-action { font-size: var(--fz-xs); }
+.skill-toggle input { transform: scale(1.1); cursor: pointer; }
+
+.skill-row-desc {
+  margin-top: 4px;
+  font-size: var(--fz-sm);
+  color: var(--fg-secondary);
+  line-height: 1.5;
+}
+.skill-row-path {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-view-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.32);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.skill-view {
+  width: 720px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.skill-view-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.skill-view-head strong { flex: 1; font-family: var(--font-mono); }
+.skill-view-body {
+  flex: 1;
+  margin: 0;
+  padding: var(--sp-3);
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

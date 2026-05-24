@@ -135,6 +135,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("logs:tail", bucket, lines),
   listRuns: () => ipcRenderer.invoke("runs:list"),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
+  listSkills: (cwd: string) => ipcRenderer.invoke("skills:list", cwd),
+  readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
   getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),

@@ -18,6 +18,7 @@ import { readSettings, writeSettings, type SettingsScope } from "./settings-serv
 import { listSessions, deleteSession } from "./sessions-service.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
+import { listSkills, readSkillBody, type SkillSummary } from "./skills-service.js";
 import { listRuns, getRun } from "./runs-service.js";
 import { initUpdater, checkForUpdate, quitAndInstall, getLastStatus } from "./updater.js";
 import { loadRecents, pushRecent } from "./recents-store.js";
@@ -165,6 +166,9 @@ app.whenReady().then(() => {
   void createWindow();
   initUpdater();
 });
+
+ipcMain.handle("skills:list", async (_e, cwd: string) => listSkills(cwd));
+ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 
 ipcMain.handle("updater:check", async () => checkForUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
