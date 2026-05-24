@@ -146,7 +146,7 @@ export class InvestigationGuard {
     if (name === "Bash") return true;
     if (name === "Edit" || name === "Write" || name === "NotebookEdit") return true;
     if (name === "AskUserQuestion") return true;
-    if (name === "TaskCreate" || name === "TaskUpdate") return false;
+    if (name === "TodoWrite") return false;
     return false;
   }
 

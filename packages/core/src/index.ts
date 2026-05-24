@@ -75,7 +75,9 @@ export type { ApprovalBackend } from "./tool-system/permission.js";
 export { BUILTIN_TOOLS } from "./tool-system/builtin/index.js";
 export { MCPManager } from "./tool-system/mcp-manager.js";
 export type { AskUserFn } from "./tool-system/builtin/ask-user.js";
-export { taskManager } from "./tool-system/builtin/task.js";
+// taskManager singleton removed in the 2026-05-24 TodoWrite refactor;
+// task state lives in the transcript now. Type re-exports stay for SDK
+// consumers that imported the old `Task` shape.
 export type { Task, TaskStatus } from "./tool-system/builtin/task.js";
 
 // ─── Hooks ───────────────────────────────────────────────────────

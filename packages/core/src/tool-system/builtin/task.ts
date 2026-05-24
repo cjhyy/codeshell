@@ -1,356 +1,227 @@
 /**
- * Built-in Task management tools — TaskCreate, TaskList, TaskUpdate, TaskStop.
+ * Built-in task management: a single `TodoWrite` tool.
  *
- * Provides an in-memory task list that the agent uses to track progress
- * on complex multi-step work. Tasks are displayed in the terminal UI
- * so the user can see what the agent is doing.
+ * Design (after the 2026-05-24 simplification):
+ *   - No in-memory TaskManager. The transcript IS the task store.
+ *   - Each `TodoWrite` call passes the ENTIRE todo list as a snapshot.
+ *     The previous snapshot is overwritten — there is no per-item
+ *     update API.
+ *   - The tool's return value is the formatted list, so a future
+ *     turn (even one in a fresh worker process) reads the last
+ *     snapshot straight from transcript.jsonl.
+ *   - One `task_update` stream event is emitted on each call so the
+ *     UI's pinned task panel stays in sync.
+ *
+ * Why a snapshot and not deltas:
+ *   The previous TaskCreate/TaskUpdate API stored a sequence of
+ *   incremental ops behind an in-memory map. When the worker process
+ *   exited (the desktop bridge spawns one per run), the map was lost
+ *   and the next run's TaskList returned "No tasks". A snapshot tool
+ *   doesn't need a runtime store at all: the LLM reads its own last
+ *   tool_result and rewrites it.
+ *
+ * Legacy IDs:
+ *   The desktop renderer still listens for `task_update` events and
+ *   the TaskInfo wire shape from packages/desktop/.../types.ts keeps
+ *   the existing { id, subject, activeForm?, status } fields. We
+ *   manufacture an id per position (`"1"`, `"2"`, ...) so the UI
+ *   can use stable React keys; LLMs never see these ids.
  */
 
-import type { ToolDefinition, StreamCallback } from "../../types.js";
+import type { ToolDefinition, StreamCallback, TaskInfo } from "../../types.js";
+import type { ToolContext } from "../context.js";
 
-// ─── Task Types ──────────────────────────────────────────────────
+// ─── Public types ────────────────────────────────────────────────
 
-export type TaskStatus = "pending" | "in_progress" | "completed" | "stopped";
+export type TaskStatus = "pending" | "in_progress" | "completed";
 
-export interface Task {
-  id: string;
-  subject: string;
-  description: string;
-  activeForm?: string;
+export interface TodoItem {
+  content: string;
   status: TaskStatus;
-  createdAt: number;
-  updatedAt: number;
-  blockedBy: string[];
-  blocks: string[];
+  /** Present-continuous form shown in the UI when status is in_progress. */
+  activeForm?: string;
 }
 
-// ─── Task Manager (singleton) ────────────────────────────────────
+// Re-exported for legacy importers that pulled `Task` from this module.
+export type Task = TaskInfo;
 
-class TaskManager {
-  private tasks = new Map<string, Task>();
-  private nextId = 1;
-  private onUpdate?: StreamCallback;
+// ─── Tool definition ─────────────────────────────────────────────
 
-  reset(): void {
-    this.tasks.clear();
-    this.nextId = 1;
-  }
-
-  setStreamCallback(cb?: StreamCallback): void {
-    this.onUpdate = cb;
-  }
-
-  create(subject: string, description: string, activeForm?: string): Task {
-    const id = String(this.nextId++);
-    const now = Date.now();
-    const task: Task = {
-      id,
-      subject,
-      description,
-      activeForm,
-      status: "pending",
-      createdAt: now,
-      updatedAt: now,
-      blockedBy: [],
-      blocks: [],
-    };
-    this.tasks.set(id, task);
-    this.emitUpdate();
-    return task;
-  }
-
-  get(id: string): Task | undefined {
-    return this.tasks.get(id);
-  }
-
-  list(): Task[] {
-    return [...this.tasks.values()];
-  }
-
-  update(id: string, updates: Partial<Pick<Task, "subject" | "description" | "activeForm" | "status">> & {
-    addBlockedBy?: string[];
-    addBlocks?: string[];
-  }): Task | undefined {
-    const task = this.tasks.get(id);
-    if (!task) return undefined;
-
-    if (updates.subject !== undefined) task.subject = updates.subject;
-    if (updates.description !== undefined) task.description = updates.description;
-    if (updates.activeForm !== undefined) task.activeForm = updates.activeForm;
-    if (updates.status !== undefined) task.status = updates.status;
-
-    if (updates.addBlockedBy) {
-      for (const dep of updates.addBlockedBy) {
-        if (!task.blockedBy.includes(dep)) task.blockedBy.push(dep);
-        // Also set the reverse relationship
-        const blocker = this.tasks.get(dep);
-        if (blocker && !blocker.blocks.includes(id)) blocker.blocks.push(id);
-      }
-    }
-
-    if (updates.addBlocks) {
-      for (const dep of updates.addBlocks) {
-        if (!task.blocks.includes(dep)) task.blocks.push(dep);
-        const blocked = this.tasks.get(dep);
-        if (blocked && !blocked.blockedBy.includes(id)) blocked.blockedBy.push(id);
-      }
-    }
-
-    task.updatedAt = Date.now();
-    this.emitUpdate();
-    return task;
-  }
-
-  stop(id: string): Task | undefined {
-    const task = this.tasks.get(id);
-    if (!task) return undefined;
-    task.status = "stopped";
-    task.updatedAt = Date.now();
-    this.emitUpdate();
-    return task;
-  }
-
-  delete(id: string): boolean {
-    const existed = this.tasks.delete(id);
-    if (existed) this.emitUpdate();
-    return existed;
-  }
-
-  private emitUpdate(): void {
-    this.onUpdate?.({
-      type: "task_update",
-      tasks: this.list(),
-    } as any);
-  }
-}
-
-export const taskManager = new TaskManager();
-
-// ─── Tool Definitions ────────────────────────────────────────────
-
-export const taskCreateToolDef: ToolDefinition = {
-  name: "TaskCreate",
+export const todoWriteToolDef: ToolDefinition = {
+  name: "TodoWrite",
   description:
-    "Create a task to track progress on multi-step work. " +
-    "Use this to break down complex tasks into discrete steps so the user can see your progress. " +
-    "Only use when the work requires 3+ steps. Tasks are created with 'pending' status.",
+    "Plan and track multi-step work. Pass the COMPLETE todo list each time you call this — there is no per-item update, you rewrite the whole snapshot. Use proactively for tasks with 3+ steps so the user can see your progress. " +
+    "Status semantics: " +
+    "`pending` = not yet started; " +
+    "`in_progress` = actively working on this now (exactly one item should be in_progress at a time); " +
+    "`completed` = fully done. " +
+    "Always include an `activeForm` (present-continuous) for in_progress items so the UI can show what is happening right now. " +
+    "After each meaningful step, call TodoWrite again with the updated list — the user relies on the running snapshot to see progress.",
   inputSchema: {
     type: "object",
     properties: {
-      subject: {
-        type: "string",
-        description: "A brief, actionable title in imperative form (e.g., 'Fix authentication bug')",
-      },
-      description: {
-        type: "string",
-        description: "What needs to be done",
-      },
-      activeForm: {
-        type: "string",
-        description: "Present continuous form shown in spinner when in_progress (e.g., 'Fixing auth bug')",
-      },
-    },
-    required: ["subject", "description"],
-  },
-};
-
-export const taskListToolDef: ToolDefinition = {
-  name: "TaskList",
-  description:
-    "List all tasks and their current status. Use this to check progress and find the next task to work on.",
-  inputSchema: {
-    type: "object",
-    properties: {},
-  },
-};
-
-export const taskUpdateToolDef: ToolDefinition = {
-  name: "TaskUpdate",
-  description:
-    "Update a task's status or details. Mark tasks as 'in_progress' when starting work, " +
-    "'completed' when done. Only mark completed when the work is FULLY accomplished.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      taskId: {
-        type: "string",
-        description: "The ID of the task to update",
-      },
-      status: {
-        type: "string",
-        enum: ["pending", "in_progress", "completed", "stopped"],
-        description: "New status for the task",
-      },
-      subject: {
-        type: "string",
-        description: "New subject for the task",
-      },
-      description: {
-        type: "string",
-        description: "New description for the task",
-      },
-      activeForm: {
-        type: "string",
-        description: "Present continuous form shown in spinner when in_progress",
-      },
-      addBlockedBy: {
+      todos: {
         type: "array",
-        items: { type: "string" },
-        description: "Task IDs that must complete before this one can start",
-      },
-      addBlocks: {
-        type: "array",
-        items: { type: "string" },
-        description: "Task IDs that cannot start until this one completes",
+        description: "The complete todo list. Replaces any previous list.",
+        items: {
+          type: "object",
+          properties: {
+            content: {
+              type: "string",
+              description: "Imperative-form task title (e.g. 'Fix authentication bug').",
+            },
+            status: {
+              type: "string",
+              enum: ["pending", "in_progress", "completed"],
+              description: "Current status. At most one item should be in_progress.",
+            },
+            activeForm: {
+              type: "string",
+              description: "Present-continuous label shown while in_progress (e.g. 'Fixing authentication bug').",
+            },
+          },
+          required: ["content", "status"],
+        },
       },
     },
-    required: ["taskId"],
+    required: ["todos"],
   },
 };
 
-export const taskStopToolDef: ToolDefinition = {
-  name: "TaskStop",
-  description:
-    "Stop/cancel a task that is no longer needed or was created in error.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      taskId: {
-        type: "string",
-        description: "The ID of the task to stop",
-      },
-    },
-    required: ["taskId"],
-  },
-};
+// ─── Tool implementation ─────────────────────────────────────────
 
-// ─── Tool Implementations ────────────────────────────────────────
-
-export async function taskCreateTool(args: Record<string, unknown>): Promise<string> {
-  const subject = args.subject as string;
-  const description = args.description as string;
-  const activeForm = args.activeForm as string | undefined;
-
-  if (!subject || !description) {
-    return "Error: subject and description are required";
+export async function todoWriteTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  const raw = args.todos;
+  if (!Array.isArray(raw)) {
+    return "Error: `todos` must be an array.";
   }
 
-  const task = taskManager.create(subject, description, activeForm);
-  return `Task #${task.id} created successfully: ${task.subject}`;
+  const todos: TodoItem[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object") continue;
+    const obj = r as Record<string, unknown>;
+    if (typeof obj.content !== "string") continue;
+    const status = obj.status;
+    if (status !== "pending" && status !== "in_progress" && status !== "completed") continue;
+    const item: TodoItem = { content: obj.content, status };
+    if (typeof obj.activeForm === "string") item.activeForm = obj.activeForm;
+    todos.push(item);
+  }
+
+  // Emit one task_update so the UI's pinned panel refreshes. id is
+  // position-based so React keys stay stable across rewrites.
+  const tasks: TaskInfo[] = todos.map((t, i) => ({
+    id: String(i + 1),
+    subject: t.content,
+    activeForm: t.activeForm,
+    status: t.status,
+  }));
+  emitTaskUpdate(ctx, tasks);
+
+  return formatSnapshot(todos);
 }
 
-export async function taskListTool(_args: Record<string, unknown>): Promise<string> {
-  const tasks = taskManager.list();
-  if (tasks.length === 0) {
-    return "No tasks.";
+/**
+ * Pull the latest todo snapshot out of a transcript event stream.
+ * Used by the engine on session resume to replay one task_update so
+ * the UI re-hydrates without needing the LLM to re-run TodoWrite.
+ *
+ * Walks events newest-first looking for a tool_result whose toolName
+ * is TodoWrite — its args carry the snapshot directly. Also tolerates
+ * legacy TaskCreate/TaskUpdate runs by scanning their tool_use events
+ * and rebuilding a best-effort list (legacy sessions stay usable).
+ */
+export function readLastTodoSnapshot(
+  events: Array<{ type: string; data: Record<string, unknown> }>,
+): TaskInfo[] | null {
+  // Newer schema: a single TodoWrite tool_use carries the canonical list.
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.type !== "tool_use") continue;
+    const d = e.data ?? {};
+    if (d.toolName !== "TodoWrite") continue;
+    const args = (d.args ?? {}) as Record<string, unknown>;
+    const todos = args.todos;
+    if (!Array.isArray(todos)) continue;
+    return todos
+      .filter((t) => t && typeof t === "object")
+      .map((t, idx) => {
+        const obj = t as Record<string, unknown>;
+        return {
+          id: String(idx + 1),
+          subject: typeof obj.content === "string" ? obj.content : "",
+          activeForm: typeof obj.activeForm === "string" ? obj.activeForm : undefined,
+          status:
+            obj.status === "in_progress" || obj.status === "completed" || obj.status === "pending"
+              ? (obj.status as TaskStatus)
+              : "pending",
+        };
+      });
   }
 
-  const statusIcon: Record<TaskStatus, string> = {
-    pending: "○",
-    in_progress: "◉",
-    completed: "✓",
-    stopped: "✗",
-  };
+  // Legacy schema: rebuild from a sequence of TaskCreate / TaskUpdate /
+  // TaskStop tool_use events. Best-effort — old sessions won't be perfect
+  // but will at least show the create order with last-known status.
+  const tasks = new Map<string, TaskInfo>();
+  let nextId = 1;
+  for (const e of events) {
+    if (e.type !== "tool_use") continue;
+    const d = e.data ?? {};
+    const toolName = d.toolName as string | undefined;
+    const args = (d.args ?? {}) as Record<string, unknown>;
+    if (toolName === "TaskCreate") {
+      const id = String(nextId++);
+      tasks.set(id, {
+        id,
+        subject: typeof args.subject === "string" ? args.subject : "",
+        activeForm: typeof args.activeForm === "string" ? args.activeForm : undefined,
+        status: "pending",
+      });
+    } else if (toolName === "TaskUpdate") {
+      const id = typeof args.taskId === "string" ? args.taskId : "";
+      const existing = tasks.get(id);
+      if (!existing) continue;
+      if (
+        args.status === "pending" || args.status === "in_progress" ||
+        args.status === "completed" || args.status === "stopped"
+      ) {
+        existing.status = args.status as TaskInfo["status"];
+      }
+      if (typeof args.subject === "string") existing.subject = args.subject;
+      if (typeof args.activeForm === "string") existing.activeForm = args.activeForm;
+    } else if (toolName === "TaskStop") {
+      const id = typeof args.taskId === "string" ? args.taskId : "";
+      const existing = tasks.get(id);
+      if (existing) existing.status = "stopped";
+    }
+  }
 
-  const lines = tasks.map((t) => {
-    const icon = statusIcon[t.status];
-    const deps = t.blockedBy.length > 0 ? ` (blocked by: ${t.blockedBy.join(", ")})` : "";
-    return `  ${icon} #${t.id} [${t.status}] ${t.subject}${deps}`;
+  if (tasks.size === 0) return null;
+  return [...tasks.values()];
+}
+
+// ─── Stream helper ───────────────────────────────────────────────
+
+function emitTaskUpdate(ctx: ToolContext | undefined, tasks: TaskInfo[]): void {
+  // ToolContext.streamCallback is the in-turn stream sink the engine
+  // installs before invoking the tool. May be undefined for headless
+  // or test invocations.
+  const cb = (ctx as ToolContext & { streamCallback?: StreamCallback } | undefined)?.streamCallback;
+  cb?.({ type: "task_update", tasks });
+}
+
+function formatSnapshot(todos: TodoItem[]): string {
+  if (todos.length === 0) return "Todo list cleared.";
+  const completed = todos.filter((t) => t.status === "completed").length;
+  const lines = todos.map((t) => {
+    const icon =
+      t.status === "completed" ? "✓" :
+      t.status === "in_progress" ? "◐" : "○";
+    const label = t.status === "in_progress" && t.activeForm ? t.activeForm : t.content;
+    return `  ${icon} ${label}`;
   });
-
-  return `Tasks (${tasks.length}):\n${lines.join("\n")}`;
-}
-
-export async function taskUpdateTool(args: Record<string, unknown>): Promise<string> {
-  const taskId = args.taskId as string;
-  if (!taskId) return "Error: taskId is required";
-
-  const task = taskManager.get(taskId);
-  if (!task) return `Error: Task #${taskId} not found`;
-
-  // Handle "deleted" status as actual deletion
-  if (args.status === "deleted") {
-    taskManager.delete(taskId);
-    return `Task #${taskId} deleted`;
-  }
-
-  const updated = taskManager.update(taskId, {
-    status: args.status as TaskStatus | undefined,
-    subject: args.subject as string | undefined,
-    description: args.description as string | undefined,
-    activeForm: args.activeForm as string | undefined,
-    addBlockedBy: args.addBlockedBy as string[] | undefined,
-    addBlocks: args.addBlocks as string[] | undefined,
-  });
-
-  if (!updated) return `Error: Task #${taskId} not found`;
-  return `Updated task #${taskId} status`;
-}
-
-export async function taskStopTool(args: Record<string, unknown>): Promise<string> {
-  const taskId = args.taskId as string;
-  if (!taskId) return "Error: taskId is required";
-
-  const task = taskManager.stop(taskId);
-  if (!task) return `Error: Task #${taskId} not found`;
-  return `Task #${taskId} stopped: ${task.subject}`;
-}
-
-// ─── TaskGet & TaskOutput ────────────────────────────────────────
-
-export const taskGetToolDef: ToolDefinition = {
-  name: "TaskGet",
-  description: "Get detailed information about a specific task by ID.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      taskId: { type: "string", description: "The ID of the task to retrieve" },
-    },
-    required: ["taskId"],
-  },
-};
-
-export async function taskGetTool(args: Record<string, unknown>): Promise<string> {
-  const taskId = args.taskId as string;
-  if (!taskId) return "Error: taskId is required";
-
-  const task = taskManager.get(taskId);
-  if (!task) return `Error: Task #${taskId} not found`;
-
-  const lines = [
-    `Task #${task.id}`,
-    `  Subject:     ${task.subject}`,
-    `  Status:      ${task.status}`,
-    `  Description: ${task.description}`,
-  ];
-  if (task.activeForm) lines.push(`  Active form: ${task.activeForm}`);
-  if (task.blockedBy.length) lines.push(`  Blocked by:  ${task.blockedBy.join(", ")}`);
-  if (task.blocks.length) lines.push(`  Blocks:      ${task.blocks.join(", ")}`);
-  lines.push(`  Created:     ${new Date(task.createdAt).toLocaleString()}`);
-  lines.push(`  Updated:     ${new Date(task.updatedAt).toLocaleString()}`);
-  return lines.join("\n");
-}
-
-export const taskOutputToolDef: ToolDefinition = {
-  name: "TaskOutput",
-  description: "Get the output/result of a completed task.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      taskId: { type: "string", description: "The ID of the task" },
-    },
-    required: ["taskId"],
-  },
-};
-
-export async function taskOutputTool(args: Record<string, unknown>): Promise<string> {
-  const taskId = args.taskId as string;
-  if (!taskId) return "Error: taskId is required";
-
-  const task = taskManager.get(taskId);
-  if (!task) return `Error: Task #${taskId} not found`;
-  if (task.status !== "completed" && task.status !== "stopped") {
-    return `Task #${taskId} is still ${task.status}. No output yet.`;
-  }
-  return `Task #${taskId} (${task.status}): ${task.subject}\n\nDescription: ${task.description}`;
+  return `Updated todo list (${completed}/${todos.length} done):\n${lines.join("\n")}`;
 }
