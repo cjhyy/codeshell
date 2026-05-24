@@ -6,6 +6,9 @@ import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
 import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { ContextRing } from "./chat/ContextRing";
+import { TaskListMessageView } from "./messages/TaskListMessageView";
+import { AskUserMessageView } from "./messages/AskUserMessageView";
+import type { TaskListMessage, AskUserMessage } from "./types";
 
 interface Props {
   messages: Message[];
@@ -118,12 +121,37 @@ export function ChatView({
     }
   };
 
+  // Pin the latest TaskList and any unanswered AskUser above the
+  // composer so they stay visible as new chat messages roll in.
+  // We scan from the tail because the latest emission is the source
+  // of truth (TaskList replaces in place; AskUser is one at a time).
+  let latestTasks: TaskListMessage | null = null;
+  let openAsk: AskUserMessage | null = null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!latestTasks && m.kind === "task_list") latestTasks = m;
+    if (!openAsk && m.kind === "ask_user" && m.answer === undefined) openAsk = m;
+    if (latestTasks && openAsk) break;
+  }
+
   return (
     <div className="chat">
       <MessageStream
         messages={messages}
         onAskUserAnswer={onAskUserAnswer}
       />
+
+      {(latestTasks || openAsk) && (
+        <div className="pinned-above-composer">
+          {latestTasks && <TaskListMessageView message={latestTasks} />}
+          {openAsk && (
+            <AskUserMessageView
+              message={openAsk}
+              onAnswer={onAskUserAnswer ?? (() => undefined)}
+            />
+          )}
+        </div>
+      )}
 
       <div className="composer">
         <div className="composer-textarea-wrap">

@@ -3,6 +3,24 @@
    attach + permission, right side holds context ring + model + mic +
    send. The whole composer floats inside a rounded card. */
 
+/* Sticky panel above the composer that holds the latest TaskList and
+   any unanswered AskUserMessage. Stays put while the scroll stream
+   moves underneath so the user can always read what's pending. */
+.pinned-above-composer {
+  flex-shrink: 0;
+  margin: 0 var(--sp-4);
+  padding-top: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+/* Inside the pinned panel, override the message-view 'margin' that
+   was tuned for inline rendering so cards align flush with composer. */
+.pinned-above-composer .msg-tasks,
+.pinned-above-composer .ask-user { margin: 0; }
+
 .composer {
   margin: var(--sp-2) var(--sp-4);
   padding: var(--sp-2) var(--sp-3) var(--sp-1);

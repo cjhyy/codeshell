@@ -51,17 +51,24 @@ export function MessageStream({ messages, onAskUserAnswer }: Props) {
           case "agent":
             return <AgentMessageView key={m.id} message={m} />;
           case "task_list":
-            return <TaskListMessageView key={m.id} message={m} />;
+            // task_list is rendered as a pinned panel above the
+            // composer (see ChatView), not inline in the scroll stream
+            // — that way the user keeps tasks in view as new messages
+            // push old ones up.
+            return null;
           case "context_boundary":
             return <ContextBoundaryView key={m.id} message={m} />;
           case "ask_user":
-            return (
+            // ask_user is also pinned above the composer. We still
+            // render the resolved (answered) cards inline so the chat
+            // history reflects the conversation.
+            return m.answer !== undefined ? (
               <AskUserMessageView
                 key={m.id}
                 message={m}
                 onAnswer={onAskUserAnswer ?? (() => undefined)}
               />
-            );
+            ) : null;
           case "system":
             return (
               <div key={m.id} className="msg-row msg-row-system">
