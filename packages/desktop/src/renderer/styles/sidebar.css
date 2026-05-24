@@ -1,115 +1,197 @@
-.sidebar {
+/* Project-first sidebar (v2). Three vertical regions:
+   - sidebar-top:    workflow shortcuts (new chat / search / plugins / automations)
+   - sidebar-section (项目): grows, scrolls, holds project groups
+   - sidebar-bottom: pinned Settings row
+*/
+.sidebar.sidebar-v2 {
   height: 100%;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-subtle);
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  padding: var(--sp-2) 0;
+  padding: var(--sp-2) 0 0;
+  overflow: hidden;
 }
 
-.sidebar-nav {
+.sidebar-top {
   display: flex;
   flex-direction: column;
   padding: 0 var(--sp-2);
-  gap: 2px;
+  gap: 1px;
+  flex-shrink: 0;
 }
 
-.sidebar-nav-item {
+.sidebar-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--sp-3);
+  overflow: hidden;
+}
+.sidebar-section-head {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  height: 30px;
-  padding: 0 var(--sp-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--fz-md);
-  color: var(--fg-secondary);
-  text-align: left;
+  justify-content: space-between;
+  padding: 0 var(--sp-3) 4px;
+  flex-shrink: 0;
 }
-.sidebar-nav-item:hover {
-  background: var(--bg-hover);
-  color: var(--fg-primary);
-}
-.sidebar-nav-item.active {
-  background: var(--bg-selected);
-  color: var(--fg-primary);
-  font-weight: 500;
-}
-.sidebar-nav-label { flex: 1; }
-
-.sidebar-divider {
-  height: 1px;
-  background: var(--border-subtle);
-  margin: var(--sp-2) 0;
-}
-
 .sidebar-section-label {
   font-size: var(--fz-xs);
   color: var(--fg-muted);
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  padding: 0 var(--sp-3);
-  margin-bottom: var(--sp-1);
   user-select: none;
 }
+.sidebar-section-add {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+}
+.sidebar-section-add:hover { background: var(--bg-hover); color: var(--fg-primary); }
 
-.sidebar-repos {
-  display: flex;
-  flex-direction: column;
-  padding: 0 var(--sp-2);
-  gap: 1px;
+.sidebar-projects {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--sp-2) var(--sp-2);
 }
 
-.sidebar-repo-item {
+.sidebar-bottom {
+  flex-shrink: 0;
+  padding: var(--sp-2);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-sidebar);
+}
+
+/* Shared sidebar-item used by top shortcuts AND bottom Settings */
+.sidebar-item {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  width: 100%;
   height: 30px;
   padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+  text-align: left;
+}
+.sidebar-item:hover { background: var(--bg-hover); }
+.sidebar-item.active { background: var(--bg-selected); font-weight: 500; }
+.sidebar-item-label { flex: 1; }
+
+/* Project group */
+.project-group { margin-bottom: 2px; }
+
+.project-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 var(--sp-2) 0 0;
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+  cursor: pointer;
+  user-select: none;
+}
+.project-row:hover { background: var(--bg-hover); }
+.project-row:hover .project-remove { opacity: 1; }
+.project-row.selected { color: var(--fg-primary); font-weight: 500; }
+
+.project-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--fg-muted);
+  border-radius: var(--radius-sm);
+}
+.project-chevron:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.project-icon { color: var(--fg-muted); flex-shrink: 0; }
+.project-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-remove {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--fg-muted);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.project-remove:hover { background: var(--border-subtle); color: var(--fg-primary); }
+
+/* Session list nested under a project */
+.session-list {
+  list-style: none;
+  padding: 0 0 4px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 28px;
+  padding: 0 var(--sp-2) 0 28px; /* indent to align past chevron + folder */
   border-radius: var(--radius-sm);
   font-size: var(--fz-md);
   color: var(--fg-secondary);
   cursor: pointer;
   user-select: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.sidebar-repo-item:hover { background: var(--bg-hover); }
-.sidebar-repo-item.selected {
+.session-row:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.session-row.active {
   background: var(--bg-selected);
   color: var(--fg-primary);
+  font-weight: 500;
 }
-.repo-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.repo-remove {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  color: var(--fg-muted);
-  font-size: var(--fz-lg);
-  line-height: 1;
+.session-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-meta-right {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-}
-.repo-remove:hover { background: var(--border-subtle); color: var(--fg-primary); }
-
-.sidebar-add {
   color: var(--fg-muted);
-  font-style: italic;
+  font-size: var(--fz-xs);
 }
+.session-kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  background: transparent;
+  border: none;
+}
+.session-time { font-variant-numeric: tabular-nums; }
+.session-row-more { color: var(--fg-muted); font-style: italic; }
+.session-row-more:hover { color: var(--fg-primary); }
+
+/* Empty state */
 .repo-empty {
   padding: var(--sp-2);
   color: var(--fg-muted);
   font-size: var(--fz-sm);
 }
 
-/* Collapsed-sidebar variant */
-.app-grid[data-sidebar="collapsed"] .sidebar-nav-label,
-.app-grid[data-sidebar="collapsed"] .sidebar-section-label,
-.app-grid[data-sidebar="collapsed"] .sidebar-repos,
-.app-grid[data-sidebar="collapsed"] .sidebar-divider { display: none; }
-.app-grid[data-sidebar="collapsed"] .sidebar-nav-item {
-  justify-content: center;
-  padding: 0;
-}
+/* Collapsed sidebar — show only icons in the top group */
+.app-grid[data-sidebar="collapsed"] .sidebar-item-label,
+.app-grid[data-sidebar="collapsed"] .sidebar-section,
+.app-grid[data-sidebar="collapsed"] .sidebar-bottom .sidebar-item-label { display: none; }
+.app-grid[data-sidebar="collapsed"] .sidebar-item { justify-content: center; padding: 0; }

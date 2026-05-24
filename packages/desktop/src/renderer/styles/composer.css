@@ -1,0 +1,150 @@
+/* Composer: text area + control row beneath, sticking to the bottom of
+   the chat region. Matches the reference screenshot — left side holds
+   attach + permission, right side holds context ring + model + mic +
+   send. The whole composer floats inside a rounded card. */
+
+.composer {
+  margin: var(--sp-2) var(--sp-4);
+  padding: var(--sp-2) var(--sp-3) var(--sp-1);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.composer-textarea-wrap textarea {
+  width: 100%;
+  min-height: 28px;
+  max-height: 200px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--fz-lg);
+  line-height: 1.5;
+  color: var(--fg-primary);
+  padding: 0;
+}
+.composer-textarea-wrap textarea::placeholder { color: var(--fg-muted); }
+
+.composer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.composer-controls-left,
+.composer-controls-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* Icon-only square buttons inside the composer (attach, mic). */
+.composer-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--fg-muted);
+}
+.composer-icon-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+}
+.composer-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Permission/model pills */
+.composer-pill-wrap { position: relative; }
+.composer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--fg-secondary);
+  font-size: var(--fz-sm);
+  font-weight: 500;
+}
+.composer-pill:hover:not(:disabled) { background: var(--bg-hover); color: var(--fg-primary); }
+.composer-pill:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Permission tones */
+.composer-pill.perm-tone-ok   { color: var(--fg-secondary); }
+.composer-pill.perm-tone-warn { color: var(--status-warn); border-color: var(--status-warn); }
+.composer-pill.perm-tone-err  { color: var(--status-err);  border-color: var(--status-err); }
+
+.composer-model-pill { color: var(--fg-primary); }
+
+/* Popover dropdown for permission / model menus */
+.composer-popover {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  min-width: 180px;
+  padding: 4px;
+  list-style: none;
+  margin: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  z-index: var(--z-popover);
+}
+.composer-popover-wide { min-width: 240px; right: 0; left: auto; }
+.composer-popover-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 4px var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+  cursor: pointer;
+}
+.composer-popover-item:hover { background: var(--bg-hover); }
+.composer-popover-item.active { background: var(--bg-selected); }
+.composer-popover-prov {
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  min-width: 70px;
+}
+.composer-popover-empty { padding: var(--sp-2); color: var(--fg-muted); font-size: var(--fz-sm); }
+
+.context-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+/* Circular send/stop button on the far right */
+.composer-send {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--fg-primary);
+  color: var(--bg-app);
+}
+.composer-send:hover:not(:disabled) { background: var(--accent); color: var(--accent-fg); }
+.composer-send:disabled { background: var(--border-strong); color: var(--bg-elevated); cursor: not-allowed; }
+.composer-send-stop { background: var(--status-err); color: #fff; }
+.composer-send-stop:hover { background: var(--status-err); opacity: 0.85; }
+
+/* Old input-row class still referenced by markdown stream styles; null
+   it out so legacy left-overs don't fight the composer card. */
+.input-row { display: none; }

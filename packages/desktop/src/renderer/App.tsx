@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import { ApprovalModal } from "./ApprovalModal";
@@ -13,7 +13,17 @@ import {
   type ApprovalState,
   type ToolMessage,
 } from "./types";
-import { loadTranscript, saveTranscript } from "./transcripts";
+import {
+  loadTranscript,
+  saveTranscript,
+  loadSessionIndex,
+  createSession,
+  deleteSessionLocal,
+  renameSessionLocal,
+  touchSession,
+  setActiveSession,
+  type SessionIndex,
+} from "./transcripts";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
@@ -30,7 +40,6 @@ import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { PanelLeft } from "./ui/icons";
 import { IconButton } from "./ui/IconButton";
 import { ApprovalsView } from "./approvals/ApprovalsView";
-import { SessionsView } from "./sessions/SessionsView";
 import { LogsView } from "./logs/LogsView";
 import { SettingsView } from "./settings/SettingsView";
 import { McpView } from "./mcp/McpView";
@@ -39,37 +48,36 @@ import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SearchBar } from "./shell/SearchBar";
 import { TrustGate } from "./workspace-trust/TrustGate";
 import { UpdaterBanner } from "./updater/UpdaterBanner";
-
-/**
- * Transcripts are keyed by repoId; null repoId uses a "global" bucket.
- * Reducer is repo-aware: every dispatched action carries the repo it
- * targets, so a stream event arriving after the user has switched
- * repos still folds into the right bucket (won't poison the new repo's
- * view, won't drop on the floor either).
- */
-type TranscriptsMap = Record<string, MessagesReducerState>;
+import type { PermissionMode } from "./chat/PermissionPill";
+import type { ModelOption } from "./chat/ModelPill";
 
 const GLOBAL_KEY = "__global__";
-function bucketKey(repoId: string | null): string {
+function repoKeyOf(repoId: string | null): string {
   return repoId ?? GLOBAL_KEY;
 }
+/** Compose a transcripts-map bucket key from repo + UI session id. */
+function bucketKey(repoId: string | null, sessionId: string | null): string {
+  return `${repoKeyOf(repoId)}::${sessionId ?? "_none_"}`;
+}
+
+type TranscriptsMap = Record<string, MessagesReducerState>;
 
 type Action =
-  | { type: "user_message"; repoKey: string; text: string }
-  | { type: "stream"; repoKey: string; event: StreamEvent }
-  | { type: "hydrate"; repoKey: string; state: MessagesReducerState };
+  | { type: "user_message"; bucket: string; text: string }
+  | { type: "stream"; bucket: string; event: StreamEvent }
+  | { type: "hydrate"; bucket: string; state: MessagesReducerState };
 
 function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
   if (action.type === "hydrate") {
-    return { ...map, [action.repoKey]: action.state };
+    return { ...map, [action.bucket]: action.state };
   }
-  const current = map[action.repoKey] ?? INITIAL_STATE;
+  const current = map[action.bucket] ?? INITIAL_STATE;
   const next =
     action.type === "user_message"
       ? appendUserMessage(current, action.text)
       : applyStreamEvent(current, action.event);
   if (next === current) return map;
-  return { ...map, [action.repoKey]: next };
+  return { ...map, [action.bucket]: next };
 }
 
 interface ApprovalHistoryEntry {
@@ -93,35 +101,67 @@ function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [model, setModel] = useState<string | null>(null);
-  const [permissionMode, setPermissionMode] = useState<string | null>(null);
+  const [activeModel, setActiveModel] = useState<{ provider: string; model: string } | null>(null);
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const [permissionMode, setPermissionMode] = useState<PermissionMode | null>(null);
+  const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
 
-  const activeRepoKey = bucketKey(activeRepoId);
-  const runningRepoKeyRef = useRef<string | null>(null);
+  // Session indices per repo (keyed by repoKey).
+  const [sessionIndices, setSessionIndices] = useState<Record<string, SessionIndex>>(() => {
+    const out: Record<string, SessionIndex> = {};
+    for (const r of loadRepos()) out[r.id] = loadSessionIndex(r.id);
+    out[GLOBAL_KEY] = loadSessionIndex(null);
+    return out;
+  });
+
+  /** Ensure the active repo has at least one session; return its id. */
+  const ensureActiveSession = (repoId: string | null): string => {
+    const key = repoKeyOf(repoId);
+    const idx = sessionIndices[key] ?? loadSessionIndex(repoId);
+    if (idx.activeSessionId) return idx.activeSessionId;
+    const { index, sessionId } = createSession(repoId);
+    setSessionIndices((prev) => ({ ...prev, [key]: index }));
+    return sessionId;
+  };
+
+  const activeRepoKey = repoKeyOf(activeRepoId);
+  const activeSessionId =
+    sessionIndices[activeRepoKey]?.activeSessionId ?? null;
+  const activeBucket = bucketKey(activeRepoId, activeSessionId);
+  const runningBucketRef = useRef<string | null>(null);
+  const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
 
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
 
+  // Ensure the visible repo always has a session selected. Auto-creates
+  // one if the user just added a repo or switched to an empty index.
   useEffect(() => {
-    if (transcripts[activeRepoKey]) return;
-    const loaded = loadTranscript(activeRepoId);
-    dispatch({ type: "hydrate", repoKey: activeRepoKey, state: loaded });
-  }, [activeRepoKey, activeRepoId, transcripts]);
+    if (!activeSessionId) ensureActiveSession(activeRepoId);
+  }, [activeRepoId, activeSessionId]);
 
+  // Lazy-hydrate transcript on first view of a bucket.
   useEffect(() => {
+    if (!activeSessionId) return;
+    if (transcripts[activeBucket]) return;
+    const loaded = loadTranscript(activeRepoId, activeSessionId);
+    dispatch({ type: "hydrate", bucket: activeBucket, state: loaded });
+  }, [activeBucket, activeRepoId, activeSessionId, transcripts]);
+
+  // Persist active transcript (debounced).
+  useEffect(() => {
+    if (!activeSessionId) return;
     const handle = setTimeout(() => {
-      const s = transcripts[activeRepoKey];
+      const s = transcripts[activeBucket];
       if (!s) return;
-      const repoId = activeRepoKey === GLOBAL_KEY ? null : activeRepoKey;
-      saveTranscript(repoId, s);
+      saveTranscript(activeRepoId, activeSessionId, s);
     }, 600);
     return () => clearTimeout(handle);
-  }, [transcripts, activeRepoKey]);
+  }, [transcripts, activeBucket, activeRepoId, activeSessionId]);
 
-  const state = transcripts[activeRepoKey] ?? INITIAL_STATE;
-  const busy = busyKeys.has(activeRepoKey);
-  const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
+  const state = transcripts[activeBucket] ?? INITIAL_STATE;
+  const busy = busyKeys.has(activeBucket);
 
   const setBusyForKey = (key: string, val: boolean): void => {
     setBusyKeys((prev) => {
@@ -138,9 +178,9 @@ function App() {
     window.codeshell.log("sidebar.add_clicked", {});
     const picked = await window.codeshell.pickDir();
     if (!picked) return;
-    if (repos.some((r) => r.path === picked.path)) {
-      const existing = repos.find((r) => r.path === picked.path);
-      if (existing) setActiveRepoId(existing.id);
+    const dup = repos.find((r) => r.path === picked.path);
+    if (dup) {
+      setActiveRepoId(dup.id);
       return;
     }
     const next: Repo = {
@@ -151,39 +191,95 @@ function App() {
     };
     setRepos((prev) => [...prev, next]);
     setActiveRepoId(next.id);
+    setSessionIndices((prev) => ({
+      ...prev,
+      [next.id]: loadSessionIndex(next.id),
+    }));
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
   };
 
   const handleRemoveRepo = (id: string): void => {
     setRepos((prev) => prev.filter((r) => r.id !== id));
     if (activeRepoId === id) setActiveRepoId(null);
+    setSessionIndices((prev) => {
+      const { [id]: _drop, ...rest } = prev;
+      return rest;
+    });
     window.codeshell.log("repo.removed", { id });
+  };
+
+  const handleToggleRepo = (id: string): void => {
+    setCollapsedRepos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectSession = (repoId: string | null, sessionId: string): void => {
+    const key = repoKeyOf(repoId);
+    setActiveRepoId(repoId);
+    setSessionIndices((prev) => ({
+      ...prev,
+      [key]: setActiveSession(repoId, sessionId),
+    }));
+    setSelectedToolId(null);
+    // Make sure we're looking at chat, not settings, when the user
+    // explicitly picks a session.
+    setView((v) => ({ ...v, viewMode: "chat" }));
+  };
+
+  const handleNewConversation = (): void => {
+    const repoId = activeRepoId;
+    const { index, sessionId } = createSession(repoId);
+    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: index }));
+    setSelectedToolId(null);
+    setView((v) => ({ ...v, viewMode: "chat" }));
+    // hydrate empty bucket so chat shows welcome state
+    dispatch({ type: "hydrate", bucket: bucketKey(repoId, sessionId), state: INITIAL_STATE });
+  };
+
+  const handleRenameSession = (
+    repoId: string | null,
+    sessionId: string,
+    title: string,
+  ): void => {
+    const next = renameSessionLocal(repoId, sessionId, title);
+    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+  };
+
+  const handleDeleteSession = (
+    repoId: string | null,
+    sessionId: string,
+  ): void => {
+    const next = deleteSessionLocal(repoId, sessionId);
+    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
   };
 
   useEffect(() => {
     window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
 
     const offStream = window.codeshell.onStreamEvent((event: StreamEvent) => {
-      const targetKey = runningRepoKeyRef.current ?? GLOBAL_KEY;
+      const target = runningBucketRef.current;
+      if (!target) return;
       const noisy =
         event.type === "text_delta" ||
         event.type === "tool_use_args_delta" ||
         event.type === "usage_update" ||
         event.type === "thinking_delta";
       if (!noisy) {
-        window.codeshell.log("stream.event", { type: event.type, targetKey });
+        window.codeshell.log("stream.event", { type: event.type, bucket: target });
       }
-      dispatch({ type: "stream", repoKey: targetKey, event });
+      dispatch({ type: "stream", bucket: target, event });
       if (event.type === "turn_complete" || event.type === "error") {
-        setBusyForKey(targetKey, false);
-        runningRepoKeyRef.current = null;
+        setBusyForKey(target, false);
+        runningBucketRef.current = null;
       }
     });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", { requestId: env.requestId, toolName: env.request.toolName });
       setApprovalQueue((q) => [...q, env]);
-      // First-in-queue also becomes the modal blocker so the existing
-      // blocking flow keeps working for the user looking at chat.
       setApproval((cur) => cur ?? env);
     });
     const offStatus = window.codeshell.onStatus((evt) => {
@@ -191,14 +287,14 @@ function App() {
     });
     const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
-      const runningKey = runningRepoKeyRef.current;
+      const runningKey = runningBucketRef.current;
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
       else if (evt.type === "gave_up") setLifecycle("Agent crashed too many times. Quit and reopen.");
       else if (evt.type === "exited") {
         if (evt.code === 0) setLifecycle(null);
         else setLifecycle(`Agent exited (code ${evt.code}).`);
         if (runningKey) setBusyForKey(runningKey, false);
-        runningRepoKeyRef.current = null;
+        runningBucketRef.current = null;
       }
     });
     return () => {
@@ -210,11 +306,19 @@ function App() {
   }, []);
 
   const send = (text: string): void => {
-    const targetKey = activeRepoKey;
-    window.codeshell.log("send", { textLen: text.length, repo: activeRepo?.name ?? null, targetKey });
-    dispatch({ type: "user_message", repoKey: targetKey, text });
-    setBusyForKey(targetKey, true);
-    runningRepoKeyRef.current = targetKey;
+    const sid = activeSessionId ?? ensureActiveSession(activeRepoId);
+    const bucket = bucketKey(activeRepoId, sid);
+    window.codeshell.log("send", { textLen: text.length, repo: activeRepo?.name ?? null, bucket });
+    dispatch({ type: "user_message", bucket, text });
+    setBusyForKey(bucket, true);
+    runningBucketRef.current = bucket;
+
+    // Touch session: bump updatedAt + adopt first user prompt as title.
+    setSessionIndices((prev) => ({
+      ...prev,
+      [repoKeyOf(activeRepoId)]: touchSession(activeRepoId, sid, text),
+    }));
+
     void window.codeshell
       .run(text, activeRepo ? { cwd: activeRepo.path } : undefined)
       .then((r) =>
@@ -240,7 +344,6 @@ function App() {
     ]);
     setApproval((cur) => {
       if (!cur || cur.requestId === env.requestId) {
-        // Promote next queued envelope into modal (if any).
         const next = approvalQueue.find((e) => e.requestId !== env.requestId);
         return next ?? null;
       }
@@ -261,8 +364,6 @@ function App() {
   const toggleInspector = (): void =>
     setView((p) => ({ ...p, inspectorCollapsed: !p.inspectorCollapsed }));
 
-  // Global keyboard shortcuts: Cmd/Ctrl+K palette, Cmd/Ctrl+F search,
-  // Cmd/Ctrl+B sidebar, Cmd/Ctrl+I inspector. Esc closes palette/search.
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       const mod = e.metaKey || e.ctrlKey;
@@ -278,6 +379,15 @@ function App() {
       } else if (mod && e.key.toLowerCase() === "i") {
         e.preventDefault();
         toggleInspector();
+      } else if (mod && e.key >= "1" && e.key <= "9") {
+        // Cmd+N — jump to Nth session under active repo.
+        const n = parseInt(e.key, 10) - 1;
+        const idx = sessionIndices[repoKeyOf(activeRepoId)];
+        const target = idx?.sessions[n];
+        if (target) {
+          e.preventDefault();
+          handleSelectSession(activeRepoId, target.id);
+        }
       } else if (e.key === "Escape") {
         if (paletteOpen) setPaletteOpen(false);
         if (searchOpen) setSearchOpen(false);
@@ -285,9 +395,8 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [paletteOpen, searchOpen]);
+  }, [paletteOpen, searchOpen, sessionIndices, activeRepoId]);
 
-  // Menu events from main process (File → 添加项目, View → 命令面板, etc).
   useEffect(() => {
     const off = window.codeshell.onMenuEvent((evt, payload) => {
       switch (evt) {
@@ -303,6 +412,7 @@ function App() {
             const id = makeRepoId();
             setRepos((prev) => [...prev, { id, name: p.name, path: p.path, addedAt: Date.now() }]);
             setActiveRepoId(id);
+            setSessionIndices((prev) => ({ ...prev, [id]: loadSessionIndex(id) }));
           }
           break;
         }
@@ -326,34 +436,42 @@ function App() {
     return off;
   }, [repos]);
 
-  // Pull model + permissionMode from settings on mount and after the
-  // settings view writes (we re-poll cheaply when viewMode flips).
+  // Refresh model + permission + provider list from settings whenever
+  // active repo or view changes (after a SettingsView write the user
+  // typically returns to chat — that's our cue to re-poll).
   useEffect(() => {
     let cancelled = false;
     const refresh = async (): Promise<void> => {
       try {
         const cwd = activeRepo?.path;
-        // Project settings override user settings when present.
         const projectS = cwd ? (await window.codeshell.getSettings("project", cwd)) ?? {} : {};
         const userS = (await window.codeshell.getSettings("user")) ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         if (cancelled) return;
-        setModel(typeof merged.model === "string" ? merged.model : null);
-        setPermissionMode(typeof merged.permissionMode === "string" ? merged.permissionMode : null);
+        setActiveModel(
+          typeof merged.model === "string" && typeof merged.provider === "string"
+            ? { provider: merged.provider, model: merged.model }
+            : null,
+        );
+        const pm = typeof merged.permissionMode === "string" ? merged.permissionMode : "default";
+        setPermissionMode(
+          pm === "plan" || pm === "default" || pm === "accept_edits" || pm === "bypass"
+            ? (pm as PermissionMode)
+            : "default",
+        );
+        setModelOptions(candidatesFromSettings(merged));
       } catch {
-        // ignore — likely no settings file yet.
+        // ignore
       }
     };
     void refresh();
     return () => { cancelled = true; };
   }, [activeRepo, view.viewMode]);
 
-  // Sync dock/taskbar badge with pending approvals count.
   useEffect(() => {
     void window.codeshell.setBadgeCount(approvalQueue.length);
   }, [approvalQueue.length]);
 
-  // Notification when a background turn completes while window unfocused.
   const prevBusyRef = useRef(busy);
   useEffect(() => {
     if (prevBusyRef.current && !busy && document.hidden) {
@@ -366,27 +484,44 @@ function App() {
   }, [busy, activeRepo]);
 
   const clearTranscript = (): void => {
-    dispatch({ type: "hydrate", repoKey: activeRepoKey, state: INITIAL_STATE });
+    dispatch({ type: "hydrate", bucket: activeBucket, state: INITIAL_STATE });
   };
 
-  const matchCount = searchQuery
-    ? state.messages.reduce((n, m) => {
-        const text =
-          m.kind === "user" || m.kind === "assistant" || m.kind === "thinking" || m.kind === "system"
-            ? m.text
-            : "";
-        if (!text) return n;
-        const q = searchQuery.toLowerCase();
-        let count = 0;
-        const lower = text.toLowerCase();
-        let idx = lower.indexOf(q);
-        while (idx !== -1) {
-          count++;
-          idx = lower.indexOf(q, idx + q.length);
-        }
-        return n + count;
-      }, 0)
-    : 0;
+  const onPermissionChange = (m: PermissionMode): void => {
+    setPermissionMode(m);
+    void window.codeshell.updateSettings("user", { permissionMode: m });
+  };
+
+  const onModelChange = (opt: ModelOption): void => {
+    setActiveModel({ provider: opt.provider, model: opt.model });
+    void window.codeshell.updateSettings("user", { provider: opt.provider, model: opt.model });
+  };
+
+  const matchCount = useMemo(() => {
+    if (!searchQuery) return 0;
+    const q = searchQuery.toLowerCase();
+    return state.messages.reduce((n, m) => {
+      const text =
+        m.kind === "user" || m.kind === "assistant" || m.kind === "thinking" || m.kind === "system"
+          ? m.text
+          : "";
+      if (!text) return n;
+      let count = 0;
+      const lower = text.toLowerCase();
+      let idx = lower.indexOf(q);
+      while (idx !== -1) {
+        count++;
+        idx = lower.indexOf(q, idx + q.length);
+      }
+      return n + count;
+    }, 0);
+  }, [state.messages, searchQuery]);
+
+  const sessionTitleForTop = (() => {
+    const idx = sessionIndices[activeRepoKey];
+    const s = idx?.sessions.find((x) => x.id === activeSessionId);
+    return s?.title ?? null;
+  })();
 
   return (
     <div
@@ -397,11 +532,7 @@ function App() {
       <div className="topbar-region">
         <TopBar
           repoName={activeRepo?.name ?? null}
-          sessionTitle={state.sessionId ? state.sessionId.slice(0, 8) : null}
-          branch={null}
-          model={model}
-          permissionMode={permissionMode}
-          promptTokens={state.promptTokens > 0 ? state.promptTokens : undefined}
+          sessionTitle={sessionTitleForTop}
           busy={busy}
         />
       </div>
@@ -409,14 +540,22 @@ function App() {
       <div className="sidebar-region">
         <Sidebar
           repos={repos}
+          sessions={sessionIndices}
           activeRepoId={activeRepoId}
+          activeSessionId={activeSessionId}
+          collapsedRepos={collapsedRepos}
+          approvalsBadge={approvalQueue.length}
           onSelectRepo={setActiveRepoId}
+          onSelectSession={handleSelectSession}
+          onToggleRepo={handleToggleRepo}
           onAddRepo={() => { void handleAddRepo(); }}
           onRemoveRepo={handleRemoveRepo}
+          onNewConversation={handleNewConversation}
+          onOpenSearch={() => setSearchOpen(true)}
+          onOpenAutomations={() => setViewMode("runs")}
+          onOpenPlugins={() => setViewMode("mcp")}
+          onOpenSettings={() => setViewMode("settings")}
           viewMode={view.viewMode}
-          onSelectView={setViewMode}
-          approvalsBadge={approvalQueue.length}
-          runsBadge={busy ? 1 : 0}
         />
       </div>
 
@@ -441,8 +580,6 @@ function App() {
             history={approvalHistory}
             onDecide={decideEnvelope}
           />
-        ) : view.viewMode === "sessions" ? (
-          <SessionsView onNewSession={clearTranscript} />
         ) : view.viewMode === "logs" ? (
           <LogsView />
         ) : view.viewMode === "settings" ? (
@@ -451,7 +588,7 @@ function App() {
           <McpView />
         ) : view.viewMode === "runs" ? (
           <RunsView />
-        ) : view.viewMode === "chat" ? (
+        ) : (
           <>
             {showWelcome && (
               <div className="welcome">
@@ -473,13 +610,14 @@ function App() {
               activeRepoId={activeRepoId}
               selectedToolId={selectedToolId}
               onSelectTool={(m: ToolMessage) => setSelectedToolId(m.id)}
+              permissionMode={permissionMode}
+              onPermissionChange={onPermissionChange}
+              modelOptions={modelOptions}
+              activeModel={activeModel}
+              onModelChange={onModelChange}
+              contextTokens={state.promptTokens}
             />
           </>
-        ) : (
-          <div className="view-placeholder">
-            <div className="view-placeholder-title">{viewLabel(view.viewMode)}</div>
-            <div className="view-placeholder-hint">该视图将在后续阶段实现</div>
-          </div>
         )}
         <SearchBar
           open={searchOpen}
@@ -505,11 +643,7 @@ function App() {
 
       <TrustGate
         repoPath={activeRepo?.path ?? null}
-        onDecide={() => {
-          // No-op: TrustGate updates main-side trust store itself.
-          // Renderer state doesn't currently gate UI on trust, but the
-          // worker reads trust via settings/path in future versions.
-        }}
+        onDecide={() => { /* trust persisted in main */ }}
       />
 
       <div className="inspector-region">
@@ -529,16 +663,32 @@ function App() {
   );
 }
 
-function viewLabel(v: ViewMode): string {
-  switch (v) {
-    case "sessions": return "会话";
-    case "approvals": return "审批";
-    case "runs": return "运行";
-    case "mcp": return "插件";
-    case "logs": return "日志";
-    case "settings": return "设置";
-    default: return v;
+/** Read providers[].models[] out of merged settings into composer-ready options. */
+function candidatesFromSettings(s: Record<string, unknown>): ModelOption[] {
+  const out: ModelOption[] = [];
+  const providers = s.providers;
+  if (!Array.isArray(providers)) return out;
+  for (const p of providers) {
+    if (!p || typeof p !== "object") continue;
+    const obj = p as Record<string, unknown>;
+    const provider =
+      typeof obj.name === "string" ? obj.name :
+      typeof obj.kind === "string" ? obj.kind : "";
+    const models = obj.models;
+    if (!Array.isArray(models)) continue;
+    for (const m of models) {
+      if (typeof m === "string") out.push({ provider, model: m });
+      else if (m && typeof m === "object" && typeof (m as Record<string, unknown>).name === "string") {
+        const mm = m as Record<string, unknown>;
+        out.push({
+          provider,
+          model: mm.name as string,
+          label: typeof mm.label === "string" ? mm.label : undefined,
+        });
+      }
+    }
   }
+  return out;
 }
 
 export { App };

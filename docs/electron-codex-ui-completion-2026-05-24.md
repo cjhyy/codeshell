@@ -5,6 +5,18 @@
 > Spec: `docs/superpowers/specs/2026-05-24-electron-codex-ui-full-design.md`
 > Plan (Phase 1 in detail): `docs/superpowers/plans/2026-05-24-electron-codex-ui-phase1-shell.md`
 
+## Post-build review
+
+The first completed version still needs a follow-up information-architecture pass. See:
+
+- `docs/electron-codex-ui-review-feedback-2026-05-24.md`
+
+Main requested changes:
+
+- Sidebar should be project-first, with sessions nested under each project.
+- Settings should be pinned to the bottom-left, and model/provider/permission setup should live inside Settings.
+- Permission mode, current session context progress, and model switching should move into the composer/input row.
+
 ## Phases delivered (all 6)
 
 | Phase | Branch (merged to main) | Headline |

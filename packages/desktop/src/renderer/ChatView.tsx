@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Paperclip, Mic, ArrowUp, Square } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message, ToolMessage } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
+import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
+import { ModelPill, type ModelOption } from "./chat/ModelPill";
+import { ContextRing } from "./chat/ContextRing";
 
 interface Props {
   messages: Message[];
@@ -11,32 +15,46 @@ interface Props {
   activeRepoId: string | null;
   selectedToolId?: string | null;
   onSelectTool?: (m: ToolMessage) => void;
+
+  // Composer controls
+  permissionMode: PermissionMode | null;
+  onPermissionChange: (m: PermissionMode) => void;
+  modelOptions: ModelOption[];
+  activeModel: { provider: string; model: string } | null;
+  onModelChange: (opt: ModelOption) => void;
+  contextTokens: number;
 }
 
 const MAX_TEXTAREA_PX = 200;
 
-export function ChatView({ messages, onSend, onStop, busy, activeRepoId, selectedToolId, onSelectTool }: Props) {
+export function ChatView({
+  messages,
+  onSend,
+  onStop,
+  busy,
+  activeRepoId,
+  selectedToolId,
+  onSelectTool,
+  permissionMode,
+  onPermissionChange,
+  modelOptions,
+  activeModel,
+  onModelChange,
+  contextTokens,
+}: Props) {
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
-  /**
-   * historyCursor: -1 means "user is typing fresh draft" (`draft` is the
-   * live edit). 0..history.length-1 means "user is browsing entry N".
-   * When cursor leaves -1 we stash the live draft into `liveDraftStash`
-   * so ↓ all the way back can restore it.
-   */
   const [historyCursor, setHistoryCursor] = useState(-1);
   const liveDraftStash = useRef<string>("");
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Reload history when the active repo changes.
   useEffect(() => {
     setHistory(loadHistory(activeRepoId));
     setHistoryCursor(-1);
     liveDraftStash.current = "";
   }, [activeRepoId]);
 
-  // Auto-grow textarea height.
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -64,21 +82,14 @@ export function ChatView({ messages, onSend, onStop, busy, activeRepoId, selecte
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    // IME composing — don't intercept anything. Browser delivers Enter
-    // events during composition to confirm the candidate; respecting
-    // them is mandatory for Chinese/Japanese/Korean users.
     if (isComposing || e.nativeEvent.isComposing) return;
 
-    // Submit on Enter (without Shift) or Cmd-Enter / Ctrl-Enter.
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
       e.preventDefault();
       submit();
       return;
     }
 
-    // History navigation only when the textarea is empty OR the user is
-    // already browsing history. Otherwise ↑/↓ should move the caret
-    // inside multi-line text as usual.
     const browsingHistory = historyCursor !== -1;
     const canEnterHistory =
       (e.key === "ArrowUp" || e.key === "ArrowDown") &&
@@ -114,33 +125,82 @@ export function ChatView({ messages, onSend, onStop, busy, activeRepoId, selecte
         selectedToolId={selectedToolId ?? null}
         onSelectTool={onSelectTool}
       />
-      <div className="input-row">
-        <textarea
-          ref={textareaRef}
-          value={draft}
-          onChange={(e) => {
-            setDraft(e.target.value);
-            // Editing while browsing history exits browse mode.
-            if (historyCursor !== -1) setHistoryCursor(-1);
-          }}
-          onKeyDown={handleKeyDown}
-          onCompositionStart={() => setIsComposing(true)}
-          onCompositionEnd={() => setIsComposing(false)}
-          placeholder={placeholder}
-          disabled={activeRepoId === null}
-          rows={1}
-        />
-        {busy ? (
-          <button className="stop-btn" onClick={onStop}>Stop</button>
-        ) : (
-          <button
-            className="send-btn primary"
-            onClick={submit}
-            disabled={disabled || !draft.trim()}
-          >
-            Send
-          </button>
-        )}
+
+      <div className="composer">
+        <div className="composer-textarea-wrap">
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              if (historyCursor !== -1) setHistoryCursor(-1);
+            }}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
+            placeholder={placeholder}
+            disabled={activeRepoId === null}
+            rows={1}
+          />
+        </div>
+
+        <div className="composer-controls">
+          <div className="composer-controls-left">
+            <button
+              type="button"
+              className="composer-icon-btn"
+              aria-label="添加附件"
+              title="添加附件 (尚未实现)"
+              disabled
+            >
+              <Paperclip size={14} />
+            </button>
+            <PermissionPill
+              value={permissionMode}
+              onChange={onPermissionChange}
+              disabled={disabled}
+            />
+          </div>
+
+          <div className="composer-controls-right">
+            <ContextRing used={contextTokens} />
+            <ModelPill
+              active={activeModel}
+              options={modelOptions}
+              onSelect={onModelChange}
+              disabled={busy}
+            />
+            <button
+              type="button"
+              className="composer-icon-btn"
+              aria-label="语音输入"
+              title="语音输入 (尚未实现)"
+              disabled
+            >
+              <Mic size={14} />
+            </button>
+            {busy ? (
+              <button
+                type="button"
+                className="composer-send composer-send-stop"
+                onClick={onStop}
+                aria-label="停止"
+              >
+                <Square size={14} fill="currentColor" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="composer-send"
+                onClick={submit}
+                disabled={disabled || !draft.trim()}
+                aria-label="发送"
+              >
+                <ArrowUp size={16} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

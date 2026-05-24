@@ -57,26 +57,47 @@ async function createWindow(): Promise<BrowserWindow> {
 
   if (ws.maximized) win.maximize();
 
-  // Strict CSP installed once on the default session (a session is
-  // shared across windows, so re-installing per window would double
-  // the header).
+  // CSP installed once on the default session (sessions are shared
+  // across windows, so re-installing per window would double-emit).
+  //
+  // Dev needs `'unsafe-inline'` for scripts because Vite's React plugin
+  // injects an inline preamble for Fast Refresh — without it the
+  // renderer fails to start. Dev also needs `connect-src ws://…` for
+  // HMR and `style-src 'unsafe-inline'` for vite's style injection.
+  //
+  // Prod tightens script-src back to 'self'. Inline styles stay
+  // permitted (highlight.js / react-markdown emit them).
   if (!cspInstalled) {
     cspInstalled = true;
+    const isDev = Boolean(process.env.VITE_DEV_URL);
+    const csp = isDev
+      ? [
+          "default-src 'self'; " +
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "img-src 'self' data: blob:; " +
+          "font-src 'self' data:; " +
+          "connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*; " +
+          "object-src 'none'; " +
+          "base-uri 'none'; " +
+          "frame-ancestors 'none'",
+        ]
+      : [
+          "default-src 'self'; " +
+          "script-src 'self'; " +
+          "style-src 'self' 'unsafe-inline'; " +
+          "img-src 'self' data:; " +
+          "font-src 'self' data:; " +
+          "connect-src 'self'; " +
+          "object-src 'none'; " +
+          "base-uri 'none'; " +
+          "frame-ancestors 'none'",
+        ];
     session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
       cb({
         responseHeaders: {
           ...details.responseHeaders,
-          "Content-Security-Policy": [
-            "default-src 'self'; " +
-            "script-src 'self'; " +
-            "style-src 'self' 'unsafe-inline'; " +
-            "img-src 'self' data:; " +
-            "font-src 'self' data:; " +
-            "connect-src 'self' ws: http://localhost:* http://127.0.0.1:*; " +
-            "object-src 'none'; " +
-            "base-uri 'none'; " +
-            "frame-ancestors 'none'",
-          ],
+          "Content-Security-Policy": csp,
         },
       });
     });
