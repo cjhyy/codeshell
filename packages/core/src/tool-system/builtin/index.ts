@@ -20,7 +20,14 @@ import {
 } from "./agent.js";
 import { enterPlanModeToolDef, enterPlanModeTool, exitPlanModeToolDef, exitPlanModeTool } from "./plan.js";
 import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
-import { todoWriteToolDef, todoWriteTool } from "./task.js";
+import {
+  taskCreateToolDef, taskCreateTool,
+  taskListToolDef, taskListTool,
+  taskUpdateToolDef, taskUpdateTool,
+  taskStopToolDef, taskStopTool,
+  taskGetToolDef, taskGetTool,
+  taskOutputToolDef, taskOutputTool,
+} from "./task.js";
 import { enterWorktreeToolDef, enterWorktreeTool, exitWorktreeToolDef, exitWorktreeTool } from "./worktree.js";
 import { sendMessageToolDef, sendMessageTool } from "./send-message.js";
 import { sleepToolDef, sleepTool } from "./sleep.js";
@@ -228,13 +235,63 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
   },
   {
     definition: {
-      ...todoWriteToolDef,
+      ...taskCreateToolDef,
       source: "builtin",
       permissionDefault: "allow",
       isReadOnly: false,
       isConcurrencySafe: false,
     },
-    execute: todoWriteTool,
+    execute: taskCreateTool,
+  },
+  {
+    definition: {
+      ...taskListToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: taskListTool,
+  },
+  {
+    definition: {
+      ...taskUpdateToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: taskUpdateTool,
+  },
+  {
+    definition: {
+      ...taskStopToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: taskStopTool,
+  },
+  {
+    definition: {
+      ...taskGetToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: taskGetTool,
+  },
+  {
+    definition: {
+      ...taskOutputToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: taskOutputTool,
   },
   // ─── Phase 4: Multi-Agent + Worktree ───────────────────────────
   {

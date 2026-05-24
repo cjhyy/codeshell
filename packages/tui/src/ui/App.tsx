@@ -31,10 +31,7 @@ import {
   ThinkingMessage,
 } from "./components/MessageContent.js";
 import { AgentClient } from "@cjhyy/code-shell-core";
-// taskManager removed in 2026-05-24 refactor — task state lives in
-// transcript + task_update stream events now. The reset() call below
-// is no longer needed; the engine replays the last TodoWrite snapshot
-// on resume and a new run starts with an empty UI task list anyway.
+import { taskManager } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { AskUserPrompt } from "./components/AskUserPrompt.js";
@@ -1179,6 +1176,7 @@ export function App({
       if (!queryGuard.reserve()) return; // already busy → ignore concurrent submit
       streamingTokensRef.current = 0;
       cancelledRef.current = false;
+      taskManager.reset();
 
       const abortController = new AbortController();
       if (!queryGuard.tryStart(abortController)) {

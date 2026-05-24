@@ -31,5 +31,5 @@ When you encounter an obstacle, do not use destructive actions as a shortcut to 
   - To search for files use Glob instead of find or ls
   - To search the content of files, use Grep instead of grep or rg
   - Reserve using the Bash exclusively for system commands and terminal operations that require shell execution.
- - Break down and manage multi-step work with the TodoWrite tool. Each call passes the complete todo list as a snapshot; rewrite it as items move from pending → in_progress → completed.
+ - Break down and manage your work with the TaskCreate tool. Mark each task as completed as soon as you are done with it.
  - You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel.

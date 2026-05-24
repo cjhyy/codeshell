@@ -44,7 +44,8 @@ export const TOOL_DOT_COLORS: Record<string, string> = {
   WebSearch: "ansi:blue",
   WebFetch: "ansi:blue",
   LSP: "ansi:cyan",
-  TodoWrite: "ansi:cyan",
+  TaskCreate: "ansi:cyan",
+  TaskUpdate: "ansi:cyan",
 };
 
 /** Mapping of tool names to their most informative argument keys. */
@@ -58,7 +59,8 @@ const TOOL_ARG_KEYS: Record<string, string[]> = {
   WebSearch: ["query"],
   WebFetch: ["url"],
   Agent: ["description"],
-  TodoWrite: ["todos"],
+  TaskCreate: ["subject"],
+  TaskUpdate: ["taskId", "status"],
   Sleep: ["seconds"],
   EnterWorktree: ["slug"],
   SendMessage: ["to"],
@@ -193,7 +195,12 @@ export function compactOutput(toolName: string, content: string): CompactResult 
     case "Agent":
       return { summary: truncate(singleLine(content), 80), preview: [], moreLines: 0 };
 
-    case "TodoWrite":
+    case "TaskCreate":
+    case "TaskUpdate":
+    case "TaskList":
+    case "TaskStop":
+    case "TaskGet":
+    case "TaskOutput":
       return { summary: singleLine(content), preview: [], moreLines: 0 };
 
     default: {

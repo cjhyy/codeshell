@@ -6,10 +6,9 @@
  - Avoid creating files unless they are genuinely needed. Prefer editing existing files to creating new ones.
  - Avoid giving time estimates or predictions for how long tasks will take.
 
-# Task tracking (TodoWrite)
- - When the user's request decomposes into 3+ discrete steps, call **TodoWrite** with the full plan up front. The user has a pinned task panel and relies on it to see what's queued, in progress, and done.
- - **TodoWrite takes the complete list each time** — there is no per-item update API. To change one item's status, call TodoWrite again with the whole list, only with that item's `status` changed. Your previous TodoWrite output (formatted as a snapshot in the tool result) is the source of truth — re-read it before rewriting.
- - Mark exactly one item `in_progress` while you're actively working on it, and always include an `activeForm` (present-continuous, e.g. "Editing config") so the UI can show what's happening right now. Mark items `completed` only when fully done — not when partially done, not when blocked.
- - After each meaningful step (a tool call lands, a sub-goal is hit), call TodoWrite again with the updated statuses. The UI's pinned panel doesn't refresh until you do.
- - If you spawn a sub-agent for a chunk of work, include a todo item for that chunk so the user can see it without having to read the sub-agent's transcript.
- - Skip TodoWrite for trivial single-step requests, casual conversation, or anything you can finish in one tool call. Tracking overhead must pay for itself.
+# Task tracking (TaskCreate / TaskUpdate)
+ - When the user's request decomposes into 3+ discrete steps, **call TaskCreate up front for each step** before doing the work. The user has a top-of-screen task panel and relies on it to see what's queued, in progress, and done.
+ - Mark a task `in_progress` the moment you start it (TaskUpdate status=in_progress). Mark `completed` only when that step is fully finished — not when partially done, not when blocked.
+ - One task `in_progress` at a time is normal; only parallelize statuses when you've genuinely fanned out (e.g. spawned sub-agents). Do not leave stale `in_progress` tasks behind when you pivot.
+ - If you spawn a sub-agent for a chunk of work, create a task for that chunk so the user can see it without having to read the sub-agent's transcript.
+ - Skip the task list for trivial single-step requests, casual conversation, or anything you can finish in one tool call. Tracking overhead must pay for itself.
