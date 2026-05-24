@@ -9,8 +9,10 @@ import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
+import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { TaskListMessage, AskUserMessage } from "./types";
 import type { Repo } from "./repos";
+import type { ApprovalRequestEnvelope } from "../preload/types";
 
 interface Props {
   messages: Message[];
@@ -19,6 +21,8 @@ interface Props {
   busy: boolean;
   activeRepoId: string | null;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
+  pendingApproval?: ApprovalRequestEnvelope | null;
+  onApprovalDecide?: (decision: "approve" | "deny", reason?: string) => void;
 
   // Composer controls
   permissionMode: PermissionMode | null;
@@ -44,6 +48,8 @@ export function ChatView({
   busy,
   activeRepoId,
   onAskUserAnswer,
+  pendingApproval,
+  onApprovalDecide,
   permissionMode,
   onPermissionChange,
   modelOptions,
@@ -150,7 +156,7 @@ export function ChatView({
         onAskUserAnswer={onAskUserAnswer}
       />
 
-      {(latestTasks || openAsk) && (
+      {(latestTasks || openAsk || pendingApproval) && (
         <div className="pinned-above-composer">
           {latestTasks && <TaskListMessageView message={latestTasks} />}
           {openAsk && (
@@ -159,82 +165,87 @@ export function ChatView({
               onAnswer={onAskUserAnswer ?? (() => undefined)}
             />
           )}
+          {pendingApproval && onApprovalDecide && (
+            <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
+          )}
         </div>
       )}
 
-      <div className="composer">
-        <div className="composer-textarea-wrap">
-          <textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              if (historyCursor !== -1) setHistoryCursor(-1);
-            }}
-            onKeyDown={handleKeyDown}
-            onCompositionStart={() => setIsComposing(true)}
-            onCompositionEnd={() => setIsComposing(false)}
-            placeholder={placeholder}
-            disabled={busy}
-            rows={1}
-          />
-        </div>
-
-        <div className="composer-controls">
-          <div className="composer-controls-left">
-            <button
-              type="button"
-              className="composer-icon-btn"
-              aria-label="添加附件"
-              title="添加附件 (尚未实现)"
-              disabled
-            >
-              <Paperclip size={14} />
-            </button>
-            <PermissionPill
-              value={permissionMode}
-              onChange={onPermissionChange}
-              disabled={disabled}
+      <div className="composer-shell">
+        <div className="composer">
+          <div className="composer-textarea-wrap">
+            <textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                if (historyCursor !== -1) setHistoryCursor(-1);
+              }}
+              onKeyDown={handleKeyDown}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
+              placeholder={placeholder}
+              disabled={busy}
+              rows={1}
             />
           </div>
 
-          <div className="composer-controls-right">
-            <ContextRing used={contextTokens} max={contextMax} busy={busy} />
-            <ModelPill
-              activeKey={activeModelKey}
-              options={modelOptions}
-              onSelect={onModelChange}
-              disabled={busy}
-            />
-            <button
-              type="button"
-              className="composer-icon-btn"
-              aria-label="语音输入"
-              title="语音输入 (尚未实现)"
-              disabled
-            >
-              <Mic size={14} />
-            </button>
-            {busy ? (
+          <div className="composer-controls">
+            <div className="composer-controls-left">
               <button
                 type="button"
-                className="composer-send composer-send-stop"
-                onClick={onStop}
-                aria-label="停止"
+                className="composer-icon-btn"
+                aria-label="添加附件"
+                title="添加附件 (尚未实现)"
+                disabled
               >
-                <Square size={14} fill="currentColor" />
+                <Paperclip size={14} />
               </button>
-            ) : (
+              <PermissionPill
+                value={permissionMode}
+                onChange={onPermissionChange}
+                disabled={disabled}
+              />
+            </div>
+
+            <div className="composer-controls-right">
+              <ContextRing used={contextTokens} max={contextMax} busy={busy} />
+              <ModelPill
+                activeKey={activeModelKey}
+                options={modelOptions}
+                onSelect={onModelChange}
+                disabled={busy}
+              />
               <button
                 type="button"
-                className="composer-send"
-                onClick={submit}
-                disabled={disabled || !draft.trim()}
-                aria-label="发送"
+                className="composer-icon-btn"
+                aria-label="语音输入"
+                title="语音输入 (尚未实现)"
+                disabled
               >
-                <ArrowUp size={16} />
+                <Mic size={14} />
               </button>
-            )}
+              {busy ? (
+                <button
+                  type="button"
+                  className="composer-send composer-send-stop"
+                  onClick={onStop}
+                  aria-label="停止"
+                >
+                  <Square size={14} fill="currentColor" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="composer-send"
+                  onClick={submit}
+                  disabled={disabled || !draft.trim()}
+                  aria-label="发送"
+                >
+                  <ArrowUp size={16} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -244,7 +255,7 @@ export function ChatView({
             already tied to the existing repo). Use the sidebar to
             jump projects after a session has started. */}
         {messages.length === 0 && (
-          <div className="composer-pills-row">
+          <div className="composer-context-dock">
             <ProjectPicker
               repos={repos}
               activeRepoId={activeRepoId}

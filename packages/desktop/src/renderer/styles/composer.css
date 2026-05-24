@@ -19,10 +19,15 @@
 /* Inside the pinned panel, override the message-view 'margin' that
    was tuned for inline rendering so cards align flush with composer. */
 .pinned-above-composer .msg-tasks,
-.pinned-above-composer .ask-user { margin: 0; }
+.pinned-above-composer .ask-user,
+.pinned-above-composer .approval-card { margin: 0; }
+
+.composer-shell {
+  flex-shrink: 0;
+  margin: var(--sp-2) var(--sp-4);
+}
 
 .composer {
-  margin: var(--sp-2) var(--sp-4);
   padding: var(--sp-2) var(--sp-3) var(--sp-1);
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
@@ -261,16 +266,25 @@
    it out so legacy left-overs don't fight the composer card. */
 .input-row { display: none; }
 
-/* Composer second row: project / mode / branch pills below textarea.
-   Renders below the main control row so the input area stays tall. */
-.composer-pills-row {
+/* New-chat context dock: Codex-style separate strip below the input card.
+   Project/repo selection lives here instead of inside the text composer. */
+.composer-context-dock {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding-top: 4px;
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 6px var(--sp-3);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
   flex-wrap: wrap;
 }
-.composer-pills-row .composer-pill { font-weight: 400; }
+.composer-context-dock .composer-pill { font-weight: 400; }
+.composer-context-dock .project-picker-popover {
+  top: calc(100% + 6px);
+  bottom: auto;
+}
 
 /* Project picker pill + dropdown */
 .project-picker { position: relative; }

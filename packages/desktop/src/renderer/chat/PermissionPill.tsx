@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { AlertCircle, ChevronDown } from "lucide-react";
 
 export type PermissionMode = "plan" | "default" | "accept_edits" | "bypass";
+export type CorePermissionMode = "plan" | "default" | "acceptEdits" | "bypassPermissions";
 
 const MODES: Array<{ id: PermissionMode; label: string; tone: "ok" | "warn" | "err" }> = [
   { id: "plan", label: "计划模式", tone: "ok" },
@@ -9,6 +10,33 @@ const MODES: Array<{ id: PermissionMode; label: string; tone: "ok" | "warn" | "e
   { id: "accept_edits", label: "接受编辑", tone: "warn" },
   { id: "bypass", label: "完全访问权限", tone: "err" },
 ];
+
+export function toCorePermissionMode(mode: PermissionMode): CorePermissionMode {
+  switch (mode) {
+    case "accept_edits":
+      return "acceptEdits";
+    case "bypass":
+      return "bypassPermissions";
+    default:
+      return mode;
+  }
+}
+
+export function fromSettingsPermissionMode(raw: unknown): PermissionMode {
+  switch (raw) {
+    case "plan":
+      return "plan";
+    case "accept_edits":
+    case "acceptEdits":
+      return "accept_edits";
+    case "bypass":
+    case "bypassPermissions":
+      return "bypass";
+    case "default":
+    default:
+      return "default";
+  }
+}
 
 interface Props {
   value: PermissionMode | null;

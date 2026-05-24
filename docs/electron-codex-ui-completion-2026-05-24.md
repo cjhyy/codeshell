@@ -17,6 +17,7 @@ Main requested changes:
 - Settings should be pinned to the bottom-left, and model/provider/permission setup should live inside Settings.
 - Permission mode, current session context progress, and model switching should move into the composer/input row.
 - Settings should navigate to a full Settings page with its own module sidebar, not exist only as a popup/modal.
+- Settings mode should replace the normal app sidebar/workspace shell, with a clear `返回应用` control; it should not be embedded inside the existing app layout.
 - New conversation should support project switching and a `不使用项目` mode; no-repo sessions should live under a bottom `对话` section.
 - Search should open a session-search modal.
 - Plugins and Skills should be managed together, including installed Skill viewing and enable/disable controls.

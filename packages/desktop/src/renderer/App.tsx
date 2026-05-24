@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
-import { ApprovalModal } from "./ApprovalModal";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 // InspectorPanel removed — tool details now live inline in the chat
@@ -57,7 +56,11 @@ import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
 import { TrustGate } from "./workspace-trust/TrustGate";
 import { UpdaterBanner } from "./updater/UpdaterBanner";
-import type { PermissionMode } from "./chat/PermissionPill";
+import {
+  fromSettingsPermissionMode,
+  toCorePermissionMode,
+  type PermissionMode,
+} from "./chat/PermissionPill";
 import type { ModelOption } from "./chat/ModelPill";
 
 // Bucket key for sessions without a project — re-exported from transcripts.
@@ -172,11 +175,15 @@ function App() {
     sessionIndices[activeRepoKey]?.activeSessionId ?? null;
   const activeBucket = bucketKey(activeRepoId, activeSessionId);
   const runningBucketRef = useRef<string | null>(null);
+  const activeBucketRef = useRef(activeBucket);
+  const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
 
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
+  useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
+  useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
 
   // No auto-create here: a null activeSessionId is the legitimate
   // "draft" state. A real session row only appears after the user
@@ -412,7 +419,7 @@ function App() {
                 )
                 .map((o) => ({ label: o.label, description: o.description }))
             : undefined;
-        const bucket = runningBucketRef.current ?? activeBucket;
+        const bucket = runningBucketRef.current ?? activeBucketRef.current;
         dispatch({
           type: "ask_user",
           bucket,
@@ -422,6 +429,19 @@ function App() {
           options,
           multiSelect,
         });
+        return;
+      }
+      if (permissionModeRef.current === "bypass") {
+        window.codeshell.log("approval.auto_approved", {
+          requestId: env.requestId,
+          toolName: env.request.toolName,
+          reason: "composer_bypass",
+        });
+        void window.codeshell.approve(env.requestId, "approve");
+        setApprovalHistory((h) => [
+          ...h,
+          { decision: "approve", envelope: env, reason: "完全访问权限自动批准", at: Date.now() },
+        ]);
         return;
       }
       setApprovalQueue((q) => [...q, env]);
@@ -480,7 +500,16 @@ function App() {
       ?? loadSessionIndex(activeRepoId).sessions.find((s) => s.id === sid);
     const engineSessionId = summary?.engineSessionId;
 
-    const opts: { cwd?: string; sessionId?: string } = {};
+    const opts: {
+      cwd?: string;
+      sessionId?: string;
+      permissionMode?: ReturnType<typeof toCorePermissionMode>;
+    } = {};
+    // Only forward when the renderer has actually loaded settings;
+    // otherwise we'd downgrade an engine started with bypass to default.
+    if (permissionMode !== null) {
+      opts.permissionMode = toCorePermissionMode(permissionMode);
+    }
     if (activeRepo) opts.cwd = activeRepo.path;
     if (engineSessionId) opts.sessionId = engineSessionId;
 
@@ -514,11 +543,6 @@ function App() {
       }
       return cur;
     });
-  };
-
-  const decide = (decision: "approve" | "deny", reason?: string): void => {
-    if (!approval) return;
-    decideEnvelope(approval, decision, reason);
   };
 
   const showWelcome = state.messages.length === 0;
@@ -614,12 +638,10 @@ function App() {
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         if (cancelled) return;
         setActiveModelKey(resolveActiveKey(merged));
-        const pm = typeof merged.permissionMode === "string" ? merged.permissionMode : "default";
-        setPermissionMode(
-          pm === "plan" || pm === "default" || pm === "accept_edits" || pm === "bypass"
-            ? (pm as PermissionMode)
-            : "default",
-        );
+        const permissions = merged.permissions && typeof merged.permissions === "object"
+          ? (merged.permissions as Record<string, unknown>)
+          : {};
+        setPermissionMode(fromSettingsPermissionMode(merged.permissionMode ?? permissions.defaultMode));
         const baseOpts = candidatesFromSettings(merged);
         setModelOptions(baseOpts);
 
@@ -687,7 +709,10 @@ function App() {
 
   const onPermissionChange = (m: PermissionMode): void => {
     setPermissionMode(m);
-    void window.codeshell.updateSettings("user", { permissionMode: m });
+    void window.codeshell.updateSettings("user", {
+      permissionMode: m,
+      permissions: { defaultMode: toCorePermissionMode(m) },
+    });
   };
 
   const onModelChange = (opt: ModelOption): void => {
@@ -819,6 +844,12 @@ function App() {
               busy={busy}
               activeRepoId={activeRepoId}
               onAskUserAnswer={handleAskUserAnswer}
+              pendingApproval={approval}
+              onApprovalDecide={
+                approval
+                  ? (decision, reason) => decideEnvelope(approval, decision, reason)
+                  : undefined
+              }
               permissionMode={permissionMode}
               onPermissionChange={onPermissionChange}
               modelOptions={modelOptions}
@@ -841,7 +872,6 @@ function App() {
           onClose={() => setSearchOpen(false)}
           matchCount={matchCount}
         />
-        {approval && <ApprovalModal envelope={approval} onDecide={decide} />}
       </main>
 
       <CommandPalette

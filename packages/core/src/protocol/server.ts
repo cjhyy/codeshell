@@ -26,7 +26,7 @@ import {
   isRequest,
 } from "./types.js";
 import type { Engine, EngineConfig } from "../engine/engine.js";
-import type { ApprovalRequest, ApprovalResult, StreamEvent } from "../types.js";
+import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import { setInPlanMode, isInPlanMode } from "../tool-system/builtin/plan.js";
 import { setRuntimeBypass, isRuntimeBypass } from "../tool-system/permission.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
@@ -126,6 +126,19 @@ export class AgentServer {
         createErrorResponse(req.id, ErrorCodes.InvalidParams, "task is required"),
       );
       return;
+    }
+
+    if (params.permissionMode !== undefined) {
+      const mode = params.permissionMode;
+      if (!isValidPermissionMode(mode)) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InvalidParams, `invalid permission mode: ${mode}`),
+        );
+        return;
+      }
+      this.engine.setPermissionMode(mode);
+      setRuntimeBypass(mode === "bypassPermissions");
+      setInPlanMode(mode === "plan");
     }
 
     this.running = true;
@@ -732,4 +745,15 @@ export class AgentServer {
     }
     this.approvalTimers.clear();
   }
+}
+
+function isValidPermissionMode(value: unknown): value is PermissionMode {
+  return (
+    value === "default" ||
+    value === "acceptEdits" ||
+    value === "dontAsk" ||
+    value === "bypassPermissions" ||
+    value === "auto" ||
+    value === "plan"
+  );
 }

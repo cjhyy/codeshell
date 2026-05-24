@@ -45,6 +45,7 @@ The current version is directionally complete, but several product layout decisi
 5. New conversation needs a better start surface with project switching and a "no project" option.
 6. Search should open a modal for searching sessions.
 7. Plugins and Skills should live together in one management surface, with installed-skill viewing and enable/disable controls.
+8. The Settings page must replace the normal app sidebar/workspace shell instead of being embedded inside it.
 
 This is mainly an information architecture and layout revision. Do not treat it as a pure color/style pass.
 
@@ -223,6 +224,18 @@ Do not put model/provider/permission as always-visible large sidebar sections. D
 
 Settings must not be implemented as only a floating modal/popover.
 
+Settings must also not be embedded inside the normal app layout. When the user enters Settings, the app should switch into a dedicated Settings mode:
+
+```text
+Settings mode
+  Left column: Settings module sidebar
+  Right area: selected settings module content
+
+Normal app mode
+  Left column: app sidebar with projects/sessions
+  Right area: chat/workspace
+```
+
 Expected behavior:
 
 - The bottom-left settings area may open a small upward menu.
@@ -232,9 +245,12 @@ Expected behavior:
   - update status
   - help/about later
 - Clicking `设置` must switch the main app into a full Settings page.
+- In Settings mode, the normal project/session sidebar is replaced by the Settings module sidebar.
+- Do not render the Settings page as a panel inside the existing chat workspace/sidebar layout.
 - The Settings page should have its own left-side settings module list, matching the settings-page reference screenshot.
 - The main content area should show the selected settings module.
 - There should be a clear `返回应用` action to return to the normal chat workspace.
+- Clicking `返回应用` restores the previous normal app view, including the previous active project/session when possible.
 
 Recommended Settings modules:
 
@@ -266,8 +282,11 @@ Visual target:
 - Full-height settings page.
 - Left module sidebar.
 - Right content panel with grouped settings sections.
+- No normal project/session sidebar visible while in Settings mode.
+- No chat composer visible while in Settings mode.
 - Use switches, segmented cards, and select rows like the reference.
 - Avoid using only a small modal for deep settings.
+- Avoid an "embedded settings inside app content" layout; it feels visually awkward and should be treated as incorrect.
 
 ## 4. Session UX Details
 
@@ -478,7 +497,11 @@ If session data is currently grouped separately from projects:
 - [ ] Settings is pinned to bottom-left.
 - [ ] Model/provider/permission settings are not primary sidebar peers.
 - [ ] Clicking Settings navigates to a real Settings page, not only a modal.
+- [ ] Settings page replaces the normal project/session sidebar instead of being embedded inside it.
+- [ ] Settings mode has a `返回应用` control.
+- [ ] `返回应用` restores the previous app workspace/session when possible.
 - [ ] Settings page has a left module list and main content panel.
+- [ ] Normal chat composer is not visible while in Settings mode.
 - [ ] Settings page includes `插件与 Skills`.
 - [ ] Permission mode control appears in the composer row.
 - [ ] Current session context progress appears in the composer row.

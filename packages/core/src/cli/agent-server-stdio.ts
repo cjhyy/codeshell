@@ -17,7 +17,7 @@ import { Engine, type EngineConfig } from "../engine/engine.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
 import { SettingsManager } from "../settings/manager.js";
-import type { LLMConfig } from "../types.js";
+import type { LLMConfig, PermissionMode } from "../types.js";
 
 /**
  * Run the agent server on this process's stdin/stdout. Resolves when
@@ -97,7 +97,29 @@ export function buildEngineConfigFromSettings(): EngineConfig {
         "in a terminal to configure, or set settings.model.apiKey directly.",
     );
   }
-  return { llm, permissionMode: "default" };
+  return { llm, permissionMode: resolvePermissionMode(settings) };
+}
+
+function resolvePermissionMode(settings: Record<string, unknown>): PermissionMode {
+  const permissions = settings.permissions && typeof settings.permissions === "object"
+    ? (settings.permissions as Record<string, unknown>)
+    : {};
+  const raw = settings.permissionMode ?? permissions.defaultMode;
+  switch (raw) {
+    case "plan":
+    case "default":
+    case "acceptEdits":
+    case "dontAsk":
+    case "bypassPermissions":
+    case "auto":
+      return raw;
+    case "accept_edits":
+      return "acceptEdits";
+    case "bypass":
+      return "bypassPermissions";
+    default:
+      return "default";
+  }
 }
 
 // Direct-execute entry: `node dist/cli/agent-server-stdio.js`.

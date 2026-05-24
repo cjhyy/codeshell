@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
+import {
+  fromSettingsPermissionMode,
+  toCorePermissionMode,
+  type PermissionMode,
+} from "../chat/PermissionPill";
 
-const MODES = ["plan", "default", "accept_edits", "bypass"] as const;
-type Mode = (typeof MODES)[number];
+const MODES: PermissionMode[] = ["plan", "default", "accept_edits", "bypass"];
 
 interface Props {
   scope: "user" | "project";
@@ -9,25 +13,34 @@ interface Props {
 }
 
 export function PermissionSection({ scope, activeRepoPath }: Props) {
-  const [mode, setMode] = useState<Mode | null>(null);
+  const [mode, setMode] = useState<PermissionMode | null>(null);
   const [saving, setSaving] = useState(false);
 
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
-    const m = typeof s.permissionMode === "string" ? (s.permissionMode as Mode) : "default";
-    setMode(MODES.includes(m) ? m : "default");
+    const permissions = s.permissions && typeof s.permissions === "object"
+      ? (s.permissions as Record<string, unknown>)
+      : {};
+    setMode(fromSettingsPermissionMode(s.permissionMode ?? permissions.defaultMode));
   };
 
   useEffect(() => {
     void load();
   }, [scope, activeRepoPath]);
 
-  const choose = async (m: Mode) => {
+  const choose = async (m: PermissionMode) => {
     setSaving(true);
     try {
-      await window.codeshell.updateSettings(scope, { permissionMode: m }, cwd);
+      await window.codeshell.updateSettings(
+        scope,
+        {
+          permissionMode: m,
+          permissions: { defaultMode: toCorePermissionMode(m) },
+        },
+        cwd,
+      );
       setMode(m);
     } finally {
       setSaving(false);

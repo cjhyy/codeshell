@@ -71,6 +71,11 @@ export const ErrorCodes = {
 export interface RunParams {
   task: string;
   sessionId?: string;
+  /**
+   * Per-run permission mode supplied by desktop/composer UIs.
+   * When omitted, the engine keeps its configured default.
+   */
+  permissionMode?: PermissionMode;
 }
 
 export interface RunResult {
