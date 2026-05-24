@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Paperclip, Mic, ArrowUp, Square } from "lucide-react";
 import { MessageStream } from "./MessageStream";
-import type { Message, ToolMessage } from "./types";
+import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
 import { ModelPill, type ModelOption } from "./chat/ModelPill";
@@ -13,17 +13,16 @@ interface Props {
   onStop: () => void;
   busy: boolean;
   activeRepoId: string | null;
-  selectedToolId?: string | null;
-  onSelectTool?: (m: ToolMessage) => void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
 
   // Composer controls
   permissionMode: PermissionMode | null;
   onPermissionChange: (m: PermissionMode) => void;
   modelOptions: ModelOption[];
-  activeModel: { provider: string; model: string } | null;
+  activeModelKey: string | null;
   onModelChange: (opt: ModelOption) => void;
   contextTokens: number;
+  contextMax?: number;
 }
 
 const MAX_TEXTAREA_PX = 200;
@@ -34,15 +33,14 @@ export function ChatView({
   onStop,
   busy,
   activeRepoId,
-  selectedToolId,
-  onSelectTool,
   onAskUserAnswer,
   permissionMode,
   onPermissionChange,
   modelOptions,
-  activeModel,
+  activeModelKey,
   onModelChange,
   contextTokens,
+  contextMax,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
@@ -124,8 +122,6 @@ export function ChatView({
     <div className="chat">
       <MessageStream
         messages={messages}
-        selectedToolId={selectedToolId ?? null}
-        onSelectTool={onSelectTool}
         onAskUserAnswer={onAskUserAnswer}
       />
 
@@ -166,9 +162,9 @@ export function ChatView({
           </div>
 
           <div className="composer-controls-right">
-            <ContextRing used={contextTokens} />
+            <ContextRing used={contextTokens} max={contextMax} />
             <ModelPill
-              active={activeModel}
+              activeKey={activeModelKey}
               options={modelOptions}
               onSelect={onModelChange}
               disabled={busy}

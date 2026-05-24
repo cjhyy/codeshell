@@ -3,17 +3,26 @@ import React from "react";
 interface Props {
   /** Current context tokens. */
   used: number;
-  /** Optional max for ratio. Falls back to a reasonable default (200k). */
+  /** Model's max context. Falls back to 200k if not known. */
   max?: number;
 }
 
 /**
- * Compact circular progress ring shown in the composer row, telling
- * the user how full the current session's context is.
+ * Compact circular progress ring shown in the composer row.
+ *
+ * Title (hover) shows: 已用 X / 共 Y · 剩 Z (P%) — so the user can
+ * read the actual numbers without expanding into a tooltip popover.
+ *
+ * Color: green < 70%, amber 70–90%, red >= 90%. Same thresholds
+ * core uses for context-management strategy choice, so the visual
+ * matches the engine's behaviour.
  */
 export function ContextRing({ used, max = 200_000 }: Props) {
-  const ratio = max > 0 ? Math.max(0, Math.min(1, used / max)) : 0;
+  const safeMax = max > 0 ? max : 200_000;
+  const ratio = Math.max(0, Math.min(1, used / safeMax));
   const pct = Math.round(ratio * 100);
+  const remaining = Math.max(0, safeMax - used);
+
   const size = 22;
   const stroke = 3;
   const r = (size - stroke) / 2;
@@ -23,10 +32,14 @@ export function ContextRing({ used, max = 200_000 }: Props) {
   const tone =
     ratio >= 0.9 ? "var(--status-err)" :
     ratio >= 0.7 ? "var(--status-warn)" :
-    "var(--accent)";
+    "var(--status-ok)";
+
+  const title =
+    `已用 ${formatTok(used)} / 共 ${formatTok(safeMax)}\n` +
+    `剩 ${formatTok(remaining)} · ${pct}%`;
 
   return (
-    <div className="context-ring" title={`上下文 ${used.toLocaleString()} / ${max.toLocaleString()} (${pct}%)`}>
+    <div className="context-ring" title={title} aria-label={title}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle
           cx={size / 2}
@@ -51,4 +64,10 @@ export function ContextRing({ used, max = 200_000 }: Props) {
       </svg>
     </div>
   );
+}
+
+function formatTok(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return `${n}`;
 }

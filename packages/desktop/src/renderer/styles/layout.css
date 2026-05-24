@@ -1,35 +1,24 @@
-/* Three-region grid:
-   [ topbar               ]
-   [ side | main | insp   ]
-   Sidebar/inspector collapsible via data attrs on .app-grid. */
+/* Two-region grid (sidebar | main) under a top bar. Inspector panel
+   removed — tool details now live inline in each tool card. */
 
 .app-grid {
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr var(--inspector-w);
+  grid-template-columns: var(--sidebar-w) 1fr;
   grid-template-rows: var(--topbar-h) 1fr;
   grid-template-areas:
-    "topbar topbar topbar"
-    "sidebar main inspector";
+    "topbar topbar"
+    "sidebar main";
   height: 100vh;
   overflow: hidden;
 }
 
 .app-grid[data-sidebar="collapsed"] {
-  grid-template-columns: var(--sidebar-w-collapsed) 1fr var(--inspector-w);
-}
-
-.app-grid[data-inspector="collapsed"] {
-  grid-template-columns: var(--sidebar-w) 1fr 0;
-}
-
-.app-grid[data-sidebar="collapsed"][data-inspector="collapsed"] {
-  grid-template-columns: var(--sidebar-w-collapsed) 1fr 0;
+  grid-template-columns: var(--sidebar-w-collapsed) 1fr;
 }
 
 .topbar-region { grid-area: topbar; }
 .sidebar-region { grid-area: sidebar; overflow: hidden; }
 .main-region { grid-area: main; overflow: hidden; display: flex; flex-direction: column; }
-.inspector-region { grid-area: inspector; overflow: hidden; }
 
 .main-toolbar {
   display: flex;

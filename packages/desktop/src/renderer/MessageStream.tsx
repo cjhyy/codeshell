@@ -1,5 +1,5 @@
 import React from "react";
-import type { Message, ToolMessage } from "./types";
+import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { Markdown } from "./Markdown";
 import { ThinkingMessageView } from "./messages/ThinkingMessageView";
@@ -11,12 +11,10 @@ import { useStickToBottom } from "./chat/stickToBottom";
 
 interface Props {
   messages: Message[];
-  selectedToolId?: string | null;
-  onSelectTool?: (m: ToolMessage) => void;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
 }
 
-export function MessageStream({ messages, selectedToolId, onSelectTool, onAskUserAnswer }: Props) {
+export function MessageStream({ messages, onAskUserAnswer }: Props) {
   const ref = useStickToBottom<HTMLDivElement>(messages.length);
 
   return (
@@ -24,14 +22,9 @@ export function MessageStream({ messages, selectedToolId, onSelectTool, onAskUse
       {messages.map((m) => {
         switch (m.kind) {
           case "tool":
-            return (
-              <ToolCard
-                key={m.id}
-                message={m}
-                onSelect={onSelectTool}
-                selectedId={selectedToolId}
-              />
-            );
+            // Tool cards now display their full args/result body inline
+            // when expanded — no separate inspector pane to feed.
+            return <ToolCard key={m.id} message={m} />;
           case "user":
             return (
               <div key={m.id} className="msg-row msg-row-user">

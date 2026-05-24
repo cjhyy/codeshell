@@ -4,7 +4,8 @@ import { ChatView } from "./ChatView";
 import { ApprovalModal } from "./ApprovalModal";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
-import { InspectorPanel } from "./InspectorPanel";
+// InspectorPanel removed — tool details now live inline in the chat
+// stream's expandable tool cards (no dedicated detail pane).
 import {
   applyStreamEvent,
   appendUserMessage,
@@ -129,11 +130,10 @@ function App() {
   const [repos, setRepos] = useState<Repo[]>(() => loadRepos());
   const [activeRepoId, setActiveRepoId] = useState<string | null>(() => loadActiveRepoId());
   const [view, setView] = useState<ViewState>(() => loadView());
-  const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeModel, setActiveModel] = useState<{ provider: string; model: string } | null>(null);
+  const [activeModelKey, setActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [permissionMode, setPermissionMode] = useState<PermissionMode | null>(null);
   const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
@@ -257,7 +257,6 @@ function App() {
       ...prev,
       [key]: setActiveSession(repoId, sessionId),
     }));
-    setSelectedToolId(null);
     // Make sure we're looking at chat, not settings, when the user
     // explicitly picks a session.
     setView((v) => ({ ...v, viewMode: "chat" }));
@@ -275,7 +274,6 @@ function App() {
       ...prev,
       [repoKeyOf(repoId)]: setActiveSession(repoId, null),
     }));
-    setSelectedToolId(null);
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
@@ -485,8 +483,9 @@ function App() {
   const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
   const toggleSidebar = (): void =>
     setView((p) => ({ ...p, sidebarCollapsed: !p.sidebarCollapsed }));
-  const toggleInspector = (): void =>
-    setView((p) => ({ ...p, inspectorCollapsed: !p.inspectorCollapsed }));
+  // toggleInspector retained as a no-op for menu/palette wiring that
+  // still references the action verb but the panel itself is gone.
+  const toggleInspector = (): void => undefined;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -500,9 +499,6 @@ function App() {
       } else if (mod && e.key.toLowerCase() === "b") {
         e.preventDefault();
         toggleSidebar();
-      } else if (mod && e.key.toLowerCase() === "i") {
-        e.preventDefault();
-        toggleInspector();
       } else if (mod && e.key >= "1" && e.key <= "9") {
         // Cmd+N — jump to Nth session under active repo.
         const n = parseInt(e.key, 10) - 1;
@@ -550,7 +546,7 @@ function App() {
           toggleSidebar();
           break;
         case "toggle-inspector":
-          toggleInspector();
+          // no-op: inspector panel removed
           break;
         case "new-window":
           void window.codeshell.newWindow();
@@ -560,9 +556,7 @@ function App() {
     return off;
   }, [repos]);
 
-  // Refresh model + permission + provider list from settings whenever
-  // active repo or view changes (after a SettingsView write the user
-  // typically returns to chat — that's our cue to re-poll).
+  // Refresh model list + active selection + permission from settings.
   useEffect(() => {
     let cancelled = false;
     const refresh = async (): Promise<void> => {
@@ -572,11 +566,7 @@ function App() {
         const userS = (await window.codeshell.getSettings("user")) ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         if (cancelled) return;
-        setActiveModel(
-          typeof merged.model === "string" && typeof merged.provider === "string"
-            ? { provider: merged.provider, model: merged.model }
-            : null,
-        );
+        setActiveModelKey(resolveActiveKey(merged));
         const pm = typeof merged.permissionMode === "string" ? merged.permissionMode : "default";
         setPermissionMode(
           pm === "plan" || pm === "default" || pm === "accept_edits" || pm === "bypass"
@@ -627,8 +617,10 @@ function App() {
   };
 
   const onModelChange = (opt: ModelOption): void => {
-    setActiveModel({ provider: opt.provider, model: opt.model });
-    void window.codeshell.updateSettings("user", { provider: opt.provider, model: opt.model });
+    setActiveModelKey(opt.key);
+    // code-shell engine reads `activeKey` from settings.json to pick
+    // the active model entry out of `models[]`.
+    void window.codeshell.updateSettings("user", { activeKey: opt.key });
   };
 
   const matchCount = useMemo(() => {
@@ -661,7 +653,7 @@ function App() {
     <div
       className="app-grid"
       data-sidebar={view.sidebarCollapsed ? "collapsed" : "open"}
-      data-inspector={view.inspectorCollapsed ? "collapsed" : "open"}
+      data-inspector="hidden"
     >
       <div className="topbar-region">
         <TopBar
@@ -706,12 +698,6 @@ function App() {
             <PanelLeft size={14} />
           </IconButton>
           <span className="main-toolbar-spacer" />
-          <IconButton
-            label={view.inspectorCollapsed ? "展开详情" : "折叠详情"}
-            onClick={toggleInspector}
-          >
-            <PanelLeft size={14} style={{ transform: "scaleX(-1)" }} />
-          </IconButton>
         </div>
         {lifecycle && <div className="banner">{lifecycle}</div>}
         {view.viewMode === "approvals" ? (
@@ -746,15 +732,16 @@ function App() {
               onStop={stop}
               busy={busy}
               activeRepoId={activeRepoId}
-              selectedToolId={selectedToolId}
-              onSelectTool={(m: ToolMessage) => setSelectedToolId(m.id)}
               onAskUserAnswer={handleAskUserAnswer}
               permissionMode={permissionMode}
               onPermissionChange={onPermissionChange}
               modelOptions={modelOptions}
-              activeModel={activeModel}
+              activeModelKey={activeModelKey}
               onModelChange={onModelChange}
               contextTokens={state.promptTokens}
+              contextMax={
+                modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens
+              }
             />
           </>
         )}
@@ -785,49 +772,57 @@ function App() {
         onDecide={() => { /* trust persisted in main */ }}
       />
 
-      <div className="inspector-region">
-        <InspectorPanel
-          collapsed={view.inspectorCollapsed}
-          onToggle={toggleInspector}
-          selectedTool={
-            selectedToolId
-              ? (state.messages.find(
-                  (m) => m.kind === "tool" && m.id === selectedToolId,
-                ) as ToolMessage | undefined) ?? null
-              : null
-          }
-        />
-      </div>
+      {/* Inspector panel removed — tool detail lives inline in each
+          tool card's expandable body. */}
     </div>
   );
 }
 
-/** Read providers[].models[] out of merged settings into composer-ready options. */
+/**
+ * Read top-level models[] out of merged settings.
+ *
+ * Code-shell's settings.json shape is:
+ *   {
+ *     activeKey: "deepseek-v4-pro",
+ *     models: [{ key, label, providerKey, maxContextTokens, ... }],
+ *     providers: [{ key, kind, label, ... }],
+ *     model: { provider, name, ... }       // legacy single-model field
+ *   }
+ *
+ * The engine picks the active model by matching activeKey against
+ * models[].key. We mirror that here: read models[] for the dropdown,
+ * read activeKey (or fall back to model.name) for the current pick.
+ */
 function candidatesFromSettings(s: Record<string, unknown>): ModelOption[] {
+  const models = s.models;
+  if (!Array.isArray(models)) return [];
   const out: ModelOption[] = [];
-  const providers = s.providers;
-  if (!Array.isArray(providers)) return out;
-  for (const p of providers) {
-    if (!p || typeof p !== "object") continue;
-    const obj = p as Record<string, unknown>;
+  for (const m of models) {
+    if (!m || typeof m !== "object") continue;
+    const obj = m as Record<string, unknown>;
+    const key = typeof obj.key === "string" ? obj.key : typeof obj.model === "string" ? obj.model : "";
+    if (!key) continue;
+    const label =
+      typeof obj.label === "string" ? obj.label :
+      typeof obj.model === "string" ? obj.model : key;
     const provider =
-      typeof obj.name === "string" ? obj.name :
-      typeof obj.kind === "string" ? obj.kind : "";
-    const models = obj.models;
-    if (!Array.isArray(models)) continue;
-    for (const m of models) {
-      if (typeof m === "string") out.push({ provider, model: m });
-      else if (m && typeof m === "object" && typeof (m as Record<string, unknown>).name === "string") {
-        const mm = m as Record<string, unknown>;
-        out.push({
-          provider,
-          model: mm.name as string,
-          label: typeof mm.label === "string" ? mm.label : undefined,
-        });
-      }
-    }
+      typeof obj.providerKey === "string" ? obj.providerKey :
+      typeof obj.provider === "string" ? obj.provider : "";
+    const maxContextTokens =
+      typeof obj.maxContextTokens === "number" ? obj.maxContextTokens : undefined;
+    out.push({ key, label, provider, maxContextTokens });
   }
   return out;
+}
+
+function resolveActiveKey(s: Record<string, unknown>): string | null {
+  if (typeof s.activeKey === "string" && s.activeKey) return s.activeKey;
+  // Legacy: top-level `model.name` named the model directly.
+  if (s.model && typeof s.model === "object") {
+    const m = s.model as Record<string, unknown>;
+    if (typeof m.name === "string") return m.name;
+  }
+  return null;
 }
 
 export { App };

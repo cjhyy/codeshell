@@ -154,6 +154,11 @@
   min-width: 90px;
 }
 .model-name { flex: 1; color: var(--fg-primary); font-family: var(--font-mono); }
+.model-ctx {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
 .model-active-badge {
   font-size: var(--fz-xs);
   color: var(--accent-fg);
