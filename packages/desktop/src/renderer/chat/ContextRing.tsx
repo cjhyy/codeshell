@@ -14,7 +14,11 @@ interface Props {
   busy?: boolean;
 }
 
-const FALLBACK_MAX = 128_000;
+// Fallback when the active model entry doesn't declare maxContextTokens.
+// 200k is closer to what most current frontier models actually offer
+// (GPT-5/Claude/Gemini Pro all sit at ≥200k); a 128k default kept making
+// 200k-context models look ~50% fuller than they really were.
+const FALLBACK_MAX = 200_000;
 
 export function ContextRing({ used, max, busy }: Props) {
   const [hover, setHover] = useState(false);
