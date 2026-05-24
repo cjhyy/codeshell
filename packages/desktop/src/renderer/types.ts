@@ -172,10 +172,14 @@ export function applyStreamEvent(
 ): MessagesReducerState {
   switch (event.type) {
     case "session_started": {
+      // Ignore event.promptTokens here: on resume, core reports the
+      // *theoretical* size of the entire transcript file (byte/4
+      // estimate), not the prompt that will actually be sent. That
+      // produced the alarming "473k → 39k" jump in the ring. Wait for
+      // the next usage_update — that's the real active prompt size.
       return {
         ...state,
         sessionId: event.sessionId,
-        promptTokens: event.promptTokens,
       };
     }
 
