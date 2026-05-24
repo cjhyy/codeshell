@@ -31,7 +31,6 @@ import {
   ThinkingMessage,
 } from "./components/MessageContent.js";
 import { AgentClient } from "@cjhyy/code-shell-core";
-import { taskManager } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import { AskUserPrompt } from "./components/AskUserPrompt.js";
@@ -1176,7 +1175,9 @@ export function App({
       if (!queryGuard.reserve()) return; // already busy → ignore concurrent submit
       streamingTokensRef.current = 0;
       cancelledRef.current = false;
-      taskManager.reset();
+      // taskManager removed — tasks live in the transcript now; engine
+      // emits task_update on resume so the UI re-hydrates without a
+      // module-level reset.
 
       const abortController = new AbortController();
       if (!queryGuard.tryStart(abortController)) {

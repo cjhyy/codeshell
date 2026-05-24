@@ -124,6 +124,15 @@ export interface ToolContext {
    * standalone tests; tools must tolerate absence.
    */
   hooks?: HookRegistry;
+  /**
+   * Per-turn stream sink (engine.run's `onStream`). Tools that need to
+   * push UI events independently of their return value use this — e.g.
+   * TodoWrite emits a `task_update` so the desktop pinned panel and
+   * tui task list refresh immediately rather than waiting for the LLM
+   * to surface the snapshot in the next turn. Undefined in
+   * headless/test mode; tools must tolerate absence.
+   */
+  streamCallback?: StreamCallback;
 }
 
 /**

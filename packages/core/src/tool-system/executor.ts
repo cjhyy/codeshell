@@ -91,10 +91,7 @@ export class ToolExecutor {
         "AskUserQuestion",
         "Agent",
         "ToolSearch",
-        "TaskCreate",
-        "TaskUpdate",
-        "TaskList",
-        "TaskGet",
+        "TodoWrite",
       ]);
 
       if (!allowedInPlan.has(call.toolName)) {

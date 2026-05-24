@@ -310,12 +310,7 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
       return { summary: truncate(singleLine(content), 80), lines: [], hiddenCount: 0 };
     }
 
-    case "TaskCreate":
-    case "TaskUpdate":
-    case "TaskList":
-    case "TaskStop":
-    case "TaskGet":
-    case "TaskOutput":
+    case "TodoWrite":
       return { summary: singleLine(content), lines: [], hiddenCount: 0 };
 
     case "WebSearch":

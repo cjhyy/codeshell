@@ -31,7 +31,6 @@ import { setInPlanMode, isInPlanMode } from "../tool-system/builtin/plan.js";
 import { setRuntimeBypass, isRuntimeBypass } from "../tool-system/permission.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
-import { taskManager } from "../tool-system/builtin/task.js";
 import { nanoid } from "nanoid";
 
 export interface AgentServerOptions {
@@ -137,12 +136,8 @@ export class AgentServer {
       this.notify(Methods.StreamEvent, { event });
     };
 
-    // Wire the global TaskManager into this run's stream so TaskCreate /
-    // TaskUpdate calls — from the main agent OR any spawned sub-agent —
-    // surface as task_update events the UI's top panel listens for.
-    // The manager is a module singleton, so a single registration here
-    // covers nested engine.run() calls; we tear it down in finally.
-    taskManager.setStreamCallback(streamToClient);
+    // TodoWrite emits task_update directly through ToolContext.streamCallback;
+    // no module singleton wiring needed anymore.
 
     try {
       const result = await this.engine.run(params.task, {
@@ -165,7 +160,6 @@ export class AgentServer {
         createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
       );
     } finally {
-      taskManager.setStreamCallback(undefined);
       this.running = false;
       this.abortController = null;
       this.notify(Methods.Status, { status: "ready" });

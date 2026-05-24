@@ -86,7 +86,7 @@ export function defineProduct(
   const baseTools = [
     "Read", "Write", "Edit", "Glob", "Grep", "Bash",
     "AskUserQuestion", "Agent", "ToolSearch",
-    "TaskCreate", "TaskList", "TaskUpdate", "TaskGet",
+    "TodoWrite",
   ];
   const enabledSet = new Set([...baseTools, ...(adapter?.enableTools ?? [])]);
   for (const t of adapter?.disableTools ?? []) {
@@ -101,10 +101,7 @@ export function defineProduct(
     { tool: "Grep", decision: "allow" as const },
     { tool: "AskUserQuestion", decision: "allow" as const },
     { tool: "ToolSearch", decision: "allow" as const },
-    { tool: "TaskCreate", decision: "allow" as const },
-    { tool: "TaskList", decision: "allow" as const },
-    { tool: "TaskUpdate", decision: "allow" as const },
-    { tool: "TaskGet", decision: "allow" as const },
+    { tool: "TodoWrite", decision: "allow" as const },
     // Product-specific rules (higher priority)
     ...(adapter?.permissionRules ?? []),
   ];

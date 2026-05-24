@@ -7,6 +7,7 @@ import type {
   LLMConfig,
   Settings,
   StreamCallback,
+  TaskInfo,
   TerminalReason,
   TokenUsage,
 } from "../types.js";
@@ -15,7 +16,7 @@ import { ToolRegistry } from "../tool-system/registry.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
-import { taskManager } from "../tool-system/builtin/task.js";
+import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import {
   PermissionClassifier,
   HeadlessApprovalBackend,
@@ -404,6 +405,23 @@ export class Engine {
   ): Promise<EngineResult> {
     const cwd = this.config.cwd ?? process.cwd();
 
+    // Wrap the caller's onStream so we can intercept `task_update`
+    // events emitted by TodoWrite and keep an in-engine snapshot.
+    // TaskGuard reads this snapshot at turn end to decide whether to
+    // nag about stale in_progress items. Without the wrapper we'd
+    // have no way to observe TodoWrite's emission — the canonical
+    // store is the transcript, but TaskGuard runs in-loop and can't
+    // afford a transcript scan per turn.
+    let latestTodos: TaskInfo[] = [];
+    const userOnStream = options?.onStream;
+    const wrappedOnStream: StreamCallback = (event) => {
+      if (event.type === "task_update") {
+        latestTodos = event.tasks;
+      }
+      userOnStream?.(event);
+    };
+    if (options) options.onStream = wrappedOnStream;
+
     const noise = detectPastedNoise(task);
     if (noise.isNoise) {
       const hint =
@@ -537,6 +555,12 @@ export class Engine {
       sandbox: sandboxBackend,
       isSubAgent: this.config.isSubAgent === true,
       hooks: this.hooks,
+      // TodoWrite reads this to push task_update events independently
+      // of its return value, so the UI's pinned task panel refreshes
+      // immediately rather than after the LLM next surfaces the
+      // snapshot. wrappedOnStream snoops the same channel to keep
+      // latestTodos current for TaskGuard.
+      streamCallback: options?.onStream,
     };
 
     logger.info("engine.run", {
@@ -681,6 +705,20 @@ export class Engine {
       promptTokens: roughPromptTokens,
     });
 
+    // Replay the last TodoWrite snapshot on resume so the UI's pinned
+    // task panel re-hydrates without the LLM needing to call TodoWrite
+    // again. Scans the resumed transcript newest-first (and tolerates
+    // legacy TaskCreate/Update events for sessions recorded against
+    // the pre-2026-05-24 API). New sessions have no transcript yet so
+    // readLastTodoSnapshot returns null and nothing is emitted.
+    if (options?.sessionId) {
+      const snap = readLastTodoSnapshot(session.transcript.getEvents());
+      if (snap && snap.length > 0) {
+        latestTodos = snap;
+        options?.onStream?.({ type: "task_update", tasks: snap });
+      }
+    }
+
     // Kick off LLM client creation early (network handshake)
     const llmClientPromise = createLLMClient(this.config.llm);
 
@@ -709,7 +747,7 @@ export class Engine {
     const investigationGuard = new InvestigationGuard();
     if (this.config.headless) investigationGuard.setSoftMode(true);
     toolExecutor.setInvestigationGuard(investigationGuard);
-    toolExecutor.setTaskGuard(new TaskGuard(() => taskManager.list()));
+    toolExecutor.setTaskGuard(new TaskGuard(() => latestTodos));
 
     // Wire abort signal for cascading cancellation + per-Engine ToolContext
     toolExecutor.setSignal(options?.signal);
