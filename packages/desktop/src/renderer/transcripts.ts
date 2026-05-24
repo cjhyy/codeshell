@@ -8,23 +8,25 @@
  *   - state:    MessagesReducerState
  *
  * Two localStorage keys per repo:
- *   codeshell.sessionIndex.<repoId>          → SessionIndex (list metadata)
- *   codeshell.transcript.<repoId>.<sessionId>→ MessagesReducerState
+ *   codeshell.sessionIndex.<repoKey>          → SessionIndex (list metadata)
+ *   codeshell.transcript.<repoKey>.<sessionId>→ MessagesReducerState
+ *
+ * `repoKey` is the repo id, or NO_REPO_KEY ("__no_repo__") when the
+ * conversation runs without a project. Sessions in the no-repo bucket
+ * render under the sidebar's bottom `对话` section instead of under
+ * any project.
  *
  * Why split: writing the full session list on every stream delta would
  * grow O(N · runs); keeping the index thin lets the sidebar render
  * cheaply while the heavy transcript only writes for the active session.
- *
- * Legacy single-bucket transcripts (`codeshell.transcript.<repoId>`)
- * are migrated lazily on first read: their content becomes session
- * "legacy" under the repo, so users don't lose history.
  */
 
 import type { MessagesReducerState } from "./types";
 import { INITIAL_STATE } from "./types";
 
 const TRANSCRIPT_MSG_CAP = 500;
-const GLOBAL_REPO = "__global__";
+/** Bucket key for sessions that have no associated repo. */
+export const NO_REPO_KEY = "__no_repo__";
 
 export interface SessionSummary {
   /** Local UI session id (NOT the engine session id; see `engineSessionId`). */
@@ -53,16 +55,13 @@ export interface SessionIndex {
 }
 
 function repoKey(repoId: string | null): string {
-  return repoId ?? GLOBAL_REPO;
+  return repoId ?? NO_REPO_KEY;
 }
 function indexKey(repoId: string | null): string {
   return `codeshell.sessionIndex.${repoKey(repoId)}`;
 }
 function transcriptKey(repoId: string | null, sessionId: string): string {
   return `codeshell.transcript.${repoKey(repoId)}.${sessionId}`;
-}
-function legacyKey(repoId: string | null): string {
-  return `codeshell.transcript.${repoKey(repoId)}`;
 }
 
 let idCounter = 0;
@@ -71,48 +70,21 @@ export function makeSessionId(): string {
   return `s-${Date.now().toString(36)}-${idCounter}`;
 }
 
-/** Read the session index for a repo, migrating legacy single-bucket
- * data on first access so existing users keep their history. */
 export function loadSessionIndex(repoId: string | null): SessionIndex {
   try {
     const raw = localStorage.getItem(indexKey(repoId));
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<SessionIndex>;
-      if (parsed && Array.isArray(parsed.sessions)) {
-        return {
-          sessions: parsed.sessions,
-          activeSessionId: parsed.activeSessionId ?? parsed.sessions[0]?.id ?? null,
-        };
-      }
+    if (!raw) return { sessions: [], activeSessionId: null };
+    const parsed = JSON.parse(raw) as Partial<SessionIndex>;
+    if (!parsed || !Array.isArray(parsed.sessions)) {
+      return { sessions: [], activeSessionId: null };
     }
+    return {
+      sessions: parsed.sessions,
+      activeSessionId: parsed.activeSessionId ?? parsed.sessions[0]?.id ?? null,
+    };
   } catch {
-    // fall through to migration / empty
+    return { sessions: [], activeSessionId: null };
   }
-  // Migration: a legacy `codeshell.transcript.<repoId>` blob means this
-  // repo has one historical conversation. Adopt it as a single session
-  // titled "legacy" so users don't lose context.
-  try {
-    const legacy = localStorage.getItem(legacyKey(repoId));
-    if (legacy) {
-      const id = makeSessionId();
-      const now = Date.now();
-      const summary: SessionSummary = {
-        id,
-        title: "迁移自旧版",
-        createdAt: now,
-        updatedAt: now,
-      };
-      // Move payload to its new key.
-      localStorage.setItem(transcriptKey(repoId, id), legacy);
-      const idx: SessionIndex = { sessions: [summary], activeSessionId: id };
-      localStorage.setItem(indexKey(repoId), JSON.stringify(idx));
-      localStorage.removeItem(legacyKey(repoId));
-      return idx;
-    }
-  } catch {
-    // best effort
-  }
-  return { sessions: [], activeSessionId: null };
 }
 
 export function saveSessionIndex(repoId: string | null, idx: SessionIndex): void {
@@ -277,7 +249,7 @@ export function touchSession(
       const out: SessionSummary = { ...s, updatedAt: now };
       // Auto-title from first user prompt if the session is still
       // wearing the default placeholder.
-      if (firstUserText && (s.title === "新对话" || s.title === "迁移自旧版")) {
+      if (firstUserText && s.title === "新对话") {
         out.title = firstUserText.slice(0, 60);
       }
       return out;

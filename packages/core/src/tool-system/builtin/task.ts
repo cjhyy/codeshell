@@ -144,13 +144,11 @@ function emitTaskUpdate(ctx: ToolContext | undefined, tasks: TaskInfo[]): void {
  * Pull the latest todo snapshot from a transcript's event stream.
  *
  * Walks newest-first looking for a `tool_use` event whose toolName is
- * TodoWrite — its args carry the canonical snapshot. Falls back to a
- * best-effort reconstruction from legacy TaskCreate/TaskUpdate events
- * so sessions recorded against the old API still re-hydrate when
- * resumed under the new API.
+ * TodoWrite — its args carry the canonical snapshot. Returns null if
+ * no TodoWrite call exists in the transcript (e.g. fresh session, or
+ * a session where the agent never used the tool).
  */
 export function readLastTodoSnapshot(events: TranscriptEvent[]): TaskInfo[] | null {
-  // New schema: a TodoWrite tool_use carries the snapshot directly.
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     if (e.type !== "tool_use") continue;
@@ -166,42 +164,5 @@ export function readLastTodoSnapshot(events: TranscriptEvent[]): TaskInfo[] | nu
     const allDone = parsed.length > 0 && parsed.every((t) => t.status === "completed");
     return allDone ? [] : toTaskInfos(parsed);
   }
-
-  // Legacy schema: replay TaskCreate/TaskUpdate/TaskStop ops in order.
-  const map = new Map<string, TaskInfo>();
-  let nextId = 1;
-  for (const e of events) {
-    if (e.type !== "tool_use") continue;
-    const d = e.data ?? {};
-    const tool = d.toolName as string | undefined;
-    const args = (d.args ?? {}) as Record<string, unknown>;
-    if (tool === "TaskCreate") {
-      const id = String(nextId++);
-      map.set(id, {
-        id,
-        subject: typeof args.subject === "string" ? args.subject : "",
-        activeForm: typeof args.activeForm === "string" ? args.activeForm : undefined,
-        status: "pending",
-      });
-    } else if (tool === "TaskUpdate") {
-      const id = typeof args.taskId === "string" ? args.taskId : "";
-      const t = map.get(id);
-      if (!t) continue;
-      if (args.status === "pending" || args.status === "in_progress" || args.status === "completed") {
-        t.status = args.status;
-      } else if (args.status === "stopped") {
-        // The new schema doesn't have stopped; drop the item so it
-        // doesn't show up as a phantom in the pinned panel.
-        map.delete(id);
-        continue;
-      }
-      if (typeof args.subject === "string") t.subject = args.subject;
-      if (typeof args.activeForm === "string") t.activeForm = args.activeForm;
-    } else if (tool === "TaskStop") {
-      const id = typeof args.taskId === "string" ? args.taskId : "";
-      map.delete(id);
-    }
-  }
-  if (map.size === 0) return null;
-  return [...map.values()];
+  return null;
 }
