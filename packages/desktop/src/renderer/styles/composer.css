@@ -121,12 +121,78 @@
 }
 .composer-popover-empty { padding: var(--sp-2); color: var(--fg-muted); font-size: var(--fz-sm); }
 
+.context-ring-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  cursor: default;
+}
+.context-ring-wrap:hover { background: var(--bg-hover); }
+
 .context-ring {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
+  pointer-events: none; /* let hover events hit the wrapper, not the SVG */
+}
+.context-ring-pct {
+  font-size: var(--fz-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  min-width: 26px;
+  text-align: right;
+  pointer-events: none;
+}
+
+.context-ring-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  padding: var(--sp-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  z-index: var(--z-tooltip);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+  pointer-events: none;
+}
+.context-ring-tt-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+.context-ring-tt-label {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.context-ring-tt-val {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.context-ring-tt-bar {
+  margin-top: 4px;
+  height: 4px;
+  background: var(--border-subtle);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.context-ring-tt-bar-fill {
+  height: 100%;
+  transition: width 0.2s ease;
 }
 
 /* Circular send/stop button on the far right */

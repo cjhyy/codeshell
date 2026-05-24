@@ -1,23 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 
 interface Props {
-  /** Current context tokens. */
   used: number;
-  /** Model's max context. Falls back to 200k if not known. */
   max?: number;
 }
 
 /**
- * Compact circular progress ring shown in the composer row.
+ * Compact context-usage indicator in the composer row.
  *
- * Title (hover) shows: 已用 X / 共 Y · 剩 Z (P%) — so the user can
- * read the actual numbers without expanding into a tooltip popover.
+ * Layout: a small ring + a percent number next to it. Hover anywhere
+ * on the wrapper shows a custom popover with absolute numbers, so the
+ * user doesn't have to wait on the browser's slow native title tooltip
+ * (which also strips '\n' and disappears under sibling elements).
  *
- * Color: green < 70%, amber 70–90%, red >= 90%. Same thresholds
- * core uses for context-management strategy choice, so the visual
- * matches the engine's behaviour.
+ * Tone: green <70%, amber 70–90%, red ≥90%.
  */
 export function ContextRing({ used, max = 200_000 }: Props) {
+  const [hover, setHover] = useState(false);
+
   const safeMax = max > 0 ? max : 200_000;
   const ratio = Math.max(0, Math.min(1, used / safeMax));
   const pct = Math.round(ratio * 100);
@@ -34,40 +34,63 @@ export function ContextRing({ used, max = 200_000 }: Props) {
     ratio >= 0.7 ? "var(--status-warn)" :
     "var(--status-ok)";
 
-  const title =
-    `已用 ${formatTok(used)} / 共 ${formatTok(safeMax)}\n` +
-    `剩 ${formatTok(remaining)} · ${pct}%`;
-
   return (
-    <div className="context-ring" title={title} aria-label={title}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="var(--border-subtle)"
-          strokeWidth={stroke}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={tone}
-          strokeWidth={stroke}
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </svg>
+    <div
+      className="context-ring-wrap"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div className="context-ring">
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke="var(--border-subtle)"
+            strokeWidth={stroke}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke={tone}
+            strokeWidth={stroke}
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </svg>
+      </div>
+      <span className="context-ring-pct" style={{ color: tone }}>{pct}%</span>
+
+      {hover && (
+        <div className="context-ring-tooltip">
+          <div className="context-ring-tt-row">
+            <span className="context-ring-tt-label">已用</span>
+            <span className="context-ring-tt-val">{formatTok(used)}</span>
+          </div>
+          <div className="context-ring-tt-row">
+            <span className="context-ring-tt-label">剩余</span>
+            <span className="context-ring-tt-val">{formatTok(remaining)}</span>
+          </div>
+          <div className="context-ring-tt-row">
+            <span className="context-ring-tt-label">上限</span>
+            <span className="context-ring-tt-val">{formatTok(safeMax)}</span>
+          </div>
+          <div className="context-ring-tt-bar">
+            <div className="context-ring-tt-bar-fill" style={{ width: `${pct}%`, background: tone }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function formatTok(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return `${n}`;
+  return String(n);
 }
