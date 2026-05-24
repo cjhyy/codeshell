@@ -110,7 +110,7 @@ export function buildCommands(opts: {
     { id: "go.runs", label: "打开 运行", run: () => setViewMode("runs") },
     { id: "go.mcp", label: "打开 插件", run: () => setViewMode("mcp") },
     { id: "go.logs", label: "打开 日志", run: () => setViewMode("logs") },
-    { id: "go.settings", label: "打开 设置", run: () => setViewMode("settings") },
+    // 设置改为左下角上拉菜单 — 不再由 viewMode 驱动，所以不放进 palette。
     { id: "toggle.sidebar", label: "切换 侧栏", hint: "Cmd+B", run: toggleSidebar },
     { id: "toggle.inspector", label: "切换 详情", hint: "Cmd+I", run: toggleInspector },
     { id: "transcript.clear", label: "清空当前 transcript", run: clearTranscript },

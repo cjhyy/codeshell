@@ -120,18 +120,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.project-remove {
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: var(--fg-muted);
-  opacity: 0;
-  transition: opacity 0.12s ease;
-}
-.project-remove:hover { background: var(--border-subtle); color: var(--fg-primary); }
+/* No project-remove button anymore — repo deletion goes through
+   right-click → 移除项目 with a confirm() guard. */
 
 /* Session list nested under a project */
 .session-list {
@@ -182,6 +172,29 @@
 .session-time { font-variant-numeric: tabular-nums; }
 .session-row-more { color: var(--fg-muted); font-style: italic; }
 .session-row-more:hover { color: var(--fg-primary); }
+.session-row.archived .session-title { color: var(--fg-muted); }
+
+/* Archived group toggle, sits under live sessions */
+.archived-group { padding-bottom: var(--sp-1); }
+.archived-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 24px;
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.archived-toggle:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.archived-count {
+  margin-left: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.session-list-archived .session-row { opacity: 0.75; }
+.session-list-archived .session-row:hover { opacity: 1; }
 
 /* Empty state */
 .repo-empty {

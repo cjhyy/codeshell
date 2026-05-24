@@ -32,6 +32,9 @@ export interface SessionSummary {
   title: string;
   createdAt: number;
   updatedAt: number;
+  /** True when the user has archived this session — hidden from the
+   *  main list, accessible under a collapsed "已归档" group. */
+  archived?: boolean;
 }
 
 export interface SessionIndex {
@@ -195,6 +198,26 @@ export function deleteSessionLocal(
   const next: SessionIndex = { sessions: remaining, activeSessionId: nextActive };
   saveSessionIndex(repoId, next);
   clearTranscript(repoId, sessionId);
+  return next;
+}
+
+export function archiveSession(
+  repoId: string | null,
+  sessionId: string,
+  archived: boolean,
+): SessionIndex {
+  const idx = loadSessionIndex(repoId);
+  const next: SessionIndex = {
+    ...idx,
+    sessions: idx.sessions.map((s) =>
+      s.id === sessionId ? { ...s, archived } : s,
+    ),
+    // If we just archived the active session, clear it (the chat surface
+    // returns to draft state until the user picks another).
+    activeSessionId:
+      archived && idx.activeSessionId === sessionId ? null : idx.activeSessionId,
+  };
+  saveSessionIndex(repoId, next);
   return next;
 }
 

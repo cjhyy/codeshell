@@ -1,0 +1,90 @@
+/* Bottom-left settings popover + focused modal */
+
+.settings-menu { position: relative; }
+
+.settings-menu-trigger { width: 100%; }
+.settings-menu-trigger.active { background: var(--bg-selected); }
+
+.settings-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  z-index: var(--z-popover);
+}
+.settings-popover-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+  cursor: pointer;
+}
+.settings-popover-item:hover { background: var(--bg-hover); }
+.settings-popover-item span { flex: 1; }
+.settings-popover-chevron { color: var(--fg-muted); }
+
+/* Modal */
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+.settings-modal {
+  width: 640px;
+  max-width: 90vw;
+  max-height: 85vh;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.settings-modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.settings-modal-title {
+  margin: 0;
+  font-size: var(--fz-lg);
+  font-weight: 600;
+  color: var(--fg-primary);
+  flex: 1;
+}
+.settings-modal-close {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fg-muted);
+  border-radius: 50%;
+}
+.settings-modal-close:hover { background: var(--bg-hover); color: var(--fg-primary); }
+
+.settings-modal-body {
+  padding: var(--sp-3);
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}

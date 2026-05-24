@@ -23,6 +23,7 @@ import {
   createSession,
   deleteSessionLocal,
   renameSessionLocal,
+  archiveSession,
   touchSession,
   setActiveSession,
   type SessionIndex,
@@ -44,7 +45,7 @@ import { PanelLeft } from "./ui/icons";
 import { IconButton } from "./ui/IconButton";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
-import { SettingsView } from "./settings/SettingsView";
+// SettingsView replaced by SettingsMenu + SettingsModal triggered from sidebar bottom.
 import { McpView } from "./mcp/McpView";
 import { RunsView } from "./runs/RunsView";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
@@ -283,6 +284,15 @@ function App() {
     title: string,
   ): void => {
     const next = renameSessionLocal(repoId, sessionId, title);
+    setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+  };
+
+  const handleArchiveSession = (
+    repoId: string | null,
+    sessionId: string,
+    archived: boolean,
+  ): void => {
+    const next = archiveSession(repoId, sessionId, archived);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
   };
 
@@ -643,7 +653,13 @@ function App() {
           onOpenSearch={() => setSearchOpen(true)}
           onOpenAutomations={() => setViewMode("runs")}
           onOpenPlugins={() => setViewMode("mcp")}
-          onOpenSettings={() => setViewMode("settings")}
+          onOpenApprovals={() => setViewMode("approvals")}
+          onOpenRuns={() => setViewMode("runs")}
+          onOpenLogs={() => setViewMode("logs")}
+          onRenameSession={handleRenameSession}
+          onArchiveSession={handleArchiveSession}
+          onDeleteSession={handleDeleteSession}
+          activeRepoPath={activeRepo?.path ?? null}
           viewMode={view.viewMode}
         />
       </div>
@@ -671,8 +687,6 @@ function App() {
           />
         ) : view.viewMode === "logs" ? (
           <LogsView />
-        ) : view.viewMode === "settings" ? (
-          <SettingsView activeRepoPath={activeRepo?.path ?? null} />
         ) : view.viewMode === "mcp" ? (
           <McpView />
         ) : view.viewMode === "runs" ? (

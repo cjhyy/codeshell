@@ -4,49 +4,54 @@ import {
   Search,
   Puzzle,
   Workflow,
-  Settings as SettingsIcon,
   ChevronDown,
   ChevronRight,
   Folder,
-  X,
   FolderPlus,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
+import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
+import { SettingsMenu } from "./settings/SettingsMenu";
 import type { ViewMode } from "./view";
 import type { Repo } from "./repos";
-import type { SessionIndex } from "./transcripts";
+import type { SessionIndex, SessionSummary } from "./transcripts";
 
 interface SidebarProps {
   repos: Repo[];
-  /** Session index per repo (keyed by repoKey = repoId or "__global__"). */
   sessions: Record<string, SessionIndex>;
   activeRepoId: string | null;
   activeSessionId: string | null;
-  /** Repos collapsed in the project list (UI state lives in App). */
   collapsedRepos: Set<string>;
   approvalsBadge?: number;
+
   onSelectRepo: (id: string) => void;
   onSelectSession: (repoId: string | null, sessionId: string) => void;
   onToggleRepo: (id: string) => void;
   onAddRepo: () => void;
   onRemoveRepo: (id: string) => void;
+
   onNewConversation: () => void;
   onOpenSearch: () => void;
   onOpenAutomations: () => void;
   onOpenPlugins: () => void;
-  onOpenSettings: () => void;
+  onOpenApprovals: () => void;
+  onOpenRuns: () => void;
+  onOpenLogs: () => void;
+
+  onRenameSession: (repoId: string | null, sessionId: string, title: string) => void;
+  onArchiveSession: (repoId: string | null, sessionId: string, archived: boolean) => void;
+  onDeleteSession: (repoId: string | null, sessionId: string) => void;
+
+  activeRepoPath: string | null;
   viewMode: ViewMode;
 }
 
 const COMPACT_SESSION_LIMIT = 5;
 
-/**
- * Project-first sidebar.
- *
- * Top:    workflow shortcuts (new conversation / search / plugins / automations)
- * Middle: 项目 — collapsible folder rows, sessions nested below
- * Bottom: 设置 pinned to the floor
- */
+type MenuTarget =
+  | { kind: "repo"; x: number; y: number; repo: Repo }
+  | { kind: "session"; x: number; y: number; repoId: string | null; session: SessionSummary };
+
 export function Sidebar({
   repos,
   sessions,
@@ -63,30 +68,64 @@ export function Sidebar({
   onOpenSearch,
   onOpenAutomations,
   onOpenPlugins,
-  onOpenSettings,
+  onOpenApprovals,
+  onOpenRuns,
+  onOpenLogs,
+  onRenameSession,
+  onArchiveSession,
+  onDeleteSession,
+  activeRepoPath,
   viewMode,
 }: SidebarProps) {
+  const [menu, setMenu] = useState<MenuTarget | null>(null);
+  const closeMenu = (): void => setMenu(null);
+
+  const repoMenu = (repo: Repo): ContextMenuItem[] => [
+    {
+      label: collapsedRepos.has(repo.id) ? "展开" : "折叠",
+      onClick: () => onToggleRepo(repo.id),
+    },
+    {
+      label: "在 Finder 中显示",
+      onClick: () => { void window.codeshell.revealInFinder(repo.path); },
+    },
+    {
+      label: "移除项目",
+      danger: true,
+      onClick: () => {
+        if (confirm(`确定从侧栏移除 "${repo.name}" 吗？\n本地会话保留 — 重新添加同一目录可恢复。`)) {
+          onRemoveRepo(repo.id);
+        }
+      },
+    },
+  ];
+
+  const sessionMenu = (repoId: string | null, s: SessionSummary): ContextMenuItem[] => [
+    {
+      label: "重命名…",
+      onClick: () => {
+        const t = prompt("会话标题", s.title);
+        if (t !== null && t.trim()) onRenameSession(repoId, s.id, t.trim());
+      },
+    },
+    s.archived
+      ? { label: "恢复", onClick: () => onArchiveSession(repoId, s.id, false) }
+      : { label: "归档", onClick: () => onArchiveSession(repoId, s.id, true) },
+    {
+      label: "删除",
+      danger: true,
+      onClick: () => {
+        if (confirm(`确定删除会话 "${s.title}" 吗？`)) onDeleteSession(repoId, s.id);
+      },
+    },
+  ];
+
   return (
     <aside className="sidebar sidebar-v2">
       <nav className="sidebar-top">
-        <SidebarItem
-          label="新对话"
-          Icon={MessageSquare}
-          onClick={onNewConversation}
-          active={false}
-        />
-        <SidebarItem
-          label="搜索"
-          Icon={Search}
-          onClick={onOpenSearch}
-          active={false}
-        />
-        <SidebarItem
-          label="插件"
-          Icon={Puzzle}
-          onClick={onOpenPlugins}
-          active={viewMode === "mcp"}
-        />
+        <SidebarItem label="新对话" Icon={MessageSquare} onClick={onNewConversation} active={false} />
+        <SidebarItem label="搜索" Icon={Search} onClick={onOpenSearch} active={false} />
+        <SidebarItem label="插件" Icon={Puzzle} onClick={onOpenPlugins} active={viewMode === "mcp"} />
         <SidebarItem
           label="自动化"
           Icon={Workflow}
@@ -124,20 +163,40 @@ export function Sidebar({
               onToggle={() => onToggleRepo(repo.id)}
               onSelectRepo={() => onSelectRepo(repo.id)}
               onSelectSession={(sid) => onSelectSession(repo.id, sid)}
-              onRemove={() => onRemoveRepo(repo.id)}
+              onRepoContextMenu={(e) => {
+                e.preventDefault();
+                setMenu({ kind: "repo", x: e.clientX, y: e.clientY, repo });
+              }}
+              onSessionContextMenu={(e, s) => {
+                e.preventDefault();
+                setMenu({ kind: "session", x: e.clientX, y: e.clientY, repoId: repo.id, session: s });
+              }}
             />
           ))}
         </div>
       </div>
 
       <div className="sidebar-bottom">
-        <SidebarItem
-          label="设置"
-          Icon={SettingsIcon}
-          onClick={onOpenSettings}
-          active={viewMode === "settings"}
+        <SettingsMenu
+          activeRepoPath={activeRepoPath}
+          onOpenApprovals={onOpenApprovals}
+          onOpenRuns={onOpenRuns}
+          onOpenLogs={onOpenLogs}
         />
       </div>
+
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={closeMenu}
+          items={
+            menu.kind === "repo"
+              ? repoMenu(menu.repo)
+              : sessionMenu(menu.repoId, menu.session)
+          }
+        />
+      )}
     </aside>
   );
 }
@@ -176,7 +235,8 @@ function ProjectGroup({
   onToggle,
   onSelectRepo,
   onSelectSession,
-  onRemove,
+  onRepoContextMenu,
+  onSessionContextMenu,
 }: {
   repo: Repo;
   index: SessionIndex | undefined;
@@ -186,15 +246,21 @@ function ProjectGroup({
   onToggle: () => void;
   onSelectRepo: () => void;
   onSelectSession: (sid: string) => void;
-  onRemove: () => void;
+  onRepoContextMenu: (e: React.MouseEvent) => void;
+  onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
 }) {
   const [showMore, setShowMore] = useState(false);
-  const sessions = index?.sessions ?? [];
-  const visible = useMemo(
-    () => (showMore ? sessions : sessions.slice(0, COMPACT_SESSION_LIMIT)),
-    [sessions, showMore],
+  const [showArchived, setShowArchived] = useState(false);
+
+  const all = index?.sessions ?? [];
+  const live = useMemo(() => all.filter((s) => !s.archived), [all]);
+  const archived = useMemo(() => all.filter((s) => s.archived), [all]);
+
+  const visibleLive = useMemo(
+    () => (showMore ? live : live.slice(0, COMPACT_SESSION_LIMIT)),
+    [live, showMore],
   );
-  const hasMore = sessions.length > COMPACT_SESSION_LIMIT && !showMore;
+  const hiddenLiveCount = Math.max(0, live.length - COMPACT_SESSION_LIMIT);
 
   return (
     <div className="project-group">
@@ -204,6 +270,7 @@ function ProjectGroup({
           onSelectRepo();
           if (collapsed) onToggle();
         }}
+        onContextMenu={onRepoContextMenu}
       >
         <button
           className="project-chevron"
@@ -217,52 +284,99 @@ function ProjectGroup({
         </button>
         <Folder size={13} className="project-icon" />
         <span className="project-name">{repo.name}</span>
-        <button
-          className="project-remove"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          aria-label="移除"
-          title="移除项目"
-        >
-          <X size={11} />
-        </button>
       </div>
 
-      {!collapsed && sessions.length > 0 && (
-        <ul className="session-list">
-          {visible.map((s, i) => (
-            <li
-              key={s.id}
-              className={`session-row${activeSessionId === s.id && isActiveRepo ? " active" : ""}`}
-              onClick={() => onSelectSession(s.id)}
-              title={s.title}
-            >
-              <span className="session-title">{s.title}</span>
-              <span className="session-meta-right">
-                {isActiveRepo && i < 5 ? (
-                  <kbd className="session-kbd">⌘{i + 1}</kbd>
-                ) : (
-                  <span className="session-time">{formatRelative(s.updatedAt)}</span>
-                )}
-              </span>
-            </li>
-          ))}
-          {hasMore && (
-            <li
-              className="session-row session-row-more"
-              onClick={() => setShowMore(true)}
-            >
-              <span className="session-title">展开显示</span>
-              <span className="session-meta-right">
-                {sessions.length - COMPACT_SESSION_LIMIT}
-              </span>
-            </li>
+      {!collapsed && (
+        <>
+          {live.length > 0 && (
+            <ul className="session-list">
+              {visibleLive.map((s, i) => (
+                <SessionRow
+                  key={s.id}
+                  s={s}
+                  isActive={isActiveRepo && activeSessionId === s.id}
+                  showKbd={isActiveRepo && i < 5}
+                  kbdIndex={i + 1}
+                  onClick={() => onSelectSession(s.id)}
+                  onContextMenu={(e) => onSessionContextMenu(e, s)}
+                />
+              ))}
+              {hiddenLiveCount > 0 && !showMore && (
+                <li
+                  className="session-row session-row-more"
+                  onClick={() => setShowMore(true)}
+                >
+                  <span className="session-title">展开显示</span>
+                  <span className="session-meta-right">{hiddenLiveCount}</span>
+                </li>
+              )}
+            </ul>
           )}
-        </ul>
+
+          {archived.length > 0 && (
+            <div className="archived-group">
+              <button
+                className="archived-toggle"
+                onClick={() => setShowArchived((v) => !v)}
+              >
+                {showArchived ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                <span>已归档</span>
+                <span className="archived-count">{archived.length}</span>
+              </button>
+              {showArchived && (
+                <ul className="session-list session-list-archived">
+                  {archived.map((s) => (
+                    <SessionRow
+                      key={s.id}
+                      s={s}
+                      isActive={isActiveRepo && activeSessionId === s.id}
+                      showKbd={false}
+                      kbdIndex={0}
+                      onClick={() => onSelectSession(s.id)}
+                      onContextMenu={(e) => onSessionContextMenu(e, s)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
+  );
+}
+
+function SessionRow({
+  s,
+  isActive,
+  showKbd,
+  kbdIndex,
+  onClick,
+  onContextMenu,
+}: {
+  s: SessionSummary;
+  isActive: boolean;
+  showKbd: boolean;
+  kbdIndex: number;
+  onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <li
+      className={`session-row${isActive ? " active" : ""}${s.archived ? " archived" : ""}`}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      title={s.title}
+    >
+      <span className="session-title">{s.title}</span>
+      <span className="session-meta-right">
+        {showKbd ? (
+          <kbd className="session-kbd">⌘{kbdIndex}</kbd>
+        ) : (
+          <span className="session-time">{formatRelative(s.updatedAt)}</span>
+        )}
+      </span>
+    </li>
   );
 }
 
