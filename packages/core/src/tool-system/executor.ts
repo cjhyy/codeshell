@@ -2,6 +2,7 @@
  * Tool executor — orchestrates permission checks, hooks, and execution.
  */
 
+import { setMaxListeners } from "node:events";
 import type { ToolCall, ToolResult, Message, ContentBlock } from "../types.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
@@ -55,6 +56,13 @@ export class ToolExecutor {
   /** Set the abort signal for cascading cancellation. */
   setSignal(signal?: AbortSignal): void {
     this.signal = signal;
+    // Each parallel tool call attaches its own `abort` listener to this
+    // session-wide signal (registry.ts:115). With 11+ concurrent tools —
+    // common when an Agent subagent fans out reads — Node's default
+    // limit of 10 fires a MaxListenersExceededWarning. The listeners are
+    // removed correctly in finally blocks; raise the ceiling to silence
+    // the noise without masking real leaks.
+    if (signal) setMaxListeners(50, signal);
   }
 
   /** Set the per-Engine ToolContext (askUser, llmConfig, modelPool, etc.). */
