@@ -174,26 +174,32 @@ describe("Plan mode tools", () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("enters plan mode (ctx.planMode=false → returns entered message)", async () => {
-    const ctx = { planMode: false } as unknown as ToolContext;
+  it("enters plan mode (ctx.engine.planMode=false → returns entered message)", async () => {
+    const engine = { planMode: false, setPlanMode(v: boolean) { this.planMode = v; } };
+    const ctx = { planMode: false, engine } as unknown as ToolContext;
     const enterResult = await enterPlanModeTool({}, ctx);
     expect(enterResult).toContain("Entered plan mode");
+    expect(engine.planMode).toBe(true);
   });
 
   it("returns informative message when already in plan mode", async () => {
-    const ctx = { planMode: true } as unknown as ToolContext;
+    const engine = { planMode: true, setPlanMode(v: boolean) { this.planMode = v; } };
+    const ctx = { planMode: true, engine } as unknown as ToolContext;
     const result = await enterPlanModeTool({}, ctx);
     expect(result).toContain("Already in plan mode");
   });
 
-  it("exits plan mode (ctx.planMode=true → returns exited message)", async () => {
-    const ctx = { planMode: true } as unknown as ToolContext;
+  it("exits plan mode (ctx.engine.planMode=true → returns exited message)", async () => {
+    const engine = { planMode: true, setPlanMode(v: boolean) { this.planMode = v; } };
+    const ctx = { planMode: true, engine } as unknown as ToolContext;
     const exitResult = await exitPlanModeTool({}, ctx);
     expect(exitResult).toContain("Exited plan mode");
+    expect(engine.planMode).toBe(false);
   });
 
   it("returns informative message when exiting without entering", async () => {
-    const ctx = { planMode: false } as unknown as ToolContext;
+    const engine = { planMode: false, setPlanMode(v: boolean) { this.planMode = v; } };
+    const ctx = { planMode: false, engine } as unknown as ToolContext;
     const result = await exitPlanModeTool({}, ctx);
     expect(result).toContain("Not currently in plan mode");
   });

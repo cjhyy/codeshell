@@ -43,11 +43,11 @@ export async function enterPlanModeTool(
   _args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
-  if (ctx?.planMode) {
+  if (ctx?.engine?.planMode) {
     return "Already in plan mode. Output your plan as text, then call ExitPlanMode.";
   }
 
-  ctx?.engine?.setPlanMode(true);
+  ctx?.engine.setPlanMode(true);
 
   return [
     "Entered plan mode.",
@@ -65,11 +65,11 @@ export async function exitPlanModeTool(
   _args: Record<string, unknown>,
   ctx?: ToolContext,
 ): Promise<string> {
-  if (!ctx?.planMode) {
+  if (!ctx?.engine?.planMode) {
     return "Not currently in plan mode.";
   }
 
-  ctx?.engine?.setPlanMode(false);
+  ctx?.engine.setPlanMode(false);
 
   return "Exited plan mode. You can now write and edit files to implement the plan.";
 }

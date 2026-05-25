@@ -1142,12 +1142,9 @@ export class Engine {
       inputSchema: t.inputSchema,
     }));
 
-    const toolCtx: import("../tool-system/context.js").ToolContext = {
+    const toolCtx: ToolContext = {
+      ...this.buildToolContext(),
       cwd: opts.projectDir ?? process.cwd(),
-      llmConfig: this.config.llm,
-      toolRegistry: this.toolRegistry,
-      planMode: this.planMode,
-      engine: this,
     };
 
     const messages: Message[] = [{ role: "user", content: opts.userPrompt }];
