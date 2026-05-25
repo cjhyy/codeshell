@@ -23,7 +23,19 @@ import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import { PluginsAndSkillsSection } from "./PluginsAndSkillsSection";
 import { AppearanceSection } from "./AppearanceSection";
-import { ArchivedSessionsSection } from "./ArchivedSessionsSection";
+import {
+  ArchivedConversationsSection,
+  ConnectionsSection,
+  EnvironmentSection,
+  GitSection,
+  HooksSection,
+  PersonalizationSection,
+  ShortcutsSection,
+  ToggleCapabilitySection,
+  WorktreeSection,
+} from "./AdvancedSections";
+import type { Repo } from "../repos";
+import type { SessionIndex } from "../transcripts";
 
 type ModuleId =
   | "general"
@@ -69,6 +81,10 @@ const MODULES: Module[] = [
 
 interface Props {
   activeRepoPath: string | null;
+  repos: Repo[];
+  sessionIndices: Record<string, SessionIndex>;
+  onRestoreArchivedSession: (repoId: string | null, sessionId: string) => void;
+  onDeleteArchivedSession: (repoId: string | null, sessionId: string) => void;
   onBack: () => void;
 }
 
@@ -80,15 +96,27 @@ interface Props {
  * components (ModelSection / PermissionSection / McpSection / etc.)
  * are reused so we don't fork the model/permission/mcp UIs.
  */
-export function SettingsPage({ activeRepoPath, onBack }: Props) {
+export function SettingsPage({
+  activeRepoPath,
+  repos,
+  sessionIndices,
+  onRestoreArchivedSession,
+  onDeleteArchivedSession,
+  onBack,
+}: Props) {
   const [active, setActive] = useState<ModuleId>("general");
   const [scope, setScope] = useState<"user" | "project">("user");
 
   const supportsProjectScope =
     active === "general" ||
     active === "config" ||
+    active === "personalization" ||
     active === "mcp" ||
-    active === "hooks";
+    active === "hooks" ||
+    active === "connections" ||
+    active === "environment" ||
+    active === "browser" ||
+    active === "computer";
 
   return (
     <div className="settings-page">
@@ -151,31 +179,58 @@ export function SettingsPage({ activeRepoPath, onBack }: Props) {
             {active === "config" && (
               <ModelSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
+            {active === "personalization" && (
+              <PersonalizationSection scope={scope} activeRepoPath={activeRepoPath} />
+            )}
+            {active === "shortcuts" && (
+              <ShortcutsSection />
+            )}
             {active === "mcp" && (
               <McpSection scope={scope} activeRepoPath={activeRepoPath} />
+            )}
+            {active === "hooks" && (
+              <HooksSection scope={scope} activeRepoPath={activeRepoPath} />
+            )}
+            {active === "connections" && (
+              <ConnectionsSection scope={scope} activeRepoPath={activeRepoPath} />
+            )}
+            {active === "git" && (
+              <GitSection activeRepoPath={activeRepoPath} />
+            )}
+            {active === "environment" && (
+              <EnvironmentSection scope={scope} activeRepoPath={activeRepoPath} />
+            )}
+            {active === "worktree" && (
+              <WorktreeSection activeRepoPath={activeRepoPath} />
+            )}
+            {active === "browser" && (
+              <ToggleCapabilitySection
+                scope={scope}
+                activeRepoPath={activeRepoPath}
+                settingKey="browser"
+                title="浏览器"
+                description="控制是否在会话中启用浏览器相关能力。"
+              />
+            )}
+            {active === "computer" && (
+              <ToggleCapabilitySection
+                scope={scope}
+                activeRepoPath={activeRepoPath}
+                settingKey="computer"
+                title="电脑操控"
+                description="控制是否在会话中启用本机应用操控能力。"
+              />
             )}
             {active === "plugins-skills" && (
               <PluginsAndSkillsSection activeRepoPath={activeRepoPath} />
             )}
-            {active === "archived" && <ArchivedSessionsSection />}
-
-            {/* Modules that don't have a real implementation yet show a
-                placeholder rather than disappearing. Better visible
-                'todo' than silent breakage. */}
-            {(active === "personalization" ||
-              active === "shortcuts" ||
-              active === "hooks" ||
-              active === "connections" ||
-              active === "git" ||
-              active === "environment" ||
-              active === "worktree" ||
-              active === "browser" ||
-              active === "computer") && (
-              <section className="settings-section">
-                <div className="approvals-empty">
-                  「{MODULES.find((m) => m.id === active)?.label}」模块的设置项还未实现。
-                </div>
-              </section>
+            {active === "archived" && (
+              <ArchivedConversationsSection
+                repos={repos}
+                sessionIndices={sessionIndices}
+                onRestore={onRestoreArchivedSession}
+                onDelete={onDeleteArchivedSession}
+              />
             )}
           </div>
         </main>

@@ -237,6 +237,112 @@
   line-height: 1.4;
 }
 
+.settings-form-grid {
+  display: grid;
+  gap: var(--sp-3);
+}
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--fg-secondary);
+  font-size: var(--fz-sm);
+}
+.settings-field input,
+.settings-field select,
+.settings-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--fg-primary);
+  font: inherit;
+  padding: 7px 9px;
+  outline: none;
+}
+.settings-field textarea {
+  min-height: 88px;
+  resize: vertical;
+  font-family: var(--font-mono);
+}
+.settings-field input:focus,
+.settings-field select:focus,
+.settings-field textarea:focus {
+  border-color: var(--border-strong);
+}
+.settings-save-btn { width: fit-content; }
+
+.settings-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+}
+.settings-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 36px;
+  padding: var(--sp-2);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+}
+.settings-list-row strong {
+  color: var(--fg-primary);
+  min-width: 0;
+}
+.settings-list-row code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-muted);
+}
+.settings-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.settings-table-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 38px;
+  padding: 0 var(--sp-3);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.settings-table-row:last-child { border-bottom: none; }
+.settings-table-row kbd {
+  min-width: 76px;
+  padding: 2px 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+  color: var(--fg-primary);
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+}
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 360px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+.settings-toggle-row input { transform: scale(1.1); }
+
 /* Skills list */
 .skills-panel { display: flex; flex-direction: column; gap: var(--sp-2); }
 
