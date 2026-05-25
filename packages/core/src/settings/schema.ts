@@ -202,6 +202,22 @@ export const SettingsSchema = z
         provider: z.enum(["serper", "tavily", "searxng"]).default("serper"),
         apiKey: z.string().optional(),
         baseUrl: z.string().optional(),
+        /**
+         * Per-provider credentials bag. Lets the desktop UI keep
+         * Serper/Tavily/SearXNG configured simultaneously and flip the
+         * default without losing the others. `provider/apiKey/baseUrl`
+         * remain authoritative for the *active* provider so legacy
+         * readers keep working.
+         */
+        providers: z
+          .record(
+            z.enum(["serper", "tavily", "searxng"]),
+            z.object({
+              apiKey: z.string().optional(),
+              baseUrl: z.string().optional(),
+            }),
+          )
+          .optional(),
       })
       .default({}),
 

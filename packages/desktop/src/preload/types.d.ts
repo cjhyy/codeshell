@@ -131,6 +131,7 @@ export interface CodeshellApi {
     force?: boolean,
   ): Promise<McpProbeResult[]>;
   invalidateMcpProbeCache(name?: string): Promise<void>;
+  probeSearch(input: SearchProbeInput): Promise<SearchProbeResult>;
   resolveModelMeta(
     models: Array<{ key: string; model?: string; providerKey?: string; maxContextTokens?: number | null }>,
     providers: Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>,
@@ -186,6 +187,20 @@ export interface DesktopSessionSummary {
   size: number;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface SearchProbeInput {
+  provider: "serper" | "tavily" | "searxng";
+  apiKey?: string;
+  baseUrl?: string;
+}
+
+export interface SearchProbeResult {
+  status: "ok" | "error" | "unconfigured";
+  sampleTitles?: string[];
+  errorMessage?: string;
+  errorDetail?: string;
+  lastProbedAt: string;
 }
 
 export interface McpServerProbeInput {

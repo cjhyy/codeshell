@@ -157,6 +157,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("mcp:probe", configs, force),
   invalidateMcpProbeCache: (name?: string) =>
     ipcRenderer.invoke("mcp:invalidate", name),
+  probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   resolveModelMeta: (models: unknown, providers: unknown) =>
     ipcRenderer.invoke("models:resolve-meta", models, providers),
   listModels: (provider: unknown, refresh?: boolean) =>

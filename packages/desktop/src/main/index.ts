@@ -42,6 +42,7 @@ import {
   invalidateMcpProbeCache,
   type McpServerConfig,
 } from "./mcp-probe-service.js";
+import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -235,6 +236,17 @@ ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
 
 ipcMain.handle("mcp:invalidate", async (_e, name?: string) => {
   invalidateMcpProbeCache(typeof name === "string" ? name : undefined);
+});
+
+ipcMain.handle("search:probe", async (_e, raw: unknown) => {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("search:probe requires { provider, apiKey?, baseUrl? }");
+  }
+  const r = raw as SearchProbeInput;
+  if (r.provider !== "serper" && r.provider !== "tavily" && r.provider !== "searxng") {
+    throw new Error(`invalid provider: ${r.provider}`);
+  }
+  return probeSearch(r);
 });
 
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {

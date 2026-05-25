@@ -92,9 +92,9 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   const removeServer = async (name: string) => {
     const ok = await confirm({
       title: "移除 MCP 服务器",
-      message: `确认移除「${truncateTitle(name)}」？\n下次启动 engine 时生效；要恢复需要重新添加。`,
-      confirmText: "移除",
-      danger: true,
+      message: `确认移除「${truncateTitle(name)}」？下次启动 engine 时生效；要恢复需要重新添加。`,
+      confirmLabel: "移除",
+      destructive: true,
     });
     if (!ok) return;
     await window.codeshell.updateSettings(scope, { mcpServers: { [name]: null } }, cwd);

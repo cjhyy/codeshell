@@ -5,6 +5,7 @@ import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
 import { Select } from "../ui/Select";
+import { SearchConnectionsPanel } from "./SearchConnectionsPanel";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -168,61 +169,8 @@ export function HooksSection({ scope, activeRepoPath }: ScopedProps) {
   );
 }
 
-export function ConnectionsSection({ scope, activeRepoPath }: ScopedProps) {
-  const [provider, setProvider] = useState("serper");
-  const [apiKey, setApiKey] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
-
-  const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
-    const search = objectOf(s.search);
-    setProvider(stringOf(search.provider) || "serper");
-    setApiKey(stringOf(search.apiKey));
-    setBaseUrl(stringOf(search.baseUrl));
-  };
-  useEffect(() => { void load(); }, [scope, activeRepoPath]);
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      await window.codeshell.updateSettings(scope, { search: { provider, apiKey, baseUrl } }, cwd);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">连接</h3>
-      <div className="settings-form-grid">
-        <label className="settings-field">
-          <span>搜索 Provider</span>
-          <Select
-            value={provider}
-            onChange={setProvider}
-            options={[
-              { value: "serper", label: "Serper" },
-              { value: "tavily", label: "Tavily" },
-              { value: "searxng", label: "SearXNG" },
-            ]}
-          />
-        </label>
-        <label className="settings-field">
-          <span>API Key</span>
-          <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="可留空" />
-        </label>
-        <label className="settings-field">
-          <span>Base URL</span>
-          <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="自定义服务地址" />
-        </label>
-      </div>
-      <button className="approval-btn approve settings-save-btn" onClick={() => void save()} disabled={saving}>
-        {saving ? "保存中..." : "保存连接"}
-      </button>
-    </section>
-  );
+export function ConnectionsSection(props: ScopedProps) {
+  return <SearchConnectionsPanel {...props} />;
 }
 
 export function GitSection({ activeRepoPath }: { activeRepoPath: string | null }) {

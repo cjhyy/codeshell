@@ -38,7 +38,7 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-export type LogSource = "main" | "bridge" | "renderer" | "agent";
+export type LogSource = "main" | "bridge" | "renderer" | "agent" | "mcp-probe";
 
 function todayLogPath(): string {
   const d = new Date();

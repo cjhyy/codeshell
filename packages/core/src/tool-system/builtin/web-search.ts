@@ -1,8 +1,84 @@
 /**
  * Built-in WebSearch tool — search the web via Serper, Tavily, or SearXNG.
+ *
+ * Provider selection / credentials are read in this precedence:
+ *   1. settings.search.{provider, apiKey, baseUrl} from ~/.code-shell/settings.json
+ *      (set via the desktop "连接" UI or hand-edited)
+ *   2. env vars SERPER_API_KEY / TAVILY_API_KEY / SEARXNG_URL (legacy / CI override)
+ * Settings take precedence so the desktop UI's "保存连接" + "测试连接" is the
+ * single source of truth for end users.
  */
 
 import type { ToolDefinition } from "../../types.js";
+import { SettingsManager } from "../../settings/manager.js";
+
+export type SearchProvider = "serper" | "tavily" | "searxng";
+
+export interface ResolvedSearchConfig {
+  provider: SearchProvider;
+  apiKey?: string;
+  baseUrl?: string;
+  source: "settings" | "env" | "none";
+}
+
+/**
+ * Resolve the active search config. Returns `source` so callers can show
+ * the user where the value came from when debugging.
+ */
+export function resolveSearchConfig(cwd: string = process.cwd()): ResolvedSearchConfig {
+  let settingsProvider: SearchProvider | undefined;
+  let settingsKey: string | undefined;
+  let settingsBaseUrl: string | undefined;
+  try {
+    const merged = new SettingsManager(cwd).get();
+    const search = (merged as { search?: Record<string, unknown> }).search ?? {};
+    const p = search.provider;
+    if (p === "serper" || p === "tavily" || p === "searxng") settingsProvider = p;
+    // Per-provider bag takes precedence over the legacy single-slot fields
+    // when the active provider matches the bag entry.
+    const bag =
+      search.providers && typeof search.providers === "object"
+        ? (search.providers as Record<string, Record<string, unknown>>)
+        : undefined;
+    const bagEntry = settingsProvider && bag ? bag[settingsProvider] : undefined;
+    if (bagEntry && typeof bagEntry.apiKey === "string" && bagEntry.apiKey) {
+      settingsKey = bagEntry.apiKey;
+    } else if (typeof search.apiKey === "string" && search.apiKey) {
+      settingsKey = search.apiKey;
+    }
+    if (bagEntry && typeof bagEntry.baseUrl === "string" && bagEntry.baseUrl) {
+      settingsBaseUrl = bagEntry.baseUrl;
+    } else if (typeof search.baseUrl === "string" && search.baseUrl) {
+      settingsBaseUrl = search.baseUrl;
+    }
+  } catch {
+    /* settings unreadable — fall through to env */
+  }
+
+  const envSerper = process.env.SERPER_API_KEY;
+  const envTavily = process.env.TAVILY_API_KEY;
+  const envSearxng = process.env.SEARXNG_URL;
+
+  if (settingsProvider) {
+    if (settingsProvider === "searxng") {
+      const base = settingsBaseUrl ?? envSearxng;
+      return base
+        ? { provider: "searxng", baseUrl: base, source: settingsBaseUrl ? "settings" : "env" }
+        : { provider: "searxng", source: "none" };
+    }
+    const key =
+      settingsKey ?? (settingsProvider === "serper" ? envSerper : envTavily);
+    return key
+      ? { provider: settingsProvider, apiKey: key, source: settingsKey ? "settings" : "env" }
+      : { provider: settingsProvider, source: "none" };
+  }
+
+  if (envSerper) return { provider: "serper", apiKey: envSerper, source: "env" };
+  if (envTavily) return { provider: "tavily", apiKey: envTavily, source: "env" };
+  if (envSearxng) return { provider: "searxng", baseUrl: envSearxng, source: "env" };
+
+  return { provider: "serper", source: "none" };
+}
 
 export const webSearchToolDef: ToolDefinition = {
   name: "WebSearch",
@@ -33,23 +109,22 @@ export async function webSearchTool(args: Record<string, unknown>): Promise<stri
   if (!query) return "Error: query is required";
 
   const numResults = Math.min((args.num_results as number) || 10, 20);
+  const config = resolveSearchConfig();
 
-  // Try providers in order: SERPER_API_KEY → TAVILY_API_KEY → SEARXNG_URL
-  const serperKey = process.env.SERPER_API_KEY;
-  const tavilyKey = process.env.TAVILY_API_KEY;
-  const searxngUrl = process.env.SEARXNG_URL;
+  if (config.source === "none") {
+    return "Error: No search provider configured. Open desktop 设置 → 连接 to add credentials, or set SERPER_API_KEY / TAVILY_API_KEY / SEARXNG_URL.";
+  }
 
   try {
     let results: SearchResult[];
-
-    if (serperKey) {
-      results = await searchSerper(query, numResults, serperKey);
-    } else if (tavilyKey) {
-      results = await searchTavily(query, numResults, tavilyKey);
-    } else if (searxngUrl) {
-      results = await searchSearXNG(query, numResults, searxngUrl);
+    if (config.provider === "serper" && config.apiKey) {
+      results = await searchSerper(query, numResults, config.apiKey);
+    } else if (config.provider === "tavily" && config.apiKey) {
+      results = await searchTavily(query, numResults, config.apiKey);
+    } else if (config.provider === "searxng" && config.baseUrl) {
+      results = await searchSearXNG(query, numResults, config.baseUrl);
     } else {
-      return "Error: No search API configured. Set one of: SERPER_API_KEY, TAVILY_API_KEY, or SEARXNG_URL";
+      return `Error: provider "${config.provider}" missing ${config.provider === "searxng" ? "base URL" : "API key"}`;
     }
 
     if (results.length === 0) return "No results found.";
