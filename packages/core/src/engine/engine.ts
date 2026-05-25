@@ -40,6 +40,7 @@ import { ModelFacade } from "./model-facade.js";
 import type { CostStateStore } from "./cost-store.js";
 import { logger, setCurrentSid, runWithSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
+import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
@@ -721,7 +722,10 @@ export class Engine {
     return runWithSid(session.state.sessionId, async () => {
 
     recordSessionStart(session.state.sessionId, {
-      task,
+      // Strip <codeshell-image> base64 payloads before they reach
+      // <repo>/log/. Reader still sees the marker + byte count, just
+      // not the bytes. Transcript persistence keeps the full payload.
+      task: sanitizeTaskString(task),
       cwd,
       model: this.config.llm.model,
       provider: this.config.llm.provider,
@@ -1171,10 +1175,19 @@ export class Engine {
       );
       if (messages.length < 8) return;
 
-      const plainMessages = messages.map((m) => ({
-        role: m.role,
-        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-      }));
+      // Memory orchestrator + dream-loop calls are auxiliary LLM calls
+      // that don't (and shouldn't) carry image payloads. Sanitize before
+      // stringify so we don't pump a 10 MB base64 string into the
+      // summarization prompt — provider 400s on it, and it leaks bytes
+      // into a downstream cost-tracking path we don't audit as carefully
+      // as the primary turn.
+      const plainMessages = messages.map((m) => {
+        const safe = sanitizeContent(m.content);
+        return {
+          role: m.role,
+          content: typeof safe === "string" ? safe : JSON.stringify(safe),
+        };
+      });
 
       const orchestrator = new MemoryOrchestrator({
         callLLM: async (sysPrompt, userMsg) => {

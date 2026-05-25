@@ -11,6 +11,7 @@ import {
   recordLLMRequest,
   recordLLMResponse,
 } from "../logging/session-recorder.js";
+import { sanitizeMessages } from "../logging/sanitize-messages.js";
 import { addAPIDuration, addToModelUsage, addInputTokens, addOutputTokens } from "../state.js";
 
 let _reqSeq = 0;
@@ -43,7 +44,10 @@ export class ModelFacade {
         provider: this.client.provider ?? "?",
         model: this.client.model ?? "?",
         stream: true,
-        messages,
+        // Image base64 payloads stay out of recorded prompts — see
+        // logging/sanitize-messages.ts. Transcripts keep the full bytes
+        // (needed for replay); logs do not.
+        messages: sanitizeMessages(messages),
         tools,
         systemPrompt,
       },
@@ -134,7 +138,9 @@ export class ModelFacade {
         provider: this.client.provider ?? "?",
         model: this.client.model ?? "?",
         stream: false,
-        messages,
+        // Image base64 payloads stay out of recorded prompts — same rule
+        // as the streaming path above.
+        messages: sanitizeMessages(messages),
         tools,
         systemPrompt,
       },
