@@ -27,7 +27,6 @@ import {
 } from "./types.js";
 import type { Engine, EngineConfig } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent } from "../types.js";
-import { setRuntimeBypass, isRuntimeBypass } from "../tool-system/permission.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
 import { taskManager } from "../tool-system/builtin/task.js";
@@ -225,9 +224,8 @@ export class AgentServer {
       // TODO(T6): once Engine exposes setPlanMode(), call this.engine.setPlanMode(params.planMode).
       // For now, plan-mode toggling via Configure is a no-op until T6 wires Engine.planMode.
     }
-    if (params.bypassPermissions !== undefined) {
-      setRuntimeBypass(params.bypassPermissions);
-    }
+    // TODO(T10): wire params.bypassPermissions through Engine.permissionMode once
+    // handleConfigure is rewritten in T10.
     if (params.reloadModels) {
       // Pick up newly persisted providers[]/models[] (e.g. from /login)
       // before any model-key switch below tries to find them.

@@ -14,4 +14,10 @@ describe("plan mode isolation", () => {
     expect(mod.setInPlanMode).toBeUndefined();
     expect(mod.isInPlanMode).toBeUndefined();
   });
+
+  it("permission.ts no longer exports setRuntimeBypass/isRuntimeBypass", async () => {
+    const mod: any = await import("../packages/core/src/tool-system/permission.ts");
+    expect(mod.setRuntimeBypass).toBeUndefined();
+    expect(mod.isRuntimeBypass).toBeUndefined();
+  });
 });
