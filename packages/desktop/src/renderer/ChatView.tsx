@@ -193,6 +193,7 @@ export function ChatView({
         messages={messages}
         onAskUserAnswer={onAskUserAnswer}
         trailing={inlineApproval}
+        trailingKey={pendingApproval?.requestId ?? null}
       />
 
       {(latestTasks || openAsk || showStickyApproval) && (

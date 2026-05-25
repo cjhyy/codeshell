@@ -19,10 +19,23 @@ interface Props {
    * with the rest of the conversation (Codex-style inline approvals).
    */
   trailing?: React.ReactNode;
+  /**
+   * Stable identity of `trailing`. When it changes (e.g. a new
+   * approval envelope arrives), the stick-to-bottom hook treats it
+   * the same as a new message and scrolls into view.
+   */
+  trailingKey?: string | null;
 }
 
-export function MessageStream({ messages, onAskUserAnswer, trailing }: Props) {
-  const ref = useStickToBottom<HTMLDivElement>(messages.length);
+export function MessageStream({
+  messages,
+  onAskUserAnswer,
+  trailing,
+  trailingKey,
+}: Props) {
+  const ref = useStickToBottom<HTMLDivElement>(
+    `${messages.length}:${trailingKey ?? ""}`,
+  );
 
   return (
     <div className="stream" ref={ref}>
