@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import type { GitBranches, GitStatus, WorktreeInfo } from "../../preload/types";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
+import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -489,15 +490,32 @@ export function ArchivedConversationsSection({
     }).sort((a, b) => b.session.updatedAt - a.session.updatedAt);
   }, [repos, sessionIndices]);
 
+  const confirm = useConfirm();
+
   const removeOne = (repoId: string | null, sessionId: string, title: string): void => {
-    if (!window.confirm(`永久删除「${title}」？此操作不可撤销。`)) return;
-    onDelete(repoId, sessionId);
+    void confirm({
+      title: "永久删除",
+      message: `永久删除「${truncateTitle(title, 28)}」？`,
+      detail: "此操作不可撤销。",
+      confirmLabel: "删除",
+      destructive: true,
+    }).then((ok) => {
+      if (ok) onDelete(repoId, sessionId);
+    });
   };
 
   const removeAll = (): void => {
     if (rows.length === 0) return;
-    if (!window.confirm(`永久删除全部 ${rows.length} 条已归档对话？此操作不可撤销。`)) return;
-    for (const row of rows) onDelete(row.repoId, row.session.id);
+    void confirm({
+      title: "永久清空归档",
+      message: `永久删除全部 ${rows.length} 条已归档对话？`,
+      detail: "此操作不可撤销。",
+      confirmLabel: "全部删除",
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      for (const row of rows) onDelete(row.repoId, row.session.id);
+    });
   };
 
   return (

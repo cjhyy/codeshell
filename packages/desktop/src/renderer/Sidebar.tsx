@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
+import { useConfirm, truncateTitle } from "./ui/ConfirmDialog";
 import { SettingsMenu } from "./settings/SettingsMenu";
 import type { ViewMode } from "./view";
 import { repoLabel, sortRepos, type Repo } from "./repos";
@@ -94,6 +95,7 @@ export function Sidebar({
 }: SidebarProps) {
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const closeMenu = (): void => setMenu(null);
+  const confirm = useConfirm();
 
   // Pin sort (sortRepos: pinned first, then by addedAt asc).
   const orderedRepos = useMemo(() => sortRepos(repos), [repos]);
@@ -127,18 +129,28 @@ export function Sidebar({
       onClick: () => {
         const live = sessions[repo.id]?.sessions.filter((s) => !s.archived).length ?? 0;
         if (live === 0) return;
-        if (confirm(`归档「${repoLabel(repo)}」下所有 ${live} 条未归档会话？`)) {
-          onArchiveAllSessions(repo.id);
-        }
+        void confirm({
+          title: "归档项目对话",
+          message: `归档「${truncateTitle(repoLabel(repo), 24)}」下所有 ${live} 条未归档会话？`,
+          confirmLabel: "归档",
+        }).then((ok) => {
+          if (ok) onArchiveAllSessions(repo.id);
+        });
       },
     },
     {
       label: "移除",
       danger: true,
       onClick: () => {
-        if (confirm(`确定从侧栏移除「${repoLabel(repo)}」吗？\n本地会话保留 — 重新添加同一目录可恢复。`)) {
-          onRemoveRepo(repo.id);
-        }
+        void confirm({
+          title: "从侧栏移除项目",
+          message: `确定从侧栏移除「${truncateTitle(repoLabel(repo), 24)}」吗？`,
+          detail: "本地会话保留 — 重新添加同一目录可恢复。",
+          confirmLabel: "移除",
+          destructive: true,
+        }).then((ok) => {
+          if (ok) onRemoveRepo(repo.id);
+        });
       },
     },
   ];
@@ -164,7 +176,14 @@ export function Sidebar({
       label: "删除",
       danger: true,
       onClick: () => {
-        if (confirm(`确定删除会话「${s.title}」吗？`)) onDeleteSession(repoId, s.id);
+        void confirm({
+          title: "删除会话",
+          message: `确定删除会话「${truncateTitle(s.title, 28)}」吗？`,
+          confirmLabel: "删除",
+          destructive: true,
+        }).then((ok) => {
+          if (ok) onDeleteSession(repoId, s.id);
+        });
       },
     },
   ];

@@ -34,6 +34,13 @@ import { installAppMenu, refreshAppMenu } from "./menu.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Override the runtime app name. In dev (`electron .`) the default is
+// "Electron"; this makes the macOS menu bar, Dock tooltip, and About
+// panel show our product name even before packaging. setAppUserModelId
+// makes Windows taskbar/notification grouping work correctly.
+app.setName("code-shell");
+if (process.platform === "win32") app.setAppUserModelId("com.cjhyy.codeshell");
+
 dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: process.cwd() });
 
 /**
@@ -54,6 +61,7 @@ async function createWindow(): Promise<BrowserWindow> {
     height: ws.height,
     x: ws.x,
     y: ws.y,
+    icon: resolve(__dirname, "..", "..", "build", "icon.png"),
     webPreferences: {
       preload: resolve(__dirname, "..", "preload", "index.cjs"),
       contextIsolation: true,
@@ -175,6 +183,13 @@ async function createWindow(): Promise<BrowserWindow> {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === "darwin" && app.dock) {
+    try {
+      app.dock.setIcon(resolve(__dirname, "..", "..", "build", "icon.png"));
+    } catch {
+      // dev-only nicety; ignore if the asset is missing in some build paths
+    }
+  }
   void createWindow();
   initUpdater();
 });

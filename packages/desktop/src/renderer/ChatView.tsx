@@ -40,6 +40,9 @@ interface Props {
   onAddRepo: () => void;
   activeRepoPath: string | null;
   repoClean?: boolean | null;
+
+  // Title shown above the composer in new-chat mode (empty stream)
+  welcomeNode?: React.ReactNode;
 }
 
 const MAX_TEXTAREA_PX = 200;
@@ -65,6 +68,7 @@ export function ChatView({
   onAddRepo,
   activeRepoPath,
   repoClean,
+  welcomeNode,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
@@ -211,6 +215,8 @@ export function ChatView({
           )}
         </div>
       )}
+
+      {isNewChat && welcomeNode}
 
       <div className="composer-shell">
         <div className="composer">

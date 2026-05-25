@@ -897,20 +897,6 @@ function App() {
           <RunsView />
         ) : (
           <>
-            {showWelcome && (
-              <div className="welcome">
-                <div className="welcome-title">
-                  {activeRepo
-                    ? `要在 ${activeRepo.name} 中构建什么?`
-                    : `开始一个无项目对话`}
-                </div>
-                {!activeRepo && (
-                  <div className="welcome-hint">
-                    在下方选择一个项目，或直接在「不使用项目」模式开始
-                  </div>
-                )}
-              </div>
-            )}
             <ChatView
               messages={state.messages}
               onSend={send}
@@ -938,6 +924,22 @@ function App() {
               onAddRepo={() => { void handleAddRepo(); }}
               activeRepoPath={activeRepo?.path ?? null}
               repoClean={activeGitMeta.clean}
+              welcomeNode={
+                showWelcome ? (
+                  <div className="welcome">
+                    <div className="welcome-title">
+                      {activeRepo
+                        ? `要在 ${activeRepo.name} 中构建什么?`
+                        : `开始一个无项目对话`}
+                    </div>
+                    {!activeRepo && (
+                      <div className="welcome-hint">
+                        在下方选择一个项目，或直接在「不使用项目」模式开始
+                      </div>
+                    )}
+                  </div>
+                ) : null
+              }
             />
           </>
         )}
