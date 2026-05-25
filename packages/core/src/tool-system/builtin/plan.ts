@@ -9,6 +9,7 @@
  */
 
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 
 export const enterPlanModeToolDef: ToolDefinition = {
   name: "EnterPlanMode",
@@ -36,34 +37,18 @@ export const exitPlanModeToolDef: ToolDefinition = {
   },
 };
 
-// ─── Plan mode state ──────────────────────────────────────────
-
-let _inPlanMode = false;
-
-export function isInPlanMode(): boolean {
-  return _inPlanMode;
-}
-
-export function setInPlanMode(value: boolean): void {
-  _inPlanMode = value;
-}
-
-export function resetPlanMode(): void {
-  _inPlanMode = false;
-}
-
-export function restorePlanMode(): void {
-  _inPlanMode = true;
-}
-
 // ─── Tool implementations ─────────────────────────────────────
 
-export async function enterPlanModeTool(_args: Record<string, unknown>): Promise<string> {
-  if (_inPlanMode) {
+export async function enterPlanModeTool(
+  _args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  if (ctx?.planMode) {
     return "Already in plan mode. Output your plan as text, then call ExitPlanMode.";
   }
 
-  _inPlanMode = true;
+  // TODO(T7): once Engine populates ToolContext.engine, call ctx.engine.setPlanMode(true).
+  // For now, plan-mode entry is a no-op from the tool side — engine sets it via constructor.
 
   return [
     "Entered plan mode.",
@@ -77,11 +62,16 @@ export async function enterPlanModeTool(_args: Record<string, unknown>): Promise
   ].join("\n");
 }
 
-export async function exitPlanModeTool(_args: Record<string, unknown>): Promise<string> {
-  if (!_inPlanMode) {
+export async function exitPlanModeTool(
+  _args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  if (!ctx?.planMode) {
     return "Not currently in plan mode.";
   }
 
-  _inPlanMode = false;
+  // TODO(T7): once Engine populates ToolContext.engine, call ctx.engine.setPlanMode(false).
+  // For now, plan-mode exit is a no-op from the tool side — engine manages its own state.
+
   return "Exited plan mode. You can now write and edit files to implement the plan.";
 }

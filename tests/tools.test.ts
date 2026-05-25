@@ -7,7 +7,7 @@ import { grepTool } from "../packages/core/src/tool-system/builtin/grep.js";
 import { webFetchTool } from "../packages/core/src/tool-system/builtin/web-fetch.js";
 import { askUserTool } from "../packages/core/src/tool-system/builtin/ask-user.js";
 import type { ToolContext } from "../packages/core/src/tool-system/context.js";
-import { enterPlanModeTool, exitPlanModeTool, resetPlanMode } from "../packages/core/src/tool-system/builtin/plan.js";
+import { enterPlanModeTool, exitPlanModeTool } from "../packages/core/src/tool-system/builtin/plan.js";
 import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -169,23 +169,32 @@ describe("Plan mode tools", () => {
 
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "plan-test-"));
-    resetPlanMode();
   });
   afterEach(() => {
-    resetPlanMode();
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("enters and exits plan mode", async () => {
-    const enterResult = await enterPlanModeTool({});
+  it("enters plan mode (ctx.planMode=false → returns entered message)", async () => {
+    const ctx = { planMode: false } as unknown as ToolContext;
+    const enterResult = await enterPlanModeTool({}, ctx);
     expect(enterResult).toContain("Entered plan mode");
+  });
 
-    const exitResult = await exitPlanModeTool({});
+  it("returns informative message when already in plan mode", async () => {
+    const ctx = { planMode: true } as unknown as ToolContext;
+    const result = await enterPlanModeTool({}, ctx);
+    expect(result).toContain("Already in plan mode");
+  });
+
+  it("exits plan mode (ctx.planMode=true → returns exited message)", async () => {
+    const ctx = { planMode: true } as unknown as ToolContext;
+    const exitResult = await exitPlanModeTool({}, ctx);
     expect(exitResult).toContain("Exited plan mode");
   });
 
   it("returns informative message when exiting without entering", async () => {
-    const result = await exitPlanModeTool({});
+    const ctx = { planMode: false } as unknown as ToolContext;
+    const result = await exitPlanModeTool({}, ctx);
     expect(result).toContain("Not currently in plan mode");
   });
 });

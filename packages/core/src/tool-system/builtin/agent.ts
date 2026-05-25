@@ -9,7 +9,6 @@
 
 import type { ToolDefinition, StreamCallback } from "../../types.js";
 import type { ToolContext, SubAgentSpawner } from "../context.js";
-import { isInPlanMode, resetPlanMode, restorePlanMode } from "./plan.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { notificationQueue } from "./agent-notifications.js";
@@ -99,17 +98,13 @@ async function runSubAgent(
 
   startEndSink?.({ type: "agent_start", agentId, name, description });
 
-  const parentWasInPlanMode = isInPlanMode();
-  if (parentWasInPlanMode) resetPlanMode();
-
-  try {
-    const text = await spawner.spawn({ ...opts, streamOverride });
-    const finalText = text || `Agent completed but produced no text output.`;
-    startEndSink?.({ type: "agent_end", agentId, name, description, text: finalText });
-    return finalText;
-  } finally {
-    if (parentWasInPlanMode) restorePlanMode();
-  }
+  // `resetPlanMode` / `restorePlanMode` are no longer needed: the child
+  // Engine receives its own planMode at construction time, and the parent
+  // Engine's planMode is unaffected.
+  const text = await spawner.spawn({ ...opts, streamOverride });
+  const finalText = text || `Agent completed but produced no text output.`;
+  startEndSink?.({ type: "agent_end", agentId, name, description, text: finalText });
+  return finalText;
 }
 
 export async function agentTool(

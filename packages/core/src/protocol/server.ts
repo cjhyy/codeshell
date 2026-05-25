@@ -27,7 +27,6 @@ import {
 } from "./types.js";
 import type { Engine, EngineConfig } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent } from "../types.js";
-import { setInPlanMode, isInPlanMode } from "../tool-system/builtin/plan.js";
 import { setRuntimeBypass, isRuntimeBypass } from "../tool-system/permission.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
@@ -223,7 +222,8 @@ export class AgentServer {
     const params = (req.params ?? {}) as unknown as ConfigureParams;
 
     if (params.planMode !== undefined) {
-      setInPlanMode(params.planMode);
+      // TODO(T6): once Engine exposes setPlanMode(), call this.engine.setPlanMode(params.planMode).
+      // For now, plan-mode toggling via Configure is a no-op until T6 wires Engine.planMode.
     }
     if (params.bypassPermissions !== undefined) {
       setRuntimeBypass(params.bypassPermissions);
@@ -291,7 +291,8 @@ export class AgentServer {
             type: "config",
             data: {
               permissionMode: config.permissionMode ?? "default",
-              planMode: isInPlanMode(),
+              // TODO(T6): replace with this.engine.planMode once Engine exposes it.
+              planMode: false,
               preset: config.preset,
               model: config.llm.model,
               cwd: config.cwd,

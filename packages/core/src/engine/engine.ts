@@ -41,7 +41,6 @@ import { recordSessionStart, recordSessionEnd } from "../logging/session-recorde
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { isInPlanMode } from "../tool-system/builtin/plan.js";
 import { SettingsManager } from "../settings/manager.js";
 import { FileHistory } from "../session/file-history.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
@@ -758,7 +757,7 @@ export class Engine {
       "TaskGet",
       "Bash", // Bash is included but executor filters non-read-only commands
     ]);
-    const toolDefs = isInPlanMode()
+    const toolDefs = this.planMode
       ? allToolDefs.filter((t) => planModeAllowed.has(t.name))
       : allToolDefs;
 
