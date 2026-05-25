@@ -332,6 +332,33 @@
   bottom: auto;
 }
 
+.branch-picker { position: relative; }
+.branch-picker-trigger { max-width: 220px; }
+.branch-picker-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.branch-picker-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  max-width: 320px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  z-index: var(--z-popover);
+  padding: 4px;
+}
+.branch-picker-error {
+  padding: 6px var(--sp-2);
+  color: var(--status-err);
+  font-size: var(--fz-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
 /* Project picker pill + dropdown */
 .project-picker { position: relative; }
 .project-picker-trigger {

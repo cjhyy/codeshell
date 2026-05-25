@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Paperclip, Mic, ArrowUp, Square, Monitor, GitBranch } from "lucide-react";
+import { Paperclip, Mic, ArrowUp, Square, Monitor } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
@@ -7,6 +7,7 @@ import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
 import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
+import { BranchPicker } from "./chat/BranchPicker";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
@@ -37,7 +38,7 @@ interface Props {
   repos: Repo[];
   onSelectRepo: (id: string | null) => void;
   onAddRepo: () => void;
-  repoBranch?: string | null;
+  activeRepoPath: string | null;
   repoClean?: boolean | null;
 }
 
@@ -62,7 +63,7 @@ export function ChatView({
   repos,
   onSelectRepo,
   onAddRepo,
-  repoBranch,
+  activeRepoPath,
   repoClean,
 }: Props) {
   const [draft, setDraft] = useState("");
@@ -307,16 +308,7 @@ export function ChatView({
               <Monitor size={12} />
               <span>本地模式</span>
             </span>
-            {repoBranch && (
-              <span
-                className="composer-context-pill"
-                title={repoClean === false ? "当前分支有未提交改动" : "当前 Git 分支"}
-              >
-                <GitBranch size={12} />
-                <span className="composer-context-pill-label">{repoBranch}</span>
-                {repoClean === false && <span className="composer-context-dirty-dot" />}
-              </span>
-            )}
+            <BranchPicker cwd={activeRepoPath} clean={repoClean} disabled={busy} />
           </div>
         )}
       </div>

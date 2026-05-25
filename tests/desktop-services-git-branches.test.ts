@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, mock, test } from "bun:test";
+import { afterEach, beforeAll, beforeEach, expect, mock, test } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -10,10 +10,8 @@ mock.module("electron", () => ({
   },
 }));
 
-const { getGitBranches, switchGitBranch } = await import(
-  "../packages/desktop/src/main/desktop-services"
-);
-
+let getGitBranches: typeof import("../packages/desktop/src/main/desktop-services").getGitBranches;
+let switchGitBranch: typeof import("../packages/desktop/src/main/desktop-services").switchGitBranch;
 let dir: string;
 
 async function run(args: string[], cwd = dir): Promise<string> {
@@ -24,6 +22,12 @@ async function run(args: string[], cwd = dir): Promise<string> {
   if (code !== 0) throw new Error(`git ${args.join(" ")} failed: ${stderr}`);
   return stdout;
 }
+
+beforeAll(async () => {
+  const services = await import("../packages/desktop/src/main/desktop-services");
+  getGitBranches = services.getGitBranches;
+  switchGitBranch = services.switchGitBranch;
+});
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "codeshell-git-branches-"));

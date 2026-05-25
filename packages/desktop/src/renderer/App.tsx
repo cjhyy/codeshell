@@ -893,7 +893,7 @@ function App() {
               repos={repos}
               onSelectRepo={setActiveRepoId}
               onAddRepo={() => { void handleAddRepo(); }}
-              repoBranch={activeGitMeta.branch}
+              activeRepoPath={activeRepo?.path ?? null}
               repoClean={activeGitMeta.clean}
             />
           </>
