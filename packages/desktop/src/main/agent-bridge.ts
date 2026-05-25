@@ -20,8 +20,23 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
+import { join } from "node:path";
+import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
+
+/**
+ * Neutral sandbox directory used when the user is in a "no project"
+ * conversation. We do NOT want the agent worker booting in $HOME —
+ * tools like Bash/Read/Write would then roam the entire home folder.
+ * `~/.code-shell/no-repo` is created on demand and kept stable across
+ * runs so the worker always lands in a contained directory.
+ */
+function resolveNoRepoCwd(): string {
+  const dir = join(homedir(), ".code-shell", "no-repo");
+  try { mkdirSync(dir, { recursive: true }); } catch { /* best-effort */ }
+  return dir;
+}
 
 const require = createRequire(import.meta.url);
 const agentEntry = require.resolve(
@@ -69,7 +84,7 @@ export class AgentBridge {
    */
   private spawnChild(cwd: string | undefined): void {
     if (this.child) return;
-    const workerCwd = cwd ?? homedir();
+    const workerCwd = cwd ?? resolveNoRepoCwd();
     dlog("bridge", "spawn.start", {
       cwd: workerCwd,
       requestedCwd: cwd,
