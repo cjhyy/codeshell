@@ -366,7 +366,13 @@ export class Engine {
    * the same key overwrites them), so callers don't need to clear first.
    */
   reloadModelPool(): void {
-    this.populateModelPoolFromSettings();
+    // When sharing a runtime, the owner of the runtime is responsible
+    // for populating the pool; reloading from settings here would
+    // blast that owner's contributions and affect every other Engine
+    // that shares this runtime.
+    if (!this.runtime) {
+      this.populateModelPoolFromSettings();
+    }
   }
 
   /**
@@ -1514,12 +1520,13 @@ export class Engine {
    * Also syncs permissionMode to keep both fields consistent.
    */
   setPlanMode(value: boolean): void {
-    this.planMode = value;
     if (value) {
       this.setPermissionMode("plan");
     } else if (this.permissionMode === "plan") {
-      // Revert to default interactive mode when leaving plan mode.
+      // Leaving plan mode: drop back to the default.
       this.setPermissionMode("acceptEdits");
+    } else {
+      this.planMode = value;
     }
   }
 }

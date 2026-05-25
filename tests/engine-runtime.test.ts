@@ -40,7 +40,7 @@ describe("EngineRuntime", () => {
       costTracker: {} as any,
     });
     const e = new Engine({ runtime: rt, cwd: "/tmp", llm: { provider: "noop" } as any });
-    expect((e as any).runtime).toBe(rt);
+    expect(e.runtime).toBe(rt);
   });
 
   it("Engine exposes planMode/permissionMode as instance fields", async () => {
