@@ -153,6 +153,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     cwd?: string,
     name?: string,
   ) => ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
+  uninstallSkill: (filePath: string, source: "user" | "project" | "plugin") =>
+    ipcRenderer.invoke("skills:uninstall", filePath, source),
   probeMcpServers: (configs: unknown, force?: boolean) =>
     ipcRenderer.invoke("mcp:probe", configs, force),
   invalidateMcpProbeCache: (name?: string) =>

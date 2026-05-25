@@ -29,7 +29,12 @@ import { readSettings, writeSettings, type SettingsScope } from "./settings-serv
 import { listSessions, deleteSession } from "./sessions-service.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
-import { installSkillFromDirectory, listSkills, readSkillBody } from "./skills-service.js";
+import {
+  installSkillFromDirectory,
+  listSkills,
+  readSkillBody,
+  uninstallSkill,
+} from "./skills-service.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun } from "./runs-service.js";
 import { initUpdater, checkForUpdate, quitAndInstall, getLastStatus } from "./updater.js";
@@ -208,6 +213,16 @@ app.whenReady().then(() => {
 
 ipcMain.handle("skills:list", async (_e, cwd: string) => listSkills(cwd));
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
+ipcMain.handle(
+  "skills:uninstall",
+  async (_e, filePath: string, source: "user" | "project" | "plugin") => {
+    if (typeof filePath !== "string") throw new Error("skills:uninstall requires filePath");
+    if (source !== "user" && source !== "project" && source !== "plugin")
+      throw new Error("invalid source");
+    return uninstallSkill(filePath, source);
+  },
+);
+
 ipcMain.handle(
   "skills:installLocal",
   async (

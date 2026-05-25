@@ -126,6 +126,7 @@ export interface CodeshellApi {
     cwd?: string,
     name?: string,
   ): Promise<InstalledSkill>;
+  uninstallSkill(filePath: string, source: "user" | "project" | "plugin"): Promise<void>;
   probeMcpServers(
     configs: McpServerProbeInput[],
     force?: boolean,
