@@ -1,0 +1,158 @@
+/* Unified Select component — replaces native <select> across desktop UI. */
+
+.select-root {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 7px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--fg-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 80ms ease, background 80ms ease;
+}
+.select-trigger:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.select-trigger:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(184, 92, 43, 0.18);
+}
+.select-trigger.is-open {
+  border-color: var(--border-strong);
+}
+.select-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.select-trigger-sm { padding: 4px 8px; font-size: var(--fz-sm); }
+
+.select-value {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.select-value.is-placeholder {
+  color: var(--fg-muted);
+}
+.select-caret {
+  color: var(--fg-muted);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.select-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  min-width: 180px;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+  z-index: var(--z-popover);
+  overflow: hidden;
+}
+
+.select-search-row {
+  padding: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+}
+.select-search {
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--fg-primary);
+  font: inherit;
+  padding: 5px 8px;
+  outline: none;
+}
+.select-search:focus { border-color: var(--accent); }
+
+.select-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.select-group-label {
+  padding: 6px 8px 2px;
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.select-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  color: var(--fg-primary);
+  font-size: var(--fz-sm);
+  line-height: 1.35;
+}
+.select-row.is-active { background: var(--bg-hover); }
+.select-row.is-selected { color: var(--fg-primary); font-weight: 500; }
+.select-row.is-selected.is-active { background: var(--bg-selected); }
+.select-row.is-disabled { color: var(--fg-muted); cursor: not-allowed; }
+
+.select-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.select-row-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.select-row-desc {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.select-row-check {
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.select-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: var(--fz-sm);
+  color: var(--fg-muted);
+}
+
+/* When Select sits inside .settings-field, drop the legacy native styles. */
+.settings-field .select-root .select-trigger {
+  padding: 7px 9px;
+}

@@ -123,15 +123,7 @@
   color: var(--fg-primary);
 }
 .approval-btn.deny:hover { background: var(--bg-hover); }
-.approval-deny-select {
-  flex: 1;
-  padding: 3px 6px;
-  background: var(--bg-app);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  font-size: var(--fz-sm);
-  color: var(--fg-primary);
-}
+.approval-deny-select { flex: 1; min-width: 0; }
 
 .risk-pill {
   font-size: var(--fz-xs);

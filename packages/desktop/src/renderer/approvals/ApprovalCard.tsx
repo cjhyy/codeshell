@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import { RiskPill, riskFor } from "./RiskPill";
+import { Select } from "../ui/Select";
 
 const DENY_PRESETS = [
   "looks unsafe",
@@ -52,14 +53,15 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
         <button className="approval-btn approve" onClick={() => onDecide("approve")}>
           Approve
         </button>
-        <select
-          className="approval-deny-select"
-          value={denyReason}
-          onChange={(e) => setDenyReason(e.target.value)}
-        >
-          <option value="">deny reason…</option>
-          {DENY_PRESETS.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <div className="approval-deny-select">
+          <Select
+            size="sm"
+            value={denyReason}
+            onChange={setDenyReason}
+            placeholder="deny reason…"
+            options={DENY_PRESETS.map((r) => ({ value: r, label: r }))}
+          />
+        </div>
         <button
           className="approval-btn deny"
           onClick={() => onDecide("deny", denyReason || undefined)}

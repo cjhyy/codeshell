@@ -4,6 +4,7 @@ import type { GitBranches, GitStatus, WorktreeInfo } from "../../preload/types";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
+import { Select } from "../ui/Select";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -198,11 +199,15 @@ export function ConnectionsSection({ scope, activeRepoPath }: ScopedProps) {
       <div className="settings-form-grid">
         <label className="settings-field">
           <span>搜索 Provider</span>
-          <select value={provider} onChange={(e) => setProvider(e.target.value)}>
-            <option value="serper">serper</option>
-            <option value="tavily">tavily</option>
-            <option value="searxng">searxng</option>
-          </select>
+          <Select
+            value={provider}
+            onChange={setProvider}
+            options={[
+              { value: "serper", label: "Serper" },
+              { value: "tavily", label: "Tavily" },
+              { value: "searxng", label: "SearXNG" },
+            ]}
+          />
         </label>
         <label className="settings-field">
           <span>API Key</span>
@@ -326,19 +331,27 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
       <div className="settings-form-grid">
         <label className="settings-field">
           <span>Sandbox</span>
-          <select value={mode} onChange={(e) => setMode(e.target.value)}>
-            <option value="auto">auto</option>
-            <option value="off">off</option>
-            <option value="seatbelt">seatbelt</option>
-            <option value="bwrap">bwrap</option>
-          </select>
+          <Select
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "auto", label: "auto", description: "按平台自动选择" },
+              { value: "off", label: "off", description: "关闭沙箱" },
+              { value: "seatbelt", label: "seatbelt", description: "macOS 沙箱" },
+              { value: "bwrap", label: "bwrap", description: "Linux Bubblewrap" },
+            ]}
+          />
         </label>
         <label className="settings-field">
           <span>Network</span>
-          <select value={network} onChange={(e) => setNetwork(e.target.value)}>
-            <option value="allow">allow</option>
-            <option value="deny">deny</option>
-          </select>
+          <Select
+            value={network}
+            onChange={setNetwork}
+            options={[
+              { value: "allow", label: "allow", description: "允许访问网络" },
+              { value: "deny", label: "deny", description: "拒绝网络访问" },
+            ]}
+          />
         </label>
         <label className="settings-field">
           <span>Writable roots</span>

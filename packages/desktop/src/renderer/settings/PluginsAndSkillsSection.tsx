@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { SkillSummary } from "../../preload/types";
+import { Select } from "../ui/Select";
 
 interface McpServer {
   name: string;
@@ -300,10 +301,19 @@ function AddPanel({
         </label>
         <label className="settings-field">
           <span>安装位置</span>
-          <select value={scope} onChange={(e) => setScope(e.target.value as "user" | "project")}>
-            <option value="user">全局</option>
-            <option value="project" disabled={!activeRepoPath}>当前项目</option>
-          </select>
+          <Select<"user" | "project">
+            value={scope}
+            onChange={(v) => setScope(v)}
+            options={[
+              { value: "user", label: "全局", description: "对所有项目可用" },
+              {
+                value: "project",
+                label: "当前项目",
+                description: activeRepoPath ?? "未选中项目",
+                disabled: !activeRepoPath,
+              },
+            ]}
+          />
         </label>
       </div>
 

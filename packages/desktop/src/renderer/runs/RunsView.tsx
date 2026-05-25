@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { RunSummary, RunDetail } from "../../preload/types";
+import { Select } from "../ui/Select";
 
 const STATUS_TONES: Record<string, "ok" | "warn" | "err" | "running" | "idle"> = {
   queued: "idle",
@@ -53,19 +54,17 @@ export function RunsView() {
   return (
     <div className="runs-view">
       <div className="runs-toolbar">
-        <select
-          className="sessions-filter"
-          style={{ maxWidth: 180 }}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option value="all">全部</option>
-          {Object.keys(STATUS_TONES).map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <div style={{ maxWidth: 180, flex: "0 0 180px" }}>
+          <Select
+            size="sm"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: "all", label: "全部" },
+              ...Object.keys(STATUS_TONES).map((s) => ({ value: s, label: s })),
+            ]}
+          />
+        </div>
         <span style={{ flex: 1 }} />
         <button className="approval-btn deny" onClick={() => void refresh()}>
           Refresh

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Select } from "../ui/Select";
 
 interface ModelEntry {
   key: string;
@@ -495,24 +496,30 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
           <div className="model-add-grid">
             <label className="settings-field">
               <span>Provider</span>
-              <select value={form.kind} onChange={(e) => chooseKind(e.target.value as ProviderKind)}>
-                {KIND_ORDER.map((kind) => (
-                  <option key={kind} value={kind}>{KIND_META[kind].label}</option>
-                ))}
-              </select>
+              <Select<ProviderKind>
+                value={form.kind}
+                onChange={(v) => chooseKind(v)}
+                options={KIND_ORDER.map((kind) => ({
+                  value: kind,
+                  label: KIND_META[kind].label,
+                }))}
+              />
             </label>
 
             {matchingProviders.length > 0 && (
               <label className="settings-field">
                 <span>凭证</span>
-                <select value={form.providerRef} onChange={(e) => chooseProviderRef(e.target.value)}>
-                  {matchingProviders.map((p) => (
-                    <option key={p.key} value={p.key}>
-                      使用已有：{p.label ?? p.key}
-                    </option>
-                  ))}
-                  <option value={NEW_PROVIDER}>新增 {kindMeta.label} 凭证</option>
-                </select>
+                <Select
+                  value={form.providerRef}
+                  onChange={chooseProviderRef}
+                  options={[
+                    ...matchingProviders.map((p) => ({
+                      value: p.key,
+                      label: `使用已有：${p.label ?? p.key}`,
+                    })),
+                    { value: NEW_PROVIDER, label: `新增 ${kindMeta.label} 凭证` },
+                  ]}
+                />
               </label>
             )}
 
@@ -563,25 +570,42 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
           {!manualModel && (
             <label className="settings-field">
               <span>模型</span>
-              <select
+              <Select
                 value={form.model}
-                onChange={(e) => setModelId(e.target.value)}
-              >
-                {recommendedModels.length > 0 && (
-                  <optgroup label="推荐">
-                    {recommendedModels.map((m) => (
-                      <option key={m.id} value={m.id}>{m.label}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {fetchedPickList.length > 0 && (
-                  <optgroup label={`完整列表${fetchedModels.length > fetchedPickList.length ? "（前 300 个）" : ""}`}>
-                    {fetchedPickList.map((m) => (
-                      <option key={m.id} value={m.id}>{m.id}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
+                onChange={setModelId}
+                placeholder={
+                  recommendedModels.length + fetchedPickList.length === 0
+                    ? "拉取后选择模型"
+                    : "选择模型"
+                }
+                searchable={fetchedPickList.length > 8}
+                emptyLabel="没有匹配的模型"
+                options={[
+                  ...(recommendedModels.length > 0
+                    ? [
+                        {
+                          label: "推荐",
+                          options: recommendedModels.map((m) => ({
+                            value: m.id,
+                            label: m.label,
+                            searchText: `${m.label} ${m.id}`,
+                          })),
+                        },
+                      ]
+                    : []),
+                  ...(fetchedPickList.length > 0
+                    ? [
+                        {
+                          label: `完整列表${fetchedModels.length > fetchedPickList.length ? "（前 300 个）" : ""}`,
+                          options: fetchedPickList.map((m) => ({
+                            value: m.id,
+                            label: m.id,
+                          })),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
             </label>
           )}
 
