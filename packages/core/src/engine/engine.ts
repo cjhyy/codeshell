@@ -66,6 +66,14 @@ import {
   buildModelPool,
 } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
+import {
+  parseTaskWithImages,
+  ImageParseError,
+  type ParsedTask,
+} from "./parse-task.js";
+import { capabilitiesFor } from "../llm/capabilities/index.js";
+import type { ProviderKindName } from "../llm/provider-kinds.js";
+import type { ContentBlock } from "../types.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -423,7 +431,59 @@ export class Engine {
     };
     if (options) options.onStream = wrappedOnStream;
 
-    const noise = detectPastedNoise(task);
+    // ── P2-6: image input ─────────────────────────────────────────────
+    // Parse `<codeshell-image>` blocks out of the raw task string before
+    // any other gate looks at it. Two concerns:
+    //   1. The noise detector below sees the raw base64 as gibberish and
+    //      would reject the whole turn — split images out first so it
+    //      only inspects the prose portion.
+    //   2. Models that don't accept vision must be refused immediately,
+    //      with the image bytes intact for the user to retry on another
+    //      model. Silent text-only fallback was the failure mode this
+    //      gate is here to prevent.
+    let parsedTask: ParsedTask;
+    try {
+      parsedTask = parseTaskWithImages(task);
+    } catch (err) {
+      const msg = (err as Error).message;
+      logger.warn("engine.run.image_parse_failed", { error: msg });
+      return {
+        text: `ERROR: image attachment is malformed (${msg}). Drop the image and try again, or re-attach it.`,
+        reason: "image_error",
+        sessionId: options?.sessionId ?? "image-parse-failed",
+        turnCount: 0,
+        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      };
+    }
+    if (parsedTask.hasImages) {
+      const cap = capabilitiesFor(
+        (this.config.llm.providerKind ?? this.config.llm.provider) as ProviderKindName,
+        this.config.llm.model,
+      );
+      if (!cap.supportsVision) {
+        logger.warn("engine.run.vision_not_supported", {
+          provider: this.config.llm.provider,
+          model: this.config.llm.model,
+          imageCount: parsedTask.images.length,
+        });
+        return {
+          text:
+            `ERROR: model "${this.config.llm.model}" does not accept image input. ` +
+            `Switch to a vision-capable model (e.g. gpt-4o, claude-sonnet, gemini-1.5-pro) and resend.`,
+          reason: "image_error",
+          sessionId: options?.sessionId ?? "vision-not-supported",
+          turnCount: 0,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      }
+    }
+    // For downstream noise-detection + transcript persistence we want the
+    // *text* portion only — base64 bytes count as "noise" by the heuristic
+    // and would also bloat the transcript by megabytes per image. Image
+    // bytes ride in parsedTask.images and re-enter the message tree below.
+    const taskText = parsedTask.hasImages ? parsedTask.text : task;
+
+    const noise = detectPastedNoise(taskText);
     if (noise.isNoise) {
       const hint =
         `Your input looks like pasted terminal output (${noise.reason}). ` +
@@ -565,11 +625,33 @@ export class Engine {
     };
 
     logger.info("engine.run", {
-      task: task.slice(0, 200),
+      task: taskText.slice(0, 200),
       cwd,
       model: this.config.llm.model,
       preset: this.preset.name,
+      imageCount: parsedTask.images.length,
     });
+
+    // Compose the user-turn payload once so resume + cold paths agree on
+    // shape. With images, content becomes a ContentBlock[] holding one
+    // text block (when prose is present) followed by one image block per
+    // attachment — the provider-specific clients translate this to OpenAI
+    // `image_url` or Anthropic `{type:image, source:base64}` downstream.
+    const userMessageContent: string | ContentBlock[] = parsedTask.hasImages
+      ? [
+          ...(parsedTask.text
+            ? [{ type: "text" as const, text: parsedTask.text }]
+            : []),
+          ...parsedTask.images.map((img) => ({
+            type: "image" as const,
+            source: {
+              type: "base64" as const,
+              media_type: img.mime,
+              data: img.base64,
+            },
+          })),
+        ]
+      : taskText;
 
     // Create or resume session
     let session: SessionBundle;
@@ -598,9 +680,9 @@ export class Engine {
         this.config.costStore.restore(session.state.costState);
       }
       // Append new user message
-      const userMsg: Message = { role: "user", content: task };
+      const userMsg: Message = { role: "user", content: userMessageContent };
       messages.push(userMsg);
-      session.transcript.appendMessage("user", task);
+      session.transcript.appendMessage("user", userMessageContent);
       // Flush "active" status to disk immediately. resume() set it in memory
       // (session-manager.ts), but without this write the on-disk state.json
       // still shows the previous run's terminal reason — so any external
@@ -609,10 +691,15 @@ export class Engine {
       this.sessionManager.saveState(session.state);
     } else {
       session = this.sessionManager.create(cwd, this.config.llm.model, this.config.llm.provider);
-      messages = [{ role: "user", content: task }];
-      session.transcript.appendMessage("user", task);
-      // Save first user message as session summary
-      session.state.summary = task.slice(0, 80).replace(/\n/g, " ");
+      messages = [{ role: "user", content: userMessageContent }];
+      session.transcript.appendMessage("user", userMessageContent);
+      // Save first user message as session summary — text only. The summary
+      // shows up in the session list; "[image]" is more informative than a
+      // truncated `[object Object]` when the prompt was purely visual.
+      const summarySrc = parsedTask.hasImages
+        ? parsedTask.text || `[image${parsedTask.images.length > 1 ? `s × ${parsedTask.images.length}` : ""}]`
+        : taskText;
+      session.state.summary = summarySrc.slice(0, 80).replace(/\n/g, " ");
       this.sessionManager.saveState(session.state);
     }
 
@@ -659,7 +746,12 @@ export class Engine {
     // available — check before acting").
     const promptSubmitHook = await this.emitHook("user_prompt_submit", {
       sessionId: session.state.sessionId,
-      prompt: task,
+      // Pass the text-only portion. Handlers reading the prompt for keyword
+      // detection / classification (e.g. superpowers' "did the user ask
+      // about X?") don't gain anything from megabytes of base64 inlined here,
+      // and silently leaking attachment bytes through hooks is the kind of
+      // exfiltration risk a curious user-installed shell hook shouldn't carry.
+      prompt: taskText,
       resumed: !!options?.sessionId,
     });
     // updatedPrompt: handler rewrote the user's prompt text. Replace the

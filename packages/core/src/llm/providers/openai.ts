@@ -576,11 +576,17 @@ export class OpenAIClient extends LLMClientBase {
         });
       } else {
         // user messages — may contain tool_result blocks mixed with text
+        // and image blocks (P2-6: image input).
         if (typeof msg.content === "string") {
           result.push({ role: "user", content: msg.content });
         } else {
-          // Separate tool_result blocks from text blocks
+          // Separate tool_result blocks from text/image blocks. tool_result
+          // must become its own `role: "tool"` message (OpenAI's wire format
+          // doesn't allow tool_result inside a user content array); text and
+          // image stay together so the model sees "this text refers to this
+          // image" without an intervening tool turn.
           const textParts: string[] = [];
+          const imageParts: OpenAI.ChatCompletionContentPart[] = [];
           const toolResults: { tool_use_id: string; content: string }[] = [];
 
           for (const block of msg.content) {
@@ -591,6 +597,18 @@ export class OpenAIClient extends LLMClientBase {
               });
             } else if (block.type === "text" && block.text) {
               textParts.push(block.text);
+            } else if (block.type === "image" && block.source) {
+              // OpenAI-compat image_url: every supported provider (OpenAI,
+              // OpenRouter, OpenAI-compatible proxies for Gemini/xAI/etc)
+              // accepts a base64 data URL as the URL. Per-(provider, model)
+              // vision-capability gating happens earlier in Engine.run —
+              // by the time we reach here, the model supports vision.
+              imageParts.push({
+                type: "image_url",
+                image_url: {
+                  url: `data:${block.source.media_type};base64,${block.source.data}`,
+                },
+              });
             }
           }
 
@@ -603,8 +621,18 @@ export class OpenAIClient extends LLMClientBase {
             });
           }
 
-          // Emit remaining text as user message
-          if (textParts.length > 0) {
+          // Emit the user-visible turn. With images present, content MUST be
+          // an array — putting a stringified version into `content: "..."`
+          // strips the images. Without images we keep the legacy string form
+          // so requests for vanilla text turns are byte-identical to before.
+          if (imageParts.length > 0) {
+            const parts: OpenAI.ChatCompletionContentPart[] = [];
+            if (textParts.length > 0) {
+              parts.push({ type: "text", text: textParts.join("\n") });
+            }
+            parts.push(...imageParts);
+            result.push({ role: "user", content: parts });
+          } else if (textParts.length > 0) {
             result.push({ role: "user", content: textParts.join("\n") });
           }
         }
