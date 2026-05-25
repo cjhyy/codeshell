@@ -78,7 +78,9 @@ ipcRenderer.on(RPC_TO_RENDERER, (_ipcEvent, msg: IncomingMessage) => {
     if (pending) {
       _pending.delete(msg.id as number);
       if ("error" in msg && msg.error) {
-        pending.reject(new Error(msg.error.message));
+        const err = new Error(msg.error.message);
+        (err as { code?: number }).code = msg.error.code;
+        pending.reject(err);
       } else {
         pending.resolve((msg as RpcResponse).result);
       }
