@@ -26,7 +26,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     setError(null);
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
     const list = (s.mcpServers as unknown) ?? [];
-    setServers(Array.isArray(list) ? (list as McpServer[]) : []);
+    setServers(mcpServersFromSettings(list));
   };
 
   useEffect(() => {
@@ -34,12 +34,16 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   }, [scope, activeRepoPath]);
 
   const persist = async (next: McpServer[]) => {
-    await window.codeshell.updateSettings(scope, { mcpServers: next }, cwd);
+    const record = Object.fromEntries(next.map((server) => [server.name, server]));
+    await window.codeshell.updateSettings(scope, { mcpServers: record }, cwd);
     setServers(next);
   };
 
   const remove = (name: string) => {
-    void persist(servers.filter((s) => s.name !== name));
+    void (async () => {
+      await window.codeshell.updateSettings(scope, { mcpServers: { [name]: null } }, cwd);
+      setServers((cur) => cur.filter((s) => s.name !== name));
+    })();
   };
 
   const add = async () => {
@@ -110,4 +114,17 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       </details>
     </section>
   );
+}
+
+function mcpServersFromSettings(value: unknown): McpServer[] {
+  if (Array.isArray(value)) return value as McpServer[];
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([name, raw]) => ({
+        name,
+        ...(raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}),
+      }))
+      .filter((x): x is McpServer => typeof x.name === "string");
+  }
+  return [];
 }

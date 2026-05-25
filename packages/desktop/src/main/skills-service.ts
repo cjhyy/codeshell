@@ -11,11 +11,20 @@
  */
 
 import { scanSkills, type SkillDefinition } from "@cjhyy/code-shell-core";
+import { promises as fs } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 export interface SkillSummary {
   name: string;
   description: string;
   source: "project" | "user" | "plugin";
+  filePath: string;
+}
+
+export interface InstalledSkill {
+  name: string;
+  targetDir: string;
   filePath: string;
 }
 
@@ -34,8 +43,58 @@ export function listSkills(cwd: string): SkillSummary[] {
   }));
 }
 
-import { promises as fs } from "node:fs";
-
 export async function readSkillBody(filePath: string): Promise<string> {
   return fs.readFile(filePath, "utf8");
+}
+
+export async function installSkillFromDirectory(
+  sourceDir: string,
+  scope: "user" | "project",
+  cwd?: string,
+  requestedName?: string,
+): Promise<InstalledSkill> {
+  const source = path.resolve(sourceDir);
+  const skillFile = path.join(source, "SKILL.md");
+  await fs.access(skillFile);
+
+  const name = normalizeSkillName(requestedName || path.basename(source));
+  const root = scope === "user"
+    ? path.join(os.homedir(), ".code-shell", "skills")
+    : projectSkillRoot(cwd);
+  const targetDir = path.join(root, name);
+
+  try {
+    await fs.access(targetDir);
+    throw new Error(`Skill "${name}" 已存在：${targetDir}`);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+  }
+
+  await fs.mkdir(root, { recursive: true });
+  await fs.cp(source, targetDir, {
+    recursive: true,
+    filter: (src) => !path.basename(src).startsWith(".git"),
+  });
+
+  return {
+    name,
+    targetDir,
+    filePath: path.join(targetDir, "SKILL.md"),
+  };
+}
+
+function projectSkillRoot(cwd?: string): string {
+  if (!cwd) throw new Error("project scope requires cwd");
+  return path.join(cwd, ".code-shell", "skills");
+}
+
+function normalizeSkillName(input: string): string {
+  const name = input
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+  if (!name) throw new Error("Skill 名称不能为空");
+  return name;
 }

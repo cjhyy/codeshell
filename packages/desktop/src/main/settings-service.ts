@@ -61,7 +61,9 @@ function deepMerge(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...a };
   for (const [k, v] of Object.entries(b)) {
-    if (
+    if (v === null) {
+      delete out[k];
+    } else if (
       v &&
       typeof v === "object" &&
       !Array.isArray(v) &&
