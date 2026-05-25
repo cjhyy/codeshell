@@ -40,7 +40,10 @@
   flex-direction: column;
   gap: 1px;
 }
-.session-row {
+/* Scope SessionsView rows to .sessions-view so they don't clobber the
+   sidebar's .session-row (which shares the class name but should be a
+   borderless list item that blends into the sidebar background). */
+.sessions-view .session-row {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
@@ -50,7 +53,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
 }
-.session-id {
+.sessions-view .session-id {
   flex: 1;
   font-family: var(--font-mono);
   overflow: hidden;
@@ -58,13 +61,13 @@
   white-space: nowrap;
   color: var(--fg-primary);
 }
-.session-meta { color: var(--fg-muted); font-size: var(--fz-xs); white-space: nowrap; }
-.session-delete {
+.sessions-view .session-meta { color: var(--fg-muted); font-size: var(--fz-xs); white-space: nowrap; }
+.sessions-view .session-delete {
   font-size: var(--fz-xs);
   color: var(--status-err);
   padding: 2px 6px;
 }
-.session-delete:hover { background: rgba(184,57,43,0.1); border-radius: var(--radius-sm); }
+.sessions-view .session-delete:hover { background: rgba(184,57,43,0.1); border-radius: var(--radius-sm); }
 
 .logs-buckets, .settings-scope {
   display: flex;
