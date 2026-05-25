@@ -3,23 +3,29 @@
 # logs.sh — query helper for the split log files in ~/.code-shell/logs.
 #
 # Layout (per day):
-#   engine-YYYY-MM-DD.log   engine, llm, tool, context, mcp, sandbox, ...
-#   ui-ink-YYYY-MM-DD.log   UI events: stream events, ctx render, chatStore, ink ratio
+#   engine-YYYY-MM-DD.log        engine, llm, tool, context, mcp, sandbox, ...
+#   ui-ink-YYYY-MM-DD.log        UI events: stream events, ctx render, chatStore, ink ratio
+#   desktop/desktop-YYYY-MM-DD.log  Electron main/bridge/renderer/agent stderr
 #
 # Why: separating the buckets keeps engine traces from being drowned by the
 # 200ms spinner ticks and per-stream-event UI logs. A single sid is still
-# reconstructible by merging both buckets sorted by `t`.
+# reconstructible by merging both buckets sorted by `t`. The desktop bucket
+# is in its own subdirectory so engine queries don't accidentally pick up
+# Electron IPC traffic.
 #
 # Usage:
-#   scripts/logs.sh                          # today, both buckets, sorted by time
-#   scripts/logs.sh sid <SID>                # only lines for that sid, merged
+#   scripts/logs.sh                          # today, engine+ui buckets, sorted
+#   scripts/logs.sh sid <SID>                # only lines for that sid, merged across all 3 buckets
 #   scripts/logs.sh ui                       # only ui-ink bucket
 #   scripts/logs.sh engine                   # only engine bucket
-#   scripts/logs.sh grep '<pattern>'         # ripgrep across both, merged
+#   scripts/logs.sh desktop                  # only desktop bucket (Electron-side)
+#   scripts/logs.sh grep '<pattern>'         # ripgrep across engine+ui, merged
 #   scripts/logs.sh date <YYYY-MM-DD> sid X  # a non-today date
 #   scripts/logs.sh repo <SID>               # full session timeline:
 #                                            # <repo>/log/<date>/engine/session-<SID>.jsonl
 #   scripts/logs.sh repo <SID> ui            # UI-only timeline for that session
+#   scripts/logs.sh desktop-session <SID>    # Electron-side events for that session:
+#                                            # ~/.code-shell/logs/desktop/sessions/session-<SID>.jsonl
 #
 # Output is the raw JSONL line per match. Pipe to `jq -c .` for pretty.
 
@@ -29,7 +35,7 @@ LOGS_DIR="${HOME}/.code-shell/logs"
 DATE="$(date +%Y-%m-%d)"
 
 usage() {
-  sed -n '3,22p' "$0"
+  sed -n '3,28p' "$0"
   exit "${1:-0}"
 }
 
@@ -41,6 +47,7 @@ fi
 
 ENGINE_FILE="${LOGS_DIR}/engine-${DATE}.log"
 UI_FILE="${LOGS_DIR}/ui-ink-${DATE}.log"
+DESKTOP_FILE="${LOGS_DIR}/desktop/desktop-${DATE}.log"
 
 merge_sorted() {
   # Concat files (skipping missing ones), sort by leading {"t":"..." stamp.
@@ -65,15 +72,31 @@ case "${1:-all}" in
   engine)
     [[ -f "$ENGINE_FILE" ]] && cat "$ENGINE_FILE"
     ;;
+  desktop)
+    [[ -f "$DESKTOP_FILE" ]] && cat "$DESKTOP_FILE"
+    ;;
   sid)
     SID="${2:-}"
     [[ -z "$SID" ]] && { echo "usage: $0 sid <SID>" >&2; exit 2; }
-    merge_sorted "$ENGINE_FILE" "$UI_FILE" | grep -F "\"sid\":\"${SID}\""
+    # Include desktop bucket too — Electron-side run.resolved / bridge
+    # events carry the same sessionId in their raw payload, so a sid
+    # query is most useful when it spans engine + ui + desktop.
+    merge_sorted "$ENGINE_FILE" "$UI_FILE" "$DESKTOP_FILE" | grep -F "\"${SID}\""
     ;;
   grep)
     PATTERN="${2:-}"
     [[ -z "$PATTERN" ]] && { echo "usage: $0 grep <pattern>" >&2; exit 2; }
     merge_sorted "$ENGINE_FILE" "$UI_FILE" | grep -E "$PATTERN" || true
+    ;;
+  desktop-session)
+    SID="${2:-}"
+    [[ -z "$SID" ]] && { echo "usage: $0 desktop-session <SID>" >&2; exit 2; }
+    DSESS="${LOGS_DIR}/desktop/sessions/session-${SID}.jsonl"
+    if [[ ! -f "$DSESS" ]]; then
+      echo "no desktop session file: $DSESS" >&2
+      exit 1
+    fi
+    cat "$DSESS"
     ;;
   repo)
     SID="${2:-}"
