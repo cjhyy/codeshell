@@ -44,15 +44,24 @@
   user-select: none;
 }
 .sidebar-section-add {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  color: var(--fg-muted);
+  color: var(--fg-secondary);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
-.sidebar-section-add:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.sidebar-section-add:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+}
+.sidebar-section-add:active {
+  background: var(--bg-selected);
+}
 
 .sidebar-projects {
   flex: 1;

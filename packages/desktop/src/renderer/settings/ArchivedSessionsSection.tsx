@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ArchiveRestore, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
   archiveSession,
   deleteSessionLocal,
@@ -59,15 +59,29 @@ export function ArchivedSessionsSection() {
     setBump((b) => b + 1);
   };
 
+  const removeAll = (): void => {
+    if (rows.length === 0) return;
+    const ok = window.confirm(`永久删除全部 ${rows.length} 条已归档对话？此操作不可撤销。`);
+    if (!ok) return;
+    for (const r of rows) deleteSessionLocal(r.repoId, r.session.id);
+    setBump((b) => b + 1);
+  };
+
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">已归档对话</h3>
-      <p className="settings-section-help">
-        归档后从侧栏隐藏的会话集中在这里。可以恢复到侧栏，或永久删除。
-      </p>
+    <section className="archived-section">
+      <div className="archived-section-toolbar">
+        <button
+          type="button"
+          className="archived-clear-all"
+          onClick={removeAll}
+          disabled={rows.length === 0}
+        >
+          全部删除
+        </button>
+      </div>
 
       {rows.length === 0 ? (
-        <div className="approvals-empty">还没有任何归档对话。</div>
+        <div className="archived-empty">还没有任何归档对话。</div>
       ) : (
         <ul className="archived-list">
           {rows.map((row) => (
@@ -75,29 +89,28 @@ export function ArchivedSessionsSection() {
               <div className="archived-row-main">
                 <span className="archived-row-title">{row.session.title}</span>
                 <span className="archived-row-meta">
-                  <span className="archived-row-repo">{row.repoName}</span>
-                  <span className="archived-row-dot">·</span>
                   <span className="archived-row-time">{formatTime(row.session.updatedAt)}</span>
+                  <span className="archived-row-dot">·</span>
+                  <span className="archived-row-repo">{row.repoName}</span>
                 </span>
               </div>
               <div className="archived-row-actions">
                 <button
-                  className="archived-action"
-                  onClick={() => restore(row)}
-                  title="恢复到侧栏"
-                  aria-label="恢复到侧栏"
-                >
-                  <ArchiveRestore size={13} />
-                  <span>恢复</span>
-                </button>
-                <button
-                  className="archived-action archived-action-danger"
+                  type="button"
+                  className="archived-row-icon-btn"
                   onClick={() => remove(row)}
                   title="永久删除"
                   aria-label="永久删除"
                 >
-                  <Trash2 size={13} />
-                  <span>删除</span>
+                  <Trash2 size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="archived-row-link"
+                  onClick={() => restore(row)}
+                  title="取消归档"
+                >
+                  取消归档
                 </button>
               </div>
             </li>
@@ -111,7 +124,9 @@ export function ArchivedSessionsSection() {
 function formatTime(ts: number): string {
   const d = new Date(ts);
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${yyyy}年${m}月${day}日，${hh}:${mm}`;
 }

@@ -7,7 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Folder,
-  FolderPlus,
+  Plus,
   MoreHorizontal,
   PenSquare,
   Archive,
@@ -183,12 +183,13 @@ export function Sidebar({
         <div className="sidebar-section-head">
           <span className="sidebar-section-label">项目</span>
           <button
+            type="button"
             className="sidebar-section-add"
             onClick={onAddRepo}
             aria-label="添加项目"
             title="添加项目"
           >
-            <FolderPlus size={13} />
+            <Plus size={16} strokeWidth={2.25} />
           </button>
         </div>
 
