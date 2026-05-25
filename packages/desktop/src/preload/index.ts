@@ -119,6 +119,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   pickDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickDir"),
   getGitStatus: (cwd: string) => ipcRenderer.invoke("git:status", cwd),
+  getGitBranches: (cwd: string) => ipcRenderer.invoke("git:branches", cwd),
+  switchGitBranch: (cwd: string, branch: string) =>
+    ipcRenderer.invoke("git:switchBranch", cwd, branch),
   getGitDiff: (cwd: string, file?: string) => ipcRenderer.invoke("git:diff", cwd, file),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),

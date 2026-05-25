@@ -27,6 +27,12 @@ export interface GitStatus {
   clean: boolean;
 }
 
+export interface GitBranches {
+  isRepo: boolean;
+  current: string | null;
+  branches: string[];
+}
+
 async function gitRun(cwd: string, args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", args, {
     cwd,
@@ -57,6 +63,53 @@ export async function getGitStatus(cwd: string): Promise<GitStatus> {
     entries.push({ code, path: p });
   }
   return { branch, entries, clean: entries.length === 0 };
+}
+
+export async function getGitBranches(cwd: string): Promise<GitBranches> {
+  // Distinguish "not a repo" from "fresh repo with no commits". The
+  // abbrev-ref query fails on the latter too, so check is-inside-work-tree
+  // first — that way a freshly init'd repo doesn't falsely report
+  // isRepo: false.
+  try {
+    const inside = (await gitRun(cwd, ["rev-parse", "--is-inside-work-tree"])).trim();
+    if (inside !== "true") return { isRepo: false, current: null, branches: [] };
+  } catch {
+    return { isRepo: false, current: null, branches: [] };
+  }
+
+  let current: string | null = null;
+  try {
+    current = (await gitRun(cwd, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+  } catch {
+    // No commits yet — keep isRepo: true with null current.
+    current = null;
+  }
+
+  let raw = "";
+  try {
+    raw = await gitRun(cwd, ["branch", "--format=%(refname:short)"]);
+  } catch {
+    raw = "";
+  }
+  const branches = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  return { isRepo: true, current, branches };
+}
+
+export async function switchGitBranch(cwd: string, branch: string): Promise<GitBranches> {
+  const trimmed = branch.trim();
+  if (!trimmed) throw new Error("Branch is required");
+
+  const before = await getGitBranches(cwd);
+  if (!before.isRepo) throw new Error("Not a Git repository");
+  if (!before.branches.includes(trimmed)) throw new Error(`Local branch not found: ${trimmed}`);
+
+  await gitRun(cwd, ["switch", trimmed]);
+  return getGitBranches(cwd);
 }
 
 /**

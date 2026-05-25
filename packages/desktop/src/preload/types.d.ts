@@ -43,6 +43,12 @@ export interface GitStatus {
   clean: boolean;
 }
 
+export interface GitBranches {
+  isRepo: boolean;
+  current: string | null;
+  branches: string[];
+}
+
 export interface CodeshellApi {
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
@@ -71,6 +77,8 @@ export interface CodeshellApi {
 
   // Phase 4 — git / shell services (renderer never spawns child procs directly).
   getGitStatus(cwd: string): Promise<GitStatus>;
+  getGitBranches(cwd: string): Promise<GitBranches>;
+  switchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
   /** Unified diff for the working tree (vs HEAD). file optional. */
   getGitDiff(cwd: string, file?: string): Promise<string>;
   openExternal(url: string): Promise<void>;

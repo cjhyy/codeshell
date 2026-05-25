@@ -10,7 +10,9 @@ import { AgentBridge } from "./agent-bridge.js";
 import { dlog } from "./desktop-logger.js";
 import {
   getGitStatus,
+  getGitBranches,
   getGitDiff,
+  switchGitBranch,
   openExternal,
   revealInFinder,
 } from "./desktop-services.js";
@@ -207,6 +209,17 @@ ipcMain.handle("window:new", async () => {
 ipcMain.handle("git:status", async (_e, cwd: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:status requires cwd");
   return getGitStatus(cwd);
+});
+
+ipcMain.handle("git:branches", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:branches requires cwd");
+  return getGitBranches(cwd);
+});
+
+ipcMain.handle("git:switchBranch", async (_e, cwd: string, branch: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:switchBranch requires cwd");
+  if (typeof branch !== "string" || !branch) throw new Error("git:switchBranch requires branch");
+  return switchGitBranch(cwd, branch);
 });
 
 ipcMain.handle("git:diff", async (_e, cwd: string, file?: string) => {
