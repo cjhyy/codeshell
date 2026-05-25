@@ -47,8 +47,7 @@ export async function enterPlanModeTool(
     return "Already in plan mode. Output your plan as text, then call ExitPlanMode.";
   }
 
-  // TODO(T7): once Engine populates ToolContext.engine, call ctx.engine.setPlanMode(true).
-  // For now, plan-mode entry is a no-op from the tool side — engine sets it via constructor.
+  ctx?.engine?.setPlanMode(true);
 
   return [
     "Entered plan mode.",
@@ -70,8 +69,7 @@ export async function exitPlanModeTool(
     return "Not currently in plan mode.";
   }
 
-  // TODO(T7): once Engine populates ToolContext.engine, call ctx.engine.setPlanMode(false).
-  // For now, plan-mode exit is a no-op from the tool side — engine manages its own state.
+  ctx?.engine?.setPlanMode(false);
 
   return "Exited plan mode. You can now write and edit files to implement the plan.";
 }

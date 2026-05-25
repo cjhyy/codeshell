@@ -556,16 +556,10 @@ export class Engine {
     }
 
     const toolCtx: ToolContext = {
-      cwd,
-      llmConfig: this.config.llm,
-      modelPool: this.modelPool,
-      toolRegistry: this.toolRegistry,
-      askUser: this.config.askUser,
+      ...this.buildToolContext(),
       subAgentSpawner,
       sandbox: sandboxBackend,
-      isSubAgent: this.config.isSubAgent === true,
-      hooks: this.hooks,
-      planMode: this.planMode,
+      cwd,
     };
 
     logger.info("engine.run", {
@@ -1148,11 +1142,13 @@ export class Engine {
       inputSchema: t.inputSchema,
     }));
 
-    const toolCtx = {
+    const toolCtx: import("../tool-system/context.js").ToolContext = {
       cwd: opts.projectDir ?? process.cwd(),
       llmConfig: this.config.llm,
       toolRegistry: this.toolRegistry,
-    } as import("../tool-system/context.js").ToolContext;
+      planMode: this.planMode,
+      engine: this,
+    };
 
     const messages: Message[] = [{ role: "user", content: opts.userPrompt }];
     let writeBudget = MAX_WRITES;
@@ -1528,5 +1524,24 @@ export class Engine {
     } else {
       this.planMode = value;
     }
+  }
+
+  /**
+   * Build a base ToolContext for this Engine. Used by run() (which then
+   * overlays turn-specific fields like sandbox and subAgentSpawner) and
+   * by tests that want a ToolContext without a full run() cycle.
+   */
+  buildToolContext(): ToolContext {
+    return {
+      cwd: this.config.cwd ?? process.cwd(),
+      llmConfig: this.config.llm,
+      modelPool: this.modelPool,
+      toolRegistry: this.toolRegistry,
+      askUser: this.config.askUser,
+      isSubAgent: this.config.isSubAgent === true,
+      hooks: this.hooks,
+      planMode: this.planMode,
+      engine: this,
+    };
   }
 }
