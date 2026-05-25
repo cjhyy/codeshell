@@ -143,6 +143,7 @@ export interface CodeshellApi {
     maxContextTokens: number;
     maxCompletionTokens?: number;
     source: "settings" | "openrouter-api" | "hardcoded" | "fallback";
+    supportsVision: boolean;
   }>>;
   listModels(
     provider: {

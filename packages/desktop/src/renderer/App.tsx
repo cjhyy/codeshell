@@ -733,7 +733,11 @@ function App() {
           prev.map((o) => {
             const r = byKey.get(o.key);
             if (!r) return o;
-            return { ...o, maxContextTokens: r.maxContextTokens };
+            return {
+              ...o,
+              maxContextTokens: r.maxContextTokens,
+              supportsVision: r.supportsVision,
+            };
           }),
         );
       } catch {

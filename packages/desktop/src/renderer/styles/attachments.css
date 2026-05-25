@@ -1,0 +1,90 @@
+/* Image attachments inside the composer — thumbnails, drag overlay,
+   vision-incompatibility banner. */
+
+.composer-attachments {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 var(--sp-2) var(--sp-1);
+}
+
+.composer-attachment-chip {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+}
+.composer-attachment-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.composer-attachment-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+}
+.composer-attachment-remove:hover { background: rgba(0, 0, 0, 0.75); }
+
+.composer.is-drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -3px;
+}
+
+.composer-vision-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 var(--sp-2) var(--sp-1);
+  padding: 8px 12px;
+  background: rgba(196, 138, 24, 0.08);
+  border: 1px solid rgba(196, 138, 24, 0.4);
+  border-radius: var(--radius-sm);
+  font-size: var(--fz-sm);
+  color: var(--fg-secondary);
+}
+.composer-vision-banner strong { color: var(--status-warn); }
+.composer-vision-remove-all {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--status-warn);
+  border-radius: var(--radius-sm);
+  color: var(--status-warn);
+  padding: 3px 10px;
+  font-size: var(--fz-xs);
+  cursor: pointer;
+  margin-top: 4px;
+}
+.composer-vision-remove-all:hover {
+  background: rgba(196, 138, 24, 0.12);
+}
+
+.composer-attachment-error {
+  margin: 0 var(--sp-2) var(--sp-1);
+  padding: 6px 10px;
+  background: rgba(184, 57, 43, 0.08);
+  border: 1px solid rgba(184, 57, 43, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--status-err);
+  font-size: var(--fz-xs);
+}
+
+.composer-popover-vision {
+  margin-left: auto;
+  color: var(--status-ok);
+  opacity: 0.85;
+}

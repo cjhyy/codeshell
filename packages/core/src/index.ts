@@ -524,6 +524,10 @@ export {
   PROVIDER_KINDS,
   type ProviderKindName,
 } from "./llm/provider-kinds.js";
+export {
+  capabilitiesFor,
+  type Capability,
+} from "./llm/capabilities/index.js";
 export { type ProviderConfig } from "./llm/provider-catalog.js";
 
 // ─── Data ────────────────────────────────────────────────────────

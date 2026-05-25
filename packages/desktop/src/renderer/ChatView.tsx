@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Paperclip, Mic, ArrowUp, Square, Monitor } from "lucide-react";
+import { Paperclip, Mic, ArrowUp, Square, Monitor, X } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
@@ -14,6 +14,13 @@ import { ApprovalCard } from "./approvals/ApprovalCard";
 import type { TaskListMessage, AskUserMessage } from "./types";
 import type { Repo } from "./repos";
 import type { ApprovalRequestEnvelope } from "../preload/types";
+import {
+  buildAttachments,
+  encodeAttachmentsForWire,
+  filesFromClipboard,
+  imageFilesFromDrop,
+  type ImageAttachment,
+} from "./chat/attachments";
 
 interface Props {
   messages: Message[];
@@ -76,6 +83,13 @@ export function ChatView({
   const liveDraftStash = useRef<string>("");
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
+  const activeSupportsVision = activeModel?.supportsVision === true;
 
   useEffect(() => {
     setHistory(loadHistory(activeRepoId));
@@ -100,12 +114,57 @@ export function ChatView({
 
   const submit = (): void => {
     const text = draft.trim();
-    if (!text || disabled) return;
-    onSend(text);
-    setHistory(pushHistory(activeRepoId, text));
+    if (disabled) return;
+    const hasImages = attachments.length > 0;
+    if (!text && !hasImages) return;
+    // Block send when there are images but the active model can't accept
+    // them. The UI shows an inline banner with options (switch model /
+    // remove images) so this branch is just a safety net.
+    if (hasImages && !activeSupportsVision) {
+      setAttachmentError(
+        "当前模型不支持图片输入。请切换到支持视觉的模型，或先移除图片。",
+      );
+      return;
+    }
+    const payload = encodeAttachmentsForWire(text, attachments);
+    onSend(payload);
+    if (text) setHistory(pushHistory(activeRepoId, text));
     setDraft("");
+    setAttachments([]);
+    setAttachmentError(null);
     setHistoryCursor(-1);
     liveDraftStash.current = "";
+  };
+
+  const acceptFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    setAttachmentError(null);
+    const { accepted, errors } = await buildAttachments(files, attachments);
+    if (accepted.length > 0) {
+      setAttachments((cur) => [...cur, ...accepted]);
+    }
+    if (errors.length > 0) {
+      setAttachmentError(errors.map((e) => e.message).join("；"));
+    }
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const imageFiles = filesFromClipboard(e.clipboardData?.items ?? null);
+    if (imageFiles.length === 0) return;
+    e.preventDefault();
+    await acceptFiles(imageFiles);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    const imageFiles = imageFilesFromDrop(e.dataTransfer?.items ?? null);
+    if (imageFiles.length === 0) return;
+    await acceptFiles(imageFiles);
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((cur) => cur.filter((a) => a.id !== id));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -219,7 +278,66 @@ export function ChatView({
       {isNewChat && welcomeNode}
 
       <div className="composer-shell">
-        <div className="composer">
+        <div
+          className={`composer${dragOver ? " is-drop-target" : ""}`}
+          onDragEnter={(e) => {
+            if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
+              e.preventDefault();
+              setDragOver(true);
+            }
+          }}
+          onDragOver={(e) => {
+            if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
+              e.preventDefault();
+            }
+          }}
+          onDragLeave={(e) => {
+            if (e.target === e.currentTarget) setDragOver(false);
+          }}
+          onDrop={(e) => void handleDrop(e)}
+        >
+          {attachments.length > 0 && (
+            <div className="composer-attachments">
+              {attachments.map((a) => (
+                <div className="composer-attachment-chip" key={a.id} title={a.name}>
+                  <img src={a.dataUrl} alt={a.name} />
+                  <button
+                    type="button"
+                    className="composer-attachment-remove"
+                    aria-label={`移除 ${a.name}`}
+                    onClick={() => removeAttachment(a.id)}
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {attachments.length > 0 && !activeSupportsVision && (
+            <div className="composer-vision-banner">
+              <strong>当前模型不支持图片</strong>
+              <span>
+                {activeModel
+                  ? `${activeModel.label} 没有视觉能力。请切换到支持图片的模型，或先移除图片。`
+                  : "当前模型未知，请先选择一个支持图片的模型。"}
+              </span>
+              <button
+                type="button"
+                className="composer-vision-remove-all"
+                onClick={() => {
+                  setAttachments([]);
+                  setAttachmentError(null);
+                }}
+              >
+                移除所有图片
+              </button>
+            </div>
+          )}
+          {attachmentError && (
+            <div className="composer-attachment-error">{attachmentError}</div>
+          )}
+
           <div className="composer-textarea-wrap">
             <textarea
               ref={textareaRef}
@@ -231,20 +349,39 @@ export function ChatView({
               onKeyDown={handleKeyDown}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
+              onPaste={(e) => void handlePaste(e)}
               placeholder={placeholder}
               disabled={busy}
               rows={1}
             />
           </div>
 
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            multiple
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? []);
+              if (e.target) e.target.value = "";
+              void acceptFiles(files);
+            }}
+          />
+
           <div className="composer-controls">
             <div className="composer-controls-left">
               <button
                 type="button"
                 className="composer-icon-btn"
-                aria-label="添加附件"
-                title="添加附件 (尚未实现)"
-                disabled
+                aria-label="添加图片"
+                title={
+                  activeSupportsVision
+                    ? "添加图片（也支持拖拽 / 粘贴）"
+                    : "当前模型不支持图片；切换模型后即可上传"
+                }
+                onClick={() => fileInputRef.current?.click()}
+                disabled={busy}
               >
                 <Paperclip size={14} />
               </button>
@@ -286,7 +423,11 @@ export function ChatView({
                   type="button"
                   className="composer-send"
                   onClick={submit}
-                  disabled={disabled || !draft.trim()}
+                  disabled={
+                    disabled ||
+                    (!draft.trim() && attachments.length === 0) ||
+                    (attachments.length > 0 && !activeSupportsVision)
+                  }
                   aria-label="发送"
                 >
                   <ArrowUp size={16} />

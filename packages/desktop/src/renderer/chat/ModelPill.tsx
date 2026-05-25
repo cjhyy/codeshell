@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown, Zap } from "lucide-react";
+import { ChevronDown, Zap, Image } from "lucide-react";
 
 /**
  * One row in the model dropdown.
@@ -15,6 +15,8 @@ export interface ModelOption {
   label: string;
   provider: string;
   maxContextTokens?: number;
+  /** Whether this model accepts image content blocks. */
+  supportsVision?: boolean;
 }
 
 interface Props {
@@ -71,6 +73,9 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
               >
                 <span className="composer-popover-prov">{o.provider}</span>
                 <span>{o.label}</span>
+                {o.supportsVision && (
+                  <Image size={11} aria-label="支持图片输入" className="composer-popover-vision" />
+                )}
               </li>
             ))
           )}

@@ -74,6 +74,12 @@ export type StreamUsageShape =
   | "none";
 
 export interface Capability {
+  /**
+   * Whether the model accepts image content blocks. UI gates image attachments
+   * on this — non-vision models surface a "this model does not accept images"
+   * message instead of silently dropping the upload.
+   */
+  supportsVision: boolean;
   /** Token-limit request field. */
   tokenLimitField: "max_tokens" | "max_completion_tokens";
   /**
@@ -101,6 +107,7 @@ export interface Capability {
  * every OpenAI-compat endpoint at minimum understands.
  */
 export const DEFAULT_CAPABILITY: Capability = {
+  supportsVision: false,
   tokenLimitField: "max_tokens",
   rejectedParams: new Set(),
   reasoning: { kind: "none" },

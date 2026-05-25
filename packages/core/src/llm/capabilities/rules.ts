@@ -36,6 +36,7 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     kind: "openai",
     match: /^gpt-5\.(?:[5-9]|\d{2,})(?:[-.]|$)/i,
     capability: {
+      supportsVision: true,
       tokenLimitField: "max_completion_tokens",
       rejectedParams: new Set([
         "temperature", "top_p", "presence_penalty",
@@ -55,6 +56,7 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     // never match this rule (OpenRouter rule below handles those).
     match: /^(?:o[1-9]\d*|gpt-[5-9])(?:[-.]|$)/i,
     capability: {
+      supportsVision: true,
       tokenLimitField: "max_completion_tokens",
       rejectedParams: new Set([
         "temperature", "top_p", "presence_penalty",
@@ -110,6 +112,7 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     kind: "anthropic",
     match: /^claude-(?:opus|sonnet|haiku)-4-[6-9](?:[-.]|$)/i,
     capability: {
+      supportsVision: true,
       reasoning: { kind: "anthropic-adaptive" },
       echoReasoning: "when-tools",
       parallelToolCalls: "anthropic-disable-flag",
@@ -121,6 +124,7 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     kind: "anthropic",
     match: /^claude-(?:opus|sonnet|haiku)-4(?:[-.]|$)/i,
     capability: {
+      supportsVision: true,
       reasoning: { kind: "anthropic-budget", minBudgetTokens: 1024 },
       echoReasoning: "when-tools",
       parallelToolCalls: "anthropic-disable-flag",
@@ -129,15 +133,16 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     why: "Claude 4.x ≤4.5 supports explicit thinking:{type:enabled, budget_tokens≥1024}.",
   },
   // Catch-all for Claude 3.x and earlier — no thinking field, but still
-  // needs Anthropic-shape tool_choice.
+  // needs Anthropic-shape tool_choice. Claude 3+ all support vision.
   {
     kind: "anthropic",
     match: /^claude-/i,
     capability: {
+      supportsVision: true,
       parallelToolCalls: "anthropic-disable-flag",
       streamUsage: "auto",
     },
-    why: "Pre-Claude-4 — no extended thinking; keep Anthropic tool_choice/stream shape.",
+    why: "Pre-Claude-4 — no extended thinking; keep Anthropic tool_choice/stream shape; vision supported since Claude 3.",
   },
 
   // ─── Gemini (OpenAI-compat endpoint) ───────────────────────────
@@ -147,18 +152,34 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     // to thinkingConfig. Lite/flash families also accept it.
     match: /^gemini-(?:[2-9]\.\d|[2-9])/i,
     capability: {
+      supportsVision: true,
       reasoning: { kind: "openai-effort" },
       echoReasoning: "optional",
     },
-    why: "Gemini 2.5+ via OpenAI-compat — reasoning_effort is auto-mapped to thinking_level.",
+    why: "Gemini 2.5+ via OpenAI-compat — reasoning_effort is auto-mapped to thinking_level; multimodal native.",
   },
 
   // ─── OpenRouter ────────────────────────────────────────────────
   // OpenRouter normalizes everything under {reasoning: {...}}. It also
   // accepts max_tokens for every model it routes (internal mapping).
+  // OpenRouter rules — check vision-specific backends first so the
+  // catch-all doesn't mask them.
   {
     kind: "openrouter",
-    match: /./, // Any model via OpenRouter
+    // Most modern frontier models on OpenRouter are multimodal; flag the
+    // big families explicitly. The catch-all below stays vision=false so
+    // older/text-only routes don't get a green checkmark they don't earn.
+    match: /^(?:openai\/(?:gpt-4o|gpt-5|o[1-9])|anthropic\/claude-(?:3|4|opus|sonnet|haiku)|google\/gemini-[2-9]|x-ai\/grok-[4-9]|qwen\/qwen-?vl|meta\/llama-(?:3\.2|4))/i,
+    capability: {
+      supportsVision: true,
+      reasoning: { kind: "openrouter-reasoning" },
+      echoReasoning: "optional",
+    },
+    why: "OpenRouter routes to vision-capable backends for these slugs (GPT-4o, Claude 3+, Gemini 2.5+, Grok 4+, Qwen-VL, Llama 3.2/4).",
+  },
+  {
+    kind: "openrouter",
+    match: /./, // Any other model via OpenRouter
     capability: {
       reasoning: { kind: "openrouter-reasoning" },
       // OpenRouter doesn't enforce per-provider echo contracts at its edge.
@@ -174,9 +195,10 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     // Send "low" when the caller asks to disable — xAI rejects "minimal" 400.
     match: /^grok-4\.3(?:[-.]|$)/i,
     capability: {
+      supportsVision: true,
       reasoning: { kind: "openai-effort", disabledEffort: "low" },
     },
-    why: "xAI grok-4.3 supports reasoning_effort none|low|medium|high — no `minimal`.",
+    why: "xAI grok-4.3 supports reasoning_effort none|low|medium|high — no `minimal`; vision supported in grok-4+.",
   },
 
   // ─── Mistral ───────────────────────────────────────────────────

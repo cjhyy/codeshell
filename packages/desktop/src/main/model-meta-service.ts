@@ -1,3 +1,5 @@
+import { capabilitiesFor } from "@cjhyy/code-shell-core";
+
 /**
  * Resolve a model's true `maxContextTokens` without making the user
  * fill it into settings.json.
@@ -37,6 +39,8 @@ interface ResolvedModelMeta {
   maxCompletionTokens?: number;
   /** Where the number came from, for the UI's tooltip. */
   source: "settings" | "openrouter-api" | "hardcoded" | "fallback";
+  /** Whether the model accepts image content blocks. */
+  supportsVision: boolean;
 }
 
 interface ProviderCache {
@@ -126,6 +130,16 @@ export async function resolveModelMeta(
   const out: ResolvedModelMeta[] = [];
 
   for (const m of models) {
+    const provider = providers.find((p) => p.key === m.providerKey);
+    const modelId = m.model ?? m.key;
+    const kind = (provider?.kind ?? "openai") as Parameters<typeof capabilitiesFor>[0];
+    let supportsVision = false;
+    try {
+      supportsVision = capabilitiesFor(kind, modelId).supportsVision;
+    } catch {
+      /* unknown kind — leave as false */
+    }
+
     // 1. settings.json wins.
     if (typeof m.maxContextTokens === "number" && m.maxContextTokens > 0) {
       out.push({
@@ -133,12 +147,10 @@ export async function resolveModelMeta(
         maxContextTokens: m.maxContextTokens,
         maxCompletionTokens: m.maxOutputTokens ?? undefined,
         source: "settings",
+        supportsVision,
       });
       continue;
     }
-
-    const provider = providers.find((p) => p.key === m.providerKey);
-    const modelId = m.model ?? m.key;
 
     // 2. OpenRouter API.
     if (provider?.kind === "openrouter") {
@@ -151,6 +163,7 @@ export async function resolveModelMeta(
           maxContextTokens: hit.context,
           maxCompletionTokens: hit.completion,
           source: "openrouter-api",
+          supportsVision,
         });
         continue;
       }
@@ -164,6 +177,7 @@ export async function resolveModelMeta(
         maxContextTokens: hc.context,
         maxCompletionTokens: hc.completion,
         source: "hardcoded",
+        supportsVision,
       });
       continue;
     }
@@ -173,6 +187,7 @@ export async function resolveModelMeta(
       key: m.key,
       maxContextTokens: FALLBACK_CONTEXT,
       source: "fallback",
+      supportsVision,
     });
   }
 
