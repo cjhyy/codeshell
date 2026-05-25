@@ -89,6 +89,7 @@ export class ChatSession {
     try {
       const onStream = next.opts.onStream ?? this.defaultOnStream;
       const result = await this.engine.run(next.task, {
+        sessionId: this.id,
         signal: this.controller.signal,
         onStream,
       });

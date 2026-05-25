@@ -382,8 +382,8 @@ export class AgentServer {
     const params = (req.params ?? {}) as unknown as ConfigureParams;
 
     // If a sessionId is present, mutate that specific session's engine
-    if (this.chatManager && typeof (params as any).sessionId === "string") {
-      const sid = (params as any).sessionId as string;
+    if (this.chatManager && typeof params.sessionId === "string") {
+      const sid = params.sessionId;
       const s = this.chatManager.get(sid);
       if (!s) {
         this.transport.send(

@@ -94,19 +94,36 @@ export class AgentClient {
 
   /**
    * Respond to an approval request from the server.
+   *
+   * Multi-session form: approve(sessionId, requestId, decision)
+   * Legacy form:        approve(requestId, decision)
    */
-  async approve(requestId: string, decision: ApprovalResult): Promise<void> {
-    await this.request(Methods.Approve, { requestId, decision } as unknown as Record<
-      string,
-      unknown
-    >);
+  approve(sessionId: string, requestId: string, decision: ApprovalResult): Promise<void>;
+  approve(requestId: string, decision: ApprovalResult): Promise<void>;
+  approve(...args: unknown[]): Promise<void> {
+    if (args.length === 3) {
+      const [sessionId, requestId, decision] = args as [string, string, ApprovalResult];
+      return this.request(Methods.Approve, {
+        sessionId,
+        requestId,
+        decision,
+      } as unknown as Record<string, unknown>) as Promise<void>;
+    }
+    const [requestId, decision] = args as [string, ApprovalResult];
+    return this.request(Methods.Approve, {
+      requestId,
+      decision,
+    } as unknown as Record<string, unknown>) as Promise<void>;
   }
 
   /**
    * Cancel a running agent.
+   *
+   * Multi-session form: cancel(sessionId, reason?)
+   * Legacy form:        cancel(reason?)
    */
-  async cancel(reason?: string): Promise<void> {
-    await this.request(Methods.Cancel, { reason } as Record<string, unknown>);
+  async cancel(sessionId?: string, reason?: string): Promise<void> {
+    await this.request(Methods.Cancel, { sessionId, reason } as Record<string, unknown>);
   }
 
   /**

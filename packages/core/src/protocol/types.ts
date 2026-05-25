@@ -109,6 +109,8 @@ export interface InjectParams {
 
 /** Update runtime configuration. */
 export interface ConfigureParams {
+  /** When present, configure that specific chat session. Otherwise worker-global. */
+  sessionId?: string;
   permissionMode?: PermissionMode;
   planMode?: boolean;
   bypassPermissions?: boolean;
