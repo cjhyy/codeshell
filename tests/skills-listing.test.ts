@@ -32,4 +32,24 @@ describe("buildSkillListing", () => {
     const out = buildSkillListing([skill({ name: "bare", description: "" })]);
     expect(out).toContain("- bare:");
   });
+
+  it("groups skills by namespace, user/project first then plugins A-Z", () => {
+    const out = buildSkillListing([
+      skill({ name: "superpowers:debugging", source: "plugin" }),
+      skill({ name: "local-tool", source: "user" }),
+      skill({ name: "document-skills:pdf", source: "plugin" }),
+      skill({ name: "superpowers:brainstorming", source: "plugin" }),
+    ]);
+    // Each namespace gets its own ## heading with a count.
+    expect(out).toContain("## 用户 / 项目 (1)");
+    expect(out).toContain("## document-skills (1)");
+    expect(out).toContain("## superpowers (2)");
+    // User/project comes before any plugin group.
+    expect(out.indexOf("## 用户 / 项目")).toBeLessThan(out.indexOf("## document-skills"));
+    // Plugin groups are alphabetical (document-skills < superpowers).
+    expect(out.indexOf("## document-skills")).toBeLessThan(out.indexOf("## superpowers"));
+    // Skills inside a group are sorted by name.
+    const sp = out.slice(out.indexOf("## superpowers"));
+    expect(sp.indexOf("brainstorming")).toBeLessThan(sp.indexOf("debugging"));
+  });
 });
