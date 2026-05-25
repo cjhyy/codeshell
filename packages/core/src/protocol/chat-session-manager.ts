@@ -15,6 +15,11 @@ export type EngineConfigSlice = Pick<
 >;
 
 export interface ChatSessionManagerOptions {
+  /**
+   * Shared runtime, supplied here so callers and engineFactory closures
+   * derived from these options can reference one canonical instance. The
+   * manager itself does not retain it — engineFactory captures it via closure.
+   */
   runtime: EngineRuntime;
   /** Build an Engine. Tests inject a fake; production passes (cfg) => new Engine({ runtime, ...cfg }). */
   engineFactory: (slice: EngineConfigSlice) => Engine;
@@ -24,14 +29,12 @@ export interface ChatSessionManagerOptions {
 
 export class ChatSessionManager {
   private readonly sessions = new Map<string, ChatSession>();
-  private readonly runtime: EngineRuntime;
   private readonly factory: (slice: EngineConfigSlice) => Engine;
   private readonly maxSessions: number;
   private readonly idleTtlMs: number;
   private sweeper: ReturnType<typeof setInterval> | null = null;
 
   constructor(opts: ChatSessionManagerOptions) {
-    this.runtime = opts.runtime;
     this.factory = opts.engineFactory;
     this.maxSessions = opts.maxSessions ?? 16;
     this.idleTtlMs = opts.idleTtlMs ?? 30 * 60 * 1000;
@@ -75,7 +78,7 @@ export class ChatSessionManager {
 
   sweepIdle(): void {
     const cutoff = Date.now() - this.idleTtlMs;
-    for (const [id, s] of this.sessions) {
+    for (const [id, s] of [...this.sessions]) {
       if (s.lastActivityAt < cutoff && !s.isBusy()) this.close(id);
     }
   }
