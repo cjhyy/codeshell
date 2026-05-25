@@ -35,6 +35,11 @@ import {
   readSkillBody,
   uninstallSkill,
 } from "./skills-service.js";
+import {
+  inspectRepo,
+  installFromGithub,
+  type InstallFromGithubInput,
+} from "./github-skill-service.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun } from "./runs-service.js";
 import { initUpdater, checkForUpdate, quitAndInstall, getLastStatus } from "./updater.js";
@@ -220,6 +225,29 @@ ipcMain.handle(
     if (source !== "user" && source !== "project" && source !== "plugin")
       throw new Error("invalid source");
     return uninstallSkill(filePath, source);
+  },
+);
+
+ipcMain.handle("skills:inspectGithub", async (_e, url: string, existingNames?: unknown) => {
+  if (typeof url !== "string" || !url) {
+    throw new Error("skills:inspectGithub requires url");
+  }
+  const names = Array.isArray(existingNames)
+    ? existingNames.filter((n): n is string => typeof n === "string")
+    : [];
+  return inspectRepo(url, names);
+});
+
+ipcMain.handle(
+  "skills:installFromGithub",
+  async (_e, input: unknown) => {
+    if (!input || typeof input !== "object") {
+      throw new Error("skills:installFromGithub requires { inspection, selected, scope }");
+    }
+    const i = input as InstallFromGithubInput;
+    if (!i.inspection || !i.selected) throw new Error("missing inspection/selected");
+    if (i.scope !== "user" && i.scope !== "project") throw new Error("invalid scope");
+    return installFromGithub(i);
   },
 );
 

@@ -127,6 +127,8 @@ export interface CodeshellApi {
     name?: string,
   ): Promise<InstalledSkill>;
   uninstallSkill(filePath: string, source: "user" | "project" | "plugin"): Promise<void>;
+  inspectGithubSkill(url: string, existingNames?: string[]): Promise<GithubRepoInspection>;
+  installFromGithub(input: GithubSkillInstallInput): Promise<InstalledSkill>;
   probeMcpServers(
     configs: McpServerProbeInput[],
     force?: boolean,
@@ -188,6 +190,38 @@ export interface DesktopSessionSummary {
   size: number;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface GithubUrlInfo {
+  owner: string;
+  repo: string;
+  ref?: string;
+  subpath?: string;
+}
+
+export interface GithubDetectedSkill {
+  name: string;
+  description: string;
+  pathInRepo: string;
+  dirInRepo: string;
+  alreadyInstalled?: boolean;
+}
+
+export interface GithubRepoInspection {
+  url: GithubUrlInfo;
+  defaultBranch: string;
+  skills: GithubDetectedSkill[];
+  isPlugin: boolean;
+  totalDetected: number;
+  warning?: string;
+}
+
+export interface GithubSkillInstallInput {
+  inspection: GithubRepoInspection;
+  selected: GithubDetectedSkill;
+  scope: "user" | "project";
+  cwd?: string;
+  installName?: string;
 }
 
 export interface SearchProbeInput {

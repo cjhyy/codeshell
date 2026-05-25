@@ -155,6 +155,10 @@ contextBridge.exposeInMainWorld("codeshell", {
   ) => ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
   uninstallSkill: (filePath: string, source: "user" | "project" | "plugin") =>
     ipcRenderer.invoke("skills:uninstall", filePath, source),
+  inspectGithubSkill: (url: string, existingNames?: string[]) =>
+    ipcRenderer.invoke("skills:inspectGithub", url, existingNames),
+  installFromGithub: (input: unknown) =>
+    ipcRenderer.invoke("skills:installFromGithub", input),
   probeMcpServers: (configs: unknown, force?: boolean) =>
     ipcRenderer.invoke("mcp:probe", configs, force),
   invalidateMcpProbeCache: (name?: string) =>

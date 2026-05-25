@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { SkillSummary } from "../../preload/types";
+import type {
+  GithubDetectedSkill,
+  GithubRepoInspection,
+  SkillSummary,
+} from "../../preload/types";
 import { Select } from "../ui/Select";
 import { useConfirm } from "../ui/ConfirmDialog";
 
@@ -444,6 +448,41 @@ function AddPanel({
   activeRepoPath: string | null;
   onInstalled: () => void;
 }) {
+  const [source, setSource] = useState<"github" | "local">("github");
+
+  return (
+    <div className="skills-panel">
+      <div className="add-source-tabs">
+        <button
+          className={`add-source-tab${source === "github" ? " active" : ""}`}
+          onClick={() => setSource("github")}
+        >
+          从 GitHub 安装
+        </button>
+        <button
+          className={`add-source-tab${source === "local" ? " active" : ""}`}
+          onClick={() => setSource("local")}
+        >
+          从本地文件夹
+        </button>
+      </div>
+
+      {source === "github" ? (
+        <GithubAddPanel activeRepoPath={activeRepoPath} onInstalled={onInstalled} />
+      ) : (
+        <LocalAddPanel activeRepoPath={activeRepoPath} onInstalled={onInstalled} />
+      )}
+    </div>
+  );
+}
+
+function LocalAddPanel({
+  activeRepoPath,
+  onInstalled,
+}: {
+  activeRepoPath: string | null;
+  onInstalled: () => void;
+}) {
   const [source, setSource] = useState<{ path: string; name: string } | null>(null);
   const [scope, setScope] = useState<"user" | "project">("user");
   const [name, setName] = useState("");
@@ -478,11 +517,11 @@ function AddPanel({
   };
 
   return (
-    <div className="skills-panel">
+    <div className="add-panel-body">
       <div className="settings-option-grid">
         <button className="settings-option-card" onClick={() => void choose()}>
-          <span className="settings-option-title">导入本地 Skill</span>
-          <span className="settings-option-desc">选择一个包含 SKILL.md 的文件夹。</span>
+          <span className="settings-option-title">选择本地文件夹</span>
+          <span className="settings-option-desc">需要包含 SKILL.md。</span>
         </button>
       </div>
 
@@ -521,6 +560,234 @@ function AddPanel({
       >
         {saving ? "安装中..." : "安装 Skill"}
       </button>
+    </div>
+  );
+}
+
+function GithubAddPanel({
+  activeRepoPath,
+  onInstalled,
+}: {
+  activeRepoPath: string | null;
+  onInstalled: () => void;
+}) {
+  const [url, setUrl] = useState("");
+  const [inspecting, setInspecting] = useState(false);
+  const [inspection, setInspection] = useState<GithubRepoInspection | null>(null);
+  const [selected, setSelected] = useState<GithubDetectedSkill | null>(null);
+  const [scope, setScope] = useState<"user" | "project">("user");
+  const [installName, setInstallName] = useState("");
+  const [installing, setInstalling] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [trustAck, setTrustAck] = useState(false);
+  const confirm = useConfirm();
+
+  const reset = () => {
+    setInspection(null);
+    setSelected(null);
+    setInstallName("");
+    setTrustAck(false);
+    setError(null);
+  };
+
+  const inspect = async () => {
+    setError(null);
+    setInspecting(true);
+    setInspection(null);
+    setSelected(null);
+    try {
+      // Pass existing installed names so the preview can flag conflicts.
+      const installed = await window.codeshell.listSkills(activeRepoPath ?? "/");
+      const names = installed.map((s) => s.name);
+      const result = await window.codeshell.inspectGithubSkill(url.trim(), names);
+      setInspection(result);
+      // Auto-select if only one skill detected.
+      if (result.skills.length === 1) {
+        setSelected(result.skills[0]);
+        setInstallName(result.skills[0].name);
+      }
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setInspecting(false);
+    }
+  };
+
+  const install = async () => {
+    if (!inspection || !selected) return;
+    if (selected.alreadyInstalled) {
+      const ok = await confirm({
+        title: "已存在同名 skill",
+        message: `「${selected.name}」似乎已经安装。重新安装会因目录冲突而失败，先卸载旧版本再继续。`,
+        confirmLabel: "知道了",
+      });
+      if (!ok) return;
+      return;
+    }
+    if (!trustAck) {
+      setError("请先确认信任来源");
+      return;
+    }
+    setInstalling(true);
+    setError(null);
+    try {
+      await window.codeshell.installFromGithub({
+        inspection,
+        selected,
+        scope,
+        cwd: scope === "project" ? activeRepoPath ?? undefined : undefined,
+        installName: installName.trim() || selected.name,
+      });
+      onInstalled();
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  return (
+    <div className="add-panel-body">
+      <div className="github-input-row">
+        <input
+          className="github-url-input"
+          placeholder="https://github.com/owner/repo"
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            if (inspection) reset();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && url.trim() && !inspecting) void inspect();
+          }}
+        />
+        <button
+          className="approval-btn approve"
+          disabled={!url.trim() || inspecting}
+          onClick={() => void inspect()}
+        >
+          {inspecting ? "解析中…" : "解析"}
+        </button>
+      </div>
+      <p className="github-url-hint">
+        支持仓库 URL，或子目录形式 <code>/tree/&lt;ref&gt;/&lt;subpath&gt;</code>。
+        系统会读取仓库目录树，不会自动执行任何脚本。
+      </p>
+
+      {error && <div className="view-error">{error}</div>}
+
+      {inspection && (
+        <div className="github-preview">
+          <div className="github-preview-head">
+            <strong>
+              {inspection.url.owner}/{inspection.url.repo}
+            </strong>
+            <span className="session-meta">
+              {inspection.url.ref ?? inspection.defaultBranch}
+            </span>
+            {inspection.isPlugin && (
+              <span className="github-plugin-pill">检测到 plugin.json</span>
+            )}
+          </div>
+
+          {inspection.warning && (
+            <div className="github-warning">{inspection.warning}</div>
+          )}
+
+          {inspection.skills.length === 0 ? (
+            <div className="approvals-empty">没有可安装的 skill</div>
+          ) : (
+            <div className="github-skill-list">
+              {inspection.skills.map((s) => {
+                const isSelected = selected?.dirInRepo === s.dirInRepo;
+                return (
+                  <button
+                    key={s.dirInRepo}
+                    className={`github-skill-card${isSelected ? " is-selected" : ""}`}
+                    onClick={() => {
+                      setSelected(s);
+                      setInstallName(s.name);
+                    }}
+                  >
+                    <div className="github-skill-name">
+                      <strong>{s.name}</strong>
+                      {s.alreadyInstalled && (
+                        <span className="github-skill-installed">已安装</span>
+                      )}
+                    </div>
+                    {s.description && (
+                      <div className="github-skill-desc">{s.description}</div>
+                    )}
+                    <div className="github-skill-path">{s.dirInRepo}</div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {selected && (
+            <div className="github-install-block">
+              <div className="settings-form-grid">
+                <label className="settings-field">
+                  <span>安装名称</span>
+                  <input
+                    value={installName}
+                    onChange={(e) => setInstallName(e.target.value)}
+                    placeholder={selected.name}
+                  />
+                </label>
+                <label className="settings-field">
+                  <span>安装位置</span>
+                  <Select<"user" | "project">
+                    value={scope}
+                    onChange={setScope}
+                    options={[
+                      { value: "user", label: "全局" },
+                      {
+                        value: "project",
+                        label: "当前项目",
+                        description: activeRepoPath ?? "未选中项目",
+                        disabled: !activeRepoPath,
+                      },
+                    ]}
+                  />
+                </label>
+              </div>
+
+              <div className="github-trust-row">
+                <label className="github-trust-label">
+                  <input
+                    type="checkbox"
+                    checked={trustAck}
+                    onChange={(e) => setTrustAck(e.target.checked)}
+                  />
+                  <span>
+                    我已确认信任 {inspection.url.owner}/{inspection.url.repo}。
+                    远程仓库的内容会被复制到本地 skills 目录，但不会被自动执行。
+                  </span>
+                </label>
+              </div>
+
+              <button
+                className="approval-btn approve settings-save-btn"
+                disabled={
+                  installing ||
+                  !trustAck ||
+                  selected.alreadyInstalled ||
+                  (scope === "project" && !activeRepoPath)
+                }
+                onClick={() => void install()}
+              >
+                {installing
+                  ? "安装中…"
+                  : selected.alreadyInstalled
+                    ? "已安装"
+                    : `安装「${installName || selected.name}」`}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
