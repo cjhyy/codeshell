@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { Markdown } from "./Markdown";
@@ -7,6 +7,8 @@ import { AgentMessageView } from "./messages/AgentMessageView";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
+import { ToolGroupCard } from "./messages/ToolGroupCard";
+import { buildStreamItems } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
 
 interface Props {
@@ -37,9 +39,18 @@ export function MessageStream({
     `${messages.length}:${trailingKey ?? ""}`,
   );
 
+  // Collapse adjacent tool calls of the same category into a single
+  // foldable group, but only for tools BEFORE the last assistant
+  // reply — the in-flight tool run stays expanded so the user can
+  // watch what's happening right now.
+  const items = useMemo(() => buildStreamItems(messages), [messages]);
+
   return (
     <div className="stream" ref={ref}>
-      {messages.map((m) => {
+      {items.map((m) => {
+        if (m.kind === "tool_group") {
+          return <ToolGroupCard key={m.id} group={m} />;
+        }
         switch (m.kind) {
           case "tool":
             // Tool cards now display their full args/result body inline

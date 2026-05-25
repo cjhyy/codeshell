@@ -6,6 +6,34 @@
   font-size: var(--fz-md);
   cursor: default;
 }
+
+/* Codex-style folded tool group — a single quiet row that stands in
+   for several adjacent same-category tool calls, expanding inline. */
+.tool-group {
+  margin: var(--sp-1) var(--sp-3);
+}
+.tool-group-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+  cursor: pointer;
+}
+.tool-group-header:hover {
+  background: var(--bg-hover);
+  color: var(--fg-secondary);
+}
+.tool-group-label { line-height: 1; }
+/* When the group is open, nested ToolCards keep their normal margin —
+   but trim the outer margin so the body docks under the header without
+   a double gap. */
+.tool-group.open .tool-group-body > .tool-card:first-child { margin-top: 4px; }
 .tool-card.selected {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
