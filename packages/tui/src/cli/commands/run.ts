@@ -5,8 +5,15 @@
  * but with a headless renderer instead of Ink UI.
  */
 
+import { randomUUID } from "node:crypto";
 import { Engine } from "@cjhyy/code-shell-core";
-import { createInProcessClient } from "@cjhyy/code-shell-core";
+import { EngineRuntime } from "@cjhyy/code-shell-core";
+import { ChatSessionManager } from "@cjhyy/code-shell-core";
+import { AgentServer } from "@cjhyy/code-shell-core";
+import { AgentClient } from "@cjhyy/code-shell-core";
+import { createInProcessTransport } from "@cjhyy/code-shell-core";
+import { MCPManager } from "@cjhyy/code-shell-core";
+import { CostTracker } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
 import { resolveApiKey } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
@@ -144,9 +151,8 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
   const sandboxConfig = mergeSandboxConfig(settings.sandbox, "auto");
 
-  const engine = new Engine({
-    llm: llmConfig,
-    cwd,
+  // ── Shared config passed into every session engine ─────────────
+  const sharedCfg = {
     preset: options.preset ?? settings.agent.preset,
     enabledBuiltinTools: settings.agent.enabledBuiltinTools,
     disabledBuiltinTools: settings.agent.disabledBuiltinTools,
@@ -160,18 +166,73 @@ export async function runCommand(options: RunOptions): Promise<void> {
     mcpServers: settings.mcpServers,
     headless: true,
     sandbox: sandboxConfig,
+  };
+
+  // 1. Seed engine — populates model pool + tool registry via
+  //    populateModelPoolFromSettings() in ctor. Discarded after extraction.
+  const seedEngine = new Engine({ llm: llmConfig, cwd, headless: true });
+
+  // 2. Extract shared resources
+  const modelPool = seedEngine.getModelPool();
+  const toolRegistry = seedEngine.getToolRegistry();
+  const resolvedLlmConfig = seedEngine.getConfig().llm;
+  // Reuse the SettingsManager already constructed above (settingsManager).
+  // MCPManager: no-op holder for EngineRuntime; per-session engines connect
+  // via mcpServers in sharedCfg.
+  // TODO(future): aggregate MCP connections at the runtime level.
+  const mcpPool = new MCPManager(toolRegistry);
+  // CostTracker: fresh instance for this invocation.
+  // TODO(future): thread into Engine cost accounting via runtime.costTracker.
+  const runCostTracker = new CostTracker();
+
+  // 3. Build the shared EngineRuntime (reuse settingsManager from above)
+  const runtime = new EngineRuntime({
+    modelPool,
+    toolRegistry,
+    settings: settingsManager,
+    mcpPool,
+    costTracker: runCostTracker,
   });
+
+  // 4. ChatSessionManager — one session per `run` invocation (UUID)
+  const chatManager = new ChatSessionManager({
+    runtime,
+    engineFactory: (slice) =>
+      new Engine({
+        llm: resolvedLlmConfig,
+        cwd,
+        runtime,
+        ...sharedCfg,
+        // Per-session overrides from the protocol request take precedence
+        ...(slice.permissionMode ? { permissionMode: slice.permissionMode } : {}),
+        ...(slice.preset ? { preset: slice.preset } : {}),
+        ...(slice.customSystemPrompt !== undefined ? { customSystemPrompt: slice.customSystemPrompt } : {}),
+        ...(slice.appendSystemPrompt !== undefined ? { appendSystemPrompt: slice.appendSystemPrompt } : {}),
+        ...(slice.maxTurns !== undefined ? { maxTurns: slice.maxTurns } : {}),
+        ...(slice.maxContextTokens !== undefined ? { maxContextTokens: slice.maxContextTokens } : {}),
+        ...(slice.cwd ? { cwd: slice.cwd } : {}),
+      }),
+    maxSessions: 4,
+    idleTtlMs: 30 * 60 * 1000,
+  });
+  chatManager.startIdleSweeper();
+
+  // 5. Wire up in-process transport + server + client
+  const [serverTransport, clientTransport] = createInProcessTransport();
+  const _server = new AgentServer({ chatManager, transport: serverTransport });
+  const client = new AgentClient({ transport: clientTransport });
+
+  // Unique sessionId per run invocation; use --resume if provided.
+  const runSessionId = options.resume ?? `run-${randomUUID()}`;
 
   const outputFormat = options.output ?? (settings.output.format as OutputFormat) ?? "text";
   const renderer = createRenderer(outputFormat);
 
-  // Wire engine through the protocol layer; renderer consumes stream events.
-  const { client, close } = createInProcessClient(engine, {
-    onStream: (event) => renderer.onEvent(event),
-  });
+  // Wire renderer to stream events from client
+  client.onStreamEvent((envelope) => renderer.onEvent(envelope.event));
 
   try {
-    const result = await client.run(options.task, options.resume);
+    const result = await client.run(options.task, runSessionId);
 
     renderer.onComplete(result.text, result.reason, {
       sessionId: result.sessionId,
@@ -180,7 +241,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
     process.exit(result.reason === "completed" ? 0 : 1);
   } finally {
-    close();
+    client.close();
   }
 }
 

@@ -6,10 +6,14 @@
 
 import chalk from "chalk";
 import { Engine } from "@cjhyy/code-shell-core";
+import { EngineRuntime } from "@cjhyy/code-shell-core";
+import { ChatSessionManager } from "@cjhyy/code-shell-core";
 import { AgentServer } from "@cjhyy/code-shell-core";
 import { AgentClient } from "@cjhyy/code-shell-core";
 import { createInProcessTransport } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
+import { MCPManager } from "@cjhyy/code-shell-core";
+import { CostTracker } from "@cjhyy/code-shell-core";
 import { resolveApiKey } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import type { LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
@@ -122,10 +126,8 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   const permissionMode = (options.permissionMode ?? "acceptEdits") as PermissionMode;
   const maxContextTokens = settings.context.maxTokens ?? 200_000;
 
-  // 1. Create the engine (server-side)
-  const engine = new Engine({
-    llm: llmConfig,
-    cwd,
+  // ── Shared config passed into every session engine ─────────────
+  const sharedCfg = {
     preset: options.preset ?? settings.agent.preset,
     enabledBuiltinTools: settings.agent.enabledBuiltinTools,
     disabledBuiltinTools: settings.agent.disabledBuiltinTools,
@@ -138,26 +140,82 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     costStore: costTracker,
     mcpServers: settings.mcpServers,
     approvalBackend: getInteractiveApprovalBackend(),
+  };
+
+  // 1. Seed engine — calls populateModelPoolFromSettings() in ctor so the
+  //    model pool and tool registry are fully populated. Discarded after
+  //    resource extraction (never runs a task).
+  const seedEngine = new Engine({ llm: llmConfig, cwd });
+
+  // 2. Extract shared resources from seed engine
+  const modelPool = seedEngine.getModelPool();
+  const toolRegistry = seedEngine.getToolRegistry();
+  const resolvedLlmConfig = seedEngine.getConfig().llm;
+  // Build the shared SettingsManager wrapper (reuse from above).
+  const settingsManager = new SettingsManager(cwd);
+  // MCPManager: no-op holder satisfying EngineRuntime type; individual
+  // session engines connect to mcpServers from their config.
+  // TODO(future): aggregate MCP connections across sessions at the runtime level.
+  const mcpPool = new MCPManager(toolRegistry);
+  // CostTracker: fresh shared instance for this process.
+  // TODO(future): thread into Engine cost accounting once Engine reads runtime.costTracker.
+  const sessionCostTracker = new CostTracker();
+
+  // 3. Build the shared EngineRuntime
+  const runtime = new EngineRuntime({
+    modelPool,
+    toolRegistry,
+    settings: settingsManager,
+    mcpPool,
+    costTracker: sessionCostTracker,
   });
 
-  // 2. Create in-process transport pair
+  // 4. ChatSessionManager — single session "tui-main" (or resumed sid)
+  const chatManager = new ChatSessionManager({
+    runtime,
+    engineFactory: (slice) =>
+      new Engine({
+        llm: resolvedLlmConfig,
+        cwd,
+        runtime,
+        ...sharedCfg,
+        // Per-session overrides from the protocol request take precedence
+        ...(slice.permissionMode ? { permissionMode: slice.permissionMode } : {}),
+        ...(slice.preset ? { preset: slice.preset } : {}),
+        ...(slice.customSystemPrompt !== undefined ? { customSystemPrompt: slice.customSystemPrompt } : {}),
+        ...(slice.appendSystemPrompt !== undefined ? { appendSystemPrompt: slice.appendSystemPrompt } : {}),
+        ...(slice.maxTurns !== undefined ? { maxTurns: slice.maxTurns } : {}),
+        ...(slice.maxContextTokens !== undefined ? { maxContextTokens: slice.maxContextTokens } : {}),
+        ...(slice.cwd ? { cwd: slice.cwd } : {}),
+      }),
+    maxSessions: 4,
+    idleTtlMs: 30 * 60 * 1000,
+  });
+  chatManager.startIdleSweeper();
+
+  // 5. Create in-process transport pair
   const [serverTransport, clientTransport] = createInProcessTransport();
 
-  // 3. Wire up AgentServer (wraps engine, handles protocol)
-  const _server = new AgentServer({ engine, transport: serverTransport });
+  // 6. Wire up AgentServer (wraps chatManager, handles protocol)
+  const _server = new AgentServer({ chatManager, transport: serverTransport });
 
-  // 4. Create AgentClient (UI-side)
+  // 7. Create AgentClient (UI-side)
   const client = new AgentClient({ transport: clientTransport });
 
-  // 5. Launch Ink UI with the client
+  // Fixed sessionId — every user message in this REPL session routes to the
+  // same engine. Use the --resume id when provided so conversation history
+  // is correctly continued.
+  const tuiSessionId = options.resume ?? "tui-main";
+
+  // 8. Launch Ink UI with the client
   await startInkRepl({
     client,
     model,
     effort,
     maxTurns,
     cwd,
-    maxContextTokens: engine.maxContextTokens,
-    sessionId: options.resume,
+    maxContextTokens,
+    sessionId: tuiSessionId,
     prefill: options.prefill,
   });
 }
