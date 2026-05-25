@@ -35,6 +35,7 @@ interface SidebarProps {
   onPinRepo: (id: string, pinned: boolean) => void;
   onRenameRepo: (id: string, name: string) => void;
   onArchiveAllSessions: (id: string) => void;
+  onCreateWorktree: (repo: Repo) => void;
   onNewConversationForRepo: (id: string | null) => void;
 
   onNewConversation: () => void;
@@ -75,6 +76,7 @@ export function Sidebar({
   onPinRepo,
   onRenameRepo,
   onArchiveAllSessions,
+  onCreateWorktree,
   onNewConversationForRepo,
   onNewConversation,
   onOpenSearch,
@@ -111,10 +113,7 @@ export function Sidebar({
     },
     {
       label: "创建永久工作树",
-      // Worktree wiring lands in a later batch; show the entry now so
-      // users see the intent, but no-op until the IPC is in place.
-      disabled: true,
-      onClick: () => undefined,
+      onClick: () => onCreateWorktree(repo),
     },
     {
       label: "重命名项目…",
@@ -150,6 +149,12 @@ export function Sidebar({
       onClick: () => {
         const t = prompt("会话标题", s.title);
         if (t !== null && t.trim()) onRenameSession(repoId, s.id, t.trim());
+      },
+    },
+    {
+      label: "复制 session ID",
+      onClick: () => {
+        void navigator.clipboard.writeText(s.id);
       },
     },
     s.archived
@@ -346,7 +351,7 @@ function ProjectGroup({
           }}
           aria-label={collapsed ? "展开" : "折叠"}
         >
-          {collapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+          {collapsed ? <ChevronRight size={14} strokeWidth={2.25} /> : <ChevronDown size={14} strokeWidth={2.25} />}
         </button>
         <Folder size={13} className="project-icon" />
         <span className="project-name">{repoLabel(repo)}</span>

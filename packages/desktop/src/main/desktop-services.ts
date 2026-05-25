@@ -159,8 +159,13 @@ export async function createPermanentWorktree(
 
   await fs.mkdir(path.dirname(worktreePath), { recursive: true });
   await gitRun(root, ["worktree", "add", "-b", branch, worktreePath]);
-  await symlinkLargeDirectories(root, worktreePath);
-
+  // No node_modules / .venv / .pnpm-store symlinks: in a bun or pnpm
+  // workspace monorepo, root node_modules holds RELATIVE symlinks like
+  // `@scope/pkg -> ../../packages/pkg`. Symlinking the whole tree into
+  // ../.worktrees/foo would make those workspace links resolve to the
+  // SOURCE repo's packages/*, not the worktree's — silent
+  // edits-don't-take-effect bugs. Users should `bun install` in the
+  // worktree themselves; correct over fast.
   return { path: worktreePath, name, branch, originalBranch };
 }
 
@@ -241,19 +246,3 @@ function normalizeWorktreeName(input: string): string {
   return slug || "worktree";
 }
 
-async function symlinkLargeDirectories(sourceRoot: string, worktreePath: string): Promise<void> {
-  const largeDirs = ["node_modules", ".venv", "vendor", ".pnpm-store"];
-  await Promise.all(largeDirs.map(async (dir) => {
-    const source = path.join(sourceRoot, dir);
-    const target = path.join(worktreePath, dir);
-    try {
-      const stat = await fs.lstat(source);
-      if (!stat.isDirectory()) return;
-      await fs.lstat(target).then(() => undefined, async () => {
-        await fs.symlink(source, target, "dir");
-      });
-    } catch {
-      // Best effort only: symlink failures should not make worktree creation fail.
-    }
-  }));
-}

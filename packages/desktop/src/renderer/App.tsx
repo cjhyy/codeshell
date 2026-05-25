@@ -271,6 +271,38 @@ function App() {
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
   };
 
+  const handleCreateWorktree = async (repo: Repo): Promise<void> => {
+    const base = repo.displayName || repo.name;
+    const requested = prompt("工作树名称", base);
+    if (requested === null || !requested.trim()) return;
+    try {
+      const created = await window.codeshell.createWorktree(repo.path, requested);
+      const next: Repo = {
+        id: makeRepoId(),
+        name: `${base} · ${created.name}`,
+        path: created.path,
+        addedAt: Date.now(),
+      };
+      const existing = repos.find((r) => r.path === created.path);
+      setRepos((prev) => {
+        const dup = prev.find((r) => r.path === created.path);
+        return dup ? prev : [...prev, next];
+      });
+      setActiveRepoId(existing?.id ?? next.id);
+      setSessionIndices((prev) => ({
+        ...prev,
+        [existing?.id ?? next.id]: loadSessionIndex(existing?.id ?? next.id),
+      }));
+      window.codeshell.log("repo.worktree_created", {
+        source: repo.path,
+        path: created.path,
+        branch: created.branch,
+      });
+    } catch (e) {
+      alert(String(e instanceof Error ? e.message : e));
+    }
+  };
+
   const handleRemoveRepo = (id: string): void => {
     setRepos((prev) => prev.filter((r) => r.id !== id));
     if (activeRepoId === id) setActiveRepoId(null);
@@ -778,6 +810,16 @@ function App() {
       <div className="settings-app-shell">
         <SettingsPage
           activeRepoPath={activeRepo?.path ?? null}
+          repos={repos}
+          sessionIndices={sessionIndices}
+          onRestoreArchivedSession={(repoId, sessionId) => {
+            const next = archiveSession(repoId, sessionId, false);
+            setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+          }}
+          onDeleteArchivedSession={(repoId, sessionId) => {
+            const next = deleteSessionLocal(repoId, sessionId);
+            setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+          }}
           onBack={() => setViewMode("chat")}
         />
       </div>
@@ -814,6 +856,7 @@ function App() {
           onPinRepo={handlePinRepo}
           onRenameRepo={handleRenameRepo}
           onArchiveAllSessions={handleArchiveAllSessions}
+          onCreateWorktree={(repo) => { void handleCreateWorktree(repo); }}
           onNewConversationForRepo={handleNewConversationForRepo}
           onNewConversation={handleNewConversation}
           onOpenSearch={() => setSessionSearchOpen(true)}
