@@ -69,16 +69,27 @@ const seedEngine = new Engine({
 const modelPool = seedEngine.getModelPool();
 const toolRegistry = seedEngine.getToolRegistry();
 
-// SettingsManager is constructed fresh so the runtime owns its instance.
-const sharedSettings = new SettingsManager(cwd);
+// Capture the seed engine's resolved llmConfig (post-populateModelPoolFromSettings).
+// This includes resolved provider/baseUrl/apiKey from settings.providers[].
+const resolvedLlmConfig = seedEngine.getConfig().llm;
+
+// Reuse the same SettingsManager instance for the runtime instead of constructing
+// a fresh one — avoids duplication and keeps the pattern cleaner.
+const sharedSettings = settingsManager;
 
 // MCPManager: not connected to any servers at bootstrap time.
 // Individual session engines will connect to mcpServers from their config.
 // This instance satisfies the EngineRuntime type requirement; it is a
 // no-op holder until an engineFactory caller opts to attach servers.
+// TODO(future) — currently a top-level placeholder. Future work: aggregate
+// MCP server connections across sessions instead of each session creating
+// its own MCPManager via Engine.run lazy init.
 const mcpPool = new MCPManager(toolRegistry);
 
 // CostTracker: shared across all sessions for aggregate tracking.
+// TODO(future) — shared across all sessions, but Engine doesn't yet read
+// runtime.costTracker. Future work: per-session cost accounting through
+// the shared runtime.
 const costTracker = new CostTracker();
 
 // ─── Step 3: build the shared EngineRuntime ───────────────────────
@@ -97,7 +108,7 @@ const chatManager = new ChatSessionManager({
   runtime,
   engineFactory: (slice) =>
     new Engine({
-      llm: llmConfig,
+      llm: resolvedLlmConfig,
       cwd,
       runtime,
       // Per-session overrides from the protocol request
