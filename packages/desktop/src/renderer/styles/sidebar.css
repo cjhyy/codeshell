@@ -208,27 +208,38 @@
 .session-row-more:hover { color: var(--fg-primary); }
 .session-row.archived .session-title { color: var(--fg-muted); }
 
-/* Archived group toggle, sits under live sessions */
-.archived-group { padding-bottom: var(--sp-1); }
-.archived-toggle {
-  display: inline-flex;
+/* Hover-revealed action button on the right of a session row.
+ * Replaces the relative-time / ⌘N hint on hover (mutually exclusive
+ * via .session-row:hover .session-time / .session-kbd below). */
+.session-action {
+  display: none;
   align-items: center;
-  gap: 4px;
-  margin-left: 24px;
-  padding: 2px var(--sp-2);
+  justify-content: center;
+  height: 20px;
+  padding: 0 6px;
   border-radius: var(--radius-sm);
-  font-size: var(--fz-xs);
   color: var(--fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  background: transparent;
+  font-size: var(--fz-xs);
 }
-.archived-toggle:hover { background: var(--bg-hover); color: var(--fg-primary); }
-.archived-count {
-  margin-left: 2px;
-  font-variant-numeric: tabular-nums;
+.session-row:hover .session-action-archive { display: inline-flex; }
+.session-row:hover .session-action-archive ~ .session-time,
+.session-row:hover .session-action-archive ~ .session-kbd { display: none; }
+.session-action-archive:hover { background: var(--border-subtle); color: var(--fg-primary); }
+
+/* Confirm pill — replaces the archive icon after the first click. */
+.session-action-confirm {
+  display: inline-flex;
+  background: transparent;
+  color: var(--status-err);
+  border: 1px solid var(--status-err);
+  font-weight: 500;
+  padding: 0 8px;
+  height: 20px;
 }
-.session-list-archived .session-row { opacity: 0.75; }
-.session-list-archived .session-row:hover { opacity: 1; }
+.session-action-confirm:hover {
+  background: color-mix(in srgb, var(--status-err) 10%, transparent);
+}
 
 /* Empty state */
 .repo-empty {

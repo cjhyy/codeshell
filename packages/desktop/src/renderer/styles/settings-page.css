@@ -120,6 +120,67 @@
   border-color: var(--accent);
   background: var(--bg-selected);
 }
+
+/* Archived sessions list (Settings → 已归档对话). */
+.archived-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.archived-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.archived-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.archived-row-title {
+  color: var(--fg-primary);
+  font-size: var(--fz-md);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.archived-row-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+}
+.archived-row-actions { display: flex; gap: var(--sp-1); flex-shrink: 0; }
+.archived-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-secondary);
+  font-size: var(--fz-sm);
+}
+.archived-action:hover { background: var(--bg-hover); color: var(--fg-primary); }
+.archived-action-danger { color: var(--status-err); border-color: var(--status-err); }
+.archived-action-danger:hover {
+  background: color-mix(in srgb, var(--status-err) 10%, transparent);
+  color: var(--status-err);
+}
+
 .settings-option-title {
   color: var(--fg-primary);
   font-weight: 600;

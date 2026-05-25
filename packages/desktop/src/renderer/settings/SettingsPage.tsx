@@ -23,6 +23,7 @@ import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import { PluginsAndSkillsSection } from "./PluginsAndSkillsSection";
 import { AppearanceSection } from "./AppearanceSection";
+import { ArchivedSessionsSection } from "./ArchivedSessionsSection";
 
 type ModuleId =
   | "general"
@@ -156,6 +157,7 @@ export function SettingsPage({ activeRepoPath, onBack }: Props) {
             {active === "plugins-skills" && (
               <PluginsAndSkillsSection activeRepoPath={activeRepoPath} />
             )}
+            {active === "archived" && <ArchivedSessionsSection />}
 
             {/* Modules that don't have a real implementation yet show a
                 placeholder rather than disappearing. Better visible
@@ -168,8 +170,7 @@ export function SettingsPage({ activeRepoPath, onBack }: Props) {
               active === "environment" ||
               active === "worktree" ||
               active === "browser" ||
-              active === "computer" ||
-              active === "archived") && (
+              active === "computer") && (
               <section className="settings-section">
                 <div className="approvals-empty">
                   「{MODULES.find((m) => m.id === active)?.label}」模块的设置项还未实现。

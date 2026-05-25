@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   MessageSquare,
   Search,
@@ -10,6 +10,7 @@ import {
   FolderPlus,
   MoreHorizontal,
   PenSquare,
+  Archive,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -216,6 +217,7 @@ export function Sidebar({
                 e.preventDefault();
                 setMenu({ kind: "session", x: e.clientX, y: e.clientY, repoId: repo.id, session: s });
               }}
+              onArchiveSession={(sid) => onArchiveSession(repo.id, sid, true)}
             />
           ))}
 
@@ -228,6 +230,7 @@ export function Sidebar({
                 e.preventDefault();
                 setMenu({ kind: "session", x: e.clientX, y: e.clientY, repoId: null, session: s });
               }}
+              onArchiveSession={(sid) => onArchiveSession(null, sid, true)}
             />
           )}
         </div>
@@ -297,6 +300,7 @@ function ProjectGroup({
   onNewChat,
   onRepoContextMenu,
   onSessionContextMenu,
+  onArchiveSession,
 }: {
   repo: Repo;
   index: SessionIndex | undefined;
@@ -310,13 +314,12 @@ function ProjectGroup({
   onNewChat: () => void;
   onRepoContextMenu: (e: React.MouseEvent) => void;
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
+  onArchiveSession: (sid: string) => void;
 }) {
   const [showMore, setShowMore] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
 
   const all = index?.sessions ?? [];
   const live = useMemo(() => all.filter((s) => !s.archived), [all]);
-  const archived = useMemo(() => all.filter((s) => s.archived), [all]);
 
   const visibleLive = useMemo(
     () => (showMore ? live : live.slice(0, COMPACT_SESSION_LIMIT)),
@@ -387,6 +390,7 @@ function ProjectGroup({
                   kbdIndex={i + 1}
                   onClick={() => onSelectSession(s.id)}
                   onContextMenu={(e) => onSessionContextMenu(e, s)}
+                  onArchive={() => onArchiveSession(s.id)}
                 />
               ))}
               {hiddenLiveCount > 0 && !showMore && (
@@ -399,34 +403,6 @@ function ProjectGroup({
                 </li>
               )}
             </ul>
-          )}
-
-          {archived.length > 0 && (
-            <div className="archived-group">
-              <button
-                className="archived-toggle"
-                onClick={() => setShowArchived((v) => !v)}
-              >
-                {showArchived ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-                <span>已归档</span>
-                <span className="archived-count">{archived.length}</span>
-              </button>
-              {showArchived && (
-                <ul className="session-list session-list-archived">
-                  {archived.map((s) => (
-                    <SessionRow
-                      key={s.id}
-                      s={s}
-                      isActive={isActiveRepo && activeSessionId === s.id}
-                      showKbd={false}
-                      kbdIndex={0}
-                      onClick={() => onSelectSession(s.id)}
-                      onContextMenu={(e) => onSessionContextMenu(e, s)}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
           )}
         </>
       )}
@@ -444,11 +420,13 @@ function NoRepoSection({
   activeSessionId,
   onSelectSession,
   onSessionContextMenu,
+  onArchiveSession,
 }: {
   sessions: SessionSummary[];
   activeSessionId: string | null;
   onSelectSession: (sid: string) => void;
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
+  onArchiveSession: (sid: string) => void;
 }) {
   if (sessions.length === 0) return null;
   return (
@@ -464,6 +442,7 @@ function NoRepoSection({
             kbdIndex={0}
             onClick={() => onSelectSession(s.id)}
             onContextMenu={(e) => onSessionContextMenu(e, s)}
+            onArchive={() => onArchiveSession(s.id)}
           />
         ))}
       </ul>
@@ -478,6 +457,7 @@ function SessionRow({
   kbdIndex,
   onClick,
   onContextMenu,
+  onArchive,
 }: {
   s: SessionSummary;
   isActive: boolean;
@@ -485,20 +465,75 @@ function SessionRow({
   kbdIndex: number;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
+  onArchive?: () => void;
 }) {
+  const [confirming, setConfirming] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const armConfirm = (e: React.MouseEvent): void => {
+    e.stopPropagation();
+    setConfirming(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    // Auto-revert if the user wanders off — same "tap twice or it cancels"
+    // pattern as the screenshot reference.
+    timerRef.current = setTimeout(() => setConfirming(false), 2500);
+  };
+
+  const fireArchive = (e: React.MouseEvent): void => {
+    e.stopPropagation();
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setConfirming(false);
+    onArchive?.();
+  };
+
   return (
     <li
       className={`session-row${isActive ? " active" : ""}${s.archived ? " archived" : ""}`}
       onClick={onClick}
       onContextMenu={onContextMenu}
+      onMouseLeave={() => {
+        if (confirming) {
+          if (timerRef.current) clearTimeout(timerRef.current);
+          setConfirming(false);
+        }
+      }}
       title={s.title}
     >
       <span className="session-title">{s.title}</span>
       <span className="session-meta-right">
-        {showKbd ? (
-          <kbd className="session-kbd">⌘{kbdIndex}</kbd>
+        {confirming ? (
+          <button
+            className="session-action session-action-confirm"
+            onClick={fireArchive}
+            aria-label="确认归档"
+            title="确认归档"
+          >
+            确认
+          </button>
         ) : (
-          <span className="session-time">{formatRelative(s.updatedAt)}</span>
+          <>
+            {onArchive && (
+              <button
+                className="session-action session-action-archive"
+                onClick={armConfirm}
+                aria-label="归档"
+                title="归档"
+              >
+                <Archive size={12} />
+              </button>
+            )}
+            {showKbd ? (
+              <kbd className="session-kbd">⌘{kbdIndex}</kbd>
+            ) : (
+              <span className="session-time">{formatRelative(s.updatedAt)}</span>
+            )}
+          </>
         )}
       </span>
     </li>
