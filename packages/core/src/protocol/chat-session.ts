@@ -8,7 +8,6 @@ export interface ChatSessionOptions {
 }
 
 export interface TurnOpts {
-  cwd?: string;
   onStream?: (event: StreamEvent) => void;
 }
 
@@ -27,6 +26,13 @@ interface QueuedTurn {
 export class ChatSession {
   readonly id: string;
   readonly engine: Engine;
+  /**
+   * Per-session approval callbacks indexed by tool-call requestId.
+   * `readonly` guards the Map reference (preventing reassignment); the
+   * contents are mutated by `.set()` / `.delete()` as approvals come and go.
+   * Task 10 will register entries here when the Engine raises an approval
+   * request and clean them up on response.
+   */
   readonly pendingApprovals = new Map<string, (decision: unknown) => void>();
   lastActivityAt = Date.now();
 
@@ -49,6 +55,14 @@ export class ChatSession {
     });
   }
 
+  /**
+   * Abort the in-flight turn and drain queued turns.
+   *
+   * Relies on `engine.run()` honouring the `AbortSignal`. If `engine.run` were
+   * to swallow the abort and resolve successfully, the caller of the in-flight
+   * `enqueueTurn` would observe success — not a cancellation. The queued turns
+   * are always rejected regardless.
+   */
   cancel(): void {
     this.controller?.abort();
     // Drain queued turns as cancelled
