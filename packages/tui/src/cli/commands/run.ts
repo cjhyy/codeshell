@@ -219,7 +219,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
   // 5. Wire up in-process transport + server + client
   const [serverTransport, clientTransport] = createInProcessTransport();
-  const _server = new AgentServer({ chatManager, transport: serverTransport });
+  const server = new AgentServer({ chatManager, transport: serverTransport });
   const client = new AgentClient({ transport: clientTransport });
 
   // Unique sessionId per run invocation; use --resume if provided.
@@ -241,6 +241,9 @@ export async function runCommand(options: RunOptions): Promise<void> {
 
     process.exit(result.reason === "completed" ? 0 : 1);
   } finally {
+    // Tear down in correct order: server first (aborts in-flight run, emits
+    // shutdown notification through still-open transport), then client.
+    server.close();
     client.close();
   }
 }
