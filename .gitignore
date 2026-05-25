@@ -26,3 +26,9 @@ examples/*/.runs/
 docs/test-outputs/*
 !docs/test-outputs/.gitkeep
 out/
+
+# superpowers skills' local runtime state (PID/log/events files per
+# brainstorm session). Pure machine-local — every run regenerates.
+# Brainstorm "content/" output (HTML/MD artifacts) is intentionally
+# allowed through.
+.superpowers/brainstorm/*/state/
