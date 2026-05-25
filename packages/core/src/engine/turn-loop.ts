@@ -104,7 +104,38 @@ export class TurnLoop {
   constructor(
     private readonly deps: TurnLoopDeps,
     private readonly config: TurnLoopConfig,
-  ) {}
+  ) {
+    // Wrap onStream so a single throwing handler can't silently break
+    // the channel for the rest of the run. A 2026-05-25 incident saw a
+    // sub-agent's events stop reaching the renderer ~23s into its run —
+    // the engine kept executing tools, but every subsequent stream emit
+    // was happening into a dead pipe. With this guard the failure shows
+    // up in ~/.code-shell/logs/engine-*.log with the offending event
+    // type, instead of presenting as a frozen UI.
+    //
+    // We replace `config.onStream` so the wrap covers BOTH direct calls
+    // (`this.config.onStream?.({...})` inside this class) AND places
+    // where the reference is passed onward (ModelFacade, StreamingToolQueue).
+    if (this.config.onStream) {
+      const inner = this.config.onStream;
+      this.config = {
+        ...this.config,
+        onStream: (event) => {
+          try {
+            inner(event);
+          } catch (err) {
+            // Use root logger, not currentTurnLog — this can fire from
+            // outside a turn iteration (e.g. ModelFacade after run() resolves).
+            logger.warn("stream.handler_threw", {
+              eventType: (event as { type?: string }).type,
+              error: (err as Error).message,
+              stack: (err as Error).stack?.split("\n").slice(0, 4).join("\n"),
+            });
+          }
+        },
+      };
+    }
+  }
 
   /**
    * Emit a lifecycle hook with isSubAgent + sessionId auto-merged into data.

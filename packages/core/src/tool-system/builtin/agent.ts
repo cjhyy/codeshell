@@ -14,6 +14,27 @@ import { asyncAgentRegistry } from "./agent-registry.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { notificationQueue } from "./agent-notifications.js";
 import { nanoid } from "nanoid";
+import { logger } from "../../logging/logger.js";
+
+/**
+ * Invoke a stream callback that came from outside the engine's own
+ * TurnLoop wrap (e.g. `subAgentSpawner.parentStream`, which is the
+ * parent Engine.run's caller-supplied onStream forwarded straight
+ * through). A throw here would otherwise bubble out of the Agent tool
+ * and abort the parent turn, even though the underlying emit is a UI
+ * marker the parent doesn't need to succeed.
+ */
+function safeEmit(sink: StreamCallback | undefined, event: Parameters<StreamCallback>[0]): void {
+  if (!sink) return;
+  try {
+    sink(event);
+  } catch (err) {
+    logger.warn("agent.stream_handler_threw", {
+      eventType: (event as { type?: string }).type,
+      error: (err as Error).message,
+    });
+  }
+}
 
 export const agentToolDef: ToolDefinition = {
   name: "Agent",
@@ -97,7 +118,7 @@ async function runSubAgent(
   const { agentId, name, description } = opts;
   const startEndSink = uiStream ?? spawner.parentStream;
 
-  startEndSink?.({ type: "agent_start", agentId, name, description });
+  safeEmit(startEndSink, { type: "agent_start", agentId, name, description });
 
   const parentWasInPlanMode = isInPlanMode();
   if (parentWasInPlanMode) resetPlanMode();
@@ -105,7 +126,7 @@ async function runSubAgent(
   try {
     const text = await spawner.spawn({ ...opts, streamOverride });
     const finalText = text || `Agent completed but produced no text output.`;
-    startEndSink?.({ type: "agent_end", agentId, name, description, text: finalText });
+    safeEmit(startEndSink, { type: "agent_end", agentId, name, description, text: finalText });
     return finalText;
   } finally {
     if (parentWasInPlanMode) restorePlanMode();
@@ -265,7 +286,7 @@ export async function agentTool(
       signal: parentSignal ?? new AbortController().signal,
     });
   } catch (err) {
-    parentStream?.({ type: "agent_end", agentId, name, description, error: (err as Error).message });
+    safeEmit(parentStream, { type: "agent_end", agentId, name, description, error: (err as Error).message });
     if (parentSignal?.aborted) return "Agent was aborted.";
     return `Agent error: ${(err as Error).message}`;
   }
