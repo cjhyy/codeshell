@@ -126,6 +126,11 @@ export interface CodeshellApi {
     cwd?: string,
     name?: string,
   ): Promise<InstalledSkill>;
+  probeMcpServers(
+    configs: McpServerProbeInput[],
+    force?: boolean,
+  ): Promise<McpProbeResult[]>;
+  invalidateMcpProbeCache(name?: string): Promise<void>;
   resolveModelMeta(
     models: Array<{ key: string; model?: string; providerKey?: string; maxContextTokens?: number | null }>,
     providers: Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>,
@@ -181,6 +186,32 @@ export interface DesktopSessionSummary {
   size: number;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface McpServerProbeInput {
+  name: string;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  transport?: "stdio" | "streamable-http" | "sse";
+  headers?: Record<string, string>;
+}
+
+export interface McpProbedTool {
+  name: string;
+  description?: string;
+}
+
+export interface McpProbeResult {
+  name: string;
+  transport: "stdio" | "streamable-http" | "sse";
+  status: "ok" | "error" | "probing" | "unknown";
+  lastProbedAt?: string;
+  toolCount?: number;
+  tools?: McpProbedTool[];
+  errorMessage?: string;
+  errorDetail?: string;
 }
 
 export interface SkillSummary {

@@ -37,6 +37,11 @@ import { loadRecents, pushRecent } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import { getTrust, setTrust, type TrustLevel } from "./trust-store.js";
 import { installAppMenu, refreshAppMenu } from "./menu.js";
+import {
+  probeMcpServers,
+  invalidateMcpProbeCache,
+  type McpServerConfig,
+} from "./mcp-probe-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -218,6 +223,19 @@ ipcMain.handle(
     return installSkillFromDirectory(sourceDir, scope, cwd, name);
   },
 );
+
+ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
+  if (!Array.isArray(raw)) return [];
+  const configs = raw.filter(
+    (x): x is McpServerConfig =>
+      !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
+  );
+  return probeMcpServers(configs, { force: Boolean(force) });
+});
+
+ipcMain.handle("mcp:invalidate", async (_e, name?: string) => {
+  invalidateMcpProbeCache(typeof name === "string" ? name : undefined);
+});
 
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
   if (!Array.isArray(models) || !Array.isArray(providers)) return [];

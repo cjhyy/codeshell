@@ -153,6 +153,10 @@ contextBridge.exposeInMainWorld("codeshell", {
     cwd?: string,
     name?: string,
   ) => ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
+  probeMcpServers: (configs: unknown, force?: boolean) =>
+    ipcRenderer.invoke("mcp:probe", configs, force),
+  invalidateMcpProbeCache: (name?: string) =>
+    ipcRenderer.invoke("mcp:invalidate", name),
   resolveModelMeta: (models: unknown, providers: unknown) =>
     ipcRenderer.invoke("models:resolve-meta", models, providers),
   listModels: (provider: unknown, refresh?: boolean) =>

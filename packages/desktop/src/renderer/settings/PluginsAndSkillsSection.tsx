@@ -2,29 +2,16 @@ import React, { useEffect, useState } from "react";
 import type { SkillSummary } from "../../preload/types";
 import { Select } from "../ui/Select";
 
-interface McpServer {
-  name: string;
-  command?: string;
-  url?: string;
-  transport?: string;
-}
-
 interface Props {
   activeRepoPath: string | null;
 }
 
 export function PluginsAndSkillsSection({ activeRepoPath }: Props) {
-  const [tab, setTab] = useState<"plugins" | "skills" | "available">("plugins");
+  const [tab, setTab] = useState<"skills" | "available">("skills");
 
   return (
     <section className="settings-section ps-section">
       <div className="settings-scope">
-        <button
-          className={`logs-bucket${tab === "plugins" ? " active" : ""}`}
-          onClick={() => setTab("plugins")}
-        >
-          已安装插件
-        </button>
         <button
           className={`logs-bucket${tab === "skills" ? " active" : ""}`}
           onClick={() => setTab("skills")}
@@ -39,7 +26,6 @@ export function PluginsAndSkillsSection({ activeRepoPath }: Props) {
         </button>
       </div>
 
-      {tab === "plugins" && <InstalledPlugins />}
       {tab === "skills" && <InstalledSkills activeRepoPath={activeRepoPath} />}
       {tab === "available" && (
         <AddPanel
@@ -48,75 +34,6 @@ export function PluginsAndSkillsSection({ activeRepoPath }: Props) {
         />
       )}
     </section>
-  );
-}
-
-function InstalledPlugins() {
-  const [servers, setServers] = useState<McpServer[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const refresh = async () => {
-    try {
-      const s = (await window.codeshell.getSettings("user")) ?? {};
-      setServers(mcpServersFromSettings(s.mcpServers));
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
-    }
-  };
-
-  useEffect(() => {
-    void refresh();
-  }, []);
-
-  // No "disable" toggle: core only reads `mcpServers`. A separate
-  // `disabledMcpServers` bucket would be UI-only state that no part of
-  // the engine consults, so toggling it back to "enabled" later would
-  // be a lie. Removing the server is the only honest verb here; users
-  // can re-add via 「MCP 服务器」 if they need it again.
-  const remove = async (server: McpServer) => {
-    if (!confirm(`移除 MCP 插件「${server.name}」？\n要重新启用需要再次添加。`)) return;
-    try {
-      await window.codeshell.updateSettings("user", { mcpServers: { [server.name]: null } });
-      await refresh();
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
-    }
-  };
-
-  if (error) return <div className="view-error">{error}</div>;
-  if (!servers) return <div className="view-loading">加载中…</div>;
-
-  if (servers.length === 0) {
-    return (
-      <div className="approvals-empty">
-        没有已安装的 MCP 插件。到「MCP 服务器」模块添加。
-      </div>
-    );
-  }
-
-  return (
-    <ul className="mcp-list">
-      {servers.map((s) => (
-        <li key={s.name} className="mcp-row">
-          <div className="mcp-row-head">
-            <strong>{s.name}</strong>
-            <span className="session-meta">{s.transport ?? (s.url ? "http" : "stdio")}</span>
-            <button
-              className="approval-btn deny"
-              onClick={() => void remove(s)}
-              title="下次启动 engine 时移除"
-            >
-              移除
-            </button>
-          </div>
-          {(s.command || s.url) && (
-            <div className="mcp-row-detail">
-              <code>{s.command ?? s.url}</code>
-            </div>
-          )}
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -329,15 +246,3 @@ function AddPanel({
   );
 }
 
-function mcpServersFromSettings(value: unknown): McpServer[] {
-  if (Array.isArray(value)) return value as McpServer[];
-  if (value && typeof value === "object") {
-    return Object.entries(value as Record<string, unknown>)
-      .map(([name, raw]) => ({
-        name,
-        ...(raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}),
-      }))
-      .filter((x): x is McpServer => typeof x.name === "string");
-  }
-  return [];
-}
