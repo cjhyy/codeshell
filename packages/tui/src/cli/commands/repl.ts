@@ -54,8 +54,9 @@ function getEffortConfig(level: EffortLevel): { temperature: number; maxTokens: 
 export async function replCommand(options: ReplOptions): Promise<void> {
   const cwd = process.cwd();
 
-  // Load settings
-  let settings = new SettingsManager(cwd).get();
+  // Load settings — single SettingsManager instance reused throughout.
+  const settingsManager = new SettingsManager(cwd);
+  let settings = settingsManager.get();
 
   // Resolve API key.
   //
@@ -99,7 +100,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     baseUrl = result.baseUrl;
     // Reload settings — the wizard has just persisted the model pool / arena
     // entries, and downstream code (e.g. /model) reads them from settings.
-    settings = new SettingsManager(cwd).get();
+    settings = settingsManager.get();
   }
 
   model = model ?? "anthropic/claude-opus-4-6";
@@ -151,8 +152,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   const modelPool = seedEngine.getModelPool();
   const toolRegistry = seedEngine.getToolRegistry();
   const resolvedLlmConfig = seedEngine.getConfig().llm;
-  // Build the shared SettingsManager wrapper (reuse from above).
-  const settingsManager = new SettingsManager(cwd);
+  // settingsManager was hoisted to the top of replCommand; reused here.
   // MCPManager: no-op holder satisfying EngineRuntime type; individual
   // session engines connect to mcpServers from their config.
   // TODO(future): aggregate MCP connections across sessions at the runtime level.
@@ -188,7 +188,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
         ...(slice.maxContextTokens !== undefined ? { maxContextTokens: slice.maxContextTokens } : {}),
         ...(slice.cwd ? { cwd: slice.cwd } : {}),
       }),
-    maxSessions: 4,
+    maxSessions: 4,  // TUI is single-user; 4 accommodates a few sub-sessions without runaway resource use
     idleTtlMs: 30 * 60 * 1000,
   });
   chatManager.startIdleSweeper();

@@ -212,7 +212,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
         ...(slice.maxContextTokens !== undefined ? { maxContextTokens: slice.maxContextTokens } : {}),
         ...(slice.cwd ? { cwd: slice.cwd } : {}),
       }),
-    maxSessions: 4,
+    maxSessions: 1,  // one-shot run; exactly one session per invocation
     idleTtlMs: 30 * 60 * 1000,
   });
   chatManager.startIdleSweeper();
@@ -231,6 +231,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // Wire renderer to stream events from client
   client.onStreamEvent((envelope) => renderer.onEvent(envelope.event));
 
+  let exitCode = 1;
   try {
     const result = await client.run(options.task, runSessionId);
 
@@ -239,13 +240,14 @@ export async function runCommand(options: RunOptions): Promise<void> {
       turnCount: result.turnCount,
     });
 
-    process.exit(result.reason === "completed" ? 0 : 1);
+    exitCode = result.reason === "completed" ? 0 : 1;
   } finally {
     // Tear down in correct order: server first (aborts in-flight run, emits
     // shutdown notification through still-open transport), then client.
     server.close();
     client.close();
   }
+  process.exit(exitCode);
 }
 
 /**
