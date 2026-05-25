@@ -1,7 +1,7 @@
 /* Legacy chat-stream styles. Layout, sidebar, topbar, composer and
    buttons all live in styles/*.css. Anything remaining here is
-   strictly markdown-body + message-row + approval modal + welcome
-   overlay until those get their own files too. */
+   strictly markdown-body + message-row + welcome overlay until those
+   get their own files too. */
 
 .main { position: relative; }
 
@@ -128,59 +128,3 @@
   white-space: pre-wrap;
   font-family: inherit;
 }
-
-/* Approval modal */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-modal);
-}
-.modal {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  padding: 20px;
-  min-width: 480px;
-  max-width: 80vw;
-  box-shadow: var(--shadow-2);
-}
-.modal h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-  color: var(--fg-primary);
-}
-.modal-body { font-size: 13px; color: var(--fg-secondary); }
-.modal-args {
-  background: var(--bg-app);
-  border: 1px solid var(--border-subtle);
-  border-radius: 5px;
-  padding: 8px;
-  max-height: 240px;
-  overflow: auto;
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.modal-desc { margin-top: 8px; color: var(--fg-muted); }
-.modal-risk { margin-top: 4px; color: var(--fg-muted); }
-.modal-actions {
-  margin-top: 14px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.modal-actions input {
-  flex: 1;
-  background: var(--bg-elevated);
-  color: var(--fg-primary);
-  border: 1px solid var(--border-subtle);
-  border-radius: 5px;
-  padding: 6px 8px;
-  font: inherit;
-  font-size: 13px;
-  outline: none;
-}
-.modal-actions input:focus { border-color: var(--border-strong); }

@@ -484,36 +484,36 @@ If session data is currently grouped separately from projects:
 
 ## 9. Acceptance Checklist
 
-- [ ] Screenshot 1 is linked in this document and available under `docs/images/`.
-- [ ] Screenshot 2 is linked in this document and available under `docs/images/`.
-- [ ] Settings page screenshot is linked in this document and available under `docs/images/`.
-- [ ] Project menu screenshot is linked in this document and available under `docs/images/`.
-- [ ] Project switcher screenshot is linked in this document and available under `docs/images/`.
-- [ ] Session search screenshot is linked in this document and available under `docs/images/`.
-- [ ] No-repo dialogue screenshot is linked in this document and available under `docs/images/`.
-- [ ] Sidebar has `项目` section with project rows.
-- [ ] Sessions render nested below each project.
-- [ ] Active session row has selected background.
-- [ ] Settings is pinned to bottom-left.
-- [ ] Model/provider/permission settings are not primary sidebar peers.
-- [ ] Clicking Settings navigates to a real Settings page, not only a modal.
-- [ ] Settings page replaces the normal project/session sidebar instead of being embedded inside it.
-- [ ] Settings mode has a `返回应用` control.
-- [ ] `返回应用` restores the previous app workspace/session when possible.
-- [ ] Settings page has a left module list and main content panel.
-- [ ] Normal chat composer is not visible while in Settings mode.
-- [ ] Settings page includes `插件与 Skills`.
-- [ ] Permission mode control appears in the composer row.
-- [ ] Current session context progress appears in the composer row.
-- [ ] Model selector appears in the composer row.
-- [ ] Send/stop button is far right and visually prominent.
-- [ ] Composer layout matches the second screenshot's control grouping.
-- [ ] New conversation screen can switch repo.
-- [ ] New conversation screen supports `不使用项目`.
-- [ ] No-repo sessions appear under `对话` at the bottom of the sidebar.
-- [ ] Project sessions support `展开显示` when many sessions exist.
-- [ ] Search opens a modal to search sessions.
-- [ ] Project row menu includes pin/open in Finder/worktree/rename/archive/remove actions.
-- [ ] Plugin and Skill management are in one page.
-- [ ] Installed Skills can be viewed and enabled/disabled.
-- [ ] Installed Plugins can be viewed and enabled/disabled.
+- [x] Screenshot 1 is linked in this document and available under `docs/images/`.
+- [x] Screenshot 2 is linked in this document and available under `docs/images/`.
+- [x] Settings page screenshot is linked in this document and available under `docs/images/`.
+- [x] Project menu screenshot is linked in this document and available under `docs/images/`.
+- [x] Project switcher screenshot is linked in this document and available under `docs/images/`.
+- [x] Session search screenshot is linked in this document and available under `docs/images/`.
+- [x] No-repo dialogue screenshot is linked in this document and available under `docs/images/`.
+- [x] Sidebar has `项目` section with project rows.
+- [x] Sessions render nested below each project.
+- [x] Active session row has selected background.
+- [x] Settings is pinned to bottom-left.
+- [x] Model/provider/permission settings are not primary sidebar peers.
+- [x] Clicking Settings navigates to a real Settings page, not only a modal.
+- [x] Settings page replaces the normal project/session sidebar instead of being embedded inside it.
+- [x] Settings mode has a `返回应用` control.
+- [x] `返回应用` restores the previous app workspace/session when possible.
+- [x] Settings page has a left module list and main content panel.
+- [x] Normal chat composer is not visible while in Settings mode.
+- [x] Settings page includes `插件与 Skills`.
+- [x] Permission mode control appears in the composer row.
+- [x] Current session context progress appears in the composer row.
+- [x] Model selector appears in the composer row.
+- [x] Send/stop button is far right and visually prominent.
+- [x] Composer layout matches the second screenshot's control grouping.
+- [x] New conversation screen can switch repo.
+- [x] New conversation screen supports `不使用项目`.
+- [x] No-repo sessions appear under `对话` at the bottom of the sidebar.
+- [x] Project sessions support `展开显示` when many sessions exist.
+- [x] Search opens a modal to search sessions.
+- [x] Project row menu includes pin/open in Finder/worktree/rename/archive/remove actions.
+- [x] Plugin and Skill management are in one page.
+- [x] Installed Skills can be viewed and enabled/disabled.
+- [x] Installed Plugins can be viewed and enabled/disabled.

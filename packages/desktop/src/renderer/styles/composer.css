@@ -27,6 +27,24 @@
   margin: var(--sp-2) var(--sp-4);
 }
 
+/* New-chat layout: the composer + context dock float vertically near
+   the middle so the dock's project dropdown has room to expand
+   downward without pushing the textarea up. Once the conversation
+   starts (data-mode="active"), the composer goes back to docking at
+   the bottom of the chat region. */
+.chat { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.chat > .stream { flex: 1; min-height: 0; overflow: auto; }
+.chat[data-mode="new"] > .stream { flex: 0 0 auto; }
+.chat[data-mode="new"] {
+  justify-content: center;
+}
+.chat[data-mode="new"] .composer-shell {
+  max-width: 760px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .composer {
   padding: var(--sp-2) var(--sp-3) var(--sp-1);
   background: var(--bg-elevated);
@@ -281,6 +299,34 @@
   flex-wrap: wrap;
 }
 .composer-context-dock .composer-pill { font-weight: 400; }
+.composer-context-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  min-width: 0;
+  max-width: 180px;
+  padding: 0 var(--sp-2);
+  border-radius: 14px;
+  color: var(--fg-secondary);
+  font-size: var(--fz-sm);
+  white-space: nowrap;
+}
+.composer-context-pill svg {
+  flex-shrink: 0;
+  color: var(--fg-muted);
+}
+.composer-context-pill-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composer-context-dirty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-warn);
+  flex-shrink: 0;
+}
 .composer-context-dock .project-picker-popover {
   top: calc(100% + 6px);
   bottom: auto;

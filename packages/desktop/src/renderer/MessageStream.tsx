@@ -12,9 +12,16 @@ import { useStickToBottom } from "./chat/stickToBottom";
 interface Props {
   messages: Message[];
   onAskUserAnswer?: (requestId: string, answer: string) => void;
+  /**
+   * Optional trailing slot rendered after the last message but still
+   * inside the scrollable stream. Used by the chat shell to drop a
+   * pending ApprovalCard at the end of the transcript so it scrolls
+   * with the rest of the conversation (Codex-style inline approvals).
+   */
+  trailing?: React.ReactNode;
 }
 
-export function MessageStream({ messages, onAskUserAnswer }: Props) {
+export function MessageStream({ messages, onAskUserAnswer, trailing }: Props) {
   const ref = useStickToBottom<HTMLDivElement>(messages.length);
 
   return (
@@ -77,6 +84,7 @@ export function MessageStream({ messages, onAskUserAnswer }: Props) {
             );
         }
       })}
+      {trailing}
     </div>
   );
 }

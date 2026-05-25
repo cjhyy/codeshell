@@ -112,7 +112,7 @@ export function ContextRing({ used, max, busy }: Props) {
               </div>
               {!hasDeclaredMax && (
                 <div className="context-ring-tt-note">
-                  当前模型未在 settings.json 声明 maxContextTokens，使用 128k 作为默认。
+                  当前模型未在 settings.json 声明 maxContextTokens，使用 200k 作为默认。
                 </div>
               )}
             </>

@@ -1,5 +1,12 @@
 /* Full-page Settings layout (SettingsPage). */
 
+.settings-app-shell {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
 .settings-page {
   flex: 1;
   display: flex;
@@ -87,6 +94,41 @@
 }
 
 .ps-section { gap: var(--sp-3); }
+
+.settings-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-2);
+}
+.settings-option-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 72px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--fg-secondary);
+  text-align: left;
+}
+.settings-option-card:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+}
+.settings-option-card.active {
+  border-color: var(--accent);
+  background: var(--bg-selected);
+}
+.settings-option-title {
+  color: var(--fg-primary);
+  font-weight: 600;
+  font-size: var(--fz-md);
+}
+.settings-option-desc {
+  font-size: var(--fz-sm);
+  line-height: 1.4;
+}
 
 /* Skills list */
 .skills-panel { display: flex; flex-direction: column; gap: var(--sp-2); }

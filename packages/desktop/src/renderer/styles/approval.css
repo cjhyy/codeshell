@@ -44,6 +44,12 @@
   border-radius: var(--radius-sm);
   padding: var(--sp-2) var(--sp-3);
 }
+/* Codex-style: the inline approval anchor sits in the chat stream at
+   the tail of the transcript. Match the message rows' horizontal
+   gutter so the card aligns with assistant/user messages. */
+.approval-card-inline-anchor {
+  margin: var(--sp-2) var(--sp-4);
+}
 .approval-card.risk-medium { border-left-color: var(--status-warn); }
 .approval-card.risk-high   { border-left-color: var(--status-err); }
 .approval-card-head {

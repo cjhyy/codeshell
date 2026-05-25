@@ -174,16 +174,42 @@ function App() {
   const activeSessionId =
     sessionIndices[activeRepoKey]?.activeSessionId ?? null;
   const activeBucket = bucketKey(activeRepoId, activeSessionId);
+  const busy = busyKeys.has(activeBucket);
   const runningBucketRef = useRef<string | null>(null);
   const activeBucketRef = useRef(activeBucket);
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
+  const [activeGitMeta, setActiveGitMeta] = useState<{
+    branch: string | null;
+    clean: boolean | null;
+  }>({ branch: null, clean: null });
 
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
   useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
   useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeRepo?.path) {
+      setActiveGitMeta({ branch: null, clean: null });
+      return () => { cancelled = true; };
+    }
+    void window.codeshell.getGitStatus(activeRepo.path)
+      .then((status) => {
+        if (!cancelled) {
+          setActiveGitMeta({
+            branch: status.branch,
+            clean: status.clean,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setActiveGitMeta({ branch: null, clean: null });
+      });
+    return () => { cancelled = true; };
+  }, [activeRepo?.path, busy]);
 
   // No auto-create here: a null activeSessionId is the legitimate
   // "draft" state. A real session row only appears after the user
@@ -209,7 +235,6 @@ function App() {
   }, [transcripts, activeBucket, activeRepoId, activeSessionId]);
 
   const state = transcripts[activeBucket] ?? INITIAL_STATE;
-  const busy = busyKeys.has(activeBucket);
 
   const setBusyForKey = (key: string, val: boolean): void => {
     setBusyKeys((prev) => {
@@ -748,6 +773,17 @@ function App() {
     return s?.title ?? null;
   })();
 
+  if (view.viewMode === "settings_page") {
+    return (
+      <div className="settings-app-shell">
+        <SettingsPage
+          activeRepoPath={activeRepo?.path ?? null}
+          onBack={() => setViewMode("chat")}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className="app-grid"
@@ -804,12 +840,7 @@ function App() {
           <span className="main-toolbar-spacer" />
         </div>
         {lifecycle && <div className="banner">{lifecycle}</div>}
-        {view.viewMode === "settings_page" ? (
-          <SettingsPage
-            activeRepoPath={activeRepo?.path ?? null}
-            onBack={() => setViewMode("chat")}
-          />
-        ) : view.viewMode === "approvals" ? (
+        {view.viewMode === "approvals" ? (
           <ApprovalsView
             queue={approvalQueue}
             history={approvalHistory}
@@ -862,6 +893,8 @@ function App() {
               repos={repos}
               onSelectRepo={setActiveRepoId}
               onAddRepo={() => { void handleAddRepo(); }}
+              repoBranch={activeGitMeta.branch}
+              repoClean={activeGitMeta.clean}
             />
           </>
         )}

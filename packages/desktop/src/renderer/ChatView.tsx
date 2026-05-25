@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Paperclip, Mic, ArrowUp, Square } from "lucide-react";
+import { Paperclip, Mic, ArrowUp, Square, Monitor, GitBranch } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
@@ -37,6 +37,8 @@ interface Props {
   repos: Repo[];
   onSelectRepo: (id: string | null) => void;
   onAddRepo: () => void;
+  repoBranch?: string | null;
+  repoClean?: boolean | null;
 }
 
 const MAX_TEXTAREA_PX = 200;
@@ -60,6 +62,8 @@ export function ChatView({
   repos,
   onSelectRepo,
   onAddRepo,
+  repoBranch,
+  repoClean,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
@@ -149,14 +153,49 @@ export function ChatView({
     if (latestTasks && openAsk) break;
   }
 
+  const isNewChat = messages.length === 0;
+
+  // Codex-style inline approvals: when an approval is pending, drop
+  // the full ApprovalCard at the tail of the chat stream so it scrolls
+  // with the conversation. A compact sticky bar appears above the
+  // composer only when the inline card scrolls out of the viewport.
+  const inlineApprovalRef = useRef<HTMLDivElement>(null);
+  const [inlineApprovalVisible, setInlineApprovalVisible] = useState(true);
+  useEffect(() => {
+    if (!pendingApproval) { setInlineApprovalVisible(true); return; }
+    const el = inlineApprovalRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setInlineApprovalVisible(entry.isIntersecting),
+      { root: el.closest(".stream") ?? undefined, threshold: 0.15 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [pendingApproval?.requestId]);
+
+  const inlineApproval =
+    pendingApproval && onApprovalDecide ? (
+      <div
+        ref={inlineApprovalRef}
+        className="approval-card-inline-anchor"
+        data-request-id={pendingApproval.requestId}
+      >
+        <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
+      </div>
+    ) : null;
+
+  const showStickyApproval =
+    !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
+
   return (
-    <div className="chat">
+    <div className="chat" data-mode={isNewChat ? "new" : "active"}>
       <MessageStream
         messages={messages}
         onAskUserAnswer={onAskUserAnswer}
+        trailing={inlineApproval}
       />
 
-      {(latestTasks || openAsk || pendingApproval) && (
+      {(latestTasks || openAsk || showStickyApproval) && (
         <div className="pinned-above-composer">
           {latestTasks && <TaskListMessageView message={latestTasks} />}
           {openAsk && (
@@ -165,7 +204,7 @@ export function ChatView({
               onAnswer={onAskUserAnswer ?? (() => undefined)}
             />
           )}
-          {pendingApproval && onApprovalDecide && (
+          {showStickyApproval && pendingApproval && onApprovalDecide && (
             <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
           )}
         </div>
@@ -254,7 +293,7 @@ export function ChatView({
             would be confusing (cwd / context / engine sessionId are
             already tied to the existing repo). Use the sidebar to
             jump projects after a session has started. */}
-        {messages.length === 0 && (
+        {isNewChat && (
           <div className="composer-context-dock">
             <ProjectPicker
               repos={repos}
@@ -263,6 +302,20 @@ export function ChatView({
               onAddRepo={onAddRepo}
               disabled={busy}
             />
+            <span className="composer-context-pill" title="在本机当前工作区运行">
+              <Monitor size={12} />
+              <span>本地模式</span>
+            </span>
+            {repoBranch && (
+              <span
+                className="composer-context-pill"
+                title={repoClean === false ? "当前分支有未提交改动" : "当前 Git 分支"}
+              >
+                <GitBranch size={12} />
+                <span className="composer-context-pill-label">{repoBranch}</span>
+                {repoClean === false && <span className="composer-context-dirty-dot" />}
+              </span>
+            )}
           </div>
         )}
       </div>

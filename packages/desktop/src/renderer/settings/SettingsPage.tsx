@@ -22,6 +22,7 @@ import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import { PluginsAndSkillsSection } from "./PluginsAndSkillsSection";
+import { AppearanceSection } from "./AppearanceSection";
 
 type ModuleId =
   | "general"
@@ -143,6 +144,9 @@ export function SettingsPage({ activeRepoPath, onBack }: Props) {
                 <UpdaterSettingsRow />
               </>
             )}
+            {active === "appearance" && (
+              <AppearanceSection />
+            )}
             {active === "config" && (
               <ModelSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
@@ -156,8 +160,7 @@ export function SettingsPage({ activeRepoPath, onBack }: Props) {
             {/* Modules that don't have a real implementation yet show a
                 placeholder rather than disappearing. Better visible
                 'todo' than silent breakage. */}
-            {(active === "appearance" ||
-              active === "personalization" ||
+            {(active === "personalization" ||
               active === "shortcuts" ||
               active === "hooks" ||
               active === "connections" ||
