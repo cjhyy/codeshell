@@ -29,4 +29,24 @@ describe("EngineRuntime", () => {
     expect(rt.mcpPool).toBe(mcpPool);
     expect(rt.costTracker).toBe(costTracker);
   });
+
+  it("Engine accepts a shared EngineRuntime via constructor", async () => {
+    const { Engine } = await import("../packages/core/src/engine/engine.ts");
+    const rt = new EngineRuntime({
+      modelPool: {} as any,
+      toolRegistry: {} as any,
+      settings: {} as any,
+      mcpPool: {} as any,
+      costTracker: {} as any,
+    });
+    const e = new Engine({ runtime: rt, cwd: "/tmp", llm: { provider: "noop" } as any });
+    expect((e as any).runtime).toBe(rt);
+  });
+
+  it("Engine exposes planMode/permissionMode as instance fields", async () => {
+    const { Engine } = await import("../packages/core/src/engine/engine.ts");
+    const e = new Engine({ cwd: "/tmp", llm: { provider: "noop" } as any, permissionMode: "plan" });
+    expect(e.permissionMode).toBe("plan");
+    expect(e.planMode).toBe(true);
+  });
 });
