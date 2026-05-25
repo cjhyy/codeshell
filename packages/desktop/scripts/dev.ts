@@ -45,7 +45,18 @@ function spawnElectron(): void {
   electronProc = spawn("electron", ["."], {
     cwd: root,
     stdio: "inherit",
-    env: { ...process.env, VITE_DEV_URL: VITE_URL },
+    env: {
+      ...process.env,
+      VITE_DEV_URL: VITE_URL,
+      // Silence Electron's "no/loose CSP" devtools warning. CSP is set
+      // by main via webRequest.onHeadersReceived, which Electron's check
+      // doesn't inspect — it only reads <meta http-equiv="CSP">, so a
+      // header-only setup always trips the warning even when CSP is
+      // actually present. The warning is dev-only (Electron suppresses
+      // it in packaged builds anyway), so disabling it here doesn't
+      // weaken prod security.
+      ELECTRON_DISABLE_SECURITY_WARNINGS: "true",
+    },
   });
   electronProc.on("exit", (code) => {
     // eslint-disable-next-line no-console

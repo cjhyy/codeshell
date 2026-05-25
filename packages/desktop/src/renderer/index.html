@@ -3,7 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:" />
+    <!--
+      CSP is set by the Electron main process via webRequest.onHeadersReceived
+      (see packages/desktop/src/main/index.ts) so it can branch on dev/prod —
+      dev needs blob: workers for vite HMR's SharedWorker reconnect, prod
+      doesn't. Adding a meta CSP here would intersect (most-restrictive wins)
+      with the header CSP and silently break dev features that weren't
+      duplicated into the meta.
+    -->
     <title>code-shell</title>
   </head>
   <body>
