@@ -98,9 +98,10 @@ async function runSubAgent(
 
   startEndSink?.({ type: "agent_start", agentId, name, description });
 
-  // `resetPlanMode` / `restorePlanMode` are no longer needed: the child
-  // Engine receives its own planMode at construction time, and the parent
-  // Engine's planMode is unaffected.
+  // `resetPlanMode` / `restorePlanMode` operated on a module-level singleton
+  // that no longer exists. The child Engine is a fresh instance; plan-mode
+  // isolation between parent and child is enforced via separate Engine
+  // instances (finalized in T6).
   const text = await spawner.spawn({ ...opts, streamOverride });
   const finalText = text || `Agent completed but produced no text output.`;
   startEndSink?.({ type: "agent_end", agentId, name, description, text: finalText });

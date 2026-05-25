@@ -535,6 +535,7 @@ export class Engine {
       sandbox: sandboxBackend,
       isSubAgent: this.config.isSubAgent === true,
       hooks: this.hooks,
+      planMode: false, // TODO(T6): replace with this.planMode once Engine.planMode is wired.
     };
 
     logger.info("engine.run", {
