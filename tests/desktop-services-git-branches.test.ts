@@ -12,6 +12,7 @@ mock.module("electron", () => ({
 
 let getGitBranches: typeof import("../packages/desktop/src/main/desktop-services").getGitBranches;
 let switchGitBranch: typeof import("../packages/desktop/src/main/desktop-services").switchGitBranch;
+let stashAndSwitchGitBranch: typeof import("../packages/desktop/src/main/desktop-services").stashAndSwitchGitBranch;
 let dir: string;
 
 async function run(args: string[], cwd = dir): Promise<string> {
@@ -27,6 +28,7 @@ beforeAll(async () => {
   const services = await import("../packages/desktop/src/main/desktop-services");
   getGitBranches = services.getGitBranches;
   switchGitBranch = services.switchGitBranch;
+  stashAndSwitchGitBranch = services.stashAndSwitchGitBranch;
 });
 
 beforeEach(async () => {
@@ -76,4 +78,16 @@ test("switchGitBranch rejects missing branches and keeps current branch", async 
   );
 
   expect((await run(["rev-parse", "--abbrev-ref", "HEAD"])).trim()).toBe("main");
+});
+
+test("stashAndSwitchGitBranch stashes dirty changes before switching", async () => {
+  await writeFile(join(dir, "README.md"), "dirty change\n");
+  await writeFile(join(dir, "new-file.txt"), "untracked\n");
+
+  const branches = await stashAndSwitchGitBranch(dir, "feature/local");
+
+  expect(branches.current).toBe("feature/local");
+  expect((await run(["rev-parse", "--abbrev-ref", "HEAD"])).trim()).toBe("feature/local");
+  expect((await run(["status", "--porcelain=v1"])).trim()).toBe("");
+  expect(await run(["stash", "list"])).toContain("CodeShell auto-stash before switching to feature/local");
 });

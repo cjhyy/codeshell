@@ -13,6 +13,9 @@ import {
   getGitBranches,
   getGitDiff,
   switchGitBranch,
+  stashAndSwitchGitBranch,
+  createPermanentWorktree,
+  listGitWorktrees,
   openExternal,
   revealInFinder,
 } from "./desktop-services.js";
@@ -20,7 +23,7 @@ import { readSettings, writeSettings, type SettingsScope } from "./settings-serv
 import { listSessions, deleteSession } from "./sessions-service.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
-import { listSkills, readSkillBody, type SkillSummary } from "./skills-service.js";
+import { installSkillFromDirectory, listSkills, readSkillBody } from "./skills-service.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun } from "./runs-service.js";
 import { initUpdater, checkForUpdate, quitAndInstall, getLastStatus } from "./updater.js";
@@ -178,6 +181,22 @@ app.whenReady().then(() => {
 
 ipcMain.handle("skills:list", async (_e, cwd: string) => listSkills(cwd));
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
+ipcMain.handle(
+  "skills:installLocal",
+  async (
+    _e,
+    sourceDir: string,
+    scope: "user" | "project",
+    cwd?: string,
+    name?: string,
+  ) => {
+    if (typeof sourceDir !== "string" || !sourceDir) {
+      throw new Error("skills:installLocal requires sourceDir");
+    }
+    if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
+    return installSkillFromDirectory(sourceDir, scope, cwd, name);
+  },
+);
 
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
   if (!Array.isArray(models) || !Array.isArray(providers)) return [];
@@ -202,6 +221,16 @@ ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string
   return result;
 });
 
+ipcMain.handle("dialog:pickSkillDir", async (): Promise<{ path: string; name: string } | null> => {
+  const res = await dialog.showOpenDialog({
+    title: "选择 Skill 文件夹",
+    properties: ["openDirectory"],
+  });
+  if (res.canceled || res.filePaths.length === 0) return null;
+  const selected = res.filePaths[0];
+  return { path: selected, name: basename(selected) };
+});
+
 ipcMain.handle("window:new", async () => {
   await createWindow();
 });
@@ -220,6 +249,23 @@ ipcMain.handle("git:switchBranch", async (_e, cwd: string, branch: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:switchBranch requires cwd");
   if (typeof branch !== "string" || !branch) throw new Error("git:switchBranch requires branch");
   return switchGitBranch(cwd, branch);
+});
+
+ipcMain.handle("git:stashAndSwitchBranch", async (_e, cwd: string, branch: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:stashAndSwitchBranch requires cwd");
+  if (typeof branch !== "string" || !branch) throw new Error("git:stashAndSwitchBranch requires branch");
+  return stashAndSwitchGitBranch(cwd, branch);
+});
+
+ipcMain.handle("git:createWorktree", async (_e, cwd: string, name: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:createWorktree requires cwd");
+  if (typeof name !== "string" || !name.trim()) throw new Error("git:createWorktree requires name");
+  return createPermanentWorktree(cwd, name);
+});
+
+ipcMain.handle("git:listWorktrees", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:listWorktrees requires cwd");
+  return listGitWorktrees(cwd);
 });
 
 ipcMain.handle("git:diff", async (_e, cwd: string, file?: string) => {

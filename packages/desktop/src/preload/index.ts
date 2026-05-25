@@ -118,10 +118,17 @@ contextBridge.exposeInMainWorld("codeshell", {
   },
   pickDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickDir"),
+  pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
+    ipcRenderer.invoke("dialog:pickSkillDir"),
   getGitStatus: (cwd: string) => ipcRenderer.invoke("git:status", cwd),
   getGitBranches: (cwd: string) => ipcRenderer.invoke("git:branches", cwd),
   switchGitBranch: (cwd: string, branch: string) =>
     ipcRenderer.invoke("git:switchBranch", cwd, branch),
+  stashAndSwitchGitBranch: (cwd: string, branch: string) =>
+    ipcRenderer.invoke("git:stashAndSwitchBranch", cwd, branch),
+  createWorktree: (cwd: string, name: string) =>
+    ipcRenderer.invoke("git:createWorktree", cwd, name),
+  listWorktrees: (cwd: string) => ipcRenderer.invoke("git:listWorktrees", cwd),
   getGitDiff: (cwd: string, file?: string) => ipcRenderer.invoke("git:diff", cwd, file),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
@@ -140,6 +147,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   listSkills: (cwd: string) => ipcRenderer.invoke("skills:list", cwd),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
+  installLocalSkill: (
+    sourceDir: string,
+    scope: "user" | "project",
+    cwd?: string,
+    name?: string,
+  ) => ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
   resolveModelMeta: (models: unknown, providers: unknown) =>
     ipcRenderer.invoke("models:resolve-meta", models, providers),
   getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),

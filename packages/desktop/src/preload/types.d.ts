@@ -49,6 +49,26 @@ export interface GitBranches {
   branches: string[];
 }
 
+export interface WorktreeInfo {
+  path: string;
+  branch: string | null;
+  head: string | null;
+  current: boolean;
+}
+
+export interface CreatedWorktree {
+  path: string;
+  name: string;
+  branch: string;
+  originalBranch: string | null;
+}
+
+export interface InstalledSkill {
+  name: string;
+  targetDir: string;
+  filePath: string;
+}
+
 export interface CodeshellApi {
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
@@ -74,11 +94,15 @@ export interface CodeshellApi {
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
   /** Show native folder picker. Resolves to null if user canceled. */
   pickDir(): Promise<{ path: string; name: string } | null>;
+  pickSkillDir(): Promise<{ path: string; name: string } | null>;
 
   // Phase 4 — git / shell services (renderer never spawns child procs directly).
   getGitStatus(cwd: string): Promise<GitStatus>;
   getGitBranches(cwd: string): Promise<GitBranches>;
   switchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
+  stashAndSwitchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
+  createWorktree(cwd: string, name: string): Promise<CreatedWorktree>;
+  listWorktrees(cwd: string): Promise<WorktreeInfo[]>;
   /** Unified diff for the working tree (vs HEAD). file optional. */
   getGitDiff(cwd: string, file?: string): Promise<string>;
   openExternal(url: string): Promise<void>;
@@ -96,6 +120,12 @@ export interface CodeshellApi {
   getRun(runId: string): Promise<RunDetail | null>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
   readSkillBody(filePath: string): Promise<string>;
+  installLocalSkill(
+    sourceDir: string,
+    scope: "user" | "project",
+    cwd?: string,
+    name?: string,
+  ): Promise<InstalledSkill>;
   resolveModelMeta(
     models: Array<{ key: string; model?: string; providerKey?: string; maxContextTokens?: number | null }>,
     providers: Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>,

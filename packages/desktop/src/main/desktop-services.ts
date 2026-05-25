@@ -12,6 +12,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { shell } from "electron";
 import * as path from "node:path";
+import * as fs from "node:fs/promises";
 
 const execFileAsync = promisify(execFile);
 
@@ -31,6 +32,20 @@ export interface GitBranches {
   isRepo: boolean;
   current: string | null;
   branches: string[];
+}
+
+export interface WorktreeInfo {
+  path: string;
+  branch: string | null;
+  head: string | null;
+  current: boolean;
+}
+
+export interface CreatedWorktree {
+  path: string;
+  name: string;
+  branch: string;
+  originalBranch: string | null;
 }
 
 async function gitRun(cwd: string, args: string[]): Promise<string> {
@@ -112,6 +127,75 @@ export async function switchGitBranch(cwd: string, branch: string): Promise<GitB
   return getGitBranches(cwd);
 }
 
+export async function stashAndSwitchGitBranch(cwd: string, branch: string): Promise<GitBranches> {
+  const trimmed = branch.trim();
+  if (!trimmed) throw new Error("Branch is required");
+
+  const before = await getGitBranches(cwd);
+  if (!before.isRepo) throw new Error("Not a Git repository");
+  if (!before.branches.includes(trimmed)) throw new Error(`Local branch not found: ${trimmed}`);
+
+  await gitRun(cwd, ["stash", "push", "-u", "-m", `CodeShell auto-stash before switching to ${trimmed}`]);
+  await gitRun(cwd, ["switch", trimmed]);
+  return getGitBranches(cwd);
+}
+
+export async function createPermanentWorktree(
+  cwd: string,
+  requestedName: string,
+): Promise<CreatedWorktree> {
+  const root = (await gitRun(cwd, ["rev-parse", "--show-toplevel"])).trim();
+  const name = normalizeWorktreeName(requestedName);
+  const suffix = Date.now().toString(36);
+  const branch = `worktree/${name}-${suffix}`;
+  const worktreePath = path.resolve(root, "..", ".worktrees", `${name}-${suffix}`);
+
+  let originalBranch: string | null = null;
+  try {
+    originalBranch = (await gitRun(root, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
+  } catch {
+    originalBranch = null;
+  }
+
+  await fs.mkdir(path.dirname(worktreePath), { recursive: true });
+  await gitRun(root, ["worktree", "add", "-b", branch, worktreePath]);
+  await symlinkLargeDirectories(root, worktreePath);
+
+  return { path: worktreePath, name, branch, originalBranch };
+}
+
+export async function listGitWorktrees(cwd: string): Promise<WorktreeInfo[]> {
+  let root = cwd;
+  try {
+    root = (await gitRun(cwd, ["rev-parse", "--show-toplevel"])).trim();
+  } catch {
+    return [];
+  }
+
+  const raw = await gitRun(root, ["worktree", "list", "--porcelain"]);
+  const out: WorktreeInfo[] = [];
+  let cur: WorktreeInfo | null = null;
+
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) {
+      if (cur) out.push(cur);
+      cur = null;
+      continue;
+    }
+    if (line.startsWith("worktree ")) {
+      if (cur) out.push(cur);
+      const p = line.slice("worktree ".length);
+      cur = { path: p, branch: null, head: null, current: path.resolve(p) === path.resolve(root) };
+    } else if (cur && line.startsWith("HEAD ")) {
+      cur.head = line.slice("HEAD ".length, "HEAD ".length + 8);
+    } else if (cur && line.startsWith("branch ")) {
+      cur.branch = line.slice("branch ".length).replace(/^refs\/heads\//, "");
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
 /**
  * Unified diff for the working tree (vs HEAD). If `file` is provided,
  * limits to that path. Falls back to staged-only if working tree is
@@ -145,4 +229,31 @@ export async function openExternal(url: string): Promise<void> {
 export async function revealInFinder(targetPath: string): Promise<void> {
   const normalized = path.resolve(targetPath);
   shell.showItemInFolder(normalized);
+}
+
+function normalizeWorktreeName(input: string): string {
+  const slug = input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return slug || "worktree";
+}
+
+async function symlinkLargeDirectories(sourceRoot: string, worktreePath: string): Promise<void> {
+  const largeDirs = ["node_modules", ".venv", "vendor", ".pnpm-store"];
+  await Promise.all(largeDirs.map(async (dir) => {
+    const source = path.join(sourceRoot, dir);
+    const target = path.join(worktreePath, dir);
+    try {
+      const stat = await fs.lstat(source);
+      if (!stat.isDirectory()) return;
+      await fs.lstat(target).then(() => undefined, async () => {
+        await fs.symlink(source, target, "dir");
+      });
+    } catch {
+      // Best effort only: symlink failures should not make worktree creation fail.
+    }
+  }));
 }

@@ -358,6 +358,45 @@
   font-size: var(--fz-sm);
   border-bottom: 1px solid var(--border-subtle);
 }
+.branch-picker-confirm {
+  padding: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.branch-picker-confirm-title {
+  font-size: var(--fz-sm);
+  font-weight: 600;
+  color: var(--fg-primary);
+}
+.branch-picker-confirm-body {
+  font-size: var(--fz-sm);
+  color: var(--fg-secondary);
+  line-height: 1.4;
+}
+.branch-picker-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+.branch-picker-confirm-actions button {
+  height: 26px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--fg-primary);
+  font-size: var(--fz-sm);
+  cursor: pointer;
+}
+.branch-picker-confirm-actions button:hover {
+  background: var(--bg-hover);
+}
+.branch-picker-confirm-actions .primary {
+  background: var(--fg-primary);
+  color: var(--bg-app);
+  border-color: var(--fg-primary);
+}
 
 /* Project picker pill + dropdown */
 .project-picker { position: relative; }

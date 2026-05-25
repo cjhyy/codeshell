@@ -15,6 +15,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   const [state, setState] = useState<LoadState>("idle");
   const [branches, setBranches] = useState<GitBranches>({ isRepo: false, current: null, branches: [] });
   const [error, setError] = useState<string | null>(null);
+  const [pendingBranch, setPendingBranch] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,7 +50,10 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   }, [cwd]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setPendingBranch(null);
+      return;
+    }
     const onDoc = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
     };
@@ -74,11 +78,8 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
     return branches.current ?? "detached HEAD";
   })();
 
-  const choose = async (branch: string): Promise<void> => {
-    if (!cwd || branch === branches.current) {
-      setOpen(false);
-      return;
-    }
+  const switchClean = async (branch: string): Promise<void> => {
+    if (!cwd) return;
     const previous = branches;
     setState("loading");
     setError(null);
@@ -86,9 +87,47 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       const next = await window.codeshell.switchGitBranch(cwd, branch);
       setBranches(next);
       setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
+      setPendingBranch(null);
       setOpen(false);
     } catch (err) {
       setBranches(previous);
+      setError(err instanceof Error ? err.message : "切换分支失败");
+      setState("ready");
+    }
+  };
+
+  const stashAndSwitch = async (): Promise<void> => {
+    if (!cwd || !pendingBranch) return;
+    const previous = branches;
+    setState("loading");
+    setError(null);
+    try {
+      const next = await window.codeshell.stashAndSwitchGitBranch(cwd, pendingBranch);
+      setBranches(next);
+      setState(next.isRepo && next.branches.length > 0 ? "ready" : "unavailable");
+      setPendingBranch(null);
+      setOpen(false);
+    } catch (err) {
+      setBranches(previous);
+      setError(err instanceof Error ? err.message : "暂存并切换失败");
+      setState("ready");
+    }
+  };
+
+  const choose = async (branch: string): Promise<void> => {
+    if (!cwd || branch === branches.current) {
+      setOpen(false);
+      return;
+    }
+    setError(null);
+    try {
+      const status = await window.codeshell.getGitStatus(cwd);
+      if (!status.clean) {
+        setPendingBranch(branch);
+        return;
+      }
+      await switchClean(branch);
+    } catch (err) {
       setError(err instanceof Error ? err.message : "切换分支失败");
       setState("ready");
     }
@@ -112,24 +151,47 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       {open && (
         <div className="branch-picker-popover">
           {error && <div className="branch-picker-error">{error}</div>}
-          <ul className="project-picker-list">
-            {branches.branches.map((branch) => {
-              const active = branch === branches.current;
-              return (
-                <li
-                  key={branch}
-                  className={`project-picker-item${active ? " active" : ""}`}
+          {pendingBranch ? (
+            <div className="branch-picker-confirm">
+              <div className="branch-picker-confirm-title">当前有未提交改动</div>
+              <div className="branch-picker-confirm-body">
+                切换到 {pendingBranch} 前需要先暂存当前改动。
+              </div>
+              <div className="branch-picker-confirm-actions">
+                <button type="button" onClick={() => setPendingBranch(null)}>
+                  取消
+                </button>
+                <button
+                  type="button"
+                  className="primary"
                   onClick={() => {
-                    void choose(branch);
+                    void stashAndSwitch();
                   }}
                 >
-                  <GitBranch size={12} className="project-picker-item-icon" />
-                  <span className="project-picker-item-label">{branch}</span>
-                  {active && <Check size={12} className="project-picker-item-check" />}
-                </li>
-              );
-            })}
-          </ul>
+                  暂存并切换
+                </button>
+              </div>
+            </div>
+          ) : (
+            <ul className="project-picker-list">
+              {branches.branches.map((branch) => {
+                const active = branch === branches.current;
+                return (
+                  <li
+                    key={branch}
+                    className={`project-picker-item${active ? " active" : ""}`}
+                    onClick={() => {
+                      void choose(branch);
+                    }}
+                  >
+                    <GitBranch size={12} className="project-picker-item-icon" />
+                    <span className="project-picker-item-label">{branch}</span>
+                    {active && <Check size={12} className="project-picker-item-check" />}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       )}
     </div>
