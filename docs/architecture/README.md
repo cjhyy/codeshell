@@ -1,6 +1,6 @@
 # CodeShell Architecture Docs
 
-> Originally generated on 2026-05-16; entry points refreshed after the 2026-05-22 monorepo split.
+> Originally generated on 2026-05-16; entry points refreshed after the 2026-05-22 monorepo split. Current review refreshed on 2026-05-25.
 
 This directory is the current architecture documentation set for CodeShell. It is organized as a reading path rather than one giant document, so each file can stay focused and easier to update when a subsystem moves.
 
@@ -23,6 +23,7 @@ This directory is the current architecture documentation set for CodeShell. It i
 | 12 | [mac Visual Client Research](12-mac-visual-client-research.md) | Electron/Tauri/SwiftUI options, Codex desktop evidence, and recommended mac client architecture |
 | 13 | [LLM/UI Decoupling](../superpowers/specs/2026-05-17-llm-ui-decoupling-design.md) | Four-layer architecture borrowed from Claude Code: stream-idle watchdog, QueryGuard sync state machine, partial-text preservation on Esc, and background-agent dock. Implementation [plan](../superpowers/plans/2026-05-17-llm-ui-decoupling.md). |
 | 14 | [Engine Call Paths (ADR)](14-engine-call-paths.md) | Why every internal `engine.run` goes through `AgentServer + AgentClient`. Allowlist, enforcement, sub-agent exception. Phase 1 of the LLM/UI decoupling roadmap. |
+| 15 | [Current Review and Bug Inventory](15-current-review-and-bug-inventory.md) | 2026-05-25 repo-wide architecture review, confirmed drift from docs, and prioritized bug/risk list. |
 
 ## One-Screen Summary
 
@@ -36,10 +37,13 @@ general-purpose agent orchestration core
   + product adapter layer for external agent products
 ```
 
-The current source tree supports two primary usage modes:
+The current source tree supports three primary usage modes:
 
 - CLI product: `code-shell`, defaulting to the `terminal-coding` preset.
 - Library/framework: exported `Engine`, `RunManager`, `Arena`, `IterativeArena`, and `defineProduct()` APIs.
+- Electron desktop client: `packages/desktop` thin renderer + Electron main broker + stdio `AgentServer` worker.
+
+Current caveat: the public `@cjhyy/code-shell-core` export surface still includes migration/internal TUI support APIs, not only stable SDK APIs. Treat `packages/core/src/index.ts` as a broad compatibility surface until it is split into stable/experimental/internal subpaths.
 
 ## Primary Source Anchors
 

@@ -81,10 +81,15 @@ remain free to use Engine however they like. The constraint is
 ## Enforcement
 
 `scripts/check-no-engine-bypass.sh` (also runnable via
-`bun run lint:engine-bypass`) greps `src/` for `new Engine(` and fails
-if any match falls outside the allowlist. The guard is intentionally
-simple — a path-level allowlist, not a code-pattern matcher — because
-the rule it enforces is "construction site, not call pattern."
+`bun run lint:engine-bypass`) is intended to grep package source trees for
+`new Engine(` and fail if any match falls outside the allowlist. The guard is
+intentionally simple — a path-level allowlist, not a code-pattern matcher —
+because the rule it enforces is "construction site, not call pattern."
+
+**Current enforcement gap (2026-05-25):** the script still scans the old root
+`src/` path from before the monorepo split. A passing
+`bun run lint:engine-bypass` result is therefore not proof that the package
+trees are clean. Fix the script before relying on this gate.
 
 If a future change needs a new construction site:
 

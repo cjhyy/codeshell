@@ -84,13 +84,15 @@ Primary modes:
 | Mode | Behavior |
 |---|---|
 | `default` | Use explicit rules, then ask for uncertain operations |
-| `acceptEdits` | Allows common edits and safe writes; asks for risky bash |
+| `acceptEdits` | Intended to allow common edits and safe writes; current implementation is broader for non-Bash tools and should be tightened |
 | `dontAsk` | Denies asks instead of prompting |
 | `bypassPermissions` | Allows all classifier checks, with startup safety checks |
 | `auto` | Heuristic auto-approval with fallback |
 | `plan` | Exposes and allows mostly read-only planning tools |
 
 Project-scoped interactive approvals are persisted to `.code-shell/settings.local.json`.
+
+Permission hooks are powerful and should be treated as trusted policy code. `pre_tool_use` and `on_permission_check` can currently return `decision: "allow"`; for external settings/plugin hooks this can upgrade a classifier `deny`/`ask` into allow. See [Current Review and Bug Inventory](15-current-review-and-bug-inventory.md).
 
 ## Plan Mode
 
@@ -109,7 +111,11 @@ Read-only Bash can still be allowed in plan mode, but mutation tools are blocked
 mcp_<serverName>_<toolName>
 ```
 
-MCP tools currently default to `ask`, are considered concurrency-safe, and return text extracted from MCP content arrays. Resource listing and reading are exposed through built-in MCP resource tools.
+MCP tools currently default to `ask`, are considered concurrency-safe, and return text extracted from MCP content arrays. Resource listing and reading are exposed through built-in MCP resource tools. The concurrency default is a known risk for unknown remote side effects; future metadata should distinguish read-only/safe tools from mutating tools.
+
+## Sandbox Scope
+
+The OS sandbox currently wraps the `Bash` tool path. It does not automatically constrain `Write`, `Edit`, `ApplyPatch`, `REPL`, `PowerShell`, MCP tools, or settings/plugin shell hooks. Treat plugin hook commands as host shell execution, not as sandboxed Bash tool calls.
 
 ## Adding a Built-In Tool
 

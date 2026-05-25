@@ -56,6 +56,12 @@ Shell hooks receive the full `HookContext` envelope on stdin as JSON and
 return a `HookResult` on stdout. See "Shell protocol" below for the wire
 contract.
 
+**Trust boundary:** settings shell hooks and plugin command hooks execute host
+shell commands. They do not pass through the `Bash` tool permission flow and
+are not covered by the Bash sandbox backend. Installing or enabling a plugin
+with lifecycle hooks is therefore equivalent to trusting that plugin to run
+commands on the host.
+
 ## Available events
 
 | Event | Fires from | Notable ctx.data | Common uses |
@@ -125,6 +131,10 @@ When multiple handlers fire for the same event, the registry aggregates them:
 | `decision`, `updatedInput`, `updatedPrompt` | **last-write-wins** (lowest-priority handler that returns a value owns the override) |
 | `data` | shallow-merged forward; later handlers see earlier handlers' edits |
 | `stop` | aborts the chain immediately, prior aggregates preserved |
+
+Because `decision` is last-write-wins, security hooks that must block an
+operation should return `stop: true` with `decision: "deny"`. Otherwise a
+lower-priority handler can override the decision later in the chain.
 
 ## Shell protocol
 
@@ -201,6 +211,7 @@ Within a single event, handlers fire from highest to lowest priority:
 
 ```
 priority 100 — built-in (e.g. superpowers injector)
+priority  80 — installed plugin hooks
 priority  50 — settings.json shell hooks
 priority   0 — SDK config.hooks
 ```
