@@ -4,9 +4,7 @@ import {
   Cpu,
   Lock,
   Download,
-  Activity,
-  ScrollText,
-  ShieldAlert,
+  Plug,
   ArrowRight,
 } from "lucide-react";
 import { SettingsModal } from "./SettingsModal";
@@ -16,16 +14,10 @@ export type SettingsSection =
   | "permission"
   | "mcp"
   | "update"
-  | "approvals"
-  | "runs"
-  | "logs"
   | "json";
 
 interface Props {
   activeRepoPath: string | null;
-  onOpenApprovals: () => void;
-  onOpenRuns: () => void;
-  onOpenLogs: () => void;
   /** Switch to the full-page Settings view. */
   onOpenSettingsPage: () => void;
 }
@@ -34,17 +26,14 @@ interface Props {
  * Bottom-left settings entry.
  *
  * Clicking opens an upward popover with quick shortcuts. The full
- * Settings page lives behind '打开设置…' at the bottom — clicking it
+ * Settings page lives behind the primary row — clicking it
  * navigates to viewMode === 'settings_page' (handled by App).
  *
- * Quick shortcuts (model / permission / update) open the legacy
+ * Quick shortcuts (model / permission / mcp / update) open the legacy
  * focused modal for speed; deep configuration lives on the page.
  */
 export function SettingsMenu({
   activeRepoPath,
-  onOpenApprovals,
-  onOpenRuns,
-  onOpenLogs,
   onOpenSettingsPage,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -69,9 +58,6 @@ export function SettingsMenu({
 
   const pick = (id: SettingsSection): void => {
     setOpen(false);
-    if (id === "approvals") return onOpenApprovals();
-    if (id === "runs") return onOpenRuns();
-    if (id === "logs") return onOpenLogs();
     setModal(id);
   };
 
@@ -80,12 +66,10 @@ export function SettingsMenu({
     label: string;
     Icon: React.ComponentType<{ size?: number }>;
   }> = [
-    { id: "model", label: "模型", Icon: Cpu },
-    { id: "permission", label: "权限", Icon: Lock },
-    { id: "update", label: "更新", Icon: Download },
-    { id: "approvals", label: "审批历史", Icon: ShieldAlert },
-    { id: "runs", label: "运行", Icon: Activity },
-    { id: "logs", label: "日志", Icon: ScrollText },
+    { id: "model", label: "模型配置", Icon: Cpu },
+    { id: "permission", label: "权限默认值", Icon: Lock },
+    { id: "mcp", label: "MCP", Icon: Plug },
+    { id: "update", label: "检查更新", Icon: Download },
   ];
 
   return (
@@ -99,13 +83,6 @@ export function SettingsMenu({
       </button>
       {open && (
         <ul className="settings-popover">
-          {quickItems.map(({ id, label, Icon }) => (
-            <li key={id} className="settings-popover-item" onClick={() => pick(id)}>
-              <Icon size={13} />
-              <span>{label}</span>
-            </li>
-          ))}
-          <li className="settings-popover-divider" />
           <li
             className="settings-popover-item settings-popover-primary"
             onClick={() => {
@@ -117,6 +94,13 @@ export function SettingsMenu({
             <span>打开设置…</span>
             <ArrowRight size={11} className="settings-popover-chevron" />
           </li>
+          <li className="settings-popover-divider" />
+          {quickItems.map(({ id, label, Icon }) => (
+            <li key={id} className="settings-popover-item" onClick={() => pick(id)}>
+              <Icon size={13} />
+              <span>{label}</span>
+            </li>
+          ))}
         </ul>
       )}
       {modal && (

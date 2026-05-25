@@ -66,10 +66,11 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
         type="button"
         className={`composer-pill perm-tone-${cur.tone}`}
         disabled={disabled}
+        title="当前对话权限"
         onClick={() => setOpen((o) => !o)}
       >
         <AlertCircle size={12} />
-        <span>{cur.label}</span>
+        <span>本次：{cur.label}</span>
         <ChevronDown size={11} />
       </button>
       {open && (

@@ -146,7 +146,9 @@ function App() {
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   const [activeModelKey, setActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
-  const [permissionMode, setPermissionMode] = useState<PermissionMode | null>(null);
+  const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
+  const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>({});
+  const [settingsRevision, setSettingsRevision] = useState(0);
   const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
 
   // Session indices per repo (keyed by repoKey).
@@ -174,6 +176,7 @@ function App() {
   const activeSessionId =
     sessionIndices[activeRepoKey]?.activeSessionId ?? null;
   const activeBucket = bucketKey(activeRepoId, activeSessionId);
+  const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   const busy = busyKeys.has(activeBucket);
   const runningBucketRef = useRef<string | null>(null);
   const activeBucketRef = useRef(activeBucket);
@@ -189,6 +192,12 @@ function App() {
   useEffect(() => { saveView(view); }, [view]);
   useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
   useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
+
+  useEffect(() => {
+    const refreshSettings = (): void => setSettingsRevision((n) => n + 1);
+    window.addEventListener("codeshell:settings-changed", refreshSettings);
+    return () => window.removeEventListener("codeshell:settings-changed", refreshSettings);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -698,7 +707,7 @@ function App() {
         const permissions = merged.permissions && typeof merged.permissions === "object"
           ? (merged.permissions as Record<string, unknown>)
           : {};
-        setPermissionMode(fromSettingsPermissionMode(merged.permissionMode ?? permissions.defaultMode));
+        setDefaultPermissionMode(fromSettingsPermissionMode(merged.permissionMode ?? permissions.defaultMode));
         const baseOpts = candidatesFromSettings(merged);
         setModelOptions(baseOpts);
 
@@ -733,7 +742,7 @@ function App() {
     };
     void refresh();
     return () => { cancelled = true; };
-  }, [activeRepo, view.viewMode]);
+  }, [activeRepo, view.viewMode, settingsRevision]);
 
   useEffect(() => {
     void window.codeshell.setBadgeCount(approvalQueue.length);
@@ -765,10 +774,15 @@ function App() {
   };
 
   const onPermissionChange = (m: PermissionMode): void => {
-    setPermissionMode(m);
-    void window.codeshell.updateSettings("user", {
-      permissionMode: m,
-      permissions: { defaultMode: toCorePermissionMode(m) },
+    setPermissionOverrides((prev) => {
+      if (m === defaultPermissionMode) {
+        const { [activeBucket]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return {
+        ...prev,
+        [activeBucket]: m,
+      };
     });
   };
 
@@ -862,9 +876,6 @@ function App() {
           onOpenSearch={() => setSessionSearchOpen(true)}
           onOpenAutomations={() => setViewMode("runs")}
           onOpenPlugins={() => setViewMode("mcp")}
-          onOpenApprovals={() => setViewMode("approvals")}
-          onOpenRuns={() => setViewMode("runs")}
-          onOpenLogs={() => setViewMode("logs")}
           onOpenSettingsPage={() => setViewMode("settings_page")}
           onRenameSession={handleRenameSession}
           onArchiveSession={handleArchiveSession}

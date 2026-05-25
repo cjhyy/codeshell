@@ -301,8 +301,8 @@ function AddPanel({
         <label className="settings-field">
           <span>安装位置</span>
           <select value={scope} onChange={(e) => setScope(e.target.value as "user" | "project")}>
-            <option value="user">user</option>
-            <option value="project" disabled={!activeRepoPath}>project</option>
+            <option value="user">全局</option>
+            <option value="project" disabled={!activeRepoPath}>当前项目</option>
           </select>
         </label>
       </div>

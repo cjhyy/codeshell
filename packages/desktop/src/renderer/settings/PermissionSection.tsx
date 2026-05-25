@@ -6,6 +6,12 @@ import {
 } from "../chat/PermissionPill";
 
 const MODES: PermissionMode[] = ["plan", "default", "accept_edits", "bypass"];
+const MODE_LABELS: Record<PermissionMode, string> = {
+  plan: "计划模式",
+  default: "默认权限",
+  accept_edits: "接受编辑",
+  bypass: "完全访问权限",
+};
 
 interface Props {
   scope: "user" | "project";
@@ -41,6 +47,7 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
         },
         cwd,
       );
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
       setMode(m);
     } finally {
       setSaving(false);
@@ -49,12 +56,9 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
 
   return (
     <section className="settings-section">
-      <h3 className="settings-section-title">Permission mode</h3>
+      <h3 className="settings-section-title">默认权限</h3>
       <p className="settings-section-help">
-        <strong>plan</strong>：仅生成方案，所有写工具拒绝。
-        <strong>default</strong>：写工具弹审批。
-        <strong>accept_edits</strong>：文件编辑自动通过，命令仍审批。
-        <strong>bypass</strong>：跳过所有审批 — 仅信任的本地环境使用。
+        当前项目设置会覆盖全局默认；输入框里的权限只影响当前对话。
       </p>
       <div className="permission-modes">
         {MODES.map((m) => (
@@ -64,7 +68,7 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
             disabled={saving}
             onClick={() => void choose(m)}
           >
-            {m}
+            {MODE_LABELS[m]}
           </button>
         ))}
       </div>

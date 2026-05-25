@@ -150,17 +150,18 @@ export function SettingsPage({
               <div className="settings-scope">
                 <button
                   className={`logs-bucket${scope === "user" ? " active" : ""}`}
+                  title="所有项目的默认配置"
                   onClick={() => setScope("user")}
                 >
-                  user
+                  全局
                 </button>
                 <button
                   className={`logs-bucket${scope === "project" ? " active" : ""}`}
                   disabled={!activeRepoPath}
-                  title={activeRepoPath ?? "先在左侧选一个项目"}
+                  title={activeRepoPath ? "仅当前项目，覆盖全局默认" : "先在左侧选一个项目"}
                   onClick={() => setScope("project")}
                 >
-                  project
+                  当前项目
                 </button>
               </div>
             )}

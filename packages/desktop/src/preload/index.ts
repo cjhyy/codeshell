@@ -155,6 +155,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   ) => ipcRenderer.invoke("skills:installLocal", sourceDir, scope, cwd, name),
   resolveModelMeta: (models: unknown, providers: unknown) =>
     ipcRenderer.invoke("models:resolve-meta", models, providers),
+  listModels: (provider: unknown, refresh?: boolean) =>
+    ipcRenderer.invoke("models:list", provider, refresh),
   getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),
   setTrust: (path: string, level: "trusted" | "untrusted") =>
     ipcRenderer.invoke("trust:set", path, level),

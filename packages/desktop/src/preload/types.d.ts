@@ -135,6 +135,22 @@ export interface CodeshellApi {
     maxCompletionTokens?: number;
     source: "settings" | "openrouter-api" | "hardcoded" | "fallback";
   }>>;
+  listModels(
+    provider: {
+      key?: string;
+      kind?: string;
+      baseUrl?: string;
+      apiKey?: string;
+      modelsPath?: string;
+    },
+    refresh?: boolean,
+  ): Promise<{
+    fetchedAt: string;
+    providerKey: string;
+    models: Array<{ id: string; contextLength: number; maxOutputTokens: number }>;
+    error?: string;
+    fromCache?: boolean;
+  }>;
 
   // Phase 6 — native polish & security.
   getTrust(path: string): Promise<"trusted" | "untrusted" | "unknown">;

@@ -46,6 +46,7 @@ export function SettingsView({ activeRepoPath }: Props) {
     try {
       const patch = JSON.parse(draft) as Record<string, unknown>;
       await window.codeshell.updateSettings(scope, patch, cwd);
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
       await refresh();
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
@@ -60,17 +61,18 @@ export function SettingsView({ activeRepoPath }: Props) {
         <div className="settings-scope">
           <button
             className={`logs-bucket${scope === "user" ? " active" : ""}`}
+            title="所有项目的默认配置"
             onClick={() => setScope("user")}
           >
-            user
+            全局
           </button>
           <button
             className={`logs-bucket${scope === "project" ? " active" : ""}`}
             disabled={!activeRepoPath}
-            title={activeRepoPath ? activeRepoPath : "先在左侧选一个 repo"}
+            title={activeRepoPath ? "仅当前项目，覆盖全局默认" : "先在左侧选一个项目"}
             onClick={() => setScope("project")}
           >
-            project
+            当前项目
           </button>
         </div>
         <div className="settings-scope">

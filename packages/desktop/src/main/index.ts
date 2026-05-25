@@ -6,6 +6,12 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell, Notification } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, basename } from "node:path";
+import {
+  defaultCacheDir,
+  fetchModelList,
+  PROVIDER_KINDS,
+  type ProviderKindName,
+} from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
 import { dlog } from "./desktop-logger.js";
 import {
@@ -216,6 +222,31 @@ ipcMain.handle(
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
   if (!Array.isArray(models) || !Array.isArray(providers)) return [];
   return resolveModelMeta(models as never, providers as never);
+});
+
+ipcMain.handle("models:list", async (_e, rawProvider: unknown, refresh?: boolean) => {
+  const provider = rawProvider && typeof rawProvider === "object"
+    ? rawProvider as Record<string, unknown>
+    : {};
+  const rawKind = typeof provider.kind === "string" ? provider.kind : "custom";
+  const kind = Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
+    ? rawKind as ProviderKindName
+    : "custom";
+  const meta = PROVIDER_KINDS[kind];
+  const rawBaseUrl = typeof provider.baseUrl === "string" && provider.baseUrl.trim()
+    ? provider.baseUrl.trim()
+    : meta.defaultBaseUrl;
+  const baseUrl = kind === "ollama" ? rawBaseUrl.replace(/\/v1\/?$/, "") : rawBaseUrl;
+  return fetchModelList(
+    {
+      key: typeof provider.key === "string" && provider.key ? provider.key : kind,
+      kind,
+      baseUrl,
+      apiKey: typeof provider.apiKey === "string" ? provider.apiKey : undefined,
+      modelsPath: typeof provider.modelsPath === "string" ? provider.modelsPath : undefined,
+    },
+    { cacheDir: defaultCacheDir(), refresh: refresh === true },
+  );
 });
 
 ipcMain.handle("updater:check", async () => checkForUpdate());

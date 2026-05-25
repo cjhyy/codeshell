@@ -43,9 +43,6 @@ interface SidebarProps {
   onOpenSearch: () => void;
   onOpenAutomations: () => void;
   onOpenPlugins: () => void;
-  onOpenApprovals: () => void;
-  onOpenRuns: () => void;
-  onOpenLogs: () => void;
   onOpenSettingsPage: () => void;
 
   onRenameSession: (repoId: string | null, sessionId: string, title: string) => void;
@@ -83,9 +80,6 @@ export function Sidebar({
   onOpenSearch,
   onOpenAutomations,
   onOpenPlugins,
-  onOpenApprovals,
-  onOpenRuns,
-  onOpenLogs,
   onOpenSettingsPage,
   onRenameSession,
   onArchiveSession,
@@ -264,9 +258,6 @@ export function Sidebar({
       <div className="sidebar-bottom">
         <SettingsMenu
           activeRepoPath={activeRepoPath}
-          onOpenApprovals={onOpenApprovals}
-          onOpenRuns={onOpenRuns}
-          onOpenLogs={onOpenLogs}
           onOpenSettingsPage={onOpenSettingsPage}
         />
       </div>
