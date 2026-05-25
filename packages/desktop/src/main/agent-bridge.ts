@@ -19,6 +19,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
 import { createRequire } from "node:module";
+import { homedir } from "node:os";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
 
@@ -68,13 +69,18 @@ export class AgentBridge {
    */
   private spawnChild(cwd: string | undefined): void {
     if (this.child) return;
-    dlog("bridge", "spawn.start", { cwd, restartCount: this.restartCount });
+    const workerCwd = cwd ?? homedir();
+    dlog("bridge", "spawn.start", {
+      cwd: workerCwd,
+      requestedCwd: cwd,
+      restartCount: this.restartCount,
+    });
     this.child = spawn(process.execPath, [agentEntry], {
-      cwd,
+      cwd: workerCwd,
       env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", CODESHELL_AGENT_STDIO: "1" },
       stdio: ["pipe", "pipe", "pipe"],
     });
-    dlog("bridge", "spawn.ok", { pid: this.child.pid, cwd });
+    dlog("bridge", "spawn.ok", { pid: this.child.pid, cwd: workerCwd, requestedCwd: cwd });
     if (!this.child.stdout || !this.child.stdin || !this.child.stderr) {
       dlog("bridge", "spawn.error", { reason: "stdio not piped" });
       throw new Error("AgentBridge: child stdio not piped");

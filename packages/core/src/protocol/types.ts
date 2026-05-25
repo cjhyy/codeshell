@@ -70,6 +70,11 @@ export const ErrorCodes = {
 /** Start an agent run with a user task. */
 export interface RunParams {
   task: string;
+  /**
+   * Working directory for this run. When omitted, the Engine uses its
+   * configured cwd.
+   */
+  cwd?: string;
   sessionId?: string;
   /**
    * Per-run permission mode supplied by desktop/composer UIs.

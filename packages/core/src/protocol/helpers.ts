@@ -25,7 +25,7 @@ import { AgentClient } from "./client.js";
 import { createInProcessTransport } from "./transport.js";
 
 export interface InProcessClientHandle {
-  /** The client; pass to `client.run(task, sessionId)` to execute. */
+  /** The client; pass to `client.run(task, { cwd, sessionId })` to execute. */
   readonly client: AgentClient;
   /**
    * Tear down server + client + transports. Call from a `finally` block.

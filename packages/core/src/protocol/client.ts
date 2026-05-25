@@ -25,7 +25,7 @@ import {
   isResponse,
   isNotification,
 } from "./types.js";
-import type { StreamEvent, ApprovalRequest, ApprovalResult } from "../types.js";
+import type { StreamEvent, ApprovalRequest, ApprovalResult, PermissionMode } from "../types.js";
 import { EventEmitter } from "node:events";
 import { logger } from "../logging/logger.js";
 
@@ -35,6 +35,12 @@ export interface AgentClientEvents {
   stream: (event: StreamEvent) => void;
   approvalRequest: (requestId: string, request: ApprovalRequest) => void;
   status: (status: string, message?: string) => void;
+}
+
+export interface AgentRunOptions {
+  cwd?: string;
+  sessionId?: string;
+  permissionMode?: PermissionMode;
 }
 
 // ─── Client ─────────────────────────────────────────────────────────
@@ -68,14 +74,21 @@ export class AgentClient {
    * Run an agent task. Resolves when the agent completes.
    * Stream events arrive via the onStreamEvent callback.
    */
-  async run(task: string, sessionId?: string): Promise<RunResult> {
-    const params: RunParams = { task, sessionId };
+  async run(
+    task: string,
+    sessionIdOrOptions?: string | AgentRunOptions,
+  ): Promise<RunResult> {
+    const options =
+      typeof sessionIdOrOptions === "string"
+        ? { sessionId: sessionIdOrOptions }
+        : sessionIdOrOptions;
+    const params: RunParams = { task, ...options };
     // If the caller provided a session id, stamp it on the logger eagerly
     // so client-side log lines emitted during this run (before the server
     // response arrives) carry the right sid. The server-resolved id from
     // the response below takes precedence — they only differ on the
     // first call of a brand-new session, when sessionId is undefined.
-    if (sessionId) logger.setSid(sessionId);
+    if (options?.sessionId) logger.setSid(options.sessionId);
     const result = (await this.request(
       Methods.Run,
       params as unknown as Record<string, unknown>,

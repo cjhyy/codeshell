@@ -127,6 +127,12 @@ export class AgentServer {
       );
       return;
     }
+    if (params.cwd !== undefined && (typeof params.cwd !== "string" || params.cwd.length === 0)) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "cwd must be a non-empty string"),
+      );
+      return;
+    }
 
     if (params.permissionMode !== undefined) {
       const mode = params.permissionMode;
@@ -154,6 +160,7 @@ export class AgentServer {
 
     try {
       const result = await this.engine.run(params.task, {
+        cwd: params.cwd,
         sessionId: params.sessionId,
         signal: this.abortController!.signal,
         onStream: streamToClient,

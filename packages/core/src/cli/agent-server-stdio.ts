@@ -83,7 +83,8 @@ export async function runAgentServerStdio(config: EngineConfig): Promise<void> {
  * for its REPL launch (settings.model.{provider, name, apiKey, baseUrl}).
  */
 export function buildEngineConfigFromSettings(): EngineConfig {
-  const settings = new SettingsManager(process.cwd()).get();
+  const cwd = process.cwd();
+  const settings = new SettingsManager(cwd).get();
   const llm: LLMConfig = {
     provider: settings.model.provider ?? "openai",
     model: settings.model.name ?? "anthropic/claude-opus-4-6",
@@ -97,7 +98,7 @@ export function buildEngineConfigFromSettings(): EngineConfig {
         "in a terminal to configure, or set settings.model.apiKey directly.",
     );
   }
-  return { llm, permissionMode: resolvePermissionMode(settings) };
+  return { llm, cwd, permissionMode: resolvePermissionMode(settings) };
 }
 
 function resolvePermissionMode(settings: Record<string, unknown>): PermissionMode {

@@ -398,12 +398,13 @@ export class Engine {
   async run(
     task: string,
     options?: {
+      cwd?: string;
       onStream?: StreamCallback;
       signal?: AbortSignal;
       sessionId?: string;
     },
   ): Promise<EngineResult> {
-    const cwd = this.config.cwd ?? process.cwd();
+    const cwd = options?.cwd ?? this.config.cwd ?? process.cwd();
 
     // Wrap the caller's onStream so we can intercept `task_update`
     // events emitted by TodoWrite and keep an in-engine snapshot.

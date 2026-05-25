@@ -183,7 +183,10 @@ export class EngineRunner implements RunExecutor {
     }
 
     try {
-      const result = await client.run(run.objective, run.sessionId ?? undefined);
+      const result = await client.run(run.objective, {
+        cwd: run.cwd,
+        sessionId: run.sessionId ?? undefined,
+      });
       return {
         result: {
           text: result.text,
