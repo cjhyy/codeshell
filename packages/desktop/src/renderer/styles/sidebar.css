@@ -33,14 +33,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--sp-3) 4px;
+  /* Match the projects-list container padding so the label and the
+     project rows below share the same left edge. */
+  padding: 0 var(--sp-2) 4px;
   flex-shrink: 0;
 }
 .sidebar-section-label {
   font-size: var(--fz-xs);
   color: var(--fg-muted);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  padding-left: 4px;
   user-select: none;
 }
 .sidebar-section-add {
@@ -141,7 +142,6 @@
   transition: opacity 0.12s ease;
 }
 .project-row:hover .project-row-actions { opacity: 1; }
-.project-row.selected .project-row-actions { opacity: 1; }
 .project-row-action {
   width: 22px;
   height: 22px;
@@ -164,7 +164,9 @@
 /* No-repo "对话" section, pinned just below the project list. */
 .no-repo-section { margin-top: var(--sp-3); }
 .no-repo-label { padding-top: 0; padding-bottom: 4px; }
-.no-repo-list .session-row { padding-left: var(--sp-3); }
+/* No project chevron above these rows — keep them at the same indent
+   as the project row's name (8 base + ~8 to clear the folder icon). */
+.no-repo-list .session-row { padding-left: 16px; }
 
 /* Session list nested under a project */
 .session-list {
@@ -179,8 +181,9 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  height: 28px;
-  padding: 0 var(--sp-2) 0 28px; /* indent to align past chevron + folder */
+  height: 26px;
+  /* Align session title with the project name (chevron 16 + folder 12 + gap 4 = 32). */
+  padding: 0 var(--sp-2) 0 32px;
   border-radius: var(--radius-sm);
   font-size: var(--fz-md);
   color: var(--fg-secondary);
@@ -191,7 +194,6 @@
 .session-row.active {
   background: var(--bg-selected);
   color: var(--fg-primary);
-  font-weight: 500;
 }
 .session-title {
   flex: 1;

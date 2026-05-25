@@ -5,16 +5,19 @@
 [data-theme="light"] {
   /* surface */
   --bg-app:        #fafaf9;
-  --bg-sidebar:    #f0eee6;
+  --bg-sidebar:    #f4f3ee;
   --bg-inspector:  #f5f3ec;
   --bg-elevated:   #ffffff;
-  --bg-hover:      #e8e3d4;
-  --bg-selected:   #e0dcc8;
+  /* Hover/selected used to be saturated kraft-paper tones — too loud
+     against the warm sidebar. Toned down to neutral greys so an active
+     row reads as "highlighted" rather than "paper-coloured". */
+  --bg-hover:      #ebe9e3;
+  --bg-selected:   #dedcd5;
 
   /* text */
   --fg-primary:    #1a1a1a;
   --fg-secondary:  #555555;
-  --fg-muted:      #888888;
+  --fg-muted:      #8a8678;
   --fg-inverse:    #ffffff;
 
   /* border */
