@@ -124,6 +124,9 @@ export interface ToolContext {
    * standalone tests; tools must tolerate absence.
    */
   hooks?: HookRegistry;
+  /** Whether the owning Engine is currently in plan mode. Replaces the
+   *  removed module-level `isInPlanMode()` singleton. */
+  planMode: boolean;
 }
 
 /**
