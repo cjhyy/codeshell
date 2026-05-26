@@ -184,6 +184,7 @@ export class AgentServer {
     const sid = params.sessionId;
     try {
       const result = await session.enqueueTurn(params.task, {
+        cwd: params.cwd,
         onStream: (event: StreamEvent) =>
           this.notify(Methods.StreamEvent, { sessionId: sid, event }),
       });
@@ -252,6 +253,7 @@ export class AgentServer {
 
     try {
       const result = await this.legacyEngine!.run(params.task, {
+        cwd: params.cwd,
         sessionId: params.sessionId,
         signal: this.abortController!.signal,
         onStream: streamToClient,

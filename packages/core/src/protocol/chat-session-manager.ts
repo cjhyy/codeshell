@@ -21,7 +21,7 @@ export interface ChatSessionManagerOptions {
    * manager itself does not retain it — engineFactory captures it via closure.
    */
   runtime: EngineRuntime;
-  /** Build an Engine. Tests inject a fake; production passes (cfg) => new Engine({ runtime, ...cfg }). */
+  /** Build an Engine. Tests inject a fake; production passes a runtime-backed Engine factory. */
   engineFactory: (slice: EngineConfigSlice) => Engine;
   maxSessions?: number;   // default 16
   idleTtlMs?: number;     // default 30 min

@@ -82,27 +82,31 @@ export class AgentClient {
    * for backward compatibility with createInProcessClient callers.
    */
   async run(
-    task: string,
+    taskOrParams: string | RunParams,
     sessionIdOrOptions?: string | AgentRunOptions,
   ): Promise<RunResult> {
-    const options =
-      typeof sessionIdOrOptions === "string"
-        ? { sessionId: sessionIdOrOptions }
-        : sessionIdOrOptions;
-    // RunParams.sessionId is required; if the caller didn't supply one, send
-    // empty string (single-engine server will accept it; multi-session server
-    // will reject with -32602 which is the right behavior).
-    const params: RunParams = {
-      task,
-      sessionId: options?.sessionId ?? "",
-      ...(options ?? {}),
-    };
+    let params: RunParams;
+    if (typeof taskOrParams === "string") {
+      // Form: run(task, sessionId | options?)
+      const options =
+        typeof sessionIdOrOptions === "string"
+          ? { sessionId: sessionIdOrOptions }
+          : sessionIdOrOptions;
+      params = {
+        task: taskOrParams,
+        sessionId: options?.sessionId ?? "",
+        ...(options ?? {}),
+      };
+    } else {
+      // Form: run({ sessionId, task, ... })
+      params = { sessionId: "", ...taskOrParams } as RunParams;
+    }
     // If the caller provided a session id, stamp it on the logger eagerly
     // so client-side log lines emitted during this run (before the server
     // response arrives) carry the right sid. The server-resolved id from
     // the response below takes precedence — they only differ on the
     // first call of a brand-new session, when sessionId is undefined.
-    if (options?.sessionId) logger.setSid(options.sessionId);
+    if (params.sessionId) logger.setSid(params.sessionId);
     const result = (await this.request(
       Methods.Run,
       params as unknown as Record<string, unknown>,

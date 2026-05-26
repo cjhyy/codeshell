@@ -10,11 +10,12 @@
 # docs/architecture/14-engine-call-paths.md.
 #
 # Allowed sites:
-#   src/engine/engine.ts        — Engine class itself + sub-agent spawn
-#   src/cli/commands/repl.ts    — REPL entry; wraps in AgentServer
-#   src/cli/commands/run.ts     — headless CLI; wraps in createInProcessClient
-#   src/run/EngineRunner.ts     — RunManager runner; wraps in createInProcessClient
-#   tests/**                    — tests need direct Engine construction
+#   packages/core/src/engine/engine.ts       — Engine class itself + sub-agent spawn
+#   packages/tui/src/cli/commands/repl.ts    — REPL entry; wraps in AgentServer
+#   packages/tui/src/cli/commands/run.ts     — headless CLI; wraps in createInProcessClient
+#   packages/core/src/run/EngineRunner.ts    — RunManager runner; wraps in createInProcessClient
+#   packages/core/src/cli/agent-server-stdio.ts — stdio worker; wraps engines in AgentServer
+#   tests/**                                 — tests need direct Engine construction
 #
 # Anything new appearing outside this list is an architecture violation.
 # If you have a legitimate new use case, add it here AND document why in
@@ -22,16 +23,21 @@
 
 set -euo pipefail
 
-# Find all `new Engine(` references in src/ that are not in the allowlist.
-# We don't filter tests/ here — they were never in scope of src/ scan.
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+
+# Find all `new Engine(` references in package source trees that are not in the allowlist.
+# Tests are intentionally out of scope; they can construct Engine directly for unit setup.
 violations=$(
   grep -rn --include="*.ts" --include="*.tsx" "new Engine(" \
-    /Users/admin/Documents/个人学习/代码学习/codeshell/src/ \
+    "$repo_root/packages/core/src" \
+    "$repo_root/packages/tui/src" \
+    "$repo_root/packages/desktop/src" \
     2>/dev/null \
-  | grep -v "/engine/engine.ts:" \
-  | grep -v "/cli/commands/repl.ts:" \
-  | grep -v "/cli/commands/run.ts:" \
-  | grep -v "/run/EngineRunner.ts:" \
+  | grep -v "/packages/core/src/engine/engine.ts:" \
+  | grep -v "/packages/tui/src/cli/commands/repl.ts:" \
+  | grep -v "/packages/tui/src/cli/commands/run.ts:" \
+  | grep -v "/packages/core/src/run/EngineRunner.ts:" \
+  | grep -v "/packages/core/src/cli/agent-server-stdio.ts:" \
   || true
 )
 
@@ -39,7 +45,7 @@ if [ -n "$violations" ]; then
   echo "ERROR: unauthorized 'new Engine(' call site(s) found:" >&2
   echo "$violations" >&2
   echo "" >&2
-  echo "All engine instantiations in src/ must route through" >&2
+  echo "All internal package-source engine instantiations must route through" >&2
   echo "createInProcessClient (or be in the engine.ts internal spawn path)." >&2
   echo "See docs/architecture/14-engine-call-paths.md." >&2
   echo "" >&2

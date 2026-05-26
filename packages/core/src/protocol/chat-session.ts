@@ -8,6 +8,9 @@ export interface ChatSessionOptions {
 }
 
 export interface TurnOpts {
+  /** Working directory override for this turn. If omitted, Engine uses its
+   *  configured cwd. */
+  cwd?: string;
   onStream?: (event: StreamEvent) => void;
 }
 
@@ -89,6 +92,7 @@ export class ChatSession {
     try {
       const onStream = next.opts.onStream ?? this.defaultOnStream;
       const result = await this.engine.run(next.task, {
+        cwd: next.opts.cwd,
         sessionId: this.id,
         signal: this.controller.signal,
         onStream,
