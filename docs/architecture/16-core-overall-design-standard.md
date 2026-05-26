@@ -325,8 +325,10 @@ Core cannot be called stable until all are true:
 ### Gate 2: Runtime Gate
 
 - [x] `EngineRuntime` declares ownership of shared model/provider/settings resources. *(done — `packages/core/src/engine/runtime.ts:23-31` has real fields, not placeholders.)*
-- [ ] `Engine` actually consumes `runtime.mcpPool` and stops lazily instantiating `new MCPManager` per session. *(open — `packages/core/src/engine/engine.ts:893` still does `new MCPManager(this.toolRegistry)`.)*
-- [ ] `MCPManager` lifecycle is owned by `EngineRuntime`, not the Engine.
+- [x] `Engine` actually consumes `runtime.mcpPool` and stops lazily instantiating `new MCPManager` per session. *(B1 — `engine.ts` now uses `this.runtime.mcpPool` when a Runtime is present, falling back to `new MCPManager` only for null-runtime paths like ad-hoc tests. `MCPManager.connect()` is already idempotent so subsequent sessions in the same Runtime reuse connections.)*
+- [x] `MCPManager` lifecycle is owned by `EngineRuntime`, not the Engine. *(B1 — Runtime owns the instance; Engine consumes it as a shared resource.)*
+- [x] `SandboxBackend` resolution is cached per Runtime. *(closed by A2 — `runtime.ts:resolveSandbox` provides per-(mode, cwd) cache.)*
+- [ ] `CostTracker` is runtime-scoped and Engine usage records through it instead of the process-global singleton. *(deferred to B1.2 — requires changing `LLMClientBase.onUsage` signature to thread session/runtime context.)*
 - [ ] discovered MCP tools default to not concurrency-safe unless proven otherwise.
 - [ ] cost tracking has one canonical path.
 - [ ] sandbox backend resolution is cached consistently.

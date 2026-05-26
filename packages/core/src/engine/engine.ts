@@ -883,10 +883,18 @@ export class Engine {
       appendSystemPrompt: this.config.appendSystemPrompt,
     });
 
-    // Connect MCP servers (if configured and not already connected)
+    // Connect MCP servers (if configured and not already connected).
+    // B1: prefer the Runtime-owned MCPManager so all sessions in a
+    // worker share one set of connections. Falling back to a
+    // per-Engine instance keeps the null-runtime path (tests, ad-hoc
+    // scripts) working.
     const mcpServers = this.config.mcpServers ?? {};
     if (Object.keys(mcpServers).length > 0 && !this.mcpManager) {
-      this.mcpManager = new MCPManager(this.toolRegistry);
+      if (this.runtime) {
+        this.mcpManager = this.runtime.mcpPool;
+      } else {
+        this.mcpManager = new MCPManager(this.toolRegistry);
+      }
       await this.mcpManager.connectAll(mcpServers);
     }
 

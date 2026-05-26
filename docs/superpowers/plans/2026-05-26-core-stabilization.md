@@ -150,11 +150,11 @@ Core 可以给其他业务方接入前，至少满足这些门槛：
 - `packages/core/src/cli/agent-server-stdio.ts`
 - `packages/tui/src/cli/commands/{repl,run}.ts`
 
-- [ ] Make `Engine` use `runtime.mcpPool` instead of lazy-creating `new MCPManager`.
-- [ ] Define MCP connection ownership and cleanup at worker/session boundaries.
-- [ ] Default discovered MCP tools to `isConcurrencySafe: false` unless metadata proves read-only/concurrency-safe.
-- [ ] Thread `runtime.costTracker` or `config.costStore` through one canonical usage-recording path.
-- [ ] Persist per-session cost state without losing aggregate process totals.
+- [x] Make `Engine` use `runtime.mcpPool` instead of lazy-creating `new MCPManager`. *(B1 — `engine.ts` prefers `this.runtime.mcpPool`; falls back to a per-Engine instance only when `runtime` is null. MCPManager.connect is already idempotent so repeat sessions reuse connections.)*
+- [ ] Define MCP connection ownership and cleanup at worker/session boundaries. *(deferred — needs runtime close semantics; tracked alongside session lifecycle work in B2.)*
+- [ ] Default discovered MCP tools to `isConcurrencySafe: false` unless metadata proves read-only/concurrency-safe. *(deferred — separate cleanup, not blocking core stability.)*
+- [ ] Thread `runtime.costTracker` or `config.costStore` through one canonical usage-recording path. *(deferred — requires reshaping `LLMClientBase.onUsage` to thread session/runtime context; tracked as B1.2.)*
+- [ ] Persist per-session cost state without losing aggregate process totals. *(deferred — blocked by B1.2.)*
 
 ### B2. Background agent notification as protocol feature
 

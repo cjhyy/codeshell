@@ -30,6 +30,24 @@ describe("EngineRuntime", () => {
     expect(rt.costTracker).toBe(costTracker);
   });
 
+  it("B1: resolveSandbox caches per (mode, cwd)", async () => {
+    const { defaultSandboxConfig } = await import(
+      "../packages/core/src/tool-system/sandbox/index.ts"
+    );
+    const rt = new EngineRuntime({
+      modelPool: {} as any,
+      toolRegistry: {} as any,
+      settings: {} as any,
+      mcpPool: {} as any,
+      costTracker: {} as any,
+    });
+    const cfg = defaultSandboxConfig("off");
+    const a = await rt.resolveSandbox(cfg, process.cwd());
+    const b = await rt.resolveSandbox(cfg, process.cwd());
+    // Same backend instance — the second call hits the cache.
+    expect(a).toBe(b);
+  });
+
   it("Engine accepts a shared EngineRuntime via constructor", async () => {
     const { Engine } = await import("../packages/core/src/engine/engine.ts");
     const rt = new EngineRuntime({
