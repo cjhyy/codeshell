@@ -58,6 +58,7 @@ jobs:
             tests/chat-session-manager.test.ts \
             tests/engine-bypass-guard.test.ts \
             tests/hooks-on-permission-check.test.ts \
+            tests/mcp-default-unsafe.test.ts \
             tests/permission.test.ts \
             tests/runtime-close.test.ts \
             tests/sandbox.test.ts \

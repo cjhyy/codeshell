@@ -7,6 +7,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import type { MCPServerConfig, RegisteredTool } from "../types.js";
 import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
@@ -15,6 +16,35 @@ interface MCPConnection {
   client: Client;
   serverName: string;
   transport: StdioClientTransport | StreamableHTTPClientTransport;
+}
+
+/**
+ * Build the static metadata for a discovered MCP tool.
+ *
+ * Policy (Gate 2 / Standard §S3):
+ *   - Default: isConcurrencySafe=false, isReadOnly=false — conservative
+ *     safe-by-default for unknown servers that may hold mutable state.
+ *   - Opt-in: when the MCP server explicitly declares
+ *     `annotations.readOnlyHint === true` per the MCP spec, we honour
+ *     that hint and set BOTH isConcurrencySafe and isReadOnly to true,
+ *     enabling parallel execution for provably read-only tools.
+ *   - Anything other than the boolean literal `true`
+ *     (undefined, null, false, "true", missing annotations) stays false.
+ *
+ * @internal exported for unit testing without spinning up a real transport.
+ */
+export function buildRegisteredTool(serverName: string, tool: McpTool): RegisteredTool {
+  const readOnly = tool.annotations?.readOnlyHint === true;
+  return {
+    name: `mcp_${serverName}_${tool.name}`,
+    description: `[${serverName}] ${tool.description ?? tool.name}`,
+    inputSchema: (tool.inputSchema as Record<string, unknown>) ?? { type: "object", properties: {} },
+    source: "mcp",
+    serverName,
+    permissionDefault: "ask",
+    isConcurrencySafe: readOnly,
+    isReadOnly: readOnly,
+  };
 }
 
 export class MCPManager {
@@ -135,23 +165,7 @@ export class MCPManager {
     const result = await client.listTools();
 
     for (const tool of result.tools) {
-      const registered: RegisteredTool = {
-        name: `mcp_${serverName}_${tool.name}`,
-        description: `[${serverName}] ${tool.description ?? tool.name}`,
-        inputSchema: (tool.inputSchema as Record<string, unknown>) ?? { type: "object", properties: {} },
-        source: "mcp",
-        serverName,
-        permissionDefault: "ask",
-        // Gate 2 / standard §S3: discovered MCP tools default to NOT
-        // concurrency-safe. Most MCP servers maintain in-process state
-        // (a database session, an open file handle, a per-request token
-        // bucket) that breaks under parallel calls. Servers that have
-        // proved read-only/concurrency-safe can flip this via metadata
-        // in a future iteration; the conservative default avoids races
-        // for the common case.
-        isConcurrencySafe: false,
-        isReadOnly: false,
-      };
+      const registered = buildRegisteredTool(serverName, tool);
 
       // Register with an executor that calls the MCP server
       this.toolRegistry.registerTool(registered, async (args: Record<string, unknown>) => {
