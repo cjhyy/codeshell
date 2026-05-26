@@ -1,0 +1,242 @@
+/* Three-pane Customize page — plugin list | skill list | detail.
+   Layout uses CSS grid with a fixed left, fixed middle, and flexible
+   right; each pane is independently scrollable. */
+
+.customize-three-pane {
+  display: grid;
+  grid-template-columns: 240px 320px 1fr;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.customize-pane {
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.customize-pane:last-child { border-right: none; }
+
+.customize-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+.customize-toolbar .sessions-filter { flex: 1; }
+
+/* Left pane: plugin list. */
+.customize-plugin-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-2) 0;
+  display: flex;
+  flex-direction: column;
+}
+.customize-plugin-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: 8px 12px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  user-select: none;
+  transition: background 80ms ease, border-color 80ms ease;
+}
+.customize-plugin-row:hover { background: var(--bg-hover); }
+.customize-plugin-row.is-selected {
+  background: var(--bg-selected);
+  border-left-color: var(--accent);
+}
+.customize-plugin-row-check { padding-top: 2px; }
+.customize-plugin-row-check input { transform: scale(1.05); cursor: pointer; }
+.customize-plugin-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.customize-plugin-row-name {
+  font-family: var(--font-mono);
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.customize-plugin-row-source,
+.customize-plugin-row-count {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customize-plugin-add {
+  margin: var(--sp-2);
+  margin-top: auto;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+  transition: background 80ms ease, color 80ms ease, border-color 80ms ease;
+}
+.customize-plugin-add:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+  border-color: var(--accent);
+}
+.customize-plugin-add.is-active {
+  background: var(--bg-selected);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Middle pane: skill list. */
+.customize-skill-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-2) 0;
+}
+.customize-skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: 8px 12px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+.customize-skill-row:hover { background: var(--bg-hover); }
+.customize-skill-row.is-selected {
+  background: var(--bg-selected);
+  border-left-color: var(--accent);
+}
+.customize-skill-row.is-plugin-disabled {
+  opacity: 0.5;
+}
+.customize-skill-row-check { padding-top: 2px; }
+.customize-skill-row-check input { transform: scale(1.05); cursor: pointer; }
+.customize-skill-row-main {
+  flex: 1;
+  min-width: 0;
+}
+.customize-skill-row-name {
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.customize-skill-row-desc {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.customize-skill-row-kebab {
+  background: transparent;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  align-self: center;
+}
+.customize-skill-row-kebab:hover { color: var(--fg-primary); background: var(--bg-hover); }
+
+.customize-empty {
+  padding: var(--sp-4);
+  color: var(--fg-muted);
+  text-align: center;
+  font-size: var(--fz-sm);
+}
+
+/* Right pane: detail / preview. */
+.customize-detail {
+  padding: var(--sp-4);
+  overflow-y: auto;
+  min-height: 0;
+}
+.customize-detail-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.customize-detail-name {
+  font-family: var(--font-mono);
+  font-size: var(--fz-lg);
+  color: var(--fg-primary);
+  font-weight: 600;
+}
+.customize-detail-path {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.customize-detail-actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--sp-1);
+}
+.customize-detail-body {
+  font-size: var(--fz-md);
+  line-height: 1.6;
+  color: var(--fg-primary);
+}
+.customize-detail-body .md-body { max-width: 760px; }
+
+.customize-plugin-card {
+  padding: var(--sp-4);
+}
+.customize-plugin-card-row {
+  display: flex;
+  gap: var(--sp-2);
+  font-size: var(--fz-sm);
+  color: var(--fg-secondary);
+  margin: 4px 0;
+}
+.customize-plugin-card-row .label {
+  width: 96px;
+  color: var(--fg-muted);
+  flex-shrink: 0;
+}
+.customize-plugin-card-row .value {
+  font-family: var(--font-mono);
+  color: var(--fg-primary);
+  word-break: break-all;
+}
+
+/* The Customize section dropped the standard settings-section padding
+   so the three-pane grid can fill the available vertical space. */
+.settings-section.ps-section.customize-host {
+  padding: 0;
+  height: 100%;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+}

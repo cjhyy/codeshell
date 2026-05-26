@@ -1,0 +1,128 @@
+/**
+ * Read-only enumeration of installed plugins for the Customize UI.
+ *
+ * Sourced from core's `readInstalledPlugins()` (the same V2 JSON the
+ * scanner uses). For each install key (`<plugin>@<marketplace>`) we
+ * derive a display name, a source label and a skill count by counting
+ * `installPath/skills/*\/SKILL.md` files on disk — the value isn't
+ * authoritative for tool dispatch (the scanner is), it's just for the
+ * left-pane summary.
+ *
+ * Plugin descriptions are read best-effort from `plugin.json` if it
+ * exists; missing manifests are not an error. We deliberately never
+ * throw — the Customize page should still render if a single entry's
+ * installPath has disappeared.
+ */
+
+import { listInstalled } from "@cjhyy/code-shell-core";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import * as path from "node:path";
+
+export interface PluginSummary {
+  /** Display name (without the `@marketplace` suffix). */
+  name: string;
+  /** Full install key from installed-plugins.json (e.g. "superpowers@official"). */
+  installKey: string;
+  /** Marketplace source — null for direct git / GitHub installs without marketplace. */
+  marketplace: string | null;
+  /** Source line shown under the plugin name. */
+  sourceLabel: string;
+  /** Plugin install path (truncated display elsewhere). */
+  installPath: string;
+  installedAt: string;
+  version: string;
+  /** Number of skills this plugin contributes (counted from disk). */
+  skillCount: number;
+  /** Optional plugin description if `plugin.json` provides one. */
+  description?: string;
+}
+
+interface PluginManifest {
+  description?: string;
+  name?: string;
+}
+
+function readPluginManifest(installPath: string): PluginManifest | null {
+  const candidates = ["plugin.json", "claude-plugin.json"];
+  for (const file of candidates) {
+    const full = path.join(installPath, file);
+    if (!existsSync(full)) continue;
+    try {
+      const raw = JSON.parse(readFileSync(full, "utf-8"));
+      if (raw && typeof raw === "object") return raw as PluginManifest;
+    } catch {
+      // Corrupt manifest — ignore, fall through to the next candidate.
+    }
+  }
+  return null;
+}
+
+function countSkills(installPath: string): number {
+  const skillsDir = path.join(installPath, "skills");
+  if (!existsSync(skillsDir)) return 0;
+  let entries: { name: string; isDirectory: () => boolean; isSymbolicLink: () => boolean }[];
+  try {
+    entries = readdirSync(skillsDir, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  let count = 0;
+  for (const e of entries) {
+    if (!e.isDirectory() && !e.isSymbolicLink()) continue;
+    if (existsSync(path.join(skillsDir, e.name, "SKILL.md"))) count++;
+  }
+  return count;
+}
+
+function deriveSourceLabel(marketplace: string | null): string {
+  if (!marketplace) return "本地安装";
+  // Heuristic: marketplaces are sometimes labeled "github:owner/repo" by
+  // direct-github installs. Pass that through verbatim; otherwise prefix.
+  if (marketplace.startsWith("github:") || marketplace.startsWith("git:")) {
+    return `installed from ${marketplace}`;
+  }
+  return `installed from ${marketplace}`;
+}
+
+export function listPlugins(_cwd: string): PluginSummary[] {
+  let rows: ReturnType<typeof listInstalled>;
+  try {
+    rows = listInstalled();
+  } catch {
+    return [];
+  }
+
+  // listInstalled() may include multiple rows per key (different scopes).
+  // For the Customize summary we collapse to one per key — keys are
+  // unique in the plugins JSON, and the MVP only writes scope:"user".
+  const seen = new Set<string>();
+  const out: PluginSummary[] = [];
+  for (const { key, entry } of rows) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const atIdx = key.lastIndexOf("@");
+    const name = atIdx > 0 ? key.slice(0, atIdx) : key;
+    const marketplace = atIdx > 0 ? key.slice(atIdx + 1) : null;
+    const installPath = entry.installPath;
+    const manifest = installPath ? readPluginManifest(installPath) : null;
+
+    out.push({
+      name,
+      installKey: key,
+      marketplace,
+      sourceLabel: deriveSourceLabel(marketplace),
+      installPath,
+      installedAt: entry.installedAt,
+      version: entry.version,
+      skillCount: installPath ? countSkills(installPath) : 0,
+      description: manifest?.description,
+    });
+  }
+  return out;
+}
+
+// Promise-shaped variant for callers that prefer async/await.
+export async function listPluginsAsync(cwd: string): Promise<PluginSummary[]> {
+  return Promise.resolve(listPlugins(cwd));
+}

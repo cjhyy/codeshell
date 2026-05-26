@@ -142,6 +142,7 @@ export interface CodeshellApi {
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
+  listPlugins(cwd: string): Promise<PluginSummary[]>;
   readSkillBody(filePath: string): Promise<string>;
   installLocalSkill(
     sourceDir: string,
@@ -293,6 +294,25 @@ export interface SkillSummary {
   description: string;
   source: "project" | "user" | "plugin";
   filePath: string;
+}
+
+export interface PluginSummary {
+  /** Display name (without the `@marketplace` suffix). */
+  name: string;
+  /** Full install key from installed-plugins.json (e.g. "superpowers@official"). */
+  installKey: string;
+  /** Marketplace source — null for direct git / GitHub installs without marketplace. */
+  marketplace: string | null;
+  /** Source line shown under the plugin name. */
+  sourceLabel: string;
+  /** Plugin install path (truncated display elsewhere). */
+  installPath: string;
+  installedAt: string;
+  version: string;
+  /** Number of skills this plugin contributes. */
+  skillCount: number;
+  /** Optional plugin description if `plugin.json` provides one. */
+  description?: string;
 }
 
 export interface RunSummary {

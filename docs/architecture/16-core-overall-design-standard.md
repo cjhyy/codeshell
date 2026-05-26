@@ -227,6 +227,8 @@ Tests must deliberately set `process.cwd()` and `EngineConfig.cwd` to different 
 
 `settings.disabledSkills: string[]` filters individual skills out of LLM view at scanner consumption points (PromptComposer skill listing, skill builtin tool dispatch). `settings.disabledPlugins: string[]` is the coarser knob: each entry is a bare plugin name (no colon suffix) and drops every skill whose namespaced name starts with `${pluginName}:` in one go. Both filters run at `scanSkills` after the memoized scan returns, so toggling either never forces a re-scan. The Engine reads both lists in a single settings pass (`readDisabledLists`) before constructing the PromptComposer and the ToolContext so both consumers see the same snapshot. The skill builtin tool returns three distinct error messages — "disabled" (per-skill), "disabled plugin" (plugin-level), and "not found" — so the LLM can attribute the rejection.
 
+Desktop's Customize page exposes plugin- and skill-level toggles via a three-pane UI (left: plugins, middle: skills in the selected plugin, right: SKILL.md preview or plugin info card); the toggle state is the same `settings.disabledPlugins` / `settings.disabledSkills` wired in Steps 1+2. A read-only `plugins:list` IPC (handled in `packages/desktop/src/main/plugins-service.ts`) feeds the left pane — it sources from core's `listInstalled()` and counts skills on disk, so the renderer never imports core directly.
+
 ### S6. Cancellation Reaches Real Work
 
 Returning "Tool aborted" while a child process keeps running is not cancellation.

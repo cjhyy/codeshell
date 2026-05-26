@@ -35,6 +35,7 @@ import {
   readSkillBody,
   uninstallSkill,
 } from "./skills-service.js";
+import { listPlugins } from "./plugins-service.js";
 import {
   inspectRepo,
   installFromGithub,
@@ -217,6 +218,10 @@ app.whenReady().then(() => {
 });
 
 ipcMain.handle("skills:list", async (_e, cwd: string) => listSkills(cwd));
+ipcMain.handle("plugins:list", async (_e, cwd: string) => {
+  if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
+  return listPlugins(cwd);
+});
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 ipcMain.handle(
   "skills:uninstall",

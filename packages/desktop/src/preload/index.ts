@@ -188,6 +188,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   listRuns: () => ipcRenderer.invoke("runs:list"),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   listSkills: (cwd: string) => ipcRenderer.invoke("skills:list", cwd),
+  listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
   installLocalSkill: (
     sourceDir: string,
