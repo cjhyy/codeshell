@@ -1,10 +1,14 @@
 /**
  * REPLTool — execute code in an interactive REPL environment.
+ *
+ * The lifecycle (spawn, abort/timeout cascade, IO drain, byte cap) is
+ * centralized in {@link safeSpawn}; this file only carries the language
+ * runtime selection table and the REPL-specific output formatting.
  */
 
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
-import { spawn } from "node:child_process";
+import { safeSpawn } from "../../runtime/safe-spawn.js";
 
 export const replToolDef: ToolDefinition = {
   name: "REPL",
@@ -31,6 +35,8 @@ export const replToolDef: ToolDefinition = {
     required: ["language", "code"],
   },
 };
+
+const REPL_MAX_BUFFER = 1024 * 1024;
 
 export async function replTool(
   args: Record<string, unknown>,
@@ -63,95 +69,29 @@ export async function replTool(
     return `Unsupported language: ${language}. Supported: ${Object.keys(commands).join(", ")}`;
   }
 
-  // A2: REPL is now spawn-based so it can honor ctx.signal and not
-  // block the event loop. Mirrors the Bash kill cascade.
-  if (ctx?.signal?.aborted) {
-    return `${language} aborted before starting.`;
-  }
-
-  return new Promise<string>((resolve) => {
-    let settled = false;
-    const finish = (output: string) => {
-      if (settled) return;
-      settled = true;
-      resolve(output);
-    };
-
-    const child = spawn(runtime.file, [...runtime.pre, code], {
-      cwd,
-      env: { ...process.env },
-    });
-
-    let stdout = "";
-    let stderr = "";
-    const MAX = 1024 * 1024;
-    let stdoutOver = false;
-    let stderrOver = false;
-    let timedOut = false;
-    let aborted = false;
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try { child.kill("SIGTERM"); } catch { /* may already be dead */ }
-      setTimeout(() => {
-        try { child.kill("SIGKILL"); } catch { /* ignore */ }
-      }, 2000).unref();
-    }, timeout);
-
-    const onAbort = () => {
-      aborted = true;
-      try { child.kill("SIGTERM"); } catch { /* ignore */ }
-      setTimeout(() => {
-        try { child.kill("SIGKILL"); } catch { /* ignore */ }
-      }, 2000).unref();
-    };
-    if (ctx?.signal) {
-      ctx.signal.addEventListener("abort", onAbort, { once: true });
-    }
-
-    child.stdout?.on("data", (chunk: Buffer) => {
-      if (stdoutOver) return;
-      const piece = chunk.toString("utf-8");
-      if (stdout.length + piece.length > MAX) {
-        stdoutOver = true;
-        stdout += piece.slice(0, MAX - stdout.length);
-      } else {
-        stdout += piece;
-      }
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      if (stderrOver) return;
-      const piece = chunk.toString("utf-8");
-      if (stderr.length + piece.length > MAX) {
-        stderrOver = true;
-        stderr += piece.slice(0, MAX - stderr.length);
-      } else {
-        stderr += piece;
-      }
-    });
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      if (ctx?.signal) ctx.signal.removeEventListener("abort", onAbort);
-      finish(`Failed to spawn ${language}: ${(err as Error).message}`);
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (ctx?.signal) ctx.signal.removeEventListener("abort", onAbort);
-
-      if (aborted) {
-        finish(`${language} aborted by signal.`);
-        return;
-      }
-      if (timedOut) {
-        finish(`${language} timed out after ${timeout}ms`);
-        return;
-      }
-      if (code !== 0) {
-        const out = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n");
-        finish(`Error executing ${language}:\n${out || `exit code ${code}`}`);
-        return;
-      }
-      finish(stdout.trim() || "(no output)");
-    });
+  const wasAbortedBeforeStart = ctx?.signal?.aborted === true;
+  const result = await safeSpawn(runtime.file, [...runtime.pre, code], {
+    cwd,
+    env: { ...process.env },
+    timeoutMs: timeout,
+    maxOutputBytes: REPL_MAX_BUFFER,
+    signal: ctx?.signal,
   });
+
+  if (result.aborted) {
+    return wasAbortedBeforeStart
+      ? `${language} aborted before starting.`
+      : `${language} aborted by signal.`;
+  }
+  if (result.timedOut) {
+    return `${language} timed out after ${timeout}ms`;
+  }
+  if (result.spawnFailed) {
+    return `Failed to spawn ${language}: ${result.error ?? "unknown error"}`;
+  }
+  if (result.exitCode !== 0) {
+    const out = [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n");
+    return `Error executing ${language}:\n${out || `exit code ${result.exitCode}`}`;
+  }
+  return result.stdout.trim() || "(no output)";
 }

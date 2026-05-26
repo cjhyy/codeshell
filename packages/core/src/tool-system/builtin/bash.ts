@@ -5,12 +5,20 @@
  * bubblewrap on Linux). The sandbox is selected by the Engine and handed
  * down via ToolContext.sandbox. Without a sandbox we fall back to the
  * historical behavior — plain shell spawn in the user's environment.
+ *
+ * The actual lifecycle (spawn, IO drain, byte cap, abort cascade, timeout
+ * cascade, listener cleanup) lives in {@link safeSpawnShell}. This file
+ * keeps only Bash-specific concerns:
+ *
+ *   - The env allowlist + deny regex (a Bash threat-model thing — REPL /
+ *     PowerShell don't have free-form shell injection from the LLM).
+ *   - The final user-facing output formatting (STDERR: prefix, Exit code,
+ *     Killed by signal, the truncation message, sandbox denial hints).
  */
 
-import { spawn } from "node:child_process";
-import { StringDecoder } from "node:string_decoder";
 import type { ToolContext } from "../context.js";
 import { createOffBackend } from "../sandbox/off.js";
+import { safeSpawnShell } from "../../runtime/safe-spawn.js";
 import type { ToolDefinition } from "../../types.js";
 
 export const bashToolDef: ToolDefinition = {
@@ -98,142 +106,59 @@ export async function bashTool(
   const cwd = ctx?.cwd ?? process.cwd();
   const shell = process.env.SHELL || "/bin/bash";
   const backend = ctx?.sandbox ?? createOffBackend();
-  const wrapped = backend.wrap(command, { cwd, shell });
-  const { file, args: spawnArgs, cleanup } = wrapped;
   const env = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
 
-  // A2: honor ctx.signal so a user-initiated cancel kills the child.
-  // If the caller already aborted before we spawn, return immediately
-  // without paying spawn cost.
-  if (ctx?.signal?.aborted) {
-    try { cleanup?.(); } catch { /* ignore */ }
-    return "Bash aborted before starting.";
+  // A6: lifecycle (spawn, kill cascade, IO drain, byte cap, abort/timeout)
+  // is centralized in safeSpawnShell. We still handle Bash's user-facing
+  // output formatting here.
+  // Capture pre-spawn abort state so we can produce the historical
+  // "aborted before starting" message; SafeSpawn collapses both pre- and
+  // mid-flight abort to aborted=true.
+  const wasAbortedBeforeStart = ctx?.signal?.aborted === true;
+  const result = await safeSpawnShell(command, {
+    cwd,
+    env,
+    timeoutMs: timeout,
+    maxOutputBytes: MAX_BUFFER,
+    sandbox: backend,
+    shell,
+    signal: ctx?.signal,
+  });
+
+  if (result.aborted) {
+    return wasAbortedBeforeStart ? "Bash aborted before starting." : "Bash aborted by signal.";
+  }
+  if (result.timedOut) {
+    return `Command timed out after ${timeout}ms`;
+  }
+  if (result.spawnFailed) {
+    return `Failed to spawn command: ${result.error ?? "unknown error"}`;
   }
 
-  return new Promise<string>((resolve) => {
-    let settled = false;
-    const finish = (output: string) => {
-      if (settled) return;
-      settled = true;
-      // Backend-allocated per-command resources (seatbelt's tmp profile
-      // dir, etc.) are released here. cleanup is best-effort and must
-      // never throw — see the seatbelt backend for rationale.
-      try {
-        cleanup?.();
-      } catch {
-        // ignore
-      }
-      resolve(output);
-    };
+  let output = "";
+  if (result.stdout) output += result.stdout;
+  if (result.stderr) output += (output ? "\n" : "") + `STDERR:\n${result.stderr}`;
+  if (!output) output = "(command completed with no output)";
 
-    const child = spawn(file, spawnArgs, { cwd, env });
+  const code = result.exitCode;
+  const sig = result.signal;
+  if (code !== 0 && code !== null) {
+    output = `Exit code: ${code}\n${output}`;
+  } else if (code === null && sig) {
+    // Killed by a signal we didn't time out on — OOM-kill, sandbox-kill,
+    // external SIGKILL. Surface so the model can distinguish from our
+    // own timeout path above.
+    output = `Killed by signal: ${sig}\n${output}`;
+  }
 
-    // A2: SIGTERM → SIGKILL escalation on ctx.signal abort, mirroring
-    // the timeout path below. Listener is removed in the close handler
-    // so a long-lived signal (multi-turn session) doesn't leak.
-    let aborted = false;
-    const onAbort = () => {
-      aborted = true;
-      try { child.kill("SIGTERM"); } catch { /* may already be dead */ }
-      setTimeout(() => {
-        try { child.kill("SIGKILL"); } catch { /* ignore */ }
-      }, 2000).unref();
-    };
-    if (ctx?.signal) {
-      ctx.signal.addEventListener("abort", onAbort, { once: true });
-    }
+  const hint = backend.hintForBlockedOutput?.(result.stderr);
+  if (hint) output += hint;
 
-    // StringDecoder buffers partial utf-8 sequences across chunks, so a
-    // multi-byte CJK character split across two `data` events still decodes
-    // cleanly. Slicing the decoded string by .length is fine for truncation —
-    // we only cap at MAX_BUFFER chars (not bytes), which is the same budget
-    // the downstream MAX_OUTPUT clamp uses.
-    const stdoutDec = new StringDecoder("utf-8");
-    const stderrDec = new StringDecoder("utf-8");
-    let stdout = "";
-    let stderr = "";
-    let stdoutOver = false;
-    let stderrOver = false;
-    let timedOut = false;
+  if (output.length > MAX_OUTPUT) {
+    output =
+      output.slice(0, MAX_OUTPUT) +
+      `\n\n... output truncated (${output.length} chars total)`;
+  }
 
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGTERM");
-      setTimeout(() => child.kill("SIGKILL"), 2000).unref();
-    }, timeout);
-
-    child.stdout?.on("data", (chunk: Buffer) => {
-      if (stdoutOver) return;
-      const piece = stdoutDec.write(chunk);
-      if (stdout.length + piece.length > MAX_BUFFER) {
-        stdoutOver = true;
-        stdout += piece.slice(0, MAX_BUFFER - stdout.length);
-      } else {
-        stdout += piece;
-      }
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      if (stderrOver) return;
-      const piece = stderrDec.write(chunk);
-      if (stderr.length + piece.length > MAX_BUFFER) {
-        stderrOver = true;
-        stderr += piece.slice(0, MAX_BUFFER - stderr.length);
-      } else {
-        stderr += piece;
-      }
-    });
-
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      finish(`Failed to spawn command: ${(err as Error).message}`);
-    });
-
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      // A2: cleanup abort listener so long-lived signals don't leak.
-      if (ctx?.signal) {
-        ctx.signal.removeEventListener("abort", onAbort);
-      }
-      // Flush any trailing incomplete utf-8 (returns empty string when the
-      // last write completed a sequence).
-      const tailOut = stdoutDec.end();
-      const tailErr = stderrDec.end();
-      if (tailOut && !stdoutOver) stdout += tailOut;
-      if (tailErr && !stderrOver) stderr += tailErr;
-
-      if (aborted) {
-        finish("Bash aborted by signal.");
-        return;
-      }
-      if (timedOut) {
-        finish(`Command timed out after ${timeout}ms`);
-        return;
-      }
-
-      let output = "";
-      if (stdout) output += stdout;
-      if (stderr) output += (output ? "\n" : "") + `STDERR:\n${stderr}`;
-      if (!output) output = "(command completed with no output)";
-
-      if (code !== 0 && code !== null) {
-        output = `Exit code: ${code}\n${output}`;
-      } else if (code === null && signal) {
-        // Killed by a signal we didn't time out on — OOM-kill, sandbox-kill,
-        // external SIGKILL. Surface so the model can distinguish from our
-        // own timeout path above.
-        output = `Killed by signal: ${signal}\n${output}`;
-      }
-
-      const hint = backend.hintForBlockedOutput?.(stderr);
-      if (hint) output += hint;
-
-      if (output.length > MAX_OUTPUT) {
-        output =
-          output.slice(0, MAX_OUTPUT) +
-          `\n\n... output truncated (${output.length} chars total)`;
-      }
-
-      finish(output);
-    });
-  });
+  return output;
 }

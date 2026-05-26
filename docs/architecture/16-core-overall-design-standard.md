@@ -197,6 +197,7 @@ Hard rules:
 - Plugin command hooks and settings shell hooks are either clearly trusted code or routed through the same permission/sandbox/abort path as Bash.
 - Explicit sandbox modes fail closed. Only `auto` can degrade to `off`, and that must be visible.
 - WebFetch validates every redirect hop and DNS-resolved IP, not just the initial hostname.
+- All LLM- or host-driven subprocess spawns (Bash, REPL, PowerShell builtin tools; `packages/core/src/plugins/gitOps.ts` for marketplace install/update) go through `packages/core/src/runtime/safe-spawn.ts`. SafeSpawn is the single owner of the spawn lifecycle: sandbox wrap, UTF-8 IO drain, per-stream byte cap, SIGTERM→SIGKILL cascade on `ctx.signal` abort, hard-timeout cascade, and abort-listener cleanup. Permission classification is NOT inside SafeSpawn — `ToolExecutor` already classifies builtin tools before the tool function runs; duplicating that here would double-prompt. Plugin command hooks (`packages/core/src/plugins/pluginCommandHook.ts`) and settings shell hooks (`packages/core/src/hooks/shell-runner.ts`) are explicitly exempt: per [doc 17 trust model](17-plugin-shell-hook-trust-model.md) they are trusted-by-install user code with a different protocol (stdin envelope, exit-code 2 = deny, malformed stdout = noop), and routing them through SafeSpawn would either break those semantics or impose double permission gates.
 
 ### S5. `ToolContext.cwd` Is the Only Execution Root
 

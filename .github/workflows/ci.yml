@@ -61,6 +61,7 @@ jobs:
             tests/mcp-default-unsafe.test.ts \
             tests/permission.test.ts \
             tests/runtime-close.test.ts \
+            tests/safe-spawn.test.ts \
             tests/sandbox.test.ts \
             tests/sdk-smoke.test.ts \
             tests/session-cold-start.test.ts \

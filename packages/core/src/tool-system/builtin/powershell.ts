@@ -1,10 +1,14 @@
 /**
- * PowerShellTool — execute PowerShell commands (Windows).
+ * PowerShellTool — execute PowerShell commands (Windows or pwsh).
+ *
+ * The lifecycle (spawn, abort/timeout cascade, IO drain, byte cap) is
+ * centralized in {@link safeSpawn}; this file only carries the pwsh /
+ * powershell.exe selection + the PowerShell-specific output formatting.
  */
 
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
-import { spawn } from "node:child_process";
+import { safeSpawn } from "../../runtime/safe-spawn.js";
 
 export const powershellToolDef: ToolDefinition = {
   name: "PowerShell",
@@ -26,6 +30,8 @@ export const powershellToolDef: ToolDefinition = {
   },
 };
 
+const PS_MAX_BUFFER = 5 * 1024 * 1024;
+
 export async function powershellTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
@@ -37,103 +43,40 @@ export async function powershellTool(
     return "Error: command is required.";
   }
 
-  // Determine PowerShell executable
+  // Determine PowerShell executable.
   const psCmd = process.platform === "win32" ? "powershell.exe" : "pwsh";
   // A4: child process runs in the Engine's cwd, not the host process cwd.
   const cwd = ctx?.cwd ?? process.cwd();
 
-  // A2: spawn-based so we can honor ctx.signal and not block the event
-  // loop. Same kill cascade as Bash.
-  if (ctx?.signal?.aborted) {
-    return "PowerShell aborted before starting.";
+  const wasAbortedBeforeStart = ctx?.signal?.aborted === true;
+  // PowerShell's -Command flag takes the script as a single argument;
+  // passing it through argv avoids shell quoting issues.
+  const result = await safeSpawn(
+    psCmd,
+    ["-NoProfile", "-NonInteractive", "-Command", command],
+    {
+      cwd,
+      env: { ...process.env },
+      timeoutMs: timeout,
+      maxOutputBytes: PS_MAX_BUFFER,
+      signal: ctx?.signal,
+    },
+  );
+
+  if (result.aborted) {
+    return wasAbortedBeforeStart
+      ? "PowerShell aborted before starting."
+      : "PowerShell aborted by signal.";
   }
-
-  return new Promise<string>((resolve) => {
-    let settled = false;
-    const finish = (output: string) => {
-      if (settled) return;
-      settled = true;
-      resolve(output);
-    };
-
-    // PowerShell's -Command flag takes the script as a single argument;
-    // passing it through argv avoids shell quoting issues.
-    const child = spawn(
-      psCmd,
-      ["-NoProfile", "-NonInteractive", "-Command", command],
-      { cwd, env: { ...process.env } },
-    );
-
-    let stdout = "";
-    let stderr = "";
-    const MAX = 5 * 1024 * 1024;
-    let stdoutOver = false;
-    let stderrOver = false;
-    let timedOut = false;
-    let aborted = false;
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try { child.kill("SIGTERM"); } catch { /* ignore */ }
-      setTimeout(() => {
-        try { child.kill("SIGKILL"); } catch { /* ignore */ }
-      }, 2000).unref();
-    }, timeout);
-
-    const onAbort = () => {
-      aborted = true;
-      try { child.kill("SIGTERM"); } catch { /* ignore */ }
-      setTimeout(() => {
-        try { child.kill("SIGKILL"); } catch { /* ignore */ }
-      }, 2000).unref();
-    };
-    if (ctx?.signal) {
-      ctx.signal.addEventListener("abort", onAbort, { once: true });
-    }
-
-    child.stdout?.on("data", (chunk: Buffer) => {
-      if (stdoutOver) return;
-      const piece = chunk.toString("utf-8");
-      if (stdout.length + piece.length > MAX) {
-        stdoutOver = true;
-        stdout += piece.slice(0, MAX - stdout.length);
-      } else {
-        stdout += piece;
-      }
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      if (stderrOver) return;
-      const piece = chunk.toString("utf-8");
-      if (stderr.length + piece.length > MAX) {
-        stderrOver = true;
-        stderr += piece.slice(0, MAX - stderr.length);
-      } else {
-        stderr += piece;
-      }
-    });
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      if (ctx?.signal) ctx.signal.removeEventListener("abort", onAbort);
-      finish(`PowerShell spawn error: ${(err as Error).message}`);
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (ctx?.signal) ctx.signal.removeEventListener("abort", onAbort);
-
-      if (aborted) {
-        finish("PowerShell aborted by signal.");
-        return;
-      }
-      if (timedOut) {
-        finish(`PowerShell timed out after ${timeout}ms`);
-        return;
-      }
-      if (code !== 0) {
-        const out = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n");
-        finish(`PowerShell error:\n${out || `exit code ${code}`}`);
-        return;
-      }
-      finish(stdout.trim() || "(no output)");
-    });
-  });
+  if (result.timedOut) {
+    return `PowerShell timed out after ${timeout}ms`;
+  }
+  if (result.spawnFailed) {
+    return `PowerShell spawn error: ${result.error ?? "unknown error"}`;
+  }
+  if (result.exitCode !== 0) {
+    const out = [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n");
+    return `PowerShell error:\n${out || `exit code ${result.exitCode}`}`;
+  }
+  return result.stdout.trim() || "(no output)";
 }
