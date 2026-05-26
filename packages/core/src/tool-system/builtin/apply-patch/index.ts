@@ -16,6 +16,7 @@
  */
 
 import type { ToolDefinition } from "../../../types.js";
+import type { ToolContext } from "../../context.js";
 import { fileCache } from "../file-cache.js";
 import { applyPatch } from "./applier.js";
 import { parsePatch } from "./parser.js";
@@ -56,7 +57,10 @@ export const applyPatchToolDef: ToolDefinition = {
   },
 };
 
-export async function applyPatchTool(args: Record<string, unknown>): Promise<string> {
+export async function applyPatchTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const patchText = args.patch;
   if (typeof patchText !== "string" || patchText.length === 0) {
     return "Error: patch is required and must be a non-empty string";
@@ -73,9 +77,13 @@ export async function applyPatchTool(args: Record<string, unknown>): Promise<str
     return "Error: patch contains no hunks";
   }
 
+  // A4: resolve relative patch paths against the Engine's cwd, not the
+  // host process cwd. See standard §S5.
+  const cwd = ctx?.cwd ?? process.cwd();
+
   let result;
   try {
-    result = await applyPatch(parsed.hunks, { cwd: process.cwd() });
+    result = await applyPatch(parsed.hunks, { cwd });
   } catch (err) {
     return `Error applying patch: ${(err as Error).message}`;
   }

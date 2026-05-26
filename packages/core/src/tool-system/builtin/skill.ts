@@ -6,6 +6,7 @@
 
 import { dirname } from "node:path";
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 import { scanSkills } from "../../skills/scanner.js";
 
 export const skillToolDef: ToolDefinition = {
@@ -30,7 +31,10 @@ export const skillToolDef: ToolDefinition = {
   },
 };
 
-export async function skillTool(args: Record<string, unknown>): Promise<string> {
+export async function skillTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const skillName = args.skill as string;
   const skillArgs = (args.args as string) ?? "";
 
@@ -38,7 +42,8 @@ export async function skillTool(args: Record<string, unknown>): Promise<string> 
     return "Error: skill name is required.";
   }
 
-  const skills = scanSkills(process.cwd());
+  // A4: scan skills from the Engine's cwd, not the host process cwd.
+  const skills = scanSkills(ctx?.cwd ?? process.cwd());
   const found = skills.find((s) => s.name === skillName);
 
   if (!found) {

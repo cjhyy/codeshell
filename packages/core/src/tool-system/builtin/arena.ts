@@ -256,9 +256,11 @@ function participantWouldResolve(
  *
  * Returns an empty array if no settings file exists or the field is empty.
  */
-function readSettingsParticipants(): string[] {
+function readSettingsParticipants(cwd?: string): string[] {
+  // A4: prefer Engine cwd when caller provides one; fall back to host
+  // process cwd for non-tool callers like getArenaStatus().
   try {
-    const settings = new SettingsManager(process.cwd()).get();
+    const settings = new SettingsManager(cwd ?? process.cwd()).get();
     const raw = settings.arena?.participants ?? [];
     return raw.filter((p): p is string => typeof p === "string");
   } catch {
@@ -409,7 +411,7 @@ export async function arenaTool(
       participantNames = explicitParticipants;
       participantSource = "explicit";
     } else {
-      const fromSettings = readSettingsParticipants();
+      const fromSettings = readSettingsParticipants(ctx?.cwd);
       if (fromSettings.length >= 2) {
         participantNames = fromSettings;
         participantSource = "explicit-coerced-to-settings";
@@ -422,7 +424,7 @@ export async function arenaTool(
       }
     }
   } else {
-    const fromSettings = readSettingsParticipants();
+    const fromSettings = readSettingsParticipants(ctx?.cwd);
     if (fromSettings.length >= 2) {
       participantNames = fromSettings;
       participantSource = "settings";

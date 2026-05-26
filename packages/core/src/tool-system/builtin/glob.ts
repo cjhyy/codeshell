@@ -4,7 +4,9 @@
 
 import { glob } from "glob";
 import { stat } from "node:fs/promises";
+import * as path from "node:path";
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 
 export const globToolDef: ToolDefinition = {
   name: "Glob",
@@ -22,11 +24,22 @@ export const globToolDef: ToolDefinition = {
   },
 };
 
-export async function globTool(args: Record<string, unknown>): Promise<string> {
+export async function globTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const pattern = args.pattern as string;
   if (!pattern) return "Error: pattern is required";
 
-  const cwd = (args.path as string) || process.cwd();
+  // A4: resolve search root against ctx.cwd. Relative args.path is
+  // resolved against ctx.cwd; absolute args.path is used as-is.
+  const baseDir = ctx?.cwd ?? process.cwd();
+  const argPath = args.path as string | undefined;
+  const cwd = argPath
+    ? path.isAbsolute(argPath)
+      ? argPath
+      : path.resolve(baseDir, argPath)
+    : baseDir;
 
   try {
     const matches = await glob(pattern, {

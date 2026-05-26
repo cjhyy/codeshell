@@ -3,6 +3,7 @@
  */
 
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 import { execSync } from "node:child_process";
 
 export const replToolDef: ToolDefinition = {
@@ -31,10 +32,15 @@ export const replToolDef: ToolDefinition = {
   },
 };
 
-export async function replTool(args: Record<string, unknown>): Promise<string> {
+export async function replTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const language = args.language as string;
   const code = args.code as string;
   const timeout = (args.timeout as number) ?? 30_000;
+  // A4: child process runs in the Engine's cwd, not the host process cwd.
+  const cwd = ctx?.cwd ?? process.cwd();
 
   if (!code.trim()) {
     return "Error: no code provided.";
@@ -60,7 +66,7 @@ export async function replTool(args: Record<string, unknown>): Promise<string> {
       encoding: "utf-8",
       timeout,
       maxBuffer: 1024 * 1024,
-      cwd: process.cwd(),
+      cwd,
       env: { ...process.env },
     });
     return result.trim() || "(no output)";

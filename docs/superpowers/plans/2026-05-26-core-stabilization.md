@@ -118,10 +118,10 @@ Core 可以给其他业务方接入前，至少满足这些门槛：
 - `packages/core/src/tool-system/registry.ts`
 - `tests/tool-cwd*.test.ts`
 
-- [ ] Make builtin executors use `ctx?.cwd` directly; remove `__cwd` hidden arg paths where possible.
-- [ ] For tools with a `path` input, interpret relative paths against `ctx.cwd`.
-- [ ] Run cwd tests with `process.chdir(tempA)` and `EngineConfig.cwd=tempB`.
-- [ ] Ensure `ApplyPatch` resolves patch paths against `ctx.cwd`.
+- [x] Make builtin executors use `ctx?.cwd` directly; remove `__cwd` hidden arg paths where possible. *(done — ApplyPatch / Glob / Grep / REPL / PowerShell / Skill executors now take `(args, ctx?)` and resolve `ctx?.cwd ?? process.cwd()`; Arena's `readSettingsParticipants(cwd?)` consumes `ctx?.cwd`.)*
+- [x] For tools with a `path` input, interpret relative paths against `ctx.cwd`. *(done — Glob and Grep `path.resolve(ctx.cwd, args.path)` for relative inputs; absolute inputs unchanged.)*
+- [x] Run cwd tests with `process.chdir(tempA)` and `EngineConfig.cwd=tempB`. *(done — `tests/tool-cwd.test.ts`)*
+- [x] Ensure `ApplyPatch` resolves patch paths against `ctx.cwd`. *(done — `applyPatch(hunks, { cwd })` now receives `ctx?.cwd ?? process.cwd()`.)*
 
 ### A5. CI guard correctness
 

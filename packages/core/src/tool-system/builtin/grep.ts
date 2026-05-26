@@ -4,8 +4,9 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { resolve, sep } from "node:path";
+import { resolve, sep, isAbsolute } from "node:path";
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -53,11 +54,22 @@ export const grepToolDef: ToolDefinition = {
   },
 };
 
-export async function grepTool(args: Record<string, unknown>): Promise<string> {
+export async function grepTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const pattern = args.pattern as string;
   if (!pattern) return "Error: pattern is required";
 
-  const searchPath = (args.path as string) || process.cwd();
+  // A4: resolve search path against ctx.cwd. Relative args.path is
+  // resolved against ctx.cwd; absolute args.path is used as-is.
+  const baseDir = ctx?.cwd ?? process.cwd();
+  const argPath = args.path as string | undefined;
+  const searchPath = argPath
+    ? isAbsolute(argPath)
+      ? argPath
+      : resolve(baseDir, argPath)
+    : baseDir;
   const fileGlob = args.glob as string | undefined;
   const context = (args.context as number) || 0;
   const maxResults = (args.max_results as number) || 50;

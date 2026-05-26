@@ -314,8 +314,8 @@ Core cannot be called stable until all are true:
 
 ### Gate 1: Correctness Gate
 
-- [ ] all builtin tools use `ToolContext.cwd`.
-- [ ] relative-path semantics are tested.
+- [x] all builtin tools use `ToolContext.cwd`. *(A4 — ApplyPatch / Glob / Grep / REPL / PowerShell / Skill / Arena all consume `ctx?.cwd ?? process.cwd()`; Bash was already correct.)*
+- [x] relative-path semantics are tested. *(A4 — `tests/tool-cwd.test.ts` runs `process.chdir(A)` + `ctx.cwd = B` and asserts each tool reads/writes B.)*
 - [ ] same-session turns are FIFO.
 - [ ] different sessions can run concurrently.
 - [ ] cancel targets only one session.
