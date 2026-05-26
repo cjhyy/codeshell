@@ -206,7 +206,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   useEffect(() => {
     if (selection.kind !== "skill") {
       setSkillBody(null);
-      setSkillBodyFor(null);
+      skillBodyForRef.current = null;
       return;
     }
     const s = skillsByName.get(selection.skillName);
