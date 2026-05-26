@@ -1,0 +1,66 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Standard §S7 + Gate 4: the gates this workflow protects are
+#   - safety guards (engine-bypass scan, sandbox tests, SSRF tests)
+#   - correctness (chat-session isolation, cwd consistency)
+#   - typecheck no-new-errors (clean baseline today; locked here)
+#   - SDK smoke (the public API contract from B3)
+# Anything that goes red here blocks merges to main.
+
+jobs:
+  guards:
+    name: guards (engine-bypass + lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: engine-bypass guard
+        run: bash scripts/check-no-engine-bypass.sh
+
+  typecheck:
+    name: typecheck (tsc --noEmit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: typecheck
+        # Baseline is clean as of B4 — any new error fails CI.
+        run: bun run typecheck
+
+  tests:
+    name: tests (targeted)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: gate test suites
+        # Targeted instead of the full suite because the broader test set
+        # currently has pre-existing failures unrelated to core stability
+        # (OpenAI capabilities + a task.ts named-export issue). Lock the
+        # core stability surface here; sweep the rest as separate work.
+        run: |
+          bun test \
+            tests/agent-notifications.test.ts \
+            tests/chat-session-isolation.test.ts \
+            tests/chat-session-queue.test.ts \
+            tests/chat-session-manager.test.ts \
+            tests/engine-bypass-guard.test.ts \
+            tests/hooks-on-permission-check.test.ts \
+            tests/permission.test.ts \
+            tests/runtime-close.test.ts \
+            tests/sandbox.test.ts \
+            tests/sdk-smoke.test.ts \
+            tests/tool-cwd.test.ts \
+            tests/web-fetch-ssrf.test.ts

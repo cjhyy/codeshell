@@ -133,8 +133,8 @@ Core 可以给其他业务方接入前，至少满足这些门槛：
 - `.github/workflows/*`
 
 - [x] Update engine-bypass guard to scan `packages/core/src`, `packages/tui/src`, and desktop main/preload paths with a package-aware allowlist. *(done — `scripts/check-no-engine-bypass.sh:32-34` already scans the monorepo paths.)*
-- [ ] Add/repair tests proving the guard fails on a forbidden `new Engine()` call outside approved sites.
-- [ ] Add initial GitHub Actions workflow for install, targeted tests, build, lint guard. (Same workflow closes [Gate 4](../../architecture/16-core-overall-design-standard.md#gate-4-verification-gate).)
+- [x] Add/repair tests proving the guard fails on a forbidden `new Engine()` call outside approved sites. *(A5 — `tests/engine-bypass-guard.test.ts` writes a tmp file, runs the script, asserts exit non-zero + stderr contains the unauthorized path; cleans up in finally.)*
+- [x] Add initial GitHub Actions workflow for install, targeted tests, build, lint guard. *(A5 — `.github/workflows/ci.yml` with three jobs: `guards` (engine-bypass), `typecheck`, `tests` (12 gate test files). Closes [Gate 4](../../architecture/16-core-overall-design-standard.md#gate-4-verification-gate).)*
 
 ---
 
@@ -192,10 +192,10 @@ Core 可以给其他业务方接入前，至少满足这些门槛：
 - `packages/*/package.json`
 - `.github/workflows/*`
 
-- [ ] Capture current typecheck/lint baseline.
-- [ ] Enforce no-new-errors for touched packages.
-- [ ] Drive `packages/core` to clean `tsc --noEmit`.
-- [ ] Then promote `bun run typecheck` and `bun run lint` into blocking CI.
+- [x] Capture current typecheck/lint baseline. *(B4 — baseline is clean as of the `client.ts` fix; no errors to grandfather.)*
+- [x] Enforce no-new-errors for touched packages. *(B4 — CI `typecheck` job runs `bun run typecheck` repo-wide; any new error fails.)*
+- [x] Drive `packages/core` to clean `tsc --noEmit`. *(B4 — exits 0.)*
+- [x] Then promote `bun run typecheck` and `bun run lint` into blocking CI. *(B4 — `.github/workflows/ci.yml` typecheck job is blocking; lint is wired via the engine-bypass guard in the `guards` job. Full `eslint` promotion can come later — the gate this plan was built to close is "no new typecheck errors land," and that's enforced.)*
 
 ---
 

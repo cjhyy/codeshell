@@ -31,6 +31,8 @@ type EngineStub = {
   planMode: false;
 };
 
+const PER_RUN_MS = 50;
+
 function makeSlowEngine(id: string, startedSignal?: () => void): EngineStub {
   return {
     run: (task, opts) =>
@@ -44,7 +46,7 @@ function makeSlowEngine(id: string, startedSignal?: () => void): EngineStub {
             turnCount: 1,
             usage: {},
           });
-        }, 50);
+        }, PER_RUN_MS);
         opts.signal.addEventListener("abort", () => {
           clearTimeout(t);
           reject(new Error("aborted"));
@@ -57,26 +59,60 @@ function makeSlowEngine(id: string, startedSignal?: () => void): EngineStub {
 
 describe("ChatSession isolation (Gate 1)", () => {
   it("two sessions run concurrently — neither blocks the other", async () => {
+    // Use start-order counters instead of wall-clock timing. The claim
+    // we care about is "B can start while A is still running" — that is
+    // the precise opposite of serialized. If a hidden lock serialized
+    // them, B's `startedSignal` would fire only after A's
+    // setTimeout resolves; the snapshot taken inside A's run would
+    // therefore show bStartedAtAFire === 0.
     let aStarted = 0;
     let bStarted = 0;
-    const a = new ChatSession({ id: "A", engine: makeSlowEngine("A", () => { aStarted += 1; }) as any });
-    const b = new ChatSession({ id: "B", engine: makeSlowEngine("B", () => { bStarted += 1; }) as any });
+    let bStartedAtAFire = -1;
 
-    const start = Date.now();
-    const [ra, rb] = await Promise.all([
-      a.enqueueTurn("x", {}),
-      b.enqueueTurn("y", {}),
-    ]);
-    const elapsed = Date.now() - start;
+    const a = new ChatSession({
+      id: "A",
+      engine: makeSlowEngine("A", () => {
+        aStarted += 1;
+        // Capture B's start counter at the moment A starts running. If
+        // they're truly concurrent, the start order may interleave but
+        // both should be observed as 1 by the time the engine resolves.
+      }) as any,
+    });
+    const b = new ChatSession({
+      id: "B",
+      engine: makeSlowEngine("B", () => {
+        bStarted += 1;
+        // Take a snapshot of A's started count when B's run() begins.
+        // Concurrent: aStarted === 1 here (A already started, still
+        // running). Serialized: aStarted === 1 too — but only because
+        // A would have already finished and B is taking its slot.
+        // The discriminator is whether `aStarted === 1 && bStarted === 1`
+        // is observed at the *same* time, which we check below by
+        // sampling immediately after kicking off both enqueueTurn calls.
+        bStartedAtAFire = aStarted;
+      }) as any,
+    });
 
-    expect(ra.text).toBe("done:A:x");
-    expect(rb.text).toBe("done:B:y");
+    const pa = a.enqueueTurn("x", {});
+    const pb = b.enqueueTurn("y", {});
+
+    // One microtask flush is enough for both `pump()` calls to advance
+    // into engine.run(); both should be sitting in setTimeout already.
+    await new Promise<void>((r) => setImmediate(r));
+
+    // Both runs in flight at the same time → both sessions are busy.
+    // A serialized implementation could only show one busy.
+    expect(a.isBusy()).toBe(true);
+    expect(b.isBusy()).toBe(true);
     expect(aStarted).toBe(1);
     expect(bStarted).toBe(1);
+    // B observed A as already-started when its own run() began →
+    // they overlapped, which is the multi-session concurrency claim.
+    expect(bStartedAtAFire).toBe(1);
 
-    // Both runs are 50ms. If they were serialized through some shared lock
-    // the total would be >=100ms. Allow generous CI slack (<=130ms).
-    expect(elapsed).toBeLessThan(130);
+    const [ra, rb] = await Promise.all([pa, pb]);
+    expect(ra.text).toBe("done:A:x");
+    expect(rb.text).toBe("done:B:y");
   });
 
   it("cancel(A) does not abort B's in-flight turn", async () => {

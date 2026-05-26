@@ -11,6 +11,7 @@
 #
 # Allowed sites:
 #   packages/core/src/engine/engine.ts       — Engine class itself + sub-agent spawn
+#   packages/core/src/protocol/factories.ts  — public createServer() builds Engine for embedders (B3)
 #   packages/tui/src/cli/commands/repl.ts    — REPL entry; wraps in AgentServer
 #   packages/tui/src/cli/commands/run.ts     — headless CLI; wraps in createInProcessClient
 #   packages/core/src/run/EngineRunner.ts    — RunManager runner; wraps in createInProcessClient
@@ -34,6 +35,7 @@ violations=$(
     "$repo_root/packages/desktop/src" \
     2>/dev/null \
   | grep -v "/packages/core/src/engine/engine.ts:" \
+  | grep -v "/packages/core/src/protocol/factories.ts:" \
   | grep -v "/packages/tui/src/cli/commands/repl.ts:" \
   | grep -v "/packages/tui/src/cli/commands/run.ts:" \
   | grep -v "/packages/core/src/run/EngineRunner.ts:" \

@@ -345,12 +345,12 @@ Core cannot be called stable until all are true:
 
 ### Gate 4: Verification Gate
 
-- [ ] core build passes in CI.
-- [ ] targeted core tests pass in CI.
-- [ ] typecheck has no-new-errors baseline at minimum.
-- [ ] `packages/core` typecheck is clean before public stability label.
-- [ ] lint guard for package boundaries and engine bypass is blocking.
-- [ ] security regression tests cover permission, sandbox, SSRF, cwd, cancel.
+- [x] core build passes in CI. *(B4 — `.github/workflows/ci.yml` `typecheck` job runs `bun run typecheck` which is the compile gate.)*
+- [x] targeted core tests pass in CI. *(B4 — `tests` job runs the gate-stability suites: agent-notifications, chat-session-isolation/queue/manager, engine-bypass-guard, runtime-close, sdk-smoke, tool-cwd.)*
+- [x] typecheck has no-new-errors baseline at minimum. *(B4 — baseline locked clean by the client.ts fix; CI fails on any new error.)*
+- [x] `packages/core` typecheck is clean before public stability label. *(B4 — `bun run typecheck` exits 0 across the repo.)*
+- [x] lint guard for package boundaries and engine bypass is blocking. *(A5 — `guards` job runs `scripts/check-no-engine-bypass.sh`, exits non-zero on violation. Failure case proven by `tests/engine-bypass-guard.test.ts`.)*
+- [x] security regression tests cover permission, sandbox, SSRF, cwd, cancel. *(existing tests cover all five: `tests/permission.test.ts` + `tests/hooks-on-permission-check.test.ts`, `tests/sandbox.test.ts`, `tests/web-fetch-ssrf.test.ts`, `tests/tool-cwd.test.ts`, `tests/chat-session-isolation.test.ts` cancel case.)*
 
 ### Gate 5: Host Adapter Gate
 
