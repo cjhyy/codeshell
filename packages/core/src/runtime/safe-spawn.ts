@@ -65,7 +65,27 @@ export interface SafeSpawnShellOptions extends SafeSpawnOptions {
   shell?: string;
 }
 
+/**
+ * Outcome discriminant for {@link SafeSpawnResult}. Lets SDK callers
+ * `switch (result.reason)` instead of reading three booleans and
+ * deciding which one to branch on first. `ok` is the normal-exit case
+ * (any `exitCode`, including non-zero); `spawn_failed` covers both
+ * synchronous `spawn()` throws and the child's `error` event mid-stream
+ * — both mean "we never got a clean lifecycle". The existing boolean
+ * flags (`timedOut`, `aborted`, `spawnFailed`) are preserved so the
+ * per-tool output formatting in Bash/REPL/PowerShell keeps working;
+ * `reason` is additive.
+ */
+export type SafeSpawnReason = "ok" | "timeout" | "aborted" | "spawn_failed";
+
 export interface SafeSpawnResult {
+  /**
+   * Discriminant for the outcome. `ok` means the process exited
+   * normally (any `exitCode`, including non-zero). Mutually exclusive
+   * by construction with the boolean flags below — e.g.
+   * `reason === "timeout"` ⇒ `timedOut === true`.
+   */
+  reason: SafeSpawnReason;
   /** UTF-8 decoded stdout (truncated to `maxOutputBytes` characters when over). */
   stdout: string;
   /** UTF-8 decoded stderr (truncated to `maxOutputBytes` characters when over). */
@@ -151,7 +171,7 @@ function runLifecycle({ file, args, opts, cleanup }: LifecycleArgs): Promise<Saf
   // Pre-spawn abort: don't pay spawn cost.
   if (opts.signal?.aborted) {
     safeCleanup(cleanup);
-    return Promise.resolve(emptyResult({ aborted: true }));
+    return Promise.resolve(emptyResult({ reason: "aborted", aborted: true }));
   }
 
   return new Promise<SafeSpawnResult>((resolve) => {
@@ -174,7 +194,7 @@ function runLifecycle({ file, args, opts, cleanup }: LifecycleArgs): Promise<Saf
     try {
       child = spawn(file, args, { cwd: opts.cwd, env: opts.env });
     } catch (err) {
-      finish(emptyResult({ spawnFailed: true, error: (err as Error).message }));
+      finish(emptyResult({ reason: "spawn_failed", spawnFailed: true, error: (err as Error).message }));
       return;
     }
 
@@ -231,7 +251,19 @@ function runLifecycle({ file, args, opts, cleanup }: LifecycleArgs): Promise<Saf
 
     child.on("error", (err) => {
       clearTimeout(timer);
+      // Mid-stream child error (e.g. spawn race where the exec fails after
+      // the parent got the ChildProcess handle). SDK-wise this maps to the
+      // same "never got a clean lifecycle" meaning as the synchronous spawn
+      // throw above, so we surface the same reason. If timeout or abort
+      // fired concurrently, give those precedence — the user-facing cause
+      // is the cancel/timeout, not the resulting process death.
+      const reason: SafeSpawnReason = timedOut
+        ? "timeout"
+        : aborted
+        ? "aborted"
+        : "spawn_failed";
       finish({
+        reason,
         stdout,
         stderr,
         exitCode: null,
@@ -267,7 +299,13 @@ function runLifecycle({ file, args, opts, cleanup }: LifecycleArgs): Promise<Saf
           stderr += tailErr;
         }
       }
+      const reason: SafeSpawnReason = timedOut
+        ? "timeout"
+        : aborted
+        ? "aborted"
+        : "ok";
       finish({
+        reason,
         stdout,
         stderr,
         exitCode: code,
@@ -289,6 +327,10 @@ function safeCleanup(cleanup: (() => void) | undefined): void {
 
 function emptyResult(overrides: Partial<SafeSpawnResult>): SafeSpawnResult {
   return {
+    // Callers always supply `reason` via overrides; the "ok" default is just
+    // a placeholder for the shape — it's never observed because every
+    // emptyResult() callsite sets reason explicitly.
+    reason: "ok",
     stdout: "",
     stderr: "",
     exitCode: null,

@@ -27,6 +27,7 @@ import {
   resolveSandboxBackend,
 } from "../packages/core/src/tool-system/sandbox/index.js";
 import { createOffBackend } from "../packages/core/src/tool-system/sandbox/off.js";
+import { SandboxUnavailableError } from "../packages/core/src/exceptions.js";
 
 const IS_MAC = process.platform === "darwin";
 
@@ -126,6 +127,37 @@ describe("resolveSandboxBackend errors", () => {
         "/tmp",
       ),
     ).rejects.toThrow(/bubblewrap|bwrap/);
+  });
+
+  // SDK-facing contract: explicit-mode failures throw a typed
+  // SandboxUnavailableError so callers can dispatch on `code` or
+  // `instanceof` instead of string-matching the message.
+  it("throws SandboxUnavailableError with literal code/mode/platform on unavailable explicit mode", async () => {
+    // Pick a mode that's definitively unavailable on this host. On macOS,
+    // bwrap is never available; on non-macOS, seatbelt is never available.
+    const caps = detectSandboxCapabilities();
+    let unavailableMode: "seatbelt" | "bwrap";
+    if (!caps.seatbelt) unavailableMode = "seatbelt";
+    else if (!caps.bwrap) unavailableMode = "bwrap";
+    else return; // both available — extraordinarily rare; nothing to assert
+
+    let caught: unknown;
+    try {
+      await resolveSandboxBackend(
+        { mode: unavailableMode, writableRoots: [], deniedReads: [], network: "allow" },
+        "/tmp",
+      );
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(SandboxUnavailableError);
+    const e = caught as SandboxUnavailableError;
+    expect(e.code).toBe("SANDBOX_UNAVAILABLE");
+    expect(e.mode).toBe(unavailableMode);
+    expect(e.platform).toBe(process.platform);
+    // Existing message text must remain so the install-hint behavior we
+    // were already verifying with /sandbox-exec|bubblewrap|bwrap/ still works.
+    expect(e.message).toMatch(unavailableMode === "seatbelt" ? /sandbox-exec/ : /bubblewrap|bwrap/);
   });
 
   // Regression: Engine.run wraps resolveSandboxBackend in a try/catch so a

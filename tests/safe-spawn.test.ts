@@ -23,6 +23,7 @@ describe("A6 — safeSpawn happy path", () => {
     expect(r.stderrTruncated).toBe(false);
     expect(r.spawnFailed).toBe(false);
     expect(r.signal).toBeNull();
+    expect(r.reason).toBe("ok");
   });
 
   it("captures stderr separately from stdout", async () => {
@@ -45,6 +46,8 @@ describe("A6 — safeSpawn happy path", () => {
     expect(r.exitCode).toBe(7);
     expect(r.aborted).toBe(false);
     expect(r.timedOut).toBe(false);
+    // Non-zero exit still counts as a clean lifecycle — reason is "ok".
+    expect(r.reason).toBe("ok");
   });
 });
 
@@ -63,6 +66,7 @@ describe("A6 — safeSpawn already-aborted", () => {
     expect(r.aborted).toBe(true);
     expect(r.exitCode).toBeNull();
     expect(elapsed).toBeLessThan(500);
+    expect(r.reason).toBe("aborted");
   });
 });
 
@@ -83,6 +87,7 @@ describe("A6 — safeSpawn mid-flight abort", () => {
     expect(r.aborted).toBe(true);
     // Should resolve within abort + small margin (SIGTERM + 100ms grace + child reaping).
     expect(elapsed).toBeLessThan(3000);
+    expect(r.reason).toBe("aborted");
   });
 });
 
@@ -99,6 +104,7 @@ describe("A6 — safeSpawn timeout", () => {
     expect(r.aborted).toBe(false);
     // 200ms timeout + SIGTERM grace; well under the 30s sleep.
     expect(elapsed).toBeLessThan(5000);
+    expect(r.reason).toBe("timeout");
   });
 });
 
@@ -184,6 +190,7 @@ describe("A6 — safeSpawn spawn failure", () => {
     );
     expect(r.spawnFailed).toBe(true);
     expect(r.error).toBeDefined();
+    expect(r.reason).toBe("spawn_failed");
   });
 });
 

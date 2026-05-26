@@ -121,3 +121,28 @@ export class ConfigError extends FrameworkError {
     this.name = "ConfigError";
   }
 }
+
+// ─── Sandbox Errors ───────────────────────────────────────────────
+
+/**
+ * Thrown by `resolveSandboxBackend` when an explicit sandbox mode is
+ * requested but the corresponding backend is unavailable on this host
+ * (e.g. `mode=seatbelt` on Linux, `mode=bwrap` without bubblewrap
+ * installed). The literal `code` field lets SDK callers narrow without
+ * `instanceof`: `if (err.code === "SANDBOX_UNAVAILABLE") { ... }`.
+ *
+ * Per standard §S4, explicit modes fail closed — only `auto` may
+ * silently downgrade to `off`. `mode` here is always one of the two
+ * explicit modes that can throw; `off` and `auto` never throw.
+ */
+export class SandboxUnavailableError extends FrameworkError {
+  readonly code = "SANDBOX_UNAVAILABLE" as const;
+  constructor(
+    public readonly mode: "seatbelt" | "bwrap",
+    public readonly platform: NodeJS.Platform,
+    message: string,
+  ) {
+    super(message, { code: "SANDBOX_UNAVAILABLE", mode, platform });
+    this.name = "SandboxUnavailableError";
+  }
+}

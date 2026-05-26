@@ -50,6 +50,7 @@ export {
   SessionError,
   TranscriptError,
   ConfigError,
+  SandboxUnavailableError,
 } from "./exceptions.js";
 
 // ─── Engine (primary API) ────────────────────────────────────────

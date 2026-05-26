@@ -20,6 +20,8 @@
 import { accessSync, constants, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 
+import { SandboxUnavailableError } from "../../exceptions.js";
+
 export type SandboxMode = "off" | "auto" | "seatbelt" | "bwrap";
 export type SandboxNetworkPolicy = "allow" | "deny";
 
@@ -189,7 +191,9 @@ export async function resolveSandboxBackend(
       break;
     case "seatbelt":
       if (!caps.seatbelt) {
-        throw new Error(
+        throw new SandboxUnavailableError(
+          "seatbelt",
+          process.platform,
           "sandbox.mode=seatbelt requested but sandbox-exec is unavailable (macOS-only). " +
             'Set sandbox.mode to "auto" or "off".',
         );
@@ -198,7 +202,9 @@ export async function resolveSandboxBackend(
       break;
     case "bwrap":
       if (!caps.bwrap) {
-        throw new Error(
+        throw new SandboxUnavailableError(
+          "bwrap",
+          process.platform,
           "sandbox.mode=bwrap requested but bubblewrap (bwrap) is not installed. " +
             "Install with `apt install bubblewrap` (Debian/Ubuntu) or `dnf install bubblewrap` (Fedora).",
         );
