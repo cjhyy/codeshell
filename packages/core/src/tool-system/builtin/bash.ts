@@ -102,6 +102,14 @@ export async function bashTool(
   const { file, args: spawnArgs, cleanup } = wrapped;
   const env = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
 
+  // A2: honor ctx.signal so a user-initiated cancel kills the child.
+  // If the caller already aborted before we spawn, return immediately
+  // without paying spawn cost.
+  if (ctx?.signal?.aborted) {
+    try { cleanup?.(); } catch { /* ignore */ }
+    return "Bash aborted before starting.";
+  }
+
   return new Promise<string>((resolve) => {
     let settled = false;
     const finish = (output: string) => {
@@ -119,6 +127,21 @@ export async function bashTool(
     };
 
     const child = spawn(file, spawnArgs, { cwd, env });
+
+    // A2: SIGTERM → SIGKILL escalation on ctx.signal abort, mirroring
+    // the timeout path below. Listener is removed in the close handler
+    // so a long-lived signal (multi-turn session) doesn't leak.
+    let aborted = false;
+    const onAbort = () => {
+      aborted = true;
+      try { child.kill("SIGTERM"); } catch { /* may already be dead */ }
+      setTimeout(() => {
+        try { child.kill("SIGKILL"); } catch { /* ignore */ }
+      }, 2000).unref();
+    };
+    if (ctx?.signal) {
+      ctx.signal.addEventListener("abort", onAbort, { once: true });
+    }
 
     // StringDecoder buffers partial utf-8 sequences across chunks, so a
     // multi-byte CJK character split across two `data` events still decodes
@@ -167,6 +190,10 @@ export async function bashTool(
 
     child.on("close", (code, signal) => {
       clearTimeout(timer);
+      // A2: cleanup abort listener so long-lived signals don't leak.
+      if (ctx?.signal) {
+        ctx.signal.removeEventListener("abort", onAbort);
+      }
       // Flush any trailing incomplete utf-8 (returns empty string when the
       // last write completed a sequence).
       const tailOut = stdoutDec.end();
@@ -174,6 +201,10 @@ export async function bashTool(
       if (tailOut && !stdoutOver) stdout += tailOut;
       if (tailErr && !stderrOver) stderr += tailErr;
 
+      if (aborted) {
+        finish("Bash aborted by signal.");
+        return;
+      }
       if (timedOut) {
         finish(`Command timed out after ${timeout}ms`);
         return;

@@ -88,11 +88,11 @@ Core 可以给其他业务方接入前，至少满足这些门槛：
 - `tests/sandbox*.test.ts`
 - `tests/tool-abort*.test.ts`
 
-- [ ] Cache resolved sandbox backend on `EngineRuntime` or per Engine; do not resolve on every turn.
-- [ ] `sandbox.mode === "auto"` may degrade to `off` with a warning; explicit `seatbelt` / `bwrap` / future modes must fail closed.
-- [ ] Wire `ctx.signal` into Bash child process handling; abort should send `SIGTERM`, then `SIGKILL` after grace period.
-- [ ] Audit REPL, PowerShell, LSP, MCP, plugin command hooks, settings shell hooks, and other subprocess/network tools for the same abort semantics.
-- [ ] Add tests for timeout, user cancel, server close, and explicit sandbox mode unavailable.
+- [x] Cache resolved sandbox backend on `EngineRuntime` or per Engine; do not resolve on every turn. *(done — `runtime.ts:resolveSandbox` caches per (mode, cwd))*
+- [x] `sandbox.mode === "auto"` may degrade to `off` with a warning; explicit `seatbelt` / `bwrap` / future modes must fail closed. *(done — removed Engine's try/catch silent downgrade at `engine.ts:625`; only `auto` may degrade, and only inside `resolveSandboxBackend`)*
+- [x] Wire `ctx.signal` into Bash child process handling; abort should send `SIGTERM`, then `SIGKILL` after grace period. *(done — `bash.ts` listens on `ctx.signal.abort` + 2s SIGTERM→SIGKILL escalation; cleans up listener on close)*
+- [x] Audit REPL, PowerShell, LSP, MCP, plugin command hooks, settings shell hooks, and other subprocess/network tools for the same abort semantics. *(partial — REPL and PowerShell rewritten from `execSync` to `spawn` with full signal/timeout cascade. LSP/MCP request cancellation deferred: their client SDKs do not accept `AbortSignal`. plugin shell-runner already does SIGTERM→SIGKILL on timeout but does not honor `ctx.signal`; minimal patch in a follow-up.)*
+- [x] Add tests for timeout, user cancel, server close, and explicit sandbox mode unavailable. *(done — `tests/abort-subprocess.test.ts` covers user cancel + pre-aborted signal for Bash and REPL, plus EngineRuntime sandbox cache identity and explicit-mode fail-closed regression)*
 
 ### A3. WebFetch SSRF redirect guard
 

@@ -618,23 +618,19 @@ export class Engine {
     const sandboxConfig =
       this.config.sandbox ??
       defaultSandboxConfig(this.config.headless ? "auto" : "off");
-    // resolveSandboxBackend throws on an explicit but unavailable mode
-    // (e.g. mode=seatbelt on Linux). That fast-fail is right at startup,
-    // but here we're inside a hot turn — a misconfig shouldn't kill the
-    // turn, just downgrade. Fall back to "off" with a one-shot warning.
-    let sandboxBackend;
-    try {
-      sandboxBackend = await resolveSandboxBackend(sandboxConfig, cwd);
-    } catch (err) {
-      logger.warn("engine.sandbox_resolve_failed", {
-        mode: sandboxConfig.mode,
-        error: (err as Error).message,
-      });
-      sandboxBackend = await resolveSandboxBackend(
-        { ...sandboxConfig, mode: "off" },
-        cwd,
-      );
-    }
+    // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
+    // per standard §S4. resolveSandboxBackend throws when an explicit
+    // mode is unavailable on this host; we let it propagate. The
+    // previous behavior — catching the throw inside the hot turn and
+    // silently downgrading to "off" — was the leak A2 closes. The
+    // `auto` mode handles its own downgrade with a one-time warning
+    // inside resolveSandboxBackend; explicit modes do not.
+    //
+    // Backend is cached on EngineRuntime (when available) so the
+    // capability probe runs once per (mode, cwd) instead of every turn.
+    const sandboxBackend = this.runtime
+      ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
+      : await resolveSandboxBackend(sandboxConfig, cwd);
 
     const toolCtx: ToolContext = {
       ...this.buildToolContext(),
