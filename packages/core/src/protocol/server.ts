@@ -34,6 +34,7 @@ import type { Engine, EngineConfig } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
+import { agentNotificationBus } from "../tool-system/builtin/agent-notifications.js";
 import { nanoid } from "nanoid";
 import type { ChatSessionManager } from "./chat-session-manager.js";
 
@@ -66,6 +67,14 @@ export class AgentServer {
   private approvalTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Default approval timeout: 5 minutes */
   private static readonly APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
+
+  /**
+   * Unsubscribe handle for the process-local `agentNotificationBus`
+   * subscription set up in the constructor. Called from `close()` so a
+   * shut-down server stops forwarding completion events even if the bus
+   * itself outlives the server (it's a process-local singleton).
+   */
+  private bgAgentBusUnsubscribe: (() => void) | null = null;
 
   constructor(options: AgentServerOptions) {
     this.chatManager = options.chatManager ?? null;
@@ -100,6 +109,16 @@ export class AgentServer {
         return this.requestAskUserFromClient(question, opts);
       });
     }
+
+    // B2.2 — forward background sub-agent completion events through the
+    // protocol so Desktop / SDK / remote AgentClients see them too. The
+    // bus is fed from `NotificationQueue.enqueue`, so this single
+    // subscription covers every enqueue site (today: only agent.ts).
+    // Legacy bucket (no sessionId) maps to `""` to match the legacy run
+    // path on ~line 248.
+    this.bgAgentBusUnsubscribe = agentNotificationBus.subscribe((sessionId, event) => {
+      this.notify(Methods.StreamEvent, { sessionId: sessionId ?? "", event });
+    });
 
     // Notify client we're ready
     this.notify(Methods.Status, { status: "ready" });
@@ -1009,6 +1028,19 @@ export class AgentServer {
   // ─── Lifecycle ──────────────────────────────────────────────────
 
   close(): void {
+    // Detach the bg-agent bus subscription first so a final flurry of
+    // completions during shutdown can't race the `shutdown` status
+    // notify below. Safe to call repeatedly — the unsubscribe is a
+    // single-shot Set.delete.
+    if (this.bgAgentBusUnsubscribe) {
+      try {
+        this.bgAgentBusUnsubscribe();
+      } catch {
+        // swallow
+      }
+      this.bgAgentBusUnsubscribe = null;
+    }
+
     if (this.chatManager) {
       this.chatManager.closeAll();
     }

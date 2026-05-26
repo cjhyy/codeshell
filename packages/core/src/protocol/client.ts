@@ -26,7 +26,13 @@ import {
   isResponse,
   isNotification,
 } from "./types.js";
-import type { StreamEvent, ApprovalRequest, ApprovalResult, PermissionMode } from "../types.js";
+import type {
+  StreamEvent,
+  ApprovalRequest,
+  ApprovalResult,
+  PermissionMode,
+  BackgroundAgentCompletedEvent,
+} from "../types.js";
 import { EventEmitter } from "node:events";
 import { logger } from "../logging/logger.js";
 
@@ -48,6 +54,11 @@ export interface AgentRunOptions {
 
 // ─── Client ─────────────────────────────────────────────────────────
 
+export type BackgroundAgentCompletedHandler = (
+  sessionId: string,
+  event: BackgroundAgentCompletedEvent,
+) => void;
+
 export class AgentClient {
   private transport: Transport;
   private emitter = new EventEmitter();
@@ -57,6 +68,17 @@ export class AgentClient {
       resolve: (result: unknown) => void;
       reject: (error: Error) => void;
     }
+  >();
+
+  /**
+   * Map from a user-supplied `BackgroundAgentCompletedHandler` to the
+   * internal envelope-filtering wrapper actually registered on the
+   * EventEmitter. Lets `offBackgroundAgentCompleted` look up the real
+   * listener so removal is symmetric with subscription.
+   */
+  private bgAgentHandlers = new Map<
+    BackgroundAgentCompletedHandler,
+    (envelope: AgentStreamEventNotification) => void
   >();
 
   constructor(options: { transport: Transport }) {
@@ -238,6 +260,30 @@ export class AgentClient {
     this.emitter.off("status", handler);
   }
 
+  /**
+   * Typed convenience for the B2.2 `background_agent_completed` stream
+   * event. Internally wraps `onStreamEvent`, so catch-all stream
+   * consumers keep seeing the same envelope; this just adds a typed
+   * entry point so SDK callers don't have to switch on `event.type`
+   * themselves.
+   */
+  onBackgroundAgentCompleted(handler: BackgroundAgentCompletedHandler): void {
+    const wrapper = (envelope: AgentStreamEventNotification) => {
+      if (envelope.event.type === "background_agent_completed") {
+        handler(envelope.sessionId, envelope.event);
+      }
+    };
+    this.bgAgentHandlers.set(handler, wrapper);
+    this.emitter.on("stream", wrapper);
+  }
+
+  offBackgroundAgentCompleted(handler: BackgroundAgentCompletedHandler): void {
+    const wrapper = this.bgAgentHandlers.get(handler);
+    if (!wrapper) return;
+    this.bgAgentHandlers.delete(handler);
+    this.emitter.off("stream", wrapper);
+  }
+
   // ─── Internals ──────────────────────────────────────────────────
 
   private request(method: string, params?: Record<string, unknown>): Promise<unknown> {
@@ -302,6 +348,7 @@ export class AgentClient {
       pending.reject(new Error("Client closed"));
     }
     this.pendingRequests.clear();
+    this.bgAgentHandlers.clear();
     this.emitter.removeAllListeners();
     this.transport.close();
   }

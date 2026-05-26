@@ -53,6 +53,7 @@ jobs:
         run: |
           bun test \
             tests/agent-notifications.test.ts \
+            tests/background-agent-protocol.test.ts \
             tests/chat-session-isolation.test.ts \
             tests/chat-session-queue.test.ts \
             tests/chat-session-manager.test.ts \

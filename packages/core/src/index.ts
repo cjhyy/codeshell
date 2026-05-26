@@ -93,7 +93,7 @@ export { wrapHookMessages } from "./hooks/inject.js";
 // ─── Protocol (client/server + transports) ──────────────────────
 
 export { AgentServer, type AgentServerOptions } from "./protocol/server.js";
-export { AgentClient } from "./protocol/client.js";
+export { AgentClient, type BackgroundAgentCompletedHandler } from "./protocol/client.js";
 export {
   createInProcessTransport,
   StdioTransport,
@@ -475,7 +475,13 @@ export {
   buildNotificationMessage,
   buildNotificationSummary,
   notificationQueue,
+  agentNotificationBus,
+  notificationItemToStreamEvent,
 } from "./tool-system/builtin/agent-notifications.js";
+// B2.2 — typed projection of the new `background_agent_completed` StreamEvent
+// variant so SDK consumers can write handlers without re-destructuring the
+// StreamEvent union themselves.
+export type { BackgroundAgentCompletedEvent } from "./types.js";
 export {
   asyncAgentRegistry,
   type AsyncAgentEntry,

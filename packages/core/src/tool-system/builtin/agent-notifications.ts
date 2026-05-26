@@ -1,3 +1,5 @@
+import type { BackgroundAgentCompletedEvent } from "../../types.js";
+
 /**
  * Background-agent completion notification queue.
  *
@@ -57,6 +59,12 @@ class NotificationQueue {
     const next = [...(this.buckets.get(key) ?? []), item];
     this.buckets.set(key, next);
     this.notify();
+    // B2.2 — also publish to the protocol-facing bus. The bus is a
+    // separate listener set so existing TUI subscribers (which poll the
+    // queue via getSnapshot/drainAll) are unaffected. The server
+    // subscribes on construction and forwards each event to its client
+    // via the existing `agent/streamEvent` notification path.
+    agentNotificationBus.publish(sessionId, notificationItemToStreamEvent(item));
   }
 
   subscribe = (cb: Listener): (() => void) => {
@@ -107,6 +115,66 @@ class NotificationQueue {
 }
 
 export const notificationQueue = new NotificationQueue();
+
+// ─── Protocol-facing bus (B2.2) ─────────────────────────────────────
+//
+// A tiny process-local pub/sub that fires whenever a NotificationItem is
+// enqueued. The server subscribes on construction and forwards each
+// event through `Methods.StreamEvent` to its client. This keeps the
+// dependency direction correct — tool-system doesn't import from the
+// protocol layer; instead the protocol layer subscribes to a value
+// owned here. Listener errors are isolated so one buggy subscriber can't
+// poison fan-out to the others (same isolation rule as
+// NotificationQueue.notify).
+
+type BusHandler = (
+  sessionId: string | undefined,
+  event: BackgroundAgentCompletedEvent,
+) => void;
+
+class AgentNotificationBus {
+  private handlers = new Set<BusHandler>();
+
+  publish(sessionId: string | undefined, event: BackgroundAgentCompletedEvent): void {
+    for (const handler of this.handlers) {
+      try {
+        handler(sessionId, event);
+      } catch {
+        // isolate per-listener errors
+      }
+    }
+  }
+
+  subscribe(handler: BusHandler): () => void {
+    this.handlers.add(handler);
+    return () => {
+      this.handlers.delete(handler);
+    };
+  }
+}
+
+export const agentNotificationBus = new AgentNotificationBus();
+
+/**
+ * Project a queue item to its protocol-event shape. The two types are
+ * field-compatible by design (see the comment on BackgroundAgentCompletedEvent
+ * in types.ts) so this is essentially an identity tag.
+ */
+export function notificationItemToStreamEvent(
+  item: NotificationItem,
+): BackgroundAgentCompletedEvent {
+  const event: BackgroundAgentCompletedEvent = {
+    type: "background_agent_completed",
+    agentId: item.agentId,
+    description: item.description,
+    status: item.status,
+    enqueuedAt: item.enqueuedAt,
+  };
+  if (item.name !== undefined) event.name = item.name;
+  if (item.finalText !== undefined) event.finalText = item.finalText;
+  if (item.error !== undefined) event.error = item.error;
+  return event;
+}
 
 /**
  * Escape XML-special characters. We only emit a fixed handful of tags, so

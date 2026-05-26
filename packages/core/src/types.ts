@@ -272,7 +272,36 @@ export type StreamEvent =
       type: "usage_update";
       promptTokens: number;
       agentId?: string;
+    }
+  // B2.2 — background sub-agent finished (completed | failed). Mirrors the
+  // shape of NotificationItem in tool-system/builtin/agent-notifications.ts
+  // so adapters between the two paths are trivial. Status "cancelled" is
+  // intentionally absent — the in-memory queue does not enqueue cancelled
+  // agents (user explicitly stopped, no follow-up turn needed), and this
+  // protocol event matches that policy.
+  | {
+      type: "background_agent_completed";
+      agentId: string;
+      name?: string;
+      description: string;
+      status: "completed" | "failed";
+      /** Final assistant text (status === "completed" only). */
+      finalText?: string;
+      /** Error message (status === "failed" only). */
+      error?: string;
+      /** When the bg agent finished (Date.now() value). */
+      enqueuedAt: number;
     };
+
+/**
+ * Convenience extraction so SDK consumers and tests can import the
+ * `background_agent_completed` payload shape without re-destructuring
+ * the StreamEvent union themselves.
+ */
+export type BackgroundAgentCompletedEvent = Extract<
+  StreamEvent,
+  { type: "background_agent_completed" }
+>;
 
 export type StreamCallback = (event: StreamEvent) => void | Promise<void>;
 

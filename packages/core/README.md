@@ -121,6 +121,12 @@ For an out-of-process worker, swap `createInProcessTransport()` for a
 `StdioTransport` pair. The factory accepts any `Transport`, so a future
 `IpcAdapter` will compose without changing the call shape.
 
+`StreamEvent` includes `background_agent_completed` (B2.2) so embedders
+that don't poll `notificationQueue` still observe sub-agent finish/fail
+results. `client.onBackgroundAgentCompleted((sessionId, event) => …)` is
+the typed entry point; events also flow through the catch-all
+`onStreamEvent`.
+
 ## Stable surface
 
 These exports are covered by the stability promise:
@@ -130,7 +136,7 @@ These exports are covered by the stability promise:
 | Factories | `createServer`, `createClient`, `createInProcessTransport`, `StdioTransport` |
 | Server/client | `AgentServer`, `AgentClient` (direct use is supported but `createServer/Client` preferred) |
 | Engine | `Engine`, `EngineConfig`, `EngineRuntime`, `ChatSessionManager` |
-| Protocol types | `Methods`, `ErrorCodes`, `RpcMessage`, `RunResult`, `StreamEvent`, `StreamCallback` |
+| Protocol types | `Methods`, `ErrorCodes`, `RpcMessage`, `RunResult`, `StreamEvent`, `StreamCallback`, `BackgroundAgentCompletedEvent` |
 | LLM | `LLMConfig`, `LLMResponse`, `ModelPool`, `createLLMClient`, `registerProvider` |
 | Tool authoring | `ToolDefinition`, `ToolCall`, `ToolResult`, `RegisteredTool`, `BUILTIN_TOOLS`, `HookContext`, `HookResult` |
 | Permissions | `PermissionClassifier`, `HeadlessApprovalBackend`, `AutoApprovalBackend`, `ApprovalBackend`, `PermissionMode`, `PermissionRule` |
