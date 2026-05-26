@@ -148,6 +148,14 @@ export interface ToolContext {
    * narrow context, or standalone tool tests. (B2 — Gate 1, standard §S3.)
    */
   sessionId?: string;
+  /**
+   * Skill names the user has hidden from the LLM (full namespaced names
+   * for plugin skills, e.g. "docs:pdf"). The skill builtin tool uses
+   * this to refuse direct invocation of a disabled skill so the UI
+   * toggle is honored at dispatch time, not just in the prompt listing.
+   * Populated from `settings.disabledSkills` by Engine.run().
+   */
+  disabledSkills?: string[];
 }
 
 /**

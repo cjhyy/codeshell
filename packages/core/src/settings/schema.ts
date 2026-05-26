@@ -167,6 +167,14 @@ export const SettingsSchema = z
       )
       .default({}),
 
+    /**
+     * Skill names hidden from the LLM. Names include the full
+     * "<plugin>:<skill>" prefix for plugin skills. Filtered at the
+     * scanner so PromptComposer's skills listing and the skill builtin
+     * tool both see the filtered set — see scanSkills(opts).
+     */
+    disabledSkills: z.array(z.string()).default([]),
+
     instructions: z
       .object({
         fileName: z.string().default("CODESHELL.md"),

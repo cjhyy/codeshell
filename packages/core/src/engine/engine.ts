@@ -912,6 +912,7 @@ export class Engine {
       preset: this.preset,
       customSystemPrompt: this.config.customSystemPrompt,
       appendSystemPrompt: this.config.appendSystemPrompt,
+      disabledSkills: this.readDisabledSkills(),
     });
 
     // Connect MCP servers (if configured and not already connected).
@@ -1730,6 +1731,25 @@ export class Engine {
       hooks: this.hooks,
       planMode: this.planMode,
       engine: this,
+      disabledSkills: this.readDisabledSkills(),
     };
+  }
+
+  /**
+   * Read settings.disabledSkills. Sub-agents skip this for the same
+   * reason they skip settings.hooks / plugin hooks (registerSettingsHooks
+   * at ~line 237): they run with a minimal surface area. Defaults to []
+   * so callers don't have to null-check.
+   */
+  private readDisabledSkills(): string[] {
+    if (this.config.isSubAgent === true) return [];
+    try {
+      const settings = this.getSettingsManager().get() as {
+        disabledSkills?: string[];
+      };
+      return settings.disabledSkills ?? [];
+    } catch {
+      return [];
+    }
   }
 }

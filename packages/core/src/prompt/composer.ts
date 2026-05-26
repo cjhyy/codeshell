@@ -22,6 +22,13 @@ export interface ComposerOptions {
   preset?: AgentPreset;
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
+  /**
+   * Skill names (full names including any "<plugin>:" prefix) the user
+   * has disabled in settings. Filtered out of the LLM's skills listing
+   * so the prompt matches what the skill builtin tool will actually
+   * dispatch — see scanSkills(opts.disabledSkills) and skillTool.
+   */
+  disabledSkills?: string[];
 }
 
 export class PromptComposer {
@@ -160,7 +167,9 @@ export class PromptComposer {
     sections.push({
       name: "skills",
       compute: () => {
-        const skills = scanSkills(this.options.cwd);
+        const skills = scanSkills(this.options.cwd, {
+          disabledSkills: this.options.disabledSkills,
+        });
         return buildSkillListing(skills);
       },
     });

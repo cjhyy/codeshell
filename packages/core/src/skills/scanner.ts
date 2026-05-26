@@ -206,8 +206,27 @@ const memoized = memoize(
   (cwd: string) => `${cwd}\0${userHome()}\0${installedPluginsMtime()}`,
 );
 
-export function scanSkills(cwd: string): SkillDefinition[] {
-  return memoized(cwd);
+/**
+ * Options accepted by scanSkills. The disabled-skill filter is applied
+ * after the memoized scan returns so the cache stays warm across
+ * different filter values — changing `settings.disabledSkills` should
+ * never force a re-scan. Names in `disabledSkills` must match the
+ * SkillDefinition.name exactly, including any "<plugin>:" prefix —
+ * see scanInstalledPlugins() at line ~168 for namespace construction.
+ */
+export interface ScanSkillsOptions {
+  disabledSkills?: string[];
+}
+
+export function scanSkills(
+  cwd: string,
+  opts?: ScanSkillsOptions,
+): SkillDefinition[] {
+  const all = memoized(cwd);
+  const disabled = opts?.disabledSkills;
+  if (!disabled || disabled.length === 0) return all;
+  const set = new Set(disabled);
+  return all.filter((s) => !set.has(s.name));
 }
 
 export function invalidateSkillCache(): void {

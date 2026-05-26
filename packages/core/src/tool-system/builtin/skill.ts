@@ -42,8 +42,17 @@ export async function skillTool(
     return "Error: skill name is required.";
   }
 
+  // Reject disabled skills before scanning so the user gets a clear
+  // message that distinguishes "disabled" from "not found" — matches
+  // the UI's toggle semantics. The scanner would also filter the entry
+  // out, which alone would produce a misleading "not found" reply.
+  const disabledSkills = ctx?.disabledSkills;
+  if (disabledSkills && disabledSkills.includes(skillName)) {
+    return `Skill "${skillName}" is disabled. Enable it in Customize or remove it from settings.disabledSkills.`;
+  }
+
   // A4: scan skills from the Engine's cwd, not the host process cwd.
-  const skills = scanSkills(ctx?.cwd ?? process.cwd());
+  const skills = scanSkills(ctx?.cwd ?? process.cwd(), { disabledSkills });
   const found = skills.find((s) => s.name === skillName);
 
   if (!found) {

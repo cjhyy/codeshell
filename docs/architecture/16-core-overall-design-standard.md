@@ -225,6 +225,8 @@ This includes:
 
 Tests must deliberately set `process.cwd()` and `EngineConfig.cwd` to different directories.
 
+`settings.disabledSkills: string[]` filters skills out of LLM view at scanner consumption points (PromptComposer skill listing, skill builtin tool dispatch).
+
 ### S6. Cancellation Reaches Real Work
 
 Returning "Tool aborted" while a child process keeps running is not cancellation.
