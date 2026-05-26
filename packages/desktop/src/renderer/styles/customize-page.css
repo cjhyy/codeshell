@@ -226,13 +226,15 @@
 }
 .customize-plugin-card-row {
   display: flex;
-  gap: var(--sp-2);
+  gap: var(--sp-3);
   font-size: var(--fz-sm);
   color: var(--fg-secondary);
-  margin: 4px 0;
+  margin: 6px 0;
+  align-items: baseline;
 }
 .customize-plugin-card-row .label {
-  width: 96px;
+  /* Wider so 中文 label like "安装时间" / "Skill 数量" sit on one line. */
+  width: 88px;
   color: var(--fg-muted);
   flex-shrink: 0;
 }
@@ -257,5 +259,15 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  width: 100%;
+}
+
+/* The settings module body normally caps content at 720px for the
+   vertical-form layout used by every other module. The Customize
+   three-pane grid needs the full content area, so we widen the cap
+   when our host is present. Chromium-only :has() is fine here — the
+   renderer ships under Electron. */
+.settings-page-module-body:has(.customize-host) {
+  max-width: none;
 }
 
