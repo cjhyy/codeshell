@@ -24,6 +24,7 @@ This directory is the current architecture documentation set for CodeShell. It i
 | 13 | [LLM/UI Decoupling](../superpowers/specs/2026-05-17-llm-ui-decoupling-design.md) | Four-layer architecture borrowed from Claude Code: stream-idle watchdog, QueryGuard sync state machine, partial-text preservation on Esc, and background-agent dock. Implementation [plan](../superpowers/plans/2026-05-17-llm-ui-decoupling.md). |
 | 14 | [Engine Call Paths (ADR)](14-engine-call-paths.md) | Why every internal `engine.run` goes through `AgentServer + AgentClient`. Allowlist, enforcement, sub-agent exception. Phase 1 of the LLM/UI decoupling roadmap. |
 | 15 | [Current Review and Bug Inventory](15-current-review-and-bug-inventory.md) | 2026-05-25 repo-wide architecture review, confirmed drift from docs, and prioritized bug/risk list. |
+| 16 | [Core Overall Design Standard](16-core-overall-design-standard.md) | Target standard for stabilizing `@cjhyy/code-shell-core`: host boundary, protocol, runtime/session ownership, safety gates, public API, and business adoption definition of done. |
 
 ## One-Screen Summary
 

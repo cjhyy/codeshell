@@ -30,6 +30,17 @@
 
 对标 Claude Code / OpenCode 的"开箱即用完整性"。
 
+### 0.0 Core Stability Gate（业务接入前置）
+
+**目标**：先把 `@cjhyy/code-shell-core` 的安全边界、cwd/权限一致性、运行时共享资源、协议通知闭环和工程门禁稳定下来。业务方接入 core 之前，Phase 0 的首要判断标准不是“功能够不够多”，而是“默认路径是否安全、可预测、可测试”。
+
+**单一来源**：
+
+- 整体设计标准与 Gate 0–5 checklist：[`docs/architecture/16-core-overall-design-standard.md`](architecture/16-core-overall-design-standard.md)
+- 落地迭代（Phase A / B / C，含事实校验依据）：[`docs/superpowers/plans/2026-05-26-core-stabilization.md`](superpowers/plans/2026-05-26-core-stabilization.md)
+
+阻塞项与出关标准以上述两份文档为准，本节不再单列以避免三处漂移。0.0 在 Gate 0–4 全部关闭前**阻塞** 0.1 / 0.2 / 0.3 的启动。
+
 ### 0.1 项目指令文件全局化
 
 **目标**：自动发现并注入项目级指令文件，对标 Claude Code 的 CLAUDE.md。
@@ -294,7 +305,9 @@
 ## 建议执行顺序
 
 ```
-现在 ──→ Phase 0.1（指令全局化）+ 0.2（工具补齐）
+现在 ──→ Phase 0.0（Core Stability Gate，业务接入前置；阻塞 0.1 / 0.2 / 0.3）
+   │
+然后 ──→ Phase 0.1（指令全局化）+ 0.2（工具补齐）
    │
 本月 ──→ Phase 1（Arena 产品化）⭐ 核心差异化，三款标杆都没有
    │
