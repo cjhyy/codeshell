@@ -33,6 +33,7 @@ import {
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
+  StreamEventEnvelope,
 } from "../preload/types";
 import {
   loadRepos,
@@ -178,7 +179,21 @@ function App() {
   const activeBucket = bucketKey(activeRepoId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   const busy = busyKeys.has(activeBucket);
+  /**
+   * Most-recently-started run's bucket. Soft fallback only — the
+   * authoritative per-session routing is engineToBucketRef. We keep this
+   * around for the brief window between sending agent/run and receiving
+   * the first stream event back (envelopes during that window may carry
+   * an empty sessionId for very legacy engines).
+   */
   const runningBucketRef = useRef<string | null>(null);
+  /**
+   * Engine sessionId → UI bucket. Populated when send() fires (we use the
+   * UI sessionId directly as the engine sessionId — see notes in send())
+   * and reinforced when session_started arrives. This is what makes
+   * concurrent runs route to the correct tab.
+   */
+  const engineToBucketRef = useRef<Map<string, string>>(new Map());
   const activeBucketRef = useRef(activeBucket);
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
@@ -422,31 +437,42 @@ function App() {
   useEffect(() => {
     window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
 
-    const offStream = window.codeshell.onStreamEvent((event: StreamEvent) => {
-      const target = runningBucketRef.current;
+    const offStream = window.codeshell.onStreamEvent((env: StreamEventEnvelope) => {
+      const event = env.event;
+      // Multi-session routing: every envelope carries the engine sessionId.
+      // We mirror engineSessionId → bucket in a ref so stream events route to
+      // the right tab even when several runs are in flight at once. Fallback
+      // to the single runningBucketRef only for legacy / pre-bind events
+      // (engineSessionId empty or not yet in the table).
+      const fromTable = env.sessionId ? engineToBucketRef.current.get(env.sessionId) : undefined;
+      const target = fromTable ?? runningBucketRef.current;
       if (!target) return;
+
       const noisy =
         event.type === "text_delta" ||
         event.type === "tool_use_args_delta" ||
         event.type === "usage_update" ||
         event.type === "thinking_delta";
       if (!noisy) {
-        window.codeshell.log("stream.event", { type: event.type, bucket: target });
+        window.codeshell.log("stream.event", {
+          type: event.type,
+          bucket: target,
+          engineSessionId: env.sessionId || null,
+        });
       }
       dispatch({ type: "stream", bucket: target, event });
 
-      // Bind engine sessionId back to the UI session on the first
-      // session_started for this run. Subsequent sends in the same UI
-      // session will pass this id explicitly so the worker resumes the
-      // right engine conversation instead of guessing.
+      // session_started carries the authoritative engine sessionId. Persist
+      // the binding (engineSessionId == uiSessionId is the new normal, but
+      // older sessions on disk may differ) and seed the routing table.
       if (event.type === "session_started") {
-        // target is "repoKey::uiSessionId"
         const sep = target.indexOf("::");
         if (sep > 0) {
           const repoKey = target.slice(0, sep);
           const uiSessionId = target.slice(sep + 2);
           const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
           if (uiSessionId && uiSessionId !== "_none_") {
+            engineToBucketRef.current.set(event.sessionId, target);
             const nextIdx = bindEngineSession(repoId, uiSessionId, event.sessionId);
             setSessionIndices((prev) => ({ ...prev, [repoKey]: nextIdx }));
           }
@@ -455,11 +481,17 @@ function App() {
 
       if (event.type === "turn_complete" || event.type === "error") {
         setBusyForKey(target, false);
-        runningBucketRef.current = null;
+        // Don't null runningBucketRef here — another concurrent send may
+        // still be using it as a fallback. The ref is only a soft hint;
+        // engineToBucketRef is the authoritative routing for in-flight runs.
       }
     });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
-      window.codeshell.log("approval.request", { requestId: env.requestId, toolName: env.request.toolName });
+      window.codeshell.log("approval.request", {
+        requestId: env.requestId,
+        toolName: env.request.toolName,
+        engineSessionId: env.sessionId ?? null,
+      });
       // AskUserQuestion is delivered through the same channel as tool
       // approvals (toolName === "__ask_user__"). Route it into the chat
       // stream as an inline AskUserMessage instead of the approval modal
@@ -485,7 +517,10 @@ function App() {
                 )
                 .map((o) => ({ label: o.label, description: o.description }))
             : undefined;
-        const bucket = runningBucketRef.current ?? activeBucketRef.current;
+        const bucket =
+          (env.sessionId && engineToBucketRef.current.get(env.sessionId)) ||
+          runningBucketRef.current ||
+          activeBucketRef.current;
         dispatch({
           type: "ask_user",
           bucket,
@@ -503,7 +538,11 @@ function App() {
           toolName: env.request.toolName,
           reason: "composer_bypass",
         });
-        void window.codeshell.approve(env.requestId, "approve");
+        if (env.sessionId) {
+          void window.codeshell.approve(env.sessionId, env.requestId, "approve");
+        } else {
+          void window.codeshell.approve(env.requestId, "approve");
+        }
         setApprovalHistory((h) => [
           ...h,
           { decision: "approve", envelope: env, reason: "完全访问权限自动批准", at: Date.now() },
@@ -518,14 +557,23 @@ function App() {
     });
     const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {
       window.codeshell.log("lifecycle", evt as Record<string, unknown>);
-      const runningKey = runningBucketRef.current;
       if (evt.type === "restarted") setLifecycle("Agent restarted.");
       else if (evt.type === "gave_up") setLifecycle("Agent crashed too many times. Quit and reopen.");
       else if (evt.type === "exited") {
         if (evt.code === 0) setLifecycle(null);
         else setLifecycle(`Agent exited (code ${evt.code}).`);
-        if (runningKey) setBusyForKey(runningKey, false);
+        // Worker died — every in-flight run is dead with it. Clear busy
+        // for *all* buckets we have routes for, not just the latest ref.
+        const inflight = Array.from(engineToBucketRef.current.values());
+        if (inflight.length > 0) {
+          setBusyKeys((prev) => {
+            const next = new Set(prev);
+            for (const b of inflight) next.delete(b);
+            return next;
+          });
+        }
         runningBucketRef.current = null;
+        engineToBucketRef.current.clear();
       }
     });
     return () => {
@@ -541,54 +589,85 @@ function App() {
     // it back via touchSession() right after sees the new entry.
     const sid = activeSessionId ?? ensureActiveSession(activeRepoId);
     const bucket = bucketKey(activeRepoId, sid);
-    window.codeshell.log("send", { textLen: text.length, repo: activeRepo?.name ?? null, bucket });
+    const repoKey = repoKeyOf(activeRepoId);
+
+    // Look up any previously-bound engine sessionId for this UI session.
+    // Pre-multi-session sessions on disk may have an engineSessionId that
+    // differs from the UI sessionId (the old auto-bound flow). For brand
+    // new sessions we use the UI sessionId directly as the engine
+    // sessionId so the engineToBucket route is populated synchronously.
+    const summary =
+      sessionIndices[repoKey]?.sessions.find((s) => s.id === sid)
+      ?? loadSessionIndex(activeRepoId).sessions.find((s) => s.id === sid);
+    const engineSessionId = summary?.engineSessionId ?? sid;
+
+    window.codeshell.log("send", {
+      textLen: text.length,
+      repo: activeRepo?.name ?? null,
+      bucket,
+      engineSessionId,
+    });
     dispatch({ type: "user_message", bucket, text });
     setBusyForKey(bucket, true);
     runningBucketRef.current = bucket;
+    // Register the route NOW so concurrent sends can each find their own
+    // bucket. session_started will reinforce this with the same value (or
+    // overwrite with the engine-generated id for legacy sessions).
+    engineToBucketRef.current.set(engineSessionId, bucket);
 
-    // Touch session: bump updatedAt + adopt first user prompt as title.
-    setSessionIndices((prev) => ({
-      ...prev,
-      [repoKeyOf(activeRepoId)]: touchSession(activeRepoId, sid, text),
-    }));
-
-    // Resolve the engine sessionId bound to this UI session, if any.
-    // First send of a UI session → undefined → core creates a fresh
-    // engine session and we'll capture its id from session_started.
-    // Without this, core silently resumes the last active engine
-    // session, which is why '新对话' was leaking the previous chat's
-    // context (it greeted itself with "我是新的对话...").
-    const repoKey = repoKeyOf(activeRepoId);
-    const summary =
-      sessionIndices[repoKey]?.sessions.find((s) => s.id === sid)
-      // fallback: ensureActiveSession just persisted but state may not have
-      // re-read yet — pull from localStorage to be safe.
-      ?? loadSessionIndex(activeRepoId).sessions.find((s) => s.id === sid);
-    const engineSessionId = summary?.engineSessionId;
+    // Touch session: bump updatedAt + adopt first user prompt as title,
+    // and persist engineSessionId so future sends in this UI session
+    // pass the same value (and the engine resumes the right convo).
+    setSessionIndices((prev) => {
+      const touched = touchSession(activeRepoId, sid, text);
+      const next = summary?.engineSessionId
+        ? touched
+        : bindEngineSession(activeRepoId, sid, engineSessionId);
+      return { ...prev, [repoKey]: next };
+    });
 
     const opts: {
       cwd?: string;
       sessionId?: string;
       permissionMode?: ReturnType<typeof toCorePermissionMode>;
-    } = {};
-    // Only forward when the renderer has actually loaded settings;
-    // otherwise we'd downgrade an engine started with bypass to default.
+    } = { sessionId: engineSessionId };
     if (permissionMode !== null) {
       opts.permissionMode = toCorePermissionMode(permissionMode);
     }
     if (activeRepo) opts.cwd = activeRepo.path;
-    if (engineSessionId) opts.sessionId = engineSessionId;
 
     void window.codeshell
       .run(text, opts)
-      .then((r) =>
-        window.codeshell.log("run.resolved", { result: r as unknown as Record<string, unknown> }),
-      );
+      .then((r) => {
+        // Belt-and-braces: clear busy for THIS run's bucket even if the
+        // stream never delivered turn_complete (e.g. error in setup, or
+        // the worker shutdown before flushing the event). Use the closed-
+        // over `bucket`, not runningBucketRef — concurrent sends may have
+        // moved the ref by the time we resolve.
+        setBusyForKey(bucket, false);
+        if (runningBucketRef.current === bucket) {
+          runningBucketRef.current = null;
+        }
+        window.codeshell.log("run.resolved", {
+          bucket,
+          result: r as unknown as Record<string, unknown>,
+        });
+      });
   };
 
   const stop = (): void => {
-    window.codeshell.log("stop.click", {});
-    void window.codeshell.cancel();
+    const bucket = runningBucketRef.current ?? activeBucket;
+    const sep = bucket.indexOf("::");
+    const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
+    const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
+    const repoId = repoKey === GLOBAL_KEY || repoKey === null ? null : repoKey;
+    const summary = uiSessionId && uiSessionId !== "_none_"
+      ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId)
+        ?? loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId)
+      : undefined;
+    const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
+    window.codeshell.log("stop.click", { bucket, engineSessionId });
+    void window.codeshell.cancel(engineSessionId);
   };
 
   const decideEnvelope = (
@@ -596,7 +675,13 @@ function App() {
     decision: "approve" | "deny",
     reason?: string,
   ): void => {
-    void window.codeshell.approve(env.requestId, decision, reason);
+    // Multi-session: thread engine sessionId so the worker routes the
+    // decision back to the right session's pendingApprovals map.
+    if (env.sessionId) {
+      void window.codeshell.approve(env.sessionId, env.requestId, decision, reason);
+    } else {
+      void window.codeshell.approve(env.requestId, decision, reason);
+    }
     setApprovalQueue((q) => q.filter((e) => e.requestId !== env.requestId));
     setApprovalHistory((h) => [
       ...h,
@@ -764,7 +849,21 @@ function App() {
   }, [busy, activeRepo]);
 
   const handleAskUserAnswer = (requestId: string, answer: string): void => {
-    void window.codeshell.approve(requestId, "approve", undefined, answer);
+    // AskUser is always inside the active bucket — derive the engine
+    // sessionId so the worker routes the answer to the right session's
+    // pending approval map.
+    const sep = activeBucket.indexOf("::");
+    const uiSessionId = sep > 0 ? activeBucket.slice(sep + 2) : null;
+    const repoKey = sep > 0 ? activeBucket.slice(0, sep) : null;
+    const summary = uiSessionId && uiSessionId !== "_none_"
+      ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId)
+      : undefined;
+    const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
+    if (engineSessionId) {
+      void window.codeshell.approve(engineSessionId, requestId, "approve", undefined, answer);
+    } else {
+      void window.codeshell.approve(requestId, "approve", undefined, answer);
+    }
     dispatch({
       type: "ask_user_answered",
       bucket: activeBucket,
