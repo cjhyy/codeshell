@@ -73,7 +73,10 @@ describe("pre_tool_use deny short-circuits the executor", () => {
     expect(result.error).toContain("denied");
   });
 
-  it("decision:'allow' overrides a classifier 'deny' rule (hook is authoritative)", async () => {
+  it("A1: decision:'allow' from pre_tool_use is REJECTED — classifier 'deny' wins", async () => {
+    // A1 hardening: pre_tool_use can no longer promote to `allow`.
+    // A hook returning `allow` when the classifier said `deny` is
+    // logged as a rejected upgrade and the tool stays denied.
     let toolRan = false;
     const registry = new ToolRegistry({ builtinTools: ["Read"] });
     registry.registerTool(
@@ -83,7 +86,6 @@ describe("pre_tool_use deny short-circuits the executor", () => {
         return { id: "ok", toolName: "Read", content: "ran" };
       },
     );
-    // Classifier would normally deny — handler overrides.
     const exec = new ToolExecutor(
       registry,
       new PermissionClassifier([{ tool: "Read", decision: "deny" }]),
@@ -98,8 +100,8 @@ describe("pre_tool_use deny short-circuits the executor", () => {
       args: { file_path: "/tmp/x" },
     });
 
-    expect(toolRan).toBe(true);
-    expect(result.isError).toBeFalsy();
+    expect(toolRan).toBe(false);
+    expect(result.isError).toBe(true);
   });
 
   it("decision:'ask' approved by user runs the tool", async () => {

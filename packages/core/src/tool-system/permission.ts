@@ -386,26 +386,182 @@ const SAFE_WRITE_PATTERNS = [
   /^(cp|mv)\s/,
 ];
 
-export function classifyBashCommand(command: string): BashSafetyLevel {
-  const trimmed = command.trim();
+// ─── Shell metacharacter scanner ──────────────────────────────────
+//
+// A1 hardening: classifyBashCommand previously ran SAFE_READ_PATTERNS
+// against the whole command string, so `ls -la; rm -rf /` would
+// match /^ls\s/ and be returned as safe-read. We now scan the command
+// once with quote/escape awareness:
+//
+//   - top-level `;`, `&&`, `||`, newline split the command into
+//     segments. Every segment must independently classify as safe
+//     for the whole command to be safe.
+//   - unquoted command substitution (` ` ` or `$(` ), redirection
+//     (`>` `>>` `<` `<<`), process substitution (`<(` `>(`), and
+//     pipe-to-shell (`| sh`, `| bash`, ...) flag the command as
+//     dangerous.
+//   - quoted (`'…'`, `"…"`) and backslash-escaped characters are
+//     ignored — `echo "a; b"` is a single segment.
+//
+// This is intentionally detection-only, not a full shell parser. We
+// only need to find unquoted metacharacters and split safely.
 
-  // Check dangerous first (highest priority)
-  if (DANGEROUS_PATTERNS.some((p) => p.test(trimmed))) return "dangerous";
+const PIPE_TO_SHELL_RE =
+  /\|\s*(sh|bash|zsh|dash|ksh|fish|python|python3|node|nodejs|ruby|perl|php)\b/;
 
-  // Check safe-read
-  if (SAFE_READ_PATTERNS.some((p) => p.test(trimmed))) return "safe-read";
+interface ScanResult {
+  segments: string[];
+  dangerous: boolean;
+}
 
-  // Check safe-write
-  if (SAFE_WRITE_PATTERNS.some((p) => p.test(trimmed))) return "safe-write";
+function scanShellCommand(input: string): ScanResult {
+  const segments: string[] = [];
+  let buf = "";
+  let dangerous = false;
+  let i = 0;
+  // Track top-level quote state. We do NOT recurse into nested
+  // command substitutions for classification — the presence of `$(`
+  // or backticks already marks the command dangerous.
+  let quote: "'" | '"' | null = null;
 
-  // Piped commands: check the last command in the pipe
-  if (trimmed.includes("|")) {
-    const parts = trimmed.split("|");
-    const last = parts[parts.length - 1].trim();
-    if (SAFE_READ_PATTERNS.some((p) => p.test(last))) return "safe-read";
+  const flush = () => {
+    const s = buf.trim();
+    if (s.length > 0) segments.push(s);
+    buf = "";
+  };
+
+  while (i < input.length) {
+    const ch = input[i];
+    const next = input[i + 1];
+
+    if (quote === null) {
+      // Escape: skip the next character
+      if (ch === "\\" && next !== undefined) {
+        buf += ch + next;
+        i += 2;
+        continue;
+      }
+      // Enter quote
+      if (ch === "'" || ch === '"') {
+        quote = ch;
+        buf += ch;
+        i++;
+        continue;
+      }
+      // Command substitution: backtick or $(
+      if (ch === "`" || (ch === "$" && next === "(")) {
+        dangerous = true;
+        buf += ch;
+        i++;
+        continue;
+      }
+      // Process substitution: <( or >(
+      if ((ch === "<" || ch === ">") && next === "(") {
+        dangerous = true;
+        buf += ch;
+        i++;
+        continue;
+      }
+      // Redirection
+      if (ch === ">" || ch === "<") {
+        dangerous = true;
+        buf += ch;
+        i++;
+        continue;
+      }
+      // Top-level separators
+      if (ch === ";" || ch === "\n") {
+        flush();
+        i++;
+        continue;
+      }
+      if ((ch === "&" && next === "&") || (ch === "|" && next === "|")) {
+        flush();
+        i += 2;
+        continue;
+      }
+      // Background `&` is treated like `;`
+      if (ch === "&") {
+        flush();
+        i++;
+        continue;
+      }
+      buf += ch;
+      i++;
+      continue;
+    }
+
+    // Inside a quote
+    if (ch === "\\" && next !== undefined) {
+      buf += ch + next;
+      i += 2;
+      continue;
+    }
+    if (ch === quote) {
+      quote = null;
+      buf += ch;
+      i++;
+      continue;
+    }
+    buf += ch;
+    i++;
   }
 
+  flush();
+  return { segments, dangerous };
+}
+
+function classifySegment(segment: string): BashSafetyLevel {
+  if (DANGEROUS_PATTERNS.some((p) => p.test(segment))) return "dangerous";
+  if (SAFE_READ_PATTERNS.some((p) => p.test(segment))) return "safe-read";
+  if (SAFE_WRITE_PATTERNS.some((p) => p.test(segment))) return "safe-write";
+
+  // Pipe handling within a segment: every command in the pipe must
+  // independently classify as safe-read for the segment to count as
+  // safe-read. We did not split on `|` in the scanner because pipes
+  // are not statement boundaries; they're per-segment data flow.
+  if (segment.includes("|")) {
+    const parts = segment.split("|").map((p) => p.trim());
+    if (parts.every((p) => SAFE_READ_PATTERNS.some((re) => re.test(p)))) {
+      return "safe-read";
+    }
+  }
   return "unsafe";
+}
+
+const SAFETY_RANK: Record<BashSafetyLevel, number> = {
+  "safe-read": 3,
+  "safe-write": 2,
+  unsafe: 1,
+  dangerous: 0,
+};
+
+function minSafety(a: BashSafetyLevel, b: BashSafetyLevel): BashSafetyLevel {
+  return SAFETY_RANK[a] <= SAFETY_RANK[b] ? a : b;
+}
+
+export function classifyBashCommand(command: string): BashSafetyLevel {
+  const trimmed = command.trim();
+  if (trimmed.length === 0) return "unsafe";
+
+  // Whole-command dangerous patterns (e.g. `curl ... | sh`) need to
+  // be checked against the raw text because some of them span
+  // separators we would split on.
+  if (DANGEROUS_PATTERNS.some((p) => p.test(trimmed))) return "dangerous";
+  if (PIPE_TO_SHELL_RE.test(trimmed)) return "dangerous";
+
+  const scan = scanShellCommand(trimmed);
+  if (scan.dangerous) return "dangerous";
+  if (scan.segments.length === 0) return "unsafe";
+
+  // Every top-level segment must independently classify. The whole
+  // command's safety is the minimum across segments.
+  let overall: BashSafetyLevel = "safe-read";
+  for (const seg of scan.segments) {
+    overall = minSafety(overall, classifySegment(seg));
+    if (overall === "dangerous") return "dangerous";
+  }
+  return overall;
 }
 
 // ─── Denial Tracker — rate limit repeated denials ────────────────
@@ -464,6 +620,21 @@ export class DenialTracker {
     this.denials.clear();
   }
 }
+
+// A1 hardening: tools that `acceptEdits` mode will auto-allow without
+// asking. Everything else falls through to `ask`. Read-only tools
+// (Read/Glob/Grep) reach `allow` through rule matching or default
+// classification; they do not need to be in this list.
+//
+// Keep this set tight. Adding a tool here means "the user is OK with
+// this tool running silently when they opt into acceptEdits".
+export const ACCEPT_EDITS_ALLOWLIST: ReadonlySet<string> = new Set([
+  "Write",
+  "Edit",
+  "ApplyPatch",
+  "NotebookEdit",
+  "TodoWrite",
+]);
 
 export class PermissionClassifier {
   private denialTracker = new DenialTracker();
@@ -529,7 +700,11 @@ export class PermissionClassifier {
       case "dontAsk":
         return "deny";
       case "acceptEdits":
-        return "allow";
+        // A1 hardening: acceptEdits is an allowlist, not allow-all.
+        // Only auto-allow tools that mutate the workspace in ways the
+        // user has explicitly opted in to. Everything else (network,
+        // shell, MCP, etc.) still requires an interactive prompt.
+        return ACCEPT_EDITS_ALLOWLIST.has(toolName) ? "allow" : "ask";
       default:
         return "ask";
     }

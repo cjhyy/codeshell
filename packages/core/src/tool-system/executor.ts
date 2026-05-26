@@ -3,7 +3,7 @@
  */
 
 import { setMaxListeners } from "node:events";
-import type { ToolCall, ToolResult, Message, ContentBlock } from "../types.js";
+import type { ToolCall, ToolResult, Message, ContentBlock, PermissionDecision } from "../types.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier } from "./permission.js";
@@ -16,6 +16,25 @@ import type { InvestigationGuard } from "./investigation-guard.js";
 import type { TaskGuard } from "./task-guard.js";
 
 type Logger = typeof rootLogger;
+
+// A1 hardening: hooks must never promote a non-`allow` classifier
+// decision to `allow`. They may otherwise adjust the decision freely
+// (e.g. tighten `allow` to `deny`/`ask`, or relax `deny` to `ask` to
+// request interactive confirmation — both legitimate audit patterns).
+// The user remains the only source of `allow` when the classifier
+// said `ask`/`deny`.
+//
+// See standard §S4 and spec docs/superpowers/specs/2026-05-26-a1-permission-hardening-design.md.
+function clampHookDecision(
+  classifier: PermissionDecision,
+  hook: PermissionDecision | undefined,
+): { decision: PermissionDecision; rejectedUpgrade: boolean } {
+  if (!hook) return { decision: classifier, rejectedUpgrade: false };
+  if (hook === "allow" && classifier !== "allow") {
+    return { decision: classifier, rejectedUpgrade: true };
+  }
+  return { decision: hook, rejectedUpgrade: false };
+}
 
 export class ToolExecutor {
   private signal?: AbortSignal;
@@ -167,15 +186,24 @@ export class ToolExecutor {
       });
     }
 
-    // pre_tool_use can pre-approve a tool, bypassing the PermissionClassifier.
-    // This is the dual of "deny" — handler overrides the rule set. We still
-    // run the investigation guard and the sandbox afterwards: those are
-    // independent safety layers, not permission decisions.
-    const hookAllowed = hookResult.decision === "allow";
+    // A1 hardening: pre_tool_use can no longer pre-approve a tool via
+    // `decision === "allow"`. Hooks may relax `allow` and may force
+    // `ask`/`deny`, but they cannot promote a `deny`/`ask` decision to
+    // `allow`. The only paths to `allow` are the classifier (rules,
+    // safe-read, allowlist) and the user (interactive approval).
+    if (hookResult.decision === "allow") {
+      this.log.info("permission.hook_upgrade_rejected", {
+        cat: "permission",
+        tool: call.toolName,
+        site: "pre_tool_use",
+      });
+    }
 
-    // pre_tool_use can request interactive confirmation via decision: "ask".
-    // We invoke the same handleAsk path the classifier uses, but feed the
-    // hook's messages so the user sees the handler's reasoning.
+    // pre_tool_use can request interactive confirmation via
+    // decision: "ask". We invoke the same handleAsk path the classifier
+    // uses, but feed the hook's messages so the user sees the handler's
+    // reasoning. If the user approves, we skip the classifier below —
+    // the hook and the user together have decided.
     if (hookResult.decision === "ask") {
       const reason = hookResult.messages?.join("\n") ?? undefined;
       const approved = await this.permission.handleAsk(
@@ -191,8 +219,6 @@ export class ToolExecutor {
           isError: true,
         };
       }
-      // User approved — fall through, skipping the classifier (the hook
-      // and the user together have already decided).
     }
 
     // 0.7. Investigation guard — block redundant reads and tag soft reminders
@@ -209,8 +235,9 @@ export class ToolExecutor {
       };
     }
 
-    // 1. Permission check — skipped when the hook already approved.
-    if (!hookAllowed && hookResult.decision !== "ask") {
+    // 1. Permission check — skipped only when pre_tool_use issued an
+    // `ask` that the user just approved (we don't double-prompt).
+    if (hookResult.decision !== "ask") {
       const classifierDecision = this.permission.classify(call.toolName, call.args);
       this.log.info("permission.classify", {
         cat: "permission",
@@ -219,21 +246,28 @@ export class ToolExecutor {
         mode: this.permission.getMode(),
       });
 
-      // on_permission_check hook: lets handlers audit AND override the
-      // classifier decision (allow|deny|ask). Final priority order is:
-      //   pre_tool_use hook (deny/allow/ask above)  > classifier rules
-      //   on_permission_check hook (here)           > classifier rules
-      //   pre_tool_use already-decided cases skip both.
-      // If multiple handlers return decisions, the highest-priority wins
-      // (HookRegistry preserves last-write semantics — last handler's
-      // decision is the aggregated one).
+      // on_permission_check hook: lets handlers audit and *downgrade*
+      // the classifier decision (e.g. `allow → ask/deny`, `deny →
+      // ask`). Promotion to `allow` is rejected by clampHookDecision
+      // — only the classifier and the user can grant `allow`.
       const permHook = await this.hooks.emit("on_permission_check", {
         toolName: call.toolName,
         args: call.args,
         toolCallId: call.id,
         classifierDecision,
       });
-      const decision = permHook.decision ?? classifierDecision;
+      // A1 hardening: clamp hook decision to downgrades only.
+      const clamped = clampHookDecision(classifierDecision, permHook.decision);
+      const decision = clamped.decision;
+      if (clamped.rejectedUpgrade) {
+        this.log.info("permission.hook_upgrade_rejected", {
+          cat: "permission",
+          tool: call.toolName,
+          site: "on_permission_check",
+          attempted: permHook.decision,
+          classifier: classifierDecision,
+        });
+      }
       if (decision !== classifierDecision) {
         this.log.info("permission.hook_override", {
           cat: "permission",
@@ -264,12 +298,6 @@ export class ToolExecutor {
           };
         }
       }
-    } else {
-      this.log.info("permission.hook_override", {
-        cat: "permission",
-        tool: call.toolName,
-        decision: hookResult.decision,
-      });
     }
 
     // 2. Pre-tool hook

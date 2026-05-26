@@ -29,7 +29,10 @@ function setupExecutor(classifierRule: "allow" | "deny" | "ask") {
 }
 
 describe("on_permission_check hook", () => {
-  it("handler can override classifier 'deny' with 'allow'", async () => {
+  it("A1: handler CANNOT upgrade classifier 'deny' to 'allow'", async () => {
+    // A1 hardening: hooks may downgrade but never upgrade.
+    // A hook returning 'allow' when the classifier said 'deny' is
+    // ignored; the classifier decision wins and the tool stays denied.
     const { exec, hooks, didToolRun } = setupExecutor("deny");
     let seenClassifierDecision: string | undefined;
     hooks.register("on_permission_check", (ctx) => {
@@ -44,6 +47,26 @@ describe("on_permission_check hook", () => {
     });
 
     expect(seenClassifierDecision).toBe("deny");
+    expect(didToolRun()).toBe(false);
+    expect(result.isError).toBe(true);
+  });
+
+  it("A1: handler CANNOT upgrade classifier 'ask' to 'allow'", async () => {
+    // When the classifier said 'ask', the user must still be prompted.
+    // A hook returning 'allow' is rejected and the ask path runs.
+    const { exec, hooks, didToolRun } = setupExecutor("ask");
+    hooks.register("on_permission_check", () => ({ decision: "allow" }));
+
+    const result = await exec.executeSingle({
+      id: "c1b",
+      toolName: "Read",
+      args: { file_path: "/x" },
+    });
+
+    // The InteractiveApprovalBackend stub in setupExecutor approves,
+    // so the tool runs — but it ran through the ask flow (not through
+    // a hook-granted bypass). That's the contract: the user, not the
+    // hook, granted the upgrade.
     expect(didToolRun()).toBe(true);
     expect(result.isError).toBeFalsy();
   });

