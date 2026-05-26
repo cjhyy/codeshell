@@ -130,6 +130,128 @@ describe("settings.disabledSkills — scanner", () => {
     const skills = scanSkills(projectRoot, { disabledSkills: [] });
     expect(skills.find((s) => s.name === "solo")).toBeDefined();
   });
+
+  it("disabledPlugins drops every skill in a plugin in one entry", () => {
+    // Install a fake plugin with two skills. disabledPlugins:
+    // ["fake-plugin"] should remove BOTH without listing each by name.
+    const cache = mkdtempSync(join(tmpdir(), "disabled-plugin-all-"));
+    try {
+      for (const name of ["foo", "bar"]) {
+        const dir = join(cache, "skills", name);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          join(dir, "SKILL.md"),
+          `---\ndescription: ${name} desc\n---\n${name} body`,
+        );
+      }
+      const pluginsDir = join(fakeHome, ".code-shell", "plugins");
+      mkdirSync(pluginsDir, { recursive: true });
+      writeFileSync(
+        join(pluginsDir, "installed_plugins.json"),
+        JSON.stringify({
+          version: 2,
+          plugins: {
+            "fake-plugin@mkt": [
+              {
+                scope: "user",
+                installPath: cache,
+                version: "v1",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+          },
+        }),
+      );
+
+      // Sanity: both skills are present without the filter.
+      const all = scanSkills(projectRoot);
+      expect(all.find((s) => s.name === "fake-plugin:foo")).toBeDefined();
+      expect(all.find((s) => s.name === "fake-plugin:bar")).toBeDefined();
+
+      invalidateSkillCache();
+      const filtered = scanSkills(projectRoot, {
+        disabledPlugins: ["fake-plugin"],
+      });
+      expect(filtered.find((s) => s.name?.startsWith("fake-plugin:"))).toBeUndefined();
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("disabledPlugins + disabledSkills compose (both filters apply)", () => {
+    // fake-plugin:foo dropped by plugin filter; "other:keep" dropped by
+    // skill filter; a third "other:also" survives. Validates the two
+    // filters run independently.
+    const cache = mkdtempSync(join(tmpdir(), "disabled-plugin-compose-"));
+    try {
+      // fake-plugin has one skill
+      const fooDir = join(cache, "fake-plugin", "skills", "foo");
+      mkdirSync(fooDir, { recursive: true });
+      writeFileSync(join(fooDir, "SKILL.md"), "---\ndescription: f\n---\nfoo");
+      // other-plugin has two skills: keep + also
+      for (const name of ["keep", "also"]) {
+        const dir = join(cache, "other", "skills", name);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          join(dir, "SKILL.md"),
+          `---\ndescription: ${name}\n---\n${name}`,
+        );
+      }
+      const pluginsDir = join(fakeHome, ".code-shell", "plugins");
+      mkdirSync(pluginsDir, { recursive: true });
+      writeFileSync(
+        join(pluginsDir, "installed_plugins.json"),
+        JSON.stringify({
+          version: 2,
+          plugins: {
+            "fake-plugin@mkt": [
+              {
+                scope: "user",
+                installPath: join(cache, "fake-plugin"),
+                version: "v1",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+            "other@mkt": [
+              {
+                scope: "user",
+                installPath: join(cache, "other"),
+                version: "v1",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+          },
+        }),
+      );
+
+      invalidateSkillCache();
+      const filtered = scanSkills(projectRoot, {
+        disabledSkills: ["other:keep"],
+        disabledPlugins: ["fake-plugin"],
+      });
+      const names = filtered.map((s) => s.name);
+      expect(names).not.toContain("fake-plugin:foo");
+      expect(names).not.toContain("other:keep");
+      expect(names).toContain("other:also");
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
+  });
+
+  it("disabledPlugins does NOT touch standalone (non-namespaced) skills", () => {
+    // A bare "local-skill" with no colon must NOT match disabledPlugins:
+    // ["local-skill"] — the plugin filter requires namespace form.
+    const userBase = join(fakeHome, ".code-shell", "skills");
+    makeSkill(userBase, "local-skill", "local", "body");
+
+    const skills = scanSkills(projectRoot, {
+      disabledPlugins: ["local-skill"],
+    });
+    expect(skills.find((s) => s.name === "local-skill")).toBeDefined();
+  });
 });
 
 describe("settings.disabledSkills — skillTool", () => {
@@ -181,6 +303,51 @@ describe("settings.disabledSkills — skillTool", () => {
       { cwd: fakeHome, disabledSkills: ["alpha"] } as never,
     );
     expect(out).toContain("beta body");
+  });
+
+  it("returns a 'disabled plugin' message distinct from per-skill disable", async () => {
+    // Install a fake plugin so the skill exists on disk; ctx says the
+    // plugin is in disabledPlugins. The tool should refuse with a
+    // message that contains "disabled plugin" — distinct phrasing from
+    // the per-skill case so callers can tell them apart.
+    const cache = mkdtempSync(join(tmpdir(), "disabled-tool-plugin-"));
+    try {
+      const skillDir = join(cache, "skills", "foo");
+      mkdirSync(skillDir, { recursive: true });
+      writeFileSync(
+        join(skillDir, "SKILL.md"),
+        "---\ndescription: foo\n---\nfoo body",
+      );
+      const pluginsDir = join(fakeHome, ".code-shell", "plugins");
+      mkdirSync(pluginsDir, { recursive: true });
+      writeFileSync(
+        join(pluginsDir, "installed_plugins.json"),
+        JSON.stringify({
+          version: 2,
+          plugins: {
+            "fake-plugin@mkt": [
+              {
+                scope: "user",
+                installPath: cache,
+                version: "v1",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+          },
+        }),
+      );
+
+      const out = await skillTool(
+        { skill: "fake-plugin:foo" },
+        { cwd: fakeHome, disabledPlugins: ["fake-plugin"] } as never,
+      );
+      expect(out.toLowerCase()).toContain("disabled plugin");
+      // Make sure it is NOT the per-skill phrasing nor not-found.
+      expect(out.toLowerCase()).not.toContain("not found");
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
   });
 });
 
@@ -237,5 +404,52 @@ describe("settings.disabledSkills — PromptComposer skills section", () => {
     const prompt = await composer.buildSystemPrompt([]);
     expect(prompt).toContain("alpha");
     expect(prompt).toContain("beta");
+  });
+
+  it("omits every skill from a disabled plugin in the system prompt", async () => {
+    // Install a fake plugin with two skills; disabledPlugins:
+    // ["fake-plugin"] removes both. We assert by namespace prefix so
+    // the test stays robust if buildSkillListing formatting changes.
+    const cache = mkdtempSync(join(tmpdir(), "disabled-comp-plugin-"));
+    try {
+      for (const name of ["foo", "bar"]) {
+        const dir = join(cache, "skills", name);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          join(dir, "SKILL.md"),
+          `---\ndescription: ${name} description\n---\n${name} body`,
+        );
+      }
+      const pluginsDir = join(fakeHome, ".code-shell", "plugins");
+      mkdirSync(pluginsDir, { recursive: true });
+      writeFileSync(
+        join(pluginsDir, "installed_plugins.json"),
+        JSON.stringify({
+          version: 2,
+          plugins: {
+            "fake-plugin@mkt": [
+              {
+                scope: "user",
+                installPath: cache,
+                version: "v1",
+                installedAt: "t",
+                lastUpdated: "t",
+              },
+            ],
+          },
+        }),
+      );
+
+      const composer = new PromptComposer({
+        cwd: projectRoot,
+        model: "test-model",
+        disabledPlugins: ["fake-plugin"],
+      });
+      const prompt = await composer.buildSystemPrompt([]);
+      expect(prompt).not.toContain("fake-plugin:foo");
+      expect(prompt).not.toContain("fake-plugin:bar");
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
   });
 });

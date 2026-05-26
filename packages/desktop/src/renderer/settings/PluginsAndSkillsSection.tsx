@@ -88,6 +88,9 @@ function InstalledSkills({ activeRepoPath }: { activeRepoPath: string | null }) 
   const [filter, setFilter] = useState("");
   const [viewing, setViewing] = useState<{ skill: SkillSummary; body: string } | null>(null);
   const [disabledSet, setDisabledSet] = useState<Set<string>>(new Set());
+  const [disabledPluginsSet, setDisabledPluginsSet] = useState<Set<string>>(
+    new Set(),
+  );
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const confirm = useConfirm();
@@ -103,6 +106,10 @@ function InstalledSkills({ activeRepoPath }: { activeRepoPath: string | null }) 
       setSkills(list);
       const disabled = settings?.disabledSkills;
       setDisabledSet(new Set(Array.isArray(disabled) ? (disabled as string[]) : []));
+      const disabledPlugins = settings?.disabledPlugins;
+      setDisabledPluginsSet(
+        new Set(Array.isArray(disabledPlugins) ? (disabledPlugins as string[]) : []),
+      );
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -136,6 +143,19 @@ function InstalledSkills({ activeRepoPath }: { activeRepoPath: string | null }) 
     }
     setDisabledSet(next);
     await window.codeshell.updateSettings("user", { disabledSkills: [...next] });
+  };
+
+  const togglePluginDisabled = async (
+    pluginName: string,
+    shouldDisable: boolean,
+  ) => {
+    const next = new Set(disabledPluginsSet);
+    if (shouldDisable) next.add(pluginName);
+    else next.delete(pluginName);
+    setDisabledPluginsSet(next);
+    await window.codeshell.updateSettings("user", {
+      disabledPlugins: [...next],
+    });
   };
 
   const openView = async (s: SkillSummary) => {
@@ -296,6 +316,8 @@ function InstalledSkills({ activeRepoPath }: { activeRepoPath: string | null }) 
         <div className="skill-group-list">
           {groups.map((g) => {
             const isCollapsed = collapsed.has(g.namespace);
+            const pluginDisabled =
+              !g.synthetic && disabledPluginsSet.has(g.namespace);
             const enabledCount = g.skills.filter((s) => !disabledSet.has(s.name)).length;
             const allSelected = allSelectedInGroup(g);
             const someSelected =
@@ -304,7 +326,7 @@ function InstalledSkills({ activeRepoPath }: { activeRepoPath: string | null }) 
             return (
               <section
                 key={g.namespace}
-                className={`skill-group${isCollapsed ? " is-collapsed" : ""}`}
+                className={`skill-group${isCollapsed ? " is-collapsed" : ""}${pluginDisabled ? " plugin-disabled" : ""}`}
               >
                 <header
                   className="skill-group-head"
@@ -330,12 +352,30 @@ function InstalledSkills({ activeRepoPath }: { activeRepoPath: string | null }) 
                     {g.synthetic ? "未分组" : g.namespace}
                   </strong>
                   <span className="skill-group-meta">
-                    {enabledCount}/{g.skills.length} 启用
+                    {pluginDisabled
+                      ? `整组已禁用 · ${g.skills.length} 个`
+                      : `${enabledCount}/${g.skills.length} 启用`}
                   </span>
                   {g.skills[0]?.source && !g.synthetic && (
                     <span className={`skill-source skill-source-${g.skills[0].source}`}>
                       {g.skills[0].source}
                     </span>
+                  )}
+                  {!g.synthetic && (
+                    <label
+                      className="skill-group-plugin-toggle"
+                      onClick={(e) => e.stopPropagation()}
+                      title="整组禁用 / 启用"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!pluginDisabled}
+                        onChange={() =>
+                          void togglePluginDisabled(g.namespace, !pluginDisabled)
+                        }
+                      />
+                      <span>{pluginDisabled ? "整组启用" : "整组禁用"}</span>
+                    </label>
                   )}
                 </header>
 
@@ -347,7 +387,7 @@ function InstalledSkills({ activeRepoPath }: { activeRepoPath: string | null }) 
                       return (
                         <li
                           key={s.filePath}
-                          className={`skill-row${isDisabled ? " disabled" : ""}${isSelected ? " is-selected" : ""}`}
+                          className={`skill-row${isDisabled || pluginDisabled ? " disabled" : ""}${isSelected ? " is-selected" : ""}${pluginDisabled ? " is-plugin-disabled" : ""}`}
                         >
                           <label
                             className="skill-row-check"
@@ -404,10 +444,18 @@ function InstalledSkills({ activeRepoPath }: { activeRepoPath: string | null }) 
                             >
                               卸载
                             </button>
-                            <label className="skill-toggle" title="启用 / 禁用">
+                            <label
+                              className={`skill-toggle${pluginDisabled ? " is-overridden" : ""}`}
+                              title={
+                                pluginDisabled
+                                  ? "插件整组已禁用，先开启整组才能单独启用"
+                                  : "启用 / 禁用"
+                              }
+                            >
                               <input
                                 type="checkbox"
-                                checked={!isDisabled}
+                                checked={!isDisabled && !pluginDisabled}
+                                disabled={pluginDisabled}
                                 onChange={() => void toggleDisabled([s.name], !isDisabled)}
                               />
                             </label>

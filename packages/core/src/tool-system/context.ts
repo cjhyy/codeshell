@@ -156,6 +156,14 @@ export interface ToolContext {
    * Populated from `settings.disabledSkills` by Engine.run().
    */
   disabledSkills?: string[];
+  /**
+   * Plugin names the user has totally disabled. Every skill whose
+   * namespaced name starts with `${pluginName}:` is hidden from the
+   * LLM and rejected at dispatch by the skill builtin tool with a
+   * distinct "disabled plugin" message. Populated from
+   * `settings.disabledPlugins` by Engine.run().
+   */
+  disabledPlugins?: string[];
 }
 
 /**

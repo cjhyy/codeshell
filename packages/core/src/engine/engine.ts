@@ -906,13 +906,15 @@ export class Engine {
     });
     this.lastContextManager = contextManager;
 
+    const { disabledSkills, disabledPlugins } = this.readDisabledLists();
     const promptComposer = new PromptComposer({
       cwd,
       model: this.config.llm.model,
       preset: this.preset,
       customSystemPrompt: this.config.customSystemPrompt,
       appendSystemPrompt: this.config.appendSystemPrompt,
-      disabledSkills: this.readDisabledSkills(),
+      disabledSkills,
+      disabledPlugins,
     });
 
     // Connect MCP servers (if configured and not already connected).
@@ -1721,6 +1723,7 @@ export class Engine {
    * by tests that want a ToolContext without a full run() cycle.
    */
   buildToolContext(): ToolContext {
+    const { disabledSkills, disabledPlugins } = this.readDisabledLists();
     return {
       cwd: this.config.cwd ?? process.cwd(),
       llmConfig: this.config.llm,
@@ -1731,25 +1734,40 @@ export class Engine {
       hooks: this.hooks,
       planMode: this.planMode,
       engine: this,
-      disabledSkills: this.readDisabledSkills(),
+      disabledSkills,
+      disabledPlugins,
     };
   }
 
   /**
-   * Read settings.disabledSkills. Sub-agents skip this for the same
-   * reason they skip settings.hooks / plugin hooks (registerSettingsHooks
-   * at ~line 237): they run with a minimal surface area. Defaults to []
-   * so callers don't have to null-check.
+   * Read settings.disabledSkills + settings.disabledPlugins in a single
+   * pass. Sub-agents skip both for the same reason they skip
+   * settings.hooks / plugin hooks (registerSettingsHooks at ~line 237):
+   * they run with a minimal surface area. Defaults to [] for both
+   * fields so callers don't have to null-check.
+   *
+   * Combined read avoids drift if settings change between two separate
+   * reads — the prompt composer and the tool context will always see
+   * the same snapshot.
    */
-  private readDisabledSkills(): string[] {
-    if (this.config.isSubAgent === true) return [];
+  private readDisabledLists(): {
+    disabledSkills: string[];
+    disabledPlugins: string[];
+  } {
+    if (this.config.isSubAgent === true) {
+      return { disabledSkills: [], disabledPlugins: [] };
+    }
     try {
       const settings = this.getSettingsManager().get() as {
         disabledSkills?: string[];
+        disabledPlugins?: string[];
       };
-      return settings.disabledSkills ?? [];
+      return {
+        disabledSkills: settings.disabledSkills ?? [],
+        disabledPlugins: settings.disabledPlugins ?? [],
+      };
     } catch {
-      return [];
+      return { disabledSkills: [], disabledPlugins: [] };
     }
   }
 }

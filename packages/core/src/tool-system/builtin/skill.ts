@@ -42,17 +42,35 @@ export async function skillTool(
     return "Error: skill name is required.";
   }
 
-  // Reject disabled skills before scanning so the user gets a clear
-  // message that distinguishes "disabled" from "not found" — matches
-  // the UI's toggle semantics. The scanner would also filter the entry
-  // out, which alone would produce a misleading "not found" reply.
+  // Reject disabled skills/plugins before scanning so the user gets a
+  // clear message that distinguishes "disabled" from "not found" —
+  // matches the UI's toggle semantics. The scanner would also filter
+  // these entries out, which alone would produce a misleading "not
+  // found" reply.
+  //
+  // Ordering: per-skill check fires BEFORE plugin-level check so the
+  // more-specific match wins. Both produce distinct error strings so
+  // ordering is observable but not load-bearing.
   const disabledSkills = ctx?.disabledSkills;
+  const disabledPlugins = ctx?.disabledPlugins;
   if (disabledSkills && disabledSkills.includes(skillName)) {
     return `Skill "${skillName}" is disabled. Enable it in Customize or remove it from settings.disabledSkills.`;
   }
+  if (disabledPlugins && disabledPlugins.length > 0) {
+    const colon = skillName.indexOf(":");
+    if (colon > 0) {
+      const pluginName = skillName.slice(0, colon);
+      if (disabledPlugins.includes(pluginName)) {
+        return `Skill "${skillName}" is in disabled plugin "${pluginName}". Enable the plugin in Customize or remove "${pluginName}" from settings.disabledPlugins.`;
+      }
+    }
+  }
 
   // A4: scan skills from the Engine's cwd, not the host process cwd.
-  const skills = scanSkills(ctx?.cwd ?? process.cwd(), { disabledSkills });
+  const skills = scanSkills(ctx?.cwd ?? process.cwd(), {
+    disabledSkills,
+    disabledPlugins,
+  });
   const found = skills.find((s) => s.name === skillName);
 
   if (!found) {

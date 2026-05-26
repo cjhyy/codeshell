@@ -29,6 +29,12 @@ export interface ComposerOptions {
    * dispatch — see scanSkills(opts.disabledSkills) and skillTool.
    */
   disabledSkills?: string[];
+  /**
+   * Plugin names the user has totally disabled. Coarser knob than
+   * disabledSkills — every skill whose namespaced name starts with
+   * `${pluginName}:` is filtered. See scanSkills(opts.disabledPlugins).
+   */
+  disabledPlugins?: string[];
 }
 
 export class PromptComposer {
@@ -169,6 +175,7 @@ export class PromptComposer {
       compute: () => {
         const skills = scanSkills(this.options.cwd, {
           disabledSkills: this.options.disabledSkills,
+          disabledPlugins: this.options.disabledPlugins,
         });
         return buildSkillListing(skills);
       },

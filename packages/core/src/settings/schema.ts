@@ -175,6 +175,14 @@ export const SettingsSchema = z
      */
     disabledSkills: z.array(z.string()).default([]),
 
+    /**
+     * Plugin-level total switch: every skill whose namespaced name
+     * starts with `${pluginName}:` is filtered. Coarser knob than
+     * disabledSkills; both are honored simultaneously. Bare plugin
+     * names (no colon suffix). See scanSkills(opts.disabledPlugins).
+     */
+    disabledPlugins: z.array(z.string()).default([]),
+
     instructions: z
       .object({
         fileName: z.string().default("CODESHELL.md"),

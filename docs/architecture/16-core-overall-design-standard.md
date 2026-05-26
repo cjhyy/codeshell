@@ -225,7 +225,7 @@ This includes:
 
 Tests must deliberately set `process.cwd()` and `EngineConfig.cwd` to different directories.
 
-`settings.disabledSkills: string[]` filters skills out of LLM view at scanner consumption points (PromptComposer skill listing, skill builtin tool dispatch).
+`settings.disabledSkills: string[]` filters individual skills out of LLM view at scanner consumption points (PromptComposer skill listing, skill builtin tool dispatch). `settings.disabledPlugins: string[]` is the coarser knob: each entry is a bare plugin name (no colon suffix) and drops every skill whose namespaced name starts with `${pluginName}:` in one go. Both filters run at `scanSkills` after the memoized scan returns, so toggling either never forces a re-scan. The Engine reads both lists in a single settings pass (`readDisabledLists`) before constructing the PromptComposer and the ToolContext so both consumers see the same snapshot. The skill builtin tool returns three distinct error messages — "disabled" (per-skill), "disabled plugin" (plugin-level), and "not found" — so the LLM can attribute the rejection.
 
 ### S6. Cancellation Reaches Real Work
 

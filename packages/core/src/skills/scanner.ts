@@ -207,15 +207,22 @@ const memoized = memoize(
 );
 
 /**
- * Options accepted by scanSkills. The disabled-skill filter is applied
- * after the memoized scan returns so the cache stays warm across
- * different filter values — changing `settings.disabledSkills` should
- * never force a re-scan. Names in `disabledSkills` must match the
- * SkillDefinition.name exactly, including any "<plugin>:" prefix —
- * see scanInstalledPlugins() at line ~168 for namespace construction.
+ * Options accepted by scanSkills. Both filters are applied after the
+ * memoized scan returns so the cache stays warm across different filter
+ * values — changing `settings.disabledSkills` or `settings.disabledPlugins`
+ * should never force a re-scan.
+ *
+ * - `disabledSkills` names must match the SkillDefinition.name exactly,
+ *   including any "<plugin>:" prefix — see scanInstalledPlugins() at
+ *   line ~168 for namespace construction.
+ * - `disabledPlugins` names are bare plugin names (no colon suffix).
+ *   Every skill whose name starts with `${pluginName}:` is filtered.
+ *   This is the coarse "plugin total switch" knob; `disabledSkills` is
+ *   the per-skill knob.
  */
 export interface ScanSkillsOptions {
   disabledSkills?: string[];
+  disabledPlugins?: string[];
 }
 
 export function scanSkills(
@@ -223,10 +230,30 @@ export function scanSkills(
   opts?: ScanSkillsOptions,
 ): SkillDefinition[] {
   const all = memoized(cwd);
-  const disabled = opts?.disabledSkills;
-  if (!disabled || disabled.length === 0) return all;
-  const set = new Set(disabled);
-  return all.filter((s) => !set.has(s.name));
+  const disabledSkills = opts?.disabledSkills;
+  const disabledPlugins = opts?.disabledPlugins;
+
+  const hasSkillFilter = disabledSkills && disabledSkills.length > 0;
+  const hasPluginFilter = disabledPlugins && disabledPlugins.length > 0;
+  if (!hasSkillFilter && !hasPluginFilter) return all;
+
+  const skillSet = hasSkillFilter ? new Set(disabledSkills) : null;
+  const pluginSet = hasPluginFilter ? new Set(disabledPlugins) : null;
+
+  return all.filter((s) => {
+    if (skillSet && skillSet.has(s.name)) return false;
+    if (pluginSet) {
+      // Use indexOf, not split — skill names may theoretically contain
+      // more colons after the first; the namespace boundary is the
+      // first ":" only.
+      const colon = s.name.indexOf(":");
+      if (colon > 0) {
+        const prefix = s.name.slice(0, colon);
+        if (pluginSet.has(prefix)) return false;
+      }
+    }
+    return true;
+  });
 }
 
 export function invalidateSkillCache(): void {
