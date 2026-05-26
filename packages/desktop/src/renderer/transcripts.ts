@@ -64,6 +64,41 @@ function transcriptKey(repoId: string | null, sessionId: string): string {
   return `codeshell.transcript.${repoKey(repoId)}.${sessionId}`;
 }
 
+/**
+ * One-shot wipe of legacy session data. Pre-2026-05-26 the renderer
+ * could (a) hand the same `s-…` id to multiple BrowserWindows and (b)
+ * route stream events to the wrong bucket, so on-disk transcripts and
+ * session indices from before the multi-session fix are unreliable.
+ *
+ * We blow them away on first boot after the migration lands and stamp
+ * a schema marker so the wipe never repeats. User preferences
+ * (codeshell.repos / activeRepoId / view / theme / history) are kept.
+ */
+const SCHEMA_KEY = "codeshell.schema";
+const SCHEMA_VERSION = "2026-05-26-multi-session";
+function migrateSessionStorageIfNeeded(): void {
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (localStorage.getItem(SCHEMA_KEY) === SCHEMA_VERSION) return;
+    const stale: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith("codeshell.transcript.") || k.startsWith("codeshell.sessionIndex.")) {
+        stale.push(k);
+      }
+    }
+    for (const k of stale) localStorage.removeItem(k);
+    localStorage.setItem(SCHEMA_KEY, SCHEMA_VERSION);
+    if (stale.length > 0 && typeof console !== "undefined") {
+      console.info(`[codeshell] cleared ${stale.length} legacy session entries`);
+    }
+  } catch {
+    // localStorage may be unavailable (SSR / private mode) — best effort.
+  }
+}
+migrateSessionStorageIfNeeded();
+
 export function makeSessionId(): string {
   // crypto.randomUUID() is collision-proof across renderer processes;
   // a module-level counter would reset on reload and run independently
