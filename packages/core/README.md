@@ -83,9 +83,71 @@ new Engine({
 - **Hooks** are the right place for audit logging, prompt rewriting, and policy enforcement.
 - **Memory.** The engine ships with an extract-memories + auto-dream pipeline that persists to `~/.code-shell/memory/`. Disable by passing a no-op `MemoryOrchestrator`, or scope to a project by setting `CODE_SHELL_HOME`.
 
+## Recommended public API (B3 / standard §S7)
+
+The stable, recommended construction path for embedders is the
+`createServer` / `createClient` factory pair over a protocol transport.
+Direct `new Engine(...)` still works for advanced cases — but the
+protocol-mediated path is what we test, document, and avoid breaking.
+
+```ts
+import {
+  createServer,
+  createClient,
+  createInProcessTransport,
+} from "@cjhyy/code-shell-core";
+
+const [serverT, clientT] = createInProcessTransport();
+const handle = createServer({
+  transport: serverT,
+  cwd: process.cwd(),
+  llm: { provider: "anthropic", model: "claude-sonnet-4-6", apiKey: KEY },
+  permissionMode: "default",
+});
+const client = createClient({ transport: clientT });
+
+client.onStreamEvent(({ sessionId, event }) => {
+  if (event.type === "text_delta") process.stdout.write(event.text);
+});
+
+const result = await client.run({ sessionId: "main", task: "Summarize README.md" });
+console.log(result.text);
+
+handle.close();
+client.close();
+```
+
+For an out-of-process worker, swap `createInProcessTransport()` for a
+`StdioTransport` pair. The factory accepts any `Transport`, so a future
+`IpcAdapter` will compose without changing the call shape.
+
+## Stable surface
+
+These exports are covered by the stability promise:
+
+| Area | Stable exports |
+| --- | --- |
+| Factories | `createServer`, `createClient`, `createInProcessTransport`, `StdioTransport` |
+| Server/client | `AgentServer`, `AgentClient` (direct use is supported but `createServer/Client` preferred) |
+| Engine | `Engine`, `EngineConfig`, `EngineRuntime`, `ChatSessionManager` |
+| Protocol types | `Methods`, `ErrorCodes`, `RpcMessage`, `RunResult`, `StreamEvent`, `StreamCallback` |
+| LLM | `LLMConfig`, `LLMResponse`, `ModelPool`, `createLLMClient`, `registerProvider` |
+| Tool authoring | `ToolDefinition`, `ToolCall`, `ToolResult`, `RegisteredTool`, `BUILTIN_TOOLS`, `HookContext`, `HookResult` |
+| Permissions | `PermissionClassifier`, `HeadlessApprovalBackend`, `AutoApprovalBackend`, `ApprovalBackend`, `PermissionMode`, `PermissionRule` |
+| Errors | `FrameworkError` + subclasses (`LLMError`, `ToolError`, `PermissionDeniedError`, …) |
+
+### Treat as internal
+
+Anything not in the table above — including direct imports from
+`./engine/...`, `./tool-system/...`, `./session/...`, `./hooks/...`
+subpaths and APIs marked `@internal` in their docstrings — may change
+between minor versions without notice. Plan to migrate via the protocol
+surface instead of deep-importing.
+
 ## Stability
 
-Pre-1.0 — APIs may change between minor versions. Major exports (`Engine`, `ToolRegistry`, `PermissionClassifier`, `BUILTIN_TOOLS`, types under `./types`) are the stable surface; deep imports into subdirectories may shift.
+Pre-1.0 — APIs may change between minor versions. The "stable surface"
+table above is the contract; everything else is mobile.
 
 See [CHANGELOG.md](https://github.com/cjhyy/codeshell/blob/main/CHANGELOG.md) in the monorepo.
 

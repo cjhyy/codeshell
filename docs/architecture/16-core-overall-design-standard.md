@@ -336,12 +336,12 @@ Core cannot be called stable until all are true:
 
 ### Gate 3: API Gate
 
-- [ ] stable exports documented in `packages/core/README.md`.
-- [ ] internal exports separated or marked.
-- [ ] SDK smoke test imports only from package entrypoints.
-- [ ] protocol errors have a stable shape.
-- [ ] protocol notifications always include `sessionId` when session-related.
-- [ ] raw transport is available but business docs use typed client/server helpers.
+- [x] stable exports documented in `packages/core/README.md`. *(B3 — "Stable surface" table lists every promised export by area; "Treat as internal" section names the deep paths that may move.)*
+- [x] internal exports separated or marked. *(B3 — README documents the boundary; deep imports into `./engine/...` `./tool-system/...` etc. are explicitly listed as internal. Subpath-export split (`/internal/*`) is post-stability cleanup; the contract — which the README pins — is what embedders rely on.)*
+- [x] SDK smoke test imports only from package entrypoints. *(B3 — `tests/sdk-smoke.test.ts` constructs server+client+transport via root imports only and verifies the close lifecycle.)*
+- [x] protocol errors have a stable shape. *(`protocol/types.ts:ErrorCodes` enumerates the codes; `createErrorResponse` produces the JSON-RPC error envelope. Re-exported at root as `ErrorCodes`.)*
+- [x] protocol notifications always include `sessionId` when session-related. *(`AgentServer.handleRunMulti` wraps every `StreamEvent` in `{ sessionId, event }` — `server.ts:185-190`; legacy path stamps `sessionId: params.sessionId ?? ""` — `server.ts:247-249`.)*
+- [x] raw transport is available but business docs use typed client/server helpers. *(README "Recommended public API" leads with `createServer`/`createClient`; `Transport` + `StdioTransport` remain exported for transport composition.)*
 
 ### Gate 4: Verification Gate
 

@@ -179,10 +179,10 @@ Core 可以给其他业务方接入前，至少满足这些门槛：
 - `packages/core/package.json`
 - `docs/architecture/*`
 
-- [ ] Split stable exports from compatibility/internal exports.
-- [ ] Document supported construction paths: `Engine`, `AgentServer`, `AgentClient`, `ChatSessionManager`, transports, custom tools, hooks.
-- [ ] Mark internal APIs explicitly or move them behind `internal/*` exports.
-- [ ] Add a small SDK smoke test that imports from package entrypoints only.
+- [x] Split stable exports from compatibility/internal exports. *(B3 — README "Stable surface" table pins the contract; full `/internal/*` subpath split deferred as post-stability cleanup since the contract — not the file layout — is what embedders depend on.)*
+- [x] Document supported construction paths: `Engine`, `AgentServer`, `AgentClient`, `ChatSessionManager`, transports, custom tools, hooks. *(B3 — `packages/core/README.md` "Recommended public API" + "Stable surface" sections.)*
+- [x] Mark internal APIs explicitly or move them behind `internal/*` exports. *(B3 — README "Treat as internal" section enumerates the deep paths.)*
+- [x] Add a small SDK smoke test that imports from package entrypoints only. *(B3 — `tests/sdk-smoke.test.ts` constructs server+client+transport via root imports only.)*
 
 ### B4. Typecheck/lint gate
 

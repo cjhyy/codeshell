@@ -99,6 +99,15 @@ export {
   StdioTransport,
   type Transport,
 } from "./protocol/transport.js";
+// Recommended public factories — see protocol/factories.ts for the
+// stable construction contract referenced by standard §7.
+export {
+  createServer,
+  createClient,
+  type CreateServerOptions,
+  type CreateClientOptions,
+  type ServerHandle,
+} from "./protocol/factories.js";
 export {
   Methods,
   ErrorCodes,
