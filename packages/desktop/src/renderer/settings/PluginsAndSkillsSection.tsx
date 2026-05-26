@@ -127,9 +127,6 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const [skills, setSkills] = useState<SkillSummary[] | null>(null);
   const [plugins, setPlugins] = useState<PluginSummary[]>([]);
   const [disabledSet, setDisabledSet] = useState<Set<string>>(new Set());
-  const [disabledPluginsSet, setDisabledPluginsSet] = useState<Set<string>>(
-    new Set(),
-  );
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [selection, setSelection] = useState<Selection>({ kind: "empty" });
@@ -153,8 +150,6 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
       setPlugins(pluginList);
       const ds = settings?.disabledSkills;
       setDisabledSet(new Set(Array.isArray(ds) ? (ds as string[]) : []));
-      const dp = settings?.disabledPlugins;
-      setDisabledPluginsSet(new Set(Array.isArray(dp) ? (dp as string[]) : []));
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -249,17 +244,41 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     });
   };
 
-  const togglePluginDisabled = async (
-    pluginName: string,
-    shouldDisable: boolean,
+  /**
+   * Cascade: plugin checkbox is an aggregate of its skills. Toggling it
+   * batch-flips every skill in that group. We don't write disabledPlugins
+   * from the UI — the underlying field stays supported (Step 2 schema +
+   * scanner filter) for advanced consumers / SDK callers, but the user-
+   * facing knob expresses everything through disabledSkills so the
+   * indeterminate / all-on / all-off tri-state stays consistent.
+   */
+  const togglePluginGroup = async (
+    pluginKey: string,
+    shouldDisableGroup: boolean,
   ) => {
-    const next = new Set(disabledPluginsSet);
-    if (shouldDisable) next.add(pluginName);
-    else next.delete(pluginName);
-    setDisabledPluginsSet(next);
+    if (!skills) return;
+    const groupSkills = skillsForPlugin(skills, pluginKey);
+    const next = new Set(disabledSet);
+    for (const s of groupSkills) {
+      if (shouldDisableGroup) next.add(s.name);
+      else next.delete(s.name);
+    }
+    setDisabledSet(next);
     await window.codeshell.updateSettings("user", {
-      disabledPlugins: [...next],
+      disabledSkills: [...next],
     });
+  };
+
+  /** Aggregate state of a plugin group: all enabled / all disabled / mixed. */
+  const pluginGroupState = (pluginKey: string): "all" | "none" | "some" => {
+    if (!skills) return "all";
+    const groupSkills = skillsForPlugin(skills, pluginKey);
+    if (groupSkills.length === 0) return "all";
+    let disabled = 0;
+    for (const s of groupSkills) if (disabledSet.has(s.name)) disabled++;
+    if (disabled === 0) return "all";
+    if (disabled === groupSkills.length) return "none";
+    return "some";
   };
 
   const uninstallOne = async (s: SkillSummary) => {
@@ -309,8 +328,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
               (selection.kind === "plugin" && selection.pluginKey === row.key) ||
               (selection.kind === "skill" &&
                 selectedPluginRow?.key === row.key);
-            const pluginDisabled =
-              !row.synthetic && disabledPluginsSet.has(row.key);
+            const groupState = pluginGroupState(row.key);
             return (
               <li
                 key={row.key}
@@ -324,11 +342,17 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                   >
                     <input
                       type="checkbox"
-                      checked={!pluginDisabled}
+                      checked={groupState === "all"}
+                      ref={(el) => {
+                        if (el) el.indeterminate = groupState === "some";
+                      }}
                       onChange={() =>
-                        void togglePluginDisabled(row.key, !pluginDisabled)
+                        // From "all" → disable all; from "none" or "some" → enable all.
+                        // The "some → all" choice mirrors macOS Finder / Claude Code:
+                        // clicking an indeterminate checkbox enables everything.
+                        void togglePluginGroup(row.key, groupState === "all")
                       }
-                      title="启用 / 禁用整个插件"
+                      title="启用 / 禁用整个插件（级联到下属 skill）"
                     />
                   </label>
                 ) : (
@@ -386,30 +410,22 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             <ul className="customize-skill-list">
               {middleSkills.map((s) => {
                 const isDisabled = disabledSet.has(s.name);
-                const pluginDisabled =
-                  !selectedPluginRow.synthetic &&
-                  disabledPluginsSet.has(selectedPluginRow.key);
                 const isSelected =
                   selection.kind === "skill" && selection.skillName === s.name;
                 return (
                   <li
                     key={s.filePath}
-                    className={`customize-skill-row${isSelected ? " is-selected" : ""}${pluginDisabled ? " is-plugin-disabled" : ""}`}
+                    className={`customize-skill-row${isSelected ? " is-selected" : ""}`}
                     onClick={() => onSelectSkill(s)}
                   >
                     <label
                       className="customize-skill-row-check"
                       onClick={(e) => e.stopPropagation()}
-                      title={
-                        pluginDisabled
-                          ? "插件整组已禁用，先启用整组才能单独启用此 skill"
-                          : "启用 / 禁用"
-                      }
+                      title="启用 / 禁用"
                     >
                       <input
                         type="checkbox"
-                        checked={!isDisabled && !pluginDisabled}
-                        disabled={pluginDisabled}
+                        checked={!isDisabled}
                         onChange={() =>
                           void toggleSkillDisabled(s.name, !isDisabled)
                         }

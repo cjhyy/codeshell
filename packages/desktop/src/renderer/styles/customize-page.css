@@ -4,10 +4,13 @@
 
 .customize-three-pane {
   display: grid;
-  grid-template-columns: 240px 320px 1fr;
+  grid-template-columns: 240px 320px minmax(0, 1fr);
   gap: 0;
-  height: 100%;
-  min-height: 0;
+  /* Cap to viewport so each pane can manage its own scroll. The
+     -180px subtracts the top app chrome (TopBar + section header);
+     adjust if the host layout changes. */
+  height: calc(100vh - 180px);
+  min-height: 420px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
@@ -17,6 +20,11 @@
 .customize-pane {
   border-right: 1px solid var(--border-subtle);
   overflow-y: auto;
+  overflow-x: hidden;
+  /* min-width:0 is the load-bearing fix: without it a grid 1fr track
+     refuses to shrink below its content's min-content width, which for
+     long install paths is a single wide line that breaks the layout. */
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -39,6 +47,8 @@
   padding: var(--sp-2) 0;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 .customize-plugin-row {
   display: flex;
@@ -109,6 +119,10 @@
   list-style: none;
   margin: 0;
   padding: var(--sp-2) 0;
+  /* flex:1 + min-height:0 = scroll lives on the parent .customize-pane;
+     this list takes whatever vertical space remains under the toolbar. */
+  flex: 1;
+  min-height: 0;
 }
 .customize-skill-row {
   display: flex;
@@ -123,9 +137,6 @@
 .customize-skill-row.is-selected {
   background: var(--bg-selected);
   border-left-color: var(--accent);
-}
-.customize-skill-row.is-plugin-disabled {
-  opacity: 0.5;
 }
 .customize-skill-row-check { padding-top: 2px; }
 .customize-skill-row-check input { transform: scale(1.05); cursor: pointer; }
@@ -228,15 +239,23 @@
 .customize-plugin-card-row .value {
   font-family: var(--font-mono);
   color: var(--fg-primary);
-  word-break: break-all;
+  /* break-word + min-width:0 on the flex item gives long install paths
+     a graceful wrap instead of forcing the pane to grow horizontally
+     (or — when grid sizing kicks in — collapsing to one char per line). */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 /* The Customize section dropped the standard settings-section padding
-   so the three-pane grid can fill the available vertical space. */
+   so the three-pane grid can fill the available vertical space.
+   The grid itself owns its height (calc viewport-based) so this host
+   only enforces "let the grid be its natural height, don't add
+   padding-driven jitter." */
 .settings-section.ps-section.customize-host {
   padding: 0;
-  height: 100%;
-  min-height: 480px;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
+
