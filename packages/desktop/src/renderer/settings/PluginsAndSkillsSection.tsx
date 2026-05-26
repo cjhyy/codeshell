@@ -16,7 +16,7 @@
  * isn't a real plugin), but each skill underneath still has its own.
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
   GithubDetectedSkill,
   GithubRepoInspection,
@@ -134,7 +134,10 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const [filter, setFilter] = useState("");
   const [selection, setSelection] = useState<Selection>({ kind: "empty" });
   const [skillBody, setSkillBody] = useState<string | null>(null);
-  const [skillBodyFor, setSkillBodyFor] = useState<string | null>(null);
+  // Tracks the filePath the current skillBody belongs to. Ref (not state) so
+  // updating it doesn't retrigger the lazy-load effect — the effect only
+  // depends on selection / skillsByName.
+  const skillBodyForRef = useRef<string | null>(null);
   const confirm = useConfirm();
 
   const cwd = activeRepoPath ?? "/";
@@ -209,29 +212,29 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     const s = skillsByName.get(selection.skillName);
     if (!s) {
       setSkillBody(null);
-      setSkillBodyFor(null);
+      skillBodyForRef.current = null;
       return;
     }
-    if (skillBodyFor === s.filePath) return;
+    if (skillBodyForRef.current === s.filePath) return;
     let cancelled = false;
     void (async () => {
       try {
         const body = await window.codeshell.readSkillBody(s.filePath);
         if (!cancelled) {
           setSkillBody(body);
-          setSkillBodyFor(s.filePath);
+          skillBodyForRef.current = s.filePath;
         }
       } catch (e) {
         if (!cancelled) {
           setSkillBody(`# 读取失败\n\n${String(e instanceof Error ? e.message : e)}`);
-          setSkillBodyFor(s.filePath);
+          skillBodyForRef.current = s.filePath;
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [selection, skillsByName, skillBodyFor]);
+  }, [selection, skillsByName]);
 
   if (error) return <div className="view-error">{error}</div>;
   if (!skills) return <div className="view-loading">加载中…</div>;
@@ -540,7 +543,8 @@ function PluginInfoCard({ row }: { row: PluginRow }) {
       </div>
     );
   }
-  const p = row.summary!;
+  const p = row.summary;
+  if (!p) return null;
   return (
     <div className="customize-plugin-card">
       <header className="customize-detail-head">

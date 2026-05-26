@@ -76,11 +76,6 @@ function countSkills(installPath: string): number {
 
 function deriveSourceLabel(marketplace: string | null): string {
   if (!marketplace) return "本地安装";
-  // Heuristic: marketplaces are sometimes labeled "github:owner/repo" by
-  // direct-github installs. Pass that through verbatim; otherwise prefix.
-  if (marketplace.startsWith("github:") || marketplace.startsWith("git:")) {
-    return `installed from ${marketplace}`;
-  }
   return `installed from ${marketplace}`;
 }
 
@@ -122,7 +117,3 @@ export function listPlugins(_cwd: string): PluginSummary[] {
   return out;
 }
 
-// Promise-shaped variant for callers that prefer async/await.
-export async function listPluginsAsync(cwd: string): Promise<PluginSummary[]> {
-  return Promise.resolve(listPlugins(cwd));
-}
