@@ -166,10 +166,10 @@ Core 可以给其他业务方接入前，至少满足这些门槛：
 - `packages/tui/src/ui/App.tsx`
 - `packages/desktop/src/*`
 
-- [ ] Move notification queue from process-global to session-scoped ownership.
-- [ ] Deliver completion notifications through the protocol layer with `sessionId`.
-- [ ] Support both paths: user-visible stream marker and LLM-visible injected turn.
-- [ ] Verify TUI and Desktop both deliver background agent results without polling.
+- [x] Move notification queue from process-global to session-scoped ownership. *(B2 — `agent-notifications.ts` is now keyed by sessionId; `ToolContext.sessionId` populated by `engine.ts` after session resolve; `agent.ts` enqueue sites pass `ctx?.sessionId`; TUI `App.tsx` consumes its own bucket via `getSnapshot(sessionId)` / `drainAll(sessionId)`. Legacy no-arg bucket retained as transitional shim. See [B2 spec](../specs/2026-05-26-b2-session-scoped-notifications.md).)*
+- [ ] Deliver completion notifications through the protocol layer with `sessionId`. *(deferred to B2.2 — requires new StreamEvent type + AgentServer/AgentClient touch.)*
+- [ ] Support both paths: user-visible stream marker and LLM-visible injected turn. *(deferred to B2.2.)*
+- [ ] Verify TUI and Desktop both deliver background agent results without polling. *(deferred to B2.2 — desktop has no background-agent UI yet; TUI continues using direct queue subscription.)*
 
 ### B3. Public core API contract
 

@@ -1311,9 +1311,18 @@ export function App({
     modelEntries ||
     modelManager ||
     sessionEntries;
+  // B2: drain only this session's bucket. Other sessions running in the
+  // same process (multi-session host roadmap) have their own buckets and
+  // don't bleed into this one. sessionId can be undefined before the
+  // first run() resolves a sid — getSnapshot/drainAll fall back to the
+  // queue's legacy bucket in that window, matching pre-B2 behavior.
+  const getNotificationSnapshot = useCallback(
+    () => notificationQueue.getSnapshot(sessionId),
+    [sessionId],
+  );
   const notificationSnapshot = useSyncExternalStore(
     notificationQueue.subscribe,
-    notificationQueue.getSnapshot,
+    getNotificationSnapshot,
   );
   useEffect(() => {
     if (notificationSnapshot.length === 0) return;
@@ -1321,7 +1330,7 @@ export function App({
     if (input.trim() !== "") return;
     if (overlayOpen) return;
 
-    const items = notificationQueue.drainAll();
+    const items = notificationQueue.drainAll(sessionId);
     if (items.length === 0) return;
     const xml = buildNotificationMessage(items);
     const summary = buildNotificationSummary(items);
@@ -1332,6 +1341,7 @@ export function App({
     input,
     overlayOpen,
     submitToEngine,
+    sessionId,
   ]);
 
   const handleSubmit = useCallback(

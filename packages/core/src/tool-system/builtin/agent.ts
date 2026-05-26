@@ -208,14 +208,21 @@ export async function agentTool(
     )
       .then((text) => {
         asyncAgentRegistry.markCompleted(agentId);
-        notificationQueue.enqueue({
-          agentId,
-          name,
-          description,
-          status: "completed",
-          finalText: text,
-          enqueuedAt: Date.now(),
-        });
+        notificationQueue.enqueue(
+          {
+            agentId,
+            name,
+            description,
+            status: "completed",
+            finalText: text,
+            enqueuedAt: Date.now(),
+          },
+          // B2 / Gate 1: attribute completion to the session that spawned
+          // this agent so concurrent sessions don't drain each other's
+          // notifications. Undefined ctx.sessionId (legacy / test paths)
+          // falls back to the queue's `__legacy__` bucket.
+          ctx?.sessionId,
+        );
         // notification hook: fire-and-forget. ctx.hooks may be absent in
         // legacy callers; treat as opt-in observability rather than a
         // required publish step. We deliberately do not await — bg-agent
@@ -243,14 +250,17 @@ export async function agentTool(
           return;
         }
         asyncAgentRegistry.markFailed(agentId);
-        notificationQueue.enqueue({
-          agentId,
-          name,
-          description,
-          status: "failed",
-          error: err.message,
-          enqueuedAt: Date.now(),
-        });
+        notificationQueue.enqueue(
+          {
+            agentId,
+            name,
+            description,
+            status: "failed",
+            error: err.message,
+            enqueuedAt: Date.now(),
+          },
+          ctx?.sessionId,
+        );
         void ctx?.hooks?.emit("notification", {
           kind: "agent_failed",
           agentId,

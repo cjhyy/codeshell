@@ -11,6 +11,18 @@
  * The result text lives only in this queue + the eventual user message —
  * not in `asyncAgentRegistry`. Registry stays metadata-only.
  *
+ * B2 (2026-05-26): items are keyed by `sessionId`. Same Engine process
+ * may host concurrent sessions (multi-session host roadmap, standard §S3),
+ * and a background agent spawned from session A must not deliver its
+ * result XML into session B's next turn. Callers that don't supply a
+ * `sessionId` (legacy / ad-hoc tests) operate on a `__legacy__` bucket
+ * so untouched call sites keep working until B2.2 promotes notifications
+ * to a protocol StreamEvent.
+ *
+ * Listeners are still process-wide: any bucket change wakes every
+ * subscriber, and each subscriber filters by sessionId when reading
+ * `getSnapshot(sid)`. This matches `useSyncExternalStore`'s contract.
+ *
  * Process-local singleton; same lifetime contract as `asyncAgentRegistry`.
  */
 
@@ -28,12 +40,22 @@ export type NotificationItem = {
 
 type Listener = () => void;
 
+const LEGACY_BUCKET = "__legacy__";
+
+// Stable empty reference so `getSnapshot(sid)` returns the same array
+// identity across calls when the bucket is empty. React's
+// useSyncExternalStore compares snapshots by identity to decide whether
+// to re-render — a fresh `[]` each call would cause render loops.
+const EMPTY: readonly NotificationItem[] = Object.freeze([]);
+
 class NotificationQueue {
-  private items: NotificationItem[] = [];
+  private buckets = new Map<string, NotificationItem[]>();
   private listeners = new Set<Listener>();
 
-  enqueue(item: NotificationItem): void {
-    this.items = [...this.items, item];
+  enqueue(item: NotificationItem, sessionId?: string): void {
+    const key = sessionId ?? LEGACY_BUCKET;
+    const next = [...(this.buckets.get(key) ?? []), item];
+    this.buckets.set(key, next);
     this.notify();
   }
 
@@ -44,19 +66,32 @@ class NotificationQueue {
     };
   };
 
-  getSnapshot = (): NotificationItem[] => this.items;
+  getSnapshot = (sessionId?: string): readonly NotificationItem[] => {
+    return this.buckets.get(sessionId ?? LEGACY_BUCKET) ?? EMPTY;
+  };
 
-  /** Atomic: returns all items and clears in one shot. */
-  drainAll(): NotificationItem[] {
-    if (this.items.length === 0) return [];
-    const out = this.items;
-    this.items = [];
+  /** Atomic: returns all items for a session and clears that bucket. */
+  drainAll(sessionId?: string): NotificationItem[] {
+    const key = sessionId ?? LEGACY_BUCKET;
+    const items = this.buckets.get(key);
+    if (!items || items.length === 0) return [];
+    this.buckets.delete(key);
     this.notify();
-    return out;
+    return items;
   }
 
-  reset(): void {
-    this.items = [];
+  /**
+   * Clear one bucket (sessionId given) or every bucket (no arg). Used by
+   * tests; production code drains per-session through `drainAll`.
+   */
+  reset(sessionId?: string): void {
+    if (sessionId === undefined) {
+      if (this.buckets.size === 0) return;
+      this.buckets.clear();
+    } else {
+      if (!this.buckets.has(sessionId)) return;
+      this.buckets.delete(sessionId);
+    }
     this.notify();
   }
 
@@ -96,7 +131,7 @@ function escapeXmlAttr(s: string): string {
  * tag as a signal that this turn is a system-injected notification,
  * not a real user message.
  */
-export function buildNotificationMessage(items: NotificationItem[]): string {
+export function buildNotificationMessage(items: readonly NotificationItem[]): string {
   const agents = items
     .map((item) => {
       const nameAttr = item.name ? ` name="${escapeXmlAttr(item.name)}"` : "";
@@ -125,7 +160,7 @@ export function buildNotificationMessage(items: NotificationItem[]): string {
  * this terse marker plus an optional inline error preview, and can
  * switch to the sub-agent's dock view if they want details.
  */
-export function buildNotificationSummary(items: NotificationItem[]): string {
+export function buildNotificationSummary(items: readonly NotificationItem[]): string {
   const header = "📨 background agents completed";
   const rows = items.map((item) => {
     const badge = item.status === "completed" ? "✓" : "✗";

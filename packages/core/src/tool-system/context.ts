@@ -140,6 +140,14 @@ export interface ToolContext {
   /** The Engine that built this context. Lets tools call back into the engine
    *  (e.g. ctx.engine.setPlanMode(true/false)) without a module-level singleton. */
   engine: Engine;
+  /**
+   * sessionId of the Engine.run() turn this context was built for. Tools
+   * that emit session-scoped side effects (today: background-agent
+   * completion notifications) attribute the event by this. Undefined for
+   * ad-hoc contexts built outside Engine.run() — e.g. memory.auto_dream's
+   * narrow context, or standalone tool tests. (B2 — Gate 1, standard §S3.)
+   */
+  sessionId?: string;
 }
 
 /**

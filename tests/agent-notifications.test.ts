@@ -85,6 +85,76 @@ describe("notificationQueue", () => {
   });
 });
 
+describe("notificationQueue session scoping (B2)", () => {
+  test("enqueue with sessionId is isolated per session", () => {
+    notificationQueue.enqueue(fixture({ agentId: "a" }), "sess-1");
+    notificationQueue.enqueue(fixture({ agentId: "b" }), "sess-2");
+    expect(notificationQueue.getSnapshot("sess-1").map((i) => i.agentId)).toEqual(["a"]);
+    expect(notificationQueue.getSnapshot("sess-2").map((i) => i.agentId)).toEqual(["b"]);
+    // Legacy bucket (no-arg) is independent of session buckets.
+    expect(notificationQueue.getSnapshot()).toEqual([]);
+  });
+
+  test("drainAll(sid) only drains that session's bucket", () => {
+    notificationQueue.enqueue(fixture({ agentId: "a" }), "sess-1");
+    notificationQueue.enqueue(fixture({ agentId: "b" }), "sess-2");
+    const drained = notificationQueue.drainAll("sess-1");
+    expect(drained.map((i) => i.agentId)).toEqual(["a"]);
+    expect(notificationQueue.getSnapshot("sess-1")).toEqual([]);
+    expect(notificationQueue.getSnapshot("sess-2").map((i) => i.agentId)).toEqual(["b"]);
+  });
+
+  test("drainAll(sid) on unknown session returns empty without disturbing others", () => {
+    notificationQueue.enqueue(fixture({ agentId: "a" }), "sess-1");
+    expect(notificationQueue.drainAll("never-existed")).toEqual([]);
+    expect(notificationQueue.getSnapshot("sess-1").map((i) => i.agentId)).toEqual(["a"]);
+  });
+
+  test("subscribe fires for any bucket change", () => {
+    let calls = 0;
+    notificationQueue.subscribe(() => {
+      calls += 1;
+    });
+    notificationQueue.enqueue(fixture(), "sess-1");
+    expect(calls).toBe(1);
+    notificationQueue.enqueue(fixture(), "sess-2");
+    expect(calls).toBe(2);
+    notificationQueue.drainAll("sess-1");
+    expect(calls).toBe(3);
+  });
+
+  test("getSnapshot(sid) returns stable empty reference between calls", () => {
+    const a = notificationQueue.getSnapshot("nope");
+    const b = notificationQueue.getSnapshot("nope");
+    // useSyncExternalStore compares by identity — must be the same array.
+    expect(a).toBe(b);
+  });
+
+  test("reset(sid) clears only that bucket", () => {
+    notificationQueue.enqueue(fixture(), "sess-1");
+    notificationQueue.enqueue(fixture(), "sess-2");
+    notificationQueue.reset("sess-1");
+    expect(notificationQueue.getSnapshot("sess-1")).toEqual([]);
+    expect(notificationQueue.getSnapshot("sess-2")).toHaveLength(1);
+  });
+
+  test("reset() with no arg clears every bucket including legacy", () => {
+    notificationQueue.enqueue(fixture(), "sess-1");
+    notificationQueue.enqueue(fixture()); // legacy bucket
+    notificationQueue.reset();
+    expect(notificationQueue.getSnapshot("sess-1")).toEqual([]);
+    expect(notificationQueue.getSnapshot()).toEqual([]);
+  });
+
+  test("no-arg drainAll only touches the legacy bucket", () => {
+    notificationQueue.enqueue(fixture({ agentId: "legacy" }));
+    notificationQueue.enqueue(fixture({ agentId: "tagged" }), "sess-1");
+    const drained = notificationQueue.drainAll();
+    expect(drained.map((i) => i.agentId)).toEqual(["legacy"]);
+    expect(notificationQueue.getSnapshot("sess-1").map((i) => i.agentId)).toEqual(["tagged"]);
+  });
+});
+
 describe("buildNotificationMessage", () => {
   test("single completed item", () => {
     const msg = buildNotificationMessage([

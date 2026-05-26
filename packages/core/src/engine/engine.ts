@@ -632,6 +632,10 @@ export class Engine {
       ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
       : await resolveSandboxBackend(sandboxConfig, cwd);
 
+    // sessionId is filled in after the session bundle is resolved below
+    // (the session may be cold-started or resumed). Until then this is
+    // intentionally shaped as a mutable local; we treat it as immutable
+    // after the assignment.
     const toolCtx: ToolContext = {
       ...this.buildToolContext(),
       subAgentSpawner,
@@ -739,6 +743,14 @@ export class Engine {
     // a child mutates that child's scope only and doesn't leak back to
     // the parent's chain after `await child.run(...)` returns.
     setCurrentSid(session.state.sessionId);
+
+    // B2 / Gate 1: stamp the resolved sid onto the tool context so
+    // session-scoped side effects (background-agent completion
+    // notifications) attribute to the right session. toolCtx is created
+    // before the session bundle is resolved (see ~line 635), so this is
+    // the first point we can set it. After this assignment treat the
+    // field as immutable for the rest of the run.
+    toolCtx.sessionId = session.state.sessionId;
     return runWithSid(session.state.sessionId, async () => {
 
     recordSessionStart(session.state.sessionId, {

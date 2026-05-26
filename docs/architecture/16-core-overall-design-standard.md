@@ -320,7 +320,7 @@ Core cannot be called stable until all are true:
 - [ ] different sessions can run concurrently.
 - [ ] cancel targets only one session.
 - [ ] pending approvals are session-scoped.
-- [ ] background-agent notifications cannot leak across sessions.
+- [x] background-agent notifications cannot leak across sessions. *(B2 — `agent-notifications.ts` keyed by sessionId; `ToolContext.sessionId` populated in `engine.ts` after session resolve; `agent.ts` enqueue passes `ctx?.sessionId`; TUI `App.tsx` reads/drains its own bucket. Protocol StreamEvent surface deferred to B2.2.)*
 
 ### Gate 2: Runtime Gate
 
