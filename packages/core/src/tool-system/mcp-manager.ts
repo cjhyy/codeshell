@@ -142,7 +142,14 @@ export class MCPManager {
         source: "mcp",
         serverName,
         permissionDefault: "ask",
-        isConcurrencySafe: true,
+        // Gate 2 / standard §S3: discovered MCP tools default to NOT
+        // concurrency-safe. Most MCP servers maintain in-process state
+        // (a database session, an open file handle, a per-request token
+        // bucket) that breaks under parallel calls. Servers that have
+        // proved read-only/concurrency-safe can flip this via metadata
+        // in a future iteration; the conservative default avoids races
+        // for the common case.
+        isConcurrencySafe: false,
         isReadOnly: false,
       };
 

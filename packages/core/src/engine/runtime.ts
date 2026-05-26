@@ -60,4 +60,22 @@ export class EngineRuntime {
     }
     return cached;
   }
+
+  /**
+   * Tear down runtime-owned resources. Safe to call multiple times; the
+   * MCPManager's `disconnectAll` clears its own connection map and the
+   * sandbox cache holds resolved-backend promises that don't need
+   * explicit cleanup (they're plain objects). Closes Gate 2 bullet
+   * "runtime close shuts down MCP connections, timers, and background
+   * work."
+   *
+   * Hosts that own a long-lived Runtime (the stdio worker, future
+   * Electron broker, codeshell-serve) should `await runtime.close()`
+   * before exiting the process — otherwise MCP child processes may be
+   * left running and bound ports may stay held until the OS cleans up.
+   */
+  async close(): Promise<void> {
+    await this.mcpPool.disconnectAll();
+    this.sandboxCache.clear();
+  }
 }

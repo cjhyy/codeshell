@@ -306,7 +306,7 @@ Core cannot be called stable until all are true:
 - [x] `acceptEdits` allowlist implemented. *(A1 — `permission.ts:ACCEPT_EDITS_ALLOWLIST`.)*
 - [x] Bash safe-read metacharacter bypass closed. *(A1 — `classifyBashCommand` + `scanShellCommand`.)*
 - [x] untrusted hooks cannot upgrade permissions. *(A1 — `executor.ts:clampHookDecision`; `allow` upgrade is dropped and logged.)*
-- [ ] plugin/shell hook execution path is documented as trusted or routed through Bash-equivalent safety.
+- [x] plugin/shell hook execution path is documented as trusted or routed through Bash-equivalent safety. *(documented as trusted code in [17-plugin-shell-hook-trust-model.md](17-plugin-shell-hook-trust-model.md); timeout + SIGTERM/SIGKILL + downgrade-only hook output + `CLAUDE_PLUGIN_ROOT` stripping enforced. Sandbox routing tracked as post-stability work.)*
 - [x] explicit sandbox mode fail-closed. *(A2 — `runtime.ts:resolveSandbox` caches the backend per (mode, cwd) and propagates `seatbelt`/`bwrap` failures; `engine.ts` no longer wraps the call in a try/catch with silent downgrade. Only `auto` may degrade to `off` and only with a one-time warning.)*
 - [x] child process abort works for Bash and audited long-running tools. *(A2 — Bash, REPL, PowerShell now spawn-based with `ctx.signal` listeners and SIGTERM→SIGKILL escalation. LSP/MCP request cancellation deferred pending upstream SDK support; see [A2 spec](../superpowers/specs/2026-05-26-a2-sandbox-abort-design.md#out-of-scope).)*
 - [x] WebFetch redirect and DNS SSRF guard implemented. *(A3 — manual redirect loop in `web-fetch.ts`, per-hop `validateHopHost` with `node:dns` lookup, `isBlockedIp` for IPv4/IPv6 private/loopback/link-local/multicast.)*
@@ -329,10 +329,10 @@ Core cannot be called stable until all are true:
 - [x] `MCPManager` lifecycle is owned by `EngineRuntime`, not the Engine. *(B1 — Runtime owns the instance; Engine consumes it as a shared resource.)*
 - [x] `SandboxBackend` resolution is cached per Runtime. *(closed by A2 — `runtime.ts:resolveSandbox` provides per-(mode, cwd) cache.)*
 - [ ] `CostTracker` is runtime-scoped and Engine usage records through it instead of the process-global singleton. *(deferred to B1.2 — requires changing `LLMClientBase.onUsage` signature to thread session/runtime context.)*
-- [ ] discovered MCP tools default to not concurrency-safe unless proven otherwise.
-- [ ] cost tracking has one canonical path.
-- [ ] sandbox backend resolution is cached consistently.
-- [ ] runtime close shuts down MCP connections, timers, and background work.
+- [x] discovered MCP tools default to not concurrency-safe unless proven otherwise. *(`mcp-manager.ts:discoverTools` now sets `isConcurrencySafe: false`. Servers that prove read-only/concurrency-safe can flip via metadata in a later iteration.)*
+- [ ] cost tracking has one canonical path. *(deferred to B1.2 — requires `LLMClientBase.onUsage` reshape.)*
+- [x] sandbox backend resolution is cached consistently. *(A2 — `runtime.ts:resolveSandbox` per-(mode, cwd) cache.)*
+- [x] runtime close shuts down MCP connections, timers, and background work. *(`runtime.ts:close` awaits `mcpPool.disconnectAll()` and clears `sandboxCache`. Verified by `tests/runtime-close.test.ts`. Hosts owning long-lived Runtimes must `await runtime.close()` before exit.)*
 
 ### Gate 3: API Gate
 
