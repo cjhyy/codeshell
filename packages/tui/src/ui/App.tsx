@@ -1314,11 +1314,20 @@ export function App({
   // B2: drain only this session's bucket. Other sessions running in the
   // same process (multi-session host roadmap) have their own buckets and
   // don't bleed into this one. sessionId can be undefined before the
-  // first run() resolves a sid — getSnapshot/drainAll fall back to the
-  // queue's legacy bucket in that window, matching pre-B2 behavior.
+  // first run() resolves a sid — in that window we have nothing to read
+  // anyway (no agent could have been spawned yet), so we short-circuit
+  // to an empty snapshot rather than poke the queue.
+  // Stable empty reference for the no-session window — useSyncExternalStore
+  // compares snapshots by identity, so we can't return a fresh `[]` each
+  // call without provoking a render loop. Typed via `ReturnType` so we
+  // don't have to re-import `NotificationItem` for one literal.
+  const EMPTY_NOTIFICATIONS = useMemo<ReturnType<typeof notificationQueue.getSnapshot>>(
+    () => [],
+    [],
+  );
   const getNotificationSnapshot = useCallback(
-    () => notificationQueue.getSnapshot(sessionId),
-    [sessionId],
+    () => (sessionId ? notificationQueue.getSnapshot(sessionId) : EMPTY_NOTIFICATIONS),
+    [sessionId, EMPTY_NOTIFICATIONS],
   );
   const notificationSnapshot = useSyncExternalStore(
     notificationQueue.subscribe,
@@ -1329,6 +1338,7 @@ export function App({
     if (isQueryActive) return;
     if (input.trim() !== "") return;
     if (overlayOpen) return;
+    if (!sessionId) return;
 
     const items = notificationQueue.drainAll(sessionId);
     if (items.length === 0) return;

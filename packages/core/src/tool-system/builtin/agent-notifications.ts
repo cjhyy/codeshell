@@ -1,4 +1,5 @@
 import type { BackgroundAgentCompletedEvent } from "../../types.js";
+import { logger } from "../../logging/logger.js";
 
 /**
  * Background-agent completion notification queue.
@@ -13,13 +14,12 @@ import type { BackgroundAgentCompletedEvent } from "../../types.js";
  * The result text lives only in this queue + the eventual user message —
  * not in `asyncAgentRegistry`. Registry stays metadata-only.
  *
- * B2 (2026-05-26): items are keyed by `sessionId`. Same Engine process
- * may host concurrent sessions (multi-session host roadmap, standard §S3),
- * and a background agent spawned from session A must not deliver its
- * result XML into session B's next turn. Callers that don't supply a
- * `sessionId` (legacy / ad-hoc tests) operate on a `__legacy__` bucket
- * so untouched call sites keep working until B2.2 promotes notifications
- * to a protocol StreamEvent.
+ * Every enqueue must carry a sessionId. The B2 shim that allowed undefined
+ * sessionId (a `__legacy__` bucket fallback) is gone — callers without a
+ * session context (standalone tool tests) must mint a sessionId or use the
+ * test helpers in `tests/` that do. At runtime, a bad sessionId (empty or
+ * non-string, e.g. a caller bypassing the type via `as any`) is logged at
+ * warn level and dropped — it does NOT touch the buckets or fire the bus.
  *
  * Listeners are still process-wide: any bucket change wakes every
  * subscriber, and each subscriber filters by sessionId when reading
@@ -42,22 +42,38 @@ export type NotificationItem = {
 
 type Listener = () => void;
 
-const LEGACY_BUCKET = "__legacy__";
-
 // Stable empty reference so `getSnapshot(sid)` returns the same array
 // identity across calls when the bucket is empty. React's
 // useSyncExternalStore compares snapshots by identity to decide whether
 // to re-render — a fresh `[]` each call would cause render loops.
 const EMPTY: readonly NotificationItem[] = Object.freeze([]);
 
+/**
+ * Runtime guard for sessionId. The static type is already `string` on
+ * the public surface, but a caller bypassing the type system via
+ * `as any` (or a stale JS-only consumer) could still smuggle in
+ * undefined / "". We refuse those, log once, and let the agent path
+ * continue — a buggy plugin shouldn't crash the engine.
+ */
+function isValidSessionId(sid: unknown): sid is string {
+  return typeof sid === "string" && sid.length > 0;
+}
+
 class NotificationQueue {
   private buckets = new Map<string, NotificationItem[]>();
   private listeners = new Set<Listener>();
 
-  enqueue(item: NotificationItem, sessionId?: string): void {
-    const key = sessionId ?? LEGACY_BUCKET;
-    const next = [...(this.buckets.get(key) ?? []), item];
-    this.buckets.set(key, next);
+  enqueue(item: NotificationItem, sessionId: string): void {
+    if (!isValidSessionId(sessionId)) {
+      logger.warn("notification_queue.invalid_session_id", {
+        agentId: item.agentId,
+        status: item.status,
+        sessionIdType: typeof sessionId,
+      });
+      return;
+    }
+    const next = [...(this.buckets.get(sessionId) ?? []), item];
+    this.buckets.set(sessionId, next);
     this.notify();
     // B2.2 — also publish to the protocol-facing bus. The bus is a
     // separate listener set so existing TUI subscribers (which poll the
@@ -74,16 +90,17 @@ class NotificationQueue {
     };
   };
 
-  getSnapshot = (sessionId?: string): readonly NotificationItem[] => {
-    return this.buckets.get(sessionId ?? LEGACY_BUCKET) ?? EMPTY;
+  getSnapshot = (sessionId: string): readonly NotificationItem[] => {
+    if (!isValidSessionId(sessionId)) return EMPTY;
+    return this.buckets.get(sessionId) ?? EMPTY;
   };
 
   /** Atomic: returns all items for a session and clears that bucket. */
-  drainAll(sessionId?: string): NotificationItem[] {
-    const key = sessionId ?? LEGACY_BUCKET;
-    const items = this.buckets.get(key);
+  drainAll(sessionId: string): NotificationItem[] {
+    if (!isValidSessionId(sessionId)) return [];
+    const items = this.buckets.get(sessionId);
     if (!items || items.length === 0) return [];
-    this.buckets.delete(key);
+    this.buckets.delete(sessionId);
     this.notify();
     return items;
   }
@@ -128,14 +145,24 @@ export const notificationQueue = new NotificationQueue();
 // NotificationQueue.notify).
 
 type BusHandler = (
-  sessionId: string | undefined,
+  sessionId: string,
   event: BackgroundAgentCompletedEvent,
 ) => void;
 
 class AgentNotificationBus {
   private handlers = new Set<BusHandler>();
 
-  publish(sessionId: string | undefined, event: BackgroundAgentCompletedEvent): void {
+  publish(sessionId: string, event: BackgroundAgentCompletedEvent): void {
+    if (!isValidSessionId(sessionId)) {
+      // Mirrors NotificationQueue.enqueue — refuse undefined / "" so the
+      // server-side subscriber never has to defend against it.
+      logger.warn("agent_notification_bus.invalid_session_id", {
+        agentId: event.agentId,
+        status: event.status,
+        sessionIdType: typeof sessionId,
+      });
+      return;
+    }
     for (const handler of this.handlers) {
       try {
         handler(sessionId, event);

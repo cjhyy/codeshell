@@ -46,7 +46,7 @@ beforeEach(() => {
 
 describe("agentNotificationBus (B2.2)", () => {
   it("publishes when the queue enqueues (a)", () => {
-    const received: Array<{ sid: string | undefined; ev: BackgroundAgentCompletedEvent }> = [];
+    const received: Array<{ sid: string; ev: BackgroundAgentCompletedEvent }> = [];
     const unsub = agentNotificationBus.subscribe((sid, ev) => {
       received.push({ sid, ev });
     });
@@ -97,18 +97,27 @@ describe("agentNotificationBus (B2.2)", () => {
     expect(count).toBe(0);
   });
 
-  it("delivers undefined sessionId for the legacy bucket (d)", () => {
-    // Important: the bus itself does NOT coerce to "" — that conversion
-    // is the server's responsibility. The bus reflects what the caller
-    // actually passed. Server code that wants a string must default it.
-    let observed: string | undefined | "<unset>" = "<unset>";
-    const unsub = agentNotificationBus.subscribe((sid) => {
-      observed = sid;
+  it("rejects empty / undefined sessionId at runtime (d)", () => {
+    // The static type now requires `sessionId: string`. A caller that
+    // bypasses the type system via `as any` (or a stale JS-only
+    // consumer) must NOT be able to silently push events through with
+    // undefined / "" — the queue guards at the top of enqueue, so the
+    // bus never fires. This locks in the runtime side of the contract
+    // the type signature already advertises.
+    let calls = 0;
+    const unsub = agentNotificationBus.subscribe(() => {
+      calls += 1;
     });
 
-    notificationQueue.enqueue(fixture()); // no sessionId → legacy bucket
+    notificationQueue.enqueue(fixture(), "" as string);
+    expect(calls).toBe(0);
 
-    expect(observed).toBeUndefined();
+    notificationQueue.enqueue(fixture(), undefined as unknown as string);
+    expect(calls).toBe(0);
+
+    // Sanity: a real sessionId still publishes.
+    notificationQueue.enqueue(fixture(), "sess-real");
+    expect(calls).toBe(1);
 
     unsub();
   });
@@ -292,10 +301,13 @@ describe("AgentClient.onBackgroundAgentCompleted via in-process transport (B2.2)
     client.close();
   });
 
-  it("legacy-bucket events arrive with sessionId === '' on the client", async () => {
-    // Verifies the server's bus→notify conversion: bus delivers undefined,
-    // server stamps it as "". This matches what the legacy run path does
-    // for un-sessioned StreamEvents already.
+  it("un-sessioned enqueue is dropped end-to-end (no protocol event reaches the client)", async () => {
+    // The B2 `__legacy__` bucket and the server-side `sessionId ?? ""`
+    // coercion are gone. An enqueue without a real sessionId should be
+    // dropped by the queue's runtime guard — the bus never fires and the
+    // client never sees a background_agent_completed event with an empty
+    // sessionId. This is the inverse of the old "legacy-bucket → ''"
+    // contract.
     const [serverT, clientT] = createInProcessTransport();
     const stubEngine = {
       setPlanMode: () => {},
@@ -305,15 +317,18 @@ describe("AgentClient.onBackgroundAgentCompleted via in-process transport (B2.2)
     const server = new AgentServer({ transport: serverT, engine: stubEngine });
     const client = new AgentClient({ transport: clientT });
 
-    let sid: string | "<unset>" = "<unset>";
-    client.onBackgroundAgentCompleted((s) => {
-      sid = s;
+    let calls = 0;
+    client.onBackgroundAgentCompleted(() => {
+      calls += 1;
     });
 
-    notificationQueue.enqueue(fixture({ agentId: "no-session" }));
+    notificationQueue.enqueue(
+      fixture({ agentId: "no-session" }),
+      undefined as unknown as string,
+    );
     await new Promise<void>((r) => setImmediate(r));
 
-    expect(sid).toBe("");
+    expect(calls).toBe(0);
 
     server.close();
     client.close();

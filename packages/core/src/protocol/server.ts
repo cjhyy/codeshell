@@ -113,11 +113,11 @@ export class AgentServer {
     // B2.2 — forward background sub-agent completion events through the
     // protocol so Desktop / SDK / remote AgentClients see them too. The
     // bus is fed from `NotificationQueue.enqueue`, so this single
-    // subscription covers every enqueue site (today: only agent.ts).
-    // Legacy bucket (no sessionId) maps to `""` to match the legacy run
-    // path on ~line 248.
+    // subscription covers every enqueue site (today: only agent.ts). The
+    // bus now guarantees a real sessionId (no more legacy-bucket coercion
+    // to ""), so we forward whatever sid it hands us.
     this.bgAgentBusUnsubscribe = agentNotificationBus.subscribe((sessionId, event) => {
-      this.notify(Methods.StreamEvent, { sessionId: sessionId ?? "", event });
+      this.notify(Methods.StreamEvent, { sessionId, event });
     });
 
     // Notify client we're ready

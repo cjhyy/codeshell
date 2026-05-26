@@ -11,44 +11,46 @@ const fixture = (overrides: Partial<NotificationItem> = {}): NotificationItem =>
   ...overrides,
 });
 
+const SID = "sess-test";
+
 beforeEach(() => {
   notificationQueue.reset();
 });
 
 describe("notificationQueue", () => {
   test("starts empty", () => {
-    expect(notificationQueue.getSnapshot()).toEqual([]);
+    expect(notificationQueue.getSnapshot("nonexistent")).toEqual([]);
   });
 
   test("enqueue appends to snapshot", () => {
-    notificationQueue.enqueue(fixture());
-    expect(notificationQueue.getSnapshot()).toHaveLength(1);
-    expect(notificationQueue.getSnapshot()[0]!.agentId).toBe("abc12345");
+    notificationQueue.enqueue(fixture(), SID);
+    expect(notificationQueue.getSnapshot(SID)).toHaveLength(1);
+    expect(notificationQueue.getSnapshot(SID)[0]!.agentId).toBe("abc12345");
   });
 
   test("multiple enqueues preserve order", () => {
-    notificationQueue.enqueue(fixture({ agentId: "a" }));
-    notificationQueue.enqueue(fixture({ agentId: "b" }));
-    notificationQueue.enqueue(fixture({ agentId: "c" }));
-    expect(notificationQueue.getSnapshot().map((i) => i.agentId)).toEqual(["a", "b", "c"]);
+    notificationQueue.enqueue(fixture({ agentId: "a" }), SID);
+    notificationQueue.enqueue(fixture({ agentId: "b" }), SID);
+    notificationQueue.enqueue(fixture({ agentId: "c" }), SID);
+    expect(notificationQueue.getSnapshot(SID).map((i) => i.agentId)).toEqual(["a", "b", "c"]);
   });
 
   test("drainAll returns all items and clears queue", () => {
-    notificationQueue.enqueue(fixture({ agentId: "a" }));
-    notificationQueue.enqueue(fixture({ agentId: "b" }));
-    const drained = notificationQueue.drainAll();
+    notificationQueue.enqueue(fixture({ agentId: "a" }), SID);
+    notificationQueue.enqueue(fixture({ agentId: "b" }), SID);
+    const drained = notificationQueue.drainAll(SID);
     expect(drained).toHaveLength(2);
-    expect(notificationQueue.getSnapshot()).toEqual([]);
+    expect(notificationQueue.getSnapshot(SID)).toEqual([]);
   });
 
   test("drainAll on empty queue returns empty array", () => {
-    expect(notificationQueue.drainAll()).toEqual([]);
+    expect(notificationQueue.drainAll(SID)).toEqual([]);
   });
 
   test("reset clears queue", () => {
-    notificationQueue.enqueue(fixture());
+    notificationQueue.enqueue(fixture(), SID);
     notificationQueue.reset();
-    expect(notificationQueue.getSnapshot()).toEqual([]);
+    expect(notificationQueue.getSnapshot(SID)).toEqual([]);
   });
 
   test("subscribe is notified on enqueue", () => {
@@ -56,9 +58,9 @@ describe("notificationQueue", () => {
     const unsub = notificationQueue.subscribe(() => {
       calls += 1;
     });
-    notificationQueue.enqueue(fixture());
+    notificationQueue.enqueue(fixture(), SID);
     expect(calls).toBe(1);
-    notificationQueue.enqueue(fixture());
+    notificationQueue.enqueue(fixture(), SID);
     expect(calls).toBe(2);
     unsub();
   });
@@ -68,9 +70,9 @@ describe("notificationQueue", () => {
     notificationQueue.subscribe(() => {
       calls += 1;
     });
-    notificationQueue.enqueue(fixture());
+    notificationQueue.enqueue(fixture(), SID);
     calls = 0; // reset count after enqueue
-    notificationQueue.drainAll();
+    notificationQueue.drainAll(SID);
     expect(calls).toBe(1);
   });
 
@@ -80,7 +82,7 @@ describe("notificationQueue", () => {
       calls += 1;
     });
     unsub();
-    notificationQueue.enqueue(fixture());
+    notificationQueue.enqueue(fixture(), SID);
     expect(calls).toBe(0);
   });
 });
@@ -91,8 +93,8 @@ describe("notificationQueue session scoping (B2)", () => {
     notificationQueue.enqueue(fixture({ agentId: "b" }), "sess-2");
     expect(notificationQueue.getSnapshot("sess-1").map((i) => i.agentId)).toEqual(["a"]);
     expect(notificationQueue.getSnapshot("sess-2").map((i) => i.agentId)).toEqual(["b"]);
-    // Legacy bucket (no-arg) is independent of session buckets.
-    expect(notificationQueue.getSnapshot()).toEqual([]);
+    // An unknown session has no bucket of its own.
+    expect(notificationQueue.getSnapshot("sess-unknown")).toEqual([]);
   });
 
   test("drainAll(sid) only drains that session's bucket", () => {
@@ -138,20 +140,33 @@ describe("notificationQueue session scoping (B2)", () => {
     expect(notificationQueue.getSnapshot("sess-2")).toHaveLength(1);
   });
 
-  test("reset() with no arg clears every bucket including legacy", () => {
+  test("reset() with no arg clears every bucket", () => {
     notificationQueue.enqueue(fixture(), "sess-1");
-    notificationQueue.enqueue(fixture()); // legacy bucket
+    notificationQueue.enqueue(fixture(), "sess-2");
     notificationQueue.reset();
     expect(notificationQueue.getSnapshot("sess-1")).toEqual([]);
-    expect(notificationQueue.getSnapshot()).toEqual([]);
+    expect(notificationQueue.getSnapshot("sess-2")).toEqual([]);
   });
 
-  test("no-arg drainAll only touches the legacy bucket", () => {
-    notificationQueue.enqueue(fixture({ agentId: "legacy" }));
-    notificationQueue.enqueue(fixture({ agentId: "tagged" }), "sess-1");
-    const drained = notificationQueue.drainAll();
-    expect(drained.map((i) => i.agentId)).toEqual(["legacy"]);
-    expect(notificationQueue.getSnapshot("sess-1").map((i) => i.agentId)).toEqual(["tagged"]);
+  test("invalid sessionId (empty / undefined-via-any) is dropped at runtime", () => {
+    let calls = 0;
+    notificationQueue.subscribe(() => {
+      calls += 1;
+    });
+
+    // Empty string — refused.
+    notificationQueue.enqueue(fixture({ agentId: "empty" }), "");
+    expect(calls).toBe(0);
+    expect(notificationQueue.getSnapshot("")).toEqual([]);
+
+    // Undefined via `as any` — refused.
+    notificationQueue.enqueue(fixture({ agentId: "undef" }), undefined as unknown as string);
+    expect(calls).toBe(0);
+
+    // A real session still works after the bad calls.
+    notificationQueue.enqueue(fixture({ agentId: "good" }), "sess-1");
+    expect(calls).toBe(1);
+    expect(notificationQueue.getSnapshot("sess-1").map((i) => i.agentId)).toEqual(["good"]);
   });
 });
 

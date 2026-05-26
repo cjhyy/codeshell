@@ -185,6 +185,11 @@ Forbidden:
 - process-global notification queue for session-specific events
 - global current session id except as an `AsyncLocalStorage` fallback for logging
 
+Background-agent notifications require a sessionId. The B2 transitional
+`__legacy__` bucket and the empty-string sessionId-on-the-wire fallback
+were removed; any caller that publishes without a session is logged at
+warn level and dropped (queue and bus both guard at runtime).
+
 ### S4. Security Boundaries Fail Closed
 
 Core defaults must be conservative because every new host increases exposure.
