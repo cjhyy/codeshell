@@ -98,8 +98,10 @@ export class AgentClient {
         ...(options ?? {}),
       };
     } else {
-      // Form: run({ sessionId, task, ... })
-      params = { sessionId: "", ...taskOrParams } as RunParams;
+      // Form: run({ sessionId, task, ... }). The caller-provided fields
+      // win; the empty-string default only fills in when sessionId is
+      // truly absent (cold start).
+      params = { ...taskOrParams, sessionId: taskOrParams.sessionId ?? "" };
     }
     // If the caller provided a session id, stamp it on the logger eagerly
     // so client-side log lines emitted during this run (before the server

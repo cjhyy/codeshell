@@ -316,10 +316,10 @@ Core cannot be called stable until all are true:
 
 - [x] all builtin tools use `ToolContext.cwd`. *(A4 — ApplyPatch / Glob / Grep / REPL / PowerShell / Skill / Arena all consume `ctx?.cwd ?? process.cwd()`; Bash was already correct.)*
 - [x] relative-path semantics are tested. *(A4 — `tests/tool-cwd.test.ts` runs `process.chdir(A)` + `ctx.cwd = B` and asserts each tool reads/writes B.)*
-- [ ] same-session turns are FIFO.
-- [ ] different sessions can run concurrently.
-- [ ] cancel targets only one session.
-- [ ] pending approvals are session-scoped.
+- [x] same-session turns are FIFO. *(`ChatSession.enqueueTurn` → `queue + pump`; verified by `tests/chat-session-queue.test.ts` "serializes turns from the same session".)*
+- [x] different sessions can run concurrently. *(each `ChatSession` owns its own `Engine` + `AbortController`; no shared serialization in `pump`; verified by `tests/chat-session-isolation.test.ts` "two sessions run concurrently".)*
+- [x] cancel targets only one session. *(`AgentServer.handleCancel` requires `sessionId` and calls `s.cancel()` on that session only — `server.ts:338-363`; verified by `tests/chat-session-isolation.test.ts` "cancel(A) does not abort B".)*
+- [x] pending approvals are session-scoped. *(`ChatSession.pendingApprovals` is a per-instance `Map`; `AgentServer.handleApprove` looks up by `sessionId` — `server.ts:284-315`; verified by `tests/chat-session-isolation.test.ts` "pendingApprovals are session-scoped maps".)*
 - [x] background-agent notifications cannot leak across sessions. *(B2 — `agent-notifications.ts` keyed by sessionId; `ToolContext.sessionId` populated in `engine.ts` after session resolve; `agent.ts` enqueue passes `ctx?.sessionId`; TUI `App.tsx` reads/drains its own bucket. Protocol StreamEvent surface deferred to B2.2.)*
 
 ### Gate 2: Runtime Gate
