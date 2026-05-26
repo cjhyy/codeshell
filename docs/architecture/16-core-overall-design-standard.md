@@ -309,7 +309,7 @@ Core cannot be called stable until all are true:
 - [ ] plugin/shell hook execution path is documented as trusted or routed through Bash-equivalent safety.
 - [ ] explicit sandbox mode fail-closed.
 - [ ] child process abort works for Bash and audited long-running tools.
-- [ ] WebFetch redirect and DNS SSRF guard implemented.
+- [x] WebFetch redirect and DNS SSRF guard implemented. *(A3 — manual redirect loop in `web-fetch.ts`, per-hop `validateHopHost` with `node:dns` lookup, `isBlockedIp` for IPv4/IPv6 private/loopback/link-local/multicast.)*
 - [x] engine-bypass guard scans the monorepo package paths. *(done — `scripts/check-no-engine-bypass.sh:32-34`; still needs to be wired into CI in Gate 4.)*
 
 ### Gate 1: Correctness Gate

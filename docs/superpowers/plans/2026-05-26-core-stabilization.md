@@ -102,11 +102,12 @@ Core 可以给其他业务方接入前，至少满足这些门槛：
 - `packages/core/src/tool-system/builtin/web-fetch.ts`
 - `tests/web-fetch*.test.ts`
 
-- [ ] Replace `redirect: "follow"` with manual redirect handling.
-- [ ] Validate every redirect target protocol and hostname before following it.
-- [ ] Resolve DNS and reject private/loopback/link-local/multicast/metadata ranges after resolution.
-- [ ] Enforce max redirects=5.
-- [ ] Block user-supplied headers that can spoof routing or credentials.
+- [x] Replace `redirect: "follow"` with manual redirect handling. *(done — `web-fetch.ts` for-loop with `redirect: "manual"`)*
+- [x] Validate every redirect target protocol and hostname before following it. *(done — `validateHopHost` runs on every iteration)*
+- [x] Resolve DNS and reject private/loopback/link-local/multicast/metadata ranges after resolution. *(done — `isBlockedIp` covers IPv4 RFC1918/CGNAT/loopback/link-local/multicast/reserved + IPv6 loopback/ULA/link-local/documentation + IPv4-mapped IPv6)*
+- [x] Enforce max redirects=5. *(done — `MAX_REDIRECTS = 5`)*
+- [x] Block user-supplied headers that can spoof routing or credentials. *(pre-existing `BLOCKED_REQUEST_HEADERS` retained; A3 adds `CROSS_ORIGIN_STRIP_HEADERS` for cross-origin redirect hops)*
+- Known limitation: TOCTOU between `dns.lookup` and undici's own DNS resolution remains open. See [spec §Known limitations](../specs/2026-05-26-a3-webfetch-ssrf-design.md#known-limitations-documented-not-fixed-in-a3).
 
 ### A4. cwd consistency across all tools
 
