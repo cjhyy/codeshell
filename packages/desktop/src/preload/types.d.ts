@@ -12,8 +12,19 @@ import type { StreamEvent, ApprovalRequest } from "@cjhyy/code-shell-core";
  * the inner request carries what the user actually needs to see.
  */
 export interface ApprovalRequestEnvelope {
+  /** Owning chat session — renderer routes the modal to the right tab. */
+  sessionId?: string;
   requestId: string;
   request: ApprovalRequest;
+}
+
+/**
+ * Multi-session stream envelope. The renderer routes by sessionId; a missing
+ * sessionId (legacy single-engine path) routes to the active session.
+ */
+export interface StreamEventEnvelope {
+  sessionId: string;
+  event: StreamEvent;
 }
 
 export interface RpcResponse<T = unknown> {
@@ -78,17 +89,29 @@ export interface CodeshellApi {
       cwd?: string;
       sessionId?: string;
       permissionMode?: "plan" | "default" | "acceptEdits" | "bypassPermissions";
+      planMode?: boolean;
     },
   ): Promise<RpcResponse>;
-  cancel(): Promise<RpcResponse>;
+  /** Cancel a session's running turn. sessionId optional for legacy callers. */
+  cancel(sessionId?: string): Promise<RpcResponse>;
+  /** Multi-session form. The dual-arg legacy form is also supported at runtime. */
   approve(
-    id: string,
+    sessionId: string,
+    requestId: string,
     decision: "approve" | "deny",
     reason?: string,
-    /** For AskUserQuestion: the user's selected/typed answer. */
     answer?: string,
   ): Promise<RpcResponse>;
-  onStreamEvent(cb: (event: StreamEvent) => void): Unsubscribe;
+  /** Legacy approve form — single-engine callers (kept for backward compat). */
+  approve(
+    requestId: string,
+    decision: "approve" | "deny",
+    reason?: string,
+    answer?: string,
+  ): Promise<RpcResponse>;
+  /** Destroy a chat session and free its resources. */
+  closeSession(sessionId: string): Promise<RpcResponse>;
+  onStreamEvent(cb: (env: StreamEventEnvelope) => void): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;

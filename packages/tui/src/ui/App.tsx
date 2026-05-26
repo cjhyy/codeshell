@@ -773,8 +773,11 @@ export function App({
 
   // Wire stream events from client
   useEffect(() => {
-    client.onStreamEvent(handleStreamEvent);
-    return () => client.offStreamEvent(handleStreamEvent);
+    // T10 changed onStreamEvent signature to pass an envelope { sessionId, event }.
+    // Unwrap to the legacy event-only signature; T12 will properly thread sessionId.
+    const envelopeHandler = (envelope: any) => handleStreamEvent(envelope.event);
+    client.onStreamEvent(envelopeHandler);
+    return () => client.offStreamEvent(envelopeHandler);
   }, [client, handleStreamEvent]);
 
   // Open the model selector by querying the pool from the server.

@@ -1,137 +1,138 @@
 /**
- * Headless agent server over stdio (newline-delimited JSON-RPC).
+ * agent-server-stdio — Electron worker entry point.
  *
- * Spawned as a Node subprocess by hosts that want to embed code-shell's
- * Engine without linking against the engine in-process. Reads RPC
- * messages from stdin, writes responses + stream notifications to
- * stdout. All log/console output goes to stderr so stdout stays a clean
- * JSON-RPC channel.
+ * Bootstraps EngineRuntime + ChatSessionManager and exposes AgentServer
+ * over a newline-delimited JSON stdio transport so Electron's main process
+ * (or any other parent that spawns this file as a child process) can drive
+ * multi-session agent runs through the standard protocol.
  *
- * Hosts:
- *   - packages/desktop (Electron main spawns this)
- *   - third-party IDE/CLI integrators in the future
+ * Bootstrap approach (bootstrap-then-extract / approach a):
+ *   1. Construct a single "seed" Engine without a runtime.  Engine's
+ *      constructor calls populateModelPoolFromSettings() which reads
+ *      settings.json, registers model entries and provider catalog, and
+ *      resolves the active model — exactly the initialization work we need.
+ *   2. Extract the fully-populated modelPool and toolRegistry from the seed
+ *      engine, plus construct SettingsManager, MCPManager, CostTracker.
+ *   3. Wrap those shared resources in an EngineRuntime.
+ *   4. Pass the runtime to ChatSessionManager's engineFactory so every
+ *      session engine shares the pool (same active model, same tool set).
+ *   5. Discard the seed engine — it will never run a task.
+ *
+ * Why this over pure "factor-out-builders" (approach b):
+ *   Engine.populateModelPoolFromSettings() is a 60-line private method that
+ *   reads settings, resolves the active key, builds the ProviderCatalog, and
+ *   reloads cached context windows. Extracting it as a standalone helper
+ *   would require making several private fields and imports public. The seed
+ *   engine pattern reuses the existing, tested code with zero API changes.
+ *
+ * Clients (Electron renderer, TUI) must not change. As long as the
+ * transport is stdio NDJSON and the protocol surface is unchanged, this
+ * bootstrap is invisible to them.
  */
 
-import { pathToFileURL } from "node:url";
-import { Engine, type EngineConfig } from "../engine/engine.js";
+import { Engine } from "../engine/engine.js";
+import { EngineRuntime } from "../engine/runtime.js";
+import { ChatSessionManager } from "../protocol/chat-session-manager.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
 import { SettingsManager } from "../settings/manager.js";
-import type { LLMConfig, PermissionMode } from "../types.js";
+import { MCPManager } from "../tool-system/mcp-manager.js";
+import { CostTracker } from "../cost-tracker.js";
 
-/**
- * Run the agent server on this process's stdin/stdout. Resolves when
- * stdin closes (parent disconnected) or on SIGTERM/SIGINT.
- */
-export async function runAgentServerStdio(config: EngineConfig): Promise<void> {
-  // Redirect console.* to stderr so stray plugin/permission warnings
-  // can't corrupt the JSON-RPC stdout stream. Engine's own logger
-  // already writes to ~/.code-shell/logs/, not stdout.
-  console.log = (...args) => process.stderr.write(args.map(String).join(" ") + "\n");
-  console.info = console.log;
-  console.warn = console.log;
-  console.error = console.log;
+// ─── Read base config from environment / settings ─────────────────
 
-  const engine = new Engine(config);
-  const transport = new StdioTransport(process.stdin, process.stdout);
-  // Constructor wires transport.onMessage and sends a "ready" status
-  // notification. There is no separate start() — see protocol/server.ts.
-  const server = new AgentServer({ engine, transport });
+const cwd = process.env.AGENT_CWD ?? process.cwd();
 
-  // Track whether a run has completed at least once. The agent server
-  // notifies Status:"ready" both at startup (in its constructor) and at
-  // the end of each handleRun() in a `finally` block. We exit cleanly
-  // after the second "ready" — i.e. one run completed.
-  //
-  // Implementation: wrap `transport.send` to peek at outgoing
-  // notifications. On the post-run "ready" we close + exit.
-  const originalSend = transport.send.bind(transport);
-  let runHasStarted = false;
-  let shuttingDown = false;
-  transport.send = (msg) => {
-    originalSend(msg);
-    if (shuttingDown) return;
-    if ("method" in msg && msg.method === "agent/status") {
-      const status = (msg.params as { status?: string })?.status;
-      if (status === "running") runHasStarted = true;
-      else if (status === "ready" && runHasStarted) {
-        shuttingDown = true;
-        // Let the response flush, then bail.
-        setImmediate(() => {
-          server.close();
-          process.exit(0);
-        });
-      }
-    }
-  };
+// Load settings once to derive llm config for the seed engine.
+const settingsManager = new SettingsManager(cwd);
+const settings = settingsManager.get();
 
-  await new Promise<void>((resolve) => {
-    const shutdown = () => {
-      server.close();
-      resolve();
-    };
-    process.stdin.on("end", shutdown);
-    process.stdin.on("close", shutdown);
-    process.on("SIGTERM", shutdown);
-    process.on("SIGINT", shutdown);
-  });
-}
+const llmConfig = {
+  provider: settings.model.provider,
+  model: settings.model.name,
+  apiKey: settings.model.apiKey ?? "",
+  baseUrl: settings.model.baseUrl,
+  temperature: settings.model.temperature,
+  maxTokens: settings.model.maxTokens,
+};
 
-/**
- * Build a minimal EngineConfig from ~/.code-shell/settings.json.
- * Mirrors the field mapping that packages/tui/src/cli/main.ts uses
- * for its REPL launch (settings.model.{provider, name, apiKey, baseUrl}).
- */
-export function buildEngineConfigFromSettings(): EngineConfig {
-  const cwd = process.cwd();
-  const settings = new SettingsManager(cwd).get();
-  const llm: LLMConfig = {
-    provider: settings.model.provider ?? "openai",
-    model: settings.model.name ?? "anthropic/claude-opus-4-6",
-    apiKey: settings.model.apiKey,
-    baseUrl: settings.model.baseUrl ?? "https://openrouter.ai/api/v1",
-    enableStreaming: true,
-  };
-  if (!llm.apiKey) {
-    throw new Error(
-      "agent-server-stdio: no API key in settings.json. Run `code-shell` once " +
-        "in a terminal to configure, or set settings.model.apiKey directly.",
-    );
-  }
-  return { llm, cwd, permissionMode: resolvePermissionMode(settings) };
-}
+// ─── Step 1: seed engine — populates model pool from settings ─────
 
-function resolvePermissionMode(settings: Record<string, unknown>): PermissionMode {
-  const permissions = settings.permissions && typeof settings.permissions === "object"
-    ? (settings.permissions as Record<string, unknown>)
-    : {};
-  const raw = settings.permissionMode ?? permissions.defaultMode;
-  switch (raw) {
-    case "plan":
-    case "default":
-    case "acceptEdits":
-    case "dontAsk":
-    case "bypassPermissions":
-    case "auto":
-      return raw;
-    case "accept_edits":
-      return "acceptEdits";
-    case "bypass":
-      return "bypassPermissions";
-    default:
-      return "default";
-  }
-}
+const seedEngine = new Engine({
+  llm: llmConfig,
+  cwd,
+  // No runtime — Engine.populateModelPoolFromSettings() runs in ctor.
+});
 
-// Direct-execute entry: `node dist/cli/agent-server-stdio.js`.
-// Use pathToFileURL so paths with non-ASCII characters (e.g. CJK
-// install dirs) URL-encode the same way import.meta.url does — naive
-// `file://${argv[1]}` string-templating misses that and the guard
-// never fires.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const config = buildEngineConfigFromSettings();
-  runAgentServerStdio(config).catch((err) => {
-    process.stderr.write(`agent-server-stdio fatal: ${(err as Error).stack ?? err}\n`);
-    process.exit(1);
-  });
-}
+// ─── Step 2: extract shared resources ────────────────────────────
+
+const modelPool = seedEngine.getModelPool();
+const toolRegistry = seedEngine.getToolRegistry();
+
+// Capture the seed engine's resolved llmConfig (post-populateModelPoolFromSettings).
+// This includes resolved provider/baseUrl/apiKey from settings.providers[].
+const resolvedLlmConfig = seedEngine.getConfig().llm;
+
+// Reuse the same SettingsManager instance for the runtime instead of constructing
+// a fresh one — avoids duplication and keeps the pattern cleaner.
+const sharedSettings = settingsManager;
+
+// MCPManager: not connected to any servers at bootstrap time.
+// Individual session engines will connect to mcpServers from their config.
+// This instance satisfies the EngineRuntime type requirement; it is a
+// no-op holder until an engineFactory caller opts to attach servers.
+// TODO(future) — currently a top-level placeholder. Future work: aggregate
+// MCP server connections across sessions instead of each session creating
+// its own MCPManager via Engine.run lazy init.
+const mcpPool = new MCPManager(toolRegistry);
+
+// CostTracker: shared across all sessions for aggregate tracking.
+// TODO(future) — shared across all sessions, but Engine doesn't yet read
+// runtime.costTracker. Future work: per-session cost accounting through
+// the shared runtime.
+const costTracker = new CostTracker();
+
+// ─── Step 3: build the shared EngineRuntime ───────────────────────
+
+const runtime = new EngineRuntime({
+  modelPool,
+  toolRegistry,
+  settings: sharedSettings,
+  mcpPool,
+  costTracker,
+});
+
+// ─── Step 4: ChatSessionManager ──────────────────────────────────
+
+const chatManager = new ChatSessionManager({
+  runtime,
+  engineFactory: (slice) =>
+    new Engine({
+      llm: resolvedLlmConfig,
+      cwd,
+      runtime,
+      // Per-session overrides from the protocol request
+      permissionMode: slice.permissionMode,
+      preset: slice.preset,
+      customSystemPrompt: slice.customSystemPrompt,
+      appendSystemPrompt: slice.appendSystemPrompt,
+      maxTurns: slice.maxTurns,
+      maxContextTokens: slice.maxContextTokens,
+      ...(slice.cwd ? { cwd: slice.cwd } : {}),
+    }),
+  maxSessions: 16,
+  idleTtlMs: 30 * 60 * 1000,
+});
+chatManager.startIdleSweeper();
+
+// ─── Step 5: AgentServer over stdio ──────────────────────────────
+
+const stdioTransport = new StdioTransport(process.stdin, process.stdout);
+
+new AgentServer({
+  chatManager,
+  transport: stdioTransport,
+});
+
+// Keep the process alive — readline in StdioTransport holds the event loop.
+// On parent close / stdin EOF the process will exit naturally.

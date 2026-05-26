@@ -7,14 +7,23 @@
  * line (string) we relay verbatim to/from the agent worker's stdio.
  * That keeps the preload a true transparent transport — no protocol
  * interpretation in main, only in here (to fan out to listeners).
+ *
+ * Multi-session note: `agent/streamEvent` and `agent/approvalRequest`
+ * notifications carry `sessionId` on their params; we forward that to
+ * listeners as `{ sessionId, event }` / `{ sessionId, requestId, request }`
+ * envelopes so the renderer can route by session bucket. `run`, `cancel`,
+ * `approve`, and `closeSession` all take a sessionId so the worker can
+ * dispatch via ChatSessionManager.
  */
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
 let nextRpcId = 1;
 const pending = new Map<number, (resp: unknown) => void>();
-const streamListeners: Array<(event: unknown) => void> = [];
-const approvalListeners: Array<(req: unknown) => void> = [];
+// Multi-session: callbacks receive `{ sessionId, event }` for stream events
+// and `{ sessionId, requestId, request }` for approval requests.
+const streamListeners: Array<(env: { sessionId: string; event: unknown }) => void> = [];
+const approvalListeners: Array<(env: unknown) => void> = [];
 const statusListeners: Array<(evt: unknown) => void> = [];
 const lifecycleListeners: Array<(evt: unknown) => void> = [];
 
@@ -39,15 +48,14 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   const method = msg.method as string | undefined;
   const params = msg.params as Record<string, unknown> | undefined;
   if (method === "agent/streamEvent") {
-    // Worker wire format wraps the event: { params: { event: {...} } }.
-    // Strip that wrapper so renderer callbacks see the StreamEvent directly,
-    // matching the typed `onStreamEvent(cb: (event: StreamEvent) => void)`
-    // signature.
+    // Multi-session wire format: `{ sessionId, event }` envelope. The
+    // renderer routes by sessionId; legacy callers can ignore it.
+    const sessionId = (params?.sessionId as string | undefined) ?? "";
     const event = params?.event;
-    streamListeners.forEach((cb) => cb(event));
+    streamListeners.forEach((cb) => cb({ sessionId, event }));
   } else if (method === "agent/approvalRequest") {
-    // Approval keeps the full envelope { requestId, request } intentionally —
-    // the renderer needs requestId to echo back via approve().
+    // `{ sessionId, requestId, request }` envelope. requestId lets the
+    // renderer echo the decision back via approve(sessionId, requestId, ...).
     approvalListeners.forEach((cb) => cb(params));
   } else if (method === "agent/status") {
     statusListeners.forEach((cb) => cb(params));
@@ -71,24 +79,58 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Forward a renderer-side log line into ~/.code-shell/logs/desktop-*.log. */
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),
-  run: (task: string, opts?: { cwd?: string; sessionId?: string } & Record<string, unknown>) =>
+  run: (task: string, opts?: { cwd?: string; sessionId?: string; permissionMode?: string; planMode?: boolean } & Record<string, unknown>) =>
     rpc("agent/run", { task, ...(opts ?? {}) }),
-  cancel: () => rpc("agent/cancel"),
+  /**
+   * Cancel a session's running turn. sessionId is required for the
+   * multi-session worker; legacy callers that omitted it routed through
+   * the (now-removed) single-flag path — multi-session always wants the id.
+   */
+  cancel: (sessionId?: string) => rpc("agent/cancel", { sessionId }),
   approve: (
-    requestId: string,
-    decision: "approve" | "deny",
-    reason?: string,
+    sessionIdOrRequestId: string,
+    requestIdOrDecision: string | "approve" | "deny",
+    decisionOrReason?: "approve" | "deny" | string,
+    reasonOrAnswer?: string,
     answer?: string,
-  ) =>
-    rpc("agent/approve", {
+  ) => {
+    // Multi-session form: approve(sessionId, requestId, decision, reason?, answer?)
+    // Legacy form:        approve(requestId, decision, reason?, answer?)
+    let sessionId: string | undefined;
+    let requestId: string;
+    let decision: "approve" | "deny";
+    let reason: string | undefined;
+    let answerText: string | undefined;
+    if (
+      typeof requestIdOrDecision === "string" &&
+      requestIdOrDecision !== "approve" &&
+      requestIdOrDecision !== "deny"
+    ) {
+      // Multi-session: first arg is sessionId
+      sessionId = sessionIdOrRequestId;
+      requestId = requestIdOrDecision;
+      decision = decisionOrReason as "approve" | "deny";
+      reason = reasonOrAnswer;
+      answerText = answer;
+    } else {
+      // Legacy: first arg is requestId
+      requestId = sessionIdOrRequestId;
+      decision = requestIdOrDecision as "approve" | "deny";
+      reason = decisionOrReason as string | undefined;
+      answerText = reasonOrAnswer;
+    }
+    return rpc("agent/approve", {
+      sessionId,
       requestId,
       decision: decision === "approve"
-        ? answer !== undefined
-          ? { approved: true, answer }
+        ? answerText !== undefined
+          ? { approved: true, answer: answerText }
           : { approved: true }
         : { approved: false, reason },
-    }),
-  onStreamEvent: (cb: (event: unknown) => void): (() => void) => {
+    });
+  },
+  closeSession: (sessionId: string) => rpc("agent/closeSession", { sessionId }),
+  onStreamEvent: (cb: (env: { sessionId: string; event: unknown }) => void): (() => void) => {
     streamListeners.push(cb);
     return () => {
       const i = streamListeners.indexOf(cb);

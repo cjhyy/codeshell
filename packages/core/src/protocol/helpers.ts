@@ -54,7 +54,8 @@ export function createInProcessClient(
   const client = new AgentClient({ transport: clientTransport });
 
   if (options.onStream) {
-    client.onStreamEvent(options.onStream);
+    const cb = options.onStream;
+    client.onStreamEvent((envelope) => cb(envelope.event));
   }
 
   let closed = false;

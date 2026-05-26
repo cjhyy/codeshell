@@ -57,6 +57,10 @@ export {
 export { Engine } from "./engine/engine.js";
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/engine.js";
 export type { CostStateStore, CostStateSnapshot } from "./engine/cost-store.js";
+export { EngineRuntime } from "./engine/runtime.js";
+export type { EngineRuntimeOptions } from "./engine/runtime.js";
+export { ChatSessionManager } from "./protocol/chat-session-manager.js";
+export type { ChatSessionManagerOptions } from "./protocol/chat-session-manager.js";
 
 // ─── LLM ─────────────────────────────────────────────────────────
 
@@ -409,7 +413,7 @@ export { recordUIEvent } from "./logging/session-recorder.js";
 
 // ─── Cost Tracker ────────────────────────────────────────────────
 
-export { costTracker, installCostTracking } from "./cost-tracker.js";
+export { CostTracker, costTracker, installCostTracking } from "./cost-tracker.js";
 export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 
 // ─── Onboarding ──────────────────────────────────────────────────
@@ -471,7 +475,10 @@ export {
 // ─── Protocol (extended for TUI) ────────────────────────────────
 
 export { createInProcessClient } from "./protocol/helpers.js";
-export { runAgentServerStdio, buildEngineConfigFromSettings } from "./cli/agent-server-stdio.js";
+// Note: agent-server-stdio.ts is a self-running entry point in the multi-session
+// rewrite; the previous named exports (runAgentServerStdio,
+// buildEngineConfigFromSettings) were only used in this re-export and have been
+// dropped. Hosts spawn the file directly via `node agent-server-stdio.js`.
 export type { ProtocolModelEntry } from "./protocol/types.js";
 
 // ─── Arena (extended for TUI) ───────────────────────────────────

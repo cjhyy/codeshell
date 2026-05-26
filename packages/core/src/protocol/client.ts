@@ -17,6 +17,7 @@ import {
   type RpcNotification,
   type RunParams,
   type RunResult,
+  type AgentStreamEventNotification,
   type ConfigureParams,
   type QueryParams,
   type QueryResult,
@@ -32,7 +33,8 @@ import { logger } from "../logging/logger.js";
 // ─── Event Types ────────────────────────────────────────────────────
 
 export interface AgentClientEvents {
-  stream: (event: StreamEvent) => void;
+  /** Multi-session envelope: carries sessionId + event. */
+  stream: (envelope: AgentStreamEventNotification) => void;
   approvalRequest: (requestId: string, request: ApprovalRequest) => void;
   status: (status: string, message?: string) => void;
 }
@@ -41,6 +43,7 @@ export interface AgentRunOptions {
   cwd?: string;
   sessionId?: string;
   permissionMode?: PermissionMode;
+  planMode?: boolean;
 }
 
 // ─── Client ─────────────────────────────────────────────────────────
@@ -73,6 +76,10 @@ export class AgentClient {
   /**
    * Run an agent task. Resolves when the agent completes.
    * Stream events arrive via the onStreamEvent callback.
+   *
+   * Accepts either the new object form `{ sessionId, task, ... }` (required
+   * for multi-session servers) or the legacy string form `(task, sessionId?)`
+   * for backward compatibility with createInProcessClient callers.
    */
   async run(
     task: string,
@@ -82,7 +89,14 @@ export class AgentClient {
       typeof sessionIdOrOptions === "string"
         ? { sessionId: sessionIdOrOptions }
         : sessionIdOrOptions;
-    const params: RunParams = { task, ...options };
+    // RunParams.sessionId is required; if the caller didn't supply one, send
+    // empty string (single-engine server will accept it; multi-session server
+    // will reject with -32602 which is the right behavior).
+    const params: RunParams = {
+      task,
+      sessionId: options?.sessionId ?? "",
+      ...(options ?? {}),
+    };
     // If the caller provided a session id, stamp it on the logger eagerly
     // so client-side log lines emitted during this run (before the server
     // response arrives) carry the right sid. The server-resolved id from
@@ -99,19 +113,36 @@ export class AgentClient {
 
   /**
    * Respond to an approval request from the server.
+   *
+   * Multi-session form: approve(sessionId, requestId, decision)
+   * Legacy form:        approve(requestId, decision)
    */
-  async approve(requestId: string, decision: ApprovalResult): Promise<void> {
-    await this.request(Methods.Approve, { requestId, decision } as unknown as Record<
-      string,
-      unknown
-    >);
+  approve(sessionId: string, requestId: string, decision: ApprovalResult): Promise<void>;
+  approve(requestId: string, decision: ApprovalResult): Promise<void>;
+  approve(...args: unknown[]): Promise<void> {
+    if (args.length === 3) {
+      const [sessionId, requestId, decision] = args as [string, string, ApprovalResult];
+      return this.request(Methods.Approve, {
+        sessionId,
+        requestId,
+        decision,
+      } as unknown as Record<string, unknown>) as Promise<void>;
+    }
+    const [requestId, decision] = args as [string, ApprovalResult];
+    return this.request(Methods.Approve, {
+      requestId,
+      decision,
+    } as unknown as Record<string, unknown>) as Promise<void>;
   }
 
   /**
    * Cancel a running agent.
+   *
+   * Multi-session form: cancel(sessionId, reason?)
+   * Legacy form:        cancel(reason?)
    */
-  async cancel(reason?: string): Promise<void> {
-    await this.request(Methods.Cancel, { reason } as Record<string, unknown>);
+  async cancel(sessionId?: string, reason?: string): Promise<void> {
+    await this.request(Methods.Cancel, { sessionId, reason } as Record<string, unknown>);
   }
 
   /**
@@ -172,11 +203,16 @@ export class AgentClient {
 
   // ─── Event Handlers ─────────────────────────────────────────────
 
-  onStreamEvent(handler: (event: StreamEvent) => void): void {
+  /**
+   * Register a handler for stream event notifications.
+   * The handler receives the full envelope `{ sessionId, event }` so callers
+   * can route events to the correct tab/session.
+   */
+  onStreamEvent(handler: (envelope: AgentStreamEventNotification) => void): void {
     this.emitter.on("stream", handler);
   }
 
-  offStreamEvent(handler: (event: StreamEvent) => void): void {
+  offStreamEvent(handler: (envelope: AgentStreamEventNotification) => void): void {
     this.emitter.off("stream", handler);
   }
 
@@ -213,7 +249,12 @@ export class AgentClient {
     this.pendingRequests.delete(res.id);
 
     if (res.error) {
-      pending.reject(new Error(`[${res.error.code}] ${res.error.message}`));
+      // Attach both message and code so callers can do toMatchObject({ code }).
+      const err = new Error(`[${res.error.code}] ${res.error.message}`) as Error & {
+        code: number;
+      };
+      err.code = res.error.code;
+      pending.reject(err);
     } else {
       pending.resolve(res.result);
     }
@@ -225,7 +266,11 @@ export class AgentClient {
     switch (notif.method) {
       case Methods.StreamEvent: {
         const event = params.event as StreamEvent | undefined;
-        if (event) this.emitter.emit("stream", event);
+        const sessionId = (params.sessionId as string | undefined) ?? "";
+        if (event) {
+          const envelope: AgentStreamEventNotification = { sessionId, event };
+          this.emitter.emit("stream", envelope);
+        }
         break;
       }
       case Methods.ApprovalRequest: {

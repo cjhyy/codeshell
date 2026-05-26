@@ -59,28 +59,32 @@ export const ErrorCodes = {
   InvalidParams: -32602,
   InternalError: -32603,
   // Custom codes
-  EngineNotReady: -32001,
+  Overloaded: -32001,
   SessionNotFound: -32002,
-  AlreadyRunning: -32003,
-  NotRunning: -32004,
+  SessionClosed: -32004,
 } as const;
 
 // ─── Client → Server Requests ───────────────────────────────────────
 
 /** Start an agent run with a user task. */
 export interface RunParams {
+  sessionId: string;          // required, client-minted
   task: string;
   /**
    * Working directory for this run. When omitted, the Engine uses its
    * configured cwd.
    */
   cwd?: string;
-  sessionId?: string;
   /**
    * Per-run permission mode supplied by desktop/composer UIs.
    * When omitted, the engine keeps its configured default.
    */
   permissionMode?: PermissionMode;
+  /**
+   * Per-run plan-mode flag. When true, the Engine enters plan mode for
+   * this run; when omitted, the engine keeps its configured default.
+   */
+  planMode?: boolean;
 }
 
 export interface RunResult {
@@ -93,13 +97,20 @@ export interface RunResult {
 
 /** Respond to an approval request from the server. */
 export interface ApproveParams {
+  sessionId: string;
   requestId: string;
   decision: ApprovalResult;
 }
 
-/** Cancel a running agent. */
+/** Cancel a running agent turn. */
 export interface CancelParams {
+  sessionId: string;
   reason?: string;
+}
+
+/** Close (destroy) a session. */
+export interface CloseSessionParams {
+  sessionId: string;
 }
 
 /** Inject context into a session transcript. */
@@ -110,6 +121,8 @@ export interface InjectParams {
 
 /** Update runtime configuration. */
 export interface ConfigureParams {
+  /** When present, configure that specific chat session. Otherwise worker-global. */
+  sessionId?: string;
   permissionMode?: PermissionMode;
   planMode?: boolean;
   bypassPermissions?: boolean;
@@ -223,8 +236,14 @@ export interface ConfigResult {
 
 // ─── Server → Client Notifications ─────────────────────────────────
 
-/** Stream event forwarded from the engine. */
+/** Stream event forwarded from the engine (legacy, no sessionId). */
 export interface StreamEventNotification {
+  event: StreamEvent;
+}
+
+/** Multi-session stream event envelope — carries the originating sessionId. */
+export interface AgentStreamEventNotification {
+  sessionId: string;
   event: StreamEvent;
 }
 
@@ -251,6 +270,8 @@ export const Methods = {
   Query: "agent/query",
   /** Inject context into transcript without triggering LLM. */
   Inject: "agent/inject",
+  /** Close (destroy) a session. */
+  CloseSession: "agent/closeSession",
 
   // Server → Client (notifications, no id)
   StreamEvent: "agent/streamEvent",

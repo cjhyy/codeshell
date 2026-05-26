@@ -1,11 +1,17 @@
 /**
- * AgentServer — wraps Engine and exposes it over the protocol.
+ * AgentServer — wraps ChatSessionManager and exposes it over the protocol.
  *
  * Responsibilities:
  *   - Handles RPC requests from the client (run, approve, cancel, configure, query)
- *   - Forwards StreamEvents to the client as notifications
- *   - Manages approval flow: engine → server → client → server → engine
- *   - Owns all mutable runtime state (plan mode, bypass, etc.)
+ *   - Forwards StreamEvents to the client as notifications with sessionId envelope
+ *   - Manages per-session approval flow
+ *   - Dispatches agent/run through ChatSessionManager so multiple sessions
+ *     run concurrently without cross-talk
+ *
+ * Backward compat: an optional `engine` can be supplied for global operations
+ * (model list, config reads/writes, tool registry queries, etc.) that don't
+ * yet have a natural "which session" answer. When not supplied the server
+ * falls back to borrowing any live session's engine for those reads.
  */
 
 import type { Transport } from "./transport.js";
@@ -14,7 +20,6 @@ import {
   type RunParams,
   type RunResult,
   type ApproveParams,
-  type CancelParams,
   type ConfigureParams,
   type QueryParams,
   type InjectParams,
@@ -27,24 +32,35 @@ import {
 } from "./types.js";
 import type { Engine, EngineConfig } from "../engine/engine.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
-import { setInPlanMode, isInPlanMode } from "../tool-system/builtin/plan.js";
-import { setRuntimeBypass, isRuntimeBypass } from "../tool-system/permission.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
 import { nanoid } from "nanoid";
+import type { ChatSessionManager } from "./chat-session-manager.js";
 
 export interface AgentServerOptions {
-  engine: Engine;
+  /**
+   * Multi-session manager. Required for the new multi-session protocol.
+   * When present, agent/run dispatches through the manager.
+   */
+  chatManager?: ChatSessionManager;
+  /**
+   * Legacy single-engine mode. When chatManager is not supplied the server
+   * falls back to the old single-engine behaviour (backwards compat for
+   * createInProcessClient and agent-server-stdio until T11).
+   */
+  engine?: Engine;
   transport: Transport;
 }
 
 export class AgentServer {
-  private engine: Engine;
+  private readonly chatManager: ChatSessionManager | null;
+  private readonly legacyEngine: Engine | null;
   private transport: Transport;
+
+  // ── Legacy single-engine state (used when chatManager is null) ──
   private running = false;
   private abortController: AbortController | null = null;
-
-  /** Pending approval requests: requestId → resolve function */
+  /** Pending approval requests: requestId → resolve function (legacy path) */
   private pendingApprovals = new Map<string, (result: ApprovalResult) => void>();
   /** Timers for approval timeouts */
   private approvalTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -52,7 +68,13 @@ export class AgentServer {
   private static readonly APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
 
   constructor(options: AgentServerOptions) {
-    this.engine = options.engine;
+    this.chatManager = options.chatManager ?? null;
+    this.legacyEngine = options.engine ?? null;
+
+    if (!this.chatManager && !this.legacyEngine) {
+      throw new Error("AgentServer: either chatManager or engine must be supplied");
+    }
+
     this.transport = options.transport;
 
     // Wire up incoming messages
@@ -66,16 +88,18 @@ export class AgentServer {
       }
     });
 
-    // Wire approval flow: engine asks server, server asks client
-    setInteractiveApprovalFn((request: ApprovalRequest) => {
-      return this.requestApprovalFromClient(request);
-    });
+    // Wire approval flow for the legacy single-engine path.
+    // In the chatManager path approval flows are per-session and registered
+    // when the session's engine raises an approval request via onStream.
+    if (this.legacyEngine) {
+      setInteractiveApprovalFn((request: ApprovalRequest) => {
+        return this.requestApprovalFromClient(request);
+      });
 
-    // Wire askUser: install a protocol-backed askUser handler on the engine
-    // (replaces the legacy setAskUserFn module singleton).
-    this.engine.setAskUser((question, opts) => {
-      return this.requestAskUserFromClient(question, opts);
-    });
+      this.legacyEngine.setAskUser((question, opts) => {
+        return this.requestAskUserFromClient(question, opts);
+      });
+    }
 
     // Notify client we're ready
     this.notify(Methods.Status, { status: "ready" });
@@ -98,10 +122,13 @@ export class AgentServer {
         this.handleConfigure(req);
         break;
       case Methods.Query:
-        this.handleQuery(req);
+        await this.handleQuery(req);
         break;
       case Methods.Inject:
         this.handleInject(req);
+        break;
+      case Methods.CloseSession:
+        this.handleCloseSession(req);
         break;
       default:
         this.transport.send(
@@ -113,9 +140,73 @@ export class AgentServer {
   // ─── Run ────────────────────────────────────────────────────────
 
   private async handleRun(req: RpcRequest): Promise<void> {
+    // ── ChatSessionManager path (multi-session) ──────────────────
+    if (this.chatManager) {
+      return this.handleRunMulti(req);
+    }
+    // ── Legacy single-engine path ────────────────────────────────
+    return this.handleRunLegacy(req);
+  }
+
+  private async handleRunMulti(req: RpcRequest): Promise<void> {
+    const cm = this.chatManager!;
+    const params = (req.params ?? {}) as unknown as RunParams;
+
+    if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
+      );
+      return;
+    }
+    if (!params.task) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "task is required"),
+      );
+      return;
+    }
+
+    let session;
+    try {
+      session = cm.getOrCreate(params.sessionId, {
+        permissionMode: params.permissionMode,
+        cwd: params.cwd,
+      } as any);
+    } catch (err: any) {
+      const code = err.code ?? ErrorCodes.InternalError;
+      this.transport.send(createErrorResponse(req.id, code, err.message));
+      return;
+    }
+
+    if (typeof params.planMode === "boolean") {
+      session.engine.setPlanMode(params.planMode);
+    }
+
+    const sid = params.sessionId;
+    try {
+      const result = await session.enqueueTurn(params.task, {
+        onStream: (event: StreamEvent) =>
+          this.notify(Methods.StreamEvent, { sessionId: sid, event }),
+      });
+
+      const runResult: RunResult = {
+        text: result.text,
+        reason: result.reason,
+        sessionId: result.sessionId ?? sid,
+        turnCount: result.turnCount,
+        usage: result.usage,
+      };
+      this.transport.send(createResponse(req.id, runResult));
+    } catch (err) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+      );
+    }
+  }
+
+  private async handleRunLegacy(req: RpcRequest): Promise<void> {
     if (this.running) {
       this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.AlreadyRunning, "Agent is already running"),
+        createErrorResponse(req.id, ErrorCodes.Overloaded, "Agent is already running"),
       );
       return;
     }
@@ -142,9 +233,10 @@ export class AgentServer {
         );
         return;
       }
-      this.engine.setPermissionMode(mode);
-      setRuntimeBypass(mode === "bypassPermissions");
-      setInPlanMode(mode === "plan");
+      this.legacyEngine!.setPermissionMode(mode);
+      // setRuntimeBypass / setInPlanMode singletons were removed in T4/T5;
+      // Engine.setPermissionMode now keeps this.permissionMode + this.planMode
+      // in sync and tools read them via ToolContext.permissionMode/planMode.
     }
 
     this.running = true;
@@ -152,15 +244,14 @@ export class AgentServer {
     this.notify(Methods.Status, { status: "running" });
 
     const streamToClient = (event: StreamEvent) => {
-      this.notify(Methods.StreamEvent, { event });
+      this.notify(Methods.StreamEvent, { sessionId: params.sessionId ?? "", event });
     };
 
     // TodoWrite emits task_update directly through ToolContext.streamCallback;
     // no module singleton wiring needed anymore.
 
     try {
-      const result = await this.engine.run(params.task, {
-        cwd: params.cwd,
+      const result = await this.legacyEngine!.run(params.task, {
         sessionId: params.sessionId,
         signal: this.abortController!.signal,
         onStream: streamToClient,
@@ -190,8 +281,39 @@ export class AgentServer {
 
   private handleApprove(req: RpcRequest): void {
     const params = (req.params ?? {}) as unknown as ApproveParams;
-    const resolve = this.pendingApprovals.get(params.requestId);
 
+    // ChatSessionManager path: look up per-session pendingApprovals
+    if (this.chatManager && typeof params.sessionId === "string") {
+      const s = this.chatManager.get(params.sessionId);
+      if (!s) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.SessionClosed,
+            `No such session: ${params.sessionId}`,
+          ),
+        );
+        return;
+      }
+      const resolve = s.pendingApprovals.get(params.requestId);
+      if (!resolve) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.InvalidParams,
+            `No pending approval: ${params.requestId}`,
+          ),
+        );
+        return;
+      }
+      s.pendingApprovals.delete(params.requestId);
+      resolve(params.decision);
+      this.transport.send(createResponse(req.id, { ok: true }));
+      return;
+    }
+
+    // Legacy path
+    const resolve = this.pendingApprovals.get(params.requestId);
     if (!resolve) {
       this.transport.send(
         createErrorResponse(
@@ -212,17 +334,43 @@ export class AgentServer {
   // ─── Cancel ─────────────────────────────────────────────────────
 
   private handleCancel(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as import("./types.js").CancelParams;
+
+    // ChatSessionManager path: cancel a specific session
+    if (this.chatManager) {
+      if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
+        );
+        return;
+      }
+      const s = this.chatManager.get(params.sessionId);
+      if (!s) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.SessionClosed,
+            `No such session: ${params.sessionId}`,
+          ),
+        );
+        return;
+      }
+      s.cancel();
+      this.transport.send(createResponse(req.id, { ok: true }));
+      return;
+    }
+
+    // Legacy path
     if (!this.running || !this.abortController) {
       this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.NotRunning, "Agent is not running"),
+        createErrorResponse(req.id, ErrorCodes.SessionClosed, "Agent is not running"),
       );
       return;
     }
 
     this.abortController.abort();
 
-    // Reject all pending approvals
-    for (const [id, resolve] of this.pendingApprovals) {
+    for (const [, resolve] of this.pendingApprovals) {
       resolve({ approved: false, reason: "cancelled" });
     }
     this.pendingApprovals.clear();
@@ -231,22 +379,52 @@ export class AgentServer {
     this.transport.send(createResponse(req.id, { ok: true }));
   }
 
+  // ─── CloseSession ───────────────────────────────────────────────
+
+  private handleCloseSession(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as import("./types.js").CloseSessionParams;
+    if (typeof params.sessionId !== "string" || params.sessionId.length === 0) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
+      );
+      return;
+    }
+    if (this.chatManager) {
+      this.chatManager.close(params.sessionId);
+    }
+    this.transport.send(createResponse(req.id, { ok: true }));
+  }
+
   // ─── Configure ──────────────────────────────────────────────────
 
   private handleConfigure(req: RpcRequest): void {
     const params = (req.params ?? {}) as unknown as ConfigureParams;
 
-    if (params.planMode !== undefined) {
-      setInPlanMode(params.planMode);
+    // If a sessionId is present, mutate that specific session's engine
+    if (this.chatManager && typeof params.sessionId === "string") {
+      const sid = params.sessionId;
+      const s = this.chatManager.get(sid);
+      if (!s) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.SessionClosed, `No such session: ${sid}`),
+        );
+        return;
+      }
+      if (typeof params.planMode === "boolean") s.engine.setPlanMode(params.planMode);
+      if (typeof params.permissionMode === "string") {
+        s.engine.setPermissionMode(params.permissionMode as NonNullable<EngineConfig["permissionMode"]>);
+      }
+      this.transport.send(createResponse(req.id, { ok: true }));
+      return;
     }
-    if (params.bypassPermissions !== undefined) {
-      setRuntimeBypass(params.bypassPermissions);
-    }
-    if (params.reloadModels) {
-      // Pick up newly persisted providers[]/models[] (e.g. from /login)
-      // before any model-key switch below tries to find them.
+
+    // Global configure — delegate to legacyEngine if available,
+    // or to any session's engine from chatManager for settings ops
+    const engine = this.legacyEngine ?? this.anyEngine();
+
+    if (params.reloadModels && engine) {
       try {
-        this.engine.reloadModelPool();
+        engine.reloadModelPool();
       } catch (err) {
         this.transport.send(
           createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -254,9 +432,9 @@ export class AgentServer {
         return;
       }
     }
-    if (params.model !== undefined) {
+    if (params.model !== undefined && engine) {
       try {
-        const entry = this.engine.switchModel(params.model);
+        const entry = engine.switchModel(params.model);
         this.transport.send(
           createResponse(req.id, { ok: true, model: entry.model, key: entry.key }),
         );
@@ -268,8 +446,9 @@ export class AgentServer {
         return;
       }
     }
-    // permissionMode and effort are stored but need engine-level support
-    // to change mid-session — for now we accept and acknowledge
+    if (params.planMode !== undefined && engine) {
+      engine.setPlanMode(params.planMode);
+    }
 
     this.transport.send(createResponse(req.id, { ok: true }));
   }
@@ -278,12 +457,19 @@ export class AgentServer {
 
   private async handleQuery(req: RpcRequest): Promise<void> {
     const params = (req.params ?? {}) as unknown as QueryParams;
+    // For query operations we prefer the legacyEngine; if absent borrow any
+    // session engine from the manager (model pool, settings are shared).
+    const engine = this.legacyEngine ?? this.anyEngine();
 
     switch (params.type) {
       case "tools": {
-        const registry = this.engine.getToolRegistry();
-        // listToolsDetailed() returns objects with name/description,
-        // listTools() returns just names — use detailed if available
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for tools query"),
+          );
+          return;
+        }
+        const registry = engine.getToolRegistry();
         const tools =
           typeof registry.listToolsDetailed === "function"
             ? registry
@@ -294,18 +480,39 @@ export class AgentServer {
         break;
       }
       case "sessions": {
-        const sessions = this.engine.getSessionManager().list();
-        this.transport.send(createResponse(req.id, { type: "sessions", data: sessions }));
+        if (this.chatManager) {
+          // Return the ChatSessionManager's live sessions
+          const sessions = [...(this.chatManager as any).sessions.entries()].map(
+            ([id, s]: [string, any]) => ({
+              sessionId: id,
+              busy: s.isBusy(),
+              queueDepth: s.queueDepth(),
+              lastActivityAt: s.lastActivityAt,
+            }),
+          );
+          this.transport.send(createResponse(req.id, { type: "sessions", data: sessions }));
+        } else if (engine) {
+          const sessions = engine.getSessionManager().list();
+          this.transport.send(createResponse(req.id, { type: "sessions", data: sessions }));
+        } else {
+          this.transport.send(createResponse(req.id, { type: "sessions", data: [] }));
+        }
         break;
       }
       case "config": {
-        const config = this.engine.getConfig();
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for config query"),
+          );
+          return;
+        }
+        const config = engine.getConfig();
         this.transport.send(
           createResponse(req.id, {
             type: "config",
             data: {
               permissionMode: config.permissionMode ?? "default",
-              planMode: isInPlanMode(),
+              planMode: engine.planMode ?? false,
               preset: config.preset,
               model: config.llm.model,
               cwd: config.cwd,
@@ -325,9 +532,15 @@ export class AgentServer {
         break;
       }
       case "session_detail": {
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for session_detail query"),
+          );
+          return;
+        }
         if (params.sessionId) {
           try {
-            const bundle = this.engine.getSessionManager().resume(params.sessionId);
+            const bundle = engine.getSessionManager().resume(params.sessionId);
             const data = {
               state: bundle.state,
               transcript: bundle.transcript.getEvents(),
@@ -350,9 +563,14 @@ export class AgentServer {
         break;
       }
       case "compact": {
-        // Force context compaction and return stats
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for compact query"),
+          );
+          return;
+        }
         try {
-          const result = this.engine.forceCompact();
+          const result = engine.forceCompact();
           this.transport.send(
             createResponse(req.id, {
               type: "compact",
@@ -367,15 +585,17 @@ export class AgentServer {
         break;
       }
       case "models": {
-        const pool = this.engine.getModelPool();
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for models query"),
+          );
+          return;
+        }
+        const pool = engine.getModelPool();
         const models: import("./types.js").ProtocolModelEntry[] = pool.list().map((m) => ({
           key: m.key,
           label: m.label ?? m.key,
           model: m.model,
-          // `protocol` is the engine-internal "which client speaks for this
-          // model" flag ("openai"/"anthropic"). ModelEntry.provider holds it
-          // legacy-style; we map it through here so the protocol surface
-          // doesn't leak the misleading name.
           protocol: m.provider,
           providerKey: m.providerKey,
           active: m.key === pool.getActiveKey(),
@@ -386,15 +606,15 @@ export class AgentServer {
         break;
       }
       case "providers": {
-        // Wraps config_get("providers") with two extras the ModelManager
-        // panel needs:
-        //   - modelCount: how many models[] entries reference this provider
-        //   - cachedModels/cachedAt: from <cacheDir>/<providerKey>.json
-        // Without these, the panel shows "0 模型 · 未拉取" even when the
-        // wizard has already pulled the model list.
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for providers query"),
+          );
+          return;
+        }
         try {
-          const providersRaw = this.engine.readSetting("providers") as unknown;
-          const modelsRaw = this.engine.readSetting("models") as unknown;
+          const providersRaw = engine.readSetting("providers") as unknown;
+          const modelsRaw = engine.readSetting("models") as unknown;
           const providerList = Array.isArray(providersRaw)
             ? (providersRaw as Array<Record<string, unknown>>)
             : [];
@@ -429,19 +649,21 @@ export class AgentServer {
         break;
       }
       case "arena_status": {
-        // Returns what Arena would do if invoked right now: which
-        // participants it would default to, against which endpoint,
-        // and whether each one looks compatible.
         const status = getArenaStatus();
         this.transport.send(createResponse(req.id, { type: "arena_status", data: status }));
         break;
       }
       case "config_set": {
-        // Update a settings key
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for config_set"),
+          );
+          return;
+        }
         try {
           const { key, value } = params;
           if (!key) throw new Error("key is required for config_set");
-          this.engine.updateConfig(key, value);
+          engine.updateConfig(key, value);
           this.transport.send(createResponse(req.id, { type: "config_set", data: { key, value } }));
         } catch (err) {
           this.transport.send(
@@ -451,10 +673,16 @@ export class AgentServer {
         break;
       }
       case "config_get": {
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for config_get"),
+          );
+          return;
+        }
         try {
           const { key } = params;
           if (!key) throw new Error("key is required for config_get");
-          const value = this.engine.readSetting(key);
+          const value = engine.readSetting(key);
           this.transport.send(createResponse(req.id, { type: "config_get", data: { key, value } }));
         } catch (err) {
           this.transport.send(
@@ -464,13 +692,19 @@ export class AgentServer {
         break;
       }
       case "permission_set": {
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for permission_set"),
+          );
+          return;
+        }
         try {
           const value = params.value as string | undefined;
           const valid = ["default", "acceptEdits", "dontAsk", "bypassPermissions", "auto", "plan"];
           if (!value || !valid.includes(value)) {
             throw new Error(`invalid permission mode: ${value}`);
           }
-          this.engine.setPermissionMode(value as NonNullable<EngineConfig["permissionMode"]>);
+          engine.setPermissionMode(value as NonNullable<EngineConfig["permissionMode"]>);
           this.transport.send(
             createResponse(req.id, {
               type: "permission_set",
@@ -485,6 +719,12 @@ export class AgentServer {
         break;
       }
       case "provider_add": {
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for provider_add"),
+          );
+          return;
+        }
         try {
           const cfg = params.provider as Record<string, unknown> | undefined;
           if (
@@ -495,9 +735,9 @@ export class AgentServer {
           ) {
             throw new Error("provider_add: requires {key, kind, baseUrl, ...}");
           }
-          const current = (this.engine.readSetting("providers") as unknown[] | undefined) ?? [];
+          const current = (engine.readSetting("providers") as unknown[] | undefined) ?? [];
           const next = [...current, cfg];
-          this.engine.updateConfig("providers", next);
+          engine.updateConfig("providers", next);
           this.transport.send(
             createResponse(req.id, { type: "provider_add", data: { ok: true, key: cfg.key } }),
           );
@@ -509,11 +749,17 @@ export class AgentServer {
         break;
       }
       case "provider_refresh": {
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for provider_refresh"),
+          );
+          return;
+        }
         try {
           const key = params.key;
           if (!key) throw new Error("provider_refresh: key required");
           const providers =
-            (this.engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ??
+            (engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ??
             [];
           const p = providers.find((x) => x.key === key);
           if (!p) throw new Error(`provider not found: ${key}`);
@@ -542,20 +788,26 @@ export class AgentServer {
         break;
       }
       case "provider_delete": {
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for provider_delete"),
+          );
+          return;
+        }
         try {
           const key = params.key;
           if (!key) throw new Error("provider_delete: key required");
           const models =
-            (this.engine.readSetting("models") as Array<Record<string, unknown>> | undefined) ?? [];
+            (engine.readSetting("models") as Array<Record<string, unknown>> | undefined) ?? [];
           const refs = models.filter((m) => m.providerKey === key).map((m) => m.key as string);
           if (refs.length > 0) {
             throw new Error(`provider ${key} referenced by models: ${refs.join(", ")}`);
           }
           const providers =
-            (this.engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ??
+            (engine.readSetting("providers") as Array<Record<string, unknown>> | undefined) ??
             [];
           const next = providers.filter((p) => p.key !== key);
-          this.engine.updateConfig("providers", next);
+          engine.updateConfig("providers", next);
           this.transport.send(
             createResponse(req.id, { type: "provider_delete", data: { ok: true } }),
           );
@@ -567,14 +819,20 @@ export class AgentServer {
         break;
       }
       case "model_add": {
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for model_add"),
+          );
+          return;
+        }
         try {
           const entry = params.model as Record<string, unknown> | undefined;
           if (!entry || typeof entry.key !== "string" || typeof entry.model !== "string") {
             throw new Error("model_add: requires {key, model, providerKey}");
           }
-          const current = (this.engine.readSetting("models") as unknown[] | undefined) ?? [];
+          const current = (engine.readSetting("models") as unknown[] | undefined) ?? [];
           const next = [...current, entry];
-          this.engine.updateConfig("models", next);
+          engine.updateConfig("models", next);
           this.transport.send(
             createResponse(req.id, { type: "model_add", data: { ok: true, key: entry.key } }),
           );
@@ -586,13 +844,19 @@ export class AgentServer {
         break;
       }
       case "model_delete": {
+        if (!engine) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InternalError, "No engine available for model_delete"),
+          );
+          return;
+        }
         try {
           const key = params.key;
           if (!key) throw new Error("model_delete: key required");
           const current =
-            (this.engine.readSetting("models") as Array<Record<string, unknown>> | undefined) ?? [];
+            (engine.readSetting("models") as Array<Record<string, unknown>> | undefined) ?? [];
           const next = current.filter((m) => m.key !== key);
-          this.engine.updateConfig("models", next);
+          engine.updateConfig("models", next);
           this.transport.send(
             createResponse(req.id, { type: "model_delete", data: { ok: true } }),
           );
@@ -624,8 +888,31 @@ export class AgentServer {
       );
       return;
     }
+    // In the chatManager path, inject into the session's engine
+    if (this.chatManager) {
+      const s = this.chatManager.get(params.sessionId);
+      if (!s) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.SessionClosed,
+            `No such session: ${params.sessionId}`,
+          ),
+        );
+        return;
+      }
+      try {
+        s.engine.injectContext(params.sessionId, params.content);
+        this.transport.send(createResponse(req.id, { ok: true }));
+      } catch (err) {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+        );
+      }
+      return;
+    }
     try {
-      this.engine.injectContext(params.sessionId, params.content);
+      this.legacyEngine!.injectContext(params.sessionId, params.content);
       this.transport.send(createResponse(req.id, { ok: true }));
     } catch (err) {
       this.transport.send(
@@ -637,8 +924,7 @@ export class AgentServer {
   // ─── Client Communication ───────────────────────────────────────
 
   /**
-   * Ask the client to approve a tool operation.
-   * Sends a notification, returns a promise that resolves when client responds.
+   * Ask the client to approve a tool operation (legacy single-engine path).
    */
   private requestApprovalFromClient(request: ApprovalRequest): Promise<ApprovalResult> {
     return new Promise((resolve) => {
@@ -659,10 +945,7 @@ export class AgentServer {
   }
 
   /**
-   * Ask the client to answer a question from the agent.
-   * Reuses the approval flow with a synthetic request. Optional `opts`
-   * carry multiple-choice options / header / multiSelect hints that the
-   * client UI may use to render a picker instead of a text input.
+   * Ask the client to answer a question from the agent (legacy single-engine path).
    */
   private requestAskUserFromClient(
     question: string,
@@ -688,8 +971,6 @@ export class AgentServer {
       }, AgentServer.APPROVAL_TIMEOUT_MS);
       this.approvalTimers.set(requestId, timer);
 
-      // Pass options through the synthetic request's `args` — clients that
-      // don't know about them ignore the extra fields and still see `question`.
       const args: Record<string, unknown> = { question };
       if (opts?.header !== undefined) args.header = opts.header;
       if (opts?.options !== undefined) args.options = opts.options;
@@ -711,23 +992,34 @@ export class AgentServer {
     this.transport.send(createNotification(method, params));
   }
 
+  /**
+   * Get any available engine — used for global query ops when chatManager is
+   * present but no legacyEngine was supplied. Borrows the first live session.
+   */
+  private anyEngine(): Engine | null {
+    if (!this.chatManager) return null;
+    // Access private `sessions` map — acceptable for same-package access.
+    const sessions: Map<string, any> = (this.chatManager as any).sessions;
+    const first = sessions.values().next().value;
+    return first ? (first.engine as Engine) : null;
+  }
+
   // ─── Lifecycle ──────────────────────────────────────────────────
 
   close(): void {
-    // Abort an in-flight engine.run so the awaited promise in handleRun
-    // settles and the finally block clears `this.running`. Without this,
-    // closing a server during an active run leaves the engine churning
-    // until natural completion, defeating the point of close().
+    if (this.chatManager) {
+      this.chatManager.closeAll();
+    }
+
+    // Legacy path cleanup
     if (this.abortController) {
       try {
         this.abortController.abort("server closing");
       } catch {
-        // swallow — best-effort abort
+        // swallow
       }
     }
 
-    // Reject pending approvals so any sub-agent or tool waiting on a
-    // user decision unblocks instead of hanging forever.
     for (const [, resolve] of this.pendingApprovals) {
       resolve({ approved: false, reason: "server closing" });
     }

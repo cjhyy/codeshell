@@ -1,7 +1,7 @@
 # Multi-Session Chat Runtime — Design
 
 Date: 2026-05-26
-Status: Draft (awaiting user review)
+Status: Implemented (commits 55448c6..a3f2388)
 Scope: `packages/core/src/protocol/`, `packages/core/src/engine/`, `packages/core/src/tool-system/{permission,builtin/plan}`, `packages/desktop/src/{preload,renderer}`, `packages/tui/src/cli/commands/`.
 
 ## 1. Background and problem statement

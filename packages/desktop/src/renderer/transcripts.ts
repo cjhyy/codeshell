@@ -64,10 +64,17 @@ function transcriptKey(repoId: string | null, sessionId: string): string {
   return `codeshell.transcript.${repoKey(repoId)}.${sessionId}`;
 }
 
-let idCounter = 0;
 export function makeSessionId(): string {
-  idCounter += 1;
-  return `s-${Date.now().toString(36)}-${idCounter}`;
+  // crypto.randomUUID() is collision-proof across renderer processes;
+  // a module-level counter would reset on reload and run independently
+  // per BrowserWindow, so two windows opening "新对话" in the same
+  // millisecond used to produce identical ids that then clobbered each
+  // other's localStorage bucket.
+  const rand =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+  return `s-${Date.now().toString(36)}-${rand}`;
 }
 
 export function loadSessionIndex(repoId: string | null): SessionIndex {

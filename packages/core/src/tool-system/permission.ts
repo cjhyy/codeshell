@@ -465,18 +465,6 @@ export class DenialTracker {
   }
 }
 
-// ─── Runtime permission override ─────────────────────────────
-// Allows the UI to toggle bypass mode without recreating the classifier.
-let _runtimeBypass = false;
-
-export function setRuntimeBypass(enabled: boolean): void {
-  _runtimeBypass = enabled;
-}
-
-export function isRuntimeBypass(): boolean {
-  return _runtimeBypass;
-}
-
 export class PermissionClassifier {
   private denialTracker = new DenialTracker();
   /**
@@ -512,8 +500,8 @@ export class PermissionClassifier {
   }
 
   classify(toolName: string, args: Record<string, unknown>): PermissionDecision {
-    // Runtime bypass overrides everything
-    if (_runtimeBypass) return "allow";
+    // bypassPermissions mode overrides everything
+    if (this.defaultMode === "bypassPermissions") return "allow";
 
     // Check explicit rules (ordered by specificity)
     for (const rule of this.rules) {
@@ -525,7 +513,6 @@ export class PermissionClassifier {
     // YOLO classifier for Bash commands
     if (toolName === "Bash") {
       const level = classifyBashCommand(String(args.command ?? ""));
-      if (this.defaultMode === "bypassPermissions") return "allow";
       if (level === "dangerous") return "ask";
       if (level === "safe-read") return "allow";
       if (
@@ -539,8 +526,6 @@ export class PermissionClassifier {
 
     // Fall back to default mode
     switch (this.defaultMode) {
-      case "bypassPermissions":
-        return "allow";
       case "dontAsk":
         return "deny";
       case "acceptEdits":

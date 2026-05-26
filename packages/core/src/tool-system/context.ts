@@ -18,6 +18,7 @@ import type { ToolRegistry } from "./registry.js";
 import type { AgentPresetName } from "../preset/index.js";
 import type { SandboxBackend } from "./sandbox/index.js";
 import type { HookRegistry } from "../hooks/registry.js";
+import type { Engine } from "../engine/engine.js";
 
 /** One choice in a multiple-choice AskUserQuestion. */
 export interface AskUserChoice {
@@ -133,6 +134,12 @@ export interface ToolContext {
    * headless/test mode; tools must tolerate absence.
    */
   streamCallback?: StreamCallback;
+  /** Whether the owning Engine is currently in plan mode. Replaces the
+   *  removed module-level `isInPlanMode()` singleton. */
+  planMode: boolean;
+  /** The Engine that built this context. Lets tools call back into the engine
+   *  (e.g. ctx.engine.setPlanMode(true/false)) without a module-level singleton. */
+  engine: Engine;
 }
 
 /**
