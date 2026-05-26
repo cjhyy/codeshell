@@ -156,7 +156,26 @@ These are options if/when the trust model needs to harden:
   as Bash. Cost: hooks frequently need access to repo state outside the
   Bash sandbox profile (e.g. reading `.git/`), so the sandbox profile
   would need to be looser, defeating most of its value. Trade-off study
-  required before committing.
+  required before committing. Note this does NOT address the next item,
+  which is a separate failure mode.
+- **LLM-influenced hook input** (the unaddressed risk in this doc).
+  `post_tool_use` / `on_tool_end` hooks routinely receive fields that
+  originated from the LLM (tool output, args). A hook author who writes
+  `echo "$TOOL_OUTPUT" | grep error` (or similar) gives the LLM a path
+  to arbitrary shell via prompt injection in tool output. The hook is
+  the trusted surface, but its quoting practice is the load-bearing
+  piece — wrapping spawn in SafeSpawn doesn't help because the unsafe
+  expansion is inside `bash -c "$user_command"`. Mitigations to study
+  post-stability:
+    - Mark HookContext fields with a `tainted: true` flag and warn at
+      hook-config load time if the command string includes
+      shell-expansion of tainted env vars.
+    - Document and lint-recommend stdin-based context delivery (which
+      shell-runner and pluginCommandHook already do) over env-var
+      substitution.
+    - Per-event opt-out list: hooks that subscribe to LLM-output events
+      get loaded under a stricter shell mode (`set -u; set -e;`
+      injection or a wrapper script).
 
 None of these are required for Gate 0; they would extend it.
 
