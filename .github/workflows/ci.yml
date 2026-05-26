@@ -62,5 +62,6 @@ jobs:
             tests/runtime-close.test.ts \
             tests/sandbox.test.ts \
             tests/sdk-smoke.test.ts \
+            tests/session-cold-start.test.ts \
             tests/tool-cwd.test.ts \
             tests/web-fetch-ssrf.test.ts

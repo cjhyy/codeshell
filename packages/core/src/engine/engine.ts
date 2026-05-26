@@ -678,11 +678,23 @@ export class Engine {
         ]
       : taskText;
 
-    // Create or resume session
+    // Create or resume session.
+    //
+    // Three valid shapes:
+    //   1. options.sessionId names an EXISTING on-disk session → resume
+    //   2. options.sessionId names a fresh sid the host wants materialized
+    //      (ChatSessionManager's "tui-main" first-turn case) → create
+    //      with that explicit sid so subsequent turns can resume cleanly
+    //   3. no sessionId → create with nanoid
+    //
+    // Shape (2) was previously broken — engine threw SessionError,
+    // surfacing as `[-32603] Session not found: <sid>` on the very first
+    // TUI turn. Detection now uses `sessionManager.exists()` (one stat
+    // call) instead of a try/catch on resume.
     let session: SessionBundle;
     let messages: Message[];
 
-    if (options?.sessionId) {
+    if (options?.sessionId && this.sessionManager.exists(options.sessionId)) {
       session = this.sessionManager.resume(options.sessionId);
       messages = this.compactedMessagesBySession.get(options.sessionId)
         ? [...this.compactedMessagesBySession.get(options.sessionId)!]
@@ -715,7 +727,14 @@ export class Engine {
       // the session is still errored/aborted while we're actually running.
       this.sessionManager.saveState(session.state);
     } else {
-      session = this.sessionManager.create(cwd, this.config.llm.model, this.config.llm.provider);
+      // Cold start: shape (2) reuses the host-supplied sid; shape (3)
+      // lets sessionManager generate one with nanoid.
+      session = this.sessionManager.create(
+        cwd,
+        this.config.llm.model,
+        this.config.llm.provider,
+        options?.sessionId,
+      );
       messages = [{ role: "user", content: userMessageContent }];
       session.transcript.appendMessage("user", userMessageContent);
       // Save first user message as session summary — text only. The summary

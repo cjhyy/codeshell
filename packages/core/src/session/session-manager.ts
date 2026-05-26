@@ -34,8 +34,20 @@ export class SessionManager {
     mkdirSync(this.sessionsDir, { recursive: true });
   }
 
-  create(cwd: string, model: string, provider: string): SessionBundle {
-    const sessionId = nanoid(16);
+  /**
+   * Create a new on-disk session. If `explicitSessionId` is passed, use
+   * it verbatim (ChatSessionManager-driven hosts choose a logical sid like
+   * "tui-main" and expect us to honor it). Otherwise generate one with
+   * nanoid. Either way the on-disk directory is materialized and the
+   * state.json + transcript.jsonl files are written before return.
+   */
+  create(
+    cwd: string,
+    model: string,
+    provider: string,
+    explicitSessionId?: string,
+  ): SessionBundle {
+    const sessionId = explicitSessionId ?? nanoid(16);
     const sessionDir = join(this.sessionsDir, sessionId);
     mkdirSync(sessionDir, { recursive: true });
 
@@ -63,6 +75,15 @@ export class SessionManager {
     });
 
     return { state, transcript };
+  }
+
+  /**
+   * Whether a session directory exists on disk. Used by ChatSession-driven
+   * cold starts to decide between resume vs create-with-explicit-sid
+   * without catching SessionError.
+   */
+  exists(sessionId: string): boolean {
+    return existsSync(join(this.sessionsDir, sessionId));
   }
 
   resume(sessionId: string): SessionBundle {
