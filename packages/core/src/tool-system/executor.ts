@@ -9,7 +9,6 @@ import { PermissionClassifier } from "./permission.js";
 import { PermissionDeniedError } from "../exceptions.js";
 import { logger as rootLogger, getCurrentSid } from "../logging/logger.js";
 import { recordToolCall, recordToolResult } from "../logging/session-recorder.js";
-import { isInPlanMode } from "./builtin/plan.js";
 import { validateToolArgs } from "./validation.js";
 import type { ToolContext } from "./context.js";
 import type { InvestigationGuard } from "./investigation-guard.js";
@@ -79,7 +78,7 @@ export class ToolExecutor {
     // without mutating the caller's object.
     let call: ToolCall = callIn;
     // 0. Plan mode: only allow read-only tools — no file writes at all
-    if (isInPlanMode()) {
+    if (this.toolCtx?.planMode) {
       const allowedInPlan = new Set([
         "EnterPlanMode",
         "ExitPlanMode",

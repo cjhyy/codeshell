@@ -41,7 +41,6 @@ import { recordSessionStart, recordSessionEnd } from "../logging/session-recorde
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { isInPlanMode } from "../tool-system/builtin/plan.js";
 import { SettingsManager } from "../settings/manager.js";
 import { FileHistory } from "../session/file-history.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
@@ -65,6 +64,7 @@ import {
 } from "../onboarding.js";
 import { detectPastedNoise } from "../utils/task-sanitizer.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
+import { EngineRuntime } from "./runtime.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -121,6 +121,13 @@ export interface EngineConfig {
    * pool, the runtime check still blocks the call.
    */
   isSubAgent?: boolean;
+  /**
+   * Optional shared EngineRuntime providing pre-constructed shared resources
+   * (modelPool, toolRegistry, etc.). When provided, Engine uses these instead
+   * of constructing its own. Existing callers that omit this field continue to
+   * work unchanged — T11 will migrate them.
+   */
+  runtime?: EngineRuntime;
 }
 
 export interface EngineHookConfig {
@@ -145,6 +152,13 @@ export class Engine {
   private sessionManager: SessionManager;
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
+
+  /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
+  readonly runtime: EngineRuntime | null;
+  /** Active permission mode for this Engine instance. */
+  permissionMode: NonNullable<EngineConfig["permissionMode"]>;
+  /** True when permissionMode === "plan". */
+  planMode: boolean;
 
   // Lazy SettingsManager — reused across updateConfig/readSetting so we
   // don't re-read 6+ JSON files on every /model, /login, etc. The manager
@@ -231,8 +245,15 @@ export class Engine {
   }
 
   constructor(private config: EngineConfig) {
+    // Wire shared runtime (adapter pattern — null when self-constructing).
+    this.runtime = config.runtime ?? null;
+
+    // Instance-level permission/plan mode fields.
+    this.permissionMode = config.permissionMode ?? "acceptEdits";
+    this.planMode = this.permissionMode === "plan";
+
     this.preset = resolveAgentPreset(config.preset);
-    this.toolRegistry = new ToolRegistry({
+    this.toolRegistry = config.runtime?.toolRegistry ?? new ToolRegistry({
       builtinTools: resolveBuiltinToolNames({
         preset: this.preset.name,
         enabledBuiltinTools: config.enabledBuiltinTools,
@@ -258,9 +279,11 @@ export class Engine {
     }
     this.sessionManager = new SessionManager(config.sessionStorageDir);
 
-    // Initialize model pool from settings
-    this.modelPool = new ModelPool();
-    this.populateModelPoolFromSettings();
+    // Initialize model pool — prefer runtime's shared pool, fall back to self-constructed.
+    this.modelPool = config.runtime?.modelPool ?? new ModelPool();
+    if (!config.runtime) {
+      this.populateModelPoolFromSettings();
+    }
   }
 
   /**
@@ -343,7 +366,13 @@ export class Engine {
    * the same key overwrites them), so callers don't need to clear first.
    */
   reloadModelPool(): void {
-    this.populateModelPoolFromSettings();
+    // When sharing a runtime, the owner of the runtime is responsible
+    // for populating the pool; reloading from settings here would
+    // blast that owner's contributions and affect every other Engine
+    // that shares this runtime.
+    if (!this.runtime) {
+      this.populateModelPoolFromSettings();
+    }
   }
 
   /**
@@ -527,15 +556,10 @@ export class Engine {
     }
 
     const toolCtx: ToolContext = {
-      cwd,
-      llmConfig: this.config.llm,
-      modelPool: this.modelPool,
-      toolRegistry: this.toolRegistry,
-      askUser: this.config.askUser,
+      ...this.buildToolContext(),
       subAgentSpawner,
       sandbox: sandboxBackend,
-      isSubAgent: this.config.isSubAgent === true,
-      hooks: this.hooks,
+      cwd,
     };
 
     logger.info("engine.run", {
@@ -758,7 +782,7 @@ export class Engine {
       "TaskGet",
       "Bash", // Bash is included but executor filters non-read-only commands
     ]);
-    const toolDefs = isInPlanMode()
+    const toolDefs = this.planMode
       ? allToolDefs.filter((t) => planModeAllowed.has(t.name))
       : allToolDefs;
 
@@ -1118,11 +1142,10 @@ export class Engine {
       inputSchema: t.inputSchema,
     }));
 
-    const toolCtx = {
+    const toolCtx: ToolContext = {
+      ...this.buildToolContext(),
       cwd: opts.projectDir ?? process.cwd(),
-      llmConfig: this.config.llm,
-      toolRegistry: this.toolRegistry,
-    } as import("../tool-system/context.js").ToolContext;
+    };
 
     const messages: Message[] = [{ role: "user", content: opts.userPrompt }];
     let writeBudget = MAX_WRITES;
@@ -1472,6 +1495,8 @@ export class Engine {
    */
   setPermissionMode(mode: NonNullable<EngineConfig["permissionMode"]>): void {
     this.config = { ...this.config, permissionMode: mode };
+    this.permissionMode = mode;
+    this.planMode = mode === "plan";
     if (this.activePermission) {
       const cwd = this.config.cwd ?? process.cwd();
       const { rules, backend } = this.buildPermissionConfig(mode, cwd);
@@ -1481,5 +1506,39 @@ export class Engine {
 
   getPermissionMode(): NonNullable<EngineConfig["permissionMode"]> {
     return this.config.permissionMode ?? "acceptEdits";
+  }
+
+  /**
+   * Toggle plan mode directly. Called by the Plan tool (Task 7) via ToolContext.engine.
+   * Also syncs permissionMode to keep both fields consistent.
+   */
+  setPlanMode(value: boolean): void {
+    if (value) {
+      this.setPermissionMode("plan");
+    } else if (this.permissionMode === "plan") {
+      // Leaving plan mode: drop back to the default.
+      this.setPermissionMode("acceptEdits");
+    } else {
+      this.planMode = value;
+    }
+  }
+
+  /**
+   * Build a base ToolContext for this Engine. Used by run() (which then
+   * overlays turn-specific fields like sandbox and subAgentSpawner) and
+   * by tests that want a ToolContext without a full run() cycle.
+   */
+  buildToolContext(): ToolContext {
+    return {
+      cwd: this.config.cwd ?? process.cwd(),
+      llmConfig: this.config.llm,
+      modelPool: this.modelPool,
+      toolRegistry: this.toolRegistry,
+      askUser: this.config.askUser,
+      isSubAgent: this.config.isSubAgent === true,
+      hooks: this.hooks,
+      planMode: this.planMode,
+      engine: this,
+    };
   }
 }

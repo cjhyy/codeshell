@@ -57,6 +57,10 @@ export {
 export { Engine } from "./engine/engine.js";
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/engine.js";
 export type { CostStateStore, CostStateSnapshot } from "./engine/cost-store.js";
+export { EngineRuntime } from "./engine/runtime.js";
+export type { EngineRuntimeOptions } from "./engine/runtime.js";
+export { ChatSessionManager } from "./protocol/chat-session-manager.js";
+export type { ChatSessionManagerOptions } from "./protocol/chat-session-manager.js";
 
 // ─── LLM ─────────────────────────────────────────────────────────
 
@@ -407,7 +411,7 @@ export { recordUIEvent } from "./logging/session-recorder.js";
 
 // ─── Cost Tracker ────────────────────────────────────────────────
 
-export { costTracker, installCostTracking } from "./cost-tracker.js";
+export { CostTracker, costTracker, installCostTracking } from "./cost-tracker.js";
 export { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 
 // ─── Onboarding ──────────────────────────────────────────────────
