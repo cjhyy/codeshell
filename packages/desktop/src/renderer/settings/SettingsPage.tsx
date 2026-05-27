@@ -16,12 +16,14 @@ import {
   Monitor,
   Archive,
   Puzzle,
+  Bot,
 } from "lucide-react";
 import { ModelSection } from "./ModelSection";
 import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import { PluginsAndSkillsSection } from "./PluginsAndSkillsSection";
+import { AgentsSection } from "./AgentsSection";
 import { AppearanceSection } from "./AppearanceSection";
 import {
   ArchivedConversationsSection,
@@ -53,6 +55,7 @@ type ModuleId =
   | "computer"
   | "archived"
   | "plugins-skills"
+  | "agents"
   | "update";
 
 interface Module {
@@ -77,6 +80,7 @@ const MODULES: Module[] = [
   { id: "computer", label: "电脑操控", Icon: Monitor },
   { id: "archived", label: "已归档对话", Icon: Archive },
   { id: "plugins-skills", label: "插件与 Skills", Icon: Puzzle },
+  { id: "agents", label: "子代理", Icon: Bot },
 ];
 
 interface Props {
@@ -224,6 +228,9 @@ export function SettingsPage({
             )}
             {active === "plugins-skills" && (
               <PluginsAndSkillsSection activeRepoPath={activeRepoPath} />
+            )}
+            {active === "agents" && (
+              <AgentsSection activeRepoPath={activeRepoPath} />
             )}
             {active === "archived" && (
               <ArchivedConversationsSection
