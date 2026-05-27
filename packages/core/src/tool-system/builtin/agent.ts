@@ -66,6 +66,33 @@ export function resolveAgentTypeOverrides(
   };
 }
 
+/** Default per-sub-agent wall-clock timeout (5 minutes). */
+export const DEFAULT_SUBAGENT_TIMEOUT_MS = 5 * 60_000;
+
+/**
+ * Run `work()` with a timeout. On expiry, calls `onTimeout` (to abort the
+ * child) and rejects with a timeout error. The child's own abort handling
+ * unwinds its resources.
+ */
+export async function runWithTimeout<T>(
+  work: () => Promise<T>,
+  timeoutMs: number,
+  onTimeout: () => void,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      onTimeout();
+      reject(new Error(`Sub-agent timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([work(), timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export const agentToolDef: ToolDefinition = {
   name: "Agent",
   description:
@@ -357,22 +384,37 @@ export async function agentTool(
   }
 
   // ─── Synchronous path ──────────────────────────────────────────
+  // A timeout-capable controller: the timeout callback aborts the child, and
+  // a parent abort is forwarded to it too. Keeping the timeout OUTSIDE
+  // runSubAgent (and off the background path) avoids the background path's
+  // "abort means user-cancel → drop silently" semantics; here a timeout is a
+  // genuine error surfaced to the parent.
+  const syncController = new AbortController();
+  const onParentAbort = () => syncController.abort();
+  parentSignal?.addEventListener("abort", onParentAbort, { once: true });
   try {
-    return await runSubAgent(spawner, {
-      agentId,
-      name,
-      description,
-      prompt,
-      maxTurns,
-      model: overrides.model,
-      toolAllowlist: overrides.toolAllowlist,
-      appendSystemPrompt: overrides.appendSystemPrompt,
-      signal: parentSignal ?? new AbortController().signal,
-    });
+    return await runWithTimeout(
+      () =>
+        runSubAgent(spawner, {
+          agentId,
+          name,
+          description,
+          prompt,
+          maxTurns,
+          model: overrides.model,
+          toolAllowlist: overrides.toolAllowlist,
+          appendSystemPrompt: overrides.appendSystemPrompt,
+          signal: syncController.signal,
+        }),
+      DEFAULT_SUBAGENT_TIMEOUT_MS,
+      () => syncController.abort(),
+    );
   } catch (err) {
     safeEmit(parentStream, { type: "agent_end", agentId, name, description, error: (err as Error).message });
     if (parentSignal?.aborted) return "Agent was aborted.";
     return `Agent error: ${(err as Error).message}`;
+  } finally {
+    parentSignal?.removeEventListener("abort", onParentAbort);
   }
 }
 
