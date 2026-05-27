@@ -69,6 +69,23 @@ export interface SubAgentSpawnRequest {
    * gets `agent_start` / `agent_end` markers via `spawner.parentStream`.
    */
   streamOverride?: StreamCallback;
+  /**
+   * Optional ModelPool key for the child Engine's LLM (e.g. "flash").
+   * Undefined → child inherits the parent's model (current behavior).
+   */
+  model?: string;
+  /**
+   * Optional tool-name allowlist for the child. When set, the child's tool
+   * pool is restricted to these names (still minus the nested-agent tools).
+   * Undefined → child inherits the parent's full tool set (current behavior).
+   */
+  toolAllowlist?: string[];
+  /**
+   * Optional per-call system prompt appended to the child Engine's prompt
+   * (the role definition's Markdown body). Undefined → child inherits only
+   * the parent's appendSystemPrompt (current behavior).
+   */
+  appendSystemPrompt?: string;
 }
 
 export interface SubAgentSpawner {
@@ -103,6 +120,12 @@ export interface ToolContext {
   askUser?: AskUserFn;
   /** Sub-agent spawner (Agent tool). Undefined → Agent tool unavailable. */
   subAgentSpawner?: SubAgentSpawner;
+  /**
+   * Reusable sub-agent role definitions (loaded from .code-shell/agents/*.md).
+   * The Agent tool reads this to resolve `agent_type`. Undefined → only the
+   * ephemeral (inline prompt) mode is available.
+   */
+  agentDefinitions?: import("../agent/agent-definition-registry.js").AgentDefinitionRegistry;
   /**
    * True when this Engine is itself a sub-agent. Set from EngineConfig.
    * The Agent tool refuses to spawn when this is true — runtime check
