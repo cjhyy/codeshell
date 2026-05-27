@@ -38,7 +38,7 @@ export function parseAgentDefinition(raw: string, sourceName: string): AgentDefi
   try {
     fm = (parseYaml(yamlSrc) ?? {}) as RawFrontmatter;
   } catch (err) {
-    throw new Error(`${sourceName}: invalid YAML frontmatter — ${(err as Error).message}`);
+    throw new Error(`${sourceName}: invalid YAML frontmatter — ${(err as Error).message}`, { cause: err });
   }
 
   if (typeof fm.name !== "string" || fm.name.trim().length === 0) {

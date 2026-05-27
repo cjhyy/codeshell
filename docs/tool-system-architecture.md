@@ -808,6 +808,72 @@ src/tool-system/
 
 ---
 
+## Reusable Sub-Agent Roles (`.code-shell/agents`)
+
+The `Agent` tool supports two modes:
+
+- **Ephemeral (default):** `Agent({ description, prompt })` spawns a generic
+  sub-agent that inherits the parent's model and full tool set. This is the
+  original behavior and is unchanged.
+- **Role-based:** `Agent({ agent_type: "researcher", description, prompt })`
+  loads a reusable role definition that supplies a model, a tool allowlist, a
+  turn cap, and a system prompt.
+
+### Role definition files
+
+Roles are Markdown files in `<cwd>/.code-shell/agents/*.md`: YAML frontmatter +
+a body that becomes the sub-agent's appended system prompt. (`.code-shell/` is
+per-user runtime state and gitignored, so a copyable sample ships in
+`examples/agents/researcher.md` — drop it into `.code-shell/agents/` to use it.)
+
+```markdown
+---
+name: researcher              # required — matched against agent_type
+description: Read-only research # required — human-facing summary
+model: flash                  # optional — ModelPool key; omit → inherit parent
+maxTurns: 10                  # optional — turn cap; omit → caller/default (15)
+tools:                        # optional — tool allowlist; omit → inherit parent
+  - Read
+  - Grep
+  - Glob
+---
+You are a research sub-agent. Investigate and report; never edit files.
+```
+
+Loading is non-recursive and resilient: a malformed file is skipped with a
+warning rather than failing the whole load. An unknown `agent_type` returns a
+clear error listing the available roles, so the LLM self-corrects instead of
+silently running a generic agent.
+
+### How role fields map to a spawn
+
+| Frontmatter | Effect on the child Engine |
+|-------------|----------------------------|
+| `model`     | Resolved via `ModelPool.resolveLLMConfig`. Unknown key → soft fallback to the parent's model (never an error). |
+| `tools`     | Becomes the child's `enabledBuiltinTools` allowlist (minus nested-agent tools). Omit → inherit parent's set. |
+| `maxTurns`  | Caps the child's turns. Explicit `max_turns` arg still wins. |
+| body        | Appended to the child's system prompt (after the parent's `appendSystemPrompt`). |
+
+The flat-hierarchy rule still holds: `Agent` / `AgentStatus` / `AgentCancel`
+are always stripped from a child's tool pool, so a role cannot spawn
+grandchildren regardless of its `tools` list.
+
+### Operational guards
+
+- **Concurrency cap:** background sub-agents are capped at
+  `MAX_BACKGROUND_AGENTS` (default 6, aligned with Codex `max_threads`).
+  Launching past the cap returns an error instead of piling up unbounded work.
+- **Sync timeout:** synchronous sub-agents have a wall-clock timeout
+  (`DEFAULT_SUBAGENT_TIMEOUT_MS`, default 5 minutes). On expiry the child is
+  aborted and the parent gets a timeout error. The background path has **no**
+  timeout — it doesn't block the parent, and a forced abort there would be
+  indistinguishable from a user cancel (which is silently dropped).
+- **Lifecycle hooks:** spawns emit `notification` hook events tagged
+  `subagent_start` / `subagent_finish` / `subagent_error` (fire-and-forget),
+  reusing the existing hook event rather than adding a new schema.
+
+---
+
 ## Cross-Cutting Patterns & Gotchas
 
 ### 1. Context Injection (`__args`)

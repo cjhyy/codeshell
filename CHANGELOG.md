@@ -8,6 +8,23 @@ breaking.
 
 ## [Unreleased]
 
+### Added
+
+#### Reusable sub-agent roles (`.code-shell/agents`)
+
+- The `Agent` tool now accepts an optional `agent_type` parameter. When set, it
+  loads a reusable role definition from `<cwd>/.code-shell/agents/<name>.md`
+  (YAML frontmatter + body), supplying the sub-agent's model, tool allowlist,
+  turn cap, and system prompt. Omitting `agent_type` preserves the existing
+  ephemeral behavior — fully backward compatible.
+- Per-role **model routing** via `ModelPool` keys (unknown key → soft fallback
+  to the parent model), per-role **tool allowlists**, and per-role **turn caps**.
+- Background sub-agents are now capped at `MAX_BACKGROUND_AGENTS` (default 6);
+  synchronous sub-agents have a wall-clock timeout (default 5 minutes).
+- Sub-agent spawns emit `subagent_start` / `subagent_finish` / `subagent_error`
+  lifecycle events through the existing `notification` hook.
+- Ships a sample `researcher` role at `examples/agents/researcher.md`.
+
 ## [0.5.0-rc.0] - 2026-05-23
 
 > ⚠️ Breaking. The repo is now a monorepo with three published packages.
