@@ -102,8 +102,8 @@ export interface RunOptions {
 export async function runCommand(options: RunOptions): Promise<void> {
   const cwd = process.cwd();
 
-  // Load settings
-  const settingsManager = new SettingsManager(cwd);
+  // Load settings — host terminal entrypoint reads the full hierarchy.
+  const settingsManager = new SettingsManager(cwd, "full");
   const settings = settingsManager.get();
 
   // Resolve API key. Headless used to only consult settings.model.apiKey
@@ -166,11 +166,15 @@ export async function runCommand(options: RunOptions): Promise<void> {
     mcpServers: settings.mcpServers,
     headless: true,
     sandbox: sandboxConfig,
+    // Host terminal entrypoint: read the full disk hierarchy (managed + user
+    // ~/.code-shell + project + local). The SDK default is 'project', which
+    // would skip the user's personal config — not what a CLI invocation wants.
+    settingsScope: "full" as const,
   };
 
   // 1. Seed engine — populates model pool + tool registry via
   //    populateModelPoolFromSettings() in ctor. Discarded after extraction.
-  const seedEngine = new Engine({ llm: llmConfig, cwd, headless: true });
+  const seedEngine = new Engine({ llm: llmConfig, cwd, headless: true, settingsScope: "full" });
 
   // 2. Extract shared resources
   const modelPool = seedEngine.getModelPool();

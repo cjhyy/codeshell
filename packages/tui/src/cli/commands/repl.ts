@@ -55,7 +55,8 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   const cwd = process.cwd();
 
   // Load settings — single SettingsManager instance reused throughout.
-  const settingsManager = new SettingsManager(cwd);
+  // Host terminal entrypoint reads the full hierarchy (incl. user ~/.code-shell).
+  const settingsManager = new SettingsManager(cwd, "full");
   let settings = settingsManager.get();
 
   // Resolve API key.
@@ -141,12 +142,15 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     costStore: costTracker,
     mcpServers: settings.mcpServers,
     approvalBackend: getInteractiveApprovalBackend(),
+    // Host terminal entrypoint: read the full disk hierarchy (incl. user
+    // ~/.code-shell). The SDK default 'project' would skip the user's config.
+    settingsScope: "full" as const,
   };
 
   // 1. Seed engine — calls populateModelPoolFromSettings() in ctor so the
   //    model pool and tool registry are fully populated. Discarded after
   //    resource extraction (never runs a task).
-  const seedEngine = new Engine({ llm: llmConfig, cwd });
+  const seedEngine = new Engine({ llm: llmConfig, cwd, settingsScope: "full" });
 
   // 2. Extract shared resources from seed engine
   const modelPool = seedEngine.getModelPool();

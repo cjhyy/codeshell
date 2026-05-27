@@ -30,6 +30,17 @@ function userHome(): string {
 
 export type SettingsSourceName = "managed" | "user" | "project" | "local" | "flag";
 
+/**
+ * Which disk layers a SettingsManager is allowed to read.
+ *   'full'     — managed + user (~/.code-shell) + project + local (host terminal entrypoints)
+ *   'project'  — project + local only (${cwd}/.code-shell); never the host user dir. [default]
+ *   'isolated' — no disk layers at all; only explicit flag overrides.
+ * Flag overrides always apply regardless of scope. Default is 'project' so a
+ * codeshell library/SDK embedding never silently inherits the host user's
+ * personal ~/.code-shell config (keys, models, MCP servers, hooks).
+ */
+export type SettingsScope = "isolated" | "project" | "full";
+
 interface SettingsSource {
   name: SettingsSourceName;
   priority: number;
@@ -40,7 +51,10 @@ export class SettingsManager {
   private sources: SettingsSource[] = [];
   private merged: ValidatedSettings | null = null;
 
-  constructor(private readonly cwd: string = process.cwd()) {}
+  constructor(
+    private readonly cwd: string = process.cwd(),
+    private readonly scope: SettingsScope = "project",
+  ) {}
 
   /**
    * Load settings from all sources.
@@ -48,22 +62,31 @@ export class SettingsManager {
   load(flagOverrides?: Record<string, unknown>): ValidatedSettings {
     this.sources = [];
 
-    // 1. Managed (lowest priority)
-    this.loadJsonFile(join(userHome(), ".code-shell", "settings.managed.json"), "managed", 0);
+    // Scope gates which disk layers we read. 'full' reads the host user dir
+    // (~/.code-shell); 'project' and 'isolated' never do. See SettingsScope.
+    const readUser = this.scope === "full";
+    const readProject = this.scope !== "isolated";
 
-    // 2. User — only ~/.code-shell/. We used to also read ~/.claude/settings.json
-    // for "zero-migration from Claude Code", but Claude Code's schema diverges
-    // (e.g. `model` is a string there, an object here). Merging caused boot
-    // crashes on machines that had Claude Code installed but never ran us.
-    // File-level compat (CLAUDE.md, .claude/skills/) is kept elsewhere — only
-    // the settings.json read is dropped.
-    this.loadJsonFile(join(userHome(), ".code-shell", "settings.json"), "user", 1);
+    if (readUser) {
+      // 1. Managed (lowest priority)
+      this.loadJsonFile(join(userHome(), ".code-shell", "settings.managed.json"), "managed", 0);
 
-    // 3. Project
-    this.loadJsonFile(join(this.cwd, ".code-shell", "settings.json"), "project", 2);
+      // 2. User — only ~/.code-shell/. We used to also read ~/.claude/settings.json
+      // for "zero-migration from Claude Code", but Claude Code's schema diverges
+      // (e.g. `model` is a string there, an object here). Merging caused boot
+      // crashes on machines that had Claude Code installed but never ran us.
+      // File-level compat (CLAUDE.md, .claude/skills/) is kept elsewhere — only
+      // the settings.json read is dropped.
+      this.loadJsonFile(join(userHome(), ".code-shell", "settings.json"), "user", 1);
+    }
 
-    // 4. Local
-    this.loadJsonFile(join(this.cwd, ".code-shell", "settings.local.json"), "local", 3);
+    if (readProject) {
+      // 3. Project
+      this.loadJsonFile(join(this.cwd, ".code-shell", "settings.json"), "project", 2);
+
+      // 4. Local
+      this.loadJsonFile(join(this.cwd, ".code-shell", "settings.local.json"), "local", 3);
+    }
 
     // 5. CLI flags (highest priority)
     if (flagOverrides && Object.keys(flagOverrides).length > 0) {
@@ -79,9 +102,10 @@ export class SettingsManager {
     // Auto-migrate legacy models[] in the user settings file. Runs directly
     // on the user-scope file (not the merged result), because the merge
     // collapses provenance and the migration needs to write back to a
-    // single physical file.
+    // single physical file. Gated on readUser: under non-full scope we must
+    // not read — let alone rewrite — the host's ~/.code-shell/settings.json.
     const userPath = join(userHome(), ".code-shell", "settings.json");
-    if (existsSync(userPath)) {
+    if (readUser && existsSync(userPath)) {
       try {
         const userRaw = JSON.parse(readFileSync(userPath, "utf-8")) as Record<string, unknown>;
         const result = migrateModels({

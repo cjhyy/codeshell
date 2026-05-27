@@ -44,7 +44,7 @@ import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-message
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { SettingsManager } from "../settings/manager.js";
+import { SettingsManager, type SettingsScope } from "../settings/manager.js";
 import { FileHistory } from "../session/file-history.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
@@ -140,6 +140,16 @@ export interface EngineConfig {
    * work unchanged — T11 will migrate them.
    */
   runtime?: EngineRuntime;
+  /**
+   * Which disk config layers this Engine may read. Defaults to 'project' —
+   * the safe default: a library/SDK embedding never silently inherits the
+   * host user's personal ~/.code-shell config (keys, models, MCP, hooks); it
+   * only reads the project-level ${cwd}/.code-shell that travels with a repo.
+   * Host-terminal entrypoints (TUI/desktop/CLI) pass 'full' to restore the
+   * managed+user+project+local behavior. 'isolated' reads no disk at all.
+   * Subagents inherit the parent Engine's scope. See SettingsScope.
+   */
+  settingsScope?: SettingsScope;
 }
 
 export interface EngineHookConfig {
@@ -629,6 +639,9 @@ export class Engine {
           sessionStorageDir: this.config.sessionStorageDir,
           headless: this.config.headless,
           sandbox: this.config.sandbox,
+          // Subagents inherit the parent's scope: a child runs in the same
+          // cwd/session, so it should see the same config layers the parent did.
+          settingsScope: this.config.settingsScope ?? "project",
           isSubAgent: true,
         });
         // Where the spawned child Engine's stream events go. AgentTool's
@@ -1641,7 +1654,10 @@ export class Engine {
 
   private getSettingsManager(): SettingsManager {
     if (!this.settingsManager) {
-      this.settingsManager = new SettingsManager(this.config.cwd);
+      this.settingsManager = new SettingsManager(
+        this.config.cwd,
+        this.config.settingsScope ?? "project",
+      );
     }
     return this.settingsManager;
   }
@@ -1701,7 +1717,7 @@ export class Engine {
     }
 
     try {
-      const settingsManager = new SettingsManager(cwd);
+      const settingsManager = new SettingsManager(cwd, this.config.settingsScope ?? "project");
       const settings = settingsManager.get();
       if (settings.permissions?.rules?.length) {
         rules.unshift(...settings.permissions.rules);

@@ -44,7 +44,9 @@ import { CostTracker } from "../cost-tracker.js";
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 
 // Load settings once to derive llm config for the seed engine.
-const settingsManager = new SettingsManager(cwd);
+// Desktop is a host application: read the full disk hierarchy (incl. the
+// user's ~/.code-shell). The SDK default 'project' would skip user config.
+const settingsManager = new SettingsManager(cwd, "full");
 const settings = settingsManager.get();
 
 const llmConfig = {
@@ -61,6 +63,7 @@ const llmConfig = {
 const seedEngine = new Engine({
   llm: llmConfig,
   cwd,
+  settingsScope: "full",
   // No runtime — Engine.populateModelPoolFromSettings() runs in ctor.
 });
 
@@ -111,6 +114,8 @@ const chatManager = new ChatSessionManager({
       llm: resolvedLlmConfig,
       cwd,
       runtime,
+      // Inherit full scope so spawned subagents read user config too.
+      settingsScope: "full",
       // Per-session overrides from the protocol request
       permissionMode: slice.permissionMode,
       preset: slice.preset,

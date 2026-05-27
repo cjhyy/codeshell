@@ -341,7 +341,7 @@ export { logger } from "./logging/logger.js";
 
 // ─── Settings ────────────────────────────────────────────────────
 
-export { SettingsManager } from "./settings/manager.js";
+export { SettingsManager, type SettingsScope } from "./settings/manager.js";
 export { SettingsSchema, validateSettings } from "./settings/schema.js";
 
 // ─── State (runtime singletons shared with TUI) ──────────────────
