@@ -1,7 +1,7 @@
 ---
 name: researcher
 description: Read-only codebase research — investigates and reports, never edits
-model: deepseek-v4-flash
+# model: deepseek-v4-flash   # uncomment to override; omit to reuse the parent model
 maxTurns: 10
 tools:
   - Read
