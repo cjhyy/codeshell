@@ -151,6 +151,10 @@ export interface CodeshellApi {
     name?: string,
   ): Promise<InstalledSkill>;
   uninstallSkill(filePath: string, source: "user" | "project" | "plugin"): Promise<void>;
+  listAgents(cwd: string): Promise<AgentSummary[]>;
+  readAgentBody(filePath: string): Promise<string>;
+  saveAgent(def: AgentDefinitionInput): Promise<AgentSummary>;
+  deleteAgent(name: string): Promise<void>;
   inspectGithubSkill(url: string, existingNames?: string[]): Promise<GithubRepoInspection>;
   installFromGithub(input: GithubSkillInstallInput): Promise<InstalledSkill>;
   probeMcpServers(
@@ -294,6 +298,27 @@ export interface SkillSummary {
   description: string;
   source: "project" | "user" | "plugin";
   filePath: string;
+}
+
+export interface AgentSummary {
+  name: string;
+  description: string;
+  model?: string;
+  maxTurns?: number;
+  tools?: string[];
+  systemPrompt: string;
+  source: "project" | "user";
+  override: boolean;
+  filePath: string;
+}
+
+export interface AgentDefinitionInput {
+  name: string;
+  description: string;
+  model?: string;
+  maxTurns?: number;
+  tools?: string[];
+  systemPrompt: string;
 }
 
 export interface PluginSummary {
