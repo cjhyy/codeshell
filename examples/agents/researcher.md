@@ -1,7 +1,7 @@
 ---
 name: researcher
 description: Read-only codebase research — investigates and reports, never edits
-model: flash
+model: deepseek-v4-flash
 maxTurns: 10
 tools:
   - Read
