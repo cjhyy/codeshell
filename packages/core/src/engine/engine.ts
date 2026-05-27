@@ -186,9 +186,24 @@ export function resolveChildLlm(
   return parentLlm;
 }
 
-/** Load reusable sub-agent role definitions from <cwd>/.code-shell/agents. */
-export function loadAgentDefinitionsForCwd(cwd: string): AgentDefinitionRegistry {
-  return AgentDefinitionRegistry.loadFromDir(`${cwd}/.code-shell/agents`);
+/**
+ * Load reusable sub-agent role definitions, merging:
+ *   1. project-level  <cwd>/.code-shell/agents/*.md   (ships built-ins)
+ *   2. user-level     ~/.code-shell/agents/*.md        (user wins on name)
+ * Names in `disabledAgents` are filtered out so the LLM never sees them.
+ */
+export function loadAgentDefinitionsForCwd(
+  cwd: string,
+  disabledAgents: string[] = [],
+): AgentDefinitionRegistry {
+  const home = homedir();
+  return AgentDefinitionRegistry.loadFromDirs(
+    [
+      { dir: `${cwd}/.code-shell/agents`, source: "project" },
+      { dir: `${home}/.code-shell/agents`, source: "user" },
+    ],
+    disabledAgents,
+  );
 }
 
 const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel"];
@@ -224,7 +239,7 @@ export class Engine {
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
   /** Memoized sub-agent role registry, keyed by the cwd it was loaded from. */
-  private agentDefsCache?: { cwd: string; reg: AgentDefinitionRegistry };
+  private agentDefsCache?: { cwd: string; disabledKey: string; reg: AgentDefinitionRegistry };
 
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
@@ -342,7 +357,10 @@ export class Engine {
     // overhead multiplied across sub-agents outweighs the value, and
     // dispatched tasks should run with minimal surface area.
     if (config.isSubAgent !== true) {
-      loadPluginHooks(this.hooks);
+      // disabledPlugins suppresses a plugin's hooks too (not just its
+      // Skill-tool entries) — see loadPluginHooks. readDisabledLists reads
+      // the same settings the prompt composer / tool context use.
+      loadPluginHooks(this.hooks, this.readDisabledLists().disabledPlugins);
     }
     // settings.hooks → shell-command wrappers. Chain order:
     // plugin (80) → shell (50) → code (default 0).
@@ -1795,10 +1813,34 @@ export class Engine {
    * run({ cwd })) reloads.
    */
   private getAgentDefinitions(cwd: string): AgentDefinitionRegistry {
-    if (this.agentDefsCache?.cwd !== cwd) {
-      this.agentDefsCache = { cwd, reg: loadAgentDefinitionsForCwd(cwd) };
+    const disabledAgents = this.readDisabledAgents();
+    const disabledKey = disabledAgents.slice().sort().join(" ");
+    if (
+      this.agentDefsCache?.cwd !== cwd ||
+      this.agentDefsCache.disabledKey !== disabledKey
+    ) {
+      this.agentDefsCache = {
+        cwd,
+        disabledKey,
+        reg: loadAgentDefinitionsForCwd(cwd, disabledAgents),
+      };
     }
     return this.agentDefsCache.reg;
+  }
+
+  /**
+   * Read settings.disabledAgents. Unlike disabledSkills, sub-agents do
+   * NOT skip this — a disabled role must stay invisible everywhere.
+   */
+  private readDisabledAgents(): string[] {
+    try {
+      const settings = this.getSettingsManager().get() as {
+        disabledAgents?: string[];
+      };
+      return Array.isArray(settings.disabledAgents) ? settings.disabledAgents : [];
+    } catch {
+      return [];
+    }
   }
 
   /**
