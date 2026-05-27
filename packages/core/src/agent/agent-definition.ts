@@ -1,4 +1,4 @@
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 /** A reusable sub-agent role, loaded from a Markdown file. */
 export interface AgentDefinition {
@@ -14,6 +14,12 @@ export interface AgentDefinition {
   tools?: string[];
   /** Markdown body — becomes the child Engine's appendSystemPrompt. */
   systemPrompt: string;
+  /** Where this def was loaded from. Runtime-only; never serialized. */
+  source?: "project" | "user";
+  /** Absolute path of the file it came from. Runtime-only. */
+  filePath?: string;
+  /** True when a user-level def shadows a same-named project-level one. */
+  override?: boolean;
 }
 
 interface RawFrontmatter {
@@ -59,4 +65,23 @@ export function parseAgentDefinition(raw: string, sourceName: string): AgentDefi
     def.tools = fm.tools.filter((t): t is string => typeof t === "string");
   }
   return def;
+}
+
+/**
+ * Serialize an AgentDefinition back to a Markdown file body (YAML
+ * frontmatter + system prompt). Inverse of parseAgentDefinition.
+ * Optional fields that are unset are omitted entirely so an inheriting
+ * role (e.g. model undefined → inherit parent) stays clean on disk.
+ * Runtime-only metadata (source/filePath/override) is never written.
+ */
+export function serializeAgentDefinition(def: AgentDefinition): string {
+  const fm: Record<string, unknown> = {
+    name: def.name,
+    description: def.description,
+  };
+  if (def.model !== undefined) fm.model = def.model;
+  if (def.maxTurns !== undefined) fm.maxTurns = def.maxTurns;
+  if (def.tools !== undefined) fm.tools = def.tools;
+  const yaml = stringifyYaml(fm).trimEnd();
+  return `---\n${yaml}\n---\n${def.systemPrompt}\n`;
 }
