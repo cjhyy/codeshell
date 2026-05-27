@@ -54,13 +54,14 @@ describe("AgentDefinitionRegistry", () => {
     expect(reg.warnings).toEqual([]);
   });
 
-  it("first file with duplicate name wins and records a warning", () => {
+  it("last file with duplicate name wins and is marked override", () => {
     // Non-recursive: only top-level .md files are scanned, sorted by name.
-    // a.md sorts before b.md, so "first" wins.
+    // a.md sorts before b.md, so the later "b.md" overrides — mirroring
+    // how user-level dirs override project-level ones across loadFromDirs.
     write("a.md", "---\nname: dup\ndescription: first\n---\nFirst.");
     write("b.md", "---\nname: dup\ndescription: second\n---\nSecond.");
     const reg = AgentDefinitionRegistry.loadFromDir(dir);
-    expect(reg.get("dup")?.description).toBe("first");
-    expect(reg.warnings.some((w) => w.includes("b.md"))).toBe(true);
+    expect(reg.get("dup")?.description).toBe("second");
+    expect(reg.get("dup")?.override).toBe(true);
   });
 });
