@@ -156,6 +156,25 @@ export interface EngineResult {
   usage: TokenUsage;
 }
 
+/**
+ * Resolve the LLM config for a spawned child Engine.
+ * - `modelKey` set + present in pool → that model's config (over parent base).
+ * - otherwise (no key, no pool, or key miss) → the parent's llm unchanged.
+ * Key miss is a soft fallback, NOT an error: a stale agent definition must not
+ * crash the spawn.
+ */
+export function resolveChildLlm(
+  modelKey: string | undefined,
+  pool: ModelPool | undefined,
+  parentLlm: LLMConfig,
+): LLMConfig {
+  if (modelKey && pool?.has(modelKey)) {
+    const resolved = pool.resolveLLMConfig(modelKey, parentLlm);
+    if (resolved) return resolved;
+  }
+  return parentLlm;
+}
+
 export class Engine {
   private readonly preset: AgentPreset;
   private toolRegistry: ToolRegistry;
@@ -560,8 +579,9 @@ export class Engine {
         const childEnabled = this.config.enabledBuiltinTools?.filter(
           (t) => !NESTED_AGENT_TOOLS.includes(t),
         );
+        const childLlm = resolveChildLlm(req.model, this.modelPool, this.config.llm);
         const child = new Engine({
-          llm: { ...this.config.llm, retryMaxAttempts: 2 },
+          llm: { ...childLlm, retryMaxAttempts: 2 },
           cwd,
           permissionMode: this.config.permissionMode,
           preset: this.preset.name,
