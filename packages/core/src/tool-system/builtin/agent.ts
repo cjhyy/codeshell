@@ -9,6 +9,7 @@
 
 import type { ToolDefinition, StreamCallback } from "../../types.js";
 import type { ToolContext, SubAgentSpawner } from "../context.js";
+import type { AgentDefinitionRegistry } from "../../agent/agent-definition-registry.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { notificationQueue } from "./agent-notifications.js";
@@ -35,6 +36,36 @@ function safeEmit(sink: StreamCallback | undefined, event: Parameters<StreamCall
   }
 }
 
+export interface AgentTypeOverrides {
+  model?: string;
+  maxTurns?: number;
+  toolAllowlist?: string[];
+  appendSystemPrompt?: string;
+}
+
+/**
+ * Resolve an `agent_type` against the role registry into spawn overrides.
+ * Omitted type → empty overrides (ephemeral mode). Unknown type → throw, so
+ * the LLM gets a clear correction instead of silently running a generic agent.
+ */
+export function resolveAgentTypeOverrides(
+  agentType: string | undefined,
+  registry: AgentDefinitionRegistry | undefined,
+): AgentTypeOverrides {
+  if (!agentType) return {};
+  const def = registry?.get(agentType);
+  if (!def) {
+    const available = registry?.list().map((d) => d.name).join(", ") || "(none defined)";
+    throw new Error(`unknown agent_type '${agentType}'. Available: ${available}`);
+  }
+  return {
+    model: def.model,
+    maxTurns: def.maxTurns,
+    toolAllowlist: def.tools,
+    appendSystemPrompt: def.systemPrompt,
+  };
+}
+
 export const agentToolDef: ToolDefinition = {
   name: "Agent",
   description:
@@ -57,6 +88,13 @@ export const agentToolDef: ToolDefinition = {
           "Short label for the agent kind (e.g. 'Explore', 'Plan', 'Research'). " +
           "Shown in the agent dock to identify what kind of work this sub-agent is doing. " +
           "Keep it 1-2 words. Defaults to 'Agent' if omitted.",
+      },
+      agent_type: {
+        type: "string",
+        description:
+          "Optional reusable role defined in .code-shell/agents/*.md (e.g. 'researcher'). " +
+          "Loads that role's model, tool allowlist, turn cap, and system prompt. " +
+          "Omit to run an ad-hoc agent described entirely by 'prompt'.",
       },
       description: {
         type: "string",
@@ -97,6 +135,10 @@ async function runSubAgent(
     prompt: string;
     maxTurns: number;
     signal: AbortSignal;
+    /** Role overrides resolved from agent_type; forwarded to spawner.spawn. */
+    model?: string;
+    toolAllowlist?: string[];
+    appendSystemPrompt?: string;
   },
   /**
    * Optional sink for the user-visible `agent_start` / `agent_end` markers.
@@ -157,7 +199,15 @@ export async function agentTool(
     return "Agent aborted before starting.";
   }
 
-  const maxTurns = (args.max_turns as number) || 15;
+  const agentType = (args.agent_type as string | undefined)?.trim() || undefined;
+  let overrides: AgentTypeOverrides;
+  try {
+    overrides = resolveAgentTypeOverrides(agentType, ctx?.agentDefinitions);
+  } catch (err) {
+    return `Error: ${(err as Error).message}`;
+  }
+
+  const maxTurns = (args.max_turns as number) || overrides.maxTurns || 15;
   const runInBackground = args.run_in_background === true;
   const agentId = nanoid(8);
   const parentStream = spawner.parentStream;
@@ -201,6 +251,9 @@ export async function agentTool(
         description,
         prompt,
         maxTurns,
+        model: overrides.model,
+        toolAllowlist: overrides.toolAllowlist,
+        appendSystemPrompt: overrides.appendSystemPrompt,
         signal: controller.signal,
       },
       parentStream,    // uiStream: agent_start/end → main feed
@@ -307,6 +360,9 @@ export async function agentTool(
       description,
       prompt,
       maxTurns,
+      model: overrides.model,
+      toolAllowlist: overrides.toolAllowlist,
+      appendSystemPrompt: overrides.appendSystemPrompt,
       signal: parentSignal ?? new AbortController().signal,
     });
   } catch (err) {

@@ -605,7 +605,10 @@ export class Engine {
           enabledBuiltinTools: childEnabled,
           disabledBuiltinTools: childDisabled,
           customSystemPrompt: this.config.customSystemPrompt,
-          appendSystemPrompt: this.config.appendSystemPrompt,
+          appendSystemPrompt:
+            [this.config.appendSystemPrompt, req.appendSystemPrompt]
+              .filter(Boolean)
+              .join("\n\n") || undefined,
           maxTurns: req.maxTurns,
           maxContextTokens: this.config.maxContextTokens ?? 200_000,
           sessionStorageDir: this.config.sessionStorageDir,
