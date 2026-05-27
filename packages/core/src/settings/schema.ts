@@ -163,6 +163,9 @@ export const SettingsSchema = z
           url: z.string().optional(),
           transport: z.enum(["stdio", "sse", "streamable-http", "inprocess"]).optional(),
           headers: z.record(z.string()).optional(),
+          // Codex-style on/off switch. Absent or true → connected; only
+          // literal false disables. Filtered in MCPManager.connectAll.
+          enabled: z.boolean().optional(),
         }),
       )
       .default({}),
@@ -182,6 +185,15 @@ export const SettingsSchema = z
      * names (no colon suffix). See scanSkills(opts.disabledPlugins).
      */
     disabledPlugins: z.array(z.string()).default([]),
+
+    /**
+     * Sub-agent role names (the `name` in .code-shell/agents/*.md) to
+     * hide from the registry. A disabled role is filtered out at load
+     * so it never appears in registry.list()/get() — the Agent tool's
+     * agent_type list won't show it and the LLM can't pick it. Mirrors
+     * disabledSkills / disabledPlugins.
+     */
+    disabledAgents: z.array(z.string()).default([]),
 
     instructions: z
       .object({
