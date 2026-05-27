@@ -175,6 +175,31 @@ export function resolveChildLlm(
   return parentLlm;
 }
 
+const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel"];
+
+/**
+ * Compute a child Engine's tool scope.
+ * - `allowlist` set → child enabled = allowlist minus nested-agent tools
+ *   (a per-role tool whitelist, e.g. a read-only researcher).
+ * - `allowlist` undefined → inherit parent enabled/disabled, always with the
+ *   nested-agent tools forced into `disabled` (no grandchildren).
+ */
+export function resolveChildToolScope(
+  allowlist: string[] | undefined,
+  parentDisabled: string[] | undefined,
+  parentEnabled: string[] | undefined,
+): { enabled?: string[]; disabled: string[] } {
+  if (allowlist) {
+    return {
+      enabled: allowlist.filter((t) => !NESTED_AGENT_TOOLS.includes(t)),
+      disabled: [...NESTED_AGENT_TOOLS],
+    };
+  }
+  const disabled = Array.from(new Set([...(parentDisabled ?? []), ...NESTED_AGENT_TOOLS]));
+  const enabled = parentEnabled?.filter((t) => !NESTED_AGENT_TOOLS.includes(t));
+  return { enabled, disabled };
+}
+
 export class Engine {
   private readonly preset: AgentPreset;
   private toolRegistry: ToolRegistry;
@@ -566,18 +591,10 @@ export class Engine {
         // background process explosion), and the sid / approval / dock
         // model assumes a flat parent→children hierarchy. Layered with a
         // runtime check in agent.ts as defense-in-depth.
-        const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel"];
-        const childDisabled = Array.from(
-          new Set([
-            ...(this.config.disabledBuiltinTools ?? []),
-            ...NESTED_AGENT_TOOLS,
-          ]),
-        );
-        // If enabledBuiltinTools is set (explicit allow-list mode), strip
-        // the nested-agent tools from it too so the disable above isn't
-        // contradicted by an explicit allow.
-        const childEnabled = this.config.enabledBuiltinTools?.filter(
-          (t) => !NESTED_AGENT_TOOLS.includes(t),
+        const { enabled: childEnabled, disabled: childDisabled } = resolveChildToolScope(
+          req.toolAllowlist,
+          this.config.disabledBuiltinTools,
+          this.config.enabledBuiltinTools,
         );
         const childLlm = resolveChildLlm(req.model, this.modelPool, this.config.llm);
         const child = new Engine({
