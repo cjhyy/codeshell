@@ -10,6 +10,7 @@
 import type { ToolDefinition, StreamCallback } from "../../types.js";
 import type { ToolContext, SubAgentSpawner } from "../context.js";
 import type { AgentDefinitionRegistry } from "../../agent/agent-definition-registry.js";
+import type { HookRegistry } from "../../hooks/registry.js";
 import { asyncAgentRegistry, MAX_BACKGROUND_AGENTS } from "./agent-registry.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { notificationQueue } from "./agent-notifications.js";
@@ -64,6 +65,22 @@ export function resolveAgentTypeOverrides(
     toolAllowlist: def.tools,
     appendSystemPrompt: def.systemPrompt,
   };
+}
+
+type SubAgentLifecycle = "subagent_start" | "subagent_finish" | "subagent_error";
+
+/**
+ * Emit a sub-agent lifecycle event via the existing `notification` hook,
+ * tagged with a `kind`. No-op when hooks are absent. Fire-and-forget: emit is
+ * async, we deliberately `void` it so bookkeeping never blocks on a handler
+ * (mirrors the background-completion notification below).
+ */
+export function emitSubAgentHook(
+  hooks: HookRegistry | undefined,
+  kind: SubAgentLifecycle,
+  payload: { agentId: string; description: string; text?: string; error?: string },
+): void {
+  void hooks?.emit("notification", { kind, ...payload });
 }
 
 /** Default per-sub-agent wall-clock timeout (5 minutes). */
@@ -166,6 +183,8 @@ async function runSubAgent(
     model?: string;
     toolAllowlist?: string[];
     appendSystemPrompt?: string;
+    /** Engine HookRegistry for lifecycle events. Undefined → no hooks. */
+    hooks?: HookRegistry;
   },
   /**
    * Optional sink for the user-visible `agent_start` / `agent_end` markers.
@@ -187,6 +206,7 @@ async function runSubAgent(
   const startEndSink = uiStream ?? spawner.parentStream;
 
   safeEmit(startEndSink, { type: "agent_start", agentId, name, description });
+  emitSubAgentHook(opts.hooks, "subagent_start", { agentId, description });
 
   // `resetPlanMode` / `restorePlanMode` operated on a module-level singleton
   // that no longer exists. The child Engine is a fresh instance; plan-mode
@@ -195,6 +215,7 @@ async function runSubAgent(
   const text = await spawner.spawn({ ...opts, streamOverride });
   const finalText = text || `Agent completed but produced no text output.`;
   safeEmit(startEndSink, { type: "agent_end", agentId, name, description, text: finalText });
+  emitSubAgentHook(opts.hooks, "subagent_finish", { agentId, description, text: finalText });
   return finalText;
 }
 
@@ -285,6 +306,7 @@ export async function agentTool(
         model: overrides.model,
         toolAllowlist: overrides.toolAllowlist,
         appendSystemPrompt: overrides.appendSystemPrompt,
+        hooks: ctx?.hooks,
         signal: controller.signal,
       },
       parentStream,    // uiStream: agent_start/end → main feed
@@ -404,12 +426,14 @@ export async function agentTool(
           model: overrides.model,
           toolAllowlist: overrides.toolAllowlist,
           appendSystemPrompt: overrides.appendSystemPrompt,
+          hooks: ctx?.hooks,
           signal: syncController.signal,
         }),
       DEFAULT_SUBAGENT_TIMEOUT_MS,
       () => syncController.abort(),
     );
   } catch (err) {
+    emitSubAgentHook(ctx?.hooks, "subagent_error", { agentId, description, error: (err as Error).message });
     safeEmit(parentStream, { type: "agent_end", agentId, name, description, error: (err as Error).message });
     if (parentSignal?.aborted) return "Agent was aborted.";
     return `Agent error: ${(err as Error).message}`;
