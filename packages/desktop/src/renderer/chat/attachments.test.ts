@@ -1,0 +1,78 @@
+import { describe, expect, test } from "bun:test";
+import {
+  decodeWireForDisplay,
+  encodeAttachmentsForWire,
+  titleFromWire,
+  type ImageAttachment,
+} from "./attachments";
+
+function img(over: Partial<ImageAttachment> = {}): ImageAttachment {
+  return {
+    id: "x",
+    name: "shot.png",
+    mime: "image/png",
+    dataUrl: "data:image/png;base64,iVBORw0KGgoAAAA",
+    size: 10,
+    ...over,
+  };
+}
+
+describe("decodeWireForDisplay", () => {
+  test("plain text with no image blocks passes through unchanged", () => {
+    const r = decodeWireForDisplay("hello world");
+    expect(r.text).toBe("hello world");
+    expect(r.images).toEqual([]);
+  });
+
+  test("extracts a single image block, leaving the prose as text", () => {
+    const wire = encodeAttachmentsForWire("look at this", [img()]);
+    const r = decodeWireForDisplay(wire);
+    expect(r.text).toBe("look at this");
+    expect(r.images).toHaveLength(1);
+    expect(r.images[0]!.dataUrl).toBe("data:image/png;base64,iVBORw0KGgoAAAA");
+    expect(r.images[0]!.name).toBe("shot.png");
+    expect(r.images[0]!.mime).toBe("image/png");
+  });
+
+  test("image-only message yields empty text and the image", () => {
+    const wire = encodeAttachmentsForWire("", [img()]);
+    const r = decodeWireForDisplay(wire);
+    expect(r.text).toBe("");
+    expect(r.images).toHaveLength(1);
+  });
+
+  test("preserves order of multiple images", () => {
+    const wire = encodeAttachmentsForWire("two", [
+      img({ name: "a.png" }),
+      img({ name: "b.png" }),
+    ]);
+    const r = decodeWireForDisplay(wire);
+    expect(r.images.map((i) => i.name)).toEqual(["a.png", "b.png"]);
+  });
+
+  test("decodes HTML-escaped names back to original", () => {
+    const wire = encodeAttachmentsForWire("", [img({ name: 'a&b"<c>.png' })]);
+    const r = decodeWireForDisplay(wire);
+    expect(r.images[0]!.name).toBe('a&b"<c>.png');
+  });
+});
+
+describe("titleFromWire", () => {
+  test("uses the prose when present", () => {
+    const wire = encodeAttachmentsForWire("fix the bug", [img()]);
+    expect(titleFromWire(wire)).toBe("fix the bug");
+  });
+
+  test("image-only message titles as an image placeholder, never base64", () => {
+    const wire = encodeAttachmentsForWire("", [img()]);
+    const title = titleFromWire(wire);
+    expect(title).not.toContain("base64");
+    expect(title).not.toContain("codeshell-image");
+    expect(title).toBe("[图片]");
+  });
+
+  test("multiple image-only message reflects the count", () => {
+    const wire = encodeAttachmentsForWire("", [img(), img()]);
+    expect(titleFromWire(wire)).toBe("[图片 ×2]");
+  });
+});

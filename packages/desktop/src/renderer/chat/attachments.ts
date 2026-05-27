@@ -138,6 +138,64 @@ function escapeAttr(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
+function unescapeAttr(s: string): string {
+  return s
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+export interface DecodedWire {
+  /** Prose with image blocks removed and surrounding whitespace trimmed. */
+  text: string;
+  /** Images recovered from `<codeshell-image>` blocks, in source order. */
+  images: { name: string; mime: string; dataUrl: string }[];
+}
+
+const WIRE_IMAGE_RE =
+  /<codeshell-image\b([^>]*)>([\s\S]*?)<\/codeshell-image>/g;
+
+/**
+ * Derive a sidebar session title from a wire string. Image base64 must
+ * never leak into the title — an image-only turn gets a `[图片]` placeholder
+ * instead of 60 chars of `data:image/png;base64,…`.
+ */
+export function titleFromWire(wire: string): string {
+  const { text, images } = decodeWireForDisplay(wire);
+  if (text) return text;
+  if (images.length > 1) return `[图片 ×${images.length}]`;
+  if (images.length === 1) return "[图片]";
+  return text;
+}
+
+/**
+ * Inverse of {@link encodeAttachmentsForWire}, used by the chat stream to
+ * render a sent user turn: the wire string embeds base64 image blocks that
+ * must show as thumbnails, not as a wall of base64 text.
+ */
+export function decodeWireForDisplay(wire: string): DecodedWire {
+  if (typeof wire !== "string" || wire.indexOf("<codeshell-image") === -1) {
+    return { text: wire ?? "", images: [] };
+  }
+  const images: DecodedWire["images"] = [];
+  WIRE_IMAGE_RE.lastIndex = 0;
+  const text = wire
+    .replace(WIRE_IMAGE_RE, (_m, attrsRaw: string, body: string) => {
+      const mime = /mime="([^"]*)"/.exec(attrsRaw)?.[1] ?? "image/png";
+      const nameRaw = /name="([^"]*)"/.exec(attrsRaw)?.[1] ?? "";
+      images.push({
+        mime,
+        name: unescapeAttr(nameRaw),
+        dataUrl: body.trim(),
+      });
+      return "";
+    })
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return { text, images };
+}
+
 /**
  * Extract files from a clipboard paste, ignoring text items. Returns
  * empty if the user only pasted text — callers should fall through to

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { Markdown } from "./Markdown";
@@ -10,6 +10,8 @@ import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
 import { buildStreamItems } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
+import { decodeWireForDisplay } from "./chat/attachments";
+import { Lightbox } from "./chat/Lightbox";
 
 interface Props {
   messages: Message[];
@@ -38,6 +40,9 @@ export function MessageStream({
   const ref = useStickToBottom<HTMLDivElement>(
     `${messages.length}:${trailingKey ?? ""}`,
   );
+  const [zoomed, setZoomed] = useState<{ src: string; alt: string } | null>(
+    null,
+  );
 
   // Collapse adjacent tool calls of the same category into a single
   // foldable group, but only for tools BEFORE the last assistant
@@ -56,12 +61,34 @@ export function MessageStream({
             // Tool cards now display their full args/result body inline
             // when expanded — no separate inspector pane to feed.
             return <ToolCard key={m.id} message={m} />;
-          case "user":
+          case "user": {
+            const { text, images } = decodeWireForDisplay(m.text);
             return (
               <div key={m.id} className="msg-row msg-row-user">
-                <div className="msg-user-bubble">{m.text}</div>
+                <div className="msg-user-bubble">
+                  {text && <div className="msg-user-text">{text}</div>}
+                  {images.length > 0 && (
+                    <div className="msg-user-images">
+                      {images.map((img, i) => (
+                        <img
+                          key={i}
+                          src={img.dataUrl}
+                          alt={img.name || "image"}
+                          title={img.name || undefined}
+                          onClick={() =>
+                            setZoomed({
+                              src: img.dataUrl,
+                              alt: img.name || "image",
+                            })
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             );
+          }
           case "assistant":
             return (
               <div
@@ -109,6 +136,13 @@ export function MessageStream({
         }
       })}
       {trailing}
+      {zoomed && (
+        <Lightbox
+          src={zoomed.src}
+          alt={zoomed.alt}
+          onClose={() => setZoomed(null)}
+        />
+      )}
     </div>
   );
 }

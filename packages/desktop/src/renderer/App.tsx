@@ -30,6 +30,7 @@ import {
   NO_REPO_KEY,
   type SessionIndex,
 } from "./transcripts";
+import { titleFromWire } from "./chat/attachments";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
@@ -619,7 +620,7 @@ function App() {
     // and persist engineSessionId so future sends in this UI session
     // pass the same value (and the engine resumes the right convo).
     setSessionIndices((prev) => {
-      const touched = touchSession(activeRepoId, sid, text);
+      const touched = touchSession(activeRepoId, sid, titleFromWire(text));
       const next = summary?.engineSessionId
         ? touched
         : bindEngineSession(activeRepoId, sid, engineSessionId);
