@@ -23,7 +23,10 @@ breaking.
   synchronous sub-agents have a wall-clock timeout (default 5 minutes).
 - Sub-agent spawns emit `subagent_start` / `subagent_finish` / `subagent_error`
   lifecycle events through the existing `notification` hook.
-- Ships a sample `researcher` role at `examples/agents/researcher.md`.
+- Ships sample roles under `examples/agents/`: `researcher` and `explorer`
+  (read-only), `planner` (read-only planning), and `general-purpose` (full
+  tools). Their `model` is left unset so they reuse the parent model — set
+  `model:` in the frontmatter to route a role to a specific pool key.
 
 ## [0.5.0-rc.0] - 2026-05-23
 
