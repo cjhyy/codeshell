@@ -59,6 +59,7 @@ import {
   type AgentPresetName,
 } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
+import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
 import { ProviderCatalog } from "../llm/provider-catalog.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import {
@@ -175,6 +176,11 @@ export function resolveChildLlm(
   return parentLlm;
 }
 
+/** Load reusable sub-agent role definitions from <cwd>/.code-shell/agents. */
+export function loadAgentDefinitionsForCwd(cwd: string): AgentDefinitionRegistry {
+  return AgentDefinitionRegistry.loadFromDir(`${cwd}/.code-shell/agents`);
+}
+
 const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel"];
 
 /**
@@ -207,6 +213,8 @@ export class Engine {
   private sessionManager: SessionManager;
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
+  /** Memoized sub-agent role registry, keyed by the cwd it was loaded from. */
+  private agentDefsCache?: { cwd: string; reg: AgentDefinitionRegistry };
 
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
@@ -679,6 +687,7 @@ export class Engine {
     const toolCtx: ToolContext = {
       ...this.buildToolContext(),
       subAgentSpawner,
+      agentDefinitions: this.getAgentDefinitions(cwd),
       sandbox: sandboxBackend,
       cwd,
       // TodoWrite reads this to push task_update events independently
@@ -1755,6 +1764,18 @@ export class Engine {
     } else {
       this.planMode = value;
     }
+  }
+
+  /**
+   * Sub-agent role registry for the given cwd, memoized per-cwd so the
+   * directory is read once rather than every turn. A new cwd (e.g. via
+   * run({ cwd })) reloads.
+   */
+  private getAgentDefinitions(cwd: string): AgentDefinitionRegistry {
+    if (this.agentDefsCache?.cwd !== cwd) {
+      this.agentDefsCache = { cwd, reg: loadAgentDefinitionsForCwd(cwd) };
+    }
+    return this.agentDefsCache.reg;
   }
 
   /**
