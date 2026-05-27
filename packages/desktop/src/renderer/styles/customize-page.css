@@ -67,6 +67,16 @@
 }
 .customize-plugin-row-check { padding-top: 2px; }
 .customize-plugin-row-check input { transform: scale(1.05); cursor: pointer; }
+
+/* Small source tag used in the subagent list (内置 / 已覆盖 / 自定义). */
+.ps-badge {
+  flex: none;
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
+}
 .customize-plugin-row-main {
   flex: 1;
   min-width: 0;
@@ -269,5 +279,18 @@
    renderer ships under Electron. */
 .settings-page-module-body:has(.customize-host) {
   max-width: none;
+}
+
+/* Standalone full-screen host (sidebar-top "技能与插件" entry). Mirrors
+   the McpView/RunsView chrome: a section header above the three-pane
+   grid, the whole thing filling the main content column. */
+.customize-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  padding: var(--sp-3);
+  gap: var(--sp-2);
+  overflow: hidden;
 }
 
