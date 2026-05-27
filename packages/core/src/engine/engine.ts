@@ -389,27 +389,34 @@ export class Engine {
         // We then switch the pool and write the resolved entry's credentials
         // into config.llm, so the first run() uses the right endpoint instead
         // of whatever env-derived fallback repl.ts seeded earlier.
-        const activeKey = (settings as { activeKey?: string }).activeKey;
-        let match: (typeof settings.models)[number] | undefined;
-        if (activeKey) {
-          match = settings.models.find((m: any) => m.key === activeKey);
-        }
-        if (!match) {
-          const currentModel = this.config.llm.model;
-          // OpenRouter stores entries as "provider/model-name"; the top-level
-          // settings.model.name is just "model-name". Match either form.
-          match = settings.models.find(
-            (m: any) =>
-              m.model === currentModel ||
-              (currentModel && m.model?.endsWith(`/${currentModel}`)),
-          );
-        }
-        if (match) {
-          const entry = this.modelPool.switch(match.key);
-          this.config = {
-            ...this.config,
-            llm: this.modelPool.toLLMConfig(entry, this.config.llm),
-          };
+        // Sub-agents skip the activeKey resync: their llm is chosen by the
+        // parent's resolveChildLlm (per-role model routing). activeKey is the
+        // *user's* current UI model selection and must not clobber a child's
+        // routed model — without this guard a role's `model: flash` is silently
+        // overridden back to whatever the user has active in the foreground.
+        if (this.config.isSubAgent !== true) {
+          const activeKey = (settings as { activeKey?: string }).activeKey;
+          let match: (typeof settings.models)[number] | undefined;
+          if (activeKey) {
+            match = settings.models.find((m: any) => m.key === activeKey);
+          }
+          if (!match) {
+            const currentModel = this.config.llm.model;
+            // OpenRouter stores entries as "provider/model-name"; the top-level
+            // settings.model.name is just "model-name". Match either form.
+            match = settings.models.find(
+              (m: any) =>
+                m.model === currentModel ||
+                (currentModel && m.model?.endsWith(`/${currentModel}`)),
+            );
+          }
+          if (match) {
+            const entry = this.modelPool.switch(match.key);
+            this.config = {
+              ...this.config,
+              llm: this.modelPool.toLLMConfig(entry, this.config.llm),
+            };
+          }
         }
       } else if (this.config.llm.apiKey) {
         // Auto-populate pool from the configured API key when models[] is empty.
