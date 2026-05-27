@@ -55,8 +55,17 @@ export {
 
 // ─── Engine (primary API) ────────────────────────────────────────
 
-export { Engine } from "./engine/engine.js";
+export { Engine, loadAgentDefinitionsForCwd } from "./engine/engine.js";
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/engine.js";
+export {
+  parseAgentDefinition,
+  serializeAgentDefinition,
+  type AgentDefinition,
+} from "./agent/agent-definition.js";
+export {
+  AgentDefinitionRegistry,
+  type AgentSourceDir,
+} from "./agent/agent-definition-registry.js";
 export type { CostStateStore, CostStateSnapshot } from "./engine/cost-store.js";
 export { EngineRuntime } from "./engine/runtime.js";
 export type { EngineRuntimeOptions } from "./engine/runtime.js";

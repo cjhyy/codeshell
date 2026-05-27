@@ -138,6 +138,8 @@ export const agentToolDef: ToolDefinition = {
         description:
           "Optional reusable role defined in .code-shell/agents/*.md (e.g. 'researcher'). " +
           "Loads that role's model, tool allowlist, turn cap, and system prompt. " +
+          "Disabled roles are not available. If you pass an unknown role you'll get " +
+          "an error listing the currently available roles. " +
           "Omit to run an ad-hoc agent described entirely by 'prompt'.",
       },
       description: {
