@@ -37,6 +37,13 @@ import {
 } from "./skills-service.js";
 import { listPlugins } from "./plugins-service.js";
 import {
+  listAgents,
+  readAgentBody,
+  saveAgent,
+  deleteAgent,
+} from "./agents-service.js";
+import type { AgentDefinition } from "@cjhyy/code-shell-core";
+import {
   inspectRepo,
   installFromGithub,
   type InstallFromGithubInput,
@@ -232,6 +239,25 @@ ipcMain.handle(
     return uninstallSkill(filePath, source);
   },
 );
+
+ipcMain.handle("agents:list", async (_e, cwd: string) => {
+  if (typeof cwd !== "string") throw new Error("agents:list requires cwd");
+  return listAgents(cwd);
+});
+ipcMain.handle("agents:read", async (_e, filePath: string) => {
+  if (typeof filePath !== "string") throw new Error("agents:read requires filePath");
+  return readAgentBody(filePath);
+});
+ipcMain.handle("agents:save", async (_e, def: AgentDefinition) => {
+  if (!def || typeof def !== "object") throw new Error("agents:save requires def");
+  if (typeof def.name !== "string" || typeof def.description !== "string")
+    throw new Error("agents:save: name and description are required");
+  return saveAgent(def);
+});
+ipcMain.handle("agents:delete", async (_e, name: string) => {
+  if (typeof name !== "string" || !name) throw new Error("agents:delete requires name");
+  return deleteAgent(name);
+});
 
 ipcMain.handle("skills:inspectGithub", async (_e, url: string, existingNames?: unknown) => {
   if (typeof url !== "string" || !url) {
