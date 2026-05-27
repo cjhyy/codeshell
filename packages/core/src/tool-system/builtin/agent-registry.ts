@@ -14,6 +14,9 @@
 
 export type AsyncAgentStatus = "running" | "completed" | "failed" | "cancelled";
 
+/** Process-wide cap on concurrent background sub-agents (aligns with Codex max_threads=6). */
+export const MAX_BACKGROUND_AGENTS = 6;
+
 /**
  * Minimal structural shape for an entry in an agent's transcript. We avoid
  * importing the UI's `ChatEntry` here to prevent a tool-system → ui import
@@ -62,6 +65,11 @@ class AsyncAgentRegistry {
   hasRunning = (): boolean => {
     return this.snapshot.some((e) => e.status === "running");
   };
+
+  /** Count of agents currently in the "running" state (cap enforcement). */
+  runningCount(): number {
+    return this.snapshot.filter((e) => e.status === "running").length;
+  }
 
   private notify(): void {
     this.snapshot = [...this.agents.values()];

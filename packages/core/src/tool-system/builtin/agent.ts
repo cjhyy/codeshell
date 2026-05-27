@@ -10,7 +10,7 @@
 import type { ToolDefinition, StreamCallback } from "../../types.js";
 import type { ToolContext, SubAgentSpawner } from "../context.js";
 import type { AgentDefinitionRegistry } from "../../agent/agent-definition-registry.js";
-import { asyncAgentRegistry } from "./agent-registry.js";
+import { asyncAgentRegistry, MAX_BACKGROUND_AGENTS } from "./agent-registry.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { notificationQueue } from "./agent-notifications.js";
 import { nanoid } from "nanoid";
@@ -218,6 +218,10 @@ export async function agentTool(
   // (background agents survive the spawning turn). Cancellation goes
   // through AgentCancel(agent_id).
   if (runInBackground) {
+    if (asyncAgentRegistry.runningCount() >= MAX_BACKGROUND_AGENTS) {
+      return `Error: too many background agents running (limit ${MAX_BACKGROUND_AGENTS}). ` +
+        `Wait for some to finish or cancel one with AgentCancel(agent_id) before launching more.`;
+    }
     const controller = new AbortController();
     asyncAgentRegistry.register({
       agentId,
