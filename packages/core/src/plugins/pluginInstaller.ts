@@ -159,6 +159,24 @@ function shortSha(sha: string | undefined): string {
   return sha.slice(0, 12);
 }
 
+/**
+ * Compare a marketplace-declared SHA against the cloned HEAD. The
+ * declaration is allowed to be a short prefix (>= 7 chars, standard git
+ * abbreviation length); for stricter integrity guarantees marketplaces
+ * should pin the full 40-char hash. Case-insensitive.
+ *
+ * Exported so a unit test can pin the policy without spinning up a real
+ * clone.
+ */
+export function shaMatches(declared: string, actual: string): boolean {
+  if (typeof declared !== "string" || typeof actual !== "string") return false;
+  const d = declared.trim().toLowerCase();
+  const a = actual.trim().toLowerCase();
+  if (d.length < 7) return false; // refuse 6-or-less; too collision-prone
+  if (d.length > 40) return false; // not a valid SHA
+  return a.startsWith(d);
+}
+
 async function materialize(
   source: PluginEntrySource,
   marketplaceInstallLocation: string,
@@ -190,6 +208,16 @@ async function materialize(
       if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
       return r;
     }
+    // Supply-chain check: when the marketplace entry pins a SHA, fail the
+    // install if the cloned HEAD doesn't match. Without this the `sha`
+    // field is decorative — present in metadata, never enforced.
+    if (source.sha && !shaMatches(source.sha, r.sha)) {
+      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      return {
+        ok: false,
+        error: `sha mismatch for ${plugin}: expected ${source.sha}, got ${r.sha}`,
+      };
+    }
     const version = shortSha(r.sha);
     const finalDir = pluginCacheDir(marketplace, plugin, version);
     if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true });
@@ -204,6 +232,13 @@ async function materialize(
     if (!r.ok) {
       if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
       return r;
+    }
+    if (source.sha && !shaMatches(source.sha, r.sha)) {
+      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      return {
+        ok: false,
+        error: `sha mismatch for ${plugin}: expected ${source.sha}, got ${r.sha}`,
+      };
     }
     const version = shortSha(r.sha);
     const finalDir = pluginCacheDir(marketplace, plugin, version);
