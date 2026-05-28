@@ -1,11 +1,11 @@
-import React, { useState, memo } from "react";
+import React, { useState, useEffect, memo } from "react";
 import type { AgentMessage } from "../types";
 import { StatusDot } from "../ui/StatusDot";
 import { ToolCard } from "../tool-cards";
 import { Markdown } from "../Markdown";
 
-function formatElapsed(startedAt: number, endedAt?: number): string {
-  const ms = (endedAt ?? Date.now()) - startedAt;
+function formatElapsed(startedAt: number, now: number): string {
+  const ms = now - startedAt;
   if (ms < 1000) return `${ms}ms`;
   const s = Math.floor(ms / 1000);
   if (s < 60) return `${s}s`;
@@ -14,10 +14,27 @@ function formatElapsed(startedAt: number, endedAt?: number): string {
   return rem === 0 ? `${m}m` : `${m}m${rem}s`;
 }
 
+function useElapsed(startedAt: number, endedAt: number | undefined): string {
+  // For a completed agent we anchor `now` to endedAt and never tick.
+  // For a running agent we tick once per second so the elapsed text
+  // updates at most 1×/s regardless of how many stream events arrive.
+  const [now, setNow] = useState<number>(() => endedAt ?? Date.now());
+  useEffect(() => {
+    if (endedAt !== undefined) {
+      setNow(endedAt);
+      return;
+    }
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [endedAt]);
+  return formatElapsed(startedAt, now);
+}
+
 function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   const [expanded, setExpanded] = useState(false);
   const status = message.error ? "err" : message.done ? "ok" : "running";
-  const elapsed = formatElapsed(message.startedAt, message.endedAt);
+  const elapsed = useElapsed(message.startedAt, message.endedAt);
   const hasBody = message.toolCalls.length > 0 || !!message.text || !!message.error;
 
   return (
