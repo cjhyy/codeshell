@@ -1,8 +1,14 @@
 /**
  * Git utility functions for the git workflow commands.
+ *
+ * Every call goes through execFileSync with an argv array — no command
+ * strings, no shell interpolation. Even arguments that look "safe" (already
+ * quoted, hard-coded) are passed as separate argv tokens so a future caller
+ * can't accidentally widen the attack surface by interpolating user input
+ * into the string form.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 export interface GitStatusEntry {
   status: string;
@@ -16,9 +22,19 @@ export interface GitLogEntry {
   date: string;
 }
 
+/** Run git with an argv array and return its trimmed stdout. */
+function git(cwd: string, args: string[], timeoutMs = 10000): string {
+  return execFileSync("git", args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
+}
+
+/** Run gh with an argv array and return its trimmed stdout. */
+function gh(cwd: string, args: string[], timeoutMs = 10000): string {
+  return execFileSync("gh", args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
+}
+
 export function isGitRepo(cwd: string): boolean {
   try {
-    execSync("git rev-parse --is-inside-work-tree", { cwd, encoding: "utf-8", timeout: 5000 });
+    git(cwd, ["rev-parse", "--is-inside-work-tree"], 5000);
     return true;
   } catch {
     return false;
@@ -26,11 +42,11 @@ export function isGitRepo(cwd: string): boolean {
 }
 
 export function getCurrentBranch(cwd: string): string {
-  return execSync("git branch --show-current", { cwd, encoding: "utf-8", timeout: 5000 }).trim();
+  return git(cwd, ["branch", "--show-current"], 5000);
 }
 
 export function getGitStatus(cwd: string): GitStatusEntry[] {
-  const raw = execSync("git status --porcelain", { cwd, encoding: "utf-8", timeout: 10000 }).trim();
+  const raw = git(cwd, ["status", "--porcelain"], 10000);
   if (!raw) return [];
   return raw.split("\n").map((line) => ({
     status: line.slice(0, 2).trim(),
@@ -39,24 +55,30 @@ export function getGitStatus(cwd: string): GitStatusEntry[] {
 }
 
 export function getGitDiff(cwd: string, opts?: { staged?: boolean; file?: string }): string {
-  const args = ["git", "diff", "--no-color"];
+  const args = ["diff", "--no-color"];
   if (opts?.staged) args.push("--staged");
+  // `--` terminates option parsing so a file path starting with `-` can't
+  // be re-interpreted as a flag.
   if (opts?.file) args.push("--", opts.file);
-  return execSync(args.join(" "), { cwd, encoding: "utf-8", timeout: 30000 }).trim();
+  return git(cwd, args, 30000);
 }
 
 export function getGitDiffStat(cwd: string, opts?: { staged?: boolean; file?: string }): string {
-  const args = ["git", "diff", "--stat", "--no-color"];
+  const args = ["diff", "--stat", "--no-color"];
   if (opts?.staged) args.push("--staged");
   if (opts?.file) args.push("--", opts.file);
-  return execSync(args.join(" "), { cwd, encoding: "utf-8", timeout: 10000 }).trim();
+  return git(cwd, args, 10000);
 }
 
 export function getGitLog(cwd: string, n = 10): GitLogEntry[] {
-  const raw = execSync(
-    `git log --oneline --format="%H|%s|%an|%ci" -${n}`,
-    { cwd, encoding: "utf-8", timeout: 10000 },
-  ).trim();
+  // `n` is numeric — coerce/validate to keep the argv clean even if a caller
+  // hands us a string.
+  const count = Number.isFinite(n) && n > 0 ? Math.floor(n) : 10;
+  const raw = git(
+    cwd,
+    ["log", "--oneline", "--format=%H|%s|%an|%ci", `-${count}`],
+    10000,
+  );
   if (!raw) return [];
   return raw.split("\n").map((line) => {
     const [hash, message, author, date] = line.split("|");
@@ -66,19 +88,24 @@ export function getGitLog(cwd: string, n = 10): GitLogEntry[] {
 
 export function getRemoteUrl(cwd: string): string | undefined {
   try {
-    return execSync("git remote get-url origin", { cwd, encoding: "utf-8", timeout: 5000 }).trim();
+    return git(cwd, ["remote", "get-url", "origin"], 5000);
   } catch {
     return undefined;
   }
 }
 
 export function gitAdd(cwd: string, files: string[] = ["."]): void {
-  const fileArgs = files.map((f) => `"${f}"`).join(" ");
-  execSync(`git add ${fileArgs}`, { cwd, timeout: 10000 });
+  // `--` ensures a path starting with `-` cannot be parsed as a flag.
+  // Each file is its own argv token, so spaces / quotes / non-ASCII pass
+  // through verbatim with no shell parsing.
+  execFileSync("git", ["add", "--", ...files], { cwd, timeout: 10000 });
 }
 
 export function gitCommit(cwd: string, message: string): string {
-  return execSync(`git commit -m ${JSON.stringify(message)}`, {
+  // Pre-fix this used `JSON.stringify(message)` which only happened to be
+  // safe because JSON.stringify covers most shell metacharacters — but it's
+  // not real escaping. The argv form is.
+  return execFileSync("git", ["commit", "-m", message], {
     cwd,
     encoding: "utf-8",
     timeout: 30000,
@@ -86,7 +113,7 @@ export function gitCommit(cwd: string, message: string): string {
 }
 
 export function gitListBranches(cwd: string): { name: string; current: boolean }[] {
-  const raw = execSync("git branch --no-color", { cwd, encoding: "utf-8", timeout: 5000 }).trim();
+  const raw = git(cwd, ["branch", "--no-color"], 5000);
   if (!raw) return [];
   return raw.split("\n").map((line) => ({
     current: line.startsWith("*"),
@@ -95,13 +122,23 @@ export function gitListBranches(cwd: string): { name: string; current: boolean }
 }
 
 export function gitCheckout(cwd: string, branch: string, create = false): void {
-  const flag = create ? "-b" : "";
-  execSync(`git checkout ${flag} ${branch}`, { cwd, timeout: 10000 });
+  // argv form defeats shell injection. We additionally reject branch names
+  // that start with `-` so a value like `--orphan` can't slip through git's
+  // own option parser (the trailing `--` trick doesn't help on checkout:
+  // git interprets it as the option's value, not as an option terminator).
+  if (typeof branch !== "string" || branch.length === 0) {
+    throw new Error("branch must be a non-empty string");
+  }
+  if (branch.startsWith("-")) {
+    throw new Error(`refusing branch name that starts with '-': ${branch}`);
+  }
+  const args = create ? ["checkout", "-b", branch] : ["checkout", branch];
+  execFileSync("git", args, { cwd, timeout: 10000 });
 }
 
 export function ghAvailable(): boolean {
   try {
-    execSync("gh --version", { encoding: "utf-8", timeout: 5000 });
+    execFileSync("gh", ["--version"], { encoding: "utf-8", timeout: 5000 });
     return true;
   } catch {
     return false;
@@ -109,9 +146,12 @@ export function ghAvailable(): boolean {
 }
 
 export function ghPrComments(cwd: string, prUrl: string): string {
-  return execSync(`gh pr view ${prUrl} --comments --json comments -q ".comments[].body"`, {
+  // Pre-fix `gh pr view ${prUrl}` interpolated the URL directly. argv form
+  // means even a value like "$(rm -rf ~)" is sent to gh as a literal
+  // positional argument (which gh will then reject as a bad PR URL).
+  return gh(
     cwd,
-    encoding: "utf-8",
-    timeout: 30000,
-  }).trim();
+    ["pr", "view", prUrl, "--comments", "--json", "comments", "-q", ".comments[].body"],
+    30000,
+  );
 }
