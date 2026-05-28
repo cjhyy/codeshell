@@ -119,9 +119,44 @@ describe("maskSecretValue", () => {
     expect(maskSecretValue("headers.authorization", "Bearer xyz")).toBe("[redacted]");
   });
 
-  test("passes through non-secret values unchanged", () => {
+  test("passes through non-secret scalar values unchanged", () => {
     expect(maskSecretValue("model", "claude-opus-4-7")).toBe("claude-opus-4-7");
     expect(maskSecretValue("temperature", 0.7)).toBe(0.7);
     expect(maskSecretValue("permissionMode", "acceptEdits")).toBe("acceptEdits");
+  });
+
+  // Regression: pre-fix, masker only inspected the top-level key string.
+  // config_get("llm") and config_get("providers") returned objects whose
+  // nested apiKey fields were untouched.
+  test("recurses into object values (config_get('llm'))", () => {
+    const out = maskSecretValue("llm", {
+      provider: "anthropic",
+      model: "claude-opus-4-7",
+      apiKey: "sk-ant-LEAKED",
+      baseUrl: "https://api.example.com",
+    });
+    expect(typeof out).toBe("object");
+    expect((out as { apiKey: string }).apiKey).toBe("[redacted]");
+    expect((out as { provider: string }).provider).toBe("anthropic");
+    expect(JSON.stringify(out)).not.toContain("LEAKED");
+  });
+
+  test("recurses into arrays of objects (config_get('providers'))", () => {
+    const providers = [
+      { key: "anthropic", apiKey: "sk-ant-LEAKED-A", baseUrl: "x" },
+      { key: "openai", apiKey: "sk-LEAKED-B", baseUrl: "y" },
+    ];
+    const out = maskSecretValue("providers", providers) as Array<{ apiKey: string }>;
+    expect(out[0].apiKey).toBe("[redacted]");
+    expect(out[1].apiKey).toBe("[redacted]");
+    expect(JSON.stringify(out)).not.toContain("LEAKED");
+  });
+
+  test("primitive non-secret values still pass straight through", () => {
+    // Sanity: the object-recurse branch must not accidentally walk
+    // primitives.
+    expect(maskSecretValue("count", 42)).toBe(42);
+    expect(maskSecretValue("enabled", true)).toBe(true);
+    expect(maskSecretValue("nothing", null)).toBeNull();
   });
 });

@@ -4,6 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { writeTool } from "../packages/core/src/tool-system/builtin/write.js";
 import { editTool } from "../packages/core/src/tool-system/builtin/edit.js";
+import { readTool } from "../packages/core/src/tool-system/builtin/read.js";
+import { globTool } from "../packages/core/src/tool-system/builtin/glob.js";
+import { grepTool } from "../packages/core/src/tool-system/builtin/grep.js";
 
 /**
  * Task 6 — verify the file tools actually consult PathPolicy when called
@@ -116,5 +119,100 @@ describe("Edit tool — PathPolicy wired", () => {
     // File must be untouched.
     const fs = await import("node:fs/promises");
     expect(await fs.readFile(target, "utf-8")).toBe("hello world");
+  });
+});
+
+describe("Read tool — PathPolicy wired", () => {
+  let workspace: string;
+  let outside: string;
+
+  beforeEach(() => {
+    workspace = mkdtempSync(join(tmpdir(), "codeshell-pp-read-ws-"));
+    outside = mkdtempSync(join(tmpdir(), "codeshell-pp-read-out-"));
+    delete process.env.CODESHELL_PATH_POLICY;
+  });
+
+  afterEach(() => {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  });
+
+  test("in-workspace read passes through", async () => {
+    const target = join(workspace, "ok.txt");
+    writeFileSync(target, "hello");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const out = await readTool({ file_path: target }, ctx(workspace) as any);
+    expect(out).toContain("hello");
+  });
+
+  test("outside-workspace read is refused", async () => {
+    const target = join(outside, "leaked.txt");
+    writeFileSync(target, "secret-contents");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const out = await readTool({ file_path: target }, ctx(workspace) as any);
+    expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
+    // Critical: the body must NOT appear in the error message.
+    expect(out).not.toContain("secret-contents");
+  });
+
+  test("legacy caller without ctx still works (bypass)", async () => {
+    const target = join(outside, "legacy.txt");
+    writeFileSync(target, "legacy");
+    const out = await readTool({ file_path: target });
+    expect(out).toContain("legacy");
+  });
+});
+
+describe("Glob tool — PathPolicy wired", () => {
+  let workspace: string;
+  let outside: string;
+
+  beforeEach(() => {
+    workspace = mkdtempSync(join(tmpdir(), "codeshell-pp-glob-ws-"));
+    outside = mkdtempSync(join(tmpdir(), "codeshell-pp-glob-out-"));
+    writeFileSync(join(outside, "a.txt"), "x");
+    writeFileSync(join(outside, "b.txt"), "y");
+    delete process.env.CODESHELL_PATH_POLICY;
+  });
+
+  afterEach(() => {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  });
+
+  test("Glob with outside-workspace path is refused", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const out = await globTool({ pattern: "*.txt", path: outside }, ctx(workspace) as any);
+    expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
+    // Must not have enumerated the files — names must not leak.
+    expect(out).not.toContain("a.txt");
+    expect(out).not.toContain("b.txt");
+  });
+});
+
+describe("Grep tool — PathPolicy wired", () => {
+  let workspace: string;
+  let outside: string;
+
+  beforeEach(() => {
+    workspace = mkdtempSync(join(tmpdir(), "codeshell-pp-grep-ws-"));
+    outside = mkdtempSync(join(tmpdir(), "codeshell-pp-grep-out-"));
+    writeFileSync(join(outside, "x.txt"), "MAGIC_TOKEN_SHOULD_NOT_LEAK");
+    delete process.env.CODESHELL_PATH_POLICY;
+  });
+
+  afterEach(() => {
+    rmSync(workspace, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  });
+
+  test("Grep with outside-workspace path is refused", async () => {
+    const out = await grepTool(
+      { pattern: "MAGIC_TOKEN_SHOULD_NOT_LEAK", path: outside },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ctx(workspace) as any,
+    );
+    expect(out.toLowerCase()).toMatch(/approval|outside|path policy/);
+    expect(out).not.toContain("MAGIC_TOKEN_SHOULD_NOT_LEAK");
   });
 });

@@ -38,6 +38,7 @@ import { agentNotificationBus } from "../tool-system/builtin/agent-notifications
 import { nanoid } from "nanoid";
 import type { ChatSessionManager } from "./chat-session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
+import { redactSecrets } from "../logging/sanitize-messages.js";
 
 export interface AgentServerOptions {
   /**
@@ -656,7 +657,15 @@ export class AgentServer {
               cachedAt: cache ? cache.fetchedAt : undefined,
             };
           });
-          this.transport.send(createResponse(req.id, { type: "providers", data: enriched }));
+          // Strip apiKey / other secret-shaped fields from each provider
+          // before sending. `...p` above spreads the whole provider record,
+          // which includes apiKey verbatim — without this redact pass, any
+          // protocol client could call query("providers") and harvest
+          // credentials. The shared redactor preserves
+          // presence-without-value (hasApiKey-style consumers still see the
+          // field shape, just with [redacted] in place of the secret).
+          const safe = redactSecrets(enriched);
+          this.transport.send(createResponse(req.id, { type: "providers", data: safe }));
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -680,7 +689,11 @@ export class AgentServer {
           const { key, value } = params;
           if (!key) throw new Error("key is required for config_set");
           engine.updateConfig(key, value);
-          this.transport.send(createResponse(req.id, { type: "config_set", data: { key, value } }));
+          // Echo back through the same secret-aware masker as config_get so
+          // a `config_set("llm.apiKey", "...")` confirmation doesn't ship
+          // the new secret through the response/log path.
+          const safeValue = maskSecretValue(key, value);
+          this.transport.send(createResponse(req.id, { type: "config_set", data: { key, value: safeValue } }));
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),

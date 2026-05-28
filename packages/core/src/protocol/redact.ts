@@ -1,3 +1,5 @@
+import { redactSecrets } from "../logging/sanitize-messages.js";
+
 /**
  * Redaction helpers for protocol query responses.
  *
@@ -32,9 +34,26 @@ export function isSecretKeyPath(key: string): boolean {
   return SECRET_KEY_RE.test(key);
 }
 
-/** Redact a single value when the caller-supplied key looks secret. Non-secret keys pass through. */
+/**
+ * Redact a single value returned by config_get.
+ *
+ * Two-stage rule:
+ *   1. If the caller-supplied key path itself looks secret
+ *      ("llm.apiKey", "headers.authorization", …) → collapse to "[redacted]".
+ *   2. Otherwise, if the value is an object/array (e.g. config_get("llm") or
+ *      config_get("providers")), walk it with the shared secret redactor
+ *      from logging/sanitize-messages so nested apiKey / token / Bearer
+ *      fields don't slip through verbatim. Primitives pass unchanged.
+ *
+ * Pre-fix this only inspected the top-level key string, so
+ * config_get("providers") returned an array of provider objects with raw
+ * apiKey values intact. That defeated the purpose of the boundary.
+ */
 export function maskSecretValue<T>(key: string, value: T): T | "[redacted]" {
   if (isSecretKeyPath(key)) return "[redacted]";
+  if (value && typeof value === "object") {
+    return redactSecrets(value) as T;
+  }
   return value;
 }
 
