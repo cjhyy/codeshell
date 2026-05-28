@@ -127,6 +127,13 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const [skills, setSkills] = useState<SkillSummary[] | null>(null);
   const [plugins, setPlugins] = useState<PluginSummary[]>([]);
   const [disabledSet, setDisabledSet] = useState<Set<string>>(new Set());
+  // Bare plugin names disabled at the plugin level. Distinct from disabledSet
+  // (per-skill): this is what suppresses a plugin's hooks too (e.g.
+  // superpowers' SessionStart injection), since loadPluginHooks reads
+  // disabledPlugins — disabledSkills alone never reaches the hook path.
+  const [disabledPluginsSet, setDisabledPluginsSet] = useState<Set<string>>(
+    new Set(),
+  );
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [selection, setSelection] = useState<Selection>({ kind: "empty" });
@@ -150,6 +157,8 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
       setPlugins(pluginList);
       const ds = settings?.disabledSkills;
       setDisabledSet(new Set(Array.isArray(ds) ? (ds as string[]) : []));
+      const dp = settings?.disabledPlugins;
+      setDisabledPluginsSet(new Set(Array.isArray(dp) ? (dp as string[]) : []));
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -246,32 +255,44 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
 
   /**
    * Cascade: plugin checkbox is an aggregate of its skills. Toggling it
-   * batch-flips every skill in that group. We don't write disabledPlugins
-   * from the UI — the underlying field stays supported (Step 2 schema +
-   * scanner filter) for advanced consumers / SDK callers, but the user-
-   * facing knob expresses everything through disabledSkills so the
-   * indeterminate / all-on / all-off tri-state stays consistent.
+   * batch-flips every skill in that group (drives the skill-list tri-state)
+   * AND writes the bare plugin name into disabledPlugins. The disabledPlugins
+   * write is the part that suppresses the plugin's hooks too — disabledSkills
+   * never reaches loadPluginHooks, so without it a plugin like superpowers
+   * keeps injecting its SessionStart ruleset even when "off". pluginKey is the
+   * bare name (PluginRow.key === PluginSummary.name === skill namespace),
+   * exactly what loadPluginHooks / scanSkills match against. The synthetic
+   * 本地 bucket has no plugin-level toggle, so it never calls this.
    */
   const togglePluginGroup = async (
     pluginKey: string,
     shouldDisableGroup: boolean,
   ) => {
-    if (!skills) return;
+    if (!skills || pluginKey === STANDALONE_NAMESPACE) return;
     const groupSkills = skillsForPlugin(skills, pluginKey);
     const next = new Set(disabledSet);
     for (const s of groupSkills) {
       if (shouldDisableGroup) next.add(s.name);
       else next.delete(s.name);
     }
+    const nextPlugins = new Set(disabledPluginsSet);
+    if (shouldDisableGroup) nextPlugins.add(pluginKey);
+    else nextPlugins.delete(pluginKey);
     setDisabledSet(next);
+    setDisabledPluginsSet(nextPlugins);
     await window.codeshell.updateSettings("user", {
       disabledSkills: [...next],
+      disabledPlugins: [...nextPlugins],
     });
   };
 
   /** Aggregate state of a plugin group: all enabled / all disabled / mixed. */
   const pluginGroupState = (pluginKey: string): "all" | "none" | "some" => {
     if (!skills) return "all";
+    // A plugin-level disable (disabledPlugins) is the strongest "off" signal —
+    // it kills both the skill list and the plugin's hooks, so the group reads
+    // as fully off regardless of per-skill entries.
+    if (disabledPluginsSet.has(pluginKey)) return "none";
     const groupSkills = skillsForPlugin(skills, pluginKey);
     if (groupSkills.length === 0) return "all";
     let disabled = 0;

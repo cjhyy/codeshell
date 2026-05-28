@@ -141,10 +141,22 @@ function pluginNameFromKey(key: string): string {
  * multiple times — the caller is responsible for not double-registering
  * (HookRegistry has no de-dup; the engine constructor calls this exactly
  * once after creating the registry).
+ *
+ * `disabledPlugins` is the coarse "plugin total switch" — bare plugin names
+ * (no `@marketplace`, no `:` suffix), matching scanSkills' semantics. A
+ * disabled plugin contributes NO hooks, so e.g. disabling "superpowers"
+ * also suppresses its SessionStart injection — not just its Skill-tool
+ * entries. Without this, `disabledPlugins` only filtered the skill list and
+ * the plugin's hooks still fired regardless.
  */
-export function loadPluginHooks(registry: HookRegistry): void {
+export function loadPluginHooks(
+  registry: HookRegistry,
+  disabledPlugins: string[] = [],
+): void {
   const data = readInstalledPlugins();
+  const disabledSet = new Set(disabledPlugins);
   for (const [key, entries] of Object.entries(data.plugins)) {
+    if (disabledSet.has(pluginNameFromKey(key))) continue;
     for (const entry of entries) {
       const installPath = entry.installPath;
       if (!installPath || !existsSync(installPath)) continue;
