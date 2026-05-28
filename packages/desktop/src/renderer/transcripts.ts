@@ -154,6 +154,7 @@ export function loadTranscript(
       promptTokens: parsed.promptTokens ?? 0,
       activeAgents: parsed.activeAgents ?? {},
       agentMessageIndex: parsed.agentMessageIndex ?? {},
+      turnEpoch: parsed.turnEpoch ?? 0,
     };
   } catch {
     return INITIAL_STATE;

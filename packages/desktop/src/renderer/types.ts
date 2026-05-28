@@ -116,6 +116,28 @@ export interface AskUserMessage {
   answer?: string;
 }
 
+export interface FileEditEntry {
+  path: string;
+  added: number;
+  removed: number;
+  /** Number of tool calls that touched this path in this turn. */
+  count: number;
+}
+
+/**
+ * Codex-style "files changed this turn" summary card, appended on
+ * turn_complete when at least one successful Edit/Write/NotebookEdit
+ * fired since the last user message. Renderer-computed — no engine
+ * event for this; see fileChangeAggregator.ts.
+ */
+export interface FilesChangedSummaryMessage {
+  kind: "files_changed";
+  id: string;
+  files: FileEditEntry[];
+  totalAdded: number;
+  totalRemoved: number;
+}
+
 export type Message =
   | UserMessage
   | AssistantMessage
@@ -125,7 +147,8 @@ export type Message =
   | AgentMessage
   | ContextBoundaryMessage
   | SystemMessage
-  | AskUserMessage;
+  | AskUserMessage
+  | FilesChangedSummaryMessage;
 
 export interface AgentRuntime {
   agentId: string;
@@ -157,6 +180,13 @@ export interface MessagesReducerState {
    * Cleared on saveTranscript truncation because slice() invalidates them.
    */
   agentMessageIndex: Record<string, number>;
+  /**
+   * Monotonic counter incremented on each turn_complete. ToolCard /
+   * ToolGroupCard subscribe via prop and force their open state back
+   * to false when this changes, so prior-turn details fold out of the
+   * way when a new turn finishes.
+   */
+  turnEpoch: number;
 }
 
 export const INITIAL_STATE: MessagesReducerState = {
@@ -167,6 +197,7 @@ export const INITIAL_STATE: MessagesReducerState = {
   promptTokens: 0,
   activeAgents: {},
   agentMessageIndex: {},
+  turnEpoch: 0,
 };
 
 let _counter = 0;
