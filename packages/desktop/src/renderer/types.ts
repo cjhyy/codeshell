@@ -7,6 +7,7 @@
 
 import type { StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
 import type { ApprovalRequestEnvelope } from "../preload/types";
+import { aggregateFileChanges } from "./messages/fileChangeAggregator";
 
 export type ToolStatus =
   | "queued"
@@ -529,7 +530,7 @@ export function applyStreamEvent(
     }
 
     case "turn_complete": {
-      // Flush every active agent's textBuffer to its `text` field.
+      // 1. Flush every active agent's textBuffer to its `text` field.
       const msgs = state.messages.slice();
       for (const agentId of Object.keys(state.activeAgents)) {
         const idx = state.agentMessageIndex[agentId];
@@ -542,22 +543,57 @@ export function applyStreamEvent(
           textBuffer: "",
         };
       }
-      // Main-feed finalization (unchanged behavior for streaming pointers).
+
+      // 2. Finalize streaming pointers (existing behavior).
       const streamingAssistantId = state.streamingAssistantId;
       const streamingThinkingId = state.streamingThinkingId;
+      let finalized: Message[] = msgs.map((m) => {
+        if (m.kind === "assistant" && m.id === streamingAssistantId) {
+          return { ...m, done: true };
+        }
+        if (m.kind === "thinking" && m.id === streamingThinkingId) {
+          return { ...m, done: true };
+        }
+        return m;
+      });
+
+      // 3. Compute the per-turn files-changed summary. Remove any
+      //    prior files_changed from this user-turn first so multiple
+      //    turn_complete events within one user-turn don't stack.
+      let lastUserIdx = -1;
+      for (let i = finalized.length - 1; i >= 0; i--) {
+        if (finalized[i].kind === "user") {
+          lastUserIdx = i;
+          break;
+        }
+      }
+      if (lastUserIdx >= 0) {
+        finalized = finalized.filter(
+          (m, i) => !(i > lastUserIdx && m.kind === "files_changed"),
+        );
+      }
+      const entries = aggregateFileChanges(finalized);
+      if (entries) {
+        const totalAdded = entries.reduce((acc, e) => acc + e.added, 0);
+        const totalRemoved = entries.reduce((acc, e) => acc + e.removed, 0);
+        finalized = [
+          ...finalized,
+          {
+            kind: "files_changed",
+            id: freshId("files-changed"),
+            files: entries,
+            totalAdded,
+            totalRemoved,
+          },
+        ];
+      }
+
       return {
         ...state,
         streamingAssistantId: null,
         streamingThinkingId: null,
-        messages: msgs.map((m) => {
-          if (m.kind === "assistant" && m.id === streamingAssistantId) {
-            return { ...m, done: true };
-          }
-          if (m.kind === "thinking" && m.id === streamingThinkingId) {
-            return { ...m, done: true };
-          }
-          return m;
-        }),
+        messages: finalized,
+        turnEpoch: state.turnEpoch + 1,
       };
     }
 
