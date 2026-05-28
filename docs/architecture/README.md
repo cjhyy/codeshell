@@ -25,6 +25,8 @@ This directory is the current architecture documentation set for CodeShell. It i
 | 14 | [Engine Call Paths (ADR)](14-engine-call-paths.md) | Why every internal `engine.run` goes through `AgentServer + AgentClient`. Allowlist, enforcement, sub-agent exception. Phase 1 of the LLM/UI decoupling roadmap. |
 | 15 | [Current Review and Bug Inventory](15-current-review-and-bug-inventory.md) | 2026-05-25 repo-wide architecture review, confirmed drift from docs, and prioritized bug/risk list. |
 | 16 | [Core Overall Design Standard](16-core-overall-design-standard.md) | Target standard for stabilizing `@cjhyy/code-shell-core`: host boundary, protocol, runtime/session ownership, safety gates, public API, and business adoption definition of done. |
+| 17 | [Plugin/Shell Hook Trust Model](17-plugin-shell-hook-trust-model.md) | Why user-installed plugin/settings shell hooks are trusted code that bypasses the Bash permission/sandbox path, and the timeout + fail-silent guardrails. |
+| 18 | [Core vs CC vs Codex](18-core-vs-cc-vs-codex.md) | **Latest tri-party comparison baseline (2026-05-27).** Per-module compare of `packages/core` against Claude Code and Codex (codex-rs), with verified file:line anchors, drift notes, and prioritized improvements. Use as the package-aligned source-of-truth when other pages disagree. |
 
 ## One-Screen Summary
 

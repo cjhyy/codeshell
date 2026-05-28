@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1500" viewBox="0 0 2400 1500">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="78%">
+      <stop offset="0%" stop-color="#10264a"/>
+      <stop offset="52%" stop-color="#0b1730"/>
+      <stop offset="100%" stop-color="#07111f"/>
+    </radialGradient>
+    <linearGradient id="panelGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="rgba(20,39,70,0.96)"/>
+      <stop offset="100%" stop-color="rgba(9,21,39,0.94)"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#67e8f9" flood-opacity="0.12"/>
+    </filter>
+    <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#67e8f9" flood-opacity="0.55"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#67e8f9" opacity="0.8"/>
+    </marker>
+    <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
+      <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#67e8f9" stroke-opacity="0.055" stroke-width="1"/>
+    </pattern>
+    <style>
+      .title { font: 800 58px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; fill: #e5f0ff; }
+      .subtitle { font: 400 22px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; fill: #8aa4c7; }
+      .micro { font: 400 15px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; fill: #49617f; letter-spacing: 1.8px; }
+      .panelTitle { font: 800 26px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; letter-spacing: .8px; }
+      .panelSub { font: 400 17px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; fill: #8aa4c7; }
+      .nodeTitle { font: 800 18px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; fill: #e5f0ff; }
+      .nodeLine { font: 400 14px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; fill: #8aa4c7; }
+      .badge { font: 800 15px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; fill: #fbbf24; }
+      .legend { font: 400 18px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; fill: #8aa4c7; }
+    </style>
+  </defs>
+
+  <rect width="2400" height="1500" fill="url(#bg)"/>
+  <rect x="80" y="80" width="2240" height="1340" fill="url(#grid)"/>
+
+  <text x="110" y="110" class="title">CodeShell Core Architecture</text>
+  <text x="112" y="150" class="subtitle">packages/core · runtime map · execution, tools, context, protocol, extensions</text>
+  <text x="112" y="188" class="micro">SYSTEMS CARTOGRAPHY / DEPENDENCY TERRAIN / TRUST BOUNDARIES / ORCHESTRATION FLOW</text>
+
+  
+  <g filter="url(#softGlow)">
+    <rect x="120" y="245" width="500" height="250" rx="28" fill="url(#panelGrad)" stroke="#60a5fa" stroke-opacity="0.72" stroke-width="1.6"/>
+    <text x="150" y="293" class="panelTitle" fill="#60a5fa">ENTRY &amp; PRODUCT</text>
+    <text x="150" y="323" class="panelSub">TUI · CLI · SDK · Run · Arena</text>
+  </g>
+  
+  <g filter="url(#softGlow)">
+    <rect x="720" y="250" width="960" height="380" rx="28" fill="url(#panelGrad)" stroke="#67e8f9" stroke-opacity="0.72" stroke-width="1.6"/>
+    <text x="750" y="298" class="panelTitle" fill="#67e8f9">CORE RUNTIME</text>
+    <text x="750" y="328" class="panelSub">Engine gravity well · TurnLoop · Runtime</text>
+  </g>
+  
+  <g filter="url(#softGlow)">
+    <rect x="1780" y="245" width="500" height="250" rx="28" fill="url(#panelGrad)" stroke="#a78bfa" stroke-opacity="0.72" stroke-width="1.6"/>
+    <text x="1810" y="293" class="panelTitle" fill="#a78bfa">LLM LAYER</text>
+    <text x="1810" y="323" class="panelSub">ModelPool · Providers · Capabilities</text>
+  </g>
+  
+  <g filter="url(#softGlow)">
+    <rect x="120" y="620" width="560" height="320" rx="28" fill="url(#panelGrad)" stroke="#86efac" stroke-opacity="0.72" stroke-width="1.6"/>
+    <text x="150" y="668" class="panelTitle" fill="#86efac">CONTEXT &amp; SESSION</text>
+    <text x="150" y="698" class="panelSub">compaction · transcript · memory</text>
+  </g>
+  
+  <g filter="url(#softGlow)">
+    <rect x="1720" y="620" width="560" height="320" rx="28" fill="url(#panelGrad)" stroke="#fbbf24" stroke-opacity="0.72" stroke-width="1.6"/>
+    <text x="1750" y="668" class="panelTitle" fill="#fbbf24">SETTINGS &amp; STATE</text>
+    <text x="1750" y="698" class="panelSub">config · logs · cost · services</text>
+  </g>
+  
+  <g filter="url(#softGlow)">
+    <rect x="300" y="1030" width="1800" height="300" rx="28" fill="url(#panelGrad)" stroke="#fb7185" stroke-opacity="0.72" stroke-width="1.6"/>
+    <text x="330" y="1078" class="panelTitle" fill="#fb7185">TOOLS &amp; EXTENSIONS</text>
+    <text x="330" y="1108" class="panelSub">registry · executor · permissions · sandbox · plugins · MCP · LSP</text>
+  </g>
+
+  
+  <g>
+    <rect x="160" y="340" width="190" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="182" cy="366" r="5" fill="#60a5fa"/>
+    <text x="198" y="372" class="nodeTitle">TUI / CLI</text>
+    <text x="182" y="398" class="nodeLine">Ink UI</text>
+<text x="182" y="420" class="nodeLine">commands</text>
+  </g>
+  
+  <g>
+    <rect x="380" y="340" width="200" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="402" cy="366" r="5" fill="#60a5fa"/>
+    <text x="418" y="372" class="nodeTitle">Protocol</text>
+    <text x="402" y="398" class="nodeLine">server / client</text>
+<text x="402" y="420" class="nodeLine">chat sessions</text>
+  </g>
+  
+  <g>
+    <rect x="160" y="735" width="230" height="110" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="182" cy="761" r="5" fill="#86efac"/>
+    <text x="198" y="767" class="nodeTitle">Context</text>
+    <text x="182" y="793" class="nodeLine">manager</text>
+<text x="182" y="815" class="nodeLine">compaction</text>
+<text x="182" y="837" class="nodeLine">token budget</text>
+  </g>
+  
+  <g>
+    <rect x="420" y="735" width="220" height="110" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="442" cy="761" r="5" fill="#86efac"/>
+    <text x="458" y="767" class="nodeTitle">Session</text>
+    <text x="442" y="793" class="nodeLine">transcript</text>
+<text x="442" y="815" class="nodeLine">file history</text>
+<text x="442" y="837" class="nodeLine">memory</text>
+  </g>
+
+  
+  <g>
+    <rect x="820" y="345" width="270" height="120" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="842" cy="371" r="5" fill="#67e8f9"/>
+    <text x="858" y="377" class="nodeTitle">Engine</text>
+    <text x="842" y="403" class="nodeLine">run orchestration</text>
+<text x="842" y="425" class="nodeLine">stream events</text>
+<text x="842" y="447" class="nodeLine">sub-agents</text>
+  </g>
+  
+  <g>
+    <rect x="1135" y="345" width="240" height="120" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1157" cy="371" r="5" fill="#67e8f9"/>
+    <text x="1173" y="377" class="nodeTitle">TurnLoop</text>
+    <text x="1157" y="403" class="nodeLine">message loop</text>
+<text x="1157" y="425" class="nodeLine">tool calls</text>
+<text x="1157" y="447" class="nodeLine">recovery</text>
+  </g>
+  
+  <g>
+    <rect x="1420" y="345" width="210" height="120" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1442" cy="371" r="5" fill="#67e8f9"/>
+    <text x="1458" y="377" class="nodeTitle">Runtime</text>
+    <text x="1442" y="403" class="nodeLine">shared deps</text>
+<text x="1442" y="425" class="nodeLine">registries</text>
+<text x="1442" y="447" class="nodeLine">model facade</text>
+  </g>
+  
+  <g>
+    <rect x="980" y="500" width="330" height="90" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1002" cy="526" r="5" fill="#67e8f9"/>
+    <text x="1018" y="532" class="nodeTitle">Prompt Runtime</text>
+    <text x="1002" y="558" class="nodeLine">composer · presets · instructions</text>
+  </g>
+
+  
+  <g>
+    <rect x="1830" y="340" width="190" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1852" cy="366" r="5" fill="#a78bfa"/>
+    <text x="1868" y="372" class="nodeTitle">ModelPool</text>
+    <text x="1852" y="398" class="nodeLine">active model</text>
+<text x="1852" y="420" class="nodeLine">provider routes</text>
+  </g>
+  
+  <g>
+    <rect x="2040" y="340" width="200" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="2062" cy="366" r="5" fill="#a78bfa"/>
+    <text x="2078" y="372" class="nodeTitle">Providers</text>
+    <text x="2062" y="398" class="nodeLine">OpenAI compat</text>
+<text x="2062" y="420" class="nodeLine">Anthropic</text>
+  </g>
+  
+  <g>
+    <rect x="1885" y="455" width="300" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1907" cy="481" r="5" fill="#a78bfa"/>
+    <text x="1923" y="487" class="nodeTitle">Capabilities</text>
+    <text x="1907" y="513" class="nodeLine">reasoning · tools · vision</text>
+<text x="1907" y="535" class="nodeLine">retry · watchdog</text>
+  </g>
+
+  
+  <g>
+    <rect x="1760" y="735" width="210" height="110" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1782" cy="761" r="5" fill="#fbbf24"/>
+    <text x="1798" y="767" class="nodeTitle">Settings</text>
+    <text x="1782" y="793" class="nodeLine">schema</text>
+<text x="1782" y="815" class="nodeLine">manager</text>
+<text x="1782" y="837" class="nodeLine">scope</text>
+  </g>
+  
+  <g>
+    <rect x="2000" y="735" width="230" height="110" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="2022" cy="761" r="5" fill="#fbbf24"/>
+    <text x="2038" y="767" class="nodeTitle">Observability</text>
+    <text x="2022" y="793" class="nodeLine">logging</text>
+<text x="2022" y="815" class="nodeLine">cost</text>
+<text x="2022" y="837" class="nodeLine">diagnostics</text>
+  </g>
+  
+  <g>
+    <rect x="1835" y="855" width="310" height="70" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1857" cy="881" r="5" fill="#fbbf24"/>
+    <text x="1873" y="887" class="nodeTitle">Services</text>
+    <text x="1857" y="913" class="nodeLine">analytics · notifier · updater · onboarding</text>
+  </g>
+
+  
+  <g>
+    <rect x="350" y="1135" width="210" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="372" cy="1161" r="5" fill="#fb7185"/>
+    <text x="388" y="1167" class="nodeTitle">Tool Registry</text>
+    <text x="372" y="1193" class="nodeLine">builtin tools</text>
+<text x="372" y="1215" class="nodeLine">discovery</text>
+  </g>
+  
+  <g>
+    <rect x="600" y="1135" width="220" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="622" cy="1161" r="5" fill="#fb7185"/>
+    <text x="638" y="1167" class="nodeTitle">Executor</text>
+    <text x="622" y="1193" class="nodeLine">validation</text>
+<text x="622" y="1215" class="nodeLine">hooks</text>
+<text x="622" y="1237" class="nodeLine">timeouts</text>
+  </g>
+  
+  <g>
+    <rect x="860" y="1135" width="230" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="882" cy="1161" r="5" fill="#fb7185"/>
+    <text x="898" y="1167" class="nodeTitle">Permission</text>
+    <text x="882" y="1193" class="nodeLine">classifier</text>
+<text x="882" y="1215" class="nodeLine">approval</text>
+<text x="882" y="1237" class="nodeLine">PathPolicy</text>
+  </g>
+  
+  <g>
+    <rect x="1130" y="1135" width="210" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1152" cy="1161" r="5" fill="#fb7185"/>
+    <text x="1168" y="1167" class="nodeTitle">Sandbox</text>
+    <text x="1152" y="1193" class="nodeLine">seatbelt</text>
+<text x="1152" y="1215" class="nodeLine">bwrap</text>
+<text x="1152" y="1237" class="nodeLine">safe-spawn</text>
+  </g>
+  
+  <g>
+    <rect x="1380" y="1135" width="230" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1402" cy="1161" r="5" fill="#fb7185"/>
+    <text x="1418" y="1167" class="nodeTitle">Extensions</text>
+    <text x="1402" y="1193" class="nodeLine">plugins</text>
+<text x="1402" y="1215" class="nodeLine">hooks</text>
+<text x="1402" y="1237" class="nodeLine">skills</text>
+  </g>
+  
+  <g>
+    <rect x="1650" y="1135" width="210" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1672" cy="1161" r="5" fill="#fb7185"/>
+    <text x="1688" y="1167" class="nodeTitle">MCP / LSP</text>
+    <text x="1672" y="1193" class="nodeLine">external tools</text>
+<text x="1672" y="1215" class="nodeLine">language servers</text>
+  </g>
+  
+  <g>
+    <rect x="1895" y="1135" width="160" height="100" rx="18" fill="rgba(6,15,29,0.82)" stroke="rgba(226,241,255,0.18)"/>
+    <circle cx="1917" cy="1161" r="5" fill="#fb7185"/>
+    <text x="1933" y="1167" class="nodeTitle">Git</text>
+    <text x="1917" y="1193" class="nodeLine">worktree</text>
+<text x="1917" y="1215" class="nodeLine">utils</text>
+  </g>
+
+  <path d="M 580 390 C 700 390, 700 390, 820 390" fill="none" stroke="#60a5fa" stroke-width="2" stroke-opacity="0.75" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 480 440 C 705 440, 705 345, 930 345" fill="none" stroke="#60a5fa" stroke-width="2" stroke-opacity="0.5" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1090 405 C 1112.5 405, 1112.5 405, 1135 405" fill="none" stroke="#67e8f9" stroke-width="2" stroke-opacity="0.75" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1375 405 C 1397.5 405, 1397.5 405, 1420 405" fill="none" stroke="#67e8f9" stroke-width="2" stroke-opacity="0.75" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1145 465 C 1140 465, 1140 500, 1135 500" fill="none" stroke="#67e8f9" stroke-width="2" stroke-opacity="0.55" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1310 545 C 1570 545, 1570 390, 1830 390" fill="none" stroke="#a78bfa" stroke-width="2" stroke-opacity="0.75" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1090 465 C 810 465, 810 735, 530 735" fill="none" stroke="#86efac" stroke-width="2" stroke-opacity="0.65" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1160 465 C 715 465, 715 735, 270 735" fill="none" stroke="#86efac" stroke-width="2" stroke-opacity="0.5" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1500 465 C 1680 465, 1680 735, 1860 735" fill="none" stroke="#fbbf24" stroke-width="2" stroke-opacity="0.55" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1010 465 C 860 465, 860 1135, 710 1135" fill="none" stroke="#fb7185" stroke-width="2" stroke-opacity="0.65" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1180 590 C 1075 590, 1075 1135, 970 1135" fill="none" stroke="#fb7185" stroke-width="2" stroke-opacity="0.45" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1320 590 C 1400 590, 1400 1135, 1480 1135" fill="none" stroke="#fb7185" stroke-width="2" stroke-opacity="0.45" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1730 405 C 1780 405, 1780 390, 1830 390" fill="none" stroke="#a78bfa" stroke-width="2" stroke-opacity="0.6" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 640 790 C 1200 790, 1200 790, 1760 790" fill="none" stroke="#fbbf24" stroke-width="2" stroke-opacity="0.35" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+  <path d="M 1720 1185 C 1570 1185, 1570 465, 1420 465" fill="none" stroke="#fb7185" stroke-width="2" stroke-opacity="0.35" marker-end="url(#arrow)" filter="url(#lineGlow)"/>
+
+  <g>
+    <rect x="780" y="645" width="246" height="34" rx="17" fill="rgba(251,191,36,0.12)" stroke="#fbbf24"/>
+    <text x="795" y="668" class="badge">RISK: Engine is overloaded</text>
+  </g>
+  <g>
+    <rect x="820" y="1270" width="294" height="34" rx="17" fill="rgba(251,191,36,0.12)" stroke="#fbbf24"/>
+    <text x="835" y="1293" class="badge">RISK: File tools need PathPolicy</text>
+  </g>
+  <g>
+    <rect x="1780" y="515" width="350" height="34" rx="17" fill="rgba(251,191,36,0.12)" stroke="#fbbf24"/>
+    <text x="1795" y="538" class="badge">RISK: provider secrets must be redacted</text>
+  </g>
+  <g>
+    <rect x="1410" y="1270" width="358" height="34" rx="17" fill="rgba(251,191,36,0.12)" stroke="#fbbf24"/>
+    <text x="1425" y="1293" class="badge">RISK: plugin / hook / MCP trust boundary</text>
+  </g>
+
+  <rect x="110" y="1350" width="2180" height="80" rx="24" fill="rgba(6,15,29,0.66)" stroke="rgba(226,241,255,0.12)"/>
+  <text x="145" y="1398" class="legend">Reading guide: upper layers initiate work · center orchestrates turns · lower layer executes tools · side systems persist context, state, cost, and memory · amber badges mark review findings</text>
+</svg>
