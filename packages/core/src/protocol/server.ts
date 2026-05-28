@@ -37,6 +37,7 @@ import { getArenaStatus } from "../tool-system/builtin/arena.js";
 import { agentNotificationBus } from "../tool-system/builtin/agent-notifications.js";
 import { nanoid } from "nanoid";
 import type { ChatSessionManager } from "./chat-session-manager.js";
+import { redactLlmConfig, maskSecretValue } from "./redact.js";
 
 export interface AgentServerOptions {
   /**
@@ -538,15 +539,9 @@ export class AgentServer {
               model: config.llm.model,
               cwd: config.cwd,
               maxContextTokens: config.maxContextTokens,
-              llm: {
-                provider: config.llm.provider,
-                model: config.llm.model,
-                apiKey: config.llm.apiKey,
-                baseUrl: config.llm.baseUrl,
-                temperature: config.llm.temperature,
-                maxTokens: config.llm.maxTokens,
-                enableStreaming: config.llm.enableStreaming,
-              },
+              // apiKey is redacted at this boundary: clients only get
+              // hasApiKey + optional apiKeyPreview. See protocol/redact.ts.
+              llm: redactLlmConfig(config.llm),
             },
           }),
         );
@@ -704,7 +699,9 @@ export class AgentServer {
           const { key } = params;
           if (!key) throw new Error("key is required for config_get");
           const value = engine.readSetting(key);
-          this.transport.send(createResponse(req.id, { type: "config_get", data: { key, value } }));
+          // Mask secret-looking keys (apiKey/token/secret/…) at the boundary.
+          const safeValue = maskSecretValue(key, value);
+          this.transport.send(createResponse(req.id, { type: "config_get", data: { key, value: safeValue } }));
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
