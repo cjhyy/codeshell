@@ -2,7 +2,7 @@
  * Git worktree management — create/remove isolated worktrees for agents.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, symlinkSync, readdirSync, lstatSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -29,7 +29,7 @@ export function validateWorktreeSlug(slug: string): void {
  * Find the canonical git root (resolves worktree → main repo).
  */
 export function findGitRoot(cwd: string): string {
-  return execSync("git rev-parse --show-toplevel", { cwd, encoding: "utf-8", timeout: 5000 }).trim();
+  return execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf-8", timeout: 5000 }).trim();
 }
 
 /**
@@ -49,7 +49,7 @@ export function createWorktree(
   // Get current branch for later reference
   let originalBranch: string | undefined;
   try {
-    originalBranch = execSync("git branch --show-current", {
+    originalBranch = execFileSync("git", ["branch", "--show-current"], {
       cwd: gitRoot,
       encoding: "utf-8",
       timeout: 5000,
@@ -58,8 +58,10 @@ export function createWorktree(
     // Detached HEAD
   }
 
-  // Create the worktree
-  execSync(`git worktree add -b "${branchName}" "${worktreePath}"`, {
+  // Create the worktree. Pre-fix this used a quoted command string; the argv
+  // form keeps branchName/worktreePath as literal positional arguments even
+  // if a future caller bypasses validateWorktreeSlug.
+  execFileSync("git", ["worktree", "add", "-b", branchName, worktreePath], {
     cwd: gitRoot,
     timeout: 30000,
   });
@@ -84,7 +86,7 @@ export function createWorktree(
 export function removeWorktree(worktreePath: string, removeBranch = false): void {
   try {
     const gitRoot = findGitRoot(worktreePath);
-    execSync(`git worktree remove "${worktreePath}" --force`, {
+    execFileSync("git", ["worktree", "remove", worktreePath, "--force"], {
       cwd: gitRoot,
       timeout: 30000,
     });
@@ -92,13 +94,13 @@ export function removeWorktree(worktreePath: string, removeBranch = false): void
     if (removeBranch) {
       // Extract branch name from worktree
       try {
-        const branch = execSync("git branch --show-current", {
+        const branch = execFileSync("git", ["branch", "--show-current"], {
           cwd: worktreePath,
           encoding: "utf-8",
           timeout: 5000,
         }).trim();
         if (branch.startsWith("worktree/")) {
-          execSync(`git branch -D "${branch}"`, { cwd: gitRoot, timeout: 10000 });
+          execFileSync("git", ["branch", "-D", branch], { cwd: gitRoot, timeout: 10000 });
         }
       } catch {
         // Branch might already be removed
@@ -113,7 +115,7 @@ export function removeWorktree(worktreePath: string, removeBranch = false): void
  * List active worktrees.
  */
 export function listWorktrees(cwd: string): Array<{ path: string; branch: string; head: string }> {
-  const raw = execSync("git worktree list --porcelain", {
+  const raw = execFileSync("git", ["worktree", "list", "--porcelain"], {
     cwd,
     encoding: "utf-8",
     timeout: 10000,

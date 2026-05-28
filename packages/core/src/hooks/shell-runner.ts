@@ -32,6 +32,11 @@
 import { spawn } from "node:child_process";
 import type { HookContext, HookResult } from "./events.js";
 import type { SettingsHookConfig } from "../types.js";
+import { MAX_HOOK_OUTPUT_BYTES, validateHookResult } from "./hook-output.js";
+
+// Re-export so existing call sites that import { validateHookResult } from
+// "./shell-runner.js" (e.g. tests) keep compiling.
+export { validateHookResult };
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
@@ -100,10 +105,37 @@ export async function runShellHook(
       settle({});
     }, timeoutMs);
 
+    // Byte cap: once we cross MAX_HOOK_OUTPUT_BYTES on stdout, kill the
+    // child and surface a 'cap exceeded' failure. A misbehaving handler
+    // can otherwise hold the engine memory hostage while we accumulate
+    // its output. Stderr is also capped but treated more leniently —
+    // truncated, not fatal — since stderr is just diagnostic chatter.
+    let stdoutBytes = 0;
+    let stdoutCapped = false;
+    let stderrCapped = false;
     child.stdout?.on("data", (chunk: Buffer) => {
+      stdoutBytes += chunk.length;
+      if (stdoutBytes > MAX_HOOK_OUTPUT_BYTES) {
+        if (!stdoutCapped) {
+          stdoutCapped = true;
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[hooks] ${config.event} hook stdout exceeded ${MAX_HOOK_OUTPUT_BYTES} bytes — killing`,
+          );
+          try { child.kill("SIGTERM"); } catch { /* already exited */ }
+        }
+        return;
+      }
       stdout += chunk.toString("utf8");
     });
     child.stderr?.on("data", (chunk: Buffer) => {
+      if (stderr.length + chunk.length > MAX_HOOK_OUTPUT_BYTES) {
+        if (!stderrCapped) {
+          stderrCapped = true;
+          stderr += "\n…[stderr truncated]";
+        }
+        return;
+      }
       stderr += chunk.toString("utf8");
     });
 
@@ -119,6 +151,14 @@ export async function runShellHook(
 
     child.on("close", (code: number | null) => {
       clearTimeout(timer);
+      if (stdoutCapped) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[hooks] ${config.event} hook killed due to oversized stdout (> ${MAX_HOOK_OUTPUT_BYTES} bytes)`,
+        );
+        settle({});
+        return;
+      }
       if (code === 0) {
         const trimmed = stdout.trim();
         if (trimmed.length === 0) {
@@ -127,9 +167,15 @@ export async function runShellHook(
         }
         try {
           const parsed = JSON.parse(trimmed);
-          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            settle(parsed as HookResult);
+          const validated = validateHookResult(parsed);
+          if (validated) {
+            settle(validated);
           } else {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[hooks] ${config.event} hook returned a value that failed HookResult schema, ignoring. stdout:`,
+              trimmed.slice(0, 200),
+            );
             settle({});
           }
         } catch (err) {

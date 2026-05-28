@@ -25,7 +25,12 @@ export class LSPClient extends EventEmitter {
   private process: ChildProcess | undefined;
   private nextId = 1;
   private pending = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
-  private buffer = "";
+  // The LSP framing uses byte-counted Content-Length, so we buffer bytes,
+  // not characters. Joining chunks as strings (`data.toString()` + string
+  // concat) can split a multibyte UTF-8 codepoint across chunks and de-
+  // synchronize against Content-Length. Stay in Buffer-land until we've
+  // sliced out exactly the right body length.
+  private buffer = Buffer.alloc(0);
   private contentLength = -1;
   private initialized = false;
 
@@ -43,7 +48,7 @@ export class LSPClient extends EventEmitter {
       stdio: ["pipe", "pipe", "pipe"],
     });
 
-    this.process.stdout?.on("data", (data: Buffer) => this.handleData(data.toString()));
+    this.process.stdout?.on("data", (data: Buffer) => this.handleData(data));
     this.process.stderr?.on("data", (_data: Buffer) => {
       // LSP servers often log to stderr — ignore
     });
@@ -141,27 +146,42 @@ export class LSPClient extends EventEmitter {
     return this.process !== undefined && !this.process.killed;
   }
 
-  private handleData(data: string): void {
-    this.buffer += data;
+  private handleData(data: Buffer): void {
+    // Append the new chunk as bytes. Buffer.concat avoids the UTF-8
+    // boundary corruption that string concatenation produces — a
+    // multibyte codepoint split across two TCP/pipe chunks decodes to
+    // U+FFFD, mangles the buffer length count, and breaks framing.
+    this.buffer = Buffer.concat([this.buffer, data]);
     while (true) {
       if (this.contentLength < 0) {
+        // Search for the header terminator in bytes, not chars.
         const headerEnd = this.buffer.indexOf("\r\n\r\n");
         if (headerEnd < 0) break;
-        const header = this.buffer.slice(0, headerEnd);
+        // Headers are ASCII per spec, so toString("ascii") is safe and
+        // avoids paying for a UTF-8 decode on the framing band.
+        const header = this.buffer.slice(0, headerEnd).toString("ascii");
         const match = header.match(/Content-Length:\s*(\d+)/i);
         if (!match) {
-          this.buffer = this.buffer.slice(headerEnd + 4);
+          this.buffer = this.buffer.subarray(headerEnd + 4);
           continue;
         }
         this.contentLength = parseInt(match[1], 10);
-        this.buffer = this.buffer.slice(headerEnd + 4);
+        this.buffer = this.buffer.subarray(headerEnd + 4);
       }
 
+      // Content-Length is a BYTE count — compare against the buffer's
+      // byte length, not its character length. Pre-fix this compared
+      // string lengths; with multibyte responses (e.g. CJK identifiers,
+      // emoji in diagnostics) we'd block waiting for bytes that had
+      // already arrived.
       if (this.buffer.length < this.contentLength) break;
 
-      const content = this.buffer.slice(0, this.contentLength);
-      this.buffer = this.buffer.slice(this.contentLength);
+      const bodyBytes = this.buffer.subarray(0, this.contentLength);
+      this.buffer = this.buffer.subarray(this.contentLength);
       this.contentLength = -1;
+      // Decode the full body in one shot — at this point we have the
+      // exact byte count, so the UTF-8 boundary issue is fully gone.
+      const content = bodyBytes.toString("utf8");
 
       try {
         const message = JSON.parse(content);

@@ -156,6 +156,99 @@ export function sanitizeMessages(messages: readonly Message[]): Message[] {
   return touched ? out : (messages as Message[]);
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// Secret redaction
+// ─────────────────────────────────────────────────────────────────────
+//
+// Beyond image payloads, log/diagnostics entries can carry API keys,
+// authorization headers, provider tokens, and similar secrets via
+// `data` blobs (settings dumps, provider configs, error responses, …).
+// These walkers redact secrets *in place on a deep clone* so the caller
+// can still log "useful shape, scrubbed values".
+
+const SECRET_KEY_RE =
+  /(^|[._-])(api[_-]?key|authorization|x[_-]api[_-]key|bearer[_-]?token|access[_-]?token|refresh[_-]?token|session[_-]?token|token|secret|password|client[_-]?secret|cookie)($|[._-])/i;
+
+const BEARER_RE = /\bBearer\s+[A-Za-z0-9._\-+/=~]{8,}/g;
+
+// URL query parameters that look like credentials. Conservative — only
+// trigger on a small named set so a normal `?id=…&q=…` URL passes through.
+const URL_SECRET_QS_RE = /([?&](?:key|api_key|apikey|access_token|token|auth|sig|signature)=)[^&#\s]+/gi;
+
+const REDACTED = "[redacted]";
+const MAX_DEPTH = 10;
+
+function isSecretKey(key: string): boolean {
+  return SECRET_KEY_RE.test(key);
+}
+
+/** Scrub bare `Bearer <token>` and credential-looking URL query params from a string. */
+function redactSecretsInString(s: string): string {
+  let out = s;
+  if (BEARER_RE.test(out)) out = out.replace(BEARER_RE, "Bearer [redacted]");
+  if (URL_SECRET_QS_RE.test(out)) out = out.replace(URL_SECRET_QS_RE, "$1[redacted]");
+  return out;
+}
+
+/**
+ * Recursively walk a value and return a *new* value with secret-looking
+ * fields replaced by "[redacted]". Used by the logger (so anything ending up
+ * in `entry.d` is scrubbed) and by diagnostics / in-memory error capture.
+ *
+ * Pure / no I/O. Does not mutate the input — important because the same
+ * object may also be on its way to a transcript or UI stream where the
+ * unredacted form is correct.
+ */
+export function redactSecrets<T>(value: T, depth = 0): T {
+  if (value === null || value === undefined) return value;
+  if (depth > MAX_DEPTH) return value;
+
+  const t = typeof value;
+  if (t === "string") return redactSecretsInString(value as unknown as string) as unknown as T;
+  if (t === "number" || t === "boolean" || t === "bigint" || t === "symbol") return value;
+  if (t === "function") return value;
+
+  if (Array.isArray(value)) {
+    return value.map((v) => redactSecrets(v, depth + 1)) as unknown as T;
+  }
+
+  // Error objects: preserve name/message/stack shape but redact within.
+  if (value instanceof Error) {
+    const clone: Record<string, unknown> = {
+      name: value.name,
+      message: redactSecretsInString(value.message),
+      ...(value.stack ? { stack: redactSecretsInString(value.stack) } : {}),
+    };
+    // Some libraries attach extra properties (`.response`, `.config`, …) —
+    // walk them as well.
+    for (const key of Object.keys(value)) {
+      if (key === "name" || key === "message" || key === "stack") continue;
+      const v = (value as unknown as Record<string, unknown>)[key];
+      clone[key] = isSecretKey(key) ? REDACTED : redactSecrets(v, depth + 1);
+    }
+    return clone as unknown as T;
+  }
+
+  if (t === "object") {
+    const obj = value as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (isSecretKey(k)) {
+        // Preserve presence (null/undefined stay as-is so consumers can
+        // still distinguish "key present" vs "key absent"; non-empty values
+        // collapse to [redacted]).
+        if (v === null || v === undefined || v === "") out[k] = v;
+        else out[k] = REDACTED;
+      } else {
+        out[k] = redactSecrets(v, depth + 1);
+      }
+    }
+    return out as unknown as T;
+  }
+
+  return value;
+}
+
 /**
  * Sanitize a free-form task string before logging.
  *

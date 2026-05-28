@@ -37,6 +37,8 @@ import { getArenaStatus } from "../tool-system/builtin/arena.js";
 import { agentNotificationBus } from "../tool-system/builtin/agent-notifications.js";
 import { nanoid } from "nanoid";
 import type { ChatSessionManager } from "./chat-session-manager.js";
+import { redactLlmConfig, maskSecretValue } from "./redact.js";
+import { redactSecrets } from "../logging/sanitize-messages.js";
 
 export interface AgentServerOptions {
   /**
@@ -563,15 +565,9 @@ export class AgentServer {
               model: config.llm.model,
               cwd: config.cwd,
               maxContextTokens: config.maxContextTokens,
-              llm: {
-                provider: config.llm.provider,
-                model: config.llm.model,
-                apiKey: config.llm.apiKey,
-                baseUrl: config.llm.baseUrl,
-                temperature: config.llm.temperature,
-                maxTokens: config.llm.maxTokens,
-                enableStreaming: config.llm.enableStreaming,
-              },
+              // apiKey is redacted at this boundary: clients only get
+              // hasApiKey + optional apiKeyPreview. See protocol/redact.ts.
+              llm: redactLlmConfig(config.llm),
             },
           }),
         );
@@ -686,7 +682,15 @@ export class AgentServer {
               cachedAt: cache ? cache.fetchedAt : undefined,
             };
           });
-          this.transport.send(createResponse(req.id, { type: "providers", data: enriched }));
+          // Strip apiKey / other secret-shaped fields from each provider
+          // before sending. `...p` above spreads the whole provider record,
+          // which includes apiKey verbatim — without this redact pass, any
+          // protocol client could call query("providers") and harvest
+          // credentials. The shared redactor preserves
+          // presence-without-value (hasApiKey-style consumers still see the
+          // field shape, just with [redacted] in place of the secret).
+          const safe = redactSecrets(enriched);
+          this.transport.send(createResponse(req.id, { type: "providers", data: safe }));
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -710,7 +714,11 @@ export class AgentServer {
           const { key, value } = params;
           if (!key) throw new Error("key is required for config_set");
           engine.updateConfig(key, value);
-          this.transport.send(createResponse(req.id, { type: "config_set", data: { key, value } }));
+          // Echo back through the same secret-aware masker as config_get so
+          // a `config_set("llm.apiKey", "...")` confirmation doesn't ship
+          // the new secret through the response/log path.
+          const safeValue = maskSecretValue(key, value);
+          this.transport.send(createResponse(req.id, { type: "config_set", data: { key, value: safeValue } }));
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
@@ -729,7 +737,9 @@ export class AgentServer {
           const { key } = params;
           if (!key) throw new Error("key is required for config_get");
           const value = engine.readSetting(key);
-          this.transport.send(createResponse(req.id, { type: "config_get", data: { key, value } }));
+          // Mask secret-looking keys (apiKey/token/secret/…) at the boundary.
+          const safeValue = maskSecretValue(key, value);
+          this.transport.send(createResponse(req.id, { type: "config_get", data: { key, value: safeValue } }));
         } catch (err) {
           this.transport.send(
             createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),

@@ -33,6 +33,7 @@
 
 import { spawn } from "node:child_process";
 import type { HookContext, HookResult } from "../hooks/events.js";
+import { MAX_HOOK_OUTPUT_BYTES } from "../hooks/hook-output.js";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
@@ -124,6 +125,13 @@ export async function runPluginCommandHook(
     let stdout = "";
     let stderr = "";
     let settled = false;
+    // Output byte caps mirror src/hooks/shell-runner.ts so a chatty plugin
+    // hook can't hold engine memory hostage. Past the cap we SIGTERM the
+    // child and treat the hook as failed; stderr cap truncates with a
+    // marker instead of failing the hook.
+    let stdoutBytes = 0;
+    let stdoutCapped = false;
+    let stderrCapped = false;
     const settle = (value: HookResult) => {
       if (settled) return;
       settled = true;
@@ -151,9 +159,28 @@ export async function runPluginCommandHook(
     }, timeoutMs);
 
     child.stdout?.on("data", (chunk: Buffer) => {
+      stdoutBytes += chunk.length;
+      if (stdoutBytes > MAX_HOOK_OUTPUT_BYTES) {
+        if (!stdoutCapped) {
+          stdoutCapped = true;
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} stdout exceeded ${MAX_HOOK_OUTPUT_BYTES} bytes — killing`,
+          );
+          try { child.kill("SIGTERM"); } catch { /* already exited */ }
+        }
+        return;
+      }
       stdout += chunk.toString("utf8");
     });
     child.stderr?.on("data", (chunk: Buffer) => {
+      if (stderr.length + chunk.length > MAX_HOOK_OUTPUT_BYTES) {
+        if (!stderrCapped) {
+          stderrCapped = true;
+          stderr += "\n…[stderr truncated]";
+        }
+        return;
+      }
       stderr += chunk.toString("utf8");
     });
 
@@ -169,6 +196,14 @@ export async function runPluginCommandHook(
 
     child.on("close", (code: number | null) => {
       clearTimeout(timer);
+      if (stdoutCapped) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} killed due to oversized stdout (> ${MAX_HOOK_OUTPUT_BYTES} bytes)`,
+        );
+        settle({});
+        return;
+      }
       if (code !== 0) {
         // eslint-disable-next-line no-console
         console.warn(

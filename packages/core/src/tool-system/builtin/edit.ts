@@ -5,7 +5,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
+import { enforcePathPolicy } from "../path-policy.js";
 
 export const editToolDef: ToolDefinition = {
   name: "Edit",
@@ -36,7 +38,10 @@ export const editToolDef: ToolDefinition = {
   },
 };
 
-export async function editTool(args: Record<string, unknown>): Promise<string> {
+export async function editTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const filePath = args.file_path as string;
   const oldString = args.old_string as string;
   const newString = args.new_string as string;
@@ -47,6 +52,10 @@ export async function editTool(args: Record<string, unknown>): Promise<string> {
   if (newString === undefined) return "Error: new_string is required";
   if (oldString === newString) return "Error: old_string and new_string must be different";
   if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;
+
+  // Path policy gate before any IO.
+  const blocked = enforcePathPolicy(filePath, "write", ctx?.cwd);
+  if (blocked) return blocked;
 
   try {
     const content = await readFile(filePath, "utf-8");

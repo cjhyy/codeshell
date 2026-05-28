@@ -5,7 +5,9 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
+import { enforcePathPolicy } from "../path-policy.js";
 
 export const writeToolDef: ToolDefinition = {
   name: "Write",
@@ -22,11 +24,19 @@ export const writeToolDef: ToolDefinition = {
   },
 };
 
-export async function writeTool(args: Record<string, unknown>): Promise<string> {
+export async function writeTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const filePath = args.file_path as string;
   const content = args.content as string;
   if (!filePath) return "Error: file_path is required";
   if (content === undefined) return "Error: content is required";
+
+  // Path policy gate: deny writes to sensitive paths, refuse writes outside
+  // workspace until approved. See tool-system/path-policy.ts.
+  const blocked = enforcePathPolicy(filePath, "write", ctx?.cwd);
+  if (blocked) return blocked;
 
   try {
     await mkdir(dirname(filePath), { recursive: true });

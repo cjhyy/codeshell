@@ -10,9 +10,10 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   rmSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { gitClone, gitRevParseHead, githubRepoToCloneUrl } from "./gitOps.js";
 import { loadMarketplace } from "./marketplaceManager.js";
@@ -41,6 +42,47 @@ function pluginCacheRoot(): string {
 
 function pluginCacheDir(marketplace: string, plugin: string, version: string): string {
   return join(pluginCacheRoot(), marketplace, plugin, version);
+}
+
+/**
+ * Resolve a candidate `installPath` to a realpath and verify it lives strictly
+ * underneath the plugin cache root. Returns the resolved path on success, or
+ * null when the path is missing, escapes the cache, equals the cache root
+ * itself, or is otherwise unsafe to remove.
+ *
+ * Exported so tests can exercise the safety predicate directly without
+ * arranging a full uninstall — the contract this defends (no rmSync outside
+ * the plugin cache) is the entire point of T2 / Workstream A2.
+ */
+export function resolveSafePluginPath(installPath: string, cacheRoot: string): string | null {
+  if (typeof installPath !== "string" || installPath.length === 0) return null;
+
+  // Realpath the cache root once. We require it to exist; if the cache root
+  // itself can't be resolved, refuse all deletions rather than fall back to
+  // a string-only check.
+  let safeCacheRoot: string;
+  try {
+    safeCacheRoot = realpathSync(cacheRoot);
+  } catch {
+    return null;
+  }
+
+  // Realpath the target. A missing target (dangling symlink, already removed,
+  // typo in installed_plugins.json) returns null — caller will skip silently.
+  let resolvedTarget: string;
+  try {
+    resolvedTarget = realpathSync(installPath);
+  } catch {
+    return null;
+  }
+
+  // Strict containment: must start with cacheRoot + separator. Equal-to-root
+  // is explicitly rejected so a tampered entry can't wipe the whole cache.
+  const rootWithSep = safeCacheRoot.endsWith(sep) ? safeCacheRoot : safeCacheRoot + sep;
+  if (resolvedTarget === safeCacheRoot) return null;
+  if (!resolvedTarget.startsWith(rootWithSep)) return null;
+
+  return resolvedTarget;
 }
 
 export interface VarRewriteReport {
@@ -117,6 +159,24 @@ function shortSha(sha: string | undefined): string {
   return sha.slice(0, 12);
 }
 
+/**
+ * Compare a marketplace-declared SHA against the cloned HEAD. The
+ * declaration is allowed to be a short prefix (>= 7 chars, standard git
+ * abbreviation length); for stricter integrity guarantees marketplaces
+ * should pin the full 40-char hash. Case-insensitive.
+ *
+ * Exported so a unit test can pin the policy without spinning up a real
+ * clone.
+ */
+export function shaMatches(declared: string, actual: string): boolean {
+  if (typeof declared !== "string" || typeof actual !== "string") return false;
+  const d = declared.trim().toLowerCase();
+  const a = actual.trim().toLowerCase();
+  if (d.length < 7) return false; // refuse 6-or-less; too collision-prone
+  if (d.length > 40) return false; // not a valid SHA
+  return a.startsWith(d);
+}
+
 async function materialize(
   source: PluginEntrySource,
   marketplaceInstallLocation: string,
@@ -148,6 +208,16 @@ async function materialize(
       if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
       return r;
     }
+    // Supply-chain check: when the marketplace entry pins a SHA, fail the
+    // install if the cloned HEAD doesn't match. Without this the `sha`
+    // field is decorative — present in metadata, never enforced.
+    if (source.sha && !shaMatches(source.sha, r.sha)) {
+      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      return {
+        ok: false,
+        error: `sha mismatch for ${plugin}: expected ${source.sha}, got ${r.sha}`,
+      };
+    }
     const version = shortSha(r.sha);
     const finalDir = pluginCacheDir(marketplace, plugin, version);
     if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true });
@@ -162,6 +232,13 @@ async function materialize(
     if (!r.ok) {
       if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
       return r;
+    }
+    if (source.sha && !shaMatches(source.sha, r.sha)) {
+      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      return {
+        ok: false,
+        error: `sha mismatch for ${plugin}: expected ${source.sha}, got ${r.sha}`,
+      };
     }
     const version = shortSha(r.sha);
     const finalDir = pluginCacheDir(marketplace, plugin, version);
@@ -259,10 +336,17 @@ export function uninstallPlugin(
   const data = readInstalledPlugins();
   const entries = data.plugins[key];
   let removedFromDisk = false;
+  const cacheRoot = pluginCacheRoot();
   if (entries) {
     for (const e of entries) {
-      if (e.installPath && existsSync(e.installPath)) {
-        rmSync(e.installPath, { recursive: true, force: true });
+      if (!e.installPath) continue;
+      // Containment check: the on-disk installed_plugins.json can be tampered
+      // with to point at arbitrary paths (e.g. "/", "$HOME"). Refuse to rm
+      // anything that doesn't realpath to a strict child of the plugin cache.
+      const safePath = resolveSafePluginPath(e.installPath, cacheRoot);
+      if (!safePath) continue;
+      if (existsSync(safePath)) {
+        rmSync(safePath, { recursive: true, force: true });
         removedFromDisk = true;
       }
     }
