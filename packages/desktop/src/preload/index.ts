@@ -183,6 +183,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
   openPath: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:openPath", path, cwd),
+  undoFiles: (cwd: string, paths: string[]) =>
+    ipcRenderer.invoke("files:undo", cwd, paths),
   getSettings: (scope: "user" | "project", cwd?: string) =>
     ipcRenderer.invoke("settings:get", scope, cwd),
   updateSettings: (scope: "user" | "project", patch: Record<string, unknown>, cwd?: string) =>

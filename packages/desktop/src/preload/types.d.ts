@@ -36,6 +36,19 @@ export interface RpcResponse<T = unknown> {
 
 export type AgentStatusEvent = { status: "ready" | "shutting_down" | string };
 
+/**
+ * Per-path outcome of an undoFiles batch. Mirrors the shape declared
+ * in main/desktop-services.ts. `action` records what we tried to do
+ * (restore via git, remove from disk, or skip because the path was
+ * rejected); `ok=false` carries the underlying error message.
+ */
+export interface UndoFilesResult {
+  path: string;
+  ok: boolean;
+  action: "restore" | "remove" | "skip";
+  error?: string;
+}
+
 export type AgentLifecycleEvent =
   | { type: "exited"; code: number | null }
   | { type: "restarted" }
@@ -156,6 +169,13 @@ export interface CodeshellApi {
    * which case we reveal the parent in Finder instead).
    */
   openPath(path: string, cwd?: string): Promise<string>;
+  /**
+   * Revert working-tree edits to the given relative paths. Tracked
+   * files are restored from HEAD; untracked files are deleted from
+   * disk. Returns a per-path result so the UI can show partial
+   * failures rather than aborting the batch.
+   */
+  undoFiles(cwd: string, paths: string[]): Promise<UndoFilesResult[]>;
 
   // Phase 5 — settings / sessions / logs.
   getSettings(scope: "user" | "project", cwd?: string): Promise<Record<string, unknown> | null>;

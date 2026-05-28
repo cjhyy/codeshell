@@ -43,6 +43,12 @@ interface Props {
    * "live" header so its elapsed ticker stops when the turn ends.
    */
   liveTurnActive?: boolean;
+  /**
+   * Working directory of the owning chat. Needed for the
+   * FilesChangedCard review / undo actions, which call git with
+   * this cwd. Null when the session was created without a repo.
+   */
+  cwd?: string | null;
 }
 
 export function MessageStream({
@@ -52,6 +58,7 @@ export function MessageStream({
   trailingKey,
   turnEpoch,
   liveTurnActive,
+  cwd,
 }: Props) {
   const ref = useStickToBottom<HTMLDivElement>(
     `${messages.length}:${trailingKey ?? ""}`,
@@ -145,7 +152,7 @@ export function MessageStream({
               </div>
             );
           case "files_changed":
-            return <FilesChangedCard key={m.id} message={m} />;
+            return <FilesChangedCard key={m.id} message={m} cwd={cwd ?? null} />;
         }
       })}
       {trailing}

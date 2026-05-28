@@ -331,6 +331,85 @@ export async function revealInFinder(targetPath: string): Promise<void> {
 }
 
 /**
+ * Undo (revert) edits to the given paths in the working tree.
+ *
+ * For tracked files modified vs HEAD: `git restore --source=HEAD -- <path>`
+ * — overwrites the working copy with the index-or-HEAD version, which
+ * is what the user almost always means by "undo this edit".
+ *
+ * For untracked / newly-created files: `git ls-files --error-unmatch`
+ * fails, so we delete the path from disk instead. We never `rm` a
+ * tracked file — that would be surprising and easy to recover the
+ * wrong direction from.
+ *
+ * Returns a per-path result so the renderer can surface partial
+ * failures rather than aborting the whole batch on one bad apple.
+ */
+export interface UndoFilesResult {
+  path: string;
+  ok: boolean;
+  action: "restore" | "remove" | "skip";
+  error?: string;
+}
+
+export async function undoFiles(
+  cwd: string,
+  paths: string[],
+): Promise<UndoFilesResult[]> {
+  const results: UndoFilesResult[] = [];
+  for (const rel of paths) {
+    // Resolve under cwd; reject paths that escape it.
+    const abs = path.resolve(cwd, rel);
+    if (!abs.startsWith(path.resolve(cwd) + path.sep) && abs !== path.resolve(cwd)) {
+      results.push({
+        path: rel,
+        ok: false,
+        action: "skip",
+        error: "refused: path escapes cwd",
+      });
+      continue;
+    }
+    // Tracked? `git ls-files --error-unmatch -- <path>` exits 0 if so.
+    let tracked = false;
+    try {
+      await execFileAsync("git", ["ls-files", "--error-unmatch", "--", rel], {
+        cwd,
+      });
+      tracked = true;
+    } catch {
+      tracked = false;
+    }
+    try {
+      if (tracked) {
+        await execFileAsync(
+          "git",
+          ["restore", "--source=HEAD", "--worktree", "--", rel],
+          { cwd },
+        );
+        results.push({ path: rel, ok: true, action: "restore" });
+      } else {
+        // Untracked file — delete it from disk. Only do this if the
+        // file actually exists; otherwise it's a no-op success.
+        try {
+          await fs.unlink(abs);
+        } catch (e: unknown) {
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+        }
+        results.push({ path: rel, ok: true, action: "remove" });
+      }
+    } catch (e: unknown) {
+      results.push({
+        path: rel,
+        ok: false,
+        action: tracked ? "restore" : "remove",
+        error: String(e instanceof Error ? e.message : e),
+      });
+    }
+  }
+  return results;
+}
+
+/**
  * Open a file with the system default application. Supports the
  * "<path>:<line>" form emitted by tools and assistant text — the line
  * suffix is discarded (shell.openPath has no concept of line

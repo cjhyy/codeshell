@@ -370,6 +370,7 @@ export function ChatView({
         onAskUserAnswer={onAskUserAnswer}
         trailing={inlineApproval}
         trailingKey={pendingApproval?.requestId ?? null}
+        cwd={activeRepoPath}
       />
 
       {(latestTasks || openAsk || showStickyApproval) && (

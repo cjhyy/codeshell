@@ -26,6 +26,8 @@ import {
   openExternal,
   revealInFinder,
   openPath,
+  undoFiles,
+  type UndoFilesResult,
 } from "./desktop-services.js";
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
 import { listSessions, deleteSession } from "./sessions-service.js";
@@ -517,6 +519,17 @@ ipcMain.handle("shell:openPath", async (_e, p: string, cwd?: string) => {
   if (typeof p !== "string" || !p) throw new Error("openPath requires path");
   return openPath(p, typeof cwd === "string" ? cwd : undefined);
 });
+
+ipcMain.handle(
+  "files:undo",
+  async (_e, cwd: string, paths: string[]): Promise<UndoFilesResult[]> => {
+    if (typeof cwd !== "string" || !cwd) throw new Error("files:undo requires cwd");
+    if (!Array.isArray(paths) || paths.length === 0) {
+      throw new Error("files:undo requires non-empty paths");
+    }
+    return undoFiles(cwd, paths);
+  },
+);
 
 ipcMain.handle("settings:get", async (_e, scope: SettingsScope, cwd?: string) => {
   if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
