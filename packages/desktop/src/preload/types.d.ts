@@ -124,8 +124,19 @@ export interface CodeshellApi {
   getGitBranches(cwd: string): Promise<GitBranches>;
   switchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
   stashAndSwitchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
-  createWorktree(cwd: string, name: string): Promise<CreatedWorktree>;
+  createWorktree(cwd: string, name: string, branchPrefix?: string): Promise<CreatedWorktree>;
   listWorktrees(cwd: string): Promise<WorktreeInfo[]>;
+  /**
+   * Push Electron-local Git prefs (branch prefix, auto-cleanup) to
+   * main. The renderer is the source of truth (localStorage); main
+   * keeps an in-memory copy so the periodic worktree-cleanup task and
+   * default branch prefix have something to consult.
+   */
+  setGitPrefs(prefs: {
+    branchPrefix: string;
+    autoDeleteWorktrees: boolean;
+    autoDeleteWorktreesGraceMins: number;
+  }): Promise<void>;
   /** Unified diff for the working tree (vs HEAD). file optional. */
   getGitDiff(cwd: string, file?: string): Promise<string>;
   openExternal(url: string): Promise<void>;

@@ -22,6 +22,7 @@ import {
   stashAndSwitchGitBranch,
   createPermanentWorktree,
   listGitWorktrees,
+  cleanupStaleWorktrees,
   openExternal,
   revealInFinder,
 } from "./desktop-services.js";
@@ -222,6 +223,11 @@ app.whenReady().then(() => {
   }
   void createWindow();
   initUpdater();
+
+  // Defer initial sweep so the renderer has a chance to push current
+  // git prefs via `git:setPrefs` first. Subsequent sweeps run hourly.
+  setTimeout(() => void sweepStaleWorktrees("startup"), 5_000);
+  setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
 });
 
 ipcMain.handle("skills:list", async (_e, cwd: string) => listSkills(cwd));
@@ -407,14 +413,75 @@ ipcMain.handle("git:stashAndSwitchBranch", async (_e, cwd: string, branch: strin
   return stashAndSwitchGitBranch(cwd, branch);
 });
 
-ipcMain.handle("git:createWorktree", async (_e, cwd: string, name: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:createWorktree requires cwd");
-  if (typeof name !== "string" || !name.trim()) throw new Error("git:createWorktree requires name");
-  return createPermanentWorktree(cwd, name);
+ipcMain.handle(
+  "git:createWorktree",
+  async (_e, cwd: string, name: string, branchPrefix?: string) => {
+    if (typeof cwd !== "string" || !cwd) throw new Error("git:createWorktree requires cwd");
+    if (typeof name !== "string" || !name.trim()) throw new Error("git:createWorktree requires name");
+    const prefix =
+      typeof branchPrefix === "string" && branchPrefix.trim()
+        ? branchPrefix
+        : gitPrefsCache.branchPrefix;
+    const result = await createPermanentWorktree(cwd, name, prefix);
+    knownGitRoots.add(cwd);
+    return result;
+  },
+);
+
+interface MainGitPrefs {
+  branchPrefix: string;
+  autoDeleteWorktrees: boolean;
+  autoDeleteWorktreesGraceMins: number;
+}
+
+let gitPrefsCache: MainGitPrefs = {
+  branchPrefix: "codeshell/",
+  autoDeleteWorktrees: true,
+  autoDeleteWorktreesGraceMins: 60 * 24 * 7,
+};
+
+ipcMain.handle("git:setPrefs", async (_e, prefs: MainGitPrefs) => {
+  if (!prefs || typeof prefs !== "object") return;
+  const grace = Number(prefs.autoDeleteWorktreesGraceMins);
+  gitPrefsCache = {
+    branchPrefix:
+      typeof prefs.branchPrefix === "string" && prefs.branchPrefix.trim()
+        ? prefs.branchPrefix
+        : "codeshell/",
+    autoDeleteWorktrees: prefs.autoDeleteWorktrees !== false,
+    autoDeleteWorktreesGraceMins:
+      Number.isFinite(grace) && grace >= 1 ? Math.floor(grace) : 60 * 24 * 7,
+  };
+  dlog("main", "git.prefs.updated", { ...gitPrefsCache });
 });
+
+const knownGitRoots = new Set<string>();
+
+/**
+ * Drives the worktree-cleanup sweep across every cwd the desktop has
+ * touched this session (worktree create/list/diff/switch all funnel
+ * through `cwd`). Each call is fire-and-forget; failures are logged
+ * and never block the renderer.
+ */
+async function sweepStaleWorktrees(reason: string): Promise<void> {
+  if (!gitPrefsCache.autoDeleteWorktrees) return;
+  if (knownGitRoots.size === 0) return;
+  const grace = gitPrefsCache.autoDeleteWorktreesGraceMins;
+  for (const root of knownGitRoots) {
+    try {
+      const removed = await cleanupStaleWorktrees(root, grace);
+      if (removed.length > 0) {
+        dlog("main", "git.worktree.cleanup", { reason, root, removed });
+      }
+    } catch (e) {
+      dlog("main", "git.worktree.cleanup_error", { root, error: String(e) });
+    }
+  }
+}
 
 ipcMain.handle("git:listWorktrees", async (_e, cwd: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:listWorktrees requires cwd");
+  knownGitRoots.add(cwd);
   return listGitWorktrees(cwd);
 });
 

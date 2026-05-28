@@ -11,7 +11,6 @@ import {
   Wifi,
   GitBranch,
   Terminal,
-  Workflow,
   Globe,
   Monitor,
   Archive,
@@ -34,7 +33,6 @@ import {
   PersonalizationSection,
   ShortcutsSection,
   ToggleCapabilitySection,
-  WorktreeSection,
 } from "./AdvancedSections";
 import type { Repo } from "../repos";
 import type { SessionIndex } from "../transcripts";
@@ -50,7 +48,6 @@ type ModuleId =
   | "connections"
   | "git"
   | "environment"
-  | "worktree"
   | "browser"
   | "computer"
   | "archived"
@@ -75,7 +72,6 @@ const MODULES: Module[] = [
   { id: "connections", label: "连接", Icon: Wifi },
   { id: "git", label: "Git", Icon: GitBranch },
   { id: "environment", label: "环境", Icon: Terminal },
-  { id: "worktree", label: "工作树", Icon: Workflow },
   { id: "browser", label: "浏览器", Icon: Globe },
   { id: "computer", label: "电脑操控", Icon: Monitor },
   { id: "archived", label: "已归档对话", Icon: Archive },
@@ -200,13 +196,10 @@ export function SettingsPage({
               <ConnectionsSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
             {active === "git" && (
-              <GitSection activeRepoPath={activeRepoPath} />
+              <GitSection />
             )}
             {active === "environment" && (
               <EnvironmentSection scope={scope} activeRepoPath={activeRepoPath} />
-            )}
-            {active === "worktree" && (
-              <WorktreeSection activeRepoPath={activeRepoPath} />
             )}
             {active === "browser" && (
               <ToggleCapabilitySection

@@ -37,7 +37,6 @@ interface SidebarProps {
   onPinRepo: (id: string, pinned: boolean) => void;
   onRenameRepo: (id: string, name: string) => void;
   onArchiveAllSessions: (id: string) => void;
-  onCreateWorktree: (repo: Repo) => void;
   onNewConversationForRepo: (id: string | null) => void;
 
   onNewConversation: () => void;
@@ -76,7 +75,6 @@ export function Sidebar({
   onPinRepo,
   onRenameRepo,
   onArchiveAllSessions,
-  onCreateWorktree,
   onNewConversationForRepo,
   onNewConversation,
   onOpenSearch,
@@ -109,10 +107,6 @@ export function Sidebar({
     {
       label: "在「访达」中打开",
       onClick: () => { void window.codeshell.revealInFinder(repo.path); },
-    },
-    {
-      label: "创建永久工作树",
-      onClick: () => onCreateWorktree(repo),
     },
     {
       label: "重命名项目…",

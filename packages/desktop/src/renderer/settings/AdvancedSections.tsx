@@ -1,11 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
-import type { GitBranches, GitStatus, WorktreeInfo } from "../../preload/types";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
 import { Select } from "../ui/Select";
 import { SearchConnectionsPanel } from "./SearchConnectionsPanel";
+import {
+  DEFAULT_GIT_PREFS,
+  loadGitPrefs,
+  saveGitPrefs,
+  type GitPrefs,
+} from "../gitPrefs";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -173,65 +178,93 @@ export function ConnectionsSection(props: ScopedProps) {
   return <SearchConnectionsPanel {...props} />;
 }
 
-export function GitSection({ activeRepoPath }: { activeRepoPath: string | null }) {
-  const [branches, setBranches] = useState<GitBranches | null>(null);
-  const [status, setStatus] = useState<GitStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export function GitSection() {
+  const [prefs, setPrefs] = useState<GitPrefs>(() => loadGitPrefs());
 
-  const refresh = async () => {
-    if (!activeRepoPath) return;
-    setError(null);
-    try {
-      const [b, s] = await Promise.all([
-        window.codeshell.getGitBranches(activeRepoPath),
-        window.codeshell.getGitStatus(activeRepoPath),
-      ]);
-      setBranches(b);
-      setStatus(s);
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
-    }
-  };
-  useEffect(() => { void refresh(); }, [activeRepoPath]);
+  useEffect(() => { setPrefs(loadGitPrefs()); }, []);
 
-  if (!activeRepoPath) return <EmptyProject label="Git" />;
-  if (error) return <div className="view-error">{error}</div>;
-  if (!branches) return <div className="view-loading">加载中...</div>;
-  if (!branches.isRepo) return <div className="approvals-empty">当前项目不是 Git 仓库</div>;
-
-  const switchTo = async (branch: string) => {
-    setError(null);
-    try {
-      await window.codeshell.switchGitBranch(activeRepoPath, branch);
-      await refresh();
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
-    }
+  const update = <K extends keyof GitPrefs>(key: K, value: GitPrefs[K]) => {
+    setPrefs((c) => {
+      const next = { ...c, [key]: value };
+      saveGitPrefs(next);
+      void window.codeshell.setGitPrefs?.(next);
+      return next;
+    });
   };
 
   return (
     <section className="settings-section">
-      <h3 className="settings-section-title">Git</h3>
-      <div className="settings-section-current">
-        <span>当前分支：</span>
-        <code>{branches.current ?? "(detached)"}</code>
-        {status && <span>{status.clean ? "工作区干净" : `${status.entries.length} 个改动`}</span>}
-      </div>
-      <ul className="settings-list">
-        {branches.branches.map((branch) => (
-          <li className="settings-list-row" key={branch}>
-            <strong>{branch}</strong>
-            {branch === branches.current ? (
-              <span className="model-active-badge">current</span>
-            ) : (
-              <button className="approval-btn deny" onClick={() => void switchTo(branch)}>
-                切换
-              </button>
-            )}
-          </li>
-        ))}
+      <ul className="settings-row-list">
+        <GitRowShell
+          title="分支前缀"
+          help="在 codeshell 中创建工作树时使用的分支前缀（创建后会自动追加工作树名 + 短哈希）"
+          control={
+            <input
+              className="settings-git-input"
+              value={prefs.branchPrefix}
+              placeholder={DEFAULT_GIT_PREFS.branchPrefix}
+              onChange={(e) => update("branchPrefix", e.target.value)}
+            />
+          }
+        />
+        <GitRowShell
+          title="自动清理过期工作树"
+          help="启动 codeshell 时检查 .worktrees/ 目录，删除超过下方时长未修改的工作树（包含其本地分支）。"
+          control={
+            <button
+              type="button"
+              role="switch"
+              aria-checked={prefs.autoDeleteWorktrees}
+              className={`settings-git-switch${prefs.autoDeleteWorktrees ? " on" : ""}`}
+              onClick={() => update("autoDeleteWorktrees", !prefs.autoDeleteWorktrees)}
+            >
+              <span className="settings-git-switch-thumb" />
+            </button>
+          }
+        />
+        <GitRowShell
+          title="清理阈值"
+          help="工作树空闲多久（按目录修改时间）后被自动清理。"
+          control={
+            <div className="settings-git-number">
+              <input
+                className="settings-git-input settings-git-input--number"
+                type="number"
+                value={prefs.autoDeleteWorktreesGraceMins}
+                min={1}
+                max={60 * 24 * 365}
+                disabled={!prefs.autoDeleteWorktrees}
+                onChange={(e) => {
+                  const n = Math.floor(Number(e.target.value));
+                  if (Number.isFinite(n) && n >= 1) update("autoDeleteWorktreesGraceMins", n);
+                }}
+              />
+              <span className="settings-git-number-suffix">分钟</span>
+            </div>
+          }
+        />
       </ul>
     </section>
+  );
+}
+
+function GitRowShell({
+  title,
+  help,
+  control,
+}: {
+  title: string;
+  help?: string;
+  control: React.ReactNode;
+}) {
+  return (
+    <li className="settings-git-row">
+      <div className="settings-git-row-text">
+        <div className="settings-git-row-title">{title}</div>
+        {help && <div className="settings-git-row-help">{help}</div>}
+      </div>
+      <div className="settings-git-row-control">{control}</div>
+    </li>
   );
 }
 
@@ -313,79 +346,6 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
       <button className="approval-btn approve settings-save-btn" onClick={() => void save()} disabled={saving}>
         {saving ? "保存中..." : "保存环境"}
       </button>
-    </section>
-  );
-}
-
-export function WorktreeSection({ activeRepoPath }: { activeRepoPath: string | null }) {
-  const [items, setItems] = useState<WorktreeInfo[] | null>(null);
-  const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-
-  const refresh = async () => {
-    if (!activeRepoPath) return;
-    setError(null);
-    try {
-      setItems(await window.codeshell.listWorktrees(activeRepoPath));
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
-    }
-  };
-  useEffect(() => { void refresh(); }, [activeRepoPath]);
-
-  if (!activeRepoPath) return <EmptyProject label="工作树" />;
-
-  const create = async () => {
-    if (!name.trim()) return;
-    setCreating(true);
-    setError(null);
-    try {
-      const created = await window.codeshell.createWorktree(activeRepoPath, name);
-      setName("");
-      await refresh();
-      await window.codeshell.revealInFinder(created.path);
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">工作树</h3>
-      <div className="settings-toolbar">
-        <input
-          className="sessions-filter"
-          value={name}
-          placeholder="新工作树名称"
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button className="approval-btn approve" disabled={creating || !name.trim()} onClick={() => void create()}>
-          创建
-        </button>
-        <button className="approval-btn deny" onClick={() => void refresh()}>刷新</button>
-      </div>
-      {error && <div className="view-error">{error}</div>}
-      {!items ? (
-        <div className="view-loading">加载中...</div>
-      ) : items.length === 0 ? (
-        <div className="approvals-empty">暂无工作树</div>
-      ) : (
-        <ul className="settings-list">
-          {items.map((item) => (
-            <li className="settings-list-row" key={item.path}>
-              <strong>{item.branch ?? "(detached)"}</strong>
-              <code>{item.path}</code>
-              {item.current && <span className="model-active-badge">main</span>}
-              <button className="approval-btn deny" onClick={() => void window.codeshell.revealInFinder(item.path)}>
-                打开
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   );
 }
@@ -541,10 +501,6 @@ function formatArchivedTime(ts: number): string {
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
   return `${yyyy}年${m}月${day}日，${hh}:${mm}`;
-}
-
-function EmptyProject({ label }: { label: string }) {
-  return <div className="approvals-empty">先选择一个项目，再配置「{label}」。</div>;
 }
 
 function objectOf(value: unknown): Record<string, unknown> {

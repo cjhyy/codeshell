@@ -168,9 +168,14 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("git:switchBranch", cwd, branch),
   stashAndSwitchGitBranch: (cwd: string, branch: string) =>
     ipcRenderer.invoke("git:stashAndSwitchBranch", cwd, branch),
-  createWorktree: (cwd: string, name: string) =>
-    ipcRenderer.invoke("git:createWorktree", cwd, name),
+  createWorktree: (cwd: string, name: string, branchPrefix?: string) =>
+    ipcRenderer.invoke("git:createWorktree", cwd, name, branchPrefix),
   listWorktrees: (cwd: string) => ipcRenderer.invoke("git:listWorktrees", cwd),
+  setGitPrefs: (prefs: {
+    branchPrefix: string;
+    autoDeleteWorktrees: boolean;
+    autoDeleteWorktreesGraceMins: number;
+  }) => ipcRenderer.invoke("git:setPrefs", prefs),
   getGitDiff: (cwd: string, file?: string) => ipcRenderer.invoke("git:diff", cwd, file),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
