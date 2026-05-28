@@ -65,4 +65,28 @@ describe("ModelPool credential resolution", () => {
     const cfg = pool.resolveLLMConfig("m");
     expect(cfg?.provider).toBe("anthropic");
   });
+
+  // Regression: agent-server-stdio's engineFactory calls
+  // runtime.modelPool.resolveLLMConfig() (no args) for every new session so
+  // hot-switched models flow into newly-spawned sessions. The contract:
+  // after pool.switch(key), resolveLLMConfig() with no args must return the
+  // newly-active model — not the bootstrap default. See TODO-week.md #8.
+  it("resolveLLMConfig() with no args follows pool.switch()", () => {
+    const pool = new ModelPool([
+      { key: "boot", provider: "openai", model: "gpt-5.5", apiKey: "k1", baseUrl: "https://a" },
+      { key: "next", provider: "openai", model: "deepseek-v4-flash", apiKey: "k2", baseUrl: "https://b" },
+    ]);
+    // Bootstrap snapshot — what agent-server-stdio froze at startup.
+    const boot = pool.resolveLLMConfig();
+    expect(boot?.model).toBe("gpt-5.5");
+
+    // Hot-switch via the same path Engine.switchModel() uses.
+    pool.switch("next");
+
+    // engineFactory(slice) for a new session now resolves against the pool.
+    const live = pool.resolveLLMConfig();
+    expect(live?.model).toBe("deepseek-v4-flash");
+    expect(live?.apiKey).toBe("k2");
+    expect(live?.baseUrl).toBe("https://b");
+  });
 });

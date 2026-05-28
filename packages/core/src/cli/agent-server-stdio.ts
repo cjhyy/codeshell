@@ -109,9 +109,14 @@ const runtime = new EngineRuntime({
 
 const chatManager = new ChatSessionManager({
   runtime,
+  // resolvedLlmConfig is the bootstrap-time snapshot. When the user
+  // hot-switches models via configure() the modelPool.activeKey moves
+  // ahead of it, so newly-created sessions must re-resolve from the pool
+  // each time the factory fires; fall back to the snapshot only when the
+  // pool can't resolve (no active key — shouldn't happen in practice).
   engineFactory: (slice) =>
     new Engine({
-      llm: resolvedLlmConfig,
+      llm: runtime.modelPool.resolveLLMConfig() ?? resolvedLlmConfig,
       cwd,
       runtime,
       // Inherit full scope so spawned subagents read user config too.
