@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
-import { Markdown } from "./Markdown";
+import { AssistantMessageView } from "./messages/AssistantMessageView";
 import { ThinkingMessageView } from "./messages/ThinkingMessageView";
 import { AgentMessageView } from "./messages/AgentMessageView";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
@@ -114,21 +114,7 @@ export function MessageStream({
             );
           }
           case "assistant":
-            if (!m.done && m.text === "") return null;
-            return (
-              <div
-                key={m.id}
-                className={`msg-row msg-row-assistant ${m.done ? "done" : "streaming"}`}
-              >
-                {m.done ? (
-                  <Markdown text={m.text} />
-                ) : (
-                  <div className="md-body md-streaming">
-                    <pre>{m.text}</pre>
-                  </div>
-                )}
-              </div>
-            );
+            return <AssistantMessageView key={m.id} message={m} />;
           case "thinking":
             return <ThinkingMessageView key={m.id} message={m} />;
           case "agent":
