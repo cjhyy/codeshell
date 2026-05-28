@@ -14,6 +14,21 @@ interface McpServer {
   transport?: "stdio" | "streamable-http" | "sse";
   env?: Record<string, string>;
   headers?: Record<string, string>;
+  /** Codex-style toggle. Absent/true = on; only false disables. */
+  enabled?: boolean;
+}
+
+/** A server is on unless explicitly disabled. */
+function isEnabled(s: McpServer): boolean {
+  return s.enabled !== false;
+}
+
+/**
+ * Tell other components that read mcpServers (e.g. McpView in the sidebar)
+ * to re-read settings. Same channel ModelSection / PermissionSection use.
+ */
+function broadcastSettingsChanged(): void {
+  window.dispatchEvent(new Event("codeshell:settings-changed"));
 }
 
 interface Props {
@@ -51,11 +66,14 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   }, [scope, cwd]);
 
   const runProbe = useCallback(async (list: McpServer[], force: boolean) => {
-    if (list.length === 0) {
+    // Disabled servers are never connected by the engine, so probing them
+    // would be misleading — skip them here too.
+    const probeable = list.filter(isEnabled);
+    if (probeable.length === 0) {
       setProbes({});
       return;
     }
-    const inputs: McpServerProbeInput[] = list.map((s) => ({
+    const inputs: McpServerProbeInput[] = probeable.map((s) => ({
       name: s.name,
       command: s.command,
       args: s.args,
@@ -64,7 +82,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       transport: s.transport,
       headers: s.headers,
     }));
-    setLoadingProbe(new Set(list.map((x) => x.name)));
+    setLoadingProbe(new Set(probeable.map((x) => x.name)));
     try {
       const results = await window.codeshell.probeMcpServers(inputs, force);
       setProbes((prev) => {
@@ -87,6 +105,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     const record = Object.fromEntries(next.map((s) => [s.name, stripNameFromServer(s)]));
     await window.codeshell.updateSettings(scope, { mcpServers: record }, cwd);
     setServers(next);
+    broadcastSettingsChanged();
   };
 
   const removeServer = async (name: string) => {
@@ -104,6 +123,34 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       return rest;
     });
     setServers((cur) => cur.filter((s) => s.name !== name));
+    broadcastSettingsChanged();
+  };
+
+  const toggleServer = async (s: McpServer) => {
+    const nextEnabled = !isEnabled(s);
+    // Persist just this server's full config with the flipped flag. We write
+    // the whole entry (not a partial) because updateSettings merges records
+    // key-by-key but replaces a server entry wholesale.
+    const updated = servers.map((x) =>
+      x.name === s.name ? { ...x, enabled: nextEnabled } : x,
+    );
+    await window.codeshell.updateSettings(
+      scope,
+      { mcpServers: { [s.name]: stripNameFromServer({ ...s, enabled: nextEnabled }) } },
+      cwd,
+    );
+    setServers(updated);
+    broadcastSettingsChanged();
+    if (!nextEnabled) {
+      // Drop the stale "connected" probe so the card doesn't look live.
+      await window.codeshell.invalidateMcpProbeCache(s.name);
+      setProbes((prev) => {
+        const { [s.name]: _, ...rest } = prev;
+        return rest;
+      });
+    } else {
+      void runProbe(updated.filter((x) => x.name === s.name), true);
+    }
   };
 
   const saveEdit = async (next: McpServer, originalName?: string) => {
@@ -188,6 +235,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
               server={s}
               probe={probe}
               loading={loading}
+              onToggle={() => void toggleServer(s)}
               onTest={() => void testOne(s)}
               onEdit={() => setEdit({ kind: "edit", original: s.name })}
               onRemove={() => void removeServer(s.name)}
@@ -226,6 +274,7 @@ interface McpCardProps {
   server: McpServer;
   probe?: McpProbeResult;
   loading: boolean;
+  onToggle: () => void;
   onTest: () => void;
   onEdit: () => void;
   onRemove: () => void;
@@ -237,6 +286,7 @@ function McpCard({
   server,
   probe,
   loading,
+  onToggle,
   onTest,
   onEdit,
   onRemove,
@@ -247,19 +297,38 @@ function McpCard({
   const target = server.command
     ? [server.command, ...(server.args ?? [])].join(" ")
     : server.url ?? "";
+  const enabled = isEnabled(server);
 
   return (
-    <article className="mcp-card">
+    <article className={`mcp-card${enabled ? "" : " mcp-card-disabled"}`}>
       <div className="mcp-card-head">
         <div className="mcp-card-title">
+          <button
+            className={`mcp-toggle${enabled ? " on" : ""}`}
+            role="switch"
+            aria-checked={enabled}
+            onClick={onToggle}
+            title={enabled ? "停用此服务器" : "启用此服务器"}
+          >
+            <span className="mcp-toggle-knob" />
+          </button>
           <strong>{server.name}</strong>
           <span className={`mcp-transport-pill mcp-transport-${transport}`}>
             {transportLabel(transport)}
           </span>
-          <StatusPill probe={probe} loading={loading} />
+          {enabled ? (
+            <StatusPill probe={probe} loading={loading} />
+          ) : (
+            <span className="mcp-status-pill unknown">已停用</span>
+          )}
         </div>
         <div className="mcp-card-actions">
-          <button className="mcp-icon-btn" onClick={onTest} disabled={loading} title="测试连接">
+          <button
+            className="mcp-icon-btn"
+            onClick={onTest}
+            disabled={loading || !enabled}
+            title={enabled ? "测试连接" : "已停用"}
+          >
             {loading ? "…" : "测试"}
           </button>
           <button className="mcp-icon-btn" onClick={onEdit} title="编辑">

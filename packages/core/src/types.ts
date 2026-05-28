@@ -365,6 +365,14 @@ export interface MCPServerConfig {
   url?: string;
   transport?: MCPTransport;
   headers?: Record<string, string>;
+  /**
+   * Toggle a server off without deleting its config (mirrors Codex's
+   * `enabled` field). Absent or `true` → connected; only the literal
+   * `false` disables it. Filtered in MCPManager.connectAll so the
+   * connection is never attempted; the entry stays in settings so the
+   * UI toggle can flip it back on. See connectAll().
+   */
+  enabled?: boolean;
 }
 
 // ─── Settings ─────────────────────────────────────────────────────

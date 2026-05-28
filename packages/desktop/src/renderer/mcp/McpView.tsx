@@ -12,6 +12,13 @@ interface McpServer {
   transport?: "stdio" | "streamable-http" | "sse";
   env?: Record<string, string>;
   headers?: Record<string, string>;
+  /** Codex-style toggle. Absent/true = on; only false disables. */
+  enabled?: boolean;
+}
+
+/** A server is on unless explicitly disabled. */
+function isEnabled(s: McpServer): boolean {
+  return s.enabled !== false;
 }
 
 export function McpView() {
@@ -25,7 +32,10 @@ export function McpView() {
       const s = (await window.codeshell.getSettings("user")) ?? {};
       const list = parseServers(s.mcpServers);
       setServers(list);
-      if (list.length > 0) void probe(list, false);
+      // Disabled servers are never connected by the engine — don't probe
+      // them (probing would spawn a child + show a misleading "连接中…").
+      const probeable = list.filter(isEnabled);
+      if (probeable.length > 0) void probe(probeable, false);
       else setProbes({});
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
@@ -57,6 +67,14 @@ export function McpView() {
     void load();
   }, [load]);
 
+  // Re-read settings when any settings writer broadcasts a change (e.g. the
+  // MCP toggle in Settings → MCP). Without this McpView keeps the stale list
+  // it read on mount, so a toggle "inside" settings never shows up here.
+  useEffect(() => {
+    window.addEventListener("codeshell:settings-changed", load);
+    return () => window.removeEventListener("codeshell:settings-changed", load);
+  }, [load]);
+
   if (error) return <div className="view-error">{error}</div>;
   if (!servers) return <div className="view-loading">加载中…</div>;
 
@@ -68,8 +86,8 @@ export function McpView() {
         </h2>
         <button
           className="approval-btn deny"
-          onClick={() => void probe(servers, true)}
-          disabled={servers.length === 0 || busy}
+          onClick={() => void probe(servers.filter(isEnabled), true)}
+          disabled={servers.filter(isEnabled).length === 0 || busy}
         >
           {busy ? "测试中…" : "重新测试"}
         </button>
@@ -84,19 +102,24 @@ export function McpView() {
         <div className="mcp-card-list">
           {servers.map((s) => {
             const p = probes[s.name];
+            const enabled = isEnabled(s);
             const transport = s.transport ?? (s.url ? "streamable-http" : "stdio");
             const target = s.command
               ? [s.command, ...(s.args ?? [])].join(" ")
               : s.url ?? "";
             return (
-              <article key={s.name} className="mcp-card">
+              <article key={s.name} className={`mcp-card${enabled ? "" : " mcp-card-disabled"}`}>
                 <div className="mcp-card-head">
                   <div className="mcp-card-title">
                     <strong>{s.name}</strong>
                     <span className={`mcp-transport-pill mcp-transport-${transport}`}>
                       {transport === "stdio" ? "stdio" : transport === "sse" ? "SSE" : "HTTP"}
                     </span>
-                    <StatusPill probe={p} loading={busy && !p} />
+                    {enabled ? (
+                      <StatusPill probe={p} loading={busy && !p} />
+                    ) : (
+                      <span className="mcp-status-pill unknown">已停用</span>
+                    )}
                   </div>
                   {p?.status === "ok" && (
                     <span className="mcp-card-stamp">{p.toolCount ?? 0} tools</span>

@@ -253,3 +253,39 @@
   overflow-y: auto;
   flex: 1;
 }
+
+/* ─── enable/disable toggle (Codex-style on/off switch) ──────────── */
+.mcp-card-disabled {
+  opacity: 0.55;
+}
+.mcp-card-disabled .mcp-card-target code {
+  text-decoration: line-through;
+}
+.mcp-toggle {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--border-strong);
+  cursor: pointer;
+  position: relative;
+  transition: background 120ms ease;
+}
+.mcp-toggle.on {
+  background: var(--accent, var(--status-ok));
+}
+.mcp-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 120ms ease;
+}
+.mcp-toggle.on .mcp-toggle-knob {
+  transform: translateX(12px);
+}

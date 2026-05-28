@@ -66,7 +66,16 @@ export class MCPManager {
    * Connect to all configured MCP servers and register their tools.
    */
   async connectAll(servers: Record<string, MCPServerConfig>): Promise<void> {
-    const entries = Object.entries(servers);
+    // Codex-style toggle: skip servers explicitly disabled in settings.
+    // Only the literal `false` disables — absent / true / any other value
+    // stays connected, matching the schema default semantics.
+    const entries = Object.entries(servers).filter(([name, config]) => {
+      if (config.enabled === false) {
+        logger.info("mcp.skipped_disabled", { server: name });
+        return false;
+      }
+      return true;
+    });
     if (entries.length === 0) return;
 
     const results = await Promise.allSettled(

@@ -116,6 +116,13 @@ const chatManager = new ChatSessionManager({
       runtime,
       // Inherit full scope so spawned subagents read user config too.
       settingsScope: "full",
+      // MCP servers from settings — the worker reads the full disk
+      // hierarchy at bootstrap (incl. ~/.code-shell). Without this the
+      // factory-built session Engine has config.mcpServers === undefined,
+      // so Engine.run()'s connectAll() guard never fires and no MCP server
+      // (stdio OR url) is ever connected. The shared runtime.mcpPool means
+      // the first session to connect populates connections for the worker.
+      mcpServers: settings.mcpServers,
       // Per-session overrides from the protocol request
       permissionMode: slice.permissionMode,
       preset: slice.preset,
