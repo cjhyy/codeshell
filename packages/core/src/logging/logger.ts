@@ -33,6 +33,7 @@ import {
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { redactSecrets } from "./sanitize-messages.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -291,7 +292,14 @@ class Logger {
 
   private recordError(msg: string, data?: Record<string, unknown>): void {
     if (inMemoryErrors.length >= MAX_IN_MEMORY_ERRORS) inMemoryErrors.shift();
-    inMemoryErrors.push({ msg, t: new Date().toISOString(), data });
+    // Scrub secrets out of msg + data before parking the entry in the in-
+    // memory ring. The ring is exposed via diagnostics endpoints, so
+    // anything that survives here is reachable by protocol clients.
+    inMemoryErrors.push({
+      msg: redactSecrets(msg),
+      t: new Date().toISOString(),
+      data: data ? redactSecrets(data) : undefined,
+    });
   }
 
   private write(level: LogLevel, msg: string, data?: Record<string, unknown>): void {
@@ -307,13 +315,19 @@ class Logger {
     }
 
     const t = new Date().toISOString();
-    const entry: Record<string, unknown> = { t, l: level, msg, ...this.context };
+    // Scrub msg + data before the entry is built. msg is a plain string so
+    // only bearer-tokens / URL secret query params can hide there; data is
+    // arbitrary so it gets the full recursive walk. Done at the boundary so
+    // every level/category sink shares the same redaction rules.
+    const safeMsg = redactSecrets(msg);
+    const safeData = data ? redactSecrets(data) : undefined;
+    const entry: Record<string, unknown> = { t, l: level, msg: safeMsg, ...this.context };
     if (cat && !entry.cat) entry.cat = cat;
     // Stamp the current process-wide session id unless this logger's
     // own context overrode it (rare). Doing it at write time means
     // children created before Engine.run() still pick up the real sid.
     if (entry.sid === undefined) entry.sid = getCurrentSid();
-    if (data) entry.d = data;
+    if (safeData) entry.d = safeData;
 
     const line = JSON.stringify(entry) + "\n";
 
