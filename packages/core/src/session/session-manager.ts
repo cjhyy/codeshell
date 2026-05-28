@@ -26,6 +26,44 @@ export interface SessionBundle {
   transcript: Transcript;
 }
 
+/**
+ * Validate a session ID before it is joined into a filesystem path.
+ *
+ * Internally generated IDs use `nanoid(16)` and are trusted by construction.
+ * But every public entry point (`create`'s explicitSessionId, `resume`,
+ * `exists`, `saveState`'s state.sessionId, `fork`'s sourceSessionId) accepts
+ * an ID from an outside caller — protocol clients, ChatSessionManager-driven
+ * cold starts, persisted state files — and join()'s it into `sessionsDir`.
+ * Without this check a value like "../etc/passwd" or "/tmp/x" would let the
+ * caller escape the sessions directory.
+ *
+ * Exported for direct unit testing.
+ */
+export function assertSafeSessionId(sessionId: unknown): asserts sessionId is string {
+  if (typeof sessionId !== "string" || sessionId.length === 0) {
+    throw new SessionError(`invalid session id: must be a non-empty string`);
+  }
+  // basename check: reject any path-shaped value. Covers absolute paths,
+  // POSIX and Windows separators, parent-dir tokens, and the lone "..".
+  if (sessionId.includes("/") || sessionId.includes("\\")) {
+    throw new SessionError(`invalid session id: contains path separator: ${sessionId}`);
+  }
+  if (sessionId === "." || sessionId === ".." || sessionId.includes("..")) {
+    throw new SessionError(`invalid session id: contains parent-dir token: ${sessionId}`);
+  }
+  // Conservative character allow-list: letters, digits, and `-_.` only.
+  // This matches what nanoid emits plus the dotted variants in-house code
+  // already uses (e.g. "tui-main", "agent.foo"). Anything else (NUL,
+  // newline, control chars, shell metacharacters, glob chars) is rejected.
+  if (!/^[A-Za-z0-9_.-]+$/.test(sessionId)) {
+    throw new SessionError(`invalid session id: unexpected characters: ${sessionId}`);
+  }
+  // Cap the length to keep filesystem APIs happy and avoid disk-name DoS.
+  if (sessionId.length > 128) {
+    throw new SessionError(`invalid session id: too long (max 128 chars)`);
+  }
+}
+
 export class SessionManager {
   private readonly sessionsDir: string;
 
@@ -47,6 +85,10 @@ export class SessionManager {
     provider: string,
     explicitSessionId?: string,
   ): SessionBundle {
+    // External callers may pass any string; nanoid output is trusted. Either
+    // way the ID gets joined into a filesystem path, so the public entry
+    // point validates before that join.
+    if (explicitSessionId !== undefined) assertSafeSessionId(explicitSessionId);
     const sessionId = explicitSessionId ?? nanoid(16);
     const sessionDir = join(this.sessionsDir, sessionId);
     mkdirSync(sessionDir, { recursive: true });
@@ -83,10 +125,19 @@ export class SessionManager {
    * without catching SessionError.
    */
   exists(sessionId: string): boolean {
+    // exists() is a probe — callers use it to decide between resume and
+    // create-with-explicit-sid. Treat an invalid id as "not present"
+    // rather than letting the traversal-shaped string reach existsSync.
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return false;
+    }
     return existsSync(join(this.sessionsDir, sessionId));
   }
 
   resume(sessionId: string): SessionBundle {
+    assertSafeSessionId(sessionId);
     const sessionDir = join(this.sessionsDir, sessionId);
     if (!existsSync(sessionDir)) {
       throw new SessionError(`Session not found: ${sessionId}`);
@@ -107,6 +158,9 @@ export class SessionManager {
   }
 
   saveState(state: SessionState): void {
+    // state.sessionId could come from a deserialized state.json that was
+    // tampered with on disk. Validate before joining.
+    assertSafeSessionId(state.sessionId);
     const sessionDir = join(this.sessionsDir, state.sessionId);
     mkdirSync(sessionDir, { recursive: true });
     // Atomic write: stage to .tmp, then rename. Protects against two processes
