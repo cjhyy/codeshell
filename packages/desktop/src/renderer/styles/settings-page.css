@@ -13,25 +13,24 @@
   flex-direction: column;
   background: var(--bg-app);
   overflow: hidden;
+  padding-top: var(--topbar-h); /* clear macOS traffic-light buttons */
 }
 
-.settings-page-head {
+/* Back button — standalone block at top of sidebar nav, separated by a border */
+.settings-page-back {
   display: flex;
   align-items: center;
-  height: 38px;
-  padding: 0 var(--sp-3);
+  gap: var(--sp-2);
+  height: 30px;
+  padding: 0 var(--sp-2);
+  margin-left: calc(-1 * var(--sp-2));
+  margin-right: calc(-1 * var(--sp-2));
+  margin-bottom: var(--sp-2);
+  padding-bottom: calc(var(--sp-2) + 4px);
   border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-sidebar);
-  flex-shrink: 0;
-}
-.settings-page-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px var(--sp-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--fz-sm);
+  font-size: var(--fz-md);
   color: var(--fg-secondary);
+  text-align: left;
 }
 .settings-page-back:hover { background: var(--bg-hover); color: var(--fg-primary); }
 

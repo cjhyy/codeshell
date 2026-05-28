@@ -120,15 +120,12 @@ export function SettingsPage({
 
   return (
     <div className="settings-page">
-      <header className="settings-page-head">
-        <button className="settings-page-back" onClick={onBack}>
-          <ArrowLeft size={14} />
-          <span>返回应用</span>
-        </button>
-      </header>
-
       <div className="settings-page-body">
         <nav className="settings-page-modules">
+          <button className="settings-page-back" onClick={onBack}>
+            <ArrowLeft size={14} />
+            <span>返回应用</span>
+          </button>
           {MODULES.map(({ id, label, Icon }) => (
             <button
               key={id}

@@ -16,6 +16,8 @@ import {
 interface Props {
   /** Switch to the full-page Settings view. */
   onOpenSettingsPage: () => void;
+  /** When sidebar is collapsed the trigger goes straight to settings. */
+  sidebarCollapsed?: boolean;
 }
 
 const LANGUAGES: UILanguage[] = ["zh", "en"];
@@ -31,7 +33,7 @@ const LANGUAGES: UILanguage[] = ["zh", "en"];
  * bounding rect, so it escapes the sidebar's `overflow: hidden` instead
  * of being clipped by it (same approach as the project ContextMenu).
  */
-export function SettingsMenu({ onOpenSettingsPage }: Props) {
+export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
   const [submenu, setSubmenu] = useState<{ left: number; top: number } | null>(null);
@@ -73,7 +75,7 @@ export function SettingsMenu({ onOpenSettingsPage }: Props) {
     <div className="settings-menu" ref={ref}>
       <button
         className={`sidebar-item settings-menu-trigger${open ? " active" : ""}`}
-        onClick={() => setOpen((o) => !o)}
+        onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}
       >
         <SettingsIcon size={14} />
         <span className="sidebar-item-label">设置</span>

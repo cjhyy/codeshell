@@ -28,6 +28,7 @@ interface SidebarProps {
   activeSessionId: string | null;
   collapsedRepos: Set<string>;
   approvalsBadge?: number;
+  sidebarCollapsed?: boolean;
 
   onSelectRepo: (id: string | null) => void;
   onSelectSession: (repoId: string | null, sessionId: string) => void;
@@ -67,6 +68,7 @@ export function Sidebar({
   activeSessionId,
   collapsedRepos,
   approvalsBadge,
+  sidebarCollapsed,
   onSelectRepo,
   onSelectSession,
   onToggleRepo,
@@ -259,7 +261,7 @@ export function Sidebar({
       </div>
 
       <div className="sidebar-bottom">
-        <SettingsMenu onOpenSettingsPage={onOpenSettingsPage} />
+        <SettingsMenu onOpenSettingsPage={onOpenSettingsPage} sidebarCollapsed={sidebarCollapsed} />
       </div>
 
       {menu && (
