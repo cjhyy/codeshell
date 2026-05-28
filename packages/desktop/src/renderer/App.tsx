@@ -654,6 +654,22 @@ function App() {
           bucket,
           result: r as unknown as Record<string, unknown>,
         });
+      })
+      .catch((err) => {
+        // Server crashed / RPC rejected / non-abort error. Without this
+        // the run promise silently rejects, busy never clears, and the
+        // composer stays disabled until the user reloads. Cancellation
+        // is now reported via a successful RunResult with reason
+        // "aborted_streaming" (see protocol/server.ts), so anything
+        // reaching here is a real failure worth logging.
+        setBusyForKey(bucket, false);
+        if (runningBucketRef.current === bucket) {
+          runningBucketRef.current = null;
+        }
+        window.codeshell.log("run.rejected", {
+          bucket,
+          error: String((err as Error)?.message ?? err),
+        });
       });
   };
 
@@ -669,6 +685,13 @@ function App() {
       : undefined;
     const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     window.codeshell.log("stop.click", { bucket, engineSessionId });
+    // Fire the cancel IPC, but don't wait for the round-trip — the
+    // user pressed Stop and expects the UI to reflect that NOW. Clear
+    // busy + routing optimistically; any stream events that arrive
+    // after this point are tail-end noise we can drop (the engine has
+    // already been told to abort).
+    setBusyForKey(bucket, false);
+    if (runningBucketRef.current === bucket) runningBucketRef.current = null;
     void window.codeshell.cancel(engineSessionId);
   };
 

@@ -270,11 +270,15 @@ export class AgentServer {
     // TodoWrite emits task_update directly through ToolContext.streamCallback;
     // no module singleton wiring needed anymore.
 
+    // Snapshot the controller for the catch block — `this.abortController`
+    // is nulled in the `finally`, so by the time we'd want to check
+    // `signal.aborted` below it's already gone.
+    const runController = this.abortController!;
     try {
       const result = await this.legacyEngine!.run(params.task, {
         cwd: params.cwd,
         sessionId: params.sessionId,
-        signal: this.abortController!.signal,
+        signal: runController.signal,
         onStream: streamToClient,
       });
 
@@ -288,9 +292,28 @@ export class AgentServer {
 
       this.transport.send(createResponse(req.id, runResult));
     } catch (err) {
-      this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
-      );
+      // ESC / Stop path. If the user cancelled, the engine's
+      // in-flight LLM call or Bash spawn rejects with an AbortError
+      // that bubbles up here. Don't surface it as InternalError —
+      // the user already knows they pressed stop; clients should
+      // just clear busy.
+      const aborted =
+        runController.signal.aborted ||
+        (err as { name?: string }).name === "AbortError";
+      if (aborted) {
+        const cancelledResult: RunResult = {
+          text: "",
+          reason: "aborted_streaming",
+          sessionId: params.sessionId ?? "",
+          turnCount: 0,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+        this.transport.send(createResponse(req.id, cancelledResult));
+      } else {
+        this.transport.send(
+          createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+        );
+      }
     } finally {
       this.running = false;
       this.abortController = null;

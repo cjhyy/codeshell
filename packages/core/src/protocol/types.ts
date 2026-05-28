@@ -62,6 +62,12 @@ export const ErrorCodes = {
   Overloaded: -32001,
   SessionNotFound: -32002,
   SessionClosed: -32004,
+  /**
+   * Run was cancelled by the user (ESC / Stop). Clients should treat
+   * this as a clean terminal state, not a real error: no banner, no
+   * red toast — just clear busy and stop streaming.
+   */
+  Cancelled: -32005,
 } as const;
 
 // ─── Client → Server Requests ───────────────────────────────────────
