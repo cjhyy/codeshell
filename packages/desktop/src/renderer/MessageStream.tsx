@@ -90,6 +90,7 @@ export function MessageStream({
             );
           }
           case "assistant":
+            if (!m.done && m.text === "") return null;
             return (
               <div
                 key={m.id}
@@ -99,7 +100,7 @@ export function MessageStream({
                   <Markdown text={m.text} />
                 ) : (
                   <div className="md-body md-streaming">
-                    <pre>{m.text || "…"}</pre>
+                    <pre>{m.text}</pre>
                   </div>
                 )}
               </div>
