@@ -12,10 +12,26 @@ interface Props {
   details?: React.ReactNode;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
+  /**
+   * Monotonic per-turn counter. When this value changes the card
+   * re-collapses, even if the user had opened it during streaming —
+   * Codex-style "turn ends, details fold back out of the way."
+   */
+  turnEpoch?: number;
 }
 
-export function ToolCardShell({ message, summary, details, onSelect, selected }: Props) {
+export function ToolCardShell({
+  message,
+  summary,
+  details,
+  onSelect,
+  selected,
+  turnEpoch,
+}: Props) {
   const [open, setOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (turnEpoch !== undefined) setOpen(false);
+  }, [turnEpoch]);
   const status: Status =
     message.status === "running"
       ? "running"
