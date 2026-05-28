@@ -14,7 +14,7 @@
  * background.
  */
 
-import React, { useRef, useState } from "react";
+import React, { memo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -25,7 +25,14 @@ interface Props {
   text: string;
 }
 
-export function Markdown({ text }: Props) {
+/**
+ * Memoized — re-parses markdown only when `text` actually changes.
+ * Without memo, every dispatch from a streaming text_delta would
+ * re-run ReactMarkdown/remark-gfm/rehype-highlight on every completed
+ * assistant message in the transcript, which is the dominant cost
+ * in long sessions.
+ */
+function MarkdownImpl({ text }: Props) {
   return (
     <div className="md-body">
       <ReactMarkdown
@@ -64,6 +71,8 @@ export function Markdown({ text }: Props) {
     </div>
   );
 }
+
+export const Markdown = memo(MarkdownImpl);
 
 function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) {
   const preRef = useRef<HTMLPreElement>(null);

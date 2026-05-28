@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import type { ToolMessage } from "../types";
 import { BashToolCard } from "./BashToolCard";
 import { FileToolCard } from "./FileToolCard";
@@ -16,8 +16,15 @@ interface Props {
 /**
  * Dispatch a tool message to the right specialized card based on tool name.
  * Falls back to GenericToolCard for unknown tools.
+ *
+ * Wrapped in React.memo: in long sessions the parent <MessageStream>
+ * re-renders on every text_delta (assistant text is in the same messages
+ * array). Without memo each text_delta walks all sibling tool cards.
+ * The `message` reference is stable across deltas — the reducer's
+ * `messages.map` keeps untouched items by reference identity — so the
+ * default shallow compare correctly short-circuits.
  */
-export function ToolCard({ message, onSelect, selectedId }: Props) {
+function ToolCardImpl({ message, onSelect, selectedId }: Props) {
   const selected = selectedId === message.id;
   const name = message.toolName.toLowerCase();
 
@@ -44,3 +51,5 @@ export function ToolCard({ message, onSelect, selectedId }: Props) {
   }
   return <GenericToolCard message={message} onSelect={onSelect} selected={selected} />;
 }
+
+export const ToolCard = memo(ToolCardImpl);
