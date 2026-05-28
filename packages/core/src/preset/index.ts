@@ -41,6 +41,7 @@ const GENERAL_BUILTIN_TOOLS = [
   "Bash",
   "WebSearch",
   "WebFetch",
+  "GenerateImage",
   "AskUserQuestion",
   "Agent",
   // AgentStatus removed: background agents now write to ~/.code-shell/agents/

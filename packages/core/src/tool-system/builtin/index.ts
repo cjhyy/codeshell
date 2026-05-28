@@ -5,6 +5,7 @@
 import type { RegisteredTool } from "../../types.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
+import { generateImageToolDef, generateImageTool } from "./generate-image.js";
 import { editToolDef, editTool } from "./edit.js";
 import { applyPatchToolDef, applyPatchTool } from "./apply-patch/index.js";
 import { globToolDef, globTool } from "./glob.js";
@@ -82,6 +83,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: writeTool,
+  },
+  {
+    definition: {
+      ...generateImageToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: generateImageTool,
   },
   {
     definition: {
