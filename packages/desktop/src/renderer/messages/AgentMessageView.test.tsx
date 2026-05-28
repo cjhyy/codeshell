@@ -47,7 +47,7 @@ describe("AgentMessageView", () => {
   test("folded header shows tool count when > 0", () => {
     const m = agent({ toolCount: 3 });
     const html = renderToStaticMarkup(<AgentMessageView message={m} />);
-    expect(html).toContain("3");
+    expect(html).toContain("· 3 tools");
   });
 
   test("done agent does not render final text while folded", () => {

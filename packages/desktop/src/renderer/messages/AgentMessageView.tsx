@@ -26,8 +26,9 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
         <button
           type="button"
           className="msg-agent-head"
-          onClick={() => hasBody && setExpanded((v) => !v)}
+          onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
+          aria-controls={`agent-body-${message.id}`}
           disabled={!hasBody}
         >
           <StatusDot status={status} />
@@ -42,7 +43,7 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
           )}
         </button>
         {expanded && (
-          <div className="msg-agent-body">
+          <div id={`agent-body-${message.id}`} className="msg-agent-body">
             {message.toolCalls.map((t) => (
               <ToolCard key={t.id} message={t} />
             ))}
