@@ -2,9 +2,11 @@
  * Two-level folding for the chat stream — Codex-style.
  *
  * Level 1 — adjacent tool calls of ANY kind collapse into a single
- * "已处理 N 条命令 ⌄" card. The run ends at the first non-tool
- * message (user / assistant / thinking / agent / system / context_
- * boundary / task_list / ask_user / files_changed).
+ * "已处理 N 条命令 ⌄" card. The run ends at the first "hard" non-tool
+ * message (user / agent / system / context_boundary / task_list /
+ * ask_user / files_changed). Short "transparent" messages emitted
+ * between tools — thinking and assistant_text — are absorbed into
+ * the same group so model chatter doesn't visually shatter a run.
  *
  * Level 2 — within a user-turn, everything from the first tool call
  * to the last tool call (inclusive of any assistant text or level-1
@@ -15,13 +17,29 @@
  * turn skips level-2 folding so the user can watch progress live.
  */
 
-import type { Message, ToolMessage } from "../types";
+import type {
+  AssistantMessage,
+  Message,
+  ThinkingMessage,
+  ToolMessage,
+} from "../types";
+
+/**
+ * Inner item of a level-1 tool group. Beyond the tool calls themselves
+ * we now absorb the "transparent" model output that lands between
+ * tools — `thinking` and `assistant` text — so the visual run doesn't
+ * splinter every time the model emits a one-liner between Bash calls.
+ * See foldAdjacentTools() for the lookahead rule that decides what
+ * counts as transparent.
+ */
+export type ToolGroupItem = ToolMessage | ThinkingMessage | AssistantMessage;
 
 export interface ToolGroup {
   kind: "tool_group";
   /** Stable id derived from the first member, so React keys stay stable. */
   id: string;
-  tools: ToolMessage[];
+  /** Inner items, in original order. Always starts and ends with a tool. */
+  items: ToolGroupItem[];
 }
 
 /**
@@ -86,11 +104,22 @@ function isHiddenTool(m: Message): boolean {
 }
 
 /**
+ * "Transparent" message kinds — short model output that can appear
+ * between tool calls without ending a level-1 run. Anything else
+ * (user / agent / system / context_boundary / task_list / ask_user
+ * / files_changed) is a hard break that forces a flush.
+ */
+function isTransparent(m: Message): m is ThinkingMessage | AssistantMessage {
+  return m.kind === "thinking" || m.kind === "assistant";
+}
+
+/**
  * Build the display list:
  *   0. Drop task-tracker tool calls — those drive the pinned task
  *      panel, not the chat stream.
  *   1. Run level-1 folding: collapse adjacent tool messages into
- *      ToolGroup (regardless of toolName).
+ *      ToolGroup (regardless of toolName), absorbing transparent
+ *      thinking/assistant items that land between two tools.
  *   2. Run level-2 folding: within each user-turn slice, wrap the
  *      span from first tool to last tool into a TurnProcessGroup.
  *      Mark the most recent turn as live so its header ticks.
@@ -110,35 +139,88 @@ function isToolish(item: Message | ToolGroup): boolean {
   return item.kind === "tool" || item.kind === "tool_group";
 }
 
+/**
+ * Scan forward from `from` (exclusive) until we hit a tool or a hard
+ * break, allowing only transparent items in between. Returns true if
+ * the next non-transparent item is a tool — meaning the current run
+ * can absorb [from..next_tool) as inner items.
+ *
+ * The lookahead only walks past transparent messages; the moment it
+ * sees anything else (user, system, agent, etc.) it answers "no,
+ * flush the run". This keeps the heuristic O(n) overall: each message
+ * is visited at most twice (once by the outer loop, once by lookahead).
+ */
+function nextNonTransparentIsTool(
+  messages: Message[],
+  from: number,
+): boolean {
+  for (let j = from; j < messages.length; j++) {
+    const m = messages[j]!;
+    if (m.kind === "tool") return true;
+    if (!isTransparent(m)) return false;
+  }
+  return false;
+}
+
 function foldAdjacentTools(messages: Message[]): Array<Message | ToolGroup> {
   const out: Array<Message | ToolGroup> = [];
-  let runStart = -1;
 
-  const flushRun = (endExclusive: number): void => {
-    if (runStart < 0) return;
-    const tools = messages.slice(runStart, endExclusive) as ToolMessage[];
-    if (tools.length === 1) {
-      out.push(tools[0]!);
-    } else {
+  // Items being collected for the current run. The run always opens
+  // with a tool; once it has ≥2 tools we emit a ToolGroup, otherwise
+  // we splay the buffer back into `out` so a single tool stays a plain
+  // ToolMessage row (matches pre-existing behavior).
+  let buf: ToolGroupItem[] = [];
+
+  const toolCountInBuf = (): number =>
+    buf.reduce((n, it) => (it.kind === "tool" ? n + 1 : n), 0);
+
+  // Drop any trailing transparent items hanging off the end of the
+  // run — a run must end on a tool, not on thinking/assistant. Those
+  // trailing items get pushed back to `out` so they render inline.
+  const dropTrailingTransparent = (): ToolGroupItem[] => {
+    const trailing: ToolGroupItem[] = [];
+    while (buf.length > 0 && buf[buf.length - 1]!.kind !== "tool") {
+      trailing.unshift(buf.pop()!);
+    }
+    return trailing;
+  };
+
+  const flushRun = (): void => {
+    if (buf.length === 0) return;
+    const trailing = dropTrailingTransparent();
+    if (toolCountInBuf() >= 2) {
+      const firstTool = buf.find((it) => it.kind === "tool") as ToolMessage;
       out.push({
         kind: "tool_group",
-        id: `group-${tools[0]!.id}`,
-        tools,
+        id: `group-${firstTool.id}`,
+        items: buf,
       });
+    } else {
+      // Single tool (with possibly some transparent items wedged in)
+      // — splay everything back so it renders inline.
+      for (const it of buf) out.push(it);
     }
-    runStart = -1;
+    for (const it of trailing) out.push(it);
+    buf = [];
   };
 
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i]!;
     if (m.kind === "tool") {
-      if (runStart < 0) runStart = i;
+      buf.push(m);
       continue;
     }
-    flushRun(i);
+    if (buf.length > 0 && isTransparent(m) && nextNonTransparentIsTool(messages, i + 1)) {
+      // Absorb the transparent item — another tool is coming before
+      // any hard break, so this is just inline model chatter inside
+      // an otherwise contiguous run.
+      buf.push(m);
+      continue;
+    }
+    flushRun();
     out.push(m);
   }
-  flushRun(messages.length);
+  flushRun();
   return out;
 }
 
@@ -221,17 +303,25 @@ function foldTurnProcess(
   return out;
 }
 
-function firstToolStart(items: Array<Message | ToolGroup>): number {
-  let earliest = Infinity;
+function forEachTool(
+  items: Array<Message | ToolGroup>,
+  visit: (t: ToolMessage) => void,
+): void {
   for (const it of items) {
-    if (it.kind === "tool") {
-      if (it.startedAt < earliest) earliest = it.startedAt;
-    } else if (it.kind === "tool_group") {
-      for (const t of it.tools) {
-        if (t.startedAt < earliest) earliest = t.startedAt;
+    if (it.kind === "tool") visit(it);
+    else if (it.kind === "tool_group") {
+      for (const inner of it.items) {
+        if (inner.kind === "tool") visit(inner);
       }
     }
   }
+}
+
+function firstToolStart(items: Array<Message | ToolGroup>): number {
+  let earliest = Infinity;
+  forEachTool(items, (t) => {
+    if (t.startedAt < earliest) earliest = t.startedAt;
+  });
   return isFinite(earliest) ? earliest : Date.now();
 }
 
@@ -241,10 +331,9 @@ function anchorId(item: Message | ToolGroup): string {
 
 function countToolsRecursive(items: Array<Message | ToolGroup>): number {
   let n = 0;
-  for (const it of items) {
-    if (it.kind === "tool") n += 1;
-    else if (it.kind === "tool_group") n += it.tools.length;
-  }
+  forEachTool(items, () => {
+    n += 1;
+  });
   return n;
 }
 
@@ -256,17 +345,13 @@ function countToolsRecursive(items: Array<Message | ToolGroup>): number {
 function spanDurationMs(items: Array<Message | ToolGroup>): number {
   let earliestStart = Infinity;
   let latestEnd = 0;
-  const visit = (t: ToolMessage): void => {
+  forEachTool(items, (t) => {
     if (typeof t.startedAt === "number" && t.startedAt < earliestStart) {
       earliestStart = t.startedAt;
     }
     const end = t.endedAt ?? t.startedAt;
     if (typeof end === "number" && end > latestEnd) latestEnd = end;
-  };
-  for (const it of items) {
-    if (it.kind === "tool") visit(it);
-    else if (it.kind === "tool_group") for (const t of it.tools) visit(t);
-  }
+  });
   if (!isFinite(earliestStart) || latestEnd <= 0) return 0;
   return Math.max(0, latestEnd - earliestStart);
 }
@@ -283,4 +368,11 @@ export function processGroupLabel(durationMs: number): string {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return s === 0 ? `已处理 ${m}m` : `已处理 ${m}m ${s}s`;
+}
+
+/** Count tool calls inside a level-1 group (excludes transparent items). */
+export function toolGroupToolCount(group: ToolGroup): number {
+  let n = 0;
+  for (const it of group.items) if (it.kind === "tool") n += 1;
+  return n;
 }
