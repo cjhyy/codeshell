@@ -51,7 +51,10 @@ export const todoWriteToolDef: ToolDefinition = {
   description:
     "Manage the session todo list. Pass the COMPLETE list each call — there's no per-item update API, you rewrite the entire snapshot. " +
     "Use proactively for tasks with 3+ steps. Exactly one item should be in_progress at a time. " +
-    "Always provide both `content` (imperative) and `activeForm` (present continuous) so the UI can show what's happening right now.",
+    "Always provide both `content` (imperative) and `activeForm` (present continuous) so the UI can show what's happening right now. " +
+    "Skip the todo list for straightforward tasks (roughly the easiest 25%) and don't make single-step lists. " +
+    "Update the list immediately after finishing a sub-task — mark it completed in the same turn you completed it, don't batch updates across turns. " +
+    "If you change direction and a planned item will no longer be done, rewrite the list with that item dropped rather than leaving it pending; the list must reflect what you're actually going to do next.",
   inputSchema: {
     type: "object",
     properties: {
