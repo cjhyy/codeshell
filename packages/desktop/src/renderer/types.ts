@@ -150,8 +150,12 @@ export interface MessagesReducerState {
   promptTokens: number;
   /** Currently-active sub-agents by id. */
   activeAgents: Record<string, AgentRuntime>;
-  /** agentId → index in `messages`. Set on agent_start; stable for the agent's lifetime
-   * because AgentMessages are append-only and never removed mid-session. */
+  /**
+   * agentId → index in `messages`. Set on agent_start. The `tombstone`
+   * case updates these indices when a message is removed so the mapping
+   * stays coherent for the agent's lifetime within an active session.
+   * Cleared on saveTranscript truncation because slice() invalidates them.
+   */
   agentMessageIndex: Record<string, number>;
 }
 
@@ -405,10 +409,19 @@ export function applyStreamEvent(
     }
 
     case "tombstone": {
-      return {
-        ...state,
-        messages: state.messages.filter((m) => m.id !== event.messageId),
-      };
+      // Find the doomed message's index so we can adjust agentMessageIndex.
+      const removedIdx = state.messages.findIndex((m) => m.id === event.messageId);
+      if (removedIdx < 0) return state;
+      const messages = state.messages.filter((_, i) => i !== removedIdx);
+      // Drop the entry for the removed agent (if it was an AgentMessage),
+      // decrement every index that pointed past the removed slot.
+      const removed = state.messages[removedIdx]!;
+      const agentMessageIndex: Record<string, number> = {};
+      for (const [agentId, idx] of Object.entries(state.agentMessageIndex)) {
+        if (removed.kind === "agent" && agentId === removed.id) continue;
+        agentMessageIndex[agentId] = idx > removedIdx ? idx - 1 : idx;
+      }
+      return { ...state, messages, agentMessageIndex };
     }
 
     case "turn_complete": {
