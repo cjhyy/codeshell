@@ -6,6 +6,7 @@ export type ViewMode =
   | "settings"       // legacy modal route — kept for routing back-compat
   | "settings_page"  // full-screen Settings page (new in batch E)
   | "mcp"
+  | "customize"      // full-screen 技能与插件 (skills + plugins) view
   | "logs";
 
 const KEY = "codeshell.view";

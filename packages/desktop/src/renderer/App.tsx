@@ -53,6 +53,7 @@ import { LogsView } from "./logs/LogsView";
 import { SettingsPage } from "./settings/SettingsPage";
 import { McpView } from "./mcp/McpView";
 import { RunsView } from "./runs/RunsView";
+import { CustomizeView } from "./customize/CustomizeView";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -980,6 +981,7 @@ function App() {
           onOpenSearch={() => setSessionSearchOpen(true)}
           onOpenAutomations={() => setViewMode("runs")}
           onOpenPlugins={() => setViewMode("mcp")}
+          onOpenCustomize={() => setViewMode("customize")}
           onOpenSettingsPage={() => setViewMode("settings_page")}
           onRenameSession={handleRenameSession}
           onArchiveSession={handleArchiveSession}
@@ -1008,6 +1010,8 @@ function App() {
           <LogsView />
         ) : view.viewMode === "mcp" ? (
           <McpView />
+        ) : view.viewMode === "customize" ? (
+          <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
         ) : view.viewMode === "runs" ? (
           <RunsView />
         ) : (

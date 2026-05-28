@@ -3,6 +3,7 @@ import {
   MessageSquare,
   Search,
   Puzzle,
+  Blocks,
   Workflow,
   ChevronDown,
   ChevronRight,
@@ -43,6 +44,7 @@ interface SidebarProps {
   onOpenSearch: () => void;
   onOpenAutomations: () => void;
   onOpenPlugins: () => void;
+  onOpenCustomize: () => void;
   onOpenSettingsPage: () => void;
 
   onRenameSession: (repoId: string | null, sessionId: string, title: string) => void;
@@ -80,6 +82,7 @@ export function Sidebar({
   onOpenSearch,
   onOpenAutomations,
   onOpenPlugins,
+  onOpenCustomize,
   onOpenSettingsPage,
   onRenameSession,
   onArchiveSession,
@@ -187,7 +190,13 @@ export function Sidebar({
       <nav className="sidebar-top">
         <SidebarItem label="新对话" Icon={MessageSquare} onClick={onNewConversation} active={false} />
         <SidebarItem label="搜索" Icon={Search} onClick={onOpenSearch} active={false} />
-        <SidebarItem label="插件" Icon={Puzzle} onClick={onOpenPlugins} active={viewMode === "mcp"} />
+        <SidebarItem label="MCP" Icon={Puzzle} onClick={onOpenPlugins} active={viewMode === "mcp"} />
+        <SidebarItem
+          label="技能与插件"
+          Icon={Blocks}
+          onClick={onOpenCustomize}
+          active={viewMode === "customize"}
+        />
         <SidebarItem
           label="自动化"
           Icon={Workflow}
@@ -256,10 +265,7 @@ export function Sidebar({
       </div>
 
       <div className="sidebar-bottom">
-        <SettingsMenu
-          activeRepoPath={activeRepoPath}
-          onOpenSettingsPage={onOpenSettingsPage}
-        />
+        <SettingsMenu onOpenSettingsPage={onOpenSettingsPage} />
       </div>
 
       {menu && (
