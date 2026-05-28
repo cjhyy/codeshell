@@ -10,9 +10,10 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   rmSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { gitClone, gitRevParseHead, githubRepoToCloneUrl } from "./gitOps.js";
 import { loadMarketplace } from "./marketplaceManager.js";
@@ -41,6 +42,47 @@ function pluginCacheRoot(): string {
 
 function pluginCacheDir(marketplace: string, plugin: string, version: string): string {
   return join(pluginCacheRoot(), marketplace, plugin, version);
+}
+
+/**
+ * Resolve a candidate `installPath` to a realpath and verify it lives strictly
+ * underneath the plugin cache root. Returns the resolved path on success, or
+ * null when the path is missing, escapes the cache, equals the cache root
+ * itself, or is otherwise unsafe to remove.
+ *
+ * Exported so tests can exercise the safety predicate directly without
+ * arranging a full uninstall — the contract this defends (no rmSync outside
+ * the plugin cache) is the entire point of T2 / Workstream A2.
+ */
+export function resolveSafePluginPath(installPath: string, cacheRoot: string): string | null {
+  if (typeof installPath !== "string" || installPath.length === 0) return null;
+
+  // Realpath the cache root once. We require it to exist; if the cache root
+  // itself can't be resolved, refuse all deletions rather than fall back to
+  // a string-only check.
+  let safeCacheRoot: string;
+  try {
+    safeCacheRoot = realpathSync(cacheRoot);
+  } catch {
+    return null;
+  }
+
+  // Realpath the target. A missing target (dangling symlink, already removed,
+  // typo in installed_plugins.json) returns null — caller will skip silently.
+  let resolvedTarget: string;
+  try {
+    resolvedTarget = realpathSync(installPath);
+  } catch {
+    return null;
+  }
+
+  // Strict containment: must start with cacheRoot + separator. Equal-to-root
+  // is explicitly rejected so a tampered entry can't wipe the whole cache.
+  const rootWithSep = safeCacheRoot.endsWith(sep) ? safeCacheRoot : safeCacheRoot + sep;
+  if (resolvedTarget === safeCacheRoot) return null;
+  if (!resolvedTarget.startsWith(rootWithSep)) return null;
+
+  return resolvedTarget;
 }
 
 export interface VarRewriteReport {
@@ -259,10 +301,17 @@ export function uninstallPlugin(
   const data = readInstalledPlugins();
   const entries = data.plugins[key];
   let removedFromDisk = false;
+  const cacheRoot = pluginCacheRoot();
   if (entries) {
     for (const e of entries) {
-      if (e.installPath && existsSync(e.installPath)) {
-        rmSync(e.installPath, { recursive: true, force: true });
+      if (!e.installPath) continue;
+      // Containment check: the on-disk installed_plugins.json can be tampered
+      // with to point at arbitrary paths (e.g. "/", "$HOME"). Refuse to rm
+      // anything that doesn't realpath to a strict child of the plugin cache.
+      const safePath = resolveSafePluginPath(e.installPath, cacheRoot);
+      if (!safePath) continue;
+      if (existsSync(safePath)) {
+        rmSync(safePath, { recursive: true, force: true });
         removedFromDisk = true;
       }
     }
