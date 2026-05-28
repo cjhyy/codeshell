@@ -72,7 +72,8 @@ import {
   ImageParseError,
   type ParsedTask,
 } from "./parse-task.js";
-import { enforceImagePolicy } from "./image-policy.js";
+import { enforceImagePolicy, byteLengthFromBase64 } from "./image-policy.js";
+import { tryCompressImages } from "./image-compression.js";
 import { capabilitiesFor } from "../llm/capabilities/index.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
 import type { ContentBlock } from "../types.js";
@@ -599,7 +600,26 @@ export class Engine {
       // fast with a clear message instead of letting the OpenAI client
       // grind through three 16-second "Connection error" retries on a
       // 4 MB body. See `image-policy.ts` for the rationale and limits.
-      const verdict = enforceImagePolicy(parsedTask.images);
+      let verdict = enforceImagePolicy(parsedTask.images);
+      if (!verdict.ok && verdict.code === "image_too_large") {
+        // One image blew the per-image cap. Try the engine-side
+        // compressor (jimp-backed when installed; no-op otherwise) so
+        // TUI / MCP paths that lack a host-side resize don't fail
+        // outright on a screenshot they could have rescaled. The
+        // re-check below is what decides whether we proceed.
+        const compressed = await tryCompressImages(parsedTask.images);
+        if (compressed.anyCompressed) {
+          parsedTask.images = compressed.images;
+          logger.info("engine.run.image_compressed", {
+            before: verdict.offender?.bytes,
+            after: compressed.images.reduce(
+              (s, i) => s + byteLengthFromBase64(i.base64),
+              0,
+            ),
+          });
+          verdict = enforceImagePolicy(parsedTask.images);
+        }
+      }
       if (!verdict.ok) {
         logger.warn("engine.run.image_too_large", {
           code: verdict.code,
