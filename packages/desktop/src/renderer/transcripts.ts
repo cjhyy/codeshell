@@ -153,6 +153,7 @@ export function loadTranscript(
       sessionId: parsed.sessionId ?? null,
       promptTokens: parsed.promptTokens ?? 0,
       activeAgents: parsed.activeAgents ?? {},
+      agentMessageIndex: parsed.agentMessageIndex ?? {},
     };
   } catch {
     return INITIAL_STATE;

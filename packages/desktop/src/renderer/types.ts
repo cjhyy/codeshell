@@ -69,6 +69,12 @@ export interface AgentMessage {
   error?: string;
   startedAt: number;
   endedAt?: number;
+  /** Tool calls made by this subagent, in arrival order. */
+  toolCalls: ToolMessage[];
+  /** Accumulating text_delta payload; flushed to `text` on turn_complete / agent_end. */
+  textBuffer: string;
+  /** Cheap counter for the folded header. Equals toolCalls.length. */
+  toolCount: number;
 }
 
 export interface ContextBoundaryMessage {
@@ -144,6 +150,9 @@ export interface MessagesReducerState {
   promptTokens: number;
   /** Currently-active sub-agents by id. */
   activeAgents: Record<string, AgentRuntime>;
+  /** agentId → index in `messages`. Set on agent_start; stable for the agent's lifetime
+   * because AgentMessages are append-only and never removed mid-session. */
+  agentMessageIndex: Record<string, number>;
 }
 
 export const INITIAL_STATE: MessagesReducerState = {
@@ -153,6 +162,7 @@ export const INITIAL_STATE: MessagesReducerState = {
   sessionId: null,
   promptTokens: 0,
   activeAgents: {},
+  agentMessageIndex: {},
 };
 
 let _counter = 0;
@@ -327,6 +337,7 @@ export function applyStreamEvent(
 
     case "agent_start": {
       const startedAt = Date.now();
+      const newIndex = state.messages.length;
       return {
         ...state,
         activeAgents: {
@@ -347,8 +358,15 @@ export function applyStreamEvent(
             description: event.description,
             done: false,
             startedAt,
+            toolCalls: [],
+            textBuffer: "",
+            toolCount: 0,
           },
         ],
+        agentMessageIndex: {
+          ...state.agentMessageIndex,
+          [event.agentId]: newIndex,
+        },
       };
     }
 
