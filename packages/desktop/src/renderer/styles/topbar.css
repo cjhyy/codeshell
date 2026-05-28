@@ -9,12 +9,34 @@
   font-size: var(--fz-md);
   user-select: none;
   gap: var(--sp-3);
+  -webkit-app-region: drag;
 }
 .topbar-left, .topbar-right {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   min-width: 0;
+}
+/* Reserve room for the macOS traffic-light cluster so app content
+   doesn't sit under the close/min/zoom buttons. ~78px is the standard
+   inset (button width × 3 + paddings); kept zero on non-macOS via the
+   .platform-darwin class set in App.tsx. */
+.topbar-traffic-gutter {
+  display: inline-block;
+  width: 0;
+  flex-shrink: 0;
+}
+.platform-darwin .topbar-traffic-gutter {
+  width: 70px;
+}
+/* Buttons, links, and identity text inside the topbar must stay
+   clickable — they opt out of the drag region. */
+.topbar button,
+.topbar a,
+.topbar-app,
+.topbar-repo,
+.topbar-session {
+  -webkit-app-region: no-drag;
 }
 .topbar-app { font-weight: 600; color: var(--fg-primary); }
 .topbar-sep { color: var(--fg-muted); }

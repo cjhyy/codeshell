@@ -93,6 +93,12 @@ async function createWindow(): Promise<BrowserWindow> {
     x: ws.x,
     y: ws.y,
     icon: resolve(__dirname, "..", "..", "build", "icon.png"),
+    // Codex-style single-row header: hide the native macOS title bar
+    // (keeps traffic-light), let renderer content flow under the
+    // buttons. The .topbar element reserves a 70px gutter so its
+    // contents don't sit underneath the traffic-light cluster.
+    // Other platforms get the standard window frame (no-op there).
+    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     webPreferences: {
       preload: resolve(__dirname, "..", "preload", "index.cjs"),
       contextIsolation: true,

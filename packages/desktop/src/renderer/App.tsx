@@ -45,8 +45,6 @@ import {
   type Repo,
 } from "./repos";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
-import { PanelLeft } from "./ui/icons";
-import { IconButton } from "./ui/IconButton";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
 // Full-page Settings — driven by viewMode === 'settings_page'.
@@ -973,9 +971,14 @@ function App() {
     );
   }
 
+  const platformClass =
+    typeof navigator !== "undefined" && /Mac/.test(navigator.platform)
+      ? "platform-darwin"
+      : "";
+
   return (
     <div
-      className="app-grid"
+      className={`app-grid ${platformClass}`.trim()}
       data-sidebar={view.sidebarCollapsed ? "collapsed" : "open"}
       data-inspector="hidden"
     >
@@ -984,6 +987,8 @@ function App() {
           repoName={activeRepo?.name ?? null}
           sessionTitle={sessionTitleForTop}
           busy={busy}
+          sidebarCollapsed={view.sidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
         />
       </div>
 
@@ -1020,12 +1025,6 @@ function App() {
 
       <main className="main-region main">
         <UpdaterBanner />
-        <div className="main-toolbar">
-          <IconButton label={view.sidebarCollapsed ? "展开侧栏" : "折叠侧栏"} onClick={toggleSidebar}>
-            <PanelLeft size={14} />
-          </IconButton>
-          <span className="main-toolbar-spacer" />
-        </div>
         {lifecycle && <div className="banner">{lifecycle}</div>}
         {view.viewMode === "approvals" ? (
           <ApprovalsView
