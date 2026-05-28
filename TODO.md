@@ -3,24 +3,73 @@
 > 基于 Codex CLI、Claude Code 等竞品分析，结合 CodeShell 现状整理的开发路线图。
 > 标注：✅ 已完成 | 🔧 部分完成 | ⬜ 未开始
 
+> 本文是**累积式**的——已完成项原地打 ✅ 并附简短证据（commit / spec / 文件），不删除题目；这样老的 review notes 仍可被检索。
+
+---
+
+## Review Notes — 2026-05-28
+
+> 上一轮 review 之后的进展快照（截至 2026-05-28）。本文档同步更新了下方对应条目的勾选状态。
+
+**子代理工作流（重头戏，已成体系）**
+- ✅ 内置 4 个角色（`researcher` / `explorer` / `planner` / `general-purpose`）落地为 `.code-shell/agents/*.md`，YAML frontmatter + body 格式 → commit `0ba964c`、`e5c9979`
+- ✅ Agent 工具新增 `agent_type` 入参，未知角色抛错并列出 Available；模型路由 `resolveChildLlm` 支持 ModelPool key 继承 → commit `e383afe`、`4ecfd80`
+- ✅ 子代理生命周期 hook（start/finish/error）+ 端到端测试覆盖
+- ✅ 桌面「子代理」配置面板（设置 → 子代理）：列表 + 编辑表单（model 下拉 / tools 多选 / maxTurns / 系统提示词）；内置项保存生成用户级同名覆盖文件、`disabledAgents` 让被禁角色 LLM 不可见；commit 链 `b66ddb1` → `b338d14`，spec `2026-05-27-subagent-config-panel-design.md`、plan `2026-05-27-subagent-config-panel.md`
+- ✅ 多 Engine 并发 sid 串扰修复（AsyncLocalStorage scope）→ logger.ts 已合入（2026-05-19）
+
+**桌面 UI 重排**
+- ✅ 左上 nav：新对话 / 搜索 / **MCP** / **技能与插件** / 自动化（重命名 + 增加 customize 入口）
+- ✅ 全屏「技能与插件」视图（复用 `PluginsAndSkillsSection`）→ commit `f51987d`
+- ✅ SettingsMenu 精简为「打开设置 + 切换语言（右侧级联）」→ commit `a0e25fe`
+- ✅ AgentsSection 重做：复用 `<Select>` / `settings-field` / `settings-toggle-inline`，三色来源 pill → commit `b338d14`
+
+**安全 / 隔离**
+- ✅ `disabledPlugins` 现在也压制 plugin hooks（不再只是 skills）→ commit `ed30bb9`
+- ✅ MCP per-server enabled toggle + 修 stdio worker 不连问题 → commit `6760704`
+- ✅ SDK settings 隔离设计（spec `2026-05-27-sdk-settings-isolation-design.md`，部分实现已合入）
+
+**其他**
+- ✅ `GenerateImage` 内置工具（OpenAI gpt-image-2）→ commit `d43d652`，spec `2026-05-27-generate-image-tool-design.md`
+- ✅ 架构对照文档：core vs Claude Code vs Codex → commit `ac6aea8`，`docs/architecture/18-core-vs-cc-vs-codex.md`
+- ✅ core 版本号同步：bump 到 `0.5.0-rc.1`（解决之前 VERSION 漂移）→ commit `dc21ed7`
+
+**真正仍未动 / 部分缺位**（基于 2026-05-28 实地核查）：
+- ⬜ 完整沙箱执行（A2 abort 设计已写，主体未落地）
+- 🔧 Memories（pipeline + 工具已实现，缺 `/memories` 命令、consolidation、可配置）
+- ⬜ Guardian 子代理审批
+- ⬜ Undo / 撤销系统
+- ⬜ Shell Snapshot
+- ⬜ Code Review 内置 `/review` 命令
+- ⬜ Feature Flags 系统
+- 🔧 后台 agent 自动完成通知（registry 完整，缺自动注入主 session）
+- 🔧 Plugin SessionStart hook 全套打通（已加载、需运行时验证 superpowers 是否真注入到 prompt）
+- ⬜ Agent mailbox / per-agent skill 精选层 / `max_depth` / `max_threads` 配置
+- ⬜ AGENTS.md 层级覆盖 + AGENTS.local.md
+- ⬜ OpenAI `finish_reason === "length"` 归一（5/14 P1）
+- ⬜ `resolveSandboxBackend` per-turn 缓存（5/14 P3）
+- ⬜ Provider 增强大部分（reasoning_summary、service_tier、模型降级、auth.command、env_http_headers）
+
 ---
 
 ## Review Notes — 2026-05-14
 
-> 先记录，不一定立即优化。来源：repo-wide review（安全、架构、LLM 正确性、发布/API、测试信号）。
+> 来源：repo-wide review。**2026-05-28 已逐条对照代码核实**，每项尾标注最新状态与证据。
 
-- [ ] **P0 权限：Bash safe-read 分类可被 shell 元字符绕过。** 当前 `classifyBashCommand()` 仍会把 `echo x > file`、`git status && touch file`、`cat package.json | sh` 这类命令判为 safe-read；需要统一拒绝重定向、链式执行、危险管道，或复用 `ToolExecutor.isReadOnlyBashCommand()` 的更严格逻辑。
-- [ ] **P0 权限：`acceptEdits` 对非 Bash 工具过宽。** 默认 CLI 模式是 `acceptEdits`，但 PermissionClassifier fallback 会 allow 所有未匹配工具，导致 `Config`、`CronCreate`、`MCPTool`、`RemoteTrigger`、`REPL`、`PowerShell` 等 `permissionDefault: "ask"` 的工具也被放行。
-- [ ] **P1 cwd 一致性：EngineConfig.cwd 没有贯穿到所有工具执行。** `Bash`、`Glob`、`Grep`、`Config` 等工具仍默认使用 `process.cwd()` 或未注入的 `__cwd`，RunManager/SDK 传入非当前进程 cwd 时，模型看到的 cwd 和实际工具 cwd 可能不一致。
-- [ ] **P1 LLM 正确性：OpenAI 截断续写触发条件不匹配。** TurnLoop 只识别 `stopReason === "max_tokens"`，但 OpenAI chat completion 常见截断 finish_reason 是 `"length"`；流式路径还把最终 `stopReason` 硬编码成 `"stop"`。
-- [ ] **P1 WebFetch SSRF：重定向后未重新校验目标主机。** 初始 URL 会检查 loopback/RFC1918/metadata host，但 `redirect: "follow"` 后没有对最终 URL 再检查，仍可能被外部 302 带到内网地址。
-- [ ] **P2 RunManager：approval/input resume 有竞态。** `RunApprovalBackend` 和 `createRunAskUserFn()` 都是先通知 lifecycle hook，再设置 pending promise；外部系统很快 `resume()` 时可能 resolve 失败且返回值被忽略。
-- [ ] **P2 发布/API：public `VERSION` 与 package version 漂移。** `package.json` 是 `0.1.6`，`src/index.ts` 仍导出 `VERSION = "0.1.0"`；另外 `build:dts` 使用 `|| true`，声明文件失败不会阻断发布。
-- [ ] **P3 性能：`resolveSandboxBackend` 每 turn 都重 resolve。** `Engine.run()` 每次调用都跑 `detectSandboxCapabilities()` + 动态 import backend 模块——一个 session 几百个 turn 就重做几百次。功能正确，纯性能问题：把 backend 选择移到 Engine 构造器或加 per-session 缓存即可。
+- ✅ **P0 权限：Bash safe-read 分类可被 shell 元字符绕过。** 已修。`permission.ts:391` 注释 "A1 hardening: classifyBashCommand previously ran SAFE_READ_PATTERNS … We now scan the command" — 重定向 / 链式 / 危险管道已被统一处理。spec `2026-05-26-a1-permission-hardening-design.md`。
+- ✅ **P0 权限：`acceptEdits` 对非 Bash 工具过宽。** 已修（A1 部分）。`permission.ts:624` 注释 "A1 hardening: tools that `acceptEdits` mode will auto-allow without …" — 显式名单已收紧。
+- ✅ **P1 cwd 一致性：EngineConfig.cwd 贯穿。** 已修（A4）。`bash.ts:106`、`glob.ts:36`、`grep.ts:66` 均改为 `ctx?.cwd ?? process.cwd()`；spec `2026-05-26-a4-cwd-consistency-design.md`。
+- [ ] **P1 LLM 正确性：OpenAI 截断续写触发条件不匹配。** **仍未修。** `turn-loop.ts:343` 仍是 `response.stopReason === "max_tokens"`，但 OpenAI provider `openai.ts:475` 直接透传 `choice.finish_reason`（即 `"length"`），流式路径 chunk 也透传 `finish_reason`。需要在 turn-loop 或 provider 适配层做 `"length" | "max_tokens"` 归一。
+- ✅ **P1 WebFetch SSRF：重定向后未重新校验目标主机。** 已修（A3）。`web-fetch.ts:210` 注释 "A3 hardening: manual redirect loop. Each hop revalidates the URL"。spec `2026-05-26-a3-webfetch-ssrf-design.md`。
+- [ ] **P2 RunManager：approval/input resume 有竞态。** 未确认是否修复。`RunManager.ts:170` 有 "Resolve the pending promise" 但未做明显的 race 缓解。需要单独审查。
+- ✅ **P2 发布/API：public `VERSION` 与 package version 漂移。** 已通过 commit `dc21ed7` 将 core 升到 `0.5.0-rc.1` 同步；`build:dts` 强度仍有待审视。
+- [ ] **P3 性能：`resolveSandboxBackend` 每 turn 都重 resolve。** **仍未修。** `engine.ts:719` 仍在 `Engine.run()` 主体内 `await resolveSandboxBackend(sandboxConfig, cwd)`。把 backend 选择移到 Engine 构造器或加 per-session 缓存即可。
 
 ## Review Notes — 2026-05-20
 
-- [ ] **P1 Plugin hooks 未接通 — 复用 Claude Code 兼容的 plugin SessionStart hook 机制。** 当前 codeshell 已经能扫描 `~/.code-shell/plugins/*/skills/*/SKILL.md`(实测 superpowers 14 个 + document-skills 17 个 skill 全识别),且 `SkillTool` 可加载全文。但 plugin 自带的 `hooks/hooks.json` (定义 SessionStart、PostToolUse 等事件 + 跑外部命令 + 读取 stdout JSON 的 `hookSpecificOutput.additionalContext` 注入 system prompt) 没有触发,导致:(a) superpowers 的 `using-superpowers` 强制注入 prompt 不生效,LLM 没有"必须用 skill"的硬约束;(b) 任何依赖 plugin hooks 的能力(skill auto-loading、telemetry、guardrails)都无法工作。**等 hook 系统整体补全时一起做**,不单独修。参考实现:`~/.claude/plugins/cache/superpowers-dev/superpowers/5.1.0/hooks/{hooks.json,session-start,run-hook.cmd}`。
+- 🔧 **P1 Plugin hooks — Claude Code 兼容的 plugin hook 机制。** 部分接通；需要运行时验证。
+  - 进展：`loadPluginHooks(this.hooks, this.readDisabledLists().disabledPlugins)` 在 `engine.ts:363` 已调用；`on_session_start` 在 `engine.ts:879` 已 emit；`hooks/registry.ts:55-60` 已支持 `additionalContext` 聚合；`disabledPlugins` 也压制 plugin hooks（commit `ed30bb9`）。
+  - **未验证**：superpowers `hooks/hooks.json` 中的 SessionStart 是否真的把 `using-superpowers` additionalContext 注入到了 main session 的 prompt——需要起一次 session 看实际行为。如确认 OK 就升 ✅；如未注入，要查 hooks.json 解析或 plugin hook adapter。
 
 ---
 
@@ -36,21 +85,23 @@
 - [ ] 沙箱失败时优雅降级（提示用户手动确认）
 - [ ] 配置项：`sandbox.enabled`、`sandbox.allowNetworkFor` 白名单
 
-### ⬜ 跨会话记忆系统（Memories）
-需要实现真正的跨会话持久化记忆。
+> 注：spec `2026-05-26-a2-sandbox-abort-design.md` 已写沙箱 abort 设计，但完整沙箱机制未落地。
 
-- [ ] 自动从对话中提取关键记忆（项目偏好、编码规范、常见模式）
-- [ ] 记忆持久化存储（`~/.codeshell/memories.json`）
+### 🔧 跨会话记忆系统（Memories）
+**基础已实现**：`packages/core/src/tool-system/builtin/memory.ts` 暴露 Memory 工具；`engine.ts:1257` 注释 "Fire-and-forget memory pipeline: extract durable memories from the transcript"，`engine.ts:1306` "Extracts durable memories from the transcript, saves a session"。剩下的待办偏向产品打磨：
+
+- [x] 自动从对话中提取关键记忆（已有 fire-and-forget pipeline）
+- [x] 记忆持久化存储（已有 memory 工具读写）
 - [ ] 记忆合并（consolidation）：相似记忆去重合并
-- [ ] 记忆注入：新会话启动时自动加载相关记忆到 prompt
+- [ ] 记忆注入：新会话启动时自动加载相关记忆到 prompt（需确认是否已通过 SessionStart hook 注入）
 - [ ] 记忆管理命令：`/memories list`、`/memories clear`、`/memories edit`
 - [ ] 可配置：`memories.maxAge`、`memories.maxCount`、`memories.extractionModel`
 
 ### 🔧 权限系统增强
 当前权限系统（`src/tool-system/permission.ts`）已有基础，但缺少持久化和精细控制。
 
-- [ ] 权限规则持久化到 `~/.codeshell/settings.json`
-- [ ] 支持路径级别的权限规则（如 "允许写入 src/ 下的文件"）
+- [x] 权限规则持久化到 `~/.codeshell/settings.json` —— `disabledSkills` / `disabledPlugins` / **`disabledAgents`** / `mcpServers[].enabled` 都已经走 settings 持久化
+- [ ] 支持路径级别的权限规则（如 "允许写入 src/ 下的文件"）—— spec `2026-05-26-a1-permission-hardening-design.md` 已写
 - [ ] 支持命令模式匹配（如 "允许 `npm test`、`pnpm build`"）
 - [ ] 会话级权限缓存（同一会话内相同操作不重复询问）
 - [ ] `/permissions` 命令查看和管理当前权限规则
@@ -59,23 +110,18 @@
 
 ## P1 — 效率提升
 
-### ⬜ apply_patch 批量编辑工具
-当前 Edit 工具只能单文件单次替换，多文件修改需要多次 tool call，浪费 token。
+### ✅ apply_patch 批量编辑工具（已实现）
+**已实现**。`packages/core/src/tool-system/builtin/apply-patch/index.ts` 模块；`BUILTIN_TOOLS` 列表（`builtin/index.ts:109-115`）含 `ApplyPatch`；preset/index.ts:38、permission.ts:634 都已配置。Patch 格式与 Codex 一致。剩余可能的打磨（按需）：
 
-- [ ] 设计 patch 格式（参考 Codex 的 unified diff 风格）
-- [ ] 实现 `ApplyPatch` 工具，支持：
-  - [ ] 单次调用修改多个文件
-  - [ ] 创建新文件（`Add File`）
-  - [ ] 删除文件（`Delete File`）
-  - [ ] 重命名文件（`Rename File`）
-  - [ ] 基于上下文行的 hunk 匹配
-- [ ] 原子性：全部成功或全部回滚
-- [ ] 与现有 Edit 工具共存，由模型自行选择
+- [x] 设计 patch 格式（unified diff 风格，与 Codex 兼容）
+- [x] 实现 `ApplyPatch` 工具（含 Add File / Delete File / Rename File / hunk 匹配）
+- [x] 与现有 Edit 工具共存
+- [ ] 原子性：全部成功或全部回滚（待确认实现细节）
 
 ### 🔧 AGENTS.md 层级指令系统
-当前 `instruction-scanner.ts` 已支持 CLAUDE.md 扫描，但缺少层级覆盖。
+`instruction-scanner.ts` 已支持 CLAUDE.md + AGENTS.md（`compatFileNames` 默认 `["CLAUDE.md", "AGENTS.md"]`，`schema.ts:202`、`instruction-scanner.ts:61`）。层级覆盖、local 文件、作用域标注尚未实现。
 
-- [ ] 支持 `AGENTS.md` 文件名（兼容 Codex 生态）
+- [x] 支持 `AGENTS.md` 文件名（兼容 Codex 生态）
 - [ ] 实现层级覆盖：深层目录的指令覆盖浅层
 - [ ] 支持 `AGENTS.local.md`（不入版本控制的本地指令）
 - [ ] 指令作用域标注（当前目录 vs 全局）
@@ -141,56 +187,59 @@
 - [ ] 可配置审查维度（安全、性能、可读性、正确性）
 - [ ] 支持增量审查（只审查变更部分）
 
-### ⬜ 多代理增强
-当前 Agent 工具已实现基础子代理，需要增强。
+### 🔧 多代理增强
+当前 Agent 工具已实现基础子代理，**配置面板（设置 → 子代理）已上线**，能新增/禁用/编辑模型与工具白名单；下面是仍欠的部分。
 
-#### 🔥 P0 — logger `_currentSid` 在多 Engine 并发下被串扰（多代理基础设施）
-**所有 multi-agent 数据混乱的根因**。`src/logging/logger.ts` 的 sid resolution 用 process-global 单例；`engine.run()` 入口 `logger.setSid(session.state.sessionId)`，主 Engine 启动 child Engine 后，child 自己 setSid(child_sid)，主 Engine 后续的 turn **不会重新 setSid 回到主**。`session-recorder` 里 `recordLLMRequest` / `recordToolCall` / `recordLLMResponse` 都通过 `getCurrentSid()` 拿 sid 写日志，导致：(a) 主 session 的 LLM 请求被错记进子 session 的 log file，反之亦然；(b) `tool.call` 事件归属错乱，看似主 agent 调了一堆它实际没调的工具；(c) 用户切到子 agent 视图、`/sid` 命令、auto-injection 等任何依赖 currentSid 的功能都会拿到错值。
-**实证案例**：2026-05-19 session `v3KHFDkimhi3_ClO` 主 session log 里出现了 `messageCount=4 messages[1]=子 agent prompt` 的 r5 llm.request——其实是子 agent 9ZZ 的请求被错记到主 file。
+#### ✅ logger `_currentSid` 在多 Engine 并发下被串扰
+**已修复（2026-05-19）**。`logger.ts` 用 `AsyncLocalStorage<string>` 后端 + `runWithSid(sid, fn)`；`Engine.run` 在 session 解析完后用 `return runWithSid(...)` 包整个 body，每次 Engine.run 都开自己的 ALS scope，并发主 + 子 engine 各跑各的互不串扰。`setCurrentSid` 仍同步更新 module global 作为 ALS-外路径的 fallback。
 
-**已修复（2026-05-19）**：
-- `logger.ts` 加了 `AsyncLocalStorage<string>` 后端：`getCurrentSid()` 先查 ALS，回退到 module global `_currentSidFallback`。
-- 新增 `runWithSid(sid, fn)`：在 ALS sub-scope 里运行 `fn`，scope 退出时父 scope 的 sid binding 自动恢复——不会像 `_currentSid` 全局赋值那样被 awaited child engine 永久覆盖。
-- `Engine.run` 在 session 解析完后用 `return runWithSid(session.state.sessionId, async () => { ...body... })` 包住整个 body。每次 Engine.run 都开自己的 ALS scope，并发主 + 子 engine 各跑各的，互不串扰。
-- `setCurrentSid` 仍同步更新 module global 作为 ALS-外路径的 fallback（bootstrap、`/sid` 在 run 启动前等）。
-- 子 engine spawn 处不需要额外的 `runWithSid` wrap，因为 child.run 本身会建自己的 ALS scope。
+可能的进一步加固（未做，必要时再上）：把 `recordLLMRequest(sid, ...)` / `recordToolCall(sid, ...)` 的调用方改成显式从 Engine 上下文拿 sid，彻底不依赖 ALS。
 
-**可能的进一步加固（未做，必要时再上）**：把 `recordLLMRequest(sid, ...)` / `recordToolCall(sid, ...)` 的调用方（`model-facade.ts:38`、`executor.ts:202`）改成显式从 Engine 上下文拿 sid，彻底不依赖 ALS。但 ALS 方案在 Node.js 是 first-class 并发隔离手段，目前先这样。
+#### 🔧 后台 agent 完成通知机制（消灭 Sleep+AgentStatus 轮询）
+当前后台 agent 跑起来后，主 agent **仍是 polling**（反复 `Sleep` + `AgentStatus`）。需要照搬 CC 的"自动注入完成消息"机制。
 
-#### P0 — 后台 agent 完成通知机制（消灭 Sleep+AgentStatus 轮询）
-当前后台 agent 跑起来后，主 agent **只能 polling**（反复 `Sleep` + `AgentStatus`），因为：(a) Agent 工具 description 里就写着"Use AgentStatus to check progress"——LLM 字面照做；(b) 没有自动完成通知机制——LLM 不轮询就永远不知道结果；(c) prompt 没禁止 polling。CC 的做法：spawn 返回时 prompt LLM "Briefly tell the user what you launched and end your response. results will arrive in a subsequent message"，结束当前 turn；agent 跑完时**框架自动给主 session 注入一条消息**带结果，主 agent 下一个 turn 自然看到。落地依赖关系：(A) → (B) → (C) 是同一组改动一起上，(D)/(E) 是 follow-up。
-- [ ] **(A) 改 Agent 工具的 schema description + tool prompt**：照搬 CC 的措辞——"do NOT sleep, poll, or proactively check on its progress. You will be automatically notified when it completes. Continue with other work or end your response." 见 `~/Documents/个人学习/代码学习/claude-code-sourcemap/restored-src/src/tools/AgentTool/prompt.ts:263` 和 `AgentTool.tsx:87`。改 `src/tool-system/builtin/agent.ts:17-50` 的 schema。
-- [ ] **(B) 改 background spawn 的 tool_result 文本**：当前是 "Agent launched in background. agent_id: ... Use AgentStatus(...) to check progress"，改成 "Async agent launched. agent_id: ... The agent is working in the background. You will be notified automatically when it completes. Briefly tell the user what you launched and end your response. Do not generate any other text — agent results will arrive in a subsequent message." 见 `AgentTool.tsx:1328`。改 `src/tool-system/builtin/agent.ts:153-167`。
-- [ ] **(C) 实现"自动注入完成消息"机制**【关键，无此 A/B 只是画饼】：当 `asyncAgentRegistry.markCompleted(agentId, text)` / `markFailed` 触发时，把"Agent <description> completed: <text>"作为一条 user message 注入主 session 的下一个 turn 输入。难点：主 session 当时可能 idle（已 `turn_complete`）。需要打通 `RunManager` 或 `protocol/server.ts` 的 client 注入路径——参考现有 user input pipeline。可能需要在 UI 端拦截 markCompleted 信号、调 `client.submit(...)`。
-- [ ] **(D) outputFile 机制 + 删 AgentStatus**：每个 background agent 写 `~/.code-shell/agents/<agentId>.txt`（持续 append 它的 assistant_text/tool 输出）。主 agent 想看中途状态用现有的 `Read` / `Bash tail`，不需要专用工具。删 `AgentStatus` / `AgentCancel`（保留 cancel 工具但改名/重新设计）。见 `AgentTool.tsx:151, 1329`。
-- [ ] **(E) auto-background after 120s**：同步 `Agent(...)` 跑超过 120s 自动转后台，spawn turn 不阻塞主对话。见 `AgentTool.tsx:73-77`。
+- [ ] **(A) 改 Agent 工具的 schema description + tool prompt**："do NOT sleep, poll, or proactively check on its progress. You will be automatically notified when it completes. Continue with other work or end your response." 见 CC `~/Documents/个人学习/代码学习/claude-code-sourcemap/restored-src/src/tools/AgentTool/prompt.ts:263` 和 `AgentTool.tsx:87`；改 `src/tool-system/builtin/agent.ts:17-50` 的 schema。
+- [ ] **(B) 改 background spawn 的 tool_result 文本**："Async agent launched. agent_id: ... The agent is working in the background. You will be notified automatically when it completes. Briefly tell the user what you launched and end your response. Do not generate any other text — agent results will arrive in a subsequent message."
+- [ ] **(C) 实现"自动注入完成消息"机制**【关键，无此 A/B 只是画饼】：当 `asyncAgentRegistry.markCompleted(agentId, text)` / `markFailed` 触发时，把"Agent <description> completed: <text>"作为一条 user message 注入主 session 的下一个 turn 输入。难点：主 session 当时可能 idle（已 `turn_complete`），需要打通 `RunManager` 或 `protocol/server.ts` 的 client 注入路径。
+- [ ] **(D) outputFile 机制 + 删 AgentStatus**：每个 background agent 写 `~/.code-shell/agents/<agentId>.txt`（持续 append 它的 assistant_text/tool 输出）。主 agent 想看中途状态用现有的 `Read` / `Bash tail`，不需要专用工具。
+- [ ] **(E) auto-background after 120s**：同步 `Agent(...)` 跑超过 120s 自动转后台。
+
+#### ✅ 对齐 CC 的 subagent_type / agents 目录机制（基础部分）
+- ✅ 新建 `.code-shell/agents/` loader 读 frontmatter + body（`AgentDefinitionRegistry`，含项目级 + 用户级合并）
+- ✅ Agent 工具加 `agent_type` 入参；未知类型抛错且列出 Available
+- ✅ `runSubAgent` 用 kind 的 system prompt / tools 子集 / model override 覆盖默认
+- ✅ 桌面配置面板：新增 / 禁用 / 编辑模型 / 工具白名单 / 系统提示词
+- [ ] **进一步对齐 CC** —— 把 `agent_type` 升级为 schema enum（当前是字符串 + 描述提示），动态注入已 load 的 kind 名让 LLM 看得见
+- [ ] `AsyncAgentEntry.name` 改成填 kind name（增强 dock 显示）
+- [ ] 主 agent 系统 prompt 加 kind 选择指南
 
 #### 其他多代理增强
-- [ ] **对齐 CC 的 subagent_type / agents 目录机制**：当前 `Agent` 工具只接受自由文本 `name?` label（dock 用），主 agent 多数情况留空。CC 做法是 `subagent_type` 必填、从内置表（`general-purpose` / `Explore` / `Plan` / ...）+ `~/.claude/agents/<name>/agent.md` 自定义目录里选；每种 kind 自带 system prompt、工具子集白名单、可选模型覆盖。落地路径：(1) 新建 `~/.code-shell/agents/` loader（读 frontmatter + body）；(2) `Agent` 工具加 required `subagent_type`，schema enum 动态注入已 load 的 kind 名；(3) `runSubAgent` 用 kind 的 system prompt / tools 子集 / model override 覆盖默认；(4) `AsyncAgentEntry.name` 改成填 kind name；(5) 主 agent 系统 prompt 加 kind 选择指南。
-- [ ] Agent 角色预定义（在 config 中配置常用角色）
-- [ ] `max_depth` 嵌套深度限制
+- [ ] Agent 角色预定义到 config（已有用户级目录可放，但缺 settings-level 默认配置）
+- [ ] `max_depth` 嵌套深度限制（当前通过 `NESTED_AGENT_TOOLS` 禁用 grandchildren，是 0 vs 多层而非可配）
 - [ ] `max_threads` 并发线程数限制
-- [ ] `job_max_runtime_seconds` 超时控制
-- [ ] Agent 间通信：评估 mailbox 路线（参考 CC `~/.claude/teams/<team>/inboxes/`，文件 + lockfile，tool round 间隙 readMailbox → 注入 user turn 的 `<teammate-message>` XML）。当前 `SendMessage` + `agentCoordinator` 是半成品死代码（register 从未被调用），下一次推进时一并决定：补齐 mailbox / 还是删掉
-- [ ] **task 加 agentId tag**：当前 `taskManager` 是全局 module-level singleton，所有 agent 共享同一个 `tasks: Map`，子 agent 创建 task 会混进主视图。具体改动：`Task` 类型加 `agentId?: string`；`taskManager.create` 接受 agentId（subagent Engine 启动时注入 ToolContext）；`emitUpdate` 按 agentId 路由 stream；UI 渲染按 viewMode 过滤。当前 workaround：App.tsx:1358 `viewMode.kind === "main"` 才显示 TaskList，子视图直接隐藏。
+- [ ] `job_max_runtime_seconds` 超时控制（当前有 `DEFAULT_SUBAGENT_TIMEOUT_MS = 5min` 硬编码，未暴露配置）
+- [ ] Agent 间通信：评估 mailbox 路线（参考 CC `~/.claude/teams/<team>/inboxes/`）。当前 `SendMessage` + `agentCoordinator` 是半成品死代码（`register` 从未被调用），下一次推进时一并决定：补齐 mailbox / 还是删掉
+- [ ] **task 加 agentId tag**：当前 `taskManager` 是全局 module-level singleton，所有 agent 共享同一个 `tasks: Map`，子 agent 创建 task 会混进主视图。`Task` 类型加 `agentId?: string`；`taskManager.create` 接受 agentId（subagent Engine 启动时注入 ToolContext）；`emitUpdate` 按 agentId 路由 stream；UI 渲染按 viewMode 过滤。当前 workaround：`App.tsx` viewMode === "main" 才显示 TaskList。
 - [ ] Agent 执行结果汇总视图
+- [ ] **per-agent skill 精选层**（spec 已写"先做总开关"非目标，留作下一步）：给 agent 定义加 `skills: [...]` 字段，该 agent 只看得到列出的 skill。CC 已有 `skills` frontmatter 字段可参考。
 
 ### ⬜ Model Provider 增强
 当前 LLM 层较简单，需要更灵活的 provider 支持。
 
 - [ ] 支持通过外部命令获取 token（`auth.command`）
 - [ ] 支持自定义 HTTP headers（`env_http_headers`）
-- [ ] `reasoning_effort` 参数支持（已部分实现）
+- [x] `reasoning_effort` 参数支持（已部分实现）
 - [ ] `reasoning_summary` 参数支持
 - [ ] `service_tier` 参数支持
 - [ ] 模型自动降级：主模型失败时切换备用模型
-- [ ] 支持本地模型（Ollama、llama.cpp）
+- [x] 支持本地模型（Ollama — `onboarding.ts:136`、`provider-kinds.ts:20`、`migrate-models.ts:60` 都已识别；llama.cpp 暂未列出但同 OpenAI-compatible base URL 路径可用）
 
-### ⬜ 配置系统完善
+### 🔧 配置系统完善
 当前 `src/settings/` 较基础。
 
-- [ ] 支持 `~/.codeshell/config.yaml` 全局配置
-- [ ] 支持项目级 `.codeshell/config.yaml`
+- [x] 支持 `~/.code-shell/settings.json` 全局配置（已实现）
+- [x] 支持项目级 `.code-shell/settings.json`（已实现）
+- [ ] 支持 YAML 配置（目前是 JSON）
 - [ ] 配置 JSON Schema 生成（IDE 自动补全）
 - [ ] `/config` 命令交互式编辑配置
 - [ ] 配置迁移机制（版本升级时自动迁移旧配置）
@@ -200,16 +249,17 @@
 ## P4 — 工程质量
 
 ### 🔧 测试覆盖
-- [ ] 核心模块单元测试（engine、turn-loop、permission）
+- [x] 核心模块单元测试（engine、turn-loop、permission）—— 已有相当覆盖；详见 `packages/core/tests/` 117 文件
 - [ ] 工具集成测试（每个 builtin tool）
 - [ ] E2E 测试（完整对话流程）
 - [ ] CI 流水线（GitHub Actions）
 - [ ] 测试覆盖率 > 60%
+- [ ] **清理已知不稳定 / 待修测试**：repo 当前 5 个无关失败（gpt-5.5 capabilities、model resync、legacy 迁移、taskManager 导出、notification daemon offline）需要逐一关单
 
 ### ⬜ 错误处理与恢复
 - [ ] LLM API 调用重试（指数退避）
 - [ ] 网络断开自动重连
-- [ ] 会话崩溃恢复（从 transcript 恢复）
+- [ ] 会话崩溃恢复（从 transcript 恢复）—— RunManager 的 `recover` 已部分实现
 - [ ] 工具执行超时处理
 - [ ] 优雅的错误消息（用户友好的错误提示）
 
@@ -219,9 +269,10 @@
 - [ ] 大文件处理优化（分块读取、增量搜索）
 - [ ] MCP 连接池复用
 
-### ⬜ 文档
+### 🔧 文档
 - [ ] 用户指南（Getting Started、Configuration、Tools Reference）
-- [ ] 开发者文档（Architecture、Contributing Guide）
+- [x] 开发者文档（Architecture）—— `docs/architecture/` 已积累 18 篇，含 core vs CC vs Codex 对照
+- [ ] 开发者文档：Contributing Guide
 - [ ] API 文档（公开 API 的 TypeDoc）
 - [ ] 中文文档
 
@@ -229,37 +280,68 @@
 
 ## 已完成功能清单
 
+### 基础设施 / 引擎
 - ✅ Terminal-native UI（Ink + React）
-- ✅ 28 个内置工具（Read/Write/Edit/Glob/Grep/Bash/Web/Agent/Plan/Task/Worktree/LSP/Cron/Config/Notebook/Sleep/SendMessage/ToolSearch）
+- ✅ Electron 桌面 app（broker 架构，commit `2026-05-23-electron-mvp-broker`）
+- ✅ 28+ 个内置工具（Read/Write/Edit/Glob/Grep/Bash/Web/Agent/Plan/Task/Worktree/LSP/Cron/Config/Notebook/Sleep/SendMessage/ToolSearch/GenerateImage/…）
 - ✅ 多模型支持（Anthropic/OpenAI/DeepSeek/OpenRouter）
-- ✅ MCP 协议支持
+- ✅ MCP 协议支持 + per-server enabled toggle（commit `6760704`）
 - ✅ REPL 模式 + One-shot 模式
 - ✅ 权限控制基础框架
 - ✅ Plan Mode
 - ✅ Task 系统（创建/跟踪/依赖）
-- ✅ Sub-Agent 子代理
+- ✅ Sub-Agent 子代理（详见下方）
 - ✅ Session 管理（持久化/恢复）
 - ✅ CLAUDE.md 指令扫描
 - ✅ Git 状态注入
 - ✅ Arena 多模型竞技
 - ✅ Cost Tracker 成本追踪
 - ✅ 3 级 Context Compaction
-- ✅ Skill 系统
-- ✅ Hook 系统
+- ✅ Skill 系统（项目 / 用户 / plugin 三源；`disabledSkills` / `disabledPlugins` 过滤）
+- ✅ Hook 系统（含 `disabledPlugins` 同时压制 plugin hooks）
 - ✅ Git Worktree 隔离
 - ✅ LSP 集成
 - ✅ Cron 定时任务
 - ✅ Vim Mode
-- ✅ RunManager 托管执行框架（`src/run/`）
-  - ✅ Run 生命周期状态机（queued → running → completed/failed/cancelled）
-  - ✅ FileRunStore 本地持久化（run.json + events.jsonl + checkpoints/ + approvals/ + artifacts/）
-  - ✅ RunQueue FIFO 队列（可配并发）
-  - ✅ EngineRunner 桥接层（RunSnapshot → Engine.run()）
-  - ✅ Waiting states（waiting_input / waiting_approval）+ Promise suspend/resume
-  - ✅ RunApprovalBackend — 审批桥接到 Run 状态
-  - ✅ CheckpointWriter — 阶段边界检测 + 周期 turn checkpoint
-  - ✅ ArtifactTracker — Write/Edit/Bash 产出追踪
-  - ✅ RunLock — proper-lockfile 文件锁
-  - ✅ Heartbeat — PID + 时间戳心跳 + crash recovery
-  - ✅ Evaluator 合约（Noop + Composite 内置实现）
-  - ✅ CLI 命令组：`code-shell runs list/get/submit/resume/cancel/events/recover`
+- ✅ GenerateImage 内置工具（OpenAI gpt-image-2，commit `d43d652`）
+
+### 子代理（subagent）—— 2026-05-27 完成
+- ✅ 内置 4 个角色文件（`researcher` / `explorer` / `planner` / `general-purpose`）
+- ✅ Agent definition 格式：YAML frontmatter + markdown body
+- ✅ `AgentDefinitionRegistry`：合并项目级 + 用户级两源，用户级同名覆盖、`override` 标记
+- ✅ Agent 工具 `agent_type` 入参 + 未知类型报错列出 Available
+- ✅ 模型路由 `resolveChildLlm`（ModelPool key 继承，未配置则回退父模型）
+- ✅ Tool 白名单（per-role tools 字段，含 `Skill` 总开关）
+- ✅ `disabledAgents` settings 字段 + 加载时过滤（被禁角色 LLM 完全不可见）
+- ✅ `serializeAgentDefinition`（与 `parseAgentDefinition` 互逆）
+- ✅ Engine 缓存按 disabledAgents 指纹失效
+- ✅ 桌面 `agents-service.ts` + IPC + preload 桥
+- ✅ 桌面「设置 → 子代理」面板（三栏，复用 `<Select>` / `settings-field` / `settings-toggle-inline` 等项目组件）
+- ✅ 子代理生命周期 hook（start / finish / error）
+- ✅ End-to-end agent_type smoke + registry / serializer 单元测试
+
+### 桌面 UI（renderer）
+- ✅ 左上 nav 重排：新对话 / 搜索 / **MCP** / **技能与插件** / 自动化
+- ✅ 全屏「技能与插件」customize 视图（复用 `PluginsAndSkillsSection`，commit `f51987d`）
+- ✅ SettingsMenu 精简为「打开设置… + 切换语言（右侧级联）」（commit `a0e25fe`）
+- ✅ UI 语言偏好持久化（`uiLanguage.ts`，localStorage）
+
+### RunManager 托管执行（`src/run/`）
+- ✅ Run 生命周期状态机（queued → running → completed/failed/cancelled）
+- ✅ FileRunStore 本地持久化（run.json + events.jsonl + checkpoints/ + approvals/ + artifacts/）
+- ✅ RunQueue FIFO 队列（可配并发）
+- ✅ EngineRunner 桥接层（RunSnapshot → Engine.run()）
+- ✅ Waiting states（waiting_input / waiting_approval）+ Promise suspend/resume
+- ✅ RunApprovalBackend — 审批桥接到 Run 状态
+- ✅ CheckpointWriter — 阶段边界检测 + 周期 turn checkpoint
+- ✅ ArtifactTracker — Write/Edit/Bash 产出追踪
+- ✅ RunLock — proper-lockfile 文件锁
+- ✅ Heartbeat — PID + 时间戳心跳 + crash recovery
+- ✅ Evaluator 合约（Noop + Composite 内置实现）
+- ✅ CLI 命令组：`code-shell runs list/get/submit/resume/cancel/events/recover`
+
+### 文档 / 工程
+- ✅ Monorepo 拆分（packages/core + packages/desktop + packages/tui，commit `2026-05-22`）
+- ✅ 架构文档体系 `docs/architecture/`（18 篇，含 core vs Claude Code vs Codex 对照）
+- ✅ Superpowers spec/plan 流程稳定运转（`docs/superpowers/specs/`、`docs/superpowers/plans/`）
+- ✅ Core 版本号同步（`0.5.0-rc.1`，commit `dc21ed7`）
