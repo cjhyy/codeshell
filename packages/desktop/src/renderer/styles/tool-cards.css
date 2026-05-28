@@ -136,3 +136,77 @@
 .tool-card-row-val.removed { background: rgba(184,57,43,0.08); border-color: var(--status-err); }
 .tool-card-row-val.added   { background: rgba(47,138,77,0.08); border-color: var(--status-ok); }
 .tool-card-row-val.err     { color: var(--status-err); }
+
+/* Per-turn files-changed summary card. Codex-style folded by default;
+   click to expand a list of paths with +/- line counts. */
+.files-changed-card {
+  margin: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+.files-changed-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.files-changed-head:hover {
+  background: var(--bg-hover);
+  color: var(--fg-secondary);
+}
+.files-changed-label {
+  flex: 1;
+  line-height: 1;
+  color: var(--fg-secondary);
+}
+.files-changed-totals {
+  display: inline-flex;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.files-changed-added { color: var(--status-ok); }
+.files-changed-removed { color: var(--status-err); }
+
+.files-changed-body {
+  padding: 4px 10px 8px 28px;
+  border-top: 1px solid var(--border-subtle);
+}
+.files-changed-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 0;
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+}
+.files-changed-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-primary);
+}
+.files-changed-show-more {
+  display: block;
+  margin-top: 4px;
+  padding: 2px 0;
+  background: transparent;
+  border: 0;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--fz-sm);
+  cursor: pointer;
+}
+.files-changed-show-more:hover {
+  color: var(--fg-secondary);
+}

@@ -8,6 +8,7 @@ import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
+import { FilesChangedCard } from "./messages/FilesChangedCard";
 import { buildStreamItems } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
 import { decodeWireForDisplay } from "./chat/attachments";
@@ -134,6 +135,8 @@ export function MessageStream({
                 <div className="msg-system">{m.text}</div>
               </div>
             );
+          case "files_changed":
+            return <FilesChangedCard key={m.id} message={m} />;
         }
       })}
       {trailing}
