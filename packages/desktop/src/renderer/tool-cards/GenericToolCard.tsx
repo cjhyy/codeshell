@@ -7,9 +7,10 @@ interface Props {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
+  turnEpoch?: number;
 }
 
-export function GenericToolCard({ message, onSelect, selected }: Props) {
+export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Props) {
   const oneLine = summarizeArgs(message.args);
 
   const summary = <span className="tool-card-summary-text">{oneLine}</span>;
@@ -42,6 +43,7 @@ export function GenericToolCard({ message, onSelect, selected }: Props) {
       details={details}
       onSelect={onSelect}
       selected={selected}
+      turnEpoch={turnEpoch}
     />
   );
 }

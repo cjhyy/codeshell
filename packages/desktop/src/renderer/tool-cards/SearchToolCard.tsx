@@ -7,9 +7,10 @@ interface Props {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
+  turnEpoch?: number;
 }
 
-export function SearchToolCard({ message, onSelect, selected }: Props) {
+export function SearchToolCard({ message, onSelect, selected, turnEpoch }: Props) {
   const a = parsedArgs(message);
   const pattern =
     (typeof a.pattern === "string" && a.pattern) ||
@@ -63,6 +64,7 @@ export function SearchToolCard({ message, onSelect, selected }: Props) {
       details={details}
       onSelect={onSelect}
       selected={selected}
+      turnEpoch={turnEpoch}
     />
   );
 }

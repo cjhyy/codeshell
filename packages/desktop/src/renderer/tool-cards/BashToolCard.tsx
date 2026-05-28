@@ -7,9 +7,10 @@ interface Props {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
+  turnEpoch?: number;
 }
 
-export function BashToolCard({ message, onSelect, selected }: Props) {
+export function BashToolCard({ message, onSelect, selected, turnEpoch }: Props) {
   const a = parsedArgs(message);
   const command = typeof a.command === "string" ? a.command : "";
   const cwd = typeof a.cwd === "string" ? a.cwd : undefined;
@@ -57,6 +58,7 @@ export function BashToolCard({ message, onSelect, selected }: Props) {
       details={details}
       onSelect={onSelect}
       selected={selected}
+      turnEpoch={turnEpoch}
     />
   );
 }

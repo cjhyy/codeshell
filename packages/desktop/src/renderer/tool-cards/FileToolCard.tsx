@@ -9,9 +9,10 @@ interface Props {
   selected?: boolean;
   /** "read" or "write" — affects the summary verbiage and detail layout. */
   variant: "read" | "write" | "edit";
+  turnEpoch?: number;
 }
 
-export function FileToolCard({ message, onSelect, selected, variant }: Props) {
+export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }: Props) {
   const a = parsedArgs(message);
   const path =
     (typeof a.file_path === "string" && a.file_path) ||
@@ -90,6 +91,7 @@ export function FileToolCard({ message, onSelect, selected, variant }: Props) {
       details={details}
       onSelect={onSelect}
       selected={selected}
+      turnEpoch={turnEpoch}
     />
   );
 }

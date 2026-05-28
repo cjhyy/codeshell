@@ -11,6 +11,7 @@ interface Props {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selectedId?: string | null;
+  turnEpoch?: number;
 }
 
 /**
@@ -24,32 +25,32 @@ interface Props {
  * `messages.map` keeps untouched items by reference identity — so the
  * default shallow compare correctly short-circuits.
  */
-function ToolCardImpl({ message, onSelect, selectedId }: Props) {
+function ToolCardImpl({ message, onSelect, selectedId, turnEpoch }: Props) {
   const selected = selectedId === message.id;
   const name = message.toolName.toLowerCase();
 
   if (name === "bash" || name === "shell" || name === "run") {
-    return <BashToolCard message={message} onSelect={onSelect} selected={selected} />;
+    return <BashToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
   if (name === "read" || name === "view" || name === "fileread") {
-    return <FileToolCard message={message} variant="read" onSelect={onSelect} selected={selected} />;
+    return <FileToolCard message={message} variant="read" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
   if (name === "write" || name === "filewrite") {
-    return <FileToolCard message={message} variant="write" onSelect={onSelect} selected={selected} />;
+    return <FileToolCard message={message} variant="write" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
   if (name === "edit" || name === "multiedit" || name === "applypatch" || name === "apply_patch") {
-    return <FileToolCard message={message} variant="edit" onSelect={onSelect} selected={selected} />;
+    return <FileToolCard message={message} variant="edit" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
   if (name === "grep" || name === "glob" || name === "search") {
-    return <SearchToolCard message={message} onSelect={onSelect} selected={selected} />;
+    return <SearchToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
   if (name === "webfetch" || name === "websearch" || name === "fetch") {
-    return <WebToolCard message={message} onSelect={onSelect} selected={selected} />;
+    return <WebToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
   if (name === "agent" || name === "task" || name.startsWith("agent")) {
-    return <AgentToolCard message={message} onSelect={onSelect} selected={selected} />;
+    return <AgentToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
   }
-  return <GenericToolCard message={message} onSelect={onSelect} selected={selected} />;
+  return <GenericToolCard message={message} onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;
 }
 
 export const ToolCard = memo(ToolCardImpl);

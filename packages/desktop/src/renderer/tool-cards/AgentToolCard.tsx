@@ -7,9 +7,10 @@ interface Props {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
+  turnEpoch?: number;
 }
 
-export function AgentToolCard({ message, onSelect, selected }: Props) {
+export function AgentToolCard({ message, onSelect, selected, turnEpoch }: Props) {
   const a = parsedArgs(message);
   const subagent =
     typeof a.subagent_type === "string" ? a.subagent_type : undefined;
@@ -60,6 +61,7 @@ export function AgentToolCard({ message, onSelect, selected }: Props) {
       details={details}
       onSelect={onSelect}
       selected={selected}
+      turnEpoch={turnEpoch}
     />
   );
 }

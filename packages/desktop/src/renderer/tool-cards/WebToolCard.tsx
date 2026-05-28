@@ -7,9 +7,10 @@ interface Props {
   message: ToolMessage;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
+  turnEpoch?: number;
 }
 
-export function WebToolCard({ message, onSelect, selected }: Props) {
+export function WebToolCard({ message, onSelect, selected, turnEpoch }: Props) {
   const a = parsedArgs(message);
   const url = typeof a.url === "string" ? a.url : undefined;
   const query = typeof a.query === "string" ? a.query : undefined;
@@ -51,6 +52,7 @@ export function WebToolCard({ message, onSelect, selected }: Props) {
       details={details}
       onSelect={onSelect}
       selected={selected}
+      turnEpoch={turnEpoch}
     />
   );
 }
