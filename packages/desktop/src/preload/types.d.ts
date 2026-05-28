@@ -111,6 +111,12 @@ export interface CodeshellApi {
   ): Promise<RpcResponse>;
   /** Destroy a chat session and free its resources. */
   closeSession(sessionId: string): Promise<RpcResponse>;
+  /**
+   * Notify the agent worker of a configuration change.
+   * Currently supports: { model?: string; reloadModels?: boolean }.
+   * The worker applies model switches immediately — no restart needed.
+   */
+  configure(params: { model?: string; reloadModels?: boolean }): Promise<RpcResponse>;
   onStreamEvent(cb: (env: StreamEventEnvelope) => void): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;

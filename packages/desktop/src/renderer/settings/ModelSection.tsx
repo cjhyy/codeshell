@@ -294,6 +294,9 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
         },
         cwd,
       );
+      // Notify the running agent worker so the model switch takes effect
+      // on the next turn without an Electron restart.
+      void window.codeshell.configure({ model: entry.key });
       window.dispatchEvent(new Event("codeshell:settings-changed"));
       await load();
     } catch (e) {

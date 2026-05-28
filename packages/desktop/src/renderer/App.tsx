@@ -919,9 +919,13 @@ function App() {
 
   const onModelChange = (opt: ModelOption): void => {
     setActiveModelKey(opt.key);
-    // code-shell engine reads `activeKey` from settings.json to pick
-    // the active model entry out of `models[]`.
+    // Persist the choice for next process start.
     void window.codeshell.updateSettings("user", { activeKey: opt.key });
+    // Notify the running agent worker immediately so the switch takes
+    // effect on the very next turn — without this, the worker (which
+    // reads llmConfig once at bootstrap) stays on the old model until
+    // the electron process is restarted.
+    void window.codeshell.configure({ model: opt.key });
   };
 
   const matchCount = useMemo(() => {
@@ -999,6 +1003,7 @@ function App() {
           activeRepoId={activeRepoId}
           activeSessionId={activeSessionId}
           collapsedRepos={collapsedRepos}
+          sidebarCollapsed={view.sidebarCollapsed}
           approvalsBadge={approvalQueue.length}
           onSelectRepo={setActiveRepoId}
           onSelectSession={handleSelectSession}
