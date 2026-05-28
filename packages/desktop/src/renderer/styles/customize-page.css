@@ -68,14 +68,138 @@
 .customize-plugin-row-check { padding-top: 2px; }
 .customize-plugin-row-check input { transform: scale(1.05); cursor: pointer; }
 
-/* Small source tag used in the subagent list (内置 / 已覆盖 / 自定义). */
-.ps-badge {
-  flex: none;
+/* ── Subagent settings module ───────────────────────────────────────
+   Three-pane host reuses customize-three-pane / customize-pane above;
+   the rules below are the subagent-specific touches: list row layout,
+   source tag, empty state, editor form grid, and toolbar. */
+
+.agent-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Two-column list row: checkbox + (name/desc stack) + source tag. */
+.agent-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--sp-2);
+  align-items: start;
+  padding: 8px var(--sp-2);
+}
+.agent-row.is-off .agent-row-main { opacity: 0.55; }
+.agent-row-main { min-width: 0; }
+.agent-row-name {
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-row-desc {
+  margin-top: 2px;
   font-size: var(--fz-xs);
+  color: var(--fg-secondary);
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Source tag — three tones to map onto "内置 / 已覆盖 / 自定义". */
+.agent-tag {
+  flex: none;
+  align-self: center;
+  font-size: var(--fz-xs);
+  border-radius: 999px;
+  padding: 2px 8px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.agent-tag-muted {
   color: var(--fg-muted);
   background: var(--bg-hover);
+}
+.agent-tag-accent {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.agent-tag-ok {
+  color: var(--fg-secondary);
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+}
+
+/* Editor pane spans the remaining two grid columns of the three-pane. */
+.agent-editor-pane {
+  grid-column: span 2;
+  padding: var(--sp-3);
+  overflow-y: auto;
+}
+.agent-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  max-width: 760px;
+}
+.agent-editor-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.agent-editor-head .settings-section-title { margin: 0; flex: 1; }
+
+/* Two-column responsive grid for short fields; the long ones
+   (tools, system prompt) live outside it as full-width rows. */
+.agent-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-3);
+}
+
+.agent-field-hint {
+  margin-left: 6px;
+  color: var(--fg-muted);
+  font-style: normal;
+  font-size: var(--fz-xs);
+}
+
+.agent-tools-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+  padding: 8px 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  padding: 1px 6px;
+}
+
+.agent-toolbar { gap: var(--sp-2); align-items: center; }
+.agent-toolbar-spacer { flex: 1; }
+.agent-toolbar .approval-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-empty {
+  margin: auto;
+  padding: var(--sp-3);
+  text-align: center;
+  color: var(--fg-secondary);
+}
+.agent-empty-title {
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+  margin-bottom: 4px;
+}
+.agent-empty-hint {
+  font-size: var(--fz-sm);
+  line-height: 1.6;
 }
 .customize-plugin-row-main {
   flex: 1;

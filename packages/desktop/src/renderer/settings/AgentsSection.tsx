@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import type { AgentSummary, AgentDefinitionInput } from "../../preload/types";
+import { Select } from "../ui/Select";
 import { useConfirm } from "../ui/ConfirmDialog";
 
 interface Props {
   activeRepoPath: string | null;
 }
 
-// Tool names a user can grant a sub-agent. "Skill" here is the on/off
-// switch for skill usage. Keep roughly in sync with core BUILTIN_TOOLS.
+// Tool names a user can grant a sub-agent. "Skill" is the on/off switch
+// for skill usage. Keep roughly in sync with core BUILTIN_TOOLS.
 const TOOL_CHOICES = [
   "Read", "Write", "Edit", "Grep", "Glob", "Bash",
   "WebSearch", "WebFetch", "Skill", "TodoWrite",
@@ -36,7 +38,9 @@ export function AgentsSection({ activeRepoPath }: Props) {
       const da = (s as { disabledAgents?: unknown }).disabledAgents;
       setDisabled(Array.isArray(da) ? (da as string[]) : []);
       const ms = (s as { models?: unknown }).models;
-      const arr = Array.isArray(ms) ? (ms as Array<{ key: string; label?: string }>) : [];
+      const arr = Array.isArray(ms)
+        ? (ms as Array<{ key: string; label?: string }>)
+        : [];
       setModels(arr.map((m) => ({ key: m.key, label: m.label || m.key })));
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
@@ -105,10 +109,25 @@ export function AgentsSection({ activeRepoPath }: Props) {
     setDraft(null);
   };
 
-  // A built-in (project source) with no user override: name locked,
-  // saving creates a user override file.
   const nameLocked = !!current && current.source === "project";
   const deletable = !!current && (current.source === "user" || current.override);
+  const isNew = draft !== null && current === null;
+
+  // Source tag tone — project (built-in): muted; override: accent-tinted;
+  // user-only custom: subtle "ok" tone.
+  const tagFor = (a: AgentSummary): { label: string; tone: string } => {
+    if (a.source === "project" && !a.override) return { label: "内置", tone: "muted" };
+    if (a.override) return { label: "已覆盖", tone: "accent" };
+    return { label: "自定义", tone: "ok" };
+  };
+
+  const modelOptions = useMemo(
+    () => [
+      { value: INHERIT, label: "跟随父模型（继承）" },
+      ...models.map((m) => ({ value: m.key, label: m.label })),
+    ],
+    [models],
+  );
 
   return (
     <section className="settings-section ps-section customize-host">
@@ -116,129 +135,183 @@ export function AgentsSection({ activeRepoPath }: Props) {
         {/* Left: agent list */}
         <div className="customize-pane">
           <div className="customize-toolbar">
-            <button className="approval-btn approve" onClick={startNew}>新增子代理</button>
+            <button
+              className="approval-btn approve agent-new-btn"
+              onClick={startNew}
+              title="新增子代理"
+            >
+              <Plus size={14} />
+              <span>新增子代理</span>
+            </button>
           </div>
           <ul className="customize-plugin-list">
-            {agents.map((a) => (
-              <li
-                key={a.name}
-                className={`customize-plugin-row${selected === a.name ? " is-selected" : ""}`}
-                onClick={() => setSelected(a.name)}
-              >
-                <input
-                  type="checkbox"
-                  className="customize-plugin-row-check"
-                  checked={!isDisabled(a.name)}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={() => void toggleDisabled(a.name)}
-                  title={isDisabled(a.name) ? "已禁用（LLM 不可见）" : "已启用"}
-                />
-                <span style={{ flex: 1 }}>{a.name}</span>
-                {a.source === "project" && !a.override && <span className="ps-badge">内置</span>}
-                {a.override && <span className="ps-badge">已覆盖</span>}
-                {a.source === "user" && !a.override && <span className="ps-badge">自定义</span>}
-              </li>
-            ))}
+            {agents.map((a) => {
+              const off = isDisabled(a.name);
+              const tag = tagFor(a);
+              return (
+                <li
+                  key={a.name}
+                  className={`customize-plugin-row agent-row${
+                    selected === a.name ? " is-selected" : ""
+                  }${off ? " is-off" : ""}`}
+                  onClick={() => setSelected(a.name)}
+                >
+                  <input
+                    type="checkbox"
+                    className="customize-plugin-row-check"
+                    checked={!off}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => void toggleDisabled(a.name)}
+                    title={off ? "已禁用（LLM 不可见）" : "已启用"}
+                  />
+                  <div className="agent-row-main">
+                    <div className="agent-row-name">{a.name}</div>
+                    {a.description && (
+                      <div className="agent-row-desc">{a.description}</div>
+                    )}
+                  </div>
+                  <span className={`agent-tag agent-tag-${tag.tone}`}>{tag.label}</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
         {/* Right: editor form (spans two columns) */}
-        <div className="customize-pane" style={{ gridColumn: "span 2" }}>
+        <div className="customize-pane agent-editor-pane">
           {error && <div className="view-error">{error}</div>}
           {!draft ? (
-            <div className="mcp-empty">
-              <div className="mcp-empty-hint">选择左侧一个子代理，或「新增子代理」。</div>
+            <div className="agent-empty">
+              <div className="agent-empty-title">没有选中子代理</div>
+              <div className="agent-empty-hint">
+                选择左侧一个子代理查看与编辑，或点「新增子代理」创建一个新的。
+              </div>
             </div>
           ) : (
-            <div
-              className="settings-section"
-              style={{ gap: 12, display: "flex", flexDirection: "column" }}
-            >
-              <label>名称
-                <input
-                  type="text"
-                  value={draft.name}
-                  disabled={nameLocked}
-                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                />
-              </label>
+            <div className="agent-editor">
+              <header className="agent-editor-head">
+                <h3 className="settings-section-title">
+                  {isNew ? "新增子代理" : draft.name || "子代理"}
+                </h3>
+                {!isNew && current && (
+                  <span className={`agent-tag agent-tag-${tagFor(current).tone}`}>
+                    {tagFor(current).label}
+                  </span>
+                )}
+              </header>
               {nameLocked && (
-                <div className="mcp-empty-hint">
-                  内置子代理不可改名；保存会在用户级生成同名覆盖文件。
-                </div>
+                <p className="settings-section-help">
+                  内置子代理保留原名；保存时会在用户级生成同名覆盖文件，不会修改项目仓库里的原文件。
+                </p>
               )}
-              <label>描述
-                <input
-                  type="text"
-                  value={draft.description}
-                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                />
-              </label>
-              <label>模型
-                <select
-                  value={draft.model ?? INHERIT}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      model: e.target.value === INHERIT ? undefined : e.target.value,
-                    })
-                  }
-                >
-                  <option value={INHERIT}>跟随父模型（继承）</option>
-                  {models.map((m) => (
-                    <option key={m.key} value={m.key}>{m.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>最大轮数 (maxTurns)
-                <input
-                  type="number"
-                  value={draft.maxTurns ?? ""}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      maxTurns: e.target.value === "" ? undefined : Number(e.target.value),
-                    })
-                  }
-                />
-              </label>
-              <fieldset>
-                <legend>工具（不勾任何 = 继承父全集）</legend>
-                {TOOL_CHOICES.map((t) => {
-                  const checked = (draft.tools ?? []).includes(t);
-                  return (
-                    <label key={t} style={{ display: "inline-flex", gap: 4, marginRight: 12 }}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => {
-                          const cur = new Set(draft.tools ?? []);
-                          if (checked) cur.delete(t); else cur.add(t);
-                          const arr = [...cur];
-                          setDraft({ ...draft, tools: arr.length ? arr : undefined });
-                        }}
-                      />
-                      {t}
-                    </label>
-                  );
-                })}
-              </fieldset>
-              <label>系统提示词
+
+              <div className="agent-form-grid">
+                <label className="settings-field">
+                  <span>名称</span>
+                  <input
+                    type="text"
+                    value={draft.name}
+                    disabled={nameLocked}
+                    placeholder="researcher"
+                    onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                  />
+                </label>
+                <label className="settings-field">
+                  <span>描述（LLM 选择该角色时看到的一句话）</span>
+                  <input
+                    type="text"
+                    value={draft.description}
+                    placeholder="Read-only research — investigates and reports"
+                    onChange={(e) =>
+                      setDraft({ ...draft, description: e.target.value })
+                    }
+                  />
+                </label>
+                <label className="settings-field">
+                  <span>模型</span>
+                  <Select
+                    value={draft.model ?? INHERIT}
+                    onChange={(v) =>
+                      setDraft({
+                        ...draft,
+                        model: v === INHERIT ? undefined : v,
+                      })
+                    }
+                    options={modelOptions}
+                    searchable={modelOptions.length > 8}
+                    ariaLabel="子代理使用的模型"
+                  />
+                </label>
+                <label className="settings-field">
+                  <span>最大轮数</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={draft.maxTurns ?? ""}
+                    placeholder="留空 = 调用方决定"
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        maxTurns:
+                          e.target.value === "" ? undefined : Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
+              </div>
+
+              <div className="settings-field">
+                <span>工具白名单 <em className="agent-field-hint">不勾任何 = 继承父级全集</em></span>
+                <div className="agent-tools-grid">
+                  {TOOL_CHOICES.map((t) => {
+                    const checked = (draft.tools ?? []).includes(t);
+                    return (
+                      <label key={t} className="settings-toggle-inline">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            const cur = new Set(draft.tools ?? []);
+                            if (checked) cur.delete(t);
+                            else cur.add(t);
+                            const arr = [...cur];
+                            setDraft({ ...draft, tools: arr.length ? arr : undefined });
+                          }}
+                        />
+                        <span>{t}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <label className="settings-field">
+                <span>系统提示词（角色的 system prompt）</span>
                 <textarea
-                  className="settings-editor"
                   value={draft.systemPrompt}
-                  onChange={(e) => setDraft({ ...draft, systemPrompt: e.target.value })}
-                  rows={10}
+                  rows={12}
+                  spellCheck={false}
+                  placeholder="You are a research sub-agent. …"
+                  onChange={(e) =>
+                    setDraft({ ...draft, systemPrompt: e.target.value })
+                  }
                 />
               </label>
-              <div className="settings-toolbar">
+
+              <div className="settings-toolbar agent-toolbar">
                 {deletable && (
                   <button
                     className="approval-btn deny"
                     onClick={() => current && void remove(current)}
-                  >删除</button>
+                  >
+                    <Trash2 size={13} />
+                    <span>删除</span>
+                  </button>
                 )}
-                <button className="approval-btn approve" onClick={() => void save()}>保存</button>
+                <span className="agent-toolbar-spacer" />
+                <button className="approval-btn approve" onClick={() => void save()}>
+                  保存
+                </button>
               </div>
             </div>
           )}
