@@ -30,6 +30,12 @@ interface Props {
    * the same as a new message and scrolls into view.
    */
   trailingKey?: string | null;
+  /**
+   * Monotonic counter incremented on each turn_complete. Forwarded to
+   * ToolCard and ToolGroupCard so they force-collapse on each turn
+   * boundary.
+   */
+  turnEpoch?: number;
 }
 
 export function MessageStream({
@@ -37,6 +43,7 @@ export function MessageStream({
   onAskUserAnswer,
   trailing,
   trailingKey,
+  turnEpoch,
 }: Props) {
   const ref = useStickToBottom<HTMLDivElement>(
     `${messages.length}:${trailingKey ?? ""}`,
@@ -55,13 +62,13 @@ export function MessageStream({
     <div className="stream" ref={ref}>
       {items.map((m) => {
         if (m.kind === "tool_group") {
-          return <ToolGroupCard key={m.id} group={m} />;
+          return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
         }
         switch (m.kind) {
           case "tool":
             // Tool cards now display their full args/result body inline
             // when expanded — no separate inspector pane to feed.
-            return <ToolCard key={m.id} message={m} />;
+            return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} />;
           case "user": {
             const { text, images } = decodeWireForDisplay(m.text);
             return (

@@ -24,6 +24,7 @@ import {
 
 interface Props {
   messages: Message[];
+  turnEpoch?: number;
   onSend: (text: string) => void;
   onStop: () => void;
   busy: boolean;
@@ -56,6 +57,7 @@ const MAX_TEXTAREA_PX = 200;
 
 export function ChatView({
   messages,
+  turnEpoch,
   onSend,
   onStop,
   busy,
@@ -255,6 +257,7 @@ export function ChatView({
     <div className="chat" data-mode={isNewChat ? "new" : "active"}>
       <MessageStream
         messages={messages}
+        turnEpoch={turnEpoch}
         onAskUserAnswer={onAskUserAnswer}
         trailing={inlineApproval}
         trailingKey={pendingApproval?.requestId ?? null}

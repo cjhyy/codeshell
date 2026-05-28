@@ -1045,6 +1045,7 @@ function App() {
           <>
             <ChatView
               messages={state.messages}
+              turnEpoch={state.turnEpoch}
               onSend={send}
               onStop={stop}
               busy={busy}
