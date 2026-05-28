@@ -57,6 +57,16 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  width: 100%;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.msg-agent-head:disabled {
+  cursor: default;
 }
 .msg-agent-name { font-weight: 600; color: var(--fg-primary); }
 .msg-agent-desc { color: var(--fg-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -69,6 +79,23 @@
   margin-top: var(--sp-1);
   color: var(--status-err);
   white-space: pre-wrap;
+}
+.msg-agent-meta {
+  margin-left: auto;
+  opacity: 0.6;
+  font-size: 0.85em;
+}
+.msg-agent-toggle {
+  opacity: 0.6;
+  font-size: 0.85em;
+  width: 1em;
+  text-align: center;
+}
+.msg-agent-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 /* Task list */

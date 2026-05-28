@@ -654,6 +654,16 @@ export class OpenAIClient extends LLMClientBase {
   }
 
   private handleApiError(err: unknown): never {
+    // User pressed ESC / Stop — the SDK throws APIUserAbortError when
+    // the request's AbortSignal fires mid-flight. Rethrow it unchanged
+    // so callers up the chain (turn-loop → server.ts) can recognise it
+    // as a cancellation rather than a real API failure. Wrapping it
+    // into "OpenAI API error: Request was aborted" was surfacing a
+    // scary toast for what is, from the user's perspective, "I clicked
+    // Stop and it worked."
+    if (err instanceof OpenAI.APIUserAbortError) {
+      throw err;
+    }
     if (err instanceof OpenAI.APIError) {
       if (err.status === 429) {
         throw new LLMRateLimitError("openai");

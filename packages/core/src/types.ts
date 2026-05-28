@@ -256,7 +256,7 @@ export type StreamEvent =
   | { type: "turn_complete"; reason: TerminalReason; agentId?: string }
   | { type: "error"; error: string; agentId?: string }
   | { type: "tombstone"; messageId: string }
-  | { type: "task_update"; tasks: TaskInfo[] }
+  | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }
   | { type: "thinking_delta"; text: string; agentId?: string }
   | { type: "agent_start"; agentId: string; name?: string; description: string }
   | { type: "agent_end"; agentId: string; name?: string; description: string; text?: string; error?: string }

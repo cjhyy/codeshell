@@ -153,6 +153,7 @@ export function loadTranscript(
       sessionId: parsed.sessionId ?? null,
       promptTokens: parsed.promptTokens ?? 0,
       activeAgents: parsed.activeAgents ?? {},
+      agentMessageIndex: parsed.agentMessageIndex ?? {},
     };
   } catch {
     return INITIAL_STATE;
@@ -171,6 +172,11 @@ export function saveTranscript(
         : {
             ...state,
             messages: state.messages.slice(state.messages.length - TRANSCRIPT_MSG_CAP),
+            // Indices were computed against the un-capped array; clearing
+            // them is correct because any agent whose AgentMessage survived
+            // the cap will no longer be subject to in-flight updates after
+            // restore — the session has already been persisted.
+            agentMessageIndex: {},
           };
     localStorage.setItem(transcriptKey(repoId, sessionId), JSON.stringify(capped));
   } catch {

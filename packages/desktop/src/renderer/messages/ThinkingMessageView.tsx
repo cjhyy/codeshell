@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import type { ThinkingMessage } from "../types";
 import { ChevronDown, ChevronRight } from "../ui/icons";
 
-export function ThinkingMessageView({ message }: { message: ThinkingMessage }) {
+// Memoized — see Markdown / ToolCard for the rationale. ThinkingMessage
+// references are stable across text_delta dispatches, so default
+// shallow compare correctly short-circuits.
+function ThinkingMessageViewImpl({ message }: { message: ThinkingMessage }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={`msg-row msg-thinking ${message.done ? "done" : "streaming"}`}>
@@ -16,3 +19,5 @@ export function ThinkingMessageView({ message }: { message: ThinkingMessage }) {
     </div>
   );
 }
+
+export const ThinkingMessageView = memo(ThinkingMessageViewImpl);

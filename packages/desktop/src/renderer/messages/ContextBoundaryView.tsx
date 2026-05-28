@@ -1,7 +1,7 @@
-import React from "react";
+import React, { memo } from "react";
 import type { ContextBoundaryMessage } from "../types";
 
-export function ContextBoundaryView({ message }: { message: ContextBoundaryMessage }) {
+function ContextBoundaryViewImpl({ message }: { message: ContextBoundaryMessage }) {
   const delta = message.before - message.after;
   return (
     <div className="msg-row msg-ctx">
@@ -15,3 +15,6 @@ export function ContextBoundaryView({ message }: { message: ContextBoundaryMessa
     </div>
   );
 }
+
+// Memoized — see Markdown / ToolCard for the rationale.
+export const ContextBoundaryView = memo(ContextBoundaryViewImpl);

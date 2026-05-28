@@ -59,6 +59,8 @@ import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
 import { TrustGate } from "./workspace-trust/TrustGate";
 import { UpdaterBanner } from "./updater/UpdaterBanner";
+import { loadGitPrefs } from "./gitPrefs";
+import { createEventCoalescer } from "./streamCoalescer";
 import {
   fromSettingsPermissionMode,
   toCorePermissionMode,
@@ -197,6 +199,10 @@ function App() {
    */
   const engineToBucketRef = useRef<Map<string, string>>(new Map());
   const activeBucketRef = useRef(activeBucket);
+  /** Per-bucket event coalescers — buffer rapid text_delta / tool_use_args_delta. */
+  const coalescersRef = useRef<Map<string, ReturnType<typeof createEventCoalescer>>>(
+    new Map(),
+  );
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
   const [activeGitMeta, setActiveGitMeta] = useState<{
@@ -214,6 +220,18 @@ function App() {
     const refreshSettings = (): void => setSettingsRevision((n) => n + 1);
     window.addEventListener("codeshell:settings-changed", refreshSettings);
     return () => window.removeEventListener("codeshell:settings-changed", refreshSettings);
+  }, []);
+
+  // Push Electron-local Git prefs to main on mount and whenever the
+  // user edits them. Main needs branchPrefix as a default for worktree
+  // creation and autoDelete settings for the periodic cleanup sweep.
+  useEffect(() => {
+    const push = (): void => {
+      void window.codeshell.setGitPrefs?.(loadGitPrefs());
+    };
+    push();
+    window.addEventListener("codeshell:git-prefs-changed", push);
+    return () => window.removeEventListener("codeshell:git-prefs-changed", push);
   }, []);
 
   useEffect(() => {
@@ -295,38 +313,6 @@ function App() {
       [next.id]: loadSessionIndex(next.id),
     }));
     window.codeshell.log("repo.added", { id: next.id, path: next.path });
-  };
-
-  const handleCreateWorktree = async (repo: Repo): Promise<void> => {
-    const base = repo.displayName || repo.name;
-    const requested = prompt("工作树名称", base);
-    if (requested === null || !requested.trim()) return;
-    try {
-      const created = await window.codeshell.createWorktree(repo.path, requested);
-      const next: Repo = {
-        id: makeRepoId(),
-        name: `${base} · ${created.name}`,
-        path: created.path,
-        addedAt: Date.now(),
-      };
-      const existing = repos.find((r) => r.path === created.path);
-      setRepos((prev) => {
-        const dup = prev.find((r) => r.path === created.path);
-        return dup ? prev : [...prev, next];
-      });
-      setActiveRepoId(existing?.id ?? next.id);
-      setSessionIndices((prev) => ({
-        ...prev,
-        [existing?.id ?? next.id]: loadSessionIndex(existing?.id ?? next.id),
-      }));
-      window.codeshell.log("repo.worktree_created", {
-        source: repo.path,
-        path: created.path,
-        branch: created.branch,
-      });
-    } catch (e) {
-      alert(String(e instanceof Error ? e.message : e));
-    }
   };
 
   const handleRemoveRepo = (id: string): void => {
@@ -437,6 +423,25 @@ function App() {
   };
 
   useEffect(() => {
+    const coalescers = coalescersRef.current;
+    return () => {
+      for (const c of coalescers.values()) c.dispose();
+      coalescers.clear();
+    };
+  }, []);
+
+  function getCoalescer(bucket: string) {
+    let c = coalescersRef.current.get(bucket);
+    if (!c) {
+      c = createEventCoalescer((event) =>
+        dispatch({ type: "stream", bucket, event }),
+      );
+      coalescersRef.current.set(bucket, c);
+    }
+    return c;
+  }
+
+  useEffect(() => {
     window.codeshell.log("app.mount", { codeshellKeys: Object.keys(window.codeshell ?? {}) });
 
     const offStream = window.codeshell.onStreamEvent((env: StreamEventEnvelope) => {
@@ -462,7 +467,7 @@ function App() {
           engineSessionId: env.sessionId || null,
         });
       }
-      dispatch({ type: "stream", bucket: target, event });
+      getCoalescer(target).push(event);
 
       // session_started carries the authoritative engine sessionId. Persist
       // the binding (engineSessionId == uiSessionId is the new normal, but
@@ -654,6 +659,22 @@ function App() {
           bucket,
           result: r as unknown as Record<string, unknown>,
         });
+      })
+      .catch((err) => {
+        // Server crashed / RPC rejected / non-abort error. Without this
+        // the run promise silently rejects, busy never clears, and the
+        // composer stays disabled until the user reloads. Cancellation
+        // is now reported via a successful RunResult with reason
+        // "aborted_streaming" (see protocol/server.ts), so anything
+        // reaching here is a real failure worth logging.
+        setBusyForKey(bucket, false);
+        if (runningBucketRef.current === bucket) {
+          runningBucketRef.current = null;
+        }
+        window.codeshell.log("run.rejected", {
+          bucket,
+          error: String((err as Error)?.message ?? err),
+        });
       });
   };
 
@@ -669,6 +690,13 @@ function App() {
       : undefined;
     const engineSessionId = summary?.engineSessionId ?? uiSessionId ?? undefined;
     window.codeshell.log("stop.click", { bucket, engineSessionId });
+    // Fire the cancel IPC, but don't wait for the round-trip — the
+    // user pressed Stop and expects the UI to reflect that NOW. Clear
+    // busy + routing optimistically; any stream events that arrive
+    // after this point are tail-end noise we can drop (the engine has
+    // already been told to abort).
+    setBusyForKey(bucket, false);
+    if (runningBucketRef.current === bucket) runningBucketRef.current = null;
     void window.codeshell.cancel(engineSessionId);
   };
 
@@ -975,7 +1003,6 @@ function App() {
           onPinRepo={handlePinRepo}
           onRenameRepo={handleRenameRepo}
           onArchiveAllSessions={handleArchiveAllSessions}
-          onCreateWorktree={(repo) => { void handleCreateWorktree(repo); }}
           onNewConversationForRepo={handleNewConversationForRepo}
           onNewConversation={handleNewConversation}
           onOpenSearch={() => setSessionSearchOpen(true)}
