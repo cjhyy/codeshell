@@ -37,6 +37,7 @@ import {
   uninstallSkill,
 } from "./skills-service.js";
 import { listPlugins } from "./plugins-service.js";
+import { searchFiles } from "./file-search-service.js";
 import {
   listAgents,
   readAgentBody,
@@ -242,6 +243,11 @@ ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   return listPlugins(cwd);
 });
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
+ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
+  if (typeof cwd !== "string") throw new Error("files:search requires cwd");
+  const q = typeof query === "string" ? query : "";
+  return searchFiles(cwd, q);
+});
 ipcMain.handle(
   "skills:uninstall",
   async (_e, filePath: string, source: "user" | "project" | "plugin") => {

@@ -154,6 +154,8 @@ export interface CodeshellApi {
   getRun(runId: string): Promise<RunDetail | null>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
+  /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
+  searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
   readSkillBody(filePath: string): Promise<string>;
   installLocalSkill(
     sourceDir: string,
@@ -309,6 +311,13 @@ export interface SkillSummary {
   description: string;
   source: "project" | "user" | "plugin";
   filePath: string;
+}
+
+export interface FileSearchHit {
+  /** Path relative to cwd, forward-slash separated. */
+  path: string;
+  /** Basename of the file. */
+  name: string;
 }
 
 export interface AgentSummary {

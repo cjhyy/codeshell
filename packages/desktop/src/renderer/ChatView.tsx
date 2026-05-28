@@ -22,6 +22,8 @@ import {
   type ImageAttachment,
 } from "./chat/attachments";
 import { compressBatch } from "./chat/compress";
+import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
+import { detectMention } from "./chat/mention";
 
 interface Props {
   messages: Message[];
@@ -93,6 +95,15 @@ export function ChatView({
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
+  // @-mention state. `mention` is non-null while the caret sits inside
+  // an @-token (no whitespace between the `@` and caret); `start` marks
+  // the position of the `@` itself, `query` is everything typed after it.
+  // `selected` is the index into the popover's flat item list and is
+  // clamped by `mentionItems` (the popover bubbles its list back up).
+  const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
+  const [mentionItems, setMentionItems] = useState<MentionItem[]>([]);
+  const [mentionSelected, setMentionSelected] = useState(0);
+
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
 
@@ -116,6 +127,32 @@ export function ChatView({
   const placeholder = busy
     ? "agent is working… (Stop 中止)"
     : "可向 agent 询问任何事。输入 @ 使用插件或提及文件";
+
+  const closeMention = (): void => {
+    setMention(null);
+    setMentionSelected(0);
+  };
+
+  const applyMentionPick = (item: MentionItem): void => {
+    if (!mention) return;
+    const ta = textareaRef.current;
+    const caret = ta?.selectionStart ?? draft.length;
+    const before = draft.slice(0, mention.start);
+    const after = draft.slice(caret);
+    const insertion =
+      item.kind === "skill" ? `@${item.skill.name} ` : `@${item.file.path} `;
+    const next = before + insertion + after;
+    setDraft(next);
+    closeMention();
+    // After React paints, restore caret to the end of the inserted token.
+    const nextCaret = before.length + insertion.length;
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(nextCaret, nextCaret);
+      }
+    });
+  };
 
   const submit = (): void => {
     const text = draft.trim();
@@ -173,6 +210,36 @@ export function ChatView({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (isComposing || e.nativeEvent.isComposing) return;
+
+    // While the @-mention popover is open, intercept navigation keys.
+    // Backspace falls through so the user can edit the query naturally;
+    // detectMention runs in onChange and will close the popover if the
+    // edit kills the @-token.
+    if (mention) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeMention();
+        return;
+      }
+      if (mentionItems.length > 0) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setMentionSelected((s) => (s + 1) % mentionItems.length);
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setMentionSelected((s) => (s - 1 + mentionItems.length) % mentionItems.length);
+          return;
+        }
+        if (e.key === "Enter" || e.key === "Tab") {
+          e.preventDefault();
+          const pick = mentionItems[Math.min(mentionSelected, mentionItems.length - 1)];
+          if (pick) applyMentionPick(pick);
+          return;
+        }
+      }
+    }
 
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
       e.preventDefault();
@@ -375,14 +442,67 @@ export function ChatView({
           )}
 
           <div className="composer-textarea-wrap">
+            {mention && (
+              <MentionPopover
+                cwd={activeRepoPath}
+                query={mention.query}
+                selected={mentionSelected}
+                onPick={applyMentionPick}
+                onItemsChange={(items) => {
+                  setMentionItems(items);
+                  // Clamp selection if the list shrank under us.
+                  setMentionSelected((s) =>
+                    items.length === 0 ? 0 : Math.min(s, items.length - 1),
+                  );
+                }}
+              />
+            )}
             <textarea
               ref={textareaRef}
               value={draft}
               onChange={(e) => {
-                setDraft(e.target.value);
+                const value = e.target.value;
+                setDraft(value);
                 if (historyCursor !== -1) setHistoryCursor(-1);
+                const caret = e.target.selectionStart ?? value.length;
+                const next = detectMention(value, caret);
+                if (next) {
+                  // Reset cursor to top whenever the query changes so the
+                  // first match is always primed.
+                  if (!mention || mention.query !== next.query) setMentionSelected(0);
+                  setMention(next);
+                } else if (mention) {
+                  closeMention();
+                }
               }}
               onKeyDown={handleKeyDown}
+              onKeyUp={(e) => {
+                // Arrow / click moves can shift the caret without changing
+                // text; re-detect so the popover follows the caret.
+                if (
+                  e.key === "ArrowLeft" ||
+                  e.key === "ArrowRight" ||
+                  e.key === "Home" ||
+                  e.key === "End"
+                ) {
+                  const ta = e.currentTarget;
+                  const caret = ta.selectionStart ?? ta.value.length;
+                  const next = detectMention(ta.value, caret);
+                  if (next) setMention(next);
+                  else if (mention) closeMention();
+                }
+              }}
+              onClick={(e) => {
+                const ta = e.currentTarget;
+                const caret = ta.selectionStart ?? ta.value.length;
+                const next = detectMention(ta.value, caret);
+                if (next) setMention(next);
+                else if (mention) closeMention();
+              }}
+              onBlur={() => {
+                // Delay so a mousedown pick on the popover still resolves.
+                setTimeout(() => closeMention(), 120);
+              }}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
               onPaste={(e) => void handlePaste(e)}
