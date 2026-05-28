@@ -292,6 +292,12 @@ export class AnthropicClient extends LLMClientBase {
   }
 
   private handleApiError(err: unknown): never {
+    // ESC / Stop path — see openai.ts handleApiError for the same logic.
+    // Rethrow the SDK's abort error unchanged so server.ts recognises
+    // cancellation; don't repackage it as a generic "Anthropic API error".
+    if (err instanceof Anthropic.APIUserAbortError) {
+      throw err;
+    }
     if (err instanceof Anthropic.APIError) {
       if (err.status === 429) {
         throw new LLMRateLimitError("anthropic");

@@ -297,9 +297,11 @@ export class AgentServer {
       // that bubbles up here. Don't surface it as InternalError —
       // the user already knows they pressed stop; clients should
       // just clear busy.
+      const errName = (err as { name?: string }).name;
       const aborted =
         runController.signal.aborted ||
-        (err as { name?: string }).name === "AbortError";
+        errName === "AbortError" ||
+        errName === "APIUserAbortError";
       if (aborted) {
         const cancelledResult: RunResult = {
           text: "",
