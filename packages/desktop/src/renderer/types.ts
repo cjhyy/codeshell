@@ -198,17 +198,33 @@ export function applyStreamEvent(
     }
 
     case "stream_request_start": {
+      // If a subagent is active, this request_start belongs to it (the
+      // event itself doesn't carry agentId). Don't open a new main
+      // assistant message — that would create a phantom card in the feed.
+      if (Object.keys(state.activeAgents).length > 0) return state;
       const id = freshId("assistant");
       return {
         ...state,
         messages: [...state.messages, { kind: "assistant", id, text: "", done: false }],
         streamingAssistantId: id,
-        // A new request also implies thinking from the previous turn is done.
         streamingThinkingId: null,
       };
     }
 
     case "text_delta": {
+      // Subagent text never enters the main feed — it accumulates in the
+      // owning AgentMessage's textBuffer and is flushed to `text` on
+      // turn_complete / agent_end. This is the hot path that froze the
+      // UI in session s-mpo7fju0-7d6942b7.
+      if (event.agentId) {
+        const idx = state.agentMessageIndex[event.agentId];
+        if (idx === undefined) return state;
+        const msgs = state.messages.slice();
+        const m = msgs[idx];
+        if (!m || m.kind !== "agent") return state;
+        msgs[idx] = { ...m, textBuffer: m.textBuffer + event.text };
+        return { ...state, messages: msgs };
+      }
       if (!state.streamingAssistantId) return state;
       return {
         ...state,
@@ -221,7 +237,9 @@ export function applyStreamEvent(
     }
 
     case "thinking_delta": {
-      // Open a new ThinkingMessage if none is currently streaming.
+      // Subagent thinking is dropped — same as TUI. No user value in the
+      // folded card, and rendering it would defeat the freeze fix.
+      if (event.agentId) return state;
       if (!state.streamingThinkingId) {
         const id = freshId("thinking");
         return {
@@ -245,23 +263,47 @@ export function applyStreamEvent(
 
     case "tool_use_start": {
       const id = event.toolCall.id;
-      return {
-        ...state,
-        messages: [
-          ...state.messages,
-          {
-            kind: "tool",
-            id,
-            toolName: event.toolCall.toolName,
-            args: JSON.stringify(event.toolCall.args ?? {}),
-            status: "running",
-            startedAt: Date.now(),
-          },
-        ],
+      const toolMsg: ToolMessage = {
+        kind: "tool",
+        id,
+        toolName: event.toolCall.toolName,
+        args: JSON.stringify(event.toolCall.args ?? {}),
+        status: "running",
+        startedAt: Date.now(),
       };
+      if (event.agentId) {
+        const idx = state.agentMessageIndex[event.agentId];
+        if (idx === undefined) return state;
+        const msgs = state.messages.slice();
+        const m = msgs[idx];
+        if (!m || m.kind !== "agent") return state;
+        msgs[idx] = {
+          ...m,
+          toolCalls: [...m.toolCalls, toolMsg],
+          toolCount: m.toolCount + 1,
+        };
+        return { ...state, messages: msgs };
+      }
+      return { ...state, messages: [...state.messages, toolMsg] };
     }
 
     case "tool_use_args_delta": {
+      if (event.agentId) {
+        const idx = state.agentMessageIndex[event.agentId];
+        if (idx === undefined) return state;
+        const msgs = state.messages.slice();
+        const m = msgs[idx];
+        if (!m || m.kind !== "agent") return state;
+        msgs[idx] = {
+          ...m,
+          toolCalls: m.toolCalls.map((t) =>
+            t.id === event.toolCallId
+              ? { ...t, argsLive: { ...(t.argsLive ?? {}), ...event.args } }
+              : t,
+          ),
+        };
+        return { ...state, messages: msgs };
+      }
       return {
         ...state,
         messages: state.messages.map((m) =>
@@ -274,26 +316,44 @@ export function applyStreamEvent(
 
     case "tool_result": {
       const endedAt = Date.now();
+      const patch = (t: ToolMessage): ToolMessage => {
+        const failed =
+          event.result.error !== undefined || event.result.isError === true;
+        return {
+          ...t,
+          result: event.result.result,
+          error: event.result.error,
+          status: failed ? "failed" : "succeeded",
+          endedAt,
+          durationMs: endedAt - t.startedAt,
+        };
+      };
+      if (event.agentId) {
+        const idx = state.agentMessageIndex[event.agentId];
+        if (idx === undefined) return state;
+        const msgs = state.messages.slice();
+        const m = msgs[idx];
+        if (!m || m.kind !== "agent") return state;
+        msgs[idx] = {
+          ...m,
+          toolCalls: m.toolCalls.map((t) =>
+            t.id === event.result.id ? patch(t) : t,
+          ),
+        };
+        return { ...state, messages: msgs };
+      }
       return {
         ...state,
         messages: state.messages.map((m) => {
           if (m.kind !== "tool" || m.id !== event.result.id) return m;
-          const failed =
-            event.result.error !== undefined || event.result.isError === true;
-          return {
-            ...m,
-            result: event.result.result,
-            error: event.result.error,
-            status: failed ? "failed" : "succeeded",
-            endedAt,
-            durationMs: endedAt - m.startedAt,
-          };
+          return patch(m);
         }),
       };
     }
 
     case "tool_summary": {
-      // Attach to the most recent tool message.
+      // tool_summary has no agentId in the StreamEvent type; attach to the
+      // most recent top-level tool message (existing behavior preserved).
       const msgs = state.messages.slice();
       for (let i = msgs.length - 1; i >= 0; i--) {
         const m = msgs[i];
@@ -377,15 +437,25 @@ export function applyStreamEvent(
     case "agent_end": {
       const endedAt = Date.now();
       const { [event.agentId]: _omit, ...rest } = state.activeAgents;
-      return {
-        ...state,
-        activeAgents: rest,
-        messages: state.messages.map((m) =>
-          m.kind === "agent" && m.id === event.agentId
-            ? { ...m, done: true, text: event.text, error: event.error, endedAt }
-            : m,
-        ),
-      };
+      const idx = state.agentMessageIndex[event.agentId];
+      const msgs = state.messages.slice();
+      if (idx !== undefined) {
+        const m = msgs[idx];
+        if (m && m.kind === "agent") {
+          const flushed = m.textBuffer.length > 0
+            ? (m.text ?? "") + m.textBuffer
+            : m.text;
+          msgs[idx] = {
+            ...m,
+            done: true,
+            text: event.text ?? flushed,
+            textBuffer: "",
+            error: event.error,
+            endedAt,
+          };
+        }
+      }
+      return { ...state, activeAgents: rest, messages: msgs };
     }
 
     case "context_compact": {
@@ -425,15 +495,31 @@ export function applyStreamEvent(
     }
 
     case "turn_complete": {
+      // Flush every active agent's textBuffer to its `text` field.
+      const msgs = state.messages.slice();
+      for (const agentId of Object.keys(state.activeAgents)) {
+        const idx = state.agentMessageIndex[agentId];
+        if (idx === undefined) continue;
+        const m = msgs[idx];
+        if (!m || m.kind !== "agent" || m.textBuffer.length === 0) continue;
+        msgs[idx] = {
+          ...m,
+          text: (m.text ?? "") + m.textBuffer,
+          textBuffer: "",
+        };
+      }
+      // Main-feed finalization (unchanged behavior for streaming pointers).
+      const streamingAssistantId = state.streamingAssistantId;
+      const streamingThinkingId = state.streamingThinkingId;
       return {
         ...state,
         streamingAssistantId: null,
         streamingThinkingId: null,
-        messages: state.messages.map((m) => {
-          if (m.kind === "assistant" && m.id === state.streamingAssistantId) {
+        messages: msgs.map((m) => {
+          if (m.kind === "assistant" && m.id === streamingAssistantId) {
             return { ...m, done: true };
           }
-          if (m.kind === "thinking" && m.id === state.streamingThinkingId) {
+          if (m.kind === "thinking" && m.id === streamingThinkingId) {
             return { ...m, done: true };
           }
           return m;
