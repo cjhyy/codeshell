@@ -41,19 +41,19 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
             <span className="msg-agent-toggle">{expanded ? "▾" : "▸"}</span>
           )}
         </button>
-        {expanded && message.toolCalls.length > 0 && (
+        {expanded && (
           <div className="msg-agent-body">
             {message.toolCalls.map((t) => (
               <ToolCard key={t.id} message={t} />
             ))}
+            {message.text && (
+              <div className="msg-agent-text">
+                <Markdown text={message.text} />
+              </div>
+            )}
+            {message.error && <div className="msg-agent-err">{message.error}</div>}
           </div>
         )}
-        {message.text && (
-          <div className="msg-agent-text">
-            <Markdown text={message.text} />
-          </div>
-        )}
-        {message.error && <div className="msg-agent-err">{message.error}</div>}
       </div>
     </div>
   );

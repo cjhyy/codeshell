@@ -50,9 +50,11 @@ describe("AgentMessageView", () => {
     expect(html).toContain("3");
   });
 
-  test("done agent renders final text", () => {
+  test("done agent does not render final text while folded", () => {
     const m = agent({ done: true, text: "final answer" });
     const html = renderToStaticMarkup(<AgentMessageView message={m} />);
-    expect(html).toContain("final answer");
+    // Header still shows; final text is hidden behind the fold.
+    expect(html).toContain("Sub");
+    expect(html).not.toContain("final answer");
   });
 });
