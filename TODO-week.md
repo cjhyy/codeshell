@@ -24,6 +24,8 @@
 <!-- 按你打算开工的顺序排 -->
 
 - [ ] **1. Electron 长会话页面卡顿** — 排查重渲染、虚拟列表、消息列表 DOM 体量；定位再决定优化方案
+  - 进展：session `s-mppal9el-430db385` 实证诊断（84s 1546 个 text_delta）→ 已 memo ToolCard / Markdown / ThinkingMessageView / ContextBoundaryView。本轮单点见效（不再每个 delta 都重跑 ReactMarkdown 等）
+  - 待办：实测确认；若还卡，下一步考虑 MessageStream 整体 React.memo + items.map row-level key 稳定化 + 必要时引入虚拟列表（react-window）
 - [ ] **2. 生成物（图片 / HTML / md）卡片化展示** — Electron 端给 GenerateImage 输出、写入的 .md / .html 一个统一的"附件卡片"，点击用系统应用打开
 - [ ] **3. 权限模式整顿 + Goal 模式**
   - [ ] "本次完全访问"不要——改成更明确的当前 session / 项目级 / 全局三层
