@@ -72,6 +72,7 @@ import {
   ImageParseError,
   type ParsedTask,
 } from "./parse-task.js";
+import { enforceImagePolicy } from "./image-policy.js";
 import { capabilitiesFor } from "../llm/capabilities/index.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
 import type { ContentBlock } from "../types.js";
@@ -589,6 +590,27 @@ export class Engine {
             `Switch to a vision-capable model (e.g. gpt-4o, claude-sonnet, gemini-1.5-pro) and resend.`,
           reason: "image_error",
           sessionId: options?.sessionId ?? "vision-not-supported",
+          turnCount: 0,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        };
+      }
+      // Size gate. Hosts (desktop renderer, TUI) are expected to
+      // pre-compress to IMAGE_TARGETS — if they didn't, we fail the turn
+      // fast with a clear message instead of letting the OpenAI client
+      // grind through three 16-second "Connection error" retries on a
+      // 4 MB body. See `image-policy.ts` for the rationale and limits.
+      const verdict = enforceImagePolicy(parsedTask.images);
+      if (!verdict.ok) {
+        logger.warn("engine.run.image_too_large", {
+          code: verdict.code,
+          imageCount: verdict.totals.imageCount,
+          totalBytes: verdict.totals.totalBytes,
+          offender: verdict.offender,
+        });
+        return {
+          text: `ERROR: ${verdict.message}`,
+          reason: "image_error",
+          sessionId: options?.sessionId ?? `image-policy-${verdict.code}`,
           turnCount: 0,
           usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         };

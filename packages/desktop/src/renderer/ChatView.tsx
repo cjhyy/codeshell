@@ -21,6 +21,7 @@ import {
   imageFilesFromDrop,
   type ImageAttachment,
 } from "./chat/attachments";
+import { compressBatch } from "./chat/compress";
 
 interface Props {
   messages: Message[];
@@ -145,7 +146,13 @@ export function ChatView({
     setAttachmentError(null);
     const { accepted, errors } = await buildAttachments(files, attachments);
     if (accepted.length > 0) {
-      setAttachments((cur) => [...cur, ...accepted]);
+      // Compress before staging so the chip thumbnail and the wire
+      // payload share the same bytes — keeps the UI honest about what
+      // will actually be sent. compressBatch never throws; it falls
+      // back to the original if encoding fails (engine policy still
+      // gates oversize bytes downstream).
+      const compressed = await compressBatch(accepted);
+      setAttachments((cur) => [...cur, ...compressed]);
     }
     if (errors.length > 0) {
       setAttachmentError(errors.map((e) => e.message).join("；"));
@@ -159,13 +166,6 @@ export function ChatView({
     await acceptFiles(imageFiles);
   };
 
-  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragOver(false);
-    const imageFiles = imageFilesFromDrop(e.dataTransfer?.items ?? null);
-    if (imageFiles.length === 0) return;
-    await acceptFiles(imageFiles);
-  };
 
   const removeAttachment = (id: string) => {
     setAttachments((cur) => cur.filter((a) => a.id !== id));
@@ -255,8 +255,47 @@ export function ChatView({
   const showStickyApproval =
     !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
 
+  // Drop handlers live on the whole chat surface, not just the composer.
+  // Users drag a screenshot into the window expecting it to "land" — having
+  // to aim at a 50px-tall composer is annoying. The composer still gets a
+  // visual highlight via the same `dragOver` state, but the actual catcher
+  // is the chat root. We DON'T pull this up to App because then Sidebar
+  // drops (e.g. dragging a project folder onto the sidebar) would silently
+  // become image attachments.
+  const onChatDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
+      e.preventDefault();
+      setDragOver(true);
+    }
+  };
+  const onChatDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
+      e.preventDefault();
+    }
+  };
+  const onChatDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    // Only kill the highlight when the cursor exits the chat surface
+    // entirely — sub-element transitions fire dragleave/dragenter pairs
+    // that we don't want to interpret as "left, then re-entered".
+    if (e.target === e.currentTarget) setDragOver(false);
+  };
+  const onChatDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    const imageFiles = imageFilesFromDrop(e.dataTransfer?.items ?? null);
+    if (imageFiles.length === 0) return;
+    void acceptFiles(imageFiles);
+  };
+
   return (
-    <div className="chat" data-mode={isNewChat ? "new" : "active"}>
+    <div
+      className={`chat${dragOver ? " is-drop-target" : ""}`}
+      data-mode={isNewChat ? "new" : "active"}
+      onDragEnter={onChatDragEnter}
+      onDragOver={onChatDragOver}
+      onDragLeave={onChatDragLeave}
+      onDrop={onChatDrop}
+    >
       <MessageStream
         messages={messages}
         turnEpoch={turnEpoch}
@@ -284,23 +323,14 @@ export function ChatView({
       {isNewChat && welcomeNode}
 
       <div className="composer-shell">
+        {/*
+          Drop is captured at the chat root (.chat) so the user can drag
+          a screenshot anywhere in the chat surface. The composer keeps
+          the visual highlight (`is-drop-target` class) to make the
+          landing spot obvious, but no longer owns the handlers.
+        */}
         <div
           className={`composer${dragOver ? " is-drop-target" : ""}`}
-          onDragEnter={(e) => {
-            if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
-              e.preventDefault();
-              setDragOver(true);
-            }
-          }}
-          onDragOver={(e) => {
-            if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
-              e.preventDefault();
-            }
-          }}
-          onDragLeave={(e) => {
-            if (e.target === e.currentTarget) setDragOver(false);
-          }}
-          onDrop={(e) => void handleDrop(e)}
         >
           {attachments.length > 0 && (
             <div className="composer-attachments">

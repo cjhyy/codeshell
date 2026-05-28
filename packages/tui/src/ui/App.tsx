@@ -61,6 +61,7 @@ import { utilityCommands } from "../cli/commands/builtin/utility-commands.js";
 import { advancedCommands } from "../cli/commands/builtin/advanced-commands.js";
 import { extraCommands } from "../cli/commands/builtin/extra-commands.js";
 import { moreCommands } from "../cli/commands/builtin/more-commands.js";
+import { imageCommand } from "../cli/commands/builtin/image-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
 import { chatStore, createEntry, type ChatEntry } from "./store.js";
@@ -92,6 +93,7 @@ commandRegistry.registerAll(utilityCommands);
 commandRegistry.registerAll(advancedCommands);
 commandRegistry.registerAll(extraCommands);
 commandRegistry.registerAll(moreCommands);
+commandRegistry.register(imageCommand);
 commandRegistry.registerAll(buildPluginSlashCommands());
 
 // ChatEntry types and createEntry() are in ./store.ts
@@ -228,6 +230,9 @@ export function App({
   useEffect(() => { sidRef.current = sessionId; }, [sessionId]);
   const [model, setModel] = useState(initialModel);
   const pendingContextRef = useRef<string | null>(null);
+  // Image attachments staged by the `/image` command, drained on next
+  // submitToEngine. See `cli/commands/builtin/image-command.ts`.
+  const pendingImagesRef = useRef<string[]>([]);
   const [showBanner, setShowBanner] = useState(true);
   const [totalTokens, setTotalTokens] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
@@ -1214,6 +1219,25 @@ export function App({
           engineMessage = `<context>\n${pendingContextRef.current}\n</context>\n\n${message}`;
           pendingContextRef.current = null;
         }
+        // Drain staged `/image` blocks, if any. Same wire format the
+        // desktop renderer uses (see `packages/desktop/src/renderer/chat/
+        // attachments.ts`) so the engine's parse-task pipeline handles
+        // both UIs identically. Injection turns don't get images either.
+        if (!opts.asInjection && pendingImagesRef.current.length > 0) {
+          // Strip the trailing "[name, size]" caption line each
+          // image-command block tacks on for the status echo — it's
+          // not part of the wire format the engine parses.
+          const blocks = pendingImagesRef.current.map((b) => {
+            const lines = b.split("\n");
+            // Find the closing </codeshell-image> and drop anything after.
+            const closeIdx = lines.findIndex((l) => l.trim() === "</codeshell-image>");
+            return closeIdx >= 0 ? lines.slice(0, closeIdx + 1).join("\n") : b;
+          });
+          engineMessage = engineMessage
+            ? `${engineMessage}\n\n${blocks.join("\n")}`
+            : blocks.join("\n");
+          pendingImagesRef.current = [];
+        }
 
         const result = await client.run(engineMessage, sessionId);
 
@@ -1447,6 +1471,15 @@ export function App({
             .filter((e) => !(e.type === "status" && (e as any).reason === ""));
           chatStore.setEntries(chatEntries);
           setTasks([]);
+        },
+        pendingImages: {
+          add: (block) => {
+            pendingImagesRef.current = [...pendingImagesRef.current, block];
+          },
+          clear: () => {
+            pendingImagesRef.current = [];
+          },
+          list: () => pendingImagesRef.current,
         },
       };
       commandRegistry.dispatch(cmd, cmdCtx);

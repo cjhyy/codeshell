@@ -45,6 +45,26 @@
   outline-offset: -3px;
 }
 
+/*
+ * Chat-root drop highlight. Drop is captured on the whole chat surface
+ * (see ChatView's `onChatDrop`), so we show a soft ambient glow around
+ * the entire chat instead of just the composer. Pointer-events stay
+ * untouched — this is a pure visual cue, not a hit target.
+ */
+.chat.is-drop-target {
+  position: relative;
+}
+.chat.is-drop-target::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-md, 8px);
+  background: rgba(64, 128, 255, 0.04);
+  z-index: 10;
+}
+
 .composer-vision-banner {
   display: flex;
   flex-direction: column;

@@ -1,0 +1,136 @@
+import { describe, it, expect } from "bun:test";
+import {
+  byteLengthFromBase64,
+  enforceImagePolicy,
+  IMAGE_LIMITS,
+} from "./image-policy.js";
+import type { ParsedImage } from "./parse-task.js";
+
+/**
+ * Build a synthetic ParsedImage of a chosen *decoded* byte length.
+ *
+ * Important to keep tests honest: we go through real base64 round-trip
+ * (`Buffer.from(... ).toString("base64")`) so `byteLengthFromBase64` is
+ * exercising exactly the wire shape the engine sees.
+ */
+function img(bytes: number, name = "x.png", mime = "image/png"): ParsedImage {
+  // The byte *values* don't matter to the policy — only the length does.
+  // Using 0x55 gives a deterministic base64 ('VVVV…') which makes test
+  // failures easier to read in diffs.
+  const raw = Buffer.alloc(bytes, 0x55);
+  const base64 = raw.toString("base64");
+  return {
+    mime,
+    name,
+    base64,
+    dataUrl: `data:${mime};base64,${base64}`,
+  };
+}
+
+describe("byteLengthFromBase64", () => {
+  it("returns 0 for empty", () => {
+    expect(byteLengthFromBase64("")).toBe(0);
+  });
+
+  it("computes exact decoded length without decoding", () => {
+    for (const n of [1, 2, 3, 4, 17, 64, 1024, 1024 * 1024]) {
+      const b64 = Buffer.alloc(n, 0xab).toString("base64");
+      expect(byteLengthFromBase64(b64)).toBe(n);
+    }
+  });
+
+  it("tolerates whitespace in the base64 payload", () => {
+    const b64 = Buffer.alloc(100, 0x33).toString("base64");
+    const noisy = b64.replace(/(.{20})/g, "$1\n  ");
+    expect(byteLengthFromBase64(noisy)).toBe(100);
+  });
+});
+
+describe("enforceImagePolicy", () => {
+  it("ok: empty image list passes", () => {
+    expect(enforceImagePolicy([])).toEqual({ ok: true });
+  });
+
+  it("ok: small image passes", () => {
+    const v = enforceImagePolicy([img(50 * 1024, "tiny.png")]);
+    expect(v).toEqual({ ok: true });
+  });
+
+  it("ok: multiple images within both caps pass", () => {
+    const v = enforceImagePolicy([
+      img(500 * 1024, "a.png"),
+      img(500 * 1024, "b.png"),
+      img(500 * 1024, "c.png"),
+    ]);
+    expect(v).toEqual({ ok: true });
+  });
+
+  it("refuses single image over the per-image cap", () => {
+    const big = IMAGE_LIMITS.maxBytesPerImage + 100 * 1024;
+    const v = enforceImagePolicy([img(big, "screenshot.png")]);
+    expect(v.ok).toBe(false);
+    if (v.ok) throw new Error("unreachable");
+    expect(v.code).toBe("image_too_large");
+    expect(v.offender?.name).toBe("screenshot.png");
+    expect(v.offender?.bytes).toBe(big);
+    expect(v.message).toContain("screenshot.png");
+    expect(v.message).toContain("超过单图上限");
+  });
+
+  it("refuses when cumulative bytes exceed per-turn cap even if no single image is too large", () => {
+    // Each is well under the per-image cap (2 MB) but together (4 ×
+    // 1.6 MB = 6.4 MB) they breach the 6 MB per-turn cap. With the cap
+    // ratio 6 MB total / 2 MB per image, three images of equal size
+    // physically cannot trigger this branch — need at least four.
+    const each = 1_600_000;
+    const v = enforceImagePolicy([
+      img(each, "a.png"),
+      img(each, "b.png"),
+      img(each, "c.png"),
+      img(each, "d.png"),
+    ]);
+    // Sanity: each is under the per-image cap so we know we're testing
+    // the right gate, not the previous one.
+    expect(each).toBeLessThan(IMAGE_LIMITS.maxBytesPerImage);
+    expect(v.ok).toBe(false);
+    if (v.ok) throw new Error("unreachable");
+    expect(v.code).toBe("images_total_too_large");
+    expect(v.totals.totalBytes).toBe(each * 4);
+    expect(v.message).toContain("每轮上限");
+  });
+
+  it("refuses when image count exceeds the per-turn count cap", () => {
+    const tiny = 10 * 1024;
+    const list = Array.from({ length: IMAGE_LIMITS.maxImagesPerTurn + 2 }, (_, i) =>
+      img(tiny, `img-${i}.png`),
+    );
+    const v = enforceImagePolicy(list);
+    expect(v.ok).toBe(false);
+    if (v.ok) throw new Error("unreachable");
+    expect(v.code).toBe("too_many_images");
+    expect(v.totals.imageCount).toBe(IMAGE_LIMITS.maxImagesPerTurn + 2);
+  });
+
+  it("per-image cap fires before cumulative cap (single offender wins the report)", () => {
+    // One huge file plus several small ones — user should see *which*
+    // file is at fault, not a generic 'too much overall' message.
+    const offender = img(IMAGE_LIMITS.maxBytesPerImage + 1, "huge.png");
+    const v = enforceImagePolicy([
+      img(10 * 1024, "small1.png"),
+      offender,
+      img(10 * 1024, "small2.png"),
+    ]);
+    expect(v.ok).toBe(false);
+    if (v.ok) throw new Error("unreachable");
+    expect(v.code).toBe("image_too_large");
+    expect(v.offender?.name).toBe("huge.png");
+  });
+
+  it("missing filename still renders cleanly in the message", () => {
+    const a = img(IMAGE_LIMITS.maxBytesPerImage + 1, "");
+    const v = enforceImagePolicy([a]);
+    expect(v.ok).toBe(false);
+    if (v.ok) throw new Error("unreachable");
+    expect(v.message).toContain("(未命名)");
+  });
+});

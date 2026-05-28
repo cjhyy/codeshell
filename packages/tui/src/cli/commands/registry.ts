@@ -55,6 +55,20 @@ export interface CommandContext {
   setFullscreen?: (next: boolean) => void;
   /** Toggle fullscreen mode (used by bare /fullscreen). */
   toggleFullscreen?: () => void;
+  /**
+   * Queue of staged image blocks for the next user message. `/image`
+   * pushes onto it; `submitToEngine` drains it and prepends the blocks
+   * to the message right before shipping to the engine. Optional so
+   * non-REPL command callers (one-shot CLI mode) can omit it cleanly.
+   */
+  pendingImages?: {
+    /** Append one wire-format `<codeshell-image>...</codeshell-image>` block. */
+    add: (block: string) => void;
+    /** Drop all queued blocks. */
+    clear: () => void;
+    /** Snapshot for display. */
+    list: () => readonly string[];
+  };
 }
 
 export type CommandGroup = "core" | "git" | "context" | "config" | "advanced";
