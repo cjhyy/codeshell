@@ -8,6 +8,7 @@ import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
+import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
 import { FilesChangedCard } from "./messages/FilesChangedCard";
 import { buildStreamItems } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
@@ -36,6 +37,12 @@ interface Props {
    * boundary.
    */
   turnEpoch?: number;
+  /**
+   * True while the engine is actively streaming the most recent turn
+   * (= reducer.streamingAssistantId !== null). Drives the level-2
+   * "live" header so its elapsed ticker stops when the turn ends.
+   */
+  liveTurnActive?: boolean;
 }
 
 export function MessageStream({
@@ -44,6 +51,7 @@ export function MessageStream({
   trailing,
   trailingKey,
   turnEpoch,
+  liveTurnActive,
 }: Props) {
   const ref = useStickToBottom<HTMLDivElement>(
     `${messages.length}:${trailingKey ?? ""}`,
@@ -52,15 +60,23 @@ export function MessageStream({
     null,
   );
 
-  // Collapse adjacent tool calls of the same category into a single
-  // foldable group, but only for tools BEFORE the last assistant
-  // reply — the in-flight tool run stays expanded so the user can
-  // watch what's happening right now.
-  const items = useMemo(() => buildStreamItems(messages), [messages]);
+  // Two-level fold (see messages/streamGroups.ts):
+  //   - level 1: adjacent tool calls → ToolGroup
+  //   - level 2: per turn, first-tool..last-tool span → TurnProcessGroup.
+  //     The most recent turn is "live" iff the engine is currently
+  //     streaming; that's the only one whose header ticker keeps
+  //     advancing, and the only one that defaults to open.
+  const items = useMemo(
+    () => buildStreamItems(messages, { liveTurnActive }),
+    [messages, liveTurnActive],
+  );
 
   return (
     <div className="stream" ref={ref}>
       {items.map((m) => {
+        if (m.kind === "turn_process_group") {
+          return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
+        }
         if (m.kind === "tool_group") {
           return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
         }

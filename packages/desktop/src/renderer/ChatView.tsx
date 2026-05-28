@@ -25,6 +25,7 @@ import {
 interface Props {
   messages: Message[];
   turnEpoch?: number;
+  liveTurnActive?: boolean;
   onSend: (text: string) => void;
   onStop: () => void;
   busy: boolean;
@@ -58,6 +59,7 @@ const MAX_TEXTAREA_PX = 200;
 export function ChatView({
   messages,
   turnEpoch,
+  liveTurnActive,
   onSend,
   onStop,
   busy,
@@ -258,6 +260,7 @@ export function ChatView({
       <MessageStream
         messages={messages}
         turnEpoch={turnEpoch}
+        liveTurnActive={liveTurnActive}
         onAskUserAnswer={onAskUserAnswer}
         trailing={inlineApproval}
         trailingKey={pendingApproval?.requestId ?? null}

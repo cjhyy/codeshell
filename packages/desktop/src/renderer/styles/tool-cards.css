@@ -34,6 +34,39 @@
    but trim the outer margin so the body docks under the header without
    a double gap. */
 .tool-group.open .tool-group-body > .tool-card:first-child { margin-top: 4px; }
+
+/* Turn-process group — Codex "已处理 X m Y s" wrapper that contains
+   the level-1 tool groups + the assistant's mid-turn commentary. */
+.turn-process-group {
+  margin: var(--sp-1) var(--sp-3);
+}
+.turn-process-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+  cursor: pointer;
+}
+.turn-process-header:hover {
+  background: var(--bg-hover);
+  color: var(--fg-secondary);
+}
+.turn-process-label { line-height: 1; }
+/* When the process group is expanded, nest the inner content with a
+   subtle left rule so the visual hierarchy reads "this stuff belongs
+   inside the process card." */
+.turn-process-body {
+  margin-left: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-subtle);
+  margin-top: 4px;
+}
 .tool-card.selected {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
