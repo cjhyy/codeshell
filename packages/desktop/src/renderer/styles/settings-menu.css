@@ -1,4 +1,4 @@
-/* Bottom-left settings popover + focused modal */
+/* Bottom-left settings popover + language submenu */
 
 .settings-menu { position: relative; }
 
@@ -44,58 +44,26 @@
 }
 .settings-popover-primary:hover { background: var(--bg-hover); }
 
-/* Modal */
-.settings-modal-backdrop {
+/* Cascading language submenu — anchored to the right of the hovered
+   row at viewport coords (position: fixed) so the sidebar's
+   `overflow: hidden` can't clip it. */
+.settings-submenu {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-modal);
-}
-.settings-modal {
-  width: 640px;
-  max-width: 90vw;
-  max-height: 85vh;
+  min-width: 120px;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-2);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  z-index: var(--z-popover);
 }
-.settings-modal-head {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-3);
-  border-bottom: 1px solid var(--border-subtle);
-}
-.settings-modal-title {
-  margin: 0;
-  font-size: var(--fz-lg);
-  font-weight: 600;
-  color: var(--fg-primary);
-  flex: 1;
-}
-.settings-modal-close {
-  width: 28px;
-  height: 28px;
+.settings-submenu-check {
+  flex: none !important;
+  width: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--fg-muted);
-  border-radius: 50%;
-}
-.settings-modal-close:hover { background: var(--bg-hover); color: var(--fg-primary); }
-
-.settings-modal-body {
-  padding: var(--sp-3);
-  overflow-y: auto;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
+  color: var(--accent);
 }

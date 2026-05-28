@@ -1,43 +1,40 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   Settings as SettingsIcon,
-  Cpu,
-  Lock,
-  Download,
-  Plug,
+  Globe,
+  Check,
   ArrowRight,
+  ChevronRight,
 } from "lucide-react";
-import { SettingsModal } from "./SettingsModal";
-
-export type SettingsSection =
-  | "model"
-  | "permission"
-  | "mcp"
-  | "update"
-  | "json";
+import {
+  loadUILanguage,
+  saveUILanguage,
+  languageLabel,
+  type UILanguage,
+} from "../uiLanguage";
 
 interface Props {
-  activeRepoPath: string | null;
   /** Switch to the full-page Settings view. */
   onOpenSettingsPage: () => void;
 }
 
+const LANGUAGES: UILanguage[] = ["zh", "en"];
+
 /**
  * Bottom-left settings entry.
  *
- * Clicking opens an upward popover with quick shortcuts. The full
- * Settings page lives behind the primary row — clicking it
- * navigates to viewMode === 'settings_page' (handled by App).
+ * Clicking opens an upward popover with two items: "打开设置…" navigates
+ * to the full Settings page, and "切换语言" reveals a cascading submenu
+ * on the right for picking the UI language (no dialog).
  *
- * Quick shortcuts (model / permission / mcp / update) open the legacy
- * focused modal for speed; deep configuration lives on the page.
+ * The submenu is `position: fixed` and anchored to the hovered item's
+ * bounding rect, so it escapes the sidebar's `overflow: hidden` instead
+ * of being clipped by it (same approach as the project ContextMenu).
  */
-export function SettingsMenu({
-  activeRepoPath,
-  onOpenSettingsPage,
-}: Props) {
+export function SettingsMenu({ onOpenSettingsPage }: Props) {
   const [open, setOpen] = useState(false);
-  const [modal, setModal] = useState<SettingsSection | null>(null);
+  const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
+  const [submenu, setSubmenu] = useState<{ left: number; top: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,21 +53,21 @@ export function SettingsMenu({
     };
   }, [open]);
 
-  const pick = (id: SettingsSection): void => {
-    setOpen(false);
-    setModal(id);
+  // Closing the whole popover also retracts the submenu.
+  useEffect(() => {
+    if (!open) setSubmenu(null);
+  }, [open]);
+
+  const openSubmenu = (e: React.MouseEvent<HTMLLIElement>): void => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setSubmenu({ left: r.right + 4, top: r.top - 4 });
   };
 
-  const quickItems: Array<{
-    id: SettingsSection;
-    label: string;
-    Icon: React.ComponentType<{ size?: number }>;
-  }> = [
-    { id: "model", label: "模型配置", Icon: Cpu },
-    { id: "permission", label: "权限默认值", Icon: Lock },
-    { id: "mcp", label: "MCP", Icon: Plug },
-    { id: "update", label: "检查更新", Icon: Download },
-  ];
+  const chooseLanguage = (next: UILanguage): void => {
+    setLang(next);
+    saveUILanguage(next);
+    setOpen(false);
+  };
 
   return (
     <div className="settings-menu" ref={ref}>
@@ -95,20 +92,34 @@ export function SettingsMenu({
             <ArrowRight size={11} className="settings-popover-chevron" />
           </li>
           <li className="settings-popover-divider" />
-          {quickItems.map(({ id, label, Icon }) => (
-            <li key={id} className="settings-popover-item" onClick={() => pick(id)}>
-              <Icon size={13} />
-              <span>{label}</span>
+          <li
+            className="settings-popover-item"
+            onMouseEnter={openSubmenu}
+          >
+            <Globe size={13} />
+            <span>切换语言</span>
+            <ChevronRight size={12} className="settings-popover-chevron" />
+          </li>
+        </ul>
+      )}
+      {open && submenu && (
+        <ul
+          className="settings-submenu"
+          style={{ left: submenu.left, top: submenu.top }}
+        >
+          {LANGUAGES.map((code) => (
+            <li
+              key={code}
+              className="settings-popover-item"
+              onClick={() => chooseLanguage(code)}
+            >
+              <span className="settings-submenu-check">
+                {lang === code && <Check size={12} />}
+              </span>
+              <span>{languageLabel(code)}</span>
             </li>
           ))}
         </ul>
-      )}
-      {modal && (
-        <SettingsModal
-          section={modal}
-          activeRepoPath={activeRepoPath}
-          onClose={() => setModal(null)}
-        />
       )}
     </div>
   );
