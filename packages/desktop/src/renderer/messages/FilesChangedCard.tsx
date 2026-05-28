@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import { ChevronRight, ChevronDown, RotateCcw, Eye, X } from "lucide-react";
 import type { FilesChangedSummaryMessage } from "../types";
 import type { UndoFilesResult } from "../../preload/types";
@@ -25,7 +25,7 @@ const INITIAL_VISIBLE = 3;
  *     HEAD and deletes untracked ones. Each path reports back
  *     individually so partial failures don't lose information.
  */
-export function FilesChangedCard({ message, cwd }: Props) {
+function FilesChangedCardImpl({ message, cwd }: Props) {
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -162,6 +162,8 @@ export function FilesChangedCard({ message, cwd }: Props) {
     </>
   );
 }
+
+export const FilesChangedCard = memo(FilesChangedCardImpl);
 
 function ConfirmUndoModal({
   fileCount,

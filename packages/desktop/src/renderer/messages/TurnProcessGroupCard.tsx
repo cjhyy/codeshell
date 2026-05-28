@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { memo, useState, useEffect } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { ToolGroupCard } from "./ToolGroupCard";
@@ -21,7 +21,7 @@ interface Props {
  * Live turn: defaults to OPEN with a 1s elapsed ticker. Closed turn:
  * defaults to CLOSED with static total wall time.
  */
-export function TurnProcessGroupCard({ group, turnEpoch }: Props) {
+function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
   const [open, setOpen] = useState(group.isLive);
 
   // Force-collapse on turn boundary, but only for already-closed groups.
@@ -98,3 +98,5 @@ export function TurnProcessGroupCard({ group, turnEpoch }: Props) {
     </div>
   );
 }
+
+export const TurnProcessGroupCard = memo(TurnProcessGroupCardImpl);

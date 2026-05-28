@@ -15,6 +15,10 @@ import { useStickToBottom } from "./chat/stickToBottom";
 import { decodeWireForDisplay } from "./chat/attachments";
 import { Lightbox } from "./chat/Lightbox";
 
+// Stable fallback so memoized AskUserMessageView siblings don't see a
+// fresh onAnswer prop on every render.
+const NOOP_ON_ANSWER = (): void => undefined;
+
 interface Props {
   messages: Message[];
   onAskUserAnswer?: (requestId: string, answer: string) => void;
@@ -142,7 +146,7 @@ export function MessageStream({
               <AskUserMessageView
                 key={m.id}
                 message={m}
-                onAnswer={onAskUserAnswer ?? (() => undefined)}
+                onAnswer={onAskUserAnswer ?? NOOP_ON_ANSWER}
               />
             ) : null;
           case "system":

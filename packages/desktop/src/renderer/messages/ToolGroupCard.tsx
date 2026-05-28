@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { memo, useState, useEffect } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { Markdown } from "../Markdown";
@@ -27,7 +27,7 @@ interface Props {
  *
  * On turnEpoch change, the group force-collapses back to summary.
  */
-export function ToolGroupCard({ group, turnEpoch }: Props) {
+function ToolGroupCardImpl({ group, turnEpoch }: Props) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (turnEpoch !== undefined) setOpen(false);
@@ -76,3 +76,5 @@ export function ToolGroupCard({ group, turnEpoch }: Props) {
     </div>
   );
 }
+
+export const ToolGroupCard = memo(ToolGroupCardImpl);

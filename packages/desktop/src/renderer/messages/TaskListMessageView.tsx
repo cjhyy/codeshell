@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { TaskListMessage } from "../types";
 
@@ -16,7 +16,7 @@ import type { TaskListMessage } from "../types";
  *   - the in_progress item label (so the user sees what's happening
  *     right now without expanding)
  */
-export function TaskListMessageView({ message }: { message: TaskListMessage }) {
+function TaskListMessageViewImpl({ message }: { message: TaskListMessage }) {
   const [expanded, setExpanded] = useState(false);
 
   if (message.tasks.length === 0) return null;
@@ -63,6 +63,8 @@ export function TaskListMessageView({ message }: { message: TaskListMessage }) {
     </div>
   );
 }
+
+export const TaskListMessageView = memo(TaskListMessageViewImpl);
 
 function markerFor(s: string): string {
   switch (s) {

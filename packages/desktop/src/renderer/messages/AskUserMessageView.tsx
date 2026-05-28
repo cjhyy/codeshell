@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import type { AskUserMessage } from "../types";
 import { Check } from "lucide-react";
 
@@ -20,7 +20,7 @@ interface Props {
  * The answer is always wire-encoded as a single string. For
  * multiSelect we join selected labels with ", ".
  */
-export function AskUserMessageView({ message, onAnswer }: Props) {
+function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   const [draft, setDraft] = useState("");
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherDraft, setOtherDraft] = useState("");
@@ -171,3 +171,5 @@ export function AskUserMessageView({ message, onAnswer }: Props) {
     </div>
   );
 }
+
+export const AskUserMessageView = memo(AskUserMessageViewImpl);

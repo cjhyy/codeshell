@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { Markdown } from "../Markdown";
 import { stripMarkdownToPlain } from "../markdown/stripMarkdown";
@@ -14,8 +14,12 @@ interface Props {
  * as before — we don't want to thrash ReactMarkdown re-parses on
  * every token. Once `done` we render proper markdown and surface
  * the copy affordance.
+ *
+ * Memoized — the reducer produces a new AssistantMessage object only
+ * when that specific message's text/done changes, so siblings skip
+ * re-render entirely during a long session.
  */
-export function AssistantMessageView({ message }: Props) {
+function AssistantMessageViewImpl({ message }: Props) {
   const [copied, setCopied] = useState(false);
   if (!message.done && message.text === "") return null;
 
@@ -53,3 +57,5 @@ export function AssistantMessageView({ message }: Props) {
     </div>
   );
 }
+
+export const AssistantMessageView = memo(AssistantMessageViewImpl);
