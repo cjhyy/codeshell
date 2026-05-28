@@ -380,6 +380,9 @@ export function applyStreamEvent(
     }
 
     case "task_update": {
+      // Subagent task lists are intentionally not shown in the desktop UI.
+      // Main agent's task panel stays uncluttered by subagent activity.
+      if (event.agentId) return state;
       // Find the most recent TaskListMessage and update in place; if
       // none exists yet, append a new one.
       const msgs = state.messages.slice();

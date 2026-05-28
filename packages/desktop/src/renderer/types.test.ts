@@ -171,4 +171,33 @@ describe("applyStreamEvent — subagent isolation", () => {
     ]);
     expect(findMainAssistant(s).text).toBe("abcdef");
   });
+
+  test("11. task_update without agentId updates the global TaskListMessage", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("task_update", { tasks: [{ id: "t1", subject: "main todo", status: "pending" }] } as any),
+    ]);
+    const taskList = s.messages.find((m) => m.kind === "task_list");
+    expect(taskList).toBeDefined();
+    if (taskList && taskList.kind === "task_list") {
+      expect(taskList.tasks.length).toBe(1);
+      expect(taskList.tasks[0]!.subject).toBe("main todo");
+    }
+  });
+
+  test("12. task_update with agentId is dropped (state unchanged)", () => {
+    const before = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+    ]);
+    const after = applyStreamEvent(
+      before,
+      ev("task_update", {
+        tasks: [{ id: "t1", subject: "sub todo", status: "pending" }],
+        agentId: "A",
+      } as any),
+    );
+    expect(after).toBe(before); // strict reference equality
+    expect(after.messages.filter((m) => m.kind === "task_list").length).toBe(0);
+  });
 });
