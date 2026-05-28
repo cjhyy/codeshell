@@ -58,3 +58,55 @@
   font-size: var(--fz-sm);
   border: 1px solid var(--border-subtle);
 }
+
+/* Status dot + hover popover. The wrapper opts out of the drag
+   region so the cursor can interact with it; the anchor sits below
+   the dot and the wrapper hover state extends to include it so
+   crossing the gap doesn't dismiss. */
+.topbar-status {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  -webkit-app-region: no-drag;
+}
+.topbar-status-popover-anchor {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+}
+.status-popover {
+  min-width: 180px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  padding: 8px 10px;
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+}
+.status-popover-line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  line-height: 1.55;
+}
+.status-popover-key {
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.status-popover-val {
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  color: var(--fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+.status-popover-muted {
+  color: var(--fg-muted);
+  justify-content: center;
+}

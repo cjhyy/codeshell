@@ -3,6 +3,7 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
 import {
@@ -954,6 +955,14 @@ function App() {
     return s?.title ?? null;
   })();
 
+  // Live-activity summary for the TopBar status popover. Recomputed
+  // whenever messages change — cheap (single pass from the most
+  // recent user message), no allocations beyond the returned object.
+  const liveActivity = useMemo(
+    () => summarizeLiveActivity(state.messages),
+    [state.messages],
+  );
+
   if (view.viewMode === "settings_page") {
     return (
       <div className="settings-app-shell">
@@ -993,6 +1002,7 @@ function App() {
           busy={busy}
           sidebarCollapsed={view.sidebarCollapsed}
           onToggleSidebar={toggleSidebar}
+          activity={liveActivity}
         />
       </div>
 
