@@ -20,6 +20,11 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.css";
 import { Copy } from "./ui/icons";
+import {
+  remarkPathLinks,
+  decodePathHref,
+  CODESHELL_PATH_SCHEME,
+} from "./markdown/remarkPathLinks";
 
 interface Props {
   text: string;
@@ -36,24 +41,36 @@ function MarkdownImpl({ text }: Props) {
   return (
     <div className="md-body">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkPathLinks]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
-          a: ({ href, children, ...rest }) => (
-            <a
-              href={href}
-              {...rest}
-              onClick={(e) => {
-                if (!href) return;
-                e.preventDefault();
-                if (/^https?:/i.test(href)) {
-                  void window.codeshell.openExternal(href);
-                }
-              }}
-            >
-              {children}
-            </a>
-          ),
+          a: ({ href, children, ...rest }) => {
+            const decoded = href ? decodePathHref(href) : null;
+            const isPathLink = decoded !== null;
+            return (
+              <a
+                href={href}
+                {...rest}
+                {...(isPathLink ? { "data-path-link": "true" } : {})}
+                onClick={(e) => {
+                  if (!href) return;
+                  e.preventDefault();
+                  if (href.startsWith(CODESHELL_PATH_SCHEME) && decoded) {
+                    const arg = decoded.line
+                      ? `${decoded.path}:${decoded.line}`
+                      : decoded.path;
+                    void window.codeshell.openPath(arg);
+                    return;
+                  }
+                  if (/^https?:/i.test(href)) {
+                    void window.codeshell.openExternal(href);
+                  }
+                }}
+              >
+                {children}
+              </a>
+            );
+          },
           // Wrap multi-line code blocks with a header bar showing the
           // language label (when react-markdown supplies a `language-*`
           // class) and a copy button. Inline `code` (no language class

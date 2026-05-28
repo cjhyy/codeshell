@@ -330,6 +330,42 @@ export async function revealInFinder(targetPath: string): Promise<void> {
   shell.showItemInFolder(normalized);
 }
 
+/**
+ * Open a file with the system default application. Supports the
+ * "<path>:<line>" form emitted by tools and assistant text — the line
+ * suffix is discarded (shell.openPath has no concept of line
+ * numbers); users who need it should bind a richer editor protocol
+ * themselves.
+ *
+ * Resolves relative paths against the supplied cwd so click-through
+ * works for the assistant's own bash output (which is usually
+ * relative). Returns the resolved absolute path on success.
+ *
+ * If the file doesn't exist on disk we fall through to revealing the
+ * containing directory in Finder, which is what people usually want
+ * when a generated file moved or was renamed.
+ */
+export async function openPath(
+  targetPath: string,
+  cwd?: string,
+): Promise<string> {
+  // Strip a trailing :line[:col] suffix if present.
+  const cleaned = targetPath.replace(/:(\d+)(?::(\d+))?$/, "");
+  const absolute = path.isAbsolute(cleaned)
+    ? cleaned
+    : path.resolve(cwd ?? process.cwd(), cleaned);
+  try {
+    await fs.access(absolute);
+  } catch {
+    // Best-effort: show the parent directory so the user can find it.
+    shell.showItemInFolder(path.dirname(absolute));
+    return absolute;
+  }
+  const err = await shell.openPath(absolute);
+  if (err) throw new Error(`openPath failed: ${err}`);
+  return absolute;
+}
+
 function normalizeWorktreeName(input: string): string {
   const slug = input
     .trim()

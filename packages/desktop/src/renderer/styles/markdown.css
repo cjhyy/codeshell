@@ -42,3 +42,20 @@
   background: var(--bg-app);
   color: var(--fg-primary);
 }
+
+/* Inline path:line links rewritten by remarkPathLinks. Match the same
+   muted-then-accent treatment as ordinary external links but use a
+   monospace face since they're file paths. */
+.md-body a[data-path-link="true"] {
+  font-family: var(--font-mono);
+  color: var(--fg-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-subtle);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.md-body a[data-path-link="true"]:hover {
+  color: var(--accent, var(--fg-secondary));
+  text-decoration-color: currentColor;
+}

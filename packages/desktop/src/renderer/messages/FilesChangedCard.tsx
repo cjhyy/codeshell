@@ -41,7 +41,17 @@ export function FilesChangedCard({ message }: Props) {
         <div className="files-changed-body">
           {visible.map((f) => (
             <div key={f.path} className="files-changed-row">
-              <span className="files-changed-path">{truncate(f.path, 70)}</span>
+              <a
+                href="#"
+                className="files-changed-path"
+                title={f.path}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void window.codeshell.openPath(f.path);
+                }}
+              >
+                {truncate(f.path, 70)}
+              </a>
               <span className="files-changed-added">+{f.added}</span>
               <span className="files-changed-removed">-{f.removed}</span>
             </div>

@@ -25,6 +25,7 @@ import {
   cleanupStaleWorktrees,
   openExternal,
   revealInFinder,
+  openPath,
 } from "./desktop-services.js";
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
 import { listSessions, deleteSession } from "./sessions-service.js";
@@ -510,6 +511,11 @@ ipcMain.handle("shell:openExternal", async (_e, url: string) => {
 ipcMain.handle("shell:revealInFinder", async (_e, p: string) => {
   if (typeof p !== "string") throw new Error("revealInFinder requires path");
   await revealInFinder(p);
+});
+
+ipcMain.handle("shell:openPath", async (_e, p: string, cwd?: string) => {
+  if (typeof p !== "string" || !p) throw new Error("openPath requires path");
+  return openPath(p, typeof cwd === "string" ? cwd : undefined);
 });
 
 ipcMain.handle("settings:get", async (_e, scope: SettingsScope, cwd?: string) => {

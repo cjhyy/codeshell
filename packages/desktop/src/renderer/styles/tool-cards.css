@@ -228,6 +228,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--fg-primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+.files-changed-path:hover {
+  color: var(--accent, var(--fg-secondary));
+  text-decoration: underline;
 }
 .files-changed-show-more {
   display: block;

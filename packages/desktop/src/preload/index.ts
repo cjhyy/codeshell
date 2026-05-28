@@ -181,6 +181,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   getGitDiff: (cwd: string, file?: string) => ipcRenderer.invoke("git:diff", cwd, file),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
+  openPath: (path: string, cwd?: string) =>
+    ipcRenderer.invoke("shell:openPath", path, cwd),
   getSettings: (scope: "user" | "project", cwd?: string) =>
     ipcRenderer.invoke("settings:get", scope, cwd),
   updateSettings: (scope: "user" | "project", patch: Record<string, unknown>, cwd?: string) =>

@@ -147,6 +147,15 @@ export interface CodeshellApi {
   getGitDiff(cwd: string, file?: string): Promise<string>;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string): Promise<void>;
+  /**
+   * Open a file with the system default app. Relative paths resolve
+   * against `cwd` (defaults to the worker cwd if omitted). A trailing
+   * `:line[:col]` suffix is tolerated and stripped before opening.
+   * Returns the resolved absolute path; throws if Electron rejects
+   * the open (uncommon — usually the file just doesn't exist, in
+   * which case we reveal the parent in Finder instead).
+   */
+  openPath(path: string, cwd?: string): Promise<string>;
 
   // Phase 5 — settings / sessions / logs.
   getSettings(scope: "user" | "project", cwd?: string): Promise<Record<string, unknown> | null>;
