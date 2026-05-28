@@ -1,7 +1,7 @@
 # Core Quality & Security Iteration Plan
 
 Date: 2026-05-27
-Status: Draft
+Status: Approved (ready for implementation, starting with Tasks 1–5)
 Scope: `packages/core`
 
 ## 1. Background
@@ -134,12 +134,17 @@ Suggested tests:
 
 Problem:
 
-`git/utils.ts` and parts of `git/worktree.ts` use `execSync` with string interpolation for branch names, file paths, PR URLs, and messages.
+`git/utils.ts` interpolates user-controlled values directly into shell commands in at least two places:
+
+- `gitCheckout`: `git checkout ${flag} ${branch}` — branch name is unquoted (utils.ts:99).
+- `ghPrComments`: `gh pr view ${prUrl} ...` — PR URL is unquoted (utils.ts:112).
+
+Other call sites are already defended (commit message uses `JSON.stringify`; `worktree.ts` quotes branch and worktree paths), but quoting is not real escaping. The fix should still cover all call sites, not only the two unquoted ones above.
 
 Target behavior:
 
-- Use `execFileSync` or `spawn` with argument arrays.
-- No user-controlled string should be interpolated into a shell command.
+- Use `execFileSync` or `spawn` with argument arrays across all git helpers.
+- No user-controlled string should be interpolated into a shell command, even when currently quoted.
 
 Acceptance criteria:
 
@@ -156,12 +161,13 @@ Suggested tests:
 
 Problem:
 
-Session APIs join `sessionId` into filesystem paths. Invalid IDs could cause path traversal.
+Session APIs join `sessionId` into filesystem paths (`session-manager.ts:50`). Internally generated IDs use `nanoid(16)` and are safe by construction, but `SessionManager.create()` accepts an `explicitSessionId` parameter (used by ChatSessionManager) that is taken verbatim from callers and never validated. That is the untrusted source the validator must cover.
 
 Target behavior:
 
-- Session IDs must be a safe basename.
+- `explicitSessionId` and any other externally supplied session ID must be a safe basename.
 - Reject absolute paths, slashes, backslashes, `..`, empty strings, and unexpected characters.
+- Internally generated `nanoid` IDs continue to bypass the check (they are trusted by construction).
 
 Acceptance criteria:
 
@@ -177,12 +183,12 @@ Suggested tests:
 
 Problem:
 
-Logging and diagnostics can persist raw secrets if callers pass settings, provider configs, headers, env, or errors containing tokens.
+Logging and diagnostics can persist raw secrets if callers pass settings, provider configs, headers, env, or errors containing tokens. An existing sanitizer (`logging/sanitize-messages.ts`) strips image base64 from log payloads but does not touch secret-like keys.
 
 Target behavior:
 
-- Logger applies recursive redaction before writing structured logs.
-- Diagnostics and in-memory errors use the same redaction path.
+- Extend the existing `sanitize-messages.ts` pipeline with recursive secret redaction; do not introduce a parallel redaction pass elsewhere.
+- Diagnostics and in-memory errors flow through the same extended sanitizer.
 
 Acceptance criteria:
 
@@ -226,6 +232,7 @@ Acceptance criteria:
 - Workspace-outside writes require approval.
 - Sensitive path reads are not silently allowed.
 - Existing normal project edits continue to work.
+- An env var or setting (e.g. `CODESHELL_PATH_POLICY=off`) disables enforcement so that rollout is reversible without a revert. The flag must be logged on use.
 
 Suggested tests:
 
@@ -449,6 +456,19 @@ Targets:
 - Extract `StreamEventAdapter`.
 - Keep behavior unchanged.
 
+**Status (2026-05-28): deferred to the next iteration.** Inspection
+showed that the candidate seams all touch live Engine state
+(`compactedMessagesBySession`, `config.costStore`, `ctxSeedSent`,
+`ctxOverheadBySid`, modelPool reseat side effects). Without a richer
+behavior-snapshot suite around `Engine.run()`, even a "no-behavior-
+change" extraction carries a real regression risk that would land in
+the same PR as the P0 security fixes — not the trade-off the plan's
+§7 risk-mitigation language asks for ("extract only one seam at a
+time", "no broad rename mixed with security fixes"). The next
+iteration should start with the snapshot tests called out in Task 10
+and then run the three extractions one commit at a time, each gated
+on its own behavior-stable run of the snapshot suite.
+
 ### Task 10: Run/context/session regression tests
 
 - Add tests around transcript recovery.
@@ -502,8 +522,8 @@ This iteration is complete when:
 7. Hooks/plugin hooks have output caps and runtime result validation.
 8. MCP output is marked as untrusted external content.
 9. LSP parser handles byte-length content correctly.
-10. At least the priority security tests pass under `bun test`.
-11. `Engine.run()` has at least one low-risk responsibility extracted with behavior preserved.
+10. At least the priority security tests pass under `bun test`, and the protocol config redaction, plugin uninstall containment, git command safety, session ID validation, and logger redaction paths each have direct unit tests.
+11. ~~`Engine.run()` has at least one low-risk responsibility extracted with behavior preserved.~~ **Deferred to next iteration** (see Task 9 status note) — no candidate seam was extractable without entangling Engine's live state. Replaced by: the snapshot tests in Task 10 land first, then the next iteration runs the three extractions on top of them.
 
 ## 9. Verification Plan
 
@@ -529,7 +549,7 @@ bun run lint
 
 Notes:
 
-- `bun run typecheck` has known pre-existing repo errors and should not be treated as a clean gate unless those are separately addressed.
+- `bun run typecheck` has known pre-existing repo errors and should not be treated as a clean gate unless those are separately addressed. Before starting Task 1, capture the current error count as a baseline (e.g. `bun run typecheck 2>&1 | grep -c "error TS"`) and store it in the PR description so regressions introduced by this iteration are detectable even without a clean gate.
 - Build uses `sync-models`, so `bun run build` may fetch model metadata from OpenRouter.
 
 ## 10. Suggested Commit Structure
@@ -550,12 +570,20 @@ Use conventional commits:
 
 ## 11. Open Questions
 
+Working defaults are marked **Leaning**. They are not final — implementers should still raise objections before locking behavior — but they remove the need to re-open the question for each task.
+
 1. Should `PathPolicy` default to ask or deny for sensitive reads?
+   - **Leaning: ask.** Denying `~/.aws` / `~/.ssh` outright breaks legitimate "read my own config" flows. Deny silently-allowed *writes* to sensitive paths; ask on *reads*.
 2. Should project hooks require workspace trust before any execution?
+   - Open. Tentatively yes, but needs a workspace-trust UX design pass before committing.
 3. Should LSP server startup be governed by the same permission system as Bash?
+   - **Leaning: yes.** Starting a language server is process execution; treating it as read-only (current behavior) is the bug.
 4. Should MCP stdio server startup require a separate approval from MCP tool invocation?
+   - **Leaning: yes.** Spawning the server is the trust decision, not each tool call.
 5. Should `Engine` continue emitting UI-shaped events, or should a protocol adapter own those mappings?
+   - Open. Defer to the Phase-2 `StreamEventAdapter` extraction; do not pre-decide.
 6. Should cron remain experimental/in-memory, or become a persisted run-scheduler built on `RunManager`?
+   - Open. Out of scope for this iteration; revisit after Engine Phase 1 lands.
 
 ## 12. Recommended Next Step
 
