@@ -14,6 +14,11 @@ function countLines(s: unknown): number {
 }
 
 function parseArgs(t: ToolMessage): Record<string, unknown> {
+  // argsLive is the accumulated streaming args (tool_use_args_delta).
+  // args is the initial snapshot (tool_use_start) which may be {} when
+  // args stream after the start event. Prefer argsLive when available.
+  const raw = t.argsLive && Object.keys(t.argsLive).length > 0 ? t.argsLive : t.args;
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;
   try {
     const parsed = JSON.parse(t.args);
     return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
