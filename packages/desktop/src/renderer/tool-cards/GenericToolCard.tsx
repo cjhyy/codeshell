@@ -2,6 +2,8 @@ import React from "react";
 import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
 import { prettyJson, truncate } from "./utils";
+import { detectAttachments } from "./attachments";
+import { AttachmentCard } from "./AttachmentCard";
 
 interface Props {
   message: ToolMessage;
@@ -12,6 +14,11 @@ interface Props {
 
 export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Props) {
   const oneLine = summarizeArgs(message.args);
+  const attachments = detectAttachments(
+    message.toolName,
+    message.args,
+    message.result,
+  );
 
   const summary = <span className="tool-card-summary-text">{oneLine}</span>;
 
@@ -25,6 +32,16 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Prop
         <div className="tool-card-row">
           <span className="tool-card-row-label">result</span>
           <pre className="tool-card-row-val">{truncate(message.result, 1500)}</pre>
+        </div>
+      )}
+      {attachments.length > 0 && (
+        <div className="tool-card-row">
+          <span className="tool-card-row-label">files</span>
+          <div className="attachment-list">
+            {attachments.map((a) => (
+              <AttachmentCard key={a.path} attachment={a} />
+            ))}
+          </div>
         </div>
       )}
       {message.error && (

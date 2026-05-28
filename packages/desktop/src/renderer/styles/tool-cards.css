@@ -381,3 +381,69 @@
 .files-changed-modal-foot .files-changed-action-danger:hover {
   filter: brightness(1.1);
 }
+
+/* Attachment cards — one row per artifact under a tool result.
+   Inline-flex chip with icon + filename + extension; clicking it
+   calls shell:openPath to launch the OS-default app. */
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.attachment-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px 4px 4px;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+  max-width: 320px;
+}
+.attachment-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong, var(--fg-muted));
+}
+.attachment-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-app);
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+}
+.attachment-thumb {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+}
+.attachment-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.attachment-name {
+  font-family: var(--font-mono);
+  font-size: var(--fz-sm);
+  color: var(--fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+.attachment-ext {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

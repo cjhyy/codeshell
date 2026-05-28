@@ -2,6 +2,8 @@ import React from "react";
 import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
 import { parsedArgs, truncate } from "./utils";
+import { classifyPath } from "./attachments";
+import { AttachmentCard } from "./AttachmentCard";
 
 interface Props {
   message: ToolMessage;
@@ -69,6 +71,16 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }
           <pre className="tool-card-row-val">{truncate(content, 800)}</pre>
         </div>
       )}
+      {variant === "write" && path && writeAttachmentKind(path, message) && (
+        <div className="tool-card-row">
+          <span className="tool-card-row-label">file</span>
+          <div className="attachment-list">
+            <AttachmentCard
+              attachment={{ path, kind: writeAttachmentKind(path, message)! }}
+            />
+          </div>
+        </div>
+      )}
       {message.result !== undefined && variant === "read" && (
         <div className="tool-card-row">
           <span className="tool-card-row-label">content</span>
@@ -94,4 +106,21 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }
       turnEpoch={turnEpoch}
     />
   );
+}
+
+/**
+ * For Write tool calls, return the attachment kind iff the file
+ * looks like a recognisable artifact (image / md / html) and the
+ * call didn't fail. `null` means "render no attachment card",
+ * keeping the existing behavior for source files.
+ */
+function writeAttachmentKind(
+  path: string,
+  message: ToolMessage,
+): "image" | "markdown" | "html" | null {
+  if (message.error) return null;
+  if (message.status !== "succeeded") return null;
+  const k = classifyPath(path);
+  if (k === "file") return null;
+  return k;
 }
