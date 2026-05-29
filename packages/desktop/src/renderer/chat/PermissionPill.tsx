@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AlertCircle, ChevronDown } from "lucide-react";
 
-export type PermissionMode = "plan" | "default" | "accept_edits" | "goal";
+export type PermissionMode = "plan" | "default" | "accept_edits" | "bypass";
 export type CorePermissionMode =
   | "plan"
   | "default"
   | "acceptEdits"
-  | "auto";
+  | "bypassPermissions";
 
 const MODES: Array<{
   id: PermissionMode;
@@ -18,10 +18,10 @@ const MODES: Array<{
   { id: "default", label: "默认权限", tone: "ok", hint: "每个有风险的操作都问一下" },
   { id: "accept_edits", label: "接受编辑", tone: "warn", hint: "自动放行文件编辑,命令仍问" },
   {
-    id: "goal",
-    label: "Goal 模式",
-    tone: "warn",
-    hint: "设目标后跑到完;危险/破坏性操作仍会拦下",
+    id: "bypass",
+    label: "完全访问权限",
+    tone: "err",
+    hint: "所有操作一律放行,不再询问",
   },
 ];
 
@@ -29,12 +29,12 @@ export function toCorePermissionMode(mode: PermissionMode): CorePermissionMode {
   switch (mode) {
     case "accept_edits":
       return "acceptEdits";
-    case "goal":
-      // Goal mode = engine "auto" backend: auto-approve low/safe,
-      // auto-DENY high-risk dangerous (rm -rf, curl|sh, etc). This is
-      // the "run to completion but don't let it nuke the machine"
-      // posture that replaces the old blanket bypassPermissions.
-      return "auto";
+    case "bypass":
+      // 完全访问权限 = engine bypassPermissions backend: every approval
+      // request is allowed (HeadlessApprovalBackend "approve-all"). This
+      // is a permission LEVEL — orthogonal to Goal mode, which is an
+      // autonomy toggle handled separately (see goalEnabled / RunParams.goal).
+      return "bypassPermissions";
     default:
       return mode;
   }
@@ -47,15 +47,17 @@ export function fromSettingsPermissionMode(raw: unknown): PermissionMode {
     case "accept_edits":
     case "acceptEdits":
       return "accept_edits";
-    case "goal":
-    case "auto":
-      return "goal";
-    // Legacy: old configs / sessions may still carry the dropped
-    // bypass mode. Down-map it to Goal mode (the safe replacement)
-    // rather than silently honoring an unrestricted bypass.
     case "bypass":
     case "bypassPermissions":
-      return "goal";
+      return "bypass";
+    // Migration: commit 58e6114 briefly persisted permissionMode="goal"
+    // (engine "auto" backend) before Goal became an orthogonal autonomy
+    // toggle. Residual "goal"/"auto" values are no longer permission
+    // levels — downgrade them to default (ask) rather than silently
+    // granting full access from a stale config.
+    case "goal":
+    case "auto":
+      return "default";
     case "default":
     default:
       return "default";

@@ -5,12 +5,12 @@ import {
   type PermissionMode,
 } from "../chat/PermissionPill";
 
-const MODES: PermissionMode[] = ["plan", "default", "accept_edits", "goal"];
+const MODES: PermissionMode[] = ["plan", "default", "accept_edits", "bypass"];
 const MODE_LABELS: Record<PermissionMode, string> = {
   plan: "计划模式",
   default: "默认权限",
   accept_edits: "接受编辑",
-  goal: "Goal 模式",
+  bypass: "完全访问权限",
 };
 
 interface Props {

@@ -9,9 +9,10 @@ describe("toCorePermissionMode", () => {
     expect(toCorePermissionMode("plan")).toBe("plan");
     expect(toCorePermissionMode("default")).toBe("default");
     expect(toCorePermissionMode("accept_edits")).toBe("acceptEdits");
-    // Goal mode → engine "auto" backend (auto-approve safe, deny
-    // dangerous). This replaces the old bypassPermissions.
-    expect(toCorePermissionMode("goal")).toBe("auto");
+    // 完全访问权限 = engine bypassPermissions backend (HeadlessApprovalBackend
+    // "approve-all"). It's a permission LEVEL, distinct from Goal mode
+    // (which is an orthogonal autonomy feature, not a pill entry).
+    expect(toCorePermissionMode("bypass")).toBe("bypassPermissions");
   });
 });
 
@@ -21,15 +22,18 @@ describe("fromSettingsPermissionMode", () => {
     expect(fromSettingsPermissionMode("default")).toBe("default");
     expect(fromSettingsPermissionMode("acceptEdits")).toBe("accept_edits");
     expect(fromSettingsPermissionMode("accept_edits")).toBe("accept_edits");
-    expect(fromSettingsPermissionMode("auto")).toBe("goal");
-    expect(fromSettingsPermissionMode("goal")).toBe("goal");
+    expect(fromSettingsPermissionMode("bypass")).toBe("bypass");
+    expect(fromSettingsPermissionMode("bypassPermissions")).toBe("bypass");
   });
 
-  it("down-maps the dropped bypass mode to Goal (never honors raw bypass)", () => {
-    // Legacy configs / sessions may still carry bypass; we must not
-    // resurrect an unrestricted bypass — Goal is the safe landing.
-    expect(fromSettingsPermissionMode("bypass")).toBe("goal");
-    expect(fromSettingsPermissionMode("bypassPermissions")).toBe("goal");
+  it("down-maps the short-lived goal/auto permission values to default", () => {
+    // Commit 58e6114 briefly wrote permissionMode="goal" (mapped to the
+    // engine "auto" backend) into session overrides / settings. Goal is
+    // no longer a permission value — it's an orthogonal autonomy toggle.
+    // Residual "goal"/"auto" downgrade to default (ask), NOT bypass: we
+    // never silently hand a user full-access from a stale config.
+    expect(fromSettingsPermissionMode("goal")).toBe("default");
+    expect(fromSettingsPermissionMode("auto")).toBe("default");
   });
 
   it("falls back to default for unknown / missing values", () => {

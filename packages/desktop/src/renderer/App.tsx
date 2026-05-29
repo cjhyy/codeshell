@@ -16,6 +16,7 @@ import {
   type ApprovalState,
   type ToolMessage,
   type AskUserOption,
+  type TaskListMessage,
 } from "./types";
 import {
   loadTranscript,
@@ -203,6 +204,16 @@ function App() {
     new Map(),
   );
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
+  /**
+   * Per-bucket permission resolver for the mount-time approval listener
+   * (which closes over stale state). Mirrors the same precedence as
+   * `permissionMode`: a bucket's explicit override, else the global
+   * default. Used to honor 完全访问权限 (bypass) by auto-approving requests
+   * that still reach the renderer.
+   */
+  const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(
+    () => null,
+  );
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
   const [activeGitMeta, setActiveGitMeta] = useState<{
     branch: string | null;
@@ -214,6 +225,10 @@ function App() {
   useEffect(() => { saveView(view); }, [view]);
   useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
   useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
+  useEffect(() => {
+    permissionForBucketRef.current = (bucket: string): PermissionMode | null =>
+      permissionOverrides[bucket] ?? defaultPermissionMode;
+  }, [permissionOverrides, defaultPermissionMode]);
 
   useEffect(() => {
     const refreshSettings = (): void => {
@@ -546,14 +561,24 @@ function App() {
         });
         return;
       }
-      // Goal mode (engine "auto") does its danger-gating engine-side:
-      // the AutoApprovalBackend auto-approves safe ops, auto-denies
-      // high-risk ones, and only delegates the genuinely ambiguous
-      // middle to the UI. So anything that reaches the renderer here
-      // is a request the engine decided the human should see — we no
-      // longer blanket-approve. (The old composer "完全访问权限"
-      // bypass that auto-approved everything has been removed; see
-      // PermissionPill's mode list.)
+      // 完全访问权限 (bypass): auto-approve any request that reaches the
+      // renderer for this bucket. The engine's bypassPermissions backend
+      // already approves everything, so requests rarely surface here; this
+      // is belt-and-braces so "full access" never silently blocks on a
+      // modal. Resolve the request's OWN bucket (not the active one) —
+      // concurrent runs may target a different tab.
+      const targetBucket =
+        (env.sessionId && engineToBucketRef.current.get(env.sessionId)) ||
+        runningBucketRef.current ||
+        activeBucketRef.current;
+      if (permissionForBucketRef.current(targetBucket) === "bypass") {
+        if (env.sessionId) {
+          void window.codeshell.approve(env.sessionId, env.requestId, "approve");
+        } else {
+          void window.codeshell.approve(env.requestId, "approve");
+        }
+        return;
+      }
       setApprovalQueue((q) => [...q, env]);
       setApproval((cur) => cur ?? env);
     });
@@ -962,6 +987,17 @@ function App() {
     [state.messages],
   );
 
+  // Latest TaskList snapshot — the engine replaces it in place, so we
+  // walk from the tail and take the first one we hit. Feeds the TopBar
+  // status popover's task overview.
+  const latestTasks = useMemo<TaskListMessage | null>(() => {
+    for (let i = state.messages.length - 1; i >= 0; i--) {
+      const m = state.messages[i]!;
+      if (m.kind === "task_list") return m;
+    }
+    return null;
+  }, [state.messages]);
+
   const platformClassEarly =
     typeof navigator !== "undefined" && /Mac/.test(navigator.platform)
       ? "platform-darwin"
@@ -1004,6 +1040,7 @@ function App() {
           sidebarCollapsed={view.sidebarCollapsed}
           onToggleSidebar={toggleSidebar}
           activity={liveActivity}
+          tasks={latestTasks}
         />
       </div>
 

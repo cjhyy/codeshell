@@ -130,6 +130,13 @@ export interface CodeshellApi {
       sessionId?: string;
       permissionMode?: "plan" | "default" | "acceptEdits" | "auto" | "bypassPermissions";
       planMode?: boolean;
+      /**
+       * Goal mode: when set, the engine runs loop-until-done — on each
+       * natural completion a GoalStopHook judges whether this goal is met
+       * and, if not, re-prompts the model to continue (bounded by a
+       * consecutive-block cap + maxTurns). Orthogonal to permissionMode.
+       */
+      goal?: string;
     },
   ): Promise<RpcResponse>;
   /** Cancel a session's running turn. sessionId optional for legacy callers. */
