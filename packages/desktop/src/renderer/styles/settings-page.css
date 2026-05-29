@@ -57,6 +57,23 @@
   border-right: 1px solid var(--border-subtle);
   overflow-y: auto;
 }
+.settings-page-module-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.settings-page-module-group + .settings-page-module-group {
+  margin-top: var(--sp-3);
+}
+.settings-page-module-group-title {
+  padding: 0 var(--sp-2);
+  margin-bottom: 2px;
+  font-size: var(--fz-xs);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
 .settings-page-module {
   display: flex;
   align-items: center;

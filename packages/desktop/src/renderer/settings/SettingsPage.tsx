@@ -65,24 +65,60 @@ interface Module {
   Icon: React.ComponentType<{ size?: number }>;
 }
 
-const MODULES: Module[] = [
-  { id: "general", label: "常规", Icon: SettingsIcon },
-  { id: "appearance", label: "外观", Icon: Sun },
-  { id: "config", label: "配置", Icon: Sliders },
-  { id: "personalization", label: "个性化", Icon: User },
-  { id: "shortcuts", label: "键盘快捷键", Icon: Keyboard },
-  { id: "mcp", label: "MCP 服务器", Icon: Plug },
-  { id: "hooks", label: "钩子", Icon: Webhook },
-  { id: "connections", label: "连接", Icon: Wifi },
-  { id: "git", label: "Git", Icon: GitBranch },
-  { id: "environment", label: "环境", Icon: Terminal },
-  { id: "browser", label: "浏览器", Icon: Globe },
-  { id: "computer", label: "电脑操控", Icon: Monitor },
-  { id: "archived", label: "已归档对话", Icon: Archive },
-  { id: "plugins-skills", label: "插件与 Skills", Icon: Puzzle },
-  { id: "agents", label: "子代理", Icon: Bot },
-  { id: "memory", label: "记忆", Icon: Brain },
+interface ModuleGroup {
+  /** Section header shown above the group; "" renders no header. */
+  title: string;
+  modules: Module[];
+}
+
+/**
+ * Grouped left-nav. The "扩展能力" group is the #4 conceptual
+ * unification: MCP servers, plugins/skills, subagents, and hooks are
+ * all "ways to extend what the agent can do", so they live under one
+ * heading instead of being scattered through a flat list. The data
+ * surfaces (each section's own UI) are unchanged — this is the
+ * information-architecture half of the alignment.
+ */
+const MODULE_GROUPS: ModuleGroup[] = [
+  {
+    title: "",
+    modules: [
+      { id: "general", label: "常规", Icon: SettingsIcon },
+      { id: "appearance", label: "外观", Icon: Sun },
+      { id: "config", label: "配置", Icon: Sliders },
+      { id: "personalization", label: "个性化", Icon: User },
+      { id: "shortcuts", label: "键盘快捷键", Icon: Keyboard },
+    ],
+  },
+  {
+    title: "扩展能力",
+    modules: [
+      { id: "mcp", label: "MCP 服务器", Icon: Plug },
+      { id: "plugins-skills", label: "插件与 Skills", Icon: Puzzle },
+      { id: "agents", label: "子代理", Icon: Bot },
+      { id: "hooks", label: "钩子", Icon: Webhook },
+    ],
+  },
+  {
+    title: "环境与连接",
+    modules: [
+      { id: "connections", label: "连接", Icon: Wifi },
+      { id: "git", label: "Git", Icon: GitBranch },
+      { id: "environment", label: "环境", Icon: Terminal },
+      { id: "browser", label: "浏览器", Icon: Globe },
+      { id: "computer", label: "电脑操控", Icon: Monitor },
+    ],
+  },
+  {
+    title: "数据",
+    modules: [
+      { id: "memory", label: "记忆", Icon: Brain },
+      { id: "archived", label: "已归档对话", Icon: Archive },
+    ],
+  },
 ];
+
+const MODULES: Module[] = MODULE_GROUPS.flatMap((g) => g.modules);
 
 interface Props {
   activeRepoPath: string | null;
@@ -132,15 +168,22 @@ export function SettingsPage({
             <ArrowLeft size={14} />
             <span>返回应用</span>
           </button>
-          {MODULES.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              className={`settings-page-module${active === id ? " active" : ""}`}
-              onClick={() => setActive(id)}
-            >
-              <Icon size={13} />
-              <span>{label}</span>
-            </button>
+          {MODULE_GROUPS.map((group) => (
+            <div key={group.title || "_top"} className="settings-page-module-group">
+              {group.title && (
+                <div className="settings-page-module-group-title">{group.title}</div>
+              )}
+              {group.modules.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  className={`settings-page-module${active === id ? " active" : ""}`}
+                  onClick={() => setActive(id)}
+                >
+                  <Icon size={13} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
 
