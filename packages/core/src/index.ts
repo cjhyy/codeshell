@@ -191,6 +191,23 @@ export type { ContentReplacementState } from "./context/tool-result-storage.js";
 export { scanSkills, invalidateSkillCache } from "./skills/index.js";
 export type { SkillDefinition } from "./skills/index.js";
 
+// ─── Capability control (扩展能力 backend) ───────────────────────
+export {
+  CapabilityService,
+  CapabilityNotFoundError,
+  projectBuiltin,
+  projectMcp,
+  projectSkills,
+  projectPlugins,
+} from "./capability-control/index.js";
+export type {
+  CapabilityServiceDeps,
+  CapabilityDescriptor,
+  CapabilityControl,
+} from "./capability-control/index.js";
+export { readInstalledPlugins } from "./plugins/installedPlugins.js";
+export type { InstalledPluginsV2 } from "./plugins/types.js";
+
 // ─── Arena ───────────────────────────────────────────────────────
 
 export { Arena } from "./arena/arena.js";
