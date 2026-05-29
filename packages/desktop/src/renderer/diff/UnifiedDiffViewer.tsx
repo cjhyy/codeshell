@@ -6,14 +6,23 @@ interface Props {
   cwd: string;
   /** Optional file path to limit the diff. */
   file?: string;
+  /** Optional session-scoped diff text. When present, do not ask Git. */
+  diffText?: string;
 }
 
-export function UnifiedDiffViewer({ cwd, file }: Props) {
+export function UnifiedDiffViewer({ cwd, file, diffText }: Props) {
   const [diff, setDiff] = useState<DiffFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    if (diffText !== undefined) {
+      setDiff(parseUnifiedDiff(diffText));
+      setError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
     void window.codeshell
       .getGitDiff(cwd, file)
       .then((raw) => {
@@ -27,7 +36,7 @@ export function UnifiedDiffViewer({ cwd, file }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [cwd, file]);
+  }, [cwd, file, diffText]);
 
   if (error) return <div className="diff-error">git diff failed: {error}</div>;
   if (!diff) return <div className="diff-loading">loading diff…</div>;
