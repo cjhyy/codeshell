@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { aggregateFileChanges } from "./fileChangeAggregator";
+import { aggregateFileChanges, aggregateFileChangeSummary } from "./fileChangeAggregator";
 import type { AgentMessage, Message, ToolMessage } from "../types";
 
 let _idCounter = 0;
@@ -161,5 +161,50 @@ describe("aggregateFileChanges", () => {
     expect(aggregateFileChanges(msgs)).toEqual([
       { path: "alias.ts", added: 2, removed: 0, count: 1 },
     ]);
+  });
+
+  test("returns session-scoped synthetic diffs from tool payloads", () => {
+    const msgs: Message[] = [
+      user(),
+      tool("Write", { file_path: "new.ts", content: "line1\nline2" }),
+      tool("Edit", { file_path: "old.ts", old_string: "before", new_string: "after" }),
+    ];
+
+    const summary = aggregateFileChangeSummary(msgs);
+
+    expect(summary?.files).toEqual([
+      { path: "new.ts", added: 2, removed: 0, count: 1 },
+      { path: "old.ts", added: 1, removed: 1, count: 1 },
+    ]);
+    expect(summary?.sessionDiffs.map((d) => d.path)).toEqual(["new.ts", "old.ts"]);
+    expect(summary?.sessionDiffs[0]?.diff).toContain("--- /dev/null");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("+++ b/new.ts");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("+line2");
+    expect(summary?.sessionDiffs[1]?.diff).toContain("--- a/old.ts");
+    expect(summary?.sessionDiffs[1]?.diff).toContain("-before");
+    expect(summary?.sessionDiffs[1]?.diff).toContain("+after");
+  });
+
+  test("returns session-scoped synthetic diffs for MultiEdit edits array", () => {
+    const msgs: Message[] = [
+      user(),
+      tool("MultiEdit", {
+        file_path: "multi.ts",
+        edits: [
+          { old_string: "one", new_string: "one\ntwo" },
+          { old_string: "three", new_string: "four" },
+        ],
+      }),
+    ];
+
+    const summary = aggregateFileChangeSummary(msgs);
+
+    expect(summary?.files).toEqual([{ path: "multi.ts", added: 3, removed: 2, count: 1 }]);
+    expect(summary?.sessionDiffs[0]?.diff).toContain("@@ -1 +1,2 @@ edit 1");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("-one");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("+two");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("@@ -1 +1 @@ edit 2");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("-three");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("+four");
   });
 });

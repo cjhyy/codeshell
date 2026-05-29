@@ -7,7 +7,7 @@
 
 import type { StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
 import type { ApprovalRequestEnvelope } from "../preload/types";
-import { aggregateFileChanges } from "./messages/fileChangeAggregator";
+import { aggregateFileChangeSummary } from "./messages/fileChangeAggregator";
 
 export type ToolStatus =
   | "queued"
@@ -125,6 +125,15 @@ export interface FileEditEntry {
   count: number;
 }
 
+export interface SessionFileDiff {
+  /** Path touched by this session/turn-scoped edit operation. */
+  path: string;
+  /** Tool call that produced this diff; used only as stable provenance. */
+  toolCallId: string;
+  /** Synthetic unified diff generated from the tool's own edit payload. */
+  diff: string;
+}
+
 /**
  * Codex-style "files changed this turn" summary card, appended on
  * turn_complete when at least one successful Edit/Write/NotebookEdit
@@ -137,6 +146,12 @@ export interface FilesChangedSummaryMessage {
   files: FileEditEntry[];
   totalAdded: number;
   totalRemoved: number;
+  /**
+   * Session/turn-scoped diff snippets derived from the tool calls that
+   * produced this card. This deliberately avoids asking Git for the
+   * whole working tree, which can include changes from other sessions.
+   */
+  sessionDiffs?: SessionFileDiff[];
 }
 
 export type Message =
@@ -572,8 +587,9 @@ export function applyStreamEvent(
           (m, i) => !(i > lastUserIdx && m.kind === "files_changed"),
         );
       }
-      const entries = aggregateFileChanges(finalized);
-      if (entries) {
+      const summary = aggregateFileChangeSummary(finalized);
+      if (summary) {
+        const entries = summary.files;
         const totalAdded = entries.reduce((acc, e) => acc + e.added, 0);
         const totalRemoved = entries.reduce((acc, e) => acc + e.removed, 0);
         finalized = [
@@ -584,6 +600,7 @@ export function applyStreamEvent(
             files: entries,
             totalAdded,
             totalRemoved,
+            sessionDiffs: summary.sessionDiffs,
           },
         ];
       }

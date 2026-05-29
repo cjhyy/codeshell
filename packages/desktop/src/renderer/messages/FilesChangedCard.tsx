@@ -37,7 +37,9 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
   const visible = showAll ? files : files.slice(0, INITIAL_VISIBLE);
   const remaining = files.length - visible.length;
 
-  const canAct = !!cwd && files.length > 0;
+  const sessionDiffText = message.sessionDiffs?.map((d) => d.diff).join("\n");
+  const canReview = files.length > 0 && (!!cwd || !!sessionDiffText);
+  const canUndo = !!cwd && files.length > 0;
 
   const onUndoConfirmed = async (): Promise<void> => {
     if (!cwd) return;
@@ -84,29 +86,33 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
               <span className="files-changed-removed">-{totalRemoved}</span>
             </span>
           </button>
-          {canAct && (
+          {(canReview || canUndo) && (
             <div className="files-changed-actions">
-              <button
-                type="button"
-                className="files-changed-action"
-                onClick={() => setReviewOpen(true)}
-                aria-label="审核改动"
-                title="审核(查看完整 diff)"
-              >
-                <Eye size={12} />
-                <span>审核</span>
-              </button>
-              <button
-                type="button"
-                className="files-changed-action files-changed-action-danger"
-                onClick={() => setConfirmUndo(true)}
-                disabled={undoing}
-                aria-label="撤销改动"
-                title="撤销(把这些文件回滚到 HEAD)"
-              >
-                <RotateCcw size={12} />
-                <span>{undoing ? "撤销中…" : "撤销"}</span>
-              </button>
+              {canReview && (
+                <button
+                  type="button"
+                  className="files-changed-action"
+                  onClick={() => setReviewOpen(true)}
+                  aria-label="审核改动"
+                  title="审核(查看本 session diff)"
+                >
+                  <Eye size={12} />
+                  <span>审核</span>
+                </button>
+              )}
+              {canUndo && (
+                <button
+                  type="button"
+                  className="files-changed-action files-changed-action-danger"
+                  onClick={() => setConfirmUndo(true)}
+                  disabled={undoing}
+                  aria-label="撤销改动"
+                  title="撤销(把这些文件回滚到 HEAD)"
+                >
+                  <RotateCcw size={12} />
+                  <span>{undoing ? "撤销中…" : "撤销"}</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -152,10 +158,11 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
           onConfirm={onUndoConfirmed}
         />
       )}
-      {reviewOpen && cwd && (
+      {reviewOpen && canReview && (
         <ReviewModal
-          cwd={cwd}
+          cwd={cwd ?? ""}
           files={files.map((f) => f.path)}
+          diffText={sessionDiffText}
           onClose={() => setReviewOpen(false)}
         />
       )}
@@ -208,15 +215,17 @@ function ConfirmUndoModal({
 function ReviewModal({
   cwd,
   files,
+  diffText,
   onClose,
 }: {
   cwd: string;
   files: string[];
+  diffText?: string;
   onClose: () => void;
 }) {
-  // UnifiedDiffViewer accepts a single file at a time. When the
-  // summary has multiple files we render the full working-tree diff
-  // and rely on the viewer's per-file blocks; otherwise scope to one.
+  // When the card carries session-scoped diffs, render those directly
+  // instead of asking Git for the whole worktree. The scopedFile fallback
+  // keeps older persisted messages working.
   const scopedFile = files.length === 1 ? files[0]! : undefined;
   return (
     <div
@@ -238,7 +247,7 @@ function ReviewModal({
           </button>
         </div>
         <div className="files-changed-modal-body files-changed-modal-body-scroll">
-          <UnifiedDiffViewer cwd={cwd} file={scopedFile} />
+          <UnifiedDiffViewer cwd={cwd} file={scopedFile} diffText={diffText} />
         </div>
       </div>
     </div>
