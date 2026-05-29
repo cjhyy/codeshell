@@ -209,6 +209,15 @@ export type {
 export { readInstalledPlugins } from "./plugins/installedPlugins.js";
 export type { InstalledPluginsV2 } from "./plugins/types.js";
 
+// ─── Plugin installer (CC + Codex) ───────────────────────────────
+export { installPluginFromPath } from "./plugins/installer/install.js";
+export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
+export {
+  CodexPluginManifest,
+  CSMeta,
+  PluginInstallError,
+} from "./plugins/installer/types.js";
+
 // ─── Arena ───────────────────────────────────────────────────────
 
 export { Arena } from "./arena/arena.js";
