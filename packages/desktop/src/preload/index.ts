@@ -131,7 +131,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   },
   closeSession: (sessionId: string) => rpc("agent/closeSession", { sessionId }),
   configure: (params: { model?: string; reloadModels?: boolean }) =>
-    rpc("configure", params),
+    rpc("agent/configure", params),
   onStreamEvent: (cb: (env: { sessionId: string; event: unknown }) => void): (() => void) => {
     streamListeners.push(cb);
     return () => {
