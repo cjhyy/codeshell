@@ -1,7 +1,6 @@
 import React, { memo, useState, useEffect } from "react";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { ToolCard } from "../tool-cards";
-import { Markdown } from "../Markdown";
 import { ThinkingMessageView } from "./ThinkingMessageView";
 import {
   toolGroupLabel,
@@ -51,25 +50,8 @@ function ToolGroupCardImpl({ group, turnEpoch }: Props) {
             if (it.kind === "tool") {
               return <ToolCard key={it.id} message={it} turnEpoch={turnEpoch} />;
             }
-            if (it.kind === "thinking") {
-              return <ThinkingMessageView key={it.id} message={it} />;
-            }
-            // assistant — same shell as MessageStream's inline render.
-            if (!it.done && it.text === "") return null;
-            return (
-              <div
-                key={it.id}
-                className={`msg-row msg-row-assistant ${it.done ? "done" : "streaming"}`}
-              >
-                {it.done ? (
-                  <Markdown text={it.text} />
-                ) : (
-                  <div className="md-body md-streaming">
-                    <pre>{it.text}</pre>
-                  </div>
-                )}
-              </div>
-            );
+            // thinking — the only non-tool item a tool_group can hold.
+            return <ThinkingMessageView key={it.id} message={it} />;
           })}
         </div>
       )}

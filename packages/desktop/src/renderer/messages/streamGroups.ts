@@ -3,36 +3,30 @@
  *
  * Level 1 — adjacent tool calls of ANY kind collapse into a single
  * "已处理 N 条命令 ⌄" card. The run ends at the first "hard" non-tool
- * message (user / agent / system / context_boundary / task_list /
- * ask_user / files_changed). Short "transparent" messages emitted
- * between tools — thinking and assistant_text — are absorbed into
- * the same group so model chatter doesn't visually shatter a run.
+ * message (user / assistant / agent / system / context_boundary /
+ * task_list / ask_user / files_changed). Thinking messages emitted
+ * between tools are absorbed into the same group so hidden reasoning
+ * doesn't visually shatter a run, but assistant text stays visible as
+ * a hard boundary: tools → text → tools renders as three separate
+ * blocks, not one giant command group.
  *
- * Level 2 — within a user-turn, everything from the first tool call
- * to the last tool call (inclusive of any assistant text or level-1
- * groups in between) collapses into a "已处理 X m Y s ⌄" turn-
- * process card. Assistant text BEFORE the first tool and AFTER the
- * last tool stays visible — that's the user's question framing and
- * the assistant's final answer. The most recent (still-streaming)
- * turn skips level-2 folding so the user can watch progress live.
+ * Level 2 — a whole user-turn that contains any tool collapses into ONE
+ * "已处理 X m Y s ⌄" process card spanning from just after the user
+ * message through the turn's last tool. Lead-in text and mid-run
+ * narration ride INSIDE the card (default-open); only the user bubble
+ * and the final summary after the last tool stay outside it. The most
+ * recent live turn extends to the turn end so the user watches progress.
  */
 
-import type {
-  AssistantMessage,
-  Message,
-  ThinkingMessage,
-  ToolMessage,
-} from "../types";
+import type { Message, ThinkingMessage, ToolMessage } from "../types";
 
 /**
  * Inner item of a level-1 tool group. Beyond the tool calls themselves
- * we now absorb the "transparent" model output that lands between
- * tools — `thinking` and `assistant` text — so the visual run doesn't
- * splinter every time the model emits a one-liner between Bash calls.
- * See foldAdjacentTools() for the lookahead rule that decides what
- * counts as transparent.
+ * we absorb only "transparent" thinking output that lands between
+ * tools. Assistant text is intentionally excluded: it is user-visible
+ * narration and must split command groups.
  */
-export type ToolGroupItem = ToolMessage | ThinkingMessage | AssistantMessage;
+export type ToolGroupItem = ToolMessage | ThinkingMessage;
 
 export interface ToolGroup {
   kind: "tool_group";
@@ -43,9 +37,8 @@ export interface ToolGroup {
 }
 
 /**
- * Level-2 fold: a contiguous "process" block spanning from the first
- * tool call of a turn to the last, including any assistant text or
- * level-1 ToolGroup that lives between them.
+ * Level-2 fold: a contiguous "process" block spanning one tool run.
+ * Assistant text is not included; it splits process groups.
  *
  * Live turns (the most recent one, still streaming) also produce a
  * group so the user sees a live "已处理 5s ⌄" header tick up; the
@@ -104,13 +97,13 @@ function isHiddenTool(m: Message): boolean {
 }
 
 /**
- * "Transparent" message kinds — short model output that can appear
- * between tool calls without ending a level-1 run. Anything else
- * (user / agent / system / context_boundary / task_list / ask_user
- * / files_changed) is a hard break that forces a flush.
+ * "Transparent" message kinds — non-user-visible model output that can
+ * appear between tool calls without ending a level-1 run. Assistant text
+ * is deliberately NOT transparent; it is a hard break that should remain
+ * visible between command groups.
  */
-function isTransparent(m: Message): m is ThinkingMessage | AssistantMessage {
-  return m.kind === "thinking" || m.kind === "assistant";
+function isTransparent(m: Message): m is ThinkingMessage {
+  return m.kind === "thinking";
 }
 
 /**
@@ -119,9 +112,9 @@ function isTransparent(m: Message): m is ThinkingMessage | AssistantMessage {
  *      panel, not the chat stream.
  *   1. Run level-1 folding: collapse adjacent tool messages into
  *      ToolGroup (regardless of toolName), absorbing transparent
- *      thinking/assistant items that land between two tools.
- *   2. Run level-2 folding: within each user-turn slice, wrap the
- *      span from first tool to last tool into a TurnProcessGroup.
+ *      thinking items that land between two tools.
+ *   2. Run level-2 folding: wrap each tool-bearing user-turn into one
+ *      TurnProcessGroup spanning up to the turn's last tool.
  *      Mark the most recent turn as live so its header ticks.
  */
 export function buildStreamItems(
@@ -175,7 +168,7 @@ function foldAdjacentTools(messages: Message[]): Array<Message | ToolGroup> {
     buf.reduce((n, it) => (it.kind === "tool" ? n + 1 : n), 0);
 
   // Drop any trailing transparent items hanging off the end of the
-  // run — a run must end on a tool, not on thinking/assistant. Those
+  // run — a run must end on a tool, not on thinking. Those
   // trailing items get pushed back to `out` so they render inline.
   const dropTrailingTransparent = (): ToolGroupItem[] => {
     const trailing: ToolGroupItem[] = [];
@@ -227,14 +220,24 @@ function foldAdjacentTools(messages: Message[]): Array<Message | ToolGroup> {
 // ── Level 2: per-turn process group ───────────────────────────────────
 
 /**
- * Walk items from each `user` message forward, find the first and
- * last tool-bearing item, wrap [first..last] into a TurnProcessGroup.
- * Items before `first` (typically the assistant lead-in / thinking)
- * and after `last` (the final summary) pass through untouched.
+ * Walk items from each `user` message forward. A turn that contains at
+ * least one tool collapses into ONE TurnProcessGroup spanning from the
+ * item right after the `user` message through the LAST tool of the turn.
+ * That outer card holds everything in between — lead-in text, mid-run
+ * narration, thinking, and the level-1 tool groups — so a turn reads as
+ * a single "已处理 …" card.
  *
- * The most recent turn is marked `isLive: true`. Live turns still
- * produce a process group so the elapsed ticker shows up in real
- * time; the card just defaults open so the user sees tool progress.
+ * Two things stay OUTSIDE the card:
+ *   - the `user` bubble itself (it anchors the turn);
+ *   - the final summary text AFTER the last tool (the assistant's answer
+ *     to the user, which should remain plainly visible).
+ *
+ * A turn with no tools (purely conversational) emits its items inline —
+ * no empty "已处理 0s" card.
+ *
+ * The most recent turn is marked `isLive: true` while the engine is
+ * streaming; for it the span extends to the end of the turn so in-flight
+ * trailing text stays inside the card until the next user message lands.
  */
 function foldTurnProcess(
   items: Array<Message | ToolGroup>,
@@ -257,33 +260,27 @@ function foldTurnProcess(
     const end = k + 1 < userIdxs.length ? userIdxs[k + 1]! : items.length;
     const isLive = liveTurnActive && start === lastTurnStart;
 
-    // Find first/last toolish index within [start, end).
-    let firstTool = -1;
+    // user bubble stays outside the card.
+    out.push(items[start]!);
+
+    // Find the last tool-bearing item within (start, end).
     let lastTool = -1;
-    for (let i = start; i < end; i++) {
-      if (isToolish(items[i]!)) {
-        if (firstTool < 0) firstTool = i;
-        lastTool = i;
-      }
+    for (let i = start + 1; i < end; i++) {
+      if (isToolish(items[i]!)) lastTool = i;
     }
 
-    if (firstTool < 0) {
-      // No tools in this turn yet → emit everything inline (live turn
-      // before any tool fires; or a turn that's purely conversational).
-      for (let i = start; i < end; i++) out.push(items[i]!);
+    if (lastTool < 0) {
+      // No tools in this turn → render everything inline (live turn
+      // before any tool fires, or a purely conversational turn).
+      for (let i = start + 1; i < end; i++) out.push(items[i]!);
       continue;
     }
 
-    // 1) Pre-tool prologue: items[start..firstTool).
-    for (let i = start; i < firstTool; i++) out.push(items[i]!);
-
-    // 2) Process group spans [firstTool..lastTool] for closed turns.
-    //    For the live turn we extend the span to `end` so the in-flight
-    //    assistant chatter that follows the most recent tool stays
-    //    inside the process card (the "final summary" only solidifies
-    //    after the next user message starts a new turn).
+    // Card spans [start+1 .. lastTool] for closed turns. For the live
+    // turn we extend to `end` so in-flight trailing chatter stays inside
+    // the card until the next user message solidifies the summary.
     const innerEnd = isLive ? end : lastTool + 1;
-    const innerItems = items.slice(firstTool, innerEnd);
+    const innerItems = items.slice(start + 1, innerEnd);
     out.push({
       kind: "turn_process_group",
       id: `process-${anchorId(innerItems[0]!)}`,
@@ -294,8 +291,7 @@ function foldTurnProcess(
       items: innerItems,
     });
 
-    // 3) Post-tool epilogue (closed turn only): the final assistant
-    //    summary stays visible outside the process card.
+    // Closed turn: the final summary after the last tool stays inline.
     if (!isLive) {
       for (let i = lastTool + 1; i < end; i++) out.push(items[i]!);
     }

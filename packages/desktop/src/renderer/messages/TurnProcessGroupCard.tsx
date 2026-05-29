@@ -14,9 +14,10 @@ interface Props {
 }
 
 /**
- * Codex-style "已处理 X m Y s ⌄" — wraps the span from the first to
- * the last tool call within a turn. Pre-tool prologue and post-tool
- * final summary live OUTSIDE this card (rendered by the caller).
+ * Codex-style "已处理 X m Y s ⌄" — wraps a whole turn from just after
+ * the user message through its last tool call (lead-in + mid-run
+ * narration ride inside). Only the user bubble and the post-tool final
+ * summary live OUTSIDE this card (rendered by the caller).
  *
  * Live turn: defaults to OPEN with a 1s elapsed ticker. Closed turn:
  * defaults to CLOSED with static total wall time.
