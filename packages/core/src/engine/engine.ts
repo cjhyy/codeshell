@@ -32,6 +32,7 @@ import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { createGoalStopHook } from "../hooks/goal-stop-hook.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
+import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager } from "../context/manager.js";
@@ -222,11 +223,15 @@ export function resolveChildLlm(
 export function loadAgentDefinitionsForCwd(
   cwd: string,
   disabledAgents: string[] = [],
+  disabledPlugins: string[] = [],
 ): AgentDefinitionRegistry {
   const home = homedir();
   return AgentDefinitionRegistry.loadFromDirs(
     [
       { dir: `${cwd}/.code-shell/agents`, source: "project" },
+      // Plugin agents sit between project and user so user-level defs still
+      // win on a name clash (loadFromDirs: last dir wins).
+      ...pluginAgentDirs(disabledPlugins),
       { dir: `${home}/.code-shell/agents`, source: "user" },
     ],
     disabledAgents,
@@ -1968,7 +1973,11 @@ export class Engine {
    */
   private getAgentDefinitions(cwd: string): AgentDefinitionRegistry {
     const disabledAgents = this.readDisabledAgents();
-    const disabledKey = disabledAgents.slice().sort().join(" ");
+    const disabledPlugins = this.readDisabledLists().disabledPlugins;
+    const disabledKey = [...disabledAgents, "::", ...disabledPlugins]
+      .slice()
+      .sort()
+      .join(" ");
     if (
       this.agentDefsCache?.cwd !== cwd ||
       this.agentDefsCache.disabledKey !== disabledKey
@@ -1976,7 +1985,7 @@ export class Engine {
       this.agentDefsCache = {
         cwd,
         disabledKey,
-        reg: loadAgentDefinitionsForCwd(cwd, disabledAgents),
+        reg: loadAgentDefinitionsForCwd(cwd, disabledAgents, disabledPlugins),
       };
     }
     return this.agentDefsCache.reg;

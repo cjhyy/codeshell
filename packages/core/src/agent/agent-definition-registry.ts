@@ -4,7 +4,7 @@ import { parseAgentDefinition, type AgentDefinition } from "./agent-definition.j
 
 export interface AgentSourceDir {
   dir: string;
-  source: "project" | "user";
+  source: "project" | "user" | "plugin";
 }
 
 /**

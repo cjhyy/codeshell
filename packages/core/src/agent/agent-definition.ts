@@ -15,7 +15,7 @@ export interface AgentDefinition {
   /** Markdown body — becomes the child Engine's appendSystemPrompt. */
   systemPrompt: string;
   /** Where this def was loaded from. Runtime-only; never serialized. */
-  source?: "project" | "user";
+  source?: "project" | "user" | "plugin";
   /** Absolute path of the file it came from. Runtime-only. */
   filePath?: string;
   /** True when a user-level def shadows a same-named project-level one. */
