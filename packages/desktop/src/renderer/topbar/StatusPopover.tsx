@@ -1,19 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { formatElapsed, type LiveActivity } from "./liveActivity";
+import type { TaskListMessage } from "../types";
 
 interface Props {
   activity: LiveActivity;
   busy: boolean;
+  tasks: TaskListMessage | null;
 }
 
 /**
- * Codex-style status popover anchored under the TopBar's status dot.
- * Shows the current activity / step count / elapsed when busy, or a
- * minimal "idle" line otherwise. Re-renders once per second via its
- * own interval so the elapsed counter ticks without re-rendering the
- * whole App.
+ * Status popover anchored under the TopBar's status dot.
+ *
+ * When the agent has emitted a TaskList, we surface that as the
+ * primary content — a numbered overview (1, 2, 3 …) of every task
+ * with its status marker, since the in-flight plan is the most useful
+ * "what's happening" signal. When there is no task list, we fall back
+ * to the Codex-style current-tool / step-count / elapsed summary.
  */
-export function StatusPopover({ activity, busy }: Props) {
+export function StatusPopover({ activity, busy, tasks }: Props) {
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   useEffect(() => {
     if (!busy) return;
@@ -21,6 +25,39 @@ export function StatusPopover({ activity, busy }: Props) {
     const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(id);
   }, [busy]);
+
+  if (tasks && tasks.tasks.length > 0) {
+    const done = tasks.tasks.filter((t) => t.status === "completed").length;
+    const total = tasks.tasks.length;
+    return (
+      <div className="status-popover status-popover-tasks">
+        <div className="status-popover-line status-popover-tasks-head">
+          <span className="status-popover-key">Tasks</span>
+          <span className="status-popover-val">
+            {done}/{total}
+          </span>
+        </div>
+        <ol className="status-popover-task-list">
+          {tasks.tasks.map((t, i) => (
+            <li
+              key={t.id}
+              className={`status-popover-task status-popover-task-${t.status}`}
+            >
+              <span className="status-popover-task-index">{i + 1}.</span>
+              <span className="status-popover-task-marker">
+                {markerFor(t.status)}
+              </span>
+              <span className="status-popover-task-text">
+                {t.status === "in_progress" && t.activeForm
+                  ? t.activeForm
+                  : t.subject}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
 
   if (!busy) {
     return (
@@ -56,4 +93,15 @@ export function StatusPopover({ activity, busy }: Props) {
       </div>
     </div>
   );
+}
+
+function markerFor(status: string): string {
+  switch (status) {
+    case "completed":
+      return "✓";
+    case "in_progress":
+      return "◐";
+    default:
+      return "○";
+  }
 }

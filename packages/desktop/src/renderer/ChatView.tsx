@@ -9,10 +9,9 @@ import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { BranchPicker } from "./chat/BranchPicker";
-import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
-import type { TaskListMessage, AskUserMessage } from "./types";
+import type { AskUserMessage } from "./types";
 import type { Repo } from "./repos";
 import type { ApprovalRequestEnvelope } from "../preload/types";
 import {
@@ -281,17 +280,16 @@ export function ChatView({
     }
   };
 
-  // Pin the latest TaskList and any unanswered AskUser above the
-  // composer so they stay visible as new chat messages roll in.
-  // We scan from the tail because the latest emission is the source
-  // of truth (TaskList replaces in place; AskUser is one at a time).
-  let latestTasks: TaskListMessage | null = null;
+  // Pin any unanswered AskUser above the composer so it stays
+  // visible as new chat messages roll in. The latest TaskList is
+  // surfaced via the TopBar status popover instead of pinning here.
   let openAsk: AskUserMessage | null = null;
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
-    if (!latestTasks && m.kind === "task_list") latestTasks = m;
-    if (!openAsk && m.kind === "ask_user" && m.answer === undefined) openAsk = m;
-    if (latestTasks && openAsk) break;
+    if (m.kind === "ask_user" && m.answer === undefined) {
+      openAsk = m;
+      break;
+    }
   }
 
   const isNewChat = messages.length === 0;
@@ -379,9 +377,8 @@ export function ChatView({
         cwd={activeRepoPath}
       />
 
-      {(latestTasks || openAsk || showStickyApproval) && (
+      {(openAsk || showStickyApproval) && (
         <div className="pinned-above-composer">
-          {latestTasks && <TaskListMessageView message={latestTasks} />}
           {openAsk && (
             <AskUserMessageView
               message={openAsk}

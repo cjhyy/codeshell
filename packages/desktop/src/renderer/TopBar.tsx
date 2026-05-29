@@ -4,6 +4,7 @@ import { IconButton } from "./ui/IconButton";
 import { PanelLeft } from "./ui/icons";
 import { StatusPopover } from "./topbar/StatusPopover";
 import type { LiveActivity } from "./topbar/liveActivity";
+import type { TaskListMessage } from "./types";
 
 interface Props {
   repoName: string | null;
@@ -16,6 +17,9 @@ interface Props {
    * populate the hover popover; the dot itself only needs `busy`.
    */
   activity?: LiveActivity;
+  /** Latest TaskList snapshot. When present the popover shows the
+   *  numbered task overview instead of the tool/elapsed summary. */
+  tasks?: TaskListMessage | null;
 }
 
 /**
@@ -36,6 +40,7 @@ export function TopBar({
   sidebarCollapsed,
   onToggleSidebar,
   activity,
+  tasks,
 }: Props) {
   return (
     <header className="topbar">
@@ -54,7 +59,7 @@ export function TopBar({
         {sessionTitle && <span className="topbar-session">{sessionTitle}</span>}
       </div>
       <div className="topbar-right">
-        <StatusBadge busy={busy} activity={activity} />
+        <StatusBadge busy={busy} activity={activity} tasks={tasks ?? null} />
       </div>
     </header>
   );
@@ -69,9 +74,11 @@ export function TopBar({
 function StatusBadge({
   busy,
   activity,
+  tasks,
 }: {
   busy: boolean;
   activity?: LiveActivity;
+  tasks: TaskListMessage | null;
 }) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<number | null>(null);
@@ -114,6 +121,7 @@ function StatusBadge({
               }
             }
             busy={busy}
+            tasks={tasks}
           />
         </div>
       )}
