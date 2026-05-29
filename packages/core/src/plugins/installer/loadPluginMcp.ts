@@ -9,10 +9,52 @@ function pluginNameFromKey(key: string): string {
 }
 
 /**
- * Merge each registered plugin's mcp-servers.json into a copy of `base`.
- * Plugin keys are already `<plugin>:<server>`. A key already present in `base`
- * (user-configured) is NOT overwritten. Disabled plugins are skipped. A
- * malformed plugin mcp file is skipped — it must not break startup.
+ * Read a single plugin's MCP servers, already keyed `<plugin>:<server>`.
+ *
+ * Two on-disk shapes are supported:
+ *  - `mcp-servers.json` — the Codex-install product: already keyed + named.
+ *  - `.mcp.json` — what a CC plugin ships verbatim (Docker's mcp-toolkit etc.).
+ *    It uses a `{ mcpServers: {...} }` wrapper with bare server names; we unwrap
+ *    it and apply the `<plugin>:` prefix + `name` so it matches the keyed shape.
+ *
+ * `mcp-servers.json` wins if both exist. Malformed files yield {} (must not
+ * break startup).
+ */
+function readPluginMcp(installPath: string, pluginName: string): Record<string, MCPServerConfig> {
+  const keyedPath = join(installPath, "mcp-servers.json");
+  if (existsSync(keyedPath)) {
+    try {
+      return JSON.parse(readFileSync(keyedPath, "utf-8")) as Record<string, MCPServerConfig>;
+    } catch {
+      return {};
+    }
+  }
+  const rawPath = join(installPath, ".mcp.json");
+  if (existsSync(rawPath)) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(readFileSync(rawPath, "utf-8"));
+    } catch {
+      return {};
+    }
+    const servers =
+      parsed && typeof parsed === "object" && "mcpServers" in (parsed as object)
+        ? (parsed as { mcpServers: Record<string, MCPServerConfig> }).mcpServers ?? {}
+        : (parsed as Record<string, MCPServerConfig>) ?? {};
+    const keyed: Record<string, MCPServerConfig> = {};
+    for (const [serverName, cfg] of Object.entries(servers)) {
+      const key = `${pluginName}:${serverName}`;
+      keyed[key] = { ...(cfg as object), name: key } as MCPServerConfig;
+    }
+    return keyed;
+  }
+  return {};
+}
+
+/**
+ * Merge each registered plugin's MCP servers into a copy of `base`.
+ * Plugin keys are `<plugin>:<server>`. A key already present in `base`
+ * (user-configured) is NOT overwritten. Disabled plugins are skipped.
  */
 export function mergePluginMcpServers(
   base: Record<string, MCPServerConfig>,
@@ -22,16 +64,10 @@ export function mergePluginMcpServers(
   const merged: Record<string, MCPServerConfig> = { ...base };
   const data = readInstalledPlugins();
   for (const [key, entries] of Object.entries(data.plugins)) {
-    if (disabled.has(pluginNameFromKey(key))) continue;
+    const pluginName = pluginNameFromKey(key);
+    if (disabled.has(pluginName)) continue;
     for (const entry of entries) {
-      const path = join(entry.installPath, "mcp-servers.json");
-      if (!existsSync(path)) continue;
-      let servers: Record<string, MCPServerConfig>;
-      try {
-        servers = JSON.parse(readFileSync(path, "utf-8"));
-      } catch {
-        continue;
-      }
+      const servers = readPluginMcp(entry.installPath, pluginName);
       for (const [k, cfg] of Object.entries(servers)) {
         if (k in merged) continue; // user / earlier wins
         merged[k] = cfg;

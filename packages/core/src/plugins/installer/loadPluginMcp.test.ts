@@ -26,6 +26,23 @@ describe("mergePluginMcpServers", () => {
     });
   }
 
+  /** A CC plugin that only ships a raw .mcp.json (mcpServers wrapper, no prefix). */
+  function regCcPlugin(name: string, mcpJson: Record<string, unknown>) {
+    const p = join(home, ".code-shell", "plugins", name);
+    mkdirSync(p, { recursive: true });
+    writeFileSync(join(p, ".mcp.json"), JSON.stringify(mcpJson));
+    appendInstallEntry(pluginInstallKey(name, "local"), {
+      scope: "user", installPath: p, version: "1", installedAt: "t", lastUpdated: "t",
+    });
+  }
+
+  test("falls back to .mcp.json when no mcp-servers.json (CC plugin), keying <plugin>:<server>", () => {
+    regCcPlugin("docker", { mcpServers: { "mcp-gateway": { command: "docker", args: ["mcp", "gateway", "run"] } } });
+    const merged = mergePluginMcpServers({}, []);
+    expect(merged["docker:mcp-gateway"]).toBeDefined();
+    expect(merged["docker:mcp-gateway"]).toMatchObject({ command: "docker", name: "docker:mcp-gateway" });
+  });
+
   test("merges plugin servers into the base map", () => {
     regPlugin("p1", { "p1:fs": { command: "f", name: "p1:fs" } });
     const merged = mergePluginMcpServers({ user1: { command: "u", name: "user1" } as any }, []);
