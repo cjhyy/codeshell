@@ -1,5 +1,26 @@
 # `packages/core` 逐章阅读笔记
 
+> **本批次成果(2026-05-29,提交 `a73f1a5`)** — 关联 `TODO-week.md` #10/#16
+>
+> 起因:`/goal 一章一章读 core`。逐章通读后核出 **8 个真问题**,逐个 TDD 修复(25 个回归测试,`packages/core` 146 pass/0 fail、typecheck 干净)。`ch08-fix-plans.md` 是修复总账。
+>
+> | 编号 | 问题 | 修复要点 |
+> |---|---|---|
+> | A1 | OpenAI 流式丢 `finish_reason`(硬编码 stopReason="stop")→ max_tokens 续写永不触发 | `isTruncatedStop`(认 length+max_tokens),openai 回填、turn-loop 用之 |
+> | A2 | model 切换 worker 全局串台(= #10 根因) | `handleConfigure` per-session 分支补 model + `ChatSession.requestModelSwitch`(busy 挂到 run 边界) |
+> | A3 | max_tokens 384000 跨模型泄漏 | `Capability.maxOutputTokens` + `clampMaxTokens` 钳制(= TODO-week #10 诊断的 Bug 2) |
+> | A4 | `turnLoop.run` 抛错跳过 saveState → session 卡 "active" | 兜底 catch 返回 `model_error` |
+> | A5 | `isClientError` 漏读 `LLMError.details.status` → 4xx 被重试 3× | 同时读 details.status(= TODO-week #10 诊断的 Bug 1 / abort 空烧根因) |
+> | B1 | tool schema 双发(prompt 散文 + native tools 字段) | system-prompt listing 瘦身成 name+desc |
+> | B2 | reactive compaction `% 2000` 永不命中 | 改跨 2000 桶判定 |
+> | B3 | hook decision 合并 last-write-wins(低优先级能放松 deny) | 改取最严 deny>ask>allow |
+>
+> **顺带清理**:plan-mode 工具白名单 ×2 drift → 收口为共用 `PLAN_MODE_ALLOWED_TOOLS`;`forceCompact` 的 `require()` → 静态 import;删 3 套死代码(`executeToolsOverlapped` / `executeAll` / ContextManager 工具去重 `deduplicateToolCalls`+`toolCallHashes`,从未接线,实际去重靠 InvestigationGuard)。
+>
+> **未做(留给后续,详见 ch08 §C)**:重复实现收敛(token 估算 ×3 / orphan 修复 ×3 / 并发调度 ×3,大重构)、硬编码常量抽取、`persistActiveModel` 忽略 settingsScope(可能有意)。**陈旧测试**:`tests/protocol/in-process-client-drift.test.ts` import 了在 TodoWrite 重构(`7fa254a`)早就删掉的 `taskManager` → 加载即 SyntaxError,值得顺手修。
+
+---
+
 > 目标:一个章节一个章节地读 `core` 代码,理顺逻辑、记录"逻辑理顺问题"(读出来觉得别扭 / 可疑 / 需要确认的点)。
 > 每章一个文件,结构统一:
 >

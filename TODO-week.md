@@ -1,36 +1,51 @@
 # 本周 TODO — 2026-05-28 → 2026-06-03
 
-> 这周要做的事。**只放本周**;长线路线图见 `TODO.md`。每条都经过代码核对(2026-05-29),已完成/已实现的项已剔除。
+> 这周要做的事。**只放本周**;长线路线图见 `TODO.md`。已完成的项已删除,只保留未完成/进行中的。
 
-> **进度 (2026-05-29 夜间自动修复)**:#1/2/6/7/8/9(部分)/10/11/12/13a/13b/15 + #3(b)(c) + #4(IA) 全部完成并 commit + typecheck + 测试验证。
-> 剩余只有显式延后的两块:**#9b**(history 旧图降级——要先铺 token 计数管线)和 **#4 的后端统一**(一个跨 MCP/builtin/skill 的能力注册表,属大改 core)。详见每行末尾标注。
+> **剩余主线**:**#4**(plugin/skill 系统对齐 Codex —— 本周已大幅推进,见下)。**#9b 已用占位符方案落地**(无需 token 计数管线,见 #9)。另有 #10 多 session 串台修复(从日志诊断引出)。
 
-| 状态 | #   | 任务                                                          | 备注 / 关键落点                                                                                                                                                                                                                                                                                                                  |
-| ---- | --- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ✅ | 1   | Electron 长会话页面卡顿                                       | `09b0baa` — 把剩余行组件(AssistantMessageView / TaskListMessageView / FilesChangedCard / ToolGroupCard / TurnProcessGroupCard / AskUserMessageView)都 `memo` 了,并修了 MessageStream 里每次重渲染都新建的 `onAnswer` fallback。row-key 已是稳定的 `m.id`。`react-window` 暂不需要 |
-| ✅ | 2   | 生成物(图片 / HTML / md)卡片化展示                          | `fb89799` — `tool-cards/attachments.ts` 识别工具输出里的图片/md/html 路径,`AttachmentCard.tsx` 渲染缩略图/图标 + 点击 `openPath`;GenericToolCard + FileToolCard(write)都接了                                                                                                                                                  |
-| ✅ | 3   | 权限模式整顿 + Goal 模式                                      | **修正** `58e6114` 的概念混淆(完全访问=权限级别,Goal=自主性,正交)。(a) `6f457f5` — 恢复**完全访问权限**为独立档位(映射 engine `bypassPermissions` 全放行;`auto`/`goal` 残留配置降级到默认)。(c) `caea775`+`cdd4f38`+`6341f9a` — **Goal 模式**镜像 CC 的 Stop-hook:新增 `on_stop` seam(TurnLoop,带 8 次续跑上限)+ 内置 GoalStopHook(用会话模型判"达成没"→注入"继续"),`run({goal})` 穿透,composer 加 Goal 开关(开启默认跳完全访问、可改)。(b) `f8dec9c` — 项目级 settings 已修。设计:`docs/superpowers/specs/2026-05-29-goal-mode-and-full-access-design.md`。**三层**:session=composer pill,项目/全局=设置页 scope chip |
-| 🟡 | 4   | plugin / skill 系统跟 Codex 对齐                              | `7396c29` — 设置页左导航按"扩展能力"分组(MCP + 插件&Skills + 子代理 + 钩子 同一标题下),概念层统一完成。**延后**:跨 MCP/builtin/skill 的统一能力注册表(core 大改)                                                                                                                                                            |
-| ✅ | 6   | 图片压缩补成真·基础建设(engine 层自动压缩)                 | `535e0ec` — `engine/image-compression.ts` 加了 `tryCompressImages()` + jimp 动态 import(没装就 no-op,不进 core 依赖);engine.run 在 `enforceImagePolicy` 拒前先压再复检。`setEngineImageCompressor()` 可注入自定义压缩器。desktop canvas 仍是快路径                                                                          |
-| ✅ | 7   | 右上角进度小圆点 hover 展开面板(Codex 风格)                | `b85791b` — `topbar/liveActivity.ts` 汇总当前轮(工具数 / 最早 startedAt / 最新工具名 / 是否 in-flight);`StatusPopover.tsx` 自带 1s ticker 显示 当前/已处理/用时;TopBar 包了 hover 容器(120ms 关闭延迟防闪)                                                                                                                  |
-| ✅ | 8   | **bug:模型切换后新 session 仍用旧模型**                       | `2574695` — `agent-server-stdio.ts` 的 `engineFactory` 改成 `llm: runtime.modelPool.resolveLLMConfig() ?? resolvedLlmConfig`,新 session 实时从 pool 取活跃模型。加了回归测试(`pool.switch()` → `resolveLLMConfig()` 跟随)                                                                                                     |
-| 🟡 | 9   | 图片处理对齐 CC/Codex 最佳实践                                | `ffb87f5` — **9c** MCP 返图溢写到 `~/.code-shell/mcp_images/`(不进 message tree,>8MB SKIP);**9d** `settings.images.detail` (low/high/original) 接到 OpenAI `image_url.detail`;**9e** 超限图 `dropOversizedImages()` 变占位符不进 history。**9a** token-budget 压缩部分靠 #6 的 compressor;**9b** history 旧图降级=延后(要 token 计数管线) |
-| ✅ | 10  | **bug:Turn-process 内一级折叠没合并**                         | `37bbc02` — `foldAdjacentTools()` 把 thinking / assistant 当"透明消息":run 中遇到时向前看,若 hard break 前还有 tool 就一同纳入 group(`ToolGroup.tools` → `ToolGroup.items` 异构)。重写了过时的 stream-groups 测试 + 4 个吸收回归                                                                                              |
-| ✅ | 11  | FilesChangedCard 补撤销 / 审核按钮                            | `f3522da` — `files:undo` IPC(tracked→`git restore`,untracked→删文件,拒绝越界路径,逐文件回报);卡片头 **审核**(开 UnifiedDiffViewer 弹窗)+ **撤销**(确认弹窗后调 IPC)。undoFiles 有 temp-repo 测试                                                                                                                          |
-| ✅ | 12  | 设置页面重做成两栏布局(Codex/Claude 风格)                  | 两栏布局本就有;`f8dec9c` 把 72px 红绿灯避让从无条件改成只在 `.platform-darwin`(并把该 class 挂到 settings-app-shell)。`7396c29` 给左导航加了分组标题                                                                                                                                                                          |
-| ✅ | 13a | 行内 `path:line` 渲染成可点击超链接                           | `1586f73` — `markdown/remarkPathLinks.ts` remark 插件识别 text 节点里的 `path:line`,转 `codeshell-path:` 链接;Markdown 的 `a` 渲染器识别该 scheme 调 `shell:openPath`(新 IPC,相对路径按 cwd 解析,容忍 `:line` 后缀)。FilesChangedCard path 也可点了                                                                          |
-| ✅ | 13b | 每条助手回复底部加复制按钮                                    | `fdecba9` — `AssistantMessageView.tsx` 从 MessageStream 抽出,done 回复底部加 hover 显形的复制行;`stripMarkdownToPlain()` 去 markdown 标记后写剪贴板,1.5s "已复制"                                                                                                                                                            |
-| ✅ | 15  | 记忆模块 UI                                                   | `5216c38` — `main/memory-service.ts` 包 core MemoryManager(level=user/project × scope=user/dream);`memory:*` IPC + preload;设置页"记忆"模块两栏(列表 / 查看-编辑)。memory-service 有测试                                                                                                                                       |
+| 状态 | #   | 任务                          | 备注 / 关键落点                                                                                                                                                                                                                                                                                                                                              |
+| ---- | --- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🟡 | 4   | plugin / skill 系统跟 Codex 对齐 | **本周大幅推进**:① `7396c29` 设置页「扩展能力」UI 分组;② CapabilityService 控制层收口(列举/开关单一入口);③ **插件安装器**(`plugins/installer/`)—— CC + Codex 两种格式本地安装、Codex TOML→CC 转换、MCP/skills 接入;④ 运行时加载(skill/agent/MCP 真正被发现+可调用,含 Docker `.mcp.json` 回退);⑤ list/update/uninstall 命令。**真实插件实测通过**(document-skills / cloudflare / docker mcp-toolkit 等)。**剩**:远程 git 安装(spec 已写 `2026-05-29-plugin-remote-install-design.md`,待实现)+ 跨 MCP/builtin/skill 统一注册表收尾 |
+| ✅ | 9   | 图片处理对齐 CC/Codex 最佳实践   | 9c/9d/9e 已完成(`ffb87f5`)。**9b 已完成**(`035970e`):非视觉模型的 history 旧图 → **文字占位符**(`llm/strip-vision.ts`,纯函数 + 7 单测)。原计划的"先铺 token 计数管线"被绕过 —— 占位符方案不需要计数,直接在 `openai.ts buildMessages` 收口替换。修复了切到 DeepSeek 后历史旧图每轮 `image_url` 400 的真 bug(日志实测一小时 13 次) |
+| 🟡 | 10  | 多 session 上下文/串台 + 慢 修复 | **从一次日志诊断引出**(session `s-mppq7m94`,"又卡又慢效果差")。已做:**辅助任务模型**(`035970e`)—— `settings.auxModelKey` + `Engine.resolveAuxClient()`,把 memory 提取/auto-dream 从每轮主模型(gpt-5.5)挪到可配的廉价快模型,桌面端 Model 设置加了选择器。**剩**:见下「遗留 / 待确认」 |
+
+---
+
+## 🔍 #10 前因后果(2026-05-29 日志诊断会话)
+
+**起因**:用户给出 session `s-mppq7m94`,反馈"又卡又慢效果差",让看最近一小时引擎日志。
+
+**诊断结论**(`~/.code-shell/logs/engine-2026-05-29.log`,UTC 08:43–09:43):
+1. 🔴 **history 旧图 400** —— `messages[74]: unknown variant 'image_url'`,一小时 13 次。切到 DeepSeek(非视觉)后,历史里 vision 模型时期的旧图每轮重发 → 400 → 退流式。→ 已修(#9b)。
+2. 🟡 **每轮多打一次 gpt-5.5 辅助调用** —— memory 提取每轮 1 次(`msgs:2`),一小时 37 次,占用最贵主模型。→ 已修(#10 辅助模型)。
+3. ⚪ **主请求慢 40–84s** —— 实发 ~148k tokens 给直连 gpt-5.5,p90=53s。**非 bug**:窗口 922k(settings 里有配),占用仅 16%,压缩正确未触发(Tier-0 持久化已在跑)。纯粹是 gpt-5.5 直连在大上下文上慢。**无可改**,辅助模型已减少每轮总调用数。
+
+**纠错记录**:中途一度误判 gpt-5.5 fallback 到 200k 窗口、建议"注册真实窗口" —— 错的,settings 明确配了 `maxContextTokens:922000`,该建议作废。
+
+**追加诊断(2026-05-29 第二次「读两天日志找 bug」会话)** —— 在前一次基础上扩到两天(05-28/05-29),又确认两个真 bug,均已在 `a73f1a5` 修复 + 测试:
+- **Bug 1 — 4xx 不重试守卫对 OpenAI 路径失效**。`client-base.ts isClientError` 只读顶层 `err.status`,但 `openai.ts handleApiError` 把 SDK 错误重包成 `LLMError(msg, provider, {status})`,status 落进 `details` → 守卫读到 `undefined` → 所有确定性 400/401/abort 被白白重试 3 次(~9s)再 fallback 又重试。佐证:两天 `llm.client_error_no_retry` 出现 **0 次**。**这正是上面遗留里「abort 后还 retry 3 次空烧 40s」的根因**。修复:`isClientError` 同时读 `details.status`(A5)。
+- **Bug 2 — max_tokens 跨模型串值未钳制**。`model-pool.ts:264` 把目录 `maxOutputTokens`(deepseek/openrouter=384000)直灌 `LLMConfig.maxTokens`,`buildRequestBody` 不钳制就发 → gpt-5.5(128k 上限)400 `max_tokens is too large: 384000`。`model-pool.ts:239-241` 早点名隐患却没写钳制。修复:`clampMaxTokens` 接入 `openai.ts:210`,用 `cap.maxOutputTokens`。
+- 验证:`bun test src/llm/` 27 pass / 0 fail;`tsc --noEmit` exit 0。
+- 另两个高频日志项(`notification_queue.invalid_session_id` 285×、`permission.ask.fail "Run not found"` 7×)经查 **非 bug**:都是测试夹具产生(agentId=`abc12345/empty/undef`;sid 是测试随机串而非真实 `s-`)。**教训:先按 sid 格式区分「真实会话 `s-` vs 测试随机串」再判定是不是 bug。**
+
+**提交过程的坑**:工作区当时混入了**另一个并行 session** 的大量未提交改动(correctness batch,后成为 `a73f1a5`)。该 session 在我提交期间切分支并提交,且其提交 **import 了我的 `strip-vision.ts` 却没带上该文件 → HEAD 一度 build 坏**。我的 `035970e` 补上文件修复了 build。最终 `a73f1a5` + `035970e` 一起 fast-forward 进 main(用户确认两个一起合)。
+
+## 📋 遗留 / 待确认(#10 + 杂项)
+
+- [x] **第二个 side-call 已查清并修复**(`d1bc93a`)—— 那个每轮 `msgs:2` 烧 gpt-5.5 的调用是 `engine.ts` 的两处 summarize:`contextManager.setSummarizeFn`(压缩摘要)+ `modelFacade.summarize`(工具结果摘要)。原本都用主 `llmClient`。已改为走 `resolveAuxClient(llmClient)`(装配阶段解析一次,避开压缩热路径的 settings 磁盘重读),无 aux 配置时回退主模型。验证:根 typecheck exit 0;`bun test src/llm src/engine` 53 pass / 0 fail。
+- [x] **`Request was aborted` 后还 retry 3 次空烧 ~40s** —— 根因已查清:就是 Bug 1(`isClientError` 读不到 `LLMError.details.status`,4xx/abort 全被当可重试)。已在 `a73f1a5` 修复。**(并行 session 进一步在 `client-base.ts` 加了专门的 `isAbortError`/`llm.abort_no_retry` 守卫,直接拦截 `APIUserAbortError`/`AbortError`,更彻底 —— 该改动在工作区未提交,归该 session。)**
+- [ ] **memory extraction 耗时波动** —— `elapsedMs` 3083→5939→8689 递增后又掉回 1772,原因未查。
+- [ ] **Anthropic provider 图片过滤未做** —— `stripVisionFromHistory` 只接进 OpenAI-compat 路径(当前 claude 全支持视觉,YAGNI);接非视觉 anthropic-style 模型时会漏。
+- [ ] **main 领先 origin/main 58 提交,未 push** —— 含本次 2 个提交。
+- [ ] **并行 session 撞车风险** —— 同仓库有另一 session 在写+提交;继续在 main 上干活前需确认。
+- [x] **`/` 根目录游离的 `src/` 已删除** —— 经逐文件内容比对:**混合体**(85 个 Claude Code 源码 + 15 个 codeshell 拆 monorepo 前的旧版散落副本,`packages/*/src` 已有更新版),0 个是缺失的有价值逻辑。100 文件 mtime 全 `22:05`、一次性生成、未进 git。删前确认无活引用(根 `tsup.config.ts` 是指向不存在 `src/run`/`src/product` 的死配置,真实构建走 workspaces `--filter`)。`packages/*/src` 未受影响。**顺带**:根 `tsup.config.ts` 是死配置,可顺手删/更新(低优先)。
 
 ---
 
 ## 📚 相关研究 / 资料
 
+- 日志诊断现状:`docs/research/session-isolation-state.md`(多 session 隔离/上下文装配调研)
+
 - [CC vs Codex 图片处理对比 + "上下文不会爆吗"分析](./docs/research-cc-vs-codex-image-handling.md) — 配合 #9 阅读
-
----
-
-## 🧹 本次核对(2026-05-29)已剔除的条目
-
-- ~~#5 ESC 打断不及时~~ → 已修(`App.stop()` 乐观清 busy / `server.ts` run() catch 识别 abort / `run().then.catch` 兜底)
-- ~~#14 侧边栏项目展开热区太小~~ → 已实现(`Sidebar.tsx:350-356` 整行 `.project-row` 都是 clickable,chevron 用 `stopPropagation` 独立处理)
+- 插件系统设计:`docs/superpowers/specs/2026-05-29-plugin-cc-codex-compat-design.md`、`2026-05-29-plugin-remote-install-design.md`
