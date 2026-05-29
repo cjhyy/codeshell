@@ -268,6 +268,32 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
       ? ((cur.model as Record<string, unknown>).name as string)
       : "";
 
+  const auxModelKey =
+    typeof cur?.auxModelKey === "string" ? (cur.auxModelKey as string) : "";
+
+  const setAuxModel = async (key: string) => {
+    setSaving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      // Empty string → clear the override (fall back to the active model).
+      // deepMerge treats null as "delete this key"; undefined would be
+      // dropped by JSON.stringify but null is the documented clear signal.
+      await window.codeshell.updateSettings(
+        scope,
+        { auxModelKey: key || null },
+        cwd,
+      );
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
+      await load();
+      setNotice(key ? `后台任务模型已设为 ${key}` : "后台任务模型已跟随当前模型");
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const setActive = async (entry: ModelEntry) => {
     setSaving(true);
     setError(null);
@@ -492,6 +518,32 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
             );
           })}
         </ul>
+      )}
+
+      {candidates.length > 0 && (
+        <div className="model-aux-block">
+          <label className="settings-field">
+            <span>后台任务模型</span>
+            <Select
+              value={auxModelKey}
+              onChange={(v) => void setAuxModel(v)}
+              placeholder="跟随当前模型"
+              options={[
+                { value: "", label: "跟随当前模型（默认）" },
+                ...candidates.map((m) => ({
+                  value: m.key,
+                  label: m.label,
+                  searchText: `${m.label} ${m.key} ${m.providerKey}`,
+                })),
+              ]}
+              searchable={candidates.length > 8}
+            />
+          </label>
+          <div className="settings-section-help">
+            记忆提取、自动 dream 等后台调用使用此模型。选个便宜快的（如 Haiku / DeepSeek），
+            避免每轮对话都占用主模型。默认跟随当前模型。
+          </div>
+        </div>
       )}
 
       {adding && (

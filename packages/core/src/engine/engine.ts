@@ -287,6 +287,17 @@ export class Engine {
   // handles its own cache invalidation in saveUserSetting().
   private settingsManager: SettingsManager | undefined;
 
+  /**
+   * Cached auxiliary-task LLM client, keyed by the models[].key it was built
+   * from. Background calls (memory extraction, auto-dream) reuse it across
+   * runs so we don't redo the provider handshake every session. Invalidated
+   * implicitly: a changed auxModelKey produces a different cache key.
+   */
+  private auxClientCache?: {
+    key: string;
+    client: Awaited<ReturnType<typeof createLLMClient>>;
+  };
+
   // Live state from the current/most-recent run, retained for /compact and
   // for live-mutating PermissionClassifier on permission-mode switch.
   private lastContextManager: ContextManager | undefined;
@@ -1451,13 +1462,66 @@ export class Engine {
    * task. Extracts durable memories from the transcript, saves a session
    * summary, and conditionally triggers auto-dream consolidation.
    */
+  /**
+   * Resolve the LLM client for background/auxiliary work (memory extraction,
+   * auto-dream). When settings.auxModelKey names a valid pool model, build (and
+   * cache) a dedicated client for it so per-turn book-keeping runs on a cheap
+   * fast model instead of the expensive primary. Falls back to `fallback` (the
+   * active run's client) when unset, unknown, or on any build failure — aux
+   * work is best-effort and must never break a run.
+   */
+  private async resolveAuxClient(
+    fallback: Awaited<ReturnType<typeof createLLMClient>>,
+  ): Promise<Awaited<ReturnType<typeof createLLMClient>>> {
+    let auxKey: string | undefined;
+    try {
+      // Re-read from disk: settings may have been changed by the desktop
+      // (a separate process) since this worker last cached them. This runs
+      // once per run on the post-run background path, so the cost is fine.
+      const sm = this.getSettingsManager();
+      sm.invalidate();
+      auxKey = (sm.get() as { auxModelKey?: string }).auxModelKey;
+    } catch {
+      return fallback;
+    }
+    if (!auxKey) return fallback;
+
+    // Don't spin up a second client when the aux model IS the active model.
+    if (auxKey === this.modelPool.getActiveKey()) return fallback;
+
+    if (this.auxClientCache?.key === auxKey) return this.auxClientCache.client;
+
+    const entry = this.modelPool.get(auxKey);
+    if (!entry) {
+      logger.warn("engine.aux_model_missing", { auxModelKey: auxKey });
+      return fallback;
+    }
+    try {
+      const client = await createLLMClient(
+        this.modelPool.toLLMConfig(entry),
+        this.config.clientDefaults,
+      );
+      this.auxClientCache = { key: auxKey, client };
+      return client;
+    } catch (err) {
+      logger.warn("engine.aux_model_build_failed", {
+        auxModelKey: auxKey,
+        error: (err as Error).message,
+      });
+      return fallback;
+    }
+  }
+
   private async runMemoryPipeline(
     transcript: import("../session/transcript.js").Transcript,
     sessionId: string,
     cwd: string,
-    llmClient: Awaited<ReturnType<typeof createLLMClient>>,
+    primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
   ): Promise<void> {
     try {
+      // Background calls run on the auxiliary model when configured, so memory
+      // book-keeping doesn't burn the expensive primary model every turn.
+      const llmClient = await this.resolveAuxClient(primaryClient);
       // Only run memory extraction for substantive sessions. The previous
       // threshold of 4 user+assistant messages was low enough that two-line
       // exchanges ("what's the time?" / "noon") triggered a full LLM

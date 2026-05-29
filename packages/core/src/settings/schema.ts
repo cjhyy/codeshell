@@ -26,6 +26,16 @@ export const SettingsSchema = z
     activeKey: z.string().optional(),
 
     /**
+     * Auxiliary-task model — points at a models[].key. Background, non-user-
+     * facing LLM calls (memory extraction, the auto-dream loop) use this model
+     * instead of the active one, so per-turn book-keeping doesn't burn the
+     * expensive primary model. Pick something fast/cheap (e.g. a Haiku or
+     * DeepSeek key). When unset, those calls fall back to the active model
+     * (legacy behavior). An invalid/missing key also falls back to active.
+     */
+    auxModelKey: z.string().optional(),
+
+    /**
      * Toggle background auto-update. When true (default), code-shell checks
      * npm for newer versions and — if the npm global prefix is writable —
      * installs the update in the background on process exit so the next
