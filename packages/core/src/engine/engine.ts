@@ -29,6 +29,7 @@ import { HookRegistry } from "../hooks/registry.js";
 import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
+import { createGoalStopHook } from "../hooks/goal-stop-hook.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
@@ -104,6 +105,14 @@ export interface EngineConfig {
   disabledBuiltinTools?: string[];
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
+  /**
+   * Goal mode: when set, the engine registers a GoalStopHook on `on_stop`
+   * so the turn loop runs until the session model judges this goal met
+   * (bounded by maxStopBlocks + maxTurns). Orthogonal to permissionMode —
+   * the desktop UI defaults permission to bypass when a goal is set, but
+   * the engine treats the two independently.
+   */
+  goal?: string;
   sessionStorageDir?: string;
   maxContextTokens?: number;
   approvalBackend?: ApprovalBackend;
@@ -546,6 +555,12 @@ export class Engine {
       onStream?: StreamCallback;
       signal?: AbortSignal;
       sessionId?: string;
+      /**
+       * Goal mode for this run: the engine registers a GoalStopHook so the
+       * turn loop runs until the session model judges this goal met. Falls
+       * back to config.goal. Orthogonal to permissionMode.
+       */
+      goal?: string;
     },
   ): Promise<EngineResult> {
     const cwd = options?.cwd ?? this.config.cwd ?? process.cwd();
@@ -1246,6 +1261,22 @@ export class Engine {
       model: this.config.llm.model,
     });
 
+    // Goal mode: register a GoalStopHook for the lifetime of THIS run so the
+    // turn loop keeps going until the session model judges the goal met.
+    // Registered per-run (and cleared in `finally`) so a later goal-less
+    // send doesn't inherit a stale goal. The judge reuses `llmClient` — the
+    // same model this session is talking to (per design).
+    const effectiveGoal = (options?.goal ?? this.config.goal ?? "").trim();
+    let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
+    if (effectiveGoal && this.config.isSubAgent !== true) {
+      goalHookHandler = createGoalStopHook({
+        goal: effectiveGoal,
+        llm: llmClient,
+        log: logger,
+      });
+      this.hooks.register("on_stop", goalHookHandler, 0, "goal-stop");
+    }
+
     // Surface compaction events to the UI so the user knows when context was trimmed.
     // Buffer the most recent event so TurnLoop can drain it and emit the
     // post_compact hook on the next turn (ContextManager itself doesn't
@@ -1285,6 +1316,9 @@ export class Engine {
         maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 10,
         onStream: options?.onStream,
         signal: options?.signal,
+        // Goal mode: the active goal is surfaced to the on_stop handler via
+        // ctx.data.goal; the GoalStopHook (registered above) judges it.
+        goal: effectiveGoal || undefined,
         // Heartbeat: flush turnCount + tokens to state.json after every turn
         // so external observers (other CLI processes, /sid, the session list)
         // see live progress instead of a stale snapshot from the last
@@ -1308,7 +1342,14 @@ export class Engine {
       },
     );
 
-    const result = await turnLoop.run(messages);
+    let result: Awaited<ReturnType<typeof turnLoop.run>>;
+    try {
+      result = await turnLoop.run(messages);
+    } finally {
+      // Run-scoped: drop the GoalStopHook so a later goal-less send on this
+      // long-lived engine doesn't keep blocking stops.
+      if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
+    }
     this.lastMessages = result.messages;
     this.compactedMessagesBySession.set(
       session.state.sessionId,

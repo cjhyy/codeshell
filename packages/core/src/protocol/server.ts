@@ -206,6 +206,7 @@ export class AgentServer {
     try {
       const result = await session.enqueueTurn(params.task, {
         cwd: params.cwd,
+        goal: typeof params.goal === "string" ? params.goal : undefined,
         onStream: (event: StreamEvent) =>
           this.notify(Methods.StreamEvent, { sessionId: sid, event }),
       });
@@ -282,6 +283,7 @@ export class AgentServer {
         sessionId: params.sessionId,
         signal: runController.signal,
         onStream: streamToClient,
+        goal: typeof params.goal === "string" ? params.goal : undefined,
       });
 
       const runResult: RunResult = {
