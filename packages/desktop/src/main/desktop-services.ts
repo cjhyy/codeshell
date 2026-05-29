@@ -300,9 +300,15 @@ export async function cleanupStaleWorktrees(
  * limits to that path. Falls back to staged-only if working tree is
  * clean but index has changes.
  */
-export async function getGitDiff(cwd: string, file?: string): Promise<string> {
+export async function getGitDiff(cwd: string, file?: string | string[]): Promise<string> {
+  if (Array.isArray(file)) {
+    const chunks = await Promise.all(file.map((f) => getGitDiffForFile(cwd, f)));
+    return chunks.filter((chunk) => chunk.trim()).join("\n");
+  }
+  if (file) return getGitDiffForFile(cwd, file);
+
   const baseArgs = ["diff", "--no-color", "--unified=3"];
-  const args = file ? [...baseArgs, "--", file] : baseArgs;
+  const args = baseArgs;
   try {
     const wt = await gitRun(cwd, args);
     if (wt.trim()) return wt;
@@ -315,6 +321,77 @@ export async function getGitDiff(cwd: string, file?: string): Promise<string> {
   } catch {
     return "";
   }
+}
+
+async function getGitDiffForFile(cwd: string, file: string): Promise<string> {
+  const baseArgs = ["diff", "--no-color", "--unified=3"];
+  const args = [...baseArgs, "--", file];
+  try {
+    const wt = await gitRun(cwd, args);
+    if (wt.trim()) return wt;
+  } catch {
+    // fall through
+  }
+  try {
+    const staged = await gitRun(cwd, [...baseArgs, "--cached", "--", file]);
+    if (staged.trim()) return staged;
+  } catch {
+    // fall through
+  }
+  if (await isUntrackedFile(cwd, file)) {
+    return syntheticUntrackedDiff(cwd, file);
+  }
+  return "";
+}
+
+async function isUntrackedFile(cwd: string, file: string): Promise<boolean> {
+  try {
+    await gitRun(cwd, ["ls-files", "--error-unmatch", "--", file]);
+    return false;
+  } catch {
+    // Not tracked. Only show a synthetic diff for files that actually exist.
+  }
+  const abs = path.resolve(cwd, file);
+  const root = path.resolve(cwd);
+  if (!abs.startsWith(root + path.sep) && abs !== root) return false;
+  try {
+    const stat = await fs.stat(abs);
+    return stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function syntheticUntrackedDiff(cwd: string, file: string): Promise<string> {
+  const abs = path.resolve(cwd, file);
+  let text: string;
+  try {
+    text = await fs.readFile(abs, "utf-8");
+  } catch {
+    return "";
+  }
+  if (text.includes("\0")) {
+    return [
+      `diff --git a/${file} b/${file}`,
+      "new file mode 100644",
+      "--- /dev/null",
+      `+++ b/${file}`,
+      "@@ -0,0 +1 @@",
+      "+(binary file)",
+      "",
+    ].join("\n");
+  }
+  const lines = text.endsWith("\n") ? text.slice(0, -1).split("\n") : text.split("\n");
+  const count = lines.length === 1 && lines[0] === "" ? 0 : lines.length;
+  return [
+    `diff --git a/${file} b/${file}`,
+    "new file mode 100644",
+    "--- /dev/null",
+    `+++ b/${file}`,
+    `@@ -0,0 +1,${count} @@`,
+    ...lines.map((line) => `+${line}`),
+    "",
+  ].join("\n");
 }
 
 export async function openExternal(url: string): Promise<void> {
@@ -454,4 +531,3 @@ function normalizeWorktreeName(input: string): string {
     .slice(0, 48);
   return slug || "worktree";
 }
-
