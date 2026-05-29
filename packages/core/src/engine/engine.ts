@@ -1215,8 +1215,15 @@ export class Engine {
     // run would be evaluated fresh and might get a different replacement
     // string than the one already in the message, breaking idempotency.
     contextManager.initReplacementStateFromMessages(messages);
+    // Summarization (context-compaction + tool-result summaries) are auxiliary
+    // calls — route them to the configured aux model so they don't burn the
+    // expensive primary model every turn (same rationale as runMemoryPipeline).
+    // Resolved once here (not per-call) so the magnetic-disk settings re-read
+    // in resolveAuxClient stays off the compaction hot path. Falls back to the
+    // primary client when no aux model is configured.
+    const auxSummaryClient = await this.resolveAuxClient(llmClient);
     contextManager.setSummarizeFn(async (prompt: string) => {
-      const summaryResponse = await llmClient.createMessage({
+      const summaryResponse = await auxSummaryClient.createMessage({
         systemPrompt: "You are a conversation summarizer. Be concise and factual.",
         messages: [{ role: "user", content: prompt }],
         tools: [],
@@ -1243,7 +1250,7 @@ export class Engine {
     // tracker so session_end.cost reflects only the user-facing turns and
     // turns/requestCount stay aligned.
     modelFacade.summarize = async (sysPrompt: string, userMsg: string) => {
-      const resp = await llmClient.createMessage({
+      const resp = await auxSummaryClient.createMessage({
         systemPrompt: sysPrompt,
         messages: [{ role: "user", content: userMsg }],
         tools: [],
