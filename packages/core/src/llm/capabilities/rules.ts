@@ -44,8 +44,12 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
       ]),
       reasoning: { kind: "openai-effort", disabledEffort: "none" },
       echoReasoning: "optional",
+      // 400s on `max_tokens is too large: ... at most 128000`. Clamp here so a
+      // stale 384000 (copied from a DeepSeek/OpenRouter entry on a prior model)
+      // can't bleed in after a hot switch.
+      maxOutputTokens: 128_000,
     },
-    why: "OpenAI gpt-5.5+ accepts reasoning_effort none|low|medium|high|xhigh (no `minimal`).",
+    why: "OpenAI gpt-5.5+ accepts reasoning_effort none|low|medium|high|xhigh (no `minimal`); output cap 128k.",
   },
 
   // ─── OpenAI native — o-series + gpt-5 through gpt-5.4 ──────────

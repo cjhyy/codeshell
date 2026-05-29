@@ -145,15 +145,17 @@ export class PromptComposer {
       });
     }
 
-    // Tool definitions
+    // Tool listing — name + one-line description only. The full JSON schema
+    // is NOT repeated here: the provider clients already send it in the
+    // native `tools` field (Anthropic tools / OpenAI functions), so dumping
+    // `Parameters: {...}` into the system prompt sent every tool's schema
+    // twice — a large, per-request token cost for no added model signal.
     if (tools.length > 0) {
       sections.push({
         name: "tool_definitions",
         compute: () => {
           const toolLines = tools.map(
-            (t) =>
-              `### ${t.name}\n${t.description}\n` +
-              `Parameters: ${JSON.stringify(t.inputSchema, null, 2)}`,
+            (t) => `### ${t.name}\n${t.description}`,
           );
           return `# Available Tools\n\n${toolLines.join("\n\n")}`;
         },

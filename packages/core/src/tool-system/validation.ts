@@ -1,8 +1,13 @@
 /**
- * Zod-based tool input validation.
- * Validates tool args against JSON Schema before execution.
+ * Lightweight tool input validation against a JSON Schema.
+ *
+ * NOT a full JSON-Schema validator: it only checks `required` presence and
+ * top-level primitive types (string/number/boolean). Arrays, objects, enums,
+ * nested shapes, and formats are intentionally NOT validated — this is a
+ * cheap pre-flight guard, not a substitute for the provider's own schema
+ * enforcement. (Was previously labelled "Zod-based" and imported `z`, but
+ * never used zod — corrected to avoid misleading readers.)
  */
-import { z } from "zod";
 
 /**
  * Validate tool args against the tool's inputSchema.

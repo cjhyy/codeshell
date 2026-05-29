@@ -14,6 +14,7 @@ import { validateToolArgs } from "./validation.js";
 import type { ToolContext } from "./context.js";
 import type { InvestigationGuard } from "./investigation-guard.js";
 import type { TaskGuard } from "./task-guard.js";
+import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
 
 type Logger = typeof rootLogger;
 
@@ -106,21 +107,9 @@ export class ToolExecutor {
     let call: ToolCall = callIn;
     // 0. Plan mode: only allow read-only tools — no file writes at all
     if (this.toolCtx?.planMode) {
-      const allowedInPlan = new Set([
-        "EnterPlanMode",
-        "ExitPlanMode",
-        "Read",
-        "Glob",
-        "Grep",
-        "WebSearch",
-        "WebFetch",
-        "AskUserQuestion",
-        "Agent",
-        "ToolSearch",
-        "TodoWrite",
-      ]);
-
-      if (!allowedInPlan.has(call.toolName)) {
+      // Shared with engine.ts's tool-visibility filter so the set the model
+      // SEES and the set the executor RUNS can't drift (they had).
+      if (!PLAN_MODE_ALLOWED_TOOLS.has(call.toolName)) {
         if (call.toolName === "Bash" && this.isReadOnlyBashCommand(call.args)) {
           // Read-only bash is fine
         } else {
@@ -490,37 +479,6 @@ export class ToolExecutor {
     }
 
     return false;
-  }
-
-  async executeAll(calls: ToolCall[]): Promise<ToolResult[]> {
-    const results: ToolResult[] = [];
-
-    // Separate safe (concurrent) and unsafe (sequential) tools
-    const safe: ToolCall[] = [];
-    const unsafe: ToolCall[] = [];
-
-    for (const call of calls) {
-      const tool = this.registry.getTool(call.toolName);
-      if (tool?.isConcurrencySafe) {
-        safe.push(call);
-      } else {
-        unsafe.push(call);
-      }
-    }
-
-    // Execute safe tools concurrently
-    if (safe.length > 0) {
-      const safeResults = await Promise.all(safe.map((c) => this.executeSingle(c)));
-      results.push(...safeResults);
-    }
-
-    // Execute unsafe tools sequentially
-    for (const call of unsafe) {
-      const result = await this.executeSingle(call);
-      results.push(result);
-    }
-
-    return results;
   }
 
   /**

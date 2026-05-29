@@ -45,6 +45,13 @@ export class ChatSession {
   private active: QueuedTurn | null = null;
   private controller: AbortController | null = null;
   private readonly defaultOnStream?: (event: StreamEvent) => void;
+  /**
+   * Model-pool key requested via requestModelSwitch while a turn was in
+   * flight. Applied at the next run boundary (before the next turn starts) so
+   * we never swap the model out from under a running LLM client — the bug the
+   * session-isolation research flagged. null = nothing pending.
+   */
+  private pendingModel: string | null = null;
 
   constructor(opts: ChatSessionOptions) {
     this.id = opts.id;
@@ -81,6 +88,20 @@ export class ChatSession {
     return this.active !== null;
   }
 
+  /**
+   * Switch this session's active model (per-session, not worker-global).
+   * Applies immediately when idle; defers to the next run boundary when a
+   * turn is in flight so a hot switch never mutates the model under a
+   * running LLM client.
+   */
+  requestModelSwitch(key: string): void {
+    if (this.isBusy()) {
+      this.pendingModel = key;
+      return;
+    }
+    this.engine.switchModel(key);
+  }
+
   queueDepth(): number {
     return this.queue.length;
   }
@@ -107,6 +128,13 @@ export class ChatSession {
     } finally {
       this.active = null;
       this.controller = null;
+      // Run boundary: apply any model switch that was deferred because it was
+      // requested mid-run. Done here (not in pump) so it still applies when
+      // no further turn is queued.
+      if (this.pendingModel !== null) {
+        this.engine.switchModel(this.pendingModel);
+        this.pendingModel = null;
+      }
       // Drain the next turn if one is waiting.
       if (this.queue.length > 0) void this.pump();
     }

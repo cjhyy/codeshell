@@ -464,6 +464,20 @@ export class AgentServer {
       if (typeof params.permissionMode === "string") {
         s.engine.setPermissionMode(params.permissionMode as NonNullable<EngineConfig["permissionMode"]>);
       }
+      // Per-session model switch — the missing piece that made model changes
+      // worker-global (session-isolation research §3). requestModelSwitch
+      // applies immediately when idle, defers to the run boundary when busy
+      // so it never swaps the model under a running LLM client.
+      if (typeof params.model === "string") {
+        try {
+          s.requestModelSwitch(params.model);
+        } catch (err) {
+          this.transport.send(
+            createErrorResponse(req.id, ErrorCodes.InvalidParams, (err as Error).message),
+          );
+          return;
+        }
+      }
       this.transport.send(createResponse(req.id, { ok: true }));
       return;
     }

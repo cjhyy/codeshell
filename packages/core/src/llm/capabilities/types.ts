@@ -99,6 +99,14 @@ export interface Capability {
   parallelToolCalls: ParallelToolCallsShape;
   /** Streaming usage reporting shape. */
   streamUsage: StreamUsageShape;
+  /**
+   * Known hard ceiling for max-output-tokens, when the vendor publishes one
+   * and exceeding it 400s. Used to clamp a requested/inherited max_tokens so
+   * a stale catalog value (e.g. 384000 copied from a DeepSeek/OpenRouter
+   * entry) can't bleed onto a smaller-cap model after a hot switch. Undefined
+   * = no known cap → send the request value unclamped.
+   */
+  maxOutputTokens?: number;
 }
 
 /**

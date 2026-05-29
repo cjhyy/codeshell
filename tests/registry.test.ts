@@ -161,20 +161,6 @@ describe("ContextManager", () => {
     expect(limits.ratio).toBeGreaterThanOrEqual(0.9);
     expect(limits.needsEmergency).toBe(true);
   });
-
-  it("deduplicates tool calls", () => {
-    const cm = new ContextManager();
-    const calls = [
-      { toolName: "Read", args: { file_path: "/a" } },
-      { toolName: "Read", args: { file_path: "/a" } },
-    ];
-    // First time: both execute
-    cm.recordToolResult("Read", { file_path: "/a" }, "content1");
-    cm.recordToolResult("Read", { file_path: "/a" }, "content2");
-    const { toExecute, cached } = cm.deduplicateToolCalls(calls);
-    expect(cached).toHaveLength(2);
-    expect(toExecute).toHaveLength(0);
-  });
 });
 
 describe("SettingsManager", () => {

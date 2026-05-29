@@ -8,7 +8,9 @@ describe("capabilitiesFor", () => {
     expect(c.tokenLimitField).toBe("max_completion_tokens");
     expect(c.rejectedParams.has("temperature")).toBe(true);
     expect(c.rejectedParams.has("top_p")).toBe(true);
-    expect(c.reasoning).toEqual({ kind: "openai-effort" });
+    // gpt-5.5 dropped "minimal" from reasoning_effort, so the rule pins
+    // disabledEffort to "none" (see rules.ts gpt-5.5 entry).
+    expect(c.reasoning).toEqual({ kind: "openai-effort", disabledEffort: "none" });
   });
 
   test("OpenAI o3 reasoning model — same rules as gpt-5.x", () => {
@@ -120,12 +122,12 @@ describe("capabilitiesFor", () => {
     expect(c.reasoning).toEqual({ kind: "openai-effort", disabledEffort: "none" });
   });
 
-  test("OpenAI gpt-5.5 — openai-effort without explicit disabledEffort (caller defaults to minimal)", () => {
+  test("OpenAI gpt-5.5 — openai-effort with disabledEffort=none (gpt-5.5 dropped `minimal`)", () => {
     const c = capabilitiesFor("openai", "gpt-5.5");
     expect(c.reasoning.kind).toBe("openai-effort");
-    // Other openai-effort users (OpenAI, Gemini, Groq) accept "minimal" — no
-    // override needed, the provider falls back to "minimal" by default.
-    expect((c.reasoning as { disabledEffort?: string }).disabledEffort).toBeUndefined();
+    // gpt-5.5's reasoning_effort vocabulary is none|low|medium|high|xhigh — no
+    // "minimal" — so "disable thinking" maps to "none".
+    expect((c.reasoning as { disabledEffort?: string }).disabledEffort).toBe("none");
   });
 
   test("Groq gpt-oss-20b — max_completion_tokens + effort", () => {

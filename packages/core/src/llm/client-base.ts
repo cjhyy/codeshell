@@ -145,15 +145,25 @@ export abstract class LLMClientBase {
 
 /**
  * Detect HTTP 4xx errors from provider SDKs so withRetry can bail
- * without burning backoff time. OpenAI/Anthropic SDKs both attach a
- * numeric `status` to their error objects; we treat 400-499 as
- * non-retryable (429 is handled separately above as a rate-limit).
+ * without burning backoff time. OpenAI/Anthropic SDKs attach a numeric
+ * `status` to their error objects; we treat 400-499 as non-retryable
+ * (429 is handled separately above as a rate-limit).
+ *
+ * The provider clients also wrap SDK errors into `new LLMError(msg,
+ * provider, { status })`, where the status lands in
+ * `FrameworkError.details.status` rather than a top-level `.status`.
+ * We read both so a wrapped 400/401/404 isn't retried 3× (~9 s wasted)
+ * before finally surfacing.
  *
  * Network errors and 5xx fall through and remain retryable.
+ *
+ * Exported for unit testing.
  */
-function isClientError(err: unknown): boolean {
+export function isClientError(err: unknown): boolean {
   if (typeof err !== "object" || err === null) return false;
-  const status = (err as { status?: unknown }).status;
+  const top = (err as { status?: unknown }).status;
+  const buried = (err as { details?: { status?: unknown } }).details?.status;
+  const status = typeof top === "number" ? top : typeof buried === "number" ? buried : undefined;
   if (typeof status !== "number") return false;
   if (status === 429) return false;
   return status >= 400 && status < 500;

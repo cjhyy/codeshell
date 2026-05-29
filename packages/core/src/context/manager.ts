@@ -94,7 +94,6 @@ export type OnCompactFn = (info: {
 
 export class ContextManager {
   private config: ContextManagerConfig;
-  private toolCallHashes = new Map<string, { count: number; lastResult: string }>();
   private summarizeFn: SummarizeFn | undefined;
   private consecutiveSummaryFailures = 0;
   private lastSummary: string | undefined;
@@ -487,46 +486,4 @@ export class ContextManager {
     };
   }
 
-  /**
-   * Deduplicate tool calls by hashing arguments.
-   */
-  deduplicateToolCalls(calls: Array<{ toolName: string; args: Record<string, unknown> }>): {
-    toExecute: typeof calls;
-    cached: Array<{ toolName: string; args: Record<string, unknown>; result: string }>;
-  } {
-    const toExecute: typeof calls = [];
-    const cached: Array<{ toolName: string; args: Record<string, unknown>; result: string }> = [];
-
-    for (const call of calls) {
-      const hash = this.hashCall(call.toolName, call.args);
-      const existing = this.toolCallHashes.get(hash);
-
-      if (existing && existing.count >= 2) {
-        cached.push({ ...call, result: existing.lastResult });
-        existing.count++;
-      } else {
-        toExecute.push(call);
-      }
-    }
-
-    return { toExecute, cached };
-  }
-
-  /**
-   * Record a tool call result for dedup tracking.
-   */
-  recordToolResult(toolName: string, args: Record<string, unknown>, result: string): void {
-    const hash = this.hashCall(toolName, args);
-    const existing = this.toolCallHashes.get(hash);
-    if (existing) {
-      existing.count++;
-      existing.lastResult = result;
-    } else {
-      this.toolCallHashes.set(hash, { count: 1, lastResult: result });
-    }
-  }
-
-  private hashCall(toolName: string, args: Record<string, unknown>): string {
-    return `${toolName}:${JSON.stringify(args)}`;
-  }
 }

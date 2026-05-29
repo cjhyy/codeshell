@@ -16,6 +16,8 @@ import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions
 import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
 import { capabilitiesFor, type Capability } from "../capabilities/index.js";
+import { clampMaxTokens } from "../clamp-max-tokens.js";
+import { stripVisionFromHistory } from "../strip-vision.js";
 import type { ProviderKindName } from "../provider-kinds.js";
 import {
   STREAM_WATCHDOG_CONFIG,
@@ -202,7 +204,10 @@ export class OpenAIClient extends LLMClientBase {
     stream: boolean,
   ): Record<string, unknown> {
     const cap = this.capability;
-    const maxTokens = options.maxTokens ?? this.maxTokens;
+    // Clamp to the model's known output ceiling so a stale catalog value
+    // (e.g. 384000 inherited after a hot model switch) can't 400 a
+    // smaller-cap model. No known cap → send the value as-is.
+    const maxTokens = clampMaxTokens(options.maxTokens ?? this.maxTokens, cap.maxOutputTokens) as number;
 
     // Token-limit field — capability picks `max_tokens` vs `max_completion_tokens`.
     // Sticky fallback (set by handleApiError on a 400) overrides the rule for
@@ -327,6 +332,11 @@ export class OpenAIClient extends LLMClientBase {
       let streamUsage:
         | { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
         | undefined;
+      // Last finish_reason seen on the stream. Without this we returned a
+      // hardcoded "stop", so an output-cap cutoff (finish_reason "length")
+      // was indistinguishable from a clean finish and the turn loop never
+      // ran its max-output continuation. Capture it and return it verbatim.
+      let finishReason: string | undefined;
 
       // TTFT — first chunk that actually carried text. Tool-call-only chunks
       // earlier in the stream don't count: the user-visible "text starts now"
@@ -340,6 +350,11 @@ export class OpenAIClient extends LLMClientBase {
         if ((chunk as any).usage) {
           streamUsage = (chunk as any).usage;
         }
+
+        // Capture finish_reason BEFORE the no-delta early return below: the
+        // final chunk frequently carries finish_reason with an empty delta.
+        const chunkFinish = chunk.choices?.[0]?.finish_reason;
+        if (chunkFinish) finishReason = chunkFinish;
 
         const delta = chunk.choices[0]?.delta;
         if (!delta) return "";
@@ -437,7 +452,7 @@ export class OpenAIClient extends LLMClientBase {
         text,
         toolCalls,
         usage,
-        stopReason: "stop",
+        stopReason: finishReason ?? "stop",
         ...(reasoningContent ? { reasoningContent } : {}),
       };
     } catch (err) {
@@ -483,6 +498,13 @@ export class OpenAIClient extends LLMClientBase {
     thinking?: "enabled" | "disabled",
   ): OpenAI.ChatCompletionMessageParam[] {
     const result: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: systemPrompt }];
+
+    // Drop historical image blocks when the active model can't accept vision.
+    // Engine.run only gates *new* attachments; an image left in history from
+    // when a vision model was active otherwise re-serializes into `image_url`
+    // below and 400s ("unknown variant `image_url`") after a model switch.
+    // Identity-preserving on the common path (vision models / no images).
+    messages = stripVisionFromHistory(messages, this.capability.supportsVision);
 
     // Reasoning-content echo-back contract — driven by capability:
     //   "when-tools"  : backfill an empty placeholder if the prior assistant
@@ -600,9 +622,10 @@ export class OpenAIClient extends LLMClientBase {
             } else if (block.type === "image" && block.source) {
               // OpenAI-compat image_url: every supported provider (OpenAI,
               // OpenRouter, OpenAI-compatible proxies for Gemini/xAI/etc)
-              // accepts a base64 data URL as the URL. Per-(provider, model)
-              // vision-capability gating happens earlier in Engine.run —
-              // by the time we reach here, the model supports vision.
+              // accepts a base64 data URL as the URL. Non-vision models never
+              // reach here — stripVisionFromHistory() (top of buildMessages)
+              // has already swapped their image blocks for text placeholders,
+              // and Engine.run rejects *new* attachments to non-vision models.
               //
               // The `detail` hint is honored by OpenAI; OpenAI-compat
               // proxies (OpenRouter for non-OpenAI models, etc.) tolerate

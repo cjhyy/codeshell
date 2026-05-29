@@ -36,6 +36,8 @@ import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager } from "../context/manager.js";
+import { estimateTokens } from "../context/compaction.js";
+import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
 import { SessionManager, type SessionBundle } from "../session/session-manager.js";
 import { Transcript } from "../session/transcript.js";
@@ -1155,26 +1157,13 @@ export class Engine {
     //   3. buildSystemContext — reads environment context
     const allToolDefs = this.toolRegistry.getToolDefinitions();
 
-    // In plan mode, only expose read-only tools so the model won't attempt writes
-    const planModeAllowed = new Set([
-      "EnterPlanMode",
-      "ExitPlanMode",
-      "Read",
-      "Glob",
-      "Grep",
-      "WebSearch",
-      "WebFetch",
-      "AskUserQuestion",
-      "Agent",
-      "ToolSearch",
-      "TaskCreate",
-      "TaskUpdate",
-      "TaskList",
-      "TaskGet",
-      "Bash", // Bash is included but executor filters non-read-only commands
-    ]);
+    // In plan mode, only expose read-only/planning tools so the model won't
+    // attempt writes. Shared with executor.ts's execution gate via
+    // PLAN_MODE_ALLOWED_TOOLS so what the model SEES and what the executor
+    // RUNS can't drift apart. (Bash is in the set; the executor additionally
+    // gates Bash to read-only commands at call time.)
     const toolDefs = this.planMode
-      ? allToolDefs.filter((t) => planModeAllowed.has(t.name))
+      ? allToolDefs.filter((t) => PLAN_MODE_ALLOWED_TOOLS.has(t.name))
       : allToolDefs;
 
     const [llmClient, systemPrompt, systemContext] = await Promise.all([
@@ -1806,7 +1795,6 @@ export class Engine {
     if (!this.lastContextManager || !sessionId) {
       return { before: 0, after: 0, strategy: "none (no active session)" };
     }
-    const { estimateTokens } = require("../context/compaction.js");
     const sourceMessages =
       this.compactedMessagesBySession.get(sessionId) ??
       this.sessionManager.resume(sessionId).transcript.toMessages();

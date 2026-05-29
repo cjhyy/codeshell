@@ -3,8 +3,27 @@
  */
 
 import type { HookEventName, HookContext, HookResult } from "./events.js";
+import type { PermissionDecision } from "../types.js";
 
 export type HookHandler = (ctx: HookContext) => HookResult | Promise<HookResult>;
+
+// Strictness order for merging hook permission decisions across the chain.
+// Higher = stricter. deny wins over ask wins over allow.
+const DECISION_RANK: Record<PermissionDecision, number> = { deny: 2, ask: 1, allow: 0 };
+
+/**
+ * Merge two hook decisions, keeping the stricter one. `undefined` (no prior
+ * decision) yields the incoming one. Prevents a later handler from relaxing
+ * an earlier handler's deny — aligns with the executor's clampHookDecision
+ * "downgrades only" rule.
+ */
+function stricterDecision(
+  prev: PermissionDecision | undefined,
+  next: PermissionDecision,
+): PermissionDecision {
+  if (prev === undefined) return next;
+  return DECISION_RANK[next] >= DECISION_RANK[prev] ? next : prev;
+}
 
 interface RegisteredHook {
   handler: HookHandler;
@@ -56,7 +75,10 @@ export class HookRegistry {
           aggregated.messages = [...(aggregated.messages ?? []), ...result.messages];
         }
         if (result.decision) {
-          aggregated.decision = result.decision;
+          // Strictest decision across the chain wins (deny > ask > allow),
+          // not last-write-wins. Otherwise a low-priority (later-running)
+          // handler could relax a high-priority handler's deny to allow.
+          aggregated.decision = stricterDecision(aggregated.decision, result.decision);
         }
         // Last-write-wins for input/prompt rewrites — the priority order
         // already determined which handler "owns" the override.

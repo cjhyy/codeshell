@@ -7,8 +7,6 @@
 
 import type {
   Message,
-  ToolCall,
-  ToolResult,
   StreamCallback,
   TerminalReason,
   ContentBlock,
@@ -27,6 +25,8 @@ import { logger } from "../logging/logger.js";
 import { checkTokenBudget, type BudgetTracker, createBudgetTracker } from "./token-budget.js";
 import { StreamingToolQueue } from "./streaming-tool-queue.js";
 import { estimateTokens } from "../context/compaction.js";
+import { isTruncatedStop } from "../llm/stop-reason.js";
+import { crossedReactiveThreshold } from "./reactive-threshold.js";
 
 export interface TurnLoopConfig {
   maxTurns: number;
@@ -231,6 +231,14 @@ export class TurnLoop {
     let finalText = "";
     const budgetTracker = createBudgetTracker();
 
+    // run() must never reject: the engine's post-run bookkeeping (saveState
+    // with the terminal reason, on_session_end hook) runs AFTER this call and
+    // outside the engine's try, so a throw here would leave the session
+    // frozen at status "active" on disk. Per-turn errors are already turned
+    // into return-reasons by callModelWithFallback; this outer guard catches
+    // throws from the surrounding scaffolding (contextManager.manageAsync,
+    // hook emits, guards) and surfaces them as a model_error result.
+    try {
     while (this.turnCount < this.config.maxTurns) {
       this.turnCount++;
       const state = initialTurnState(this.turnCount);
@@ -359,9 +367,12 @@ export class TurnLoop {
         this.deps.contextManager.recordActualUsage(response!.usage.promptTokens, messages.length);
       }
 
-      // Handle max_output_tokens: if response was truncated, do continuation (up to 3 times)
+      // Handle max_output_tokens: if response was truncated, do continuation
+      // (up to 3 times). Truncation is reported as finish_reason "length"
+      // (OpenAI) or stop_reason "max_tokens" (Anthropic) — isTruncatedStop
+      // accepts both, so the OpenAI streaming path triggers continuation too.
       if (
-        response.stopReason === "max_tokens" &&
+        isTruncatedStop(response.stopReason) &&
         response.toolCalls.length === 0 &&
         response.text
       ) {
@@ -386,7 +397,7 @@ export class TurnLoop {
               this.config.signal,
             );
             combinedText += contResponse.text;
-            if (contResponse.stopReason !== "max_tokens" || contResponse.toolCalls.length > 0) {
+            if (!isTruncatedStop(contResponse.stopReason) || contResponse.toolCalls.length > 0) {
               response = { ...contResponse, text: combinedText };
               break;
             }
@@ -620,6 +631,21 @@ export class TurnLoop {
         outcome: "continue",
       });
     }
+    } catch (err) {
+      // Unexpected throw from the per-turn scaffolding (manageAsync, hooks,
+      // guards). Patch any dangling tool_use so a later resume isn't poisoned,
+      // surface the error to the UI, and return a terminal reason so the
+      // engine's post-run saveState records model_error instead of leaving
+      // the session stuck at "active".
+      this.patchOrphanedToolUses(messages);
+      this.currentTurnLog.error("turn.unhandled_error", {
+        cat: "turn",
+        error: (err as Error).message,
+        stack: (err as Error).stack?.split("\n").slice(0, 4).join("\n"),
+      });
+      this.config.onStream?.({ type: "error", error: (err as Error).message });
+      return { text: finalText, reason: "model_error", messages };
+    }
 
     // Max turns reached — do one final summarization call (no tools)
     logger.warn("turn.max_turns_reached", {
@@ -670,6 +696,7 @@ export class TurnLoop {
   private async callModelWithFallback(messages: Message[]) {
     // Wrap stream callback to track tool_use_start events and reactive compaction
     let streamingResponseTokens = 0;
+    let reactiveBucket = -1;
     const wrappedStream: StreamCallback | undefined = this.config.onStream
       ? (event) => {
           if (event.type === "tool_use_start" && event.toolCall?.id) {
@@ -680,8 +707,12 @@ export class TurnLoop {
             streamingResponseTokens += Math.ceil(event.text.length / 4);
           }
           // Reactive compaction warning: if nearing context limit mid-stream,
-          // log a warning (actual compaction happens between turns)
-          if (streamingResponseTokens > 0 && streamingResponseTokens % 2000 === 0) {
+          // log a warning (actual compaction happens between turns). Gated to
+          // fire once per 2000-token bucket crossed — the old `% 2000 === 0`
+          // check essentially never matched the running accumulator.
+          const probe = crossedReactiveThreshold(streamingResponseTokens, reactiveBucket);
+          if (probe.crossed) {
+            reactiveBucket = probe.bucket;
             if (this.deps.contextManager.shouldReactiveCompact(messages, streamingResponseTokens)) {
               this.currentTurnLog.warn("turn.reactive_compact_warning", {
                 cat: "turn",
@@ -721,58 +752,6 @@ export class TurnLoop {
         this.config.signal,
       );
     }
-  }
-
-  /**
-   * Execute tools with overlap: start concurrent-safe (read-only) tools
-   * immediately in parallel while sequential (write) tools run one-by-one.
-   * Both groups run simultaneously — we don't wait for safe tools to finish
-   * before starting unsafe ones.
-   */
-  private async executeToolsOverlapped(calls: ToolCall[]): Promise<ToolResult[]> {
-    if (calls.length <= 1) {
-      // Single tool — no overlap needed
-      return this.deps.toolExecutor.executeAll(calls);
-    }
-
-    const safe: ToolCall[] = [];
-    const unsafe: ToolCall[] = [];
-
-    for (const call of calls) {
-      if (this.deps.toolExecutor.isConcurrencySafe(call.toolName)) {
-        safe.push(call);
-      } else {
-        unsafe.push(call);
-      }
-    }
-
-    // If all same type, delegate directly
-    if (safe.length === 0 || unsafe.length === 0) {
-      return this.deps.toolExecutor.executeAll(calls);
-    }
-
-    // Run both groups simultaneously:
-    // - safe tools all in parallel
-    // - unsafe tools sequentially (but started at the same time as safe group)
-    const resultMap = new Map<string, ToolResult>();
-
-    const safePromise = Promise.all(safe.map((c) => this.deps.toolExecutor.executeSingle(c)));
-
-    const unsafePromise = (async () => {
-      const results: ToolResult[] = [];
-      for (const call of unsafe) {
-        results.push(await this.deps.toolExecutor.executeSingle(call));
-      }
-      return results;
-    })();
-
-    const [safeResults, unsafeResults] = await Promise.all([safePromise, unsafePromise]);
-
-    for (const r of safeResults) resultMap.set(r.id, r);
-    for (const r of unsafeResults) resultMap.set(r.id, r);
-
-    // Return results in original call order for deterministic transcript
-    return calls.map((c) => resultMap.get(c.id)!);
   }
 
   get currentTurn(): number {
