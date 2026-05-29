@@ -12,6 +12,8 @@ export interface TurnOpts {
    *  configured cwd. */
   cwd?: string;
   onStream?: (event: StreamEvent) => void;
+  /** Goal mode for this turn — forwarded to engine.run (loop-until-done). */
+  goal?: string;
 }
 
 interface QueuedTurn {
@@ -96,6 +98,7 @@ export class ChatSession {
         sessionId: this.id,
         signal: this.controller.signal,
         onStream,
+        goal: next.opts.goal,
       });
       this.lastActivityAt = Date.now();
       next.resolve(result);

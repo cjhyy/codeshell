@@ -38,6 +38,7 @@ export function validateHookResult(parsed: unknown): HookResult | null {
   const p = parsed as Record<string, unknown>;
   const known = new Set([
     "stop",
+    "continueSession",
     "data",
     "messages",
     "decision",
@@ -49,6 +50,7 @@ export function validateHookResult(parsed: unknown): HookResult | null {
     if (!known.has(k)) return null;
   }
   if ("stop" in p && typeof p.stop !== "boolean") return null;
+  if ("continueSession" in p && typeof p.continueSession !== "boolean") return null;
   if ("data" in p) {
     if (!p.data || typeof p.data !== "object" || Array.isArray(p.data)) return null;
   }

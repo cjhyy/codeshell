@@ -24,6 +24,20 @@ export class HookRegistry {
     this.hooks.get(eventName)!.sort((a, b) => b.priority - a.priority);
   }
 
+  /**
+   * Remove a previously-registered handler by identity. Used for handlers
+   * with a run-scoped lifetime (e.g. the per-run GoalStopHook) so they don't
+   * leak across subsequent runs on the same long-lived registry. No-op if
+   * the handler isn't registered for that event.
+   */
+  unregister(eventName: HookEventName, handler: HookHandler): void {
+    const list = this.hooks.get(eventName);
+    if (!list) return;
+    const next = list.filter((h) => h.handler !== handler);
+    if (next.length === 0) this.hooks.delete(eventName);
+    else this.hooks.set(eventName, next);
+  }
+
   async emit(eventName: HookEventName, data: Record<string, unknown> = {}): Promise<HookResult> {
     const handlers = this.hooks.get(eventName);
     if (!handlers?.length) return {};
@@ -58,6 +72,10 @@ export class HookRegistry {
           aggregated.additionalContext = aggregated.additionalContext
             ? `${aggregated.additionalContext}\n\n${result.additionalContext}`
             : result.additionalContext;
+        }
+        // on_stop: any handler asking to continue blocks termination.
+        if (result.continueSession) {
+          aggregated.continueSession = true;
         }
         if (result.stop) {
           aggregated.stop = true;

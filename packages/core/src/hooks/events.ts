@@ -24,6 +24,21 @@
  *                                          may return `messages` to inject a
  *                                          per-turn reminder appended to the
  *                                          conversation right before the model call.
+ *   - on_stop                              (turn-loop.ts) — fires when the model
+ *                                          returns no tool calls and the loop is
+ *                                          about to return reason "completed". A
+ *                                          handler returning `continueSession: true`
+ *                                          (with `messages`) BLOCKS termination:
+ *                                          the messages are injected as a
+ *                                          <system-reminder> and the loop runs
+ *                                          another turn instead of stopping. This
+ *                                          is the seam Goal mode uses (see
+ *                                          goal-stop-hook.ts). Bounded by a
+ *                                          consecutive-block cap (maxStopBlocks)
+ *                                          and maxTurns. ctx.data carries `goal`,
+ *                                          `finalText`, `turnCount`. Distinct from
+ *                                          HookResult.stop, which controls the hook
+ *                                          CHAIN, not agent termination.
  *   - pre_tool_use / post_tool_use         (executor.ts) — pre_tool_use honors
  *                                          `decision: "deny"` to short-circuit
  *                                          the call (executor.ts:131).
@@ -78,6 +93,7 @@ export type HookEventName =
   | "on_agent_end"
   | "on_turn_start"
   | "on_turn_end"
+  | "on_stop"
   | "on_tool_start"
   | "on_tool_end"
   | "on_permission_check"
@@ -101,6 +117,13 @@ export interface HookContext {
 export interface HookResult {
   /** If true, stop the hook chain */
   stop?: boolean;
+  /**
+   * For on_stop: if true, BLOCK agent termination — the loop injects this
+   * result's `messages` and runs another turn instead of returning
+   * "completed". Distinct from `stop` (which only short-circuits the hook
+   * chain). Ignored for non-on_stop events. Bounded by maxStopBlocks.
+   */
+  continueSession?: boolean;
   /** Modified data to pass along */
   data?: Record<string, unknown>;
   /** Additional messages to inject */

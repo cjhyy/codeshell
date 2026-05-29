@@ -40,6 +40,20 @@ export interface TurnLoopConfig {
    * the on-disk turnCount/status frozen at the last completion.
    */
   onTurnBoundary?: (turnCount: number) => void;
+  /**
+   * Goal mode: the active goal text, passed to on_stop handlers via
+   * ctx.data.goal so the GoalStopHook can judge completion. Undefined
+   * when no goal is set (on_stop still fires but built-in Goal handler
+   * is a no-op without it).
+   */
+  goal?: string;
+  /**
+   * Max consecutive times an on_stop handler may block termination before
+   * the loop forces a stop, mirroring Claude Code's stop-hook block cap.
+   * Resets to 0 whenever a turn completes without being blocked. Defaults
+   * to 8. Independent of maxTurns, which still bounds total turns.
+   */
+  maxStopBlocks?: number;
 }
 
 export interface CtxOverheadStore {
@@ -100,6 +114,13 @@ export class TurnLoop {
 
   /** Last emitted ctx token estimate; used to skip no-op usage_update events. */
   private lastCtxEmit = -1;
+
+  /**
+   * Consecutive on_stop blocks (Goal mode kept the agent going). Reset to 0
+   * on any unblocked completion. When it reaches config.maxStopBlocks the
+   * loop forces a stop so a stuck goal can't loop forever.
+   */
+  private stopBlockCount = 0;
 
   constructor(
     private readonly deps: TurnLoopDeps,
@@ -403,6 +424,58 @@ export class TurnLoop {
           hasToolUse: false,
         });
         messages.push({ role: "assistant", content: finalText });
+
+        // on_stop seam: the model wants to stop. Give handlers (Goal mode)
+        // a chance to BLOCK termination and keep the agent working. A
+        // handler returning continueSession=true injects its messages and
+        // we run another turn instead of returning. Bounded by
+        // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
+        const maxStopBlocks = this.config.maxStopBlocks ?? 8;
+        const stopHook = await this.emitHook("on_stop", {
+          goal: this.config.goal,
+          finalText,
+          turnCount: this.turnCount,
+        });
+        if (stopHook.continueSession && this.stopBlockCount < maxStopBlocks) {
+          this.stopBlockCount++;
+          const injection = wrapHookMessages(stopHook.messages);
+          if (injection) {
+            messages.push(injection);
+          } else {
+            // No guidance from the handler — inject a generic nudge so the
+            // model knows it must keep going rather than re-emitting the
+            // same final answer.
+            messages.push({
+              role: "user",
+              content:
+                "<system-reminder>The goal is not yet complete. Continue working toward it.</system-reminder>",
+            });
+          }
+          tlog.info("turn.stop_blocked", {
+            cat: "turn",
+            stopBlockCount: this.stopBlockCount,
+            maxStopBlocks,
+            hasGuidance: !!injection,
+          });
+          continue;
+        }
+        if (stopHook.continueSession && this.stopBlockCount >= maxStopBlocks) {
+          // Cap hit: stop anyway, but tell the user why we're not looping
+          // forever on an unsatisfiable goal.
+          tlog.info("turn.stop_block_cap", {
+            cat: "turn",
+            stopBlockCount: this.stopBlockCount,
+            maxStopBlocks,
+          });
+          this.config.onStream?.({
+            type: "assistant_message",
+            message: {
+              role: "assistant",
+              content: `（Goal 续跑已达 ${maxStopBlocks} 次上限，先停下。）`,
+            },
+          });
+        }
+        this.stopBlockCount = 0;
         return { text: finalText, reason: "completed", messages };
       }
 

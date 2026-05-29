@@ -92,6 +92,33 @@ describe("HookRegistry", () => {
     expect(order).toEqual([1]); // second hook not called
     expect(result.stop).toBe(true);
   });
+
+  it("aggregates continueSession across on_stop handlers (any → true)", async () => {
+    const hr = new HookRegistry();
+    hr.register("on_stop", () => ({ messages: ["m1"] }), 10);
+    hr.register("on_stop", () => ({ continueSession: true, messages: ["m2"] }), 5);
+    const result = await hr.emit("on_stop");
+    expect(result.continueSession).toBe(true);
+    expect(result.messages).toEqual(["m1", "m2"]);
+  });
+
+  it("unregister removes a handler by identity (run-scoped goal hook)", async () => {
+    const hr = new HookRegistry();
+    let calls = 0;
+    const handler = () => { calls++; return {}; };
+    hr.register("on_stop", handler, 0, "goal-stop");
+    expect(hr.countHandlers("on_stop")).toBe(1);
+    await hr.emit("on_stop");
+    expect(calls).toBe(1);
+
+    hr.unregister("on_stop", handler);
+    expect(hr.countHandlers("on_stop")).toBe(0);
+    await hr.emit("on_stop");
+    expect(calls).toBe(1); // not called again
+
+    // No-op when the handler isn't registered.
+    expect(() => hr.unregister("on_stop", handler)).not.toThrow();
+  });
 });
 
 describe("Engine hooks", () => {

@@ -91,6 +91,12 @@ export interface RunParams {
    * this run; when omitted, the engine keeps its configured default.
    */
   planMode?: boolean;
+  /**
+   * Goal mode for this run. When set, the engine runs loop-until-done:
+   * on each natural completion a GoalStopHook judges whether this goal is
+   * met and re-prompts if not (bounded). Orthogonal to permissionMode.
+   */
+  goal?: string;
 }
 
 export interface RunResult {

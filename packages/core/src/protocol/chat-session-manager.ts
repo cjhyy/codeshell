@@ -9,6 +9,7 @@ export type EngineConfigSlice = Pick<
   | "preset"
   | "customSystemPrompt"
   | "appendSystemPrompt"
+  | "goal"
   | "maxTurns"
   | "maxContextTokens"
   | "cwd"
