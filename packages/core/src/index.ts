@@ -224,6 +224,9 @@ export {
   pluginInstallKey,
   removeInstallEntries,
 } from "./plugins/installedPlugins.js";
+export { uninstallPluginByName } from "./plugins/installer/uninstall.js";
+export { listInstalledPlugins, type PluginListRow } from "./plugins/installer/list.js";
+export { updatePluginByName, type UpdateResult } from "./plugins/installer/update.js";
 
 // ─── Arena ───────────────────────────────────────────────────────
 
