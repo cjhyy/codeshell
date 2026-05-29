@@ -10,7 +10,7 @@
  */
 
 import { Engine, type EngineConfig, type EngineHookConfig } from "../engine/engine.js";
-import type { LLMConfig, RegisteredTool } from "../types.js";
+import type { ClientDefaults, LLMConfig, RegisteredTool } from "../types.js";
 import type { RunSnapshot, RunExecutionContext, RunExecutionResult } from "./types.js";
 import {
   RunApprovalBackend,
@@ -68,6 +68,8 @@ export interface CustomToolEntry {
 
 export interface EngineRunnerConfig {
   llm: LLMConfig;
+  /** Cross-model runtime knobs (temperature/timeout/imageDetail). */
+  clientDefaults?: ClientDefaults;
   maxTurns?: number;
   maxContextTokens?: number;
   sessionStorageDir?: string;
@@ -126,6 +128,7 @@ export class EngineRunner implements RunExecutor {
 
     const engineConfig: EngineConfig = {
       llm: this.config.llm,
+      clientDefaults: this.config.clientDefaults,
       cwd: run.cwd,
       maxTurns: this.config.maxTurns ?? 30,
       maxContextTokens: this.config.maxContextTokens ?? 200_000,

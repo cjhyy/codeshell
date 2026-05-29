@@ -24,7 +24,7 @@ export async function runTournamentCandidates(args: {
 
   const tasks = participants.map(async (p, idx) => {
     signal?.throwIfAborted();
-    const client = await createLLMClient({ ...p.llm, enableStreaming: false });
+    const client = await createLLMClient(p.llm, p.clientDefaults);
     const prompt = format.draftPrompt(subject, minDraftLength);
     // Long-form generation needs a high output ceiling; the default 8k from
     // LLMClientBase is too low for a substantive PRD or design doc and
@@ -90,7 +90,7 @@ export async function mergeCandidatesToV1(args: {
   const { subject, format, author, candidates, minDraftLength, signal, onProgress } = args;
   onProgress?.({ type: "v1_merge_start", participant: author.name });
 
-  const client = await createLLMClient({ ...author.llm, enableStreaming: false });
+  const client = await createLLMClient(author.llm, author.clientDefaults);
   const prompt = format.mergePrompt(subject, candidates, minDraftLength);
   const resp = await client.createMessage({
     systemPrompt: prompt,
@@ -127,7 +127,7 @@ export async function singleAuthorV1(args: {
   signal?: AbortSignal;
 }): Promise<Draft> {
   const { subject, format, author, minDraftLength, signal } = args;
-  const client = await createLLMClient({ ...author.llm, enableStreaming: false });
+  const client = await createLLMClient(author.llm, author.clientDefaults);
   const prompt = format.draftPrompt(subject, minDraftLength);
   const resp = await client.createMessage({
     systemPrompt: prompt,

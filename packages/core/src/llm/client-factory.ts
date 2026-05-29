@@ -2,11 +2,11 @@
  * LLM provider factory with registry pattern.
  */
 
-import type { LLMConfig } from "../types.js";
+import type { ClientDefaults, LLMConfig } from "../types.js";
 import type { LLMClientBase } from "./client-base.js";
 import { LLMError } from "../exceptions.js";
 
-type ProviderConstructor = new (config: LLMConfig) => LLMClientBase;
+type ProviderConstructor = new (config: LLMConfig, defaults?: ClientDefaults) => LLMClientBase;
 
 const PROVIDER_REGISTRY = new Map<string, ProviderConstructor>();
 
@@ -14,7 +14,10 @@ export function registerProvider(name: string, cls: ProviderConstructor): void {
   PROVIDER_REGISTRY.set(name, cls);
 }
 
-export async function createLLMClient(config: LLMConfig): Promise<LLMClientBase> {
+export async function createLLMClient(
+  config: LLMConfig,
+  defaults?: ClientDefaults,
+): Promise<LLMClientBase> {
   let Cls = PROVIDER_REGISTRY.get(config.provider);
 
   if (!Cls) {
@@ -36,7 +39,7 @@ export async function createLLMClient(config: LLMConfig): Promise<LLMClientBase>
     );
   }
 
-  return new Cls(config);
+  return new Cls(config, defaults);
 }
 
 export { PROVIDER_REGISTRY };

@@ -61,10 +61,7 @@ export async function runAdjudication(
   });
 
   // Adjudicate contested claims via LLM
-  const client = await createLLMClient({
-    ...concluder.llm,
-    enableStreaming: false,
-  });
+  const client = await createLLMClient(concluder.llm, concluder.clientDefaults);
 
   for (const claim of contestedClaims) {
     signal?.throwIfAborted();

@@ -4,7 +4,7 @@
  * V2 architecture: shared facts → independent research → findings → cross-review → consensus.
  */
 
-import type { LLMConfig } from "../types.js";
+import type { ClientDefaults, LLMConfig } from "../types.js";
 
 // ─── Arena Mode ─────────────────────────────────────────────────
 
@@ -115,8 +115,14 @@ export const ARENA_MODE_DEFAULTS: Record<ArenaMode, { maxDiscussionRounds: numbe
 export interface ArenaParticipant {
   /** Display name, e.g. "Claude Sonnet", "GPT-4o" */
   name: string;
-  /** LLM config for this participant */
+  /** LLM config for this participant (pure model identity) */
   llm: LLMConfig;
+  /**
+   * Cross-model client knobs (temperature/timeout/etc.). Arena hardcodes
+   * temperature here so debate participants speak with consistent sampling
+   * regardless of the user's session preference.
+   */
+  clientDefaults?: ClientDefaults;
 }
 
 // ─── V2: Base Context ─────────────────────────────────────────

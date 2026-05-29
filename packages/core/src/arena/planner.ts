@@ -95,7 +95,6 @@ export async function planArena(
 
     const client = await createLLMClient({
       ...llmConfig,
-      enableStreaming: false,
       maxTokens: 1024,
     });
 

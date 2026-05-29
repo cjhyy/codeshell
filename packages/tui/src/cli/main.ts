@@ -131,9 +131,8 @@ addCommonOptions(
         model: resolved.model ?? settings.model.name ?? "anthropic/claude-opus-4-6",
         apiKey,
         baseUrl: resolved.baseUrl ?? settings.model.baseUrl ?? "https://openrouter.ai/api/v1",
-        temperature: 0.3,
-        enableStreaming: false,
       },
+      clientDefaults: { temperature: 0.3 },
     });
   });
 

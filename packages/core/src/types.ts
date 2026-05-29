@@ -307,17 +307,21 @@ export type StreamCallback = (event: StreamEvent) => void | Promise<void>;
 
 // ─── LLM ──────────────────────────────────────────────────────────
 
+/**
+ * LLMConfig — model identity only. Everything in this object describes
+ * "which model and how to reach it", nothing about user preferences or
+ * client wiring. Hot-switching models replaces this object wholesale.
+ *
+ * For cross-model preferences (temperature, timeouts, image detail) see
+ * ClientDefaults — those live on the Engine and feed every LLMClient
+ * independently of model identity.
+ */
 export interface LLMConfig {
   provider: string;
   model: string;
   apiKey?: string;
   baseUrl?: string;
-  temperature?: number;
-  topP?: number;
   maxTokens?: number;
-  timeout?: number;
-  retryMaxAttempts?: number;
-  enableStreaming?: boolean;
   /**
    * Default thinking-mode for DeepSeek V4. Per-call `options.thinking`
    * (e.g. summarize sub-calls) overrides this. Ignored on other providers.
@@ -331,6 +335,22 @@ export interface LLMConfig {
    * ("openai" or "anthropic") that picks which client class to use.
    */
   providerKind?: string;
+}
+
+/**
+ * ClientDefaults — runtime knobs that apply regardless of which model is
+ * active. Settings/UI source these once at boot (or when settings change);
+ * model hot-switching never alters them.
+ *
+ * Anything model-specific belongs in LLMConfig instead.
+ */
+export interface ClientDefaults {
+  /** Sampling temperature. Default 0.3. Per-call options.temperature overrides. */
+  temperature?: number;
+  /** HTTP timeout in ms for LLM requests. Default 120_000. */
+  timeout?: number;
+  /** Max retry attempts for transient errors. Default 3. */
+  retryMaxAttempts?: number;
   /**
    * OpenAI-style detail hint sent on every image_url part. Anthropic
    * ignores this. Defaults to "high" (OpenAI's own default) when

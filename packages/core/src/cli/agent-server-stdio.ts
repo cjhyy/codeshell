@@ -49,12 +49,15 @@ const cwd = process.env.AGENT_CWD ?? process.cwd();
 const settingsManager = new SettingsManager(cwd, "full");
 const settings = settingsManager.get();
 
+// LLMConfig is pure model identity now — only the bare identity fields go here.
+// temperature/imageDetail/timeout/retryMaxAttempts are ClientDefaults, derived
+// inside Engine.populateModelPoolFromSettings from settings.model.temperature
+// and settings.images.detail.
 const llmConfig = {
   provider: settings.model.provider,
   model: settings.model.name,
   apiKey: settings.model.apiKey ?? "",
   baseUrl: settings.model.baseUrl,
-  temperature: settings.model.temperature,
   maxTokens: settings.model.maxTokens,
 };
 
@@ -72,9 +75,12 @@ const seedEngine = new Engine({
 const modelPool = seedEngine.getModelPool();
 const toolRegistry = seedEngine.getToolRegistry();
 
-// Capture the seed engine's resolved llmConfig (post-populateModelPoolFromSettings).
-// This includes resolved provider/baseUrl/apiKey from settings.providers[].
+// Capture the seed engine's resolved llmConfig + clientDefaults
+// (post-populateModelPoolFromSettings). Session engines inherit defaults so
+// settings.model.temperature / images.detail apply uniformly without each
+// factory call re-reading settings.
 const resolvedLlmConfig = seedEngine.getConfig().llm;
+const resolvedClientDefaults = seedEngine.getConfig().clientDefaults;
 
 // Reuse the same SettingsManager instance for the runtime instead of constructing
 // a fresh one — avoids duplication and keeps the pattern cleaner.
@@ -117,6 +123,10 @@ const chatManager = new ChatSessionManager({
   engineFactory: (slice) =>
     new Engine({
       llm: runtime.modelPool.resolveLLMConfig() ?? resolvedLlmConfig,
+      // Inherit the seed engine's resolved clientDefaults so every session
+      // engine sees the user's temperature/imageDetail without each factory
+      // call re-running populateModelPoolFromSettings.
+      clientDefaults: resolvedClientDefaults,
       cwd,
       runtime,
       // Inherit full scope so spawned subagents read user config too.

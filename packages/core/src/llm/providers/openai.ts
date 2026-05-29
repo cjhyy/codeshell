@@ -9,7 +9,7 @@
  */
 
 import OpenAI from "openai";
-import type { LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
+import type { ClientDefaults, LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
 import type { CreateMessageOptions } from "../types.js";
 import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
@@ -114,8 +114,8 @@ export class OpenAIClient extends LLMClientBase {
   // a new variant ships before our regex knows about it.
   private _forceMaxCompletionTokens = false;
 
-  constructor(config: LLMConfig) {
-    super(config);
+  constructor(config: LLMConfig, defaults?: ClientDefaults) {
+    super(config, defaults);
   }
 
   protected initClient(): void {
@@ -612,7 +612,7 @@ export class OpenAIClient extends LLMClientBase {
               // our internal "original" (a Codex-style high-fidelity
               // marker) to "high" since OpenAI server-side scales 2048+
               // images anyway.
-              const wireDetail = mapImageDetailToOpenAI(this.config.imageDetail);
+              const wireDetail = mapImageDetailToOpenAI(this.imageDetail);
               imageParts.push({
                 type: "image_url",
                 image_url: {

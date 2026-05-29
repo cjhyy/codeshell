@@ -144,10 +144,12 @@ export async function runCommand(options: RunOptions): Promise<void> {
       activeModelEntry?.baseUrl ??
       settings.model?.baseUrl ??
       "https://openrouter.ai/api/v1",
-    temperature: settings.model?.temperature,
     maxTokens: activeModelEntry?.maxOutputTokens ?? settings.model?.maxTokens ?? 8192,
-    enableStreaming: true,
   };
+  // temperature is a ClientDefaults knob now; the seed Engine reads
+  // settings.model.temperature into clientDefaults via
+  // populateModelPoolFromSettings (settingsScope "full"), and session engines
+  // inherit it from the seed's resolved config — no explicit pass needed here.
 
   const sandboxConfig = mergeSandboxConfig(settings.sandbox, "auto");
 
@@ -180,6 +182,9 @@ export async function runCommand(options: RunOptions): Promise<void> {
   const modelPool = seedEngine.getModelPool();
   const toolRegistry = seedEngine.getToolRegistry();
   const resolvedLlmConfig = seedEngine.getConfig().llm;
+  // Cross-model knobs (temperature/imageDetail) the seed engine derived from
+  // settings — inherited by every session engine so they don't each re-read.
+  const resolvedClientDefaults = seedEngine.getConfig().clientDefaults;
   // Reuse the SettingsManager already constructed above (settingsManager).
   // MCPManager: no-op holder for EngineRuntime; per-session engines connect
   // via mcpServers in sharedCfg.
@@ -204,6 +209,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
     engineFactory: (slice) =>
       new Engine({
         llm: resolvedLlmConfig,
+        clientDefaults: resolvedClientDefaults,
         cwd,
         runtime,
         ...sharedCfg,

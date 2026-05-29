@@ -16,7 +16,7 @@ import { MCPManager } from "@cjhyy/code-shell-core";
 import { CostTracker } from "@cjhyy/code-shell-core";
 import { resolveApiKey } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
-import type { LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
+import type { ClientDefaults, LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
 import { startInkRepl } from "../../ui/index.js";
 import { runInkOnboarding } from "../../ui/onboarding-runner.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
@@ -116,13 +116,19 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     model,
     apiKey,
     baseUrl,
-    temperature: effortConfig.temperature ?? settings.model.temperature ?? 0.3,
     // Priority: user-configured settings.model.maxTokens > effort preset > 8192.
     // Previously this was `effortConfig.maxTokens ?? settings.model.maxTokens`,
     // which silently ignored the user's setting because effortConfig is always
     // populated.
     maxTokens: settings.model.maxTokens ?? effortConfig.maxTokens ?? 8192,
-    enableStreaming: true,
+  };
+
+  // Temperature is a cross-model runtime knob (ClientDefaults), no longer part
+  // of LLMConfig. The effort flag's temperature is a CLI override that
+  // settings.json doesn't know about, so thread it explicitly into every
+  // engine; falls back to settings.model.temperature, then 0.3.
+  const clientDefaults: ClientDefaults = {
+    temperature: effortConfig.temperature ?? settings.model.temperature ?? 0.3,
   };
 
   const permissionMode = (options.permissionMode ?? "acceptEdits") as PermissionMode;
@@ -130,6 +136,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
 
   // ── Shared config passed into every session engine ─────────────
   const sharedCfg = {
+    clientDefaults,
     preset: options.preset ?? settings.agent.preset,
     enabledBuiltinTools: settings.agent.enabledBuiltinTools,
     disabledBuiltinTools: settings.agent.disabledBuiltinTools,
@@ -150,7 +157,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   // 1. Seed engine — calls populateModelPoolFromSettings() in ctor so the
   //    model pool and tool registry are fully populated. Discarded after
   //    resource extraction (never runs a task).
-  const seedEngine = new Engine({ llm: llmConfig, cwd, settingsScope: "full" });
+  const seedEngine = new Engine({ llm: llmConfig, clientDefaults, cwd, settingsScope: "full" });
 
   // 2. Extract shared resources from seed engine
   const modelPool = seedEngine.getModelPool();

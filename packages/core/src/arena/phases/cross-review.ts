@@ -56,10 +56,7 @@ export async function runCrossReview(options: CrossReviewOptions): Promise<Findi
     if (otherReports.length === 0) return [];
     if (!myReport) return [];
 
-    const client = await createLLMClient({
-      ...p.llm,
-      enableStreaming: false,
-    });
+    const client = await createLLMClient(p.llm, p.clientDefaults);
 
     const systemPrompt = strategy.crossReviewSystemPrompt(p.name);
     const userContent = strategy.crossReviewUserPrompt(topic, myReport, otherReports);
@@ -177,10 +174,7 @@ export async function runVerificationReview(
     const myClaims = claimsToReview.filter((c) => c.owner !== p.name);
     if (myClaims.length === 0) return;
 
-    const client = await createLLMClient({
-      ...p.llm,
-      enableStreaming: false,
-    });
+    const client = await createLLMClient(p.llm, p.clientDefaults);
 
     const systemPrompt = strategy.crossReviewSystemPrompt(p.name);
 

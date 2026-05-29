@@ -67,10 +67,7 @@ export async function runDetailExpansion(
 
   const details: ArenaRoadmapPhaseDetail[] = [];
 
-  const client = await createLLMClient({
-    ...concluder.llm,
-    enableStreaming: false,
-  });
+  const client = await createLLMClient(concluder.llm, concluder.clientDefaults);
 
   const systemPrompt = strategy.detailExpansionSystemPrompt();
 

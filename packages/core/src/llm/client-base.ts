@@ -2,7 +2,7 @@
  * Abstract base class for all LLM provider clients.
  */
 
-import type { LLMConfig, LLMResponse, TokenUsage } from "../types.js";
+import type { ClientDefaults, LLMConfig, LLMResponse, TokenUsage } from "../types.js";
 import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
 import { LLMError, ContextLimitError, LLMRateLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
@@ -10,11 +10,11 @@ import { logger } from "../logging/logger.js";
 export abstract class LLMClientBase {
   readonly provider: string;
   readonly model: string;
-  readonly temperature: number;
   readonly maxTokens: number;
+  readonly temperature: number;
   readonly timeout: number;
   readonly retryMaxAttempts: number;
-  readonly enableStreaming: boolean;
+  readonly imageDetail?: ClientDefaults["imageDetail"];
 
   /**
    * Process-wide hook fired on every LLM response. The CLI installs this in
@@ -32,14 +32,23 @@ export abstract class LLMClientBase {
     requestCount: 0,
   };
 
-  constructor(protected readonly config: LLMConfig) {
+  /**
+   * `config` carries model identity (provider/model/apiKey/baseUrl/maxTokens/
+   * thinking/providerKind). `defaults` carries cross-model runtime knobs
+   * (temperature/timeout/retryMaxAttempts/imageDetail) — those are owned by
+   * the Engine and stay stable across hot model switches.
+   */
+  constructor(
+    protected readonly config: LLMConfig,
+    defaults?: ClientDefaults,
+  ) {
     this.provider = config.provider;
     this.model = config.model;
-    this.temperature = config.temperature ?? 0.3;
     this.maxTokens = config.maxTokens ?? 8192;
-    this.timeout = config.timeout ?? 120_000;
-    this.retryMaxAttempts = config.retryMaxAttempts ?? 3;
-    this.enableStreaming = config.enableStreaming ?? true;
+    this.temperature = defaults?.temperature ?? 0.3;
+    this.timeout = defaults?.timeout ?? 120_000;
+    this.retryMaxAttempts = defaults?.retryMaxAttempts ?? 3;
+    this.imageDetail = defaults?.imageDetail;
     this.initClient();
   }
 

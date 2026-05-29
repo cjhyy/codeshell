@@ -45,21 +45,19 @@ describe("redactLlmConfig", () => {
   });
 
   test("forwards non-secret fields verbatim", () => {
+    // temperature/enableStreaming are no longer part of LLMConfig (they moved
+    // to Engine.clientDefaults), so they're not in the redacted snapshot either.
     const out = redactLlmConfig({
       provider: "anthropic",
       model: "claude-opus-4-7",
       apiKey: "sk-secret",
       baseUrl: "https://example.com",
-      temperature: 0.7,
       maxTokens: 4096,
-      enableStreaming: true,
     });
     expect(out.provider).toBe("anthropic");
     expect(out.model).toBe("claude-opus-4-7");
     expect(out.baseUrl).toBe("https://example.com");
-    expect(out.temperature).toBe(0.7);
     expect(out.maxTokens).toBe(4096);
-    expect(out.enableStreaming).toBe(true);
   });
 });
 

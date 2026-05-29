@@ -3,7 +3,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import type { LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
+import type { ClientDefaults, LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
 import type { CreateMessageOptions } from "../types.js";
 import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
@@ -13,8 +13,8 @@ import { countTokens } from "../token-counter.js";
 export class AnthropicClient extends LLMClientBase {
   private _client: Anthropic | null = null;
 
-  constructor(config: LLMConfig) {
-    super(config);
+  constructor(config: LLMConfig, defaults?: ClientDefaults) {
+    super(config, defaults);
   }
 
   protected initClient(): void {

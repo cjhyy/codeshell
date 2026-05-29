@@ -65,10 +65,7 @@ export async function runParticipantResearchWithDossiers(options: ResearchOption
   const tasks = participants.map(async (p) => {
     onProgress?.({ type: "research_start", participant: p.name });
 
-    const client = await createLLMClient({
-      ...p.llm,
-      enableStreaming: false,
-    });
+    const client = await createLLMClient(p.llm, p.clientDefaults);
 
     const messages: Message[] = [
       {

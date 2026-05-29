@@ -22,7 +22,7 @@ export async function runRevise(args: {
   const { subject, format, previous, critiques, author, minDraftLength, signal, onProgress } = args;
   onProgress?.({ type: "revise_start", round: previous.version + 1, participant: author.name });
 
-  const client = await createLLMClient({ ...author.llm, enableStreaming: false });
+  const client = await createLLMClient(author.llm, author.clientDefaults);
   const prompt = format.revisePrompt(subject, previous, critiques, minDraftLength);
   const resp = await client.createMessage({
     systemPrompt: prompt,

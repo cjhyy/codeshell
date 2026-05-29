@@ -45,10 +45,7 @@ export async function buildConsensus(options: ConsensusOptions): Promise<ArenaCo
 
   onProgress?.({ type: "consensus_start" });
 
-  const client = await createLLMClient({
-    ...concluder.llm,
-    enableStreaming: false,
-  });
+  const client = await createLLMClient(concluder.llm, concluder.clientDefaults);
 
   const systemPrompt = strategy.consensusSystemPrompt();
 

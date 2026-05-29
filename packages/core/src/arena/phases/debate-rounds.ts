@@ -128,10 +128,7 @@ async function debateClaim(options: DebateClaimOptions): Promise<DebateRound[]> 
 
     // Each debater produces a turn
     const turnPromises = debaters.map(async (p) => {
-      const client = await createLLMClient({
-        ...p.llm,
-        enableStreaming: false,
-      });
+      const client = await createLLMClient(p.llm, p.clientDefaults);
 
       const systemPrompt = strategy.crossReviewSystemPrompt(p.name);
       let userContent: string;

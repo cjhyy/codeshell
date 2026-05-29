@@ -161,9 +161,8 @@ function resolveParticipant(
         maxTokens: preset.maxOutputTokens,
         baseUrl: fallbackBaseUrl,
         apiKey: fallbackApiKey,
-        temperature: ARENA_TEMPERATURE,
-        enableStreaming: false,
       },
+      clientDefaults: { temperature: ARENA_TEMPERATURE },
     };
   }
 
@@ -177,9 +176,8 @@ function resolveParticipant(
       maxTokens: getMaxOutputTokens(nameOrPath),
       baseUrl: fallbackBaseUrl,
       apiKey: fallbackApiKey,
-      temperature: ARENA_TEMPERATURE,
-      enableStreaming: false,
     },
+    clientDefaults: { temperature: ARENA_TEMPERATURE },
   };
 }
 
@@ -196,9 +194,8 @@ function participantFromPool(entry: ModelEntry, llmConfig: LLMConfig): ArenaPart
       maxTokens: entry.maxOutputTokens ?? getMaxOutputTokens(entry.model),
       baseUrl: entry.baseUrl ?? llmConfig.baseUrl,
       apiKey: entry.apiKey ?? llmConfig.apiKey,
-      temperature: ARENA_TEMPERATURE,
-      enableStreaming: false,
     },
+    clientDefaults: { temperature: ARENA_TEMPERATURE },
   };
 }
 

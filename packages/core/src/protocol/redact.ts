@@ -66,9 +66,7 @@ export interface RedactedLlmConfig {
   provider?: string;
   model?: string;
   baseUrl?: string;
-  temperature?: number;
   maxTokens?: number;
-  enableStreaming?: boolean;
   /** True when an apiKey is configured. */
   hasApiKey: boolean;
   /** Short preview when an apiKey is configured; omitted otherwise. */
@@ -85,18 +83,14 @@ export function redactLlmConfig(llm: {
   model?: string;
   apiKey?: string;
   baseUrl?: string;
-  temperature?: number;
   maxTokens?: number;
-  enableStreaming?: boolean;
 }): RedactedLlmConfig {
   const preview = makeApiKeyPreview(llm.apiKey);
   return {
     provider: llm.provider,
     model: llm.model,
     baseUrl: llm.baseUrl,
-    temperature: llm.temperature,
     maxTokens: llm.maxTokens,
-    enableStreaming: llm.enableStreaming,
     hasApiKey: typeof llm.apiKey === "string" && llm.apiKey.length > 0,
     ...(preview ? { apiKeyPreview: preview } : {}),
   };

@@ -30,6 +30,7 @@ export type {
   StreamEvent,
   StreamCallback,
   LLMConfig,
+  ClientDefaults,
   LLMResponse,
   Settings,
   MCPServerConfig,

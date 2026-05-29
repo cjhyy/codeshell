@@ -89,7 +89,7 @@ async function argueSingleShot(args: {
   signal?: AbortSignal;
 }): Promise<Critique[]> {
   const { critic, subject, format, draft, idPrefix, signal } = args;
-  const client = await createLLMClient({ ...critic.llm, enableStreaming: false });
+  const client = await createLLMClient(critic.llm, critic.clientDefaults);
   const resp = await client.createMessage({
     systemPrompt: format.argueSystem(format.format),
     messages: [{ role: "user", content: format.argueUser(subject, draft) }],
@@ -116,7 +116,7 @@ async function argueWithToolLoop(args: {
   signal?: AbortSignal;
 }): Promise<Critique[]> {
   const { critic, subject, format, draft, idPrefix, maxToolRounds, signal } = args;
-  const client = await createLLMClient({ ...critic.llm, enableStreaming: false });
+  const client = await createLLMClient(critic.llm, critic.clientDefaults);
 
   const messages: Message[] = [
     { role: "user", content: format.argueUser(subject, draft) },

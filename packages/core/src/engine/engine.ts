@@ -3,6 +3,7 @@
  */
 
 import type {
+  ClientDefaults,
   Message,
   LLMConfig,
   Settings,
@@ -96,6 +97,12 @@ import {
 
 export interface EngineConfig {
   llm: LLMConfig;
+  /**
+   * Cross-model runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail).
+   * Stays stable across hot model switches — only `llm` rotates. When omitted,
+   * Engine reads settings.json (model.temperature, images.detail) on construction.
+   */
+  clientDefaults?: ClientDefaults;
   cwd?: string;
   maxTurns?: number;
   maxToolCallsPerTurn?: number;
@@ -184,10 +191,15 @@ export interface EngineResult {
 
 /**
  * Resolve the LLM config for a spawned child Engine.
- * - `modelKey` set + present in pool → that model's config (over parent base).
+ * - `modelKey` set + present in pool → that model's config (pure entry-derived
+ *   identity; the parent's llm is NOT consulted).
  * - otherwise (no key, no pool, or key miss) → the parent's llm unchanged.
  * Key miss is a soft fallback, NOT an error: a stale agent definition must not
  * crash the spawn.
+ *
+ * ClientDefaults (temperature/timeout/etc.) are inherited from the parent
+ * Engine directly via EngineConfig.clientDefaults — they do not flow through
+ * this helper because they're not part of LLMConfig anymore.
  */
 export function resolveChildLlm(
   modelKey: string | undefined,
@@ -195,7 +207,7 @@ export function resolveChildLlm(
   parentLlm: LLMConfig,
 ): LLMConfig {
   if (modelKey && pool?.has(modelKey)) {
-    const resolved = pool.resolveLLMConfig(modelKey, parentLlm);
+    const resolved = pool.resolveLLMConfig(modelKey);
     if (resolved) return resolved;
   }
   return parentLlm;
@@ -457,7 +469,7 @@ export class Engine {
             const entry = this.modelPool.switch(match.key);
             this.config = {
               ...this.config,
-              llm: this.modelPool.toLLMConfig(entry, this.config.llm),
+              llm: this.modelPool.toLLMConfig(entry),
             };
           }
         }
@@ -468,17 +480,28 @@ export class Engine {
         this.autoPopulatePool(this.config.llm.apiKey, this.config.llm.baseUrl);
       }
 
-      // Carry image-attachment settings through to the llm config so
-      // the OpenAI request builder can emit the right `detail` hint
-      // per image. Anthropic ignores this field, so leaving it set is
-      // safe; we just refrain from setting it when settings don't ask
-      // for one so the existing per-provider defaults apply.
+      // Carry image-attachment settings + sampling temperature into
+      // clientDefaults. Both are cross-model knobs — they apply to whatever
+      // model is currently active and survive hot-switches. (Pre-cleanup
+      // these were merged into llm.imageDetail / llm.temperature; that path
+      // is gone because hot-switching now rotates llm wholesale.)
       const imageSettings = (settings as { images?: { detail?: "low" | "high" | "original" } }).images;
-      if (imageSettings?.detail) {
-        this.config = {
-          ...this.config,
-          llm: { ...this.config.llm, imageDetail: imageSettings.detail },
-        };
+      const modelBlock = (settings as { model?: { temperature?: number } }).model;
+      const nextDefaults: ClientDefaults = { ...(this.config.clientDefaults ?? {}) };
+      let defaultsChanged = false;
+      if (imageSettings?.detail && nextDefaults.imageDetail !== imageSettings.detail) {
+        nextDefaults.imageDetail = imageSettings.detail;
+        defaultsChanged = true;
+      }
+      if (
+        typeof modelBlock?.temperature === "number" &&
+        nextDefaults.temperature !== modelBlock.temperature
+      ) {
+        nextDefaults.temperature = modelBlock.temperature;
+        defaultsChanged = true;
+      }
+      if (defaultsChanged) {
+        this.config = { ...this.config, clientDefaults: nextDefaults };
       }
     } catch {
       // Settings not available — pool stays empty
@@ -520,7 +543,7 @@ export class Engine {
       const entry = this.modelPool.switch(defaultEntry.key);
       this.config = {
         ...this.config,
-        llm: this.modelPool.toLLMConfig(entry, this.config.llm),
+        llm: this.modelPool.toLLMConfig(entry),
       };
     }
   }
@@ -739,7 +762,11 @@ export class Engine {
         );
         const childLlm = resolveChildLlm(req.model, this.modelPool, this.config.llm);
         const child = new Engine({
-          llm: { ...childLlm, retryMaxAttempts: 2 },
+          llm: childLlm,
+          // Inherit parent's runtime knobs (temperature, image detail, timeouts)
+          // but cap sub-agent retries at 2 — they're short-lived and we'd
+          // rather surface failures than burn a 9 s exponential backoff loop.
+          clientDefaults: { ...(this.config.clientDefaults ?? {}), retryMaxAttempts: 2 },
           cwd,
           permissionMode: this.config.permissionMode,
           preset: this.preset.name,
@@ -1053,7 +1080,7 @@ export class Engine {
     }
 
     // Kick off LLM client creation early (network handshake)
-    const llmClientPromise = createLLMClient(this.config.llm);
+    const llmClientPromise = createLLMClient(this.config.llm, this.config.clientDefaults);
 
     const mode = this.config.permissionMode ?? "acceptEdits";
     const { rules: defaultRules, backend: approvalBackend } = this.buildPermissionConfig(mode, cwd);
@@ -1656,7 +1683,10 @@ export class Engine {
    */
   switchModel(key: string): ModelEntry {
     const entry = this.modelPool.switch(key);
-    const nextLlm = this.modelPool.toLLMConfig(entry, this.config.llm);
+    // LLMConfig is pure model identity now — rotate it wholesale. Cross-model
+    // runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) live on
+    // this.config.clientDefaults and survive the switch untouched.
+    const nextLlm = this.modelPool.toLLMConfig(entry);
     this.config = { ...this.config, llm: nextLlm };
     this.persistActiveModel(entry, nextLlm);
     return entry;

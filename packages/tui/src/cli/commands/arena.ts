@@ -151,10 +151,9 @@ function resolveOneParticipant(
         model: m.model,
         apiKey: m.apiKey ?? engineConfig.llm.apiKey,
         baseUrl: m.baseUrl ?? engineConfig.llm.baseUrl,
-        temperature: 0.3,
         maxTokens: m.maxOutputTokens ?? getMaxOutputTokens(m.model),
-        enableStreaming: false,
       },
+      clientDefaults: { temperature: 0.3 },
     };
   }
   // Full object (backward compat)
@@ -165,10 +164,9 @@ function resolveOneParticipant(
       model: entry.model,
       apiKey: entry.apiKey ?? engineConfig.llm.apiKey,
       baseUrl: entry.baseUrl ?? engineConfig.llm.baseUrl,
-      temperature: 0.3,
       maxTokens: getMaxOutputTokens(entry.model),
-      enableStreaming: false,
     } satisfies LLMConfig,
+    clientDefaults: { temperature: 0.3 },
   };
 }
 
@@ -192,10 +190,9 @@ function resolveParticipants(
             model: fromPool.model,
             apiKey: fromPool.apiKey ?? engineConfig.llm.apiKey,
             baseUrl: fromPool.baseUrl ?? engineConfig.llm.baseUrl,
-            temperature: 0.3,
             maxTokens: fromPool.maxOutputTokens ?? getMaxOutputTokens(fromPool.model),
-            enableStreaming: false,
           },
+          clientDefaults: { temperature: 0.3 },
         };
       }
       // Fallback to MODEL_PRESETS (backward compat)
@@ -208,16 +205,15 @@ function resolveParticipants(
             model: preset.model,
             apiKey: engineConfig.llm.apiKey,
             baseUrl: engineConfig.llm.baseUrl,
-            temperature: 0.3,
             maxTokens: preset.maxOutputTokens,
-            enableStreaming: false,
           },
+          clientDefaults: { temperature: 0.3 },
         };
       }
       // Raw model path
       return {
         name: modelDisplayName(name),
-        llm: { ...engineConfig.llm, model: name, enableStreaming: false },
+        llm: { ...engineConfig.llm, model: name },
       };
     });
   }
@@ -238,7 +234,6 @@ function resolveParticipants(
       llm: {
         ...engineConfig.llm,
         maxTokens: getMaxOutputTokens(engineConfig.llm.model),
-        enableStreaming: false,
       },
     },
   ];
@@ -254,7 +249,6 @@ function resolveParticipants(
         ...engineConfig.llm,
         model: opponent,
         maxTokens: getMaxOutputTokens(opponent),
-        enableStreaming: false,
       },
     });
   }

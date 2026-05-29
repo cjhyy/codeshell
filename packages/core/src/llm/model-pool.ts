@@ -231,10 +231,16 @@ export class ModelPool {
   }
 
   /**
-   * Build an LLMConfig for a given model entry, merging with a base config
-   * (inherits apiKey, baseUrl, etc. from the base if not set on the entry).
+   * Build an LLMConfig (pure model identity) for the given entry. Cross-model
+   * runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) are NOT
+   * part of LLMConfig — they live on the Engine as ClientDefaults and are
+   * threaded into the LLMClient independently. That separation lets hot-
+   * switching the model replace this object wholesale without touching the
+   * user's runtime preferences (and without leaking the old model's settings
+   * onto a model that doesn't share them — e.g. 384k-output deepseek bleeding
+   * into 128k-cap gpt-5.5).
    */
-  toLLMConfig(entry: ModelEntry, base?: Partial<LLMConfig>): LLMConfig {
+  toLLMConfig(entry: ModelEntry): LLMConfig {
     const fromCat =
       entry.providerKey && this.providerCatalog
         ? this.providerCatalog.get(entry.providerKey)
@@ -253,32 +259,25 @@ export class ModelPool {
         kindToClientProvider(fromCat?.kind) ||
         "openai",
       model: entry.model,
-      apiKey: entry.apiKey ?? fromCat?.apiKey ?? base?.apiKey,
-      baseUrl: entry.baseUrl ?? fromCat?.baseUrl ?? base?.baseUrl,
-      temperature: base?.temperature ?? 0.3,
-      maxTokens: entry.maxOutputTokens ?? base?.maxTokens ?? 8192,
-      enableStreaming: base?.enableStreaming ?? true,
-      // thinking precedence: model entry > provider catalog > base.
-      // Model-level wins so users can hold one default for "deepseek"
-      // and still override a single model (e.g. v4-pro off).
-      ...(entry.thinking || fromCat?.thinking || base?.thinking
-        ? { thinking: entry.thinking ?? fromCat?.thinking ?? base?.thinking }
+      apiKey: entry.apiKey ?? fromCat?.apiKey,
+      baseUrl: entry.baseUrl ?? fromCat?.baseUrl,
+      maxTokens: entry.maxOutputTokens ?? 8192,
+      // thinking: entry overrides catalog. No base fallback — see class doc.
+      ...(entry.thinking || fromCat?.thinking
+        ? { thinking: entry.thinking ?? fromCat?.thinking }
         : {}),
       // Carry the catalog kind through so the capability layer can pick
-      // per-(kind, model) request-shape rules. Defaults below cover the
-      // unusual case where an entry has a provider but no providerKey
-      // (legacy / arena-injected models).
+      // per-(kind, model) request-shape rules.
       ...(fromCat?.kind ? { providerKind: fromCat.kind } : {}),
     };
   }
 
   /**
-   * Build an LLMConfig for the active model (or a specific key),
-   * merging with a base config.
+   * Build an LLMConfig for the active model (or a specific key).
    */
-  resolveLLMConfig(key?: string, base?: Partial<LLMConfig>): LLMConfig | undefined {
+  resolveLLMConfig(key?: string): LLMConfig | undefined {
     const entry = this.get(key);
     if (!entry) return undefined;
-    return this.toLLMConfig(entry, base);
+    return this.toLLMConfig(entry);
   }
 }

@@ -33,9 +33,7 @@ function createRunManager(): RunManager {
     model: settings.model.name ?? "anthropic/claude-opus-4-6",
     apiKey,
     baseUrl: settings.model.baseUrl ?? "https://openrouter.ai/api/v1",
-    temperature: settings.model.temperature,
     maxTokens: settings.model.maxTokens ?? 8192,
-    enableStreaming: true,
   };
 
   const store = new FileRunStore();
@@ -43,6 +41,8 @@ function createRunManager(): RunManager {
     store,
     executor: {
       llm,
+      // temperature is a ClientDefaults knob now (no longer on LLMConfig).
+      clientDefaults: { temperature: settings.model.temperature },
       maxTurns: 30,
       maxContextTokens: settings.context.maxTokens,
       sessionStorageDir: settings.session.storageDir,
