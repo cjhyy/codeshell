@@ -389,6 +389,78 @@ export function ToggleCapabilitySection({
   );
 }
 
+/**
+ * Image attachment settings — currently just the OpenAI-side
+ * `detail` hint (low / high / original) so users on a tight token
+ * budget can flip every image to the cheap 85-token-per-image
+ * rendering without giving up image attachments entirely.
+ *
+ * Anthropic providers ignore the field; we still surface it on the
+ * user-level page because the active model can switch mid-session
+ * and we'd rather have one place to control it than per-call args.
+ */
+export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
+  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const [detail, setDetail] = useState<"low" | "high" | "original" | "">("");
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const images = objectOf(s.images);
+    const d = images.detail;
+    setDetail(
+      d === "low" || d === "high" || d === "original" ? d : "",
+    );
+  };
+  useEffect(() => {
+    void load();
+  }, [scope, activeRepoPath]);
+
+  const save = async (next: "low" | "high" | "original" | ""): Promise<void> => {
+    setDetail(next);
+    setSaving(true);
+    try {
+      const current = objectOf((await window.codeshell.getSettings(scope, cwd))?.images);
+      const nextImages = next ? { ...current, detail: next } : { ...current, detail: undefined };
+      await window.codeshell.updateSettings(scope, { images: nextImages }, cwd);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const options: Array<{ id: "low" | "high" | "original" | ""; label: string; help: string }> = [
+    { id: "", label: "默认", help: "由 provider 决定 (OpenAI = auto)" },
+    { id: "low", label: "Low", help: "85 tokens/图 固定,最省" },
+    { id: "high", label: "High", help: "服务端切 tile,默认体验" },
+    { id: "original", label: "Original", help: "保留客户端尺寸,最贵" },
+  ];
+
+  return (
+    <section className="settings-section">
+      <h3 className="settings-section-title">图片细节 (OpenAI 路径)</h3>
+      <p className="settings-section-help">
+        发给 OpenAI 兼容 provider 时图片的 detail 参数。
+        {scope === "user" ? "全局默认,会被项目设置覆盖。" : "仅当前项目。"}
+        Anthropic 路径不读这个字段。
+      </p>
+      <div className="settings-option-grid">
+        {options.map((o) => (
+          <button
+            key={o.id || "default"}
+            type="button"
+            className={`settings-option-card${detail === o.id ? " active" : ""}`}
+            disabled={saving}
+            onClick={() => void save(o.id)}
+          >
+            <span className="settings-option-title">{o.label}</span>
+            <span className="settings-option-desc">{o.help}</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function ArchivedConversationsSection({
   repos,
   sessionIndices,

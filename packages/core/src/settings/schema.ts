@@ -256,6 +256,25 @@ export const SettingsSchema = z
       .default({}),
 
     /**
+     * Image attachment handling. Sub-fields:
+     *   - detail: OpenAI-style fidelity hint applied to every user-
+     *     attached image. "low" = 85 tokens/image fixed (cheap
+     *     thumbnail), "high" = ~768 px tiles (default), "original" =
+     *     keep client-side dimensions (most expensive). Anthropic
+     *     ignores this field today; that's fine — it just gets
+     *     dropped on the Claude path.
+     *   - mcpImageTokenBudget: per-turn cap on token cost of images
+     *     returned by MCP tools. Codex doesn't enforce this; CC uses
+     *     25 000. Set to 0 to disable.
+     */
+    images: z
+      .object({
+        detail: z.enum(["low", "high", "original"]).optional(),
+        mcpImageTokenBudget: z.number().int().nonnegative().optional(),
+      })
+      .optional(),
+
+    /**
      * OS-level sandbox for shell-tool execution. "auto" picks per platform:
      * Seatbelt on macOS, bubblewrap on Linux when installed, otherwise off.
      * Defaults are applied per Engine run depending on headless vs REPL —

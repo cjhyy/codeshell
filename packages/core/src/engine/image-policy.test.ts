@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test";
 import {
   byteLengthFromBase64,
   enforceImagePolicy,
+  dropOversizedImages,
   IMAGE_LIMITS,
 } from "./image-policy.js";
 import type { ParsedImage } from "./parse-task.js";
@@ -132,5 +133,44 @@ describe("enforceImagePolicy", () => {
     expect(v.ok).toBe(false);
     if (v.ok) throw new Error("unreachable");
     expect(v.message).toContain("(未命名)");
+  });
+});
+
+describe("dropOversizedImages", () => {
+  it("passes everything through when all images fit", () => {
+    const a = img(100, "a.png");
+    const b = img(200, "b.png");
+    const r = dropOversizedImages([a, b]);
+    expect(r.droppedCount).toBe(0);
+    expect(r.placeholder).toBe("");
+    expect(r.kept).toHaveLength(2);
+  });
+
+  it("filters out images over the per-image cap and reports them", () => {
+    const small = img(50_000, "ok.png");
+    const big = img(IMAGE_LIMITS.maxBytesPerImage + 1024, "huge.png");
+    const r = dropOversizedImages([small, big]);
+    expect(r.droppedCount).toBe(1);
+    expect(r.kept).toHaveLength(1);
+    expect(r.kept[0]!.name).toBe("ok.png");
+    expect(r.placeholder).toContain("huge.png");
+    expect(r.placeholder).toContain("已自动跳过");
+  });
+
+  it("aggregates multiple drops into one placeholder", () => {
+    const big1 = img(IMAGE_LIMITS.maxBytesPerImage + 100, "a.png");
+    const big2 = img(IMAGE_LIMITS.maxBytesPerImage + 200, "b.png");
+    const small = img(100, "c.png");
+    const r = dropOversizedImages([big1, small, big2]);
+    expect(r.droppedCount).toBe(2);
+    expect(r.kept.map((i) => i.name)).toEqual(["c.png"]);
+    expect(r.placeholder).toContain("a.png");
+    expect(r.placeholder).toContain("b.png");
+  });
+
+  it("uses (未命名) when the file has no name", () => {
+    const big = img(IMAGE_LIMITS.maxBytesPerImage + 1, "");
+    const r = dropOversizedImages([big]);
+    expect(r.placeholder).toContain("(未命名)");
   });
 });

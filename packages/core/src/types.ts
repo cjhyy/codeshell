@@ -331,6 +331,12 @@ export interface LLMConfig {
    * ("openai" or "anthropic") that picks which client class to use.
    */
   providerKind?: string;
+  /**
+   * OpenAI-style detail hint sent on every image_url part. Anthropic
+   * ignores this. Defaults to "high" (OpenAI's own default) when
+   * unset; "low" is 85-tokens-per-image fixed.
+   */
+  imageDetail?: "low" | "high" | "original";
 }
 
 export interface LLMResponse {

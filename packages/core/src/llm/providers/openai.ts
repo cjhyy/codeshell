@@ -603,10 +603,21 @@ export class OpenAIClient extends LLMClientBase {
               // accepts a base64 data URL as the URL. Per-(provider, model)
               // vision-capability gating happens earlier in Engine.run —
               // by the time we reach here, the model supports vision.
+              //
+              // The `detail` hint is honored by OpenAI; OpenAI-compat
+              // proxies (OpenRouter for non-OpenAI models, etc.) tolerate
+              // the field even when their backend ignores it, so it's
+              // safe to always set when settings.images.detail is on.
+              // OpenAI's wire only accepts "low" / "high" / "auto"; map
+              // our internal "original" (a Codex-style high-fidelity
+              // marker) to "high" since OpenAI server-side scales 2048+
+              // images anyway.
+              const wireDetail = mapImageDetailToOpenAI(this.config.imageDetail);
               imageParts.push({
                 type: "image_url",
                 image_url: {
                   url: `data:${block.source.media_type};base64,${block.source.data}`,
+                  ...(wireDetail ? { detail: wireDetail } : {}),
                 },
               });
             }
@@ -723,5 +734,27 @@ export class OpenAIClient extends LLMClientBase {
 function extractReasoningContent(msg: Record<string, unknown>): string | undefined {
   const candidate = msg.reasoning_content ?? msg.reasoning;
   return typeof candidate === "string" && candidate.length > 0 ? candidate : undefined;
+}
+
+/**
+ * Map our internal image-detail enum to the OpenAI wire enum.
+ *
+ * OpenAI accepts only `low` / `high` / `auto`. We carry an extra
+ * `original` value through settings/config to match the Codex
+ * concept (preserve client-side dimensions, most expensive), but on
+ * the wire it has to collapse to `high` — OpenAI's server scales
+ * 2048+ images down regardless, so this is the closest faithful
+ * mapping.
+ *
+ * Returns undefined when the caller didn't set a detail at all, so
+ * the OpenAI client uses its own default ("auto", equivalent to
+ * "high" today).
+ */
+function mapImageDetailToOpenAI(
+  detail: "low" | "high" | "original" | undefined,
+): "low" | "high" | undefined {
+  if (!detail) return undefined;
+  if (detail === "low") return "low";
+  return "high";
 }
 

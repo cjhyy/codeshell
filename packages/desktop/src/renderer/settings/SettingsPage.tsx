@@ -32,6 +32,7 @@ import {
   EnvironmentSection,
   GitSection,
   HooksSection,
+  ImageSettingsSection,
   PersonalizationSection,
   ShortcutsSection,
   ToggleCapabilitySection,
@@ -180,7 +181,10 @@ export function SettingsPage({
               <AppearanceSection />
             )}
             {active === "config" && (
-              <ModelSection scope={scope} activeRepoPath={activeRepoPath} />
+              <>
+                <ModelSection scope={scope} activeRepoPath={activeRepoPath} />
+                <ImageSettingsSection scope={scope} activeRepoPath={activeRepoPath} />
+              </>
             )}
             {active === "personalization" && (
               <PersonalizationSection scope={scope} activeRepoPath={activeRepoPath} />

@@ -148,6 +148,53 @@ function fmtMB(bytes: number): string {
  * failure mode this exists to prevent was effectively a silent truncate
  * (bytes lost mid-stream); a friendly refusal is strictly better.
  */
+/**
+ * Drop the images that exceed {@link IMAGE_LIMITS.maxBytesPerImage}
+ * and return a textual placeholder describing what was removed. The
+ * engine uses this to keep a poisoned image out of conversation
+ * history while still letting the rest of the turn proceed — Claude
+ * Code's "5MB brick session" failure mode is exactly the bug where
+ * a too-large image enters history and every subsequent request
+ * re-sends it (see docs/research-cc-vs-codex-image-handling.md §A).
+ *
+ * Returns the filtered image list and, when anything was dropped, a
+ * Chinese-language note suitable for prepending to the user text.
+ */
+export interface DropOversizedResult {
+  /** Images that fit under the per-image cap (in original order). */
+  kept: ParsedImage[];
+  /** A human-readable note about what was removed, or "" if nothing was. */
+  placeholder: string;
+  /** Number of images removed. */
+  droppedCount: number;
+}
+
+export function dropOversizedImages(
+  images: readonly ParsedImage[],
+): DropOversizedResult {
+  const kept: ParsedImage[] = [];
+  const dropped: Array<{ name: string; bytes: number }> = [];
+  for (const img of images) {
+    const bytes = byteLengthFromBase64(img.base64);
+    if (bytes > IMAGE_LIMITS.maxBytesPerImage) {
+      dropped.push({ name: img.name || "(未命名)", bytes });
+    } else {
+      kept.push(img);
+    }
+  }
+  if (dropped.length === 0) {
+    return { kept, placeholder: "", droppedCount: 0 };
+  }
+  const list = dropped
+    .map((d) => `「${d.name}」(~${fmtMB(d.bytes)})`)
+    .join("、");
+  const placeholder =
+    `[已自动跳过 ${dropped.length} 张超大图片:${list};` +
+    `单图上限 ${fmtMB(IMAGE_LIMITS.maxBytesPerImage)}。` +
+    `图片未进入对话历史,本轮其余内容继续。]`;
+  return { kept, placeholder, droppedCount: dropped.length };
+}
+
 export function enforceImagePolicy(
   images: readonly ParsedImage[],
 ): ImagePolicyVerdict {

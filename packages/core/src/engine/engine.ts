@@ -72,7 +72,11 @@ import {
   ImageParseError,
   type ParsedTask,
 } from "./parse-task.js";
-import { enforceImagePolicy, byteLengthFromBase64 } from "./image-policy.js";
+import {
+  enforceImagePolicy,
+  byteLengthFromBase64,
+  dropOversizedImages,
+} from "./image-policy.js";
 import { tryCompressImages } from "./image-compression.js";
 import { capabilitiesFor } from "../llm/capabilities/index.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
@@ -454,6 +458,19 @@ export class Engine {
         // use /model to switch between the provider's available models.
         this.autoPopulatePool(this.config.llm.apiKey, this.config.llm.baseUrl);
       }
+
+      // Carry image-attachment settings through to the llm config so
+      // the OpenAI request builder can emit the right `detail` hint
+      // per image. Anthropic ignores this field, so leaving it set is
+      // safe; we just refrain from setting it when settings don't ask
+      // for one so the existing per-provider defaults apply.
+      const imageSettings = (settings as { images?: { detail?: "low" | "high" | "original" } }).images;
+      if (imageSettings?.detail) {
+        this.config = {
+          ...this.config,
+          llm: { ...this.config.llm, imageDetail: imageSettings.detail },
+        };
+      }
     } catch {
       // Settings not available — pool stays empty
     }
@@ -620,8 +637,32 @@ export class Engine {
           verdict = enforceImagePolicy(parsedTask.images);
         }
       }
+      // After compression, anything still over the per-image cap is
+      // dropped with a textual placeholder instead of failing the
+      // turn (TODO-week.md #9e). The "5MB brick session" failure
+      // mode from Claude Code (research doc §A) was the case where a
+      // poisoned image entered history and every subsequent request
+      // re-sent it; placeholders keep history clean while letting
+      // the rest of the turn run.
+      if (!verdict.ok && verdict.code === "image_too_large") {
+        const drop = dropOversizedImages(parsedTask.images);
+        if (drop.droppedCount > 0) {
+          parsedTask.images = drop.kept;
+          parsedTask.hasImages = drop.kept.length > 0;
+          parsedTask.text = drop.placeholder + "\n\n" + parsedTask.text;
+          logger.warn("engine.run.image_dropped", {
+            droppedCount: drop.droppedCount,
+            keptCount: drop.kept.length,
+          });
+          verdict = enforceImagePolicy(parsedTask.images);
+        }
+      }
       if (!verdict.ok) {
-        logger.warn("engine.run.image_too_large", {
+        // Cumulative / count caps can't be rescued by per-image
+        // dropping (well — too_many_images could trim by FIFO, but
+        // that's a bigger UX call than we want to make silently).
+        // Refuse the turn with the policy message.
+        logger.warn("engine.run.image_policy_failed", {
           code: verdict.code,
           imageCount: verdict.totals.imageCount,
           totalBytes: verdict.totals.totalBytes,

@@ -11,6 +11,8 @@ import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import type { MCPServerConfig, RegisteredTool } from "../types.js";
 import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
+import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 
 interface MCPConnection {
   client: Client;
@@ -31,6 +33,70 @@ interface MCPConnection {
  * Exported so `mcp-manager.test.ts` can pin the contract without spinning
  * up a real MCP transport.
  */
+/**
+ * Soft cap on the number of MCP-spilled images we'll keep per
+ * (server, tool) pair before older ones get garbage-collected. The
+ * spill itself is bounded by the byte budget below; this cap is just
+ * to keep ls(~/.code-shell/mcp_images) tractable.
+ */
+const MAX_MCP_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Persist an MCP-returned image to disk and return the textual
+ * reference the LLM should see. Images larger than
+ * MAX_MCP_IMAGE_BYTES are dropped with a placeholder so a misbehaving
+ * MCP server (e.g. a screenshot agent in a loop) can't blow up disk
+ * or the context.
+ *
+ * Returns a one-line note like:
+ *   [mcp-image] server=playwright tool=screenshot saved=/abs/path.png (123 KB)
+ */
+export async function spillMcpImage(
+  serverName: string,
+  toolName: string,
+  base64: string,
+  mimeType: string,
+  opts?: { baseDir?: string; now?: () => number },
+): Promise<string> {
+  const home = process.env.CODE_SHELL_HOME ?? process.env.HOME ?? "";
+  const baseDir =
+    opts?.baseDir ??
+    (home ? join(home, ".code-shell", "mcp_images") : join("/tmp", "code-shell-mcp-images"));
+  const now = opts?.now ?? Date.now;
+
+  const decodedBytes = Math.floor((base64.length * 3) / 4);
+  if (decodedBytes > MAX_MCP_IMAGE_BYTES) {
+    return `[mcp-image] server=${serverName} tool=${toolName} SKIPPED size=${decodedBytes}B (>${MAX_MCP_IMAGE_BYTES}B cap)`;
+  }
+
+  const ext = mimeType.includes("jpeg")
+    ? "jpg"
+    : mimeType.includes("webp")
+      ? "webp"
+      : mimeType.includes("gif")
+        ? "gif"
+        : "png";
+  const safeServer = serverName.replace(/[^\w.-]+/g, "_");
+  const safeTool = toolName.replace(/[^\w.-]+/g, "_");
+  const filename = `${safeServer}-${safeTool}-${now()}.${ext}`;
+  const filePath = join(baseDir, filename);
+
+  try {
+    await mkdir(baseDir, { recursive: true });
+    await writeFile(filePath, Buffer.from(base64, "base64"));
+  } catch (err) {
+    logger.warn("mcp.image_spill_failed", {
+      server: serverName,
+      tool: toolName,
+      error: (err as Error).message,
+    });
+    return `[mcp-image] server=${serverName} tool=${toolName} ERROR could not save (${(err as Error).message})`;
+  }
+
+  const kb = Math.max(1, Math.round(decodedBytes / 1024));
+  return `[mcp-image] server=${serverName} tool=${toolName} saved=${filePath} (${kb} KB)`;
+}
+
 export function wrapMcpOutput(serverName: string, toolName: string, body: string): string {
   // Use a fenced block with a distinctive sentinel; the closing fence
   // includes the server/tool name so a payload that tries to forge an
@@ -206,14 +272,38 @@ export class MCPManager {
       this.toolRegistry.registerTool(registered, async (args: Record<string, unknown>) => {
         const callResult = await client.callTool({ name: tool.name, arguments: args });
 
-        // Extract text from content array
+        // Extract text + image content from the result. Image blobs
+        // are spilled to ~/.code-shell/mcp_images/ so they don't bloat
+        // the LLM message tree — same pattern as the GenerateImage
+        // tool — and the model sees a textual reference it can Read
+        // on a later turn if it needs the pixels. This sidesteps the
+        // "MCP returned a 5MB screenshot → token budget exploded"
+        // failure mode that bit Codex (issue #11845); we never put
+        // raw base64 image data in the result text. See
+        // TODO-week.md #9c + docs/research-cc-vs-codex-image-handling.md §B.
         const parts: string[] = [];
         if (Array.isArray(callResult.content)) {
           for (const item of callResult.content) {
-            if (typeof item === "object" && item !== null && "text" in item) {
-              parts.push(String(item.text));
-            } else if (typeof item === "string") {
+            if (typeof item === "string") {
               parts.push(item);
+              continue;
+            }
+            if (typeof item !== "object" || item === null) continue;
+            if ("text" in item) {
+              parts.push(String((item as { text: unknown }).text));
+              continue;
+            }
+            if ((item as { type?: string }).type === "image") {
+              const block = item as { data?: string; mimeType?: string };
+              if (typeof block.data === "string" && block.data.length > 0) {
+                const note = await spillMcpImage(
+                  serverName,
+                  tool.name,
+                  block.data,
+                  block.mimeType ?? "image/png",
+                );
+                parts.push(note);
+              }
             }
           }
         }
