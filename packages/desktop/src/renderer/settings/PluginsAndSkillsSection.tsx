@@ -26,6 +26,7 @@ import type {
 import { Select } from "../ui/Select";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { Markdown } from "../Markdown";
+import { writeSettings } from "../settingsBus";
 
 interface Props {
   activeRepoPath: string | null;
@@ -248,7 +249,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     if (shouldDisable) next.add(name);
     else next.delete(name);
     setDisabledSet(next);
-    await window.codeshell.updateSettings("user", {
+    await writeSettings("user", {
       disabledSkills: [...next],
     });
   };
@@ -280,7 +281,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     else nextPlugins.delete(pluginKey);
     setDisabledSet(next);
     setDisabledPluginsSet(nextPlugins);
-    await window.codeshell.updateSettings("user", {
+    await writeSettings("user", {
       disabledSkills: [...next],
       disabledPlugins: [...nextPlugins],
     });

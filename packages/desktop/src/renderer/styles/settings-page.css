@@ -13,7 +13,13 @@
   flex-direction: column;
   background: var(--bg-app);
   overflow: hidden;
-  padding-top: var(--topbar-h); /* clear macOS traffic-light buttons */
+}
+/* Reserve room for macOS traffic-light buttons only on darwin —
+   Windows / Linux frames don't have the cluster so the gutter would
+   just be wasted vertical space there. The .platform-darwin class
+   is applied to .settings-app-shell in App.tsx. */
+.platform-darwin .settings-page {
+  padding-top: var(--topbar-h);
 }
 
 /* Back button — standalone block at top of sidebar nav, separated by a border */

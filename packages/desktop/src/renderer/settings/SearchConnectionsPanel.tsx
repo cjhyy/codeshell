@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { SearchProbeInput, SearchProbeResult } from "../../preload/types";
+import { writeSettings } from "../settingsBus";
 
 interface Props {
   scope: "user" | "project";
@@ -130,7 +131,7 @@ export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
         if (Object.keys(bag).length > 0) providersOut[p.id] = bag;
       }
       const active = nextProviders[nextDefault];
-      await window.codeshell.updateSettings(
+      await writeSettings(
         scope,
         {
           search: {

@@ -216,7 +216,15 @@ function App() {
   useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
 
   useEffect(() => {
-    const refreshSettings = (): void => setSettingsRevision((n) => n + 1);
+    const refreshSettings = (): void => {
+      setSettingsRevision((n) => n + 1);
+      // The worker holds its own SettingsManager; without an explicit
+      // reload it keeps the bootstrap-time snapshot and ignores any
+      // edits the user makes via the settings page. Fire-and-forget;
+      // a stale reload is harmless (configure() with no model just
+      // refreshes the pool from disk).
+      void window.codeshell.configure({ reloadModels: true });
+    };
     window.addEventListener("codeshell:settings-changed", refreshSettings);
     return () => window.removeEventListener("codeshell:settings-changed", refreshSettings);
   }, []);
@@ -963,9 +971,14 @@ function App() {
     [state.messages],
   );
 
+  const platformClassEarly =
+    typeof navigator !== "undefined" && /Mac/.test(navigator.platform)
+      ? "platform-darwin"
+      : "";
+
   if (view.viewMode === "settings_page") {
     return (
-      <div className="settings-app-shell">
+      <div className={`settings-app-shell ${platformClassEarly}`.trim()}>
         <SettingsPage
           activeRepoPath={activeRepo?.path ?? null}
           repos={repos}
@@ -984,10 +997,7 @@ function App() {
     );
   }
 
-  const platformClass =
-    typeof navigator !== "undefined" && /Mac/.test(navigator.platform)
-      ? "platform-darwin"
-      : "";
+  const platformClass = platformClassEarly;
 
   return (
     <div

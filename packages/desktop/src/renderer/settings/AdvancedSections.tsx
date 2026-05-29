@@ -11,6 +11,7 @@ import {
   saveGitPrefs,
   type GitPrefs,
 } from "../gitPrefs";
+import { writeSettings } from "../settingsBus";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -43,7 +44,7 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
   const save = async () => {
     setSaving(true);
     try {
-      await window.codeshell.updateSettings(
+      await writeSettings(
         scope,
         {
           agent: {
@@ -132,7 +133,7 @@ export function HooksSection({ scope, activeRepoPath }: ScopedProps) {
   useEffect(() => { void load(); }, [scope, activeRepoPath]);
 
   const persist = async (next: Array<Record<string, unknown>>) => {
-    await window.codeshell.updateSettings(scope, { hooks: next }, cwd);
+    await writeSettings(scope, { hooks: next }, cwd);
     setHooks(next);
   };
 
@@ -289,7 +290,7 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
   const save = async () => {
     setSaving(true);
     try {
-      await window.codeshell.updateSettings(
+      await writeSettings(
         scope,
         {
           sandbox: {
@@ -371,7 +372,7 @@ export function ToggleCapabilitySection({
     setEnabled(next);
     setSaving(true);
     try {
-      await window.codeshell.updateSettings(scope, { [settingKey]: { enabled: next } }, cwd);
+      await writeSettings(scope, { [settingKey]: { enabled: next } }, cwd);
     } finally {
       setSaving(false);
     }
@@ -422,7 +423,7 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
     try {
       const current = objectOf((await window.codeshell.getSettings(scope, cwd))?.images);
       const nextImages = next ? { ...current, detail: next } : { ...current, detail: undefined };
-      await window.codeshell.updateSettings(scope, { images: nextImages }, cwd);
+      await writeSettings(scope, { images: nextImages }, cwd);
     } finally {
       setSaving(false);
     }
