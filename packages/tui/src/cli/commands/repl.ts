@@ -6,6 +6,7 @@
 
 import chalk from "chalk";
 import { Engine } from "@cjhyy/code-shell-core";
+import { mergePluginMcpServers } from "@cjhyy/code-shell-core";
 import { EngineRuntime } from "@cjhyy/code-shell-core";
 import { ChatSessionManager } from "@cjhyy/code-shell-core";
 import { AgentServer } from "@cjhyy/code-shell-core";
@@ -147,7 +148,10 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     maxContextTokens,
     sessionStorageDir: settings.session.storageDir,
     costStore: costTracker,
-    mcpServers: settings.mcpServers,
+    mcpServers: mergePluginMcpServers(
+      settings.mcpServers ?? {},
+      (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
+    ),
     approvalBackend: getInteractiveApprovalBackend(),
     // Host terminal entrypoint: read the full disk hierarchy (incl. user
     // ~/.code-shell). The SDK default 'project' would skip the user's config.

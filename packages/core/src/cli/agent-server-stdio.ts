@@ -37,6 +37,7 @@ import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
 import { SettingsManager } from "../settings/manager.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
+import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
 import { CostTracker } from "../cost-tracker.js";
 
 // ─── Read base config from environment / settings ─────────────────
@@ -137,7 +138,12 @@ const chatManager = new ChatSessionManager({
       // so Engine.run()'s connectAll() guard never fires and no MCP server
       // (stdio OR url) is ever connected. The shared runtime.mcpPool means
       // the first session to connect populates connections for the worker.
-      mcpServers: settings.mcpServers,
+      // Plugin-provided MCP servers (mcp-servers.json in installed plugins)
+      // are merged in here so the model can actually call them.
+      mcpServers: mergePluginMcpServers(
+        settings.mcpServers ?? {},
+        (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
+      ),
       // Per-session overrides from the protocol request
       permissionMode: slice.permissionMode,
       preset: slice.preset,

@@ -217,6 +217,13 @@ export {
   CSMeta,
   PluginInstallError,
 } from "./plugins/installer/types.js";
+export { mergePluginMcpServers } from "./plugins/installer/loadPluginMcp.js";
+export { pluginAgentDirs } from "./plugins/installer/loadPluginAgents.js";
+export {
+  appendInstallEntry,
+  pluginInstallKey,
+  removeInstallEntries,
+} from "./plugins/installedPlugins.js";
 
 // ─── Arena ───────────────────────────────────────────────────────
 

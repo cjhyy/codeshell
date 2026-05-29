@@ -7,6 +7,7 @@
 
 import { randomUUID } from "node:crypto";
 import { Engine } from "@cjhyy/code-shell-core";
+import { mergePluginMcpServers } from "@cjhyy/code-shell-core";
 import { EngineRuntime } from "@cjhyy/code-shell-core";
 import { ChatSessionManager } from "@cjhyy/code-shell-core";
 import { AgentServer } from "@cjhyy/code-shell-core";
@@ -165,7 +166,10 @@ export async function runCommand(options: RunOptions): Promise<void> {
     maxContextTokens: settings.context.maxTokens,
     sessionStorageDir: settings.session.storageDir,
     costStore: costTracker,
-    mcpServers: settings.mcpServers,
+    mcpServers: mergePluginMcpServers(
+      settings.mcpServers ?? {},
+      (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
+    ),
     headless: true,
     sandbox: sandboxConfig,
     // Host terminal entrypoint: read the full disk hierarchy (managed + user
