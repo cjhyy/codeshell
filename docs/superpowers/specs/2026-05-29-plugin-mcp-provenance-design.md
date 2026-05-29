@@ -1,5 +1,7 @@
 # 插件提供 MCP:manifest 声明 + 虚拟源投影(归属可追溯)
 
+> ⚠️ **已被取代(SUPERSEDED 2026-05-29):** 本设计走「派生虚拟源 + 不连接」路线,被 [Plugin Loader: CC + Codex Compatibility](./2026-05-29-plugin-cc-codex-compat-design.md) 取代——后者在安装时把 plugin MCP 转换落盘并真正合并进 `settings.mcpServers` 连接(理由:"看得见但模型调不了的 MCP 是摆设")。本文档仅留作归属计算思路的历史参考,**不作为实现依据**。
+
 > 日期：2026-05-29
 > 目标仓:`~/Documents/个人学习/代码学习/codeshell`
 > 关联:[capability-control 设计](./2026-05-29-capability-control-design.md)、[plugin marketplace 设计](./2026-05-19-plugin-marketplace-design.md)(MVP 把 plugin MCP 列为 deferred)
