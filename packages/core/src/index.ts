@@ -131,7 +131,7 @@ export { Transcript } from "./session/transcript.js";
 export { SessionManager } from "./session/session-manager.js";
 export { FileHistory } from "./session/file-history.js";
 export { MemoryManager } from "./session/memory.js";
-export type { MemoryEntry } from "./session/memory.js";
+export type { MemoryEntry, MemoryScope } from "./session/memory.js";
 export type { FileSnapshot } from "./session/file-history.js";
 
 // ─── Prompt ──────────────────────────────────────────────────────

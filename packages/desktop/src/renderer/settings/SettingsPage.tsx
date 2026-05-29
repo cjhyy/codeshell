@@ -16,8 +16,10 @@ import {
   Archive,
   Puzzle,
   Bot,
+  Brain,
 } from "lucide-react";
 import { ModelSection } from "./ModelSection";
+import { MemorySection } from "./MemorySection";
 import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
@@ -53,6 +55,7 @@ type ModuleId =
   | "archived"
   | "plugins-skills"
   | "agents"
+  | "memory"
   | "update";
 
 interface Module {
@@ -77,6 +80,7 @@ const MODULES: Module[] = [
   { id: "archived", label: "已归档对话", Icon: Archive },
   { id: "plugins-skills", label: "插件与 Skills", Icon: Puzzle },
   { id: "agents", label: "子代理", Icon: Bot },
+  { id: "memory", label: "记忆", Icon: Brain },
 ];
 
 interface Props {
@@ -116,7 +120,8 @@ export function SettingsPage({
     active === "connections" ||
     active === "environment" ||
     active === "browser" ||
-    active === "computer";
+    active === "computer" ||
+    active === "memory";
 
   return (
     <div className="settings-page">
@@ -221,6 +226,9 @@ export function SettingsPage({
             )}
             {active === "agents" && (
               <AgentsSection activeRepoPath={activeRepoPath} />
+            )}
+            {active === "memory" && (
+              <MemorySection scope={scope} activeRepoPath={activeRepoPath} />
             )}
             {active === "archived" && (
               <ArchivedConversationsSection

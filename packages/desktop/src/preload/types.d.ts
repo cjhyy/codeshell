@@ -49,6 +49,33 @@ export interface UndoFilesResult {
   error?: string;
 }
 
+export type MemoryLevel = "user" | "project";
+export type MemoryScope = "user" | "dream";
+export type MemoryType = "user" | "feedback" | "project" | "reference";
+
+export interface RendererMemoryEntry {
+  name: string;
+  description: string;
+  type: MemoryType;
+  fileName: string;
+  scope: MemoryScope;
+  level: MemoryLevel;
+}
+
+export interface RendererMemoryEntryFull extends RendererMemoryEntry {
+  content: string;
+}
+
+export interface SaveMemoryInput {
+  level: MemoryLevel;
+  scope: MemoryScope;
+  name: string;
+  description: string;
+  type: MemoryType;
+  content: string;
+  cwd?: string;
+}
+
 export type AgentLifecycleEvent =
   | { type: "exited"; code: number | null }
   | { type: "restarted" }
@@ -176,6 +203,32 @@ export interface CodeshellApi {
    * failures rather than aborting the batch.
    */
   undoFiles(cwd: string, paths: string[]): Promise<UndoFilesResult[]>;
+  /**
+   * List memory entries. `cwd` is required for level="project".
+   * level="user" returns entries from ~/.code-shell/memory/<scope>;
+   * level="project" scopes under the given cwd's project memory dir.
+   */
+  listMemory(
+    level: MemoryLevel,
+    scope: MemoryScope,
+    cwd?: string,
+  ): Promise<RendererMemoryEntry[]>;
+  /** Read one memory entry's full content. Returns null if not found. */
+  readMemory(
+    level: MemoryLevel,
+    scope: MemoryScope,
+    name: string,
+    cwd?: string,
+  ): Promise<RendererMemoryEntryFull | null>;
+  /** Create or overwrite a memory entry. Returns the file slug. */
+  saveMemory(input: SaveMemoryInput): Promise<string>;
+  /** Soft-delete a memory entry. Returns true on success, false if missing. */
+  deleteMemory(
+    level: MemoryLevel,
+    scope: MemoryScope,
+    name: string,
+    cwd?: string,
+  ): Promise<boolean>;
 
   // Phase 5 — settings / sessions / logs.
   getSettings(scope: "user" | "project", cwd?: string): Promise<Record<string, unknown> | null>;

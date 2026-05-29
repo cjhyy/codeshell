@@ -30,6 +30,15 @@ import {
   type UndoFilesResult,
 } from "./desktop-services.js";
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
+import {
+  listMemory,
+  readMemory,
+  saveMemory,
+  deleteMemory,
+  type MemoryLevel,
+  type SaveMemoryInput,
+} from "./memory-service.js";
+import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { listSessions, deleteSession } from "./sessions-service.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
@@ -541,6 +550,54 @@ ipcMain.handle("settings:set", async (_e, scope: SettingsScope, patch: Record<st
   if (!patch || typeof patch !== "object") throw new Error("patch must be object");
   await writeSettings(scope, patch, cwd);
 });
+
+const VALID_MEMORY_LEVELS = new Set<MemoryLevel>(["user", "project"]);
+const VALID_MEMORY_SCOPES = new Set<MemoryScope>(["user", "dream"]);
+
+function validateMemoryArgs(
+  level: unknown,
+  scope: unknown,
+): { level: MemoryLevel; scope: MemoryScope } {
+  if (typeof level !== "string" || !VALID_MEMORY_LEVELS.has(level as MemoryLevel)) {
+    throw new Error(`memory level must be "user" or "project", got ${String(level)}`);
+  }
+  if (typeof scope !== "string" || !VALID_MEMORY_SCOPES.has(scope as MemoryScope)) {
+    throw new Error(`memory scope must be "user" or "dream", got ${String(scope)}`);
+  }
+  return { level: level as MemoryLevel, scope: scope as MemoryScope };
+}
+
+ipcMain.handle(
+  "memory:list",
+  async (_e, level: unknown, scope: unknown, cwd?: string) => {
+    const v = validateMemoryArgs(level, scope);
+    return listMemory(v.level, v.scope, typeof cwd === "string" ? cwd : undefined);
+  },
+);
+
+ipcMain.handle(
+  "memory:read",
+  async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string) => {
+    const v = validateMemoryArgs(level, scope);
+    if (typeof name !== "string" || !name) throw new Error("memory name required");
+    return readMemory(v.level, v.scope, name, typeof cwd === "string" ? cwd : undefined);
+  },
+);
+
+ipcMain.handle("memory:save", async (_e, input: SaveMemoryInput) => {
+  if (!input || typeof input !== "object") throw new Error("memory:save requires input");
+  const v = validateMemoryArgs(input.level, input.scope);
+  return saveMemory({ ...input, level: v.level, scope: v.scope });
+});
+
+ipcMain.handle(
+  "memory:delete",
+  async (_e, level: unknown, scope: unknown, name: unknown, cwd?: string) => {
+    const v = validateMemoryArgs(level, scope);
+    if (typeof name !== "string" || !name) throw new Error("memory name required");
+    return deleteMemory(v.level, v.scope, name, typeof cwd === "string" ? cwd : undefined);
+  },
+);
 
 ipcMain.handle("sessions:list", async () => listSessions());
 ipcMain.handle("sessions:delete", async (_e, id: string) => {

@@ -185,6 +185,14 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("shell:openPath", path, cwd),
   undoFiles: (cwd: string, paths: string[]) =>
     ipcRenderer.invoke("files:undo", cwd, paths),
+  listMemory: (level: string, scope: string, cwd?: string) =>
+    ipcRenderer.invoke("memory:list", level, scope, cwd),
+  readMemory: (level: string, scope: string, name: string, cwd?: string) =>
+    ipcRenderer.invoke("memory:read", level, scope, name, cwd),
+  saveMemory: (input: Record<string, unknown>) =>
+    ipcRenderer.invoke("memory:save", input),
+  deleteMemory: (level: string, scope: string, name: string, cwd?: string) =>
+    ipcRenderer.invoke("memory:delete", level, scope, name, cwd),
   getSettings: (scope: "user" | "project", cwd?: string) =>
     ipcRenderer.invoke("settings:get", scope, cwd),
   updateSettings: (scope: "user" | "project", patch: Record<string, unknown>, cwd?: string) =>
