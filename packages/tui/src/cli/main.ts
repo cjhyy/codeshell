@@ -141,6 +141,11 @@ addCommonOptions(
 import { createRunsCommand } from "./commands/runs.js";
 program.addCommand(createRunsCommand());
 
+// ─── plugin ──────────────────────────────────────────────────────
+
+import { createPluginCommand } from "./commands/plugin.js";
+program.addCommand(createPluginCommand());
+
 // ─── Default: if no command, go to REPL or run ───────────────────
 // Don't use addCommonOptions on the root program — Commander shares
 // the option namespace between the root and subcommands, causing
