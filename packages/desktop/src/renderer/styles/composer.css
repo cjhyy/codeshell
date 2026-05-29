@@ -156,6 +156,14 @@
 }
 .composer-popover-item:hover { background: var(--bg-hover); }
 .composer-popover-item.active { background: var(--bg-selected); }
+.composer-popover-item-label { flex-shrink: 0; }
+.composer-popover-item-hint {
+  margin-left: auto;
+  padding-left: var(--sp-3);
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+  white-space: nowrap;
+}
 .composer-popover-prov {
   font-family: var(--font-mono);
   font-size: var(--fz-xs);

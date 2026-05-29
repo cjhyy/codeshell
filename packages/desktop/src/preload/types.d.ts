@@ -128,7 +128,7 @@ export interface CodeshellApi {
     opts?: {
       cwd?: string;
       sessionId?: string;
-      permissionMode?: "plan" | "default" | "acceptEdits" | "bypassPermissions";
+      permissionMode?: "plan" | "default" | "acceptEdits" | "auto" | "bypassPermissions";
       planMode?: boolean;
     },
   ): Promise<RpcResponse>;

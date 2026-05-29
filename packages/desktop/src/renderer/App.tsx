@@ -546,23 +546,14 @@ function App() {
         });
         return;
       }
-      if (permissionModeRef.current === "bypass") {
-        window.codeshell.log("approval.auto_approved", {
-          requestId: env.requestId,
-          toolName: env.request.toolName,
-          reason: "composer_bypass",
-        });
-        if (env.sessionId) {
-          void window.codeshell.approve(env.sessionId, env.requestId, "approve");
-        } else {
-          void window.codeshell.approve(env.requestId, "approve");
-        }
-        setApprovalHistory((h) => [
-          ...h,
-          { decision: "approve", envelope: env, reason: "完全访问权限自动批准", at: Date.now() },
-        ]);
-        return;
-      }
+      // Goal mode (engine "auto") does its danger-gating engine-side:
+      // the AutoApprovalBackend auto-approves safe ops, auto-denies
+      // high-risk ones, and only delegates the genuinely ambiguous
+      // middle to the UI. So anything that reaches the renderer here
+      // is a request the engine decided the human should see — we no
+      // longer blanket-approve. (The old composer "完全访问权限"
+      // bypass that auto-approved everything has been removed; see
+      // PermissionPill's mode list.)
       setApprovalQueue((q) => [...q, env]);
       setApproval((cur) => cur ?? env);
     });
