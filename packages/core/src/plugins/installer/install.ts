@@ -9,6 +9,7 @@ import { CodexPluginManifest, type CSMeta, PluginInstallError } from "./types.js
 import { convertCodexAgentToml } from "./codex/convertAgents.js";
 import { resolveCodexMcpServers } from "./codex/convertMcp.js";
 import { copyCodexSkills } from "./codex/convertSkills.js";
+import { appendInstallEntry, pluginInstallKey } from "../installedPlugins.js";
 
 /**
  * Install a local plugin directory into ~/.code-shell/plugins/<name>/.
@@ -66,6 +67,16 @@ export function installPluginFromPath(
 
     writeFileSync(join(tmpDir, ".cs-meta.json"), JSON.stringify(meta, null, 2));
     renameSync(tmpDir, finalDir);
+    // Register so existing loaders (scanInstalledPlugins / loadPluginHooks)
+    // discover this local install. Marketplace tag "local" distinguishes it
+    // from cache/marketplace installs.
+    appendInstallEntry(pluginInstallKey(name, "local"), {
+      scope: "user",
+      installPath: finalDir,
+      version: meta.version ?? "local",
+      installedAt,
+      lastUpdated: installedAt,
+    });
     return finalDir;
   } catch (err) {
     rmSync(tmpDir, { recursive: true, force: true });

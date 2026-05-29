@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { installPluginFromPath } from "./install.js";
+import { readInstalledPlugins } from "../installedPlugins.js";
 
 const STAMP = "2026-05-29T10:00:00Z";
 
@@ -50,6 +51,16 @@ describe("installPluginFromPath", () => {
   test("refuses when install dir already exists", () => {
     mkdirSync(join(home, ".code-shell", "plugins", "dup"), { recursive: true });
     expect(() => installPluginFromPath(src, "dup", STAMP)).toThrow(/already installed/);
+  });
+
+  test("registers the install in installed_plugins.json", () => {
+    mkdirSync(join(src, "skills", "s"), { recursive: true });
+    writeFileSync(join(src, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
+    const dir = installPluginFromPath(src, "regplug", STAMP);
+    const reg = readInstalledPlugins();
+    const entry = reg.plugins["regplug@local"]?.[0];
+    expect(entry?.installPath).toBe(dir);
+    expect(entry?.version).toBeDefined();
   });
 
   test("leaves no install dir when conversion fails", () => {
