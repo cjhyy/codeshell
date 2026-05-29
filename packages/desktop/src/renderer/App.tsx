@@ -153,6 +153,8 @@ function App() {
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
   const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>({});
+  /** Per-bucket Goal-mode toggle (orthogonal to permission). */
+  const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>({});
   const [settingsRevision, setSettingsRevision] = useState(0);
   const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
 
@@ -182,6 +184,7 @@ function App() {
     sessionIndices[activeRepoKey]?.activeSessionId ?? null;
   const activeBucket = bucketKey(activeRepoId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
+  const goalEnabled = goalOverrides[activeBucket] ?? false;
   const busy = busyKeys.has(activeBucket);
   /**
    * Most-recently-started run's bucket. Soft fallback only — the
@@ -660,11 +663,15 @@ function App() {
       cwd?: string;
       sessionId?: string;
       permissionMode?: ReturnType<typeof toCorePermissionMode>;
+      goal?: string;
     } = { sessionId: engineSessionId };
     if (permissionMode !== null) {
       opts.permissionMode = toCorePermissionMode(permissionMode);
     }
     if (activeRepo) opts.cwd = activeRepo.path;
+    // Goal mode: this send's prompt IS the goal — the engine runs
+    // loop-until-done. Goal text == prompt text (reuses the composer input).
+    if (goalEnabled && text.trim()) opts.goal = text;
 
     void window.codeshell
       .run(text, opts)
@@ -942,6 +949,17 @@ function App() {
     });
   };
 
+  const onGoalToggle = (next: boolean): void => {
+    setGoalOverrides((prev) => ({ ...prev, [activeBucket]: next }));
+    // Convenience coupling (one-shot): enabling Goal defaults the permission
+    // pill to 完全访问 so the agent isn't interrupted mid-goal. Only applied
+    // when this bucket has no explicit override yet — the user can still
+    // dial it back afterward, and we never override a deliberate choice.
+    if (next && permissionOverrides[activeBucket] === undefined) {
+      setPermissionOverrides((prev) => ({ ...prev, [activeBucket]: "bypass" }));
+    }
+  };
+
   const onModelChange = (opt: ModelOption): void => {
     setActiveModelKey(opt.key);
     // Persist the choice for next process start.
@@ -1112,6 +1130,8 @@ function App() {
               }
               permissionMode={permissionMode}
               onPermissionChange={onPermissionChange}
+              goalEnabled={goalEnabled}
+              onGoalToggle={onGoalToggle}
               modelOptions={modelOptions}
               activeModelKey={activeModelKey}
               onModelChange={onModelChange}

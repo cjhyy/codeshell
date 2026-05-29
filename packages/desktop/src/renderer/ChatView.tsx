@@ -4,6 +4,7 @@ import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
+import { GoalToggle } from "./chat/GoalToggle";
 import { ModelPill, type ModelOption } from "./chat/ModelPill";
 import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
@@ -40,6 +41,9 @@ interface Props {
   // Composer controls
   permissionMode: PermissionMode | null;
   onPermissionChange: (m: PermissionMode) => void;
+  /** Goal 模式开关(与权限正交)。开启时这条消息当目标,跑到完成为止。 */
+  goalEnabled: boolean;
+  onGoalToggle: (next: boolean) => void;
   modelOptions: ModelOption[];
   activeModelKey: string | null;
   onModelChange: (opt: ModelOption) => void;
@@ -72,6 +76,8 @@ export function ChatView({
   onApprovalDecide,
   permissionMode,
   onPermissionChange,
+  goalEnabled,
+  onGoalToggle,
   modelOptions,
   activeModelKey,
   onModelChange,
@@ -545,6 +551,11 @@ export function ChatView({
               <PermissionPill
                 value={permissionMode}
                 onChange={onPermissionChange}
+                disabled={disabled}
+              />
+              <GoalToggle
+                enabled={goalEnabled}
+                onToggle={onGoalToggle}
                 disabled={disabled}
               />
             </div>

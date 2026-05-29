@@ -126,6 +126,14 @@
 .composer-pill.perm-tone-warn { color: var(--status-warn); border-color: var(--status-warn); }
 .composer-pill.perm-tone-err  { color: var(--status-err);  border-color: var(--status-err); }
 
+/* Goal toggle: dim when off, accented + filled when on. */
+.goal-toggle { color: var(--fg-secondary); }
+.goal-toggle.goal-toggle-on {
+  color: var(--accent, var(--status-warn));
+  border-color: var(--accent, var(--status-warn));
+  background: color-mix(in srgb, var(--accent, var(--status-warn)) 12%, transparent);
+}
+
 .composer-model-pill { color: var(--fg-primary); }
 
 /* Popover dropdown for permission / model menus */
