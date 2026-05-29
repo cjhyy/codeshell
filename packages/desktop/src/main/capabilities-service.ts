@@ -1,0 +1,58 @@
+/**
+ * Capability-control forwarders for the 扩展能力 settings page.
+ *
+ * The desktop main process imports core directly (same rationale as
+ * skills-service): the agent worker isn't running between turns, and this is
+ * "what's configured on disk" data. We build a fresh CapabilityService per
+ * call — it holds no mutable state, so there's nothing to cache.
+ *
+ * Scope "full" is used so list() reflects the user-level toggles that
+ * setEnabled writes (SettingsManager.saveUserSetting always targets
+ * ~/.code-shell/settings.json; "project" scope wouldn't read that layer back).
+ *
+ * Note: the registry built here is NOT MCP-connected, so MCP toolCount reads
+ * as 0. That's acceptable for the settings UI — a server's enabled/disabled
+ * state is driven entirely by the mcpServers config, not by live tool counts.
+ */
+
+import {
+  CapabilityService,
+  SettingsManager,
+  ToolRegistry,
+  scanSkills,
+  readInstalledPlugins,
+  resolveBuiltinToolNames,
+  type CapabilityDescriptor,
+} from "@cjhyy/code-shell-core";
+
+function makeService(cwd: string): CapabilityService {
+  const settings = new SettingsManager(cwd, "full");
+  const preset = (settings.get() as { agent?: { preset?: string } }).agent?.preset;
+  const registry = new ToolRegistry({
+    builtinTools: resolveBuiltinToolNames({ preset }),
+  });
+  return new CapabilityService({
+    registry,
+    settings,
+    cwd,
+    scanSkills,
+    readInstalledPlugins,
+    resolveBuiltinToolNames,
+  });
+}
+
+export function listCapabilities(cwd: string): CapabilityDescriptor[] {
+  try {
+    return makeService(cwd).list();
+  } catch {
+    return [];
+  }
+}
+
+export function setCapabilityEnabled(
+  cwd: string,
+  id: string,
+  on: boolean,
+): void {
+  makeService(cwd).setEnabled(id, on);
+}

@@ -49,6 +49,10 @@ import {
   uninstallSkill,
 } from "./skills-service.js";
 import { listPlugins } from "./plugins-service.js";
+import {
+  listCapabilities,
+  setCapabilityEnabled,
+} from "./capabilities-service.js";
 import { searchFiles } from "./file-search-service.js";
 import {
   listAgents,
@@ -250,6 +254,18 @@ app.whenReady().then(() => {
 });
 
 ipcMain.handle("skills:list", async (_e, cwd: string) => listSkills(cwd));
+ipcMain.handle("capabilities:list", async (_e, cwd: string) => {
+  if (typeof cwd !== "string") throw new Error("capabilities:list requires cwd");
+  return listCapabilities(cwd);
+});
+ipcMain.handle(
+  "capabilities:setEnabled",
+  async (_e, cwd: string, id: string, on: boolean) => {
+    if (typeof cwd !== "string") throw new Error("capabilities:setEnabled requires cwd");
+    if (typeof id !== "string") throw new Error("capabilities:setEnabled requires id");
+    setCapabilityEnabled(cwd, id, Boolean(on));
+  },
+);
 ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
   return listPlugins(cwd);
