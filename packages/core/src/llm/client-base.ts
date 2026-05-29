@@ -82,6 +82,21 @@ export abstract class LLMClientBase {
 
         if (err instanceof ContextLimitError) throw err;
 
+        // User pressed ESC / Stop, or the run's AbortSignal fired. The SDK
+        // throws APIUserAbortError (no HTTP status, so isClientError below
+        // can't catch it). Retrying re-issues the same aborted request 3×
+        // with growing backoff — ~40 s of dead time ending in llm.exhausted,
+        // for work the user explicitly cancelled. Surface immediately.
+        if (isAbortError(err)) {
+          logger.warn("llm.abort_no_retry", {
+            cat: "llm",
+            provider: this.provider,
+            model: this.model,
+            error: (err as Error).message,
+          });
+          throw err;
+        }
+
         if (err instanceof LLMRateLimitError) {
           const waitMs = (err.retryAfter ?? attempt * 2) * 1000;
           logger.warn("llm.retry", {
@@ -167,4 +182,23 @@ export function isClientError(err: unknown): boolean {
   if (typeof status !== "number") return false;
   if (status === 429) return false;
   return status >= 400 && status < 500;
+}
+
+/**
+ * Detect a user/run cancellation. The OpenAI and Anthropic SDKs throw
+ * `APIUserAbortError` when a request's AbortSignal fires mid-flight; the
+ * providers rethrow it unchanged (see handleApiError). It carries no HTTP
+ * `status`, so `isClientError` can't recognise it — without an explicit
+ * check it falls through to `withRetry`'s generic branch and gets retried.
+ *
+ * We match by error name rather than `instanceof` to avoid importing the
+ * provider SDKs into the base class: `APIUserAbortError` from the SDKs, and
+ * the WHATWG `AbortError` from `fetch`/AbortController, both surface here.
+ *
+ * Exported for unit testing.
+ */
+export function isAbortError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const name = (err as { name?: unknown }).name;
+  return name === "APIUserAbortError" || name === "AbortError";
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { isClientError } from "./client-base.js";
+import { isClientError, isAbortError } from "./client-base.js";
 import { LLMError } from "../exceptions.js";
 
 describe("isClientError", () => {
@@ -30,5 +30,33 @@ describe("isClientError", () => {
   it("returns false for errors with no status anywhere", () => {
     expect(isClientError(new Error("network blip"))).toBe(false);
     expect(isClientError(new LLMError("no status", "openai"))).toBe(false);
+  });
+
+  // An abort has no HTTP status, so isClientError must NOT claim it — the
+  // dedicated isAbortError check is what stops withRetry from retrying it.
+  it("does not treat an aborted request as a client error", () => {
+    const abort = new Error("Request was aborted.");
+    abort.name = "APIUserAbortError";
+    expect(isClientError(abort)).toBe(false);
+  });
+});
+
+describe("isAbortError", () => {
+  it("detects the SDK APIUserAbortError by name", () => {
+    const err = new Error("Request was aborted.");
+    err.name = "APIUserAbortError";
+    expect(isAbortError(err)).toBe(true);
+  });
+
+  it("detects the WHATWG AbortError by name", () => {
+    const err = new Error("The operation was aborted");
+    err.name = "AbortError";
+    expect(isAbortError(err)).toBe(true);
+  });
+
+  it("returns false for ordinary errors and 5xx", () => {
+    expect(isAbortError(new Error("network blip"))).toBe(false);
+    expect(isAbortError({ status: 503 })).toBe(false);
+    expect(isAbortError(null)).toBe(false);
   });
 });

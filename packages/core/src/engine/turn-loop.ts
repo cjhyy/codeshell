@@ -26,6 +26,7 @@ import { checkTokenBudget, type BudgetTracker, createBudgetTracker } from "./tok
 import { StreamingToolQueue } from "./streaming-tool-queue.js";
 import { estimateTokens } from "../context/compaction.js";
 import { isTruncatedStop } from "../llm/stop-reason.js";
+import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
 
 export interface TurnLoopConfig {
@@ -736,6 +737,12 @@ export class TurnLoop {
     } catch (err) {
       // If it's a context or rate limit error, don't fallback — propagate
       if (err instanceof ContextLimitError) throw err;
+
+      // User cancelled (ESC / Stop / run signal). Falling back to a
+      // non-streaming call here re-sends the whole request the user just
+      // aborted. Propagate so the run unwinds cleanly instead of doing
+      // more work after cancellation.
+      if (isAbortError(err)) throw err;
 
       // Streaming might have partially emitted — send tombstone to revoke
       this.config.onStream?.({ type: "tombstone", messageId: `turn_${this.turnCount}` });
