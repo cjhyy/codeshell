@@ -37,6 +37,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { redactSecrets } from "./redact-secrets.js";
 
 export type LogSource = "main" | "bridge" | "renderer" | "agent" | "mcp-probe";
 
@@ -98,7 +99,10 @@ function extractSid(data: Record<string, unknown> | undefined): string | undefin
 }
 
 export function dlog(source: LogSource, msg: string, data?: Record<string, unknown>): void {
-  const record = { t: new Date().toISOString(), src: source, msg, ...(data ?? {}) };
+  // Mask credential-looking fields so they don't get persisted to the log
+  // file. extractSid below reads the original `data` (sid keys aren't secrets).
+  const safeData = redactSecrets(data);
+  const record = { t: new Date().toISOString(), src: source, msg, ...(safeData ?? {}) };
   const line = JSON.stringify(record) + "\n";
   try {
     appendFileSync(logPath(), line, "utf-8");
