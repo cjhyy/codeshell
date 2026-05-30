@@ -5,8 +5,8 @@
  * Three behaviors that previously diverged between REPL (used protocol)
  * and EngineRunner/run.ts (called engine.run directly):
  *
- *   1. taskManager.setStreamCallback is wired during the run so
- *      TaskCreate/TaskUpdate produce task_update events on the stream.
+ *   1. The TodoWrite tool's task_update event (emitted via the run's
+ *      streamCallback) surfaces on the stream during the run.
  *   2. The server's `running` lock rejects a concurrent client.run with
  *      `AlreadyRunning`.
  *   3. Status notifications (status: "running" → "ready") are broadcast.
@@ -16,7 +16,8 @@
  * `setAskUser(...)` — both are part of the public Engine API.
  */
 import { test, expect } from "bun:test";
-import { taskManager } from "../../packages/core/src/tool-system/builtin/task.js";
+import { todoWriteTool } from "../../packages/core/src/tool-system/builtin/task.js";
+import type { ToolContext } from "../../packages/core/src/tool-system/context.js";
 import { createInProcessClient } from "../../packages/core/src/protocol/helpers.js";
 import type { Engine } from "../../packages/core/src/engine/engine.js";
 import type { StreamCallback } from "../../packages/core/src/types.js";
@@ -48,17 +49,21 @@ function makeMockEngine(opts: {
   return engine;
 }
 
-test("taskManager events surface through client.onStreamEvent when running via createInProcessClient", async () => {
+test("task_update events surface through client.onStreamEvent when running via createInProcessClient", async () => {
   const events: Array<{ type: string }> = [];
   const onStream: StreamCallback = (event) => {
     events.push({ type: event.type });
   };
 
   const engine = makeMockEngine({
-    onRun: async () => {
-      // Simulate a TaskCreate tool firing during the turn.
-      taskManager.reset();
-      taskManager.create("test subject", "test description");
+    onRun: async (runOnStream) => {
+      // Simulate a TodoWrite tool firing during the turn. TodoWrite emits a
+      // task_update through the run's streamCallback (no module singleton).
+      const ctx = { streamCallback: runOnStream } as unknown as ToolContext;
+      await todoWriteTool(
+        { todos: [{ content: "do the thing", status: "in_progress", activeForm: "doing the thing" }] },
+        ctx,
+      );
     },
   });
 
@@ -67,8 +72,6 @@ test("taskManager events surface through client.onStreamEvent when running via c
     await client.run("test task");
   } finally {
     close();
-    taskManager.setStreamCallback(undefined);
-    taskManager.reset();
   }
 
   expect(events.some((e) => e.type === "task_update")).toBe(true);

@@ -122,7 +122,10 @@ describe("buildStreamItems — transparent items between tools", () => {
     }
   });
 
-  it("absorbs a short assistant text between two tools", () => {
+  it("does NOT absorb assistant text — it is a hard break that splits the run", () => {
+    // Assistant text is deliberately NOT transparent (unlike thinking):
+    // it stays visible between command groups, so two tools sandwiching it
+    // do not fold into one group.
     const msgs: Message[] = [
       tool({ id: "t1" }),
       assistant("a1", "now running tests"),
@@ -132,15 +135,15 @@ describe("buildStreamItems — transparent items between tools", () => {
     const groups = out.filter(
       (it): it is ToolGroup => it.kind === "tool_group",
     );
-    expect(groups).toHaveLength(1);
-    expect(groups[0]!.items.map((it) => it.kind)).toEqual([
-      "tool",
-      "assistant",
-      "tool",
-    ]);
+    expect(groups).toHaveLength(0);
+    // The assistant text survives between the two inline tool rows.
+    expect(out.map((it) => it.kind)).toEqual(["tool", "assistant", "tool"]);
   });
 
-  it("absorbs multiple transparent items between tools", () => {
+  it("assistant between transparent thinking items still hard-breaks the run", () => {
+    // thinking is transparent, but the assistant in the middle is a hard
+    // break — so the run flushes at the assistant and neither half reaches
+    // 2 tools, leaving no tool_group.
     const msgs: Message[] = [
       tool({ id: "t1" }),
       thinking("th1"),
@@ -152,9 +155,14 @@ describe("buildStreamItems — transparent items between tools", () => {
     const groups = out.filter(
       (it): it is ToolGroup => it.kind === "tool_group",
     );
-    expect(groups).toHaveLength(1);
-    expect(toolGroupToolCount(groups[0]!)).toBe(2);
-    expect(groups[0]!.items).toHaveLength(5);
+    expect(groups).toHaveLength(0);
+    expect(out.map((it) => it.kind)).toEqual([
+      "tool",
+      "thinking",
+      "assistant",
+      "thinking",
+      "tool",
+    ]);
   });
 
   it("does NOT absorb a trailing assistant — run must end on a tool", () => {

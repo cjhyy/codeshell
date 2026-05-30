@@ -53,9 +53,13 @@ describe("sub-agent model resync", () => {
 
   it("a top-level Engine still resyncs to settings.activeKey", () => {
     // Sanity: the resync behavior is preserved for non-sub-agent engines.
+    // "full" scope so the Engine reads the host ~/.code-shell/settings.json
+    // written above; the default "project" scope deliberately ignores HOME
+    // (SDK isolation), so resync would have no models[] to match against.
     const top = new Engine({
       llm: { provider: "openai", model: "whatever", baseUrl: "https://x/v1", apiKey: "x" },
       cwd,
+      settingsScope: "full",
     });
     expect(top.getConfig().llm.model).toBe("primary-model");
   });

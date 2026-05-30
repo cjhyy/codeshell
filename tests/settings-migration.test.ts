@@ -40,7 +40,10 @@ describe("SettingsManager — legacy models[] migration", () => {
       "utf-8",
     );
 
-    const mgr = new SettingsManager();
+    // Migration only runs under "full" scope — non-full scopes must not
+    // read or rewrite the host's ~/.code-shell/settings.json (SDK isolation,
+    // spec 2026-05-27-sdk-settings-isolation-design.md §3.3).
+    const mgr = new SettingsManager(process.cwd(), "full");
     const s = mgr.load();
 
     expect(s.providers.length).toBe(1);
@@ -68,7 +71,9 @@ describe("SettingsManager — legacy models[] migration", () => {
       }),
       "utf-8",
     );
-    const mgr = new SettingsManager();
+    // "full" scope so migration is actually attempted — and skipped because
+    // the file is already in the new providers[]/models[] shape.
+    const mgr = new SettingsManager(process.cwd(), "full");
     mgr.load();
     expect(existsSync(`${path}.bak`)).toBe(false);
   });
