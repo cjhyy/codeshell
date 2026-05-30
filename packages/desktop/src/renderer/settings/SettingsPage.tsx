@@ -269,7 +269,7 @@ export function SettingsPage({
               />
             )}
             {active === "plugins-skills" && (
-              <ExtensionsPage activeRepoPath={activeRepoPath} />
+              <ExtensionsPage activeRepoPath={activeRepoPath} showDiscover={false} />
             )}
             {active === "agents" && (
               <AgentsSection activeRepoPath={activeRepoPath} />

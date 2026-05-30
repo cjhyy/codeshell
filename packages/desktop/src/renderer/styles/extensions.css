@@ -24,66 +24,116 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--sp-5);
+  gap: 36px;
   flex: 1;
   min-height: 0;
-  padding: 48px var(--sp-4) var(--sp-6);
+  padding: 64px var(--sp-4) var(--sp-6);
   overflow-y: auto;
+}
+
+/* Hero: title + subtitle + search, constrained to a comfortable column. */
+.ext-home-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  max-width: 520px;
 }
 .ext-home-title {
   margin: 0;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   text-align: center;
   color: var(--fg-primary);
 }
+.ext-home-subtitle {
+  margin: 0;
+  font-size: var(--fz-md);
+  text-align: center;
+  color: var(--fg-muted);
+}
+.ext-home-search-wrap {
+  position: relative;
+  width: 100%;
+  margin-top: var(--sp-2);
+}
+.ext-home-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--fz-sm);
+  opacity: 0.55;
+  pointer-events: none;
+}
 .ext-home-search {
   width: 100%;
-  max-width: 420px;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--bg-elevated);
   color: var(--fg-primary);
   font: inherit;
   font-size: var(--fz-md);
-  padding: 8px 12px;
+  padding: 10px 12px 10px 34px;
   outline: none;
+  transition: border-color 80ms ease, box-shadow 80ms ease;
 }
 .ext-home-search:focus {
-  border-color: var(--border-strong);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 .ext-home-search::placeholder {
   color: var(--fg-muted);
 }
-.ext-home-overview {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
+
+/* Overview as a row of stat cards (count + label), plus a 市场 entry. */
+.ext-home-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(96px, 132px));
+  gap: var(--sp-3);
+  width: 100%;
+  max-width: 600px;
 }
-.ext-home-stat {
+.ext-home-card {
   appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--fg-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--sp-4) var(--sp-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--fg-primary);
   font: inherit;
-  font-size: var(--fz-md);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  transition: color 80ms ease, background 80ms ease;
+  transition: border-color 80ms ease, background 80ms ease, transform 80ms ease;
 }
-.ext-home-stat:hover {
-  color: var(--fg-primary);
+.ext-home-card:hover {
+  border-color: var(--border-strong);
   background: var(--bg-hover);
+  transform: translateY(-1px);
 }
-.ext-home-stat b {
+.ext-home-card-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.ext-home-card-value {
+  font-size: 22px;
+  font-weight: 650;
   color: var(--fg-primary);
-  font-weight: 600;
+  line-height: 1.1;
 }
-.ext-home-dot {
-  color: var(--fg-muted);
-  user-select: none;
+.ext-home-card-label {
+  font-size: var(--fz-xs);
+  color: var(--fg-secondary);
+}
+/* The 市场 card reads as an "add more" affordance — accent the + value. */
+.ext-home-card-market .ext-home-card-value {
+  color: var(--accent);
+  font-weight: 500;
 }
 .ext-home-back {
   flex: none;

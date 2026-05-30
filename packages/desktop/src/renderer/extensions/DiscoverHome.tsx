@@ -45,33 +45,58 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
     if (e.key === "Enter") onOpenManage("skills", search.trim() || undefined);
   };
 
+  const stats: { key: TabKey; label: string; icon: string; value: number | null }[] = [
+    { key: "plugins", label: "插件", icon: "🧩", value: counts?.plugins ?? null },
+    { key: "skills", label: "技能", icon: "📄", value: counts?.skills ?? null },
+    { key: "mcp", label: "MCP", icon: "🔌", value: counts?.mcp ?? null },
+  ];
+
   return (
     <div className="ext-home">
-      <h1 className="ext-home-title">让 codeshell 按你的方式工作</h1>
-      <input
-        className="ext-home-search"
-        placeholder="搜索技能、插件…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        onKeyDown={onSearchKeyDown}
-      />
-      <div className="ext-home-overview">
+      <div className="ext-home-hero">
+        <h1 className="ext-home-title">让 codeshell 按你的方式工作</h1>
+        <p className="ext-home-subtitle">
+          管理插件、技能与 MCP 服务，或从市场添加更多能力
+        </p>
+        <div className="ext-home-search-wrap">
+          <span className="ext-home-search-icon" aria-hidden="true">
+            🔍
+          </span>
+          <input
+            className="ext-home-search"
+            placeholder="搜索技能、插件…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={onSearchKeyDown}
+          />
+        </div>
+      </div>
+
+      <div className="ext-home-cards">
+        {stats.map((s) => (
+          <button
+            key={s.key}
+            className="ext-home-card"
+            onClick={() => onOpenManage(s.key)}
+          >
+            <span className="ext-home-card-icon" aria-hidden="true">
+              {s.icon}
+            </span>
+            <span className="ext-home-card-value">
+              {s.value === null ? "—" : s.value}
+            </span>
+            <span className="ext-home-card-label">{s.label}</span>
+          </button>
+        ))}
         <button
-          className="ext-home-stat"
-          onClick={() => onOpenManage("plugins")}
+          className="ext-home-card ext-home-card-market"
+          onClick={() => onOpenManage("market")}
         >
-          插件 <b>{counts?.plugins ?? "—"}</b>
-        </button>
-        <span className="ext-home-dot">·</span>
-        <button
-          className="ext-home-stat"
-          onClick={() => onOpenManage("skills")}
-        >
-          技能 <b>{counts?.skills ?? "—"}</b>
-        </button>
-        <span className="ext-home-dot">·</span>
-        <button className="ext-home-stat" onClick={() => onOpenManage("mcp")}>
-          MCP <b>{counts?.mcp ?? "—"}</b>
+          <span className="ext-home-card-icon" aria-hidden="true">
+            🛒
+          </span>
+          <span className="ext-home-card-value">+</span>
+          <span className="ext-home-card-label">市场</span>
         </button>
       </div>
     </div>

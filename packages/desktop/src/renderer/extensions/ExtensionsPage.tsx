@@ -4,6 +4,13 @@ import { ManagePage, type TabKey } from "./ManagePage";
 
 interface Props {
   activeRepoPath: string | null;
+  /**
+   * When true (default), opens to the discovery home and lets the user drill
+   * into the management page. When false, renders the management page only —
+   * used by the Settings page, which wants the bare tabbed manager with no
+   * discovery home. The sidebar entry keeps the home.
+   */
+  showDiscover?: boolean;
 }
 
 type View =
@@ -11,13 +18,22 @@ type View =
   | { mode: "manage"; tab: TabKey; query?: string };
 
 /**
- * Unified extensions surface (Codex-style). Opens to a minimal discovery
- * home (title + search + installed overview); selecting a count or
- * submitting a search switches into the tabbed management page.
+ * Unified extensions surface (Codex-style). By default opens to a minimal
+ * discovery home (title + search + installed overview); selecting a count or
+ * submitting a search switches into the tabbed management page. With
+ * showDiscover=false it renders the management page directly.
  */
-export function ExtensionsPage({ activeRepoPath }: Props) {
+export function ExtensionsPage({ activeRepoPath, showDiscover = true }: Props) {
   const cwd = activeRepoPath ?? "/";
   const [view, setView] = useState<View>({ mode: "home" });
+
+  if (!showDiscover) {
+    return (
+      <div className="ext-page">
+        <ManagePage cwd={cwd} activeRepoPath={activeRepoPath} />
+      </div>
+    );
+  }
 
   return (
     <div className="ext-page">
