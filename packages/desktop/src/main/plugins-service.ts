@@ -14,7 +14,7 @@
  * installPath has disappeared.
  */
 
-import { listInstalled } from "@cjhyy/code-shell-core";
+import { listInstalled, uninstallPlugin } from "@cjhyy/code-shell-core";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 
@@ -115,5 +115,29 @@ export function listPlugins(_cwd: string): PluginSummary[] {
     });
   }
   return out;
+}
+
+export interface UninstallPluginResult {
+  ok: boolean;
+  removedFromManifest: boolean;
+  removedFromDisk: boolean;
+}
+
+/**
+ * Uninstall a marketplace-installed plugin. pluginName/marketplaceName come
+ * from the renderer after splitting the install key (see resolveUninstallTarget).
+ * Throws on bad input so the IPC layer surfaces a clear error.
+ */
+export function uninstallPluginEntry(
+  pluginName: string,
+  marketplaceName: string,
+): UninstallPluginResult {
+  if (typeof pluginName !== "string" || !pluginName) {
+    throw new Error("uninstallPluginEntry requires pluginName");
+  }
+  if (typeof marketplaceName !== "string" || !marketplaceName) {
+    throw new Error("uninstallPluginEntry requires marketplaceName");
+  }
+  return uninstallPlugin(pluginName, marketplaceName);
 }
 

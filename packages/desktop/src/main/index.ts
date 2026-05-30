@@ -48,7 +48,7 @@ import {
   readSkillBody,
   uninstallSkill,
 } from "./skills-service.js";
-import { listPlugins } from "./plugins-service.js";
+import { listPlugins, uninstallPluginEntry } from "./plugins-service.js";
 import {
   listCapabilities,
   setCapabilityEnabled,
@@ -270,6 +270,12 @@ ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
   return listPlugins(cwd);
 });
+ipcMain.handle(
+  "plugins:uninstall",
+  async (_e, pluginName: string, marketplaceName: string) => {
+    return uninstallPluginEntry(pluginName, marketplaceName);
+  },
+);
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
   if (typeof cwd !== "string") throw new Error("files:search requires cwd");
