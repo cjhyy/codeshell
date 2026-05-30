@@ -9,8 +9,12 @@ const EDIT_TOOLS = new Set([
 const WRITE_TOOLS = new Set(["write", "filewrite"]);
 const NOTEBOOK_TOOLS = new Set(["notebookedit", "notebook_edit"]);
 
-function countLines(s: unknown): number {
-  return typeof s === "string" && s.length > 0 ? s.split("\n").length : 0;
+export function countLines(s: unknown): number {
+  if (typeof s !== "string" || s.length === 0) return 0;
+  // Match linesOf(): a single trailing newline terminates the last line rather
+  // than starting a phantom empty one, so "a\nb\n" is 2 lines, not 3.
+  const body = s.endsWith("\n") ? s.slice(0, -1) : s;
+  return body.split("\n").length;
 }
 
 function parseArgs(t: ToolMessage): Record<string, unknown> {
