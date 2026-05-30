@@ -79,7 +79,7 @@ function readImageBlock(rawPath: string, cwd: string): string {
     size = st.size;
     bytes = readFileSync(path);
   } catch (err) {
-    throw new Error(`读取失败：${path}（${(err as Error).message}）`);
+    throw new Error(`读取失败：${path}（${(err as Error).message}）`, { cause: err });
   }
   const base64 = bytes.toString("base64");
   const name = basename(path);

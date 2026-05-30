@@ -113,7 +113,14 @@ export default [
   {
     files: ["packages/desktop/src/renderer/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", {
+      // The renderer must not take a RUNTIME dependency on the codeshell
+      // packages — it talks to main via window.codeShell.*. Type-only
+      // imports are erased at compile time (no runtime edge), so they're
+      // allowed: the renderer can share core's StreamEvent/TaskInfo shapes
+      // without bundling core. Use @typescript-eslint's variant for
+      // allowTypeImports and turn the base rule off so they don't conflict.
+      "no-restricted-imports": "off",
+      "@typescript-eslint/no-restricted-imports": ["error", {
         patterns: [
           {
             group: [
@@ -123,7 +130,8 @@ export default [
               "@cjhyy/code-shell-tui/*",
               "@cjhyy/code-shell"
             ],
-            message: "renderer must not import codeshell packages — talk to main via window.codeShell.*"
+            allowTypeImports: true,
+            message: "renderer must not import codeshell packages at runtime — talk to main via window.codeShell.* (type-only imports are allowed)"
           }
         ]
       }]
