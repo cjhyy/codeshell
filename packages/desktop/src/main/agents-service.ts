@@ -14,6 +14,7 @@ import {
   serializeAgentDefinition,
   type AgentDefinition,
 } from "@cjhyy/code-shell-core";
+import { assertCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -54,6 +55,7 @@ export function listAgents(cwd: string): AgentSummary[] {
 }
 
 export async function readAgentBody(filePath: string): Promise<string> {
+  assertCodeShellMarkdownPath(filePath);
   return fs.readFile(filePath, "utf8");
 }
 

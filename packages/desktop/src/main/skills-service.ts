@@ -11,6 +11,7 @@
  */
 
 import { scanSkills, type SkillDefinition } from "@cjhyy/code-shell-core";
+import { assertCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -44,6 +45,7 @@ export function listSkills(cwd: string): SkillSummary[] {
 }
 
 export async function readSkillBody(filePath: string): Promise<string> {
+  assertCodeShellMarkdownPath(filePath);
   return fs.readFile(filePath, "utf8");
 }
 
