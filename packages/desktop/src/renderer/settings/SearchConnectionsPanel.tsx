@@ -156,7 +156,8 @@ export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
       };
       await writeBack(next, defaultProvider);
       setByProvider(next);
-    } catch {
+    } catch (err) {
+      console.error("saveProvider writeBack failed", err);
       updateProvider(id, { saving: false });
     }
   };
@@ -167,7 +168,14 @@ export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
       [id]: { ...initialProviderState() },
     };
     setByProvider(next);
-    await writeBack(next, defaultProvider);
+    try {
+      await writeBack(next, defaultProvider);
+    } catch (err) {
+      // Don't leave the UI cleared while the persisted settings still hold the
+      // old provider — log and reload from disk to resync.
+      console.error("clearProvider writeBack failed", err);
+      void load();
+    }
   };
 
   const testProvider = async (id: Provider) => {
