@@ -174,9 +174,11 @@ function parseTerminalResponse(s: string): TerminalResponse | null {
   return null
 }
 
-function splitNumericParams(params: string): number[] {
+export function splitNumericParams(params: string): number[] {
   if (!params) return []
-  return params.split(';').map(p => parseInt(p, 10))
+  // An empty parameter (e.g. "1;;3") defaults to 0 per VT param semantics;
+  // parseInt("") is NaN, so map empties explicitly.
+  return params.split(';').map(p => (p === '' ? 0 : parseInt(p, 10)))
 }
 
 export type KeyParseState = {

@@ -18,7 +18,9 @@ export default function Newline(t0) {
   const {
     count: t1
   } = t0;
-  const count = t1 === undefined ? 1 : t1;
+  // Clamp to a non-negative integer — "\n".repeat(n) throws RangeError for
+  // negative or non-finite counts (review-2026-05-30).
+  const count = Math.max(0, Math.floor(t1 === undefined ? 1 : t1));
   let t2;
   if ($[0] !== count) {
     t2 = "\n".repeat(count);
