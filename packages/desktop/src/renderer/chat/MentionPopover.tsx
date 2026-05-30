@@ -72,7 +72,7 @@ export function MentionPopover({
   }, [cwd, query]);
 
   // Filter skills client-side by the query — name + description match.
-  // Limit to the first 6 so long lists don't push files off-screen.
+  // Limit to the first 8 so long lists don't push files off-screen.
   const filteredSkills = useMemo(() => {
     const q = query.trim().toLowerCase();
     const matches = q
