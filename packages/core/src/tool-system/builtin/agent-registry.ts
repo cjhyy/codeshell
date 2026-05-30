@@ -147,10 +147,9 @@ class AsyncAgentRegistry {
     } catch {
       // ignore abort errors — we still mark cancelled
     }
-    e.status = "cancelled";
-    e.finishedAt = Date.now();
-    e.finishedFadeAt = e.finishedAt + 30_000;
-    this.notify();
+    // Reuse markFinished for the status/timestamp/notify bookkeeping rather
+    // than duplicating it (the entry is still "running" after abort()).
+    this.markFinished(agentId, "cancelled");
     return true;
   }
 
