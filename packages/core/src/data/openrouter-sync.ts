@@ -70,7 +70,7 @@ export async function syncOpenRouterCatalog(timeoutMs = 15_000): Promise<SyncRes
     });
     return { ok: true, count: models.length };
   } catch (err) {
-    return { ok: false, count: 0, error: (err as Error).message };
+    return { ok: false, count: 0, error: err instanceof Error ? err.message : String(err) };
   }
 }
 

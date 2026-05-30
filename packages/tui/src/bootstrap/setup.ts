@@ -60,9 +60,17 @@ export async function setup(options: SetupOptions): Promise<void> {
     }
   }
 
-  // 4. Set working directory
+  // 4. Set working directory. chdir can throw (missing dir, permissions) —
+  // surface a clear error instead of an opaque stack from deep in bootstrap.
   if (process.cwd() !== cwd) {
-    process.chdir(cwd);
+    try {
+      process.chdir(cwd);
+    } catch (err) {
+      throw new Error(
+        `Cannot switch to working directory ${cwd}: ${err instanceof Error ? err.message : String(err)}`,
+        { cause: err },
+      );
+    }
   }
 
   // 5. Check if inside a git repo (informational, non-blocking)

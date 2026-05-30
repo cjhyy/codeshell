@@ -39,6 +39,7 @@ export class TerminalRenderer {
   private rows: number;
   private cols: number;
   private syncSupported: boolean;
+  private readonly onResize: () => void;
 
   constructor(stdout: NodeJS.WriteStream) {
     this.stdout = stdout;
@@ -46,13 +47,15 @@ export class TerminalRenderer {
     this.cols = stdout.columns ?? 80;
     this.syncSupported = this.detectSyncSupport();
 
-    // Listen for resize
-    stdout.on("resize", () => {
+    // Listen for resize (named so exit() can unregister it — an anonymous
+    // listener leaked on the long-lived process.stdout).
+    this.onResize = () => {
       this.rows = stdout.rows ?? 24;
       this.cols = stdout.columns ?? 80;
       // Force full repaint on resize
       this.frontLines = [];
-    });
+    };
+    stdout.on("resize", this.onResize);
   }
 
   /** Enter alt screen, hide cursor, clear. */
@@ -69,6 +72,7 @@ export class TerminalRenderer {
 
   /** Exit alt screen, show cursor, restore bracketed paste. */
   exit(): void {
+    this.stdout.off("resize", this.onResize);
     if (!this.stdout.isTTY) return;
     this.stdout.write(
       SHOW_CURSOR +
