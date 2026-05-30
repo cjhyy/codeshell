@@ -34,7 +34,6 @@ const ITEMS: Item[] = [
   { id: "sessions", label: "会话", Icon: ListChecks },
   { id: "approvals", label: "审批", Icon: ShieldAlert, badge: "approvals" },
   { id: "runs", label: "运行", Icon: Activity, badge: "runs" },
-  { id: "mcp", label: "插件", Icon: Plug },
   { id: "logs", label: "日志", Icon: ScrollText },
   { id: "settings", label: "设置", Icon: Settings },
 ];

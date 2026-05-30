@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   MessageSquare,
   Search,
-  Puzzle,
   Blocks,
   Workflow,
   ChevronDown,
@@ -43,7 +42,6 @@ interface SidebarProps {
   onNewConversation: () => void;
   onOpenSearch: () => void;
   onOpenAutomations: () => void;
-  onOpenPlugins: () => void;
   onOpenCustomize: () => void;
   onOpenSettingsPage: () => void;
 
@@ -81,7 +79,6 @@ export function Sidebar({
   onNewConversation,
   onOpenSearch,
   onOpenAutomations,
-  onOpenPlugins,
   onOpenCustomize,
   onOpenSettingsPage,
   onRenameSession,
@@ -186,7 +183,6 @@ export function Sidebar({
       <nav className="sidebar-top">
         <SidebarItem label="新对话" Icon={MessageSquare} onClick={onNewConversation} active={false} />
         <SidebarItem label="搜索" Icon={Search} onClick={onOpenSearch} active={false} />
-        <SidebarItem label="MCP" Icon={Puzzle} onClick={onOpenPlugins} active={viewMode === "mcp"} />
         <SidebarItem
           label="扩展"
           Icon={Blocks}

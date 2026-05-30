@@ -51,7 +51,6 @@ import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
 // Full-page Settings — driven by viewMode === 'settings_page'.
 import { SettingsPage } from "./settings/SettingsPage";
-import { McpView } from "./mcp/McpView";
 import { RunsView } from "./runs/RunsView";
 import { CustomizeView } from "./customize/CustomizeView";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
@@ -1083,7 +1082,6 @@ function App() {
           onNewConversation={handleNewConversation}
           onOpenSearch={() => setSessionSearchOpen(true)}
           onOpenAutomations={() => setViewMode("runs")}
-          onOpenPlugins={() => setViewMode("mcp")}
           onOpenCustomize={() => setViewMode("customize")}
           onOpenSettingsPage={() => setViewMode("settings_page")}
           onRenameSession={handleRenameSession}
@@ -1105,8 +1103,6 @@ function App() {
           />
         ) : view.viewMode === "logs" ? (
           <LogsView />
-        ) : view.viewMode === "mcp" ? (
-          <McpView />
         ) : view.viewMode === "customize" ? (
           <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
         ) : view.viewMode === "runs" ? (
