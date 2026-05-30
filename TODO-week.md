@@ -9,7 +9,7 @@
 | 🟡 | 4   | plugin / skill 系统跟 Codex 对齐 | 本地安装 / 转换 / 运行时加载 / list-update-uninstall / **远程安装(#11 已完成)**。**剩**:跨 MCP/builtin/skill 统一能力注册表收尾(core 大改) |
 | ✅ | 11  | 远程插件安装(git 来源)        | spec `docs/superpowers/specs/2026-05-29-plugin-remote-install-design.md`,**已实现**(2026-05-30,TDD)。`parseSource.ts`(解析 `github:org/repo`/https/ssh + `@ref`/`#subdir`)+ `installFromSource.ts`(薄桥:`gitClone` 临时目录 → `installPluginFromPath` 转换+装 → 改写 `.cs-meta.json.source` 为原始 git 串 → 删临时目录);`update.ts` 远程源重拉重装;CLI dispatch 本地/远程。16 个新单测/集成测全绿 |
 | 🟡 | 10  | 多 session 上下文/串台 + 慢 修复 | 辅助任务模型已落地。**剩**:见「遗留 / 待确认」 |
-| 🟡 | 12  | 全量逐文件 review 修复          | 2026-05-30 multi-agent review,两轮对抗验证后 **121 条真问题(9 高 + 52 中 + 60 低)**。**9 个高已全部处理**:8 修复(6 第一轮 + lsp 路径 + FileRunStore 锁链)、1 误报(voice execSync 本就走 shell)。**剩 52 中 + 60 低**,逐个验证(高误报率)后修+提交。详见下「🔬 全量逐文件 review」 |
+| ✅ | 12  | 全量逐文件 review 修复          | 2026-05-30 review 共 121 条已验证项(9 高 + 52 中 + 60 低)**全部逐条处理完毕**(2026-05-30,逐个 TDD/复现验证 + 单独 commit)。绝大多数已修复;少数经二次复核判定为**误报**(voice execSync、web-tools await、docs/seatbelt/y-clamp、isResponse)或**设计判断/不动**(apply-patch 空行宽容、measure-text 尾换行无测试有回归风险、clipboard execSync 一次性 OK、session pid temp、CommandInput 防御式死条件、8 字符 SHA 缩写);`send-message __agentName` 是**未接线功能**(coordinator 全链路未接,非简单修复,留作 feature)。每条的处置见下表 ⬜/✅/❎ 标记。全仓 1525 pass/0 fail、typecheck/lint(0 error)/build 全绿 |
 
 ## 遗留 / 待确认
 
@@ -35,30 +35,30 @@
 | ✅ | 🔴 高 | 安全 | `tui/cli/commands/builtin/core-commands.ts:512, 523` | Command injection vulnerability via unsanitized git diff argument | **已修**:抽出 `git-diff.ts`,改 `execFileSync("git", [argv])` 不过 shell。测试用 `; touch PWNED #` 恶意 arg 证明不执行、被当字面 pathspec |
 | ✅ | 🔴 高 | 正确性 | `tui/native-ts/yoga-layout/index.ts:958` | Root position TOP inset resolved against wrong dimension | **已修**:`posT` 从 `isDefined(w)?w:0` 改为按高度 `isDefined(h)?h:0`。`position-percent.test.ts` 覆盖 |
 | ✅ | 🔴 高 | 正确性 | `tui/native-ts/yoga-layout/index.ts:1859-1865` | Flex item relative position TOP/BOTTOM resolved against wrong dimension | **已修**:`relTop`/`relBottom` 从 `ownerW` 改为 `ownerH`(LEFT/RIGHT 仍 ownerW)。abs 定位路径本就正确,未动 |
-| ⬜ | 🟡 中 | 正确性 | `core/arena/iterate/tools/web-tools.ts:52-56` | Missing await on async tool function calls | Add await before both webSearchTool(args) on line 53 and webFetchTool(args) on line 56: `r… |
-| ⬜ | 🟡 中 | 正确性 | `core/arena/phases/planning-detail-expansion.ts:88-142` | LLM not invoked after tool execution on final round | Either: (1) use `round < maxRounds` instead of `round <= maxRounds` and make an additional… |
-| ⬜ | 🟡 中 | 正确性 | `core/git/worktree.ts:97-104` | Running git commands on already-removed worktree will fail | Extract and store the branch name before removing the worktree (line 89), then use it to d… |
-| ⬜ | 🟡 中 | 正确性 | `core/lsp/manager.ts:44-47` | Race condition: polling for server readiness without guarantee | Use a proper synchronization primitive (e.g., a promise that resolves when state changes t… |
-| ⬜ | 🟡 中 | 正确性 | `core/plugins/installer/update.ts:45-46` | Inconsistent state if reinstall fails after uninstall | Wrap the uninstall+install sequence in try-catch, or call install first (to validate) befo… |
-| ⬜ | 🟡 中 | 正确性 | `core/remote/bridge.ts:53-59` | Logic error: exit handler always rejects due to redundant condition | Change the exit handler to track connection state separately or check the exit code. For e… |
-| ⬜ | 🟡 中 | 正确性 | `core/remote/bridge.ts:36-60` | Promise rejection race condition: error events after resolution are unhandled | Add a resolved flag: let resolved = false; Set it to true after resolve/reject, then check… |
-| ⬜ | 🟡 中 | 安全 | `core/services/notifier.ts:28-31` | Command injection vulnerability in macOS notification | Use parameterized execution or properly quote the entire osascript command. Consider using… |
-| ⬜ | 🟡 中 | 正确性 | `core/tool-system/builtin/send-message.ts:33` | __agentName is read from args but never injected | Add an `agentName` field to ToolContext (or use a different mechanism to inject the agent'… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/main/desktop-logger.ts:52-63` | Cached log path doesn't roll over at midnight | Check if the cached date still matches today before returning the cached path. Compare the… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/preload/index.ts:69-76` | RPC function has no error handling or timeout, causes infinite hangs | Add error handling: wrap `ipcRenderer.send()` in try-catch, add a timeout using Promise.ra… |
-| ⬜ | 🟡 中 | 安全 | `desktop/preload/index.ts:213-225` | File paths passed to main process without traversal validation | Validate paths: reject absolute paths, reject paths containing '..', and ensure paths are … |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/settings/PermissionSection.tsx:27-33` | Unhandled promise rejection in load() function | Wrap the getSettings call in try-catch: try { const s = (await window.codeshell.getSetting… |
-| ⬜ | 🟡 中 | 安全 | `tui/cli/commands/builtin/more-commands.ts:21` | Command injection vulnerability in /files command pattern | Use execSync's built-in argument arrays instead of string interpolation, or escape the pat… |
-| ⬜ | 🟡 中 | 正确性 | `tui/render/ink.tsx:410-411, 1757-1759, 1762-1768` | Promise in waitUntilExit can hang indefinitely if unmount is called first | In waitUntilExit, ensure the promise is created first before assigning resolve/reject hand… |
-| ⬜ | 🟡 中 | 正确性 | `tui/render/render-border.ts:46` | Text truncation ignores ANSI color codes, corrupting output | Use a width-aware truncation: iterate through the text character-by-character, tracking vi… |
-| ⬜ | 🟡 中 | 正确性 | `tui/ui/vim-mode.ts:108` | Cursor movement 'l' can position cursor at -1 in empty text | Change to: s.cursor = text.length > 0 ? Math.min(text.length - 1, s.cursor + 1) : 0; |
-| ⬜ | 🟡 中 | 正确性 | `tui/ui/vim-mode.ts:174` | Cursor movement 'l' in visual mode can position cursor at -1 | Change to: s.cursor = text.length > 0 ? Math.min(text.length - 1, s.cursor + 1) : 0; |
-| ⬜ | 🟡 中 | 正确性 | `tui/utils/fullscreen.ts:34-51` | Incorrect logic in probeTmuxControlModeSync: env heuristic result cached as probe result | Remove lines 35-36. Start probing directly only if TERM_PROGRAM is not set or not iTerm (t… |
-| ⬜ | ⚪ 低 | 正确性 | `core/arena/iterate/phases/argue.ts:126-202` | Uninitialized finalText passed to parser on max-token failure | Check if finalText is still empty after the fallback attempt and either: (a) log an error … |
-| ⬜ | ⚪ 低 | 正确性 | `core/onboarding.ts:282` | validateApiKey may incorrectly return true for malformed API responses | Change `return !data.error;` to `return data.error === undefined \|\| data.error === false… |
-| ⬜ | ⚪ 低 | 正确性 | `core/plugins/installer/update.ts:26` | Unhandled JSON/Zod parsing error in update.ts | Wrap JSON.parse() and the Zod validation in a try-catch block, throwing PluginInstallError… |
-| ⬜ | ⚪ 低 | 正确性 | `core/types.ts:101` | SessionStatus includes 'paused' but it's not documented as a valid TerminalReason | Either (1) add 'paused' to the TerminalReason union if it represents a valid terminal stat… |
-| ⬜ | ⚪ 低 | 正确性 | `desktop/main/agent-bridge.ts:103` | Readline interface resource leak on child process exit | Capture `rl` as an instance variable or call `rl.close()` in the 'exit' event handler at l… |
+| ❎ | 🟡 中 | 正确性 | `core/arena/iterate/tools/web-tools.ts:52-56` | Missing await on async tool function calls | **误报**:外层函数 async、直接 `return webSearchTool(args)`(Promise 透传),无 try/catch 漏掉 rejection。加 await 是 no-op。未改 |
+| ✅ | 🟡 中 | 正确性 | `core/arena/phases/planning-detail-expansion.ts:88-142` | LLM not invoked after tool execution on final round | Either: (1) use `round < maxRounds` instead of `round <= maxRounds` and make an additional… |
+| ✅ | 🟡 中 | 正确性 | `core/git/worktree.ts:97-104` | Running git commands on already-removed worktree will fail | Extract and store the branch name before removing the worktree (line 89), then use it to d… |
+| ✅ | 🟡 中 | 正确性 | `core/lsp/manager.ts:44-47` | Race condition: polling for server readiness without guarantee | Use a proper synchronization primitive (e.g., a promise that resolves when state changes t… |
+| ✅ | 🟡 中 | 正确性 | `core/plugins/installer/update.ts:45-46` | Inconsistent state if reinstall fails after uninstall | Wrap the uninstall+install sequence in try-catch, or call install first (to validate) befo… |
+| ✅ | 🟡 中 | 正确性 | `core/remote/bridge.ts:53-59` | Logic error: exit handler always rejects due to redundant condition | Change the exit handler to track connection state separately or check the exit code. For e… |
+| ✅ | 🟡 中 | 正确性 | `core/remote/bridge.ts:36-60` | Promise rejection race condition: error events after resolution are unhandled | Add a resolved flag: let resolved = false; Set it to true after resolve/reject, then check… |
+| ✅ | 🟡 中 | 安全 | `core/services/notifier.ts:28-31` | Command injection vulnerability in macOS notification | Use parameterized execution or properly quote the entire osascript command. Consider using… |
+| 🟡 | 🟡 中 | 正确性 | `core/tool-system/builtin/send-message.ts:33` | __agentName is read from args but never injected | **留作 feature**:`agentCoordinator` 全链路从未 register(仅 send-message 引用),SendMessage 整功能未接线。单修 `__agentName` 无意义;需要在 spawn 时接入 coordinator + 经 context 传发送方身份(功能开发,非 review 修复) |
+| ✅ | 🟡 中 | 正确性 | `desktop/main/desktop-logger.ts:52-63` | Cached log path doesn't roll over at midnight | Check if the cached date still matches today before returning the cached path. Compare the… |
+| ✅ | 🟡 中 | 正确性 | `desktop/preload/index.ts:69-76` | RPC function has no error handling or timeout, causes infinite hangs | Add error handling: wrap `ipcRenderer.send()` in try-catch, add a timeout using Promise.ra… |
+| ✅ | 🟡 中 | 安全 | `desktop/preload/index.ts:213-225` | File paths passed to main process without traversal validation | Validate paths: reject absolute paths, reject paths containing '..', and ensure paths are … |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/settings/PermissionSection.tsx:27-33` | Unhandled promise rejection in load() function | Wrap the getSettings call in try-catch: try { const s = (await window.codeshell.getSetting… |
+| ✅ | 🟡 中 | 安全 | `tui/cli/commands/builtin/more-commands.ts:21` | Command injection vulnerability in /files command pattern | Use execSync's built-in argument arrays instead of string interpolation, or escape the pat… |
+| ✅ | 🟡 中 | 正确性 | `tui/render/ink.tsx:410-411, 1757-1759, 1762-1768` | Promise in waitUntilExit can hang indefinitely if unmount is called first | In waitUntilExit, ensure the promise is created first before assigning resolve/reject hand… |
+| ✅ | 🟡 中 | 正确性 | `tui/render/render-border.ts:46` | Text truncation ignores ANSI color codes, corrupting output | Use a width-aware truncation: iterate through the text character-by-character, tracking vi… |
+| ✅ | 🟡 中 | 正确性 | `tui/ui/vim-mode.ts:108` | Cursor movement 'l' can position cursor at -1 in empty text | Change to: s.cursor = text.length > 0 ? Math.min(text.length - 1, s.cursor + 1) : 0; |
+| ✅ | 🟡 中 | 正确性 | `tui/ui/vim-mode.ts:174` | Cursor movement 'l' in visual mode can position cursor at -1 | Change to: s.cursor = text.length > 0 ? Math.min(text.length - 1, s.cursor + 1) : 0; |
+| ✅ | 🟡 中 | 正确性 | `tui/utils/fullscreen.ts:34-51` | Incorrect logic in probeTmuxControlModeSync: env heuristic result cached as probe result | Remove lines 35-36. Start probing directly only if TERM_PROGRAM is not set or not iTerm (t… |
+| ✅ | ⚪ 低 | 正确性 | `core/arena/iterate/phases/argue.ts:126-202` | Uninitialized finalText passed to parser on max-token failure | Check if finalText is still empty after the fallback attempt and either: (a) log an error … |
+| ✅ | ⚪ 低 | 正确性 | `core/onboarding.ts:282` | validateApiKey may incorrectly return true for malformed API responses | Change `return !data.error;` to `return data.error === undefined \|\| data.error === false… |
+| ✅ | ⚪ 低 | 正确性 | `core/plugins/installer/update.ts:26` | Unhandled JSON/Zod parsing error in update.ts | Wrap JSON.parse() and the Zod validation in a try-catch block, throwing PluginInstallError… |
+| ✅ | ⚪ 低 | 正确性 | `core/types.ts:101` | SessionStatus includes 'paused' but it's not documented as a valid TerminalReason | Either (1) add 'paused' to the TerminalReason union if it represents a valid terminal stat… |
+| ✅ | ⚪ 低 | 正确性 | `desktop/main/agent-bridge.ts:103` | Readline interface resource leak on child process exit | Capture `rl` as an instance variable or call `rl.close()` in the 'exit' event handler at l… |
 
 #### 高严重度 / 安全项详解
 
@@ -116,39 +116,39 @@
 | ✅ | 🔴 高 | 正确性 | `core/lsp/manager.ts:71` | Incorrect path handling with simple string replace | **已修(TDD)**:抽 `lsp/root-path.ts` 用 `fileURLToPath`(修 Windows `/C:/` + %20 解码),替换 `replace("file://","")` |
 | ✅ | 🔴 高 | 正确性 | `core/run/FileRunStore.ts:73-81` | Promise rejection in appendJsonl lock chain not handled | **已修(TDD)**:存进 map 的 lock 永不 reject(prev 用 `.catch`),本次错误仍抛给本 caller,无更新 writer 时清 map 项。补 recovery + 并发序列化两个测试 |
 | ❎ | 🔴 高 | 正确性 | `tui/voice/index.ts:90, 94` | Shell redirections in which checks fail without shell: true | **误报**:`execSync` 默认走 `/bin/sh -c`(与 `execFileSync` 不同),`\|\|` 和 `2>/dev/null` 本就生效;已实测复现验证。darwin/linux 分支不跑 Windows。未改 |
-| ⬜ | 🟡 中 | 安全 | `core/arena/context-tools.ts:126` | Path traversal vulnerability on Windows systems | Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT \|\| resolved.startsWith(RE… |
-| ⬜ | 🟡 中 | 正确性 | `core/arena/providers/docs.ts:55` | Relevant documents excluded due to discovery order | Change to include documents in two sequential phases: first collect all relevant docs, the… |
-| ⬜ | 🟡 中 | 正确性 | `core/context/compaction.ts:349` | Underestimated replacement size in applyToolResultBudget | Update line 349 to: `remaining += 656;` or better yet, calculate the actual replacement st… |
-| ⬜ | 🟡 中 | 正确性 | `core/cron/scheduler.ts:131-136` | Silent default fallback masks invalid schedule configuration | Throw an Error or log a warning when schedule parsing falls back to the default, or valida… |
-| ⬜ | 🟡 中 | 正确性 | `core/git/utils.ts:84` | Unvalidated split result in getGitLog may cause undefined property access | Add validation: `const parts = line.split("\|"); if (parts.length < 4) continue;` or use `… |
-| ⬜ | 🟡 中 | 正确性 | `core/onboarding.ts:309` | resolveApiKey bypasses sanitization unlike detectEnvKeys | Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] \|\| ''… |
-| ⬜ | 🟡 中 | 安全 | `core/remote/bridge.ts:106-116` | Command injection risk via identityFile and remoteCommand | Validate identityFile path (reject absolute paths, '..' sequences). For remoteCommand, avo… |
-| ⬜ | 🟡 中 | 正确性 | `core/services/session-memory.ts:51-55` | Incorrect 'most recent first' sorting for session memories | Parse the createdAt timestamp from the SessionMemoryEntry objects and sort by that, or ens… |
-| ⬜ | 🟡 中 | 正确性 | `core/tool-system/builtin/apply-patch/parser.ts:261-267` | Blank lines treated as context lines without marker verification | Require blank lines to have an explicit ' ' marker prefix, treating truly blank lines (no … |
-| ⬜ | 🟡 中 | 正确性 | `core/tool-system/builtin/arena.ts:498` | Unsafe error property access in catch block | Use `const msg = err instanceof Error ? err.message : String(err);` or `const msg = (err a… |
-| ⬜ | 🟡 中 | 正确性 | `core/tool-system/builtin/lsp.ts:103` | Hardcoded 2-second timeout for LSP diagnostics is a race condition | Either: (1) Subscribe to LSP diagnostic notifications and collect results until no new one… |
-| ⬜ | 🟡 中 | 正确性 | `core/tool-system/sandbox/seatbelt.ts:115-116` | Incomplete escape sequence handling in SBPL profile path quoting | Escape backslashes before double quotes: return `"${path.replace(/\\/g, '\\\\').replace(/"… |
-| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/Markdown.tsx:108-113` | Uncleanable timer may cause memory leak warning on unmount | Use useEffect with a cleanup that aborts the timer, or store the timeout ID in a useRef an… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/TopBar.tsx:98-107` | Div with onFocus/onBlur handlers is not keyboard-focusable | Add tabIndex={0} to the div at line 98 to make it keyboard-focusable so focus/blur handler… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/messages/fileChangeAggregator.ts:12-14` | countLines() counts trailing newline as extra line, inconsistent with linesOf() | Make countLines() consistent with linesOf(): `return typeof s === "string" && s.length > 0… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/sessions/SessionsView.tsx:49-55` | Missing error handling in commitEdit allows silent failures | Wrap the renameSession call in a try-catch block and only clear the editing state on succe… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/sessions/SessionsView.tsx:124-127` | Unhandled promise rejection in delete button handler | Wrap the deleteSession call in a try-catch block. Only call refresh() on success, and disp… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/settings/AgentsSection.tsx:98-110` | Missing error handling in remove function | Wrap the deleteAgent call and subsequent load() call in a try-catch block. Only clear UI s… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/settings/PermissionSection.tsx:39-55` | No error handling for updateSettings failure | Add a catch block to handle and display errors: catch (e) { console.error(e); /* display e… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/settings/SearchConnectionsPanel.tsx:159-161` | Silent error handling in saveProvider with no user feedback | Add error state tracking to ProviderState (or panel-level) and display error messages to u… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/settings/SearchConnectionsPanel.tsx:164-171` | No error handling in clearProvider, risking UI/state desync | Wrap writeBack in try-catch and only call setByProvider after a successful write, or rever… |
-| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/workspace-trust/TrustGate.tsx:16` | Unhandled promise rejection in getTrust call | Add .catch(err => { if (!cancelled) console.error(err); }) or use try-catch in an async II… |
-| ⬜ | 🟡 中 | 正确性 | `tui/cli/commands/builtin/extra-commands.ts:29` | Silent error handling when parsing settings.json | Log the error or validate JSON parsing with explicit error handling, e.g., `} catch (err) … |
-| ⬜ | 🟡 中 | 正确性 | `tui/cli/input/ndjson-reader.ts:30-50` | Unclosed readline interface resource leak in start() method | Add rl.close() in the 'close' event handler, or return a cleanup function from start() tha… |
-| ⬜ | 🟡 中 | 正确性 | `tui/cli/main.ts:190` | Missing validation on parseInt for --max-turns option | Add validation with Number.isNaN() before returning, or use a safer parsing function. |
-| ⬜ | 🟡 中 | 正确性 | `tui/render/measure-text.ts:27` | Loop processes text one position past the end, creating spurious empty line | Change loop condition to 'while (start < text.length)' or add explicit check to break when… |
-| ⬜ | 🟡 中 | 安全 | `tui/render/render-node-to-output.ts:182-186` | Unvalidated URL in OSC 8 hyperlink sequences | Validate and escape the URL before use. At minimum, reject URLs containing  (BEL) or  (E… |
-| ⬜ | 🟡 中 | 正确性 | `tui/render/render-node-to-output.ts:453-460, 546, 1241` | Absolute-positioned element y-clamping not reflected in cached geometry | Store the actual computed yogaTop separately from the rendered y position. Use the actual … |
-| ⬜ | 🟡 中 | 简化 | `tui/ui/components/ModelManager.tsx:411-416, 419-428` | Duplicated utility functions fmtTokens and modelTags | Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/util… |
-| ⬜ | 🟡 中 | 正确性 | `tui/ui/index.tsx:92-96` | Resource leak on unhandled rejection from waitUntilExit() | Wrap the await in try-catch-finally: try { await instance.waitUntilExit(); } finally { cle… |
-| ⬜ | 🟡 中 | 正确性 | `tui/ui/onboarding-runner.tsx:31-47` | Race condition: instance assigned asynchronously but used synchronously | Await the render promise before subscribing to the component callbacks, or guard the finis… |
-| ⬜ | 🟡 中 | 正确性 | `tui/ui/vim-mode.ts:129` | Cursor position not re-clamped after deletion in 'x' command | After line 129, add: s.cursor = Math.min(s.cursor, text.length > 0 ? text.length - 1 : 0); |
+| ✅ | 🟡 中 | 安全 | `core/arena/context-tools.ts:126` | Path traversal vulnerability on Windows systems | Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT \|\| resolved.startsWith(RE… |
+| ❎ | 🟡 中 | 正确性 | `core/arena/providers/docs.ts:55` | Relevant documents excluded due to discovery order | **误报**:固定优先级目录顺序 + dedup + `found.size<=5` fallback 是有意分诊,非过滤 bug。未改(注:同文件的"truncate 无换行"另一条已修) |
+| ✅ | 🟡 中 | 正确性 | `core/context/compaction.ts:349` | Underestimated replacement size in applyToolResultBudget | Update line 349 to: `remaining += 656;` or better yet, calculate the actual replacement st… |
+| ✅ | 🟡 中 | 正确性 | `core/cron/scheduler.ts:131-136` | Silent default fallback masks invalid schedule configuration | Throw an Error or log a warning when schedule parsing falls back to the default, or valida… |
+| ✅ | 🟡 中 | 正确性 | `core/git/utils.ts:84` | Unvalidated split result in getGitLog may cause undefined property access | Add validation: `const parts = line.split("\|"); if (parts.length < 4) continue;` or use `… |
+| ✅ | 🟡 中 | 正确性 | `core/onboarding.ts:309` | resolveApiKey bypasses sanitization unlike detectEnvKeys | Replace `process.env[p.envKey]?.trim()` with `sanitizeApiKey(process.env[p.envKey] \|\| ''… |
+| ✅ | 🟡 中 | 安全 | `core/remote/bridge.ts:106-116` | Command injection risk via identityFile and remoteCommand | Validate identityFile path (reject absolute paths, '..' sequences). For remoteCommand, avo… |
+| ✅ | 🟡 中 | 正确性 | `core/services/session-memory.ts:51-55` | Incorrect 'most recent first' sorting for session memories | Parse the createdAt timestamp from the SessionMemoryEntry objects and sort by that, or ens… |
+| ❎ | 🟡 中 | 正确性 | `core/tool-system/builtin/apply-patch/parser.ts:261-267` | Blank lines treated as context lines without marker verification | **判断/不动**:把空行当空上下文行是该 parser 有意的宽容设计(文件头标注 "Lenient extras",应对编辑器去尾空格);改严会破坏合法补丁。未改 |
+| ✅ | 🟡 中 | 正确性 | `core/tool-system/builtin/arena.ts:498` | Unsafe error property access in catch block | Use `const msg = err instanceof Error ? err.message : String(err);` or `const msg = (err a… |
+| ✅ | 🟡 中 | 正确性 | `core/tool-system/builtin/lsp.ts:103` | Hardcoded 2-second timeout for LSP diagnostics is a race condition | Either: (1) Subscribe to LSP diagnostic notifications and collect results until no new one… |
+| ❎ | 🟡 中 | 正确性 | `core/tool-system/sandbox/seatbelt.ts:115-116` | Incomplete escape sequence handling in SBPL profile path quoting | **误报**:SBPL 字符串字面量里反斜杠是普通字符,只需转义引号定界符(现有逻辑正确)。未改 |
+| ✅ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/Markdown.tsx:108-113` | Uncleanable timer may cause memory leak warning on unmount | Use useEffect with a cleanup that aborts the timer, or store the timeout ID in a useRef an… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/TopBar.tsx:98-107` | Div with onFocus/onBlur handlers is not keyboard-focusable | Add tabIndex={0} to the div at line 98 to make it keyboard-focusable so focus/blur handler… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/messages/fileChangeAggregator.ts:12-14` | countLines() counts trailing newline as extra line, inconsistent with linesOf() | Make countLines() consistent with linesOf(): `return typeof s === "string" && s.length > 0… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/sessions/SessionsView.tsx:49-55` | Missing error handling in commitEdit allows silent failures | Wrap the renameSession call in a try-catch block and only clear the editing state on succe… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/sessions/SessionsView.tsx:124-127` | Unhandled promise rejection in delete button handler | Wrap the deleteSession call in a try-catch block. Only call refresh() on success, and disp… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/settings/AgentsSection.tsx:98-110` | Missing error handling in remove function | Wrap the deleteAgent call and subsequent load() call in a try-catch block. Only clear UI s… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/settings/PermissionSection.tsx:39-55` | No error handling for updateSettings failure | Add a catch block to handle and display errors: catch (e) { console.error(e); /* display e… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/settings/SearchConnectionsPanel.tsx:159-161` | Silent error handling in saveProvider with no user feedback | Add error state tracking to ProviderState (or panel-level) and display error messages to u… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/settings/SearchConnectionsPanel.tsx:164-171` | No error handling in clearProvider, risking UI/state desync | Wrap writeBack in try-catch and only call setByProvider after a successful write, or rever… |
+| ✅ | 🟡 中 | 正确性 | `desktop/renderer/workspace-trust/TrustGate.tsx:16` | Unhandled promise rejection in getTrust call | Add .catch(err => { if (!cancelled) console.error(err); }) or use try-catch in an async II… |
+| ✅ | 🟡 中 | 正确性 | `tui/cli/commands/builtin/extra-commands.ts:29` | Silent error handling when parsing settings.json | Log the error or validate JSON parsing with explicit error handling, e.g., `} catch (err) … |
+| ✅ | 🟡 中 | 正确性 | `tui/cli/input/ndjson-reader.ts:30-50` | Unclosed readline interface resource leak in start() method | Add rl.close() in the 'close' event handler, or return a cleanup function from start() tha… |
+| ✅ | 🟡 中 | 正确性 | `tui/cli/main.ts:190` | Missing validation on parseInt for --max-turns option | Add validation with Number.isNaN() before returning, or use a safer parsing function. |
+| ❎ | 🟡 中 | 正确性 | `tui/render/measure-text.ts:27` | Loop processes text one position past the end, creating spurious empty line | **判断/不动**:尾换行算作新视觉行在终端里可能是有意行为;无任何 measureText 测试覆盖、是热点布局原语,翻转有全局回归风险。未改(finding 本身也标注需先确认期望行为) |
+| ✅ | 🟡 中 | 安全 | `tui/render/render-node-to-output.ts:182-186` | Unvalidated URL in OSC 8 hyperlink sequences | Validate and escape the URL before use. At minimum, reject URLs containing  (BEL) or  (E… |
+| ❎ | 🟡 中 | 正确性 | `tui/render/render-node-to-output.ts:453-460, 546, 1241` | Absolute-positioned element y-clamping not reflected in cached geometry | **误报**:clamp 在缓存前一致应用,缓存值=实际绘制值,后续帧用同一 clamped y 比较,无 desync。未改 |
+| ✅ | 🟡 中 | 简化 | `tui/ui/components/ModelManager.tsx:411-416, 419-428` | Duplicated utility functions fmtTokens and modelTags | Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/src/ui/util… |
+| ✅ | 🟡 中 | 正确性 | `tui/ui/index.tsx:92-96` | Resource leak on unhandled rejection from waitUntilExit() | Wrap the await in try-catch-finally: try { await instance.waitUntilExit(); } finally { cle… |
+| ✅ | 🟡 中 | 正确性 | `tui/ui/onboarding-runner.tsx:31-47` | Race condition: instance assigned asynchronously but used synchronously | Await the render promise before subscribing to the component callbacks, or guard the finis… |
+| ✅ | 🟡 中 | 正确性 | `tui/ui/vim-mode.ts:129` | Cursor position not re-clamped after deletion in 'x' command | After line 129, add: s.cursor = Math.min(s.cursor, text.length > 0 ? text.length - 1 : 0); |
 
 #### 第二轮高严重度详解(3)
 
@@ -175,66 +175,66 @@
 
 | 状态 | 维度 | 位置 | 问题 | 修复方向 |
 | ---- | ---- | ---- | ---- | -------- |
-| ⬜ | 安全 | `core/services/oauth.ts:38-44` | Command injection vulnerability in openBrowser URL ⚠️建议提中 | Escape the URL using shell escaping (e.g., use 'printf %q' or a library like 'sh… |
-| ⬜ | 安全 | `desktop/preload/index.ts:80-81` | Log function sends unsanitized user data to main process | Add a sanitization step before sending: strip known sensitive keys (passwords, t… |
-| ⬜ | 安全 | `tui/cli/commands/builtin/core-commands.ts:627-630` | Unnecessary use of shell command for file I/O | Replace with `readFileSync(join(ctx.cwd, 'package.json'), 'utf-8')` from node:fs… |
-| ⬜ | 性能 | `core/engine/engine.ts:929-930` | Double Map.get() call on same key | Store the result of .get() in a variable and reuse it: `const cached = this.comp… |
-| ⬜ | 性能 | `core/run/RunQueue.ts:30` | O(n) lookup in enqueue using array.includes() | Use a Set to track pending runIds instead of an array, changing pending to a Map… |
-| ⬜ | 性能 | `core/tool-system/builtin/web-fetch.ts:267` | Full response loaded into memory before truncation | For text responses, stream the response and truncate during reading, or limit th… |
-| ⬜ | 性能 | `desktop/main/memory-service.ts:51, 68` | Repeated loadAll() calls for same memory manager state | Cache the entries from loadAll() for the same (level, scope, cwd) tuple, or refa… |
-| ⬜ | 性能 | `tui/cli/commands/builtin/utility-commands.ts:33` | Synchronous execSync blocks event loop for clipboard operations | Replace execSync with an async alternative: use `exec()` from child_process with… |
-| ⬜ | 性能 | `tui/render/output.ts:363-387` | O(n*m) loop checking absoluteClears for every row during blit | Build a Set or Map of row ranges covered by absoluteClears during the initial co… |
-| ⬜ | 正确性 | `core/arena/iterate/phases/argue.ts:126-202` | Uninitialized finalText passed to parser on max-token failure | Check if finalText is still empty after the fallback attempt and either: (a) log… |
-| ⬜ | 正确性 | `core/arena/phases/participant-research.ts:202-216` | Missing abort signal in force-conclude message | Add `signal,` parameter to the force-conclude client.createMessage call: `signal… |
-| ⬜ | 正确性 | `core/arena/providers/docs.ts:109-111` | Truncate fails when no newline in first MAX_DOC_CHARS | Change to `return t.slice(0, lastNl >= 0 ? lastNl : t.length) + '\n... (truncate… |
-| ⬜ | 正确性 | `core/arena/providers/repo.ts:204-207` | Truncate fails when no newline in first MAX_FILE_CHARS | Change to `return t.slice(0, lastNl >= 0 ? lastNl : t.length) + '\n... (truncate… |
-| ⬜ | 正确性 | `core/arena/strategies/utils.ts:75-83` | extractJSONArray uses greedy regex that captures multiple arrays as one | Use non-greedy matching: `/\[[\s\S]*?\]/` or better yet, try to find balanced br… |
-| ⬜ | 正确性 | `core/data/openrouter-sync.ts:73` | Unsafe error message access on caught exception | Use `err instanceof Error ? err.message : String(err)` to safely extract the err… |
-| ⬜ | 正确性 | `core/git/worktree.ts:134` | Hardcoded HEAD hash truncation assumes 8-character format | Replace `line.slice(5, 13)` with `line.slice(5).split(/\s/)[0]` or similar to ex… |
-| ⬜ | 正确性 | `core/onboarding.ts:282` | validateApiKey may incorrectly return true for malformed API responses | Change `return !data.error;` to `return data.error === undefined \|\| data.error… |
-| ⬜ | 正确性 | `core/onboarding.ts:693-700` | Orphaned temporary file when renameSync fails | Add `unlinkSync(tmp)` in the catch block after the fallback write, or use a try-… |
-| ⬜ | 正确性 | `core/plugins/installer/codex/convertMcp.ts:32` | Unsafe type cast of unparsed JSON without validation | Add a validation check before line 32: `if (!parsed \|\| typeof parsed !== 'obje… |
-| ⬜ | 正确性 | `core/plugins/installer/update.ts:26` | Unhandled JSON/Zod parsing error in update.ts | Wrap JSON.parse() and the Zod validation in a try-catch block, throwing PluginIn… |
-| ⬜ | 正确性 | `core/product/define.ts:158-159` | Ambiguous system prompt precedence not enforced | Add validation: if presetDef.customPrompt is defined, do not build agentPreset.p… |
-| ⬜ | 正确性 | `core/prompt/composer.ts:64` | System prompt uses UTC date instead of local date | Use `new Date().toLocaleDateString('en-CA')` instead of `new Date().toISOString(… |
-| ⬜ | 正确性 | `core/protocol/types.ts:326-328` | isResponse type guard doesn't validate required fields | Add a check to verify at least one of 'result' or 'error' exists: `return "id" i… |
-| ⬜ | 正确性 | `core/remote/bridge.ts:66-71` | Missing write error handling in send() | Check the return value of write() and add an error handler to ssh.stdin, or use … |
-| ⬜ | 正确性 | `core/remote/bridge.ts:94-100` | Incomplete resource cleanup: listeners not removed | Store listener references and remove them: this.ssh.stdout?.off('data', handler)… |
-| ⬜ | 正确性 | `core/run/ArtifactTracker.ts:167` | Regex for bash redirection doesn't handle quoted paths | Enhance the regex to handle both quoted and unquoted paths: `/[>\|]\s*(['"]?)([^… |
-| ⬜ | 正确性 | `core/run/FileRunStore.ts:58-63` | Atomic write doesn't clean up temp file on failure | Wrap the rename in a try-catch and delete the temp file on failure: `try { renam… |
-| ⬜ | 正确性 | `core/services/memory-orchestrator.ts:75-76` | Memory extraction only checks user scope for duplication, ignoring dream scope | Load both user and dream scopes before extraction: change line 75 to load both s… |
-| ⬜ | 正确性 | `core/session/session-manager.ts:169` | Race condition in atomic write with process.pid-based temp file naming | Use a cryptographically unique suffix like `nanoid()` instead of `process.pid.Da… |
-| ⬜ | 正确性 | `core/tool-system/builtin/sleep.ts:33-35` | Abort signal listener never removed on normal completion | Use `signal?.addEventListener("abort", ..., { once: true })` to automatically re… |
-| ⬜ | 正确性 | `core/types.ts:101` | SessionStatus includes 'paused' but it's not documented as a valid TerminalReason | Either (1) add 'paused' to the TerminalReason union if it represents a valid ter… |
-| ⬜ | 正确性 | `core/utils/theme.ts:649` | Incorrect xterm-256 grayscale index formula | Change line 649 from `Math.round((r - 8) / 247 * 24) + 232` to `Math.round((r - … |
-| ⬜ | 正确性 | `desktop/main/agent-bridge.ts:103` | Readline interface resource leak on child process exit | Capture `rl` as an instance variable or call `rl.close()` in the 'exit' event ha… |
-| ⬜ | 正确性 | `desktop/main/updater.ts:101-102` | Timers not stored or cleaned up on app shutdown | Store the timeout and interval IDs in module-scope variables, and export a clean… |
-| ⬜ | 正确性 | `desktop/main/window-state-store.ts:19-20` | Stored window state values not validated, allowing invalid data to be used | Add runtime validation after parsing JSON: check that width/height are positive … |
-| ⬜ | 正确性 | `desktop/preload/index.ts:38-44` | msg.id type cast without validation; wrong id type causes silent loss | Add type check: `if (typeof msg.id !== 'number') return;` before line 40. |
-| ⬜ | 正确性 | `desktop/preload/index.ts:50-62` | agent/approvalRequest passes undefined params to listeners | Add a null check and ensure params has the expected structure before forwarding:… |
-| ⬜ | 正确性 | `desktop/renderer/chat/MentionPopover.tsx:75-85` | Comment-code mismatch: filteredSkills limited to 8 not 6 | Change line 85 to `return matches.slice(0, 6);` to match the documented limit of… |
-| ⬜ | 正确性 | `desktop/renderer/messages/FilesChangedCard.tsx:68` | Uncleaned setTimeout in onUndoConfirmed creates memory leak | Wrap the setTimeout logic in a useEffect with proper cleanup: `useEffect(() => {… |
-| ⬜ | 正确性 | `desktop/renderer/settings/McpSection.tsx:414` | HTTP headers formatted as KEY=VALUE instead of Key: Value | Modify `envOrHeadersToText` to accept a format parameter, or create a separate f… |
-| ⬜ | 正确性 | `desktop/renderer/shell/CommandPalette.tsx:58` | Cursor can become negative when ArrowDown pressed on empty list | Guard the cursor update to only apply when filtered.length > 0, or clamp the res… |
-| ⬜ | 正确性 | `desktop/renderer/tool-cards/attachments.ts:74-76` | Write success detection relies on fragile result string heuristic | Add an explicit check for truthy result before adding the attachment: `const lc … |
-| ⬜ | 正确性 | `tui/bootstrap/setup.ts:65` | Missing try-catch on process.chdir() | Wrap process.chdir(cwd) in a try-catch block with appropriate error messaging, s… |
-| ⬜ | 正确性 | `tui/cli/main.ts:91` | Missing validation on parseInt for --limit option | Validate the parsed integer with Number.isNaN() or use parseInt with radix and v… |
-| ⬜ | 正确性 | `tui/index.ts:2-5` | Comment claims UI components are exported, but they are not | Either: (1) add 'export { startInkRepl, type InkReplOptions } from "./ui/index.j… |
-| ⬜ | 正确性 | `tui/render/components/Newline.tsx:21-24` | No validation for negative count parameter | Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(… |
-| ⬜ | 正确性 | `tui/render/devtools.ts:54-66` | WriteStream resource leak - stream never closed | Add an explicit close mechanism - either store a cleanup function that calls `st… |
-| ⬜ | 正确性 | `tui/render/parse-keypress.ts:177-179` | splitNumericParams does not handle empty numeric parameters | Filter out empty strings before parsing, or use parseInt with a fallback default… |
-| ⬜ | 正确性 | `tui/render/terminal-focus-state.ts:18-23` | Dead code: resolvers set is never populated | Either populate the `resolvers` set in `waitForBlur()` or similar function, or r… |
-| ⬜ | 正确性 | `tui/render/termio/osc.ts:367-393` | Incomplete escape sequence handling at end of input | Before the final yield on line 392, check if `esc` is true (indicating a trailin… |
-| ⬜ | 正确性 | `tui/render/wrap-text.ts:59` | Unsafe non-null assertion on optional parameter | Either: (1) Add a check: `if (wrapType && wrapType.startsWith('truncate'))`, or … |
-| ⬜ | 正确性 | `tui/ui/App.tsx:531` | Inconsistent indentation of clearThinkingBuffer() call | Align the indentation of line 531 to match lines 529-530 for consistency. |
-| ⬜ | 正确性 | `tui/ui/App.tsx:1042` | Inconsistent indentation of clearThinkingBuffer() call in Ctrl+C handler | Align the indentation of line 1042 to match lines 1040-1041 for consistency. |
-| ⬜ | 正确性 | `tui/ui/components/CodeBlock.tsx:28,41` | Inconsistent border width calculations in code block | Calculate a consistent border width. Use the same logic for both borders, or mea… |
-| ⬜ | 正确性 | `tui/ui/components/CommandInput.tsx:154` | Dead condition in handleSubmit logic | Remove the redundant trim comparison or clarify the intent—if checking for exact… |
-| ⬜ | 正确性 | `tui/ui/store.ts:151-153` | notify() lacks error isolation for listener failures | Wrap listener calls in try-catch blocks to ensure all listeners fire regardless … |
-| ⬜ | 正确性 | `tui/ui/terminal-renderer.ts:50` | Resize event listener never unregistered | Store the listener and unregister it in a cleanup/destroy method, or use once() … |
-| ⬜ | 简化 | `core/arena/arena.ts:242-247, 356-361` | Duplicate claimSummary construction logic | Extract claimSummary construction into a shared helper function: `function build… |
-| ⬜ | 简化 | `core/tool-system/builtin/agent-registry.ts:141-155` | Code duplication: cancel() duplicates markFinished() field updates | Extract the field-setting logic into a helper method or refactor cancel() to cal… |
-| ⬜ | 简化 | `tui/ui/components/ModelSelector.tsx:21-27, 30-39` | Duplicated utility functions fmtTokens and modelTags | Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/s… |
+| ✅ | 安全 | `core/services/oauth.ts:38-44` | Command injection vulnerability in openBrowser URL ⚠️建议提中 | Escape the URL using shell escaping (e.g., use 'printf %q' or a library like 'sh… |
+| ✅ | 安全 | `desktop/preload/index.ts:80-81` | Log function sends unsanitized user data to main process | Add a sanitization step before sending: strip known sensitive keys (passwords, t… |
+| ✅ | 安全 | `tui/cli/commands/builtin/core-commands.ts:627-630` | Unnecessary use of shell command for file I/O | Replace with `readFileSync(join(ctx.cwd, 'package.json'), 'utf-8')` from node:fs… |
+| ✅ | 性能 | `core/engine/engine.ts:929-930` | Double Map.get() call on same key | Store the result of .get() in a variable and reuse it: `const cached = this.comp… |
+| ✅ | 性能 | `core/run/RunQueue.ts:30` | O(n) lookup in enqueue using array.includes() | Use a Set to track pending runIds instead of an array, changing pending to a Map… |
+| ❎ | 性能 | `core/tool-system/builtin/web-fetch.ts:267` | Full response loaded into memory before truncation | **判断/不动**:结果受 max_length 限制、量级小;流式截断收益低复杂度高。未改 |
+| ❎ | 性能 | `desktop/main/memory-service.ts:51, 68` | Repeated loadAll() calls for same memory manager state | **判断/不动**:listMemory/readMemory 各自只调一次 loadAll();"重复"指跨两函数(调用方关切),非函数内冗余。未改 |
+| ❎ | 性能 | `tui/cli/commands/builtin/utility-commands.ts:33` | Synchronous execSync blocks event loop for clipboard operations | **判断/不动**:一次性 /copy handler、5s 超时、无并发后台工作;CLI 场景同步可接受。未改 |
+| ❎ | 性能 | `tui/render/output.ts:363-387` | O(n*m) loop checking absoluteClears for every row during blit | **判断/不动**:absoluteClears 数量通常很小(每帧个位数),n*m 实际接近 O(n);热点 blit 路径改动风险高于收益。未改 |
+| ✅ | 正确性 | `core/arena/iterate/phases/argue.ts:126-202` | Uninitialized finalText passed to parser on max-token failure | Check if finalText is still empty after the fallback attempt and either: (a) log… |
+| ✅ | 正确性 | `core/arena/phases/participant-research.ts:202-216` | Missing abort signal in force-conclude message | Add `signal,` parameter to the force-conclude client.createMessage call: `signal… |
+| ✅ | 正确性 | `core/arena/providers/docs.ts:109-111` | Truncate fails when no newline in first MAX_DOC_CHARS | Change to `return t.slice(0, lastNl >= 0 ? lastNl : t.length) + '\n... (truncate… |
+| ✅ | 正确性 | `core/arena/providers/repo.ts:204-207` | Truncate fails when no newline in first MAX_FILE_CHARS | Change to `return t.slice(0, lastNl >= 0 ? lastNl : t.length) + '\n... (truncate… |
+| ✅ | 正确性 | `core/arena/strategies/utils.ts:75-83` | extractJSONArray uses greedy regex that captures multiple arrays as one | Use non-greedy matching: `/\[[\s\S]*?\]/` or better yet, try to find balanced br… |
+| ✅ | 正确性 | `core/data/openrouter-sync.ts:73` | Unsafe error message access on caught exception | Use `err instanceof Error ? err.message : String(err)` to safely extract the err… |
+| ❎ | 正确性 | `core/git/worktree.ts:134` | Hardcoded HEAD hash truncation assumes 8-character format | **判断/不动**:`slice(5,13)` 取 8 字符短 SHA 是有意缩写(同 git short SHA),非 bug。未改 |
+| ✅ | 正确性 | `core/onboarding.ts:282` | validateApiKey may incorrectly return true for malformed API responses | Change `return !data.error;` to `return data.error === undefined \|\| data.error… |
+| ✅ | 正确性 | `core/onboarding.ts:693-700` | Orphaned temporary file when renameSync fails | Add `unlinkSync(tmp)` in the catch block after the fallback write, or use a try-… |
+| ✅ | 正确性 | `core/plugins/installer/codex/convertMcp.ts:32` | Unsafe type cast of unparsed JSON without validation | Add a validation check before line 32: `if (!parsed \|\| typeof parsed !== 'obje… |
+| ✅ | 正确性 | `core/plugins/installer/update.ts:26` | Unhandled JSON/Zod parsing error in update.ts | Wrap JSON.parse() and the Zod validation in a try-catch block, throwing PluginIn… |
+| ❎ | 正确性 | `core/product/define.ts:158-159` | Ambiguous system prompt precedence not enforced | **判断/不动**:custom(替换)+ append(追加)两者并存是 Engine 既有语义,可同时有意义,非歧义 bug。未改 |
+| ✅ | 正确性 | `core/prompt/composer.ts:64` | System prompt uses UTC date instead of local date | Use `new Date().toLocaleDateString('en-CA')` instead of `new Date().toISOString(… |
+| ❎ | 正确性 | `core/protocol/types.ts:326-328` | isResponse type guard doesn't validate required fields | **判断/不动**:`id && !method` 在 RpcMessage 联合内已正确区分 response/request/notification;加 result/error 检查反而可能拒掉合法边缘消息。未改 |
+| ✅ | 正确性 | `core/remote/bridge.ts:66-71` | Missing write error handling in send() | Check the return value of write() and add an error handler to ssh.stdin, or use … |
+| ✅ | 正确性 | `core/remote/bridge.ts:94-100` | Incomplete resource cleanup: listeners not removed | Store listener references and remove them: this.ssh.stdout?.off('data', handler)… |
+| ✅ | 正确性 | `core/run/ArtifactTracker.ts:167` | Regex for bash redirection doesn't handle quoted paths | Enhance the regex to handle both quoted and unquoted paths: `/[>\|]\s*(['"]?)([^… |
+| ✅ | 正确性 | `core/run/FileRunStore.ts:58-63` | Atomic write doesn't clean up temp file on failure | Wrap the rename in a try-catch and delete the temp file on failure: `try { renam… |
+| ❎ | 正确性 | `core/services/memory-orchestrator.ts:75-76` | Memory extraction only checks user scope for duplication, ignoring dream scope | **判断/不动**:dream 去重已能看到双 scope(见同文件注释),当前行为是有意设计。未改 |
+| ❎ | 正确性 | `core/session/session-manager.ts:169` | Race condition in atomic write with process.pid-based temp file naming | **判断/不动**:`pid+Date.now()` 同 pid 同毫秒碰撞概率极低,且 renameSync 会响亮失败(非静默);单进程用户驱动写入。未改 |
+| ✅ | 正确性 | `core/tool-system/builtin/sleep.ts:33-35` | Abort signal listener never removed on normal completion | Use `signal?.addEventListener("abort", ..., { once: true })` to automatically re… |
+| ✅ | 正确性 | `core/types.ts:101` | SessionStatus includes 'paused' but it's not documented as a valid TerminalReason | Either (1) add 'paused' to the TerminalReason union if it represents a valid ter… |
+| ✅ | 正确性 | `core/utils/theme.ts:649` | Incorrect xterm-256 grayscale index formula | Change line 649 from `Math.round((r - 8) / 247 * 24) + 232` to `Math.round((r - … |
+| ✅ | 正确性 | `desktop/main/agent-bridge.ts:103` | Readline interface resource leak on child process exit | Capture `rl` as an instance variable or call `rl.close()` in the 'exit' event ha… |
+| ✅ | 正确性 | `desktop/main/updater.ts:101-102` | Timers not stored or cleaned up on app shutdown | Store the timeout and interval IDs in module-scope variables, and export a clean… |
+| ✅ | 正确性 | `desktop/main/window-state-store.ts:19-20` | Stored window state values not validated, allowing invalid data to be used | Add runtime validation after parsing JSON: check that width/height are positive … |
+| ✅ | 正确性 | `desktop/preload/index.ts:38-44` | msg.id type cast without validation; wrong id type causes silent loss | Add type check: `if (typeof msg.id !== 'number') return;` before line 40. |
+| ✅ | 正确性 | `desktop/preload/index.ts:50-62` | agent/approvalRequest passes undefined params to listeners | Add a null check and ensure params has the expected structure before forwarding:… |
+| ✅ | 正确性 | `desktop/renderer/chat/MentionPopover.tsx:75-85` | Comment-code mismatch: filteredSkills limited to 8 not 6 | Change line 85 to `return matches.slice(0, 6);` to match the documented limit of… |
+| ✅ | 正确性 | `desktop/renderer/messages/FilesChangedCard.tsx:68` | Uncleaned setTimeout in onUndoConfirmed creates memory leak | Wrap the setTimeout logic in a useEffect with proper cleanup: `useEffect(() => {… |
+| ✅ | 正确性 | `desktop/renderer/settings/McpSection.tsx:414` | HTTP headers formatted as KEY=VALUE instead of Key: Value | Modify `envOrHeadersToText` to accept a format parameter, or create a separate f… |
+| ✅ | 正确性 | `desktop/renderer/shell/CommandPalette.tsx:58` | Cursor can become negative when ArrowDown pressed on empty list | Guard the cursor update to only apply when filtered.length > 0, or clamp the res… |
+| ❎ | 正确性 | `desktop/renderer/tool-cards/attachments.ts:74-76` | Write success detection relies on fragile result string heuristic | **判断/不动**:改进需要 tool-result 契约(成功标记),当前 `!startsWith("error")` 启发式覆盖常见路径;无契约下收紧易误判。未改 |
+| ✅ | 正确性 | `tui/bootstrap/setup.ts:65` | Missing try-catch on process.chdir() | Wrap process.chdir(cwd) in a try-catch block with appropriate error messaging, s… |
+| ✅ | 正确性 | `tui/cli/main.ts:91` | Missing validation on parseInt for --limit option | Validate the parsed integer with Number.isNaN() or use parseInt with radix and v… |
+| ✅ | 正确性 | `tui/index.ts:2-5` | Comment claims UI components are exported, but they are not | Either: (1) add 'export { startInkRepl, type InkReplOptions } from "./ui/index.j… |
+| ✅ | 正确性 | `tui/render/components/Newline.tsx:21-24` | No validation for negative count parameter | Add validation after line 21 to ensure count >= 1, e.g., const count = Math.max(… |
+| ✅ | 正确性 | `tui/render/devtools.ts:54-66` | WriteStream resource leak - stream never closed | Add an explicit close mechanism - either store a cleanup function that calls `st… |
+| ✅ | 正确性 | `tui/render/parse-keypress.ts:177-179` | splitNumericParams does not handle empty numeric parameters | Filter out empty strings before parsing, or use parseInt with a fallback default… |
+| ✅ | 正确性 | `tui/render/terminal-focus-state.ts:18-23` | Dead code: resolvers set is never populated | Either populate the `resolvers` set in `waitForBlur()` or similar function, or r… |
+| ✅ | 正确性 | `tui/render/termio/osc.ts:367-393` | Incomplete escape sequence handling at end of input | Before the final yield on line 392, check if `esc` is true (indicating a trailin… |
+| ✅ | 正确性 | `tui/render/wrap-text.ts:59` | Unsafe non-null assertion on optional parameter | Either: (1) Add a check: `if (wrapType && wrapType.startsWith('truncate'))`, or … |
+| ❎ | 正确性 | `tui/ui/App.tsx:531` | Inconsistent indentation of clearThinkingBuffer() call | **纯排版/不动**:零功能影响,prettier/lint 已通过(非违规)。未改 |
+| ❎ | 正确性 | `tui/ui/App.tsx:1042` | Inconsistent indentation of clearThinkingBuffer() call in Ctrl+C handler | **纯排版/不动**:同上。未改 |
+| ✅ | 正确性 | `tui/ui/components/CodeBlock.tsx:28,41` | Inconsistent border width calculations in code block | Calculate a consistent border width. Use the same logic for both borders, or mea… |
+| ❎ | 正确性 | `tui/ui/components/CommandInput.tsx:154` | Dead condition in handleSubmit logic | **判断/不动**:`v.trim()===value.trim()` 实质恒真但是无害的防御代码;删它改变 submit 控制流有风险,价值低。未改 |
+| ✅ | 正确性 | `tui/ui/store.ts:151-153` | notify() lacks error isolation for listener failures | Wrap listener calls in try-catch blocks to ensure all listeners fire regardless … |
+| ✅ | 正确性 | `tui/ui/terminal-renderer.ts:50` | Resize event listener never unregistered | Store the listener and unregister it in a cleanup/destroy method, or use once() … |
+| ✅ | 简化 | `core/arena/arena.ts:242-247, 356-361` | Duplicate claimSummary construction logic | Extract claimSummary construction into a shared helper function: `function build… |
+| ✅ | 简化 | `core/tool-system/builtin/agent-registry.ts:141-155` | Code duplication: cancel() duplicates markFinished() field updates | Extract the field-setting logic into a helper method or refactor cancel() to cal… |
+| ✅ | 简化 | `tui/ui/components/ModelSelector.tsx:21-27, 30-39` | Duplicated utility functions fmtTokens and modelTags | Extract fmtTokens and modelTags to a shared utilities file (e.g., packages/tui/s… |
 
 ---
 
