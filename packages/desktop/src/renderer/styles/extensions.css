@@ -1,0 +1,238 @@
+/* Codex-style extensions/manage page — a top tab bar with an underline on
+   the active tab, single-column rows (icon + name/desc + source + control),
+   and a centered modal for the detail view. Reuses the app's design tokens
+   (tokens.css) so it tracks the active theme / dark mode automatically. */
+
+.ext-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--sp-3);
+}
+
+.ext-manage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--sp-3);
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────
+   Thin separator under the whole bar; the active tab gets an accent
+   underline that sits on top of it. Search input floats to the right. */
+.ext-tabbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ext-tabbar button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--fg-secondary);
+  font: inherit;
+  font-size: var(--fz-md);
+  cursor: pointer;
+  padding: var(--sp-2) 2px;
+  /* Overlap the bar's 1px separator so the active underline replaces it. */
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  transition: color 80ms ease, border-color 80ms ease;
+}
+.ext-tabbar button:hover {
+  color: var(--fg-primary);
+}
+.ext-tabbar button.active {
+  color: var(--fg-primary);
+  font-weight: 500;
+  border-bottom-color: var(--accent);
+}
+
+.ext-search {
+  margin-left: auto;
+  align-self: center;
+  width: 180px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--fg-primary);
+  font: inherit;
+  font-size: var(--fz-sm);
+  padding: 5px 9px;
+  outline: none;
+}
+.ext-search:focus {
+  border-color: var(--border-strong);
+}
+.ext-search::placeholder {
+  color: var(--fg-muted);
+}
+
+/* ── List / rows ─────────────────────────────────────────────────────
+   Single-column list, thin separators between rows, whole row is
+   clickable (opens the detail modal). */
+.ext-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ext-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-2);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  user-select: none;
+  transition: background 80ms ease;
+}
+.ext-row:hover {
+  background: var(--bg-hover);
+}
+
+.ext-row-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  color: var(--fg-secondary);
+  font-size: var(--fz-md);
+}
+
+.ext-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ext-row-name {
+  font-size: var(--fz-md);
+  font-weight: 500;
+  color: var(--fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ext-row-desc {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  line-height: 1.4;
+  /* Single-line truncate with ellipsis. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ext-row-source {
+  flex: none;
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.ext-row-kebab {
+  flex: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: background 80ms ease, color 80ms ease;
+}
+.ext-row-kebab:hover {
+  color: var(--fg-primary);
+  background: var(--bg-selected);
+}
+
+/* ── Modal ───────────────────────────────────────────────────────────
+   Full-screen translucent backdrop, centered scrollable card. Mirrors
+   the .skill-view modal in settings-page.css for visual consistency. */
+.ext-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.ext-modal {
+  width: 720px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+}
+
+.ext-modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ext-modal-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fz-lg);
+  font-weight: 600;
+  color: var(--fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ext-modal-close {
+  flex: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--fz-lg);
+  line-height: 1;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: background 80ms ease, color 80ms ease;
+}
+.ext-modal-close:hover {
+  color: var(--fg-primary);
+  background: var(--bg-hover);
+}
+
+.ext-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--sp-4);
+  overflow-y: auto;
+  font-size: var(--fz-md);
+  line-height: 1.6;
+  color: var(--fg-primary);
+}
