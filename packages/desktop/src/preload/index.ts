@@ -66,12 +66,30 @@ ipcRenderer.on("agent:lifecycle", (_e: IpcRendererEvent, evt: unknown) => {
   lifecycleListeners.forEach((cb) => cb(evt));
 });
 
+const RPC_TIMEOUT_MS = 30_000;
+
 function rpc(method: string, params?: Record<string, unknown>): Promise<unknown> {
   const id = nextRpcId++;
   const line = JSON.stringify({ jsonrpc: "2.0", id, method, params });
-  return new Promise((resolve) => {
-    pending.set(id, resolve);
-    ipcRenderer.send("agent:msg", line);
+  return new Promise((resolve, reject) => {
+    // Reject (and drop the pending entry) if main never replies, so the caller
+    // doesn't hang forever and the resolver doesn't leak in `pending`.
+    const timer = setTimeout(() => {
+      if (pending.delete(id)) {
+        reject(new Error(`RPC '${method}' timed out after ${RPC_TIMEOUT_MS}ms`));
+      }
+    }, RPC_TIMEOUT_MS);
+    pending.set(id, (msg) => {
+      clearTimeout(timer);
+      resolve(msg);
+    });
+    try {
+      ipcRenderer.send("agent:msg", line);
+    } catch (err) {
+      clearTimeout(timer);
+      pending.delete(id);
+      reject(err instanceof Error ? err : new Error(String(err)));
+    }
   });
 }
 
