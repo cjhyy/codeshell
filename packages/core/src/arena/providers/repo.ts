@@ -200,11 +200,14 @@ function safeReadFile(filePath: string): string | null {
   }
 }
 
-function truncate(content: string): string {
+export function truncate(content: string): string {
   if (content.length <= MAX_FILE_CHARS) return content;
   const t = content.slice(0, MAX_FILE_CHARS);
   const lastNl = t.lastIndexOf("\n");
-  return t.slice(0, lastNl) + `\n... (truncated, ${content.length} chars total)`;
+  // No newline in the window (e.g. a minified file) → lastNl is -1 and
+  // slice(0,-1) would drop just the last char; cut at MAX_FILE_CHARS instead.
+  const body = lastNl > 0 ? t.slice(0, lastNl) : t;
+  return body + `\n... (truncated, ${content.length} chars total)`;
 }
 
 async function safeGrep(pattern: string): Promise<string> {
