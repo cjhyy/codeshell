@@ -14,7 +14,7 @@
  * background.
  */
 
-import React, { memo, useRef, useState } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -94,6 +94,11 @@ export const Markdown = memo(MarkdownImpl);
 function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) {
   const preRef = useRef<HTMLPreElement>(null);
   const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<number | undefined>(undefined);
+
+  // Clear the "copied" reset timer on unmount so it doesn't fire setCopied on
+  // an unmounted component (React warning / leak).
+  useEffect(() => () => window.clearTimeout(copyTimer.current), []);
 
   let lang = "";
   // Read the language off the inner <code> className.
@@ -109,7 +114,8 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
     const text = preRef.current?.textContent ?? "";
     void navigator.clipboard.writeText(text);
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+    window.clearTimeout(copyTimer.current);
+    copyTimer.current = window.setTimeout(() => setCopied(false), 1500);
   };
 
   return (
