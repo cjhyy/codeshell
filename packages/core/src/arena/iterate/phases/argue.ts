@@ -199,6 +199,13 @@ async function argueWithToolLoop(args: {
     finalText = resp.text;
   }
 
+  if (!finalText) {
+    // Both the tool loop and the force-conclude fallback produced no text
+    // (e.g. repeated max-token truncation). Log it — parseCritiquesResponse
+    // will just yield no critiques rather than silently parsing "".
+    logger.warn("arena.iterate.argue_empty_response", { critic: critic.name, toolRounds });
+  }
+
   const critiques = parseCritiquesResponse(finalText, critic.name, idPrefix);
   logger.info("arena.iterate.argue_toolloop", {
     critic: critic.name,

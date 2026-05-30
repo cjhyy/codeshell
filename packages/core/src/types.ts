@@ -93,10 +93,11 @@ export interface TranscriptEvent {
 
 /**
  * Session lifecycle state persisted in state.json. `"active"` means a run is
- * currently in flight (or was, at the moment of the last heartbeat). All other
- * values match the {@link TerminalReason} the last run returned, so callers
- * can distinguish a user-cancelled session (`"aborted_streaming"`) from an
- * actual error (`"model_error"`, `"prompt_too_long"`, ...).
+ * currently in flight (or was, at the moment of the last heartbeat);
+ * `"paused"` is a non-terminal hold (not a {@link TerminalReason}). Every
+ * other value matches the TerminalReason the last run returned, so callers can
+ * distinguish a user-cancelled session (`"aborted_streaming"`) from an actual
+ * error (`"model_error"`, `"prompt_too_long"`, ...).
  */
 export type SessionStatus = "active" | "paused" | TerminalReason;
 
