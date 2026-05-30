@@ -149,7 +149,13 @@ class ChatStore {
 
   private notify(): void {
     for (const listener of this.listeners) {
-      listener();
+      // Isolate listeners — one throwing must not stop the rest from being
+      // notified (they'd otherwise miss the state update).
+      try {
+        listener();
+      } catch (err) {
+        console.error("[chatStore] listener threw", err);
+      }
     }
   }
 }
