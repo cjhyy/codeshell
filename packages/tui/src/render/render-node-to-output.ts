@@ -1,5 +1,6 @@
 import indentString from 'indent-string'
 import { applyTextStyles } from './colorize.js'
+import { sanitizeOsc8Url } from './osc8-url.js'
 import type { DOMElement } from './dom.js'
 import { noteDirty } from './dirty-diag.js'
 import getMaxWidth from './get-max-width.js'
@@ -183,7 +184,9 @@ const OSC = '\u001B]'
 const BEL = '\u0007'
 
 function wrapWithOsc8Link(text: string, url: string): string {
-  return `${OSC}8;;${url}${BEL}${text}${OSC}8;;${BEL}`
+  // Strip control chars (BEL/ESC/…) so a crafted hyperlink URL can't break out
+  // of the OSC 8 sequence and inject terminal escapes.
+  return `${OSC}8;;${sanitizeOsc8Url(url)}${BEL}${text}${OSC}8;;${BEL}`
 }
 
 /**
