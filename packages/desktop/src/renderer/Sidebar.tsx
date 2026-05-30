@@ -188,7 +188,7 @@ export function Sidebar({
         <SidebarItem label="搜索" Icon={Search} onClick={onOpenSearch} active={false} />
         <SidebarItem label="MCP" Icon={Puzzle} onClick={onOpenPlugins} active={viewMode === "mcp"} />
         <SidebarItem
-          label="技能与插件"
+          label="扩展"
           Icon={Blocks}
           onClick={onOpenCustomize}
           active={viewMode === "customize"}

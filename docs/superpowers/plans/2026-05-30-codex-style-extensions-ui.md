@@ -710,3 +710,11 @@ P1 验证通过后，把以下展开为与上面同粒度的 TDD 任务：
 - **占位符**：P1 各步均有完整代码/命令；P2/P3 为明确标注的概要（待 P1 后细化），非 P1 任务内的占位。
 - **类型一致**：`resolveUninstallTarget`（Task1）↔ PluginsTab 调用（Task6）一致；`UninstallablePlugin` 字段是 PluginSummary 的子集 ✓；`uninstallPlugin(pluginName, marketplaceName)` 三处（core/IPC/preload/调用）参数名顺序一致 ✓。
 - **已知执行期需对齐项**（计划已显式标注，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。
+
+### 执行期已查明的事实（供 Task 6/7/8 复用）
+
+- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。
+- **启用/禁用机制**：用户 settings 里的 `disabledSkills` / `disabledPlugins` 数组，**按 skill name / 按 plugin？**。skill 用 **name** 作 key。读：`getSettings("user").disabledSkills` → `new Set(...)`；写：`writeSettings("user", { disabledSkills: [...next] })`。enabled = `!disabledSet.has(name)`。
+  - 因此 Task 7/8 父组件应这样接线：`isEnabled = (s) => !disabledSkillSet.has(s.name)`，`onToggle = (s, next) => toggleSkillDisabled(s.name, !next)`。
+- **PLUGIN 禁用机制（Task 6 查明）**：plugin 按 **bare name**（`PluginSummary.name`）作 key，**不是 installKey**。读 `settings.disabledPlugins` → Set；enabled = `!disabledPlugins.has(p.name)`；写 `writeSettings("user", { disabledPlugins: [...next] })`。
+  - **重要 cascade**：`PluginsAndSkillsSection.togglePluginGroup`（约 :273-287）在切换 plugin 时，会**同时**把该 plugin 贡献的每个 skill 加/删进 `disabledSkills` —— 因为 `loadPluginHooks` 只读 `disabledPlugins`，但 skill 扫描读 `disabledSkills`。Task 7/8 接线 plugin 开关时**必须复制这个 cascade**，否则禁用 plugin 不会真正关掉它的 skill。最稳妥：Task 7/8 直接复用 `PluginsAndSkillsSection` 里现成的 `togglePluginGroup` / `toggleSkillDisabled` 逻辑（抽成 hook 或把回调传进 ManagePage），不要重写。
