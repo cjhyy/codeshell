@@ -76,10 +76,37 @@ export function extractJSONArray(text: string): string {
   const fenced = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
   if (fenced) return fenced[1].trim();
 
-  const arrayMatch = text.match(/\[[\s\S]*\]/);
-  if (arrayMatch) return arrayMatch[0];
+  // Return the FIRST balanced top-level array. A greedy /\[[\s\S]*\]/ spanned
+  // to the last ']', merging two arrays (or trailing prose) into one invalid
+  // blob. Scan for bracket balance, ignoring brackets inside strings.
+  const balanced = firstBalancedArray(text);
+  if (balanced) return balanced;
 
   return text;
+}
+
+function firstBalancedArray(text: string): string | undefined {
+  const start = text.indexOf("[");
+  if (start === -1) return undefined;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "[") depth++;
+    else if (ch === "]") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return undefined; // unbalanced
 }
 
 /** Format base context into a readable text block for LLM prompts */
