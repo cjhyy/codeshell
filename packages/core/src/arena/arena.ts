@@ -39,6 +39,16 @@ import { withLanguage } from "./strategies/language-wrapper.js";
 import { ArenaLedger } from "./ledger.js";
 import { registerClaims } from "./phases/claim-registry.js";
 
+/** Bucket claims by status. Shared by the two consensus phases. */
+function summarizeClaims(all: ReturnType<ArenaLedger["getAllClaims"]>): ClaimStatusSummary {
+  return {
+    verified: all.filter((c) => c.status === "verified"),
+    contested: all.filter((c) => c.status === "contested"),
+    unresolved: all.filter((c) => c.status === "unresolved"),
+    rejected: all.filter((c) => c.status === "rejected"),
+  };
+}
+
 export class Arena {
   private config: Required<Pick<ArenaConfig, "maxDiscussionRounds" | "mode">> & ArenaConfig;
   private strategy: ArenaStrategy;
@@ -239,12 +249,7 @@ export class Arena {
 
     // ─── Roadmap Consensus ───────────────────────────────────
     const allClaims = ledger.getAllClaims();
-    const claimSummary: ClaimStatusSummary = {
-      verified: allClaims.filter((c) => c.status === "verified"),
-      contested: allClaims.filter((c) => c.status === "contested"),
-      unresolved: allClaims.filter((c) => c.status === "unresolved"),
-      rejected: allClaims.filter((c) => c.status === "rejected"),
-    };
+    const claimSummary = summarizeClaims(allClaims);
 
     logger.info("arena.planning_consensus_phase", { concluder: concluder.name });
     const consensus = await buildConsensus({
@@ -353,12 +358,7 @@ export class Arena {
 
     // ─── Consensus (claim-aware) ─────────────────────────────
     const allClaims = ledger.getAllClaims();
-    const claimSummary: ClaimStatusSummary = {
-      verified: allClaims.filter((c) => c.status === "verified"),
-      contested: allClaims.filter((c) => c.status === "contested"),
-      unresolved: allClaims.filter((c) => c.status === "unresolved"),
-      rejected: allClaims.filter((c) => c.status === "rejected"),
-    };
+    const claimSummary = summarizeClaims(allClaims);
 
     logger.info("arena.consensus_phase", {
       concluder: concluder.name,
