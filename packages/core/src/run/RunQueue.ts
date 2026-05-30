@@ -13,7 +13,10 @@ export type RunQueueExecutor = (runId: string) => Promise<void>;
 
 export class RunQueue {
   private readonly concurrency: number;
+  // `pending` keeps FIFO order; `pendingSet` mirrors its membership for O(1)
+  // dedup/lookup (the array's includes() was O(n)).
   private readonly pending: string[] = [];
+  private readonly pendingSet = new Set<string>();
   private readonly active = new Set<string>();
   private executor: RunQueueExecutor | null = null;
   private draining = false;
@@ -27,8 +30,9 @@ export class RunQueue {
   }
 
   enqueue(runId: string): void {
-    if (this.pending.includes(runId) || this.active.has(runId)) return;
+    if (this.pendingSet.has(runId) || this.active.has(runId)) return;
     this.pending.push(runId);
+    this.pendingSet.add(runId);
     this.drain();
   }
 
@@ -36,6 +40,7 @@ export class RunQueue {
     const idx = this.pending.indexOf(runId);
     if (idx !== -1) {
       this.pending.splice(idx, 1);
+      this.pendingSet.delete(runId);
       return true;
     }
     return false;
@@ -46,7 +51,7 @@ export class RunQueue {
   }
 
   isPending(runId: string): boolean {
-    return this.pending.includes(runId);
+    return this.pendingSet.has(runId);
   }
 
   get activeCount(): number {
@@ -73,6 +78,7 @@ export class RunQueue {
 
     while (this.active.size < this.concurrency && this.pending.length > 0) {
       const runId = this.pending.shift()!;
+      this.pendingSet.delete(runId);
       this.active.add(runId);
 
       this.executor(runId)
