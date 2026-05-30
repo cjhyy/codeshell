@@ -105,7 +105,8 @@ function handleNormalMode(char: string, key: string, text: string, s: VimState):
       s.cursor = Math.max(0, s.cursor - 1);
       return { state: s, text, consumed: true };
     case "l":
-      s.cursor = Math.min(text.length - 1, s.cursor + 1);
+      // max(0, …) so empty text (length-1 === -1) clamps to 0, not -1.
+      s.cursor = Math.max(0, Math.min(text.length - 1, s.cursor + 1));
       return { state: s, text, consumed: true };
     case "0":
       s.cursor = 0;
@@ -127,6 +128,9 @@ function handleNormalMode(char: string, key: string, text: string, s: VimState):
     case "x":
       if (s.cursor < text.length) {
         text = text.slice(0, s.cursor) + text.slice(s.cursor + 1);
+        // Deleting the last char can leave the cursor one past the new end;
+        // re-clamp into [0, length-1] (0 when empty).
+        s.cursor = Math.max(0, Math.min(s.cursor, text.length - 1));
       }
       return { state: s, text, consumed: true };
     case "d":
@@ -171,7 +175,8 @@ function handleVisualMode(char: string, _key: string, text: string, s: VimState)
       s.cursor = Math.max(0, s.cursor - 1);
       return { state: s, text, consumed: true };
     case "l":
-      s.cursor = Math.min(text.length - 1, s.cursor + 1);
+      // max(0, …) so empty text (length-1 === -1) clamps to 0, not -1.
+      s.cursor = Math.max(0, Math.min(text.length - 1, s.cursor + 1));
       return { state: s, text, consumed: true };
     case "w":
       s.cursor = nextWordStart(text, s.cursor);
