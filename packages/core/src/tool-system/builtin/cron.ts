@@ -26,7 +26,12 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
   const schedule = args.schedule as string;
   const prompt = args.prompt as string;
   if (!name || !schedule || !prompt) return "Error: name, schedule, and prompt are required";
-  const job = cronScheduler.create(name, schedule, prompt);
+  let job;
+  try {
+    job = cronScheduler.create(name, schedule, prompt);
+  } catch (err) {
+    return `Error: ${(err as Error).message}`;
+  }
   return `Cron job #${job.id} "${job.name}" created. Schedule: every ${job.schedule}.`;
 }
 

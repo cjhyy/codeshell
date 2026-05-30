@@ -35,3 +35,21 @@ describe("CronScheduler — no overlapping executions", () => {
     expect(completed).toBeGreaterThanOrEqual(1); // it did run
   });
 });
+
+describe("CronScheduler — schedule validation", () => {
+  test("rejects an unparseable schedule instead of silently defaulting", () => {
+    const sched = new CronScheduler();
+    // Typo like "5mn" used to silently fall back to a 10-minute interval.
+    expect(() => sched.create("typo", "5mn", "do work")).toThrow(/schedule/i);
+  });
+
+  test("accepts valid shorthand and raw-ms schedules", () => {
+    const sched = new CronScheduler();
+    const a = sched.create("ok", "5m", "p");
+    const b = sched.create("ms", "1500", "p");
+    expect(a.schedule).toBe("5m");
+    expect(b.schedule).toBe("1500");
+    sched.delete(a.id);
+    sched.delete(b.id);
+  });
+});

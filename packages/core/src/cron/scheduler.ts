@@ -125,7 +125,11 @@ export class CronScheduler {
 
 /**
  * Parse a schedule string into milliseconds.
- * Supports: "30s", "5m", "1h", "1d", or raw milliseconds.
+ * Supports: "30s", "5m", "1h", "1d", or raw (all-digit) milliseconds.
+ *
+ * Throws on anything else rather than silently falling back to a default —
+ * a typo like "5mn" should surface as an error, not quietly schedule every
+ * 10 minutes (review-2026-05-30).
  */
 function parseSchedule(schedule: string): number {
   const match = schedule.match(/^(\d+)(s|m|h|d)$/);
@@ -138,12 +142,16 @@ function parseSchedule(schedule: string): number {
       case "d": return value * 24 * 60 * 60 * 1000;
     }
   }
-  // Try raw number (milliseconds)
-  const ms = parseInt(schedule, 10);
-  if (!isNaN(ms) && ms > 0) return ms;
+  // Raw milliseconds — must be all digits and > 0 (parseInt would otherwise
+  // accept "1500abc").
+  if (/^\d+$/.test(schedule)) {
+    const ms = parseInt(schedule, 10);
+    if (ms > 0) return ms;
+  }
 
-  // Default: 10 minutes
-  return 10 * 60 * 1000;
+  throw new Error(
+    `Invalid schedule: ${JSON.stringify(schedule)}. Use "30s"/"5m"/"1h"/"1d" or a positive number of milliseconds.`,
+  );
 }
 
 export const cronScheduler = new CronScheduler();
