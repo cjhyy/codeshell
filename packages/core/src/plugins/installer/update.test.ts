@@ -44,6 +44,12 @@ describe("updatePluginByName", () => {
     const r = await updatePluginByName("u", "t2", true);
     expect(r.updated).toBe(true);
   });
+
+  test("a failed reinstall throws a clear error noting the plugin was removed", async () => {
+    // Corrupt the source so installPluginFromPath fails during the reinstall.
+    writeFileSync(join(src, ".codex-plugin", "plugin.json"), "{ not valid json");
+    await expect(updatePluginByName("u", "t2", true)).rejects.toThrow(/was removed during reinstall/);
+  });
 });
 
 describe("updatePluginByName (remote source)", () => {

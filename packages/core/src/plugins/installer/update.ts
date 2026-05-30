@@ -36,8 +36,19 @@ export async function updatePluginByName(
 
   if (parsed.kind === "remote") {
     // No local version to diff against — always re-clone and reinstall.
+    // uninstall-then-install isn't atomic: if the reinstall fails (clone
+    // error, bad plugin) the old copy is already gone. We can't roll back the
+    // removal, but we surface a clear error instead of leaving silent
+    // inconsistency.
     uninstallPluginByName(name);
-    await installPluginFromSource(parsed, name, installedAt);
+    try {
+      await installPluginFromSource(parsed, name, installedAt);
+    } catch (err) {
+      throw new PluginInstallError(
+        `update failed and '${name}' was removed during reinstall: ` +
+          `${err instanceof Error ? err.message : String(err)}. Reinstall it from ${meta.source}.`,
+      );
+    }
     return { updated: true, reason: "reinstalled from git source" };
   }
 
@@ -59,6 +70,13 @@ export async function updatePluginByName(
   }
 
   uninstallPluginByName(name);
-  installPluginFromPath(meta.source, name, installedAt);
+  try {
+    installPluginFromPath(meta.source, name, installedAt);
+  } catch (err) {
+    throw new PluginInstallError(
+      `update failed and '${name}' was removed during reinstall: ` +
+        `${err instanceof Error ? err.message : String(err)}. Reinstall it from ${meta.source}.`,
+    );
+  }
   return { updated: true, reason: "reinstalled" };
 }
