@@ -103,7 +103,12 @@ export function AgentsSection({ activeRepoPath }: Props) {
         : "这会删除该自定义子代理。",
     });
     if (!ok) return;
-    await window.codeshell.deleteAgent(a.name);
+    try {
+      await window.codeshell.deleteAgent(a.name);
+    } catch (err) {
+      console.error("deleteAgent failed", err);
+      return;
+    }
     await load();
     setSelected(null);
     setDraft(null);
