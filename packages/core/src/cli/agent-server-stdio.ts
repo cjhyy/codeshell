@@ -39,6 +39,7 @@ import { SettingsManager } from "../settings/manager.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
 import { CostTracker } from "../cost-tracker.js";
+import { installGracefulShutdown } from "./graceful-shutdown.js";
 
 // ─── Read base config from environment / settings ─────────────────
 
@@ -162,10 +163,16 @@ chatManager.startIdleSweeper();
 
 const stdioTransport = new StdioTransport(process.stdin, process.stdout);
 
-new AgentServer({
+const agentServer = new AgentServer({
   chatManager,
   transport: stdioTransport,
 });
+
+// Clean up on termination signals. Without this, SIGTERM (parent kill),
+// SIGINT (Ctrl+C), or SIGHUP would drop the process without closing sessions,
+// clearing the idle sweeper, or terminating child MCP/tool processes.
+// AgentServer.close() also closes the chatManager's sessions.
+installGracefulShutdown(agentServer);
 
 // Keep the process alive — readline in StdioTransport holds the event loop.
 // On parent close / stdin EOF the process will exit naturally.

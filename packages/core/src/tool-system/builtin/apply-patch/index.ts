@@ -104,11 +104,14 @@ export async function applyPatchTool(
     return `Error applying patch: ${(err as Error).message}`;
   }
 
-  // Invalidate file cache for every touched path.
+  // Invalidate file cache for every touched path. The cache is keyed by
+  // ABSOLUTE path (see file-cache.ts), and patch paths are relative to the
+  // Engine cwd — resolve them the same way the path-policy gate did above, or
+  // the stale entry survives and a later Read returns pre-patch content.
   for (const hunk of parsed.hunks) {
-    fileCache.invalidate(hunk.path);
+    fileCache.invalidate(resolvePath(cwd, hunk.path));
     if (hunk.kind === "update" && hunk.movePath) {
-      fileCache.invalidate(hunk.movePath);
+      fileCache.invalidate(resolvePath(cwd, hunk.movePath));
     }
   }
 

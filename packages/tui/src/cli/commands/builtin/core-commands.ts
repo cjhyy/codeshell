@@ -6,6 +6,7 @@ import type { SlashCommand } from "../registry.js";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { CHALK_COLORIZER } from "../../../utils/colorizer.js";
 import { execSync } from "node:child_process";
+import { gitDiff, gitDiffStat } from "./git-diff.js";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -507,31 +508,18 @@ export const coreCommands: SlashCommand[] = [
     description: "Show git diff",
     usage: "/diff [file]",
     execute: (_arg, ctx) => {
-      try {
-        const file = _arg || "";
-        const stat = execSync(`git diff --stat HEAD ${file}`, {
-          cwd: ctx.cwd,
-          encoding: "utf-8",
-          timeout: 10000,
-        }).trim();
-
-        if (!stat) {
-          ctx.addStatus("No changes.");
-          return;
-        }
-
-        const diff = execSync(`git diff HEAD ${file} --no-color`, {
-          cwd: ctx.cwd,
-          encoding: "utf-8",
-          timeout: 10000,
-        }).trim();
-
-        ctx.addStatus(
-          `${stat}\n\n${diff.slice(0, 5000)}${diff.length > 5000 ? "\n... (truncated)" : ""}`,
-        );
-      } catch {
-        ctx.addStatus("Not a git repository or git not available.");
+      // gitDiff* run git via execFileSync with an argv array, so a
+      // user-supplied file path can't be interpreted as shell syntax.
+      const file = _arg || "";
+      const stat = gitDiffStat(ctx.cwd, file);
+      if (!stat) {
+        ctx.addStatus("No changes.");
+        return;
       }
+      const diff = gitDiff(ctx.cwd, file);
+      ctx.addStatus(
+        `${stat}\n\n${diff.slice(0, 5000)}${diff.length > 5000 ? "\n... (truncated)" : ""}`,
+      );
     },
   },
 

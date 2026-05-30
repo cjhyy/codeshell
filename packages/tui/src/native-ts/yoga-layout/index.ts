@@ -955,7 +955,7 @@ export class Node {
     )
     const posT = resolveValue(
       resolveEdgeRaw(this.style.position, EDGE_TOP),
-      isDefined(w) ? w : 0,
+      isDefined(h) ? h : 0,
     )
     this.layout.left = mar[EDGE_LEFT] + (isDefined(posL) ? posL : 0)
     this.layout.top = mar[EDGE_TOP] + (isDefined(posT) ? posT : 0)
@@ -1858,11 +1858,11 @@ function layoutNode(
         )
         const relTop = resolveValue(
           resolveEdgeRaw(c.style.position, EDGE_TOP),
-          ownerW,
+          ownerH,
         )
         const relBottom = resolveValue(
           resolveEdgeRaw(c.style.position, EDGE_BOTTOM),
-          ownerW,
+          ownerH,
         )
         relX = isDefined(relLeft)
           ? relLeft

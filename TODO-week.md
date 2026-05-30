@@ -9,7 +9,7 @@
 | 🟡 | 4   | plugin / skill 系统跟 Codex 对齐 | 本地安装 / 转换 / 运行时加载 / list-update-uninstall / **远程安装(#11 已完成)**。**剩**:跨 MCP/builtin/skill 统一能力注册表收尾(core 大改) |
 | ✅ | 11  | 远程插件安装(git 来源)        | spec `docs/superpowers/specs/2026-05-29-plugin-remote-install-design.md`,**已实现**(2026-05-30,TDD)。`parseSource.ts`(解析 `github:org/repo`/https/ssh + `@ref`/`#subdir`)+ `installFromSource.ts`(薄桥:`gitClone` 临时目录 → `installPluginFromPath` 转换+装 → 改写 `.cs-meta.json.source` 为原始 git 串 → 删临时目录);`update.ts` 远程源重拉重装;CLI dispatch 本地/远程。16 个新单测/集成测全绿 |
 | 🟡 | 10  | 多 session 上下文/串台 + 慢 修复 | 辅助任务模型已落地。**剩**:见「遗留 / 待确认」 |
-| 🟡 | 12  | 全量逐文件 review 修复          | 2026-05-30 multi-agent review,**30 条验证通过**(6 高 + 19 中 + 5 低)。先清 6 个高严重度:2 个 yoga-layout TOP/BOTTOM 维度错配、apply-patch 缓存按相对路径失效、scheduler setInterval 竞态、stdio server 无优雅关闭、core-commands `/diff` 命令注入。详见下「🔬 全量逐文件 review」 |
+| 🟡 | 12  | 全量逐文件 review 修复          | 2026-05-30 multi-agent review,两轮对抗验证后 **121 条真问题(9 高 + 52 中 + 60 低)**。**第一轮 6 个高已全部 TDD 修复** —— 2 个 yoga-layout TOP/BOTTOM 维度错配、apply-patch 缓存按相对路径失效、scheduler setInterval 竞态、stdio server 无优雅关闭、core-commands `/diff` 命令注入。**剩 3 个高未修**:`lsp/manager.ts:71`(Windows file:// 路径)、`FileRunStore.ts:73-81`(写锁链 rejection 未处理)、`voice/index.ts:90,94`(execSync 缺 shell)。另 52 中 + 60 低待办。详见下「🔬 全量逐文件 review」 |
 
 ## 遗留 / 待确认
 
@@ -29,12 +29,12 @@
 
 | 状态 | 严重度 | 维度 | 位置 | 问题 | 修复方向 |
 | ---- | ------ | ---- | ---- | ---- | -------- |
-| ⬜ | 🔴 高 | 正确性 | `core/cli/agent-server-stdio.ts:159-172` | No graceful shutdown on process signals (SIGTERM, SIGINT, SIGHUP) | Add signal handlers before the comment on line 170, e.g., `process.on('SIGTERM', () => { a… |
-| ⬜ | 🔴 高 | 正确性 | `core/cron/scheduler.ts:100-110` | Race condition in async setInterval callback with overlapping executions | Use a flag to prevent concurrent executions (e.g., set a boolean flag before awaiting, cle… |
-| ⬜ | 🔴 高 | 正确性 | `core/tool-system/builtin/apply-patch/index.ts:109-111` | File cache invalidated with relative paths instead of absolute paths | Store the resolved absolute paths from the planning phase and invalidate by those absolute… |
-| ⬜ | 🔴 高 | 安全 | `tui/cli/commands/builtin/core-commands.ts:512, 523` | Command injection vulnerability via unsanitized git diff argument | Use `execFileSync` instead of `execSync` to avoid shell interpretation, or properly escape… |
-| ⬜ | 🔴 高 | 正确性 | `tui/native-ts/yoga-layout/index.ts:958` | Root position TOP inset resolved against wrong dimension | Change line 958 from `isDefined(w) ? w : 0` to `isDefined(h) ? h : 0` |
-| ⬜ | 🔴 高 | 正确性 | `tui/native-ts/yoga-layout/index.ts:1859-1865` | Flex item relative position TOP/BOTTOM resolved against wrong dimension | Change line 1861 from `ownerW` to `ownerH` and line 1865 from `ownerW` to `ownerH` |
+| ✅ | 🔴 高 | 正确性 | `core/cli/agent-server-stdio.ts:159-172` | No graceful shutdown on process signals (SIGTERM, SIGINT, SIGHUP) | **已修(2026-05-30,TDD)**:抽出 `cli/graceful-shutdown.ts`(可测纯函数,幂等+吞 close 异常),入口注册 SIGTERM/SIGINT/SIGHUP → `agentServer.close()` → exit |
+| ✅ | 🔴 高 | 正确性 | `core/cron/scheduler.ts:100-110` | Race condition in async setInterval callback with overlapping executions | **已修**:加 `running` Set 重入守卫,上一次 onExecute 未完成时跳过本 tick;`finally` 清守卫。测试证明 maxConcurrent=1 |
+| ✅ | 🔴 高 | 正确性 | `core/tool-system/builtin/apply-patch/index.ts:109-111` | File cache invalidated with relative paths instead of absolute paths | **已修**:invalidate 改用 `resolvePath(cwd, hunk.path)` 绝对路径(与 policy gate 一致)。测试断言 cache size 归零(非 get,避开 mtime 自愈掩盖) |
+| ✅ | 🔴 高 | 安全 | `tui/cli/commands/builtin/core-commands.ts:512, 523` | Command injection vulnerability via unsanitized git diff argument | **已修**:抽出 `git-diff.ts`,改 `execFileSync("git", [argv])` 不过 shell。测试用 `; touch PWNED #` 恶意 arg 证明不执行、被当字面 pathspec |
+| ✅ | 🔴 高 | 正确性 | `tui/native-ts/yoga-layout/index.ts:958` | Root position TOP inset resolved against wrong dimension | **已修**:`posT` 从 `isDefined(w)?w:0` 改为按高度 `isDefined(h)?h:0`。`position-percent.test.ts` 覆盖 |
+| ✅ | 🔴 高 | 正确性 | `tui/native-ts/yoga-layout/index.ts:1859-1865` | Flex item relative position TOP/BOTTOM resolved against wrong dimension | **已修**:`relTop`/`relBottom` 从 `ownerW` 改为 `ownerH`(LEFT/RIGHT 仍 ownerW)。abs 定位路径本就正确,未动 |
 | ⬜ | 🟡 中 | 正确性 | `core/arena/iterate/tools/web-tools.ts:52-56` | Missing await on async tool function calls | Add await before both webSearchTool(args) on line 53 and webFetchTool(args) on line 56: `r… |
 | ⬜ | 🟡 中 | 正确性 | `core/arena/phases/planning-detail-expansion.ts:88-142` | LLM not invoked after tool execution on final round | Either: (1) use `round < maxRounds` instead of `round <= maxRounds` and make an additional… |
 | ⬜ | 🟡 中 | 正确性 | `core/git/worktree.ts:97-104` | Running git commands on already-removed worktree will fail | Extract and store the branch name before removing the worktree (line 89), then use it to d… |

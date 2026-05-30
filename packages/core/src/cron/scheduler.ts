@@ -17,9 +17,12 @@ export interface CronJob {
   createdAt: number;
 }
 
-class CronScheduler {
+export class CronScheduler {
   private jobs = new Map<string, CronJob>();
   private timers = new Map<string, NodeJS.Timeout>();
+  /** Job ids with an execution currently in flight — prevents a tick from
+   *  starting a second run of a job whose previous run hasn't finished. */
+  private running = new Set<string>();
   private nextId = 1;
   private onExecute?: (job: CronJob) => Promise<void>;
 
@@ -99,6 +102,11 @@ class CronScheduler {
 
     const timer = setInterval(async () => {
       if (!job.enabled) return;
+      // Re-entrancy guard: if this job's previous run is still in flight
+      // (onExecute slower than the interval), skip this tick rather than
+      // stacking overlapping executions that double-count runCount/nextRun.
+      if (this.running.has(job.id)) return;
+      this.running.add(job.id);
       job.lastRun = Date.now();
       job.runCount++;
       job.nextRun = Date.now() + intervalMs;
@@ -106,6 +114,8 @@ class CronScheduler {
         await this.onExecute?.(job);
       } catch {
         // Job execution failed — continue scheduling
+      } finally {
+        this.running.delete(job.id);
       }
     }, intervalMs);
 
