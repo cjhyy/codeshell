@@ -135,7 +135,8 @@ export default class Ink {
   private readonly stylePool: StylePool;
   private charPool: CharPool;
   private hyperlinkPool: HyperlinkPool;
-  private exitPromise?: Promise<void>;
+  // Created eagerly in the constructor (see note there); never undefined.
+  private exitPromise!: Promise<void>;
   private restoreConsole?: () => void;
   private restoreStderr?: () => void;
   private readonly unsubscribeTTYHandlers?: () => void;
@@ -339,6 +340,20 @@ export default class Ink {
         rendererPackageName: 'ink'
       });
     }
+
+    // Create the exit promise eagerly (after the no-op resolver field
+    // initializers above have run) so resolve/reject are wired before any
+    // unmount can fire. A settle-before-await is fine — the promise keeps its
+    // state for a later waitUntilExit().
+    this.exitPromise = new Promise<void>((resolve, reject) => {
+      this.resolveExitPromise = resolve;
+      this.rejectExitPromise = reject;
+    });
+    // If unmount(error) rejects before anyone awaits, a bare rejected promise
+    // would trip an unhandledRejection warning. Attach a no-op catch on a
+    // SEPARATE branch — it doesn't consume the rejection for the real awaiter
+    // of this.exitPromise (waitUntilExit returns the original).
+    this.exitPromise.catch(() => {});
   }
   private handleResume = () => {
     if (!this.options.stdout.isTTY) {
@@ -407,6 +422,11 @@ export default class Ink {
       this.render(this.currentNode);
     }
   };
+  // Wire the exit promise eagerly so resolve/reject are live before any
+  // unmount. The old lazy `||=` in waitUntilExit meant an unmount that fired
+  // before the first waitUntilExit() call hit the no-op defaults, and a later
+  // waitUntilExit() then created a fresh promise that never settled (hang),
+  // also dropping an error unmount.
   resolveExitPromise: () => void = () => {};
   rejectExitPromise: (reason?: Error) => void = () => {};
   unsubscribeExit: () => void = () => {};
@@ -1760,10 +1780,8 @@ export default class Ink {
     }
   }
   async waitUntilExit(): Promise<void> {
-    this.exitPromise ||= new Promise((resolve, reject) => {
-      this.resolveExitPromise = resolve;
-      this.rejectExitPromise = reject;
-    });
+    // exitPromise is wired eagerly in the constructor, so an unmount that fired
+    // before this call has already settled it (resolve/reject were live).
     return this.exitPromise;
   }
   resetLineCount(): void {
