@@ -10,6 +10,9 @@ interface CodeBlockProps {
   showLineNumbers?: boolean;
 }
 
+/** Total dash-run width after the corner glyph; top and bottom borders match. */
+const BORDER_FILL = 44;
+
 export function CodeBlock({ code, language, showLineNumbers }: CodeBlockProps) {
   let highlighted = code;
   try {
@@ -25,7 +28,9 @@ export function CodeBlock({ code, language, showLineNumbers }: CodeBlockProps) {
   return (
     <Box flexDirection="column" marginY={0} marginLeft={1}>
       {language && (
-        <Text dim>{`  ╭─ ${language} ${"─".repeat(Math.max(0, 40 - language.length))}`}</Text>
+        // Total run after ╭ is `─ <lang> ` (3 + len) + (TAG_FILL - len) dashes
+        // = TAG_FILL + 3, kept equal to the bottom border below.
+        <Text dim>{`  ╭─ ${language} ${"─".repeat(Math.max(0, BORDER_FILL - 3 - language.length))}`}</Text>
       )}
       <Box flexDirection="column">
         {lines.map((line, i) => (
@@ -38,7 +43,7 @@ export function CodeBlock({ code, language, showLineNumbers }: CodeBlockProps) {
           </Box>
         ))}
       </Box>
-      <Text dim>{`  ╰${"─".repeat(44)}`}</Text>
+      <Text dim>{`  ╰${"─".repeat(BORDER_FILL)}`}</Text>
     </Box>
   );
 }
