@@ -495,6 +495,8 @@ export async function arenaTool(
     return full;
   } catch (err) {
     if (signal?.aborted) return "Arena aborted.";
-    return `Arena error: ${(err as Error).message}`;
+    // err may be a non-Error (string/null); `(err as Error).message` would be
+    // undefined → "Arena error: undefined", masking the real cause.
+    return `Arena error: ${err instanceof Error ? err.message : String(err)}`;
   }
 }
