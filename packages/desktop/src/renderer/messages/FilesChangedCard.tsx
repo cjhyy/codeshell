@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
 import { ChevronRight, ChevronDown, RotateCcw, Eye, X } from "lucide-react";
 import type { FilesChangedSummaryMessage } from "../types";
 import type { UndoFilesResult } from "../../preload/types";
@@ -32,6 +32,10 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
   const [undoing, setUndoing] = useState(false);
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [undoStatus, setUndoStatus] = useState<string | null>(null);
+  const clearStatusTimer = useRef<number | undefined>(undefined);
+  // Clear the auto-dismiss timer on unmount so setUndoStatus doesn't fire on
+  // an unmounted component.
+  useEffect(() => () => window.clearTimeout(clearStatusTimer.current), []);
 
   const { files, totalAdded, totalRemoved } = message;
   const visible = showAll ? files : files.slice(0, INITIAL_VISIBLE);
@@ -65,7 +69,8 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
       setUndoing(false);
       // Auto-clear the status banner after a few seconds so the card
       // returns to its quiet state.
-      window.setTimeout(() => setUndoStatus(null), 4000);
+      window.clearTimeout(clearStatusTimer.current);
+      clearStatusTimer.current = window.setTimeout(() => setUndoStatus(null), 4000);
     }
   };
 

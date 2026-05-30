@@ -57,9 +57,15 @@ export class FileRunStore implements RunStore {
 
   private writeJson(filePath: string, data: unknown): void {
     const tmp = filePath + ".tmp";
-    writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
-    // Atomic rename — prevents partial writes on crash
-    renameSync(tmp, filePath);
+    try {
+      writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
+      // Atomic rename — prevents partial writes on crash
+      renameSync(tmp, filePath);
+    } catch (err) {
+      // Don't leave a dangling .tmp behind on a failed write/rename.
+      rmSync(tmp, { force: true });
+      throw err;
+    }
   }
 
   private readJson<T>(filePath: string): T | null {
