@@ -567,6 +567,7 @@ export {
   addMarketplace,
   removeMarketplace,
   listMarketplaces,
+  loadMarketplace,
 } from "./plugins/marketplaceManager.js";
 export {
   parseMarketplaceInput,

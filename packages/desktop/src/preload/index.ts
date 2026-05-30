@@ -234,6 +234,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
   uninstallPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
+  listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
+  loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
+  addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),
+  removeMarketplace: (name: string) => ipcRenderer.invoke("marketplace:remove", name),
+  installPlugin: (pluginName: string, marketplaceName: string) =>
+    ipcRenderer.invoke("plugins:install", pluginName, marketplaceName),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
   installLocalSkill: (
     sourceDir: string,

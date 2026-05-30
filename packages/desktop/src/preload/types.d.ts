@@ -253,6 +253,38 @@ export interface CodeshellApi {
     pluginName: string,
     marketplaceName: string,
   ): Promise<{ ok: boolean; removedFromManifest: boolean; removedFromDisk: boolean }>;
+  /** List known plugin marketplaces (never throws — returns [] on read error). */
+  listMarketplaces(): Promise<
+    Array<{
+      name: string;
+      source: { source: "github"; repo: string } | { source: "git"; url: string };
+      installLocation: string;
+      lastUpdated: string;
+      pluginCount: number;
+    }>
+  >;
+  /** Load one marketplace's manifest (flattened owner/author). Null if missing. */
+  loadMarketplace(name: string): Promise<{
+    name: string;
+    description?: string;
+    owner?: string;
+    plugins: Array<{
+      name: string;
+      description?: string;
+      author?: string;
+      category?: string;
+      homepage?: string;
+    }>;
+  } | null>;
+  /** Parse a github repo / git url string and add it as a marketplace. */
+  addMarketplace(input: string): Promise<{ ok: boolean; name?: string; error?: string }>;
+  /** Remove a marketplace by name. Returns true if it existed. */
+  removeMarketplace(name: string): Promise<boolean>;
+  /** Install a plugin from a marketplace. */
+  installPlugin(
+    pluginName: string,
+    marketplaceName: string,
+  ): Promise<{ ok: boolean; error?: string }>;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
   searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
   readSkillBody(filePath: string): Promise<string>;

@@ -50,6 +50,13 @@ import {
 } from "./skills-service.js";
 import { listPlugins, uninstallPluginEntry } from "./plugins-service.js";
 import {
+  listMarketplacesForUi,
+  loadMarketplaceForUi,
+  addMarketplaceFromInput,
+  removeMarketplaceForUi,
+  installPluginForUi,
+} from "./marketplace-service.js";
+import {
   listCapabilities,
   setCapabilityEnabled,
 } from "./capabilities-service.js";
@@ -275,6 +282,21 @@ ipcMain.handle(
   async (_e, pluginName: string, marketplaceName: string) => {
     return uninstallPluginEntry(pluginName, marketplaceName);
   },
+);
+ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
+ipcMain.handle("marketplace:load", async (_e, name: string) =>
+  loadMarketplaceForUi(name),
+);
+ipcMain.handle("marketplace:add", async (_e, input: string) =>
+  addMarketplaceFromInput(input),
+);
+ipcMain.handle("marketplace:remove", async (_e, name: string) =>
+  removeMarketplaceForUi(name),
+);
+ipcMain.handle(
+  "plugins:install",
+  async (_e, pluginName: string, marketplaceName: string) =>
+    installPluginForUi(pluginName, marketplaceName),
 );
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
