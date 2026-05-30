@@ -926,9 +926,8 @@ export class Engine {
 
     if (options?.sessionId && this.sessionManager.exists(options.sessionId)) {
       session = this.sessionManager.resume(options.sessionId);
-      messages = this.compactedMessagesBySession.get(options.sessionId)
-        ? [...this.compactedMessagesBySession.get(options.sessionId)!]
-        : session.transcript.toMessages();
+      const cachedCompacted = this.compactedMessagesBySession.get(options.sessionId);
+      messages = cachedCompacted ? [...cachedCompacted] : session.transcript.toMessages();
       // If the previous run was Ctrl+C'd or crashed between an assistant
       // tool_use and the matching tool_result being persisted, the
       // loaded sequence is invalid for OpenAI (which 400s on dangling
