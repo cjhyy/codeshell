@@ -211,6 +211,8 @@ export type { InstalledPluginsV2 } from "./plugins/types.js";
 
 // ─── Plugin installer (CC + Codex) ───────────────────────────────
 export { installPluginFromPath } from "./plugins/installer/install.js";
+export { installPluginFromSource } from "./plugins/installer/installFromSource.js";
+export { parseSource, type ParsedSource } from "./plugins/installer/parseSource.js";
 export { detectPluginFormat } from "./plugins/installer/detectFormat.js";
 export {
   CodexPluginManifest,

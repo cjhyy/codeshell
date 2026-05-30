@@ -1,7 +1,8 @@
 import { Command } from "commander";
-import { resolve } from "node:path";
 import {
   installPluginFromPath,
+  installPluginFromSource,
+  parseSource,
   uninstallPluginByName,
   listInstalledPlugins,
   updatePluginByName,
@@ -13,14 +14,19 @@ export function createPluginCommand(): Command {
 
   plugin
     .command("install")
-    .description("Install a local CC or Codex plugin directory")
-    .argument("<source>", "Path to the plugin source directory")
+    .description("Install a plugin from a local directory or git source (github:org/repo, https, ssh; @ref #subdir)")
+    .argument("<source>", "Local directory path or git source")
     .option("--name <name>", "Override the installed plugin name")
     .action(async (source: string, opts: { name?: string }) => {
-      const sourceDir = resolve(source);
-      const name = opts.name ?? basenameOf(sourceDir);
-      runGuarded(`plugin install`, () => {
-        const dir = installPluginFromPath(sourceDir, name, new Date().toISOString());
+      const parsed = parseSource(source);
+      const name =
+        opts.name ?? (parsed.kind === "local" ? basenameOf(parsed.path) : parsed.inferredName);
+      await runGuarded(`plugin install`, async () => {
+        const ts = new Date().toISOString();
+        const dir =
+          parsed.kind === "local"
+            ? installPluginFromPath(parsed.path, name, ts)
+            : await installPluginFromSource(parsed, name, ts);
         console.log(`Installed '${name}' → ${dir}`);
       });
     });
@@ -44,9 +50,9 @@ export function createPluginCommand(): Command {
     .description("Re-install a plugin from its source if changed")
     .argument("<name>", "Installed plugin name")
     .option("--force", "Reinstall even if unchanged")
-    .action((name: string, opts: { force?: boolean }) => {
-      runGuarded(`update`, () => {
-        const r = updatePluginByName(name, new Date().toISOString(), Boolean(opts.force));
+    .action(async (name: string, opts: { force?: boolean }) => {
+      await runGuarded(`update`, async () => {
+        const r = await updatePluginByName(name, new Date().toISOString(), Boolean(opts.force));
         console.log(r.updated ? `Updated '${name}'` : `'${name}': ${r.reason}`);
       });
     });
@@ -55,8 +61,8 @@ export function createPluginCommand(): Command {
     .command("uninstall")
     .description("Remove an installed plugin")
     .argument("<name>", "Installed plugin name")
-    .action((name: string) => {
-      runGuarded(`uninstall`, () => {
+    .action(async (name: string) => {
+      await runGuarded(`uninstall`, () => {
         uninstallPluginByName(name);
         console.log(`Uninstalled '${name}'`);
       });
@@ -66,9 +72,9 @@ export function createPluginCommand(): Command {
 }
 
 /** Run an installer action, turning PluginInstallError into a clean exit. */
-function runGuarded(label: string, fn: () => void): void {
+async function runGuarded(label: string, fn: () => void | Promise<void>): Promise<void> {
   try {
-    fn();
+    await fn();
   } catch (err) {
     if (err instanceof PluginInstallError) {
       console.error(`${label} failed: ${err.message}`);

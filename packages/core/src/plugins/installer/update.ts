@@ -4,6 +4,8 @@ import { detectPluginFormat } from "./detectFormat.js";
 import { pluginInstallDir } from "./paths.js";
 import { uninstallPluginByName } from "./uninstall.js";
 import { installPluginFromPath } from "./install.js";
+import { installPluginFromSource } from "./installFromSource.js";
+import { parseSource } from "./parseSource.js";
 import { CodexPluginManifest, CSMeta, PluginInstallError } from "./types.js";
 
 export interface UpdateResult {
@@ -12,18 +14,32 @@ export interface UpdateResult {
 }
 
 /**
- * Reinstall a plugin from its recorded source when the source version changed,
- * or when `force`. CC plugins have no version → only `force` updates them.
+ * Reinstall a plugin from its recorded source.
+ *
+ * - Local source: reinstall when the source version changed, or when `force`.
+ *   CC plugins have no version → only `force` updates them.
+ * - Remote (git) source: re-clone and reinstall every time — git sources carry
+ *   no local version file to compare, so update is always a fresh pull
+ *   (equivalent to `--force`; cheap and reliable). See spec §9.
  */
-export function updatePluginByName(
+export async function updatePluginByName(
   name: string,
   installedAt: string,
   force: boolean,
-): UpdateResult {
+): Promise<UpdateResult> {
   const dir = pluginInstallDir(name);
   const metaPath = join(dir, ".cs-meta.json");
   if (!existsSync(metaPath)) throw new PluginInstallError(`no plugin named '${name}'`);
   const meta = CSMeta.parse(JSON.parse(readFileSync(metaPath, "utf-8")));
+
+  const parsed = parseSource(meta.source);
+
+  if (parsed.kind === "remote") {
+    // No local version to diff against — always re-clone and reinstall.
+    uninstallPluginByName(name);
+    await installPluginFromSource(parsed, name, installedAt);
+    return { updated: true, reason: "reinstalled from git source" };
+  }
 
   if (!existsSync(meta.source)) {
     throw new PluginInstallError(`source no longer exists: ${meta.source}`);
