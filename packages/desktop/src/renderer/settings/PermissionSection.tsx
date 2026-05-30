@@ -25,11 +25,15 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
-    const permissions = s.permissions && typeof s.permissions === "object"
-      ? (s.permissions as Record<string, unknown>)
-      : {};
-    setMode(fromSettingsPermissionMode(s.permissionMode ?? permissions.defaultMode));
+    try {
+      const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+      const permissions = s.permissions && typeof s.permissions === "object"
+        ? (s.permissions as Record<string, unknown>)
+        : {};
+      setMode(fromSettingsPermissionMode(s.permissionMode ?? permissions.defaultMode));
+    } catch (err) {
+      console.error("getSettings failed", err);
+    }
   };
 
   useEffect(() => {
@@ -49,6 +53,8 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
       );
       window.dispatchEvent(new Event("codeshell:settings-changed"));
       setMode(m);
+    } catch (err) {
+      console.error("updateSettings failed", err);
     } finally {
       setSaving(false);
     }
