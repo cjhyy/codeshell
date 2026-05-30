@@ -89,9 +89,15 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
     },
   );
 
-  await instance.waitUntilExit();
-  clearInterval(keepAlive);
-  flushHistorySync();
-  instance.cleanup();
+  try {
+    await instance.waitUntilExit();
+  } finally {
+    // Always tear down — if waitUntilExit rejects (error unmount), the cleanup
+    // below must still run or the keepAlive interval leaks and history isn't
+    // flushed.
+    clearInterval(keepAlive);
+    flushHistorySync();
+    instance.cleanup();
+  }
   process.exit(0);
 }
