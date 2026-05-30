@@ -7,7 +7,7 @@ import { costTracker } from "@cjhyy/code-shell-core";
 import { CHALK_COLORIZER } from "../../../utils/colorizer.js";
 import { execSync } from "node:child_process";
 import { gitDiff, gitDiffStat } from "./git-diff.js";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { resolveApiKey } from "@cjhyy/code-shell-core";
@@ -613,9 +613,7 @@ export const coreCommands: SlashCommand[] = [
     description: "Show version",
     execute: (_arg, ctx) => {
       try {
-        const pkg = JSON.parse(
-          execSync("cat package.json", { cwd: ctx.cwd, encoding: "utf-8", timeout: 3000 }),
-        );
+        const pkg = JSON.parse(readFileSync(join(ctx.cwd, "package.json"), "utf-8"));
         ctx.addStatus(`code-shell v${pkg.version ?? "0.1.0"}`);
       } catch {
         ctx.addStatus("code-shell v0.1.0");
