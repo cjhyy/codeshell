@@ -19,10 +19,33 @@ import { safeSpawn } from "../runtime/safe-spawn.js";
 
 export type GitResult = { ok: true; stdout: string } | { ok: false; error: string };
 
+/**
+ * Force git to never prompt interactively. gitOps runs in headless contexts
+ * (the Electron main process, the agent worker) that have no TTY, so a
+ * private/auth-required clone or an unknown SSH host key would otherwise make
+ * git BLOCK on a credential/host-key prompt — the operation appears to hang
+ * until the safeSpawn timeout (or an off-screen askpass dialog). With these
+ * set, git fails fast with an auth error instead.
+ *
+ * - GIT_TERMINAL_PROMPT=0 — git's own username/password prompt becomes an error.
+ * - GIT_SSH_COMMAND BatchMode=yes — ssh never asks for a password/passphrase;
+ *   accept-new auto-trusts a first-seen host key (instead of the y/n prompt)
+ *   but still rejects a changed key. Not overridden if the caller already
+ *   provides GIT_SSH_COMMAND (e.g. a custom identity file).
+ */
+export function nonInteractiveGitEnv(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return {
+    ...base,
+    GIT_TERMINAL_PROMPT: "0",
+    GIT_SSH_COMMAND:
+      base.GIT_SSH_COMMAND ?? "ssh -oBatchMode=yes -oStrictHostKeyChecking=accept-new",
+  };
+}
+
 async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise<GitResult> {
   const r = await safeSpawn("git", args, {
     cwd: cwd ?? process.cwd(),
-    env: process.env,
+    env: nonInteractiveGitEnv(process.env),
     timeoutMs,
   });
   if (r.spawnFailed) {
