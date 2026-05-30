@@ -306,7 +306,11 @@ export function resolveApiKey(
   for (const p of PROVIDERS) {
     if (!p.envKey) continue;
     const v = process.env[p.envKey];
-    if (v && v.trim()) return v.trim();
+    if (!v) continue;
+    // Same sanitization boundary as detectEnvKeys — env-sourced keys carry
+    // CRLF/BOM/zero-width/control chars; .trim() alone misses interior ones.
+    const cleaned = sanitizeApiKey(v).value;
+    if (cleaned) return cleaned;
   }
   return undefined;
 }
