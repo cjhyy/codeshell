@@ -4,6 +4,7 @@
 
 import type { SlashCommand } from "../registry.js";
 import { execSync } from "node:child_process";
+import { listFiles } from "./list-files.js";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -14,28 +15,14 @@ export const moreCommands: SlashCommand[] = [
     description: "List files in the current working directory",
     usage: "/files [pattern]",
     execute: (_arg, ctx) => {
-      try {
-        const pattern = _arg.trim();
-        let cmd: string;
-        if (pattern) {
-          cmd = `find . -maxdepth 3 -name "${pattern}" -not -path '*/node_modules/*' -not -path '*/.git/*' | head -50`;
-        } else {
-          cmd = `find . -maxdepth 2 -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' | head -50`;
-        }
-        const result = execSync(cmd, {
-          cwd: ctx.cwd,
-          encoding: "utf-8",
-          timeout: 10000,
-        }).trim();
-
-        if (!result) {
-          ctx.addStatus("No files found.");
-        } else {
-          const count = result.split("\n").length;
-          ctx.addStatus(`Files (${count}, max 50 shown):\n${result}`);
-        }
-      } catch (err) {
-        ctx.addStatus(`Error: ${(err as Error).message}`);
+      // listFiles runs `find` via execFileSync with an argv array, so the
+      // user pattern can't be interpreted as shell syntax.
+      const result = listFiles(ctx.cwd, _arg.trim());
+      if (!result) {
+        ctx.addStatus("No files found.");
+      } else {
+        const count = result.split("\n").length;
+        ctx.addStatus(`Files (${count}, max 50 shown):\n${result}`);
       }
     },
   },
