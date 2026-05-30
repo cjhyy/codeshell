@@ -61,7 +61,11 @@ export class PromptComposer {
 
     if (!instructions && !memoryContext) return null;
 
-    const currentDate = `Today's date is ${new Date().toISOString().split("T")[0]}.`;
+    // Local date, not UTC — toISOString() is UTC and would show the wrong
+    // "today" for users whose timezone has crossed midnight (review-2026-05-30).
+    const now = new Date();
+    const ymd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const currentDate = `Today's date is ${ymd}.`;
 
     let content = `<system-reminder>\n${currentDate}\n\n`;
     if (instructions) content += `${instructions}\n\n`;

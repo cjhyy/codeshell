@@ -389,6 +389,12 @@ function* splitTabStatusPairs(data: string): Generator<[string, string]> {
       key += c
     }
   }
+  // A trailing lone backslash (esc still set) is an incomplete escape — keep it
+  // as a literal rather than silently dropping it.
+  if (esc) {
+    if (inVal) val += '\\'
+    else key += '\\'
+  }
   if (key || inVal) yield [key, val]
 }
 
