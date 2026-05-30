@@ -98,7 +98,13 @@ export class RemoteBridge {
     if (!this.connected || !this.ssh?.stdin) {
       throw new Error("Not connected");
     }
-    this.ssh.stdin.write(JSON.stringify(message) + "\n");
+    this.ssh.stdin.write(JSON.stringify(message) + "\n", (err) => {
+      if (err) {
+        // A broken pipe means the remote is gone — surface it as a
+        // disconnect rather than swallowing the failed write.
+        this.connected = false;
+      }
+    });
   }
 
   /**
@@ -108,14 +114,20 @@ export class RemoteBridge {
     if (!this.ssh?.stdout) return;
 
     const rl = createInterface({ input: this.ssh.stdout, crlfDelay: Infinity });
-    for await (const line of rl) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        yield JSON.parse(trimmed);
-      } catch {
-        // Skip malformed
+    try {
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          yield JSON.parse(trimmed);
+        } catch {
+          // Skip malformed
+        }
       }
+    } finally {
+      // Close the interface if the consumer breaks/returns early — otherwise
+      // it (and its stdout listener) leaks.
+      rl.close();
     }
   }
 

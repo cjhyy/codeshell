@@ -97,9 +97,17 @@ export function initUpdater(): void {
     set({ kind: "error", message: e instanceof Error ? e.message : String(e) }),
   );
 
-  // First check shortly after launch; then every 6h.
-  setTimeout(() => void checkForUpdate(), 30_000);
-  setInterval(() => void checkForUpdate(), 6 * 60 * 60 * 1000);
+  // First check shortly after launch; then every 6h. Track the handles and
+  // clear them on quit so the periodic check doesn't keep firing (or hold a
+  // reference) during shutdown. unref() also keeps them from blocking exit.
+  const firstCheck = setTimeout(() => void checkForUpdate(), 30_000);
+  const periodic = setInterval(() => void checkForUpdate(), 6 * 60 * 60 * 1000);
+  firstCheck.unref?.();
+  periodic.unref?.();
+  app.on("before-quit", () => {
+    clearTimeout(firstCheck);
+    clearInterval(periodic);
+  });
 }
 
 export async function checkForUpdate(): Promise<void> {
