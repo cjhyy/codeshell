@@ -84,13 +84,18 @@ export async function runDetailExpansion(
     const messages: Message[] = [{ role: "user", content: userContent }];
     let finalText = "";
 
-    // Tool-use loop: allow LLM to verify file paths and interfaces
+    // Tool-use loop: allow LLM to verify file paths and interfaces.
+    // `maxRounds` bounds the number of tool rounds; after the last one we make
+    // one final call (without tools) so the model produces text FROM the tool
+    // results rather than the empty text it emitted alongside the tool calls.
     const maxRounds = tools ? Math.min(MAX_EXPANSION_TOOL_ROUNDS, MAX_TOOL_ROUNDS) : 0;
     for (let round = 0; round <= maxRounds; round++) {
+      // On the final round, stop offering tools so the model must answer.
+      const offerTools = round < maxRounds ? tools : undefined;
       const response = await client.createMessage({
         systemPrompt,
         messages,
-        tools,
+        tools: offerTools,
         signal,
       });
 
@@ -134,11 +139,6 @@ export async function runDetailExpansion(
         });
       }
       messages.push({ role: "user", content: toolResultBlocks });
-
-      // Last round: force a text response
-      if (round === maxRounds) {
-        finalText = response.text;
-      }
     }
 
     // Retry if truncated
