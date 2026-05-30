@@ -8,6 +8,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { sortSessionMemoriesByRecency } from "./session-memory-sort.js";
 
 export interface SessionMemoryEntry {
   sessionId: string;
@@ -48,20 +49,16 @@ export function loadSessionMemory(sessionId: string): SessionMemoryEntry | null 
 export function listSessionMemories(limit = 50): SessionMemoryEntry[] {
   if (!existsSync(MEMORY_DIR)) return [];
 
-  const files = readdirSync(MEMORY_DIR)
-    .filter((f) => f.endsWith(".json"))
-    .sort()
-    .reverse()
-    .slice(0, limit);
-
+  // Read all entries, then order by createdAt (not by filename — the filename
+  // is the sessionId, which has no chronological meaning), then take `limit`.
   const entries: SessionMemoryEntry[] = [];
-  for (const file of files) {
+  for (const file of readdirSync(MEMORY_DIR)) {
+    if (!file.endsWith(".json")) continue;
     try {
-      const entry = JSON.parse(readFileSync(join(MEMORY_DIR, file), "utf-8"));
-      entries.push(entry);
+      entries.push(JSON.parse(readFileSync(join(MEMORY_DIR, file), "utf-8")));
     } catch {}
   }
-  return entries;
+  return sortSessionMemoriesByRecency(entries).slice(0, limit);
 }
 
 /**
