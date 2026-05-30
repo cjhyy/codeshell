@@ -9,18 +9,14 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { parseGitLog, type GitLogEntry } from "./parse-log.js";
 
 export interface GitStatusEntry {
   status: string;
   path: string;
 }
 
-export interface GitLogEntry {
-  hash: string;
-  message: string;
-  author: string;
-  date: string;
-}
+export type { GitLogEntry };
 
 /** Run git with an argv array and return its trimmed stdout. */
 function git(cwd: string, args: string[], timeoutMs = 10000): string {
@@ -80,10 +76,7 @@ export function getGitLog(cwd: string, n = 10): GitLogEntry[] {
     10000,
   );
   if (!raw) return [];
-  return raw.split("\n").map((line) => {
-    const [hash, message, author, date] = line.split("|");
-    return { hash: hash.slice(0, 8), message, author, date };
-  });
+  return parseGitLog(raw);
 }
 
 export function getRemoteUrl(cwd: string): string | undefined {
