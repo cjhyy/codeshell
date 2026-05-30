@@ -5,6 +5,7 @@
  */
 
 import { Command } from "commander";
+import { parsePositiveInt } from "./parse-int-option.js";
 import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { setup } from "../bootstrap/setup.js";
@@ -88,7 +89,7 @@ program
   .action(async (opts) => {
     const { SessionManager } = await import("@cjhyy/code-shell-core");
     const sm = new SessionManager();
-    const sessions = sm.list(parseInt(opts.limit));
+    const sessions = sm.list(parsePositiveInt(opts.limit, "--limit"));
 
     if (sessions.length === 0) {
       console.log("No sessions found.");
@@ -187,7 +188,7 @@ function resolveOpts(opts: Record<string, string | undefined>) {
     apiKey: opts.apiKey,
     permissionMode: opts.permissionMode,
     output: opts.output as "text" | "json" | "jsonl" | "stream-json" | undefined,
-    maxTurns: opts.maxTurns ? parseInt(opts.maxTurns) : undefined,
+    maxTurns: opts.maxTurns ? parsePositiveInt(opts.maxTurns, "--max-turns") : undefined,
     resume: opts.resume,
     effort: opts.effort as "low" | "medium" | "high" | "max" | undefined,
   };
