@@ -97,6 +97,9 @@ function StatusBadge({
   return (
     <div
       className="topbar-status"
+      // tabIndex makes the div keyboard-focusable so the onFocus/onBlur popover
+      // toggling works via keyboard, not just descendant focus bubbling.
+      tabIndex={0}
       onMouseEnter={() => {
         cancelClose();
         setOpen(true);
