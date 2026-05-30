@@ -4,7 +4,7 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, symlinkSync, readdirSync, lstatSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, resolve, dirname } from "node:path";
 
 export interface WorktreeSession {
   originalCwd: string;
@@ -85,25 +85,43 @@ export function createWorktree(
  */
 export function removeWorktree(worktreePath: string, removeBranch = false): void {
   try {
-    const gitRoot = findGitRoot(worktreePath);
-    execFileSync("git", ["worktree", "remove", worktreePath, "--force"], {
-      cwd: gitRoot,
-      timeout: 30000,
-    });
+    // The MAIN repo root, not the worktree's own toplevel. `git rev-parse
+    // --show-toplevel` from inside a worktree returns the worktree path, which
+    // is about to be deleted; the branch-delete must run from the main repo,
+    // which outlives the worktree. Derive it from the common git dir.
+    const commonDir = execFileSync(
+      "git",
+      ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+      { cwd: worktreePath, encoding: "utf-8", timeout: 5000 },
+    ).trim();
+    const mainRoot = dirname(commonDir); // <main>/.git → <main>
 
+    // Capture the worktree's branch BEFORE removing the worktree — afterwards
+    // the directory is gone and `git branch --show-current` in it would fail
+    // (silently, leaving removeBranch a no-op).
+    let branch = "";
     if (removeBranch) {
-      // Extract branch name from worktree
       try {
-        const branch = execFileSync("git", ["branch", "--show-current"], {
+        branch = execFileSync("git", ["branch", "--show-current"], {
           cwd: worktreePath,
           encoding: "utf-8",
           timeout: 5000,
         }).trim();
-        if (branch.startsWith("worktree/")) {
-          execFileSync("git", ["branch", "-D", branch], { cwd: gitRoot, timeout: 10000 });
-        }
       } catch {
-        // Branch might already be removed
+        // Detached HEAD or unreadable — nothing to delete.
+      }
+    }
+
+    execFileSync("git", ["worktree", "remove", worktreePath, "--force"], {
+      cwd: mainRoot,
+      timeout: 30000,
+    });
+
+    if (removeBranch && branch.startsWith("worktree/")) {
+      try {
+        execFileSync("git", ["branch", "-D", branch], { cwd: mainRoot, timeout: 10000 });
+      } catch {
+        // Branch might already be removed.
       }
     }
   } catch {
