@@ -41,26 +41,36 @@ import { redactSecrets } from "./redact-secrets.js";
 
 export type LogSource = "main" | "bridge" | "renderer" | "agent" | "mcp-probe";
 
-function todayLogPath(): string {
-  const d = new Date();
+/** YYYY-MM-DD stamp for a date (local time). */
+export function dayStamp(d: Date): string {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
-  return join(homedir(), ".code-shell", "logs", "desktop", `desktop-${yyyy}-${mm}-${dd}.log`);
+  return `${yyyy}-${mm}-${dd}`;
 }
 
-let _path: string | null = null;
+/** Log file path for a given day stamp. */
+export function logPathForDay(stamp: string): string {
+  return join(homedir(), ".code-shell", "logs", "desktop", `desktop-${stamp}.log`);
+}
+
+let _cachedStamp: string | null = null;
+let _cachedPath: string | null = null;
 function logPath(): string {
-  if (_path === null) {
-    _path = todayLogPath();
+  const stamp = dayStamp(new Date());
+  // Recompute when the day changes — a long-running process must roll over to
+  // a new file at midnight instead of writing to the start-day's file forever.
+  if (_cachedStamp !== stamp || _cachedPath === null) {
+    _cachedStamp = stamp;
+    _cachedPath = logPathForDay(stamp);
     try {
-      mkdirSync(dirname(_path), { recursive: true });
+      mkdirSync(dirname(_cachedPath), { recursive: true });
     } catch {
       // best effort; if logging dir is unwritable the appendFileSync below
       // will throw and be caught — we still continue running.
     }
   }
-  return _path;
+  return _cachedPath;
 }
 
 const sessionDir = join(homedir(), ".code-shell", "logs", "desktop", "sessions");
