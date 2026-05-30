@@ -1,5 +1,6 @@
 import chalk from 'chalk'
 import cliBoxes, { type Boxes, type BoxStyle } from 'cli-boxes'
+import { sliceAnsi } from '@cjhyy/code-shell-core'
 import { applyColor } from './colorize.js'
 import type { DOMNode } from './dom.js'
 import type Output from './output.js'
@@ -32,7 +33,7 @@ export type BorderStyle =
   | keyof typeof CUSTOM_BORDER_STYLES
   | BoxStyle
 
-function embedTextInBorder(
+export function embedTextInBorder(
   borderLine: string,
   text: string,
   align: 'start' | 'end' | 'center',
@@ -43,7 +44,10 @@ function embedTextInBorder(
   const borderLength = borderLine.length
 
   if (textLength >= borderLength - 2) {
-    return ['', text.substring(0, borderLength), '']
+    // Slice by VISIBLE width, not string index — `text` may carry ANSI color
+    // codes (see BorderTextOptions.content), and substring would cut the wrong
+    // number of cells and could sever an escape sequence.
+    return ['', sliceAnsi(text, 0, borderLength), '']
   }
 
   let position: number
