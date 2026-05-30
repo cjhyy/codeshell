@@ -24,10 +24,16 @@ export function resolveCodexMcpServers(
   try {
     parsed = JSON.parse(readFileSync(path, "utf-8"));
   } catch (err) {
-    throw new PluginInstallError(`invalid mcp json ${decl}: ${(err as Error).message}`);
+    throw new PluginInstallError(
+      `invalid mcp json ${decl}: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
-  if (parsed && typeof parsed === "object" && "mcpServers" in (parsed as object)) {
+  // Only objects yield server maps. An array/number/string that happens to
+  // parse is not a valid mcp config — return an empty map rather than casting
+  // a non-object to Record.
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  if ("mcpServers" in (parsed as object)) {
     return (parsed as { mcpServers: Record<string, unknown> }).mcpServers ?? {};
   }
-  return (parsed as Record<string, unknown>) ?? {};
+  return parsed as Record<string, unknown>;
 }
