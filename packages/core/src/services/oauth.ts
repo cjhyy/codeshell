@@ -6,7 +6,8 @@
 
 import { createServer, type Server } from "node:http";
 import { randomBytes, createHash } from "node:crypto";
-import { exec } from "node:child_process";
+import { execFile } from "node:child_process";
+import { browserOpenCommand } from "./browser-open.js";
 
 export interface OAuthConfig {
   clientId: string;
@@ -36,13 +37,9 @@ function generatePKCE(): { verifier: string; challenge: string } {
  * Open a URL in the system browser.
  */
 function openBrowser(url: string): void {
-  const cmd =
-    process.platform === "darwin"
-      ? `open "${url}"`
-      : process.platform === "win32"
-        ? `start "${url}"`
-        : `xdg-open "${url}"`;
-  exec(cmd, () => {});
+  // execFile with an argv array — no shell, so the URL can't be interpreted.
+  const { cmd, args } = browserOpenCommand(process.platform, url);
+  execFile(cmd, args, () => {});
 }
 
 /**
