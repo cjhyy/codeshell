@@ -10,6 +10,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve, join } from "node:path";
+import { isWithinRoot } from "./within-root.js";
 import type { ToolDefinition, ToolCall } from "../../types.js";
 
 export const MAX_TOOL_RESULT = 15_000; // chars per tool call
@@ -123,10 +124,7 @@ export function executeContextTool(tc: ToolCall): string {
  */
 function validatePath(filePath: string): string | null {
   const resolved = resolve(filePath);
-  if (resolved === REPO_ROOT || resolved.startsWith(REPO_ROOT + "/")) {
-    return resolved;
-  }
-  return null;
+  return isWithinRoot(REPO_ROOT, resolved) ? resolved : null;
 }
 
 function executeReadFile(args: Record<string, unknown>): string {
