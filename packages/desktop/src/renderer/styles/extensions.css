@@ -13,7 +13,6 @@
 .ext-manage {
   display: flex;
   flex-direction: column;
-  min-height: 0;
   gap: var(--sp-3);
 }
 
@@ -25,6 +24,10 @@
   align-items: center;
   gap: var(--sp-4);
   border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-base, var(--bg-app));
 }
 .ext-tabbar button {
   appearance: none;
@@ -78,8 +81,6 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .ext-row {

@@ -14,15 +14,24 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const [plugins, setPlugins] = useState<PluginSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const load = () => {
+  const [reloadKey, setReloadKey] = useState(0);
+  const retry = () => setReloadKey((k) => k + 1);
+  useEffect(() => {
+    let alive = true;
     setPlugins(null);
     setError(null);
     window.codeshell
       .listPlugins(cwd)
-      .then(setPlugins)
-      .catch((e) => setError(String(e?.message ?? e)));
-  };
-  useEffect(load, [cwd]);
+      .then((d) => {
+        if (alive) setPlugins(d);
+      })
+      .catch((e) => {
+        if (alive) setError(String(e?.message ?? e));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [cwd, reloadKey]);
   const uninstall = async (p: PluginSummary) => {
     const t = resolveUninstallTarget(p);
     if (!t.uninstallable) {
@@ -33,7 +42,7 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     setBusy(p.installKey);
     try {
       await window.codeshell.uninstallPlugin(t.pluginName, t.marketplaceName);
-      load();
+      setReloadKey((k) => k + 1);
       onChanged();
     } catch (e) {
       window.alert(`卸载失败：${String((e as Error)?.message ?? e)}`);
@@ -44,7 +53,7 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   if (error)
     return (
       <div className="customize-empty">
-        加载失败：{error} <button onClick={load}>重试</button>
+        加载失败：{error} <button onClick={retry}>重试</button>
       </div>
     );
   if (plugins === null) return <div className="customize-empty">加载中…</div>;

@@ -13,22 +13,31 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
   const [skills, setSkills] = useState<SkillSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<SkillSummary | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const load = () => {
+  const retry = () => setReloadKey((k) => k + 1);
+
+  useEffect(() => {
+    let alive = true;
     setSkills(null);
     setError(null);
     window.codeshell
       .listSkills(cwd)
-      .then(setSkills)
-      .catch((e) => setError(String(e?.message ?? e)));
-  };
-
-  useEffect(load, [cwd]);
+      .then((d) => {
+        if (alive) setSkills(d);
+      })
+      .catch((e) => {
+        if (alive) setError(String(e?.message ?? e));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [cwd, reloadKey]);
 
   if (error) {
     return (
       <div className="customize-empty">
-        加载失败：{error} <button onClick={load}>重试</button>
+        加载失败：{error} <button onClick={retry}>重试</button>
       </div>
     );
   }
