@@ -339,29 +339,39 @@ export function applyToolResultBudget(messages: Message[], maxTotalChars = 100_0
     // Sort by size descending — truncate largest first
     resultBlocks.sort((a, b) => b.size - a.size);
 
+    // Build the exact replacement for a block, so the running budget uses the
+    // real post-truncation length (the old code assumed a flat ~200 chars,
+    // but the replacement is ~150 boilerplate + up to 500 preview ≈ 650+,
+    // which under-truncated and could even leave the message LARGER).
+    const truncate = (content: string): string => {
+      const preview = content.slice(0, 500);
+      const sizeKb = (content.length / 1000).toFixed(0);
+      return (
+        `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. ` +
+        `Re-run the originating tool if you need the full output.\n\n` +
+        `Preview (first 500 chars):\n${preview}`
+      );
+    };
+
     let remaining = totalSize;
-    const toTruncate = new Set<number>();
+    const replacements = new Map<number, string>();
 
     for (const rb of resultBlocks) {
       if (remaining <= maxTotalChars) break;
-      toTruncate.add(rb.index);
-      remaining -= rb.size;
-      remaining += 200; // truncated replacement is ~200 chars
+      const original = msg.content[rb.index]!.content as string;
+      const replaced = truncate(original);
+      // Only truncate if it actually shrinks the block; otherwise skip it
+      // (truncating a barely-oversized block would grow the message).
+      if (replaced.length >= rb.size) continue;
+      replacements.set(rb.index, replaced);
+      remaining -= rb.size - replaced.length;
     }
 
-    if (toTruncate.size === 0) return msg;
+    if (replacements.size === 0) return msg;
 
     const newContent = msg.content.map((block, i) => {
-      if (!toTruncate.has(i)) return block;
-      const preview = typeof block.content === "string" ? block.content.slice(0, 500) : "";
-      const sizeKb = ((block.content as string).length / 1000).toFixed(0);
-      return {
-        ...block,
-        content:
-          `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. ` +
-          `Re-run the originating tool if you need the full output.\n\n` +
-          `Preview (first 500 chars):\n${preview}`,
-      };
+      const replaced = replacements.get(i);
+      return replaced === undefined ? block : { ...block, content: replaced };
     });
 
     return { ...msg, content: newContent };
