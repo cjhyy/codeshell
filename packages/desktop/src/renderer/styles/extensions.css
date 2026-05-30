@@ -6,14 +6,15 @@
 .ext-page {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
-  gap: var(--sp-3);
 }
 
 .ext-manage {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  flex: 1;
+  min-height: 0;
 }
 
 /* ── Tab bar ─────────────────────────────────────────────────────────
@@ -23,10 +24,8 @@
   display: flex;
   align-items: center;
   gap: var(--sp-4);
+  flex: none;
   border-bottom: 1px solid var(--border-subtle);
-  position: sticky;
-  top: 0;
-  z-index: 1;
   background: var(--bg-base, var(--bg-app));
 }
 .ext-tabbar button {
@@ -78,23 +77,38 @@
 .ext-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: var(--sp-2) 0 var(--sp-4);
   display: flex;
   flex-direction: column;
+  /* The list is the scroll container; tab bar above it stays put. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .ext-row {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-2);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px var(--sp-2);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
   transition: background 80ms ease;
 }
+/* Hairline separators only *between* rows — lighter than a border on every
+   row, and none above the first / below the last, for a calmer list. */
+.ext-row + .ext-row {
+  border-top: 1px solid var(--border-subtle);
+}
 .ext-row:hover {
   background: var(--bg-hover);
+}
+/* Hide the separator on the row being hovered and the one after it, so the
+   hover highlight reads as a clean card rather than a boxed-in band. */
+.ext-row:hover,
+.ext-row:hover + .ext-row {
+  border-top-color: transparent;
 }
 
 .ext-row-icon {
@@ -137,6 +151,21 @@
   font-size: var(--fz-xs);
   color: var(--fg-muted);
   white-space: nowrap;
+  letter-spacing: 0.02em;
+  /* Reserve a column so names/descriptions line up across rows. */
+  min-width: 84px;
+  text-align: right;
+}
+
+/* The enable/disable toggle. Keep it quiet — accent only when on, sized
+   down so 30+ rows don't read as a wall of bright checkboxes. */
+.ext-row input[type="checkbox"] {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 0 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .ext-row-kebab {

@@ -70,9 +70,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
                 {(s.description ?? "").split("\n")[0]}
               </span>
             </div>
-            <span className={`skill-source skill-source-${s.source}`}>
-              {s.source}
-            </span>
+            <span className="ext-row-source">{s.source}</span>
             <input
               type="checkbox"
               checked={isEnabled(s)}
