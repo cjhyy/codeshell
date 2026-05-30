@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { McpSection } from "../settings/McpSection";
 import { writeSettings } from "../settingsBus";
+import { MarketList } from "./MarketList";
 import { PluginsTab } from "./PluginsTab";
 import { SkillsTab } from "./SkillsTab";
 import type { SkillSummary } from "../../main/skills-service";
@@ -29,7 +30,7 @@ function namespaceOf(s: SkillSummary): string {
   return idx > 0 ? s.name.slice(0, idx) : STANDALONE_NAMESPACE;
 }
 
-type TabKey = "plugins" | "skills" | "mcp";
+type TabKey = "plugins" | "skills" | "mcp" | "market";
 
 interface Props {
   cwd: string;
@@ -114,7 +115,13 @@ export function ManagePage({ cwd, activeRepoPath }: Props) {
         >
           MCP
         </button>
-        {tab !== "mcp" && (
+        <button
+          className={tab === "market" ? "active" : ""}
+          onClick={() => setTab("market")}
+        >
+          市场
+        </button>
+        {tab !== "mcp" && tab !== "market" && (
           <input
             className="ext-search"
             placeholder="搜索"
@@ -143,6 +150,7 @@ export function ManagePage({ cwd, activeRepoPath }: Props) {
       {tab === "mcp" && (
         <McpSection scope="user" activeRepoPath={activeRepoPath} />
       )}
+      {tab === "market" && <MarketList onInstalled={() => void refresh()} />}
     </div>
   );
 }

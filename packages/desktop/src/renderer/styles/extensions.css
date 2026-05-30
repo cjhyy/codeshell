@@ -266,3 +266,105 @@
   line-height: 1.6;
   color: var(--fg-primary);
 }
+
+/* ── Market tab ──────────────────────────────────────────────────────
+   Inline add-marketplace form, a per-row install/已安装 text button, a
+   drill-in chevron, and a back button for the detail view. */
+.ext-add-market {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-2) var(--sp-2);
+}
+.ext-add-market input {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--fg-primary);
+  font: inherit;
+  font-size: var(--fz-sm);
+  padding: 5px 9px;
+  outline: none;
+}
+.ext-add-market input:focus {
+  border-color: var(--border-strong);
+}
+.ext-add-market input::placeholder {
+  color: var(--fg-muted);
+}
+.ext-add-error {
+  flex-basis: 100%;
+  font-size: var(--fz-xs);
+  color: var(--danger, #e5484d);
+}
+
+/* Small bordered text button used for 安装 / 已安装 / 添加. */
+.ext-row-action {
+  flex: none;
+  appearance: none;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: var(--fz-sm);
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  transition: background 80ms ease, border-color 80ms ease, color 80ms ease;
+}
+.ext-row-action:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+.ext-row-action:disabled {
+  color: var(--fg-muted);
+  cursor: default;
+}
+
+/* Drill-in chevron at the end of a marketplace row. */
+.ext-row-chevron {
+  flex: none;
+  color: var(--fg-muted);
+  font-size: var(--fz-md);
+  line-height: 1;
+}
+
+/* Detail-view header with a back button. */
+.ext-detail-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-2) var(--sp-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.ext-detail-title {
+  font-size: var(--fz-md);
+  font-weight: 500;
+  color: var(--fg-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ext-back {
+  flex: none;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--fg-secondary);
+  font: inherit;
+  font-size: var(--fz-sm);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 80ms ease, color 80ms ease;
+}
+.ext-back:hover {
+  color: var(--fg-primary);
+  background: var(--bg-hover);
+}
