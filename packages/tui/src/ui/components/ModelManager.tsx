@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { Box, Text, useInput } from "../../render/index.js";
 import type { ProtocolModelEntry } from "@cjhyy/code-shell-core";
+import { fmtTokens, modelTags } from "./model-display.js";
 
 interface SnapshotInfo {
   count: number;
@@ -405,26 +406,6 @@ export function ModelManager({
       )}
     </Box>
   );
-}
-
-/** Format a token count into a human-readable string. */
-function fmtTokens(n: number | undefined): string {
-  if (!n || n <= 0) return "?";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(0)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return `${n}`;
-}
-
-/** Derive capability tags from model key/name. */
-function modelTags(key: string, model: string): string[] {
-  const tags: string[] = [];
-  const lower = `${key} ${model}`.toLowerCase();
-  if (/coder|code|devstral/i.test(lower)) tags.push("coding");
-  if (/reason|think|r1|o3|o4|pro/i.test(lower)) tags.push("reasoning");
-  if (/flash|mini|haiku|fast|small|nano/i.test(lower)) tags.push("fast");
-  if (/cheap|free/i.test(lower)) tags.push("cheap");
-  if (/large|max|ultra|opus|big/i.test(lower)) tags.push("powerful");
-  return tags;
 }
 
 // ─── Panes ───────────────────────────────────────────────────────
