@@ -17,6 +17,93 @@
   min-height: 0;
 }
 
+/* ── Discovery home ──────────────────────────────────────────────────
+   A calm centered column: big title, a wide search box, and a row of
+   clickable "installed" counts. Reuses tokens so it tracks the theme. */
+.ext-home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-5);
+  flex: 1;
+  min-height: 0;
+  padding: 48px var(--sp-4) var(--sp-6);
+  overflow-y: auto;
+}
+.ext-home-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--fg-primary);
+}
+.ext-home-search {
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--fg-primary);
+  font: inherit;
+  font-size: var(--fz-md);
+  padding: 8px 12px;
+  outline: none;
+}
+.ext-home-search:focus {
+  border-color: var(--border-strong);
+}
+.ext-home-search::placeholder {
+  color: var(--fg-muted);
+}
+.ext-home-overview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+}
+.ext-home-stat {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--fg-secondary);
+  font: inherit;
+  font-size: var(--fz-md);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: color 80ms ease, background 80ms ease;
+}
+.ext-home-stat:hover {
+  color: var(--fg-primary);
+  background: var(--bg-hover);
+}
+.ext-home-stat b {
+  color: var(--fg-primary);
+  font-weight: 600;
+}
+.ext-home-dot {
+  color: var(--fg-muted);
+  user-select: none;
+}
+.ext-home-back {
+  flex: none;
+  align-self: flex-start;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--fg-secondary);
+  font: inherit;
+  font-size: var(--fz-sm);
+  cursor: pointer;
+  padding: var(--sp-2) var(--sp-1);
+  border-radius: var(--radius-sm);
+  transition: color 80ms ease, background 80ms ease;
+}
+.ext-home-back:hover {
+  color: var(--fg-primary);
+  background: var(--bg-hover);
+}
+
 /* ── Tab bar ─────────────────────────────────────────────────────────
    Thin separator under the whole bar; the active tab gets an accent
    underline that sits on top of it. Search input floats to the right. */

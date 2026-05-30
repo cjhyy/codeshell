@@ -30,16 +30,18 @@ function namespaceOf(s: SkillSummary): string {
   return idx > 0 ? s.name.slice(0, idx) : STANDALONE_NAMESPACE;
 }
 
-type TabKey = "plugins" | "skills" | "mcp" | "market";
+export type TabKey = "plugins" | "skills" | "mcp" | "market";
 
 interface Props {
   cwd: string;
   activeRepoPath: string | null;
+  initialTab?: TabKey;
+  initialQuery?: string;
 }
 
-export function ManagePage({ cwd, activeRepoPath }: Props) {
-  const [tab, setTab] = useState<TabKey>("plugins");
-  const [query, setQuery] = useState("");
+export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Props) {
+  const [tab, setTab] = useState<TabKey>(initialTab ?? "plugins");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [disabledSkills, setDisabledSkills] = useState<Set<string>>(new Set());
   const [disabledPlugins, setDisabledPlugins] = useState<Set<string>>(new Set());
