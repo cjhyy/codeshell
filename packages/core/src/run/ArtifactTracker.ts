@@ -15,6 +15,7 @@
 import { nanoid } from "nanoid";
 import type { StreamEvent, ToolCall } from "../types.js";
 import type { RunStore } from "./RunStore.js";
+import { parseRedirectTarget } from "./redirect-target.js";
 import type { RunArtifactRef, ArtifactKind, ArtifactRole } from "./types.js";
 
 export interface ArtifactTrackerConfig {
@@ -163,10 +164,10 @@ export class ArtifactTracker {
       return;
     }
 
-    // Redirect output: command > file or command >> file
-    const redirectMatch = trimmed.match(/>\s*(\S+)\s*$/);
-    if (redirectMatch) {
-      await this.recordFileArtifact(redirectMatch[1], "output", "file");
+    // Redirect output: command > file or command >> file (quoted-path aware)
+    const redirectTarget = parseRedirectTarget(trimmed);
+    if (redirectTarget) {
+      await this.recordFileArtifact(redirectTarget, "output", "file");
       return;
     }
 
