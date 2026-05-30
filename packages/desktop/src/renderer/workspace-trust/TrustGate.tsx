@@ -13,10 +13,15 @@ export function TrustGate({ repoPath, onDecide }: Props) {
     setUnknown(false);
     if (!repoPath) return;
     let cancelled = false;
-    void window.codeshell.getTrust(repoPath).then((t) => {
-      if (cancelled) return;
-      setUnknown(t === "unknown");
-    });
+    void window.codeshell
+      .getTrust(repoPath)
+      .then((t) => {
+        if (cancelled) return;
+        setUnknown(t === "unknown");
+      })
+      .catch((err) => {
+        if (!cancelled) console.error("getTrust failed", err);
+      });
     return () => {
       cancelled = true;
     };
@@ -26,10 +31,15 @@ export function TrustGate({ repoPath, onDecide }: Props) {
 
   const decide = async (level: "trusted" | "untrusted") => {
     setPending(true);
-    await window.codeshell.setTrust(repoPath, level);
-    onDecide(level);
-    setPending(false);
-    setUnknown(false);
+    try {
+      await window.codeshell.setTrust(repoPath, level);
+      onDecide(level);
+      setUnknown(false);
+    } catch (err) {
+      console.error("setTrust failed", err);
+    } finally {
+      setPending(false);
+    }
   };
 
   return (
