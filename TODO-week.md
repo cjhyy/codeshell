@@ -9,7 +9,7 @@
 | 🟡 | 4   | plugin / skill 系统跟 Codex 对齐 | 本地安装 / 转换 / 运行时加载 / list-update-uninstall / **远程安装(#11 已完成)**。**剩**:跨 MCP/builtin/skill 统一能力注册表收尾(core 大改) |
 | ✅ | 11  | 远程插件安装(git 来源)        | spec `docs/superpowers/specs/2026-05-29-plugin-remote-install-design.md`,**已实现**(2026-05-30,TDD)。`parseSource.ts`(解析 `github:org/repo`/https/ssh + `@ref`/`#subdir`)+ `installFromSource.ts`(薄桥:`gitClone` 临时目录 → `installPluginFromPath` 转换+装 → 改写 `.cs-meta.json.source` 为原始 git 串 → 删临时目录);`update.ts` 远程源重拉重装;CLI dispatch 本地/远程。16 个新单测/集成测全绿 |
 | 🟡 | 10  | 多 session 上下文/串台 + 慢 修复 | 辅助任务模型已落地。**剩**:见「遗留 / 待确认」 |
-| 🟡 | 12  | 全量逐文件 review 修复          | 2026-05-30 multi-agent review,两轮对抗验证后 **121 条真问题(9 高 + 52 中 + 60 低)**。**第一轮 6 个高已全部 TDD 修复** —— 2 个 yoga-layout TOP/BOTTOM 维度错配、apply-patch 缓存按相对路径失效、scheduler setInterval 竞态、stdio server 无优雅关闭、core-commands `/diff` 命令注入。**剩 3 个高未修**:`lsp/manager.ts:71`(Windows file:// 路径)、`FileRunStore.ts:73-81`(写锁链 rejection 未处理)、`voice/index.ts:90,94`(execSync 缺 shell)。另 52 中 + 60 低待办。详见下「🔬 全量逐文件 review」 |
+| 🟡 | 12  | 全量逐文件 review 修复          | 2026-05-30 multi-agent review,两轮对抗验证后 **121 条真问题(9 高 + 52 中 + 60 低)**。**9 个高已全部处理**:8 修复(6 第一轮 + lsp 路径 + FileRunStore 锁链)、1 误报(voice execSync 本就走 shell)。**剩 52 中 + 60 低**,逐个验证(高误报率)后修+提交。详见下「🔬 全量逐文件 review」 |
 
 ## 遗留 / 待确认
 
@@ -113,9 +113,9 @@
 
 | 状态 | 严重度 | 维度 | 位置 | 问题 | 修复方向 |
 | ---- | ------ | ---- | ---- | ---- | -------- |
-| ⬜ | 🔴 高 | 正确性 | `core/lsp/manager.ts:71` | Incorrect path handling with simple string replace | Replace with `fileURLToPath(this.rootUri)` |
-| ⬜ | 🔴 高 | 正确性 | `core/run/FileRunStore.ts:73-81` | Promise rejection in appendJsonl lock chain not handled | Catch and handle errors within the promise: `const current = prev.then(() => { try { appen… |
-| ⬜ | 🔴 高 | 正确性 | `tui/voice/index.ts:90, 94` | Shell redirections in which checks fail without shell: true | Add { shell: true } option to both execSync calls in isRecordingAvailable() |
+| ✅ | 🔴 高 | 正确性 | `core/lsp/manager.ts:71` | Incorrect path handling with simple string replace | **已修(TDD)**:抽 `lsp/root-path.ts` 用 `fileURLToPath`(修 Windows `/C:/` + %20 解码),替换 `replace("file://","")` |
+| ✅ | 🔴 高 | 正确性 | `core/run/FileRunStore.ts:73-81` | Promise rejection in appendJsonl lock chain not handled | **已修(TDD)**:存进 map 的 lock 永不 reject(prev 用 `.catch`),本次错误仍抛给本 caller,无更新 writer 时清 map 项。补 recovery + 并发序列化两个测试 |
+| ❎ | 🔴 高 | 正确性 | `tui/voice/index.ts:90, 94` | Shell redirections in which checks fail without shell: true | **误报**:`execSync` 默认走 `/bin/sh -c`(与 `execFileSync` 不同),`\|\|` 和 `2>/dev/null` 本就生效;已实测复现验证。darwin/linux 分支不跑 Windows。未改 |
 | ⬜ | 🟡 中 | 安全 | `core/arena/context-tools.ts:126` | Path traversal vulnerability on Windows systems | Use path.sep instead of hardcoded '/': `resolved === REPO_ROOT \|\| resolved.startsWith(RE… |
 | ⬜ | 🟡 中 | 正确性 | `core/arena/providers/docs.ts:55` | Relevant documents excluded due to discovery order | Change to include documents in two sequential phases: first collect all relevant docs, the… |
 | ⬜ | 🟡 中 | 正确性 | `core/context/compaction.ts:349` | Underestimated replacement size in applyToolResultBudget | Update line 349 to: `remaining += 656;` or better yet, calculate the actual replacement st… |
