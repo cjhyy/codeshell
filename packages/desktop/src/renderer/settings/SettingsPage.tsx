@@ -23,7 +23,7 @@ import { MemorySection } from "./MemorySection";
 import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
-import { PluginsAndSkillsSection } from "./PluginsAndSkillsSection";
+import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { AgentsSection } from "./AgentsSection";
 import { AppearanceSection } from "./AppearanceSection";
 import {
@@ -94,7 +94,7 @@ const MODULE_GROUPS: ModuleGroup[] = [
     title: "扩展能力",
     modules: [
       { id: "mcp", label: "MCP 服务器", Icon: Plug },
-      { id: "plugins-skills", label: "插件与 Skills", Icon: Puzzle },
+      { id: "plugins-skills", label: "扩展", Icon: Puzzle },
       { id: "agents", label: "子代理", Icon: Bot },
       { id: "hooks", label: "钩子", Icon: Webhook },
     ],
@@ -269,7 +269,7 @@ export function SettingsPage({
               />
             )}
             {active === "plugins-skills" && (
-              <PluginsAndSkillsSection activeRepoPath={activeRepoPath} />
+              <ExtensionsPage activeRepoPath={activeRepoPath} />
             )}
             {active === "agents" && (
               <AgentsSection activeRepoPath={activeRepoPath} />
