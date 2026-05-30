@@ -1,0 +1,33 @@
+<h2>B + C 具体长什么样?</h2>
+<p class="subtitle">你选了 B（内置精选 JSON）和 C（首页弱化网格）。这俩有点互斥，下面是两种把它们结合的解读，挑一个。</p>
+
+<div class="split">
+  <div class="mockup" data-choice="bc-1" onclick="toggleSelect(this)">
+    <div class="mockup-header">解读①：首页保留卡片网格，数据来自内置 featured.json</div>
+    <div class="mockup-body" style="font-size:12px">
+      <div style="text-align:center;font-weight:600;padding:8px 0">让 codeshell 按你的方式工作</div>
+      <div style="font-size:11px;color:#888;margin-bottom:6px">🔍 搜索插件</div>
+      <div class="label">Featured（来自仓库内置清单）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+        <div class="placeholder" style="height:34px">🧩 superpowers +</div>
+        <div class="placeholder" style="height:34px">📄 document-skills +</div>
+        <div class="placeholder" style="height:34px">🔗 git-tools +</div>
+        <div class="placeholder" style="height:34px">🎨 frontend +</div>
+      </div>
+      <div style="font-size:11px;color:#aaa;margin-top:8px">无 banner。卡片点「+」走安装流程</div>
+    </div>
+  </div>
+
+  <div class="mockup" data-choice="bc-2" onclick="toggleSelect(this)">
+    <div class="mockup-header">解读②：首页不做网格，只标题+搜索+已安装概览</div>
+    <div class="mockup-body" style="font-size:12px">
+      <div style="text-align:center;font-weight:600;padding:8px 0">让 codeshell 按你的方式工作</div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px">🔍 搜索 ··· 跳到管理/市场</div>
+      <div class="label">你已安装</div>
+      <div class="placeholder" style="height:26px;margin-top:4px">插件 6 · 技能 18 · MCP 1</div>
+      <div style="font-size:11px;color:#aaa;margin-top:10px">无 banner、无精选网格。featured.json 只在「市场」tab 里当推荐源用</div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:8px">①= 有网格但数据本地（更像 Codex 首页）；②= 首页极简，精选清单只喂给市场 tab。哪个是你要的？</p>
