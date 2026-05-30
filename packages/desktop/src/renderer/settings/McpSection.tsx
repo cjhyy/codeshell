@@ -411,7 +411,7 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
   const [args, setArgs] = useState((initial?.args ?? []).join(" "));
   const [url, setUrl] = useState(initial?.url ?? "");
   const [envText, setEnvText] = useState(envOrHeadersToText(initial?.env));
-  const [headersText, setHeadersText] = useState(envOrHeadersToText(initial?.headers));
+  const [headersText, setHeadersText] = useState(envOrHeadersToText(initial?.headers, ": "));
   const [showAdvanced, setShowAdvanced] = useState(
     Boolean(initial?.env && Object.keys(initial.env).length) ||
       Boolean(initial?.headers && Object.keys(initial.headers).length),
@@ -640,10 +640,13 @@ function stripNameFromServer(s: McpServer): Omit<McpServer, "name"> {
   return rest;
 }
 
-function envOrHeadersToText(obj: Record<string, string> | undefined): string {
+function envOrHeadersToText(
+  obj: Record<string, string> | undefined,
+  sep: "=" | ": " = "=",
+): string {
   if (!obj) return "";
   return Object.entries(obj)
-    .map(([k, v]) => `${k}=${v}`)
+    .map(([k, v]) => `${k}${sep}${v}`)
     .join("\n");
 }
 
