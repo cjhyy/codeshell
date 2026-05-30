@@ -48,7 +48,11 @@ export function SessionsView({ onNewSession }: Props) {
 
   const commitEdit = async () => {
     if (!editing) return;
-    await window.codeshell.renameSession(editing, editDraft.trim());
+    try {
+      await window.codeshell.renameSession(editing, editDraft.trim());
+    } catch (err) {
+      console.error("renameSession failed", err);
+    }
     setEditing(null);
     setEditDraft("");
     void refresh();
@@ -122,7 +126,11 @@ export function SessionsView({ onNewSession }: Props) {
                 <button
                   className="session-delete"
                   onClick={async () => {
-                    await window.codeshell.deleteSession(s.id);
+                    try {
+                      await window.codeshell.deleteSession(s.id);
+                    } catch (err) {
+                      console.error("deleteSession failed", err);
+                    }
                     void refresh();
                   }}
                 >
