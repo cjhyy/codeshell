@@ -71,13 +71,30 @@ export class FileRunStore implements RunStore {
   private readonly appendLocks = new Map<string, Promise<void>>();
 
   private async appendJsonl(filePath: string, data: unknown): Promise<void> {
-    // Serialize writes to the same file to prevent interleaved output
+    // Serialize writes to the same file to prevent interleaved output. The
+    // chain we STORE as the lock must never reject — otherwise a single failed
+    // write poisons the lock and every later write chains off the rejected
+    // promise, skips its callback, and fails forever. So sequence off the
+    // previous lock's settlement (.catch(()=>{})), do the write, and surface
+    // this write's own error to *this* caller via a separate promise.
     const prev = this.appendLocks.get(filePath) ?? Promise.resolve();
-    const current = prev.then(() => {
-      appendFileSync(filePath, JSON.stringify(data) + "\n", "utf-8");
+    let settle!: () => void;
+    const lock = new Promise<void>((resolve) => {
+      settle = resolve;
     });
-    this.appendLocks.set(filePath, current);
-    await current;
+    this.appendLocks.set(filePath, lock);
+
+    try {
+      await prev.catch(() => {});
+      appendFileSync(filePath, JSON.stringify(data) + "\n", "utf-8");
+    } finally {
+      // Release the lock for the next writer regardless of success/failure,
+      // and drop the map entry if no newer writer has queued behind us.
+      settle();
+      if (this.appendLocks.get(filePath) === lock) {
+        this.appendLocks.delete(filePath);
+      }
+    }
   }
 
   private readJsonl<T>(filePath: string): T[] {
