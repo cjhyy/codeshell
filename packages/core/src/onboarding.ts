@@ -5,7 +5,7 @@
  * pure(-ish) helpers it consumes, so there's a single input stack.
  */
 
-import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { getOpenRouterModels } from "./data/openrouter-models.js";
@@ -699,8 +699,10 @@ export function appendOnboardingResult(opts: {
   try {
     renameSync(tmp, file);
   } catch {
-    // Fallback: best-effort direct write if rename fails (e.g. cross-device).
+    // Fallback: best-effort direct write if rename fails (e.g. cross-device),
+    // then remove the orphaned temp file the failed rename left behind.
     writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", "utf-8");
+    rmSync(tmp, { force: true });
   }
 }
 

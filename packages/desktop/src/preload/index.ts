@@ -36,7 +36,11 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   }
   // Response: has id, no method
   if ("id" in msg && !("method" in msg)) {
-    const id = msg.id as number;
+    // `pending` is keyed by the numeric ids we send. Coerce a string id (some
+    // JSON-RPC peers echo ids as strings) to number so the lookup matches
+    // instead of silently dropping the response.
+    const rawId = (msg as { id: unknown }).id;
+    const id = typeof rawId === "string" ? Number(rawId) : (rawId as number);
     const resolver = pending.get(id);
     if (resolver) {
       pending.delete(id);
