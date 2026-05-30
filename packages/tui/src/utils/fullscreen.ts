@@ -32,10 +32,19 @@ function isTmuxControlModeEnvHeuristic(): boolean {
  * when the env heuristic can't decide; result is cached.
  */
 function probeTmuxControlModeSync(): void {
-  tmuxControlModeProbed = isTmuxControlModeEnvHeuristic()
-  if (tmuxControlModeProbed) return
-  if (!process.env.TMUX) return
-  if (process.env.TERM_PROGRAM) return
+  // The env heuristic is only a FALLBACK — don't cache it as the answer (the
+  // old code did, then bailed before the authoritative probe could run). Ask
+  // tmux directly whenever we're under tmux; only fall back to the heuristic
+  // when the probe can't run or fails.
+  const heuristic = isTmuxControlModeEnvHeuristic()
+  if (heuristic) {
+    tmuxControlModeProbed = true
+    return
+  }
+  if (!process.env.TMUX) {
+    tmuxControlModeProbed = false
+    return
+  }
   let result
   try {
     result = spawnSync(
@@ -44,9 +53,13 @@ function probeTmuxControlModeSync(): void {
       { encoding: 'utf8', timeout: 2000 },
     )
   } catch {
+    tmuxControlModeProbed = heuristic
     return
   }
-  if (result.status !== 0) return
+  if (result.status !== 0) {
+    tmuxControlModeProbed = heuristic
+    return
+  }
   tmuxControlModeProbed = result.stdout.trim() === '1'
 }
 
