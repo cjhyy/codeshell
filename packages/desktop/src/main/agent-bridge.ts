@@ -118,6 +118,9 @@ export class AgentBridge {
       process.stderr.write(`[agent] ${text}`);
     });
     this.child.on("exit", (code, signal) => {
+      // Close the readline interface bound to the dead child's stdout so it
+      // (and its "line" listener) doesn't leak across restarts.
+      rl.close();
       dlog("bridge", "child.exit", { code, signal, pid: this.child?.pid });
       this.child = null;
       this.outbox = []; // any queued messages were for the dead child; drop

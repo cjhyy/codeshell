@@ -6,7 +6,6 @@
 export type TerminalFocusState = 'focused' | 'blurred' | 'unknown'
 
 let focusState: TerminalFocusState = 'unknown'
-const resolvers: Set<() => void> = new Set()
 const subscribers: Set<() => void> = new Set()
 
 export function setTerminalFocused(v: boolean): void {
@@ -14,12 +13,6 @@ export function setTerminalFocused(v: boolean): void {
   // Notify useSyncExternalStore subscribers
   for (const cb of subscribers) {
     cb()
-  }
-  if (!v) {
-    for (const resolve of resolvers) {
-      resolve()
-    }
-    resolvers.clear()
   }
 }
 
