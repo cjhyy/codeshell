@@ -232,6 +232,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   searchFiles: (cwd: string, query: string) =>
     ipcRenderer.invoke("files:search", cwd, query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
+  uninstallPlugin: (pluginName: string, marketplaceName: string) =>
+    ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
   installLocalSkill: (
     sourceDir: string,

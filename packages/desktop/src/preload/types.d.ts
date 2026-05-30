@@ -249,6 +249,10 @@ export interface CodeshellApi {
   getRun(runId: string): Promise<RunDetail | null>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
+  uninstallPlugin(
+    pluginName: string,
+    marketplaceName: string,
+  ): Promise<{ ok: boolean; removedFromManifest: boolean; removedFromDisk: boolean }>;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
   searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
   readSkillBody(filePath: string): Promise<string>;
