@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MarketDetail } from "./MarketDetail";
 
 interface Props {
+  cwd: string;
   onInstalled: () => void;
 }
 
@@ -9,7 +10,7 @@ type Marketplace = Awaited<
   ReturnType<typeof window.codeshell.listMarketplaces>
 >[number];
 
-export function MarketList({ onInstalled }: Props) {
+export function MarketList({ cwd, onInstalled }: Props) {
   const [markets, setMarkets] = useState<Marketplace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -70,6 +71,7 @@ export function MarketList({ onInstalled }: Props) {
   if (selected !== null) {
     return (
       <MarketDetail
+        cwd={cwd}
         marketName={selected}
         onBack={() => setSelected(null)}
         onInstalled={onInstalled}

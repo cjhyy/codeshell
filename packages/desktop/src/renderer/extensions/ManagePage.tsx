@@ -152,7 +152,9 @@ export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Pr
       {tab === "mcp" && (
         <McpSection scope="user" activeRepoPath={activeRepoPath} />
       )}
-      {tab === "market" && <MarketList onInstalled={() => void refresh()} />}
+      {tab === "market" && (
+        <MarketList cwd={cwd} onInstalled={() => void refresh()} />
+      )}
     </div>
   );
 }

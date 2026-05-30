@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 interface Props {
+  cwd: string;
   marketName: string;
   onBack: () => void;
   onInstalled: () => void;
@@ -10,7 +11,7 @@ type Marketplace = Awaited<
   ReturnType<typeof window.codeshell.loadMarketplace>
 >;
 
-export function MarketDetail({ marketName, onBack, onInstalled }: Props) {
+export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
   const [market, setMarket] = useState<Marketplace | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,13 +26,27 @@ export function MarketDetail({ marketName, onBack, onInstalled }: Props) {
     setMarket(null);
     setLoaded(false);
     setError(null);
-    window.codeshell
-      .loadMarketplace(marketName)
-      .then((d) => {
-        if (alive) {
-          setMarket(d);
-          setLoaded(true);
+    // Load the marketplace manifest and the already-installed plugins in
+    // parallel, so plugins installed in a previous session show 已安装 on
+    // entry — not only the ones installed during this visit.
+    Promise.all([
+      window.codeshell.loadMarketplace(marketName),
+      window.codeshell.listPlugins(cwd).catch(() => []),
+    ])
+      .then(([mp, plugins]) => {
+        if (!alive) return;
+        // installKey is "<plugin>@<marketplace>" — pick the ones from this
+        // marketplace and seed them as installed.
+        const here = new Set<string>();
+        for (const p of plugins) {
+          const at = p.installKey.lastIndexOf("@");
+          if (at > 0 && p.installKey.slice(at + 1) === marketName) {
+            here.add(p.installKey.slice(0, at));
+          }
         }
+        setInstalled(here);
+        setMarket(mp);
+        setLoaded(true);
       })
       .catch((e) => {
         if (alive) setError(String(e?.message ?? e));
@@ -39,7 +54,7 @@ export function MarketDetail({ marketName, onBack, onInstalled }: Props) {
     return () => {
       alive = false;
     };
-  }, [marketName, reloadKey]);
+  }, [cwd, marketName, reloadKey]);
 
   const install = async (pluginName: string) => {
     setBusy((prev) => new Set(prev).add(pluginName));
