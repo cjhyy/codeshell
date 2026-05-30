@@ -7,6 +7,7 @@ import { LSPClient } from "./client.js";
 import { BUILTIN_LSP_SERVERS, type LSPServerConfig } from "./servers.js";
 import { execSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { rootUriToPath } from "./root-path.js";
 
 type ServerState = "stopped" | "starting" | "ready" | "error";
 
@@ -68,7 +69,7 @@ export class LSPServerManager {
     managed.state = "starting";
 
     try {
-      const client = new LSPClient(managed.config.command, managed.config.args, this.rootUri.replace("file://", ""));
+      const client = new LSPClient(managed.config.command, managed.config.args, rootUriToPath(this.rootUri));
       await client.start();
       await client.initialize(this.rootUri);
 
