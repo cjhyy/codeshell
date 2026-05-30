@@ -5,7 +5,7 @@
  */
 
 import { Command } from "commander";
-import { parsePositiveInt } from "./parse-int-option.js";
+import { positiveIntOption } from "./parse-int-option.js";
 import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { setup } from "../bootstrap/setup.js";
@@ -52,7 +52,7 @@ function addCommonOptions(cmd: Command): Command {
     .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")
     .option("--permission-mode <mode>", "Permission mode (default, acceptEdits, bypassPermissions)")
     .option("-o, --output <format>", "Output format (text, json, jsonl, stream-json)", "text")
-    .option("--max-turns <n>", "Maximum turns", "100")
+    .option("--max-turns <n>", "Maximum turns", positiveIntOption("--max-turns"), 100)
     .option("--effort <level>", "Reasoning effort (low, medium, high, max)", "high");
 }
 
@@ -85,11 +85,11 @@ addCommonOptions(
 program
   .command("sessions")
   .description("List recent sessions")
-  .option("-n, --limit <n>", "Number of sessions to show", "10")
+  .option("-n, --limit <n>", "Number of sessions to show", positiveIntOption("--limit"), 10)
   .action(async (opts) => {
     const { SessionManager } = await import("@cjhyy/code-shell-core");
     const sm = new SessionManager();
-    const sessions = sm.list(parsePositiveInt(opts.limit, "--limit"));
+    const sessions = sm.list(opts.limit as number);
 
     if (sessions.length === 0) {
       console.log("No sessions found.");
@@ -163,7 +163,7 @@ program
   .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")
   .option("--permission-mode <mode>", "Permission mode (default, acceptEdits, bypassPermissions)")
   .option("-o, --output <format>", "Output format (text, json, jsonl, stream-json)", "text")
-  .option("--max-turns <n>", "Maximum turns", "100")
+  .option("--max-turns <n>", "Maximum turns", positiveIntOption("--max-turns"), 100)
   .option("--effort <level>", "Reasoning effort (low, medium, high, max)", "high")
   .option("--resume <sessionId>", "Resume a previous session")
   .option("--prefill <text>", "Pre-fill the input box without submitting")
@@ -179,17 +179,18 @@ program
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
-function resolveOpts(opts: Record<string, string | undefined>) {
+function resolveOpts(opts: Record<string, unknown>) {
   return {
-    model: opts.model,
-    provider: opts.provider,
+    model: opts.model as string | undefined,
+    provider: opts.provider as string | undefined,
     preset: opts.preset as AgentPresetName | undefined,
-    baseUrl: opts.baseUrl,
-    apiKey: opts.apiKey,
-    permissionMode: opts.permissionMode,
+    baseUrl: opts.baseUrl as string | undefined,
+    apiKey: opts.apiKey as string | undefined,
+    permissionMode: opts.permissionMode as string | undefined,
     output: opts.output as "text" | "json" | "jsonl" | "stream-json" | undefined,
-    maxTurns: opts.maxTurns ? parsePositiveInt(opts.maxTurns, "--max-turns") : undefined,
-    resume: opts.resume,
+    // commander's argParser already converted --max-turns to a number.
+    maxTurns: opts.maxTurns as number | undefined,
+    resume: opts.resume as string | undefined,
     effort: opts.effort as "low" | "medium" | "high" | "max" | undefined,
   };
 }

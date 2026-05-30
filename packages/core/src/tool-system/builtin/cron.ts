@@ -30,7 +30,7 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
   try {
     job = cronScheduler.create(name, schedule, prompt);
   } catch (err) {
-    return `Error: ${(err as Error).message}`;
+    return `Error: ${err instanceof Error ? err.message : String(err)}`;
   }
   return `Cron job #${job.id} "${job.name}" created. Schedule: every ${job.schedule}.`;
 }

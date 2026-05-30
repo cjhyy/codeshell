@@ -19,8 +19,10 @@ export default function Newline(t0) {
     count: t1
   } = t0;
   // Clamp to a non-negative integer — "\n".repeat(n) throws RangeError for
-  // negative or non-finite counts (review-2026-05-30).
-  const count = Math.max(0, Math.floor(t1 === undefined ? 1 : t1));
+  // negative or non-finite counts (review-2026-05-30). NaN/Infinity fall back
+  // to 1 (Math.max(0, NaN) is still NaN, so guard explicitly).
+  const _raw = t1 === undefined ? 1 : t1;
+  const count = Number.isFinite(_raw) ? Math.max(0, Math.floor(_raw)) : 1;
   let t2;
   if ($[0] !== count) {
     t2 = "\n".repeat(count);

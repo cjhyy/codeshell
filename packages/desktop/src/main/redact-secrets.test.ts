@@ -32,4 +32,22 @@ describe("redactSecrets", () => {
   test("returns undefined unchanged", () => {
     expect(redactSecrets(undefined)).toBeUndefined();
   });
+
+  test("does NOT redact 'author'/'authors' (auth matches only as a segment)", () => {
+    const out = redactSecrets({ author: "Alice", authors: ["Bob"], authToken: "x", authorization: "y" });
+    expect(out).toEqual({
+      author: "Alice",
+      authors: ["Bob"],
+      authToken: "[REDACTED]",
+      authorization: "[REDACTED]",
+    });
+  });
+
+  test("handles circular references without infinite recursion", () => {
+    const obj: Record<string, unknown> = { name: "x" };
+    obj.self = obj;
+    const out = redactSecrets(obj) as Record<string, unknown>;
+    expect(out.name).toBe("x");
+    expect(out.self).toBe("[CIRCULAR]");
+  });
 });
