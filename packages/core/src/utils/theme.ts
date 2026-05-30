@@ -641,12 +641,14 @@ export function themeColorToAnsi(themeColor: string): string {
  * Uses the 6×6×6 color cube (indices 16-231) plus the 24-step grayscale ramp
  * (indices 232-255).
  */
-function rgbToXterm256(r: number, g: number, b: number): number {
+export function rgbToXterm256(r: number, g: number, b: number): number {
   // Grayscale ramp: pick it when all channels are equal-ish
   if (Math.abs(r - g) < 8 && Math.abs(g - b) < 8) {
     if (r < 8) return 16
     if (r > 248) return 231
-    return Math.round((r - 8) / 247 * 24) + 232
+    // 24 ramp steps (idx 232-255) span RGB [8,248] = 240 units → /240*23.
+    // The old /247*24 produced off-by-one indices.
+    return Math.round((r - 8) / 240 * 23) + 232
   }
   // 6×6×6 cube
   const ri = Math.round(r / 255 * 5)
