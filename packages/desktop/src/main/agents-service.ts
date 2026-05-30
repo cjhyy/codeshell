@@ -26,7 +26,10 @@ export interface AgentSummary {
   maxTurns?: number;
   tools?: string[];
   systemPrompt: string;
-  source: "project" | "user";
+  // Mirrors the registry's source union — agents can also come from plugins
+  // (pluginAgentDirs). The previous "project" | "user" couldn't hold a
+  // plugin-sourced agent and broke the desktop typecheck.
+  source: "project" | "user" | "plugin";
   override: boolean;
   filePath: string;
 }
