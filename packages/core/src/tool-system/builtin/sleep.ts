@@ -29,11 +29,17 @@ export async function sleepTool(args: Record<string, unknown>): Promise<string> 
   if (signal?.aborted) return "Sleep aborted.";
 
   await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(resolve, seconds * 1000);
-    signal?.addEventListener("abort", () => {
+    const onAbort = (): void => {
       clearTimeout(timer);
       reject(new Error("Sleep aborted"));
-    });
+    };
+    const timer = setTimeout(() => {
+      // Remove the abort listener on normal completion — otherwise every Sleep
+      // call leaks a listener on the (shared, per-turn) signal.
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, seconds * 1000);
+    signal?.addEventListener("abort", onAbort, { once: true });
   }).catch(() => {});
 
   return `Slept for ${seconds} seconds.`;
