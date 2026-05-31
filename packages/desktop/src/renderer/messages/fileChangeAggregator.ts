@@ -38,10 +38,84 @@ interface ToolEditChange {
   diff: string;
 }
 
-function entryFor(t: ToolMessage): ToolEditChange | null {
+function parseApplyPatch(patch: string): ToolEditChange[] {
+  const out: ToolEditChange[] = [];
+  let current: {
+    path: string;
+    status: "modified" | "added" | "deleted";
+    lines: string[];
+    added: number;
+    removed: number;
+  } | null = null;
+
+  const flush = (): void => {
+    if (!current) return;
+    if (current.added > 0 || current.removed > 0) {
+      const oldStart = current.removed === 0 ? 0 : 1;
+      const newStart = current.added === 0 ? 0 : 1;
+      out.push({
+        path: current.path,
+        added: current.added,
+        removed: current.removed,
+        diff: [
+          `diff --git a/${current.path} b/${current.path}`,
+          ...(current.status === "added" ? ["new file mode 100644"] : []),
+          ...(current.status === "deleted" ? ["deleted file mode 100644"] : []),
+          current.status === "added" ? "--- /dev/null" : `--- a/${current.path}`,
+          current.status === "deleted" ? "+++ /dev/null" : `+++ b/${current.path}`,
+          `@@ -${hunkRange(oldStart, current.removed)} +${hunkRange(newStart, current.added)} @@`,
+          ...current.lines,
+          "",
+        ].join("\n"),
+      });
+    }
+    current = null;
+  };
+
+  for (const line of patch.split("\n")) {
+    const fileMatch = line.match(/^\*\*\* (Add|Update|Delete) File: (.+)$/);
+    if (fileMatch) {
+      flush();
+      const kind = fileMatch[1]!;
+      current = {
+        path: fileMatch[2]!.trim(),
+        status: kind === "Add" ? "added" : kind === "Delete" ? "deleted" : "modified",
+        lines: [],
+        added: 0,
+        removed: 0,
+      };
+      continue;
+    }
+    if (!current) continue;
+    if (line === "*** End Patch" || line.startsWith("*** ")) {
+      flush();
+      if (line === "*** End Patch") break;
+      continue;
+    }
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      current.lines.push(line);
+      current.added += 1;
+    } else if (line.startsWith("-") && !line.startsWith("---")) {
+      current.lines.push(line);
+      current.removed += 1;
+    } else if (line.startsWith(" ") || line === "") {
+      current.lines.push(line);
+    }
+  }
+  flush();
+  return out;
+}
+
+function entryFor(t: ToolMessage): ToolEditChange | ToolEditChange[] | null {
   if (t.status !== "succeeded") return null;
   const name = t.toolName.toLowerCase();
   const args = parseArgs(t);
+  if (name === "applypatch" || name === "apply_patch") {
+    const patch = stringOf(args.patch);
+    const changes = parseApplyPatch(patch);
+    if (changes.length === 0) return null;
+    return changes;
+  }
   const path =
     (typeof args.file_path === "string" && args.file_path) ||
     (typeof args.path === "string" && args.path) ||
@@ -188,11 +262,13 @@ export function aggregateFileChangeSummary(
     const m = messages[i];
     if (m.kind === "tool") {
       const e = entryFor(m);
-      if (e) consume(m.id, e);
+      if (Array.isArray(e)) e.forEach((change) => consume(m.id, change));
+      else if (e) consume(m.id, e);
     } else if (m.kind === "agent") {
       for (const t of m.toolCalls) {
         const e = entryFor(t);
-        if (e) consume(t.id, e);
+        if (Array.isArray(e)) e.forEach((change) => consume(t.id, change));
+        else if (e) consume(t.id, e);
       }
     }
   }

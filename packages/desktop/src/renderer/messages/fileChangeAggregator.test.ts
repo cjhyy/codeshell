@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { aggregateFileChanges, aggregateFileChangeSummary } from "./fileChangeAggregator";
+import { parseUnifiedDiff } from "../diff/parseUnifiedDiff";
 import type { AgentMessage, Message, ToolMessage } from "../types";
 
 let _idCounter = 0;
@@ -206,5 +207,35 @@ describe("aggregateFileChanges", () => {
     expect(summary?.sessionDiffs[0]?.diff).toContain("@@ -1 +1 @@ edit 2");
     expect(summary?.sessionDiffs[0]?.diff).toContain("-three");
     expect(summary?.sessionDiffs[0]?.diff).toContain("+four");
+  });
+
+  test("counts ApplyPatch and carries patch content as session diff", () => {
+    const patch = [
+      "*** Begin Patch",
+      "*** Update File: docs/plan.md",
+      "@@",
+      "-old line",
+      "+new line",
+      "+extra line",
+      "*** Add File: docs/new.md",
+      "+hello",
+      "*** End Patch",
+    ].join("\n");
+    const msgs: Message[] = [user(), tool("ApplyPatch", { patch })];
+
+    const summary = aggregateFileChangeSummary(msgs);
+
+    expect(summary?.files).toEqual([
+      { path: "docs/plan.md", added: 2, removed: 1, count: 1 },
+      { path: "docs/new.md", added: 1, removed: 0, count: 1 },
+    ]);
+    expect(summary?.sessionDiffs.map((d) => d.path)).toEqual(["docs/plan.md", "docs/new.md"]);
+    expect(summary?.sessionDiffs[0]?.diff).toContain("diff --git a/docs/plan.md b/docs/plan.md");
+    expect(summary?.sessionDiffs[0]?.diff).toContain("+extra line");
+    expect(summary?.sessionDiffs[1]?.diff).toContain("--- /dev/null");
+    expect(summary?.sessionDiffs[1]?.diff).toContain("+++ b/docs/new.md");
+    const parsed = parseUnifiedDiff(summary?.sessionDiffs.map((d) => d.diff).join("\n") ?? "");
+    expect(parsed.map((f) => f.newPath ?? f.oldPath)).toEqual(["docs/plan.md", "docs/new.md"]);
+    expect(parsed[1]?.status).toBe("added");
   });
 });
