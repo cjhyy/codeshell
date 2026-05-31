@@ -52,18 +52,16 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
   ];
 
   return (
-    <div className="ext-home">
-      <div className="ext-home-hero">
-        <h1 className="ext-home-title">让 codeshell 按你的方式工作</h1>
-        <p className="ext-home-subtitle">
+    <div className="mx-auto max-w-2xl py-10">
+      <div className="text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">让 codeshell 按你的方式工作</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           管理插件、技能与 MCP 服务，或从市场添加更多能力
         </p>
-        <div className="ext-home-search-wrap">
-          <span className="ext-home-search-icon" aria-hidden="true">
-            🔍
-          </span>
+        <div className="relative mx-auto mt-5 max-w-md">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true">🔍</span>
           <input
-            className="ext-home-search"
+            className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             placeholder="搜索技能、插件…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -72,31 +70,25 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
         </div>
       </div>
 
-      <div className="ext-home-cards">
+      <div className="mt-8 grid grid-cols-4 gap-3">
         {stats.map((s) => (
           <button
             key={s.key}
-            className="ext-home-card"
+            className="flex flex-col items-center gap-1 rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent"
             onClick={() => onOpenManage(s.key)}
           >
-            <span className="ext-home-card-icon" aria-hidden="true">
-              {s.icon}
-            </span>
-            <span className="ext-home-card-value">
-              {s.value === null ? "—" : s.value}
-            </span>
-            <span className="ext-home-card-label">{s.label}</span>
+            <span className="text-2xl" aria-hidden="true">{s.icon}</span>
+            <span className="text-lg font-semibold">{s.value === null ? "—" : s.value}</span>
+            <span className="text-xs text-muted-foreground">{s.label}</span>
           </button>
         ))}
         <button
-          className="ext-home-card ext-home-card-market"
+          className="flex flex-col items-center gap-1 rounded-xl border border-dashed bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent"
           onClick={() => onOpenManage("market")}
         >
-          <span className="ext-home-card-icon" aria-hidden="true">
-            🛒
-          </span>
-          <span className="ext-home-card-value">+</span>
-          <span className="ext-home-card-label">市场</span>
+          <span className="text-2xl" aria-hidden="true">🛒</span>
+          <span className="text-lg font-semibold">+</span>
+          <span className="text-xs text-muted-foreground">市场</span>
         </button>
       </div>
     </div>
