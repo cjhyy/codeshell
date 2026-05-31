@@ -31,21 +31,19 @@ function AssistantMessageViewImpl({ message }: Props) {
   };
 
   return (
-    <div
-      className={`msg-row msg-row-assistant ${message.done ? "done" : "streaming"}`}
-    >
+    <div className="group px-4 py-2 text-sm">
       {message.done ? (
         <Markdown text={message.text} />
       ) : (
         <div className="md-body md-streaming">
-          <pre>{message.text}</pre>
+          <pre className="whitespace-pre-wrap font-sans">{message.text}</pre>
         </div>
       )}
       {message.done && (
-        <div className="msg-assistant-actions">
+        <div className="mt-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             type="button"
-            className="msg-action-copy"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
             onClick={onCopy}
             aria-label="Copy reply as plain text"
           >

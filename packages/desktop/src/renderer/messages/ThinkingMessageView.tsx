@@ -8,14 +8,19 @@ import { ChevronDown, ChevronRight } from "../ui/icons";
 function ThinkingMessageViewImpl({ message }: { message: ThinkingMessage }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`msg-row msg-thinking ${message.done ? "done" : "streaming"}`}>
-      <button className="msg-thinking-head" onClick={() => setOpen((o) => !o)}>
+    <div className="px-4 py-1">
+      <button
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        onClick={() => setOpen((o) => !o)}
+      >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        <span className="msg-thinking-label">
-          {message.done ? "thinking" : "thinking…"}
-        </span>
+        <span>{message.done ? "thinking" : "thinking…"}</span>
       </button>
-      {open && <pre className="msg-thinking-body">{message.text}</pre>}
+      {open && (
+        <pre className="mt-1 whitespace-pre-wrap rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+          {message.text}
+        </pre>
+      )}
     </div>
   );
 }

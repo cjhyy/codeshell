@@ -38,38 +38,38 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   const hasBody = message.toolCalls.length > 0 || !!message.text || !!message.error;
 
   return (
-    <div className="msg-row msg-agent">
-      <div className={`msg-agent-card ${expanded ? "expanded" : "folded"}`}>
+    <div className="px-4 py-1">
+      <div className="rounded-lg border border-border">
         <button
           type="button"
-          className="msg-agent-head"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm disabled:cursor-default"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           aria-controls={`agent-body-${message.id}`}
           disabled={!hasBody}
         >
           <StatusDot status={status} />
-          <span className="msg-agent-name">{message.name ?? "agent"}</span>
-          <span className="msg-agent-desc">{message.description}</span>
-          <span className="msg-agent-meta">
+          <span className="font-medium">{message.name ?? "agent"}</span>
+          <span className="min-w-0 flex-1 truncate text-muted-foreground">{message.description}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">
             {elapsed}
             {message.toolCount > 0 && ` · ${message.toolCount} tools`}
           </span>
           {hasBody && (
-            <span className="msg-agent-toggle">{expanded ? "▾" : "▸"}</span>
+            <span className="shrink-0 text-muted-foreground">{expanded ? "▾" : "▸"}</span>
           )}
         </button>
         {expanded && (
-          <div id={`agent-body-${message.id}`} className="msg-agent-body">
+          <div id={`agent-body-${message.id}`} className="flex flex-col gap-2 border-t border-border p-3">
             {message.toolCalls.map((t) => (
               <ToolCard key={t.id} message={t} />
             ))}
             {message.text && (
-              <div className="msg-agent-text">
+              <div className="text-sm">
                 <Markdown text={message.text} />
               </div>
             )}
-            {message.error && <div className="msg-agent-err">{message.error}</div>}
+            {message.error && <div className="text-sm text-status-err">{message.error}</div>}
           </div>
         )}
       </div>
