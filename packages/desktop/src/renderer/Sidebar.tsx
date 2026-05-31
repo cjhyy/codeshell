@@ -4,9 +4,8 @@ import {
   Search,
   Blocks,
   Workflow,
-  ChevronDown,
-  ChevronRight,
   Folder,
+  FolderOpen,
   Plus,
   MoreHorizontal,
   PenSquare,
@@ -292,11 +291,14 @@ function SidebarItem({
 }) {
   return (
     <button
-      className={`sidebar-item${active ? " active" : ""}`}
+      className={
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors " +
+        (active ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60")
+      }
       onClick={onClick}
     >
       <Icon size={14} />
-      <span className="sidebar-item-label">{label}</span>
+      <span className="flex-1 text-left">{label}</span>
       {badge !== undefined && badge > 0 && <Badge count={badge} />}
     </button>
   );
@@ -348,21 +350,15 @@ function ProjectGroup({
         className={`project-row${isActiveRepo ? " selected" : ""}${repo.pinned ? " pinned" : ""}`}
         onClick={() => {
           onSelectRepo();
-          if (collapsed) onToggle();
+          onToggle();
         }}
         onContextMenu={onRepoContextMenu}
       >
-        <button
-          className="project-chevron"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          aria-label={collapsed ? "展开" : "折叠"}
-        >
-          {collapsed ? <ChevronRight size={14} strokeWidth={2.25} /> : <ChevronDown size={14} strokeWidth={2.25} />}
-        </button>
-        <Folder size={13} className="project-icon" />
+        {collapsed ? (
+          <Folder size={13} className="project-icon" />
+        ) : (
+          <FolderOpen size={13} className="project-icon" />
+        )}
         <span className="project-name">{repoLabel(repo)}</span>
         {repo.pinned && <span className="project-pin-dot" title="已置顶">·</span>}
         <span className="project-row-actions">
