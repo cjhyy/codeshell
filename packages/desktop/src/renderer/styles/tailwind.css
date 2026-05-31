@@ -31,8 +31,9 @@
   --card-foreground: 240 10% 3.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 240 10% 3.9%;
-  /* Blue accent (primary buttons, switch-on, focus ring) over the neutral base. */
-  --primary: 221 83% 53%;
+  /* Warm orange accent (the original brand #b85c2b) for primary buttons,
+     switch-on, focus ring — over the neutral zinc base. */
+  --primary: 19 63% 45%;
   --primary-foreground: 0 0% 98%;
   --secondary: 240 4.8% 95.9%;
   --secondary-foreground: 240 5.9% 10%;
@@ -44,7 +45,7 @@
   --destructive-foreground: 0 0% 98%;
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
-  --ring: 221 83% 53%;
+  --ring: 19 63% 45%;
   --radius: 0.5rem;
 
   /* Meaningful status colors (kept from the old palette's intent). */
@@ -62,7 +63,7 @@
   --card-foreground: 0 0% 98%;
   --popover: 240 10% 3.9%;
   --popover-foreground: 0 0% 98%;
-  --primary: 217 91% 60%;
+  --primary: 22 70% 55%;
   --primary-foreground: 0 0% 100%;
   --secondary: 240 3.7% 15.9%;
   --secondary-foreground: 0 0% 98%;
@@ -74,7 +75,7 @@
   --destructive-foreground: 0 0% 98%;
   --border: 240 3.7% 15.9%;
   --input: 240 3.7% 15.9%;
-  --ring: 217 91% 60%;
+  --ring: 22 70% 55%;
 
   --status-running: 211 64% 60%;
   --status-ok: 142 49% 55%;
