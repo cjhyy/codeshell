@@ -385,7 +385,9 @@ export function ChatView({
 
   return (
     <div
-      className={`chat${dragOver ? " is-drop-target" : ""}`}
+      className={
+        "flex h-full flex-col" + (dragOver ? " ring-2 ring-inset ring-primary/40" : "")
+      }
       data-mode={isNewChat ? "new" : "active"}
       onDragEnter={onChatDragEnter}
       onDragOver={onChatDragOver}
@@ -403,7 +405,7 @@ export function ChatView({
       />
 
       {(openAsk || showStickyApproval) && (
-        <div className="pinned-above-composer">
+        <div className="px-4">
           {openAsk && (
             <AskUserMessageView
               message={openAsk}
@@ -418,24 +420,26 @@ export function ChatView({
 
       {isNewChat && welcomeNode}
 
-      <div className="composer-shell">
+      <div className="p-3">
         {/*
-          Drop is captured at the chat root (.chat) so the user can drag
-          a screenshot anywhere in the chat surface. The composer keeps
-          the visual highlight (`is-drop-target` class) to make the
-          landing spot obvious, but no longer owns the handlers.
+          Drop is captured at the chat root so the user can drag a screenshot
+          anywhere in the chat surface. The composer keeps the visual highlight
+          to make the landing spot obvious, but no longer owns the handlers.
         */}
         <div
-          className={`composer${dragOver ? " is-drop-target" : ""}`}
+          className={
+            "rounded-xl border bg-card p-2 shadow-sm" +
+            (dragOver ? " ring-2 ring-primary/40" : "")
+          }
         >
           {attachments.length > 0 && (
-            <div className="composer-attachments">
+            <div className="mb-2 flex flex-wrap gap-2">
               {attachments.map((a) => (
-                <div className="composer-attachment-chip" key={a.id} title={a.name}>
-                  <img src={a.dataUrl} alt={a.name} />
+                <div className="relative h-14 w-14 overflow-hidden rounded-md border" key={a.id} title={a.name}>
+                  <img src={a.dataUrl} alt={a.name} className="h-full w-full object-cover" />
                   <button
                     type="button"
-                    className="composer-attachment-remove"
+                    className="absolute right-0.5 top-0.5 rounded-full bg-background/80 p-0.5 text-foreground"
                     aria-label={`移除 ${a.name}`}
                     onClick={() => removeAttachment(a.id)}
                   >
@@ -447,7 +451,7 @@ export function ChatView({
           )}
 
           {attachments.length > 0 && !activeSupportsVision && (
-            <div className="composer-vision-banner">
+            <div className="mb-2 flex flex-col gap-1 rounded-md bg-status-warn/10 p-2 text-xs text-status-warn">
               <strong>当前模型不支持图片</strong>
               <span>
                 {activeModel
@@ -456,7 +460,7 @@ export function ChatView({
               </span>
               <button
                 type="button"
-                className="composer-vision-remove-all"
+                className="self-start underline"
                 onClick={() => {
                   setAttachments([]);
                   setAttachmentError(null);
@@ -467,10 +471,10 @@ export function ChatView({
             </div>
           )}
           {attachmentError && (
-            <div className="composer-attachment-error">{attachmentError}</div>
+            <div className="mb-2 text-xs text-status-err">{attachmentError}</div>
           )}
 
-          <div className="composer-textarea-wrap">
+          <div className="relative">
             {mention && (
               <MentionPopover
                 cwd={activeRepoPath}
@@ -538,6 +542,7 @@ export function ChatView({
               placeholder={placeholder}
               disabled={busy}
               rows={1}
+              className="max-h-[200px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
             />
           </div>
 
@@ -554,11 +559,11 @@ export function ChatView({
             }}
           />
 
-          <div className="composer-controls">
-            <div className="composer-controls-left">
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                className="composer-icon-btn"
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
                 aria-label="添加图片"
                 title={
                   activeSupportsVision
@@ -582,7 +587,7 @@ export function ChatView({
               />
             </div>
 
-            <div className="composer-controls-right">
+            <div className="flex items-center gap-1.5">
               <ContextRing used={contextTokens} max={contextMax} busy={busy} />
               <ModelPill
                 activeKey={activeModelKey}
@@ -592,7 +597,7 @@ export function ChatView({
               />
               <button
                 type="button"
-                className="composer-icon-btn"
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
                 aria-label="语音输入"
                 title="语音输入 (尚未实现)"
                 disabled
@@ -602,7 +607,7 @@ export function ChatView({
               {busy ? (
                 <button
                   type="button"
-                  className="composer-send composer-send-stop"
+                  className="flex h-8 w-8 items-center justify-center rounded-md bg-status-err text-white hover:bg-status-err/90"
                   onClick={onStop}
                   aria-label="停止"
                 >
@@ -611,7 +616,7 @@ export function ChatView({
               ) : (
                 <button
                   type="button"
-                  className="composer-send"
+                  className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
                   onClick={submit}
                   disabled={
                     disabled ||
@@ -633,7 +638,7 @@ export function ChatView({
             already tied to the existing repo). Use the sidebar to
             jump projects after a session has started. */}
         {isNewChat && (
-          <div className="composer-context-dock">
+          <div className="mt-2 flex items-center gap-2">
             <ProjectPicker
               repos={repos}
               activeRepoId={activeRepoId}
@@ -641,7 +646,7 @@ export function ChatView({
               onAddRepo={onAddRepo}
               disabled={busy}
             />
-            <span className="composer-context-pill" title="在本机当前工作区运行">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground" title="在本机当前工作区运行">
               <Monitor size={12} />
               <span>本地模式</span>
             </span>
