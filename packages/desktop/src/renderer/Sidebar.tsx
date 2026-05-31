@@ -179,8 +179,8 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="sidebar sidebar-v2">
-      <nav className="sidebar-top">
+    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
+      <nav className="flex flex-col gap-0.5 p-2">
         <SidebarItem label="新对话" Icon={MessageSquare} onClick={onNewConversation} active={false} />
         <SidebarItem label="搜索" Icon={Search} onClick={onOpenSearch} active={false} />
         <SidebarItem
@@ -198,12 +198,12 @@ export function Sidebar({
         />
       </nav>
 
-      <div className="sidebar-section">
-        <div className="sidebar-section-head">
-          <span className="sidebar-section-label">项目</span>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">项目</span>
           <button
             type="button"
-            className="sidebar-section-add"
+            className="text-muted-foreground hover:text-foreground"
             onClick={onAddRepo}
             aria-label="添加项目"
             title="添加项目"
@@ -212,9 +212,9 @@ export function Sidebar({
           </button>
         </div>
 
-        <div className="sidebar-projects">
+        <div className="min-h-0 flex-1 overflow-y-auto px-2">
           {orderedRepos.length === 0 && noRepoSessions.length === 0 && (
-            <div className="repo-empty">点 + 添加你的第一个 repo</div>
+            <div className="px-2 py-3 text-xs text-muted-foreground">点 + 添加你的第一个 repo</div>
           )}
           {orderedRepos.map((repo) => (
             <ProjectGroup
@@ -256,7 +256,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="sidebar-bottom">
+      <div className="border-t border-border p-2">
         <SettingsMenu onOpenSettingsPage={onOpenSettingsPage} sidebarCollapsed={sidebarCollapsed} />
       </div>
 
@@ -345,9 +345,12 @@ function ProjectGroup({
   const hiddenLiveCount = Math.max(0, live.length - COMPACT_SESSION_LIMIT);
 
   return (
-    <div className="project-group">
+    <div className="mb-1">
       <div
-        className={`project-row${isActiveRepo ? " selected" : ""}${repo.pinned ? " pinned" : ""}`}
+        className={
+          "group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-sm " +
+          (isActiveRepo ? "bg-accent" : "hover:bg-accent/60")
+        }
         onClick={() => {
           onSelectRepo();
           onToggle();
@@ -355,15 +358,15 @@ function ProjectGroup({
         onContextMenu={onRepoContextMenu}
       >
         {collapsed ? (
-          <Folder size={13} className="project-icon" />
+          <Folder size={13} className="shrink-0 text-muted-foreground" />
         ) : (
-          <FolderOpen size={13} className="project-icon" />
+          <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
         )}
-        <span className="project-name">{repoLabel(repo)}</span>
-        {repo.pinned && <span className="project-pin-dot" title="已置顶">·</span>}
-        <span className="project-row-actions">
+        <span className="flex-1 truncate font-medium">{repoLabel(repo)}</span>
+        {repo.pinned && <span className="text-primary" title="已置顶">·</span>}
+        <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
           <button
-            className="project-row-action"
+            className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
             aria-label="更多"
             title="更多"
             onClick={(e) => {
@@ -375,7 +378,7 @@ function ProjectGroup({
             <MoreHorizontal size={13} />
           </button>
           <button
-            className="project-row-action"
+            className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
             aria-label={`在 ${repoLabel(repo)} 中开始新对话`}
             title={`在 ${repoLabel(repo)} 中开始新对话`}
             onClick={(e) => {
@@ -391,7 +394,7 @@ function ProjectGroup({
       {!collapsed && (
         <>
           {live.length > 0 && (
-            <ul className="session-list">
+            <ul className="ml-3 mt-0.5 space-y-0.5 border-l border-border pl-2">
               {visibleLive.map((s, i) => (
                 <SessionRow
                   key={s.id}
@@ -406,11 +409,11 @@ function ProjectGroup({
               ))}
               {hiddenLiveCount > 0 && !showMore && (
                 <li
-                  className="session-row session-row-more"
+                  className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent/60"
                   onClick={() => setShowMore(true)}
                 >
-                  <span className="session-title">展开显示</span>
-                  <span className="session-meta-right">{hiddenLiveCount}</span>
+                  <span>展开显示</span>
+                  <span>{hiddenLiveCount}</span>
                 </li>
               )}
             </ul>
@@ -441,9 +444,9 @@ function NoRepoSection({
 }) {
   if (sessions.length === 0) return null;
   return (
-    <div className="no-repo-section">
-      <div className="sidebar-section-label no-repo-label">对话</div>
-      <ul className="session-list no-repo-list">
+    <div className="mt-2">
+      <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">对话</div>
+      <ul className="space-y-0.5">
         {sessions.map((s) => (
           <SessionRow
             key={s.id}
@@ -505,7 +508,11 @@ function SessionRow({
 
   return (
     <li
-      className={`session-row${isActive ? " active" : ""}${s.archived ? " archived" : ""}`}
+      className={
+        "group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-sm " +
+        (isActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60") +
+        (s.archived ? " opacity-60" : "")
+      }
       onClick={onClick}
       onContextMenu={onContextMenu}
       onMouseLeave={() => {
@@ -517,13 +524,13 @@ function SessionRow({
       title={s.title}
     >
       {s.source === "automation" && (
-        <Clock className="h-3 w-3 shrink-0 mr-1 text-muted-foreground" aria-label="自动化" />
+        <Clock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="自动化" />
       )}
-      <span className="session-title">{s.title}</span>
-      <span className="session-meta-right">
+      <span className="flex-1 truncate">{s.title}</span>
+      <span className="flex shrink-0 items-center">
         {confirming ? (
           <button
-            className="session-action session-action-confirm"
+            className="rounded px-1.5 text-xs text-status-err hover:bg-background"
             onClick={fireArchive}
             aria-label="确认归档"
             title="确认归档"
@@ -534,7 +541,7 @@ function SessionRow({
           <>
             {onArchive && (
               <button
-                className="session-action session-action-archive"
+                className="rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover:opacity-100"
                 onClick={armConfirm}
                 aria-label="归档"
                 title="归档"
@@ -543,9 +550,9 @@ function SessionRow({
               </button>
             )}
             {showKbd ? (
-              <kbd className="session-kbd">⌘{kbdIndex}</kbd>
+              <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">⌘{kbdIndex}</kbd>
             ) : (
-              <span className="session-time">{formatRelative(s.updatedAt)}</span>
+              <span className="text-[10px] text-muted-foreground">{formatRelative(s.updatedAt)}</span>
             )}
           </>
         )}
