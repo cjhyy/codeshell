@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { UpdaterStatus } from "../../preload/types";
+import { Button } from "@/components/ui/button";
 
 export function UpdaterBanner() {
   const [status, setStatus] = useState<UpdaterStatus>({ kind: "idle" });
@@ -17,16 +18,11 @@ export function UpdaterBanner() {
 
   if (status.kind === "downloaded") {
     return (
-      <div className="updater-banner updater-banner-ready">
-        新版本 {status.version} 已下载完成。
+      <div className="flex items-center gap-3 border-b border-border bg-primary/10 px-4 py-2 text-sm">
+        <span className="flex-1">新版本 {status.version} 已下载完成。</span>
+        <Button size="sm" onClick={() => void window.codeshell.installUpdate()}>重启并安装</Button>
         <button
-          className="updater-banner-btn"
-          onClick={() => void window.codeshell.installUpdate()}
-        >
-          重启并安装
-        </button>
-        <button
-          className="updater-banner-close"
+          className="text-muted-foreground hover:text-foreground"
           onClick={() => setDismissed(true)}
           aria-label="关闭"
         >
@@ -38,7 +34,7 @@ export function UpdaterBanner() {
 
   if (status.kind === "downloading") {
     return (
-      <div className="updater-banner">
+      <div className="border-b border-border bg-muted px-4 py-2 text-sm text-muted-foreground">
         正在下载新版本… {status.percent}%
       </div>
     );
@@ -46,7 +42,7 @@ export function UpdaterBanner() {
 
   if (status.kind === "available") {
     return (
-      <div className="updater-banner">
+      <div className="border-b border-border bg-muted px-4 py-2 text-sm text-muted-foreground">
         发现新版本 {status.version}，正在下载…
       </div>
     );
@@ -65,31 +61,23 @@ export function UpdaterSettingsRow() {
   }, []);
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">自动更新</h3>
-      <div className="settings-section-current">
-        <span className="settings-section-label">状态：</span>
+    <section className="flex flex-col gap-2">
+      <h3 className="text-sm font-semibold">自动更新</h3>
+      <div className="text-sm">
+        <span className="text-muted-foreground">状态：</span>
         <span>{describeStatus(status)}</span>
       </div>
-      <div className="settings-toolbar">
-        <button
-          className="approval-btn deny"
-          onClick={() => void window.codeshell.checkForUpdate()}
-        >
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" onClick={() => void window.codeshell.checkForUpdate()}>
           检查更新
-        </button>
+        </Button>
         {status.kind === "downloaded" && (
-          <button
-            className="approval-btn approve"
-            onClick={() => void window.codeshell.installUpdate()}
-          >
-            重启并安装
-          </button>
+          <Button size="sm" onClick={() => void window.codeshell.installUpdate()}>重启并安装</Button>
         )}
       </div>
-      <p className="settings-section-help">
+      <p className="text-xs text-muted-foreground">
         生产构建启动后 30 秒自动检查一次，之后每 6 小时再检查。
-        update feed URL 通过环境变量 <code>CODESHELL_UPDATE_FEED</code>
+        update feed URL 通过环境变量 <code className="font-mono">CODESHELL_UPDATE_FEED</code>
         配置；若未设置，则使用 electron-builder 注入的 publish 配置。
       </p>
     </section>
