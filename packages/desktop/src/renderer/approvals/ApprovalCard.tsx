@@ -1,7 +1,14 @@
 import React, { useState } from "react";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import { RiskPill, riskFor } from "./RiskPill";
-import { Select } from "../ui/Select";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const DENY_PRESETS = [
   "looks unsafe",
@@ -27,47 +34,50 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
   const summary = summarizeRequest(request);
 
   return (
-    <div className={`approval-card risk-${risk}`}>
-      <div className="approval-card-head">
-        <span className="approval-card-tool">{request.toolName}</span>
+    <div className="rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-sm font-semibold">{request.toolName}</span>
         <RiskPill level={risk} />
         {request.description && (
-          <span className="approval-card-cwd" title={request.description}>
+          <span className="truncate text-xs text-muted-foreground" title={request.description}>
             {request.description}
           </span>
         )}
       </div>
-      <div className="approval-card-summary">{summary}</div>
+      <div className="mt-2 break-all font-mono text-sm">{summary}</div>
 
       <button
-        className="approval-card-raw-toggle"
+        className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
         onClick={() => setShowRaw((s) => !s)}
       >
         {showRaw ? "hide raw args" : "show raw args"}
       </button>
       {showRaw && (
-        <pre className="approval-card-raw">{JSON.stringify(request.args ?? {}, null, 2)}</pre>
+        <pre className="mt-1 overflow-x-auto rounded-md bg-muted/40 p-2 text-xs">
+          {JSON.stringify(request.args ?? {}, null, 2)}
+        </pre>
       )}
 
-      <div className="approval-card-actions">
-        <button className="approval-btn approve" onClick={() => onDecide("approve")}>
-          Approve
-        </button>
-        <div className="approval-deny-select">
-          <Select
-            size="sm"
-            value={denyReason}
-            onChange={setDenyReason}
-            placeholder="deny reason…"
-            options={DENY_PRESETS.map((r) => ({ value: r, label: r }))}
-          />
-        </div>
-        <button
-          className="approval-btn deny"
+      <div className="mt-3 flex items-center gap-2">
+        <Button size="sm" onClick={() => onDecide("approve")}>批准</Button>
+        <Select value={denyReason} onValueChange={setDenyReason}>
+          <SelectTrigger className="h-8 w-[200px]">
+            <SelectValue placeholder="拒绝理由…" />
+          </SelectTrigger>
+          <SelectContent>
+            {DENY_PRESETS.map((r) => (
+              <SelectItem key={r} value={r}>{r}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-status-err"
           onClick={() => onDecide("deny", denyReason || undefined)}
         >
-          Deny
-        </button>
+          拒绝
+        </Button>
       </div>
     </div>
   );

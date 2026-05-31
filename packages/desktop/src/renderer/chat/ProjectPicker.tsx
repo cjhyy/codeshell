@@ -54,82 +54,75 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
   const active = repos.find((r) => r.id === activeRepoId) ?? null;
   const triggerLabel = active ? repoLabel(active) : "不使用项目";
 
+  const itemCls = (active: boolean) =>
+    "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent " +
+    (active ? "bg-accent" : "");
+
   return (
-    <div className="project-picker" ref={wrapRef}>
+    <div className="relative" ref={wrapRef}>
       <button
         type="button"
-        className="composer-pill project-picker-trigger"
+        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground hover:bg-accent disabled:opacity-50"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
       >
         <Folder size={12} />
-        <span className="project-picker-name">{triggerLabel}</span>
-        <ChevronDown size={11} />
+        <span className="max-w-[160px] truncate">{triggerLabel}</span>
+        <ChevronDown size={11} className="opacity-60" />
       </button>
 
       {open && (
-        <div className="project-picker-popover">
-          <div className="project-picker-search">
-            <Search size={12} />
+        <div className="absolute bottom-full z-50 mb-1 w-64 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+          <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
+            <Search size={12} className="opacity-50" />
             <input
               ref={inputRef}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               placeholder="搜索项目"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
             {filter && (
-              <button className="project-picker-clear" onClick={() => setFilter("")} aria-label="清除">
+              <button className="opacity-50 hover:opacity-100" onClick={() => setFilter("")} aria-label="清除">
                 <X size={12} />
               </button>
             )}
           </div>
 
-          <ul className="project-picker-list">
+          <ul className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 && (
-              <li className="project-picker-empty">没有匹配项目</li>
+              <li className="px-2 py-1.5 text-sm text-muted-foreground">没有匹配项目</li>
             )}
             {filtered.map((r) => {
               const isActive = r.id === activeRepoId;
               return (
                 <li
                   key={r.id}
-                  className={`project-picker-item${isActive ? " active" : ""}`}
-                  onClick={() => {
-                    onSelect(r.id);
-                    setOpen(false);
-                  }}
+                  className={itemCls(isActive)}
+                  onClick={() => { onSelect(r.id); setOpen(false); }}
                 >
-                  <Folder size={12} className="project-picker-item-icon" />
-                  <span className="project-picker-item-label">{repoLabel(r)}</span>
-                  {isActive && <Check size={12} className="project-picker-item-check" />}
+                  <Folder size={12} className="opacity-60" />
+                  <span className="flex-1 truncate">{repoLabel(r)}</span>
+                  {isActive && <Check size={12} className="text-primary" />}
                 </li>
               );
             })}
           </ul>
 
-          <div className="project-picker-divider" />
+          <div className="my-1 h-px bg-border" />
 
-          <ul className="project-picker-list">
-            <li
-              className="project-picker-item"
-              onClick={() => {
-                onAddRepo();
-                setOpen(false);
-              }}
-            >
-              <FolderPlus size={12} className="project-picker-item-icon" />
-              <span className="project-picker-item-label">添加新项目</span>
+          <ul className="py-1">
+            <li className={itemCls(false)} onClick={() => { onAddRepo(); setOpen(false); }}>
+              <FolderPlus size={12} className="opacity-60" />
+              <span className="flex-1 truncate">添加新项目</span>
             </li>
             <li
-              className={`project-picker-item${activeRepoId === null ? " active" : ""}`}
-              onClick={() => {
-                onSelect(null);
-                setOpen(false);
-              }}
+              className={itemCls(activeRepoId === null)}
+              onClick={() => { onSelect(null); setOpen(false); }}
             >
-              <Folder size={12} className="project-picker-item-icon" />
-              <span className="project-picker-item-label">不使用项目</span>
-              {activeRepoId === null && <Check size={12} className="project-picker-item-check" />}
+              <Folder size={12} className="opacity-60" />
+              <span className="flex-1 truncate">不使用项目</span>
+              {activeRepoId === null && <Check size={12} className="text-primary" />}
             </li>
           </ul>
         </div>

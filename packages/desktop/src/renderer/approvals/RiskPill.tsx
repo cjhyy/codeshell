@@ -2,8 +2,18 @@ import React from "react";
 
 export type RiskLevel = "low" | "medium" | "high";
 
+const RISK_TONE: Record<RiskLevel, string> = {
+  low: "bg-status-ok/15 text-status-ok",
+  medium: "bg-status-warn/15 text-status-warn",
+  high: "bg-status-err/15 text-status-err",
+};
+
 export function RiskPill({ level }: { level: RiskLevel }) {
-  return <span className={`risk-pill risk-${level}`}>{level} risk</span>;
+  return (
+    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${RISK_TONE[level]}`}>
+      {level} risk
+    </span>
+  );
 }
 
 /** Heuristic: classify risk by tool name + args content. */
