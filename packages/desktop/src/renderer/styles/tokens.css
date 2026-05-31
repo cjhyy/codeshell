@@ -1,40 +1,45 @@
-/* Design tokens — single source of truth for colors, spacing, type.
-   Themes flip values via [data-theme="dark"] on <html>. */
+/* Design tokens.
+ *
+ * The legacy app referenced these var names directly (--bg-app, --fg-primary,
+ * --accent, --border-subtle, …). Rather than rewrite ~250 legacy class usages,
+ * we REMAP these names onto the shadcn token set (defined in tailwind.css,
+ * which flips light/dark via the `.dark` class). This instantly themes every
+ * remaining legacy class to the plain zinc + warm-orange look, unifying the
+ * whole app. Dark mode now flows from `.dark` (the [data-theme="dark"] block
+ * below is kept only as a fallback and points at the same vars).
+ */
 
 :root,
 [data-theme="light"] {
-  /* surface */
-  --bg-app:        #fafaf9;
-  --bg-sidebar:    #f4f3ee;
-  --bg-inspector:  #f5f3ec;
-  --bg-elevated:   #ffffff;
-  /* Hover/selected used to be saturated kraft-paper tones — too loud
-     against the warm sidebar. Toned down to neutral greys so an active
-     row reads as "highlighted" rather than "paper-coloured". */
-  --bg-hover:      #ebe9e3;
-  --bg-selected:   #dedcd5;
+  /* surface → shadcn */
+  --bg-app:        hsl(var(--background));
+  --bg-sidebar:    hsl(var(--card));
+  --bg-inspector:  hsl(var(--card));
+  --bg-elevated:   hsl(var(--card));
+  --bg-hover:      hsl(var(--accent));
+  --bg-selected:   hsl(var(--accent));
 
-  /* text */
-  --fg-primary:    #1a1a1a;
-  --fg-secondary:  #555555;
-  --fg-muted:      #8a8678;
-  --fg-inverse:    #ffffff;
+  /* text → shadcn */
+  --fg-primary:    hsl(var(--foreground));
+  --fg-secondary:  hsl(var(--muted-foreground));
+  --fg-muted:      hsl(var(--muted-foreground));
+  --fg-inverse:    hsl(var(--primary-foreground));
 
-  /* border */
-  --border-subtle: #e6e3da;
-  --border-strong: #cfcabc;
+  /* border → shadcn */
+  --border-subtle: hsl(var(--border));
+  --border-strong: hsl(var(--border));
 
-  /* accent */
-  --accent:        #b85c2b;
-  --accent-hover:  #a04e22;
-  --accent-fg:     #ffffff;
+  /* accent → shadcn primary (warm orange) */
+  --accent:        hsl(var(--primary));
+  --accent-hover:  hsl(var(--primary) / 0.9);
+  --accent-fg:     hsl(var(--primary-foreground));
 
-  /* status */
-  --status-running: #2b7fb8;
-  --status-ok:      #2f8a4d;
-  --status-warn:    #c48a18;
-  --status-err:     #b8392b;
-  --status-idle:    #888888;
+  /* status → shadcn status tokens */
+  --status-running: hsl(var(--status-running));
+  --status-ok:      hsl(var(--status-ok));
+  --status-warn:    hsl(var(--status-warn));
+  --status-err:     hsl(var(--status-err));
+  --status-idle:    hsl(var(--status-idle));
 
   /* radius */
   --radius-sm: 4px;
@@ -75,23 +80,6 @@
   --inspector-w-collapsed: 0px;
 }
 
-[data-theme="dark"] {
-  --bg-app:        #1c1b18;
-  --bg-sidebar:    #232220;
-  --bg-inspector:  #1f1e1b;
-  --bg-elevated:   #2a2926;
-  --bg-hover:      #2f2e2a;
-  --bg-selected:   #3a3833;
-
-  --fg-primary:    #e7e5dc;
-  --fg-secondary:  #b8b4a4;
-  --fg-muted:      #7e7a6e;
-  --fg-inverse:    #1a1a1a;
-
-  --border-subtle: #2f2e2a;
-  --border-strong: #45433d;
-
-  --accent:        #d77a4d;
-  --accent-hover:  #c46b40;
-  --accent-fg:     #1a1a1a;
-}
+/* Dark values now flow from the shadcn `.dark` class flipping the underlying
+   --background/--foreground/etc., so the legacy aliases above resolve to the
+   correct dark colors automatically. No per-token dark overrides needed. */
