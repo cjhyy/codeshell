@@ -188,6 +188,20 @@ The desktop bridge broadcasts worker output to all windows. Renderer-side local 
 
 **Fix direction:** add request/window/session routing metadata and route stream/approval events only to subscribed windows or buckets.
 
+#### I12. UI input can unlock while work is still running
+
+**Reported:** 2026-05-31
+
+**Symptom:** The user observed that the UI allowed typing / new input even though the current task or agent was still running.
+
+**Expected behavior:** While a foreground session is still busy, the composer should stay disabled or block sending another message. If concurrent input is intentionally allowed, the UI should make the queue/concurrency model explicit.
+
+**Likely paths:** Electron/TUI busy-state routing around `busyByKey`, `runningBucketRef`, `turn_complete`, tool/subagent lifecycle events, and background-agent routing.
+
+**Risk:** The UI may treat main `turn_complete` as the end of all foreground work even when tools, subagents, or background work still have active lifecycle state. This can lead to accidental overlapping turns, confusing transcript ordering, or duplicate user input while the engine is not actually idle.
+
+**Fix direction:** Reproduce with a long-running foreground tool/subagent, trace stream events and busy-state transitions, and decide the unlock contract explicitly: main turn complete vs all foreground tool/subagent lifecycle complete vs background work excluded from blocking input.
+
 ### Minor / Documentation Drift
 
 - Many architecture documents still link to old `src/...` paths rather than `packages/core/src/...` and `packages/tui/src/...`.
