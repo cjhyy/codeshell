@@ -766,6 +766,14 @@ function App() {
   const [composerSeed, setComposerSeed] = useState("");
   const [composerSeedNonce, setComposerSeedNonce] = useState(0);
   const startConversationalAutomation = (): void => {
+    // Start a FRESH draft session — never pile onto whatever task/run session
+    // happened to be active. Mirrors handleNewConversation: clear
+    // activeSessionId so a brand-new session materializes on first send.
+    const repoId = activeRepoId;
+    setSessionIndices((prev) => ({
+      ...prev,
+      [repoKeyOf(repoId)]: setActiveSession(repoId, null),
+    }));
     setComposerSeed(
       "我想设置一个自动化。先简要说明自动化如何运作,然后问我几个问题,以了解我希望它做什么、以及何时运行(包括时区)。明确后用 CronCreate 工具帮我创建。",
     );
