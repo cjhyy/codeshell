@@ -165,6 +165,21 @@ export class CronScheduler {
   }
 
   /**
+   * Fire a job immediately, out of band of its schedule (the "Run now" button).
+   * Respects the re-entrancy guard (no-op if a run is already in flight) and
+   * does not disturb the existing timer. Returns false if the id is unknown.
+   */
+  runNow(id: string): boolean {
+    const job = this.jobs.get(id);
+    if (!job) return false;
+    // Run-stat bookkeeping is shared with scheduled fires; nextRun is left as-is
+    // (a manual run shouldn't shift the next scheduled occurrence). force=true
+    // so a paused job can still be run on demand.
+    void this.fire(job, () => {}, true);
+    return true;
+  }
+
+  /**
    * Arm a job's timer. Interval schedules ("5m") use setInterval; cron-
    * expression schedules ("0 9 * * 1-5") compute the next trigger in the
    * job's timezone and use setTimeout, re-arming after each fire. nextRun is
@@ -219,8 +234,8 @@ export class CronScheduler {
    * bookkeeping, persistence, then the executor. `afterStats` updates nextRun
    * for the next occurrence (interval: now+interval; cron: re-armed inside).
    */
-  private async fire(job: CronJob, afterStats: () => void): Promise<void> {
-    if (!job.enabled) return;
+  private async fire(job: CronJob, afterStats: () => void, force = false): Promise<void> {
+    if (!job.enabled && !force) return;
     // Re-entrancy guard: if this job's previous run is still in flight
     // (onExecute slower than the interval), skip rather than stacking
     // overlapping executions that double-count runCount.
