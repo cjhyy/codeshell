@@ -5,7 +5,7 @@
  * with a predefined prompt on schedule.
  */
 
-import type { CronStore } from "./cron-store.js";
+import type { CronStore } from "./store.js";
 
 export interface CronJob {
   id: string;
