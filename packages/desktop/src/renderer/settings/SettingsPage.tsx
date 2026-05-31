@@ -150,20 +150,10 @@ export function SettingsPage({
   onBack,
 }: Props) {
   const [active, setActive] = useState<ModuleId>("general");
-  const [scope, setScope] = useState<"user" | "project">("user");
-
-  const supportsProjectScope =
-    active === "general" ||
-    active === "config" ||
-    active === "personalization" ||
-    active === "capabilities" ||
-    active === "mcp" ||
-    active === "hooks" ||
-    active === "connections" ||
-    active === "environment" ||
-    active === "browser" ||
-    active === "computer" ||
-    active === "memory";
+  // All settings are global (user scope). Per-project overrides are not
+  // supported in the UI; sections still take a `scope`/`activeRepoPath`
+  // prop pair, so we pass the fixed user scope through unchanged.
+  const scope = "user" as const;
 
   return (
     <div className="settings-page">
@@ -197,25 +187,6 @@ export function SettingsPage({
             <h2 className="settings-page-content-title">
               {MODULES.find((m) => m.id === active)?.label}
             </h2>
-            {supportsProjectScope && (
-              <div className="settings-scope">
-                <button
-                  className={`logs-bucket${scope === "user" ? " active" : ""}`}
-                  title="所有项目的默认配置"
-                  onClick={() => setScope("user")}
-                >
-                  全局
-                </button>
-                <button
-                  className={`logs-bucket${scope === "project" ? " active" : ""}`}
-                  disabled={!activeRepoPath}
-                  title={activeRepoPath ? "仅当前项目，覆盖全局默认" : "先在左侧选一个项目"}
-                  onClick={() => setScope("project")}
-                >
-                  当前项目
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="settings-page-module-body">
