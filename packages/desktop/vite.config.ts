@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
 
 /**
@@ -29,10 +30,11 @@ export default defineConfig({
     outDir: resolve(__dirname, "out/renderer"),
     emptyOutDir: true,
   },
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@renderer": resolve(__dirname, "src/renderer"),
+      "@": resolve(__dirname, "src/renderer"),
     },
   },
 });

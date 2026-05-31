@@ -19,6 +19,10 @@ export function applyTheme(t: Theme): void {
         ? "dark"
         : "light"
       : t;
+  // shadcn/Tailwind reads dark mode from a `.dark` class (see tailwind.css).
+  document.documentElement.classList.toggle("dark", resolved === "dark");
+  // Legacy CSS (styles/tokens.css) still keys off [data-theme]; keep it in sync
+  // until the migration's final phase removes the old stylesheets.
   document.documentElement.setAttribute("data-theme", resolved);
 }
 
