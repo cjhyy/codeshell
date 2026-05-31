@@ -500,15 +500,22 @@ function App() {
       if (cancelled || runs.length === 0) return;
 
       // Known engineSessionIds across every repo index (manual + already-imported).
+      // A still-running automation import is intentionally NOT counted, so the
+      // next backfill re-imports it once it completes and upsertImportedSession
+      // overwrites the partial transcript in place. Manual sessions and
+      // completed/failed/cancelled imports dedupe normally.
+      const TERMINAL_RUN = new Set(["completed", "failed", "cancelled"]);
+      const dedupable = (s: SessionSummary): boolean =>
+        s.source !== "automation" || !s.runStatus || TERMINAL_RUN.has(s.runStatus);
       const currentRepos = loadRepos();
       const known = new Set<string>();
       for (const r of currentRepos) {
         for (const s of loadSessionIndex(r.id).sessions) {
-          if (s.engineSessionId) known.add(s.engineSessionId);
+          if (s.engineSessionId && dedupable(s)) known.add(s.engineSessionId);
         }
       }
       for (const s of loadSessionIndex(null).sessions) {
-        if (s.engineSessionId) known.add(s.engineSessionId);
+        if (s.engineSessionId && dedupable(s)) known.add(s.engineSessionId);
       }
 
       const touchedRepoIds = new Set<string | null>();
