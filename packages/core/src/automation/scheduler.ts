@@ -89,30 +89,68 @@ export class CronScheduler {
    * jobs are restored without a timer.
    */
   /**
-   * Restore persisted jobs into memory. By default also (re)arms timers for
-   * enabled jobs. Pass `{ arm: false }` in a host that must NOT execute jobs —
-   * e.g. the desktop agent worker, which is a separate process from the main
-   * process that owns execution. There the worker only persists (so CronCreate
-   * sees existing ids and writes to the shared store) and must never start
-   * timers, or jobs would run twice (once per process) and fight over run stats.
+   * Reconcile in-memory jobs against the on-disk store (the store is the source
+   * of truth). Safe to call repeatedly — used both at startup and as a periodic
+   * re-sync when another process (e.g. the desktop agent worker) may have
+   * created/deleted/changed jobs through the same store. Reconciliation:
+   *   - jobs on disk but not in memory  → added (and armed if enabled)
+   *   - jobs in memory but not on disk  → removed + timer cleared
+   *   - jobs whose schedule/enabled differ → re-armed to match disk
+   *
+   * Pass `{ arm: false }` in a host that must NOT execute jobs (the worker —
+   * separate process from the one that owns execution); it still tracks +
+   * persists but starts no timers, so jobs never run twice across processes.
    */
   loadJobs(opts?: { arm?: boolean }): void {
     if (!this.store) return;
     const arm = opts?.arm ?? true;
     const persisted = this.store.load();
+    const onDisk = new Map(persisted.map((j) => [j.id, j]));
+
+    // 1. Drop in-memory jobs that no longer exist on disk (deleted elsewhere).
+    for (const id of [...this.jobs.keys()]) {
+      if (!onDisk.has(id)) {
+        this.clearTimer(id);
+        this.jobs.delete(id);
+      }
+    }
+
+    // 2. Add or update jobs from disk.
     let maxId = 0;
     for (const job of persisted) {
+      const prev = this.jobs.get(job.id);
       this.jobs.set(job.id, job);
-      // Advance id allocation past every restored id so a newly created job
-      // can't collide with a restored one.
       const n = parseInt(job.id, 10);
       if (Number.isFinite(n) && n > maxId) maxId = n;
+
+      // (Re)arm when execution is on. arm() is idempotent (clears any prior
+      // timer first), so calling it for unchanged jobs is harmless; it also
+      // refreshes nextRun for display.
       if (arm && job.enabled) {
-        // nextRun is recomputed forward from now; we do NOT catch up missed runs.
         this.arm(job);
+      } else {
+        // Disabled (or arm suppressed): ensure no stale timer survives a
+        // prior enabled state.
+        if (prev && this.timers.has(job.id)) this.clearTimer(job.id);
+        // Still refresh nextRun for display even when not arming.
+        if (!arm || !job.enabled) this.refreshNextRunForDisplay(job);
       }
     }
     this.nextId = Math.max(this.nextId, maxId + 1);
+  }
+
+  /** Recompute nextRun without arming a timer (for display in disabled/no-arm hosts). */
+  private refreshNextRunForDisplay(job: CronJob): void {
+    if (isCronExpression(job.schedule)) {
+      const next = nextCronTime(parseCronExpression(job.schedule), job.timezone ?? "UTC", Date.now());
+      job.nextRun = next ?? undefined;
+    } else {
+      try {
+        job.nextRun = Date.now() + parseSchedule(job.schedule);
+      } catch {
+        job.nextRun = undefined;
+      }
+    }
   }
 
   private persist(): void {

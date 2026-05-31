@@ -79,6 +79,78 @@ describe("CronScheduler.loadJobs — cross-process reload", () => {
     main.stopAll();
   });
 
+  test("reload removes a job another process deleted from the store", () => {
+    // Main loads two jobs.
+    const seed = new CronScheduler(new CronStore(file));
+    const a = seed.create("keep", "1h", "p");
+    const b = seed.create("remove-me", "1h", "p");
+    seed.stopAll();
+
+    const main = new CronScheduler(new CronStore(file));
+    main.loadJobs();
+    expect(main.list()).toHaveLength(2);
+
+    // Worker process deletes one job from the shared store.
+    const worker = new CronScheduler(new CronStore(file));
+    worker.setExecutionEnabled(false);
+    worker.loadJobs();
+    worker.delete(b.id);
+    worker.stopAll();
+
+    // Main reloads → the deleted job is gone from memory too.
+    main.loadJobs();
+    expect(main.list().map((j) => j.id)).toEqual([a.id]);
+    expect(main.get(b.id)).toBeUndefined();
+    main.stopAll();
+  });
+
+  test("reload stops the timer of a job deleted elsewhere (no orphan fires)", async () => {
+    const seed = new CronScheduler(new CronStore(file));
+    const job = seed.create("doomed", "20", "p"); // 20ms interval
+    seed.stopAll();
+
+    const main = new CronScheduler(new CronStore(file));
+    let fired = 0;
+    main.setExecutor(async () => {
+      fired++;
+    });
+    main.loadJobs(); // arms the 20ms timer
+
+    // Delete it from the store via another process and reload.
+    const worker = new CronScheduler(new CronStore(file));
+    worker.setExecutionEnabled(false);
+    worker.loadJobs();
+    worker.delete(job.id);
+    worker.stopAll();
+
+    main.loadJobs(); // should clear the timer
+    const firedAtReload = fired;
+    await new Promise((r) => setTimeout(r, 80));
+    // No further fires after the deleted job's timer was cleared.
+    expect(fired).toBe(firedAtReload);
+    main.stopAll();
+  });
+
+  test("reload picks up an enabled→paused change made by another process", () => {
+    const seed = new CronScheduler(new CronStore(file));
+    const job = seed.create("toggle", "1h", "p");
+    seed.stopAll();
+
+    const main = new CronScheduler(new CronStore(file));
+    main.loadJobs();
+    expect(main.get(job.id)?.enabled).toBe(true);
+
+    const worker = new CronScheduler(new CronStore(file));
+    worker.setExecutionEnabled(false);
+    worker.loadJobs();
+    worker.pause(job.id);
+    worker.stopAll();
+
+    main.loadJobs();
+    expect(main.get(job.id)?.enabled).toBe(false);
+    main.stopAll();
+  });
+
   test("reload after the file changes reflects new jobs added since", () => {
     const store = new CronStore(file);
     const b = new CronScheduler(store);
