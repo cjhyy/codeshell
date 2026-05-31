@@ -4,7 +4,6 @@ import {
   ListChecks,
   ShieldAlert,
   Activity,
-  Plug,
   ScrollText,
   Settings,
   Workflow,

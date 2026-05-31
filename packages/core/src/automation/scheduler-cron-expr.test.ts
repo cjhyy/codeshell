@@ -1,8 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { CronScheduler, type CronJob } from "./scheduler.js";
 
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
 describe("CronScheduler — cron expression schedules", () => {
   test("accepts a cron expression and computes a future nextRun", () => {
     const sched = new CronScheduler();
