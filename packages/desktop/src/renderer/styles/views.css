@@ -362,6 +362,32 @@
   color: var(--status-err, #d33);
   font-size: var(--fz-sm);
 }
+.memory-notice {
+  margin: var(--sp-2) 0;
+  padding: 8px 12px;
+  background: var(--bg-sidebar);
+  border-left: 3px solid var(--status-ok, #2a8);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: var(--fz-sm);
+}
+
+.memory-level-chip {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: var(--bg-app);
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+  border: 1px solid var(--border-subtle);
+}
+
+@keyframes memory-spin {
+  to { transform: rotate(360deg); }
+}
+.memory-toolbar .spin {
+  animation: memory-spin 0.8s linear infinite;
+}
 
 .memory-layout {
   display: grid;

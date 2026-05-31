@@ -13,6 +13,9 @@ import {
   type GitPrefs,
 } from "../gitPrefs";
 import { writeSettings } from "../settingsBus";
+import { ProjectPicker } from "./ProjectPicker";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -121,20 +124,67 @@ export function ShortcutsSection() {
   );
 }
 
-export function HooksSection({ scope, activeRepoPath }: ScopedProps) {
+/**
+ * Hooks are PROJECT-scoped only — they run shell commands on a specific repo,
+ * so a global/user hook makes no sense. The page first shows a list of
+ * projects (reusing the sidebar `repos`); clicking one drills into that
+ * project's hooks. Hooks are read/written from `<repo>/.code-shell/settings.json`.
+ */
+export function HooksSection({ repos }: { repos: Repo[] }) {
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const selectedRepo = repos.find((r) => r.path === selectedPath) ?? null;
+
+  if (!selectedPath) {
+    return (
+      <section className="settings-section">
+        <h3 className="settings-section-title">钩子</h3>
+        <p className="settings-section-help">
+          钩子按项目维护。选择一个项目以查看 / 编辑它的钩子。
+        </p>
+        <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
+      </section>
+    );
+  }
+
+  return (
+    <section className="settings-section">
+      <div className="mb-2 flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-muted-foreground"
+          onClick={() => setSelectedPath(null)}
+        >
+          <ArrowLeft size={14} />
+          <span>返回项目列表</span>
+        </Button>
+        <span className="truncate text-sm font-medium text-foreground">
+          {selectedRepo ? repoLabel(selectedRepo) : selectedPath}
+        </span>
+      </div>
+      <ProjectHooksEditor cwd={selectedPath} />
+    </section>
+  );
+}
+
+/** Hook list + add form for a single project (cwd is a concrete repo path). */
+function ProjectHooksEditor({ cwd }: { cwd: string }) {
   const [hooks, setHooks] = useState<Array<Record<string, unknown>>>([]);
   const [draft, setDraft] = useState("{\n  \"event\": \"pre_tool_use\",\n  \"command\": \"echo '{}'\"\n}");
   const [error, setError] = useState<string | null>(null);
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
-    setHooks(Array.isArray(s.hooks) ? (s.hooks as Array<Record<string, unknown>>) : []);
+    try {
+      const s = (await window.codeshell.getSettings("project", cwd)) ?? {};
+      setHooks(Array.isArray(s.hooks) ? (s.hooks as Array<Record<string, unknown>>) : []);
+    } catch {
+      setHooks([]);
+    }
   };
-  useEffect(() => { void load(); }, [scope, activeRepoPath]);
+  useEffect(() => { void load(); }, [cwd]);
 
   const persist = async (next: Array<Record<string, unknown>>) => {
-    await writeSettings(scope, { hooks: next }, cwd);
+    await writeSettings("project", { hooks: next }, cwd);
     setHooks(next);
   };
 
@@ -150,8 +200,7 @@ export function HooksSection({ scope, activeRepoPath }: ScopedProps) {
   };
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">钩子</h3>
+    <>
       {hooks.length === 0 ? (
         <div className="approvals-empty">暂无 hook</div>
       ) : (
@@ -167,12 +216,20 @@ export function HooksSection({ scope, activeRepoPath }: ScopedProps) {
           ))}
         </ul>
       )}
-      <textarea className="settings-editor" style={{ minHeight: 120 }} value={draft} onChange={(e) => setDraft(e.target.value)} />
+      <textarea
+        className="settings-editor"
+        style={{ minHeight: 120 }}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+      />
       {error && <div className="view-error">{error}</div>}
-      <button className="approval-btn approve settings-save-btn" onClick={() => void add()}>
+      <button
+        className="approval-btn approve settings-save-btn"
+        onClick={() => void add()}
+      >
         添加 hook
       </button>
-    </section>
+    </>
   );
 }
 

@@ -1,5 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Trash2, Pencil, Plus, X, Save, RefreshCw } from "lucide-react";
+import {
+  Trash2,
+  Pencil,
+  Plus,
+  X,
+  Save,
+  RefreshCw,
+  Sparkles,
+  Loader2,
+  ArrowLeft,
+} from "lucide-react";
 import type {
   MemoryLevel,
   MemoryScope,
@@ -8,10 +18,14 @@ import type {
   RendererMemoryEntryFull,
   SaveMemoryInput,
 } from "../../preload/types";
+import { repoLabel, type Repo } from "../repos";
+import { ProjectPicker } from "./ProjectPicker";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   scope: "user" | "project";
   activeRepoPath: string | null;
+  repos: Repo[];
 }
 
 const MEMORY_SCOPES: Array<{ id: MemoryScope; label: string; help: string }> = [
@@ -26,36 +40,91 @@ const MEMORY_TYPES: Array<{ id: MemoryType; label: string }> = [
   { id: "reference", label: "reference" },
 ];
 
+/** Which memory store the user drilled into. */
+interface Target {
+  level: MemoryLevel;
+  /** Concrete repo path for level="project"; undefined for the global level. */
+  cwd?: string;
+  /** Display title for the header. */
+  title: string;
+}
+
 /**
- * Settings → 记忆 module. Two axes:
- *   - level (settings page scope chip): user (global) vs project
- *   - scope (this section's local tab): user vs dream
+ * Settings → 记忆 module.
  *
- * Layout: list of entries on the left, detail / edit pane on the
- * right. New / edit / delete operate against the same MemoryManager
- * the LLM tools use, so the data is consistent across UI + tool
- * calls (both routes are managed by main/memory-service.ts).
+ * Pick a store first: a project list (reusing the sidebar `repos`) with a
+ * "全局" row on top. The global row → user-level memory (no project
+ * dimension); a project row → that project's memory. After picking, the user
+ * sees that store's entries (with the user/dream scope tab and a Dream
+ * consolidation button), plus a "返回" link back to the list.
  */
-export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
-  // levelScope is the settings page's "全局 / 当前项目" tab. Map it
-  // to MemoryLevel directly.
-  const level: MemoryLevel = levelScope === "project" ? "project" : "user";
-  const cwd = level === "project" ? activeRepoPath ?? undefined : undefined;
+export function MemorySection({ repos }: Props) {
+  const [target, setTarget] = useState<Target | null>(null);
+
+  if (!target) {
+    return (
+      <section className="settings-section memory-section">
+        <h3 className="settings-section-title">记忆</h3>
+        <p className="settings-section-help">
+          选择要查看的记忆:全局记忆所有项目共享,或选择某个项目查看它专属的记忆。
+        </p>
+        <ProjectPicker
+          repos={repos}
+          includeGlobal
+          globalLabel="全局记忆"
+          globalHint="所有项目共享 (~/.code-shell/memory)"
+          onSelect={(path) => {
+            if (path === null) {
+              setTarget({ level: "user", title: "全局记忆" });
+            } else {
+              const repo = repos.find((r) => r.path === path);
+              setTarget({
+                level: "project",
+                cwd: path,
+                title: repo ? repoLabel(repo) : path,
+              });
+            }
+          }}
+        />
+      </section>
+    );
+  }
+
+  return (
+    <section className="settings-section memory-section">
+      <div className="mb-2 flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-muted-foreground"
+          onClick={() => setTarget(null)}
+        >
+          <ArrowLeft size={14} />
+          <span>返回</span>
+        </Button>
+        <span className="truncate text-sm font-medium text-foreground">{target.title}</span>
+        <span className="memory-level-chip">
+          {target.level === "project" ? "项目" : "全局"}
+        </span>
+      </div>
+      <ProjectMemoryView level={target.level} cwd={target.cwd} />
+    </section>
+  );
+}
+
+/** Entry list + editor + Dream button for one memory store (level + cwd). */
+function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string }) {
   const [scope, setScope] = useState<MemoryScope>("user");
   const [entries, setEntries] = useState<RendererMemoryEntry[]>([]);
   const [selected, setSelected] = useState<RendererMemoryEntryFull | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [draft, setDraft] = useState<SaveMemoryInput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const requireCwd = level === "project" && !activeRepoPath;
+  const [dreaming, setDreaming] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (requireCwd) {
-      setEntries([]);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
@@ -66,12 +135,13 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [level, scope, cwd, requireCwd]);
+  }, [level, scope, cwd]);
 
   useEffect(() => {
     void refresh();
     setSelected(null);
     setDrafting(false);
+    setNotice(null);
   }, [refresh]);
 
   const openEntry = async (name: string): Promise<void> => {
@@ -93,7 +163,7 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
       scope,
       name: "",
       description: "",
-      type: "project",
+      type: level === "project" ? "project" : "user",
       content: "",
       cwd,
     });
@@ -124,7 +194,6 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
       await window.codeshell.saveMemory({ ...draft, level, scope, cwd });
       await refresh();
       setDrafting(false);
-      // Reopen the freshly-saved entry so the right pane reflects it.
       await openEntry(draft.name);
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
@@ -142,19 +211,34 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
     }
   };
 
+  const runDream = async (): Promise<void> => {
+    setDreaming(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await window.codeshell.runDream(level, cwd);
+      await refresh();
+      setNotice(
+        result.summary?.trim()
+          ? `整理完成:${result.summary.trim()}`
+          : result.ran
+            ? "整理完成。"
+            : "未执行(缺少记忆工具)。",
+      );
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setDreaming(false);
+    }
+  };
+
   const sortedEntries = useMemo(
     () => entries.slice().sort((a, b) => a.name.localeCompare(b.name)),
     [entries],
   );
 
   return (
-    <section className="settings-section memory-section">
-      <h3 className="settings-section-title">记忆</h3>
-      <p className="settings-section-help">
-        持久化的记忆条目;
-        {level === "project" ? "当前项目专属" : "所有项目共享"}。
-      </p>
-
+    <>
       <div className="memory-toolbar">
         <div className="memory-scope-tabs">
           {MEMORY_SCOPES.map((s) => (
@@ -170,11 +254,23 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
           ))}
         </div>
         <div className="memory-toolbar-actions">
+          {scope === "dream" && (
+            <button
+              type="button"
+              className="memory-action"
+              onClick={() => void runDream()}
+              disabled={dreaming || loading}
+              title="跑一次 LLM,对 dream 记忆做去重 / 合并 / 清理"
+            >
+              {dreaming ? <Loader2 size={12} className="spin" /> : <Sparkles size={12} />}
+              <span>{dreaming ? "整理中…" : "整理 Dream"}</span>
+            </button>
+          )}
           <button
             type="button"
             className="memory-action"
             onClick={() => void refresh()}
-            disabled={loading || requireCwd}
+            disabled={loading || dreaming}
             title="刷新"
           >
             <RefreshCw size={12} />
@@ -183,7 +279,7 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
             type="button"
             className="memory-action"
             onClick={startNew}
-            disabled={requireCwd}
+            disabled={dreaming}
           >
             <Plus size={12} />
             <span>新建</span>
@@ -191,14 +287,12 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
         </div>
       </div>
 
-      {requireCwd && (
-        <div className="memory-empty">先在左侧选一个项目,才能查看项目记忆。</div>
-      )}
+      {notice && <div className="memory-notice">{notice}</div>}
       {error && <div className="memory-error">{error}</div>}
 
       <div className="memory-layout">
         <ul className="memory-list" role="list">
-          {sortedEntries.length === 0 && !loading && !requireCwd && (
+          {sortedEntries.length === 0 && !loading && (
             <li className="memory-empty">该 scope 下还没有记忆。</li>
           )}
           {sortedEntries.map((e) => (
@@ -211,9 +305,7 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
                 className="memory-list-item-main"
                 onClick={() => void openEntry(e.name)}
               >
-                <span className={`memory-type-chip memory-type-${e.type}`}>
-                  {e.type}
-                </span>
+                <span className={`memory-type-chip memory-type-${e.type}`}>{e.type}</span>
                 <span className="memory-list-name">{e.name}</span>
                 <span className="memory-list-desc">{e.description}</span>
               </button>
@@ -239,17 +331,13 @@ export function MemorySection({ scope: levelScope, activeRepoPath }: Props) {
               onCancel={() => setDrafting(false)}
             />
           ) : selected ? (
-            <ViewEntry
-              entry={selected}
-              onEdit={startEdit}
-              onClose={() => setSelected(null)}
-            />
+            <ViewEntry entry={selected} onEdit={startEdit} onClose={() => setSelected(null)} />
           ) : (
             <div className="memory-empty">从左侧选择一条记忆查看,或点新建。</div>
           )}
         </div>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -266,9 +354,7 @@ function ViewEntry({
     <div className="memory-view">
       <div className="memory-view-head">
         <strong>{entry.name}</strong>
-        <span className={`memory-type-chip memory-type-${entry.type}`}>
-          {entry.type}
-        </span>
+        <span className={`memory-type-chip memory-type-${entry.type}`}>{entry.type}</span>
         <div className="memory-view-actions">
           <button type="button" className="memory-action" onClick={onEdit}>
             <Pencil size={12} />
