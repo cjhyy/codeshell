@@ -33,6 +33,10 @@ export interface RunSummary {
   sessionId: string | null;
   error: string | null;
   summary: string | null;
+  /** "automation" for cron-triggered runs (from run.json metadata.source). */
+  source?: string;
+  /** Display name of the originating cron job, when source === "automation". */
+  cronJobName?: string;
 }
 
 export interface RunDetail extends RunSummary {
@@ -68,6 +72,10 @@ async function readSnapshot(runId: string): Promise<unknown | null> {
 }
 
 function snapshotToSummary(snap: Record<string, unknown>): RunSummary {
+  const meta =
+    snap.metadata && typeof snap.metadata === "object" && !Array.isArray(snap.metadata)
+      ? (snap.metadata as Record<string, unknown>)
+      : {};
   return {
     runId: String(snap.runId ?? ""),
     objective: String(snap.objective ?? ""),
@@ -81,6 +89,8 @@ function snapshotToSummary(snap: Record<string, unknown>): RunSummary {
     sessionId: (snap.sessionId as string | null) ?? null,
     error: (snap.error as string | null) ?? null,
     summary: (snap.summary as string | null) ?? null,
+    source: typeof meta.source === "string" ? meta.source : undefined,
+    cronJobName: typeof meta.cronJobName === "string" ? meta.cronJobName : undefined,
   };
 }
 
@@ -102,6 +112,20 @@ export async function listRuns(): Promise<RunSummary[]> {
   }
   out.sort((a, b) => b.updatedAt - a.updatedAt);
   return out;
+}
+
+const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
+
+/**
+ * Remove a run's on-disk directory (~/.code-shell/runs/<runId>/).
+ * `baseDir` overridable for tests; no-op for unsafe ids or missing dirs.
+ */
+export async function deleteRunDir(
+  runId: string,
+  baseDir: string = RUNS_DIR,
+): Promise<void> {
+  if (!SAFE_ID.test(runId) || runId === "." || runId === "..") return;
+  await fs.rm(path.join(baseDir, runId), { recursive: true, force: true });
 }
 
 export async function getRun(runId: string): Promise<RunDetail | null> {

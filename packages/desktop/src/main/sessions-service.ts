@@ -18,6 +18,8 @@ export interface DesktopSessionSummary {
 
 const SESSIONS_DIR = path.join(os.homedir(), ".code-shell", "sessions");
 
+const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
+
 export async function listSessions(): Promise<DesktopSessionSummary[]> {
   try {
     const entries = await fs.readdir(SESSIONS_DIR, { withFileTypes: true });
@@ -47,15 +49,34 @@ export async function listSessions(): Promise<DesktopSessionSummary[]> {
   }
 }
 
-export async function deleteSession(id: string): Promise<void> {
-  const cleanId = id.replace(/[\\/]/g, "");
+/**
+ * Remove a session's on-disk data. Modern sessions are a directory
+ * `<sessionsDir>/<id>/` (transcript.jsonl + state.json — see core
+ * session-manager.ts:93,141). Pre-directory sessions were flat
+ * `<id>.jsonl`/`<id>.json` files; we remove those too for back-compat.
+ * `baseDir` is overridable for tests. Unsafe ids (slashes / "." / "..")
+ * are rejected without any filesystem access.
+ */
+export async function deleteSessionDir(
+  id: string,
+  baseDir: string = SESSIONS_DIR,
+): Promise<void> {
+  if (!SAFE_ID.test(id) || id === "." || id === "..") return;
+  // Directory form (current).
+  await fs.rm(path.join(baseDir, id), { recursive: true, force: true });
+  // Legacy flat files.
   for (const ext of [".jsonl", ".json"]) {
-    const p = path.join(SESSIONS_DIR, `${cleanId}${ext}`);
     try {
-      await fs.unlink(p);
-      return;
+      await fs.unlink(path.join(baseDir, `${id}${ext}`));
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
     }
   }
 }
+
+/** @deprecated retained for the existing IPC handler; delegates to deleteSessionDir. */
+export async function deleteSession(id: string): Promise<void> {
+  await deleteSessionDir(id);
+}
+
+export { getSessionTranscript } from "./transcript-reader.js";

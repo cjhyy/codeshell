@@ -252,6 +252,8 @@ export interface CodeshellApi {
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
+  getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
+  deleteRun(runId: string): Promise<void>;
   listAutomations(): Promise<AutomationSummary[]>;
   getAutomation(id: string): Promise<AutomationSummary | null>;
   createAutomation(input: CreateAutomationInput): Promise<AutomationSummary>;
@@ -560,6 +562,8 @@ export interface RunSummary {
   sessionId: string | null;
   error: string | null;
   summary: string | null;
+  source?: string;
+  cronJobName?: string;
 }
 
 export interface RunDetail extends RunSummary {

@@ -58,7 +58,7 @@ import {
   type SaveMemoryInput,
 } from "./memory-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { listSessions, deleteSession } from "./sessions-service.js";
+import { listSessions, deleteSession, getSessionTranscript } from "./sessions-service.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import {
@@ -93,7 +93,7 @@ import {
   type InstallFromGithubInput,
 } from "./github-skill-service.js";
 import { resolveModelMeta } from "./model-meta-service.js";
-import { listRuns, getRun } from "./runs-service.js";
+import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
 import { initUpdater, checkForUpdate, quitAndInstall, getLastStatus } from "./updater.js";
 import { loadRecents, pushRecent } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
@@ -718,6 +718,14 @@ ipcMain.handle("runs:list", async () => listRuns());
 ipcMain.handle("runs:get", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   return getRun(runId);
+});
+ipcMain.handle("sessions:transcript", async (_e, sessionId: string) => {
+  if (typeof sessionId !== "string") throw new Error("sessionId required");
+  return getSessionTranscript(sessionId);
+});
+ipcMain.handle("runs:delete", async (_e, runId: string) => {
+  if (typeof runId !== "string") throw new Error("runId required");
+  await deleteRunDir(runId);
 });
 
 // ─── Automation (Phase 3 UI) ─────────────────────────────────────

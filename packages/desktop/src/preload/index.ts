@@ -228,6 +228,9 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("logs:tail", bucket, lines),
   listRuns: () => ipcRenderer.invoke("runs:list"),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
+  getSessionTranscript: (sessionId: string) =>
+    ipcRenderer.invoke("sessions:transcript", sessionId),
+  deleteRun: (runId: string) => ipcRenderer.invoke("runs:delete", runId),
   listAutomations: () => ipcRenderer.invoke("automation:list"),
   getAutomation: (id: string) => ipcRenderer.invoke("automation:get", id),
   createAutomation: (input: {
