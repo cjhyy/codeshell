@@ -21,9 +21,8 @@ import {
 } from "lucide-react";
 import { ModelSection } from "./ModelSection";
 import { MemorySection } from "./MemorySection";
-import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
-import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
+import { GeneralSection } from "./GeneralSection";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { AgentsSection } from "./AgentsSection";
 import { AppearanceSection } from "./AppearanceSection";
@@ -191,10 +190,7 @@ export function SettingsPage({
 
           <div className="settings-page-module-body">
             {active === "general" && (
-              <>
-                <PermissionSection scope={scope} activeRepoPath={activeRepoPath} />
-                <UpdaterSettingsRow />
-              </>
+              <GeneralSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
             {active === "appearance" && (
               <AppearanceSection />

@@ -64,7 +64,7 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
     <section className="settings-section">
       <h3 className="settings-section-title">默认权限</h3>
       <p className="settings-section-help">
-        当前项目设置会覆盖全局默认；输入框里的权限只影响当前对话。
+        新会话默认的权限模式；对话中输入框里的临时权限只影响当前对话。
       </p>
       <div className="permission-modes">
         {MODES.map((m) => (
