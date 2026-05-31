@@ -64,6 +64,17 @@ const GENERAL_BUILTIN_TOOLS = [
   "RemoteTrigger",
   "REPL",
   "PowerShell",
+  // Persistent cross-session memory. Including these in the default preset is
+  // what lets the LLM list/read/save/delete memories during a normal session,
+  // AND what makes the end-of-session auto-dream consolidation work — its
+  // tool-call loop pulls these from the registry, so without them every dream
+  // run bailed with "missing memory tools". Save/Delete in the user scope stay
+  // permission-gated (the tools declare permissionDefault: "ask"); dream-scope
+  // writes go through freely.
+  "MemoryList",
+  "MemoryRead",
+  "MemorySave",
+  "MemoryDelete",
 ] as const;
 
 const TERMINAL_CODING_EXTRA_TOOLS = [
@@ -96,6 +107,10 @@ const GENERAL_PERMISSION_RULES: PermissionRule[] = [
   { tool: "Skill", decision: "allow" },
   { tool: "ListMcpResources", decision: "allow" },
   { tool: "ReadMcpResource", decision: "allow" },
+  // Reading memory is always safe; writes (MemorySave/MemoryDelete) stay gated
+  // by the tools' own permissionDefault so the user confirms each change.
+  { tool: "MemoryList", decision: "allow" },
+  { tool: "MemoryRead", decision: "allow" },
 ];
 
 // ─── Preset definitions ──────────────────────────────────────────
