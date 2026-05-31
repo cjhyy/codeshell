@@ -87,6 +87,7 @@ import { capabilitiesFor } from "../llm/capabilities/index.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
 import type { ContentBlock } from "../types.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
+import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -1605,131 +1606,20 @@ export class Engine {
     llmClient: Awaited<ReturnType<typeof createLLMClient>>;
     sessionId: string;
   }): Promise<boolean> {
-    const MAX_TURNS = 8;
-    const MAX_WRITES = 10;
-    const MEMORY_TOOL_NAMES = ["MemoryList", "MemoryRead", "MemorySave", "MemoryDelete"];
-
-    const memoryTools = MEMORY_TOOL_NAMES
-      .map((n) => this.toolRegistry.getTool(n))
-      .filter((t): t is NonNullable<typeof t> => t != null);
-    if (memoryTools.length < MEMORY_TOOL_NAMES.length) {
-      logger.warn("memory.auto_dream_missing_tools", {
-        sessionId: opts.sessionId,
-        found: memoryTools.map((t) => t.name),
-      });
-      return false;
-    }
-
-    // Strip RegisteredTool down to the shape createMessage expects.
-    const toolDefs = memoryTools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      inputSchema: t.inputSchema,
-    }));
-
-    const toolCtx: ToolContext = {
-      ...this.buildToolContext(),
-      cwd: opts.projectDir ?? process.cwd(),
-    };
-
-    const messages: Message[] = [{ role: "user", content: opts.userPrompt }];
-    let writeBudget = MAX_WRITES;
-
-    for (let turn = 0; turn < MAX_TURNS; turn++) {
-      const resp = await opts.llmClient.createMessage({
-        systemPrompt: opts.systemPrompt,
-        messages,
-        tools: toolDefs,
-        maxTokens: 2048,
-        recordUsage: false,
-        thinking: "disabled",
-      });
-
-      if (resp.toolCalls.length === 0) {
-        logger.info("memory.auto_dream_finished", {
-          sessionId: opts.sessionId,
-          turn,
-          finalText: resp.text.slice(0, 500),
-        });
-        return true;
-      }
-
-      // Echo the assistant turn back into the conversation so subsequent
-      // turns see the tool_use ids they need to reference.
-      const assistantContent: import("../types.js").ContentBlock[] = [];
-      if (resp.text) assistantContent.push({ type: "text", text: resp.text });
-      for (const tc of resp.toolCalls) {
-        assistantContent.push({
-          type: "tool_use",
-          id: tc.id,
-          name: tc.toolName,
-          input: tc.args,
-        });
-      }
-      messages.push({ role: "assistant", content: assistantContent });
-
-      // Dispatch every tool call requested in this turn.
-      const toolResults: import("../types.js").ContentBlock[] = [];
-      for (const tc of resp.toolCalls) {
-        const result = await this.dispatchDreamTool(tc, toolCtx, () => {
-          if (writeBudget <= 0) return false;
-          writeBudget--;
-          return true;
-        });
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: tc.id,
-          content: result,
-        });
-      }
-      messages.push({ role: "user", content: toolResults });
-    }
-
-    logger.warn("memory.auto_dream_hit_turn_cap", {
+    // The loop body now lives in services/dream-consolidation.ts so it can
+    // also be driven from the desktop host's manual "整理 / Dream" trigger.
+    // The orchestrator built systemPrompt/userPrompt from this engine's
+    // MemoryManager already; runDreamConsolidation rebuilds them from the same
+    // projectDir, so passing them here would be redundant — we just hand it the
+    // tool registry + a memory-scoped tool context.
+    const { ran } = await runDreamConsolidation({
+      llmClient: opts.llmClient,
+      toolRegistry: this.toolRegistry,
+      toolContext: this.buildToolContext(),
+      projectDir: opts.projectDir,
       sessionId: opts.sessionId,
-      maxTurns: MAX_TURNS,
     });
-    return true;
-  }
-
-  /**
-   * Execute one memory tool call inside the dream loop. Enforces the two
-   * dream-loop invariants the prompt also states:
-   *   - Only the 4 memory tools are dispatchable.
-   *   - Save/Delete in "user" scope is refused (returned as a tool error)
-   *     because dream runs without an interactive permission backend.
-   */
-  private async dispatchDreamTool(
-    tc: import("../types.js").ToolCall,
-    ctx: import("../tool-system/context.js").ToolContext,
-    consumeWriteBudget: () => boolean,
-  ): Promise<string> {
-    const allowed = new Set(["MemoryList", "MemoryRead", "MemorySave", "MemoryDelete"]);
-    if (!allowed.has(tc.toolName)) {
-      return `Error: tool "${tc.toolName}" is not available in the dream loop`;
-    }
-
-    const isWrite = tc.toolName === "MemorySave" || tc.toolName === "MemoryDelete";
-    if (isWrite) {
-      const scope = tc.args?.scope;
-      if (scope !== "dream") {
-        return (
-          `Error: dream loop may only write to scope "dream", got "${scope}". ` +
-          `User-scope changes require interactive permission, which is not available here.`
-        );
-      }
-      if (!consumeWriteBudget()) {
-        return "Error: dream write budget exhausted — stop calling write tools and summarize instead.";
-      }
-    }
-
-    try {
-      const result = await this.toolRegistry.executeTool(tc.toolName, tc.args, { ctx });
-      if (result.isError) return result.error ?? `Error executing ${tc.toolName}`;
-      return result.result ?? "";
-    } catch (err) {
-      return `Error executing ${tc.toolName}: ${(err as Error).message}`;
-    }
+    return ran;
   }
 
   getToolRegistry(): ToolRegistry {

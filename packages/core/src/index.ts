@@ -138,6 +138,11 @@ export { SessionManager } from "./session/session-manager.js";
 export { FileHistory } from "./session/file-history.js";
 export { MemoryManager } from "./session/memory.js";
 export type { MemoryEntry, MemoryScope } from "./session/memory.js";
+export {
+  runDreamConsolidation,
+  type DreamConsolidationInput,
+  type DreamConsolidationResult,
+} from "./services/dream-consolidation.js";
 export type { FileSnapshot } from "./session/file-history.js";
 
 // ─── Prompt ──────────────────────────────────────────────────────
