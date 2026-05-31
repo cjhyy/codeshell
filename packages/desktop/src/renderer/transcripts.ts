@@ -50,6 +50,9 @@ export interface SessionSummary {
   source?: "automation";
   /** RunStore run id, when source === "automation" — used for unified delete. */
   runId?: string;
+  /** Run status at import time (e.g. "running" | "completed"). Lets the
+   *  backfill dedup re-import a still-running import once it completes. */
+  runStatus?: string;
 }
 
 export interface SessionIndex {

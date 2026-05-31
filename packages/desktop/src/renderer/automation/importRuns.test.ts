@@ -20,12 +20,12 @@ function run(over: Partial<ImportableRun>): ImportableRun {
 }
 
 function deps(over: Partial<ImportDeps> = {}): { d: ImportDeps; imported: Array<{ repoId: string | null; sessionId: string }> } {
-  const imported: Array<{ repoId: string | null; sessionId: string }> = [];
+  const imported: Array<{ repoId: string | null; sessionId: string; runStatus?: string }> = [];
   const d: ImportDeps = {
     caseInsensitive: false,
     existingEngineSessionIds: new Set<string>(),
     fetchTranscript: async (): Promise<FoldItem[]> => [{ kind: "user", text: "hi" }],
-    writeImported: (repoId, summary, _state) => { imported.push({ repoId, sessionId: summary.id }); },
+    writeImported: (repoId, summary, _state) => { imported.push({ repoId, sessionId: summary.id, runStatus: summary.runStatus }); },
     createRepoForCwd: () => "auto-repo",
     cap: 50,
     ...over,
@@ -47,14 +47,31 @@ describe("importAutomationRuns", () => {
     expect(imported).toHaveLength(0);
   });
 
-  it("skips non-terminal or session-less runs", async () => {
+  it("skips only session-less runs (running-with-sessionId now imports)", async () => {
     const { d, imported } = deps();
     await importAutomationRuns(
-      [run({ status: "running" }), run({ runId: "r2", sessionId: null })],
+      [run({ runId: "r2", sessionId: null, status: "queued", finishedAt: null })],
       repos,
       d,
     );
     expect(imported).toHaveLength(0);
+  });
+
+  it("imports a running automation run (no terminal filter) and carries runStatus", async () => {
+    const { d, imported } = deps();
+    await importAutomationRuns(
+      [run({ runId: "live", sessionId: "sess-live", status: "running", finishedAt: null })],
+      repos,
+      d,
+    );
+    expect(imported).toHaveLength(1);
+    expect(imported[0].runStatus).toBe("running");
+  });
+
+  it("carries terminal runStatus too", async () => {
+    const { d, imported } = deps();
+    await importAutomationRuns([run({ status: "completed" })], repos, d);
+    expect(imported[0].runStatus).toBe("completed");
   });
 
   it("dedups against already-known engineSessionIds", async () => {

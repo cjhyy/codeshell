@@ -40,18 +40,18 @@ export interface ImportDeps {
   cap: number;
 }
 
-const TERMINAL = new Set(["completed", "failed", "cancelled"]);
-
 export async function importAutomationRuns(
   runs: ImportableRun[],
   repos: RepoLike[],
   deps: ImportDeps,
 ): Promise<void> {
-  // 1. Filter: automation-sourced, terminal, has a sessionId, not already known.
+  // 1. Filter: automation-sourced, has a sessionId, not already known.
+  //    No terminal-status filter — a running run already has a sessionId once
+  //    the engine emits session_started, and we want it in the sidebar live.
+  //    (queued runs without a sessionId are excluded by the !!r.sessionId guard.)
   const candidates = runs.filter(
     (r) =>
       r.source === "automation" &&
-      TERMINAL.has(r.status) &&
       !!r.sessionId &&
       !deps.existingEngineSessionIds.has(r.sessionId),
   );
@@ -78,7 +78,9 @@ export async function importAutomationRuns(
 
   // 3. Per repo: most-recent first, cap, fetch+fold+write.
   for (const [repoId, list] of byRepo) {
-    list.sort((a, b) => (b.finishedAt ?? 0) - (a.finishedAt ?? 0));
+    list.sort(
+      (a, b) => (b.finishedAt ?? b.createdAt) - (a.finishedAt ?? a.createdAt),
+    );
     for (const r of list.slice(0, deps.cap)) {
       let state: MessagesReducerState;
       try {
@@ -94,6 +96,7 @@ export async function importAutomationRuns(
         engineSessionId: r.sessionId as string,
         source: "automation",
         runId: r.runId,
+        runStatus: r.status,
       };
       deps.writeImported(repoId, summary, state);
     }
