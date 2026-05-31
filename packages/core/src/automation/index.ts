@@ -73,7 +73,7 @@ export {
   nextCronTime,
   type ParsedCron,
 } from "./cron-expr.js";
-export type { CronPermissionLevel, CreateJobOptions } from "./scheduler.js";
+export type { CronPermissionLevel, CreateJobOptions, UpdateJobPatch } from "./scheduler.js";
 export {
   resolveWritePolicy,
   wrapUntrustedInput,

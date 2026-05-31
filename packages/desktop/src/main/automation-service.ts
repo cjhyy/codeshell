@@ -90,6 +90,7 @@ export function getAutomation(id: string): AutomationSummary | null {
 
 export function createAutomation(input: CreateAutomationInput): AutomationSummary {
   const s = requireScheduler();
+  syncFromStore();
   const job = s.create(input.name, input.schedule, input.prompt, {
     ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
     ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
@@ -108,24 +109,33 @@ export interface UpdateAutomationInput {
 }
 
 export function updateAutomation(id: string, patch: UpdateAutomationInput): AutomationSummary | null {
-  const job = requireScheduler().update(id, patch);
+  const s = requireScheduler();
+  syncFromStore();
+  const job = s.update(id, patch);
   return job ? toSummary(job) : null;
 }
 
 export function deleteAutomation(id: string): boolean {
-  return requireScheduler().delete(id);
+  const s = requireScheduler();
+  syncFromStore();
+  return s.delete(id);
 }
 
 export function pauseAutomation(id: string): boolean {
-  return requireScheduler().pause(id);
+  const s = requireScheduler();
+  syncFromStore();
+  return s.pause(id);
 }
 
 export function resumeAutomation(id: string): boolean {
-  return requireScheduler().resume(id);
+  const s = requireScheduler();
+  syncFromStore();
+  return s.resume(id);
 }
 
 /** Fire a job immediately (out of band of its schedule). Returns false if unknown. */
 export function runAutomationNow(id: string): boolean {
   const s = requireScheduler();
+  syncFromStore();
   return s.runNow(id);
 }

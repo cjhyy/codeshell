@@ -6,13 +6,10 @@
  * same atomic tmp+rename write as FileRunStore so a crash mid-write can't
  * truncate the file and lose every job.
  *
- * Concurrency model (v1): single-process. The snapshot is read-modify-write,
- * so two processes mutating cron jobs simultaneously is a lost-update risk.
- * codeshell runs the scheduler in one process (the REPL/daemon), so this is
- * acceptable for v1 — but it is NOT safe for concurrent writers. A future
- * version that needs multi-process safety should switch to a JSONL event log
- * (append + replay) or a file lock. Documented here and in the plan so the
- * limitation is explicit rather than a silent footgun.
+ * Cross-process writes are serialized with a directory lock. Hosts that need
+ * read-modify-write behavior should use mutate() so load + save happen under
+ * the same lock and one process cannot overwrite another process's new job
+ * with a stale in-memory snapshot.
  */
 
 import { mkdirSync, existsSync, readFileSync, writeFileSync, renameSync, rmSync } from "node:fs";
@@ -20,6 +17,7 @@ import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import type { CronJob } from "./scheduler.js";
 import { logger } from "../logging/logger.js";
+import { lockSync } from "../utils/lockfile.js";
 
 interface CronSnapshot {
   version: 1;
@@ -40,6 +38,39 @@ export class CronStore {
 
   /** Load all persisted jobs. Returns [] when absent or unreadable. */
   load(): CronJob[] {
+    return this.loadUnlocked();
+  }
+
+  /**
+   * Atomically load, mutate, and save jobs under the store lock. This is the
+   * safe path for create/update/delete/pause/resume across the desktop main
+   * process and the agent worker process.
+   */
+  mutate<T>(
+    fn: (jobs: CronJob[]) => { jobs: CronJob[]; result: T },
+  ): { jobs: CronJob[]; result: T } {
+    const release = this.acquireStoreLock();
+    try {
+      const current = this.loadUnlocked();
+      const next = fn(current);
+      this.saveUnlocked(next.jobs);
+      return next;
+    } finally {
+      release();
+    }
+  }
+
+  /** Persist the full job set. Atomic: stage to .tmp, then rename. */
+  save(jobs: CronJob[]): void {
+    const release = this.acquireStoreLock();
+    try {
+      this.saveUnlocked(jobs);
+    } finally {
+      release();
+    }
+  }
+
+  private loadUnlocked(): CronJob[] {
     if (!existsSync(this.file)) return [];
     try {
       const raw = readFileSync(this.file, "utf-8");
@@ -57,8 +88,7 @@ export class CronStore {
     }
   }
 
-  /** Persist the full job set. Atomic: stage to .tmp, then rename. */
-  save(jobs: CronJob[]): void {
+  private saveUnlocked(jobs: CronJob[]): void {
     const dir = dirname(this.file);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
@@ -73,4 +103,28 @@ export class CronStore {
       throw err;
     }
   }
+
+  private acquireStoreLock(): () => void {
+    const dir = dirname(this.file);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const deadline = Date.now() + 1_000;
+    let lastError: unknown;
+    while (Date.now() <= deadline) {
+      try {
+        return lockSync(dir, {
+          stale: 10_000,
+          retries: 0,
+        });
+      } catch (err) {
+        lastError = err;
+        sleepSync(10);
+      }
+    }
+    throw lastError;
+  }
+}
+
+function sleepSync(ms: number): void {
+  const signal = new Int32Array(new SharedArrayBuffer(4));
+  Atomics.wait(signal, 0, 0, ms);
 }

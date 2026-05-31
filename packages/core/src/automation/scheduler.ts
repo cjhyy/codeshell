@@ -113,8 +113,11 @@ export class CronScheduler {
    */
   loadJobs(opts?: { arm?: boolean }): void {
     if (!this.store) return;
+    this.reconcileJobs(this.store.load(), opts);
+  }
+
+  private reconcileJobs(persisted: CronJob[], opts?: { arm?: boolean }): void {
     const arm = opts?.arm ?? true;
-    const persisted = this.store.load();
     const onDisk = new Map(persisted.map((j) => [j.id, j]));
 
     // 1. Drop in-memory jobs that no longer exist on disk (deleted elsewhere).
@@ -149,6 +152,15 @@ export class CronScheduler {
     this.nextId = Math.max(this.nextId, maxId + 1);
   }
 
+  private nextPersistedId(jobs: CronJob[]): string {
+    let maxId = 0;
+    for (const job of jobs) {
+      const n = parseInt(job.id, 10);
+      if (Number.isFinite(n) && n > maxId) maxId = n;
+    }
+    return String(Math.max(this.nextId, maxId + 1));
+  }
+
   /** Recompute nextRun without arming a timer (for display in disabled/no-arm hosts). */
   private refreshNextRunForDisplay(job: CronJob): void {
     if (isCronExpression(job.schedule)) {
@@ -173,10 +185,56 @@ export class CronScheduler {
     }
   }
 
+  private persistRunStats(job: CronJob): void {
+    if (!this.store) {
+      this.persist();
+      return;
+    }
+    try {
+      this.store.mutate((jobs) => {
+        const idx = jobs.findIndex((j) => j.id === job.id);
+        if (idx === -1) return { jobs, result: null };
+        const next = [...jobs];
+        next[idx] = {
+          ...next[idx],
+          lastRun: job.lastRun,
+          nextRun: job.nextRun,
+          runCount: job.runCount,
+          ...(job.lastRunId !== undefined ? { lastRunId: job.lastRunId } : {}),
+        };
+        return { jobs: next, result: null };
+      });
+    } catch {
+      // Persistence is best-effort; missed UI metadata must not stop scheduling.
+    }
+  }
+
   create(name: string, schedule: string, prompt: string, opts?: CreateJobOptions): CronJob {
     // Validate the schedule up front (interval or cron expr) so a bad string
     // surfaces at create time, not silently at the first missed tick.
     validateSchedule(schedule, opts?.timezone);
+
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        const id = this.nextPersistedId(jobs);
+        const job: CronJob = {
+          id,
+          name,
+          schedule,
+          prompt,
+          enabled: true,
+          runCount: 0,
+          createdAt: Date.now(),
+          ...(opts?.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
+          ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
+        };
+        this.refreshNextRunForDisplay(job);
+        return { jobs: [...jobs, job], result: job };
+      });
+      this.reconcileJobs(tx.jobs);
+      return this.jobs.get(tx.result.id) ?? tx.result;
+    }
 
     const id = String(this.nextId++);
     const job: CronJob = {
@@ -199,6 +257,15 @@ export class CronScheduler {
   }
 
   delete(id: string): boolean {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        const next = jobs.filter((j) => j.id !== id);
+        return { jobs: next, result: next.length !== jobs.length };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result;
+    }
+
     this.clearTimer(id);
     const deleted = this.jobs.delete(id);
     if (deleted) this.persist();
@@ -214,6 +281,20 @@ export class CronScheduler {
   }
 
   pause(id: string): boolean {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        let changed = false;
+        const next = jobs.map((j) => {
+          if (j.id !== id) return j;
+          changed = true;
+          return { ...j, enabled: false };
+        });
+        return { jobs: next, result: changed };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result;
+    }
+
     const job = this.jobs.get(id);
     if (!job) return false;
     job.enabled = false;
@@ -223,6 +304,22 @@ export class CronScheduler {
   }
 
   resume(id: string): boolean {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        let changed = false;
+        const next = jobs.map((j) => {
+          if (j.id !== id) return j;
+          changed = true;
+          const job = { ...j, enabled: true };
+          this.refreshNextRunForDisplay(job);
+          return job;
+        });
+        return { jobs: next, result: changed };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result;
+    }
+
     const job = this.jobs.get(id);
     if (!job) return false;
     job.enabled = true;
@@ -240,6 +337,35 @@ export class CronScheduler {
    * or null if the id is unknown.
    */
   update(id: string, patch: UpdateJobPatch): CronJob | null {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        let updated: CronJob | null = null;
+        const next = jobs.map((j) => {
+          if (j.id !== id) return j;
+          const job = { ...j };
+
+          const nextSchedule = patch.schedule ?? job.schedule;
+          const nextTimezone = patch.timezone ?? job.timezone;
+          if (patch.schedule !== undefined || patch.timezone !== undefined) {
+            validateSchedule(nextSchedule, nextTimezone);
+          }
+
+          if (patch.name !== undefined) job.name = patch.name;
+          if (patch.prompt !== undefined) job.prompt = patch.prompt;
+          if (patch.schedule !== undefined) job.schedule = patch.schedule;
+          if (patch.timezone !== undefined) job.timezone = patch.timezone;
+          if (patch.cwd !== undefined) job.cwd = patch.cwd;
+          if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
+          this.refreshNextRunForDisplay(job);
+          updated = job;
+          return job;
+        });
+        return { jobs: next, result: updated };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result ? this.jobs.get(id) ?? tx.result : null;
+    }
+
     const job = this.jobs.get(id);
     if (!job) return null;
 
@@ -364,12 +490,16 @@ export class CronScheduler {
     job.runCount++;
     afterStats();
     // Persist updated run stats so runCount/lastRun/nextRun survive a restart.
-    this.persist();
+    this.persistRunStats(job);
     try {
       await this.onExecute?.(job);
     } catch {
       // Job execution failed — continue scheduling.
     } finally {
+      // The executor may have recorded lastRunId on the job. Persist only run
+      // metadata so an old in-flight job cannot overwrite an edited prompt or
+      // schedule with its stale copy.
+      this.persistRunStats(job);
       this.running.delete(job.id);
     }
   }
