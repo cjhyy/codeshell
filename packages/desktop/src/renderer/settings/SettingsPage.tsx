@@ -157,9 +157,9 @@ export function SettingsPage({
   return (
     <div className="h-full">
       <div className="flex h-full">
-        <nav className="w-56 shrink-0 overflow-y-auto border-r border-border p-3">
+        <nav className="w-60 shrink-0 overflow-y-auto border-r border-border px-4 pb-4 pt-8">
           <button
-            className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            className="mb-5 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
             onClick={onBack}
           >
             <ArrowLeft size={14} />
@@ -189,7 +189,7 @@ export function SettingsPage({
           ))}
         </nav>
 
-        <main className="min-w-0 flex-1 overflow-y-auto p-6">
+        <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-6 pt-8">
           <div className="mb-4">
             <h2 className="text-lg font-semibold tracking-tight">
               {MODULES.find((m) => m.id === active)?.label}
@@ -222,10 +222,9 @@ export function SettingsPage({
               <McpSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
             {active === "hooks" && (
-              // Hooks are project-scoped only — pass the fixed project scope
-              // regardless of the page's user scope. HooksSection renders an
-              // empty, read-only list when no project is open.
-              <HooksSection scope="project" activeRepoPath={activeRepoPath} />
+              // Hooks are project-scoped only — the section shows a project
+              // list first, then drills into the chosen project's hooks.
+              <HooksSection repos={repos} />
             )}
             {active === "connections" && (
               <ConnectionsSection scope={scope} activeRepoPath={activeRepoPath} />
@@ -261,7 +260,9 @@ export function SettingsPage({
               <AgentsSection activeRepoPath={activeRepoPath} />
             )}
             {active === "memory" && (
-              <MemorySection scope={scope} activeRepoPath={activeRepoPath} />
+              // Memory: pick a store first (global, or a project), then view
+              // that store's entries. Reuses the sidebar `repos` list.
+              <MemorySection scope={scope} activeRepoPath={activeRepoPath} repos={repos} />
             )}
             {active === "archived" && (
               <ArchivedConversationsSection
