@@ -4,7 +4,7 @@
  * core imports in renderer source explicitly allows `import type`).
  */
 
-import type { StreamEvent, ApprovalRequest } from "@cjhyy/code-shell-core";
+import type { StreamEvent, ApprovalRequest, CapabilityDescriptor } from "@cjhyy/code-shell-core";
 
 /**
  * The wire envelope the agent server sends for tool approvals. The
@@ -249,6 +249,13 @@ export interface CodeshellApi {
   getRun(runId: string): Promise<RunDetail | null>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
+  /**
+   * Unified capability view (builtin tools + MCP servers + skills + plugins)
+   * via the core CapabilityService. Never throws — returns [] on error.
+   */
+  listCapabilities(cwd: string): Promise<CapabilityDescriptor[]>;
+  /** Toggle one capability on/off; routes the write to the right settings key. */
+  setCapabilityEnabled(cwd: string, id: string, on: boolean): Promise<void>;
   uninstallPlugin(
     pluginName: string,
     marketplaceName: string,

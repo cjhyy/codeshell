@@ -232,6 +232,10 @@ contextBridge.exposeInMainWorld("codeshell", {
   searchFiles: (cwd: string, query: string) =>
     ipcRenderer.invoke("files:search", cwd, query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
+  listCapabilities: (cwd: string) =>
+    ipcRenderer.invoke("capabilities:list", cwd),
+  setCapabilityEnabled: (cwd: string, id: string, on: boolean) =>
+    ipcRenderer.invoke("capabilities:setEnabled", cwd, id, on),
   uninstallPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
   listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
