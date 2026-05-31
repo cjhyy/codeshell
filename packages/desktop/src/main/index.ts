@@ -11,8 +11,13 @@ import {
   fetchModelList,
   PROVIDER_KINDS,
   type ProviderKindName,
+  startAutomation,
+  CronStore,
+  defaultCronStorePath,
+  type AutomationHandle,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
+import { buildDesktopAutomationRunner } from "./automation-host.js";
 import { dlog } from "./desktop-logger.js";
 import {
   getGitStatus,
@@ -107,6 +112,7 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
  */
 let bridge: AgentBridge | null = null;
 let cspInstalled = false;
+let automationHandle: AutomationHandle | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   const ws = await loadWindowState();
@@ -253,6 +259,19 @@ app.whenReady().then(() => {
   }
   void createWindow();
   initUpdater();
+
+  // Automation: load the in-process scheduler (read-only jobs). Persisted
+  // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
+  // lifecycle by design (docs/automation-plan-2026-05-31.md, D2).
+  try {
+    automationHandle = startAutomation({
+      store: new CronStore(defaultCronStorePath()),
+      runner: buildDesktopAutomationRunner(),
+    });
+  } catch (err) {
+    // Automation is non-critical to the GUI — never block startup on it.
+    console.error("automation: failed to start", err);
+  }
 
   // Defer initial sweep so the renderer has a chance to push current
   // git prefs via `git:setPrefs` first. Subsequent sweeps run hourly.
@@ -702,6 +721,8 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
   bridge?.kill();
+  automationHandle?.stop();
+  automationHandle = null;
 });
 
 app.on("activate", () => {
