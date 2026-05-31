@@ -1,0 +1,104 @@
+/**
+ * Automation service — bridges the renderer's automation UI to the live
+ * in-process CronScheduler held by main. Main injects the scheduler via
+ * setAutomationScheduler() once startAutomation() has run; the IPC handlers
+ * call into it for list/create/delete/pause/resume/run-now.
+ *
+ * Returns plain serializable summaries (no class instances cross IPC).
+ */
+
+import type { CronScheduler, CronJob, CronPermissionLevel } from "@cjhyy/code-shell-core";
+
+export interface AutomationSummary {
+  id: string;
+  name: string;
+  schedule: string;
+  prompt: string;
+  enabled: boolean;
+  cwd: string | null;
+  timezone: string | null;
+  permissionLevel: CronPermissionLevel | null;
+  lastRun: number | null;
+  nextRun: number | null;
+  runCount: number;
+  createdAt: number;
+  lastRunId: string | null;
+}
+
+export interface CreateAutomationInput {
+  name: string;
+  schedule: string;
+  prompt: string;
+  cwd?: string;
+  timezone?: string;
+  permissionLevel?: CronPermissionLevel;
+}
+
+let scheduler: CronScheduler | null = null;
+
+/** Injected by main after startAutomation(). */
+export function setAutomationScheduler(s: CronScheduler | null): void {
+  scheduler = s;
+}
+
+function toSummary(job: CronJob): AutomationSummary {
+  return {
+    id: job.id,
+    name: job.name,
+    schedule: job.schedule,
+    prompt: job.prompt,
+    enabled: job.enabled,
+    cwd: job.cwd ?? null,
+    timezone: job.timezone ?? null,
+    permissionLevel: job.permissionLevel ?? null,
+    lastRun: job.lastRun ?? null,
+    nextRun: job.nextRun ?? null,
+    runCount: job.runCount,
+    createdAt: job.createdAt,
+    lastRunId: job.lastRunId ?? null,
+  };
+}
+
+function requireScheduler(): CronScheduler {
+  if (!scheduler) throw new Error("automation scheduler not initialized");
+  return scheduler;
+}
+
+export function listAutomations(): AutomationSummary[] {
+  if (!scheduler) return [];
+  return scheduler.list().map(toSummary);
+}
+
+export function getAutomation(id: string): AutomationSummary | null {
+  if (!scheduler) return null;
+  const job = scheduler.get(id);
+  return job ? toSummary(job) : null;
+}
+
+export function createAutomation(input: CreateAutomationInput): AutomationSummary {
+  const s = requireScheduler();
+  const job = s.create(input.name, input.schedule, input.prompt, {
+    ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
+    ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+    ...(input.permissionLevel !== undefined ? { permissionLevel: input.permissionLevel } : {}),
+  });
+  return toSummary(job);
+}
+
+export function deleteAutomation(id: string): boolean {
+  return requireScheduler().delete(id);
+}
+
+export function pauseAutomation(id: string): boolean {
+  return requireScheduler().pause(id);
+}
+
+export function resumeAutomation(id: string): boolean {
+  return requireScheduler().resume(id);
+}
+
+/** Fire a job immediately (out of band of its schedule). Returns false if unknown. */
+export function runAutomationNow(id: string): boolean {
+  const s = requireScheduler();
+  return s.runNow(id);
+}

@@ -52,6 +52,7 @@ import { LogsView } from "./logs/LogsView";
 // Full-page Settings — driven by viewMode === 'settings_page'.
 import { SettingsPage } from "./settings/SettingsPage";
 import { RunsView } from "./runs/RunsView";
+import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
@@ -1081,7 +1082,7 @@ function App() {
           onNewConversationForRepo={handleNewConversationForRepo}
           onNewConversation={handleNewConversation}
           onOpenSearch={() => setSessionSearchOpen(true)}
-          onOpenAutomations={() => setViewMode("runs")}
+          onOpenAutomations={() => setViewMode("automation")}
           onOpenCustomize={() => setViewMode("customize")}
           onOpenSettingsPage={() => setViewMode("settings_page")}
           onRenameSession={handleRenameSession}
@@ -1107,6 +1108,8 @@ function App() {
           <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
         ) : view.viewMode === "runs" ? (
           <RunsView />
+        ) : view.viewMode === "automation" ? (
+          <AutomationView />
         ) : (
           <>
             <ChatView

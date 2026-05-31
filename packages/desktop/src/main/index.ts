@@ -14,10 +14,22 @@ import {
   startAutomation,
   CronStore,
   defaultCronStorePath,
+  agentNotificationBus,
   type AutomationHandle,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
 import { buildDesktopRunManager } from "./automation-host.js";
+import {
+  setAutomationScheduler,
+  listAutomations,
+  getAutomation,
+  createAutomation,
+  deleteAutomation,
+  pauseAutomation,
+  resumeAutomation,
+  runAutomationNow,
+  type CreateAutomationInput,
+} from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
 import {
   getGitStatus,
@@ -269,6 +281,23 @@ app.whenReady().then(() => {
       // Phase 2: jobs run through a read-only RunManager so each execution
       // lands in the RunStore and shows in the runs UI with full history.
       runManager: buildDesktopRunManager(),
+    });
+    // Expose the live scheduler to the automation IPC service (Phase 3 UI).
+    setAutomationScheduler(automationHandle.scheduler);
+
+    // Surface background-agent completions (incl. automation runs) as desktop
+    // notifications when the app isn't focused, so unattended jobs are visible.
+    agentNotificationBus.subscribe((_sessionId, event) => {
+      try {
+        if (BrowserWindow.getFocusedWindow()) return; // user is watching; skip
+        const ok = event.status === "completed";
+        new Notification({
+          title: ok ? "自动化任务完成" : "自动化任务失败",
+          body: event.description?.slice(0, 120) ?? "",
+        }).show();
+      } catch {
+        // Notifications are best-effort.
+      }
     });
   } catch (err) {
     // Automation is non-critical to the GUI — never block startup on it.
@@ -687,6 +716,35 @@ ipcMain.handle("runs:list", async () => listRuns());
 ipcMain.handle("runs:get", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");
   return getRun(runId);
+});
+
+// ─── Automation (Phase 3 UI) ─────────────────────────────────────
+ipcMain.handle("automation:list", async () => listAutomations());
+ipcMain.handle("automation:get", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("id required");
+  return getAutomation(id);
+});
+ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => {
+  if (!input || typeof input.name !== "string" || typeof input.schedule !== "string" || typeof input.prompt !== "string") {
+    throw new Error("name, schedule and prompt are required");
+  }
+  return createAutomation(input);
+});
+ipcMain.handle("automation:delete", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("id required");
+  return deleteAutomation(id);
+});
+ipcMain.handle("automation:pause", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("id required");
+  return pauseAutomation(id);
+});
+ipcMain.handle("automation:resume", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("id required");
+  return resumeAutomation(id);
+});
+ipcMain.handle("automation:runNow", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("id required");
+  return runAutomationNow(id);
 });
 
 ipcMain.handle("trust:get", async (_e, p: string) => {
