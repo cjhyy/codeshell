@@ -96,36 +96,28 @@ export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Pr
     });
   };
 
+  const tabBtn = (key: TabKey, label: string) => (
+    <button
+      className={
+        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+        (tab === key ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60")
+      }
+      onClick={() => setTab(key)}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <div className="ext-manage">
-      <div className="ext-tabbar">
-        <button
-          className={tab === "plugins" ? "active" : ""}
-          onClick={() => setTab("plugins")}
-        >
-          插件
-        </button>
-        <button
-          className={tab === "skills" ? "active" : ""}
-          onClick={() => setTab("skills")}
-        >
-          技能
-        </button>
-        <button
-          className={tab === "mcp" ? "active" : ""}
-          onClick={() => setTab("mcp")}
-        >
-          MCP
-        </button>
-        <button
-          className={tab === "market" ? "active" : ""}
-          onClick={() => setTab("market")}
-        >
-          市场
-        </button>
+    <div>
+      <div className="mb-4 flex items-center gap-1">
+        {tabBtn("plugins", "插件")}
+        {tabBtn("skills", "技能")}
+        {tabBtn("mcp", "MCP")}
+        {tabBtn("market", "市场")}
         {tab !== "mcp" && tab !== "market" && (
           <input
-            className="ext-search"
+            className="ml-2 h-8 flex-1 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             placeholder="搜索"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

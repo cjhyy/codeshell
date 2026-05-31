@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { MarketDetail } from "./MarketDetail";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   cwd: string;
@@ -81,15 +83,16 @@ export function MarketList({ cwd, onInstalled }: Props) {
 
   if (error)
     return (
-      <div className="customize-empty">
-        加载失败：{error} <button onClick={retry}>重试</button>
+      <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+        加载失败：{error} <Button size="sm" variant="outline" onClick={retry}>重试</Button>
       </div>
     );
-  if (markets === null) return <div className="customize-empty">加载中…</div>;
+  if (markets === null) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
 
   const addForm = (
-    <div className="ext-add-market">
-      <input
+    <div className="mb-3 flex items-center gap-2">
+      <Input
+        className="h-8 max-w-xs"
         placeholder="owner/repo 或 git URL"
         value={input}
         onChange={(e) => {
@@ -101,14 +104,14 @@ export function MarketList({ cwd, onInstalled }: Props) {
         }}
         disabled={adding}
       />
-      <button
-        className="ext-row-action"
+      <Button
+        size="sm"
         disabled={adding || input.trim().length === 0}
         onClick={() => void add()}
       >
         {adding ? "添加中…" : "添加"}
-      </button>
-      {addError && <span className="ext-add-error">{addError}</span>}
+      </Button>
+      {addError && <span className="text-xs text-status-err">{addError}</span>}
     </div>
   );
 
@@ -116,32 +119,30 @@ export function MarketList({ cwd, onInstalled }: Props) {
     return (
       <>
         {addForm}
-        <div className="customize-empty">还没有添加任何市场</div>
+        <div className="p-4 text-sm text-muted-foreground">还没有添加任何市场</div>
       </>
     );
 
   return (
     <>
       {addForm}
-      <ul className="ext-list">
+      <ul className="space-y-1">
         {markets.map((m) => (
           <li
             key={m.name}
-            className="ext-row"
+            className="flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm hover:bg-accent"
             onClick={() => setSelected(m.name)}
           >
-            <span className="ext-row-icon">🛒</span>
-            <div className="ext-row-main">
-              <span className="ext-row-name">{m.name}</span>
-              <span className="ext-row-desc">
-                {m.pluginCount >= 0
-                  ? `${m.pluginCount} 个可安装插件`
-                  : "清单无效"}
-              </span>
+            <span className="text-lg">🛒</span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium">{m.name}</div>
+              <div className="truncate text-xs text-muted-foreground">
+                {m.pluginCount >= 0 ? `${m.pluginCount} 个可安装插件` : "清单无效"}
+              </div>
             </div>
-            <span className="ext-row-source">{m.source.source}</span>
+            <span className="text-xs text-muted-foreground">{m.source.source}</span>
             <button
-              className="ext-row-kebab"
+              className="px-1 text-muted-foreground hover:text-foreground"
               title="移除市场"
               onClick={(e) => {
                 e.stopPropagation();
@@ -150,7 +151,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
             >
               ⋯
             </button>
-            <span className="ext-row-chevron">›</span>
+            <span className="text-muted-foreground">›</span>
           </li>
         ))}
       </ul>

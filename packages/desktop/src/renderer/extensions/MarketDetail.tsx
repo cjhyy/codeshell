@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   cwd: string;
@@ -79,52 +80,52 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
 
   if (error)
     return (
-      <div className="customize-empty">
-        加载失败：{error} <button onClick={retry}>重试</button>
+      <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+        加载失败：{error} <Button size="sm" variant="outline" onClick={retry}>重试</Button>
       </div>
     );
-  if (!loaded) return <div className="customize-empty">加载中…</div>;
+  if (!loaded) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
   if (market === null)
     return (
-      <div className="customize-empty">
-        市场清单读取失败 <button onClick={retry}>重试</button>
+      <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+        市场清单读取失败 <Button size="sm" variant="outline" onClick={retry}>重试</Button>
       </div>
     );
 
   return (
     <>
-      <div className="ext-detail-head">
-        <button className="ext-back" onClick={onBack}>
+      <div className="mb-3 flex items-center gap-2">
+        <button className="text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
           ‹ 返回
         </button>
-        <span className="ext-detail-title">{market.name}</span>
+        <span className="font-semibold">{market.name}</span>
       </div>
       {market.plugins.length === 0 ? (
-        <div className="customize-empty">该市场没有可安装的插件</div>
+        <div className="p-4 text-sm text-muted-foreground">该市场没有可安装的插件</div>
       ) : (
-        <ul className="ext-list">
+        <ul className="space-y-1">
           {market.plugins.map((p) => {
             const isBusy = busy.has(p.name);
             const isInstalled = installed.has(p.name);
             return (
-              <li key={p.name} className="ext-row">
-                <span className="ext-row-icon">🧩</span>
-                <div className="ext-row-main">
-                  <span className="ext-row-name">{p.name}</span>
-                  <span className="ext-row-desc">
+              <li key={p.name} className="flex items-center gap-3 rounded-md border p-3 text-sm">
+                <span className="text-lg">🧩</span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{p.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
                     {(p.description ?? "").split("\n")[0]}
-                  </span>
+                  </div>
                 </div>
-                <span className="ext-row-source">
+                <span className="text-xs text-muted-foreground">
                   {p.category ?? p.author ?? ""}
                 </span>
-                <button
-                  className="ext-row-action"
+                <Button
+                  size="sm"
                   disabled={isBusy || isInstalled}
                   onClick={() => void install(p.name)}
                 >
                   {isInstalled ? "已安装" : isBusy ? "安装中…" : "安装"}
-                </button>
+                </Button>
               </li>
             );
           })}
