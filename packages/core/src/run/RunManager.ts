@@ -446,6 +446,27 @@ export class RunManager {
         await checkpointWriter.onStreamEvent(event);
         await artifactTracker.onStreamEvent(event);
 
+        // Link the run's sessionId the moment the engine resolves it.
+        // session_started fires at run START (engine.ts:1081); without this,
+        // sessionId is only written at completion, so in-flight runs have
+        // sessionId=null on disk and never reach the sidebar import. Skip
+        // sub-agent sessions (they carry an agentId) — only the main run's
+        // session identifies the run.
+        if (
+          event.type === "session_started" &&
+          !(event as { agentId?: string }).agentId
+        ) {
+          const run = await this.getOrThrow(runId);
+          if (run.sessionId !== event.sessionId) {
+            run.sessionId = event.sessionId;
+            checkpointWriter.setSessionId(event.sessionId);
+            await this.store.update(run);
+            await this.emitRunEvent(runId, "session_linked", {
+              sessionId: event.sessionId,
+            });
+          }
+        }
+
         // Forward to run subscribers
         this.notifySubscribers(runId, { type: "engine_stream", event });
       },
