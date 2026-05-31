@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from "react";
 import type { AutomationSummary, AutomationPermissionLevel } from "../../preload/types";
-import { Select } from "../ui/Select";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const PERMISSION_OPTIONS = [
   { value: "read-only", label: "只读" },
@@ -8,8 +19,8 @@ const PERMISSION_OPTIONS = [
   { value: "full", label: "完全(可提 PR)" },
 ];
 
-// Common schedule presets (cron expressions / intervals). "custom" reveals an
-// inline input for anything not in the list.
+// Common schedule presets (cron expressions / intervals). "__custom__" reveals
+// an inline input for anything not in the list.
 const SCHEDULE_PRESETS = [
   { value: "0 9 * * 1-5", label: "工作日 9:00" },
   { value: "0 8 * * 1-5", label: "工作日 8:00" },
@@ -22,12 +33,12 @@ const SCHEDULE_PRESETS = [
 ];
 
 const TIMEZONE_OPTIONS = [
-  { value: "Asia/Shanghai", label: "Asia/Shanghai" },
-  { value: "UTC", label: "UTC" },
-  { value: "America/New_York", label: "America/New_York" },
-  { value: "America/Los_Angeles", label: "America/Los_Angeles" },
-  { value: "Europe/London", label: "Europe/London" },
-  { value: "Asia/Tokyo", label: "Asia/Tokyo" },
+  "Asia/Shanghai",
+  "UTC",
+  "America/New_York",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Asia/Tokyo",
 ];
 
 function fmtTime(ms: number | null): string {
@@ -66,45 +77,52 @@ export function AutomationView({ onCreateConversational }: { onCreateConversatio
 
   if (error) {
     return (
-      <div className="view-error">
+      <div className="flex flex-col items-start gap-3 p-6 text-sm text-status-err">
         {error}
-        <button onClick={() => { setError(null); void refresh(); }}>重试</button>
+        <Button variant="outline" size="sm" onClick={() => { setError(null); void refresh(); }}>
+          重试
+        </Button>
       </div>
     );
   }
-  if (!jobs) return <div className="view-loading">加载中…</div>;
+  if (!jobs) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
 
   return (
-    <div className="automation-view">
-      <div className="automation-toolbar">
-        <h2 className="automation-title">自动化</h2>
-        <button className="automation-new-btn" onClick={onCreateConversational}>
-          + 新建自动化
-        </button>
+    <div className="flex h-full flex-col gap-3 p-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold tracking-tight">自动化</h2>
+        <Button size="sm" onClick={onCreateConversational}>+ 新建自动化</Button>
       </div>
 
       {jobs.length === 0 ? (
-        <div className="automation-empty">
+        <div className="p-6 text-sm text-muted-foreground">
           还没有自动化任务。点击「新建自动化」,用对话告诉它你想定时做什么、何时运行 —— 不用填 cron 语法。
         </div>
       ) : (
-        <div className="automation-body">
-          <ul className="automation-list">
+        <div className="flex min-h-0 flex-1 gap-6">
+          <ul className="w-72 shrink-0 space-y-1 overflow-y-auto">
             {jobs.map((j) => (
               <li
                 key={j.id}
-                className={`automation-row${selected === j.id ? " selected" : ""}`}
                 onClick={() => setSelected(j.id)}
+                className={
+                  "flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm hover:bg-accent " +
+                  (selected === j.id ? "bg-accent ring-1 ring-border" : "")
+                }
               >
-                <span className={`automation-dot ${j.enabled ? "active" : "paused"}`} />
-                <span className="automation-row-name">{j.name}</span>
-                <span className="automation-row-sched">{j.schedule}</span>
-                <span className="automation-row-next">下次 {fmtTime(j.nextRun)}</span>
+                <span
+                  className={
+                    "h-2 w-2 shrink-0 rounded-full " +
+                    (j.enabled ? "bg-status-ok" : "bg-status-idle")
+                  }
+                />
+                <span className="flex-1 truncate font-medium">{j.name}</span>
+                <span className="font-mono text-xs text-muted-foreground">{j.schedule}</span>
               </li>
             ))}
           </ul>
 
-          <div className="automation-detail">
+          <div className="min-w-0 flex-1 overflow-y-auto">
             {detail ? (
               <AutomationDetail
                 job={detail}
@@ -120,11 +138,20 @@ export function AutomationView({ onCreateConversational }: { onCreateConversatio
                 onSave={(patch) => act(() => window.codeshell.updateAutomation(detail.id, patch))}
               />
             ) : (
-              <div className="automation-detail-empty">选择一个任务查看详情</div>
+              <div className="p-6 text-sm text-muted-foreground">选择一个任务查看详情</div>
             )}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-border py-2.5 text-sm last:border-b-0">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="flex items-center gap-2 font-medium">{children}</div>
     </div>
   );
 }
@@ -144,11 +171,9 @@ function AutomationDetail(props: {
 }) {
   const { job } = props;
 
-  // Prompt is long free text → edited via a button/textarea, not a dropdown.
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptDraft, setPromptDraft] = useState(job.prompt);
 
-  // Frequency "custom" mode reveals a free-form cron/interval input.
   const scheduleIsPreset = SCHEDULE_PRESETS.some(
     (p) => p.value === job.schedule && p.value !== "__custom__",
   );
@@ -169,37 +194,32 @@ function AutomationDetail(props: {
   };
 
   return (
-    <div className="automation-detail-card">
-      <div className="automation-detail-header">
-        <h3>{job.name}</h3>
-        <div className="automation-detail-actions">
-          {/* enable/disable as a switch toggle */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={job.enabled}
-            title={job.enabled ? "已启用 — 点击暂停" : "已暂停 — 点击启用"}
-            className={`settings-git-switch${job.enabled ? " on" : ""}`}
-            onClick={() => props.onToggleEnabled(!job.enabled)}
-          >
-            <span className="settings-git-switch-thumb" />
-          </button>
-          <button onClick={props.onRunNow}>立即运行</button>
-          <button className="danger" onClick={props.onDelete}>删除</button>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold tracking-tight">{job.name}</h3>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={job.enabled}
+            onCheckedChange={(v) => props.onToggleEnabled(v)}
+            aria-label={job.enabled ? "已启用" : "已暂停"}
+          />
+          <Button size="sm" onClick={props.onRunNow}>立即运行</Button>
+          <Button size="sm" variant="ghost" className="text-status-err" onClick={props.onDelete}>
+            删除
+          </Button>
         </div>
       </div>
 
       {/* Prompt — edit button reveals an inline textarea (long text). */}
       {editingPrompt ? (
-        <div className="automation-prompt-edit">
-          <textarea
-            value={promptDraft}
-            onChange={(e) => setPromptDraft(e.target.value)}
-            rows={5}
-          />
-          <div className="automation-detail-actions">
-            <button onClick={() => { setEditingPrompt(false); setPromptDraft(job.prompt); }}>取消</button>
-            <button
+        <div className="flex flex-col gap-2">
+          <Textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} rows={5} />
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" onClick={() => { setEditingPrompt(false); setPromptDraft(job.prompt); }}>
+              取消
+            </Button>
+            <Button
+              size="sm"
               disabled={!promptDraft.trim()}
               onClick={() => {
                 if (promptDraft.trim() !== job.prompt) props.onSave({ prompt: promptDraft.trim() });
@@ -207,84 +227,96 @@ function AutomationDetail(props: {
               }}
             >
               保存
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <div className="automation-prompt-row">
-          <pre className="automation-prompt">{job.prompt}</pre>
-          <button className="automation-prompt-edit-btn" onClick={() => setEditingPrompt(true)}>编辑</button>
+        <div className="flex items-start gap-2">
+          <pre className="flex-1 whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 text-sm leading-relaxed">
+            {job.prompt}
+          </pre>
+          <Button size="sm" variant="outline" onClick={() => setEditingPrompt(true)}>编辑</Button>
         </div>
       )}
 
-      {/* Everything else: inline dropdowns that apply immediately. */}
-      <dl className="automation-fields">
-        <dt>状态</dt><dd>{job.enabled ? "🟢 活跃" : "⏸ 已暂停"}</dd>
+      <div className="flex flex-col">
+        <FieldRow label="状态">
+          <Badge variant={job.enabled ? "secondary" : "outline"}>
+            {job.enabled ? "活跃" : "已暂停"}
+          </Badge>
+        </FieldRow>
 
-        <dt>频率</dt>
-        <dd>
-          <Select
-            size="sm"
-            ariaLabel="频率"
-            value={showCustomSchedule ? "__custom__" : job.schedule}
-            options={SCHEDULE_PRESETS}
-            onChange={(v) => {
-              if (v === "__custom__") {
-                setShowCustomSchedule(true);
-              } else {
-                setShowCustomSchedule(false);
-                if (v !== job.schedule) props.onSave({ schedule: v });
-              }
-            }}
-          />
-          {showCustomSchedule && (
-            <input
-              className="automation-inline-input"
-              value={customSchedule}
-              placeholder="0 9 * * 1-5 或 1h"
-              onChange={(e) => setCustomSchedule(e.target.value)}
-              onBlur={applyCustomSchedule}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") applyCustomSchedule();
+        <FieldRow label="频率">
+          <div className="flex items-center gap-2">
+            <Select
+              value={showCustomSchedule ? "__custom__" : job.schedule}
+              onValueChange={(v) => {
+                if (v === "__custom__") {
+                  setShowCustomSchedule(true);
+                } else {
+                  setShowCustomSchedule(false);
+                  if (v !== job.schedule) props.onSave({ schedule: v });
+                }
               }}
-            />
-          )}
-        </dd>
+            >
+              <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SCHEDULE_PRESETS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {showCustomSchedule && (
+              <Input
+                className="h-8 w-[160px] font-mono"
+                value={customSchedule}
+                placeholder="0 9 * * 1-5 或 1h"
+                onChange={(e) => setCustomSchedule(e.target.value)}
+                onBlur={applyCustomSchedule}
+                onKeyDown={(e) => { if (e.key === "Enter") applyCustomSchedule(); }}
+              />
+            )}
+          </div>
+        </FieldRow>
 
-        <dt>时区</dt>
-        <dd>
+        <FieldRow label="时区">
           <Select
-            size="sm"
-            ariaLabel="时区"
             value={job.timezone ?? "UTC"}
-            options={TIMEZONE_OPTIONS}
-            onChange={(v) => {
-              if (v !== job.timezone) props.onSave({ timezone: v });
-            }}
-          />
-        </dd>
+            onValueChange={(v) => { if (v !== job.timezone) props.onSave({ timezone: v }); }}
+          >
+            <SelectTrigger className="h-8 w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {TIMEZONE_OPTIONS.map((tz) => (
+                <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldRow>
 
-        <dt>权限</dt>
-        <dd>
+        <FieldRow label="权限">
           <Select
-            size="sm"
-            ariaLabel="权限"
             value={job.permissionLevel ?? "read-only"}
-            options={PERMISSION_OPTIONS}
-            onChange={(v) => {
+            onValueChange={(v) => {
               if (v !== (job.permissionLevel ?? "read-only")) {
                 props.onSave({ permissionLevel: v as AutomationPermissionLevel });
               }
             }}
-          />
-        </dd>
+          >
+            <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {PERMISSION_OPTIONS.map((p) => (
+                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldRow>
 
-        <dt>下次运行</dt><dd>{fmtTime(job.nextRun)}</dd>
-        <dt>上次运行</dt><dd>{fmtTime(job.lastRun)}</dd>
-        <dt>运行次数</dt><dd>{job.runCount}</dd>
-        <dt>项目</dt><dd>{job.cwd ?? "—"}</dd>
-        <dt>最近运行</dt><dd>{job.lastRunId ?? "—"}</dd>
-      </dl>
+        <FieldRow label="下次运行">{fmtTime(job.nextRun)}</FieldRow>
+        <FieldRow label="上次运行">{fmtTime(job.lastRun)}</FieldRow>
+        <FieldRow label="运行次数">{job.runCount}</FieldRow>
+        <FieldRow label="项目">{job.cwd ?? "—"}</FieldRow>
+        <FieldRow label="最近运行">{job.lastRunId ?? "—"}</FieldRow>
+      </div>
     </div>
   );
 }
