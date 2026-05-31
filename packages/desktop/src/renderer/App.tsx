@@ -1136,7 +1136,7 @@ function App() {
 
   if (view.viewMode === "settings_page") {
     return (
-      <div className={`settings-app-shell ${platformClassEarly}`.trim()}>
+      <div className={`h-screen overflow-hidden bg-background text-foreground ${platformClassEarly}`.trim()}>
         <SettingsPage
           activeRepoPath={activeRepo?.path ?? null}
           repos={repos}
@@ -1156,11 +1156,11 @@ function App() {
 
   return (
     <div
-      className={`app-grid ${platformClass}`.trim()}
+      className={`flex h-screen flex-col overflow-hidden bg-background text-foreground ${platformClass}`.trim()}
       data-sidebar={view.sidebarCollapsed ? "collapsed" : "open"}
       data-inspector="hidden"
     >
-      <div className="topbar-region">
+      <div className="shrink-0">
         <TopBar
           repoName={activeRepo?.name ?? null}
           sessionTitle={sessionTitleForTop}
@@ -1172,7 +1172,9 @@ function App() {
         />
       </div>
 
-      <div className="sidebar-region">
+      <div className="flex min-h-0 flex-1">
+      {!view.sidebarCollapsed && (
+      <div className="flex shrink-0 overflow-hidden">
         <Sidebar
           repos={repos}
           sessions={sessionIndices}
@@ -1202,10 +1204,11 @@ function App() {
           viewMode={view.viewMode}
         />
       </div>
+      )}
 
-      <main className="main-region main">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <UpdaterBanner />
-        {lifecycle && <div className="banner">{lifecycle}</div>}
+        {lifecycle && <div className="border-b border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground">{lifecycle}</div>}
         {view.viewMode === "approvals" ? (
           <ApprovalsView
             queue={approvalQueue}
@@ -1282,6 +1285,7 @@ function App() {
           matchCount={matchCount}
         />
       </main>
+      </div>
 
       <CommandPalette
         open={paletteOpen}
