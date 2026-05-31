@@ -7,6 +7,24 @@
 
 ---
 
+## Bug — 2026-06-01：自动化 cron job 一次触发堆叠多条 run（scheduler×RunManager 执行模型）
+
+> 调查记录（systematic-debugging，证据确凿，根因已定位，**暂未修**——用户先清理现场）。分支 `feat/automation-run-sidebar`。
+
+**现象**：「立即运行」一次点击/每个 cron tick 会冒出多条 run；同一个 job（id=1「每日早间新闻汇总」）累计堆了 10 条（5 条 `queued` 永远排不上、几条 `running` 卡死、1 条 completed）。用户还观察到「出 2 个」「session 不一致」——后者其实是 runId vs sessionId 两套 ID 指同一次运行（`session_linked` 绑定），不是真不一致。
+
+**根因**：`packages/core/src/automation/scheduler.ts` 的 `fire()`（~line 482-505）有再入守卫 `if (this.running.has(job.id)) return` + `finally { this.running.delete(job.id) }`，本意是「上一条还在跑就跳过」。但 `await this.onExecute?.(job)` 等的是 **RunManager.submit 返回**（run 进了 `RunQueue` 异步队列就 resolve，几十毫秒），**不是 run 真正跑完**。于是 `finally` 几乎瞬间 `delete(job.id)`，守卫形同虚设 → 同一 job 每次 fire 都 submit 一条新 run，越堆越多。RunQueue `concurrency:1` + 某些 run 卡死 → 后面的全 `queued` 排不上。
+
+**次生现象**：有 run 卡在 `turn.start` 之后、首个 `llm.request` 之前（`llm.request=0`，run.lock `acquired` 但 never `released`），4+ 分钟静默。证据：`run.lock` 配对日志里 5 条 `running` 全是 `A`（未释放）。
+
+**两种修法（择一，需 TDD）**：
+- ⬜ **(推荐) 按 job 去重 in-flight RunManager run**：`fire` 前查该 job 是否已有未终态的 run（经 `job.lastRunId` 查 RunStore 状态，注入一个 query 回调），有则 skip。治本，同 job 永不并发堆叠。
+- ⬜ **fire 等 run 真正跑完**：让 `onExecute` 返回「run 完成」的 promise（而非 submit 返回），`fire` await 它 → `running` 在 run 真正结束前不解除。改动 runner 接口语义，范围略大。
+
+证据/上下文见 [[project-automation-run-sidebar]] memory。现场已清理（10 条 run + 2 session 目录删除，cron.json job1 `lastRunId` 留陈旧引用但 `getRun` 对 ENOENT 返回 null 安全）。
+
+---
+
 ## Review Notes — 2026-05-28
 
 > 上一轮 review 之后的进展快照（截至 2026-05-28）。本文档同步更新了下方对应条目的勾选状态。
