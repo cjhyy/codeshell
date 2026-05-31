@@ -3,6 +3,11 @@ import { ModelSection } from "./ModelSection";
 import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
+import { Button } from "@/components/ui/button";
+
+const segBtn = (active: boolean) =>
+  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+  (active ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60");
 
 type Scope = "user" | "project";
 type Tab = "model" | "permission" | "mcp" | "update" | "json";
@@ -56,18 +61,14 @@ export function SettingsView({ activeRepoPath }: Props) {
   };
 
   return (
-    <div className="settings-view">
-      <div className="settings-toolbar">
-        <div className="settings-scope">
-          <button
-            className={`logs-bucket${scope === "user" ? " active" : ""}`}
-            title="所有项目的默认配置"
-            onClick={() => setScope("user")}
-          >
+    <div className="flex h-full flex-col gap-3 p-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+          <button className={segBtn(scope === "user")} title="所有项目的默认配置" onClick={() => setScope("user")}>
             全局
           </button>
           <button
-            className={`logs-bucket${scope === "project" ? " active" : ""}`}
+            className={segBtn(scope === "project") + (!activeRepoPath ? " opacity-50" : "")}
             disabled={!activeRepoPath}
             title={activeRepoPath ? "仅当前项目，覆盖全局默认" : "先在左侧选一个项目"}
             onClick={() => setScope("project")}
@@ -75,18 +76,14 @@ export function SettingsView({ activeRepoPath }: Props) {
             当前项目
           </button>
         </div>
-        <div className="settings-scope">
+        <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
           {(["model", "permission", "mcp", "update", "json"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              className={`logs-bucket${tab === t ? " active" : ""}`}
-              onClick={() => setTab(t)}
-            >
+            <button key={t} className={segBtn(tab === t)} onClick={() => setTab(t)}>
               {tabLabel(t)}
             </button>
           ))}
         </div>
-        <span className="settings-path">
+        <span className="text-xs text-muted-foreground">
           {scope === "project" && !activeRepoPath
             ? "(选一个项目)"
             : scope === "user"
@@ -95,33 +92,31 @@ export function SettingsView({ activeRepoPath }: Props) {
         </span>
       </div>
 
-      {tab === "model" && <ModelSection scope={scope} activeRepoPath={activeRepoPath} />}
-      {tab === "permission" && <PermissionSection scope={scope} activeRepoPath={activeRepoPath} />}
-      {tab === "mcp" && <McpSection scope={scope} activeRepoPath={activeRepoPath} />}
-      {tab === "update" && <UpdaterSettingsRow />}
-      {tab === "json" && (
-        <>
-          <div className="settings-toolbar">
-            <button className="approval-btn deny" onClick={() => void refresh()} disabled={saving}>
-              Reload
-            </button>
-            <button
-              className="approval-btn approve"
-              disabled={!dirty || saving}
-              onClick={() => void save()}
-            >
-              {saving ? "保存中…" : "Save"}
-            </button>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {tab === "model" && <ModelSection scope={scope} activeRepoPath={activeRepoPath} />}
+        {tab === "permission" && <PermissionSection scope={scope} activeRepoPath={activeRepoPath} />}
+        {tab === "mcp" && <McpSection scope={scope} activeRepoPath={activeRepoPath} />}
+        {tab === "update" && <UpdaterSettingsRow />}
+        {tab === "json" && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={saving}>
+                Reload
+              </Button>
+              <Button size="sm" disabled={!dirty || saving} onClick={() => void save()}>
+                {saving ? "保存中…" : "Save"}
+              </Button>
+            </div>
+            {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
+            <textarea
+              className="min-h-[400px] w-full rounded-md border border-input bg-transparent p-3 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              spellCheck={false}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
           </div>
-          {error && <div className="view-error">{error}</div>}
-          <textarea
-            className="settings-editor"
-            spellCheck={false}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

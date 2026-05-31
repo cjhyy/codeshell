@@ -155,22 +155,30 @@ export function SettingsPage({
   const scope = "user" as const;
 
   return (
-    <div className="settings-page">
-      <div className="settings-page-body">
-        <nav className="settings-page-modules">
-          <button className="settings-page-back" onClick={onBack}>
+    <div className="h-full">
+      <div className="flex h-full">
+        <nav className="w-56 shrink-0 overflow-y-auto border-r border-border p-3">
+          <button
+            className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            onClick={onBack}
+          >
             <ArrowLeft size={14} />
             <span>返回应用</span>
           </button>
           {MODULE_GROUPS.map((group) => (
-            <div key={group.title || "_top"} className="settings-page-module-group">
+            <div key={group.title || "_top"} className="mb-3">
               {group.title && (
-                <div className="settings-page-module-group-title">{group.title}</div>
+                <div className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {group.title}
+                </div>
               )}
               {group.modules.map(({ id, label, Icon }) => (
                 <button
                   key={id}
-                  className={`settings-page-module${active === id ? " active" : ""}`}
+                  className={
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors " +
+                    (active === id ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60")
+                  }
                   onClick={() => setActive(id)}
                 >
                   <Icon size={13} />
@@ -181,14 +189,14 @@ export function SettingsPage({
           ))}
         </nav>
 
-        <main className="settings-page-content">
-          <div className="settings-page-content-head">
-            <h2 className="settings-page-content-title">
+        <main className="min-w-0 flex-1 overflow-y-auto p-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold tracking-tight">
               {MODULES.find((m) => m.id === active)?.label}
             </h2>
           </div>
 
-          <div className="settings-page-module-body">
+          <div className="flex flex-col gap-6">
             {active === "general" && (
               <GeneralSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
@@ -214,7 +222,10 @@ export function SettingsPage({
               <McpSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
             {active === "hooks" && (
-              <HooksSection scope={scope} activeRepoPath={activeRepoPath} />
+              // Hooks are project-scoped only — pass the fixed project scope
+              // regardless of the page's user scope. HooksSection renders an
+              // empty, read-only list when no project is open.
+              <HooksSection scope="project" activeRepoPath={activeRepoPath} />
             )}
             {active === "connections" && (
               <ConnectionsSection scope={scope} activeRepoPath={activeRepoPath} />
