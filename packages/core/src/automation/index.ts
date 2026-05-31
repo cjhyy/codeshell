@@ -8,14 +8,25 @@
  */
 
 import { CronScheduler } from "./scheduler.js";
-import { bindCronToEngine, type CronRunner } from "./runner.js";
+import {
+  bindCronToEngine,
+  bindCronToRunManager,
+  type CronRunner,
+  type RunSubmitter,
+} from "./runner.js";
 import type { CronStore } from "./store.js";
 
 export interface StartAutomationDeps {
   /** Persistence backend (injected; module never picks a path itself). */
   store: CronStore;
-  /** Run backend invoked when a job fires (injected by the host). */
-  runner: CronRunner;
+  /**
+   * Execution backend. Provide exactly one:
+   *   - `runner`: a one-shot run callback (Phase 1 direct-Engine path).
+   *   - `runManager`: a RunManager submitter (Phase 2 — runs land in RunStore
+   *     with full history/checkpoint/resume).
+   */
+  runner?: CronRunner;
+  runManager?: RunSubmitter;
 }
 
 export interface AutomationHandle {
@@ -25,12 +36,19 @@ export interface AutomationHandle {
 }
 
 /**
- * Wire a scheduler to a host-provided store + runner and restore persisted
- * jobs. Returns a handle the host keeps for its lifetime.
+ * Wire a scheduler to a host-provided store + execution backend and restore
+ * persisted jobs. Returns a handle the host keeps for its lifetime. Prefers
+ * `runManager` when both are supplied (it gives run history).
  */
 export function startAutomation(deps: StartAutomationDeps): AutomationHandle {
   const scheduler = new CronScheduler(deps.store);
-  bindCronToEngine(scheduler, deps.runner);
+  if (deps.runManager) {
+    bindCronToRunManager(scheduler, deps.runManager);
+  } else if (deps.runner) {
+    bindCronToEngine(scheduler, deps.runner);
+  } else {
+    throw new Error("startAutomation requires either a runner or a runManager");
+  }
   scheduler.loadJobs();
   return {
     scheduler,
@@ -43,7 +61,16 @@ export { CronScheduler, cronScheduler, type CronJob } from "./scheduler.js";
 export { CronStore, defaultCronStorePath } from "./store.js";
 export {
   bindCronToEngine,
+  bindCronToRunManager,
   type CronRunner,
   type CronRunRequest,
   type CronRunResult,
+  type RunSubmitter,
 } from "./runner.js";
+export {
+  isCronExpression,
+  parseCronExpression,
+  nextCronTime,
+  type ParsedCron,
+} from "./cron-expr.js";
+export type { CronPermissionLevel, CreateJobOptions } from "./scheduler.js";

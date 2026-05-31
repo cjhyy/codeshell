@@ -61,3 +61,42 @@ export function bindCronToEngine(scheduler: CronScheduler, runner: CronRunner): 
     await runner(req);
   });
 }
+
+// ─── Phase 2: RunManager-backed executor ────────────────────────────
+//
+// Instead of running a one-shot Engine directly, submit each fired job to a
+// RunManager so the execution lands in the RunStore (queue, checkpoint,
+// resume, attach, and a full run-history detail view). The automation module
+// stays decoupled from the concrete RunManager via a structural interface —
+// the host injects whatever satisfies `submit`.
+
+/** Minimal structural view of RunManager.submit the executor needs. */
+export interface RunSubmitter {
+  submit(input: {
+    objective: string;
+    cwd?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<{ runId: string }>;
+}
+
+/**
+ * Wire the scheduler to submit each fired job into a RunManager. Records the
+ * resulting runId back onto the job (`lastRunId`) so the UI can link a job to
+ * its latest run in the RunStore. Read-only is enforced at the RunManager level
+ * by the host injecting `approvalBackend: HeadlessApprovalBackend("approve-read-only")`
+ * into createRunManager (Phase 2) until sandbox+write tiers land (Phase 4/5).
+ */
+export function bindCronToRunManager(
+  scheduler: CronScheduler,
+  runManager: RunSubmitter,
+): void {
+  scheduler.setExecutor(async (job: CronJob) => {
+    const snapshot = await runManager.submit({
+      objective: job.prompt,
+      cwd: job.cwd,
+      metadata: { source: "automation", cronJobId: job.id, cronJobName: job.name },
+    });
+    // Record the run id on the job so the UI can link to run history.
+    job.lastRunId = snapshot.runId;
+  });
+}
