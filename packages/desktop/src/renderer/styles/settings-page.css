@@ -53,6 +53,9 @@
   flex-direction: column;
   gap: 1px;
   padding: var(--sp-2);
+  /* Push the nav down a little so it doesn't sit flush against the
+     window chrome now that the header divider is gone. */
+  padding-top: var(--sp-4);
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-subtle);
   overflow-y: auto;
@@ -99,8 +102,6 @@
   align-items: center;
   gap: var(--sp-3);
   margin-bottom: var(--sp-4);
-  padding-bottom: var(--sp-2);
-  border-bottom: 1px solid var(--border-subtle);
 }
 .settings-page-content-title {
   margin: 0;
