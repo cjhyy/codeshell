@@ -449,20 +449,33 @@ export class RunManager {
         // Link the run's sessionId the moment the engine resolves it.
         // session_started fires at run START (engine.ts:1081); without this,
         // sessionId is only written at completion, so in-flight runs have
-        // sessionId=null on disk and never reach the sidebar import. Skip
-        // sub-agent sessions (they carry an agentId) — only the main run's
-        // session identifies the run.
+        // sessionId=null on disk and never reach the sidebar import.
+        //
+        // The `!agentId` guard is defensive: the built-in engine already
+        // suppresses sub-agent session_started upstream (engine.ts:830-835),
+        // but a custom RunExecutor could forward sub-agent events — and only
+        // the MAIN run's session should identify the run, never a sub-agent's.
         if (
           event.type === "session_started" &&
           !(event as { agentId?: string }).agentId
         ) {
-          const run = await this.getOrThrow(runId);
-          if (run.sessionId !== event.sessionId) {
-            run.sessionId = event.sessionId;
-            checkpointWriter.setSessionId(event.sessionId);
-            await this.store.update(run);
-            await this.emitRunEvent(runId, "session_linked", {
-              sessionId: event.sessionId,
+          try {
+            const run = await this.getOrThrow(runId);
+            if (run.sessionId !== event.sessionId) {
+              run.sessionId = event.sessionId;
+              checkpointWriter.setSessionId(event.sessionId);
+              await this.store.update(run);
+              await this.emitRunEvent(runId, "session_linked", {
+                sessionId: event.sessionId,
+              });
+            }
+          } catch (linkErr) {
+            // Don't let a snapshot-write failure abort the run as a swallowed
+            // unhandled rejection — log and continue; the completion-time link
+            // is the backstop.
+            logger.warn("run.session_link_error", {
+              runId,
+              error: linkErr instanceof Error ? linkErr.message : String(linkErr),
             });
           }
         }
