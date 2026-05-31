@@ -12,11 +12,10 @@ function fmtTime(ms: number | null): string {
   return new Date(ms).toLocaleString();
 }
 
-export function AutomationView() {
+export function AutomationView({ onCreateConversational }: { onCreateConversational: () => void }) {
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
 
   const refresh = async () => {
     try {
@@ -56,14 +55,14 @@ export function AutomationView() {
     <div className="automation-view">
       <div className="automation-toolbar">
         <h2 className="automation-title">自动化</h2>
-        <button className="automation-new-btn" onClick={() => setCreating(true)}>
+        <button className="automation-new-btn" onClick={onCreateConversational}>
           + 新建自动化
         </button>
       </div>
 
-      {jobs.length === 0 && !creating ? (
+      {jobs.length === 0 ? (
         <div className="automation-empty">
-          还没有自动化任务。点击「新建自动化」创建一个定时任务。
+          还没有自动化任务。点击「新建自动化」,用对话告诉它你想定时做什么、何时运行 —— 不用填 cron 语法。
         </div>
       ) : (
         <div className="automation-body">
@@ -96,16 +95,6 @@ export function AutomationView() {
             )}
           </div>
         </div>
-      )}
-
-      {creating && (
-        <CreateAutomationForm
-          onCancel={() => setCreating(false)}
-          onCreate={async (input) => {
-            await act(() => window.codeshell.createAutomation(input));
-            setCreating(false);
-          }}
-        />
       )}
     </div>
   );
@@ -144,56 +133,6 @@ function AutomationDetail(props: {
         <dt>权限</dt><dd>{job.permissionLevel ? PERMISSION_LABELS[job.permissionLevel] : "只读(默认)"}</dd>
         <dt>最近运行</dt><dd>{job.lastRunId ?? "—"}</dd>
       </dl>
-    </div>
-  );
-}
-
-function CreateAutomationForm(props: {
-  onCancel: () => void;
-  onCreate: (input: {
-    name: string;
-    schedule: string;
-    prompt: string;
-    cwd?: string;
-    timezone?: string;
-    permissionLevel?: AutomationPermissionLevel;
-  }) => void;
-}) {
-  const [name, setName] = useState("");
-  const [schedule, setSchedule] = useState("0 9 * * 1-5");
-  const [prompt, setPrompt] = useState("");
-  const [cwd, setCwd] = useState("");
-  const [timezone, setTimezone] = useState("Asia/Shanghai");
-
-  const canSubmit = name.trim() && schedule.trim() && prompt.trim();
-
-  return (
-    <div className="automation-modal-backdrop" onClick={props.onCancel}>
-      <div className="automation-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>新建自动化</h3>
-        <label>名称<input value={name} onChange={(e) => setName(e.target.value)} placeholder="工作日晨间简报" /></label>
-        <label>频率(cron 表达式或间隔)<input value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="0 9 * * 1-5 或 1h" /></label>
-        <label>时区<input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Asia/Shanghai" /></label>
-        <label>项目目录(可选)<input value={cwd} onChange={(e) => setCwd(e.target.value)} placeholder="/Users/you/proj" /></label>
-        <label>任务提示<textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} placeholder="检查今天的 git 变更并总结…" /></label>
-        <div className="automation-modal-actions">
-          <button onClick={props.onCancel}>取消</button>
-          <button
-            disabled={!canSubmit}
-            onClick={() =>
-              props.onCreate({
-                name: name.trim(),
-                schedule: schedule.trim(),
-                prompt: prompt.trim(),
-                ...(cwd.trim() ? { cwd: cwd.trim() } : {}),
-                ...(timezone.trim() ? { timezone: timezone.trim() } : {}),
-              })
-            }
-          >
-            创建
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

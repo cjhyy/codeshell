@@ -759,6 +759,19 @@ function App() {
   const showWelcome = state.messages.length === 0;
 
   const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
+
+  // Conversational automation creation: seed the chat composer with a starter
+  // prompt and switch to chat. The agent explains automation, asks what to do
+  // and when, then calls CronCreate — the user never touches cron syntax.
+  const [composerSeed, setComposerSeed] = useState("");
+  const [composerSeedNonce, setComposerSeedNonce] = useState(0);
+  const startConversationalAutomation = (): void => {
+    setComposerSeed(
+      "我想设置一个自动化。先简要说明自动化如何运作,然后问我几个问题,以了解我希望它做什么、以及何时运行(包括时区)。明确后用 CronCreate 工具帮我创建。",
+    );
+    setComposerSeedNonce((n) => n + 1);
+    setViewMode("chat");
+  };
   const toggleSidebar = (): void =>
     setView((p) => ({ ...p, sidebarCollapsed: !p.sidebarCollapsed }));
   // toggleInspector retained as a no-op for menu/palette wiring that
@@ -1109,7 +1122,7 @@ function App() {
         ) : view.viewMode === "runs" ? (
           <RunsView />
         ) : view.viewMode === "automation" ? (
-          <AutomationView />
+          <AutomationView onCreateConversational={startConversationalAutomation} />
         ) : (
           <>
             <ChatView
@@ -1120,6 +1133,8 @@ function App() {
               onStop={stop}
               busy={busy}
               activeRepoId={activeRepoId}
+              composerSeed={composerSeed}
+              composerSeedNonce={composerSeedNonce}
               onAskUserAnswer={handleAskUserAnswer}
               pendingApproval={approval}
               onApprovalDecide={

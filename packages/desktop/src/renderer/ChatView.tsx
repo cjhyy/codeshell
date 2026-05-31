@@ -58,6 +58,13 @@ interface Props {
 
   // Title shown above the composer in new-chat mode (empty stream)
   welcomeNode?: React.ReactNode;
+  /**
+   * Seed text to drop into the composer (without sending). Bump `composerSeedNonce`
+   * to re-apply the same text. Used by the "新建自动化" entry to start a
+   * conversational automation setup.
+   */
+  composerSeed?: string;
+  composerSeedNonce?: number;
 }
 
 const MAX_TEXTAREA_PX = 200;
@@ -88,6 +95,8 @@ export function ChatView({
   activeRepoPath,
   repoClean,
   welcomeNode,
+  composerSeed,
+  composerSeedNonce,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
@@ -111,6 +120,22 @@ export function ChatView({
 
   const activeModel = modelOptions.find((o) => o.key === activeModelKey) ?? null;
   const activeSupportsVision = activeModel?.supportsVision === true;
+
+  // Seed the composer from outside (e.g. the "新建自动化" entry) without
+  // sending. Keyed on the nonce so re-clicking re-applies the same text.
+  useEffect(() => {
+    if (composerSeed && composerSeed.length > 0) {
+      setDraft(composerSeed);
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current;
+        if (ta) {
+          ta.focus();
+          ta.setSelectionRange(composerSeed.length, composerSeed.length);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composerSeedNonce]);
 
   useEffect(() => {
     setHistory(loadHistory(activeRepoId));
