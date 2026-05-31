@@ -46,6 +46,10 @@ export interface SessionSummary {
    * '新对话' resume the previous chat's context.
    */
   engineSessionId?: string;
+  /** "automation" when imported from a cron run; absent for manual chats. */
+  source?: "automation";
+  /** RunStore run id, when source === "automation" — used for unified delete. */
+  runId?: string;
 }
 
 export interface SessionIndex {
@@ -243,6 +247,28 @@ export function bindEngineSession(
     sessions: idx.sessions.map((s) =>
       s.id === sessionId ? { ...s, engineSessionId } : s,
     ),
+  };
+  saveSessionIndex(repoId, next);
+  return next;
+}
+
+/**
+ * Insert or update an imported (automation) session summary in a repo's
+ * index, keyed by engineSessionId. Returns the new index. Does NOT write
+ * the transcript (caller does that via saveTranscript). Idempotent: a second
+ * call with the same engineSessionId updates in place instead of duplicating.
+ */
+export function upsertImportedSession(
+  repoId: string | null,
+  summary: SessionSummary,
+): SessionIndex {
+  const idx = loadSessionIndex(repoId);
+  const without = idx.sessions.filter(
+    (s) => !(summary.engineSessionId && s.engineSessionId === summary.engineSessionId),
+  );
+  const next: SessionIndex = {
+    sessions: [summary, ...without].sort((a, b) => b.updatedAt - a.updatedAt),
+    activeSessionId: idx.activeSessionId,
   };
   saveSessionIndex(repoId, next);
   return next;
