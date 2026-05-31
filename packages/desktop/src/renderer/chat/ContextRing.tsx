@@ -37,27 +37,27 @@ export function ContextRing({ used, max, busy }: Props) {
   const offset = c * (1 - ratio);
 
   const tone =
-    !hasUsage ? "var(--fg-muted)" :
-    ratio >= 0.9 ? "var(--status-err)" :
-    ratio >= 0.7 ? "var(--status-warn)" :
-    "var(--status-ok)";
+    !hasUsage ? "hsl(var(--muted-foreground))" :
+    ratio >= 0.9 ? "hsl(var(--status-err))" :
+    ratio >= 0.7 ? "hsl(var(--status-warn))" :
+    "hsl(var(--status-ok))";
 
   const pctLabel = !hasUsage ? (busy ? "·" : "—") : `${pct}%`;
 
   return (
     <div
-      className={`context-ring-wrap${busy ? " busy" : ""}`}
+      className={"relative inline-flex items-center gap-1" + (busy ? " animate-pulse" : "")}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <div className="context-ring">
+      <div className="leading-none">
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           <circle
             cx={size / 2}
             cy={size / 2}
             r={r}
             fill="none"
-            stroke="var(--border-subtle)"
+            stroke="hsl(var(--border))"
             strokeWidth={stroke}
           />
           {hasUsage && (
@@ -76,42 +76,40 @@ export function ContextRing({ used, max, busy }: Props) {
           )}
         </svg>
       </div>
-      <span className="context-ring-pct" style={{ color: tone }}>{pctLabel}</span>
+      <span className="text-xs font-medium" style={{ color: tone }}>{pctLabel}</span>
 
       {hover && (
-        <div className="context-ring-tooltip">
+        <div className="absolute bottom-full right-0 z-50 mb-1 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md">
           {!hasUsage ? (
-            <div className="context-ring-tt-empty">
+            <div className="text-sm">
               {busy ? "已发送，等待引擎统计…" : "新会话，尚未消耗上下文"}
-              <div className="context-ring-tt-sub">
+              <div className="mt-1 text-xs text-muted-foreground">
                 上限 {formatTok(safeMax)}
                 {!hasDeclaredMax && " (默认，模型未声明)"}
               </div>
             </div>
           ) : (
             <>
-              <div className="context-ring-tt-row">
-                <span className="context-ring-tt-label">已用</span>
-                <span className="context-ring-tt-val">{formatTok(used)}</span>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">已用</span>
+                <span>{formatTok(used)}</span>
               </div>
-              <div className="context-ring-tt-row">
-                <span className="context-ring-tt-label">剩余</span>
-                <span className="context-ring-tt-val">{formatTok(remaining)}</span>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">剩余</span>
+                <span>{formatTok(remaining)}</span>
               </div>
-              <div className="context-ring-tt-row">
-                <span className="context-ring-tt-label">上限</span>
-                <span className="context-ring-tt-val">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">上限</span>
+                <span>
                   {formatTok(safeMax)}
-                  {!hasDeclaredMax && (
-                    <span className="context-ring-tt-fallback"> 默认</span>
-                  )}
+                  {!hasDeclaredMax && <span className="text-muted-foreground"> 默认</span>}
                 </span>
               </div>
-              <div className="context-ring-tt-bar">
-                <div className="context-ring-tt-bar-fill" style={{ width: `${pct}%`, background: tone }} />
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: tone }} />
               </div>
               {!hasDeclaredMax && (
-                <div className="context-ring-tt-note">
+                <div className="mt-2 text-xs text-muted-foreground">
                   当前模型未在 settings.json 声明 maxContextTokens，使用 200k 作为默认。
                 </div>
               )}

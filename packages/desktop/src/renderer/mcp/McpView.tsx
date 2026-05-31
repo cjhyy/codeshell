@@ -3,6 +3,8 @@ import type {
   McpProbeResult,
   McpServerProbeInput,
 } from "../../preload/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface McpServer {
   name: string;
@@ -75,31 +77,32 @@ export function McpView() {
     return () => window.removeEventListener("codeshell:settings-changed", load);
   }, [load]);
 
-  if (error) return <div className="view-error">{error}</div>;
-  if (!servers) return <div className="view-loading">加载中…</div>;
+  if (error) return <div className="p-6 text-sm text-status-err">{error}</div>;
+  if (!servers) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
 
   return (
-    <div className="mcp-view">
-      <header className="mcp-section-head">
-        <h2 className="approvals-section-title">
-          MCP 服务器 <span className="approvals-count">{servers.length}</span>
+    <div className="flex flex-col gap-3 p-6">
+      <header className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          MCP 服务器 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{servers.length}</span>
         </h2>
-        <button
-          className="approval-btn deny"
+        <Button
+          size="sm"
+          variant="outline"
           onClick={() => void probe(servers.filter(isEnabled), true)}
           disabled={servers.filter(isEnabled).length === 0 || busy}
         >
           {busy ? "测试中…" : "重新测试"}
-        </button>
+        </Button>
       </header>
 
       {servers.length === 0 ? (
-        <div className="mcp-empty">
-          <div className="mcp-empty-title">没有配置的 MCP 服务器</div>
-          <div className="mcp-empty-hint">到「设置 → MCP 服务器」添加。</div>
+        <div className="p-6">
+          <div className="font-medium">没有配置的 MCP 服务器</div>
+          <div className="mt-1 text-sm text-muted-foreground">到「设置 → MCP 服务器」添加。</div>
         </div>
       ) : (
-        <div className="mcp-card-list">
+        <div className="flex flex-col gap-2">
           {servers.map((s) => {
             const p = probes[s.name];
             const enabled = isEnabled(s);
@@ -108,34 +111,33 @@ export function McpView() {
               ? [s.command, ...(s.args ?? [])].join(" ")
               : s.url ?? "";
             return (
-              <article key={s.name} className={`mcp-card${enabled ? "" : " mcp-card-disabled"}`}>
-                <div className="mcp-card-head">
-                  <div className="mcp-card-title">
+              <article
+                key={s.name}
+                className={"rounded-lg border bg-card p-3 text-card-foreground shadow-sm " + (enabled ? "" : "opacity-60")}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <strong>{s.name}</strong>
-                    <span className={`mcp-transport-pill mcp-transport-${transport}`}>
+                    <Badge variant="outline">
                       {transport === "stdio" ? "stdio" : transport === "sse" ? "SSE" : "HTTP"}
-                    </span>
+                    </Badge>
                     {enabled ? (
                       <StatusPill probe={p} loading={busy && !p} />
                     ) : (
-                      <span className="mcp-status-pill unknown">已停用</span>
+                      <span className="text-xs text-muted-foreground">已停用</span>
                     )}
                   </div>
                   {p?.status === "ok" && (
-                    <span className="mcp-card-stamp">{p.toolCount ?? 0} tools</span>
+                    <span className="text-xs text-muted-foreground">{p.toolCount ?? 0} tools</span>
                   )}
                 </div>
                 {target && (
-                  <div className="mcp-card-target" title={target}>
-                    <code>{target}</code>
+                  <div className="mt-1 truncate text-xs text-muted-foreground" title={target}>
+                    <code className="font-mono">{target}</code>
                   </div>
                 )}
                 {p?.status === "error" && (
-                  <div className="mcp-card-meta">
-                    <span className="mcp-card-error-msg" style={{ color: "var(--status-err)" }}>
-                      {p.errorMessage}
-                    </span>
-                  </div>
+                  <div className="mt-1 text-xs text-status-err">{p.errorMessage}</div>
                 )}
               </article>
             );
@@ -147,11 +149,12 @@ export function McpView() {
 }
 
 function StatusPill({ probe, loading }: { probe?: McpProbeResult; loading: boolean }) {
-  if (loading || probe?.status === "probing") return <span className="mcp-status-pill probing">连接中…</span>;
-  if (!probe) return <span className="mcp-status-pill unknown">未测试</span>;
-  if (probe.status === "ok") return <span className="mcp-status-pill ok">已连接</span>;
-  if (probe.status === "error") return <span className="mcp-status-pill err">连接失败</span>;
-  return <span className="mcp-status-pill unknown">未知</span>;
+  const base = "text-xs font-medium";
+  if (loading || probe?.status === "probing") return <span className={`${base} text-status-running`}>连接中…</span>;
+  if (!probe) return <span className={`${base} text-muted-foreground`}>未测试</span>;
+  if (probe.status === "ok") return <span className={`${base} text-status-ok`}>已连接</span>;
+  if (probe.status === "error") return <span className={`${base} text-status-err`}>连接失败</span>;
+  return <span className={`${base} text-muted-foreground`}>未知</span>;
 }
 
 function parseServers(value: unknown): McpServer[] {
