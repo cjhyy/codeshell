@@ -18,7 +18,11 @@ export function isCaseInsensitivePlatform(): boolean {
   return true;
 }
 
-/** Strip trailing slashes (keep a lone "/") and optionally lowercase. */
+/**
+ * Strip trailing slashes (keep a lone "/") and optionally lowercase.
+ * Expects POSIX-separator paths — the engine always emits POSIX cwd
+ * strings; Windows backslash paths are not normalized.
+ */
 export function normalizeCwd(cwd: string, caseInsensitive: boolean): string {
   let out = cwd.replace(/\/+$/, "");
   if (out === "") out = "/";

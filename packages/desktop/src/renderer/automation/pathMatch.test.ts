@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { normalizeCwd, matchRepoIdForCwd } from "./pathMatch";
+import { normalizeCwd, matchRepoIdForCwd, isCaseInsensitivePlatform } from "./pathMatch";
 
 const repos = [
   { id: "r1", name: "alpha", path: "/Users/me/alpha" },
@@ -32,5 +32,12 @@ describe("matchRepoIdForCwd", () => {
   });
   it("returns null on no match", () => {
     expect(matchRepoIdForCwd("/somewhere/else", repos, false)).toBeNull();
+  });
+});
+
+describe("isCaseInsensitivePlatform", () => {
+  it("defaults to insensitive when navigator.platform is unavailable", () => {
+    // In the bun test environment navigator is undefined → safe default true.
+    expect(isCaseInsensitivePlatform()).toBe(true);
   });
 });
