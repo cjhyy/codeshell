@@ -37,3 +37,7 @@ out/
 # worktree add live here. Local only — never commit worktree contents.
 .claude/worktrees/
 packages/desktop/.preview/
+
+# Renderer source 'logs/' view dir is NOT a runtime-logs dir — keep it tracked
+!packages/desktop/src/renderer/logs/
+!packages/desktop/src/renderer/logs/**
