@@ -5,6 +5,21 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
+ * Explicit, class-scoped state styling for components that rely on Radix's
+ * `data-state` attribute. Tailwind v4.3 mis-compiles the `data-[state=...]:`
+ * arbitrary variant (it drops the class prefix → a bare `[data-state=checked]`
+ * rule that both fails to style the target and bleeds onto unrelated elements).
+ * Writing the rules by hand, scoped to a class, is deterministic and correct.
+ */
+@layer components {
+  .cs-switch[data-state="checked"] { background-color: hsl(var(--primary)); }
+  .cs-switch[data-state="unchecked"] { background-color: hsl(var(--input)); }
+  .cs-switch .cs-switch-thumb { background-color: hsl(var(--background)); }
+  .cs-switch[data-state="checked"] .cs-switch-thumb { transform: translateX(1rem); }
+  .cs-switch[data-state="unchecked"] .cs-switch-thumb { transform: translateX(0); }
+}
+
+/*
  * shadcn/ui design tokens — neutral zinc theme (desktop UI overhaul,
  * docs/superpowers/specs/2026-05-31-desktop-shadcn-design.md).
  * Values are the standard shadcn zinc palette in HSL channels.

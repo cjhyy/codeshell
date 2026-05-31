@@ -36,3 +36,4 @@ out/
 # Claude Code session state: worktrees created by EnterWorktree / git
 # worktree add live here. Local only — never commit worktree contents.
 .claude/worktrees/
+packages/desktop/.preview/

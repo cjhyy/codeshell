@@ -19,9 +19,17 @@ button {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
-  background: none;
   border: none;
   cursor: pointer;
+}
+
+/* Legacy bare-button background reset. Scoped so it does NOT clobber shadcn
+   buttons (any `bg-*` utility) or the Switch — base.css is UNLAYERED, so
+   without this exclusion it would beat Tailwind's layered `bg-primary` etc.
+   in the cascade (unlayered always wins over @layer), leaving primary buttons
+   and switches transparent. */
+button:not([class*="bg-"]):not(.cs-switch) {
+  background: none;
 }
 
 button:focus-visible {
