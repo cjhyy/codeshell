@@ -83,6 +83,14 @@ export interface EngineRunnerConfig {
   customTools?: CustomToolEntry[];
   /** Hooks registered into each Engine instance before run execution. */
   hooks?: EngineHookConfig[];
+  /**
+   * Override the approval backend. When set, the run uses THIS backend instead
+   * of the interactive run-aware RunApprovalBackend — used by unattended hosts
+   * (e.g. automation/cron) that must auto-decide without a UI, e.g. a
+   * HeadlessApprovalBackend("approve-read-only"). When unset, the interactive
+   * run-aware backend is used (default REPL/desktop behavior).
+   */
+  approvalBackend?: import("../tool-system/permission.js").ApprovalBackend;
 }
 
 // ─── EngineRunner (built-in RunExecutor) ────────────────────────
@@ -96,16 +104,24 @@ export class EngineRunner implements RunExecutor {
     lifecycleHooks?: RunLifecycleHooks,
     onHandleReady?: (handle: RunExecutionHandle) => void,
   ): Promise<{ result: RunExecutionResult; handle: RunExecutionHandle }> {
-    // Create run-aware approval backend
-    const approvalBackend = new RunApprovalBackend();
+    // Run-aware approval backend (interactive: suspends the run and waits for
+    // RunManager to resolve via the handle). Always constructed so the handle
+    // stays well-formed, but only wired into the engine when no override is set.
+    const runApprovalBackend = new RunApprovalBackend();
+
+    // Unattended override: a host (automation/cron) can inject a backend that
+    // auto-decides (e.g. approve-read-only). When set, the engine uses it and
+    // the interactive resolve path is inert (no UI to resolve approvals).
+    const override = this.config.approvalBackend;
+    const engineApprovalBackend = override ?? runApprovalBackend;
 
     // Create run-aware askUser adapter
     let resolveInputFn: (answer: string) => boolean = () => false;
     let hasPendingInputFn: () => boolean = () => false;
     let askUserFn: ((question: string) => Promise<string>) | undefined;
 
-    if (lifecycleHooks) {
-      approvalBackend.setHooks(lifecycleHooks);
+    if (lifecycleHooks && !override) {
+      runApprovalBackend.setHooks(lifecycleHooks);
       const askAdapter = createRunAskUserFn(lifecycleHooks);
       askUserFn = askAdapter.askUserFn;
       resolveInputFn = askAdapter.resolveInput;
@@ -114,11 +130,11 @@ export class EngineRunner implements RunExecutor {
 
     const handle: RunExecutionHandle = {
       resolveApproval: (approved, reason) =>
-        approvalBackend.resolveApproval(
+        runApprovalBackend.resolveApproval(
           approved ? { approved: true } : { approved: false, reason },
         ),
       resolveInput: resolveInputFn,
-      hasPendingApproval: () => approvalBackend.hasPendingApproval(),
+      hasPendingApproval: () => runApprovalBackend.hasPendingApproval(),
       hasPendingInput: hasPendingInputFn,
     };
 
@@ -141,7 +157,7 @@ export class EngineRunner implements RunExecutor {
       sessionStorageDir: this.config.sessionStorageDir,
       mcpServers: this.config.mcpServers,
       hooks: this.config.hooks,
-      approvalBackend,
+      approvalBackend: engineApprovalBackend,
       askUser: askUserFn,
       ...context.engineConfigOverrides,
     };

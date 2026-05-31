@@ -77,6 +77,14 @@ export interface CreateRunManagerOptions {
 
   /** Metadata merged into every submitted run. Submit input wins on conflicts. */
   defaultMetadata?: Record<string, unknown>;
+
+  /**
+   * Override the approval backend for every run. Used by unattended hosts
+   * (automation/cron) that must auto-decide without a UI — e.g.
+   * `new HeadlessApprovalBackend("approve-read-only")`. When unset, runs use
+   * the interactive run-aware backend.
+   */
+  approvalBackend?: import("../tool-system/permission.js").ApprovalBackend;
 }
 
 /**
@@ -101,6 +109,7 @@ export function createRunManager(options: CreateRunManagerOptions): RunManager {
       customSystemPrompt: options.customSystemPrompt,
       appendSystemPrompt: options.appendSystemPrompt,
       hooks: options.hooks,
+      ...(options.approvalBackend ? { approvalBackend: options.approvalBackend } : {}),
     },
     concurrency: options.concurrency ?? 1,
     runsDir,
