@@ -73,6 +73,22 @@
   .customize-detail-head { display: flex; align-items: center; gap: 0.5rem; }
   .customize-detail-name { font-weight: 600; }
 
+  /* Legacy action buttons still used by a few settings sections + TrustGate.
+     Re-styled plain (the old --accent/--bg-elevated tokens no longer exist, so
+     these rendered with invalid colors). approve = accent-outline, deny = outline. */
+  .approval-btn {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    padding: 0.375rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.875rem;
+    font-weight: 500; border: 1px solid hsl(var(--border)); background: transparent;
+    color: hsl(var(--foreground)); cursor: pointer;
+  }
+  .approval-btn:hover { background: hsl(var(--accent)); }
+  .approval-btn.approve { border-color: hsl(var(--primary) / 0.4); color: hsl(var(--primary)); }
+  .approval-btn.approve:hover { background: hsl(var(--primary) / 0.1); }
+  .approval-btn.deny:hover { background: hsl(var(--accent)); }
+  .approval-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .approval-deny-select { flex: 1; min-width: 0; }
+
   .cs-switch[data-state="checked"] { background-color: hsl(var(--primary)); }
   .cs-switch[data-state="unchecked"] { background-color: hsl(var(--input)); }
   .cs-switch .cs-switch-thumb { background-color: hsl(var(--background)); }
