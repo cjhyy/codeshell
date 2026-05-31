@@ -228,6 +228,31 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("logs:tail", bucket, lines),
   listRuns: () => ipcRenderer.invoke("runs:list"),
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
+  listAutomations: () => ipcRenderer.invoke("automation:list"),
+  getAutomation: (id: string) => ipcRenderer.invoke("automation:get", id),
+  createAutomation: (input: {
+    name: string;
+    schedule: string;
+    prompt: string;
+    cwd?: string;
+    timezone?: string;
+    permissionLevel?: string;
+  }) => ipcRenderer.invoke("automation:create", input),
+  updateAutomation: (
+    id: string,
+    patch: {
+      name?: string;
+      prompt?: string;
+      schedule?: string;
+      timezone?: string;
+      cwd?: string;
+      permissionLevel?: string;
+    },
+  ) => ipcRenderer.invoke("automation:update", id, patch),
+  deleteAutomation: (id: string) => ipcRenderer.invoke("automation:delete", id),
+  pauseAutomation: (id: string) => ipcRenderer.invoke("automation:pause", id),
+  resumeAutomation: (id: string) => ipcRenderer.invoke("automation:resume", id),
+  runAutomationNow: (id: string) => ipcRenderer.invoke("automation:runNow", id),
   listSkills: (cwd: string) => ipcRenderer.invoke("skills:list", cwd),
   searchFiles: (cwd: string, query: string) =>
     ipcRenderer.invoke("files:search", cwd, query),

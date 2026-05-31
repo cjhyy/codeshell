@@ -17,24 +17,53 @@ export interface RunLockConfig {
   runsDir?: string;
   /** Stale lock timeout in ms. Default: 60_000 (1 minute) */
   staleMs?: number;
+  /** How long to wait for runs/<id>/run.json to appear before failing. */
+  targetWaitMs?: number;
+  /** Poll interval while waiting for the lock target file. */
+  targetPollMs?: number;
 }
+
+export type RunLockAcquireResult =
+  | { acquired: true }
+  | {
+      acquired: false;
+      reason: "missing_target" | "locked";
+      message?: string;
+      code?: string;
+    };
 
 export class RunLock {
   private readonly runsDir: string;
   private readonly staleMs: number;
+  private readonly targetWaitMs: number;
+  private readonly targetPollMs: number;
   private readonly releaseFns = new Map<string, () => Promise<void>>();
 
   constructor(config?: RunLockConfig) {
     this.runsDir = config?.runsDir ?? join(homedir(), ".code-shell", "runs");
     this.staleMs = config?.staleMs ?? 60_000;
+    this.targetWaitMs = config?.targetWaitMs ?? 2_000;
+    this.targetPollMs = config?.targetPollMs ?? 10;
   }
 
   /**
-   * Acquire a lock for a run. Returns true if acquired, false if already held.
+   * Acquire a lock for a run. Missing target and held-lock failures are
+   * intentionally distinct so callers don't silently abandon a run as "locked"
+   * when the real issue is a bad/mismatched run store path.
+   *
+   * Race note: if the queue reaches acquire() before the file is visible, a
+   * short wait bridges that gap. Only a proper-lockfile conflict is "locked".
    */
-  async acquire(runId: string): Promise<boolean> {
+  async acquire(runId: string): Promise<RunLockAcquireResult> {
     const lockTarget = this.lockTarget(runId);
-    if (!existsSync(lockTarget)) return false;
+    if (!(await this.waitForTarget(lockTarget))) {
+      logger.warn("run.lock.target_missing", { runId, lockTarget });
+      return {
+        acquired: false,
+        reason: "missing_target",
+        message: `Lock target did not appear: ${lockTarget}`,
+      };
+    }
 
     try {
       const release = await lock(lockTarget, {
@@ -43,11 +72,38 @@ export class RunLock {
       });
       this.releaseFns.set(runId, release);
       logger.info("run.lock.acquired", { runId });
-      return true;
-    } catch {
-      // Lock already held by another process
-      return false;
+      return { acquired: true };
+    } catch (err) {
+      const e = err as { code?: string; message?: string };
+      logger.warn("run.lock.conflict", {
+        runId,
+        lockTarget,
+        code: e?.code,
+        message: e?.message,
+        alreadyHeldByThisInstance: this.releaseFns.has(runId),
+      });
+      return {
+        acquired: false,
+        reason: "locked",
+        code: e?.code,
+        message: e?.message,
+      };
     }
+  }
+
+  /**
+   * Wait (up to ~targetWaitMs) for the lock target file to exist, polling on a
+   * short interval. Returns true once present, false if it never appears
+   * within the window. Bridges the submit→executeRun create race without
+   * blocking meaningfully when the file is already there (first check hits).
+   */
+  private async waitForTarget(lockTarget: string): Promise<boolean> {
+    const deadline = Date.now() + this.targetWaitMs;
+    while (!existsSync(lockTarget)) {
+      if (Date.now() >= deadline) return false;
+      await new Promise<void>((r) => setTimeout(r, this.targetPollMs));
+    }
+    return true;
   }
 
   /**

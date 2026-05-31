@@ -195,7 +195,7 @@ export type DetachFn = () => void;
  * Key = current status, Value = allowed next statuses.
  */
 export const VALID_TRANSITIONS: Record<RunStatus, RunStatus[]> = {
-  queued: ["running", "cancelled"],
+  queued: ["running", "blocked", "cancelled"],
   running: [
     "waiting_input",
     "waiting_approval",

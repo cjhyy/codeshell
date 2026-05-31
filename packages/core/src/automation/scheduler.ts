@@ -1,0 +1,552 @@
+/**
+ * Cron scheduler — schedule and manage recurring agent tasks.
+ *
+ * Supports simple cron-like intervals. Each job runs the Engine
+ * with a predefined prompt on schedule.
+ */
+
+import type { CronStore } from "./store.js";
+import { isCronExpression, parseCronExpression, nextCronTime } from "./cron-expr.js";
+
+/** Permission tier a scheduled job runs under (Phase 5 enforces write tiers). */
+export type CronPermissionLevel = "read-only" | "workspace-write" | "full";
+
+export interface CronJob {
+  id: string;
+  name: string;
+  schedule: string;        // cron expression ("0 9 * * 1-5") or interval ("5m", "1h", "1500")
+  prompt: string;          // task prompt to run
+  enabled: boolean;
+  lastRun?: number;
+  nextRun?: number;
+  runCount: number;
+  createdAt: number;
+  /** Working directory the job runs in (the project it monitors/edits). */
+  cwd?: string;
+  /** IANA timezone for cron-expression schedules (e.g. "Asia/Shanghai"). Default "UTC". */
+  timezone?: string;
+  /** Permission tier; defaults to read-only when unset. */
+  permissionLevel?: CronPermissionLevel;
+  /** RunStore run id of the most recent execution (Phase 2 RunManager path). */
+  lastRunId?: string;
+}
+
+/** Optional metadata accepted by create(). */
+export interface CreateJobOptions {
+  cwd?: string;
+  timezone?: string;
+  permissionLevel?: CronPermissionLevel;
+}
+
+/** Fields editable via update(). Any omitted field is left unchanged. */
+export interface UpdateJobPatch {
+  name?: string;
+  prompt?: string;
+  schedule?: string;
+  timezone?: string;
+  cwd?: string;
+  permissionLevel?: CronPermissionLevel;
+}
+
+export class CronScheduler {
+  private jobs = new Map<string, CronJob>();
+  private timers = new Map<string, NodeJS.Timeout>();
+  /** Job ids with an execution currently in flight — prevents a tick from
+   *  starting a second run of a job whose previous run hasn't finished. */
+  private running = new Set<string>();
+  private nextId = 1;
+  private onExecute?: (job: CronJob) => Promise<void>;
+  /** Optional persistence backend. When set, every create/delete/pause/resume
+   *  writes the full job set to disk so jobs survive a restart. */
+  private store?: CronStore;
+  /** When false, the scheduler persists + tracks jobs but NEVER arms timers
+   *  (so it can't execute). Used by the desktop agent worker, a separate
+   *  process from the main process that owns execution. Default true. */
+  private executionEnabled = true;
+
+  constructor(store?: CronStore) {
+    this.store = store;
+  }
+
+  /**
+   * Disable (or re-enable) timer arming / execution. A host that only needs to
+   * persist + read jobs — never run them — calls setExecutionEnabled(false).
+   * Stops any timers already armed when turning off.
+   */
+  setExecutionEnabled(enabled: boolean): void {
+    this.executionEnabled = enabled;
+    if (!enabled) {
+      for (const timer of this.timers.values()) clearTimeout(timer);
+      this.timers.clear();
+    }
+  }
+
+  /** Attach (or replace) the persistence backend. Used to give the shared
+   *  singleton a store at runtime startup without changing its identity. */
+  setStore(store: CronStore): void {
+    this.store = store;
+  }
+
+  setExecutor(fn: (job: CronJob) => Promise<void>): void {
+    this.onExecute = fn;
+  }
+
+  /**
+   * Restore persisted jobs and rebuild their timers. Call once at startup
+   * after `setStore`. nextRun is recomputed forward from now — we do NOT
+   * catch up on runs missed while the process was down (avoids a restart
+   * thundering-herd; aligns with Codex's stateless philosophy). Disabled
+   * jobs are restored without a timer.
+   */
+  /**
+   * Reconcile in-memory jobs against the on-disk store (the store is the source
+   * of truth). Safe to call repeatedly — used both at startup and as a periodic
+   * re-sync when another process (e.g. the desktop agent worker) may have
+   * created/deleted/changed jobs through the same store. Reconciliation:
+   *   - jobs on disk but not in memory  → added (and armed if enabled)
+   *   - jobs in memory but not on disk  → removed + timer cleared
+   *   - jobs whose schedule/enabled differ → re-armed to match disk
+   *
+   * Pass `{ arm: false }` in a host that must NOT execute jobs (the worker —
+   * separate process from the one that owns execution); it still tracks +
+   * persists but starts no timers, so jobs never run twice across processes.
+   */
+  loadJobs(opts?: { arm?: boolean }): void {
+    if (!this.store) return;
+    this.reconcileJobs(this.store.load(), opts);
+  }
+
+  private reconcileJobs(persisted: CronJob[], opts?: { arm?: boolean }): void {
+    const arm = opts?.arm ?? true;
+    const onDisk = new Map(persisted.map((j) => [j.id, j]));
+
+    // 1. Drop in-memory jobs that no longer exist on disk (deleted elsewhere).
+    for (const id of [...this.jobs.keys()]) {
+      if (!onDisk.has(id)) {
+        this.clearTimer(id);
+        this.jobs.delete(id);
+      }
+    }
+
+    // 2. Add or update jobs from disk.
+    let maxId = 0;
+    for (const job of persisted) {
+      const prev = this.jobs.get(job.id);
+      this.jobs.set(job.id, job);
+      const n = parseInt(job.id, 10);
+      if (Number.isFinite(n) && n > maxId) maxId = n;
+
+      // (Re)arm when execution is on. arm() is idempotent (clears any prior
+      // timer first), so calling it for unchanged jobs is harmless; it also
+      // refreshes nextRun for display.
+      if (arm && job.enabled) {
+        this.arm(job);
+      } else {
+        // Disabled (or arm suppressed): ensure no stale timer survives a
+        // prior enabled state.
+        if (prev && this.timers.has(job.id)) this.clearTimer(job.id);
+        // Still refresh nextRun for display even when not arming.
+        if (!arm || !job.enabled) this.refreshNextRunForDisplay(job);
+      }
+    }
+    this.nextId = Math.max(this.nextId, maxId + 1);
+  }
+
+  private nextPersistedId(jobs: CronJob[]): string {
+    let maxId = 0;
+    for (const job of jobs) {
+      const n = parseInt(job.id, 10);
+      if (Number.isFinite(n) && n > maxId) maxId = n;
+    }
+    return String(Math.max(this.nextId, maxId + 1));
+  }
+
+  /** Recompute nextRun without arming a timer (for display in disabled/no-arm hosts). */
+  private refreshNextRunForDisplay(job: CronJob): void {
+    if (isCronExpression(job.schedule)) {
+      const next = nextCronTime(parseCronExpression(job.schedule), job.timezone ?? "UTC", Date.now());
+      job.nextRun = next ?? undefined;
+    } else {
+      try {
+        job.nextRun = Date.now() + parseSchedule(job.schedule);
+      } catch {
+        job.nextRun = undefined;
+      }
+    }
+  }
+
+  private persist(): void {
+    if (!this.store) return;
+    try {
+      this.store.save([...this.jobs.values()]);
+    } catch {
+      // Persistence is best-effort: an unwritable disk should not break the
+      // in-memory scheduler. The store logs the failure.
+    }
+  }
+
+  private persistRunStats(job: CronJob): void {
+    if (!this.store) {
+      this.persist();
+      return;
+    }
+    try {
+      this.store.mutate((jobs) => {
+        const idx = jobs.findIndex((j) => j.id === job.id);
+        if (idx === -1) return { jobs, result: null };
+        const next = [...jobs];
+        next[idx] = {
+          ...next[idx],
+          lastRun: job.lastRun,
+          nextRun: job.nextRun,
+          runCount: job.runCount,
+          ...(job.lastRunId !== undefined ? { lastRunId: job.lastRunId } : {}),
+        };
+        return { jobs: next, result: null };
+      });
+    } catch {
+      // Persistence is best-effort; missed UI metadata must not stop scheduling.
+    }
+  }
+
+  create(name: string, schedule: string, prompt: string, opts?: CreateJobOptions): CronJob {
+    // Validate the schedule up front (interval or cron expr) so a bad string
+    // surfaces at create time, not silently at the first missed tick.
+    validateSchedule(schedule, opts?.timezone);
+
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        const id = this.nextPersistedId(jobs);
+        const job: CronJob = {
+          id,
+          name,
+          schedule,
+          prompt,
+          enabled: true,
+          runCount: 0,
+          createdAt: Date.now(),
+          ...(opts?.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
+          ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
+        };
+        this.refreshNextRunForDisplay(job);
+        return { jobs: [...jobs, job], result: job };
+      });
+      this.reconcileJobs(tx.jobs);
+      return this.jobs.get(tx.result.id) ?? tx.result;
+    }
+
+    const id = String(this.nextId++);
+    const job: CronJob = {
+      id,
+      name,
+      schedule,
+      prompt,
+      enabled: true,
+      runCount: 0,
+      createdAt: Date.now(),
+      ...(opts?.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
+      ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
+    };
+
+    this.jobs.set(id, job);
+    this.arm(job);
+    this.persist();
+    return job;
+  }
+
+  delete(id: string): boolean {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        const next = jobs.filter((j) => j.id !== id);
+        return { jobs: next, result: next.length !== jobs.length };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result;
+    }
+
+    this.clearTimer(id);
+    const deleted = this.jobs.delete(id);
+    if (deleted) this.persist();
+    return deleted;
+  }
+
+  list(): CronJob[] {
+    return [...this.jobs.values()];
+  }
+
+  get(id: string): CronJob | undefined {
+    return this.jobs.get(id);
+  }
+
+  pause(id: string): boolean {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        let changed = false;
+        const next = jobs.map((j) => {
+          if (j.id !== id) return j;
+          changed = true;
+          return { ...j, enabled: false };
+        });
+        return { jobs: next, result: changed };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result;
+    }
+
+    const job = this.jobs.get(id);
+    if (!job) return false;
+    job.enabled = false;
+    this.clearTimer(id);
+    this.persist();
+    return true;
+  }
+
+  resume(id: string): boolean {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        let changed = false;
+        const next = jobs.map((j) => {
+          if (j.id !== id) return j;
+          changed = true;
+          const job = { ...j, enabled: true };
+          this.refreshNextRunForDisplay(job);
+          return job;
+        });
+        return { jobs: next, result: changed };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result;
+    }
+
+    const job = this.jobs.get(id);
+    if (!job) return false;
+    job.enabled = true;
+    this.arm(job);
+    this.persist();
+    return true;
+  }
+
+  /**
+   * Edit an existing job's fields (name/prompt/schedule/timezone/cwd/
+   * permissionLevel) without recreating it. A changed schedule is validated up
+   * front (throws on invalid, leaving the job untouched), then the timer is
+   * re-armed so the new schedule takes effect immediately. Enabled state is
+   * preserved — a paused job stays paused (no timer). Returns the updated job,
+   * or null if the id is unknown.
+   */
+  update(id: string, patch: UpdateJobPatch): CronJob | null {
+    if (this.store) {
+      const tx = this.store.mutate((jobs) => {
+        let updated: CronJob | null = null;
+        const next = jobs.map((j) => {
+          if (j.id !== id) return j;
+          const job = { ...j };
+
+          const nextSchedule = patch.schedule ?? job.schedule;
+          const nextTimezone = patch.timezone ?? job.timezone;
+          if (patch.schedule !== undefined || patch.timezone !== undefined) {
+            validateSchedule(nextSchedule, nextTimezone);
+          }
+
+          if (patch.name !== undefined) job.name = patch.name;
+          if (patch.prompt !== undefined) job.prompt = patch.prompt;
+          if (patch.schedule !== undefined) job.schedule = patch.schedule;
+          if (patch.timezone !== undefined) job.timezone = patch.timezone;
+          if (patch.cwd !== undefined) job.cwd = patch.cwd;
+          if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
+          this.refreshNextRunForDisplay(job);
+          updated = job;
+          return job;
+        });
+        return { jobs: next, result: updated };
+      });
+      this.reconcileJobs(tx.jobs);
+      return tx.result ? this.jobs.get(id) ?? tx.result : null;
+    }
+
+    const job = this.jobs.get(id);
+    if (!job) return null;
+
+    // Validate a new schedule/timezone BEFORE mutating anything.
+    const nextSchedule = patch.schedule ?? job.schedule;
+    const nextTimezone = patch.timezone ?? job.timezone;
+    if (patch.schedule !== undefined || patch.timezone !== undefined) {
+      validateSchedule(nextSchedule, nextTimezone);
+    }
+
+    if (patch.name !== undefined) job.name = patch.name;
+    if (patch.prompt !== undefined) job.prompt = patch.prompt;
+    if (patch.schedule !== undefined) job.schedule = patch.schedule;
+    if (patch.timezone !== undefined) job.timezone = patch.timezone;
+    if (patch.cwd !== undefined) job.cwd = patch.cwd;
+    if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
+
+    // Re-arm so a schedule/timezone change drives execution now. arm() is
+    // idempotent and respects enabled + executionEnabled (paused → no timer,
+    // but nextRun still refreshed for display).
+    if (job.enabled) {
+      this.arm(job);
+    } else {
+      this.clearTimer(id);
+      this.refreshNextRunForDisplay(job);
+    }
+    this.persist();
+    return job;
+  }
+
+  stopAll(): void {
+    for (const timer of this.timers.values()) {
+      clearTimeout(timer);
+    }
+    this.timers.clear();
+  }
+
+  /**
+   * Fire a job immediately, out of band of its schedule (the "Run now" button).
+   * Respects the re-entrancy guard (no-op if a run is already in flight) and
+   * does not disturb the existing timer. Returns false if the id is unknown.
+   */
+  runNow(id: string): boolean {
+    const job = this.jobs.get(id);
+    if (!job) return false;
+    // Run-stat bookkeeping is shared with scheduled fires; nextRun is left as-is
+    // (a manual run shouldn't shift the next scheduled occurrence). force=true
+    // so a paused job can still be run on demand.
+    void this.fire(job, () => {}, true);
+    return true;
+  }
+
+  /**
+   * Arm a job's timer. Interval schedules ("5m") use setInterval; cron-
+   * expression schedules ("0 9 * * 1-5") compute the next trigger in the
+   * job's timezone and use setTimeout, re-arming after each fire. nextRun is
+   * updated to reflect the scheduled instant.
+   */
+  private arm(job: CronJob): void {
+    this.clearTimer(job.id);
+    if (isCronExpression(job.schedule)) {
+      // Compute nextRun for display even when execution is disabled.
+      const cron = parseCronExpression(job.schedule);
+      const next = nextCronTime(cron, job.timezone ?? "UTC", Date.now());
+      job.nextRun = next ?? undefined;
+      if (!this.executionEnabled) return;
+      this.armCron(job);
+    } else {
+      const intervalMs = parseSchedule(job.schedule);
+      job.nextRun = Date.now() + intervalMs;
+      if (!this.executionEnabled) return;
+      const timer = setInterval(() => void this.fire(job, () => this.refreshIntervalNextRun(job, intervalMs)), intervalMs);
+      this.timers.set(job.id, timer);
+    }
+  }
+
+  private refreshIntervalNextRun(job: CronJob, intervalMs: number): void {
+    job.nextRun = Date.now() + intervalMs;
+  }
+
+  private armCron(job: CronJob): void {
+    const cron = parseCronExpression(job.schedule);
+    const tz = job.timezone ?? "UTC";
+    const next = nextCronTime(cron, tz, Date.now());
+    if (next === null) {
+      // Unsatisfiable within the search window — leave unscheduled.
+      job.nextRun = undefined;
+      return;
+    }
+    job.nextRun = next;
+    const delay = Math.max(0, next - Date.now());
+    const timer = setTimeout(() => {
+      void this.fire(job, () => {
+        // Re-arm for the following occurrence.
+        if (job.enabled) this.armCron(job);
+      });
+    }, delay);
+    this.timers.set(job.id, timer);
+  }
+
+  private clearTimer(id: string): void {
+    const t = this.timers.get(id);
+    if (t) {
+      clearTimeout(t);
+      this.timers.delete(id);
+    }
+  }
+
+  /**
+   * Shared fire path for both schedule kinds. Re-entrancy guard, run-stat
+   * bookkeeping, persistence, then the executor. `afterStats` updates nextRun
+   * for the next occurrence (interval: now+interval; cron: re-armed inside).
+   */
+  private async fire(job: CronJob, afterStats: () => void, force = false): Promise<void> {
+    if (!job.enabled && !force) return;
+    // Re-entrancy guard: if this job's previous run is still in flight
+    // (onExecute slower than the interval), skip rather than stacking
+    // overlapping executions that double-count runCount.
+    if (this.running.has(job.id)) return;
+    this.running.add(job.id);
+    job.lastRun = Date.now();
+    job.runCount++;
+    afterStats();
+    // Persist updated run stats so runCount/lastRun/nextRun survive a restart.
+    this.persistRunStats(job);
+    try {
+      await this.onExecute?.(job);
+    } catch {
+      // Job execution failed — continue scheduling.
+    } finally {
+      // The executor may have recorded lastRunId on the job. Persist only run
+      // metadata so an old in-flight job cannot overwrite an edited prompt or
+      // schedule with its stale copy.
+      this.persistRunStats(job);
+      this.running.delete(job.id);
+    }
+  }
+}
+
+/** Validate a schedule string (interval or cron expr) without scheduling. Throws on invalid. */
+function validateSchedule(schedule: string, timezone?: string): void {
+  if (isCronExpression(schedule)) {
+    parseCronExpression(schedule); // throws on bad fields
+    // Validate timezone is acceptable to Intl (throws RangeError if not).
+    if (timezone !== undefined) {
+      new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+    }
+    return;
+  }
+  parseSchedule(schedule); // throws on bad interval
+}
+
+/**
+ * Parse a schedule string into milliseconds.
+ * Supports: "30s", "5m", "1h", "1d", or raw (all-digit) milliseconds.
+ *
+ * Throws on anything else rather than silently falling back to a default —
+ * a typo like "5mn" should surface as an error, not quietly schedule every
+ * 10 minutes (review-2026-05-30).
+ */
+function parseSchedule(schedule: string): number {
+  const match = schedule.match(/^(\d+)(s|m|h|d)$/);
+  if (match) {
+    const value = parseInt(match[1], 10);
+    switch (match[2]) {
+      case "s": return value * 1000;
+      case "m": return value * 60 * 1000;
+      case "h": return value * 60 * 60 * 1000;
+      case "d": return value * 24 * 60 * 60 * 1000;
+    }
+  }
+  // Raw milliseconds — must be all digits and > 0 (parseInt would otherwise
+  // accept "1500abc").
+  if (/^\d+$/.test(schedule)) {
+    const ms = parseInt(schedule, 10);
+    if (ms > 0) return ms;
+  }
+
+  throw new Error(
+    `Invalid schedule: ${JSON.stringify(schedule)}. Use "30s"/"5m"/"1h"/"1d" or a positive number of milliseconds.`,
+  );
+}
+
+export const cronScheduler = new CronScheduler();

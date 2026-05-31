@@ -40,6 +40,8 @@ import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
 import { CostTracker } from "../cost-tracker.js";
 import { installGracefulShutdown } from "./graceful-shutdown.js";
+import { cronScheduler } from "../automation/scheduler.js";
+import { CronStore, defaultCronStorePath } from "../automation/store.js";
 
 // ─── Read base config from environment / settings ─────────────────
 
@@ -158,6 +160,21 @@ const chatManager = new ChatSessionManager({
   idleTtlMs: 30 * 60 * 1000,
 });
 chatManager.startIdleSweeper();
+
+// ─── Cron persistence ────────────────────────────────────────────
+// The agent's CronCreate/Delete tools operate on the shared cronScheduler
+// singleton. In the desktop host this worker is a SEPARATE process from the
+// Electron main process that owns the live scheduler, so the only way a
+// chat-created job reaches the automation UI is through the shared on-disk
+// store (~/.code-shell/cron.json). Give this process's scheduler that store so
+// CronCreate persists; loadJobs() so the agent can list/modify existing jobs.
+// Execution is DISABLED here — this worker must not run scheduled jobs (the
+// main process owns execution); persistence is its only cron role. Without
+// this, loadJobs()/CronCreate would arm timers in this process too, double-
+// running jobs and corrupting run stats.
+cronScheduler.setStore(new CronStore(defaultCronStorePath()));
+cronScheduler.setExecutionEnabled(false);
+cronScheduler.loadJobs();
 
 // ─── Step 5: AgentServer over stdio ──────────────────────────────
 

@@ -318,3 +318,60 @@ Phase 6  薄服务端(网络 transport + serve 入口)          ── P2:服务
   `server.ts:89`(AgentServer 解耦 transport)、`run.ts`(已补 stdin/last-message/drain)、
   `cron/{scheduler,cron-store,cron-runtime}.ts`(本会话实现)、`RunManager.ts:65`、`App.tsx:1360-1371`、
   desktop `agent-bridge.ts:1-16`、preload `createWorktree`。
+---
+
+## 方向修正(2026-05-31，设计讨论，未动码)
+
+### 起因：「关了 Electron，定时任务还跑吗？」
+
+复盘当前实现，答案是**不跑**。三个宿主各自 `import startAutomation()`，调度器的 `setTimeout`/`setInterval` 活在各自进程的事件循环里：
+
+| 宿主 | 调度器跑在哪 | 关了它会怎样 |
+|---|---|---|
+| Electron | `main/index.ts → automation-host.ts` 的 `startAutomation()`，Electron main 进程 | timer 随进程消失，不触发 |
+| TUI | `repl.ts`，TUI 进程 | 同上 |
+| server | `agent-server-tcp.ts`，TCP 服务进程 | 同上 |
+
+三个进程各跑一个 `CronScheduler` 各读同一个 `cron.json` → ① 谁活着谁触发、谁死谁停；② 多进程同时开会抢跑同一 job（cron-store 是 v1 单进程，并发写 lost-update）。
+
+### 关键澄清：Codex 也没有魔法（查证 OpenAI 官方文档）
+
+误以为「Codex 关了还能跑」，实查 [developers.openai.com/codex/app/automations](https://developers.openai.com/codex/app/automations)，Codex 自己也分两类：
+
+- **Standalone（独立任务）**：跑在 **OpenAI 云端**，每次起一个全新 session（`new-chat`），关本机不影响 —— 因为执行根本不在你机器上，云服务器 7×24 由 OpenAI 的基础设施守护。
+- **Project-scoped（本地项目）**：官方原话 *"the app needs to be running, and the selected project needs to be available on disk"* —— **App 必须开着**，和我们现状一模一样。
+
+截图实证：用户的「工作日晨间简报」任务，右侧「运行环境=本地」、目标本机目录、历史两条 `new-chat`。**它是 project-scoped，关了 App 明早 08:01 不会跑。** 「本地不跑也没问题」只对云端任务成立，对本地环境任务不成立。
+
+OpenAI 文档还有句未兑现的承诺：*"building out... cloud-based triggers, so Codex can run continuously... not just when your computer is open"* —— 连 OpenAI 都把「关机还跑本地任务」列为「建设中」，印证：**没有「放进库就能自启」这种事，必须有一个常驻进程 + OS 守护。**
+
+### 结论：核心认知 —— 「代码放 core」≠「能自己启动」
+
+- `CronScheduler` **代码**已在 core（`automation/`），这是对的，不用动。
+- 但 core 是**库**，库没有进程。`setTimeout` 在**哪个进程的事件循环**里转，才决定关了 Electron 还跑不跑。
+- 「启动」必须由**进程入口 + OS 守护**完成，core 只提供 `startAutomation()` 函数。
+
+目标架构（复刻 Codex standalone，常驻进程放本机）：
+
+```
+OS 守护（launchd / systemd）          ← 开机自启 + 崩溃重启
+  └─ code-shell serve（headless 常驻，= agent-server-tcp）
+        └─ startAutomation({store, runner})   ← 调度器只在这一个进程里转
+              └─ 到点 → RunManager 跑一次 Engine（new-chat，每次新 session）
+Electron / TUI ──TCP──► 连到常驻进程（纯客户端，关了不影响调度）
+```
+
+收敛点：「自动化调度」与「UI 连后端」用**同一套 Transport 解耦机制**（Phase 6 已有 `SocketTransport`/`listenTcp`）。`startAutomation` 将来**只在 server 调用一次**，Electron/TUI 删掉各自那份，改成下发 cron 增删查 + 订阅运行结果。
+
+### 分阶段（本次决定：先不做常驻）
+
+每次运行起一个全新 session（`new-chat` 模型）—— 已与 core 的 `bindCronToRunManager`（每次一次性 Engine）一致，方向对，保留。
+
+| 阶段 | 内容 | 依赖常驻 | 本轮 |
+|---|---|---|---|
+| A | CronJob 加 `runtime` 字段（`electron`\|`server`，默认 electron）+ store 持久化 —— 数据模型先立住，将来接常驻零改动 | 否 | 待办（铺垫） |
+| B | AutomationView 详情按截图展示：运行环境/下次运行/重复/模型/历史(new-chat) | 否 | 待办（铺垫） |
+| C | 多进程互斥（防 Electron + 将来 server 抢同一 job） | 为常驻铺垫 | 暂缓 |
+| D | 真·常驻进程 + launchd/systemd 守护（「关了 Electron 也能跑」的唯一真实来源） | —— | **本次明确先不做** |
+
+**当下定调**：先把「运行环境」概念与 UI 铺好（A/B，不依赖常驻），常驻（D）留到以后。在 D 落地前，所有 cron 实际仍是「Electron/TUI 进程内、关窗即停」—— 这点须在 UI 如实呈现，不可让「运行环境=本地」读起来像「关了也跑」。

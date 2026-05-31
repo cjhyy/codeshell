@@ -247,6 +247,14 @@ export interface CodeshellApi {
   tailLog(bucket: "ui-ink" | "engine" | "desktop", lines?: number): Promise<string[]>;
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
+  listAutomations(): Promise<AutomationSummary[]>;
+  getAutomation(id: string): Promise<AutomationSummary | null>;
+  createAutomation(input: CreateAutomationInput): Promise<AutomationSummary>;
+  updateAutomation(id: string, patch: UpdateAutomationInput): Promise<AutomationSummary | null>;
+  deleteAutomation(id: string): Promise<boolean>;
+  pauseAutomation(id: string): Promise<boolean>;
+  resumeAutomation(id: string): Promise<boolean>;
+  runAutomationNow(id: string): Promise<boolean>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
   /**
@@ -496,6 +504,42 @@ export interface PluginSummary {
   skillCount: number;
   /** Optional plugin description if `plugin.json` provides one. */
   description?: string;
+}
+
+export type AutomationPermissionLevel = "read-only" | "workspace-write" | "full";
+
+export interface AutomationSummary {
+  id: string;
+  name: string;
+  schedule: string;
+  prompt: string;
+  enabled: boolean;
+  cwd: string | null;
+  timezone: string | null;
+  permissionLevel: AutomationPermissionLevel | null;
+  lastRun: number | null;
+  nextRun: number | null;
+  runCount: number;
+  createdAt: number;
+  lastRunId: string | null;
+}
+
+export interface CreateAutomationInput {
+  name: string;
+  schedule: string;
+  prompt: string;
+  cwd?: string;
+  timezone?: string;
+  permissionLevel?: AutomationPermissionLevel;
+}
+
+export interface UpdateAutomationInput {
+  name?: string;
+  prompt?: string;
+  schedule?: string;
+  timezone?: string;
+  cwd?: string;
+  permissionLevel?: AutomationPermissionLevel;
 }
 
 export interface RunSummary {

@@ -13,6 +13,7 @@ import type { RunSnapshot, RunStatus } from "../packages/core/src/run/types.js";
 describe("VALID_TRANSITIONS", () => {
   it("queued can go to running or cancelled", () => {
     expect(VALID_TRANSITIONS.queued).toContain("running");
+    expect(VALID_TRANSITIONS.queued).toContain("blocked");
     expect(VALID_TRANSITIONS.queued).toContain("cancelled");
     expect(VALID_TRANSITIONS.queued).not.toContain("completed");
   });

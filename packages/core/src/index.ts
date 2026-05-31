@@ -110,6 +110,11 @@ export {
   StdioTransport,
   type Transport,
 } from "./protocol/transport.js";
+export {
+  SocketTransport,
+  listenTcp,
+  type TcpListenResult,
+} from "./protocol/tcp-transport.js";
 // Recommended public factories — see protocol/factories.ts for the
 // stable construction contract referenced by standard §7.
 export {
@@ -344,6 +349,8 @@ export {
   ArtifactTracker,
   // Hardening
   RunLock,
+  type RunLockConfig,
+  type RunLockAcquireResult,
   Heartbeat,
   // Evaluator
   NoopEvaluator,
@@ -532,15 +539,39 @@ export {
 // variant so SDK consumers can write handlers without re-destructuring the
 // StreamEvent union themselves.
 export type { BackgroundAgentCompletedEvent } from "./types.js";
-// Cron — scheduler singleton + persistence + executor binding (B1/B2).
-export { CronScheduler, cronScheduler, type CronJob } from "./cron/scheduler.js";
-export { CronStore, defaultCronStorePath } from "./cron/cron-store.js";
+// Automation — zero-env-dependency scheduling module (startAutomation facade
+// + scheduler/store/runner). Hosts (Electron main, future CLI server) load
+// this and inject store + runner. See docs/automation-plan-2026-05-31.md.
 export {
+  startAutomation,
+  type StartAutomationDeps,
+  type AutomationHandle,
+  CronScheduler,
+  cronScheduler,
+  type CronJob,
+  type CronPermissionLevel,
+  type CreateJobOptions,
+  type UpdateJobPatch,
+  CronStore,
+  defaultCronStorePath,
   bindCronToEngine,
+  bindCronToRunManager,
   type CronRunner,
   type CronRunRequest,
   type CronRunResult,
-} from "./cron/cron-runtime.js";
+  type RunSubmitter,
+  isCronExpression,
+  parseCronExpression,
+  nextCronTime,
+  type ParsedCron,
+  resolveWritePolicy,
+  wrapUntrustedInput,
+  type WritePolicy,
+  runWriteJobInWorktree,
+  type WriteJobGitOps,
+  type RunWriteJobInput,
+  type RunWriteJobResult,
+} from "./automation/index.js";
 export {
   asyncAgentRegistry,
   type AsyncAgentEntry,

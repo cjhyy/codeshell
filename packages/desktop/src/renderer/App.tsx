@@ -52,6 +52,7 @@ import { LogsView } from "./logs/LogsView";
 // Full-page Settings — driven by viewMode === 'settings_page'.
 import { SettingsPage } from "./settings/SettingsPage";
 import { RunsView } from "./runs/RunsView";
+import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
@@ -758,6 +759,27 @@ function App() {
   const showWelcome = state.messages.length === 0;
 
   const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
+
+  // Conversational automation creation: seed the chat composer with a starter
+  // prompt and switch to chat. The agent explains automation, asks what to do
+  // and when, then calls CronCreate — the user never touches cron syntax.
+  const [composerSeed, setComposerSeed] = useState("");
+  const [composerSeedNonce, setComposerSeedNonce] = useState(0);
+  const startConversationalAutomation = (): void => {
+    // Start a FRESH draft session — never pile onto whatever task/run session
+    // happened to be active. Mirrors handleNewConversation: clear
+    // activeSessionId so a brand-new session materializes on first send.
+    const repoId = activeRepoId;
+    setSessionIndices((prev) => ({
+      ...prev,
+      [repoKeyOf(repoId)]: setActiveSession(repoId, null),
+    }));
+    setComposerSeed(
+      "我想设置一个自动化。先简要说明自动化如何运作,然后问我几个问题,以了解我希望它做什么、以及何时运行(包括时区)。明确后用 CronCreate 工具帮我创建。",
+    );
+    setComposerSeedNonce((n) => n + 1);
+    setViewMode("chat");
+  };
   const toggleSidebar = (): void =>
     setView((p) => ({ ...p, sidebarCollapsed: !p.sidebarCollapsed }));
   // toggleInspector retained as a no-op for menu/palette wiring that
@@ -1081,7 +1103,7 @@ function App() {
           onNewConversationForRepo={handleNewConversationForRepo}
           onNewConversation={handleNewConversation}
           onOpenSearch={() => setSessionSearchOpen(true)}
-          onOpenAutomations={() => setViewMode("runs")}
+          onOpenAutomations={() => setViewMode("automation")}
           onOpenCustomize={() => setViewMode("customize")}
           onOpenSettingsPage={() => setViewMode("settings_page")}
           onRenameSession={handleRenameSession}
@@ -1107,6 +1129,8 @@ function App() {
           <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
         ) : view.viewMode === "runs" ? (
           <RunsView />
+        ) : view.viewMode === "automation" ? (
+          <AutomationView onCreateConversational={startConversationalAutomation} />
         ) : (
           <>
             <ChatView
@@ -1117,6 +1141,8 @@ function App() {
               onStop={stop}
               busy={busy}
               activeRepoId={activeRepoId}
+              composerSeed={composerSeed}
+              composerSeedNonce={composerSeedNonce}
               onAskUserAnswer={handleAskUserAnswer}
               pendingApproval={approval}
               onApprovalDecide={

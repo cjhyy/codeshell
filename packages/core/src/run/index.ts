@@ -47,7 +47,7 @@ export { CheckpointWriter, type CheckpointWriterConfig } from "./CheckpointWrite
 export { ArtifactTracker, type ArtifactTrackerConfig } from "./ArtifactTracker.js";
 
 // Hardening
-export { RunLock, type RunLockConfig } from "./RunLock.js";
+export { RunLock, type RunLockConfig, type RunLockAcquireResult } from "./RunLock.js";
 export { Heartbeat, type HeartbeatConfig, type HeartbeatData } from "./Heartbeat.js";
 
 // Evaluator
