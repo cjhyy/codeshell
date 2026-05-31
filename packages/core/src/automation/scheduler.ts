@@ -49,9 +49,26 @@ export class CronScheduler {
   /** Optional persistence backend. When set, every create/delete/pause/resume
    *  writes the full job set to disk so jobs survive a restart. */
   private store?: CronStore;
+  /** When false, the scheduler persists + tracks jobs but NEVER arms timers
+   *  (so it can't execute). Used by the desktop agent worker, a separate
+   *  process from the main process that owns execution. Default true. */
+  private executionEnabled = true;
 
   constructor(store?: CronStore) {
     this.store = store;
+  }
+
+  /**
+   * Disable (or re-enable) timer arming / execution. A host that only needs to
+   * persist + read jobs — never run them — calls setExecutionEnabled(false).
+   * Stops any timers already armed when turning off.
+   */
+  setExecutionEnabled(enabled: boolean): void {
+    this.executionEnabled = enabled;
+    if (!enabled) {
+      for (const timer of this.timers.values()) clearTimeout(timer);
+      this.timers.clear();
+    }
   }
 
   /** Attach (or replace) the persistence backend. Used to give the shared
@@ -71,8 +88,17 @@ export class CronScheduler {
    * thundering-herd; aligns with Codex's stateless philosophy). Disabled
    * jobs are restored without a timer.
    */
-  loadJobs(): void {
+  /**
+   * Restore persisted jobs into memory. By default also (re)arms timers for
+   * enabled jobs. Pass `{ arm: false }` in a host that must NOT execute jobs —
+   * e.g. the desktop agent worker, which is a separate process from the main
+   * process that owns execution. There the worker only persists (so CronCreate
+   * sees existing ids and writes to the shared store) and must never start
+   * timers, or jobs would run twice (once per process) and fight over run stats.
+   */
+  loadJobs(opts?: { arm?: boolean }): void {
     if (!this.store) return;
+    const arm = opts?.arm ?? true;
     const persisted = this.store.load();
     let maxId = 0;
     for (const job of persisted) {
@@ -81,7 +107,7 @@ export class CronScheduler {
       // can't collide with a restored one.
       const n = parseInt(job.id, 10);
       if (Number.isFinite(n) && n > maxId) maxId = n;
-      if (job.enabled) {
+      if (arm && job.enabled) {
         // nextRun is recomputed forward from now; we do NOT catch up missed runs.
         this.arm(job);
       }
@@ -188,10 +214,16 @@ export class CronScheduler {
   private arm(job: CronJob): void {
     this.clearTimer(job.id);
     if (isCronExpression(job.schedule)) {
+      // Compute nextRun for display even when execution is disabled.
+      const cron = parseCronExpression(job.schedule);
+      const next = nextCronTime(cron, job.timezone ?? "UTC", Date.now());
+      job.nextRun = next ?? undefined;
+      if (!this.executionEnabled) return;
       this.armCron(job);
     } else {
       const intervalMs = parseSchedule(job.schedule);
       job.nextRun = Date.now() + intervalMs;
+      if (!this.executionEnabled) return;
       const timer = setInterval(() => void this.fire(job, () => this.refreshIntervalNextRun(job, intervalMs)), intervalMs);
       this.timers.set(job.id, timer);
     }

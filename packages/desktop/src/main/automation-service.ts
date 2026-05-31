@@ -64,13 +64,26 @@ function requireScheduler(): CronScheduler {
   return scheduler;
 }
 
+/**
+ * Reload jobs from the shared on-disk store before reading. The desktop agent
+ * worker is a separate process; a chat-created job (via CronCreate) is written
+ * to ~/.code-shell/cron.json by that worker but isn't in main's in-memory
+ * scheduler until we reload. loadJobs() is idempotent and (since main has
+ * execution enabled) arms any newly-seen job so main takes over its schedule.
+ */
+function syncFromStore(): void {
+  scheduler?.loadJobs();
+}
+
 export function listAutomations(): AutomationSummary[] {
   if (!scheduler) return [];
+  syncFromStore();
   return scheduler.list().map(toSummary);
 }
 
 export function getAutomation(id: string): AutomationSummary | null {
   if (!scheduler) return null;
+  syncFromStore();
   const job = scheduler.get(id);
   return job ? toSummary(job) : null;
 }
