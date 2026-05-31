@@ -24,11 +24,13 @@ import {
   listAutomations,
   getAutomation,
   createAutomation,
+  updateAutomation,
   deleteAutomation,
   pauseAutomation,
   resumeAutomation,
   runAutomationNow,
   type CreateAutomationInput,
+  type UpdateAutomationInput,
 } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
 import {
@@ -729,6 +731,11 @@ ipcMain.handle("automation:create", async (_e, input: CreateAutomationInput) => 
     throw new Error("name, schedule and prompt are required");
   }
   return createAutomation(input);
+});
+ipcMain.handle("automation:update", async (_e, id: string, patch: UpdateAutomationInput) => {
+  if (typeof id !== "string") throw new Error("id required");
+  if (!patch || typeof patch !== "object") throw new Error("patch required");
+  return updateAutomation(id, patch);
 });
 ipcMain.handle("automation:delete", async (_e, id: string) => {
   if (typeof id !== "string") throw new Error("id required");

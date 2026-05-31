@@ -549,6 +549,7 @@ export {
   type CronJob,
   type CronPermissionLevel,
   type CreateJobOptions,
+  type UpdateJobPatch,
   CronStore,
   defaultCronStorePath,
   bindCronToEngine,

@@ -5,6 +5,7 @@ import {
   listAutomations,
   getAutomation,
   createAutomation,
+  updateAutomation,
   deleteAutomation,
   pauseAutomation,
   resumeAutomation,
@@ -51,6 +52,27 @@ describe("automation-service", () => {
     expect(resumeAutomation(job.id)).toBe(true);
     expect(getAutomation(job.id)?.enabled).toBe(true);
     sched.stopAll();
+  });
+
+  test("update changes prompt + schedule and returns the new summary", () => {
+    const job = createAutomation({ name: "j", schedule: "1h", prompt: "old" });
+    const updated = updateAutomation(job.id, { prompt: "new", schedule: "0 9 * * 1-5", timezone: "UTC" });
+    expect(updated?.prompt).toBe("new");
+    expect(updated?.schedule).toBe("0 9 * * 1-5");
+    expect(updated?.timezone).toBe("UTC");
+    expect(getAutomation(job.id)?.prompt).toBe("new");
+    sched.stopAll();
+  });
+
+  test("update rejects an invalid schedule (throws, job unchanged)", () => {
+    const job = createAutomation({ name: "j", schedule: "1h", prompt: "p" });
+    expect(() => updateAutomation(job.id, { schedule: "99 9 * * *" })).toThrow();
+    expect(getAutomation(job.id)?.schedule).toBe("1h");
+    sched.stopAll();
+  });
+
+  test("update returns null for unknown id", () => {
+    expect(updateAutomation("nope", { prompt: "x" })).toBeNull();
   });
 
   test("delete removes the job", () => {

@@ -85,10 +85,16 @@ export function AutomationView({ onCreateConversational }: { onCreateConversatio
             {detail ? (
               <AutomationDetail
                 job={detail}
-                onPause={() => act(() => window.codeshell.pauseAutomation(detail.id))}
-                onResume={() => act(() => window.codeshell.resumeAutomation(detail.id))}
+                onToggleEnabled={(next) =>
+                  act(() =>
+                    next
+                      ? window.codeshell.resumeAutomation(detail.id)
+                      : window.codeshell.pauseAutomation(detail.id),
+                  )
+                }
                 onDelete={() => act(() => window.codeshell.deleteAutomation(detail.id))}
                 onRunNow={() => act(() => window.codeshell.runAutomationNow(detail.id))}
+                onSave={(patch) => act(() => window.codeshell.updateAutomation(detail.id, patch))}
               />
             ) : (
               <div className="automation-detail-empty">选择一个任务查看详情</div>
@@ -102,23 +108,84 @@ export function AutomationView({ onCreateConversational }: { onCreateConversatio
 
 function AutomationDetail(props: {
   job: AutomationSummary;
-  onPause: () => void;
-  onResume: () => void;
+  onToggleEnabled: (next: boolean) => void;
   onDelete: () => void;
   onRunNow: () => void;
+  onSave: (patch: {
+    name?: string;
+    schedule?: string;
+    prompt?: string;
+    timezone?: string;
+  }) => void;
 }) {
   const { job } = props;
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(job.name);
+  const [schedule, setSchedule] = useState(job.schedule);
+  const [timezone, setTimezone] = useState(job.timezone ?? "");
+  const [prompt, setPrompt] = useState(job.prompt);
+
+  // Re-sync the edit fields whenever a different job is selected.
+  useEffect(() => {
+    setEditing(false);
+    setName(job.name);
+    setSchedule(job.schedule);
+    setTimezone(job.timezone ?? "");
+    setPrompt(job.prompt);
+  }, [job.id, job.name, job.schedule, job.timezone, job.prompt]);
+
+  if (editing) {
+    return (
+      <div className="automation-detail-card">
+        <div className="automation-detail-header">
+          <h3>编辑自动化</h3>
+        </div>
+        <label className="automation-edit-label">名称<input value={name} onChange={(e) => setName(e.target.value)} /></label>
+        <label className="automation-edit-label">
+          频率(cron 表达式或间隔)
+          <input value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="0 9 * * 1-5 或 1h" />
+        </label>
+        <label className="automation-edit-label">时区<input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Asia/Shanghai" /></label>
+        <label className="automation-edit-label">任务提示<textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} /></label>
+        <div className="automation-detail-actions">
+          <button onClick={() => setEditing(false)}>取消</button>
+          <button
+            disabled={!name.trim() || !schedule.trim() || !prompt.trim()}
+            onClick={() => {
+              props.onSave({
+                name: name.trim(),
+                schedule: schedule.trim(),
+                prompt: prompt.trim(),
+                timezone: timezone.trim() || undefined,
+              });
+              setEditing(false);
+            }}
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="automation-detail-card">
       <div className="automation-detail-header">
         <h3>{job.name}</h3>
         <div className="automation-detail-actions">
+          {/* enable/disable as a switch toggle (not a button) */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={job.enabled}
+            title={job.enabled ? "已启用 — 点击暂停" : "已暂停 — 点击启用"}
+            className={`settings-git-switch${job.enabled ? " on" : ""}`}
+            onClick={() => props.onToggleEnabled(!job.enabled)}
+          >
+            <span className="settings-git-switch-thumb" />
+          </button>
           <button onClick={props.onRunNow}>立即运行</button>
-          {job.enabled ? (
-            <button onClick={props.onPause}>暂停</button>
-          ) : (
-            <button onClick={props.onResume}>启用</button>
-          )}
+          <button onClick={() => setEditing(true)}>编辑</button>
           <button className="danger" onClick={props.onDelete}>删除</button>
         </div>
       </div>

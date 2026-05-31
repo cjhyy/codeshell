@@ -583,3 +583,10 @@
   background: var(--bg-elevated); color: var(--fg-primary); cursor: pointer; font-size: var(--fz-sm);
 }
 .automation-modal-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.automation-edit-label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fz-sm); color: var(--fg-muted); margin-bottom: var(--sp-2); }
+.automation-edit-label input, .automation-edit-label textarea {
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  padding: 6px; color: var(--fg-primary); font-size: var(--fz-sm); font-family: inherit;
+}
+.automation-detail-actions .settings-git-switch { align-self: center; }

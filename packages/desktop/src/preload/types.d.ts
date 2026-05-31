@@ -250,6 +250,7 @@ export interface CodeshellApi {
   listAutomations(): Promise<AutomationSummary[]>;
   getAutomation(id: string): Promise<AutomationSummary | null>;
   createAutomation(input: CreateAutomationInput): Promise<AutomationSummary>;
+  updateAutomation(id: string, patch: UpdateAutomationInput): Promise<AutomationSummary | null>;
   deleteAutomation(id: string): Promise<boolean>;
   pauseAutomation(id: string): Promise<boolean>;
   resumeAutomation(id: string): Promise<boolean>;
@@ -529,6 +530,15 @@ export interface CreateAutomationInput {
   prompt: string;
   cwd?: string;
   timezone?: string;
+  permissionLevel?: AutomationPermissionLevel;
+}
+
+export interface UpdateAutomationInput {
+  name?: string;
+  prompt?: string;
+  schedule?: string;
+  timezone?: string;
+  cwd?: string;
   permissionLevel?: AutomationPermissionLevel;
 }
 

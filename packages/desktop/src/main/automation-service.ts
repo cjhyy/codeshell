@@ -98,6 +98,20 @@ export function createAutomation(input: CreateAutomationInput): AutomationSummar
   return toSummary(job);
 }
 
+export interface UpdateAutomationInput {
+  name?: string;
+  prompt?: string;
+  schedule?: string;
+  timezone?: string;
+  cwd?: string;
+  permissionLevel?: CronPermissionLevel;
+}
+
+export function updateAutomation(id: string, patch: UpdateAutomationInput): AutomationSummary | null {
+  const job = requireScheduler().update(id, patch);
+  return job ? toSummary(job) : null;
+}
+
 export function deleteAutomation(id: string): boolean {
   return requireScheduler().delete(id);
 }

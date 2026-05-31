@@ -38,6 +38,16 @@ export interface CreateJobOptions {
   permissionLevel?: CronPermissionLevel;
 }
 
+/** Fields editable via update(). Any omitted field is left unchanged. */
+export interface UpdateJobPatch {
+  name?: string;
+  prompt?: string;
+  schedule?: string;
+  timezone?: string;
+  cwd?: string;
+  permissionLevel?: CronPermissionLevel;
+}
+
 export class CronScheduler {
   private jobs = new Map<string, CronJob>();
   private timers = new Map<string, NodeJS.Timeout>();
@@ -219,6 +229,45 @@ export class CronScheduler {
     this.arm(job);
     this.persist();
     return true;
+  }
+
+  /**
+   * Edit an existing job's fields (name/prompt/schedule/timezone/cwd/
+   * permissionLevel) without recreating it. A changed schedule is validated up
+   * front (throws on invalid, leaving the job untouched), then the timer is
+   * re-armed so the new schedule takes effect immediately. Enabled state is
+   * preserved — a paused job stays paused (no timer). Returns the updated job,
+   * or null if the id is unknown.
+   */
+  update(id: string, patch: UpdateJobPatch): CronJob | null {
+    const job = this.jobs.get(id);
+    if (!job) return null;
+
+    // Validate a new schedule/timezone BEFORE mutating anything.
+    const nextSchedule = patch.schedule ?? job.schedule;
+    const nextTimezone = patch.timezone ?? job.timezone;
+    if (patch.schedule !== undefined || patch.timezone !== undefined) {
+      validateSchedule(nextSchedule, nextTimezone);
+    }
+
+    if (patch.name !== undefined) job.name = patch.name;
+    if (patch.prompt !== undefined) job.prompt = patch.prompt;
+    if (patch.schedule !== undefined) job.schedule = patch.schedule;
+    if (patch.timezone !== undefined) job.timezone = patch.timezone;
+    if (patch.cwd !== undefined) job.cwd = patch.cwd;
+    if (patch.permissionLevel !== undefined) job.permissionLevel = patch.permissionLevel;
+
+    // Re-arm so a schedule/timezone change drives execution now. arm() is
+    // idempotent and respects enabled + executionEnabled (paused → no timer,
+    // but nextRun still refreshed for display).
+    if (job.enabled) {
+      this.arm(job);
+    } else {
+      this.clearTimer(id);
+      this.refreshNextRunForDisplay(job);
+    }
+    this.persist();
+    return job;
   }
 
   stopAll(): void {

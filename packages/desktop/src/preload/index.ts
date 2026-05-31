@@ -238,6 +238,17 @@ contextBridge.exposeInMainWorld("codeshell", {
     timezone?: string;
     permissionLevel?: string;
   }) => ipcRenderer.invoke("automation:create", input),
+  updateAutomation: (
+    id: string,
+    patch: {
+      name?: string;
+      prompt?: string;
+      schedule?: string;
+      timezone?: string;
+      cwd?: string;
+      permissionLevel?: string;
+    },
+  ) => ipcRenderer.invoke("automation:update", id, patch),
   deleteAutomation: (id: string) => ipcRenderer.invoke("automation:delete", id),
   pauseAutomation: (id: string) => ipcRenderer.invoke("automation:pause", id),
   resumeAutomation: (id: string) => ipcRenderer.invoke("automation:resume", id),
