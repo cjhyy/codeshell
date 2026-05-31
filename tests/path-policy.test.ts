@@ -110,6 +110,37 @@ describe("classifyPath", () => {
     }).decision).toBe("ask");
   });
 
+  test("read current CodeShell session artifacts → allow", () => {
+    const c = classifyPath("~/.code-shell/sessions/s-abc123/tool-results/call_1.txt", {
+      workspaceRoot: workspace,
+      operation: "read",
+    });
+    expect(c.decision).toBe("allow");
+    expect(c.reason).toContain("diagnostic");
+  });
+
+  test("read CodeShell desktop logs → allow", () => {
+    expect(classifyPath("~/.code-shell/logs/desktop-2026-05-31.log", {
+      workspaceRoot: workspace,
+      operation: "read",
+    }).decision).toBe("allow");
+  });
+
+  test("CodeShell auth/token material remains protected", () => {
+    expect(classifyPath("~/.code-shell/auth.json", {
+      workspaceRoot: workspace,
+      operation: "read",
+    }).decision).toBe("ask");
+    expect(classifyPath("~/.code-shell/sessions/s-abc123/token.txt", {
+      workspaceRoot: workspace,
+      operation: "read",
+    }).decision).toBe("ask");
+    expect(classifyPath("~/.code-shell/sessions/s-abc123/tool-results/call_1.txt", {
+      workspaceRoot: workspace,
+      operation: "write",
+    }).decision).toBe("deny");
+  });
+
   test("read of .env in workspace → ask", () => {
     writeFileSync(join(workspace, ".env"), "x\n");
     expect(classifyPath(join(workspace, ".env"), {

@@ -86,6 +86,10 @@ const SENSITIVE_FILE_PATTERNS = [
   /\.pem$/i,
   /\.p12$/i,
   /\.pfx$/i,
+  /auth/i,
+  /token/i,
+  /credential/i,
+  /secret/i,
 ] as const;
 
 const ENV_DISABLE = "CODESHELL_PATH_POLICY";
@@ -170,6 +174,23 @@ function matchSensitiveFile(resolved: string): string | undefined {
   return undefined;
 }
 
+function isSafeCodeShellDiagnosticRead(resolved: string): boolean {
+  const home = homedir();
+  const root = home + sep + ".code-shell";
+  if (!isInsideDir(resolved, root)) return false;
+
+  const rel = resolved.slice(root.length + 1);
+  const parts = rel.split(sep).filter(Boolean);
+  if (parts[0] === "sessions" && /^s-[A-Za-z0-9_-]+$/.test(parts[1] ?? "")) {
+    return parts[2] === "tool-results" || parts[2] === "logs" || parts[2] === "transcript";
+  }
+  if (parts[0] === "logs") {
+    const name = parts[1] ?? "";
+    return /^(desktop|tui|agent|main)-.+\.log$/i.test(name);
+  }
+  return false;
+}
+
 /**
  * Classify a file path against the workspace + sensitive-path policy.
  *
@@ -216,6 +237,13 @@ export function classifyPath(rawPath: string, opts: ClassifyOptions): PathClassi
   // Sensitive: write is always denied, read always asks. Workspace placement
   // doesn't soften the rule — an `.env` in the project still asks on read.
   if (sensitiveLabel) {
+    if (opts.operation === "read" && isSafeCodeShellDiagnosticRead(resolved)) {
+      return {
+        decision: "allow",
+        reason: "safe CodeShell diagnostic read",
+        resolvedPath: resolved,
+      };
+    }
     if (opts.operation === "write") {
       return {
         decision: "deny",
