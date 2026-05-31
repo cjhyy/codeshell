@@ -363,6 +363,44 @@
 }
 .settings-toggle-row input { transform: scale(1.1); }
 
+/* 能力总览 (unified capability overview) */
+.cap-overview-error {
+  margin: 0;
+  color: var(--fg-danger, #e5484d);
+  font-size: var(--fz-sm);
+}
+.cap-overview-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.cap-overview-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--fg-primary);
+  font-size: var(--fz-md);
+  text-align: left;
+}
+.cap-overview-group-chevron { width: 1em; color: var(--fg-secondary); }
+.cap-overview-group-count {
+  margin-left: var(--sp-1);
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--fg-secondary);
+  font-size: var(--fz-xs);
+}
+.cap-overview-row { max-width: 520px; gap: var(--sp-3); }
+.cap-overview-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cap-overview-name { color: var(--fg-primary); }
+.cap-overview-desc { color: var(--fg-secondary); font-size: var(--fz-sm); }
+.cap-overview-meta { color: var(--fg-secondary); font-size: var(--fz-xs); font-family: var(--font-mono); }
+
 /* Skills list */
 .skills-panel { display: flex; flex-direction: column; gap: var(--sp-2); }
 

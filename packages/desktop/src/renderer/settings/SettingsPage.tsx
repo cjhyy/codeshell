@@ -17,6 +17,7 @@ import {
   Puzzle,
   Bot,
   Brain,
+  Layers,
 } from "lucide-react";
 import { ModelSection } from "./ModelSection";
 import { MemorySection } from "./MemorySection";
@@ -26,6 +27,7 @@ import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { AgentsSection } from "./AgentsSection";
 import { AppearanceSection } from "./AppearanceSection";
+import { CapabilitiesOverviewSection } from "./CapabilitiesOverviewSection";
 import {
   ArchivedConversationsSection,
   ConnectionsSection,
@@ -54,6 +56,7 @@ type ModuleId =
   | "browser"
   | "computer"
   | "archived"
+  | "capabilities"
   | "plugins-skills"
   | "agents"
   | "memory"
@@ -93,6 +96,7 @@ const MODULE_GROUPS: ModuleGroup[] = [
   {
     title: "扩展能力",
     modules: [
+      { id: "capabilities", label: "能力总览", Icon: Layers },
       { id: "mcp", label: "MCP 服务器", Icon: Plug },
       { id: "plugins-skills", label: "扩展", Icon: Puzzle },
       { id: "agents", label: "子代理", Icon: Bot },
@@ -152,6 +156,7 @@ export function SettingsPage({
     active === "general" ||
     active === "config" ||
     active === "personalization" ||
+    active === "capabilities" ||
     active === "mcp" ||
     active === "hooks" ||
     active === "connections" ||
@@ -234,6 +239,9 @@ export function SettingsPage({
             )}
             {active === "shortcuts" && (
               <ShortcutsSection />
+            )}
+            {active === "capabilities" && (
+              <CapabilitiesOverviewSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
             {active === "mcp" && (
               <McpSection scope={scope} activeRepoPath={activeRepoPath} />
