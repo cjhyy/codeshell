@@ -102,7 +102,7 @@
   align-items: center;
   gap: 4px;
   height: 26px;
-  padding: 0 var(--sp-2) 0 0;
+  padding: 0 var(--sp-2);
   border-radius: var(--radius-sm);
   font-size: var(--fz-md);
   color: var(--fg-primary);
@@ -113,16 +113,6 @@
 .project-row:hover .project-remove { opacity: 1; }
 .project-row.selected { color: var(--fg-primary); font-weight: 500; }
 
-.project-chevron {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  color: var(--fg-secondary);
-  border-radius: var(--radius-sm);
-}
-.project-chevron:hover { background: var(--bg-hover); color: var(--fg-primary); }
 .project-icon { color: var(--fg-muted); flex-shrink: 0; }
 .project-name {
   flex: 1;

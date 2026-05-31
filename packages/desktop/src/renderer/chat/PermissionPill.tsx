@@ -12,17 +12,11 @@ const MODES: Array<{
   id: PermissionMode;
   label: string;
   tone: "ok" | "warn" | "err";
-  hint: string;
 }> = [
-  { id: "plan", label: "计划模式", tone: "ok", hint: "只读探索 + 出方案,不动手" },
-  { id: "default", label: "默认权限", tone: "ok", hint: "每个有风险的操作都问一下" },
-  { id: "accept_edits", label: "接受编辑", tone: "warn", hint: "自动放行文件编辑,命令仍问" },
-  {
-    id: "bypass",
-    label: "完全访问权限",
-    tone: "err",
-    hint: "所有操作一律放行,不再询问",
-  },
+  { id: "plan", label: "计划模式", tone: "ok" },
+  { id: "default", label: "默认权限", tone: "ok" },
+  { id: "accept_edits", label: "接受编辑", tone: "warn" },
+  { id: "bypass", label: "完全访问权限", tone: "err" },
 ];
 
 export function toCorePermissionMode(mode: PermissionMode): CorePermissionMode {
@@ -101,7 +95,7 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
         onClick={() => setOpen((o) => !o)}
       >
         <AlertCircle size={12} />
-        <span>本次：{cur.label}</span>
+        <span>{cur.label}</span>
         <ChevronDown size={11} className="opacity-60" />
       </button>
       {open && (
@@ -113,7 +107,6 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
                 "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent " +
                 (m.id === value ? "bg-accent" : "")
               }
-              title={m.hint}
               onClick={() => {
                 onChange(m.id);
                 setOpen(false);
@@ -121,7 +114,6 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
             >
               <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
               <span className="font-medium">{m.label}</span>
-              <span className="truncate text-xs text-muted-foreground">{m.hint}</span>
             </li>
           ))}
         </ul>

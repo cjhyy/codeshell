@@ -83,6 +83,7 @@
     "electron": "^33.0.0",
     "electron-builder": "^25.1.8",
     "esbuild": "^0.24.0",
+    "playwright": "^1.60.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "tailwindcss": "^4.3.0",
