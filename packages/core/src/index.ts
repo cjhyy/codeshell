@@ -556,6 +556,13 @@ export {
   parseCronExpression,
   nextCronTime,
   type ParsedCron,
+  resolveWritePolicy,
+  wrapUntrustedInput,
+  type WritePolicy,
+  runWriteJobInWorktree,
+  type WriteJobGitOps,
+  type RunWriteJobInput,
+  type RunWriteJobResult,
 } from "./automation/index.js";
 export {
   asyncAgentRegistry,

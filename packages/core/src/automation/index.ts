@@ -74,3 +74,14 @@ export {
   type ParsedCron,
 } from "./cron-expr.js";
 export type { CronPermissionLevel, CreateJobOptions } from "./scheduler.js";
+export {
+  resolveWritePolicy,
+  wrapUntrustedInput,
+  type WritePolicy,
+} from "./write-policy.js";
+export {
+  runWriteJobInWorktree,
+  type WriteJobGitOps,
+  type RunWriteJobInput,
+  type RunWriteJobResult,
+} from "./write-run.js";
