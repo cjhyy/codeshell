@@ -45,11 +45,14 @@ export function ToolCardShell({
   const duration = formatDuration(message.durationMs);
   return (
     <div
-      className={`tool-card status-${message.status}${selected ? " selected" : ""}`}
+      className={
+        "rounded-lg border text-sm " +
+        (selected ? "border-primary/40 bg-accent/40" : "border-border")
+      }
       onClick={() => onSelect?.(message)}
     >
       <button
-        className="tool-card-head"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left"
         onClick={(e) => {
           e.stopPropagation();
           setOpen((o) => !o);
@@ -58,16 +61,16 @@ export function ToolCardShell({
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <StatusDot status={status} title={message.status} />
-        <span className="tool-card-name">{message.toolName}</span>
-        <span className="tool-card-summary">{summary}</span>
-        {duration && <span className="tool-card-duration">{duration}</span>}
+        <span className="font-medium">{message.toolName}</span>
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">{summary}</span>
+        {duration && <span className="shrink-0 text-xs text-muted-foreground">{duration}</span>}
         {message.status === "failed" && (
-          <span className="tool-card-err-badge">error</span>
+          <span className="shrink-0 rounded border border-status-err/40 px-1.5 text-xs text-status-err">error</span>
         )}
       </button>
-      {open && details && <div className="tool-card-body">{details}</div>}
+      {open && details && <div className="border-t border-border px-3 py-2">{details}</div>}
       {message.summary && (
-        <div className="tool-card-subtitle">{message.summary}</div>
+        <div className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">{message.summary}</div>
       )}
     </div>
   );
