@@ -3,7 +3,8 @@ import { Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
-import { Select } from "../ui/Select";
+import { SimpleSelect as Select } from "@/components/ui/simple-select";
+import { Switch } from "@/components/ui/switch";
 import { SearchConnectionsPanel } from "./SearchConnectionsPanel";
 import {
   DEFAULT_GIT_PREFS,
@@ -212,15 +213,10 @@ export function GitSection() {
           title="自动清理过期工作树"
           help="启动 codeshell 时检查 .worktrees/ 目录，删除超过下方时长未修改的工作树（包含其本地分支）。"
           control={
-            <button
-              type="button"
-              role="switch"
-              aria-checked={prefs.autoDeleteWorktrees}
-              className={`settings-git-switch${prefs.autoDeleteWorktrees ? " on" : ""}`}
-              onClick={() => update("autoDeleteWorktrees", !prefs.autoDeleteWorktrees)}
-            >
-              <span className="settings-git-switch-thumb" />
-            </button>
+            <Switch
+              checked={prefs.autoDeleteWorktrees}
+              onCheckedChange={(v) => update("autoDeleteWorktrees", v)}
+            />
           }
         />
         <GitRowShell

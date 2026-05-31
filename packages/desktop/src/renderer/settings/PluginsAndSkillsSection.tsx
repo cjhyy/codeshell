@@ -23,7 +23,7 @@ import type {
   PluginSummary,
   SkillSummary,
 } from "../../preload/types";
-import { Select } from "../ui/Select";
+import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { Markdown } from "../Markdown";
 import { writeSettings } from "../settingsBus";

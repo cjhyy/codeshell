@@ -3,7 +3,7 @@ import type {
   McpProbeResult,
   McpServerProbeInput,
 } from "../../preload/types";
-import { Select } from "../ui/Select";
+import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
 
 interface McpServer {

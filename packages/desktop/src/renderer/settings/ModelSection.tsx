@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Select } from "../ui/Select";
+import { SimpleSelect as Select } from "@/components/ui/simple-select";
 
 interface ModelEntry {
   key: string;
