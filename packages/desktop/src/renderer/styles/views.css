@@ -590,3 +590,23 @@
   padding: 6px; color: var(--fg-primary); font-size: var(--fz-sm); font-family: inherit;
 }
 .automation-detail-actions .settings-git-switch { align-self: center; }
+
+.automation-prompt-row { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.automation-prompt-row .automation-prompt { flex: 1; margin: 0; }
+.automation-prompt-edit-btn {
+  flex: 0 0 auto; padding: 3px var(--sp-2); background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  font-size: var(--fz-sm); cursor: pointer; color: var(--fg-primary);
+}
+.automation-prompt-edit { display: flex; flex-direction: column; gap: var(--sp-2); }
+.automation-prompt-edit textarea {
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  padding: 6px; color: var(--fg-primary); font-size: var(--fz-sm); font-family: inherit; width: 100%;
+}
+/* inline dropdowns in the fields grid sit right-aligned like Codex */
+.automation-fields dd { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.automation-inline-input {
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+  padding: 3px 6px; color: var(--fg-primary); font-size: var(--fz-sm); font-family: var(--font-mono, monospace);
+  min-width: 160px;
+}

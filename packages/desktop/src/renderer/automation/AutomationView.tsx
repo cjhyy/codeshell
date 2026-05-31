@@ -1,11 +1,34 @@
 import React, { useEffect, useState } from "react";
 import type { AutomationSummary, AutomationPermissionLevel } from "../../preload/types";
+import { Select } from "../ui/Select";
 
-const PERMISSION_LABELS: Record<AutomationPermissionLevel, string> = {
-  "read-only": "只读",
-  "workspace-write": "可写工作区",
-  full: "完全(可提 PR)",
-};
+const PERMISSION_OPTIONS = [
+  { value: "read-only", label: "只读" },
+  { value: "workspace-write", label: "可写工作区" },
+  { value: "full", label: "完全(可提 PR)" },
+];
+
+// Common schedule presets (cron expressions / intervals). "custom" reveals an
+// inline input for anything not in the list.
+const SCHEDULE_PRESETS = [
+  { value: "0 9 * * 1-5", label: "工作日 9:00" },
+  { value: "0 8 * * 1-5", label: "工作日 8:00" },
+  { value: "0 9 * * *", label: "每天 9:00" },
+  { value: "0 */6 * * *", label: "每 6 小时" },
+  { value: "0 * * * *", label: "每小时" },
+  { value: "1h", label: "每 1 小时(间隔)" },
+  { value: "1d", label: "每天(间隔)" },
+  { value: "__custom__", label: "自定义…" },
+];
+
+const TIMEZONE_OPTIONS = [
+  { value: "Asia/Shanghai", label: "Asia/Shanghai" },
+  { value: "UTC", label: "UTC" },
+  { value: "America/New_York", label: "America/New_York" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles" },
+  { value: "Europe/London", label: "Europe/London" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo" },
+];
 
 function fmtTime(ms: number | null): string {
   if (ms == null) return "—";
@@ -116,64 +139,41 @@ function AutomationDetail(props: {
     schedule?: string;
     prompt?: string;
     timezone?: string;
+    permissionLevel?: AutomationPermissionLevel;
   }) => void;
 }) {
   const { job } = props;
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(job.name);
-  const [schedule, setSchedule] = useState(job.schedule);
-  const [timezone, setTimezone] = useState(job.timezone ?? "");
-  const [prompt, setPrompt] = useState(job.prompt);
 
-  // Re-sync the edit fields whenever a different job is selected.
+  // Prompt is long free text → edited via a button/textarea, not a dropdown.
+  const [editingPrompt, setEditingPrompt] = useState(false);
+  const [promptDraft, setPromptDraft] = useState(job.prompt);
+
+  // Frequency "custom" mode reveals a free-form cron/interval input.
+  const scheduleIsPreset = SCHEDULE_PRESETS.some(
+    (p) => p.value === job.schedule && p.value !== "__custom__",
+  );
+  const [customSchedule, setCustomSchedule] = useState(scheduleIsPreset ? "" : job.schedule);
+  const [showCustomSchedule, setShowCustomSchedule] = useState(!scheduleIsPreset);
+
   useEffect(() => {
-    setEditing(false);
-    setName(job.name);
-    setSchedule(job.schedule);
-    setTimezone(job.timezone ?? "");
-    setPrompt(job.prompt);
-  }, [job.id, job.name, job.schedule, job.timezone, job.prompt]);
+    setEditingPrompt(false);
+    setPromptDraft(job.prompt);
+    const preset = SCHEDULE_PRESETS.some((p) => p.value === job.schedule && p.value !== "__custom__");
+    setShowCustomSchedule(!preset);
+    setCustomSchedule(preset ? "" : job.schedule);
+  }, [job.id, job.prompt, job.schedule]);
 
-  if (editing) {
-    return (
-      <div className="automation-detail-card">
-        <div className="automation-detail-header">
-          <h3>编辑自动化</h3>
-        </div>
-        <label className="automation-edit-label">名称<input value={name} onChange={(e) => setName(e.target.value)} /></label>
-        <label className="automation-edit-label">
-          频率(cron 表达式或间隔)
-          <input value={schedule} onChange={(e) => setSchedule(e.target.value)} placeholder="0 9 * * 1-5 或 1h" />
-        </label>
-        <label className="automation-edit-label">时区<input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Asia/Shanghai" /></label>
-        <label className="automation-edit-label">任务提示<textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={4} /></label>
-        <div className="automation-detail-actions">
-          <button onClick={() => setEditing(false)}>取消</button>
-          <button
-            disabled={!name.trim() || !schedule.trim() || !prompt.trim()}
-            onClick={() => {
-              props.onSave({
-                name: name.trim(),
-                schedule: schedule.trim(),
-                prompt: prompt.trim(),
-                timezone: timezone.trim() || undefined,
-              });
-              setEditing(false);
-            }}
-          >
-            保存
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const applyCustomSchedule = () => {
+    const v = customSchedule.trim();
+    if (v && v !== job.schedule) props.onSave({ schedule: v });
+  };
 
   return (
     <div className="automation-detail-card">
       <div className="automation-detail-header">
         <h3>{job.name}</h3>
         <div className="automation-detail-actions">
-          {/* enable/disable as a switch toggle (not a button) */}
+          {/* enable/disable as a switch toggle */}
           <button
             type="button"
             role="switch"
@@ -185,19 +185,104 @@ function AutomationDetail(props: {
             <span className="settings-git-switch-thumb" />
           </button>
           <button onClick={props.onRunNow}>立即运行</button>
-          <button onClick={() => setEditing(true)}>编辑</button>
           <button className="danger" onClick={props.onDelete}>删除</button>
         </div>
       </div>
-      <pre className="automation-prompt">{job.prompt}</pre>
+
+      {/* Prompt — edit button reveals an inline textarea (long text). */}
+      {editingPrompt ? (
+        <div className="automation-prompt-edit">
+          <textarea
+            value={promptDraft}
+            onChange={(e) => setPromptDraft(e.target.value)}
+            rows={5}
+          />
+          <div className="automation-detail-actions">
+            <button onClick={() => { setEditingPrompt(false); setPromptDraft(job.prompt); }}>取消</button>
+            <button
+              disabled={!promptDraft.trim()}
+              onClick={() => {
+                if (promptDraft.trim() !== job.prompt) props.onSave({ prompt: promptDraft.trim() });
+                setEditingPrompt(false);
+              }}
+            >
+              保存
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="automation-prompt-row">
+          <pre className="automation-prompt">{job.prompt}</pre>
+          <button className="automation-prompt-edit-btn" onClick={() => setEditingPrompt(true)}>编辑</button>
+        </div>
+      )}
+
+      {/* Everything else: inline dropdowns that apply immediately. */}
       <dl className="automation-fields">
         <dt>状态</dt><dd>{job.enabled ? "🟢 活跃" : "⏸ 已暂停"}</dd>
-        <dt>频率</dt><dd>{job.schedule}{job.timezone ? ` (${job.timezone})` : ""}</dd>
+
+        <dt>频率</dt>
+        <dd>
+          <Select
+            size="sm"
+            ariaLabel="频率"
+            value={showCustomSchedule ? "__custom__" : job.schedule}
+            options={SCHEDULE_PRESETS}
+            onChange={(v) => {
+              if (v === "__custom__") {
+                setShowCustomSchedule(true);
+              } else {
+                setShowCustomSchedule(false);
+                if (v !== job.schedule) props.onSave({ schedule: v });
+              }
+            }}
+          />
+          {showCustomSchedule && (
+            <input
+              className="automation-inline-input"
+              value={customSchedule}
+              placeholder="0 9 * * 1-5 或 1h"
+              onChange={(e) => setCustomSchedule(e.target.value)}
+              onBlur={applyCustomSchedule}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyCustomSchedule();
+              }}
+            />
+          )}
+        </dd>
+
+        <dt>时区</dt>
+        <dd>
+          <Select
+            size="sm"
+            ariaLabel="时区"
+            value={job.timezone ?? "UTC"}
+            options={TIMEZONE_OPTIONS}
+            onChange={(v) => {
+              if (v !== job.timezone) props.onSave({ timezone: v });
+            }}
+          />
+        </dd>
+
+        <dt>权限</dt>
+        <dd>
+          <Select
+            size="sm"
+            ariaLabel="权限"
+            value={job.permissionLevel ?? "read-only"}
+            options={PERMISSION_OPTIONS}
+            onChange={(v) => {
+              if (v !== (job.permissionLevel ?? "read-only")) {
+                props.onSave({ permissionLevel: v as AutomationPermissionLevel });
+              }
+            }}
+          />
+        </dd>
+
         <dt>下次运行</dt><dd>{fmtTime(job.nextRun)}</dd>
         <dt>上次运行</dt><dd>{fmtTime(job.lastRun)}</dd>
         <dt>运行次数</dt><dd>{job.runCount}</dd>
         <dt>项目</dt><dd>{job.cwd ?? "—"}</dd>
-        <dt>权限</dt><dd>{job.permissionLevel ? PERMISSION_LABELS[job.permissionLevel] : "只读(默认)"}</dd>
         <dt>最近运行</dt><dd>{job.lastRunId ?? "—"}</dd>
       </dl>
     </div>
