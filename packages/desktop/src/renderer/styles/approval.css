@@ -105,25 +105,9 @@
   gap: var(--sp-2);
   align-items: center;
 }
-.approval-btn {
-  padding: 4px var(--sp-3);
-  border-radius: var(--radius-sm);
-  font-size: var(--fz-md);
-  font-weight: 500;
-  border: 1px solid var(--border-strong);
-}
-.approval-btn.approve {
-  background: var(--accent);
-  color: var(--accent-fg);
-  border-color: var(--accent);
-}
-.approval-btn.approve:hover { background: var(--accent-hover); }
-.approval-btn.deny {
-  background: var(--bg-elevated);
-  color: var(--fg-primary);
-}
-.approval-btn.deny:hover { background: var(--bg-hover); }
-.approval-deny-select { flex: 1; min-width: 0; }
+/* .approval-btn / .approval-deny-select now live in tailwind.css's component
+   layer (plain style). Removed here to avoid the duplicate rule that made the
+   approve button's label hard to read. */
 
 .risk-pill {
   font-size: var(--fz-xs);
