@@ -8,6 +8,7 @@ import { Command } from "commander";
 import { positiveIntOption } from "./parse-int-option.js";
 import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
+import { resolveTaskFromArgOrStdin } from "./input/read-stdin.js";
 import { setup } from "../bootstrap/setup.js";
 import { costTracker, installCostTracking, hasApiKey, resolveApiKey, getCurrentVersion } from "@cjhyy/code-shell-core";
 import { CHALK_COLORIZER } from "../utils/colorizer.js";
@@ -61,12 +62,32 @@ function addCommonOptions(cmd: Command): Command {
 addCommonOptions(
   program
     .command("run")
-    .description("Execute a single task (headless mode)")
-    .argument("<task>", "The task to execute"),
+    .description("Execute a single task (headless mode). Reads the task from stdin if omitted and piped.")
+    .argument("[task]", "The task to execute (or pipe it via stdin)"),
 )
   .option("--resume <sessionId>", "Resume a previous session")
-  .action(async (task: string, opts) => {
-    await runCommand({ task, ...resolveOpts(opts) });
+  .option("--output-last-message <file>", "Write the final assistant message to a file")
+  .option("--no-wait-background-agents", "Exit without waiting for in-flight background agents")
+  .option(
+    "--background-wait-ms <ms>",
+    "Max ms to wait for background agents to finish",
+    positiveIntOption("--background-wait-ms"),
+  )
+  .action(async (task: string | undefined, opts) => {
+    const resolvedTask = await resolveTaskFromArgOrStdin(task);
+    if (!resolvedTask) {
+      console.error(
+        "Error: no task provided. Pass a <task> argument or pipe a prompt via stdin.",
+      );
+      process.exit(2);
+    }
+    await runCommand({
+      task: resolvedTask,
+      ...resolveOpts(opts),
+      // Commander maps --no-wait-background-agents to waitBackgroundAgents=false.
+      waitBackgroundAgents: opts.waitBackgroundAgents as boolean | undefined,
+      backgroundWaitMs: opts.backgroundWaitMs as number | undefined,
+    });
   });
 
 // ─── repl (default) ──────────────────────────────────────────────
@@ -192,6 +213,7 @@ function resolveOpts(opts: Record<string, unknown>) {
     maxTurns: opts.maxTurns as number | undefined,
     resume: opts.resume as string | undefined,
     effort: opts.effort as "low" | "medium" | "high" | "max" | undefined,
+    outputLastMessage: opts.outputLastMessage as string | undefined,
   };
 }
 

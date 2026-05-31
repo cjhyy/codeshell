@@ -22,6 +22,12 @@ import { startInkRepl } from "../../ui/index.js";
 import { runInkOnboarding } from "../../ui/onboarding-runner.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import { getInteractiveApprovalBackend } from "@cjhyy/code-shell-core";
+import {
+  cronScheduler,
+  CronStore,
+  bindCronToEngine,
+  type CronRunResult,
+} from "@cjhyy/code-shell-core";
 
 export type EffortLevel = "low" | "medium" | "high" | "max";
 
@@ -216,6 +222,30 @@ export async function replCommand(options: ReplOptions): Promise<void> {
 
   // 7. Create AgentClient (UI-side)
   const client = new AgentClient({ transport: clientTransport });
+
+  // ── Cron (B1 + B2) ──────────────────────────────────────────────
+  // Give the shared cron singleton a persistence store, restore any jobs
+  // saved in a previous run, and wire its executor to a one-shot headless
+  // Engine run. Until the sandbox (Phase 4) lands, cron runs read-only:
+  // bindCronToEngine hands us permissionMode "default" + a read-only
+  // approval backend, which we apply to a fresh Engine per fired job.
+  cronScheduler.setStore(new CronStore());
+  cronScheduler.loadJobs();
+  bindCronToEngine(cronScheduler, async (req): Promise<CronRunResult> => {
+    const cronEngine = new Engine({
+      llm: resolvedLlmConfig,
+      cwd,
+      runtime,
+      ...sharedCfg,
+      // Override the REPL's interactive backend/mode with the read-only
+      // contract from cron-runtime — cron is unattended.
+      permissionMode: req.permissionMode,
+      approvalBackend: req.approvalBackend,
+      headless: true,
+    });
+    const result = await cronEngine.run(req.prompt, { cwd });
+    return { text: result.text, reason: result.reason };
+  });
 
   // Fixed sessionId — every user message in this REPL session routes to the
   // same engine. Use the --resume id when provided so conversation history

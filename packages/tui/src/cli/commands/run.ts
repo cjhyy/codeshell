@@ -6,6 +6,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { writeFileSync } from "node:fs";
 import { Engine } from "@cjhyy/code-shell-core";
 import { mergePluginMcpServers } from "@cjhyy/code-shell-core";
 import { EngineRuntime } from "@cjhyy/code-shell-core";
@@ -22,6 +23,12 @@ import { createRenderer, type OutputFormat } from "../output/renderer.js";
 import type { LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import { defaultSandboxConfig, type SandboxConfig } from "@cjhyy/code-shell-core";
+import {
+  asyncAgentRegistry,
+  buildNotificationMessage,
+  buildNotificationSummary,
+} from "@cjhyy/code-shell-core";
+import { drainBackgroundNotifications } from "./drain-notifications.js";
 
 /**
  * Shape of a settings.models[] entry. Mirrors the zod schema in
@@ -98,6 +105,28 @@ export interface RunOptions {
   resume?: string;
   apiKey?: string;
   maxTurns?: number;
+  /** Write the final assistant message to this file (codex `-o`). */
+  outputLastMessage?: string;
+  /**
+   * Wait for in-flight background agents to finish before draining their
+   * completion notifications into the output. Default true.
+   */
+  waitBackgroundAgents?: boolean;
+  /** Max ms to wait for background agents (see waitBackgroundAgents). Default 5000. */
+  backgroundWaitMs?: number;
+}
+
+/**
+ * Write the final assistant message to a file (codex `-o`). Best-effort:
+ * a write failure is logged but never throws, so it can't change the run's
+ * exit code. Exported for testing.
+ */
+export function writeLastMessage(file: string, text: string): void {
+  try {
+    writeFileSync(file, text, "utf-8");
+  } catch (err) {
+    console.error(`Warning: failed to write --output-last-message file: ${(err as Error).message}`);
+  }
 }
 
 export async function runCommand(options: RunOptions): Promise<void> {
@@ -253,6 +282,39 @@ export async function runCommand(options: RunOptions): Promise<void> {
       sessionId: result.sessionId,
       turnCount: result.turnCount,
     });
+
+    // ── Background-agent completions (Phase 1, headless tail) ────────
+    // Headless has no idle loop to drain the notification queue, so do it
+    // here — BEFORE closing the server/client, or a background agent that
+    // finishes late loses its result. Default: wait briefly for in-flight
+    // agents; --no-wait-background-agents skips the wait.
+    const wait = options.waitBackgroundAgents ?? true;
+    const notifications = await drainBackgroundNotifications(runSessionId, {
+      wait,
+      timeoutMs: options.backgroundWaitMs ?? 5000,
+    });
+    if (notifications.length > 0) {
+      // Human-facing summary on stderr (stdout stays the main result / JSON).
+      process.stderr.write("\n" + buildNotificationSummary(notifications) + "\n");
+    } else if (wait && asyncAgentRegistry.hasRunning()) {
+      // Waited out the timeout with agents still running — say so explicitly
+      // rather than exiting as if everything completed.
+      process.stderr.write(
+        "\n⏱  background agents still running at timeout — their results were not captured.\n",
+      );
+    }
+
+    // codex `-o`: persist the final assistant message to a file so CI scripts
+    // can read it without parsing stdout. Fold in any background results so
+    // the file is a complete record. Best-effort — a write failure must not
+    // change the run's exit code.
+    if (options.outputLastMessage) {
+      const body =
+        notifications.length > 0
+          ? `${result.text ?? ""}\n\n${buildNotificationMessage(notifications)}`
+          : result.text ?? "";
+      writeLastMessage(options.outputLastMessage, body);
+    }
 
     exitCode = result.reason === "completed" ? 0 : 1;
   } finally {

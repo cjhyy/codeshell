@@ -5,6 +5,8 @@
  * with a predefined prompt on schedule.
  */
 
+import type { CronStore } from "./cron-store.js";
+
 export interface CronJob {
   id: string;
   name: string;
@@ -25,9 +27,58 @@ export class CronScheduler {
   private running = new Set<string>();
   private nextId = 1;
   private onExecute?: (job: CronJob) => Promise<void>;
+  /** Optional persistence backend. When set, every create/delete/pause/resume
+   *  writes the full job set to disk so jobs survive a restart. */
+  private store?: CronStore;
+
+  constructor(store?: CronStore) {
+    this.store = store;
+  }
+
+  /** Attach (or replace) the persistence backend. Used to give the shared
+   *  singleton a store at runtime startup without changing its identity. */
+  setStore(store: CronStore): void {
+    this.store = store;
+  }
 
   setExecutor(fn: (job: CronJob) => Promise<void>): void {
     this.onExecute = fn;
+  }
+
+  /**
+   * Restore persisted jobs and rebuild their timers. Call once at startup
+   * after `setStore`. nextRun is recomputed forward from now — we do NOT
+   * catch up on runs missed while the process was down (avoids a restart
+   * thundering-herd; aligns with Codex's stateless philosophy). Disabled
+   * jobs are restored without a timer.
+   */
+  loadJobs(): void {
+    if (!this.store) return;
+    const persisted = this.store.load();
+    let maxId = 0;
+    for (const job of persisted) {
+      this.jobs.set(job.id, job);
+      // Advance id allocation past every restored id so a newly created job
+      // can't collide with a restored one.
+      const n = parseInt(job.id, 10);
+      if (Number.isFinite(n) && n > maxId) maxId = n;
+      if (job.enabled) {
+        const intervalMs = parseSchedule(job.schedule);
+        job.nextRun = Date.now() + intervalMs;
+        this.startTimer(job, intervalMs);
+      }
+    }
+    this.nextId = Math.max(this.nextId, maxId + 1);
+  }
+
+  private persist(): void {
+    if (!this.store) return;
+    try {
+      this.store.save([...this.jobs.values()]);
+    } catch {
+      // Persistence is best-effort: an unwritable disk should not break the
+      // in-memory scheduler. The store logs the failure.
+    }
   }
 
   create(name: string, schedule: string, prompt: string): CronJob {
@@ -47,6 +98,7 @@ export class CronScheduler {
 
     this.jobs.set(id, job);
     this.startTimer(job, intervalMs);
+    this.persist();
     return job;
   }
 
@@ -56,7 +108,9 @@ export class CronScheduler {
       clearInterval(timer);
       this.timers.delete(id);
     }
-    return this.jobs.delete(id);
+    const deleted = this.jobs.delete(id);
+    if (deleted) this.persist();
+    return deleted;
   }
 
   list(): CronJob[] {
@@ -76,6 +130,7 @@ export class CronScheduler {
       clearInterval(timer);
       this.timers.delete(id);
     }
+    this.persist();
     return true;
   }
 
@@ -85,6 +140,7 @@ export class CronScheduler {
     job.enabled = true;
     const intervalMs = parseSchedule(job.schedule);
     this.startTimer(job, intervalMs);
+    this.persist();
     return true;
   }
 
@@ -110,6 +166,8 @@ export class CronScheduler {
       job.lastRun = Date.now();
       job.runCount++;
       job.nextRun = Date.now() + intervalMs;
+      // Persist updated run stats so runCount/lastRun survive a restart.
+      this.persist();
       try {
         await this.onExecute?.(job);
       } catch {

@@ -526,11 +526,21 @@ export {
   notificationQueue,
   agentNotificationBus,
   notificationItemToStreamEvent,
+  type NotificationItem,
 } from "./tool-system/builtin/agent-notifications.js";
 // B2.2 — typed projection of the new `background_agent_completed` StreamEvent
 // variant so SDK consumers can write handlers without re-destructuring the
 // StreamEvent union themselves.
 export type { BackgroundAgentCompletedEvent } from "./types.js";
+// Cron — scheduler singleton + persistence + executor binding (B1/B2).
+export { CronScheduler, cronScheduler, type CronJob } from "./cron/scheduler.js";
+export { CronStore, defaultCronStorePath } from "./cron/cron-store.js";
+export {
+  bindCronToEngine,
+  type CronRunner,
+  type CronRunRequest,
+  type CronRunResult,
+} from "./cron/cron-runtime.js";
 export {
   asyncAgentRegistry,
   type AsyncAgentEntry,
