@@ -29,14 +29,14 @@ export function ExtensionsPage({ activeRepoPath, showDiscover = true }: Props) {
 
   if (!showDiscover) {
     return (
-      <div className="ext-page">
+      <div className="h-full overflow-y-auto p-6">
         <ManagePage cwd={cwd} activeRepoPath={activeRepoPath} />
       </div>
     );
   }
 
   return (
-    <div className="ext-page">
+    <div className="h-full overflow-y-auto p-6">
       {view.mode === "home" ? (
         <DiscoverHome
           cwd={cwd}
@@ -45,7 +45,7 @@ export function ExtensionsPage({ activeRepoPath, showDiscover = true }: Props) {
       ) : (
         <>
           <button
-            className="ext-home-back"
+            className="mb-3 text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setView({ mode: "home" })}
           >
             ‹ 返回
