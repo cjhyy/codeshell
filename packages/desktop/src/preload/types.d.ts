@@ -6,6 +6,11 @@
 
 import type { StreamEvent, ApprovalRequest, CapabilityDescriptor } from "@cjhyy/code-shell-core";
 
+/** One step in replaying a persisted transcript into renderer state. */
+export type FoldItem =
+  | { kind: "stream"; event: StreamEvent }
+  | { kind: "user"; text: string };
+
 /**
  * The wire envelope the agent server sends for tool approvals. The
  * outer requestId is what the renderer echoes back via approve();
