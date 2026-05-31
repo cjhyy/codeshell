@@ -453,14 +453,24 @@ function App() {
     const next = deleteSessionLocal(repoId, sessionId);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
     if (summary?.source === "automation") {
-      const engineId = summary.engineSessionId ?? sessionId;
-      void window.codeshell.deleteSession(engineId).catch((e) =>
-        window.codeshell.log("automation.delete.session.failed", { engineId, error: String(e) }),
-      );
-      if (summary.runId) {
-        void window.codeshell.deleteRun(summary.runId).catch((e) =>
-          window.codeshell.log("automation.delete.run.failed", { runId: summary.runId, error: String(e) }),
+      // Skip the on-disk dirs only while the run is KNOWN to be still running.
+      // Deleting a live run's session/run dir would race the worker (mid-write)
+      // and leave a partial dir the next backfill re-imports as a zombie. A
+      // missing runStatus means a legacy/terminal import — safe to delete. The
+      // local entry is removed regardless; a still-running run simply re-appears
+      // on the next backfill (it's not in the dedup skip-set).
+      const inFlight = new Set(["queued", "running", "waiting_input", "waiting_approval", "blocked"]);
+      const isStillRunning = summary.runStatus ? inFlight.has(summary.runStatus) : false;
+      if (!isStillRunning) {
+        const engineId = summary.engineSessionId ?? sessionId;
+        void window.codeshell.deleteSession(engineId).catch((e) =>
+          window.codeshell.log("automation.delete.session.failed", { engineId, error: String(e) }),
         );
+        if (summary.runId) {
+          void window.codeshell.deleteRun(summary.runId).catch((e) =>
+            window.codeshell.log("automation.delete.run.failed", { runId: summary.runId, error: String(e) }),
+          );
+        }
       }
     }
   };
