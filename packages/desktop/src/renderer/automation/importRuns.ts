@@ -8,7 +8,7 @@ import type { FoldItem } from "../../preload/types";
 import type { MessagesReducerState } from "../types";
 import type { SessionSummary } from "../transcripts";
 import { foldTranscript } from "./foldTranscript";
-import { matchRepoIdForCwd, type RepoLike } from "./pathMatch";
+import { matchRepoIdForCwd, normalizeCwd, type RepoLike } from "./pathMatch";
 
 /** A run as needed for import (subset of the main-process RunSummary). */
 export interface ImportableRun {
@@ -19,8 +19,8 @@ export interface ImportableRun {
   status: string;
   finishedAt: number | null;
   createdAt: number;
-  /** "automation" only — non-automation runs are filtered out. */
-  source?: "automation" | string;
+  /** Run metadata source tag; only "automation" runs are imported. */
+  source?: string;
   cronJobName?: string;
 }
 
@@ -58,9 +58,19 @@ export async function importAutomationRuns(
 
   // 2. Group by attributed repoId (auto-creating repos as needed).
   const byRepo = new Map<string | null, ImportableRun[]>();
+  // Memo so multiple runs sharing an unmatched cwd reuse ONE auto-created repo
+  // instead of spawning a new repo per run.
+  const autoCreated = new Map<string, string>();
   for (const r of candidates) {
     let repoId = matchRepoIdForCwd(r.cwd, repos, deps.caseInsensitive);
-    if (!repoId) repoId = deps.createRepoForCwd(r.cwd);
+    if (!repoId) {
+      const key = normalizeCwd(r.cwd, deps.caseInsensitive);
+      repoId = autoCreated.get(key) ?? null;
+      if (!repoId) {
+        repoId = deps.createRepoForCwd(r.cwd);
+        autoCreated.set(key, repoId);
+      }
+    }
     const list = byRepo.get(repoId) ?? [];
     list.push(r);
     byRepo.set(repoId, list);

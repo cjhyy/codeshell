@@ -87,4 +87,23 @@ describe("importAutomationRuns", () => {
     await importAutomationRuns([run({})], repos, d);
     expect(imported).toHaveLength(1);
   });
+
+  it("creates only ONE repo for multiple runs sharing an unmatched cwd", async () => {
+    let createCalls = 0;
+    const { d, imported } = deps({
+      createRepoForCwd: () => { createCalls += 1; return "auto-1"; },
+    });
+    await importAutomationRuns(
+      [
+        run({ runId: "a", sessionId: "sess-a", cwd: "/new/path" }),
+        run({ runId: "b", sessionId: "sess-b", cwd: "/new/path" }),
+        run({ runId: "c", sessionId: "sess-c", cwd: "/new/path/" }), // trailing slash → same after normalize
+      ],
+      repos,
+      d,
+    );
+    expect(createCalls).toBe(1);
+    expect(imported).toHaveLength(3);
+    expect(new Set(imported.map((x) => x.repoId))).toEqual(new Set(["auto-1"]));
+  });
 });

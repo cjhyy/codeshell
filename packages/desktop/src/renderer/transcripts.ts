@@ -262,6 +262,9 @@ export function upsertImportedSession(
   repoId: string | null,
   summary: SessionSummary,
 ): SessionIndex {
+  if (!summary.engineSessionId) {
+    throw new Error("upsertImportedSession: summary must have engineSessionId");
+  }
   const idx = loadSessionIndex(repoId);
   const without = idx.sessions.filter(
     (s) => !(summary.engineSessionId && s.engineSessionId === summary.engineSessionId),
