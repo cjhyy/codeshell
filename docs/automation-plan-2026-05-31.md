@@ -1,212 +1,320 @@
 # Automation Plan — Headless / Background / Scheduling (2026-05-31)
 
-对标 Codex (`codex exec`) 与 Claude Code (本地 cron + 远程 trigger + 后台 agent 通知) 的无人值守能力,
-补齐 codeshell 的自动化链路。
+补齐 codeshell 的无人值守能力。对标三家上游:Codex(`codex exec` 无状态 CLI)、
+Claude Code(内置 cron + 后台 agent 通知)、opencode(server + HTTP/SSE API)。
 
-> **核心发现**:codeshell 的组件大多已写好(`CronScheduler`、`NotificationQueue`、`RunManager`),
-> 真正缺的不是「实现」而是「**接线**」—— 几个单例被造出来但没人把它们连到 Engine / 主 session。
-> 本 plan 优先修这些断点,再补真缺失的能力。
+> **路线修订(2026-05-31,解耦方案)**:本 plan 旧版曾采用「Codex 路线:不内置调度,
+> 全外包 OS crontab」(旧 D1)。该决策的核心论据是「内置调度会陷入『关窗即停 vs 常驻 daemon』
+> 的两难」。**此前提在源码事实下不成立**(见 §0),故推翻。新路线:**自动化拆成 core 的零环境
+> 依赖模块,由不同宿主加载——v1 内置进 Electron 进程(开箱即用),未来同模块被一层薄服务端引用
+> 做服务器部署。** 调度内置(日历式 cron + 时区),不外包 OS。
 
-> **复核修正(2026-05-31,逐行对源码 grep 复查)**:初版三个"断点"中 **B3 已过时**——
-> `notificationQueue.drainAll` 的 TUI 消费端早已在 `App.tsx:1360-1371` 实现。Phase 3 的"退出码缺失/
-> output-format 缺失"两条**硬阻塞也已不成立**(`run.ts:257/264` 有退出码,`renderer.ts:14` 有四种 format)。
-> 据此:**P0 收敛为 B1+B2**(Phase 0+2),Phase 1 降为"仅补 headless 尾巴",Phase 3 降为"补 stdin + last-message"。
-> 另把 Phase 0 的默认审批从 `bypassPermissions` 改为现成的 `approve-read-only`,在 Phase 4 沙箱前不放开写权限。下表已逐条标注复核结果。
+---
+
+## §0 关键事实:server 与 transport 已解耦(推翻旧「两难」)
+
+旧路线假设「常驻服务端」是昂贵的、要避开的。源码核实证明并非如此:
+
+1. **core 已能起一个完整的多会话 server** —— `packages/core/src/cli/agent-server-stdio.ts`
+   已 bootstrap 好 `EngineRuntime` + `ChatSessionManager` + `AgentServer`(`maxSessions:16`、
+   idle 清理、优雅关闭),设计成长期存活。它现在只是被当作「Electron 子进程 worker」。
+2. **`Transport` 接口只有 3 个方法**(`protocol/transport.ts:17`):`send` / `onMessage` / `close`。
+   `AgentServer` 仅通过这 3 个方法与外界通信(`server.ts:89-92`),**完全不知道底层是 stdio 还是网络**。
+   已有两个现成实现:`StdioTransport`、`createInProcessTransport`(内存管道,Electron 在用)。
+3. **因此「薄服务端」确实薄**:加一个网络 transport(`TcpTransport`/`WebSocketTransport`,照
+   `StdioTransport` 抄,数十行)+ 一个换传输的启动入口(复制 `agent-server-stdio.ts`、把最后一行
+   `new StdioTransport(stdin,stdout)` 换成 `new TcpTransport(port)`),**178 行核心逻辑零改动**。
+
+**结论**:常驻、可独立部署的服务端是廉价且解耦的。旧 D1 的「两难」前提作废 → **可以内置调度**,
+并让同一份自动化逻辑跨「桌面进程内」与「未来服务端」两种宿主复用。
+
+> ⚠️ 唯一不薄的部分是**生产级服务端的认证/TLS/访问控制**——一旦监听网络端口,等于把「能起 agent、
+> 改代码、跑命令」暴露出去,必须鉴权。但这可 v1 不做(先只监听 localhost / 走 SSH 隧道),
+> 真要暴露公网再加。传输层与启动入口本身是薄的。
+
+---
+
+## 决策(2026-05-31,已拍板)
+
+### D1 — 自动化 = core 里的零环境依赖模块,由宿主加载
+新增 `packages/core/src/automation/`,对外暴露一个干净入口 `startAutomation(deps) → { scheduler, stop() }`。
+**铁律**(保证跨宿主复用、永不分叉):
+
+- 零 Electron / 零 Ink import(否则服务端加载即崩)。
+- 不假设有 GUI / TTY(不弹窗、不等终端交互)。
+- 所有环境绑定依赖走**注入**(`startAutomation({ runManager, store, clock, ... })`),模块自己不 `new`
+  环境相关实例 —— 桌面与服务端各传各的。
+- 配置 / 数据走文件(`~/.code-shell/cron.json` + RunStore),两个宿主读同一套,语义一致。
+
+### D2 — 两种宿主,同一模块
+| 宿主 | 形态 | 何时 |
+|---|---|---|
+| **Electron main 进程内** | `import { startAutomation }` 直接在 main 启动,双击即用、零连接。cron 跟随 app 生命周期(关 app 即停——对桌面用户是符合预期的)。 | **v1** |
+| **薄服务端(CLI daemon)** | 同一个 `startAutomation` 被一层薄服务端 CLI 引用(`code-shell automation serve`),headless 常驻(systemd/docker/pm2),7×24。依赖 §0 的网络 transport。 | **未来**(架构预留,v1 不实现;但模块铁律保证无需返工) |
+
+> 「关窗即停」不再是缺陷:桌面用户本就不期望关了 app 还跑;真要 7×24 = 服务端部署,
+> 由宿主 B 承担。同一逻辑两种宿主,不分叉。
+
+### D3 — 内置调度:日历式 cron 表达式 + 时区,自己解析(轻依赖)
+对齐截图里 Codex 的「下次运行 明天 08:01 / 频率 工作日 8:00」体验,需支持 `0 9 * * 1-5` 式日历调度 +
+时区,而非仅间隔(`5m`/`1h`)。自己写一个小型 cron 表达式解析器 + 下次触发时间计算(含时区),
+不引第三方库(core 依赖政策克制)。现有 `CronScheduler` 的间隔能力保留并扩展。
+
+### D4 — 执行走 RunManager,落 RunStore(完整运行历史)
+到点 → `RunManager.submit({ objective: job.prompt, cwd: job.cwd, ... })`。每次定时执行成为一个 Run,
+落 `RunStore`,**复用现有 runs 详情页 / checkpoint / resume**。这同时满足截图里「运行历史记录」字段。
+前置:扩 `CreateRunManagerOptions` / `EngineRunnerConfig` 透传 `approvalBackend`(见 §权限)。
+
+### D5 — 任务配置(对齐截图)
+核心字段:`name + prompt + schedule + cwd(绑定项目)` + **权限级别**。模型 / effort / 沙箱模式 v1 先用
+全局默认(后续再加进表单)。每个 job 绑 cwd —— 这是「监控/改哪个项目」的锚点,现有 `CronJob` 缺此字段,需补。
+
+### D6 — 写型任务(改代码 → 提 PR)= 核心目标,非仅监控
+自动化不止「只读监控」。写型任务链(读外部输入 → 分析 → 改代码 → 提 PR)是核心目标。落地要素:
+
+- **权限分级**:`read-only`(监控类)/ `workspace-write`(改代码跑测试)/ `full`(可 git push、提 PR)。
+- **git worktree 隔离**:写型 job 在自己的 worktree 跑(复用现有 `createWorktree`/`listWorktrees` 能力),
+  改完提 PR,不碰用户正在用的主工作区。
+- **沙箱是放开写权限的前提**(见 Phase 3):无沙箱时写型默认拒绝。
+- **prompt injection 防护**:读外部输入(评论/issue)的 prompt 可能含恶意指令,写型任务尤其要防——
+  外部内容与指令分隔、限制可执行动作面。
+
+### D7 — 桌面 UI:自动化栏目
+Sidebar 加「自动化」项 → 列表页 + 详情页(含运行历史)+ 创建表单 + 「立即运行」。详情字段对齐截图:
+name / prompt / 状态(enabled)/ 下次运行 / 上次运行 / 频率 / 运行环境(沙箱)/ 项目(cwd)/ 运行历史。
+UI 通过现有 IPC 协议连到 main 进程内的 automation 模块(纯客户端,不自己持有调度逻辑)。
+
+### D8 — session 模式
+定时任务每次执行默认开**新 session**(幂等、无记忆,对齐 codex 默认);提供 `--resume <id>` /
+`--continue-last` 让需累积上下文的任务延续(对齐 codex `exec resume <id>` / `--last`)。落地于 Phase 1。
+
+---
 
 ## 现状核实(2026-05-31,基于源码 grep,非推测)
 
-| 组件 | 文件 | 状态 |
-|---|---|---|
-| `CronScheduler` 类(create/delete/pause/resume、parseSchedule、重入守卫) | `packages/core/src/cron/scheduler.ts` | ✅ 完整 |
-| Cron 工具 CronCreate/Delete/List(注册 + preset 白名单) | `packages/core/src/tool-system/builtin/cron.ts`、`builtin/index.ts:326`、`preset/index.ts:57-59` | ✅ 完整 |
-| `NotificationQueue` + `agentNotificationBus` + `buildNotificationMessage` | `packages/core/src/tool-system/builtin/agent-notifications.ts` | ✅ 完整 |
-| 后台 agent enqueue(完成/失败时入队) | `packages/core/src/tool-system/builtin/agent.ts:326,372` | ✅ 完整 |
-| `RunManager`(队列/checkpoint/resume/attach) | `packages/core/src/run/RunManager.ts` | ✅ 完整 |
-| Turn loop(maxTurns / stop hook / context recovery / 续写) | `packages/core/src/engine/turn-loop.ts` | ✅ 完整 |
-
-### 真正的断点(grep 已证)
-
-| # | 断点 | 证据 | 后果 |
+| 组件 | 文件 | 状态 | 在新路线下的去向 |
 |---|---|---|---|
-| **B1** | `cronScheduler.setExecutor()` **无人调用** ✅复核属实 | `grep setExecutor` 生产代码仅命中 `RunManager.ts:99`(调自己的 RunQueue)与定义 `scheduler.ts:29`;cron 实例只在 `scheduler.test.ts:19` 被调。`scheduler.ts:27` `onExecute?` 可选,`:114` `this.onExecute?.(job)` 未设即 no-op | cron job 能创建、`setInterval` 会 tick,但**到点什么都不执行** |
-| **B2** | cron **零持久化** | `grep "cron.json\|persistJobs\|loadJobs"` → 空;`scheduler.ts:21` jobs 只在内存 Map | 进程重启 → 所有定时任务丢失 |
-| **B3** | ~~`notificationQueue.drainAll()` 无人调用~~ **已过时(2026-05-31 复核)** | `grep drainAll` 实际命中 `tui/src/ui/App.tsx:1367` —— **TUI 侧消费者已实现** | TUI 主会话已能自动注入;真正剩下的只有 headless 侧 drain |
-
-> **复核修正**:B3 的 TUI 消费端已在 `App.tsx:1360-1371` 完整实现(`useSyncExternalStore` 订阅 + idle 守卫 + `drainAll`→`buildNotificationMessage`→`submitToEngine(asInjection)`),与下方 Phase 1「改动 1」描述一字不差。
-> 因此 **P0 实为 B1 + B2 两件**(cron 不执行、cron 不持久化);Phase 1 仅剩 headless 侧的小尾巴(见 Phase 1 已更新范围)。
-
----
-
-## 范围
-
-P0~P2 全部,分阶段。每阶段独立可交付、独立可测,失败不影响前序阶段。
-
----
-
-## Phase 0 — 接通 cron 执行器 (B1) 【P0,最高性价比】
-
-**目标**:cron job 到点真的跑起来。
-
-### 改动
-1. **新增 `cron/cron-runtime.ts`** — 一个 `bindCronToEngine(scheduler, engineFactory)` 函数:
-   - 调 `scheduler.setExecutor(async (job) => { ... })`
-   - executor 内部:为每个 job 起一次 Engine run。Phase 0 先用最简单的直跑把链路打通;Phase 5 再替换为 `RunManager.submit()`。
-   - 把 job.prompt 作为一次性 headless 任务执行。**审批策略(复核修正)**:不要直接 `bypassPermissions`(在 Phase 4 沙箱就绪前等于一把上膛的枪)。改用现成的 `HeadlessApprovalBackend("approve-read-only")`(`permission.ts:18`,已实现 approve-all / deny-all / approve-read-only 三模式)——只读工具自动批准,写操作默认拒绝。等 Phase 4 沙箱落地后再开放到 `approve-all` + 沙箱兜底。
-   - **实现契约(避免误接)**:`approve-read-only` 当前不是 `permissionMode` 枚举值,不能通过 `permissionMode: "approve-read-only"` 表达。Phase 0 若直跑 Engine,必须显式传 `approvalBackend: new HeadlessApprovalBackend("approve-read-only")`;若提前走 `RunManager`,则必须先扩展 `CreateRunManagerOptions` / `EngineRunnerConfig` 透传 `approvalBackend`,再接 cron。
-2. **在引擎/CLI 启动处调用 `bindCronToEngine`** — 找到 Engine 构造或 TUI 启动入口(`packages/tui/src/cli/main.ts`),在 assistant/daemon 模式下绑定。
-
-### 测试(先写)
-- `cron-runtime.test.ts`:fake scheduler + fake engine,断言 executor 被 setExecutor 注册,且 job 触发时 engine 收到正确 prompt 与显式 `approve-read-only` 审批后端。
-- 审批回归:cron 默认允许 `Read/Grep/Glob` 等只读工具,拒绝 `Write/Edit/Bash` 等写入/命令工具;禁止用不存在的 `permissionMode: "approve-read-only"` 伪实现。
-- executor 抛错时不崩溃(`scheduler.ts:115` 已 try/catch,但补一条断言保证不阻断后续 tick)。
-
-### 验收
-- 创建一个 `30s` 的 cron job,观察 30s 后真的有一次 Engine run 发生(日志或 RunStore 出现新 run)。
+| `agent-server-stdio`(多会话 server) | `packages/core/src/cli/agent-server-stdio.ts` | ✅ 完整,仅 stdio transport | §0:加网络 transport 即可独立部署 |
+| `Transport` 接口(send/onMessage/close) | `protocol/transport.ts:17`、`server.ts:89` | ✅ 已与 AgentServer 解耦 | 加 TcpTransport(薄) |
+| `code-shell run` 一次性执行 | `packages/tui/src/cli/commands/run.ts` | ✅ 在(已补 stdin/last-message/drain) | CLI 自动化入口之一 |
+| `CronScheduler`(间隔调度 + 重入守卫 + 持久化) | `packages/core/src/cron/scheduler.ts` | ✅ 已有(本会话补了执行器+持久化) | **保留,挪进 `automation/` 并扩日历式调度** |
+| `CronStore` 持久化(`~/.code-shell/cron.json`) | `packages/core/src/cron/cron-store.ts` | ✅ 已有(本会话新增) | 复用,扩 cwd/权限字段 |
+| `bindCronToEngine` 执行器接线 | `packages/core/src/cron/cron-runtime.ts` | ✅ 已有(本会话新增,直跑 Engine) | **改走 RunManager.submit()**(D4) |
+| `RunManager`(队列/checkpoint/resume/attach) | `packages/core/src/run/RunManager.ts:65` | ✅ 完整 | 执行落地 + 运行历史 |
+| `RunStore` / session 持久化 | `packages/core/src/run/FileRunStore.ts` | ✅ 完整 | 支撑 resume + 历史详情 |
+| 后台 agent 完成通知 | `agent-notifications.ts`、`App.tsx:1360-1371` | ✅ TUI 通,headless 已补 | 复用 |
+| git worktree 能力 | desktop preload `createWorktree`/`listWorktrees` | ✅ 已有 | 写型任务隔离(D6) |
+| Sandbox(seatbelt/bwrap/off) | `tool-system/sandbox/` | 🔧 需核实深度 | 放开写权限前提(Phase 3) |
+| `CreateRunManagerOptions`/`EngineRunnerConfig` 透传 approvalBackend | `run/factory.ts`、`run/EngineRunner.ts` | ❌ 未透传 | 需扩展(D4 前置) |
+| `CronJob.cwd` / 权限级别字段 | `cron/scheduler.ts:8-18` | ❌ 缺 | 补字段(D5) |
 
 ---
 
-## Phase 1 — 接通后台完成通知 (B3) 【~~P0~~ → P1,仅剩 headless 尾巴】
+## 范围与阶段
 
-**目标**:后台 agent / 后台 run 完成后,结果自动注入主 session,无需轮询。
-
-### 改动
-1. ~~**TUI 侧消费者**~~ **✅ 已实现(2026-05-31 复核)** —— `tui/src/ui/App.tsx:1360-1371` 已订阅 `notificationQueue.subscribe`(via `useSyncExternalStore`),并在 idle(`input.trim()===""`、非 `isQueryActive`、无 overlay)时 `drainAll` → `buildNotificationMessage` + `buildNotificationSummary` → `submitToEngine(…,{asInjection:true})`。这正是原计划描述的契约,无需再做。
-2. **headless 侧消费者(本阶段唯一剩余项)**:`run` / `runs` 命令当前**不** drain notification(`grep drainAll packages/tui/src/cli/commands/run.ts` 为空)。需在主 turn loop 每轮结束 / 任务结束处 drain 一次。
-   - 注意:headless 是一次性任务,turn 边界注入的意义有限;更主要的价值是把后台结果**汇总进最终输出 / `--output-last-message`**(见 Phase 3),而非"喂下一轮"。
-   - **生命周期契约**:不能只在 `client.run()` 返回后立刻 `drainAll` 一次然后 `process.exit`。如果后台 agent 尚未完成,这一 drain 会拿不到结果,随后 close server/client 会让结果永久丢失。需在 `runCommand` 关闭 server/client 与 `process.exit` 前定义等待策略:默认短 timeout 等待当前 session 的后台 agent 完成,或提供 `--wait-background-agents` / `--no-wait-background-agents` 明确控制;超时必须输出明确状态而不是静默丢失。
-
-### 测试(先写)
-- headless:模拟后台 agent enqueue 一条 completed,断言 `run` 结束输出包含该通知。
-- headless 生命周期:后台 agent 在主结果之后完成时仍能输出;超时未完成时输出明确状态;server/client shutdown 不会早于 drain/汇总。
-- 多条 batch:断言 `drainAll` 原子清空,不重复注入。
-- cancelled 不入队(已由 `agent.ts` 保证,补一条回归断言)。
-- TUI 侧已实现,补一条回归测试锁住 `App.tsx` 的 idle-drain 行为即可,不重写。
-
-### 验收
-- headless `run` 启动一个 `run_in_background: true` 的子 agent,即使子 agent 晚于主任务完成,其完成结果也会在等待策略允许的窗口内出现在输出中。
-- TUI 侧验收已天然满足(现状即可复现)。
-
----
-
-## Phase 2 — cron 持久化 (B2) 【P0】
-
-**目标**:cron job 跨重启存活。
-
-### 改动
-1. **`cron/cron-store.ts`** — 读写 `.code-shell/cron.json`(项目级)或 `~/.code-shell/cron.json`(全局),复用 `run/FileRunStore.ts` 的原子写思路,但不要把 JSONL append lock 直接当成 cron 快照事务。
-   - **并发模型必须先选清楚**:如果采用单文件 `cron.json` 快照,两个进程同时 `CronCreate` 是读-改-写丢更新风险,仅 tmp+rename 不够,需要文件锁 / CAS / retry merge。若采用 JSONL event log,才适合 append-only + replay 的模式。v1 如只保证单进程,需在文档、测试与 CLI 行为中明确“不保证多进程同时写”。
-2. **`CronScheduler` 增量改造**:`create/delete/pause/resume` 后调用 store 持久化;启动时 `loadJobs()` 恢复并重建定时器。
-   - 注意 `nextRun`:重启后按 `parseSchedule` 重算下一次,不补跑错过的(对齐 Codex「无状态」哲学,避免重启惊群)。可选:记录 `lastRun`,提供 `--catch-up` 开关留待后续。
-3. **持久化粒度**:复用 `CronJob` 现有字段(`scheduler.ts:8-18`),已含 `lastRun/runCount/createdAt`,直接序列化即可。
-
-### 测试(先写)
-- 写 job → 新建 scheduler 实例 loadJobs → 断言 job 与定时器恢复。
-- 并发写:按选定模型测试。单文件快照需模拟两个 store 实例并发 create 不丢失;JSONL event log 需测试 append + replay;若 v1 限定单进程,则测试与文档都明确该限制,不虚假承诺跨进程安全。
-
-### 验收
-- 创建 job → 重启进程 → `CronList` 仍列出该 job 且继续触发。
-
----
-
-## Phase 3 — Headless 对齐 `codex exec` 【P1】
-
-**目标**:`code-shell run` 达到可挂 CI 的脚本化水平。
-
-> **复核修正(2026-05-31)**:原计划列的两个"硬阻塞"其实已实现,本阶段范围大幅缩小。
-
-### 改动(`packages/tui/src/cli/commands/run.ts`)
-1. ~~**退出码语义**~~ **✅ 已实现** —— `run.ts:257` `exitCode = result.reason === "completed" ? 0 : 1`,`:264` `process.exit(exitCode)`。原"当前缺失,是硬阻塞"的判断已过时,仅需补测试锁定。
-2. ~~**`--output-format`**~~ **✅ 基础设施已存在** —— `run.ts:242` 读 `options.output`,`output/renderer.ts:14` 的 `OutputFormat` 已含 `"text" | "json" | "jsonl" | "stream-json"` 全部四种,`createRenderer` 已接。仅需:校验各 format 实际输出符合 codex/CC 约定 + 补快照测试(不是从零做)。
-   - **schema 验收**:当前 `jsonl` 与 `stream-json` 实现都近似为逐事件 `JSON.stringify(event)`,差异不明显。需明确两者是否应对齐不同上游语义,还是作为 alias;不能只因“有四个枚举值”就认定兼容。测试应锁定 `json` 单最终对象、`jsonl` 事件日志、`stream-json` 流式事件的字段与事件类型。
-3. **stdin pipe pass-through(真缺失)**:`run.ts:91` `task: string` 为必填参数,无 stdin 读取路径。需:无 `<task>` 且 `!process.stdin.isTTY` 时从 stdin 读 prompt。对齐 codex `RequiredIfPiped`。
-4. **`--output-last-message <file>`(真缺失)**:把最终消息写文件,对齐 codex `-o`。可与 Phase 1 headless drain 合流(把后台通知一并写入)。
-
-### 测试(先写)
-- 回归:成功任务 exit 0、失败 exit 1(锁定现状)。
-- echo 管道喂 prompt,断言被读取(新功能)。
-- 各 output-format 的 schema/快照测试(校验现有实现,并明确 `jsonl` 与 `stream-json` 是否不同或互为 alias)。
-- `--output-last-message` 写入文件内容正确(新功能)。
-
-### 验收
-- `echo "list files" | code-shell run --output-format stream-json; echo "exit=$?"` 输出逐行 JSON 且退出码正确。
-
----
-
-## Phase 4 — Sandbox 落地 【P1】
-
-**目标**:无人值守 + `bypassPermissions` 时有隔离兜底(Phase 0 的安全前提)。
-
-### 现状
-`tool-system/sandbox/` 已有 `seatbelt.ts`(macOS)、`bwrap.ts`(Linux)、`off.ts`、`index.ts` —— 需核实是骨架还是可用,从骨架做成真隔离。
-
-### 改动
-1. 核实 seatbelt/bwrap 当前实现深度(读这四个文件)。
-2. 接到 Bash/危险工具执行路径:`bypassPermissions` 或 cron executor 默认套 `workspace-write` 级沙箱(对齐 codex `SandboxMode::WorkspaceWrite`)。
-3. 三级策略对齐 codex:`read-only` / `workspace-write` / `danger-full-access`,经 settings 与 CLI flag 配置。
-
-### 测试
-- 沙箱内写工作目录外文件被拒;工作目录内允许。
-- 平台缺失沙箱工具时优雅降级 + 明确告警(不静默关闭隔离)。
-
-### 验收
-- 在 sandbox=workspace-write 下,`rm` 项目外文件失败;项目内成功。
-
-> ⚠️ 本阶段涉及真实命令执行隔离,改动前先单独读 `sandbox/*.ts` 确认现状,可能需要拆成独立 plan。
-
----
-
-## Phase 5 — RunManager × Cron 组合 + Guardian 【P2】
-
-**目标**:做出 Codex/CC 都没有的能力——**定时的、可 checkpoint/resume 的后台任务**。
-
-### 改动
-1. **Cron executor 改走 RunManager**:把 Phase 0 的直跑替换为 `runManager.submit({ prompt: job.prompt, ... })`。
-   - 收益:定时任务自动获得队列、checkpoint、resume、attach —— 复用 `RunManager` 现有全套能力(`RunManager.ts:65`)。
-   - 这是 codeshell 的架构优势点:CC 的本地 cron 直接喂 prompt 队列,没有 checkpoint/resume;codex 干脆没有内置 cron。
-2. **Guardian 子代理审批**(对齐 CC `auto` 模式的分类器,但用子 agent):
-   - 无人值守下,危险工具调用先交给一个轻量 Guardian 子 agent 判 approve/deny/ask。
-   - 接到 `tool-system/permission.ts` 的 backend 体系(已有 `HeadlessApprovalBackend` 3 种模式,加一个 `GuardianApprovalBackend`)。
-
-### 测试
-- 定时 job 触发 → 进 RunManager 队列 → 可 attach/resume。
-- Guardian 对 `rm -rf` 判 deny,对只读命令判 approve。
-
-### 验收
-- 定时跑的任务中途 ctrl-c,可 `runs resume <id>` 续上。
-
----
-
-## 执行顺序与依赖
+设计一次写全;实现分期。每阶段独立可交付、独立可测。
 
 ```
-Phase 0 (cron executor) ─┐
-Phase 2 (cron persist)  ─┴─ P0:两个构成最小无人值守闭环(B1+B2)
+Phase 1  抽 automation 模块 + 内置 Electron(只读闭环)  ── P0:主路径
         │
-Phase 1 (headless drain)── P1:TUI 侧已实现,仅补 headless 尾巴,可与 Phase 3 合流
-Phase 3 (headless exec) ── P1:exit码/output-format 已具备,仅补 stdin + last-message
-Phase 4 (sandbox)       ── P1:Phase 0 的安全兜底(强烈建议在大规模无人值守前完成)
+Phase 2  日历式调度 + RunManager 执行 + 运行历史          ── P0:对齐截图体验
         │
-Phase 5 (RunMgr×Cron + Guardian) ── P2:依赖 Phase 0 + Phase 4
+Phase 3  桌面 UI(列表/详情/表单/立即运行)              ── P1:可见可控
+        │
+Phase 4  Sandbox 落地                                    ── P1:放开写权限前提
+        │
+Phase 5  写型任务(worktree + 权限分级 + 自动提 PR)      ── P1:核心目标②,依赖 Phase 4
+        │
+Phase 6  薄服务端(网络 transport + serve 入口)          ── P2:服务器部署,§0 已论证薄
 ```
 
-**最小可用里程碑**:Phase 0 + 2 完成(B1+B2)→ 「定时触发 → 执行(默认 approve-read-only)→ 重启不丢」闭环成立。后台完成回报在 TUI 侧已可用;headless 回报随 Phase 1 尾巴补齐。
+**交付分期**:① 只读闭环(Phase 1-3)先跑通、界面可见;② 写型(Phase 4-5)需沙箱+worktree+权限;
+③ 服务端(Phase 6)按需。
+
+---
+
+## Phase 1 — 抽 `automation/` 模块 + 内置 Electron【P0,主路径】
+
+**目标**:把调度/执行/存储抽成 core 的零环境依赖模块,Electron main 进程内启动,只读任务能定时跑通。
+
+### 改动
+1. **新增 `packages/core/src/automation/`**:
+   - `scheduler.ts` — 由现有 `cron/scheduler.ts` 挪入并扩展(保留间隔 + 重入守卫 + 持久化)。
+   - `executor.ts` — 到点的执行逻辑(Phase 1 先直跑 Engine 只读,Phase 2 改走 RunManager)。
+   - `store.ts` — 由现有 `cron/cron-store.ts` 挪入。
+   - `index.ts` — 暴露 `startAutomation(deps) → { scheduler, stop() }`,遵守 D1 铁律(零 Electron/Ink、依赖注入)。
+2. **Electron main 引入**:`desktop/src/main/index.ts` 在 `app.whenReady` 后 `startAutomation({...})`,
+   像现有 `*-service` 一样进程内加载。**不 spawn 额外进程**。
+3. **权限默认只读**:`permissionMode: "default"` + `HeadlessApprovalBackend("approve-read-only")`
+   (注意 `approve-read-only` 非 permissionMode 枚举值,须显式传 approvalBackend)。
+
+### 测试(先写)
+- automation 模块**零 Electron/Ink import**(可写一条断言 / lint 规则扫描)。
+- `startAutomation` 注入 fake runManager + fake store,到点触发 executor 收到正确 prompt + cwd + 只读后端。
+- 只读后端:Read/Grep/Glob 批准,Write/Edit/Bash 拒绝。
+- 持久化:create → 重启 → loadJobs 恢复 + 重建定时器 + 重算 nextRun(不补跑)。
+
+### 验收
+- Electron 启动后,一个间隔 job 到点真的起一次只读 Engine run;关 app 即停;重开恢复任务列表。
+
+---
+
+## Phase 2 — 日历式调度 + RunManager 执行 + 运行历史【P0】
+
+**目标**:支持 `每天9点/每周一` + 时区;每次执行落 RunStore,可在 runs 详情查看历史。
+
+### 改动
+1. **日历式 cron 解析(D3)**:`automation/cron-expr.ts` — 解析 `分 时 日 月 周` 五段 + 时区,
+   计算下次触发时间。`CronJob.schedule` 同时接受间隔(`5m`)与 cron 表达式(`0 9 * * 1-5`),
+   `CronJob.timezone` 新增。调度器用 next-run 计算 + setTimeout(替代纯 setInterval),避免时钟漂移。
+2. **执行走 RunManager(D4)**:executor 改为 `runManager.submit({ objective, cwd, ... })`。
+   先扩 `CreateRunManagerOptions` / `EngineRunnerConfig` 透传 `approvalBackend`(现写死 `RunApprovalBackend`)。
+3. **CronJob 扩字段(D5)**:`cwd`、`permissionLevel`、`lastRunId`(指向 RunStore)。
+
+### 测试(先写)
+- cron 表达式:`0 9 * * 1-5` 在不同时区算出正确下次时间;DST 边界;非法表达式报错不静默。
+- 间隔与表达式两种 schedule 并存解析正确。
+- executor 走 RunManager:job 触发 → RunStore 出现新 run,可 attach/resume。
+- approvalBackend 透传:RunManager 起的 run 用注入的只读后端而非默认。
+
+### 验收
+- 建一个 `0 9 * * 1-5`(Asia/Shanghai)的 job,详情显示「下次运行 明天 09:00」;到点落一条 run,
+  在 runs 详情看到结果。
+
+---
+
+## Phase 3 — 桌面 UI:自动化栏目【P1】
+
+**目标**:对齐截图——列表 + 详情(含运行历史)+ 创建表单 + 立即运行。
+
+### 改动
+1. **main 服务 + IPC**:`main/automation-service.ts`(读 cron.json + 调 scheduler)+
+   `automation:list/get/create/delete/pause/resume/runNow` 的 `ipcMain.handle`。
+2. **preload 桥**:`index.ts` 加 `listAutomations/getAutomation/createAutomation/...`(挨着 `listRuns`)+
+   `types.d.ts` 类型。
+3. **renderer 页面**:`renderer/automation/`(仿 `renderer/runs/`)—— 列表页 + 详情页 + 创建表单;
+   `SidebarNav.tsx` 加「自动化」项(有 badge 机制)。详情字段对齐截图(D7)。
+4. **后台完成 → 桌面通知**:订阅 `agentNotificationBus`,job 跑完弹 `notify:show`(desktop 已有通道)。
+
+### 测试(先写)
+- automation-service 只读 cron.json 正确解析为列表 summary。
+- create/delete 经 IPC 改动 scheduler 后持久化生效。
+- renderer 列表/详情渲染快照。
+
+### 验收
+- 自动化栏目能看到任务列表;点进详情看到字段 + 运行历史;能创建、暂停、立即运行一个任务。
+
+---
+
+## Phase 4 — Sandbox 落地【P1,放开写权限前提】
+
+**目标**:无人值守跑危险工具有隔离兜底。这是 Phase 5 写型任务放开写权限的前提。
+
+### 改动
+1. 先读 `sandbox/seatbelt.ts`(macOS)、`bwrap.ts`(Linux)、`off.ts`、`index.ts` 核实实现深度
+   (本会话已知:并非骨架,seatbelt/bwrap 有真实 profile/spawn 实现,需确认可用度)。
+2. 接到 Bash/危险工具执行路径;无人值守默认套 `workspace-write` 级沙箱(对齐 codex `SandboxMode::WorkspaceWrite`)。
+3. 三级策略:`read-only` / `workspace-write` / `danger-full-access`,经 settings + 任务权限级别配置。
+
+### 测试
+- 沙箱内写工作目录外文件被拒、目录内允许。
+- 平台缺沙箱工具时优雅降级 + 明确告警(不静默关闭隔离)。
+
+### 验收
+- `workspace-write` 下,`rm` 项目外文件失败、项目内成功。
+
+> ⚠️ 涉及真实命令执行隔离,改动前先单独读 `sandbox/*.ts`,可能拆成独立 plan。
+
+---
+
+## Phase 5 — 写型任务:worktree + 权限分级 + 自动提 PR【P1,核心目标②】
+
+**目标**:实现「读外部输入 → 分析 → 改代码 → 提 PR」的自主开发型自动化。
+
+### 改动
+1. **权限分级(D6)**:`CronJob.permissionLevel`(read-only/workspace-write/full)贯通到 approvalBackend
+   与沙箱模式。无沙箱(Phase 4 未就绪)时写型默认拒绝。
+2. **worktree 隔离**:写型 job 执行前为其建 git worktree(复用现有能力),run 在 worktree 内跑,
+   `cwd` 指向 worktree;结束后留分支供提 PR。
+3. **自动提 PR**:run 完成后,在 worktree 分支上 `gh pr create`(经 Bash,需 `full` 权限 + 沙箱网络放行)。
+4. **prompt injection 防护**:读外部输入的内容与指令分隔(包进明确的「不可信内容」标记),
+   限制写型任务可执行的动作面。
+
+### 测试
+- read-only job 试图 Write 被拒;workspace-write job 能改 worktree 内文件、改 worktree 外被拒。
+- worktree 隔离:写型 job 不污染主工作区。
+- 注入防护:外部输入里的「请删除所有文件」式指令不被当作命令执行(回归用例)。
+
+### 验收
+- 配一个「读 issue → 改代码 → 提 PR」的 job,触发后在隔离 worktree 改动并开出 PR,主工作区无变化。
+
+---
+
+## Phase 6 — 薄服务端:网络 transport + serve 入口【P2,服务器部署】
+
+**目标**:同一份 `startAutomation` 模块由一层薄服务端引用,headless 常驻部署。§0 已论证其薄。
+
+### 改动
+1. **网络 transport**:`protocol/tcp-transport.ts`(或 ws),实现 `Transport` 三方法,照 `StdioTransport` 抄。
+2. **serve 入口**:`code-shell automation serve` —— 复制 `agent-server-stdio.ts` 的 bootstrap,
+   末行换 `new TcpTransport(port)`,并 `startAutomation({...})`。核心逻辑不动。
+3. **v1 安全边界**:仅监听 localhost / 走 SSH 隧道;鉴权(token/TLS)留待真要暴露公网时。
+
+### 测试
+- TcpTransport send/onMessage/close 与 stdio 行为一致(共用协议测试)。
+- serve 进程常驻,cron 7×24 触发不依赖任何 GUI。
+
+### 验收
+- 服务器(无 Electron)上 `automation serve` 起住,配置的 cron 任务按时跑;桌面端(未来)可连上查看。
+
+---
+
+## 清理 / 复用(撤销旧版「移除 cron」)
+
+旧版 plan 因「不内置调度」决定**删除** `CronScheduler` + `CronCreate/Delete/List` 工具。新路线**内置调度**,
+故**撤销该删除**:`CronScheduler`/`CronStore`/`bindCronToEngine`(本会话已实现)**保留并挪进 `automation/`**。
+`CronCreate/Delete/List` 三个 LLM 工具保留(让 agent 也能登记自动化任务)。
+
+---
 
 ## 不做(明确排除)
 
-- 远程定时 agent(CC 的 CCR Triggers / Anthropic 远程基础设施)—— codeshell 无对应后端,不在范围。
-- 补跑错过的 cron(catch-up)—— 默认按 Codex 无状态哲学,重启不补跑;留作 Phase 2 可选开关。
-- `codex cloud-tasks` 式企业云任务 —— 范围外。
+- **公网暴露的生产级服务端**(鉴权/TLS/多租户)—— Phase 6 仅 localhost/SSH,公网化单独立项。
+- **桌面端关窗后台常驻**(D2:关窗即停;要 7×24 用 Phase 6 服务端)。
+- **远程定时 agent**(CC 的 CCR Triggers)、`codex cloud-tasks` 云任务 —— 无对应后端,范围外。
+- **补跑错过的 cron**(catch-up)—— 重启按 next-run 重算,不补跑(避免惊群);可选开关留后续。
+- 桌面端连**远程服务器上的自动化** —— 能最好,但 v1 不做(需 transport 以外的认证/网络一整套)。
 
 ## 风险与缓解
 
 | 风险 | 缓解 |
 |---|---|
-| Phase 0 直跑无沙箱即上线 → 无人值守误删 | **默认 `approve-read-only`**(写操作自动拒绝),不在 Phase 4 沙箱就绪前开放 `approve-all`/`bypassPermissions`;验收仅用安全 prompt |
-| cron 定时器与 setInterval 漂移 | 现状 `setInterval` 已够;若需精确,后续可换成 next-run 计算 + setTimeout(留待) |
-| notification 注入打断用户输入 | 严格在 idle / turn 边界 drain(Phase 1 设计已含),不在用户打字中插入 |
+| automation 模块误引 Electron/Ink → 服务端加载崩 | D1 铁律 + lint/测试断言扫描 import;依赖注入 |
+| 无人值守写型任务误删/越权/被注入劫持 | 权限分级 + 沙箱(Phase 4 前置)+ worktree 隔离 + 注入防护(D6) |
+| 日历式调度时区/DST 算错 | cron-expr 单测覆盖时区 + DST 边界;非法表达式报错不静默 |
+| RunManager 透传 approvalBackend 漏改 → 仍走默认后端 | 扩 `CreateRunManagerOptions`/`EngineRunnerConfig` + 透传回归测试 |
+| 服务端监听端口被未授权访问 | v1 仅 localhost/SSH;公网前必须加鉴权(Phase 6 之外单独立项) |
+| 后台 agent 结果在 headless 退出丢失 | 已实现的 drain 生命周期契约(本会话 Phase 1 尾巴)继续复用 |
+
+## 三家自动化范式对比(决策依据,存档)
+
+| 维度 | Codex | Claude Code | opencode | **codeshell(本 plan 新路线)** |
+|---|---|---|---|---|
+| 主路径 | 无状态 CLI `exec` | 内置 cron + 后台 agent | server + HTTP/SSE API | **core 内 automation 模块 + 多宿主** |
+| 定时 | 外部 OS cron | 内置三层 cron | 外部编排 | **内置(日历式 cron + 时区)** |
+| 常驻 | 无 | 桌面可后台 | server 常驻 | **桌面进程内(关窗停);服务端可常驻(Phase 6)** |
+| 调度逻辑位置 | OS | 内置进程 | server | **core 零依赖模块,宿主加载** |
+| session | rollout,resume by-id/last | 内部 db | SQLite,可 fork | **RunStore,`--resume`/`--continue-last`** |
+| 写型(改码提PR) | 手动审批 | 手动 | 手动 | **核心目标:权限分级+worktree+自动PR(Phase 5)** |
+| 服务端 | 无 | 无 | 一等公民 | **薄层(transport 已解耦,Phase 6)** |
 
 ## 参考(对标证据)
 
-- Codex `exec`:`codex-rs/exec/src/lib.rs:820`(主循环)、`:885-941`(退出码);approval `protocol/src/protocol.rs:764`;sandbox `config_types.rs:86`。
-- Claude Code:本地 cron `cronScheduler.ts`(文件锁 + 1s 轮询);后台 agent webhook 回父会话 `AgentTool.tsx:87`;权限分类器 `yoloClassifier.ts`。
-- 上游对比文档:`docs/comparison/`、`docs/subagent-design-comparison-2026-05-27.md`。
+- Codex `exec`:主循环 `codex-rs/exec/src/lib.rs:820`、退出码 `:885-941`;resume `exec/src/cli.rs:207`、
+  `lib.rs:1334`;approval `protocol/src/protocol.rs:764`;sandbox `config_types.rs:86`。
+- Claude Code:本地 cron `cronScheduler.ts`;后台 agent webhook `AgentTool.tsx:87`;分类器 `yoloClassifier.ts`。
+- opencode:server `cli/cmd/serve.ts:10`;SSE `groups/event.ts`;SDK `sdk/js/src/v2/`。
+- codeshell 现状:`agent-server-stdio.ts`(多会话 server)、`protocol/transport.ts:17`(Transport 三方法)、
+  `server.ts:89`(AgentServer 解耦 transport)、`run.ts`(已补 stdin/last-message/drain)、
+  `cron/{scheduler,cron-store,cron-runtime}.ts`(本会话实现)、`RunManager.ts:65`、`App.tsx:1360-1371`、
+  desktop `agent-bridge.ts:1-16`、preload `createWorktree`。
