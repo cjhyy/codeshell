@@ -115,6 +115,13 @@ export class OpenAIClient extends LLMClientBase {
   // client. Cheaper and more reliable than re-deriving from the model id when
   // a new variant ships before our regex knows about it.
   private _forceMaxCompletionTokens = false;
+  // Sticky override: some gpt-5.x variants reject `reasoning_effort` when it's
+  // combined with `tools` on /v1/chat/completions ("Please use /v1/responses
+  // instead"). Once we see that 400, drop `reasoning_effort` for the lifetime
+  // of the client so tool-calling turns (e.g. the dream consolidation loop)
+  // succeed. Omitting the field just means "model default reasoning", which is
+  // fine for our background/aux calls.
+  private _dropReasoningEffort = false;
 
   constructor(config: LLMConfig, defaults?: ClientDefaults) {
     super(config, defaults);
@@ -241,10 +248,16 @@ export class OpenAIClient extends LLMClientBase {
           // "enabled" → "medium" (safe middle). "disabled" → the capability's
           // `disabledEffort` value; defaults to "minimal" (OpenAI), but xAI
           // uses "low" (no minimal) and Mistral uses "none" (only high|none).
-          reasoning.reasoning_effort =
-            thinking === "disabled"
-              ? (cap.reasoning.disabledEffort ?? "minimal")
-              : "medium";
+          //
+          // Skip entirely once the endpoint has told us `reasoning_effort` is
+          // incompatible with `tools` here (see _dropReasoningEffort) — sending
+          // it again would just re-trigger the same 400.
+          if (!this._dropReasoningEffort) {
+            reasoning.reasoning_effort =
+              thinking === "disabled"
+                ? (cap.reasoning.disabledEffort ?? "minimal")
+                : "medium";
+          }
           break;
         case "openrouter-reasoning":
           // OpenRouter normalized shape — {reasoning: {effort, exclude}}.
@@ -703,19 +716,47 @@ export class OpenAIClient extends LLMClientBase {
         throw new LLMRateLimitError("openai");
       }
       const msg = (err.message ?? "").toLowerCase();
+      // Some 400s are deterministically self-correctable: we flip a sticky
+      // flag that changes the NEXT request body. For those we rethrow a
+      // STATUS-LESS LLMError so withRetry's isClientError() check doesn't bail
+      // (4xx is normally non-retryable) and the immediate retry goes out with
+      // the corrected body — fixing the call that triggered it, not just the
+      // next one.
+      let selfCorrected = false;
+
       // o-series / gpt-5+ reject `max_tokens` and demand
       // `max_completion_tokens`. The id-based regex catches the common
       // cases; this is the belt-and-suspenders path for ids that ship
       // before the regex knows about them (e.g. new `gpt-5.x` variants
-      // routed via OpenAI-compatible proxies). Flip a sticky flag so the
-      // next request — including `withRetry`'s next attempt — sends the
-      // right field, instead of looping on the same 400.
+      // routed via OpenAI-compatible proxies).
       if (
         err.status === 400 &&
         msg.includes("max_tokens") &&
-        msg.includes("max_completion_tokens")
+        msg.includes("max_completion_tokens") &&
+        !this._forceMaxCompletionTokens
       ) {
         this._forceMaxCompletionTokens = true;
+        selfCorrected = true;
+      }
+      // gpt-5.x: "Function tools with reasoning_effort are not supported for
+      // <model> in /v1/chat/completions. Please use /v1/responses instead."
+      // Drop reasoning_effort for the lifetime of the client so the retry —
+      // and every later tool-calling turn — goes through. We can't switch to
+      // /v1/responses here, but tool calls work on /v1/chat/completions as long
+      // as reasoning_effort is absent.
+      if (
+        err.status === 400 &&
+        msg.includes("reasoning_effort") &&
+        (msg.includes("tools") || msg.includes("/v1/responses")) &&
+        !this._dropReasoningEffort
+      ) {
+        this._dropReasoningEffort = true;
+        selfCorrected = true;
+      }
+      if (selfCorrected) {
+        // No status in details → withRetry treats it as retryable and reissues
+        // with the now-corrected request body.
+        throw new LLMError(`OpenAI API error (auto-correcting): ${err.message}`, "openai");
       }
       if (
         msg.includes("context_length_exceeded") ||
