@@ -57,6 +57,13 @@ describe("transcriptToFoldItems", () => {
     expect(items[0]).toEqual({ kind: "stream", event: { type: "context_compact", strategy: "summary", before: 0, after: 0 } });
     expect(items[1]).toEqual({ kind: "stream", event: { type: "error", error: "boom" } });
   });
+
+  it("uses the event's turn number for assistant stream_request_start", () => {
+    const t1 = JSON.stringify({ id: "x", type: "message", timestamp: 1, turnNumber: 1, data: { role: "assistant", content: "second" } });
+    const items = transcriptToFoldItems(t1);
+    const reqStart = items.find((i) => i.kind === "stream" && i.event.type === "stream_request_start");
+    expect(reqStart).toEqual({ kind: "stream", event: { type: "stream_request_start", turnNumber: 1 } });
+  });
 });
 
 describe("getSessionTranscript", () => {

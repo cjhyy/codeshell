@@ -11,6 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import type { FoldItem } from "../preload/types";
+import type { ContentBlock } from "@cjhyy/code-shell-core";
 
 const SESSIONS_DIR = path.join(os.homedir(), ".code-shell", "sessions");
 
@@ -62,11 +63,11 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
         if (role === "user") {
           items.push({ kind: "user", text: textOf(d.content) });
         } else if (role === "assistant") {
-          items.push({ kind: "stream", event: { type: "stream_request_start", turnNumber: 0 } });
+          items.push({ kind: "stream", event: { type: "stream_request_start", turnNumber: ev.turnNumber } });
           items.push({ kind: "stream", event: { type: "text_delta", text: textOf(d.content) } });
           items.push({
             kind: "stream",
-            event: { type: "assistant_message", message: { role: "assistant", content: d.content as never } },
+            event: { type: "assistant_message", message: { role: "assistant", content: d.content as string | ContentBlock[] } },
           });
         }
         break;
@@ -79,7 +80,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             toolCall: {
               id: String(d.toolCallId ?? ""),
               toolName: String(d.toolName ?? ""),
-              args: (d.args as Record<string, unknown>) ?? {},
+              args: (d.args ?? {}) as Record<string, unknown>,
             },
           },
         });
@@ -94,6 +95,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
               toolName: String(d.toolName ?? ""),
               result: d.result as string | undefined,
               error: d.error as string | undefined,
+              isError: d.isError as boolean | undefined,
             },
           },
         });
@@ -117,12 +119,14 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
  * Read + convert the transcript for `sessionId`. `baseDir` overridable for
  * tests; defaults to ~/.code-shell/sessions. Returns [] when absent/empty.
  */
+const SAFE_ID = /^[A-Za-z0-9_.-]+$/;
+
 export async function getSessionTranscript(
   sessionId: string,
   baseDir: string = SESSIONS_DIR,
 ): Promise<FoldItem[]> {
-  const clean = sessionId.replace(/[\\/]/g, "");
-  const file = path.join(baseDir, clean, "transcript.jsonl");
+  if (!SAFE_ID.test(sessionId) || sessionId === "." || sessionId === "..") return [];
+  const file = path.join(baseDir, sessionId, "transcript.jsonl");
   try {
     const jsonl = await fs.readFile(file, "utf8");
     return transcriptToFoldItems(jsonl);
