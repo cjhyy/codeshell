@@ -31,6 +31,48 @@
   .tool-card-summary-text { color: hsl(var(--muted-foreground)); }
   .attachment-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
+  /* Settings section layout — shared by the big settings bodies (Model/Mcp/
+     Plugins/Advanced/Memory/…). Defined here (Tailwind layer) so those sections
+     no longer depend on the legacy settings stylesheet. */
+  .settings-section { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+  .settings-section-title { font-size: 0.95rem; font-weight: 600; margin: 0; }
+  .settings-section-help { font-size: 0.75rem; color: hsl(var(--muted-foreground)); margin: 0; }
+  .settings-section-label { font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
+  .settings-section-current { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+  .settings-field { display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.875rem; }
+  .settings-field > span { color: hsl(var(--muted-foreground)); }
+  .settings-field input, .settings-field textarea, .settings-git-input {
+    background: transparent; border: 1px solid hsl(var(--input)); border-radius: var(--radius-sm);
+    padding: 0.375rem 0.5rem; color: hsl(var(--foreground)); font-size: 0.875rem; font-family: inherit;
+  }
+  .settings-field input:focus-visible, .settings-field textarea:focus-visible {
+    outline: none; box-shadow: 0 0 0 1px hsl(var(--ring));
+  }
+  .settings-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .settings-toolbar { display: flex; align-items: center; gap: 0.5rem; }
+  .settings-toggle-row, .settings-toggle-inline { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+  .settings-option-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.5rem; }
+  .settings-option-card {
+    display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;
+    border: 1px solid hsl(var(--border)); border-radius: var(--radius-md);
+    padding: 0.75rem; background: transparent; cursor: pointer; text-align: left;
+  }
+  .settings-option-card.active { border-color: hsl(var(--primary)); background: hsl(var(--primary) / 0.08); }
+  .settings-option-title { font-weight: 500; font-size: 0.875rem; }
+  .settings-option-desc { font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
+  .settings-save-btn {
+    border: 1px solid hsl(var(--primary) / 0.4); color: hsl(var(--primary)); background: transparent;
+    border-radius: var(--radius-sm); padding: 0.375rem 0.75rem; font-size: 0.875rem; cursor: pointer;
+  }
+  .settings-save-btn:hover { background: hsl(var(--primary) / 0.1); }
+  .settings-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Customize / extensions shared bits still referenced by a few sections. */
+  .customize-empty { color: hsl(var(--muted-foreground)); font-size: 0.875rem; padding: 1rem; }
+  .customize-pane { display: flex; flex-direction: column; gap: 0.5rem; }
+  .customize-detail-head { display: flex; align-items: center; gap: 0.5rem; }
+  .customize-detail-name { font-weight: 600; }
+
   .cs-switch[data-state="checked"] { background-color: hsl(var(--primary)); }
   .cs-switch[data-state="unchecked"] { background-color: hsl(var(--input)); }
   .cs-switch .cs-switch-thumb { background-color: hsl(var(--background)); }
