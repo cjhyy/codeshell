@@ -1145,10 +1145,7 @@ function App() {
             const next = archiveSession(repoId, sessionId, false);
             setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
           }}
-          onDeleteArchivedSession={(repoId, sessionId) => {
-            const next = deleteSessionLocal(repoId, sessionId);
-            setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
-          }}
+          onDeleteArchivedSession={handleDeleteSession}
           onBack={() => setViewMode("chat")}
         />
       </div>
