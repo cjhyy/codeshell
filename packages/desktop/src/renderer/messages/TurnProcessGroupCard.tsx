@@ -47,18 +47,18 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
   const label = processGroupLabel(elapsedMs);
 
   return (
-    <div className={`turn-process-group${open ? " open" : ""}${group.isLive ? " live" : ""}`}>
+    <div className="px-4 py-1">
       <button
         type="button"
-        className="turn-process-header"
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        <span className="turn-process-label">{label}</span>
+        <span>{label}</span>
       </button>
       {open && (
-        <div className="turn-process-body">
+        <div className="mt-1 flex flex-col gap-1 border-l border-border pl-2">
           {group.items.map((m) => {
             if (m.kind === "tool_group") {
               return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
@@ -69,15 +69,12 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
             if (m.kind === "assistant") {
               if (!m.done && m.text === "") return null;
               return (
-                <div
-                  key={m.id}
-                  className={`msg-row msg-row-assistant ${m.done ? "done" : "streaming"}`}
-                >
+                <div key={m.id} className="py-1 text-sm">
                   {m.done ? (
                     <Markdown text={m.text} />
                   ) : (
                     <div className="md-body md-streaming">
-                      <pre>{m.text}</pre>
+                      <pre className="whitespace-pre-wrap font-sans">{m.text}</pre>
                     </div>
                   )}
                 </div>
