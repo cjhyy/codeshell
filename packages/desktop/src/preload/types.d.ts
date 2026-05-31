@@ -241,6 +241,16 @@ export interface CodeshellApi {
     name: string,
     cwd?: string,
   ): Promise<boolean>;
+  /**
+   * Run one manual dream consolidation pass over the `dream` scope at the
+   * given level (project requires cwd). Runs an LLM in the main process; the
+   * promise resolves when consolidation finishes. `summary` is the LLM's
+   * one-paragraph description of what it changed.
+   */
+  runDream(
+    level: MemoryLevel,
+    cwd?: string,
+  ): Promise<{ ran: boolean; summary: string }>;
 
   // Phase 5 — settings / sessions / logs.
   getSettings(scope: "user" | "project", cwd?: string): Promise<Record<string, unknown> | null>;

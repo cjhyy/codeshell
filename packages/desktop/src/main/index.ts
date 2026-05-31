@@ -57,6 +57,7 @@ import {
   type MemoryLevel,
   type SaveMemoryInput,
 } from "./memory-service.js";
+import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { listSessions, deleteSession, getSessionTranscript } from "./sessions-service.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
@@ -694,6 +695,13 @@ ipcMain.handle(
     return deleteMemory(v.level, v.scope, name, typeof cwd === "string" ? cwd : undefined);
   },
 );
+
+ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
+  if (level !== "user" && level !== "project") {
+    throw new Error(`dream level must be "user" or "project", got ${String(level)}`);
+  }
+  return runDream(level, typeof cwd === "string" ? cwd : undefined);
+});
 
 ipcMain.handle("sessions:list", async () => listSessions());
 ipcMain.handle("sessions:delete", async (_e, id: string) => {

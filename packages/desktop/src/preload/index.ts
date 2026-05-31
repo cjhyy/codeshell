@@ -215,6 +215,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("memory:save", input),
   deleteMemory: (level: string, scope: string, name: string, cwd?: string) =>
     ipcRenderer.invoke("memory:delete", level, scope, name, cwd),
+  runDream: (level: string, cwd?: string) =>
+    ipcRenderer.invoke("memory:dream", level, cwd),
   getSettings: (scope: "user" | "project", cwd?: string) =>
     ipcRenderer.invoke("settings:get", scope, cwd),
   updateSettings: (scope: "user" | "project", patch: Record<string, unknown>, cwd?: string) =>
