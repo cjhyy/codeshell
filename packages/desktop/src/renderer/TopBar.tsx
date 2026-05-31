@@ -43,22 +43,22 @@ export function TopBar({
   tasks,
 }: Props) {
   return (
-    <header className="topbar">
-      <div className="topbar-left">
-        <span className="topbar-traffic-gutter" aria-hidden="true" />
+    <header className="flex h-11 items-center justify-between border-b border-border px-3 text-sm">
+      <div className="flex items-center gap-2">
+        <span className="w-[68px] shrink-0" aria-hidden="true" />
         <IconButton
           label={sidebarCollapsed ? "展开侧栏" : "折叠侧栏"}
           onClick={onToggleSidebar}
         >
           <PanelLeft size={14} />
         </IconButton>
-        <span className="topbar-app">code-shell</span>
-        {repoName && <span className="topbar-sep">/</span>}
-        {repoName && <span className="topbar-repo">{repoName}</span>}
-        {sessionTitle && <span className="topbar-sep">·</span>}
-        {sessionTitle && <span className="topbar-session">{sessionTitle}</span>}
+        <span className="font-semibold">code-shell</span>
+        {repoName && <span className="text-muted-foreground">/</span>}
+        {repoName && <span className="text-foreground">{repoName}</span>}
+        {sessionTitle && <span className="text-muted-foreground">·</span>}
+        {sessionTitle && <span className="truncate text-muted-foreground">{sessionTitle}</span>}
       </div>
-      <div className="topbar-right">
+      <div className="flex items-center">
         <StatusBadge busy={busy} activity={activity} tasks={tasks ?? null} />
       </div>
     </header>
@@ -96,7 +96,7 @@ function StatusBadge({
 
   return (
     <div
-      className="topbar-status"
+      className="relative flex items-center"
       // tabIndex makes the div keyboard-focusable so the onFocus/onBlur popover
       // toggling works via keyboard, not just descendant focus bubbling.
       tabIndex={0}
@@ -113,7 +113,7 @@ function StatusBadge({
         title={busy ? "running" : "idle"}
       />
       {open && (
-        <div className="topbar-status-popover-anchor">
+        <div className="absolute right-0 top-full z-50 mt-1">
           <StatusPopover
             activity={
               activity ?? {
