@@ -215,8 +215,6 @@
 }
 .settings-toggle-inline input { transform: scale(1.05); }
 
-.permission-modes { display: flex; gap: 2px; padding: 2px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); width: fit-content; }
-
 .mcp-row {
   padding: var(--sp-1) var(--sp-2);
   background: var(--bg-elevated);

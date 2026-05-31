@@ -12,6 +12,12 @@ const MODE_LABELS: Record<PermissionMode, string> = {
   accept_edits: "接受编辑",
   bypass: "完全访问权限",
 };
+const MODE_DESCRIPTIONS: Record<PermissionMode, string> = {
+  plan: "只读分析，不改动任何文件",
+  default: "执行前对写入和命令逐项请求授权",
+  accept_edits: "自动批准文件编辑，命令仍需确认",
+  bypass: "完全访问，不再请求授权（高风险）",
+};
 
 interface Props {
   scope: "user" | "project";
@@ -66,15 +72,16 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
       <p className="settings-section-help">
         新会话默认的权限模式；对话中输入框里的临时权限只影响当前对话。
       </p>
-      <div className="permission-modes">
+      <div className="settings-option-grid">
         {MODES.map((m) => (
           <button
             key={m}
-            className={`logs-bucket${mode === m ? " active" : ""}`}
+            className={`settings-option-card${mode === m ? " active" : ""}`}
             disabled={saving}
             onClick={() => void choose(m)}
           >
-            {MODE_LABELS[m]}
+            <span className="settings-option-title">{MODE_LABELS[m]}</span>
+            <span className="settings-option-desc">{MODE_DESCRIPTIONS[m]}</span>
           </button>
         ))}
       </div>
