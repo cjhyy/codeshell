@@ -10,15 +10,15 @@ interface Props {
 
 export function ApprovalsView({ queue, history, onDecide }: Props) {
   return (
-    <div className="approvals-view">
+    <div className="flex flex-col gap-6 p-6">
       <section>
-        <h2 className="approvals-section-title">
-          待批准 <span className="approvals-count">{queue.length}</span>
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          待批准 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{queue.length}</span>
         </h2>
         {queue.length === 0 ? (
-          <div className="approvals-empty">没有待处理的工具调用</div>
+          <div className="text-sm text-muted-foreground">没有待处理的工具调用</div>
         ) : (
-          <div className="approvals-queue">
+          <div className="flex flex-col gap-2">
             {queue.map((env) => (
               <ApprovalCard
                 key={env.requestId}
@@ -31,22 +31,22 @@ export function ApprovalsView({ queue, history, onDecide }: Props) {
       </section>
 
       <section>
-        <h2 className="approvals-section-title">
-          历史 <span className="approvals-count">{history.length}</span>
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+          历史 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{history.length}</span>
         </h2>
         {history.length === 0 ? (
-          <div className="approvals-empty">暂无记录</div>
+          <div className="text-sm text-muted-foreground">暂无记录</div>
         ) : (
-          <ul className="approvals-history">
+          <ul className="space-y-1">
             {history.slice().reverse().slice(0, 50).map((h, i) => (
-              <li key={i} className={`approval-history-row decision-${h.decision}`}>
-                <span className="approval-history-decision">{h.decision}</span>
-                <span className="approval-history-tool">{h.envelope.request.toolName}</span>
-                <span className="approval-history-summary">
-                  {summarize(h.envelope)}
+              <li key={i} className="flex items-center gap-2 text-sm">
+                <span className={"font-semibold " + (h.decision === "approve" ? "text-status-ok" : "text-status-err")}>
+                  {h.decision}
                 </span>
-                {h.reason && <span className="approval-history-reason">— {h.reason}</span>}
-                <span className="approval-history-when">{formatTime(h.at)}</span>
+                <span className="font-mono text-xs">{h.envelope.request.toolName}</span>
+                <span className="flex-1 truncate text-muted-foreground">{summarize(h.envelope)}</span>
+                {h.reason && <span className="text-muted-foreground">— {h.reason}</span>}
+                <span className="text-xs text-muted-foreground">{formatTime(h.at)}</span>
               </li>
             ))}
           </ul>

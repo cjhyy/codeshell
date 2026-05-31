@@ -86,34 +86,42 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
+  const toneText = (t: "ok" | "warn" | "err") =>
+    t === "ok" ? "text-status-ok" : t === "warn" ? "text-status-warn" : "text-status-err";
+  const toneDot = (t: "ok" | "warn" | "err") =>
+    t === "ok" ? "bg-status-ok" : t === "warn" ? "bg-status-warn" : "bg-status-err";
+
   return (
-    <div className="composer-pill-wrap" ref={ref}>
+    <div className="relative" ref={ref}>
       <button
         type="button"
-        className={`composer-pill perm-tone-${cur.tone}`}
+        className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs hover:bg-accent disabled:opacity-50 ${toneText(cur.tone)}`}
         disabled={disabled}
         title="当前对话权限"
         onClick={() => setOpen((o) => !o)}
       >
         <AlertCircle size={12} />
         <span>本次：{cur.label}</span>
-        <ChevronDown size={11} />
+        <ChevronDown size={11} className="opacity-60" />
       </button>
       {open && (
-        <ul className="composer-popover">
+        <ul className="absolute bottom-full z-50 mb-1 w-64 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
           {MODES.map((m) => (
             <li
               key={m.id}
-              className={`composer-popover-item${m.id === value ? " active" : ""}`}
+              className={
+                "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent " +
+                (m.id === value ? "bg-accent" : "")
+              }
               title={m.hint}
               onClick={() => {
                 onChange(m.id);
                 setOpen(false);
               }}
             >
-              <span className={`status-dot status-${m.tone === "ok" ? "ok" : m.tone === "warn" ? "warn" : "err"}`} />
-              <span className="composer-popover-item-label">{m.label}</span>
-              <span className="composer-popover-item-hint">{m.hint}</span>
+              <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
+              <span className="font-medium">{m.label}</span>
+              <span className="truncate text-xs text-muted-foreground">{m.hint}</span>
             </li>
           ))}
         </ul>

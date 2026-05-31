@@ -44,37 +44,40 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
   const label = active?.label ?? (activeKey ?? "选择模型");
 
   return (
-    <div className="composer-pill-wrap" ref={ref}>
+    <div className="relative" ref={ref}>
       <button
         type="button"
-        className="composer-pill composer-model-pill"
+        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground hover:bg-accent disabled:opacity-50"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
       >
         <Zap size={12} />
         <span>{label}</span>
-        <ChevronDown size={11} />
+        <ChevronDown size={11} className="opacity-60" />
       </button>
       {open && (
-        <ul className="composer-popover composer-popover-wide">
+        <ul className="absolute bottom-full z-50 mb-1 max-h-80 w-72 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
           {options.length === 0 ? (
-            <li className="composer-popover-empty">
+            <li className="px-2 py-1.5 text-sm text-muted-foreground">
               settings.json 里还没声明 models
             </li>
           ) : (
             options.map((o) => (
               <li
                 key={o.key}
-                className={`composer-popover-item${o.key === activeKey ? " active" : ""}`}
+                className={
+                  "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent " +
+                  (o.key === activeKey ? "bg-accent" : "")
+                }
                 onClick={() => {
                   onSelect(o);
                   setOpen(false);
                 }}
               >
-                <span className="composer-popover-prov">{o.provider}</span>
-                <span>{o.label}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{o.provider}</span>
+                <span className="flex-1 truncate">{o.label}</span>
                 {o.supportsVision && (
-                  <Image size={11} aria-label="支持图片输入" className="composer-popover-vision" />
+                  <Image size={11} aria-label="支持图片输入" className="opacity-60" />
                 )}
               </li>
             ))
