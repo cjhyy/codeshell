@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { PluginSummary } from "../../main/plugins-service";
 import { resolveUninstallTarget } from "./uninstallTarget";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   cwd: string;
@@ -52,11 +54,11 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   };
   if (error)
     return (
-      <div className="customize-empty">
-        加载失败：{error} <button onClick={retry}>重试</button>
+      <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+        加载失败：{error} <Button size="sm" variant="outline" onClick={retry}>重试</Button>
       </div>
     );
-  if (plugins === null) return <div className="customize-empty">加载中…</div>;
+  if (plugins === null) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
   const q = query.trim().toLowerCase();
   const rows = q
     ? plugins.filter(
@@ -66,32 +68,29 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
       )
     : plugins;
   if (rows.length === 0)
-    return <div className="customize-empty">还没有安装插件</div>;
+    return <div className="p-4 text-sm text-muted-foreground">还没有安装插件</div>;
   return (
-    <ul className="ext-list">
+    <ul className="space-y-1">
       {rows.map((p) => (
-        <li key={p.installKey} className="ext-row">
-          <span className="ext-row-icon">🧩</span>
-          <div className="ext-row-main">
-            <span className="ext-row-name">{p.name}</span>
-            <span className="ext-row-desc">
+        <li key={p.installKey} className="flex items-center gap-3 rounded-md border p-3 text-sm">
+          <span className="text-lg">🧩</span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium">{p.name}</div>
+            <div className="truncate text-xs text-muted-foreground">
               {p.sourceLabel} · {p.skillCount} skills
-            </span>
+            </div>
           </div>
-          <span className="ext-row-source">{p.marketplace ?? "本地"}</span>
-          <input
-            type="checkbox"
-            checked={isEnabled(p)}
-            onChange={(e) => onToggle(p, e.target.checked)}
-          />
-          <button
-            className="ext-row-kebab"
+          <span className="text-xs text-muted-foreground">{p.marketplace ?? "本地"}</span>
+          <Switch checked={isEnabled(p)} onCheckedChange={(v) => onToggle(p, v)} />
+          <Button
+            size="icon"
+            variant="ghost"
             title="卸载"
             disabled={busy === p.installKey}
             onClick={() => void uninstall(p)}
           >
             {busy === p.installKey ? "…" : "⋯"}
-          </button>
+          </Button>
         </li>
       ))}
     </ul>
