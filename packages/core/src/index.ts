@@ -110,6 +110,11 @@ export {
   StdioTransport,
   type Transport,
 } from "./protocol/transport.js";
+export {
+  SocketTransport,
+  listenTcp,
+  type TcpListenResult,
+} from "./protocol/tcp-transport.js";
 // Recommended public factories — see protocol/factories.ts for the
 // stable construction contract referenced by standard §7.
 export {
