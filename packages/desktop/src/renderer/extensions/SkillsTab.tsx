@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { SkillSummary } from "../../main/skills-service";
 import { SkillDetailModal } from "./SkillDetailModal";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   cwd: string;
@@ -36,12 +38,12 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
 
   if (error) {
     return (
-      <div className="customize-empty">
-        加载失败：{error} <button onClick={retry}>重试</button>
+      <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
+        加载失败：{error} <Button size="sm" variant="outline" onClick={retry}>重试</Button>
       </div>
     );
   }
-  if (skills === null) return <div className="customize-empty">加载中…</div>;
+  if (skills === null) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
 
   const q = query.trim().toLowerCase();
   const rows = q
@@ -52,31 +54,28 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
       )
     : skills;
   if (rows.length === 0)
-    return <div className="customize-empty">没有匹配的 skill</div>;
+    return <div className="p-4 text-sm text-muted-foreground">没有匹配的 skill</div>;
 
   return (
     <>
-      <ul className="ext-list">
+      <ul className="space-y-1">
         {rows.map((s) => (
           <li
             key={s.filePath}
-            className="ext-row"
+            className="flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm hover:bg-accent"
             onClick={() => setOpen(s)}
           >
-            <span className="ext-row-icon">📄</span>
-            <div className="ext-row-main">
-              <span className="ext-row-name">{s.name}</span>
-              <span className="ext-row-desc">
+            <span className="text-lg">📄</span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium">{s.name}</div>
+              <div className="truncate text-xs text-muted-foreground">
                 {(s.description ?? "").split("\n")[0]}
-              </span>
+              </div>
             </div>
-            <span className="ext-row-source">{s.source}</span>
-            <input
-              type="checkbox"
-              checked={isEnabled(s)}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => onToggle(s, e.target.checked)}
-            />
+            <span className="text-xs text-muted-foreground">{s.source}</span>
+            <span onClick={(e) => e.stopPropagation()}>
+              <Switch checked={isEnabled(s)} onCheckedChange={(v) => onToggle(s, v)} />
+            </span>
           </li>
         ))}
       </ul>

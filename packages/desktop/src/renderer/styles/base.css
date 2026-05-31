@@ -32,11 +32,11 @@ button:not([class*="bg-"]):not(.cs-switch) {
   background: none;
 }
 
-button:focus-visible {
-  /* `--accent` is now a zinc HSL-channel token (not a full color), so the old
-     `solid var(--accent)` produced an invalid value → the browser drew a
-     default black box. shadcn components manage their own focus ring; for any
-     remaining legacy bare <button> use the valid --ring color instead. */
+/* Legacy bare-button focus ring. Scoped to NOT touch shadcn controls — they
+   manage their own focus ring (focus:ring-*). Without the exclusion this
+   unlayered outline stacks a second ring (and, with the old invalid
+   var(--accent), drew a black box) on Select triggers / buttons. */
+button:not([class*="ring"]):not([class*="bg-"]):not(.cs-switch):focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
 }
