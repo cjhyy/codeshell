@@ -349,6 +349,8 @@ export {
   ArtifactTracker,
   // Hardening
   RunLock,
+  type RunLockConfig,
+  type RunLockAcquireResult,
   Heartbeat,
   // Evaluator
   NoopEvaluator,

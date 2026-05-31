@@ -385,9 +385,25 @@ export class RunManager {
     const run = await this.getOrThrow(runId);
 
     // Acquire run lock — prevents concurrent execution by multiple workers
-    const acquired = await this.lock.acquire(runId);
-    if (!acquired) {
-      logger.warn("run.lock.failed", { runId, reason: "already locked by another worker" });
+    const lockResult = await this.lock.acquire(runId);
+    if (!lockResult.acquired) {
+      if (lockResult.reason === "missing_target") {
+        const errorMsg = lockResult.message ?? "Run lock target was missing";
+        run.error = errorMsg;
+        await this.transition(run, "blocked");
+        await this.emitRunEvent(runId, "run_blocked", {
+          error: errorMsg,
+          reason: "missing_lock_target",
+        });
+        logger.error("run.lock.target_missing", { runId, error: errorMsg });
+        return;
+      }
+      logger.warn("run.lock.failed", {
+        runId,
+        reason: "already locked by another worker",
+        code: lockResult.code,
+        message: lockResult.message,
+      });
       return;
     }
 
