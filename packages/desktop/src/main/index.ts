@@ -17,7 +17,7 @@ import {
   type AutomationHandle,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
-import { buildDesktopAutomationRunner } from "./automation-host.js";
+import { buildDesktopRunManager } from "./automation-host.js";
 import { dlog } from "./desktop-logger.js";
 import {
   getGitStatus,
@@ -266,7 +266,9 @@ app.whenReady().then(() => {
   try {
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
-      runner: buildDesktopAutomationRunner(),
+      // Phase 2: jobs run through a read-only RunManager so each execution
+      // lands in the RunStore and shows in the runs UI with full history.
+      runManager: buildDesktopRunManager(),
     });
   } catch (err) {
     // Automation is non-critical to the GUI — never block startup on it.
