@@ -12,6 +12,25 @@
  * Writing the rules by hand, scoped to a class, is deterministic and correct.
  */
 @layer components {
+  /* Tool-card detail rows — shared by every tool-card (Generic/Bash/File/…).
+     Defined here (Tailwind component layer, not legacy CSS) so the cards are
+     migrated without repeating the same utilities across six files. */
+  .tool-card-detail { display: flex; flex-direction: column; gap: 0.5rem; }
+  .tool-card-row { display: flex; flex-direction: column; gap: 0.25rem; }
+  .tool-card-row-label {
+    font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.03em; color: hsl(var(--muted-foreground));
+  }
+  .tool-card-row-val {
+    margin: 0; white-space: pre-wrap; word-break: break-word;
+    border-radius: var(--radius-sm); background: hsl(var(--muted) / 0.4);
+    padding: 0.5rem; font-size: 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .tool-card-row-val.err { color: hsl(var(--status-err)); }
+  .tool-card-summary-text { color: hsl(var(--muted-foreground)); }
+  .attachment-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
   .cs-switch[data-state="checked"] { background-color: hsl(var(--primary)); }
   .cs-switch[data-state="unchecked"] { background-color: hsl(var(--input)); }
   .cs-switch .cs-switch-thumb { background-color: hsl(var(--background)); }

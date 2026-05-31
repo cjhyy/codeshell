@@ -83,7 +83,7 @@ export function MessageStream({
   );
 
   return (
-    <div className="stream" ref={ref}>
+    <div className="flex-1 overflow-y-auto" ref={ref}>
       {items.map((m) => {
         if (m.kind === "turn_process_group") {
           return <TurnProcessGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
@@ -99,11 +99,11 @@ export function MessageStream({
           case "user": {
             const { text, images } = decodeWireForDisplay(m.text);
             return (
-              <div key={m.id} className="msg-row msg-row-user">
-                <div className="msg-user-bubble">
-                  {text && <div className="msg-user-text">{text}</div>}
+              <div key={m.id} className="flex justify-end px-4 py-1.5">
+                <div className="max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
+                  {text && <div className="whitespace-pre-wrap">{text}</div>}
                   {images.length > 0 && (
-                    <div className="msg-user-images">
+                    <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
                       {images.map((img, i) => (
                         <img
                           key={i}
@@ -151,8 +151,8 @@ export function MessageStream({
             ) : null;
           case "system":
             return (
-              <div key={m.id} className="msg-row msg-row-system">
-                <div className="msg-system">{m.text}</div>
+              <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
+                {m.text}
               </div>
             );
           case "files_changed":
