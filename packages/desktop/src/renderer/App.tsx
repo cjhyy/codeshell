@@ -27,10 +27,12 @@ import {
   renameSessionLocal,
   archiveSession,
   bindEngineSession,
+  upsertImportedSession,
   touchSession,
   setActiveSession,
   NO_REPO_KEY,
   type SessionIndex,
+  type SessionSummary,
 } from "./transcripts";
 import { titleFromWire } from "./chat/attachments";
 import type {
@@ -46,6 +48,8 @@ import {
   makeRepoId,
   type Repo,
 } from "./repos";
+import { importAutomationRuns, type ImportableRun } from "./automation/importRuns";
+import { isCaseInsensitivePlatform } from "./automation/pathMatch";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
@@ -443,8 +447,22 @@ function App() {
     repoId: string | null,
     sessionId: string,
   ): void => {
+    // Capture source/runId BEFORE wiping the local entry — needed to also
+    // remove the on-disk session + run dirs for imported automation sessions.
+    const summary = sessionIndices[repoKeyOf(repoId)]?.sessions.find((s) => s.id === sessionId);
     const next = deleteSessionLocal(repoId, sessionId);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
+    if (summary?.source === "automation") {
+      const engineId = summary.engineSessionId ?? sessionId;
+      void window.codeshell.deleteSession(engineId).catch((e) =>
+        window.codeshell.log("automation.delete.session.failed", { engineId, error: String(e) }),
+      );
+      if (summary.runId) {
+        void window.codeshell.deleteRun(summary.runId).catch((e) =>
+          window.codeshell.log("automation.delete.run.failed", { runId: summary.runId, error: String(e) }),
+        );
+      }
+    }
   };
 
   useEffect(() => {
@@ -453,6 +471,80 @@ function App() {
       for (const c of coalescers.values()) c.dispose();
       coalescers.clear();
     };
+  }, []);
+
+  // Backfill automation runs from disk into the sidebar on startup. Disk is
+  // the source of truth; localStorage is our projection. Runs are deduped by
+  // engineSessionId and capped to the 50 most-recent per project. Re-running
+  // is safe (idempotent) because upsertImportedSession keys on engineSessionId.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      let runs: ImportableRun[];
+      try {
+        const raw = await window.codeshell.listRuns();
+        runs = raw.map((r) => ({
+          runId: r.runId,
+          sessionId: r.sessionId,
+          cwd: r.cwd,
+          objective: r.objective,
+          status: r.status,
+          finishedAt: r.finishedAt,
+          createdAt: r.createdAt,
+          source: r.source,
+          cronJobName: r.cronJobName,
+        }));
+      } catch {
+        return; // no runs dir / read error — nothing to backfill
+      }
+      if (cancelled || runs.length === 0) return;
+
+      // Known engineSessionIds across every repo index (manual + already-imported).
+      const currentRepos = loadRepos();
+      const known = new Set<string>();
+      for (const r of currentRepos) {
+        for (const s of loadSessionIndex(r.id).sessions) {
+          if (s.engineSessionId) known.add(s.engineSessionId);
+        }
+      }
+      for (const s of loadSessionIndex(null).sessions) {
+        if (s.engineSessionId) known.add(s.engineSessionId);
+      }
+
+      const touchedRepoIds = new Set<string | null>();
+      let reposChanged = false;
+      await importAutomationRuns(runs, currentRepos, {
+        caseInsensitive: isCaseInsensitivePlatform(),
+        existingEngineSessionIds: known,
+        cap: 50,
+        fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
+        createRepoForCwd: (cwd) => {
+          const id = makeRepoId();
+          const name = cwd.split("/").filter(Boolean).pop() || cwd;
+          const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
+          currentRepos.push(repo);
+          saveRepos(currentRepos);
+          reposChanged = true;
+          return id;
+        },
+        writeImported: (repoId, summary, state) => {
+          saveTranscript(repoId, summary.id, state);
+          upsertImportedSession(repoId, summary);
+          touchedRepoIds.add(repoId);
+        },
+      });
+      if (cancelled) return;
+
+      if (reposChanged) setRepos(currentRepos.slice());
+      if (touchedRepoIds.size > 0) {
+        setSessionIndices((prev) => {
+          const next = { ...prev };
+          for (const rid of touchedRepoIds) next[repoKeyOf(rid)] = loadSessionIndex(rid);
+          return next;
+        });
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   function getCoalescer(bucket: string) {

@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   PenSquare,
   Archive,
+  Clock,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -519,6 +520,9 @@ function SessionRow({
       }}
       title={s.title}
     >
+      {s.source === "automation" && (
+        <Clock className="h-3 w-3 shrink-0 mr-1 text-muted-foreground" aria-label="自动化" />
+      )}
       <span className="session-title">{s.title}</span>
       <span className="session-meta-right">
         {confirming ? (
