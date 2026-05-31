@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { DesktopSessionSummary } from "../../preload/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   onNewSession?: () => void;
@@ -30,8 +32,8 @@ export function SessionsView({ onNewSession }: Props) {
     void refresh();
   }, []);
 
-  if (error) return <div className="view-error">无法读取会话: {error}</div>;
-  if (!sessions) return <div className="view-loading">加载中…</div>;
+  if (error) return <div className="p-6 text-sm text-status-err">无法读取会话: {error}</div>;
+  if (!sessions) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
 
   const filtered = filter
     ? sessions.filter(
@@ -59,72 +61,61 @@ export function SessionsView({ onNewSession }: Props) {
   };
 
   return (
-    <div className="sessions-view">
-      <div className="sessions-toolbar">
-        <input
-          className="sessions-filter"
+    <div className="flex h-full flex-col gap-3 p-6">
+      <div className="flex items-center gap-2">
+        <Input
+          className="h-8 max-w-xs"
           placeholder="搜索会话 id 或标题…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <button className="approval-btn approve" onClick={onNewSession}>
-          新会话
-        </button>
-        <button className="approval-btn deny" onClick={() => void refresh()}>
-          Refresh
-        </button>
+        <span className="flex-1" />
+        <Button size="sm" onClick={onNewSession}>新会话</Button>
+        <Button size="sm" variant="outline" onClick={() => void refresh()}>刷新</Button>
       </div>
       {filtered.length === 0 ? (
-        <div className="approvals-empty">暂无匹配的会话</div>
+        <div className="p-3 text-sm text-muted-foreground">暂无匹配的会话</div>
       ) : (
-        <ul className="sessions-list">
+        <ul className="space-y-1 overflow-y-auto">
           {filtered.map((s) => {
             const title = titles[s.id];
             const isEditing = editing === s.id;
             return (
-              <li key={s.id} className="session-row">
+              <li key={s.id} className="flex items-center gap-3 rounded-md p-2 text-sm hover:bg-accent">
                 {isEditing ? (
-                  <input
+                  <Input
                     autoFocus
-                    className="sessions-filter"
-                    style={{ flex: 1 }}
+                    className="h-8 flex-1"
                     value={editDraft}
                     onChange={(e) => setEditDraft(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") void commitEdit();
-                      else if (e.key === "Escape") {
-                        setEditing(null);
-                        setEditDraft("");
-                      }
+                      else if (e.key === "Escape") { setEditing(null); setEditDraft(""); }
                     }}
                     onBlur={() => void commitEdit()}
                     placeholder="会话标题"
                   />
                 ) : (
                   <>
-                    <span className="session-id" onDoubleClick={() => startEdit(s)}>
+                    <span className="flex-1 truncate" onDoubleClick={() => startEdit(s)}>
                       {title ? (
                         <>
                           <strong>{title}</strong>{" "}
-                          <span className="session-meta">{s.id.slice(0, 8)}</span>
+                          <span className="text-xs text-muted-foreground">{s.id.slice(0, 8)}</span>
                         </>
                       ) : (
-                        s.id
+                        <span className="font-mono text-xs">{s.id}</span>
                       )}
                     </span>
-                    <button
-                      className="session-delete"
-                      style={{ color: "var(--fg-muted)" }}
-                      onClick={() => startEdit(s)}
-                    >
-                      重命名
-                    </button>
+                    <Button size="sm" variant="ghost" onClick={() => startEdit(s)}>重命名</Button>
                   </>
                 )}
-                <span className="session-meta">{formatBytes(s.size)}</span>
-                <span className="session-meta">{new Date(s.updatedAt).toLocaleString()}</span>
-                <button
-                  className="session-delete"
+                <span className="text-xs text-muted-foreground">{formatBytes(s.size)}</span>
+                <span className="text-xs text-muted-foreground">{new Date(s.updatedAt).toLocaleString()}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-status-err"
                   onClick={async () => {
                     try {
                       await window.codeshell.deleteSession(s.id);
@@ -135,7 +126,7 @@ export function SessionsView({ onNewSession }: Props) {
                   }}
                 >
                   删除
-                </button>
+                </Button>
               </li>
             );
           })}
