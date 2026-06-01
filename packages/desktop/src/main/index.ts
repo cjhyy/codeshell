@@ -5,7 +5,8 @@
 
 import { app, BrowserWindow, dialog, ipcMain, session, shell, Notification } from "electron";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve, basename } from "node:path";
+import { dirname, resolve, basename, extname, isAbsolute } from "node:path";
+import { readFile, lstat } from "node:fs/promises";
 import {
   defaultCacheDir,
   fetchModelList,
@@ -385,6 +386,40 @@ ipcMain.handle("agents:list", async (_e, cwd: string) => {
 ipcMain.handle("agents:read", async (_e, filePath: string) => {
   if (typeof filePath !== "string") throw new Error("agents:read requires filePath");
   return readAgentBody(filePath);
+});
+
+// Read an image file and return it as a base64 data: URL. The renderer can't
+// load `file://` (default webSecurity blocks it, and the CSP only allows
+// `img-src 'self' data:`), so inline image thumbnails (GenerateImage output,
+// screenshots, generated SVGs surfaced from answer text) come through here
+// instead. Returns null on any failure so the caller degrades to a link.
+//
+// We use lstat (not stat) and reject symlinks: a symlink with an image
+// extension could otherwise point at a non-image file, a device/FIFO, or a
+// secret outside the workspace, defeating the extension+size guards.
+const IMG_MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".bmp": "image/bmp",
+  ".avif": "image/avif",
+};
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024; // 25MB — guard against huge data URLs
+ipcMain.handle("images:readDataUrl", async (_e, absPath: string): Promise<string | null> => {
+  try {
+    if (typeof absPath !== "string" || !isAbsolute(absPath)) return null;
+    const mime = IMG_MIME[extname(absPath).toLowerCase()];
+    if (!mime) return null; // not an image extension
+    const info = await lstat(absPath); // lstat: don't follow symlinks
+    if (!info.isFile() || info.size > MAX_IMAGE_BYTES) return null;
+    const buf = await readFile(absPath);
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
 });
 ipcMain.handle(
   "agents:save",

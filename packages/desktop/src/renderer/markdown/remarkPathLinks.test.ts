@@ -67,4 +67,43 @@ describe("remarkPathLinks — CJK punctuation boundaries", () => {
     expect(linkedPaths("纯文本 readme 不该匹配")).toEqual([]);
     expect(linkedPaths("这是一句话没有路径")).toEqual([]);
   });
+
+  it("links a quoted path that contains spaces (macOS screenshot path)", () => {
+    expect(
+      linkedPaths(
+        "'/var/folders/1d/T/TemporaryItems/截屏2026-06-01 18.39.07.png'",
+      ),
+    ).toEqual(["/var/folders/1d/T/TemporaryItems/截屏2026-06-01 18.39.07.png"]);
+  });
+
+  it("links a double-quoted spaced path", () => {
+    expect(linkedPaths('图片 "docs/my folder/a b.png" 在这', )).toEqual([
+      "docs/my folder/a b.png",
+    ]);
+  });
+
+  it("does not link quoted prose without a path shape", () => {
+    expect(linkedPaths("他说 '你好世界' 然后离开")).toEqual([]);
+  });
+
+  it("preserves a :line suffix inside a quoted path", () => {
+    // The href carries the line so editors can jump to it; decodePathHref
+    // strips it off `path`, so assert on the raw url instead.
+    const urls = linkUrls("打开 '/Users/x/app.ts:42'");
+    expect(urls).toEqual([
+      `${CODESHELL_PATH_SCHEME}${encodeURIComponent("/Users/x/app.ts")}:42`,
+    ]);
+  });
+
+  it("does not link a path whose open/close quotes differ", () => {
+    // ' opens but ` closes — not a balanced quote, so no link. The bare
+    // matcher can't pick it up either (preceded by a quote, not whitespace).
+    expect(linkedPaths("x '/a/b.png` y")).toEqual([]);
+  });
+
+  it("a contraction apostrophe doesn't open a spurious quoted span", () => {
+    // "don't" + a later "'" must not be read as a quoted path; the bare
+    // a/b.ts inside is still linked on its own.
+    expect(linkedPaths("don't use a/b.ts here'")).toEqual(["a/b.ts"]);
+  });
 });

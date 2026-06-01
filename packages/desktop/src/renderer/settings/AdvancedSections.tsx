@@ -5,6 +5,7 @@ import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { SearchConnectionsPanel } from "./SearchConnectionsPanel";
 import {
   DEFAULT_GIT_PREFS,
@@ -22,12 +23,23 @@ interface ScopedProps {
   activeRepoPath: string | null;
 }
 
+/**
+ * Settings → 个性化.
+ *
+ * Codex-style single "自定义指令" card: one large textarea that maps to the
+ * agent's `appendSystemPrompt` — extra instructions/context layered onto the
+ * system prompt for every conversation. The save button is disabled until the
+ * text differs from what's on disk (no-op saves were confusing).
+ *
+ * The richer instruction-file knobs (customSystemPrompt / instructions.fileName
+ * / scanDirs / compatFileNames) were intentionally dropped from this tab to
+ * match Codex; they remain in the settings schema and can be set via the config
+ * file. Memory enable/skip/reset toggles live in the dedicated 记忆 tab, not
+ * here — so this tab stays a single focused control.
+ */
 export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [appendPrompt, setAppendPrompt] = useState("");
-  const [fileName, setFileName] = useState("CODESHELL.md");
-  const [scanDirs, setScanDirs] = useState("");
-  const [compatFiles, setCompatFiles] = useState("CLAUDE.md\nAGENTS.md");
+  const [instructions, setInstructions] = useState("");
+  const [saved, setSaved] = useState("");
   const [saving, setSaving] = useState(false);
 
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
@@ -35,67 +47,52 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
     const agent = objectOf(s.agent);
-    const instructions = objectOf(s.instructions);
-    setCustomPrompt(stringOf(agent.customSystemPrompt));
-    setAppendPrompt(stringOf(agent.appendSystemPrompt));
-    setFileName(stringOf(instructions.fileName) || "CODESHELL.md");
-    setScanDirs(arrayText(instructions.scanDirs));
-    setCompatFiles(arrayText(instructions.compatFileNames) || "CLAUDE.md\nAGENTS.md");
+    const value = stringOf(agent.appendSystemPrompt);
+    setInstructions(value);
+    setSaved(value);
   };
 
   useEffect(() => { void load(); }, [scope, activeRepoPath]);
+
+  const dirty = instructions !== saved;
 
   const save = async () => {
     setSaving(true);
     try {
       await writeSettings(
         scope,
-        {
-          agent: {
-            customSystemPrompt: customPrompt,
-            appendSystemPrompt: appendPrompt,
-          },
-          instructions: {
-            fileName: fileName.trim() || "CODESHELL.md",
-            scanDirs: lines(scanDirs),
-            compatFileNames: lines(compatFiles),
-          },
-        },
+        { agent: { appendSystemPrompt: instructions } },
         cwd,
       );
+      setSaved(instructions);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">个性化指令</h3>
-      <div className="settings-form-grid">
-        <label className="settings-field">
-          <span>覆盖系统提示</span>
-          <textarea value={customPrompt} onChange={(e) => setCustomPrompt(e.target.value)} />
-        </label>
-        <label className="settings-field">
-          <span>追加系统提示</span>
-          <textarea value={appendPrompt} onChange={(e) => setAppendPrompt(e.target.value)} />
-        </label>
-        <label className="settings-field">
-          <span>项目指令文件</span>
-          <input value={fileName} onChange={(e) => setFileName(e.target.value)} />
-        </label>
-        <label className="settings-field">
-          <span>额外扫描目录</span>
-          <textarea value={scanDirs} onChange={(e) => setScanDirs(e.target.value)} />
-        </label>
-        <label className="settings-field">
-          <span>兼容指令文件</span>
-          <textarea value={compatFiles} onChange={(e) => setCompatFiles(e.target.value)} />
-        </label>
+    <section className="flex flex-col gap-3">
+      <div>
+        <h3 className="text-sm font-medium text-foreground">自定义指令</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          为 CodeShell 提供额外的说明和上下文,会附加到每次对话的系统提示中。
+        </p>
       </div>
-      <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
-        {saving ? "保存中..." : "保存个性化"}
-      </Button>
+      <Textarea
+        value={instructions}
+        onChange={(e) => setInstructions(e.target.value)}
+        placeholder="添加自定义指令…"
+        className="min-h-[260px] resize-y leading-relaxed"
+      />
+      <div className="flex justify-end">
+        <Button
+          variant="solid"
+          onClick={() => void save()}
+          disabled={saving || !dirty}
+        >
+          {saving ? "保存中…" : "保存"}
+        </Button>
+      </div>
     </section>
   );
 }

@@ -209,6 +209,12 @@ export interface CodeshellApi {
    */
   openPath(path: string, cwd?: string): Promise<string>;
   /**
+   * Read an image file (absolute path) as a base64 `data:` URL so the
+   * renderer can display it without `file://` (blocked by webSecurity/CSP).
+   * Returns null if the path isn't an absolute image file or read fails.
+   */
+  readImageDataUrl(absPath: string): Promise<string | null>;
+  /**
    * Revert working-tree edits to the given relative paths. Tracked
    * files are restored from HEAD; untracked files are deleted from
    * disk. Returns a per-path result so the UI can show partial

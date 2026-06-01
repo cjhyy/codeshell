@@ -67,6 +67,46 @@ export function resolveAgentTypeOverrides(
   };
 }
 
+/**
+ * Render the "Available agent types" block injected into the Agent tool's
+ * description, listing the roles defined in .code-shell/agents/*.md so the
+ * model knows it can pass `agent_type` instead of hand-rolling an ad-hoc
+ * agent. Without this the model never sees the registry (it lives per-engine,
+ * not in the static tool def) and falls back to nameless ephemeral agents —
+ * see the Core A/B/C incident. Returns "" when no roles are defined, so the
+ * base description is left untouched.
+ */
+export function buildAgentTypesBlock(
+  registry: AgentDefinitionRegistry | undefined,
+): string {
+  const defs = registry?.list() ?? [];
+  if (defs.length === 0) return "";
+  const lines = defs.map((d) => {
+    const tools = d.tools && d.tools.length > 0 ? d.tools.join(", ") : "all parent tools";
+    return `- ${d.name}: ${d.description} (tools: ${tools})`;
+  });
+  return [
+    "",
+    "Available agent types (pass one as `agent_type` to reuse its role, tool allowlist, and turn cap):",
+    ...lines,
+    "Prefer a matching agent_type over an ad-hoc agent: e.g. read-only investigation → researcher/explorer, planning → planner, full multi-step work → general-purpose. Omit agent_type only when no role fits.",
+  ].join("\n");
+}
+
+/**
+ * Produce an Agent tool definition whose description ends with the live
+ * available-agent-types listing. Pure: takes the registry, returns a new def
+ * (the base `agentToolDef` const is never mutated). When no roles exist the
+ * base def is returned unchanged.
+ */
+export function agentToolDefWithTypes(
+  registry: AgentDefinitionRegistry | undefined,
+): ToolDefinition {
+  const block = buildAgentTypesBlock(registry);
+  if (!block) return agentToolDef;
+  return { ...agentToolDef, description: agentToolDef.description + "\n" + block };
+}
+
 type SubAgentLifecycle = "subagent_start" | "subagent_finish" | "subagent_error";
 
 /**

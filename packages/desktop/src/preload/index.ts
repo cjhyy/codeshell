@@ -252,6 +252,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
   openPath: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:openPath", path, cwd),
+  /** Read an image file as a base64 data: URL (null on failure). */
+  readImageDataUrl: (absPath: string) =>
+    ipcRenderer.invoke("images:readDataUrl", absPath),
   undoFiles: (cwd: string, paths: string[]) =>
     ipcRenderer.invoke("files:undo", cwd, paths),
   listMemory: (level: string, scope: string, cwd?: string) =>

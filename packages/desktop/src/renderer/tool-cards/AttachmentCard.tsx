@@ -94,10 +94,14 @@ function ImageThumb({
       };
     }
     const abs = isAbs ? path : `${cwd!.replace(/\/$/, "")}/${path}`;
-    const fileUrl = `file://${abs}`;
-    // Set src; the <img> onError will flip `failed` if the load
-    // fails. No need to fetch ourselves — that would double the work.
-    if (!cancelled) setSrc(fileUrl);
+    // Load via the images:readDataUrl IPC, not `file://` — the renderer can't
+    // load file:// (webSecurity + CSP block it); main returns a base64 data:
+    // URL the CSP's `img-src ... data:` allows.
+    void window.codeshell.readImageDataUrl(abs).then((dataUrl) => {
+      if (cancelled) return;
+      if (dataUrl) setSrc(dataUrl);
+      else setFailed(true);
+    });
     return () => {
       cancelled = true;
     };

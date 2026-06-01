@@ -18,6 +18,7 @@ import { ToolExecutor } from "../tool-system/executor.js";
 import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
+import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
 import {
   PermissionClassifier,
   HeadlessApprovalBackend,
@@ -1184,7 +1185,17 @@ export class Engine {
     //   1. createLLMClient — network handshake (started earlier)
     //   2. buildSystemPrompt — includes git status (3 execSync calls)
     //   3. buildSystemContext — reads environment context
-    const allToolDefs = this.toolRegistry.getToolDefinitions();
+    // Inject the live available-agent-types listing into the Agent tool's
+    // description. The registry is per-engine (loaded from .code-shell/agents
+    // for this cwd), so it can't live in the static tool def — without this
+    // the model never learns the reusable roles exist and spawns nameless
+    // ad-hoc agents instead (the Core A/B/C incident). For a sub-agent there
+    // is no Agent tool (nested agents are disabled), so the map is a no-op.
+    const allToolDefs = this.toolRegistry.getToolDefinitions().map((t) =>
+      t.name === "Agent"
+        ? { ...t, description: agentToolDefWithTypes(toolCtx.agentDefinitions).description }
+        : t,
+    );
 
     // In plan mode, only expose read-only/planning tools so the model won't
     // attempt writes. Shared with executor.ts's execution gate via
