@@ -18,6 +18,16 @@ import {
   type RunLifecycleHooks,
 } from "./RunApprovalBackend.js";
 import { createInProcessClient } from "../protocol/helpers.js";
+import type { ApprovalBackend } from "../tool-system/permission.js";
+
+/** Unattended runs (those with an injected approval backend) run headless so
+ *  the in-process AgentServer does not wire an interactive askUser. Exported
+ *  for unit testing the decision rule. */
+export function buildHeadlessFlag(
+  override: ApprovalBackend | undefined,
+): boolean {
+  return override !== undefined;
+}
 
 // ─── RunExecutionHandle ─────────────────────────────────────────
 
@@ -90,7 +100,7 @@ export interface EngineRunnerConfig {
    * HeadlessApprovalBackend("approve-read-only"). When unset, the interactive
    * run-aware backend is used (default REPL/desktop behavior).
    */
-  approvalBackend?: import("../tool-system/permission.js").ApprovalBackend;
+  approvalBackend?: ApprovalBackend;
 }
 
 // ─── EngineRunner (built-in RunExecutor) ────────────────────────
@@ -149,6 +159,7 @@ export class EngineRunner implements RunExecutor {
       maxTurns: this.config.maxTurns ?? 30,
       maxContextTokens: this.config.maxContextTokens ?? 200_000,
       permissionMode: this.config.permissionMode ?? "acceptEdits",
+      headless: buildHeadlessFlag(override),
       preset: run.preset,
       enabledBuiltinTools: this.config.enabledBuiltinTools,
       disabledBuiltinTools: this.config.disabledBuiltinTools,
