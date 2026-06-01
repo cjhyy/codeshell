@@ -161,6 +161,9 @@ function App() {
   const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>({});
   const [settingsRevision, setSettingsRevision] = useState(0);
   const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
+  /** Transient: a run to pre-select when jumping into the runs view (e.g. from
+   *  the 自动化 detail's 「查看最近运行」 button). Not persisted in view state. */
+  const [runsInitialRunId, setRunsInitialRunId] = useState<string | null>(null);
 
   // Session indices per repo (keyed by repoKey).
   const [sessionIndices, setSessionIndices] = useState<Record<string, SessionIndex>>(() => {
@@ -1237,9 +1240,12 @@ function App() {
         ) : view.viewMode === "customize" ? (
           <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
         ) : view.viewMode === "runs" ? (
-          <RunsView />
+          <RunsView initialRunId={runsInitialRunId} />
         ) : view.viewMode === "automation" ? (
-          <AutomationView onCreateConversational={startConversationalAutomation} />
+          <AutomationView
+            onCreateConversational={startConversationalAutomation}
+            onViewRun={(runId) => { setRunsInitialRunId(runId); setViewMode("runs"); }}
+          />
         ) : (
           <>
             <ChatView

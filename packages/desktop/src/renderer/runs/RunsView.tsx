@@ -20,9 +20,9 @@ const STATUS_TONES: Record<string, string> = {
   cancelled: "bg-status-warn",
 };
 
-export function RunsView() {
+export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}) {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialRunId ?? null);
   const [detail, setDetail] = useState<RunDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("all");
@@ -39,6 +39,12 @@ export function RunsView() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  // Jump-from-automation: when the parent hands us a new run id (e.g. the
+  // 自动化 detail's 「查看」 button), select it so its detail renders.
+  useEffect(() => {
+    if (initialRunId) setSelected(initialRunId);
+  }, [initialRunId]);
 
   useEffect(() => {
     if (!selected) {

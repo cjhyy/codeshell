@@ -47,7 +47,13 @@ function fmtTime(ms: number | null): string {
   return new Date(ms).toLocaleString();
 }
 
-export function AutomationView({ onCreateConversational }: { onCreateConversational: () => void }) {
+export function AutomationView({
+  onCreateConversational,
+  onViewRun,
+}: {
+  onCreateConversational: () => void;
+  onViewRun: (runId: string) => void;
+}) {
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +158,7 @@ export function AutomationView({ onCreateConversational }: { onCreateConversatio
                 deleteBusy={!!pending["delete:" + detail.id]}
                 toggleBusy={!!pending["toggle:" + detail.id]}
                 saveBusy={!!pending["save:" + detail.id]}
+                onViewRun={onViewRun}
               />
             ) : (
               <div className="p-6 text-sm text-muted-foreground">选择一个任务查看详情</div>
@@ -188,6 +195,7 @@ function AutomationDetail(props: {
   deleteBusy: boolean;
   toggleBusy: boolean;
   saveBusy: boolean;
+  onViewRun: (runId: string) => void;
 }) {
   const { job } = props;
 
@@ -358,7 +366,15 @@ function AutomationDetail(props: {
         <FieldRow label="上次运行">{fmtTime(job.lastRun)}</FieldRow>
         <FieldRow label="运行次数">{job.runCount}</FieldRow>
         <FieldRow label="项目">{job.cwd ?? "—"}</FieldRow>
-        <FieldRow label="最近运行">{job.lastRunId ?? "—"}</FieldRow>
+        <FieldRow label="最近运行">
+          {job.lastRunId ? (
+            <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
+              查看
+            </Button>
+          ) : (
+            "—"
+          )}
+        </FieldRow>
       </div>
     </div>
   );
