@@ -23,6 +23,7 @@ import type { CronJob } from "./scheduler.js";
 import type { CronScheduler } from "./scheduler.js";
 import type { PermissionMode } from "../types.js";
 import { HeadlessApprovalBackend, type ApprovalBackend } from "../tool-system/permission.js";
+import { AUTOMATION_RUN_SOURCE } from "../run/EngineRunner.js";
 
 /** What the executor hands to the run backend for one fired job. */
 export interface CronRunRequest {
@@ -94,7 +95,7 @@ export function bindCronToRunManager(
     const snapshot = await runManager.submit({
       objective: job.prompt,
       cwd: job.cwd,
-      metadata: { source: "automation", cronJobId: job.id, cronJobName: job.name },
+      metadata: { source: AUTOMATION_RUN_SOURCE, cronJobId: job.id, cronJobName: job.name },
     });
     // Record the run id on the job so the UI can link to run history.
     job.lastRunId = snapshot.runId;
