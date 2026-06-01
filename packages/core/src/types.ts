@@ -12,6 +12,12 @@ export interface ContentBlock {
   input?: Record<string, unknown>;
   content?: string | ContentBlock[];
   tool_use_id?: string;
+  /**
+   * 标记 tool_result 为出错,让 provider 据此设置 wire 层错误标志
+   * (Anthropic 的 `is_error: true`)。不设的话,出错的工具只会以普通
+   * content 文字回传,模型可能把超时/中断误当成成功。
+   */
+  is_error?: boolean;
   source?: { type: "base64"; media_type: string; data: string };
   // DeepSeek thinking-mode payload that must be echoed back verbatim
   // on the next request, alongside the assistant's content/tool_calls.

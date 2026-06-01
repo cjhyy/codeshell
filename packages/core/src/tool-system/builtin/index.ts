@@ -91,6 +91,7 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       permissionDefault: "ask",
       isReadOnly: false,
       isConcurrencySafe: false,
+      timeoutMs: 600_000, // 10min — high-quality / large image generation routinely exceeds the 120s default; give slow renders ample room while still bounding a hung request (Stop / ctx.signal cancels sooner)
     },
     execute: generateImageTool,
   },

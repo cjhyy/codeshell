@@ -554,6 +554,7 @@ export class TurnLoop {
           type: "tool_result",
           tool_use_id: result.id,
           content,
+          ...(result.isError ? { is_error: true } : {}),
         });
 
         this.deps.transcript.appendToolResult(

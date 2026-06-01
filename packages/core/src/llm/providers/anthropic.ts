@@ -266,6 +266,7 @@ export class AnthropicClient extends LLMClientBase {
               type: "tool_result",
               tool_use_id: block.tool_use_id,
               content: typeof block.content === "string" ? block.content : "",
+              ...(block.is_error ? { is_error: true } : {}),
             });
           } else if (block.type === "image" && block.source) {
             blocks.push({
