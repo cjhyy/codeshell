@@ -3,6 +3,30 @@
  */
 
 import { z } from "zod";
+
+/**
+ * Tri-state project capability overlay. Lives in PROJECT settings only and
+ * layers over the global baseline (disabledSkills / disabledPlugins /
+ * mcpServers.<name>.enabled / disabledAgents). NOT a second denylist:
+ *   - "on"      → force enabled (even if globally disabled)
+ *   - "off"     → force disabled (even if globally enabled)
+ *   - "inherit" → take the global baseline. We don't persist "inherit"; an
+ *                 absent key means inherit. See the project-scoped
+ *                 capabilities design (spec §4).
+ */
+export const CapabilityOverrideSchema = z.enum(["inherit", "on", "off"]);
+export type CapabilityOverride = z.infer<typeof CapabilityOverrideSchema>;
+
+export const CapabilityOverridesSchema = z
+  .object({
+    skills: z.record(CapabilityOverrideSchema).optional(),
+    plugins: z.record(CapabilityOverrideSchema).optional(),
+    agents: z.record(CapabilityOverrideSchema).optional(),
+    mcp: z.record(CapabilityOverrideSchema).optional(),
+  })
+  .optional();
+export type CapabilityOverrides = z.infer<typeof CapabilityOverridesSchema>;
+
 export const SettingsSchema = z
   .object({
     agent: z
@@ -204,6 +228,13 @@ export const SettingsSchema = z
      * disabledSkills / disabledPlugins.
      */
     disabledAgents: z.array(z.string()).default([]),
+
+    /**
+     * Project-scoped tri-state capability overlay. Only meaningful in
+     * ${cwd}/.code-shell/settings.json; layered over the global baseline at
+     * capability-assembly time. Optional — absence === everything inherits.
+     */
+    capabilityOverrides: CapabilityOverridesSchema,
 
     instructions: z
       .object({
