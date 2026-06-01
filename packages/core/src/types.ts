@@ -249,6 +249,10 @@ export type StreamEvent =
   // id (resume vs. create). Lets the client know the authoritative sid
   // *before* run() resolves, which matters for mid-turn `/sid` lookups.
   | { type: "session_started"; sessionId: string; promptTokens: number }
+  // Emitted once, fire-and-forget, after the FIRST turn of a session
+  // completes: an LLM-generated one-line title for the sidebar. Best-effort
+  // — absent on failure / when aux model unavailable.
+  | { type: "session_title"; sessionId: string; title: string }
   | { type: "stream_request_start"; turnNumber: number; agentId?: string }
   | { type: "text_delta"; text: string; tokens?: number; agentId?: string }
   | { type: "tool_use_start"; toolCall: ToolCall; agentId?: string }
