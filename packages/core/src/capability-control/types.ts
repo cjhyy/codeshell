@@ -23,6 +23,12 @@ export interface CapabilityDescriptor {
   enabled: boolean;
   /** Which settings key the switch writes, and how. */
   control: CapabilityControl;
+  /** user/global baseline enablement, before any project overlay. */
+  globalEnabled?: boolean;
+  /** Project overlay state in a project-scope view. Absent === inherit. */
+  projectOverride?: "on" | "off";
+  /** Where the effective `enabled` value came from. */
+  effectiveSource?: "user" | "project" | "default";
   /** Source details for UI grouping / navigation. */
   origin?: {
     serverName?: string;
@@ -57,3 +63,13 @@ export class CapabilityNotFoundError extends Error {
     this.name = "CapabilityNotFoundError";
   }
 }
+
+/**
+ * Which settings file a capability write targets. Distinct from
+ * SettingsManager's disk-READ scope ("isolated" | "project" | "full"): this is
+ * the WRITE scope — user → global settings, project → capabilityOverrides.
+ */
+export type WriteScope = "user" | "project";
+
+/** Tri-state project override as seen by callers. */
+export type CapabilityOverrideState = "inherit" | "on" | "off";
