@@ -85,6 +85,7 @@ import {
   dropOversizedImages,
 } from "./image-policy.js";
 import { tryCompressImages } from "./image-compression.js";
+import { buildSessionTitle } from "./session-title.js";
 import { capabilitiesFor } from "../llm/capabilities/index.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
 import type { ContentBlock } from "../types.js";
@@ -1438,6 +1439,35 @@ export class Engine {
     // transcript, save a session summary, and conditionally trigger
     // auto-dream consolidation. Doesn't block the Engine result.
     void this.runMemoryPipeline(session.transcript, session.state.sessionId, cwd, llmClient);
+
+    // Fire-and-forget session title generation — only after the FIRST turn.
+    // Reuses the already-resolved auxSummaryClient (aux model, cheap). Best-
+    // effort: failures never touch the run result. The renderer writes the
+    // title into the sidebar on receipt of the session_title stream event.
+    {
+      const userMsgCount = session.transcript
+        .getEvents("message")
+        .filter((e) => (e.data as { role?: string }).role === "user").length;
+      const onStream = options?.onStream;
+      if (userMsgCount === 1 && onStream && result.text) {
+        const firstUser = messages.find((m) => m.role === "user");
+        const firstUserText =
+          typeof firstUser?.content === "string"
+            ? firstUser.content
+            : JSON.stringify(firstUser?.content ?? "");
+        void buildSessionTitle(auxSummaryClient, firstUserText, result.text).then(
+          (title) => {
+            if (title) {
+              onStream({
+                type: "session_title",
+                sessionId: session.state.sessionId,
+                title,
+              });
+            }
+          },
+        );
+      }
+    }
 
     // Update session state. Persist the raw terminal reason as the status so
     // callers can distinguish user-cancelled (aborted_streaming) from real
