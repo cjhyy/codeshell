@@ -50,7 +50,9 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
     <div className="px-4 py-1">
       <button
         type="button"
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        className={`flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground${
+          open ? " border-b border-border pb-1" : ""
+        }`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
@@ -58,7 +60,7 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
         <span>{label}</span>
       </button>
       {open && (
-        <div className="mt-1 flex flex-col gap-1 border-l border-border pl-2">
+        <div className="mt-1 flex flex-col gap-1">
           {group.items.map((m) => {
             if (m.kind === "tool_group") {
               return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
