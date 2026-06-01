@@ -49,6 +49,8 @@ import {
   type Repo,
 } from "./repos";
 import { importAutomationRuns, type ImportableRun } from "./automation/importRuns";
+import { foldTranscript } from "./automation/foldTranscript";
+import { mergeTranscripts } from "./automation/mergeTranscripts";
 import { isCaseInsensitivePlatform } from "./automation/pathMatch";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
@@ -292,12 +294,40 @@ function App() {
   // actually sends a message (see `send` below).
 
   // Lazy-hydrate transcript on first view of a bucket.
+  //
+  // Manual sessions hydrate straight from localStorage. Automation (cron)
+  // sessions ran headless in the engine, so their turns live in the on-disk
+  // transcript.jsonl, not in localStorage — and once the user manually replies,
+  // the backfill importer's dedup gate stops re-importing them, permanently
+  // shadowing the headless history. So for automation sessions we fold the disk
+  // transcript and merge the localStorage tail on top (see mergeTranscripts).
   useEffect(() => {
     if (!activeSessionId) return;
     if (transcripts[activeBucket]) return;
-    const loaded = loadTranscript(activeRepoId, activeSessionId);
-    dispatch({ type: "hydrate", bucket: activeBucket, state: loaded });
-  }, [activeBucket, activeRepoId, activeSessionId, transcripts]);
+    const local = loadTranscript(activeRepoId, activeSessionId);
+    const summary = sessionIndices[activeRepoKey]?.sessions.find(
+      (s) => s.id === activeSessionId,
+    );
+    const engineId = summary?.engineSessionId;
+    if (summary?.source !== "automation" || !engineId) {
+      dispatch({ type: "hydrate", bucket: activeBucket, state: local });
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      let merged = local;
+      try {
+        const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
+        if (disk.messages.length > 0) merged = mergeTranscripts(disk, local);
+      } catch {
+        // disk read failed — fall back to the localStorage projection.
+      }
+      if (!cancelled) dispatch({ type: "hydrate", bucket: activeBucket, state: merged });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBucket, activeRepoId, activeSessionId, activeRepoKey, sessionIndices, transcripts]);
 
   // Persist active transcript (debounced).
   useEffect(() => {
