@@ -50,6 +50,8 @@ import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { SettingsManager, type SettingsScope } from "../settings/manager.js";
+import type { CapabilityOverrides } from "../settings/schema.js";
+import { effectiveDisabledList } from "../capability-control/overlay.js";
 import { FileHistory } from "../session/file-history.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
@@ -2007,13 +2009,23 @@ export class Engine {
       return { disabledSkills: [], disabledPlugins: [] };
     }
     try {
-      const settings = this.getSettingsManager().get() as {
+      const sm = this.getSettingsManager();
+      const settings = sm.get() as {
         disabledSkills?: string[];
         disabledPlugins?: string[];
       };
+      // Fold the project capabilityOverrides over the global baseline so a
+      // project can force-enable a globally-disabled skill/plugin or vice
+      // versa. Read the project overlay UNMERGED (getForScope), not the merged
+      // get(), so tri-state inheritance survives. No cwd / no overlay → the
+      // baseline is returned unchanged (zero regression).
+      const cwd = this.config.cwd;
+      const overrides = cwd
+        ? (sm.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides | undefined)
+        : undefined;
       return {
-        disabledSkills: settings.disabledSkills ?? [],
-        disabledPlugins: settings.disabledPlugins ?? [],
+        disabledSkills: effectiveDisabledList(settings.disabledSkills ?? [], overrides?.skills),
+        disabledPlugins: effectiveDisabledList(settings.disabledPlugins ?? [], overrides?.plugins),
       };
     } catch {
       return { disabledSkills: [], disabledPlugins: [] };
