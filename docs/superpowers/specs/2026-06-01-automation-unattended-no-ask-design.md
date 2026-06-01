@@ -111,6 +111,25 @@ field, and works for any host that tags a run `source: "automation"`.
 Net effect: in unattended runs, `AskUserQuestion` short-circuits to "make a
 reasonable assumption and proceed" instead of suspending for 300s.
 
+#### Why this fully closes the human-wait surface
+
+In an unattended run there are exactly two places that suspend on a
+`new Promise` awaiting a human callback:
+
+1. **Tool approval** — `requestApprovalFromClient` (`server.ts:1001`) /
+   `RunApprovalBackend.onApprovalNeeded` (`RunApprovalBackend.ts:65`).
+2. **Ask user** — `requestAskUserFromClient` (`server.ts:1022`) /
+   `onInputNeeded` (`RunApprovalBackend.ts:112`), i.e. `AskUserQuestion`.
+
+Path (1) is **already closed** for automation: the host injects
+`HeadlessApprovalBackend("approve-read-only")`, which auto-decides (reads
+allowed, writes denied) and never routes to the interactive `RunApprovalBackend`
+— hence the log's many `permission.classify … decision:"allow"/"deny"` with no
+approval suspends. Path (2) is the **only** remaining leak, caused by
+`server.ts:110` unconditionally re-binding askUser. Fix B closes it. After this,
+both human-wait paths are gated symmetrically and no interactive path can block
+an unattended run.
+
 ## Components touched
 
 - `packages/core/src/run/EngineRunner.ts` — read `run.metadata.source`, prepend
