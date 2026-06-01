@@ -77,6 +77,7 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
           <button
             key={m}
             className={`settings-option-card${mode === m ? " active" : ""}`}
+            aria-pressed={mode === m}
             disabled={saving}
             onClick={() => void choose(m)}
           >

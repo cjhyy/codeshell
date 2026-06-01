@@ -527,7 +527,7 @@ function SessionRow({
         <Clock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="自动化" />
       )}
       <span className="flex-1 truncate">{s.title}</span>
-      <span className="flex shrink-0 items-center">
+      <span className="relative flex shrink-0 items-center">
         {confirming ? (
           <button
             className="rounded px-1.5 text-xs text-status-err hover:bg-background"
@@ -539,20 +539,24 @@ function SessionRow({
           </button>
         ) : (
           <>
+            {/* Shortcut / relative-time badge sits in normal flow and defines
+                the slot width. */}
+            {showKbd ? (
+              <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">⌘{kbdIndex}</kbd>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">{formatRelative(s.updatedAt)}</span>
+            )}
+            {/* Archive action overlays the badge on hover (absolute, right-
+                anchored) so it covers the shortcut instead of pushing it. */}
             {onArchive && (
               <button
-                className="rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover:opacity-100"
+                className="absolute right-0 rounded bg-accent p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100"
                 onClick={armConfirm}
                 aria-label="归档"
                 title="归档"
               >
                 <Archive size={12} />
               </button>
-            )}
-            {showKbd ? (
-              <kbd className="rounded bg-muted px-1 text-[10px] text-muted-foreground">⌘{kbdIndex}</kbd>
-            ) : (
-              <span className="text-[10px] text-muted-foreground">{formatRelative(s.updatedAt)}</span>
             )}
           </>
         )}

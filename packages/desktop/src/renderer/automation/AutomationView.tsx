@@ -13,6 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
+import {
+  parseSchedule,
+  buildSchedule,
+  describeSchedule,
+  WEEKDAY_LABELS,
+  type Schedule,
+} from "./scheduleModel";
 
 const PERMISSION_OPTIONS = [
   { value: "read-only", label: "只读" },
@@ -20,27 +27,69 @@ const PERMISSION_OPTIONS = [
   { value: "full", label: "完全(可提 PR)" },
 ];
 
-// Common schedule presets (cron expressions / intervals). "__custom__" reveals
-// an inline input for anything not in the list.
-const SCHEDULE_PRESETS = [
-  { value: "0 9 * * 1-5", label: "工作日 9:00" },
-  { value: "0 8 * * 1-5", label: "工作日 8:00" },
-  { value: "0 9 * * *", label: "每天 9:00" },
-  { value: "0 */6 * * *", label: "每 6 小时" },
-  { value: "0 * * * *", label: "每小时" },
-  { value: "1h", label: "每 1 小时(间隔)" },
-  { value: "1d", label: "每天(间隔)" },
-  { value: "__custom__", label: "自定义…" },
+// Cadence types for the "pick a cadence → pick a time" frequency control. The
+// raw cron string is derived from this + a time/weekday via scheduleModel.
+const CADENCE_OPTIONS: { value: Schedule["kind"]; label: string }[] = [
+  { value: "daily", label: "每天" },
+  { value: "weekdays", label: "工作日" },
+  { value: "weekly", label: "每周" },
+  { value: "hourly", label: "按小时" },
+  { value: "custom", label: "自定义 cron…" },
 ];
 
-const TIMEZONE_OPTIONS = [
-  "Asia/Shanghai",
+const HOURLY_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
+
+const DEFAULT_TIME = "09:00";
+
+// Timezone choices. Default is UTC; the system-local zone is appended with a
+// "()" note so the user can recognise their own offset without IANA fluency.
+// Only the system zone carries that note — the rest are plain IANA ids.
+function systemTimezone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
+/** "(UTC+8)" style offset note for a zone, or "" if it can't be computed. */
+function offsetNote(tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      timeZoneName: "shortOffset",
+    }).formatToParts(new Date(0));
+    const name = parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+    return name.replace("GMT", "UTC");
+  } catch {
+    return "";
+  }
+}
+
+const BASE_TIMEZONES = [
   "UTC",
+  "Asia/Shanghai",
   "America/New_York",
   "America/Los_Angeles",
   "Europe/London",
   "Asia/Tokyo",
 ];
+
+function timezoneOptions(current: string): { value: string; label: string }[] {
+  const sys = systemTimezone();
+  const seen = new Set<string>();
+  const out: { value: string; label: string }[] = [];
+  const add = (tz: string, note?: string) => {
+    if (seen.has(tz)) return;
+    seen.add(tz);
+    out.push({ value: tz, label: note ? `${tz} (${note})` : tz });
+  };
+  // System zone first, with its offset note — the only entry that gets one.
+  if (sys) add(sys, offsetNote(sys) || undefined);
+  for (const tz of BASE_TIMEZONES) add(tz);
+  add(current); // keep a previously-saved zone selectable even if exotic
+  return out;
+}
 
 function fmtTime(ms: number | null): string {
   if (ms == null) return "—";
@@ -135,7 +184,7 @@ export function AutomationView({
                   }
                 />
                 <span className="flex-1 truncate font-medium">{j.name}</span>
-                <span className="font-mono text-xs text-muted-foreground">{j.schedule}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{describeSchedule(j.schedule)}</span>
               </li>
             ))}
           </ul>
@@ -202,24 +251,60 @@ function AutomationDetail(props: {
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptDraft, setPromptDraft] = useState(job.prompt);
 
-  const scheduleIsPreset = SCHEDULE_PRESETS.some(
-    (p) => p.value === job.schedule && p.value !== "__custom__",
-  );
-  const [customSchedule, setCustomSchedule] = useState(scheduleIsPreset ? "" : job.schedule);
-  const [showCustomSchedule, setShowCustomSchedule] = useState(!scheduleIsPreset);
+  // Frequency UI model derived from the stored cron string. Edits rebuild the
+  // cron and save it; the raw input only shows for the "custom" cadence.
+  const [sched, setSched] = useState<Schedule>(() => parseSchedule(job.schedule));
+  const [customDraft, setCustomDraft] = useState(job.schedule);
 
   useEffect(() => {
     setEditingPrompt(false);
     setPromptDraft(job.prompt);
-    const preset = SCHEDULE_PRESETS.some((p) => p.value === job.schedule && p.value !== "__custom__");
-    setShowCustomSchedule(!preset);
-    setCustomSchedule(preset ? "" : job.schedule);
+    setSched(parseSchedule(job.schedule));
+    setCustomDraft(job.schedule);
   }, [job.id, job.prompt, job.schedule]);
 
+  // Apply a new schedule model: rebuild the cron string and save if changed.
+  const commitSchedule = (next: Schedule) => {
+    setSched(next);
+    if (next.kind === "custom") return; // custom saves on blur/Enter, not on keystroke
+    const cron = buildSchedule(next);
+    if (cron !== job.schedule) props.onSave({ schedule: cron });
+  };
+
+  // Switching cadence: seed sensible defaults for the new kind.
+  const onCadenceChange = (kind: Schedule["kind"]) => {
+    const time = "time" in sched ? sched.time : DEFAULT_TIME;
+    switch (kind) {
+      case "daily":
+        return commitSchedule({ kind, time });
+      case "weekdays":
+        return commitSchedule({ kind, time });
+      case "weekly":
+        return commitSchedule({
+          kind,
+          weekday: sched.kind === "weekly" ? sched.weekday : 1,
+          time,
+        });
+      case "hourly":
+        return commitSchedule({
+          kind,
+          everyHours: sched.kind === "hourly" ? sched.everyHours : 6,
+        });
+      case "custom":
+        // Switch to the raw editor without saving yet; prime it with the
+        // current cron so the user edits from where they are.
+        setSched({ kind: "custom", raw: job.schedule });
+        setCustomDraft(job.schedule);
+        return;
+    }
+  };
+
   const applyCustomSchedule = () => {
-    const v = customSchedule.trim();
+    const v = customDraft.trim();
     if (v && v !== job.schedule) props.onSave({ schedule: v });
   };
+
+  const tzOptions = timezoneOptions(job.timezone ?? "UTC");
 
   return (
     <div className="flex flex-col gap-4">
@@ -292,37 +377,78 @@ function AutomationDetail(props: {
 
       <div className="flex flex-col">
         <FieldRow label="状态">
-          <Badge variant={job.enabled ? "secondary" : "outline"}>
+          <Badge
+            variant="outline"
+            className={
+              job.enabled
+                ? "border-status-ok/30 bg-status-ok/15 text-status-ok"
+                : undefined
+            }
+          >
             {job.enabled ? "活跃" : "已暂停"}
           </Badge>
         </FieldRow>
 
         <FieldRow label="频率">
-          <div className="flex items-center gap-2">
-            <Select
-              value={showCustomSchedule ? "__custom__" : job.schedule}
-              onValueChange={(v) => {
-                if (v === "__custom__") {
-                  setShowCustomSchedule(true);
-                } else {
-                  setShowCustomSchedule(false);
-                  if (v !== job.schedule) props.onSave({ schedule: v });
-                }
-              }}
-            >
-              <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {/* Step 1: cadence type. */}
+            <Select value={sched.kind} onValueChange={(v) => onCadenceChange(v as Schedule["kind"])}>
+              <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {SCHEDULE_PRESETS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                {CADENCE_OPTIONS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {showCustomSchedule && (
+
+            {/* Step 2: per-cadence detail. */}
+            {sched.kind === "weekly" && (
+              <Select
+                value={String(sched.weekday)}
+                onValueChange={(v) =>
+                  commitSchedule({ ...sched, weekday: Number(v) })
+                }
+              >
+                <SelectTrigger className="h-8 w-[96px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {WEEKDAY_LABELS.map((label, i) => (
+                    <SelectItem key={i} value={String(i)}>{`周${label.slice(1)}`}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {(sched.kind === "daily" || sched.kind === "weekdays" || sched.kind === "weekly") && (
               <Input
-                className="h-8 w-[160px] font-mono"
-                value={customSchedule}
+                type="time"
+                className="h-8 w-[120px]"
+                value={sched.time}
+                onChange={(e) => {
+                  if (e.target.value) commitSchedule({ ...sched, time: e.target.value });
+                }}
+              />
+            )}
+
+            {sched.kind === "hourly" && (
+              <Select
+                value={String(sched.everyHours)}
+                onValueChange={(v) => commitSchedule({ kind: "hourly", everyHours: Number(v) })}
+              >
+                <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {HOURLY_OPTIONS.map((h) => (
+                    <SelectItem key={h} value={String(h)}>{`每 ${h} 小时`}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {sched.kind === "custom" && (
+              <Input
+                className="h-8 w-[180px] font-mono"
+                value={customDraft}
                 placeholder="0 9 * * 1-5 或 1h"
-                onChange={(e) => setCustomSchedule(e.target.value)}
+                onChange={(e) => setCustomDraft(e.target.value)}
                 onBlur={applyCustomSchedule}
                 onKeyDown={(e) => { if (e.key === "Enter") applyCustomSchedule(); }}
               />
@@ -335,10 +461,10 @@ function AutomationDetail(props: {
             value={job.timezone ?? "UTC"}
             onValueChange={(v) => { if (v !== job.timezone) props.onSave({ timezone: v }); }}
           >
-            <SelectTrigger className="h-8 w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {TIMEZONE_OPTIONS.map((tz) => (
-                <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+              {tzOptions.map((tz) => (
+                <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
