@@ -19,6 +19,12 @@ import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
+import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
+import {
+  notificationQueue,
+  buildNotificationMessage,
+  type NotificationItem,
+} from "../tool-system/builtin/agent-notifications.js";
 import {
   PermissionClassifier,
   HeadlessApprovalBackend,
@@ -1416,6 +1422,49 @@ export class Engine {
     let result: Awaited<ReturnType<typeof turnLoop.run>>;
     try {
       result = await turnLoop.run(messages);
+
+      // ── Wait for background sub-agents, then summarize ───────────────
+      // run_in_background sub-agents outlive the turn that spawned them. The
+      // main agent must not resolve while ITS OWN background agents are still
+      // working — otherwise their results land in the notification queue with
+      // nobody to drain them and the run looks "done" while work is in flight
+      // (the s-mpvf4rsj-bb6e4639 bug). We block here until none of this
+      // session's background agents are running, then drain ALL their results
+      // and feed them back as one more turn so the agent summarizes.
+      //
+      // Top-level only: a sub-agent must never wait on grandchildren (and
+      // nested agents are disabled anyway). `signal` aborts the wait.
+      const sid = session.state.sessionId;
+      const isTopLevel = this.config.isSubAgent !== true;
+      if (isTopLevel) {
+        let aborted = options?.signal?.aborted === true;
+        while (!aborted && asyncAgentRegistry.hasRunningForSession(sid)) {
+          aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
+        }
+        // Drain everything that came back — including partial results when the
+        // user aborted with one agent still stuck. Nothing already returned is
+        // lost: it's injected into the transcript either way.
+        const pending = notificationQueue.drainAll(sid);
+        if (pending.length > 0) {
+          const injected: Message = {
+            role: "user",
+            content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
+          };
+          if (aborted) {
+            // Aborted: preserve the results in context (transcript + messages)
+            // but do NOT spin up another LLM turn — the user cancelled, and a
+            // fresh turn would just be killed by the same signal. The next
+            // user message in this session will see these results in history.
+            session.transcript.appendMessage(injected.role, injected.content);
+            result = { ...result, messages: [...result.messages, injected] };
+          } else {
+            // All background agents finished: one more turn so the agent reads
+            // every result and summarizes. turnCount keeps accumulating, so
+            // maxTurns still bounds runaway re-summarization.
+            result = await turnLoop.run([...result.messages, injected]);
+          }
+        }
+      }
     } finally {
       // Run-scoped: drop the GoalStopHook so a later goal-less send on this
       // long-lived engine doesn't keep blocking stops.
@@ -1973,6 +2022,45 @@ export class Engine {
     } else {
       this.planMode = value;
     }
+  }
+
+  /**
+   * Block until a background agent's state changes (finishes / its result is
+   * enqueued) or `signal` aborts. Resolves `true` if aborted, `false` on a
+   * change. The caller re-checks `hasRunningForSession` after each wake, so a
+   * spurious wake (another session's agent) just loops again.
+   *
+   * Subscribes to BOTH the registry AND the notification queue — and that's
+   * load-bearing, not belt-and-suspenders. A completing agent calls
+   * `markCompleted` (registry notify) and only THEN `enqueue` (queue notify),
+   * as two separate statements. If we woke on the registry notify alone, the
+   * loop could re-check, see no running agents, and `drainAll` BEFORE the
+   * result was enqueued — silently losing the last agent's output. Waking on
+   * the queue notify guarantees the item is already in the bucket. But a
+   * *cancelled* agent marks-but-never-enqueues (by design), so we also need
+   * the registry notify or a final cancel would hang the wait forever. Hence
+   * both. Subscribe-before-await closes the check/wait race either way.
+   */
+  private waitForBackgroundAgentChange(
+    _sessionId: string,
+    signal: AbortSignal | undefined,
+  ): Promise<boolean> {
+    if (signal?.aborted) return Promise.resolve(true);
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finish = (aborted: boolean) => {
+        if (settled) return;
+        settled = true;
+        unsubRegistry();
+        unsubQueue();
+        signal?.removeEventListener("abort", onAbort);
+        resolve(aborted);
+      };
+      const onAbort = () => finish(true);
+      const unsubRegistry = asyncAgentRegistry.subscribe(() => finish(false));
+      const unsubQueue = notificationQueue.subscribe(() => finish(false));
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
   }
 
   /**

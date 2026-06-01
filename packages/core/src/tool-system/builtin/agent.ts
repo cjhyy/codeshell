@@ -335,6 +335,9 @@ export async function agentTool(
       agentId,
       name,
       description,
+      // Tag with the spawning session so the parent Engine.run waits only on
+      // its own background agents (hasRunningForSession).
+      sessionId: ctx?.sessionId,
       status: "running",
       startedAt: Date.now(),
       abort: () => controller.abort(),

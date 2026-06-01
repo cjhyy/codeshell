@@ -34,6 +34,11 @@ export interface AsyncAgentEntry {
   /** Short kind label shown in the dock (e.g. "Explore", "Plan"). */
   name?: string;
   description: string;
+  /** Session that spawned this background agent. Lets the spawning
+   *  Engine.run wait only on ITS OWN background agents (hasRunningForSession),
+   *  not every concurrent session's. Undefined only for legacy/ad-hoc callers
+   *  outside Engine.run. */
+  sessionId?: string;
   status: AsyncAgentStatus;
   startedAt: number;
   finishedAt?: number;
@@ -64,6 +69,12 @@ class AsyncAgentRegistry {
 
   hasRunning = (): boolean => {
     return this.snapshot.some((e) => e.status === "running");
+  };
+
+  /** True if any background agent spawned by `sessionId` is still running.
+   *  Drives Engine.run's "wait for my background agents before resolving". */
+  hasRunningForSession = (sessionId: string): boolean => {
+    return this.snapshot.some((e) => e.status === "running" && e.sessionId === sessionId);
   };
 
   /** Count of agents currently in the "running" state (cap enforcement). */
