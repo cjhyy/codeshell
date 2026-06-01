@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
 const PERMISSION_OPTIONS = [
   { value: "read-only", label: "只读" },
@@ -50,6 +51,8 @@ export function AutomationView({ onCreateConversational }: { onCreateConversatio
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Per-action in-flight flags, keyed by "<action>:<jobId>". */
+  const [pending, setPending] = useState<Record<string, boolean>>({});
 
   const refresh = async () => {
     try {
@@ -66,12 +69,21 @@ export function AutomationView({ onCreateConversational }: { onCreateConversatio
 
   const detail = jobs?.find((j) => j.id === selected) ?? null;
 
-  const act = async (fn: () => Promise<unknown>) => {
+  // Per-action in-flight guard. Keyed by "<action>:<jobId>" so the same
+  // button can't be re-fired while its request is pending (the bug that let
+  // a quick double-click on 立即运行 submit multiple runs), while distinct
+  // actions/jobs stay independent. The finally always clears the key so a
+  // failed request can't leave a button stuck disabled.
+  const act = async (key: string, fn: () => Promise<unknown>) => {
+    if (pending[key]) return;
+    setPending((p) => ({ ...p, [key]: true }));
     try {
       await fn();
       await refresh();
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setPending((p) => ({ ...p, [key]: false }));
     }
   };
 
@@ -127,15 +139,19 @@ export function AutomationView({ onCreateConversational }: { onCreateConversatio
               <AutomationDetail
                 job={detail}
                 onToggleEnabled={(next) =>
-                  act(() =>
+                  act("toggle:" + detail.id, () =>
                     next
                       ? window.codeshell.resumeAutomation(detail.id)
                       : window.codeshell.pauseAutomation(detail.id),
                   )
                 }
-                onDelete={() => act(() => window.codeshell.deleteAutomation(detail.id))}
-                onRunNow={() => act(() => window.codeshell.runAutomationNow(detail.id))}
-                onSave={(patch) => act(() => window.codeshell.updateAutomation(detail.id, patch))}
+                onDelete={() => act("delete:" + detail.id, () => window.codeshell.deleteAutomation(detail.id))}
+                onRunNow={() => act("runNow:" + detail.id, () => window.codeshell.runAutomationNow(detail.id))}
+                onSave={(patch) => act("save:" + detail.id, () => window.codeshell.updateAutomation(detail.id, patch))}
+                runNowBusy={!!pending["runNow:" + detail.id]}
+                deleteBusy={!!pending["delete:" + detail.id]}
+                toggleBusy={!!pending["toggle:" + detail.id]}
+                saveBusy={!!pending["save:" + detail.id]}
               />
             ) : (
               <div className="p-6 text-sm text-muted-foreground">选择一个任务查看详情</div>
@@ -168,6 +184,10 @@ function AutomationDetail(props: {
     timezone?: string;
     permissionLevel?: AutomationPermissionLevel;
   }) => void;
+  runNowBusy: boolean;
+  deleteBusy: boolean;
+  toggleBusy: boolean;
+  saveBusy: boolean;
 }) {
   const { job } = props;
 
@@ -201,10 +221,26 @@ function AutomationDetail(props: {
           <Switch
             checked={job.enabled}
             onCheckedChange={(v) => props.onToggleEnabled(v)}
+            disabled={props.toggleBusy}
             aria-label={job.enabled ? "已启用" : "已暂停"}
           />
-          <Button size="sm" onClick={props.onRunNow}>立即运行</Button>
-          <Button size="sm" variant="ghost" className="text-status-err" onClick={props.onDelete}>
+          <Button size="sm" onClick={props.onRunNow} disabled={props.runNowBusy}>
+            {props.runNowBusy ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                运行中…
+              </>
+            ) : (
+              "立即运行"
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-status-err"
+            onClick={props.onDelete}
+            disabled={props.deleteBusy}
+          >
             删除
           </Button>
         </div>
@@ -220,13 +256,20 @@ function AutomationDetail(props: {
             </Button>
             <Button
               size="sm"
-              disabled={!promptDraft.trim()}
+              disabled={props.saveBusy || !promptDraft.trim()}
               onClick={() => {
                 if (promptDraft.trim() !== job.prompt) props.onSave({ prompt: promptDraft.trim() });
                 setEditingPrompt(false);
               }}
             >
-              保存
+              {props.saveBusy ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  保存中…
+                </>
+              ) : (
+                "保存"
+              )}
             </Button>
           </div>
         </div>
