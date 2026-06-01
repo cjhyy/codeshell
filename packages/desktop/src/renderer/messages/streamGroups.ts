@@ -126,6 +126,64 @@ export function buildStreamItems(
   return foldTurnProcess(level1, opts.liveTurnActive ?? false);
 }
 
+/**
+ * Content signature for a built group, used to decide whether a freshly-built
+ * group is structurally identical to the previous render's. buildStreamItems
+ * allocates brand-new ToolGroup/TurnProcessGroup objects every call, so even
+ * an unchanged group arrives as a new reference and defeats the React.memo on
+ * its card — forcing the whole (live-turn) subtree to re-render every 50ms
+ * batch. We compare signatures and, when equal, reuse the OLD object so memo
+ * sees a stable prop and skips the subtree. (perf: scroll-jank-2026-06-02)
+ *
+ * The signature captures everything the card renders from the group: the
+ * member ids in order, plus the fields that flip its header (toolCount,
+ * durationMs, isLive). Leaf ToolMessage content (args/result/status) is NOT
+ * hashed here — those are owned by the memoized ToolCard, which re-renders on
+ * its own message-identity change independently of the group wrapper.
+ */
+function groupSignature(item: StreamItem): string {
+  if (item.kind === "tool_group") {
+    return "g:" + item.items.map((it) => it.id).join(",");
+  }
+  if (item.kind === "turn_process_group") {
+    const inner = item.items
+      .map((it) => (it.kind === "tool_group" ? "tg(" + it.items.map((x) => x.id).join(",") + ")" : it.id))
+      .join(",");
+    return `p:${item.isLive ? 1 : 0}:${item.durationMs}:${item.toolCount}:${inner}`;
+  }
+  return item.kind + ":" + item.id;
+}
+
+/**
+ * Reuse previous-render group objects whose content signature is unchanged, so
+ * downstream React.memo'd cards keep a stable `group` prop. Returns a list the
+ * same length/order as `next`; only changed (or new) groups get the fresh
+ * object. Plain Message items pass through untouched (their identity is already
+ * stable from the reducer).
+ */
+export function reconcileStreamItems(prev: StreamItem[], next: StreamItem[]): StreamItem[] {
+  if (prev.length === 0) return next;
+  const prevBySig = new Map<string, StreamItem>();
+  for (const p of prev) {
+    if (p.kind === "tool_group" || p.kind === "turn_process_group") {
+      prevBySig.set(groupSignature(p), p);
+    }
+  }
+  let reused = false;
+  const out = next.map((n) => {
+    if (n.kind !== "tool_group" && n.kind !== "turn_process_group") return n;
+    const hit = prevBySig.get(groupSignature(n));
+    if (hit) {
+      reused = true;
+      return hit;
+    }
+    return n;
+  });
+  // If nothing was reused the new array is fine as-is; return it to avoid an
+  // extra allocation churn on the no-overlap path.
+  return reused ? out : next;
+}
+
 // ── Level 1: adjacent tools → ToolGroup ───────────────────────────────
 
 function isToolish(item: Message | ToolGroup): boolean {

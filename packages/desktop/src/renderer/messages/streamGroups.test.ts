@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildStreamItems, type TurnProcessGroup } from "./streamGroups";
+import { buildStreamItems, reconcileStreamItems, type TurnProcessGroup } from "./streamGroups";
 import type { AssistantMessage, Message, ThinkingMessage, ToolMessage } from "../types";
 
 let idCounter = 0;
@@ -121,5 +121,45 @@ describe("buildStreamItems", () => {
     const items = buildStreamItems(messages);
     expect(items.map((it) => it.kind)).toEqual(["user", "assistant"]);
     expect(processGroups(items)).toHaveLength(0);
+  });
+});
+
+describe("reconcileStreamItems", () => {
+  test("reuses the previous group object when content is unchanged", () => {
+    // Same message objects (same ids) folded twice — mirrors the app, where
+    // a 50ms batch hands the SAME stable reducer messages back to the fold.
+    // buildStreamItems allocates fresh group wrappers each call; reconcile
+    // should hand back the previous render's wrapper so React.memo skips it.
+    const msgs: Message[] = [user(), tool("Read", 10, 15), tool("Grep", 16, 20)];
+    const prev = buildStreamItems(msgs);
+    const next = buildStreamItems(msgs);
+    const reconciled = reconcileStreamItems(prev, next);
+    const prevGroup = prev.find((i) => i.kind === "turn_process_group");
+    const recGroup = reconciled.find((i) => i.kind === "turn_process_group");
+    expect(recGroup).toBe(prevGroup);
+  });
+
+  test("returns a fresh group object when the group content changes", () => {
+    const base: Message[] = [user(), tool("Read", 10, 15), tool("Grep", 16, 20)];
+    const prev = buildStreamItems(base);
+    // A new tool appended this turn → different signature → no reuse.
+    const next = buildStreamItems([...base, tool("Read", 21, 25)]);
+    const reconciled = reconcileStreamItems(prev, next);
+    const prevGroup = prev.find((i) => i.kind === "turn_process_group");
+    const recGroup = reconciled.find((i) => i.kind === "turn_process_group");
+    expect(recGroup).not.toBe(prevGroup);
+  });
+
+  test("empty previous render passes new items through unchanged", () => {
+    const next = buildStreamItems([user(), tool("Read", 10, 15), tool("Grep", 16, 20)]);
+    expect(reconcileStreamItems([], next)).toBe(next);
+  });
+
+  test("plain (non-group) messages pass through by their own identity", () => {
+    const prev = buildStreamItems([user(), assistant("hi")]);
+    const next = buildStreamItems([user(), assistant("hi")]);
+    const reconciled = reconcileStreamItems(prev, next);
+    // No groups to reuse → returns the new array as-is.
+    expect(reconciled).toBe(next);
   });
 });

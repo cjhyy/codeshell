@@ -91,6 +91,7 @@ type TranscriptsMap = Record<string, MessagesReducerState>;
 type Action =
   | { type: "user_message"; bucket: string; text: string }
   | { type: "stream"; bucket: string; event: StreamEvent }
+  | { type: "stream_batch"; bucket: string; events: StreamEvent[] }
   | { type: "hydrate"; bucket: string; state: MessagesReducerState }
   | {
       type: "ask_user";
@@ -128,6 +129,16 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
     case "stream":
       next = applyStreamEvent(current, action.event);
       break;
+    case "stream_batch": {
+      // Fold the whole 50ms batch into one new state so the list re-renders
+      // once per window, not once per event. applyStreamEvent returns the
+      // same ref when an event is a no-op, so an all-no-op batch leaves
+      // `next === current` and the dispatch below bails out.
+      let acc = current;
+      for (const ev of action.events) acc = applyStreamEvent(acc, ev);
+      next = acc;
+      break;
+    }
   }
   if (next === current) return map;
   return { ...map, [action.bucket]: next };
@@ -600,8 +611,8 @@ function App() {
   function getCoalescer(bucket: string) {
     let c = coalescersRef.current.get(bucket);
     if (!c) {
-      c = createEventCoalescer((event) =>
-        dispatch({ type: "stream", bucket, event }),
+      c = createEventCoalescer((events) =>
+        dispatch({ type: "stream_batch", bucket, events }),
       );
       coalescersRef.current.set(bucket, c);
     }

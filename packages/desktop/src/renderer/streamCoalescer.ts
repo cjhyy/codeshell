@@ -1,6 +1,8 @@
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 
-type Flush = (event: StreamEvent) => void;
+/** Flushes a batch of events in arrival order. Callers apply them under a
+ *  single reducer dispatch so one 50ms window = one render, not one per event. */
+type FlushBatch = (events: StreamEvent[]) => void;
 
 interface PendingText {
   agentId: string | undefined;
@@ -15,50 +17,78 @@ interface PendingArgs {
 }
 
 /**
- * Coalesce rapid `text_delta` and `tool_use_args_delta` bursts before
- * they reach the reducer. Mirrors the TUI's 50 ms `flushTextBuffer`
- * pattern (`packages/tui/src/ui/App.tsx`) at the renderer ingress.
+ * Coalesce a stream into batched, render-friendly flushes.
  *
- * Pass-through events (everything else) emit immediately. The pending
- * buffer is also drained immediately on `tool_use_start`, `tool_result`,
- * `turn_complete`, `agent_start`, `agent_end`, and `error` — boundaries
- * the user must see in real time.
+ * Two jobs, both aimed at cutting renderer load when a (sub-)agent emits
+ * events at high frequency:
  *
- * Pure logic, no React. Callers (App.tsx) wire `push` to the stream
- * source and provide an `onFlush` that dispatches into the reducer.
+ *  1. Merge rapid `text_delta` / `tool_use_args_delta` bursts into one event
+ *     each (mirrors the TUI's 50ms `flushTextBuffer`).
+ *  2. Batch EVERYTHING flushed in a 50ms window — including boundary events
+ *     like tool_use_start / tool_result / agent_* — into a single
+ *     `onFlushBatch` call, so the reducer dispatches once per window instead
+ *     of once per event. Before this, every tool_use_start/tool_result went
+ *     straight to its own dispatch → its own full re-render of the (un-
+ *     virtualized) message list; a tool-heavy sub-agent could fire dozens per
+ *     second and starve scrolling. (perf: scroll-jank-2026-06-02)
+ *
+ * Ordering: a single insertion-ordered `order` list records every key (delta
+ * slots + boundary events) as first seen, so the batch preserves arrival
+ * order across types. Re-seeing a delta key merges into the existing slot
+ * without re-appending — its original position is kept.
+ *
+ * `error` still flushes synchronously and alone (it must surface instantly and
+ * may precede teardown). Pure logic, no React.
  */
-export function createEventCoalescer(onFlush: Flush, intervalMs = 50) {
-  // Key shape: `${eventType}|${agentId ?? ""}|${toolCallId ?? ""}`
+export function createEventCoalescer(onFlushBatch: FlushBatch, intervalMs = 50) {
+  // Ordered record of pending items. Delta slots are referenced by key so
+  // repeats merge; boundary events are inlined as one-shot entries.
+  type Slot =
+    | { kind: "text"; key: string }
+    | { kind: "args"; key: string }
+    | { kind: "passthrough"; event: StreamEvent };
+  let order: Slot[] = [];
   const textBuf = new Map<string, PendingText>();
   const argsBuf = new Map<string, PendingArgs>();
   let timer: ReturnType<typeof setTimeout> | null = null;
+
+  function drainToBatch(): StreamEvent[] {
+    const out: StreamEvent[] = [];
+    for (const slot of order) {
+      if (slot.kind === "text") {
+        const p = textBuf.get(slot.key);
+        if (!p) continue;
+        out.push(
+          p.tokens !== undefined
+            ? ({ type: "text_delta", text: p.text, tokens: p.tokens, agentId: p.agentId } as any)
+            : ({ type: "text_delta", text: p.text, agentId: p.agentId } as any),
+        );
+      } else if (slot.kind === "args") {
+        const p = argsBuf.get(slot.key);
+        if (!p) continue;
+        out.push({
+          type: "tool_use_args_delta",
+          toolCallId: p.toolCallId,
+          args: p.args,
+          agentId: p.agentId,
+        } as any);
+      } else {
+        out.push(slot.event);
+      }
+    }
+    order = [];
+    textBuf.clear();
+    argsBuf.clear();
+    return out;
+  }
 
   function flush(): void {
     if (timer !== null) {
       clearTimeout(timer);
       timer = null;
     }
-    // Drain in insertion order: text first, then args. Both maps preserve
-    // insertion order per spec; cross-type ordering is not preserved
-    // (text_delta and tool_use_args_delta should never interleave for the
-    // same tool since args precedes the tool's text output).
-    for (const [, p] of textBuf) {
-      const ev: StreamEvent =
-        p.tokens !== undefined
-          ? ({ type: "text_delta", text: p.text, tokens: p.tokens, agentId: p.agentId } as any)
-          : ({ type: "text_delta", text: p.text, agentId: p.agentId } as any);
-      onFlush(ev);
-    }
-    textBuf.clear();
-    for (const [, p] of argsBuf) {
-      onFlush({
-        type: "tool_use_args_delta",
-        toolCallId: p.toolCallId,
-        args: p.args,
-        agentId: p.agentId,
-      } as any);
-    }
-    argsBuf.clear();
+    const batch = drainToBatch();
+    if (batch.length > 0) onFlushBatch(batch);
   }
 
   function scheduleFlush(): void {
@@ -81,11 +111,8 @@ export function createEventCoalescer(onFlush: Flush, intervalMs = 50) {
           prev.tokens = (prev.tokens ?? 0) + ((event as any).tokens as number);
         }
       } else {
-        textBuf.set(key, {
-          agentId,
-          text: (event as any).text,
-          tokens: (event as any).tokens,
-        });
+        textBuf.set(key, { agentId, text: (event as any).text, tokens: (event as any).tokens });
+        order.push({ kind: "text", key });
       }
       scheduleFlush();
       return;
@@ -103,25 +130,23 @@ export function createEventCoalescer(onFlush: Flush, intervalMs = 50) {
           toolCallId,
           args: { ...((event as any).args as Record<string, unknown>) },
         });
+        order.push({ kind: "args", key });
       }
       scheduleFlush();
       return;
     }
-    // Boundary events: flush first to preserve ordering, then pass through.
-    if (
-      t === "tool_use_start" ||
-      t === "tool_result" ||
-      t === "turn_complete" ||
-      t === "agent_start" ||
-      t === "agent_end" ||
-      t === "error"
-    ) {
+    // `error` must surface instantly and on its own — flush the pending batch
+    // (preserving order), then emit the error in its own batch.
+    if (t === "error") {
       flush();
-      onFlush(event);
+      onFlushBatch([event]);
       return;
     }
-    // Everything else passes straight through.
-    onFlush(event);
+    // All other events (tool_use_start, tool_result, turn_complete, agent_*,
+    // session_started, usage_update, …) join the ordered batch. They are no
+    // longer dispatched one-render-each: a 50ms window of them flushes once.
+    order.push({ kind: "passthrough", event });
+    scheduleFlush();
   }
 
   function dispose(): void {

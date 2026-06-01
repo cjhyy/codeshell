@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import type { Message } from "./types";
 import { ToolCard } from "./tool-cards";
 import { AssistantMessageView } from "./messages/AssistantMessageView";
@@ -10,7 +10,7 @@ import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
 import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
 import { FilesChangedCard } from "./messages/FilesChangedCard";
-import { buildStreamItems } from "./messages/streamGroups";
+import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
 import { decodeWireForDisplay } from "./chat/attachments";
 import { Lightbox } from "./chat/Lightbox";
@@ -77,10 +77,18 @@ export function MessageStream({
   //     The most recent turn is "live" iff the engine is currently
   //     streaming; that's the only one whose header ticker keeps
   //     advancing, and the only one that defaults to open.
-  const items = useMemo(
-    () => buildStreamItems(messages, { liveTurnActive }),
-    [messages, liveTurnActive],
-  );
+  // Build the folded list, then reconcile group objects against the previous
+  // render so unchanged ToolGroup/TurnProcessGroup wrappers keep a stable
+  // reference — that's what lets their React.memo actually skip work on the
+  // 50ms stream batches. prevItemsRef survives renders; the useMemo only
+  // recomputes when messages/liveTurnActive change.
+  const prevItemsRef = useRef<StreamItem[]>([]);
+  const items = useMemo(() => {
+    const built = buildStreamItems(messages, { liveTurnActive });
+    const reconciled = reconcileStreamItems(prevItemsRef.current, built);
+    prevItemsRef.current = reconciled;
+    return reconciled;
+  }, [messages, liveTurnActive]);
 
   return (
     <div className="flex-1 overflow-y-auto" ref={ref}>
