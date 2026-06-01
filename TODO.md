@@ -7,21 +7,21 @@
 
 ---
 
-## Bug — 2026-06-01：自动化 cron job 一次触发堆叠多条 run（scheduler×RunManager 执行模型）
+## Bug — 2026-06-01：自动化「立即运行」连点堆叠多条 run（✅ UI 侧已修）
 
-> 调查记录（systematic-debugging，证据确凿，根因已定位，**暂未修**——用户先清理现场）。分支 `feat/automation-run-sidebar`。
+> systematic-debugging 定位，证据确凿。**UI 侧已修**（commit `9e04789`）；**core 按设计不改**（见下）。分支 `feat/automation-run-sidebar`。spec `docs/superpowers/specs/2026-06-01-automation-runnow-debounce-design.md`。
 
-**现象**：「立即运行」一次点击/每个 cron tick 会冒出多条 run；同一个 job（id=1「每日早间新闻汇总」）累计堆了 10 条（5 条 `queued` 永远排不上、几条 `running` 卡死、1 条 completed）。用户还观察到「出 2 个」「session 不一致」——后者其实是 runId vs sessionId 两套 ID 指同一次运行（`session_linked` 绑定），不是真不一致。
+**现象**：同一个 cron job（id=1「每日早间新闻汇总」）累计堆了 10 条 run（5 `queued` 排不上、几条 `running` 卡死、1 completed）。用户观察到「出 2 个」「session 不一致」——后者其实是 runId vs sessionId 两套 ID 指同一次运行（`session_linked` 绑定），非真不一致。
 
-**根因**：`packages/core/src/automation/scheduler.ts` 的 `fire()`（~line 482-505）有再入守卫 `if (this.running.has(job.id)) return` + `finally { this.running.delete(job.id) }`，本意是「上一条还在跑就跳过」。但 `await this.onExecute?.(job)` 等的是 **RunManager.submit 返回**（run 进了 `RunQueue` 异步队列就 resolve，几十毫秒），**不是 run 真正跑完**。于是 `finally` 几乎瞬间 `delete(job.id)`，守卫形同虚设 → 同一 job 每次 fire 都 submit 一条新 run，越堆越多。RunQueue `concurrency:1` + 某些 run 卡死 → 后面的全 `queued` 排不上。
+**根因定位**：堆叠真凶是 **UI「立即运行」按钮无防重复点击 + 无 loading**（`AutomationView.tsx` 的 `act()` 无 in-flight 保护，点完立刻可再点 → 连点就 `runAutomationNow`×N → 每次 `fire`→`RunManager.submit` 一条新 run）。core `scheduler.fire()` 的再入守卫毫秒级失效（`await onExecute` 等的是 submit 返回而非 run 跑完）是叠加因素，**但「同一 cron job 允许多条并发」是期望行为**（cron 到点就跑、重叠合法），cron 定时 tick 是分钟/天级、不会毫秒级重复 → 唯一毫秒级重复 submit 的来源就是被连点的按钮。
 
-**次生现象**：有 run 卡在 `turn.start` 之后、首个 `llm.request` 之前（`llm.request=0`，run.lock `acquired` 但 never `released`），4+ 分钟静默。证据：`run.lock` 配对日志里 5 条 `running` 全是 `A`（未释放）。
+**✅ 已修（UI-only，commit `9e04789`）**：`act(key, fn)` 改为按 `"<action>:<jobId>"` key 跟踪 in-flight，`if(pending[key])return` 防重复 + finally 必清；立即运行/删除/暂停Switch/保存 在 pending 时 disabled，立即运行/保存显示 `Loader2 animate-spin` + 「运行中…/保存中…」。每按钮独立。157 desktop tests pass、tsc/build 绿。
 
-**两种修法（择一，需 TDD）**：
-- ⬜ **(推荐) 按 job 去重 in-flight RunManager run**：`fire` 前查该 job 是否已有未终态的 run（经 `job.lastRunId` 查 RunStore 状态，注入一个 query 回调），有则 skip。治本，同 job 永不并发堆叠。
-- ⬜ **fire 等 run 真正跑完**：让 `onExecute` 返回「run 完成」的 promise（而非 submit 返回），`fire` await 它 → `running` 在 run 真正结束前不解除。改动 runner 接口语义，范围略大。
+**core 按设计不改**：既然允许同 job 并发，就不在 core 做「上一条没跑完就 skip」。`fire` 守卫的毫秒级失效在「允许并发」语义下无害（真正的并发是合法的；防误点归 UI）。
 
-证据/上下文见 [[project-automation-run-sidebar]] memory。现场已清理（10 条 run + 2 session 目录删除，cron.json job1 `lastRunId` 留陈旧引用但 `getRun` 对 ENOENT 返回 null 安全）。
+**次生现象（未追，独立）**：有 run 卡在 `turn.start` 之后、首个 `llm.request` 之前（`llm.request=0`、run.lock `acquired` never `released`，4+ 分钟静默）。这是另一个潜在挂起问题，与堆叠无关，**未深挖**——若复现再单独 debug。
+
+现场已清理（10 条 run + 2 session 目录删除）。证据/上下文见 [[project-automation-run-sidebar]] memory。
 
 ---
 
