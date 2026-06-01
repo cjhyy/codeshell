@@ -107,9 +107,15 @@ export class AgentServer {
         return this.requestApprovalFromClient(request);
       });
 
-      this.legacyEngine.setAskUser((question, opts) => {
-        return this.requestAskUserFromClient(question, opts);
-      });
+      // Only wire an interactive askUser when a human is present. For
+      // unattended (headless) runs we leave askUser undefined so
+      // AskUserQuestion hits its headless-error branch and returns immediately
+      // instead of suspending until the tool-exec timeout (~300s).
+      if (!this.legacyEngine.isHeadless()) {
+        this.legacyEngine.setAskUser((question, opts) => {
+          return this.requestAskUserFromClient(question, opts);
+        });
+      }
     }
 
     // B2.2 — forward background sub-agent completion events through the
