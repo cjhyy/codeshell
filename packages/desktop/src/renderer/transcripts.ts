@@ -32,6 +32,8 @@ export interface SessionSummary {
   /** Local UI session id (NOT the engine session id; see `engineSessionId`). */
   id: string;
   title: string;
+  /** True once the user manually renamed this session — blocks LLM auto-title overwrite. */
+  titleManual?: boolean;
   createdAt: number;
   updatedAt: number;
   /** True when the user has archived this session — hidden from the
@@ -311,12 +313,20 @@ export function renameSessionLocal(
   repoId: string | null,
   sessionId: string,
   title: string,
+  manual = false,
 ): SessionIndex {
   const idx = loadSessionIndex(repoId);
   const next: SessionIndex = {
     ...idx,
     sessions: idx.sessions.map((s) =>
-      s.id === sessionId ? { ...s, title: title.trim() || s.title, updatedAt: Date.now() } : s,
+      s.id === sessionId
+        ? {
+            ...s,
+            title: title.trim() || s.title,
+            ...(manual ? { titleManual: true } : {}),
+            updatedAt: Date.now(),
+          }
+        : s,
     ),
   };
   saveSessionIndex(repoId, next);

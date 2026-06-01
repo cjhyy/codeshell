@@ -463,7 +463,7 @@ function App() {
     sessionId: string,
     title: string,
   ): void => {
-    const next = renameSessionLocal(repoId, sessionId, title);
+    const next = renameSessionLocal(repoId, sessionId, title, true);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
   };
 
@@ -649,6 +649,26 @@ function App() {
             engineToBucketRef.current.set(event.sessionId, target);
             const nextIdx = bindEngineSession(repoId, uiSessionId, event.sessionId);
             setSessionIndices((prev) => ({ ...prev, [repoKey]: nextIdx }));
+          }
+        }
+      }
+
+      // session_title: LLM-generated sidebar title (first turn only).
+      // Reuse the session_started bucket-parse pattern. Never clobber a
+      // manual rename (titleManual flag set by handleRenameSession).
+      if (event.type === "session_title") {
+        const sep = target.indexOf("::");
+        if (sep > 0) {
+          const repoKey = target.slice(0, sep);
+          const uiSessionId = target.slice(sep + 2);
+          const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+          if (uiSessionId && uiSessionId !== "_none_") {
+            setSessionIndices((prev) => {
+              const cur = prev[repoKey]?.sessions.find((s) => s.id === uiSessionId);
+              if (!cur || cur.titleManual) return prev; // never clobber manual rename
+              const next = renameSessionLocal(repoId, uiSessionId, event.title);
+              return { ...prev, [repoKey]: next };
+            });
           }
         }
       }
