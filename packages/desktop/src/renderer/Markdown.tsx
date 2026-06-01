@@ -23,6 +23,7 @@ import { Copy } from "./ui/icons";
 import {
   remarkPathLinks,
   decodePathHref,
+  decodeLocalPathHref,
   CODESHELL_PATH_SCHEME,
 } from "./markdown/remarkPathLinks";
 import { classifyPath } from "./tool-cards/attachments";
@@ -53,22 +54,31 @@ function MarkdownImpl({ text, cwd }: Props) {
         remarkPlugins={[remarkGfm, remarkPathLinks]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
-          a: ({ href, children, ...rest }) => {
-            const decoded = href ? decodePathHref(href) : null;
+          a: ({ href, children, node: _node, ...rest }) => {
+            const schemeDecoded = href ? decodePathHref(href) : null;
+            const localDecoded = href ? decodeLocalPathHref(href) : null;
+            const decoded = schemeDecoded ?? localDecoded;
             const isPathLink = decoded !== null;
             // Inline-render image/SVG artifacts (GenerateImage output,
             // Playwright screenshots, generated SVGs) as a thumbnail right
             // in the answer, so the user sees the picture instead of an
             // unclickable path. Click opens a full-screen Lightbox; the
             // filename caption still opens the file in the OS app.
-            if (decoded && classifyPath(decoded.path) === "image") {
-              return <InlineImageLink path={decoded.path} cwd={cwd} />;
+            if (schemeDecoded && classifyPath(schemeDecoded.path) === "image") {
+              return <InlineImageLink path={schemeDecoded.path} cwd={cwd} />;
             }
+            if (localDecoded && classifyPath(localDecoded.path) === "image") {
+              return <InlineImageLink path={localDecoded.path} cwd={cwd} />;
+            }
+            const pathTarget = decoded ? formatPathTarget(decoded.path, decoded.line) : "";
+            const showPathTarget = localDecoded !== null;
             return (
               <a
                 href={href}
                 {...rest}
                 {...(isPathLink ? { "data-path-link": "true" } : {})}
+                className={isPathLink ? "md-file-link" : rest.className}
+                title={isPathLink ? pathTarget : rest.title}
                 onClick={(e) => {
                   if (!href) return;
                   e.preventDefault();
@@ -79,12 +89,25 @@ function MarkdownImpl({ text, cwd }: Props) {
                     void window.codeshell.openPath(arg);
                     return;
                   }
+                  if (localDecoded) {
+                    void window.codeshell.openPath(pathTarget, cwd ?? undefined);
+                    return;
+                  }
                   if (/^https?:/i.test(href)) {
                     void window.codeshell.openExternal(href);
                   }
                 }}
               >
-                {children}
+                {isPathLink ? (
+                  <>
+                    <span className="md-file-link-label">{children}</span>
+                    {showPathTarget && (
+                      <span className="md-file-link-target">{pathTarget}</span>
+                    )}
+                  </>
+                ) : (
+                  children
+                )}
               </a>
             );
           },
@@ -107,6 +130,10 @@ function MarkdownImpl({ text, cwd }: Props) {
 }
 
 export const Markdown = memo(MarkdownImpl);
+
+function formatPathTarget(path: string, line?: number): string {
+  return line ? `${path}:${line}` : path;
+}
 
 /**
  * Inline thumbnail for an image/SVG path mentioned in an assistant answer.

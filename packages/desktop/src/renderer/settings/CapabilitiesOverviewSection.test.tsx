@@ -11,9 +11,10 @@ describe("CapabilitiesOverviewSection", () => {
   test("renders the section header, tree, and loading line", () => {
     const html = renderToStaticMarkup(<CapabilitiesOverviewSection repos={[]} />);
     expect(html).toContain("能力总览");
-    expect(html).toContain("统一开关");
+    expect(html).toContain("项目设置独立覆盖");
     // Left tree always shows the user node.
     expect(html).toContain("用户(全局)");
+    expect(html).toContain("项目配置");
     // Initial render before the effect fires shows the loading line.
     expect(html).toContain("加载中");
   });

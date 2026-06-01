@@ -6,7 +6,12 @@
  * path as plain unclickable text.
  */
 import { describe, it, expect } from "bun:test";
-import { remarkPathLinks, decodePathHref, CODESHELL_PATH_SCHEME } from "./remarkPathLinks";
+import {
+  remarkPathLinks,
+  decodePathHref,
+  decodeLocalPathHref,
+  CODESHELL_PATH_SCHEME,
+} from "./remarkPathLinks";
 
 interface MdastNode {
   type: string;
@@ -105,5 +110,39 @@ describe("remarkPathLinks — CJK punctuation boundaries", () => {
     // "don't" + a later "'" must not be read as a quoted path; the bare
     // a/b.ts inside is still linked on its own.
     expect(linkedPaths("don't use a/b.ts here'")).toEqual(["a/b.ts"]);
+  });
+});
+
+describe("decodeLocalPathHref", () => {
+  it("decodes absolute markdown hrefs with line numbers", () => {
+    expect(decodeLocalPathHref("/Users/me/app/src/Foo.tsx:81")).toEqual({
+      path: "/Users/me/app/src/Foo.tsx",
+      line: 81,
+    });
+  });
+
+  it("decodes relative markdown hrefs", () => {
+    expect(decodeLocalPathHref("packages/core/src/index.ts")).toEqual({
+      path: "packages/core/src/index.ts",
+    });
+  });
+
+  it("ignores non-file web links and anchors", () => {
+    expect(decodeLocalPathHref("https://example.com/a.ts")).toBeNull();
+    expect(decodeLocalPathHref("#section")).toBeNull();
+  });
+
+  it("ignores scheme-less URLs (domain-shaped first segment) so they open externally", () => {
+    // These have no scheme but are clearly web links, not workspace paths.
+    // Treating them as local sent openPath after a file that can't exist and
+    // never reached the openExternal branch.
+    expect(decodeLocalPathHref("example.com/path.html")).toBeNull();
+    expect(decodeLocalPathHref("www.google.com/a.html")).toBeNull();
+    expect(decodeLocalPathHref("mysite.io/index.html")).toBeNull();
+    expect(decodeLocalPathHref("//cdn.com/x.js")).toBeNull();
+  });
+
+  it("still decodes explicit-relative paths with dotted dirs via ./", () => {
+    expect(decodeLocalPathHref("./my.app/foo.ts")).toEqual({ path: "./my.app/foo.ts" });
   });
 });

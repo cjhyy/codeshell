@@ -156,8 +156,8 @@ export function SettingsPage({
 
   return (
     <div className="h-full">
-      <div className="flex h-full">
-        <nav className="w-60 shrink-0 overflow-y-auto border-r border-border px-4 pb-4 pt-8">
+      <div className="flex h-full max-[720px]:flex-col">
+        <nav className="w-60 shrink-0 overflow-y-auto border-r border-border px-4 pb-4 pt-8 max-[720px]:h-44 max-[720px]:w-full max-[720px]:border-b max-[720px]:border-r-0 max-[720px]:px-3 max-[720px]:py-3">
           <button
             className="mb-5 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
             onClick={onBack}
@@ -189,7 +189,7 @@ export function SettingsPage({
           ))}
         </nav>
 
-        <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-6 pt-8">
+        <main className="min-w-0 flex-1 overflow-y-auto px-8 pb-6 pt-8 max-[720px]:px-4 max-[720px]:pt-4">
           <div className="mb-4">
             <h2 className="text-lg font-semibold tracking-tight">
               {MODULES.find((m) => m.id === active)?.label}

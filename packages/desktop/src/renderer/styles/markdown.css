@@ -1,4 +1,46 @@
 /* Inline image/SVG artifacts surfaced from an answer's file paths. */
+.md-body {
+  color: var(--fg-primary);
+  font-size: inherit;
+  line-height: 1.6;
+}
+.md-body > :first-child { margin-top: 0; }
+.md-body > :last-child { margin-bottom: 0; }
+.md-body p {
+  margin: 0 0 var(--sp-2);
+}
+.md-body ul,
+.md-body ol {
+  margin: var(--sp-2) 0;
+  padding-left: 1.35rem;
+}
+.md-body li {
+  margin: 0.35rem 0;
+  padding-left: 0.1rem;
+}
+.md-body li > p {
+  margin: 0;
+}
+.md-body strong {
+  font-weight: 650;
+}
+.md-body a {
+  color: var(--accent);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+.md-body a:hover {
+  text-decoration: underline;
+}
+.md-body code:not(pre code) {
+  border-radius: var(--radius-sm);
+  background: hsl(var(--cs-muted) / 0.55);
+  padding: 0.08rem 0.3rem;
+  color: var(--fg-primary);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
 .md-inline-image {
   display: inline-flex;
   flex-direction: column;
@@ -82,16 +124,45 @@
 /* Inline path:line links rewritten by remarkPathLinks. Match the same
    muted-then-accent treatment as ordinary external links but use a
    monospace face since they're file paths. */
-.md-body a[data-path-link="true"] {
-  font-family: var(--font-mono);
+.md-body a[data-path-link="true"],
+.md-file-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  max-width: min(100%, 680px);
+  vertical-align: baseline;
+  border: 1px solid hsl(var(--cs-border) / 0.75);
+  border-radius: var(--radius-sm);
+  background: hsl(var(--cs-muted) / 0.35);
+  padding: 0.05rem 0.35rem;
   color: var(--fg-primary);
-  text-decoration: underline;
-  text-decoration-color: var(--border-subtle);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
+  text-decoration: none;
   cursor: pointer;
 }
-.md-body a[data-path-link="true"]:hover {
-  color: var(--accent, var(--fg-secondary));
-  text-decoration-color: currentColor;
+.md-body a[data-path-link="true"]:hover,
+.md-file-link:hover {
+  border-color: hsl(var(--cs-primary) / 0.35);
+  background: hsl(var(--cs-primary) / 0.08);
+  color: var(--fg-primary);
+  text-decoration: none;
+}
+.md-file-link-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--accent);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.md-file-link-target {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.md-body li .md-file-link {
+  margin: 0 0.1rem;
 }

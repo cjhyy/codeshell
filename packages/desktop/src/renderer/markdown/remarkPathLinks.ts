@@ -170,3 +170,54 @@ export function decodePathHref(
     return null;
   }
 }
+
+/**
+ * Decode an ordinary markdown href when the author wrote a real local path,
+ * e.g. `[foo.ts](/Users/me/app/foo.ts:12)` or `[foo](packages/x/foo.ts)`.
+ * ReactMarkdown keeps those as normal hrefs, so the renderer needs a second
+ * decoder in addition to the synthetic `codeshell-path:` scheme above.
+ */
+export function decodeLocalPathHref(
+  href: string,
+): { path: string; line?: number } | null {
+  if (!href) return null;
+  if (/^(?:https?|mailto|xmpp|irc|ircs):/i.test(href)) return null;
+  if (href.startsWith("#")) return null;
+
+  const clean = href.split(/[?#]/, 1)[0] ?? "";
+  if (!clean) return null;
+
+  let decoded = clean;
+  try {
+    decoded = decodeURIComponent(clean);
+  } catch {
+    return null;
+  }
+
+  const m = /^(.*?)(?::(\d+)(?::\d+)?)?$/.exec(decoded);
+  if (!m) return null;
+  const pathPart = m[1] ?? "";
+  const line = m[2] ? Number(m[2]) : undefined;
+
+  // Protocol-relative URL (//host/…) is a web link, never a local path.
+  if (pathPart.startsWith("//")) return null;
+
+  const isExplicitLocal =
+    pathPart.startsWith("/") ||
+    pathPart.startsWith("./") ||
+    pathPart.startsWith("../");
+  // Bare "seg/more" form: only treat as local when the first segment is NOT
+  // domain-shaped. A code dir (packages, src, a_b) has no dot; a host
+  // (example.com, www.google.com) does — so a dotted first segment means it's
+  // almost certainly a scheme-less URL the author meant to open externally,
+  // not a path under the workspace. Without this, `example.com/x.html` and
+  // `//cdn/x.js` got linked as local files that openPath can't resolve.
+  const firstSeg = pathPart.split("/", 1)[0] ?? "";
+  const bareLocal = /^[\w@.-]+\//.test(pathPart) && !firstSeg.includes(".");
+  const looksLocal = isExplicitLocal || bareLocal;
+
+  const hasExtension = /\.[\w]{1,12}$/.test(pathPart);
+  if (!looksLocal || !hasExtension) return null;
+
+  return line !== undefined ? { path: pathPart, line } : { path: pathPart };
+}
