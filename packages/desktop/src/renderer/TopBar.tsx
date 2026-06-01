@@ -43,15 +43,26 @@ export function TopBar({
   tasks,
 }: Props) {
   return (
-    <header className="flex h-11 items-center justify-between border-b border-border px-3 text-sm">
+    // The window is frameless on macOS (titleBarStyle: "hiddenInset"),
+    // so the only thing that lets the user drag it is a
+    // -webkit-app-region: drag surface. Tailwind v4 has no utility for
+    // that property, so set it inline on the header. Interactive
+    // children (the sidebar toggle, the status badge) must opt back out
+    // with `no-drag`, otherwise the drag region swallows their clicks.
+    <header
+      className="flex h-11 items-center justify-between border-b border-border px-3 text-sm"
+      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+    >
       <div className="flex items-center gap-2">
         <span className="w-[68px] shrink-0" aria-hidden="true" />
-        <IconButton
-          label={sidebarCollapsed ? "展开侧栏" : "折叠侧栏"}
-          onClick={onToggleSidebar}
-        >
-          <PanelLeft size={14} />
-        </IconButton>
+        <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          <IconButton
+            label={sidebarCollapsed ? "展开侧栏" : "折叠侧栏"}
+            onClick={onToggleSidebar}
+          >
+            <PanelLeft size={14} />
+          </IconButton>
+        </span>
         <span className="font-semibold">code-shell</span>
         {repoName && <span className="text-muted-foreground">/</span>}
         {repoName && <span className="text-foreground">{repoName}</span>}
@@ -97,6 +108,8 @@ function StatusBadge({
   return (
     <div
       className="relative flex items-center"
+      // Opt out of the header's drag region so hover/focus reach the dot.
+      style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       // tabIndex makes the div keyboard-focusable so the onFocus/onBlur popover
       // toggling works via keyboard, not just descendant focus bubbling.
       tabIndex={0}

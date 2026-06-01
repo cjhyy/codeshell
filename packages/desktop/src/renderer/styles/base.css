@@ -1,5 +1,6 @@
 * {
   box-sizing: border-box;
+  border-color: var(--border-subtle);
 }
 
 html, body, #root { height: 100vh; margin: 0; }

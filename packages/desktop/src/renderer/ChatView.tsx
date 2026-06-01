@@ -425,18 +425,32 @@ export function ChatView({
         </div>
       )}
 
-      {isNewChat && welcomeNode && (
-        <div className="flex flex-1 flex-col items-center justify-center px-4">
-          {welcomeNode}
-        </div>
-      )}
+      {/*
+        New-chat mode centers the whole hero group — welcome text, composer,
+        and project picker — in the empty stream space instead of pinning the
+        composer to the bottom. The flex-1 wrapper claims that space and
+        justify-center pulls the group to the middle; the composer is width-
+        capped so it reads as a centered hero. In active mode this wrapper is
+        absent (the MessageStream owns flex-1) and the composer stays pinned
+        at the bottom as a plain p-3 block.
+      */}
+      <div
+        className={
+          isNewChat
+            ? "flex flex-1 flex-col items-center justify-center px-4"
+            : "contents"
+        }
+      >
+        {isNewChat && welcomeNode && (
+          <div className="flex flex-col items-center">{welcomeNode}</div>
+        )}
 
-      <div className="p-3">
-        {/*
-          Drop is captured at the chat root so the user can drag a screenshot
-          anywhere in the chat surface. The composer keeps the visual highlight
-          to make the landing spot obvious, but no longer owns the handlers.
-        */}
+        <div className={isNewChat ? "w-full max-w-2xl p-3" : "p-3"}>
+          {/*
+            Drop is captured at the chat root so the user can drag a screenshot
+            anywhere in the chat surface. The composer keeps the visual highlight
+            to make the landing spot obvious, but no longer owns the handlers.
+          */}
         <div
           className={
             "rounded-xl border bg-card p-2 shadow-sm" +
@@ -664,6 +678,7 @@ export function ChatView({
             <BranchPicker cwd={activeRepoPath} clean={repoClean} disabled={busy} />
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -394,7 +394,7 @@ function ProjectGroup({
       {!collapsed && (
         <>
           {live.length > 0 && (
-            <ul className="ml-3 mt-0.5 space-y-0.5 border-l border-border pl-2">
+            <ul className="ml-3 mt-0.5 space-y-0.5 pl-2">
               {visibleLive.map((s, i) => (
                 <SessionRow
                   key={s.id}
@@ -409,11 +409,11 @@ function ProjectGroup({
               ))}
               {hiddenLiveCount > 0 && !showMore && (
                 <li
-                  className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent/60"
+                  className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-accent/60"
                   onClick={() => setShowMore(true)}
                 >
                   <span>展开显示</span>
-                  <span>{hiddenLiveCount}</span>
+                  <span className="text-muted-foreground">{hiddenLiveCount}</span>
                 </li>
               )}
             </ul>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 
 export type PermissionMode = "plan" | "default" | "accept_edits" | "bypass";
@@ -89,6 +89,8 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
 
   const toneText = (t: "ok" | "warn" | "err") =>
     t === "ok" ? "text-status-ok" : t === "warn" ? "text-status-warn" : "text-status-err";
+  const toneBorder = (t: "ok" | "warn" | "err") =>
+    t === "ok" ? "border-status-ok" : t === "warn" ? "border-status-warn" : "border-status-err";
   const toneDot = (t: "ok" | "warn" | "err") =>
     t === "ok" ? "bg-status-ok" : t === "warn" ? "bg-status-warn" : "bg-status-err";
 
@@ -97,12 +99,11 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
       <button
         ref={anchorRef}
         type="button"
-        className={`cs-control inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs disabled:opacity-50 ${toneText(cur.tone)}`}
+        className={`cs-control inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50 ${toneText(cur.tone)} ${toneBorder(cur.tone)}`}
         disabled={disabled}
         title="当前对话权限"
         onClick={() => setOpen((o) => !o)}
       >
-        <AlertCircle size={12} />
         <span>{cur.label}</span>
         <ChevronDown size={11} className="opacity-60" />
       </button>

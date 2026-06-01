@@ -11,14 +11,6 @@
  * rule that both fails to style the target and bleeds onto unrelated elements).
  * Writing the rules by hand, scoped to a class, is deterministic and correct.
  */
-@layer base {
-  *,
-  ::before,
-  ::after {
-    border-color: hsl(var(--cs-border));
-  }
-}
-
 @layer components {
   .cs-control {
     border: 1px solid hsl(var(--cs-input));
