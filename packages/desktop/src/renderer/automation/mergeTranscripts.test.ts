@@ -19,6 +19,20 @@ const tool = (id: string, toolName: string, args: string): Message => ({
   status: "ok",
   startedAt: 0,
 });
+const filesChanged = (id: string, path: string, added: number, removed: number): Message => ({
+  kind: "files_changed",
+  id,
+  files: [{ path, added, removed, count: 1 }],
+  totalAdded: added,
+  totalRemoved: removed,
+});
+const contextBoundary = (id: string, before: number, after: number): Message => ({
+  kind: "context_boundary",
+  id,
+  strategy: "summary",
+  before,
+  after,
+});
 
 describe("mergeTranscripts", () => {
   it("keeps disk as the canonical base and appends live-only tail", () => {
@@ -90,6 +104,51 @@ describe("mergeTranscripts", () => {
     const live = stateOf([user("l-u1", "hi"), assistant("l-a1", "hello")]);
     const merged = mergeTranscripts(disk, live);
     expect(merged.messages.map((m) => (m as { text: string }).text)).toEqual(["hi", "hello"]);
+  });
+
+  // Regression: files_changed / context_boundary cards ARE produced by the
+  // disk fold (turn_complete -> files_changed, context_compact ->
+  // context_boundary), each with a fresh random id. The merged result is
+  // persisted back to localStorage, so on the NEXT open `live` carries the
+  // previously-folded card (old id) while the fresh fold produces the same
+  // card with a new id. Keying these on id let the old copy survive in the
+  // tail, so the card accumulated one duplicate per re-open.
+  it("dedupes files_changed cards by content, not id (no accumulation on re-open)", () => {
+    // Fresh disk fold of a headless run that edited a.ts.
+    const disk = stateOf([
+      user("d-u1", "改一下 a.ts"),
+      assistant("d-a1", "done"),
+      filesChanged("files-changed-2-1", "a.ts", 3, 1),
+    ]);
+    // localStorage from a PRIOR open: same turn, but the card was folded with a
+    // different fresh id last time and persisted back.
+    const live = stateOf([
+      user("l-u1", "改一下 a.ts"),
+      assistant("l-a1", "done"),
+      filesChanged("files-changed-1-9", "a.ts", 3, 1), // same content, stale id
+    ]);
+    const merged = mergeTranscripts(disk, live);
+    expect(merged.messages.filter((m) => m.kind === "files_changed")).toHaveLength(1);
+  });
+
+  it("dedupes context_boundary cards by content, not id", () => {
+    const disk = stateOf([
+      assistant("d-a1", "x"),
+      contextBoundary("ctx-2-1", 1000, 200),
+    ]);
+    const live = stateOf([
+      assistant("l-a1", "x"),
+      contextBoundary("ctx-1-9", 1000, 200), // same content, stale id
+    ]);
+    const merged = mergeTranscripts(disk, live);
+    expect(merged.messages.filter((m) => m.kind === "context_boundary")).toHaveLength(1);
+  });
+
+  it("keeps a genuinely different files_changed card (different files)", () => {
+    const disk = stateOf([filesChanged("fc-1", "a.ts", 3, 1)]);
+    const live = stateOf([filesChanged("fc-2", "b.ts", 5, 0)]); // different file = real new card
+    const merged = mergeTranscripts(disk, live);
+    expect(merged.messages.filter((m) => m.kind === "files_changed")).toHaveLength(2);
   });
 
   it("preserves session metadata from disk, falling back to live", () => {

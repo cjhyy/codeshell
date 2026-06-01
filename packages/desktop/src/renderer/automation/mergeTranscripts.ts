@@ -12,7 +12,11 @@
  * contains the complete headless history. We then append any live (localStorage)
  * messages whose content does NOT already appear in the disk fold. We dedup by
  * a content signature rather than message id, because the same logical turn gets
- * a fresh random id when folded from disk vs. streamed live.
+ * a fresh random id when folded from disk vs. streamed live — and because the
+ * merged result is persisted back to localStorage, a re-open folds disk again
+ * (new ids) while `live` still holds the previous fold's copy. Content keying
+ * collapses those, so renderer-synthesized cards (files_changed,
+ * context_boundary) don't accumulate one duplicate per open.
  */
 import type { Message, MessagesReducerState } from "../types";
 
@@ -30,10 +34,26 @@ function signature(m: Message): string {
     case "system":
     case "thinking":
       return `${m.kind}|${m.text}`;
+    case "files_changed":
+      // The disk fold regenerates this card (with a fresh id) on EVERY open via
+      // turn_complete, and the merged result is persisted back to localStorage,
+      // so `live` carries the previous fold's stale-id copy. Keying on id let
+      // the stale copy survive in the tail, accumulating one duplicate per
+      // re-open. Key on content (per-file add/remove totals) so the two folds
+      // collapse to one. sessionDiffs are derived from the same edits, so the
+      // file totals are a sufficient identity for a single turn's card.
+      return `files_changed|${m.files
+        .map((f) => `${f.path}:${f.added}:${f.removed}`)
+        .join(",")}`;
+    case "context_boundary":
+      // Same story: context_compact -> context_boundary is re-folded with a
+      // fresh id each open. Key on its compaction shape instead.
+      return `context_boundary|${m.strategy}|${m.before}|${m.after}`;
     default:
-      // Other kinds (agent, task_list, context_boundary, ask_user,
-      // files_changed) don't appear in folded disk transcripts, so they are
-      // inherently live-only — give each a unique signature so none is dropped.
+      // Remaining kinds (agent, task_list, ask_user) are NOT produced by the
+      // disk fold — their source events (agent_start, task_update, ask) aren't
+      // replayed — so they are inherently live-only. Give each a unique
+      // signature so none is dropped.
       return `${m.kind}|${m.id}`;
   }
 }
