@@ -1190,19 +1190,15 @@ export class Engine {
     // for this cwd), so it can't live in the static tool def — without this
     // the model never learns the reusable roles exist and spawns nameless
     // ad-hoc agents instead (the Core A/B/C incident).
-    // Agent (and its companions) are only available when at least one agent is
-    // configured under .code-shell/agents. With an empty registry we strip them
-    // entirely so the model cannot spawn ephemeral sub-agents.
-    const agentRegistryEmpty =
-      (toolCtx.agentDefinitions?.list().length ?? 0) === 0;
-    const allToolDefs = this.toolRegistry
-      .getToolDefinitions()
-      .filter((t) => !(agentRegistryEmpty && NESTED_AGENT_TOOLS.includes(t.name)))
-      .map((t) =>
-        t.name === "Agent"
-          ? { ...t, description: agentToolDefWithTypes(toolCtx.agentDefinitions).description }
-          : t,
-      );
+    // The Agent tool is always available: with configured roles, an omitted
+    // agent_type falls back to one of them (see resolveAgentTypeOverrides); with
+    // no roles configured it runs a true ephemeral agent, so workflows that need
+    // sub-agents (e.g. superpowers) work in any project.
+    const allToolDefs = this.toolRegistry.getToolDefinitions().map((t) =>
+      t.name === "Agent"
+        ? { ...t, description: agentToolDefWithTypes(toolCtx.agentDefinitions).description }
+        : t,
+    );
 
     // In plan mode, only expose read-only/planning tools so the model won't
     // attempt writes. Shared with executor.ts's execution gate via
