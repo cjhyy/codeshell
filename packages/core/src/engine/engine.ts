@@ -231,7 +231,11 @@ export function loadAgentDefinitionsForCwd(
   const home = homedir();
   return AgentDefinitionRegistry.loadFromDirs(
     [
-      { dir: `${cwd}/.code-shell/agents`, source: "project" },
+      // No project context (no-project bucket): cwd is "". Skip the project
+      // source rather than synthesizing "/.code-shell/agents" at the FS root,
+      // which silently resolves to nothing and drops every project-level
+      // (built-in) agent from the list.
+      ...(cwd ? [{ dir: `${cwd}/.code-shell/agents`, source: "project" as const }] : []),
       // Plugin agents sit between project and user so user-level defs still
       // win on a name clash (loadFromDirs: last dir wins).
       ...pluginAgentDirs(disabledPlugins),
@@ -585,6 +589,14 @@ export class Engine {
    */
   setAskUser(fn: AskUserFn | undefined): void {
     this.config.askUser = fn;
+  }
+
+  /**
+   * Whether this engine runs unattended (no interactive human). Used by the
+   * in-process AgentServer to decide whether to wire an interactive askUser.
+   */
+  isHeadless(): boolean {
+    return this.config.headless === true;
   }
 
   /**
