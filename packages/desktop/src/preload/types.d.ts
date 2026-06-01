@@ -44,6 +44,18 @@ export interface SessionSnapshot {
   nextSeq: number;
 }
 
+/**
+ * A raw on-disk transcript event (getSessionRawEvents). Preserves the stable
+ * `id` (dedup key) and `turnNumber`/`timestamp` that the folded reader drops.
+ */
+export interface RawTranscriptEvent {
+  id: string;
+  type: string;
+  timestamp: number;
+  turnNumber: number;
+  data: Record<string, unknown>;
+}
+
 export interface RpcResponse<T = unknown> {
   jsonrpc: "2.0";
   id: number;
@@ -282,6 +294,7 @@ export interface CodeshellApi {
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
   subscribeSession(sessionId: string, sinceSeq?: number): Promise<SessionSnapshot>;
+  getSessionRawEvents(sessionId: string, sinceId?: string): Promise<RawTranscriptEvent[]>;
   deleteRun(runId: string): Promise<void>;
   listAutomations(): Promise<AutomationSummary[]>;
   getAutomation(id: string): Promise<AutomationSummary | null>;

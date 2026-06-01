@@ -289,6 +289,13 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   subscribeSession: (sessionId: string, sinceSeq?: number) =>
     ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq),
+  /**
+   * Long-disconnect fallback: read raw transcript events (with stable id/
+   * turnNumber/timestamp) from disk, optionally only those after `sinceId`.
+   * Used when the main snapshot window has evicted older events.
+   */
+  getSessionRawEvents: (sessionId: string, sinceId?: string) =>
+    ipcRenderer.invoke("sessions:rawEvents", sessionId, sinceId),
   deleteRun: (runId: string) => ipcRenderer.invoke("runs:delete", runId),
   listAutomations: () => ipcRenderer.invoke("automation:list"),
   getAutomation: (id: string) => ipcRenderer.invoke("automation:get", id),

@@ -61,6 +61,7 @@ import {
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
 import { listSessions, deleteSession, getSessionTranscript } from "./sessions-service.js";
+import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
 import {
@@ -797,6 +798,10 @@ ipcMain.handle("runs:get", async (_e, runId: string) => {
 ipcMain.handle("sessions:transcript", async (_e, sessionId: string) => {
   if (typeof sessionId !== "string") throw new Error("sessionId required");
   return getSessionTranscript(sessionId);
+});
+ipcMain.handle("sessions:rawEvents", async (_e, sessionId: string, sinceId?: string) => {
+  if (typeof sessionId !== "string") throw new Error("sessionId required");
+  return getSessionEvents(sessionId, typeof sinceId === "string" ? sinceId : undefined);
 });
 ipcMain.handle("runs:delete", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");

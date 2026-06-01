@@ -158,6 +158,18 @@ core/worker ──事件──▶ main / AgentBridge ──IPC──▶ renderer
 
 每步 TDD,直接在 `main` 分支提交(用户 Goal:直接在 main 分支完成)。
 
+### 落地记录(2026-06-02 全部完成)
+
+- 阶段1 `2936f81`:resolveBucket 反查兜底 + exited 不清表(纯 renderer)。
+- 阶段2 `d270501`:SessionSnapshotStore(main 持快照,自分配 seq)+ AgentBridge 喂 store
+  + IPC agent:subscribe + preload subscribeSession。
+- 阶段3 `ccfd56f`:selectReplayEvents + 合并进 hydrate effect,base 空时重放快照。
+- 阶段4(本提交):parseRawTranscriptEvents/getSessionEvents(原始事件流,保留 id 游标)
+  + IPC sessions:rawEvents + preload getSessionRawEvents;renderer hydrate 末态仍空时
+  folded getSessionTranscript 兜底回读磁盘(对所有 session,不再限 automation)。
+  注:renderer hydrate 用 folded reader(与既有 MessagesReducerState 对齐);
+  getSessionRawEvents 作为 id-增量恢复的原语保留,当前由测试覆盖,供后续增量路径用。
+
 ## 9. YAGNI(明确不做)
 
 - 不引入 sqlite / 独立事件库 —— main 快照 + 磁盘 transcript.jsonl 已够。

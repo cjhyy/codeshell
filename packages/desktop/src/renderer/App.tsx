@@ -368,6 +368,18 @@ function App() {
         } catch {
           // Snapshot unavailable (no bridge / unknown session) — use base.
         }
+        // Long-disconnect fallback: snapshot empty (evicted / worker long gone)
+        // but the on-disk transcript may still hold the full history. Fold it
+        // from disk as the last resort so the tab isn't blank for a session
+        // whose events aged out of the in-memory snapshot window.
+        if (state.messages.length === 0) {
+          try {
+            const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
+            if (disk.messages.length > 0) state = disk;
+          } catch {
+            // disk read failed — keep base.
+          }
+        }
       }
       if (!cancelled) dispatch({ type: "hydrate", bucket, state });
     })();
