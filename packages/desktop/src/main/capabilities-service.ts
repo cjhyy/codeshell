@@ -43,7 +43,9 @@ function makeService(cwd: string): CapabilityService {
 
 export function listCapabilities(cwd: string): CapabilityDescriptor[] {
   try {
-    return makeService(cwd).list();
+    // A non-empty cwd → project view (descriptors carry the tri-state overlay
+    // via globalEnabled/projectOverride/effectiveSource). Empty cwd → user view.
+    return makeService(cwd).list(cwd || undefined);
   } catch {
     return [];
   }
@@ -53,6 +55,15 @@ export function setCapabilityEnabled(
   cwd: string,
   id: string,
   on: boolean,
+  opts?: { scope?: "user" | "project" },
 ): void {
-  makeService(cwd).setEnabled(id, on);
+  makeService(cwd).setEnabled(id, on, { scope: opts?.scope ?? "user", cwd });
+}
+
+export function setCapabilityOverride(
+  cwd: string,
+  id: string,
+  state: "inherit" | "on" | "off",
+): void {
+  makeService(cwd).setOverride(id, state, { scope: "project", cwd });
 }

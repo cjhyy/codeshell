@@ -279,8 +279,26 @@ export interface CodeshellApi {
    * via the core CapabilityService. Never throws — returns [] on error.
    */
   listCapabilities(cwd: string): Promise<CapabilityDescriptor[]>;
-  /** Toggle one capability on/off; routes the write to the right settings key. */
-  setCapabilityEnabled(cwd: string, id: string, on: boolean): Promise<void>;
+  /**
+   * Toggle one capability on/off. scope:"user" (default) routes to the global
+   * settings key; scope:"project" writes a tri-state capabilityOverrides entry
+   * for `cwd` (on/off only — use setCapabilityOverride for "inherit").
+   */
+  setCapabilityEnabled(
+    cwd: string,
+    id: string,
+    on: boolean,
+    opts?: { scope?: "user" | "project" },
+  ): Promise<void>;
+  /**
+   * Write a project tri-state override (继承/开/关). "inherit" deletes the
+   * override key so the capability falls back to the global baseline.
+   */
+  setCapabilityOverride(
+    cwd: string,
+    id: string,
+    state: "inherit" | "on" | "off",
+  ): Promise<void>;
   uninstallPlugin(
     pluginName: string,
     marketplaceName: string,

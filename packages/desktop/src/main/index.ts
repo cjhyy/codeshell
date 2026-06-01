@@ -79,6 +79,7 @@ import {
 import {
   listCapabilities,
   setCapabilityEnabled,
+  setCapabilityOverride,
 } from "./capabilities-service.js";
 import { searchFiles } from "./file-search-service.js";
 import {
@@ -320,10 +321,20 @@ ipcMain.handle("capabilities:list", async (_e, cwd: string) => {
 });
 ipcMain.handle(
   "capabilities:setEnabled",
-  async (_e, cwd: string, id: string, on: boolean) => {
+  async (_e, cwd: string, id: string, on: boolean, opts?: { scope?: "user" | "project" }) => {
     if (typeof cwd !== "string") throw new Error("capabilities:setEnabled requires cwd");
     if (typeof id !== "string") throw new Error("capabilities:setEnabled requires id");
-    setCapabilityEnabled(cwd, id, Boolean(on));
+    setCapabilityEnabled(cwd, id, Boolean(on), opts);
+  },
+);
+ipcMain.handle(
+  "capabilities:setOverride",
+  async (_e, cwd: string, id: string, state: "inherit" | "on" | "off") => {
+    if (typeof cwd !== "string") throw new Error("capabilities:setOverride requires cwd");
+    if (typeof id !== "string") throw new Error("capabilities:setOverride requires id");
+    if (state !== "inherit" && state !== "on" && state !== "off")
+      throw new Error("capabilities:setOverride requires state inherit|on|off");
+    setCapabilityOverride(cwd, id, state);
   },
 );
 ipcMain.handle("plugins:list", async (_e, cwd: string) => {
