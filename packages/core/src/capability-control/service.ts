@@ -16,7 +16,7 @@ import type { ToolRegistry } from "../tool-system/registry.js";
 import type { SettingsManager } from "../settings/manager.js";
 import type { SkillDefinition } from "../skills/scanner.js";
 import type { InstalledPluginsV2 } from "../plugins/types.js";
-import type { CapabilityDescriptor } from "./types.js";
+import type { CapabilityDescriptor, WriteScope, CapabilityOverrideState } from "./types.js";
 import { CapabilityNotFoundError } from "./types.js";
 import {
   projectBuiltin,
@@ -24,10 +24,20 @@ import {
   projectSkills,
   projectPlugins,
 } from "./project.js";
+import {
+  applyOverride,
+  bucketForKind,
+  overrideTokenForId,
+  overrideFor,
+} from "./overlay.js";
+import type { CapabilityOverrides } from "../settings/schema.js";
 
 export interface CapabilityServiceDeps {
   registry: Pick<ToolRegistry, "listToolsDetailed">;
-  settings: Pick<SettingsManager, "get" | "saveUserSetting">;
+  settings: Pick<
+    SettingsManager,
+    "get" | "saveUserSetting" | "saveProjectSetting" | "deleteProjectSetting" | "getForScope"
+  >;
   cwd: string;
   scanSkills: (
     cwd: string,
@@ -44,13 +54,19 @@ export interface CapabilityServiceDeps {
 export class CapabilityService {
   constructor(private readonly deps: CapabilityServiceDeps) {}
 
-  list(): CapabilityDescriptor[] {
+  /**
+   * List capability descriptors. With no `cwd` this is the user/global view
+   * (enabled === global baseline). With a `cwd` it's that project's view:
+   * each descriptor gains globalEnabled / projectOverride / effectiveSource
+   * and `enabled` reflects the tri-state overlay (spec §6.1).
+   */
+  list(cwd?: string): CapabilityDescriptor[] {
     const s = this.deps.settings.get() as Record<string, any>;
     const agent = (s.agent ?? {}) as Record<string, any>;
     const tools = this.deps.registry.listToolsDetailed();
     const preset: string | undefined = agent.preset;
 
-    return [
+    const base: CapabilityDescriptor[] = [
       ...projectBuiltin({
         tools: tools.filter((t) => t.source === "builtin"),
         presetDefaults: this.deps.resolveBuiltinToolNames({ preset }),
@@ -73,9 +89,65 @@ export class CapabilityService {
         disabledPlugins: s.disabledPlugins ?? [],
       }),
     ];
+
+    const overrides: CapabilityOverrides | undefined = cwd
+      ? (this.deps.settings.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides)
+      : undefined;
+
+    return base.map((d) => {
+      const globalEnabled = d.enabled;
+      const token = overrideTokenForId(d.id);
+      const ov = cwd ? overrideFor(overrides, d.kind, token) : undefined;
+      const enabled = applyOverride(globalEnabled, ov);
+      return {
+        ...d,
+        enabled,
+        globalEnabled,
+        projectOverride: ov,
+        effectiveSource: ov ? "project" : cwd ? "default" : "user",
+      } as CapabilityDescriptor;
+    });
   }
 
-  setEnabled(id: string, on: boolean): void {
+  /**
+   * Toggle a capability. Default scope is "user" (back-compat: old callers
+   * pass no opts → global write, unchanged). scope:"project" maps on/off to a
+   * tri-state override and writes capabilityOverrides (requires cwd).
+   */
+  setEnabled(id: string, on: boolean, opts?: { scope?: WriteScope; cwd?: string }): void {
+    if (opts?.scope === "project") {
+      this.setOverride(id, on ? "on" : "off", {
+        scope: "project",
+        cwd: opts.cwd ?? this.deps.cwd,
+      });
+      return;
+    }
+    this.writeUserScope(id, on);
+  }
+
+  /**
+   * Write a project tri-state override. "inherit" deletes the key (we never
+   * persist the literal). builtin capabilities have no override bucket and
+   * are rejected.
+   */
+  setOverride(
+    id: string,
+    state: CapabilityOverrideState,
+    opts: { scope: "project"; cwd: string },
+  ): void {
+    const descriptor = this.list().find((c) => c.id === id);
+    if (!descriptor) throw new CapabilityNotFoundError(id);
+    const bucket = bucketForKind(descriptor.kind);
+    if (!bucket) throw new Error(`Capability kind '${descriptor.kind}' has no project override`);
+    if (!opts.cwd) throw new Error("project override requires cwd");
+    const token = overrideTokenForId(id);
+    const path = `capabilityOverrides.${bucket}.${token}`;
+    if (state === "inherit") this.deps.settings.deleteProjectSetting(path, opts.cwd);
+    else this.deps.settings.saveProjectSetting(path, state, opts.cwd);
+  }
+
+  /** Existing global write path — unchanged behavior, refactored out of setEnabled. */
+  private writeUserScope(id: string, on: boolean): void {
     const descriptor = this.list().find((c) => c.id === id);
     if (!descriptor) throw new CapabilityNotFoundError(id);
     const { settingsKey, mode, token } = descriptor.control;
