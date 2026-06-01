@@ -1199,6 +1199,22 @@ function App() {
     [state.messages],
   );
 
+  // Count background sub-agents still running in THIS session. When the model
+  // spawns with run_in_background, the main run resolves immediately (busy
+  // clears, the composer re-enables — by design), but the children keep
+  // working. We surface that with a separate "后台 N 个子代理运行中" indicator
+  // so the UI doesn't look idle while agents are still in flight. Derived from
+  // the reducer's AgentMessage entries (done=false set on agent_start, true on
+  // agent_end), so no extra state to track. (perf/ux: bg-agent-busy-2026-06-02)
+  const runningAgents = useMemo(
+    () =>
+      state.messages.reduce(
+        (n, m) => (m.kind === "agent" && !m.done && !m.error ? n + 1 : n),
+        0,
+      ),
+    [state.messages],
+  );
+
   // Latest TaskList snapshot — the engine replaces it in place, so we
   // walk from the tail and take the first one we hit. Feeds the TopBar
   // status popover's task overview.
@@ -1316,6 +1332,7 @@ function App() {
               onSend={send}
               onStop={stop}
               busy={busy}
+              runningAgents={runningAgents}
               activeRepoId={activeRepoId}
               composerSeed={composerSeed}
               composerSeedNonce={composerSeedNonce}

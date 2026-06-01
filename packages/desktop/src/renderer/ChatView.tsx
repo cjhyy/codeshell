@@ -32,6 +32,10 @@ interface Props {
   onSend: (text: string) => void;
   onStop: () => void;
   busy: boolean;
+  /** Count of background sub-agents still running in this session. Shown as a
+   *  separate "后台 N 个子代理运行中" hint even after busy clears (run_in_background
+   *  resolves the main run immediately while children keep working). */
+  runningAgents?: number;
   activeRepoId: string | null;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
@@ -76,6 +80,7 @@ export function ChatView({
   onSend,
   onStop,
   busy,
+  runningAgents = 0,
   activeRepoId,
   onAskUserAnswer,
   pendingApproval,
@@ -583,6 +588,13 @@ export function ChatView({
               void acceptFiles(files);
             }}
           />
+
+          {runningAgents > 0 && (
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-status-running">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-running" />
+              <span>后台 {runningAgents} 个子代理运行中…</span>
+            </div>
+          )}
 
           <div className="mt-1 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
