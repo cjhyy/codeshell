@@ -1445,18 +1445,18 @@ export class Engine {
     // effort: failures never touch the run result. The renderer writes the
     // title into the sidebar on receipt of the session_title stream event.
     {
-      const userMsgCount = session.transcript
-        .getEvents("message")
-        .filter((e) => (e.data as { role?: string }).role === "user").length;
+      const messageEvents = session.transcript.getEvents("message");
+      const userMsgEvents = messageEvents.filter(
+        (e) => (e.data as { role?: string }).role === "user",
+      );
+      const userMsgCount = userMsgEvents.length;
       const onStream = options?.onStream;
       if (userMsgCount === 1 && onStream && result.text) {
-        const firstUser = messages.find((m) => m.role === "user");
+        const rawContent = (userMsgEvents[0]?.data as { content?: unknown })?.content;
         const firstUserText =
-          typeof firstUser?.content === "string"
-            ? firstUser.content
-            : JSON.stringify(firstUser?.content ?? "");
-        void buildSessionTitle(auxSummaryClient, firstUserText, result.text).then(
-          (title) => {
+          typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent ?? "");
+        void buildSessionTitle(auxSummaryClient, firstUserText, result.text)
+          .then((title) => {
             if (title) {
               onStream({
                 type: "session_title",
@@ -1464,8 +1464,8 @@ export class Engine {
                 title,
               });
             }
-          },
-        );
+          })
+          .catch(() => {});
       }
     }
 
