@@ -129,7 +129,14 @@ export function loadSessionIndex(repoId: string | null): SessionIndex {
     }
     return {
       sessions: parsed.sessions,
-      activeSessionId: parsed.activeSessionId ?? parsed.sessions[0]?.id ?? null,
+      // A persisted `null` is the legitimate "draft" state (user hit 新对话
+      // and hasn't sent a message). Only fall back to the first session when
+      // the field is genuinely absent (legacy data missing the key) — using
+      // `??` here would resurrect a closed draft and auto-jump to sessions[0].
+      activeSessionId:
+        parsed.activeSessionId !== undefined
+          ? parsed.activeSessionId
+          : parsed.sessions[0]?.id ?? null,
     };
   } catch {
     return { sessions: [], activeSessionId: null };
