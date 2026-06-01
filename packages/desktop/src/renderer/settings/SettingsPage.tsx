@@ -216,7 +216,7 @@ export function SettingsPage({
               <ShortcutsSection />
             )}
             {active === "capabilities" && (
-              <CapabilitiesOverviewSection scope={scope} activeRepoPath={activeRepoPath} />
+              <CapabilitiesOverviewSection repos={repos} />
             )}
             {active === "mcp" && (
               <McpSection scope={scope} activeRepoPath={activeRepoPath} />
