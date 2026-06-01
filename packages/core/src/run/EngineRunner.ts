@@ -29,6 +29,31 @@ export function buildHeadlessFlag(
   return override !== undefined;
 }
 
+/** Run-metadata `source` value tagging a run as unattended automation
+ *  (set by the automation host; read here to decide prompt/headless behavior). */
+export const AUTOMATION_RUN_SOURCE = "automation";
+
+/** Appended to the system prompt for unattended automation runs so the model
+ *  knows it IS the automation and must not ask the user or offer to schedule
+ *  automation. English by repo convention; the model answers in the user's
+ *  language regardless. */
+export const AUTOMATION_PROMPT_NOTE =
+  "This is an unattended, scheduled automation run. No human is watching, and " +
+  "AskUserQuestion will not reach anyone. You ARE the automation — do not ask " +
+  "the user questions and do not offer to set up or schedule automation. " +
+  "Produce the requested output directly; when uncertain, state your assumption " +
+  "and proceed.";
+
+/** Compose the run's appendSystemPrompt: prepend the automation note when the
+ *  run is tagged source "automation", preserving any host-provided append. */
+export function buildAppendSystemPrompt(
+  hostAppend: string | undefined,
+  metadata: Record<string, unknown> | undefined,
+): string | undefined {
+  if (metadata?.source !== AUTOMATION_RUN_SOURCE) return hostAppend;
+  return hostAppend ? `${AUTOMATION_PROMPT_NOTE}\n\n${hostAppend}` : AUTOMATION_PROMPT_NOTE;
+}
+
 // ─── RunExecutionHandle ─────────────────────────────────────────
 
 /**
@@ -164,7 +189,9 @@ export class EngineRunner implements RunExecutor {
       enabledBuiltinTools: this.config.enabledBuiltinTools,
       disabledBuiltinTools: this.config.disabledBuiltinTools,
       customSystemPrompt: this.config.customSystemPrompt,
-      appendSystemPrompt: this.config.appendSystemPrompt,
+      // NOTE: callers must not pass appendSystemPrompt in engineConfigOverrides
+      // below, or it will clobber this composed (automation note + host) value.
+      appendSystemPrompt: buildAppendSystemPrompt(this.config.appendSystemPrompt, run.metadata),
       sessionStorageDir: this.config.sessionStorageDir,
       mcpServers: this.config.mcpServers,
       hooks: this.config.hooks,
