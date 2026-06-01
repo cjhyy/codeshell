@@ -429,17 +429,13 @@ function DraftEditor({
         />
       </label>
       <div className="memory-edit-actions">
-        <button type="button" className="memory-action" onClick={onCancel}>
+        <Button type="button" variant="default" onClick={onCancel}>
           取消
-        </button>
-        <button
-          type="button"
-          className="memory-action memory-action-primary"
-          onClick={onSave}
-        >
+        </Button>
+        <Button type="button" variant="solid" onClick={onSave}>
           <Save size={12} />
           <span>保存</span>
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   repoPath: string | null;
@@ -52,20 +53,20 @@ export function TrustGate({ repoPath, onDecide }: Props) {
           未信任项目仍可对话，但所有写工具调用会被拒绝。
         </p>
         <div className="trust-gate-actions">
-          <button
-            className="approval-btn deny"
+          <Button
+            variant="default"
             disabled={pending}
             onClick={() => void decide("untrusted")}
           >
             仅查看（拒绝写工具）
-          </button>
-          <button
-            className="approval-btn approve"
+          </Button>
+          <Button
+            variant="solid"
             disabled={pending}
             onClick={() => void decide("trusted")}
           >
             信任并继续
-          </button>
+          </Button>
         </div>
       </div>
     </div>

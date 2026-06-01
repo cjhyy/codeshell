@@ -93,9 +93,9 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
           <textarea value={compatFiles} onChange={(e) => setCompatFiles(e.target.value)} />
         </label>
       </div>
-      <button className="approval-btn approve settings-save-btn" onClick={() => void save()} disabled={saving}>
+      <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
         {saving ? "保存中..." : "保存个性化"}
-      </button>
+      </Button>
     </section>
   );
 }
@@ -223,12 +223,9 @@ function ProjectHooksEditor({ cwd }: { cwd: string }) {
         onChange={(e) => setDraft(e.target.value)}
       />
       {error && <div className="view-error">{error}</div>}
-      <button
-        className="approval-btn approve settings-save-btn"
-        onClick={() => void add()}
-      >
+      <Button variant="solid" className="w-fit" onClick={() => void add()}>
         添加 hook
-      </button>
+      </Button>
     </>
   );
 }
@@ -397,9 +394,9 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
           <textarea value={deniedReads} onChange={(e) => setDeniedReads(e.target.value)} />
         </label>
       </div>
-      <button className="approval-btn approve settings-save-btn" onClick={() => void save()} disabled={saving}>
+      <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
         {saving ? "保存中..." : "保存环境"}
-      </button>
+      </Button>
     </section>
   );
 }

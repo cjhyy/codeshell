@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
+import { Button } from "@/components/ui/button";
 
 interface ModelEntry {
   key: string;
@@ -728,12 +729,12 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
           </label>
 
           <div className="settings-toolbar">
-            <button className="approval-btn deny" disabled={saving} onClick={() => setAdding(false)}>
+            <Button variant="default" disabled={saving} onClick={() => setAdding(false)}>
               取消
-            </button>
-            <button className="approval-btn approve" disabled={saving} onClick={() => void saveNewModel()}>
+            </Button>
+            <Button variant="solid" disabled={saving} onClick={() => void saveNewModel()}>
               {saving ? "保存中…" : "保存模型"}
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -618,7 +618,7 @@ export function ChatView({
               {busy ? (
                 <button
                   type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-md bg-status-err text-white hover:bg-status-err/90"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
                   onClick={onStop}
                   aria-label="停止"
                 >
@@ -627,7 +627,7 @@ export function ChatView({
               ) : (
                 <button
                   type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50 disabled:opacity-50"
                   onClick={submit}
                   disabled={
                     disabled ||

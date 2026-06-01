@@ -23,6 +23,7 @@ import type {
   PluginSummary,
   SkillSummary,
 } from "../../preload/types";
+import { Button } from "@/components/ui/button";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { Markdown } from "../Markdown";
@@ -739,13 +740,14 @@ function LocalAddPanel({
       </div>
 
       {error && <div className="view-error">{error}</div>}
-      <button
-        className="approval-btn approve settings-save-btn"
+      <Button
+        variant="solid"
+        className="w-fit"
         disabled={!source || saving || (scope === "project" && !activeRepoPath)}
         onClick={() => void install()}
       >
         {saving ? "安装中..." : "安装 Skill"}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -847,13 +849,13 @@ function GithubAddPanel({
             if (e.key === "Enter" && url.trim() && !inspecting) void inspect();
           }}
         />
-        <button
-          className="approval-btn approve"
+        <Button
+          variant="solid"
           disabled={!url.trim() || inspecting}
           onClick={() => void inspect()}
         >
           {inspecting ? "解析中…" : "解析"}
-        </button>
+        </Button>
       </div>
       <p className="github-url-hint">
         支持仓库 URL，或子目录形式 <code>/tree/&lt;ref&gt;/&lt;subpath&gt;</code>。
@@ -954,8 +956,9 @@ function GithubAddPanel({
                 </label>
               </div>
 
-              <button
-                className="approval-btn approve settings-save-btn"
+              <Button
+                variant="solid"
+                className="w-fit"
                 disabled={
                   installing ||
                   !trustAck ||
@@ -969,7 +972,7 @@ function GithubAddPanel({
                   : selected.alreadyInstalled
                     ? "已安装"
                     : `安装「${installName || selected.name}」`}
-              </button>
+              </Button>
             </div>
           )}
         </div>

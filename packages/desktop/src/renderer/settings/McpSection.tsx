@@ -4,6 +4,7 @@ import type {
   McpServerProbeInput,
 } from "../../preload/types";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
+import { Button } from "@/components/ui/button";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
 
 interface McpServer {
@@ -198,19 +199,19 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       <header className="mcp-section-head">
         <h3 className="settings-section-title">MCP 服务器</h3>
         <div className="settings-toolbar mcp-section-actions">
-          <button
-            className="approval-btn deny"
+          <Button
+            variant="default"
             onClick={() => void runProbe(servers, true)}
             disabled={servers.length === 0 || loadingProbe.size > 0}
           >
             {loadingProbe.size > 0 ? "测试中…" : "全部测试"}
-          </button>
-          <button
-            className="approval-btn approve"
+          </Button>
+          <Button
+            variant="solid"
             onClick={() => setEdit({ kind: "new" })}
           >
             添加服务器
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -560,10 +561,10 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
       {validationError && <div className="view-error">{validationError}</div>}
 
       <div className="settings-toolbar">
-        <button className="approval-btn deny" onClick={onCancel}>取消</button>
-        <button className="approval-btn approve" onClick={submit}>
+        <Button variant="default" onClick={onCancel}>取消</Button>
+        <Button variant="solid" onClick={submit}>
           {initial ? "保存" : "添加"}
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { SearchProbeInput, SearchProbeResult } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   scope: "user" | "project";
@@ -355,30 +356,30 @@ function ConnectionCard({
       )}
 
       <footer className="conn-card-footer">
-        <button
-          className="approval-btn deny"
+        <Button
+          variant="default"
           onClick={onTest}
           disabled={state.testing || !isConfigured}
           title={isConfigured ? "测试搜索连接" : "请先填写凭证"}
         >
           {state.testing ? "测试中…" : "测试搜索"}
-        </button>
-        <button
-          className="approval-btn approve"
+        </Button>
+        <Button
+          variant="solid"
           onClick={onSave}
           disabled={state.saving || !state.dirty}
         >
           {state.saving ? "保存中…" : "保存"}
-        </button>
+        </Button>
         {isConfigured && !isDefault && (
-          <button className="approval-btn deny" onClick={onSetDefault}>
+          <Button variant="default" onClick={onSetDefault}>
             设为默认
-          </button>
+          </Button>
         )}
         {isConfigured && (
-          <button className="conn-clear-btn" onClick={onClear}>
+          <Button variant="destructive" onClick={onClear}>
             清除
-          </button>
+          </Button>
         )}
       </footer>
     </article>

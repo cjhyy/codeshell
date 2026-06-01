@@ -20,27 +20,33 @@ pre {
 button {
   font-family: inherit;
   font-size: inherit;
-  color: inherit;
   cursor: pointer;
 }
 
-button:not(.cs-control):not(.cs-switch):not([class*="border"]) {
+/* Bare-button reset — neutralize the browser's default button chrome (gray
+   background, border, inherited color, focus outline) ONLY for buttons that
+   carry NO class at all. base.css is UNLAYERED, so any rule here beats
+   Tailwind's @layer utilities AND legacy component CSS in the cascade. The
+   old `:not([class*="bg-"])`-style blacklists tried to exclude known styled
+   buttons one prefix at a time and silently clobbered every button styled by
+   a class the blacklist didn't anticipate (Tailwind `text-primary`, legacy
+   `.logs-bucket` / `.approval-btn` backgrounds, …). `:not([class])` flips it
+   to a whitelist: the instant a button has ANY class, it owns its own
+   background / border / color / ring and base.css keeps its hands off. */
+button:not([class]) {
+  color: inherit;
+  background: none;
   border: none;
 }
 
-/* Legacy bare-button background reset. Scoped so it does NOT clobber shadcn
-   buttons (any `bg-*` utility) or the Switch — base.css is UNLAYERED, so
-   without this exclusion it would beat Tailwind's layered `bg-primary` etc.
-   in the cascade (unlayered always wins over @layer), leaving primary buttons
-   and switches transparent. */
-button:not([class*="bg-"]):not(.cs-control):not(.cs-switch) {
-  background: none;
-}
-
-/* Legacy bare-button focus ring. Scoped to NOT touch shadcn controls — they
-   manage their own focus ring (focus:ring-*). Without the exclusion this
-   unlayered outline stacks a second ring (and, with the old invalid
-   var(--accent), drew a black box) on Select triggers / buttons. */
+/* Focus ring for buttons that do NOT manage their own. shadcn Button (any
+   `ring-`/`bg-` utility) and the custom controls (.cs-control/.cs-switch) draw
+   their own focus-visible ring, so exclude them to avoid stacking a second
+   outline. Everything else — bare buttons AND legacy classed buttons
+   (.approval-btn, .memory-action, .logs-bucket, .mcp-icon-btn, …) that define
+   no :focus-visible of their own — gets this ring so keyboard focus stays
+   visible. Unlike the chrome reset above, this must reach classed buttons,
+   so it is NOT gated on `:not([class])`. */
 button:not([class*="ring"]):not([class*="bg-"]):not(.cs-control):not(.cs-switch):focus-visible {
   outline: 2px solid hsl(var(--cs-ring));
   outline-offset: 2px;
