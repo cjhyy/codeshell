@@ -53,14 +53,40 @@ button:not([class*="ring"]):not([class*="bg-"]):not(.cs-control):not(.cs-switch)
   outline-offset: 2px;
 }
 
+/* Auto-hiding scrollbars: the thumb is transparent at rest and only paints
+   when the pointer is over the scrolling element. Cross-platform (webkit
+   scrollbars look identical on macOS and Windows here), unlike the system
+   overlay scrollbar which only auto-hides on macOS. The track stays
+   transparent so the gutter is invisible when idle.
+   Note: webkit scrollbars reserve layout width even when transparent, so the
+   gutter is always present — only the thumb's visibility toggles. The thumb is
+   drawn with a transparent border + background-clip: padding-box so its visible
+   width is narrower than the gutter (a slim 2px line: 8px gutter − 2×3px border),
+   while the wider gutter keeps it an easy hit target. */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 5px;
+  background: transparent;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 4px;
+  transition: background 0.2s ease;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+/* Reveal the thumb while the pointer is over the scrollable element (or
+   dragging the thumb itself). :hover on the scrolled element covers the
+   common case; :active/:hover on the pseudo keeps it lit during a drag.
+   background-clip is re-stated so the reveal keeps the slim inset. */
+:hover::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: var(--border-strong);
+  background-clip: padding-box;
 }
