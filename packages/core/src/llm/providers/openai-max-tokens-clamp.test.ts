@@ -59,4 +59,21 @@ describe("OpenAIClient max_tokens clamp", () => {
     await client.createMessage(opts());
     expect(lastBody().max_completion_tokens).toBe(16_000);
   });
+
+  it("omits the token-limit field entirely when neither a requested value nor a known cap exists", async () => {
+    // Unknown model: capabilitiesFor() leaves maxOutputTokens undefined, and no
+    // maxTokens was configured. Previously client-base's `?? 8192` forced 8192,
+    // truncating long outputs (tool-arg JSON cut off → "Missing file_path").
+    // Now we send no max_tokens and let the endpoint use its own ceiling.
+    const { client, lastBody } = clientCapturing({
+      provider: "custom" as never,
+      model: "some-unknown-model",
+      apiKey: "test",
+      providerKind: "openai",
+      // no maxTokens
+    });
+    await client.createMessage(opts());
+    expect(lastBody().max_tokens).toBeUndefined();
+    expect(lastBody().max_completion_tokens).toBeUndefined();
+  });
 });

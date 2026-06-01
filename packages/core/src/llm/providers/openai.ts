@@ -214,16 +214,21 @@ export class OpenAIClient extends LLMClientBase {
     // Clamp to the model's known output ceiling so a stale catalog value
     // (e.g. 384000 inherited after a hot model switch) can't 400 a
     // smaller-cap model. No known cap → send the value as-is.
-    const maxTokens = clampMaxTokens(options.maxTokens ?? this.maxTokens, cap.maxOutputTokens) as number;
+    const maxTokens = clampMaxTokens(options.maxTokens ?? this.maxTokens, cap.maxOutputTokens);
 
     // Token-limit field — capability picks `max_tokens` vs `max_completion_tokens`.
     // Sticky fallback (set by handleApiError on a 400) overrides the rule for
-    // ids the regex hasn't learned about yet.
+    // ids the regex hasn't learned about yet. When neither a requested value nor
+    // a known cap exists, omit the field entirely and let the endpoint apply its
+    // own ceiling (rather than inventing 8192 and truncating long outputs).
     const useCompletion =
       this._forceMaxCompletionTokens || cap.tokenLimitField === "max_completion_tokens";
-    const tokenLimit: Record<string, number> = useCompletion
-      ? { max_completion_tokens: maxTokens }
-      : { max_tokens: maxTokens };
+    const tokenLimit: Record<string, number> =
+      maxTokens === undefined
+        ? {}
+        : useCompletion
+          ? { max_completion_tokens: maxTokens }
+          : { max_tokens: maxTokens };
 
     // Sampling params — only include if the model accepts them.
     const sampling: Record<string, number> = {};

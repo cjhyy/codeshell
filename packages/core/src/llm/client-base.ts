@@ -10,7 +10,7 @@ import { logger } from "../logging/logger.js";
 export abstract class LLMClientBase {
   readonly provider: string;
   readonly model: string;
-  readonly maxTokens: number;
+  readonly maxTokens: number | undefined;
   readonly temperature: number;
   readonly timeout: number;
   readonly retryMaxAttempts: number;
@@ -44,7 +44,12 @@ export abstract class LLMClientBase {
   ) {
     this.provider = config.provider;
     this.model = config.model;
-    this.maxTokens = config.maxTokens ?? 8192;
+    // No `?? 8192` fallback: when the model's output ceiling is unknown we keep
+    // `undefined` so each provider decides (OpenAI omits the field and lets the
+    // endpoint use its own max; Anthropic, where max_tokens is required, supplies
+    // a conservative default at request time). Forcing 8192 here truncated long
+    // outputs — a streamed tool-arg JSON cut off mid-token → "Missing file_path".
+    this.maxTokens = config.maxTokens;
     this.temperature = defaults?.temperature ?? 0.3;
     this.timeout = defaults?.timeout ?? 120_000;
     this.retryMaxAttempts = defaults?.retryMaxAttempts ?? 3;

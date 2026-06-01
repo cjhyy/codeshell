@@ -10,6 +10,14 @@ import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions
 import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
 
+/**
+ * Anthropic's `max_tokens` is required, so unlike OpenAI we can't omit it when
+ * the model's ceiling is unknown. Use a conservative floor in that rare case
+ * (every catalog Anthropic model resolves a real value via resolveMaxOutput, so
+ * this only fires for an unconfigured/unknown model).
+ */
+const ANTHROPIC_FALLBACK_MAX_TOKENS = 4096;
+
 export class AnthropicClient extends LLMClientBase {
   private _client: Anthropic | null = null;
 
@@ -78,7 +86,7 @@ export class AnthropicClient extends LLMClientBase {
       const response = await this.client.messages.create(
         {
           model: this.model,
-          max_tokens: options.maxTokens ?? this.maxTokens,
+          max_tokens: options.maxTokens ?? this.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
           system: [
             {
               type: "text" as const,
@@ -120,7 +128,7 @@ export class AnthropicClient extends LLMClientBase {
       const stream = this.client.messages.stream(
         {
           model: this.model,
-          max_tokens: options.maxTokens ?? this.maxTokens,
+          max_tokens: options.maxTokens ?? this.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
           system: [
             {
               type: "text" as const,

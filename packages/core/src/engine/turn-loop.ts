@@ -368,6 +368,28 @@ export class TurnLoop {
         this.deps.contextManager.recordActualUsage(response!.usage.promptTokens, messages.length);
       }
 
+      // Truncation that cut off a TOOL CALL: the model overflowed
+      // max_output_tokens mid tool-call, so the arg JSON is incomplete (e.g. a
+      // Write whose `content` was clipped, leaving file_path unset). Executing
+      // it raised a misleading "Missing required parameter: file_path". Instead,
+      // tell the model its output was truncated and let the next turn retry —
+      // bounded by the outer maxTurns loop.
+      if (isTruncatedStop(response.stopReason) && response.toolCalls.length > 0) {
+        tlog.info("turn.truncated_tool_call", {
+          cat: "turn",
+          toolCount: response.toolCalls.length,
+        });
+        if (response.text) {
+          messages.push({ role: "assistant", content: response.text });
+        }
+        messages.push({
+          role: "user",
+          content:
+            "<system-reminder>Your previous response was truncated by the max output token limit before the tool call finished, so its arguments are incomplete. Do not assume it ran. Either retry with a smaller/more focused tool call (e.g. write the file in sections via Edit), or raise this model's maxOutputTokens.</system-reminder>",
+        });
+        continue;
+      }
+
       // Handle max_output_tokens: if response was truncated, do continuation
       // (up to 3 times). Truncation is reported as finish_reason "length"
       // (OpenAI) or stop_reason "max_tokens" (Anthropic) — isTruncatedStop

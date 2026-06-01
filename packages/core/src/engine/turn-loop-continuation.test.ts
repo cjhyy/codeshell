@@ -6,7 +6,11 @@ import type { LLMResponse, Message } from "../types.js";
  * Build minimal fake deps for TurnLoop. Only the methods exercised by the
  * max-output continuation path are implemented; the rest are no-ops/getters.
  */
-function makeDeps(responses: LLMResponse[]): { deps: TurnLoopDeps; calls: () => number } {
+function makeDeps(responses: LLMResponse[]): {
+  deps: TurnLoopDeps;
+  calls: () => number;
+  callArgs: Message[][];
+} {
   let i = 0;
   const callArgs: Message[][] = [];
   const call = async (_sys: string, messages: Message[]): Promise<LLMResponse> => {
@@ -80,7 +84,7 @@ function makeDeps(responses: LLMResponse[]): { deps: TurnLoopDeps; calls: () => 
     ctxOverheadStore: { get: () => 0, set: () => {} },
   };
 
-  return { deps, calls: () => i };
+  return { deps, calls: () => i, callArgs };
 }
 
 const config: TurnLoopConfig = { maxTurns: 5, maxToolCallsPerTurn: 10 };
@@ -112,5 +116,28 @@ describe("TurnLoop max-output continuation", () => {
     const result = await loop.run([{ role: "user", content: "go" }]);
     expect(calls()).toBe(1);
     expect(result.text).toBe("all done");
+  });
+
+  it("retries with a truncation notice instead of executing a tool call cut off by the output cap", async () => {
+    // The bug: a Write whose `content` arg overflowed max_output_tokens arrives
+    // with truncated arg JSON (stopReason "length" + a tool call). Executing it
+    // raised a misleading "Missing required parameter: file_path". Instead the
+    // loop should tell the model its output was truncated and let it retry.
+    const truncatedWithTool: LLMResponse = {
+      text: "",
+      toolCalls: [{ id: "c1", toolName: "Write", args: {} }],
+      stopReason: "length",
+      usage: { promptTokens: 10, completionTokens: 8192, totalTokens: 8202 },
+    };
+    const { deps, calls, callArgs } = makeDeps([truncatedWithTool, resp("done", "stop")]);
+    const loop = new TurnLoop(deps, config);
+    await loop.run([{ role: "user", content: "write a long doc" }]);
+
+    // It must NOT just execute the truncated tool — it retries with the model.
+    expect(calls()).toBeGreaterThanOrEqual(2);
+    // The retry prompt carries a truncation notice (mentions output/truncated).
+    const retryMessages = callArgs[1] ?? [];
+    const blob = JSON.stringify(retryMessages);
+    expect(blob).toMatch(/truncat|output token|max.?output/i);
   });
 });
