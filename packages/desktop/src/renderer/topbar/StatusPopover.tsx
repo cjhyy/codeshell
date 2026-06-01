@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { formatElapsed, type LiveActivity } from "./liveActivity";
+import { formatElapsed, describeActivity, type LiveActivity } from "./liveActivity";
 import type { TaskListMessage } from "../types";
+
+/** Braille spinner frames — the same set ink/CLI spinners use. Cycled on a
+ *  ~100ms ticker (see SPINNER_MS) so the popover visibly "breathes" while a
+ *  run is in flight, independent of whether new events are arriving. */
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const SPINNER_MS = 100;
 
 interface Props {
   activity: LiveActivity;
@@ -26,6 +32,30 @@ export function StatusPopover({ activity, busy, tasks }: Props) {
     return () => clearInterval(id);
   }, [busy]);
 
+  // Spinner frame ticker — separate (faster) interval so the glyph animates
+  // smoothly without forcing the 1s elapsed clock to re-render 10×/s.
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    if (!busy) {
+      setFrame(0);
+      return;
+    }
+    const id = setInterval(() => setFrame((f) => (f + 1) % SPINNER_FRAMES.length), SPINNER_MS);
+    return () => clearInterval(id);
+  }, [busy]);
+  const spinner = SPINNER_FRAMES[frame];
+
+  // Codex-style live line: spinner + a verb describing the current tool and
+  // its key argument (command / file / pattern…). Shown at the top of both
+  // the task and no-task layouts so "what's happening right now" is always
+  // visible, not just the static tool name.
+  const liveLine = busy ? (
+    <div className="flex items-center gap-1.5 text-xs text-status-running">
+      <span className="font-mono">{spinner}</span>
+      <span className="truncate">{describeActivity(activity)}</span>
+    </div>
+  ) : null;
+
   const markerColor = (s: string) =>
     s === "completed" ? "text-status-ok" : s === "in_progress" ? "text-status-running" : "text-muted-foreground";
 
@@ -38,6 +68,7 @@ export function StatusPopover({ activity, busy, tasks }: Props) {
           <span className="text-xs uppercase tracking-wide text-muted-foreground">Tasks</span>
           <span className="font-mono text-xs text-muted-foreground">{done}/{total}</span>
         </div>
+        {liveLine && <div className="mb-1.5">{liveLine}</div>}
         <ol className="flex max-h-60 flex-col gap-0.5 overflow-y-auto">
           {tasks.tasks.map((t, i) => (
             <li key={t.id} className="grid grid-cols-[auto_auto_1fr] items-baseline gap-1.5 text-xs">
@@ -66,7 +97,6 @@ export function StatusPopover({ activity, busy, tasks }: Props) {
       ? Math.max(0, nowMs - activity.turnStartedAt)
       : 0;
   const elapsed = activity.turnStartedAt > 0 ? formatElapsed(elapsedMs) : "—";
-  const activityLabel = activity.lastToolName || "思考中";
 
   const row = (k: string, v: React.ReactNode) => (
     <div className="flex items-center justify-between gap-3 leading-relaxed">
@@ -76,8 +106,8 @@ export function StatusPopover({ activity, busy, tasks }: Props) {
   );
 
   return (
-    <div className="w-[180px] rounded-md border bg-popover p-2.5 text-sm text-popover-foreground shadow-lg">
-      {row("当前", `${activityLabel}${activity.toolInFlight ? "…" : ""}`)}
+    <div className="w-[220px] rounded-md border bg-popover p-2.5 text-sm text-popover-foreground shadow-lg">
+      {liveLine && <div className="mb-1.5 border-b border-border pb-1.5">{liveLine}</div>}
       {row("已处理", `${activity.toolCount} 步`)}
       {row("用时", elapsed)}
     </div>

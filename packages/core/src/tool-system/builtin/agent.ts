@@ -44,31 +44,37 @@ export interface AgentTypeOverrides {
   appendSystemPrompt?: string;
 }
 
+/** Preferred default role when the caller omits agent_type but roles exist. */
+const DEFAULT_AGENT_TYPE = "general-purpose";
+
 /**
  * Resolve an `agent_type` against the role registry into spawn overrides.
- * Registry non-empty + omitted type → throw (ephemeral sub-agents are
- * disabled; the caller must pick a configured role). Registry empty +
- * omitted type → empty overrides. Unknown type → throw, so the LLM gets a
- * clear correction instead of silently running a generic agent.
+ *
+ * - Omitted type + non-empty registry → fall back to a configured role
+ *   ("general-purpose" if present, else the first available) instead of
+ *   running a nameless ephemeral agent. Relaxed from the earlier "throw when
+ *   agent_type omitted": the model habitually omits it, and a hard error just
+ *   turned every spawn into a failure. Falling back to a real role keeps the
+ *   tool-allowlist / system-prompt benefits without breaking the call.
+ * - Omitted type + empty registry → empty overrides (true ephemeral; nothing
+ *   to fall back to).
+ * - Unknown explicit type → throw, so the LLM gets a clear correction rather
+ *   than silently running a generic agent.
  */
 export function resolveAgentTypeOverrides(
   agentType: string | undefined,
   registry: AgentDefinitionRegistry | undefined,
 ): AgentTypeOverrides {
   const available = registry?.list().map((d) => d.name) ?? [];
-  if (!agentType) {
-    if (available.length > 0) {
-      throw new Error(
-        `agent_type is required — ephemeral sub-agents are disabled. ` +
-          `Pass one of: ${available.join(", ")}`,
-      );
-    }
-    return {};
+  let resolvedType = agentType;
+  if (!resolvedType) {
+    if (available.length === 0) return {};
+    resolvedType = available.includes(DEFAULT_AGENT_TYPE) ? DEFAULT_AGENT_TYPE : available[0]!;
   }
-  const def = registry?.get(agentType);
+  const def = registry?.get(resolvedType);
   if (!def) {
     const list = available.join(", ") || "(none defined)";
-    throw new Error(`unknown agent_type '${agentType}'. Available: ${list}`);
+    throw new Error(`unknown agent_type '${resolvedType}'. Available: ${list}`);
   }
   return {
     model: def.model,

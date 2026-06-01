@@ -10,13 +10,18 @@
  * tool calls case.
  */
 
-import type { Message } from "../types";
+import type { Message, ToolMessage } from "../types";
+import { parsedArgs, basename, truncate } from "../tool-cards/utils";
 
 export interface LiveActivity {
   /** Name of the most recent in-flight tool, or the last completed
    *  tool if nothing is in-flight. Empty string while there are no
    *  tools yet (e.g. assistant is just thinking). */
   lastToolName: string;
+  /** The most relevant tool message this turn (running tool if any,
+   *  else the last completed). Null while the assistant is only
+   *  thinking. Lets consumers extract live args (command, file…). */
+  lastTool: ToolMessage | null;
   /** Tool calls fired since the most recent user message. */
   toolCount: number;
   /** Earliest tool startedAt in this turn — drives the elapsed
@@ -40,26 +45,99 @@ export function summarizeLiveActivity(messages: Message[]): LiveActivity {
 
   let toolCount = 0;
   let earliestStart = Infinity;
-  let lastTool: { name: string; startedAt: number; running: boolean } | null =
-    null;
-  let runningTool: { name: string; startedAt: number } | null = null;
+  let lastTool: ToolMessage | null = null;
+  let runningTool: ToolMessage | null = null;
 
   for (let i = turnStart; i < messages.length; i++) {
     const m = messages[i]!;
     if (m.kind !== "tool") continue;
     toolCount += 1;
     if (m.startedAt < earliestStart) earliestStart = m.startedAt;
-    const running = m.status === "running";
-    lastTool = { name: m.toolName, startedAt: m.startedAt, running };
-    if (running) runningTool = { name: m.toolName, startedAt: m.startedAt };
+    lastTool = m;
+    if (m.status === "running") runningTool = m;
   }
 
+  const primary = runningTool ?? lastTool;
   return {
-    lastToolName: runningTool?.name ?? lastTool?.name ?? "",
+    lastToolName: primary?.toolName ?? "",
+    lastTool: primary,
     toolCount,
     turnStartedAt: isFinite(earliestStart) ? earliestStart : 0,
     toolInFlight: runningTool !== null,
   };
+}
+
+/**
+ * Localized one-line description of what the agent is doing right now, Codex
+ * style: a verb + the tool's most telling argument (the bash command, the
+ * file being edited, the search pattern…), or "正在思考…" when no tool has
+ * fired yet. `running` flips the verb between present ("正在运行") and a
+ * neutral past-ish form ("已运行") so a finished-but-not-yet-next-step moment
+ * doesn't read as still-in-flight.
+ *
+ * Args are read via parsedArgs (prefers the live-streaming snapshot), so the
+ * line fills in character-by-character as tool_use_args_delta arrives — the
+ * same source the tool cards use, no new backend signal needed.
+ */
+export function describeActivity(activity: LiveActivity): string {
+  const t = activity.lastTool;
+  if (!t) return "正在思考…";
+  const a = parsedArgs(t);
+  const running = t.status === "running";
+  const str = (v: unknown): string => (typeof v === "string" ? v : "");
+
+  // Per-tool argument pick. Falls through to a bare verb + tool name.
+  let detail = "";
+  switch (t.toolName) {
+    case "Bash":
+      detail = str(a.command);
+      break;
+    case "Edit":
+    case "Write":
+    case "Read":
+    case "NotebookEdit": {
+      const fp = str(a.file_path) || str(a.notebook_path);
+      detail = fp ? basename(fp) : "";
+      break;
+    }
+    case "Grep":
+    case "Glob":
+      detail = str(a.pattern);
+      break;
+    case "Skill":
+      detail = str(a.skill);
+      break;
+    case "Agent":
+      detail = str(a.name) || str(a.description);
+      break;
+    case "WebFetch":
+      detail = str(a.url);
+      break;
+    case "WebSearch":
+      detail = str(a.query);
+      break;
+    default:
+      detail = "";
+  }
+
+  const verbs: Record<string, [string, string]> = {
+    Bash: ["正在运行", "已运行"],
+    Edit: ["正在编辑", "已编辑"],
+    Write: ["正在写入", "已写入"],
+    Read: ["正在读取", "已读取"],
+    NotebookEdit: ["正在编辑", "已编辑"],
+    Grep: ["正在搜索", "已搜索"],
+    Glob: ["正在查找", "已查找"],
+    Skill: ["正在调用技能", "已调用技能"],
+    Agent: ["正在派发子代理", "已派发子代理"],
+    WebFetch: ["正在抓取", "已抓取"],
+    WebSearch: ["正在搜索", "已搜索"],
+  };
+  const [presentVerb, pastVerb] = verbs[t.toolName] ?? ["正在运行", "已运行"];
+  const verb = running ? presentVerb : pastVerb;
+
+  const label = detail ? `${verb} ${truncate(detail.replace(/\s+/g, " ").trim(), 64)}` : `${verb} ${t.toolName}`;
+  return label;
 }
 
 /** Format an elapsed millisecond delta like the AgentMessageView ticker. */

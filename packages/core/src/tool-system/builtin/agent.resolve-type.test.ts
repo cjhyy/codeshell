@@ -11,11 +11,20 @@ function registryWith(names: string[]): AgentDefinitionRegistry {
   return reg;
 }
 
-describe("resolveAgentTypeOverrides — must use a configured agent", () => {
-  it("throws when registry has agents but no agent_type given (no ephemeral)", () => {
+describe("resolveAgentTypeOverrides — falls back to a configured agent", () => {
+  it("falls back to general-purpose when omitted and that role exists", () => {
+    const reg = registryWith(["researcher", "general-purpose", "planner"]);
+    // @ts-expect-error — poke a distinct prompt so we can tell which role won
+    reg.defs.get("general-purpose")!.systemPrompt = "gp-prompt";
+    const ov = resolveAgentTypeOverrides(undefined, reg);
+    expect(ov.appendSystemPrompt).toBe("gp-prompt");
+  });
+  it("falls back to the first available role when general-purpose is absent", () => {
     const reg = registryWith(["researcher", "planner"]);
-    expect(() => resolveAgentTypeOverrides(undefined, reg)).toThrow(/agent_type is required/i);
-    expect(() => resolveAgentTypeOverrides(undefined, reg)).toThrow(/researcher/);
+    // @ts-expect-error — mark the first role
+    reg.defs.get("researcher")!.systemPrompt = "research-prompt";
+    const ov = resolveAgentTypeOverrides(undefined, reg);
+    expect(ov.appendSystemPrompt).toBe("research-prompt");
   });
   it("throws on unknown agent_type and lists available", () => {
     const reg = registryWith(["researcher"]);

@@ -131,6 +131,7 @@ function StatusBadge({
             activity={
               activity ?? {
                 lastToolName: "",
+                lastTool: null,
                 toolCount: 0,
                 turnStartedAt: 0,
                 toolInFlight: false,
