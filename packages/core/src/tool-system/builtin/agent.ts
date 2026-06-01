@@ -46,18 +46,29 @@ export interface AgentTypeOverrides {
 
 /**
  * Resolve an `agent_type` against the role registry into spawn overrides.
- * Omitted type → empty overrides (ephemeral mode). Unknown type → throw, so
- * the LLM gets a clear correction instead of silently running a generic agent.
+ * Registry non-empty + omitted type → throw (ephemeral sub-agents are
+ * disabled; the caller must pick a configured role). Registry empty +
+ * omitted type → empty overrides. Unknown type → throw, so the LLM gets a
+ * clear correction instead of silently running a generic agent.
  */
 export function resolveAgentTypeOverrides(
   agentType: string | undefined,
   registry: AgentDefinitionRegistry | undefined,
 ): AgentTypeOverrides {
-  if (!agentType) return {};
+  const available = registry?.list().map((d) => d.name) ?? [];
+  if (!agentType) {
+    if (available.length > 0) {
+      throw new Error(
+        `agent_type is required — ephemeral sub-agents are disabled. ` +
+          `Pass one of: ${available.join(", ")}`,
+      );
+    }
+    return {};
+  }
   const def = registry?.get(agentType);
   if (!def) {
-    const available = registry?.list().map((d) => d.name).join(", ") || "(none defined)";
-    throw new Error(`unknown agent_type '${agentType}'. Available: ${available}`);
+    const list = available.join(", ") || "(none defined)";
+    throw new Error(`unknown agent_type '${agentType}'. Available: ${list}`);
   }
   return {
     model: def.model,
