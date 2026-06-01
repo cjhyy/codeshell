@@ -1277,14 +1277,14 @@ function App() {
               repoClean={activeGitMeta.clean}
               welcomeNode={
                 showWelcome ? (
-                  <div className="welcome">
-                    <div className="welcome-title">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <div className="text-3xl font-semibold tracking-tight text-foreground">
                       {activeRepo
                         ? `要在 ${activeRepo.name} 中构建什么?`
                         : `开始一个无项目对话`}
                     </div>
                     {!activeRepo && (
-                      <div className="welcome-hint">
+                      <div className="text-sm text-muted-foreground">
                         在下方选择一个项目，或直接在「不使用项目」模式开始
                       </div>
                     )}

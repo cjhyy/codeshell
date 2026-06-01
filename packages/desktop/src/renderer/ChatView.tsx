@@ -394,15 +394,22 @@ export function ChatView({
       onDragLeave={onChatDragLeave}
       onDrop={onChatDrop}
     >
-      <MessageStream
-        messages={messages}
-        turnEpoch={turnEpoch}
-        liveTurnActive={liveTurnActive}
-        onAskUserAnswer={onAskUserAnswer}
-        trailing={inlineApproval}
-        trailingKey={pendingApproval?.requestId ?? null}
-        cwd={activeRepoPath}
-      />
+      {/*
+        In new-chat mode the stream is empty; skip it so its flex-1 doesn't
+        eat the vertical space and push the welcome + composer to the bottom.
+        The welcome block below owns the flex-1 and centers itself instead.
+      */}
+      {!isNewChat && (
+        <MessageStream
+          messages={messages}
+          turnEpoch={turnEpoch}
+          liveTurnActive={liveTurnActive}
+          onAskUserAnswer={onAskUserAnswer}
+          trailing={inlineApproval}
+          trailingKey={pendingApproval?.requestId ?? null}
+          cwd={activeRepoPath}
+        />
+      )}
 
       {(openAsk || showStickyApproval) && (
         <div className="px-4">
@@ -418,7 +425,11 @@ export function ChatView({
         </div>
       )}
 
-      {isNewChat && welcomeNode}
+      {isNewChat && welcomeNode && (
+        <div className="flex flex-1 flex-col items-center justify-center px-4">
+          {welcomeNode}
+        </div>
+      )}
 
       <div className="p-3">
         {/*
