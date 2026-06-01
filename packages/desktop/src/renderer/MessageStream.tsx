@@ -125,7 +125,7 @@ export function MessageStream({
             );
           }
           case "assistant":
-            return <AssistantMessageView key={m.id} message={m} />;
+            return <AssistantMessageView key={m.id} message={m} cwd={cwd ?? null} />;
           case "thinking":
             return <ThinkingMessageView key={m.id} message={m} />;
           case "agent":

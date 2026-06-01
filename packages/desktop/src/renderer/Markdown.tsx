@@ -25,9 +25,18 @@ import {
   decodePathHref,
   CODESHELL_PATH_SCHEME,
 } from "./markdown/remarkPathLinks";
+import { classifyPath } from "./tool-cards/attachments";
+import { Lightbox } from "./chat/Lightbox";
 
 interface Props {
   text: string;
+  /**
+   * Workspace dir for the session this message belongs to. Used to resolve
+   * relative image paths (e.g. `docs/x.png`) to an absolute `file://` URL so
+   * the inline thumbnail can load. Omitted in contexts with no workspace
+   * (skill/agent bodies) — relative image paths there degrade to a link.
+   */
+  cwd?: string | null;
 }
 
 /**
@@ -37,7 +46,7 @@ interface Props {
  * assistant message in the transcript, which is the dominant cost
  * in long sessions.
  */
-function MarkdownImpl({ text }: Props) {
+function MarkdownImpl({ text, cwd }: Props) {
   return (
     <div className="md-body">
       <ReactMarkdown
@@ -47,6 +56,14 @@ function MarkdownImpl({ text }: Props) {
           a: ({ href, children, ...rest }) => {
             const decoded = href ? decodePathHref(href) : null;
             const isPathLink = decoded !== null;
+            // Inline-render image/SVG artifacts (GenerateImage output,
+            // Playwright screenshots, generated SVGs) as a thumbnail right
+            // in the answer, so the user sees the picture instead of an
+            // unclickable path. Click opens a full-screen Lightbox; the
+            // filename caption still opens the file in the OS app.
+            if (decoded && classifyPath(decoded.path) === "image") {
+              return <InlineImageLink path={decoded.path} cwd={cwd} />;
+            }
             return (
               <a
                 href={href}
@@ -90,6 +107,67 @@ function MarkdownImpl({ text }: Props) {
 }
 
 export const Markdown = memo(MarkdownImpl);
+
+/**
+ * Inline thumbnail for an image/SVG path mentioned in an assistant answer.
+ * Loads via `file://<abs>` (the renderer's relaxed webSecurity allows it for
+ * absolute paths, same mechanism as AttachmentCard's ImageThumb). Clicking
+ * opens a full-screen Lightbox; the filename caption below opens the file in
+ * the OS default app. Falls back to a plain clickable path if the image
+ * fails to load (relative path with no cwd, deleted file, …).
+ */
+function InlineImageLink({ path, cwd }: { path: string; cwd?: string | null }) {
+  const [failed, setFailed] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
+  const filename = path.split("/").pop() ?? path;
+  // Resolve to an absolute path so file:// can load it. Absolute paths are used
+  // as-is; relative paths (docs/x.png) are joined onto the session workspace.
+  const isAbs = path.startsWith("/");
+  const abs = isAbs ? path : cwd ? `${cwd.replace(/\/$/, "")}/${path}` : null;
+  const src = abs ? `file://${abs}` : null;
+
+  if (!src || failed) {
+    // Couldn't resolve to an absolute path (relative with no cwd) or the image
+    // failed to load — degrade to a clickable link that shows only the
+    // filename, not the full path. Click opens the file via openPath (which
+    // resolves the relative path against cwd on the main side).
+    return (
+      <a
+        href="#"
+        data-path-link="true"
+        title={path}
+        onClick={(e) => {
+          e.preventDefault();
+          void window.codeshell.openPath(path, cwd ?? undefined);
+        }}
+      >
+        {filename}
+      </a>
+    );
+  }
+
+  return (
+    <span className="md-inline-image">
+      <img
+        className="md-inline-image-thumb"
+        src={src}
+        alt={filename}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        onClick={() => setZoomed(true)}
+      />
+      <button
+        type="button"
+        className="md-inline-image-name"
+        title={path}
+        onClick={() => void window.codeshell.openPath(path)}
+      >
+        {filename}
+      </button>
+      {zoomed && <Lightbox src={src} alt={filename} onClose={() => setZoomed(false)} />}
+    </span>
+  );
+}
 
 function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) {
   const preRef = useRef<HTMLPreElement>(null);

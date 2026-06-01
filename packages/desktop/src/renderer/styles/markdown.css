@@ -1,3 +1,39 @@
+/* Inline image/SVG artifacts surfaced from an answer's file paths. */
+.md-inline-image {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  vertical-align: bottom;
+  margin: var(--sp-1) 0;
+  max-width: 100%;
+}
+.md-inline-image-thumb {
+  max-width: 360px;
+  max-height: 240px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-app);
+  cursor: zoom-in;
+  object-fit: contain;
+}
+.md-inline-image-name {
+  align-self: flex-start;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--fg-secondary);
+  font-size: var(--fz-sm);
+  cursor: pointer;
+}
+.md-inline-image-name:hover {
+  color: var(--fg-primary);
+  text-decoration: underline;
+}
+
 /* Code blocks in markdown messages — header bar with lang + copy. */
 
 .md-code {

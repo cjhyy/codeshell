@@ -6,6 +6,8 @@ import type { AssistantMessage } from "../types";
 
 interface Props {
   message: AssistantMessage;
+  /** Session workspace dir — lets Markdown resolve relative image paths. */
+  cwd?: string | null;
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * when that specific message's text/done changes, so siblings skip
  * re-render entirely during a long session.
  */
-function AssistantMessageViewImpl({ message }: Props) {
+function AssistantMessageViewImpl({ message, cwd }: Props) {
   const [copied, setCopied] = useState(false);
   if (!message.done && message.text === "") return null;
 
@@ -33,7 +35,7 @@ function AssistantMessageViewImpl({ message }: Props) {
   return (
     <div className="group px-4 py-2 text-sm">
       {message.done ? (
-        <Markdown text={message.text} />
+        <Markdown text={message.text} cwd={cwd} />
       ) : (
         <div className="md-body md-streaming">
           <pre className="whitespace-pre-wrap font-sans">{message.text}</pre>

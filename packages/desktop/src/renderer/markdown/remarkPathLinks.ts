@@ -35,8 +35,22 @@ interface MdastNode {
 
 // Hand-rolled regex — anchored to whitespace / sentence-boundary so
 // it doesn't grab punctuation. Group 1 = path, group 2 = line.
-const PATH_LINE_RE =
-  /(?<=^|[\s(,])((?:\/|\.{1,2}\/|[\w@.-]+\/)[\w./@+\-]+\.[\w]{1,8})(?::(\d+)(?::\d+)?)?(?=$|[\s),.;!?])/g;
+//
+// The boundary classes include CJK punctuation (：，、（「『 …) on both
+// sides: the model often writes paths in Chinese prose like "SVG 原图：
+// docs/x.svg" with a full-width colon glued to the path. With only the
+// ASCII [\s(,] boundary the lookbehind failed there, so the path stayed
+// plain text and wasn't clickable. CJK_OPEN are leading delimiters that
+// may precede a path; CJK_CLOSE are trailing delimiters that may follow.
+const CJK_OPEN = "：:，,、（(「『【《“";
+const CJK_CLOSE = "：，、）)」』】》”。；！？";
+const PATH_LINE_RE = new RegExp(
+  `(?<=^|[\\s(,${CJK_OPEN}])` +
+    `((?:\\/|\\.{1,2}\\/|[\\w@.-]+\\/)[\\w./@+\\-]+\\.[\\w]{1,8})` +
+    `(?::(\\d+)(?::\\d+)?)?` +
+    `(?=$|[\\s),.;!?${CJK_CLOSE}])`,
+  "g",
+);
 
 const SKIP_PARENTS = new Set(["link", "linkReference", "inlineCode", "code"]);
 

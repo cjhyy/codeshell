@@ -2,7 +2,7 @@ import React, { memo, useEffect, useRef, useState } from "react";
 import { ChevronRight, ChevronDown, RotateCcw, Eye, X } from "lucide-react";
 import type { FilesChangedSummaryMessage } from "../types";
 import type { UndoFilesResult } from "../../preload/types";
-import { truncate } from "../tool-cards/utils";
+import { basename } from "../tool-cards/utils";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
 
 interface Props {
@@ -137,7 +137,7 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
                     void window.codeshell.openPath(f.path, cwd ?? undefined);
                   }}
                 >
-                  {truncate(f.path, 70)}
+                  {basename(f.path)}
                 </a>
                 <span className="files-changed-added">+{f.added}</span>
                 <span className="files-changed-removed">-{f.removed}</span>
