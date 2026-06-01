@@ -386,16 +386,22 @@ ipcMain.handle("agents:read", async (_e, filePath: string) => {
   if (typeof filePath !== "string") throw new Error("agents:read requires filePath");
   return readAgentBody(filePath);
 });
-ipcMain.handle("agents:save", async (_e, def: AgentDefinition) => {
-  if (!def || typeof def !== "object") throw new Error("agents:save requires def");
-  if (typeof def.name !== "string" || typeof def.description !== "string")
-    throw new Error("agents:save: name and description are required");
-  return saveAgent(def);
-});
-ipcMain.handle("agents:delete", async (_e, name: string) => {
-  if (typeof name !== "string" || !name) throw new Error("agents:delete requires name");
-  return deleteAgent(name);
-});
+ipcMain.handle(
+  "agents:save",
+  async (_e, def: AgentDefinition, opts?: { scope?: "user" | "project"; cwd?: string }) => {
+    if (!def || typeof def !== "object") throw new Error("agents:save requires def");
+    if (typeof def.name !== "string" || typeof def.description !== "string")
+      throw new Error("agents:save: name and description are required");
+    return saveAgent(def, opts);
+  },
+);
+ipcMain.handle(
+  "agents:delete",
+  async (_e, name: string, opts?: { scope?: "user" | "project"; cwd?: string }) => {
+    if (typeof name !== "string" || !name) throw new Error("agents:delete requires name");
+    return deleteAgent(name, opts);
+  },
+);
 
 ipcMain.handle("skills:inspectGithub", async (_e, url: string, existingNames?: unknown) => {
   if (typeof url !== "string" || !url) {

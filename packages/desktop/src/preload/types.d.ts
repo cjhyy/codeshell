@@ -347,8 +347,11 @@ export interface CodeshellApi {
   uninstallSkill(filePath: string, source: "user" | "project" | "plugin"): Promise<void>;
   listAgents(cwd: string): Promise<AgentSummary[]>;
   readAgentBody(filePath: string): Promise<string>;
-  saveAgent(def: AgentDefinitionInput): Promise<AgentSummary>;
-  deleteAgent(name: string): Promise<void>;
+  saveAgent(
+    def: AgentDefinitionInput,
+    opts?: { scope?: "user" | "project"; cwd?: string },
+  ): Promise<AgentSummary>;
+  deleteAgent(name: string, opts?: { scope?: "user" | "project"; cwd?: string }): Promise<void>;
   inspectGithubSkill(url: string, existingNames?: string[]): Promise<GithubRepoInspection>;
   installFromGithub(input: GithubSkillInstallInput): Promise<InstalledSkill>;
   probeMcpServers(
@@ -508,8 +511,10 @@ export interface AgentSummary {
   maxTurns?: number;
   tools?: string[];
   systemPrompt: string;
-  source: "project" | "user";
+  source: "project" | "user" | "plugin";
   override: boolean;
+  /** Sources this def shadows (e.g. ["user"] when a project agent wins). */
+  shadowedSources?: Array<"project" | "user" | "plugin">;
   filePath: string;
 }
 

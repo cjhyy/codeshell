@@ -291,9 +291,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("skills:uninstall", filePath, source),
   listAgents: (cwd: string) => ipcRenderer.invoke("agents:list", cwd),
   readAgentBody: (filePath: string) => ipcRenderer.invoke("agents:read", filePath),
-  saveAgent: (def: import("./types").AgentDefinitionInput) =>
-    ipcRenderer.invoke("agents:save", def),
-  deleteAgent: (name: string) => ipcRenderer.invoke("agents:delete", name),
+  saveAgent: (
+    def: import("./types").AgentDefinitionInput,
+    opts?: { scope?: "user" | "project"; cwd?: string },
+  ) => ipcRenderer.invoke("agents:save", def, opts),
+  deleteAgent: (name: string, opts?: { scope?: "user" | "project"; cwd?: string }) =>
+    ipcRenderer.invoke("agents:delete", name, opts),
   inspectGithubSkill: (url: string, existingNames?: string[]) =>
     ipcRenderer.invoke("skills:inspectGithub", url, existingNames),
   installFromGithub: (input: unknown) =>

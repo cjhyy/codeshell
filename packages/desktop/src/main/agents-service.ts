@@ -31,11 +31,25 @@ export interface AgentSummary {
   // plugin-sourced agent and broke the desktop typecheck.
   source: "project" | "user" | "plugin";
   override: boolean;
+  /** Sources this def shadows (e.g. ["user"] when a project agent overrides a
+   *  same-named user one). Drives the "本项目覆盖" warning in the settings UI. */
+  shadowedSources?: Array<"project" | "user" | "plugin">;
   filePath: string;
 }
 
 function userAgentsRoot(): string {
   return path.join(os.homedir(), ".code-shell", "agents");
+}
+
+function projectAgentsRoot(cwd: string): string {
+  if (!cwd || !cwd.trim()) throw new Error("project-scope agent write requires cwd");
+  return path.join(cwd, ".code-shell", "agents");
+}
+
+/** Resolve the agents dir for a write/delete. Default (no opts) = user dir. */
+function agentsRootFor(opts?: { scope?: "user" | "project"; cwd?: string }): string {
+  if (opts?.scope === "project") return projectAgentsRoot(opts.cwd ?? "");
+  return userAgentsRoot();
 }
 
 /**
@@ -53,6 +67,7 @@ export function listAgents(cwd: string): AgentSummary[] {
     systemPrompt: d.systemPrompt,
     source: d.source ?? "project",
     override: d.override === true,
+    shadowedSources: d.shadowedSources,
     filePath: d.filePath ?? "",
   }));
 }
@@ -74,11 +89,15 @@ function normalizeAgentName(input: string): string {
 }
 
 /**
- * Write an agent definition to the user-level dir as <name>.md (atomic:
- * .tmp + rename). Used for both new user agents and overrides of a
- * built-in (same name → creates ~/.code-shell/agents/<name>.md).
+ * Write an agent definition as <name>.md (atomic: .tmp + rename). Default
+ * scope is "user" (~/.code-shell/agents) — back-compat for existing callers.
+ * scope:"project" writes ${cwd}/.code-shell/agents (requires cwd), so a repo
+ * can ship/override an agent that wins over the user version (spec §7.2).
  */
-export async function saveAgent(def: AgentDefinition): Promise<AgentSummary> {
+export async function saveAgent(
+  def: AgentDefinition,
+  opts?: { scope?: "user" | "project"; cwd?: string },
+): Promise<AgentSummary> {
   const name = normalizeAgentName(def.name);
   const clean: AgentDefinition = {
     name,
@@ -89,9 +108,12 @@ export async function saveAgent(def: AgentDefinition): Promise<AgentSummary> {
       Array.isArray(def.tools) && def.tools.length > 0 ? def.tools : undefined,
     systemPrompt: def.systemPrompt ?? "",
   };
-  const root = userAgentsRoot();
+  const root = agentsRootFor(opts);
   await fs.mkdir(root, { recursive: true });
   const target = path.join(root, `${name}.md`);
+  if (!target.startsWith(root + path.sep)) {
+    throw new Error(`refuse to write outside agents dir: ${target}`);
+  }
   const tmp = `${target}.tmp`;
   await fs.writeFile(tmp, serializeAgentDefinition(clean), "utf8");
   await fs.rename(tmp, target);
@@ -102,23 +124,27 @@ export async function saveAgent(def: AgentDefinition): Promise<AgentSummary> {
     maxTurns: clean.maxTurns,
     tools: clean.tools,
     systemPrompt: clean.systemPrompt,
-    source: "user",
+    source: opts?.scope === "project" ? "project" : "user",
     override: false,
     filePath: target,
   };
 }
 
 /**
- * Delete a USER-level agent file (a custom agent or a built-in override).
- * Refuses anything outside ~/.code-shell/agents — built-in project files
- * are never deletable here (the UI offers "disable" for those instead).
+ * Delete an agent file. Default scope "user" (~/.code-shell/agents);
+ * scope:"project" deletes from ${cwd}/.code-shell/agents. Refuses anything
+ * outside the resolved agents dir. Deleting a project agent only removes the
+ * project definition — a same-named user/plugin agent stays intact.
  */
-export async function deleteAgent(name: string): Promise<void> {
+export async function deleteAgent(
+  name: string,
+  opts?: { scope?: "user" | "project"; cwd?: string },
+): Promise<void> {
   const safe = normalizeAgentName(name);
-  const root = userAgentsRoot();
+  const root = agentsRootFor(opts);
   const target = path.join(root, `${safe}.md`);
   if (!target.startsWith(root + path.sep)) {
-    throw new Error(`refuse to delete outside user agents dir: ${target}`);
+    throw new Error(`refuse to delete outside agents dir: ${target}`);
   }
   await fs.rm(target, { force: true });
 }
