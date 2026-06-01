@@ -35,6 +35,7 @@ import {
   type SessionSummary,
 } from "./transcripts";
 import { titleFromWire } from "./chat/attachments";
+import { resolveBucket } from "./streamRouting";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
@@ -222,6 +223,13 @@ function App() {
    */
   const engineToBucketRef = useRef<Map<string, string>>(new Map());
   const activeBucketRef = useRef(activeBucket);
+  /**
+   * Mirror of `sessionIndices` for the mount-time stream listener (which
+   * closes over stale state). Lets resolveBucket reverse-look-up an engine
+   * sessionId in the on-disk indices when the in-memory route table missed —
+   * the recovery path after a renderer remount.
+   */
+  const sessionIndicesRef = useRef(sessionIndices);
   /** Per-bucket event coalescers — buffer rapid text_delta / tool_use_args_delta. */
   const coalescersRef = useRef<Map<string, ReturnType<typeof createEventCoalescer>>>(
     new Map(),
@@ -247,6 +255,7 @@ function App() {
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
   useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
+  useEffect(() => { sessionIndicesRef.current = sessionIndices; }, [sessionIndices]);
   useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
   useEffect(() => {
     permissionForBucketRef.current = (bucket: string): PermissionMode | null =>
@@ -629,9 +638,22 @@ function App() {
       // the right tab even when several runs are in flight at once. Fallback
       // to the single runningBucketRef only for legacy / pre-bind events
       // (engineSessionId empty or not yet in the table).
-      const fromTable = env.sessionId ? engineToBucketRef.current.get(env.sessionId) : undefined;
-      const target = fromTable ?? runningBucketRef.current;
+      // Route the event to its UI bucket. On a route-table miss (e.g. after a
+      // renderer remount wiped the in-memory table while a worker kept resuming
+      // the same engine session), resolveBucket reverse-looks-up the engine
+      // sessionId in the on-disk indices instead of dropping the event.
+      const target = resolveBucket(
+        env.sessionId ?? "",
+        engineToBucketRef.current,
+        sessionIndicesRef.current,
+        runningBucketRef.current,
+      );
       if (!target) return;
+      // Backfill the route table so subsequent events for this session take the
+      // fast path (and so turn_complete/error below can clear the right bucket).
+      if (env.sessionId && !engineToBucketRef.current.has(env.sessionId)) {
+        engineToBucketRef.current.set(env.sessionId, target);
+      }
 
       const noisy =
         event.type === "text_delta" ||
@@ -779,7 +801,13 @@ function App() {
           });
         }
         runningBucketRef.current = null;
-        engineToBucketRef.current.clear();
+        // Do NOT clear engineToBucketRef here. The worker exits cleanly after
+        // every run (and may later respawn + resume the same engine session),
+        // so wiping the route table on exit is exactly what made resumed-
+        // session events miss their bucket and get dropped (blank UI). The
+        // bucket↔session bindings belong to the session, not the worker
+        // lifecycle, and are safe to keep — resolveBucket reconciles against
+        // on-disk indices anyway.
       }
     });
     return () => {
