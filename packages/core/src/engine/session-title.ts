@@ -14,8 +14,8 @@ const SYSTEM_PROMPT =
 function clean(raw: string): string {
   return raw
     .trim()
-    .replace(/^["'「『]+/, "")
-    .replace(/["'」』]+$/, "")
+    .replace(/^["'“”‘’「『]+/, "")
+    .replace(/["'“”‘’」』]+$/, "")
     .trim();
 }
 

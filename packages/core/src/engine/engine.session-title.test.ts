@@ -38,6 +38,11 @@ describe("buildSessionTitle", () => {
     expect(title).toBe("配置热切换设计");
   });
 
+  it("strips surrounding curly quotes the model sometimes adds", async () => {
+    const title = await buildSessionTitle(fakeClient("“配置热切换设计”"), "q", "a");
+    expect(title).toBe("配置热切换设计");
+  });
+
   it("returns null when the LLM throws (best-effort)", async () => {
     const title = await buildSessionTitle(fakeClient("x", { throws: true }), "q", "a");
     expect(title).toBeNull();
