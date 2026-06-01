@@ -56,7 +56,9 @@ function withMessages(
   return { ...INITIAL_STATE, messages, ...over };
 }
 
-const turnComplete: StreamEvent = { type: "turn_complete" } as StreamEvent;
+// A cleanly-completed turn — the only kind that bumps turnEpoch (and thus
+// collapses tool cards). Abnormal ends carry a different reason and must not.
+const turnComplete: StreamEvent = { type: "turn_complete", reason: "completed" } as StreamEvent;
 
 // ── tests ───────────────────────────────────────────────────────────
 
@@ -224,6 +226,16 @@ describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
     s = applyStreamEvent(s, turnComplete);
     s = applyStreamEvent(s, turnComplete);
     expect(s.turnEpoch).toBe(3);
+  });
+
+  test("does NOT bump turnEpoch on an abnormal turn end (so tool cards stay open)", () => {
+    // model_error / aborted_streaming etc. often fire mid-task on a transient
+    // error; collapsing the cards the user is reading is the "莫名其妙折叠" bug.
+    for (const reason of ["model_error", "aborted_streaming", "prompt_too_long"] as const) {
+      const ev = { type: "turn_complete", reason } as StreamEvent;
+      const next = applyStreamEvent(withMessages([], { turnEpoch: 5 }), ev);
+      expect(next.turnEpoch).toBe(5);
+    }
   });
 
   test("appends files_changed message when turn had successful Edits", () => {

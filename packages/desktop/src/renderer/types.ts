@@ -605,12 +605,19 @@ export function applyStreamEvent(
         ];
       }
 
+      // Only a cleanly completed turn bumps turnEpoch — that counter is what
+      // force-collapses tool cards back to their summary (ToolGroupCard /
+      // ToolCardShell watch it). An abnormal end (model_error, aborted_*,
+      // prompt_too_long, …) often fires mid-task on a transient error and
+      // should NOT yank the cards the user is reading shut; we still flush and
+      // finalize above, just don't advance the epoch.
+      const cleanlyCompleted = event.reason === "completed";
       return {
         ...state,
         streamingAssistantId: null,
         streamingThinkingId: null,
         messages: finalized,
-        turnEpoch: state.turnEpoch + 1,
+        turnEpoch: cleanlyCompleted ? state.turnEpoch + 1 : state.turnEpoch,
       };
     }
 
