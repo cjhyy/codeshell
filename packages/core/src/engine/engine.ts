@@ -231,17 +231,20 @@ export function loadAgentDefinitionsForCwd(
   disabledPlugins: string[] = [],
 ): AgentDefinitionRegistry {
   const home = homedir();
+  // Increasing priority; loadFromDirs is last-dir-wins. ORDER ENCODES POLICY:
+  // user (cross-project personal default, lowest) → plugins (reusable baseline)
+  // → project (highest). A repo's in-tree agent therefore overrides a same-named
+  // user agent. This REVERSES the previous user>project behavior (spec §7.2);
+  // the descriptor's shadowedSources surfaces the override so the UI can warn.
   return AgentDefinitionRegistry.loadFromDirs(
     [
+      { dir: `${home}/.code-shell/agents`, source: "user" },
+      ...pluginAgentDirs(disabledPlugins),
       // No project context (no-project bucket): cwd is "". Skip the project
       // source rather than synthesizing "/.code-shell/agents" at the FS root,
       // which silently resolves to nothing and drops every project-level
       // (built-in) agent from the list.
       ...(cwd ? [{ dir: `${cwd}/.code-shell/agents`, source: "project" as const }] : []),
-      // Plugin agents sit between project and user so user-level defs still
-      // win on a name clash (loadFromDirs: last dir wins).
-      ...pluginAgentDirs(disabledPlugins),
-      { dir: `${home}/.code-shell/agents`, source: "user" },
     ],
     disabledAgents,
   );

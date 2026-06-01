@@ -18,8 +18,11 @@ export interface AgentDefinition {
   source?: "project" | "user" | "plugin";
   /** Absolute path of the file it came from. Runtime-only. */
   filePath?: string;
-  /** True when a user-level def shadows a same-named project-level one. */
+  /** True when this def shadows a same-named def from a lower-priority dir. */
   override?: boolean;
+  /** Sources whose same-named def this one shadows (runtime-only). Drives the
+   *  UI "this project overrides your user version" warning (spec §7.2). */
+  shadowedSources?: Array<"project" | "user" | "plugin">;
 }
 
 interface RawFrontmatter {

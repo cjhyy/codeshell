@@ -13,10 +13,13 @@ export interface AgentSourceDir {
  * warning rather than failing the whole load — one bad role file must
  * not break the agent system.
  *
- * When multiple dirs define the same role name, the LAST dir wins
- * (callers pass [project, user] so user-level overrides project-level).
- * The shadowing def is marked `override: true`. Names in `disabled` are
- * filtered out entirely after the merge, so the LLM never sees them.
+ * When multiple dirs define the same role name, the LAST dir wins. This is
+ * pure mechanism — the project>user POLICY lives in the caller's dir ORDER
+ * (loadAgentDefinitionsForCwd passes [user, ...plugins, project] so a repo's
+ * in-tree agent wins; see spec §7.2). The shadowing def is marked
+ * `override: true` and records the sources it shadowed in `shadowedSources`.
+ * Names in `disabled` are filtered out entirely after the merge, so the LLM
+ * never sees them.
  */
 export class AgentDefinitionRegistry {
   private defs = new Map<string, AgentDefinition>();
@@ -43,8 +46,17 @@ export class AgentDefinitionRegistry {
           const def = parseAgentDefinition(readFileSync(full, "utf8"), entry);
           def.source = source;
           def.filePath = full;
-          // A later dir overriding an earlier one (user over project).
-          if (reg.defs.has(def.name)) def.override = true;
+          // A later dir overriding an earlier one. Carry forward the shadowed
+          // sources (the prev def's own source + anything it already shadowed)
+          // so a project def that shadows a plugin def that shadowed a user
+          // def reports both.
+          const prev = reg.defs.get(def.name);
+          if (prev) {
+            def.override = true;
+            const shadowed = new Set<"project" | "user" | "plugin">(prev.shadowedSources ?? []);
+            if (prev.source) shadowed.add(prev.source);
+            def.shadowedSources = [...shadowed];
+          }
           reg.defs.set(def.name, def);
         } catch (err) {
           reg.warnings.push(`${entry}: ${(err as Error).message}`);

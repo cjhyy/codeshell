@@ -33,7 +33,10 @@ describe("AgentDefinitionRegistry.loadFromDirs", () => {
     expect(reg.list().map((d) => d.name).sort()).toEqual(["myhelper", "researcher"]);
   });
 
-  it("user-level same name overrides project-level and marks override", () => {
+  it("last dir wins on name clash and marks override (mechanism)", () => {
+    // loadFromDirs is last-dir-wins regardless of source labels. The
+    // project>user POLICY lives in the caller's dir ORDER (see
+    // loadAgentDefinitionsForCwd), not here.
     writeAgent(projectDir, "researcher", "slow");
     writeAgent(userDir, "researcher", "fast");
     const reg = AgentDefinitionRegistry.loadFromDirs(
@@ -44,6 +47,29 @@ describe("AgentDefinitionRegistry.loadFromDirs", () => {
     expect(def.model).toBe("fast");
     expect(def.source).toBe("user");
     expect(def.override).toBe(true);
+  });
+
+  it("records shadowedSources of the defs it replaced", () => {
+    writeAgent(userDir, "researcher", "u");
+    writeAgent(projectDir, "researcher", "p");
+    // project last → project wins, shadows user
+    const reg = AgentDefinitionRegistry.loadFromDirs(
+      [{ dir: userDir, source: "user" }, { dir: projectDir, source: "project" }],
+      [],
+    );
+    const def = reg.get("researcher")!;
+    expect(def.source).toBe("project");
+    expect(def.override).toBe(true);
+    expect(def.shadowedSources).toContain("user");
+  });
+
+  it("non-clashing def has no shadowedSources", () => {
+    writeAgent(projectDir, "solo");
+    const reg = AgentDefinitionRegistry.loadFromDirs(
+      [{ dir: projectDir, source: "project" }],
+      [],
+    );
+    expect(reg.get("solo")!.shadowedSources).toBeUndefined();
   });
 
   it("disabledAgents filters a role out of list() and get()", () => {
