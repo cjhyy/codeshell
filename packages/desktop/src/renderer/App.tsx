@@ -36,6 +36,7 @@ import {
 } from "./transcripts";
 import { titleFromWire } from "./chat/attachments";
 import { resolveBucket } from "./streamRouting";
+import { selectReplayEvents } from "./snapshotReplay";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
@@ -313,6 +314,9 @@ function App() {
   // "draft" state. A real session row only appears after the user
   // actually sends a message (see `send` below).
 
+  /** Highest main-snapshot seq replayed into each bucket (dedup across re-views). */
+  const appliedSeqRef = useRef<Map<string, number>>(new Map());
+
   // Lazy-hydrate transcript on first view of a bucket.
   //
   // Manual sessions hydrate straight from localStorage. Automation (cron)
@@ -329,20 +333,43 @@ function App() {
       (s) => s.id === activeSessionId,
     );
     const engineId = summary?.engineSessionId;
-    if (summary?.source !== "automation" || !engineId) {
-      dispatch({ type: "hydrate", bucket: activeBucket, state: local });
-      return;
-    }
+    const bucket = activeBucket;
     let cancelled = false;
     void (async () => {
-      let merged = local;
-      try {
-        const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
-        if (disk.messages.length > 0) merged = mergeTranscripts(disk, local);
-      } catch {
-        // disk read failed — fall back to the localStorage projection.
+      // Base projection: automation sessions fold the on-disk transcript and
+      // merge the localStorage tail; manual sessions use localStorage directly.
+      let base = local;
+      if (summary?.source === "automation" && engineId) {
+        try {
+          const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
+          if (disk.messages.length > 0) base = mergeTranscripts(disk, local);
+        } catch {
+          // disk read failed — fall back to the localStorage projection.
+        }
       }
-      if (!cancelled) dispatch({ type: "hydrate", bucket: activeBucket, state: merged });
+      // Reconnect to the main-held snapshot. The main process doesn't remount
+      // with the renderer, so it still has events the worker streamed while the
+      // renderer was gone (or after the last debounced persist). When the
+      // localStorage projection is empty — the remount / fresh-view case where
+      // the missing tail is exactly the bug — replay the snapshot to rebuild it.
+      // (A non-empty projection already reflects persisted history; we don't
+      // overlay there to avoid double-applying the worker-life overlap.)
+      let state = base;
+      if (engineId && base.messages.length === 0) {
+        try {
+          const snapshot = await window.codeshell.subscribeSession(engineId, 0);
+          const { events, cursor } = selectReplayEvents(snapshot, 0);
+          if (events.length > 0) {
+            appliedSeqRef.current.set(bucket, cursor);
+            let acc = base;
+            for (const ev of events) acc = applyStreamEvent(acc, ev as StreamEvent);
+            state = acc;
+          }
+        } catch {
+          // Snapshot unavailable (no bridge / unknown session) — use base.
+        }
+      }
+      if (!cancelled) dispatch({ type: "hydrate", bucket, state });
     })();
     return () => {
       cancelled = true;

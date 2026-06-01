@@ -1,0 +1,29 @@
+/**
+ * Pick which snapshot events a (re)subscribing renderer must replay.
+ *
+ * The renderer tracks the highest seq it has applied per bucket. On a fresh
+ * remount that cursor is 0 and the whole snapshot replays; while live it only
+ * replays events past the cursor, so the main-held snapshot and the live
+ * stream align with no gap and no duplicate. seq is assigned by the main
+ * SessionSnapshotStore — live StreamEvents have no stable id of their own.
+ */
+import type { SessionSnapshot } from "../preload/types";
+
+export interface ReplaySelection {
+  /** The bare events to feed through the normal stream reducer, in order. */
+  events: unknown[];
+  /** New highest-applied seq (unchanged if nothing was replayed). */
+  cursor: number;
+}
+
+export function selectReplayEvents(snapshot: SessionSnapshot, appliedSeq: number): ReplaySelection {
+  let cursor = appliedSeq;
+  const events: unknown[] = [];
+  for (const entry of snapshot.events) {
+    if (entry.seq > appliedSeq) {
+      events.push(entry.event);
+      if (entry.seq > cursor) cursor = entry.seq;
+    }
+  }
+  return { events, cursor };
+}
