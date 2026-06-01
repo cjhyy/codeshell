@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AlertCircle, ChevronDown } from "lucide-react";
+import { useAnchoredPopover } from "./useAnchoredPopover";
 
 export type PermissionMode = "plan" | "default" | "accept_edits" | "bypass";
 export type CorePermissionMode =
@@ -67,6 +68,12 @@ interface Props {
 export function PermissionPill({ value, onChange, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLUListElement>(null);
+  const popoverStyle = useAnchoredPopover(open, anchorRef, popoverRef, {
+    align: "start",
+    preferredSide: "top",
+  });
   const cur = MODES.find((m) => m.id === value) ?? MODES[1];
 
   useEffect(() => {
@@ -88,8 +95,9 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={anchorRef}
         type="button"
-        className={`inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs hover:bg-accent disabled:opacity-50 ${toneText(cur.tone)}`}
+        className={`cs-control inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs disabled:opacity-50 ${toneText(cur.tone)}`}
         disabled={disabled}
         title="当前对话权限"
         onClick={() => setOpen((o) => !o)}
@@ -99,12 +107,16 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
         <ChevronDown size={11} className="opacity-60" />
       </button>
       {open && (
-        <ul className="absolute bottom-full z-50 mb-1 w-64 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+        <ul
+          ref={popoverRef}
+          style={popoverStyle}
+          className="cs-popup-surface w-64 overflow-hidden rounded-md p-1"
+        >
           {MODES.map((m) => (
             <li
               key={m.id}
               className={
-                "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent " +
+                "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " +
                 (m.id === value ? "bg-accent" : "")
               }
               onClick={() => {

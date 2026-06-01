@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Folder, FolderPlus, Search, X, Check } from "lucide-react";
 import { repoLabel, type Repo } from "../repos";
+import { useAnchoredPopover } from "./useAnchoredPopover";
 
 interface Props {
   repos: Repo[];
@@ -27,6 +28,12 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
   const [filter, setFilter] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const popoverStyle = useAnchoredPopover(open, anchorRef, popoverRef, {
+    align: "start",
+    preferredSide: "top",
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -55,14 +62,15 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
   const triggerLabel = active ? repoLabel(active) : "不使用项目";
 
   const itemCls = (active: boolean) =>
-    "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent " +
+    "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " +
     (active ? "bg-accent" : "");
 
   return (
     <div className="relative" ref={wrapRef}>
       <button
+        ref={anchorRef}
         type="button"
-        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground hover:bg-accent disabled:opacity-50"
+        className="cs-control inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-foreground disabled:opacity-50"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
       >
@@ -72,7 +80,11 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
       </button>
 
       {open && (
-        <div className="absolute bottom-full z-50 mb-1 w-64 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+        <div
+          ref={popoverRef}
+          style={popoverStyle}
+          className="cs-popup-surface w-64 rounded-md p-1"
+        >
           <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
             <Search size={12} className="opacity-50" />
             <input

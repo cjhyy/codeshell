@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, Zap, Image } from "lucide-react";
+import { useAnchoredPopover } from "./useAnchoredPopover";
 
 /**
  * One row in the model dropdown.
@@ -30,6 +31,12 @@ interface Props {
 export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLUListElement>(null);
+  const popoverStyle = useAnchoredPopover(open, anchorRef, popoverRef, {
+    align: "end",
+    preferredSide: "top",
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -46,8 +53,9 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
   return (
     <div className="relative" ref={ref}>
       <button
+        ref={anchorRef}
         type="button"
-        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground hover:bg-accent disabled:opacity-50"
+        className="cs-control inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-foreground disabled:opacity-50"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
       >
@@ -56,7 +64,11 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
         <ChevronDown size={11} className="opacity-60" />
       </button>
       {open && (
-        <ul className="absolute bottom-full z-50 mb-1 max-h-80 w-72 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+        <ul
+          ref={popoverRef}
+          style={popoverStyle}
+          className="cs-popup-surface max-h-[min(20rem,calc(100vh-20px))] w-72 overflow-y-auto rounded-md p-1"
+        >
           {options.length === 0 ? (
             <li className="px-2 py-1.5 text-sm text-muted-foreground">
               settings.json 里还没声明 models
@@ -66,7 +78,7 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
               <li
                 key={o.key}
                 className={
-                  "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent " +
+                  "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " +
                   (o.key === activeKey ? "bg-accent" : "")
                 }
                 onClick={() => {

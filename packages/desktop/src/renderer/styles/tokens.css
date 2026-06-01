@@ -1,45 +1,54 @@
 /* Design tokens.
  *
- * The legacy app referenced these var names directly (--bg-app, --fg-primary,
- * --accent, --border-subtle, …). Rather than rewrite ~250 legacy class usages,
- * we REMAP these names onto the shadcn token set (defined in tailwind.css,
- * which flips light/dark via the `.dark` class). This instantly themes every
- * remaining legacy class to the plain zinc + warm-orange look, unifying the
- * whole app. Dark mode now flows from `.dark` (the [data-theme="dark"] block
- * below is kept only as a fallback and points at the same vars).
+ * Legacy CSS reads these names as real colors (--bg-app, --fg-primary,
+ * --accent, --status-ok, ...). Tailwind/shadcn reads HSL channels from
+ * tailwind.css under the --cs-* namespace. Keep the two layers separate:
+ * legacy tokens are complete CSS colors, while --cs-* tokens are channels.
  */
 
 :root,
 [data-theme="light"] {
   /* surface → shadcn */
-  --bg-app:        hsl(var(--background));
-  --bg-sidebar:    hsl(var(--card));
-  --bg-inspector:  hsl(var(--card));
-  --bg-elevated:   hsl(var(--card));
-  --bg-hover:      hsl(var(--accent));
-  --bg-selected:   hsl(var(--accent));
+  --bg-app:        hsl(var(--cs-background));
+  --bg-sidebar:    hsl(var(--cs-card));
+  --bg-inspector:  hsl(var(--cs-card));
+  --bg-elevated:   hsl(var(--cs-card));
+  --bg-hover:      hsl(var(--cs-accent));
+  --bg-selected:   hsl(var(--cs-accent));
 
   /* text → shadcn */
-  --fg-primary:    hsl(var(--foreground));
-  --fg-secondary:  hsl(var(--muted-foreground));
-  --fg-muted:      hsl(var(--muted-foreground));
-  --fg-inverse:    hsl(var(--primary-foreground));
+  --fg-primary:    hsl(var(--cs-foreground));
+  --fg-secondary:  hsl(var(--cs-muted-foreground));
+  --fg-muted:      hsl(var(--cs-muted-foreground));
+  --fg-inverse:    hsl(var(--cs-primary-foreground));
 
   /* border → shadcn */
-  --border-subtle: hsl(var(--border));
-  --border-strong: hsl(var(--border));
+  --border-subtle: hsl(var(--cs-border));
+  --border-strong: hsl(var(--cs-border));
 
   /* accent → shadcn primary (warm orange) */
-  --accent:        hsl(var(--primary));
-  --accent-hover:  hsl(var(--primary) / 0.9);
-  --accent-fg:     hsl(var(--primary-foreground));
+  --accent:        hsl(var(--cs-primary));
+  --accent-hover:  hsl(var(--cs-primary) / 0.9);
+  --accent-fg:     hsl(var(--cs-primary-foreground));
 
   /* status → shadcn status tokens */
-  --status-running: hsl(var(--status-running));
-  --status-ok:      hsl(var(--status-ok));
-  --status-warn:    hsl(var(--status-warn));
-  --status-err:     hsl(var(--status-err));
-  --status-idle:    hsl(var(--status-idle));
+  --status-running: hsl(var(--cs-status-running));
+  --status-ok:      hsl(var(--cs-status-ok));
+  --status-warn:    hsl(var(--cs-status-warn));
+  --status-err:     hsl(var(--cs-status-err));
+  --status-idle:    hsl(var(--cs-status-idle));
+  --status-success:  var(--status-ok);
+  --status-warning:  var(--status-warn);
+  --status-error:    var(--status-err);
+  --status-info:     var(--status-running);
+  --success:         var(--status-ok);
+  --warning:         var(--status-warn);
+  --danger:          var(--status-err);
+  --info:            var(--status-running);
+  --fg-success:      var(--status-ok);
+  --fg-warning:      var(--status-warn);
+  --fg-danger:       var(--status-err);
+  --fg-info:         var(--status-running);
 
   /* radius */
   --radius-sm: 4px;
@@ -80,6 +89,5 @@
   --inspector-w-collapsed: 0px;
 }
 
-/* Dark values now flow from the shadcn `.dark` class flipping the underlying
-   --background/--foreground/etc., so the legacy aliases above resolve to the
-   correct dark colors automatically. No per-token dark overrides needed. */
+/* Dark values flow from the shadcn `.dark` class flipping the --cs-* channels,
+   so the legacy aliases above resolve to the correct dark colors automatically. */

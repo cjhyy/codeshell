@@ -11,7 +11,69 @@
  * rule that both fails to style the target and bleeds onto unrelated elements).
  * Writing the rules by hand, scoped to a class, is deterministic and correct.
  */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: hsl(var(--cs-border));
+  }
+}
+
 @layer components {
+  .cs-control {
+    border: 1px solid hsl(var(--cs-input));
+    background: hsl(var(--cs-background));
+    box-shadow: none;
+    transition:
+      border-color 120ms ease,
+      background-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+  .cs-control:hover {
+    border-color: hsl(var(--cs-border));
+    background: hsl(var(--cs-accent) / 0.55);
+  }
+  .cs-control:focus-visible,
+  .cs-control[data-state="open"] {
+    outline: none;
+    border-color: hsl(var(--cs-primary) / 0.5);
+    box-shadow: 0 0 0 2px hsl(var(--cs-primary) / 0.14);
+  }
+  .cs-control:disabled,
+  .cs-control[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .cs-popup-surface {
+    background: hsl(var(--cs-popover));
+    color: hsl(var(--cs-popover-foreground));
+    border: 1px solid hsl(var(--cs-border) / 0.86);
+    box-shadow:
+      0 18px 45px hsl(var(--cs-foreground) / 0.1),
+      0 1px 2px hsl(var(--cs-foreground) / 0.08);
+  }
+  .dark .cs-popup-surface {
+    border-color: hsl(var(--cs-border) / 0.95);
+    box-shadow:
+      0 18px 45px rgb(0 0 0 / 0.26),
+      0 1px 2px rgb(0 0 0 / 0.18);
+  }
+
+  .cs-menu-item {
+    display: flex;
+    align-items: center;
+    min-height: 1.875rem;
+    border-radius: var(--radius-sm);
+    color: hsl(var(--cs-popover-foreground));
+    outline: none;
+  }
+  .cs-menu-item:hover,
+  .cs-menu-item:focus {
+    background: hsl(var(--cs-accent));
+    color: hsl(var(--cs-accent-foreground));
+  }
+
   /* Tool-card detail rows — shared by every tool-card (Generic/Bash/File/…).
      Defined here (Tailwind component layer, not legacy CSS) so the cards are
      migrated without repeating the same utilities across six files. */
@@ -19,16 +81,16 @@
   .tool-card-row { display: flex; flex-direction: column; gap: 0.25rem; }
   .tool-card-row-label {
     font-size: 0.6875rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.03em; color: hsl(var(--muted-foreground));
+    letter-spacing: 0.03em; color: hsl(var(--cs-muted-foreground));
   }
   .tool-card-row-val {
     margin: 0; white-space: pre-wrap; word-break: break-word;
-    border-radius: var(--radius-sm); background: hsl(var(--muted) / 0.4);
+    border-radius: var(--radius-sm); background: hsl(var(--cs-muted) / 0.4);
     padding: 0.5rem; font-size: 0.75rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   }
-  .tool-card-row-val.err { color: hsl(var(--status-err)); }
-  .tool-card-summary-text { color: hsl(var(--muted-foreground)); }
+  .tool-card-row-val.err { color: hsl(var(--cs-status-err)); }
+  .tool-card-summary-text { color: hsl(var(--cs-muted-foreground)); }
   .attachment-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
   /* Settings section layout — shared by the big settings bodies (Model/Mcp/
@@ -36,17 +98,17 @@
      no longer depend on the legacy settings stylesheet. */
   .settings-section { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
   .settings-section-title { font-size: 0.95rem; font-weight: 600; margin: 0; }
-  .settings-section-help { font-size: 0.75rem; color: hsl(var(--muted-foreground)); margin: 0; }
-  .settings-section-label { font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
+  .settings-section-help { font-size: 0.75rem; color: hsl(var(--cs-muted-foreground)); margin: 0; }
+  .settings-section-label { font-size: 0.75rem; color: hsl(var(--cs-muted-foreground)); }
   .settings-section-current { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
   .settings-field { display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.875rem; }
-  .settings-field > span { color: hsl(var(--muted-foreground)); }
+  .settings-field > span { color: hsl(var(--cs-muted-foreground)); }
   .settings-field input, .settings-field textarea, .settings-git-input {
-    background: transparent; border: 1px solid hsl(var(--input)); border-radius: var(--radius-sm);
-    padding: 0.375rem 0.5rem; color: hsl(var(--foreground)); font-size: 0.875rem; font-family: inherit;
+    background: transparent; border: 1px solid hsl(var(--cs-input)); border-radius: var(--radius-sm);
+    padding: 0.375rem 0.5rem; color: hsl(var(--cs-foreground)); font-size: 0.875rem; font-family: inherit;
   }
   .settings-field input:focus-visible, .settings-field textarea:focus-visible {
-    outline: none; box-shadow: 0 0 0 1px hsl(var(--ring));
+    outline: none; box-shadow: 0 0 0 1px hsl(var(--cs-ring));
   }
   .settings-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
   .settings-toolbar { display: flex; align-items: center; gap: 0.5rem; }
@@ -54,44 +116,43 @@
   .settings-option-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.5rem; }
   .settings-option-card {
     display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start;
-    border: 1px solid hsl(var(--border)); border-radius: var(--radius-md);
+    border: 1px solid hsl(var(--cs-border)); border-radius: var(--radius-md);
     padding: 0.75rem; background: transparent; cursor: pointer; text-align: left;
   }
-  .settings-option-card.active { border-color: hsl(var(--primary)); background: hsl(var(--primary) / 0.08); }
+  .settings-option-card.active { border-color: hsl(var(--cs-primary)); background: hsl(var(--cs-primary) / 0.08); }
   .settings-option-title { font-weight: 500; font-size: 0.875rem; }
-  .settings-option-desc { font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
+  .settings-option-desc { font-size: 0.75rem; color: hsl(var(--cs-muted-foreground)); }
   .settings-save-btn {
-    border: 1px solid hsl(var(--primary) / 0.4); color: hsl(var(--primary)); background: transparent;
+    border: 1px solid hsl(var(--cs-primary) / 0.4); color: hsl(var(--cs-primary)); background: transparent;
     border-radius: var(--radius-sm); padding: 0.375rem 0.75rem; font-size: 0.875rem; cursor: pointer;
   }
-  .settings-save-btn:hover { background: hsl(var(--primary) / 0.1); }
+  .settings-save-btn:hover { background: hsl(var(--cs-primary) / 0.1); }
   .settings-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Customize / extensions shared bits still referenced by a few sections. */
-  .customize-empty { color: hsl(var(--muted-foreground)); font-size: 0.875rem; padding: 1rem; }
+  .customize-empty { color: hsl(var(--cs-muted-foreground)); font-size: 0.875rem; padding: 1rem; }
   .customize-pane { display: flex; flex-direction: column; gap: 0.5rem; }
   .customize-detail-head { display: flex; align-items: center; gap: 0.5rem; }
   .customize-detail-name { font-weight: 600; }
 
   /* Legacy action buttons still used by a few settings sections + TrustGate.
-     Re-styled plain (the old --accent/--bg-elevated tokens no longer exist, so
-     these rendered with invalid colors). approve = accent-outline, deny = outline. */
+     Re-styled plain. approve = primary outline, deny = neutral outline. */
   .approval-btn {
     display: inline-flex; align-items: center; gap: 0.375rem;
     padding: 0.375rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.875rem;
-    font-weight: 500; border: 1px solid hsl(var(--border)); background: transparent;
-    color: hsl(var(--foreground)); cursor: pointer;
+    font-weight: 500; border: 1px solid hsl(var(--cs-border)); background: transparent;
+    color: hsl(var(--cs-foreground)); cursor: pointer;
   }
-  .approval-btn:hover { background: hsl(var(--accent)); }
-  .approval-btn.approve { border-color: hsl(var(--primary) / 0.4); color: hsl(var(--primary)); }
-  .approval-btn.approve:hover { background: hsl(var(--primary) / 0.1); }
-  .approval-btn.deny:hover { background: hsl(var(--accent)); }
+  .approval-btn:hover { background: hsl(var(--cs-accent)); }
+  .approval-btn.approve { border-color: hsl(var(--cs-primary) / 0.4); color: hsl(var(--cs-primary)); }
+  .approval-btn.approve:hover { background: hsl(var(--cs-primary) / 0.1); }
+  .approval-btn.deny:hover { background: hsl(var(--cs-accent)); }
   .approval-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .approval-deny-select { flex: 1; min-width: 0; }
 
-  .cs-switch[data-state="checked"] { background-color: hsl(var(--primary)); }
-  .cs-switch[data-state="unchecked"] { background-color: hsl(var(--input)); }
-  .cs-switch .cs-switch-thumb { background-color: hsl(var(--background)); }
+  .cs-switch[data-state="checked"] { background-color: hsl(var(--cs-primary)); }
+  .cs-switch[data-state="unchecked"] { background-color: hsl(var(--cs-input)); }
+  .cs-switch .cs-switch-thumb { background-color: hsl(var(--cs-background)); }
   .cs-switch[data-state="checked"] .cs-switch-thumb { transform: translateX(1rem); }
   .cs-switch[data-state="unchecked"] .cs-switch-thumb { transform: translateX(0); }
 }
@@ -102,63 +163,63 @@
  * Values are the standard shadcn zinc palette in HSL channels.
  */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
+  --cs-background: 0 0% 100%;
+  --cs-foreground: 240 10% 3.9%;
+  --cs-card: 0 0% 100%;
+  --cs-card-foreground: 240 10% 3.9%;
+  --cs-popover: 0 0% 100%;
+  --cs-popover-foreground: 240 10% 3.9%;
   /* Warm orange accent (the original brand #b85c2b) for primary buttons,
      switch-on, focus ring — over the neutral zinc base. */
-  --primary: 19 63% 45%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 5.9% 10%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 19 63% 45%;
+  --cs-primary: 19 63% 45%;
+  --cs-primary-foreground: 0 0% 98%;
+  --cs-secondary: 240 4.8% 95.9%;
+  --cs-secondary-foreground: 240 5.9% 10%;
+  --cs-muted: 240 4.8% 95.9%;
+  --cs-muted-foreground: 240 3.8% 46.1%;
+  --cs-accent: 240 4.8% 95.9%;
+  --cs-accent-foreground: 240 5.9% 10%;
+  --cs-destructive: 0 72% 50%;
+  --cs-destructive-foreground: 0 0% 98%;
+  --cs-border: 240 5.9% 90%;
+  --cs-input: 240 5.9% 90%;
+  --cs-ring: 19 63% 45%;
   --radius: 0.5rem;
 
-  /* Meaningful status colors (kept from the old palette's intent). */
-  --status-running: 211 64% 45%;
-  --status-ok: 142 49% 36%;
-  --status-warn: 41 79% 43%;
-  --status-err: 6 62% 45%;
-  --status-idle: 0 0% 53%;
+  /* Meaningful status colors. Keep them separate from the brand primary. */
+  --cs-status-running: 210 82% 45%;
+  --cs-status-ok: 145 63% 32%;
+  --cs-status-warn: 38 92% 38%;
+  --cs-status-err: 0 72% 50%;
+  --cs-status-idle: 240 4% 46%;
 }
 
 .dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 22 70% 55%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 240 3.7% 15.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 22 70% 55%;
+  --cs-background: 240 10% 3.9%;
+  --cs-foreground: 0 0% 98%;
+  --cs-card: 240 10% 3.9%;
+  --cs-card-foreground: 0 0% 98%;
+  --cs-popover: 240 10% 3.9%;
+  --cs-popover-foreground: 0 0% 98%;
+  --cs-primary: 22 70% 55%;
+  --cs-primary-foreground: 0 0% 100%;
+  --cs-secondary: 240 3.7% 15.9%;
+  --cs-secondary-foreground: 0 0% 98%;
+  --cs-muted: 240 3.7% 15.9%;
+  --cs-muted-foreground: 240 5% 64.9%;
+  --cs-accent: 240 3.7% 15.9%;
+  --cs-accent-foreground: 0 0% 98%;
+  --cs-destructive: 0 84% 65%;
+  --cs-destructive-foreground: 0 0% 98%;
+  --cs-border: 240 3.7% 15.9%;
+  --cs-input: 240 3.7% 15.9%;
+  --cs-ring: 22 70% 55%;
 
-  --status-running: 211 64% 60%;
-  --status-ok: 142 49% 55%;
-  --status-warn: 41 79% 58%;
-  --status-err: 6 70% 60%;
-  --status-idle: 0 0% 60%;
+  --cs-status-running: 210 90% 64%;
+  --cs-status-ok: 142 64% 48%;
+  --cs-status-warn: 42 92% 62%;
+  --cs-status-err: 0 84% 65%;
+  --cs-status-idle: 240 5% 65%;
 }
 
 /*
@@ -167,31 +228,31 @@
  * reads these from the @theme block.
  */
 @theme inline {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--cs-background));
+  --color-foreground: hsl(var(--cs-foreground));
+  --color-card: hsl(var(--cs-card));
+  --color-card-foreground: hsl(var(--cs-card-foreground));
+  --color-popover: hsl(var(--cs-popover));
+  --color-popover-foreground: hsl(var(--cs-popover-foreground));
+  --color-primary: hsl(var(--cs-primary));
+  --color-primary-foreground: hsl(var(--cs-primary-foreground));
+  --color-secondary: hsl(var(--cs-secondary));
+  --color-secondary-foreground: hsl(var(--cs-secondary-foreground));
+  --color-muted: hsl(var(--cs-muted));
+  --color-muted-foreground: hsl(var(--cs-muted-foreground));
+  --color-accent: hsl(var(--cs-accent));
+  --color-accent-foreground: hsl(var(--cs-accent-foreground));
+  --color-destructive: hsl(var(--cs-destructive));
+  --color-destructive-foreground: hsl(var(--cs-destructive-foreground));
+  --color-border: hsl(var(--cs-border));
+  --color-input: hsl(var(--cs-input));
+  --color-ring: hsl(var(--cs-ring));
 
-  --color-status-running: hsl(var(--status-running));
-  --color-status-ok: hsl(var(--status-ok));
-  --color-status-warn: hsl(var(--status-warn));
-  --color-status-err: hsl(var(--status-err));
-  --color-status-idle: hsl(var(--status-idle));
+  --color-status-running: hsl(var(--cs-status-running));
+  --color-status-ok: hsl(var(--cs-status-ok));
+  --color-status-warn: hsl(var(--cs-status-warn));
+  --color-status-err: hsl(var(--cs-status-err));
+  --color-status-idle: hsl(var(--cs-status-idle));
 
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);

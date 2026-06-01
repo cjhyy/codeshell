@@ -1,4 +1,6 @@
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 html, body, #root { height: 100vh; margin: 0; }
 
@@ -19,8 +21,11 @@ button {
   font-family: inherit;
   font-size: inherit;
   color: inherit;
-  border: none;
   cursor: pointer;
+}
+
+button:not(.cs-control):not(.cs-switch):not([class*="border"]) {
+  border: none;
 }
 
 /* Legacy bare-button background reset. Scoped so it does NOT clobber shadcn
@@ -28,7 +33,7 @@ button {
    without this exclusion it would beat Tailwind's layered `bg-primary` etc.
    in the cascade (unlayered always wins over @layer), leaving primary buttons
    and switches transparent. */
-button:not([class*="bg-"]):not(.cs-switch) {
+button:not([class*="bg-"]):not(.cs-control):not(.cs-switch) {
   background: none;
 }
 
@@ -36,8 +41,8 @@ button:not([class*="bg-"]):not(.cs-switch) {
    manage their own focus ring (focus:ring-*). Without the exclusion this
    unlayered outline stacks a second ring (and, with the old invalid
    var(--accent), drew a black box) on Select triggers / buttons. */
-button:not([class*="ring"]):not([class*="bg-"]):not(.cs-switch):focus-visible {
-  outline: 2px solid hsl(var(--ring));
+button:not([class*="ring"]):not([class*="bg-"]):not(.cs-control):not(.cs-switch):focus-visible {
+  outline: 2px solid hsl(var(--cs-ring));
   outline-offset: 2px;
 }
 

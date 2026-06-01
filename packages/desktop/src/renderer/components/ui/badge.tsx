@@ -10,6 +10,10 @@ const badgeVariants = cva(
       variant: {
         default: "border-border text-foreground",
         accent: "border-primary/40 text-primary",
+        success: "border-status-ok/40 bg-status-ok/10 text-status-ok",
+        warning: "border-status-warn/40 bg-status-warn/10 text-status-warn",
+        error: "border-status-err/40 bg-status-err/10 text-status-err",
+        info: "border-status-running/40 bg-status-running/10 text-status-running",
         secondary: "border-border text-muted-foreground",
         destructive: "border-destructive/40 text-destructive",
         outline: "border-border text-foreground",
