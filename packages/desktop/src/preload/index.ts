@@ -19,7 +19,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
 let nextRpcId = 1;
-const pending = new Map<number, (resp: unknown) => void>();
+const pending = new Map<number, { resolve: (resp: unknown) => void; reject: (err: Error) => void }>();
 // Multi-session: callbacks receive `{ sessionId, event }` for stream events
 // and `{ sessionId, requestId, request }` for approval requests.
 const streamListeners: Array<(env: { sessionId: string; event: unknown }) => void> = [];
@@ -41,10 +41,10 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     // instead of silently dropping the response.
     const rawId = (msg as { id: unknown }).id;
     const id = typeof rawId === "string" ? Number(rawId) : (rawId as number);
-    const resolver = pending.get(id);
-    if (resolver) {
+    const entry = pending.get(id);
+    if (entry) {
       pending.delete(id);
-      resolver(msg);
+      entry.resolve(msg);
     }
     return;
   }
@@ -67,30 +67,75 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
 });
 
 ipcRenderer.on("agent:lifecycle", (_e: IpcRendererEvent, evt: unknown) => {
+  // Worker death is the fallback that used to be covered by the per-RPC
+  // timeout. Now that agent/run runs untimed, a crashed/exited worker would
+  // otherwise leave its pending Promise hanging forever (busy never clears).
+  // Reject every in-flight RPC when the child goes away. On a clean exit the
+  // run has already resolved, so `pending` is empty and this is a no-op.
+  const type = (evt as { type?: string } | null)?.type;
+  if (type === "exited" || type === "gave_up") {
+    if (pending.size > 0) {
+      const err = new Error(`worker ${type} before replying`);
+      for (const [id, entry] of pending) {
+        pending.delete(id);
+        entry.reject(err);
+      }
+    }
+  }
   lifecycleListeners.forEach((cb) => cb(evt));
 });
 
 const RPC_TIMEOUT_MS = 30_000;
 
-function rpc(method: string, params?: Record<string, unknown>): Promise<unknown> {
+/**
+ * Send a JSON-RPC request to main and resolve with its reply.
+ *
+ * `timeoutMs` guards against main never replying so the caller doesn't hang
+ * and the resolver doesn't leak in `pending`. Pass `0` to DISABLE the timeout
+ * for long-running requests: `agent/run` only resolves when the whole turn
+ * finishes (minutes, with Playwright / image-gen / multi-turn tool loops), and
+ * its responses stream in via agent:lifecycle meanwhile. A fixed 30s timeout
+ * there fired mid-run, rejecting a still-healthy run — App.tsx's .catch then
+ * cleared busy and nulled runningBucketRef, so the eventual streamEvents and
+ * final result had no bucket to land in (UI froze on the last task snapshot).
+ *
+ * Recovery model now: normal end / error → cleared by the streamEvent the
+ * renderer already listens for (turn_complete/error, App.tsx); worker process
+ * death → the exited/gave_up lifecycle handler above rejects the pending run;
+ * a wedged-but-alive worker (no events, no exit) → the user's Stop button
+ * (agent/cancel) clears busy. No clock can tell "slow" from "wedged", so that
+ * last call is left to the human rather than guessed by a timeout.
+ */
+function rpc(
+  method: string,
+  params?: Record<string, unknown>,
+  timeoutMs: number = RPC_TIMEOUT_MS,
+): Promise<unknown> {
   const id = nextRpcId++;
   const line = JSON.stringify({ jsonrpc: "2.0", id, method, params });
   return new Promise((resolve, reject) => {
-    // Reject (and drop the pending entry) if main never replies, so the caller
-    // doesn't hang forever and the resolver doesn't leak in `pending`.
-    const timer = setTimeout(() => {
-      if (pending.delete(id)) {
-        reject(new Error(`RPC '${method}' timed out after ${RPC_TIMEOUT_MS}ms`));
-      }
-    }, RPC_TIMEOUT_MS);
-    pending.set(id, (msg) => {
-      clearTimeout(timer);
-      resolve(msg);
+    const timer =
+      timeoutMs > 0
+        ? setTimeout(() => {
+            if (pending.delete(id)) {
+              reject(new Error(`RPC '${method}' timed out after ${timeoutMs}ms`));
+            }
+          }, timeoutMs)
+        : null;
+    pending.set(id, {
+      resolve: (msg) => {
+        if (timer) clearTimeout(timer);
+        resolve(msg);
+      },
+      reject: (err) => {
+        if (timer) clearTimeout(timer);
+        reject(err);
+      },
     });
     try {
       ipcRenderer.send("agent:msg", line);
     } catch (err) {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       pending.delete(id);
       reject(err instanceof Error ? err : new Error(String(err)));
     }
@@ -102,7 +147,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   log: (msg: string, data?: Record<string, unknown>) =>
     ipcRenderer.send("desktop:log", { msg, data }),
   run: (task: string, opts?: { cwd?: string; sessionId?: string; permissionMode?: string; planMode?: boolean } & Record<string, unknown>) =>
-    rpc("agent/run", { task, ...(opts ?? {}) }),
+    // No timeout: a run resolves only when the whole turn completes (can be
+    // minutes). The Stop button (agent/cancel) is the abort path, not a clock.
+    rpc("agent/run", { task, ...(opts ?? {}) }, 0),
   /**
    * Cancel a session's running turn. sessionId is required for the
    * multi-session worker; legacy callers that omitted it routed through
