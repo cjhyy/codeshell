@@ -759,6 +759,21 @@ ipcMain.handle("sessions:list", async () => listSessions());
 ipcMain.handle("sessions:delete", async (_e, id: string) => {
   if (typeof id !== "string") throw new Error("session id required");
   await deleteSession(id);
+  // Drop any in-memory snapshot for the deleted session so it can't be
+  // replayed into a fresh tab that happens to reuse the id.
+  bridge?.forgetSession(id);
+});
+
+/**
+ * Snapshot subscription: a (re)mounted renderer asks main for the events it
+ * missed for a session past `sinceSeq`. main holds these (AgentBridge's
+ * SessionSnapshotStore) precisely because it does not remount with the
+ * renderer. Returns { events: [{seq,event}], nextSeq }.
+ */
+ipcMain.handle("agent:subscribe", async (_e, sessionId: string, sinceSeq?: number) => {
+  if (typeof sessionId !== "string") throw new Error("sessionId required");
+  return bridge?.getSnapshot(sessionId, typeof sinceSeq === "number" ? sinceSeq : 0)
+    ?? { events: [], nextSeq: 1 };
 });
 ipcMain.handle("sessions:titles", async () => listTitles());
 ipcMain.handle("sessions:rename", async (_e, id: string, title: string) => {

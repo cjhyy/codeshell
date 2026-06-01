@@ -282,6 +282,13 @@ contextBridge.exposeInMainWorld("codeshell", {
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   getSessionTranscript: (sessionId: string) =>
     ipcRenderer.invoke("sessions:transcript", sessionId),
+  /**
+   * Re-subscribe to a session's main-held event snapshot after a remount.
+   * Returns events past `sinceSeq` plus the next cursor, so the renderer can
+   * replay what it missed and align the snapshot with the live stream.
+   */
+  subscribeSession: (sessionId: string, sinceSeq?: number) =>
+    ipcRenderer.invoke("agent:subscribe", sessionId, sinceSeq),
   deleteRun: (runId: string) => ipcRenderer.invoke("runs:delete", runId),
   listAutomations: () => ipcRenderer.invoke("automation:list"),
   getAutomation: (id: string) => ipcRenderer.invoke("automation:get", id),

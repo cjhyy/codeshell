@@ -90,6 +90,17 @@ main 快照有上限;断点过久(快照已淘汰)时,renderer 回读 transcript
 worker 崩溃重启 resume 同会话时,清表正是失联根源之一。`exited` 时只清 `runningBucketRef`
 和 busy 标记,**路由表保留**;且 main 快照不因 worker exit 而清(快照属于 session,不属于 worker 生命周期)。
 
+## 5bis. 实现期发现:live StreamEvent 没有 id/turnNumber(影响游标设计)
+
+落地阶段 2 时核对 `core/src/types.ts:247 StreamEvent` 发现:**实时流事件不带 `id`,
+基本不带 `turnNumber`**(仅 `stream_request_start` 有)。`id`/`turnNumber` 只存在于
+**磁盘 transcript.jsonl**(core 持久化层写入),不在 worker→renderer 的实时 envelope 里。
+
+**决策(自主,记录在案):main 快照在转发时给每条事件分配自己的单调 `seq`(每 session 一个计数器),
+`seq` 即游标。** renderer 按 `seq` 对齐/去重(快照返回 `{events, nextSeq}`,增量事件也带 seq)。
+这与 Codex "靠 append 顺序定序" 等价,且绕开了 live 事件无 id 的问题。磁盘 `id` 仅阶段 4
+回读 transcript 时用于去重。
+
 ## 5. 已知约束(落地时必须解决)
 
 **`getSessionTranscript` 当前返回 `FoldItem[]`,不是原始事件流。**

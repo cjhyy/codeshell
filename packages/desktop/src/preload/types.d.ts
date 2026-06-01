@@ -32,6 +32,18 @@ export interface StreamEventEnvelope {
   event: StreamEvent;
 }
 
+/** One entry in a main-held session snapshot: a forwarded event + its seq. */
+export interface SnapshotEntry {
+  seq: number;
+  event: StreamEvent;
+}
+
+/** Reply to subscribeSession — events past the requested cursor + next cursor. */
+export interface SessionSnapshot {
+  events: SnapshotEntry[];
+  nextSeq: number;
+}
+
 export interface RpcResponse<T = unknown> {
   jsonrpc: "2.0";
   id: number;
@@ -269,6 +281,7 @@ export interface CodeshellApi {
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
+  subscribeSession(sessionId: string, sinceSeq?: number): Promise<SessionSnapshot>;
   deleteRun(runId: string): Promise<void>;
   listAutomations(): Promise<AutomationSummary[]>;
   getAutomation(id: string): Promise<AutomationSummary | null>;

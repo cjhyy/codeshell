@@ -24,6 +24,8 @@ import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
+import { SessionSnapshotStore, type Snapshot } from "./SessionSnapshotStore.js";
+import { parseSnapshotAppend } from "./parseStreamLine.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -64,6 +66,12 @@ export class AgentBridge {
    * destroyed window.
    */
   private windows = new Set<BrowserWindow>();
+  /**
+   * Per-session event snapshot. Lives in main (which never remounts), so a
+   * reloaded renderer can re-subscribe and replay the events it missed while
+   * it was gone. See SessionSnapshotStore.
+   */
+  private readonly snapshots = new SessionSnapshotStore();
 
   constructor(window: BrowserWindow) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
@@ -109,6 +117,10 @@ export class AgentBridge {
         if (m.method) summary = { method: m.method, raw: previewLine(line) };
         else if (m.id !== undefined) summary = { responseId: m.id, raw: previewLine(line) };
       } catch { /* keep raw */ }
+      // Mirror stream events into the per-session snapshot so a remounted
+      // renderer can replay what it missed. Non-streamEvent lines yield null.
+      const append = parseSnapshotAppend(line);
+      if (append) this.snapshots.append(append.sessionId, append.event);
       dlog("bridge", "worker→renderer", summary);
       this.safeSend("agent:msg", line);
     });
@@ -124,6 +136,9 @@ export class AgentBridge {
       dlog("bridge", "child.exit", { code, signal, pid: this.child?.pid });
       this.child = null;
       this.outbox = []; // any queued messages were for the dead child; drop
+      // Snapshots intentionally survive worker exit — a respawn may resume the
+      // same session, and a remounted renderer still needs to replay them.
+      this.snapshots.onWorkerExit();
       if (code === 0 && signal === null) {
         // Normal completion. Reset restart counter — clean exits don't count.
         this.restartCount = 0;
@@ -201,6 +216,20 @@ export class AgentBridge {
       }
       w.webContents.send(channel, payload);
     }
+  }
+
+  /**
+   * Snapshot of a session's events for a (re)subscribing renderer. With
+   * `sinceSeq`, returns only the events the renderer is missing past that
+   * cursor; the renderer aligns them against its live stream by seq.
+   */
+  getSnapshot(sessionId: string, sinceSeq = 0): Snapshot {
+    return this.snapshots.get(sessionId, sinceSeq);
+  }
+
+  /** Drop a session's snapshot (e.g. when the session is deleted). */
+  forgetSession(sessionId: string): void {
+    this.snapshots.forget(sessionId);
   }
 
   kill(): void {
