@@ -197,6 +197,100 @@ export class SettingsManager {
     this.invalidate();
   }
 
+  /**
+   * Persist a single setting (dotted key path) to the PROJECT-level config
+   * file at ${cwd}/.code-shell/settings.json. This is where capabilityOverrides
+   * live — project overlays never touch the global user file. Atomic write +
+   * cache invalidation mirror saveUserSetting.
+   */
+  saveProjectSetting(key: string, value: unknown, cwd: string): void {
+    const path = this.projectSettingsPath(cwd);
+    const current = this.readJsonObject(path);
+    const parts = key.split(".");
+    let target: Record<string, unknown> = current;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const seg = parts[i]!;
+      const next = target[seg];
+      if (!next || typeof next !== "object" || Array.isArray(next)) {
+        target[seg] = {};
+      }
+      target = target[seg] as Record<string, unknown>;
+    }
+    target[parts[parts.length - 1]!] = value;
+    this.atomicWriteJson(path, current);
+    this.invalidate();
+  }
+
+  /**
+   * Delete a single dotted key from the PROJECT-level config file. Used to
+   * express "inherit" — we don't persist the literal "inherit"; we remove the
+   * override key. No-ops if the file or any intermediate segment is absent.
+   */
+  deleteProjectSetting(key: string, cwd: string): void {
+    const path = this.projectSettingsPath(cwd);
+    if (!existsSync(path)) return;
+    const current = this.readJsonObject(path);
+    const parts = key.split(".");
+    let target: Record<string, unknown> | undefined = current;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const next = target?.[parts[i]!];
+      if (!next || typeof next !== "object" || Array.isArray(next)) return;
+      target = next as Record<string, unknown>;
+    }
+    if (target) delete target[parts[parts.length - 1]!];
+    this.atomicWriteJson(path, current);
+    this.invalidate();
+  }
+
+  /**
+   * Read ONE scope's raw settings file, validated but UNMERGED. Capability
+   * overlay math needs the project overlay and the user/global baseline
+   * separately — the merged get() collapses provenance and can't express
+   * tri-state inheritance. user → ~/.code-shell/settings.json, project →
+   * ${cwd}/.code-shell/settings.json. Only keys actually present in the file
+   * are returned (defaults are not synthesized), so an absent file → {}.
+   */
+  getForScope(scope: "user" | "project", cwd?: string): Partial<ValidatedSettings> {
+    const path =
+      scope === "user"
+        ? join(userHome(), ".code-shell", "settings.json")
+        : this.projectSettingsPath(cwd ?? this.cwd);
+    const raw = this.readJsonObject(path);
+    // validateSettings applies defaults; for a scope view we want only the
+    // file's own keys, so validate then project back the present keys.
+    const validated = validateSettings(raw) as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(raw)) out[k] = validated[k];
+    return out as Partial<ValidatedSettings>;
+  }
+
+  private projectSettingsPath(cwd: string): string {
+    if (!cwd || cwd.trim().length === 0) {
+      throw new Error("project setting write requires a non-empty cwd");
+    }
+    return join(cwd, ".code-shell", "settings.json");
+  }
+
+  private readJsonObject(path: string): Record<string, unknown> {
+    if (!existsSync(path)) return {};
+    try {
+      const parsed = JSON.parse(readFileSync(path, "utf-8"));
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // Corrupt file — overwrite rather than crash.
+    }
+    return {};
+  }
+
+  private atomicWriteJson(path: string, data: Record<string, unknown>): void {
+    mkdirSync(dirname(path), { recursive: true });
+    const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
+    writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
+    renameSync(tmp, path);
+  }
+
   private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {
     if (!existsSync(path)) return;
     try {

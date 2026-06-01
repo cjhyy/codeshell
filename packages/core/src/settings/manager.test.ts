@@ -1,5 +1,12 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  existsSync,
+  readFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { SettingsManager } from "./manager.js";
@@ -87,5 +94,75 @@ describe("SettingsManager scope", () => {
     );
     new SettingsManager(cwd, "project").get();
     expect(existsSync(join(home, ".code-shell", "settings.json.bak"))).toBe(false);
+  });
+});
+
+describe("SettingsManager project writes", () => {
+  let home: string;
+  let cwd: string;
+  let prevHome: string | undefined;
+
+  beforeEach(() => {
+    prevHome = process.env.HOME;
+    home = mkdtempSync(join(tmpdir(), "cs-home-"));
+    cwd = mkdtempSync(join(tmpdir(), "cs-cwd-"));
+    process.env.HOME = home;
+  });
+  afterEach(() => {
+    process.env.HOME = prevHome;
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  function projectJson(): any {
+    return JSON.parse(readFileSync(join(cwd, ".code-shell", "settings.json"), "utf-8"));
+  }
+
+  test("saveProjectSetting writes dotted path to project settings.json", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveProjectSetting("capabilityOverrides.skills.helper", "on", cwd);
+    expect(projectJson().capabilityOverrides.skills.helper).toBe("on");
+  });
+
+  test("saveProjectSetting creates .code-shell dir if absent", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveProjectSetting("capabilityOverrides.mcp.playwright", "off", cwd);
+    expect(existsSync(join(cwd, ".code-shell", "settings.json"))).toBe(true);
+  });
+
+  test("deleteProjectSetting removes the leaf key (inherit)", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveProjectSetting("capabilityOverrides.skills.a", "off", cwd);
+    sm.saveProjectSetting("capabilityOverrides.skills.b", "on", cwd);
+    sm.deleteProjectSetting("capabilityOverrides.skills.a", cwd);
+    const j = projectJson();
+    expect(j.capabilityOverrides.skills.a).toBeUndefined();
+    expect(j.capabilityOverrides.skills.b).toBe("on");
+  });
+
+  test("empty cwd throws (boundary guard)", () => {
+    const sm = new SettingsManager(cwd, "project");
+    expect(() => sm.saveProjectSetting("x.y", "on", "")).toThrow();
+  });
+
+  test("write invalidates cache so next get() reflects it", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.get(); // prime cache
+    sm.saveProjectSetting("capabilityOverrides.skills.z", "on", cwd);
+    expect((sm.get() as any).capabilityOverrides.skills.z).toBe("on");
+  });
+
+  test("getForScope('project') returns only the project file, unmerged", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveProjectSetting("capabilityOverrides.skills.a", "off", cwd);
+    const proj = sm.getForScope("project", cwd);
+    expect(proj.capabilityOverrides?.skills?.a).toBe("off");
+    // user-only fields are not present in the project-scope view
+    expect((proj as any).disabledSkills).toBeUndefined();
+  });
+
+  test("getForScope('project') returns {} when no project file", () => {
+    const sm = new SettingsManager(cwd, "project");
+    expect(sm.getForScope("project", cwd)).toEqual({});
   });
 });
