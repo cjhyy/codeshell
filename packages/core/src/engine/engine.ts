@@ -1189,8 +1189,7 @@ export class Engine {
     // description. The registry is per-engine (loaded from .code-shell/agents
     // for this cwd), so it can't live in the static tool def — without this
     // the model never learns the reusable roles exist and spawns nameless
-    // ad-hoc agents instead (the Core A/B/C incident). For a sub-agent there
-    // is no Agent tool (nested agents are disabled), so the map is a no-op.
+    // ad-hoc agents instead (the Core A/B/C incident).
     // Agent (and its companions) are only available when at least one agent is
     // configured under .code-shell/agents. With an empty registry we strip them
     // entirely so the model cannot spawn ephemeral sub-agents.

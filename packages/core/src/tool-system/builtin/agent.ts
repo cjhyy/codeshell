@@ -100,7 +100,7 @@ export function buildAgentTypesBlock(
     "",
     "Available agent types (pass one as `agent_type` to reuse its role, tool allowlist, and turn cap):",
     ...lines,
-    "Prefer a matching agent_type over an ad-hoc agent: e.g. read-only investigation → researcher/explorer, planning → planner, full multi-step work → general-purpose. Omit agent_type only when no role fits.",
+    "agent_type is REQUIRED — pick the closest role above (e.g. read-only investigation → researcher/explorer, planning → planner, full multi-step work → general-purpose). Omitting agent_type is an error; ad-hoc/ephemeral sub-agents are disabled.",
   ].join("\n");
 }
 
@@ -191,7 +191,7 @@ export const agentToolDef: ToolDefinition = {
           "Loads that role's model, tool allowlist, turn cap, and system prompt. " +
           "Disabled roles are not available. If you pass an unknown role you'll get " +
           "an error listing the currently available roles. " +
-          "Omit to run an ad-hoc agent described entirely by 'prompt'.",
+          "Required whenever any role is configured — omitting it errors (ad-hoc/ephemeral sub-agents are disabled).",
       },
       description: {
         type: "string",
