@@ -142,11 +142,12 @@ state = disk.messages.length
   child Engine 有 parent sessionId 上下文 → 创建子 session 时写入 parentSessionId。
 - 重建列表时:`listDiskSessions` 跳过 `parentSessionId != null` 的目录。
 
-**存量边界(诚实记录)**:已存在的 807 个旧 session 加字段后**仍无 parentSessionId** → 重建时
-它们既无标识、又确实是子代理噪声。处理:落地计划用一个**轻启发式兜底**仅对"无 parentSessionId 字段
-的旧 session"生效(候选:summary 以"你是…子代理/只读探索/只读分析"开头则视为子代理;或仅展示
-`s-`/automation 来源的)。新 session 靠精确 parentSessionId,不依赖启发式。此兜底规则的具体形式
-列为落地待解点,不在本设计硬编死。
+**存量边界(用户定:不自动重建,手动处理)**:已存在的 807 个旧 session **没有 parentSessionId
+字段**。决策:`listDiskSessions` 的过滤规则 = **只返回带 parentSessionId 字段、且值为 null/空
+(即顶层)的会话;完全没有该字段的旧 session 一律跳过**(视为存量,不自动重建,用户手动管理)。
+- 零误判:新会话靠精确字段区分顶层/子代理;旧会话不碰。
+- 代价(已知):用户这次被清空的旧会话(那 34 个 s-)不会自动回来——用户接受,手动处理。
+- 实现简化:无需任何 summary 关键词启发式 / id 前缀约定。
 
 - **engineSessionId↔目录名**:disk 目录名即 engine sessionId;重建的 UI 会话 id 用同值
   (与 automation import 一致,`id === engineSessionId`),使路由/去重一致。
