@@ -209,6 +209,20 @@ export class AgentServer {
     }
 
     const sid = params.sessionId;
+
+    // Wire AskUserQuestion for this interactive session. The chatManager path
+    // builds a fresh per-session Engine via engineFactory, which (unlike the
+    // legacy single-engine path) never had askUser wired — so AskUserQuestion
+    // always fell into its "not available in headless mode" branch in normal
+    // chat (and in a resumed automation session). Route it to the client with
+    // this session's id so the renderer attributes the question to the right
+    // tab, resolving via the session's own pendingApprovals. Skip genuinely
+    // headless engines (no human to answer).
+    if (!session.engine.isHeadless()) {
+      session.engine.setAskUser((question, opts) =>
+        this.requestAskUserForSession(session, sid, question, opts),
+      );
+    }
     try {
       const result = await session.enqueueTurn(params.task, {
         cwd: params.cwd,
@@ -1025,6 +1039,59 @@ export class AgentServer {
   /**
    * Ask the client to answer a question from the agent (legacy single-engine path).
    */
+  /**
+   * Per-session AskUserQuestion for the chatManager path. Mirrors
+   * requestAskUserFromClient but resolves via the SESSION's pendingApprovals
+   * (the chatManager approve handler looks there, keyed by sessionId+requestId)
+   * and tags the notify with sessionId so the renderer routes the question to
+   * the right chat tab.
+   */
+  private requestAskUserForSession(
+    session: import("./chat-session.js").ChatSession,
+    sessionId: string,
+    question: string,
+    opts?: import("../tool-system/context.js").AskUserOptions,
+  ): Promise<string> {
+    return new Promise((resolve) => {
+      const requestId = nanoid(12);
+      session.pendingApprovals.set(requestId, (decision: unknown) => {
+        this.clearApprovalTimer(requestId);
+        const result = decision as ApprovalResult;
+        if (result && typeof result === "object" && "approved" in result) {
+          resolve(result.approved ? (result.answer ?? "") : (result.reason ?? "(user declined to answer)"));
+        } else {
+          // chatManager approve handler resolves with the raw decision value.
+          resolve(typeof decision === "string" ? decision : "");
+        }
+      });
+
+      const timer = setTimeout(() => {
+        if (session.pendingApprovals.has(requestId)) {
+          session.pendingApprovals.delete(requestId);
+          this.approvalTimers.delete(requestId);
+          resolve("(approval timed out)");
+        }
+      }, AgentServer.APPROVAL_TIMEOUT_MS);
+      this.approvalTimers.set(requestId, timer);
+
+      const args: Record<string, unknown> = { question };
+      if (opts?.header !== undefined) args.header = opts.header;
+      if (opts?.options !== undefined) args.options = opts.options;
+      if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
+
+      this.notify(Methods.ApprovalRequest, {
+        sessionId,
+        requestId,
+        request: {
+          toolName: "__ask_user__",
+          args,
+          description: question,
+          riskLevel: "low" as const,
+        },
+      });
+    });
+  }
+
   private requestAskUserFromClient(
     question: string,
     opts?: import("../tool-system/context.js").AskUserOptions,
