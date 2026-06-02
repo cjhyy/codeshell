@@ -104,7 +104,11 @@ export class SessionManager {
       turnCount: 0,
       invokedSkills: [],
       status: "active",
-      ...(parentSessionId ? { parentSessionId } : {}),
+      // Always write the key: a sub-agent gets its parent sid; a top-level
+      // session gets explicit null. This lets the desktop disk-rebuild tell a
+      // new top-level session (key present, null) apart from a legacy session
+      // (key absent) and from a sub-agent (key present, non-empty string).
+      parentSessionId: parentSessionId ?? null,
     };
 
     writeFileSync(join(sessionDir, "state.json"), JSON.stringify(state, null, 2), "utf-8");

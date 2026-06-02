@@ -18,11 +18,14 @@ describe("SessionManager.create — parentSessionId", () => {
     expect(onDisk.parentSessionId).toBe("parent-9");
   });
 
-  test("omits parentSessionId for a top-level session", () => {
+  test("writes parentSessionId: null for a top-level session (present, not absent)", () => {
     const sm = new SessionManager(dir);
     const b = sm.create("/tmp", "m", "p", "top-1");
-    expect(b.state.parentSessionId).toBeUndefined();
+    expect(b.state.parentSessionId).toBeNull();
     const onDisk = JSON.parse(readFileSync(join(dir, "top-1", "state.json"), "utf8"));
-    expect("parentSessionId" in onDisk).toBe(false);
+    // Key MUST be present (= null) so disk-rebuild can distinguish a new
+    // top-level session from a legacy one (which has no key at all).
+    expect("parentSessionId" in onDisk).toBe(true);
+    expect(onDisk.parentSessionId).toBeNull();
   });
 });

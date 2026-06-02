@@ -116,7 +116,13 @@ export interface SessionState {
   tokenUsage: TokenUsage;
   turnCount: number;
   invokedSkills: string[];
-  parentSessionId?: string;
+  /**
+   * Owning parent session for a sub-agent run; `null` explicitly marks a
+   * top-level session (post-create marker). Absent only on legacy sessions
+   * written before this field existed — the desktop disk-rebuild uses
+   * "key present && null" to tell a new top-level session apart from legacy.
+   */
+  parentSessionId?: string | null;
   status: SessionStatus;
   /** Short summary derived from the first user message */
   summary?: string;
