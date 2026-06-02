@@ -18,11 +18,13 @@ import {
   SettingsManager,
   createRunManager,
   HeadlessApprovalBackend,
+  makeUpdateAutomationMemoryTool,
   type RunManager,
   type CronRunner,
   type CronRunResult,
 } from "@cjhyy/code-shell-core";
-import { readAutomationMemory } from "./automationMemory.js";
+import { readAutomationMemory, appendAutomationMemory } from "./automationMemory.js";
+import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
 
 /**
  * Build a read-only RunManager for automation. Per-job cwd is passed at submit
@@ -71,10 +73,21 @@ export function buildDesktopAutomationRunner(
       cwd: jobCwd,
       settingsScope: "full",
       headless: true,
+      // Strip the cron tools so an unattended run can't recursively schedule
+      // more automations. (disabledBuiltinTools is a delta on the preset's
+      // builtin set — see resolveBuiltinToolNames.)
+      disabledBuiltinTools: [...AUTOMATION_DISABLED_TOOLS],
       // Read-only contract from bindCronToEngine — cron is unattended.
       permissionMode: req.permissionMode,
       approvalBackend: req.approvalBackend,
     });
+
+    // Let the run persist a one-paragraph summary for the NEXT scheduled run.
+    // The sink writes to this job's task-level memory.md.
+    const memoryTool = makeUpdateAutomationMemoryTool((summary) =>
+      appendAutomationMemory(req.job.id, summary),
+    );
+    engine.registerCustomTool(memoryTool.definition, memoryTool.execute);
 
     // Task-level cross-run memory: prepend prior run summaries so the job can
     // build on what earlier runs learned.

@@ -88,6 +88,8 @@ export { ToolExecutor } from "./tool-system/executor.js";
 export { PermissionClassifier, HeadlessApprovalBackend, AutoApprovalBackend } from "./tool-system/permission.js";
 export type { ApprovalBackend } from "./tool-system/permission.js";
 export { BUILTIN_TOOLS } from "./tool-system/builtin/index.js";
+export type { BuiltinTool, BuiltinToolFn } from "./tool-system/builtin/index.js";
+export { makeUpdateAutomationMemoryTool } from "./tool-system/builtin/update-automation-memory.js";
 export { MCPManager } from "./tool-system/mcp-manager.js";
 export type { AskUserFn } from "./tool-system/builtin/ask-user.js";
 // taskManager singleton removed in the TodoWrite refactor; task state
