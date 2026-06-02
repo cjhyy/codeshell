@@ -34,6 +34,28 @@ const READ_ONLY_TOOLS = new Set([
 const WRITE_TOOLS = new Set(["Write", "Edit", "ApplyPatch", "NotebookEdit", "MultiEdit"]);
 
 /**
+ * Tools approved regardless of permission tier — automation-internal bookkeeping
+ * that is NOT a user-file/shell side effect. UpdateAutomationMemory writes the
+ * job's own memory.md, and the automation system prompt requires the agent to
+ * call it at end-of-run, so a read-only tier must not deny it.
+ */
+const ALWAYS_APPROVED_TOOLS = new Set(["UpdateAutomationMemory"]);
+
+/**
+ * Wrap a tier backend so the always-approved automation-internal tools bypass
+ * the tier check. Keeps the exemption inside the automation module rather than
+ * polluting the shared HeadlessApprovalBackend.
+ */
+function withAlwaysApproved(backend: ApprovalBackend): ApprovalBackend {
+  return {
+    async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
+      if (ALWAYS_APPROVED_TOOLS.has(req.toolName)) return { approved: true };
+      return backend.requestApproval(req);
+    },
+  };
+}
+
+/**
  * Tier-aware approval backend. read-only delegates to the existing
  * HeadlessApprovalBackend; workspace-write additionally approves file-write
  * tools but still denies shell; full approves everything (shell included).
@@ -70,14 +92,14 @@ export function resolveWritePolicy(level: CronPermissionLevel | undefined): Writ
     return {
       permissionMode: "default",
       // Reuse the shared read-only backend so read-only stays identical to the
-      // Phase 1/2 contract.
-      approvalBackend: new HeadlessApprovalBackend("approve-read-only"),
+      // Phase 1/2 contract; wrap so automation-internal tools still pass.
+      approvalBackend: withAlwaysApproved(new HeadlessApprovalBackend("approve-read-only")),
       sandboxMode: "auto",
     };
   }
   return {
     permissionMode: "default",
-    approvalBackend: new TierApprovalBackend(level),
+    approvalBackend: withAlwaysApproved(new TierApprovalBackend(level)),
     // Sandbox in auto mode picks the OS backend; writes are confined to the
     // workspace regardless of tier (Phase 4 fail-closed).
     sandboxMode: "auto",

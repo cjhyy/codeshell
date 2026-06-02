@@ -4,7 +4,6 @@ import {
   wrapUntrustedInput,
   type CronPermissionLevel,
 } from "./write-policy.js";
-import { HeadlessApprovalBackend } from "../tool-system/permission.js";
 
 async function decide(level: CronPermissionLevel, tool: string): Promise<boolean> {
   const policy = resolveWritePolicy(level);
@@ -21,7 +20,6 @@ describe("resolveWritePolicy", () => {
   test("read-only: permissionMode default, reads approved, writes denied", async () => {
     const p = resolveWritePolicy("read-only");
     expect(p.permissionMode).toBe("default");
-    expect(p.approvalBackend).toBeInstanceOf(HeadlessApprovalBackend);
     expect(await decide("read-only", "Read")).toBe(true);
     expect(await decide("read-only", "Write")).toBe(false);
     expect(await decide("read-only", "Bash")).toBe(false);
@@ -48,6 +46,17 @@ describe("resolveWritePolicy", () => {
     expect(await p.approvalBackend.requestApproval({ toolName: "Write", args: {}, description: "", riskLevel: "low" })).toEqual(
       expect.objectContaining({ approved: false }),
     );
+  });
+
+  // UpdateAutomationMemory writes the automation's OWN memory.md (bookkeeping,
+  // not a user-file write), and the system prompt requires the agent to call it
+  // at end-of-run. So it must be approved regardless of permission tier — incl.
+  // read-only, where it was previously denied ("Permission denied by user").
+  test("UpdateAutomationMemory is approved in every tier (incl. read-only)", async () => {
+    expect(await decide("read-only", "UpdateAutomationMemory")).toBe(true);
+    expect(await decide("workspace-write", "UpdateAutomationMemory")).toBe(true);
+    expect(await decide("full", "UpdateAutomationMemory")).toBe(true);
+    expect(await decide(undefined, "UpdateAutomationMemory")).toBe(true);
   });
 });
 
