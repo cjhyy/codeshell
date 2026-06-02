@@ -11,7 +11,7 @@
  * Electron / localStorage.
  */
 import type { SessionSummary } from "../transcripts";
-import { matchRepoIdForCwd, type RepoLike } from "./pathMatch";
+import { matchRepoIdForCwd, isNoRepoCwd, type RepoLike } from "./pathMatch";
 
 export interface AutomationSessionAnnouncement {
   sessionId: string;
@@ -42,9 +42,11 @@ export function placeLiveAutomationSession(
   repos: RepoLike[],
   deps: PlaceLiveSessionDeps,
 ): LiveSessionPlacement {
-  const repoId =
-    matchRepoIdForCwd(ann.cwd, repos, deps.caseInsensitive) ??
-    deps.createRepoForCwd(ann.cwd);
+  // The internal no-repo sandbox is a no-project chat → NO_REPO_KEY bucket
+  // (repoId null), never a real repo.
+  const repoId = isNoRepoCwd(ann.cwd)
+    ? null
+    : (matchRepoIdForCwd(ann.cwd, repos, deps.caseInsensitive) ?? deps.createRepoForCwd(ann.cwd));
   const now = Date.now();
   const summary: SessionSummary = {
     id: ann.sessionId, // engine sessionId doubles as the UI session id for imports

@@ -1,5 +1,21 @@
 import { describe, it, expect } from "bun:test";
-import { normalizeCwd, matchRepoIdForCwd, isCaseInsensitivePlatform } from "./pathMatch";
+import { normalizeCwd, matchRepoIdForCwd, isCaseInsensitivePlatform, isNoRepoCwd } from "./pathMatch";
+
+describe("isNoRepoCwd", () => {
+  it("treats the internal no-repo sandbox dir as no-project (chat)", () => {
+    expect(isNoRepoCwd("/Users/admin/.code-shell/no-repo")).toBe(true);
+    expect(isNoRepoCwd("/Users/admin/.code-shell/no-repo/")).toBe(true); // trailing slash
+    expect(isNoRepoCwd("/home/x/.code-shell/no-repo")).toBe(true); // any home
+  });
+  it("treats empty/missing cwd as no-project", () => {
+    expect(isNoRepoCwd("")).toBe(true);
+    expect(isNoRepoCwd(undefined as unknown as string)).toBe(true);
+  });
+  it("does NOT match a real project that merely contains the substring", () => {
+    expect(isNoRepoCwd("/Users/admin/Documents/codeshell")).toBe(false);
+    expect(isNoRepoCwd("/Users/admin/.code-shell/no-repo-clone")).toBe(false); // not the exact dir
+  });
+});
 
 const repos = [
   { id: "r1", name: "alpha", path: "/Users/me/alpha" },

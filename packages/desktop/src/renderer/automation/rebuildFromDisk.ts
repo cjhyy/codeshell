@@ -4,7 +4,7 @@
  * returned (repoId, summary) pairs via upsertImportedSession and persist repos.
  * Reuses the same cwd→repo matching as live automation placement (D1).
  */
-import { matchRepoIdForCwd, type RepoLike } from "./pathMatch";
+import { matchRepoIdForCwd, isNoRepoCwd, type RepoLike } from "./pathMatch";
 import type { SessionSummary } from "../transcripts";
 
 export interface DiskSessionMeta {
@@ -21,7 +21,8 @@ export interface RebuildDeps {
 }
 
 export interface RebuildPlacement {
-  repoId: string;
+  /** Target repo id, or `null` for the no-project (chat / NO_REPO_KEY) bucket. */
+  repoId: string | null;
   summary: SessionSummary;
 }
 
@@ -31,7 +32,10 @@ export function planDiskRebuild(
   deps: RebuildDeps,
 ): RebuildPlacement[] {
   return sessions.map((s) => {
-    const repoId = matchRepoIdForCwd(s.cwd, repos, deps.caseInsensitive) ?? deps.createRepoForCwd(s.cwd);
+    // The internal no-repo sandbox is a no-project chat, never a real repo.
+    const repoId = isNoRepoCwd(s.cwd)
+      ? null
+      : (matchRepoIdForCwd(s.cwd, repos, deps.caseInsensitive) ?? deps.createRepoForCwd(s.cwd));
     const summary: SessionSummary = {
       id: s.id,
       title: (s.title || s.id).slice(0, 60),

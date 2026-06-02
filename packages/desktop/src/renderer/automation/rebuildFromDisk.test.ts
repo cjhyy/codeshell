@@ -29,4 +29,16 @@ describe("planDiskRebuild", () => {
     expect(created).toBe("/proj/new");
     expect(out[0].repoId).toBe("r-new");
   });
+
+  it("routes a no-repo sandbox cwd to chat (repoId null), never creating a repo", () => {
+    let called = false;
+    const out = planDiskRebuild(
+      [{ id: "s3", engineSessionId: "s3", cwd: "/Users/admin/.code-shell/no-repo", title: "你好", updatedAt: 5 }],
+      [],
+      { caseInsensitive: false, createRepoForCwd: () => { called = true; return "X"; } },
+    );
+    expect(called).toBe(false); // must NOT create a "no-repo" project
+    expect(out[0].repoId).toBeNull(); // null → NO_REPO_KEY (chat) bucket
+    expect(out[0].summary).toMatchObject({ id: "s3", engineSessionId: "s3" });
+  });
 });

@@ -29,6 +29,21 @@ export function normalizeCwd(cwd: string, caseInsensitive: boolean): string {
   return caseInsensitive ? out.toLowerCase() : out;
 }
 
+/**
+ * True when `cwd` is the internal "no-repo" sandbox (`~/.code-shell/no-repo`,
+ * any home dir) or empty/missing. These are NOT real projects — a session run
+ * there is a no-project chat. Callers that map cwd→repo must route these to the
+ * NO_REPO_KEY bucket (chat) instead of creating a bogus "no-repo" project (which
+ * would otherwise show a project in the sidebar and pop a trust gate for the
+ * sandbox dir). Matches the exact trailing segment `.code-shell/no-repo`, so a
+ * real project like `.../no-repo-clone` does not falsely match.
+ */
+export function isNoRepoCwd(cwd: string | undefined | null): boolean {
+  if (!cwd) return true;
+  const norm = cwd.replace(/\/+$/, "");
+  return norm.endsWith("/.code-shell/no-repo") || norm.endsWith("\\.code-shell\\no-repo");
+}
+
 /** Return the id of the repo whose path equals `cwd` (normalized), or null. */
 export function matchRepoIdForCwd(
   cwd: string,

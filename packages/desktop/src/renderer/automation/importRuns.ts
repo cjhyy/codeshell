@@ -8,7 +8,7 @@ import type { FoldItem } from "../../preload/types";
 import type { MessagesReducerState } from "../types";
 import type { SessionSummary } from "../transcripts";
 import { foldTranscript } from "./foldTranscript";
-import { matchRepoIdForCwd, normalizeCwd, type RepoLike } from "./pathMatch";
+import { matchRepoIdForCwd, normalizeCwd, isNoRepoCwd, type RepoLike } from "./pathMatch";
 
 /** A run as needed for import (subset of the main-process RunSummary). */
 export interface ImportableRun {
@@ -62,8 +62,10 @@ export async function importAutomationRuns(
   // instead of spawning a new repo per run.
   const autoCreated = new Map<string, string>();
   for (const r of candidates) {
-    let repoId = matchRepoIdForCwd(r.cwd, repos, deps.caseInsensitive);
-    if (!repoId) {
+    // The internal no-repo sandbox is a no-project chat → NO_REPO_KEY bucket
+    // (repoId null), never a real repo.
+    let repoId = isNoRepoCwd(r.cwd) ? null : matchRepoIdForCwd(r.cwd, repos, deps.caseInsensitive);
+    if (!repoId && !isNoRepoCwd(r.cwd)) {
       const key = normalizeCwd(r.cwd, deps.caseInsensitive);
       repoId = autoCreated.get(key) ?? null;
       if (!repoId) {
