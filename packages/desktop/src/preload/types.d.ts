@@ -302,6 +302,10 @@ export interface CodeshellApi {
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
+  listDiskSessions(opts?: { limit?: number; cursor?: string }): Promise<{
+    sessions: Array<{ id: string; engineSessionId: string; cwd: string; title: string; updatedAt: number }>;
+    nextCursor: string | null;
+  }>;
   subscribeSession(sessionId: string, sinceSeq?: number): Promise<SessionSnapshot>;
   getSessionRawEvents(sessionId: string, sinceId?: string): Promise<RawTranscriptEvent[]>;
   deleteRun(runId: string): Promise<void>;

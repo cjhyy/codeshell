@@ -304,6 +304,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   getRun: (runId: string) => ipcRenderer.invoke("runs:get", runId),
   getSessionTranscript: (sessionId: string) =>
     ipcRenderer.invoke("sessions:transcript", sessionId),
+  listDiskSessions: (opts?: { limit?: number; cursor?: string }) =>
+    ipcRenderer.invoke("sessions:listDisk", opts ?? {}),
   /**
    * Re-subscribe to a session's main-held event snapshot after a remount.
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can
