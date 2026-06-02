@@ -245,6 +245,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
         clientDefaults: resolvedClientDefaults,
         cwd,
         runtime,
+        origin: "tui",
         ...sharedCfg,
         // Per-session overrides from the protocol request take precedence
         ...(slice.permissionMode ? { permissionMode: slice.permissionMode } : {}),

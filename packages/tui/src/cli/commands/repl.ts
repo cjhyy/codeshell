@@ -199,6 +199,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
         llm: resolvedLlmConfig,
         cwd,
         runtime,
+        origin: "tui",
         ...sharedCfg,
         // Per-session overrides from the protocol request take precedence
         ...(slice.permissionMode ? { permissionMode: slice.permissionMode } : {}),

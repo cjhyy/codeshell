@@ -169,6 +169,9 @@ const chatManager = new ChatSessionManager({
       clientDefaults: resolvedClientDefaults,
       cwd,
       runtime,
+      // This stdio worker exists only to serve the desktop app, so every
+      // session it creates is a desktop-origin session.
+      origin: "desktop",
       // Inherit full scope so spawned subagents read user config too.
       settingsScope: "full",
       // MCP servers from settings — the worker reads the full disk

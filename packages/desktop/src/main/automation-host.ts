@@ -98,6 +98,7 @@ export function buildDesktopAutomationRunner(
       cwd: jobCwd,
       settingsScope: "full",
       headless: true,
+      origin: "automation",
       // This is an unattended automation run — tell the model so it doesn't
       // ask the user or offer to schedule automation, and so it persists a
       // cross-run memory summary on finish.
