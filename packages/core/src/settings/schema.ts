@@ -37,6 +37,14 @@ export const SettingsSchema = z
         disabledBuiltinTools: z.array(z.string()).default([]),
         customSystemPrompt: z.string().optional(),
         appendSystemPrompt: z.string().optional(),
+        responseLanguage: z.string().optional(),
+        userProfile: z.string().optional(),
+        instructions: z
+          .object({
+            compatClaude: z.boolean().default(true),
+            compatCodex: z.boolean().default(true),
+          })
+          .optional(),
       })
       .default({}),
 
