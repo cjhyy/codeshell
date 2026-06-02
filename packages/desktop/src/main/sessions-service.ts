@@ -4,6 +4,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import * as fsSync from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 
@@ -77,6 +78,68 @@ export async function deleteSessionDir(
 /** @deprecated retained for the existing IPC handler; delegates to deleteSessionDir. */
 export async function deleteSession(id: string): Promise<void> {
   await deleteSessionDir(id);
+}
+
+export interface DiskSessionMeta {
+  id: string;
+  engineSessionId: string; // == directory name; reused as the UI session id
+  cwd: string;
+  title: string;
+  updatedAt: number;
+}
+
+export interface ListDiskSessionsResult {
+  sessions: DiskSessionMeta[];
+  nextCursor: string | null; // index into the mtime-sorted dir list; null = no more
+}
+
+/**
+ * List top-level (non-sub-agent) sessions from disk, newest first, paginated.
+ * Filter on state.json `parentSessionId`:
+ *   - key absent  → legacy → skip (存量 not auto-rebuilt)
+ *   - null / ""   → top-level → show
+ *   - non-empty   → sub-agent → filter out
+ */
+export function listDiskSessions(
+  opts: { limit: number; cursor?: string },
+  baseDir: string = SESSIONS_DIR,
+): ListDiskSessionsResult {
+  let entries: fsSync.Dirent[];
+  try {
+    entries = fsSync.readdirSync(baseDir, { withFileTypes: true });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { sessions: [], nextCursor: null };
+    throw e;
+  }
+  const dirs: Array<{ id: string; mtime: number }> = [];
+  for (const e of entries) {
+    if (!e.isDirectory() || !SAFE_ID.test(e.name)) continue;
+    try {
+      dirs.push({ id: e.name, mtime: fsSync.statSync(path.join(baseDir, e.name)).mtimeMs });
+    } catch { /* skip unreadable */ }
+  }
+  dirs.sort((a, b) => b.mtime - a.mtime);
+
+  const start = opts.cursor ? Number(opts.cursor) : 0;
+  const sessions: DiskSessionMeta[] = [];
+  let i = start;
+  for (; i < dirs.length && sessions.length < opts.limit; i++) {
+    const { id, mtime } = dirs[i]!;
+    let state: Record<string, unknown>;
+    try {
+      state = JSON.parse(fsSync.readFileSync(path.join(baseDir, id, "state.json"), "utf8"));
+    } catch { continue; }
+    if (!("parentSessionId" in state)) continue;          // legacy → skip
+    if (state.parentSessionId) continue;                  // sub-agent (non-empty) → filter
+    sessions.push({
+      id,
+      engineSessionId: id,
+      cwd: typeof state.cwd === "string" ? state.cwd : "",
+      title: typeof state.summary === "string" && state.summary ? state.summary : id,
+      updatedAt: mtime,
+    });
+  }
+  return { sessions, nextCursor: i < dirs.length ? String(i) : null };
 }
 
 export { getSessionTranscript } from "./transcript-reader.js";
