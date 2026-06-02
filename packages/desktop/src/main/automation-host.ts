@@ -2,15 +2,17 @@
  * Desktop automation host — builds the execution backend that fired cron jobs
  * run through.
  *
- * Phase 2 path (preferred): a RunManager configured read-only. Each fired job
- * is submitted to the manager, lands in the RunStore, and shows up in the
- * existing runs UI with full history/checkpoint/resume.
+ * Active path: a one-shot HEADLESS Engine per job (`buildDesktopAutomationRunner`).
+ * Each run uses the job's cwd for config/skills, honors the job's permission tier
+ * (resolveWritePolicy → read-only/workspace-write/full), auto-writes a full
+ * transcript.jsonl (so the run's content is visible like a chat), keeps a
+ * per-task memory.md (the agent calls UpdateAutomationMemory at the end), and
+ * streams events to the renderer via the injected `emit`/`onSession` callbacks
+ * so the run shows up live in the project sidebar.
  *
- * Phase 1 path (kept as fallback): a one-shot headless Engine per job.
- *
- * Read-only contract until sandbox + write tiers land (Phase 4/5): the
- * RunManager is created with HeadlessApprovalBackend("approve-read-only") and
- * permissionMode "default", so reads are auto-approved and writes denied.
+ * Fallback (降级保留, no production consumer): `buildDesktopRunManager` — the
+ * earlier RunManager-backed path (RunStore + checkpoint/resume/evaluator). Kept
+ * for future long/expensive jobs that need durable resume; not wired up now.
  */
 
 import {
