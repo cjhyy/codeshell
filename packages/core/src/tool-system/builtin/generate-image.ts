@@ -75,13 +75,31 @@ function resolveOpenAIProvider(cwd: string): OpenAIProvider | null {
 /**
  * Tool-visibility guard: GenerateImage needs a kind:"openai" provider with a
  * key. resolveOpenAIProvider returns null when none is configured.
+ *
+ * Cached per-cwd with a short TTL: the guard runs on EVERY message's toolDefs
+ * assembly (engine.ts), and resolveOpenAIProvider reads + parses settings from
+ * disk each call. The 1s TTL collapses the back-to-back reads (same message,
+ * rapid turns) while still picking up a newly-configured key well within the
+ * gap before the user's next message. The execution path
+ * (resolveOpenAIProvider) is intentionally NOT cached — only this boolean.
  */
-export function isGenerateImageAvailable(cwd: string = process.cwd()): boolean {
+const availCache = new Map<string, { at: number; value: boolean }>();
+const AVAIL_TTL_MS = 1000;
+
+export function isGenerateImageAvailable(
+  cwd: string = process.cwd(),
+  nowMs: number = Date.now(),
+): boolean {
+  const hit = availCache.get(cwd);
+  if (hit && nowMs - hit.at < AVAIL_TTL_MS) return hit.value;
+  let value = false;
   try {
-    return resolveOpenAIProvider(cwd) !== null;
+    value = resolveOpenAIProvider(cwd) !== null;
   } catch {
-    return false;
+    value = false;
   }
+  availCache.set(cwd, { at: nowMs, value });
+  return value;
 }
 
 export async function generateImageTool(

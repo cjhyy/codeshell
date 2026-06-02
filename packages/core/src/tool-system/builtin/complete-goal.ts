@@ -17,8 +17,15 @@
 
 import type { ToolDefinition } from "../../types.js";
 
+/**
+ * The tool name, shared with turn-loop.ts's short-circuit check so a rename
+ * can't silently break completion detection (the name lives in exactly one
+ * place).
+ */
+export const COMPLETE_GOAL_TOOL_NAME = "complete_goal";
+
 export const completeGoalToolDef: ToolDefinition = {
-  name: "complete_goal",
+  name: COMPLETE_GOAL_TOOL_NAME,
   description:
     "声明当前目标已完全达成。仅当目标确实完整完成时才调用本工具(模型在目标完全达成时显式调用以声明完成)。" +
     "调用后应当停止。可选传入 summary 作为一句话完成总结。\n" +

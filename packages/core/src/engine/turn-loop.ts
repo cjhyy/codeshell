@@ -28,6 +28,7 @@ import { estimateTokens } from "../context/compaction.js";
 import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
+import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js";
 import {
   type GoalConfig,
   type GoalBudgetTracker,
@@ -635,7 +636,7 @@ export class TurnLoop {
       // running the judge hook. The tool's result is already in `messages`
       // above so the summary lands in the transcript. Reset the stop-block
       // counter so a prior judge-driven block streak doesn't leak out.
-      if (goalTracker && toolCalls.some((tc) => tc.toolName === "complete_goal")) {
+      if (goalTracker && toolCalls.some((tc) => tc.toolName === COMPLETE_GOAL_TOOL_NAME)) {
         tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
         this.stopBlockCount = 0;
         return { text: finalText, reason: "completed", messages };

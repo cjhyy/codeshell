@@ -281,15 +281,18 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     let cancelled = false;
     const targets = reasoningTargets;
     void (async () => {
-      const next: Record<string, ReasoningControl | null> = {};
-      for (const [key, t] of Object.entries(targets)) {
-        try {
-          next[key] = await window.codeshell.reasoningControl(t.kind, t.modelId);
-        } catch {
-          next[key] = { kind: "none" };
-        }
-      }
-      if (!cancelled) setControls(next);
+      // Independent per-model lookups — fetch them concurrently rather than
+      // awaiting each IPC round-trip in series (N models × ~one round-trip).
+      const entries = await Promise.all(
+        Object.entries(targets).map(async ([key, t]) => {
+          try {
+            return [key, await window.codeshell.reasoningControl(t.kind, t.modelId)] as const;
+          } catch {
+            return [key, { kind: "none" } as ReasoningControl] as const;
+          }
+        }),
+      );
+      if (!cancelled) setControls(Object.fromEntries(entries));
     })();
     return () => {
       cancelled = true;

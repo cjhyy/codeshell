@@ -87,14 +87,31 @@ export function resolveSearchConfig(cwd: string = process.cwd()): ResolvedSearch
 /**
  * Tool-visibility guard: WebSearch is only useful when a search provider is
  * configured. Mirrors the runtime check in the tool itself (source === "none"
- * means no provider). Cheap + sync so it can run on every toolDefs assembly.
+ * means no provider).
+ *
+ * Cached per-cwd with a short TTL: this runs on EVERY message's toolDefs
+ * assembly (engine.ts), and resolveSearchConfig reads + parses settings from
+ * disk each call. The 1s TTL collapses back-to-back reads while still picking
+ * up a newly-configured provider before the user's next message. The execution
+ * path (resolveSearchConfig) is intentionally NOT cached — only this boolean.
  */
-export function isWebSearchAvailable(cwd: string = process.cwd()): boolean {
+const availCache = new Map<string, { at: number; value: boolean }>();
+const AVAIL_TTL_MS = 1000;
+
+export function isWebSearchAvailable(
+  cwd: string = process.cwd(),
+  nowMs: number = Date.now(),
+): boolean {
+  const hit = availCache.get(cwd);
+  if (hit && nowMs - hit.at < AVAIL_TTL_MS) return hit.value;
+  let value = false;
   try {
-    return resolveSearchConfig(cwd).source !== "none";
+    value = resolveSearchConfig(cwd).source !== "none";
   } catch {
-    return false; // unresolved config → treat as unavailable
+    value = false; // unresolved config → treat as unavailable
   }
+  availCache.set(cwd, { at: nowMs, value });
+  return value;
 }
 
 export const webSearchToolDef: ToolDefinition = {

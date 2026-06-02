@@ -13,9 +13,12 @@
  * the hook. The consecutive-block cap that prevents infinite looping lives
  * in TurnLoop (maxStopBlocks), not here.
  *
- * Failure is conservative: if the judge call throws or returns text we
- * can't parse, we ALLOW the stop (return {}). A flaky judge must never
- * wedge a session into an unstoppable loop.
+ * Failure does NOT allow the stop (Goal mode P0, 2026-06-02): if the judge
+ * call throws or returns unparseable text, we return continueSession:true and
+ * nudge the model to keep going — silently allowing the stop in an unattended
+ * run would make the goal fail without anyone noticing. The backstop against
+ * an unsatisfiable goal looping forever is NOT this hook; it's the turn-loop's
+ * run-scoped budget guardrail (token/time) plus maxStopBlocks.
  */
 import type { HookContext, HookResult } from "./events.js";
 import type { HookHandler } from "./registry.js";

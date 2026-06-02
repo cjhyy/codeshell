@@ -2096,6 +2096,8 @@ function friendlyReason(reason: string): string {
       return "上下文超长 — 用 /compact 压缩,或开新会话";
     case "max_turns":
       return "达到最大回合数 — 可继续输入推进";
+    case "goal_budget_exhausted":
+      return "目标预算已耗尽 — 调高 token/时间预算后重试";
     case "hook_stopped":
     case "stop_hook_prevented":
       return "被 hook 拦截 — 检查 settings.json 中的 hook 配置";
