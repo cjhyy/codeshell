@@ -38,6 +38,7 @@ import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { createGoalStopHook } from "../hooks/goal-stop-hook.js";
+import { normalizeGoal, type GoalConfig } from "./goal.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
@@ -149,8 +150,11 @@ export interface EngineConfig {
    * (bounded by maxStopBlocks + maxTurns). Orthogonal to permissionMode —
    * the desktop UI defaults permission to bypass when a goal is set, but
    * the engine treats the two independently.
+   *
+   * Accepts a raw string (objective only) or a full GoalConfig (objective +
+   * optional token/time budgets); the run boundary normalizes it once.
    */
-  goal?: string;
+  goal?: string | GoalConfig;
   sessionStorageDir?: string;
   maxContextTokens?: number;
   approvalBackend?: ApprovalBackend;
@@ -647,9 +651,10 @@ export class Engine {
       /**
        * Goal mode for this run: the engine registers a GoalStopHook so the
        * turn loop runs until the session model judges this goal met. Falls
-       * back to config.goal. Orthogonal to permissionMode.
+       * back to config.goal. Orthogonal to permissionMode. Accepts a raw
+       * string or a full GoalConfig; normalized once at the run boundary.
        */
-      goal?: string;
+      goal?: string | GoalConfig;
     },
   ): Promise<EngineResult> {
     const cwd = options?.cwd ?? this.config.cwd ?? process.cwd();
@@ -1372,11 +1377,14 @@ export class Engine {
     // Registered per-run (and cleared in `finally`) so a later goal-less
     // send doesn't inherit a stale goal. The judge reuses `llmClient` — the
     // same model this session is talking to (per design).
-    const effectiveGoal = (options?.goal ?? this.config.goal ?? "").trim();
+    // Normalize the raw goal (string | GoalConfig) once at the run boundary;
+    // everything inward uses the GoalConfig. normalizeGoal() returns undefined
+    // when there's effectively no goal (empty objective).
+    const normalizedGoal = normalizeGoal(options?.goal ?? this.config.goal);
     let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
-    if (effectiveGoal && this.config.isSubAgent !== true) {
+    if (normalizedGoal && this.config.isSubAgent !== true) {
       goalHookHandler = createGoalStopHook({
-        goal: effectiveGoal,
+        goal: normalizedGoal,
         llm: llmClient,
         log: logger,
       });
@@ -1424,7 +1432,7 @@ export class Engine {
         signal: options?.signal,
         // Goal mode: the active goal is surfaced to the on_stop handler via
         // ctx.data.goal; the GoalStopHook (registered above) judges it.
-        goal: effectiveGoal || undefined,
+        goal: normalizedGoal,
         // Heartbeat: flush turnCount + tokens to state.json after every turn
         // so external observers (other CLI processes, /sid, the session list)
         // see live progress instead of a stale snapshot from the last

@@ -42,6 +42,7 @@ import {
   memorySaveToolDef, memorySaveTool,
   memoryDeleteToolDef, memoryDeleteTool,
 } from "./memory.js";
+import { completeGoalToolDef, completeGoalTool } from "./complete-goal.js";
 
 /**
  * Tool executor signature.
@@ -489,5 +490,19 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: memoryDeleteTool,
+  },
+  // ─── Goal mode: model-declared completion ──────────────────────
+  // Lets the model explicitly declare the active goal complete. The
+  // turn-loop short-circuits on this call; the tool itself only records an
+  // acknowledgement string, so it's read-only and concurrency-safe.
+  {
+    definition: {
+      ...completeGoalToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: completeGoalTool,
   },
 ];
