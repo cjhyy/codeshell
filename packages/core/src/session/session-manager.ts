@@ -84,6 +84,7 @@ export class SessionManager {
     model: string,
     provider: string,
     explicitSessionId?: string,
+    parentSessionId?: string,
   ): SessionBundle {
     // External callers may pass any string; nanoid output is trusted. Either
     // way the ID gets joined into a filesystem path, so the public entry
@@ -103,6 +104,7 @@ export class SessionManager {
       turnCount: 0,
       invokedSkills: [],
       status: "active",
+      ...(parentSessionId ? { parentSessionId } : {}),
     };
 
     writeFileSync(join(sessionDir, "state.json"), JSON.stringify(state, null, 2), "utf-8");

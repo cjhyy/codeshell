@@ -50,7 +50,7 @@ import { SessionManager, type SessionBundle } from "../session/session-manager.j
 import { Transcript } from "../session/transcript.js";
 import { ModelFacade } from "./model-facade.js";
 import type { CostStateStore } from "./cost-store.js";
-import { logger, setCurrentSid, runWithSid } from "../logging/logger.js";
+import { logger, setCurrentSid, runWithSid, getCurrentSid } from "../logging/logger.js";
 import { recordSessionStart, recordSessionEnd } from "../logging/session-recorder.js";
 import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-messages.js";
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
@@ -1014,6 +1014,7 @@ export class Engine {
         this.config.llm.model,
         this.config.llm.provider,
         options?.sessionId,
+        this.config.isSubAgent === true ? getCurrentSid() : undefined,
       );
       messages = [{ role: "user", content: userMessageContent }];
       session.transcript.appendMessage("user", userMessageContent);
