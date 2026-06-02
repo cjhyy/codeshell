@@ -27,6 +27,8 @@ function formatSessionStatus(s: SessionStatus): string {
     case "model_error":
     case "image_error":
       return "error";
+    case "goal_budget_exhausted":
+      return "budget";
     case "stop_hook_prevented":
     case "hook_stopped":
       return "hook_stop";

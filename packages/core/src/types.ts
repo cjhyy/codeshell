@@ -239,6 +239,7 @@ export type TerminalReason =
   | "aborted_streaming"
   | "aborted_tools"
   | "max_turns"
+  | "goal_budget_exhausted"
   | "image_error";
 
 // ─── Streaming ────────────────────────────────────────────────────
