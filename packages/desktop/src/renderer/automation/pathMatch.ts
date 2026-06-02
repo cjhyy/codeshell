@@ -41,7 +41,21 @@ export function normalizeCwd(cwd: string, caseInsensitive: boolean): string {
 export function isNoRepoCwd(cwd: string | undefined | null): boolean {
   if (!cwd) return true;
   const norm = cwd.replace(/\/+$/, "");
-  return norm.endsWith("/.code-shell/no-repo") || norm.endsWith("\\.code-shell\\no-repo");
+  // The internal no-repo sandbox.
+  if (norm.endsWith("/.code-shell/no-repo") || norm.endsWith("\\.code-shell\\no-repo")) return true;
+  // Ephemeral / temp scratch dirs — test runs and tools (mkdtemp $TMPDIR) use
+  // these as cwd; they are never a real project and must not spawn a sidebar
+  // repo. Anchored to path prefixes so a real project like ".../tmp-project"
+  // or ".../Documents/var/app" does NOT match.
+  if (
+    norm.startsWith("/tmp/") ||
+    norm.startsWith("/private/tmp/") ||
+    norm.startsWith("/var/folders/") ||
+    norm.startsWith("/private/var/folders/")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /** Return the id of the repo whose path equals `cwd` (normalized), or null. */

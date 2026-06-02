@@ -11,9 +11,17 @@ describe("isNoRepoCwd", () => {
     expect(isNoRepoCwd("")).toBe(true);
     expect(isNoRepoCwd(undefined as unknown as string)).toBe(true);
   });
+  it("treats ephemeral/temp dirs as no-project (test/tool scratch, never a real project)", () => {
+    expect(isNoRepoCwd("/tmp/claude-501/rm-usage-2-mGU6oL")).toBe(true);
+    expect(isNoRepoCwd("/private/tmp/x")).toBe(true);
+    expect(isNoRepoCwd("/var/folders/1d/abc/T/rm-usage-4-aDF2GO")).toBe(true);
+    expect(isNoRepoCwd("/private/var/folders/1d/abc/T/codeshell-sandbox-xyz")).toBe(true);
+  });
   it("does NOT match a real project that merely contains the substring", () => {
     expect(isNoRepoCwd("/Users/admin/Documents/codeshell")).toBe(false);
     expect(isNoRepoCwd("/Users/admin/.code-shell/no-repo-clone")).toBe(false); // not the exact dir
+    expect(isNoRepoCwd("/Users/admin/Documents/tmp-project")).toBe(false); // not under /tmp
+    expect(isNoRepoCwd("/Users/admin/Documents/var/app")).toBe(false); // not /var/folders
   });
 });
 

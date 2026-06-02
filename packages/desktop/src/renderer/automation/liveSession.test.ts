@@ -31,10 +31,10 @@ describe("placeLiveAutomationSession", () => {
     expect(repoId).toBe("r1");
   });
 
-  it("auto-creates a repo for an unmatched cwd", () => {
+  it("auto-creates a repo for an unmatched (real) cwd", () => {
     let createdWith = "";
     const { repoId } = placeLiveAutomationSession(
-      { sessionId: "s", cwd: "/tmp/fresh", title: "t" },
+      { sessionId: "s", cwd: "/Users/me/fresh", title: "t" },
       repos,
       {
         caseInsensitive: true,
@@ -45,13 +45,24 @@ describe("placeLiveAutomationSession", () => {
       },
     );
     expect(repoId).toBe("new-repo");
-    expect(createdWith).toBe("/tmp/fresh");
+    expect(createdWith).toBe("/Users/me/fresh");
+  });
+
+  it("routes an ephemeral/temp cwd to chat (repoId null), never creating a repo", () => {
+    let called = false;
+    const { repoId } = placeLiveAutomationSession(
+      { sessionId: "s", cwd: "/tmp/claude-501/rm-usage-2-x", title: "t" },
+      repos,
+      { caseInsensitive: true, createRepoForCwd: () => { called = true; return "X"; } },
+    );
+    expect(repoId).toBeNull();
+    expect(called).toBe(false);
   });
 
   it("falls back to a default title and caps length", () => {
     const long = "x".repeat(100);
     const { summary } = placeLiveAutomationSession(
-      { sessionId: "s", cwd: "/tmp/fresh", title: long },
+      { sessionId: "s", cwd: "/Users/me/fresh", title: long },
       repos,
       { caseInsensitive: true, createRepoForCwd: () => "n" },
     );
