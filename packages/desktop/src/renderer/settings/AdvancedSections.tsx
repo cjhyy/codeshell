@@ -5,6 +5,7 @@ import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchConnectionsPanel } from "./SearchConnectionsPanel";
 import {
@@ -84,6 +85,150 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
         placeholder="添加自定义指令…"
         className="min-h-[260px] resize-y leading-relaxed"
       />
+      <div className="flex justify-end">
+        <Button
+          variant="solid"
+          onClick={() => void save()}
+          disabled={saving || !dirty}
+        >
+          {saving ? "保存中…" : "保存"}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Settings → 个性化 (回复语言 + 称呼画像).
+ *
+ * Two stable preferences injected into every conversation (main agent and
+ * subagents alike): `agent.responseLanguage` (single line) and
+ * `agent.userProfile` (multi-line). Save is disabled until either differs
+ * from disk.
+ */
+export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
+  const [language, setLanguage] = useState("");
+  const [profile, setProfile] = useState("");
+  const [saved, setSaved] = useState({ language: "", profile: "" });
+  const [saving, setSaving] = useState(false);
+  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+
+  const load = async () => {
+    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const agent = objectOf(s.agent);
+    const lang = stringOf(agent.responseLanguage);
+    const prof = stringOf(agent.userProfile);
+    setLanguage(lang);
+    setProfile(prof);
+    setSaved({ language: lang, profile: prof });
+  };
+  useEffect(() => { void load(); }, [scope, activeRepoPath]);
+
+  const dirty = language !== saved.language || profile !== saved.profile;
+  const save = async () => {
+    setSaving(true);
+    try {
+      await writeSettings(
+        scope,
+        { agent: { responseLanguage: language, userProfile: profile } },
+        cwd,
+      );
+      setSaved({ language, profile });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div>
+        <h3 className="text-sm font-medium text-foreground">个性化</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          回复语言与称呼会作为稳定偏好注入每次对话(主对话与子代理均生效)。
+        </p>
+      </div>
+      <Input
+        value={language}
+        onChange={(e) => setLanguage(e.target.value)}
+        placeholder="回复语言,如:始终用简体中文"
+      />
+      <Textarea
+        value={profile}
+        onChange={(e) => setProfile(e.target.value)}
+        placeholder="称呼 / 画像,如:叫我 maki,后端工程师"
+        className="min-h-[120px] resize-y leading-relaxed"
+      />
+      <div className="flex justify-end">
+        <Button
+          variant="solid"
+          onClick={() => void save()}
+          disabled={saving || !dirty}
+        >
+          {saving ? "保存中…" : "保存"}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Settings → 指令文件.
+ *
+ * CODESHELL.md is always read; these two toggles opt into compat reading of
+ * other tools' instruction files. Stored under `agent.instructions.{compatClaude,
+ * compatCodex}`; absent/undefined means enabled (default true), so we treat
+ * `!== false` as on.
+ */
+export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) {
+  const [compatClaude, setCompatClaude] = useState(true);
+  const [compatCodex, setCompatCodex] = useState(true);
+  const [saved, setSaved] = useState({ claude: true, codex: true });
+  const [saving, setSaving] = useState(false);
+  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+
+  const load = async () => {
+    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const agent = objectOf(s.agent);
+    const instr = objectOf(agent.instructions);
+    const c = instr.compatClaude !== false;
+    const x = instr.compatCodex !== false;
+    setCompatClaude(c);
+    setCompatCodex(x);
+    setSaved({ claude: c, codex: x });
+  };
+  useEffect(() => { void load(); }, [scope, activeRepoPath]);
+
+  const dirty = compatClaude !== saved.claude || compatCodex !== saved.codex;
+  const save = async () => {
+    setSaving(true);
+    try {
+      await writeSettings(
+        scope,
+        { agent: { instructions: { compatClaude, compatCodex } } },
+        cwd,
+      );
+      setSaved({ claude: compatClaude, codex: compatCodex });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div>
+        <h3 className="text-sm font-medium text-foreground">指令文件</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          始终读取 CODESHELL.md。可选地兼容读取其他工具的指令文件。
+        </p>
+      </div>
+      <label className="flex items-center justify-between gap-3 text-sm text-foreground">
+        <span>兼容 Claude(CLAUDE.md)</span>
+        <Switch checked={compatClaude} onCheckedChange={setCompatClaude} />
+      </label>
+      <label className="flex items-center justify-between gap-3 text-sm text-foreground">
+        <span>兼容 Codex(AGENTS.md)</span>
+        <Switch checked={compatCodex} onCheckedChange={setCompatCodex} />
+      </label>
       <div className="flex justify-end">
         <Button
           variant="solid"
