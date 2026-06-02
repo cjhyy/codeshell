@@ -52,7 +52,7 @@ import {
 } from "./repos";
 import { importAutomationRuns, type ImportableRun } from "./automation/importRuns";
 import { foldTranscript } from "./automation/foldTranscript";
-import { mergeTranscripts } from "./automation/mergeTranscripts";
+import { chooseHydrateBase } from "./automation/hydrateOrder";
 import { isCaseInsensitivePlatform } from "./automation/pathMatch";
 import { placeLiveAutomationSession } from "./automation/liveSession";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
@@ -337,13 +337,15 @@ function App() {
     const bucket = activeBucket;
     let cancelled = false;
     void (async () => {
-      // Base projection: automation sessions fold the on-disk transcript and
-      // merge the localStorage tail; manual sessions use localStorage directly.
+      // Base projection: disk-authoritative for ANY session with an engine id.
+      // Fold the on-disk transcript and let chooseHydrateBase merge the genuine
+      // localStorage tail (disk order wins, so no orphan trailing group);
+      // sessions not yet on disk fall back to the localStorage projection.
       let base = local;
-      if (summary?.source === "automation" && engineId) {
+      if (engineId) {
         try {
           const disk = foldTranscript(await window.codeshell.getSessionTranscript(engineId));
-          if (disk.messages.length > 0) base = mergeTranscripts(disk, local);
+          base = chooseHydrateBase(disk, local);
         } catch {
           // disk read failed — fall back to the localStorage projection.
         }
