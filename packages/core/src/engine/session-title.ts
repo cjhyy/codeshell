@@ -39,7 +39,7 @@ export async function buildSessionTitle(
       messages: [{ role: "user", content: prompt }],
       tools: [],
       maxTokens: 64,
-      thinking: "disabled",
+      reasoning: { mode: "off" },
     });
     const title = clean(resp.text ?? "");
     return title.length > 0 ? title : null;

@@ -1316,7 +1316,7 @@ export class Engine {
         // Auxiliary call — no need to burn reasoning tokens. On DeepSeek V4
         // this flips thinking off (~3x faster, fewer tokens); on every other
         // OpenAI-compatible provider the field is ignored.
-        thinking: "disabled",
+        reasoning: { mode: "off" },
       });
       return summaryResponse.text;
     });
@@ -1342,7 +1342,7 @@ export class Engine {
         maxTokens: 256,
         recordUsage: false,
         // Auxiliary call — see contextManager.setSummarizeFn above.
-        thinking: "disabled",
+        reasoning: { mode: "off" },
       });
       logger.debug("summarize.call", {
         sysPromptLen: sysPrompt.length,
@@ -1724,7 +1724,7 @@ export class Engine {
             tools: [],
             maxTokens: 1024,
             recordUsage: false,
-            thinking: "disabled",
+            reasoning: { mode: "off" },
           });
           return resp.text;
         },

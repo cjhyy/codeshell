@@ -63,12 +63,11 @@ export interface ModelEntry {
    *  come from the catalog unless the entry overrides them. */
   providerKey?: string;
   /**
-   * Per-model thinking override. Wins over the provider-level setting
-   * (ProviderCatalog entry's `thinking`). Useful when models in the same
-   * provider need different defaults — e.g. DeepSeek V4 Pro off but
-   * V4 Flash on.
+   * Per-model reasoning override. Wins over the provider-level setting
+   * (ProviderCatalog entry's `reasoning`). Useful when models in the same
+   * provider need different defaults — e.g. one model off but another on.
    */
-  thinking?: "enabled" | "disabled";
+  reasoning?: import("./reasoning-setting.js").ReasoningSetting;
 }
 
 // ─── Built-in context windows ────────────────────────────────────
@@ -262,9 +261,9 @@ export class ModelPool {
       apiKey: entry.apiKey ?? fromCat?.apiKey,
       baseUrl: entry.baseUrl ?? fromCat?.baseUrl,
       maxTokens: entry.maxOutputTokens ?? 8192,
-      // thinking: entry overrides catalog. No base fallback — see class doc.
-      ...(entry.thinking || fromCat?.thinking
-        ? { thinking: entry.thinking ?? fromCat?.thinking }
+      // reasoning: entry overrides catalog. No base fallback — see class doc.
+      ...(entry.reasoning ?? fromCat?.reasoning
+        ? { reasoning: entry.reasoning ?? fromCat?.reasoning }
         : {}),
       // Carry the catalog kind through so the capability layer can pick
       // per-(kind, model) request-shape rules.

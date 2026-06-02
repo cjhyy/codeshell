@@ -11,6 +11,7 @@
 import OpenAI from "openai";
 import type { ClientDefaults, LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
 import type { CreateMessageOptions } from "../types.js";
+import type { ReasoningSetting } from "../reasoning-setting.js";
 import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
@@ -160,13 +161,13 @@ export class OpenAIClient extends LLMClientBase {
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     return this.withRetry(async () => {
-      // Per-call thinking wins; otherwise fall back to provider default
-      // (settings.providers[].thinking, threaded through LLMConfig).
-      const thinking = options.thinking ?? this.config.thinking;
+      // Per-call reasoning wins; otherwise fall back to provider default
+      // (settings.providers[].reasoning, threaded through LLMConfig).
+      const reasoning = options.reasoning ?? this.config.reasoning;
       const messages = this.buildMessages(
         options.systemPrompt,
         options.messages,
-        thinking,
+        reasoning,
       );
       const tools = options.tools?.length ? this.convertTools(options.tools) : undefined;
 
@@ -181,8 +182,8 @@ export class OpenAIClient extends LLMClientBase {
       try {
         const response =
           options.stream && options.onChunk
-            ? await this.streamMessage(options, messages, tools, thinking)
-            : await this.nonStreamMessage(options, messages, tools, thinking);
+            ? await this.streamMessage(options, messages, tools, reasoning)
+            : await this.nonStreamMessage(options, messages, tools, reasoning);
         span.end({
           stopReason: response.stopReason,
           promptTokens: response.usage?.promptTokens,
@@ -207,7 +208,7 @@ export class OpenAIClient extends LLMClientBase {
     options: CreateMessageOptions,
     messages: OpenAI.ChatCompletionMessageParam[],
     tools: OpenAI.ChatCompletionTool[] | undefined,
-    thinking: "enabled" | "disabled" | undefined,
+    reasoning: ReasoningSetting | undefined,
     stream: boolean,
   ): Record<string, unknown> {
     const cap = this.capability;
@@ -237,45 +238,61 @@ export class OpenAIClient extends LLMClientBase {
         options.temperature !== undefined ? options.temperature : this.temperature;
     }
 
-    // Reasoning shape — different vendors, different fields, never combine.
-    // We treat `options.thinking` as the user's intent ("enabled"/"disabled")
-    // and translate to whichever wire shape the model expects.
-    const reasoning: Record<string, unknown> = {};
-    if (thinking) {
+    // Reasoning shape — translate the user's ReasoningSetting to the wire
+    // shape. Different vendors, different fields, never combine. We read the
+    // real picked level (no "medium" hardcode) — only fall back to "medium"
+    // when the setting says "thinking on" but carries no explicit effort
+    // ({mode:"on"}).
+    const reasoningBody: Record<string, unknown> = {};
+    if (reasoning && reasoning.mode !== "off") {
       switch (cap.reasoning.kind) {
         case "deepseek-thinking":
           // DeepSeek V4, Z.AI GLM-4.5+ — top-level {thinking: {type}}.
-          reasoning.thinking = { type: thinking };
+          // Binary: any non-off means thinking on (effort irrelevant).
+          reasoningBody.thinking = { type: "enabled" };
           break;
         case "openai-effort":
           // OpenAI o-series, gpt-5+, Gemini OpenAI-compat, xAI grok-4.3,
           // Mistral magistral, Groq reasoning models — `reasoning_effort`.
-          // "enabled" → "medium" (safe middle). "disabled" → the capability's
-          // `disabledEffort` value; defaults to "minimal" (OpenAI), but xAI
-          // uses "low" (no minimal) and Mistral uses "none" (only high|none).
+          // Send the user's real level; {mode:"on"} (no level) → "medium".
           //
           // Skip entirely once the endpoint has told us `reasoning_effort` is
           // incompatible with `tools` here (see _dropReasoningEffort) — sending
           // it again would just re-trigger the same 400.
           if (!this._dropReasoningEffort) {
-            reasoning.reasoning_effort =
-              thinking === "disabled"
-                ? (cap.reasoning.disabledEffort ?? "minimal")
-                : "medium";
+            reasoningBody.reasoning_effort =
+              reasoning.mode === "effort" ? reasoning.effort : "medium";
           }
           break;
         case "openrouter-reasoning":
-          // OpenRouter normalized shape — {reasoning: {effort, exclude}}.
-          reasoning.reasoning =
-            thinking === "disabled"
-              ? { effort: "minimal", exclude: true }
-              : { effort: "medium" };
+          // OpenRouter normalized shape — {reasoning: {effort}}.
+          reasoningBody.reasoning =
+            reasoning.mode === "effort" ? { effort: reasoning.effort } : { effort: "medium" };
           break;
         case "anthropic-budget":
         case "anthropic-adaptive":
         case "none":
           // OpenAI client doesn't serve Anthropic-direct; nothing to do.
           // `none` means the model doesn't expose a knob — skip silently.
+          break;
+      }
+    } else if (reasoning && reasoning.mode === "off") {
+      // Explicit OFF — each shape's "don't think" wire form.
+      switch (cap.reasoning.kind) {
+        case "deepseek-thinking":
+          reasoningBody.thinking = { type: "disabled" };
+          break;
+        case "openai-effort":
+          // The capability's `disabledEffort` (defaults "minimal"; xAI "low",
+          // Mistral "none"). Skip if the endpoint already rejected the field.
+          if (!this._dropReasoningEffort) {
+            reasoningBody.reasoning_effort = cap.reasoning.disabledEffort ?? "minimal";
+          }
+          break;
+        case "openrouter-reasoning":
+          reasoningBody.reasoning = { effort: "minimal", exclude: true };
+          break;
+        default:
           break;
       }
     }
@@ -285,7 +302,7 @@ export class OpenAIClient extends LLMClientBase {
       messages,
       ...tokenLimit,
       ...sampling,
-      ...reasoning,
+      ...reasoningBody,
       ...(tools ? { tools } : {}),
       ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
     };
@@ -295,7 +312,7 @@ export class OpenAIClient extends LLMClientBase {
     options: CreateMessageOptions,
     messages: OpenAI.ChatCompletionMessageParam[],
     tools?: OpenAI.ChatCompletionTool[],
-    thinking?: "enabled" | "disabled",
+    reasoning?: ReasoningSetting,
   ): Promise<LLMResponse> {
     try {
       const response = await this.client.chat.completions.create(
@@ -303,7 +320,7 @@ export class OpenAIClient extends LLMClientBase {
           options,
           messages,
           tools,
-          thinking,
+          reasoning,
           false,
         ) as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
         { signal: options.signal },
@@ -330,7 +347,7 @@ export class OpenAIClient extends LLMClientBase {
     options: CreateMessageOptions,
     messages: OpenAI.ChatCompletionMessageParam[],
     tools?: OpenAI.ChatCompletionTool[],
-    thinking?: "enabled" | "disabled",
+    reasoning?: ReasoningSetting,
   ): Promise<LLMResponse> {
     try {
       const stream = await this.client.chat.completions.create(
@@ -338,7 +355,7 @@ export class OpenAIClient extends LLMClientBase {
           options,
           messages,
           tools,
-          thinking,
+          reasoning,
           true,
         ) as unknown as OpenAI.ChatCompletionCreateParamsStreaming,
         { signal: options.signal },
@@ -513,7 +530,7 @@ export class OpenAIClient extends LLMClientBase {
   private buildMessages(
     systemPrompt: string,
     messages: import("../../types.js").Message[],
-    thinking?: "enabled" | "disabled",
+    reasoning?: ReasoningSetting,
   ): OpenAI.ChatCompletionMessageParam[] {
     const result: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: systemPrompt }];
 
@@ -540,7 +557,7 @@ export class OpenAIClient extends LLMClientBase {
         m.content.some((b) => b.type === "tool_use" || b.type === "tool_result"),
     );
     const needsReasoningBackfill =
-      thinking !== "disabled" &&
+      reasoning?.mode !== "off" &&
       cap.echoReasoning === "when-tools" &&
       hasTools;
     const stripReasoning = cap.echoReasoning === "never";

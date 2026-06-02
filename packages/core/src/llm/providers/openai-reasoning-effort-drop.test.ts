@@ -57,7 +57,7 @@ const toolCallOpts = (): CreateMessageOptions => ({
       inputSchema: { type: "object", properties: {}, required: [] },
     },
   ],
-  thinking: "disabled",
+  reasoning: { mode: "off" },
   stream: false,
 });
 

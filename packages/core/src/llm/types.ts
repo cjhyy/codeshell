@@ -22,13 +22,12 @@ export interface CreateMessageOptions {
    */
   recordUsage?: boolean;
   /**
-   * DeepSeek V4 thinking-mode switch. "enabled" is the endpoint default;
-   * "disabled" turns reasoning off (faster, cheaper, no `reasoning_content`
-   * on the reply). Ignored by every provider except DeepSeek V4 — the OpenAI
-   * SDK forwards unknown top-level fields verbatim, so it's harmless on
-   * other compatible endpoints.
+   * Reasoning/thinking setting for this call. Overrides LLMConfig.reasoning.
+   * Rich shape ({mode:"off"|"on"} | {mode:"effort",effort} |
+   * {mode:"budget",budgetTokens}) — translated to the per-vendor wire form by
+   * the client's capability layer.
    */
-  thinking?: "enabled" | "disabled";
+  reasoning?: import("./reasoning-setting.js").ReasoningSetting;
 }
 
 export interface LLMUsageTracker {

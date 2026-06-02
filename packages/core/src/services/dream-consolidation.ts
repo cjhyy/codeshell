@@ -116,7 +116,7 @@ export async function runDreamConsolidation(
       tools: toolDefs,
       maxTokens: 2048,
       recordUsage: false,
-      thinking: "disabled",
+      reasoning: { mode: "off" },
     });
 
     if (resp.toolCalls.length === 0) {

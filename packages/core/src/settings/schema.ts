@@ -3,6 +3,7 @@
  */
 
 import { z } from "zod";
+import { ReasoningSettingSchema } from "../llm/reasoning-setting.js";
 
 /**
  * Tri-state project capability overlay. Lives in PROJECT settings only and
@@ -110,12 +111,11 @@ export const SettingsSchema = z
           protocol: z.enum(["openai-compat", "anthropic-style"]).optional(),
           modelsPath: z.string().optional(),
           /**
-           * DeepSeek V4 thinking-mode default for this provider. "enabled"
-           * matches endpoint default; "disabled" makes V4 calls run in
-           * non-thinking mode (faster, cheaper). Ignored by every provider
-           * other than DeepSeek V4. Per-call overrides still win.
+           * Default reasoning/thinking setting for this provider's models.
+           * Rich shape: {mode:"off"|"on"} | {mode:"effort",effort} |
+           * {mode:"budget",budgetTokens}. Per-model `reasoning` wins.
            */
-          thinking: z.enum(["enabled", "disabled"]).optional(),
+          reasoning: ReasoningSettingSchema.optional(),
         }),
       )
       .default([]),
@@ -141,12 +141,12 @@ export const SettingsSchema = z
             baseUrl: z.string().optional(),
             apiKey: z.string().optional(),
             /**
-             * Per-model thinking override. Wins over the provider-level
-             * setting (settings.providers[].thinking). Use this when
-             * different models under the same provider need different
-             * defaults — e.g. DeepSeek V4 Pro off (faster) but V4 Flash on.
+             * Per-model reasoning override. Wins over the provider-level
+             * `reasoning` setting (settings.providers[].reasoning). Use this
+             * when different models under the same provider need different
+             * defaults — e.g. one model off (faster) and another on.
              */
-            thinking: z.enum(["enabled", "disabled"]).optional(),
+            reasoning: ReasoningSettingSchema.optional(),
           })
           .transform((m) => {
             // Normalize: prefer `protocol`; fall back to legacy `provider`.

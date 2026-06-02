@@ -341,10 +341,11 @@ export interface LLMConfig {
   baseUrl?: string;
   maxTokens?: number;
   /**
-   * Default thinking-mode for DeepSeek V4. Per-call `options.thinking`
-   * (e.g. summarize sub-calls) overrides this. Ignored on other providers.
+   * Default reasoning/thinking setting for this model. Per-call
+   * `options.reasoning` (e.g. summarize sub-calls) overrides this.
+   * Translated to the per-vendor wire form by the client's capability layer.
    */
-  thinking?: "enabled" | "disabled";
+  reasoning?: import("./llm/reasoning-setting.js").ReasoningSetting;
   /**
    * The provider's `kind` (deepseek/openai/zai/openrouter/...). Used by
    * the capability layer to look up per-(kind, model) request-shape rules
