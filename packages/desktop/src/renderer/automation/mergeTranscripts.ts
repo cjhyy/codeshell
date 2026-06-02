@@ -65,8 +65,24 @@ export function mergeTranscripts(
   if (disk.messages.length === 0) return live;
   if (live.messages.length === 0) return disk;
 
+  // Find the live "continuation point": the index just after the LAST live
+  // message that disk also has. Everything in live up to there is part of a
+  // turn disk already covers (disk is authoritative), so we keep only what
+  // comes strictly after it as the genuine tail.
+  //
+  // Why not a plain `filter(!seen)` (the old approach): automation now streams
+  // live into the renderer too, so localStorage holds the same turn the disk
+  // fold produces — PLUS live-only kinds (task_list / agent / ask_user) that
+  // the disk fold never emits and that get unique kind|id signatures. A plain
+  // filter kept those live-only messages even when they sat INSIDE a
+  // disk-covered span, appending them as a tail with no user message; that tail
+  // then folded into an orphan "已处理 N 条命令" group pinned to the bottom.
   const seen = new Set(disk.messages.map(signature));
-  const liveTail = live.messages.filter((m) => !seen.has(signature(m)));
+  let lastCovered = -1;
+  for (let i = 0; i < live.messages.length; i++) {
+    if (seen.has(signature(live.messages[i]!))) lastCovered = i;
+  }
+  const liveTail = live.messages.slice(lastCovered + 1);
 
   return {
     ...disk,

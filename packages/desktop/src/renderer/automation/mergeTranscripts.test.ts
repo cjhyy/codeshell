@@ -151,6 +151,79 @@ describe("mergeTranscripts", () => {
     expect(merged.messages.filter((m) => m.kind === "files_changed")).toHaveLength(2);
   });
 
+  // Regression (orphan "已处理 N 条命令" group at the bottom): now that
+  // automation runs ALSO stream live into the renderer (ingestExternalEvent),
+  // localStorage carries the SAME turn the disk fold produces — PLUS live-only
+  // kinds the disk fold never emits (task_list / agent / ask_user, keyed by
+  // kind|id). The old dedup kept those live-only messages and appended them as
+  // a tail, even though they belong to a turn disk already fully covers. With
+  // no user message among them, buildStreamItems folded the leaked tools into a
+  // single orphan TurnProcessGroup pinned to the very bottom. Fix: a live
+  // message only survives as tail when it comes AFTER the last live message
+  // that disk also has (a genuine continuation) — live-only messages inside an
+  // already-covered span are dropped.
+  it("drops live-only messages that fall inside a disk-covered turn (no orphan tail)", () => {
+    const taskList = (id: string): Message => ({ kind: "task_list", id, tasks: [] });
+    const agent = (id: string): Message => ({
+      kind: "agent",
+      id,
+      description: "sub",
+      done: true,
+      startedAt: 0,
+      toolCalls: [],
+      textBuffer: "",
+      toolCount: 0,
+    });
+    // disk = the complete automation turn (authoritative).
+    const disk = stateOf([
+      user("d-u1", "汇总新闻"),
+      tool("d-t1", "WebSearch", '{"q":"a"}'),
+      tool("d-t2", "WebFetch", '{"url":"b"}'),
+      assistant("d-a1", "今日简报：……"),
+    ]);
+    // live = the SAME turn streamed in (tools dedupe by name+args), but with
+    // interleaved live-only task_list/agent the disk fold never produced.
+    const live = stateOf([
+      user("l-u1", "汇总新闻"),
+      taskList("l-tl1"),
+      tool("l-t1", "WebSearch", '{"q":"a"}'),
+      agent("l-ag1"),
+      tool("l-t2", "WebFetch", '{"url":"b"}'),
+      assistant("l-a1", "今日简报：……"),
+    ]);
+    const merged = mergeTranscripts(disk, live);
+    // No leaked tail: everything in live is covered by disk's turn.
+    expect(merged.messages).toEqual(disk.messages);
+  });
+
+  it("still appends a genuine live continuation after a disk-covered turn", () => {
+    const disk = stateOf([
+      user("d-u1", "汇总新闻"),
+      tool("d-t1", "WebSearch", '{"q":"a"}'),
+      assistant("d-a1", "今日简报：……"),
+    ]);
+    const live = stateOf([
+      user("l-u1", "汇总新闻"),
+      tool("l-t1", "WebSearch", '{"q":"a"}'),
+      assistant("l-a1", "今日简报：……"),
+      user("l-u2", "帮我改成早上9点"), // genuine continuation AFTER the covered turn
+      assistant("l-a2", "已改好"),
+    ]);
+    const merged = mergeTranscripts(disk, live);
+    expect(
+      merged.messages
+        .filter((m) => m.kind === "user" || m.kind === "assistant")
+        .map((m) => (m as { text: string }).text),
+    ).toEqual([
+      "汇总新闻",
+      "今日简报：……",
+      "帮我改成早上9点",
+      "已改好",
+    ]);
+    // The continuation's tools/turns are present; no orphan duplication.
+    expect(merged.messages.filter((m) => m.kind === "tool")).toHaveLength(1);
+  });
+
   it("preserves session metadata from disk, falling back to live", () => {
     const disk = stateOf([assistant("d-a1", "x")], { sessionId: null, promptTokens: 0 });
     const live = stateOf([user("l-u1", "y")], { sessionId: "live-sess", promptTokens: 42 });
