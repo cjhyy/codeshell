@@ -11,8 +11,11 @@
 
 import type { ProviderKindName } from "../provider-kinds.js";
 
-/** OpenAI-style reasoning effort levels — shared by several vendors. */
-export type ReasoningEffort = "minimal" | "low" | "medium" | "high";
+/**
+ * OpenAI-style reasoning effort levels — shared by several vendors.
+ * `xhigh` is gpt-5.5+ only (which also drops `minimal`); see rules.ts.
+ */
+export type ReasoningEffort = "minimal" | "low" | "medium" | "high" | "xhigh";
 
 /** A binary thinking switch, like DeepSeek V4 and Z.AI GLM use. */
 export type ThinkingSwitch = "enabled" | "disabled";
