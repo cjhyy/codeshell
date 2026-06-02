@@ -650,6 +650,14 @@ export {
   capabilitiesFor,
   type Capability,
 } from "./llm/capabilities/index.js";
+export {
+  reasoningControlFor,
+  type ReasoningControl,
+} from "./llm/capabilities/reasoning-control.js";
+export {
+  REASONING_EFFORTS,
+  type ReasoningSetting,
+} from "./llm/reasoning-setting.js";
 export { type ProviderConfig } from "./llm/provider-catalog.js";
 
 // ─── Data ────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import {
   defaultCacheDir,
   fetchModelList,
   PROVIDER_KINDS,
+  reasoningControlFor,
   type ProviderKindName,
   startAutomation,
   CronStore,
@@ -521,6 +522,15 @@ ipcMain.handle("search:probe", async (_e, raw: unknown) => {
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
   if (!Array.isArray(models) || !Array.isArray(providers)) return [];
   return resolveModelMeta(models as never, providers as never);
+});
+
+ipcMain.handle("models:reasoning-control", async (_e, rawKind: unknown, rawModel: unknown) => {
+  const kind: ProviderKindName =
+    typeof rawKind === "string" && Object.prototype.hasOwnProperty.call(PROVIDER_KINDS, rawKind)
+      ? (rawKind as ProviderKindName)
+      : "custom";
+  const model = typeof rawModel === "string" ? rawModel : "";
+  return reasoningControlFor(kind, model);
 });
 
 ipcMain.handle("models:list", async (_e, rawProvider: unknown, refresh?: boolean) => {

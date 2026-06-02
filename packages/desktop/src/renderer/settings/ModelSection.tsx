@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Button } from "@/components/ui/button";
+import type { ReasoningControl, ReasoningSetting } from "@cjhyy/code-shell-core";
 
 interface ModelEntry {
   key: string;
@@ -223,6 +224,10 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
   const [form, setForm] = useState<AddModelForm>(() => initialForm());
+  // Per-model reasoning descriptor, keyed by model `key`. Fetched lazily from
+  // core (reasoningControlFor) via the preload bridge — the renderer never
+  // imports core at runtime. `null` while a fetch is in flight.
+  const [controls, setControls] = useState<Record<string, ReasoningControl | null>>({});
 
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
@@ -244,6 +249,73 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
   const rawModels = useMemo(() => rawModelsFrom(cur ?? {}), [cur]);
   const candidates = useMemo(() => candidatesFrom(cur ?? {}), [cur]);
   const modelKeys = useMemo(() => new Set(candidates.map((m) => m.key)), [candidates]);
+
+  // Resolve {provider kind, model id, current reasoning setting} for each model
+  // key. Kind comes from the matching provider (by providerKey/provider); model
+  // id from the raw entry's `model`. Used both to fetch the descriptor and to
+  // read the saved value.
+  const reasoningTargets = useMemo(() => {
+    const map: Record<string, { kind: string; modelId: string; reasoning?: ReasoningSetting }> = {};
+    for (const raw of rawModels) {
+      const key = typeof raw.key === "string" ? raw.key
+        : typeof raw.model === "string" ? raw.model : "";
+      if (!key) continue;
+      const modelId = typeof raw.model === "string" ? raw.model : key;
+      const providerKey = typeof raw.providerKey === "string" ? raw.providerKey
+        : typeof raw.provider === "string" ? raw.provider : "";
+      const provider = providers.find((p) => p.key === providerKey);
+      const kind = provider?.kind
+        ?? (raw.provider === "anthropic" ? "anthropic" : "custom");
+      map[key] = {
+        kind,
+        modelId,
+        reasoning: isReasoningSetting(raw.reasoning) ? raw.reasoning : undefined,
+      };
+    }
+    return map;
+  }, [rawModels, providers]);
+
+  // Fetch the ReasoningControl descriptor for every model via the preload
+  // bridge. Re-runs when the (kind, modelId) set changes.
+  useEffect(() => {
+    let cancelled = false;
+    const targets = reasoningTargets;
+    void (async () => {
+      const next: Record<string, ReasoningControl | null> = {};
+      for (const [key, t] of Object.entries(targets)) {
+        try {
+          next[key] = await window.codeshell.reasoningControl(t.kind, t.modelId);
+        } catch {
+          next[key] = { kind: "none" };
+        }
+      }
+      if (!cancelled) setControls(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reasoningTargets]);
+
+  const setReasoning = async (key: string, reasoning: ReasoningSetting) => {
+    setSaving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const nextModels = rawModels.map((m) =>
+        m.key === key || (typeof m.key !== "string" && m.model === key)
+          ? { ...m, reasoning }
+          : m,
+      );
+      await window.codeshell.updateSettings(scope, { models: nextModels }, cwd);
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
+      await load();
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const matchingProviders = providers.filter((p) => p.kind === form.kind);
   const selectedProvider =
     form.providerRef === NEW_PROVIDER
@@ -503,6 +575,8 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
         <ul className="model-list">
           {candidates.map((m) => {
             const active = m.key === activeKey;
+            const control = controls[m.key];
+            const reasoning = reasoningTargets[m.key]?.reasoning;
             return (
               <li
                 key={m.key}
@@ -515,6 +589,16 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
                   <span className="model-ctx">{formatTok(m.maxContextTokens)} ctx</span>
                 )}
                 {active && <span className="model-active-badge">active</span>}
+                {control && control.kind !== "none" && (
+                  <span
+                    className="model-reasoning"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {renderReasoningControl(control, reasoning, saving, (next) =>
+                      void setReasoning(m.key, next),
+                    )}
+                  </span>
+                )}
               </li>
             );
           })}
@@ -861,4 +945,90 @@ function formatTok(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
   return `${n}`;
+}
+
+/** Narrow an unknown settings value to a ReasoningSetting. */
+function isReasoningSetting(v: unknown): v is ReasoningSetting {
+  if (!v || typeof v !== "object") return false;
+  const mode = (v as { mode?: unknown }).mode;
+  return mode === "off" || mode === "on" || mode === "effort" || mode === "budget";
+}
+
+const EFFORT_LABELS: Record<string, string> = {
+  minimal: "最低",
+  low: "低",
+  medium: "中",
+  high: "高",
+  xhigh: "极高",
+};
+
+/**
+ * Render the "思考" (reasoning) control a model's ReasoningControl describes.
+ * Pure — given a control + the saved value, returns the right widget and calls
+ * `onChange` with the ReasoningSetting to persist. `none` is filtered upstream.
+ *
+ *   toggle   → checkbox      → {mode:"on"} / {mode:"off"}
+ *   effort   → dropdown      → {mode:"effort", effort}
+ *   budget   → number input  → {mode:"budget", budgetTokens}
+ *   adaptive → read-only tag  (no write)
+ */
+export function renderReasoningControl(
+  control: ReasoningControl,
+  value: ReasoningSetting | undefined,
+  disabled: boolean,
+  onChange: (next: ReasoningSetting) => void,
+): React.ReactNode {
+  switch (control.kind) {
+    case "none":
+      return null;
+    case "adaptive":
+      return <span className="model-reasoning-tag">自动思考(不可调)</span>;
+    case "toggle": {
+      const on = value ? value.mode !== "off" : control.default;
+      return (
+        <label className="model-reasoning-toggle" title="思考">
+          <input
+            type="checkbox"
+            checked={on}
+            disabled={disabled}
+            onChange={(e) => onChange(e.target.checked ? { mode: "on" } : { mode: "off" })}
+          />
+          <span>思考</span>
+        </label>
+      );
+    }
+    case "effort": {
+      const current = value && value.mode === "effort" ? value.effort : control.default;
+      return (
+        <Select
+          value={current}
+          disabled={disabled}
+          onChange={(v) => onChange({ mode: "effort", effort: v as typeof control.options[number] })}
+          options={control.options.map((opt) => ({
+            value: opt,
+            label: `思考:${EFFORT_LABELS[opt] ?? opt}`,
+          }))}
+        />
+      );
+    }
+    case "budget": {
+      const current = value && value.mode === "budget" ? value.budgetTokens : control.default;
+      return (
+        <label className="model-reasoning-budget" title="思考预算(tokens)">
+          <span>思考预算</span>
+          <input
+            type="number"
+            min={control.min}
+            step={1024}
+            value={current}
+            disabled={disabled}
+            onChange={(e) => {
+              const n = Math.max(control.min, Math.floor(Number(e.target.value) || control.min));
+              onChange({ mode: "budget", budgetTokens: n });
+            }}
+          />
+        </label>
+      );
+    }
+  }
 }

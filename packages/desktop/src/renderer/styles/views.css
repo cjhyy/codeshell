@@ -183,6 +183,27 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+.model-reasoning {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+}
+.model-reasoning > * { font-size: var(--fz-xs); }
+.model-reasoning .cs-control { height: auto; min-height: 0; padding: 2px 6px; }
+.model-reasoning-toggle,
+.model-reasoning-budget {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.model-reasoning-budget input[type="number"] { width: 84px; }
+.model-reasoning-tag {
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
+  font-style: italic;
+}
 .model-add-panel {
   display: flex;
   flex-direction: column;

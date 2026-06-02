@@ -4,7 +4,12 @@
  * core imports in renderer source explicitly allows `import type`).
  */
 
-import type { StreamEvent, ApprovalRequest, CapabilityDescriptor } from "@cjhyy/code-shell-core";
+import type {
+  StreamEvent,
+  ApprovalRequest,
+  CapabilityDescriptor,
+  ReasoningControl,
+} from "@cjhyy/code-shell-core";
 
 /** One step in replaying a persisted transcript into renderer state. */
 export type FoldItem =
@@ -415,6 +420,12 @@ export interface CodeshellApi {
     source: "settings" | "openrouter-api" | "hardcoded" | "fallback";
     supportsVision: boolean;
   }>>;
+  /**
+   * Describe which reasoning/thinking control a (provider kind, model) pair
+   * should render. Pure core lookup (reasoningControlFor) bridged via main —
+   * the renderer never imports core at runtime.
+   */
+  reasoningControl(kind: string, model: string): Promise<ReasoningControl>;
   listModels(
     provider: {
       key?: string;

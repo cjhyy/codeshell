@@ -396,6 +396,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   resolveModelMeta: (models: unknown, providers: unknown) =>
     ipcRenderer.invoke("models:resolve-meta", models, providers),
+  reasoningControl: (kind: string, model: string) =>
+    ipcRenderer.invoke("models:reasoning-control", kind, model),
   listModels: (provider: unknown, refresh?: boolean) =>
     ipcRenderer.invoke("models:list", provider, refresh),
   getTrust: (path: string) => ipcRenderer.invoke("trust:get", path),
