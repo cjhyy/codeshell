@@ -5,10 +5,16 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { listDiskSessions } from "./sessions-service";
 
+// Default origin "desktop" so existing fixtures are "should-show" sessions
+// (override per-test by passing `origin` in state). A fixture wanting NO origin
+// key (legacy) passes `origin: undefined` explicitly — handled below.
 function mkSession(base: string, id: string, state: Record<string, unknown>, mtime: number) {
   const dir = path.join(base, id);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "state.json"), JSON.stringify({ sessionId: id, ...state }));
+  const full: Record<string, unknown> = { sessionId: id, origin: "desktop", ...state };
+  // Drop keys explicitly set to undefined so the JSON omits them (legacy case).
+  for (const k of Object.keys(full)) if (full[k] === undefined) delete full[k];
+  fs.writeFileSync(path.join(dir, "state.json"), JSON.stringify(full));
   fs.writeFileSync(path.join(dir, "transcript.jsonl"), "");
   fs.utimesSync(dir, new Date(mtime), new Date(mtime));
 }
@@ -53,6 +59,17 @@ describe("listDiskSessions", () => {
     expect(p1.nextCursor).not.toBeNull();
     const p2 = listDiskSessions({ limit: 2, cursor: p1.nextCursor! }, dir);
     expect(p2.sessions.map((s) => s.id)).toEqual(["s2", "s1"]);
+  });
+
+  it("shows desktop + automation origins; hides tui and origin-less", () => {
+    mkSession(dir, "d1", { cwd: "/p", parentSessionId: null, origin: "desktop" }, 4000);
+    mkSession(dir, "a1", { cwd: "/p", parentSessionId: null, origin: "automation" }, 3000);
+    mkSession(dir, "t1", { cwd: "/p", parentSessionId: null, origin: "tui" }, 2000);
+    mkSession(dir, "n1", { cwd: "/p", parentSessionId: null, origin: undefined }, 1000); // no origin key
+    const { sessions } = listDiskSessions({ limit: 10 }, dir);
+    expect(sessions.map((s) => s.id)).toEqual(["d1", "a1"]);
+    expect(sessions[0].origin).toBe("desktop");
+    expect(sessions[1].origin).toBe("automation");
   });
 
   it("returns [] for a missing sessions dir", () => {

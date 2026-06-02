@@ -308,7 +308,7 @@ export interface CodeshellApi {
   getRun(runId: string): Promise<RunDetail | null>;
   getSessionTranscript(sessionId: string): Promise<FoldItem[]>;
   listDiskSessions(opts?: { limit?: number; cursor?: string }): Promise<{
-    sessions: Array<{ id: string; engineSessionId: string; cwd: string; title: string; updatedAt: number }>;
+    sessions: Array<{ id: string; engineSessionId: string; cwd: string; title: string; updatedAt: number; origin: "desktop" | "automation" }>;
     nextCursor: string | null;
   }>;
   subscribeSession(sessionId: string, sinceSeq?: number): Promise<SessionSnapshot>;

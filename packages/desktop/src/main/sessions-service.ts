@@ -86,6 +86,8 @@ export interface DiskSessionMeta {
   cwd: string;
   title: string;
   updatedAt: number;
+  /** Session origin — only "desktop" / "automation" are listed (see filter). */
+  origin: "desktop" | "automation";
 }
 
 export interface ListDiskSessionsResult {
@@ -131,12 +133,17 @@ export function listDiskSessions(
     } catch { continue; }
     if (!("parentSessionId" in state)) continue;          // legacy → skip
     if (state.parentSessionId) continue;                  // sub-agent (non-empty) → filter
+    // Only desktop + automation belong in the desktop sidebar. tui / missing
+    // origin are filtered out (tui shares ~/.code-shell; legacy has no origin).
+    const origin = state.origin;
+    if (origin !== "desktop" && origin !== "automation") continue;
     sessions.push({
       id,
       engineSessionId: id,
       cwd: typeof state.cwd === "string" ? state.cwd : "",
       title: typeof state.summary === "string" && state.summary ? state.summary : id,
       updatedAt: mtime,
+      origin,
     });
   }
   return { sessions, nextCursor: i < dirs.length ? String(i) : null };
