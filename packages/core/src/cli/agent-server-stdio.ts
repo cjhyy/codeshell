@@ -38,6 +38,7 @@ import type { ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
 import { SettingsManager } from "../settings/manager.js";
+import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
 import { CostTracker } from "../cost-tracker.js";
@@ -196,10 +197,9 @@ const chatManager = new ChatSessionManager({
       ...resolveSessionAgentConfig(slice, live),
       // Personalization + instruction compat come from disk settings only
       // (not per-request protocol overrides), so they read straight from
-      // `live` here rather than through the slice.
-      responseLanguage: live.agent.responseLanguage,
-      userProfile: live.agent.userProfile,
-      instructions: live.agent.instructions,
+      // `live` here rather than through the slice. Shared helper keeps the
+      // three fields wired identically across desktop / TUI / TCP.
+      ...personalizationFrom(live.agent),
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
       ...(slice.cwd ? { cwd: slice.cwd } : {}),

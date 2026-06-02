@@ -13,6 +13,7 @@ import { AgentServer } from "@cjhyy/code-shell-core";
 import { AgentClient } from "@cjhyy/code-shell-core";
 import { createInProcessTransport } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
+import { personalizationFrom } from "@cjhyy/code-shell-core";
 import { MCPManager } from "@cjhyy/code-shell-core";
 import { CostTracker } from "@cjhyy/code-shell-core";
 import { resolveApiKey } from "@cjhyy/code-shell-core";
@@ -150,6 +151,9 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     permissionMode,
     customSystemPrompt: settings.agent.customSystemPrompt,
     appendSystemPrompt: settings.agent.appendSystemPrompt,
+    // Personalization + instruction compat (shared helper → no per-host drift).
+    // Covers both the main engineFactory and the cron engine (both spread sharedCfg).
+    ...personalizationFrom(settings.agent),
     maxTurns,
     maxContextTokens,
     sessionStorageDir: settings.session.storageDir,

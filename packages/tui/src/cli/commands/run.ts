@@ -17,6 +17,7 @@ import { createInProcessTransport } from "@cjhyy/code-shell-core";
 import { MCPManager } from "@cjhyy/code-shell-core";
 import { CostTracker } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
+import { personalizationFrom } from "@cjhyy/code-shell-core";
 import { resolveApiKey } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { createRenderer, type OutputFormat } from "../output/renderer.js";
@@ -191,6 +192,8 @@ export async function runCommand(options: RunOptions): Promise<void> {
     permissionMode: (options.permissionMode ?? "acceptEdits") as PermissionMode,
     customSystemPrompt: settings.agent.customSystemPrompt,
     appendSystemPrompt: settings.agent.appendSystemPrompt,
+    // Personalization + instruction compat (shared helper → no per-host drift).
+    ...personalizationFrom(settings.agent),
     maxTurns: options.maxTurns ?? 30,
     maxContextTokens: settings.context.maxTokens,
     sessionStorageDir: settings.session.storageDir,

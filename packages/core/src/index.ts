@@ -407,6 +407,7 @@ export { logger } from "./logging/logger.js";
 
 export { SettingsManager, type SettingsScope } from "./settings/manager.js";
 export { SettingsSchema, validateSettings } from "./settings/schema.js";
+export { personalizationFrom, type PersonalizationConfig } from "./settings/personalization.js";
 
 // ─── State (runtime singletons shared with TUI) ──────────────────
 

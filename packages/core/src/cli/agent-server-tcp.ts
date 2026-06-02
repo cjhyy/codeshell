@@ -24,6 +24,7 @@ import { ChatSessionManager } from "../protocol/chat-session-manager.js";
 import { AgentServer } from "../protocol/server.js";
 import { listenTcp } from "../protocol/tcp-transport.js";
 import { SettingsManager } from "../settings/manager.js";
+import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
 import { CostTracker } from "../cost-tracker.js";
@@ -81,6 +82,10 @@ const chatManager = new ChatSessionManager({
       preset: slice.preset,
       customSystemPrompt: slice.customSystemPrompt,
       appendSystemPrompt: slice.appendSystemPrompt,
+      // Personalization + instruction compat come from disk settings only
+      // (not per-request slice overrides) — same disk-only contract as the
+      // stdio host. Shared helper keeps the three fields wired identically.
+      ...personalizationFrom(settings.agent),
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
       ...(slice.cwd ? { cwd: slice.cwd } : {}),

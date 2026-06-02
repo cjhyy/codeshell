@@ -126,8 +126,8 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
  *
  * Two stable preferences injected into every conversation (main agent and
  * subagents alike): `agent.responseLanguage` (single line) and
- * `agent.userProfile` (multi-line). Save is disabled until either differs
- * from disk.
+ * `agent.userProfile` (multi-line). Auto-saves (debounced while typing,
+ * flushed on blur); no Save button — same pattern as 自定义指令 above.
  */
 export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
   const [language, setLanguage] = useState("");
