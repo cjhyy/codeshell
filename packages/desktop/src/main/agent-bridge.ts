@@ -242,6 +242,18 @@ export class AgentBridge {
     }));
   }
 
+  /**
+   * Announce a live automation session to the renderer so it can create the
+   * sidebar entry under the project owning `cwd` (stream events carry no cwd).
+   * Separate JSON-RPC method from `agent/streamEvent` so the shared core
+   * StreamEvent shape stays untouched and the interactive path is unaffected.
+   */
+  broadcastAutomationSession(meta: { sessionId: string; cwd: string; title: string }): void {
+    this.safeSend("agent:msg", JSON.stringify({
+      jsonrpc: "2.0", method: "agent/automationSession", params: meta,
+    }));
+  }
+
   kill(): void {
     dlog("bridge", "kill", { pid: this.child?.pid });
     this.child?.kill("SIGTERM");

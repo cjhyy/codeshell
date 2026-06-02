@@ -288,12 +288,19 @@ app.whenReady().then(() => {
     // before any window (and thus the bridge) exists.
     const emitAutomationEvent = (sessionId: string, event: unknown) =>
       bridge?.ingestExternalEvent(sessionId, event);
+    const announceAutomationSession = (meta: {
+      sessionId: string;
+      cwd: string;
+      title: string;
+    }) => bridge?.broadcastAutomationSession(meta);
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
       // Each fired job runs as a one-shot read-only headless Engine, which
       // auto-writes a full transcript.jsonl (like interactive chat). The emit
-      // callback also streams events to a live snapshot for renderer reconnect.
-      runner: buildDesktopAutomationRunner(emitAutomationEvent),
+      // callback streams events to a live snapshot for renderer reconnect; the
+      // announce callback fires once with cwd+title so the renderer can place
+      // the live run in the right project sidebar group immediately.
+      runner: buildDesktopAutomationRunner(emitAutomationEvent, announceAutomationSession),
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);

@@ -50,15 +50,32 @@ export function buildDesktopRunManager(): RunManager {
   });
 }
 
+/** Metadata the renderer needs to live-create a sidebar session for an
+ *  automation run: the real engine sessionId, the job cwd (to group under
+ *  the right project), and a display title. */
+export interface AutomationSessionMeta {
+  sessionId: string;
+  cwd: string;
+  title: string;
+}
+
 /**
  * Build a CronRunner that runs each job as a one-shot read-only headless Engine.
  *
- * `emit`, when provided, forwards Engine stream events (keyed by job id) so the
- * main process can build a live snapshot / write a transcript (later task B5
- * refines the session id).
+ * `emit`, when provided, forwards Engine stream events (keyed by the real engine
+ * sessionId) so the main process can build a live snapshot / broadcast to the
+ * renderer stream.
+ *
+ * `onSession`, when provided, fires ONCE per run the moment the engine
+ * sessionId is known (on `session_started`), carrying the job cwd + a display
+ * title. The renderer uses this to live-create the sidebar session under the
+ * project that owns the cwd — stream events alone carry no cwd, so without this
+ * a live automation run can't be attributed to a project until the next startup
+ * backfill from disk.
  */
 export function buildDesktopAutomationRunner(
   emit?: (sessionId: string, event: unknown) => void,
+  onSession?: (meta: AutomationSessionMeta) => void,
 ): CronRunner {
   return async (req): Promise<CronRunResult> => {
     const jobCwd = req.job.cwd ?? process.cwd();
@@ -105,13 +122,24 @@ export function buildDesktopAutomationRunner(
     // `session_started` event) so renderer routing/reconnect matches interactive
     // chat. Fall back to job.id until that event is seen.
     let sid: string | undefined;
-    const onStream = emit
-      ? (e: unknown) => {
-          const ev = e as { type?: string; sessionId?: string };
-          if (ev.type === "session_started" && typeof ev.sessionId === "string") sid = ev.sessionId;
-          emit(sid ?? req.job.id, e);
-        }
-      : undefined;
+    const onStream =
+      emit || onSession
+        ? (e: unknown) => {
+            const ev = e as { type?: string; sessionId?: string };
+            if (ev.type === "session_started" && typeof ev.sessionId === "string") {
+              const firstBind = sid === undefined;
+              sid = ev.sessionId;
+              // Announce the session ONCE so the renderer can attribute this
+              // live run to the project owning jobCwd and title it nicely.
+              if (firstBind && onSession) {
+                const name = req.job.name?.trim() || req.job.id;
+                const date = new Date().toLocaleDateString();
+                onSession({ sessionId: sid, cwd: jobCwd, title: `⚙ ${name} ${date}` });
+              }
+            }
+            emit?.(sid ?? req.job.id, e);
+          }
+        : undefined;
     const result = await engine.run(prompt, { cwd: jobCwd, onStream });
     return { text: result.text, reason: result.reason };
   };

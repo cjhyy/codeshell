@@ -26,6 +26,11 @@ const streamListeners: Array<(env: { sessionId: string; event: unknown }) => voi
 const approvalListeners: Array<(env: unknown) => void> = [];
 const statusListeners: Array<(evt: unknown) => void> = [];
 const lifecycleListeners: Array<(evt: unknown) => void> = [];
+// Live automation session announcements: `{ sessionId, cwd, title }`, fired
+// once when an in-main automation Engine emits session_started.
+const automationSessionListeners: Array<
+  (meta: { sessionId: string; cwd: string; title: string }) => void
+> = [];
 
 ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   let msg: Record<string, unknown>;
@@ -57,6 +62,13 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     const sessionId = (params?.sessionId as string | undefined) ?? "";
     const event = params?.event;
     streamListeners.forEach((cb) => cb({ sessionId, event }));
+  } else if (method === "agent/automationSession") {
+    const sessionId = (params?.sessionId as string | undefined) ?? "";
+    const cwd = (params?.cwd as string | undefined) ?? "";
+    const title = (params?.title as string | undefined) ?? "";
+    if (sessionId) {
+      automationSessionListeners.forEach((cb) => cb({ sessionId, cwd, title }));
+    }
   } else if (method === "agent/approvalRequest") {
     // `{ sessionId, requestId, request }` envelope. requestId lets the
     // renderer echo the decision back via approve(sessionId, requestId, ...).
@@ -206,6 +218,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => {
       const i = streamListeners.indexOf(cb);
       if (i >= 0) streamListeners.splice(i, 1);
+    };
+  },
+  onAutomationSession: (
+    cb: (meta: { sessionId: string; cwd: string; title: string }) => void,
+  ): (() => void) => {
+    automationSessionListeners.push(cb);
+    return () => {
+      const i = automationSessionListeners.indexOf(cb);
+      if (i >= 0) automationSessionListeners.splice(i, 1);
     };
   },
   onApprovalRequest: (cb: (req: unknown) => void): (() => void) => {

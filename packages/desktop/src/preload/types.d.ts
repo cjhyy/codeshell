@@ -194,6 +194,15 @@ export interface CodeshellApi {
    */
   configure(params: { model?: string; reloadModels?: boolean }): Promise<RpcResponse>;
   onStreamEvent(cb: (env: StreamEventEnvelope) => void): Unsubscribe;
+  /**
+   * Live automation session announcement. Fires once when an in-main
+   * automation run emits session_started, carrying the engine sessionId plus
+   * the job cwd + display title so the renderer can place the live run in the
+   * correct project sidebar group (stream events carry no cwd).
+   */
+  onAutomationSession(
+    cb: (meta: { sessionId: string; cwd: string; title: string }) => void,
+  ): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;

@@ -1,0 +1,59 @@
+/**
+ * Pure placement logic for a LIVE automation session announced over the stream
+ * (`agent/automationSession`). Stream events carry only a sessionId — the cwd
+ * needed to group the run under a project lives on the cron job (main side) and
+ * is forwarded once via the announcement. This module turns that announcement
+ * into a (repoId, SessionSummary) the renderer can upsert into the sidebar,
+ * reusing the SAME source:"automation" machinery the startup disk-backfill uses
+ * (so clicking the session renders the run like a normal chat).
+ *
+ * Kept side-effect-free (repo creation is injected) so it unit-tests without
+ * Electron / localStorage.
+ */
+import type { SessionSummary } from "../transcripts";
+import { matchRepoIdForCwd, type RepoLike } from "./pathMatch";
+
+export interface AutomationSessionAnnouncement {
+  sessionId: string;
+  cwd: string;
+  title: string;
+}
+
+export interface PlaceLiveSessionDeps {
+  caseInsensitive: boolean;
+  /** Create a repo for an unmatched cwd; returns its id. */
+  createRepoForCwd: (cwd: string) => string;
+}
+
+export interface LiveSessionPlacement {
+  repoId: string | null;
+  summary: SessionSummary;
+}
+
+/**
+ * Resolve which project an announced automation session belongs to (matching
+ * the cwd against existing repos, auto-creating one when unmatched) and build
+ * the SessionSummary for it. `runStatus: "running"` mirrors the disk-backfill
+ * convention so the next startup backfill re-imports the finished transcript in
+ * place (upsertImportedSession keys on engineSessionId).
+ */
+export function placeLiveAutomationSession(
+  ann: AutomationSessionAnnouncement,
+  repos: RepoLike[],
+  deps: PlaceLiveSessionDeps,
+): LiveSessionPlacement {
+  const repoId =
+    matchRepoIdForCwd(ann.cwd, repos, deps.caseInsensitive) ??
+    deps.createRepoForCwd(ann.cwd);
+  const now = Date.now();
+  const summary: SessionSummary = {
+    id: ann.sessionId, // engine sessionId doubles as the UI session id for imports
+    title: (ann.title || "automation").slice(0, 60),
+    createdAt: now,
+    updatedAt: now,
+    engineSessionId: ann.sessionId,
+    source: "automation",
+    runStatus: "running",
+  };
+  return { repoId, summary };
+}

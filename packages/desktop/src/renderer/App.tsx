@@ -54,6 +54,7 @@ import { importAutomationRuns, type ImportableRun } from "./automation/importRun
 import { foldTranscript } from "./automation/foldTranscript";
 import { mergeTranscripts } from "./automation/mergeTranscripts";
 import { isCaseInsensitivePlatform } from "./automation/pathMatch";
+import { placeLiveAutomationSession } from "./automation/liveSession";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
@@ -752,6 +753,61 @@ function App() {
         // engineToBucketRef is the authoritative routing for in-flight runs.
       }
     });
+    // Live automation session: main announces {sessionId, cwd, title} once when
+    // an in-main automation run emits session_started. Stream events carry no
+    // cwd, so without this the run can't be attributed to a project until the
+    // next startup disk-backfill. We create the sidebar session immediately
+    // (reusing the source:"automation" import machinery) and register the route
+    // so this run's subsequent stream events land in the right bucket.
+    const offAutomationSession = window.codeshell.onAutomationSession((meta) => {
+      window.codeshell.log("automation.session.announce", {
+        sessionId: meta.sessionId,
+        cwd: meta.cwd,
+      });
+      // Idempotency: if any repo already has this engine session (a prior
+      // announce, or a disk-backfilled import), don't duplicate.
+      const reposNow = loadRepos();
+      const alreadyKnown =
+        [null as string | null, ...reposNow.map((r) => r.id)].some((rid) =>
+          loadSessionIndex(rid).sessions.some(
+            (s) => s.engineSessionId === meta.sessionId,
+          ),
+        );
+      if (alreadyKnown) {
+        // Still (re)register the route in case the table was wiped by a remount.
+        const knownRepoId =
+          [null as string | null, ...reposNow.map((r) => r.id)].find((rid) =>
+            loadSessionIndex(rid).sessions.some(
+              (s) => s.engineSessionId === meta.sessionId,
+            ),
+          ) ?? null;
+        engineToBucketRef.current.set(
+          meta.sessionId,
+          bucketKey(knownRepoId, meta.sessionId),
+        );
+        return;
+      }
+      let reposChanged = false;
+      const { repoId, summary } = placeLiveAutomationSession(meta, reposNow, {
+        caseInsensitive: isCaseInsensitivePlatform(),
+        createRepoForCwd: (cwd) => {
+          const id = makeRepoId();
+          const name = cwd.split("/").filter(Boolean).pop() || cwd;
+          const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
+          reposNow.push(repo);
+          saveRepos(reposNow);
+          reposChanged = true;
+          return id;
+        },
+      });
+      const nextIdx = upsertImportedSession(repoId, summary);
+      // Register the route so this run's stream events (already arriving) bucket
+      // correctly. The session_started handler's reverse-lookup would also find
+      // it now that it's on disk, but setting the fast path is cheap.
+      engineToBucketRef.current.set(meta.sessionId, bucketKey(repoId, summary.id));
+      if (reposChanged) setRepos(reposNow.slice());
+      setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
+    });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {
       window.codeshell.log("approval.request", {
         requestId: env.requestId,
@@ -851,6 +907,7 @@ function App() {
     });
     return () => {
       offStream();
+      offAutomationSession();
       offApproval();
       offStatus();
       offLifecycle();
