@@ -22,6 +22,10 @@ export interface ComposerOptions {
   preset?: AgentPreset;
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
+  /** User's preferred response language (free text), injected as a stable system section. */
+  responseLanguage?: string;
+  /** How to address the user / short profile (free text). */
+  userProfile?: string;
   /**
    * Skill names (full names including any "<plugin>:" prefix) the user
    * has disabled in settings. Filtered out of the LLM's skills listing
@@ -192,6 +196,22 @@ export class PromptComposer {
       sections.push({
         name: "append_system",
         compute: () => this.options.appendSystemPrompt!,
+      });
+    }
+
+    // Personalization — stable user preferences (language + how to address
+    // the user). Placed in the cacheable system prefix because it doesn't
+    // change per-turn. Only emitted when at least one field is set.
+    const { responseLanguage, userProfile } = this.options;
+    if (responseLanguage || userProfile) {
+      sections.push({
+        name: "personalization",
+        compute: () => {
+          const lines = ["# User & Response Preferences"];
+          if (userProfile) lines.push(`- About the user: ${userProfile}`);
+          if (responseLanguage) lines.push(`- Response language: ${responseLanguage}`);
+          return lines.join("\n");
+        },
       });
     }
 

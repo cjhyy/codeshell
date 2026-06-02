@@ -126,6 +126,8 @@ export interface EngineConfig {
   disabledBuiltinTools?: string[];
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
+  responseLanguage?: string;
+  userProfile?: string;
   /**
    * Goal mode: when set, the engine registers a GoalStopHook on `on_stop`
    * so the turn loop runs until the session model judges this goal met
@@ -826,6 +828,8 @@ export class Engine {
             [this.config.appendSystemPrompt, req.appendSystemPrompt]
               .filter(Boolean)
               .join("\n\n") || undefined,
+          responseLanguage: this.config.responseLanguage,
+          userProfile: this.config.userProfile,
           maxTurns: req.maxTurns,
           maxContextTokens: this.config.maxContextTokens ?? 200_000,
           sessionStorageDir: this.config.sessionStorageDir,
@@ -1173,6 +1177,8 @@ export class Engine {
       preset: this.preset,
       customSystemPrompt: this.config.customSystemPrompt,
       appendSystemPrompt: this.config.appendSystemPrompt,
+      responseLanguage: this.config.responseLanguage,
+      userProfile: this.config.userProfile,
       disabledSkills,
       disabledPlugins,
     });
