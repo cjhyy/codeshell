@@ -20,6 +20,7 @@
 import type { HookContext, HookResult } from "./events.js";
 import type { HookHandler } from "./registry.js";
 import type { LLMResponse } from "../types.js";
+import { normalizeGoal, type GoalConfig } from "../engine/goal.js";
 
 /** Narrow LLM surface the judge needs — just a one-shot completion. */
 export interface GoalJudgeLLM {
@@ -43,7 +44,7 @@ export interface GoalStopHookOptions {
   llm: GoalJudgeLLM;
   log: GoalLogger;
   /** Override the goal instead of reading ctx.data.goal (mainly for tests). */
-  goal?: string;
+  goal?: string | GoalConfig;
 }
 
 const JUDGE_SYSTEM =
@@ -73,11 +74,13 @@ function extractJson(text: string): { met: boolean; gaps: string } | null {
 export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
   const { llm, log } = opts;
   return async (ctx: HookContext): Promise<HookResult> => {
-    const rawGoal =
-      opts.goal ?? (typeof ctx.data.goal === "string" ? ctx.data.goal : "");
-    const goal = rawGoal.trim();
+    // Accept string or GoalConfig from either the override or ctx.data.goal.
+    const g = normalizeGoal(
+      opts.goal ?? (ctx.data.goal as string | GoalConfig | undefined),
+    );
     // No goal → not Goal mode → allow stop.
-    if (!goal) return {};
+    if (!g) return {};
+    const goal = g.objective;
 
     const finalText =
       typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";
@@ -106,12 +109,28 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
         cat: "goal",
         error: (err as Error).message,
       });
-      return {}; // conservative: allow stop
+      // P0: do NOT silently allow stop on judge failure — in unattended runs
+      // that means the goal silently fails. Nudge to continue instead; the
+      // run-scoped budget guardrail (turn-loop) is the real safety backstop
+      // that prevents an unsatisfiable goal from looping forever.
+      return {
+        continueSession: true,
+        messages: [
+          "继续 —— 目标完成度无法判定,请继续推进直到明确完成(或调用 complete_goal 声明完成)。",
+        ],
+      };
     }
 
     if (!verdict) {
       log.warn("goal_stop.unparseable", { cat: "goal" });
-      return {}; // conservative: allow stop
+      // P0: same as the throw path — unparseable judge output must not be
+      // treated as "done". Continue instead of silently allowing the stop.
+      return {
+        continueSession: true,
+        messages: [
+          "继续 —— 目标完成度无法判定,请继续推进直到明确完成(或调用 complete_goal 声明完成)。",
+        ],
+      };
     }
 
     if (verdict.met) {
