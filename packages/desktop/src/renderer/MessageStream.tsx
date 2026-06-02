@@ -10,6 +10,7 @@ import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
 import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
 import { FilesChangedCard } from "./messages/FilesChangedCard";
+import { LiveActivityLine } from "./messages/LiveActivityLine";
 import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
 import { decodeWireForDisplay } from "./chat/attachments";
@@ -167,6 +168,7 @@ export function MessageStream({
             return <FilesChangedCard key={m.id} message={m} cwd={cwd ?? null} />;
         }
       })}
+      {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}
       {trailing}
       {zoomed && (
         <Lightbox
