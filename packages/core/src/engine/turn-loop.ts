@@ -28,6 +28,13 @@ import { estimateTokens } from "../context/compaction.js";
 import { isTruncatedStop } from "../llm/stop-reason.js";
 import { isAbortError } from "../llm/client-base.js";
 import { crossedReactiveThreshold } from "./reactive-threshold.js";
+import {
+  type GoalConfig,
+  type GoalBudgetTracker,
+  createGoalBudgetTracker,
+  recordGoalUsage,
+  goalBudgetExceeded,
+} from "./goal.js";
 
 export interface TurnLoopConfig {
   maxTurns: number;
@@ -42,12 +49,13 @@ export interface TurnLoopConfig {
    */
   onTurnBoundary?: (turnCount: number) => void;
   /**
-   * Goal mode: the active goal text, passed to on_stop handlers via
-   * ctx.data.goal so the GoalStopHook can judge completion. Undefined
-   * when no goal is set (on_stop still fires but built-in Goal handler
-   * is a no-op without it).
+   * Goal mode: the normalized GoalConfig (objective + optional token/time
+   * budgets), passed to on_stop handlers via ctx.data.goal so the
+   * GoalStopHook can judge completion. The run-scoped budget tracker reads
+   * the budgets to force-stop an unattended run. Undefined when no goal is
+   * set (on_stop still fires but built-in Goal handler is a no-op without it).
    */
-  goal?: string;
+  goal?: GoalConfig;
   /**
    * Max consecutive times an on_stop handler may block termination before
    * the loop forces a stop, mirroring Claude Code's stop-hook block cap.
@@ -231,6 +239,14 @@ export class TurnLoop {
     let messages = [...initialMessages];
     let finalText = "";
     const budgetTracker = createBudgetTracker();
+
+    // Goal-mode run-scoped budget tracker (P0). Null when no goal. Stamps a
+    // wall-clock start now and accumulates prompt+completion tokens across
+    // every turn; the guardrail below force-stops the run once any configured
+    // budget is blown — the unattended-safety backstop.
+    const goalTracker: GoalBudgetTracker | null = this.config.goal
+      ? createGoalBudgetTracker(this.config.goal, Date.now())
+      : null;
 
     // run() must never reject: the engine's post-run bookkeeping (saveState
     // with the terminal reason, on_session_end hook) runs AFTER this call and
@@ -436,6 +452,15 @@ export class TurnLoop {
         this.emitCtxFromUsage(response.usage.promptTokens, messages);
       }
 
+      // Goal-mode run-scoped accounting: add this turn's total token usage
+      // (prompt + completion) to the running total. Done after continuation so
+      // continued output is counted against the budget.
+      if (goalTracker && response.usage) {
+        const used =
+          (response.usage.promptTokens ?? 0) + (response.usage.completionTokens ?? 0);
+        recordGoalUsage(goalTracker, used);
+      }
+
       // Aborted?
       if (this.config.signal?.aborted) {
         return { text: finalText, reason: "aborted_streaming", messages };
@@ -444,6 +469,27 @@ export class TurnLoop {
       // Accumulate text
       if (response.text) {
         finalText = response.text;
+      }
+
+      // Goal budget guardrail (P0): a run that has blown its token/time budget
+      // is force-stopped regardless of what the model wants to do next (stop OR
+      // continue with tool calls). This is the unattended-safety backstop, so
+      // it sits BEFORE the "tool calls?" branch — both paths pass the gate.
+      if (goalTracker && goalBudgetExceeded(goalTracker, Date.now())) {
+        tlog.info("turn.goal_budget_exhausted", {
+          cat: "goal",
+          tokensUsed: goalTracker.tokensUsed,
+          tokenBudget: this.config.goal?.tokenBudget,
+          timeBudgetMs: this.config.goal?.timeBudgetMs,
+        });
+        this.config.onStream?.({
+          type: "assistant_message",
+          message: {
+            role: "assistant",
+            content: "（Goal 预算已耗尽，强制停止。）",
+          },
+        });
+        return { text: finalText, reason: "goal_budget_exhausted", messages };
       }
 
       // Post-check: tool calls?
@@ -583,6 +629,17 @@ export class TurnLoop {
       // Tool results just pushed; recompute ctx so the bar updates *before*
       // the next model round-trip — large tool outputs can move it sharply.
       this.emitCtxFromMessages(messages);
+
+      // Goal mode P0: explicit completion. If the model called complete_goal,
+      // it has DECLARED the goal done — short-circuit to "completed" WITHOUT
+      // running the judge hook. The tool's result is already in `messages`
+      // above so the summary lands in the transcript. Reset the stop-block
+      // counter so a prior judge-driven block streak doesn't leak out.
+      if (goalTracker && toolCalls.some((tc) => tc.toolName === "complete_goal")) {
+        tlog.info("turn.goal_self_reported_complete", { cat: "goal" });
+        this.stopBlockCount = 0;
+        return { text: finalText, reason: "completed", messages };
+      }
 
       // Token budget check
       const totalOutputTokens = this.deps.model.getOutputTokens?.() ?? 0;
