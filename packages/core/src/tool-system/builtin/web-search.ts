@@ -84,6 +84,19 @@ export function resolveSearchConfig(cwd: string = process.cwd()): ResolvedSearch
   return { provider: "serper", source: "none" };
 }
 
+/**
+ * Tool-visibility guard: WebSearch is only useful when a search provider is
+ * configured. Mirrors the runtime check in the tool itself (source === "none"
+ * means no provider). Cheap + sync so it can run on every toolDefs assembly.
+ */
+export function isWebSearchAvailable(cwd: string = process.cwd()): boolean {
+  try {
+    return resolveSearchConfig(cwd).source !== "none";
+  } catch {
+    return false; // unresolved config → treat as unavailable
+  }
+}
+
 export const webSearchToolDef: ToolDefinition = {
   name: "WebSearch",
   description:

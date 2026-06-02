@@ -19,6 +19,7 @@ import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
+import { BUILTIN_TOOL_GUARDS } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import {
   notificationQueue,
@@ -1234,11 +1235,23 @@ export class Engine {
     // agent_type falls back to one of them (see resolveAgentTypeOverrides); with
     // no roles configured it runs a true ephemeral agent, so workflows that need
     // sub-agents (e.g. superpowers) work in any project.
-    const allToolDefs = this.toolRegistry.getToolDefinitions().map((t) =>
-      t.name === "Agent"
-        ? { ...t, description: agentToolDefWithTypes(toolCtx.agentDefinitions).description }
-        : t,
-    );
+    // Availability guard (tool-visibility): a gated builtin (WebSearch needs a
+    // search provider, GenerateImage needs an OpenAI provider) is hidden from
+    // the toolDefs the model sees when its credential isn't configured for this
+    // cwd. Recomputed every message, so configuring a key takes effect on the
+    // NEXT message without a restart. Tools with no guard entry are always kept.
+    const guardCwd = toolCtx.cwd;
+    const allToolDefs = this.toolRegistry
+      .getToolDefinitions()
+      .filter((t) => {
+        const guard = BUILTIN_TOOL_GUARDS.get(t.name);
+        return guard ? guard(guardCwd) : true;
+      })
+      .map((t) =>
+        t.name === "Agent"
+          ? { ...t, description: agentToolDefWithTypes(toolCtx.agentDefinitions).description }
+          : t,
+      );
 
     // In plan mode, only expose read-only/planning tools so the model won't
     // attempt writes. Shared with executor.ts's execution gate via

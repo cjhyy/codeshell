@@ -72,6 +72,18 @@ function resolveOpenAIProvider(cwd: string): OpenAIProvider | null {
   return { baseUrl: provider.baseUrl, apiKey: provider.apiKey };
 }
 
+/**
+ * Tool-visibility guard: GenerateImage needs a kind:"openai" provider with a
+ * key. resolveOpenAIProvider returns null when none is configured.
+ */
+export function isGenerateImageAvailable(cwd: string = process.cwd()): boolean {
+  try {
+    return resolveOpenAIProvider(cwd) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export async function generateImageTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,

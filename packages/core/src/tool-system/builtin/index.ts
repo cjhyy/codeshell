@@ -5,13 +5,13 @@
 import type { RegisteredTool } from "../../types.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
-import { generateImageToolDef, generateImageTool } from "./generate-image.js";
+import { generateImageToolDef, generateImageTool, isGenerateImageAvailable } from "./generate-image.js";
 import { editToolDef, editTool } from "./edit.js";
 import { applyPatchToolDef, applyPatchTool } from "./apply-patch/index.js";
 import { globToolDef, globTool } from "./glob.js";
 import { grepToolDef, grepTool } from "./grep.js";
 import { bashToolDef, bashTool } from "./bash.js";
-import { webSearchToolDef, webSearchTool } from "./web-search.js";
+import { webSearchToolDef, webSearchTool, isWebSearchAvailable } from "./web-search.js";
 import { webFetchToolDef, webFetchTool } from "./web-fetch.js";
 import { askUserToolDef, askUserTool } from "./ask-user.js";
 import {
@@ -506,3 +506,14 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     execute: completeGoalTool,
   },
 ];
+
+/**
+ * Per-tool availability predicates. A tool listed here is filtered OUT of the
+ * exposed toolDefs when its predicate returns false for the active cwd (see
+ * engine.ts toolDefs assembly). Tools NOT listed here are always visible.
+ * Keyed by the tool's `name` (must match the toolDef name).
+ */
+export const BUILTIN_TOOL_GUARDS: Map<string, (cwd: string) => boolean> = new Map([
+  [webSearchToolDef.name, isWebSearchAvailable],
+  [generateImageToolDef.name, isGenerateImageAvailable],
+]);
