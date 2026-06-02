@@ -41,4 +41,19 @@ describe("planDiskRebuild", () => {
     expect(out[0].repoId).toBeNull(); // null → NO_REPO_KEY (chat) bucket
     expect(out[0].summary).toMatchObject({ id: "s3", engineSessionId: "s3" });
   });
+
+  it("marks automation-origin sessions with source:automation (⚙); desktop stays undefined", () => {
+    const out = planDiskRebuild(
+      [
+        { id: "a", engineSessionId: "a", cwd: "/proj/a", title: "新闻", updatedAt: 2, origin: "automation" },
+        { id: "d", engineSessionId: "d", cwd: "/proj/a", title: "聊天", updatedAt: 1, origin: "desktop" },
+      ],
+      [{ id: "r1", name: "a", path: "/proj/a" }],
+      { caseInsensitive: false, createRepoForCwd: () => "X" },
+    );
+    const a = out.find((p) => p.summary.id === "a")!;
+    const d = out.find((p) => p.summary.id === "d")!;
+    expect(a.summary.source).toBe("automation");
+    expect(d.summary.source).toBeUndefined();
+  });
 });

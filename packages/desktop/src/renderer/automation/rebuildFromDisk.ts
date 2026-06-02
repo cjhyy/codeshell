@@ -13,6 +13,8 @@ export interface DiskSessionMeta {
   cwd: string;
   title: string;
   updatedAt: number;
+  /** Session origin from disk; "automation" sessions get the ⚙ source mark. */
+  origin?: "desktop" | "automation";
 }
 
 export interface RebuildDeps {
@@ -42,7 +44,8 @@ export function planDiskRebuild(
       createdAt: s.updatedAt,
       updatedAt: s.updatedAt,
       engineSessionId: s.engineSessionId,
-      // source absent → a normal (non-automation) session.
+      // automation sessions carry the ⚙ source mark; desktop leaves it absent.
+      ...(s.origin === "automation" ? { source: "automation" as const } : {}),
     };
     return { repoId, summary };
   });
