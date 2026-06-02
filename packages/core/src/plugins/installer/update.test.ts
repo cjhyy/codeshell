@@ -10,7 +10,7 @@ import { parseSource } from "./parseSource.js";
 
 describe("updatePluginByName", () => {
   let home: string, src: string, prev: string | undefined;
-  beforeEach(() => {
+  beforeEach(async () => {
     prev = process.env.HOME;
     home = mkdtempSync(join(tmpdir(), "cs-up-home-"));
     src = mkdtempSync(join(tmpdir(), "cs-up-src-"));
@@ -19,7 +19,7 @@ describe("updatePluginByName", () => {
     writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "u", version: "1.0.0" }));
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "a.toml"), 'name = "a"\ndescription = "d"');
-    installPluginFromPath(src, "u", "t1");
+    await installPluginFromPath(src, "u", "t1");
   });
   afterEach(() => {
     process.env.HOME = prev;

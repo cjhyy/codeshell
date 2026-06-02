@@ -71,7 +71,7 @@ export async function updatePluginByName(
 
   uninstallPluginByName(name);
   try {
-    installPluginFromPath(meta.source, name, installedAt);
+    await installPluginFromPath(meta.source, name, installedAt);
   } catch (err) {
     throw new PluginInstallError(
       `update failed and '${name}' was removed during reinstall: ` +

@@ -19,12 +19,12 @@ describe("listInstalledPlugins", () => {
     rmSync(src, { recursive: true, force: true });
   });
 
-  test("lists local installs with name/format/version", () => {
+  test("lists local installs with name/format/version", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
     writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "cx", version: "9.9" }));
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "a.toml"), 'name = "a"\ndescription = "d"');
-    installPluginFromPath(src, "cx", "t");
+    await installPluginFromPath(src, "cx", "t");
     const rows = listInstalledPlugins();
     const row = rows.find((r) => r.name === "cx");
     expect(row).toMatchObject({ name: "cx", format: "codex", version: "9.9" });

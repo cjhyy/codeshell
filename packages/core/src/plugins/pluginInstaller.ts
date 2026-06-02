@@ -5,14 +5,8 @@
  * sparse-checkout, no npm/pip.
  */
 
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  realpathSync,
-  rmSync,
-} from "node:fs";
+import { existsSync, realpathSync, rmSync } from "node:fs";
+import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { gitClone, gitRevParseHead, githubRepoToCloneUrl } from "./gitOps.js";
@@ -105,9 +99,9 @@ async function materializePath(
   if (!existsSync(src)) {
     return { ok: false, error: `plugin source path "${relativePath}" not found in marketplace` };
   }
-  mkdirSync(dirname(cacheTarget), { recursive: true });
-  if (existsSync(cacheTarget)) rmSync(cacheTarget, { recursive: true, force: true });
-  cpSync(src, cacheTarget, { recursive: true });
+  await mkdir(dirname(cacheTarget), { recursive: true });
+  if (existsSync(cacheTarget)) await rm(cacheTarget, { recursive: true, force: true });
+  await cp(src, cacheTarget, { recursive: true });
   return { ok: true, sha: undefined };
 }
 
@@ -116,8 +110,8 @@ async function materializeGit(
   ref: string | undefined,
   cacheTarget: string,
 ): Promise<{ ok: true; sha: string } | { ok: false; error: string }> {
-  mkdirSync(dirname(cacheTarget), { recursive: true });
-  if (existsSync(cacheTarget)) rmSync(cacheTarget, { recursive: true, force: true });
+  await mkdir(dirname(cacheTarget), { recursive: true });
+  if (existsSync(cacheTarget)) await rm(cacheTarget, { recursive: true, force: true });
   const clone = await gitClone(url, cacheTarget, ref ? { ref } : undefined);
   if (!clone.ok) return { ok: false, error: clone.error };
   const head = await gitRevParseHead(cacheTarget);
@@ -132,7 +126,7 @@ async function materializeGitSubdir(
   cacheTarget: string,
 ): Promise<{ ok: true; sha: string } | { ok: false; error: string }> {
   // Clone to a tempdir, then copy the subdir over.
-  const tmp = mkdtempSync(join(tmpdir(), "plugin-clone-"));
+  const tmp = await mkdtemp(join(tmpdir(), "plugin-clone-"));
   try {
     const clone = await gitClone(url, tmp + "/repo", ref ? { ref } : undefined);
     if (!clone.ok) return { ok: false, error: clone.error };
@@ -145,12 +139,12 @@ async function materializeGitSubdir(
         error: `git-subdir path "${subPath}" not found in cloned repository`,
       };
     }
-    mkdirSync(dirname(cacheTarget), { recursive: true });
-    if (existsSync(cacheTarget)) rmSync(cacheTarget, { recursive: true, force: true });
-    cpSync(src, cacheTarget, { recursive: true });
+    await mkdir(dirname(cacheTarget), { recursive: true });
+    if (existsSync(cacheTarget)) await rm(cacheTarget, { recursive: true, force: true });
+    await cp(src, cacheTarget, { recursive: true });
     return { ok: true, sha: head.stdout };
   } finally {
-    rmSync(tmp, { recursive: true, force: true });
+    await rm(tmp, { recursive: true, force: true });
   }
 }
 
@@ -194,10 +188,10 @@ async function materialize(
     const r = await materializePath(marketplaceInstallLocation, source, placeholder);
     if (!r.ok) return r;
     const finalDir = pluginCacheDir(marketplace, plugin, "local");
-    if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true });
-    mkdirSync(dirname(finalDir), { recursive: true });
-    cpSync(placeholder, finalDir, { recursive: true });
-    rmSync(placeholder, { recursive: true, force: true });
+    if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
+    await mkdir(dirname(finalDir), { recursive: true });
+    await cp(placeholder, finalDir, { recursive: true });
+    await rm(placeholder, { recursive: true, force: true });
     return { ok: true, cacheDir: finalDir, version: "local", sha: undefined };
   }
 
@@ -205,14 +199,14 @@ async function materialize(
     const url = source.source === "github" ? githubRepoToCloneUrl(source.repo) : source.url;
     const r = await materializeGit(url, source.ref, placeholder);
     if (!r.ok) {
-      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      if (existsSync(placeholder)) await rm(placeholder, { recursive: true, force: true });
       return r;
     }
     // Supply-chain check: when the marketplace entry pins a SHA, fail the
     // install if the cloned HEAD doesn't match. Without this the `sha`
     // field is decorative — present in metadata, never enforced.
     if (source.sha && !shaMatches(source.sha, r.sha)) {
-      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      if (existsSync(placeholder)) await rm(placeholder, { recursive: true, force: true });
       return {
         ok: false,
         error: `sha mismatch for ${plugin}: expected ${source.sha}, got ${r.sha}`,
@@ -220,21 +214,21 @@ async function materialize(
     }
     const version = shortSha(r.sha);
     const finalDir = pluginCacheDir(marketplace, plugin, version);
-    if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true });
-    mkdirSync(dirname(finalDir), { recursive: true });
-    cpSync(placeholder, finalDir, { recursive: true });
-    rmSync(placeholder, { recursive: true, force: true });
+    if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
+    await mkdir(dirname(finalDir), { recursive: true });
+    await cp(placeholder, finalDir, { recursive: true });
+    await rm(placeholder, { recursive: true, force: true });
     return { ok: true, cacheDir: finalDir, version, sha: r.sha };
   }
 
   if (source.source === "git-subdir") {
     const r = await materializeGitSubdir(source.url, source.path, source.ref, placeholder);
     if (!r.ok) {
-      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      if (existsSync(placeholder)) await rm(placeholder, { recursive: true, force: true });
       return r;
     }
     if (source.sha && !shaMatches(source.sha, r.sha)) {
-      if (existsSync(placeholder)) rmSync(placeholder, { recursive: true, force: true });
+      if (existsSync(placeholder)) await rm(placeholder, { recursive: true, force: true });
       return {
         ok: false,
         error: `sha mismatch for ${plugin}: expected ${source.sha}, got ${r.sha}`,
@@ -242,10 +236,10 @@ async function materialize(
     }
     const version = shortSha(r.sha);
     const finalDir = pluginCacheDir(marketplace, plugin, version);
-    if (existsSync(finalDir)) rmSync(finalDir, { recursive: true, force: true });
-    mkdirSync(dirname(finalDir), { recursive: true });
-    cpSync(placeholder, finalDir, { recursive: true });
-    rmSync(placeholder, { recursive: true, force: true });
+    if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
+    await mkdir(dirname(finalDir), { recursive: true });
+    await cp(placeholder, finalDir, { recursive: true });
+    await rm(placeholder, { recursive: true, force: true });
     return { ok: true, cacheDir: finalDir, version, sha: r.sha };
   }
 

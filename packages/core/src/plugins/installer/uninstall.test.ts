@@ -22,8 +22,8 @@ describe("uninstallPluginByName", () => {
     rmSync(src, { recursive: true, force: true });
   });
 
-  test("removes the dir and the registry entry", () => {
-    const dir = installPluginFromPath(src, "gone", "t");
+  test("removes the dir and the registry entry", async () => {
+    const dir = await installPluginFromPath(src, "gone", "t");
     expect(existsSync(dir)).toBe(true);
     uninstallPluginByName("gone");
     expect(existsSync(dir)).toBe(false);

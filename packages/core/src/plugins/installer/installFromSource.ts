@@ -39,7 +39,7 @@ export async function installPluginFromSource(
       throw new PluginInstallError(`subdir not found in repo: ${parsed.subdir}`);
     }
 
-    const dir = installPluginFromPath(realSrc, name, installedAt);
+    const dir = await installPluginFromPath(realSrc, name, installedAt);
 
     // Rewrite source: realSrc is the throwaway clone path; record the git
     // string so list/update can re-clone later.

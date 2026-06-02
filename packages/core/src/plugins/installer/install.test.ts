@@ -21,16 +21,16 @@ describe("installPluginFromPath", () => {
     rmSync(src, { recursive: true, force: true });
   });
 
-  test("installs a CC plugin: copies dir + writes cc meta", () => {
+  test("installs a CC plugin: copies dir + writes cc meta", async () => {
     mkdirSync(join(src, "skills", "s"), { recursive: true });
     writeFileSync(join(src, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
-    const dir = installPluginFromPath(src, "ccplug", STAMP);
+    const dir = await installPluginFromPath(src, "ccplug", STAMP);
     expect(existsSync(join(dir, "skills", "s", "SKILL.md"))).toBe(true);
     const meta = JSON.parse(readFileSync(join(dir, ".cs-meta.json"), "utf-8"));
     expect(meta).toMatchObject({ name: "ccplug", format: "cc", source: src, installedAt: STAMP });
   });
 
-  test("installs a Codex plugin: converts agent + writes mcp-servers.json + codex meta", () => {
+  test("installs a Codex plugin: converts agent + writes mcp-servers.json + codex meta", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
     writeFileSync(
       join(src, ".codex-plugin", "plugin.json"),
@@ -38,7 +38,7 @@ describe("installPluginFromPath", () => {
     );
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "r.toml"), 'name = "r"\ndescription = "d"\nmodel = "flash"');
-    const dir = installPluginFromPath(src, "cx", STAMP);
+    const dir = await installPluginFromPath(src, "cx", STAMP);
     const md = readFileSync(join(dir, "agents", "r.md"), "utf-8");
     expect(md).toContain("name: r");
     expect(md).toContain("model: flash");
@@ -48,27 +48,27 @@ describe("installPluginFromPath", () => {
     expect(meta).toMatchObject({ name: "cx", format: "codex", version: "2.0.0" });
   });
 
-  test("refuses when install dir already exists", () => {
+  test("refuses when install dir already exists", async () => {
     mkdirSync(join(home, ".code-shell", "plugins", "dup"), { recursive: true });
-    expect(() => installPluginFromPath(src, "dup", STAMP)).toThrow(/already installed/);
+    await expect(installPluginFromPath(src, "dup", STAMP)).rejects.toThrow(/already installed/);
   });
 
-  test("registers the install in installed_plugins.json", () => {
+  test("registers the install in installed_plugins.json", async () => {
     mkdirSync(join(src, "skills", "s"), { recursive: true });
     writeFileSync(join(src, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
-    const dir = installPluginFromPath(src, "regplug", STAMP);
+    const dir = await installPluginFromPath(src, "regplug", STAMP);
     const reg = readInstalledPlugins();
     const entry = reg.plugins["regplug@local"]?.[0];
     expect(entry?.installPath).toBe(dir);
     expect(entry?.version).toBeDefined();
   });
 
-  test("leaves no install dir when conversion fails", () => {
+  test("leaves no install dir when conversion fails", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
     writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "x", version: "1" }));
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "bad.toml"), 'description = "no name"');
-    expect(() => installPluginFromPath(src, "x", STAMP)).toThrow(/name/);
+    await expect(installPluginFromPath(src, "x", STAMP)).rejects.toThrow(/name/);
     expect(existsSync(join(home, ".code-shell", "plugins", "x"))).toBe(false);
   });
 });
