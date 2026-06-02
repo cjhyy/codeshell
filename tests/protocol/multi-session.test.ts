@@ -30,6 +30,7 @@ function makeManager(maxSessions = 8) {
       setPlanMode: (_v: boolean) => {},
       setPermissionMode: (_m: string) => {},
       setAskUser: (_fn: any) => {},
+      isHeadless: () => false,
       run: async (task: string, opts: any) => {
         opts.onStream?.({ type: "text_delta", text: `t:${task}` });
         await new Promise((r) => setTimeout(r, 20));

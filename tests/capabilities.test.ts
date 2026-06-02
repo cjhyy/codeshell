@@ -10,7 +10,7 @@ describe("capabilitiesFor", () => {
     expect(c.rejectedParams.has("top_p")).toBe(true);
     // gpt-5.5 dropped "minimal" from reasoning_effort, so the rule pins
     // disabledEffort to "none" (see rules.ts gpt-5.5 entry).
-    expect(c.reasoning).toEqual({ kind: "openai-effort", disabledEffort: "none" });
+    expect(c.reasoning).toEqual({ kind: "openai-effort", disabledEffort: "none", supportedEfforts: ["low", "medium", "high", "xhigh"] });
   });
 
   test("OpenAI o3 reasoning model — same rules as gpt-5.x", () => {
@@ -119,7 +119,7 @@ describe("capabilitiesFor", () => {
 
   test("Mistral magistral — reasoning_effort with disabledEffort=none (only high|none)", () => {
     const c = capabilitiesFor("mistral", "magistral-medium");
-    expect(c.reasoning).toEqual({ kind: "openai-effort", disabledEffort: "none" });
+    expect(c.reasoning).toEqual({ kind: "openai-effort", disabledEffort: "none", supportedEfforts: ["high"] });
   });
 
   test("OpenAI gpt-5.5 — openai-effort with disabledEffort=none (gpt-5.5 dropped `minimal`)", () => {

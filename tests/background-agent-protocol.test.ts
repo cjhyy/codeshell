@@ -199,6 +199,7 @@ describe("AgentClient.onBackgroundAgentCompleted via in-process transport (B2.2)
       setPlanMode: () => {},
       setPermissionMode: () => {},
       setAskUser: () => {},
+      isHeadless: () => false,
     } as unknown as import("../packages/core/src/engine/engine.ts").Engine;
     const server = new AgentServer({ transport: serverT, engine: stubEngine });
     const client = new AgentClient({ transport: clientT });
@@ -234,6 +235,7 @@ describe("AgentClient.onBackgroundAgentCompleted via in-process transport (B2.2)
       setPlanMode: () => {},
       setPermissionMode: () => {},
       setAskUser: () => {},
+      isHeadless: () => false,
     } as unknown as import("../packages/core/src/engine/engine.ts").Engine;
     const server = new AgentServer({ transport: serverT, engine: stubEngine });
     const client = new AgentClient({ transport: clientT });
@@ -262,6 +264,7 @@ describe("AgentClient.onBackgroundAgentCompleted via in-process transport (B2.2)
       setPlanMode: () => {},
       setPermissionMode: () => {},
       setAskUser: () => {},
+      isHeadless: () => false,
     } as unknown as import("../packages/core/src/engine/engine.ts").Engine;
     const server = new AgentServer({ transport: serverT, engine: stubEngine });
     const client = new AgentClient({ transport: clientT });
@@ -313,6 +316,7 @@ describe("AgentClient.onBackgroundAgentCompleted via in-process transport (B2.2)
       setPlanMode: () => {},
       setPermissionMode: () => {},
       setAskUser: () => {},
+      isHeadless: () => false,
     } as unknown as import("../packages/core/src/engine/engine.ts").Engine;
     const server = new AgentServer({ transport: serverT, engine: stubEngine });
     const client = new AgentClient({ transport: clientT });
@@ -340,6 +344,7 @@ describe("AgentClient.onBackgroundAgentCompleted via in-process transport (B2.2)
       setPlanMode: () => {},
       setPermissionMode: () => {},
       setAskUser: () => {},
+      isHeadless: () => false,
     } as unknown as import("../packages/core/src/engine/engine.ts").Engine;
     const server = new AgentServer({ transport: serverT, engine: stubEngine });
     const client = new AgentClient({ transport: clientT });

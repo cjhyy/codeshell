@@ -32,6 +32,7 @@ function makeMockEngine(opts: {
 } = {}): Engine {
   const engine = {
     setAskUser: () => {},
+    isHeadless: () => false,
     run: async (
       _task: string,
       runOpts: { onStream?: StreamCallback; sessionId?: string; signal?: AbortSignal },

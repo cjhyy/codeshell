@@ -70,7 +70,7 @@ describe("Agent tool agent_type — end to end", () => {
 
   it("ephemeral mode (no agent_type) leaves role fields unset", async () => {
     const { spawner, captured } = capturingSpawner();
-    const ctx = { subAgentSpawner: spawner, agentDefinitions: regWith(researcher) } as unknown as ToolContext;
+    const ctx = { subAgentSpawner: spawner, agentDefinitions: regWith() } as unknown as ToolContext;
 
     await agentTool({ description: "d", prompt: "p" }, ctx);
 

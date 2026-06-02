@@ -92,6 +92,7 @@ describe("agent/run cwd mapping", () => {
     const engine = {
       setAskUser() {},
       setPermissionMode() {},
+      isHeadless: () => false,
       async run(task: string, options?: { cwd?: string }) {
         calls.push({ task, options });
         return {
