@@ -155,6 +155,11 @@ export interface EngineConfig {
    */
   headless?: boolean;
   /**
+   * When true, treat like headless for InvestigationGuard soft-mode — a
+   * read-only session should never be hard-blocked for repeated reads.
+   */
+  readOnlySession?: boolean;
+  /**
    * Sandbox configuration for shell-tool execution. When omitted, headless
    * runs default to "auto" (Seatbelt on macOS / bwrap on Linux when
    * available) and interactive runs default to "off" because a human is in
@@ -1148,7 +1153,7 @@ export class Engine {
 
     const toolExecutor = new ToolExecutor(this.toolRegistry, permission, this.hooks);
     const investigationGuard = new InvestigationGuard();
-    if (this.config.headless) investigationGuard.setSoftMode(true);
+    if (this.config.headless || this.config.readOnlySession) investigationGuard.setSoftMode(true);
     toolExecutor.setInvestigationGuard(investigationGuard);
     toolExecutor.setTaskGuard(new TaskGuard(() => latestTodos));
 
