@@ -30,7 +30,11 @@ export function resolveSearchConfig(cwd: string = process.cwd()): ResolvedSearch
   let settingsKey: string | undefined;
   let settingsBaseUrl: string | undefined;
   try {
-    const merged = new SettingsManager(cwd).get();
+    // scope "full" so the USER-level ~/.code-shell/settings.json is read, not
+    // just ${cwd}/.code-shell — the search key is typically a personal/global
+    // credential. Default "project" scope would miss it (the "No search provider
+    // configured" bug, esp. for automation runs rooted at the app dir).
+    const merged = new SettingsManager(cwd, "full").get();
     const search = (merged as { search?: Record<string, unknown> }).search ?? {};
     const p = search.provider;
     if (p === "serper" || p === "tavily" || p === "searxng") settingsProvider = p;
@@ -104,12 +108,17 @@ interface SearchResult {
   snippet: string;
 }
 
-export async function webSearchTool(args: Record<string, unknown>): Promise<string> {
+export async function webSearchTool(
+  args: Record<string, unknown>,
+  ctx?: { cwd?: string },
+): Promise<string> {
   const query = args.query as string;
   if (!query) return "Error: query is required";
 
   const numResults = Math.min((args.num_results as number) || 10, 20);
-  const config = resolveSearchConfig();
+  // Use the run's cwd (e.g. an automation job's project dir) so per-project
+  // settings resolve correctly; falls back to process.cwd() when absent.
+  const config = resolveSearchConfig(ctx?.cwd);
 
   if (config.source === "none") {
     return "Error: No search provider configured. Open desktop 设置 → 连接 to add credentials, or set SERPER_API_KEY / TAVILY_API_KEY / SEARXNG_URL.";
