@@ -171,6 +171,12 @@ const chatManager = new ChatSessionManager({
       // were always undefined — the 自定义指令 box never took effect).
       permissionMode: slice.permissionMode,
       ...resolveSessionAgentConfig(slice, settings),
+      // Personalization + instruction compat come from disk settings only
+      // (not per-request protocol overrides), so they read straight from
+      // `settings` here rather than through the slice.
+      responseLanguage: settings.agent.responseLanguage,
+      userProfile: settings.agent.userProfile,
+      instructions: settings.agent.instructions,
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
       ...(slice.cwd ? { cwd: slice.cwd } : {}),

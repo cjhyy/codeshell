@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "bun:test";
 import { resolveSessionAgentConfig } from "../agent-server-stdio.js";
 import type { ValidatedSettings } from "../../settings/schema.js";
 
