@@ -122,6 +122,342 @@
   min-height: 240px;
 }
 
+/* Automation */
+.automation-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  overflow: hidden;
+}
+
+.automation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.automation-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 650;
+  color: var(--fg-primary);
+}
+
+.automation-subtitle {
+  margin: var(--sp-1) 0 0;
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+}
+
+.automation-layout {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: var(--sp-4);
+}
+
+.automation-list {
+  list-style: none;
+  padding: 2px;
+  margin: 0;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.automation-job-row {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  color: var(--fg-secondary);
+  cursor: pointer;
+}
+
+.automation-job-row:hover {
+  background: var(--bg-hover);
+}
+
+.automation-job-row.active {
+  background: var(--bg-selected);
+  color: var(--fg-primary);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+.automation-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  background: var(--status-idle);
+}
+
+.automation-status-dot.enabled {
+  background: var(--status-ok);
+}
+
+.automation-status-dot.paused {
+  background: var(--status-idle);
+}
+
+.automation-job-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.automation-job-name,
+.automation-history-main > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.automation-job-name {
+  font-size: var(--fz-md);
+  font-weight: 600;
+}
+
+.automation-job-meta,
+.automation-job-schedule,
+.automation-history-main small {
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+}
+
+.automation-job-schedule {
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.automation-detail-scroll {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--sp-1);
+}
+
+.automation-detail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  max-width: 920px;
+}
+
+.automation-detail-hero,
+.automation-panel,
+.automation-prompt-panel,
+.automation-run-history {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.automation-detail-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+}
+
+.automation-detail-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.automation-detail-title h3 {
+  margin: 0;
+  font-size: var(--fz-xl);
+  line-height: 1.25;
+  color: var(--fg-primary);
+}
+
+.automation-detail-title p {
+  margin: 2px 0 0;
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+}
+
+.automation-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.automation-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+.automation-metrics > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.automation-metrics span,
+.automation-section-head p {
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+}
+
+.automation-metrics strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-primary);
+  font-size: var(--fz-md);
+  font-weight: 600;
+}
+
+.automation-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--sp-3);
+}
+
+.automation-prompt-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+
+.automation-prompt-panel pre {
+  min-width: 0;
+  max-height: 220px;
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: var(--fg-primary);
+  font-family: var(--font-sans);
+  font-size: var(--fz-sm);
+  line-height: 1.6;
+}
+
+.automation-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.automation-section-head h4 {
+  margin: 0;
+  font-size: var(--fz-md);
+  color: var(--fg-primary);
+}
+
+.automation-section-head p {
+  margin: 2px 0 0;
+}
+
+.automation-run-history ul {
+  list-style: none;
+  padding: 2px;
+  margin: 0;
+}
+
+.automation-history-row {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  color: var(--fg-secondary);
+}
+
+.automation-history-row:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+}
+
+.automation-history-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.automation-history-action {
+  color: var(--accent);
+  font-size: var(--fz-xs);
+}
+
+.automation-history-empty,
+.automation-empty {
+  color: var(--fg-muted);
+  font-size: var(--fz-sm);
+}
+
+.automation-history-empty {
+  padding: var(--sp-3);
+}
+
+.automation-empty {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  padding: var(--sp-5);
+}
+
+@media (max-width: 900px) {
+  .automation-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .automation-list {
+    max-height: 220px;
+  }
+
+  .automation-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .automation-detail-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .automation-prompt-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Sections under SettingsView */
 .settings-section { display: flex; flex-direction: column; gap: var(--sp-2); }
 .settings-section-title { margin: 0; font-size: var(--fz-md); color: var(--fg-primary); }

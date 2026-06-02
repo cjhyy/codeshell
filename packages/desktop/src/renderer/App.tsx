@@ -1522,6 +1522,8 @@ function App() {
           <AutomationView
             onCreateConversational={startConversationalAutomation}
             onViewRun={(runId) => { setRunsInitialRunId(runId); setViewMode("runs"); }}
+            onOpenSession={handleSelectSession}
+            sessionIndices={sessionIndices}
           />
         ) : (
           <>

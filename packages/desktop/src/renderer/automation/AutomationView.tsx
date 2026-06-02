@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { AutomationSummary, AutomationPermissionLevel } from "../../preload/types";
+import type { AutomationSummary, AutomationPermissionLevel, RunSummary } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Clock3, History, Loader2, Play, Plus, Trash2 } from "lucide-react";
+import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
 import {
   parseSchedule,
   buildSchedule,
@@ -96,14 +97,94 @@ function fmtTime(ms: number | null): string {
   return new Date(ms).toLocaleString();
 }
 
+function shortDate(ms: number): string {
+  return new Date(ms).toLocaleString(undefined, {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function runStatusLabel(status?: string): string {
+  switch (status) {
+    case "completed":
+      return "完成";
+    case "running":
+      return "运行中";
+    case "failed":
+      return "失败";
+    case "cancelled":
+      return "已取消";
+    case "queued":
+      return "排队中";
+    default:
+      return status || "session";
+  }
+}
+
+type AutomationSessionLink = {
+  repoId: string | null;
+  session: SessionSummary;
+  run?: RunSummary;
+};
+
+function automationSessionLinks(
+  job: AutomationSummary,
+  sessionIndices: Record<string, SessionIndex>,
+  runs: RunSummary[],
+): AutomationSessionLink[] {
+  const runsById = new Map(runs.map((r) => [r.runId, r]));
+  const runsBySessionId = new Map(
+    runs
+      .filter((r) => r.sessionId)
+      .map((r) => [r.sessionId as string, r]),
+  );
+  const matchingRunIds = new Set(
+    runs
+      .filter(
+        (r) =>
+          r.source === "automation" &&
+          (r.cronJobName === job.name || r.runId === job.lastRunId),
+      )
+      .map((r) => r.runId),
+  );
+
+  const out: AutomationSessionLink[] = [];
+  for (const [repoKey, idx] of Object.entries(sessionIndices)) {
+    const repoId = repoKey === NO_REPO_KEY ? null : repoKey;
+    for (const session of idx.sessions) {
+      if (session.source !== "automation" || session.archived) continue;
+      const run = session.runId ? runsById.get(session.runId) : runsBySessionId.get(session.engineSessionId ?? session.id);
+      const matches =
+        session.title === job.name ||
+        (session.runId ? matchingRunIds.has(session.runId) : false) ||
+        run?.cronJobName === job.name ||
+        run?.runId === job.lastRunId;
+      if (matches) out.push({ repoId, session, run });
+    }
+  }
+
+  return out.sort((a, b) => {
+    const at = a.run?.updatedAt ?? a.session.updatedAt;
+    const bt = b.run?.updatedAt ?? b.session.updatedAt;
+    return bt - at;
+  });
+}
+
 export function AutomationView({
   onCreateConversational,
   onViewRun,
+  onOpenSession,
+  sessionIndices,
 }: {
   onCreateConversational: () => void;
   onViewRun: (runId: string) => void;
+  onOpenSession: (repoId: string | null, sessionId: string) => void;
+  sessionIndices: Record<string, SessionIndex>;
 }) {
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
+  const [runs, setRuns] = useState<RunSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Per-action in-flight flags, keyed by "<action>:<jobId>". */
@@ -111,8 +192,12 @@ export function AutomationView({
 
   const refresh = async () => {
     try {
-      const list = await window.codeshell.listAutomations();
+      const [list, runList] = await Promise.all([
+        window.codeshell.listAutomations(),
+        window.codeshell.listRuns(),
+      ]);
       setJobs(list);
+      setRuns(runList);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -123,6 +208,11 @@ export function AutomationView({
   }, []);
 
   const detail = jobs?.find((j) => j.id === selected) ?? null;
+
+  useEffect(() => {
+    if (!jobs || jobs.length === 0) return;
+    if (!selected || !jobs.some((j) => j.id === selected)) setSelected(jobs[0].id);
+  }, [jobs, selected]);
 
   // Per-action in-flight guard. Keyed by "<action>:<jobId>" so the same
   // button can't be re-fired while its request is pending (the bug that let
@@ -155,44 +245,56 @@ export function AutomationView({
   if (!jobs) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
 
   return (
-    <div className="flex h-full flex-col gap-3 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">自动化</h2>
-        <Button size="sm" onClick={onCreateConversational}>+ 新建自动化</Button>
+    <div className="automation-view">
+      <div className="automation-head">
+        <div>
+          <h2 className="automation-title">自动化</h2>
+          <p className="automation-subtitle">{jobs.length} 个任务</p>
+        </div>
+        <Button size="sm" onClick={onCreateConversational}>
+          <Plus size={14} />
+          新建自动化
+        </Button>
       </div>
 
       {jobs.length === 0 ? (
-        <div className="p-6 text-sm text-muted-foreground">
+        <div className="automation-empty">
           还没有自动化任务。点击「新建自动化」,用对话告诉它你想定时做什么、何时运行 —— 不用填 cron 语法。
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 gap-6">
-          <ul className="w-72 shrink-0 space-y-1 overflow-y-auto">
+        <div className="automation-layout">
+          <ul className="automation-list">
             {jobs.map((j) => (
               <li
                 key={j.id}
                 onClick={() => setSelected(j.id)}
                 className={
-                  "flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm hover:bg-accent " +
-                  (selected === j.id ? "bg-accent ring-1 ring-border" : "")
+                  "automation-job-row " +
+                  (selected === j.id ? "active" : "")
                 }
               >
                 <span
                   className={
-                    "h-2 w-2 shrink-0 rounded-full " +
-                    (j.enabled ? "bg-status-ok" : "bg-status-idle")
+                    "automation-status-dot " +
+                    (j.enabled ? "enabled" : "paused")
                   }
                 />
-                <span className="flex-1 truncate font-medium">{j.name}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">{describeSchedule(j.schedule)}</span>
+                <span className="automation-job-main">
+                  <span className="automation-job-name">{j.name}</span>
+                  <span className="automation-job-meta">
+                    {j.enabled ? "活跃" : "暂停"} · {j.runCount} 次
+                  </span>
+                </span>
+                <span className="automation-job-schedule">{describeSchedule(j.schedule)}</span>
               </li>
             ))}
           </ul>
 
-          <div className="min-w-0 flex-1 overflow-y-auto">
+          <div className="automation-detail-scroll">
             {detail ? (
               <AutomationDetail
                 job={detail}
+                sessions={automationSessionLinks(detail, sessionIndices, runs)}
                 onToggleEnabled={(next) =>
                   act("toggle:" + detail.id, () =>
                     next
@@ -208,9 +310,10 @@ export function AutomationView({
                 toggleBusy={!!pending["toggle:" + detail.id]}
                 saveBusy={!!pending["save:" + detail.id]}
                 onViewRun={onViewRun}
+                onOpenSession={onOpenSession}
               />
             ) : (
-              <div className="p-6 text-sm text-muted-foreground">选择一个任务查看详情</div>
+              <div className="automation-empty">选择一个任务查看详情</div>
             )}
           </div>
         </div>
@@ -240,13 +343,17 @@ function AutomationDetail(props: {
     timezone?: string;
     permissionLevel?: AutomationPermissionLevel;
   }) => void;
+  sessions: AutomationSessionLink[];
   runNowBusy: boolean;
   deleteBusy: boolean;
   toggleBusy: boolean;
   saveBusy: boolean;
   onViewRun: (runId: string) => void;
+  onOpenSession: (repoId: string | null, sessionId: string) => void;
 }) {
   const { job } = props;
+  const sessionCount = props.sessions.length;
+  const lastSession = props.sessions[0];
 
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [promptDraft, setPromptDraft] = useState(job.prompt);
@@ -307,10 +414,21 @@ function AutomationDetail(props: {
   const tzOptions = timezoneOptions(job.timezone ?? "UTC");
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold tracking-tight">{job.name}</h3>
-        <div className="flex items-center gap-2">
+    <div className="automation-detail">
+      <div className="automation-detail-hero">
+        <div className="automation-detail-title">
+          <span
+            className={
+              "automation-status-dot " +
+              (job.enabled ? "enabled" : "paused")
+            }
+          />
+          <div>
+            <h3>{job.name}</h3>
+            <p>{describeSchedule(job.schedule)} · {job.timezone ?? "UTC"}</p>
+          </div>
+        </div>
+        <div className="automation-actions">
           <Switch
             checked={job.enabled}
             onCheckedChange={(v) => props.onToggleEnabled(v)}
@@ -324,7 +442,10 @@ function AutomationDetail(props: {
                 运行中…
               </>
             ) : (
-              "立即运行"
+              <>
+                <Play size={14} />
+                立即运行
+              </>
             )}
           </Button>
           <Button
@@ -333,15 +454,31 @@ function AutomationDetail(props: {
             className="text-status-err"
             onClick={props.onDelete}
             disabled={props.deleteBusy}
+            aria-label="删除自动化"
           >
-            删除
+            <Trash2 size={14} />
           </Button>
+        </div>
+      </div>
+
+      <div className="automation-metrics">
+        <div>
+          <span>下次运行</span>
+          <strong>{fmtTime(job.nextRun)}</strong>
+        </div>
+        <div>
+          <span>上次运行</span>
+          <strong>{fmtTime(job.lastRun)}</strong>
+        </div>
+        <div>
+          <span>历史 session</span>
+          <strong>{sessionCount}</strong>
         </div>
       </div>
 
       {/* Prompt — edit button reveals an inline textarea (long text). */}
       {editingPrompt ? (
-        <div className="flex flex-col gap-2">
+        <div className="automation-panel">
           <Textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} rows={5} />
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => { setEditingPrompt(false); setPromptDraft(job.prompt); }}>
@@ -367,15 +504,15 @@ function AutomationDetail(props: {
           </div>
         </div>
       ) : (
-        <div className="flex items-start gap-2">
-          <pre className="flex-1 whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 text-sm leading-relaxed">
+        <div className="automation-prompt-panel">
+          <pre>
             {job.prompt}
           </pre>
           <Button size="sm" variant="outline" onClick={() => setEditingPrompt(true)}>编辑</Button>
         </div>
       )}
 
-      <div className="flex flex-col">
+      <div className="automation-panel">
         <FieldRow label="状态">
           <Badge
             variant="outline"
@@ -495,12 +632,53 @@ function AutomationDetail(props: {
         <FieldRow label="最近运行">
           {job.lastRunId ? (
             <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
+              <History size={14} />
               查看
             </Button>
           ) : (
             "—"
           )}
         </FieldRow>
+      </div>
+
+      <div className="automation-run-history">
+        <div className="automation-section-head">
+          <div>
+            <h4>运行 session</h4>
+            <p>{lastSession ? `最近 ${shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt)}` : "暂无历史 session"}</p>
+          </div>
+          {job.lastRunId && (
+            <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
+              <History size={14} />
+              运行详情
+            </Button>
+          )}
+        </div>
+        {props.sessions.length === 0 ? (
+          <div className="automation-history-empty">这个任务还没有可跳转的历史 session。</div>
+        ) : (
+          <ul>
+            {props.sessions.map(({ repoId, session, run }) => {
+              const status = run?.status ?? session.runStatus;
+              const when = run?.updatedAt ?? session.updatedAt;
+              return (
+                <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`}>
+                  <button
+                    className="automation-history-row"
+                    onClick={() => props.onOpenSession(repoId, session.id)}
+                  >
+                    <Clock3 size={14} />
+                    <span className="automation-history-main">
+                      <span>{session.title}</span>
+                      <small>{shortDate(when)} · {runStatusLabel(status)}</small>
+                    </span>
+                    <span className="automation-history-action">查看</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );
