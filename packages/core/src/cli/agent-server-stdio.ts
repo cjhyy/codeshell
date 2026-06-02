@@ -33,6 +33,8 @@
 import { Engine } from "../engine/engine.js";
 import { EngineRuntime } from "../engine/runtime.js";
 import { ChatSessionManager } from "../protocol/chat-session-manager.js";
+import type { EngineConfigSlice } from "../protocol/chat-session-manager.js";
+import type { ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
 import { SettingsManager } from "../settings/manager.js";
@@ -42,6 +44,22 @@ import { CostTracker } from "../cost-tracker.js";
 import { installGracefulShutdown } from "./graceful-shutdown.js";
 import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
+
+/**
+ * Resolve per-session agent config: protocol slice overrides win, else fall
+ * back to disk settings.agent.*. Fixes the bug where settings.agent.* never
+ * reached session engines (slice arrived with only permissionMode+cwd).
+ */
+export function resolveSessionAgentConfig(
+  slice: EngineConfigSlice,
+  settings: ValidatedSettings,
+) {
+  return {
+    preset: slice.preset ?? settings.agent.preset,
+    customSystemPrompt: slice.customSystemPrompt ?? settings.agent.customSystemPrompt,
+    appendSystemPrompt: slice.appendSystemPrompt ?? settings.agent.appendSystemPrompt,
+  };
+}
 
 // ─── Read base config from environment / settings ─────────────────
 
@@ -147,11 +165,12 @@ const chatManager = new ChatSessionManager({
         settings.mcpServers ?? {},
         (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
       ),
-      // Per-session overrides from the protocol request
+      // Per-session overrides from the protocol request; fall back to
+      // settings.agent.* so the user's 个性化 settings actually apply
+      // (previously slice arrived with only permissionMode+cwd, so these
+      // were always undefined — the 自定义指令 box never took effect).
       permissionMode: slice.permissionMode,
-      preset: slice.preset,
-      customSystemPrompt: slice.customSystemPrompt,
-      appendSystemPrompt: slice.appendSystemPrompt,
+      ...resolveSessionAgentConfig(slice, settings),
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
       ...(slice.cwd ? { cwd: slice.cwd } : {}),
