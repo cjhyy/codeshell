@@ -3,7 +3,9 @@
  *
  * An unattended automation run must NOT be able to recursively schedule more
  * automations, so the cron tools (CronCreate/CronDelete/CronList) are stripped
- * from the builtin set its Engine gets. Everything else stays available.
+ * from the builtin set its Engine gets. AskUserQuestion is stripped too — no
+ * human is watching, so it can only waste a turn and error ("not available in
+ * headless mode"); better the model never sees it. Everything else stays.
  *
  * `automationBuiltinTools()` is the absolute allowlist (every core builtin
  * except the cron trio); `AUTOMATION_DISABLED_TOOLS` is the same exclusion
@@ -12,11 +14,13 @@
  */
 import { BUILTIN_TOOLS } from "@cjhyy/code-shell-core";
 
-/** Cron tools removed from automation runs to prevent recursive scheduling. */
+/** Tools removed from automation runs: cron trio (no recursive scheduling) +
+ *  AskUserQuestion (no human to answer in an unattended run). */
 export const AUTOMATION_DISABLED_TOOLS = [
   "CronCreate",
   "CronDelete",
   "CronList",
+  "AskUserQuestion",
 ] as const;
 
 /**

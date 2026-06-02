@@ -11,6 +11,9 @@ describe("automationBuiltinTools", () => {
     expect(names).not.toContain("CronDelete");
     expect(names).not.toContain("CronList");
   });
+  it("excludes AskUserQuestion (no human present in an unattended run)", () => {
+    expect(automationBuiltinTools()).not.toContain("AskUserQuestion");
+  });
   it("keeps a normal read tool like Read", () => {
     expect(automationBuiltinTools()).toContain("Read");
   });
