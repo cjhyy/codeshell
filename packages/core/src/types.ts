@@ -107,6 +107,10 @@ export interface TranscriptEvent {
  */
 export type SessionStatus = "active" | "paused" | TerminalReason;
 
+/** Which host/context created a session — used by the desktop disk-rebuild to
+ *  filter the sidebar (only `desktop` + `automation` are shown). */
+export type SessionOrigin = "desktop" | "tui" | "automation" | "subagent";
+
 export interface SessionState {
   sessionId: string;
   cwd: string;
@@ -123,6 +127,11 @@ export interface SessionState {
    * "key present && null" to tell a new top-level session apart from legacy.
    */
   parentSessionId?: string | null;
+  /**
+   * Which host/context created this session. Desktop disk-rebuild shows only
+   * `desktop` + `automation`. Absent on legacy sessions.
+   */
+  origin?: SessionOrigin;
   status: SessionStatus;
   /** Short summary derived from the first user message */
   summary?: string;

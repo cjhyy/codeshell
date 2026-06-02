@@ -95,7 +95,8 @@ export class SessionManager {
     model: string,
     provider: string,
     explicitSessionId?: string,
-    parentSessionId?: string,
+    parentSessionId?: string | null,
+    origin?: import("../types.js").SessionOrigin,
   ): SessionBundle {
     // External callers may pass any string; nanoid output is trusted. Either
     // way the ID gets joined into a filesystem path, so the public entry
@@ -120,6 +121,7 @@ export class SessionManager {
       // new top-level session (key present, null) apart from a legacy session
       // (key absent) and from a sub-agent (key present, non-empty string).
       parentSessionId: parentSessionId ?? null,
+      ...(origin ? { origin } : {}),
     };
 
     writeFileSync(join(sessionDir, "state.json"), JSON.stringify(state, null, 2), "utf-8");

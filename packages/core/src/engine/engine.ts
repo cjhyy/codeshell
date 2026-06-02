@@ -7,6 +7,7 @@ import type {
   Message,
   LLMConfig,
   Settings,
+  SessionOrigin,
   StreamCallback,
   TaskInfo,
   TerminalReason,
@@ -196,6 +197,12 @@ export interface EngineConfig {
    * pool, the runtime check still blocks the call.
    */
   isSubAgent?: boolean;
+  /**
+   * Host/context that created this Engine's sessions — written to state.json's
+   * `origin` so the desktop disk-rebuild can filter the sidebar (desktop +
+   * automation shown; tui hidden). Sub-agents override to "subagent".
+   */
+  origin?: SessionOrigin;
   /**
    * Optional shared EngineRuntime providing pre-constructed shared resources
    * (modelPool, toolRegistry, etc.). When provided, Engine uses these instead
@@ -1021,6 +1028,7 @@ export class Engine {
         this.config.llm.provider,
         options?.sessionId,
         this.config.isSubAgent === true ? getCurrentSid() : undefined,
+        this.config.isSubAgent === true ? "subagent" : this.config.origin,
       );
       messages = [{ role: "user", content: userMessageContent }];
       session.transcript.appendMessage("user", userMessageContent);
