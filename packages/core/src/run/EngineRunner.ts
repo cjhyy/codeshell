@@ -42,7 +42,9 @@ export const AUTOMATION_PROMPT_NOTE =
   "AskUserQuestion will not reach anyone. You ARE the automation — do not ask " +
   "the user questions and do not offer to set up or schedule automation. " +
   "Produce the requested output directly; when uncertain, state your assumption " +
-  "and proceed.";
+  "and proceed." +
+  " When finished, call UpdateAutomationMemory exactly once with a concise " +
+  "summary of this run's key findings/state for the next run.";
 
 /** Compose the run's appendSystemPrompt: prepend the automation note when the
  *  run is tagged source "automation", preserving any host-provided append. */

@@ -343,6 +343,8 @@ export {
   RunQueue,
   // Runner
   EngineRunner,
+  AUTOMATION_PROMPT_NOTE,
+  AUTOMATION_RUN_SOURCE,
   type EngineRunnerConfig,
   type RunExecutionHandle,
   type RunExecutor,

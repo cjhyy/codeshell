@@ -282,12 +282,18 @@ app.whenReady().then(() => {
   // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
   // lifecycle by design (docs/automation-plan-2026-05-31.md, D2).
   try {
+    // Feed in-main automation Engine events into the bridge's per-session
+    // snapshot + renderer stream, so automation sessions reconnect identically
+    // to interactive chat. `bridge?.` safely no-ops if a job somehow fires
+    // before any window (and thus the bridge) exists.
+    const emitAutomationEvent = (sessionId: string, event: unknown) =>
+      bridge?.ingestExternalEvent(sessionId, event);
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
       // Each fired job runs as a one-shot read-only headless Engine, which
-      // auto-writes a full transcript.jsonl (like interactive chat). (B5 will
-      // pass an emit callback so events also stream to a live snapshot.)
-      runner: buildDesktopAutomationRunner(),
+      // auto-writes a full transcript.jsonl (like interactive chat). The emit
+      // callback also streams events to a live snapshot for renderer reconnect.
+      runner: buildDesktopAutomationRunner(emitAutomationEvent),
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);

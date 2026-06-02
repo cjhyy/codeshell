@@ -19,6 +19,7 @@ import {
   createRunManager,
   HeadlessApprovalBackend,
   makeUpdateAutomationMemoryTool,
+  AUTOMATION_PROMPT_NOTE,
   type RunManager,
   type CronRunner,
   type CronRunResult,
@@ -73,6 +74,10 @@ export function buildDesktopAutomationRunner(
       cwd: jobCwd,
       settingsScope: "full",
       headless: true,
+      // This is an unattended automation run — tell the model so it doesn't
+      // ask the user or offer to schedule automation, and so it persists a
+      // cross-run memory summary on finish.
+      appendSystemPrompt: AUTOMATION_PROMPT_NOTE,
       // Strip the cron tools so an unattended run can't recursively schedule
       // more automations. (disabledBuiltinTools is a delta on the preset's
       // builtin set — see resolveBuiltinToolNames.)
@@ -96,7 +101,17 @@ export function buildDesktopAutomationRunner(
       ? `<previous_runs_memory>\n${memory.trim()}\n</previous_runs_memory>\n\n${req.prompt}`
       : req.prompt;
 
-    const onStream = emit ? (e: unknown) => emit(req.job.id, e) : undefined;
+    // Key emitted events by the REAL engine sessionId (carried on the first
+    // `session_started` event) so renderer routing/reconnect matches interactive
+    // chat. Fall back to job.id until that event is seen.
+    let sid: string | undefined;
+    const onStream = emit
+      ? (e: unknown) => {
+          const ev = e as { type?: string; sessionId?: string };
+          if (ev.type === "session_started" && typeof ev.sessionId === "string") sid = ev.sessionId;
+          emit(sid ?? req.job.id, e);
+        }
+      : undefined;
     const result = await engine.run(prompt, { cwd: jobCwd, onStream });
     return { text: result.text, reason: result.reason };
   };

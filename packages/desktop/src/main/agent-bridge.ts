@@ -232,6 +232,16 @@ export class AgentBridge {
     this.snapshots.forget(sessionId);
   }
 
+  /** Feed an event produced OUTSIDE the stdio worker (e.g. an in-main automation
+   *  Engine) into the same snapshot + renderer stream, so renderer reconnect works
+   *  identically for automation sessions. */
+  ingestExternalEvent(sessionId: string, event: unknown): void {
+    this.snapshots.append(sessionId, event);
+    this.safeSend("agent:msg", JSON.stringify({
+      jsonrpc: "2.0", method: "agent/streamEvent", params: { sessionId, event },
+    }));
+  }
+
   kill(): void {
     dlog("bridge", "kill", { pid: this.child?.pid });
     this.child?.kill("SIGTERM");
