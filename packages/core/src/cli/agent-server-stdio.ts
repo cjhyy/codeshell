@@ -135,6 +135,23 @@ const runtime = new EngineRuntime({
 
 // ─── Step 4: ChatSessionManager ──────────────────────────────────
 
+// Re-read settings from disk on each new session so edits the user makes in
+// the settings UI take effect on the NEXT session without restarting the
+// worker (the `settings` bootstrap snapshot above is read once at process
+// start and would otherwise pin every session to the launch-time values).
+// This is the "pull on session creation" tier — mirrors how Codex's new
+// threads call load_with_overrides() per start. (Hot-reloading ALREADY-RUNNING
+// sessions is a separate, heavier push mechanism, intentionally out of scope.)
+// Best-effort: if a freshly-edited settings.json is malformed, fall back to the
+// last-known-good bootstrap snapshot rather than failing to create a session.
+function freshSettings(): typeof settings {
+  try {
+    return settingsManager.load();
+  } catch {
+    return settings;
+  }
+}
+
 const chatManager = new ChatSessionManager({
   runtime,
   // resolvedLlmConfig is the bootstrap-time snapshot. When the user
@@ -142,8 +159,9 @@ const chatManager = new ChatSessionManager({
   // ahead of it, so newly-created sessions must re-resolve from the pool
   // each time the factory fires; fall back to the snapshot only when the
   // pool can't resolve (no active key — shouldn't happen in practice).
-  engineFactory: (slice) =>
-    new Engine({
+  engineFactory: (slice) => {
+    const live = freshSettings();
+    return new Engine({
       llm: runtime.modelPool.resolveLLMConfig() ?? resolvedLlmConfig,
       // Inherit the seed engine's resolved clientDefaults so every session
       // engine sees the user's temperature/imageDetail without each factory
@@ -162,25 +180,28 @@ const chatManager = new ChatSessionManager({
       // Plugin-provided MCP servers (mcp-servers.json in installed plugins)
       // are merged in here so the model can actually call them.
       mcpServers: mergePluginMcpServers(
-        settings.mcpServers ?? {},
-        (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
+        live.mcpServers ?? {},
+        (live as { disabledPlugins?: string[] }).disabledPlugins ?? [],
       ),
       // Per-session overrides from the protocol request; fall back to
       // settings.agent.* so the user's 个性化 settings actually apply
       // (previously slice arrived with only permissionMode+cwd, so these
       // were always undefined — the 自定义指令 box never took effect).
+      // `live` is re-read from disk per session, so settings edits take effect
+      // on the next session without a worker restart.
       permissionMode: slice.permissionMode,
-      ...resolveSessionAgentConfig(slice, settings),
+      ...resolveSessionAgentConfig(slice, live),
       // Personalization + instruction compat come from disk settings only
       // (not per-request protocol overrides), so they read straight from
-      // `settings` here rather than through the slice.
-      responseLanguage: settings.agent.responseLanguage,
-      userProfile: settings.agent.userProfile,
-      instructions: settings.agent.instructions,
+      // `live` here rather than through the slice.
+      responseLanguage: live.agent.responseLanguage,
+      userProfile: live.agent.userProfile,
+      instructions: live.agent.instructions,
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
       ...(slice.cwd ? { cwd: slice.cwd } : {}),
-    }),
+    });
+  },
   maxSessions: 16,
   idleTtlMs: 30 * 60 * 1000,
 });
