@@ -36,12 +36,18 @@ describe("bindCronToEngine", () => {
     const first = calls[0];
     expect(first.prompt).toBe("summarize the repo");
     expect(first.job.name).toBe("nightly");
-    // Contract from the plan: cron runs read-only until the sandbox lands.
-    // It must use permissionMode "default" (NOT a non-existent
-    // "approve-read-only" mode) plus an explicit read-only approval backend,
-    // so the classifier's acceptEdits Write/Edit auto-allow rules are never added.
+    // A job with no permissionLevel resolves (via resolveWritePolicy) to the
+    // read-only tier: permissionMode "default" (so the classifier never adds
+    // acceptEdits Write/Edit auto-allow rules) and a backend that approves reads
+    // but denies writes. The backend is wrapped (withAlwaysApproved), so assert
+    // BEHAVIOR rather than a concrete class.
     expect(first.permissionMode).toBe("default");
-    expect(first.approvalBackend).toBeInstanceOf(HeadlessApprovalBackend);
+    const reqOf = (toolName: string) =>
+      first.approvalBackend.requestApproval({ toolName, args: {}, description: "", riskLevel: "low" });
+    expect((await reqOf("Read")).approved).toBe(true);
+    expect((await reqOf("Write")).approved).toBe(false);
+    // The automation-internal memory tool is always approved, even read-only.
+    expect((await reqOf("UpdateAutomationMemory")).approved).toBe(true);
   });
 
   test("the read-only backend denies writes and approves reads", async () => {
