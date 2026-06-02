@@ -5,10 +5,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ClientDefaults, LLMConfig, LLMResponse, ToolCall, ToolDefinition, TokenUsage } from "../../types.js";
 import type { CreateMessageOptions } from "../types.js";
+import type { ReasoningSetting } from "../reasoning-setting.js";
 import { LLMClientBase } from "../client-base.js";
 import { ContextLimitError, LLMError, LLMRateLimitError } from "../../exceptions.js";
 import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
+import { capabilitiesFor, type Capability } from "../capabilities/index.js";
+import type { ProviderKindName } from "../provider-kinds.js";
 
 /**
  * Anthropic's `max_tokens` is required, so unlike OpenAI we can't omit it when
@@ -17,6 +20,15 @@ import { countTokens } from "../token-counter.js";
  * this only fires for an unconfigured/unknown model).
  */
 const ANTHROPIC_FALLBACK_MAX_TOKENS = 4096;
+
+/**
+ * Default thinking budget when a budget-capable model wants "thinking on" but
+ * no explicit token budget was given. Clamped up to the model's minimum.
+ */
+const ANTHROPIC_DEFAULT_THINKING_BUDGET = 4096;
+
+/** Shape of the SDK's `thinking` request field when extended thinking is on. */
+type ThinkingParam = { type: "enabled"; budget_tokens: number };
 
 export class AnthropicClient extends LLMClientBase {
   private _client: Anthropic | null = null;
@@ -38,6 +50,74 @@ export class AnthropicClient extends LLMClientBase {
       });
     }
     return this._client;
+  }
+
+  /**
+   * Resolve the capability descriptor for the current model. `providerKind`
+   * defaults to "anthropic" (this client only serves the Anthropic API).
+   * Memoized — the model doesn't change mid-client.
+   */
+  private _capability: Capability | null = null;
+  private get capability(): Capability {
+    if (!this._capability) {
+      const kind = (this.config.providerKind ?? "anthropic") as ProviderKindName;
+      this._capability = capabilitiesFor(kind, this.model);
+    }
+    return this._capability;
+  }
+
+  /**
+   * Translate the resolved ReasoningSetting into Anthropic's `thinking` field,
+   * honoring the model's reasoning shape (rules.ts):
+   *
+   *  - `anthropic-budget` (Claude 4.0–4.5): supports explicit
+   *    `thinking:{type:"enabled", budget_tokens≥minBudgetTokens}`.
+   *      · mode "budget" → use budgetTokens (clamped up to minBudgetTokens)
+   *      · mode "on"     → default budget (clamped up to minBudgetTokens)
+   *      · mode "effort" → this family is budget-typed, not effort-typed, so
+   *                        treat any effort selection as "on" with the default.
+   *      · mode "off" / unset → return undefined (omit the field).
+   *  - `anthropic-adaptive` (Claude 4.6+): thinking is automatic and NOT
+   *    controllable; sending `type:"enabled"` 400s. Always omit → undefined.
+   *  - anything else (Claude 3.x catch-all → kind "none"): omit → undefined.
+   *
+   * `maxTokens` is the request's max_tokens. Anthropic requires
+   * max_tokens > budget_tokens when thinking is enabled, so we cap the budget
+   * just below it (leaving headroom for the visible answer). The minBudgetTokens
+   * floor still wins — if even the floor doesn't fit under max_tokens the model
+   * itself rejects it, which surfaces as a clear API error rather than us
+   * silently sending a degenerate budget.
+   */
+  private buildThinking(
+    reasoning: ReasoningSetting | undefined,
+    maxTokens: number,
+  ): ThinkingParam | undefined {
+    const cap = this.capability;
+    if (cap.reasoning.kind !== "anthropic-budget") {
+      // anthropic-adaptive and none: never send a thinking field.
+      return undefined;
+    }
+    if (!reasoning || reasoning.mode === "off") {
+      return undefined;
+    }
+
+    const min = cap.reasoning.minBudgetTokens;
+    let budget =
+      reasoning.mode === "budget"
+        ? reasoning.budgetTokens
+        : ANTHROPIC_DEFAULT_THINKING_BUDGET; // "on" or "effort" → default budget
+    // Floor at the model's minimum.
+    budget = Math.max(budget, min);
+    // Anthropic constraint: max_tokens must exceed budget_tokens. Cap the
+    // budget below max_tokens (reserve at least `min` tokens for the answer).
+    const ceiling = maxTokens - min;
+    if (ceiling >= min) {
+      budget = Math.min(budget, ceiling);
+    }
+    // Never drop below the model's floor even if max_tokens is tiny.
+    budget = Math.max(budget, min);
+
+    return { type: "enabled", budget_tokens: budget };
   }
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
@@ -83,10 +163,15 @@ export class AnthropicClient extends LLMClientBase {
     tools?: Anthropic.Tool[],
   ): Promise<LLMResponse> {
     try {
+      // Per-call reasoning wins; otherwise fall back to the provider/model
+      // default (settings → LLMConfig.reasoning). Mirrors openai.ts.
+      const reasoning = options.reasoning ?? this.config.reasoning;
+      const maxTokens = options.maxTokens ?? this.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS;
+      const thinking = this.buildThinking(reasoning, maxTokens);
       const response = await this.client.messages.create(
         {
           model: this.model,
-          max_tokens: options.maxTokens ?? this.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
+          max_tokens: maxTokens,
           system: [
             {
               type: "text" as const,
@@ -96,6 +181,7 @@ export class AnthropicClient extends LLMClientBase {
           ],
           messages,
           ...(tools?.length ? { tools } : {}),
+          ...(thinking ? { thinking } : {}),
           ...(options.temperature !== undefined
             ? { temperature: options.temperature }
             : { temperature: this.temperature }),
@@ -125,10 +211,13 @@ export class AnthropicClient extends LLMClientBase {
     tools?: Anthropic.Tool[],
   ): Promise<LLMResponse> {
     try {
+      const reasoning = options.reasoning ?? this.config.reasoning;
+      const maxTokens = options.maxTokens ?? this.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS;
+      const thinking = this.buildThinking(reasoning, maxTokens);
       const stream = this.client.messages.stream(
         {
           model: this.model,
-          max_tokens: options.maxTokens ?? this.maxTokens ?? ANTHROPIC_FALLBACK_MAX_TOKENS,
+          max_tokens: maxTokens,
           system: [
             {
               type: "text" as const,
@@ -138,6 +227,7 @@ export class AnthropicClient extends LLMClientBase {
           ],
           messages,
           ...(tools?.length ? { tools } : {}),
+          ...(thinking ? { thinking } : {}),
           ...(options.temperature !== undefined
             ? { temperature: options.temperature }
             : { temperature: this.temperature }),
