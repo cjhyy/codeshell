@@ -22,6 +22,7 @@ import {
   scanSkills,
   readInstalledPlugins,
   resolveBuiltinToolNames,
+  loadAgentDefinitionsForCwd,
   type CapabilityDescriptor,
 } from "@cjhyy/code-shell-core";
 
@@ -36,6 +37,10 @@ function makeService(cwd: string): CapabilityService {
     settings,
     cwd,
     scanSkills,
+    // Full agent role set (user + project), UNFILTERED by disabledAgents so the
+    // capability list shows disabled roles too. loadAgentDefinitionsForCwd
+    // tolerates an empty cwd (skips the project dir → user roles only).
+    scanAgents: (c: string) => loadAgentDefinitionsForCwd(c, [], []).list(),
     readInstalledPlugins,
     resolveBuiltinToolNames,
   });

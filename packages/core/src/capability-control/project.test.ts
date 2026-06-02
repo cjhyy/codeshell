@@ -4,9 +4,11 @@ import {
   projectMcp,
   projectSkills,
   projectPlugins,
+  projectAgents,
 } from "./project.js";
 import type { RegisteredTool } from "../types.js";
 import type { SkillDefinition } from "../skills/scanner.js";
+import type { AgentDefinition } from "../agent/agent-definition.js";
 
 const tool = (
   name: string,
@@ -136,6 +138,49 @@ describe("projectSkills", () => {
     expect(out.find((d) => d.id === "skill:a")!.origin?.filePath).toBe(
       "/x/a/SKILL.md",
     );
+  });
+});
+
+const agent = (
+  name: string,
+  source: AgentDefinition["source"],
+): AgentDefinition => ({
+  name,
+  description: `${name} desc`,
+  systemPrompt: "",
+  source,
+  filePath: `/x/${name}.md`,
+});
+
+describe("projectAgents", () => {
+  test("lists project/user agents, denylist control, enabled unless disabled", () => {
+    const out = projectAgents({
+      agents: [agent("researcher", "project"), agent("planner", "user")],
+      disabledAgents: ["planner"],
+    });
+    expect(out.map((d) => d.id).sort()).toEqual(["agent:planner", "agent:researcher"]);
+    const planner = out.find((d) => d.id === "agent:planner")!;
+    expect(planner).toMatchObject({
+      kind: "agent",
+      name: "planner",
+      enabled: false,
+    });
+    expect(planner.control).toMatchObject({
+      settingsKey: "disabledAgents",
+      mode: "denylist",
+      token: "planner",
+    });
+    expect(out.find((d) => d.id === "agent:researcher")!.origin?.filePath).toBe(
+      "/x/researcher.md",
+    );
+  });
+
+  test("excludes plugin-sourced agents (they ride their plugin)", () => {
+    const out = projectAgents({
+      agents: [agent("p-agent", "plugin"), agent("mine", "user")],
+      disabledAgents: [],
+    });
+    expect(out.map((d) => d.id)).toEqual(["agent:mine"]);
   });
 });
 

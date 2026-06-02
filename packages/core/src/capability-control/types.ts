@@ -14,8 +14,8 @@
 export interface CapabilityDescriptor {
   /** Globally unique; the source prefix isolates the namespace. */
   id: string;
-  kind: "builtin" | "mcp" | "skill" | "plugin";
-  /** Display name: builtin=tool, mcp=server, skill=skill, plugin=plugin. */
+  kind: "builtin" | "mcp" | "skill" | "plugin" | "agent";
+  /** Display name: builtin=tool, mcp=server, skill=skill, plugin=plugin, agent=role. */
   name: string;
   /** One-line description pulled from the underlying metadata. */
   description: string;
@@ -46,7 +46,8 @@ export interface CapabilityControl {
     | "agent.disabledBuiltinTools"
     | "mcpServers"
     | "disabledSkills"
-    | "disabledPlugins";
+    | "disabledPlugins"
+    | "disabledAgents";
   /**
    *  - "denylist"    → off = token present in array (disabled*); on = removed
    *  - "allowlist"   → on  = token present in array (enabled*); off = removed

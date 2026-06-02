@@ -15,6 +15,7 @@
 import type { ToolRegistry } from "../tool-system/registry.js";
 import type { SettingsManager } from "../settings/manager.js";
 import type { SkillDefinition } from "../skills/scanner.js";
+import type { AgentDefinition } from "../agent/agent-definition.js";
 import type { InstalledPluginsV2 } from "../plugins/types.js";
 import type { CapabilityDescriptor, WriteScope, CapabilityOverrideState } from "./types.js";
 import { CapabilityNotFoundError } from "./types.js";
@@ -23,6 +24,7 @@ import {
   projectMcp,
   projectSkills,
   projectPlugins,
+  projectAgents,
 } from "./project.js";
 import {
   applyOverride,
@@ -43,6 +45,9 @@ export interface CapabilityServiceDeps {
     cwd: string,
     opts?: { disabledSkills?: string[]; disabledPlugins?: string[] },
   ) => SkillDefinition[];
+  /** Full agent role set for `cwd` (user + project), loaded WITHOUT the
+   *  disabled filter so disabled roles still list and can be re-enabled. */
+  scanAgents: (cwd: string) => AgentDefinition[];
   readInstalledPlugins: () => InstalledPluginsV2;
   resolveBuiltinToolNames: (o?: {
     preset?: string;
@@ -87,6 +92,10 @@ export class CapabilityService {
       ...projectPlugins({
         installed: this.deps.readInstalledPlugins().plugins,
         disabledPlugins: s.disabledPlugins ?? [],
+      }),
+      ...projectAgents({
+        agents: this.deps.scanAgents(this.deps.cwd),
+        disabledAgents: s.disabledAgents ?? [],
       }),
     ];
 

@@ -54,6 +54,7 @@ describe("CapabilityService.setEnabled", () => {
             source: "project",
           },
         ] as any,
+      scanAgents: () => [],
       readInstalledPlugins: f.emptyPlugins as any,
       resolveBuiltinToolNames: () => [],
     });
@@ -70,6 +71,7 @@ describe("CapabilityService.setEnabled", () => {
       settings: f.settings as any,
       cwd: "/x",
       scanSkills: () => [],
+      scanAgents: () => [],
       readInstalledPlugins: f.emptyPlugins as any,
       resolveBuiltinToolNames: (o?: any) =>
         o?.enabledBuiltinTools?.length ? ["REPL"] : [],
@@ -87,6 +89,7 @@ describe("CapabilityService.setEnabled", () => {
       settings: f.settings as any,
       cwd: "/x",
       scanSkills: () => [],
+      scanAgents: () => [],
       readInstalledPlugins: f.emptyPlugins as any,
       resolveBuiltinToolNames: () => [],
     });
@@ -103,6 +106,7 @@ describe("CapabilityService.setEnabled", () => {
       settings: f.settings as any,
       cwd: "/x",
       scanSkills: () => [],
+      scanAgents: () => [],
       readInstalledPlugins: f.emptyPlugins as any,
       resolveBuiltinToolNames: () => [],
     });
@@ -113,7 +117,7 @@ describe("CapabilityService.setEnabled", () => {
 });
 
 describe("CapabilityService.list", () => {
-  test("composes all four sources", () => {
+  test("composes all five sources", () => {
     const f = fakes({ mcpServers: { gh: { name: "gh" } } });
     const svc = new CapabilityService({
       registry: {
@@ -139,11 +143,12 @@ describe("CapabilityService.list", () => {
             source: "project",
           },
         ] as any,
+      scanAgents: () => [{ name: "researcher", description: "rd", systemPrompt: "", source: "project" }] as any,
       readInstalledPlugins: () => ({ version: 2, plugins: { "p@m": [] } }) as any,
       resolveBuiltinToolNames: () => ["Read"],
     });
     const kinds = new Set(svc.list().map((d) => d.kind));
-    expect(kinds).toEqual(new Set(["builtin", "mcp", "skill", "plugin"]));
+    expect(kinds).toEqual(new Set(["builtin", "mcp", "skill", "plugin", "agent"]));
   });
 });
 
@@ -202,6 +207,7 @@ describe("CapabilityService project scope", () => {
       cwd: "/proj",
       scanSkills: () =>
         [{ name: "a", description: "", content: "", filePath: "/x/a", source: "project" }] as any,
+      scanAgents: () => [],
       readInstalledPlugins: f.emptyPlugins as any,
       resolveBuiltinToolNames: () => [],
     });
@@ -285,6 +291,7 @@ describe("CapabilityService project scope", () => {
       settings: f.settings as any,
       cwd: "/proj",
       scanSkills: () => [],
+      scanAgents: () => [],
       readInstalledPlugins: f.emptyPlugins as any,
       resolveBuiltinToolNames: () => [],
     });

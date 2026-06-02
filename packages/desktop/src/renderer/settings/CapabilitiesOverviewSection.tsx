@@ -17,6 +17,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { CapabilityDescriptor } from "@cjhyy/code-shell-core";
 import {
+  Bot,
   Check,
   Circle,
   FolderGit2,
@@ -52,6 +53,7 @@ const KIND_ICON: Record<CapabilityKind, LucideIcon> = {
   mcp: Plug,
   skill: Sparkles,
   plugin: Puzzle,
+  agent: Bot,
   builtin: Wrench,
 };
 
@@ -159,7 +161,7 @@ export function CapabilitiesOverviewSection({ repos }: Props) {
           <div className="cap-overview-eyebrow">扩展能力</div>
           <h3 className="settings-section-title">能力总览</h3>
           <p className="settings-section-help">
-            统一管理内置工具、MCP 服务器、技能和插件。先选全局默认，再为每个项目设置独立覆盖。
+            统一管理内置工具、MCP 服务器、技能、插件和子代理。先选全局默认，再为每个项目设置独立覆盖。
           </p>
         </div>
       </div>

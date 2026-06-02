@@ -2069,7 +2069,7 @@ export class Engine {
    * run({ cwd })) reloads.
    */
   private getAgentDefinitions(cwd: string): AgentDefinitionRegistry {
-    const disabledAgents = this.readDisabledAgents();
+    const disabledAgents = this.readDisabledAgents(cwd);
     const disabledPlugins = this.readDisabledLists().disabledPlugins;
     const disabledKey = [...disabledAgents, "::", ...disabledPlugins]
       .slice()
@@ -2089,15 +2089,23 @@ export class Engine {
   }
 
   /**
-   * Read settings.disabledAgents. Unlike disabledSkills, sub-agents do
-   * NOT skip this — a disabled role must stay invisible everywhere.
+   * Read settings.disabledAgents, folded with the project's
+   * capabilityOverrides.agents overlay for `cwd`. Unlike disabledSkills,
+   * sub-agents do NOT skip this — a disabled role must stay invisible
+   * everywhere. The overlay lets a project force-enable a globally-disabled
+   * role or force-disable a globally-enabled one (tri-state); read UNMERGED
+   * (getForScope) so inherit survives. No cwd / no overlay → baseline
+   * unchanged. Mirrors readDisabledLists (skills/plugins).
    */
-  private readDisabledAgents(): string[] {
+  private readDisabledAgents(cwd?: string): string[] {
     try {
-      const settings = this.getSettingsManager().get() as {
-        disabledAgents?: string[];
-      };
-      return Array.isArray(settings.disabledAgents) ? settings.disabledAgents : [];
+      const sm = this.getSettingsManager();
+      const settings = sm.get() as { disabledAgents?: string[] };
+      const baseline = Array.isArray(settings.disabledAgents) ? settings.disabledAgents : [];
+      const overrides = cwd
+        ? (sm.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides | undefined)
+        : undefined;
+      return effectiveDisabledList(baseline, overrides?.agents);
     } catch {
       return [];
     }

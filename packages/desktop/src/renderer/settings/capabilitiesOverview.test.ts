@@ -19,9 +19,10 @@ function cap(over: Partial<CapabilityDescriptor>): CapabilityDescriptor {
 }
 
 describe("groupCapabilities", () => {
-  test("buckets by kind in fixed order, builtin last", () => {
+  test("buckets by kind in fixed order, agent before builtin (last)", () => {
     const groups = groupCapabilities([
       cap({ id: "b:1", kind: "builtin", name: "Read" }),
+      cap({ id: "a:1", kind: "agent", name: "researcher" }),
       cap({ id: "p:1", kind: "plugin", name: "Plg" }),
       cap({ id: "m:1", kind: "mcp", name: "Srv" }),
       cap({ id: "s:1", kind: "skill", name: "Skl" }),
@@ -30,6 +31,7 @@ describe("groupCapabilities", () => {
       "mcp",
       "skill",
       "plugin",
+      "agent",
       "builtin",
     ]);
   });
@@ -51,6 +53,11 @@ describe("groupCapabilities", () => {
   test("labels each group", () => {
     const groups = groupCapabilities([cap({ kind: "mcp" })]);
     expect(groups[0]!.label).toBe("MCP 服务器");
+  });
+
+  test("labels the agent group 子代理", () => {
+    const groups = groupCapabilities([cap({ id: "a:1", kind: "agent", name: "x" })]);
+    expect(groups[0]!.label).toBe("子代理");
   });
 });
 

@@ -8,6 +8,7 @@
 
 import type { RegisteredTool, MCPServerConfig } from "../types.js";
 import type { SkillDefinition } from "../skills/scanner.js";
+import type { AgentDefinition } from "../agent/agent-definition.js";
 import type { CapabilityDescriptor } from "./types.js";
 
 /**
@@ -106,6 +107,37 @@ export function projectSkills(input: {
         token: s.name,
       },
       origin: { filePath: s.filePath },
+    }));
+}
+
+/**
+ * Project/user sub-agent roles, projected per role. Like projectSkills, the
+ * caller MUST pass the FULL agent set (loaded WITHOUT the disabled filter), so
+ * disabled roles still appear in the list and can be re-enabled. Plugin-sourced
+ * agents are excluded — they ride their plugin's switch via projectPlugins, and
+ * disabledAgents only governs user/project roles. Toggling writes the top-level
+ * `disabledAgents` denylist (same key the 子代理 tab uses), so the two stay in
+ * sync; the project overlay layers on via capabilityOverrides.agents.
+ */
+export function projectAgents(input: {
+  agents: AgentDefinition[];
+  disabledAgents: string[];
+}): CapabilityDescriptor[] {
+  const disabled = new Set(input.disabledAgents);
+  return input.agents
+    .filter((a) => a.source === "project" || a.source === "user")
+    .map((a) => ({
+      id: `agent:${a.name}`,
+      kind: "agent" as const,
+      name: a.name,
+      description: a.description,
+      enabled: !disabled.has(a.name),
+      control: {
+        settingsKey: "disabledAgents" as const,
+        mode: "denylist" as const,
+        token: a.name,
+      },
+      origin: { filePath: a.filePath },
     }));
 }
 

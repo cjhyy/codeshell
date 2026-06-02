@@ -13,11 +13,12 @@ import type { CapabilityDescriptor } from "@cjhyy/code-shell-core";
 
 export type CapabilityKind = CapabilityDescriptor["kind"];
 
-/** Display order + labels for the four kinds. builtin sits last (folded). */
+/** Display order + labels for the kinds. builtin sits last (folded). */
 export const CAPABILITY_GROUP_ORDER: CapabilityKind[] = [
   "mcp",
   "skill",
   "plugin",
+  "agent",
   "builtin",
 ];
 
@@ -25,6 +26,7 @@ export const CAPABILITY_GROUP_LABEL: Record<CapabilityKind, string> = {
   mcp: "MCP 服务器",
   skill: "技能",
   plugin: "插件",
+  agent: "子代理",
   builtin: "内置工具",
 };
 
