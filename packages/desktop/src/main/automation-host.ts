@@ -22,6 +22,7 @@ import {
   type CronRunner,
   type CronRunResult,
 } from "@cjhyy/code-shell-core";
+import { readAutomationMemory } from "./automationMemory.js";
 
 /**
  * Build a read-only RunManager for automation. Per-job cwd is passed at submit
@@ -46,12 +47,18 @@ export function buildDesktopRunManager(): RunManager {
   });
 }
 
-/** Build a CronRunner that runs each job as a one-shot read-only headless Engine. */
-export function buildDesktopAutomationRunner(): CronRunner {
+/**
+ * Build a CronRunner that runs each job as a one-shot read-only headless Engine.
+ *
+ * `emit`, when provided, forwards Engine stream events (keyed by job id) so the
+ * main process can build a live snapshot / write a transcript (later task B5
+ * refines the session id).
+ */
+export function buildDesktopAutomationRunner(
+  emit?: (sessionId: string, event: unknown) => void,
+): CronRunner {
   return async (req): Promise<CronRunResult> => {
-    // CronJob.cwd is added in Phase 2; read defensively so Phase 1 compiles and
-    // Phase 2 can add the field without touching this runner.
-    const jobCwd = (req.job as { cwd?: string }).cwd ?? process.cwd();
+    const jobCwd = req.job.cwd ?? process.cwd();
     const settings = new SettingsManager(jobCwd, "full").get();
     const engine = new Engine({
       llm: {
@@ -68,7 +75,16 @@ export function buildDesktopAutomationRunner(): CronRunner {
       permissionMode: req.permissionMode,
       approvalBackend: req.approvalBackend,
     });
-    const result = await engine.run(req.prompt, { cwd: jobCwd });
+
+    // Task-level cross-run memory: prepend prior run summaries so the job can
+    // build on what earlier runs learned.
+    const memory = readAutomationMemory(req.job.id);
+    const prompt = memory.trim()
+      ? `<previous_runs_memory>\n${memory.trim()}\n</previous_runs_memory>\n\n${req.prompt}`
+      : req.prompt;
+
+    const onStream = emit ? (e: unknown) => emit(req.job.id, e) : undefined;
+    const result = await engine.run(prompt, { cwd: jobCwd, onStream });
     return { text: result.text, reason: result.reason };
   };
 }

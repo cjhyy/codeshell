@@ -19,7 +19,7 @@ import {
   type AutomationHandle,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
-import { buildDesktopRunManager } from "./automation-host.js";
+import { buildDesktopAutomationRunner } from "./automation-host.js";
 import {
   setAutomationScheduler,
   listAutomations,
@@ -284,9 +284,10 @@ app.whenReady().then(() => {
   try {
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
-      // Phase 2: jobs run through a read-only RunManager so each execution
-      // lands in the RunStore and shows in the runs UI with full history.
-      runManager: buildDesktopRunManager(),
+      // Each fired job runs as a one-shot read-only headless Engine, which
+      // auto-writes a full transcript.jsonl (like interactive chat). (B5 will
+      // pass an emit callback so events also stream to a live snapshot.)
+      runner: buildDesktopAutomationRunner(),
     });
     // Expose the live scheduler to the automation IPC service (Phase 3 UI).
     setAutomationScheduler(automationHandle.scheduler);
