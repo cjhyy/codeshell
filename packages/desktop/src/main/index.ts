@@ -292,6 +292,7 @@ app.whenReady().then(() => {
       sessionId: string;
       cwd: string;
       title: string;
+      prompt: string;
     }) => bridge?.broadcastAutomationSession(meta);
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),

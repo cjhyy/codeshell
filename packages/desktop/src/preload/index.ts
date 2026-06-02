@@ -29,7 +29,7 @@ const lifecycleListeners: Array<(evt: unknown) => void> = [];
 // Live automation session announcements: `{ sessionId, cwd, title }`, fired
 // once when an in-main automation Engine emits session_started.
 const automationSessionListeners: Array<
-  (meta: { sessionId: string; cwd: string; title: string }) => void
+  (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void
 > = [];
 
 ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
@@ -66,8 +66,9 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     const sessionId = (params?.sessionId as string | undefined) ?? "";
     const cwd = (params?.cwd as string | undefined) ?? "";
     const title = (params?.title as string | undefined) ?? "";
+    const prompt = (params?.prompt as string | undefined) ?? "";
     if (sessionId) {
-      automationSessionListeners.forEach((cb) => cb({ sessionId, cwd, title }));
+      automationSessionListeners.forEach((cb) => cb({ sessionId, cwd, title, prompt }));
     }
   } else if (method === "agent/approvalRequest") {
     // `{ sessionId, requestId, request }` envelope. requestId lets the

@@ -59,6 +59,11 @@ export interface AutomationSessionMeta {
   sessionId: string;
   cwd: string;
   title: string;
+  /** The job's prompt (the triggering "user" message) so the renderer can show
+   *  it as the opening message — automation never goes through the chat send()
+   *  path, so this is the only way the prompt reaches the live UI. The ORIGINAL
+   *  prompt, not the memory-prepended one fed to the engine. */
+  prompt: string;
 }
 
 /**
@@ -136,7 +141,7 @@ export function buildDesktopAutomationRunner(
               if (firstBind && onSession) {
                 const name = req.job.name?.trim() || req.job.id;
                 const date = new Date().toLocaleDateString();
-                onSession({ sessionId: sid, cwd: jobCwd, title: `⚙ ${name} ${date}` });
+                onSession({ sessionId: sid, cwd: jobCwd, title: `${name} ${date}`, prompt: req.job.prompt });
               }
             }
             emit?.(sid ?? req.job.id, e);

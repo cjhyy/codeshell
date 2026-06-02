@@ -201,7 +201,7 @@ export interface CodeshellApi {
    * correct project sidebar group (stream events carry no cwd).
    */
   onAutomationSession(
-    cb: (meta: { sessionId: string; cwd: string; title: string }) => void,
+    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void,
   ): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;

@@ -801,10 +801,19 @@ function App() {
         },
       });
       const nextIdx = upsertImportedSession(repoId, summary);
+      const bucket = bucketKey(repoId, summary.id);
       // Register the route so this run's stream events (already arriving) bucket
       // correctly. The session_started handler's reverse-lookup would also find
       // it now that it's on disk, but setting the fast path is cheap.
-      engineToBucketRef.current.set(meta.sessionId, bucketKey(repoId, summary.id));
+      engineToBucketRef.current.set(meta.sessionId, bucket);
+      // Show the triggering prompt as the opening user message. Automation never
+      // goes through send() (it runs in main), so without this the live UI would
+      // open straight into the assistant's reply with no visible question. Only
+      // on first placement (re-announce hits the alreadyKnown early-return above),
+      // so the bubble isn't duplicated.
+      if (meta.prompt.trim()) {
+        dispatch({ type: "user_message", bucket, text: meta.prompt });
+      }
       if (reposChanged) setRepos(reposNow.slice());
       setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
     });
