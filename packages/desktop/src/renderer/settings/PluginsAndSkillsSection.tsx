@@ -25,7 +25,7 @@ import type {
 } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
-import { useConfirm } from "../ui/ConfirmDialog";
+import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { Markdown } from "../Markdown";
 import { writeSettings } from "../settingsBus";
 
@@ -145,6 +145,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   // depends on selection / skillsByName.
   const skillBodyForRef = useRef<string | null>(null);
   const confirm = useConfirm();
+  const alert = useAlert();
 
   const cwd = activeRepoPath ?? "/";
 
@@ -329,7 +330,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
       }
       await refresh();
     } catch (e) {
-      alert(String(e instanceof Error ? e.message : e));
+      void alert({ title: "卸载失败", message: String(e instanceof Error ? e.message : e) });
     }
   };
 

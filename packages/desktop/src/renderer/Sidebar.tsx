@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
-import { useConfirm, truncateTitle } from "./ui/ConfirmDialog";
+import { truncateTitle } from "./ui/ConfirmDialog";
+import { useConfirm, usePrompt } from "./ui/DialogProvider";
 import { SettingsMenu } from "./settings/SettingsMenu";
 import type { ViewMode } from "./view";
 import { repoLabel, sortRepos, type Repo } from "./repos";
@@ -90,6 +91,7 @@ export function Sidebar({
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const closeMenu = (): void => setMenu(null);
   const confirm = useConfirm();
+  const prompt = usePrompt();
 
   // Pin sort (sortRepos: pinned first, then by addedAt asc).
   const orderedRepos = useMemo(() => sortRepos(repos), [repos]);
@@ -110,8 +112,13 @@ export function Sidebar({
     {
       label: "重命名项目…",
       onClick: () => {
-        const t = prompt("项目显示名称", repoLabel(repo));
-        if (t !== null && t.trim()) onRenameRepo(repo.id, t.trim());
+        void prompt({
+          title: "重命名项目",
+          message: "项目显示名称",
+          defaultValue: repoLabel(repo),
+        }).then((t) => {
+          if (t !== null && t.trim()) onRenameRepo(repo.id, t.trim());
+        });
       },
     },
     {
@@ -149,8 +156,13 @@ export function Sidebar({
     {
       label: "重命名…",
       onClick: () => {
-        const t = prompt("会话标题", s.title);
-        if (t !== null && t.trim()) onRenameSession(repoId, s.id, t.trim());
+        void prompt({
+          title: "重命名会话",
+          message: "会话标题",
+          defaultValue: s.title,
+        }).then((t) => {
+          if (t !== null && t.trim()) onRenameSession(repoId, s.id, t.trim());
+        });
       },
     },
     {

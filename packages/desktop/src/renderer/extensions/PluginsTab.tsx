@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import type { PluginSummary } from "../../main/plugins-service";
 import { resolveUninstallTarget } from "./uninstallTarget";
+import { MoreHorizontal, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { useConfirm, useAlert } from "../ui/DialogProvider";
 
 interface Props {
   cwd: string;
@@ -18,6 +26,8 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const [busy, setBusy] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const retry = () => setReloadKey((k) => k + 1);
+  const confirm = useConfirm();
+  const alert = useAlert();
   useEffect(() => {
     let alive = true;
     setPlugins(null);
@@ -37,17 +47,23 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const uninstall = async (p: PluginSummary) => {
     const t = resolveUninstallTarget(p);
     if (!t.uninstallable) {
-      window.alert("该插件为本地/直接安装，无法从这里卸载。");
+      void alert({ title: "无法卸载", message: "该插件为本地/直接安装，无法从这里卸载。" });
       return;
     }
-    if (!window.confirm(`确定卸载插件 “${p.name}”？`)) return;
+    const ok = await confirm({
+      title: "卸载插件",
+      message: `确定卸载插件 “${p.name}”？`,
+      confirmLabel: "卸载",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusy(p.installKey);
     try {
       await window.codeshell.uninstallPlugin(t.pluginName, t.marketplaceName);
       setReloadKey((k) => k + 1);
       onChanged();
     } catch (e) {
-      window.alert(`卸载失败：${String((e as Error)?.message ?? e)}`);
+      void alert({ title: "卸载失败", message: String((e as Error)?.message ?? e) });
     } finally {
       setBusy(null);
     }
@@ -82,15 +98,30 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
           </div>
           <span className="text-xs text-muted-foreground">{p.marketplace ?? "本地"}</span>
           <Switch checked={isEnabled(p)} onCheckedChange={(v) => onToggle(p, v)} />
-          <Button
-            size="icon"
-            variant="ghost"
-            title="卸载"
-            disabled={busy === p.installKey}
-            onClick={() => void uninstall(p)}
-          >
-            {busy === p.installKey ? "…" : "⋯"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                title="更多操作"
+                disabled={busy === p.installKey}
+              >
+                {busy === p.installKey ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MoreHorizontal className="h-4 w-4" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="text-status-err focus:text-status-err"
+                onSelect={() => void uninstall(p)}
+              >
+                卸载
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </li>
       ))}
     </ul>

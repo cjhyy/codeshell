@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MarketDetail } from "./MarketDetail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useConfirm, useAlert } from "../ui/DialogProvider";
 
 interface Props {
   cwd: string;
@@ -18,6 +19,8 @@ export function MarketList({ cwd, onInstalled }: Props) {
   const [reloadKey, setReloadKey] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [input, setInput] = useState("");
+  const confirm = useConfirm();
+  const alert = useAlert();
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -61,12 +64,18 @@ export function MarketList({ cwd, onInstalled }: Props) {
   };
 
   const remove = async (name: string) => {
-    if (!window.confirm(`确定移除市场 “${name}”？`)) return;
+    const ok = await confirm({
+      title: "移除市场",
+      message: `确定移除市场 “${name}”？`,
+      confirmLabel: "移除",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await window.codeshell.removeMarketplace(name);
       retry();
     } catch (e) {
-      window.alert(`移除失败：${String((e as Error)?.message ?? e)}`);
+      void alert({ title: "移除失败", message: String((e as Error)?.message ?? e) });
     }
   };
 

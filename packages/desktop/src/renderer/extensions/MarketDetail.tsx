@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAlert } from "../ui/DialogProvider";
 
 interface Props {
   cwd: string;
@@ -18,6 +19,7 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState<Set<string>>(new Set());
+  const alert = useAlert();
   const [installed, setInstalled] = useState<Set<string>>(new Set());
 
   const retry = () => setReloadKey((k) => k + 1);
@@ -62,13 +64,13 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
     try {
       const res = await window.codeshell.installPlugin(pluginName, marketName);
       if (!res.ok) {
-        window.alert(`安装失败：${res.error ?? "未知错误"}`);
+        void alert({ title: "安装失败", message: res.error ?? "未知错误" });
         return;
       }
       setInstalled((prev) => new Set(prev).add(pluginName));
       onInstalled();
     } catch (e) {
-      window.alert(`安装失败：${String((e as Error)?.message ?? e)}`);
+      void alert({ title: "安装失败", message: String((e as Error)?.message ?? e) });
     } finally {
       setBusy((prev) => {
         const next = new Set(prev);
