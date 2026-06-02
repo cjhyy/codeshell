@@ -55,6 +55,7 @@ import { foldTranscript } from "./automation/foldTranscript";
 import { chooseHydrateBase } from "./automation/hydrateOrder";
 import { isCaseInsensitivePlatform } from "./automation/pathMatch";
 import { placeLiveAutomationSession } from "./automation/liveSession";
+import { planDiskRebuild } from "./automation/rebuildFromDisk";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
@@ -237,6 +238,14 @@ function App() {
     new Map(),
   );
   const permissionModeRef = useRef<PermissionMode | null>(permissionMode);
+  /**
+   * Repo keys already probed for a disk rebuild this session. Guards against an
+   * infinite re-scan: the rebuild effect depends on `sessionIndices` and calls
+   * `setSessionIndices`, so when a disk page maps only into OTHER repos the
+   * active repo's index stays empty → the effect would re-run and re-scan disk
+   * on every render. Probing each active repo at most once breaks that loop.
+   */
+  const diskProbedRef = useRef<Set<string>>(new Set());
   /**
    * Per-bucket permission resolver for the mount-time approval listener
    * (which closes over stale state). Mirrors the same precedence as
@@ -658,6 +667,62 @@ function App() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Rebuild an empty repo's session list from disk (localStorage cleared/lost).
+  // Only when the active repo's index is empty → no disk scan otherwise. Mirrors
+  // D1's automation placement: match disk cwd → repo, auto-create on miss.
+  useEffect(() => {
+    const repoKey = repoKeyOf(activeRepoId);
+    const idx = sessionIndices[repoKey];
+    if (idx && idx.sessions.length > 0) return; // has data → don't scan disk
+    if (diskProbedRef.current.has(repoKey)) return; // already scanned for this repo
+    diskProbedRef.current.add(repoKey);
+    let cancelled = false;
+    let probed = false; // disk read resolved (with or without sessions)
+    void (async () => {
+      try {
+        const page = await window.codeshell.listDiskSessions({ limit: 30 });
+        probed = true;
+        if (cancelled || page.sessions.length === 0) return;
+        const reposNow = loadRepos();
+        let reposChanged = false;
+        const placements = planDiskRebuild(page.sessions, reposNow, {
+          caseInsensitive: isCaseInsensitivePlatform(),
+          createRepoForCwd: (cwd) => {
+            const id = makeRepoId();
+            const name = cwd.split("/").filter(Boolean).pop() || cwd;
+            const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
+            reposNow.push(repo);
+            saveRepos(reposNow);
+            reposChanged = true;
+            return id;
+          },
+        });
+        if (cancelled) return;
+        const touched = new Set<string>();
+        for (const { repoId, summary } of placements) {
+          upsertImportedSession(repoId, summary);
+          touched.add(repoKeyOf(repoId));
+        }
+        if (reposChanged) setRepos(reposNow.slice());
+        setSessionIndices((prev) => {
+          const next = { ...prev };
+          for (const k of touched) next[k] = loadSessionIndex(k === GLOBAL_KEY ? null : k);
+          return next;
+        });
+      } catch {
+        // disk unavailable — leave empty and allow a later retry for this repo.
+        diskProbedRef.current.delete(repoKey);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      // If we tore down before the disk read resolved, drop the mark so a
+      // future visit can retry. A completed probe keeps its mark — that's what
+      // breaks the re-scan loop when a page maps only into other repos.
+      if (!probed) diskProbedRef.current.delete(repoKey);
+    };
+  }, [activeRepoId, sessionIndices]);
 
   function getCoalescer(bucket: string) {
     let c = coalescersRef.current.get(bucket);
