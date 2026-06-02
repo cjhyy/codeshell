@@ -1,7 +1,8 @@
 # 自动化轻量化 — automation = 项目里的特殊 session(学 Codex)
 
 日期:2026-06-02
-状态:待审(已过一轮代码对峙 review,见 §9;权限映射 §4.3 方向待定)
+状态:已过 review(§9);权限确定走方案 A 接线 resolveWritePolicy(§4.3);
+含问题二 guard 误伤修复(§10)。准备进 writing-plans。
 
 ## 1. 背景与问题(已实锤)
 
@@ -67,8 +68,9 @@ scheduler 触发 cron
   → new Engine({
         cwd: job.cwd,                               // 4.4 单 cwd,按项目解析配置/skill
         sessionStorageDir,                          // → 自动落 transcript.jsonl
-        permissionMode: <见 4.3,待定>,              // ⚠ 真字段名 permissionMode(engine.ts:123)
-        approvalBackend: <见 4.3,待定>,             // 权限靠 permissionMode + approvalBackend 配合
+        // 4.3 接线 resolveWritePolicy(job.permissionLevel) → 解构出下面两项(+ sandboxMode)
+        permissionMode,                             // 真字段名 permissionMode(engine.ts:123)= "default"
+        approvalBackend,                            // = TierApprovalBackend(level),按 3 档放行
         appendSystemPrompt: AUTOMATION_PROMPT_NOTE
           + "\n任务完成后,调用一次 UpdateAutomationMemory 写入本次运行的关键发现/状态,供下次运行参考。",
         // 工具集:经 EngineConfig.runtime.toolRegistry,用 ToolRegistry 的 builtinTools 白名单
@@ -86,22 +88,28 @@ automation 执行入口。⚠ 注意 index.ts:289 注入的是给 `startAutomati
 不是裸 runner —— 绕开 RunManager 需改 `startAutomation` 的执行模型(它现期望一个 runManager),
 不只是「换个 runner」。改动比一行替换大,落地计划须单列。详见 §9 #4。
 
-### 4.3 权限:执行时真生效(🚧 方向待定 — 用户优化中)
+### 4.3 权限:接线现成的 resolveWritePolicy(方案 A — 零件齐全,只差接线)
 
-**目标确定**:automation 不再写死只读(`runner.ts:60` 的 `approve-all/...`),要能按配置读写。
-**方向待定**:用户在重想权限模型本身(可能重新分档 / 调整含义 / 与聊天那套的关系),故此处不锁定。
+**根因(已实锤)**:`job.permissionLevel` 是孤儿字段——UI 能选、存进 scheduler,但执行时无人读:
+`runner.ts:59-60` `bindCronToEngine` 与 `automation-host.ts:45` 都**硬编码**
+`HeadlessApprovalBackend("approve-read-only")`。所以无论配 workspace-write/full 都被强制只读。
 
-落地前已查实的事实底牌(供权限设计参考,不作结论):
-- `HeadlessApprovalBackend` 当前仅 3 个 mode(permission.ts:19):
-  `"approve-all"` / `"deny-all"` / `"approve-read-only"`。
-- cron 现有 3 档(scheduler.ts:12)`read-only | workspace-write | full`。
-- **错配点**:`workspace-write`(写但限 cwd)在 backend **没有对应 mode** —— 要么落 approve-all(太松),
-  要么需新增一个「写但限 cwd」档。这是权限模型可能要动的核心原因。
-- 另一维度 `permissionMode`(engine.ts:123)`default|acceptEdits|dontAsk|bypassPermissions|auto|plan`
-  走分类器,与 approvalBackend 是**配合**关系。automation 该用哪套是待定项之一。
-- 交互式聊天那套 4 档 plan/default/accept_edits/bypass 是另一概念维度。
+**现成零件(已存在、有测试 write-policy.test.ts、已 export index.ts:572,但无人调用)**:
+`resolveWritePolicy(level): { permissionMode, approvalBackend, sandboxMode }`(write-policy.ts:67)
+—— 内部 `TierApprovalBackend`(:41)已实现全部 3 档语义:
+- `read-only` → 读批、写/shell 拒(= 复用 HeadlessApprovalBackend approve-read-only)。
+- `workspace-write` → 读+文件写(Write/Edit/ApplyPatch/NotebookEdit/MultiEdit)批、shell 拒。
+- `full` → 全批(含 shell,开 PR 用)。
+- 三档 `permissionMode` 均为 `"default"`(让 backend 当单一事实源,分类器不抢)+ `sandboxMode:"auto"`
+  写盘兜底,即使 full 也困在 workspace。
 
-→ 待用户定权限模型后,回填本节与 §4.2 伪代码的 `permissionMode`/`approvalBackend` 两个占位。
+**接线(方案 A,~8-12 行,零删除核心)**:automation runner 调
+`const { permissionMode, approvalBackend, sandboxMode } = resolveWritePolicy(job.permissionLevel)`,
+喂进 Engine 的 `permissionMode` + `approvalBackend`(EngineRunner `override ?? fallback` 天然接住,
+:151)。删掉两处硬编码 `approve-read-only`。**workspace-write 缺档的疑虑解除** —— TierApprovalBackend
+已实现它。automation 能按配置读写。
+
+(交互式聊天那套 4 档 plan/default/accept_edits/bypass 是另一维度,不合并。)
 
 ### 4.4 配置 / cwd / skill 按项目
 
@@ -169,8 +177,9 @@ main 快照」目前**不成立**,是一条**必须新做的接线**:让 automat
 
 1. **Engine 配置字段名**:`permission`→`permissionMode`(engine.ts:123);`onStream` 是
    `engine.run(task,{onStream})` 入参非构造项(:622);无 `tools` 构造项,工具走 `toolRegistry`。已修 §4.2。
-2. **权限映射**(🔴→🚧):`HeadlessApprovalBackend` 仅 approve-all/deny-all/approve-read-only,
-   表达不了 cron 的 workspace-write。已改 §4.3 为「方向待定」+ 事实底牌,等用户定权限模型。
+2. **权限映射**(🔴→✅ 已解):`HeadlessApprovalBackend` 确实只 3 mode,但 `workspace-write` 早被
+   `resolveWritePolicy`/`TierApprovalBackend`(write-policy.ts)实现且有测试,只是无人调用。改为
+   方案 A 接线(§4.3),不重设计权限模型。
 3. **工具过滤入口**(原 #3 缺口,已解):cron 工具是 core builtin(builtin/cron.ts)。`ToolRegistry`
    构造支持 `builtinTools` 白名单(registry.ts:18/29)→ automation 传【不含 cron、含
    UpdateAutomationMemory】的白名单即可。**不需要 RunManager 的 metadata.source 通道**,判据由
@@ -178,3 +187,21 @@ main 快照」目前**不成立**,是一条**必须新做的接线**:让 automat
 4. **绕开 RunManager 的改动面**:index.ts:289 注入的是 `runManager` 给 `startAutomation`;绕开它要
    改 `startAutomation` 执行模型,非一行替换。落地计划单列。
 5. **main 快照接线**:automation 在 main 进程跑,事件不经 AgentBridge;须新接线喂快照。见 §8。
+
+## 10. 问题二:InvestigationGuard 只读误伤(方案①,纳入本计划)
+
+**根因(已实锤,investigation-guard.ts)**:guard 三计数器共享一个 per-Engine 实例 —
+(A) dedupe:同一 Read offset ≥2 次→reminder,**≥3 次→hard-block `return {block}`(:97)**;
+(B) read-budget、(C) silent-turns:仅注入 `<system-reminder>` 催促,不拦。**唯一 hard-block 是 A**。
+唯一出口是 `setSoftMode(true)`(:58)——headless 在用;**交互式只读会话无任何 override**,
+`AgentDefinition` 也没有 `readOnly` 字段。→ 一个本就只读的会话多读几次会被拦死。
+
+**方案①(最小,复用现成出口)**:对「已知只读」的会话/agent 调 `guard.setSoftMode(true)`,
+把 dedupe 第3次的 hard-block 降级为强 reminder(:90-95 已有此分支),不 dead-end。
+- 判据「何时算只读」:read-only 权限会话、只读 automation。
+- 改动:1 行接线 + 一个只读判据;**不改 guard 对其它会话的行为**(非只读仍 hard-block,防死循环狂读)。
+- 不选方案②(给 AgentDefinition 加 readOnly 字段,改动面大、与①功能重叠)/ 方案③(全局取消
+  hard-block,风险最大),留作以后精确化。
+
+**与主线关系**:正交,可独立 plan/提交;但只读 automation 天然受益(automation runner 设只读时
+顺带 setSoftMode)。
