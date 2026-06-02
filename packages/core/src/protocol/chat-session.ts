@@ -12,8 +12,9 @@ export interface TurnOpts {
    *  configured cwd. */
   cwd?: string;
   onStream?: (event: StreamEvent) => void;
-  /** Goal mode for this turn — forwarded to engine.run (loop-until-done). */
-  goal?: string;
+  /** Goal mode for this turn — forwarded to engine.run (loop-until-done).
+   *  String objective or full GoalConfig (objective + optional budgets). */
+  goal?: string | import("../engine/goal.js").GoalConfig;
 }
 
 interface QueuedTurn {

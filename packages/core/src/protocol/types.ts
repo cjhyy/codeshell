@@ -95,8 +95,11 @@ export interface RunParams {
    * Goal mode for this run. When set, the engine runs loop-until-done:
    * on each natural completion a GoalStopHook judges whether this goal is
    * met and re-prompts if not (bounded). Orthogonal to permissionMode.
+   *
+   * Accepts a bare objective string or a full GoalConfig (objective +
+   * optional token/time budgets). Normalized at the engine run boundary.
    */
-  goal?: string;
+  goal?: string | import("../engine/goal.js").GoalConfig;
 }
 
 export interface RunResult {

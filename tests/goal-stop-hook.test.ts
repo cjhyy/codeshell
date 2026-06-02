@@ -67,7 +67,11 @@ describe("createGoalStopHook", () => {
     expect(res.messages!.join("\n")).toContain("deploy step missing");
   });
 
-  it("conservatively allows stop when the judge call throws", async () => {
+  // P0 behavior change (Goal mode redesign, 2026-06-02): a failing judge
+  // must NOT silently allow the stop — in unattended runs that means the
+  // goal silently fails. The hook now nudges to continue; the turn-loop
+  // run-scoped budget guardrail is the real backstop against infinite loops.
+  it("continues (does NOT silently allow stop) when the judge call throws", async () => {
     const llm = {
       createMessage: async () => {
         throw new Error("boom");
@@ -79,14 +83,25 @@ describe("createGoalStopHook", () => {
       log: { ...silentLog, warn: () => { warned = true; } },
     });
     const res = await hook(ctx({ goal: "x", finalText: "y" }));
-    expect(res.continueSession).toBeUndefined();
+    expect(res.continueSession).toBe(true);
+    expect(res.messages).toBeDefined();
     expect(warned).toBe(true);
   });
 
-  it("conservatively allows stop when the judge returns unparseable text", async () => {
+  it("continues (does NOT silently allow stop) when the judge returns unparseable text", async () => {
     const llm = fakeLLM("I have no idea, sorry.");
     const hook = createGoalStopHook({ llm, log: silentLog });
     const res = await hook(ctx({ goal: "x", finalText: "y" }));
+    expect(res.continueSession).toBe(true);
+    expect(res.messages).toBeDefined();
+  });
+
+  it("accepts a GoalConfig object goal (not just a string)", async () => {
+    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const hook = createGoalStopHook({ llm, log: silentLog });
+    const res = await hook(
+      ctx({ goal: { objective: "ship it", tokenBudget: 1000 }, finalText: "shipped" }),
+    );
     expect(res.continueSession).toBeUndefined();
   });
 
