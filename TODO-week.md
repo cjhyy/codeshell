@@ -6,7 +6,6 @@
 
 | 状态 | #   | 任务 | 备注 / 关键落点 |
 | ---- | --- | ---- | --------------- |
-| 🔴 | 1 | 修 13 个预存测试 fail(让 CI 绿) | **低成本、最该先做**(#3 调研期发现,#5 调研确认与隔离无关=纯测试基础设施债)。① fake engine stub 缺 `isHeadless()`(6 fail):`tests/protocol/in-process-client-drift.test.ts:36/70/97/124`、`multi-session.test.ts:27/52/93` —— Engine 真身有 `isHeadless()`(`engine.ts:638`),给 stub/fake 补上即可;② `AgentMessageView.test.tsx:50` 期望「· 3 tools」实际「3 tools」—— 对齐断言或实现(`AgentMessageView.tsx:26-29`);③ 余下 plugin-hook timeout / fixture 环境问题逐个看。**目标:`bun test` 从 13 fail → 0。** |
 | 🟡 | 2 | 跨 MCP/builtin/skill/plugin 统一能力 UI | **【已基本完成,剩纯产品决策】** 后端 100%(`capability-control/` + list/setEnabled/setOverride + 三个 IPC + preload 桥)+ UI ~80%(`CapabilitiesOverviewSection.tsx`:用户/项目 scope、五分类、两态/三态开关、统计、实时保存,已挂进 SettingsPage)。与分散 tab(MCP/扩展/子代理/钩子)=分工非重复(总览管开关、各 tab 管细节)。**剩**:① 产品方向——A 维持现状(推荐)/B 大一统内嵌(~5-7d)/C 总览+详情弹窗(~2-3d);② 无需决策即可做的小项:点能力行跳转对应 tab、builtin 项目级覆盖(spec §4.2 首期未纳入)、项目级 agent 写路径(AgentsSection 现只写 user)。**建议别为完成 TODO 强行重构。** spec:`docs/superpowers/specs/2026-05-29-capability-control-design.md` |
 | 🟡 | 3 | 多 session 隔离根治 + 慢 修复 | **【隔离架构已成体系,剩缓解→根治】** per-session 独立 Engine/AbortController/队列 + 配置切片 + model 切换 per-session(pendingModel defer,`server.ts:499-508`)都齐。**剩架构隐患**:① `activeKey` 仍全局可变(`engine.ts:1799`),并发切模型竞态→per-session 化;② maxTokens 跨模型残留(DeepSeek 384k 漏到 gpt-5.5 128k),per-run 重算缓解但复用 client 仍可能残留→per-run 重建 client 或 client 去模型化。详见 `docs/research/session-isolation-state.md` §6。**慢**:RPC 30s 超时已修;**memory extraction 耗时波动未深挖**(`services/memory-orchestrator.ts`、`engine.ts:1306`);resolveSandboxBackend 每 turn 重 resolve(`engine.ts:719`,P3)。**建议**:P1 activeKey per-session + maxTokens 防残留(对标 Codex);P2 memory extraction 根因。**改 core 必 rebuild** |
 | 🔴 | 4 | 配置热重载「第二层」:push 给运行中的 session | **【调研完毕,可开 brainstorm+spec】** 第一层已落地(`cli/agent-server-stdio.ts:147-153` `freshSettings`,新 session 重读盘)。第二层=让 running session 也热生效(对标 Codex 写事件触发→遍历 live thread `refresh_runtime_config`)。**攒好的料**:① EngineConfigSlice per-session 字段(`chat-session-manager.ts:6-16`:permissionMode/preset/customSystemPrompt/appendSystemPrompt/goal/maxTurns/maxContextTokens/cwd)→写 spec 拆 RequestOverride vs DiskDefaults,push 只更新后者;② 派生状态重建清单:可热重载=PromptComposer/HookRegistry/MCPManager/disabledLists/agentDefsCache,无法=ToolRegistry(plugin 工具注册算死,需重启),已无损=modelPool;③ live session 遍历=`ChatSessionManager.sessions` 私有 Map(`:31`,需加公有遍历)+ main→worker 走 `handleConfigure`(`server.ts:478-546`,需加 `handleSettingsReload`+`Engine.refreshRuntimeConfig`);④ 搁置方案A=本任务受限子集,「下条消息生效」语义可复用。**写 spec 前 5 个开放问题**:in-flight turn 是否中断(Codex=否)/子 agent appendSystemPrompt 传播边界/MCP 热切换是否断 in-flight tool/plugin 工具动态重载 vs 明确需重启/snapshot 是否要版本戳防乱序。Codex 参照:`config_processor.rs`、`session/mod.rs refresh_runtime_config`。**改 core 必 rebuild** |
@@ -36,6 +35,12 @@
 ---
 
 ## ✅ 已完成(本周移除自待办)
+
+**2026-06-03(/goal 一轮,过夜验收,5 commit `2dfd522`→`d9ef196`,在 main 未 push):**
+
+- **#1 修预存测试 fail(CI 绿)**(`f1976d2`):实测 15 fail(非 13),全是测试基础设施债,实现侧无 bug。① 8 个 fake/stub Engine 缺 `isHeadless()`(`tests/protocol/multi-session`、`in-process-client-drift`、`background-agent-protocol`×5、`protocol-client-query`)补 `isHeadless: () => false`;② `agent-type-e2e` 的 ephemeral 用例陈旧——现行设计是「省略 agent_type + 非空 registry → 回退 general-purpose/首个」,改用空 registry 才测真 ephemeral;③ `AgentMessageView` 折叠头去掉「· 」前缀,断言对齐;④ `capabilities` gpt-5.5/magistral 补 `supportedEfforts`(实现新增的一等字段)。**`bun test` 15 fail → 0(2019 pass)**。Explore 子代理逐条根因 + spec/quality 双审。
+- **个性化设置 完整落地**(`2dfd522`+`d9ef196`,plan `docs/superpowers/plans/2026-06-02-personalization.md`):设置页「个性化」真生效 + 新增回复语言/称呼画像两字段 + 指令文件兼容开关(CLAUDE.md/AGENTS.md 勾选,主名写死 CODESHELL.md)。Task 1–8 验收发现**计划编写后已被一轮实现完成**(schema/EngineConfig/composer section/`compatFileNamesFrom`/engineFactory/UI 两 section 全在),本轮补齐唯一缺口:**三字段原只在 desktop stdio 宿主接线,TUI(repl/run/cron)+TCP 漏接→功能在那些宿主里是死的**;抽 core 共享 helper `personalizationFrom(agent)` 全宿主 spread,杜绝再漂移。子代理自动继承三字段。Task 9 手动验收(起 desktop 填值)留用户。
+- **automation 会话 disk 重建标 ⚙**(`2dfd522`):`planDiskRebuild` 读 `DiskSessionMeta.origin`,automation 会话标 `source:automation`,desktop 留空——补齐 session-origin 工作的 desktop 侧。
 
 **2026-06-02 → 06-03(/goal 一轮,17 commit `08552fc`→`a00246a`,在 main 未 push):**
 

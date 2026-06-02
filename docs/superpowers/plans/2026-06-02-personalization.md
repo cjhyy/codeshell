@@ -1,5 +1,11 @@
 # 个性化设置 Implementation Plan
 
+> **✅ 已完成 — 2026-06-03 验收。** Task 1–8 全部落地并验证(`bun test` 2019 pass / 0 fail;core+tui+desktop tsc 绿;core build + renderer build 绿)。
+> 计划编写后已被一轮实现完成(Task 1–8 的核心改动均已 commit),本轮验收发现并补齐了一个原计划未覆盖的缺口:
+> **三个个性化字段原先只在 desktop stdio 宿主接线,TUI(repl/run/cron)与 TCP 宿主漏接 → 这些宿主里功能是死的。** 已抽 core 共享 helper `personalizationFrom(agent)`(`packages/core/src/settings/personalization.ts`),在全部宿主 engineFactory `...spread`,杜绝再漂移(commit `d9ef196`)。
+> 另注:测试命令约定有误——本仓库新测试是 `bun:test`,须用 `bun test <path>`(根目录),`bunx vitest run` 无法加载 `bun:test` import。下方各 Task 的 vitest 命令照此换算。
+> 实现中的 UX 取舍:UI 用 `useDebouncedSave` 自动保存(无 Save 按钮),与既有 `PersonalizationSection` 一致,优于计划伪码里的 Save 按钮 + dirty 跟踪。Task 9 手动验收(起 desktop 填值)留给用户。Task 5 的判断成立:三字段为 disk-only,不进 `EngineConfigSlice`。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让设置页「个性化」真正生效,并新增回复语言/称呼画像两个字段与指令文件兼容开关。
