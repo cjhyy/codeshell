@@ -109,6 +109,20 @@ import {
   writeFileSync,
 } from "node:fs";
 
+/**
+ * Build ScanOptions.compatFileNames from the user's instruction compat toggles.
+ * Primary file name stays hard-wired to CODESHELL.md (not exposed). Turning a
+ * compat flag off only drops the same-named .md (CLAUDE.md / AGENTS.md); the
+ * .claude/ subdir, *.local.md and rules/ are intentionally NOT linked.
+ * undefined (instructions omitted) means both stay on — backward compatible.
+ */
+export function compatFileNamesFrom(instructions?: { compatClaude?: boolean; compatCodex?: boolean }): string[] {
+  const names: string[] = [];
+  if (instructions?.compatClaude !== false) names.push("CLAUDE.md");
+  if (instructions?.compatCodex !== false) names.push("AGENTS.md");
+  return names;
+}
+
 export interface EngineConfig {
   llm: LLMConfig;
   /**
@@ -128,6 +142,7 @@ export interface EngineConfig {
   appendSystemPrompt?: string;
   responseLanguage?: string;
   userProfile?: string;
+  instructions?: { compatClaude?: boolean; compatCodex?: boolean };
   /**
    * Goal mode: when set, the engine registers a GoalStopHook on `on_stop`
    * so the turn loop runs until the session model judges this goal met
@@ -830,6 +845,7 @@ export class Engine {
               .join("\n\n") || undefined,
           responseLanguage: this.config.responseLanguage,
           userProfile: this.config.userProfile,
+          instructions: this.config.instructions,
           maxTurns: req.maxTurns,
           maxContextTokens: this.config.maxContextTokens ?? 200_000,
           sessionStorageDir: this.config.sessionStorageDir,
@@ -1179,6 +1195,7 @@ export class Engine {
       appendSystemPrompt: this.config.appendSystemPrompt,
       responseLanguage: this.config.responseLanguage,
       userProfile: this.config.userProfile,
+      instructionOptions: { compatFileNames: compatFileNamesFrom(this.config.instructions) },
       disabledSkills,
       disabledPlugins,
     });
