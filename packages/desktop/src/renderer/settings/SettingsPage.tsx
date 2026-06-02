@@ -213,9 +213,9 @@ export function SettingsPage({
             )}
             {active === "personalization" && (
               <>
-                <PersonalizationSection scope={scope} activeRepoPath={activeRepoPath} />
-                <ResponsePrefsSection scope={scope} activeRepoPath={activeRepoPath} />
                 <InstructionFilesSection scope={scope} activeRepoPath={activeRepoPath} />
+                <ResponsePrefsSection scope={scope} activeRepoPath={activeRepoPath} />
+                <PersonalizationSection scope={scope} activeRepoPath={activeRepoPath} />
               </>
             )}
             {active === "shortcuts" && (

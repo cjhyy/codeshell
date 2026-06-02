@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
@@ -25,51 +25,82 @@ interface ScopedProps {
 }
 
 /**
- * Settings → 个性化.
+ * Auto-save hook for free-text settings fields.
  *
- * Codex-style single "自定义指令" card: one large textarea that maps to the
- * agent's `appendSystemPrompt` — extra instructions/context layered onto the
- * system prompt for every conversation. The save button is disabled until the
- * text differs from what's on disk (no-op saves were confusing).
+ * Debounces writes (default 600ms) while typing, and exposes a `flush` to save
+ * immediately on blur — so a quick tab-away never loses the last keystrokes.
+ * The whole personalization tab auto-saves; no Save buttons (a Switch toggles
+ * instantly, text persists on pause/blur).
+ */
+function useDebouncedSave(
+  persist: (value: string) => Promise<void> | void,
+  delay = 600,
+) {
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = useRef<string | null>(null);
+
+  const flush = useCallback(() => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    if (pending.current !== null) {
+      const value = pending.current;
+      pending.current = null;
+      void persistRef.current(value);
+    }
+  }, []);
+
+  const schedule = useCallback(
+    (value: string) => {
+      pending.current = value;
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => {
+        timer.current = null;
+        const v = pending.current;
+        pending.current = null;
+        if (v !== null) void persistRef.current(v);
+      }, delay);
+    },
+    [delay],
+  );
+
+  // Flush any pending write on unmount (e.g. switching tabs/scopes).
+  useEffect(() => () => flush(), [flush]);
+
+  return { schedule, flush };
+}
+
+/**
+ * Settings → 自定义指令.
+ *
+ * One large textarea mapping to the agent's `appendSystemPrompt` — extra
+ * instructions/context layered onto the system prompt for every conversation.
+ * Auto-saves (debounced while typing, flushed on blur); no Save button.
  *
  * The richer instruction-file knobs (customSystemPrompt / instructions.fileName
  * / scanDirs / compatFileNames) were intentionally dropped from this tab to
  * match Codex; they remain in the settings schema and can be set via the config
- * file. Memory enable/skip/reset toggles live in the dedicated 记忆 tab, not
- * here — so this tab stays a single focused control.
+ * file. Memory enable/skip/reset toggles live in the dedicated 记忆 tab.
  */
 export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
   const [instructions, setInstructions] = useState("");
-  const [saved, setSaved] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+
+  const { schedule, flush } = useDebouncedSave((value) =>
+    writeSettings(scope, { agent: { appendSystemPrompt: value } }, cwd),
+  );
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
     const agent = objectOf(s.agent);
-    const value = stringOf(agent.appendSystemPrompt);
-    setInstructions(value);
-    setSaved(value);
+    setInstructions(stringOf(agent.appendSystemPrompt));
   };
 
   useEffect(() => { void load(); }, [scope, activeRepoPath]);
-
-  const dirty = instructions !== saved;
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      await writeSettings(
-        scope,
-        { agent: { appendSystemPrompt: instructions } },
-        cwd,
-      );
-      setSaved(instructions);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <section className="flex flex-col gap-3">
@@ -81,19 +112,11 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
       </div>
       <Textarea
         value={instructions}
-        onChange={(e) => setInstructions(e.target.value)}
+        onChange={(e) => { setInstructions(e.target.value); schedule(e.target.value); }}
+        onBlur={flush}
         placeholder="添加自定义指令…"
         className="min-h-[260px] resize-y leading-relaxed"
       />
-      <div className="flex justify-end">
-        <Button
-          variant="solid"
-          onClick={() => void save()}
-          disabled={saving || !dirty}
-        >
-          {saving ? "保存中…" : "保存"}
-        </Button>
-      </div>
     </section>
   );
 }
@@ -109,35 +132,29 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
 export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
   const [language, setLanguage] = useState("");
   const [profile, setProfile] = useState("");
-  const [saved, setSaved] = useState({ language: "", profile: "" });
-  const [saving, setSaving] = useState(false);
+  // Latest values held in refs so each field's save writes both keys without
+  // racing the other field's debounce.
+  const languageRef = useRef("");
+  const profileRef = useRef("");
+  languageRef.current = language;
+  profileRef.current = profile;
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+
+  const { schedule, flush } = useDebouncedSave(() =>
+    writeSettings(
+      scope,
+      { agent: { responseLanguage: languageRef.current, userProfile: profileRef.current } },
+      cwd,
+    ),
+  );
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
     const agent = objectOf(s.agent);
-    const lang = stringOf(agent.responseLanguage);
-    const prof = stringOf(agent.userProfile);
-    setLanguage(lang);
-    setProfile(prof);
-    setSaved({ language: lang, profile: prof });
+    setLanguage(stringOf(agent.responseLanguage));
+    setProfile(stringOf(agent.userProfile));
   };
   useEffect(() => { void load(); }, [scope, activeRepoPath]);
-
-  const dirty = language !== saved.language || profile !== saved.profile;
-  const save = async () => {
-    setSaving(true);
-    try {
-      await writeSettings(
-        scope,
-        { agent: { responseLanguage: language, userProfile: profile } },
-        cwd,
-      );
-      setSaved({ language, profile });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <section className="flex flex-col gap-3">
@@ -149,24 +166,17 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
       </div>
       <Input
         value={language}
-        onChange={(e) => setLanguage(e.target.value)}
+        onChange={(e) => { setLanguage(e.target.value); schedule(e.target.value); }}
+        onBlur={flush}
         placeholder="回复语言,如:始终用简体中文"
       />
       <Textarea
         value={profile}
-        onChange={(e) => setProfile(e.target.value)}
+        onChange={(e) => { setProfile(e.target.value); schedule(e.target.value); }}
+        onBlur={flush}
         placeholder="称呼 / 画像,如:叫我 maki,后端工程师"
         className="min-h-[120px] resize-y leading-relaxed"
       />
-      <div className="flex justify-end">
-        <Button
-          variant="solid"
-          onClick={() => void save()}
-          disabled={saving || !dirty}
-        >
-          {saving ? "保存中…" : "保存"}
-        </Button>
-      </div>
     </section>
   );
 }
@@ -182,36 +192,24 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
 export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) {
   const [compatClaude, setCompatClaude] = useState(true);
   const [compatCodex, setCompatCodex] = useState(true);
-  const [saved, setSaved] = useState({ claude: true, codex: true });
-  const [saving, setSaving] = useState(false);
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
     const agent = objectOf(s.agent);
     const instr = objectOf(agent.instructions);
-    const c = instr.compatClaude !== false;
-    const x = instr.compatCodex !== false;
-    setCompatClaude(c);
-    setCompatCodex(x);
-    setSaved({ claude: c, codex: x });
+    setCompatClaude(instr.compatClaude !== false);
+    setCompatCodex(instr.compatCodex !== false);
   };
   useEffect(() => { void load(); }, [scope, activeRepoPath]);
 
-  const dirty = compatClaude !== saved.claude || compatCodex !== saved.codex;
-  const save = async () => {
-    setSaving(true);
-    try {
-      await writeSettings(
-        scope,
-        { agent: { instructions: { compatClaude, compatCodex } } },
-        cwd,
-      );
-      setSaved({ claude: compatClaude, codex: compatCodex });
-    } finally {
-      setSaving(false);
-    }
-  };
+  // Switches persist instantly on toggle.
+  const persist = (claude: boolean, codex: boolean) =>
+    void writeSettings(
+      scope,
+      { agent: { instructions: { compatClaude: claude, compatCodex: codex } } },
+      cwd,
+    );
 
   return (
     <section className="flex flex-col gap-3">
@@ -223,21 +221,18 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
       </div>
       <label className="flex items-center justify-between gap-3 text-sm text-foreground">
         <span>兼容 Claude(CLAUDE.md)</span>
-        <Switch checked={compatClaude} onCheckedChange={setCompatClaude} />
+        <Switch
+          checked={compatClaude}
+          onCheckedChange={(v) => { setCompatClaude(v); persist(v, compatCodex); }}
+        />
       </label>
       <label className="flex items-center justify-between gap-3 text-sm text-foreground">
         <span>兼容 Codex(AGENTS.md)</span>
-        <Switch checked={compatCodex} onCheckedChange={setCompatCodex} />
+        <Switch
+          checked={compatCodex}
+          onCheckedChange={(v) => { setCompatCodex(v); persist(compatClaude, v); }}
+        />
       </label>
-      <div className="flex justify-end">
-        <Button
-          variant="solid"
-          onClick={() => void save()}
-          disabled={saving || !dirty}
-        >
-          {saving ? "保存中…" : "保存"}
-        </Button>
-      </div>
     </section>
   );
 }
