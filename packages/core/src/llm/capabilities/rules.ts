@@ -42,7 +42,11 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
         "temperature", "top_p", "presence_penalty",
         "frequency_penalty", "logit_bias", "logprobs", "top_logprobs",
       ]),
-      reasoning: { kind: "openai-effort", disabledEffort: "none" },
+      reasoning: {
+        kind: "openai-effort",
+        disabledEffort: "none",
+        supportedEfforts: ["low", "medium", "high", "xhigh"], // no "minimal"; adds "xhigh"
+      },
       echoReasoning: "optional",
       // 400s on `max_tokens is too large: ... at most 128000`. Clamp here so a
       // stale 384000 (copied from a DeepSeek/OpenRouter entry on a prior model)
@@ -211,7 +215,11 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     // Magistral series exposes reasoning_effort: high|none — no minimal/low/medium.
     match: /^magistral/i,
     capability: {
-      reasoning: { kind: "openai-effort", disabledEffort: "none" },
+      reasoning: {
+        kind: "openai-effort",
+        disabledEffort: "none",
+        supportedEfforts: ["high"], // magistral: only high|none — "none" is the off value
+      },
     },
     why: "Mistral magistral models accept only reasoning_effort `high` or `none`.",
   },

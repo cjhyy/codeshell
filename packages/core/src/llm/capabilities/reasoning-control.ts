@@ -15,8 +15,6 @@ export type ReasoningControl =
   | { kind: "adaptive" };
 
 const FULL_EFFORTS: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
-// gpt-5.5+: drops "minimal", adds "xhigh" (signalled by disabledEffort === "none").
-const GPT55_EFFORTS: ReasoningEffort[] = ["low", "medium", "high", "xhigh"];
 
 export function reasoningControlFor(
   kind: ProviderKindName,
@@ -41,10 +39,20 @@ export function reasoningControlFor(
       // OpenRouter normalizes to minimal..high (no xhigh passthrough).
       return { kind: "effort", options: FULL_EFFORTS, default: "medium" };
     case "openai-effort": {
-      // disabledEffort === "none" is the gpt-5.5+ signal (no minimal, has xhigh).
-      const isGpt55 = r.disabledEffort === "none";
-      const options = isGpt55 ? GPT55_EFFORTS : FULL_EFFORTS;
-      return { kind: "effort", options, default: "medium" };
+      // Prefer the capability's first-class supportedEfforts list (gpt-5.5 →
+      // low..xhigh, magistral → [high]). Fall back to the default four levels
+      // when a rule didn't specify one. We no longer infer the level set from
+      // disabledEffort — that's a wire-detail two vendors can coincidentally
+      // share (gpt-5.5 and magistral both use "none"), so inferring misrendered
+      // magistral as a gpt-5.5-style control.
+      const options =
+        r.supportedEfforts && r.supportedEfforts.length > 0
+          ? r.supportedEfforts
+          : FULL_EFFORTS;
+      // Default to "medium" if available, else the first offered level
+      // (magistral has only "high", so its default is "high").
+      const def: ReasoningEffort = options.includes("medium") ? "medium" : options[0]!;
+      return { kind: "effort", options, default: def };
     }
   }
 }

@@ -35,8 +35,20 @@ export type ReasoningShape =
    * "disabled" — defaults to `"minimal"` (OpenAI), but vendors with a
    * narrower vocabulary override it (e.g. xAI Grok 4.3 has no `"minimal"`;
    * Mistral Magistral only accepts `"high"` and `"none"`).
+   *
+   * `supportedEfforts` is the FIRST-CLASS list of levels a UI may offer for
+   * this model. Set it whenever the vocabulary differs from the default
+   * `["minimal","low","medium","high"]` — e.g. gpt-5.5 is
+   * `["low","medium","high","xhigh"]`, Mistral magistral is `["high"]`. The UI
+   * (reasoningControlFor) reads this directly instead of inferring the
+   * level set from `disabledEffort`, which is a wire-detail, not a
+   * capability marker (two unrelated vendors can share `disabledEffort:"none"`).
    */
-  | { kind: "openai-effort"; disabledEffort?: ReasoningEffort | "none" }
+  | {
+      kind: "openai-effort";
+      disabledEffort?: ReasoningEffort | "none";
+      supportedEfforts?: ReasoningEffort[];
+    }
   /** Anthropic Claude 4.x ≤ 4.5 — `{thinking: {type: "enabled", budget_tokens: N}}`. */
   | { kind: "anthropic-budget"; minBudgetTokens: number }
   /** Anthropic Claude 4.6+ — no opt-in, thinking is adaptive. Sending `type: "enabled"` 400s. */

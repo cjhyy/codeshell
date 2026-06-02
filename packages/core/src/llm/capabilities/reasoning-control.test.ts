@@ -21,6 +21,20 @@ describe("reasoningControlFor", () => {
     }
   });
 
+  test("magistral (openai-effort, disabledEffort none too) → ONLY [high], not the gpt-5.5 set", () => {
+    // Regression: magistral shares disabledEffort:"none" with gpt-5.5, but only
+    // accepts reasoning_effort high|none. Inferring the level set from
+    // disabledEffort misrendered it as low..xhigh; supportedEfforts fixes it.
+    const c = reasoningControlFor("mistral", "magistral-medium-2509");
+    expect(c.kind).toBe("effort");
+    if (c.kind === "effort") {
+      expect(c.options).toEqual(["high"]);
+      expect(c.options).not.toContain("low");
+      expect(c.options).not.toContain("xhigh");
+      expect(c.default).toBe("high"); // no "medium" available → first offered
+    }
+  });
+
   test("deepseek-v4 (deepseek-thinking) → toggle control", () => {
     expect(reasoningControlFor("deepseek", "deepseek-v4").kind).toBe("toggle");
   });
