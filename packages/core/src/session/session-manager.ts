@@ -64,11 +64,22 @@ export function assertSafeSessionId(sessionId: unknown): asserts sessionId is st
   }
 }
 
+/**
+ * Resolve the `.code-shell` home dir. `CODE_SHELL_HOME` overrides the default
+ * `~/.code-shell` — mirrors Codex's `CODEX_HOME`. Tests set it to a temp dir
+ * (see bunfig.toml preload) so a `new Engine()` / `new SessionManager()` with
+ * no explicit storageDir doesn't pollute the user's real ~/.code-shell/sessions
+ * with throwaway test sessions (the rm-usage/test-model sidebar junk).
+ */
+export function codeShellHome(): string {
+  return process.env.CODE_SHELL_HOME || join(homedir(), ".code-shell");
+}
+
 export class SessionManager {
   private readonly sessionsDir: string;
 
   constructor(storageDir?: string) {
-    this.sessionsDir = storageDir ?? join(homedir(), ".code-shell", "sessions");
+    this.sessionsDir = storageDir ?? join(codeShellHome(), "sessions");
     mkdirSync(this.sessionsDir, { recursive: true });
   }
 

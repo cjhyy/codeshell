@@ -1,0 +1,5 @@
+[test]
+# Redirect .code-shell home to a temp dir for the whole test run so tests that
+# create Engine/SessionManager without an explicit storageDir don't pollute the
+# developer's real ~/.code-shell/sessions. See test-setup.ts.
+preload = ["./test-setup.ts"]
