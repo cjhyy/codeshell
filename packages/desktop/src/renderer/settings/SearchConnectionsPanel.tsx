@@ -64,6 +64,29 @@ const initialProviderState = (): ProviderState => ({
   dirty: false,
 });
 
+function isProbeResult(value: unknown): value is SearchProbeResult {
+  if (!value || typeof value !== "object") return false;
+  const rec = value as Record<string, unknown>;
+  return (
+    (rec.status === "ok" || rec.status === "error" || rec.status === "unconfigured") &&
+    typeof rec.lastProbedAt === "string"
+  );
+}
+
+function formatProbeTime(iso?: string): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
   const [defaultProvider, setDefaultProvider] = useState<Provider>("serper");
   const [byProvider, setByProvider] = useState<Record<Provider, ProviderState>>(() => ({
@@ -98,6 +121,7 @@ export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
         ...next[p.id],
         apiKey: typeof bag.apiKey === "string" ? bag.apiKey : "",
         baseUrl: typeof bag.baseUrl === "string" ? bag.baseUrl : "",
+        probe: isProbeResult(bag.lastProbe) ? bag.lastProbe : undefined,
       };
     }
 
@@ -123,12 +147,13 @@ export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
 
   const writeBack = useCallback(
     async (nextProviders: Record<Provider, ProviderState>, nextDefault: Provider) => {
-      const providersOut: Record<string, Record<string, string>> = {};
+      const providersOut: Record<string, Record<string, unknown>> = {};
       for (const p of PROVIDERS) {
         const st = nextProviders[p.id];
-        const bag: Record<string, string> = {};
+        const bag: Record<string, unknown> = {};
         if (st.apiKey) bag.apiKey = st.apiKey;
         if (st.baseUrl) bag.baseUrl = st.baseUrl;
+        if (st.probe) bag.lastProbe = st.probe;
         if (Object.keys(bag).length > 0) providersOut[p.id] = bag;
       }
       const active = nextProviders[nextDefault];
@@ -189,7 +214,12 @@ export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
     };
     try {
       const result = await window.codeshell.probeSearch(input);
-      updateProvider(id, { probe: result, testing: false });
+      const next = {
+        ...byProvider,
+        [id]: { ...byProvider[id], probe: result, testing: false },
+      };
+      setByProvider(next);
+      if (result.status === "ok") await writeBack(next, defaultProvider);
     } catch (e) {
       updateProvider(id, {
         probe: {
@@ -219,32 +249,45 @@ export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
   return (
     <section className="settings-section">
       <header className="connections-head">
-        <h3 className="settings-section-title">搜索连接</h3>
+        <div>
+          <h3 className="settings-section-title">连接</h3>
+          <span className="connections-kicker">WebSearch</span>
+        </div>
         <span className="connections-hint">
-          这些连接让代理能调用 WebSearch 工具。默认 provider 决定调用哪一个。
+          当前连接组用于 WebSearch；以后新增浏览器、仓库、外部数据源时会按工具分组放在这里。
         </span>
       </header>
 
-      <div className="connections-card-list">
-        {PROVIDERS.map((meta) => {
-          const st = byProvider[meta.id];
-          const isDefault = defaultProvider === meta.id;
-          const isConfigured = meta.needsKey ? !!st.apiKey : !!st.baseUrl;
-          return (
-            <ConnectionCard
-              key={meta.id}
-              meta={meta}
-              state={st}
-              isDefault={isDefault}
-              isConfigured={isConfigured}
-              onChange={(patch) => updateProvider(meta.id, { ...patch, dirty: true })}
-              onSave={() => void saveProvider(meta.id)}
-              onTest={() => void testProvider(meta.id)}
-              onClear={() => void clearProvider(meta.id)}
-              onSetDefault={() => void setDefault(meta.id)}
-            />
-          );
-        })}
+      <div className="connections-group">
+        <div className="connections-group-head">
+          <div>
+            <strong>WebSearch providers</strong>
+            <span>默认 provider 决定代理调用 WebSearch 时使用哪一个。</span>
+          </div>
+          <span className="connections-group-count">{PROVIDERS.length} providers</span>
+        </div>
+        <div className="connections-card-grid">
+          {PROVIDERS.map((meta) => {
+            const st = byProvider[meta.id];
+            const isDefault = defaultProvider === meta.id;
+            const isConfigured = meta.needsKey ? !!st.apiKey : !!st.baseUrl;
+            return (
+              <ConnectionCard
+                key={meta.id}
+                meta={meta}
+                state={st}
+                isDefault={isDefault}
+                isConfigured={isConfigured}
+                onConfigChange={(patch) => updateProvider(meta.id, { ...patch, dirty: true, probe: undefined })}
+                onUiChange={(patch) => updateProvider(meta.id, patch)}
+                onSave={() => void saveProvider(meta.id)}
+                onTest={() => void testProvider(meta.id)}
+                onClear={() => void clearProvider(meta.id)}
+                onSetDefault={() => void setDefault(meta.id)}
+              />
+            );
+          })}
+        </div>
       </div>
     </section>
   );
@@ -255,7 +298,8 @@ interface CardProps {
   state: ProviderState;
   isDefault: boolean;
   isConfigured: boolean;
-  onChange: (patch: Partial<ProviderState>) => void;
+  onConfigChange: (patch: Partial<ProviderState>) => void;
+  onUiChange: (patch: Partial<ProviderState>) => void;
   onSave: () => void;
   onTest: () => void;
   onClear: () => void;
@@ -267,7 +311,8 @@ function ConnectionCard({
   state,
   isDefault,
   isConfigured,
-  onChange,
+  onConfigChange,
+  onUiChange,
   onSave,
   onTest,
   onClear,
@@ -312,13 +357,13 @@ function ConnectionCard({
               <input
                 type={state.showKey ? "text" : "password"}
                 value={state.apiKey}
-                onChange={(e) => onChange({ apiKey: e.target.value.trim() })}
+                onChange={(e) => onConfigChange({ apiKey: e.target.value.trim() })}
                 placeholder="粘贴 API key"
               />
               <button
                 className="conn-secret-toggle"
                 type="button"
-                onClick={() => onChange({ showKey: !state.showKey })}
+                onClick={() => onUiChange({ showKey: !state.showKey })}
               >
                 {state.showKey ? "隐藏" : "显示"}
               </button>
@@ -333,7 +378,7 @@ function ConnectionCard({
             <span>Base URL</span>
             <input
               value={state.baseUrl}
-              onChange={(e) => onChange({ baseUrl: e.target.value.trim() })}
+              onChange={(e) => onConfigChange({ baseUrl: e.target.value.trim() })}
               placeholder="https://searxng.example.com"
             />
             <span className="conn-field-hint">自部署 SearXNG 实例地址。</span>
@@ -343,7 +388,12 @@ function ConnectionCard({
 
       {state.probe?.status === "ok" && state.probe.sampleTitles?.length && (
         <div className="conn-probe-ok">
-          <div className="conn-probe-title">测试返回 {state.probe.sampleTitles.length} 条结果：</div>
+          <div className="conn-probe-title">
+            测试成功
+            {formatProbeTime(state.probe.lastProbedAt) && (
+              <span> · {formatProbeTime(state.probe.lastProbedAt)}</span>
+            )}
+          </div>
           <ul>
             {state.probe.sampleTitles.map((t) => (
               <li key={t}>{t}</li>

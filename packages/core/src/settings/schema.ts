@@ -293,6 +293,15 @@ export const SettingsSchema = z
             z.object({
               apiKey: z.string().optional(),
               baseUrl: z.string().optional(),
+              lastProbe: z
+                .object({
+                  status: z.enum(["ok", "error", "unconfigured"]),
+                  sampleTitles: z.array(z.string()).optional(),
+                  errorMessage: z.string().optional(),
+                  errorDetail: z.string().optional(),
+                  lastProbedAt: z.string(),
+                })
+                .optional(),
             }),
           )
           .optional(),

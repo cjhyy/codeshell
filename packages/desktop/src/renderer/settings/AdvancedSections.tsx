@@ -462,6 +462,7 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
   const [writableRoots, setWritableRoots] = useState("");
   const [deniedReads, setDeniedReads] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
@@ -489,14 +490,32 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
         },
         cwd,
       );
+      setSavedAt(Date.now());
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">环境</h3>
+    <section className="settings-section env-settings-section">
+      <div className="env-settings-head">
+        <div>
+          <h3 className="settings-section-title">运行沙箱</h3>
+          <p className="settings-section-help">
+            保存到 {scope === "project" ? "当前项目 .code-shell/settings.json" : "~/.code-shell/settings.json"} 的 <code>sandbox</code> 字段；新对话、自动化和 Bash 工具启动时会读取它。
+          </p>
+        </div>
+        <span className="env-settings-scope">{scope === "project" ? "Project" : "User"}</span>
+      </div>
+
+      <div className="env-settings-note">
+        <strong>Codex 风格</strong>
+        <span>
+          Codex 把项目 trust 写在 <code>[projects."path"]</code>，把 MCP 环境变量写在 <code>[mcp_servers.name.env]</code>。
+          Code Shell 也按作用域保存：这里控制 shell sandbox；MCP 的 KEY=VALUE 环境变量在 MCP 服务器卡片里单独保存并只注入对应 server。
+        </span>
+      </div>
+
       <div className="settings-form-grid">
         <label className="settings-field">
           <span>Sandbox</span>
@@ -525,15 +544,24 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
         <label className="settings-field">
           <span>Writable roots</span>
           <textarea value={writableRoots} onChange={(e) => setWritableRoots(e.target.value)} />
+          <span className="conn-field-hint">每行一个路径，支持 ${"{workspace}"}、~。这些路径会作为命令可写范围。</span>
         </label>
         <label className="settings-field">
           <span>Denied reads</span>
           <textarea value={deniedReads} onChange={(e) => setDeniedReads(e.target.value)} />
+          <span className="conn-field-hint">每行一个路径，命令读取这些路径会被沙箱拦截。</span>
         </label>
       </div>
-      <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
-        {saving ? "保存中..." : "保存环境"}
-      </Button>
+      <div className="env-settings-actions">
+        <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
+          {saving ? "保存中..." : "保存沙箱"}
+        </Button>
+        {savedAt && (
+          <span className="env-settings-saved">
+            已保存 · {new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
+      </div>
     </section>
   );
 }

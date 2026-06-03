@@ -2,31 +2,73 @@
 
 .connections-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  margin-bottom: var(--sp-3);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
 }
 .connections-hint {
   font-size: var(--fz-sm);
   color: var(--fg-muted);
+  max-width: 620px;
+  line-height: 1.5;
 }
 
-.connections-card-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
+.connections-kicker {
+  display: inline-flex;
+  margin-top: 3px;
+  font-size: var(--fz-xs);
+  color: var(--fg-muted);
 }
 
-.conn-card {
+.connections-group {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-elevated);
-  padding: var(--sp-4);
+  overflow: hidden;
+}
+
+.connections-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.connections-group-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.connections-group-head strong {
+  color: var(--fg-primary);
+  font-size: var(--fz-md);
+}
+.connections-group-head span,
+.connections-group-count {
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+}
+
+.connections-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1px;
+  background: var(--border-subtle);
+}
+
+.conn-card {
+  border: 0;
+  border-radius: 0;
+  background: var(--bg-elevated);
+  padding: var(--sp-3);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+  min-width: 0;
 }
-.conn-card.is-default { border-color: var(--accent); }
+.conn-card.is-default { box-shadow: inset 3px 0 0 var(--accent); }
 
 .conn-card-head {
   display: flex;
@@ -38,13 +80,15 @@
   display: flex;
   align-items: center;
   gap: var(--sp-2);
+  flex-wrap: wrap;
   flex: 1;
   min-width: 0;
 }
 .conn-card-title strong {
   color: var(--fg-primary);
-  font-size: var(--fz-lg);
-  white-space: nowrap;
+  font-size: var(--fz-md);
+  line-height: 1.3;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -84,9 +128,9 @@
 
 .conn-card-desc {
   margin: 0;
-  font-size: var(--fz-sm);
+  font-size: var(--fz-xs);
   color: var(--fg-secondary);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .conn-secret-row {
@@ -112,7 +156,7 @@
 }
 
 .conn-probe-ok {
-  padding: var(--sp-2) var(--sp-3);
+  padding: var(--sp-2);
   background: rgba(47, 138, 77, 0.06);
   border: 1px solid rgba(47, 138, 77, 0.25);
   border-radius: var(--radius-sm);
@@ -123,6 +167,10 @@
   color: var(--status-ok);
   font-weight: 500;
   margin-bottom: 4px;
+}
+.conn-probe-title span {
+  color: var(--fg-muted);
+  font-weight: 400;
 }
 .conn-probe-ok ul {
   margin: 0;
@@ -142,6 +190,7 @@
   display: flex;
   gap: var(--sp-2);
   align-items: center;
+  flex-wrap: wrap;
   margin-top: var(--sp-1);
 }
 .conn-clear-btn {
@@ -156,3 +205,62 @@
   text-underline-offset: 2px;
 }
 .conn-clear-btn:hover { color: var(--status-err); }
+
+.env-settings-section code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+}
+
+.env-settings-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.env-settings-scope {
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+  background: var(--bg-elevated);
+}
+
+.env-settings-note {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  padding: var(--sp-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--fg-secondary);
+  font-size: var(--fz-sm);
+  line-height: 1.55;
+}
+.env-settings-note strong {
+  color: var(--fg-primary);
+  white-space: nowrap;
+}
+
+.env-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.env-settings-saved {
+  color: var(--status-ok);
+  font-size: var(--fz-sm);
+}
+
+@media (max-width: 760px) {
+  .connections-head,
+  .connections-group-head,
+  .env-settings-head,
+  .env-settings-note {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
