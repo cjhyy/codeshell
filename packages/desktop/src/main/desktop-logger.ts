@@ -34,10 +34,38 @@
  *   tail -f ~/.code-shell/logs/desktop/desktop-$(date +%F).log
  */
 
-import { appendFileSync, mkdirSync } from "node:fs";
+import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { redactSecrets } from "./redact-secrets.js";
+
+/**
+ * Persistent append streams, keyed by file path. dlog() runs in the Electron
+ * main process on the hot path (every worker→renderer JSON-RPC line, i.e. per
+ * streaming text chunk). The previous appendFileSync() did a blocking open +
+ * write + close on the event loop for every line, freezing IPC/rendering under
+ * load. A long-lived createWriteStream buffers writes and flushes off the
+ * critical path. Streams are cached and reused; the day-stamped file rolls over
+ * to a new stream at midnight (the old one is closed).
+ */
+const _streams = new Map<string, WriteStream>();
+
+function streamFor(filePath: string): WriteStream | null {
+  let s = _streams.get(filePath);
+  if (s) return s;
+  try {
+    s = createWriteStream(filePath, { flags: "a" });
+    // Never crash the desktop because a log stream errored (disk full,
+    // permission, etc.). Drop the broken stream so the next call can retry.
+    s.on("error", () => {
+      _streams.delete(filePath);
+    });
+    _streams.set(filePath, s);
+    return s;
+  } catch {
+    return null;
+  }
+}
 
 export type LogSource = "main" | "bridge" | "renderer" | "agent" | "mcp-probe";
 
@@ -61,13 +89,22 @@ function logPath(): string {
   // Recompute when the day changes — a long-running process must roll over to
   // a new file at midnight instead of writing to the start-day's file forever.
   if (_cachedStamp !== stamp || _cachedPath === null) {
+    // Day rolled over: close yesterday's stream so it isn't leaked, and let
+    // the new path lazily open a fresh stream on next write.
+    if (_cachedPath) {
+      const prev = _streams.get(_cachedPath);
+      if (prev) {
+        prev.end();
+        _streams.delete(_cachedPath);
+      }
+    }
     _cachedStamp = stamp;
     _cachedPath = logPathForDay(stamp);
     try {
       mkdirSync(dirname(_cachedPath), { recursive: true });
     } catch {
-      // best effort; if logging dir is unwritable the appendFileSync below
-      // will throw and be caught — we still continue running.
+      // best effort; if logging dir is unwritable the stream write below
+      // will error and be swallowed — we still continue running.
     }
   }
   return _cachedPath;
@@ -114,17 +151,13 @@ export function dlog(source: LogSource, msg: string, data?: Record<string, unkno
   const safeData = redactSecrets(data);
   const record = { t: new Date().toISOString(), src: source, msg, ...(safeData ?? {}) };
   const line = JSON.stringify(record) + "\n";
-  try {
-    appendFileSync(logPath(), line, "utf-8");
-  } catch {
-    // Never crash the desktop because logging failed. Swallow and move on.
-  }
+  // Buffered async writes via long-lived append streams — no blocking
+  // open/write/close per call. write() returning false (backpressure) is fine;
+  // Node buffers internally and we never await. The stream's 'error' handler
+  // (in streamFor) swallows failures so logging can never crash the desktop.
+  streamFor(logPath())?.write(line);
   const sid = extractSid(data);
   if (sid) {
-    try {
-      appendFileSync(sessionPath(sid), line, "utf-8");
-    } catch {
-      /* same swallow rationale as above */
-    }
+    streamFor(sessionPath(sid))?.write(line);
   }
 }

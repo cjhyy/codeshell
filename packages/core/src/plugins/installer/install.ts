@@ -52,7 +52,7 @@ export async function installPluginFromPath(
         JSON.parse(await readFile(join(sourceDir, ".codex-plugin", "plugin.json"), "utf-8")),
       );
       // skills (verbatim copy)
-      copyCodexSkills(sourceDir, tmpDir);
+      await copyCodexSkills(sourceDir, tmpDir);
       // agents (TOML → MD)
       await convertAgentsInto(sourceDir, tmpDir, name);
       // mcp → mcp-servers.json keyed <plugin>:<server>

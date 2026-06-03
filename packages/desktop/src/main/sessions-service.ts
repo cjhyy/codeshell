@@ -102,24 +102,31 @@ export interface ListDiskSessionsResult {
  *   - null / ""   → top-level → show
  *   - non-empty   → sub-agent → filter out
  */
-export function listDiskSessions(
+export async function listDiskSessions(
   opts: { limit: number; cursor?: string },
   baseDir: string = SESSIONS_DIR,
-): ListDiskSessionsResult {
+): Promise<ListDiskSessionsResult> {
+  // Async fs throughout: this is an IPC handler on the Electron main thread
+  // (sessions:listDisk). The previous synchronous statSync/readFileSync loops
+  // never yielded the event loop and froze the UI while enumerating sessions.
   let entries: fsSync.Dirent[];
   try {
-    entries = fsSync.readdirSync(baseDir, { withFileTypes: true });
+    entries = await fs.readdir(baseDir, { withFileTypes: true });
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return { sessions: [], nextCursor: null };
     throw e;
   }
-  const dirs: Array<{ id: string; mtime: number }> = [];
-  for (const e of entries) {
-    if (!e.isDirectory() || !SAFE_ID.test(e.name)) continue;
-    try {
-      dirs.push({ id: e.name, mtime: fsSync.statSync(path.join(baseDir, e.name)).mtimeMs });
-    } catch { /* skip unreadable */ }
-  }
+  const candidates = entries.filter((e) => e.isDirectory() && SAFE_ID.test(e.name));
+  const stats = await Promise.all(
+    candidates.map(async (e) => {
+      try {
+        return { id: e.name, mtime: (await fs.stat(path.join(baseDir, e.name))).mtimeMs };
+      } catch {
+        return null; // skip unreadable
+      }
+    }),
+  );
+  const dirs = stats.filter((d): d is { id: string; mtime: number } => d !== null);
   dirs.sort((a, b) => b.mtime - a.mtime);
 
   const start = opts.cursor ? Number(opts.cursor) : 0;
@@ -129,7 +136,7 @@ export function listDiskSessions(
     const { id, mtime } = dirs[i]!;
     let state: Record<string, unknown>;
     try {
-      state = JSON.parse(fsSync.readFileSync(path.join(baseDir, id, "state.json"), "utf8"));
+      state = JSON.parse(await fs.readFile(path.join(baseDir, id, "state.json"), "utf8"));
     } catch { continue; }
     if (!("parentSessionId" in state)) continue;          // legacy → skip
     if (state.parentSessionId) continue;                  // sub-agent (non-empty) → filter

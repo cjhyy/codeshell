@@ -15,21 +15,21 @@ describe("copyCodexSkills", () => {
     rmSync(dest, { recursive: true, force: true });
   });
 
-  test("copies skills/<name>/SKILL.md into dest", () => {
+  test("copies skills/<name>/SKILL.md into dest", async () => {
     mkdirSync(join(src, "skills", "foo"), { recursive: true });
     writeFileSync(join(src, "skills", "foo", "SKILL.md"), "---\nname: foo\ndescription: d\n---\nbody");
-    copyCodexSkills(src, dest);
+    await copyCodexSkills(src, dest);
     expect(existsSync(join(dest, "skills", "foo", "SKILL.md"))).toBe(true);
   });
 
-  test("no-op when source has no skills dir", () => {
-    copyCodexSkills(src, dest);
+  test("no-op when source has no skills dir", async () => {
+    await copyCodexSkills(src, dest);
     expect(existsSync(join(dest, "skills"))).toBe(false);
   });
 
-  test("throws when a SKILL.md lacks frontmatter", () => {
+  test("throws when a SKILL.md lacks frontmatter", async () => {
     mkdirSync(join(src, "skills", "bad"), { recursive: true });
     writeFileSync(join(src, "skills", "bad", "SKILL.md"), "no frontmatter here");
-    expect(() => copyCodexSkills(src, dest)).toThrow(/frontmatter/);
+    await expect(copyCodexSkills(src, dest)).rejects.toThrow(/frontmatter/);
   });
 });
