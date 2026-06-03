@@ -71,6 +71,10 @@ export interface AgentMessage {
   kind: "agent";
   id: string; // === agentId
   name?: string;
+  /** Resolved role the agent was dispatched as (e.g. "general-purpose",
+   *  "explorer"). From agent_start.agentType. Undefined for an ephemeral
+   *  agent (no role registry). Shown as a small badge in the card header. */
+  agentType?: string;
   description: string;
   done: boolean;
   text?: string;
@@ -479,6 +483,7 @@ export function applyStreamEvent(
             kind: "agent",
             id: event.agentId,
             name: event.name,
+            agentType: event.agentType,
             description: event.description,
             done: false,
             startedAt,

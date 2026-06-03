@@ -285,8 +285,8 @@ export type StreamEvent =
   | { type: "tombstone"; messageId: string }
   | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }
   | { type: "thinking_delta"; text: string; agentId?: string }
-  | { type: "agent_start"; agentId: string; name?: string; description: string }
-  | { type: "agent_end"; agentId: string; name?: string; description: string; text?: string; error?: string }
+  | { type: "agent_start"; agentId: string; name?: string; description: string; agentType?: string }
+  | { type: "agent_end"; agentId: string; name?: string; description: string; text?: string; error?: string; agentType?: string }
   | { type: "tool_summary"; summary: string }
   | {
       type: "context_compact";

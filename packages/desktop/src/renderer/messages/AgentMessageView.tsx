@@ -22,6 +22,11 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
         >
           <StatusDot status={status} />
           <span className="font-medium">{message.name ?? "agent"}</span>
+          {message.agentType && (
+            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {message.agentType}
+            </span>
+          )}
           <span className="min-w-0 flex-1 truncate text-muted-foreground">{message.description}</span>
           {message.toolCount > 0 && (
             <span className="shrink-0 text-xs text-muted-foreground">
