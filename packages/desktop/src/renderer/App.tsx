@@ -40,6 +40,7 @@ import { selectReplayEvents } from "./snapshotReplay";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
+  RunSummary,
   StreamEventEnvelope,
 } from "../preload/types";
 import {
@@ -55,7 +56,7 @@ import { foldTranscript } from "./automation/foldTranscript";
 import { chooseHydrateBase } from "./automation/hydrateOrder";
 import { isCaseInsensitivePlatform } from "./automation/pathMatch";
 import { placeLiveAutomationSession } from "./automation/liveSession";
-import { planDiskRebuild } from "./automation/rebuildFromDisk";
+import { planDiskRebuild, type DiskSessionMeta } from "./automation/rebuildFromDisk";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
@@ -512,6 +513,125 @@ function App() {
     // Make sure we're looking at chat, not settings, when the user
     // explicitly picks a session.
     setView((v) => ({ ...v, viewMode: "chat" }));
+  };
+
+  const findSessionByEngineId = (engineSessionId: string): { repoId: string | null; session: SessionSummary } | null => {
+    const reposNow = loadRepos();
+    for (const repoId of [null as string | null, ...reposNow.map((r) => r.id)]) {
+      const session = loadSessionIndex(repoId).sessions.find(
+        (s) => s.engineSessionId === engineSessionId || s.id === engineSessionId,
+      );
+      if (session) return { repoId, session };
+    }
+    return null;
+  };
+
+  const handleOpenAutomationRunSession = async (run: RunSummary): Promise<void> => {
+    if (!run.sessionId) {
+      setRunsInitialRunId(run.runId);
+      setViewMode("runs");
+      return;
+    }
+
+    const existing = findSessionByEngineId(run.sessionId);
+    if (existing) {
+      handleSelectSession(existing.repoId, existing.session.id);
+      return;
+    }
+
+    const reposNow = loadRepos();
+    const touchedRepoIds = new Set<string | null>();
+    let reposChanged = false;
+    await importAutomationRuns(
+      [{
+        runId: run.runId,
+        sessionId: run.sessionId,
+        cwd: run.cwd,
+        objective: run.objective,
+        status: run.status,
+        finishedAt: run.finishedAt,
+        createdAt: run.createdAt,
+        source: "automation",
+        cronJobName: run.cronJobName,
+      }],
+      reposNow,
+      {
+        caseInsensitive: isCaseInsensitivePlatform(),
+        existingEngineSessionIds: new Set(),
+        cap: 1,
+        fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
+        createRepoForCwd: (cwd) => {
+          const id = makeRepoId();
+          const name = cwd.split("/").filter(Boolean).pop() || cwd;
+          const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
+          reposNow.push(repo);
+          saveRepos(reposNow);
+          reposChanged = true;
+          return id;
+        },
+        writeImported: (repoId, summary, state) => {
+          saveTranscript(repoId, summary.id, state);
+          upsertImportedSession(repoId, summary);
+          touchedRepoIds.add(repoId);
+        },
+      },
+    );
+
+    if (reposChanged) setRepos(reposNow.slice());
+    if (touchedRepoIds.size > 0) {
+      setSessionIndices((prev) => {
+        const next = { ...prev };
+        for (const rid of touchedRepoIds) next[repoKeyOf(rid)] = loadSessionIndex(rid);
+        return next;
+      });
+    }
+
+    const imported = findSessionByEngineId(run.sessionId);
+    if (imported) handleSelectSession(imported.repoId, imported.session.id);
+    else {
+      setRunsInitialRunId(run.runId);
+      setViewMode("runs");
+    }
+  };
+
+  const handleOpenAutomationDiskSession = async (session: DiskSessionMeta): Promise<void> => {
+    const existing = findSessionByEngineId(session.engineSessionId);
+    if (existing) {
+      handleSelectSession(existing.repoId, existing.session.id);
+      return;
+    }
+
+    const reposNow = loadRepos();
+    let reposChanged = false;
+    const [placement] = planDiskRebuild([session], reposNow, {
+      caseInsensitive: isCaseInsensitivePlatform(),
+      createRepoForCwd: (cwd) => {
+        const id = makeRepoId();
+        const name = cwd.split("/").filter(Boolean).pop() || cwd;
+        const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
+        reposNow.push(repo);
+        saveRepos(reposNow);
+        reposChanged = true;
+        return id;
+      },
+    });
+    if (!placement) return;
+
+    let state: MessagesReducerState;
+    try {
+      state = foldTranscript(await window.codeshell.getSessionTranscript(session.engineSessionId));
+    } catch {
+      state = foldTranscript([]);
+    }
+    saveTranscript(placement.repoId, placement.summary.id, state);
+    const nextIdx = upsertImportedSession(placement.repoId, placement.summary);
+
+    if (reposChanged) setRepos(reposNow.slice());
+    setSessionIndices((prev) => ({
+      ...prev,
+      [repoKeyOf(placement.repoId)]: nextIdx,
+    }));
+    handleSelectSession(placement.repoId, placement.summary.id);
   };
 
   /**
@@ -1522,6 +1642,8 @@ function App() {
           <AutomationView
             onCreateConversational={startConversationalAutomation}
             onViewRun={(runId) => { setRunsInitialRunId(runId); setViewMode("runs"); }}
+            onOpenRunSession={(run) => { void handleOpenAutomationRunSession(run); }}
+            onOpenDiskSession={(session) => { void handleOpenAutomationDiskSession(session); }}
             onOpenSession={handleSelectSession}
             sessionIndices={sessionIndices}
           />

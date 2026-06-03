@@ -21,6 +21,7 @@ import {
   WEEKDAY_LABELS,
   type Schedule,
 } from "./scheduleModel";
+import type { DiskSessionMeta } from "./rebuildFromDisk";
 
 const PERMISSION_OPTIONS = [
   { value: "read-only", label: "只读" },
@@ -127,12 +128,15 @@ type AutomationSessionLink = {
   repoId: string | null;
   session: SessionSummary;
   run?: RunSummary;
+  disk?: DiskSessionMeta;
+  needsImport?: boolean;
 };
 
 function automationSessionLinks(
   job: AutomationSummary,
   sessionIndices: Record<string, SessionIndex>,
   runs: RunSummary[],
+  diskSessions: DiskSessionMeta[],
 ): AutomationSessionLink[] {
   const runsById = new Map(runs.map((r) => [r.runId, r]));
   const runsBySessionId = new Map(
@@ -151,6 +155,8 @@ function automationSessionLinks(
   );
 
   const out: AutomationSessionLink[] = [];
+  const seenRunIds = new Set<string>();
+  const seenSessionIds = new Set<string>();
   for (const [repoKey, idx] of Object.entries(sessionIndices)) {
     const repoId = repoKey === NO_REPO_KEY ? null : repoKey;
     for (const session of idx.sessions) {
@@ -161,8 +167,69 @@ function automationSessionLinks(
         (session.runId ? matchingRunIds.has(session.runId) : false) ||
         run?.cronJobName === job.name ||
         run?.runId === job.lastRunId;
-      if (matches) out.push({ repoId, session, run });
+      if (matches) {
+        out.push({ repoId, session, run });
+        if (session.runId) seenRunIds.add(session.runId);
+        if (session.engineSessionId) seenSessionIds.add(session.engineSessionId);
+        seenSessionIds.add(session.id);
+      }
     }
+  }
+
+  for (const run of runs) {
+    if (
+      run.source !== "automation" ||
+      !run.sessionId ||
+      seenRunIds.has(run.runId) ||
+      seenSessionIds.has(run.sessionId) ||
+      (run.cronJobName !== job.name && run.runId !== job.lastRunId)
+    ) {
+      continue;
+    }
+    out.push({
+      repoId: null,
+      run,
+      needsImport: true,
+      session: {
+        id: run.sessionId,
+        title: (run.cronJobName || run.objective || job.name || "automation").slice(0, 60),
+        createdAt: run.createdAt,
+        updatedAt: run.updatedAt,
+        engineSessionId: run.sessionId,
+        source: "automation",
+        runId: run.runId,
+        runStatus: run.status,
+      },
+    });
+  }
+
+  const promptNeedle = job.prompt.trim().slice(0, 36);
+  for (const disk of diskSessions) {
+    if (
+      disk.origin !== "automation" ||
+      seenSessionIds.has(disk.engineSessionId) ||
+      (job.cwd && disk.cwd !== job.cwd)
+    ) {
+      continue;
+    }
+    const promptMatches = promptNeedle.length > 0 && disk.title.includes(promptNeedle);
+    const timeMatches =
+      job.lastRun != null &&
+      Math.abs(disk.updatedAt - job.lastRun) < 24 * 60 * 60 * 1000;
+    if (!promptMatches && !timeMatches) continue;
+    out.push({
+      repoId: null,
+      disk,
+      needsImport: true,
+      session: {
+        id: disk.id,
+        title: (disk.title || job.name || "automation").slice(0, 60),
+        createdAt: disk.updatedAt,
+        updatedAt: disk.updatedAt,
+        engineSessionId: disk.engineSessionId,
+        source: "automation",
+      },
+    });
   }
 
   return out.sort((a, b) => {
@@ -175,16 +242,21 @@ function automationSessionLinks(
 export function AutomationView({
   onCreateConversational,
   onViewRun,
+  onOpenRunSession,
+  onOpenDiskSession,
   onOpenSession,
   sessionIndices,
 }: {
   onCreateConversational: () => void;
   onViewRun: (runId: string) => void;
+  onOpenRunSession: (run: RunSummary) => void;
+  onOpenDiskSession: (session: DiskSessionMeta) => void;
   onOpenSession: (repoId: string | null, sessionId: string) => void;
   sessionIndices: Record<string, SessionIndex>;
 }) {
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
+  const [diskSessions, setDiskSessions] = useState<DiskSessionMeta[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Per-action in-flight flags, keyed by "<action>:<jobId>". */
@@ -192,12 +264,14 @@ export function AutomationView({
 
   const refresh = async () => {
     try {
-      const [list, runList] = await Promise.all([
+      const [list, runList, diskPage] = await Promise.all([
         window.codeshell.listAutomations(),
         window.codeshell.listRuns(),
+        window.codeshell.listDiskSessions({ limit: 100 }),
       ]);
       setJobs(list);
       setRuns(runList);
+      setDiskSessions(diskPage.sessions);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -294,7 +368,7 @@ export function AutomationView({
             {detail ? (
               <AutomationDetail
                 job={detail}
-                sessions={automationSessionLinks(detail, sessionIndices, runs)}
+                sessions={automationSessionLinks(detail, sessionIndices, runs, diskSessions)}
                 onToggleEnabled={(next) =>
                   act("toggle:" + detail.id, () =>
                     next
@@ -310,6 +384,8 @@ export function AutomationView({
                 toggleBusy={!!pending["toggle:" + detail.id]}
                 saveBusy={!!pending["save:" + detail.id]}
                 onViewRun={onViewRun}
+                onOpenRunSession={onOpenRunSession}
+                onOpenDiskSession={onOpenDiskSession}
                 onOpenSession={onOpenSession}
               />
             ) : (
@@ -349,6 +425,8 @@ function AutomationDetail(props: {
   toggleBusy: boolean;
   saveBusy: boolean;
   onViewRun: (runId: string) => void;
+  onOpenRunSession: (run: RunSummary) => void;
+  onOpenDiskSession: (session: DiskSessionMeta) => void;
   onOpenSession: (repoId: string | null, sessionId: string) => void;
 }) {
   const { job } = props;
@@ -658,14 +736,19 @@ function AutomationDetail(props: {
           <div className="automation-history-empty">这个任务还没有可跳转的历史 session。</div>
         ) : (
           <ul>
-            {props.sessions.map(({ repoId, session, run }) => {
+            {props.sessions.map(({ repoId, session, run, disk }) => {
+              const needsImport = !!run && !props.sessions.find((x) => !x.needsImport && x.session.engineSessionId === run.sessionId);
               const status = run?.status ?? session.runStatus;
               const when = run?.updatedAt ?? session.updatedAt;
               return (
                 <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`}>
                   <button
                     className="automation-history-row"
-                    onClick={() => props.onOpenSession(repoId, session.id)}
+                    onClick={() => {
+                      if (needsImport && run) props.onOpenRunSession(run);
+                      else if (disk) props.onOpenDiskSession(disk);
+                      else props.onOpenSession(repoId, session.id);
+                    }}
                   >
                     <Clock3 size={14} />
                     <span className="automation-history-main">
