@@ -259,6 +259,21 @@ export class TurnLoop {
     try {
     while (this.turnCount < this.config.maxTurns) {
       this.turnCount++;
+
+      // Abort fast-path: bail at the loop TOP before doing any per-turn work.
+      // Without this, an aborted child (parent abort, or the 30min per-call
+      // registry timeout) would run a full contextManager.manageAsync (itself
+      // an LLM summarization call) + model call + tool batch before the
+      // post-model check at the bottom of the loop noticed — exactly the
+      // sub-agent leak where a synchronous child kept burning turns/tokens for
+      // minutes after the parent Agent call already returned. The model call's
+      // own signal check only fires AFTER the call resolves; this guards the
+      // boundary between turns. (Mirrors Claude Code's query.ts, where the
+      // aborted check short-circuits before re-entering the streaming loop.)
+      if (this.config.signal?.aborted) {
+        return { text: finalText, reason: "aborted_streaming", messages };
+      }
+
       const state = initialTurnState(this.turnCount);
 
       // Per-turn correlation ID. Every log written through `tlog` (or any
@@ -305,6 +320,14 @@ export class TurnLoop {
 
       // Pre-check: context management (async — may trigger LLM summarization)
       messages = await this.deps.contextManager.manageAsync(messages);
+
+      // manageAsync can itself issue an LLM summarization call lasting several
+      // seconds; if the signal aborted during it, stop here rather than
+      // proceeding into the (expensive) main model call. Belt to the loop-top
+      // brace: this catches an abort that landed *inside* context management.
+      if (this.config.signal?.aborted) {
+        return { text: finalText, reason: "aborted_streaming", messages };
+      }
       // No pre-llm ctx emit here: the messages-only estimate would be ~16k
       // smaller than the real prompt (system + tools not included), making
       // the bar visibly drop on every submit. Post-llm/post-tool-result

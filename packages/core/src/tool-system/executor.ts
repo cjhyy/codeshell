@@ -105,6 +105,22 @@ export class ToolExecutor {
     // Local `call` so we can rewrite args via pre_tool_use updatedInput
     // without mutating the caller's object.
     let call: ToolCall = callIn;
+    // 0. Abort fast-path: if the run signal is already aborted, return a
+    // synthetic error result WITHOUT running pre_tool_use hooks, the
+    // permission classifier, or the handler. registry.executeTool also checks
+    // abort, but only after this method has paid for all the per-tool
+    // hook/permission round-trips. For an aborted sub-agent whose turn queued
+    // a batch of tools (e.g. 10 Reads), this collapses the whole batch
+    // instantly instead of round-tripping each one — part of the sub-agent
+    // leak fix that keeps an aborted child from burning work post-abort.
+    if (this.signal?.aborted) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool aborted before execution: ${call.toolName}`,
+        isError: true,
+      };
+    }
     // 0. Capability override: a builtin the project marked `off` is HIDDEN from
     // the model's tool list (engine.ts applyBuiltinOverrideVisibility), but the
     // model can still NAME it (hallucination, or a remembered earlier turn). The
