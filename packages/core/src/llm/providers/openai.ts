@@ -648,10 +648,41 @@ export class OpenAIClient extends LLMClientBase {
 
           for (const block of msg.content) {
             if (block.type === "tool_result" && block.tool_use_id) {
-              toolResults.push({
-                tool_use_id: block.tool_use_id,
-                content: typeof block.content === "string" ? block.content : "",
-              });
+              if (typeof block.content === "string") {
+                toolResults.push({
+                  tool_use_id: block.tool_use_id,
+                  content: block.content,
+                });
+              } else if (Array.isArray(block.content)) {
+                // view_image returns an image inside tool_result.content. OpenAI's
+                // role:"tool" message can't carry an image, so split it: text stays
+                // in the tool message, image blocks are hoisted into imageParts and
+                // get emitted as their own user image_url message below.
+                const texts: string[] = [];
+                for (const inner of block.content) {
+                  if (inner.type === "text" && inner.text) {
+                    texts.push(inner.text);
+                  } else if (inner.type === "image" && inner.source) {
+                    const wireDetail = mapImageDetailToOpenAI(this.imageDetail);
+                    imageParts.push({
+                      type: "image_url",
+                      image_url: {
+                        url: `data:${inner.source.media_type};base64,${inner.source.data}`,
+                        ...(wireDetail ? { detail: wireDetail } : {}),
+                      },
+                    });
+                  }
+                }
+                toolResults.push({
+                  tool_use_id: block.tool_use_id,
+                  content: texts.length > 0 ? texts.join("\n") : "[image returned to user message]",
+                });
+              } else {
+                toolResults.push({
+                  tool_use_id: block.tool_use_id,
+                  content: "",
+                });
+              }
             } else if (block.type === "text" && block.text) {
               textParts.push(block.text);
             } else if (block.type === "image" && block.source) {
