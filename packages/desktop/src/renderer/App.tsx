@@ -488,7 +488,23 @@ function App() {
     return () => clearTimeout(handle);
   }, [transcripts, activeBucket, activeRepoId, activeSessionId]);
 
-  const state = transcripts[activeBucket] ?? INITIAL_STATE;
+  // Display state for the active bucket. Prefer the hydrated reducer state; if
+  // this bucket hasn't been hydrated yet (just switched to it), fall back to the
+  // SYNCHRONOUS localStorage projection so the existing conversation paints on
+  // the very first render — without this, the bucket reads INITIAL_STATE (empty)
+  // for the frame(s) before the async hydrate effect dispatches, flashing the
+  // "welcome / new chat" UI on every session switch. The async effect still
+  // upgrades the bucket in place (disk-authoritative merge + main-snapshot tail)
+  // exactly as before; this only covers the pre-hydration gap. Memoized on the
+  // bucket so we don't re-read localStorage on unrelated renders.
+  const fallbackState = useMemo<MessagesReducerState>(() => {
+    if (!activeSessionId) return INITIAL_STATE;
+    const local = loadTranscript(activeRepoId, activeSessionId);
+    return local.messages.length > 0 ? local : INITIAL_STATE;
+    // activeBucket captures (repoId, sessionId); recomputing per-bucket is the intent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBucket]);
+  const state = transcripts[activeBucket] ?? fallbackState;
 
   const setBusyForKey = (key: string, val: boolean): void => {
     setBusyKeys((prev) => {

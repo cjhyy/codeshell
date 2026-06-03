@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { buildStreamItems, reconcileStreamItems, type TurnProcessGroup } from "./streamGroups";
+import {
+  buildStreamItems,
+  processGroupLabel,
+  reconcileStreamItems,
+  type TurnProcessGroup,
+} from "./streamGroups";
 import type { AgentMessage, AssistantMessage, Message, ThinkingMessage, ToolMessage } from "../types";
 
 let idCounter = 0;
@@ -8,12 +13,15 @@ function freshId(prefix: string): string {
   return `${prefix}-${idCounter}`;
 }
 
-function user(text = "hi"): Message {
-  return { kind: "user", id: freshId("user"), text };
+function user(text = "hi", createdAt?: number): Message {
+  return { kind: "user", id: freshId("user"), text, createdAt };
 }
 
-function assistant(text: string): AssistantMessage {
-  return { kind: "assistant", id: freshId("assistant"), text, done: true };
+function assistant(
+  text: string,
+  times: { createdAt?: number; doneAt?: number } = {},
+): AssistantMessage {
+  return { kind: "assistant", id: freshId("assistant"), text, done: true, ...times };
 }
 
 function thinking(text = "thinking"): ThinkingMessage {
@@ -152,6 +160,49 @@ describe("buildStreamItems", () => {
     const items = buildStreamItems(messages);
     expect(items.map((it) => it.kind)).toEqual(["user", "assistant"]);
     expect(processGroups(items)).toHaveLength(0);
+  });
+});
+
+describe("turn process duration", () => {
+  // Bug: the process card showed "已处理 0s" whenever the turn's tools each
+  // completed near-instantly (e.g. a Skill that returns in 0ms, or fast local
+  // reads). The card measured ONLY the tool-execution wall span, so a turn that
+  // spent its real time inside the model produced 0s. The duration should
+  // reflect the WHOLE turn — from when the user sent / the assistant began to
+  // when the assistant finished (doneAt) — not just the tool span.
+
+  test("uses the user→assistant span, not the (near-zero) tool span", () => {
+    // Tools are instantaneous (startedAt === endedAt) but the model spent 8s.
+    const messages: Message[] = [
+      user("帮我查一下", 100_000),
+      tool("Skill", 105_000, 105_000), // 0ms tool
+      assistant("查完了。", { createdAt: 100_500, doneAt: 108_000 }),
+    ];
+    const groups = processGroups(buildStreamItems(messages));
+    expect(groups).toHaveLength(1);
+    // 108_000 − 100_000 = 8s, not 0s from the instant tool.
+    expect(groups[0]!.durationMs).toBe(8_000);
+    expect(processGroupLabel(groups[0]!.durationMs)).toBe("已处理 8s");
+  });
+
+  test("falls back to the tool span when no turn timestamps are present", () => {
+    // Replayed/historical transcripts carry no createdAt/doneAt — keep the
+    // existing tool-span behavior so we don't regress those.
+    const messages: Message[] = [user(), tool("Read", 1_000, 6_000)];
+    const groups = processGroups(buildStreamItems(messages));
+    expect(groups[0]!.durationMs).toBe(5_000);
+  });
+
+  test("takes the wider of turn span and tool span", () => {
+    // Defensive: if a tool somehow ran past the recorded doneAt, don't shrink
+    // the reported duration below the real tool wall time.
+    const messages: Message[] = [
+      user("go", 0),
+      tool("Bash", 1_000, 12_000), // 12s tool
+      assistant("done", { createdAt: 0, doneAt: 5_000 }), // only 5s turn stamp
+    ];
+    const groups = processGroups(buildStreamItems(messages));
+    expect(groups[0]!.durationMs).toBe(12_000);
   });
 });
 

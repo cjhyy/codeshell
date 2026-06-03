@@ -238,9 +238,19 @@ function freshId(prefix: string): string {
  * new state. Unknown event types are no-ops so future Engine event
  * additions don't break the renderer.
  */
+/**
+ * Clock for timestamping live messages. Returns epoch ms for live stream
+ * events; transcript replay passes a clock returning `undefined` so old
+ * sessions don't get stamped with the replay-time (which made hover footers
+ * show today's time, e.g. "16:30", on historical content). Absent timestamps
+ * render no footer — same as replayed user messages.
+ */
+export type MessageClock = () => number | undefined;
+
 export function applyStreamEvent(
   state: MessagesReducerState,
   event: StreamEvent,
+  now: MessageClock = Date.now,
 ): MessagesReducerState {
   switch (event.type) {
     case "session_started": {
@@ -265,7 +275,7 @@ export function applyStreamEvent(
         ...state,
         messages: [
           ...state.messages,
-          { kind: "assistant", id, text: "", done: false, createdAt: Date.now() },
+          { kind: "assistant", id, text: "", done: false, createdAt: now() },
         ],
         streamingAssistantId: id,
         streamingThinkingId: null,
@@ -434,7 +444,7 @@ export function applyStreamEvent(
         ...state,
         messages: state.messages.map((m) =>
           m.kind === "assistant" && m.id === state.streamingAssistantId
-            ? { ...m, done: true, doneAt: m.doneAt ?? Date.now() }
+            ? { ...m, done: true, doneAt: m.doneAt ?? now() }
             : m,
         ),
       };
@@ -586,7 +596,7 @@ export function applyStreamEvent(
       // 2. Finalize streaming pointers (existing behavior).
       const streamingAssistantId = state.streamingAssistantId;
       const streamingThinkingId = state.streamingThinkingId;
-      const turnDoneAt = Date.now();
+      const turnDoneAt = now();
       let finalized: Message[] = msgs.map((m) => {
         if (m.kind === "assistant" && m.id === streamingAssistantId) {
           return { ...m, done: true, doneAt: m.doneAt ?? turnDoneAt };

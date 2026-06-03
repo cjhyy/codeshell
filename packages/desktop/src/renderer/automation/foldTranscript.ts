@@ -6,12 +6,22 @@
 import { applyStreamEvent, appendUserMessage, INITIAL_STATE, type MessagesReducerState } from "../types";
 import type { FoldItem } from "../../preload/types";
 
+/**
+ * Replay clock — the persisted FoldItem stream carries no original timestamps,
+ * so we must NOT fabricate them from the current time. Returning undefined
+ * leaves createdAt/doneAt absent (footer renders nothing), instead of stamping
+ * the replay-time onto historical messages (which showed today's clock, e.g.
+ * "16:30", when hovering old sessions). Matches replayed user messages, which
+ * already omit createdAt.
+ */
+const noReplayClock = () => undefined;
+
 export function foldTranscript(items: FoldItem[]): MessagesReducerState {
   let state = INITIAL_STATE;
   for (const item of items) {
     state = item.kind === "user"
       ? appendUserMessage(state, item.text)
-      : applyStreamEvent(state, item.event);
+      : applyStreamEvent(state, item.event, noReplayClock);
   }
   return state;
 }

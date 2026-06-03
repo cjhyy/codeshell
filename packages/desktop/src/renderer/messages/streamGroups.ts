@@ -373,10 +373,18 @@ function foldTurnProcess(
     // the card until the next user message solidifies the summary.
     const innerEnd = isLive ? end : lastTool + 1;
     const innerItems = items.slice(start + 1, innerEnd);
+    // Closed-turn duration is the WHOLE turn's wall time, not just the tool
+    // span: a turn whose tools each return instantly (a 0ms Skill, fast local
+    // reads) still spent real time in the model. Prefer the user→assistant
+    // stamp span over the slice [start..end) (which includes the trailing
+    // summary that lives outside innerItems), and never report less than the
+    // actual tool span. Replayed transcripts carry no stamps → tool span only.
     out.push({
       kind: "turn_process_group",
       id: `process-${anchorId(innerItems[0]!)}`,
-      durationMs: isLive ? 0 : spanDurationMs(innerItems),
+      durationMs: isLive
+        ? 0
+        : turnSpanMs(items.slice(start, end)) || spanDurationMs(innerItems),
       firstToolStartedAt: firstToolStart(innerItems),
       isLive,
       toolCount: countToolsRecursive(innerItems),
@@ -442,6 +450,47 @@ function spanDurationMs(items: Array<Message | ToolGroup>): number {
   });
   if (!isFinite(earliestStart) || latestEnd <= 0) return 0;
   return Math.max(0, latestEnd - earliestStart);
+}
+
+/**
+ * Whole-turn wall time as a single span: from the turn's earliest start (user
+ * `createdAt`, assistant `createdAt`, or any tool `startedAt`) to its latest end
+ * (assistant `doneAt` or any tool `endedAt`). `turnItems` is the full turn slice
+ * [user .. next user), so it includes the trailing summary assistant that the
+ * process card renders outside itself — that's the message carrying `doneAt`.
+ *
+ * Folding tool timestamps into the SAME span (rather than maxing two
+ * independently-anchored spans) means a tool that outruns the recorded `doneAt`
+ * still widens the end without resetting the start. Returns 0 only when NO
+ * turn-level stamp exists (replayed/historical transcripts), letting the caller
+ * fall back to the pure tool span instead of inventing a duration.
+ */
+function turnSpanMs(turnItems: Array<Message | ToolGroup>): number {
+  let earliest = Infinity;
+  let latest = 0;
+  let sawStamp = false;
+  const note = (start?: number, end?: number): void => {
+    if (typeof start === "number") {
+      if (start < earliest) earliest = start;
+      sawStamp = true;
+    }
+    if (typeof end === "number" && end > latest) latest = end;
+  };
+  for (const it of turnItems) {
+    if (it.kind === "user") note(it.createdAt);
+    else if (it.kind === "assistant") note(it.createdAt, it.doneAt);
+    else if (it.kind === "tool") note(it.startedAt, it.endedAt ?? it.startedAt);
+    else if (it.kind === "tool_group") {
+      for (const inner of it.items) {
+        if (inner.kind === "tool") note(inner.startedAt, inner.endedAt ?? inner.startedAt);
+      }
+    }
+  }
+  // Require a turn-level stamp (user/assistant) to claim a turn span; a span
+  // built only from tools is exactly what spanDurationMs already provides, so
+  // returning 0 here routes those to the tool-span fallback unchanged.
+  if (!sawStamp || !isFinite(earliest) || latest <= 0) return 0;
+  return Math.max(0, latest - earliest);
 }
 
 // ── Header labels ─────────────────────────────────────────────────────
