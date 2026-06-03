@@ -43,6 +43,20 @@ describe("ChatSessionManager", () => {
     expect(m.get("A")).toBeUndefined();
   });
 
+  it("forEachSession iterates every live session once", () => {
+    const m = new ChatSessionManager({
+      runtime: fakeRuntime(),
+      engineFactory: () => ({ run: async () => ({}), permissionMode: "default", planMode: false } as any),
+      maxSessions: 4,
+      idleTtlMs: 60_000,
+    });
+    m.getOrCreate("A", {} as any);
+    m.getOrCreate("B", {} as any);
+    const seen: string[] = [];
+    m.forEachSession((s) => seen.push(s.id));
+    expect(seen.sort()).toEqual(["A", "B"]);
+  });
+
   it("evicts idle sessions older than idleTtlMs", async () => {
     const m = new ChatSessionManager({
       runtime: fakeRuntime(),

@@ -150,6 +150,14 @@ export interface ConfigureParams {
    * running engine picks them up without a process restart.
    */
   reloadModels?: boolean;
+  /**
+   * Re-read disk settings and hot-push the disk-default config fields (preset /
+   * customSystemPrompt / appendSystemPrompt / personalization / mcpServers) +
+   * settings hooks onto ALREADY-RUNNING sessions ("config hot-reload layer 2").
+   * No sessionId → applies to every live session; with sessionId → that one.
+   * Applied at the next turn boundary; in-flight turns are not interrupted.
+   */
+  reloadSettings?: boolean;
 }
 
 /** Query server state. */

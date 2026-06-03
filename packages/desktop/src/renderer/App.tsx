@@ -328,6 +328,13 @@ function App() {
       // a stale reload is harmless (configure() with no model just
       // refreshes the pool from disk).
       void window.codeshell.configure({ reloadModels: true });
+      // Config hot-reload layer 2: also push the disk-default config fields
+      // (preset / custom & append system prompt / personalization / mcpServers)
+      // + settings hooks onto ALREADY-RUNNING sessions, applied at their next
+      // turn boundary. Without this, editing personalization/preset/prompts
+      // only affected sessions created AFTER the edit. Worker-global (no
+      // sessionId) → every live session; in-flight turns are untouched.
+      void window.codeshell.configure({ reloadSettings: true });
     };
     window.addEventListener("codeshell:settings-changed", refreshSettings);
     return () => window.removeEventListener("codeshell:settings-changed", refreshSettings);

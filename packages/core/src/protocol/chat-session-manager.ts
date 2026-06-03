@@ -62,6 +62,16 @@ export class ChatSessionManager {
     return this.sessions.get(sessionId);
   }
 
+  /**
+   * Iterate every live session once. Public iterator so callers (e.g. the
+   * protocol server's config hot-reload / sessions query) don't reach into
+   * the private `sessions` map with an `as any` cast. Iterates a snapshot of
+   * the values so a callback that closes a session can't perturb the walk.
+   */
+  forEachSession(fn: (s: ChatSession) => void): void {
+    for (const s of [...this.sessions.values()]) fn(s);
+  }
+
   close(sessionId: string): void {
     const s = this.sessions.get(sessionId);
     if (!s) return;

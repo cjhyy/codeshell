@@ -194,10 +194,17 @@ export interface CodeshellApi {
   closeSession(sessionId: string): Promise<RpcResponse>;
   /**
    * Notify the agent worker of a configuration change.
-   * Currently supports: { model?: string; reloadModels?: boolean }.
+   * Supports: { model?: string; reloadModels?: boolean; reloadSettings?: boolean }.
    * The worker applies model switches immediately — no restart needed.
+   * `reloadSettings` hot-pushes disk-default config (preset / system prompts /
+   * personalization / mcpServers) + settings hooks onto already-running
+   * sessions; applied at the next turn boundary, in-flight turns untouched.
    */
-  configure(params: { model?: string; reloadModels?: boolean }): Promise<RpcResponse>;
+  configure(params: {
+    model?: string;
+    reloadModels?: boolean;
+    reloadSettings?: boolean;
+  }): Promise<RpcResponse>;
   onStreamEvent(cb: (env: StreamEventEnvelope) => void): Unsubscribe;
   /**
    * Live automation session announcement. Fires once when an in-main

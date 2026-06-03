@@ -222,6 +222,12 @@ export interface EngineConfig {
   settingsScope?: SettingsScope;
 }
 
+// Re-export the config hot-reload patch builder from here so the protocol
+// server (and tests) can import it alongside Engine without reaching into the
+// settings/ subtree directly. The implementation lives in settings/ to keep
+// engine.ts from growing and to sit next to personalizationFrom it composes.
+export { diskDefaultsFrom, type DiskDefaultPatch } from "../settings/disk-defaults.js";
+
 export interface EngineHookConfig {
   event: HookEventName;
   handler: HookHandler;
@@ -324,6 +330,21 @@ export class Engine {
   private sessionManager: SessionManager;
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
+  /**
+   * Handles for the settings-sourced hook handlers registered by
+   * registerSettingsHooks(), so reloadHooks() can unregister exactly those
+   * (and nothing else — plugin hooks, goal/builtin hooks are untouched) before
+   * re-registering from fresh settings. Without this, a reload would
+   * accumulate duplicate settings-hook handlers that all fire per event.
+   */
+  private settingsHookHandles: Array<{ event: HookEventName; handler: HookHandler }> = [];
+  /**
+   * Highest config-reload version applied so far. refreshRuntimeConfig drops
+   * any payload whose version is <= this, so out-of-order reload deliveries
+   * (multiple quick settings saves) can't let an older config clobber a newer
+   * one.
+   */
+  private lastAppliedConfigVersion = 0;
   /** Memoized sub-agent role registry, keyed by the cwd it was loaded from. */
   private agentDefsCache?: { cwd: string; disabledKey: string; reg: AgentDefinitionRegistry };
 
@@ -417,16 +438,50 @@ export class Engine {
     }
     const entries = settings.hooks ?? [];
     for (const entry of entries) {
+      const event = entry.event as HookEventName;
+      const handler: HookHandler = async (ctx) => {
+        if (!shellHookMatches(entry, ctx)) return {};
+        return runShellHook(entry, ctx);
+      };
       this.hooks.register(
-        entry.event as HookEventName,
-        async (ctx) => {
-          if (!shellHookMatches(entry, ctx)) return {};
-          return runShellHook(entry, ctx);
-        },
+        event,
+        handler,
         50,
         `shell:${entry.event}:${entry.command.slice(0, 32)}`,
       );
+      // Track the (event, handler) so reloadHooks() can unregister exactly
+      // these settings-sourced handlers without touching plugin/goal/code hooks.
+      this.settingsHookHandles.push({ event, handler });
     }
+  }
+
+  /**
+   * Re-apply settings.hooks onto the live HookRegistry after a settings
+   * change (config hot-reload layer 2). Surgical: removes ONLY the
+   * settings-sourced handlers this Engine previously registered (tracked in
+   * settingsHookHandles by identity) and re-runs registerSettingsHooks() from
+   * fresh disk settings. Plugin hooks (registered once at construction at
+   * priority 80) and goal/builtin/SDK-config hooks are never touched.
+   *
+   * The SettingsManager cache is invalidated first so the re-read reflects the
+   * latest settings.json on disk (mirrors freshSettings()'s load() semantics).
+   * Sub-agents never register settings hooks, so this is a no-op for them.
+   */
+  reloadHooks(): void {
+    if (this.config.isSubAgent === true) return;
+    // Drop the previously-registered settings handlers by identity.
+    for (const { event, handler } of this.settingsHookHandles) {
+      this.hooks.unregister(event, handler);
+    }
+    this.settingsHookHandles = [];
+    // Force the next get() to re-read disk so reloaded hooks reflect the
+    // newest settings.json, not a stale merged cache.
+    try {
+      this.getSettingsManager().invalidate();
+    } catch {
+      // best-effort; registerSettingsHooks below tolerates read failures
+    }
+    this.registerSettingsHooks();
   }
 
   constructor(private config: EngineConfig) {
@@ -1900,6 +1955,44 @@ export class Engine {
 
   getConfig(): EngineConfig {
     return this.config;
+  }
+
+  /**
+   * Config hot-reload "layer 2": merge a disk-default config patch into this
+   * ALREADY-RUNNING session's `this.config`, reload settings hooks, and
+   * incrementally connect any newly-added MCP servers. Applied at the next
+   * turn boundary — an in-flight turn is NOT interrupted: it keeps using the
+   * PromptComposer it was built with, and the next turn rebuilds the composer
+   * from the freshly-merged config (composer is rebuilt per-turn).
+   *
+   * `version` is a monotonic counter from the server: stale (<=last applied)
+   * payloads are dropped so out-of-order reload deliveries can't let an older
+   * config clobber a newer one (Q5).
+   *
+   * MCP: only connects (idempotent — already-connected servers are skipped);
+   * never disconnects, so an in-flight tool call on an existing server is
+   * never severed (Q3). Removed servers are deferred to the next session
+   * rebuild. If mcpManager isn't built yet (no MCP run has happened), the
+   * new servers will be connected on the next run via the existing per-run
+   * connectAll path — so we skip the connect here.
+   */
+  refreshRuntimeConfig(patch: Partial<EngineConfig>, version: number): void {
+    if (version <= this.lastAppliedConfigVersion) return;
+    const prevServers = this.config.mcpServers ?? {};
+    this.config = { ...this.config, ...patch };
+    this.reloadHooks();
+    if (patch.mcpServers && this.mcpManager) {
+      const added: Record<string, import("../types.js").MCPServerConfig> = {};
+      for (const [name, cfg] of Object.entries(patch.mcpServers)) {
+        if (!(name in prevServers)) added[name] = cfg;
+      }
+      if (Object.keys(added).length > 0) {
+        // connectAll is idempotent (skips already-connected); fire-and-forget
+        // so a slow server handshake never blocks the reload call.
+        void this.mcpManager.connectAll(added);
+      }
+    }
+    this.lastAppliedConfigVersion = version;
   }
 
   /**

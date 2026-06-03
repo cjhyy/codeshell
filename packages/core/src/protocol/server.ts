@@ -31,6 +31,8 @@ import {
   isRequest,
 } from "./types.js";
 import type { Engine, EngineConfig } from "../engine/engine.js";
+import { diskDefaultsFrom } from "../engine/engine.js";
+import type { ValidatedSettings } from "../settings/schema.js";
 import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } from "../types.js";
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
@@ -53,12 +55,27 @@ export interface AgentServerOptions {
    */
   engine?: Engine;
   transport: Transport;
+  /**
+   * Reads fresh settings from disk for config hot-reload (layer 2). MUST be
+   * the SAME closure the engineFactory uses for new sessions (e.g.
+   * agent-server-stdio's `freshSettings`) so a reloaded running session and a
+   * newly-created session converge on identical disk config — no divergence.
+   * When absent, `configure({ reloadSettings })` is a silent no-op.
+   */
+  settingsReader?: () => ValidatedSettings;
 }
 
 export class AgentServer {
   private readonly chatManager: ChatSessionManager | null;
   private readonly legacyEngine: Engine | null;
   private transport: Transport;
+  /** Fresh-disk settings reader for config hot-reload; null when not wired. */
+  private readonly settingsReader: (() => ValidatedSettings) | null;
+  /**
+   * Monotonic config-reload version, bumped per reloadSettings request so each
+   * Engine.refreshRuntimeConfig can drop out-of-order (stale) deliveries (Q5).
+   */
+  private configVersion = 0;
 
   // ── Legacy single-engine state (used when chatManager is null) ──
   private running = false;
@@ -81,6 +98,7 @@ export class AgentServer {
   constructor(options: AgentServerOptions) {
     this.chatManager = options.chatManager ?? null;
     this.legacyEngine = options.engine ?? null;
+    this.settingsReader = options.settingsReader ?? null;
 
     if (!this.chatManager && !this.legacyEngine) {
       throw new Error("AgentServer: either chatManager or engine must be supplied");
@@ -506,6 +524,12 @@ export class AgentServer {
           return;
         }
       }
+      // Hot-reload disk-default config onto this one session (layer 2).
+      if (params.reloadSettings === true && this.settingsReader) {
+        const settings = this.settingsReader();
+        const version = ++this.configVersion;
+        s.engine.refreshRuntimeConfig(diskDefaultsFrom(settings), version);
+      }
       this.transport.send(createResponse(req.id, { ok: true }));
       return;
     }
@@ -542,6 +566,18 @@ export class AgentServer {
       engine.setPlanMode(params.planMode);
     }
 
+    // Config hot-reload layer 2: re-read disk settings once and push the
+    // disk-default config patch (+ settings-hook reload + incremental MCP
+    // connect) onto every live session. Parallel to reloadModels; no new
+    // protocol method. In-flight turns are untouched — refreshRuntimeConfig
+    // only mutates this.config, picked up at the next turn boundary.
+    if (params.reloadSettings === true && this.chatManager && this.settingsReader) {
+      const settings = this.settingsReader();
+      const version = ++this.configVersion;
+      const patch = diskDefaultsFrom(settings);
+      this.chatManager.forEachSession((s) => s.engine.refreshRuntimeConfig(patch, version));
+    }
+
     this.transport.send(createResponse(req.id, { ok: true }));
   }
 
@@ -574,14 +610,20 @@ export class AgentServer {
       case "sessions": {
         if (this.chatManager) {
           // Return the ChatSessionManager's live sessions
-          const sessions = [...(this.chatManager as any).sessions.entries()].map(
-            ([id, s]: [string, any]) => ({
-              sessionId: id,
+          const sessions: Array<{
+            sessionId: string;
+            busy: boolean;
+            queueDepth: number;
+            lastActivityAt: number;
+          }> = [];
+          this.chatManager.forEachSession((s) => {
+            sessions.push({
+              sessionId: s.id,
               busy: s.isBusy(),
               queueDepth: s.queueDepth(),
               lastActivityAt: s.lastActivityAt,
-            }),
-          );
+            });
+          });
           this.transport.send(createResponse(req.id, { type: "sessions", data: sessions }));
         } else if (engine) {
           const sessions = engine.getSessionManager().list();
