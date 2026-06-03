@@ -44,10 +44,20 @@ export class FileHistory {
       );
       if (existing) return existing;
 
-      // Create backup
+      // Create backup. The filename must uniquely identify (path, content): a
+      // bare 100-char tail of the path can collide for two different files
+      // whose tails coincide, and with the same ms timestamp the second
+      // copyFileSync would silently overwrite the first backup while both
+      // index entries point to it (restore would then return the wrong file's
+      // content). Fold a full-path hash and the content hash into the name so
+      // distinct (path, content) pairs never share a backup file.
       const timestamp = Date.now();
-      const safeName = absPath.replace(/[/\\:]/g, "_").slice(-100);
-      const backupPath = join(this.historyDir, `${timestamp}_${safeName}`);
+      const pathHash = createHash("md5").update(absPath).digest("hex").slice(0, 8);
+      const safeName = absPath.replace(/[/\\:]/g, "_").slice(-80);
+      const backupPath = join(
+        this.historyDir,
+        `${timestamp}_${pathHash}_${hash.slice(0, 8)}_${safeName}`,
+      );
 
       copyFileSync(absPath, backupPath);
 

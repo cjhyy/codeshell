@@ -21,6 +21,7 @@ import type {
 import { repoLabel, type Repo } from "../repos";
 import { ProjectPicker } from "./ProjectPicker";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "../ui/ConfirmDialog";
 
 interface Props {
   scope: "user" | "project";
@@ -114,6 +115,7 @@ export function MemorySection({ repos }: Props) {
 
 /** Entry list + editor + Dream button for one memory store (level + cwd). */
 function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string }) {
+  const confirm = useConfirm();
   const [scope, setScope] = useState<MemoryScope>("user");
   const [entries, setEntries] = useState<RendererMemoryEntry[]>([]);
   const [selected, setSelected] = useState<RendererMemoryEntryFull | null>(null);
@@ -201,7 +203,14 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   };
 
   const removeEntry = async (name: string): Promise<void> => {
-    if (!confirm(`删除记忆 "${name}"?(会移到 memory-trash/,可手动恢复)`)) return;
+    const ok = await confirm({
+      title: "删除记忆",
+      message: `删除记忆「${name}」?`,
+      detail: "会移到 memory-trash/,可手动恢复。",
+      confirmLabel: "删除",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await window.codeshell.deleteMemory(level, scope, name, cwd);
       if (selected?.name === name) setSelected(null);

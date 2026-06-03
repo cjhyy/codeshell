@@ -22,14 +22,17 @@ export function validateToolArgs(
     const properties = schema.properties as Record<string, any> | undefined;
     const required = (schema.required as string[]) ?? [];
 
-    if (!properties) return null;
-
-    // Check required fields
+    // Required-field presence does not depend on `properties` existing — a
+    // schema may declare `required` with no `properties` block (e.g. a
+    // malformed external MCP tool schema). Check it before the properties
+    // guard so missing params are still caught.
     for (const field of required) {
       if (args[field] === undefined || args[field] === null) {
         return `Missing required parameter: ${field}`;
       }
     }
+
+    if (!properties) return null; // No property shapes to type-check.
 
     // Type check each provided field
     for (const [key, value] of Object.entries(args)) {
