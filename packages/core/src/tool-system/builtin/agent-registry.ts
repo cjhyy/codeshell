@@ -33,6 +33,9 @@ export interface AsyncAgentEntry {
   agentId: string;
   /** Short kind label shown in the dock (e.g. "Explore", "Plan"). */
   name?: string;
+  /** Dispatched role (e.g. "general-purpose", "explorer"); shown in the dock
+   *  so you can see what kind of agent is running. */
+  agentType?: string;
   description: string;
   /** Session that spawned this background agent. Lets the spawning
    *  Engine.run wait only on ITS OWN background agents (hasRunningForSession),

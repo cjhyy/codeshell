@@ -507,17 +507,26 @@ export function applyStreamEvent(
       if (idx !== undefined) {
         const m = msgs[idx];
         if (m && m.kind === "agent") {
-          const flushed = m.textBuffer.length > 0
-            ? (m.text ?? "") + m.textBuffer
-            : m.text;
-          msgs[idx] = {
-            ...m,
-            done: true,
-            text: event.text ?? flushed,
-            textBuffer: "",
-            error: event.error,
-            endedAt,
-          };
+          // Idempotent / first-terminal-state-wins. The engine should now emit
+          // exactly one agent_end per agent (the sub-agent wall-clock timeout
+          // that raced completion was removed), but stay defensive: if a second
+          // agent_end ever arrives for an already-finished agent, do NOT let a
+          // later success overwrite an earlier error (a timed-out/failed agent
+          // must not flip back to "done" with text). Keep the first terminal
+          // result; just refresh activeAgents bookkeeping.
+          if (!m.done) {
+            const flushed = m.textBuffer.length > 0
+              ? (m.text ?? "") + m.textBuffer
+              : m.text;
+            msgs[idx] = {
+              ...m,
+              done: true,
+              text: event.text ?? flushed,
+              textBuffer: "",
+              error: event.error,
+              endedAt,
+            };
+          }
         }
       }
       return { ...state, activeAgents: rest, messages: msgs };

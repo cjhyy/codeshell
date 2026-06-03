@@ -142,33 +142,6 @@ export function emitSubAgentHook(
   void hooks?.emit("notification", { kind, ...payload });
 }
 
-/** Default per-sub-agent wall-clock timeout (5 minutes). */
-export const DEFAULT_SUBAGENT_TIMEOUT_MS = 5 * 60_000;
-
-/**
- * Run `work()` with a timeout. On expiry, calls `onTimeout` (to abort the
- * child) and rejects with a timeout error. The child's own abort handling
- * unwinds its resources.
- */
-export async function runWithTimeout<T>(
-  work: () => Promise<T>,
-  timeoutMs: number,
-  onTimeout: () => void,
-): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      onTimeout();
-      reject(new Error(`Sub-agent timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-  });
-  try {
-    return await Promise.race([work(), timeout]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-
 export const agentToolDef: ToolDefinition = {
   name: "Agent",
   description:
@@ -341,6 +314,7 @@ export async function agentTool(
     asyncAgentRegistry.register({
       agentId,
       name,
+      agentType: overrides.resolvedType,
       description,
       // Tag with the spawning session so the parent Engine.run waits only on
       // its own background agents (hasRunningForSession).
@@ -478,34 +452,37 @@ export async function agentTool(
   }
 
   // ─── Synchronous path ──────────────────────────────────────────
-  // A timeout-capable controller: the timeout callback aborts the child, and
-  // a parent abort is forwarded to it too. Keeping the timeout OUTSIDE
-  // runSubAgent (and off the background path) avoids the background path's
-  // "abort means user-cancel → drop silently" semantics; here a timeout is a
-  // genuine error surfaced to the parent.
+  // No wall-clock timeout on the sub-agent lifecycle — that matches Claude
+  // Code / Codex, where a sub-agent (Task) is bounded by maxTurns + per-tool
+  // timeouts (Bash etc. carry their own) + parent/user abort, NOT by a global
+  // countdown that kills legitimate heavy work mid-task. The old
+  // runWithTimeout(5min) both (a) murdered a "read 40 files" agent at 5:00 and
+  // (b) raced with the normal completion path: the timeout aborted the child,
+  // the catch emitted agent_end{error}, AND the aborted child still let
+  // runSubAgent reach its line-280 agent_end{text} — two agent_end events for
+  // one agent, the later text one overwriting the error so a timed-out agent
+  // rendered as "done". Dropping the timeout removes the race entirely: a
+  // genuine spawn error throws BEFORE the success emit, so only the catch
+  // fires; a clean run emits agent_end{text} exactly once. (fix:
+  // subagent-timeout-double-agent-end)
   const syncController = new AbortController();
   const onParentAbort = () => syncController.abort();
   parentSignal?.addEventListener("abort", onParentAbort, { once: true });
   try {
-    return await runWithTimeout(
-      () =>
-        runSubAgent(spawner, {
-          agentId,
-          name,
-          description,
-          agentType: overrides.resolvedType,
-          prompt,
-          maxTurns,
-          model: overrides.model,
-          toolAllowlist: overrides.toolAllowlist,
-          appendSystemPrompt: overrides.appendSystemPrompt,
-          readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
-          hooks: ctx?.hooks,
-          signal: syncController.signal,
-        }),
-      DEFAULT_SUBAGENT_TIMEOUT_MS,
-      () => syncController.abort(),
-    );
+    return await runSubAgent(spawner, {
+      agentId,
+      name,
+      description,
+      agentType: overrides.resolvedType,
+      prompt,
+      maxTurns,
+      model: overrides.model,
+      toolAllowlist: overrides.toolAllowlist,
+      appendSystemPrompt: overrides.appendSystemPrompt,
+      readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
+      hooks: ctx?.hooks,
+      signal: syncController.signal,
+    });
   } catch (err) {
     emitSubAgentHook(ctx?.hooks, "subagent_error", { agentId, description, error: (err as Error).message });
     safeEmit(parentStream, { type: "agent_end", agentId, name, description, error: (err as Error).message, agentType: overrides.resolvedType });

@@ -175,6 +175,22 @@ describe("applyStreamEvent — subagent isolation", () => {
     expect(agent.done).toBe(true);
   });
 
+  test("9b. a second agent_end never overwrites the first terminal state", () => {
+    // Defends against the old sub-agent-timeout race that emitted agent_end
+    // twice (error then text). The first terminal result must win — a failed/
+    // timed-out agent must not flip back to a successful "done" with text.
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("agent_end", { agentId: "A", error: "Sub-agent timed out after 300000ms" } as any),
+      ev("agent_end", { agentId: "A", text: "partial output" } as any),
+    ]);
+    const agent = findAgent(s, "A");
+    expect(agent.done).toBe(true);
+    expect(agent.error).toBe("Sub-agent timed out after 300000ms");
+    expect(agent.text).toBeUndefined();
+  });
+
   test("10. main-agent text_delta still appends to main assistant (regression)", () => {
     const s = dispatch(INITIAL_STATE, [
       ...mainTurn(),
