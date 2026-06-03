@@ -349,6 +349,35 @@ export const SettingsSchema = z
       .optional(),
 
     /**
+     * Project-local environment profile. Mirrors Codex's local-environment
+     * shape at the settings layer: setup/cleanup scripts can be customized per
+     * platform, and env values are stored as KEY=VALUE pairs. Runtime wiring is
+     * intentionally separate from the MCP server env model above.
+     */
+    localEnvironment: z
+      .object({
+        name: z.string().optional(),
+        setupScripts: z
+          .object({
+            default: z.string().optional(),
+            macos: z.string().optional(),
+            linux: z.string().optional(),
+            windows: z.string().optional(),
+          })
+          .optional(),
+        cleanupScripts: z
+          .object({
+            default: z.string().optional(),
+            macos: z.string().optional(),
+            linux: z.string().optional(),
+            windows: z.string().optional(),
+          })
+          .optional(),
+        env: z.record(z.string()).optional(),
+      })
+      .optional(),
+
+    /**
      * Shell-hook configuration. Each entry binds a HookEventName to a
      * shell command; the command receives ctx JSON on stdin and returns
      * a HookResult JSON on stdout (or exit 2 = deny with stderr as

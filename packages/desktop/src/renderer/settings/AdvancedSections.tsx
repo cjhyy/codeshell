@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Folder, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
@@ -456,31 +456,66 @@ function GitRowShell({
   );
 }
 
+type LocalEnvPlatform = "default" | "macos" | "linux" | "windows";
+
+const LOCAL_ENV_TABS: Array<{ id: LocalEnvPlatform; label: string }> = [
+  { id: "default", label: "默认" },
+  { id: "macos", label: "macOS" },
+  { id: "linux", label: "Linux" },
+  { id: "windows", label: "Windows" },
+];
+
+const EMPTY_SCRIPTS: Record<LocalEnvPlatform, string> = {
+  default: "",
+  macos: "",
+  linux: "",
+  windows: "",
+};
+
 export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
+  const targetScope: "user" | "project" = activeRepoPath ? "project" : scope;
+  const cwd = targetScope === "project" ? activeRepoPath ?? undefined : undefined;
+  const projectName = activeRepoPath ? pathBasename(activeRepoPath) : "未选择项目";
+  const [name, setName] = useState(projectName);
+  const [setupTab, setSetupTab] = useState<LocalEnvPlatform>("default");
+  const [cleanupTab, setCleanupTab] = useState<LocalEnvPlatform>("default");
+  const [setupScripts, setSetupScripts] = useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
+  const [cleanupScripts, setCleanupScripts] = useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
+  const [envText, setEnvText] = useState("");
   const [mode, setMode] = useState("auto");
   const [network, setNetwork] = useState("allow");
   const [writableRoots, setWritableRoots] = useState("");
   const [deniedReads, setDeniedReads] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
-    const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
+    const s = (await window.codeshell.getSettings(targetScope, cwd)) ?? {};
+    const localEnvironment = objectOf(s.localEnvironment);
+    setName(stringOf(localEnvironment.name) || projectName);
+    setSetupScripts(scriptMapOf(localEnvironment.setupScripts));
+    setCleanupScripts(scriptMapOf(localEnvironment.cleanupScripts));
+    setEnvText(envTextOf(localEnvironment.env));
     const sandbox = objectOf(s.sandbox);
     setMode(stringOf(sandbox.mode) || "auto");
     setNetwork(stringOf(sandbox.network) || "allow");
     setWritableRoots(arrayText(sandbox.writableRoots));
     setDeniedReads(arrayText(sandbox.deniedReads));
   };
-  useEffect(() => { void load(); }, [scope, activeRepoPath]);
+  useEffect(() => { void load(); }, [targetScope, activeRepoPath]);
 
   const save = async () => {
     setSaving(true);
     try {
       await writeSettings(
-        scope,
+        targetScope,
         {
+          localEnvironment: {
+            name: name.trim() || projectName,
+            setupScripts,
+            cleanupScripts,
+            env: parseEnvText(envText),
+          },
           sandbox: {
             mode,
             network,
@@ -500,22 +535,65 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
     <section className="settings-section env-settings-section">
       <div className="env-settings-head">
         <div>
-          <h3 className="settings-section-title">运行沙箱</h3>
+          <h3 className="settings-section-title">本地环境</h3>
           <p className="settings-section-help">
-            保存到 {scope === "project" ? "当前项目 .code-shell/settings.json" : "~/.code-shell/settings.json"} 的 <code>sandbox</code> 字段；新对话、自动化和 Bash 工具启动时会读取它。
+            保存项目的 setup / cleanup 脚本和 KEY=VALUE 变量。选择了项目时会写入当前项目的 <code>.code-shell/settings.json</code>。
           </p>
         </div>
-        <span className="env-settings-scope">{scope === "project" ? "Project" : "User"}</span>
+        <span className="env-settings-scope">{targetScope === "project" ? "Project" : "User"}</span>
       </div>
 
-      <div className="env-settings-note">
-        <strong>Codex 风格</strong>
-        <span>
-          Codex 把项目 trust 写在 <code>[projects."path"]</code>，把 MCP 环境变量写在 <code>[mcp_servers.name.env]</code>。
-          Code Shell 也按作用域保存：这里控制 shell sandbox；MCP 的 KEY=VALUE 环境变量在 MCP 服务器卡片里单独保存并只注入对应 server。
+      <div className="local-env-project-card">
+        <Folder size={18} />
+        <div>
+          <strong>{projectName}</strong>
+          <span>{activeRepoPath ?? "打开一个项目后，这里会按项目保存本地环境。"}</span>
+        </div>
+      </div>
+
+      <label className="settings-field local-env-name">
+        <span>名称</span>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={projectName} />
+      </label>
+
+      <LocalScriptEditor
+        title="设置脚本"
+        help="保存用于创建工作树或准备运行环境的项目根目录脚本。"
+        activeTab={setupTab}
+        onTabChange={setSetupTab}
+        scripts={setupScripts}
+        onScriptChange={(tab, value) => setSetupScripts((prev) => ({ ...prev, [tab]: value }))}
+        placeholder={'cd "$CODEX_WORKTREE_PATH"\npip install -r requirements.txt\nnpm install\n./run/setup.sh'}
+      />
+
+      <LocalScriptEditor
+        title="清理脚本"
+        help="保存用于清理工作树或释放本地资源的项目根目录脚本。"
+        activeTab={cleanupTab}
+        onTabChange={setCleanupTab}
+        scripts={cleanupScripts}
+        onScriptChange={(tab, value) => setCleanupScripts((prev) => ({ ...prev, [tab]: value }))}
+        placeholder={"docker compose down --remove-orphans\nrm -rf .cache/tmp"}
+      />
+
+      <label className="settings-field local-env-vars">
+        <span>变量</span>
+        <Textarea
+          value={envText}
+          onChange={(e) => setEnvText(e.target.value)}
+          placeholder={"KEY=value\nNODE_ENV=development"}
+          className="min-h-[120px] resize-y font-mono text-sm"
+        />
+        <span className="conn-field-hint">
+          每行一个 KEY=VALUE。MCP server 自己的环境变量仍在 MCP 服务器卡片里保存，只注入对应 server。
         </span>
-      </div>
+      </label>
 
+      <details className="local-env-advanced">
+        <summary>沙箱边界（高级）</summary>
+        <p>
+          这里仍保存到 <code>sandbox</code> 字段；新对话、自动化和 Bash 工具启动时会读取它。
+        </p>
       <div className="settings-form-grid">
         <label className="settings-field">
           <span>Sandbox</span>
@@ -552,9 +630,10 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
           <span className="conn-field-hint">每行一个路径，命令读取这些路径会被沙箱拦截。</span>
         </label>
       </div>
+      </details>
       <div className="env-settings-actions">
         <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
-          {saving ? "保存中..." : "保存沙箱"}
+          {saving ? "保存中..." : "保存本地环境"}
         </Button>
         {savedAt && (
           <span className="env-settings-saved">
@@ -563,6 +642,53 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
         )}
       </div>
     </section>
+  );
+}
+
+function LocalScriptEditor({
+  title,
+  help,
+  activeTab,
+  onTabChange,
+  scripts,
+  onScriptChange,
+  placeholder,
+}: {
+  title: string;
+  help: string;
+  activeTab: LocalEnvPlatform;
+  onTabChange: (tab: LocalEnvPlatform) => void;
+  scripts: Record<LocalEnvPlatform, string>;
+  onScriptChange: (tab: LocalEnvPlatform, value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="local-env-script">
+      <div className="local-env-script-head">
+        <div>
+          <h4>{title}</h4>
+          <p>{help}</p>
+        </div>
+        <div className="local-env-tabs" role="tablist" aria-label={title}>
+          {LOCAL_ENV_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={activeTab === tab.id ? "active" : ""}
+              onClick={() => onTabChange(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Textarea
+        value={scripts[activeTab]}
+        onChange={(e) => onScriptChange(activeTab, e.target.value)}
+        placeholder={placeholder}
+        className="min-h-[180px] resize-y font-mono text-sm"
+      />
+    </div>
   );
 }
 
@@ -799,6 +925,40 @@ function objectOf(value: unknown): Record<string, unknown> {
 
 function stringOf(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+function pathBasename(path: string): string {
+  const parts = path.split(/[\\/]/).filter(Boolean);
+  return parts.at(-1) ?? path;
+}
+
+function scriptMapOf(value: unknown): Record<LocalEnvPlatform, string> {
+  const obj = objectOf(value);
+  return {
+    default: stringOf(obj.default),
+    macos: stringOf(obj.macos),
+    linux: stringOf(obj.linux),
+    windows: stringOf(obj.windows),
+  };
+}
+
+function envTextOf(value: unknown): string {
+  return Object.entries(objectOf(value))
+    .filter(([, v]) => typeof v === "string")
+    .map(([k, v]) => `${k}=${v}`)
+    .join("\n");
+}
+
+function parseEnvText(text: string): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx <= 0) continue;
+    env[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
+  }
+  return env;
 }
 
 function lines(text: string): string[] {

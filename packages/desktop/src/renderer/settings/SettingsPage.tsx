@@ -109,7 +109,7 @@ const MODULE_GROUPS: ModuleGroup[] = [
     modules: [
       { id: "connections", label: "连接", Icon: Wifi },
       { id: "git", label: "Git", Icon: GitBranch },
-      { id: "environment", label: "环境", Icon: Terminal },
+      { id: "environment", label: "本地环境", Icon: Terminal },
       { id: "browser", label: "浏览器", Icon: Globe },
       { id: "computer", label: "电脑操控", Icon: Monitor },
     ],
