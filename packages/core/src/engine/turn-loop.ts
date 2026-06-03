@@ -460,6 +460,10 @@ export class TurnLoop {
       ) {
         let combinedText = response.text;
         for (let retry = 0; retry < 3; retry++) {
+          // Don't fire another continuation call if the user cancelled — without
+          // this an abort during a truncated response could still issue up to 3
+          // more model calls, emitting text after Stop.
+          if (this.config.signal?.aborted) break;
           tlog.info("turn.max_tokens_continuation", { cat: "turn", retry: retry + 1 });
           const contMessages = [
             ...messages,

@@ -37,6 +37,57 @@ test("watchdog does not abort a fast stream", async () => {
   expect(text).toBe("abc");
 });
 
+test("fast path: aborted signal stops forwarding buffered chunks", async () => {
+  delete process.env.CODESHELL_ENABLE_STREAM_WATCHDOG;
+  const { runStreamWithWatchdog } = await import("../../packages/core/src/llm/providers/openai.js");
+
+  const seen: string[] = [];
+  const controller = new AbortController();
+  // Generator with several buffered chunks; abort after the first is consumed.
+  async function* buffered() {
+    yield { choices: [{ delta: { content: "a" } }] };
+    yield { choices: [{ delta: { content: "b" } }] };
+    yield { choices: [{ delta: { content: "c" } }] };
+  }
+  await runStreamWithWatchdog(buffered() as any, {
+    signal: controller.signal,
+    onChunk: (chunk: any) => {
+      const t = chunk?.choices?.[0]?.delta?.content ?? "";
+      seen.push(t);
+      controller.abort(); // abort right after the first chunk
+      return t;
+    },
+  });
+  // Only the first chunk should have been forwarded; b/c are dropped post-abort.
+  expect(seen).toEqual(["a"]);
+});
+
+test("watchdog path: abort mid-await breaks out promptly", async () => {
+  const { runStreamWithWatchdog } = await import("../../packages/core/src/llm/providers/openai.js");
+  const controller = new AbortController();
+  const seen: string[] = [];
+
+  async function* slowThenHang() {
+    yield { choices: [{ delta: { content: "first" } }] };
+    await new Promise(() => {}); // hang — only the abort race can break this
+  }
+
+  // Abort 50ms in, while awaiting the (never-arriving) second chunk.
+  setTimeout(() => controller.abort(), 50);
+
+  const text = await runStreamWithWatchdog(slowThenHang() as any, {
+    idleTimeoutMs: 5000, // long enough that the abort, not the watchdog, wins
+    signal: controller.signal,
+    onChunk: (chunk: any) => {
+      const t = chunk?.choices?.[0]?.delta?.content ?? "";
+      seen.push(t);
+      return t;
+    },
+  });
+  expect(seen).toEqual(["first"]);
+  expect(text).toBe("first");
+});
+
 test("watchdog is dormant when env flag is off and caller does not override", async () => {
   // Explicitly ensure the env flag is off.
   delete process.env.CODESHELL_ENABLE_STREAM_WATCHDOG;

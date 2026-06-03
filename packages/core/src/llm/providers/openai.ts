@@ -34,6 +34,14 @@ interface RunStreamOpts {
    * the watchdog-side text accumulator used in tests.
    */
   onChunk?: (chunk: any) => string;
+  /**
+   * Abort signal. Checked BEFORE handing each chunk to onChunk so a cancelled
+   * turn stops emitting text_delta immediately — the SDK keeps yielding
+   * already-buffered chunks after abort() until its HTTP teardown completes, and
+   * without this guard those buffered deltas leak to the UI after the user hit
+   * Stop ("content comes back after interrupt").
+   */
+  signal?: AbortSignal;
 }
 
 /**
@@ -60,6 +68,12 @@ export async function runStreamWithWatchdog<T = any>(
   // Fast path: watchdog disabled AND caller did not override → no overhead.
   if (!watchdogActive) {
     for await (const chunk of stream) {
+      // Stop consuming the moment the turn is aborted — do NOT forward more
+      // chunks to onChunk (which emits text_delta to the UI). The SDK may still
+      // be draining buffered chunks after abort(); this prevents them leaking
+      // post-Stop. `break` from a for-await calls the iterator's return() for us,
+      // letting the SDK tear the stream down.
+      if (opts.signal?.aborted) break;
       if (opts.onChunk) {
         text += opts.onChunk(chunk) ?? "";
       } else {
@@ -74,6 +88,10 @@ export async function runStreamWithWatchdog<T = any>(
   const iterator = stream[Symbol.asyncIterator]();
   try {
     while (true) {
+      // Abort short-circuit: stop before awaiting/forwarding the next chunk so
+      // buffered post-abort deltas never reach onChunk. The finally below calls
+      // iterator.return() to tear the SDK stream down.
+      if (opts.signal?.aborted) break;
       const nextPromise = iterator.next();
 
       // Build a timeout promise that rejects if no chunk arrives in time.
@@ -84,13 +102,31 @@ export async function runStreamWithWatchdog<T = any>(
         }, idleTimeoutMs);
       });
 
-      let result: IteratorResult<T>;
+      // Abort promise: resolve as soon as the signal fires so a cancel mid-chunk
+      // (while awaiting the next delta) breaks out immediately instead of
+      // waiting for the next chunk or the idle deadline.
+      const abortCleanups: Array<() => void> = [];
+      const abortPromise = new Promise<{ aborted: true }>((resolve) => {
+        const sig = opts.signal;
+        if (!sig) return; // never resolves → no effect on the race
+        if (sig.aborted) {
+          resolve({ aborted: true });
+          return;
+        }
+        const onAbort = () => resolve({ aborted: true });
+        sig.addEventListener("abort", onAbort, { once: true });
+        abortCleanups.push(() => sig.removeEventListener("abort", onAbort));
+      });
+
+      let result: IteratorResult<T> | { aborted: true };
       try {
-        result = await Promise.race([nextPromise, timeoutPromise]);
+        result = await Promise.race([nextPromise, timeoutPromise, abortPromise]);
       } finally {
         if (timeoutHandle !== null) clearTimeout(timeoutHandle);
+        for (const c of abortCleanups) c();
       }
 
+      if ("aborted" in result) break;
       if (result.done) break;
 
       const chunk = result.value;
@@ -465,6 +501,7 @@ export class OpenAIClient extends LLMClientBase {
           : undefined,
         requestId,
         onChunk: handleChunk,
+        signal: options.signal,
       });
 
       const toolCalls: ToolCall[] = [];

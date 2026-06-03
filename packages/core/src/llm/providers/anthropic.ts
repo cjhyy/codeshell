@@ -243,6 +243,23 @@ export class AnthropicClient extends LLMClientBase {
       let currentToolId = "";
       let currentToolInput = "";
 
+      // Abort-guarded emit: once the turn is cancelled, stop forwarding chunks
+      // to the UI. The SDK's event emitter can keep firing buffered text/
+      // contentBlock/inputJson events after abort() until its HTTP stream tears
+      // down; without this guard those leak to the UI after the user hit Stop
+      // ("content comes back after interrupt"). We also eagerly abort the SDK
+      // stream below so teardown starts immediately rather than waiting on the
+      // passed-in request signal alone.
+      const emit = (chunk: Parameters<NonNullable<typeof options.onChunk>>[0]) => {
+        if (options.signal?.aborted) return;
+        options.onChunk?.(chunk);
+      };
+      if (options.signal) {
+        const sig = options.signal;
+        if (sig.aborted) stream.abort();
+        else sig.addEventListener("abort", () => stream.abort(), { once: true });
+      }
+
       // Time-to-first-byte: log exactly once per stream so streaming-latency
       // questions ("model felt slow tonight") get a clean number per request.
       const streamStartedAt = Date.now();
@@ -259,7 +276,7 @@ export class AnthropicClient extends LLMClientBase {
           });
         }
         currentText += text;
-        options.onChunk?.({ type: "text", text, tokens: countTokens(text) });
+        emit({ type: "text", text, tokens: countTokens(text) });
       });
 
       stream.on("contentBlock", (block) => {
@@ -267,7 +284,7 @@ export class AnthropicClient extends LLMClientBase {
           currentToolName = block.name;
           currentToolId = block.id;
           currentToolInput = "";
-          options.onChunk?.({
+          emit({
             type: "tool_use_start",
             toolCall: { id: block.id, toolName: block.name, args: {} },
           });
@@ -277,7 +294,7 @@ export class AnthropicClient extends LLMClientBase {
       stream.on("inputJson", (_delta, snapshot) => {
         currentToolInput = JSON.stringify(snapshot);
         if (currentToolId) {
-          options.onChunk?.({
+          emit({
             type: "tool_use_delta",
             toolCall: {
               id: currentToolId,
