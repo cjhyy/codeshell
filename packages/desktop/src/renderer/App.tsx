@@ -1116,6 +1116,16 @@ function App() {
       // correctly. The session_started handler's reverse-lookup would also find
       // it now that it's on disk, but setting the fast path is cheap.
       engineToBucketRef.current.set(meta.sessionId, bucket);
+      // Mark the bucket busy NOW so the sidebar shows the running spinner
+      // immediately. Automation never goes through send() (it runs headless in
+      // main), so without this the run-now session would sit with no status
+      // indicator until — and only ever — turn_complete, which then clears busy
+      // and (if off-screen) flips it to the unread dot. The announce arrives
+      // before this run's session_started stream event (automation-host emits
+      // onSession() then emit() on the same ordered channel), so no turn_complete
+      // can clear this before we set it. asking>running>unread precedence then
+      // matches interactive chat.
+      setBusyForKey(bucket, true);
       // Show the triggering prompt as the opening user message. Automation never
       // goes through send() (it runs in main), so without this the live UI would
       // open straight into the assistant's reply with no visible question. Only
