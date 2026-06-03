@@ -103,20 +103,22 @@ export class AnthropicClient extends LLMClientBase {
     }
 
     const min = cap.reasoning.minBudgetTokens;
+    // Anthropic constraint: max_tokens must STRICTLY exceed budget_tokens, and
+    // budget_tokens must be ≥ the model's minimum. If max_tokens can't fit a
+    // min-sized thinking block plus at least `min` tokens of answer, there is
+    // no valid budget — omit thinking entirely rather than emit budget_tokens
+    // ≥ max_tokens (which the API rejects with a 400). This is reachable for
+    // small-maxTokens auxiliary calls (judge/planner) on budget models.
+    const ceiling = maxTokens - min;
+    if (ceiling < min) {
+      return undefined;
+    }
     let budget =
       reasoning.mode === "budget"
         ? reasoning.budgetTokens
         : ANTHROPIC_DEFAULT_THINKING_BUDGET; // "on" or "effort" → default budget
-    // Floor at the model's minimum.
-    budget = Math.max(budget, min);
-    // Anthropic constraint: max_tokens must exceed budget_tokens. Cap the
-    // budget below max_tokens (reserve at least `min` tokens for the answer).
-    const ceiling = maxTokens - min;
-    if (ceiling >= min) {
-      budget = Math.min(budget, ceiling);
-    }
-    // Never drop below the model's floor even if max_tokens is tiny.
-    budget = Math.max(budget, min);
+    // Clamp into [min, ceiling] — both bounds are now guaranteed ≥ min.
+    budget = Math.min(Math.max(budget, min), ceiling);
 
     return { type: "enabled", budget_tokens: budget };
   }

@@ -5,17 +5,22 @@
  * consistent state transitions across phases.
  *
  * State machine:
- *   proposed → under_review
- *   under_review → verified | contested | rejected
+ *   proposed → under_review | unresolved
+ *   under_review → verified | contested | rejected | unresolved
  *   contested → under_review | unresolved | verified | rejected
+ *
+ * `unresolved` is reachable from proposed/under_review (not just contested):
+ * adjudication sweeps any claims left in those states when the round/budget
+ * is exhausted (adjudication.ts) — without these edges markUnresolved() would
+ * silently no-op and the claims would be dropped from the consensus summary.
  */
 
 import type { ClaimRecord, ClaimStatus, ClaimChallenge } from "./types.js";
 
 /** Valid transitions from each status */
 const VALID_TRANSITIONS: Record<ClaimStatus, ClaimStatus[]> = {
-  proposed:     ["under_review"],
-  under_review: ["verified", "contested", "rejected"],
+  proposed:     ["under_review", "unresolved"],
+  under_review: ["verified", "contested", "rejected", "unresolved"],
   contested:    ["under_review", "unresolved", "verified", "rejected"],
   verified:     [],
   rejected:     [],

@@ -122,6 +122,34 @@ describe("AnthropicClient thinking — anthropic-budget", () => {
     expect(lastBody().thinking.budget_tokens).toBeLessThan(lastBody().max_tokens);
   });
 
+  // Regression: when max_tokens can't fit a min-sized thinking block plus a
+  // min-sized answer (max_tokens < 2*minBudgetTokens), there is no valid
+  // budget. Previously budget was floored back to min, producing
+  // budget_tokens ≥ max_tokens → Anthropic 400. Now thinking is omitted.
+  it("omits thinking when max_tokens has no headroom for a min budget", async () => {
+    const { client, lastBody } = clientCapturing({
+      provider: "anthropic",
+      model: BUDGET_MODEL, // minBudgetTokens 1024
+      apiKey: "test",
+      maxTokens: 400, // 400 < 2*1024 → no valid budget
+    });
+    await client.createMessage(opts({ mode: "on" }));
+    expect(lastBody().thinking).toBeUndefined();
+    expect(lastBody().max_tokens).toBe(400);
+  });
+
+  it("whenever thinking IS sent, budget_tokens stays strictly below max_tokens", async () => {
+    // maxTokens=1024 → ceiling=0 < min → must omit (the planner's value).
+    const { client, lastBody } = clientCapturing({
+      provider: "anthropic",
+      model: BUDGET_MODEL,
+      apiKey: "test",
+      maxTokens: 1024,
+    });
+    await client.createMessage(opts({ mode: "budget", budgetTokens: 8000 }));
+    expect(lastBody().thinking).toBeUndefined();
+  });
+
   it("falls back to config.reasoning when no per-call reasoning", async () => {
     const { client, lastBody } = clientCapturing({
       provider: "anthropic",
