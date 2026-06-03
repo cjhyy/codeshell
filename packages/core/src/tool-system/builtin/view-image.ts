@@ -62,13 +62,17 @@ export async function viewImageTool(
   const cwd = ctx?.cwd ?? process.cwd();
   const abs = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);
 
-  // 闸门 1:vision gate —— 不支持视觉就不读文件
-  if (ctx?.llmConfig) {
+  // 闸门 1:vision gate —— 不支持视觉就不读文件。
+  // 缺 llmConfig 时按「非视觉」处理(fail closed),对齐 DEFAULT_CAPABILITY
+  // 的保守姿态:运行时 ToolContext.llmConfig 必有,缺失只发生在测试 / 异常
+  // 装配下,此时绝不把 base64 读进上下文。
+  const supportsVision = (() => {
+    if (!ctx?.llmConfig) return false;
     const kind = (ctx.llmConfig.providerKind ?? ctx.llmConfig.provider) as ProviderKindName;
-    const cap = capabilitiesFor(kind, ctx.llmConfig.model);
-    if (!cap.supportsVision) {
-      return `[图片未加载: ${abs} —— 当前模型不支持视觉输入,已跳过。切换到 vision 模型后再 view_image。]`;
-    }
+    return capabilitiesFor(kind, ctx.llmConfig.model).supportsVision;
+  })();
+  if (!supportsVision) {
+    return `[图片未加载: ${abs} —— 当前模型不支持视觉输入,已跳过。切换到 vision 模型后再 view_image。]`;
   }
 
   // 闸门 2:格式 gate

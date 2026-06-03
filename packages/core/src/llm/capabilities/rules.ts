@@ -76,6 +76,25 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
     why: "OpenAI o-series + gpt-5..5.4 reject classic sampling params; use max_completion_tokens + reasoning_effort.",
   },
 
+  // ─── OpenAI native — gpt-4o / gpt-4-turbo (multimodal, non-reasoning) ──
+  // The famous vision models. They are NOT reasoning models, so they keep
+  // classic sampling params + max_tokens — only `supportsVision` differs
+  // from DEFAULT_CAPABILITY. Listed AFTER the gpt-5+ rules (those anchor on
+  // gpt-[5-9]) so neither family masks the other. Without this rule gpt-4o
+  // falls through to DEFAULT_CAPABILITY (supportsVision:false) and a famous
+  // vision model gets its history images stripped / new attachments rejected.
+  {
+    kind: "openai",
+    // gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4-vision-preview, gpt-4.1*.
+    // gpt-4o has no separator before the "o"; the rest are `-`/`.`-separated.
+    // Stays clear of gpt-3.5-turbo (no vision) and gpt-5+ (handled above).
+    match: /^gpt-4o(?:[-.]|$)|^gpt-4(?:\.1|-turbo|-vision)(?:[-.]|$)/i,
+    capability: {
+      supportsVision: true,
+    },
+    why: "OpenAI gpt-4o / gpt-4o-mini / gpt-4-turbo / gpt-4.1 are multimodal but non-reasoning; only vision differs from default.",
+  },
+
   // ─── DeepSeek ──────────────────────────────────────────────────
   {
     kind: "deepseek",

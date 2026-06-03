@@ -43,6 +43,24 @@ describe("view_image", () => {
     expect(out as string).toContain("不支持视觉");
   });
 
+  it("fails closed (no image) when ctx.llmConfig is absent", async () => {
+    const p = join(dir, "a.png");
+    await writeFile(p, Buffer.from(PNG_B64, "base64"));
+    // Missing llmConfig must NOT fall open and leak base64 into context;
+    // treat as non-vision (DEFAULT_CAPABILITY.supportsVision === false).
+    const out = await viewImageTool({ path: p }, { cwd: dir } as unknown as ToolContext);
+    expect(typeof out).toBe("string");
+    expect(out as string).toContain("不支持视觉");
+  });
+
+  it("loads the image for a vision OpenAI model (gpt-4o)", async () => {
+    const p = join(dir, "a.png");
+    await writeFile(p, Buffer.from(PNG_B64, "base64"));
+    const out = await viewImageTool({ path: p }, ctxWith("gpt-4o", "openai", dir));
+    expect(typeof out).toBe("object");
+    expect((out as { contentBlocks: any[] }).contentBlocks[0].type).toBe("image");
+  });
+
   it("rejects unsupported formats (svg) with text", async () => {
     const p = join(dir, "a.svg");
     await writeFile(p, "<svg/>");
