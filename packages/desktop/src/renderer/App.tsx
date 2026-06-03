@@ -36,6 +36,7 @@ import {
 } from "./transcripts";
 import { titleFromWire } from "./chat/attachments";
 import { resolveBucket } from "./streamRouting";
+import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import { selectReplayEvents } from "./snapshotReplay";
 import type {
   AgentLifecycleEvent,
@@ -163,6 +164,10 @@ function App() {
   const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
+  // Buckets that finished a turn while the user was viewing a different
+  // session. Cleared when the user selects the bucket (handleSelectSession).
+  // Not persisted — purely a live "did something finish off-screen" hint.
+  const [unreadBuckets, setUnreadBuckets] = useState<Set<string>>(() => new Set());
   const [repos, setRepos] = useState<Repo[]>(() => loadRepos());
   const [activeRepoId, setActiveRepoId] = useState<string | null>(() => loadActiveRepoId());
   const [view, setView] = useState<ViewState>(() => loadView());
@@ -262,6 +267,46 @@ function App() {
     branch: string | null;
     clean: boolean | null;
   }>({ branch: null, clean: null });
+
+  /**
+   * Per-session sidebar status, keyed by the SAME bucketKey() the Sidebar
+   * derives per row (repoKey::uiSessionId). Priority asking > running > unread.
+   *
+   * - asking: a pending approval / ask_user envelope is queued for this bucket.
+   *   The envelope carries an ENGINE sessionId, so we map it through the exact
+   *   same resolveBucket() machinery stream events use (live route table → disk
+   *   index reverse-lookup → runningBucket hint). Falls back to activeBucket so
+   *   an unattributable approval at least lights up the bucket the user sees.
+   * - running: bucket is in busyKeys.
+   * - unread: bucket finished a turn off-screen.
+   *
+   * Iterates every known session across all repo indices so the keys here line
+   * up 1:1 with the rows Sidebar renders. NOTE: bucketKey()/repoKeyOf() must
+   * stay byte-identical to Sidebar's per-row key derivation (see Sidebar.tsx).
+   */
+  const sessionStatusMap = useMemo<Record<string, SessionStatus>>(() => {
+    const asking = new Set<string>();
+    for (const env of approvalQueue) {
+      const bucket =
+        resolveBucket(
+          env.sessionId ?? "",
+          engineToBucketRef.current,
+          sessionIndices,
+          runningBucketRef.current,
+        ) ?? activeBucketRef.current;
+      if (bucket) asking.add(bucket);
+    }
+    const map: Record<string, SessionStatus> = {};
+    for (const [repoKey, index] of Object.entries(sessionIndices)) {
+      const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+      for (const s of index.sessions) {
+        const bucket = bucketKey(repoId, s.id);
+        const status = statusForBucket(bucket, asking, busyKeys, unreadBuckets);
+        if (status) map[bucket] = status;
+      }
+    }
+    return map;
+  }, [approvalQueue, sessionIndices, busyKeys, unreadBuckets]);
 
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
@@ -505,6 +550,14 @@ function App() {
 
   const handleSelectSession = (repoId: string | null, sessionId: string): void => {
     const key = repoKeyOf(repoId);
+    // Selecting a session clears its unread mark — the user is now looking at it.
+    const selectedBucket = bucketKey(repoId, sessionId);
+    setUnreadBuckets((prev) => {
+      if (!prev.has(selectedBucket)) return prev;
+      const next = new Set(prev);
+      next.delete(selectedBucket);
+      return next;
+    });
     setActiveRepoId(repoId);
     setSessionIndices((prev) => ({
       ...prev,
@@ -935,6 +988,18 @@ function App() {
 
       if (event.type === "turn_complete" || event.type === "error") {
         setBusyForKey(target, false);
+        // A turn finished in a bucket the user is NOT looking at → mark unread
+        // so the sidebar shows a dot. Read the active bucket from the ref (not
+        // a captured `activeBucket`): this onStreamEvent callback is registered
+        // once and would otherwise close over a stale value.
+        if (target !== activeBucketRef.current) {
+          setUnreadBuckets((prev) => {
+            if (prev.has(target)) return prev;
+            const next = new Set(prev);
+            next.add(target);
+            return next;
+          });
+        }
         // Don't null runningBucketRef here — another concurrent send may
         // still be using it as a fallback. The ref is only a soft hint;
         // engineToBucketRef is the authoritative routing for in-flight runs.
@@ -1600,6 +1665,7 @@ function App() {
           collapsedRepos={collapsedRepos}
           sidebarCollapsed={view.sidebarCollapsed}
           approvalsBadge={approvalQueue.length}
+          sessionStatuses={sessionStatusMap}
           onSelectRepo={setActiveRepoId}
           onSelectSession={handleSelectSession}
           onToggleRepo={handleToggleRepo}

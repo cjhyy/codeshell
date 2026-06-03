@@ -11,6 +11,7 @@ import {
   PenSquare,
   Archive,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { ContextMenu, type ContextMenuItem } from "./ui/ContextMenu";
@@ -20,6 +21,17 @@ import { SettingsMenu } from "./settings/SettingsMenu";
 import type { ViewMode } from "./view";
 import { repoLabel, sortRepos, type Repo } from "./repos";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "./transcripts";
+import type { SessionStatus } from "./sessionStatus";
+
+/**
+ * Compose the transcripts-map bucket key for a session row.
+ * MUST stay byte-identical to App.bucketKey()/repoKeyOf() so the keys in the
+ * `sessionStatuses` map (built in App.tsx) line up 1:1 with the rows here.
+ * repoId === null is the no-project case → NO_REPO_KEY (same const App uses).
+ */
+function rowBucketKey(repoId: string | null, sessionId: string): string {
+  return `${repoId ?? NO_REPO_KEY}::${sessionId}`;
+}
 
 interface SidebarProps {
   repos: Repo[];
@@ -28,6 +40,8 @@ interface SidebarProps {
   activeSessionId: string | null;
   collapsedRepos: Set<string>;
   approvalsBadge?: number;
+  /** Per-bucket status mark, keyed by rowBucketKey(repoId, sessionId). */
+  sessionStatuses?: Record<string, SessionStatus>;
   sidebarCollapsed?: boolean;
 
   onSelectRepo: (id: string | null) => void;
@@ -67,6 +81,7 @@ export function Sidebar({
   activeSessionId,
   collapsedRepos,
   approvalsBadge,
+  sessionStatuses,
   sidebarCollapsed,
   onSelectRepo,
   onSelectSession,
@@ -236,6 +251,7 @@ export function Sidebar({
               collapsed={collapsedRepos.has(repo.id)}
               isActiveRepo={activeRepoId === repo.id}
               activeSessionId={activeSessionId}
+              statusFor={(sid) => sessionStatuses?.[rowBucketKey(repo.id, sid)]}
               onToggle={() => onToggleRepo(repo.id)}
               onSelectRepo={() => onSelectRepo(repo.id)}
               onSelectSession={(sid) => onSelectSession(repo.id, sid)}
@@ -257,6 +273,7 @@ export function Sidebar({
             <NoRepoSection
               sessions={noRepoSessions}
               activeSessionId={activeRepoId === null ? activeSessionId : null}
+              statusFor={(sid) => sessionStatuses?.[rowBucketKey(null, sid)]}
               onSelectSession={(sid) => onSelectSession(null, sid)}
               onSessionContextMenu={(e, s) => {
                 e.preventDefault();
@@ -322,6 +339,7 @@ function ProjectGroup({
   collapsed,
   isActiveRepo,
   activeSessionId,
+  statusFor,
   onToggle,
   onSelectRepo,
   onSelectSession,
@@ -336,6 +354,7 @@ function ProjectGroup({
   collapsed: boolean;
   isActiveRepo: boolean;
   activeSessionId: string | null;
+  statusFor: (sid: string) => SessionStatus | undefined;
   onToggle: () => void;
   onSelectRepo: () => void;
   onSelectSession: (sid: string) => void;
@@ -412,6 +431,7 @@ function ProjectGroup({
                   key={s.id}
                   s={s}
                   isActive={isActiveRepo && activeSessionId === s.id}
+                  status={statusFor(s.id)}
                   showKbd={isActiveRepo && i < 5}
                   kbdIndex={i + 1}
                   onClick={() => onSelectSession(s.id)}
@@ -444,12 +464,14 @@ function ProjectGroup({
 function NoRepoSection({
   sessions,
   activeSessionId,
+  statusFor,
   onSelectSession,
   onSessionContextMenu,
   onArchiveSession,
 }: {
   sessions: SessionSummary[];
   activeSessionId: string | null;
+  statusFor: (sid: string) => SessionStatus | undefined;
   onSelectSession: (sid: string) => void;
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
   onArchiveSession: (sid: string) => void;
@@ -464,6 +486,7 @@ function NoRepoSection({
             key={s.id}
             s={s}
             isActive={activeSessionId === s.id}
+            status={statusFor(s.id)}
             showKbd={false}
             kbdIndex={0}
             onClick={() => onSelectSession(s.id)}
@@ -479,6 +502,7 @@ function NoRepoSection({
 function SessionRow({
   s,
   isActive,
+  status,
   showKbd,
   kbdIndex,
   onClick,
@@ -487,6 +511,7 @@ function SessionRow({
 }: {
   s: SessionSummary;
   isActive: boolean;
+  status?: SessionStatus;
   showKbd: boolean;
   kbdIndex: number;
   onClick: () => void;
@@ -539,6 +564,24 @@ function SessionRow({
         <Clock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="自动化" />
       )}
       <span className="flex-1 truncate">{s.title}</span>
+      {status === "running" ? (
+        <Loader2
+          className="h-3 w-3 shrink-0 animate-spin text-status-running"
+          aria-label="运行中"
+        />
+      ) : status === "asking" ? (
+        <span
+          className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
+          aria-label="待输入"
+          role="img"
+        />
+      ) : status === "unread" ? (
+        <span
+          className="h-2 w-2 shrink-0 rounded-full bg-primary"
+          aria-label="未读"
+          role="img"
+        />
+      ) : null}
       <span className="relative flex shrink-0 items-center">
         {confirming ? (
           <button
