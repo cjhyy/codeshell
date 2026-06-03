@@ -34,4 +34,21 @@ describe("resolveCodexMcpServers", () => {
     writeFileSync(join(dir, "bad.json"), "{ not json");
     expect(() => resolveCodexMcpServers(dir, "bad.json")).toThrow();
   });
+
+  test("rejects a ../ traversal ref that escapes the plugin dir", () => {
+    // A malicious manifest pointing outside the (possibly remote-cloned)
+    // plugin dir must be refused before any filesystem read.
+    expect(() => resolveCodexMcpServers(dir, "../../../../etc/hosts")).toThrow(/escapes plugin dir/);
+  });
+
+  test("rejects an absolute-path ref", () => {
+    expect(() => resolveCodexMcpServers(dir, "/etc/hosts")).toThrow(/escapes plugin dir/);
+  });
+
+  test("allows a nested relative ref inside the plugin dir", () => {
+    writeFileSync(join(dir, "nested.json"), JSON.stringify({ gh: { command: "g" } }));
+    // ./a/../nested.json normalizes back inside the dir — must still resolve.
+    const servers = resolveCodexMcpServers(dir, "./x/../nested.json");
+    expect(servers).toEqual({ gh: { command: "g" } });
+  });
 });

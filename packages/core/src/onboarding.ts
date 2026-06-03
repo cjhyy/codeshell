@@ -7,7 +7,7 @@
 
 import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { userHome } from "./settings/manager.js";
 import { getOpenRouterModels } from "./data/openrouter-models.js";
 import { sanitizeApiKey } from "./llm/api-key-sanitize.js";
 
@@ -327,7 +327,7 @@ export function resolveApiKey(
 export function findSavedKeyForProvider(
   provider: ProviderDef,
 ): { apiKey: string; baseUrl: string } | undefined {
-  const file = join(homedir(), ".code-shell", "settings.json");
+  const file = join(userHome(), ".code-shell", "settings.json");
   if (!existsSync(file)) return undefined;
   let data: any;
   try {
@@ -361,7 +361,7 @@ export function findSavedKeyForProvider(
  * just the provider's first model.
  */
 export function loadSavedModelsForProvider(provider: ProviderDef): string[] {
-  const file = join(homedir(), ".code-shell", "settings.json");
+  const file = join(userHome(), ".code-shell", "settings.json");
   if (!existsSync(file)) return [];
   let data: any;
   try {
@@ -389,7 +389,7 @@ export function hasApiKey(): boolean {
   // /logout look like a no-op when the others still held credentials.
   // Reads ~/.code-shell/ only — ~/.claude/ compat was dropped because Claude
   // Code's settings schema diverges and merging broke boot.
-  const p = join(homedir(), ".code-shell", "settings.json");
+  const p = join(userHome(), ".code-shell", "settings.json");
   if (existsSync(p)) {
     try {
       const data = JSON.parse(readFileSync(p, "utf-8"));
@@ -562,7 +562,7 @@ export function modelDisplayName(model: string): string {
 }
 
 export function saveSettings(result: OnboardingResult, providerDef?: ProviderDef, poolModels?: string[]): void {
-  const dir = join(homedir(), ".code-shell");
+  const dir = join(userHome(), ".code-shell");
   const file = join(dir, "settings.json");
   mkdirSync(dir, { recursive: true });
 
@@ -646,7 +646,7 @@ export function appendOnboardingResult(opts: {
     maxOutputTokens?: number;
   }>;
 }): void {
-  const dir = join(homedir(), ".code-shell");
+  const dir = join(userHome(), ".code-shell");
   const file = join(dir, "settings.json");
   mkdirSync(dir, { recursive: true });
 
@@ -709,7 +709,7 @@ export function appendOnboardingResult(opts: {
 // saveArenaSettings removed — replaced by saveArenaSettingsByKeys
 
 export function saveArenaSettingsByKeys(keys: string[]): void {
-  const dir = join(homedir(), ".code-shell");
+  const dir = join(userHome(), ".code-shell");
   const file = join(dir, "settings.json");
 
   let existing: Record<string, unknown> = {};

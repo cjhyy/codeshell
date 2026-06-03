@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { PluginInstallError } from "../types.js";
 
 /**
@@ -16,7 +16,16 @@ export function resolveCodexMcpServers(
   if (decl === undefined) return {};
   if (typeof decl === "object") return decl;
 
-  const path = join(sourceDir, decl);
+  // `decl` is an untrusted, unvalidated manifest field from a (possibly
+  // remote-cloned) plugin. Resolve it and assert it stays inside sourceDir so
+  // a value like "../../../../etc/secret.json" can't escape the plugin dir and
+  // read arbitrary files into the install's mcp-servers.json.
+  const base = resolve(sourceDir);
+  const path = resolve(base, decl);
+  const rel = relative(base, path);
+  if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+    throw new PluginInstallError(`mcpServers ref escapes plugin dir: ${decl}`);
+  }
   if (!existsSync(path)) {
     throw new PluginInstallError(`mcpServers ref not found: ${decl}`);
   }
