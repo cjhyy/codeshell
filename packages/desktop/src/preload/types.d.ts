@@ -213,7 +213,7 @@ export interface CodeshellApi {
    * correct project sidebar group (stream events carry no cwd).
    */
   onAutomationSession(
-    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void,
+    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void,
   ): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
@@ -329,6 +329,9 @@ export interface CodeshellApi {
   pauseAutomation(id: string): Promise<boolean>;
   resumeAutomation(id: string): Promise<boolean>;
   runAutomationNow(id: string): Promise<boolean>;
+  /** Abort the in-flight run of cron job `id`, if any. Returns false when no
+   *  run is in flight. Used by session delete to stop a still-running run. */
+  cancelAutomationRun(id: string): Promise<boolean>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
   /**

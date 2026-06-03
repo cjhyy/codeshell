@@ -17,6 +17,10 @@ export interface AutomationSessionAnnouncement {
   sessionId: string;
   cwd: string;
   title: string;
+  /** The cron job id that owns this run. Stored on the session so deleting a
+   *  still-running automation session can cancel the in-flight run before
+   *  removing its on-disk dir. */
+  cronJobId: string;
 }
 
 export interface PlaceLiveSessionDeps {
@@ -56,6 +60,7 @@ export function placeLiveAutomationSession(
     engineSessionId: ann.sessionId,
     source: "automation",
     runStatus: "running",
+    cronJobId: ann.cronJobId,
   };
   return { repoId, summary };
 }

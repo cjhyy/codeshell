@@ -31,6 +31,10 @@ export interface CronRunRequest {
   permissionMode: PermissionMode;
   /** Approval backend the run must install (resolved from the job's tier). */
   approvalBackend: ApprovalBackend;
+  /** Abort signal for the run — tripped by `CronScheduler.abort(jobId)` when
+   *  the run must be cancelled mid-flight (e.g. the user deletes its session
+   *  while it's still executing). Forward to `Engine.run({ signal })`. */
+  signal?: AbortSignal;
 }
 
 export interface CronRunResult {
@@ -50,13 +54,14 @@ export type CronRunner = (req: CronRunRequest) => Promise<CronRunResult>;
  * future ticks — we still log here so failures are visible.
  */
 export function bindCronToEngine(scheduler: CronScheduler, runner: CronRunner): void {
-  scheduler.setExecutor(async (job: CronJob) => {
+  scheduler.setExecutor(async (job: CronJob, signal: AbortSignal) => {
     const policy = resolveWritePolicy(job.permissionLevel);
     const req: CronRunRequest = {
       job,
       prompt: job.prompt,
       permissionMode: policy.permissionMode,
       approvalBackend: policy.approvalBackend,
+      signal,
     };
     await runner(req);
   });
@@ -90,7 +95,7 @@ export function bindCronToRunManager(
   scheduler: CronScheduler,
   runManager: RunSubmitter,
 ): void {
-  scheduler.setExecutor(async (job: CronJob) => {
+  scheduler.setExecutor(async (job: CronJob, _signal: AbortSignal) => {
     const snapshot = await runManager.submit({
       objective: job.prompt,
       cwd: job.cwd,

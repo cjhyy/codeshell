@@ -139,3 +139,13 @@ export function runAutomationNow(id: string): boolean {
   syncFromStore();
   return s.runNow(id);
 }
+
+/**
+ * Abort the in-flight run of cron job `id`, if any. Used when the user deletes
+ * a still-running automation session from the sidebar — the run's in-main
+ * Engine is cancelled so it stops writing to the session dir we're about to
+ * delete. Returns false when there's no run in flight (or no scheduler yet).
+ */
+export function cancelAutomationRun(id: string): boolean {
+  return scheduler?.abort(id) ?? false;
+}

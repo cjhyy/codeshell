@@ -54,8 +54,13 @@ export class CronScheduler {
   /** Job ids with an execution currently in flight — prevents a tick from
    *  starting a second run of a job whose previous run hasn't finished. */
   private running = new Set<string>();
+  /** AbortControllers for in-flight runs, keyed by job id. The re-entrancy
+   *  guard (`running`) ensures at most one run per job, so one controller per
+   *  job id is sufficient. Used by `abort(jobId)` to cancel a live run (e.g.
+   *  the user deletes the run's session while it's still executing). */
+  private runningControllers = new Map<string, AbortController>();
   private nextId = 1;
-  private onExecute?: (job: CronJob) => Promise<void>;
+  private onExecute?: (job: CronJob, signal: AbortSignal) => Promise<void>;
   /** Optional persistence backend. When set, every create/delete/pause/resume
    *  writes the full job set to disk so jobs survive a restart. */
   private store?: CronStore;
@@ -87,8 +92,23 @@ export class CronScheduler {
     this.store = store;
   }
 
-  setExecutor(fn: (job: CronJob) => Promise<void>): void {
+  setExecutor(fn: (job: CronJob, signal: AbortSignal) => Promise<void>): void {
     this.onExecute = fn;
+  }
+
+  /**
+   * Abort the in-flight run of `jobId`, if any. Aborts the AbortSignal handed
+   * to the executor (which Engine.run cooperates with — it resolves with
+   * reason "aborted_streaming" rather than throwing). Returns false when the
+   * job has no run currently in flight (already settled, never started, or
+   * unknown id). The run's own finally block clears the controller, so a
+   * settled run is a no-op here.
+   */
+  abort(jobId: string): boolean {
+    const controller = this.runningControllers.get(jobId);
+    if (!controller) return false;
+    controller.abort();
+    return true;
   }
 
   /**
@@ -486,13 +506,17 @@ export class CronScheduler {
     // overlapping executions that double-count runCount.
     if (this.running.has(job.id)) return;
     this.running.add(job.id);
+    // One controller per in-flight run, keyed by job id. abort(jobId) trips
+    // this signal; the executor (Engine.run) cooperates and resolves early.
+    const controller = new AbortController();
+    this.runningControllers.set(job.id, controller);
     job.lastRun = Date.now();
     job.runCount++;
     afterStats();
     // Persist updated run stats so runCount/lastRun/nextRun survive a restart.
     this.persistRunStats(job);
     try {
-      await this.onExecute?.(job);
+      await this.onExecute?.(job, controller.signal);
     } catch {
       // Job execution failed — continue scheduling.
     } finally {
@@ -501,6 +525,7 @@ export class CronScheduler {
       // schedule with its stale copy.
       this.persistRunStats(job);
       this.running.delete(job.id);
+      this.runningControllers.delete(job.id);
     }
   }
 }

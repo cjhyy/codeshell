@@ -29,7 +29,7 @@ const lifecycleListeners: Array<(evt: unknown) => void> = [];
 // Live automation session announcements: `{ sessionId, cwd, title }`, fired
 // once when an in-main automation Engine emits session_started.
 const automationSessionListeners: Array<
-  (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void
+  (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void
 > = [];
 
 ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
@@ -67,8 +67,9 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     const cwd = (params?.cwd as string | undefined) ?? "";
     const title = (params?.title as string | undefined) ?? "";
     const prompt = (params?.prompt as string | undefined) ?? "";
+    const cronJobId = (params?.cronJobId as string | undefined) ?? "";
     if (sessionId) {
-      automationSessionListeners.forEach((cb) => cb({ sessionId, cwd, title, prompt }));
+      automationSessionListeners.forEach((cb) => cb({ sessionId, cwd, title, prompt, cronJobId }));
     }
   } else if (method === "agent/approvalRequest") {
     // `{ sessionId, requestId, request }` envelope. requestId lets the
@@ -222,7 +223,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     };
   },
   onAutomationSession: (
-    cb: (meta: { sessionId: string; cwd: string; title: string }) => void,
+    cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void,
   ): (() => void) => {
     automationSessionListeners.push(cb);
     return () => {
@@ -346,6 +347,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   pauseAutomation: (id: string) => ipcRenderer.invoke("automation:pause", id),
   resumeAutomation: (id: string) => ipcRenderer.invoke("automation:resume", id),
   runAutomationNow: (id: string) => ipcRenderer.invoke("automation:runNow", id),
+  cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
   listSkills: (cwd: string) => ipcRenderer.invoke("skills:list", cwd),
   searchFiles: (cwd: string, query: string) =>
     ipcRenderer.invoke("files:search", cwd, query),

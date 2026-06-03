@@ -31,6 +31,7 @@ import {
   pauseAutomation,
   resumeAutomation,
   runAutomationNow,
+  cancelAutomationRun,
   type CreateAutomationInput,
   type UpdateAutomationInput,
 } from "./automation-service.js";
@@ -294,6 +295,7 @@ app.whenReady().then(() => {
       cwd: string;
       title: string;
       prompt: string;
+      cronJobId: string;
     }) => bridge?.broadcastAutomationSession(meta);
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
@@ -869,6 +871,10 @@ ipcMain.handle("automation:resume", async (_e, id: string) => {
 ipcMain.handle("automation:runNow", async (_e, id: string) => {
   if (typeof id !== "string") throw new Error("id required");
   return runAutomationNow(id);
+});
+ipcMain.handle("automation:cancelRun", async (_e, id: string) => {
+  if (typeof id !== "string") throw new Error("id required");
+  return cancelAutomationRun(id);
 });
 
 ipcMain.handle("trust:get", async (_e, p: string) => {

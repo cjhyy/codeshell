@@ -59,6 +59,11 @@ export interface AutomationSessionMeta {
   sessionId: string;
   cwd: string;
   title: string;
+  /** The cron job id that owns this run. The renderer stores it on the session
+   *  so deleting a still-running automation session can cancel the in-flight
+   *  run (window.codeshell.cancelAutomationRun(cronJobId)) before deleting the
+   *  on-disk session dir. */
+  cronJobId: string;
   /** The job's prompt (the triggering "user" message) so the renderer can show
    *  it as the opening message — automation never goes through the chat send()
    *  path, so this is the only way the prompt reaches the live UI. The ORIGINAL
@@ -142,13 +147,13 @@ export function buildDesktopAutomationRunner(
               if (firstBind && onSession) {
                 const name = req.job.name?.trim() || req.job.id;
                 const date = new Date().toLocaleDateString();
-                onSession({ sessionId: sid, cwd: jobCwd, title: `${name} ${date}`, prompt: req.job.prompt });
+                onSession({ sessionId: sid, cwd: jobCwd, title: `${name} ${date}`, prompt: req.job.prompt, cronJobId: req.job.id });
               }
             }
             emit?.(sid ?? req.job.id, e);
           }
         : undefined;
-    const result = await engine.run(prompt, { cwd: jobCwd, onStream });
+    const result = await engine.run(prompt, { cwd: jobCwd, onStream, signal: req.signal });
     return { text: result.text, reason: result.reason };
   };
 }

@@ -248,7 +248,7 @@ export class AgentBridge {
    * Separate JSON-RPC method from `agent/streamEvent` so the shared core
    * StreamEvent shape stays untouched and the interactive path is unaffected.
    */
-  broadcastAutomationSession(meta: { sessionId: string; cwd: string; title: string; prompt: string }): void {
+  broadcastAutomationSession(meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }): void {
     this.safeSend("agent:msg", JSON.stringify({
       jsonrpc: "2.0", method: "agent/automationSession", params: meta,
     }));
