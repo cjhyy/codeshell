@@ -214,7 +214,13 @@ const RECOMMENDED_MODELS: Partial<Record<ProviderKind, RecommendedModel[]>> = {
  */
 export function ModelSection({ scope, activeRepoPath }: Props) {
   const [cur, setCur] = useState<Record<string, unknown> | null>(null);
-  const [saving, setSaving] = useState(false);
+  // Action-scoped saving indicator. One shared boolean made *every* mutation
+  // (switching the active model, toggling reasoning, picking the aux model)
+  // flash the bottom-of-section "保存中…" block — jarring for the common,
+  // near-instant model switch. We key by action id instead so only the
+  // affected control disables, and the add-model form keeps its own inline
+  // "保存中…" on its button (no global block). Mirrors CapabilitiesOverviewSection.
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -300,7 +306,7 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
   }, [reasoningTargets]);
 
   const setReasoning = async (key: string, reasoning: ReasoningSetting) => {
-    setSaving(true);
+    setSavingId(`reasoning:${key}`);
     setError(null);
     setNotice(null);
     try {
@@ -315,7 +321,7 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
-      setSaving(false);
+      setSavingId(null);
     }
   };
 
@@ -348,7 +354,7 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     typeof cur?.auxModelKey === "string" ? (cur.auxModelKey as string) : "";
 
   const setAuxModel = async (key: string) => {
-    setSaving(true);
+    setSavingId("aux");
     setError(null);
     setNotice(null);
     try {
@@ -366,12 +372,12 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
-      setSaving(false);
+      setSavingId(null);
     }
   };
 
   const setActive = async (entry: ModelEntry) => {
-    setSaving(true);
+    setSavingId(`active:${entry.key}`);
     setError(null);
     setNotice(null);
     try {
@@ -404,7 +410,7 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
-      setSaving(false);
+      setSavingId(null);
     }
   };
 
@@ -462,7 +468,7 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
   };
 
   const saveNewModel = async () => {
-    setSaving(true);
+    setSavingId("new");
     setError(null);
     setNotice(null);
     try {
@@ -543,7 +549,7 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
-      setSaving(false);
+      setSavingId(null);
     }
   };
 
@@ -584,7 +590,11 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
               <li
                 key={m.key}
                 className={`model-row${active ? " active" : ""}`}
-                onClick={() => void setActive(m)}
+                aria-busy={savingId === `active:${m.key}`}
+                onClick={() => {
+                  if (savingId === `active:${m.key}`) return;
+                  void setActive(m);
+                }}
               >
                 <span className="model-provider">{m.providerKey}</span>
                 <span className="model-name">{m.label}</span>
@@ -597,8 +607,11 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
                     className="model-reasoning"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {renderReasoningControl(control, reasoning, saving, (next) =>
-                      void setReasoning(m.key, next),
+                    {renderReasoningControl(
+                      control,
+                      reasoning,
+                      savingId === `reasoning:${m.key}`,
+                      (next) => void setReasoning(m.key, next),
                     )}
                   </span>
                 )}
@@ -614,6 +627,7 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
             <span>后台任务模型</span>
             <Select
               value={auxModelKey}
+              disabled={savingId === "aux"}
               onChange={(v) => void setAuxModel(v)}
               placeholder="跟随当前模型"
               options={[
@@ -816,18 +830,25 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
           </label>
 
           <div className="settings-toolbar">
-            <Button variant="default" disabled={saving} onClick={() => setAdding(false)}>
+            <Button
+              variant="default"
+              disabled={savingId === "new"}
+              onClick={() => setAdding(false)}
+            >
               取消
             </Button>
-            <Button variant="solid" disabled={saving} onClick={() => void saveNewModel()}>
-              {saving ? "保存中…" : "保存模型"}
+            <Button
+              variant="solid"
+              disabled={savingId === "new"}
+              onClick={() => void saveNewModel()}
+            >
+              {savingId === "new" ? "保存中…" : "保存模型"}
             </Button>
           </div>
         </div>
       )}
 
       {error && <div className="view-error">{error}</div>}
-      {saving && <div className="approvals-empty">保存中…</div>}
     </section>
   );
 }
