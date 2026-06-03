@@ -12,6 +12,7 @@ import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
 import { capabilitiesFor, type Capability } from "../capabilities/index.js";
 import type { ProviderKindName } from "../provider-kinds.js";
+import { stripVisionFromHistory } from "../strip-vision.js";
 
 /**
  * Anthropic's `max_tokens` is required, so unlike OpenAI we can't omit it when
@@ -330,6 +331,7 @@ export class AnthropicClient extends LLMClientBase {
   }
 
   private buildMessages(messages: import("../../types.js").Message[]): Anthropic.MessageParam[] {
+    messages = stripVisionFromHistory(messages, this.capability.supportsVision);
     const result: Anthropic.MessageParam[] = [];
 
     for (const msg of messages) {

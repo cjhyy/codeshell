@@ -56,6 +56,12 @@ export class EngineRuntime {
     let cached = this.sandboxCache.get(key);
     if (!cached) {
       cached = resolveSandboxBackend(config, cwd);
+      // Don't cache a rejection: an explicit-mode probe that throws (e.g.
+      // `seatbelt` on a host without sandbox-exec) must be retryable after the
+      // user fixes the config, not sticky until process restart.
+      cached.catch(() => {
+        if (this.sandboxCache.get(key) === cached) this.sandboxCache.delete(key);
+      });
       this.sandboxCache.set(key, cached);
     }
     return cached;

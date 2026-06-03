@@ -67,6 +67,7 @@ import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
   defaultSandboxConfig,
   resolveSandboxBackend,
+  type SandboxBackend,
   type SandboxConfig,
 } from "../tool-system/sandbox/index.js";
 import {
@@ -395,6 +396,7 @@ export class Engine {
 
   /** Shared resources supplied at construction (adapter pattern — null when self-constructed). */
   readonly runtime: EngineRuntime | null;
+  private readonly sandboxCache = new Map<string, Promise<SandboxBackend>>();
   /** Active permission mode for this Engine instance. */
   permissionMode: NonNullable<EngineConfig["permissionMode"]>;
   /** True when permissionMode === "plan". */
@@ -982,6 +984,7 @@ export class Engine {
           maxContextTokens: this.config.maxContextTokens ?? 200_000,
           sessionStorageDir: this.config.sessionStorageDir,
           headless: this.config.headless,
+          readOnlySession: req.readOnlySession,
           sandbox: this.config.sandbox,
           // Subagents inherit the parent's scope: a child runs in the same
           // cwd/session, so it should see the same config layers the parent did.
@@ -1038,11 +1041,11 @@ export class Engine {
     // `auto` mode handles its own downgrade with a one-time warning
     // inside resolveSandboxBackend; explicit modes do not.
     //
-    // Backend is cached on EngineRuntime (when available) so the
-    // capability probe runs once per (mode, cwd) instead of every turn.
+    // Backend is cached per runtime/engine so the capability probe runs once
+    // per (mode, cwd) instead of every turn.
     const sandboxBackend = this.runtime
       ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
-      : await resolveSandboxBackend(sandboxConfig, cwd);
+      : await this.resolveSandboxWithoutRuntime(sandboxConfig, cwd);
 
     // sessionId is filled in after the session bundle is resolved below
     // (the session may be cold-started or resumed). Until then this is
@@ -1307,7 +1310,11 @@ export class Engine {
 
     const toolExecutor = new ToolExecutor(this.toolRegistry, permission, this.hooks);
     const investigationGuard = new InvestigationGuard();
-    if (this.config.headless || this.config.readOnlySession) investigationGuard.setSoftMode(true);
+    if (this.config.readOnlySession) {
+      investigationGuard.setPolicy("read-only-review");
+    } else if (this.config.headless) {
+      investigationGuard.setSoftMode(true);
+    }
     toolExecutor.setInvestigationGuard(investigationGuard);
     toolExecutor.setTaskGuard(new TaskGuard(() => latestTodos));
 
@@ -2436,6 +2443,25 @@ export class Engine {
    * overlays turn-specific fields like sandbox and subAgentSpawner) and
    * by tests that want a ToolContext without a full run() cycle.
    */
+  private resolveSandboxWithoutRuntime(
+    config: SandboxConfig,
+    cwd: string,
+  ): Promise<SandboxBackend> {
+    const key = `${config.mode}:${cwd}`;
+    let cached = this.sandboxCache.get(key);
+    if (!cached) {
+      cached = resolveSandboxBackend(config, cwd);
+      // Mirror EngineRuntime.resolveSandbox: don't cache a rejection, or an
+      // explicit-mode probe that throws stays sticky until process restart even
+      // after the user fixes the config.
+      cached.catch(() => {
+        if (this.sandboxCache.get(key) === cached) this.sandboxCache.delete(key);
+      });
+      this.sandboxCache.set(key, cached);
+    }
+    return cached;
+  }
+
   buildToolContext(): ToolContext {
     const { disabledSkills, disabledPlugins } = this.readDisabledLists();
     return {

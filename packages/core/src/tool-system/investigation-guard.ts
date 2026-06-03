@@ -39,6 +39,8 @@ export interface GuardDecision {
   prepend?: string;
 }
 
+export type InvestigationGuardPolicy = "normal" | "soft" | "read-only-review";
+
 export class InvestigationGuard {
   private readHistory = new Map<string, number>();
   private consecutiveReads = 0;
@@ -53,10 +55,15 @@ export class InvestigationGuard {
    * be killed by the guard — it should still get the signal to change
    * strategy, but the tool call goes through.
    */
-  private softMode = false;
+  private policy: InvestigationGuardPolicy = "normal";
+  private readOnlyReviewBudgetReminderShown = false;
 
   setSoftMode(soft: boolean): void {
-    this.softMode = soft;
+    this.policy = soft ? "soft" : "normal";
+  }
+
+  setPolicy(policy: InvestigationGuardPolicy): void {
+    this.policy = policy;
   }
 
   preToolCheck(call: ToolCall): GuardDecision | undefined {
@@ -87,7 +94,7 @@ export class InvestigationGuard {
         `Re-reading the same content will not produce new information. ` +
         `Switch strategy: run a command with side effects (Bash, debug log, repro), make a code change, or ask the user a specific question. ` +
         `If you genuinely need this content, summarize what you already know about it from prior reads instead of re-fetching.`;
-      if (this.softMode) {
+      if (this.policy !== "normal") {
         // Soft mode (headless): deliver the same signal as a prepend so the
         // model still sees it, but allow the tool call to proceed. Hard-
         // blocking an unattended `code-shell run …` would dead-end the task
@@ -105,6 +112,16 @@ export class InvestigationGuard {
     }
 
     if (this.consecutiveReads > READ_BUDGET) {
+      if (this.policy === "read-only-review") {
+        if (!this.readOnlyReviewBudgetReminderShown) {
+          this.readOnlyReviewBudgetReminderShown = true;
+          prependParts.push(
+            `<system-reminder>Investigation guard: ${this.consecutiveReads} consecutive read-only calls during an explicit read-only review. ` +
+              `Continue only if each read is adding new evidence, and surface a concise status update when useful.</system-reminder>`,
+          );
+        }
+        return prependParts.length ? { prepend: prependParts.join("\n") } : undefined;
+      }
       prependParts.push(
         `<system-reminder>Investigation guard: ${this.consecutiveReads} consecutive read-only calls with no action taken. ` +
           `Per coding.md, change strategy now — make a code change, run a command with side effects, or ask the user.</system-reminder>`,
@@ -132,6 +149,12 @@ export class InvestigationGuard {
 
     if (wasSilent >= SILENT_TURN_BUDGET && turnNumber !== this.lastReminderSilent) {
       this.lastReminderSilent = turnNumber;
+      if (this.policy === "read-only-review") {
+        return (
+          `<system-reminder>Investigation guard: you have taken ${wasSilent} consecutive turns of read-only investigation ` +
+          `without any text update to the user. Surface a brief status update with what you have confirmed, ruled out, and will inspect next.</system-reminder>`
+        );
+      }
       return (
         `<system-reminder>Investigation guard: you have taken ${wasSilent} consecutive turns of read-only investigation ` +
           `without any text update to the user or side-effecting action. ` +

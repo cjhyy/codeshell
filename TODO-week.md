@@ -6,8 +6,6 @@
 
 | 状态 | #   | 任务 | 备注 / 关键落点 |
 | ---- | --- | ---- | --------------- |
-| 🟡 | 2 | 统一能力 UI — **剩纯产品决策** | **【小项已全做完(`562fc83`),仅剩一个产品方向待你拍】** 三个无需决策的小项已落地:① 点能力行跳转对应 tab;② builtin 项目级覆盖(schema `CapabilityOverrides.builtin` + overlay `bucketForKind`/`effectiveBuiltinLists` + Engine 构造期消费,真生效非只可写);③ 项目级 agent 写路径(AgentsSection 按 activeRepoPath 走 project scope)。**只剩**:产品方向——A 维持现状(推荐)/B 大一统内嵌(~5-7d)/C 总览+详情弹窗(~2-3d)。**建议 A,别为完成 TODO 强行重构。** |
-| 🟡 | 3 | 多 session 隔离 — **剩 P2/P3(均低优先)** | **【P1 根治已完成(`9ce09a5`):** activeKey 改 per-session(Engine 自持 activeModelKey,aux-client 决策不再读共享池)+ maxTokens 不再臆造 8192(undefined→端点默认/Anthropic 4096 兜底,clamp 仍挡 384k→128k)。**剩(低优先,非阻塞)**:① **P2 memory extraction 耗时波动未深挖**(`services/memory-orchestrator.ts`、`engine.ts` extraction 路径;`elapsedMs` 3083→5939→8689 又掉回);② **P3 resolveSandboxBackend 每 turn 重 resolve**(`engine.ts`)。详见 `docs/research/session-isolation-state.md` §6。**改 core 必 rebuild** |
 | ⚪ 不做 | 5 | 内置默认配置随 Electron 发布(agents/skills) | **【不做 — 2026-06-03 用户决定搁置;调研料留档备查】** 诉求:用户开箱即有默认子代理/技能,且走 **Electron 发布默认**(不是 core 包)。**已查清现状**:① **presets 已是 core 内置常量**(`preset/index.ts:118 BUILTIN_AGENT_PRESETS`,general/terminal-coding…)→ 本来就有,不用动;② **models 默认也是 core 常量**(`onboarding.ts` 各 provider 默认 model 列表)→ 不用动;③ **agents 缺分发**——4 个 `.md`(explorer/general-purpose/planner/researcher)仅在本仓库 `.code-shell/agents/`、**git 未跟踪**、无任何内置/seed;core 有软默认 `DEFAULT_AGENT_TYPE="general-purpose"`(`tool-system/builtin/agent.ts:48`)但**不保证存在**,打包后用户 registry 空→退临时 agent,偏好失效;④ **skills 缺内置默认**(`skills/scanner.ts` 只扫 plugin installPath/skills + 用户级,无 bundled)。**Electron 打包现状**:`packages/desktop/package.json build.files` 只带 `out/**`+icon,**无 extraResources、无 seed 机制**。**现成参考模式**:core `prompt/sections/*.md`——build 拷 dist + `package.json files` 列出 + 运行时 `readFileSync(new URL("./sections/x.md", import.meta.url))` 包内读。**待定方向**(brainstorm 时拍):A=Electron extraResources 带默认 + 首次启动 seed 到 `~/.code-shell/{agents,skills}`(用户可改可删,推荐);B=包内只读加载不 seed(用户不能删、升级跟新)。AgentsSection 现 `listAgents(cwd)` 用 `activeRepoPath ?? ""`,没选项目→只列用户级→空(用户报「子代理没东西」根因)。相关记忆 [[project_agent_capability_overview]] [[project_subagent_require_configured]] |
 
 ## 📋 #7 修复清单(本轮 code-review,按严重度;全 CONFIRMED/PLAUSIBLE)
@@ -22,7 +20,7 @@
 - [x] **③ 测试污染真实 `~/.code-shell/settings.json`**(`persistActiveModel`→写真盘;#3 测试用真 Engine.switchModel 把 `A-key`/`model-a`/localhost 漏进用户配置;已手动清理 activeKey→deepseek-v4-flash + 删假 model 块 + 存 `.bak`)。**修**:所有会触发 `persistActiveModel`/写盘的测试必须 `HOME`/`os.homedir` 指向 tmp(或 mock persist);审计 `switchModel`/`populateModelPoolFromSettings` 相关测试。**这是 review 没抓到的第 11 项**。
 
 **P1 — #4 部分热重载族:**
-- [x] **④ 非 stdio 宿主 reloadSettings 静默 no-op**(只 `agent-server-stdio` 传 settingsReader;tcp/repl/run 没传;`server.ts` L528/L574 `&& this.settingsReader` 跳过却仍回 `ok:true`)。**修**:无 reader 时回明确「不支持」或这些宿主也注入 reader。
+- [x] **④ 非 stdio 宿主 reloadSettings 静默 no-op — 已修(本轮)**。原问题:只 `agent-server-stdio` 传 settingsReader;tcp/in-process helpers/factories 未传;`server.ts` `&& this.settingsReader` 跳过却仍回 `ok:true`。**修:** 保留 `settingsReader` 可选,但 `configure({ reloadSettings:true })` 在无 reader 时明确返回 JSON-RPC error(`InvalidParams`,"reloadSettings is not supported...")而非 silent ok;session-scoped/global 两条路径都覆盖。新增 `server.reload-settings.test.ts` 两个 RED→GREEN 用例:global 无 reader 拒绝、session-scoped 无 reader 拒绝。
 - [x] **⑤ MCP connectAll 惊群**(`engine.ts` L2007;mcpManager=共享 `runtime.mcpPool` L1303;`mcp-manager.ts` connect 在 L254 才 `connections.set`、L192 才 has→K 个 session 同 tick 并发重复连同一 server)。**修**:广播层算一次 added、对共享池只 connectAll 一次;或 connect 用 pending-promise map 合并同名 in-flight。
 - [x] **⑥ reloadHooks 每次保存无谓 churn**(`refreshRuntimeConfig` L1997 无条件 reloadHooks;无内容短路;version 单调永不等;个性化 600ms 防抖自动保存→K session×重读盘+拆装全 hook,即便只改 responseLanguage)。**修**:server 端对 `diskDefaultsFrom` 哈希,patch 与上次相同跳过广播;或 refreshRuntimeConfig 对比 this.config 再决定是否 reloadHooks/只在 hooks 实际变时重注册。
 - [x] **⑦ builtin 覆盖 ctor 急切、不即时**(`engine.ts` L511 `effectiveBuiltinLists(...readBuiltinOverride(cwd))` 烘进冻结 toolRegistry;skills/plugins/agents 每 turn 懒读 L1281;refreshRuntimeConfig 不重折叠 builtin;新 UI 三态开关让用户期望即时)。**修**:builtin 工具集加每 turn 重算钩子(对齐其他类),或 UI/文档明确 builtin 覆盖为 session 级需新建会话。
@@ -35,12 +33,12 @@
 
 ## 遗留 / 待确认
 
-- [ ] **本地 main 领先 origin/main 未 push**(2026-06-03 实测 ~101 commit,含本轮 goal/tools/reasoning 17 个)。此前选择本地合并不 push —— 决定何时 push。
-- [ ] **memory extraction 耗时波动** —— `elapsedMs` 3083→5939→8689 递增又掉回 1772,原因未查(归入 #3 P2)。
-- [ ] **Anthropic provider 图片过滤未做** —— `stripVisionFromHistory` 只接 OpenAI-compat 路径;接非视觉 anthropic-style 模型时会漏(当前 claude 全支持视觉,YAGNI)。
-- [ ] **并行 session 撞车风险** —— 同仓库可能有另一 session 在写+提交(本轮 commit 列表里夹了一条 `059cc07 fix(desktop): no-repo 沙箱` 非本 session 改动);在 main 上干活前先确认。
+- [ ] **本地 main 领先 origin/main 未 push**(2026-06-03 复核: ahead 141 / behind 0)。此前选择本地合并不 push —— 决定何时 push。
+- [x] **memory extraction 耗时波动** —— **已修(本轮):** `memory.extraction_done` 保留 `elapsedMs`,新增 `loadMs/promptMs/llmMs/parseMs/saveMs/existingCount/transcriptMessages/responseChars`,能定位波动来自 LLM/parse/save/load 哪一段;新增 `memory-orchestrator.test.ts` 覆盖 telemetry 字段。
+- [x] **Anthropic provider 图片过滤未做** —— **已修(本轮):** `AnthropicClient.buildMessages()` 复用 `stripVisionFromHistory(messages,this.capability.supportsVision)`,非视觉 anthropic-style 模型出站前把 image 替换成占位文本;视觉 Claude 保留 image;新增 provider 集成测试。
+- [ ] **`render-diff.test.ts` 用 30ms `setTimeout` 替掉了确定性 `flush`(测试坏味道,非阻塞)** —— **现象**:本轮把 `import { mount, flush } from "./render-fixtures"` 改成本地 `function flushRender() { return new Promise(r => setTimeout(r, 30)); }`,三处 `await flush()` 全换成 `await flushRender()`。**为什么是问题**:① 共享 `flush` 是 `new Promise(r => setImmediate(r))` —— `setImmediate` 在「排空当前所有微任务之后、下一轮事件循环 check 阶段」确定性触发,而渲染器写帧走 `queueMicrotask`(`ink.tsx:271` `deferredRender = () => queueMicrotask(this.onRender)`)+ `throttle(…, FRAME_INTERVAL_MS=16)`,所以 `setImmediate` 一定盖在写帧之后,是「等到帧真写完」的精确信号;② 换成固定 `setTimeout(30)` 是**墙钟傻等**,不是排空队列 —— 现在 30ms > 16ms 帧间隔能盖住,所以**当前不会真 flake**,但渲染哪天变慢(慢 CI / 内存压力 / 未来某次重构把写帧挪到 >30ms 的 debounce/timer 上)就会偶发失败,且失败信号和别的测试完全不同,难查;③ **不一致**:`render-input.test.ts`/`render-screen.test.ts` 仍 import 共享 `flush` 且工作正常,只有 `render-diff` 这一个文件特立独行 —— 说明要么是当初 `flush` 对这个测试有过时序问题被本地 workaround 掉(那应去修 `render-fixtures.ts` 的 `flush`,不是单文件绕过),要么只是顺手改的、没必要。**修法**:改回 `import { flush }` 用共享实现;若 `flush` 确实对 diff 测试不灵,在 fixtures 里修根因(让 `flush` 真排空渲染队列),保持所有 render 测试用同一个等待原语。**严重度**:🟢 最低(代码债 / 潜在脆性,非现网 bug),故未在本轮动。
 - [x] **根 `tsup.config.ts` 死配置** —— 已不存在(早前某轮删除);`tsup` 仅 devDependency,build 走 workspace `--filter`,无引用。核实关闭。
-- [ ] **InvestigationGuard 与显式只读深度分析冲突** —— 用户明确要求「只读分析/不要修改任何文件」时,连续 Glob/Grep/Read 会持续注入「change strategy now」。建议为 read-only review / researcher subagent 增加 guard policy override 或只保留去重提醒。
+- [x] **InvestigationGuard 与显式只读深度分析冲突** —— **已修(本轮):** `InvestigationGuard` 新增 `read-only-review` policy;`readOnlySession` Engine 使用该 policy,重复读不 hard-block,连续只读提醒不再建议 edit/Bash/AskUser 等副作用,只提示补阶段性状态;新增 guard 测试覆盖 read budget/silent-turn 文案。
 - [x] **切换模型闪「保存中…」** —— **已修(`78fe9c2` 本轮)**:`ModelSection` 共享 `saving` → 动作级 `savingId`(active:<key> / aux / reasoning:<key> / new),删底部无条件块,各控件只 disable 自己,新增表单保留按钮内联「保存中…」;active 行切换中 no-op(aria-busy)、aux Select 自己 save 时 disable。仿 `CapabilitiesOverviewSection`。typecheck+build+235 renderer 测试绿。详见记忆 `project_model_switch_saving_flash`。
 - [x] **自动化「立即运行」后无状态指示**(更关键的②已修) —— **已修(本轮)**:`onAutomationSession` 绑定 route 后 `setBusyForKey(bucket, true)`,侧边栏立即转圈;announce 先于本 run 的 `session_started` 事件到达(automation-host 同一有序通道先 onSession 后 emit),既有 turn_complete handler 自然清 busy + 离屏置 unread → 与聊天同 asking>running>unread。**剩①滞后**:session 仅在 headless Engine 发 `session_started`(sessionId 在 main 铸造)后才现身,属固有,未动(用户标②为更关键)。详见记忆 `project_automation_runnow_session_lag`。
 - [x] **消息加时间节点** —— **已修(本轮)**:`UserMessage.createdAt?` + `AssistantMessage.createdAt?/doneAt?`(stream_request_start 记 createdAt、assistant_message/turn_complete done 点记 doneAt 不覆盖);耗时=doneAt−createdAt 经 formatDuration 渲染在复制按钮左、回答时刻并列,提问时刻在用户气泡下(均 hover 显);新 `messages/time.ts` formatClockTime。replay/automation(foldTranscript)不带 createdAt(FoldItem 无原始时间戳),历史 transcript 不显误导性 replay 时间;live reducer 态随 localStorage 持久。3 新测试。详见记忆 `project_message_timestamps`。
@@ -59,6 +57,14 @@
 ---
 
 ## ✅ 已完成(本周移除自待办)
+
+**2026-06-03(本轮 TODO 收口,未提交):**
+
+- **#2 统一能力 UI 产品决策关闭**:按 TODO 原建议选 A「维持现状」,不为完成 TODO 强行做 B 大一统/C 弹窗重构。保留已实现边界: builtin `off` 下一 turn 隐藏+executor 拒绝;builtin `on` 若构造期 registry 没有需新会话/重启。
+- **#3 剩余 P2/P3 收口**:memory extraction 波动改为可诊断 telemetry(`loadMs/promptMs/llmMs/parseMs/saveMs/...`);no-runtime sandbox fallback 增加 per-engine cache,对齐 runtime 路径按 mode/cwd 缓存,不再每 turn 直调 `resolveSandboxBackend`。
+- **Anthropic 图片过滤**:Anthropic provider 接入 `stripVisionFromHistory`,非视觉 anthropic-style 模型不再漏发 image block,视觉 Claude 保持原样。
+- **InvestigationGuard 只读分析冲突**:`read-only-review` policy + `readOnlySession` 接线,只读深挖提醒不再建议副作用。
+- **#7④ reloadSettings silent no-op**:无 `settingsReader` 时 global/session-scoped `reloadSettings` 明确 JSON-RPC error,不再 silent `ok:true`。
 
 **2026-06-03(/goal「过夜全做完」一轮,3 个 UX 遗留,commit `2edbe39`→`17d91ee`,在 main 未 push):**
 

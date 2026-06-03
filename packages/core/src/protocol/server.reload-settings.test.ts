@@ -153,6 +153,74 @@ describe("AgentServer configure({ reloadSettings })", () => {
     expect(a2.calls.length).toBe(2);
   });
 
+  it("rejects reloadSettings when no settingsReader is wired", () => {
+    const a = makeFakeEngine("A");
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => {
+        throw new Error("factory should not be called");
+      },
+    });
+    (chatManager as any).sessions.set("A", { id: "A", engine: a.engine });
+
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
+
+    const response = t.sent.find((m: any) => m.id === 1);
+    expect(response?.error?.message).toContain("reloadSettings is not supported");
+    expect(t.sent.some((m: any) => m.id === 1 && m.result?.ok === true)).toBe(false);
+    expect(a.calls.length).toBe(0);
+  });
+
+  it("reloads onto the single legacyEngine when there is no chatManager", () => {
+    const a = makeFakeEngine("A");
+    let readCount = 0;
+    const settingsReader = () => {
+      readCount++;
+      return fakeSettings(`append-${readCount}`);
+    };
+
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, engine: a.engine, settingsReader });
+
+    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
+
+    // Without chatManager the reload must still land on the one engine, not be
+    // silently dropped behind an ok:true.
+    expect(readCount).toBe(1);
+    expect(a.calls.length).toBe(1);
+    expect(a.calls[0].patch.appendSystemPrompt).toBe("append-1");
+    expect(t.sent.some((m: any) => m.id === 1 && m.result?.ok === true)).toBe(true);
+  });
+
+  it("rejects session-scoped reloadSettings when no settingsReader is wired", () => {
+    const a = makeFakeEngine("A");
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => {
+        throw new Error("factory should not be called");
+      },
+    });
+    (chatManager as any).sessions.set("A", { id: "A", engine: a.engine });
+
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/configure",
+      params: { sessionId: "A", reloadSettings: true },
+    });
+
+    const response = t.sent.find((m: any) => m.id === 1);
+    expect(response?.error?.message).toContain("reloadSettings is not supported");
+    expect(t.sent.some((m: any) => m.id === 1 && m.result?.ok === true)).toBe(false);
+    expect(a.calls.length).toBe(0);
+  });
+
   it("sessionId-scoped reloadSettings applies to that one session only", () => {
     const a = makeFakeEngine("A");
     const b = makeFakeEngine("B");

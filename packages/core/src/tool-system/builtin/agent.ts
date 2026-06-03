@@ -38,6 +38,7 @@ function safeEmit(sink: StreamCallback | undefined, event: Parameters<StreamCall
 }
 
 export interface AgentTypeOverrides {
+  resolvedType?: string;
   model?: string;
   maxTurns?: number;
   toolAllowlist?: string[];
@@ -77,6 +78,7 @@ export function resolveAgentTypeOverrides(
     throw new Error(`unknown agent_type '${resolvedType}'. Available: ${list}`);
   }
   return {
+    resolvedType,
     model: def.model,
     maxTurns: def.maxTurns,
     toolAllowlist: def.tools,
@@ -236,6 +238,10 @@ async function runSubAgent(
     agentId: string;
     name?: string;
     description: string;
+    /** Resolved role name (e.g. "general-purpose", "explorer"); surfaced in
+     *  the agent_start / agent_end markers so the UI can show the dispatched
+     *  type. Undefined for a true ephemeral agent (empty registry). */
+    agentType?: string;
     prompt: string;
     maxTurns: number;
     signal: AbortSignal;
@@ -243,6 +249,7 @@ async function runSubAgent(
     model?: string;
     toolAllowlist?: string[];
     appendSystemPrompt?: string;
+    readOnlySession?: boolean;
     /** Engine HookRegistry for lifecycle events. Undefined → no hooks. */
     hooks?: HookRegistry;
   },
@@ -262,10 +269,10 @@ async function runSubAgent(
    */
   streamOverride?: StreamCallback,
 ): Promise<string> {
-  const { agentId, name, description } = opts;
+  const { agentId, name, description, agentType } = opts;
   const startEndSink = uiStream ?? spawner.parentStream;
 
-  safeEmit(startEndSink, { type: "agent_start", agentId, name, description });
+  safeEmit(startEndSink, { type: "agent_start", agentId, name, description, agentType });
   emitSubAgentHook(opts.hooks, "subagent_start", { agentId, description });
 
   // `resetPlanMode` / `restorePlanMode` operated on a module-level singleton
@@ -274,7 +281,7 @@ async function runSubAgent(
   // instances (finalized in T6).
   const text = await spawner.spawn({ ...opts, streamOverride });
   const finalText = text || `Agent completed but produced no text output.`;
-  safeEmit(startEndSink, { type: "agent_end", agentId, name, description, text: finalText });
+  safeEmit(startEndSink, { type: "agent_end", agentId, name, description, text: finalText, agentType });
   emitSubAgentHook(opts.hooks, "subagent_finish", { agentId, description, text: finalText });
   return finalText;
 }
@@ -364,11 +371,13 @@ export async function agentTool(
         agentId,
         name,
         description,
+        agentType: overrides.resolvedType,
         prompt,
         maxTurns,
         model: overrides.model,
         toolAllowlist: overrides.toolAllowlist,
         appendSystemPrompt: overrides.appendSystemPrompt,
+        readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
         hooks: ctx?.hooks,
         signal: controller.signal,
       },
@@ -484,11 +493,13 @@ export async function agentTool(
           agentId,
           name,
           description,
+          agentType: overrides.resolvedType,
           prompt,
           maxTurns,
           model: overrides.model,
           toolAllowlist: overrides.toolAllowlist,
           appendSystemPrompt: overrides.appendSystemPrompt,
+          readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
           hooks: ctx?.hooks,
           signal: syncController.signal,
         }),
@@ -497,7 +508,7 @@ export async function agentTool(
     );
   } catch (err) {
     emitSubAgentHook(ctx?.hooks, "subagent_error", { agentId, description, error: (err as Error).message });
-    safeEmit(parentStream, { type: "agent_end", agentId, name, description, error: (err as Error).message });
+    safeEmit(parentStream, { type: "agent_end", agentId, name, description, error: (err as Error).message, agentType: overrides.resolvedType });
     if (parentSignal?.aborted) return "Agent was aborted.";
     return `Agent error: ${(err as Error).message}`;
   } finally {

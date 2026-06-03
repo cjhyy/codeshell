@@ -60,7 +60,7 @@ export interface AgentServerOptions {
    * the SAME closure the engineFactory uses for new sessions (e.g.
    * agent-server-stdio's `freshSettings`) so a reloaded running session and a
    * newly-created session converge on identical disk config — no divergence.
-   * When absent, `configure({ reloadSettings })` is a silent no-op.
+   * When absent, `configure({ reloadSettings })` returns an explicit error.
    */
   settingsReader?: () => ValidatedSettings;
 }
@@ -536,7 +536,17 @@ export class AgentServer {
         }
       }
       // Hot-reload disk-default config onto this one session (layer 2).
-      if (params.reloadSettings === true && this.settingsReader) {
+      if (params.reloadSettings === true) {
+        if (!this.settingsReader) {
+          this.transport.send(
+            createErrorResponse(
+              req.id,
+              ErrorCodes.InvalidParams,
+              "reloadSettings is not supported by this AgentServer: no settingsReader is wired",
+            ),
+          );
+          return;
+        }
         const settings = this.settingsReader();
         const version = ++this.configVersion;
         s.engine.refreshRuntimeConfig(diskDefaultsFrom(settings), version);
@@ -582,7 +592,29 @@ export class AgentServer {
     // connect) onto every live session. Parallel to reloadModels; no new
     // protocol method. In-flight turns are untouched — refreshRuntimeConfig
     // only mutates this.config, picked up at the next turn boundary.
-    if (params.reloadSettings === true && this.chatManager && this.settingsReader) {
+    if (params.reloadSettings === true) {
+      if (!this.settingsReader) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.InvalidParams,
+            "reloadSettings is not supported by this AgentServer: no settingsReader is wired",
+          ),
+        );
+        return;
+      }
+      if (!this.chatManager) {
+        // Single-engine host (legacyEngine / anyEngine, no chatManager): there
+        // are no sessions to fan out to, but the one engine must still pick up
+        // the reload — otherwise we'd report ok:true while silently dropping it.
+        // Mirrors how reloadModels/model/planMode above act on `engine`.
+        if (engine) {
+          const settings = this.settingsReader();
+          engine.refreshRuntimeConfig(diskDefaultsFrom(settings), ++this.configVersion);
+        }
+        this.transport.send(createResponse(req.id, { ok: true }));
+        return;
+      }
       const settings = this.settingsReader();
       const patch = diskDefaultsFrom(settings);
       // #6: content short-circuit. If the disk-default patch is byte-identical

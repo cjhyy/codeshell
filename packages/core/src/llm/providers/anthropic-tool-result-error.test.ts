@@ -2,13 +2,14 @@ import { describe, it, expect } from "bun:test";
 import { AnthropicClient } from "./anthropic.js";
 import type { CreateMessageOptions } from "../types.js";
 import type { ContentBlock } from "../../types.js";
+import { VISION_PLACEHOLDER } from "../strip-vision.js";
 
 /** Capture the request body the client sends to the (stubbed) SDK. */
-function clientCapturing(): { client: AnthropicClient; lastBody: () => any } {
+function clientCapturing(model = "claude-3-5-sonnet"): { client: AnthropicClient; lastBody: () => any } {
   const client = new AnthropicClient({
     provider: "anthropic",
     apiKey: "x",
-    model: "claude-3-5-sonnet",
+    model,
   } as ConstructorParameters<typeof AnthropicClient>[0]);
   let body: any;
   (client as any)._client = {
@@ -58,6 +59,40 @@ describe("AnthropicClient tool_result is_error propagation", () => {
     expect(block).toBeDefined();
     expect(block.is_error).toBe(true);
     expect(block.content).toContain("timed out");
+  });
+
+  it("filters image blocks for non-vision anthropic-style models", async () => {
+    const { client, lastBody } = clientCapturing("text-only-anthropic-model");
+    const original: ContentBlock[] = [
+      { type: "text", text: "look" },
+      {
+        type: "image",
+        source: { type: "base64", media_type: "image/png", data: "abc" },
+      },
+    ];
+
+    await client.createMessage(optsWith(original));
+
+    const msg = lastBody().messages.find((m: any) => m.role === "user");
+    expect((msg.content as any[]).some((b) => b.type === "image")).toBe(false);
+    expect((msg.content as any[]).some((b) => b.type === "text" && b.text === VISION_PLACEHOLDER)).toBe(true);
+    expect(original.some((b) => b.type === "image")).toBe(true);
+  });
+
+  it("keeps image blocks for vision-capable Claude models", async () => {
+    const { client, lastBody } = clientCapturing("claude-3-5-sonnet");
+    await client.createMessage(
+      optsWith([
+        { type: "text", text: "look" },
+        {
+          type: "image",
+          source: { type: "base64", media_type: "image/png", data: "abc" },
+        },
+      ]),
+    );
+
+    const msg = lastBody().messages.find((m: any) => m.role === "user");
+    expect((msg.content as any[]).some((b) => b.type === "image")).toBe(true);
   });
 
   it("omits is_error (or leaves it falsy) for a successful tool_result", async () => {

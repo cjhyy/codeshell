@@ -86,6 +86,8 @@ export interface SubAgentSpawnRequest {
    * the parent's appendSystemPrompt (current behavior).
    */
   appendSystemPrompt?: string;
+  /** True for read-only reviewer/researcher children; tunes investigation guard reminders. */
+  readOnlySession?: boolean;
 }
 
 export interface SubAgentSpawner {

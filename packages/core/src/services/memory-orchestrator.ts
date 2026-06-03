@@ -72,13 +72,22 @@ export class MemoryOrchestrator {
     // --------------- 1. Extract durable memories ---------------
     let extracted = 0;
     try {
+      let t = Date.now();
       const existing = mm.loadAll();
+      const loadMs = Date.now() - t;
+      t = Date.now();
       const extractionPrompt = buildExtractionPrompt(transcript, existing);
+      const promptMs = Date.now() - t;
+      t = Date.now();
       const response = await this.options.callLLM(
         "You are a memory extraction assistant. Extract only durable, reusable information worth carrying into future sessions.",
         extractionPrompt,
       );
+      const llmMs = Date.now() - t;
+      t = Date.now();
       const entries = parseExtractionResponse(response);
+      const parseMs = Date.now() - t;
+      t = Date.now();
       for (const entry of entries) {
         mm.save({
           type: entry.type,
@@ -87,11 +96,20 @@ export class MemoryOrchestrator {
           content: entry.content,
         });
       }
+      const saveMs = Date.now() - t;
       extracted = entries.length;
       logger.info("memory.extraction_done", {
         sessionId,
         extracted,
         elapsedMs: Date.now() - startTime,
+        loadMs,
+        promptMs,
+        llmMs,
+        parseMs,
+        saveMs,
+        existingCount: existing.length,
+        transcriptMessages: transcript.length,
+        responseChars: response.length,
       });
     } catch (err) {
       logger.warn("memory.extraction_failed", {
