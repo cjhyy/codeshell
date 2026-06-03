@@ -54,10 +54,20 @@ import { completeGoalToolDef, completeGoalTool } from "./complete-goal.js";
  * ctx is optional in the signature so legacy call sites (and tests) that
  * pass only args still type-check; ToolRegistry always passes ctx at runtime.
  */
+/**
+ * 内置工具返回值:大多数返回纯文本字符串。需要回传图片(或其它结构化
+ * 内容块)的工具(view_image)可改为返回 `{ contentBlocks }`;此时
+ * registry 会把它放进 ToolResult.contentBlocks。可选的 `result` 字段是给
+ * transcript / 摘要用的纯文本镜像。
+ */
+export type BuiltinToolResult =
+  | string
+  | { contentBlocks: import("../../types.js").ContentBlock[]; result?: string };
+
 export type BuiltinToolFn = (
   args: Record<string, unknown>,
   ctx?: import("../context.js").ToolContext,
-) => Promise<string>;
+) => Promise<BuiltinToolResult>;
 
 export interface BuiltinTool {
   definition: RegisteredTool;

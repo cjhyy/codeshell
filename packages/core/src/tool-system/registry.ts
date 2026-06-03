@@ -135,7 +135,18 @@ export class ToolRegistry {
 
       clearTimeout(timerId);
       parentSignal?.removeEventListener("abort", onParentAbort);
-      return { id, toolName: name, result };
+      // executor 可返回纯字符串,或 { contentBlocks, result? }(view_image
+      // 用后者回传图片块)。归一化成 ToolResult:有 contentBlocks 就带上,
+      // result 始终保留一份文本镜像供 transcript / 摘要使用。
+      if (typeof result === "string") {
+        return { id, toolName: name, result };
+      }
+      return {
+        id,
+        toolName: name,
+        result: result.result ?? "(image)",
+        contentBlocks: result.contentBlocks,
+      };
     } catch (err) {
       clearTimeout(timerId);
       parentSignal?.removeEventListener("abort", onParentAbort);
