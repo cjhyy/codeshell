@@ -2,8 +2,7 @@ import React, { memo, useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { Markdown } from "../Markdown";
 import { stripMarkdownToPlain } from "../markdown/stripMarkdown";
-import { formatDuration } from "../tool-cards/utils";
-import { formatClockTime } from "../messages/time";
+import { formatMessageTime } from "../messages/time";
 import type { AssistantMessage } from "../types";
 
 interface Props {
@@ -46,21 +45,14 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
       {message.done && (
         <div className="mt-1 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
           {(() => {
-            const clock = formatClockTime(message.doneAt);
-            const elapsed =
-              message.createdAt !== undefined && message.doneAt !== undefined
-                ? formatDuration(message.doneAt - message.createdAt)
-                : null;
-            if (!clock && !elapsed) return null;
+            // Footer shows the absolute answer time (today→time, 昨天,
+            // weekday this week, else full date) — not the process/elapsed
+            // duration, which lives on the turn-process card instead.
+            const when = formatMessageTime(message.doneAt);
+            if (!when) return null;
             return (
-              <span
-                className="text-[11px] tabular-nums text-muted-foreground"
-                title={
-                  elapsed && clock ? `回答于 ${clock} · 耗时 ${elapsed}` : undefined
-                }
-              >
-                {clock}
-                {elapsed ? ` · ${elapsed}` : ""}
+              <span className="text-[11px] tabular-nums text-muted-foreground">
+                {when}
               </span>
             );
           })()}

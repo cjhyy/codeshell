@@ -14,8 +14,9 @@ import { LiveActivityLine } from "./messages/LiveActivityLine";
 import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
 import { decodeWireForDisplay } from "./chat/attachments";
-import { formatClockTime } from "./messages/time";
+import { formatMessageTime } from "./messages/time";
 import { Lightbox } from "./chat/Lightbox";
+import { timePhase } from "./perf";
 
 // Stable fallback so memoized AskUserMessageView siblings don't see a
 // fresh onAnswer prop on every render.
@@ -85,12 +86,21 @@ export function MessageStream({
   // 50ms stream batches. prevItemsRef survives renders; the useMemo only
   // recomputes when messages/liveTurnActive change.
   const prevItemsRef = useRef<StreamItem[]>([]);
-  const items = useMemo(() => {
-    const built = buildStreamItems(messages, { liveTurnActive });
-    const reconciled = reconcileStreamItems(prevItemsRef.current, built);
-    prevItemsRef.current = reconciled;
-    return reconciled;
-  }, [messages, liveTurnActive]);
+  const items = useMemo(
+    () =>
+      timePhase(
+        "stream.build",
+        () => {
+          const built = buildStreamItems(messages, { liveTurnActive });
+          const reconciled = reconcileStreamItems(prevItemsRef.current, built);
+          prevItemsRef.current = reconciled;
+          return reconciled;
+        },
+        () => ({ msgs: messages.length }),
+        4,
+      ),
+    [messages, liveTurnActive],
+  );
 
   return (
     <div className="flex-1 overflow-y-auto" ref={ref}>
@@ -108,7 +118,7 @@ export function MessageStream({
             return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} />;
           case "user": {
             const { text, images } = decodeWireForDisplay(m.text);
-            const askedAt = formatClockTime(m.createdAt);
+            const askedAt = formatMessageTime(m.createdAt);
             return (
               <div key={m.id} className="group flex flex-col items-end px-4 py-1.5">
                 <div className="max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
