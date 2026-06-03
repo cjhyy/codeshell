@@ -41,6 +41,7 @@
 - [ ] **并行 session 撞车风险** —— 同仓库可能有另一 session 在写+提交(本轮 commit 列表里夹了一条 `059cc07 fix(desktop): no-repo 沙箱` 非本 session 改动);在 main 上干活前先确认。
 - [ ] **根 `tsup.config.ts` 是死配置**(指向不存在的 `src/run`/`src/product`,真实构建走 workspaces `--filter`),可顺手删/更新(低优先)。
 - [ ] **InvestigationGuard 与显式只读深度分析冲突** —— 用户明确要求「只读分析/不要修改任何文件」时,连续 Glob/Grep/Read 会持续注入「change strategy now」。建议为 read-only review / researcher subagent 增加 guard policy override 或只保留去重提醒。
+- [ ] **切换模型闪「保存中…」** —— `ModelSection.tsx` 共享 `saving` 布尔(217 行)+ 830 行无条件渲染 `{saving && <div>保存中…</div>}`,切模型/改配置时底部一闪而过,体感差。修向:乐观更新去块级 loading,或把"保存中"收窄到新增模型表单(按钮文案 823 行已自带);别用一个 saving 盖所有动作,要 disable 就按动作 id 标(参考 `CapabilitiesOverviewSection` 的 `savingId`)。详见记忆 `project_model_switch_saving_flash`。
 
 ## 📚 相关研究 / 资料
 
