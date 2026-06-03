@@ -10,6 +10,7 @@ import type {
   StreamCallback,
   TerminalReason,
   ContentBlock,
+  ToolResult,
 } from "../types.js";
 import type { TurnState } from "./turn-state.js";
 import { initialTurnState, newTurnId } from "./turn-state.js";
@@ -108,6 +109,24 @@ export interface TurnLoopResult {
   text: string;
   reason: TerminalReason;
   messages: Message[];
+}
+
+/**
+ * 把一个 ToolResult 映射成发给 LLM 的 tool_result ContentBlock。
+ * 有 contentBlocks(view_image 的图片块)就原样用作 content;否则
+ * 用文本(成功用 result,失败用 "Error: ...")。抽成纯函数以便单测。
+ */
+export function toolResultToBlock(result: ToolResult): ContentBlock {
+  const block: ContentBlock = {
+    type: "tool_result",
+    tool_use_id: result.id,
+    content:
+      result.error
+        ? `Error: ${result.error}`
+        : result.contentBlocks ?? (result.result ?? "(no output)"),
+  };
+  if (result.isError || result.error) block.is_error = true;
+  return block;
 }
 
 export class TurnLoop {
@@ -618,14 +637,7 @@ export class TurnLoop {
       // Record results in transcript and stream
       const resultBlocks: ContentBlock[] = [];
       for (const result of results) {
-        const content = result.error ? `Error: ${result.error}` : (result.result ?? "(no output)");
-
-        resultBlocks.push({
-          type: "tool_result",
-          tool_use_id: result.id,
-          content,
-          ...(result.isError ? { is_error: true } : {}),
-        });
+        resultBlocks.push(toolResultToBlock(result));
 
         this.deps.transcript.appendToolResult(
           result.id,
