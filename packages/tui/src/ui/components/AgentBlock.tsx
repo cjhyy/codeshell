@@ -15,12 +15,15 @@ import { Spinner } from "./Spinner.js";
 
 interface AgentBlockStartProps {
   name?: string;
+  /** Dispatched role (e.g. "general-purpose", "explorer"); shown as a dim
+   *  [type] badge so you can see what kind of agent was launched. */
+  agentType?: string;
   description: string;
   running?: boolean;
   isLast?: boolean;
 }
 
-export function AgentBlockStart({ name, description, running, isLast }: AgentBlockStartProps) {
+export function AgentBlockStart({ name, agentType, description, running, isLast }: AgentBlockStartProps) {
   const treeChar = isLast ? "└─" : "├─";
   const continueLine = isLast ? "   " : "│  ";
 
@@ -35,6 +38,7 @@ export function AgentBlockStart({ name, description, running, isLast }: AgentBlo
           </>
         ) : null}
         {name && <Text bold>{name + "  "}</Text>}
+        {agentType && <Text color="ansi:cyan">[{agentType}] </Text>}
         <Text bold={!name} dim={!!name}>
           {description}
         </Text>
@@ -51,13 +55,14 @@ export function AgentBlockStart({ name, description, running, isLast }: AgentBlo
 
 interface AgentBlockEndProps {
   name?: string;
+  agentType?: string;
   description: string;
   text?: string;
   error?: string;
   isLast?: boolean;
 }
 
-export function AgentBlockEnd({ name, description, text, error, isLast }: AgentBlockEndProps) {
+export function AgentBlockEnd({ name, agentType, description, text, error, isLast }: AgentBlockEndProps) {
   const treeChar = isLast ? "└─" : "├─";
   const continueLine = isLast ? "   " : "│  ";
 
@@ -67,6 +72,7 @@ export function AgentBlockEnd({ name, description, text, error, isLast }: AgentB
         <Box>
           <Text dim>{treeChar} </Text>
           {name && <Text color="ansi:red" bold>{name + "  "}</Text>}
+          {agentType && <Text color="ansi:red" dim>[{agentType}] </Text>}
           <Text color="ansi:red" dim={!!name}>
             {description}
           </Text>
@@ -86,6 +92,7 @@ export function AgentBlockEnd({ name, description, text, error, isLast }: AgentB
       <Box>
         <Text dim>{treeChar} </Text>
         {name && <Text bold>{name + "  "}</Text>}
+        {agentType && <Text color="ansi:cyan">[{agentType}] </Text>}
         <Text dim={!!name}>{description}</Text>
         <Text dim> · </Text>
         <Text color="ansi:green">Done</Text>

@@ -145,6 +145,7 @@ function AgentDockRow({
           {entry.name + "  "}
         </Text>
       )}
+      {entry.agentType && <Text dim>{`[${entry.agentType}] `}</Text>}
       <Text
         color={focused ? "ansi:cyanBright" : active ? "ansi:cyan" : undefined}
         bold={focused}

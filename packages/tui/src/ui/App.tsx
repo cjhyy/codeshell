@@ -686,7 +686,7 @@ export function App({
           const ev = event as Extract<StreamEvent, { type: "agent_start" }>;
           chatStore.update((prev) => [
             ...prev,
-            entry({ type: "agent_start", agentId: ev.agentId, name: ev.name, description: ev.description }),
+            entry({ type: "agent_start", agentId: ev.agentId, name: ev.name, description: ev.description, agentType: ev.agentType }),
           ]);
           break;
         }
@@ -710,6 +710,7 @@ export function App({
                 description: ev.description,
                 text: ev.text,
                 error: ev.error,
+                agentType: ev.agentType,
               }),
             ];
           });
@@ -1986,6 +1987,7 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
         <AgentBlockStart
           key={key}
           name={entry.name}
+          agentType={entry.agentType}
           description={entry.description}
           running
         />
@@ -1996,6 +1998,7 @@ function renderEntry(entry: ChatEntry, key: string, expanded = false) {
         <AgentBlockEnd
           key={key}
           name={entry.name}
+          agentType={entry.agentType}
           description={entry.description}
           text={entry.text}
           error={entry.error}

@@ -37,17 +37,19 @@ export class TextRenderer implements OutputRenderer {
       case "agent_start": {
         const ev = event as any;
         this.activeAgents.add(ev.agentId);
-        process.stderr.write(`\n${indent}${chalk.magenta("▸")} ${chalk.bold("Agent")} ${chalk.dim(ev.description)}\n`);
+        const startType = ev.agentType ? `${chalk.cyan(`[${ev.agentType}]`)} ` : "";
+        process.stderr.write(`\n${indent}${chalk.magenta("▸")} ${chalk.bold("Agent")} ${startType}${chalk.dim(ev.description)}\n`);
         break;
       }
 
       case "agent_end": {
         const ev = event as any;
         this.activeAgents.delete(ev.agentId);
+        const endType = ev.agentType ? `[${ev.agentType}] ` : "";
         if (ev.error) {
-          process.stderr.write(`${indent}${chalk.red("✗")} ${chalk.dim(`Agent ${ev.description}: ${ev.error}`)}\n`);
+          process.stderr.write(`${indent}${chalk.red("✗")} ${chalk.dim(`Agent ${endType}${ev.description}: ${ev.error}`)}\n`);
         } else {
-          process.stderr.write(`${indent}${chalk.green("✓")} ${chalk.dim(`Agent ${ev.description}`)}\n`);
+          process.stderr.write(`${indent}${chalk.green("✓")} ${chalk.dim(`Agent ${endType}${ev.description}`)}\n`);
         }
         break;
       }
