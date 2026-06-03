@@ -153,7 +153,27 @@ export function buildDesktopAutomationRunner(
             emit?.(sid ?? req.job.id, e);
           }
         : undefined;
-    const result = await engine.run(prompt, { cwd: jobCwd, onStream, signal: req.signal });
-    return { text: result.text, reason: result.reason };
+    try {
+      const result = await engine.run(prompt, { cwd: jobCwd, onStream, signal: req.signal });
+      return { text: result.text, reason: result.reason };
+    } catch (err) {
+      // engine.run normally emits its own terminal turn_complete/error, which
+      // the renderer uses to clear the sidebar "running" spinner it raised on
+      // the announce. But post-turn cleanup (background-agent drain, on_session_end
+      // hooks, memory pipeline) runs after the turn loop with no catch — a throw
+      // there skips that terminal event. If we'd already announced the session
+      // (so the renderer is showing a spinner), synthesize one terminal `error`
+      // event so the spinner clears instead of sticking forever. No-op when the
+      // throw happened before session_started (nothing was marked busy yet).
+      if (sid !== undefined) {
+        // The envelope supplies the sessionId (emit's first arg); the `error`
+        // StreamEvent itself is just { type, error } (see core types.ts).
+        emit?.(sid, {
+          type: "error",
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      throw err;
+    }
   };
 }
