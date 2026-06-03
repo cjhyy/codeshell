@@ -331,6 +331,16 @@ export class Engine {
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
   /**
+   * THIS engine's own active model key. Distinct from the SHARED ModelPool's
+   * activeKey (getActiveKey()), which any concurrent session's switchModel can
+   * mutate. resolveAuxClient compares against this per-engine key so the aux-
+   * client decision is isolated from other sessions. Seeded whenever the engine
+   * adopts a model (ctor → populateModelPoolFromSettings, autoPopulatePool,
+   * switchModel); may be undefined for a freshly-built engine with no models —
+   * the L1730 comparison then simply won't match and falls back safely.
+   */
+  private activeModelKey?: string;
+  /**
    * Handles for the settings-sourced hook handlers registered by
    * registerSettingsHooks(), so reloadHooks() can unregister exactly those
    * (and nothing else — plugin hooks, goal/builtin hooks are untouched) before
@@ -602,6 +612,7 @@ export class Engine {
           }
           if (match) {
             const entry = this.modelPool.switch(match.key);
+            this.activeModelKey = match.key;
             this.config = {
               ...this.config,
               llm: this.modelPool.toLLMConfig(entry),
@@ -676,6 +687,7 @@ export class Engine {
     const defaultEntry = entries[0];
     if (defaultEntry) {
       const entry = this.modelPool.switch(defaultEntry.key);
+      this.activeModelKey = defaultEntry.key;
       this.config = {
         ...this.config,
         llm: this.modelPool.toLLMConfig(entry),
@@ -1727,7 +1739,9 @@ export class Engine {
     if (!auxKey) return fallback;
 
     // Don't spin up a second client when the aux model IS the active model.
-    if (auxKey === this.modelPool.getActiveKey()) return fallback;
+    // Compare against THIS engine's own active key (not the shared pool's
+    // activeKey, which another concurrent session may have mutated).
+    if (auxKey === this.activeModelKey) return fallback;
 
     if (this.auxClientCache?.key === auxKey) return this.auxClientCache.client;
 
@@ -1870,6 +1884,7 @@ export class Engine {
    */
   switchModel(key: string): ModelEntry {
     const entry = this.modelPool.switch(key);
+    this.activeModelKey = key;
     // LLMConfig is pure model identity now — rotate it wholesale. Cross-model
     // runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) live on
     // this.config.clientDefaults and survive the switch untouched.

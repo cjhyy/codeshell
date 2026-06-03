@@ -260,7 +260,11 @@ export class ModelPool {
       model: entry.model,
       apiKey: entry.apiKey ?? fromCat?.apiKey,
       baseUrl: entry.baseUrl ?? fromCat?.baseUrl,
-      maxTokens: entry.maxOutputTokens ?? 8192,
+      // No invented default: undefined lets each client apply its own fallback
+      // (OpenAI omits the token field entirely; Anthropic uses its own constant)
+      // instead of fabricating 8192, which silently truncates long outputs and
+      // masks the real per-model cap.
+      maxTokens: entry.maxOutputTokens,
       // reasoning: entry overrides catalog. No base fallback — see class doc.
       ...(entry.reasoning ?? fromCat?.reasoning
         ? { reasoning: entry.reasoning ?? fromCat?.reasoning }
