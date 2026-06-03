@@ -246,8 +246,29 @@ process.on("exit", () => {
 
 // ─── Parse ────────────────────────────────────────────────────────
 
+/** Print an error the way a CLI should — message + stack, no JSON noise. */
+function reportFatal(err: unknown): never {
+  process.stderr.write(
+    (err instanceof Error ? (err.stack ?? err.message) : String(err)) + "\n",
+  );
+  process.exit(1);
+}
+
+// Backstop for any promise that rejects outside the awaited parse chain
+// (e.g. a fire-and-forget started by a command). Without this, Node prints a
+// raw "UnhandledPromiseRejection" stack and the deliberate exit code is lost.
+process.on("unhandledRejection", reportFatal);
+
 // Funnel every LLM call through the singleton cost tracker before any
 // command runs. Awaited so an early sub-agent can't fire before the hook
 // is installed.
 await installCostTracking();
-program.parse();
+
+// parseAsync (not parse) so commander awaits each async .action() handler and
+// a rejection surfaces here instead of floating off as an unhandledRejection
+// with a raw stack and a collapsed exit code.
+try {
+  await program.parseAsync();
+} catch (err) {
+  reportFatal(err);
+}

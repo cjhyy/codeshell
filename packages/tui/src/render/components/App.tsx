@@ -540,7 +540,12 @@ export function handleMouseEvent(app: App, m: ParsedMouse): void {
       // `focus-events on` is set, so this is the more reliable signal.
       if (sel.isDragging) {
         finishSelection(sel);
-        app.props.onSelectionChange();
+        // onSelectionFinish (not onSelectionChange) so copy-on-select actually
+        // fires — onSelectionChange only repaints. This is the PRIMARY
+        // lost-release recovery for mode-1003 (FOCUS_OUT is unreliable under
+        // tmux), so using the non-copying callback silently dropped the copy.
+        // Matches the FOCUS_OUT (L493) and all other release paths.
+        app.props.onSelectionFinish();
       }
       if (col === app.lastHoverCol && row === app.lastHoverRow) return;
       app.lastHoverCol = col;
