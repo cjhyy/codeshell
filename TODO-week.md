@@ -39,9 +39,11 @@
 - [ ] **memory extraction 耗时波动** —— `elapsedMs` 3083→5939→8689 递增又掉回 1772,原因未查(归入 #3 P2)。
 - [ ] **Anthropic provider 图片过滤未做** —— `stripVisionFromHistory` 只接 OpenAI-compat 路径;接非视觉 anthropic-style 模型时会漏(当前 claude 全支持视觉,YAGNI)。
 - [ ] **并行 session 撞车风险** —— 同仓库可能有另一 session 在写+提交(本轮 commit 列表里夹了一条 `059cc07 fix(desktop): no-repo 沙箱` 非本 session 改动);在 main 上干活前先确认。
-- [ ] **根 `tsup.config.ts` 是死配置**(指向不存在的 `src/run`/`src/product`,真实构建走 workspaces `--filter`),可顺手删/更新(低优先)。
+- [x] **根 `tsup.config.ts` 死配置** —— 已不存在(早前某轮删除);`tsup` 仅 devDependency,build 走 workspace `--filter`,无引用。核实关闭。
 - [ ] **InvestigationGuard 与显式只读深度分析冲突** —— 用户明确要求「只读分析/不要修改任何文件」时,连续 Glob/Grep/Read 会持续注入「change strategy now」。建议为 read-only review / researcher subagent 增加 guard policy override 或只保留去重提醒。
-- [ ] **切换模型闪「保存中…」** —— `ModelSection.tsx` 共享 `saving` 布尔(217 行)+ 830 行无条件渲染 `{saving && <div>保存中…</div>}`,切模型/改配置时底部一闪而过,体感差。修向:乐观更新去块级 loading,或把"保存中"收窄到新增模型表单(按钮文案 823 行已自带);别用一个 saving 盖所有动作,要 disable 就按动作 id 标(参考 `CapabilitiesOverviewSection` 的 `savingId`)。详见记忆 `project_model_switch_saving_flash`。
+- [x] **切换模型闪「保存中…」** —— **已修(`bb...` 本轮)**:`ModelSection` 共享 `saving` → 动作级 `savingId`(active:<key> / aux / reasoning:<key> / new),删底部无条件块,各控件只 disable 自己,新增表单保留按钮内联「保存中…」;active 行切换中 no-op(aria-busy)、aux Select 自己 save 时 disable。仿 `CapabilitiesOverviewSection`。typecheck+build+235 renderer 测试绿。详见记忆 `project_model_switch_saving_flash`。
+- [x] **自动化「立即运行」后无状态指示**(更关键的②已修) —— **已修(本轮)**:`onAutomationSession` 绑定 route 后 `setBusyForKey(bucket, true)`,侧边栏立即转圈;announce 先于本 run 的 `session_started` 事件到达(automation-host 同一有序通道先 onSession 后 emit),既有 turn_complete handler 自然清 busy + 离屏置 unread → 与聊天同 asking>running>unread。**剩①滞后**:session 仅在 headless Engine 发 `session_started`(sessionId 在 main 铸造)后才现身,属固有,未动(用户标②为更关键)。详见记忆 `project_automation_runnow_session_lag`。
+- [x] **消息加时间节点** —— **已修(本轮)**:`UserMessage.createdAt?` + `AssistantMessage.createdAt?/doneAt?`(stream_request_start 记 createdAt、assistant_message/turn_complete done 点记 doneAt 不覆盖);耗时=doneAt−createdAt 经 formatDuration 渲染在复制按钮左、回答时刻并列,提问时刻在用户气泡下(均 hover 显);新 `messages/time.ts` formatClockTime。replay/automation(foldTranscript)不带 createdAt(FoldItem 无原始时间戳),历史 transcript 不显误导性 replay 时间;live reducer 态随 localStorage 持久。3 新测试。详见记忆 `project_message_timestamps`。
 
 ## 📚 相关研究 / 资料
 
@@ -57,6 +59,12 @@
 ---
 
 ## ✅ 已完成(本周移除自待办)
+
+**2026-06-03(/goal「过夜全做完」一轮,3 个 UX 遗留,commit `2edbe39`→`17d91ee`,在 main 未 push):**
+
+- **消息加时间节点**(`2edbe39`):`UserMessage` 加可选 `createdAt`、`AssistantMessage` 加 `createdAt`(stream_request_start 记)+`doneAt`(assistant_message / turn_complete done 点记,绝不覆盖更早值)。耗时=doneAt−createdAt 经既有 `formatDuration` 渲在复制按钮左、回答钟点并列;提问钟点在用户气泡下;均 hover 显。新 `messages/time.ts` `formatClockTime`。replay/automation 路径(foldTranscript)不带 createdAt(`FoldItem` 无原始时间戳)→历史 transcript 不显误导性 replay 时间;live reducer 态随 localStorage 持久保真。3 新 reducer 测试。
+- **切模型闪「保存中…」**(`78fe9c2`):`ModelSection` 共享 `saving` 布尔 → 动作级 `savingId`(active:<key> / aux / reasoning:<key> / new)。删底部无条件「保存中…」块,各控件只 disable 自己;新增表单保留按钮内联「保存中…」;active 行切换中 no-op + aria-busy;aux Select 自己 save 时 disable。仿 `CapabilitiesOverviewSection` 的 savingId。typecheck+build+全 235 renderer 测试绿。
+- **自动化「立即运行」无状态指示**(`17d91ee`,用户标②为「更关键」):`onAutomationSession` 绑 route 后 `setBusyForKey(bucket, true)` → 侧边栏立即转圈。announce 先于本 run 的 `session_started` 流事件到达(automation-host 同一有序通道先 onSession 后 emit),既有 turn_complete handler 自然清 busy 并离屏置 unread → 与聊天同 asking>running>unread 生命周期。**剩①滞后**未动(session 须等 headless Engine 发 `session_started`,sessionId 在 main 铸造,属固有)。**全仓库 `bun test` 2075 pass/0 fail。**
 
 **2026-06-03(code-review 11 项修复,commit `8a53508`,在 main 未 push):**
 
