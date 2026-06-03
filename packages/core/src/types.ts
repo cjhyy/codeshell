@@ -50,6 +50,13 @@ export interface ToolResult {
   id: string;
   toolName: string;
   result?: string;
+  /**
+   * 结构化结果块(目前仅图片)。存在时优先于 `result` 用作发给 LLM 的
+   * tool_result content —— view_image 用它把本地图片以 image ContentBlock
+   * 回传,让 vision 模型能「看」自己生成的图。非视觉模型由 provider 的
+   * stripVisionFromHistory 自动剥离,所以这里照常带图也安全。
+   */
+  contentBlocks?: ContentBlock[];
   error?: string;
   isError?: boolean;
 }
