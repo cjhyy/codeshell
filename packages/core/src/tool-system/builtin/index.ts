@@ -6,6 +6,7 @@ import type { RegisteredTool } from "../../types.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
 import { generateImageToolDef, generateImageTool, isGenerateImageAvailable } from "./generate-image.js";
+import { viewImageToolDef, viewImageTool } from "./view-image.js";
 import { editToolDef, editTool } from "./edit.js";
 import { applyPatchToolDef, applyPatchTool } from "./apply-patch/index.js";
 import { globToolDef, globTool } from "./glob.js";
@@ -105,6 +106,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       timeoutMs: 600_000, // 10min — high-quality / large image generation routinely exceeds the 120s default; give slow renders ample room while still bounding a hung request (Stop / ctx.signal cancels sooner)
     },
     execute: generateImageTool,
+  },
+  {
+    definition: {
+      ...viewImageToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: viewImageTool,
   },
   {
     definition: {
