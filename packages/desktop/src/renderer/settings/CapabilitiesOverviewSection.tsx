@@ -22,7 +22,6 @@ import {
   Circle,
   FolderGit2,
   Globe2,
-  Hammer,
   Layers,
   Plug,
   Puzzle,
@@ -47,6 +46,12 @@ type LucideIcon = React.ComponentType<{ size?: number; className?: string }>;
 
 interface Props {
   repos: Repo[];
+  /**
+   * Click a capability row's info area → jump to that kind's dedicated detail
+   * tab. The parent maps the kind to a settings module (mcp/skill/plugin/agent);
+   * builtin has no detail tab, so its rows are not clickable.
+   */
+  onNavigateToKind?: (kind: CapabilityKind) => void;
 }
 
 const KIND_ICON: Record<CapabilityKind, LucideIcon> = {
@@ -80,7 +85,7 @@ function projectStateLabel(cap: CapabilityDescriptor): string {
   return "继承全局";
 }
 
-export function CapabilitiesOverviewSection({ repos }: Props) {
+export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) {
   const [node, setNode] = useState<ScopeNode>({ kind: "user" });
   const [caps, setCaps] = useState<CapabilityDescriptor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,12 +255,30 @@ export function CapabilitiesOverviewSection({ repos }: Props) {
                 {g.items.map((cap) => {
                   const meta = capabilityMeta(cap);
                   const overridden = cap.effectiveSource === "project";
-                  // builtin has no project override bucket, so project rows
-                  // show the global value while staying togglable globally.
-                  const projectLocked = node.kind === "project" && cap.kind === "builtin";
+                  // builtin has no dedicated detail tab, so its rows don't navigate.
+                  const navigable = !!onNavigateToKind && cap.kind !== "builtin";
                   return (
                     <div className="cap-overview-row" key={cap.id}>
-                      <span className="cap-overview-info">
+                      <span
+                        className={cn(
+                          "cap-overview-info",
+                          navigable && "cursor-pointer hover:text-foreground",
+                        )}
+                        role={navigable ? "button" : undefined}
+                        tabIndex={navigable ? 0 : undefined}
+                        title={navigable ? `打开${g.label}详情` : undefined}
+                        onClick={navigable ? () => onNavigateToKind?.(cap.kind) : undefined}
+                        onKeyDown={
+                          navigable
+                            ? (e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  onNavigateToKind?.(cap.kind);
+                                }
+                              }
+                            : undefined
+                        }
+                      >
                         <span className="cap-overview-name">{cap.name}</span>
                         {cap.description && (
                           <span className="cap-overview-desc">{cap.description}</span>
@@ -287,39 +310,29 @@ export function CapabilitiesOverviewSection({ repos }: Props) {
                         />
                       ) : (
                         <div
-                          className={cn(
-                            "cap-overview-project-control",
-                            projectLocked && "is-locked",
-                          )}
+                          className="cap-overview-project-control"
                           aria-label={`${cap.name} 项目覆盖`}
                         >
-                          {projectLocked ? (
-                            <span className="cap-overview-locked">
-                              <Hammer size={13} />
-                              跟随全局
-                            </span>
-                          ) : (
-                            (["inherit", "on", "off"] as ProjectState[]).map((state) => {
-                              const stateMeta = PROJECT_STATE_META[state];
-                              const active = (cap.projectOverride ?? "inherit") === state;
-                              return (
-                                <button
-                                  type="button"
-                                  key={state}
-                                  className={cn(
-                                    "cap-overview-state-btn",
-                                    stateMeta.className,
-                                    active && "active",
-                                  )}
-                                  disabled={savingId === cap.id}
-                                  onClick={() => void onProjectState(cap, state)}
-                                >
-                                  <stateMeta.Icon size={13} />
-                                  {stateMeta.label}
-                                </button>
-                              );
-                            })
-                          )}
+                          {(["inherit", "on", "off"] as ProjectState[]).map((state) => {
+                            const stateMeta = PROJECT_STATE_META[state];
+                            const active = (cap.projectOverride ?? "inherit") === state;
+                            return (
+                              <button
+                                type="button"
+                                key={state}
+                                className={cn(
+                                  "cap-overview-state-btn",
+                                  stateMeta.className,
+                                  active && "active",
+                                )}
+                                disabled={savingId === cap.id}
+                                onClick={() => void onProjectState(cap, state)}
+                              >
+                                <stateMeta.Icon size={13} />
+                                {stateMeta.label}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

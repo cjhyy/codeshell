@@ -60,8 +60,8 @@ import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { SettingsManager, type SettingsScope } from "../settings/manager.js";
-import type { CapabilityOverrides } from "../settings/schema.js";
-import { effectiveDisabledList } from "../capability-control/overlay.js";
+import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
+import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
 import { FileHistory } from "../session/file-history.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
@@ -438,11 +438,21 @@ export class Engine {
     this.planMode = this.permissionMode === "plan";
 
     this.preset = resolveAgentPreset(config.preset);
+    // Fold the project's capabilityOverrides.builtin overlay over the global
+    // enabled/disabled builtin lists so a project can force-enable a
+    // globally-disabled builtin tool or force-disable a globally-enabled one
+    // (tri-state). Mirrors readDisabledLists for skills/plugins/agents; no cwd
+    // / no overlay → the config lists pass through unchanged (zero regression).
+    const builtinLists = effectiveBuiltinLists(
+      config.enabledBuiltinTools ?? [],
+      config.disabledBuiltinTools ?? [],
+      this.readBuiltinOverride(config.cwd),
+    );
     this.toolRegistry = config.runtime?.toolRegistry ?? new ToolRegistry({
       builtinTools: resolveBuiltinToolNames({
         preset: this.preset.name,
-        enabledBuiltinTools: config.enabledBuiltinTools,
-        disabledBuiltinTools: config.disabledBuiltinTools,
+        enabledBuiltinTools: builtinLists.enabledBuiltinTools,
+        disabledBuiltinTools: builtinLists.disabledBuiltinTools,
       }),
     });
     this.hooks = new HookRegistry();
@@ -2166,6 +2176,26 @@ export class Engine {
       return effectiveDisabledList(baseline, overrides?.agents);
     } catch {
       return [];
+    }
+  }
+
+  /**
+   * Read the project's capabilityOverrides.builtin bucket for `cwd`, read
+   * UNMERGED (getForScope) so tri-state inherit survives. Sub-agents skip the
+   * overlay (minimal surface, same as readDisabledLists) — their builtin lists
+   * are already narrowed by resolveChildToolScope. No cwd / error → undefined,
+   * so the caller's baseline builtin lists pass through unchanged.
+   */
+  private readBuiltinOverride(
+    cwd?: string,
+  ): Record<string, CapabilityOverride> | undefined {
+    if (this.config.isSubAgent === true || !cwd) return undefined;
+    try {
+      const overrides = this.getSettingsManager().getForScope("project", cwd)
+        .capabilityOverrides as CapabilityOverrides | undefined;
+      return overrides?.builtin;
+    } catch {
+      return undefined;
     }
   }
 

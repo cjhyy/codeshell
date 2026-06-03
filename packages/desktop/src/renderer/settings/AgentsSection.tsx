@@ -60,6 +60,12 @@ export function AgentsSection({ activeRepoPath }: Props) {
 
   useEffect(() => { void load(); }, [load]);
 
+  // Write scope for saveAgent/deleteAgent: project when a repo is active (so
+  // the agent lands in that project's .code-shell and load(cwd) surfaces it),
+  // else user. Mirrors load()'s read scope (listAgents(cwd)).
+  const agentScope = (): { scope: "project"; cwd: string } | { scope: "user" } =>
+    activeRepoPath ? { scope: "project", cwd: activeRepoPath } : { scope: "user" };
+
   const current = useMemo(
     () => agents.find((a) => a.name === selected) ?? null,
     [agents, selected],
@@ -98,7 +104,7 @@ export function AgentsSection({ activeRepoPath }: Props) {
     if (!draft) return;
     setError(null);
     try {
-      const saved = await window.codeshell.saveAgent(draft);
+      const saved = await window.codeshell.saveAgent(draft, agentScope());
       await load();
       setSelected(saved.name);
     } catch (e) {
@@ -115,7 +121,7 @@ export function AgentsSection({ activeRepoPath }: Props) {
     });
     if (!ok) return;
     try {
-      await window.codeshell.deleteAgent(a.name);
+      await window.codeshell.deleteAgent(a.name, agentScope());
     } catch (err) {
       console.error("deleteAgent failed", err);
       return;

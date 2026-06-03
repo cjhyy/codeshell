@@ -24,6 +24,7 @@ export const CapabilityOverridesSchema = z
     plugins: z.record(CapabilityOverrideSchema).optional(),
     agents: z.record(CapabilityOverrideSchema).optional(),
     mcp: z.record(CapabilityOverrideSchema).optional(),
+    builtin: z.record(CapabilityOverrideSchema).optional(),
   })
   .optional();
 export type CapabilityOverrides = z.infer<typeof CapabilityOverridesSchema>;

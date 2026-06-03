@@ -14,7 +14,7 @@
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import type { CapabilityDescriptor } from "./types.js";
 
-/** Buckets in capabilityOverrides: "skills" | "plugins" | "agents" | "mcp". */
+/** Buckets in capabilityOverrides: "skills" | "plugins" | "agents" | "mcp" | "builtin". */
 export type OverrideBucket = keyof NonNullable<CapabilityOverrides>;
 
 /** Apply a tri-state override to a baseline. inherit/garbage → baseline. */
@@ -24,7 +24,7 @@ export function applyOverride(globalEnabled: boolean, override?: CapabilityOverr
   return globalEnabled;
 }
 
-/** Which capabilityOverrides bucket a descriptor kind writes to (builtin: none). */
+/** Which capabilityOverrides bucket a descriptor kind writes to. */
 export function bucketForKind(
   kind: CapabilityDescriptor["kind"] | "agent",
 ): OverrideBucket | undefined {
@@ -37,6 +37,8 @@ export function bucketForKind(
       return "mcp";
     case "agent":
       return "agents";
+    case "builtin":
+      return "builtin";
     default:
       return undefined;
   }
@@ -78,4 +80,41 @@ export function effectiveDisabledList(
     }
   }
   return [...disabled];
+}
+
+/**
+ * Fold a project builtin override bucket into the global enabled/disabled
+ * builtin-tool lists, producing the lists to feed resolveBuiltinToolNames
+ * (whose effective set is `preset.builtinTools ∪ enabled − disabled`).
+ *
+ * Unlike skills/plugins/agents — which the engine reads as a single denylist
+ * — builtin tools resolve from a pair of allow/deny lists, so an override must
+ * land in BOTH to win regardless of which side the preset/global config put
+ * the token on:
+ *   - "on"  → add to enabled, remove from disabled (force-enabled)
+ *   - "off" → add to disabled, remove from enabled (force-disabled)
+ *   - inherit/absent → leave the baseline untouched
+ */
+export function effectiveBuiltinLists(
+  globalEnabled: string[],
+  globalDisabled: string[],
+  bucket: Record<string, CapabilityOverride> | undefined,
+): { enabledBuiltinTools: string[]; disabledBuiltinTools: string[] } {
+  const enabled = new Set(globalEnabled);
+  const disabled = new Set(globalDisabled);
+  if (bucket) {
+    for (const [token, state] of Object.entries(bucket)) {
+      if (state === "on") {
+        enabled.add(token);
+        disabled.delete(token);
+      } else if (state === "off") {
+        disabled.add(token);
+        enabled.delete(token);
+      }
+    }
+  }
+  return {
+    enabledBuiltinTools: [...enabled],
+    disabledBuiltinTools: [...disabled],
+  };
 }

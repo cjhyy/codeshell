@@ -5,6 +5,7 @@ import {
   overrideTokenForId,
   overrideFor,
   effectiveDisabledList,
+  effectiveBuiltinLists,
 } from "./overlay.js";
 
 describe("applyOverride matrix (spec §12.2)", () => {
@@ -35,9 +36,7 @@ describe("bucketForKind", () => {
     expect(bucketForKind("plugin")).toBe("plugins");
     expect(bucketForKind("mcp")).toBe("mcp");
     expect(bucketForKind("agent")).toBe("agents");
-  });
-  test("builtin has no bucket", () => {
-    expect(bucketForKind("builtin")).toBeUndefined();
+    expect(bucketForKind("builtin")).toBe("builtin");
   });
 });
 
@@ -59,12 +58,16 @@ describe("overrideFor", () => {
     expect(overrideFor(overrides, "skill", "a")).toBe("off");
     expect(overrideFor(overrides, "mcp", "gh")).toBe("on");
   });
+  test("reads the builtin bucket too (now a first-class override)", () => {
+    const overrides = { builtin: { REPL: "off" as const } };
+    expect(overrideFor(overrides, "builtin", "REPL")).toBe("off");
+  });
   test("normalizes inherit / missing / garbage to undefined", () => {
     const overrides = { skills: { a: "inherit" as const } };
     expect(overrideFor(overrides, "skill", "a")).toBeUndefined();
     expect(overrideFor(overrides, "skill", "missing")).toBeUndefined();
     expect(overrideFor(undefined, "skill", "a")).toBeUndefined();
-    expect(overrideFor(overrides, "builtin", "a")).toBeUndefined();
+    expect(overrideFor(overrides, "builtin", "missing")).toBeUndefined();
   });
 });
 
@@ -78,5 +81,26 @@ describe("effectiveDisabledList", () => {
   });
   test("inherit leaves the baseline alone", () => {
     expect(effectiveDisabledList(["a"], { a: "inherit", b: "inherit" })).toEqual(["a"]);
+  });
+});
+
+describe("effectiveBuiltinLists", () => {
+  test("'on' force-enables: add to enabled, drop from disabled", () => {
+    const out = effectiveBuiltinLists([], ["REPL"], { REPL: "on" });
+    expect(new Set(out.enabledBuiltinTools)).toEqual(new Set(["REPL"]));
+    expect(out.disabledBuiltinTools).toEqual([]);
+  });
+  test("'off' force-disables: add to disabled, drop from enabled", () => {
+    const out = effectiveBuiltinLists(["Bash"], [], { Bash: "off" });
+    expect(out.enabledBuiltinTools).toEqual([]);
+    expect(new Set(out.disabledBuiltinTools)).toEqual(new Set(["Bash"]));
+  });
+  test("inherit / undefined leaves both baselines unchanged", () => {
+    const a = effectiveBuiltinLists(["x"], ["y"], { z: "inherit" });
+    expect(new Set(a.enabledBuiltinTools)).toEqual(new Set(["x"]));
+    expect(new Set(a.disabledBuiltinTools)).toEqual(new Set(["y"]));
+    const b = effectiveBuiltinLists(["x"], ["y"], undefined);
+    expect(b.enabledBuiltinTools).toEqual(["x"]);
+    expect(b.disabledBuiltinTools).toEqual(["y"]);
   });
 });

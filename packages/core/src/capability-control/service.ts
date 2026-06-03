@@ -136,8 +136,10 @@ export class CapabilityService {
 
   /**
    * Write a project tri-state override. "inherit" deletes the key (we never
-   * persist the literal). builtin capabilities have no override bucket and
-   * are rejected.
+   * persist the literal). All capability kinds — including builtin, which
+   * writes to capabilityOverrides.builtin.<token> — now support project
+   * overrides; only a kind with no bucket (bucketForKind returns undefined)
+   * is rejected.
    */
   setOverride(
     id: string,

@@ -222,7 +222,21 @@ export function SettingsPage({
               <ShortcutsSection />
             )}
             {active === "capabilities" && (
-              <CapabilitiesOverviewSection repos={repos} />
+              <CapabilitiesOverviewSection
+                repos={repos}
+                onNavigateToKind={(kind) => {
+                  // Jump from a capability row to its dedicated detail tab.
+                  // builtin has no detail tab → stay on 能力总览 (no-op).
+                  const target: Record<string, ModuleId> = {
+                    mcp: "mcp",
+                    skill: "plugins-skills",
+                    plugin: "plugins-skills",
+                    agent: "agents",
+                  };
+                  const next = target[kind];
+                  if (next) setActive(next);
+                }}
+              />
             )}
             {active === "mcp" && (
               <McpSection scope={scope} activeRepoPath={activeRepoPath} />

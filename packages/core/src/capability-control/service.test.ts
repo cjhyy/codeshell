@@ -280,7 +280,7 @@ describe("CapabilityService project scope", () => {
     expect(d.enabled).toBe(false);
   });
 
-  test("setOverride rejects builtin (no override bucket)", () => {
+  test("setOverride 'off' writes capabilityOverrides.builtin.<token> (no longer rejected)", () => {
     const f = fakesWithProject();
     const svc = new CapabilityService({
       registry: {
@@ -293,8 +293,34 @@ describe("CapabilityService project scope", () => {
       scanSkills: () => [],
       scanAgents: () => [],
       readInstalledPlugins: f.emptyPlugins as any,
-      resolveBuiltinToolNames: () => [],
+      // REPL ships in the preset's effective set → globally enabled baseline.
+      resolveBuiltinToolNames: () => ["REPL"],
     });
-    expect(() => svc.setOverride("builtin:REPL", "off", { scope: "project", cwd: "/proj" })).toThrow();
+    svc.setOverride("builtin:REPL", "off", { scope: "project", cwd: "/proj" });
+    expect(f.projectWrites).toContainEqual(["capabilityOverrides.builtin.REPL", "off"]);
+  });
+
+  test("list(cwd) applies the builtin override: global on + project off => disabled", () => {
+    const f = fakesWithProject({
+      capabilityOverrides: { builtin: { REPL: "off" } },
+    });
+    const svc = new CapabilityService({
+      registry: {
+        listToolsDetailed: () => [
+          { name: "REPL", description: "", inputSchema: {}, source: "builtin", permissionDefault: "allow" },
+        ],
+      } as any,
+      settings: f.settings as any,
+      cwd: "/proj",
+      scanSkills: () => [],
+      scanAgents: () => [],
+      readInstalledPlugins: f.emptyPlugins as any,
+      resolveBuiltinToolNames: () => ["REPL"],
+    });
+    const d = svc.list("/proj").find((c) => c.id === "builtin:REPL")!;
+    expect(d.globalEnabled).toBe(true);
+    expect(d.projectOverride).toBe("off");
+    expect(d.enabled).toBe(false);
+    expect(d.effectiveSource).toBe("project");
   });
 });
