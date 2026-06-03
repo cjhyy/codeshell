@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { CapabilityDescriptor } from "@cjhyy/code-shell-core";
 import {
+  type CapabilityKind,
   capabilityMeta,
   groupCapabilities,
   isCollapsedByDefault,
+  isGroupCollapsed,
 } from "./capabilitiesOverview";
 
 function cap(over: Partial<CapabilityDescriptor>): CapabilityDescriptor {
@@ -67,6 +69,28 @@ describe("isCollapsedByDefault", () => {
     expect(isCollapsedByDefault("mcp")).toBe(false);
     expect(isCollapsedByDefault("skill")).toBe(false);
     expect(isCollapsedByDefault("plugin")).toBe(false);
+  });
+});
+
+describe("isGroupCollapsed", () => {
+  const none = new Set<CapabilityKind>();
+
+  test("follows the default when untoggled", () => {
+    expect(isGroupCollapsed(none, "builtin")).toBe(true); // folded by default
+    expect(isGroupCollapsed(none, "mcp")).toBe(false);
+  });
+
+  test("a toggled kind flips away from its default", () => {
+    // builtin defaults collapsed → toggling expands it
+    expect(isGroupCollapsed(new Set<CapabilityKind>(["builtin"]), "builtin")).toBe(false);
+    // mcp defaults expanded → toggling collapses it
+    expect(isGroupCollapsed(new Set<CapabilityKind>(["mcp"]), "mcp")).toBe(true);
+  });
+
+  test("only the toggled kind is affected", () => {
+    const toggled = new Set<CapabilityKind>(["mcp"]);
+    expect(isGroupCollapsed(toggled, "skill")).toBe(false);
+    expect(isGroupCollapsed(toggled, "builtin")).toBe(true);
   });
 });
 

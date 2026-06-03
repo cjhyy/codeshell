@@ -58,6 +58,20 @@ export function isCollapsedByDefault(kind: CapabilityKind): boolean {
 }
 
 /**
+ * Effective collapsed state for a group: a kind in `toggled` has been
+ * manually flipped away from its default, everything else follows
+ * isCollapsedByDefault. Keeps the toggle bookkeeping out of the component
+ * so it's unit-testable.
+ */
+export function isGroupCollapsed(
+  toggled: ReadonlySet<CapabilityKind>,
+  kind: CapabilityKind,
+): boolean {
+  const def = isCollapsedByDefault(kind);
+  return toggled.has(kind) ? !def : def;
+}
+
+/**
  * One-line meta string shown under a capability's name. Surfaces the
  * MCP tool count and read-only marker when present; empty otherwise.
  */

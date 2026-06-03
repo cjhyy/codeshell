@@ -14,11 +14,13 @@
  * Each row shows the effective value and flags "本项目覆盖" when the project
  * overrides the global baseline (descriptor.effectiveSource === "project").
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { CapabilityDescriptor } from "@cjhyy/code-shell-core";
 import {
   Bot,
   Check,
+  ChevronDown,
+  ChevronRight,
   Circle,
   FolderGit2,
   Globe2,
@@ -38,6 +40,7 @@ import {
   type CapabilityKind,
   capabilityMeta,
   groupCapabilities,
+  isGroupCollapsed,
 } from "./capabilitiesOverview";
 
 type ScopeNode = { kind: "user" } | { kind: "project"; repoPath: string; label: string };
@@ -88,22 +91,43 @@ function projectStateLabel(cap: CapabilityDescriptor): string {
 export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) {
   const [node, setNode] = useState<ScopeNode>({ kind: "user" });
   const [caps, setCaps] = useState<CapabilityDescriptor[]>([]);
+  // Only true before the very first list arrives. Switching scopes refreshes
+  // in the background (stale-while-revalidate) so the existing list — and the
+  // scroll position — stays put instead of unmounting to a "加载中" line.
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Monotonic token: a slow earlier request can resolve after a newer scope
+  // switch; only the latest load is allowed to commit its result.
+  const loadSeq = useRef(0);
+  // Kinds the user manually toggled away from their default collapse state.
+  // Anything not in here falls back to isCollapsedByDefault (builtin folded).
+  const [toggled, setToggled] = useState<Set<CapabilityKind>>(() => new Set());
+
+  const toggleGroup = (kind: CapabilityKind) =>
+    setToggled((prev) => {
+      const next = new Set(prev);
+      if (next.has(kind)) next.delete(kind);
+      else next.add(kind);
+      return next;
+    });
 
   const cwd = node.kind === "project" ? node.repoPath : "";
 
   const load = async () => {
-    setLoading(true);
+    const seq = ++loadSeq.current;
     setError(null);
     try {
       // Non-empty cwd → project overlay view; empty → user/global view.
-      setCaps(await window.codeshell.listCapabilities(cwd));
+      const next = await window.codeshell.listCapabilities(cwd);
+      if (seq !== loadSeq.current) return; // a newer scope switch won
+      setCaps(next);
     } catch (e) {
+      if (seq !== loadSeq.current) return;
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      // First load drops the loading shell; later refreshes never re-raise it.
+      if (seq === loadSeq.current) setLoading(false);
     }
   };
 
@@ -243,16 +267,26 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
             <p className="settings-section-help">暂无可管理的能力。</p>
           )}
           {!loading &&
-            groups.map((g) => (
+            groups.map((g) => {
+              const collapsed = isGroupCollapsed(toggled, g.kind);
+              return (
               <div className="cap-overview-group" key={g.kind}>
-                <div className="cap-overview-group-head">
+                <button
+                  type="button"
+                  className="cap-overview-group-head"
+                  aria-expanded={!collapsed}
+                  onClick={() => toggleGroup(g.kind)}
+                >
+                  <span className="cap-overview-group-chevron" aria-hidden>
+                    {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                  </span>
                   <span className="cap-overview-group-icon" aria-hidden>
                     {React.createElement(KIND_ICON[g.kind], { size: 15 })}
                   </span>
                   <span>{g.label}</span>
                   <span className="cap-overview-group-count">{g.items.length}</span>
-                </div>
-                {g.items.map((cap) => {
+                </button>
+                {!collapsed && g.items.map((cap) => {
                   const meta = capabilityMeta(cap);
                   const overridden = cap.effectiveSource === "project";
                   // builtin has no dedicated detail tab, so its rows don't navigate.
@@ -339,7 +373,8 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                   );
                 })}
               </div>
-            ))}
+              );
+            })}
         </div>
       </div>
     </section>
