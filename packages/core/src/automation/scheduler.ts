@@ -54,11 +54,18 @@ export class CronScheduler {
   /** Job ids with an execution currently in flight — prevents a tick from
    *  starting a second run of a job whose previous run hasn't finished. */
   private running = new Set<string>();
-  /** AbortControllers for in-flight runs, keyed by job id. The re-entrancy
-   *  guard (`running`) ensures at most one run per job, so one controller per
-   *  job id is sufficient. Used by `abort(jobId)` to cancel a live run (e.g.
-   *  the user deletes the run's session while it's still executing). */
-  private runningControllers = new Map<string, AbortController>();
+  /** In-flight runs keyed by job id: the AbortController that cancels the run,
+   *  plus `done` — a promise that resolves when the run has FULLY settled
+   *  (executor returned, including any post-abort bookkeeping like Engine's
+   *  final saveState). The re-entrancy guard (`running`) ensures at most one
+   *  run per job, so one entry per job id is sufficient. `abort(jobId)` trips
+   *  the controller and returns `done` so callers can wait for the run to
+   *  actually stop before acting (e.g. deleting its session dir without racing
+   *  a final write that would recreate it). */
+  private runningControllers = new Map<
+    string,
+    { controller: AbortController; done: Promise<void> }
+  >();
   private nextId = 1;
   private onExecute?: (job: CronJob, signal: AbortSignal) => Promise<void>;
   /** Optional persistence backend. When set, every create/delete/pause/resume
@@ -104,10 +111,13 @@ export class CronScheduler {
    * unknown id). The run's own finally block clears the controller, so a
    * settled run is a no-op here.
    */
-  abort(jobId: string): boolean {
-    const controller = this.runningControllers.get(jobId);
-    if (!controller) return false;
-    controller.abort();
+  async abort(jobId: string): Promise<boolean> {
+    const entry = this.runningControllers.get(jobId);
+    if (!entry) return false;
+    entry.controller.abort();
+    // Wait for the run to fully settle (the executor's promise, incl. any
+    // post-abort write) so callers don't race its teardown.
+    await entry.done;
     return true;
   }
 
@@ -506,10 +516,15 @@ export class CronScheduler {
     // overlapping executions that double-count runCount.
     if (this.running.has(job.id)) return;
     this.running.add(job.id);
-    // One controller per in-flight run, keyed by job id. abort(jobId) trips
-    // this signal; the executor (Engine.run) cooperates and resolves early.
+    // One in-flight entry per job. abort(jobId) trips `controller` (Engine.run
+    // cooperates and resolves early) and awaits `done`, which we resolve in the
+    // finally below once the run — including any post-abort write — has settled.
     const controller = new AbortController();
-    this.runningControllers.set(job.id, controller);
+    let resolveDone!: () => void;
+    const done = new Promise<void>((r) => {
+      resolveDone = r;
+    });
+    this.runningControllers.set(job.id, { controller, done });
     job.lastRun = Date.now();
     job.runCount++;
     afterStats();
@@ -526,6 +541,8 @@ export class CronScheduler {
       this.persistRunStats(job);
       this.running.delete(job.id);
       this.runningControllers.delete(job.id);
+      // Unblock any abort() awaiting this run's teardown.
+      resolveDone();
     }
   }
 }

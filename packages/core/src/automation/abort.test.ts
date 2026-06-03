@@ -24,18 +24,38 @@ describe("CronScheduler.abort", () => {
     const job = sched.create("x", "1h", "p"); // long interval — won't tick during the test
     sched.runNow(job.id);
     await sleep(10); // let fire() install the controller + start the executor
-    expect(sched.abort(job.id)).toBe(true);
-    await sleep(10);
+    await expect(sched.abort(job.id)).resolves.toBe(true);
     expect(sawAbort).toBe(true);
     sched.stopAll();
   });
 
-  test("returns false when the job is not running", () => {
+  test("the returned promise resolves only AFTER the run fully settles", async () => {
+    const sched = new CronScheduler();
+    let finishedWriting = false;
+    sched.setExecutor(async (_job, signal) => {
+      await new Promise<void>((resolve) => {
+        signal?.addEventListener("abort", () => resolve());
+      });
+      // Simulate Engine's post-abort bookkeeping (the saveState that recreated
+      // the deleted session dir in the race we're closing). The abort() promise
+      // MUST NOT resolve until this has run.
+      await sleep(20);
+      finishedWriting = true;
+    });
+    const job = sched.create("x", "1h", "p");
+    sched.runNow(job.id);
+    await sleep(10);
+    await sched.abort(job.id); // awaiting this must wait out the post-abort write
+    expect(finishedWriting).toBe(true);
+    sched.stopAll();
+  });
+
+  test("resolves false when the job is not running (no run to wait on)", async () => {
     const sched = new CronScheduler();
     sched.setExecutor(async () => {});
     const job = sched.create("x", "1h", "p");
-    expect(sched.abort(job.id)).toBe(false); // never fired
-    expect(sched.abort("nope")).toBe(false); // unknown id
+    await expect(sched.abort(job.id)).resolves.toBe(false); // never fired
+    await expect(sched.abort("nope")).resolves.toBe(false); // unknown id
     sched.stopAll();
   });
 
@@ -47,8 +67,8 @@ describe("CronScheduler.abort", () => {
     const job = sched.create("x", "1h", "p");
     sched.runNow(job.id);
     await sleep(40); // run finished
-    // run settled → controller removed → abort is a no-op returning false
-    expect(sched.abort(job.id)).toBe(false);
+    // run settled → controller removed → abort is a no-op resolving false
+    await expect(sched.abort(job.id)).resolves.toBe(false);
     sched.stopAll();
   });
 });

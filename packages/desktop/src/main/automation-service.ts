@@ -141,11 +141,12 @@ export function runAutomationNow(id: string): boolean {
 }
 
 /**
- * Abort the in-flight run of cron job `id`, if any. Used when the user deletes
- * a still-running automation session from the sidebar — the run's in-main
- * Engine is cancelled so it stops writing to the session dir we're about to
- * delete. Returns false when there's no run in flight (or no scheduler yet).
+ * Abort the in-flight run of cron job `id`, if any, and wait for it to fully
+ * settle. Used when the user deletes a still-running automation session — the
+ * run's in-main Engine is cancelled AND we await its teardown (incl. the final
+ * saveState) so the caller can delete the session dir without racing a late
+ * write that would recreate it. Resolves false when no run is in flight.
  */
-export function cancelAutomationRun(id: string): boolean {
-  return scheduler?.abort(id) ?? false;
+export function cancelAutomationRun(id: string): Promise<boolean> {
+  return scheduler?.abort(id) ?? Promise.resolve(false);
 }
