@@ -141,14 +141,32 @@ export function buildStreamItems(
  * hashed here — those are owned by the memoized ToolCard, which re-renders on
  * its own message-identity change independently of the group wrapper.
  */
+/**
+ * Per-inner-item signature token. Usually just the id — that's stable from the
+ * reducer and is all the wrapper card needs. BUT an `agent` message mutates in
+ * place (its nested toolCalls / textBuffer / done / error change while its id
+ * stays fixed): a subagent fires more tools, streams text, then finishes. If we
+ * keyed only on its id, an unchanged signature would make reconcileStreamItems
+ * reuse the PREVIOUS group object — which still holds the STALE AgentMessage —
+ * and the memoized card would render a frozen subagent (stuck at "1 tools",
+ * never flipping to done). So fold the agent's renderable mutable shape into
+ * the token. Leaf tool content is still owned by the memoized ToolCard and need
+ * not be hashed here. (fix: subagent-card-stale-during-run)
+ */
+function innerItemToken(it: Message | ToolGroup): string {
+  if (it.kind === "tool_group") return "tg(" + it.items.map((x) => x.id).join(",") + ")";
+  if (it.kind === "agent") {
+    return `a(${it.id}:${it.done ? 1 : 0}:${it.error ? 1 : 0}:${it.toolCount}:${it.textBuffer.length}:${(it.text ?? "").length})`;
+  }
+  return it.id;
+}
+
 function groupSignature(item: StreamItem): string {
   if (item.kind === "tool_group") {
     return "g:" + item.items.map((it) => it.id).join(",");
   }
   if (item.kind === "turn_process_group") {
-    const inner = item.items
-      .map((it) => (it.kind === "tool_group" ? "tg(" + it.items.map((x) => x.id).join(",") + ")" : it.id))
-      .join(",");
+    const inner = item.items.map(innerItemToken).join(",");
     return `p:${item.isLive ? 1 : 0}:${item.durationMs}:${item.toolCount}:${inner}`;
   }
   return item.kind + ":" + item.id;

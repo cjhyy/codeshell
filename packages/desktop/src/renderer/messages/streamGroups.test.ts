@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { buildStreamItems, reconcileStreamItems, type TurnProcessGroup } from "./streamGroups";
-import type { AssistantMessage, Message, ThinkingMessage, ToolMessage } from "../types";
+import type { AgentMessage, AssistantMessage, Message, ThinkingMessage, ToolMessage } from "../types";
 
 let idCounter = 0;
 function freshId(prefix: string): string {
@@ -32,6 +32,37 @@ function tool(toolName = "Read", startedAt = 1, endedAt = startedAt + 5): ToolMe
     endedAt,
     durationMs: endedAt - startedAt,
   };
+}
+
+function agent(id: string, toolCount: number, opts: { done?: boolean } = {}): AgentMessage {
+  return {
+    kind: "agent",
+    id,
+    description: "sub",
+    done: opts.done ?? false,
+    startedAt: 2,
+    toolCalls: Array.from({ length: toolCount }, (_, i) => ({
+      kind: "tool" as const,
+      id: `${id}-t${i}`,
+      toolName: "Read",
+      args: "{}",
+      status: "running" as const,
+      startedAt: 2 + i,
+    })),
+    textBuffer: "",
+    toolCount,
+  };
+}
+
+function findAgentIn(items: ReturnType<typeof buildStreamItems>): AgentMessage | null {
+  for (const it of items) {
+    if (it.kind === "agent") return it;
+    if (it.kind === "turn_process_group" || it.kind === "tool_group") {
+      const f = findAgentIn(it.items as ReturnType<typeof buildStreamItems>);
+      if (f) return f;
+    }
+  }
+  return null;
 }
 
 function processGroups(items: ReturnType<typeof buildStreamItems>): TurnProcessGroup[] {
@@ -148,6 +179,25 @@ describe("reconcileStreamItems", () => {
     const prevGroup = prev.find((i) => i.kind === "turn_process_group");
     const recGroup = reconciled.find((i) => i.kind === "turn_process_group");
     expect(recGroup).not.toBe(prevGroup);
+  });
+
+  test("does NOT reuse a stale group when an inner agent message mutates in place", () => {
+    // A live turn containing a subagent. The agent's id is stable while its
+    // toolCalls/toolCount grow as it runs. Keying the group signature only on
+    // inner ids would reuse the previous (stale) group object and freeze the
+    // subagent card. The signature must reflect the agent's mutable shape.
+    const u = user();
+    const t = tool("Bash", 1, 2);
+    const built1 = buildStreamItems([u, t, agent("a1", 1)], { liveTurnActive: true });
+    const recon1 = reconcileStreamItems([], built1);
+    const built2 = buildStreamItems([u, t, agent("a1", 2)], { liveTurnActive: true });
+    const recon2 = reconcileStreamItems(recon1, built2);
+    expect(findAgentIn(recon2)?.toolCount).toBe(2);
+
+    // Flipping to done is also a content change the card must observe.
+    const built3 = buildStreamItems([u, t, agent("a1", 2, { done: true })], { liveTurnActive: true });
+    const recon3 = reconcileStreamItems(recon2, built3);
+    expect(findAgentIn(recon3)?.done).toBe(true);
   });
 
   test("empty previous render passes new items through unchanged", () => {

@@ -3,6 +3,7 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import { timePhase } from "./perf";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
@@ -138,9 +139,16 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
       // once per window, not once per event. applyStreamEvent returns the
       // same ref when an event is a no-op, so an all-no-op batch leaves
       // `next === current` and the dispatch below bails out.
-      let acc = current;
-      for (const ev of action.events) acc = applyStreamEvent(acc, ev);
-      next = acc;
+      next = timePhase(
+        "reducer.batch",
+        () => {
+          let acc = current;
+          for (const ev of action.events) acc = applyStreamEvent(acc, ev);
+          return acc;
+        },
+        () => ({ events: action.events.length, msgs: current.messages.length }),
+        4,
+      );
       break;
     }
   }
@@ -1020,7 +1028,15 @@ function App() {
         }
       }
 
-      if (event.type === "turn_complete" || event.type === "error") {
+      // A *sub-agent's* turn_complete / error carries an agentId (engine.ts
+      // injects it into every child stream event). It must NOT clear the main
+      // bucket's busy flag, mark it unread, or terminate the automation run —
+      // the parent turn is still running and will emit its own (agentId-less)
+      // turn_complete when it actually finishes. Treating the child's
+      // turn_complete as the parent's flipped the top-bar/sidebar to "完成"
+      // (idle) mid-run while the agent kept working. The per-agent card's own
+      // done state is handled separately in the reducer via `agent_end`.
+      if ((event.type === "turn_complete" || event.type === "error") && !event.agentId) {
         setBusyForKey(target, false);
         // A turn finished in a bucket the user is NOT looking at → mark unread
         // so the sidebar shows a dot. Read the active bucket from the ref (not
