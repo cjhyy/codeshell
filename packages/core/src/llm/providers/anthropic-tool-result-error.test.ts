@@ -95,6 +95,33 @@ describe("AnthropicClient tool_result is_error propagation", () => {
     expect((msg.content as any[]).some((b) => b.type === "image")).toBe(true);
   });
 
+  it("maps an image-bearing tool_result.content array to API image blocks (vision model)", async () => {
+    const { client, lastBody } = clientCapturing("claude-3-5-sonnet");
+    await client.createMessage(
+      optsWith([
+        {
+          type: "tool_result",
+          tool_use_id: "call_1",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: "image/png", data: "AAAA" },
+            },
+          ],
+        },
+      ]),
+    );
+
+    const msg = lastBody().messages.find((m: any) => m.role === "user");
+    const block = (msg.content as any[]).find(
+      (b) => b.type === "tool_result" && b.tool_use_id === "call_1",
+    );
+    expect(block).toBeDefined();
+    expect(Array.isArray(block.content)).toBe(true);
+    expect(block.content[0].type).toBe("image");
+    expect(block.content[0].source.media_type).toBe("image/png");
+  });
+
   it("omits is_error (or leaves it falsy) for a successful tool_result", async () => {
     const { client, lastBody } = clientCapturing();
     await client.createMessage(

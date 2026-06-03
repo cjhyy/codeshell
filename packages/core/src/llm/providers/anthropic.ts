@@ -354,10 +354,37 @@ export class AnthropicClient extends LLMClientBase {
               input: block.input,
             });
           } else if (block.type === "tool_result" && block.tool_use_id) {
+            let content: Anthropic.ToolResultBlockParam["content"];
+            if (typeof block.content === "string") {
+              content = block.content;
+            } else if (Array.isArray(block.content)) {
+              const parts: Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam> = [];
+              for (const part of block.content) {
+                if (part.type === "text" && part.text) {
+                  parts.push({ type: "text", text: part.text });
+                } else if (part.type === "image" && part.source) {
+                  parts.push({
+                    type: "image",
+                    source: {
+                      type: "base64",
+                      media_type: part.source.media_type as
+                        | "image/jpeg"
+                        | "image/png"
+                        | "image/gif"
+                        | "image/webp",
+                      data: part.source.data,
+                    },
+                  });
+                }
+              }
+              content = parts;
+            } else {
+              content = "";
+            }
             blocks.push({
               type: "tool_result",
               tool_use_id: block.tool_use_id,
-              content: typeof block.content === "string" ? block.content : "",
+              content,
               ...(block.is_error ? { is_error: true } : {}),
             });
           } else if (block.type === "image" && block.source) {
