@@ -42,7 +42,10 @@ export function stripVisionFromHistory(
   let changed = false;
   const out = messages.map((msg) => {
     if (typeof msg.content === "string") return msg;
-    if (!msg.content.some((b) => b.type === "image")) return msg;
+    // Need to process if there's a top-level image, OR a tool_result whose
+    // own content array carries a nested image (view_image-produced screenshots
+    // live in `tool_result.content: ContentBlock[]`).
+    if (!msg.content.some(needsStrip)) return msg;
 
     changed = true;
     const rebuilt: ContentBlock[] = [];
@@ -57,10 +60,48 @@ export function stripVisionFromHistory(
         }
         continue;
       }
+      if (
+        block.type === "tool_result" &&
+        Array.isArray(block.content) &&
+        block.content.some((b) => b.type === "image")
+      ) {
+        rebuilt.push({ ...block, content: stripImageBlocks(block.content) });
+        continue;
+      }
       rebuilt.push(block);
     }
     return { ...msg, content: rebuilt };
   });
 
   return changed ? out : messages;
+}
+
+/** True if this block holds an image we must elide — either it *is* an image,
+ *  or it's a tool_result whose nested content array contains one. */
+function needsStrip(block: ContentBlock): boolean {
+  if (block.type === "image") return true;
+  return (
+    block.type === "tool_result" &&
+    Array.isArray(block.content) &&
+    block.content.some((b) => b.type === "image")
+  );
+}
+
+/** Replace image blocks in a ContentBlock[] with a single text placeholder
+ *  (consecutive/multiple images collapse to one), preserving other blocks.
+ *  Used for both the message top level and nested tool_result.content. */
+function stripImageBlocks(blocks: ContentBlock[]): ContentBlock[] {
+  const rebuilt: ContentBlock[] = [];
+  let placeholderInserted = false;
+  for (const block of blocks) {
+    if (block.type === "image") {
+      if (!placeholderInserted) {
+        rebuilt.push({ type: "text", text: VISION_PLACEHOLDER });
+        placeholderInserted = true;
+      }
+      continue;
+    }
+    rebuilt.push(block);
+  }
+  return rebuilt;
 }

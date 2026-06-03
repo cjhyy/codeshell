@@ -79,4 +79,57 @@ describe("stripVisionFromHistory", () => {
     expect(content.some((b) => b.type === "tool_result")).toBe(true);
     expect(content.some((b) => b.type === "image")).toBe(false);
   });
+
+  it("strips images nested inside tool_result.content when vision unsupported", () => {
+    const msgs: Message[] = [
+      {
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "call_1",
+            content: [
+              { type: "text", text: "before" },
+              { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } },
+            ],
+          },
+        ],
+      },
+    ];
+    const out = stripVisionFromHistory(msgs, false);
+    const content = out[0].content as Exclude<Message["content"], string>;
+    const tr = content.find((b) => b.type === "tool_result");
+    expect(tr).toBeDefined();
+    expect(Array.isArray(tr!.content)).toBe(true);
+    const inner = tr!.content as Exclude<Message["content"], string>;
+    expect(inner.some((b) => b.type === "image")).toBe(false);
+    // original inner text survives
+    expect(inner.some((b) => b.type === "text" && b.text === "before")).toBe(true);
+    // a placeholder replaced the image
+    expect(inner.some((b) => b.type === "text" && b.text === VISION_PLACEHOLDER)).toBe(true);
+  });
+
+  it("does NOT touch nested tool_result images when vision IS supported", () => {
+    const msgs: Message[] = [
+      {
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "call_1",
+            content: [
+              { type: "text", text: "before" },
+              { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } },
+            ],
+          },
+        ],
+      },
+    ];
+    const out = stripVisionFromHistory(msgs, true);
+    expect(out).toBe(msgs); // identity
+    const content = out[0].content as Exclude<Message["content"], string>;
+    const tr = content.find((b) => b.type === "tool_result");
+    const inner = tr!.content as Exclude<Message["content"], string>;
+    expect(inner.some((b) => b.type === "image")).toBe(true);
+  });
 });

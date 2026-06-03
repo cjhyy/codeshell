@@ -13,9 +13,13 @@ function fakeStream(chunks: any[]): AsyncIterable<any> {
 
 /** OpenAIClient (vision model) that records the outgoing request body. */
 function clientCapturing(): { client: OpenAIClient; lastBody: () => any } {
+  // Must be a model whose capability resolves to supportsVision:true, else
+  // buildMessages' stripVisionFromHistory elides the nested tool_result image
+  // (correctly) and there's nothing left to hoist. gpt-4o has no native
+  // capability rule → falls to DEFAULT (vision:false); gpt-5 does → vision:true.
   const client = new OpenAIClient({
     provider: "openai",
-    model: "gpt-4o",
+    model: "gpt-5",
     apiKey: "test",
   });
   let body: any;
