@@ -97,7 +97,6 @@ export function MessageStream({
           return reconciled;
         },
         () => ({ msgs: messages.length }),
-        4,
       ),
     [messages, liveTurnActive],
   );

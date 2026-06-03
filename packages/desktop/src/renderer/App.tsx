@@ -147,7 +147,6 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
           return acc;
         },
         () => ({ events: action.events.length, msgs: current.messages.length }),
-        4,
       );
       break;
     }

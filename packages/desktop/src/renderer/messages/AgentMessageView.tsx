@@ -1,13 +1,24 @@
 import React, { useState, memo } from "react";
 import type { AgentMessage } from "../types";
 import { StatusDot } from "../ui/StatusDot";
-import { ToolCard } from "../tool-cards";
 import { Markdown } from "../Markdown";
+import { summarizeAgentActivity, describeActivity } from "../topbar/liveActivity";
 
 function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   const [expanded, setExpanded] = useState(false);
   const status = message.error ? "err" : message.done ? "ok" : "running";
-  const hasBody = message.toolCalls.length > 0 || !!message.text || !!message.error;
+
+  // What the subagent is doing right now (Codex-style verb + arg), derived
+  // from its own toolCalls. Shown live in the header while running — that's
+  // the signal the user wants ("正在读取 schema.ts"), not a tool-card dump.
+  const liveText = !message.done && message.toolCalls.length > 0
+    ? describeActivity(summarizeAgentActivity(message.toolCalls))
+    : null;
+
+  // The agent's text output (streaming buffer + finalized text). This — not
+  // the tool list — is what the expanded body shows.
+  const bodyText = (message.text ?? "") + (message.textBuffer ?? "");
+  const hasBody = bodyText.trim().length > 0 || !!message.error;
 
   return (
     <div className="px-4 py-1">
@@ -28,23 +39,36 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
             </span>
           )}
           <span className="min-w-0 flex-1 truncate text-muted-foreground">{message.description}</span>
-          {message.toolCount > 0 && (
+          {/* Right side: live activity while running, else a quiet tool count. */}
+          {liveText ? (
+            <span className="min-w-0 max-w-[45%] shrink truncate text-xs text-muted-foreground">
+              {liveText}
+            </span>
+          ) : message.toolCount > 0 ? (
             <span className="shrink-0 text-xs text-muted-foreground">
               {message.toolCount} tools
             </span>
-          )}
+          ) : null}
           {hasBody && (
             <span className="shrink-0 text-muted-foreground">{expanded ? "▾" : "▸"}</span>
           )}
         </button>
         {expanded && (
           <div id={`agent-body-${message.id}`} className="flex flex-col gap-2 border-t border-border p-3">
-            {message.toolCalls.map((t) => (
-              <ToolCard key={t.id} message={t} />
-            ))}
-            {message.text && (
+            {bodyText.trim().length > 0 && (
               <div className="text-sm">
-                <Markdown text={message.text} />
+                {/* While the sub-agent is still streaming, render plain text —
+                    re-parsing Markdown (remark + rehype-highlight) on every
+                    token was a ~150ms-per-frame commit that froze the UI
+                    (perf: subagent-stream-markdown-reparse). Only the settled
+                    text, on done, goes through Markdown. */}
+                {message.done ? (
+                  <Markdown text={bodyText} />
+                ) : (
+                  <div className="md-body md-streaming">
+                    <pre className="whitespace-pre-wrap font-sans">{bodyText}</pre>
+                  </div>
+                )}
               </div>
             )}
             {message.error && <div className="text-sm text-status-err">{message.error}</div>}
@@ -59,5 +83,11 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
  * Memoized so subagent events that update one card don't re-render
  * sibling cards. Reducer produces a new AgentMessage object only when
  * that agent's own event arrives, so shallow comparison is correct.
+ *
+ * The card deliberately does NOT render the subagent's individual tool
+ * cards — the user wants a live one-line "what it's doing now" summary in
+ * the header (Codex-style) plus the agent's text output when expanded, not
+ * a nested tool-card dump. This is also much cheaper to render on the 50ms
+ * stream batches than re-laying-out N tool cards per flush.
  */
 export const AgentMessageView = memo(AgentMessageViewImpl);

@@ -68,6 +68,34 @@ export function summarizeLiveActivity(messages: Message[]): LiveActivity {
 }
 
 /**
+ * Same shape as summarizeLiveActivity but scoped to ONE sub-agent's own
+ * toolCalls (which live inside its AgentMessage, not in the top-level feed).
+ * Lets a subagent card show its own Codex-style "正在读取 schema.ts" line
+ * without scanning the whole conversation. Single pass, no allocations beyond
+ * the returned object — runs on every 50ms flush while the agent is live.
+ */
+export function summarizeAgentActivity(toolCalls: ToolMessage[]): LiveActivity {
+  let toolCount = 0;
+  let earliestStart = Infinity;
+  let lastTool: ToolMessage | null = null;
+  let runningTool: ToolMessage | null = null;
+  for (const m of toolCalls) {
+    toolCount += 1;
+    if (m.startedAt < earliestStart) earliestStart = m.startedAt;
+    lastTool = m;
+    if (m.status === "running") runningTool = m;
+  }
+  const primary = runningTool ?? lastTool;
+  return {
+    lastToolName: primary?.toolName ?? "",
+    lastTool: primary,
+    toolCount,
+    turnStartedAt: isFinite(earliestStart) ? earliestStart : 0,
+    toolInFlight: runningTool !== null,
+  };
+}
+
+/**
  * Localized one-line description of what the agent is doing right now, Codex
  * style: a verb + the tool's most telling argument (the bash command, the
  * file being edited, the search pattern…), or "正在思考…" when no tool has

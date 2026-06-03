@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { memo, useState, useRef, useEffect } from "react";
 import { StatusDot } from "./ui/StatusDot";
 import { IconButton } from "./ui/IconButton";
 import { PanelLeft } from "./ui/icons";
@@ -33,7 +33,7 @@ interface Props {
  * current tool / step count / elapsed time, mirroring Codex's "what
  * is the agent doing right now" affordance.
  */
-export function TopBar({
+function TopBarImpl({
   repoName,
   sessionTitle,
   busy,
@@ -145,3 +145,35 @@ function StatusBadge({
     </div>
   );
 }
+
+/**
+ * Memoized with a value-based comparator. App recomputes `activity` (and the
+ * `messages`-derived `tasks`) on EVERY streamed token, handing TopBar a fresh
+ * object each time — which, unmemoized, re-rendered this header ~30×/sec during
+ * streaming at ~10ms a pop (the dominant non-MessageStream cost behind the
+ * freeze: perf showed commit.TopBar ≈ commit.App ≫ commit.MessageStream).
+ *
+ * The visible header only depends on busy/repoName/sessionTitle/sidebar; the
+ * `activity`/`tasks` objects feed only the hover popover. So we re-render only
+ * when a *meaningful* field changes — the activity's current tool / in-flight /
+ * count, or the task list identity — not on every token that merely grows the
+ * streaming text. The popover, when open, still shows the latest tool because
+ * those fields ARE in the comparator. (perf: topbar-rerender-per-token)
+ */
+function topBarPropsEqual(a: Props, b: Props): boolean {
+  return (
+    a.repoName === b.repoName &&
+    a.sessionTitle === b.sessionTitle &&
+    a.busy === b.busy &&
+    a.sidebarCollapsed === b.sidebarCollapsed &&
+    a.onToggleSidebar === b.onToggleSidebar &&
+    a.tasks === b.tasks &&
+    a.activity?.lastToolName === b.activity?.lastToolName &&
+    a.activity?.toolInFlight === b.activity?.toolInFlight &&
+    a.activity?.toolCount === b.activity?.toolCount &&
+    a.activity?.lastTool?.id === b.activity?.lastTool?.id &&
+    a.activity?.lastTool?.status === b.activity?.lastTool?.status
+  );
+}
+
+export const TopBar = memo(TopBarImpl, topBarPropsEqual);

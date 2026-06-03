@@ -152,11 +152,27 @@ export function buildStreamItems(
  * never flipping to done). So fold the agent's renderable mutable shape into
  * the token. Leaf tool content is still owned by the memoized ToolCard and need
  * not be hashed here. (fix: subagent-card-stale-during-run)
+ *
+ * The card also shows a live "what it's doing now" line derived from its LAST
+ * toolCall, so the token additionally captures that tool's id + status + a
+ * cheap args fingerprint — otherwise the line wouldn't flip from "正在读取" to
+ * the next action when a tool completes or its streamed args change without the
+ * toolCount changing.
  */
+let liveAgentToken = 0;
 function innerItemToken(it: Message | ToolGroup): string {
   if (it.kind === "tool_group") return "tg(" + it.items.map((x) => x.id).join(",") + ")";
   if (it.kind === "agent") {
-    return `a(${it.id}:${it.done ? 1 : 0}:${it.error ? 1 : 0}:${it.toolCount}:${it.textBuffer.length}:${(it.text ?? "").length})`;
+    // A LIVE (not-done) agent mutates in place every 50ms flush — its tool
+    // status flips, streamed args grow, the live activity line changes — in
+    // ways a content hash can't fully capture cheaply. The reducer hands us a
+    // fresh AgentMessage object each time anyway, so just force a unique token
+    // per build: the wrapping group is never reused while the agent is live,
+    // so the card always re-renders the latest. Once done/errored its content
+    // is stable, so we hash the renderable shape and reuse normally (lets the
+    // memo skip a settled card on later batches).
+    if (!it.done && !it.error) return `a-live(${it.id}:${(liveAgentToken += 1)})`;
+    return `a(${it.id}:1:${it.error ? 1 : 0}:${it.toolCount}:${(it.text ?? "").length})`;
   }
   return it.id;
 }
