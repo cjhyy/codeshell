@@ -105,6 +105,20 @@ export class ToolExecutor {
     // Local `call` so we can rewrite args via pre_tool_use updatedInput
     // without mutating the caller's object.
     let call: ToolCall = callIn;
+    // 0. Capability override: a builtin the project marked `off` is HIDDEN from
+    // the model's tool list (engine.ts applyBuiltinOverrideVisibility), but the
+    // model can still NAME it (hallucination, or a remembered earlier turn). The
+    // registry still holds the tool, so without a gate here it would execute.
+    // Reject it the same way plan mode rejects a disallowed tool — return an
+    // error result, never run the handler.
+    if (this.toolCtx?.disabledBuiltins?.has(call.toolName)) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: `Tool ${call.toolName} is disabled by this project's capability override and cannot be used. Do NOT retry this tool call.`,
+        isError: true,
+      };
+    }
     // 0. Plan mode: only allow read-only tools — no file writes at all
     if (this.toolCtx?.planMode) {
       // Shared with engine.ts's tool-visibility filter so the set the model

@@ -187,6 +187,16 @@ export interface ToolContext {
    * `settings.disabledPlugins` by Engine.run().
    */
   disabledPlugins?: string[];
+  /**
+   * Builtin tool names the project's capabilityOverrides marked `off` for
+   * this cwd. Engine.run() already HIDES these from the LLM-visible tool
+   * list, but the model can still NAME a hidden builtin (hallucinated, or
+   * remembered from an earlier turn when it was visible). The executor reads
+   * this set and rejects such a call — turning `off` into a real execution
+   * gate, not just a prompt-visibility filter. Empty/undefined for
+   * sub-agents and no-cwd contexts (same as readBuiltinOverride).
+   */
+  disabledBuiltins?: Set<string>;
 }
 
 /**

@@ -59,7 +59,7 @@ import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-message
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { SettingsManager, type SettingsScope } from "../settings/manager.js";
+import { SettingsManager, userHome, type SettingsScope } from "../settings/manager.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
 import { FileHistory } from "../session/file-history.js";
@@ -124,6 +124,29 @@ export function compatFileNamesFrom(instructions?: { compatClaude?: boolean; com
   if (instructions?.compatClaude !== false) names.push("CLAUDE.md");
   if (instructions?.compatCodex !== false) names.push("AGENTS.md");
   return names;
+}
+
+/**
+ * True when two LLMConfigs name the SAME client identity — i.e. building a
+ * client from either would talk to the same model on the same endpoint with the
+ * same shaping. Used by resolveAuxClient to de-dup the aux client against the
+ * active model WITHOUT collapsing two distinct pool keys that merely share a
+ * `model` NAME but differ in reasoning/maxTokens/baseUrl/provider. Compares the
+ * fields that actually change request behavior; apiKey is intentionally NOT
+ * compared (two keys with the same endpoint+model but different credentials
+ * still produce equivalent aux work and don't warrant a second client). The
+ * reasoning object is compared by normalized JSON since it's a small
+ * discriminated union.
+ */
+function sameLlmIdentity(a: LLMConfig, b: LLMConfig): boolean {
+  return (
+    a.model === b.model &&
+    (a.baseUrl ?? undefined) === (b.baseUrl ?? undefined) &&
+    (a.provider ?? undefined) === (b.provider ?? undefined) &&
+    (a.providerKind ?? undefined) === (b.providerKind ?? undefined) &&
+    (a.maxTokens ?? undefined) === (b.maxTokens ?? undefined) &&
+    JSON.stringify(a.reasoning ?? null) === JSON.stringify(b.reasoning ?? null)
+  );
 }
 
 export interface EngineConfig {
@@ -301,6 +324,22 @@ export function loadAgentDefinitionsForCwd(
 const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel"];
 
 /**
+ * #7: apply a project's per-turn builtin capability override to a tool list.
+ * A builtin marked `off` for the current cwd is HIDDEN from the turn's tool
+ * list (matching how skills/plugins/agents `off` apply mid-session). `on` /
+ * `inherit` / absent keep the tool — we can't re-add a tool the ctor-frozen
+ * registry omitted, but `on` for a tool already present is a no-op. Pure +
+ * exported so it's unit-testable without a full run() turn.
+ */
+export function applyBuiltinOverrideVisibility<T extends { name: string }>(
+  tools: T[],
+  override: Record<string, CapabilityOverride> | undefined,
+): T[] {
+  if (!override) return tools;
+  return tools.filter((t) => override[t.name] !== "off");
+}
+
+/**
  * Compute a child Engine's tool scope.
  * - `allowlist` set → child enabled = allowlist minus nested-agent tools
  *   (a per-role tool whitelist, e.g. a read-only researcher).
@@ -324,22 +363,18 @@ export function resolveChildToolScope(
 }
 
 export class Engine {
-  private readonly preset: AgentPreset;
+  // Resolved per-session preset. Set in the ctor; re-resolved by
+  // refreshRuntimeConfig on a preset hot-reload so the next-turn PromptComposer
+  // picks up the new preset's system prompt / behavior (#2). NOT readonly for
+  // that reason. NOTE: the toolRegistry's builtin tool SET is still ctor-frozen
+  // and is NOT rebuilt on reload — a preset change that alters the builtin tool
+  // set only takes effect on session restart (logged in refreshRuntimeConfig).
+  private preset: AgentPreset;
   private toolRegistry: ToolRegistry;
   private hooks: HookRegistry;
   private sessionManager: SessionManager;
   private mcpManager: MCPManager | undefined;
   private modelPool: ModelPool;
-  /**
-   * THIS engine's own active model key. Distinct from the SHARED ModelPool's
-   * activeKey (getActiveKey()), which any concurrent session's switchModel can
-   * mutate. resolveAuxClient compares against this per-engine key so the aux-
-   * client decision is isolated from other sessions. Seeded whenever the engine
-   * adopts a model (ctor → populateModelPoolFromSettings, autoPopulatePool,
-   * switchModel); may be undefined for a freshly-built engine with no models —
-   * the L1730 comparison then simply won't match and falls back safely.
-   */
-  private activeModelKey?: string;
   /**
    * Handles for the settings-sourced hook handlers registered by
    * registerSettingsHooks(), so reloadHooks() can unregister exactly those
@@ -508,6 +543,15 @@ export class Engine {
     // globally-disabled builtin tool or force-disable a globally-enabled one
     // (tri-state). Mirrors readDisabledLists for skills/plugins/agents; no cwd
     // / no overlay → the config lists pass through unchanged (zero regression).
+    //
+    // #7: this builds the ctor-FROZEN builtin tool SET in the registry — a
+    // mid-session project override can't rebuild it. To make a builtin `off`
+    // toggle apply mid-session, run()'s per-turn tool-list assembly re-reads
+    // readBuiltinOverride(cwd) and HIDES `off` builtins from the turn's tool
+    // list (see the allToolDefs filter). `on` here can force-enable a
+    // globally-disabled builtin INTO the frozen set at construction; the
+    // per-turn path can only hide, not add, so a freshly-`on`'d builtin not in
+    // the set needs a session restart to appear.
     const builtinLists = effectiveBuiltinLists(
       config.enabledBuiltinTools ?? [],
       config.disabledBuiltinTools ?? [],
@@ -612,7 +656,6 @@ export class Engine {
           }
           if (match) {
             const entry = this.modelPool.switch(match.key);
-            this.activeModelKey = match.key;
             this.config = {
               ...this.config,
               llm: this.modelPool.toLLMConfig(entry),
@@ -687,7 +730,6 @@ export class Engine {
     const defaultEntry = entries[0];
     if (defaultEntry) {
       const entry = this.modelPool.switch(defaultEntry.key);
-      this.activeModelKey = defaultEntry.key;
       this.config = {
         ...this.config,
         llm: this.modelPool.toLLMConfig(entry),
@@ -1326,8 +1368,38 @@ export class Engine {
     // cwd. Recomputed every message, so configuring a key takes effect on the
     // NEXT message without a restart. Tools with no guard entry are always kept.
     const guardCwd = toolCtx.cwd;
-    const allToolDefs = this.toolRegistry
-      .getToolDefinitions()
+    // #7: per-turn project builtin override. The toolRegistry's builtin tool
+    // SET is ctor-frozen (and may be shared via runtime), so a mid-session
+    // project override of a builtin can't rebuild the registry. But the tool
+    // LIST handed to the LLM is assembled fresh every turn, so we apply the
+    // override here: a builtin marked `off` for this cwd is HIDDEN from the
+    // turn's tool list (matching how skills/plugins/agents `off` apply
+    // mid-session via readDisabledLists). `on`/`inherit` keep whatever the
+    // registry already has — we can't re-add a tool the frozen registry omits,
+    // but `on` for a tool already present is a no-op (it stays). This makes a
+    // builtin toggle take effect on the NEXT message, like other capability
+    // kinds, without touching the registry.
+    const builtinOverride = this.readBuiltinOverride(guardCwd);
+    // Turn `off` from a prompt-visibility filter into a real execution gate:
+    // collect the builtin tool names the override marks `off` and hand them to
+    // the executor (via the shared toolCtx the executor already holds a
+    // reference to, set at setContext above) so it rejects a call to a hidden
+    // builtin instead of running it from the still-populated registry.
+    if (builtinOverride) {
+      const registryNames = new Set(
+        this.toolRegistry.getToolDefinitions().map((t) => t.name),
+      );
+      const disabledBuiltins = new Set(
+        Object.keys(builtinOverride).filter(
+          (name) => builtinOverride[name] === "off" && registryNames.has(name),
+        ),
+      );
+      toolCtx.disabledBuiltins = disabledBuiltins;
+    }
+    const allToolDefs = applyBuiltinOverrideVisibility(
+      this.toolRegistry.getToolDefinitions(),
+      builtinOverride,
+    )
       .filter((t) => {
         const guard = BUILTIN_TOOL_GUARDS.get(t.name);
         return guard ? guard(guardCwd) : true;
@@ -1444,7 +1516,7 @@ export class Engine {
 
     // File history: auto-backup before Write/Edit
     const sessionDir = join(
-      this.config.sessionStorageDir ?? join(homedir(), ".code-shell", "sessions"),
+      this.config.sessionStorageDir ?? join(userHome(), ".code-shell", "sessions"),
       session.state.sessionId,
     );
     const fileHistory = FileHistory.loadFromDir(sessionDir);
@@ -1738,14 +1810,25 @@ export class Engine {
     }
     if (!auxKey) return fallback;
 
-    // Don't spin up a second client when the aux model IS the active model.
-    // Compare against THIS engine's own active key (not the shared pool's
-    // activeKey, which another concurrent session may have mutated).
-    if (auxKey === this.activeModelKey) return fallback;
+    // Don't spin up a second client when the aux key resolves to the SAME
+    // client config as this engine's active model. Compare FULL LLM IDENTITY
+    // (model + reasoning + maxTokens + baseUrl + provider/providerKind) against
+    // this engine's own per-session config.llm — NOT a separately-tracked active
+    // key, and NOT just the model NAME. Two distinct pool keys can share the same
+    // `model` string yet differ in reasoning/maxOutputTokens/baseUrl/apiKey/
+    // providerKey; de-duping on the name alone would wrongly route the user's
+    // chosen aux entry onto the primary's config. config.llm is isolated per
+    // session and always set for a real run, so this is correct even for desktop
+    // worker sessions built with a shared runtime (which never explicitly
+    // switchModel, so the old activeModelKey field was undefined and defeated the
+    // de-dup), AND immune to another session mutating the shared pool's activeKey.
+    const entry = this.modelPool.get(auxKey);
+    if (entry && sameLlmIdentity(this.modelPool.toLLMConfig(entry), this.config.llm)) {
+      return fallback;
+    }
 
     if (this.auxClientCache?.key === auxKey) return this.auxClientCache.client;
 
-    const entry = this.modelPool.get(auxKey);
     if (!entry) {
       logger.warn("engine.aux_model_missing", { auxModelKey: auxKey });
       return fallback;
@@ -1884,7 +1967,6 @@ export class Engine {
    */
   switchModel(key: string): ModelEntry {
     const entry = this.modelPool.switch(key);
-    this.activeModelKey = key;
     // LLMConfig is pure model identity now — rotate it wholesale. Cross-model
     // runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) live on
     // this.config.clientDefaults and survive the switch untouched.
@@ -1905,7 +1987,11 @@ export class Engine {
    */
   private persistActiveModel(entry: ModelEntry, llm: LLMConfig): void {
     try {
-      const dir = join(homedir(), ".code-shell");
+      // userHome() (not raw homedir()) so a test that sets process.env.HOME to
+      // a tmpdir gets its writes isolated too — the SettingsManager reader
+      // already honors HOME; the writer must match or tests pollute the real
+      // ~/.code-shell/settings.json (this happened: an A-key/model-a leak).
+      const dir = join(userHome(), ".code-shell");
       const file = join(dir, "settings.json");
       mkdirSync(dir, { recursive: true });
 
@@ -1990,11 +2076,49 @@ export class Engine {
    * rebuild. If mcpManager isn't built yet (no MCP run has happened), the
    * new servers will be connected on the next run via the existing per-run
    * connectAll path — so we skip the connect here.
+   *
+   * Preset (#2): a preset hot-reload re-resolves `this.preset` so the next-turn
+   * PromptComposer picks up the new preset's system prompt / behavior — that's
+   * the main user-visible preset effect and it IS hot. The toolRegistry's
+   * builtin tool SET, however, is ctor-frozen (and may be shared via runtime):
+   * it is NOT rebuilt here. So a preset change that alters the builtin tool set
+   * (e.g. general → terminal-coding adds LSP/Brief) only takes effect on the
+   * next session restart; we log a warning when that case is detected.
+   *
+   * disk-default-vs-slice caveat (#8): the patch carries pure DISK-default
+   * values (preset/customSystemPrompt/appendSystemPrompt/responseLanguage/
+   * userProfile — see diskDefaultsFrom). Spreading them here OVERRIDES any
+   * per-request slice override of the same field. This is correct for the
+   * desktop host today (its per-request slice only carries permissionMode+cwd,
+   * which are excluded from the disk patch). A future host that sets
+   * slice.preset (or the other prompt fields) per-request MUST exclude those
+   * from the reload patch — or track per-request overrides separately — or this
+   * reload will clobber them back to disk values.
    */
   refreshRuntimeConfig(patch: Partial<EngineConfig>, version: number): void {
     if (version <= this.lastAppliedConfigVersion) return;
     const prevServers = this.config.mcpServers ?? {};
+    const prevPresetName = this.preset.name;
     this.config = { ...this.config, ...patch };
+    // #2: re-resolve the prompt-affecting preset so the next-turn PromptComposer
+    // (rebuilt per turn from this.preset) reflects the new preset's system
+    // prompt / behavior. Only when the preset actually changed.
+    if (patch.preset !== undefined && patch.preset !== prevPresetName) {
+      const nextPreset = resolveAgentPreset(this.config.preset);
+      // The builtin tool SET is ctor-frozen and may be shared via runtime — we
+      // do NOT rebuild it here. If the new preset implies a different builtin
+      // tool set, that part of the change only lands on session restart.
+      const prevTools = resolveBuiltinToolNames({ preset: prevPresetName }).slice().sort().join(",");
+      const nextTools = resolveBuiltinToolNames({ preset: nextPreset.name }).slice().sort().join(",");
+      if (prevTools !== nextTools) {
+        logger.warn("engine.preset_reload.tool_set_change_needs_restart", {
+          from: prevPresetName,
+          to: nextPreset.name,
+          note: "preset system prompt hot-reloaded; builtin tool-set change takes effect on session restart",
+        });
+      }
+      this.preset = nextPreset;
+    }
     this.reloadHooks();
     if (patch.mcpServers && this.mcpManager) {
       const added: Record<string, import("../types.js").MCPServerConfig> = {};

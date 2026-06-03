@@ -142,6 +142,18 @@ export function buildRegisteredTool(serverName: string, tool: McpTool): Register
 export class MCPManager {
   private static instance: MCPManager | null = null;
   private connections = new Map<string, MCPConnection>();
+  /**
+   * In-flight connect()s keyed by server name. When the broadcast config
+   * reload (server.ts forEachSession → every session's refreshRuntimeConfig)
+   * calls connectAll for the SAME `added` server on this ONE shared pool, K
+   * concurrent connect(name) calls would each start a fresh handshake because
+   * `connections.has(name)` only becomes true AFTER the handshake completes —
+   * a thundering herd of duplicate connections racing to set(). Coalescing by
+   * name here collapses them to a SINGLE underlying connection; the late
+   * callers await the same promise and return. Cleared in finally so a failed
+   * connect can be retried later.
+   */
+  private connecting = new Map<string, Promise<void>>();
 
   constructor(private readonly toolRegistry: ToolRegistry) {
     MCPManager.instance = this;
@@ -187,8 +199,35 @@ export class MCPManager {
 
   /**
    * Connect to a single MCP server.
+   *
+   * Coalesces concurrent calls for the same `name`: an already-connected server
+   * returns immediately, and a connect already in flight for this name is
+   * awaited rather than restarted (#5 — thundering-herd guard on the shared
+   * pool). The actual handshake lives in `performConnect`.
    */
   async connect(name: string, config: MCPServerConfig): Promise<void> {
+    if (this.connections.has(name)) {
+      logger.info("mcp.already_connected", { server: name });
+      return;
+    }
+    const inflight = this.connecting.get(name);
+    if (inflight) {
+      logger.info("mcp.connect_coalesced", { server: name });
+      return inflight;
+    }
+    const p = this.performConnect(name, config).finally(() => {
+      this.connecting.delete(name);
+    });
+    this.connecting.set(name, p);
+    return p;
+  }
+
+  /**
+   * Perform the actual handshake + tool discovery for one server. Separated
+   * from `connect` so the coalescing/dedup logic stays in one place. Override
+   * `connect` (not this) in test doubles that want to count handshakes.
+   */
+  protected async performConnect(name: string, config: MCPServerConfig): Promise<void> {
     if (this.connections.has(name)) {
       logger.info("mcp.already_connected", { server: name });
       return;

@@ -76,6 +76,17 @@ export class AgentServer {
    * Engine.refreshRuntimeConfig can drop out-of-order (stale) deliveries (Q5).
    */
   private configVersion = 0;
+  /**
+   * JSON of the last disk-default patch broadcast to ALL live sessions (#6).
+   * When a new reloadSettings request produces a byte-identical patch we SKIP
+   * the entire forEachSession broadcast — every session's refreshRuntimeConfig
+   * would otherwise unconditionally reloadHooks() (invalidate + full disk
+   * re-read + hook teardown/re-register) per call, and the personalization UI
+   * auto-saves on a 600ms debounce, so identical re-saves caused K× hook churn
+   * per keystroke-pause. A genuine change still differs in JSON → propagates.
+   * null until the first broadcast.
+   */
+  private lastBroadcastPatch: string | null = null;
 
   // ── Legacy single-engine state (used when chatManager is null) ──
   private running = false;
@@ -573,9 +584,18 @@ export class AgentServer {
     // only mutates this.config, picked up at the next turn boundary.
     if (params.reloadSettings === true && this.chatManager && this.settingsReader) {
       const settings = this.settingsReader();
-      const version = ++this.configVersion;
       const patch = diskDefaultsFrom(settings);
-      this.chatManager.forEachSession((s) => s.engine.refreshRuntimeConfig(patch, version));
+      // #6: content short-circuit. If the disk-default patch is byte-identical
+      // to the last one we broadcast, the disk config that matters to running
+      // sessions hasn't changed — skip the whole forEachSession (and the per-
+      // session reloadHooks churn it triggers). Still return ok; a genuine
+      // change differs in JSON and propagates normally.
+      const patchJson = JSON.stringify(patch);
+      if (patchJson !== this.lastBroadcastPatch) {
+        this.lastBroadcastPatch = patchJson;
+        const version = ++this.configVersion;
+        this.chatManager.forEachSession((s) => s.engine.refreshRuntimeConfig(patch, version));
+      }
     }
 
     this.transport.send(createResponse(req.id, { ok: true }));

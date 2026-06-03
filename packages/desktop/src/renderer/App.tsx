@@ -28,9 +28,12 @@ import {
   archiveSession,
   bindEngineSession,
   upsertImportedSession,
+  updateSessionRunStatus,
   touchSession,
   setActiveSession,
   NO_REPO_KEY,
+  bucketKey,
+  repoKeyOf,
   type SessionIndex,
   type SessionSummary,
 } from "./transcripts";
@@ -82,15 +85,10 @@ import type { ModelOption } from "./chat/ModelPill";
 
 // Bucket key for sessions without a project — re-exported from transcripts.
 // We use NO_REPO_KEY everywhere instead of a local const so the renderer
-// and the persistence layer can't drift apart.
+// and the persistence layer can't drift apart. `bucketKey`/`repoKeyOf` are
+// imported from transcripts (the single source of truth) so App's map build
+// can't drift from Sidebar's row lookup.
 const GLOBAL_KEY = NO_REPO_KEY;
-function repoKeyOf(repoId: string | null): string {
-  return repoId ?? GLOBAL_KEY;
-}
-/** Compose a transcripts-map bucket key from repo + UI session id. */
-function bucketKey(repoId: string | null, sessionId: string | null): string {
-  return `${repoKeyOf(repoId)}::${sessionId ?? "_none_"}`;
-}
 
 type TranscriptsMap = Record<string, MessagesReducerState>;
 
@@ -285,18 +283,37 @@ function App() {
    * stay byte-identical to Sidebar's per-row key derivation (see Sidebar.tsx).
    */
   const sessionStatusMap = useMemo<Record<string, SessionStatus>>(() => {
+    // Build the engineSessionId → bucket reverse index ONCE (O(total-sessions))
+    // instead of letting resolveBucket re-scan every repo index per approval.
+    // This mirrors resolveBucket's lookup precedence exactly — live route table
+    // first, then this reverse index, then the runningBucket hint — but pays the
+    // expensive scan a single time. (When the live table is cold after an
+    // HMR/remount, every approval would otherwise hit the full reverse scan →
+    // O(approvals × total-sessions).)
+    const engineToBucketIndex = new Map<string, string>();
+    const map: Record<string, SessionStatus> = {};
+    for (const [repoKey, index] of Object.entries(sessionIndices)) {
+      const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+      for (const s of index.sessions) {
+        if (s.engineSessionId && !engineToBucketIndex.has(s.engineSessionId)) {
+          engineToBucketIndex.set(s.engineSessionId, bucketKey(repoId, s.id));
+        }
+      }
+    }
+
     const asking = new Set<string>();
     for (const env of approvalQueue) {
-      const bucket =
-        resolveBucket(
-          env.sessionId ?? "",
-          engineToBucketRef.current,
-          sessionIndices,
-          runningBucketRef.current,
-        ) ?? activeBucketRef.current;
+      const sid = env.sessionId ?? "";
+      // Replicate resolveBucket order: live table → precomputed reverse index →
+      // runningBucket → activeBucket fallback. Same bucket choice, O(1) per item.
+      let bucket: string | null = null;
+      if (sid) {
+        bucket = engineToBucketRef.current.get(sid) ?? engineToBucketIndex.get(sid) ?? null;
+      }
+      bucket = bucket ?? runningBucketRef.current ?? activeBucketRef.current;
       if (bucket) asking.add(bucket);
     }
-    const map: Record<string, SessionStatus> = {};
+
     for (const [repoKey, index] of Object.entries(sessionIndices)) {
       const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
       for (const s of index.sessions) {
@@ -737,25 +754,35 @@ function App() {
     const next = deleteSessionLocal(repoId, sessionId);
     setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: next }));
     if (summary?.source === "automation") {
-      // Skip the on-disk dirs only while the run is KNOWN to be still running.
-      // Deleting a live run's session/run dir would race the worker (mid-write)
-      // and leave a partial dir the next backfill re-imports as a zombie. A
-      // missing runStatus means a legacy/terminal import — safe to delete. The
-      // local entry is removed regardless; a still-running run simply re-appears
-      // on the next backfill (it's not in the dedup skip-set).
-      const inFlight = new Set(["queued", "running", "waiting_input", "waiting_approval", "blocked"]);
-      const isStillRunning = summary.runStatus ? inFlight.has(summary.runStatus) : false;
-      if (!isStillRunning) {
+      // Delete means delete — always remove the on-disk dirs, even if the run is
+      // still in flight (user's explicit intent: kill it). The old code skipped
+      // disk deletion for "running" runs, but a live-announced run's runStatus
+      // is frozen at "running" and never refreshed, so it was ALWAYS skipped →
+      // the session dir survived → the next backfill re-imported it forever.
+      //
+      // Cancel first (so the in-main automation run stops writing the session
+      // dir we're about to delete and doesn't recreate it post-delete), THEN
+      // delete. Cancel is best-effort: a no-op for an already-finished run.
+      void (async () => {
+        const inFlight = new Set(["queued", "running", "waiting_input", "waiting_approval", "blocked"]);
+        const maybeRunning = summary.runStatus ? inFlight.has(summary.runStatus) : false;
+        if (maybeRunning && summary.cronJobId) {
+          await window.codeshell.cancelAutomationRun(summary.cronJobId).catch((e) =>
+            window.codeshell.log("automation.delete.cancel.failed", { cronJobId: summary.cronJobId, error: String(e) }),
+          );
+        }
         const engineId = summary.engineSessionId ?? sessionId;
-        void window.codeshell.deleteSession(engineId).catch((e) =>
+        await window.codeshell.deleteSession(engineId).catch((e) =>
           window.codeshell.log("automation.delete.session.failed", { engineId, error: String(e) }),
         );
+        // deleteRun is a no-op for current jobs (which write sessions/, not
+        // runs/), but still clears legacy RunManager-era run dirs.
         if (summary.runId) {
-          void window.codeshell.deleteRun(summary.runId).catch((e) =>
+          await window.codeshell.deleteRun(summary.runId).catch((e) =>
             window.codeshell.log("automation.delete.run.failed", { runId: summary.runId, error: String(e) }),
           );
         }
-      }
+      })();
     }
   };
 
@@ -1010,6 +1037,30 @@ function App() {
         // Don't null runningBucketRef here — another concurrent send may
         // still be using it as a fallback. The ref is only a soft hint;
         // engineToBucketRef is the authoritative routing for in-flight runs.
+
+        // Flip a live automation session's runStatus from its frozen "running"
+        // to a terminal state. Without this it stays "running" forever, which
+        // (a) makes delete treat a long-finished run as in-flight, and (b)
+        // keeps it out of the backfill dedup skip-set. Find the owning session
+        // by engineSessionId (== local id for automation imports) and update it.
+        if (env.sessionId) {
+          const eid = env.sessionId;
+          const reposNow = loadRepos();
+          for (const rid of [null as string | null, ...reposNow.map((r) => r.id)]) {
+            const owner = loadSessionIndex(rid).sessions.find(
+              (s) => s.source === "automation" && s.engineSessionId === eid,
+            );
+            if (owner) {
+              const nextIdx = updateSessionRunStatus(
+                rid,
+                owner.id,
+                event.type === "error" ? "failed" : "completed",
+              );
+              setSessionIndices((prev) => ({ ...prev, [repoKeyOf(rid)]: nextIdx }));
+              break;
+            }
+          }
+        }
       }
     });
     // Live automation session: main announces {sessionId, cwd, title} once when

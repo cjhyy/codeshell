@@ -101,6 +101,58 @@ describe("AgentServer configure({ reloadSettings })", () => {
     expect(oks.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("#6: skips the broadcast when the disk patch is byte-identical to the last", () => {
+    const a = makeFakeEngine("A");
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => {
+        throw new Error("factory should not be called");
+      },
+    });
+    (chatManager as any).sessions.set("A", { id: "A", engine: a.engine });
+
+    // Identical settings every read (simulates a no-op personalization re-save).
+    let readCount = 0;
+    const settingsReader = () => {
+      readCount++;
+      return fakeSettings("same");
+    };
+
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager, settingsReader });
+
+    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
+    t.deliver({ jsonrpc: "2.0", id: 2, method: "agent/configure", params: { reloadSettings: true } });
+    t.deliver({ jsonrpc: "2.0", id: 3, method: "agent/configure", params: { reloadSettings: true } });
+
+    // Settings are re-read each time (cheap) but the broadcast — and the per-
+    // session reloadHooks churn — fires only once because the patch is identical.
+    expect(a.calls.length).toBe(1);
+    // All three still get an ok response.
+    const oks = t.sent.filter((m: any) => m.result?.ok === true);
+    expect(oks.length).toBe(3);
+
+    // A genuinely different patch propagates again.
+    const a2 = makeFakeEngine("A2");
+    const chatManager2 = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => {
+        throw new Error("factory should not be called");
+      },
+    });
+    (chatManager2 as any).sessions.set("A2", { id: "A2", engine: a2.engine });
+    let n = 0;
+    const t2 = makeTransport();
+    new AgentServer({
+      transport: t2.transport,
+      chatManager: chatManager2,
+      settingsReader: () => fakeSettings(`v${++n}`),
+    });
+    t2.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadSettings: true } });
+    t2.deliver({ jsonrpc: "2.0", id: 2, method: "agent/configure", params: { reloadSettings: true } });
+    expect(a2.calls.length).toBe(2);
+  });
+
   it("sessionId-scoped reloadSettings applies to that one session only", () => {
     const a = makeFakeEngine("A");
     const b = makeFakeEngine("B");

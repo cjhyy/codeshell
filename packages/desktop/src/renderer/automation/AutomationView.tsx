@@ -168,7 +168,10 @@ function automationSessionLinks(
         run?.cronJobName === job.name ||
         run?.runId === job.lastRunId;
       if (matches) {
-        out.push({ repoId, session, run });
+        // Locally-present session (found in a repo's session index) → already
+        // imported, so never flag it for import. Set explicitly so the render
+        // site can trust `link.needsImport` instead of re-deriving it.
+        out.push({ repoId, session, run, needsImport: false });
         if (session.runId) seenRunIds.add(session.runId);
         if (session.engineSessionId) seenSessionIds.add(session.engineSessionId);
         seenSessionIds.add(session.id);
@@ -736,8 +739,12 @@ function AutomationDetail(props: {
           <div className="automation-history-empty">这个任务还没有可跳转的历史 session。</div>
         ) : (
           <ul>
-            {props.sessions.map(({ repoId, session, run, disk }) => {
-              const needsImport = !!run && !props.sessions.find((x) => !x.needsImport && x.session.engineSessionId === run.sessionId);
+            {props.sessions.map(({ repoId, session, run, disk, needsImport }) => {
+              // Trust the flag set at link synthesis (automationSessionLinks):
+              // local-present links carry needsImport=false, disk/run-only links
+              // carry true. The old per-row `props.sessions.find()` was O(rows²)
+              // and used a different predicate, risking re-import of an
+              // already-local session.
               const status = run?.status ?? session.runStatus;
               const when = run?.updatedAt ?? session.updatedAt;
               return (

@@ -55,6 +55,10 @@ export interface SessionSummary {
   /** Run status at import time (e.g. "running" | "completed"). Lets the
    *  backfill dedup re-import a still-running import once it completes. */
   runStatus?: string;
+  /** Cron job id that owns this automation run, when known (live-announced
+   *  sessions). Lets delete cancel a still-running run via
+   *  cancelAutomationRun(cronJobId) before removing the on-disk session dir. */
+  cronJobId?: string;
 }
 
 export interface SessionIndex {
@@ -65,6 +69,24 @@ export interface SessionIndex {
 
 function repoKey(repoId: string | null): string {
   return repoId ?? NO_REPO_KEY;
+}
+
+/** Resolve a repo id (or null) to its bucket repo-key segment. */
+export function repoKeyOf(repoId: string | null): string {
+  return repoId ?? NO_REPO_KEY;
+}
+
+/**
+ * Canonical transcripts-map / sidebar-status bucket key:
+ *   `${repoId ?? NO_REPO_KEY}::${sessionId ?? "_none_"}`
+ *
+ * This is the SINGLE source of truth — App.tsx (map build), Sidebar.tsx (row
+ * lookup), and streamRouting.ts all use it. The output MUST stay byte-identical
+ * across versions so persisted/runtime keys keep matching. The `_none_` only
+ * matters for a null sessionId (draft/global edge cases) — keep it.
+ */
+export function bucketKey(repoId: string | null, sessionId: string | null): string {
+  return `${repoKeyOf(repoId)}::${sessionId ?? "_none_"}`;
 }
 function indexKey(repoId: string | null): string {
   return `codeshell.sessionIndex.${repoKey(repoId)}`;
@@ -244,6 +266,29 @@ export function deleteSessionLocal(
   const next: SessionIndex = { sessions: remaining, activeSessionId: nextActive };
   saveSessionIndex(repoId, next);
   clearTranscript(repoId, sessionId);
+  return next;
+}
+
+/**
+ * Update the runStatus of an automation session (keyed by local UI id), e.g.
+ * flip a live-announced run from "running" to its terminal status once it
+ * finishes. Without this the runStatus stays frozen at "running", which makes
+ * the delete handler treat a long-finished run as still in flight. No-op if
+ * the session isn't found.
+ */
+export function updateSessionRunStatus(
+  repoId: string | null,
+  sessionId: string,
+  runStatus: string,
+): SessionIndex {
+  const idx = loadSessionIndex(repoId);
+  const next: SessionIndex = {
+    ...idx,
+    sessions: idx.sessions.map((s) =>
+      s.id === sessionId ? { ...s, runStatus } : s,
+    ),
+  };
+  saveSessionIndex(repoId, next);
   return next;
 }
 

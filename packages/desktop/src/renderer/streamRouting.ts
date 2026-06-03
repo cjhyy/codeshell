@@ -10,12 +10,13 @@
  * the event. This is what keeps a resumed worker's output flowing into the UI
  * after the renderer reloads — without it, App.tsx silently dropped the events.
  */
-import type { SessionIndex } from "./transcripts";
+import { bucketKey, type SessionIndex } from "./transcripts";
 
-/** Build a bucket key from a repo key and UI session id. Mirrors App.bucketKey. */
-function bucketKey(repoKey: string, uiSessionId: string): string {
-  return `${repoKey}::${uiSessionId}`;
-}
+// Bucket keys here are built from an already-resolved repoKey string (the keys
+// of `sessionIndices`, never null) + a non-null UI session id, which the shared
+// `bucketKey(repoId, sessionId)` reproduces byte-identically
+// (`${repoKey}::${uiSessionId}`). Use the shared helper so this can't drift from
+// App's map build / Sidebar's row lookup.
 
 /**
  * Resolve the bucket for an event's engine sessionId.

@@ -24,7 +24,7 @@ import { migrateModels } from "../migrate-models.js";
  * cached from the user database at process startup and ignores later
  * `process.env.HOME` mutations.
  */
-function userHome(): string {
+export function userHome(): string {
   return process.env.HOME ?? homedir();
 }
 

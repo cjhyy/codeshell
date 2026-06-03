@@ -50,6 +50,66 @@ describe("MCPManager.connectAll enabled filter", () => {
   });
 });
 
+/**
+ * #5: concurrent connect(name) calls for the SAME server must collapse to a
+ * SINGLE underlying handshake. The broadcast config reload fans connectAll out
+ * across K sessions onto one shared pool; without coalescing each would start a
+ * fresh handshake (connections.has() only flips true after the handshake
+ * completes). We spy on the protected performConnect (the real handshake) and
+ * keep it pending so both connect() calls overlap.
+ */
+class CoalesceSpyManager extends MCPManager {
+  performCalls: string[] = [];
+  private releaseFns: Array<() => void> = [];
+  protected override async performConnect(name: string, _config: MCPServerConfig): Promise<void> {
+    this.performCalls.push(name);
+    // Stay pending until released so the second connect() overlaps with this one.
+    await new Promise<void>((resolve) => this.releaseFns.push(resolve));
+  }
+  releaseAll(): void {
+    for (const fn of this.releaseFns) fn();
+    this.releaseFns = [];
+  }
+}
+
+describe("MCPManager.connect coalescing (#5)", () => {
+  test("two concurrent connect(name) → ONE underlying handshake", async () => {
+    const m = new CoalesceSpyManager(new ToolRegistry());
+    const p1 = m.connect("srv", cfg("srv"));
+    const p2 = m.connect("srv", cfg("srv"));
+    // Only one handshake started despite two overlapping connect() calls.
+    expect(m.performCalls).toEqual(["srv"]);
+    m.releaseAll();
+    await Promise.all([p1, p2]);
+    expect(m.performCalls).toEqual(["srv"]);
+  });
+
+  test("two concurrent connectAll for the same added server → ONE handshake", async () => {
+    const m = new CoalesceSpyManager(new ToolRegistry());
+    // Simulate K=2 sessions each calling connectAll for the same server.
+    const p1 = m.connectAll({ srv: cfg("srv") });
+    const p2 = m.connectAll({ srv: cfg("srv") });
+    expect(m.performCalls).toEqual(["srv"]);
+    m.releaseAll();
+    await Promise.all([p1, p2]);
+    expect(m.performCalls).toEqual(["srv"]);
+  });
+
+  test("after the in-flight connect resolves, a later connect can retry", async () => {
+    const m = new CoalesceSpyManager(new ToolRegistry());
+    const p1 = m.connect("srv", cfg("srv"));
+    expect(m.performCalls).toEqual(["srv"]);
+    m.releaseAll();
+    await p1;
+    // performConnect (the spy) never populates `connections`, so a fresh
+    // connect re-runs the handshake — proving the inflight map was cleared.
+    const p2 = m.connect("srv", cfg("srv"));
+    expect(m.performCalls).toEqual(["srv", "srv"]);
+    m.releaseAll();
+    await p2;
+  });
+});
+
 describe("buildRegisteredTool readOnlyHint", () => {
   test("readOnlyHint=true → concurrency-safe + read-only", () => {
     const t = buildRegisteredTool("srv", {

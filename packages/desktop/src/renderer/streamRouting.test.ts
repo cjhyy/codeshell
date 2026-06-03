@@ -15,9 +15,24 @@
  */
 import { describe, it, expect } from "bun:test";
 import { resolveBucket } from "./streamRouting";
-import type { SessionIndex } from "./transcripts";
+import { bucketKey, NO_REPO_KEY, type SessionIndex } from "./transcripts";
 
 const GLOBAL_KEY = "__global__";
+
+describe("bucketKey", () => {
+  it("composes repoId::sessionId for a real repo", () => {
+    expect(bucketKey("repoA", "ui-1")).toBe("repoA::ui-1");
+  });
+
+  it("uses NO_REPO_KEY for a null repoId (byte-identical to legacy)", () => {
+    expect(bucketKey(null, "ui-1")).toBe(`${NO_REPO_KEY}::ui-1`);
+  });
+
+  it("uses _none_ for a null sessionId", () => {
+    expect(bucketKey("repoA", null)).toBe("repoA::_none_");
+    expect(bucketKey(null, null)).toBe(`${NO_REPO_KEY}::_none_`);
+  });
+});
 
 function idx(sessions: SessionIndex["sessions"]): SessionIndex {
   return { sessions, activeSessionId: null };

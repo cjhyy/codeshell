@@ -20,18 +20,8 @@ import { useConfirm, usePrompt } from "./ui/DialogProvider";
 import { SettingsMenu } from "./settings/SettingsMenu";
 import type { ViewMode } from "./view";
 import { repoLabel, sortRepos, type Repo } from "./repos";
-import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "./transcripts";
+import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "./transcripts";
 import type { SessionStatus } from "./sessionStatus";
-
-/**
- * Compose the transcripts-map bucket key for a session row.
- * MUST stay byte-identical to App.bucketKey()/repoKeyOf() so the keys in the
- * `sessionStatuses` map (built in App.tsx) line up 1:1 with the rows here.
- * repoId === null is the no-project case → NO_REPO_KEY (same const App uses).
- */
-function rowBucketKey(repoId: string | null, sessionId: string): string {
-  return `${repoId ?? NO_REPO_KEY}::${sessionId}`;
-}
 
 interface SidebarProps {
   repos: Repo[];
@@ -40,7 +30,7 @@ interface SidebarProps {
   activeSessionId: string | null;
   collapsedRepos: Set<string>;
   approvalsBadge?: number;
-  /** Per-bucket status mark, keyed by rowBucketKey(repoId, sessionId). */
+  /** Per-bucket status mark, keyed by the shared bucketKey(repoId, sessionId). */
   sessionStatuses?: Record<string, SessionStatus>;
   sidebarCollapsed?: boolean;
 
@@ -251,7 +241,7 @@ export function Sidebar({
               collapsed={collapsedRepos.has(repo.id)}
               isActiveRepo={activeRepoId === repo.id}
               activeSessionId={activeSessionId}
-              statusFor={(sid) => sessionStatuses?.[rowBucketKey(repo.id, sid)]}
+              statusFor={(sid) => sessionStatuses?.[bucketKey(repo.id, sid)]}
               onToggle={() => onToggleRepo(repo.id)}
               onSelectRepo={() => onSelectRepo(repo.id)}
               onSelectSession={(sid) => onSelectSession(repo.id, sid)}
@@ -273,7 +263,7 @@ export function Sidebar({
             <NoRepoSection
               sessions={noRepoSessions}
               activeSessionId={activeRepoId === null ? activeSessionId : null}
-              statusFor={(sid) => sessionStatuses?.[rowBucketKey(null, sid)]}
+              statusFor={(sid) => sessionStatuses?.[bucketKey(null, sid)]}
               onSelectSession={(sid) => onSelectSession(null, sid)}
               onSessionContextMenu={(e, s) => {
                 e.preventDefault();

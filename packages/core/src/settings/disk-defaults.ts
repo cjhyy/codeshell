@@ -10,6 +10,20 @@ import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
  * life. Request-override fields (permissionMode / goal / maxTurns /
  * maxContextTokens / cwd) are intentionally excluded — those are per-request
  * and handled by handleConfigure / run() options, not by disk hot-push.
+ *
+ * Reload semantics per field (see Engine.refreshRuntimeConfig):
+ *   - preset: system-prompt / behavior hot-reloads (next-turn PromptComposer
+ *     re-resolves it); the builtin TOOL SET it implies needs a session restart
+ *     (registry is ctor-frozen, possibly shared via runtime).
+ *   - customSystemPrompt / appendSystemPrompt / responseLanguage / userProfile:
+ *     hot — re-read by the next-turn PromptComposer.
+ *
+ * IMPORTANT (#8): every field here is pushed as a PURE DISK value and will
+ * OVERRIDE any per-request slice override of the same field on the running
+ * session. Safe for the desktop host today (its slice carries only
+ * permissionMode+cwd, both excluded above). A future host that sets any of
+ * these per-request MUST exclude that field from the reload patch — or track
+ * per-request overrides separately — to avoid the reload clobbering it.
  */
 export type DiskDefaultPatch = Pick<
   EngineConfig,
