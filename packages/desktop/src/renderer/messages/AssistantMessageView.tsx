@@ -2,6 +2,8 @@ import React, { memo, useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { Markdown } from "../Markdown";
 import { stripMarkdownToPlain } from "../markdown/stripMarkdown";
+import { formatDuration } from "../tool-cards/utils";
+import { formatClockTime } from "../messages/time";
 import type { AssistantMessage } from "../types";
 
 interface Props {
@@ -42,7 +44,26 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
         </div>
       )}
       {message.done && (
-        <div className="mt-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="mt-1 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          {(() => {
+            const clock = formatClockTime(message.doneAt);
+            const elapsed =
+              message.createdAt !== undefined && message.doneAt !== undefined
+                ? formatDuration(message.doneAt - message.createdAt)
+                : null;
+            if (!clock && !elapsed) return null;
+            return (
+              <span
+                className="text-[11px] tabular-nums text-muted-foreground"
+                title={
+                  elapsed && clock ? `回答于 ${clock} · 耗时 ${elapsed}` : undefined
+                }
+              >
+                {clock}
+                {elapsed ? ` · ${elapsed}` : ""}
+              </span>
+            );
+          })()}
           <button
             type="button"
             className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"

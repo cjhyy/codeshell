@@ -317,3 +317,32 @@ describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
     }
   });
 });
+
+describe("applyStreamEvent — message timestamps", () => {
+  test("stream_request_start stamps assistant createdAt", () => {
+    const before = Date.now();
+    const s = applyStreamEvent(INITIAL_STATE, mainTurn()[0]);
+    const a = findMainAssistant(s);
+    expect(a.createdAt).toBeGreaterThanOrEqual(before);
+    expect(a.doneAt).toBeUndefined();
+  });
+
+  test("turn_complete stamps assistant doneAt (so elapsed is computable)", () => {
+    let s = applyStreamEvent(INITIAL_STATE, mainTurn()[0]);
+    const created = findMainAssistant(s).createdAt!;
+    s = applyStreamEvent(s, turnComplete);
+    const a = s.messages.find((m) => m.kind === "assistant") as AssistantMessage;
+    expect(a.done).toBe(true);
+    expect(a.doneAt).toBeGreaterThanOrEqual(created);
+  });
+
+  test("assistant_message stamps doneAt and does not overwrite an existing one", () => {
+    let s = applyStreamEvent(INITIAL_STATE, mainTurn()[0]);
+    s = applyStreamEvent(s, { type: "assistant_message" } as StreamEvent);
+    const first = (s.messages[0] as AssistantMessage).doneAt;
+    expect(first).toBeGreaterThan(0);
+    // A later turn_complete must not clobber the already-recorded doneAt.
+    s = applyStreamEvent(s, turnComplete);
+    expect((s.messages[0] as AssistantMessage).doneAt).toBe(first);
+  });
+});

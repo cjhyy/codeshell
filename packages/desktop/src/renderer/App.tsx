@@ -116,7 +116,7 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
   let next: MessagesReducerState;
   switch (action.type) {
     case "user_message":
-      next = appendUserMessage(current, action.text);
+      next = appendUserMessage(current, action.text, Date.now());
       break;
     case "ask_user":
       next = appendAskUserMessage(current, {

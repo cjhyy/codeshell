@@ -14,6 +14,7 @@ import { LiveActivityLine } from "./messages/LiveActivityLine";
 import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
 import { decodeWireForDisplay } from "./chat/attachments";
+import { formatClockTime } from "./messages/time";
 import { Lightbox } from "./chat/Lightbox";
 
 // Stable fallback so memoized AskUserMessageView siblings don't see a
@@ -107,8 +108,9 @@ export function MessageStream({
             return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} />;
           case "user": {
             const { text, images } = decodeWireForDisplay(m.text);
+            const askedAt = formatClockTime(m.createdAt);
             return (
-              <div key={m.id} className="flex justify-end px-4 py-1.5">
+              <div key={m.id} className="group flex flex-col items-end px-4 py-1.5">
                 <div className="max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
                   {text && <div className="whitespace-pre-wrap">{text}</div>}
                   {images.length > 0 && (
@@ -130,6 +132,11 @@ export function MessageStream({
                     </div>
                   )}
                 </div>
+                {askedAt && (
+                  <span className="mt-0.5 px-1 text-[11px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+                    {askedAt}
+                  </span>
+                )}
               </div>
             );
           }

@@ -21,6 +21,9 @@ export interface UserMessage {
   kind: "user";
   id: string;
   text: string;
+  /** Epoch ms the user sent this message. Absent on replayed/historical
+   *  transcripts (FoldItem carries no timestamp) — render nothing then. */
+  createdAt?: number;
 }
 
 export interface AssistantMessage {
@@ -28,6 +31,10 @@ export interface AssistantMessage {
   id: string;
   text: string;
   done: boolean;
+  /** Epoch ms this assistant turn began streaming. */
+  createdAt?: number;
+  /** Epoch ms this turn finished (done:true). Elapsed = doneAt − createdAt. */
+  doneAt?: number;
 }
 
 export interface ThinkingMessage {
@@ -252,7 +259,10 @@ export function applyStreamEvent(
       const id = freshId("assistant");
       return {
         ...state,
-        messages: [...state.messages, { kind: "assistant", id, text: "", done: false }],
+        messages: [
+          ...state.messages,
+          { kind: "assistant", id, text: "", done: false, createdAt: Date.now() },
+        ],
         streamingAssistantId: id,
         streamingThinkingId: null,
       };
@@ -420,7 +430,7 @@ export function applyStreamEvent(
         ...state,
         messages: state.messages.map((m) =>
           m.kind === "assistant" && m.id === state.streamingAssistantId
-            ? { ...m, done: true }
+            ? { ...m, done: true, doneAt: m.doneAt ?? Date.now() }
             : m,
         ),
       };
@@ -562,9 +572,10 @@ export function applyStreamEvent(
       // 2. Finalize streaming pointers (existing behavior).
       const streamingAssistantId = state.streamingAssistantId;
       const streamingThinkingId = state.streamingThinkingId;
+      const turnDoneAt = Date.now();
       let finalized: Message[] = msgs.map((m) => {
         if (m.kind === "assistant" && m.id === streamingAssistantId) {
-          return { ...m, done: true };
+          return { ...m, done: true, doneAt: m.doneAt ?? turnDoneAt };
         }
         if (m.kind === "thinking" && m.id === streamingThinkingId) {
           return { ...m, done: true };
@@ -669,10 +680,16 @@ export function markAskUserAnswered(
 export function appendUserMessage(
   state: MessagesReducerState,
   text: string,
+  /** Epoch ms to record as the send time. Omit on transcript replay
+   *  (FoldItem has no original timestamp) so we don't stamp replay-time. */
+  createdAt?: number,
 ): MessagesReducerState {
   return {
     ...state,
-    messages: [...state.messages, { kind: "user", id: freshId("user"), text }],
+    messages: [
+      ...state.messages,
+      { kind: "user", id: freshId("user"), text, createdAt },
+    ],
   };
 }
 
