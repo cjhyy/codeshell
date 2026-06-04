@@ -105,6 +105,7 @@ import { loadRecents, pushRecent } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import { getTrust, setTrust, type TrustLevel } from "./trust-store.js";
 import { installAppMenu, refreshAppMenu } from "./menu.js";
+import { seedDefaults } from "./seed-defaults.js";
 import {
   probeMcpServers,
   invalidateMcpProbeCache,
@@ -279,6 +280,11 @@ app.whenReady().then(() => {
   }
   void createWindow();
   initUpdater();
+
+  // First-run defaults: copy bundled agents + register seed marketplace
+  // sources into ~/.code-shell. best-effort, fully self-guarded — never blocks
+  // the startup chain.
+  void seedDefaults();
 
   // Automation: load the in-process scheduler (read-only jobs). Persisted
   // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
