@@ -348,6 +348,10 @@ export function applyStreamEvent(
         const msgs = state.messages.slice();
         const m = msgs[idx];
         if (!m || m.kind !== "agent") return state;
+        // Idempotent: a duplicate tool_use_start for the same call id (provider
+        // re-emit, stream replay/overlap) must NOT append a second tool with the
+        // same id — that produces duplicate React keys and a doubled card.
+        if (m.toolCalls.some((t) => t.id === id)) return state;
         msgs[idx] = {
           ...m,
           toolCalls: [...m.toolCalls, toolMsg],
@@ -355,6 +359,8 @@ export function applyStreamEvent(
         };
         return { ...state, messages: msgs };
       }
+      // Idempotent guard (see above) for the main feed.
+      if (state.messages.some((m) => m.kind === "tool" && m.id === id)) return state;
       return { ...state, messages: [...state.messages, toolMsg] };
     }
 

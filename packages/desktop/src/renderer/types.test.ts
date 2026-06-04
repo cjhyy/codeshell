@@ -62,6 +62,32 @@ const turnComplete: StreamEvent = { type: "turn_complete", reason: "completed" }
 
 // ── tests ───────────────────────────────────────────────────────────
 
+describe("applyStreamEvent — tool_use_start idempotency", () => {
+  // Regression: a duplicate tool_use_start for the same call id (provider
+  // re-emit, stream replay/overlap) must not append a second tool message with
+  // the same id — that caused duplicate React keys + a doubled card.
+  test("duplicate main-feed tool_use_start does not append a second tool", () => {
+    const dup = ev("tool_use_start", {
+      toolCall: { id: "call_dup", toolName: "Skill", args: { skill: "x" } },
+    } as any);
+    const s = dispatch(INITIAL_STATE, [...mainTurn(), dup, dup]);
+    const tools = s.messages.filter((m) => m.kind === "tool");
+    expect(tools.length).toBe(1);
+    expect(tools[0]!.id).toBe("call_dup");
+  });
+
+  test("duplicate agent tool_use_start does not append a second toolCall", () => {
+    const dup = ev("tool_use_start", {
+      agentId: "A",
+      toolCall: { id: "call_dup", toolName: "Read", args: {} },
+    } as any);
+    const s = dispatch(INITIAL_STATE, [...mainTurn(), startAgent("A"), dup, dup]);
+    const agent = findAgent(s, "A");
+    expect(agent.toolCalls.length).toBe(1);
+    expect(agent.toolCount).toBe(1);
+  });
+});
+
 describe("applyStreamEvent — subagent isolation", () => {
   test("1. text_delta with agentId does not touch main assistant", () => {
     const s = dispatch(INITIAL_STATE, [
