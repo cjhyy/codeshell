@@ -1,13 +1,32 @@
+<p align="center">
+  <img src="docs/images/codeshell-dog-icon.png" alt="CodeShell dog mascot" width="120" />
+</p>
+
 # CodeShell
 
-CodeShell is a general-purpose AI agent orchestration framework for terminal and headless workflows.
+<p align="center">
+  <strong>AI agent orchestration for terminal and headless workflows.</strong>
+</p>
 
-It now ships with built-in presets:
+<p align="center">
+  <img src="docs/images/codeshell-hero.png" alt="CodeShell terminal agent orchestration hero image" width="860" />
+</p>
+
+CodeShell is a general-purpose AI agent orchestration framework with a terminal-native coding assistant built on top.
+
+It ships with two built-in presets:
 
 - `general`: a domain-agnostic orchestrator for research, automation, operations, and long-running tasks
-- `terminal-coding`: a coding-focused terminal assistant built on top of the same core engine
+- `terminal-coding`: a coding-focused terminal assistant using the same core engine
 
-The important part is that the core is no longer tied to software engineering. The turn loop, context management, permissions, MCP integration, hooks, tasks, cron, and sub-agents stay generic; coding behavior is expressed as a preset.
+The core is not tied to software engineering. The turn loop, context management, permissions, MCP integration, hooks, tasks, cron, and sub-agents stay generic; coding behavior is expressed as a preset.
+
+## Why CodeShell
+
+- **One engine, multiple agent products**: use the same runtime for coding, research, automation, and product-specific workflows.
+- **Terminal-first, headless-ready**: run interactively in the terminal or execute one-shot/headless jobs.
+- **Permission-aware tool execution**: keep high-impact actions behind explicit approval flows.
+- **Extensible by design**: presets, tools, MCP servers, hooks, skills, sub-agents, and cron jobs are first-class concepts.
 
 ## Features
 
@@ -153,16 +172,16 @@ The framework keeps a broad orchestration toolbox available, including:
 
 ## Architecture
 
-```text
-User / CLI / SDK
-  -> Engine
-    -> Preset resolution (prompt + default tools + default permission shortcuts)
-    -> TurnLoop
-      -> ModelFacade
-      -> ToolExecutor
-      -> ContextManager
-      -> Hooks / MCP / Tasks / Sessions
-```
+<p align="center">
+  <img src="docs/architecture/images/00-framework-overview.png" alt="CodeShell framework overview architecture diagram" width="860" />
+</p>
+
+At a high level, CodeShell routes CLI, headless, SDK, and desktop clients through the same engine runtime:
+
+- **Preset resolution** selects the system prompt, built-in tools, and permission defaults.
+- **TurnLoop** coordinates model streaming, context assembly, tool execution, and lifecycle events.
+- **Tool system** hosts built-ins, MCP tools, permissions, hooks, and cancellation.
+- **Session/run layers** persist transcripts, state, tasks, automation runs, and memories.
 
 Design principles:
 
@@ -182,21 +201,16 @@ Design principles:
 ## Project structure
 
 ```text
-src/
-├── cli/              # CLI entrypoints, commands, onboarding, and output modes
-├── context/          # Context compaction and window management
-├── engine/           # Turn loop orchestration
-├── hooks/            # Hook chain
-├── llm/              # Model providers
-├── preset/           # Built-in agent presets
-├── prompt/           # Prompt composition
-├── protocol/         # Agent client/server protocol
-├── render/           # Custom Ink-like terminal renderer
-├── run/              # Managed run lifecycle
-├── session/          # Session persistence and memory
-├── tool-system/      # Tool registry, execution, permissions, MCP
-├── ui/               # Terminal UI components
-└── index.ts          # Public API exports
+packages/
+├── core/             # Engine, context, tools, MCP, hooks, sessions, runs, presets
+├── tui/              # Terminal CLI, Ink-style UI, renderer, commands, approvals
+└── desktop/          # Electron desktop client and agent worker bridge
+
+docs/
+├── architecture/     # Current architecture reading path and diagrams
+└── images/           # README and product documentation images
+
+scripts/              # Build, release, and repo maintenance scripts
 ```
 
 ## Development

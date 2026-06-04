@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { MCPManager, buildRegisteredTool } from "./mcp-manager.js";
+import { MCPManager, buildRegisteredTool, stripInternalToolArgs } from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
 import type { MCPServerConfig } from "../types.js";
 
@@ -130,5 +130,25 @@ describe("buildRegisteredTool readOnlyHint", () => {
     });
     expect(t.isConcurrencySafe).toBe(false);
     expect(t.isReadOnly).toBe(false);
+  });
+
+  test("sanitizes server and MCP tool names for OpenAI function names", () => {
+    const t = buildRegisteredTool("chrome-devtools:chrome-devtools", {
+      name: "take-screenshot.v1",
+      inputSchema: { type: "object" },
+    });
+    expect(t.name).toBe("mcp_chrome-devtools_chrome-devtools_take-screenshot_v1");
+  });
+});
+
+describe("stripInternalToolArgs", () => {
+  test("removes executor-only signal before forwarding MCP arguments", () => {
+    const ac = new AbortController();
+    expect(stripInternalToolArgs({ __signal: ac.signal, value: 1 })).toEqual({ value: 1 });
+  });
+
+  test("returns empty args for no-argument MCP tools", () => {
+    const ac = new AbortController();
+    expect(stripInternalToolArgs({ __signal: ac.signal })).toEqual({});
   });
 });

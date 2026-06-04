@@ -110,6 +110,11 @@ export function wrapMcpOutput(serverName: string, toolName: string, body: string
   ].join("\n");
 }
 
+export function stripInternalToolArgs(args: Record<string, unknown>): Record<string, unknown> {
+  const { __signal: _signal, ...toolArgs } = args;
+  return toolArgs;
+}
+
 /**
  * Build the static metadata for a discovered MCP tool.
  *
@@ -125,10 +130,14 @@ export function wrapMcpOutput(serverName: string, toolName: string, body: string
  *
  * @internal exported for unit testing without spinning up a real transport.
  */
+function toOpenAIToolName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
 export function buildRegisteredTool(serverName: string, tool: McpTool): RegisteredTool {
   const readOnly = tool.annotations?.readOnlyHint === true;
   return {
-    name: `mcp_${serverName}_${tool.name}`,
+    name: toOpenAIToolName(`mcp_${serverName}_${tool.name}`),
     description: `[${serverName}] ${tool.description ?? tool.name}`,
     inputSchema: (tool.inputSchema as Record<string, unknown>) ?? { type: "object", properties: {} },
     source: "mcp",
@@ -309,7 +318,10 @@ export class MCPManager {
 
       // Register with an executor that calls the MCP server
       this.toolRegistry.registerTool(registered, async (args: Record<string, unknown>) => {
-        const callResult = await client.callTool({ name: tool.name, arguments: args });
+        const callResult = await client.callTool({
+          name: tool.name,
+          arguments: stripInternalToolArgs(args),
+        });
 
         // Extract text + image content from the result. Image blobs
         // are spilled to ~/.code-shell/mcp_images/ so they don't bloat
@@ -390,7 +402,7 @@ export class MCPManager {
     if (!conn) {
       throw new Error(`MCP server "${serverName}" is not connected.`);
     }
-    const result = await conn.client.callTool({ name: toolName, arguments: args });
+    const result = await conn.client.callTool({ name: toolName, arguments: stripInternalToolArgs(args) });
     const parts: string[] = [];
     if (Array.isArray(result.content)) {
       for (const item of result.content) {
