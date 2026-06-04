@@ -55,6 +55,27 @@ describe("decodeWireForDisplay", () => {
     const r = decodeWireForDisplay(wire);
     expect(r.images[0]!.name).toBe('a&b"<c>.png');
   });
+
+  // Regression: an empty image body (ephemeral screenshot deleted by encode
+  // time) must be dropped, not surfaced as a blank <img src=""> that renders
+  // as selectable-but-blank content.
+  test("drops an image block with an empty body", () => {
+    const wire =
+      '<codeshell-image mime="image/png" name="截屏.png">\n\n</codeshell-image>';
+    const r = decodeWireForDisplay(wire);
+    expect(r.images).toEqual([]);
+    expect(r.text).toBe("");
+  });
+
+  test("keeps valid images while dropping an empty sibling", () => {
+    const wire =
+      'look\n\n' +
+      '<codeshell-image mime="image/png" name="dead.png">\n  \n</codeshell-image>\n' +
+      encodeAttachmentsForWire("", [img({ name: "ok.png" })]);
+    const r = decodeWireForDisplay(wire);
+    expect(r.images.map((i) => i.name)).toEqual(["ok.png"]);
+    expect(r.text).toBe("look");
+  });
 });
 
 describe("titleFromWire", () => {

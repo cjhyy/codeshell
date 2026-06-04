@@ -182,12 +182,19 @@ export function decodeWireForDisplay(wire: string): DecodedWire {
   WIRE_IMAGE_RE.lastIndex = 0;
   const text = wire
     .replace(WIRE_IMAGE_RE, (_m, attrsRaw: string, body: string) => {
+      const dataUrl = body.trim();
+      // Skip blocks with an empty body: an ephemeral source (e.g. a macOS
+      // screenshot under /var/folders/.../TemporaryItems/ already deleted by
+      // encode time) yields an empty data URL. Keeping it would render a blank
+      // but still-selectable <img src=""> ("空白可复制内容") and make an
+      // image-only turn falsely claim a [图片] title.
+      if (dataUrl === "") return "";
       const mime = /mime="([^"]*)"/.exec(attrsRaw)?.[1] ?? "image/png";
       const nameRaw = /name="([^"]*)"/.exec(attrsRaw)?.[1] ?? "";
       images.push({
         mime,
         name: unescapeAttr(nameRaw),
-        dataUrl: body.trim(),
+        dataUrl,
       });
       return "";
     })
