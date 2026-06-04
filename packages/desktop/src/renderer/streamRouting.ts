@@ -46,5 +46,5 @@ export function resolveBucket(
     }
   }
 
-  return runningBucket;
+  return sessionId ? null : runningBucket;
 }

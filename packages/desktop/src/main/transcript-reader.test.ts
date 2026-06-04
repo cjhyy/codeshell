@@ -17,12 +17,15 @@ describe("transcriptToFoldItems", () => {
       line("turn_boundary", { turnNumber: 1 }),
     ].join("\n");
     const items = transcriptToFoldItems(jsonl);
-    expect(items[0]).toEqual({ kind: "stream", event: { type: "session_started", sessionId: "sess-1", promptTokens: 0 } });
-    expect(items[1]).toEqual({ kind: "user", text: "hello" });
-    expect(items[2]).toEqual({ kind: "stream", event: { type: "stream_request_start", turnNumber: 0 } });
-    expect(items[3]).toEqual({ kind: "stream", event: { type: "text_delta", text: "hi there" } });
-    expect(items[4]).toEqual({ kind: "stream", event: { type: "assistant_message", message: { role: "assistant", content: "hi there" } } });
-    expect(items[5]).toEqual({ kind: "stream", event: { type: "turn_complete", reason: "completed" } });
+    // Each FoldItem carries the event's original persisted timestamp (the
+    // fixture stamps every line with timestamp:1) so replay can recover the
+    // real asked-at / answered-at and elapsed instead of showing 0s.
+    expect(items[0]).toEqual({ kind: "stream", event: { type: "session_started", sessionId: "sess-1", promptTokens: 0 }, timestamp: 1 });
+    expect(items[1]).toEqual({ kind: "user", text: "hello", timestamp: 1 });
+    expect(items[2]).toEqual({ kind: "stream", event: { type: "stream_request_start", turnNumber: 0 }, timestamp: 1 });
+    expect(items[3]).toEqual({ kind: "stream", event: { type: "text_delta", text: "hi there" }, timestamp: 1 });
+    expect(items[4]).toEqual({ kind: "stream", event: { type: "assistant_message", message: { role: "assistant", content: "hi there" } }, timestamp: 1 });
+    expect(items[5]).toEqual({ kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: 1 });
   });
 
   it("maps tool_use + tool_result", () => {
@@ -31,8 +34,8 @@ describe("transcriptToFoldItems", () => {
       line("tool_result", { toolCallId: "tc1", toolName: "Bash", result: "a\nb" }),
     ].join("\n");
     const items = transcriptToFoldItems(jsonl);
-    expect(items[0]).toEqual({ kind: "stream", event: { type: "tool_use_start", toolCall: { id: "tc1", toolName: "Bash", args: { command: "ls" } } } });
-    expect(items[1]).toEqual({ kind: "stream", event: { type: "tool_result", result: { id: "tc1", toolName: "Bash", result: "a\nb", error: undefined } } });
+    expect(items[0]).toEqual({ kind: "stream", event: { type: "tool_use_start", toolCall: { id: "tc1", toolName: "Bash", args: { command: "ls" } } }, timestamp: 1 });
+    expect(items[1]).toEqual({ kind: "stream", event: { type: "tool_result", result: { id: "tc1", toolName: "Bash", result: "a\nb", error: undefined } }, timestamp: 1 });
   });
 
   it("extracts text from assistant content blocks", () => {
@@ -42,27 +45,27 @@ describe("transcriptToFoldItems", () => {
     });
     const items = transcriptToFoldItems(jsonl);
     const delta = items.find((i) => i.kind === "stream" && i.event.type === "text_delta");
-    expect(delta).toEqual({ kind: "stream", event: { type: "text_delta", text: "block one" } });
+    expect(delta).toEqual({ kind: "stream", event: { type: "text_delta", text: "block one" }, timestamp: 1 });
   });
 
   it("skips malformed lines without throwing", () => {
     const jsonl = ["not json", line("message", { role: "user", content: "ok" })].join("\n");
     const items = transcriptToFoldItems(jsonl);
-    expect(items).toEqual([{ kind: "user", text: "ok" }]);
+    expect(items).toEqual([{ kind: "user", text: "ok", timestamp: 1 }]);
   });
 
   it("maps summary and error", () => {
     const jsonl = [line("summary", { summary: "s" }), line("error", { error: "boom" })].join("\n");
     const items = transcriptToFoldItems(jsonl);
-    expect(items[0]).toEqual({ kind: "stream", event: { type: "context_compact", strategy: "summary", before: 0, after: 0 } });
-    expect(items[1]).toEqual({ kind: "stream", event: { type: "error", error: "boom" } });
+    expect(items[0]).toEqual({ kind: "stream", event: { type: "context_compact", strategy: "summary", before: 0, after: 0 }, timestamp: 1 });
+    expect(items[1]).toEqual({ kind: "stream", event: { type: "error", error: "boom" }, timestamp: 1 });
   });
 
   it("uses the event's turn number for assistant stream_request_start", () => {
     const t1 = JSON.stringify({ id: "x", type: "message", timestamp: 1, turnNumber: 1, data: { role: "assistant", content: "second" } });
     const items = transcriptToFoldItems(t1);
     const reqStart = items.find((i) => i.kind === "stream" && i.event.type === "stream_request_start");
-    expect(reqStart).toEqual({ kind: "stream", event: { type: "stream_request_start", turnNumber: 1 } });
+    expect(reqStart).toEqual({ kind: "stream", event: { type: "stream_request_start", turnNumber: 1 }, timestamp: 1 });
   });
 });
 
@@ -79,6 +82,6 @@ describe("getSessionTranscript", () => {
     const sdir = path.join(dir, "sess-9");
     fs.mkdirSync(sdir, { recursive: true });
     fs.writeFileSync(path.join(sdir, "transcript.jsonl"), line("message", { role: "user", content: "yo" }) + "\n");
-    expect(await getSessionTranscript("sess-9", dir)).toEqual([{ kind: "user", text: "yo" }]);
+    expect(await getSessionTranscript("sess-9", dir)).toEqual([{ kind: "user", text: "yo", timestamp: 1 }]);
   });
 });

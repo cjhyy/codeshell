@@ -985,7 +985,16 @@ function App() {
         sessionIndicesRef.current,
         runningBucketRef.current,
       );
-      if (!target) return;
+      if (!target) {
+        if ((event.type === "turn_complete" || event.type === "error") && !event.agentId) {
+          const runningBucket = runningBucketRef.current;
+          if (runningBucket) {
+            setBusyForKey(runningBucket, false);
+            runningBucketRef.current = null;
+          }
+        }
+        return;
+      }
       // Backfill the route table so subsequent events for this session take the
       // fast path (and so turn_complete/error below can clear the right bucket).
       if (env.sessionId && !engineToBucketRef.current.has(env.sessionId)) {
@@ -1811,6 +1820,7 @@ function App() {
             onOpenDiskSession={(session) => { void handleOpenAutomationDiskSession(session); }}
             onOpenSession={handleSelectSession}
             sessionIndices={sessionIndices}
+            repos={repos}
           />
         ) : (
           <>

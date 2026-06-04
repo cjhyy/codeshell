@@ -3,14 +3,14 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { ToolCard } from "../tool-cards";
 import { ThinkingMessageView } from "./ThinkingMessageView";
 import {
-  toolGroupLabel,
-  toolGroupToolCount,
+  toolGroupActivityLabel,
   type ToolGroup,
 } from "./streamGroups";
 
 interface Props {
   group: ToolGroup;
   turnEpoch?: number;
+  defaultOpen?: boolean;
 }
 
 /**
@@ -26,12 +26,12 @@ interface Props {
  *
  * On turnEpoch change, the group force-collapses back to summary.
  */
-function ToolGroupCardImpl({ group, turnEpoch }: Props) {
-  const [open, setOpen] = useState(false);
+function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false }: Props) {
+  const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
-    if (turnEpoch !== undefined) setOpen(false);
-  }, [turnEpoch]);
-  const label = toolGroupLabel(toolGroupToolCount(group));
+    if (turnEpoch !== undefined) setOpen(defaultOpen);
+  }, [defaultOpen, turnEpoch]);
+  const label = toolGroupActivityLabel(group);
 
   return (
     <div className={`tool-group${open ? " open" : ""}`}>

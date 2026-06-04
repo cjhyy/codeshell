@@ -51,23 +51,29 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
       continue; // skip malformed lines, mirroring core Transcript.loadFromFile
     }
     const d = ev.data ?? {};
+    // Real wall-clock the event was persisted at — carried onto each FoldItem so
+    // replay can stamp the original createdAt/doneAt (proper "asked at / answered
+    // at / elapsed") instead of leaving them blank (which read as 0s elapsed).
+    const ts = typeof ev.timestamp === "number" ? ev.timestamp : undefined;
     switch (ev.type) {
       case "session_meta":
         items.push({
           kind: "stream",
           event: { type: "session_started", sessionId: String(d.sessionId ?? ""), promptTokens: 0 },
+          timestamp: ts,
         });
         break;
       case "message": {
         const role = String(d.role ?? "");
         if (role === "user") {
-          items.push({ kind: "user", text: textOf(d.content) });
+          items.push({ kind: "user", text: textOf(d.content), timestamp: ts });
         } else if (role === "assistant") {
-          items.push({ kind: "stream", event: { type: "stream_request_start", turnNumber: ev.turnNumber } });
-          items.push({ kind: "stream", event: { type: "text_delta", text: textOf(d.content) } });
+          items.push({ kind: "stream", event: { type: "stream_request_start", turnNumber: ev.turnNumber }, timestamp: ts });
+          items.push({ kind: "stream", event: { type: "text_delta", text: textOf(d.content) }, timestamp: ts });
           items.push({
             kind: "stream",
             event: { type: "assistant_message", message: { role: "assistant", content: d.content as string | ContentBlock[] } },
+            timestamp: ts,
           });
         }
         break;
@@ -83,6 +89,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
               args: (d.args ?? {}) as Record<string, unknown>,
             },
           },
+          timestamp: ts,
         });
         break;
       case "tool_result":
@@ -98,16 +105,17 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
               isError: d.isError as boolean | undefined,
             },
           },
+          timestamp: ts,
         });
         break;
       case "turn_boundary":
-        items.push({ kind: "stream", event: { type: "turn_complete", reason: "completed" } });
+        items.push({ kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: ts });
         break;
       case "summary":
-        items.push({ kind: "stream", event: { type: "context_compact", strategy: "summary", before: 0, after: 0 } });
+        items.push({ kind: "stream", event: { type: "context_compact", strategy: "summary", before: 0, after: 0 }, timestamp: ts });
         break;
       case "error":
-        items.push({ kind: "stream", event: { type: "error", error: String(d.error ?? "error") } });
+        items.push({ kind: "stream", event: { type: "error", error: String(d.error ?? "error") }, timestamp: ts });
         break;
       // session lifecycle events with no renderer representation are ignored.
     }

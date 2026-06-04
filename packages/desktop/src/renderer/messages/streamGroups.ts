@@ -19,6 +19,7 @@
  */
 
 import type { Message, ThinkingMessage, ToolMessage } from "../types";
+import { describeActivity } from "../topbar/liveActivity";
 
 /**
  * Inner item of a level-1 tool group. Beyond the tool calls themselves
@@ -350,7 +351,7 @@ function foldTurnProcess(
   for (let k = 0; k < userIdxs.length; k++) {
     const start = userIdxs[k]!;
     const end = k + 1 < userIdxs.length ? userIdxs[k + 1]! : items.length;
-    const isLive = liveTurnActive && start === lastTurnStart;
+    const isLive = liveTurnActive && start === lastTurnStart && !turnHasDoneAssistant(items, start, end);
 
     // user bubble stays outside the card.
     out.push(items[start]!);
@@ -397,6 +398,18 @@ function foldTurnProcess(
     }
   }
   return out;
+}
+
+function turnHasDoneAssistant(
+  items: Array<Message | ToolGroup>,
+  start: number,
+  end: number,
+): boolean {
+  for (let i = start + 1; i < end; i++) {
+    const item = items[i]!;
+    if (item.kind === "assistant" && item.done) return true;
+  }
+  return false;
 }
 
 function forEachTool(
@@ -497,6 +510,44 @@ function turnSpanMs(turnItems: Array<Message | ToolGroup>): number {
 
 export function toolGroupLabel(count: number): string {
   return `已处理 ${count} 条命令`;
+}
+
+function latestToolInToolGroup(group: ToolGroup): ToolMessage | null {
+  for (let i = group.items.length - 1; i >= 0; i--) {
+    const item = group.items[i]!;
+    if (item.kind === "tool") return item;
+  }
+  return null;
+}
+
+function latestToolInProcessGroup(group: TurnProcessGroup): ToolMessage | null {
+  let latest: ToolMessage | null = null;
+  forEachTool(group.items, (tool) => {
+    latest = tool;
+  });
+  return latest;
+}
+
+export function toolGroupActivityLabel(group: ToolGroup): string {
+  const tool = latestToolInToolGroup(group);
+  return describeActivity({
+    lastToolName: tool?.toolName ?? "",
+    lastTool: tool,
+    toolCount: toolGroupToolCount(group),
+    turnStartedAt: tool?.startedAt ?? 0,
+    toolInFlight: tool?.status === "running",
+  });
+}
+
+export function processGroupActivityLabel(group: TurnProcessGroup): string {
+  const tool = latestToolInProcessGroup(group);
+  return describeActivity({
+    lastToolName: tool?.toolName ?? "",
+    lastTool: tool,
+    toolCount: group.toolCount,
+    turnStartedAt: group.firstToolStartedAt,
+    toolInFlight: tool?.status === "running",
+  });
 }
 
 export function processGroupLabel(durationMs: number): string {

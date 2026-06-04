@@ -54,6 +54,13 @@ function MarkdownImpl({ text, cwd }: Props) {
         remarkPlugins={[remarkGfm, remarkPathLinks]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
         components={{
+          img: ({ src, alt, node: _node, ...rest }) => {
+            const localDecoded = src ? decodeLocalPathHref(src) : null;
+            if (localDecoded && classifyPath(localDecoded.path) === "image") {
+              return <InlineImageLink path={localDecoded.path} cwd={cwd} alt={alt} />;
+            }
+            return <img src={src} alt={alt} {...rest} />;
+          },
           a: ({ href, children, node: _node, ...rest }) => {
             const schemeDecoded = href ? decodePathHref(href) : null;
             const localDecoded = href ? decodeLocalPathHref(href) : null;
@@ -144,7 +151,15 @@ function formatPathTarget(path: string, line?: number): string {
  * app. Until the data URL resolves (and if it fails — relative path with no
  * cwd, deleted file, non-image), it shows a clickable filename link instead.
  */
-function InlineImageLink({ path, cwd }: { path: string; cwd?: string | null }) {
+function InlineImageLink({
+  path,
+  cwd,
+  alt,
+}: {
+  path: string;
+  cwd?: string | null;
+  alt?: string;
+}) {
   const [failed, setFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
@@ -213,7 +228,7 @@ function InlineImageLink({ path, cwd }: { path: string; cwd?: string | null }) {
       <img
         className="md-inline-image-thumb"
         src={src}
-        alt={filename}
+        alt={alt ?? filename}
         loading="lazy"
         onError={() => setFailed(true)}
         onClick={() => setZoomed(true)}
@@ -226,7 +241,7 @@ function InlineImageLink({ path, cwd }: { path: string; cwd?: string | null }) {
       >
         {filename}
       </button>
-      {zoomed && <Lightbox src={src} alt={filename} onClose={() => setZoomed(false)} />}
+      {zoomed && <Lightbox src={src} alt={alt ?? filename} onClose={() => setZoomed(false)} />}
     </span>
   );
 }

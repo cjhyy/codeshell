@@ -92,6 +92,16 @@ export function buildDesktopAutomationRunner(
   return async (req): Promise<CronRunResult> => {
     const jobCwd = req.job.cwd ?? process.cwd();
     const settings = new SettingsManager(jobCwd, "full").get();
+    // Task-level cross-run memory: prior run summaries the job left for itself.
+    // This is system-level context (notes from earlier runs), NOT something the
+    // user typed — so it rides appendSystemPrompt, not the user prompt. Folding
+    // it into req.prompt made it indistinguishable from a user instruction
+    // (prompt-injection shaped) and polluted the user turn shown in the UI.
+    const memory = readAutomationMemory(req.job.id);
+    const appendSystemPrompt = memory.trim()
+      ? `${AUTOMATION_PROMPT_NOTE}\n\n<previous_runs_memory>\n${memory.trim()}\n</previous_runs_memory>`
+      : AUTOMATION_PROMPT_NOTE;
+
     const engine = new Engine({
       llm: {
         provider: settings.model.provider,
@@ -106,8 +116,9 @@ export function buildDesktopAutomationRunner(
       origin: "automation",
       // This is an unattended automation run — tell the model so it doesn't
       // ask the user or offer to schedule automation, and so it persists a
-      // cross-run memory summary on finish.
-      appendSystemPrompt: AUTOMATION_PROMPT_NOTE,
+      // cross-run memory summary on finish. Prior-run memory is appended here
+      // too (see above) so it's framed as system context, not a user message.
+      appendSystemPrompt,
       // Strip the cron tools so an unattended run can't recursively schedule
       // more automations. (disabledBuiltinTools is a delta on the preset's
       // builtin set — see resolveBuiltinToolNames.)
@@ -123,13 +134,6 @@ export function buildDesktopAutomationRunner(
       appendAutomationMemory(req.job.id, summary),
     );
     engine.registerCustomTool(memoryTool.definition, memoryTool.execute);
-
-    // Task-level cross-run memory: prepend prior run summaries so the job can
-    // build on what earlier runs learned.
-    const memory = readAutomationMemory(req.job.id);
-    const prompt = memory.trim()
-      ? `<previous_runs_memory>\n${memory.trim()}\n</previous_runs_memory>\n\n${req.prompt}`
-      : req.prompt;
 
     // Key emitted events by the REAL engine sessionId (carried on the first
     // `session_started` event) so renderer routing/reconnect matches interactive
@@ -154,7 +158,7 @@ export function buildDesktopAutomationRunner(
           }
         : undefined;
     try {
-      const result = await engine.run(prompt, { cwd: jobCwd, onStream, signal: req.signal });
+      const result = await engine.run(req.prompt, { cwd: jobCwd, onStream, signal: req.signal });
       return { text: result.text, reason: result.reason };
     } catch (err) {
       // engine.run normally emits its own terminal turn_complete/error, which

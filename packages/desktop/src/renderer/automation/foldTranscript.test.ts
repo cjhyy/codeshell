@@ -36,12 +36,34 @@ describe("foldTranscript", () => {
     expect(foldTranscript([]).messages).toEqual([]);
   });
 
-  it("does not stamp replay-time on assistant messages", () => {
-    // Replaying a persisted transcript must NOT fabricate createdAt/doneAt
-    // from the current clock — the original timestamps aren't in the
-    // FoldItem stream, so the only honest value is "absent" (the footer
-    // then renders nothing, same as replayed user messages). Stamping
-    // Date.now() made old sessions hover-display today's time (e.g. 16:30).
+  it("stamps the ORIGINAL persisted timestamps so elapsed is real", () => {
+    // The FoldItems carry the real wall-clock each event was persisted at.
+    // Replay must reflect those (asked-at / answered-at), NOT the current
+    // clock and NOT blank — blank read as "0s elapsed" after a refresh.
+    const asked = 1_700_000_000_000;
+    const answered = asked + 4_000; // 4s later
+    const items: FoldItem[] = [
+      { kind: "user", text: "hello", timestamp: asked },
+      { kind: "stream", event: { type: "stream_request_start", turnNumber: 0 }, timestamp: asked },
+      { kind: "stream", event: { type: "text_delta", text: "hi" }, timestamp: answered },
+      { kind: "stream", event: { type: "assistant_message", message: { role: "assistant", content: "hi" } }, timestamp: answered },
+      { kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: answered },
+    ];
+    const state = foldTranscript(items);
+    const user = state.messages.find((m) => m.kind === "user") as { createdAt?: number };
+    const assistant = state.messages.find((m) => m.kind === "assistant") as
+      | { createdAt?: number; doneAt?: number }
+      | undefined;
+    expect(user.createdAt).toBe(asked);
+    expect(assistant!.doneAt).toBe(answered);
+    // Elapsed = answer time − ask time = the real 4s, not 0.
+    expect(assistant!.doneAt! - user.createdAt!).toBe(4_000);
+  });
+
+  it("leaves timestamps absent for legacy items that carry none", () => {
+    // Transcripts written before timestamps were threaded through have no
+    // per-item timestamp. We must NOT fabricate the replay-time onto them
+    // (that made old sessions hover-display today's clock, e.g. "16:30").
     const items: FoldItem[] = [
       { kind: "user", text: "hello" },
       { kind: "stream", event: { type: "stream_request_start", turnNumber: 0 } },
@@ -50,10 +72,11 @@ describe("foldTranscript", () => {
       { kind: "stream", event: { type: "turn_complete", reason: "completed" } },
     ];
     const state = foldTranscript(items);
+    const user = state.messages.find((m) => m.kind === "user") as { createdAt?: number };
     const assistant = state.messages.find((m) => m.kind === "assistant") as
       | { createdAt?: number; doneAt?: number }
       | undefined;
-    expect(assistant).toBeDefined();
+    expect(user.createdAt).toBeUndefined();
     expect(assistant!.createdAt).toBeUndefined();
     expect(assistant!.doneAt).toBeUndefined();
   });

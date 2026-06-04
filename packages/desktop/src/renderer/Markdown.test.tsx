@@ -15,4 +15,17 @@ describe("Markdown", () => {
     expect(html).toContain("/Users/me/app/src/Foo.tsx:81");
     expect(html).not.toContain('node="[object Object]"');
   });
+
+  test("routes repo-relative markdown image syntax through the inline image loader", () => {
+    const html = renderToStaticMarkup(
+      <Markdown
+        text="![framework overview](docs/architecture/images/00-framework-overview.png)"
+        cwd="/repo"
+      />,
+    );
+
+    expect(html).toContain('class="md-inline-image"');
+    expect(html).not.toContain('src="docs/architecture/images/00-framework-overview.png"');
+    expect(html).not.toContain("framework overview");
+  });
 });

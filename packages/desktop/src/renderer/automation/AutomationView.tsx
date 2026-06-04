@@ -22,6 +22,12 @@ import {
   type Schedule,
 } from "./scheduleModel";
 import type { DiskSessionMeta } from "./rebuildFromDisk";
+import type { Repo } from "../repos";
+import {
+  buildProjectOptions,
+  selectedProjectValue,
+  cwdFromSelection,
+} from "./projectOptions";
 
 const PERMISSION_OPTIONS = [
   { value: "read-only", label: "只读" },
@@ -249,6 +255,7 @@ export function AutomationView({
   onOpenDiskSession,
   onOpenSession,
   sessionIndices,
+  repos,
 }: {
   onCreateConversational: () => void;
   onViewRun: (runId: string) => void;
@@ -256,6 +263,7 @@ export function AutomationView({
   onOpenDiskSession: (session: DiskSessionMeta) => void;
   onOpenSession: (repoId: string | null, sessionId: string) => void;
   sessionIndices: Record<string, SessionIndex>;
+  repos: Repo[];
 }) {
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
@@ -371,6 +379,7 @@ export function AutomationView({
             {detail ? (
               <AutomationDetail
                 job={detail}
+                repos={repos}
                 sessions={automationSessionLinks(detail, sessionIndices, runs, diskSessions)}
                 onToggleEnabled={(next) =>
                   act("toggle:" + detail.id, () =>
@@ -412,6 +421,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 
 function AutomationDetail(props: {
   job: AutomationSummary;
+  repos: Repo[];
   onToggleEnabled: (next: boolean) => void;
   onDelete: () => void;
   onRunNow: () => void;
@@ -420,6 +430,7 @@ function AutomationDetail(props: {
     schedule?: string;
     prompt?: string;
     timezone?: string;
+    cwd?: string;
     permissionLevel?: AutomationPermissionLevel;
   }) => void;
   sessions: AutomationSessionLink[];
@@ -709,7 +720,22 @@ function AutomationDetail(props: {
         <FieldRow label="下次运行">{fmtTime(job.nextRun)}</FieldRow>
         <FieldRow label="上次运行">{fmtTime(job.lastRun)}</FieldRow>
         <FieldRow label="运行次数">{job.runCount}</FieldRow>
-        <FieldRow label="项目">{job.cwd ?? "—"}</FieldRow>
+        <FieldRow label="项目">
+          <Select
+            value={selectedProjectValue(job.cwd)}
+            onValueChange={(v) => {
+              const nextCwd = cwdFromSelection(v);
+              if (nextCwd !== (job.cwd ?? "")) props.onSave({ cwd: nextCwd });
+            }}
+          >
+            <SelectTrigger className="h-8 w-[220px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {buildProjectOptions(props.repos, job.cwd).map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldRow>
         <FieldRow label="最近运行">
           {job.lastRunId ? (
             <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>

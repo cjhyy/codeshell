@@ -13,8 +13,8 @@ import type {
 
 /** One step in replaying a persisted transcript into renderer state. */
 export type FoldItem =
-  | { kind: "stream"; event: StreamEvent }
-  | { kind: "user"; text: string };
+  | { kind: "stream"; event: StreamEvent; timestamp?: number }
+  | { kind: "user"; text: string; timestamp?: number };
 
 /**
  * The wire envelope the agent server sends for tool approvals. The

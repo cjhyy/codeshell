@@ -92,6 +92,11 @@ describe("resolveBucket", () => {
     expect(result).toBeNull();
   });
 
+  it("does not route an unknown non-empty sessionId through the soft running-bucket hint", () => {
+    const result = resolveBucket("eng-unknown", new Map(), {}, "repoA::ui-1");
+    expect(result).toBeNull();
+  });
+
   it("prefers the route table over a reverse lookup (no double work)", () => {
     const table = new Map([["eng-1", "repoA::ui-1"]]);
     const indices: Record<string, SessionIndex> = {

@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildStreamItems,
+  processGroupActivityLabel,
   processGroupLabel,
   reconcileStreamItems,
+  toolGroupActivityLabel,
+  type ToolGroup,
   type TurnProcessGroup,
 } from "./streamGroups";
 import type { AgentMessage, AssistantMessage, Message, ThinkingMessage, ToolMessage } from "../types";
@@ -28,12 +31,17 @@ function thinking(text = "thinking"): ThinkingMessage {
   return { kind: "thinking", id: freshId("thinking"), text, done: true };
 }
 
-function tool(toolName = "Read", startedAt = 1, endedAt = startedAt + 5): ToolMessage {
+function tool(
+  toolName = "Read",
+  startedAt = 1,
+  endedAt = startedAt + 5,
+  args: Record<string, unknown> = {},
+): ToolMessage {
   return {
     kind: "tool",
     id: freshId("tool"),
     toolName,
-    args: "{}",
+    args: JSON.stringify(args),
     result: "ok",
     status: "succeeded",
     startedAt,
@@ -160,6 +168,45 @@ describe("buildStreamItems", () => {
     const items = buildStreamItems(messages);
     expect(items.map((it) => it.kind)).toEqual(["user", "assistant"]);
     expect(processGroups(items)).toHaveLength(0);
+  });
+
+  test("completed assistant message makes the last turn non-live even if the bucket busy flag is stale", () => {
+    const messages: Message[] = [
+      user("run", 0),
+      tool("Bash", 1_000, 2_000),
+      assistant("done", { createdAt: 500, doneAt: 3_000 }),
+    ];
+
+    const groups = processGroups(buildStreamItems(messages, { liveTurnActive: true }));
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.isLive).toBe(false);
+    expect(groups[0]!.durationMs).toBe(3_000);
+  });
+});
+
+describe("activity labels", () => {
+  test("process group label uses the latest concrete action instead of command count or duration", () => {
+    const messages: Message[] = [
+      user(),
+      tool("Read", 10, 20, { file_path: "/repo/src/index.ts" }),
+      tool("Grep", 21, 30, { pattern: "runner.permission" }),
+    ];
+
+    const groups = processGroups(buildStreamItems(messages));
+    expect(processGroupActivityLabel(groups[0]!)).toBe("已搜索 runner.permission");
+  });
+
+  test("tool group label uses the latest concrete action", () => {
+    const messages: Message[] = [
+      user(),
+      tool("Read", 10, 20, { file_path: "/repo/src/index.ts" }),
+      tool("Bash", 21, 30, { command: "bun test streamGroups.test.ts" }),
+    ];
+
+    const groups = processGroups(buildStreamItems(messages));
+    const inner = groups[0]!.items[0] as ToolGroup;
+    expect(toolGroupActivityLabel(inner)).toBe("已运行 bun test streamGroups.test.ts");
   });
 });
 

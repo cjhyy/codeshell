@@ -20,7 +20,7 @@ import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
-import { BUILTIN_TOOL_GUARDS } from "../tool-system/builtin/index.js";
+import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import {
   notificationQueue,
@@ -745,7 +745,7 @@ export class Engine {
    */
   registerCustomTool(
     definition: import("../types.js").RegisteredTool,
-    executor: (args: Record<string, unknown>) => Promise<string>,
+    executor: BuiltinToolFn,
   ): void {
     this.toolRegistry.registerTool(definition, executor);
   }
