@@ -9,6 +9,7 @@ import { ContextBoundaryView } from "./messages/ContextBoundaryView";
 import { GoalProgressView } from "./messages/GoalProgressView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
+import { CollapsibleContent } from "./messages/CollapsibleContent";
 import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
 import { FilesChangedCard } from "./messages/FilesChangedCard";
 import { LiveActivityLine } from "./messages/LiveActivityLine";
@@ -127,8 +128,12 @@ export function MessageStream({
             if (!text && images.length === 0) return null;
             return (
               <div key={m.id} className="group flex flex-col items-end px-4 py-1.5">
-                <div className="max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
-                  {text && <div className="whitespace-pre-wrap">{text}</div>}
+                <div className="min-w-0 max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
+                  {text && (
+                    <CollapsibleContent>
+                      <div className="whitespace-pre-wrap break-words">{text}</div>
+                    </CollapsibleContent>
+                  )}
                   {images.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2 [&>img]:h-20 [&>img]:rounded-md [&>img]:object-cover [&>img]:cursor-pointer">
                       {images.map((img, i) => (

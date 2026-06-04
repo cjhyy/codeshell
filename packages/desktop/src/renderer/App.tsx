@@ -1854,7 +1854,14 @@ function App() {
                 modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens
               }
               repos={repos}
-              onSelectRepo={setActiveRepoId}
+              // Picking a project (or 不使用项目) from the composer's
+              // ProjectPicker enters a fresh draft for that repo rather than a
+              // bare setActiveRepoId — otherwise the chat snaps to whatever
+              // session that bucket last had active (the top of its list),
+              // which reads as an unexpected auto-jump. (The reload-time
+              // auto-jump was fixed separately in transcripts.ts; this is the
+              // interactive project-switch path, same symptom, different code.)
+              onSelectRepo={handleNewConversationForRepo}
               onAddRepo={() => { void handleAddRepo(); }}
               activeRepoPath={activeRepo?.path ?? null}
               repoClean={activeGitMeta.clean}

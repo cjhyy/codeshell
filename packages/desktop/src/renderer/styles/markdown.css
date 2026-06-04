@@ -41,6 +41,43 @@
   font-size: 0.92em;
 }
 
+/* GFM tables. Native <table> renders at its natural content width, which on a
+   wide table pushes the whole transcript out and makes the page scroll
+   left/right. Pin the table to the container width and hard-wrap cell content
+   so a wide row grows tall instead of wide — no horizontal scroll. */
+.md-body table {
+  display: table;
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin: var(--sp-2) 0;
+  font-size: 0.95em;
+}
+.md-body th,
+.md-body td {
+  border: 1px solid var(--border-subtle);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+  /* Break anywhere needed so a single long token (URL, path, no-space CJK run)
+     can't force the column — and thus the page — wider than the container. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.md-body th {
+  background: hsl(var(--cs-muted) / 0.4);
+  font-weight: 600;
+}
+/* Code inside a cell must wrap too — inline <code> defaults to nowrap-ish and
+   a long `inline code` token would re-introduce the overflow we just killed. */
+.md-body td code,
+.md-body th code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .md-inline-image {
   display: inline-flex;
   flex-direction: column;
