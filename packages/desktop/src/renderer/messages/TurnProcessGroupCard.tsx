@@ -30,17 +30,15 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
     if (turnEpoch !== undefined && !group.isLive) setOpen(false);
   }, [turnEpoch, group.isLive]);
 
-  // 1s elapsed ticker while live. For closed groups, use the static
-  // span the reducer baked in.
-  const [nowMs, setNowMs] = useState<number>(() =>
-    group.isLive ? Date.now() : 0,
-  );
+  // Codex-style "已处理 X m Y s" header. Live turn: tick every 1s from the
+  // first tool's start so the elapsed time counts up (group.durationMs is 0
+  // while a tool is still running). Closed turn: static group.durationMs.
+  const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
     if (!group.isLive) return;
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
   }, [group.isLive]);
-
   const elapsedMs = group.isLive
     ? Math.max(0, nowMs - group.firstToolStartedAt)
     : group.durationMs;
@@ -63,7 +61,7 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
         <div className="mt-1 flex flex-col gap-1">
           {group.items.map((m) => {
             if (m.kind === "tool_group") {
-              return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
+              return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} defaultOpen />;
             }
             if (m.kind === "tool") {
               return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} />;
