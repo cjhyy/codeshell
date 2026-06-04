@@ -1,4 +1,4 @@
-# 测试版冒烟清单 + 分发说明 (0.5.0-rc.1)
+# 测试版冒烟清单 + 分发说明 (0.5.0-rc.2)
 
 ## A. 桌面 App 冒烟(本机,发前必跑)
 
@@ -16,9 +16,9 @@
 
 ## B. npm 包冒烟
 
-- [ ] 干净目录 `npm i @cjhyy/code-shell@rc`
-- [ ] `npx code-shell --version` → 0.5.0-rc.1
-- [ ] 起一次 TUI,跑一轮对话,退出重进
+- [x] 干净目录 `npm i @cjhyy/code-shell@rc` —— ✅ 装好,三包全解析到 0.5.0-rc.2,0 漏洞
+- [x] `code-shell --version` → 0.5.0-rc.2 —— ✅ 跑通无报错
+- [ ] 起一次 TUI,跑一轮对话,退出重进(需真 API key,留人工)
 
 ## C. 给熟人的分发说明
 
@@ -36,20 +36,27 @@
 - mac 未做正式签名/公证 → 首次需右键打开
 - 无崩溃自动上报 → 请口头反馈
 
-## E. 发布执行记录(0.5.0-rc.1)
+## E. 发布执行记录(最终 = 0.5.0-rc.2)
 
 - **npm 包**:用 `bun publish --tag rc`(**不是** `npm publish` —— meta/tui 用
-  `workspace:*` 依赖,只有 bun 会在发布时把它解析成具体版本 `0.5.0-rc.1`;npm 会
-  原样发出 `workspace:*` 导致安装失败)。已发:
-  - `@cjhyy/code-shell-core@0.5.0-rc.1`(上一轮已发,本轮补打 `rc` dist-tag)
-  - `@cjhyy/code-shell-tui@0.5.0-rc.1`
-  - `@cjhyy/code-shell@0.5.0-rc.1`(meta;依赖已解析为 core/tui 的 rc.1)
-  - dist-tags 校验:meta `latest` 仍是 `0.3.0`(未污染),`rc=0.5.0-rc.1`。
-- **桌面包**:`packages/desktop/dist/` 已出 mac arm64+x64 的 dmg/zip(electron-builder,
+  `workspace:*` 依赖,只有 bun 会在发布时把它解析成具体版本;npm 会原样发出
+  `workspace:*` 导致安装失败)。最终已发并**验证可用**:
+  - `@cjhyy/code-shell-core@0.5.0-rc.2`
+  - `@cjhyy/code-shell-tui@0.5.0-rc.2`
+  - `@cjhyy/code-shell@0.5.0-rc.2`(meta;依赖已解析为 core/tui 的 rc.2)
+  - **✅ 干净环境 `npm i @cjhyy/code-shell@rc` → `code-shell --version` = 0.5.0-rc.2,无报错。**
+  - dist-tags 校验:meta `latest` 仍是 `0.3.0`(未污染),`rc=0.5.0-rc.2`。
+- **⚠️ rc.1 作废(别发给熟人)**:rc.1 的 npm 包**装得上但跑不起来** —— 上一轮已发的
+  `core@0.5.0-rc.1` 早于 tui 用 `mergePluginMcpServers`,该 export 缺失,装完跑 bin 抛
+  `SyntaxError: does not provide an export named 'mergePluginMcpServers'`。npm 版本不可
+  覆盖,故全量 bump 到 rc.2 用当前(互相兼容的)构建重发。**教训:发前必须真跑一次 bin,
+  不能只看 `bun publish` 打印的 `+ pkg@ver`。**
+- **桌面包**:`packages/desktop/dist/` 已出过 mac arm64+x64 的 dmg/zip(electron-builder,
   未签名,`CSC_IDENTITY_AUTO_DISCOVERY=false`)。
   - 已客观验证:`Info.plist` 的 `CFBundleName/DisplayName/Executable` 全为 `code-shell`;
     打包产物 `Contents/Resources/examples/agents/` 含 4 个默认 agent,
     `Contents/Resources/packages/desktop/resources/known-marketplaces-seed.json` 就位。
-  - ⚠️ 这批 dmg/zip 是在版本号 bump 前打的,文件名/内部版本是 `0.5.0-rc.0`。
-    分发前请用 `cd packages/desktop && bun run build && CSC_IDENTITY_AUTO_DISCOVERY=false bun run dist`
-    重新出包,得到 `0.5.0-rc.1` 命名的产物。
+  - ✅ 已重出包到 **rc.2**:`packages/desktop/dist/` 现有
+    `code-shell-0.5.0-rc.2{,-arm64}.dmg` 与 `...-mac.zip`(arm64+x64,~117–127MB);
+    fresh arm64 app 再次客观验证 name=`code-shell`、`CFBundleShortVersionString=0.5.0-rc.2`、
+    seed 资源齐。(出包时 hdiutil 偶发 detach 报错会自动重试恢复,产物完整。)
