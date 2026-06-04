@@ -145,16 +145,23 @@ export function emitSubAgentHook(
 export const agentToolDef: ToolDefinition = {
   name: "Agent",
   description:
-    "Launch a sub-agent to handle a complex task autonomously. " +
-    "The sub-agent has access to the same tools and runs independently. " +
-    "Use this for tasks that can be delegated, parallelized, or require deep exploration. " +
-    "Provide a clear, complete description of what the agent should do.\n\n" +
-    "When you launch multiple agents for independent work, send them in a single " +
-    "message with multiple tool uses so they run concurrently.\n\n" +
-    "You can optionally run agents in the background using the run_in_background " +
-    "parameter. When an agent runs in the background, you will be automatically " +
-    "notified when it completes — do NOT sleep, poll, or proactively check on its " +
-    "progress. Continue with other work or respond to the user instead.",
+    "Launch a sub-agent to handle a task in its own clean, isolated context. " +
+    "The sub-agent runs independently with access to the same tools, and its final " +
+    "report is the ONLY thing returned to you — it is stateless, so you cannot send " +
+    "follow-up messages. Write a complete, self-contained task description.\n\n" +
+    "PRIMARY USE — context isolation: when a task needs to read many files or run a " +
+    "broad investigation but you only need the conclusion, delegate it. The sub-agent " +
+    "absorbs the noisy intermediate output in its own context; you keep the answer, not " +
+    "the file dumps. This protects your main context from being flooded.\n\n" +
+    "DON'T use this for a quick lookup where you know the file/symbol and expect a few " +
+    "matches — use Read/Grep/Glob directly instead; spawning an agent wastes a turn.\n\n" +
+    "Parallel fan-out is the EXCEPTION: only launch several agents in one message when " +
+    "the work truly splits into independent pieces with no shared state. Prefer one " +
+    "well-scoped delegation over a swarm.\n\n" +
+    "You can optionally run an agent in the background using the run_in_background " +
+    "parameter. When it runs in the background, you will be automatically notified when " +
+    "it completes — do NOT sleep, poll, or proactively check on its progress. Continue " +
+    "with other work or respond to the user instead.",
   inputSchema: {
     type: "object",
     properties: {
