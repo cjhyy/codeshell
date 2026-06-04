@@ -1,6 +1,6 @@
 {
   "name": "@cjhyy/code-shell-desktop",
-  "version": "0.5.0-rc.1",
+  "version": "0.5.0-rc.2",
   "private": true,
   "description": "Electron desktop client for code-shell (POC).",
   "type": "module",
@@ -25,8 +25,14 @@
       "package.json"
     ],
     "extraResources": [
-      { "from": "../../examples/agents", "to": "examples/agents" },
-      { "from": "resources/known-marketplaces-seed.json", "to": "packages/desktop/resources/known-marketplaces-seed.json" }
+      {
+        "from": "../../examples/agents",
+        "to": "examples/agents"
+      },
+      {
+        "from": "resources/known-marketplaces-seed.json",
+        "to": "packages/desktop/resources/known-marketplaces-seed.json"
+      }
     ],
     "directories": {
       "output": "dist",
@@ -36,22 +42,32 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["arm64", "x64"]
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["arm64", "x64"]
+          "arch": [
+            "arm64",
+            "x64"
+          ]
         }
       ],
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "build/icon.png"
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "category": "Development",
       "icon": "build/icon.png"
     }
