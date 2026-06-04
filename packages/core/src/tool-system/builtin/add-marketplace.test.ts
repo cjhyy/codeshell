@@ -40,3 +40,12 @@ describe("AddMarketplace tool", () => {
     expect(out).toContain("source_type");
   });
 });
+
+import { BUILTIN_TOOLS } from "./index.js";
+
+it("is registered in BUILTIN_TOOLS with ask permission", () => {
+  const entry = BUILTIN_TOOLS.find((t) => t.definition.name === "AddMarketplace");
+  expect(entry).toBeDefined();
+  expect(entry!.definition.permissionDefault).toBe("ask");
+  expect(entry!.definition.isReadOnly).toBe(false);
+});

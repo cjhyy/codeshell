@@ -44,6 +44,7 @@ import {
   memoryDeleteToolDef, memoryDeleteTool,
 } from "./memory.js";
 import { completeGoalToolDef, completeGoalTool } from "./complete-goal.js";
+import { addMarketplaceToolDef, addMarketplaceTool } from "./add-marketplace.js";
 
 /**
  * Tool executor signature.
@@ -525,6 +526,18 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: true,
     },
     execute: completeGoalTool,
+  },
+  // ─── Plugin marketplace: model-driven source registration ──────
+  {
+    definition: {
+      ...addMarketplaceToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+      timeoutMs: 120_000, // git clone over network
+    },
+    execute: addMarketplaceTool,
   },
 ];
 
