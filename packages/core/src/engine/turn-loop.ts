@@ -563,8 +563,22 @@ export class TurnLoop {
           finalText,
           turnCount: this.turnCount,
         });
+        // The judge's structured verdict (set by GoalStopHook in result.data)
+        // rides back here so we can show goal progress WITHOUT a second LLM
+        // call — `gaps` is whatever the judge already computed.
+        const goalVerdict = stopHook.data?.goalVerdict as
+          | { met: boolean; gaps: string }
+          | undefined;
         if (stopHook.continueSession && this.stopBlockCount < maxStopBlocks) {
           this.stopBlockCount++;
+          // Goal visibility: one not_met marker per re-prompt. round counts
+          // up with stopBlockCount so the UI can show "第 N 轮".
+          this.config.onStream?.({
+            type: "goal_progress",
+            status: "not_met",
+            round: this.stopBlockCount,
+            gaps: goalVerdict?.gaps || undefined,
+          });
           const injection = wrapHookMessages(stopHook.messages);
           if (injection) {
             messages.push(injection);
@@ -595,11 +609,24 @@ export class TurnLoop {
             maxStopBlocks,
           });
           this.config.onStream?.({
+            type: "goal_progress",
+            status: "exhausted",
+            round: this.stopBlockCount,
+          });
+          this.config.onStream?.({
             type: "assistant_message",
             message: {
               role: "assistant",
               content: `（Goal 续跑已达 ${maxStopBlocks} 次上限，先停下。）`,
             },
+          });
+        } else if (this.config.goal && goalVerdict?.met) {
+          // Goal run completed cleanly: the judge says met. round = total
+          // rounds = prior blocks + this accepted final round.
+          this.config.onStream?.({
+            type: "goal_progress",
+            status: "met",
+            round: this.stopBlockCount + 1,
           });
         }
         this.stopBlockCount = 0;

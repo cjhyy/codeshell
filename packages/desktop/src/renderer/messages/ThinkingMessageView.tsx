@@ -7,6 +7,9 @@ import { ChevronDown, ChevronRight } from "../ui/icons";
 // shallow compare correctly short-circuits.
 function ThinkingMessageViewImpl({ message }: { message: ThinkingMessage }) {
   const [open, setOpen] = useState(false);
+  // Empty thinking = nothing to reveal; the toggle alone is a blank block.
+  // (Replay / empty thinking_delta can land here with text:"".)
+  if (message.text === "") return null;
   return (
     <div className="px-4 py-1">
       <button

@@ -24,7 +24,14 @@ interface Props {
  */
 function AssistantMessageViewImpl({ message, cwd }: Props) {
   const [copied, setCopied] = useState(false);
-  if (!message.done && message.text === "") return null;
+  // Nothing to draw without text — this view renders only `message.text`
+  // (tool calls are separate ToolMessages). A streaming assistant starts
+  // empty (suppress until the first token), and replay emits a done empty
+  // assistant for every tool-only turn (e.g. a TodoWrite turn with no prose):
+  // transcript-reader fires stream_request_start → text_delta("") →
+  // assistant_message, leaving done:true text:"". Guarding only the !done
+  // case let those render as blank bubbles after refresh. Suppress both.
+  if (message.text === "") return null;
 
   const onCopy = (): void => {
     const plain = stripMarkdownToPlain(message.text);

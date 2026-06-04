@@ -801,6 +801,16 @@ export class Engine {
       if (event.type === "task_update") {
         latestTodos = event.tasks;
       }
+      // Persist goal progress so replay/history shows how many rounds the
+      // goal ran. Display-only — toMessages() ignores this type, so it never
+      // re-enters the LLM context.
+      if (event.type === "goal_progress") {
+        session.transcript.append("goal_progress", {
+          status: event.status,
+          round: event.round,
+          ...(event.gaps ? { gaps: event.gaps } : {}),
+        });
+      }
       userOnStream?.(event);
     };
     if (options) options.onStream = wrappedOnStream;

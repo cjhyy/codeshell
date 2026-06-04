@@ -144,6 +144,23 @@ describe("mergeTranscripts", () => {
     expect(merged.messages.filter((m) => m.kind === "context_boundary")).toHaveLength(1);
   });
 
+  it("dedupes goal_progress markers by content, not id (no accumulation per re-open)", () => {
+    // The disk fold replays goal_progress with a fresh id each open; keying on
+    // id let one duplicate accumulate per restart ("每次重启都冒一个 goal 提示").
+    const goal = (id: string): Message => ({ kind: "goal_progress", id, status: "met", round: 1 });
+    const disk = stateOf([assistant("d-a1", "done"), goal("goal-2-7")]);
+    const live = stateOf([assistant("l-a1", "done"), goal("goal-1-3")]); // same content, stale id
+    const merged = mergeTranscripts(disk, live);
+    expect(merged.messages.filter((m) => m.kind === "goal_progress")).toHaveLength(1);
+  });
+
+  it("keeps genuinely different goal_progress rounds", () => {
+    const r1: Message = { kind: "goal_progress", id: "g1", status: "not_met", round: 1, gaps: "缺测试" };
+    const r2: Message = { kind: "goal_progress", id: "g2", status: "not_met", round: 2, gaps: "缺类型" };
+    const merged = mergeTranscripts(stateOf([r1]), stateOf([r2]));
+    expect(merged.messages.filter((m) => m.kind === "goal_progress")).toHaveLength(2);
+  });
+
   it("keeps a genuinely different files_changed card (different files)", () => {
     const disk = stateOf([filesChanged("fc-1", "a.ts", 3, 1)]);
     const live = stateOf([filesChanged("fc-2", "b.ts", 5, 0)]); // different file = real new card

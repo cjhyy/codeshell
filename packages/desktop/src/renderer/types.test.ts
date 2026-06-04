@@ -388,3 +388,52 @@ describe("applyStreamEvent — message timestamps", () => {
     expect((s.messages[0] as AssistantMessage).doneAt).toBe(first);
   });
 });
+
+describe("applyStreamEvent — empty error is dropped", () => {
+  // An error event with no message would render as a bare "Error: " system
+  // bubble (a blank-ish block). Drop it instead of materializing noise.
+  test("empty error string produces no message", () => {
+    const s = applyStreamEvent(INITIAL_STATE, { type: "error", error: "" } as StreamEvent);
+    expect(s.messages.filter((m) => m.kind === "system")).toHaveLength(0);
+  });
+
+  test("non-empty error still produces a system message", () => {
+    const s = applyStreamEvent(INITIAL_STATE, { type: "error", error: "boom" } as StreamEvent);
+    const sys = s.messages.find((m) => m.kind === "system");
+    expect(sys).toBeDefined();
+    if (sys && sys.kind === "system") expect(sys.text).toContain("boom");
+  });
+
+  test("error always clears streaming ids (regression guard)", () => {
+    let s = applyStreamEvent(INITIAL_STATE, mainTurn()[0]);
+    expect(s.streamingAssistantId).not.toBeNull();
+    s = applyStreamEvent(s, { type: "error", error: "" } as StreamEvent);
+    expect(s.streamingAssistantId).toBeNull();
+  });
+});
+
+describe("applyStreamEvent — goal_progress markers", () => {
+  test("each goal_progress event appends one marker message (count = rounds)", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_progress", { status: "not_met", round: 1, gaps: "缺测试" } as any),
+      ev("goal_progress", { status: "not_met", round: 2, gaps: "缺类型" } as any),
+      ev("goal_progress", { status: "met", round: 3 } as any),
+    ]);
+    const markers = s.messages.filter((m) => m.kind === "goal_progress");
+    expect(markers).toHaveLength(3);
+    // not_met count tells the user how many re-prompt rounds happened.
+    expect(markers.filter((m) => m.kind === "goal_progress" && m.status === "not_met")).toHaveLength(2);
+    const met = markers.find((m) => m.kind === "goal_progress" && m.status === "met");
+    expect(met).toMatchObject({ status: "met", round: 3 });
+  });
+
+  test("carries the judge gaps through unchanged", () => {
+    const s = applyStreamEvent(
+      INITIAL_STATE,
+      ev("goal_progress", { status: "not_met", round: 1, gaps: "tests still failing" } as any),
+    );
+    const m = s.messages[0];
+    expect(m.kind).toBe("goal_progress");
+    if (m.kind === "goal_progress") expect(m.gaps).toBe("tests still failing");
+  });
+});

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { foldTranscript } from "./foldTranscript";
+import { transcriptToFoldItems } from "../../main/transcript-reader";
 import type { FoldItem } from "../../preload/types";
 
 describe("foldTranscript", () => {
@@ -58,6 +59,56 @@ describe("foldTranscript", () => {
     expect(assistant!.doneAt).toBe(answered);
     // Elapsed = answer time − ask time = the real 4s, not 0.
     expect(assistant!.doneAt! - user.createdAt!).toBe(4_000);
+  });
+
+  it("stamps tool startedAt/endedAt from the persisted timestamps, NOT replay-time", () => {
+    // The bug: tool_use_start/tool_result hard-coded Date.now(), ignoring the
+    // replay clock. On replay every tool got "now" — so turnSpan stretched from
+    // the real user time to the replay moment, and the card's elapsed grew every
+    // time you reopened the session. Tools must use the persisted timestamps.
+    const t0 = 1_700_000_000_000;
+    const items: FoldItem[] = [
+      { kind: "user", text: "fix it", timestamp: t0 },
+      { kind: "stream", event: { type: "stream_request_start", turnNumber: 0 }, timestamp: t0 + 1_000 },
+      { kind: "stream", event: { type: "tool_use_start", toolCall: { id: "tc1", toolName: "Bash", args: {} } }, timestamp: t0 + 2_000 },
+      { kind: "stream", event: { type: "tool_result", result: { id: "tc1", toolName: "Bash", result: "ok" } }, timestamp: t0 + 5_000 },
+      { kind: "stream", event: { type: "assistant_message", message: { role: "assistant", content: "done" } }, timestamp: t0 + 6_000 },
+      { kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: t0 + 6_000 },
+    ];
+    const state = foldTranscript(items);
+    const tool = state.messages.find((m) => m.kind === "tool") as
+      | { startedAt: number; endedAt?: number; durationMs?: number }
+      | undefined;
+    expect(tool!.startedAt).toBe(t0 + 2_000);
+    expect(tool!.endedAt).toBe(t0 + 5_000);
+    expect(tool!.durationMs).toBe(3_000);
+    // And the stamp must be in the persisted past, never near the replay clock.
+    expect(tool!.startedAt).toBeLessThan(t0 + 10_000);
+  });
+
+  it("puts the files_changed card at the turn END, not sandwiched before the closing summary", () => {
+    // Real-transcript shape: a `turn_boundary turnNumber=N` marks the START of
+    // turn N and is written BEFORE that turn's content. The LAST turn's closing
+    // summary text therefore lands after its turn_complete — which used to pin
+    // the files_changed card BEFORE the summary ("夹在两段文字中间"). The reader
+    // appends a closing turn_complete at EOF so the card moves to the real end.
+    const jsonl = [
+      { type: "message", turnNumber: 0, data: { role: "user", content: "完成修复" } },
+      { type: "turn_boundary", turnNumber: 28, data: { turnNumber: 28 } },
+      { type: "message", turnNumber: 28, data: { role: "assistant", content: [{ type: "text", text: "验证完成，更新任务状态。" }, { type: "tool_use", id: "e1", name: "Edit", input: {} }] } },
+      { type: "tool_use", turnNumber: 28, data: { toolCallId: "e1", toolName: "Edit", args: { file_path: "renderer.ts", old_string: "a", new_string: "b" } } },
+      { type: "tool_result", turnNumber: 28, data: { toolCallId: "e1", toolName: "Edit", result: "Successfully edited" } },
+      { type: "turn_boundary", turnNumber: 29, data: { turnNumber: 29 } },
+      { type: "message", turnNumber: 29, data: { role: "assistant", content: "已完成，按 TDD 做了。" } },
+    ].map((e, i) => JSON.stringify({ id: `e${i}`, timestamp: 1000 + i, ...e })).join("\n");
+    const state = foldTranscript(transcriptToFoldItems(jsonl));
+    const kinds = state.messages.map((m) => m.kind);
+    const cardIdx = kinds.indexOf("files_changed");
+    const lastAssistantIdx = kinds.lastIndexOf("assistant");
+    expect(cardIdx).toBeGreaterThan(-1);
+    // The card must come AFTER the final summary assistant, not before it.
+    expect(cardIdx).toBeGreaterThan(lastAssistantIdx);
+    expect(state.messages.filter((m) => m.kind === "files_changed")).toHaveLength(1);
   });
 
   it("leaves timestamps absent for legacy items that carry none", () => {

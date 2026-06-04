@@ -127,6 +127,14 @@ export function createRenderer(format: OutputFormat): OutputRenderer {
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
+function extractViewImagePath(content: string): string | null {
+  const loaded = content.match(/^\[已加载图片: (.+?) \(/);
+  if (loaded) return loaded[1] ?? null;
+  const skipped = content.match(/^\[图片未加载: (.+?) ——/);
+  if (skipped) return skipped[1] ?? null;
+  return null;
+}
+
 function compactSummary(toolName: string, content: string): string {
   const lines = content.split("\n");
   const total = lines.length;
@@ -146,6 +154,8 @@ function compactSummary(toolName: string, content: string): string {
       const preview = truncate(lines[0], 60);
       return `${preview} (+${total - 1} lines)`;
     }
+    case "view_image":
+      return extractViewImagePath(content) ?? truncate(content, 80);
     default:
       if (total <= 1) return truncate(content, 80);
       return `${truncate(lines[0], 60)} (+${total - 1} lines)`;

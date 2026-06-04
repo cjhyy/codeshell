@@ -61,6 +61,17 @@ describe("transcriptToFoldItems", () => {
     expect(items[1]).toEqual({ kind: "stream", event: { type: "error", error: "boom" }, timestamp: 1 });
   });
 
+  it("replays persisted goal_progress markers (so history shows the rounds)", () => {
+    const jsonl = [
+      line("goal_progress", { status: "not_met", round: 1, gaps: "缺测试" }),
+      line("goal_progress", { status: "met", round: 2 }),
+    ].join("\n");
+    const items = transcriptToFoldItems(jsonl);
+    expect(items[0]).toEqual({ kind: "stream", event: { type: "goal_progress", status: "not_met", round: 1, gaps: "缺测试" }, timestamp: 1 });
+    // No gaps field when absent (met / no-gap rounds).
+    expect(items[1]).toEqual({ kind: "stream", event: { type: "goal_progress", status: "met", round: 2 }, timestamp: 1 });
+  });
+
   it("uses the event's turn number for assistant stream_request_start", () => {
     const t1 = JSON.stringify({ id: "x", type: "message", timestamp: 1, turnNumber: 1, data: { role: "assistant", content: "second" } });
     const items = transcriptToFoldItems(t1);

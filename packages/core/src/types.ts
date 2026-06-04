@@ -92,6 +92,7 @@ export type TranscriptEventType =
   | "plan_operation"
   | "session_meta"
   | "turn_boundary"
+  | "goal_progress"
   | "error";
 
 export interface TranscriptEvent {
@@ -288,6 +289,19 @@ export type StreamEvent =
   | { type: "tool_result"; result: ToolResult; agentId?: string }
   | { type: "assistant_message"; message: Message; agentId?: string }
   | { type: "turn_complete"; reason: TerminalReason; agentId?: string }
+  // Goal mode visibility: emitted each time the goal judge re-prompts the
+  // model ("not_met", carries the judge's `gaps` + the running round count),
+  // when the goal is finally judged complete ("met", round = total rounds),
+  // and when the continuation cap / run budget forces a stop ("exhausted").
+  // The UI renders one marker bar per event so the user can count rounds.
+  // No extra LLM call — `gaps` reuses the verdict the judge already produced.
+  | {
+      type: "goal_progress";
+      status: "not_met" | "met" | "exhausted";
+      round: number;
+      gaps?: string;
+      agentId?: string;
+    }
   | { type: "error"; error: string; agentId?: string }
   | { type: "tombstone"; messageId: string }
   | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }

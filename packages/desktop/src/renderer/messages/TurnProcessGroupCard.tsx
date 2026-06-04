@@ -5,6 +5,7 @@ import { ToolGroupCard } from "./ToolGroupCard";
 import { ThinkingMessageView } from "./ThinkingMessageView";
 import { AgentMessageView } from "./AgentMessageView";
 import { ContextBoundaryView } from "./ContextBoundaryView";
+import { GoalProgressView } from "./GoalProgressView";
 import { Markdown } from "../Markdown";
 import { processGroupLabel, type TurnProcessGroup } from "./streamGroups";
 
@@ -67,7 +68,10 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
               return <ToolCard key={m.id} message={m} turnEpoch={turnEpoch} />;
             }
             if (m.kind === "assistant") {
-              if (!m.done && m.text === "") return null;
+              // Empty assistant = nothing to draw (only text renders here).
+              // Replay makes tool-only turns done:true text:"" — suppress
+              // those too, not just streaming empties. See AssistantMessageView.
+              if (m.text === "") return null;
               return (
                 <div key={m.id} className="py-1 text-sm">
                   {m.done ? (
@@ -88,6 +92,9 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
             }
             if (m.kind === "context_boundary") {
               return <ContextBoundaryView key={m.id} message={m} />;
+            }
+            if (m.kind === "goal_progress") {
+              return <GoalProgressView key={m.id} message={m} />;
             }
             return null;
           })}

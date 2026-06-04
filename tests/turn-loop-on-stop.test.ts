@@ -146,3 +146,68 @@ describe("TurnLoop on_stop seam", () => {
     expect(seenGoal).toBe("ship the feature");
   });
 });
+
+describe("TurnLoop goal_progress events", () => {
+  // Goal visibility: the loop emits a goal_progress event each time the judge
+  // re-prompts (not_met, with round + gaps), once when the goal is finally met
+  // (met, round = total rounds), and once when the block cap forces a stop
+  // (exhausted). The UI counts these to show how many rounds the goal ran.
+  type GP = Extract<import("../packages/core/src/types.ts").StreamEvent, { type: "goal_progress" }>;
+
+  it("emits not_met with running round + gaps each time the judge re-prompts, then met", async () => {
+    const model = scriptedModel([noTool("a"), noTool("b"), noTool("c")]);
+    const { deps, hooks } = makeDeps(model);
+    let fired = 0;
+    // Judge: not met (round 1), not met (round 2), then met.
+    hooks.register("on_stop", () => {
+      fired++;
+      if (fired === 1) return { continueSession: true, messages: ["go"], data: { goalVerdict: { met: false, gaps: "缺测试" } } };
+      if (fired === 2) return { continueSession: true, messages: ["go"], data: { goalVerdict: { met: false, gaps: "缺类型" } } };
+      return { data: { goalVerdict: { met: true, gaps: "" } } };
+    });
+    const events: GP[] = [];
+    const loop = new TurnLoop(deps, makeConfig({
+      goal: "make it pass",
+      onStream: (e) => { if (e.type === "goal_progress") events.push(e as GP); },
+    }));
+    await loop.run([{ role: "user", content: "go" }]);
+
+    expect(events).toEqual([
+      { type: "goal_progress", status: "not_met", round: 1, gaps: "缺测试" },
+      { type: "goal_progress", status: "not_met", round: 2, gaps: "缺类型" },
+      { type: "goal_progress", status: "met", round: 3 },
+    ]);
+  });
+
+  it("emits exhausted when the block cap forces a stop", async () => {
+    const model = scriptedModel([noTool("loop")]);
+    const { deps, hooks } = makeDeps(model);
+    hooks.register("on_stop", () => ({
+      continueSession: true,
+      messages: ["again"],
+      data: { goalVerdict: { met: false, gaps: "still going" } },
+    }));
+    const events: GP[] = [];
+    const loop = new TurnLoop(deps, makeConfig({
+      goal: "unsatisfiable",
+      maxStopBlocks: 2,
+      onStream: (e) => { if (e.type === "goal_progress") events.push(e as GP); },
+    }));
+    await loop.run([{ role: "user", content: "go" }]);
+
+    // 2 not_met rounds, then exhausted at the cap.
+    expect(events.map((e) => e.status)).toEqual(["not_met", "not_met", "exhausted"]);
+    expect(events[events.length - 1]!.round).toBe(2);
+  });
+
+  it("emits nothing when there is no goal (plain run)", async () => {
+    const model = scriptedModel([noTool("done")]);
+    const { deps } = makeDeps(model);
+    const events: GP[] = [];
+    const loop = new TurnLoop(deps, makeConfig({
+      onStream: (e) => { if (e.type === "goal_progress") events.push(e as GP); },
+    }));
+    await loop.run([{ role: "user", content: "go" }]);
+    expect(events).toEqual([]);
+  });
+});

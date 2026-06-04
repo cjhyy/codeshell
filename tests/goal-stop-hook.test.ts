@@ -57,6 +57,27 @@ describe("createGoalStopHook", () => {
     expect(res.messages!.join("\n")).toContain("tests still failing");
   });
 
+  // The structured verdict rides in result.data.goalVerdict so the turn loop
+  // can emit a goal_progress stream event WITHOUT re-running the judge LLM —
+  // the same {met, gaps} the hook already computed is surfaced to the UI.
+  it("surfaces the structured verdict in data.goalVerdict (not met)", async () => {
+    const llm = fakeLLM(
+      JSON.stringify({ met: false, gaps: "tests still failing" }),
+    );
+    const hook = createGoalStopHook({ llm, log: silentLog });
+    const res = await hook(
+      ctx({ goal: "make tests pass", finalText: "fine" }),
+    );
+    expect(res.data?.goalVerdict).toEqual({ met: false, gaps: "tests still failing" });
+  });
+
+  it("surfaces the structured verdict in data.goalVerdict (met)", async () => {
+    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const hook = createGoalStopHook({ llm, log: silentLog });
+    const res = await hook(ctx({ goal: "ship it", finalText: "shipped" }));
+    expect(res.data?.goalVerdict).toEqual({ met: true, gaps: "" });
+  });
+
   it("tolerates JSON wrapped in prose / code fences", async () => {
     const llm = fakeLLM(
       'Sure!\n```json\n{"met": false, "gaps": "deploy step missing"}\n```\n',

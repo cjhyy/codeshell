@@ -6,6 +6,7 @@ import { ThinkingMessageView } from "./messages/ThinkingMessageView";
 import { AgentMessageView } from "./messages/AgentMessageView";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
+import { GoalProgressView } from "./messages/GoalProgressView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
 import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
@@ -169,6 +170,8 @@ export function MessageStream({
             return null;
           case "context_boundary":
             return <ContextBoundaryView key={m.id} message={m} />;
+          case "goal_progress":
+            return <GoalProgressView key={m.id} message={m} />;
           case "ask_user":
             // ask_user is also pinned above the composer. We still
             // render the resolved (answered) cards inline so the chat
@@ -181,6 +184,8 @@ export function MessageStream({
               />
             ) : null;
           case "system":
+            // Empty system text = a blank centered block; skip it.
+            if (m.text.trim() === "") return null;
             return (
               <div key={m.id} className="px-4 py-1 text-center text-xs text-muted-foreground">
                 {m.text}

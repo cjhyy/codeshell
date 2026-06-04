@@ -138,7 +138,8 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
 
     if (verdict.met) {
       log.info("goal_stop.met", { cat: "goal" });
-      return {};
+      // Surface the verdict so the loop can emit a goal_progress(met) event.
+      return { data: { goalVerdict: { met: true, gaps: "" } } };
     }
 
     log.info("goal_stop.not_met", { cat: "goal", gaps: verdict.gaps });
@@ -150,6 +151,9 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
           ? `继续 —— 目标尚未达成。还差:${gaps}`
           : "继续 —— 目标尚未达成,请接着完成它。",
       ],
+      // Structured verdict for the UI — the loop emits goal_progress(not_met)
+      // with this `gaps` instead of re-running the judge.
+      data: { goalVerdict: { met: false, gaps } },
     };
   };
 }

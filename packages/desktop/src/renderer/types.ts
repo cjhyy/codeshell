@@ -103,6 +103,21 @@ export interface SystemMessage {
   text: string;
 }
 
+/**
+ * Goal-mode progress marker. Emitted once per judge verdict: `not_met` each
+ * time the goal judge re-prompts the model (with its `gaps` + running round),
+ * `met` when the goal is finally complete (round = total rounds), `exhausted`
+ * when the continuation cap forces a stop. Rendered as a thin marker bar so
+ * the user can count how many rounds the goal ran. Display-only.
+ */
+export interface GoalProgressMessage {
+  kind: "goal_progress";
+  id: string;
+  status: "not_met" | "met" | "exhausted";
+  round: number;
+  gaps?: string;
+}
+
 export interface AskUserOption {
   label: string;
   description: string;
@@ -174,6 +189,7 @@ export type Message =
   | AgentMessage
   | ContextBoundaryMessage
   | SystemMessage
+  | GoalProgressMessage
   | AskUserMessage
   | FilesChangedSummaryMessage;
 
@@ -340,7 +356,13 @@ export function applyStreamEvent(
         toolName: event.toolCall.toolName,
         args: JSON.stringify(event.toolCall.args ?? {}),
         status: "running",
-        startedAt: Date.now(),
+        // Use the clock, not a hard-coded Date.now(): on replay `now()` returns
+        // the PERSISTED timestamp so a tool's startedAt reflects when it really
+        // ran, not the replay moment. Hard-coding Date.now() made the turn span
+        // stretch to "now" and grow on every reopen. Fall back to 0 (never the
+        // replay clock) for legacy items with no timestamp — turnSpanMs/
+        // spanDurationMs filter 0/non-finite stamps out.
+        startedAt: now() ?? 0,
       };
       if (event.agentId) {
         const idx = state.agentMessageIndex[event.agentId];
@@ -392,17 +414,21 @@ export function applyStreamEvent(
     }
 
     case "tool_result": {
-      const endedAt = Date.now();
+      // Clock, not Date.now() — see tool_use_start. Replay supplies the
+      // persisted end time; a missing stamp falls back to the tool's own
+      // startedAt (→ 0ms span) rather than the replay clock.
+      const endedAt = now() ?? undefined;
       const patch = (t: ToolMessage): ToolMessage => {
         const failed =
           event.result.error !== undefined || event.result.isError === true;
+        const end = endedAt ?? t.startedAt;
         return {
           ...t,
           result: event.result.result,
           error: event.result.error,
           status: failed ? "failed" : "succeeded",
-          endedAt,
-          durationMs: endedAt - t.startedAt,
+          endedAt: end,
+          durationMs: Math.max(0, end - t.startedAt),
         };
       };
       if (event.agentId) {
@@ -564,6 +590,22 @@ export function applyStreamEvent(
       };
     }
 
+    case "goal_progress": {
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          {
+            kind: "goal_progress",
+            id: freshId("goal"),
+            status: event.status,
+            round: event.round,
+            gaps: event.gaps,
+          },
+        ],
+      };
+    }
+
     case "usage_update": {
       return { ...state, promptTokens: event.promptTokens };
     }
@@ -663,12 +705,14 @@ export function applyStreamEvent(
     }
 
     case "error": {
+      // An empty error would render as a bare "Error: " block. Drop the
+      // message but still clear streaming ids (the turn is over either way).
+      const errText = (event.error ?? "").trim();
       return {
         ...state,
-        messages: [
-          ...state.messages,
-          { kind: "system", id: freshId("err"), text: `Error: ${event.error}` },
-        ],
+        messages: errText
+          ? [...state.messages, { kind: "system", id: freshId("err"), text: `Error: ${errText}` }]
+          : state.messages,
         streamingAssistantId: null,
         streamingThinkingId: null,
       };

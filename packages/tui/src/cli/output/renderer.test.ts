@@ -4,17 +4,25 @@ import type { StreamEvent, TerminalReason } from "@cjhyy/code-shell-core";
 
 // Capture stdout.write so we can assert the exact bytes each renderer emits.
 let chunks: string[];
+let stderrChunks: string[];
 let restore: () => void;
 
 beforeEach(() => {
   chunks = [];
-  const orig = process.stdout.write.bind(process.stdout);
+  stderrChunks = [];
+  const origStdout = process.stdout.write.bind(process.stdout);
+  const origStderr = process.stderr.write.bind(process.stderr);
   process.stdout.write = ((s: string) => {
     chunks.push(typeof s === "string" ? s : String(s));
     return true;
   }) as typeof process.stdout.write;
+  process.stderr.write = ((s: string) => {
+    stderrChunks.push(typeof s === "string" ? s : String(s));
+    return true;
+  }) as typeof process.stderr.write;
   restore = () => {
-    process.stdout.write = orig;
+    process.stdout.write = origStdout;
+    process.stderr.write = origStderr;
   };
 });
 
@@ -82,5 +90,22 @@ describe("output renderers — schema contracts", () => {
     r.onComplete("hi", reason, {});
     restore();
     expect(chunks.join("")).not.toContain('"reason"');
+  });
+
+  test("text renderer shows only the image path for view_image results", () => {
+    const r = createRenderer("text");
+    r.onEvent({
+      type: "tool_result",
+      result: {
+        id: "call_1",
+        toolName: "view_image",
+        result: "[已加载图片: /tmp/codeshell-shot.png (image/png, 12 KB)]",
+      },
+    } as StreamEvent);
+    restore();
+    expect(stderrChunks.join("")).toContain("/tmp/codeshell-shot.png");
+    expect(stderrChunks.join("")).not.toContain("已加载图片");
+    expect(stderrChunks.join("")).not.toContain("image/png");
+    expect(stderrChunks.join("")).not.toContain("12 KB");
   });
 });

@@ -31,3 +31,34 @@ describe("MessageStream — empty streaming assistant guard", () => {
     expect(html).not.toContain("…");
   });
 });
+
+describe("MessageStream — empty marker suppression (no blank blocks)", () => {
+  // The replay path can synthesize these with empty content; each must
+  // render nothing rather than a padded blank block.
+  test("hides a system message with empty text", () => {
+    const messages: Message[] = [
+      { kind: "user", id: "u1", text: "hi" },
+      { kind: "system", id: "s1", text: "" },
+    ];
+    const html = renderToStaticMarkup(<MessageStream messages={messages} />);
+    // No empty centered marker div beyond the user bubble.
+    expect(html).not.toContain("text-center");
+  });
+
+  test("hides a thinking message with empty text", () => {
+    const messages: Message[] = [
+      { kind: "user", id: "u1", text: "hi" },
+      { kind: "thinking", id: "t1", text: "", done: true },
+    ];
+    const html = renderToStaticMarkup(<MessageStream messages={messages} />);
+    expect(html).not.toContain("thinking");
+  });
+
+  test("still renders a thinking message that has text", () => {
+    const messages: Message[] = [
+      { kind: "thinking", id: "t1", text: "pondering", done: true },
+    ];
+    const html = renderToStaticMarkup(<MessageStream messages={messages} />);
+    expect(html).toContain("thinking");
+  });
+});
