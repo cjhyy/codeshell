@@ -30,12 +30,15 @@ export type MarketplaceSource =
   | { source: "github"; repo: string }
   | { source: "git"; url: string };
 
+export type MarketplaceFormat = "claude-code" | "codex" | "universal";
+
 export interface ListedMarketplaceDTO {
   name: string;
   source: MarketplaceSource;
   installLocation: string;
   lastUpdated: string;
   pluginCount: number;
+  format: MarketplaceFormat;
 }
 
 export interface MarketplacePluginDTO {

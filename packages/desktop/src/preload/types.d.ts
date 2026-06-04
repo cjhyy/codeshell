@@ -371,6 +371,7 @@ export interface CodeshellApi {
       installLocation: string;
       lastUpdated: string;
       pluginCount: number;
+      format: "claude-code" | "codex" | "universal";
     }>
   >;
   /** Load one marketplace's manifest (flattened owner/author). Null if missing. */

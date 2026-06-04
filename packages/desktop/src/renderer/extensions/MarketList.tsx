@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MarketDetail } from "./MarketDetail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
 
 interface Props {
@@ -12,6 +13,15 @@ interface Props {
 type Marketplace = Awaited<
   ReturnType<typeof window.codeshell.listMarketplaces>
 >[number];
+
+const FORMAT_BADGE: Record<
+  Marketplace["format"],
+  { label: string; variant: "accent" | "info" | "success" }
+> = {
+  "claude-code": { label: "Claude Code", variant: "accent" },
+  codex: { label: "Codex", variant: "info" },
+  universal: { label: "通用", variant: "success" },
+};
 
 export function MarketList({ cwd, onInstalled }: Props) {
   const [markets, setMarkets] = useState<Marketplace[] | null>(null);
@@ -149,6 +159,11 @@ export function MarketList({ cwd, onInstalled }: Props) {
                 {m.pluginCount >= 0 ? `${m.pluginCount} 个可安装插件` : "清单无效"}
               </div>
             </div>
+            {m.format && (
+              <Badge variant={FORMAT_BADGE[m.format].variant} className="shrink-0">
+                {FORMAT_BADGE[m.format].label}
+              </Badge>
+            )}
             <span className="text-xs text-muted-foreground">{m.source.source}</span>
             <button
               className="px-1 text-muted-foreground hover:text-foreground"

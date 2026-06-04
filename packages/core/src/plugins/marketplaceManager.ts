@@ -18,9 +18,12 @@ import {
 import { validateMarketplace } from "./schemas.js";
 import type {
   KnownMarketplace,
+  MarketplaceFormat,
   MarketplaceSource,
   PluginMarketplace,
 } from "./types.js";
+
+export type { MarketplaceFormat } from "./types.js";
 
 function userHome(): string {
   return process.env.HOME ?? homedir();
@@ -34,8 +37,38 @@ export function marketplaceDir(name: string): string {
   return join(marketplacesRoot(), name);
 }
 
-function marketplaceJsonPath(name: string): string {
-  return join(marketplaceDir(name), ".claude-plugin", "marketplace.json");
+const CC_MANIFEST_REL = [".claude-plugin", "marketplace.json"] as const;
+const CODEX_MANIFEST_REL = [".agents", "plugins", "marketplace.json"] as const;
+
+/**
+ * Resolve the marketplace manifest inside a cloned repo. Claude Code's format
+ * lives at .claude-plugin/marketplace.json; the Codex / agents format lives at
+ * .agents/plugins/marketplace.json. Prefer the CC manifest when present (it is
+ * our canonical shape), else fall back to the Codex one. Returns null when
+ * neither exists.
+ */
+function resolveManifestPath(dir: string): string | null {
+  const cc = join(dir, ...CC_MANIFEST_REL);
+  if (existsSync(cc)) return cc;
+  const codex = join(dir, ...CODEX_MANIFEST_REL);
+  if (existsSync(codex)) return codex;
+  return null;
+}
+
+function marketplaceJsonPath(name: string): string | null {
+  return resolveManifestPath(marketplaceDir(name));
+}
+
+/**
+ * Classify a cloned marketplace by which manifest files it ships:
+ * both → universal, only .agents/plugins → codex, otherwise claude-code.
+ */
+export function detectMarketplaceFormat(dir: string): MarketplaceFormat {
+  const hasCc = existsSync(join(dir, ...CC_MANIFEST_REL));
+  const hasCodex = existsSync(join(dir, ...CODEX_MANIFEST_REL));
+  if (hasCc && hasCodex) return "universal";
+  if (hasCodex) return "codex";
+  return "claude-code";
 }
 
 function sourceToCloneUrl(source: MarketplaceSource): string {
@@ -80,11 +113,11 @@ export async function addMarketplace(
   }
 
   const manifestPath = marketplaceJsonPath(name);
-  if (!existsSync(manifestPath)) {
+  if (!manifestPath) {
     rmSync(dir, { recursive: true, force: true });
     return {
       ok: false,
-      error: `Marketplace ${name}: .claude-plugin/marketplace.json not found in the cloned repository.`,
+      error: `Marketplace ${name}: no marketplace.json found (looked in .claude-plugin/ and .agents/plugins/).`,
     };
   }
 
@@ -109,6 +142,7 @@ export async function addMarketplace(
     source,
     installLocation: dir,
     lastUpdated: new Date().toISOString(),
+    format: detectMarketplaceFormat(dir),
   };
   upsertKnownMarketplace(name, entry);
 
@@ -137,7 +171,7 @@ export function loadMarketplace(name: string): PluginMarketplace | null {
   const known = readKnownMarketplaces();
   if (!known[name]) return null;
   const manifestPath = marketplaceJsonPath(name);
-  if (!existsSync(manifestPath)) return null;
+  if (!manifestPath) return null;
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(manifestPath, "utf-8"));
@@ -154,6 +188,7 @@ export interface ListedMarketplace {
   installLocation: string;
   lastUpdated: string;
   pluginCount: number;
+  format: MarketplaceFormat;
 }
 
 /**
@@ -172,6 +207,8 @@ export function listMarketplaces(): ListedMarketplace[] {
       installLocation: entry.installLocation,
       lastUpdated: entry.lastUpdated,
       pluginCount: mp ? mp.plugins.length : -1,
+      // Re-detect from disk when the stored entry predates the format field.
+      format: entry.format ?? detectMarketplaceFormat(entry.installLocation),
     });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));

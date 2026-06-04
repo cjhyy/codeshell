@@ -9,7 +9,12 @@ import { existsSync, realpathSync, rmSync } from "node:fs";
 import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
-import { gitClone, gitRevParseHead, githubRepoToCloneUrl } from "./gitOps.js";
+import {
+  gitClone,
+  gitRevParseHead,
+  gitSparseCheckoutAdd,
+  githubRepoToCloneUrl,
+} from "./gitOps.js";
 import { loadMarketplace } from "./marketplaceManager.js";
 import { readKnownMarketplaces } from "./knownMarketplaces.js";
 import {
@@ -185,6 +190,15 @@ async function materialize(
   const placeholder = pluginCacheDir(marketplace, plugin, "_pending_");
 
   if (typeof source === "string") {
+    // The marketplace was cloned sparse (only the manifest dirs are on disk),
+    // so a local-path plugin's tree may not be checked out yet. Expand the
+    // sparse-checkout to include it before reading. Best-effort: on a
+    // non-sparse (full) clone this errors harmlessly and the files are already
+    // present, so we ignore the result and let materializePath report a real
+    // missing-path error if the subdir truly isn't there.
+    if (!isAbsolute(source)) {
+      await gitSparseCheckoutAdd(marketplaceInstallLocation, source);
+    }
     const r = await materializePath(marketplaceInstallLocation, source, placeholder);
     if (!r.ok) return r;
     const finalDir = pluginCacheDir(marketplace, plugin, "local");

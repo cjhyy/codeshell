@@ -63,15 +63,50 @@ async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise
   };
 }
 
+/**
+ * Clone a marketplace repo cheaply. These repos can bundle hundreds of plugins
+ * (thousands of files), but adding a marketplace only needs its manifest — the
+ * individual plugin trees are pulled on demand at install time
+ * ({@link gitSparseCheckoutAdd}). So we do a blobless, no-checkout clone and
+ * then sparse-check out only the manifest directories.
+ *
+ * `sparsePaths` defaults to the two manifest locations we support
+ * (.claude-plugin and .agents/plugins). On any failure of the sparse setup we
+ * fall back to checking out the full tree, so correctness never depends on
+ * sparse support being present.
+ */
 export async function gitClone(
   url: string,
   destDir: string,
-  options?: { ref?: string },
+  options?: { ref?: string; sparsePaths?: string[] },
 ): Promise<GitResult> {
-  const args = ["clone", "--depth", "1"];
+  const sparsePaths = options?.sparsePaths ?? [".claude-plugin", ".agents/plugins"];
+  const args = ["clone", "--depth", "1", "--filter=blob:none", "--no-checkout"];
   if (options?.ref) args.push("--branch", options.ref);
   args.push("--", url, destDir);
-  return runGit(args);
+  const cloned = await runGit(args);
+  if (!cloned.ok) return cloned;
+
+  // Restrict the working tree to the manifest dirs, then check out. Use
+  // non-cone mode so nested paths like ".agents/plugins" match exactly.
+  const init = await runGit(["sparse-checkout", "set", "--no-cone", ...sparsePaths], destDir);
+  if (!init.ok) {
+    // Sparse unsupported/failed — fall back to a normal full checkout so the
+    // manifest is still present.
+    return runGit(["checkout"], destDir);
+  }
+  const checkout = await runGit(["checkout"], destDir);
+  if (!checkout.ok) return checkout;
+  return cloned;
+}
+
+/**
+ * Expand a sparse-checkout to include an additional path (a plugin subdir),
+ * materializing its blobs. Best-effort: if the repo isn't sparse this errors
+ * harmlessly and the caller proceeds (the files are already present).
+ */
+export async function gitSparseCheckoutAdd(repoDir: string, relPath: string): Promise<GitResult> {
+  return runGit(["sparse-checkout", "add", relPath], repoDir);
 }
 
 export async function gitRevParseHead(repoDir: string): Promise<GitResult> {

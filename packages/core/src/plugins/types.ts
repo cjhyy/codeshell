@@ -9,10 +9,15 @@ export type MarketplaceSource =
   | { source: "github"; repo: string /* owner/name */ }
   | { source: "git"; url: string };
 
+/** Which plugin-manifest convention a cloned marketplace ships. */
+export type MarketplaceFormat = "claude-code" | "codex" | "universal";
+
 export interface KnownMarketplace {
   source: MarketplaceSource;
   installLocation: string;
   lastUpdated: string;
+  /** Optional: absent on entries written before format detection existed. */
+  format?: MarketplaceFormat;
 }
 
 export type KnownMarketplaces = Record<string, KnownMarketplace>;

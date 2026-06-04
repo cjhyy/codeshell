@@ -55,6 +55,30 @@ export function validatePluginEntrySource(
       },
     };
   }
+  if (kind === "local") {
+    // Codex / agents-format marketplaces (e.g. awesome-codex-plugins) express
+    // a local plugin as { source: "local", path }. Our installer's local path
+    // source is a bare string, so normalize onto that.
+    if (typeof raw.path !== "string" || !raw.path) {
+      return { ok: false, error: `${path}: local source requires path` };
+    }
+    return { ok: true, value: raw.path };
+  }
+  if (kind === "url") {
+    // The official claude-plugins-official marketplace emits a "url" source
+    // type for "clone this git repo" (optionally a subdir via `path`). It is
+    // semantically identical to our git / git-subdir sources, so normalize it
+    // onto those rather than carrying a fourth code path through the installer.
+    if (typeof raw.url !== "string" || !raw.url) {
+      return { ok: false, error: `${path}: url source requires url` };
+    }
+    const ref = typeof raw.ref === "string" ? raw.ref : undefined;
+    const sha = typeof raw.sha === "string" ? raw.sha : undefined;
+    if (typeof raw.path === "string" && raw.path) {
+      return { ok: true, value: { source: "git-subdir", url: raw.url, path: raw.path, ref, sha } };
+    }
+    return { ok: true, value: { source: "git", url: raw.url, ref, sha } };
+  }
   if (kind === "git-subdir") {
     if (typeof raw.url !== "string" || !raw.url) {
       return { ok: false, error: `${path}: git-subdir source requires url` };
@@ -123,8 +147,19 @@ export function validateMarketplace(raw: unknown): ValidationResult<PluginMarket
   if (typeof raw.name !== "string" || !raw.name) {
     return { ok: false, error: "marketplace.json: name is required" };
   }
-  if (!isObject(raw.owner) || typeof raw.owner.name !== "string") {
-    return { ok: false, error: "marketplace.json: owner.name is required" };
+  // Claude Code marketplaces carry a top-level `owner: { name }`. Codex /
+  // agents-format marketplaces omit it and instead carry `interface.displayName`.
+  // Accept either, falling back to the marketplace name as a last resort, so a
+  // Codex manifest is not rejected purely for lacking an owner.
+  let ownerName: string | undefined;
+  let ownerEmail: string | undefined;
+  if (isObject(raw.owner) && typeof raw.owner.name === "string") {
+    ownerName = raw.owner.name;
+    ownerEmail = typeof raw.owner.email === "string" ? raw.owner.email : undefined;
+  } else if (isObject(raw.interface) && typeof raw.interface.displayName === "string") {
+    ownerName = raw.interface.displayName;
+  } else {
+    ownerName = raw.name;
   }
   if (!Array.isArray(raw.plugins)) {
     return { ok: false, error: "marketplace.json: plugins must be an array" };
@@ -140,10 +175,7 @@ export function validateMarketplace(raw: unknown): ValidationResult<PluginMarket
     value: {
       name: raw.name,
       description: typeof raw.description === "string" ? raw.description : undefined,
-      owner: {
-        name: raw.owner.name,
-        email: typeof raw.owner.email === "string" ? raw.owner.email : undefined,
-      },
+      owner: { name: ownerName, email: ownerEmail },
       plugins,
     },
   };
