@@ -52,6 +52,14 @@ describe("buildProjectOptions", () => {
     const opts = buildProjectOptions([{ id: "x", path: "", name: "ghost" }], null);
     expect(opts).toEqual([{ value: NO_PROJECT_VALUE, label: "无项目(对话)" }]);
   });
+
+  it("treats the no-repo sandbox cwd as 无项目, not a ghost project", () => {
+    // A headless/automation job records "no project" as the sandbox path.
+    // It must NOT become a synthetic option labelled with the full path.
+    const opts = buildProjectOptions(repos, "/Users/admin/.code-shell/no-repo");
+    expect(opts).toHaveLength(repos.length + 1); // no-project + 2 repos, no ghost
+    expect(opts.some((o) => o.label.includes("no-repo"))).toBe(false);
+  });
 });
 
 describe("selectedProjectValue", () => {
@@ -63,6 +71,10 @@ describe("selectedProjectValue", () => {
     expect(selectedProjectValue("   ")).toBe(NO_PROJECT_VALUE);
     expect(selectedProjectValue(null)).toBe(NO_PROJECT_VALUE);
     expect(selectedProjectValue(undefined)).toBe(NO_PROJECT_VALUE);
+  });
+  it("maps the no-repo sandbox path to the no-project sentinel", () => {
+    expect(selectedProjectValue("/Users/admin/.code-shell/no-repo")).toBe(NO_PROJECT_VALUE);
+    expect(selectedProjectValue("/Users/admin/.code-shell/no-repo/")).toBe(NO_PROJECT_VALUE);
   });
 });
 

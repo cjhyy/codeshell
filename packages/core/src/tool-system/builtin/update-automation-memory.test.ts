@@ -1,6 +1,10 @@
 import { describe, test, expect } from "bun:test";
 import { makeUpdateAutomationMemoryTool } from "./update-automation-memory.js";
 
+function asText(r: string | { contentBlocks: unknown[]; result?: string }): string {
+  return typeof r === "string" ? r : (r.result ?? "");
+}
+
 describe("UpdateAutomationMemory", () => {
   test("has the expected definition shape", () => {
     const tool = makeUpdateAutomationMemoryTool(() => {});
@@ -23,8 +27,8 @@ describe("UpdateAutomationMemory", () => {
     const res = await tool.execute({ summary: "  today: 3 items  " });
     expect(writes).toEqual(["today: 3 items"]);
     // success contract: returns a non-error string
-    expect(res.startsWith("Error:")).toBe(false);
-    expect(res.toLowerCase()).toContain("saved");
+    expect(asText(res).startsWith("Error:")).toBe(false);
+    expect(asText(res).toLowerCase()).toContain("saved");
   });
 
   test("rejects empty/whitespace summary without calling the sink", async () => {
@@ -33,7 +37,7 @@ describe("UpdateAutomationMemory", () => {
     const res = await tool.execute({ summary: "   " });
     expect(writes).toEqual([]);
     // error contract: returns a string prefixed with "Error:"
-    expect(res.startsWith("Error:")).toBe(true);
+    expect(asText(res).startsWith("Error:")).toBe(true);
   });
 
   test("rejects a missing summary without calling the sink", async () => {
@@ -41,6 +45,6 @@ describe("UpdateAutomationMemory", () => {
     const tool = makeUpdateAutomationMemoryTool((s) => writes.push(s));
     const res = await tool.execute({});
     expect(writes).toEqual([]);
-    expect(res.startsWith("Error:")).toBe(true);
+    expect(asText(res).startsWith("Error:")).toBe(true);
   });
 });

@@ -28,6 +28,8 @@ export interface ProjectOption {
   label: string;
 }
 
+import { isNoRepoCwd } from "./pathMatch";
+
 /** Sentinel value for the "无项目" option (shadcn Select disallows ""). */
 export const NO_PROJECT_VALUE = "__no_project__";
 
@@ -56,7 +58,11 @@ export function buildProjectOptions(
     out.push({ value: repo.path, label: repoLabel(repo) });
   }
   const cwd = currentCwd?.trim();
-  if (cwd && !seen.has(cwd)) {
+  // The internal no-repo sandbox path (`~/.code-shell/no-repo`) is how a
+  // headless/automation job records "no project". Treat it as 无项目 rather than
+  // synthesizing a bogus project option labelled with the full sandbox path —
+  // otherwise the dropdown shows a duplicate "ghost project" next to 无项目.
+  if (cwd && !seen.has(cwd) && !isNoRepoCwd(cwd)) {
     out.push({ value: cwd, label: cwd });
   }
   return out;
@@ -65,7 +71,10 @@ export function buildProjectOptions(
 /** Map a job's stored cwd to the matching <Select> value. */
 export function selectedProjectValue(currentCwd: string | null | undefined): string {
   const cwd = currentCwd?.trim();
-  return cwd ? cwd : NO_PROJECT_VALUE;
+  // Empty cwd OR the no-repo sandbox path both mean 无项目 — map both to the
+  // sentinel so a no-repo job's dropdown selects 无项目, not a ghost project.
+  if (!cwd || isNoRepoCwd(cwd)) return NO_PROJECT_VALUE;
+  return cwd;
 }
 
 /**

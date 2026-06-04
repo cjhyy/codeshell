@@ -3,6 +3,7 @@ import { AgentServer } from "./server.js";
 import { ChatSessionManager } from "./chat-session-manager.js";
 import type { Engine } from "../engine/engine.js";
 import type { ValidatedSettings } from "../settings/schema.js";
+import { getInteractiveApprovalBackend } from "../tool-system/permission.js";
 
 function makeTransport() {
   const sent: any[] = [];
@@ -54,6 +55,89 @@ function fakeSettings(appendSystemPrompt: string): ValidatedSettings {
 }
 
 describe("AgentServer configure({ reloadSettings })", () => {
+  it("wires interactive approval prompts for chatManager sessions", async () => {
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => makeFakeEngine("A").engine,
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    const approval = getInteractiveApprovalBackend().requestApproval({
+      toolName: "MemoryDelete",
+      args: { scope: "user", name: "stale" },
+      description: "Delete a user memory",
+      riskLevel: "medium",
+    });
+
+    await new Promise((r) => setTimeout(r, 10));
+    const notification = t.sent.find((m: any) => m.method === "agent/approvalRequest");
+    expect(notification?.params?.request?.toolName).toBe("MemoryDelete");
+
+    t.deliver({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "agent/approve",
+      params: {
+        requestId: notification.params.requestId,
+        decision: { approved: true },
+      },
+    });
+
+    await expect(approval).resolves.toEqual({ approved: true });
+  });
+
+  it("answers global model/provider queries before the first chat session exists", async () => {
+    let factoryCalls = 0;
+    const engine = {
+      getModelPool() {
+        return {
+          getActiveKey: () => "sonnet",
+          list: () => [
+            {
+              key: "sonnet",
+              label: "Sonnet",
+              model: "claude-sonnet-4-5",
+              provider: "anthropic",
+              providerKey: "anthropic",
+            },
+          ],
+        };
+      },
+      readSetting(key: string) {
+        if (key === "providers") return [{ key: "anthropic", label: "Anthropic" }];
+        if (key === "models") return [{ key: "sonnet", providerKey: "anthropic" }];
+        return undefined;
+      },
+    } as unknown as Engine;
+
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => {
+        factoryCalls++;
+        return engine;
+      },
+    });
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager });
+
+    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/query", params: { type: "models" } });
+    t.deliver({ jsonrpc: "2.0", id: 2, method: "agent/query", params: { type: "providers" } });
+    await new Promise((r) => setTimeout(r, 10));
+
+    const models = t.sent.find((m: any) => m.id === 1)?.result;
+    expect(models?.type).toBe("models");
+    expect(models?.data?.[0]?.key).toBe("sonnet");
+
+    const providers = t.sent.find((m: any) => m.id === 2)?.result;
+    expect(providers?.type).toBe("providers");
+    expect(providers?.data?.[0]?.key).toBe("anthropic");
+    expect(providers?.data?.[0]?.modelCount).toBe(1);
+
+    expect(factoryCalls).toBe(1);
+    expect(chatManager.sessionCount()).toBe(0);
+  });
+
   it("pushes diskDefaultsFrom(settings) to ALL live sessions with a monotonic version", () => {
     const a = makeFakeEngine("A");
     const b = makeFakeEngine("B");

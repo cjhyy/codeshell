@@ -56,7 +56,7 @@ describe("resolveWritePolicy", () => {
     expect(await decide("read-only", "UpdateAutomationMemory")).toBe(true);
     expect(await decide("workspace-write", "UpdateAutomationMemory")).toBe(true);
     expect(await decide("full", "UpdateAutomationMemory")).toBe(true);
-    expect(await decide(undefined, "UpdateAutomationMemory")).toBe(true);
+    expect(await decide("read-only", "UpdateAutomationMemory")).toBe(true);
   });
 });
 

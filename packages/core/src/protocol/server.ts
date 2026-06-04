@@ -68,6 +68,7 @@ export interface AgentServerOptions {
 export class AgentServer {
   private readonly chatManager: ChatSessionManager | null;
   private readonly legacyEngine: Engine | null;
+  private globalQueryEngine: Engine | null = null;
   private transport: Transport;
   /** Fresh-disk settings reader for config hot-reload; null when not wired. */
   private readonly settingsReader: (() => ValidatedSettings) | null;
@@ -128,14 +129,11 @@ export class AgentServer {
       }
     });
 
-    // Wire approval flow for the legacy single-engine path.
-    // In the chatManager path approval flows are per-session and registered
-    // when the session's engine raises an approval request via onStream.
-    if (this.legacyEngine) {
-      setInteractiveApprovalFn((request: ApprovalRequest) => {
-        return this.requestApprovalFromClient(request);
-      });
+    setInteractiveApprovalFn((request: ApprovalRequest) => {
+      return this.requestApprovalFromClient(request);
+    });
 
+    if (this.legacyEngine) {
       // Only wire an interactive askUser when a human is present. For
       // unattended (headless) runs we leave askUser undefined so
       // AskUserQuestion hits its headless-error branch and returns immediately
@@ -1240,15 +1238,25 @@ export class AgentServer {
   }
 
   /**
-   * Get any available engine — used for global query ops when chatManager is
-   * present but no legacyEngine was supplied. Borrows the first live session.
+   * Get any available engine — used for global query/configure ops when
+   * chatManager is present but no legacyEngine was supplied. Prefer a live chat
+   * session; before the first user turn, lazily build a detached engine through
+   * the manager's factory so global UI surfaces (/login, model manager, model
+   * selector) can query models/providers without requiring a chat session first.
    */
   private anyEngine(): Engine | null {
     if (!this.chatManager) return null;
-    // Access private `sessions` map — acceptable for same-package access.
     const sessions: Map<string, any> = (this.chatManager as any).sessions;
     const first = sessions.values().next().value;
-    return first ? (first.engine as Engine) : null;
+    if (first) return first.engine as Engine;
+    if (this.globalQueryEngine) return this.globalQueryEngine;
+
+    const factory = (this.chatManager as any).factory as
+      | ((slice: Partial<EngineConfig>) => Engine)
+      | undefined;
+    if (typeof factory !== "function") return null;
+    this.globalQueryEngine = factory({});
+    return this.globalQueryEngine;
   }
 
   // ─── Lifecycle ──────────────────────────────────────────────────

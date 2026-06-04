@@ -24,6 +24,8 @@ describe("ToolExecutor abort propagation", () => {
         name: "Probe",
         description: "test probe",
         inputSchema: { type: "object", properties: {} },
+        source: "builtin",
+        permissionDefault: "allow",
       },
       async () => {
         handlerRan = true;

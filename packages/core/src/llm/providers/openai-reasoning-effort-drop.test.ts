@@ -11,7 +11,7 @@ import type { CreateMessageOptions } from "../types.js";
  * Dream consolidation (a tool-calling background call) work on gpt-5.5.
  */
 
-function makeApiError(message: string): OpenAI.APIError {
+function makeApiError(message: string): InstanceType<typeof OpenAI.APIError> {
   // OpenAI.APIError(status, error, message, headers)
   return new OpenAI.APIError(400, { message }, message, undefined);
 }
