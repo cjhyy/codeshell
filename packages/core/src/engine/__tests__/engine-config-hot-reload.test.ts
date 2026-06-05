@@ -62,3 +62,38 @@ describe("Engine.refreshRuntimeConfig preset hot-reload (#2)", () => {
     expect((engine as any).preset.name).toBe("terminal-coding");
   });
 });
+
+// TODO §6.1 — the fire-and-forget MCP reconcile during hot-reload must not
+// surface as an unhandled rejection: one flaky server failing to connect/
+// disconnect would otherwise crash the host (or be silently swallowed).
+describe("Engine.refreshRuntimeConfig MCP reconcile is best-effort", () => {
+  it("a rejecting reconcile does not throw out of refreshRuntimeConfig", async () => {
+    const engine = buildEngine("general");
+    let reconcileCalled = false;
+    let caught = false;
+    // Inject a mcpManager whose reconcile rejects.
+    (engine as any).mcpManager = {
+      reconcile: () => {
+        reconcileCalled = true;
+        const p = Promise.reject(new Error("server X refused connection"));
+        // Track that the engine attached a .catch so the rejection is handled.
+        return { catch: (fn: (e: unknown) => void) => p.catch((e) => { caught = true; fn(e); }) };
+      },
+    };
+
+    // Must return synchronously without throwing, even though reconcile rejects.
+    expect(() =>
+      engine.refreshRuntimeConfig(
+        { mcpServers: { X: { command: "x", args: [] } as any } },
+        1,
+      ),
+    ).not.toThrow();
+    expect(reconcileCalled).toBe(true);
+
+    // Let the rejected promise settle; the engine's .catch must have run.
+    await new Promise((r) => setTimeout(r, 0));
+    expect(caught).toBe(true);
+    // Version still advanced despite the reconcile failure.
+    expect((engine as any).lastAppliedConfigVersion).toBe(1);
+  });
+});

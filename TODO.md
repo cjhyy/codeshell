@@ -51,7 +51,7 @@
 - [x] **RunManager approval/input resume 竞态** ✅：审查发现两处真隐患并修复——(1) `resume()`/`cancel()` 多 await 点 + 顶部状态检查读到陈旧 `waiting_*`(直到后面 `await transition` 才变),并发双 resume(双击批准)或 resume/cancel 互穿都能双双过检查;加 `resolvingRuns` 每-run 串行守卫(迟到者明确拒绝)。(2) handle 在场但 input 类型不匹配(给 waiting_approval 喂 userInput)会穿到 Case 2 **重新入队一个全新执行**而原 Engine 仍挂起→重复 run+泄漏 handle;改为明确报错。handle 的 resolveApproval 本身幂等(`!pendingApproval` 返回 false)缓解了双 resolve。测试 `RunManager.resume-race.test.ts`(去守卫后并发测试确实失败,证明有效)
 - [x] **`resolveSandboxBackend` 每 turn 都重 resolve** ✅：已缓存 by `(mode, cwd)`。`EngineRuntime.resolveSandbox`(共享)与 `Engine.resolveSandboxWithoutRuntime`(无 runtime 回退)各有 cache;run 路径 1065-1066 走缓存版,绝不裸调 resolveSandboxBackend;rejection 不缓存(改配置后可重试)。补 runtime.sandbox-cache.test.ts(同键同 promise/异键新建/rejection 不缓存)。
 - [x] **Plugin SessionStart hook 运行时验证** ✅：已确认全链路通。`runPluginCommandHook` 把 stdout 的 additionalContext(CC `hookSpecificOutput.additionalContext` / Cursor `additional_context` / SDK `additionalContext` 三形态)→ `HookResult.messages`,engine.ts:1464 把 `on_session_start` 的 messages splice 进 user prompt 前的 `<system-reminder>`。本会话开头的 "You have superpowers" 即此机制。测试 `plugins/pluginCommandHook.test.ts`(6 用例,含失败兜底)
-- [ ] **自动化 run 卡在 `turn.start` 后、首个 `llm.request` 前**：收集 events/checkpoints/lock/heartbeat；定位 EngineRunner / RunManager / LLM request 前置路径；确认 lock release 与失败恢复
+- [x] **自动化 run 卡在 `turn.start` 后、首个 `llm.request` 前** ✅(复核):lock release 与失败恢复已闭环——RunManager 执行 `finally` 块统一 `lock.release` + `executionHandles.delete` + `heartbeat.stop`(engine.ts run 段 640-645);recover() 对 stale-heartbeat 且进程已死的 running/waiting run 重置(340+)。原"卡住"现象的两个真因(preload rpc 30s 硬超时误伤长任务 d50c365、main 同步 fs 阻塞事件循环 178abc8)均已在 main 修复,见记忆 [[project_rpc_30s_timeout_freeze]] / [[project_main_sync_fs_freeze]]。
 
 ### ⬜ 错误处理与恢复
 
@@ -159,13 +159,16 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 - [ ] 提供管理 UI/命令：查看当前 workspace 绑定了哪些数据源、哪些文件/资源可读
 - [ ] 记录授权来源、更新时间、失效/撤销状态，保证可审计与可撤销
 
-### 🔧 插件 MCP 加载/禁用链路收尾
+### ✅ 插件 MCP 加载/禁用链路收尾
 
-- [ ] 安装插件后，新 session 自动加载插件 MCP
-- [ ] 禁用插件后，不再合并 MCP server
-- [ ] 禁用插件后，已连接 server 被 disconnect
-- [ ] 禁用插件后，`ToolRegistry` 对应 MCP tools 被 unregister
-- [ ] 重新启用插件后，可重新 connect/register
+链路全通(reconcile→disconnect→unregister),并补上 reconcile 的 catch/日志兜底。
+
+- [x] 安装插件后，新 session 自动加载插件 MCP（mergePluginMcpServers,ea9dc50)
+- [x] 禁用插件后，不再合并 MCP server（reconcile 按 enabled!==false 过滤)
+- [x] 禁用插件后，已连接 server 被 disconnect（reconcile 把 stale 全 disconnect)
+- [x] 禁用插件后，`ToolRegistry` 对应 MCP tools 被 unregister（disconnect 的 finally 块逐工具 unregisterTool)
+- [x] 重新启用插件后，可重新 connect/register（connectAll 幂等)
+- [x] **`engine.ts` 的 async reconcile 加 catch/日志兜底**（原 `void reconcile()` 无 catch,失败=未处理拒绝可崩主进程;已加 `.catch` → `engine.mcp_reconcile_failed` 日志。测试 engine-config-hot-reload.test.ts)
 
 ### ⬜ MCP 管理页展示插件提供的 MCP server
 

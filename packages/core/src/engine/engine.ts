@@ -2149,7 +2149,17 @@ export class Engine {
     }
     this.reloadHooks();
     if (patch.mcpServers && this.mcpManager) {
-      void this.mcpManager.reconcile(patch.mcpServers);
+      // Fire-and-forget reconcile (connect added / disconnect removed servers).
+      // It must NOT surface as an unhandled rejection: a single flaky server
+      // that fails to connect/disconnect during hot-reload would otherwise
+      // crash the host process (or be silently swallowed). Catch + log so the
+      // reconcile is best-effort and the next reload can retry.
+      void this.mcpManager.reconcile(patch.mcpServers).catch((err) => {
+        logger.error("engine.mcp_reconcile_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          version,
+        });
+      });
     }
     this.lastAppliedConfigVersion = version;
   }

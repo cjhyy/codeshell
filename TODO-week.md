@@ -273,15 +273,15 @@
 
 ## 6. 插件、MCP、Workspace 数据源与远程控制
 
-### 6.1 插件 MCP 加载 / 禁用链路收尾
+### 6.1 插件 MCP 加载 / 禁用链路收尾 ✅
 
-- [ ] 安装插件后，新 session 自动加载插件 MCP。
-- [ ] 禁用插件后，不再合并 MCP server。
-- [ ] 禁用插件后，已连接 server 被 disconnect。
-- [ ] 禁用插件后，`ToolRegistry` 对应 MCP tools 被 unregister。
-- [ ] 重新启用插件后，可重新 connect / register。
-- [ ] `engine.ts` 的 async reconcile 加 catch / 日志兜底。
-- [ ] 评估 reconcile 切断进行中 MCP 调用的用户体验。
+- [x] 安装插件后，新 session 自动加载插件 MCP（mergePluginMcpServers)。
+- [x] 禁用插件后，不再合并 MCP server（reconcile 按 enabled 过滤)。
+- [x] 禁用插件后，已连接 server 被 disconnect（reconcile 把 stale 全 disconnect)。
+- [x] 禁用插件后，`ToolRegistry` 对应 MCP tools 被 unregister（disconnect finally 逐工具 unregister)。
+- [x] 重新启用插件后，可重新 connect / register（connectAll 幂等)。
+- [x] `engine.ts` 的 async reconcile 加 catch / 日志兜底（原 void 无 catch,失败=未处理拒绝可崩主进程;已加 catch→日志。测试 engine-config-hot-reload.test.ts)。
+- [ ] 评估 reconcile 切断进行中 MCP 调用的用户体验(UI/产品观察,排后)。
 
 ### 6.2 MCP 管理页展示插件提供的 MCP server
 
