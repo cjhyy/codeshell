@@ -106,6 +106,10 @@ export function buildCommands(opts: {
   const { setViewMode, toggleSidebar, toggleInspector, clearTranscript, openSearch } = opts;
   return [
     { id: "go.chat", label: "打开 对话", run: () => setViewMode("chat") },
+    { id: "go.files", label: "打开 文件", hint: "Cmd+Shift+E", run: () => setViewMode("files") },
+    { id: "go.browser", label: "打开 浏览器", hint: "Cmd+T", run: () => setViewMode("browser") },
+    { id: "go.review", label: "打开 审查", hint: "Ctrl+Shift+G", run: () => setViewMode("review") },
+    { id: "go.terminal", label: "打开 终端", hint: "Ctrl+`", run: () => setViewMode("terminal") },
     { id: "go.sessions", label: "打开 会话", run: () => setViewMode("sessions") },
     { id: "go.approvals", label: "打开 审批", run: () => setViewMode("approvals") },
     { id: "go.runs", label: "打开 运行", run: () => setViewMode("runs") },

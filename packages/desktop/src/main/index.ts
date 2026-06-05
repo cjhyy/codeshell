@@ -37,6 +37,8 @@ import {
   type UpdateAutomationInput,
 } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
+import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
+import { readDirectory, readFile as fsReadFile } from "./fs-service.js";
 import {
   getGitStatus,
   getGitBranches,
@@ -156,7 +158,38 @@ async function createWindow(): Promise<BrowserWindow> {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Enable <webview> for the built-in browser panel. The guest runs in its
+      // own process/partition; we harden its webPreferences on attach below.
+      webviewTag: true,
     },
+  });
+
+  // Harden every <webview> guest the browser panel attaches: keep node off,
+  // sandbox on, isolated context, web security on — the guest only renders
+  // remote pages and must never gain Node or escape same-origin.
+  win.webContents.on("will-attach-webview", (_e, webPreferences, params) => {
+    delete (webPreferences as Record<string, unknown>).preload;
+    webPreferences.nodeIntegration = false;
+    webPreferences.nodeIntegrationInSubFrames = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+    webPreferences.webSecurity = true;
+    // No renderer-driven popups; strip the attribute and deny window.open on
+    // the guest below. (params is a string attribute map — delete, don't set.)
+    delete (params as Record<string, unknown>).allowpopups;
+    // Persist a shared session so logins survive across tabs/restarts.
+    if (!params.partition) params.partition = "persist:browser";
+  });
+  // Gate the guest's navigation/popups once attached: deny window.open, and
+  // refuse non-web schemes (file:, etc.) — the panel is for http(s) only.
+  win.webContents.on("did-attach-webview", (_e, guest) => {
+    guest.setWindowOpenHandler(({ url }) => {
+      if (/^https?:/i.test(url)) void shell.openExternal(url);
+      return { action: "deny" };
+    });
+    guest.on("will-navigate", (ev, url) => {
+      if (!/^(https?|about):/i.test(url)) ev.preventDefault();
+    });
   });
 
   if (ws.maximized) win.maximize();
@@ -198,7 +231,9 @@ async function createWindow(): Promise<BrowserWindow> {
           "style-src 'self' 'unsafe-inline'; " +
           "img-src 'self' data:; " +
           "font-src 'self' data:; " +
-          "connect-src 'self'; " +
+          // localhost connect is needed by the browser panel's dev-server
+          // probe; without it the prod build can never detect local servers.
+          "connect-src 'self' http://localhost:* http://127.0.0.1:*; " +
           "object-src 'none'; " +
           "base-uri 'none'; " +
           "frame-ancestors 'none'",
@@ -225,12 +260,13 @@ async function createWindow(): Promise<BrowserWindow> {
   });
 
   const devUrl = process.env.VITE_DEV_URL;
+  const noDevtools = process.env.CODE_SHELL_NO_DEVTOOLS === "1";
   if (devUrl) {
     win.loadURL(devUrl);
-    win.webContents.openDevTools({ mode: "right" });
+    if (!noDevtools) win.webContents.openDevTools({ mode: "right" });
   } else {
     win.loadFile(resolve(__dirname, "..", "renderer", "index.html"));
-    if (!app.isPackaged) win.webContents.openDevTools({ mode: "right" });
+    if (!app.isPackaged && !noDevtools) win.webContents.openDevTools({ mode: "right" });
   }
 
   win.webContents.on("did-fail-load", (_e, code, desc, url) => {
@@ -260,6 +296,12 @@ async function createWindow(): Promise<BrowserWindow> {
   win.on("close", persist);
   win.on("resize", persist);
   win.on("move", persist);
+  // macOS keeps the app alive after the last window closes, so ptys whose
+  // window is gone would otherwise leak until quit. Reap them once the
+  // webContents is actually torn down (next tick after `closed`).
+  win.on("closed", () => {
+    setImmediate(ptyReapDestroyed);
+  });
 
   if (!bridge) {
     bridge = new AgentBridge(win);
@@ -745,6 +787,38 @@ ipcMain.handle(
   },
 );
 
+// ── Terminal (pty) — interactive shell panel ───────────────────────────────
+// Output streams back to the requesting webContents via "pty:data"/"pty:exit".
+ipcMain.handle(
+  "pty:start",
+  (e, opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) => {
+    if (!opts || typeof opts.sessionId !== "string" || !opts.sessionId) {
+      throw new Error("pty:start requires sessionId");
+    }
+    return ptyStart(e.sender, opts);
+  },
+);
+ipcMain.handle("pty:write", (_e, sessionId: string, data: string) => {
+  ptyWrite(sessionId, data);
+});
+ipcMain.handle("pty:resize", (_e, sessionId: string, cols: number, rows: number) => {
+  ptyResize(sessionId, cols, rows);
+});
+ipcMain.handle("pty:kill", (_e, sessionId: string) => {
+  ptyKill(sessionId);
+});
+
+// ── Filesystem reads — file-browser panel ──────────────────────────────────
+ipcMain.handle("fs:readDir", async (_e, root: string, dir: string) => {
+  if (typeof root !== "string" || !root) throw new Error("fs:readDir requires root");
+  return readDirectory(root, typeof dir === "string" && dir ? dir : root);
+});
+ipcMain.handle("fs:readFile", async (_e, root: string, path: string) => {
+  if (typeof root !== "string" || !root) throw new Error("fs:readFile requires root");
+  if (typeof path !== "string" || !path) throw new Error("fs:readFile requires path");
+  return fsReadFile(root, path);
+});
+
 ipcMain.handle("settings:get", async (_e, scope: SettingsScope, cwd?: string) => {
   if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
   return readSettings(scope, cwd);
@@ -941,6 +1015,7 @@ app.on("before-quit", () => {
   bridge?.kill();
   automationHandle?.stop();
   automationHandle = null;
+  ptyKillAll();
 });
 
 app.on("activate", () => {

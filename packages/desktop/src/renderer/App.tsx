@@ -78,6 +78,10 @@ import { SettingsPage } from "./settings/SettingsPage";
 import { RunsView } from "./runs/RunsView";
 import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
+import { FilesPanel } from "./panels/FilesPanel";
+import { BrowserPanel } from "./panels/BrowserPanel";
+import { ReviewPanel } from "./panels/ReviewPanel";
+import { TerminalPanel } from "./panels/TerminalPanel";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -1493,6 +1497,18 @@ function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       const mod = e.metaKey || e.ctrlKey;
+      // Is the user typing into an editable field? Panel-switch hotkeys
+      // (esp. ⌃` and ⌘⇧E, which produce/consume printable chars) must not
+      // fire while typing, or they'd swallow keystrokes. The app-global
+      // ⌘K/⌘P/⌘F palette/search keys deliberately still work from inputs.
+      const t = e.target as HTMLElement | null;
+      const typing =
+        !!t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.isContentEditable ||
+          // xterm's helper textarea / the terminal viewport
+          !!t.closest(".xterm"));
       if (mod && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setPaletteOpen((o) => !o);
@@ -1505,6 +1521,22 @@ function App() {
       } else if (mod && e.key.toLowerCase() === "b") {
         e.preventDefault();
         toggleSidebar();
+      } else if (!typing && mod && e.key.toLowerCase() === "t") {
+        // ⌘T — built-in browser
+        e.preventDefault();
+        setViewMode("browser");
+      } else if (!typing && mod && e.shiftKey && e.key.toLowerCase() === "e") {
+        // ⌘⇧E — file browser (⌘P is taken by session search)
+        e.preventDefault();
+        setViewMode("files");
+      } else if (!typing && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "g") {
+        // ⌃⇧G — code review / diff
+        e.preventDefault();
+        setViewMode("review");
+      } else if (!typing && e.ctrlKey && e.code === "Backquote") {
+        // ⌃` — interactive terminal (use physical key for layout safety)
+        e.preventDefault();
+        setViewMode("terminal");
       } else if (mod && e.key >= "1" && e.key <= "9") {
         // Cmd+N — jump to Nth session under active repo.
         const n = parseInt(e.key, 10) - 1;
@@ -1522,7 +1554,7 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [paletteOpen, searchOpen, sessionIndices, activeRepoId]);
+  }, [paletteOpen, searchOpen, sessionSearchOpen, sessionIndices, activeRepoId]);
 
   useEffect(() => {
     const off = window.codeshell.onMenuEvent((evt, payload) => {
@@ -1849,6 +1881,17 @@ function App() {
           <LogsView />
         ) : view.viewMode === "customize" ? (
           <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
+        ) : view.viewMode === "files" ? (
+          <FilesPanel cwd={activeRepo?.path ?? null} />
+        ) : view.viewMode === "browser" ? (
+          <BrowserPanel cwd={activeRepo?.path ?? null} />
+        ) : view.viewMode === "review" ? (
+          <ReviewPanel cwd={activeRepo?.path ?? null} />
+        ) : view.viewMode === "terminal" ? (
+          <TerminalPanel
+            cwd={activeRepo?.path ?? null}
+            sessionId={`term:${activeRepoId ?? "no-repo"}`}
+          />
         ) : view.viewMode === "runs" ? (
           <RunsView initialRunId={runsInitialRunId} />
         ) : view.viewMode === "automation" ? (

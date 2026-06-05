@@ -154,6 +154,23 @@ export interface InstalledSkill {
   filePath: string;
 }
 
+/** One entry in the file-browser tree. */
+export interface FsEntry {
+  name: string;
+  /** Absolute path. */
+  path: string;
+  isDirectory: boolean;
+}
+
+/** A file's contents for the file-browser preview. */
+export interface FileContent {
+  path: string;
+  /** UTF-8 text, or null when binary / too large. */
+  text: string | null;
+  reason?: "too-large" | "binary";
+  size: number;
+}
+
 export interface CodeshellApi {
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
@@ -242,6 +259,35 @@ export interface CodeshellApi {
   }): Promise<void>;
   /** Unified diff for the working tree (vs HEAD). file optional. */
   getGitDiff(cwd: string, file?: string): Promise<string>;
+
+  // ── Terminal (pty) — interactive shell panel ──────────────────────────
+  /** Token unique to this window's renderer process (for window-unique ids). */
+  windowToken: string;
+  /** Start (or reattach) the pty for sessionId; returns the shell pid. */
+  ptyStart(opts: {
+    sessionId: string;
+    cwd?: string;
+    cols?: number;
+    rows?: number;
+  }): Promise<{ pid: number }>;
+  /** Send user keystrokes to the shell. */
+  ptyWrite(sessionId: string, data: string): Promise<void>;
+  /** Tell the shell the viewport changed. */
+  ptyResize(sessionId: string, cols: number, rows: number): Promise<void>;
+  /** Terminate the shell. */
+  ptyKill(sessionId: string): Promise<void>;
+  /** Subscribe to shell output. Returns an unsubscribe fn. */
+  onPtyData(cb: (msg: { sessionId: string; data: string }) => void): () => void;
+  /** Subscribe to shell exit. Returns an unsubscribe fn. */
+  onPtyExit(
+    cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
+  ): () => void;
+
+  // ── Filesystem — file-browser panel ───────────────────────────────────
+  /** List one directory level under the workspace root (dirs first). */
+  readDir(root: string, dir: string): Promise<FsEntry[]>;
+  /** Read a text file (capped at 2 MB; binary/oversize → text null). */
+  readFileContent(root: string, path: string): Promise<FileContent>;
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string): Promise<void>;
   /**

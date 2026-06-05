@@ -433,4 +433,37 @@ contextBridge.exposeInMainWorld("codeshell", {
       handlers.forEach(({ c, h }) => ipcRenderer.removeListener(c, h));
     };
   },
+
+  // ── Terminal (pty) ────────────────────────────────────────────────────
+  /**
+   * A token unique to this window's renderer process. Used to make terminal
+   * session ids window-unique so two windows on the same repo don't hijack
+   * each other's shell. Each BrowserWindow gets its own renderer process, so
+   * its pid is a stable per-window discriminator for the window's lifetime.
+   */
+  windowToken: String(process.pid),
+  ptyStart: (opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) =>
+    ipcRenderer.invoke("pty:start", opts) as Promise<{ pid: number }>,
+  ptyWrite: (sessionId: string, data: string) =>
+    ipcRenderer.invoke("pty:write", sessionId, data),
+  ptyResize: (sessionId: string, cols: number, rows: number) =>
+    ipcRenderer.invoke("pty:resize", sessionId, cols, rows),
+  ptyKill: (sessionId: string) => ipcRenderer.invoke("pty:kill", sessionId),
+  onPtyData: (cb: (msg: { sessionId: string; data: string }) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; data: string }) => cb(msg);
+    ipcRenderer.on("pty:data", h);
+    return () => ipcRenderer.removeListener("pty:data", h);
+  },
+  onPtyExit: (
+    cb: (msg: { sessionId: string; exitCode: number; signal?: number }) => void,
+  ): (() => void) => {
+    const h = (_e: IpcRendererEvent, msg: { sessionId: string; exitCode: number; signal?: number }) =>
+      cb(msg);
+    ipcRenderer.on("pty:exit", h);
+    return () => ipcRenderer.removeListener("pty:exit", h);
+  },
+
+  // ── Filesystem (file-browser panel) ───────────────────────────────────
+  readDir: (root: string, dir: string) => ipcRenderer.invoke("fs:readDir", root, dir),
+  readFileContent: (root: string, path: string) => ipcRenderer.invoke("fs:readFile", root, path),
 });
