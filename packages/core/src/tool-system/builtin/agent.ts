@@ -130,8 +130,30 @@ export function agentToolDefWithTypes(
   registry: AgentDefinitionRegistry | undefined,
 ): ToolDefinition {
   const block = buildAgentTypesBlock(registry);
-  if (!block) return agentToolDef;
-  return { ...agentToolDef, description: agentToolDef.description + "\n" + block };
+  const names = registry?.list().map((d) => d.name) ?? [];
+  if (!block && names.length === 0) return agentToolDef;
+
+  // Constrain agent_type to the loaded kind names so the model can't invent a
+  // role that doesn't exist (resolveAgentTypeOverrides would throw, wasting a
+  // turn). A free string still slipped through before; an enum surfaces the
+  // valid set directly in the schema the model sees. We rebuild the property
+  // (not mutate the shared const) so each engine's registry stays isolated.
+  const baseProps =
+    (agentToolDef.inputSchema.properties as Record<string, Record<string, unknown>>) ?? {};
+  const baseAgentType = baseProps.agent_type ?? {};
+  const inputSchema: Record<string, unknown> = {
+    ...agentToolDef.inputSchema,
+    properties: {
+      ...baseProps,
+      agent_type:
+        names.length > 0 ? { ...baseAgentType, enum: names } : baseAgentType,
+    },
+  };
+  return {
+    ...agentToolDef,
+    description: block ? agentToolDef.description + "\n" + block : agentToolDef.description,
+    inputSchema,
+  };
 }
 
 type SubAgentLifecycle = "subagent_start" | "subagent_finish" | "subagent_error";
@@ -282,7 +304,9 @@ export async function agentTool(
   const prompt = args.prompt as string;
   const description = (args.description as string) || "sub-agent";
   const rawName = (args.name as string | undefined)?.trim();
-  const name = rawName && rawName.length > 0 ? rawName : undefined;
+  // Resolved below: when the model omits `name`, fall back to the resolved
+  // kind name so the dock shows a meaningful label instead of bare "Agent".
+  let name = rawName && rawName.length > 0 ? rawName : undefined;
   if (!prompt) return "Error: prompt is required";
 
   if (!ctx?.subAgentSpawner) {
@@ -309,6 +333,14 @@ export async function agentTool(
     overrides = resolveAgentTypeOverrides(agentType, ctx?.agentDefinitions);
   } catch (err) {
     return `Error: ${(err as Error).message}`;
+  }
+
+  // Dock label fallback: an omitted `name` defaults to the resolved kind
+  // (e.g. "explorer") so background agents are identifiable in the dock even
+  // when the model didn't pass an explicit label. True ephemeral agents
+  // (empty registry, no resolvedType) keep name undefined → dock shows "Agent".
+  if (name === undefined && overrides.resolvedType) {
+    name = overrides.resolvedType;
   }
 
   const maxTurns = (args.max_turns as number) || overrides.maxTurns || 15;

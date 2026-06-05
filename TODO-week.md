@@ -205,12 +205,12 @@
 - [ ] 删除或替换 AgentStatus 轮询路径。
 - [ ] 同步 `Agent(...)` 超过 120s 自动转后台。
 
-### 4.2 对齐 subagent_type / agents 目录机制
+### 4.2 对齐 subagent_type / agents 目录机制 🔧
 
-- [ ] 把 `agent_type` 升级为 schema enum。
-- [ ] 动态注入已 load 的 kind 名，让 LLM 看得见可选子代理。
-- [ ] `AsyncAgentEntry.name` 填 kind name，增强 dock 显示。
-- [ ] 主 agent 系统 prompt 加 kind 选择指南。
+- [x] 把 `agent_type` 升级为 schema enum（`agentToolDefWithTypes` 动态注入 enum=已 load 的 kind 名;空 registry 维持自由串以跑临时 agent）。
+- [x] 动态注入已 load 的 kind 名，让 LLM 看得见可选子代理（enum + 描述块双管）。
+- [x] `AsyncAgentEntry.name` 填 kind name：省略 `name` 时回退到 resolvedType,dock 显示有意义标签而非裸 "Agent"。
+- [x] 主 agent kind 选择指南：已由 `buildAgentTypesBlock` 注入 Agent 工具描述（CC 范式,指南随工具走不重复进 system prompt）。
 - [ ] Agent 角色预定义到 config：用户级目录已有，补 settings-level 默认配置。
 
 ### 4.3 子 agent skill 隔离 ✅

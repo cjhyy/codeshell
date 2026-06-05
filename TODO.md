@@ -215,11 +215,11 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 - [ ] outputFile 机制 + 删 AgentStatus：每个 background agent 写 `~/.code-shell/agents/<agentId>.txt`
 - [ ] auto-background after 120s：同步 `Agent(...)` 跑超过 120s 自动转后台
 
-### 🔧 对齐 CC 的 subagent_type / agents 目录机制（剩余项）
+### ✅ 对齐 CC 的 subagent_type / agents 目录机制（剩余项）
 
-- [ ] 把 `agent_type` 升级为 schema enum，动态注入已 load 的 kind 名让 LLM 看得见
-- [ ] `AsyncAgentEntry.name` 改成填 kind name：增强 dock 显示
-- [ ] 主 agent 系统 prompt 加 kind 选择指南
+- [x] 把 `agent_type` 升级为 schema enum，动态注入已 load 的 kind 名让 LLM 看得见（`agentToolDefWithTypes`；空 registry 维持自由串）
+- [x] `AsyncAgentEntry.name` 改成填 kind name：省略 name 时回退 resolvedType，增强 dock 显示
+- [x] 主 agent kind 选择指南：`buildAgentTypesBlock` 已注入 Agent 工具描述（含 enum）
 
 ### 🔧 其他多代理增强
 
