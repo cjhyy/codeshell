@@ -318,7 +318,9 @@ spawnBackground:
 
 **输出上限(防失控):**
 - ringBuffer:每 shell 内存上限(建议 1000 行 / 256KB,取先到者,丢最旧)。
-- 落盘文件:单文件字节上限(建议 8MB,与 mcp_images 同量级),超过后停止写盘但进程继续(日志环绕或停写,实现时定;倾向"停写并在 BashOutput 头部提示 truncated")。
+- 落盘文件:单文件字节上限(建议 8MB,与 mcp_images 同量级)。**超过后环绕覆盖最旧内容**(ring-file 语义),进程继续写。
+  dev server 的早期启动横幅丢了无所谓,用户/agent 关心的永远是"最近的日志";保留最新 8MB 足够,不停写、不无限增长。
+  `BashOutput` 在曾发生环绕时于头部提示 `(older output discarded)`。
 - `BashOutput` 单次返回上限(建议尾部 ~16KB,strip 后),避免一次拉爆 context。
 
 ---
@@ -359,7 +361,7 @@ spawnBackground:
 - session 隔离:session A 的 shell 在 `listForSession(B)` 不可见;`BashOutput` 跨 session 报错。
 - `killSession` / `killAll` 杀净对应集合。
 - pidfile:spawn 写、exit/kill 删;`reapOrphansFromPidfiles` 对死 pid 删文件、对(模拟)活 pid 列 orphaned。
-- 上限:超 ringBuffer 行数丢最旧;超落盘上限提示 truncated;超 per-session shell 上限拒绝。
+- 上限:超 ringBuffer 行数丢最旧;超落盘上限**环绕覆盖最旧**(进程继续写),`BashOutput` 头部提示 `(older output discarded)`;超 per-session shell 上限拒绝。
 
 **关键回归(难点5):**
 - 一个 session 内 `Bash(run_in_background=true)` 跑永不退出的命令,`Engine.run()` 的该 turn **正常收尾**
