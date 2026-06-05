@@ -28,4 +28,24 @@ describe("Markdown", () => {
     expect(html).not.toContain('src="docs/architecture/images/00-framework-overview.png"');
     expect(html).not.toContain("framework overview");
   });
+
+  test("routes raw generated PNG paths through the inline image loader", () => {
+    const html = renderToStaticMarkup(
+      <Markdown text="生成完成：.code-shell/generated_images/example.png" cwd="/repo" />,
+    );
+
+    expect(html).toContain('class="md-inline-image"');
+    expect(html).toContain("example.png");
+    expect(html).not.toContain("codeshell-path:");
+  });
+
+  test("keeps external links as normal links while allowing internal path links", () => {
+    const html = renderToStaticMarkup(
+      <Markdown text="外部 [site](https://example.com) 内部 packages/core/src/index.ts" />,
+    );
+
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain("codeshell-path:");
+    expect(html).toContain('data-path-link="true"');
+  });
 });

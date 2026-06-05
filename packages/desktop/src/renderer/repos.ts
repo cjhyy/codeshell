@@ -9,6 +9,8 @@
  * `对话` section (NO_REPO_KEY bucket in transcripts.ts).
  */
 
+import { isCaseInsensitivePlatform, normalizeCwd } from "./automation/pathMatch";
+
 export interface Repo {
   id: string;
   /** Default name derived from path basename when first added. */
@@ -24,6 +26,7 @@ export interface Repo {
 
 const REPOS_KEY = "codeshell.repos";
 const ACTIVE_KEY = "codeshell.activeRepoId";
+const REMOVED_PATHS_KEY = "codeshell.removedRepoPaths";
 
 export function loadRepos(): Repo[] {
   try {
@@ -66,6 +69,68 @@ export function saveActiveRepoId(id: string | null): void {
   } catch {
     // best effort
   }
+}
+
+function normalizeRepoPath(path: string): string {
+  // Reuse the canonical cwd→repo matcher's normalization so the removed-path
+  // denylist agrees with matchRepoIdForCwd: strip trailing slashes, keep a
+  // lone "/", and lowercase on case-insensitive platforms (macOS/Windows).
+  // Without this, a repo removed as /Users/Me/Proj wouldn't match an
+  // auto-create for /users/me/proj and would silently resurrect.
+  //
+  // Empty input stays empty (callers drop it via `!path` / filter(Boolean)) —
+  // we must NOT let normalizeCwd turn "" into "/" and persist a bogus
+  // "root removed" entry.
+  const trimmed = path.trim();
+  if (!trimmed) return "";
+  return normalizeCwd(trimmed, isCaseInsensitivePlatform());
+}
+
+export function loadRemovedRepoPaths(): string[] {
+  try {
+    const raw = localStorage.getItem(REMOVED_PATHS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const item of parsed) {
+      if (typeof item !== "string") continue;
+      const path = normalizeRepoPath(item);
+      if (!path || seen.has(path)) continue;
+      seen.add(path);
+      out.push(path);
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+export function saveRemovedRepoPaths(paths: string[]): void {
+  try {
+    const normalized = paths.map(normalizeRepoPath).filter(Boolean);
+    localStorage.setItem(REMOVED_PATHS_KEY, JSON.stringify([...new Set(normalized)]));
+  } catch {
+    // best effort
+  }
+}
+
+export function isRepoPathRemoved(path: string): boolean {
+  const normalized = normalizeRepoPath(path);
+  return loadRemovedRepoPaths().includes(normalized);
+}
+
+export function markRepoPathRemoved(path: string): void {
+  const normalized = normalizeRepoPath(path);
+  if (!normalized) return;
+  saveRemovedRepoPaths([...loadRemovedRepoPaths(), normalized]);
+}
+
+export function unmarkRepoPathRemoved(path: string): void {
+  const normalized = normalizeRepoPath(path);
+  if (!normalized) return;
+  saveRemovedRepoPaths(loadRemovedRepoPaths().filter((p) => p !== normalized));
 }
 
 /** Reasonably-unique id without pulling in nanoid. */

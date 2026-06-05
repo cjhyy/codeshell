@@ -54,6 +54,9 @@ import {
   loadActiveRepoId,
   saveActiveRepoId,
   makeRepoId,
+  isRepoPathRemoved,
+  markRepoPathRemoved,
+  unmarkRepoPathRemoved,
   type Repo,
 } from "./repos";
 import { importAutomationRuns, type ImportableRun } from "./automation/importRuns";
@@ -62,6 +65,11 @@ import { chooseHydrateBase } from "./automation/hydrateOrder";
 import { isCaseInsensitivePlatform } from "./automation/pathMatch";
 import { placeLiveAutomationSession } from "./automation/liveSession";
 import { planDiskRebuild, type DiskSessionMeta } from "./automation/rebuildFromDisk";
+import {
+  enqueueQueuedInput,
+  dequeueQueuedInput,
+  type QueuedInputState,
+} from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
 import { LogsView } from "./logs/LogsView";
@@ -169,6 +177,7 @@ function App() {
   const [approvalHistory, setApprovalHistory] = useState<ApprovalHistoryEntry[]>([]);
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
+  const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
   // Buckets that finished a turn while the user was viewing a different
   // session. Cleared when the user selects the bucket (handleSelectSession).
   // Not persisted — purely a live "did something finish off-screen" hint.
@@ -523,6 +532,7 @@ function App() {
     if (!picked) return;
     const dup = repos.find((r) => r.path === picked.path);
     if (dup) {
+      unmarkRepoPathRemoved(picked.path);
       setActiveRepoId(dup.id);
       return;
     }
@@ -532,6 +542,7 @@ function App() {
       path: picked.path,
       addedAt: Date.now(),
     };
+    unmarkRepoPathRemoved(next.path);
     setRepos((prev) => [...prev, next]);
     setActiveRepoId(next.id);
     setSessionIndices((prev) => ({
@@ -542,6 +553,8 @@ function App() {
   };
 
   const handleRemoveRepo = (id: string): void => {
+    const repo = repos.find((r) => r.id === id);
+    if (repo) markRepoPathRemoved(repo.path);
     setRepos((prev) => prev.filter((r) => r.id !== id));
     if (activeRepoId === id) setActiveRepoId(null);
     setSessionIndices((prev) => {
@@ -661,6 +674,7 @@ function App() {
         cap: 1,
         fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
         createRepoForCwd: (cwd) => {
+          if (isRepoPathRemoved(cwd)) return null;
           const id = makeRepoId();
           const name = cwd.split("/").filter(Boolean).pop() || cwd;
           const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
@@ -706,6 +720,7 @@ function App() {
     const [placement] = planDiskRebuild([session], reposNow, {
       caseInsensitive: isCaseInsensitivePlatform(),
       createRepoForCwd: (cwd) => {
+        if (isRepoPathRemoved(cwd)) return null;
         const id = makeRepoId();
         const name = cwd.split("/").filter(Boolean).pop() || cwd;
         const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
@@ -870,6 +885,7 @@ function App() {
         cap: 50,
         fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
         createRepoForCwd: (cwd) => {
+          if (isRepoPathRemoved(cwd)) return null;
           const id = makeRepoId();
           const name = cwd.split("/").filter(Boolean).pop() || cwd;
           const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
@@ -919,6 +935,7 @@ function App() {
         const placements = planDiskRebuild(page.sessions, reposNow, {
           caseInsensitive: isCaseInsensitivePlatform(),
           createRepoForCwd: (cwd) => {
+            if (isRepoPathRemoved(cwd)) return null;
             const id = makeRepoId();
             const name = cwd.split("/").filter(Boolean).pop() || cwd;
             const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
@@ -1138,9 +1155,10 @@ function App() {
         return;
       }
       let reposChanged = false;
-      const { repoId, summary } = placeLiveAutomationSession(meta, reposNow, {
+      const placement = placeLiveAutomationSession(meta, reposNow, {
         caseInsensitive: isCaseInsensitivePlatform(),
         createRepoForCwd: (cwd) => {
+          if (isRepoPathRemoved(cwd)) return null;
           const id = makeRepoId();
           const name = cwd.split("/").filter(Boolean).pop() || cwd;
           const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
@@ -1150,6 +1168,8 @@ function App() {
           return id;
         },
       });
+      if (!placement) return;
+      const { repoId, summary } = placement;
       const nextIdx = upsertImportedSession(repoId, summary);
       const bucket = bucketKey(repoId, summary.id);
       // Register the route so this run's stream events (already arriving) bucket
@@ -1374,8 +1394,26 @@ function App() {
       });
   };
 
-  const stop = (): void => {
-    const bucket = runningBucketRef.current ?? activeBucket;
+  useEffect(() => {
+    if (busy || !activeSessionId) return;
+    const queued = queuedInputs[activeBucket];
+    if (!queued || queued.length === 0) return;
+    const { text, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
+    setQueuedInputs(next);
+    if (text) send(text);
+  }, [busy, activeBucket, activeSessionId, queuedInputs]);
+
+  const queueInput = (text: string): void => {
+    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
+  };
+
+  const forceSend = (text: string): void => {
+    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
+    stop(activeBucket);
+  };
+
+  const stop = (bucketOverride?: string): void => {
+    const bucket = bucketOverride ?? runningBucketRef.current ?? activeBucket;
     const sep = bucket.indexOf("::");
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
     const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
@@ -1495,6 +1533,7 @@ function App() {
         case "open-recent": {
           const p = payload as { path: string; name: string } | undefined;
           if (!p) return;
+          unmarkRepoPathRemoved(p.path);
           const existing = repos.find((r) => r.path === p.path);
           if (existing) setActiveRepoId(existing.id);
           else {
@@ -1829,8 +1868,11 @@ function App() {
               turnEpoch={state.turnEpoch}
               liveTurnActive={busy && state.streamingAssistantId !== null}
               onSend={send}
+              onQueueInput={queueInput}
+              onForceSend={forceSend}
               onStop={stop}
               busy={busy}
+              queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
               runningAgents={runningAgents}
               activeRepoId={activeRepoId}
               composerSeed={composerSeed}

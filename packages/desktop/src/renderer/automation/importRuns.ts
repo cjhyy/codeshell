@@ -35,7 +35,7 @@ export interface ImportDeps {
     state: MessagesReducerState,
   ) => void;
   /** Create a repo for an unmatched cwd; returns its id. */
-  createRepoForCwd: (cwd: string) => string;
+  createRepoForCwd: (cwd: string) => string | null;
   /** Max runs imported per repo (most-recent first). */
   cap: number;
 }
@@ -70,6 +70,7 @@ export async function importAutomationRuns(
       repoId = autoCreated.get(key) ?? null;
       if (!repoId) {
         repoId = deps.createRepoForCwd(r.cwd);
+        if (!repoId) continue;
         autoCreated.set(key, repoId);
       }
     }

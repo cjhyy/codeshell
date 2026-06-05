@@ -15,7 +15,7 @@
  */
 
 import React, { memo, useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.css";
@@ -53,6 +53,9 @@ function MarkdownImpl({ text, cwd }: Props) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkPathLinks]}
         rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+        urlTransform={(url) =>
+          url.startsWith(CODESHELL_PATH_SCHEME) ? url : defaultUrlTransform(url)
+        }
         components={{
           img: ({ src, alt, node: _node, ...rest }) => {
             const localDecoded = src ? decodeLocalPathHref(src) : null;
@@ -198,9 +201,18 @@ function InlineImageLink({
   }, [abs]);
 
   if (loading) {
-    // IPC in flight — render an empty inline placeholder so a valid image
-    // doesn't flash the fallback link before its bytes arrive.
-    return <span className="md-inline-image" aria-hidden="true" />;
+    return (
+      <span className="md-inline-image">
+        <button
+          type="button"
+          className="md-inline-image-name"
+          title={path}
+          onClick={() => void window.codeshell.openPath(path, cwd ?? undefined)}
+        >
+          {filename}
+        </button>
+      </span>
+    );
   }
 
   if (!src || failed) {

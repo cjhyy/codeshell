@@ -26,7 +26,7 @@ export interface AutomationSessionAnnouncement {
 export interface PlaceLiveSessionDeps {
   caseInsensitive: boolean;
   /** Create a repo for an unmatched cwd; returns its id. */
-  createRepoForCwd: (cwd: string) => string;
+  createRepoForCwd: (cwd: string) => string | null;
 }
 
 export interface LiveSessionPlacement {
@@ -45,12 +45,13 @@ export function placeLiveAutomationSession(
   ann: AutomationSessionAnnouncement,
   repos: RepoLike[],
   deps: PlaceLiveSessionDeps,
-): LiveSessionPlacement {
+): LiveSessionPlacement | null {
   // The internal no-repo sandbox is a no-project chat → NO_REPO_KEY bucket
   // (repoId null), never a real repo.
   const repoId = isNoRepoCwd(ann.cwd)
     ? null
     : (matchRepoIdForCwd(ann.cwd, repos, deps.caseInsensitive) ?? deps.createRepoForCwd(ann.cwd));
+  if (repoId === null && !isNoRepoCwd(ann.cwd)) return null;
   const now = Date.now();
   const summary: SessionSummary = {
     id: ann.sessionId, // engine sessionId doubles as the UI session id for imports

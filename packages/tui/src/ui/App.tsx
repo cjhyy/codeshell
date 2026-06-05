@@ -140,6 +140,7 @@ export function App({
     [fullscreen],
   );
   const [input, setInput] = useState(prefill ?? "");
+  const [queuedInputs, setQueuedInputs] = useState<string[]>([]);
   const chatLog = useSyncExternalStore(
     chatStore.subscribe.bind(chatStore),
     chatStore.getEntries.bind(chatStore),
@@ -1386,7 +1387,18 @@ export function App({
 
       const head = trimmed.split(/\s+/)[0]?.toLowerCase();
       const READ_ONLY_WHILE_RUNNING = new Set(["/sid", "/help"]);
-      if (isQueryActive && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) return;
+      if (isQueryActive && head === "/force") {
+        const next = trimmed.slice("/force".length).trim();
+        if (next) setQueuedInputs((prev) => [...prev, next]);
+        setInput("");
+        client.cancel().catch(() => {});
+        return;
+      }
+      if (isQueryActive && !READ_ONLY_WHILE_RUNNING.has(head ?? "")) {
+        setQueuedInputs((prev) => [...prev, trimmed]);
+        setInput("");
+        return;
+      }
       if (!isQueryActive) {
         setInput("");
         setShowBanner(false);
@@ -1402,8 +1414,15 @@ export function App({
 
       await submitToEngine(trimmed, { asInjection: false });
     },
-    [isQueryActive, submitToEngine, onScrollToBottom],
+    [isQueryActive, submitToEngine, onScrollToBottom, client],
   );
+
+  useEffect(() => {
+    if (isQueryActive || queuedInputs.length === 0 || input.trim() !== "") return;
+    const [next, ...rest] = queuedInputs;
+    setQueuedInputs(rest);
+    if (next) void handleSubmit(next);
+  }, [isQueryActive, queuedInputs, input, handleSubmit]);
 
   const handleSlashCommand = useCallback(
     (cmd: string) => {

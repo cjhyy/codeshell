@@ -49,6 +49,15 @@ describe("placeLiveAutomationSession", () => {
     expect(createdWith).toBe("/Users/me/fresh");
   });
 
+  it("returns null for an unmatched cwd when repo creation returns null", () => {
+    const placement = placeLiveAutomationSession(
+      { sessionId: "s", cwd: "/Users/me/removed", title: "t", cronJobId: "j" },
+      repos,
+      { caseInsensitive: true, createRepoForCwd: () => null },
+    );
+    expect(placement).toBeNull();
+  });
+
   it("routes an ephemeral/temp cwd to chat (repoId null), never creating a repo", () => {
     let called = false;
     const { repoId } = placeLiveAutomationSession(

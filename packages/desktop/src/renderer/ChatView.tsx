@@ -30,8 +30,11 @@ interface Props {
   turnEpoch?: number;
   liveTurnActive?: boolean;
   onSend: (text: string) => void;
+  onQueueInput?: (text: string) => void;
+  onForceSend?: (text: string) => void;
   onStop: () => void;
   busy: boolean;
+  queuedInputCount?: number;
   /** Count of background sub-agents still running in this session. Shown as a
    *  separate "后台 N 个子代理运行中" hint even after busy clears (run_in_background
    *  resolves the main run immediately while children keep working). */
@@ -78,8 +81,11 @@ export function ChatView({
   turnEpoch,
   liveTurnActive,
   onSend,
+  onQueueInput,
+  onForceSend,
   onStop,
   busy,
+  queuedInputCount = 0,
   runningAgents = 0,
   activeRepoId,
   onAskUserAnswer,
@@ -156,11 +162,11 @@ export function ChatView({
     ta.style.height = next + "px";
   }, [draft]);
 
-  // No-repo conversations are legitimate now (see ProjectPicker's
-  // "不使用项目" option). Only `busy` truly blocks input.
-  const disabled = busy;
+  // Busy no longer disables the textarea: Enter queues input for the next turn.
+  // It still disables side controls whose changes would be ambiguous mid-turn.
+  const controlsDisabled = busy;
   const placeholder = busy
-    ? "agent is working… (Stop 中止)"
+    ? "agent 正在工作…输入内容将先缓存到下一轮"
     : "可向 agent 询问任何事。输入 @ 使用插件或提及文件";
 
   const closeMention = (): void => {
@@ -191,7 +197,6 @@ export function ChatView({
 
   const submit = (): void => {
     const text = draft.trim();
-    if (disabled) return;
     const hasImages = attachments.length > 0;
     if (!text && !hasImages) return;
     // Block send when there are images but the active model can't accept
@@ -204,7 +209,8 @@ export function ChatView({
       return;
     }
     const payload = encodeAttachmentsForWire(text, attachments);
-    onSend(payload);
+    if (busy) onQueueInput?.(payload);
+    else onSend(payload);
     if (text) setHistory(pushHistory(activeRepoId, text));
     setDraft("");
     setAttachments([]);
@@ -570,7 +576,7 @@ export function ChatView({
               onCompositionEnd={() => setIsComposing(false)}
               onPaste={(e) => void handlePaste(e)}
               placeholder={placeholder}
-              disabled={busy}
+              disabled={false}
               rows={1}
               className="max-h-[200px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
             />
@@ -615,12 +621,12 @@ export function ChatView({
               <PermissionPill
                 value={permissionMode}
                 onChange={onPermissionChange}
-                disabled={disabled}
+                disabled={controlsDisabled}
               />
               <GoalToggle
                 enabled={goalEnabled}
                 onToggle={onGoalToggle}
-                disabled={disabled}
+                disabled={controlsDisabled}
               />
             </div>
 
@@ -641,7 +647,25 @@ export function ChatView({
               >
                 <Mic size={14} />
               </button>
-              {busy ? (
+              {busy && draft.trim() && onForceSend && (
+                <button
+                  type="button"
+                  className="rounded-md border border-status-warn/30 px-2 py-1 text-xs text-status-warn hover:bg-status-warn/10"
+                  onClick={() => {
+                    const payload = encodeAttachmentsForWire(draft.trim(), attachments);
+                    onForceSend(payload);
+                    if (draft.trim()) setHistory(pushHistory(activeRepoId, draft.trim()));
+                    setDraft("");
+                    setAttachments([]);
+                    setAttachmentError(null);
+                  }}
+                  aria-label="打断并发送"
+                  title="停止当前轮，随后发送这条输入"
+                >
+                  打断发送
+                </button>
+              )}
+              {busy && (
                 <button
                   type="button"
                   className="flex h-8 w-8 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
@@ -650,13 +674,13 @@ export function ChatView({
                 >
                   <Square size={14} fill="currentColor" />
                 </button>
-              ) : (
+              )}
+              {!busy && (
                 <button
                   type="button"
                   className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50 disabled:opacity-50"
                   onClick={submit}
                   disabled={
-                    disabled ||
                     (!draft.trim() && attachments.length === 0) ||
                     (attachments.length > 0 && !activeSupportsVision)
                   }
@@ -667,6 +691,11 @@ export function ChatView({
               )}
             </div>
           </div>
+          {queuedInputCount > 0 && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              已缓存 {queuedInputCount} 条，将在本轮结束后发送
+            </div>
+          )}
         </div>
 
         {/* Project picker only appears for fresh conversations — once

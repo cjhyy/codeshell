@@ -30,6 +30,15 @@ describe("planDiskRebuild", () => {
     expect(out[0].repoId).toBe("r-new");
   });
 
+  it("skips an unmatched cwd when repo creation returns null", () => {
+    const out = planDiskRebuild(
+      [{ id: "s2", engineSessionId: "s2", cwd: "/proj/removed", title: "x", updatedAt: 1 }],
+      [],
+      { caseInsensitive: false, createRepoForCwd: () => null },
+    );
+    expect(out).toEqual([]);
+  });
+
   it("routes a no-repo sandbox cwd to chat (repoId null), never creating a repo", () => {
     let called = false;
     const out = planDiskRebuild(

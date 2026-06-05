@@ -88,6 +88,12 @@ describe("importAutomationRuns", () => {
     expect(imported[0].repoId).toBe("new-repo");
   });
 
+  it("skips an unmatched cwd when repo creation returns null", async () => {
+    const { d, imported } = deps({ createRepoForCwd: () => null });
+    await importAutomationRuns([run({ cwd: "/somewhere/removed" })], repos, d);
+    expect(imported).toHaveLength(0);
+  });
+
   it("caps to the N most-recent per repo", async () => {
     const runs: ImportableRun[] = [];
     for (let i = 0; i < 60; i++) runs.push(run({ runId: `run-${i}`, sessionId: `sess-${i}`, finishedAt: i }));
