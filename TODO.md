@@ -47,9 +47,9 @@
 
 ### ❓ LLM / Engine 待确认问题
 
-- [ ] **OpenAI 截断续写触发条件不匹配**：OpenAI provider 透传 `finish_reason === "length"`，而 turn-loop 仍按 `stopReason === "max_tokens"` 判断；需要归一为 `"length" | "max_tokens"`
+- [x] **OpenAI 截断续写触发条件不匹配** ✅：已归一。`isTruncatedStop`(llm/stop-reason.ts)接受 `"length"`(OpenAI)与 `"max_tokens"`(Anthropic),turn-loop 截断续写/截断工具调用两处都用它。测试 stop-reason.test.ts + openai-stream-stop.test.ts。
 - [x] **RunManager approval/input resume 竞态** ✅：审查发现两处真隐患并修复——(1) `resume()`/`cancel()` 多 await 点 + 顶部状态检查读到陈旧 `waiting_*`(直到后面 `await transition` 才变),并发双 resume(双击批准)或 resume/cancel 互穿都能双双过检查;加 `resolvingRuns` 每-run 串行守卫(迟到者明确拒绝)。(2) handle 在场但 input 类型不匹配(给 waiting_approval 喂 userInput)会穿到 Case 2 **重新入队一个全新执行**而原 Engine 仍挂起→重复 run+泄漏 handle;改为明确报错。handle 的 resolveApproval 本身幂等(`!pendingApproval` 返回 false)缓解了双 resolve。测试 `RunManager.resume-race.test.ts`(去守卫后并发测试确实失败,证明有效)
-- [ ] **`resolveSandboxBackend` 每 turn 都重 resolve**：应移到 Engine 构造器或加 per-session 缓存
+- [x] **`resolveSandboxBackend` 每 turn 都重 resolve** ✅：已缓存 by `(mode, cwd)`。`EngineRuntime.resolveSandbox`(共享)与 `Engine.resolveSandboxWithoutRuntime`(无 runtime 回退)各有 cache;run 路径 1065-1066 走缓存版,绝不裸调 resolveSandboxBackend;rejection 不缓存(改配置后可重试)。补 runtime.sandbox-cache.test.ts(同键同 promise/异键新建/rejection 不缓存)。
 - [x] **Plugin SessionStart hook 运行时验证** ✅：已确认全链路通。`runPluginCommandHook` 把 stdout 的 additionalContext(CC `hookSpecificOutput.additionalContext` / Cursor `additional_context` / SDK `additionalContext` 三形态)→ `HookResult.messages`,engine.ts:1464 把 `on_session_start` 的 messages splice 进 user prompt 前的 `<system-reminder>`。本会话开头的 "You have superpowers" 即此机制。测试 `plugins/pluginCommandHook.test.ts`(6 用例,含失败兜底)
 - [ ] **自动化 run 卡在 `turn.start` 后、首个 `llm.request` 前**：收集 events/checkpoints/lock/heartbeat；定位 EngineRunner / RunManager / LLM request 前置路径；确认 lock release 与失败恢复
 
