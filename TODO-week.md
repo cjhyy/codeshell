@@ -23,7 +23,18 @@
 
 ## 遗留 / 待确认
 
-当前本周遗留已清空。view_image 的两个计划明确排除项（TUI inline 图片渲染、历史图降级成文字摘要）不作为本周执行项，保留到长期 backlog。
+view_image 的两个计划明确排除项（TUI inline 图片渲染、历史图降级成文字摘要）不作为本周执行项，保留到长期 backlog。
+
+### code-review 遗留（2026-06-05 max-effort 审查，低优先级，已随特性提交但未修）
+
+> 关键项（深层导入崩溃、normalizeRepoPath 大小写/根路径）已在 `ea9dc50`/`2e24b47` 修复。以下为审查保留的次要项，按落点分组待后续处理。
+
+| 状态 | 任务 | 关键落点 |
+| ---- | ---- | -------- |
+| ⬜ 未开始 | **路径审批弹窗匹配过宽 + 标题误导** | `path-policy.ts:341` 批准判定用 `answer.trim().startsWith("允许本次")`，桌面端 AskUser 发原始自由文本（无 TUI 的 `Other:` 前缀），以「允许本次」开头的自由文本会误批准敏感读取——应改成与确切选项标签相等比较；另 `path-policy.ts:332` 标题硬编码「工作区外路径」，对工作区内敏感读取（committed `.env` 等）误标，应据 `c.reason` 区分。 |
+| ⬜ 未开始 | **path-policy 跨工具不一致** | `notebook-edit.ts:74`/`apply-patch/index.ts:95`/`glob.ts:48`/`grep.ts:76` 仍用旧同步 `enforcePathPolicy`（ask→自动拒绝），与已接入弹窗审批的 Read/Write/Edit 不一致；NotebookEdit 作为写类工具尤为明显，唯一绕过是进程级关闭 `CODESHELL_PATH_POLICY`。考虑统一接 `enforcePathPolicyWithApproval`。 |
+| ⬜ 未开始 | **reconcile 切断进行中调用 + 吞 rejection** | `mcp-manager.ts:217` 移除/禁用服务器时会断开其进行中的 MCP 调用（抛错被上报，非挂死；旧逻辑延迟到下次会话重建）；`engine.ts:2138` `void this.mcpManager.reconcile(...)` 无 `.catch`，rejection 被静默吞掉，应加日志兜底。（跨会话切断已验证不会发生——mcpServers 对所有会话全局一致。） |
+| ⬜ 未开始 | **renderer 清理项** | App.tsx 有 4× 几乎相同的 `createRepoForCwd` 闭包（removed 守卫散落各处），可抽 `makeCreateRepoForCwd` 工厂收拢；`McpSection.tsx:124` `stripNameFromServer` 未剥 `source`/`editable`，toggle/save 会把这两个合并专用字段写进 settings.json（运行时无害，schema 会丢弃，但污染配置文件）；`repos.ts` 的 `loadRemovedRepoPaths` 在磁盘重建热循环里被逐会话重复 JSON.parse，可每轮 hoist 一次。 |
 
 ## 📚 相关研究 / 资料
 
