@@ -23,7 +23,8 @@ interface Props {
    * source for creating tabs, so opening the dock can't double-create.
    */
   requestNonce: number;
-  requestKind: PanelTab;
+  /** Kind to open/focus; null opens the dock on the card landing (no tab). */
+  requestKind: PanelTab | null;
   /** Files for a review tab to focus (from a chat "files changed" card). */
   reviewFiles?: string[];
   /** Controlled dock width (px). The divider on the left edge resizes it. */
@@ -114,6 +115,8 @@ export function PanelArea({
   useEffect(() => {
     if (openedNonce.current === requestNonce) return;
     openedNonce.current = requestNonce;
+    // null kind = open the dock on the card landing without creating a tab.
+    if (requestKind === null) return;
     const newTab: OpenTab = { id: mkId(requestKind), kind: requestKind };
     setTabs((prev) => {
       const existing = prev.find((t) => t.kind === requestKind);
@@ -205,12 +208,39 @@ export function PanelArea({
         </button>
       </div>
 
-      {/* Bodies — all mounted, toggled via display. */}
+      {/* Bodies — all mounted, toggled via display. Empty dock shows the
+          card landing so the user picks what to open. */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {tabs.map((t) => (
-          <Slot key={t.id} active={t.id === activeId}>
-            <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} />
-          </Slot>
+        {tabs.length === 0 ? (
+          <PanelLanding onPick={addTab} />
+        ) : (
+          tabs.map((t) => (
+            <Slot key={t.id} active={t.id === activeId}>
+              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} />
+            </Slot>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Empty-dock landing: a card grid to open one of the four panels. */
+function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+      <div className="grid w-full max-w-md grid-cols-2 gap-3">
+        {KINDS.map(({ kind, label, Icon, hint }) => (
+          <button
+            key={kind}
+            type="button"
+            onClick={() => onPick(kind)}
+            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-6 text-center transition-colors hover:border-primary/50 hover:bg-accent"
+          >
+            <Icon className="h-7 w-7 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">{label}</span>
+            {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+          </button>
         ))}
       </div>
     </div>

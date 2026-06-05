@@ -8,7 +8,8 @@ export function addAnchor(input: {
   label: string;
   locator: Record<string, string>;
   comment: string;
-}): void {
+}): string {
   const anchor: Anchor = { id: nextAnchorId(), ...input };
   window.dispatchEvent(new CustomEvent("codeshell:add-anchor", { detail: { anchor } }));
+  return anchor.id;
 }

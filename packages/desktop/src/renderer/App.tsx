@@ -1477,19 +1477,28 @@ function App() {
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
   const [anchors, setAnchors] = useState<Anchor[]>([]);
-  const removeAnchor = (id: string): void => setAnchors((a) => a.filter((x) => x.id !== id));
-  const clearAnchors = (): void => setAnchors([]);
+  const removeAnchor = (id: string): void => {
+    setAnchors((a) => a.filter((x) => x.id !== id));
+    window.dispatchEvent(new CustomEvent("codeshell:anchor-removed", { detail: { id } }));
+  };
+  const clearAnchors = (): void => {
+    setAnchors([]);
+    // Tell panels (e.g. the browser's page markers) the anchors are gone so
+    // they can clear their in-page UI — fires after a message is sent.
+    window.dispatchEvent(new CustomEvent("codeshell:anchors-cleared"));
+  };
   // Panel-dock request: nonce + kind, in ONE state object so opening the dock
   // and choosing the kind is a single atomic update — PanelArea then mounts
   // seeing the right kind and never opens a stray tab for a stale value.
   // open=false means the dock is closed; the nonce only matters while open.
-  const [panelRequest, setPanelRequest] = useState<{ nonce: number; kind: PanelTab; open: boolean }>({
+  const [panelRequest, setPanelRequest] = useState<{ nonce: number; kind: PanelTab | null; open: boolean }>({
     nonce: 0,
-    kind: "files",
+    kind: null,
     open: false,
   });
+  // Top-bar toggle opens the dock on the card landing (kind null) / closes it.
   const togglePanel = (): void =>
-    setPanelRequest((r) => ({ ...r, open: !r.open, nonce: r.nonce + 1 }));
+    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: r.open ? r.kind : null, open: !r.open }));
   // Open the dock and request a tab of `kind` (used by hotkeys, palette, cards).
   const openPanel = (kind: PanelTab): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind, open: true }));
@@ -1632,8 +1641,16 @@ function App() {
       const anchor = (e as CustomEvent<{ anchor?: Anchor }>).detail?.anchor;
       if (anchor) setAnchors((prev) => [...prev, anchor]);
     };
+    const onRemove = (e: Event): void => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (id) setAnchors((prev) => prev.filter((x) => x.id !== id));
+    };
     window.addEventListener("codeshell:add-anchor", onAnchor);
-    return () => window.removeEventListener("codeshell:add-anchor", onAnchor);
+    window.addEventListener("codeshell:remove-anchor-request", onRemove);
+    return () => {
+      window.removeEventListener("codeshell:add-anchor", onAnchor);
+      window.removeEventListener("codeshell:remove-anchor-request", onRemove);
+    };
   }, []);
 
   // A browser popout window pinned an element anchor; it arrives over IPC

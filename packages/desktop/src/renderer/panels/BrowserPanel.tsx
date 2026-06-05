@@ -21,6 +21,19 @@ interface Rect {
   height: number;
 }
 
+/** A saved comment marker shown as a dot over the page. */
+interface PageMarker {
+  id: string;
+  /** Composer anchor id this marker is tied to (for removal sync). */
+  anchorId: string;
+  url: string;
+  rect: Rect;
+  label: string;
+  comment: string;
+}
+
+let markerSeq = 0;
+
 /** What the in-page picker returns about the clicked element. */
 interface PickedElement {
   selector: string;
@@ -142,7 +155,7 @@ interface Props {
    * add-anchor event). The popout window overrides this to send over IPC to the
    * parent window's composer. Return value unused.
    */
-  onAnchor?: (a: { kind: "browser"; label: string; locator: Record<string, string>; comment: string }) => void;
+  onAnchor?: (a: { kind: "browser"; label: string; locator: Record<string, string>; comment: string }) => string | void;
   /** Whether to show the "弹出独立窗口" button (hidden inside the popout itself). */
   showPopout?: boolean;
 }
@@ -161,8 +174,32 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
   // Element-picking ("圈选") state.
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<PickedElement | null>(null);
+  // Saved comment markers on the current page (kept until the message sends).
+  // Keyed list; each has the element rect (for the dot position), the comment,
+  // and the anchor id so removing the anchor removes the dot.
+  const [markers, setMarkers] = useState<PageMarker[]>([]);
+  // Which marker is open for editing (its id), if any.
+  const [editingMarker, setEditingMarker] = useState<string | null>(null);
+
+  // Clear page markers once the composer's anchors are cleared (message sent),
+  // and drop a single marker if its anchor chip is removed.
+  useEffect(() => {
+    const onCleared = (): void => setMarkers([]);
+    const onRemoved = (e: Event): void => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (id) setMarkers((m) => m.filter((x) => x.anchorId !== id));
+    };
+    window.addEventListener("codeshell:anchors-cleared", onCleared);
+    window.addEventListener("codeshell:anchor-removed", onRemoved);
+    return () => {
+      window.removeEventListener("codeshell:anchors-cleared", onCleared);
+      window.removeEventListener("codeshell:anchor-removed", onRemoved);
+    };
+  }, []);
 
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
+  // Markers belong to a page; hide them when not on that URL.
+  const visibleMarkers = markers.filter((m) => m.url === active.url);
 
   const patchTab = useCallback((id: string, patch: Partial<Tab>) => {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -376,34 +413,10 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
           点选页面上的元素以添加评论 · Esc 取消
         </div>
       )}
-      {picked && (
-        <div className="shrink-0 border-b border-border px-2">
-          <CommentBox
-            title={`${picked.tag}${picked.id ? "#" + picked.id : ""} · ${picked.selector}`}
-            onCancel={() => setPicked(null)}
-            onSubmit={(comment) => {
-              emitAnchor({
-                kind: "browser",
-                label: picked.id
-                  ? `${picked.tag}#${picked.id}`
-                  : picked.selector.split(" > ").pop() || picked.tag,
-                locator: {
-                  网址: picked.url,
-                  选择器: picked.selector,
-                  元素: picked.tag + (picked.className ? ` .${picked.className}` : ""),
-                  ...(picked.text ? { 文本: picked.text } : {}),
-                  尺寸: `${Math.round(picked.rect.width)}×${Math.round(picked.rect.height)}`,
-                },
-                comment,
-              });
-              setPicked(null);
-            }}
-          />
-        </div>
-      )}
 
-      {/* Content: webview or the new-tab landing (localhost bookmarks). */}
-      <div className="relative min-h-0 flex-1">
+      {/* Content: webview or the new-tab landing (localhost bookmarks). The
+          element-pick comment box + saved markers float over the page. */}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {active.url === NEW_TAB ? (
           <NewTabLanding onOpen={navigate} />
         ) : (
@@ -419,8 +432,129 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
             style={{ width: "100%", height: "100%", display: "flex" }}
           />
         )}
+
+        {/* Saved comment dots over the page. Click to edit/delete. */}
+        {visibleMarkers.map((m, i) => (
+          <MarkerDot
+            key={m.id}
+            index={i + 1}
+            marker={m}
+            editing={editingMarker === m.id}
+            onOpen={() => setEditingMarker(editingMarker === m.id ? null : m.id)}
+            onDelete={() => {
+              setMarkers((prev) => prev.filter((x) => x.id !== m.id));
+              window.dispatchEvent(
+                new CustomEvent("codeshell:remove-anchor-request", { detail: { id: m.anchorId } }),
+              );
+              setEditingMarker(null);
+            }}
+          />
+        ))}
+
+        {/* Floating comment box for a freshly-picked element, near its rect. */}
+        {picked && (
+          <FloatingAt rect={picked.rect}>
+            <CommentBox
+              title={`${picked.tag}${picked.id ? "#" + picked.id : ""}`}
+              onCancel={() => setPicked(null)}
+              onSubmit={(comment) => {
+                const label = picked.id
+                  ? `${picked.tag}#${picked.id}`
+                  : picked.selector.split(" > ").pop() || picked.tag;
+                const ret = emitAnchor({
+                  kind: "browser",
+                  label,
+                  locator: {
+                    网址: picked.url,
+                    选择器: picked.selector,
+                    元素: picked.tag + (picked.className ? ` .${picked.className}` : ""),
+                    ...(picked.text ? { 文本: picked.text } : {}),
+                    尺寸: `${Math.round(picked.rect.width)}×${Math.round(picked.rect.height)}`,
+                  },
+                  comment,
+                });
+                markerSeq += 1;
+                setMarkers((prev) => [
+                  ...prev,
+                  {
+                    id: `mk-${markerSeq}`,
+                    anchorId: typeof ret === "string" ? ret : `mk-${markerSeq}`,
+                    url: picked.url,
+                    rect: picked.rect,
+                    label,
+                    comment,
+                  },
+                ]);
+                setPicked(null);
+              }}
+            />
+          </FloatingAt>
+        )}
       </div>
     </div>
+  );
+}
+
+/** Position children near a webview-viewport rect, clamped into view. */
+function FloatingAt({ rect, children }: { rect: Rect; children: React.ReactNode }) {
+  // Place just below the element; clamp so it doesn't overflow the panel.
+  const top = Math.max(4, Math.min(rect.y + rect.height + 6, 9999));
+  const left = Math.max(4, rect.x);
+  return (
+    <div className="absolute z-30 w-72 max-w-[90%]" style={{ top, left }}>
+      {children}
+    </div>
+  );
+}
+
+/** A numbered dot at an element's rect; hover shows the comment, click edits. */
+function MarkerDot({
+  index,
+  marker,
+  editing,
+  onOpen,
+  onDelete,
+}: {
+  index: number;
+  marker: PageMarker;
+  editing: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
+  const { rect } = marker;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onOpen}
+        title={marker.comment}
+        className="group absolute z-30 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground shadow ring-2 ring-background"
+        style={{ top: Math.max(2, rect.y - 8), left: Math.max(2, rect.x - 8) }}
+      >
+        {index}
+      </button>
+      {editing && (
+        <div
+          className="absolute z-40 w-72 max-w-[90%] rounded-md border border-border bg-card p-2 shadow-lg"
+          style={{ top: Math.max(4, rect.y + rect.height + 6), left: Math.max(4, rect.x) }}
+        >
+          <div className="mb-1 truncate text-xs font-medium text-muted-foreground">{marker.label}</div>
+          <div className="mb-2 whitespace-pre-wrap break-words text-xs text-foreground">{marker.comment}</div>
+          <div className="flex justify-end gap-1.5">
+            <button
+              type="button"
+              className="rounded px-2 py-0.5 text-xs text-status-err hover:bg-accent"
+              onClick={onDelete}
+            >
+              删除
+            </button>
+            <button type="button" className="rounded px-2 py-0.5 text-xs hover:bg-accent" onClick={onOpen}>
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
