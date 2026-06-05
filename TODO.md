@@ -61,12 +61,12 @@
 - [ ] 工具执行超时处理与可取消性一致化
 - [ ] 优雅的错误消息：用户友好、包含下一步建议
 
-### ❓ ApplyPatch 原子性确认
+### ✅ ApplyPatch 原子性确认
 
-ApplyPatch 工具已存在；仍需确认原子性是否真正做到“全部成功或全部回滚”。
+ApplyPatch 工具已存在；原子性已核实并补测试。
 
-- [ ] 审查 `packages/core/src/tool-system/builtin/apply-patch/` 原子性实现
-- [ ] 补失败回滚测试：多文件 patch 中某个 hunk 失败时，所有文件保持原状
+- [x] 审查 `packages/core/src/tool-system/builtin/apply-patch/` 原子性实现 —— plan-then-commit 两阶段，commit 失败用规划期内存快照回滚（TOCTOU-safe），见 `applier.ts`
+- [x] 补失败回滚测试：见 `apply-patch/atomicity.test.ts`（plan 期失败零写入 / commit 期失败回滚已写文件 / 回滚删除新增文件 / allowPartialOnCommit codex 语义）
 
 ---
 
@@ -147,6 +147,18 @@ ApplyPatch 工具已存在；仍需确认原子性是否真正做到“全部成
 
 ## P4 — 插件、MCP 与扩展能力
 
+### ⬜ Workspace 数据源绑定与作用域分配（Roadmap）
+
+每个项目都是一个 workspace。用户可以把不同外部数据源 link 到 CodeShell，再按 workspace 分配可访问的数据范围，让 agent 只读取和操作该 workspace 关联的内容。
+
+- [ ] 定义 workspace 级资源模型：project path、linked data sources、allowed scopes、默认读取策略
+- [ ] 支持 link 外部数据源：Figma、文档库、issue/PR、云盘、知识库、数据库等
+- [ ] 支持按 workspace 分配数据源范围：例如只允许某个 workspace 读取指定 Figma 文件/页面/组件
+- [ ] Agent 读取上下文时自动发现当前 workspace 已授权的数据源与范围
+- [ ] 工具调用必须检查 workspace scope，避免跨项目读取未分配内容
+- [ ] 提供管理 UI/命令：查看当前 workspace 绑定了哪些数据源、哪些文件/资源可读
+- [ ] 记录授权来源、更新时间、失效/撤销状态，保证可审计与可撤销
+
 ### 🔧 插件 MCP 加载/禁用链路收尾
 
 - [ ] 安装插件后，新 session 自动加载插件 MCP
@@ -184,6 +196,17 @@ ApplyPatch 工具已存在；仍需确认原子性是否真正做到“全部成
 
 ## P5 — Agent / 多代理能力
 
+### ⬜ 远程控制入口 / 跨代理编排（Roadmap）
+
+让 CodeShell 作为统一控制台，通过安全授权连接远程设备/环境，并编排 Codex、Claude Code 等外部 coding agent 干活。
+
+- [ ] 支持 SSH 连接远程机器或开发环境
+- [ ] 支持手机扫码 / 临时配对码完成设备授权与会话绑定
+- [ ] 定义远程控制会话：CodeShell 下发任务、跟踪状态、收集日志与产物
+- [ ] 支持编排 Codex CLI、Claude Code 等外部 coding agent 执行任务
+- [ ] 统一管理外部 agent 的 cwd、权限、审批、日志、产物与失败恢复
+- [ ] 明确安全边界：不自动外发密钥，不绕过外部 agent 自身审批，不允许未授权远控
+
 ### 🔧 后台 agent 完成通知机制（消灭 Sleep+AgentStatus 轮询）
 
 - [ ] 改 Agent 工具的 schema description + tool prompt：后台 agent 会自动通知完成，不要 sleep/poll
@@ -207,7 +230,16 @@ ApplyPatch 工具已存在；仍需确认原子性是否真正做到“全部成
 - [ ] Agent 间通信：评估 mailbox 路线；决定补齐 mailbox 还是删除半成品 `SendMessage` / `agentCoordinator`
 - [ ] `task` 加 `agentId` tag，避免子 agent task 混进主视图
 - [ ] Agent 执行结果汇总视图
-- [ ] per-agent skill 精选层：给 agent 定义加 `skills: [...]` 字段
+### ⬜ 子 agent skill 隔离（per-agent skill allowlist）
+
+子 agent 当前看到的 skill 池 = 项目内所有未禁用 skill，与"是哪个子 agent"无关；agent 定义 frontmatter 的 `skills:` 字段在 `parseAgentDefinition` 解析时被直接丢弃（CC 血统的包如 Seedance 团队带了该字段，但运行时无效）。需补齐硬隔离：director 子 agent 物理上只看到自己的 skill。照搬现有 `tools` 白名单那套链路。
+
+- [ ] `agent/agent-definition.ts`：解析时保留 `skills`（数组/逗号串归一），写 `AgentDefinition.skills`；`serializeAgentDefinition` 对称回写
+- [ ] `tool-system/builtin/agent.ts`：构造子 engine 时把 `def.skills` 作为 skill allowlist 下传（类比现有 `toolAllowlist: def.tools`）
+- [ ] `skills/scanner.ts` + `tool-system/builtin/skill.ts`：scan/列出/invoke 接收 allowlist，子 agent 的 skill 池按它过滤（未在 allowlist 的 skill 既不进 system prompt 列表，也拒绝 invoke）
+- [ ] `buildAgentTypesBlock` 同步：可选在 agent types 块里显示各 agent 的 skill 集
+- [ ] 未配 `skills:` → 维持现状（继承项目全量池），保证向后兼容
+- [ ] 测试：配了 skills 的 agent 看不到/调不到池外 skill；未配的 agent 行为不变
 
 ---
 
@@ -220,6 +252,35 @@ ApplyPatch 工具已存在；仍需确认原子性是否真正做到“全部成
 - [ ] `reasoning_summary` 参数支持
 - [ ] `service_tier` 参数支持
 - [ ] 模型自动降级：主模型失败时切换备用模型
+
+### ⬜ 多 provider 图片 / 视频生成工具（统一内置工具 + 连接 tab 配置）
+
+把生图/生视频从「写死 OpenAI」升级为**统一内置工具 + 多 provider 适配器**，且**配置了才进可用工具池**（沿用 `isGenerateImageAvailable` 的 tool-visibility guard 与 `SearchConnectionsPanel` 的多卡片连接范式）。
+
+> 现状：`GenerateImage` 已存在，但写死复用 `kind:"openai"` provider + 模型 `gpt-image-2`（`packages/core/src/tool-system/builtin/generate-image.ts`）；可见性已走 guard。连接 tab（`SearchConnectionsPanel`）已是「多 provider 卡片：配置/测试/默认/清除/状态 pill」的成熟样板，注释里已预告「以后新增浏览器、仓库、外部数据源按工具分组放这里」。本条就是把图片/视频接进这套范式。
+
+**A. 图片生成（GenerateImage 泛化为多 provider）**
+- [ ] 抽 `ImageProvider` 适配器接口：`generate(prompt, opts) → { b64/url }`，统一入参（size/quality/n）与错误归一
+- [ ] 内置适配器：OpenAI `gpt-image`（迁移现有实现）、Google Gemini「Nano Banana」（Gemini 2.5 Flash Image）；预留 1~2 个扩展位
+- [ ] provider/模型从配置读取，不再写死 `gpt-image-2`；落盘路径仍 `<cwd>/.code-shell/generated_images/`
+- [ ] 工具入参加可选 `provider` / `model`；未指定走该类目「默认 provider」
+
+**B. 视频生成（新内置工具 GenerateVideo）**
+- [ ] 新增 `GenerateVideo` 内置工具：text-to-video（首期）；产物写 `<cwd>/.code-shell/generated_videos/`，返回绝对路径
+- [ ] `VideoProvider` 适配器接口：处理**异步任务轮询**（生视频普遍是 submit→poll→download 异步流程，不同于同步生图）
+- [ ] 内置适配器：即梦（字节 Dreamina/Seedance）、可灵（Kling）；预留其他（Sora/Veo 等）扩展位
+- [ ] 长任务与超时：复用/对齐 `index.ts` 已有的 GenerateImage 600s 放宽逻辑，避免 rpc 30s 误杀；考虑后台任务 + 完成通知
+
+**C. 连接 tab 配置（settings 连接页新增分组）**
+- [ ] 连接页新增「图片生成」「视频生成」两个 provider 分组（复刻 `SearchConnectionsPanel` 卡片：apiKey/baseUrl/model、测试连接、设为默认、清除、状态 pill）
+- [ ] settings schema：`imageGen.providers[]` / `videoGen.providers[]`（各带 default provider）；按 user/project scope 隔离，密钥存 `~/.code-shell/settings.json`
+- [ ] 复用 search 的 legacy→providers 迁移与 probe 范式；为生图/生视频实现各自 `probe`（轻量鉴权/配额校验）
+
+**D. 可见性闭环（配了才可用）**
+- [ ] `isGenerateImageAvailable` 泛化：任一 image provider 配齐 → GenerateImage 进工具池；否则隐藏
+- [ ] 新增 `isGenerateVideoAvailable`：任一 video provider 配齐 → GenerateVideo 进池
+- [ ] tool prompt/描述按已配 provider 动态生成（告诉模型有哪些 provider/model 可选）
+- [ ] 测试：未配 → 工具不出现且 invoke 被拒；配了某 provider → 仅该 provider 可用；多 provider → 默认生效、可指定覆盖
 
 ### ⬜ Code Review 内置命令
 
