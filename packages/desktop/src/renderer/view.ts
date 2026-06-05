@@ -7,7 +7,11 @@ export type ViewMode =
   | "settings"       // legacy modal route — kept for routing back-compat
   | "settings_page"  // full-screen Settings page (new in batch E)
   | "customize"      // full-screen 扩展 (plugins + skills + MCP + market) view
-  | "logs";
+  | "logs"
+  | "files"          // file-browser panel (tree + preview)
+  | "browser"        // built-in web browser (<webview>)
+  | "review"         // working-tree diff / code review
+  | "terminal";      // interactive shell (node-pty + xterm)
 
 const KEY = "codeshell.view";
 
