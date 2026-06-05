@@ -224,10 +224,10 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 ### 🔧 其他多代理增强
 
 - [ ] Agent 角色预定义到 config：已有用户级目录可放，但缺 settings-level 默认配置
-- [ ] `max_depth` 嵌套深度限制
-- [ ] `max_threads` 并发线程数限制
-- [ ] `job_max_runtime_seconds` 超时控制
-- [ ] Agent 间通信：评估 mailbox 路线；决定补齐 mailbox 还是删除半成品 `SendMessage` / `agentCoordinator`
+- [x] `max_depth` 嵌套深度限制 —— 现为有意的扁平层级(depth=1):`isSubAgent` 两道把关(engine spawn 剥 Agent 工具 + agent.ts 运行时拒绝),子 agent 不能再 spawn。配置化暂无必要(放孙代理违背无状态设计)。
+- [x] `max_threads` 并发线程数限制 —— `MAX_BACKGROUND_AGENTS=6`(对齐 Codex),agent.ts 超限拒绝并提示。
+- [x] `job_max_runtime_seconds` 超时控制 —— 经核实**有意不设**同步子 agent 墙钟超时(见 agent.ts 注释:旧 5min 超时既误杀重活又制造 double agent_end 竞态);边界由 maxTurns + 各工具自身超时 + parent/user abort 兜底。
+- [x] **Agent 间通信:决定删除半成品** —— `SendMessage` / `agentCoordinator` 是死代码:coordinator 的 `register()`/`receive()` 从未被调用(Agent 工具用的是另一套 `asyncAgentRegistry`),所以 SendMessage 永远找不到目标。且扁平无状态设计本就不该有 mailbox,后台完成回灌已走 `notificationQueue`。已删两文件 + 反注册工具 + 清 toolDisplay,从 LLM 工具面移除这个坏工具。
 - [ ] `task` 加 `agentId` tag，避免子 agent task 混进主视图
 - [ ] Agent 执行结果汇总视图
 ### ✅ 子 agent skill 隔离（per-agent skill allowlist）

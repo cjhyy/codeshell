@@ -225,12 +225,12 @@
 - [x] 未配 `skills:` 维持继承项目全量池。
 - [x] 测试：`scanner.allowlist.test.ts` / `agent-definition.skills.test.ts` / `skill.allowlist.test.ts`（15 用例,含未配行为不变）。
 
-### 4.4 多代理控制与结果视图
+### 4.4 多代理控制与结果视图 🔧
 
-- [ ] `max_depth` 嵌套深度限制。
-- [ ] `max_threads` 并发线程数限制。
-- [ ] `job_max_runtime_seconds` 超时控制。
-- [ ] Agent 间通信：评估 mailbox；决定补齐 mailbox 还是删除半成品 `SendMessage` / `agentCoordinator`。
+- [x] `max_depth`：现为有意的扁平层级(depth=1),isSubAgent 双把关,子 agent 不能 spawn。
+- [x] `max_threads`：`MAX_BACKGROUND_AGENTS=6` 已存在并把关(对齐 Codex)。
+- [x] `job_max_runtime_seconds`：有意不设同步墙钟超时(旧 5min 误杀重活+double agent_end 竞态),靠 maxTurns+工具超时+abort。
+- [x] Agent 间通信:**删除半成品** SendMessage/agentCoordinator(死代码,register/receive 从未被调,扁平无状态设计不需要 mailbox,回灌走 notificationQueue)。
 - [ ] `task` 加 `agentId` tag，避免子 agent task 混进主视图。
 - [ ] Agent 执行结果汇总视图。
 

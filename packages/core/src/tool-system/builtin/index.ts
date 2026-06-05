@@ -24,7 +24,6 @@ import { enterPlanModeToolDef, enterPlanModeTool, exitPlanModeToolDef, exitPlanM
 import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
 import { todoWriteToolDef, todoWriteTool } from "./task.js";
 import { enterWorktreeToolDef, enterWorktreeTool, exitWorktreeToolDef, exitWorktreeTool } from "./worktree.js";
-import { sendMessageToolDef, sendMessageTool } from "./send-message.js";
 import { sleepToolDef, sleepTool } from "./sleep.js";
 import { configToolDef, configTool } from "./config.js";
 import { notebookEditToolDef, notebookEditTool } from "./notebook-edit.js";
@@ -291,16 +290,6 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: exitWorktreeTool,
-  },
-  {
-    definition: {
-      ...sendMessageToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: false,
-      isConcurrencySafe: true,
-    },
-    execute: sendMessageTool,
   },
   // ─── Phase 5: Utility Tools ────────────────────────────────────
   {
