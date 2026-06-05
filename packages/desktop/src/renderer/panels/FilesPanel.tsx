@@ -1,7 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronRight, ChevronDown, File as FileIcon, Folder } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { ChevronRight, ChevronDown, File as FileIcon, Folder, MessageSquarePlus } from "lucide-react";
 import type { FsEntry, FileContent } from "../../preload/types";
 import { Input } from "@/components/ui/input";
+import { Markdown } from "../Markdown";
+import { CommentBox } from "../chat/CommentBox";
+import { addAnchor } from "../chat/addAnchor";
+
+/** Image extensions we render as an inline preview (via data URL). */
+const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif"]);
+/** SVG is text but we can render it directly as an image too. */
+const SVG_EXT = "svg";
 
 interface Props {
   /** Workspace root; null when no project is active. */
@@ -161,10 +169,68 @@ function DirNode({
 }
 
 function FileViewer({ root, path }: { root: string; path: string }) {
+  const ext = useMemo(() => (path.split(".").pop() ?? "").toLowerCase(), [path]);
+  const name = useMemo(() => path.split("/").pop() ?? path, [path]);
+  const isImage = IMAGE_EXT.has(ext) || ext === SVG_EXT;
+  const isMarkdown = ext === "md" || ext === "markdown";
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+        <FileIcon className="h-4 w-4 text-muted-foreground" />
+        <span className="truncate text-sm font-medium text-foreground">{name}</span>
+        <span className="truncate text-xs text-muted-foreground">{path}</span>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto">
+        {isImage ? (
+          <ImagePreview path={path} />
+        ) : (
+          <TextPreview root={root} path={path} markdown={isMarkdown} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Render an image file by reading it as a data URL through main. */
+function ImagePreview({ path }: { path: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setSrc(null);
+    setFailed(false);
+    void window.codeshell
+      .readImageDataUrl(path)
+      .then((url) => {
+        if (cancelled) return;
+        if (url) setSrc(url);
+        else setFailed(true);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [path]);
+
+  if (failed) return <div className="p-4 text-sm text-muted-foreground">无法预览此图片</div>;
+  if (!src) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  return (
+    <div className="flex h-full items-center justify-center p-4">
+      {/* checkerboard-free neutral bg; image scaled to fit */}
+      <img src={src} alt={path} className="max-h-full max-w-full object-contain" />
+    </div>
+  );
+}
+
+/** Render a text file: markdown rendered, code syntax-highlighted, else plain. */
+function TextPreview({ root, path, markdown }: { root: string; path: string; markdown: boolean }) {
   const [content, setContent] = useState<FileContent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(() => {
+  useEffect(() => {
     let cancelled = false;
     setContent(null);
     setError(null);
@@ -181,32 +247,75 @@ function FileViewer({ root, path }: { root: string; path: string }) {
     };
   }, [root, path]);
 
-  useEffect(() => load(), [load]);
+  if (error) return <div className="p-4 text-sm text-status-err">读取失败:{error}</div>;
+  if (!content) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  if (content.text === null) {
+    return (
+      <div className="p-4 text-sm text-muted-foreground">
+        {content.reason === "too-large" ? "文件过大,无法预览" : "二进制文件,无法预览"}
+      </div>
+    );
+  }
 
-  const name = useMemo(() => path.split("/").pop() ?? path, [path]);
+  if (markdown) {
+    // Render markdown with the shared renderer (gfm + highlighted code blocks).
+    return (
+      <div className="p-4">
+        <Markdown text={content.text} />
+      </div>
+    );
+  }
+
+  // Code/text: line-numbered view with a per-line comment affordance so the
+  // user can pin a precise location (file:line) to the composer.
+  return <CodeWithComments path={path} text={content.text} />;
+}
+
+/** Line-numbered code view; hover a line to pin a comment anchor (file:line). */
+function CodeWithComments({ path, text }: { path: string; text: string }) {
+  const lines = useMemo(() => text.replace(/\n$/, "").split("\n"), [text]);
+  const [commenting, setCommenting] = useState<number | null>(null);
+  const name = path.split("/").pop() ?? path;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-        <FileIcon className="h-4 w-4 text-muted-foreground" />
-        <span className="truncate text-sm font-medium text-foreground">{name}</span>
-        <span className="truncate text-xs text-muted-foreground">{path}</span>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {error ? (
-          <div className="p-4 text-sm text-status-err">读取失败:{error}</div>
-        ) : !content ? (
-          <div className="p-4 text-sm text-muted-foreground">加载中…</div>
-        ) : content.text === null ? (
-          <div className="p-4 text-sm text-muted-foreground">
-            {content.reason === "too-large" ? "文件过大,无法预览" : "二进制文件,无法预览"}
+    <div className="p-2 font-mono text-xs leading-relaxed">
+      {lines.map((line, i) => {
+        const no = i + 1;
+        return (
+          <div key={i}>
+            <div className="group flex items-start gap-2 px-1 hover:bg-accent/40">
+              <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground">{no}</span>
+              <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-foreground">{line || " "}</pre>
+              <button
+                type="button"
+                aria-label="评论此行"
+                title="评论此行(加入输入框)"
+                className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
+                onClick={() => setCommenting(commenting === no ? null : no)}
+              >
+                <MessageSquarePlus size={12} />
+              </button>
+            </div>
+            {commenting === no && (
+              <div className="px-2">
+                <CommentBox
+                  title={`${name}:${no}`}
+                  onCancel={() => setCommenting(null)}
+                  onSubmit={(comment) => {
+                    addAnchor({
+                      kind: "file",
+                      label: `${name}:${no}`,
+                      locator: { 文件: path, 行号: String(no), 代码: line.trim().slice(0, 200) },
+                      comment,
+                    });
+                    setCommenting(null);
+                  }}
+                />
+              </div>
+            )}
           </div>
-        ) : (
-          <pre className="m-0 whitespace-pre overflow-auto p-3 text-xs leading-relaxed text-foreground">
-            <code>{content.text}</code>
-          </pre>
-        )}
-      </div>
+        );
+      })}
     </div>
   );
 }

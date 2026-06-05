@@ -1,7 +1,7 @@
 import React, { memo, useState, useRef, useEffect } from "react";
 import { StatusDot } from "./ui/StatusDot";
 import { IconButton } from "./ui/IconButton";
-import { PanelLeft } from "./ui/icons";
+import { PanelLeft, PanelRight } from "./ui/icons";
 import { StatusPopover } from "./topbar/StatusPopover";
 import type { LiveActivity } from "./topbar/liveActivity";
 import type { TaskListMessage } from "./types";
@@ -12,6 +12,9 @@ interface Props {
   busy: boolean;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
+  /** Right-side panel dock (files/browser/review/terminal) open state + toggle. */
+  panelOpen: boolean;
+  onTogglePanel: () => void;
   /**
    * Snapshot of what the agent is doing right now. Only used to
    * populate the hover popover; the dot itself only needs `busy`.
@@ -39,6 +42,8 @@ function TopBarImpl({
   busy,
   sidebarCollapsed,
   onToggleSidebar,
+  panelOpen,
+  onTogglePanel,
   activity,
   tasks,
 }: Props) {
@@ -69,8 +74,17 @@ function TopBarImpl({
         {sessionTitle && <span className="text-muted-foreground">·</span>}
         {sessionTitle && <span className="truncate text-muted-foreground">{sessionTitle}</span>}
       </div>
-      <div className="flex items-center">
+      <div className="flex items-center gap-1">
         <StatusBadge busy={busy} activity={activity} tasks={tasks ?? null} />
+        <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          <IconButton
+            label={panelOpen ? "关闭面板" : "打开面板"}
+            onClick={onTogglePanel}
+            className={panelOpen ? "text-foreground" : undefined}
+          >
+            <PanelRight size={14} />
+          </IconButton>
+        </span>
       </div>
     </header>
   );
@@ -167,6 +181,8 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.busy === b.busy &&
     a.sidebarCollapsed === b.sidebarCollapsed &&
     a.onToggleSidebar === b.onToggleSidebar &&
+    a.panelOpen === b.panelOpen &&
+    a.onTogglePanel === b.onTogglePanel &&
     a.tasks === b.tasks &&
     a.activity?.lastToolName === b.activity?.lastToolName &&
     a.activity?.toolInFlight === b.activity?.toolInFlight &&

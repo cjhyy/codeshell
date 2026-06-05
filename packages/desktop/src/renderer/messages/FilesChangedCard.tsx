@@ -97,9 +97,22 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
                 <button
                   type="button"
                   className="files-changed-action"
-                  onClick={() => setReviewOpen(true)}
+                  onClick={() => {
+                    // Open the docked review panel focused on this card's files
+                    // (App listens for this). Fall back to the inline modal if
+                    // there's no repo cwd (panel can't run git diff then).
+                    if (cwd) {
+                      window.dispatchEvent(
+                        new CustomEvent("codeshell:review-files", {
+                          detail: { files: files.map((f) => f.path) },
+                        }),
+                      );
+                    } else {
+                      setReviewOpen(true);
+                    }
+                  }}
                   aria-label="审核改动"
-                  title="审核(查看本 session diff)"
+                  title="审核(在面板中查看 diff)"
                 >
                   <Eye size={12} />
                   <span>审核</span>

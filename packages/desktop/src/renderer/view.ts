@@ -7,11 +7,14 @@ export type ViewMode =
   | "settings"       // legacy modal route — kept for routing back-compat
   | "settings_page"  // full-screen Settings page (new in batch E)
   | "customize"      // full-screen 扩展 (plugins + skills + MCP + market) view
-  | "logs"
-  | "files"          // file-browser panel (tree + preview)
-  | "browser"        // built-in web browser (<webview>)
-  | "review"         // working-tree diff / code review
-  | "terminal";      // interactive shell (node-pty + xterm)
+  | "logs";
+
+/**
+ * The side panel area lives alongside chat (not a full-screen ViewMode). It's
+ * a Codex-style dock on the right: a tab strip switches between these panels,
+ * and a top-bar button toggles the whole area open/closed.
+ */
+export type PanelTab = "files" | "browser" | "review" | "terminal";
 
 const KEY = "codeshell.view";
 
@@ -27,11 +30,28 @@ const DEFAULT: ViewState = {
   inspectorCollapsed: false,
 };
 
+const VALID_MODES: ReadonlySet<ViewMode> = new Set([
+  "chat",
+  "sessions",
+  "approvals",
+  "runs",
+  "automation",
+  "settings",
+  "settings_page",
+  "customize",
+  "logs",
+]);
+
 export function loadView(): ViewState {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT;
-    return { ...DEFAULT, ...(JSON.parse(raw) as Partial<ViewState>) };
+    const merged = { ...DEFAULT, ...(JSON.parse(raw) as Partial<ViewState>) };
+    // Old builds persisted panel kinds (files/browser/review/terminal) as
+    // ViewModes; those are now dock tabs, not full-screen views. Fall back to
+    // chat so a stale value doesn't leave the user on a blank/unknown view.
+    if (!VALID_MODES.has(merged.viewMode)) merged.viewMode = "chat";
+    return merged;
   } catch {
     return DEFAULT;
   }

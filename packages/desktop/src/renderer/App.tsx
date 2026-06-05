@@ -78,10 +78,9 @@ import { SettingsPage } from "./settings/SettingsPage";
 import { RunsView } from "./runs/RunsView";
 import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
-import { FilesPanel } from "./panels/FilesPanel";
-import { BrowserPanel } from "./panels/BrowserPanel";
-import { ReviewPanel } from "./panels/ReviewPanel";
-import { TerminalPanel } from "./panels/TerminalPanel";
+import { PanelArea } from "./panels/PanelArea";
+import type { PanelTab } from "./view";
+import type { Anchor } from "./chat/anchors";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -1468,6 +1467,64 @@ function App() {
 
   const setViewMode = (v: ViewMode): void => setView((prev) => ({ ...prev, viewMode: v }));
 
+  // Right-side panel dock (dynamic tabs: files/browser/review/terminal). Lives
+  // alongside chat; the top-bar button toggles it. The dock manages its own
+  // open tabs; App only asks it to open/focus a given kind via a request nonce.
+  // Files the review tab should focus, set when a chat "files changed" card
+  // requests review. Cleared is fine — review falls back to the whole tree.
+  const [reviewFiles, setReviewFiles] = useState<string[] | undefined>(undefined);
+  // Comment anchors pinned from the panels (diff line / browser element / file
+  // line). They show as chips above the composer and ride along with the next
+  // message. Panels push them via the "codeshell:add-anchor" window event.
+  const [anchors, setAnchors] = useState<Anchor[]>([]);
+  const removeAnchor = (id: string): void => setAnchors((a) => a.filter((x) => x.id !== id));
+  const clearAnchors = (): void => setAnchors([]);
+  // Panel-dock request: nonce + kind, in ONE state object so opening the dock
+  // and choosing the kind is a single atomic update — PanelArea then mounts
+  // seeing the right kind and never opens a stray tab for a stale value.
+  // open=false means the dock is closed; the nonce only matters while open.
+  const [panelRequest, setPanelRequest] = useState<{ nonce: number; kind: PanelTab; open: boolean }>({
+    nonce: 0,
+    kind: "files",
+    open: false,
+  });
+  const togglePanel = (): void =>
+    setPanelRequest((r) => ({ ...r, open: !r.open, nonce: r.nonce + 1 }));
+  // Open the dock and request a tab of `kind` (used by hotkeys, palette, cards).
+  const openPanel = (kind: PanelTab): void =>
+    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind, open: true }));
+
+  // Dock width (px), persisted. The divider on the dock's left edge drags it.
+  const PANEL_MIN = 320;
+  const PANEL_MAX_FRAC = 0.7; // never let the dock eat more than 70% of the window
+  const [panelWidth, setPanelWidth] = useState<number>(() => {
+    const saved = Number(localStorage.getItem("codeshell.panelWidth"));
+    return Number.isFinite(saved) && saved >= PANEL_MIN ? saved : 480;
+  });
+  const beginPanelResize = (startX: number, startWidth: number): void => {
+    const onMove = (ev: MouseEvent): void => {
+      // Dock is on the RIGHT, so dragging left (smaller clientX) widens it.
+      const delta = startX - ev.clientX;
+      const max = Math.max(PANEL_MIN, Math.floor(window.innerWidth * PANEL_MAX_FRAC));
+      const next = Math.min(max, Math.max(PANEL_MIN, startWidth + delta));
+      setPanelWidth(next);
+    };
+    const onUp = (): void => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+      setPanelWidth((w) => {
+        localStorage.setItem("codeshell.panelWidth", String(w));
+        return w;
+      });
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
   // Conversational automation creation: seed the chat composer with a starter
   // prompt and switch to chat. The agent explains automation, asks what to do
   // and when, then calls CronCreate — the user never touches cron syntax.
@@ -1522,21 +1579,21 @@ function App() {
         e.preventDefault();
         toggleSidebar();
       } else if (!typing && mod && e.key.toLowerCase() === "t") {
-        // ⌘T — built-in browser
+        // ⌘T — open browser panel in the dock
         e.preventDefault();
-        setViewMode("browser");
+        openPanel("browser");
       } else if (!typing && mod && e.shiftKey && e.key.toLowerCase() === "e") {
-        // ⌘⇧E — file browser (⌘P is taken by session search)
+        // ⌘⇧E — file panel (⌘P is taken by session search)
         e.preventDefault();
-        setViewMode("files");
+        openPanel("files");
       } else if (!typing && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "g") {
-        // ⌃⇧G — code review / diff
+        // ⌃⇧G — review / diff panel
         e.preventDefault();
-        setViewMode("review");
+        openPanel("review");
       } else if (!typing && e.ctrlKey && e.code === "Backquote") {
-        // ⌃` — interactive terminal (use physical key for layout safety)
+        // ⌃` — terminal panel (physical key for layout safety)
         e.preventDefault();
-        setViewMode("terminal");
+        openPanel("terminal");
       } else if (mod && e.key >= "1" && e.key <= "9") {
         // Cmd+N — jump to Nth session under active repo.
         const n = parseInt(e.key, 10) - 1;
@@ -1555,6 +1612,29 @@ function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [paletteOpen, searchOpen, sessionSearchOpen, sessionIndices, activeRepoId]);
+
+  // A chat "files changed" card asked to review its edited files: open the
+  // review panel in the dock, focused on those files.
+  useEffect(() => {
+    const onReview = (e: Event): void => {
+      const files = (e as CustomEvent<{ files?: string[] }>).detail?.files;
+      setReviewFiles(Array.isArray(files) && files.length > 0 ? files : undefined);
+      setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "review", open: true }));
+    };
+    window.addEventListener("codeshell:review-files", onReview);
+    return () => window.removeEventListener("codeshell:review-files", onReview);
+  }, []);
+
+  // A panel pinned a comment anchor (diff line / browser element / file line).
+  // Accumulate it as a chip above the composer.
+  useEffect(() => {
+    const onAnchor = (e: Event): void => {
+      const anchor = (e as CustomEvent<{ anchor?: Anchor }>).detail?.anchor;
+      if (anchor) setAnchors((prev) => [...prev, anchor]);
+    };
+    window.addEventListener("codeshell:add-anchor", onAnchor);
+    return () => window.removeEventListener("codeshell:add-anchor", onAnchor);
+  }, []);
 
   useEffect(() => {
     const off = window.codeshell.onMenuEvent((evt, payload) => {
@@ -1828,6 +1908,8 @@ function App() {
           busy={busy}
           sidebarCollapsed={view.sidebarCollapsed}
           onToggleSidebar={toggleSidebar}
+          panelOpen={panelRequest.open}
+          onTogglePanel={togglePanel}
           activity={liveActivity}
           tasks={latestTasks}
         />
@@ -1881,17 +1963,6 @@ function App() {
           <LogsView />
         ) : view.viewMode === "customize" ? (
           <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
-        ) : view.viewMode === "files" ? (
-          <FilesPanel cwd={activeRepo?.path ?? null} />
-        ) : view.viewMode === "browser" ? (
-          <BrowserPanel cwd={activeRepo?.path ?? null} />
-        ) : view.viewMode === "review" ? (
-          <ReviewPanel cwd={activeRepo?.path ?? null} />
-        ) : view.viewMode === "terminal" ? (
-          <TerminalPanel
-            cwd={activeRepo?.path ?? null}
-            sessionId={`term:${activeRepoId ?? "no-repo"}`}
-          />
         ) : view.viewMode === "runs" ? (
           <RunsView initialRunId={runsInitialRunId} />
         ) : view.viewMode === "automation" ? (
@@ -1920,6 +1991,9 @@ function App() {
               activeRepoId={activeRepoId}
               composerSeed={composerSeed}
               composerSeedNonce={composerSeedNonce}
+              anchors={anchors}
+              onRemoveAnchor={removeAnchor}
+              onClearAnchors={clearAnchors}
               onAskUserAnswer={handleAskUserAnswer}
               pendingApproval={approval}
               onApprovalDecide={
@@ -1977,6 +2051,19 @@ function App() {
           matchCount={matchCount}
         />
       </main>
+
+      {panelRequest.open && (
+        <PanelArea
+          cwd={activeRepo?.path ?? null}
+          repoId={activeRepoId}
+          onClose={() => setPanelRequest((r) => ({ ...r, open: false }))}
+          requestNonce={panelRequest.nonce}
+          requestKind={panelRequest.kind}
+          reviewFiles={reviewFiles}
+          width={panelWidth}
+          onResizeStart={beginPanelResize}
+        />
+      )}
       </div>
 
       <CommandPalette
@@ -1984,6 +2071,7 @@ function App() {
         onClose={() => setPaletteOpen(false)}
         commands={buildCommands({
           setViewMode,
+          openPanel,
           toggleSidebar,
           toggleInspector,
           clearTranscript,

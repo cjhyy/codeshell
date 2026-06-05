@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { ViewMode } from "../view";
+import type { ViewMode, PanelTab } from "../view";
 
 export interface PaletteCommand {
   id: string;
@@ -98,18 +98,19 @@ export function CommandPalette({ open, onClose, commands }: Props) {
 /** Build the standard command set the palette exposes. */
 export function buildCommands(opts: {
   setViewMode: (v: ViewMode) => void;
+  openPanel: (t: PanelTab) => void;
   toggleSidebar: () => void;
   toggleInspector: () => void;
   clearTranscript: () => void;
   openSearch: () => void;
 }): PaletteCommand[] {
-  const { setViewMode, toggleSidebar, toggleInspector, clearTranscript, openSearch } = opts;
+  const { setViewMode, openPanel, toggleSidebar, toggleInspector, clearTranscript, openSearch } = opts;
   return [
     { id: "go.chat", label: "打开 对话", run: () => setViewMode("chat") },
-    { id: "go.files", label: "打开 文件", hint: "Cmd+Shift+E", run: () => setViewMode("files") },
-    { id: "go.browser", label: "打开 浏览器", hint: "Cmd+T", run: () => setViewMode("browser") },
-    { id: "go.review", label: "打开 审查", hint: "Ctrl+Shift+G", run: () => setViewMode("review") },
-    { id: "go.terminal", label: "打开 终端", hint: "Ctrl+`", run: () => setViewMode("terminal") },
+    { id: "go.files", label: "打开 文件", hint: "Cmd+Shift+E", run: () => openPanel("files") },
+    { id: "go.browser", label: "打开 浏览器", hint: "Cmd+T", run: () => openPanel("browser") },
+    { id: "go.review", label: "打开 审查", hint: "Ctrl+Shift+G", run: () => openPanel("review") },
+    { id: "go.terminal", label: "打开 终端", hint: "Ctrl+`", run: () => openPanel("terminal") },
     { id: "go.sessions", label: "打开 会话", run: () => setViewMode("sessions") },
     { id: "go.approvals", label: "打开 审批", run: () => setViewMode("approvals") },
     { id: "go.runs", label: "打开 运行", run: () => setViewMode("runs") },

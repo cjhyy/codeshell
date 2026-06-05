@@ -6,6 +6,8 @@
   "type": "module",
   "main": "./out/main/index.mjs",
   "scripts": {
+    "postinstall": "bun run rebuild:native",
+    "rebuild:native": "bun run scripts/rebuild-native.ts",
     "dev": "bun run scripts/dev.ts",
     "build": "bun run scripts/build.ts",
     "build:main": "esbuild src/main/index.ts --bundle --platform=node --format=esm --outfile=out/main/index.mjs --external:electron --external:@cjhyy/code-shell-core --loader:.md=text --banner:js=\"import { createRequire as __ccr } from 'node:module'; const require = __ccr(import.meta.url);\"",

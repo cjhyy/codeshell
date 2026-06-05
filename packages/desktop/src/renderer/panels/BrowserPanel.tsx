@@ -7,8 +7,31 @@ import {
   Globe,
   Plus,
   X,
+  MousePointerSquareDashed,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { CommentBox } from "../chat/CommentBox";
+import { addAnchor } from "../chat/addAnchor";
+
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** What the in-page picker returns about the clicked element. */
+interface PickedElement {
+  selector: string;
+  tag: string;
+  text: string;
+  id?: string;
+  className?: string;
+  rect: Rect;
+  /** URL of the page the element was picked on (captured at pick time, so a
+   *  later tab switch can't misattribute the anchor to another page). */
+  url: string;
+}
 
 // Electron's <webview> element. React 19's JSX doesn't know it; declare a
 // minimal typing so we can render it and call its imperative methods.
@@ -21,6 +44,9 @@ interface WebviewElement extends HTMLElement {
   reload(): void;
   loadURL(url: string): Promise<void>;
   getURL(): string;
+  executeJavaScript(code: string, userGesture?: boolean): Promise<unknown>;
+  insertCSS(css: string): Promise<string>;
+  capturePage(rect?: Rect): Promise<{ toDataURL(): string }>;
 }
 
 interface Tab {
@@ -32,6 +58,71 @@ interface Tab {
 }
 
 const NEW_TAB = "about:blank";
+
+// Injected into the guest page (no preload available there). Highlights the
+// hovered element with an outline, and on click resolves with a compact
+// descriptor: a best-effort CSS selector, tag, trimmed text, and bounding rect.
+// Returns null if the user presses Escape. Runs as the completion value of
+// executeJavaScript, so the whole thing is one expression evaluating to a
+// Promise.
+const PICKER_SCRIPT = `
+(() => new Promise((resolve) => {
+  const OUTLINE = '2px solid #2563eb';
+  let last = null;
+  const restore = () => { if (last) { last.style.outline = lastOutline; last = null; } };
+  let lastOutline = '';
+  function selectorFor(el) {
+    if (el.id) return '#' + el.id;
+    let path = [];
+    let node = el;
+    while (node && node.nodeType === 1 && path.length < 4) {
+      let part = node.tagName.toLowerCase();
+      if (node.classList && node.classList.length) {
+        part += '.' + Array.from(node.classList).slice(0, 2).join('.');
+      }
+      const parent = node.parentElement;
+      if (parent) {
+        const sibs = Array.from(parent.children).filter(c => c.tagName === node.tagName);
+        if (sibs.length > 1) part += ':nth-of-type(' + (sibs.indexOf(node) + 1) + ')';
+      }
+      path.unshift(part);
+      node = node.parentElement;
+    }
+    return path.join(' > ');
+  }
+  function onMove(e) {
+    const el = e.target;
+    if (el === last) return;
+    restore();
+    last = el; lastOutline = el.style.outline; el.style.outline = OUTLINE;
+  }
+  function cleanup() {
+    restore();
+    document.removeEventListener('mousemove', onMove, true);
+    document.removeEventListener('click', onClick, true);
+    document.removeEventListener('keydown', onKey, true);
+  }
+  function onClick(e) {
+    e.preventDefault(); e.stopPropagation();
+    const el = e.target;
+    const r = el.getBoundingClientRect();
+    const info = {
+      selector: selectorFor(el),
+      tag: el.tagName.toLowerCase(),
+      text: (el.innerText || el.textContent || '').trim().slice(0, 200),
+      id: el.id || undefined,
+      className: (typeof el.className === 'string' ? el.className : '') || undefined,
+      rect: { x: r.x, y: r.y, width: r.width, height: r.height },
+    };
+    cleanup();
+    resolve(info);
+  }
+  function onKey(e) { if (e.key === 'Escape') { cleanup(); resolve(null); } }
+  document.addEventListener('mousemove', onMove, true);
+  document.addEventListener('click', onClick, true);
+  document.addEventListener('keydown', onKey, true);
+}))()
+`;
 
 let tabSeq = 0;
 function freshTab(): Tab {
@@ -54,12 +145,48 @@ export function BrowserPanel(_props: Props) {
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
   const viewRef = useRef<WebviewElement | null>(null);
   const [nav, setNav] = useState({ canGoBack: false, canGoForward: false, loading: false });
+  // Element-picking ("圈选") state.
+  const [selecting, setSelecting] = useState(false);
+  const [picked, setPicked] = useState<PickedElement | null>(null);
 
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
 
   const patchTab = useCallback((id: string, patch: Partial<Tab>) => {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   }, []);
+
+  // Enter element-pick mode: inject a picker into the guest page that
+  // highlights elements on hover and resolves with the clicked element's info.
+  // The guest has no preload, so we drive it entirely via executeJavaScript and
+  // read the picker's Promise resolution value back here.
+  const startPicking = useCallback(async () => {
+    const view = viewRef.current;
+    if (!view || active.url === NEW_TAB) return;
+    const pickUrl = active.url;
+    setSelecting(true);
+    // Safety net: if the picker promise never settles (e.g. a navigation tears
+    // down the guest without rejecting executeJavaScript), don't leave the
+    // button permanently disabled.
+    const timeout = new Promise<null>((res) => setTimeout(() => res(null), 60_000));
+    try {
+      const result = (await Promise.race([
+        view.executeJavaScript(PICKER_SCRIPT, true) as Promise<PickedElement | null>,
+        timeout,
+      ])) as (Omit<PickedElement, "url"> & { url?: string }) | null;
+      if (result) setPicked({ ...result, url: pickUrl });
+    } catch {
+      /* navigation/CSP interrupted the picker — just exit select mode */
+    } finally {
+      setSelecting(false);
+    }
+  }, [active.url]);
+
+  // If the active tab changes while picking, abandon select mode so the button
+  // can't get stuck (the guest running the picker may have been torn down).
+  useEffect(() => {
+    if (selecting) setSelecting(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
 
   // Wire webview lifecycle events for the active tab.
   useEffect(() => {
@@ -113,10 +240,15 @@ export function BrowserPanel(_props: Props) {
 
   const openInNewTab = useCallback((url: string) => {
     const tab = freshTab();
-    const norm = normalizeUrl(url);
-    if (norm) {
-      tab.url = norm;
-      tab.draft = norm;
+    // NEW_TAB is the landing-page sentinel — never run it through normalizeUrl
+    // (which would treat the `about:` scheme as a search and send it to a
+    // search engine). Only normalize real user-supplied URLs.
+    if (url && url !== NEW_TAB) {
+      const norm = normalizeUrl(url);
+      if (norm) {
+        tab.url = norm;
+        tab.draft = norm;
+      }
     }
     setTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
@@ -194,12 +326,51 @@ export function BrowserPanel(_props: Props) {
           className="h-8 flex-1"
         />
         <IconBtn
+          onClick={() => void startPicking()}
+          disabled={active.url === NEW_TAB || selecting}
+          label={selecting ? "点选页面元素…" : "圈选元素(加入输入框)"}
+          active={selecting}
+        >
+          <MousePointerSquareDashed className="h-4 w-4" />
+        </IconBtn>
+        <IconBtn
           onClick={() => active.url !== NEW_TAB && void window.codeshell.openExternal(active.url)}
           label="在外部打开"
         >
           <ExternalLink className="h-4 w-4" />
         </IconBtn>
       </div>
+
+      {selecting && (
+        <div className="shrink-0 border-b border-border bg-primary/10 px-3 py-1 text-xs text-foreground">
+          点选页面上的元素以添加评论 · Esc 取消
+        </div>
+      )}
+      {picked && (
+        <div className="shrink-0 border-b border-border px-2">
+          <CommentBox
+            title={`${picked.tag}${picked.id ? "#" + picked.id : ""} · ${picked.selector}`}
+            onCancel={() => setPicked(null)}
+            onSubmit={(comment) => {
+              addAnchor({
+                kind: "browser",
+                label: picked.id
+                  ? `${picked.tag}#${picked.id}`
+                  : picked.selector.split(" > ").pop() || picked.tag,
+                locator: {
+                  网址: picked.url,
+                  选择器: picked.selector,
+                  元素: picked.tag + (picked.className ? ` .${picked.className}` : ""),
+                  ...(picked.text ? { 文本: picked.text } : {}),
+                  尺寸: `${Math.round(picked.rect.width)}×${Math.round(picked.rect.height)}`,
+                },
+                comment,
+              });
+              setPicked(null);
+            }}
+          />
+        </div>
+      )}
 
       {/* Content: webview or the new-tab landing (localhost bookmarks). */}
       <div className="relative min-h-0 flex-1">
@@ -228,11 +399,13 @@ function IconBtn({
   onClick,
   disabled,
   label,
+  active,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
   label: string;
+  active?: boolean;
 }) {
   return (
     <button
@@ -240,7 +413,11 @@ function IconBtn({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className="rounded-md p-1.5 text-muted-foreground hover:bg-accent disabled:opacity-40"
+      title={label}
+      className={
+        "rounded-md p-1.5 hover:bg-accent disabled:opacity-40 " +
+        (active ? "bg-primary/15 text-primary" : "text-muted-foreground")
+      }
     >
       {children}
     </button>

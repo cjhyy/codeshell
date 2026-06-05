@@ -24,6 +24,7 @@ import {
 import { compressBatch } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import { detectMention } from "./chat/mention";
+import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 
 interface Props {
   messages: Message[];
@@ -72,6 +73,10 @@ interface Props {
    */
   composerSeed?: string;
   composerSeedNonce?: number;
+  /** Comment anchors pinned from the panels; shown as chips above the composer. */
+  anchors?: Anchor[];
+  onRemoveAnchor?: (id: string) => void;
+  onClearAnchors?: () => void;
 }
 
 const MAX_TEXTAREA_PX = 200;
@@ -108,6 +113,9 @@ export function ChatView({
   welcomeNode,
   composerSeed,
   composerSeedNonce,
+  anchors = [],
+  onRemoveAnchor,
+  onClearAnchors,
 }: Props) {
   const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
@@ -198,7 +206,8 @@ export function ChatView({
   const submit = (): void => {
     const text = draft.trim();
     const hasImages = attachments.length > 0;
-    if (!text && !hasImages) return;
+    const hasAnchors = anchors.length > 0;
+    if (!text && !hasImages && !hasAnchors) return;
     // Block send when there are images but the active model can't accept
     // them. The UI shows an inline banner with options (switch model /
     // remove images) so this branch is just a safety net.
@@ -208,7 +217,10 @@ export function ChatView({
       );
       return;
     }
-    const payload = encodeAttachmentsForWire(text, attachments);
+    // Anchors (diff/browser/file comments) are prepended as a structured block
+    // so the model can pin each comment to its exact location.
+    const withAnchors = encodeAnchorsForWire(text, anchors);
+    const payload = encodeAttachmentsForWire(withAnchors, attachments);
     if (busy) onQueueInput?.(payload);
     else onSend(payload);
     if (text) setHistory(pushHistory(activeRepoId, text));
@@ -217,6 +229,7 @@ export function ChatView({
     setAttachmentError(null);
     setHistoryCursor(-1);
     liveDraftStash.current = "";
+    onClearAnchors?.();
   };
 
   const acceptFiles = async (files: File[]) => {
@@ -468,6 +481,34 @@ export function ChatView({
             (dragOver ? " ring-2 ring-primary/40" : "")
           }
         >
+          {anchors.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {anchors.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex max-w-full items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-1 text-xs"
+                  title={`${a.comment}\n${Object.entries(a.locator).map(([k, v]) => `${k}: ${v}`).join("\n")}`}
+                >
+                  <span className="shrink-0 text-muted-foreground">
+                    {a.kind === "diff" ? "审查" : a.kind === "browser" ? "网页" : "文件"}
+                  </span>
+                  <span className="truncate font-medium text-foreground">{a.label}</span>
+                  {a.comment && (
+                    <span className="truncate text-muted-foreground">· {a.comment}</span>
+                  )}
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-background"
+                    aria-label="移除标注"
+                    onClick={() => onRemoveAnchor?.(a.id)}
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {attachments.map((a) => (
