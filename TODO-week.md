@@ -7,7 +7,7 @@
 | 状态 | # | 任务 | 备注 / 关键落点 |
 | ---- | - | ---- | --------------- |
 | ⬜ 未开始 | 14 | **Goal 模式最大轮次优化调研** | 先调研当前 Goal 模式最大轮次/停止条件/预算控制如何实现，确认是否存在轮次过少、过多、无法动态调整或 UI 不透明的问题；再比较可选优化方案：按 goal 类型配置默认 max turns、运行中可续轮/加预算、接近上限时提示、失败恢复与总结输出等。产出建议方案后再决定是否实现。 |
-| ⬜ 未开始 | 15 | **Session 内后台命令支持与 UI 展示调研** | 调研当前 session 是否支持启动长期后台命令（例如 `npm run dev`）并保持进程、流式日志、停止/重启；若不支持，梳理可行技术方案（进程管理、生命周期绑定、权限/approval、日志截断、跨 desktop/TUI/headless 行为）；若已支持，重点设计 UI：后台命令列表/状态、端口提示、日志展开、停止按钮、失败通知，以及与普通 Bash tool 输出的区别。 |
+| 🟡 设计完成/待实现 | 15 | **Session 内后台命令支持** | 调研结论：当前不支持（Bash 同步 120s 超时杀；PTY 仅 UI 终端面板、agent 用不了；后台 agent 只能跑 LLM 不能跑进程）。已产出完整设计：`docs/superpowers/specs/2026-06-05-background-shell-design.md`（CC 式后台 shell 范式：Bash 加 `run_in_background` + BashOutput/KillShell/ListShells；core 层 `BackgroundShellManager`；session 级生命周期；五难点=进程组杀净/不被 Engine 等待循环卡死/端口探测/ANSI 清理/孤儿 pidfile；退出一行通知，运行中靠主动拉不灌 context；automation 禁用）。决策已敲定（关 tab 不杀仅 app 退出/删 session 才杀；抽 `core/runtime/spawn-common.ts` 共用沙箱+env+杀进程；落盘满 8MB 环绕覆盖）。待用户 review spec → writing-plans 拆实现计划。desktop UI 面板列为二期。 |
 
 ## 已完成 / 本周记录
 
