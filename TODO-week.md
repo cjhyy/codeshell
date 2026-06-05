@@ -174,7 +174,7 @@
 ### 3.3 LLM / Engine 待确认问题
 
 - [ ] OpenAI 截断续写触发条件统一：`finish_reason === "length"` 与 `stopReason === "max_tokens"` 归一。
-- [ ] RunManager approval / input resume 竞态审查。
+- [x] RunManager approval / input resume 竞态审查 ✅：修两处——并发 resume 加 `resolvingRuns` 每-run 串行守卫;handle 在场但 input 不匹配改为报错(原会重新入队重复执行)。测试 RunManager.resume-race.test.ts(去守卫后失败证明有效)。
 - [ ] `resolveSandboxBackend` 从每 turn 重 resolve 改为 Engine 构造器或 per-session 缓存。
 - [x] Plugin SessionStart hook 运行时验证 ✅：全链路通(runPluginCommandHook 三形态 additionalContext→messages,engine splice 进 user prompt 前 system-reminder)。测试 pluginCommandHook.test.ts。
 - [ ] 自动化 run 首个 LLM 前卡住的链路复核，确认 lock release 与失败恢复。

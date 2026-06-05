@@ -75,6 +75,17 @@ export class RunManager {
   private readonly abortControllers = new Map<string, AbortController>();
   /** Active execution handles — used to resolve pending approvals/input while Engine is suspended */
   private readonly executionHandles = new Map<string, RunExecutionHandle>();
+  /**
+   * Runs with a resume()/cancel() decision currently being applied. Guards the
+   * approval/input resume race: resume() and cancel() each have multiple await
+   * points, and the status check at the top of resume() reads a value that
+   * stays `waiting_*` until a later `await transition()` lands. Two concurrent
+   * resumes (double-click approve), or resume racing cancel, would both pass
+   * that check and both drive transitions / resolve the handle. The handle's
+   * resolve is idempotent, but the duplicate transitions and (worse) the
+   * mismatched-input re-queue path are not. We serialize per-run here.
+   */
+  private readonly resolvingRuns = new Set<string>();
 
   constructor(config: RunManagerConfig) {
     this.store = config.store;
@@ -154,6 +165,23 @@ export class RunManager {
   // ─── Resume ────────────────────────────────────────────────────
 
   async resume(runId: string, input?: ResumeRunInput): Promise<void> {
+    // Serialize resume/cancel decisions per run. Without this, two concurrent
+    // resumes (or resume racing cancel) both pass the status check below —
+    // status stays `waiting_*` until a later `await transition()` — and both
+    // drive transitions / the re-queue path. Reject the late arrival rather
+    // than letting it double-resolve.
+    if (this.resolvingRuns.has(runId)) {
+      throw new Error(`Cannot resume run ${runId}: another resume/cancel is already in progress`);
+    }
+    this.resolvingRuns.add(runId);
+    try {
+      await this.resumeInner(runId, input);
+    } finally {
+      this.resolvingRuns.delete(runId);
+    }
+  }
+
+  private async resumeInner(runId: string, input?: ResumeRunInput): Promise<void> {
     const run = await this.getOrThrow(runId);
 
     if (
@@ -200,6 +228,16 @@ export class RunManager {
         handle.resolveInput(input.userInput);
         return;
       }
+
+      // A handle exists (Engine is live and suspended) but the input doesn't
+      // match what it's waiting for — e.g. userInput supplied for a
+      // waiting_approval run. Falling through to Case 2 would re-enqueue a
+      // FRESH execution while the suspended Engine still dangles (duplicate
+      // run + leaked handle). Reject with a clear message instead.
+      throw new Error(
+        `Cannot resume run ${runId}: it is ${run.status} but the provided input does not match ` +
+          `(expected ${run.status === "waiting_approval" ? "approvalDecision" : "userInput"}).`,
+      );
     }
 
     // Case 2: No active handle (process restarted, or blocked state)
