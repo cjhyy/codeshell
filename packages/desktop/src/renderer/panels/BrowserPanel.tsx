@@ -8,6 +8,7 @@ import {
   Plus,
   X,
   MousePointerSquareDashed,
+  PictureInPicture2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { CommentBox } from "../chat/CommentBox";
@@ -125,14 +126,25 @@ const PICKER_SCRIPT = `
 `;
 
 let tabSeq = 0;
-function freshTab(): Tab {
+function freshTab(initialUrl?: string): Tab {
   tabSeq += 1;
-  return { id: `tab-${tabSeq}`, url: NEW_TAB, title: "新选项卡", draft: "" };
+  const url = initialUrl && initialUrl !== NEW_TAB ? initialUrl : NEW_TAB;
+  return { id: `tab-${tabSeq}`, url, title: "新选项卡", draft: url === NEW_TAB ? "" : url };
 }
 
 interface Props {
   /** Workspace root — reserved for future "open file in browser" wiring. */
   cwd: string | null;
+  /** Initial URL to open (used by the popout window). */
+  initialUrl?: string;
+  /**
+   * Where a comment anchor goes. Defaults to the in-window composer (via the
+   * add-anchor event). The popout window overrides this to send over IPC to the
+   * parent window's composer. Return value unused.
+   */
+  onAnchor?: (a: { kind: "browser"; label: string; locator: Record<string, string>; comment: string }) => void;
+  /** Whether to show the "弹出独立窗口" button (hidden inside the popout itself). */
+  showPopout?: boolean;
 }
 
 /**
@@ -140,8 +152,9 @@ interface Props {
  * persistent partition) with a self-drawn address bar, tabs, and a
  * localhost bookmark list discovered by port-probing common dev ports.
  */
-export function BrowserPanel(_props: Props) {
-  const [tabs, setTabs] = useState<Tab[]>(() => [freshTab()]);
+export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props) {
+  const emitAnchor = onAnchor ?? addAnchor;
+  const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
   const viewRef = useRef<WebviewElement | null>(null);
   const [nav, setNav] = useState({ canGoBack: false, canGoForward: false, loading: false });
@@ -342,6 +355,14 @@ export function BrowserPanel(_props: Props) {
         >
           <MousePointerSquareDashed className="h-4 w-4" />
         </IconBtn>
+        {showPopout && (
+          <IconBtn
+            onClick={() => void window.codeshell.openBrowserPopout(active.url === NEW_TAB ? undefined : active.url)}
+            label="弹出独立窗口"
+          >
+            <PictureInPicture2 className="h-4 w-4" />
+          </IconBtn>
+        )}
         <IconBtn
           onClick={() => active.url !== NEW_TAB && void window.codeshell.openExternal(active.url)}
           label="在外部打开"
@@ -361,7 +382,7 @@ export function BrowserPanel(_props: Props) {
             title={`${picked.tag}${picked.id ? "#" + picked.id : ""} · ${picked.selector}`}
             onCancel={() => setPicked(null)}
             onSubmit={(comment) => {
-              addAnchor({
+              emitAnchor({
                 kind: "browser",
                 label: picked.id
                   ? `${picked.tag}#${picked.id}`

@@ -80,7 +80,7 @@ import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
 import { PanelArea } from "./panels/PanelArea";
 import type { PanelTab } from "./view";
-import type { Anchor } from "./chat/anchors";
+import { nextAnchorId, type Anchor } from "./chat/anchors";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -1634,6 +1634,17 @@ function App() {
     };
     window.addEventListener("codeshell:add-anchor", onAnchor);
     return () => window.removeEventListener("codeshell:add-anchor", onAnchor);
+  }, []);
+
+  // A browser popout window pinned an element anchor; it arrives over IPC
+  // (no id assigned yet). Add it to the composer like a local one.
+  useEffect(() => {
+    return window.codeshell.onBrowserAnchorFromPopout((raw) => {
+      const a = raw as Omit<Anchor, "id">;
+      if (a && a.kind && a.locator) {
+        setAnchors((prev) => [...prev, { ...a, id: nextAnchorId() }]);
+      }
+    });
   }, []);
 
   useEffect(() => {

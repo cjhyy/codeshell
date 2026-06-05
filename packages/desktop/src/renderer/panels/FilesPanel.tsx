@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronRight, ChevronDown, File as FileIcon, Folder, MessageSquarePlus } from "lucide-react";
+import { ChevronRight, ChevronDown, File as FileIcon, Folder, MessageSquarePlus, PanelLeftClose } from "lucide-react";
 import type { FsEntry, FileContent } from "../../preload/types";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "../Markdown";
@@ -23,6 +23,7 @@ interface Props {
 export function FilesPanel({ cwd }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  const [treeOpen, setTreeOpen] = useState(true);
 
   if (!cwd) {
     return (
@@ -34,29 +35,44 @@ export function FilesPanel({ cwd }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1">
-      <div className="flex w-72 shrink-0 flex-col border-r border-border">
-        <div className="shrink-0 border-b border-border p-2">
-          <Input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="筛选文件…"
-            className="h-8"
-          />
-        </div>
-        <div className="min-h-0 flex-1 overflow-auto py-1">
-          <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} />
-        </div>
-      </div>
-      <div className="min-h-0 min-w-0 flex-1">
-        {selected ? (
-          <FileViewer root={cwd} path={selected} />
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
-            <Folder className="h-7 w-7" />
-            <div className="text-sm font-medium text-foreground">打开文件</div>
-            <div className="text-xs">从工作区目录树中选择文件</div>
+      {treeOpen && (
+        <div className="flex w-72 shrink-0 flex-col border-r border-border">
+          <div className="shrink-0 border-b border-border p-2">
+            <Input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="筛选文件…"
+              className="h-8"
+            />
           </div>
-        )}
+          <div className="min-h-0 flex-1 overflow-auto py-1">
+            <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} />
+          </div>
+        </div>
+      )}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex shrink-0 items-center border-b border-border px-1 py-1">
+          <button
+            type="button"
+            aria-label={treeOpen ? "隐藏文件树" : "显示文件树"}
+            title={treeOpen ? "隐藏文件树" : "显示文件树"}
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+            onClick={() => setTreeOpen((v) => !v)}
+          >
+            <PanelLeftClose className={treeOpen ? "h-4 w-4" : "h-4 w-4 rotate-180"} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {selected ? (
+            <FileViewer root={cwd} path={selected} />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
+              <Folder className="h-7 w-7" />
+              <div className="text-sm font-medium text-foreground">打开文件</div>
+              <div className="text-xs">从工作区目录树中选择文件</div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -173,19 +189,36 @@ function FileViewer({ root, path }: { root: string; path: string }) {
   const name = useMemo(() => path.split("/").pop() ?? path, [path]);
   const isImage = IMAGE_EXT.has(ext) || ext === SVG_EXT;
   const isMarkdown = ext === "md" || ext === "markdown";
+  // Markdown renders rich by default; switch to 源码 to get per-line comments.
+  // (Rich preview has no addressable lines, so commenting needs source mode.)
+  const [mdSource, setMdSource] = useState(false);
+  // Reset to preview when switching to a different markdown file.
+  useEffect(() => setMdSource(false), [path]);
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <FileIcon className="h-4 w-4 text-muted-foreground" />
         <span className="truncate text-sm font-medium text-foreground">{name}</span>
-        <span className="truncate text-xs text-muted-foreground">{path}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{path}</span>
+        {isMarkdown && (
+          <button
+            type="button"
+            className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
+            onClick={() => setMdSource((v) => !v)}
+            title={mdSource ? "切换到预览" : "切换到源码(可逐行评论)"}
+          >
+            {mdSource ? "预览" : "源码"}
+          </button>
+        )}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {isImage ? (
           <ImagePreview path={path} />
         ) : (
-          <TextPreview root={root} path={path} markdown={isMarkdown} />
+          // Markdown in preview mode renders rich; everything else (and md in
+          // source mode) uses the line-numbered, per-line-commentable view.
+          <TextPreview root={root} path={path} markdown={isMarkdown && !mdSource} />
         )}
       </div>
     </div>

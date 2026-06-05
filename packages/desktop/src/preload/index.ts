@@ -466,4 +466,16 @@ contextBridge.exposeInMainWorld("codeshell", {
   // ── Filesystem (file-browser panel) ───────────────────────────────────
   readDir: (root: string, dir: string) => ipcRenderer.invoke("fs:readDir", root, dir),
   readFileContent: (root: string, path: string) => ipcRenderer.invoke("fs:readFile", root, path),
+
+  // ── Browser popout window ─────────────────────────────────────────────
+  /** Open the standalone browser window, optionally at an initial URL. */
+  openBrowserPopout: (initialUrl?: string) => ipcRenderer.invoke("browser:popout", initialUrl),
+  /** From a popout: send an element-pick anchor back to the parent window. */
+  sendBrowserAnchor: (anchor: unknown) => ipcRenderer.send("browser:anchor", anchor),
+  /** In the parent: receive anchors forwarded from a popout. Returns unsubscribe. */
+  onBrowserAnchorFromPopout: (cb: (anchor: unknown) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, anchor: unknown) => cb(anchor);
+    ipcRenderer.on("browser:anchor-from-popout", h);
+    return () => ipcRenderer.removeListener("browser:anchor-from-popout", h);
+  },
 });

@@ -313,6 +313,43 @@ async function createWindow(): Promise<BrowserWindow> {
   return win;
 }
 
+/** Tracks the popout browser windows so we can route anchors back to a parent. */
+const popoutParents = new Map<number, number>(); // popout wc id -> parent window id
+
+/**
+ * Open a standalone browser window (the popout). It loads the same renderer
+ * with `?popout=browser`, which mounts just the browser panel full-window.
+ * Element-pick anchors made in here are forwarded to `parent` so they land in
+ * the main window's composer.
+ */
+async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): Promise<void> {
+  const win = new BrowserWindow({
+    width: 1100,
+    height: 800,
+    title: "浏览器",
+    webPreferences: {
+      preload: resolve(__dirname, "..", "preload", "index.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webviewTag: true,
+    },
+  });
+  popoutParents.set(win.webContents.id, parent.id);
+  win.on("closed", () => popoutParents.delete(win.webContents.id));
+
+  const query: Record<string, string> = { popout: "browser" };
+  if (initialUrl) query.url = initialUrl;
+  const devUrl = process.env.VITE_DEV_URL;
+  if (devUrl) {
+    const u = new URL(devUrl);
+    for (const [k, v] of Object.entries(query)) u.searchParams.set(k, v);
+    await win.loadURL(u.toString());
+  } else {
+    await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), { query });
+  }
+}
+
 app.whenReady().then(() => {
   if (process.platform === "darwin" && app.dock) {
     try {
@@ -660,6 +697,23 @@ ipcMain.handle("dialog:pickSkillDir", async (): Promise<{ path: string; name: st
 
 ipcMain.handle("window:new", async () => {
   await createWindow();
+});
+
+// Open the standalone browser popout, parented to the requesting window so its
+// element-pick anchors route back to that window's composer.
+ipcMain.handle("browser:popout", async (e, initialUrl?: string) => {
+  const parent = BrowserWindow.fromWebContents(e.sender);
+  if (!parent) return;
+  await createBrowserPopout(parent, typeof initialUrl === "string" ? initialUrl : undefined);
+});
+
+// A popout pinned an element anchor → forward it to the parent window's
+// renderer, which dispatches the normal add-anchor flow into the composer.
+ipcMain.on("browser:anchor", (e, anchor: unknown) => {
+  const parentId = popoutParents.get(e.sender.id);
+  if (parentId === undefined) return;
+  const parent = BrowserWindow.fromId(parentId);
+  if (parent && !parent.isDestroyed()) parent.webContents.send("browser:anchor-from-popout", anchor);
 });
 
 ipcMain.handle("git:status", async (_e, cwd: string) => {

@@ -288,6 +288,15 @@ export interface CodeshellApi {
   readDir(root: string, dir: string): Promise<FsEntry[]>;
   /** Read a text file (capped at 2 MB; binary/oversize → text null). */
   readFileContent(root: string, path: string): Promise<FileContent>;
+
+  // ── Browser popout window ─────────────────────────────────────────────
+  /** Open the standalone browser window, optionally at an initial URL. */
+  openBrowserPopout(initialUrl?: string): Promise<void>;
+  /** From a popout: send an element-pick anchor back to the parent window. */
+  sendBrowserAnchor(anchor: unknown): void;
+  /** In the parent: receive anchors forwarded from a popout. Returns unsubscribe. */
+  onBrowserAnchorFromPopout(cb: (anchor: unknown) => void): () => void;
+
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string): Promise<void>;
   /**
