@@ -42,6 +42,7 @@ export interface AgentTypeOverrides {
   model?: string;
   maxTurns?: number;
   toolAllowlist?: string[];
+  skillAllowlist?: string[];
   appendSystemPrompt?: string;
 }
 
@@ -82,6 +83,7 @@ export function resolveAgentTypeOverrides(
     model: def.model,
     maxTurns: def.maxTurns,
     toolAllowlist: def.tools,
+    skillAllowlist: def.skills,
     appendSystemPrompt: def.systemPrompt,
   };
 }
@@ -102,7 +104,13 @@ export function buildAgentTypesBlock(
   if (defs.length === 0) return "";
   const lines = defs.map((d) => {
     const tools = d.tools && d.tools.length > 0 ? d.tools.join(", ") : "all parent tools";
-    return `- ${d.name}: ${d.description} (tools: ${tools})`;
+    // Only surface skills when the role restricts them — most roles inherit
+    // the full pool and listing "all skills" everywhere is noise.
+    const skillsNote =
+      d.skills !== undefined
+        ? `; skills: ${d.skills.length > 0 ? d.skills.join(", ") : "none"}`
+        : "";
+    return `- ${d.name}: ${d.description} (tools: ${tools}${skillsNote})`;
   });
   return [
     "",
@@ -228,6 +236,7 @@ async function runSubAgent(
     /** Role overrides resolved from agent_type; forwarded to spawner.spawn. */
     model?: string;
     toolAllowlist?: string[];
+    skillAllowlist?: string[];
     appendSystemPrompt?: string;
     readOnlySession?: boolean;
     /** Engine HookRegistry for lifecycle events. Undefined → no hooks. */
@@ -357,6 +366,7 @@ export async function agentTool(
         maxTurns,
         model: overrides.model,
         toolAllowlist: overrides.toolAllowlist,
+        skillAllowlist: overrides.skillAllowlist,
         appendSystemPrompt: overrides.appendSystemPrompt,
         readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
         hooks: ctx?.hooks,
@@ -485,6 +495,7 @@ export async function agentTool(
       maxTurns,
       model: overrides.model,
       toolAllowlist: overrides.toolAllowlist,
+      skillAllowlist: overrides.skillAllowlist,
       appendSystemPrompt: overrides.appendSystemPrompt,
       readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
       hooks: ctx?.hooks,

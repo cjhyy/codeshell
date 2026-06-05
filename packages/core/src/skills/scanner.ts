@@ -223,6 +223,15 @@ const memoized = memoize(
 export interface ScanSkillsOptions {
   disabledSkills?: string[];
   disabledPlugins?: string[];
+  /**
+   * Hard skill isolation for sub-agents. When set, ONLY skills whose name is
+   * in this list survive — every other skill is dropped from the result
+   * regardless of the disabled lists. Undefined → no allowlist filtering
+   * (parent inherits the full pool). An empty array → no skills at all.
+   * Applied after the disabled-list filters, so a skill must be both allowed
+   * AND not disabled to appear.
+   */
+  skillAllowlist?: string[];
 }
 
 export function scanSkills(
@@ -232,15 +241,21 @@ export function scanSkills(
   const all = memoized(cwd);
   const disabledSkills = opts?.disabledSkills;
   const disabledPlugins = opts?.disabledPlugins;
+  const skillAllowlist = opts?.skillAllowlist;
 
   const hasSkillFilter = disabledSkills && disabledSkills.length > 0;
   const hasPluginFilter = disabledPlugins && disabledPlugins.length > 0;
-  if (!hasSkillFilter && !hasPluginFilter) return all;
+  // An allowlist of [] is meaningful (no skills at all), so check for
+  // presence with !== undefined, not truthiness/length.
+  const hasAllowlist = skillAllowlist !== undefined;
+  if (!hasSkillFilter && !hasPluginFilter && !hasAllowlist) return all;
 
   const skillSet = hasSkillFilter ? new Set(disabledSkills) : null;
   const pluginSet = hasPluginFilter ? new Set(disabledPlugins) : null;
+  const allowSet = hasAllowlist ? new Set(skillAllowlist) : null;
 
   return all.filter((s) => {
+    if (allowSet && !allowSet.has(s.name)) return false;
     if (skillSet && skillSet.has(s.name)) return false;
     if (pluginSet) {
       // Use indexOf, not split — skill names may theoretically contain

@@ -81,6 +81,12 @@ export interface SubAgentSpawnRequest {
    */
   toolAllowlist?: string[];
   /**
+   * Optional skill-name allowlist for the child (hard isolation). When set,
+   * the child only sees/invokes these skills in its system prompt and Skill
+   * tool. Undefined → child inherits the parent's full skill pool.
+   */
+  skillAllowlist?: string[];
+  /**
    * Optional per-call system prompt appended to the child Engine's prompt
    * (the role definition's Markdown body). Undefined → child inherits only
    * the parent's appendSystemPrompt (current behavior).
@@ -189,6 +195,14 @@ export interface ToolContext {
    * `settings.disabledPlugins` by Engine.run().
    */
   disabledPlugins?: string[];
+  /**
+   * Sub-agent skill allowlist (hard isolation). When set, this sub-agent may
+   * only see/invoke skills in this list — applied on top of the disabled
+   * lists. Undefined → inherit the parent's full pool (current behavior).
+   * Comes from the agent role definition's `skills:` frontmatter, threaded
+   * through SubAgentSpawnRequest.skillAllowlist into the child Engine.
+   */
+  skillAllowlist?: string[];
   /**
    * Builtin tool names the project's capabilityOverrides marked `off` for
    * this cwd. Engine.run() already HIDES these from the LLM-visible tool

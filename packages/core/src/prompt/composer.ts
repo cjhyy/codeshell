@@ -39,6 +39,14 @@ export interface ComposerOptions {
    * `${pluginName}:` is filtered. See scanSkills(opts.disabledPlugins).
    */
   disabledPlugins?: string[];
+  /**
+   * Sub-agent skill allowlist (hard isolation). When set, only these skills
+   * appear in the LLM's skills listing — applied on top of the disabled
+   * lists. Undefined → the full (non-disabled) pool. Mirrors
+   * scanSkills(opts.skillAllowlist) so the prompt matches the Skill tool's
+   * dispatch gate.
+   */
+  skillAllowlist?: string[];
 }
 
 export class PromptComposer {
@@ -186,6 +194,7 @@ export class PromptComposer {
         const skills = scanSkills(this.options.cwd, {
           disabledSkills: this.options.disabledSkills,
           disabledPlugins: this.options.disabledPlugins,
+          skillAllowlist: this.options.skillAllowlist,
         });
         return buildSkillListing(skills);
       },

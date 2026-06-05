@@ -53,6 +53,14 @@ export async function skillTool(
   // ordering is observable but not load-bearing.
   const disabledSkills = ctx?.disabledSkills;
   const disabledPlugins = ctx?.disabledPlugins;
+  const skillAllowlist = ctx?.skillAllowlist;
+  // Sub-agent skill isolation: when this agent has an allowlist, a skill
+  // outside it must be refused — even invoking it by exact name. The scan
+  // below also drops it, but an explicit message beats a misleading "not
+  // found" for a skill that exists in the project but isn't this agent's.
+  if (skillAllowlist !== undefined && !skillAllowlist.includes(skillName)) {
+    return `Skill "${skillName}" is not available to this sub-agent. This agent's role restricts it to: ${skillAllowlist.length > 0 ? skillAllowlist.join(", ") : "(no skills)"}.`;
+  }
   if (disabledSkills && disabledSkills.includes(skillName)) {
     return `Skill "${skillName}" is disabled. Enable it in Customize or remove it from settings.disabledSkills.`;
   }
@@ -70,6 +78,7 @@ export async function skillTool(
   const skills = scanSkills(ctx?.cwd ?? process.cwd(), {
     disabledSkills,
     disabledPlugins,
+    skillAllowlist,
   });
   const found = skills.find((s) => s.name === skillName);
 

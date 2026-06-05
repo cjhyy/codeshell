@@ -230,16 +230,16 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 - [ ] Agent 间通信：评估 mailbox 路线；决定补齐 mailbox 还是删除半成品 `SendMessage` / `agentCoordinator`
 - [ ] `task` 加 `agentId` tag，避免子 agent task 混进主视图
 - [ ] Agent 执行结果汇总视图
-### ⬜ 子 agent skill 隔离（per-agent skill allowlist）
+### ✅ 子 agent skill 隔离（per-agent skill allowlist）
 
-子 agent 当前看到的 skill 池 = 项目内所有未禁用 skill，与"是哪个子 agent"无关；agent 定义 frontmatter 的 `skills:` 字段在 `parseAgentDefinition` 解析时被直接丢弃（CC 血统的包如 Seedance 团队带了该字段，但运行时无效）。需补齐硬隔离：director 子 agent 物理上只看到自己的 skill。照搬现有 `tools` 白名单那套链路。
+已实现硬隔离：director 子 agent 物理上只看到自己的 skill。照搬了现有 `tools` 白名单链路（overrides → SubAgentSpawnRequest → EngineConfig → PromptComposer + ToolContext）。
 
-- [ ] `agent/agent-definition.ts`：解析时保留 `skills`（数组/逗号串归一），写 `AgentDefinition.skills`；`serializeAgentDefinition` 对称回写
-- [ ] `tool-system/builtin/agent.ts`：构造子 engine 时把 `def.skills` 作为 skill allowlist 下传（类比现有 `toolAllowlist: def.tools`）
-- [ ] `skills/scanner.ts` + `tool-system/builtin/skill.ts`：scan/列出/invoke 接收 allowlist，子 agent 的 skill 池按它过滤（未在 allowlist 的 skill 既不进 system prompt 列表，也拒绝 invoke）
-- [ ] `buildAgentTypesBlock` 同步：可选在 agent types 块里显示各 agent 的 skill 集
-- [ ] 未配 `skills:` → 维持现状（继承项目全量池），保证向后兼容
-- [ ] 测试：配了 skills 的 agent 看不到/调不到池外 skill；未配的 agent 行为不变
+- [x] `agent/agent-definition.ts`：解析时保留 `skills`（数组/逗号串归一，抽 `normalizeNameList`，tools 一并升级）；`serializeAgentDefinition` 对称回写
+- [x] `tool-system/builtin/agent.ts`：构造子 engine 时把 `def.skills` 作为 skill allowlist 下传（`overrides.skillAllowlist`，类比 `toolAllowlist: def.tools`）
+- [x] `skills/scanner.ts` + `tool-system/builtin/skill.ts`：scan/列出/invoke 接收 allowlist（`ScanSkillsOptions.skillAllowlist` / `ctx.skillAllowlist`），未在 allowlist 的 skill 不进 system prompt，也拒绝 invoke（专属报错）
+- [x] `buildAgentTypesBlock`：受限 agent 在 agent types 块显示 skill 集（仅受限时显示）
+- [x] 未配 `skills:` → 维持现状（继承项目全量池），向后兼容（`undefined` vs `[]` 语义区分）
+- [x] 测试：`scanner.allowlist.test.ts` / `agent-definition.skills.test.ts` / `skill.allowlist.test.ts`（15 用例）
 
 ---
 

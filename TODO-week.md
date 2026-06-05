@@ -213,17 +213,17 @@
 - [ ] 主 agent 系统 prompt 加 kind 选择指南。
 - [ ] Agent 角色预定义到 config：用户级目录已有，补 settings-level 默认配置。
 
-### 4.3 子 agent skill 隔离
+### 4.3 子 agent skill 隔离 ✅
 
-- [ ] `agent/agent-definition.ts` 解析并保留 `skills`。
-- [ ] `serializeAgentDefinition` 对称回写 `skills`。
-- [ ] 构造子 engine 时把 `def.skills` 作为 skill allowlist 下传。
-- [ ] `skills/scanner.ts` 支持 allowlist。
-- [ ] `tool-system/builtin/skill.ts` 列出 / invoke 时按 allowlist 过滤。
-- [ ] 未在 allowlist 的 skill 不进入 system prompt，也拒绝 invoke。
-- [ ] `buildAgentTypesBlock` 可选显示各 agent 的 skill 集。
-- [ ] 未配 `skills:` 维持继承项目全量池。
-- [ ] 测试：配了 skills 的 agent 看不到 / 调不到池外 skill；未配行为不变。
+- [x] `agent/agent-definition.ts` 解析并保留 `skills`（YAML 列表 / 逗号串归一，复用 normalizeNameList，tools 一并升级）。
+- [x] `serializeAgentDefinition` 对称回写 `skills`。
+- [x] 构造子 engine 时把 `def.skills` 作为 skill allowlist 下传（overrides.skillAllowlist → SubAgentSpawnRequest.skillAllowlist → EngineConfig.skillAllowlist）。
+- [x] `skills/scanner.ts` 支持 allowlist（ScanSkillsOptions.skillAllowlist，[] = 无 skill,undefined = 继承全量）。
+- [x] `tool-system/builtin/skill.ts` 列出 / invoke 时按 allowlist 过滤（ctx.skillAllowlist；池外 skill 报「not available to this sub-agent」而非 not found）。
+- [x] 未在 allowlist 的 skill 不进入 system prompt（PromptComposer.skillAllowlist），也拒绝 invoke。
+- [x] `buildAgentTypesBlock` 显示受限 agent 的 skill 集（仅当 role 限制时显示，避免噪声）。
+- [x] 未配 `skills:` 维持继承项目全量池。
+- [x] 测试：`scanner.allowlist.test.ts` / `agent-definition.skills.test.ts` / `skill.allowlist.test.ts`（15 用例,含未配行为不变）。
 
 ### 4.4 多代理控制与结果视图
 

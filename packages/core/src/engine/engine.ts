@@ -222,6 +222,13 @@ export interface EngineConfig {
    */
   isSubAgent?: boolean;
   /**
+   * Hard skill isolation for a sub-agent. When set, this Engine only lists
+   * and invokes skills in this allowlist (applied on top of disabledSkills).
+   * Set by the spawn() closure from the role definition's `skills:`
+   * frontmatter. Undefined → inherit the parent's full skill pool.
+   */
+  skillAllowlist?: string[];
+  /**
    * Host/context that created this Engine's sessions — written to state.json's
    * `origin` so the desktop disk-rebuild can filter the sidebar (desktop +
    * automation shown; tui hidden). Sub-agents override to "subagent".
@@ -995,6 +1002,7 @@ export class Engine {
           sessionStorageDir: this.config.sessionStorageDir,
           headless: this.config.headless,
           readOnlySession: req.readOnlySession,
+          skillAllowlist: req.skillAllowlist,
           sandbox: this.config.sandbox,
           // Subagents inherit the parent's scope: a child runs in the same
           // cwd/session, so it should see the same config layers the parent did.
@@ -1349,6 +1357,7 @@ export class Engine {
       instructionOptions: { compatFileNames: compatFileNamesFrom(this.config.instructions) },
       disabledSkills,
       disabledPlugins,
+      skillAllowlist: this.config.skillAllowlist,
     });
 
     // Connect MCP servers (if configured and not already connected).
@@ -2476,6 +2485,7 @@ export class Engine {
       engine: this,
       disabledSkills,
       disabledPlugins,
+      skillAllowlist: this.config.skillAllowlist,
     };
   }
 

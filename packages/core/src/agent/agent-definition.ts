@@ -12,6 +12,13 @@ export interface AgentDefinition {
   maxTurns?: number;
   /** Optional tool allowlist. Undefined → inherit parent's full tool set. */
   tools?: string[];
+  /**
+   * Optional skill allowlist. Undefined → inherit the parent's full skill
+   * pool (every non-disabled skill in the project). When set, the sub-agent
+   * physically only sees these skills: they're the only ones listed in its
+   * system prompt and the only ones it may invoke. Empty array → no skills.
+   */
+  skills?: string[];
   /** Markdown body — becomes the child Engine's appendSystemPrompt. */
   systemPrompt: string;
   /** Where this def was loaded from. Runtime-only; never serialized. */
@@ -31,6 +38,27 @@ interface RawFrontmatter {
   model?: unknown;
   maxTurns?: unknown;
   tools?: unknown;
+  skills?: unknown;
+}
+
+/**
+ * Normalize a frontmatter `tools:` / `skills:` value into a string[].
+ * Accepts both a YAML list (`[a, b]`) and a comma/whitespace-separated
+ * string (`a, b`) — CC-lineage agent files use either form. Returns
+ * undefined when the field is absent or not a usable shape, so the caller
+ * keeps the "inherit parent" default.
+ */
+function normalizeNameList(value: unknown): string[] | undefined {
+  if (Array.isArray(value)) {
+    return value.filter((t): t is string => typeof t === "string");
+  }
+  if (typeof value === "string") {
+    return value
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
+  return undefined;
 }
 
 /**
@@ -64,9 +92,10 @@ export function parseAgentDefinition(raw: string, sourceName: string): AgentDefi
   };
   if (typeof fm.model === "string" && fm.model.trim()) def.model = fm.model.trim();
   if (typeof fm.maxTurns === "number") def.maxTurns = fm.maxTurns;
-  if (Array.isArray(fm.tools)) {
-    def.tools = fm.tools.filter((t): t is string => typeof t === "string");
-  }
+  const tools = normalizeNameList(fm.tools);
+  if (tools !== undefined) def.tools = tools;
+  const skills = normalizeNameList(fm.skills);
+  if (skills !== undefined) def.skills = skills;
   return def;
 }
 
@@ -85,6 +114,7 @@ export function serializeAgentDefinition(def: AgentDefinition): string {
   if (def.model !== undefined) fm.model = def.model;
   if (def.maxTurns !== undefined) fm.maxTurns = def.maxTurns;
   if (def.tools !== undefined) fm.tools = def.tools;
+  if (def.skills !== undefined) fm.skills = def.skills;
   const yaml = stringifyYaml(fm).trimEnd();
   return `---\n${yaml}\n---\n${def.systemPrompt}\n`;
 }
