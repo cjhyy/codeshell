@@ -18,7 +18,27 @@ export interface GoalConfig {
   tokenBudget?: number;
   /** Hard cap on wall-clock duration of the whole goal run, in ms. */
   timeBudgetMs?: number;
+  /**
+   * Hard cap on total turns for this goal run. When set, it overrides the
+   * engine's interactive maxTurns default — a goal ("keep going until done")
+   * routinely needs more turns than a single interactive prompt, and the
+   * stop-hook keeps re-blocking completion, so the 100-turn interactive
+   * ceiling would silently truncate a long unattended goal. Drops
+   * non-positive values to "no override". See GOAL_DEFAULT_MAX_TURNS for the
+   * fallback applied when a goal is active but no explicit cap was given.
+   */
+  maxTurns?: number;
 }
+
+/**
+ * Turn ceiling applied when a goal is active and neither the GoalConfig nor
+ * the engine config set an explicit maxTurns. Higher than the interactive
+ * default (100) because goal runs are unattended and the stop-hook keeps the
+ * loop going until the objective is met — the real safety backstops are the
+ * token/time budgets and maxStopBlocks, not this ceiling. A round 300 gives
+ * long goals room while still bounding a pathological loop.
+ */
+export const GOAL_DEFAULT_MAX_TURNS = 300;
 
 /**
  * Coerce a raw goal input into a normalized GoalConfig, or undefined when
@@ -33,7 +53,32 @@ export function normalizeGoal(raw: string | GoalConfig | undefined): GoalConfig 
   const out: GoalConfig = { objective };
   if (typeof obj.tokenBudget === "number" && obj.tokenBudget > 0) out.tokenBudget = obj.tokenBudget;
   if (typeof obj.timeBudgetMs === "number" && obj.timeBudgetMs > 0) out.timeBudgetMs = obj.timeBudgetMs;
+  if (typeof obj.maxTurns === "number" && obj.maxTurns > 0) out.maxTurns = Math.floor(obj.maxTurns);
   return out;
+}
+
+/** Interactive (no-goal) turn ceiling — a single prompt rarely needs more. */
+export const INTERACTIVE_DEFAULT_MAX_TURNS = 100;
+
+/**
+ * Resolve the turn ceiling for a run, honoring goal mode.
+ *
+ * Precedence (first defined wins):
+ *   1. `configMaxTurns` — an explicit engine/caller override (always wins).
+ *   2. `goal.maxTurns`  — a per-goal cap from the GoalConfig.
+ *   3. `GOAL_DEFAULT_MAX_TURNS` when a goal is active (raise the unattended
+ *      ceiling above the interactive default).
+ *   4. `INTERACTIVE_DEFAULT_MAX_TURNS` otherwise.
+ *
+ * Pure + injectable so the engine and tests agree on the rule.
+ */
+export function resolveMaxTurns(
+  configMaxTurns: number | undefined,
+  goal: GoalConfig | undefined,
+): number {
+  if (typeof configMaxTurns === "number" && configMaxTurns > 0) return configMaxTurns;
+  if (goal) return goal.maxTurns ?? GOAL_DEFAULT_MAX_TURNS;
+  return INTERACTIVE_DEFAULT_MAX_TURNS;
 }
 
 export interface GoalBudgetTracker {

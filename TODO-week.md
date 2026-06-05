@@ -148,13 +148,13 @@
 
 ## 3. Session / Goal / 后台执行可靠性
 
-### 3.1 Goal 模式最大轮次优化
+### 3.1 Goal 模式最大轮次优化 🔧
 
-- [ ] 调研当前 Goal 模式最大轮次、停止条件、预算控制实现。
-- [ ] 判断是否存在轮次过少、过多、无法动态调整或 UI 不透明的问题。
-- [ ] 设计按 goal 类型配置默认 max turns。
-- [ ] 支持运行中续轮 / 加预算。
-- [ ] 接近上限时提示，并在失败时输出恢复建议和总结。
+- [x] 调研：Goal 模式由 on_stop 裁判 hook(goal-stop-hook)+ complete_goal 主动声明协作;停止条件 = maxStopBlocks(默认8 连续) + maxTurns 上限 + run-scoped token/time budget(goal.ts GoalBudgetTracker)。
+- [x] 判断问题:**核心 bug = goal 运行仍用交互默认 maxTurns 100**,无人值守长目标被静默截断,且无 goal 级配置。
+- [x] 按 goal 配置默认 max turns:`resolveMaxTurns` 优先级 = 显式 config > goal.maxTurns > GOAL_DEFAULT_MAX_TURNS(300) > 交互默认(100);`GoalConfig.maxTurns` 经 normalizeGoal 归一(floored,非正丢弃)。
+- [x] 接近上限提示 + 失败总结:turn-loop 已有 turnsRemaining===2 预警 / ===0 强制总结;goal 续跑达 maxStopBlocks 上限输出「先停下」;judge 失败/不可解析不放行(P0)。
+- [ ] 运行中续轮 / 加预算(UI 交互层,需 desktop 配合,排后)。
 
 ### 3.2 Session 内后台命令支持
 

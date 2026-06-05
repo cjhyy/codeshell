@@ -4,6 +4,9 @@ import {
   createGoalBudgetTracker,
   recordGoalUsage,
   goalBudgetExceeded,
+  resolveMaxTurns,
+  GOAL_DEFAULT_MAX_TURNS,
+  INTERACTIVE_DEFAULT_MAX_TURNS,
   type GoalConfig,
 } from "./goal.js";
 
@@ -29,6 +32,40 @@ describe("normalizeGoal", () => {
     expect(normalizeGoal({ objective: "x", tokenBudget: 0, timeBudgetMs: -1 })).toEqual({
       objective: "x",
     });
+  });
+  test("maxTurns is normalized: positive kept (floored), non-positive dropped", () => {
+    expect(normalizeGoal({ objective: "x", maxTurns: 250 })).toEqual({
+      objective: "x",
+      maxTurns: 250,
+    });
+    expect(normalizeGoal({ objective: "x", maxTurns: 12.9 })).toEqual({
+      objective: "x",
+      maxTurns: 12,
+    });
+    expect(normalizeGoal({ objective: "x", maxTurns: 0 })).toEqual({ objective: "x" });
+    expect(normalizeGoal({ objective: "x", maxTurns: -5 })).toEqual({ objective: "x" });
+  });
+});
+
+// TODO §3.1 — goal runs need a higher turn ceiling than interactive prompts.
+describe("resolveMaxTurns (goal-aware turn ceiling)", () => {
+  test("no goal, no override → interactive default", () => {
+    expect(resolveMaxTurns(undefined, undefined)).toBe(INTERACTIVE_DEFAULT_MAX_TURNS);
+  });
+  test("goal active, no per-goal cap → goal default (higher)", () => {
+    expect(resolveMaxTurns(undefined, { objective: "x" })).toBe(GOAL_DEFAULT_MAX_TURNS);
+    expect(GOAL_DEFAULT_MAX_TURNS).toBeGreaterThan(INTERACTIVE_DEFAULT_MAX_TURNS);
+  });
+  test("per-goal maxTurns wins over the goal default", () => {
+    expect(resolveMaxTurns(undefined, { objective: "x", maxTurns: 42 })).toBe(42);
+  });
+  test("explicit config override always wins (even over goal cap)", () => {
+    expect(resolveMaxTurns(7, { objective: "x", maxTurns: 42 })).toBe(7);
+    expect(resolveMaxTurns(7, undefined)).toBe(7);
+  });
+  test("non-positive config override is ignored, falls through", () => {
+    expect(resolveMaxTurns(0, { objective: "x" })).toBe(GOAL_DEFAULT_MAX_TURNS);
+    expect(resolveMaxTurns(-1, undefined)).toBe(INTERACTIVE_DEFAULT_MAX_TURNS);
   });
 });
 

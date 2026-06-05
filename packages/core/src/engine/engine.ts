@@ -40,7 +40,7 @@ import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { createGoalStopHook } from "../hooks/goal-stop-hook.js";
-import { normalizeGoal, type GoalConfig } from "./goal.js";
+import { normalizeGoal, resolveMaxTurns, type GoalConfig } from "./goal.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
@@ -1622,7 +1622,11 @@ export class Engine {
         },
       },
       {
-        maxTurns: this.config.maxTurns ?? 100,
+        // Goal mode raises the turn ceiling: an unattended goal run keeps
+        // getting re-blocked by the stop-hook until it's done, and the 100
+        // interactive default would silently truncate a long objective. The
+        // real backstops are the goal token/time budgets + maxStopBlocks.
+        maxTurns: resolveMaxTurns(this.config.maxTurns, normalizedGoal),
         maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 10,
         onStream: options?.onStream,
         signal: options?.signal,
