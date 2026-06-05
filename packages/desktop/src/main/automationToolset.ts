@@ -21,6 +21,9 @@ export const AUTOMATION_DISABLED_TOOLS = [
   "CronDelete",
   "CronList",
   "AskUserQuestion",
+  "MCPTool",
+  "ListMcpResources",
+  "ReadMcpResource",
 ] as const;
 
 /**

@@ -17,6 +17,7 @@ import {
   CronStore,
   defaultCronStorePath,
   agentNotificationBus,
+  mergePluginMcpServers,
   type AutomationHandle,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
@@ -510,6 +511,27 @@ ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
       !!x && typeof x === "object" && typeof (x as McpServerConfig).name === "string",
   );
   return probeMcpServers(configs, { force: Boolean(force) });
+});
+
+ipcMain.handle("mcp:listMerged", async (_e, rawBase: unknown, rawDisabledPlugins?: unknown) => {
+  const base = rawBase && typeof rawBase === "object"
+    ? (rawBase as Record<string, McpServerConfig>)
+    : {};
+  const disabledPlugins = Array.isArray(rawDisabledPlugins)
+    ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
+    : [];
+  const merged = mergePluginMcpServers(base, disabledPlugins);
+  return Object.fromEntries(
+    Object.entries(merged).map(([name, cfg]) => [
+      name,
+      {
+        ...cfg,
+        name,
+        source: Object.prototype.hasOwnProperty.call(base, name) ? "settings" : "plugin",
+        editable: Object.prototype.hasOwnProperty.call(base, name),
+      },
+    ]),
+  );
 });
 
 ipcMain.handle("mcp:invalidate", async (_e, name?: string) => {

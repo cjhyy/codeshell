@@ -14,6 +14,12 @@ describe("automationBuiltinTools", () => {
   it("excludes AskUserQuestion (no human present in an unattended run)", () => {
     expect(automationBuiltinTools()).not.toContain("AskUserQuestion");
   });
+  it("excludes MCP tools so unattended runs cannot block on external MCP startup", () => {
+    const names = automationBuiltinTools();
+    expect(names).not.toContain("MCPTool");
+    expect(names).not.toContain("ListMcpResources");
+    expect(names).not.toContain("ReadMcpResource");
+  });
   it("keeps a normal read tool like Read", () => {
     expect(automationBuiltinTools()).toContain("Read");
   });

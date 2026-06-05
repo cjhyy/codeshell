@@ -119,6 +119,10 @@ export function buildDesktopAutomationRunner(
       // cross-run memory summary on finish. Prior-run memory is appended here
       // too (see above) so it's framed as system context, not a user message.
       appendSystemPrompt,
+      // Automation runs are unattended and should not block before the first
+      // LLM request on plugin/user MCP startup. MCP tools are disabled below,
+      // so explicitly keep the engine's MCP config empty for this one-shot run.
+      mcpServers: {},
       // Strip the cron tools so an unattended run can't recursively schedule
       // more automations. (disabledBuiltinTools is a delta on the preset's
       // builtin set — see resolveBuiltinToolNames.)

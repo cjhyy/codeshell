@@ -2087,12 +2087,10 @@ export class Engine {
    * payloads are dropped so out-of-order reload deliveries can't let an older
    * config clobber a newer one (Q5).
    *
-   * MCP: only connects (idempotent — already-connected servers are skipped);
-   * never disconnects, so an in-flight tool call on an existing server is
-   * never severed (Q3). Removed servers are deferred to the next session
-   * rebuild. If mcpManager isn't built yet (no MCP run has happened), the
-   * new servers will be connected on the next run via the existing per-run
-   * connectAll path — so we skip the connect here.
+   * MCP: reconciles the shared MCP pool against the new disk-default server
+   * set. Added servers connect idempotently; removed/disabled servers are
+   * disconnected and their registered MCP tools are unregistered so plugin
+   * disable takes effect without an Electron restart.
    *
    * Preset (#2): a preset hot-reload re-resolves `this.preset` so the next-turn
    * PromptComposer picks up the new preset's system prompt / behavior — that's
@@ -2138,15 +2136,7 @@ export class Engine {
     }
     this.reloadHooks();
     if (patch.mcpServers && this.mcpManager) {
-      const added: Record<string, import("../types.js").MCPServerConfig> = {};
-      for (const [name, cfg] of Object.entries(patch.mcpServers)) {
-        if (!(name in prevServers)) added[name] = cfg;
-      }
-      if (Object.keys(added).length > 0) {
-        // connectAll is idempotent (skips already-connected); fire-and-forget
-        // so a slow server handshake never blocks the reload call.
-        void this.mcpManager.connectAll(added);
-      }
+      void this.mcpManager.reconcile(patch.mcpServers);
     }
     this.lastAppliedConfigVersion = version;
   }

@@ -110,6 +110,43 @@ describe("MCPManager.connect coalescing (#5)", () => {
   });
 });
 
+class ReconcileSpyManager extends MCPManager {
+  connected = new Set<string>();
+  connectCalls: string[] = [];
+  disconnectCalls: string[] = [];
+
+  override listServers(): string[] {
+    return [...this.connected];
+  }
+
+  override async connect(name: string, _config: MCPServerConfig): Promise<void> {
+    this.connectCalls.push(name);
+    this.connected.add(name);
+  }
+
+  override async disconnect(name: string): Promise<void> {
+    this.disconnectCalls.push(name);
+    this.connected.delete(name);
+  }
+}
+
+describe("MCPManager.reconcile", () => {
+  test("disconnects removed/disabled servers and connects added enabled servers", async () => {
+    const m = new ReconcileSpyManager(new ToolRegistry());
+    m.connected = new Set(["old", "stay", "disabled"]);
+
+    await m.reconcile({
+      stay: cfg("stay"),
+      added: cfg("added"),
+      disabled: cfg("disabled", { enabled: false }),
+    });
+
+    expect(m.disconnectCalls.sort()).toEqual(["disabled", "old"]);
+    expect(m.connectCalls.sort()).toEqual(["added", "stay"]);
+    expect(m.listServers().sort()).toEqual(["added", "stay"]);
+  });
+});
+
 describe("buildRegisteredTool readOnlyHint", () => {
   test("readOnlyHint=true → concurrency-safe + read-only", () => {
     const t = buildRegisteredTool("srv", {

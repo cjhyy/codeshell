@@ -56,6 +56,11 @@ export class ToolRegistry {
     }
   }
 
+  unregisterTool(name: string): void {
+    this.tools.delete(name);
+    this.builtinExecutors.delete(name);
+  }
+
   getToolDefinitions(): ToolDefinition[] {
     return [...this.tools.values()].map((t) => ({
       name: t.name,

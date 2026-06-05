@@ -17,6 +17,16 @@ interface McpServer {
   headers?: Record<string, string>;
   /** Codex-style toggle. Absent/true = on; only false disables. */
   enabled?: boolean;
+  source?: "settings" | "plugin";
+  editable?: boolean;
+}
+
+export function isEditableMcpServer(s: McpServer): boolean {
+  return s.editable !== false && s.source !== "plugin";
+}
+
+export function persistableMcpServers(servers: McpServer[]): McpServer[] {
+  return servers.filter(isEditableMcpServer);
 }
 
 /** A server is on unless explicitly disabled. */
@@ -58,7 +68,14 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     setError(null);
     try {
       const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
-      const list = mcpServersFromSettings(s.mcpServers);
+      const disabledPlugins = Array.isArray(s.disabledPlugins)
+        ? s.disabledPlugins.filter((x): x is string => typeof x === "string")
+        : [];
+      const merged = await window.codeshell.listMergedMcpServers(
+        settingsRecordOf(s.mcpServers),
+        disabledPlugins,
+      );
+      const list = mcpServersFromSettings(merged);
       setServers(list);
       void runProbe(list, false);
     } catch (e) {
@@ -103,7 +120,9 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   }, [load]);
 
   const persist = async (next: McpServer[]) => {
-    const record = Object.fromEntries(next.map((s) => [s.name, stripNameFromServer(s)]));
+    const record = Object.fromEntries(
+      persistableMcpServers(next).map((s) => [s.name, stripNameFromServer(s)]),
+    );
     await window.codeshell.updateSettings(scope, { mcpServers: record }, cwd);
     setServers(next);
     broadcastSettingsChanged();
@@ -128,6 +147,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   };
 
   const toggleServer = async (s: McpServer) => {
+    if (!isEditableMcpServer(s)) return;
     const nextEnabled = !isEnabled(s);
     // Persist just this server's full config with the flipped flag. We write
     // the whole entry (not a partial) because updateSettings merges records
@@ -299,6 +319,7 @@ function McpCard({
     ? [server.command, ...(server.args ?? [])].join(" ")
     : server.url ?? "";
   const enabled = isEnabled(server);
+  const editable = isEditableMcpServer(server);
 
   return (
     <article className={`mcp-card${enabled ? "" : " mcp-card-disabled"}`}>
@@ -308,8 +329,9 @@ function McpCard({
             className={`mcp-toggle${enabled ? " on" : ""}`}
             role="switch"
             aria-checked={enabled}
-            onClick={onToggle}
-            title={enabled ? "停用此服务器" : "启用此服务器"}
+            onClick={editable ? onToggle : undefined}
+            disabled={!editable}
+            title={editable ? (enabled ? "停用此服务器" : "启用此服务器") : "由插件管理，不能在这里启停"}
           >
             <span className="mcp-toggle-knob" />
           </button>
@@ -317,6 +339,11 @@ function McpCard({
           <span className={`mcp-transport-pill mcp-transport-${transport}`}>
             {transportLabel(transport)}
           </span>
+          {server.source === "plugin" && (
+            <span className="mcp-transport-pill" title="由插件安装提供，只读展示">
+              plugin
+            </span>
+          )}
           {enabled ? (
             <StatusPill probe={probe} loading={loading} />
           ) : (
@@ -332,12 +359,18 @@ function McpCard({
           >
             {loading ? "…" : "测试"}
           </button>
-          <button className="mcp-icon-btn" onClick={onEdit} title="编辑">
-            编辑
-          </button>
-          <button className="mcp-icon-btn danger" onClick={onRemove} title="删除">
-            删除
-          </button>
+          {editable ? (
+            <>
+              <button className="mcp-icon-btn" onClick={onEdit} title="编辑">
+                编辑
+              </button>
+              <button className="mcp-icon-btn danger" onClick={onRemove} title="删除">
+                删除
+              </button>
+            </>
+          ) : (
+            <span className="mcp-card-stamp">只读：由插件管理</span>
+          )}
         </div>
       </div>
 
@@ -619,7 +652,7 @@ function ErrorDetailViewer({ probe, onClose }: { probe: McpProbeResult; onClose:
 
 // ─── helpers ────────────────────────────────────────────────────────
 
-function mcpServersFromSettings(value: unknown): McpServer[] {
+export function mcpServersFromSettings(value: unknown): McpServer[] {
   if (Array.isArray(value)) {
     return value.filter(
       (x): x is McpServer => !!x && typeof x === "object" && typeof (x as McpServer).name === "string",
@@ -634,6 +667,20 @@ function mcpServersFromSettings(value: unknown): McpServer[] {
       .filter((x): x is McpServer => typeof x.name === "string");
   }
   return [];
+}
+
+function settingsRecordOf(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (Array.isArray(value)) {
+    return Object.fromEntries(
+      value
+        .filter((x): x is McpServer => !!x && typeof x === "object" && typeof (x as McpServer).name === "string")
+        .map((s) => [s.name, stripNameFromServer(s)]),
+    );
+  }
+  return {};
 }
 
 function stripNameFromServer(s: McpServer): Omit<McpServer, "name"> {

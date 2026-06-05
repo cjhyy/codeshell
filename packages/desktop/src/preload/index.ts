@@ -393,6 +393,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("skills:installFromGithub", input),
   probeMcpServers: (configs: unknown, force?: boolean) =>
     ipcRenderer.invoke("mcp:probe", configs, force),
+  listMergedMcpServers: (base: unknown, disabledPlugins?: unknown) =>
+    ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins),
   invalidateMcpProbeCache: (name?: string) =>
     ipcRenderer.invoke("mcp:invalidate", name),
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),

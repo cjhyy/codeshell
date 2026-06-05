@@ -151,6 +151,8 @@ export function buildRegisteredTool(serverName: string, tool: McpTool): Register
 export class MCPManager {
   private static instance: MCPManager | null = null;
   private connections = new Map<string, MCPConnection>();
+  private registeredToolsByServer = new Map<string, Set<string>>();
+  private desiredServerNames: Set<string> | null = null;
   /**
    * In-flight connect()s keyed by server name. When the broadcast config
    * reload (server.ts forEachSession → every session's refreshRuntimeConfig)
@@ -204,6 +206,18 @@ export class MCPManager {
         });
       }
     }
+  }
+
+  async reconcile(servers: Record<string, MCPServerConfig>): Promise<void> {
+    const enabledNames = new Set(
+      Object.entries(servers)
+        .filter(([, config]) => config.enabled !== false)
+        .map(([name]) => name),
+    );
+    this.desiredServerNames = enabledNames;
+    const stale = this.listServers().filter((name) => !enabledNames.has(name));
+    await Promise.all(stale.map((name) => this.disconnect(name)));
+    await this.connectAll(servers);
   }
 
   /**
@@ -304,6 +318,11 @@ export class MCPManager {
     // Discover and register tools
     await this.discoverTools(name, client);
 
+    if (this.desiredServerNames && !this.desiredServerNames.has(name)) {
+      await this.disconnect(name);
+      return;
+    }
+
     logger.info("mcp.connected", { server: name });
   }
 
@@ -367,6 +386,9 @@ export class MCPManager {
         // strings can't fake their way out.
         return wrapMcpOutput(serverName, tool.name, body);
       });
+      const set = this.registeredToolsByServer.get(serverName) ?? new Set<string>();
+      set.add(registered.name);
+      this.registeredToolsByServer.set(serverName, set);
 
       logger.info("mcp.tool_registered", { server: serverName, tool: registered.name });
     }
@@ -376,15 +398,25 @@ export class MCPManager {
    * Disconnect all MCP servers.
    */
   async disconnectAll(): Promise<void> {
-    for (const [name, conn] of this.connections) {
-      try {
-        await conn.client.close();
-        logger.info("mcp.disconnected", { server: name });
-      } catch (err) {
-        logger.warn("mcp.disconnect_error", { server: name, error: (err as Error).message });
+    await Promise.all([...this.connections.keys()].map((name) => this.disconnect(name)));
+  }
+
+  async disconnect(name: string): Promise<void> {
+    const conn = this.connections.get(name);
+    if (!conn) return;
+    try {
+      await conn.client.close();
+      logger.info("mcp.disconnected", { server: name });
+    } catch (err) {
+      logger.warn("mcp.disconnect_error", { server: name, error: (err as Error).message });
+    } finally {
+      this.connections.delete(name);
+      for (const toolName of this.registeredToolsByServer.get(name) ?? []) {
+        this.toolRegistry.unregisterTool(toolName);
+        logger.info("mcp.tool_unregistered", { server: name, tool: toolName });
       }
+      this.registeredToolsByServer.delete(name);
     }
-    this.connections.clear();
   }
 
   /**

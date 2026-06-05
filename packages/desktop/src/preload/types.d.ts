@@ -419,6 +419,10 @@ export interface CodeshellApi {
     configs: McpServerProbeInput[],
     force?: boolean,
   ): Promise<McpProbeResult[]>;
+  listMergedMcpServers(
+    base: Record<string, unknown>,
+    disabledPlugins?: string[],
+  ): Promise<Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>>;
   invalidateMcpProbeCache(name?: string): Promise<void>;
   probeSearch(input: SearchProbeInput): Promise<SearchProbeResult>;
   resolveModelMeta(
