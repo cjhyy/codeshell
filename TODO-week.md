@@ -6,20 +6,24 @@
 
 | 状态 | # | 任务 | 备注 / 关键落点 |
 | ---- | - | ---- | --------------- |
-| ⬜ 未开始 | 7 | **运行中输入缓存 / 强制发送下一轮** | 竞品（Codex/Claude Code）都有的关键交互：当前轮运行中用户仍可在输入框继续输入；默认先缓存为 queued input，等当前 assistant/tool 完成后自动读取并进入下一轮；同时提供显式“强制发送/打断并进入下一轮”能力。关键点：区分普通缓存 vs interrupt/force；UI 展示“已缓存 N 条/将于本轮后发送”；发送顺序稳定；避免与 approval prompt、AskUserQuestion、后台 agent 通知、automation/headless run 混淆；desktop + TUI 行为一致。 |
-| ⬜ 未开始 | 8 | **GenerateImage 工具结果直接展示图片** | 当前只返回 `.code-shell/generated_images/*.png` 路径，聊天结果区没有 PNG 预览。需确认 tool result 图片路径是否进入 transcript/content block；desktop renderer 是否支持 tool result 本地 PNG 预览；设计返回结构：保留路径文本 + 可渲染 image block/Markdown image；补 desktop smoke。 |
-| ⬜ 未开始 | 9 | **插件 MCP 在 MCP 管理页可见** | `chrome-devtools` 插件实际启动并连接了 `chrome-devtools-mcp`，但 MCP 管理页看不见。插件 MCP 不应由普通 MCP 配置页编辑 command/args/env，但应显示状态、工具数、工具列表、错误信息，并标注 `source=plugin` / `owner=<plugin>` / `editable=false`。 |
-| ⬜ 未开始 | 10 | **Markdown 内容结构与渲染体验优化** | 梳理 desktop/TUI Markdown 渲染差异；优化长回答结构、代码块展示、图片/链接混排、工具结果 Markdown 结构规范；补 smoke/demo。 |
-| ⬜ 未开始 | 11 | **路径策略 block 时缺少权限申请/继续运行能力** | 当前访问 workspace 外路径（如 Desktop、`~/.code-shell`）会被 path policy 直接 block，工具层没有正常弹权限/申请临时授权/继续执行的能力；用户即使口头授权也可能无法解除，导致只能绕到 Bash 或放弃。需要把 path policy deny 接入权限系统：展示可理解原因、允许用户批准本次/本会话/特定路径、批准后原工具可继续运行；避免 Bash 绕过造成策略不一致。 |
-| ⬜ 未开始 | 12 | **移除项目后不应被 session 磁盘恢复自动复活** | 采用“移除=隐藏项目、保留本地会话”的方案 A：移除 repo 时按 path 写入 tombstone/removedProjectPaths；启动 backfill、disk rebuild、automation import、live session placement 的 `createRepoForCwd` 都要跳过已移除 cwd，不能因历史 session/run 自动重建侧栏项目；用户手动重新添加同一路径时清除 tombstone，并恢复该目录历史 session。同步更新确认弹窗/测试，保证“重新添加同一目录可恢复”语义成立。 |
+| ⬜ 未开始 | 14 | **Goal 模式最大轮次优化调研** | 先调研当前 Goal 模式最大轮次/停止条件/预算控制如何实现，确认是否存在轮次过少、过多、无法动态调整或 UI 不透明的问题；再比较可选优化方案：按 goal 类型配置默认 max turns、运行中可续轮/加预算、接近上限时提示、失败恢复与总结输出等。产出建议方案后再决定是否实现。 |
+| ⬜ 未开始 | 15 | **Session 内后台命令支持与 UI 展示调研** | 调研当前 session 是否支持启动长期后台命令（例如 `npm run dev`）并保持进程、流式日志、停止/重启；若不支持，梳理可行技术方案（进程管理、生命周期绑定、权限/approval、日志截断、跨 desktop/TUI/headless 行为）；若已支持，重点设计 UI：后台命令列表/状态、端口提示、日志展开、停止按钮、失败通知，以及与普通 Bash tool 输出的区别。 |
+
+## 已完成 / 本周记录
+
+- [x] **#8 GenerateImage 工具结果直接展示图片** —— desktop Markdown 放行内部 `codeshell-path:` scheme，raw `.code-shell/generated_images/*.png` 路径可走现有 inline image loader；保留文件名/路径入口；TUI 不变。
+- [x] **#12 移除项目后不应被 session 磁盘恢复自动复活** —— 增加 removed repo path tombstone；移除项目时记录 path，手动重新添加时清除；automation backfill、disk rebuild、live session placement 自动建 repo 前跳过已移除 cwd。
+- [x] **#13 设置页隐藏未实现的浏览器/电脑操控入口** —— 设置页暂不展示“浏览器 / 电脑操控”入口，后续真实能力实现后再恢复。
+- [x] **#9 插件 MCP 在 MCP 管理页可见** —— MCP 页加载 user settings 与插件安装目录 MCP 的合并视图；插件 MCP 标记 `source=plugin` / `editable=false`，可测试连接、查看工具/错误详情，但不能在普通 MCP 配置页编辑、删除或启停。
+- [x] **#10 Markdown 内容结构与渲染体验优化** —— 收敛为低风险渲染收尾：内部 `codeshell-path:` 链接保留，外部 URL 正常渲染；raw generated PNG 路径进入 inline image loader，保留文件名入口。
+- [x] **#11 路径策略 block 时缺少权限申请/继续运行能力** —— `PathPolicy` 的 `ask` 决策接入交互式 approval：文件工具访问工作区外路径时弹“路径权限”确认，用户批准则本次工具继续，拒绝/headless 无 UI 则阻止；敏感写仍 hard deny。
+- [x] **插件 MCP 加载/禁用链路收尾** —— 插件 MCP 进入 engine/runtime merged config；`refreshRuntimeConfig` 调用 `MCPManager.reconcile()`，安装/启用后可 connect/register，禁用/移除后 disconnect 并 unregister 对应 MCP tools，无需 Electron 重启。
+- [x] **自动化 run 卡在 `turn.start` 后、首个 `llm.request` 前** —— 根因定位为 automation one-shot Engine 可能在首个 LLM 前等待 MCP startup；automation 现显式禁用 MCP tools 并传空 `mcpServers`，避免无人值守 run 被外部 MCP 启动阻塞。
+- [x] **#7 运行中输入缓存 / 强制发送下一轮** —— desktop busy 时输入框保持可用，Enter 缓存当前可见 session 的 queued input 并显示“已缓存 N 条”，当前轮结束后 FIFO 自动发送；“打断发送”会先缓存再 cancel 当前轮。TUI busy 时普通输入进入 FIFO 队列，空闲后自动提交，`/force <text>` 缓存后取消当前轮。跨 session 后台自动 drain 留作后续增强。
 
 ## 遗留 / 待确认
 
-- [ ] **插件 MCP 加载/禁用链路收尾** —— 现象：安装 `chrome-devtools-codex-plugin` 后，`mcp-servers.json` 已生成，`mergePluginMcpServers({}, [])` 能读到 `chrome-devtools:chrome-devtools`，但新 session 的 `ToolSearch` 里没有暴露 Chrome DevTools MCP 工具；关闭插件后也可能复用同一进程内已注册 MCP tools。后续期望：安装插件后新 session 自动加载插件 MCP；禁用插件后不再合并 MCP server、已连接 server 被 disconnect、`ToolRegistry` 对应 MCP tools 被 unregister；重新启用可重新 connect/register。
-- [ ] **自动化 run 卡在 `turn.start` 后、首个 `llm.request` 前** —— 收集卡住 run 的 events/checkpoints/lock/heartbeat；定位 EngineRunner / RunManager / LLM request 前置路径；确认 lock release 与失败恢复。
-- [ ] **view_image 收尾（剩 2 个计划明确排除的低优先增量）**：
-  - TUI 端图片渲染（计划明确排除，低优先）：终端 inline image（iTerm/kitty graphics protocol）。core 已能产出 image 块，desktop 已能渲染（`InlineImageLink`），仅 TUI 缺。
-  - 策略 B「看过一轮后把历史图降级成文字摘要」（计划排除，后续增量）：当前靠三道闸门 + tool_result.content 递归剥离控制污染，够用；主动降级是更激进的省 token 手段，留待需要时做。
+当前本周遗留已清空。view_image 的两个计划明确排除项（TUI inline 图片渲染、历史图降级成文字摘要）不作为本周执行项，保留到长期 backlog。
 
 ## 📚 相关研究 / 资料
 
