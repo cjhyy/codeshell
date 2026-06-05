@@ -231,11 +231,20 @@ export function BrowserPanel(_props: Props) {
     (raw: string) => {
       const url = normalizeUrl(raw);
       if (!url) return;
-      patchTab(activeId, { url, draft: url });
+      // Single navigation driver: update the tab url, which flows into the
+      // <webview src> prop and triggers exactly one navigation. We deliberately
+      // do NOT also call view.loadURL here — driving both the controlled `src`
+      // and an imperative loadURL races two navigations and aborts one
+      // (ERR_ABORTED). If the URL is unchanged (re-enter same address), nudge
+      // via loadURL since `src` won't change.
       const view = viewRef.current;
-      if (view) void view.loadURL(url).catch(() => undefined);
+      if (url === active.url && view) {
+        void view.loadURL(url).catch(() => undefined);
+      } else {
+        patchTab(activeId, { url, draft: url });
+      }
     },
-    [activeId, patchTab],
+    [activeId, active.url, patchTab],
   );
 
   const openInNewTab = useCallback((url: string) => {
