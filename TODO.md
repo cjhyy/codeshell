@@ -50,7 +50,7 @@
 - [ ] **OpenAI 截断续写触发条件不匹配**：OpenAI provider 透传 `finish_reason === "length"`，而 turn-loop 仍按 `stopReason === "max_tokens"` 判断；需要归一为 `"length" | "max_tokens"`
 - [ ] **RunManager approval/input resume 竞态**：单独审查 Waiting states 的 suspend/resume 路径
 - [ ] **`resolveSandboxBackend` 每 turn 都重 resolve**：应移到 Engine 构造器或加 per-session 缓存
-- [ ] **Plugin SessionStart hook 运行时验证**：确认 superpowers `hooks/hooks.json` 是否真的把 additionalContext 注入 main session prompt
+- [x] **Plugin SessionStart hook 运行时验证** ✅：已确认全链路通。`runPluginCommandHook` 把 stdout 的 additionalContext(CC `hookSpecificOutput.additionalContext` / Cursor `additional_context` / SDK `additionalContext` 三形态)→ `HookResult.messages`,engine.ts:1464 把 `on_session_start` 的 messages splice 进 user prompt 前的 `<system-reminder>`。本会话开头的 "You have superpowers" 即此机制。测试 `plugins/pluginCommandHook.test.ts`(6 用例,含失败兜底)
 - [ ] **自动化 run 卡在 `turn.start` 后、首个 `llm.request` 前**：收集 events/checkpoints/lock/heartbeat；定位 EngineRunner / RunManager / LLM request 前置路径；确认 lock release 与失败恢复
 
 ### ⬜ 错误处理与恢复

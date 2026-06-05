@@ -176,7 +176,7 @@
 - [ ] OpenAI 截断续写触发条件统一：`finish_reason === "length"` 与 `stopReason === "max_tokens"` 归一。
 - [ ] RunManager approval / input resume 竞态审查。
 - [ ] `resolveSandboxBackend` 从每 turn 重 resolve 改为 Engine 构造器或 per-session 缓存。
-- [ ] Plugin SessionStart hook 运行时验证：确认 additionalContext 是否真的注入 main session prompt。
+- [x] Plugin SessionStart hook 运行时验证 ✅：全链路通(runPluginCommandHook 三形态 additionalContext→messages,engine splice 进 user prompt 前 system-reminder)。测试 pluginCommandHook.test.ts。
 - [ ] 自动化 run 首个 LLM 前卡住的链路复核，确认 lock release 与失败恢复。
 
 ### 3.4 错误处理与恢复
