@@ -11,8 +11,6 @@ import {
   Wifi,
   GitBranch,
   Terminal,
-  Globe,
-  Monitor,
   Archive,
   Puzzle,
   Bot,
@@ -54,8 +52,6 @@ type ModuleId =
   | "connections"
   | "git"
   | "environment"
-  | "browser"
-  | "computer"
   | "archived"
   | "capabilities"
   | "plugins-skills"
@@ -110,8 +106,6 @@ const MODULE_GROUPS: ModuleGroup[] = [
       { id: "connections", label: "连接", Icon: Wifi },
       { id: "git", label: "Git", Icon: GitBranch },
       { id: "environment", label: "本地环境", Icon: Terminal },
-      { id: "browser", label: "浏览器", Icon: Globe },
-      { id: "computer", label: "电脑操控", Icon: Monitor },
     ],
   },
   {
@@ -254,24 +248,6 @@ export function SettingsPage({
             )}
             {active === "environment" && (
               <EnvironmentSection scope={scope} activeRepoPath={activeRepoPath} />
-            )}
-            {active === "browser" && (
-              <ToggleCapabilitySection
-                scope={scope}
-                activeRepoPath={activeRepoPath}
-                settingKey="browser"
-                title="浏览器"
-                description="控制是否在会话中启用浏览器相关能力。"
-              />
-            )}
-            {active === "computer" && (
-              <ToggleCapabilitySection
-                scope={scope}
-                activeRepoPath={activeRepoPath}
-                settingKey="computer"
-                title="电脑操控"
-                description="控制是否在会话中启用本机应用操控能力。"
-              />
             )}
             {active === "plugins-skills" && (
               <ExtensionsPage activeRepoPath={activeRepoPath} showDiscover={false} />
