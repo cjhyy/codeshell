@@ -33,6 +33,7 @@
 import { realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve as resolvePath, sep } from "node:path";
+import type { ToolContext } from "./context.js";
 
 export type PathDecision = "allow" | "ask" | "deny";
 
@@ -309,6 +310,40 @@ export function enforcePathPolicy(
   // lands. The conservative bias matches the plan's leaning answer for Q1.
   return `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
     `Set CODESHELL_PATH_POLICY=off to disable enforcement during a rollback.`;
+}
+
+export async function enforcePathPolicyWithApproval(
+  filePath: string,
+  operation: PathOperation,
+  ctx?: ToolContext,
+): Promise<string | null> {
+  if (ctx?.cwd === undefined) return null;
+  const c = classifyPath(filePath, { workspaceRoot: ctx.cwd, operation });
+  if (c.decision === "allow") return null;
+  if (c.decision === "deny") {
+    return `Error: blocked by path policy — ${c.reason}. Path: ${c.resolvedPath}`;
+  }
+  if (operation === "write" && ctx.planMode) {
+    return `Error: blocked by path policy — ${c.reason}. Path: ${c.resolvedPath}. ` +
+      `Plan mode does not allow file writes.`;
+  }
+  if (!ctx.askUser) {
+    return `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
+      `No interactive approval UI is available in this run.`;
+  }
+
+  const answer = await ctx.askUser(
+    `工具想${operation === "read" ? "读取" : "写入"}工作区外路径：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`,
+    {
+      header: "路径权限",
+      options: [
+        { label: "允许本次", description: "仅允许当前这一次文件操作继续执行" },
+        { label: "拒绝", description: "阻止当前文件操作" },
+      ],
+    },
+  );
+  if (answer.trim().startsWith("允许本次")) return null;
+  return `Error: path approval denied by user — ${c.reason}. Path: ${c.resolvedPath}`;
 }
 
 /**

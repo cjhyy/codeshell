@@ -7,7 +7,7 @@ import { dirname } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
-import { enforcePathPolicy } from "../path-policy.js";
+import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
 export const writeToolDef: ToolDefinition = {
   name: "Write",
@@ -35,7 +35,7 @@ export async function writeTool(
 
   // Path policy gate: deny writes to sensitive paths, refuse writes outside
   // workspace until approved. See tool-system/path-policy.ts.
-  const blocked = enforcePathPolicy(filePath, "write", ctx?.cwd);
+  const blocked = await enforcePathPolicyWithApproval(filePath, "write", ctx);
   if (blocked) return blocked;
 
   try {

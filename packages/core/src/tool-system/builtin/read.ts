@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
-import { enforcePathPolicy } from "../path-policy.js";
+import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
 export const readToolDef: ToolDefinition = {
   name: "Read",
@@ -45,7 +45,7 @@ export async function readTool(
   // .env, etc.) and outside-workspace reads are refused with an explanatory
   // error. existsSync check stays AFTER the policy gate — we don't want to
   // probe sensitive paths' existence as a side-channel.
-  const blocked = enforcePathPolicy(filePath, "read", ctx?.cwd);
+  const blocked = await enforcePathPolicyWithApproval(filePath, "read", ctx);
   if (blocked) return blocked;
 
   if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;

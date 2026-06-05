@@ -5,8 +5,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   classifyPath,
+  enforcePathPolicyWithApproval,
   __resetPathPolicyWarnLatchForTests,
 } from "../packages/core/src/tool-system/path-policy.js";
+import type { ToolContext } from "../packages/core/src/tool-system/context.js";
 
 /**
  * Task 6 — PathPolicy classifies a file path as allow / ask / deny depending
@@ -210,5 +212,40 @@ describe("classifyPath", () => {
     const c = classifyPath("~/.ssh/x", { workspaceRoot: workspace, operation: "write" });
     expect(c.reason.length).toBeGreaterThan(0);
     expect(c.reason.toLowerCase()).toContain("sensitive");
+  });
+
+  test("outside-workspace ask can be approved and continue", async () => {
+    let question = "";
+    const ctx = {
+      cwd: workspace,
+      askUser: async (q: string) => {
+        question = q;
+        return "允许本次";
+      },
+    } as ToolContext;
+
+    const blocked = await enforcePathPolicyWithApproval(join(outside, "x.txt"), "read", ctx);
+
+    expect(blocked).toBeNull();
+    expect(question).toContain("工作区外路径");
+  });
+
+  test("outside-workspace ask is blocked when user denies", async () => {
+    const ctx = {
+      cwd: workspace,
+      askUser: async () => "拒绝",
+    } as ToolContext;
+
+    const blocked = await enforcePathPolicyWithApproval(join(outside, "x.txt"), "write", ctx);
+
+    expect(blocked).toContain("path approval denied");
+  });
+
+  test("outside-workspace ask is blocked without interactive UI", async () => {
+    const ctx = { cwd: workspace } as ToolContext;
+
+    const blocked = await enforcePathPolicyWithApproval(join(outside, "x.txt"), "read", ctx);
+
+    expect(blocked).toContain("No interactive approval UI");
   });
 });

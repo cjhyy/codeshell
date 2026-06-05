@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
-import { enforcePathPolicy } from "../path-policy.js";
+import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
 export const editToolDef: ToolDefinition = {
   name: "Edit",
@@ -54,7 +54,7 @@ export async function editTool(
   if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;
 
   // Path policy gate before any IO.
-  const blocked = enforcePathPolicy(filePath, "write", ctx?.cwd);
+  const blocked = await enforcePathPolicyWithApproval(filePath, "write", ctx);
   if (blocked) return blocked;
 
   try {
