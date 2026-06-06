@@ -278,6 +278,12 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Read an image file as a base64 data: URL (null on failure). */
   readImageDataUrl: (absPath: string) =>
     ipcRenderer.invoke("images:readDataUrl", absPath),
+  /**
+   * Save an image (data: URL) to a user-chosen location via a save dialog.
+   * Returns the saved path, or null if the user cancelled.
+   */
+  saveImage: (src: string, opts?: { name?: string; mime?: string }) =>
+    ipcRenderer.invoke("images:save", src, opts) as Promise<string | null>,
   undoFiles: (cwd: string, paths: string[]) =>
     ipcRenderer.invoke("files:undo", cwd, paths),
   listMemory: (level: string, scope: string, cwd?: string) =>

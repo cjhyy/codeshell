@@ -315,6 +315,15 @@ export interface CodeshellApi {
    */
   readImageDataUrl(absPath: string): Promise<string | null>;
   /**
+   * Save an image (`data:` URL) to a user-chosen location via a native save
+   * dialog. Used by the Lightbox / attachment "download" action. Returns the
+   * saved absolute path, or null if the user cancelled.
+   */
+  saveImage(
+    src: string,
+    opts?: { name?: string; mime?: string },
+  ): Promise<string | null>;
+  /**
    * Revert working-tree edits to the given relative paths. Tracked
    * files are restored from HEAD; untracked files are deleted from
    * disk. Returns a per-path result so the UI can show partial

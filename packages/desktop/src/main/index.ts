@@ -6,7 +6,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell, Notification } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, basename, extname, isAbsolute } from "node:path";
-import { readFile, lstat } from "node:fs/promises";
+import { readFile, lstat, writeFile } from "node:fs/promises";
 import {
   defaultCacheDir,
   fetchModelList,
@@ -116,6 +116,7 @@ import {
 } from "./mcp-probe-service.js";
 import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
 import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
+import { parseDataUrl, suggestImageFilename } from "./image-save.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -527,6 +528,36 @@ ipcMain.handle("images:readDataUrl", async (_e, absPath: string): Promise<string
     return null;
   }
 });
+
+// Save an image to a user-chosen location (Lightbox / attachment "download").
+// Accepts the data URL the renderer already holds (works for generated images,
+// pasted/dragged attachments, and file-backed thumbnails alike). Returns the
+// saved path, or null if the user cancelled the dialog.
+ipcMain.handle(
+  "images:save",
+  async (
+    e,
+    src: string,
+    opts?: { name?: string; mime?: string },
+  ): Promise<string | null> => {
+    if (typeof src !== "string" || !src) throw new Error("images:save requires src");
+    const parsed = parseDataUrl(src);
+    if (!parsed) throw new Error("images:save: src is not a data URL");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const suggested = suggestImageFilename({
+      name: opts?.name ?? null,
+      mime: opts?.mime ?? parsed.mime,
+      stamp,
+    });
+    const win = BrowserWindow.fromWebContents(e.sender) ?? undefined;
+    const result = win
+      ? await dialog.showSaveDialog(win, { defaultPath: suggested })
+      : await dialog.showSaveDialog({ defaultPath: suggested });
+    if (result.canceled || !result.filePath) return null;
+    await writeFile(result.filePath, parsed.buffer);
+    return result.filePath;
+  },
+);
 ipcMain.handle(
   "agents:save",
   async (_e, def: AgentDefinition, opts?: { scope?: "user" | "project"; cwd?: string }) => {

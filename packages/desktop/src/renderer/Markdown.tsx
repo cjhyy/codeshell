@@ -253,7 +253,16 @@ function InlineImageLink({
       >
         {filename}
       </button>
-      {zoomed && <Lightbox src={src} alt={alt ?? filename} onClose={() => setZoomed(false)} />}
+      {zoomed && (
+        <Lightbox
+          src={src}
+          alt={alt ?? filename}
+          path={path}
+          cwd={cwd}
+          name={filename}
+          onClose={() => setZoomed(false)}
+        />
+      )}
     </span>
   );
 }

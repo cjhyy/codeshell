@@ -74,9 +74,9 @@ export function MessageStream({
   const ref = useStickToBottom<HTMLDivElement>(
     `${messages.length}:${trailingKey ?? ""}`,
   );
-  const [zoomed, setZoomed] = useState<{ src: string; alt: string } | null>(
-    null,
-  );
+  const [zoomed, setZoomed] = useState<
+    { src: string; alt: string; name?: string } | null
+  >(null);
 
   // Two-level fold (see messages/streamGroups.ts):
   //   - level 1: adjacent tool calls → ToolGroup
@@ -153,6 +153,7 @@ export function MessageStream({
                             setZoomed({
                               src: img.dataUrl,
                               alt: img.name || "image",
+                              name: img.name || undefined,
                             })
                           }
                         />
@@ -213,6 +214,7 @@ export function MessageStream({
         <Lightbox
           src={zoomed.src}
           alt={zoomed.alt}
+          name={zoomed.name}
           onClose={() => setZoomed(null)}
         />
       )}

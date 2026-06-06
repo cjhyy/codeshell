@@ -129,11 +129,15 @@
 .lightbox-icon-button:hover {
   background: rgba(0, 0, 0, 0.75);
 }
-@media (min-width: 720px) {
-  .lightbox-shell .lightbox-icon-button {
-    display: none;
-  }
+.lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
+/* The floating bottom-right close button is redundant with the toolbar's own
+   action row (which always shows now that it carries download/reveal too), so
+   only surface it on narrow widths where the toolbar may crowd. */
 @media (max-width: 719px) {
   .lightbox-close {
     display: none;
