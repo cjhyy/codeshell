@@ -179,10 +179,10 @@
 - [x] Plugin SessionStart hook 运行时验证 ✅：全链路通(runPluginCommandHook 三形态 additionalContext→messages,engine splice 进 user prompt 前 system-reminder)。测试 pluginCommandHook.test.ts。
 - [ ] 自动化 run 首个 LLM 前卡住的链路复核，确认 lock release 与失败恢复。
 
-### 3.4 错误处理与恢复
+### 3.4 错误处理与恢复 🔧
 
-- [ ] LLM API 指数退避重试和可配置 retry policy。
-- [ ] 网络断开自动重连。
+- [x] LLM API 指数退避重试和可配置 retry policy —— client-base withRetry 已实现(指数退避封顶30s、retryMaxAttempts 可配、429 retryAfter、4xx 含埋藏 status 非重试)。测试 client-error.test.ts。
+- [~] 网络断开自动重连 —— 瞬时网络错误已走 withRetry;长断网会话级重连待补。
 - [ ] 会话崩溃恢复补齐产品闭环。
 - [ ] 工具执行超时和可取消性一致化。
 - [ ] 错误消息用户友好，并包含下一步建议。

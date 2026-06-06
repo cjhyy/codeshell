@@ -53,10 +53,10 @@
 - [x] **Plugin SessionStart hook 运行时验证** ✅：已确认全链路通。`runPluginCommandHook` 把 stdout 的 additionalContext(CC `hookSpecificOutput.additionalContext` / Cursor `additional_context` / SDK `additionalContext` 三形态)→ `HookResult.messages`,engine.ts:1464 把 `on_session_start` 的 messages splice 进 user prompt 前的 `<system-reminder>`。本会话开头的 "You have superpowers" 即此机制。测试 `plugins/pluginCommandHook.test.ts`(6 用例,含失败兜底)
 - [x] **自动化 run 卡在 `turn.start` 后、首个 `llm.request` 前** ✅(复核):lock release 与失败恢复已闭环——RunManager 执行 `finally` 块统一 `lock.release` + `executionHandles.delete` + `heartbeat.stop`(engine.ts run 段 640-645);recover() 对 stale-heartbeat 且进程已死的 running/waiting run 重置(340+)。原"卡住"现象的两个真因(preload rpc 30s 硬超时误伤长任务 d50c365、main 同步 fs 阻塞事件循环 178abc8)均已在 main 修复,见记忆 [[project_rpc_30s_timeout_freeze]] / [[project_main_sync_fs_freeze]]。
 
-### ⬜ 错误处理与恢复
+### 🔧 错误处理与恢复
 
-- [ ] LLM API 调用重试：指数退避、可配置 retry policy
-- [ ] 网络断开自动重连
+- [x] LLM API 调用重试：指数退避、可配置 retry policy —— `client-base.ts` withRetry 已实现:`Math.min(1000*2^(n-1), 30s)` 指数退避、`retryMaxAttempts`(默认3)可配、429 走 `retryAfter`、4xx(含 details 埋藏 status)非重试、abort 非重试、5xx/网络重试。测试 client-error.test.ts(isClientError/isAbortError 含埋藏 status 回归)
+- [~] 网络断开自动重连 —— 瞬时网络错误已被 withRetry 覆盖(5xx/ECONNRESET 重试);长时段断网的会话级重连待补
 - [ ] 会话崩溃恢复：RunManager 的 `recover` 已部分实现，需补齐产品闭环
 - [ ] 工具执行超时处理与可取消性一致化
 - [ ] 优雅的错误消息：用户友好、包含下一步建议
