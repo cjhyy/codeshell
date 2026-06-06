@@ -704,6 +704,9 @@ export class AgentServer {
               // apiKey is redacted at this boundary: clients only get
               // hasApiKey + optional apiKeyPreview. See protocol/redact.ts.
               llm: redactLlmConfig(config.llm),
+              // Resolved feature flags (defaults merged with settings overlay)
+              // so the /features command can list current state.
+              featureFlags: engine.getFeatureFlags(),
             },
           }),
         );

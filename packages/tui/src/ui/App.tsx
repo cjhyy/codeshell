@@ -57,6 +57,7 @@ import {
 import { coreCommands } from "../cli/commands/builtin/core-commands.js";
 import { gitCommands } from "../cli/commands/builtin/git-commands.js";
 import { permissionsCommand } from "../cli/commands/builtin/permissions-command.js";
+import { featuresCommand } from "../cli/commands/builtin/features-command.js";
 import { utilityCommands } from "../cli/commands/builtin/utility-commands.js";
 import { advancedCommands } from "../cli/commands/builtin/advanced-commands.js";
 import { extraCommands } from "../cli/commands/builtin/extra-commands.js";
@@ -89,6 +90,7 @@ const commandRegistry = new CommandRegistry();
 commandRegistry.registerAll(coreCommands);
 commandRegistry.registerAll(gitCommands);
 commandRegistry.register(permissionsCommand);
+commandRegistry.register(featuresCommand);
 commandRegistry.registerAll(utilityCommands);
 commandRegistry.registerAll(advancedCommands);
 commandRegistry.registerAll(extraCommands);

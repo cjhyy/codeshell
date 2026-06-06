@@ -61,6 +61,12 @@ import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { SettingsManager, userHome, type SettingsScope } from "../settings/manager.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
+import {
+  isFeatureEnabled,
+  resolveFeatureFlags,
+  type FeatureFlagName,
+  type FeatureFlagOverrides,
+} from "../settings/feature-flags.js";
 import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
 import { FileHistory } from "../session/file-history.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
@@ -1422,6 +1428,12 @@ export class Engine {
       );
       toolCtx.disabledBuiltins = disabledBuiltins;
     }
+    // Feature-flag visibility: a builtin mapped in TOOL_FEATURE_FLAGS is
+    // hidden when its flag resolves to false (default-on flags only hide when
+    // explicitly disabled, so zero regression out of the box). Read once per
+    // turn so flipping a flag in settings takes effect on the NEXT message,
+    // like the other capability kinds.
+    const featureFlags = this.readFeatureFlags();
     const allToolDefs = applyBuiltinOverrideVisibility(
       this.toolRegistry.getToolDefinitions(),
       builtinOverride,
@@ -1429,6 +1441,10 @@ export class Engine {
       .filter((t) => {
         const guard = BUILTIN_TOOL_GUARDS.get(t.name);
         return guard ? guard(guardCwd) : true;
+      })
+      .filter((t) => {
+        const flag = TOOL_FEATURE_FLAGS.get(t.name);
+        return flag ? isFeatureEnabled(featureFlags, flag) : true;
       })
       .map((t) =>
         t.name === "Agent"
@@ -2544,4 +2560,42 @@ export class Engine {
       return { disabledSkills: [], disabledPlugins: [] };
     }
   }
+
+  /**
+   * Public: resolve every known feature flag to its effective boolean (the
+   * settings overlay merged over the compiled-in defaults). Used by the
+   * `config` protocol query so the `/features` command can list flag state.
+   */
+  getFeatureFlags(): Record<FeatureFlagName, boolean> {
+    return resolveFeatureFlags(this.readFeatureFlags());
+  }
+
+  /**
+   * Read the merged `settings.featureFlags` overlay for this cwd. Project
+   * settings override user settings via the normal SettingsManager merge.
+   * Returns undefined (→ all defaults) on any read error or for sub-agents,
+   * so a flag check never throws and a child runs with default behavior.
+   */
+  private readFeatureFlags(): FeatureFlagOverrides | undefined {
+    if (this.config.isSubAgent === true) return undefined;
+    try {
+      const settings = this.getSettingsManager().get() as {
+        featureFlags?: Record<string, boolean>;
+      };
+      return settings.featureFlags as FeatureFlagOverrides | undefined;
+    } catch {
+      return undefined;
+    }
+  }
 }
+
+/**
+ * Builtin tool name → the feature flag that gates its visibility. A tool here
+ * is hidden from the LLM when its flag resolves to false. Tools not listed are
+ * unaffected. Kept beside the engine (not in builtin/index) because the flag
+ * read needs the engine's scoped SettingsManager.
+ */
+const TOOL_FEATURE_FLAGS: ReadonlyMap<string, FeatureFlagName> = new Map([
+  ["WebSearch", "web_search"],
+  ["Bash", "shell_tool"],
+]);

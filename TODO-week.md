@@ -381,13 +381,13 @@
 - [ ] 请求压缩：发送前压缩历史消息。
 - [ ] token 预算管理：根据剩余 token 动态调整策略。
 
-### 8.4 Feature Flags 系统
+### 8.4 Feature Flags 系统 🔧
 
-- [ ] 定义 `FeatureFlags` 类型和默认值。
-- [ ] 从配置文件加载 flags。
-- [ ] 各模块检查 flag 状态。
-- [ ] `/features` 命令查看和切换 flags。
-- [ ] 候选 flags：`web_search`、`shell_tool`、`fast_mode`、`undo`、`shell_snapshot`。
+- [x] 定义 `FeatureFlags` 类型和默认值（feature-flags.ts FEATURE_FLAGS）。
+- [x] 从配置文件加载 flags（settings.featureFlags Zod 字段）。
+- [x] 各模块检查 flag 状态（isFeatureEnabled;engine toolDefs 按 flag 隐藏 WebSearch/Bash）。
+- [x] `/features` 命令查看 flags（TUI,只读;切换走 settings.json）。
+- [x] 候选 flags 登记齐：web_search/shell_tool(默认开)、fast_mode/undo/shell_snapshot(默认关)。测试 feature-flags.test.ts。
 
 ### 8.5 配置系统完善
 

@@ -245,6 +245,16 @@ export const SettingsSchema = z
      */
     capabilityOverrides: CapabilityOverridesSchema,
 
+    /**
+     * Feature flags overlay: a map of flag name → boolean that overrides the
+     * compiled-in defaults (see settings/feature-flags.ts FEATURE_FLAGS).
+     * Project settings override user settings via the normal merge, so a flag
+     * can be flipped per-workspace. Unknown flag names are tolerated (kept as
+     * data) for forward-compat; consumers only read known flags via
+     * isFeatureEnabled(). Passthrough record — values coerced to boolean.
+     */
+    featureFlags: z.record(z.string(), z.boolean()).default({}),
+
     instructions: z
       .object({
         fileName: z.string().default("CODESHELL.md"),

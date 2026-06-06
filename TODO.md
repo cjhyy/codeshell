@@ -180,13 +180,14 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 - [ ] UI 文案标注“由 xxx 插件管理”，避免用户误以为没有连接
 - [ ] 保留用户配置 MCP 的编辑/启停能力；插件 MCP 的启停走插件开关或明确的只读/会话级操作
 
-### ⬜ Feature Flags 系统
+### 🔧 Feature Flags 系统
 
-- [ ] 定义 `FeatureFlags` 类型和默认值
-- [ ] 从配置文件加载 flags
-- [ ] 在各模块中检查 flag 状态
-- [ ] `/features` 命令查看和切换 flags
-- [ ] 候选 flags：`web_search`、`shell_tool`、`fast_mode`、`undo`、`shell_snapshot`
+- [x] 定义 `FeatureFlags` 类型和默认值（`settings/feature-flags.ts` 的 `FEATURE_FLAGS` const,typo-safe 名集 + 各自 default）
+- [x] 从配置文件加载 flags（`settings.featureFlags` Zod 字段,project 覆盖 user 走常规 merge,空={}默认)
+- [x] 在各模块中检查 flag 状态（`isFeatureEnabled`;首个消费者:engine toolDefs 按 `TOOL_FEATURE_FLAGS`(WebSearch→web_search、Bash→shell_tool)隐藏关闭的工具,每 turn 重读=下条消息生效)
+- [x] `/features` 命令查看 flags（TUI command,经 config query 读 `getFeatureFlags()` 解析态;**只读**,切换走 settings.json/Customize)
+- [x] 候选 flags 全部登记：`web_search`(默认开)、`shell_tool`(默认开)、`fast_mode`、`undo`、`shell_snapshot`(后三默认关)
+- 备注:`/features` 写入(命令内直接 toggle)与 fast_mode/undo/shell_snapshot 的真实消费端接线后续按需补;系统底座 + 工具可见性闭环已就绪。测试 feature-flags.test.ts
 
 ### 🔧 配置系统完善
 
