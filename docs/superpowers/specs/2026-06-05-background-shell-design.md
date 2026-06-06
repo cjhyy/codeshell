@@ -1,7 +1,10 @@
 # 设计:Session 级后台 Shell(Background Shell)
 
-- 状态:Draft(待 review)
-- 日期:2026-06-05
+- 状态:**已实现**(core 层 2026-06-06;desktop UI 面板二期未做)
+- 日期:2026-06-05(实现 2026-06-06)
+- 实现:`runtime/{spawn-common,output-clean,ring-file,background-shell}.ts`、
+  `tool-system/builtin/{bash.ts 的 run_in_background 分支, background-shell-tools.ts}`、
+  生命周期接线(closeAll/handleCloseSession/agent-server-stdio 孤儿回收)。
 - 关联:`TODO-week.md` #15「Session 内后台命令支持与 UI 展示调研」
 - 范围:让 agent 能在一个 session 里启动并保持长期后台进程(典型:`npm run dev`),
   随时拉取增量日志、列出、终止;退出时收到一行通知。**Session 级**生命周期。

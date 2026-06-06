@@ -31,5 +31,6 @@ When you encounter an obstacle, do not use destructive actions as a shortcut to 
   - To search for files use Glob instead of find or ls
   - To search the content of files, use Grep instead of grep or rg
   - Reserve using the Bash exclusively for system commands and terminal operations that require shell execution.
+ - For long-lived processes that don't exit on their own — a dev server (`npm run dev`, `vite`), a watcher, a tunnel — call Bash with `run_in_background: true`. It returns a `shell_id` immediately instead of blocking until a timeout. Then use `BashOutput(shell_id)` to read its logs (e.g. to confirm it started or to see an error), `ListShells()` to see what's running, and `KillShell(shell_id)` to stop it. Never run such a command in the foreground — it will just block until it's killed. Plain one-shot commands (build, test, git) stay foreground.
  - Break down and manage multi-step work with the TodoWrite tool. Pass the complete todo list each call; rewrite it as items move pending → in_progress → completed.
  - You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel.
