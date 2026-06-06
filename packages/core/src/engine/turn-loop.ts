@@ -372,6 +372,17 @@ export class TurnLoop {
             "<system-reminder>Warning: you have only 2 turns remaining before the turn limit is reached. " +
             "Start wrapping up your work and prepare a summary of what you've accomplished and what remains to be done.</system-reminder>",
         });
+        // Goal mode: surface an "approaching limit" marker so the UI can offer
+        // a "再续 N 轮" extend button while the run is still live (TODO 3.1).
+        // Emitted only for goals — there's nothing to extend otherwise.
+        if (this.config.goal) {
+          this.config.onStream?.({
+            type: "goal_progress",
+            status: "approaching_limit",
+            round: this.stopBlockCount,
+            turnsRemaining,
+          });
+        }
       } else if (turnsRemaining === 0) {
         messages.push({
           role: "user",

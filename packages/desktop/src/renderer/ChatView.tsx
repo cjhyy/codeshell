@@ -48,6 +48,8 @@ interface Props {
   runningAgents?: number;
   activeRepoId: string | null;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
+  /** Extend the running goal by N more turns (TODO 3.1). */
+  onExtendGoal?: (addTurns: number) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (decision: "approve" | "deny", reason?: string) => void;
 
@@ -109,6 +111,7 @@ export function ChatView({
   runningAgents = 0,
   activeRepoId,
   onAskUserAnswer,
+  onExtendGoal,
   pendingApproval,
   onApprovalDecide,
   permissionMode,
@@ -455,6 +458,7 @@ export function ChatView({
           turnEpoch={turnEpoch}
           liveTurnActive={liveTurnActive}
           onAskUserAnswer={onAskUserAnswer}
+          onExtendGoal={onExtendGoal}
           trailing={inlineApproval}
           trailingKey={pendingApproval?.requestId ?? null}
           cwd={activeRepoPath}

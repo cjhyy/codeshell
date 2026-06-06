@@ -113,9 +113,11 @@ export interface SystemMessage {
 export interface GoalProgressMessage {
   kind: "goal_progress";
   id: string;
-  status: "not_met" | "met" | "exhausted";
+  status: "not_met" | "met" | "exhausted" | "approaching_limit";
   round: number;
   gaps?: string;
+  /** For "approaching_limit": turns left before the cap (TODO 3.1). */
+  turnsRemaining?: number;
 }
 
 /**
@@ -607,19 +609,22 @@ export function applyStreamEvent(
     }
 
     case "goal_progress": {
-      return {
-        ...state,
-        messages: [
-          ...state.messages,
-          {
-            kind: "goal_progress",
-            id: freshId("goal"),
-            status: event.status,
-            round: event.round,
-            gaps: event.gaps,
-          },
-        ],
+      const msg: GoalProgressMessage = {
+        kind: "goal_progress",
+        id: freshId("goal"),
+        status: event.status,
+        round: event.round,
+        gaps: event.gaps,
+        turnsRemaining: event.turnsRemaining,
       };
+      // "approaching_limit" is a transient call-to-action (the extend button).
+      // Any other goal_progress (not_met/met/exhausted) means the moment passed
+      // or the run advanced — drop a lingering approaching_limit marker so the
+      // button doesn't stick around stale. And never stack two of them.
+      const pruned = state.messages.filter(
+        (m) => !(m.kind === "goal_progress" && m.status === "approaching_limit"),
+      );
+      return { ...state, messages: [...pruned, msg] };
     }
 
     case "usage_update": {

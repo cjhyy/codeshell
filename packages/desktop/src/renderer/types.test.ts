@@ -37,6 +37,36 @@ function dispatch(
   return events.reduce((s, e) => applyStreamEvent(s, e), state);
 }
 
+describe("goal_progress approaching_limit (TODO 3.1)", () => {
+  const goalCount = (s: MessagesReducerState, status: string) =>
+    s.messages.filter((m) => m.kind === "goal_progress" && m.status === status).length;
+
+  test("approaching_limit marker carries turnsRemaining", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_progress", { status: "approaching_limit", round: 0, turnsRemaining: 2 } as never),
+    ]);
+    const m = s.messages.find((x) => x.kind === "goal_progress");
+    expect(m && m.kind === "goal_progress" && m.turnsRemaining).toBe(2);
+  });
+
+  test("a second approaching_limit replaces the first (no stacking)", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_progress", { status: "approaching_limit", round: 0, turnsRemaining: 2 } as never),
+      ev("goal_progress", { status: "approaching_limit", round: 0, turnsRemaining: 2 } as never),
+    ]);
+    expect(goalCount(s, "approaching_limit")).toBe(1);
+  });
+
+  test("a later not_met/met/exhausted prunes the approaching_limit marker", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_progress", { status: "approaching_limit", round: 0, turnsRemaining: 2 } as never),
+      ev("goal_progress", { status: "met", round: 3 } as never),
+    ]);
+    expect(goalCount(s, "approaching_limit")).toBe(0);
+    expect(goalCount(s, "met")).toBe(1);
+  });
+});
+
 function ev<T extends StreamEvent["type"]>(
   type: T,
   rest: Omit<Extract<StreamEvent, { type: T }>, "type">,

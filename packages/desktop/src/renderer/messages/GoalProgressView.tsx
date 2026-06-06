@@ -1,6 +1,9 @@
-import React, { memo } from "react";
-import { CircleDot, CheckCircle2, AlertTriangle } from "lucide-react";
+import React, { memo, useState } from "react";
+import { CircleDot, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import type { GoalProgressMessage } from "../types";
+
+/** Default turn bump offered by the "再续" button. */
+const EXTEND_TURNS = 50;
 
 /**
  * Goal-mode progress marker bar — one per judge verdict.
@@ -14,8 +17,45 @@ import type { GoalProgressMessage } from "../types";
  * voice (mirrors goal-stop-hook's 「目标尚未达成 / 还差」). `gaps` is whatever
  * the judge already produced — no extra LLM call.
  */
-function GoalProgressViewImpl({ message }: { message: GoalProgressMessage }) {
+function GoalProgressViewImpl({
+  message,
+  onExtend,
+}: {
+  message: GoalProgressMessage;
+  /** Extend the running goal by `addTurns` more turns (TODO 3.1). */
+  onExtend?: (addTurns: number) => void;
+}) {
   const { status, round, gaps } = message;
+  const [extended, setExtended] = useState(false);
+
+  // Approaching the turn cap while still running — offer a one-click extend so
+  // an unattended goal doesn't get truncated. After clicking we show a brief
+  // confirmation instead of the button.
+  if (status === "approaching_limit") {
+    return (
+      <div className="flex items-center gap-1.5 px-4 py-1 text-xs text-status-warn">
+        <Clock size={12} className="shrink-0" />
+        <span className="shrink-0">
+          目标接近轮次上限{message.turnsRemaining != null ? ` · 还剩 ${message.turnsRemaining} 轮` : ""}
+        </span>
+        {onExtend &&
+          (extended ? (
+            <span className="text-muted-foreground">— 已再续 {EXTEND_TURNS} 轮</span>
+          ) : (
+            <button
+              type="button"
+              className="rounded border border-border px-1.5 py-0.5 text-[11px] text-foreground hover:bg-accent"
+              onClick={() => {
+                setExtended(true);
+                onExtend(EXTEND_TURNS);
+              }}
+            >
+              再续 {EXTEND_TURNS} 轮
+            </button>
+          ))}
+      </div>
+    );
+  }
 
   if (status === "met") {
     return (

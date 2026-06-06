@@ -1468,6 +1468,32 @@ function App() {
     void window.codeshell.cancel(engineSessionId);
   };
 
+  // Resolve the engine sessionId for the currently-running bucket (same logic
+  // stop() uses). Returns undefined when nothing maps.
+  const resolveActiveEngineSessionId = (): string | undefined => {
+    const bucket = runningBucketRef.current ?? activeBucket;
+    const sep = bucket.indexOf("::");
+    const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
+    const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
+    const repoId = repoKey === GLOBAL_KEY || repoKey === null ? null : repoKey;
+    const summary =
+      uiSessionId && uiSessionId !== "_none_"
+        ? sessionIndices[repoKey ?? GLOBAL_KEY]?.sessions.find((s) => s.id === uiSessionId) ??
+          loadSessionIndex(repoId).sessions.find((s) => s.id === uiSessionId)
+        : undefined;
+    return summary?.engineSessionId ?? uiSessionId ?? undefined;
+  };
+
+  // Extend the running goal by N more turns (TODO 3.1). Fired by the
+  // "approaching limit" extend button in the goal progress marker.
+  const extendGoal = (addTurns: number): void => {
+    const engineSessionId = resolveActiveEngineSessionId();
+    if (!engineSessionId) return;
+    void window.codeshell.goalExtend(engineSessionId, { addTurns }).catch((e) =>
+      window.codeshell.log("goal.extend.failed", { error: String(e) }),
+    );
+  };
+
   const decideEnvelope = (
     env: ApprovalRequestEnvelope,
     decision: "approve" | "deny",
@@ -2062,6 +2088,7 @@ function App() {
               onRemoveAnchor={removeAnchor}
               onClearAnchors={clearAnchors}
               onAskUserAnswer={handleAskUserAnswer}
+              onExtendGoal={extendGoal}
               pendingApproval={approval}
               onApprovalDecide={
                 approval

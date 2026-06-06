@@ -297,9 +297,11 @@ export type StreamEvent =
   // No extra LLM call — `gaps` reuses the verdict the judge already produced.
   | {
       type: "goal_progress";
-      status: "not_met" | "met" | "exhausted";
+      status: "not_met" | "met" | "exhausted" | "approaching_limit";
       round: number;
       gaps?: string;
+      /** For "approaching_limit": turns left before the maxTurns cap (TODO 3.1). */
+      turnsRemaining?: number;
       agentId?: string;
     }
   | { type: "error"; error: string; agentId?: string }

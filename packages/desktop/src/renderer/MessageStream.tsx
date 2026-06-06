@@ -30,6 +30,8 @@ const NOOP_ON_ANSWER = (): void => undefined;
 interface Props {
   messages: Message[];
   onAskUserAnswer?: (requestId: string, answer: string) => void;
+  /** Extend the running goal by N more turns (TODO 3.1). */
+  onExtendGoal?: (addTurns: number) => void;
   /**
    * Optional trailing slot rendered after the last message but still
    * inside the scrollable stream. Used by the chat shell to drop a
@@ -66,6 +68,7 @@ interface Props {
 export function MessageStream({
   messages,
   onAskUserAnswer,
+  onExtendGoal,
   trailing,
   trailingKey,
   turnEpoch,
@@ -185,7 +188,7 @@ export function MessageStream({
           case "context_boundary":
             return <ContextBoundaryView key={m.id} message={m} />;
           case "goal_progress":
-            return <GoalProgressView key={m.id} message={m} />;
+            return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
           case "ask_user":
             // ask_user is also pinned above the composer. We still
             // render the resolved (answered) cards inline so the chat
