@@ -19,6 +19,13 @@ import {
   agentNotificationBus,
   mergePluginMcpServers,
   type AutomationHandle,
+  ExternalAgentJobManager,
+  ClaudeCodeAdapter,
+  CodexAdapter,
+  resolveExternalAgentConfig,
+  resolveClaudeModeForWorkspace,
+  parseExternalAgentSlash,
+  type ExternalAgentEvent,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
@@ -38,6 +45,9 @@ import {
 } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
 import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
+import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
+import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
+import type { MobileClientEvent } from "./mobile-remote/types.js";
 import { readDirectory, readFile as fsReadFile } from "./fs-service.js";
 import {
   getGitStatus,
@@ -140,6 +150,152 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
 let bridge: AgentBridge | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
+
+// ── Mobile Web Remote (LAN phone controller; off by default) ────────────────
+// Trusted-device store + HTTP/WS host. The host is NOT started on launch — the
+// user must explicitly Start it from Settings → Advanced. onClientEvent is a
+// v1 echo placeholder; chat/approval routing is wired in a later task and must
+// reuse the existing run/permission path rather than create a second runtime.
+const mobileDevices = new TrustedDeviceStore(
+  resolve(app.getPath("userData"), "mobile-remote", "devices.json"),
+);
+const mobileRemote = new RemoteHostManager({
+  devices: mobileDevices,
+  onClientEvent: (event) => {
+    void handleMobileClientEvent(event as MobileClientEvent);
+  },
+});
+
+// External agent (Claude Code / Codex CLI) managed jobs launched from the
+// phone via /cc and /codex. Job stdout/stderr/status are mirrored to mobile
+// clients. Spawning uses argument arrays (no shell string), so dangerous args
+// can never be interpolated into a command line.
+const externalAgentJobs = new ExternalAgentJobManager(
+  { claudeCode: new ClaudeCodeAdapter(), codex: new CodexAdapter() },
+  (event: ExternalAgentEvent) => {
+    mobileRemote.broadcastRaw(JSON.stringify({ channel: "externalAgent", event }));
+  },
+);
+
+/**
+ * Route an authenticated mobile client event into the SAME run/permission
+ * path the renderer uses, via AgentBridge.injectWorkerMessage. There is no
+ * second run loop: chat/approval/cancel become the identical JSON-RPC lines
+ * the renderer's preload rpc() would emit, so the core permission engine,
+ * goal logic, and snapshots all apply unchanged.
+ */
+async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> {
+  if (!bridge) return;
+  const ctx = bridge.getLastRunContext();
+  if (event.type === "chat.send") {
+    const sessionId = event.sessionId ?? ctx.sessionId;
+    const cwd = ctx.cwd ?? process.cwd();
+    // /cc and /codex launch external-agent managed jobs; everything else is a
+    // normal CodeShell turn routed through the existing worker run path.
+    const parsed = parseExternalAgentSlash(event.text);
+    if (parsed) {
+      await startExternalAgentJob(parsed, cwd, sessionId);
+      return;
+    }
+    bridge.injectWorkerMessage(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: `mobile-run-${Date.now()}`,
+        method: "agent/run",
+        params: { task: event.text, cwd: ctx.cwd, sessionId },
+      }),
+    );
+    return;
+  }
+  if (event.type === "job.stop") {
+    await externalAgentJobs.stop(event.jobId);
+    return;
+  }
+  if (event.type === "approval.respond") {
+    bridge.injectWorkerMessage(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: `mobile-approve-${Date.now()}`,
+        method: "agent/approve",
+        params: {
+          sessionId: event.sessionId ?? ctx.sessionId,
+          requestId: event.approvalId,
+          decision:
+            event.decision === "approve" ? { approved: true } : { approved: false },
+        },
+      }),
+    );
+    return;
+  }
+  if (event.type === "run.stop") {
+    bridge.injectWorkerMessage(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: `mobile-cancel-${Date.now()}`,
+        method: "agent/cancel",
+        params: { sessionId: event.sessionId },
+      }),
+    );
+    return;
+  }
+}
+
+/**
+ * Start a Claude Code / Codex managed job from a parsed slash command. For
+ * Claude Code, the mode is resolved against externalAgents config + the
+ * workspace trust allowlist: dangerous mode auto-starts ONLY inside a trusted
+ * workspace with autoStart enabled; otherwise a high-risk approval card is
+ * pushed to the phone and the job is NOT started until the user confirms.
+ * (Approval-resume of dangerous jobs is a follow-up; v1 surfaces the gate.)
+ */
+async function startExternalAgentJob(
+  parsed: ReturnType<typeof parseExternalAgentSlash> & object,
+  cwd: string,
+  sessionId: string | undefined,
+): Promise<void> {
+  const settings = ((await readSettings("user", cwd).catch(() => null)) ?? {}) as {
+    externalAgents?: Parameters<typeof resolveExternalAgentConfig>[0];
+  };
+  const cfg = resolveExternalAgentConfig(settings.externalAgents);
+
+  if (parsed.kind === "claude-code") {
+    const decision = resolveClaudeModeForWorkspace(cfg.claudeCode, cwd, parsed.mode);
+    if (decision.requiresHighRiskApproval) {
+      mobileRemote.broadcast({
+        type: "approval.request",
+        approvalId: `cc-danger-${Date.now()}`,
+        title: "启动 Claude Code(dangerous 模式)?",
+        risk: "high",
+        body:
+          `目录:${cwd}\n模式:dangerous\nargs:${decision.args.join(" ")}\n` +
+          `prompt:${parsed.prompt.slice(0, 200)}\n` +
+          `原因:${decision.reason}(非可信工作区,需明确批准)`,
+      });
+      return;
+    }
+    externalAgentJobs.start({
+      kind: "claude-code",
+      sessionId: sessionId ?? "mobile",
+      cwd,
+      prompt: parsed.prompt,
+      command: cfg.claudeCode.command,
+      mode: decision.mode,
+      args: decision.args,
+    });
+    return;
+  }
+
+  // Codex: v1 always safe; command/args come from config.
+  externalAgentJobs.start({
+    kind: "codex",
+    sessionId: sessionId ?? "mobile",
+    cwd,
+    prompt: parsed.prompt,
+    command: cfg.codex.command,
+    mode: "safe",
+    args: cfg.codex.args,
+  });
+}
 
 async function createWindow(): Promise<BrowserWindow> {
   const ws = await loadWindowState();
@@ -308,6 +464,11 @@ async function createWindow(): Promise<BrowserWindow> {
 
   if (!bridge) {
     bridge = new AgentBridge(win);
+    // Mirror every worker→renderer line onto any connected mobile clients, so
+    // the phone sees the same stream (messages, tool summaries, approvals).
+    bridge.subscribeOutbound((line) => {
+      mobileRemote.broadcastRaw(line);
+    });
   } else {
     bridge.attachWindow(win);
   }
@@ -714,6 +875,22 @@ ipcMain.handle("models:list", async (_e, rawProvider: unknown, refresh?: boolean
 ipcMain.handle("updater:check", async () => checkForUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
+
+// ── Mobile Web Remote ───────────────────────────────────────────────────────
+ipcMain.handle("mobileRemote:start", async () => {
+  const started = await mobileRemote.start({ host: "127.0.0.1", port: 0 });
+  const pairing = mobileRemote.createPairingUrl();
+  return { url: started.url, pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
+});
+ipcMain.handle("mobileRemote:stop", async () => {
+  await mobileRemote.stop();
+});
+ipcMain.handle("mobileRemote:status", async () => {
+  const status = mobileRemote.status();
+  return { running: Boolean(status), url: status?.url };
+});
+ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
+ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => mobileDevices.revoke(id));
 
 ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string } | null> => {
   const res = await dialog.showOpenDialog({
@@ -1122,6 +1299,7 @@ app.on("before-quit", () => {
   automationHandle?.stop();
   automationHandle = null;
   ptyKillAll();
+  void mobileRemote.stop();
 });
 
 app.on("activate", () => {

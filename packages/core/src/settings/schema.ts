@@ -513,6 +513,32 @@ export const SettingsSchema = z
         }),
       )
       .optional(),
+
+    /**
+     * External coding-agent orchestration (Claude Code / Codex CLI).
+     * Used by the Mobile Web Remote to launch managed jobs. dangerousArgs
+     * is config-provided (not hardcoded) so it tracks CLI flag changes;
+     * project-default dangerous mode only applies inside trustedWorkspaces.
+     */
+    externalAgents: z
+      .object({
+        claudeCode: z
+          .object({
+            command: z.string().optional(),
+            defaultMode: z.enum(["safe", "dangerous"]).optional(),
+            dangerousArgs: z.array(z.string()).optional(),
+            trustedWorkspaces: z.array(z.string()).optional(),
+            autoStartInTrustedWorkspaces: z.boolean().optional(),
+          })
+          .optional(),
+        codex: z
+          .object({
+            command: z.string().optional(),
+            args: z.array(z.string()).optional(),
+          })
+          .optional(),
+      })
+      .optional(),
   })
   .passthrough();
 

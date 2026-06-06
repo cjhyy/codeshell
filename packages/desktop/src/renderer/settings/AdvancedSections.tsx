@@ -968,3 +968,120 @@ function lines(text: string): string[] {
 function arrayText(value: unknown): string {
   return Array.isArray(value) ? value.filter((x): x is string => typeof x === "string").join("\n") : "";
 }
+
+type MobileDevice = {
+  id: string;
+  name: string;
+  createdAt: number;
+  lastSeenAt?: number;
+  revokedAt?: number;
+};
+
+/**
+ * Mobile Web Remote — start/stop a LAN HTTP/WebSocket host so a trusted phone
+ * can drive CodeShell chat + approvals. Off by default; no public relay. The
+ * pairing URL is one-time (10-min TTL) and must be opened on the phone.
+ */
+export function MobileRemoteSection() {
+  const confirm = useConfirm();
+  const [status, setStatus] = useState<{ running: boolean; url?: string }>({ running: false });
+  const [pairingUrl, setPairingUrl] = useState<string | undefined>();
+  const [devices, setDevices] = useState<MobileDevice[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setStatus(await window.codeshell.mobileRemote.status());
+    setDevices(await window.codeshell.mobileRemote.listDevices());
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  async function start() {
+    setBusy(true);
+    try {
+      const res = await window.codeshell.mobileRemote.start();
+      setPairingUrl(res.pairingUrl);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function stop() {
+    setBusy(true);
+    try {
+      await window.codeshell.mobileRemote.stop();
+      setPairingUrl(undefined);
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function revoke(device: MobileDevice) {
+    const ok = await confirm({
+      title: "撤销设备",
+      message: `撤销「${device.name}」后,该手机将无法重新连接。`,
+      confirmLabel: "撤销",
+      destructive: true,
+    });
+    if (!ok) return;
+    await window.codeshell.mobileRemote.revokeDevice(device.id);
+    await refresh();
+  }
+
+  return (
+    <section className="settings-section">
+      <h3 className="settings-section-title">手机遥控 (Mobile Remote)</h3>
+      <p className="text-sm text-muted-foreground">
+        在局域网启动一个手机网页遥控入口,供已配对的可信手机控制聊天与权限审批。默认关闭,不暴露公网。
+      </p>
+      <div className="flex gap-2 mt-3">
+        <Button type="button" onClick={start} disabled={busy || status.running}>
+          开启手机遥控
+        </Button>
+        <Button type="button" variant="outline" onClick={stop} disabled={busy || !status.running}>
+          关闭
+        </Button>
+      </div>
+      <p className="text-sm mt-2">
+        {status.running ? `运行中:${status.url}` : "已关闭"}
+      </p>
+      {pairingUrl ? (
+        <div className="mt-2">
+          <p className="text-sm font-medium">配对链接(10 分钟内有效,在手机上打开):</p>
+          <pre className="text-xs whitespace-pre-wrap break-all bg-muted rounded-md p-2 mt-1">
+            {pairingUrl}
+          </pre>
+        </div>
+      ) : null}
+      <div className="mt-4 space-y-2">
+        <h4 className="text-sm font-medium">可信设备</h4>
+        {devices.length === 0 ? (
+          <p className="text-sm text-muted-foreground">暂无可信设备。</p>
+        ) : (
+          devices.map((device) => (
+            <div key={device.id} className="flex items-center justify-between text-sm">
+              <span>
+                {device.name}
+                {device.revokedAt ? "(已撤销)" : ""}
+              </span>
+              {!device.revokedAt ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void revoke(device)}
+                >
+                  撤销
+                </Button>
+              ) : null}
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
