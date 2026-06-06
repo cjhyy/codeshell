@@ -75,11 +75,24 @@ export abstract class LLMClientBase {
     return { ...this.usage };
   }
 
-  protected async withRetry<T>(fn: () => Promise<T>, maxAttempts?: number): Promise<T> {
-    const attempts = maxAttempts ?? this.retryMaxAttempts;
+  protected async withRetry<T>(
+    fn: () => Promise<T>,
+    opts?: { maxAttempts?: number; signal?: AbortSignal },
+  ): Promise<T> {
+    const attempts = opts?.maxAttempts ?? this.retryMaxAttempts;
+    const signal = opts?.signal;
     let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= attempts; attempt++) {
+      // Bail BEFORE issuing (or re-issuing) the request if the run was
+      // cancelled. Without this, a cancel that lands during a backoff sleep —
+      // or while a flaky connection hangs — still re-fires the same doomed
+      // request, so the user's Stop "does nothing" until all attempts +
+      // backoffs drain (~50 s for a 3× Connection-error loop). Checking here
+      // makes Cancel take effect at the next retry boundary.
+      if (signal?.aborted) {
+        throw new DOMException("Aborted before LLM request", "AbortError");
+      }
       try {
         return await fn();
       } catch (err) {
@@ -92,7 +105,10 @@ export abstract class LLMClientBase {
         // can't catch it). Retrying re-issues the same aborted request 3×
         // with growing backoff — ~40 s of dead time ending in llm.exhausted,
         // for work the user explicitly cancelled. Surface immediately.
-        if (isAbortError(err)) {
+        // Also catch the case where the run aborted but the underlying error
+        // surfaced as a generic Connection error (not an SDK abort): the
+        // signal is the authoritative "user cancelled" source.
+        if (isAbortError(err) || signal?.aborted) {
           logger.warn("llm.abort_no_retry", {
             cat: "llm",
             provider: this.provider,
@@ -113,7 +129,9 @@ export abstract class LLMClientBase {
             reason: "rate_limit",
             waitMs,
           });
-          await new Promise((r) => setTimeout(r, waitMs));
+          if (await abortableSleep(waitMs, signal)) {
+            throw new DOMException("Aborted during retry backoff", "AbortError");
+          }
           continue;
         }
 
@@ -155,12 +173,36 @@ export abstract class LLMClientBase {
           error: (err as Error).message,
           backoffMs: backoff,
         });
-        await new Promise((r) => setTimeout(r, backoff));
+        if (await abortableSleep(backoff, signal)) {
+          throw new DOMException("Aborted during retry backoff", "AbortError");
+        }
       }
     }
 
     throw lastError ?? new LLMError("Unknown LLM error");
   }
+}
+
+/**
+ * Sleep `ms`, but wake immediately if `signal` aborts. Returns true when it
+ * woke due to an abort (caller should bail), false on a normal timeout.
+ * Without this an abort during a retry backoff is invisible until the timer
+ * fires — the root cause of "Stop does nothing" during a flaky-connection
+ * retry loop.
+ */
+function abortableSleep(ms: number, signal?: AbortSignal): Promise<boolean> {
+  if (signal?.aborted) return Promise.resolve(true);
+  return new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve(false);
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 /**

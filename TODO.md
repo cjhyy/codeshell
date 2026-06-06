@@ -64,6 +64,7 @@ UI/设计活(2.x 面板/markdown/图片/手动停止样式)建议有人盯着做
 
 - [x] LLM API 调用重试：指数退避、可配置 retry policy —— `client-base.ts` withRetry 已实现:`Math.min(1000*2^(n-1), 30s)` 指数退避、`retryMaxAttempts`(默认3)可配、429 走 `retryAfter`、4xx(含 details 埋藏 status)非重试、abort 非重试、5xx/网络重试。测试 client-error.test.ts(isClientError/isAbortError 含埋藏 status 回归)
 - [~] 网络断开自动重连 —— 瞬时网络错误已被 withRetry 覆盖(5xx/ECONNRESET 重试);长时段断网的会话级重连待补
+- [x] **修复:flaky 连接重试时 Cancel 打不断** ✅ —— `withRetry` 既不收 signal、退避又用不可中断 setTimeout,网络错误重试 3×(每次 fetch ~16s + 退避)期间点 Stop 要等整轮 ~50s 才生效。已把 run 的 AbortSignal 喂进 withRetry:重试边界检查 aborted 立即抛、退避改 `abortableSleep`(signal 触发即醒)、connection-error 但 signal 已 abort 也按取消处理。fetch 层本就传了 signal。测试 retry-abort.test.ts(去 signal 仍跑满 3 次=无回归)
 - [ ] 会话崩溃恢复：RunManager 的 `recover` 已部分实现，需补齐产品闭环
 - [ ] 工具执行超时处理与可取消性一致化
 - [ ] 优雅的错误消息：用户友好、包含下一步建议

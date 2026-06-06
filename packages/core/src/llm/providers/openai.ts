@@ -197,6 +197,8 @@ export class OpenAIClient extends LLMClientBase {
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
     return this.withRetry(async () => {
+      // (signal passed below so an abort during retry backoff / a hung
+      // connection breaks the loop instead of running all attempts)
       // Per-call reasoning wins; otherwise fall back to provider default
       // (settings.providers[].reasoning, threaded through LLMConfig).
       const reasoning = options.reasoning ?? this.config.reasoning;
@@ -232,7 +234,7 @@ export class OpenAIClient extends LLMClientBase {
         span.fail(err);
         throw err;
       }
-    });
+    }, { signal: options.signal });
   }
 
   /**

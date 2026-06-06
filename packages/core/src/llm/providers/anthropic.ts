@@ -157,7 +157,7 @@ export class AnthropicClient extends LLMClientBase {
         span.fail(err);
         throw err;
       }
-    });
+    }, { signal: options.signal });
   }
 
   private async nonStreamMessage(
