@@ -21,6 +21,20 @@ export type FoldItem =
  * outer requestId is what the renderer echoes back via approve();
  * the inner request carries what the user actually needs to see.
  */
+/** One background shell surfaced to the dock panel (TODO 3.2). */
+export interface BackgroundShellInfo {
+  shellId: string;
+  sessionId: string;
+  command: string;
+  cwd: string;
+  status: "running" | "exited" | "killed";
+  startedAt: number;
+  exitedAt?: number;
+  exitCode: number | null;
+  signal: string | null;
+  detectedPort?: number;
+}
+
 export interface ApprovalRequestEnvelope {
   /** Owning chat session — renderer routes the modal to the right tab. */
   sessionId?: string;
@@ -203,6 +217,13 @@ export interface CodeshellApi {
     ok: boolean;
     limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number };
   }>;
+  /** Background-shell dock panel (TODO 3.2). */
+  listBackgroundShells(sessionId: string): Promise<{ shells: BackgroundShellInfo[] }>;
+  backgroundShellOutput(
+    sessionId: string,
+    shellId: string,
+  ): Promise<{ header: string; text: string }>;
+  killBackgroundShell(sessionId: string, shellId: string): Promise<{ ok: boolean }>;
   /** Multi-session form. The dual-arg legacy form is also supported at runtime. */
   approve(
     sessionId: string,

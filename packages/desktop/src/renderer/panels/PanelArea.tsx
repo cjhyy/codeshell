@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus, Maximize2, Minimize2 } from "lucide-react";
+import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus, Maximize2, Minimize2, ServerCog } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -12,6 +12,7 @@ import { FilesPanel } from "./FilesPanel";
 import { BrowserPanel } from "./BrowserPanel";
 import { ReviewPanel } from "./ReviewPanel";
 import { TerminalPanel } from "./TerminalPanel";
+import { BackgroundShellPanel } from "./BackgroundShellPanel";
 
 export interface OpenTab {
   id: string;
@@ -42,6 +43,8 @@ interface Props {
   requestKind: PanelTab | null;
   /** Files for a review tab to focus (from a chat "files changed" card). */
   reviewFiles?: string[];
+  /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
+  engineSessionId?: string | null;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
   width: number;
   /** Drag the divider: report the new width (parent clamps + persists). */
@@ -55,6 +58,7 @@ const KINDS: { kind: PanelTab; label: string; Icon: typeof FolderTree; hint?: st
   { kind: "browser", label: "浏览器", Icon: Globe, hint: "⌘T" },
   { kind: "review", label: "审查", Icon: GitCompare, hint: "⌃⇧G" },
   { kind: "terminal", label: "终端", Icon: SquareTerminal, hint: "⌃`" },
+  { kind: "shells", label: "后台 Shell", Icon: ServerCog },
 ];
 
 const META: Record<PanelTab, { label: string; Icon: typeof FolderTree }> = {
@@ -62,6 +66,7 @@ const META: Record<PanelTab, { label: string; Icon: typeof FolderTree }> = {
   browser: { label: "浏览器", Icon: Globe },
   review: { label: "审查", Icon: GitCompare },
   terminal: { label: "终端", Icon: SquareTerminal },
+  shells: { label: "后台 Shell", Icon: ServerCog },
 };
 
 /**
@@ -80,6 +85,7 @@ export function PanelArea({
   requestNonce,
   requestKind,
   reviewFiles,
+  engineSessionId,
   width,
   onResizeStart,
   onAttachImage,
@@ -245,7 +251,7 @@ export function PanelArea({
         ) : (
           tabs.map((t) => (
             <Slot key={t.id} active={t.id === activeId}>
-              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} onAttachImage={onAttachImage} />
+              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} engineSessionId={engineSessionId} onAttachImage={onAttachImage} />
             </Slot>
           ))
         )}
@@ -281,12 +287,14 @@ function PanelBody({
   cwd,
   repoId,
   reviewFiles,
+  engineSessionId,
   onAttachImage,
 }: {
   tab: OpenTab;
   cwd: string | null;
   repoId: string | null;
   reviewFiles?: string[];
+  engineSessionId?: string | null;
   onAttachImage?: (absPath: string) => void;
 }) {
   switch (tab.kind) {
@@ -299,6 +307,8 @@ function PanelBody({
     case "terminal":
       // Per-tab session id so multiple terminals are independent shells.
       return <TerminalPanel cwd={cwd} sessionId={`term:${repoId ?? "no-repo"}:${tab.id}`} />;
+    case "shells":
+      return <BackgroundShellPanel sessionId={engineSessionId ?? null} />;
   }
 }
 

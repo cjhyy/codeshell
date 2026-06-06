@@ -18,6 +18,21 @@
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
+/** One background shell as surfaced to the dock panel (TODO 3.2). Mirrors core
+ *  BgShell's public shape; renderer-local since the renderer can't import core. */
+export interface BackgroundShellInfo {
+  shellId: string;
+  sessionId: string;
+  command: string;
+  cwd: string;
+  status: "running" | "exited" | "killed";
+  startedAt: number;
+  exitedAt?: number;
+  exitCode: number | null;
+  signal: string | null;
+  detectedPort?: number;
+}
+
 let nextRpcId = 1;
 const pending = new Map<number, { resolve: (resp: unknown) => void; reject: (err: Error) => void }>();
 // Multi-session: callbacks receive `{ sessionId, event }` for stream events
@@ -181,6 +196,22 @@ contextBridge.exposeInMainWorld("codeshell", {
     rpc("agent/goalExtend", { sessionId, ...opts }) as Promise<{
       ok: boolean;
       limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number };
+    }>,
+  /** List a session's background shells for the dock panel (TODO 3.2). */
+  listBackgroundShells: (sessionId: string) =>
+    rpc("agent/backgroundShells", { sessionId, action: "list" }) as Promise<{
+      shells: BackgroundShellInfo[];
+    }>,
+  /** Read one background shell's full retained output. */
+  backgroundShellOutput: (sessionId: string, shellId: string) =>
+    rpc("agent/backgroundShells", { sessionId, action: "output", shellId }) as Promise<{
+      header: string;
+      text: string;
+    }>,
+  /** Terminate one background shell's process group. */
+  killBackgroundShell: (sessionId: string, shellId: string) =>
+    rpc("agent/backgroundShells", { sessionId, action: "kill", shellId }) as Promise<{
+      ok: boolean;
     }>,
   approve: (
     sessionIdOrRequestId: string,

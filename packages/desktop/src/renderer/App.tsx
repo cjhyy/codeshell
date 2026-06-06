@@ -2180,6 +2180,7 @@ function App() {
           width={panelWidth}
           onResizeStart={beginPanelResize}
           onAttachImage={(p) => void attachImageByPath(p)}
+          engineSessionId={resolveActiveEngineSessionId() ?? null}
           tabs={panelTabs}
           setTabs={setPanelTabs}
           activeId={panelActiveId}

@@ -188,6 +188,9 @@ export class AgentServer {
       case Methods.GoalExtend:
         this.handleGoalExtend(req);
         break;
+      case Methods.BackgroundShells:
+        this.handleBackgroundShells(req);
+        break;
       default:
         this.transport.send(
           createErrorResponse(req.id, ErrorCodes.MethodNotFound, `Unknown method: ${req.method}`),
@@ -526,6 +529,64 @@ export class AgentServer {
       return;
     }
     this.transport.send(createResponse(req.id, { ok: true, limits: result }));
+  }
+
+  /**
+   * Query/control a session's background shells for the desktop UI panel (TODO
+   * 3.2). Reads the singleton BackgroundShellManager directly (shells outlive
+   * the run that spawned them, so we don't need a live ChatSession). Actions:
+   *   - (default) list  → the session's shells
+   *   - output          → full retained output of one shell
+   *   - kill            → terminate one shell's process group
+   * All scoped by sessionId (manager enforces ownership on output/kill).
+   */
+  private handleBackgroundShells(req: RpcRequest): void {
+    const params = (req.params ?? {}) as {
+      sessionId?: string;
+      action?: "list" | "output" | "kill";
+      shellId?: string;
+    };
+    const sessionId = params.sessionId;
+    if (typeof sessionId !== "string" || !sessionId) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
+      );
+      return;
+    }
+    const action = params.action ?? "list";
+    if (action === "list") {
+      const shells = backgroundShellManager.listForSession(sessionId);
+      this.transport.send(createResponse(req.id, { shells }));
+      return;
+    }
+    if (!params.shellId) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "shellId is required"),
+      );
+      return;
+    }
+    if (action === "output") {
+      const res = backgroundShellManager.readOutput(params.shellId, "all", sessionId);
+      if (!res.ok) {
+        this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, res.error));
+        return;
+      }
+      this.transport.send(createResponse(req.id, { header: res.header, text: res.text }));
+      return;
+    }
+    if (action === "kill") {
+      void backgroundShellManager.kill(params.shellId, sessionId).then((res) => {
+        if (!res.ok) {
+          this.transport.send(createErrorResponse(req.id, ErrorCodes.InvalidParams, res.error));
+        } else {
+          this.transport.send(createResponse(req.id, { ok: true }));
+        }
+      });
+      return;
+    }
+    this.transport.send(
+      createErrorResponse(req.id, ErrorCodes.InvalidParams, `unknown action: ${action}`),
+    );
   }
 
   // ─── CloseSession ───────────────────────────────────────────────
