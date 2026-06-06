@@ -43,7 +43,7 @@ import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { createGoalStopHook } from "../hooks/goal-stop-hook.js";
-import { normalizeGoal, resolveMaxTurns, type GoalConfig } from "./goal.js";
+import { normalizeGoal, resolveMaxTurns, resolveMaxStopBlocks, type GoalConfig } from "./goal.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
@@ -169,6 +169,11 @@ export interface EngineConfig {
   clientDefaults?: ClientDefaults;
   cwd?: string;
   maxTurns?: number;
+  /**
+   * Override the goal-mode consecutive-stop-block cap (TODO 3.1). Falls back to
+   * goal.maxStopBlocks, then GOAL_DEFAULT_MAX_STOP_BLOCKS. See resolveMaxStopBlocks.
+   */
+  maxStopBlocks?: number;
   maxToolCallsPerTurn?: number;
   permissionMode?: "default" | "acceptEdits" | "dontAsk" | "bypassPermissions" | "auto" | "plan";
   preset?: AgentPresetName;
@@ -1675,6 +1680,10 @@ export class Engine {
         // interactive default would silently truncate a long objective. The
         // real backstops are the goal token/time budgets + maxStopBlocks.
         maxTurns: resolveMaxTurns(this.config.maxTurns, normalizedGoal),
+        // Consecutive stop-block cap: config override > goal.maxStopBlocks >
+        // GOAL_DEFAULT_MAX_STOP_BLOCKS(25). The old hardcoded 8 was too tight
+        // for complex goals that legitimately get re-blocked while advancing.
+        maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, normalizedGoal),
         maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 10,
         onStream: options?.onStream,
         signal: options?.signal,

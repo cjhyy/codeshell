@@ -28,6 +28,41 @@ export interface GoalConfig {
    * fallback applied when a goal is active but no explicit cap was given.
    */
   maxTurns?: number;
+  /**
+   * Max CONSECUTIVE times the on_stop judge may block termination before the
+   * loop forces a stop (the "stuck on an unsatisfiable goal" backstop). A goal
+   * that keeps legitimately making progress resets this every accepted turn, so
+   * this only bites when the judge re-blocks over and over with no completion.
+   * Overrides GOAL_DEFAULT_MAX_STOP_BLOCKS. Non-positive values are dropped.
+   */
+  maxStopBlocks?: number;
+}
+
+/**
+ * Default consecutive-stop-block cap for goal runs. The real safety net for an
+ * unattended goal is the token/time budget + maxTurns; this cap only stops a
+ * goal that the judge keeps re-blocking with NO progress between blocks. 8 was
+ * too tight — a complex goal can legitimately get "not yet" several times while
+ * advancing — so we allow a generous streak before declaring it stuck.
+ */
+export const GOAL_DEFAULT_MAX_STOP_BLOCKS = 25;
+
+/**
+ * Resolve the consecutive-stop-block cap for a run. Precedence:
+ *   1. explicit `configMaxStopBlocks` (engine/caller override)
+ *   2. `goal.maxStopBlocks`
+ *   3. GOAL_DEFAULT_MAX_STOP_BLOCKS
+ * Pure + injectable so engine and tests agree.
+ */
+export function resolveMaxStopBlocks(
+  configMaxStopBlocks: number | undefined,
+  goal: GoalConfig | undefined,
+): number {
+  if (typeof configMaxStopBlocks === "number" && configMaxStopBlocks > 0) {
+    return Math.floor(configMaxStopBlocks);
+  }
+  if (goal?.maxStopBlocks && goal.maxStopBlocks > 0) return goal.maxStopBlocks;
+  return GOAL_DEFAULT_MAX_STOP_BLOCKS;
 }
 
 /**
@@ -54,6 +89,9 @@ export function normalizeGoal(raw: string | GoalConfig | undefined): GoalConfig 
   if (typeof obj.tokenBudget === "number" && obj.tokenBudget > 0) out.tokenBudget = obj.tokenBudget;
   if (typeof obj.timeBudgetMs === "number" && obj.timeBudgetMs > 0) out.timeBudgetMs = obj.timeBudgetMs;
   if (typeof obj.maxTurns === "number" && obj.maxTurns > 0) out.maxTurns = Math.floor(obj.maxTurns);
+  if (typeof obj.maxStopBlocks === "number" && obj.maxStopBlocks > 0) {
+    out.maxStopBlocks = Math.floor(obj.maxStopBlocks);
+  }
   return out;
 }
 

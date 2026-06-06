@@ -5,11 +5,35 @@ import {
   recordGoalUsage,
   goalBudgetExceeded,
   resolveMaxTurns,
+  resolveMaxStopBlocks,
   applyGoalExtension,
   GOAL_DEFAULT_MAX_TURNS,
+  GOAL_DEFAULT_MAX_STOP_BLOCKS,
   INTERACTIVE_DEFAULT_MAX_TURNS,
   type GoalConfig,
 } from "./goal.js";
+
+describe("resolveMaxStopBlocks (TODO 3.1 — 续跑上限调大可配)", () => {
+  test("defaults to GOAL_DEFAULT_MAX_STOP_BLOCKS (>8) when unset", () => {
+    expect(resolveMaxStopBlocks(undefined, undefined)).toBe(GOAL_DEFAULT_MAX_STOP_BLOCKS);
+    expect(GOAL_DEFAULT_MAX_STOP_BLOCKS).toBeGreaterThan(8);
+  });
+  test("explicit config override wins", () => {
+    expect(resolveMaxStopBlocks(40, { objective: "x", maxStopBlocks: 12 })).toBe(40);
+  });
+  test("goal.maxStopBlocks used when no config override", () => {
+    expect(resolveMaxStopBlocks(undefined, { objective: "x", maxStopBlocks: 12 })).toBe(12);
+  });
+  test("non-positive values fall through to the default", () => {
+    expect(resolveMaxStopBlocks(0, undefined)).toBe(GOAL_DEFAULT_MAX_STOP_BLOCKS);
+    expect(resolveMaxStopBlocks(-3, { objective: "x" })).toBe(GOAL_DEFAULT_MAX_STOP_BLOCKS);
+  });
+  test("normalizeGoal floors + drops non-positive maxStopBlocks", () => {
+    expect(normalizeGoal({ objective: "x", maxStopBlocks: 15.9 })?.maxStopBlocks).toBe(15);
+    expect(normalizeGoal({ objective: "x", maxStopBlocks: 0 })?.maxStopBlocks).toBeUndefined();
+    expect(normalizeGoal({ objective: "x", maxStopBlocks: -2 })?.maxStopBlocks).toBeUndefined();
+  });
+});
 
 describe("applyGoalExtension (TODO 3.1 — 运行中续轮/加预算)", () => {
   test("addTurns bumps the ceiling (floored, positive only)", () => {

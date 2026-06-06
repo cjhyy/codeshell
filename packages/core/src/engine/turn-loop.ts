@@ -39,6 +39,7 @@ import {
   recordGoalUsage,
   goalBudgetExceeded,
   applyGoalExtension,
+  GOAL_DEFAULT_MAX_STOP_BLOCKS,
 } from "./goal.js";
 
 export interface TurnLoopConfig {
@@ -65,7 +66,8 @@ export interface TurnLoopConfig {
    * Max consecutive times an on_stop handler may block termination before
    * the loop forces a stop, mirroring Claude Code's stop-hook block cap.
    * Resets to 0 whenever a turn completes without being blocked. Defaults
-   * to 8. Independent of maxTurns, which still bounds total turns.
+   * to GOAL_DEFAULT_MAX_STOP_BLOCKS. Independent of maxTurns, which still
+   * bounds total turns.
    */
   maxStopBlocks?: number;
 }
@@ -612,7 +614,7 @@ export class TurnLoop {
         // handler returning continueSession=true injects its messages and
         // we run another turn instead of returning. Bounded by
         // maxStopBlocks (consecutive) and the outer maxTurns ceiling.
-        const maxStopBlocks = this.config.maxStopBlocks ?? 8;
+        const maxStopBlocks = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
         const stopHook = await this.emitHook("on_stop", {
           goal: this.config.goal,
           finalText,
