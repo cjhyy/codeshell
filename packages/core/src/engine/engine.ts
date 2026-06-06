@@ -2425,6 +2425,17 @@ export class Engine {
   }
 
   /**
+   * The effective permission rules for the current mode + cwd (TODO 5.1) —
+   * preset defaults + mode-derived + settings.permissions.rules, in the same
+   * order the classifier evaluates them. Exposed read-only so `/permissions`
+   * (and any UI) can list what's actually in force. Pure read; builds the same
+   * rule set buildPermissionConfig does, without constructing a backend.
+   */
+  getPermissionRules(): import("../types.js").PermissionRule[] {
+    return this.buildPermissionConfig(this.getPermissionMode(), this.config.cwd ?? process.cwd()).rules;
+  }
+
+  /**
    * Toggle plan mode directly. Called by the Plan tool (Task 7) via ToolContext.engine.
    * Also syncs permissionMode to keep both fields consistent.
    */

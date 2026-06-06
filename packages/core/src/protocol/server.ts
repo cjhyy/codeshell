@@ -713,6 +713,8 @@ export class AgentServer {
               // Resolved feature flags (defaults merged with settings overlay)
               // so the /features command can list current state.
               featureFlags: engine.getFeatureFlags(),
+              // Effective permission rules so /permissions can list them (TODO 5.1).
+              permissionRules: engine.getPermissionRules(),
             },
           }),
         );
