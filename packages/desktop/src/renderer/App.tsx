@@ -38,7 +38,7 @@ import {
   type SessionIndex,
   type SessionSummary,
 } from "./transcripts";
-import { titleFromWire } from "./chat/attachments";
+import { titleFromWire, type ImageAttachment } from "./chat/attachments";
 import { resolveBucket } from "./streamRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import { selectReplayEvents } from "./snapshotReplay";
@@ -104,6 +104,15 @@ import type { ModelOption } from "./chat/ModelPill";
 const GLOBAL_KEY = NO_REPO_KEY;
 
 type TranscriptsMap = Record<string, MessagesReducerState>;
+
+interface ComposerDraftState {
+  text: string;
+  attachments: ImageAttachment[];
+}
+
+type ComposerDraftsMap = Record<string, ComposerDraftState>;
+
+const EMPTY_ATTACHMENTS: ImageAttachment[] = [];
 
 type Action =
   | { type: "user_message"; bucket: string; text: string }
@@ -234,6 +243,27 @@ function App() {
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
   const goalEnabled = goalOverrides[activeBucket] ?? false;
   const busy = busyKeys.has(activeBucket);
+  const [composerDrafts, setComposerDrafts] = useState<ComposerDraftsMap>({});
+  const composerDraft = composerDrafts[activeBucket] ?? {
+    text: "",
+    attachments: EMPTY_ATTACHMENTS,
+  };
+  const setComposerDraftText: React.Dispatch<React.SetStateAction<string>> = (next) => {
+    setComposerDrafts((prev) => {
+      const current = prev[activeBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
+      const text = typeof next === "function" ? next(current.text) : next;
+      if (text === current.text) return prev;
+      return { ...prev, [activeBucket]: { ...current, text } };
+    });
+  };
+  const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (next) => {
+    setComposerDrafts((prev) => {
+      const current = prev[activeBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
+      const attachments = typeof next === "function" ? next(current.attachments) : next;
+      if (attachments === current.attachments) return prev;
+      return { ...prev, [activeBucket]: { ...current, attachments } };
+    });
+  };
   /**
    * Most-recently-started run's bucket. Soft fallback only — the
    * authoritative per-session routing is engineToBucketRef. We keep this
@@ -1975,6 +2005,10 @@ function App() {
               activeRepoId={activeRepoId}
               composerSeed={composerSeed}
               composerSeedNonce={composerSeedNonce}
+              draft={composerDraft.text}
+              onDraftChange={setComposerDraftText}
+              attachments={composerDraft.attachments}
+              onAttachmentsChange={setComposerDraftAttachments}
               anchors={anchors}
               onRemoveAnchor={removeAnchor}
               onClearAnchors={clearAnchors}

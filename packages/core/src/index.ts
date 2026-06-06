@@ -592,6 +592,14 @@ export {
   type BgShell,
   type BgShellStatus,
 } from "./runtime/background-shell.js";
+export {
+  getImageProvider,
+  DEFAULT_IMAGE_MODEL,
+  type ImageProvider,
+  type ImageProviderCreds,
+  type ImageGenerateRequest,
+  type ImageGenerateResult,
+} from "./tool-system/builtin/image-providers.js";
 
 // ─── Protocol (extended for TUI) ────────────────────────────────
 

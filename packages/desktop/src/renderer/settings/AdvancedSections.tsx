@@ -7,7 +7,7 @@ import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SearchConnectionsPanel } from "./SearchConnectionsPanel";
+import { ConnectionsPanel } from "./SearchConnectionsPanel";
 import {
   DEFAULT_GIT_PREFS,
   loadGitPrefs,
@@ -368,7 +368,7 @@ function ProjectHooksEditor({ cwd }: { cwd: string }) {
 }
 
 export function ConnectionsSection(props: ScopedProps) {
-  return <SearchConnectionsPanel {...props} />;
+  return <ConnectionsPanel {...props} />;
 }
 
 export function GitSection() {

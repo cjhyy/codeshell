@@ -480,6 +480,7 @@ export interface CodeshellApi {
   ): Promise<Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>>;
   invalidateMcpProbeCache(name?: string): Promise<void>;
   probeSearch(input: SearchProbeInput): Promise<SearchProbeResult>;
+  probeImage(input: ImageProbeInput): Promise<ImageProbeResult>;
   resolveModelMeta(
     models: Array<{ key: string; model?: string; providerKey?: string; maxContextTokens?: number | null }>,
     providers: Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>,
@@ -585,6 +586,23 @@ export interface SearchProbeInput {
 export interface SearchProbeResult {
   status: "ok" | "error" | "unconfigured";
   sampleTitles?: string[];
+  errorMessage?: string;
+  errorDetail?: string;
+  lastProbedAt: string;
+}
+
+export interface ImageProbeInput {
+  /** Adapter selector — "openai" | "google" | … */
+  kind: string;
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+}
+
+export interface ImageProbeResult {
+  status: "ok" | "error" | "unconfigured";
+  /** data:image/png;base64,… preview of the generated probe image when ok. */
+  previewDataUrl?: string;
   errorMessage?: string;
   errorDetail?: string;
   lastProbedAt: string;

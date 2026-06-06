@@ -2,10 +2,49 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { SearchProbeInput, SearchProbeResult } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
 import { Button } from "@/components/ui/button";
+import { CollapsibleGroup } from "./CollapsibleGroup";
+import { ImageGenConnectionsPanel } from "./ImageGenConnectionsPanel";
 
 interface Props {
   scope: "user" | "project";
   activeRepoPath: string | null;
+}
+
+/**
+ * 连接 page — one section holding several collapsible connection groups
+ * (WebSearch, 图片生成, …). Each group folds independently; the WebSearch group
+ * used to be un-collapsible, now all groups fold.
+ */
+export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
+  return (
+    <section className="settings-section">
+      <header className="connections-head">
+        <div>
+          <h3 className="settings-section-title">连接</h3>
+          <span className="connections-kicker">内置功能凭证</span>
+        </div>
+        <span className="connections-hint">
+          需要 key 的内置功能（WebSearch、图片生成…）按功能分组放在这里；每组可折叠。
+        </span>
+      </header>
+
+      <CollapsibleGroup
+        title="WebSearch providers"
+        subtitle="默认 provider 决定代理调用 WebSearch 时使用哪一个。"
+        defaultOpen
+      >
+        <SearchProvidersGrid scope={scope} activeRepoPath={activeRepoPath} />
+      </CollapsibleGroup>
+
+      <CollapsibleGroup
+        title="图片生成 providers"
+        subtitle="默认 provider 决定 GenerateImage 用哪一个；可点「测试生图」验证连通。"
+        defaultOpen={false}
+      >
+        <ImageGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
+      </CollapsibleGroup>
+    </section>
+  );
 }
 
 type Provider = "serper" | "tavily" | "searxng";
@@ -87,7 +126,7 @@ function formatProbeTime(iso?: string): string {
   }
 }
 
-export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
+function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
   const [defaultProvider, setDefaultProvider] = useState<Provider>("serper");
   const [byProvider, setByProvider] = useState<Record<Provider, ProviderState>>(() => ({
     serper: initialProviderState(),
@@ -238,58 +277,32 @@ export function SearchConnectionsPanel({ scope, activeRepoPath }: Props) {
   };
 
   if (!loaded) {
-    return (
-      <section className="settings-section">
-        <h3 className="settings-section-title">连接</h3>
-        <div className="view-loading">加载中…</div>
-      </section>
-    );
+    return <div className="connections-card-grid"><div className="view-loading">加载中…</div></div>;
   }
 
   return (
-    <section className="settings-section">
-      <header className="connections-head">
-        <div>
-          <h3 className="settings-section-title">连接</h3>
-          <span className="connections-kicker">WebSearch</span>
-        </div>
-        <span className="connections-hint">
-          当前连接组用于 WebSearch；以后新增浏览器、仓库、外部数据源时会按工具分组放在这里。
-        </span>
-      </header>
-
-      <div className="connections-group">
-        <div className="connections-group-head">
-          <div>
-            <strong>WebSearch providers</strong>
-            <span>默认 provider 决定代理调用 WebSearch 时使用哪一个。</span>
-          </div>
-          <span className="connections-group-count">{PROVIDERS.length} providers</span>
-        </div>
-        <div className="connections-card-grid">
-          {PROVIDERS.map((meta) => {
-            const st = byProvider[meta.id];
-            const isDefault = defaultProvider === meta.id;
-            const isConfigured = meta.needsKey ? !!st.apiKey : !!st.baseUrl;
-            return (
-              <ConnectionCard
-                key={meta.id}
-                meta={meta}
-                state={st}
-                isDefault={isDefault}
-                isConfigured={isConfigured}
-                onConfigChange={(patch) => updateProvider(meta.id, { ...patch, dirty: true, probe: undefined })}
-                onUiChange={(patch) => updateProvider(meta.id, patch)}
-                onSave={() => void saveProvider(meta.id)}
-                onTest={() => void testProvider(meta.id)}
-                onClear={() => void clearProvider(meta.id)}
-                onSetDefault={() => void setDefault(meta.id)}
-              />
-            );
-          })}
-        </div>
-      </div>
-    </section>
+    <div className="connections-card-grid">
+      {PROVIDERS.map((meta) => {
+        const st = byProvider[meta.id];
+        const isDefault = defaultProvider === meta.id;
+        const isConfigured = meta.needsKey ? !!st.apiKey : !!st.baseUrl;
+        return (
+          <ConnectionCard
+            key={meta.id}
+            meta={meta}
+            state={st}
+            isDefault={isDefault}
+            isConfigured={isConfigured}
+            onConfigChange={(patch) => updateProvider(meta.id, { ...patch, dirty: true, probe: undefined })}
+            onUiChange={(patch) => updateProvider(meta.id, patch)}
+            onSave={() => void saveProvider(meta.id)}
+            onTest={() => void testProvider(meta.id)}
+            onClear={() => void clearProvider(meta.id)}
+            onSetDefault={() => void setDefault(meta.id)}
+          />
+        );
+      })}
+    </div>
   );
 }
 

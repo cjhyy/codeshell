@@ -73,6 +73,11 @@ interface Props {
    */
   composerSeed?: string;
   composerSeedNonce?: number;
+  /** Composer draft state is owned by App so full-page routes don't lose it. */
+  draft: string;
+  onDraftChange: React.Dispatch<React.SetStateAction<string>>;
+  attachments: ImageAttachment[];
+  onAttachmentsChange: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
   /** Comment anchors pinned from the panels; shown as chips above the composer. */
   anchors?: Anchor[];
   onRemoveAnchor?: (id: string) => void;
@@ -113,20 +118,24 @@ export function ChatView({
   welcomeNode,
   composerSeed,
   composerSeedNonce,
+  draft,
+  onDraftChange,
+  attachments,
+  onAttachmentsChange,
   anchors = [],
   onRemoveAnchor,
   onClearAnchors,
 }: Props) {
-  const [draft, setDraft] = useState("");
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
   const [historyCursor, setHistoryCursor] = useState(-1);
   const liveDraftStash = useRef<string>("");
   const [isComposing, setIsComposing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const setDraft = onDraftChange;
+  const setAttachments = onAttachmentsChange;
 
   // @-mention state. `mention` is non-null while the caret sits inside
   // an @-token (no whitespace between the `@` and caret); `start` marks

@@ -115,6 +115,7 @@ import {
   type McpServerConfig,
 } from "./mcp-probe-service.js";
 import { probeSearch, type SearchProbeInput } from "./search-probe-service.js";
+import { probeImage, type ImageProbeInput } from "./image-probe-service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -626,6 +627,17 @@ ipcMain.handle("search:probe", async (_e, raw: unknown) => {
     throw new Error(`invalid provider: ${r.provider}`);
   }
   return probeSearch(r);
+});
+
+ipcMain.handle("image:probe", async (_e, raw: unknown) => {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("image:probe requires { kind, apiKey?, baseUrl?, model? }");
+  }
+  const r = raw as ImageProbeInput;
+  if (typeof r.kind !== "string" || !r.kind) {
+    throw new Error("image:probe requires a provider kind");
+  }
+  return probeImage(r);
 });
 
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {

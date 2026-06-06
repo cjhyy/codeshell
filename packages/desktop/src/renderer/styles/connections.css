@@ -36,6 +36,42 @@
   padding: var(--sp-3);
   border-bottom: 1px solid var(--border-subtle);
 }
+/* Collapsible group header — the whole head is a button. */
+.connections-group-head.is-toggle {
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.connections-group-head.is-toggle:hover {
+  background: var(--bg-hover, rgba(127, 127, 127, 0.06));
+}
+.connections-group.is-collapsed .connections-group-head {
+  border-bottom: none;
+}
+.connections-group-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--fg-muted);
+  transition: transform 0.15s ease;
+  margin-left: var(--sp-2);
+}
+.connections-group-chevron.is-open {
+  transform: rotate(90deg);
+}
+.connections-group-head-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
 .connections-group-head > div {
   display: flex;
   flex-direction: column;
@@ -69,6 +105,25 @@
   min-width: 0;
 }
 .conn-card.is-default { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* Image-probe success preview thumbnail. */
+.conn-probe-image {
+  margin-top: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.conn-probe-image img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+.conn-probe-image .conn-probe-title {
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+}
 
 .conn-card-head {
   display: flex;
