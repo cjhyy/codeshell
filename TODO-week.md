@@ -4,9 +4,28 @@
 
 ## 执行原则
 
-- [ ] 先做会影响全局命名 / scope / schema 的底座，再做依赖它的 UI 和工具。
-- [ ] 每个大块完成后跑对应测试；改 core 后至少跑 core 相关测试，改 desktop 后至少跑 renderer/main 相关测试和一次手动 smoke。
-- [ ] 已确认完成的旧项从本周看板移除；长期路线原文留在 `TODO.md`，这里按执行顺序重排。
+- 先做会影响全局命名 / scope / schema 的底座，再做依赖它的 UI 和工具。
+- 每个大块完成后跑对应测试；改 core 后至少跑 core 相关测试，改 desktop 后至少跑 renderer/main 相关测试和一次手动 smoke。
+- 已确认完成的旧项从本周看板移除；长期路线原文留在 `TODO.md`，这里按执行顺序重排。
+
+## 🎯 下一步起点（新 session 从这里开始）
+
+**首选：3.2 Session 内后台命令支持** —— 纯 core,有现成设计 spec
+(`docs/superpowers/specs/2026-06-05-background-shell-design.md`),UI 是二期,
+无需肉眼验收,适合一个 session 独立做完。先把 spec 拆成 plan,再 TDD 实现
+`BackgroundShellManager` + Bash `run_in_background` + BashOutput/KillShell/ListShells。
+
+**备选纯 core 活**（也无需 UI 验收）：
+- 4.1 后台 agent 完成通知机制（schema/tool_result 文案 + markCompleted 注入主 session + outputFile + 120s 自动转后台;部分已有 notificationQueue 雏形,先 grep 现状）
+- 4.5 Guardian 子代理审批（GuardianAgent + approvals.reviewer 配置）
+- 5.1 剩余：路径级权限规则 / 命令模式匹配 / 会话级权限缓存 / 审计
+
+**需要你盯着做的 UI 活**（建议有人在）：2.1~2.6、2.8~2.11（open-with 菜单、面板放大、
+annotations rehype 样式、markdown 渲染、图片下载、手动停止样式、Undo、Shell Snapshot UI）。
+
+**大路线图（多天）**：第 1 节 Workspace 概念升级 + Profile 管理、6.3 数据源、6.4 远程控制、7.1 图片/视频生成。
+
+> 注：动任何"待实现"项前先 grep 现状 + 跑/读测试 —— 上一轮发现大量项其实早已实现只差勾选。
 
 ---
 
@@ -177,7 +196,7 @@
 - [x] RunManager approval / input resume 竞态审查 ✅：修两处——并发 resume 加 `resolvingRuns` 每-run 串行守卫;handle 在场但 input 不匹配改为报错(原会重新入队重复执行)。测试 RunManager.resume-race.test.ts(去守卫后失败证明有效)。
 - [x] `resolveSandboxBackend` 缓存 ✅：EngineRuntime.resolveSandbox + Engine.resolveSandboxWithoutRuntime 均 cache by (mode,cwd),run 路径走缓存版,rejection 不缓存。测试 runtime.sandbox-cache.test.ts。
 - [x] Plugin SessionStart hook 运行时验证 ✅：全链路通(runPluginCommandHook 三形态 additionalContext→messages,engine splice 进 user prompt 前 system-reminder)。测试 pluginCommandHook.test.ts。
-- [ ] 自动化 run 首个 LLM 前卡住的链路复核，确认 lock release 与失败恢复。
+- [x] 自动化 run 首个 LLM 前卡住的链路复核 ✅：lock release/失败恢复已闭环(finally 块 + recover stale-heartbeat);两个真因(rpc 30s 超时 d50c365、main 同步 fs 阻塞 178abc8)已在 main 修。
 
 ### 3.4 错误处理与恢复 🔧
 

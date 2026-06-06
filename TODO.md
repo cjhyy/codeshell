@@ -2,7 +2,24 @@
 
 > 长期路线图。近期执行队列放在 `TODO-week.md`。
 > 只保留未完成、部分完成、待确认项；历史归档内容不再放在本文里。
-> 标注：🔧 部分完成 | ⬜ 未开始 | ❓ 待确认
+> 标注：✅ 完成 | 🔧 部分完成 | ⬜ 未开始 | ❓ 待确认 | ~ 进行中/半完成
+
+---
+
+## 进度快照（2026-06-06 夜间一轮后）
+
+**已完成 ✅**（各带测试,全在 main）：ApplyPatch 原子性(3.5)、子 agent skill 隔离(4.3)、
+subagent_type enum+name(4.2)、AGENTS.md 层级(8.2)、插件 MCP 加载/禁用链路(6.1)、
+LLM/Engine 五个待确认项(截断归一/resume 竞态/sandbox 缓存/SessionStart 注入/自动化卡死复核)。
+
+**部分完成 🔧**（底座好了,剩 UI/收尾）：权限增强(path-policy 审批两 bug 已修,剩路径级规则/会话缓存/审计)、
+错误处理(LLM 重试已做)、运行中输入缓存(desktop 已做,剩 TUI+强制发送 UI)、跨会话记忆(合并+注入+maxCount 已做,剩 /memories CLI)、
+智能上下文(文件去重+tool result 压缩已做)、Feature Flags(底座+可见性+/features 已做,剩部分 flag 消费端)、
+配置系统、后台 agent 通知、多代理增强(max_depth/threads/超时已厘清,mailbox 死代码已删)、测试覆盖、文档。
+
+**下一步建议起点**（未开始,无需肉眼验收的纯 code 活优先）：见 `TODO-week.md`。
+UI/设计活(2.x 面板/markdown/图片/手动停止样式)建议有人盯着做。
+大路线图(P5 远程控制、P4 workspace 数据源、1.x workspace 概念升级、1.5 profile)是多天工程。
 
 ---
 
@@ -45,7 +62,7 @@
 
 ## P1 — 核心运行可靠性
 
-### ❓ LLM / Engine 待确认问题
+### ✅ LLM / Engine 待确认问题（全部已确认/已修）
 
 - [x] **OpenAI 截断续写触发条件不匹配** ✅：已归一。`isTruncatedStop`(llm/stop-reason.ts)接受 `"length"`(OpenAI)与 `"max_tokens"`(Anthropic),turn-loop 截断续写/截断工具调用两处都用它。测试 stop-reason.test.ts + openai-stream-stop.test.ts。
 - [x] **RunManager approval/input resume 竞态** ✅：审查发现两处真隐患并修复——(1) `resume()`/`cancel()` 多 await 点 + 顶部状态检查读到陈旧 `waiting_*`(直到后面 `await transition` 才变),并发双 resume(双击批准)或 resume/cancel 互穿都能双双过检查;加 `resolvingRuns` 每-run 串行守卫(迟到者明确拒绝)。(2) handle 在场但 input 类型不匹配(给 waiting_approval 喂 userInput)会穿到 Case 2 **重新入队一个全新执行**而原 Engine 仍挂起→重复 run+泄漏 handle;改为明确报错。handle 的 resolveApproval 本身幂等(`!pendingApproval` 返回 false)缓解了双 resolve。测试 `RunManager.resume-race.test.ts`(去守卫后并发测试确实失败,证明有效)
