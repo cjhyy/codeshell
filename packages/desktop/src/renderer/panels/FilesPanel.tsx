@@ -180,12 +180,13 @@ function DirNode({
             <button
               type="button"
               style={pad}
-              // Image rows are draggable onto the composer (TODO 2.1). The drag
-              // payload is the absolute path under a custom MIME so the composer
-              // can tell an internal file-panel drag from an OS file drop.
-              draggable={isImageFile && !!onAttachImage}
+              // Every file row is draggable onto the composer (TODO 2.1). The
+              // drag payload is the absolute path under a custom MIME so the
+              // composer can tell an internal file-panel drag from an OS file
+              // drop. The composer decides what to do: image → attach as image,
+              // any other file → insert an `@path` reference into the draft.
+              draggable={!!onAttachImage}
               onDragStart={(ev) => {
-                if (!isImageFile) return;
                 ev.dataTransfer.setData(CODESHELL_PATH_DND_MIME, e.path);
                 ev.dataTransfer.effectAllowed = "copy";
               }}

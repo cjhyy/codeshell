@@ -26,6 +26,7 @@ import {
 import { compressBatch } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import { detectMention } from "./chat/mention";
+import { classifyPath } from "./tool-cards/attachments";
 import { formatBytes } from "@/lib/utils";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 
@@ -206,6 +207,30 @@ export function ChatView({
   const closeMention = (): void => {
     setMention(null);
     setMentionSelected(0);
+  };
+
+  // Insert an `@path` reference into the draft (file-panel drag of a non-image
+  // file — TODO 2.1). Appends at the caret, or at the end with a leading space
+  // if the draft doesn't already end with whitespace.
+  const insertPathReference = (absPath: string): void => {
+    const ta = textareaRef.current;
+    const ref = `@${absPath} `;
+    if (ta && ta.selectionStart != null) {
+      const caret = ta.selectionStart;
+      const before = draft.slice(0, caret);
+      const after = draft.slice(caret);
+      const sep = before.length > 0 && !/\s$/.test(before) ? " " : "";
+      const next = before + sep + ref + after;
+      setDraft(next);
+      const nextCaret = before.length + sep.length + ref.length;
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.setSelectionRange(nextCaret, nextCaret);
+      });
+      return;
+    }
+    const sep = draft.length > 0 && !/\s$/.test(draft) ? " " : "";
+    setDraft(draft + sep + ref);
   };
 
   const applyMentionPick = (item: MentionItem): void => {
@@ -442,10 +467,16 @@ export function ChatView({
   const onChatDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
-    // Internal file-panel image drag → attach by absolute path.
+    // Internal file-panel drag. Image → attach as an image; any other file →
+    // insert an `@path` reference into the draft (same convention as @mention),
+    // so the user/model can refer to it.
     const draggedPath = e.dataTransfer?.getData(CODESHELL_PATH_DND_MIME);
     if (draggedPath) {
-      onAttachImagePath?.(draggedPath);
+      if (classifyPath(draggedPath) === "image") {
+        onAttachImagePath?.(draggedPath);
+      } else {
+        insertPathReference(draggedPath);
+      }
       return;
     }
     const imageFiles = imageFilesFromDrop(e.dataTransfer?.items ?? null);
