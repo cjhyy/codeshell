@@ -40,6 +40,7 @@ import { dlog } from "./desktop-logger.js";
 import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
 import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
+import type { MobileClientEvent } from "./mobile-remote/types.js";
 import { readDirectory, readFile as fsReadFile } from "./fs-service.js";
 import {
   getGitStatus,
@@ -153,10 +154,61 @@ const mobileDevices = new TrustedDeviceStore(
 );
 const mobileRemote = new RemoteHostManager({
   devices: mobileDevices,
-  onClientEvent: (event, ws) => {
-    ws.send(JSON.stringify({ type: "echo", event }));
+  onClientEvent: (event) => {
+    void handleMobileClientEvent(event as MobileClientEvent);
   },
 });
+
+/**
+ * Route an authenticated mobile client event into the SAME run/permission
+ * path the renderer uses, via AgentBridge.injectWorkerMessage. There is no
+ * second run loop: chat/approval/cancel become the identical JSON-RPC lines
+ * the renderer's preload rpc() would emit, so the core permission engine,
+ * goal logic, and snapshots all apply unchanged.
+ */
+async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> {
+  if (!bridge) return;
+  const ctx = bridge.getLastRunContext();
+  if (event.type === "chat.send") {
+    const sessionId = event.sessionId ?? ctx.sessionId;
+    bridge.injectWorkerMessage(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: `mobile-run-${Date.now()}`,
+        method: "agent/run",
+        params: { task: event.text, cwd: ctx.cwd, sessionId },
+      }),
+    );
+    return;
+  }
+  if (event.type === "approval.respond") {
+    bridge.injectWorkerMessage(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: `mobile-approve-${Date.now()}`,
+        method: "agent/approve",
+        params: {
+          sessionId: event.sessionId ?? ctx.sessionId,
+          requestId: event.approvalId,
+          decision:
+            event.decision === "approve" ? { approved: true } : { approved: false },
+        },
+      }),
+    );
+    return;
+  }
+  if (event.type === "run.stop") {
+    bridge.injectWorkerMessage(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: `mobile-cancel-${Date.now()}`,
+        method: "agent/cancel",
+        params: { sessionId: event.sessionId },
+      }),
+    );
+    return;
+  }
+}
 
 async function createWindow(): Promise<BrowserWindow> {
   const ws = await loadWindowState();
@@ -325,6 +377,11 @@ async function createWindow(): Promise<BrowserWindow> {
 
   if (!bridge) {
     bridge = new AgentBridge(win);
+    // Mirror every worker→renderer line onto any connected mobile clients, so
+    // the phone sees the same stream (messages, tool summaries, approvals).
+    bridge.subscribeOutbound((line) => {
+      mobileRemote.broadcastRaw(line);
+    });
   } else {
     bridge.attachWindow(win);
   }

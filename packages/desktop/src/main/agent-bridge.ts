@@ -72,6 +72,19 @@ export class AgentBridge {
    * it was gone. See SessionSnapshotStore.
    */
   private readonly snapshots = new SessionSnapshotStore();
+  /**
+   * Out-of-band observers of worker→renderer lines (e.g. the Mobile Web
+   * Remote, which streams the same events to a phone). Taps are read-only:
+   * they see the exact JSON-RPC lines the renderer sees, so the phone shares
+   * the renderer's single run/permission path rather than a second runtime.
+   */
+  private readonly outboundTaps = new Set<(line: string) => void>();
+  /**
+   * The cwd/sessionId of the most recent `agent/run` (from renderer OR mobile).
+   * Used as the default context when a mobile client sends chat without an
+   * explicit session — the phone follows whatever the desktop is working on.
+   */
+  private lastRunContext: { cwd?: string; sessionId?: string } = {};
 
   constructor(window: BrowserWindow) {
     dlog("bridge", "ctor", { agentEntry, execPath: process.execPath });
@@ -123,6 +136,13 @@ export class AgentBridge {
       if (append) this.snapshots.append(append.sessionId, append.event);
       dlog("bridge", "worker→renderer", summary);
       this.safeSend("agent:msg", line);
+      for (const tap of this.outboundTaps) {
+        try {
+          tap(line);
+        } catch {
+          /* a tap must never break worker streaming */
+        }
+      }
     });
     this.child.stderr.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
@@ -182,11 +202,15 @@ export class AgentBridge {
       // Inspect the message: an agent/run is the only one that can trigger
       // a fresh spawn. Other messages (agent/approve, agent/cancel) only
       // make sense if the worker is already alive.
-      let parsed: { method?: string; params?: { cwd?: string } } = {};
+      let parsed: { method?: string; params?: { cwd?: string; sessionId?: string } } = {};
       try { parsed = JSON.parse(line); } catch { /* fall through */ }
 
       if (parsed.method === "agent/run") {
         this.spawnChild(parsed.params?.cwd);
+        this.lastRunContext = {
+          cwd: parsed.params?.cwd,
+          sessionId: parsed.params?.sessionId,
+        };
       }
 
       if (!this.child?.stdin || this.child.stdin.destroyed) {
@@ -230,6 +254,55 @@ export class AgentBridge {
   /** Drop a session's snapshot (e.g. when the session is deleted). */
   forgetSession(sessionId: string): void {
     this.snapshots.forget(sessionId);
+  }
+
+  /**
+   * Inject a JSON-RPC line into the worker exactly as the renderer would via
+   * the "agent:msg" IPC channel. This is the reuse seam for alternate front
+   * ends (the Mobile Web Remote): an `agent/run` line spawns the worker if
+   * needed; `agent/approve` / `agent/cancel` are dropped if no worker is
+   * alive — identical semantics to the renderer path. The caller is
+   * responsible for building a well-formed line (see preload's rpc()).
+   */
+  injectWorkerMessage(line: string): void {
+    let parsed: { method?: string; params?: { cwd?: string; sessionId?: string } } = {};
+    try {
+      parsed = JSON.parse(line);
+    } catch {
+      /* fall through — a malformed line is dropped below */
+    }
+    if (parsed.method === "agent/run") {
+      this.spawnChild(parsed.params?.cwd);
+      this.lastRunContext = {
+        cwd: parsed.params?.cwd,
+        sessionId: parsed.params?.sessionId,
+      };
+    }
+    if (!this.child?.stdin || this.child.stdin.destroyed) {
+      dlog("bridge", "inject.dropped", {
+        reason: this.child ? "stdin destroyed" : "no child",
+        method: parsed.method,
+      });
+      return;
+    }
+    dlog("bridge", "inject→worker", { method: parsed.method, raw: previewLine(line) });
+    this.child.stdin.write(line + "\n");
+  }
+
+  /**
+   * Observe every worker→renderer line (e.g. to mirror onto the Mobile Web
+   * Remote). Returns an unsubscribe. Taps are read-only and isolated: a
+   * throwing tap never disrupts the renderer stream.
+   */
+  subscribeOutbound(tap: (line: string) => void): () => void {
+    this.outboundTaps.add(tap);
+    return () => this.outboundTaps.delete(tap);
+  }
+
+  /** cwd/sessionId of the most recent run — the default context for a mobile
+   *  client that didn't specify one. */
+  getLastRunContext(): { cwd?: string; sessionId?: string } {
+    return this.lastRunContext;
   }
 
   /**

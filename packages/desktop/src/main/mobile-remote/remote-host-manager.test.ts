@@ -38,4 +38,56 @@ describe("RemoteHostManager", () => {
     expect(pairing.url).toContain(`${started.url}/mobile?pairing=`);
     await host.stop();
   });
+
+  test("pairs and authenticates a device over client events", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const seen: unknown[] = [];
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: (event) => seen.push(event),
+    });
+    await host.start({ host: "127.0.0.1", port: 0 });
+    const pairing = host.createPairingUrl();
+
+    const paired = host.handleClientEvent({
+      type: "pair.complete",
+      token: pairing.token,
+      name: "iPhone",
+      secretHash: "h1",
+    });
+    expect(paired?.type).toBe("pair.ok");
+    const device = paired?.type === "pair.ok" ? paired.device : undefined;
+    expect(device?.name).toBe("iPhone");
+
+    const authed = host.handleClientEvent({
+      type: "auth.device",
+      deviceId: device!.id,
+      secretHash: "h1",
+    });
+    expect(authed?.type).toBe("auth.ok");
+    await host.stop();
+  });
+
+  test("rejects auth for revoked device", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+    const host = new RemoteHostManager({ devices: store, onClientEvent: () => {} });
+    await host.start({ host: "127.0.0.1", port: 0 });
+    const pairing = host.createPairingUrl();
+    const paired = host.handleClientEvent({
+      type: "pair.complete",
+      token: pairing.token,
+      name: "iPhone",
+      secretHash: "h1",
+    });
+    const device = paired?.type === "pair.ok" ? paired.device : undefined;
+    store.revoke(device!.id);
+    const authed = host.handleClientEvent({
+      type: "auth.device",
+      deviceId: device!.id,
+      secretHash: "h1",
+    });
+    expect(authed?.type).toBe("auth.failed");
+    await host.stop();
+  });
 });
