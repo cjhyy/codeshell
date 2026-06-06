@@ -878,7 +878,9 @@ ipcMain.handle("updater:status", async () => getLastStatus());
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
 ipcMain.handle("mobileRemote:start", async () => {
-  const started = await mobileRemote.start({ host: "127.0.0.1", port: 0 });
+  // Bind the Mac's real LAN IP so a phone on the same Wi-Fi can reach it
+  // (falls back to localhost if no LAN interface is found). Never 0.0.0.0.
+  const started = await mobileRemote.start({ host: "lan", port: 0 });
   const pairing = mobileRemote.createPairingUrl();
   return { url: started.url, pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
 });

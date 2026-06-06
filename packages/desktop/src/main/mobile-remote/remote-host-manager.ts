@@ -1,9 +1,39 @@
 import { createServer, type Server } from "node:http";
+import { networkInterfaces } from "node:os";
 import { WebSocketServer, type WebSocket } from "ws";
 import { mobileRemoteHtml } from "./mobile-ui.js";
 import { PairingTokenManager } from "./pairing.js";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
 import type { MobileClientEvent, MobileServerEvent } from "./types.js";
+
+/**
+ * Pick the Mac's real LAN IPv4 so a phone on the same Wi-Fi can reach the
+ * remote host. We bind to a concrete LAN address (NOT 0.0.0.0) per the design's
+ * §6.5 network-safety rule. Excludes loopback (127.x), link-local (169.254.x),
+ * and common VPN/tunnel ranges (198.18.x carrier-grade test net used by some
+ * VPN clients) so we don't advertise an address the phone can't route to.
+ * Returns undefined if no suitable interface is found.
+ */
+export function resolveLanHost(): string | undefined {
+  const ifaces = networkInterfaces();
+  const candidates: string[] = [];
+  for (const addrs of Object.values(ifaces)) {
+    for (const addr of addrs ?? []) {
+      if (addr.family !== "IPv4" || addr.internal) continue;
+      const ip = addr.address;
+      if (ip.startsWith("127.") || ip.startsWith("169.254.") || ip.startsWith("198.18.")) {
+        continue;
+      }
+      candidates.push(ip);
+    }
+  }
+  // Prefer private LAN ranges (192.168.x, 10.x, 172.16-31.x) over anything else.
+  const isPrivate = (ip: string) =>
+    ip.startsWith("192.168.") ||
+    ip.startsWith("10.") ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
+  return candidates.find(isPrivate) ?? candidates[0];
+}
 
 export interface RemoteHostStartOptions {
   host: string;
@@ -81,13 +111,18 @@ export class RemoteHostManager {
       });
     });
     this.server = server;
+    // host: "lan" → resolve the Mac's real LAN IPv4 so a phone on the same
+    // Wi-Fi can reach us. We bind that concrete address (never 0.0.0.0). If no
+    // LAN interface is found, fall back to the requested host (e.g. localhost).
+    const bindHost =
+      options.host === "lan" ? (resolveLanHost() ?? "127.0.0.1") : options.host;
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
-      server.listen(options.port, options.host, () => resolve());
+      server.listen(options.port, bindHost, () => resolve());
     });
     const addr = server.address();
     const port = typeof addr === "object" && addr ? addr.port : options.port;
-    this.started = { host: options.host, port, url: `http://${options.host}:${port}` };
+    this.started = { host: bindHost, port, url: `http://${bindHost}:${port}` };
     return this.started;
   }
 

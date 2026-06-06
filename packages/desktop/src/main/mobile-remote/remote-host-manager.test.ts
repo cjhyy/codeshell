@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
-import { RemoteHostManager } from "./remote-host-manager.js";
+import { RemoteHostManager, resolveLanHost } from "./remote-host-manager.js";
 import { TrustedDeviceStore } from "./trusted-device-store.js";
 
 let dir: string | undefined;
@@ -88,6 +88,30 @@ describe("RemoteHostManager", () => {
       secretHash: "h1",
     });
     expect(authed?.type).toBe("auth.failed");
+    await host.stop();
+  });
+
+  test("resolveLanHost never returns loopback/link-local/VPN ranges", () => {
+    const ip = resolveLanHost();
+    // CI/sandbox may have no LAN interface → undefined is allowed.
+    if (ip !== undefined) {
+      expect(ip.startsWith("127.")).toBe(false);
+      expect(ip.startsWith("169.254.")).toBe(false);
+      expect(ip.startsWith("198.18.")).toBe(false);
+    }
+  });
+
+  test("host 'lan' binds a non-loopback address when a LAN interface exists", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+    const started = await host.start({ host: "lan", port: 0 });
+    // Either a real LAN IP, or the documented localhost fallback if none found.
+    expect(started.url).toMatch(/^http:\/\/(\d{1,3}\.){3}\d{1,3}:\d+$/);
+    const res = await fetch(`${started.url}/mobile`);
+    expect(res.status).toBe(200);
     await host.stop();
   });
 });
