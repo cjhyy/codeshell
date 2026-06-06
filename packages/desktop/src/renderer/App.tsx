@@ -69,6 +69,9 @@ import { planDiskRebuild, type DiskSessionMeta } from "./automation/rebuildFromD
 import {
   enqueueQueuedInput,
   dequeueQueuedInput,
+  clearQueuedInput,
+  removeQueuedInputAt,
+  promoteQueuedInputAt,
   type QueuedInputState,
 } from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
@@ -1401,6 +1404,19 @@ function App() {
     stop(activeBucket);
   };
 
+  const clearActiveQueuedInput = (): void => {
+    setQueuedInputs((prev) => clearQueuedInput(prev, activeBucket));
+  };
+
+  const removeActiveQueuedInputAt = (index: number): void => {
+    setQueuedInputs((prev) => removeQueuedInputAt(prev, activeBucket, index));
+  };
+
+  const guideActiveQueuedInputAt = (index: number): void => {
+    setQueuedInputs((prev) => promoteQueuedInputAt(prev, activeBucket, index));
+    stop(activeBucket);
+  };
+
   const stop = (bucketOverride?: string): void => {
     const bucket = bucketOverride ?? runningBucketRef.current ?? activeBucket;
     const sep = bucket.indexOf("::");
@@ -2001,6 +2017,10 @@ function App() {
               onStop={stop}
               busy={busy}
               queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
+              queuedInputItems={queuedInputs[activeBucket] ?? []}
+              onClearQueuedInput={clearActiveQueuedInput}
+              onRemoveQueuedInput={removeActiveQueuedInputAt}
+              onGuideQueuedInput={guideActiveQueuedInputAt}
               runningAgents={runningAgents}
               activeRepoId={activeRepoId}
               composerSeed={composerSeed}

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Paperclip, Mic, ArrowUp, Square, Monitor, X } from "lucide-react";
+import { CornerDownRight, Paperclip, Mic, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
@@ -16,6 +16,7 @@ import type { Repo } from "./repos";
 import type { ApprovalRequestEnvelope } from "../preload/types";
 import {
   buildAttachments,
+  decodeWireForDisplay,
   encodeAttachmentsForWire,
   filesFromClipboard,
   imageFilesFromDrop,
@@ -36,6 +37,10 @@ interface Props {
   onStop: () => void;
   busy: boolean;
   queuedInputCount?: number;
+  queuedInputItems?: string[];
+  onClearQueuedInput?: () => void;
+  onRemoveQueuedInput?: (index: number) => void;
+  onGuideQueuedInput?: (index: number) => void;
   /** Count of background sub-agents still running in this session. Shown as a
    *  separate "后台 N 个子代理运行中" hint even after busy clears (run_in_background
    *  resolves the main run immediately while children keep working). */
@@ -96,6 +101,10 @@ export function ChatView({
   onStop,
   busy,
   queuedInputCount = 0,
+  queuedInputItems = [],
+  onClearQueuedInput,
+  onRemoveQueuedInput,
+  onGuideQueuedInput,
   runningAgents = 0,
   activeRepoId,
   onAskUserAnswer,
@@ -183,7 +192,7 @@ export function ChatView({
   // It still disables side controls whose changes would be ambiguous mid-turn.
   const controlsDisabled = busy;
   const placeholder = busy
-    ? "agent 正在工作…输入内容将先缓存到下一轮"
+    ? "要求后续变更"
     : "可向 agent 询问任何事。输入 @ 使用插件或提及文件";
 
   const closeMention = (): void => {
@@ -384,6 +393,13 @@ export function ChatView({
   const showStickyApproval =
     !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
 
+  const queuedPreviewItems = queuedInputItems.slice(0, 2).map((item) => {
+    const decoded = decodeWireForDisplay(item);
+    const text = decoded.text || (decoded.images.length > 0 ? `[图片 ×${decoded.images.length}]` : item);
+    return text.length > 180 ? `${text.slice(0, 180)}...` : text;
+  });
+  const queuedHiddenCount = Math.max(0, queuedInputItems.length - queuedPreviewItems.length);
+
   // Drop handlers live on the whole chat surface, not just the composer.
   // Users drag a screenshot into the window expecting it to "land" — having
   // to aim at a 50px-tall composer is annoying. The composer still gets a
@@ -479,6 +495,69 @@ export function ChatView({
         )}
 
         <div className={isNewChat ? "w-full max-w-2xl p-3" : "p-3"}>
+          {queuedInputItems.length > 0 && (
+            <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <CornerDownRight size={14} />
+                  <span>后续变更</span>
+                  <span className="text-xs font-normal tabular-nums">{queuedInputItems.length}</span>
+                </div>
+                {onClearQueuedInput && (
+                  <button
+                    type="button"
+                    className="rounded-full p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    aria-label="清除后续变更"
+                    title="清除后续变更"
+                    onClick={onClearQueuedInput}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                {queuedPreviewItems.map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex min-w-0 items-start gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-sm text-foreground"
+                  >
+                    <div className="line-clamp-2 min-w-0 flex-1 whitespace-pre-wrap break-words">{item}</div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {busy && onGuideQueuedInput && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
+                          aria-label={`引导第 ${i + 1} 条后续变更`}
+                          title="打断当前轮，并优先发送这条后续变更"
+                          onClick={() => onGuideQueuedInput(i)}
+                        >
+                          <CornerDownRight size={12} />
+                          <span>引导</span>
+                        </button>
+                      )}
+                      {onRemoveQueuedInput && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
+                          aria-label={`删除第 ${i + 1} 条后续变更`}
+                          title="删除"
+                          onClick={() => onRemoveQueuedInput(i)}
+                        >
+                          <Trash2 size={12} />
+                          <span>删除</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {queuedHiddenCount > 0 && (
+                  <div className="px-1 text-xs text-muted-foreground">
+                    还有 {queuedHiddenCount} 条将在本轮结束后发送
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {/*
             Drop is captured at the chat root so the user can drag a screenshot
             anywhere in the chat surface. The composer keeps the visual highlight
@@ -700,7 +779,7 @@ export function ChatView({
               {busy && draft.trim() && onForceSend && (
                 <button
                   type="button"
-                  className="rounded-md border border-status-warn/30 px-2 py-1 text-xs text-status-warn hover:bg-status-warn/10"
+                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
                   onClick={() => {
                     const payload = encodeAttachmentsForWire(draft.trim(), attachments);
                     onForceSend(payload);
@@ -709,10 +788,11 @@ export function ChatView({
                     setAttachments([]);
                     setAttachmentError(null);
                   }}
-                  aria-label="打断并发送"
-                  title="停止当前轮，随后发送这条输入"
+                  aria-label="引导"
+                  title="打断当前轮，并发送这条输入"
                 >
-                  打断发送
+                  <CornerDownRight size={13} />
+                  引导
                 </button>
               )}
               {busy && (
@@ -741,7 +821,7 @@ export function ChatView({
               )}
             </div>
           </div>
-          {queuedInputCount > 0 && (
+          {queuedInputCount > 0 && queuedInputItems.length === 0 && (
             <div className="mt-1 text-xs text-muted-foreground">
               已缓存 {queuedInputCount} 条，将在本轮结束后发送
             </div>

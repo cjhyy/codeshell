@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { X } from "lucide-react";
 
 /** Pure decision so the close behavior is unit-testable without a DOM. */
 export function shouldCloseOnKey(key: string): boolean {
@@ -30,19 +31,29 @@ export function Lightbox({
 
   return (
     <div className="lightbox-backdrop" onMouseDown={onClose}>
-      <img
-        className="lightbox-image"
-        src={src}
-        alt={alt}
-        onMouseDown={(e) => e.stopPropagation()}
-      />
+      <div className="lightbox-shell" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="lightbox-toolbar">
+          <div className="lightbox-title" title={alt}>{alt}</div>
+          <button
+            type="button"
+            className="lightbox-icon-button"
+            aria-label="关闭"
+            title="关闭"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <img className="lightbox-image" src={src} alt={alt} />
+      </div>
       <button
         type="button"
         className="lightbox-close"
         aria-label="关闭"
+        title="关闭"
         onClick={onClose}
       >
-        ×
+        <X size={18} />
       </button>
     </div>
   );

@@ -102,19 +102,28 @@ function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvid
   const imageGen = (settings as { imageGen?: { defaultProvider?: string; providers?: Array<{ id: string; kind: string; baseUrl: string; apiKey?: string; defaultModel?: string }> } }).imageGen;
   if (imageGen && Array.isArray(imageGen.providers) && imageGen.providers.length > 0) {
     const list = imageGen.providers;
-    let chosen = prefer
-      ? list.find((p) => p.id === prefer)
-      : imageGen.defaultProvider
-        ? list.find((p) => p.id === imageGen.defaultProvider)
-        : list[0];
-    // defaultProvider misconfigured (points at a missing id) → fall back to first.
-    if (!prefer && !chosen) chosen = list[0];
-    if (chosen && chosen.apiKey && getImageProvider(chosen.kind)) {
-      return {
-        kind: chosen.kind,
-        creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey },
-        defaultModel: chosen.defaultModel,
-      };
+    const usable = (p: { kind: string; apiKey?: string }): boolean =>
+      !!p.apiKey && getImageProvider(p.kind) !== null;
+
+    if (prefer) {
+      // Explicit request — respect the user's intent. If that exact instance
+      // isn't usable (no key / no adapter), DON'T silently use another one.
+      const chosen = list.find((p) => p.id === prefer);
+      if (chosen && usable(chosen)) {
+        return { kind: chosen.kind, creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey! }, defaultModel: chosen.defaultModel };
+      }
+      return null;
+    }
+
+    // No explicit request: prefer defaultProvider, but if it isn't usable
+    // (e.g. configured but no key yet) fall back to the first usable entry,
+    // rather than erroring. (User-confirmed: default-with-no-key → fall back.)
+    const preferred = imageGen.defaultProvider
+      ? list.find((p) => p.id === imageGen.defaultProvider)
+      : undefined;
+    const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
+    if (chosen) {
+      return { kind: chosen.kind, creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey! }, defaultModel: chosen.defaultModel };
     }
     return null;
   }
@@ -178,9 +187,9 @@ export async function generateImageTool(
   const resolved = resolveImageProvider(cwd, preferKind);
   if (!resolved) {
     return preferKind
-      ? `Error: no image provider of kind "${preferKind}" available. Configure a provider with that kind (including an apiKey) in your code-shell settings.`
-      : 'Error: no image provider available. Configure a provider with kind: "openai" ' +
-          "(including an apiKey) in your code-shell settings to use GenerateImage.";
+      ? `Error: no image provider "${preferKind}" is available (unknown id/kind, or it has no API key). Configure it in your code-shell settings, or omit \`provider\` to use the default.`
+      : 'Error: no image provider available. Configure an image provider (including an apiKey) ' +
+          "in your code-shell settings to use GenerateImage.";
   }
 
   const adapter = getImageProvider(resolved.kind);
@@ -208,7 +217,9 @@ export async function generateImageTool(
     await mkdir(dir, { recursive: true });
     const path = join(dir, `${Date.now()}.png`);
     await writeFile(path, Buffer.from(result.b64, "base64"));
-    return `Generated image saved to ${path}`;
+    // Name the provider/model actually used, so the user/agent knows which
+    // image backend produced this (esp. when a default fell back to another).
+    return `Generated image with ${resolved.kind} (${model}), saved to ${path}`;
   } catch (err) {
     return `Error saving generated image: ${(err as Error).message}`;
   }

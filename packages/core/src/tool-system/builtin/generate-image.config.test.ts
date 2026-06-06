@@ -76,7 +76,7 @@ describe("imageGen.providers[] config", () => {
       },
     });
     const out = await generateImageTool({ prompt: "p", provider: "gem" }, ctx());
-    expect(out).toMatch(/Generated image saved to/);
+    expect(out).toMatch(/Generated image with .+ saved to/);
     // Routed to the Gemini adapter (x-goog-api-key + generateContent path).
     expect(lastGoogHeader).toBe("AIza-x");
     expect(lastUrl).toContain(":generateContent");
@@ -112,13 +112,59 @@ describe("imageGen.providers[] config", () => {
   });
 });
 
+describe("default-with-no-key falls back to a configured one", () => {
+  test("defaultProvider lacks apiKey → uses the next entry that has one", async () => {
+    writeSettings({
+      imageGen: {
+        defaultProvider: "gem",
+        providers: [
+          // default points here, but no apiKey → must not be chosen
+          { id: "gem", kind: "google", baseUrl: "https://g.test/v1beta", defaultModel: "gemini-2.5-flash-image" },
+          { id: "oa", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-oa", defaultModel: "gpt-image-2" },
+        ],
+      },
+    });
+    const out = await generateImageTool({ prompt: "p" }, ctx());
+    expect(out).toMatch(/Generated image with .+ saved to/);
+    expect(lastAuthHeader).toBe("Bearer sk-oa"); // fell back to openai
+  });
+
+  test("explicit provider arg with no key still errors (no silent fallback)", async () => {
+    writeSettings({
+      imageGen: {
+        providers: [
+          { id: "gem", kind: "google", baseUrl: "https://g.test/v1beta" },
+          { id: "oa", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-oa" },
+        ],
+      },
+    });
+    // User explicitly asked for gem (no key) — respect intent, don't use oa.
+    const out = await generateImageTool({ prompt: "p", provider: "gem" }, ctx());
+    expect(out).toMatch(/no image provider|not configured|no api key/i);
+  });
+});
+
+describe("result names the provider/model actually used", () => {
+  test("success message includes the kind + model", async () => {
+    writeSettings({
+      imageGen: {
+        defaultProvider: "gem",
+        providers: [{ id: "gem", kind: "google", baseUrl: "https://generativelanguage.googleapis.com/v1beta", apiKey: "AIza", defaultModel: "gemini-2.5-flash-image" }],
+      },
+    });
+    const out = (await generateImageTool({ prompt: "p" }, ctx())) as string;
+    expect(out).toMatch(/google/);
+    expect(out).toMatch(/gemini-2\.5-flash-image/);
+  });
+});
+
 describe("fallback to LLM providers[] when imageGen absent", () => {
   test("still resolves an openai LLM provider (back-compat)", async () => {
     writeSettings({
       providers: [{ key: "openai", kind: "openai", baseUrl: "https://api.openai.com/v1", apiKey: "sk-legacy" }],
     });
     const out = await generateImageTool({ prompt: "p" }, ctx());
-    expect(out).toMatch(/Generated image saved to/);
+    expect(out).toMatch(/Generated image with .+ saved to/);
     expect(lastAuthHeader).toBe("Bearer sk-legacy");
     expect(lastBody.model).toBe("gpt-image-2");
   });
