@@ -77,6 +77,44 @@ describe("GeminiImageProvider", () => {
   });
 });
 
+describe("baseUrl normalization (OpenAI-compat layer → native REST)", () => {
+  test("strips a trailing /openai so the path hits native generateContent", async () => {
+    let calledUrl = "";
+    const fakeFetch: typeof fetch = (async (url: string) => {
+      calledUrl = url;
+      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ inline_data: { data: "x" } }] } }] }) } as Response;
+    }) as unknown as typeof fetch;
+    const p = new GeminiImageProvider(fakeFetch);
+    await p.generate({
+      prompt: "p",
+      size: "auto",
+      quality: "auto",
+      model: "gemini-2.5-flash-image",
+      creds: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", apiKey: "k" },
+    });
+    expect(calledUrl).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+    );
+  });
+
+  test("a native baseUrl (no /openai) is left as-is", async () => {
+    let calledUrl = "";
+    const fakeFetch: typeof fetch = (async (url: string) => {
+      calledUrl = url;
+      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ inline_data: { data: "x" } }] } }] }) } as Response;
+    }) as unknown as typeof fetch;
+    const p = new GeminiImageProvider(fakeFetch);
+    await p.generate({
+      prompt: "p",
+      size: "auto",
+      quality: "auto",
+      model: "m",
+      creds: { baseUrl: "https://generativelanguage.googleapis.com/v1beta", apiKey: "k" },
+    });
+    expect(calledUrl).toBe("https://generativelanguage.googleapis.com/v1beta/models/m:generateContent");
+  });
+});
+
 describe("registry wiring", () => {
   test("getImageProvider('google') returns a Gemini adapter", () => {
     expect(getImageProvider("google")?.kind).toBe("google");

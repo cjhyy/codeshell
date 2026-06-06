@@ -107,7 +107,13 @@ export class GeminiImageProvider implements ImageProvider {
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
   async generate(req: ImageGenerateRequest): Promise<ImageGenerateResult> {
-    const baseUrl = req.creds.baseUrl.replace(/\/+$/, "");
+    // Image generation uses the NATIVE Gemini REST path
+    // (`{base}/models/{model}:generateContent`). A provider configured for
+    // Gemini's OpenAI-compatibility layer carries a `…/openai` baseUrl (fine
+    // for chat) — strip that suffix so images hit the native endpoint without
+    // the user needing a second provider entry. A native `…/v1beta` baseUrl is
+    // left untouched.
+    const baseUrl = req.creds.baseUrl.replace(/\/+$/, "").replace(/\/openai$/, "");
     let resp: Response;
     try {
       resp = await this.fetchImpl(`${baseUrl}/models/${req.model}:generateContent`, {
