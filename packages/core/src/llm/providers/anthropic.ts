@@ -12,6 +12,7 @@ import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
 import { capabilitiesFor, type Capability } from "../capabilities/index.js";
 import type { ProviderKindName } from "../provider-kinds.js";
+import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
 
 /**
@@ -44,9 +45,12 @@ export class AnthropicClient extends LLMClientBase {
 
   private get client(): Anthropic {
     if (!this._client) {
+      const headers = resolveHeaders(this.config.httpHeaders);
       this._client = new Anthropic({
-        apiKey: this.config.apiKey ?? process.env.ANTHROPIC_API_KEY,
+        // explicit apiKey > authCommand stdout > ANTHROPIC_API_KEY (TODO 7.2).
+        apiKey: resolveApiKey(this.config, process.env.ANTHROPIC_API_KEY),
         ...(this.config.baseUrl ? { baseURL: this.config.baseUrl } : {}),
+        ...(Object.keys(headers).length > 0 ? { defaultHeaders: headers } : {}),
         timeout: this.timeout,
       });
     }

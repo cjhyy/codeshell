@@ -371,6 +371,21 @@ export interface LLMConfig {
   baseUrl?: string;
   maxTokens?: number;
   /**
+   * Shell command whose stdout is the auth token (TODO 7.2). Resolved at
+   * client-build time when `apiKey` is absent. The trimmed first line of
+   * stdout becomes the bearer token.
+   */
+  authCommand?: string;
+  /**
+   * Extra HTTP headers for every request to this model's provider (TODO 7.2).
+   * A value `$ENV_VAR` is resolved from the environment at build time.
+   */
+  httpHeaders?: Record<string, string>;
+  /** OpenAI `service_tier` request param, passed through verbatim (TODO 7.2). */
+  serviceTier?: string;
+  /** OpenAI reasoning `summary` control ("auto"|"concise"|"detailed") (TODO 7.2). */
+  reasoningSummary?: string;
+  /**
    * Default reasoning/thinking setting for this model. Per-call
    * `options.reasoning` (e.g. summarize sub-calls) overrides this.
    * Translated to the per-vendor wire form by the client's capability layer.

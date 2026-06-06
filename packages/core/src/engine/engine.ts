@@ -638,6 +638,10 @@ export class Engine {
             maxOutputTokens: m.maxOutputTokens,
             maxContextTokens: m.maxContextTokens,
             providerKey: m.providerKey,
+            authCommand: (m as { authCommand?: string }).authCommand,
+            httpHeaders: (m as { httpHeaders?: Record<string, string> }).httpHeaders,
+            serviceTier: (m as { serviceTier?: string }).serviceTier,
+            reasoningSummary: (m as { reasoningSummary?: string }).reasoningSummary,
           });
         }
         // Build catalog from settings.providers[] and attach to the pool
@@ -1528,8 +1532,11 @@ export class Engine {
       return summaryResponse.text;
     });
 
-    // Create components (requires resolved llmClient)
-    const modelFacade = new ModelFacade(llmClient, session.transcript);
+    // Create components (requires resolved llmClient). Build fallback clients
+    // (TODO 7.2) from settings.fallbackModelKeys so a terminal failure on the
+    // primary model retries against a backup before surfacing to the user.
+    const fallbackClients = await this.resolveFallbackClients();
+    const modelFacade = new ModelFacade(llmClient, session.transcript, fallbackClients);
 
     // Wire getOutputTokens for token budget tracking
     modelFacade.getOutputTokens = () => {
@@ -1901,6 +1908,47 @@ export class Engine {
       });
       return fallback;
     }
+  }
+
+  /**
+   * Build the ordered list of fallback LLM clients from
+   * settings.fallbackModelKeys (TODO 7.2). Each key that resolves to a pool
+   * model (and isn't identical to the active model) becomes a client tried, in
+   * order, when the primary fails terminally. Build failures and unknown keys
+   * are skipped with a warning — fallback is best-effort and must never break a
+   * run's construction.
+   */
+  private async resolveFallbackClients(): Promise<
+    Array<Awaited<ReturnType<typeof createLLMClient>>>
+  > {
+    let keys: string[] = [];
+    try {
+      const sm = this.getSettingsManager();
+      keys = (sm.get() as { fallbackModelKeys?: string[] }).fallbackModelKeys ?? [];
+    } catch {
+      return [];
+    }
+    if (!keys.length) return [];
+    const clients: Array<Awaited<ReturnType<typeof createLLMClient>>> = [];
+    for (const key of keys) {
+      const entry = this.modelPool.get(key);
+      if (!entry) {
+        logger.warn("engine.fallback_model_missing", { key });
+        continue;
+      }
+      const llm = this.modelPool.toLLMConfig(entry);
+      // Skip a fallback identical to the active model — it'd just fail again.
+      if (sameLlmIdentity(llm, this.config.llm)) continue;
+      try {
+        clients.push(await createLLMClient(llm, this.config.clientDefaults));
+      } catch (err) {
+        logger.warn("engine.fallback_model_build_failed", {
+          key,
+          error: (err as Error).message,
+        });
+      }
+    }
+    return clients;
   }
 
   private async runMemoryPipeline(

@@ -62,6 +62,14 @@ export interface ModelEntry {
   /** Optional reference into ProviderCatalog. When set, baseUrl/apiKey
    *  come from the catalog unless the entry overrides them. */
   providerKey?: string;
+  /** Per-model external token command; overrides provider-level (TODO 7.2). */
+  authCommand?: string;
+  /** Per-model extra HTTP headers; merged over provider-level (TODO 7.2). */
+  httpHeaders?: Record<string, string>;
+  /** OpenAI `service_tier` request param (TODO 7.2). */
+  serviceTier?: string;
+  /** OpenAI reasoning `summary` control (TODO 7.2). */
+  reasoningSummary?: string;
   /**
    * Per-model reasoning override. Wins over the provider-level setting
    * (ProviderCatalog entry's `reasoning`). Useful when models in the same
@@ -269,6 +277,16 @@ export class ModelPool {
       ...(entry.reasoning ?? fromCat?.reasoning
         ? { reasoning: entry.reasoning ?? fromCat?.reasoning }
         : {}),
+      // Auth command: entry overrides catalog. (TODO 7.2)
+      ...(entry.authCommand ?? fromCat?.authCommand
+        ? { authCommand: entry.authCommand ?? fromCat?.authCommand }
+        : {}),
+      // HTTP headers: merge catalog (base) then entry (override). (TODO 7.2)
+      ...(fromCat?.httpHeaders || entry.httpHeaders
+        ? { httpHeaders: { ...fromCat?.httpHeaders, ...entry.httpHeaders } }
+        : {}),
+      ...(entry.serviceTier ? { serviceTier: entry.serviceTier } : {}),
+      ...(entry.reasoningSummary ? { reasoningSummary: entry.reasoningSummary } : {}),
       // Carry the catalog kind through so the capability layer can pick
       // per-(kind, model) request-shape rules.
       ...(fromCat?.kind ? { providerKind: fromCat.kind } : {}),

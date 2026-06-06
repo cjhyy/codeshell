@@ -13,6 +13,10 @@ export interface ProviderConfig {
   kind: ProviderKindName;
   baseUrl: string;
   apiKey?: string;
+  /** Shell command yielding an auth token (TODO 7.2). See LLMConfig.authCommand. */
+  authCommand?: string;
+  /** Extra HTTP headers for this provider (TODO 7.2). See LLMConfig.httpHeaders. */
+  httpHeaders?: Record<string, string>;
   protocol?: "openai-compat" | "anthropic-style";
   modelsPath?: string;
   /** Default reasoning/thinking setting for this provider. See LLMConfig. */

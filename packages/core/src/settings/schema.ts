@@ -70,6 +70,15 @@ export const SettingsSchema = z
     auxModelKey: z.string().optional(),
 
     /**
+     * Fallback models — ordered list of models[].key tried, in order, when the
+     * active model's request fails with a non-retryable error after exhausting
+     * its own retries (TODO 7.2). Each fallback is attempted once per turn-level
+     * LLM call. Invalid/missing keys are skipped. Empty (default) = no
+     * fallback, the error propagates as today.
+     */
+    fallbackModelKeys: z.array(z.string()).default([]),
+
+    /**
      * Toggle background auto-update. When true (default), code-shell checks
      * npm for newer versions and — if the npm global prefix is writable —
      * installs the update in the background on process exit so the next
@@ -109,6 +118,20 @@ export const SettingsSchema = z
           ]),
           baseUrl: z.string(),
           apiKey: z.string().optional(),
+          /**
+           * Shell command that prints an auth token to stdout (TODO 7.2). Used
+           * when the token is short-lived / vended by an external tool (e.g.
+           * `gcloud auth print-access-token`, an `aws ... | jq -r .token`). Runs
+           * at client-build time; the trimmed stdout becomes the bearer token.
+           * `apiKey` wins if both are set.
+           */
+          authCommand: z.string().optional(),
+          /**
+           * Extra HTTP headers sent on every request to this provider (TODO
+           * 7.2). A value of the form `$ENV_VAR` is resolved from the
+           * environment at request time, so secrets need not live in settings.
+           */
+          httpHeaders: z.record(z.string(), z.string()).optional(),
           protocol: z.enum(["openai-compat", "anthropic-style"]).optional(),
           modelsPath: z.string().optional(),
           /**
@@ -141,6 +164,20 @@ export const SettingsSchema = z
             provider: z.string().optional(),
             baseUrl: z.string().optional(),
             apiKey: z.string().optional(),
+            /** Per-model external token command; overrides provider-level. (TODO 7.2) */
+            authCommand: z.string().optional(),
+            /** Per-model extra HTTP headers; merged over provider-level. (TODO 7.2) */
+            httpHeaders: z.record(z.string(), z.string()).optional(),
+            /**
+             * OpenAI `service_tier` request param ("auto" | "default" |
+             * "flex" | "priority"). Passed through to the request body. (TODO 7.2)
+             */
+            serviceTier: z.string().optional(),
+            /**
+             * OpenAI reasoning `summary` control ("auto" | "concise" |
+             * "detailed"). Requests a reasoning summary from o-series models. (TODO 7.2)
+             */
+            reasoningSummary: z.string().optional(),
             /**
              * Per-model reasoning override. Wins over the provider-level
              * `reasoning` setting (settings.providers[].reasoning). Use this

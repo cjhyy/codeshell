@@ -18,6 +18,7 @@ import { logger } from "../../logging/logger.js";
 import { countTokens } from "../token-counter.js";
 import { capabilitiesFor, type Capability } from "../capabilities/index.js";
 import { clampMaxTokens } from "../clamp-max-tokens.js";
+import { resolveApiKey, resolveHeaders } from "../provider-auth.js";
 import { stripVisionFromHistory } from "../strip-vision.js";
 import type { ProviderKindName } from "../provider-kinds.js";
 import {
@@ -170,9 +171,16 @@ export class OpenAIClient extends LLMClientBase {
 
   private get client(): OpenAI {
     if (!this._client) {
+      const headers = resolveHeaders(this.config.httpHeaders);
       this._client = new OpenAI({
-        apiKey: this.config.apiKey ?? process.env.OPENAI_API_KEY,
+        // apiKey: explicit > authCommand stdout > OPENAI_API_KEY (TODO 7.2).
+        // OpenAI's SDK requires a non-empty string; fall back to a placeholder
+        // when a custom provider authenticates purely via httpHeaders.
+        apiKey:
+          resolveApiKey(this.config, process.env.OPENAI_API_KEY) ??
+          (Object.keys(headers).length > 0 ? "x-headers-auth" : undefined),
         ...(this.config.baseUrl ? { baseURL: this.config.baseUrl } : {}),
+        ...(Object.keys(headers).length > 0 ? { defaultHeaders: headers } : {}),
         timeout: this.timeout,
       });
     }
@@ -335,12 +343,25 @@ export class OpenAIClient extends LLMClientBase {
       }
     }
 
+    // reasoning_summary (TODO 7.2): when the model uses the object-form
+    // reasoning shape (OpenRouter normalized / Responses-style), attach the
+    // requested summary level to that object. For the bare `reasoning_effort`
+    // shape there's no summary field on chat-completions, so we skip it rather
+    // than send an unknown top-level param.
+    if (this.config.reasoningSummary && reasoningBody.reasoning &&
+        typeof reasoningBody.reasoning === "object") {
+      (reasoningBody.reasoning as Record<string, unknown>).summary =
+        this.config.reasoningSummary;
+    }
+
     return {
       model: this.model,
       messages,
       ...tokenLimit,
       ...sampling,
       ...reasoningBody,
+      // service_tier (TODO 7.2): passed through verbatim when configured.
+      ...(this.config.serviceTier ? { service_tier: this.config.serviceTier } : {}),
       ...(tools ? { tools } : {}),
       ...(stream ? { stream: true, stream_options: { include_usage: true } } : {}),
     };
