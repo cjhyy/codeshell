@@ -275,6 +275,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
   openPath: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:openPath", path, cwd),
+  /** Open a path in an external editor (Cursor/VS Code; CODE_SHELL_EDITOR override). */
+  openInEditor: (path: string, cwd?: string) =>
+    ipcRenderer.invoke("shell:openInEditor", path, cwd) as Promise<string>,
   /** Read an image file as a base64 data: URL (null on failure). */
   readImageDataUrl: (absPath: string) =>
     ipcRenderer.invoke("images:readDataUrl", absPath),

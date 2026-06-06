@@ -1,7 +1,14 @@
 import React, { memo, useEffect, useState } from "react";
-import { FileText, FileCode2, ImageIcon, File as FileIcon } from "lucide-react";
+import {
+  FileText,
+  FileCode2,
+  ImageIcon,
+  File as FileIcon,
+  MoreHorizontal,
+} from "lucide-react";
 import { truncate } from "./utils";
 import type { Attachment } from "./attachments";
+import { OpenWithMenu } from "../chat/OpenWithMenu";
 
 interface Props {
   attachment: Attachment;
@@ -16,7 +23,8 @@ interface Props {
 /**
  * One-line attachment row: icon (or image thumbnail) + filename +
  * extension chip. Click opens the file in the OS default app via
- * shell:openPath; right-click could later reveal in Finder.
+ * shell:openPath; a hover "⋯" trigger opens the shared "open with" menu
+ * (system default / editor / reveal in folder — TODO 2.2/2.3).
  *
  * Images: we read the file via the renderer's fetch("file://…")
  * gate, which the main process allows for absolute paths inside
@@ -29,24 +37,36 @@ function AttachmentCardImpl({ attachment, cwd }: Props) {
   const ext = (filename.split(".").pop() ?? "").toLowerCase();
 
   return (
-    <button
-      type="button"
-      className={`attachment-card attachment-${kind}`}
-      onClick={() => {
-        void window.codeshell.openPath(path, cwd ?? undefined);
-      }}
-      title={path}
-    >
-      {kind === "image" ? (
-        <ImageThumb path={path} cwd={cwd} />
-      ) : (
-        <span className="attachment-icon">{iconFor(kind)}</span>
-      )}
-      <span className="attachment-meta">
-        <span className="attachment-name">{truncate(filename, 48)}</span>
-        <span className="attachment-ext">.{ext}</span>
-      </span>
-    </button>
+    <span className="attachment-card-wrap">
+      <button
+        type="button"
+        className={`attachment-card attachment-${kind}`}
+        onClick={() => {
+          void window.codeshell.openPath(path, cwd ?? undefined);
+        }}
+        title={path}
+      >
+        {kind === "image" ? (
+          <ImageThumb path={path} cwd={cwd} />
+        ) : (
+          <span className="attachment-icon">{iconFor(kind)}</span>
+        )}
+        <span className="attachment-meta">
+          <span className="attachment-name">{truncate(filename, 48)}</span>
+          <span className="attachment-ext">.{ext}</span>
+        </span>
+      </button>
+      <OpenWithMenu path={path} cwd={cwd} align="start">
+        <button
+          type="button"
+          className="attachment-openwith"
+          title="打开方式"
+          aria-label="打开方式"
+        >
+          <MoreHorizontal size={14} />
+        </button>
+      </OpenWithMenu>
+    </span>
   );
 }
 

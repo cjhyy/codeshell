@@ -51,6 +51,7 @@ import {
   openExternal,
   revealInFinder,
   openPath,
+  openInEditor,
   undoFiles,
   type UndoFilesResult,
 } from "./desktop-services.js";
@@ -871,6 +872,11 @@ ipcMain.handle("shell:revealInFinder", async (_e, p: string) => {
 ipcMain.handle("shell:openPath", async (_e, p: string, cwd?: string) => {
   if (typeof p !== "string" || !p) throw new Error("openPath requires path");
   return openPath(p, typeof cwd === "string" ? cwd : undefined);
+});
+
+ipcMain.handle("shell:openInEditor", async (_e, p: string, cwd?: string) => {
+  if (typeof p !== "string" || !p) throw new Error("openInEditor requires path");
+  return openInEditor(p, typeof cwd === "string" ? cwd : undefined);
 });
 
 ipcMain.handle(

@@ -4,6 +4,8 @@ import { ToolCardShell } from "./ToolCardShell";
 import { parsedArgs, truncate } from "./utils";
 import { classifyPath } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
+import { OpenWithMenu } from "../chat/OpenWithMenu";
+import { MoreHorizontal } from "lucide-react";
 
 interface Props {
   message: ToolMessage;
@@ -48,6 +50,19 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }
       <div className="tool-card-row">
         <span className="tool-card-row-label">path</span>
         <span className="tool-card-row-val mono">{path}</span>
+        {path && (
+          <OpenWithMenu path={path} align="end">
+            <button
+              type="button"
+              className="attachment-openwith"
+              title="打开方式"
+              aria-label="打开方式"
+              style={{ opacity: 1 }}
+            >
+              <MoreHorizontal size={14} />
+            </button>
+          </OpenWithMenu>
+        )}
       </div>
       {variant === "edit" && (
         <>

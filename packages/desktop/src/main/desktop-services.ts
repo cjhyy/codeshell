@@ -13,6 +13,11 @@ import { promisify } from "node:util";
 import { shell } from "electron";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
+import {
+  editorCandidates,
+  splitTarget,
+  buildEditorInvocation,
+} from "./editor.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -520,6 +525,40 @@ export async function openPath(
   const err = await shell.openPath(absolute);
   if (err) throw new Error(`openPath failed: ${err}`);
   return absolute;
+}
+
+/**
+ * Open a file in an external editor (Cursor / VS Code by default, overridable
+ * via `CODE_SHELL_EDITOR`). Honors a trailing `:line[:col]` suffix via the
+ * editor's `--goto` flag. Tries each candidate in priority order and returns
+ * the command that launched; throws if none are on PATH so the renderer can
+ * fall back to the OS "open".
+ */
+export async function openInEditor(
+  targetPath: string,
+  cwd?: string,
+): Promise<string> {
+  const { path: rel, line, col } = splitTarget(targetPath);
+  const absolute = path.isAbsolute(rel)
+    ? rel
+    : path.resolve(cwd ?? process.cwd(), rel);
+  const candidates = editorCandidates(process.env.CODE_SHELL_EDITOR);
+  let lastErr: unknown = null;
+  for (const candidate of candidates) {
+    const { command, args } = buildEditorInvocation(candidate, absolute, line, col);
+    try {
+      // detached so closing the app doesn't take the editor down; the editor
+      // CLIs return immediately anyway.
+      await execFileAsync(command, args);
+      return command;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw new Error(
+    `no editor found (tried ${candidates.join(", ")})` +
+      (lastErr ? `: ${String(lastErr instanceof Error ? lastErr.message : lastErr)}` : ""),
+  );
 }
 
 function normalizeWorktreeName(input: string): string {

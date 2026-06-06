@@ -309,6 +309,14 @@ export interface CodeshellApi {
    */
   openPath(path: string, cwd?: string): Promise<string>;
   /**
+   * Open a path in an external editor (Cursor / VS Code by default; override
+   * with the `CODE_SHELL_EDITOR` env var). A trailing `:line[:col]` suffix is
+   * honored via the editor's `--goto` flag. Returns the editor command that
+   * launched; rejects if no editor is found on PATH (caller falls back to the
+   * OS "open").
+   */
+  openInEditor(path: string, cwd?: string): Promise<string>;
+  /**
    * Read an image file (absolute path) as a base64 `data:` URL so the
    * renderer can display it without `file://` (blocked by webSecurity/CSP).
    * Returns null if the path isn't an absolute image file or read fails.

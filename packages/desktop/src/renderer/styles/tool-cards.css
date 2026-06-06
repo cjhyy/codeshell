@@ -447,3 +447,33 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+/* Card + "open with" trigger share a row; the trigger only shows on hover so
+   it doesn't clutter the card at rest. */
+.attachment-card-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.attachment-openwith {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: 2px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.attachment-card-wrap:hover .attachment-openwith,
+.attachment-openwith[data-state="open"] {
+  opacity: 1;
+}
+.attachment-openwith:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+}
