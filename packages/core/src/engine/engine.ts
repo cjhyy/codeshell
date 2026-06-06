@@ -22,6 +22,7 @@ import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
+import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
   notificationQueue,
   buildNotificationMessage,
@@ -171,6 +172,13 @@ export interface EngineConfig {
   preset?: AgentPresetName;
   enabledBuiltinTools?: string[];
   disabledBuiltinTools?: string[];
+  /**
+   * When false, `Bash(run_in_background=true)` is rejected and the
+   * background-shell tools are disabled (design §5.5). Set false by
+   * unattended automation/cron hosts — no one is there to reap a long-lived
+   * dev server. Defaults to true (interactive sessions allow it).
+   */
+  allowBackgroundShells?: boolean;
   customSystemPrompt?: string;
   appendSystemPrompt?: string;
   responseLanguage?: string;
@@ -2518,6 +2526,12 @@ export class Engine {
       disabledSkills,
       disabledPlugins,
       skillAllowlist: this.config.skillAllowlist,
+      backgroundShells: backgroundShellManager,
+      // Sub-agents never start background shells (they're short-lived and
+      // their lifecycle ends with the parent turn); unattended automation
+      // opts out via config. Otherwise allowed.
+      allowBackgroundShells:
+        this.config.isSubAgent === true ? false : this.config.allowBackgroundShells !== false,
     };
   }
 

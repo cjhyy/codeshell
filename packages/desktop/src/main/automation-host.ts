@@ -127,6 +127,9 @@ export function buildDesktopAutomationRunner(
       // more automations. (disabledBuiltinTools is a delta on the preset's
       // builtin set — see resolveBuiltinToolNames.)
       disabledBuiltinTools: [...AUTOMATION_DISABLED_TOOLS],
+      // Reject Bash(run_in_background=true) too — the param survives even
+      // though the companion tools are stripped (design §5.5).
+      allowBackgroundShells: false,
       // Read-only contract from bindCronToEngine — cron is unattended.
       permissionMode: req.permissionMode,
       approvalBackend: req.approvalBackend,

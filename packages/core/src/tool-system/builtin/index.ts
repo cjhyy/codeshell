@@ -44,6 +44,11 @@ import {
 } from "./memory.js";
 import { completeGoalToolDef, completeGoalTool } from "./complete-goal.js";
 import { addMarketplaceToolDef, addMarketplaceTool } from "./add-marketplace.js";
+import {
+  bashOutputToolDef, bashOutputTool,
+  killShellToolDef, killShellTool,
+  listShellsToolDef, listShellsTool,
+} from "./background-shell-tools.js";
 
 /**
  * Tool executor signature.
@@ -167,6 +172,37 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       timeoutMs: 3_600_000, // 1h — supports long-running shell loops (e.g. `until` polling)
     },
     execute: bashTool,
+  },
+  // ─── Background shells (Bash run_in_background companions) ──────
+  {
+    definition: {
+      ...bashOutputToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: bashOutputTool,
+  },
+  {
+    definition: {
+      ...killShellToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: killShellTool,
+  },
+  {
+    definition: {
+      ...listShellsToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: listShellsTool,
   },
   {
     definition: {

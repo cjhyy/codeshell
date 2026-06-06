@@ -20,6 +20,7 @@ import type { ToolContext } from "../context.js";
 import { createOffBackend } from "../sandbox/off.js";
 import { safeSpawnShell } from "../../runtime/safe-spawn.js";
 import { buildSandboxEnv } from "../../runtime/spawn-common.js";
+import { backgroundShellManager } from "../../runtime/background-shell.js";
 import type { ToolDefinition } from "../../types.js";
 
 export const bashToolDef: ToolDefinition = {
@@ -39,6 +40,14 @@ export const bashToolDef: ToolDefinition = {
       description: {
         type: "string",
         description: "Short description of what the command does",
+      },
+      run_in_background: {
+        type: "boolean",
+        description:
+          "Run the command as a long-lived background process (e.g. a dev server like `npm run dev`). " +
+          "Returns immediately with a shell_id instead of waiting for the command to finish. " +
+          "Use BashOutput(shell_id) to read its output, KillShell(shell_id) to stop it, ListShells() to enumerate. " +
+          "The process is killed when the session/app exits. Do NOT use for one-shot commands — only for processes you expect to keep running.",
       },
     },
     required: ["command"],
@@ -65,6 +74,14 @@ export async function bashTool(
   const shell = process.env.SHELL || "/bin/bash";
   const backend = ctx?.sandbox ?? createOffBackend();
   const env = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
+
+  // Background mode: spawn a detached, long-lived process and return a
+  // shell_id immediately (design §5.1). Fire-and-forget — the turn is never
+  // blocked, and Engine.run's wait-for-background loop never waits on it
+  // (§难点5: that loop only looks at asyncAgentRegistry).
+  if (args.run_in_background === true) {
+    return runInBackground(command, ctx);
+  }
 
   // A6: lifecycle (spawn, kill cascade, IO drain, byte cap, abort/timeout)
   // is centralized in safeSpawnShell. We still handle Bash's user-facing
@@ -119,4 +136,36 @@ export async function bashTool(
   }
 
   return output;
+}
+
+/**
+ * Bash(run_in_background=true) branch: start a long-lived background shell
+ * through the BackgroundShellManager and return its handle. Same sandbox as
+ * the foreground path (D8). Rejected in unattended automation runs (§5.5)
+ * because no one is there to reap a dev server.
+ */
+function runInBackground(command: string, ctx?: ToolContext): string {
+  if (ctx?.allowBackgroundShells === false) {
+    return "Error: background shells are not available in automation/headless runs. Run the command in the foreground, or have a human start the dev server.";
+  }
+  const sessionId = ctx?.sessionId;
+  if (!sessionId) {
+    return "Error: run_in_background requires a session context (no sessionId available).";
+  }
+  const mgr = ctx?.backgroundShells ?? backgroundShellManager;
+  const r = mgr.spawnBackground({
+    command,
+    cwd: ctx?.cwd ?? process.cwd(),
+    sessionId,
+    sandbox: ctx?.sandbox,
+  });
+  if (!r.ok) {
+    return `Error: ${r.error}`;
+  }
+  return [
+    "Started background shell.",
+    `shell_id: ${r.shellId}`,
+    `command: ${command}`,
+    `(Use BashOutput("${r.shellId}") to read output; KillShell("${r.shellId}") to stop; ListShells() to enumerate.)`,
+  ].join("\n");
 }

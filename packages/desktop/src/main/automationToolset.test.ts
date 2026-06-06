@@ -20,6 +20,12 @@ describe("automationBuiltinTools", () => {
     expect(names).not.toContain("ListMcpResources");
     expect(names).not.toContain("ReadMcpResource");
   });
+  it("excludes background-shell tools (no one reaps a dev server in an unattended run)", () => {
+    const names = automationBuiltinTools();
+    expect(names).not.toContain("BashOutput");
+    expect(names).not.toContain("KillShell");
+    expect(names).not.toContain("ListShells");
+  });
   it("keeps a normal read tool like Read", () => {
     expect(automationBuiltinTools()).toContain("Read");
   });

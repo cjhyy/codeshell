@@ -24,6 +24,12 @@ export const AUTOMATION_DISABLED_TOOLS = [
   "MCPTool",
   "ListMcpResources",
   "ReadMcpResource",
+  // Background shells (design §5.5): an unattended run must not start a
+  // long-lived dev server no one will reap. The Bash run_in_background
+  // *parameter* is separately rejected via Engine allowBackgroundShells=false.
+  "BashOutput",
+  "KillShell",
+  "ListShells",
 ] as const;
 
 /**

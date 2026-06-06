@@ -204,6 +204,20 @@ export interface ToolContext {
    */
   skillAllowlist?: string[];
   /**
+   * Background-shell manager (Bash run_in_background + BashOutput / KillShell
+   * / ListShells). Undefined → the tools fall back to the process-local
+   * `backgroundShellManager` singleton. Threaded explicitly so tests (and
+   * any future per-engine isolation) can inject their own instance.
+   */
+  backgroundShells?: import("../runtime/background-shell.js").BackgroundShellManager;
+  /**
+   * False in unattended automation/cron runs — `Bash(run_in_background=true)`
+   * is rejected and the three background-shell tools are stripped (design
+   * §5.5): no one is watching to reap a long-lived dev server. Defaults to
+   * true (interactive sessions allow it).
+   */
+  allowBackgroundShells?: boolean;
+  /**
    * Builtin tool names the project's capabilityOverrides marked `off` for
    * this cwd. Engine.run() already HIDES these from the LLM-visible tool
    * list, but the model can still NAME a hidden builtin (hallucinated, or
