@@ -446,8 +446,8 @@ instruction-scanner.ts 早已实现,补测试锁定。
 
 ### 8.5 配置系统完善
 
-- [ ] 支持 YAML 配置。
-- [ ] 生成配置 JSON Schema，支持 IDE 自动补全。
+- [~] 支持 YAML 配置。**评估后暂不做(低优先级)**:settings 主要走设置页 UI + `/config` 读写,不靠手编;YAML 的优势(注释/少标点/多行)在本产品痛点不强,而多一种格式 = 多一条加载/合并/写回路径要维护(写回写 json 还是 yaml?与多文件优先级混?),复杂度 > 收益。注:agent 定义/skills frontmatter 已用 yaml 库(它们是 frontmatter+正文,天生适合),settings 是纯结构化数据 JSON 够用。
+- [~] 生成配置 JSON Schema，支持 IDE 自动补全。**评估后暂不做(低优先级)**:用途是给手编 settings.json 的人在 IDE 里做字段补全/类型校验。但本产品配置走 UI 为主、手编是少数场景;且需加 `zod-to-json-schema` 依赖(zod 3.24 无原生导出)。比 YAML 略有用(能配 IDE 校验),但场景小,留待真有手编需求时再做(~30-50 行)。
 - [x] `/config` 命令交互式编辑配置。✅ 核实 TUI 已有 `/config [show | get <key> | set <key> <value>]`(core-commands.ts,走 SettingsManager 读写,点号路径)。
 - [x] 配置迁移机制：版本升级时自动迁移旧配置。✅ `settings/migrate-config.ts`:版本化迁移框架——`configVersion` 字段 + 有序 `MigrationStep[]{from,to,migrate}`,`migrateConfig` 按当前版本顺序应用到 CURRENT(纯函数,不改入参,支持从中间版本续跑、空列表只盖版本号)。导出供使用。注:**框架就位但 MIGRATIONS 现为空**(schema 仍 v0,无破坏性变更)——故**暂不接入 manager 写回**(否则每次 load 都给文件盖 configVersion:0,纯 churn 无收益);首个破坏性 schema 变更落地时 append 一个 step + bump 版本 + 接 manager 即可。已有的 `migrateModels`(字段级 legacy models[] 迁移)继续独立工作。测试 migrate-config.test.ts(9 例,含注入样例迁移链验证顺序/续跑/no-op/不可变)。
 
