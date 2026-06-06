@@ -458,7 +458,7 @@ instruction-scanner.ts 早已实现,补测试锁定。
 
 ### 9.2 测试覆盖
 
-- [~] builtin tools 集成测试。**进行中**:补 Glob(6)/Read(5)/Edit+Write(9)/Grep(6)/NotebookEdit(7) 集成测试,共 33 例。**顺修**:① grep fallback(grep 而非 rg 时)漏传 fileGlob→现 `--include=<glob>` 对齐 rg 行为;② feature-flags.test.ts 预存 tsc 类型报错(featureFlagNames() 类型化数组 vs string[] 字面量)修掉,core tsc 现全绿。剩余无测试工具(web-fetch/notebook-edit 等)续补。
+- [~] builtin tools 集成测试。**进行中**:补 Glob(6)/Read(5)/Edit+Write(9)/Grep(6)/NotebookEdit(7)/ToolSearch(6) 集成测试,共 39 例。**顺修**:① grep fallback(grep 而非 rg 时)漏传 fileGlob→现 `--include=<glob>` 对齐 rg 行为;② feature-flags.test.ts 预存 tsc 类型报错(featureFlagNames() 类型化数组 vs string[] 字面量)修掉,core tsc 现全绿。剩余无测试工具(web-fetch/notebook-edit 等)续补。
 - [ ] E2E 完整对话流程。
 - [ ] GitHub Actions CI。
 - [ ] 测试覆盖率 > 60%。
