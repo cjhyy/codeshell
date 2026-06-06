@@ -295,6 +295,8 @@ export const Methods = {
   Inject: "agent/inject",
   /** Close (destroy) a session. */
   CloseSession: "agent/closeSession",
+  /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */
+  GoalExtend: "agent/goalExtend",
 
   // Server → Client (notifications, no id)
   StreamEvent: "agent/streamEvent",

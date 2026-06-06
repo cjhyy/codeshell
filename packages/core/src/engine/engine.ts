@@ -464,6 +464,11 @@ export class Engine {
    */
   private ctxOverheadBySid = new Map<string, number>();
   private activePermission: PermissionClassifier | undefined;
+  /**
+   * The TurnLoop of the in-flight run(), exposed so extendGoalRun() can bump a
+   * running goal's turn/budget ceilings mid-run (TODO 3.1). Null when idle.
+   */
+  private activeTurnLoop: TurnLoop | null = null;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
   get maxContextTokens(): number {
@@ -1699,6 +1704,10 @@ export class Engine {
       },
     );
 
+    // Expose this run's loop for mid-run extension (TODO 3.1). Top-level only —
+    // a sub-agent's loop is its own concern and isn't user-extendable.
+    if (this.config.isSubAgent !== true) this.activeTurnLoop = turnLoop;
+
     let result: Awaited<ReturnType<typeof turnLoop.run>>;
     try {
       result = await turnLoop.run(messages);
@@ -1749,6 +1758,7 @@ export class Engine {
       // Run-scoped: drop the GoalStopHook so a later goal-less send on this
       // long-lived engine doesn't keep blocking stops.
       if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
+      if (this.activeTurnLoop === turnLoop) this.activeTurnLoop = null;
     }
     this.lastMessages = result.messages;
     this.compactedMessagesBySession.set(
@@ -2425,6 +2435,20 @@ export class Engine {
 
   getPermissionMode(): NonNullable<EngineConfig["permissionMode"]> {
     return this.config.permissionMode ?? "acceptEdits";
+  }
+
+  /**
+   * Extend the in-flight run's turn ceiling and/or goal budgets (TODO 3.1 —
+   * 运行中续轮/加预算). No-op (returns null) when no run is active. Lets a user
+   * keep an unattended goal going past its original cap instead of restarting.
+   */
+  extendGoalRun(opts: {
+    addTurns?: number;
+    addTokenBudget?: number;
+    addTimeBudgetMs?: number;
+  }): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number } | null {
+    if (!this.activeTurnLoop) return null;
+    return this.activeTurnLoop.extend(opts);
   }
 
   /**

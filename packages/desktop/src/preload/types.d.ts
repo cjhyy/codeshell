@@ -192,6 +192,17 @@ export interface CodeshellApi {
   ): Promise<RpcResponse>;
   /** Cancel a session's running turn. sessionId optional for legacy callers. */
   cancel(sessionId?: string): Promise<RpcResponse>;
+  /**
+   * Extend a running goal's turn / budget ceilings mid-run (TODO 3.1). Returns
+   * the resulting effective limits; rejects if there's no active run.
+   */
+  goalExtend(
+    sessionId: string,
+    opts: { addTurns?: number; addTokenBudget?: number; addTimeBudgetMs?: number },
+  ): Promise<{
+    ok: boolean;
+    limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number };
+  }>;
   /** Multi-session form. The dual-arg legacy form is also supported at runtime. */
   approve(
     sessionId: string,

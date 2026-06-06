@@ -170,6 +170,18 @@ contextBridge.exposeInMainWorld("codeshell", {
    * the (now-removed) single-flag path — multi-session always wants the id.
    */
   cancel: (sessionId?: string) => rpc("agent/cancel", { sessionId }),
+  /**
+   * Extend a running goal's turn / budget ceilings mid-run (TODO 3.1). Returns
+   * the resulting effective limits, or throws if there's no active run.
+   */
+  goalExtend: (
+    sessionId: string,
+    opts: { addTurns?: number; addTokenBudget?: number; addTimeBudgetMs?: number },
+  ) =>
+    rpc("agent/goalExtend", { sessionId, ...opts }) as Promise<{
+      ok: boolean;
+      limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number };
+    }>,
   approve: (
     sessionIdOrRequestId: string,
     requestIdOrDecision: string | "approve" | "deny",

@@ -34,9 +34,11 @@ import { COMPLETE_GOAL_TOOL_NAME } from "../tool-system/builtin/complete-goal.js
 import {
   type GoalConfig,
   type GoalBudgetTracker,
+  type GoalExtension,
   createGoalBudgetTracker,
   recordGoalUsage,
   goalBudgetExceeded,
+  applyGoalExtension,
 } from "./goal.js";
 
 export interface TurnLoopConfig {
@@ -152,9 +154,49 @@ export class TurnLoop {
    */
   private stopBlockCount = 0;
 
+  /**
+   * Run-scoped goal budget tracker (Goal mode). Hoisted to an instance field
+   * (not a run() local) so extend() can bump its budgets mid-run. Null when no
+   * goal or between runs.
+   */
+  private goalTracker: GoalBudgetTracker | null = null;
+
+  /**
+   * Extend the in-flight run's limits (TODO 3.1 — 运行中续轮/加预算). Mutates
+   * the maxTurns ceiling and/or the live goal budgets; the loop re-reads both
+   * each turn so the change takes effect on the next iteration. No-op for
+   * fields not supplied. Returns the resulting effective limits.
+   */
+  extend(opts: GoalExtension): {
+    maxTurns: number;
+    tokenBudget?: number;
+    timeBudgetMs?: number;
+  } {
+    const next = applyGoalExtension(
+      this.config.maxTurns,
+      this.goalTracker?.goal,
+      this.goalTracker?.tokensUsed ?? 0,
+      opts,
+    );
+    this.config = { ...this.config, maxTurns: next.maxTurns };
+    if (this.goalTracker) {
+      this.goalTracker.goal.tokenBudget = next.tokenBudget;
+      this.goalTracker.goal.timeBudgetMs = next.timeBudgetMs;
+    }
+    // Bumping turns resets the consecutive stop-block streak so a goal that was
+    // repeatedly re-blocked isn't immediately re-capped right after extending.
+    if (typeof opts.addTurns === "number" && opts.addTurns > 0) {
+      this.stopBlockCount = 0;
+    }
+    return next;
+  }
+
   constructor(
     private readonly deps: TurnLoopDeps,
-    private readonly config: TurnLoopConfig,
+    // Not readonly: extend() bumps maxTurns mid-run (TODO 3.1), and the
+    // constructor below rewrites onStream. The loop reads config fields fresh
+    // each turn so mutations take effect on the next iteration.
+    private config: TurnLoopConfig,
   ) {
     // Wrap onStream so a single throwing handler can't silently break
     // the channel for the rest of the run. A 2026-05-25 incident saw a
@@ -265,9 +307,10 @@ export class TurnLoop {
     // wall-clock start now and accumulates prompt+completion tokens across
     // every turn; the guardrail below force-stops the run once any configured
     // budget is blown — the unattended-safety backstop.
-    const goalTracker: GoalBudgetTracker | null = this.config.goal
+    this.goalTracker = this.config.goal
       ? createGoalBudgetTracker(this.config.goal, Date.now())
       : null;
+    const goalTracker = this.goalTracker;
 
     // run() must never reject: the engine's post-run bookkeeping (saveState
     // with the terminal reason, on_session_end hook) runs AFTER this call and

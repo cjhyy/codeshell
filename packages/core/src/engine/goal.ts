@@ -81,6 +81,46 @@ export function resolveMaxTurns(
   return INTERACTIVE_DEFAULT_MAX_TURNS;
 }
 
+export interface GoalExtension {
+  addTurns?: number;
+  addTokenBudget?: number;
+  addTimeBudgetMs?: number;
+}
+
+/**
+ * Compute the new turn ceiling + goal budgets after a mid-run extension
+ * (TODO 3.1). Pure so the TurnLoop and tests agree on the arithmetic:
+ *   - addTurns bumps the maxTurns ceiling (floored, positive only).
+ *   - addTokenBudget/addTimeBudgetMs raise the goal's caps. When a cap was
+ *     previously unset ("unlimited"), we seed it from `tokensUsed` (tokens) or
+ *     0 (time) before adding, so extending an unbounded run sets a fresh cap
+ *     ABOVE current usage rather than leaving it unbounded.
+ * `tokensUsed` is the tracker's running total (used only to seed an unset
+ * token cap). Returns the resulting limits; never mutates its inputs.
+ */
+export function applyGoalExtension(
+  currentMaxTurns: number,
+  goal: GoalConfig | undefined,
+  tokensUsed: number,
+  ext: GoalExtension,
+): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number } {
+  let maxTurns = currentMaxTurns;
+  if (typeof ext.addTurns === "number" && ext.addTurns > 0) {
+    maxTurns += Math.floor(ext.addTurns);
+  }
+  let tokenBudget = goal?.tokenBudget;
+  let timeBudgetMs = goal?.timeBudgetMs;
+  if (goal) {
+    if (typeof ext.addTokenBudget === "number" && ext.addTokenBudget > 0) {
+      tokenBudget = (tokenBudget ?? tokensUsed) + Math.floor(ext.addTokenBudget);
+    }
+    if (typeof ext.addTimeBudgetMs === "number" && ext.addTimeBudgetMs > 0) {
+      timeBudgetMs = (timeBudgetMs ?? 0) + Math.floor(ext.addTimeBudgetMs);
+    }
+  }
+  return { maxTurns, tokenBudget, timeBudgetMs };
+}
+
 export interface GoalBudgetTracker {
   goal: GoalConfig;
   /** Wall-clock start (ms epoch), captured at run start. */

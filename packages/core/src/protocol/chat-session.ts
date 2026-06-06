@@ -102,6 +102,20 @@ export class ChatSession {
   }
 
   /**
+   * Extend the in-flight goal run's turn/budget ceilings (TODO 3.1). Delegates
+   * to the engine, which forwards to the active TurnLoop. Returns null when no
+   * run is active (or the run has no extendable loop). Mirrors the cancel()
+   * mid-run control path.
+   */
+  extendGoalRun(opts: {
+    addTurns?: number;
+    addTokenBudget?: number;
+    addTimeBudgetMs?: number;
+  }): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number } | null {
+    return this.engine.extendGoalRun(opts);
+  }
+
+  /**
    * Switch this session's active model (per-session, not worker-global).
    * Applies immediately when idle; defers to the next run boundary when a
    * turn is in flight so a hot switch never mutates the model under a

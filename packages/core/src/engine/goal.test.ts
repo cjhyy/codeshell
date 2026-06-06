@@ -5,10 +5,50 @@ import {
   recordGoalUsage,
   goalBudgetExceeded,
   resolveMaxTurns,
+  applyGoalExtension,
   GOAL_DEFAULT_MAX_TURNS,
   INTERACTIVE_DEFAULT_MAX_TURNS,
   type GoalConfig,
 } from "./goal.js";
+
+describe("applyGoalExtension (TODO 3.1 — 运行中续轮/加预算)", () => {
+  test("addTurns bumps the ceiling (floored, positive only)", () => {
+    expect(applyGoalExtension(100, undefined, 0, { addTurns: 50 }).maxTurns).toBe(150);
+    expect(applyGoalExtension(100, undefined, 0, { addTurns: 0.9 }).maxTurns).toBe(100);
+    expect(applyGoalExtension(100, undefined, 0, { addTurns: -5 }).maxTurns).toBe(100);
+    expect(applyGoalExtension(100, undefined, 0, { addTurns: 10.7 }).maxTurns).toBe(110);
+  });
+
+  test("raises an existing token/time budget", () => {
+    const goal: GoalConfig = { objective: "x", tokenBudget: 1000, timeBudgetMs: 60_000 };
+    const r = applyGoalExtension(100, goal, 500, { addTokenBudget: 500, addTimeBudgetMs: 30_000 });
+    expect(r.tokenBudget).toBe(1500);
+    expect(r.timeBudgetMs).toBe(90_000);
+  });
+
+  test("seeds an unset token budget from current usage so the new cap is above it", () => {
+    const goal: GoalConfig = { objective: "x" }; // unlimited tokens
+    const r = applyGoalExtension(100, goal, 800, { addTokenBudget: 200 });
+    expect(r.tokenBudget).toBe(1000); // 800 used + 200 added
+  });
+
+  test("seeds an unset time budget from 0", () => {
+    const goal: GoalConfig = { objective: "x" };
+    expect(applyGoalExtension(100, goal, 0, { addTimeBudgetMs: 5000 }).timeBudgetMs).toBe(5000);
+  });
+
+  test("does not touch budgets when no goal", () => {
+    const r = applyGoalExtension(100, undefined, 0, { addTokenBudget: 500 });
+    expect(r.tokenBudget).toBeUndefined();
+    expect(r.timeBudgetMs).toBeUndefined();
+  });
+
+  test("never mutates the input goal object", () => {
+    const goal: GoalConfig = { objective: "x", tokenBudget: 1000 };
+    applyGoalExtension(100, goal, 0, { addTokenBudget: 500 });
+    expect(goal.tokenBudget).toBe(1000);
+  });
+});
 
 describe("normalizeGoal", () => {
   test("undefined → undefined", () => {

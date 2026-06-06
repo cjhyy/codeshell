@@ -185,6 +185,9 @@ export class AgentServer {
       case Methods.CloseSession:
         this.handleCloseSession(req);
         break;
+      case Methods.GoalExtend:
+        this.handleGoalExtend(req);
+        break;
       default:
         this.transport.send(
           createErrorResponse(req.id, ErrorCodes.MethodNotFound, `Unknown method: ${req.method}`),
@@ -483,6 +486,46 @@ export class AgentServer {
     this.clearAllApprovalTimers();
 
     this.transport.send(createResponse(req.id, { ok: true }));
+  }
+
+  /**
+   * Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). Routed to
+   * a specific session (multi-session path). Returns the resulting effective
+   * limits, or an error if no session / no active run.
+   */
+  private handleGoalExtend(req: RpcRequest): void {
+    const params = (req.params ?? {}) as {
+      sessionId?: string;
+      addTurns?: number;
+      addTokenBudget?: number;
+      addTimeBudgetMs?: number;
+    };
+    const session =
+      this.chatManager && typeof params.sessionId === "string"
+        ? this.chatManager.get(params.sessionId)
+        : undefined;
+    if (!session) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionClosed,
+          params.sessionId ? `No such session: ${params.sessionId}` : "sessionId is required",
+        ),
+      );
+      return;
+    }
+    const result = session.extendGoalRun({
+      addTurns: params.addTurns,
+      addTokenBudget: params.addTokenBudget,
+      addTimeBudgetMs: params.addTimeBudgetMs,
+    });
+    if (!result) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "No active run to extend"),
+      );
+      return;
+    }
+    this.transport.send(createResponse(req.id, { ok: true, limits: result }));
   }
 
   // ─── CloseSession ───────────────────────────────────────────────
