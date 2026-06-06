@@ -1971,7 +1971,9 @@ export class Engine {
     try {
       // Background calls run on the auxiliary model when configured, so memory
       // book-keeping doesn't burn the expensive primary model every turn.
-      const llmClient = await this.resolveAuxClient(primaryClient);
+      // settings.memories.extractionModel (if set + valid) overrides the aux
+      // model specifically for memory extraction (TODO 8.1).
+      const llmClient = await this.resolveExtractionClient(primaryClient);
       // Only run memory extraction for substantive sessions. The previous
       // threshold of 4 user+assistant messages was low enough that two-line
       // exchanges ("what's the time?" / "noon") triggered a full LLM
@@ -2690,6 +2692,37 @@ export class Engine {
     } catch {
       return undefined;
     }
+  }
+
+  /**
+   * LLM client for memory extraction (TODO 8.1). Prefers
+   * settings.memories.extractionModel when it names a valid pool model;
+   * otherwise falls back to the aux client (which itself falls back to the
+   * passed primary). Build failures fall back too — extraction is best-effort.
+   */
+  private async resolveExtractionClient(
+    primaryClient: Awaited<ReturnType<typeof createLLMClient>>,
+  ): Promise<Awaited<ReturnType<typeof createLLMClient>>> {
+    const key = this.readMemoriesConfig()?.extractionModel;
+    if (key) {
+      const entry = this.modelPool.get(key);
+      if (entry) {
+        try {
+          return await createLLMClient(
+            this.modelPool.toLLMConfig(entry),
+            this.config.clientDefaults,
+          );
+        } catch (err) {
+          logger.warn("engine.extraction_model_build_failed", {
+            extractionModel: key,
+            error: (err as Error).message,
+          });
+        }
+      } else {
+        logger.warn("engine.extraction_model_missing", { extractionModel: key });
+      }
+    }
+    return this.resolveAuxClient(primaryClient);
   }
 }
 
