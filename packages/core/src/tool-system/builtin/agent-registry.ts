@@ -130,6 +130,15 @@ class AsyncAgentRegistry {
     return [...this.agents.values()];
   }
 
+  /**
+   * Agents spawned by a given session. Drives AgentStatus's default view so a
+   * background-agent listing doesn't surface every concurrent session's agents.
+   * Legacy entries with no sessionId are excluded from a session-scoped query.
+   */
+  listForSession(sessionId: string): AsyncAgentEntry[] {
+    return [...this.agents.values()].filter((e) => e.sessionId === sessionId);
+  }
+
   private markFinished(agentId: string, status: "completed" | "failed" | "cancelled"): void {
     const e = this.agents.get(agentId);
     if (!e) return;

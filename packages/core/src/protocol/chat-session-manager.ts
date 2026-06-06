@@ -3,6 +3,7 @@ import type { Engine } from "../engine/engine.js";
 import type { EngineRuntime } from "../engine/runtime.js";
 import type { EngineConfig } from "../engine/engine.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
+import { clearAgentOutputFiles } from "../tool-system/builtin/agent-output-file.js";
 
 export type EngineConfigSlice = Pick<
   EngineConfig,
@@ -88,6 +89,11 @@ export class ChatSessionManager {
     // SIGTERM→SIGKILL grace. NOTE: deliberately NOT in close()/sweepIdle() —
     // an idle chat tab must keep its dev server alive (§6 "切走再回来 server 还在").
     void backgroundShellManager.killAll();
+    // Background-agent output files are a debugging convenience, not durable
+    // state — wipe them on shutdown so ~/.code-shell/agents doesn't grow
+    // unbounded across runs. (notificationQueue, the real result path, is
+    // in-memory and already gone.)
+    void clearAgentOutputFiles();
   }
 
   sessionCount(): number {

@@ -12,6 +12,7 @@ import type { ToolContext, SubAgentSpawner } from "../context.js";
 import type { AgentDefinitionRegistry } from "../../agent/agent-definition-registry.js";
 import type { HookRegistry } from "../../hooks/registry.js";
 import { asyncAgentRegistry, MAX_BACKGROUND_AGENTS } from "./agent-registry.js";
+import { writeAgentOutputFile } from "./agent-output-file.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { notificationQueue } from "./agent-notifications.js";
 import { nanoid } from "nanoid";
@@ -423,6 +424,15 @@ export async function agentTool(
     )
       .then((text) => {
         asyncAgentRegistry.markCompleted(agentId);
+        // External-readable copy of the result (tail / cross-session history).
+        // Best-effort; never blocks the completion path.
+        void writeAgentOutputFile(agentId, {
+          status: "completed",
+          body: text,
+          description,
+          name,
+          onError: (m, meta) => logger.warn(m, meta),
+        });
         // B2 / Gate 1: attribute completion to the session that spawned
         // this agent so concurrent sessions don't drain each other's
         // notifications. Engine.run() always populates ctx.sessionId; the
@@ -475,6 +485,13 @@ export async function agentTool(
           return;
         }
         asyncAgentRegistry.markFailed(agentId);
+        void writeAgentOutputFile(agentId, {
+          status: "failed",
+          body: err.message,
+          description,
+          name,
+          onError: (m, meta) => logger.warn(m, meta),
+        });
         if (ctx?.sessionId) {
           notificationQueue.enqueue(
             {
@@ -659,6 +676,13 @@ function handoffToBackground(
   runPromise
     .then((text) => {
       asyncAgentRegistry.markCompleted(agentId);
+      void writeAgentOutputFile(agentId, {
+        status: "completed",
+        body: text,
+        description,
+        name,
+        onError: (m, meta) => logger.warn(m, meta),
+      });
       if (sessionId) {
         notificationQueue.enqueue(
           { agentId, name, description, status: "completed", finalText: text, enqueuedAt: Date.now() },
@@ -676,6 +700,13 @@ function handoffToBackground(
         return;
       }
       asyncAgentRegistry.markFailed(agentId);
+      void writeAgentOutputFile(agentId, {
+        status: "failed",
+        body: err.message,
+        description,
+        name,
+        onError: (m, meta) => logger.warn(m, meta),
+      });
       if (sessionId) {
         notificationQueue.enqueue(
           { agentId, name, description, status: "failed", error: err.message, enqueuedAt: Date.now() },
@@ -695,25 +726,46 @@ export const agentStatusToolDef: ToolDefinition = {
   description:
     "Check the status of a background agent launched with Agent(run_in_background=true). " +
     "Returns running / completed / failed / cancelled, plus the result text once finished. " +
-    "Omit agent_id to list all background agents in this process.",
+    "Omit agent_id to list this session's background agents (pass all=true for every session in the process). " +
+    "Results arrive automatically when an agent finishes — use this for an on-demand check, not to poll.",
   inputSchema: {
     type: "object",
     properties: {
       agent_id: {
         type: "string",
-        description: "The agent_id returned by Agent(run_in_background=true). Omit to list all.",
+        description: "The agent_id returned by Agent(run_in_background=true). Omit to list.",
+      },
+      all: {
+        type: "boolean",
+        description:
+          "When listing (no agent_id): true lists background agents from every session in this process; " +
+          "default (false) lists only the current session's.",
       },
     },
   },
 };
 
-export async function agentStatusTool(args: Record<string, unknown>): Promise<string> {
+export async function agentStatusTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const agentId = args.agent_id as string | undefined;
 
   if (!agentId) {
-    const all = asyncAgentRegistry.list();
-    if (all.length === 0) return "No background agents in this process.";
-    return all
+    const all = args.all === true;
+    // Default to the current session's agents so concurrent sessions don't
+    // leak into each other's listings; fall back to process-wide only when
+    // there's no session context or the caller explicitly asks for `all`.
+    const list =
+      all || !ctx?.sessionId
+        ? asyncAgentRegistry.list()
+        : asyncAgentRegistry.listForSession(ctx.sessionId);
+    if (list.length === 0) {
+      return all || !ctx?.sessionId
+        ? "No background agents in this process."
+        : "No background agents in this session.";
+    }
+    return list
       .map((e) => {
         const dur = ((e.finishedAt ?? Date.now()) - e.startedAt) / 1000;
         return `${e.agentId} [${e.status}] ${e.description} (${dur.toFixed(1)}s)`;
