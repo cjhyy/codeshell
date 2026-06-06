@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, type ILink, type ILinkProvider, type IBufferLine } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import { findTerminalLinks, splitPathAndLine } from "./terminalLinks";
 
 interface Props {
   /** Working directory for the shell. */
@@ -45,6 +46,12 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
     term.open(host);
     fit.fit();
 
+    // Make file paths and URLs in shell output clickable. xterm asks us, per
+    // buffer row, which ranges are links; findTerminalLinks does the matching
+    // (unit-tested in terminalLinks.test.ts). Paths open in the editor relative
+    // to the shell's cwd; URLs open in the OS browser.
+    const offLinks = registerTerminalLinks(term, () => cwdRef.current ?? undefined);
+
     // Renderer → shell.
     const offInput = term.onData((data) => {
       void window.codeshell.ptyWrite(sessionId, data);
@@ -85,6 +92,7 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
       offInput.dispose();
       offData();
       offExit();
+      offLinks.dispose();
       term.dispose();
       // Note: we intentionally do NOT ptyKill here — the shell persists across
       // panel toggles for the life of the session (killed on app quit/window
@@ -101,6 +109,55 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
       <div ref={hostRef} className="min-h-0 flex-1 overflow-hidden p-2" />
     </div>
   );
+}
+
+/**
+ * Register an xterm link provider that underlines file paths and URLs in the
+ * shell output and routes clicks. Returns a disposable.
+ *
+ * xterm calls provideLinks(y, cb) with a 1-based row in the *active* buffer; we
+ * read that row's text, run the (DOM-free, tested) matcher, and translate each
+ * match's 0-based char offset into xterm's 1-based {x,y} range. A link spanning
+ * wrapped rows is intentionally not stitched — the matcher sees one row at a
+ * time, which keeps the common single-row case correct and cheap.
+ */
+function registerTerminalLinks(
+  term: Terminal,
+  getCwd: () => string | undefined,
+): { dispose: () => void } {
+  const provider: ILinkProvider = {
+    provideLinks(y, callback) {
+      const line: IBufferLine | undefined = term.buffer.active.getLine(y - 1);
+      if (!line) {
+        callback(undefined);
+        return;
+      }
+      const text = line.translateToString(true);
+      const matches = findTerminalLinks(text);
+      if (matches.length === 0) {
+        callback(undefined);
+        return;
+      }
+      const links: ILink[] = matches.map((mt) => ({
+        // xterm ranges are 1-based and inclusive of the end cell.
+        range: {
+          start: { x: mt.start + 1, y },
+          end: { x: mt.start + mt.length, y },
+        },
+        text: mt.text,
+        activate: () => {
+          if (mt.kind === "url") {
+            void window.codeshell.openExternal(mt.text);
+          } else {
+            const { path } = splitPathAndLine(mt.text);
+            void window.codeshell.openPath(path, getCwd());
+          }
+        },
+      }));
+      callback(links);
+    },
+  };
+  return term.registerLinkProvider(provider);
 }
 
 /** Map the app's light/dark theme onto xterm colors. */

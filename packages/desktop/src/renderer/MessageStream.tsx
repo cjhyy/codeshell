@@ -83,8 +83,10 @@ export function MessageStream({
   const ref = useStickToBottom<HTMLDivElement>(
     `${messages.length}:${trailingKey ?? ""}`,
   );
+  // Zoom state carries the whole sibling-image group plus the clicked index,
+  // so the Lightbox can offer prev/next across the images in one message.
   const [zoomed, setZoomed] = useState<
-    { src: string; alt: string; name?: string } | null
+    { items: { src: string; alt: string; name?: string }[]; index: number } | null
   >(null);
 
   // Two-level fold (see messages/streamGroups.ts):
@@ -160,9 +162,12 @@ export function MessageStream({
                           title={img.name || undefined}
                           onClick={() =>
                             setZoomed({
-                              src: img.dataUrl,
-                              alt: img.name || "image",
-                              name: img.name || undefined,
+                              items: images.map((g) => ({
+                                src: g.dataUrl,
+                                alt: g.name || "image",
+                                name: g.name || undefined,
+                              })),
+                              index: i,
                             })
                           }
                         />
@@ -223,9 +228,11 @@ export function MessageStream({
       {trailing}
       {zoomed && (
         <Lightbox
-          src={zoomed.src}
-          alt={zoomed.alt}
-          name={zoomed.name}
+          items={zoomed.items}
+          index={zoomed.index}
+          src={zoomed.items[zoomed.index]?.src ?? ""}
+          alt={zoomed.items[zoomed.index]?.alt ?? "image"}
+          name={zoomed.items[zoomed.index]?.name}
           onClose={() => setZoomed(null)}
         />
       )}

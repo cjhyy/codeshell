@@ -72,6 +72,7 @@
   cursor: zoom-out;
 }
 .lightbox-shell {
+  position: relative;
   max-width: 94vw;
   max-height: 94vh;
   display: flex;
@@ -134,6 +135,38 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+.lightbox-counter {
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+/* Prev/next chevrons overlay the left/right edges of the image area. They sit
+   above the toolbar in stacking order but are vertically centred on the shell
+   so they track the image, not the toolbar. */
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+  z-index: 1;
+}
+.lightbox-nav:hover {
+  background: rgba(0, 0, 0, 0.78);
+}
+.lightbox-nav-prev {
+  left: 10px;
+}
+.lightbox-nav-next {
+  right: 10px;
 }
 /* The floating bottom-right close button is redundant with the toolbar's own
    action row (which always shows now that it carries download/reveal too), so

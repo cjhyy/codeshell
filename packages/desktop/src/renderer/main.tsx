@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import { DialogProvider } from "./ui/DialogProvider";
+import { ToastProvider } from "./ui/ToastProvider";
 import "./styles/tailwind.css"; // shadcn/Tailwind base — imported first so legacy CSS still wins on un-migrated pages
 import "./styles/index.css";
 import "./styles.css"; // legacy; removed in the final migration phase
@@ -35,7 +36,9 @@ if (params.get("popout") === "browser") {
   root.render(
     <React.StrictMode>
       <DialogProvider>
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </DialogProvider>
     </React.StrictMode>,
   );

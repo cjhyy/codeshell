@@ -28,6 +28,7 @@ import {
 } from "./markdown/remarkPathLinks";
 import { classifyPath } from "./tool-cards/attachments";
 import { Lightbox } from "./chat/Lightbox";
+import { useToast } from "./ui/ToastProvider";
 
 interface Props {
   text: string;
@@ -276,6 +277,7 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const copyTimer = useRef<number | undefined>(undefined);
+  const toast = useToast();
 
   // Clear the "copied" reset timer on unmount so it doesn't fire setCopied on
   // an unmounted component (React warning / leak).
@@ -304,6 +306,7 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
     const text = preRef.current?.textContent ?? "";
     void navigator.clipboard.writeText(text);
     setCopied(true);
+    toast({ message: "已复制代码", variant: "success" });
     window.clearTimeout(copyTimer.current);
     copyTimer.current = window.setTimeout(() => setCopied(false), 1500);
   };
