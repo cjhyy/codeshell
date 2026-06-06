@@ -46,6 +46,95 @@ function sanitize(v: string): string {
   return v.replace(/<\/?codeshell-annotations>/gi, "");
 }
 
+const ANNOTATIONS_BLOCK_RE =
+  /<codeshell-annotations>\n([\s\S]*?)\n<\/codeshell-annotations>/;
+
+/** One pinned location as parsed back out of the wire block for display. */
+export interface ParsedAnnotationEntry {
+  /** Kind label, e.g. "文件" / "浏览器" / "审查". */
+  kindLabel: string;
+  /** Short chip label, e.g. "engine.ts:42". */
+  label: string;
+  /** Locator key/value lines, in source order. */
+  locator: { key: string; value: string }[];
+  /** The user's note for this location. */
+  comment: string;
+}
+
+export interface ParsedAnnotationBlock {
+  /** Intro line shown above the entries. */
+  header: string;
+  entries: ParsedAnnotationEntry[];
+}
+
+export interface ExtractedAnnotations {
+  /** Parsed annotations block, or null when the text has none. */
+  block: ParsedAnnotationBlock | null;
+  /** The user's prose with the annotations block removed and trimmed. */
+  text: string;
+}
+
+const COMMENT_PREFIX = "评论:";
+
+/**
+ * Inverse of {@link encodeAnchorsForWire} for display: pull the
+ * `<codeshell-annotations>` block out of a sent user turn so the renderer can
+ * style it distinctly instead of showing raw XML + `[1] …` lines as prose. The
+ * user's own text (which follows the block) is returned separately.
+ *
+ * Lenient by design — a block whose interior doesn't match the expected entry
+ * shape still returns `block: null` and leaves the text untouched rather than
+ * throwing, so a hand-typed look-alike never breaks the bubble.
+ */
+export function extractAnnotations(wire: string): ExtractedAnnotations {
+  if (typeof wire !== "string" || wire.indexOf("<codeshell-annotations>") === -1) {
+    return { block: null, text: wire ?? "" };
+  }
+  const m = ANNOTATIONS_BLOCK_RE.exec(wire);
+  if (!m) return { block: null, text: wire };
+
+  const inner = m[1];
+  // Prose is whatever sits outside the block (encode prepends the block, so the
+  // user's text follows it — but splice generically to be safe).
+  const text = (wire.slice(0, m.index) + wire.slice(m.index + m[0].length)).trim();
+
+  const lines = inner.split("\n");
+  const header = lines.length > 0 ? lines[0] : "";
+  const entries: ParsedAnnotationEntry[] = [];
+  let current: ParsedAnnotationEntry | null = null;
+
+  // Entry header lines look like "[1] 文件 · engine.ts:42"; locator lines are
+  // indented "  key: value"; the comment is the indented "  评论: …" line.
+  const ENTRY_HEAD_RE = /^\[\d+\]\s+(.+?)\s+·\s+([\s\S]+)$/;
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    const head = ENTRY_HEAD_RE.exec(line.trim());
+    if (head) {
+      if (current) entries.push(current);
+      current = { kindLabel: head[1], label: head[2], locator: [], comment: "" };
+      continue;
+    }
+    if (!current) continue;
+    const body = line.trim();
+    if (body === "") continue;
+    if (body.startsWith(COMMENT_PREFIX)) {
+      current.comment = body.slice(COMMENT_PREFIX.length).trim();
+      continue;
+    }
+    const sep = body.indexOf(":");
+    if (sep > 0) {
+      current.locator.push({
+        key: body.slice(0, sep).trim(),
+        value: body.slice(sep + 1).trim(),
+      });
+    }
+  }
+  if (current) entries.push(current);
+
+  if (entries.length === 0) return { block: null, text: wire.trim() };
+  return { block: { header, entries }, text };
+}
+
 export function encodeAnchorsForWire(text: string, anchors: Anchor[]): string {
   if (anchors.length === 0) return text;
   const blocks = anchors.map((a, i) => {

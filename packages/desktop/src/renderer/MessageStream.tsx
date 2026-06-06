@@ -16,6 +16,8 @@ import { LiveActivityLine } from "./messages/LiveActivityLine";
 import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messages/streamGroups";
 import { useStickToBottom } from "./chat/stickToBottom";
 import { decodeWireForDisplay } from "./chat/attachments";
+import { extractAnnotations } from "./chat/anchors";
+import { AnnotationsBlock } from "./messages/AnnotationsBlock";
 import { formatMessageTime } from "./messages/time";
 import { Lightbox } from "./chat/Lightbox";
 import { timePhase } from "./perf";
@@ -121,14 +123,19 @@ export function MessageStream({
             // decodeWireForDisplay drops images with an empty data URL (dead
             // ephemeral screenshots), so a turn that was only such an image
             // decodes to empty text + no images.
-            const { text, images } = decodeWireForDisplay(m.text);
+            const decoded = decodeWireForDisplay(m.text);
+            const images = decoded.images;
+            // Pull the pinned-comment block (diff/browser/file anchors) out of
+            // the prose so it renders as a styled card, not raw XML.
+            const { block: annotations, text } = extractAnnotations(decoded.text);
             const askedAt = formatMessageTime(m.createdAt);
-            // Nothing to show (no prose, all images were dead) → render no
-            // bubble rather than an empty selectable box ("空白可复制内容").
-            if (!text && images.length === 0) return null;
+            // Nothing to show (no prose, no annotations, all images were dead) →
+            // render no bubble rather than an empty selectable box.
+            if (!text && !annotations && images.length === 0) return null;
             return (
               <div key={m.id} className="group flex flex-col items-end px-4 py-1.5">
                 <div className="min-w-0 max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
+                  {annotations && <AnnotationsBlock block={annotations} />}
                   {text && (
                     <CollapsibleContent>
                       <div className="whitespace-pre-wrap break-words">{text}</div>

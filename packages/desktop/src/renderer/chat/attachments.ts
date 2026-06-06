@@ -6,6 +6,8 @@
  * embeds them inline (engine-side support gated by model.supportsVision).
  */
 
+import { extractAnnotations } from "./anchors";
+
 export interface ImageAttachment {
   /** Local id for keying/removing in the UI. */
   id: string;
@@ -163,10 +165,13 @@ const WIRE_IMAGE_RE =
  */
 export function titleFromWire(wire: string): string {
   const { text, images } = decodeWireForDisplay(wire);
-  if (text) return text;
+  // Drop the pinned-comment block so a "comment only" turn doesn't title the
+  // sidebar with raw `<codeshell-annotations>` XML.
+  const prose = extractAnnotations(text).text;
+  if (prose) return prose;
   if (images.length > 1) return `[图片 ×${images.length}]`;
   if (images.length === 1) return "[图片]";
-  return text;
+  return prose;
 }
 
 /**

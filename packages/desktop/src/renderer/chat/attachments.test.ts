@@ -5,6 +5,7 @@ import {
   titleFromWire,
   type ImageAttachment,
 } from "./attachments";
+import { encodeAnchorsForWire, type Anchor } from "./anchors";
 
 function img(over: Partial<ImageAttachment> = {}): ImageAttachment {
   return {
@@ -95,5 +96,21 @@ describe("titleFromWire", () => {
   test("multiple image-only message reflects the count", () => {
     const wire = encodeAttachmentsForWire("", [img(), img()]);
     expect(titleFromWire(wire)).toBe("[图片 ×2]");
+  });
+
+  test("strips the annotations block so the title is the user's prose", () => {
+    const anchors: Anchor[] = [
+      {
+        id: "anchor-1",
+        kind: "file",
+        label: "x.ts:1",
+        locator: { 文件: "x.ts" },
+        comment: "note",
+      },
+    ];
+    const wire = encodeAnchorsForWire("修一下登录", anchors);
+    const title = titleFromWire(wire);
+    expect(title).toBe("修一下登录");
+    expect(title).not.toContain("codeshell-annotations");
   });
 });
