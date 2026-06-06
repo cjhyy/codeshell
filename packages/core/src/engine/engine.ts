@@ -1947,6 +1947,8 @@ export class Engine {
         runDream: async ({ systemPrompt, userPrompt, projectDir }) =>
           this.runDreamLoop({ systemPrompt, userPrompt, projectDir, llmClient, sessionId }),
         projectDir: cwd,
+        // settings.memories.maxCount caps memories accepted per extraction.
+        maxCount: this.readMemoriesConfig()?.maxCount,
       });
 
       await orchestrator.run(plainMessages, sessionId);
@@ -2583,6 +2585,24 @@ export class Engine {
         featureFlags?: Record<string, boolean>;
       };
       return settings.featureFlags as FeatureFlagOverrides | undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Read settings.memories ({ maxCount, maxAge, extractionModel }). Returns
+   * undefined on any error or when absent, so the memory pipeline falls back
+   * to its built-in defaults.
+   */
+  private readMemoriesConfig():
+    | { maxCount?: number; maxAge?: number; extractionModel?: string }
+    | undefined {
+    try {
+      const settings = this.getSettingsManager().get() as {
+        memories?: { maxCount?: number; maxAge?: number; extractionModel?: string };
+      };
+      return settings.memories;
     } catch {
       return undefined;
     }

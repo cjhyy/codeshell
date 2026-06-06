@@ -120,10 +120,10 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 
 基础 pipeline 与 Memory 工具已存在；剩余待办偏向产品打磨。
 
-- [ ] 记忆合并（consolidation）：相似记忆去重合并
-- [ ] 记忆注入：新会话启动时自动加载相关记忆到 prompt
-- [ ] 记忆管理命令：`/memories list`、`/memories clear`、`/memories edit`
-- [ ] 可配置：`memories.maxAge`、`memories.maxCount`、`memories.extractionModel`
+- [x] 记忆合并（consolidation）：相似记忆去重合并 —— `services/dream-consolidation.ts` + 手动 Dream 按钮(core runDreamConsolidation,见记忆 [[project_settings_hooks_memory_dream]])
+- [x] 记忆注入：新会话启动时自动加载相关记忆到 prompt —— PromptComposer.getMemoryContext() → MemoryManager.buildMemoryContext() 注入 system-reminder
+- [ ] 记忆管理命令：`/memories list`、`/memories clear`、`/memories edit`(CLI 待补)
+- [~] 可配置：`memories.maxCount` ✅(settings schema 加 `memories{maxCount,maxAge,extractionModel}`;maxCount 经 MemoryOrchestrator 透传到 parseExtractionResponse,覆盖默认 2;测试 extract-memories.test.ts)。`maxAge`/`extractionModel` 字段已留位,消费端待接
 
 ### ✅ AGENTS.md 层级指令系统
 

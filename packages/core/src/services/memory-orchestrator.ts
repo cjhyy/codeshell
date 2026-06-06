@@ -41,6 +41,11 @@ export interface MemoryOrchestratorOptions {
   projectDir?: string;
   /** Optional pre-constructed MemoryManager (avoids re-creating for every call). */
   memoryManager?: MemoryManager;
+  /**
+   * Max memories to accept per extraction pass. From settings.memories.maxCount;
+   * undefined → the built-in MAX_MEMORIES_PER_EXTRACTION default.
+   */
+  maxCount?: number;
 }
 
 export interface MemoryOrchestratorResult {
@@ -85,7 +90,7 @@ export class MemoryOrchestrator {
       );
       const llmMs = Date.now() - t;
       t = Date.now();
-      const entries = parseExtractionResponse(response);
+      const entries = parseExtractionResponse(response, this.options.maxCount);
       const parseMs = Date.now() - t;
       t = Date.now();
       for (const entry of entries) {

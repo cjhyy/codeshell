@@ -62,8 +62,20 @@ export const MAX_MEMORIES_PER_EXTRACTION = 2;
 
 /**
  * Parse extracted memories from LLM response.
+ *
+ * `maxCount` caps how many memories are accepted from one pass (the code-side
+ * guarantee of the prompt rule). Defaults to MAX_MEMORIES_PER_EXTRACTION; a
+ * caller can pass `settings.memories.maxCount` to tune it. Non-positive or
+ * absent → the default.
  */
-export function parseExtractionResponse(response: string): ExtractedMemory[] {
+export function parseExtractionResponse(
+  response: string,
+  maxCount?: number,
+): ExtractedMemory[] {
+  const cap =
+    typeof maxCount === "number" && maxCount > 0
+      ? Math.floor(maxCount)
+      : MAX_MEMORIES_PER_EXTRACTION;
   try {
     // Find JSON array in response
     const jsonMatch = response.match(/\[[\s\S]*\]/);
@@ -82,7 +94,7 @@ export function parseExtractionResponse(response: string): ExtractedMemory[] {
         ["user", "feedback", "project", "reference"].includes((m as any).type),
     );
 
-    return valid.slice(0, MAX_MEMORIES_PER_EXTRACTION);
+    return valid.slice(0, cap);
   } catch {
     return [];
   }

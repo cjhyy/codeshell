@@ -360,12 +360,12 @@
 
 ## 8. 上下文、记忆、指令与配置
 
-### 8.1 跨会话记忆系统
+### 8.1 跨会话记忆系统 🔧
 
-- [ ] 记忆合并：相似记忆去重合并。
-- [ ] 新会话启动时自动加载相关记忆到 prompt。
-- [ ] `/memories list`、`/memories clear`、`/memories edit`。
-- [ ] 配置：`memories.maxAge`、`memories.maxCount`、`memories.extractionModel`。
+- [x] 记忆合并：dream-consolidation.ts + 手动 Dream 按钮(runDreamConsolidation)。
+- [x] 新会话启动时自动加载相关记忆到 prompt：PromptComposer.getMemoryContext → buildMemoryContext 注入 system-reminder。
+- [ ] `/memories list`、`/memories clear`、`/memories edit`(CLI 待补)。
+- [~] 配置：memories.maxCount ✅(schema+orchestrator 透传到 parseExtractionResponse,测试 extract-memories.test.ts);maxAge/extractionModel 留位待接。
 
 ### 8.2 AGENTS.md 层级指令系统 ✅
 

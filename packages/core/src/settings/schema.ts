@@ -255,6 +255,20 @@ export const SettingsSchema = z
      */
     featureFlags: z.record(z.string(), z.boolean()).default({}),
 
+    /**
+     * Cross-session memory knobs. Optional — absence keeps the built-in
+     * defaults (see services/extract-memories.ts). `maxCount` caps memories
+     * accepted per extraction pass; `maxAge`/`extractionModel` are reserved
+     * for the consolidation/extraction pipeline.
+     */
+    memories: z
+      .object({
+        maxCount: z.number().int().positive().optional(),
+        maxAge: z.number().int().positive().optional(),
+        extractionModel: z.string().optional(),
+      })
+      .optional(),
+
     instructions: z
       .object({
         fileName: z.string().default("CODESHELL.md"),
