@@ -1,45 +1,341 @@
 export function mobileRemoteHtml(): string {
   return `<!doctype html>
-<html lang="en">
+<html lang="zh">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>CodeShell Mobile Remote</title>
   <style>
-    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: #0b0f17; color: #e5e7eb; }
-    main { max-width: 720px; margin: 0 auto; padding: 20px; }
-    textarea { width: 100%; min-height: 96px; border-radius: 12px; border: 1px solid #374151; background: #111827; color: #fff; padding: 12px; box-sizing: border-box; }
-    button { border: 0; border-radius: 999px; background: #60a5fa; color: #06111f; padding: 10px 16px; font-weight: 700; }
-    pre { white-space: pre-wrap; background: #111827; border-radius: 12px; padding: 12px; }
-    .danger { color: #fca5a5; font-weight: 700; }
+    :root {
+      --bg: #0b0f17; --panel: #111827; --panel2: #0e1420; --border: #243042;
+      --fg: #e5e7eb; --muted: #9aa6b6; --accent: #60a5fa; --accent-ink: #06111f;
+      --ok: #4ade80; --warn: #fbbf24; --err: #f87171; --danger: #fca5a5;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      background: var(--bg); color: var(--fg);
+      display: flex; flex-direction: column; height: 100dvh;
+    }
+    /* top bar */
+    header {
+      display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+      border-bottom: 1px solid var(--border); background: var(--panel2);
+      padding-top: max(10px, env(safe-area-inset-top));
+    }
+    header .title { font-weight: 700; font-size: 15px; }
+    header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    header .dot.ok { background: var(--ok); }
+    header .dot.run { background: var(--warn); animation: pulse 1s infinite; }
+    header .dot.err { background: var(--err); }
+    @keyframes pulse { 50% { opacity: .35; } }
+    header .spacer { flex: 1; }
+    header .meta { font-size: 11px; color: var(--muted); }
+    .iconbtn {
+      border: 1px solid var(--border); background: transparent; color: var(--muted);
+      border-radius: 8px; padding: 5px 9px; font-size: 12px;
+    }
+    /* session bar */
+    .sessionbar {
+      display: flex; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border);
+      align-items: center; font-size: 12px; color: var(--muted); overflow-x: auto;
+    }
+    .sessionbar .sid { color: var(--fg); font-family: ui-monospace, monospace; }
+    /* feed */
+    main { flex: 1; overflow-y: auto; padding: 12px 12px 4px; -webkit-overflow-scrolling: touch; }
+    .row { margin: 8px 0; display: flex; }
+    .row.user { justify-content: flex-end; }
+    .bubble {
+      max-width: 86%; padding: 9px 12px; border-radius: 14px; font-size: 14px;
+      line-height: 1.45; white-space: pre-wrap; word-break: break-word;
+    }
+    .user .bubble { background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+    .assistant .bubble { background: var(--panel); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .card {
+      max-width: 100%; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px 12px; font-size: 13px;
+    }
+    .card .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .card .mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+    .tool .k { color: var(--accent); }
+    .sys { color: var(--muted); font-size: 12px; font-style: italic; }
+    .err .k, .err .mono { color: var(--err); }
+    /* approval card */
+    .approval { border-color: var(--warn); }
+    .approval.high { border-color: var(--err); background: #1a0f12; }
+    .approval .risk { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .approval .risk.low { background: #14321f; color: var(--ok); }
+    .approval .risk.medium { background: #3a2e10; color: var(--warn); }
+    .approval .risk.high { background: #3a1414; color: var(--err); }
+    .approval .actions { display: flex; gap: 8px; margin-top: 10px; }
+    .approval button { flex: 1; padding: 9px; border-radius: 10px; border: 0; font-weight: 700; }
+    .approval .approve { background: var(--accent); color: var(--accent-ink); }
+    .approval .reject { background: transparent; border: 1px solid var(--border); color: var(--fg); }
+    .approval.high .approve { background: var(--err); color: #1a0a0a; }
+    .approval .resolved { margin-top: 8px; color: var(--muted); font-size: 12px; }
+    /* job card */
+    .job { border-color: var(--accent); }
+    .job .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #14233a; color: var(--accent); }
+    .job .badge.danger { background: #3a1414; color: var(--danger); }
+    .job pre { max-height: 200px; overflow: auto; background: var(--panel2); border-radius: 8px; padding: 8px; margin: 8px 0 0; font-size: 11px; }
+    .job .stop { margin-top: 8px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--fg); font-size: 12px; }
+    /* composer */
+    footer {
+      border-top: 1px solid var(--border); background: var(--panel2);
+      padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+    footer .hint { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+    footer .inputrow { display: flex; gap: 8px; align-items: flex-end; }
+    textarea {
+      flex: 1; min-height: 44px; max-height: 140px; resize: none;
+      border-radius: 12px; border: 1px solid var(--border); background: var(--panel);
+      color: var(--fg); padding: 11px 12px; font-size: 14px; font-family: inherit;
+    }
+    footer .send { border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink); padding: 0 16px; height: 44px; font-weight: 700; }
+    footer .send:disabled { opacity: .4; }
+    footer .stop { border: 1px solid var(--err); color: var(--err); background: transparent; border-radius: 12px; padding: 0 14px; height: 44px; font-weight: 700; }
+    .center { text-align: center; color: var(--muted); padding: 24px 12px; font-size: 13px; }
   </style>
 </head>
 <body>
-  <main>
-    <h1>CodeShell Mobile Remote</h1>
-    <p id="status">Connecting...</p>
-    <textarea id="input" placeholder="Send a task, /cc task, /cc --safe task, /cc --dangerous task, or /codex task"></textarea>
-    <p><button id="send" disabled>Send</button></p>
-    <pre id="log"></pre>
+  <header>
+    <span id="dot" class="dot"></span>
+    <span class="title">CodeShell</span>
+    <span id="runstate" class="meta"></span>
+    <span class="spacer"></span>
+    <span id="devname" class="meta"></span>
+    <button id="logout" class="iconbtn" style="display:none">退出</button>
+  </header>
+
+  <div class="sessionbar">
+    <span>会话:</span><span id="sid" class="sid">—</span>
+    <span class="spacer" style="flex:1"></span>
+    <button id="newsession" class="iconbtn">新建任务</button>
+  </div>
+
+  <main id="feed">
+    <div id="empty" class="center">正在连接…</div>
   </main>
+
+  <footer>
+    <div class="hint">普通任务直接发;或用 /cc、/cc --safe、/cc --dangerous、/codex 调度外部 agent</div>
+    <div class="inputrow">
+      <textarea id="input" rows="1" placeholder="给 CodeShell 发个任务…"></textarea>
+      <button id="stop" class="stop" style="display:none">停止</button>
+      <button id="send" class="send" disabled>发送</button>
+    </div>
+  </footer>
+
   <script>
-    var log = document.getElementById('log');
-    var status = document.getElementById('status');
+    var feed = document.getElementById('feed');
+    var empty = document.getElementById('empty');
+    var dot = document.getElementById('dot');
+    var runstate = document.getElementById('runstate');
+    var devname = document.getElementById('devname');
+    var logoutBtn = document.getElementById('logout');
+    var sidEl = document.getElementById('sid');
+    var newSessionBtn = document.getElementById('newsession');
     var input = document.getElementById('input');
-    var send = document.getElementById('send');
+    var sendBtn = document.getElementById('send');
+    var stopBtn = document.getElementById('stop');
 
-    function setStatus(t) { status.textContent = t; }
-    function append(line) { log.textContent += line + '\\n'; }
+    var authed = false;
+    var currentSession = null;
+    var running = false;
+    // streaming assistant bubble currently being appended to (by session)
+    var liveAssistant = null;
+    var toolEls = {};   // toolCallId -> element
+    var jobEls = {};     // jobId -> { card, pre }
 
-    // Device identity persists across reloads so a paired phone reconnects
-    // without re-scanning. The secret is a random per-device shared key sent
-    // both at pairing time (stored server-side) and at auth time (compared).
+    function hideEmpty() { if (empty) { empty.style.display = 'none'; } }
+    function scroll() { feed.scrollTop = feed.scrollHeight; }
+    function setRun(state) {
+      running = (state === 'running');
+      dot.className = 'dot ' + (state === 'running' ? 'run' : state === 'error' ? 'err' : authed ? 'ok' : '');
+      runstate.textContent =
+        state === 'running' ? '运行中…' :
+        state === 'waiting' ? '等待审批' :
+        state === 'completed' ? '已完成' :
+        state === 'error' ? '出错' : (authed ? '已连接' : '');
+      stopBtn.style.display = running ? '' : 'none';
+    }
+
+    function addRow(role, cls) {
+      hideEmpty();
+      var row = document.createElement('div');
+      row.className = 'row ' + role;
+      var el = document.createElement('div');
+      el.className = cls || (role === 'user' ? 'bubble' : 'bubble');
+      row.appendChild(el);
+      feed.appendChild(row);
+      scroll();
+      return el;
+    }
+
+    function userMsg(text) { addRow('user', 'bubble').textContent = text; }
+
+    function assistantChunk(text) {
+      if (!liveAssistant) liveAssistant = addRow('assistant', 'bubble');
+      liveAssistant.textContent += text;
+      scroll();
+    }
+    function endAssistant() { liveAssistant = null; }
+
+    function toolStart(id, name, args) {
+      var el = addRow('assistant', 'card tool');
+      var summary = '';
+      var keys = ['command', 'file_path', 'path', 'url', 'pattern', 'query'];
+      for (var i = 0; i < keys.length; i++) {
+        if (args && typeof args[keys[i]] === 'string') { summary = args[keys[i]]; break; }
+      }
+      el.innerHTML = '<div class="k">工具 · ' + esc(name) + '</div>';
+      if (summary) { var m = document.createElement('div'); m.className = 'mono'; m.textContent = summary; el.appendChild(m); }
+      toolEls[id] = el;
+      scroll();
+    }
+    function toolSummary(text) {
+      var el = addRow('assistant', 'card tool');
+      el.innerHTML = '<div class="k">工具摘要</div><div class="mono"></div>';
+      el.querySelector('.mono').textContent = text;
+      scroll();
+    }
+    function sysErr(text) {
+      var el = addRow('assistant', 'card err');
+      el.innerHTML = '<div class="k">错误</div><div class="mono"></div>';
+      el.querySelector('.mono').textContent = text;
+      scroll();
+    }
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;' }[c]; }); }
+
+    // ── approval card ──────────────────────────────────────────────
+    function approvalCard(requestId, info) {
+      hideEmpty();
+      var risk = info.risk || 'medium';
+      var row = document.createElement('div');
+      row.className = 'row assistant';
+      var el = document.createElement('div');
+      el.className = 'card approval ' + (risk === 'high' ? 'high' : '');
+      el.innerHTML =
+        '<div><span class="risk ' + risk + '">' + (risk === 'high' ? '⚠ 高风险' : risk === 'medium' ? '中风险' : '低风险') + '</span></div>' +
+        '<div style="margin-top:8px;font-weight:600">' + esc(info.title) + '</div>' +
+        '<div class="mono" style="margin-top:6px">' + esc(info.body) + '</div>' +
+        '<div class="actions"><button class="approve">批准</button><button class="reject">拒绝</button></div>';
+      row.appendChild(el);
+      feed.appendChild(row);
+      scroll();
+      function resolve(decision) {
+        send({ type: 'approval.respond', approvalId: requestId, decision: decision, sessionId: currentSession });
+        el.querySelector('.actions').remove();
+        var r = document.createElement('div'); r.className = 'resolved';
+        r.textContent = decision === 'approve' ? '已批准' : '已拒绝';
+        el.appendChild(r);
+        setRun('running');
+      }
+      el.querySelector('.approve').onclick = function () { resolve('approve'); };
+      el.querySelector('.reject').onclick = function () { resolve('reject'); };
+    }
+
+    // ── external agent job card ────────────────────────────────────
+    function jobEvent(ev) {
+      var job = ev.job || {};
+      var id = ev.jobId || job.id;
+      if (!id) return;
+      var entry = jobEls[id];
+      if (!entry) {
+        hideEmpty();
+        var row = document.createElement('div');
+        row.className = 'row assistant';
+        var el = document.createElement('div');
+        el.className = 'card job';
+        var danger = job.mode === 'dangerous';
+        el.innerHTML =
+          '<div><span class="badge ' + (danger ? 'danger' : '') + '">' + (job.kind === 'codex' ? 'Codex' : 'Claude Code') + (danger ? ' · dangerous' : '') + '</span></div>' +
+          '<div class="k" style="margin-top:6px">' + esc(job.cwd || '') + '</div>' +
+          '<pre></pre>' +
+          '<button class="stop">停止 job</button>';
+        row.appendChild(el);
+        feed.appendChild(row);
+        entry = jobEls[id] = { card: el, pre: el.querySelector('pre') };
+        el.querySelector('.stop').onclick = function () { send({ type: 'job.stop', jobId: id }); };
+        scroll();
+      }
+      if (ev.type === 'job.output' && ev.text) {
+        entry.pre.textContent += ev.text;
+        if (entry.pre.textContent.length > 8000) entry.pre.textContent = entry.pre.textContent.slice(-8000);
+      }
+      if (ev.type === 'job.completed') { entry.pre.textContent += '\\n[job 完成]'; entry.card.querySelector('.stop').remove(); }
+      if (ev.type === 'job.failed') { entry.pre.textContent += '\\n[job 失败: ' + esc(ev.error || '') + ']'; }
+      scroll();
+    }
+
+    // ── message router ─────────────────────────────────────────────
+    function handle(raw) {
+      var msg;
+      try { msg = JSON.parse(raw); } catch (e) { return; }
+
+      // a) main-originated server events: { type: ... }
+      if (msg.type === 'pair.ok') {
+        localStorage.setItem('cs.deviceId', msg.device.id);
+        send({ type: 'auth.device', deviceId: msg.device.id, secretHash: getSecret() });
+        history.replaceState(null, '', location.pathname);
+        return;
+      }
+      if (msg.type === 'auth.ok') {
+        authed = true; sendBtn.disabled = false; logoutBtn.style.display = '';
+        devname.textContent = (msg.device && msg.device.name) || '设备';
+        setRun('idle'); if (empty) empty.textContent = '已连接,发个任务试试';
+        return;
+      }
+      if (msg.type === 'auth.failed' || msg.type === 'pair.failed') {
+        authed = false; sendBtn.disabled = true; setRun('');
+        if (empty) { empty.style.display = ''; empty.textContent = msg.message || '认证失败'; }
+        if (msg.type === 'auth.failed') localStorage.removeItem('cs.deviceId');
+        return;
+      }
+      if (msg.type === 'chat.accepted') { if (msg.sessionId) { currentSession = msg.sessionId; sidEl.textContent = msg.sessionId; } return; }
+      if (msg.type === 'approval.request') { setRun('waiting'); approvalCard(msg.approvalId, { title: msg.title, body: msg.body, risk: msg.risk }); return; }
+      if (msg.type === 'error') { sysErr(msg.message || '错误'); return; }
+
+      // b) external agent job channel
+      if (msg.channel === 'externalAgent' && msg.event) { jobEvent(msg.event); return; }
+
+      // c) mirrored worker→renderer JSON-RPC lines
+      if (msg.method === 'agent/streamEvent' && msg.params && msg.params.event) {
+        var ev = msg.params.event;
+        if (msg.params.sessionId && msg.params.sessionId !== currentSession) {
+          currentSession = msg.params.sessionId; sidEl.textContent = currentSession;
+        }
+        if (ev.type === 'text_delta') { setRun('running'); assistantChunk(ev.text || ''); }
+        else if (ev.type === 'assistant_message') { endAssistant(); }
+        else if (ev.type === 'tool_use_start' && ev.toolCall) { toolStart(ev.toolCall.id, ev.toolCall.toolName, ev.toolCall.args); }
+        else if (ev.type === 'tool_summary') { toolSummary(ev.summary || ''); }
+        else if (ev.type === 'turn_complete') { endAssistant(); setRun(ev.reason === 'completed' ? 'completed' : 'idle'); }
+        else if (ev.type === 'error') { endAssistant(); setRun('error'); sysErr(ev.error || '运行出错'); }
+        return;
+      }
+      if (msg.method === 'agent/approvalRequest' && msg.params && msg.params.request) {
+        var rq = msg.params.request;
+        setRun('waiting');
+        var summary = '';
+        var ks = ['command', 'file_path', 'path', 'url', 'pattern', 'query'];
+        for (var i = 0; i < ks.length; i++) { if (rq.args && typeof rq.args[ks[i]] === 'string') { summary = rq.args[ks[i]]; break; } }
+        approvalCard(msg.params.requestId, {
+          title: (rq.toolName || '操作') + (rq.description ? ' — ' + rq.description : ''),
+          body: summary || JSON.stringify(rq.args || {}),
+          risk: rq.riskLevel || 'medium',
+        });
+        return;
+      }
+    }
+
+    // ── identity / pairing ─────────────────────────────────────────
     function getSecret() {
       var s = localStorage.getItem('cs.deviceSecret');
       if (!s) {
-        var bytes = new Uint8Array(32);
-        crypto.getRandomValues(bytes);
-        s = Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        var b = new Uint8Array(32); crypto.getRandomValues(b);
+        s = Array.from(b).map(function (x) { return x.toString(16).padStart(2, '0'); }).join('');
         localStorage.setItem('cs.deviceSecret', s);
       }
       return s;
@@ -47,64 +343,58 @@ export function mobileRemoteHtml(): string {
     function getDeviceId() { return localStorage.getItem('cs.deviceId') || ''; }
     function getDeviceName() {
       var n = localStorage.getItem('cs.deviceName');
-      if (!n) { n = (navigator.platform || 'Phone') + ' browser'; localStorage.setItem('cs.deviceName', n); }
+      if (!n) { n = (navigator.platform || 'Phone') + ' 浏览器'; localStorage.setItem('cs.deviceName', n); }
       return n;
     }
 
     var pairingToken = new URLSearchParams(location.search).get('pairing');
-    var authed = false;
-    var wsUrl = location.origin.replace(/^http/, 'ws') + '/ws';
-    var ws = new WebSocket(wsUrl);
+    var ws, wsReady = false;
+    function send(obj) { if (ws && wsReady) ws.send(JSON.stringify(obj)); }
 
-    ws.onopen = function () {
-      setStatus('Connected — authenticating...');
-      if (pairingToken) {
-        // First time on this phone: complete pairing, then auth follows on pair.ok.
-        ws.send(JSON.stringify({ type: 'pair.complete', token: pairingToken, name: getDeviceName(), secretHash: getSecret() }));
-      } else if (getDeviceId()) {
-        ws.send(JSON.stringify({ type: 'auth.device', deviceId: getDeviceId(), secretHash: getSecret() }));
-      } else {
-        setStatus('Not paired — open the pairing link from CodeShell settings.');
-      }
+    function connect() {
+      ws = new WebSocket(location.origin.replace(/^http/, 'ws') + '/ws');
+      ws.onopen = function () {
+        wsReady = true;
+        if (empty) empty.textContent = '认证中…';
+        if (pairingToken) {
+          send({ type: 'pair.complete', token: pairingToken, name: getDeviceName(), secretHash: getSecret() });
+        } else if (getDeviceId()) {
+          send({ type: 'auth.device', deviceId: getDeviceId(), secretHash: getSecret() });
+        } else if (empty) {
+          empty.textContent = '未配对 — 请从 CodeShell 设置里扫码打开配对链接';
+        }
+      };
+      ws.onmessage = function (e) { handle(e.data); };
+      ws.onclose = function () {
+        wsReady = false; authed = false; sendBtn.disabled = true; setRun('');
+        if (empty) { empty.style.display = ''; empty.textContent = '连接断开,3 秒后重连…'; }
+        setTimeout(connect, 3000);
+      };
+    }
+
+    // ── composer ───────────────────────────────────────────────────
+    function autosize() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
+    input.addEventListener('input', autosize);
+    function doSend() {
+      if (!authed) return;
+      var t = input.value.trim(); if (!t) return;
+      userMsg(t);
+      send({ type: 'chat.send', text: t, sessionId: currentSession || undefined });
+      input.value = ''; autosize(); setRun('running');
+    }
+    sendBtn.onclick = doSend;
+    stopBtn.onclick = function () { send({ type: 'run.stop', sessionId: currentSession || undefined }); setRun('idle'); };
+    newSessionBtn.onclick = function () {
+      send({ type: 'session.create' });
+      feed.innerHTML = ''; liveAssistant = null; toolEls = {}; jobEls = {};
+      hideEmpty();
+    };
+    logoutBtn.onclick = function () {
+      localStorage.removeItem('cs.deviceId'); localStorage.removeItem('cs.deviceSecret');
+      location.reload();
     };
 
-    ws.onmessage = function (event) {
-      var msg;
-      try { msg = JSON.parse(event.data); } catch (e) { append(event.data); return; }
-      if (msg.type === 'pair.ok') {
-        // Persist the assigned device id, then authenticate this socket.
-        localStorage.setItem('cs.deviceId', msg.device.id);
-        ws.send(JSON.stringify({ type: 'auth.device', deviceId: msg.device.id, secretHash: getSecret() }));
-        // Drop the one-use pairing token from the URL so a reload re-auths cleanly.
-        history.replaceState(null, '', location.pathname);
-        return;
-      }
-      if (msg.type === 'auth.ok') {
-        authed = true;
-        send.disabled = false;
-        setStatus('Authenticated as ' + (msg.device && msg.device.name ? msg.device.name : 'device'));
-        return;
-      }
-      if (msg.type === 'auth.failed' || msg.type === 'pair.failed') {
-        setStatus(msg.message || 'Auth failed');
-        // A stale device id (e.g. revoked) should not loop — clear it.
-        if (msg.type === 'auth.failed') localStorage.removeItem('cs.deviceId');
-        return;
-      }
-      // Any other server event (session stream, approvals, job output) → log.
-      append(event.data);
-    };
-
-    ws.onclose = function () { authed = false; send.disabled = true; setStatus('Disconnected'); };
-
-    send.onclick = function () {
-      if (!authed) { setStatus('Not authenticated yet'); return; }
-      var text = input.value.trim();
-      if (!text) return;
-      ws.send(JSON.stringify({ type: 'chat.send', text: text }));
-      append('> ' + text);
-      input.value = '';
-    };
+    connect();
   </script>
 </body>
 </html>`;

@@ -24,7 +24,9 @@ export type MobileClientEvent =
   | { type: "auth.device"; deviceId: string; secretHash: string }
   | { type: "pair.complete"; token: string; name: string; secretHash: string }
   | { type: "chat.send"; text: string; sessionId?: string }
-  | { type: "run.stop"; sessionId: string }
+  | { type: "session.select"; sessionId: string }
+  | { type: "session.create" }
+  | { type: "run.stop"; sessionId?: string }
   | { type: "approval.respond"; approvalId: string; decision: "approve" | "reject"; sessionId?: string }
   | { type: "job.stop"; jobId: string };
 

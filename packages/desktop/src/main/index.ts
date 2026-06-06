@@ -178,6 +178,23 @@ const externalAgentJobs = new ExternalAgentJobManager(
 );
 
 /**
+ * A stable session id for the mobile client when it isn't following a specific
+ * desktop session. The worker's multi-session path REQUIRES a non-empty
+ * sessionId on agent/run (server.ts: "sessionId is required") — sending
+ * undefined is exactly the "session id 没有" error. We lazily mint one and
+ * reuse it so the phone's turns land in one coherent session. A phone that
+ * explicitly selects a session (session.select) overrides this.
+ */
+let mobileSessionId: string | undefined;
+let mobileSelectedSessionId: string | undefined;
+function ensureMobileSessionId(): string {
+  if (!mobileSessionId) {
+    mobileSessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  return mobileSessionId;
+}
+
+/**
  * Route an authenticated mobile client event into the SAME run/permission
  * path the renderer uses, via AgentBridge.injectWorkerMessage. There is no
  * second run loop: chat/approval/cancel become the identical JSON-RPC lines
@@ -187,8 +204,23 @@ const externalAgentJobs = new ExternalAgentJobManager(
 async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> {
   if (!bridge) return;
   const ctx = bridge.getLastRunContext();
+  // session selection priority: explicit per-event → phone-selected → desktop's
+  // current run → a stable minted mobile session (never undefined for run).
+  const resolveSessionId = (explicit?: string): string =>
+    explicit ?? mobileSelectedSessionId ?? ctx.sessionId ?? ensureMobileSessionId();
+  if (event.type === "session.select") {
+    mobileSelectedSessionId = event.sessionId;
+    return;
+  }
+  if (event.type === "session.create") {
+    // Mint a fresh mobile session and make it the active selection.
+    mobileSessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    mobileSelectedSessionId = mobileSessionId;
+    mobileRemote.broadcast({ type: "chat.accepted", sessionId: mobileSessionId });
+    return;
+  }
   if (event.type === "chat.send") {
-    const sessionId = event.sessionId ?? ctx.sessionId;
+    const sessionId = resolveSessionId(event.sessionId);
     const cwd = ctx.cwd ?? process.cwd();
     // /cc and /codex launch external-agent managed jobs; everything else is a
     // normal CodeShell turn routed through the existing worker run path.
@@ -202,9 +234,12 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
         jsonrpc: "2.0",
         id: `mobile-run-${Date.now()}`,
         method: "agent/run",
-        params: { task: event.text, cwd: ctx.cwd, sessionId },
+        params: { task: event.text, cwd, sessionId },
       }),
     );
+    // Tell the phone which session this turn landed in (so it can label the
+    // conversation and route follow-up approvals/stops correctly).
+    mobileRemote.broadcast({ type: "chat.accepted", sessionId });
     return;
   }
   if (event.type === "job.stop") {
@@ -218,7 +253,7 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
         id: `mobile-approve-${Date.now()}`,
         method: "agent/approve",
         params: {
-          sessionId: event.sessionId ?? ctx.sessionId,
+          sessionId: resolveSessionId(event.sessionId),
           requestId: event.approvalId,
           decision:
             event.decision === "approve" ? { approved: true } : { approved: false },
@@ -233,7 +268,7 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
         jsonrpc: "2.0",
         id: `mobile-cancel-${Date.now()}`,
         method: "agent/cancel",
-        params: { sessionId: event.sessionId },
+        params: { sessionId: resolveSessionId(event.sessionId) },
       }),
     );
     return;
