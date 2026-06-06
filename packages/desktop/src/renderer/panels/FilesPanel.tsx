@@ -140,7 +140,14 @@ function DirNode({
               <button
                 type="button"
                 style={pad}
-                draggable={false}
+                // Folders are draggable too — dropping one inserts an `@dir`
+                // reference so the model knows to look at that directory (TODO
+                // 2.1). Folders can't be image attachments, only path refs.
+                draggable={!!onAttachImage}
+                onDragStart={(ev) => {
+                  ev.dataTransfer.setData(CODESHELL_PATH_DND_MIME, e.path);
+                  ev.dataTransfer.effectAllowed = "copy";
+                }}
                 className="flex w-full items-center gap-1 py-1 pr-2 text-left text-sm text-foreground hover:bg-accent"
                 onClick={() =>
                   setOpen((prev) => {
