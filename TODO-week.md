@@ -449,7 +449,7 @@ instruction-scanner.ts 早已实现,补测试锁定。
 - [ ] 支持 YAML 配置。
 - [ ] 生成配置 JSON Schema，支持 IDE 自动补全。
 - [x] `/config` 命令交互式编辑配置。✅ 核实 TUI 已有 `/config [show | get <key> | set <key> <value>]`(core-commands.ts,走 SettingsManager 读写,点号路径)。
-- [ ] 配置迁移机制：版本升级时自动迁移旧配置。
+- [x] 配置迁移机制：版本升级时自动迁移旧配置。✅ `settings/migrate-config.ts`:版本化迁移框架——`configVersion` 字段 + 有序 `MigrationStep[]{from,to,migrate}`,`migrateConfig` 按当前版本顺序应用到 CURRENT(纯函数,不改入参,支持从中间版本续跑、空列表只盖版本号)。导出供使用。注:**框架就位但 MIGRATIONS 现为空**(schema 仍 v0,无破坏性变更)——故**暂不接入 manager 写回**(否则每次 load 都给文件盖 configVersion:0,纯 churn 无收益);首个破坏性 schema 变更落地时 append 一个 step + bump 版本 + 接 manager 即可。已有的 `migrateModels`(字段级 legacy models[] 迁移)继续独立工作。测试 migrate-config.test.ts(9 例,含注入样例迁移链验证顺序/续跑/no-op/不可变)。
 
 ---
 

@@ -406,6 +406,12 @@ export { logger } from "./logging/logger.js";
 // ─── Settings ────────────────────────────────────────────────────
 
 export { SettingsManager, type SettingsScope } from "./settings/manager.js";
+export {
+  migrateConfig,
+  configVersionOf,
+  CURRENT_CONFIG_VERSION,
+  type MigrationStep,
+} from "./settings/migrate-config.js";
 export { SettingsSchema, validateSettings } from "./settings/schema.js";
 export { personalizationFrom, type PersonalizationConfig } from "./settings/personalization.js";
 
