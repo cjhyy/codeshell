@@ -270,9 +270,10 @@ export const coreCommands: SlashCommand[] = [
 
   {
     name: "/memory",
+    aliases: ["/memories"],
     group: "context",
     description: "Manage persistent memories",
-    usage: "/memory [list | add <name> <content> | delete <name> | open]",
+    usage: "/memory [list | add <name> <content> | delete <name> | edit <name> | clear | open]",
     execute: async (arg, ctx) => {
       const { MemoryManager } = await import("@cjhyy/code-shell-core");
       const mm = new MemoryManager(ctx.cwd);
@@ -317,12 +318,38 @@ export const coreCommands: SlashCommand[] = [
           }
           const deleted = mm.delete(name);
           ctx.addStatus(deleted ? `Memory "${name}" deleted.` : `Memory "${name}" not found.`);
+        } else if (sub === "clear") {
+          // Soft-delete every memory in this scope (files move to memory-trash).
+          const entries = mm.loadAll();
+          if (entries.length === 0) {
+            ctx.addStatus("No memories to clear.");
+            return;
+          }
+          let n = 0;
+          for (const e of entries) if (mm.delete(e.fileName)) n++;
+          ctx.addStatus(`Cleared ${n} memor${n === 1 ? "y" : "ies"} (moved to memory-trash).`);
+        } else if (sub === "edit") {
+          const name = parts[1];
+          if (!name) {
+            ctx.addStatus("Usage: /memory edit <name>");
+            return;
+          }
+          const entry = mm.loadAll().find((e) => e.name === name || e.fileName === name);
+          if (!entry) {
+            ctx.addStatus(`Memory "${name}" not found.`);
+            return;
+          }
+          const file = `${mm.getMemoryDir()}/${entry.fileName}`;
+          const editor = process.env.CODE_SHELL_EDITOR || process.env.EDITOR || process.env.VISUAL || "vi";
+          ctx.addStatus(`Edit memory "${name}":\n  ${editor} ${file}`);
         } else if (sub === "open") {
           const dir = mm.getMemoryDir();
           const editor = process.env.EDITOR || process.env.VISUAL || "vi";
           ctx.addStatus(`Memory directory: ${dir}\nOpen with: ${editor} ${dir}`);
         } else {
-          ctx.addStatus("Usage: /memory [list | add <name> <content> | delete <name> | open]");
+          ctx.addStatus(
+            "Usage: /memory [list | add <name> <content> | delete <name> | edit <name> | clear | open]",
+          );
         }
       } catch (err) {
         ctx.addStatus(`Memory error: ${(err as Error).message}`);
