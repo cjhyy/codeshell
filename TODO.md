@@ -48,16 +48,6 @@ UI/设计活(2.x 面板/markdown/图片/手动停止样式)建议有人盯着做
 - [ ] **原工具可继续运行**：用户批准路径后，Read/Glob/Grep 等原工具应能继续执行，避免被迫绕到 Bash 导致策略不一致
 - [ ] 审计路径授权：记录批准来源、范围、过期策略与被拒原因
 
-### ⬜ Guardian 子代理审批
-
-用轻量 guardian agent 辅助判断低/中风险操作，减少用户打断；高风险操作仍强制人工确认。
-
-- [ ] 实现 `GuardianAgent`：接收操作描述，返回 approve/deny/escalate
-- [ ] 配置项：`approvals.reviewer: "guardian_subagent" | "user" | "auto"`
-- [ ] Guardian 使用轻量模型降低成本
-- [ ] 高风险操作仍强制用户确认：删除、force push、外部发布、共享状态修改等
-- [ ] Guardian 判断日志可审计
-
 ---
 
 ## P1 — 核心运行可靠性
