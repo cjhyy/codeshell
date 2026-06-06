@@ -125,7 +125,13 @@ export class AutoApprovalBackend implements ApprovalBackend {
  * the next time the user opens the project.
  */
 export class InteractiveApprovalBackend implements ApprovalBackend {
-  private sessionRules = new Map<string, "allow" | "deny">();
+  // Session-scoped grants, keyed on the OPERATION (tool + narrowed argsPattern
+  // via buildProjectRule), NOT just the tool name. Approving `git status` for
+  // the session must not auto-allow `rm -rf /` (both are "Bash"). Allow and
+  // deny are tracked separately so a one-off deny of `curl evil` never blocks
+  // an unrelated `git status`. (TODO 5.1 会话级权限缓存.)
+  private sessionAllowRules: PermissionRule[] = [];
+  private sessionDenyRules: PermissionRule[] = [];
   private promptFn: ((request: ApprovalRequest) => Promise<ApprovalResult>) | null = null;
   private cwd: string | null = null;
   // Project rules saved during this session. Kept in-memory (not re-read from
@@ -167,10 +173,14 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
   }
 
   async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
-    // Check session rules first
-    const toolRule = this.sessionRules.get(req.toolName);
-    if (toolRule === "allow") return { approved: true };
-    if (toolRule === "deny") return { approved: false };
+    // Check session rules first — operation-scoped (see field doc). Deny wins
+    // over allow if both somehow match (conservative).
+    if (this.sessionDenyRules.some((r) => ruleMatches(r, req.toolName, req.args))) {
+      return { approved: false };
+    }
+    if (this.sessionAllowRules.some((r) => ruleMatches(r, req.toolName, req.args))) {
+      return { approved: true };
+    }
 
     if (!this.promptFn) {
       return { approved: false, reason: "interactive approval backend has no prompt function" };
@@ -180,7 +190,22 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     const scope = result.scope ?? (result.always ? "session" : "once");
 
     if (scope === "session" && result.always) {
-      this.sessionRules.set(req.toolName, result.approved ? "allow" : "deny");
+      // Narrow to the operation (Bash → head command) so the session grant is
+      // scoped, not tool-wide. A rule with no argsPattern (non-Bash tools)
+      // keeps the prior tool-granularity behavior for those tools.
+      const rule = buildProjectRule(req.toolName, req.args);
+      if (rule) {
+        const target = result.approved ? this.sessionAllowRules : this.sessionDenyRules;
+        const dup = target.some(
+          (r) =>
+            r.tool === rule.tool &&
+            JSON.stringify(r.argsPattern) === JSON.stringify(rule.argsPattern),
+        );
+        if (!dup) {
+          // buildProjectRule always returns decision:"allow"; flip for deny.
+          target.push(result.approved ? rule : { ...rule, decision: "deny" });
+        }
+      }
     } else if (scope === "project" && result.approved) {
       // Project-scope: persist a PermissionRule to settings.local.json.
       // We only persist allow rules — denies stay session-only because a
@@ -217,9 +242,17 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
           console.error("Failed to persist project permission rule:", (err as Error).message);
         }
       }
-      // Also seed session map so the rest of this REPL session benefits
-      // even if the classifier path doesn't pick the rule up immediately.
-      this.sessionRules.set(req.toolName, "allow");
+      // Also seed the session allow list (operation-scoped) so the rest of
+      // this REPL session benefits even if the classifier path doesn't pick
+      // the rule up immediately.
+      if (rule) {
+        const dup = this.sessionAllowRules.some(
+          (r) =>
+            r.tool === rule.tool &&
+            JSON.stringify(r.argsPattern) === JSON.stringify(rule.argsPattern),
+        );
+        if (!dup) this.sessionAllowRules.push(rule);
+      }
     }
 
     return result;
@@ -253,6 +286,42 @@ function buildProjectRule(toolName: string, args: Record<string, unknown>): Perm
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Does `rule` match this tool call? Shared by the {@link PermissionClassifier}
+ * (project/user rules) and {@link InteractiveApprovalBackend}'s session cache
+ * so the two never diverge on what "the same operation" means. Handles the
+ * JSON round-trip where a persisted RegExp comes back as a string.
+ */
+export function ruleMatches(
+  rule: PermissionRule,
+  toolName: string,
+  args: Record<string, unknown>,
+): boolean {
+  if (rule.tool !== toolName && rule.tool !== "*") return false;
+  if (!rule.argsPattern) return true;
+  for (const [key, pattern] of Object.entries(rule.argsPattern)) {
+    const argVal = String(args[key] ?? "");
+    if (pattern instanceof RegExp) {
+      if (!pattern.test(argVal)) return false;
+    } else if (typeof pattern === "string") {
+      const looksLikeRegex = /[\\^$.*+?()[\]|{}]/.test(pattern);
+      if (looksLikeRegex) {
+        let re: RegExp;
+        try {
+          re = new RegExp(pattern);
+        } catch {
+          if (!argVal.includes(pattern)) return false;
+          continue;
+        }
+        if (!re.test(argVal)) return false;
+      } else if (!argVal.includes(pattern)) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 /**
@@ -791,38 +860,10 @@ export class PermissionClassifier {
     toolName: string,
     args: Record<string, unknown>,
   ): boolean {
-    if (rule.tool !== toolName && rule.tool !== "*") return false;
-
-    if (rule.argsPattern) {
-      for (const [key, pattern] of Object.entries(rule.argsPattern)) {
-        const argVal = String(args[key] ?? "");
-        if (pattern instanceof RegExp) {
-          if (!pattern.test(argVal)) return false;
-        } else if (typeof pattern === "string") {
-          // Rules persisted in settings.local.json lose their RegExp type
-          // through JSON round-trip — they come back as strings. buildProjectRule
-          // produces regex sources like `^cd(\\s|$)`; treat any string with
-          // regex metacharacters as a pattern and only fall back to substring
-          // match for plain literals (kept for backward compat with hand-edited
-          // settings files that used plain substrings).
-          const looksLikeRegex = /[\\^$.*+?()[\]|{}]/.test(pattern);
-          if (looksLikeRegex) {
-            let re: RegExp;
-            try {
-              re = new RegExp(pattern);
-            } catch {
-              if (!argVal.includes(pattern)) return false;
-              continue;
-            }
-            if (!re.test(argVal)) return false;
-          } else if (!argVal.includes(pattern)) {
-            return false;
-          }
-        }
-      }
-    }
-
-    return true;
+    // Delegate to the shared matcher so the classifier and the session cache
+    // agree on rule semantics (the JSON-string-vs-RegExp handling, the head-
+    // command narrowing for Bash, etc.).
+    return ruleMatches(rule, toolName, args);
   }
 
   private isDangerousCommand(args: Record<string, unknown>): boolean {
