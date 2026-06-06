@@ -332,17 +332,30 @@ export async function enforcePathPolicyWithApproval(
       `No interactive approval UI is available in this run.`;
   }
 
+  // Title by the ACTUAL reason, not always "工作区外": a sensitive file
+  // (e.g. ~/.ssh, .env) can sit INSIDE the workspace, so the old fixed
+  // "工作区外路径" header was misleading for sensitive-path asks.
+  const isSensitive = c.reason.startsWith("sensitive");
+  const what = operation === "read" ? "读取" : "写入";
+  const title = isSensitive
+    ? `工具想${what}敏感文件`
+    : `工具想${what}工作区外路径`;
+  const header = isSensitive ? "敏感文件权限" : "路径权限";
+
+  const ALLOW_ONCE = "允许本次";
   const answer = await ctx.askUser(
-    `工具想${operation === "read" ? "读取" : "写入"}工作区外路径：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`,
+    `${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`,
     {
-      header: "路径权限",
+      header,
       options: [
-        { label: "允许本次", description: "仅允许当前这一次文件操作继续执行" },
+        { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行" },
         { label: "拒绝", description: "阻止当前文件操作" },
       ],
     },
   );
-  if (answer.trim().startsWith("允许本次")) return null;
+  // Exact match, not startsWith: a future scope option (e.g. "允许本会话")
+  // would also pass a prefix test and be misread as a one-time allow.
+  if (answer.trim() === ALLOW_ONCE) return null;
   return `Error: path approval denied by user — ${c.reason}. Path: ${c.resolvedPath}`;
 }
 

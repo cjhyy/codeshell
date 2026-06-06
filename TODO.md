@@ -27,7 +27,7 @@
 - [ ] 支持命令模式匹配：如“允许 `bun test`、`bun run build`”
 - [ ] 会话级权限缓存：同一会话内相同操作不重复询问
 - [ ] `/permissions` 命令查看和管理当前权限规则
-- [ ] **路径策略 block 接入权限系统**：访问 workspace 外路径（如 Desktop、`~/.code-shell`）被 path policy block 时，不应只硬拒绝；应展示原因，并允许用户批准本次/本会话/特定路径
+- [~] **路径策略 block 接入权限系统**：`enforcePathPolicyWithApproval` 已展示原因并交互批准本次/拒绝(aa1bcd7);本会话/特定路径范围待补。本轮顺修两个 bug：匹配过宽(startsWith→精确)、标题误导(按 reason 区分敏感文件 vs 工作区外)。测试 path-policy-approval.test.ts
 - [ ] **原工具可继续运行**：用户批准路径后，Read/Glob/Grep 等原工具应能继续执行，避免被迫绕到 Bash 导致策略不一致
 - [ ] 审计路径授权：记录批准来源、范围、过期策略与被拒原因
 

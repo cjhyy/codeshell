@@ -255,8 +255,8 @@
 - [ ] 路径策略 block 时展示原因，并允许批准本次 / 本会话 / 特定路径。
 - [ ] 用户批准路径后，Read / Glob / Grep / NotebookEdit / ApplyPatch 等原工具继续执行。
 - [ ] 审计路径授权：批准来源、范围、过期策略、被拒原因。
-- [ ] 修复路径审批弹窗匹配过宽：不要用 `startsWith("允许本次")`。
-- [ ] 修复路径审批标题误导：按 reason 区分工作区外、敏感文件等。
+- [x] 修复路径审批弹窗匹配过宽 ✅：改为精确 `=== "允许本次"`(原 startsWith 会把未来的「允许本会话」误判为一次性允许)。
+- [x] 修复路径审批标题误导 ✅：按 `c.reason.startsWith("sensitive")` 区分——敏感文件标「敏感文件权限/工具想读取敏感文件」,工作区外标「路径权限/工作区外路径」(敏感文件可在 workspace 内,旧固定标题误导)。测试 path-policy-approval.test.ts。
 - [ ] 统一 `notebook-edit` / `apply-patch` / `glob` / `grep` 的 approval path policy。
 
 ### 5.2 沙箱执行系统
