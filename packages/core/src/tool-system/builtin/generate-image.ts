@@ -24,18 +24,21 @@ import { join } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { SettingsManager } from "../../settings/manager.js";
+import { getImageProvider, DEFAULT_IMAGE_MODEL, type ImageProviderCreds } from "./image-providers.js";
 
 const DEFAULT_SIZE = "1024x1024";
 const DEFAULT_QUALITY = "auto";
-const MODEL = "gpt-image-2";
+
+/** Provider `kind`s that have an image adapter, in resolution preference. */
+const IMAGE_PROVIDER_KINDS = ["openai"] as const;
 
 export const generateImageToolDef: ToolDefinition = {
   name: "GenerateImage",
   description:
-    "Generate an image from a text prompt using the OpenAI Images API (gpt-image-2). " +
-    "Saves a PNG into the workspace and returns its absolute path; read or reference " +
-    "that path on later turns. Requires an OpenAI provider (kind: \"openai\") configured " +
-    "in settings. For raster assets (photos, illustrations, mockups, textures) — not for " +
+    "Generate an image from a text prompt. Saves a PNG into the workspace and returns its " +
+    "absolute path; read or reference that path on later turns. Defaults to the OpenAI Images " +
+    "API (gpt-image-2); requires a matching provider configured in settings. " +
+    "For raster assets (photos, illustrations, mockups, textures) — not for " +
     "SVG/vector icons or anything better built directly in code.",
   inputSchema: {
     type: "object",
@@ -54,22 +57,45 @@ export const generateImageToolDef: ToolDefinition = {
         enum: ["low", "medium", "high", "auto"],
         description: "Render quality (default auto). Use low for drafts, high for final assets.",
       },
+      provider: {
+        type: "string",
+        description:
+          "Image provider kind to use (e.g. \"openai\"). Defaults to the first configured " +
+          "image-capable provider. Only specify to override.",
+      },
+      model: {
+        type: "string",
+        description:
+          "Image model id (e.g. \"gpt-image-2\"). Defaults to the provider's default model. " +
+          "Only specify to override.",
+      },
     },
     required: ["prompt"],
   },
 };
 
-interface OpenAIProvider {
-  baseUrl: string;
-  apiKey: string;
+interface ResolvedImageProvider {
+  kind: string;
+  creds: ImageProviderCreds;
 }
 
-/** Resolve the OpenAI provider's apiKey + baseUrl from settings, or null. */
-function resolveOpenAIProvider(cwd: string): OpenAIProvider | null {
+/**
+ * Resolve an image-capable provider's creds from settings. With `preferKind`
+ * set (the tool's `provider` arg), require exactly that kind; otherwise pick
+ * the first configured provider whose kind has an adapter. Returns null when
+ * none is configured (or the requested one lacks a key).
+ */
+function resolveImageProvider(cwd: string, preferKind?: string): ResolvedImageProvider | null {
   const settings = new SettingsManager(cwd, "full").get();
-  const provider = settings.providers.find((p) => p.kind === "openai");
-  if (!provider || !provider.apiKey) return null;
-  return { baseUrl: provider.baseUrl, apiKey: provider.apiKey };
+  const kinds = preferKind ? [preferKind] : [...IMAGE_PROVIDER_KINDS];
+  for (const kind of kinds) {
+    if (!preferKind && !IMAGE_PROVIDER_KINDS.includes(kind as (typeof IMAGE_PROVIDER_KINDS)[number])) continue;
+    const provider = settings.providers.find((p) => p.kind === kind);
+    if (provider && provider.apiKey) {
+      return { kind, creds: { baseUrl: provider.baseUrl, apiKey: provider.apiKey } };
+    }
+  }
+  return null;
 }
 
 /**
@@ -94,7 +120,7 @@ export function isGenerateImageAvailable(
   if (hit && nowMs - hit.at < AVAIL_TTL_MS) return hit.value;
   let value = false;
   try {
-    value = resolveOpenAIProvider(cwd) !== null;
+    value = resolveImageProvider(cwd) !== null;
   } catch {
     value = false;
   }
@@ -112,57 +138,42 @@ export async function generateImageTool(
   }
   const size = typeof args.size === "string" ? args.size : DEFAULT_SIZE;
   const quality = typeof args.quality === "string" ? args.quality : DEFAULT_QUALITY;
+  const preferKind = typeof args.provider === "string" && args.provider ? args.provider : undefined;
+  const overrideModel = typeof args.model === "string" && args.model ? args.model : undefined;
 
   const cwd = ctx?.cwd ?? process.cwd();
-  const provider = resolveOpenAIProvider(cwd);
-  if (!provider) {
-    return (
-      'Error: no OpenAI provider available. Configure a provider with kind: "openai" ' +
-      "(including an apiKey) in your code-shell settings to use GenerateImage."
-    );
+  const resolved = resolveImageProvider(cwd, preferKind);
+  if (!resolved) {
+    return preferKind
+      ? `Error: no image provider of kind "${preferKind}" available. Configure a provider with that kind (including an apiKey) in your code-shell settings.`
+      : 'Error: no image provider available. Configure a provider with kind: "openai" ' +
+          "(including an apiKey) in your code-shell settings to use GenerateImage.";
   }
 
-  // Trim a trailing slash so `${baseUrl}/images/generations` doesn't double up.
-  const baseUrl = provider.baseUrl.replace(/\/+$/, "");
-
-  let resp: Response;
-  try {
-    resp = await fetch(`${baseUrl}/images/generations`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${provider.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model: MODEL, prompt, size, quality, n: 1 }),
-      signal: ctx?.signal,
-    });
-  } catch (err) {
-    return `Error generating image: ${(err as Error).message}`;
+  const adapter = getImageProvider(resolved.kind);
+  if (!adapter) {
+    return `Error: image generation is not supported for provider kind "${resolved.kind}".`;
   }
 
-  if (!resp.ok) {
-    const body = (await resp.text().catch(() => "")).slice(0, 500);
-    return `Error: image API returned ${resp.status}: ${body}`;
-  }
+  const model = overrideModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? "gpt-image-2";
 
-  let json: unknown;
-  try {
-    json = await resp.json();
-  } catch (err) {
-    return `Error: could not parse image API response: ${(err as Error).message}`;
-  }
-
-  const b64 = (json as { data?: Array<{ b64_json?: string }> })?.data?.[0]?.b64_json;
-  if (typeof b64 !== "string" || !b64) {
-    const preview = JSON.stringify(json).slice(0, 500);
-    return `Error: no image in response: ${preview}`;
+  const result = await adapter.generate({
+    prompt,
+    size,
+    quality,
+    model,
+    creds: resolved.creds,
+    signal: ctx?.signal,
+  });
+  if (!result.ok) {
+    return `Error generating image: ${result.error}`;
   }
 
   try {
     const dir = join(cwd, ".code-shell", "generated_images");
     await mkdir(dir, { recursive: true });
     const path = join(dir, `${Date.now()}.png`);
-    await writeFile(path, Buffer.from(b64, "base64"));
+    await writeFile(path, Buffer.from(result.b64, "base64"));
     return `Generated image saved to ${path}`;
   } catch (err) {
     return `Error saving generated image: ${(err as Error).message}`;
