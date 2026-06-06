@@ -742,7 +742,10 @@ export function ChatView({
           />
 
           {runningAgents > 0 && (
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-status-running">
+            // Codex-style low-contrast status line: muted grey text, the small
+            // pulsing dot keeps the running color so it still reads as "active"
+            // without the whole line looking like a blue link (TODO 2.7).
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-running" />
               <span>后台 {runningAgents} 个子代理运行中…</span>
             </div>
