@@ -91,7 +91,7 @@ export abstract class LLMClientBase {
       // backoffs drain (~50 s for a 3× Connection-error loop). Checking here
       // makes Cancel take effect at the next retry boundary.
       if (signal?.aborted) {
-        throw new DOMException("Aborted before LLM request", "AbortError");
+        throw new DOMException("Request cancelled", "AbortError");
       }
       try {
         return await fn();
@@ -130,7 +130,7 @@ export abstract class LLMClientBase {
             waitMs,
           });
           if (await abortableSleep(waitMs, signal)) {
-            throw new DOMException("Aborted during retry backoff", "AbortError");
+            throw new DOMException("Request cancelled during retry backoff", "AbortError");
           }
           continue;
         }
@@ -174,7 +174,7 @@ export abstract class LLMClientBase {
           backoffMs: backoff,
         });
         if (await abortableSleep(backoff, signal)) {
-          throw new DOMException("Aborted during retry backoff", "AbortError");
+          throw new DOMException("Request cancelled during retry backoff", "AbortError");
         }
       }
     }

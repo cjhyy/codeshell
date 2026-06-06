@@ -1,5 +1,6 @@
 import type { Engine, EngineResult } from "../engine/engine.js";
 import type { StreamEvent } from "../types.js";
+import { isAbortError } from "../llm/client-base.js";
 
 export interface ChatSessionOptions {
   id: string;
@@ -53,6 +54,14 @@ export class ChatSession {
    * session-isolation research flagged. null = nothing pending.
    */
   private pendingModel: string | null = null;
+  /**
+   * Set by cancel() so the in-flight turn's abort error resolves as a clean
+   * "cancelled" result instead of rejecting (which the RPC layer would surface
+   * as a scary red Error in the UI for what was a user-initiated Stop). The
+   * onboarding flow cancels + immediately re-runs the same task; without this
+   * the cancelled first run popped "Error: Request cancelled".
+   */
+  private cancelledActive = false;
 
   constructor(opts: ChatSessionOptions) {
     this.id = opts.id;
@@ -77,6 +86,9 @@ export class ChatSession {
    * are always rejected regardless.
    */
   cancel(): void {
+    // Mark the in-flight turn as user-cancelled so pump()'s catch resolves it
+    // as a clean aborted result rather than rejecting (→ UI Error).
+    if (this.active) this.cancelledActive = true;
     this.controller?.abort();
     // Drain queued turns as cancelled
     const drained = this.queue.splice(0);
@@ -112,6 +124,7 @@ export class ChatSession {
     const next = this.queue.shift();
     if (!next) return;
     this.active = next;
+    this.cancelledActive = false;
     this.controller = new AbortController();
     try {
       const onStream = next.opts.onStream ?? this.defaultOnStream;
@@ -125,10 +138,26 @@ export class ChatSession {
       this.lastActivityAt = Date.now();
       next.resolve(result);
     } catch (err) {
-      next.reject(err);
+      // A user-initiated cancel (Stop, or the onboarding cancel+rerun flow)
+      // aborts the in-flight run. That's not a failure — resolve it as a clean
+      // aborted result so the RPC layer doesn't surface "Error: Request
+      // cancelled" in the UI. Only abort errors on a cancelled turn are
+      // swallowed this way; a genuine error still rejects.
+      if (this.cancelledActive && (isAbortError(err) || this.controller?.signal.aborted)) {
+        next.resolve({
+          text: "",
+          reason: "aborted_streaming",
+          sessionId: this.id,
+          turnCount: 0,
+          usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        });
+      } else {
+        next.reject(err);
+      }
     } finally {
       this.active = null;
       this.controller = null;
+      this.cancelledActive = false;
       // Run boundary: apply any model switch that was deferred because it was
       // requested mid-run. Done here (not in pump) so it still applies when
       // no further turn is queued.

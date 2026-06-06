@@ -890,7 +890,15 @@ export class TurnLoop {
       // non-streaming call here re-sends the whole request the user just
       // aborted. Propagate so the run unwinds cleanly instead of doing
       // more work after cancellation.
-      if (isAbortError(err)) throw err;
+      //
+      // Check the run signal too, not only isAbortError(err): when a streaming
+      // request is aborted the error sometimes surfaces as a generic
+      // `Error: Request was aborted.` whose `name` is NOT "AbortError"
+      // (wrapping strips it), so isAbortError misses it and we'd fall back —
+      // re-issuing the cancelled request, which then throws "Aborted before
+      // LLM request" from withRetry and surfaces as a scary error on what was
+      // really just a cancel. The signal is the authoritative cancel source.
+      if (isAbortError(err) || this.config.signal?.aborted) throw err;
 
       // Streaming might have partially emitted — send tombstone to revoke
       this.config.onStream?.({ type: "tombstone", messageId: `turn_${this.turnCount}` });
