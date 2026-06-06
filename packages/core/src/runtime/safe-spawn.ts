@@ -37,6 +37,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
+import { resolveSpawnTarget } from "./spawn-common.js";
 
 export interface SafeSpawnOptions {
   /** Process working directory. Required — callers know their cwd; SafeSpawn does not fall back to process.cwd(). */
@@ -142,18 +143,11 @@ export function safeSpawnShell(
   opts: SafeSpawnShellOptions,
 ): Promise<SafeSpawnResult> {
   const shell = opts.shell ?? "/bin/bash";
-  let file: string;
-  let args: string[];
-  let cleanup: (() => void) | undefined;
-  if (opts.sandbox) {
-    const wrapped = opts.sandbox.wrap(command, { cwd: opts.cwd, shell });
-    file = wrapped.file;
-    args = wrapped.args;
-    cleanup = wrapped.cleanup;
-  } else {
-    file = shell;
-    args = ["-c", command];
-  }
+  const { file, args, cleanup } = resolveSpawnTarget(command, {
+    cwd: opts.cwd,
+    shell,
+    sandbox: opts.sandbox,
+  });
   return runLifecycle({ file, args, opts, cleanup });
 }
 
