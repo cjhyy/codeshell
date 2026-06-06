@@ -448,7 +448,7 @@ instruction-scanner.ts 早已实现,补测试锁定。
 
 - [ ] 支持 YAML 配置。
 - [ ] 生成配置 JSON Schema，支持 IDE 自动补全。
-- [ ] `/config` 命令交互式编辑配置。
+- [x] `/config` 命令交互式编辑配置。✅ 核实 TUI 已有 `/config [show | get <key> | set <key> <value>]`(core-commands.ts,走 SettingsManager 读写,点号路径)。
 - [ ] 配置迁移机制：版本升级时自动迁移旧配置。
 
 ---
@@ -465,7 +465,7 @@ instruction-scanner.ts 早已实现,补测试锁定。
 
 - [~] builtin tools 集成测试。**进行中**:补 Glob(6)/Read(5)/Edit+Write(9)/Grep(6)/NotebookEdit(7)/ToolSearch(6) 集成测试,共 39 例。**顺修**:① grep fallback(grep 而非 rg 时)漏传 fileGlob→现 `--include=<glob>` 对齐 rg 行为;② feature-flags.test.ts 预存 tsc 类型报错(featureFlagNames() 类型化数组 vs string[] 字面量)修掉,core tsc 现全绿。剩余无测试工具(web-fetch/notebook-edit 等)续补。
 - [ ] E2E 完整对话流程。
-- [ ] GitHub Actions CI。
+- [x] GitHub Actions CI。✅ 核实 `.github/workflows/ci.yml` 已有(guards/engine-bypass + typecheck + SDK smoke,push main + PR 触发)。
 - [ ] 测试覆盖率 > 60%。
 - [ ] 清理已知不稳定 / 待修测试。
 
