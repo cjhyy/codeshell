@@ -530,6 +530,15 @@ export {
   ghPrComments,
 } from "./git/utils.js";
 
+// ─── Code review (TODO 7.3) ─────────────────────────────────────
+export {
+  buildReviewPrompt,
+  parseDimensions,
+  ALL_DIMENSIONS,
+  type ReviewDimension,
+  type ReviewPromptOptions,
+} from "./review/review-prompt.js";
+
 // ─── Tool-system (extended for TUI) ─────────────────────────────
 
 export { getInteractiveApprovalBackend } from "./tool-system/permission.js";

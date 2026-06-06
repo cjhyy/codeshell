@@ -16,6 +16,8 @@ import {
   gitCheckout,
   ghAvailable,
   ghPrComments,
+  buildReviewPrompt,
+  parseDimensions,
 } from "@cjhyy/code-shell-core";
 
 export const gitCommands: SlashCommand[] = [
@@ -126,13 +128,22 @@ export const gitCommands: SlashCommand[] = [
   {
     name: "/review",
     group: "git",
-    description: "Send code to model for review",
-    usage: "/review [file]",
+    description: "Structured code review of the git diff (P0-P3 findings)",
+    usage: "/review [file] [--json] [--dimensions=security,perf,...] [--staged]",
     execute: async (arg, ctx) => {
       if (!isGitRepo(ctx.cwd)) {
         ctx.addStatus("Not a git repository.");
         return;
       }
+
+      // Parse flags out of the argument string; the remaining bare token (if
+      // any) is treated as a file path to scope the diff to.
+      const tokens = arg.split(/\s+/).filter(Boolean);
+      const json = tokens.includes("--json");
+      const staged = tokens.includes("--staged");
+      const dimFlag = tokens.find((t) => t.startsWith("--dimensions="));
+      const dimensions = parseDimensions(dimFlag?.split("=")[1]);
+      const file = tokens.find((t) => !t.startsWith("--"));
 
       if (!ctx.queryGuard.reserve()) {
         ctx.addStatus("Busy — wait for current turn to finish.");
@@ -141,22 +152,25 @@ export const gitCommands: SlashCommand[] = [
       const ac = new AbortController();
       ctx.queryGuard.tryStart(ac);
       try {
-        const diff = arg
-          ? getGitDiff(ctx.cwd, { file: arg })
-          : getGitDiff(ctx.cwd);
+        const diff = getGitDiff(ctx.cwd, {
+          ...(file ? { file } : {}),
+          ...(staged ? { staged: true } : {}),
+        });
 
         if (!diff) {
-          ctx.addStatus("No changes to review.");
+          ctx.addStatus(
+            staged ? "No staged changes to review." : "No changes to review.",
+          );
           return;
         }
 
-        const prompt =
-          `Review the following code changes. Provide:\n` +
-          `1. A brief summary of what changed\n` +
-          `2. Potential issues or bugs\n` +
-          `3. Suggestions for improvement\n` +
-          `4. Security concerns if any\n\n` +
-          `\`\`\`diff\n${diff.slice(0, 8000)}\n\`\`\``;
+        const prompt = buildReviewPrompt({
+          content: diff,
+          dimensions,
+          incremental: true,
+          json,
+          label: file,
+        });
 
         const result = await ctx.client.run(prompt, ctx.sessionId);
         ctx.setSessionId(result.sessionId);
