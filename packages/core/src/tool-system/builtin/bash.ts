@@ -19,6 +19,7 @@
 import type { ToolContext } from "../context.js";
 import { createOffBackend } from "../sandbox/off.js";
 import { safeSpawnShell } from "../../runtime/safe-spawn.js";
+import { truncateHeadTail } from "../../runtime/truncate-output.js";
 import { buildSandboxEnv } from "../../runtime/spawn-common.js";
 import { backgroundShellManager } from "../../runtime/background-shell.js";
 import type { ToolDefinition } from "../../types.js";
@@ -110,15 +111,25 @@ export async function bashTool(
     return `Failed to spawn command: ${result.error ?? "unknown error"}`;
   }
 
-  let output = "";
-  if (result.stdout) output += result.stdout;
-  if (result.stderr) output += (output ? "\n" : "") + `STDERR:\n${result.stderr}`;
-  if (!output) output = "(command completed with no output)";
+  let body = "";
+  if (result.stdout) body += result.stdout;
+  if (result.stderr) body += (body ? "\n" : "") + `STDERR:\n${result.stderr}`;
+  if (!body) body = "(command completed with no output)";
+
+  // Truncate the OUTPUT body head+tail (TODO 2.11) — the tail of a failing
+  // command (the error / final summary) is usually the most useful part, so we
+  // keep both ends instead of dropping the end. The exit-code/signal status
+  // line is prepended AFTER truncation so it's never lost.
+  if (body.length > MAX_OUTPUT) {
+    body = truncateHeadTail(body, { cap: MAX_OUTPUT });
+  }
 
   const code = result.exitCode;
   const sig = result.signal;
+  let output = body;
   if (code !== 0 && code !== null) {
-    output = `Exit code: ${code}\n${output}`;
+    // Semantic non-zero-exit marker (TODO 2.11): clear "command FAILED" line.
+    output = `Exit code: ${code} (command failed)\n${output}`;
   } else if (code === null && sig) {
     // Killed by a signal we didn't time out on — OOM-kill, sandbox-kill,
     // external SIGKILL. Surface so the model can distinguish from our
@@ -128,12 +139,6 @@ export async function bashTool(
 
   const hint = backend.hintForBlockedOutput?.(result.stderr);
   if (hint) output += hint;
-
-  if (output.length > MAX_OUTPUT) {
-    output =
-      output.slice(0, MAX_OUTPUT) +
-      `\n\n... output truncated (${output.length} chars total)`;
-  }
 
   return output;
 }
