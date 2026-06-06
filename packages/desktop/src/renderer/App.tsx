@@ -57,6 +57,7 @@ import {
   isRepoPathRemoved,
   markRepoPathRemoved,
   unmarkRepoPathRemoved,
+  makeCreateRepoForCwd,
   type Repo,
 } from "./repos";
 import { importAutomationRuns, type ImportableRun } from "./automation/importRuns";
@@ -657,7 +658,7 @@ function App() {
 
     const reposNow = loadRepos();
     const touchedRepoIds = new Set<string | null>();
-    let reposChanged = false;
+    const repoFactory = makeCreateRepoForCwd(reposNow);
     await importAutomationRuns(
       [{
         runId: run.runId,
@@ -676,16 +677,7 @@ function App() {
         existingEngineSessionIds: new Set(),
         cap: 1,
         fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
-        createRepoForCwd: (cwd) => {
-          if (isRepoPathRemoved(cwd)) return null;
-          const id = makeRepoId();
-          const name = cwd.split("/").filter(Boolean).pop() || cwd;
-          const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
-          reposNow.push(repo);
-          saveRepos(reposNow);
-          reposChanged = true;
-          return id;
-        },
+        createRepoForCwd: repoFactory.createRepoForCwd,
         writeImported: (repoId, summary, state) => {
           saveTranscript(repoId, summary.id, state);
           upsertImportedSession(repoId, summary);
@@ -694,7 +686,7 @@ function App() {
       },
     );
 
-    if (reposChanged) setRepos(reposNow.slice());
+    if (repoFactory.changed()) setRepos(reposNow.slice());
     if (touchedRepoIds.size > 0) {
       setSessionIndices((prev) => {
         const next = { ...prev };
@@ -719,19 +711,10 @@ function App() {
     }
 
     const reposNow = loadRepos();
-    let reposChanged = false;
+    const repoFactory = makeCreateRepoForCwd(reposNow);
     const [placement] = planDiskRebuild([session], reposNow, {
       caseInsensitive: isCaseInsensitivePlatform(),
-      createRepoForCwd: (cwd) => {
-        if (isRepoPathRemoved(cwd)) return null;
-        const id = makeRepoId();
-        const name = cwd.split("/").filter(Boolean).pop() || cwd;
-        const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
-        reposNow.push(repo);
-        saveRepos(reposNow);
-        reposChanged = true;
-        return id;
-      },
+      createRepoForCwd: repoFactory.createRepoForCwd,
     });
     if (!placement) return;
 
@@ -744,7 +727,7 @@ function App() {
     saveTranscript(placement.repoId, placement.summary.id, state);
     const nextIdx = upsertImportedSession(placement.repoId, placement.summary);
 
-    if (reposChanged) setRepos(reposNow.slice());
+    if (repoFactory.changed()) setRepos(reposNow.slice());
     setSessionIndices((prev) => ({
       ...prev,
       [repoKeyOf(placement.repoId)]: nextIdx,
@@ -881,22 +864,13 @@ function App() {
       }
 
       const touchedRepoIds = new Set<string | null>();
-      let reposChanged = false;
+      const repoFactory = makeCreateRepoForCwd(currentRepos);
       await importAutomationRuns(runs, currentRepos, {
         caseInsensitive: isCaseInsensitivePlatform(),
         existingEngineSessionIds: known,
         cap: 50,
         fetchTranscript: (sid) => window.codeshell.getSessionTranscript(sid),
-        createRepoForCwd: (cwd) => {
-          if (isRepoPathRemoved(cwd)) return null;
-          const id = makeRepoId();
-          const name = cwd.split("/").filter(Boolean).pop() || cwd;
-          const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
-          currentRepos.push(repo);
-          saveRepos(currentRepos);
-          reposChanged = true;
-          return id;
-        },
+        createRepoForCwd: repoFactory.createRepoForCwd,
         writeImported: (repoId, summary, state) => {
           saveTranscript(repoId, summary.id, state);
           upsertImportedSession(repoId, summary);
@@ -905,7 +879,7 @@ function App() {
       });
       if (cancelled) return;
 
-      if (reposChanged) setRepos(currentRepos.slice());
+      if (repoFactory.changed()) setRepos(currentRepos.slice());
       if (touchedRepoIds.size > 0) {
         setSessionIndices((prev) => {
           const next = { ...prev };
@@ -934,19 +908,10 @@ function App() {
         probed = true;
         if (cancelled || page.sessions.length === 0) return;
         const reposNow = loadRepos();
-        let reposChanged = false;
+        const repoFactory = makeCreateRepoForCwd(reposNow);
         const placements = planDiskRebuild(page.sessions, reposNow, {
           caseInsensitive: isCaseInsensitivePlatform(),
-          createRepoForCwd: (cwd) => {
-            if (isRepoPathRemoved(cwd)) return null;
-            const id = makeRepoId();
-            const name = cwd.split("/").filter(Boolean).pop() || cwd;
-            const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
-            reposNow.push(repo);
-            saveRepos(reposNow);
-            reposChanged = true;
-            return id;
-          },
+          createRepoForCwd: repoFactory.createRepoForCwd,
         });
         if (cancelled) return;
         const touched = new Set<string>();
@@ -954,7 +919,7 @@ function App() {
           upsertImportedSession(repoId, summary);
           touched.add(repoKeyOf(repoId));
         }
-        if (reposChanged) setRepos(reposNow.slice());
+        if (repoFactory.changed()) setRepos(reposNow.slice());
         setSessionIndices((prev) => {
           const next = { ...prev };
           for (const k of touched) next[k] = loadSessionIndex(k === GLOBAL_KEY ? null : k);
@@ -1157,19 +1122,10 @@ function App() {
         );
         return;
       }
-      let reposChanged = false;
+      const repoFactory = makeCreateRepoForCwd(reposNow);
       const placement = placeLiveAutomationSession(meta, reposNow, {
         caseInsensitive: isCaseInsensitivePlatform(),
-        createRepoForCwd: (cwd) => {
-          if (isRepoPathRemoved(cwd)) return null;
-          const id = makeRepoId();
-          const name = cwd.split("/").filter(Boolean).pop() || cwd;
-          const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
-          reposNow.push(repo);
-          saveRepos(reposNow);
-          reposChanged = true;
-          return id;
-        },
+        createRepoForCwd: repoFactory.createRepoForCwd,
       });
       if (!placement) return;
       const { repoId, summary } = placement;
@@ -1197,7 +1153,7 @@ function App() {
       if (meta.prompt.trim()) {
         dispatch({ type: "user_message", bucket, text: meta.prompt });
       }
-      if (reposChanged) setRepos(reposNow.slice());
+      if (repoFactory.changed()) setRepos(reposNow.slice());
       setSessionIndices((prev) => ({ ...prev, [repoKeyOf(repoId)]: nextIdx }));
     });
     const offApproval = window.codeshell.onApprovalRequest((env: ApprovalRequestEnvelope) => {

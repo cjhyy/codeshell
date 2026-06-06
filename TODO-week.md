@@ -402,10 +402,10 @@ instruction-scanner.ts 早已实现,补测试锁定。
 
 ## 9. 工程质量、性能与文档
 
-### 9.1 Renderer / Desktop 清理项
+### 9.1 Renderer / Desktop 清理项 🔧
 
-- [ ] `App.tsx` 抽 `makeCreateRepoForCwd`，收拢重复 `createRepoForCwd` 闭包。
-- [ ] `repos.ts` 的 `loadRemovedRepoPaths` 在磁盘重建循环里 hoist，避免逐会话重复 JSON.parse。
+- [x] `App.tsx` 抽 `makeCreateRepoForCwd`，收拢重复 `createRepoForCwd` 闭包 —— 5 处相同闭包收拢成 `repos.ts` 一个工厂(返回 `{createRepoForCwd, changed()}`,内部 didChange 替代各处 let reposChanged)。
+- [x] `repos.ts` 的 `loadRemovedRepoPaths` 在磁盘重建循环里 hoist —— 工厂构造时快照 removed-path 成 Set 一次,替代原每会话 `isRepoPathRemoved`(每次重读+JSON.parse)。测试 repos.test.ts。
 - [ ] 继续清理 settings / repo / workspace 命名混杂点。
 
 ### 9.2 测试覆盖

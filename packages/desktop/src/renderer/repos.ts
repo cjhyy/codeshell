@@ -138,6 +138,43 @@ export function makeRepoId(): string {
   return `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Factory for the `createRepoForCwd` callback that the disk-rebuild / run-import
+ * helpers (importAutomationRuns, planDiskRebuild) call when a session's cwd
+ * doesn't match any known repo. Collapses five identical inline closures in
+ * App.tsx into one place.
+ *
+ * Mutates `repoList` in place (pushes the new repo) and persists via saveRepos,
+ * matching the prior inline behavior. Skips creation for paths the user has
+ * removed (returns null → the helper drops that session). `changed()` reports
+ * whether any repo was added, so the caller knows to refresh React state.
+ */
+export function makeCreateRepoForCwd(repoList: Repo[]): {
+  createRepoForCwd: (cwd: string) => string | null;
+  changed: () => boolean;
+} {
+  let didChange = false;
+  // Snapshot the removed-path denylist ONCE, hoisted out of the per-cwd loop.
+  // The five inline closures this replaces each called isRepoPathRemoved(cwd)
+  // — which re-reads + JSON.parses localStorage every call — for every session
+  // in a disk-rebuild batch. Reads happen within one synchronous import pass,
+  // so a single snapshot is correct (the denylist doesn't change mid-import).
+  const removedSet = new Set(loadRemovedRepoPaths());
+  return {
+    createRepoForCwd: (cwd: string): string | null => {
+      if (removedSet.has(normalizeRepoPath(cwd))) return null;
+      const id = makeRepoId();
+      const name = cwd.split("/").filter(Boolean).pop() || cwd;
+      const repo: Repo = { id, name, path: cwd, addedAt: Date.now() };
+      repoList.push(repo);
+      saveRepos(repoList);
+      didChange = true;
+      return id;
+    },
+    changed: () => didChange,
+  };
+}
+
 /** Display label for a repo — user rename wins over default basename. */
 export function repoLabel(repo: Repo): string {
   return repo.displayName?.trim() || repo.name;
