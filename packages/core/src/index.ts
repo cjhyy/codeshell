@@ -705,3 +705,38 @@ export type {
   ApprovalScope,
   TaskInfo,
 } from "./types.js";
+
+// ─── External agent orchestration (Mobile Web Remote) ────────────
+// CLI adapters + config/mode resolution + slash parsing for Claude Code /
+// Codex managed jobs. Consumed by the Electron Mobile Web Remote host.
+
+export {
+  resolveExternalAgentConfig,
+  resolveClaudeModeForWorkspace,
+} from "./external-agents/config.js";
+export { ExternalAgentJobManager } from "./external-agents/manager.js";
+export type { ExternalAgentJobManagerAdapters } from "./external-agents/manager.js";
+export {
+  ClaudeCodeAdapter,
+  buildClaudeCodeSpawn,
+} from "./external-agents/adapters/claude-code.js";
+export { CodexAdapter } from "./external-agents/adapters/codex.js";
+export {
+  parseExternalAgentSlash,
+  type ParsedExternalAgentSlash,
+} from "./external-agents/slash.js";
+export type {
+  ExternalAgentKind,
+  ExternalAgentMode,
+  ExternalAgentModeOverride,
+  ExternalAgentsSettings,
+  ResolvedExternalAgentsConfig,
+  ResolvedClaudeCodeSettings,
+  ResolvedCodexSettings,
+  ClaudeModeDecision,
+  ExternalAgentJob,
+  ExternalAgentJobStatus,
+  ExternalAgentEvent,
+  StartExternalAgentJobInput,
+  ExternalAgentAdapter,
+} from "./external-agents/types.js";

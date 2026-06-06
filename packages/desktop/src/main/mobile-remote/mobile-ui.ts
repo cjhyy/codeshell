@@ -18,7 +18,7 @@ export function mobileRemoteHtml(): string {
   <main>
     <h1>CodeShell Mobile Remote</h1>
     <p id="status">Connecting...</p>
-    <textarea id="input" placeholder="Send a CodeShell task, /cc task, or /codex task"></textarea>
+    <textarea id="input" placeholder="Send a task, /cc task, /cc --safe task, /cc --dangerous task, or /codex task"></textarea>
     <p><button id="send">Send</button></p>
     <pre id="log"></pre>
   </main>

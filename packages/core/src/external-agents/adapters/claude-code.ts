@@ -1,4 +1,4 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import type {
   ExternalAgentAdapter,
   ExternalAgentEvent,
@@ -18,7 +18,7 @@ export function buildClaudeCodeSpawn(input: {
 }
 
 export class ClaudeCodeAdapter implements ExternalAgentAdapter {
-  private children = new Map<string, ChildProcessWithoutNullStreams>();
+  private children = new Map<string, ChildProcess>();
 
   start(
     input: StartExternalAgentJobInput,
@@ -50,14 +50,14 @@ export class ClaudeCodeAdapter implements ExternalAgentAdapter {
       env: process.env,
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
-    }) as ChildProcessWithoutNullStreams;
+    });
     this.children.set(id, child);
     onEvent({ type: "job.started", job });
 
-    child.stdout.on("data", (chunk) => {
+    child.stdout?.on("data", (chunk) => {
       onEvent({ type: "job.output", jobId: id, stream: "stdout", text: String(chunk) });
     });
-    child.stderr.on("data", (chunk) => {
+    child.stderr?.on("data", (chunk) => {
       onEvent({ type: "job.output", jobId: id, stream: "stderr", text: String(chunk) });
     });
     child.on("error", (err) => {

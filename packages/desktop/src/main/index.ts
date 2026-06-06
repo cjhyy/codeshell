@@ -19,6 +19,13 @@ import {
   agentNotificationBus,
   mergePluginMcpServers,
   type AutomationHandle,
+  ExternalAgentJobManager,
+  ClaudeCodeAdapter,
+  CodexAdapter,
+  resolveExternalAgentConfig,
+  resolveClaudeModeForWorkspace,
+  parseExternalAgentSlash,
+  type ExternalAgentEvent,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
@@ -159,6 +166,17 @@ const mobileRemote = new RemoteHostManager({
   },
 });
 
+// External agent (Claude Code / Codex CLI) managed jobs launched from the
+// phone via /cc and /codex. Job stdout/stderr/status are mirrored to mobile
+// clients. Spawning uses argument arrays (no shell string), so dangerous args
+// can never be interpolated into a command line.
+const externalAgentJobs = new ExternalAgentJobManager(
+  { claudeCode: new ClaudeCodeAdapter(), codex: new CodexAdapter() },
+  (event: ExternalAgentEvent) => {
+    mobileRemote.broadcastRaw(JSON.stringify({ channel: "externalAgent", event }));
+  },
+);
+
 /**
  * Route an authenticated mobile client event into the SAME run/permission
  * path the renderer uses, via AgentBridge.injectWorkerMessage. There is no
@@ -171,6 +189,14 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
   const ctx = bridge.getLastRunContext();
   if (event.type === "chat.send") {
     const sessionId = event.sessionId ?? ctx.sessionId;
+    const cwd = ctx.cwd ?? process.cwd();
+    // /cc and /codex launch external-agent managed jobs; everything else is a
+    // normal CodeShell turn routed through the existing worker run path.
+    const parsed = parseExternalAgentSlash(event.text);
+    if (parsed) {
+      await startExternalAgentJob(parsed, cwd, sessionId);
+      return;
+    }
     bridge.injectWorkerMessage(
       JSON.stringify({
         jsonrpc: "2.0",
@@ -179,6 +205,10 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
         params: { task: event.text, cwd: ctx.cwd, sessionId },
       }),
     );
+    return;
+  }
+  if (event.type === "job.stop") {
+    await externalAgentJobs.stop(event.jobId);
     return;
   }
   if (event.type === "approval.respond") {
@@ -208,6 +238,63 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
     );
     return;
   }
+}
+
+/**
+ * Start a Claude Code / Codex managed job from a parsed slash command. For
+ * Claude Code, the mode is resolved against externalAgents config + the
+ * workspace trust allowlist: dangerous mode auto-starts ONLY inside a trusted
+ * workspace with autoStart enabled; otherwise a high-risk approval card is
+ * pushed to the phone and the job is NOT started until the user confirms.
+ * (Approval-resume of dangerous jobs is a follow-up; v1 surfaces the gate.)
+ */
+async function startExternalAgentJob(
+  parsed: ReturnType<typeof parseExternalAgentSlash> & object,
+  cwd: string,
+  sessionId: string | undefined,
+): Promise<void> {
+  const settings = ((await readSettings("user", cwd).catch(() => null)) ?? {}) as {
+    externalAgents?: Parameters<typeof resolveExternalAgentConfig>[0];
+  };
+  const cfg = resolveExternalAgentConfig(settings.externalAgents);
+
+  if (parsed.kind === "claude-code") {
+    const decision = resolveClaudeModeForWorkspace(cfg.claudeCode, cwd, parsed.mode);
+    if (decision.requiresHighRiskApproval) {
+      mobileRemote.broadcast({
+        type: "approval.request",
+        approvalId: `cc-danger-${Date.now()}`,
+        title: "启动 Claude Code(dangerous 模式)?",
+        risk: "high",
+        body:
+          `目录:${cwd}\n模式:dangerous\nargs:${decision.args.join(" ")}\n` +
+          `prompt:${parsed.prompt.slice(0, 200)}\n` +
+          `原因:${decision.reason}(非可信工作区,需明确批准)`,
+      });
+      return;
+    }
+    externalAgentJobs.start({
+      kind: "claude-code",
+      sessionId: sessionId ?? "mobile",
+      cwd,
+      prompt: parsed.prompt,
+      command: cfg.claudeCode.command,
+      mode: decision.mode,
+      args: decision.args,
+    });
+    return;
+  }
+
+  // Codex: v1 always safe; command/args come from config.
+  externalAgentJobs.start({
+    kind: "codex",
+    sessionId: sessionId ?? "mobile",
+    cwd,
+    prompt: parsed.prompt,
+    command: cfg.codex.command,
+    mode: "safe",
+    args: cfg.codex.args,
+  });
 }
 
 async function createWindow(): Promise<BrowserWindow> {
