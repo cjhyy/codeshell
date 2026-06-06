@@ -154,6 +154,53 @@ function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvid
 const availCache = new Map<string, { at: number; value: boolean }>();
 const AVAIL_TTL_MS = 1000;
 
+/**
+ * List the configured, usable image providers for a workspace (TODO 7.1) —
+ * either `imageGen.providers[]` ids+kinds, or the back-compat LLM-provider
+ * kinds. Used to build a dynamic tool description so the model sees which
+ * backends are actually available. Returns [] on any read error.
+ */
+export function listConfiguredImageProviders(
+  cwd: string = process.cwd(),
+): Array<{ id?: string; kind: string }> {
+  try {
+    const settings = new SettingsManager(cwd, "full").get();
+    const imageGen = (settings as { imageGen?: { providers?: Array<{ id: string; kind: string; apiKey?: string }> } }).imageGen;
+    if (imageGen?.providers?.length) {
+      return imageGen.providers
+        .filter((p) => !!p.apiKey && getImageProvider(p.kind) !== null)
+        .map((p) => ({ id: p.id, kind: p.kind }));
+    }
+    return settings.providers
+      .filter(
+        (p) =>
+          p.apiKey &&
+          IMAGE_PROVIDER_KINDS.includes(p.kind as (typeof IMAGE_PROVIDER_KINDS)[number]),
+      )
+      .map((p) => ({ kind: p.kind }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Build the GenerateImage tool description for a workspace, appending the
+ * configured providers so the model knows what's available and which `provider`
+ * values are valid (TODO 7.1). Falls back to the static description when none
+ * are configured (the guard hides the tool in that case anyway).
+ */
+export function generateImageToolDefFor(cwd: string): ToolDefinition {
+  const providers = listConfiguredImageProviders(cwd);
+  if (providers.length === 0) return generateImageToolDef;
+  const names = providers.map((p) => p.id ?? p.kind).join(", ");
+  return {
+    ...generateImageToolDef,
+    description:
+      generateImageToolDef.description +
+      ` Configured provider(s): ${names}. Pass \`provider\` to pick one.`,
+  };
+}
+
 export function isGenerateImageAvailable(
   cwd: string = process.cwd(),
   nowMs: number = Date.now(),

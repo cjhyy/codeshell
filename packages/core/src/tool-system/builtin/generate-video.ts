@@ -90,6 +90,36 @@ export function isGenerateVideoAvailable(
   return value;
 }
 
+/**
+ * List configured, usable video providers (TODO 7.1). Returns [] when no
+ * adapters are wired (VIDEO_PROVIDER_KINDS empty) or none configured.
+ */
+export function listConfiguredVideoProviders(
+  cwd: string = process.cwd(),
+): Array<{ kind: string }> {
+  try {
+    const settings = new SettingsManager(cwd, "full").get();
+    return settings.providers
+      .filter((p) => p.apiKey && VIDEO_PROVIDER_KINDS.includes(p.kind))
+      .map((p) => ({ kind: p.kind }));
+  } catch {
+    return [];
+  }
+}
+
+/** Dynamic GenerateVideo description naming configured providers (TODO 7.1). */
+export function generateVideoToolDefFor(cwd: string): ToolDefinition {
+  const providers = listConfiguredVideoProviders(cwd);
+  if (providers.length === 0) return generateVideoToolDef;
+  const names = providers.map((p) => p.kind).join(", ");
+  return {
+    ...generateVideoToolDef,
+    description:
+      generateVideoToolDef.description +
+      ` Configured provider(s): ${names}. Pass \`provider\` to pick one.`,
+  };
+}
+
 interface ResolvedVideoProvider {
   kind: string;
   creds: VideoProviderCreds;

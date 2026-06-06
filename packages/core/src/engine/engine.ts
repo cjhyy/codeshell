@@ -20,6 +20,8 @@ import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
+import { generateImageToolDefFor } from "../tool-system/builtin/generate-image.js";
+import { generateVideoToolDefFor } from "../tool-system/builtin/generate-video.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
@@ -1458,11 +1460,20 @@ export class Engine {
         const flag = TOOL_FEATURE_FLAGS.get(t.name);
         return flag ? isFeatureEnabled(featureFlags, flag) : true;
       })
-      .map((t) =>
-        t.name === "Agent"
-          ? { ...t, description: agentToolDefWithTypes(toolCtx.agentDefinitions).description }
-          : t,
-      );
+      .map((t) => {
+        // Dynamic descriptions: name the actually-configured providers so the
+        // model sees which backends / `provider` values are valid (TODO 7.1).
+        if (t.name === "Agent") {
+          return { ...t, description: agentToolDefWithTypes(toolCtx.agentDefinitions).description };
+        }
+        if (t.name === "GenerateImage") {
+          return { ...t, description: generateImageToolDefFor(guardCwd).description };
+        }
+        if (t.name === "GenerateVideo") {
+          return { ...t, description: generateVideoToolDefFor(guardCwd).description };
+        }
+        return t;
+      });
 
     // In plan mode, only expose read-only/planning tools so the model won't
     // attempt writes. Shared with executor.ts's execution gate via

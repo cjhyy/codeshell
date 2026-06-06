@@ -7,12 +7,22 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { generateImageTool } from "./generate-image.js";
+import {
+  generateImageTool,
+  listConfiguredImageProviders,
+  generateImageToolDefFor,
+  isGenerateImageAvailable,
+} from "./generate-image.js";
 import type { ToolContext } from "../context.js";
 
 let ws: string;
 const realFetch = globalThis.fetch;
 let lastBody: any = null;
+// Isolate HOME so SettingsManager(cwd, "full") can't read the developer's real
+// ~/.code-shell (an imageGen/providers entry there would override the temp
+// workspace settings and break resolution). See project_test_pollutes_real_settings.
+let prevHome: string | undefined;
+let homeDir: string;
 
 function stubFetchOk(): void {
   globalThis.fetch = (async (_url: string, init: any) => {
@@ -22,6 +32,9 @@ function stubFetchOk(): void {
 }
 
 beforeEach(() => {
+  prevHome = process.env.HOME;
+  homeDir = mkdtempSync(join(tmpdir(), "genimg-home-"));
+  process.env.HOME = homeDir;
   ws = mkdtempSync(join(tmpdir(), "genimg-"));
   mkdirSync(join(ws, ".code-shell"), { recursive: true });
   writeFileSync(
@@ -34,7 +47,10 @@ beforeEach(() => {
 });
 afterEach(() => {
   globalThis.fetch = realFetch;
+  if (prevHome === undefined) delete process.env.HOME;
+  else process.env.HOME = prevHome;
   rmSync(ws, { recursive: true, force: true });
+  rmSync(homeDir, { recursive: true, force: true });
 });
 
 function ctx(): ToolContext {
@@ -67,5 +83,50 @@ describe("GenerateImage provider/model resolution", () => {
     writeFileSync(join(ws, ".code-shell", "settings.json"), JSON.stringify({ providers: [] }));
     const out = await generateImageTool({ prompt: "p" }, ctx());
     expect(out).toMatch(/no image provider available/);
+  });
+});
+
+describe("GenerateImage availability + dynamic description (TODO 7.1)", () => {
+  test("isGenerateImageAvailable true when an image provider with a key exists", () => {
+    // nowMs varied to dodge the 1s avail cache across tests sharing a cwd.
+    expect(isGenerateImageAvailable(ws, 1)).toBe(true);
+  });
+
+  test("isGenerateImageAvailable false with no usable provider", () => {
+    writeFileSync(join(ws, ".code-shell", "settings.json"), JSON.stringify({ providers: [] }));
+    expect(isGenerateImageAvailable(ws, 2)).toBe(false);
+  });
+
+  test("lists configured providers (back-compat LLM providers[] path)", () => {
+    expect(listConfiguredImageProviders(ws)).toEqual([{ kind: "openai" }]);
+  });
+
+  test("lists imageGen.providers[] ids when present", () => {
+    writeFileSync(
+      join(ws, ".code-shell", "settings.json"),
+      JSON.stringify({
+        imageGen: {
+          providers: [
+            { id: "my-oa", kind: "openai", baseUrl: "https://x/v1", apiKey: "k1" },
+            { id: "my-gemini", kind: "google", baseUrl: "https://y", apiKey: "k2" },
+          ],
+        },
+      }),
+    );
+    expect(listConfiguredImageProviders(ws)).toEqual([
+      { id: "my-oa", kind: "openai" },
+      { id: "my-gemini", kind: "google" },
+    ]);
+  });
+
+  test("dynamic description names configured providers", () => {
+    const def = generateImageToolDefFor(ws);
+    expect(def.description).toContain("Configured provider(s): openai");
+  });
+
+  test("dynamic description falls back to static when none configured", () => {
+    writeFileSync(join(ws, ".code-shell", "settings.json"), JSON.stringify({ providers: [] }));
+    const def = generateImageToolDefFor(ws);
+    expect(def.description).not.toContain("Configured provider(s)");
   });
 });
