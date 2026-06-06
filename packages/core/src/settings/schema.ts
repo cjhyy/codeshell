@@ -230,6 +230,30 @@ export const SettingsSchema = z
       })
       .optional(),
 
+    /**
+     * Video generation config (TODO 7.1) — same shape as imageGen, decoupled
+     * from LLM providers. `videoGen.providers[]` each carry an `id` (selected
+     * via GenerateVideo's `provider` arg) + a `kind` picking the adapter. With
+     * no real adapters wired yet, this is config-ready: a future getVideoProvider
+     * case lights it up. Falls back to scanning LLM providers[] when absent.
+     */
+    videoGen: z
+      .object({
+        defaultProvider: z.string().optional(),
+        providers: z
+          .array(
+            z.object({
+              id: z.string(),
+              kind: z.string(),
+              baseUrl: z.string(),
+              apiKey: z.string().optional(),
+              defaultModel: z.string().optional(),
+            }),
+          )
+          .default([]),
+      })
+      .optional(),
+
     permissions: z
       .object({
         defaultMode: z

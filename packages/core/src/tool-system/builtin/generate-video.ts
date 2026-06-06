@@ -96,9 +96,18 @@ export function isGenerateVideoAvailable(
  */
 export function listConfiguredVideoProviders(
   cwd: string = process.cwd(),
-): Array<{ kind: string }> {
+): Array<{ id?: string; kind: string }> {
   try {
     const settings = new SettingsManager(cwd, "full").get();
+    // Canonical videoGen.providers[] first (TODO 7.1) — but only kinds that
+    // have a wired adapter (VIDEO_PROVIDER_KINDS); a configured-but-unadapted
+    // entry isn't usable yet.
+    const videoGen = (settings as { videoGen?: { providers?: Array<{ id: string; kind: string; apiKey?: string }> } }).videoGen;
+    if (videoGen?.providers?.length) {
+      return videoGen.providers
+        .filter((p) => !!p.apiKey && getVideoProvider(p.kind) !== null)
+        .map((p) => ({ id: p.id, kind: p.kind }));
+    }
     return settings.providers
       .filter((p) => p.apiKey && VIDEO_PROVIDER_KINDS.includes(p.kind))
       .map((p) => ({ kind: p.kind }));
