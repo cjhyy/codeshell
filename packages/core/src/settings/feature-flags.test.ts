@@ -34,8 +34,8 @@ describe("feature flags", () => {
   });
 
   test("featureFlagNames lists every known flag", () => {
-    expect(featureFlagNames().sort()).toEqual(
-      ["fast_mode", "shell_snapshot", "shell_tool", "undo", "web_search"].sort(),
+    expect([...featureFlagNames()].sort()).toEqual(
+      ["fast_mode", "shell_snapshot", "shell_tool", "undo", "web_search"],
     );
   });
 

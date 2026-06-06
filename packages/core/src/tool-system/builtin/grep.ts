@@ -87,7 +87,7 @@ export async function grepTool(
     // rg/grep exit code 1 = no matches (not an error)
     if (isNoMatchExit(rgErr)) return "No matches found.";
     try {
-      return await runGrep(pattern, searchPath, context, maxResults, outputMode, caseInsensitive);
+      return await runGrep(pattern, searchPath, fileGlob, context, maxResults, outputMode, caseInsensitive);
     } catch (grepErr) {
       if (isNoMatchExit(grepErr)) return "No matches found.";
       return `Error in search: ${(grepErr as Error).message}`;
@@ -145,6 +145,7 @@ async function runRipgrep(
 async function runGrep(
   pattern: string,
   path: string,
+  fileGlob: string | undefined,
   context: number,
   maxResults: number,
   outputMode: string,
@@ -164,6 +165,9 @@ async function runGrep(
   }
 
   args.push("-m", String(maxResults));
+  // Honor the file glob so the grep fallback matches ripgrep's --glob behavior
+  // (previously the glob was silently dropped on the fallback path).
+  if (fileGlob) args.push(`--include=${fileGlob}`);
   args.push("-E", pattern);
   args.push("--exclude-dir=node_modules", "--exclude-dir=.git", "--exclude-dir=dist");
   args.push(path);

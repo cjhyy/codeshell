@@ -458,7 +458,7 @@ instruction-scanner.ts 早已实现,补测试锁定。
 
 ### 9.2 测试覆盖
 
-- [~] builtin tools 集成测试。**进行中**:43 个工具 ~26 有测试;本批补 Glob 集成测试(glob.test.ts,6 例:必填/匹配+大小/无匹配/mtime 排序/递归+相对路径/忽略 node_modules)。其余无测试工具(read/edit/grep/web-fetch 等)逐个补,持续推进。
+- [~] builtin tools 集成测试。**进行中**:补 Glob(6)/Read(5)/Edit+Write(9)/Grep(6) 集成测试,共 26 例。**顺修**:① grep fallback(grep 而非 rg 时)漏传 fileGlob→现 `--include=<glob>` 对齐 rg 行为;② feature-flags.test.ts 预存 tsc 类型报错(featureFlagNames() 类型化数组 vs string[] 字面量)修掉,core tsc 现全绿。剩余无测试工具(web-fetch/notebook-edit 等)续补。
 - [ ] E2E 完整对话流程。
 - [ ] GitHub Actions CI。
 - [ ] 测试覆盖率 > 60%。
