@@ -191,7 +191,10 @@ export const agentToolDef: ToolDefinition = {
     "You can optionally run an agent in the background using the run_in_background " +
     "parameter. When it runs in the background, you will be automatically notified when " +
     "it completes — do NOT sleep, poll, or proactively check on its progress. Continue " +
-    "with other work or respond to the user instead.",
+    "with other work or respond to the user instead. " +
+    "Even a synchronous agent that runs longer than ~2 minutes is automatically moved to " +
+    "the background and notifies you on completion the same way — so a long delegation never " +
+    "stalls you; just continue or end your turn when told it has moved to the background.",
   inputSchema: {
     type: "object",
     properties: {
@@ -348,6 +351,17 @@ export async function agentTool(
   const agentId = nanoid(8);
   const parentStream = spawner.parentStream;
 
+  // Auto-background threshold: a synchronous agent still running after this
+  // long is detached into the background (not killed) so the main turn isn't
+  // blocked for up to the 30min tool cap (TODO 4.1). Default 120s, matching
+  // Claude Code; overridable via env for tests. The agent keeps running on the
+  // same signal — we just stop awaiting it inline and let it notify on finish.
+  const autoBgMs = (() => {
+    const raw = process.env.CODE_SHELL_AGENT_BG_MS;
+    const n = raw !== undefined ? Number(raw) : NaN;
+    return Number.isFinite(n) && n >= 0 ? n : 120_000;
+  })();
+
   // ─── Background path ───────────────────────────────────────────
   // Register the agent, kick off execution detached from the current turn,
   // return immediately with the agent_id. Parent abort does NOT cascade
@@ -500,7 +514,7 @@ export async function agentTool(
     ].join("\n");
   }
 
-  // ─── Synchronous path ──────────────────────────────────────────
+  // ─── Synchronous path (with auto-background handoff) ────────────
   // No wall-clock timeout on the sub-agent lifecycle — that matches Claude
   // Code / Codex, where a sub-agent (Task) is bounded by maxTurns + per-tool
   // timeouts (Bash etc. carry their own) + parent/user abort, NOT by a global
@@ -517,30 +531,161 @@ export async function agentTool(
   const syncController = new AbortController();
   const onParentAbort = () => syncController.abort();
   parentSignal?.addEventListener("abort", onParentAbort, { once: true });
+  // Per-call flag (NOT module-level): true once we've detached the agent into
+  // the background, so the finally block leaves the parent-abort listener with
+  // the background handlers instead of removing it.
+  let handedOff = false;
+
+  // Run the agent, but don't necessarily await it to completion: race the run
+  // against the auto-background timer. The run promise is shared between the
+  // inline await and (if we hand off) the background completion handlers, so
+  // the agent is never started twice and never killed by the handoff.
+  const runPromise = runSubAgent(spawner, {
+    agentId,
+    name,
+    description,
+    agentType: overrides.resolvedType,
+    prompt,
+    maxTurns,
+    model: overrides.model,
+    toolAllowlist: overrides.toolAllowlist,
+    skillAllowlist: overrides.skillAllowlist,
+    appendSystemPrompt: overrides.appendSystemPrompt,
+    readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
+    hooks: ctx?.hooks,
+    signal: syncController.signal,
+  });
+
+  // Sentinel that the timer resolves with, so we can tell "agent finished" from
+  // "threshold elapsed" without rejecting either side.
+  const BG_HANDOFF = Symbol("bg-handoff");
+  let bgTimer: ReturnType<typeof setTimeout> | undefined;
+  const timerPromise =
+    autoBgMs > 0 && autoBgMs !== Infinity
+      ? new Promise<typeof BG_HANDOFF>((resolve) => {
+          bgTimer = setTimeout(() => resolve(BG_HANDOFF), autoBgMs);
+        })
+      : null;
+
   try {
-    return await runSubAgent(spawner, {
-      agentId,
-      name,
-      description,
-      agentType: overrides.resolvedType,
-      prompt,
-      maxTurns,
-      model: overrides.model,
-      toolAllowlist: overrides.toolAllowlist,
-      skillAllowlist: overrides.skillAllowlist,
-      appendSystemPrompt: overrides.appendSystemPrompt,
-      readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
-      hooks: ctx?.hooks,
-      signal: syncController.signal,
-    });
+    // If there's no timer (threshold 0/∞ disabled), just await as before.
+    const winner = timerPromise
+      ? await Promise.race([runPromise.then((t) => ({ ok: true as const, text: t })).catch((e) => ({ ok: false as const, err: e as Error })), timerPromise])
+      : { ok: true as const, text: await runPromise };
+
+    if (winner === BG_HANDOFF) {
+      // Threshold elapsed while the agent is STILL running. Detach it into the
+      // background registry (it keeps executing on syncController.signal — we
+      // do NOT abort it) and wire its eventual completion into the
+      // notification queue, exactly like an explicit run_in_background agent.
+      handedOff = true;
+      handoffToBackground(runPromise, syncController, {
+        agentId,
+        name,
+        description,
+        agentType: overrides.resolvedType,
+        sessionId: ctx?.sessionId,
+        hooks: ctx?.hooks,
+        parentSignal,
+        onParentAbort,
+      });
+      return [
+        `Task is taking a while (>${Math.round(autoBgMs / 1000)}s) — moved it to the background so I'm not blocked.`,
+        `agent_id: ${agentId} (internal — do not show to user)`,
+        `description: ${description}`,
+        ``,
+        `It is still running and you will be notified automatically when it completes.`,
+        `Briefly tell the user it's running in the background and either continue with other work or end your response. Do not sleep or poll.`,
+        `If you need to stop it: AgentCancel(agent_id="${agentId}").`,
+      ].join("\n");
+    }
+
+    // Agent finished within the threshold.
+    if (winner.ok) return winner.text;
+    throw winner.err;
   } catch (err) {
     emitSubAgentHook(ctx?.hooks, "subagent_error", { agentId, description, error: (err as Error).message });
     safeEmit(parentStream, { type: "agent_end", agentId, name, description, error: (err as Error).message, agentType: overrides.resolvedType });
     if (parentSignal?.aborted) return "Agent was aborted.";
     return `Agent error: ${(err as Error).message}`;
   } finally {
-    parentSignal?.removeEventListener("abort", onParentAbort);
+    if (bgTimer) clearTimeout(bgTimer);
+    // Only detach the parent-abort listener when we awaited to completion.
+    // On handoff, handoffToBackground already detached it (the agent is still
+    // running and now follows the background contract, not parent-turn abort).
+    if (!handedOff) parentSignal?.removeEventListener("abort", onParentAbort);
   }
+}
+
+/**
+ * Detach a still-running synchronous sub-agent into the background registry
+ * (TODO 4.1). The agent KEEPS running on its existing signal — we attach
+ * completion handlers that mirror the explicit run_in_background path so its
+ * result/error arrives via the notification queue and the registry shows it as
+ * a running (then completed/failed) background agent. Never aborts the agent.
+ */
+function handoffToBackground(
+  runPromise: Promise<string>,
+  controller: AbortController,
+  meta: {
+    agentId: string;
+    name?: string;
+    description: string;
+    agentType?: string;
+    sessionId?: string;
+    hooks?: HookRegistry;
+    parentSignal?: AbortSignal;
+    onParentAbort: () => void;
+  },
+): void {
+  const { agentId, name, description, agentType, sessionId, hooks } = meta;
+
+  // The agent outlives the spawning turn now, so parent-turn abort must NOT
+  // cascade to it (same contract as an explicit background agent). Detach the
+  // parent listener; cancellation from here on goes through AgentCancel.
+  meta.parentSignal?.removeEventListener("abort", meta.onParentAbort);
+
+  asyncAgentRegistry.register({
+    agentId,
+    name,
+    agentType,
+    description,
+    sessionId,
+    status: "running",
+    startedAt: Date.now(),
+    abort: () => controller.abort(),
+  });
+
+  runPromise
+    .then((text) => {
+      asyncAgentRegistry.markCompleted(agentId);
+      if (sessionId) {
+        notificationQueue.enqueue(
+          { agentId, name, description, status: "completed", finalText: text, enqueuedAt: Date.now() },
+          sessionId,
+        );
+      } else {
+        logger.warn("agent_completion_without_session", { agentId, name, status: "completed" });
+      }
+      void hooks?.emit("notification", { kind: "agent_completed", agentId, name, description, finalText: text });
+    })
+    .catch((err: Error) => {
+      if (controller.signal.aborted) {
+        asyncAgentRegistry.markCancelled(agentId);
+        void hooks?.emit("notification", { kind: "agent_cancelled", agentId, name, description });
+        return;
+      }
+      asyncAgentRegistry.markFailed(agentId);
+      if (sessionId) {
+        notificationQueue.enqueue(
+          { agentId, name, description, status: "failed", error: err.message, enqueuedAt: Date.now() },
+          sessionId,
+        );
+      } else {
+        logger.warn("agent_completion_without_session", { agentId, name, status: "failed" });
+      }
+      void hooks?.emit("notification", { kind: "agent_failed", agentId, name, description, error: err.message });
+    });
 }
 
 // ─── AgentStatus / AgentCancel — companions to run_in_background ─
