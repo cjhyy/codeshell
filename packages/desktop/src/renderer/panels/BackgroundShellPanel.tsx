@@ -22,8 +22,8 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
       return;
     }
     try {
-      const { shells } = await window.codeshell.listBackgroundShells(sessionId);
-      setShells(shells);
+      const res = await window.codeshell.listBackgroundShells(sessionId);
+      setShells(res?.shells ?? []);
       setError(null);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
