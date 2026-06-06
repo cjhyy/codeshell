@@ -60,8 +60,9 @@ export const generateImageToolDef: ToolDefinition = {
       provider: {
         type: "string",
         description:
-          "Image provider kind to use (e.g. \"openai\"). Defaults to the first configured " +
-          "image-capable provider. Only specify to override.",
+          "Image provider to use. With imageGen configured, this is the instance `id` " +
+          "(e.g. \"gemini\"); otherwise it's a provider kind (e.g. \"openai\"). " +
+          "Defaults to the configured default / first available. Only specify to override.",
       },
       model: {
         type: "string",
@@ -77,19 +78,51 @@ export const generateImageToolDef: ToolDefinition = {
 interface ResolvedImageProvider {
   kind: string;
   creds: ImageProviderCreds;
+  /** Instance default model (imageGen path) — used when the call omits `model`. */
+  defaultModel?: string;
 }
 
 /**
- * Resolve an image-capable provider's creds from settings. With `preferKind`
- * set (the tool's `provider` arg), require exactly that kind; otherwise pick
- * the first configured provider whose kind has an adapter. Returns null when
- * none is configured (or the requested one lacks a key).
+ * Resolve an image provider from settings (TODO 7.1). Preference order:
+ *
+ *   1. `imageGen.providers[]` — the canonical, LLM-decoupled config. `prefer`
+ *      selects an instance by its `id`; otherwise `imageGen.defaultProvider`,
+ *      else the first entry. Each instance names its own adapter `kind`.
+ *   2. Fallback (no `imageGen`): scan LLM `providers[]` for an image-capable
+ *      `kind` — keeps existing configs working with no migration. Here
+ *      `prefer` is treated as a kind.
+ *
+ * Returns null when nothing usable is configured (or the requested one lacks
+ * a key / has no adapter).
  */
-function resolveImageProvider(cwd: string, preferKind?: string): ResolvedImageProvider | null {
+function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvider | null {
   const settings = new SettingsManager(cwd, "full").get();
-  const kinds = preferKind ? [preferKind] : [...IMAGE_PROVIDER_KINDS];
+
+  // 1. Canonical imageGen config.
+  const imageGen = (settings as { imageGen?: { defaultProvider?: string; providers?: Array<{ id: string; kind: string; baseUrl: string; apiKey?: string; defaultModel?: string }> } }).imageGen;
+  if (imageGen && Array.isArray(imageGen.providers) && imageGen.providers.length > 0) {
+    const list = imageGen.providers;
+    let chosen = prefer
+      ? list.find((p) => p.id === prefer)
+      : imageGen.defaultProvider
+        ? list.find((p) => p.id === imageGen.defaultProvider)
+        : list[0];
+    // defaultProvider misconfigured (points at a missing id) → fall back to first.
+    if (!prefer && !chosen) chosen = list[0];
+    if (chosen && chosen.apiKey && getImageProvider(chosen.kind)) {
+      return {
+        kind: chosen.kind,
+        creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey },
+        defaultModel: chosen.defaultModel,
+      };
+    }
+    return null;
+  }
+
+  // 2. Back-compat: resolve from LLM providers[] by kind.
+  const kinds = prefer ? [prefer] : [...IMAGE_PROVIDER_KINDS];
   for (const kind of kinds) {
-    if (!preferKind && !IMAGE_PROVIDER_KINDS.includes(kind as (typeof IMAGE_PROVIDER_KINDS)[number])) continue;
+    if (!prefer && !IMAGE_PROVIDER_KINDS.includes(kind as (typeof IMAGE_PROVIDER_KINDS)[number])) continue;
     const provider = settings.providers.find((p) => p.kind === kind);
     if (provider && provider.apiKey) {
       return { kind, creds: { baseUrl: provider.baseUrl, apiKey: provider.apiKey } };
@@ -155,7 +188,8 @@ export async function generateImageTool(
     return `Error: image generation is not supported for provider kind "${resolved.kind}".`;
   }
 
-  const model = overrideModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? "gpt-image-2";
+  // Model precedence: call arg > instance defaultModel (imageGen) > kind default.
+  const model = overrideModel ?? resolved.defaultModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? "gpt-image-2";
 
   const result = await adapter.generate({
     prompt,

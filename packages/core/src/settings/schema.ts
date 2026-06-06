@@ -163,6 +163,36 @@ export const SettingsSchema = z
       )
       .default([]),
 
+    /**
+     * Image generation is a general capability, decoupled from LLM providers
+     * (TODO 7.1): a vendor may use different keys/endpoints/models for chat vs
+     * image, and image vendors (Gemini, and later 国内 模型) don't fit the LLM
+     * `providers[].kind` enum. `imageGen.providers[]` is the canonical config;
+     * each entry has a user-chosen `id` (selected via GenerateImage's
+     * `provider` arg) and a `kind` that picks the adapter. When `imageGen` is
+     * absent, resolution falls back to scanning LLM `providers[]` for an
+     * image-capable kind — so existing configs keep working with no migration.
+     */
+    imageGen: z
+      .object({
+        defaultProvider: z.string().optional(),
+        providers: z
+          .array(
+            z.object({
+              /** User-chosen instance name; GenerateImage(provider) selects by this. */
+              id: z.string(),
+              /** Adapter selector — e.g. "openai", "google". */
+              kind: z.string(),
+              baseUrl: z.string(),
+              apiKey: z.string().optional(),
+              /** Default model for this instance when the call omits `model`. */
+              defaultModel: z.string().optional(),
+            }),
+          )
+          .default([]),
+      })
+      .optional(),
+
     permissions: z
       .object({
         defaultMode: z
