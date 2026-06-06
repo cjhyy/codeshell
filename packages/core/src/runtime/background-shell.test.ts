@@ -79,6 +79,28 @@ describe("incremental cursor", () => {
   });
 });
 
+describe("incremental read after disk wraparound (regression)", () => {
+  test("never loses new output when the 8MB-style ring wraps", async () => {
+    // Use a real shell that emits two distinct chunks with a gap; we can't
+    // shrink the 8MB cap from here, so this asserts the absolute-cursor
+    // contract end-to-end: two incremental reads return disjoint, complete
+    // output. (RingFile's own wraparound math is unit-tested separately.)
+    const r = mgr.spawnBackground({
+      command: "echo AAA; sleep 0.3; echo BBB; sleep 0.1",
+      cwd: home,
+      sessionId: "sessA",
+    });
+    if (!r.ok) throw new Error("spawn failed");
+    await until(() => (mgr.readOutputRaw(r.shellId) ?? "").includes("AAA"));
+    const a = mgr.readOutput(r.shellId, "incremental");
+    expect(a.ok && a.text.includes("AAA")).toBe(true);
+    await until(() => (mgr.readOutputRaw(r.shellId) ?? "").includes("BBB"));
+    const b = mgr.readOutput(r.shellId, "incremental");
+    expect(b.ok && b.text.includes("BBB")).toBe(true);
+    expect(b.ok && b.text.includes("AAA")).toBe(false);
+  });
+});
+
 describe("ANSI cleaning in readOutput", () => {
   test("strips color and folds progress", async () => {
     const r = mgr.spawnBackground({

@@ -53,4 +53,34 @@ describe("RingFile", () => {
     expect(rf.readAll()).toBe("abc");
     rf.close();
   });
+
+  test("absolute cursor survives wraparound (incremental read never loses data)", () => {
+    const path = join(tmp(), "out.log");
+    const rf = new RingFile(path, 10);
+    rf.write(Buffer.from("0123456789")); // total=10, full
+    let cursor = 0;
+    expect(rf.sliceFromAbsolute(cursor).toString()).toBe("0123456789");
+    cursor = rf.totalWritten();
+    expect(cursor).toBe(10);
+
+    rf.write(Buffer.from("ABCDE")); // total=15, window slid to "56789ABCDE"
+    // Incremental read from the old cursor must still surface the NEW bytes.
+    expect(rf.sliceFromAbsolute(cursor).toString()).toBe("ABCDE");
+    cursor = rf.totalWritten();
+    expect(cursor).toBe(15);
+
+    // No new data → empty.
+    expect(rf.sliceFromAbsolute(cursor).toString()).toBe("");
+    rf.close();
+  });
+
+  test("absolute cursor older than the retained window clamps to window start", () => {
+    const path = join(tmp(), "out.log");
+    const rf = new RingFile(path, 5);
+    rf.write(Buffer.from("ABCDEFGHIJ")); // total=10, window="FGHIJ"
+    // A cursor pointing at byte 0 (long discarded) returns the whole window,
+    // not a crash or negative slice.
+    expect(rf.sliceFromAbsolute(0).toString()).toBe("FGHIJ");
+    rf.close();
+  });
 });

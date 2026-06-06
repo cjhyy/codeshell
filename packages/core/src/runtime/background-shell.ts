@@ -76,7 +76,8 @@ export interface BgShell {
   exitCode: number | null;
   signal: NodeJS.Signals | null;
   detectedPort?: number;
-  /** Bytes (within the retained window) already returned to the agent. */
+  /** Absolute stream position (RingFile.totalWritten) already returned to the
+   *  agent. Absolute — not window-relative — so it survives ring wraparound. */
   agentReadOffset: number;
   didWrap: boolean;
   diskAvailable: boolean;
@@ -356,10 +357,11 @@ export class BackgroundShellManager {
     if (mode === "all") {
       rawSlice = sh.ring.readAll();
     } else {
-      const slice = sh.ring.sliceFrom(sh.agentReadOffset);
+      // Absolute stream cursor — survives ring wraparound (a window-relative
+      // offset would silently skip new bytes once the window slides).
+      const slice = sh.ring.sliceFromAbsolute(sh.agentReadOffset);
       rawSlice = slice.toString("utf8");
-      // Advance cursor to the current end of the retained window.
-      sh.agentReadOffset = sh.ring.byteLength();
+      sh.agentReadOffset = sh.ring.totalWritten();
     }
 
     let text = cleanOutput(rawSlice);
