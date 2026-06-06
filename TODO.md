@@ -125,14 +125,14 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 - [ ] 记忆管理命令：`/memories list`、`/memories clear`、`/memories edit`
 - [ ] 可配置：`memories.maxAge`、`memories.maxCount`、`memories.extractionModel`
 
-### 🔧 AGENTS.md 层级指令系统
+### ✅ AGENTS.md 层级指令系统
 
-`AGENTS.md` 文件名兼容已支持；剩余为层级覆盖与作用域语义。
+经核实 `instruction-scanner.ts` 已实现全部层级语义,补测试锁定。
 
-- [ ] 实现层级覆盖：深层目录的指令覆盖浅层
-- [ ] 支持 `AGENTS.local.md`：不入版本控制的本地指令
-- [ ] 指令作用域标注：当前目录 vs 全局
-- [ ] 在 prompt 中按作用域排序注入
+- [x] 实现层级覆盖：从 git root 走到 cwd,`depth` 0→N(越深越大),combineInstructions 按 root→cwd 排序使深层指令排在最后(LLM 更重视后文=就近覆盖)
+- [x] 支持 `AGENTS.local.md`：每个指令名都派生 `.local.md` 变体(source:"local"),不入版本控制
+- [x] 指令作用域标注：`sourceLabel` 输出 "project (depth N)" / "local override (depth N)" / "user-level" 注释头
+- [x] 在 prompt 中按作用域排序注入：managed→user→project(root→cwd)→local;扫描止于 git root。测试 instruction-scanner.test.ts
 
 ### ⬜ 智能上下文管理
 

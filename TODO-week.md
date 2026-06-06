@@ -367,12 +367,14 @@
 - [ ] `/memories list`、`/memories clear`、`/memories edit`。
 - [ ] 配置：`memories.maxAge`、`memories.maxCount`、`memories.extractionModel`。
 
-### 8.2 AGENTS.md 层级指令系统
+### 8.2 AGENTS.md 层级指令系统 ✅
 
-- [ ] 深层目录指令覆盖浅层。
-- [ ] 支持 `AGENTS.local.md`。
-- [ ] 指令作用域标注：当前目录 vs 全局。
-- [ ] 在 prompt 中按作用域排序注入。
+instruction-scanner.ts 早已实现,补测试锁定。
+
+- [x] 深层目录指令覆盖浅层(depth 0→N,combineInstructions root→cwd 排序,深层在后)。
+- [x] 支持 `AGENTS.local.md`(每名派生 .local.md,source:local)。
+- [x] 指令作用域标注(sourceLabel:project depth N / local override / user-level)。
+- [x] 按作用域排序注入(managed→user→project→local,止于 git root)。测试 instruction-scanner.test.ts。
 
 ### 8.3 智能上下文管理
 
