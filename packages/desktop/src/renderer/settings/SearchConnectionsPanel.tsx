@@ -4,6 +4,7 @@ import { writeSettings } from "../settingsBus";
 import { Button } from "@/components/ui/button";
 import { CollapsibleGroup } from "./CollapsibleGroup";
 import { ImageGenConnectionsPanel } from "./ImageGenConnectionsPanel";
+import { VideoGenConnectionsPanel } from "./VideoGenConnectionsPanel";
 
 interface Props {
   scope: "user" | "project";
@@ -24,7 +25,7 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
           <span className="connections-kicker">内置功能凭证</span>
         </div>
         <span className="connections-hint">
-          需要 key 的内置功能（WebSearch、图片生成…）按功能分组放在这里；每组可折叠。
+          需要 key 的内置功能（WebSearch、图片生成、视频生成…）按功能分组放在这里；每组可折叠。
         </span>
       </header>
 
@@ -42,6 +43,14 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
         defaultOpen={false}
       >
         <ImageGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
+      </CollapsibleGroup>
+
+      <CollapsibleGroup
+        title="视频生成 providers"
+        subtitle="GenerateVideo 的 provider 分组。适配器待接入(见组内说明)。"
+        defaultOpen={false}
+      >
+        <VideoGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
       </CollapsibleGroup>
     </section>
   );
