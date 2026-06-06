@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import type { DesktopSessionSummary } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatBytes } from "@/lib/utils";
 
 interface Props {
   onNewSession?: () => void;
@@ -136,8 +137,3 @@ export function SessionsView({ onNewSession }: Props) {
   );
 }
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}

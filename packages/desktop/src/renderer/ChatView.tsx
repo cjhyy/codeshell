@@ -25,6 +25,7 @@ import {
 import { compressBatch } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import { detectMention } from "./chat/mention";
+import { formatBytes } from "@/lib/utils";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 
 interface Props {
@@ -600,11 +601,27 @@ export function ChatView({
           {attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {attachments.map((a) => (
-                <div className="relative h-14 w-14 overflow-hidden rounded-md border" key={a.id} title={a.name}>
-                  <img src={a.dataUrl} alt={a.name} className="h-full w-full object-cover" />
+                <div
+                  className="group/att relative flex max-w-[220px] items-center gap-2 rounded-md border bg-muted/40 py-1 pl-1 pr-6"
+                  key={a.id}
+                  title={a.name}
+                >
+                  <img
+                    src={a.dataUrl}
+                    alt={a.name}
+                    className="h-9 w-9 shrink-0 rounded object-cover"
+                  />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-xs text-foreground" title={a.name}>
+                      {a.name || "图片"}
+                    </span>
+                    <span className="text-[10px] tabular-nums text-muted-foreground">
+                      {formatBytes(a.size)}
+                    </span>
+                  </div>
                   <button
                     type="button"
-                    className="absolute right-0.5 top-0.5 rounded-full bg-background/80 p-0.5 text-foreground"
+                    className="absolute right-1 top-1 rounded-full bg-background/80 p-0.5 text-muted-foreground hover:text-foreground"
                     aria-label={`移除 ${a.name}`}
                     onClick={() => removeAttachment(a.id)}
                   >
