@@ -21,6 +21,13 @@ export interface ImageAttachment {
   size: number;
 }
 
+/**
+ * DataTransfer MIME for an internal file-panel → composer image drag (TODO
+ * 2.1). The payload is the absolute path. Custom type so the composer can tell
+ * an internal drag (a path string) from an OS file drop (a browser File).
+ */
+export const CODESHELL_PATH_DND_MIME = "application/x-codeshell-path";
+
 export const ATTACHMENT_LIMITS = {
   /** Single-file ceiling. Most providers cap at 20 MB; stay conservative. */
   maxBytesPerImage: 10 * 1024 * 1024,

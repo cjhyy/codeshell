@@ -20,6 +20,7 @@ import {
   encodeAttachmentsForWire,
   filesFromClipboard,
   imageFilesFromDrop,
+  CODESHELL_PATH_DND_MIME,
   type ImageAttachment,
 } from "./chat/attachments";
 import { compressBatch } from "./chat/compress";
@@ -50,6 +51,8 @@ interface Props {
   onAskUserAnswer?: (requestId: string, answer: string) => void;
   /** Extend the running goal by N more turns (TODO 3.1). */
   onExtendGoal?: (addTurns: number) => void;
+  /** Attach an image to the composer by absolute path (file-panel drag — TODO 2.1). */
+  onAttachImagePath?: (absPath: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (decision: "approve" | "deny", reason?: string) => void;
 
@@ -112,6 +115,7 @@ export function ChatView({
   activeRepoId,
   onAskUserAnswer,
   onExtendGoal,
+  onAttachImagePath,
   pendingApproval,
   onApprovalDecide,
   permissionMode,
@@ -411,14 +415,21 @@ export function ChatView({
   // is the chat root. We DON'T pull this up to App because then Sidebar
   // drops (e.g. dragging a project folder onto the sidebar) would silently
   // become image attachments.
+  // A drag is acceptable if it's an OS file drop OR an internal file-panel
+  // image drag (carries our custom path MIME — TODO 2.1).
+  const dragHasAcceptable = (dt: DataTransfer | null): boolean => {
+    if (!dt) return false;
+    if (Array.from(dt.items ?? []).some((it) => it.kind === "file")) return true;
+    return Array.from(dt.types ?? []).includes(CODESHELL_PATH_DND_MIME);
+  };
   const onChatDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
+    if (dragHasAcceptable(e.dataTransfer)) {
       e.preventDefault();
       setDragOver(true);
     }
   };
   const onChatDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (Array.from(e.dataTransfer?.items ?? []).some((it) => it.kind === "file")) {
+    if (dragHasAcceptable(e.dataTransfer)) {
       e.preventDefault();
     }
   };
@@ -431,6 +442,12 @@ export function ChatView({
   const onChatDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
+    // Internal file-panel image drag → attach by absolute path.
+    const draggedPath = e.dataTransfer?.getData(CODESHELL_PATH_DND_MIME);
+    if (draggedPath) {
+      onAttachImagePath?.(draggedPath);
+      return;
+    }
     const imageFiles = imageFilesFromDrop(e.dataTransfer?.items ?? null);
     if (imageFiles.length === 0) return;
     void acceptFiles(imageFiles);

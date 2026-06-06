@@ -2103,6 +2103,7 @@ function App() {
               onClearAnchors={clearAnchors}
               onAskUserAnswer={handleAskUserAnswer}
               onExtendGoal={extendGoal}
+              onAttachImagePath={(p) => void attachImageByPath(p)}
               pendingApproval={approval}
               onApprovalDecide={
                 approval

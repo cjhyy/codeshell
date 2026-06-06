@@ -7,6 +7,7 @@ import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal, Paperclip } from "lucide-react";
+import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
 
 /** Image extensions we render as an inline preview (via data URL). */
 const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif"]);
@@ -139,6 +140,7 @@ function DirNode({
               <button
                 type="button"
                 style={pad}
+                draggable={false}
                 className="flex w-full items-center gap-1 py-1 pr-2 text-left text-sm text-foreground hover:bg-accent"
                 onClick={() =>
                   setOpen((prev) => {
@@ -178,6 +180,15 @@ function DirNode({
             <button
               type="button"
               style={pad}
+              // Image rows are draggable onto the composer (TODO 2.1). The drag
+              // payload is the absolute path under a custom MIME so the composer
+              // can tell an internal file-panel drag from an OS file drop.
+              draggable={isImageFile && !!onAttachImage}
+              onDragStart={(ev) => {
+                if (!isImageFile) return;
+                ev.dataTransfer.setData(CODESHELL_PATH_DND_MIME, e.path);
+                ev.dataTransfer.effectAllowed = "copy";
+              }}
               className={`flex w-full items-center gap-1 py-1 ${
                 isImageFile && onAttachImage ? "pr-12" : "pr-7"
               } text-left text-sm hover:bg-accent ${
