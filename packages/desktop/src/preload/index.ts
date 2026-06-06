@@ -117,6 +117,17 @@ ipcRenderer.on("agent:lifecycle", (_e: IpcRendererEvent, evt: unknown) => {
 const RPC_TIMEOUT_MS = 30_000;
 
 /**
+ * Unwrap a JSON-RPC reply: `rpc()` resolves with the whole `{id, result|error}`
+ * envelope, so data-returning callers must reach into `.result` (and surface
+ * `.error`). Older bindings that ignore the payload can skip this.
+ */
+function rpcResult<T = unknown>(msg: unknown): T {
+  const m = (msg ?? {}) as { result?: unknown; error?: { message?: string } };
+  if (m.error) throw new Error(m.error.message ?? "RPC error");
+  return m.result as T;
+}
+
+/**
  * Send a JSON-RPC request to main and resolve with its reply.
  *
  * `timeoutMs` guards against main never replying so the caller doesn't hang
@@ -191,26 +202,26 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   goalExtend: (
     sessionId: string,
-    opts: { addTurns?: number; addTokenBudget?: number; addTimeBudgetMs?: number },
+    opts: { addTurns?: number; addTokenBudget?: number; addTimeBudgetMs?: number; addStopBlocks?: number },
   ) =>
-    rpc("agent/goalExtend", { sessionId, ...opts }) as Promise<{
+    rpc("agent/goalExtend", { sessionId, ...opts }).then(rpcResult) as Promise<{
       ok: boolean;
-      limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number };
+      limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number };
     }>,
   /** List a session's background shells for the dock panel (TODO 3.2). */
   listBackgroundShells: (sessionId: string) =>
-    rpc("agent/backgroundShells", { sessionId, action: "list" }) as Promise<{
+    rpc("agent/backgroundShells", { sessionId, action: "list" }).then(rpcResult) as Promise<{
       shells: BackgroundShellInfo[];
     }>,
   /** Read one background shell's full retained output. */
   backgroundShellOutput: (sessionId: string, shellId: string) =>
-    rpc("agent/backgroundShells", { sessionId, action: "output", shellId }) as Promise<{
+    rpc("agent/backgroundShells", { sessionId, action: "output", shellId }).then(rpcResult) as Promise<{
       header: string;
       text: string;
     }>,
   /** Terminate one background shell's process group. */
   killBackgroundShell: (sessionId: string, shellId: string) =>
-    rpc("agent/backgroundShells", { sessionId, action: "kill", shellId }) as Promise<{
+    rpc("agent/backgroundShells", { sessionId, action: "kill", shellId }).then(rpcResult) as Promise<{
       ok: boolean;
     }>,
   approve: (

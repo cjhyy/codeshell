@@ -116,8 +116,12 @@ export interface GoalProgressMessage {
   status: "not_met" | "met" | "exhausted" | "approaching_limit";
   round: number;
   gaps?: string;
-  /** For "approaching_limit": turns left before the cap (TODO 3.1). */
+  /** For "approaching_limit": turns left before the maxTurns cap (TODO 3.1). */
   turnsRemaining?: number;
+  /** For "approaching_limit": consecutive blocks left before maxStopBlocks (TODO 3.1). */
+  stopBlocksRemaining?: number;
+  /** For "approaching_limit": which ceiling is closest — drives UI copy + extend default. */
+  nearest?: "turns" | "stopBlocks";
 }
 
 /**
@@ -616,15 +620,26 @@ export function applyStreamEvent(
         round: event.round,
         gaps: event.gaps,
         turnsRemaining: event.turnsRemaining,
+        stopBlocksRemaining: event.stopBlocksRemaining,
+        nearest: event.nearest,
       };
-      // "approaching_limit" is a transient call-to-action (the extend button).
-      // Any other goal_progress (not_met/met/exhausted) means the moment passed
-      // or the run advanced — drop a lingering approaching_limit marker so the
-      // button doesn't stick around stale. And never stack two of them.
-      const pruned = state.messages.filter(
-        (m) => !(m.kind === "goal_progress" && m.status === "approaching_limit"),
-      );
-      return { ...state, messages: [...pruned, msg] };
+      // The "approaching_limit" marker carries the "再续" button. Only prune it
+      // when the moment has TRULY passed:
+      //  - met/exhausted → the limit dimension settled / the run stopped.
+      //  - a NEW approaching_limit → never stack two (re-announced after extend).
+      // A "not_met" event means the goal is still advancing and may still be
+      // nearing the cap, so the button must stay (fixes B2: previously not_met
+      // pruned the button within the same turn it appeared).
+      const dropApproaching =
+        event.status === "met" ||
+        event.status === "exhausted" ||
+        event.status === "approaching_limit";
+      const base = dropApproaching
+        ? state.messages.filter(
+            (m) => !(m.kind === "goal_progress" && m.status === "approaching_limit"),
+          )
+        : state.messages;
+      return { ...state, messages: [...base, msg] };
     }
 
     case "usage_update": {

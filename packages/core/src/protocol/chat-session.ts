@@ -111,7 +111,8 @@ export class ChatSession {
     addTurns?: number;
     addTokenBudget?: number;
     addTimeBudgetMs?: number;
-  }): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number } | null {
+    addStopBlocks?: number;
+  }): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number } | null {
     return this.engine.extendGoalRun(opts);
   }
 

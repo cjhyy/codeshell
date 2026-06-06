@@ -39,6 +39,7 @@ import {
   recordGoalUsage,
   goalBudgetExceeded,
   applyGoalExtension,
+  limitProximity,
   GOAL_DEFAULT_MAX_STOP_BLOCKS,
 } from "./goal.js";
 
@@ -164,33 +165,94 @@ export class TurnLoop {
   private goalTracker: GoalBudgetTracker | null = null;
 
   /**
+   * Whether an approaching_limit marker was already emitted for the current
+   * ceiling. Reset when the run advances past the moment (a fresh extension, or
+   * the goal completing) so the next approach re-announces. Prevents the marker
+   * being re-emitted every turn while still within the approach threshold.
+   */
+  private approachAnnounced = false;
+
+  /**
    * Extend the in-flight run's limits (TODO 3.1 — 运行中续轮/加预算). Mutates
-   * the maxTurns ceiling and/or the live goal budgets; the loop re-reads both
-   * each turn so the change takes effect on the next iteration. No-op for
-   * fields not supplied. Returns the resulting effective limits.
+   * the maxTurns ceiling, the maxStopBlocks cap, and/or the live goal budgets;
+   * the loop re-reads all of them each turn so the change takes effect on the
+   * next iteration. No-op for fields not supplied. Returns the resulting
+   * effective limits.
    */
   extend(opts: GoalExtension): {
     maxTurns: number;
     tokenBudget?: number;
     timeBudgetMs?: number;
+    maxStopBlocks: number;
   } {
+    const elapsedMs = this.goalTracker ? Date.now() - this.goalTracker.startedAtMs : 0;
     const next = applyGoalExtension(
       this.config.maxTurns,
       this.goalTracker?.goal,
       this.goalTracker?.tokensUsed ?? 0,
+      elapsedMs,
       opts,
     );
     this.config = { ...this.config, maxTurns: next.maxTurns };
     if (this.goalTracker) {
-      this.goalTracker.goal.tokenBudget = next.tokenBudget;
-      this.goalTracker.goal.timeBudgetMs = next.timeBudgetMs;
+      // Replace the goal object rather than mutating its fields: the tracker's
+      // goal may be a shared/frozen reference, and goalBudgetExceeded reads
+      // tracker.goal.{tokenBudget,timeBudgetMs} live, so a fresh object with the
+      // new caps takes effect on the next turn either way.
+      this.goalTracker.goal = {
+        ...this.goalTracker.goal,
+        tokenBudget: next.tokenBudget,
+        timeBudgetMs: next.timeBudgetMs,
+      };
     }
-    // Bumping turns resets the consecutive stop-block streak so a goal that was
-    // repeatedly re-blocked isn't immediately re-capped right after extending.
-    if (typeof opts.addTurns === "number" && opts.addTurns > 0) {
+    // Raise the consecutive-stop-block cap — for a re-blocked goal this is the
+    // limit that actually bites, so an extend that only bumped maxTurns/budgets
+    // couldn't keep it going. Resolve the current cap the same way the loop does.
+    const curCap = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
+    const nextCap =
+      typeof opts.addStopBlocks === "number" && opts.addStopBlocks > 0
+        ? curCap + Math.floor(opts.addStopBlocks)
+        : curCap;
+    this.config = { ...this.config, maxStopBlocks: nextCap };
+
+    // ANY extension resets the consecutive stop-block streak: the user just
+    // asked to keep going, so a goal that was repeatedly re-blocked shouldn't be
+    // immediately re-capped. (Previously only addTurns reset it, leaving a
+    // budget-only extension unable to un-stick a capped goal.)
+    const extended =
+      (opts.addTurns ?? 0) > 0 ||
+      (opts.addStopBlocks ?? 0) > 0 ||
+      (opts.addTokenBudget ?? 0) > 0 ||
+      (opts.addTimeBudgetMs ?? 0) > 0;
+    if (extended) {
       this.stopBlockCount = 0;
+      // Let the next approach re-announce against the raised ceilings.
+      this.approachAnnounced = false;
     }
-    return next;
+    return { ...next, maxStopBlocks: nextCap };
+  }
+
+  /**
+   * Goal mode only: if the run is nearing EITHER stop ceiling (maxTurns or
+   * maxStopBlocks) and we haven't announced it yet, emit one approaching_limit
+   * marker so the UI can offer a "再续" button while the run is still live.
+   * Watches both limits because a re-blocked goal hits the stop-block cap long
+   * before maxTurns. Idempotent within an approach window via approachAnnounced.
+   */
+  private maybeAnnounceApproachingLimit(): void {
+    if (!this.config.goal || this.approachAnnounced) return;
+    const cap = this.config.maxStopBlocks ?? GOAL_DEFAULT_MAX_STOP_BLOCKS;
+    const prox = limitProximity(this.turnCount, this.config.maxTurns, this.stopBlockCount, cap);
+    if (!prox.approaching) return;
+    this.approachAnnounced = true;
+    this.config.onStream?.({
+      type: "goal_progress",
+      status: "approaching_limit",
+      round: this.stopBlockCount,
+      turnsRemaining: prox.turnsRemaining,
+      stopBlocksRemaining: prox.stopBlocksRemaining,
+      nearest: prox.nearest,
+    });
   }
 
   constructor(
@@ -313,6 +375,8 @@ export class TurnLoop {
       ? createGoalBudgetTracker(this.config.goal, Date.now())
       : null;
     const goalTracker = this.goalTracker;
+    // Fresh run: re-arm the approaching-limit announcement.
+    this.approachAnnounced = false;
 
     // run() must never reject: the engine's post-run bookkeeping (saveState
     // with the terminal reason, on_session_end hook) runs AFTER this call and
@@ -365,7 +429,10 @@ export class TurnLoop {
         messages.push(turnStartInjection);
       }
 
-      // Approaching max turns: inject a warning so the model can wrap up
+      // Approaching max turns: inject a warning so the model can wrap up.
+      // (Model-facing only — the user-facing "再续" marker is handled by
+      // maybeAnnounceApproachingLimit below, which also watches the stop-block
+      // cap, the limit a re-blocked goal actually hits first.)
       const turnsRemaining = this.config.maxTurns - this.turnCount;
       if (turnsRemaining === 2) {
         messages.push({
@@ -374,17 +441,6 @@ export class TurnLoop {
             "<system-reminder>Warning: you have only 2 turns remaining before the turn limit is reached. " +
             "Start wrapping up your work and prepare a summary of what you've accomplished and what remains to be done.</system-reminder>",
         });
-        // Goal mode: surface an "approaching limit" marker so the UI can offer
-        // a "再续 N 轮" extend button while the run is still live (TODO 3.1).
-        // Emitted only for goals — there's nothing to extend otherwise.
-        if (this.config.goal) {
-          this.config.onStream?.({
-            type: "goal_progress",
-            status: "approaching_limit",
-            round: this.stopBlockCount,
-            turnsRemaining,
-          });
-        }
       } else if (turnsRemaining === 0) {
         messages.push({
           role: "user",
@@ -393,6 +449,10 @@ export class TurnLoop {
             "Do NOT call any tools. Summarize what you have accomplished and list any remaining work.</system-reminder>",
         });
       }
+
+      // Goal mode: announce once when nearing EITHER stop ceiling (turns or
+      // stop-blocks) so the UI can offer a "再续" button while still live.
+      this.maybeAnnounceApproachingLimit();
 
       // Pre-check: context management (async — may trigger LLM summarization)
       messages = await this.deps.contextManager.manageAsync(messages);
@@ -636,6 +696,10 @@ export class TurnLoop {
             round: this.stopBlockCount,
             gaps: goalVerdict?.gaps || undefined,
           });
+          // The streak just grew — we may now be nearing the stop-block cap.
+          // Announce here (before the next turn's top check) so the "再续"
+          // button shows up against the limit that's actually about to bite.
+          this.maybeAnnounceApproachingLimit();
           const injection = wrapHookMessages(stopHook.messages);
           if (injection) {
             messages.push(injection);

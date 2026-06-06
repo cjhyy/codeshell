@@ -212,10 +212,10 @@ export interface CodeshellApi {
    */
   goalExtend(
     sessionId: string,
-    opts: { addTurns?: number; addTokenBudget?: number; addTimeBudgetMs?: number },
+    opts: { addTurns?: number; addTokenBudget?: number; addTimeBudgetMs?: number; addStopBlocks?: number },
   ): Promise<{
     ok: boolean;
-    limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number };
+    limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number };
   }>;
   /** Background-shell dock panel (TODO 3.2). */
   listBackgroundShells(sessionId: string): Promise<{ shells: BackgroundShellInfo[] }>;

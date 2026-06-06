@@ -48,10 +48,21 @@ export interface GoalConfig {
 export const GOAL_DEFAULT_MAX_STOP_BLOCKS = 25;
 
 /**
+ * Consecutive-stop-block cap for NON-goal (interactive) runs. The 25-block goal
+ * default is far too loose for a plain interactive session: a plugin `on_stop`
+ * hook that keeps returning continueSession would loop 25× before the backstop
+ * bites (~3× the model calls). Non-goal runs fall back to this tighter cap —
+ * the historical value before the goal feature raised the goal-mode default.
+ */
+export const INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS = 8;
+
+/**
  * Resolve the consecutive-stop-block cap for a run. Precedence:
  *   1. explicit `configMaxStopBlocks` (engine/caller override)
  *   2. `goal.maxStopBlocks`
- *   3. GOAL_DEFAULT_MAX_STOP_BLOCKS
+ *   3. GOAL_DEFAULT_MAX_STOP_BLOCKS when a goal is active,
+ *      INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS otherwise (don't leak the loose goal
+ *      cap onto plain interactive runs — see B3 in the redesign doc).
  * Pure + injectable so engine and tests agree.
  */
 export function resolveMaxStopBlocks(
@@ -62,7 +73,7 @@ export function resolveMaxStopBlocks(
     return Math.floor(configMaxStopBlocks);
   }
   if (goal?.maxStopBlocks && goal.maxStopBlocks > 0) return goal.maxStopBlocks;
-  return GOAL_DEFAULT_MAX_STOP_BLOCKS;
+  return goal ? GOAL_DEFAULT_MAX_STOP_BLOCKS : INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS;
 }
 
 /**
@@ -119,10 +130,58 @@ export function resolveMaxTurns(
   return INTERACTIVE_DEFAULT_MAX_TURNS;
 }
 
+/**
+ * How close a run is to either hard ceiling. Both maxTurns and maxStopBlocks
+ * can force-stop a goal, so the "approaching limit" UX must watch BOTH — the
+ * old code only watched maxTurns (turnsRemaining===2), but a re-blocked goal
+ * almost always hits the much-tighter stop-block cap first. See redesign doc.
+ */
+export interface LimitProximity {
+  /** Turns left before maxTurns (maxTurns - turnCount). */
+  turnsRemaining: number;
+  /** Consecutive blocks left before maxStopBlocks (cap - stopBlockCount). */
+  stopBlocksRemaining: number;
+  /** True when EITHER dimension is within its approach threshold. */
+  approaching: boolean;
+  /** Which ceiling is closest — drives UI copy and the extend default. */
+  nearest: "turns" | "stopBlocks";
+}
+
+/** Warn when this many turns (or fewer) remain before maxTurns. */
+export const APPROACH_TURNS = 5;
+/** Warn when this many consecutive blocks (or fewer) remain before the cap. */
+export const APPROACH_STOP_BLOCKS = 3;
+
+/**
+ * Compute proximity to the two stop ceilings. Pure so turn-loop and tests
+ * agree. `nearest` favors stopBlocks when both are near, because the stop-block
+ * cap (default 25) is reached far sooner than maxTurns (default 300) for a
+ * goal the judge keeps re-blocking — it's the limit that actually bites.
+ */
+export function limitProximity(
+  turnCount: number,
+  maxTurns: number,
+  stopBlockCount: number,
+  maxStopBlocks: number,
+): LimitProximity {
+  const turnsRemaining = maxTurns - turnCount;
+  const stopBlocksRemaining = maxStopBlocks - stopBlockCount;
+  const turnsNear = turnsRemaining <= APPROACH_TURNS;
+  const blocksNear = stopBlocksRemaining <= APPROACH_STOP_BLOCKS;
+  return {
+    turnsRemaining,
+    stopBlocksRemaining,
+    approaching: turnsNear || blocksNear,
+    nearest: blocksNear ? "stopBlocks" : "turns",
+  };
+}
+
 export interface GoalExtension {
   addTurns?: number;
   addTokenBudget?: number;
   addTimeBudgetMs?: number;
+  /** Raise the consecutive-stop-block cap — the limit that usually bites. */
+  addStopBlocks?: number;
 }
 
 /**
@@ -130,16 +189,21 @@ export interface GoalExtension {
  * (TODO 3.1). Pure so the TurnLoop and tests agree on the arithmetic:
  *   - addTurns bumps the maxTurns ceiling (floored, positive only).
  *   - addTokenBudget/addTimeBudgetMs raise the goal's caps. When a cap was
- *     previously unset ("unlimited"), we seed it from `tokensUsed` (tokens) or
- *     0 (time) before adding, so extending an unbounded run sets a fresh cap
- *     ABOVE current usage rather than leaving it unbounded.
- * `tokensUsed` is the tracker's running total (used only to seed an unset
- * token cap). Returns the resulting limits; never mutates its inputs.
+ *     previously unset ("unlimited"), we seed it from CURRENT USAGE before
+ *     adding — `tokensUsed` for tokens, `elapsedMs` for time — so extending an
+ *     unbounded run sets a fresh cap ABOVE current usage rather than below it.
+ *     (Seeding time from 0 was bug B1: a long-running unbounded goal would get
+ *     a cap below its elapsed time and force-stop immediately on extend.)
+ *   - addStopBlocks is handled by the caller (TurnLoop.extend) against the live
+ *     config, not here, since it isn't part of the goal budget shape.
+ * `tokensUsed`/`elapsedMs` are the tracker's running totals (used only to seed
+ * unset caps). Returns the resulting limits; never mutates its inputs.
  */
 export function applyGoalExtension(
   currentMaxTurns: number,
   goal: GoalConfig | undefined,
   tokensUsed: number,
+  elapsedMs: number,
   ext: GoalExtension,
 ): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number } {
   let maxTurns = currentMaxTurns;
@@ -153,7 +217,9 @@ export function applyGoalExtension(
       tokenBudget = (tokenBudget ?? tokensUsed) + Math.floor(ext.addTokenBudget);
     }
     if (typeof ext.addTimeBudgetMs === "number" && ext.addTimeBudgetMs > 0) {
-      timeBudgetMs = (timeBudgetMs ?? 0) + Math.floor(ext.addTimeBudgetMs);
+      // Seed an unset cap from elapsed time (not 0), mirroring the token branch,
+      // so the new cap lands above current usage. Fixes B1.
+      timeBudgetMs = (timeBudgetMs ?? elapsedMs) + Math.floor(ext.addTimeBudgetMs);
     }
   }
   return { maxTurns, tokenBudget, timeBudgetMs };

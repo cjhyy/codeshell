@@ -50,8 +50,13 @@ interface Props {
   runningAgents?: number;
   activeRepoId: string | null;
   onAskUserAnswer?: (requestId: string, answer: string) => void;
-  /** Extend the running goal by N more turns (TODO 3.1). */
-  onExtendGoal?: (addTurns: number) => void;
+  /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
+  onExtendGoal?: (opts: {
+    addTurns?: number;
+    addStopBlocks?: number;
+    addTokenBudget?: number;
+    addTimeBudgetMs?: number;
+  }) => void;
   /** Attach an image to the composer by absolute path (file-panel drag — TODO 2.1). */
   onAttachImagePath?: (absPath: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;

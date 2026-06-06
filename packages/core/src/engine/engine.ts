@@ -43,7 +43,13 @@ import type { HookEventName, HookResult } from "../hooks/events.js";
 import type { HookHandler } from "../hooks/registry.js";
 import { wrapHookMessages } from "../hooks/inject.js";
 import { createGoalStopHook } from "../hooks/goal-stop-hook.js";
-import { normalizeGoal, resolveMaxTurns, resolveMaxStopBlocks, type GoalConfig } from "./goal.js";
+import {
+  normalizeGoal,
+  resolveMaxTurns,
+  resolveMaxStopBlocks,
+  type GoalConfig,
+  type GoalExtension,
+} from "./goal.js";
 import { loadPluginHooks } from "../plugins/loadPluginHooks.js";
 import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
@@ -2451,11 +2457,9 @@ export class Engine {
    * 运行中续轮/加预算). No-op (returns null) when no run is active. Lets a user
    * keep an unattended goal going past its original cap instead of restarting.
    */
-  extendGoalRun(opts: {
-    addTurns?: number;
-    addTokenBudget?: number;
-    addTimeBudgetMs?: number;
-  }): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number } | null {
+  extendGoalRun(
+    opts: GoalExtension,
+  ): { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number } | null {
     if (!this.activeTurnLoop) return null;
     return this.activeTurnLoop.extend(opts);
   }

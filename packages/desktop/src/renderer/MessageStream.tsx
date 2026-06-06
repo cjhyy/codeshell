@@ -30,8 +30,13 @@ const NOOP_ON_ANSWER = (): void => undefined;
 interface Props {
   messages: Message[];
   onAskUserAnswer?: (requestId: string, answer: string) => void;
-  /** Extend the running goal by N more turns (TODO 3.1). */
-  onExtendGoal?: (addTurns: number) => void;
+  /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
+  onExtendGoal?: (opts: {
+    addTurns?: number;
+    addStopBlocks?: number;
+    addTokenBudget?: number;
+    addTimeBudgetMs?: number;
+  }) => void;
   /**
    * Optional trailing slot rendered after the last message but still
    * inside the scrollable stream. Used by the chat shell to drop a

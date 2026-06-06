@@ -1498,12 +1498,17 @@ function App() {
     return summary?.engineSessionId ?? uiSessionId ?? undefined;
   };
 
-  // Extend the running goal by N more turns (TODO 3.1). Fired by the
-  // "approaching limit" extend button in the goal progress marker.
-  const extendGoal = (addTurns: number): void => {
+  // Extend the running goal (TODO 3.1). Fired by the "approaching limit" extend
+  // button; opts target whichever ceiling is closest (turns or stop-blocks).
+  const extendGoal = (opts: {
+    addTurns?: number;
+    addStopBlocks?: number;
+    addTokenBudget?: number;
+    addTimeBudgetMs?: number;
+  }): void => {
     const engineSessionId = resolveActiveEngineSessionId();
     if (!engineSessionId) return;
-    void window.codeshell.goalExtend(engineSessionId, { addTurns }).catch((e) =>
+    void window.codeshell.goalExtend(engineSessionId, opts).catch((e) =>
       window.codeshell.log("goal.extend.failed", { error: String(e) }),
     );
   };

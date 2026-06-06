@@ -195,9 +195,12 @@ describe("TurnLoop goal_progress events", () => {
     }));
     await loop.run([{ role: "user", content: "go" }]);
 
-    // 2 not_met rounds, then exhausted at the cap.
-    expect(events.map((e) => e.status)).toEqual(["not_met", "not_met", "exhausted"]);
-    expect(events[events.length - 1]!.round).toBe(2);
+    // 2 not_met rounds, then exhausted at the cap. An approaching_limit marker
+    // is also emitted once as the tight cap (2) is neared; filter it out to
+    // assert the verdict sequence.
+    const verdicts = events.filter((e) => e.status !== "approaching_limit");
+    expect(verdicts.map((e) => e.status)).toEqual(["not_met", "not_met", "exhausted"]);
+    expect(verdicts[verdicts.length - 1]!.round).toBe(2);
   });
 
   it("emits nothing when there is no goal (plain run)", async () => {
@@ -209,5 +212,105 @@ describe("TurnLoop goal_progress events", () => {
     }));
     await loop.run([{ role: "user", content: "go" }]);
     expect(events).toEqual([]);
+  });
+
+  it("emits approaching_limit (nearest=stopBlocks) BEFORE the cap, not just at maxTurns", async () => {
+    // A re-blocked goal with a tight block cap should warn as it nears the cap,
+    // carrying nearest=stopBlocks (the limit that actually bites) — the old code
+    // only warned at turnsRemaining===2 against maxTurns, which a re-blocked goal
+    // never reaches. maxStopBlocks=4, APPROACH_STOP_BLOCKS=3 → warns once when
+    // stopBlocksRemaining first hits 3 (after the 1st block).
+    const model = scriptedModel([noTool("loop")]);
+    const { deps, hooks } = makeDeps(model);
+    hooks.register("on_stop", () => ({
+      continueSession: true,
+      messages: ["again"],
+      data: { goalVerdict: { met: false, gaps: "g" } },
+    }));
+    const events: GP[] = [];
+    const loop = new TurnLoop(deps, makeConfig({
+      goal: "unsatisfiable",
+      maxTurns: 300,
+      maxStopBlocks: 4,
+      onStream: (e) => { if (e.type === "goal_progress") events.push(e as GP); },
+    }));
+    await loop.run([{ role: "user", content: "go" }]);
+
+    const approaching = events.filter((e) => e.status === "approaching_limit");
+    expect(approaching.length).toBe(1); // announced once, not stacked
+    expect(approaching[0]!.nearest).toBe("stopBlocks");
+    expect(approaching[0]!.stopBlocksRemaining).toBeLessThanOrEqual(3);
+    // It must come before the terminal "exhausted".
+    const lastStatus = events[events.length - 1]!.status;
+    expect(lastStatus).toBe("exhausted");
+  });
+});
+
+describe("TurnLoop.extend (TODO 3.1 — 续跑作用于真正逼停的维度)", () => {
+  it("addStopBlocks raises the cap AND resets the streak so the run keeps going", async () => {
+    // The goal would be capped at maxStopBlocks=3, but we extend at the 2nd
+    // block. After extend the streak resets and the cap is higher, so the run
+    // survives more blocks before exhausting.
+    const model = scriptedModel([noTool("loop")]);
+    const { deps, hooks } = makeDeps(model);
+    let fired = 0;
+    let loopRef: TurnLoop | null = null;
+    hooks.register("on_stop", () => {
+      fired++;
+      if (fired === 2) {
+        // Mid-run extension: raise the cap and reset the streak.
+        loopRef!.extend({ addStopBlocks: 5 });
+      }
+      return { continueSession: true, messages: ["again"], data: { goalVerdict: { met: false, gaps: "g" } } };
+    });
+    const loop = new TurnLoop(deps, makeConfig({ goal: { objective: "g" }, maxStopBlocks: 3 }));
+    loopRef = loop;
+    const result = await loop.run([{ role: "user", content: "go" }]);
+    expect(result.reason).toBe("completed");
+    // Without extend: capped after 3 blocks (4 fires). With extend at fire #2
+    // (reset to 0, cap now 8), it runs well past 4 — at least 6 fires.
+    expect(fired).toBeGreaterThan(4);
+  });
+
+  it("a budget-only extension also resets the stop-block streak (not just addTurns)", async () => {
+    // Bug: the old extend() reset stopBlockCount ONLY for addTurns, so a
+    // budget-only extension left a capped goal stuck. Extending time should
+    // reset the streak too.
+    const model = scriptedModel([noTool("loop")]);
+    const { deps, hooks } = makeDeps(model);
+    let fired = 0;
+    let loopRef: TurnLoop | null = null;
+    hooks.register("on_stop", () => {
+      fired++;
+      if (fired === 2) loopRef!.extend({ addTimeBudgetMs: 600_000 });
+      return { continueSession: true, messages: ["again"], data: { goalVerdict: { met: false, gaps: "g" } } };
+    });
+    const loop = new TurnLoop(deps, makeConfig({ goal: { objective: "g" }, maxStopBlocks: 3 }));
+    loopRef = loop;
+    await loop.run([{ role: "user", content: "go" }]);
+    // The streak reset means it doesn't cap at the original 3 blocks (4 fires).
+    expect(fired).toBeGreaterThan(4);
+  });
+
+  it("extending time on a long-running unbounded goal does NOT insta-stop (B1)", async () => {
+    // Goal with no time budget; we extend time mid-run. The new cap must seed
+    // from elapsed time, so goalBudgetExceeded does not fire immediately.
+    const model = scriptedModel([noTool("loop")]);
+    const { deps, hooks } = makeDeps(model);
+    let fired = 0;
+    let loopRef: TurnLoop | null = null;
+    hooks.register("on_stop", () => {
+      fired++;
+      if (fired === 1) loopRef!.extend({ addTimeBudgetMs: 600_000 });
+      // After extend, allow it to finish on the 3rd attempt.
+      if (fired >= 3) return { data: { goalVerdict: { met: true, gaps: "" } } };
+      return { continueSession: true, messages: ["again"], data: { goalVerdict: { met: false, gaps: "g" } } };
+    });
+    const loop = new TurnLoop(deps, makeConfig({ goal: { objective: "g" }, maxStopBlocks: 25 }));
+    loopRef = loop;
+    const result = await loop.run([{ role: "user", content: "go" }]);
+    // Must reach the met verdict, NOT a premature goal_budget_exhausted.
+    expect(result.reason).toBe("completed");
+    expect(fired).toBeGreaterThanOrEqual(3);
   });
 });

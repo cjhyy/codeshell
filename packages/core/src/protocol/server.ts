@@ -502,26 +502,40 @@ export class AgentServer {
       addTurns?: number;
       addTokenBudget?: number;
       addTimeBudgetMs?: number;
+      addStopBlocks?: number;
     };
+    const ext = {
+      addTurns: params.addTurns,
+      addTokenBudget: params.addTokenBudget,
+      addTimeBudgetMs: params.addTimeBudgetMs,
+      addStopBlocks: params.addStopBlocks,
+    };
+    // Multi-session path: route to the named session.
     const session =
       this.chatManager && typeof params.sessionId === "string"
         ? this.chatManager.get(params.sessionId)
         : undefined;
-    if (!session) {
-      this.transport.send(
-        createErrorResponse(
-          req.id,
-          ErrorCodes.SessionClosed,
-          params.sessionId ? `No such session: ${params.sessionId}` : "sessionId is required",
-        ),
-      );
-      return;
+    // Legacy single-engine path (no chatManager): extend the one engine's run,
+    // mirroring handleCancel which also supports both paths. Without this a
+    // legacy host can cancel but never extend a goal.
+    const result = session
+      ? session.extendGoalRun(ext)
+      : this.legacyEngine
+        ? this.legacyEngine.extendGoalRun(ext)
+        : undefined;
+    if (result === undefined) {
+      // Couldn't even resolve a target (no session and no legacy engine).
+      if (!session && !this.legacyEngine) {
+        this.transport.send(
+          createErrorResponse(
+            req.id,
+            ErrorCodes.SessionClosed,
+            params.sessionId ? `No such session: ${params.sessionId}` : "sessionId is required",
+          ),
+        );
+        return;
+      }
     }
-    const result = session.extendGoalRun({
-      addTurns: params.addTurns,
-      addTokenBudget: params.addTokenBudget,
-      addTimeBudgetMs: params.addTimeBudgetMs,
-    });
     if (!result) {
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InvalidParams, "No active run to extend"),

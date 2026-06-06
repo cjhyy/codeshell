@@ -57,13 +57,30 @@ describe("goal_progress approaching_limit (TODO 3.1)", () => {
     expect(goalCount(s, "approaching_limit")).toBe(1);
   });
 
-  test("a later not_met/met/exhausted prunes the approaching_limit marker", () => {
-    const s = dispatch(INITIAL_STATE, [
+  test("met/exhausted prune the approaching_limit marker (the moment passed)", () => {
+    const sMet = dispatch(INITIAL_STATE, [
       ev("goal_progress", { status: "approaching_limit", round: 0, turnsRemaining: 2 } as never),
       ev("goal_progress", { status: "met", round: 3 } as never),
     ]);
-    expect(goalCount(s, "approaching_limit")).toBe(0);
-    expect(goalCount(s, "met")).toBe(1);
+    expect(goalCount(sMet, "approaching_limit")).toBe(0);
+    expect(goalCount(sMet, "met")).toBe(1);
+
+    const sExhausted = dispatch(INITIAL_STATE, [
+      ev("goal_progress", { status: "approaching_limit", round: 0, turnsRemaining: 2 } as never),
+      ev("goal_progress", { status: "exhausted", round: 5 } as never),
+    ]);
+    expect(goalCount(sExhausted, "approaching_limit")).toBe(0);
+  });
+
+  test("not_met does NOT prune the approaching_limit marker (still advancing — B2)", () => {
+    // The goal is still working and may still be nearing the cap, so the "再续"
+    // button must survive a not_met that lands in the same window.
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_progress", { status: "approaching_limit", round: 0, stopBlocksRemaining: 2, nearest: "stopBlocks" } as never),
+      ev("goal_progress", { status: "not_met", round: 1, gaps: "still going" } as never),
+    ]);
+    expect(goalCount(s, "approaching_limit")).toBe(1);
+    expect(goalCount(s, "not_met")).toBe(1);
   });
 });
 

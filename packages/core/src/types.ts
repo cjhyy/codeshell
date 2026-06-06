@@ -302,6 +302,10 @@ export type StreamEvent =
       gaps?: string;
       /** For "approaching_limit": turns left before the maxTurns cap (TODO 3.1). */
       turnsRemaining?: number;
+      /** For "approaching_limit": consecutive blocks left before maxStopBlocks (TODO 3.1). */
+      stopBlocksRemaining?: number;
+      /** For "approaching_limit": which ceiling is closest — drives UI copy + extend default. */
+      nearest?: "turns" | "stopBlocks";
       agentId?: string;
     }
   | { type: "error"; error: string; agentId?: string }

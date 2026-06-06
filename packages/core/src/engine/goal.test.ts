@@ -7,16 +7,27 @@ import {
   resolveMaxTurns,
   resolveMaxStopBlocks,
   applyGoalExtension,
+  limitProximity,
   GOAL_DEFAULT_MAX_TURNS,
   GOAL_DEFAULT_MAX_STOP_BLOCKS,
+  INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS,
   INTERACTIVE_DEFAULT_MAX_TURNS,
+  APPROACH_TURNS,
+  APPROACH_STOP_BLOCKS,
   type GoalConfig,
 } from "./goal.js";
 
 describe("resolveMaxStopBlocks (TODO 3.1 — 续跑上限调大可配)", () => {
-  test("defaults to GOAL_DEFAULT_MAX_STOP_BLOCKS (>8) when unset", () => {
-    expect(resolveMaxStopBlocks(undefined, undefined)).toBe(GOAL_DEFAULT_MAX_STOP_BLOCKS);
-    expect(GOAL_DEFAULT_MAX_STOP_BLOCKS).toBeGreaterThan(8);
+  test("no goal → tighter interactive default (8), NOT the goal default (25)", () => {
+    // Bug B3: a non-goal run must not inherit the goal-mode 25-block cap, or a
+    // plugin on_stop hook that keeps returning continueSession loops 25× before
+    // the backstop bites. Non-goal falls back to INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS.
+    expect(resolveMaxStopBlocks(undefined, undefined)).toBe(INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS);
+    expect(INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS).toBe(8);
+  });
+  test("goal active, no override → GOAL_DEFAULT_MAX_STOP_BLOCKS (>8)", () => {
+    expect(resolveMaxStopBlocks(undefined, { objective: "x" })).toBe(GOAL_DEFAULT_MAX_STOP_BLOCKS);
+    expect(GOAL_DEFAULT_MAX_STOP_BLOCKS).toBeGreaterThan(INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS);
   });
   test("explicit config override wins", () => {
     expect(resolveMaxStopBlocks(40, { objective: "x", maxStopBlocks: 12 })).toBe(40);
@@ -24,9 +35,9 @@ describe("resolveMaxStopBlocks (TODO 3.1 — 续跑上限调大可配)", () => {
   test("goal.maxStopBlocks used when no config override", () => {
     expect(resolveMaxStopBlocks(undefined, { objective: "x", maxStopBlocks: 12 })).toBe(12);
   });
-  test("non-positive values fall through to the default", () => {
-    expect(resolveMaxStopBlocks(0, undefined)).toBe(GOAL_DEFAULT_MAX_STOP_BLOCKS);
-    expect(resolveMaxStopBlocks(-3, { objective: "x" })).toBe(GOAL_DEFAULT_MAX_STOP_BLOCKS);
+  test("non-positive override falls through (goal→25, no-goal→8)", () => {
+    expect(resolveMaxStopBlocks(0, { objective: "x" })).toBe(GOAL_DEFAULT_MAX_STOP_BLOCKS);
+    expect(resolveMaxStopBlocks(-3, undefined)).toBe(INTERACTIVE_DEFAULT_MAX_STOP_BLOCKS);
   });
   test("normalizeGoal floors + drops non-positive maxStopBlocks", () => {
     expect(normalizeGoal({ objective: "x", maxStopBlocks: 15.9 })?.maxStopBlocks).toBe(15);
@@ -35,41 +46,87 @@ describe("resolveMaxStopBlocks (TODO 3.1 — 续跑上限调大可配)", () => {
   });
 });
 
+describe("limitProximity (TODO 3.1 — 统一的「临近上限」信号)", () => {
+  test("turns near the cap → approaching, nearest=turns", () => {
+    // maxStopBlocks far away, only turns close.
+    const p = limitProximity(297, 300, 0, 25);
+    expect(p.turnsRemaining).toBe(3);
+    expect(p.stopBlocksRemaining).toBe(25);
+    expect(p.approaching).toBe(true);
+    expect(p.nearest).toBe("turns");
+  });
+  test("stop-blocks near the cap → approaching, nearest=stopBlocks (the limit that actually bites)", () => {
+    // The common case: a re-blocked goal hits the 25-block cap long before turn 298.
+    const p = limitProximity(40, 300, 23, 25);
+    expect(p.stopBlocksRemaining).toBe(2);
+    expect(p.approaching).toBe(true);
+    expect(p.nearest).toBe("stopBlocks");
+  });
+  test("neither near → not approaching", () => {
+    const p = limitProximity(40, 300, 2, 25);
+    expect(p.approaching).toBe(false);
+  });
+  test("thresholds: exactly at the approach boundary counts as approaching", () => {
+    expect(limitProximity(300 - APPROACH_TURNS, 300, 0, 25).approaching).toBe(true);
+    expect(limitProximity(0, 300, 25 - APPROACH_STOP_BLOCKS, 25).approaching).toBe(true);
+  });
+  test("stopBlocks wins nearest when both are near", () => {
+    const p = limitProximity(298, 300, 23, 25);
+    expect(p.approaching).toBe(true);
+    expect(p.nearest).toBe("stopBlocks");
+  });
+});
+
 describe("applyGoalExtension (TODO 3.1 — 运行中续轮/加预算)", () => {
+  // Signature: applyGoalExtension(currentMaxTurns, goal, tokensUsed, elapsedMs, ext)
   test("addTurns bumps the ceiling (floored, positive only)", () => {
-    expect(applyGoalExtension(100, undefined, 0, { addTurns: 50 }).maxTurns).toBe(150);
-    expect(applyGoalExtension(100, undefined, 0, { addTurns: 0.9 }).maxTurns).toBe(100);
-    expect(applyGoalExtension(100, undefined, 0, { addTurns: -5 }).maxTurns).toBe(100);
-    expect(applyGoalExtension(100, undefined, 0, { addTurns: 10.7 }).maxTurns).toBe(110);
+    expect(applyGoalExtension(100, undefined, 0, 0, { addTurns: 50 }).maxTurns).toBe(150);
+    expect(applyGoalExtension(100, undefined, 0, 0, { addTurns: 0.9 }).maxTurns).toBe(100);
+    expect(applyGoalExtension(100, undefined, 0, 0, { addTurns: -5 }).maxTurns).toBe(100);
+    expect(applyGoalExtension(100, undefined, 0, 0, { addTurns: 10.7 }).maxTurns).toBe(110);
   });
 
   test("raises an existing token/time budget", () => {
     const goal: GoalConfig = { objective: "x", tokenBudget: 1000, timeBudgetMs: 60_000 };
-    const r = applyGoalExtension(100, goal, 500, { addTokenBudget: 500, addTimeBudgetMs: 30_000 });
+    const r = applyGoalExtension(100, goal, 500, 10_000, {
+      addTokenBudget: 500,
+      addTimeBudgetMs: 30_000,
+    });
     expect(r.tokenBudget).toBe(1500);
     expect(r.timeBudgetMs).toBe(90_000);
   });
 
   test("seeds an unset token budget from current usage so the new cap is above it", () => {
     const goal: GoalConfig = { objective: "x" }; // unlimited tokens
-    const r = applyGoalExtension(100, goal, 800, { addTokenBudget: 200 });
+    const r = applyGoalExtension(100, goal, 800, 0, { addTokenBudget: 200 });
     expect(r.tokenBudget).toBe(1000); // 800 used + 200 added
   });
 
-  test("seeds an unset time budget from 0", () => {
-    const goal: GoalConfig = { objective: "x" };
-    expect(applyGoalExtension(100, goal, 0, { addTimeBudgetMs: 5000 }).timeBudgetMs).toBe(5000);
+  test("seeds an unset TIME budget from elapsed (not 0) so extending a long run doesn't insta-stop", () => {
+    // Bug B1: a goal alive 120s with no time cap, extended by 60s, must get a cap
+    // ABOVE current usage (180s), not 60s — else goalBudgetExceeded fires immediately.
+    const goal: GoalConfig = { objective: "x" }; // unlimited time
+    const r = applyGoalExtension(100, goal, 0, 120_000, { addTimeBudgetMs: 60_000 });
+    expect(r.timeBudgetMs).toBe(180_000); // 120s elapsed + 60s added
+  });
+
+  test("addStopBlocks is accepted and does not perturb budgets", () => {
+    const goal: GoalConfig = { objective: "x", tokenBudget: 1000 };
+    const r = applyGoalExtension(100, goal, 0, 0, { addStopBlocks: 15 });
+    expect(r.tokenBudget).toBe(1000);
+    expect(r.timeBudgetMs).toBeUndefined();
+    expect(r.maxTurns).toBe(100);
   });
 
   test("does not touch budgets when no goal", () => {
-    const r = applyGoalExtension(100, undefined, 0, { addTokenBudget: 500 });
+    const r = applyGoalExtension(100, undefined, 0, 0, { addTokenBudget: 500 });
     expect(r.tokenBudget).toBeUndefined();
     expect(r.timeBudgetMs).toBeUndefined();
   });
 
   test("never mutates the input goal object", () => {
     const goal: GoalConfig = { objective: "x", tokenBudget: 1000 };
-    applyGoalExtension(100, goal, 0, { addTokenBudget: 500 });
+    applyGoalExtension(100, goal, 0, 0, { addTokenBudget: 500 });
     expect(goal.tokenBudget).toBe(1000);
   });
 });
