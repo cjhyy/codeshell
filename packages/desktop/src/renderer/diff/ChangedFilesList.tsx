@@ -2,14 +2,28 @@ import React, { useEffect, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import type { GitStatus } from "../../preload/types";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
+import { filterByScope, type ReviewScope } from "./reviewScope";
 
 interface Props {
   cwd: string;
   selectedFile: string | null;
   onSelectFile: (file: string | null) => void;
+  /** Active review scope (TODO 2.3a). Defaults to "all" for back-compat. */
+  scope?: ReviewScope;
+  /** Files the originating turn changed — the universe for scope="turn". */
+  turnFiles?: string[];
+  /** Re-fetch trigger: bump to reload git status (e.g. after刷新/外部变更). */
+  refreshKey?: number;
 }
 
-export function ChangedFilesList({ cwd, selectedFile, onSelectFile }: Props) {
+export function ChangedFilesList({
+  cwd,
+  selectedFile,
+  onSelectFile,
+  scope = "all",
+  turnFiles,
+  refreshKey,
+}: Props) {
   const [status, setStatus] = useState<GitStatus | null>(null);
 
   useEffect(() => {
@@ -20,10 +34,20 @@ export function ChangedFilesList({ cwd, selectedFile, onSelectFile }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [cwd]);
+  }, [cwd, refreshKey]);
 
   if (!status) return <div className="diff-loading">loading status…</div>;
-  if (status.entries.length === 0) return <div className="diff-empty">working tree clean</div>;
+  // Filter the working-tree status to the active scope (TODO 2.3a). For "turn"
+  // we keep only the files the turn touched, so 审查 opens on the turn's diff
+  // instead of the whole tree.
+  const entries = filterByScope(status.entries, scope, turnFiles);
+  if (entries.length === 0) {
+    return (
+      <div className="diff-empty">
+        {scope === "turn" ? "本轮没有可显示的变更文件" : "此范围内没有变更"}
+      </div>
+    );
+  }
 
   return (
     <div className="changed-files">
@@ -32,9 +56,9 @@ export function ChangedFilesList({ cwd, selectedFile, onSelectFile }: Props) {
         onClick={() => onSelectFile(null)}
       >
         <span className="changed-file-status">ALL</span>
-        <span className="changed-file-path">all changes</span>
+        <span className="changed-file-path">全部({entries.length})</span>
       </button>
-      {status.entries.map((e) => (
+      {entries.map((e) => (
         <div key={e.path} className="group/cf relative flex items-center">
           <button
             className={`changed-file ${selectedFile === e.path ? "selected" : ""}`}
