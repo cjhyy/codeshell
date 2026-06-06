@@ -15,6 +15,7 @@ import type {
 import type { TurnState } from "./turn-state.js";
 import { initialTurnState, newTurnId } from "./turn-state.js";
 import { ModelFacade } from "./model-facade.js";
+import { formatFriendlyError } from "./friendly-error.js";
 import { ToolExecutor } from "../tool-system/executor.js";
 import { ContextManager } from "../context/manager.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -395,7 +396,7 @@ export class TurnLoop {
               break;
             } catch (retryErr) {
               if (!(retryErr instanceof ContextLimitError)) {
-                this.config.onStream?.({ type: "error", error: (retryErr as Error).message });
+                this.config.onStream?.({ type: "error", error: formatFriendlyError(retryErr) });
                 return { text: finalText, reason: "model_error", messages };
               }
             }
@@ -410,7 +411,7 @@ export class TurnLoop {
           }
         } else {
           this.patchOrphanedToolUses(messages);
-          this.config.onStream?.({ type: "error", error: (err as Error).message });
+          this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
           return { text: finalText, reason: "model_error", messages };
         }
       }
@@ -791,7 +792,7 @@ export class TurnLoop {
         error: (err as Error).message,
         stack: (err as Error).stack?.split("\n").slice(0, 4).join("\n"),
       });
-      this.config.onStream?.({ type: "error", error: (err as Error).message });
+      this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
       return { text: finalText, reason: "model_error", messages };
     }
 
