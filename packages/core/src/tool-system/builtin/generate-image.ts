@@ -30,7 +30,7 @@ const DEFAULT_SIZE = "1024x1024";
 const DEFAULT_QUALITY = "auto";
 
 /** Provider `kind`s that have an image adapter, in resolution preference. */
-const IMAGE_PROVIDER_KINDS = ["openai"] as const;
+const IMAGE_PROVIDER_KINDS = ["openai", "google"] as const;
 
 export const generateImageToolDef: ToolDefinition = {
   name: "GenerateImage",

@@ -91,9 +91,72 @@ export class OpenAIImageProvider implements ImageProvider {
   }
 }
 
+/**
+ * Gemini Images adapter — the `generateContent` endpoint
+ * (`/models/{model}:generateContent`), API key in the `x-goog-api-key`
+ * header, prompt as a text content-part, PNG returned base64 in
+ * `candidates[].content.parts[].inline_data.data` (REST may camelCase it to
+ * `inlineData`; we read both). Wire shape per ai.google.dev image-generation
+ * docs. The OpenAI-style `size`/`quality` args don't map 1:1 to Gemini's
+ * aspectRatio/imageSize, so we only forward the prompt + IMAGE modality and
+ * leave Gemini's own defaults for dimensions (a later pass can map size →
+ * aspectRatio if needed).
+ */
+export class GeminiImageProvider implements ImageProvider {
+  readonly kind = "google";
+  constructor(private readonly fetchImpl: typeof fetch = fetch) {}
+
+  async generate(req: ImageGenerateRequest): Promise<ImageGenerateResult> {
+    const baseUrl = req.creds.baseUrl.replace(/\/+$/, "");
+    let resp: Response;
+    try {
+      resp = await this.fetchImpl(`${baseUrl}/models/${req.model}:generateContent`, {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": req.creds.apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: req.prompt }] }],
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+        }),
+        signal: req.signal,
+      });
+    } catch (err) {
+      return { ok: false, error: `request failed: ${(err as Error).message}` };
+    }
+
+    if (!resp.ok) {
+      const body = (await resp.text().catch(() => "")).slice(0, 500);
+      return { ok: false, error: `image API returned ${resp.status}: ${body}` };
+    }
+
+    let json: unknown;
+    try {
+      json = await resp.json();
+    } catch (err) {
+      return { ok: false, error: `could not parse image API response: ${(err as Error).message}` };
+    }
+
+    const parts =
+      (json as { candidates?: Array<{ content?: { parts?: Array<Record<string, unknown>> } }> })
+        ?.candidates?.[0]?.content?.parts ?? [];
+    for (const part of parts) {
+      // Accept both snake_case (inline_data) and camelCase (inlineData).
+      const inline = (part.inline_data ?? part.inlineData) as { data?: string } | undefined;
+      if (inline?.data) return { ok: true, b64: inline.data };
+    }
+    const preview = JSON.stringify(json).slice(0, 500);
+    return { ok: false, error: `no image in response: ${preview}` };
+  }
+}
+
 /** Default model per provider kind when the caller doesn't specify one. */
 export const DEFAULT_IMAGE_MODEL: Record<string, string> = {
   openai: "gpt-image-2",
+  // Nano Banana — the current recommended Gemini image model. Override per call
+  // via GenerateImage's `model` arg when a newer one (e.g. gemini-3.1-flash-image) is wanted.
+  google: "gemini-2.5-flash-image",
 };
 
 /** Registry of available image-provider adapters, keyed by `kind`. */
@@ -101,6 +164,8 @@ export function getImageProvider(kind: string, fetchImpl: typeof fetch = fetch):
   switch (kind) {
     case "openai":
       return new OpenAIImageProvider(fetchImpl);
+    case "google":
+      return new GeminiImageProvider(fetchImpl);
     default:
       return null;
   }

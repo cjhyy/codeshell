@@ -155,7 +155,7 @@ describe("process group kill (难点2)", () => {
     await until(() => mgr.get(r.shellId)?.status === "exited");
     const k = await mgr.kill(r.shellId);
     expect(k.ok).toBe(true);
-    expect(k.alreadyExited).toBe(true);
+    if (k.ok) expect(k.alreadyExited).toBe(true);
   });
 });
 
