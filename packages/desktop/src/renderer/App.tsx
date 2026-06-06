@@ -2049,6 +2049,9 @@ function App() {
       </div>
       )}
 
+      {/* Chat column + dock share a relative container so a maximized panel can
+          overlay the chat/composer (TODO 2.4) without covering the sidebar. */}
+      <div className="relative flex min-w-0 flex-1 overflow-hidden">
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <UpdaterBanner />
         {lifecycle && <div className="border-b border-border bg-muted px-4 py-1.5 text-xs text-muted-foreground">{lifecycle}</div>}
@@ -2174,6 +2177,7 @@ function App() {
           onAttachImage={(p) => void attachImageByPath(p)}
         />
       )}
+      </div>
       </div>
 
       <CommandPalette

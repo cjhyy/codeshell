@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus } from "lucide-react";
+import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus, Maximize2, Minimize2 } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -79,6 +79,10 @@ export function PanelArea({
 
   const [tabs, setTabs] = useState<OpenTab[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Maximized = overlay the chat column (incl. composer) for more room (TODO
+  // 2.4). The chat/composer state lives in App and is untouched, so restoring
+  // brings the draft/attachments/queued input back intact.
+  const [maximized, setMaximized] = useState(false);
 
   const addTab = (kind: PanelTab): void => {
     const tab = { id: mkId(kind), kind };
@@ -135,20 +139,27 @@ export function PanelArea({
 
   return (
     <div
-      className="relative flex min-h-0 shrink-0 flex-col border-l border-border bg-background"
-      style={{ width }}
+      className={cn(
+        "relative flex min-h-0 flex-col bg-background",
+        maximized
+          ? "absolute inset-0 z-30 shrink"
+          : "shrink-0 border-l border-border",
+      )}
+      style={maximized ? undefined : { width }}
     >
-      {/* Drag handle on the left edge to resize the dock. */}
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="调整面板宽度"
-        onMouseDown={(e) => {
-          e.preventDefault();
-          onResizeStart(e.clientX, width);
-        }}
-        className="absolute left-0 top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize hover:bg-primary/40"
-      />
+      {/* Drag handle on the left edge to resize the dock — hidden when maximized. */}
+      {!maximized && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="调整面板宽度"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onResizeStart(e.clientX, width);
+          }}
+          className="absolute left-0 top-0 z-20 h-full w-1 -translate-x-1/2 cursor-col-resize hover:bg-primary/40"
+        />
+      )}
       {/* Tab strip */}
       <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-1.5 py-1">
         {tabs.map((t) => {
@@ -201,6 +212,15 @@ export function PanelArea({
         </DropdownMenu>
 
         <div className="flex-1" />
+        <button
+          type="button"
+          onClick={() => setMaximized((v) => !v)}
+          aria-label={maximized ? "还原面板" : "放大面板"}
+          title={maximized ? "还原(覆盖输入区→停靠)" : "放大(覆盖输入区)"}
+          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent"
+        >
+          {maximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
         <button
           type="button"
           onClick={onClose}
