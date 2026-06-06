@@ -20,7 +20,7 @@ import type { ToolContext } from "../../context.js";
 import { fileCache } from "../file-cache.js";
 import { applyPatch } from "./applier.js";
 import { parsePatch } from "./parser.js";
-import { enforcePathPolicy } from "../../path-policy.js";
+import { enforcePathPolicyWithApproval } from "../../path-policy.js";
 import { resolve as resolvePath } from "node:path";
 
 export const applyPatchToolDef: ToolDefinition = {
@@ -92,7 +92,7 @@ export async function applyPatchTool(
       targets.push(resolvePath(cwd, hunk.movePath));
     }
     for (const t of targets) {
-      const blocked = enforcePathPolicy(t, "write", cwd);
+      const blocked = await enforcePathPolicyWithApproval(t, "write", ctx);
       if (blocked) return blocked;
     }
   }

@@ -7,7 +7,7 @@ import { stat } from "node:fs/promises";
 import * as path from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
-import { enforcePathPolicy } from "../path-policy.js";
+import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
 export const globToolDef: ToolDefinition = {
   name: "Glob",
@@ -45,7 +45,7 @@ export async function globTool(
   // Path policy: refuse to glob a search root the policy classifies as
   // ask/deny for read. Stops a Glob("**/*", "/home/user/.ssh") from
   // enumerating the keys directory under the existence-check radar.
-  const blocked = enforcePathPolicy(cwd, "read", ctx?.cwd);
+  const blocked = await enforcePathPolicyWithApproval(cwd, "read", ctx);
   if (blocked) return blocked;
 
   try {

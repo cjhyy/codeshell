@@ -5,7 +5,7 @@
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { enforcePathPolicy } from "../path-policy.js";
+import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
 export const notebookEditToolDef: ToolDefinition = {
   name: "NotebookEdit",
@@ -71,7 +71,7 @@ export async function notebookEditTool(
   // Path policy: 'read' goes through the read-side rules (sensitive paths
   // still ask), all other actions are writes and use the stricter rules.
   const op = action === "read" ? "read" : "write";
-  const blocked = enforcePathPolicy(filePath, op, ctx?.cwd);
+  const blocked = await enforcePathPolicyWithApproval(filePath, op, ctx);
   if (blocked) return blocked;
 
   if (action === "read") {
