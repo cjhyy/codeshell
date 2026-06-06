@@ -3,11 +3,31 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import {
   INITIAL_STATE,
   applyStreamEvent,
+  appendTurnEndMessage,
   type AgentMessage,
   type AssistantMessage,
   type Message,
   type MessagesReducerState,
+  type TurnEndMessage,
 } from "./types";
+
+describe("appendTurnEndMessage (TODO 2.8)", () => {
+  test("appends a turn_end marker with reason + elapsed", () => {
+    const s = appendTurnEndMessage(INITIAL_STATE, "stopped", 18_000);
+    const last = s.messages[s.messages.length - 1] as TurnEndMessage;
+    expect(last.kind).toBe("turn_end");
+    expect(last.reason).toBe("stopped");
+    expect(last.elapsedMs).toBe(18_000);
+  });
+
+  test("replaces a trailing turn_end instead of stacking (double-stop)", () => {
+    let s = appendTurnEndMessage(INITIAL_STATE, "stopped", 1000);
+    s = appendTurnEndMessage(s, "stopped", 2000);
+    const ends = s.messages.filter((m) => m.kind === "turn_end");
+    expect(ends).toHaveLength(1);
+    expect((ends[0] as TurnEndMessage).elapsedMs).toBe(2000);
+  });
+});
 
 // ── helpers ─────────────────────────────────────────────────────────
 function dispatch(

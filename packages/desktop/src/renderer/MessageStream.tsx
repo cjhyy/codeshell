@@ -7,6 +7,7 @@ import { AgentMessageView } from "./messages/AgentMessageView";
 import { TaskListMessageView } from "./messages/TaskListMessageView";
 import { ContextBoundaryView } from "./messages/ContextBoundaryView";
 import { GoalProgressView } from "./messages/GoalProgressView";
+import { TurnEndMessageView } from "./messages/TurnEndMessageView";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ToolGroupCard } from "./messages/ToolGroupCard";
 import { CollapsibleContent } from "./messages/CollapsibleContent";
@@ -206,6 +207,8 @@ export function MessageStream({
             );
           case "files_changed":
             return <FilesChangedCard key={m.id} message={m} cwd={cwd ?? null} />;
+          case "turn_end":
+            return <TurnEndMessageView key={m.id} message={m} />;
         }
       })}
       {liveTurnActive && <LiveActivityLine messages={messages} running={liveTurnActive} />}

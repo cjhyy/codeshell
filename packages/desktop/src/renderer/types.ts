@@ -118,6 +118,21 @@ export interface GoalProgressMessage {
   gaps?: string;
 }
 
+/**
+ * Lightweight marker for how a turn ended when it didn't end naturally
+ * (TODO 2.8). Rendered as a thin right-aligned status line with a divider —
+ * NOT a foldable tool/thinking card. `elapsedMs` drives "你在 Ns 后停止了".
+ */
+export interface TurnEndMessage {
+  kind: "turn_end";
+  id: string;
+  reason: "stopped" | "timeout" | "error";
+  /** Time from turn start to the end event, in ms (when known). */
+  elapsedMs?: number;
+  /** Optional detail for error/timeout. */
+  detail?: string;
+}
+
 export interface AskUserOption {
   label: string;
   description: string;
@@ -191,6 +206,7 @@ export type Message =
   | SystemMessage
   | GoalProgressMessage
   | AskUserMessage
+  | TurnEndMessage
   | FilesChangedSummaryMessage;
 
 export interface AgentRuntime {
@@ -765,6 +781,35 @@ export function appendUserMessage(
       { kind: "user", id: freshId("user"), text, createdAt },
     ],
   };
+}
+
+/**
+ * Append a turn-end marker (TODO 2.8). Used for a manual Stop ("你在 Ns 后停止了")
+ * and reusable for timeout/error endings. Idempotent-ish guard: if the last
+ * message is already a turn_end, replace it rather than stacking duplicates
+ * (double-stop clicks).
+ */
+export function appendTurnEndMessage(
+  state: MessagesReducerState,
+  reason: TurnEndMessage["reason"],
+  elapsedMs?: number,
+  detail?: string,
+): MessagesReducerState {
+  const msg: TurnEndMessage = {
+    kind: "turn_end",
+    id: freshId("turn-end"),
+    reason,
+    elapsedMs,
+    detail,
+  };
+  const msgs = state.messages.slice();
+  const last = msgs[msgs.length - 1];
+  if (last && last.kind === "turn_end") {
+    msgs[msgs.length - 1] = msg;
+  } else {
+    msgs.push(msg);
+  }
+  return { ...state, messages: msgs };
 }
 
 export type ApprovalState = ApprovalRequestEnvelope | null;

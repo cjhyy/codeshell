@@ -12,6 +12,7 @@ import {
   appendUserMessage,
   appendAskUserMessage,
   markAskUserAnswered,
+  appendTurnEndMessage,
   INITIAL_STATE,
   type MessagesReducerState,
   type ApprovalState,
@@ -131,7 +132,14 @@ type Action =
       options?: AskUserOption[];
       multiSelect: boolean;
     }
-  | { type: "ask_user_answered"; bucket: string; requestId: string; answer: string };
+  | { type: "ask_user_answered"; bucket: string; requestId: string; answer: string }
+  | {
+      type: "turn_end";
+      bucket: string;
+      reason: "stopped" | "timeout" | "error";
+      elapsedMs?: number;
+      detail?: string;
+    };
 
 function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
   if (action.type === "hydrate") {
@@ -154,6 +162,9 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
       break;
     case "ask_user_answered":
       next = markAskUserAnswered(current, action.requestId, action.answer);
+      break;
+    case "turn_end":
+      next = appendTurnEndMessage(current, action.reason, action.elapsedMs, action.detail);
       break;
     case "stream":
       next = applyStreamEvent(current, action.event);
@@ -275,6 +286,12 @@ function App() {
    * an empty sessionId for very legacy engines).
    */
   const runningBucketRef = useRef<string | null>(null);
+  /**
+   * Per-bucket timestamp of when the current turn went busy, so a manual Stop
+   * can show "你在 Ns 后停止了" (TODO 2.8). Set when busy flips true, read+cleared
+   * on stop / when busy flips false.
+   */
+  const busySinceRef = useRef<Map<string, number>>(new Map());
   /**
    * Engine sessionId → UI bucket. Populated when send() fires (we use the
    * UI sessionId directly as the engine sessionId — see notes in send())
@@ -553,6 +570,12 @@ function App() {
   const state = transcripts[activeBucket] ?? fallbackState;
 
   const setBusyForKey = (key: string, val: boolean): void => {
+    // Track turn-start time for the manual-stop elapsed line (TODO 2.8).
+    if (val) {
+      if (!busySinceRef.current.has(key)) busySinceRef.current.set(key, Date.now());
+    } else {
+      busySinceRef.current.delete(key);
+    }
     setBusyKeys((prev) => {
       const had = prev.has(key);
       if (val === had) return prev;
@@ -1434,8 +1457,14 @@ function App() {
     // busy + routing optimistically; any stream events that arrive
     // after this point are tail-end noise we can drop (the engine has
     // already been told to abort).
+    // Manual-stop marker (TODO 2.8): a thin "你在 Ns 后停止了" line, using the
+    // turn-start time captured when busy went true. Read BEFORE setBusyForKey
+    // clears it.
+    const startedAt = busySinceRef.current.get(bucket);
+    const elapsedMs = startedAt !== undefined ? Date.now() - startedAt : undefined;
     setBusyForKey(bucket, false);
     if (runningBucketRef.current === bucket) runningBucketRef.current = null;
+    dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
     void window.codeshell.cancel(engineSessionId);
   };
 
