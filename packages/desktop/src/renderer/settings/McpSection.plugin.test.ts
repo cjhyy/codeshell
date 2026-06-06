@@ -3,6 +3,7 @@ import {
   isEditableMcpServer,
   mcpServersFromSettings,
   persistableMcpServers,
+  ownerPluginOf,
 } from "./McpSection";
 
 describe("plugin MCP servers in settings UI", () => {
@@ -31,5 +32,13 @@ describe("plugin MCP servers in settings UI", () => {
       { name: "local", command: "npx", source: "settings", editable: true },
       { name: "plug:server", command: "tool", source: "plugin", editable: false },
     ]);
+  });
+
+  it("derives the owning plugin name from a plugin server's key", () => {
+    expect(ownerPluginOf({ name: "supabase:db", command: "x", source: "plugin" })).toBe("supabase");
+    // user servers have no owner
+    expect(ownerPluginOf({ name: "local", command: "x", source: "settings" })).toBeUndefined();
+    // plugin server with no prefix → undefined (defensive)
+    expect(ownerPluginOf({ name: "weird", command: "x", source: "plugin" })).toBeUndefined();
   });
 });

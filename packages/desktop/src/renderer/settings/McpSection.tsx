@@ -29,6 +29,17 @@ export function persistableMcpServers(servers: McpServer[]): McpServer[] {
   return servers.filter(isEditableMcpServer);
 }
 
+/**
+ * Owning plugin name for a plugin-sourced server. Plugin MCP servers are keyed
+ * `<pluginName>:<serverName>` (core loadPluginMcp), so the owner is the prefix.
+ * Returns undefined for user servers or unkeyed names. (TODO 6.2)
+ */
+export function ownerPluginOf(s: McpServer): string | undefined {
+  if (s.source !== "plugin") return undefined;
+  const i = s.name.indexOf(":");
+  return i > 0 ? s.name.slice(0, i) : undefined;
+}
+
 /** A server is on unless explicitly disabled. */
 function isEnabled(s: McpServer): boolean {
   return s.enabled !== false;
@@ -320,6 +331,8 @@ function McpCard({
     : server.url ?? "";
   const enabled = isEnabled(server);
   const editable = isEditableMcpServer(server);
+  // Owning plugin name (TODO 6.2) — see ownerPluginOf.
+  const ownerPlugin = ownerPluginOf(server);
 
   return (
     <article className={`mcp-card${enabled ? "" : " mcp-card-disabled"}`}>
@@ -340,8 +353,11 @@ function McpCard({
             {transportLabel(transport)}
           </span>
           {server.source === "plugin" && (
-            <span className="mcp-transport-pill" title="由插件安装提供，只读展示">
-              plugin
+            <span
+              className="mcp-transport-pill"
+              title={ownerPlugin ? `由「${ownerPlugin}」插件提供，只读展示` : "由插件安装提供，只读展示"}
+            >
+              {ownerPlugin ? `插件: ${ownerPlugin}` : "plugin"}
             </span>
           )}
           {enabled ? (
@@ -369,7 +385,9 @@ function McpCard({
               </button>
             </>
           ) : (
-            <span className="mcp-card-stamp">只读：由插件管理</span>
+            <span className="mcp-card-stamp">
+              {ownerPlugin ? `只读：由「${ownerPlugin}」插件管理` : "只读：由插件管理"}
+            </span>
           )}
         </div>
       </div>
