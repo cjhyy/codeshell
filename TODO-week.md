@@ -463,7 +463,7 @@ instruction-scanner.ts 早已实现,补测试锁定。
 
 ### 9.2 测试覆盖
 
-- [~] builtin tools 集成测试。**进行中**:补 Glob(6)/Read(5)/Edit+Write(9)/Grep(6)/NotebookEdit(7)/ToolSearch(6)/Plan(4)/WebFetch(10) 集成测试,共 53 例。WebFetch 重点覆盖 **SSRF 安全边界**(非 http 协议/blocked host/DNS 解析到 metadata 169.254.169.254 与 loopback 127.0.0.1 拒绝)+ HTML→text/截断/HTTP 错误。**顺修**:① grep fallback 漏传 fileGlob→`--include` 对齐 rg;② feature-flags.test.ts 预存 tsc 类型报错修掉,core tsc 全绿。剩余无测试工具(bash/ask-user/brief/lsp/powershell)续补。
+- [~] builtin tools 集成测试。**进行中**:补 Glob(6)/Read(5)/Edit+Write(9)/Grep(6)/NotebookEdit(7)/ToolSearch(6)/Plan(4)/WebFetch(10)/AskUser(7)/Brief(5) 集成测试,共 65 例。WebFetch 重点覆盖 **SSRF 安全边界**(非 http 协议/blocked host/DNS 解析到 metadata 169.254.169.254 与 loopback 127.0.0.1 拒绝)+ HTML→text/截断/HTTP 错误。**顺修**:① grep fallback 漏传 fileGlob→`--include` 对齐 rg;② feature-flags.test.ts 预存 tsc 类型报错修掉,core tsc 全绿。剩余无测试工具(bash/lsp/powershell)续补——这几个重 I/O(spawn shell / LSP 进程),需更重的 mock,排后。
 - [ ] E2E 完整对话流程。
 - [x] GitHub Actions CI。✅ 核实 `.github/workflows/ci.yml` 已有(guards/engine-bypass + typecheck + SDK smoke,push main + PR 触发)。
 - [ ] 测试覆盖率 > 60%。
