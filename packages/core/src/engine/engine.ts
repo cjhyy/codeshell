@@ -1378,6 +1378,7 @@ export class Engine {
       disabledSkills,
       disabledPlugins,
       skillAllowlist: this.config.skillAllowlist,
+      memoriesMaxAgeDays: this.readMemoriesConfig()?.maxAge,
     });
 
     // Connect MCP servers (if configured and not already connected).

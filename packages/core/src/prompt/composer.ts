@@ -47,6 +47,12 @@ export interface ComposerOptions {
    * dispatch gate.
    */
   skillAllowlist?: string[];
+  /**
+   * settings.memories.maxAge (days). When > 0, memories whose file mtime is
+   * older than this are dropped from the injected memory context (TODO 8.1).
+   * Undefined/0 → inject all.
+   */
+  memoriesMaxAgeDays?: number;
 }
 
 export class PromptComposer {
@@ -237,7 +243,7 @@ export class PromptComposer {
   private getMemoryContext(): string {
     try {
       const mm = new MemoryManager(this.options.cwd);
-      return mm.buildMemoryContext();
+      return mm.buildMemoryContext({ maxAgeDays: this.options.memoriesMaxAgeDays });
     } catch {
       return "";
     }

@@ -41,6 +41,24 @@ export interface MemoryEntry {
   content: string;
   fileName: string;
   scope: MemoryScope;
+  /** File mtime in epoch ms — drives maxAge filtering (TODO 8.1). 0 if unknown. */
+  updatedAt?: number;
+}
+
+/**
+ * Drop memories older than `maxAgeDays` (by file mtime) for context injection
+ * (TODO 8.1). A non-positive/undefined maxAge means no filtering. Entries with
+ * an unknown mtime (updatedAt 0/undefined) are KEPT — we never hide a memory
+ * just because we couldn't read its timestamp. Pure + testable.
+ */
+export function filterByAge(
+  entries: MemoryEntry[],
+  maxAgeDays?: number,
+  now: number = Date.now(),
+): MemoryEntry[] {
+  if (!maxAgeDays || maxAgeDays <= 0) return entries;
+  const cutoff = now - maxAgeDays * 24 * 60 * 60 * 1000;
+  return entries.filter((e) => !e.updatedAt || e.updatedAt >= cutoff);
 }
 
 export interface MemoryManagerOptions {
@@ -164,8 +182,14 @@ export class MemoryManager {
       const name = frontmatter.match(/name:\s*(.+)/)?.[1]?.trim() ?? fileName;
       const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
       const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
+      let updatedAt = 0;
+      try {
+        updatedAt = statSync(filePath).mtimeMs;
+      } catch {
+        // mtime best-effort; 0 = unknown (never filtered out by maxAge).
+      }
 
-      return { name, description, type, content, fileName, scope: this.scope };
+      return { name, description, type, content, fileName, scope: this.scope, updatedAt };
     } catch {
       return null;
     }
@@ -212,13 +236,17 @@ export class MemoryManager {
    * tagged with their origin so the model can tell user-owned from
    * dream-generated.
    */
-  buildMemoryContext(): string {
-    const userEntries = this.scope === "user"
-      ? this.loadAll()
-      : this.loadScope("user");
-    const dreamEntries = this.scope === "dream"
-      ? this.loadAll()
-      : this.loadScope("dream");
+  buildMemoryContext(opts?: { maxAgeDays?: number; now?: number }): string {
+    const userEntries = filterByAge(
+      this.scope === "user" ? this.loadAll() : this.loadScope("user"),
+      opts?.maxAgeDays,
+      opts?.now,
+    );
+    const dreamEntries = filterByAge(
+      this.scope === "dream" ? this.loadAll() : this.loadScope("dream"),
+      opts?.maxAgeDays,
+      opts?.now,
+    );
 
     if (userEntries.length === 0 && dreamEntries.length === 0) return "";
 
@@ -280,7 +308,13 @@ export class MemoryManager {
       const name = frontmatter.match(/name:\s*(.+)/)?.[1]?.trim() ?? fileName;
       const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
       const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
-      return { name, description, type, content, fileName, scope };
+      let updatedAt = 0;
+      try {
+        updatedAt = statSync(filePath).mtimeMs;
+      } catch {
+        // best-effort
+      }
+      return { name, description, type, content, fileName, scope, updatedAt };
     } catch {
       return null;
     }
