@@ -106,12 +106,12 @@
 - [ ] 工具结果 Markdown 结构规范化，避免正文、JSON、日志混在一起。
 - [ ] 补长 Markdown smoke / demo。
 
-### 2.7 运行中输入缓存 / 强制发送下一轮收尾
+### 2.7 运行中输入缓存 / 强制发送下一轮收尾 🔧
 
-- [ ] 确认 desktop 当前轮运行中继续输入、queued input、打断发送都稳定。
-- [ ] 确认 TUI 行为一致。
-- [ ] 避免与 approval prompt、AskUserQuestion、后台 agent 通知、automation/headless run 混淆。
-- [ ] 补残缺测试或 smoke。
+- [x] desktop 当前轮运行中继续输入、queued input、空闲自动 flush 已实现且稳定(queuedInput.ts + App.tsx;测试 queuedInput.test.ts)。
+- [ ] 确认 TUI 行为一致(待补)。
+- [~] 避免与 approval/AskUser/后台通知/automation 混淆(desktop bucket+asking 态已分流;边角待复核)。
+- [ ] 强制发送/打断进入下一轮 UI + "已缓存 N 条"提示。
 
 ### 2.8 手动停止消息样式
 

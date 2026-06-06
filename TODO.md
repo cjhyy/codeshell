@@ -72,14 +72,16 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 
 ## P2 — 交互体验与工作流效率
 
-### ⬜ 运行中输入缓存 / 强制发送下一轮
+### 🔧 运行中输入缓存 / 强制发送下一轮
 
-- [ ] 当前轮运行中允许用户继续输入
-- [ ] 默认缓存为 queued input，当前轮完成后自动进入下一轮
+desktop 侧已实现(queuedInput.ts + App.tsx enqueue/dequeue + 忙碌时排队、空闲自动 flush,2e24b47);剩 TUI 一致性 + 强制发送 UI。
+
+- [x] 当前轮运行中允许用户继续输入(desktop)
+- [x] 默认缓存为 queued input，当前轮完成后自动进入下一轮(desktop:busy→空闲 useEffect dequeue;测试 queuedInput.test.ts)
 - [ ] 支持显式“强制发送/打断并进入下一轮”
 - [ ] UI 展示“已缓存 N 条/将于本轮后发送”
-- [ ] 避免与 approval prompt、AskUserQuestion、后台 agent 通知、automation/headless run 混淆
-- [ ] desktop + TUI 行为一致
+- [~] 避免与 approval prompt、AskUserQuestion、后台 agent 通知、automation/headless run 混淆(desktop bucket/asking 态已分流;需复核边角)
+- [ ] desktop + TUI 行为一致(TUI 侧待补)
 
 ### ⬜ GenerateImage 工具结果直接展示图片
 
