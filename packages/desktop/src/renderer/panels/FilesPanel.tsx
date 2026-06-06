@@ -371,18 +371,24 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
         const no = i + 1;
         return (
           <div key={i}>
-            <div className="group flex items-start gap-2 px-1 hover:bg-accent/40">
-              <span className="w-10 shrink-0 select-none pr-2 text-right text-muted-foreground">{no}</span>
-              <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-foreground">{line || " "}</pre>
+            <div className="group flex items-start gap-1 px-1 hover:bg-accent/40">
+              {/* Gutter comment button (left): a clear blue + that appears on
+                  row hover, GitHub-style. Click pins this line + your comment
+                  into the composer as an anchor. Replaces the old tiny,
+                  near-invisible right-side icon. */}
               <button
                 type="button"
                 aria-label="评论此行"
                 title="评论此行(加入输入框)"
-                className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
+                className={`shrink-0 mt-px flex h-4 w-4 items-center justify-center rounded bg-primary text-primary-foreground transition-opacity hover:bg-primary/90 ${
+                  commenting === no ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
                 onClick={() => setCommenting(commenting === no ? null : no)}
               >
-                <MessageSquarePlus size={12} />
+                <MessageSquarePlus size={11} />
               </button>
+              <span className="w-9 shrink-0 select-none pr-2 text-right text-muted-foreground">{no}</span>
+              <pre className="m-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-foreground">{line || " "}</pre>
             </div>
             {commenting === no && (
               <div className="px-2">

@@ -1567,6 +1567,11 @@ function App() {
     kind: null,
     open: false,
   });
+  // Panel dock tabs live in App (not PanelArea) so closing the dock and
+  // reopening it doesn't wipe the open tabs (the dock unmounts on close).
+  // PanelArea is a controlled component over these.
+  const [panelTabs, setPanelTabs] = useState<{ id: string; kind: PanelTab }[]>([]);
+  const [panelActiveId, setPanelActiveId] = useState<string | null>(null);
   // Top-bar toggle opens the dock on the card landing (kind null) / closes it.
   const togglePanel = (): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: r.open ? r.kind : null, open: !r.open }));
@@ -2175,6 +2180,10 @@ function App() {
           width={panelWidth}
           onResizeStart={beginPanelResize}
           onAttachImage={(p) => void attachImageByPath(p)}
+          tabs={panelTabs}
+          setTabs={setPanelTabs}
+          activeId={panelActiveId}
+          setActiveId={setPanelActiveId}
         />
       )}
       </div>

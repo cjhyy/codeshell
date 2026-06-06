@@ -13,10 +13,25 @@ import { BrowserPanel } from "./BrowserPanel";
 import { ReviewPanel } from "./ReviewPanel";
 import { TerminalPanel } from "./TerminalPanel";
 
+export interface OpenTab {
+  id: string;
+  kind: PanelTab;
+}
+
+/** Monotonic tab-id counter; module-level so ids stay unique across remounts. */
+let panelTabSeq = 0;
+
 interface Props {
   cwd: string | null;
   repoId: string | null;
+  /** Called when the dock should close (last tab closed). */
   onClose: () => void;
+  /** Controlled open tabs (owned by App so they survive a close→reopen). */
+  tabs: OpenTab[];
+  setTabs: React.Dispatch<React.SetStateAction<OpenTab[]>>;
+  /** Controlled active tab id. */
+  activeId: string | null;
+  setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
   /**
    * Bumped by the parent to request opening a tab of `requestKind`. Every time
    * the nonce changes we open (or focus) a tab of that kind. This is the single
@@ -33,11 +48,6 @@ interface Props {
   onResizeStart: (startX: number, startWidth: number) => void;
   /** Attach an on-disk image to the composer by absolute path (TODO 2.1). */
   onAttachImage?: (absPath: string) => void;
-}
-
-interface OpenTab {
-  id: string;
-  kind: PanelTab;
 }
 
 const KINDS: { kind: PanelTab; label: string; Icon: typeof FolderTree; hint?: string }[] = [
@@ -73,15 +83,17 @@ export function PanelArea({
   width,
   onResizeStart,
   onAttachImage,
+  tabs,
+  setTabs,
+  activeId,
+  setActiveId,
 }: Props) {
-  const seq = useRef(0);
-  const mkId = (kind: PanelTab): string => `${kind}-${(seq.current += 1)}`;
+  // Module-level id counter (not a per-mount ref) so ids stay unique across a
+  // dock close→reopen — tabs live in App now and outlive this component.
+  const mkId = (kind: PanelTab): string => `${kind}-${(panelTabSeq += 1)}`;
 
-  const [tabs, setTabs] = useState<OpenTab[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
   // Maximized = overlay the chat column (incl. composer) for more room (TODO
-  // 2.4). The chat/composer state lives in App and is untouched, so restoring
-  // brings the draft/attachments/queued input back intact.
+  // 2.4). Resets each open (local) — chat/composer state lives in App.
   const [maximized, setMaximized] = useState(false);
 
   const addTab = (kind: PanelTab): void => {
@@ -221,14 +233,8 @@ export function PanelArea({
         >
           {maximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="关闭面板"
-          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {/* No close-whole-panel ✕ — close tabs to close the dock (the last tab
+            closing calls onClose). Keeps one consistent "close" affordance. */}
       </div>
 
       {/* Bodies — all mounted, toggled via display. Empty dock shows the
