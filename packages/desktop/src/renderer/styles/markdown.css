@@ -157,6 +157,30 @@
   background: var(--bg-app);
   color: var(--fg-primary);
 }
+/* Long code blocks collapse to a capped, scrollable box with a fade at the
+   bottom edge, until the user expands (TODO 2.6). */
+.md-code pre.md-code-collapsed {
+  max-height: 420px;
+  overflow-y: auto;
+  -webkit-mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 88%, transparent 100%);
+}
+.md-code-expand {
+  display: block;
+  width: 100%;
+  padding: 4px var(--sp-2);
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-sidebar);
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+  cursor: pointer;
+  text-align: center;
+}
+.md-code-expand:hover {
+  background: var(--bg-hover);
+  color: var(--fg-primary);
+}
 
 /* Inline path:line links rewritten by remarkPathLinks. Match the same
    muted-then-accent treatment as ordinary external links but use a

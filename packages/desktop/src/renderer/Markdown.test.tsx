@@ -48,4 +48,18 @@ describe("Markdown", () => {
     expect(html).toContain("codeshell-path:");
     expect(html).toContain('data-path-link="true"');
   });
+
+  test("long code blocks collapse with an expand toggle (TODO 2.6)", () => {
+    const code = Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n");
+    const html = renderToStaticMarkup(<Markdown text={"```ts\n" + code + "\n```"} />);
+    expect(html).toContain("md-code-collapsed");
+    expect(html).toContain("md-code-expand");
+    expect(html).toContain("展开全部 (40 行)");
+  });
+
+  test("short code blocks are not collapsed", () => {
+    const html = renderToStaticMarkup(<Markdown text={"```ts\nconst a = 1;\n```"} />);
+    expect(html).not.toContain("md-code-collapsed");
+    expect(html).not.toContain("md-code-expand");
+  });
 });

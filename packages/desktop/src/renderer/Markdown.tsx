@@ -267,9 +267,14 @@ function InlineImageLink({
   );
 }
 
+/** Long code blocks (> this many lines) collapse to a scrollable, capped box
+ *  with an expand toggle so a 500-line paste doesn't dominate the transcript. */
+const CODE_COLLAPSE_LINES = 24;
+
 function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) {
   const preRef = useRef<HTMLPreElement>(null);
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const copyTimer = useRef<number | undefined>(undefined);
 
   // Clear the "copied" reset timer on unmount so it doesn't fire setCopied on
@@ -285,6 +290,15 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
     const m = /language-([\w-]+)/.exec(child.props.className);
     if (m) lang = m[1];
   }
+
+  // Line count drives the collapse affordance. Derived from the raw text so it
+  // doesn't depend on layout/measurement (works in tests + on first paint).
+  const codeText = typeof child?.props === "object"
+    ? extractText(child)
+    : "";
+  const lineCount = codeText ? codeText.replace(/\n$/, "").split("\n").length : 0;
+  const collapsible = lineCount > CODE_COLLAPSE_LINES;
+  const collapsed = collapsible && !expanded;
 
   const onCopy = (): void => {
     const text = preRef.current?.textContent ?? "";
@@ -302,9 +316,29 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
           <Copy size={11} /> {copied ? "copied" : "copy"}
         </button>
       </div>
-      <pre ref={preRef} {...rest}>
+      <pre ref={preRef} {...rest} className={collapsed ? "md-code-collapsed" : undefined}>
         {children}
       </pre>
+      {collapsible && (
+        <button
+          type="button"
+          className="md-code-expand"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {collapsed ? `展开全部 (${lineCount} 行)` : "收起"}
+        </button>
+      )}
     </div>
   );
+}
+
+/** Recursively pull text out of react-markdown's code children for line counting. */
+function extractText(node: React.ReactNode): string {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join("");
+  if (React.isValidElement(node)) {
+    return extractText((node.props as { children?: React.ReactNode }).children);
+  }
+  return "";
 }
