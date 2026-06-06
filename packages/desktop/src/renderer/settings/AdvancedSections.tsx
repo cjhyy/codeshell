@@ -18,6 +18,7 @@ import { writeSettings } from "../settingsBus";
 import { ProjectPicker } from "./ProjectPicker";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import QRCode from "qrcode";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -986,8 +987,29 @@ export function MobileRemoteSection() {
   const confirm = useConfirm();
   const [status, setStatus] = useState<{ running: boolean; url?: string }>({ running: false });
   const [pairingUrl, setPairingUrl] = useState<string | undefined>();
+  const [qrDataUrl, setQrDataUrl] = useState<string | undefined>();
   const [devices, setDevices] = useState<MobileDevice[]>([]);
   const [busy, setBusy] = useState(false);
+
+  // Render the pairing URL as a QR code locally (no external service — the
+  // token is a secret and must never leave the machine).
+  useEffect(() => {
+    if (!pairingUrl) {
+      setQrDataUrl(undefined);
+      return;
+    }
+    let cancelled = false;
+    void QRCode.toDataURL(pairingUrl, { width: 220, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pairingUrl]);
 
   const refresh = useCallback(async () => {
     setStatus(await window.codeshell.mobileRemote.status());
@@ -1051,7 +1073,17 @@ export function MobileRemoteSection() {
       </p>
       {pairingUrl ? (
         <div className="mt-2">
-          <p className="text-sm font-medium">配对链接(10 分钟内有效,在手机上打开):</p>
+          <p className="text-sm font-medium">配对二维码(10 分钟内有效,用手机扫码):</p>
+          {qrDataUrl ? (
+            <img
+              src={qrDataUrl}
+              alt="配对二维码"
+              className="mt-2 rounded-md bg-white p-2"
+              width={220}
+              height={220}
+            />
+          ) : null}
+          <p className="text-xs text-muted-foreground mt-2">或手动在手机浏览器打开:</p>
           <pre className="text-xs whitespace-pre-wrap break-all bg-muted rounded-md p-2 mt-1">
             {pairingUrl}
           </pre>

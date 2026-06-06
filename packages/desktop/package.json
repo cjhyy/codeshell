@@ -98,6 +98,7 @@
     "highlight.js": "^11",
     "lucide-react": "^0.460.0",
     "node-pty": "^1.1.0",
+    "qrcode": "^1.5.4",
     "react-markdown": "^9",
     "rehype-highlight": "^7",
     "remark-gfm": "^4",
@@ -107,6 +108,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.0",
     "@types/ws": "^8.18.1",
