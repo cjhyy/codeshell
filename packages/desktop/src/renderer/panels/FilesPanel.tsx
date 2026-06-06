@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Markdown } from "../Markdown";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
+import { OpenWithMenu } from "../chat/OpenWithMenu";
+import { MoreHorizontal } from "lucide-react";
 
 /** Image extensions we render as an inline preview (via data URL). */
 const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif"]);
@@ -165,19 +167,31 @@ function DirNode({
           );
         }
         return (
-          <button
-            key={e.path}
-            type="button"
-            style={pad}
-            className={`flex w-full items-center gap-1 py-1 pr-2 text-left text-sm hover:bg-accent ${
-              selected === e.path ? "bg-accent text-accent-foreground" : "text-foreground"
-            }`}
-            onClick={() => onSelect(e.path)}
-          >
-            <span className="w-3.5 shrink-0" />
-            <FileIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate">{e.name}</span>
-          </button>
+          <div key={e.path} className="group/file relative flex items-center">
+            <button
+              type="button"
+              style={pad}
+              className={`flex w-full items-center gap-1 py-1 pr-7 text-left text-sm hover:bg-accent ${
+                selected === e.path ? "bg-accent text-accent-foreground" : "text-foreground"
+              }`}
+              onClick={() => onSelect(e.path)}
+            >
+              <span className="w-3.5 shrink-0" />
+              <FileIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">{e.name}</span>
+            </button>
+            {/* e.path is absolute; cwd not needed but harmless. */}
+            <OpenWithMenu path={e.path} cwd={root} align="end">
+              <button
+                type="button"
+                title="打开方式"
+                aria-label="打开方式"
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100 data-[state=open]:opacity-100"
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </button>
+            </OpenWithMenu>
+          </div>
         );
       })}
     </>

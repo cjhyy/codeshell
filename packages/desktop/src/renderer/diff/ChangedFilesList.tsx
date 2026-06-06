@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
 import type { GitStatus } from "../../preload/types";
+import { OpenWithMenu } from "../chat/OpenWithMenu";
 
 interface Props {
   cwd: string;
@@ -33,14 +35,27 @@ export function ChangedFilesList({ cwd, selectedFile, onSelectFile }: Props) {
         <span className="changed-file-path">all changes</span>
       </button>
       {status.entries.map((e) => (
-        <button
-          key={e.path}
-          className={`changed-file ${selectedFile === e.path ? "selected" : ""}`}
-          onClick={() => onSelectFile(e.path)}
-        >
-          <span className={`changed-file-status status-${codeClass(e.code)}`}>{e.code.trim()}</span>
-          <span className="changed-file-path">{e.path}</span>
-        </button>
+        <div key={e.path} className="group/cf relative flex items-center">
+          <button
+            className={`changed-file ${selectedFile === e.path ? "selected" : ""}`}
+            style={{ width: "100%", paddingRight: 24 }}
+            onClick={() => onSelectFile(e.path)}
+          >
+            <span className={`changed-file-status status-${codeClass(e.code)}`}>{e.code.trim()}</span>
+            <span className="changed-file-path">{e.path}</span>
+          </button>
+          {/* e.path is relative to the repo — pass cwd so open/reveal resolve it. */}
+          <OpenWithMenu path={e.path} cwd={cwd} align="end">
+            <button
+              type="button"
+              title="打开方式"
+              aria-label="打开方式"
+              className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/cf:opacity-100 data-[state=open]:opacity-100"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+          </OpenWithMenu>
+        </div>
       ))}
     </div>
   );
