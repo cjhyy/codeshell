@@ -376,10 +376,10 @@ instruction-scanner.ts 早已实现,补测试锁定。
 - [x] 指令作用域标注(sourceLabel:project depth N / local override / user-level)。
 - [x] 按作用域排序注入(managed→user→project→local,止于 git root)。测试 instruction-scanner.test.ts。
 
-### 8.3 智能上下文管理
+### 8.3 智能上下文管理 🔧
 
-- [ ] 文件内容缓存去重：同一文件多次读取只保留最新版本。
-- [ ] tool result 压缩：大输出自动截断 + 摘要。
+- [x] 文件内容缓存去重：dedupeFileReads Tier 0d 始终运行,同 path 旧 Read 清成指向新读的指纹,仅 Read 参与。测试 dedupe-file-reads.test.ts。
+- [x] tool result 压缩：已有 Tier 0a 落盘 / 0b 硬截断 / 0c 预算 / Tier1 microcompact。
 - [ ] 请求压缩：发送前压缩历史消息。
 - [ ] token 预算管理：根据剩余 token 动态调整策略。
 

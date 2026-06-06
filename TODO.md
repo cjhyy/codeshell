@@ -134,14 +134,14 @@ ApplyPatch 工具已存在；原子性已核实并补测试。
 - [x] 指令作用域标注：`sourceLabel` 输出 "project (depth N)" / "local override (depth N)" / "user-level" 注释头
 - [x] 在 prompt 中按作用域排序注入：managed→user→project(root→cwd)→local;扫描止于 git root。测试 instruction-scanner.test.ts
 
-### ⬜ 智能上下文管理
+### 🔧 智能上下文管理
 
-当前 3 级 compaction 已实现，但可以更智能。
+当前 3 级 compaction 已实现，部分增强已落地。
 
-- [ ] 文件内容缓存去重：同一文件多次读取只保留最新版本
-- [ ] tool result 压缩：大输出自动截断 + 摘要
+- [x] 文件内容缓存去重：同一文件多次读取只保留最新版本 —— `dedupeFileReads`(compaction.ts)作为 ContextManager Tier 0d 始终运行(零成本纯废弃移除,不受压力/recency 窗约束);同一 path 的旧 Read result 清成指向新读的指纹,仅 Read(其结果=文件全文)参与,Edit/Write(diff/确认)不动。测试 dedupe-file-reads.test.ts
+- [x] tool result 压缩：大输出自动截断 + 摘要 —— 已有 Tier 0a 落盘+预览 / 0b 硬截断 / 0c 预算 / Tier 1 microcompact 指纹化
 - [ ] 请求压缩（`enable_request_compression`）：发送前压缩历史消息
-- [ ] token 预算管理：根据剩余 token 动态调整策略
+- [ ] token 预算管理：根据剩余 token 动态调整策略（现为固定 ratio 门控,可更动态）
 
 ---
 

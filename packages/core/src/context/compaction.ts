@@ -312,6 +312,96 @@ export function microcompact(
   return result;
 }
 
+/** Tools whose result is the content of a single file, keyed by path. */
+const FILE_READ_TOOLS: ReadonlySet<string> = new Set(["Read"]);
+
+export interface DedupeFileReadsResult {
+  messages: Message[];
+  /** How many stale Read results were cleared. */
+  clearedCount: number;
+}
+
+/**
+ * Content-aware dedup: when the SAME file is Read more than once, every Read
+ * result except the most recent is stale — the file's current state is in the
+ * latest read. Clear the older ones (replace with a fingerprint pointing at
+ * the newer read) regardless of the recency window or pressure floor, because
+ * this is pure waste removal, not lossy compaction: the model never needs two
+ * copies of the same file.
+ *
+ * Distinct from microcompact (which is recency-gated and pressure-gated): a
+ * file Read 3 times in the last 3 turns keeps 3 full copies under microcompact
+ * but only the newest under this pass. Zero-cost and always safe to run, so the
+ * ContextManager calls it as an early tier.
+ *
+ * Only `Read` is deduped (its result is exactly the file content). Edit/Write
+ * results are diffs/confirmations, not full snapshots, so they're left alone.
+ */
+export function dedupeFileReads(messages: Message[]): DedupeFileReadsResult {
+  const idToName = buildToolUseIdToNameMap(messages);
+  const idToInput = new Map<string, Record<string, unknown> | undefined>();
+  for (const msg of messages) {
+    if (!Array.isArray(msg.content)) continue;
+    for (const block of msg.content) {
+      if (block.type === "tool_use" && block.id) idToInput.set(block.id, block.input);
+    }
+  }
+
+  // Resolve a Read tool_use_id to its file_path arg (the dedup key).
+  const pathOf = (toolUseId: string): string | undefined => {
+    const input = idToInput.get(toolUseId);
+    const p = input?.file_path ?? input?.path;
+    return typeof p === "string" && p.length > 0 ? p : undefined;
+  };
+
+  // Collect, per file path, the message indices + block positions of every
+  // non-cleared Read result. Walk forward so "last" is the newest.
+  const byPath = new Map<string, Array<{ msgIdx: number; toolUseId: string }>>();
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    if (!Array.isArray(msg.content)) continue;
+    for (const block of msg.content) {
+      if (block.type !== "tool_result" || !block.tool_use_id) continue;
+      if (!FILE_READ_TOOLS.has(idToName.get(block.tool_use_id) ?? "")) continue;
+      if (typeof block.content !== "string") continue;
+      if (block.content.startsWith("[Old tool result cleared")) continue;
+      const path = pathOf(block.tool_use_id);
+      if (!path) continue;
+      const list = byPath.get(path) ?? [];
+      list.push({ msgIdx: i, toolUseId: block.tool_use_id });
+      byPath.set(path, list);
+    }
+  }
+
+  // For each path read more than once, mark all-but-last for clearing.
+  const clearIds = new Set<string>();
+  for (const [, reads] of byPath) {
+    if (reads.length < 2) continue;
+    for (let k = 0; k < reads.length - 1; k++) clearIds.add(reads[k].toolUseId);
+  }
+  if (clearIds.size === 0) return { messages, clearedCount: 0 };
+
+  let clearedCount = 0;
+  const result = messages.map((msg) => {
+    if (!Array.isArray(msg.content)) return msg;
+    return {
+      ...msg,
+      content: msg.content.map((block) => {
+        if (block.type !== "tool_result" || !block.tool_use_id) return block;
+        if (!clearIds.has(block.tool_use_id)) return block;
+        const argsSummary = summarizeToolCallArgs("Read", idToInput.get(block.tool_use_id));
+        clearedCount++;
+        return {
+          ...block,
+          content: `[Old tool result cleared — superseded by a newer Read${argsSummary ? ` of ${argsSummary}` : ""}]`,
+        };
+      }),
+    };
+  });
+
+  return { messages: result, clearedCount };
+}
+
 /**
  * Apply aggregate per-message tool result budget.
  * When total tool_result content in a single message exceeds maxTotalChars,

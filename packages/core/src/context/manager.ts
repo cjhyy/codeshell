@@ -10,6 +10,7 @@ import type { Message, LLMResponse } from "../types.js";
 import {
   estimateTokens,
   microcompact,
+  dedupeFileReads,
   snipCompact,
   windowCompact,
   truncateToolResult,
@@ -195,6 +196,17 @@ export class ContextManager {
     // Tier 0c: Aggregate tool result budget (per-message) — char-level
     // backstop for messages still over the limit after persistence.
     result = applyToolResultBudget(result);
+
+    // Tier 0d: dedup repeated Reads of the same file — keep only the latest
+    // copy (older ones are stale). Always-on + zero-cost: it's pure waste
+    // removal (the model never needs two snapshots of one file), unlike the
+    // pressure-/recency-gated tiers below. Runs before microcompact so an
+    // already-deduped result isn't double-counted toward the keep-recent window.
+    const dedup = dedupeFileReads(result);
+    if (dedup.clearedCount > 0) {
+      result = dedup.messages;
+      logger.info("context.dedupe_file_reads", { cleared: dedup.clearedCount });
+    }
 
     // Tier 1: microcompact — fingerprint old whitelisted tool_results.
     // Only runs above the floor ratio: under-pressure context keeps full
