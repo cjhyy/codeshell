@@ -37,6 +37,7 @@ import type { ApprovalRequest, ApprovalResult, PermissionMode, StreamEvent } fro
 import { setInteractiveApprovalFn } from "../tool-system/permission.js";
 import { getArenaStatus } from "../tool-system/builtin/arena.js";
 import { agentNotificationBus } from "../tool-system/builtin/agent-notifications.js";
+import { backgroundShellManager } from "../runtime/background-shell.js";
 import { nanoid } from "nanoid";
 import type { ChatSessionManager } from "./chat-session-manager.js";
 import { redactLlmConfig, maskSecretValue } from "./redact.js";
@@ -497,6 +498,11 @@ export class AgentServer {
     if (this.chatManager) {
       this.chatManager.close(params.sessionId);
     }
+    // Explicit session teardown — reap that session's background shells
+    // (design §6 "session 被显式删除 → killSession"). This is the RPC path
+    // (agent/closeSession from the host on delete), distinct from the idle
+    // sweeper's chatManager.close() which must NOT kill (§6). Fire-and-forget.
+    void backgroundShellManager.killSession(params.sessionId);
     this.transport.send(createResponse(req.id, { ok: true }));
   }
 

@@ -232,6 +232,27 @@ export class AgentBridge {
     this.snapshots.forget(sessionId);
   }
 
+  /**
+   * Tell the worker to tear down a session explicitly (on user delete). The
+   * worker's agent/closeSession handler reaps that session's background
+   * shells (core design §6). No-op if no live worker — then there are no
+   * shells to reap. Best-effort; delete proceeds regardless.
+   */
+  closeSession(sessionId: string): void {
+    if (!this.child?.stdin || this.child.stdin.destroyed) return;
+    const line = JSON.stringify({
+      jsonrpc: "2.0",
+      id: `close-${sessionId}`,
+      method: "agent/closeSession",
+      params: { sessionId },
+    });
+    try {
+      this.child.stdin.write(line + "\n");
+    } catch {
+      /* best-effort */
+    }
+  }
+
   /** Feed an event produced OUTSIDE the stdio worker (e.g. an in-main automation
    *  Engine) into the same snapshot + renderer stream, so renderer reconnect works
    *  identically for automation sessions. */

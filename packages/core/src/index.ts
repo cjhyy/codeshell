@@ -586,6 +586,12 @@ export {
   asyncAgentRegistry,
   type AsyncAgentEntry,
 } from "./tool-system/builtin/agent-registry.js";
+export {
+  backgroundShellManager,
+  BackgroundShellManager,
+  type BgShell,
+  type BgShellStatus,
+} from "./runtime/background-shell.js";
 
 // ─── Protocol (extended for TUI) ────────────────────────────────
 

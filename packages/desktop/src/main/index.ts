@@ -942,6 +942,9 @@ ipcMain.handle("memory:dream", async (_e, level: unknown, cwd?: string) => {
 ipcMain.handle("sessions:list", async () => listSessions());
 ipcMain.handle("sessions:delete", async (_e, id: string) => {
   if (typeof id !== "string") throw new Error("session id required");
+  // Reap the session's background shells (if any) before dropping it —
+  // explicit delete is the one tab-close path that DOES kill (core §6).
+  bridge?.closeSession(id);
   await deleteSession(id);
   // Drop any in-memory snapshot for the deleted session so it can't be
   // replayed into a fresh tab that happens to reuse the id.

@@ -43,6 +43,8 @@ import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
 import { CostTracker } from "../cost-tracker.js";
 import { installGracefulShutdown } from "./graceful-shutdown.js";
+import { backgroundShellManager } from "../runtime/background-shell.js";
+import { logger } from "../logging/logger.js";
 import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
 
@@ -241,8 +243,21 @@ const agentServer = new AgentServer({
 // Clean up on termination signals. Without this, SIGTERM (parent kill),
 // SIGINT (Ctrl+C), or SIGHUP would drop the process without closing sessions,
 // clearing the idle sweeper, or terminating child MCP/tool processes.
-// AgentServer.close() also closes the chatManager's sessions.
+// AgentServer.close() → chatManager.closeAll() also reaps background shells.
 installGracefulShutdown(agentServer);
+
+// Reap orphaned background shells left by a previously-crashed worker
+// (design §难点1): a worker crash detaches its `npm run dev` children, which
+// keep holding ports. Scanning pidfiles on boot lists still-alive groups as
+// `orphaned` (so ListShells/KillShell can clean them) and deletes stale ones.
+try {
+  const orphans = backgroundShellManager.reapOrphansFromPidfiles();
+  if (orphans.length > 0) {
+    logger.info("bg_shell.orphans_found", { count: orphans.length });
+  }
+} catch {
+  /* best-effort — never block worker startup on this */
+}
 
 // Keep the process alive — readline in StdioTransport holds the event loop.
 // On parent close / stdin EOF the process will exit naturally.

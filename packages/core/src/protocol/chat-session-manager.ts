@@ -2,6 +2,7 @@ import { ChatSession } from "./chat-session.js";
 import type { Engine } from "../engine/engine.js";
 import type { EngineRuntime } from "../engine/runtime.js";
 import type { EngineConfig } from "../engine/engine.js";
+import { backgroundShellManager } from "../runtime/background-shell.js";
 
 export type EngineConfigSlice = Pick<
   EngineConfig,
@@ -81,6 +82,12 @@ export class ChatSessionManager {
 
   closeAll(): void {
     for (const id of [...this.sessions.keys()]) this.close(id);
+    // App/worker shutdown — reap every background shell so a detached
+    // `npm run dev` doesn't outlive the process as an orphan holding a port
+    // (design §6 / §难点1). Fire-and-forget: shutdown shouldn't block on the
+    // SIGTERM→SIGKILL grace. NOTE: deliberately NOT in close()/sweepIdle() —
+    // an idle chat tab must keep its dev server alive (§6 "切走再回来 server 还在").
+    void backgroundShellManager.killAll();
   }
 
   sessionCount(): number {
