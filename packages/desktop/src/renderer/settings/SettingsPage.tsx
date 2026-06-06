@@ -16,6 +16,7 @@ import {
   Bot,
   Brain,
   Layers,
+  Smartphone,
 } from "lucide-react";
 import { ModelSection } from "./ModelSection";
 import { MemorySection } from "./MemorySection";
@@ -33,6 +34,7 @@ import {
   HooksSection,
   ImageSettingsSection,
   InstructionFilesSection,
+  MobileRemoteSection,
   PersonalizationSection,
   ResponsePrefsSection,
   ShortcutsSection,
@@ -52,6 +54,7 @@ type ModuleId =
   | "connections"
   | "git"
   | "environment"
+  | "mobile-remote"
   | "archived"
   | "capabilities"
   | "plugins-skills"
@@ -106,6 +109,7 @@ const MODULE_GROUPS: ModuleGroup[] = [
       { id: "connections", label: "连接", Icon: Wifi },
       { id: "git", label: "Git", Icon: GitBranch },
       { id: "environment", label: "本地环境", Icon: Terminal },
+      { id: "mobile-remote", label: "手机遥控", Icon: Smartphone },
     ],
   },
   {
@@ -249,6 +253,7 @@ export function SettingsPage({
             {active === "environment" && (
               <EnvironmentSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
+            {active === "mobile-remote" && <MobileRemoteSection />}
             {active === "plugins-skills" && (
               <ExtensionsPage activeRepoPath={activeRepoPath} showDiscover={false} />
             )}

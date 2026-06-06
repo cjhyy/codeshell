@@ -500,4 +500,13 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.on("browser:anchor-from-popout", h);
     return () => ipcRenderer.removeListener("browser:anchor-from-popout", h);
   },
+
+  // ── Mobile Web Remote (LAN phone controller; off by default) ──────────
+  mobileRemote: {
+    start: () => ipcRenderer.invoke("mobileRemote:start"),
+    stop: () => ipcRenderer.invoke("mobileRemote:stop"),
+    status: () => ipcRenderer.invoke("mobileRemote:status"),
+    listDevices: () => ipcRenderer.invoke("mobileRemote:listDevices"),
+    revokeDevice: (id: string) => ipcRenderer.invoke("mobileRemote:revokeDevice", id),
+  },
 });

@@ -38,6 +38,8 @@ import {
 } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
 import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
+import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
+import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { readDirectory, readFile as fsReadFile } from "./fs-service.js";
 import {
   getGitStatus,
@@ -140,6 +142,21 @@ dlog("main", "boot", { argv: process.argv, execPath: process.execPath, cwd: proc
 let bridge: AgentBridge | null = null;
 let cspInstalled = false;
 let automationHandle: AutomationHandle | null = null;
+
+// ── Mobile Web Remote (LAN phone controller; off by default) ────────────────
+// Trusted-device store + HTTP/WS host. The host is NOT started on launch — the
+// user must explicitly Start it from Settings → Advanced. onClientEvent is a
+// v1 echo placeholder; chat/approval routing is wired in a later task and must
+// reuse the existing run/permission path rather than create a second runtime.
+const mobileDevices = new TrustedDeviceStore(
+  resolve(app.getPath("userData"), "mobile-remote", "devices.json"),
+);
+const mobileRemote = new RemoteHostManager({
+  devices: mobileDevices,
+  onClientEvent: (event, ws) => {
+    ws.send(JSON.stringify({ type: "echo", event }));
+  },
+});
 
 async function createWindow(): Promise<BrowserWindow> {
   const ws = await loadWindowState();
@@ -715,6 +732,22 @@ ipcMain.handle("updater:check", async () => checkForUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
 
+// ── Mobile Web Remote ───────────────────────────────────────────────────────
+ipcMain.handle("mobileRemote:start", async () => {
+  const started = await mobileRemote.start({ host: "127.0.0.1", port: 0 });
+  const pairing = mobileRemote.createPairingUrl();
+  return { url: started.url, pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
+});
+ipcMain.handle("mobileRemote:stop", async () => {
+  await mobileRemote.stop();
+});
+ipcMain.handle("mobileRemote:status", async () => {
+  const status = mobileRemote.status();
+  return { running: Boolean(status), url: status?.url };
+});
+ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
+ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => mobileDevices.revoke(id));
+
 ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string } | null> => {
   const res = await dialog.showOpenDialog({
     title: "选择项目目录",
@@ -1122,6 +1155,7 @@ app.on("before-quit", () => {
   automationHandle?.stop();
   automationHandle = null;
   ptyKillAll();
+  void mobileRemote.stop();
 });
 
 app.on("activate", () => {

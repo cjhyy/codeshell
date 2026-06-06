@@ -554,6 +554,21 @@ export interface CodeshellApi {
   installUpdate(): Promise<void>;
   getUpdaterStatus(): Promise<UpdaterStatus>;
   onUpdaterStatus(cb: (status: UpdaterStatus) => void): Unsubscribe;
+
+  /**
+   * Mobile Web Remote — Electron-hosted LAN HTTP/WebSocket controller for a
+   * trusted phone. Off by default; `start` binds to localhost/LAN and returns
+   * a one-time pairing URL. No public relay (see mobile-remote design spec).
+   */
+  mobileRemote: {
+    start(): Promise<{ url: string; pairingUrl: string; expiresAt: number }>;
+    stop(): Promise<void>;
+    status(): Promise<{ running: boolean; url?: string }>;
+    listDevices(): Promise<
+      Array<{ id: string; name: string; createdAt: number; lastSeenAt?: number; revokedAt?: number }>
+    >;
+    revokeDevice(id: string): Promise<boolean>;
+  };
 }
 
 export type UpdaterStatus =
