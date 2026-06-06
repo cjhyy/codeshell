@@ -3,9 +3,53 @@ import {
   decodeWireForDisplay,
   encodeAttachmentsForWire,
   titleFromWire,
+  buildPathAttachment,
   type ImageAttachment,
 } from "./attachments";
 import { encodeAnchorsForWire, type Anchor } from "./anchors";
+
+// "AAAA" decodes to 3 bytes; a tiny valid base64 png data URL.
+const PNG_URL = "data:image/png;base64,AAAA";
+
+describe("buildPathAttachment (TODO 2.1)", () => {
+  test("stages an attachment keeping the absolute path as name", () => {
+    const { attachment, error } = buildPathAttachment("/abs/pic.png", PNG_URL, []);
+    expect(error).toBeUndefined();
+    expect(attachment?.name).toBe("/abs/pic.png");
+    expect(attachment?.mime).toBe("image/png");
+    expect(attachment?.dataUrl).toBe(PNG_URL);
+    expect(attachment?.size).toBeGreaterThan(0);
+  });
+
+  test("rejects a non-image mime", () => {
+    const r = buildPathAttachment("/a/x.bin", "data:application/octet-stream;base64,AAAA", []);
+    expect(r.attachment).toBeUndefined();
+    expect(r.error?.kind).toBe("wrong-type");
+  });
+
+  test("rejects when the data URL is unparseable", () => {
+    const r = buildPathAttachment("/a/x.png", "not-a-data-url", []);
+    expect(r.error?.kind).toBe("read-failed");
+  });
+
+  test("enforces the max-images count", () => {
+    const existing = Array.from({ length: 6 }, (_, i) => ({
+      id: `e${i}`,
+      name: `${i}.png`,
+      mime: "image/png",
+      dataUrl: PNG_URL,
+      size: 1,
+    })) as ImageAttachment[];
+    const r = buildPathAttachment("/a/x.png", PNG_URL, existing);
+    expect(r.error?.kind).toBe("too-many");
+  });
+
+  test("wire payload carries the absolute path as name", () => {
+    const { attachment } = buildPathAttachment("/repo/shot.png", PNG_URL, []);
+    const wire = encodeAttachmentsForWire("", [attachment!]);
+    expect(wire).toContain('name="/repo/shot.png"');
+  });
+});
 
 function img(over: Partial<ImageAttachment> = {}): ImageAttachment {
   return {

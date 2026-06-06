@@ -39,7 +39,7 @@ import {
   type SessionIndex,
   type SessionSummary,
 } from "./transcripts";
-import { titleFromWire, type ImageAttachment } from "./chat/attachments";
+import { titleFromWire, buildPathAttachment, type ImageAttachment } from "./chat/attachments";
 import { resolveBucket } from "./streamRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import { selectReplayEvents } from "./snapshotReplay";
@@ -276,6 +276,20 @@ function App() {
       const attachments = typeof next === "function" ? next(current.attachments) : next;
       if (attachments === current.attachments) return prev;
       return { ...prev, [activeBucket]: { ...current, attachments } };
+    });
+  };
+  // Attach an on-disk image to the composer by absolute path (file-panel add —
+  // TODO 2.1). The staged attachment keeps the real path as its name so the
+  // chip shows it and the wire payload carries it. Reads bytes via IPC.
+  const attachImageByPath = async (absPath: string): Promise<void> => {
+    const dataUrl = await window.codeshell.readImageDataUrl(absPath);
+    if (!dataUrl) {
+      window.codeshell.log("attach.path.not_image", { path: absPath });
+      return;
+    }
+    setComposerDraftAttachments((cur) => {
+      const { attachment } = buildPathAttachment(absPath, dataUrl, cur);
+      return attachment ? [...cur, attachment] : cur;
     });
   };
   /**
@@ -2156,6 +2170,7 @@ function App() {
           reviewFiles={reviewFiles}
           width={panelWidth}
           onResizeStart={beginPanelResize}
+          onAttachImage={(p) => void attachImageByPath(p)}
         />
       )}
       </div>

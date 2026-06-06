@@ -31,6 +31,8 @@ interface Props {
   width: number;
   /** Drag the divider: report the new width (parent clamps + persists). */
   onResizeStart: (startX: number, startWidth: number) => void;
+  /** Attach an on-disk image to the composer by absolute path (TODO 2.1). */
+  onAttachImage?: (absPath: string) => void;
 }
 
 interface OpenTab {
@@ -70,6 +72,7 @@ export function PanelArea({
   reviewFiles,
   width,
   onResizeStart,
+  onAttachImage,
 }: Props) {
   const seq = useRef(0);
   const mkId = (kind: PanelTab): string => `${kind}-${(seq.current += 1)}`;
@@ -216,7 +219,7 @@ export function PanelArea({
         ) : (
           tabs.map((t) => (
             <Slot key={t.id} active={t.id === activeId}>
-              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} />
+              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} onAttachImage={onAttachImage} />
             </Slot>
           ))
         )}
@@ -252,15 +255,17 @@ function PanelBody({
   cwd,
   repoId,
   reviewFiles,
+  onAttachImage,
 }: {
   tab: OpenTab;
   cwd: string | null;
   repoId: string | null;
   reviewFiles?: string[];
+  onAttachImage?: (absPath: string) => void;
 }) {
   switch (tab.kind) {
     case "files":
-      return <FilesPanel cwd={cwd} />;
+      return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} />;
     case "browser":
       return <BrowserPanel cwd={cwd} />;
     case "review":

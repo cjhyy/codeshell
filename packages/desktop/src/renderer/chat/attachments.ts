@@ -110,6 +110,56 @@ export async function buildAttachments(
   return { accepted, errors };
 }
 
+/** mime + byte size parsed out of a base64 data: URL (size estimated from b64 length). */
+function parseDataUrlMeta(dataUrl: string): { mime: string; size: number } | null {
+  const m = /^data:([^;,]+)?(;base64)?,([\s\S]*)$/.exec(dataUrl);
+  if (!m) return null;
+  const mime = m[1] || "image/png";
+  const data = m[3] ?? "";
+  // base64 → bytes ≈ len*3/4 minus padding; good enough for the size guard.
+  const padding = data.endsWith("==") ? 2 : data.endsWith("=") ? 1 : 0;
+  const size = m[2] ? Math.max(0, Math.floor((data.length * 3) / 4) - padding) : data.length;
+  return { mime, size };
+}
+
+/**
+ * Stage an attachment from an on-disk image PATH (file-panel drag/add — TODO
+ * 2.1). Unlike buildAttachments (browser File → no real path), the path entry
+ * keeps the ABSOLUTE path as `name`, so the chip shows it and the wire `name`
+ * lets the assistant/tools reference the original file. `dataUrl` is read by
+ * the caller via images:readDataUrl. Applies the same count / type / size
+ * limits as buildAttachments.
+ */
+export function buildPathAttachment(
+  absPath: string,
+  dataUrl: string,
+  existing: ImageAttachment[],
+): { attachment?: ImageAttachment; error?: AttachmentError } {
+  if (existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {
+    return {
+      error: { kind: "too-many", message: `最多 ${ATTACHMENT_LIMITS.maxImagesPerMessage} 张图片` },
+    };
+  }
+  const meta = parseDataUrlMeta(dataUrl);
+  if (!meta) {
+    return { error: { kind: "read-failed", message: `读取失败：${absPath}` } };
+  }
+  if (!ATTACHMENT_LIMITS.allowedMimes.has(meta.mime)) {
+    return { error: { kind: "wrong-type", message: `不支持的文件类型：${meta.mime}` } };
+  }
+  if (meta.size > ATTACHMENT_LIMITS.maxBytesPerImage) {
+    return {
+      error: {
+        kind: "too-large",
+        message: `「${absPath}」超过 ${ATTACHMENT_LIMITS.maxBytesPerImage / 1024 / 1024} MB`,
+      },
+    };
+  }
+  return {
+    attachment: { id: nextId(), name: absPath, mime: meta.mime, dataUrl, size: meta.size },
+  };
+}
+
 /**
  * Wire format for embedding images in a single-string `task` send.
  *

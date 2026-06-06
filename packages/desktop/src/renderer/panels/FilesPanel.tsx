@@ -6,7 +6,7 @@ import { Markdown } from "../Markdown";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Paperclip } from "lucide-react";
 
 /** Image extensions we render as an inline preview (via data URL). */
 const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif"]);
@@ -16,13 +16,15 @@ const SVG_EXT = "svg";
 interface Props {
   /** Workspace root; null when no project is active. */
   cwd: string | null;
+  /** Attach an image file to the composer by absolute path (TODO 2.1). */
+  onAttachImage?: (absPath: string) => void;
 }
 
 /**
  * File-browser panel, modeled on Codex's fs RPC tree: lazy directory
  * expansion (fs:readDir per level) + a capped text preview (fs:readFile).
  */
-export function FilesPanel({ cwd }: Props) {
+export function FilesPanel({ cwd, onAttachImage }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [treeOpen, setTreeOpen] = useState(true);
@@ -48,7 +50,7 @@ export function FilesPanel({ cwd }: Props) {
             />
           </div>
           <div className="min-h-0 flex-1 overflow-auto py-1">
-            <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} />
+            <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} onAttachImage={onAttachImage} />
           </div>
         </div>
       )}
@@ -87,6 +89,7 @@ function DirNode({
   selected,
   onSelect,
   filter,
+  onAttachImage,
 }: {
   root: string;
   dir: string;
@@ -94,6 +97,7 @@ function DirNode({
   selected: string | null;
   onSelect: (p: string) => void;
   filter: string;
+  onAttachImage?: (absPath: string) => void;
 }) {
   const [entries, setEntries] = useState<FsEntry[] | null>(null);
   // Top level auto-expands; deeper levels expand on click.
@@ -161,17 +165,22 @@ function DirNode({
                   selected={selected}
                   onSelect={onSelect}
                   filter={filter}
+                  onAttachImage={onAttachImage}
                 />
               )}
             </div>
           );
         }
+        const fileExt = (e.name.split(".").pop() ?? "").toLowerCase();
+        const isImageFile = IMAGE_EXT.has(fileExt);
         return (
           <div key={e.path} className="group/file relative flex items-center">
             <button
               type="button"
               style={pad}
-              className={`flex w-full items-center gap-1 py-1 pr-7 text-left text-sm hover:bg-accent ${
+              className={`flex w-full items-center gap-1 py-1 ${
+                isImageFile && onAttachImage ? "pr-12" : "pr-7"
+              } text-left text-sm hover:bg-accent ${
                 selected === e.path ? "bg-accent text-accent-foreground" : "text-foreground"
               }`}
               onClick={() => onSelect(e.path)}
@@ -180,6 +189,19 @@ function DirNode({
               <FileIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <span className="truncate">{e.name}</span>
             </button>
+            {/* Image files: one-click attach to the composer (TODO 2.1). Carries
+                the absolute path so the chip + wire payload reference the file. */}
+            {isImageFile && onAttachImage && (
+              <button
+                type="button"
+                title="添加到输入框"
+                aria-label="添加到输入框"
+                className="absolute right-7 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100"
+                onClick={() => onAttachImage(e.path)}
+              >
+                <Paperclip className="h-3.5 w-3.5" />
+              </button>
+            )}
             {/* e.path is absolute; cwd not needed but harmless. */}
             <OpenWithMenu path={e.path} cwd={root} align="end">
               <button
