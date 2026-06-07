@@ -1,20 +1,43 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { delimiter } from "node:path";
 import type {
   ExternalAgentAdapter,
   ExternalAgentEvent,
   ExternalAgentJob,
+  ExternalAgentKind,
   ExternalAgentMode,
   StartExternalAgentJobInput,
 } from "../types.js";
 import { killProcessGroup } from "../../runtime/spawn-common.js";
+
+/**
+ * macOS GUI-launched processes (Electron from Dock/Finder) inherit a minimal
+ * PATH that excludes Homebrew (/opt/homebrew/bin) and /usr/local/bin — so a
+ * bare `spawn("claude")` fails with ENOENT even though the user's shell finds
+ * it. We prepend the common CLI install dirs (deduped, missing ones harmless).
+ */
+export function pathWithCommonBins(env: NodeJS.ProcessEnv = process.env): string {
+  const extra = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"];
+  const current = (env.PATH ?? "").split(delimiter).filter(Boolean);
+  const merged: string[] = [];
+  for (const dir of [...extra, ...current]) {
+    if (!merged.includes(dir)) merged.push(dir);
+  }
+  return merged.join(delimiter);
+}
 
 export function buildClaudeCodeSpawn(input: {
   command: string;
   prompt: string;
   mode: ExternalAgentMode;
   args: string[];
+  kind?: ExternalAgentKind;
 }): { command: string; args: string[] } {
-  return { command: input.command, args: [...input.args, input.prompt] };
+  // Claude Code defaults to an interactive TUI; -p/--print runs it
+  // non-interactively (prints the response and exits) which is what a managed
+  // background job needs. Codex is left to its own argv.
+  const lead = input.kind === "claude-code" ? ["--print"] : [];
+  return { command: input.command, args: [...lead, ...input.args, input.prompt] };
 }
 
 export class ClaudeCodeAdapter implements ExternalAgentAdapter {
@@ -32,6 +55,7 @@ export class ClaudeCodeAdapter implements ExternalAgentAdapter {
       prompt: input.prompt,
       mode,
       args,
+      kind: input.kind,
     });
     const job: ExternalAgentJob = {
       id,
@@ -47,7 +71,7 @@ export class ClaudeCodeAdapter implements ExternalAgentAdapter {
 
     const child = spawn(spawnSpec.command, spawnSpec.args, {
       cwd: input.cwd,
-      env: process.env,
+      env: { ...process.env, PATH: pathWithCommonBins() },
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -63,7 +87,13 @@ export class ClaudeCodeAdapter implements ExternalAgentAdapter {
     child.on("error", (err) => {
       this.children.delete(id);
       const failed: ExternalAgentJob = { ...job, status: "failed", completedAt: Date.now() };
-      onEvent({ type: "job.failed", job: failed, error: err.message });
+      const isMissing = (err as NodeJS.ErrnoException).code === "ENOENT";
+      const friendly = isMissing
+        ? `未找到命令 "${input.command}"。请先安装对应 CLI(${
+            input.kind === "codex" ? "Codex" : "Claude Code"
+          })并确保它在 PATH 中。`
+        : err.message;
+      onEvent({ type: "job.failed", job: failed, error: friendly });
     });
     child.on("exit", (exitCode, signal) => {
       this.children.delete(id);
