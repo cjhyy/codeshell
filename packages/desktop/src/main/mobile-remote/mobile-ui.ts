@@ -96,6 +96,19 @@ export function mobileRemoteHtml(): string {
     footer .send:disabled { opacity: .4; }
     footer .stop { border: 1px solid var(--err); color: var(--err); background: transparent; border-radius: 12px; padding: 0 14px; height: 44px; font-weight: 700; }
     .center { text-align: center; color: var(--muted); padding: 24px 12px; font-size: 13px; }
+    /* rooms overlay */
+    .overlay { position: fixed; inset: 0; background: var(--bg); z-index: 20; display: flex; flex-direction: column; padding-top: max(0px, env(safe-area-inset-top)); }
+    .overlay-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .overlay-head .title { font-weight: 700; flex: 1; }
+    .overlay-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+    .rowbtn { display: block; width: 100%; text-align: left; padding: 12px; margin-bottom: 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); color: var(--fg); font-size: 14px; }
+    .roomitem { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); margin-bottom: 8px; }
+    .roomitem .nm { font-weight: 600; }
+    .roomitem .cwd { color: var(--muted); font-size: 11px; word-break: break-all; }
+    .roomitem .mode { font-size: 10px; padding: 1px 6px; border-radius: 999px; background: #14233a; color: var(--accent); }
+    .roomitem .mode.danger { background: #3a1414; color: var(--danger); }
+    .roomitem .open { font-size: 10px; color: var(--ok); }
+    .roombadge { font-size: 11px; color: var(--accent); margin-left: 6px; }
   </style>
 </head>
 <body>
@@ -109,14 +122,31 @@ export function mobileRemoteHtml(): string {
   </header>
 
   <div class="sessionbar">
-    <span>会话:</span><span id="sid" class="sid">—</span>
+    <span id="ctxlabel">会话:</span><span id="sid" class="sid">—</span>
     <span class="spacer" style="flex:1"></span>
+    <button id="roomsbtn" class="iconbtn">房间</button>
     <button id="newsession" class="iconbtn">新建任务</button>
   </div>
 
   <main id="feed">
     <div id="empty" class="center">正在连接…</div>
   </main>
+
+  <!-- Rooms overlay: list / create / pick project. Resident CC sessions. -->
+  <div id="roomspanel" class="overlay" style="display:none">
+    <div class="overlay-head">
+      <span class="title">房间(常驻 Claude Code)</span>
+      <button id="roomsclose" class="iconbtn">关闭</button>
+    </div>
+    <div class="overlay-body">
+      <button id="roomnew" class="rowbtn">+ 新建房间</button>
+      <div id="roomlist"></div>
+      <div id="roomcreate" style="display:none">
+        <p class="k">选择项目目录(常驻 CC 在此目录干活):</p>
+        <div id="projlist"></div>
+      </div>
+    </div>
+  </div>
 
   <footer>
     <div class="hint">普通任务直接发;或用 /cc、/cc --safe、/cc --dangerous、/codex 调度外部 agent</div>
@@ -139,9 +169,19 @@ export function mobileRemoteHtml(): string {
     var input = document.getElementById('input');
     var sendBtn = document.getElementById('send');
     var stopBtn = document.getElementById('stop');
+    var ctxLabel = document.getElementById('ctxlabel');
+    var roomsBtn = document.getElementById('roomsbtn');
+    var roomsPanel = document.getElementById('roomspanel');
+    var roomsClose = document.getElementById('roomsclose');
+    var roomNewBtn = document.getElementById('roomnew');
+    var roomList = document.getElementById('roomlist');
+    var roomCreate = document.getElementById('roomcreate');
+    var projList = document.getElementById('projlist');
 
     var authed = false;
     var currentSession = null;
+    var currentRoom = null;   // {id,name,cwd,permissionMode} when inside a room
+    var roomSeq = 0;          // last seen room message seq (incremental sync)
     var running = false;
     // streaming assistant bubble currently being appended to (by session)
     var liveAssistant = null;
@@ -298,6 +338,31 @@ export function mobileRemoteHtml(): string {
       if (msg.type === 'approval.request') { setRun('waiting'); approvalCard(msg.approvalId, { title: msg.title, body: msg.body, risk: msg.risk }); return; }
       if (msg.type === 'error') { sysErr(msg.message || '错误'); return; }
 
+      // ── rooms ────────────────────────────────────────────────────
+      if (msg.type === 'room.list.ok') { renderRoomList(msg.rooms || []); return; }
+      if (msg.type === 'room.projects.ok') { renderProjects(msg.projects || []); return; }
+      if (msg.type === 'room.opened') {
+        if (msg.status === 'missing') { sysErr('房间不存在'); }
+        return;
+      }
+      if (msg.type === 'room.history.ok') {
+        if (currentRoom && msg.roomId === currentRoom.id) {
+          feed.innerHTML = ''; hideEmpty();
+          (msg.messages || []).forEach(renderRoomMsg);
+          if (msg.latestSeq) roomSeq = msg.latestSeq;
+        }
+        return;
+      }
+      if (msg.type === 'room.message') {
+        if (currentRoom && msg.roomId === currentRoom.id && msg.msg) {
+          renderRoomMsg(msg.msg);
+          if (msg.msg.seq) roomSeq = msg.msg.seq;
+        }
+        return;
+      }
+      if (msg.type === 'room.closed') { return; }
+      if (msg.type === 'room.error') { sysErr(msg.message || '房间错误'); return; }
+
       // b) external agent job channel
       if (msg.channel === 'externalAgent' && msg.event) { jobEvent(msg.event); return; }
 
@@ -379,7 +444,11 @@ export function mobileRemoteHtml(): string {
       if (!authed) return;
       var t = input.value.trim(); if (!t) return;
       userMsg(t);
-      send({ type: 'chat.send', text: t, sessionId: currentSession || undefined });
+      if (currentRoom) {
+        send({ type: 'room.send', roomId: currentRoom.id, text: t });
+      } else {
+        send({ type: 'chat.send', text: t, sessionId: currentSession || undefined });
+      }
       input.value = ''; autosize(); setRun('running');
     }
     sendBtn.onclick = doSend;
@@ -392,6 +461,91 @@ export function mobileRemoteHtml(): string {
     logoutBtn.onclick = function () {
       localStorage.removeItem('cs.deviceId'); localStorage.removeItem('cs.deviceSecret');
       location.reload();
+    };
+
+    // ── rooms ──────────────────────────────────────────────────────
+    function renderRoomMsg(m) {
+      if (!m) return;
+      hideEmpty();
+      if (m.from === 'user' && m.type === 'text') { addRow('user', 'bubble').textContent = m.text || ''; return; }
+      if (m.from === 'agent' && m.type === 'text') { assistantChunk(m.text || ''); endAssistant(); return; }
+      if (m.from === 'agent' && m.type === 'tool') {
+        var el = addRow('assistant', 'card tool');
+        el.innerHTML = '<div class="k">工具 · ' + esc(m.tool || '') + '</div>';
+        if (m.summary) { var mm = document.createElement('div'); mm.className = 'mono'; mm.textContent = m.summary; el.appendChild(mm); }
+        return;
+      }
+      if (m.from === 'agent' && m.type === 'tool_result') {
+        var e2 = addRow('assistant', 'card tool' + (m.isError ? ' err' : ''));
+        e2.innerHTML = '<div class="k">工具结果</div><div class="mono"></div>';
+        e2.querySelector('.mono').textContent = m.summary || ''; return;
+      }
+      if (m.type === 'turn_end') { endAssistant(); setRun('completed'); return; }
+      if (m.type === 'error') { sysErr(m.text || '错误'); return; }
+      if (m.type === 'agent_exit') { sysErr('常驻 CC 已退出'); return; }
+    }
+
+    function openRooms() { roomsPanel.style.display = 'flex'; roomCreate.style.display = 'none'; send({ type: 'room.list' }); }
+    function closeRooms() { roomsPanel.style.display = 'none'; }
+
+    function renderRoomList(rooms) {
+      roomList.innerHTML = '';
+      if (!rooms.length) { roomList.innerHTML = '<p class="center">还没有房间,点上方新建</p>'; return; }
+      rooms.forEach(function (r) {
+        var danger = r.permissionMode === 'bypassPermissions';
+        var el = document.createElement('div');
+        el.className = 'roomitem';
+        el.innerHTML =
+          '<div style="flex:1"><div class="nm">' + esc(r.name) +
+          ' <span class="mode ' + (danger ? 'danger' : '') + '">' + (danger ? 'dangerous' : r.permissionMode) + '</span>' +
+          (r.open ? ' <span class="open">●运行中</span>' : '') +
+          '</div><div class="cwd">' + esc(r.cwd) + '</div></div>';
+        el.onclick = function () { enterRoom(r); };
+        roomList.appendChild(el);
+      });
+    }
+
+    function enterRoom(r) {
+      currentRoom = r; roomSeq = 0;
+      ctxLabel.textContent = '房间:'; sidEl.textContent = r.name;
+      input.placeholder = '在房间「' + r.name + '」里跟 Claude Code 对话…';
+      feed.innerHTML = ''; liveAssistant = null;
+      closeRooms();
+      send({ type: 'room.open', roomId: r.id });
+      send({ type: 'room.history', roomId: r.id, sinceSeq: 0 });
+    }
+
+    function leaveRoom() {
+      currentRoom = null;
+      ctxLabel.textContent = '会话:'; sidEl.textContent = currentSession || '—';
+      input.placeholder = '给 CodeShell 发个任务…';
+      feed.innerHTML = ''; liveAssistant = null; hideEmpty();
+    }
+
+    function renderProjects(projects) {
+      projList.innerHTML = '';
+      if (!projects.length) { projList.innerHTML = '<p class="center">无最近项目,可在桌面打开一个项目后再来</p>'; return; }
+      projects.forEach(function (p) {
+        var b = document.createElement('button');
+        b.className = 'rowbtn';
+        b.innerHTML = '<div class="nm">' + esc(p.name) + '</div><div class="cwd">' + esc(p.path) + '</div>';
+        b.onclick = function () {
+          send({ type: 'room.create', name: p.name, cwd: p.path });
+          roomCreate.style.display = 'none';
+        };
+        projList.appendChild(b);
+      });
+    }
+
+    roomsBtn.onclick = openRooms;
+    roomsClose.onclick = closeRooms;
+    roomNewBtn.onclick = function () { roomCreate.style.display = 'block'; send({ type: 'room.projects' }); };
+    // "新建任务" doubles as "leave room → fresh chat" when inside a room.
+    newSessionBtn.onclick = function () {
+      if (currentRoom) { leaveRoom(); return; }
+      send({ type: 'session.create' });
+      feed.innerHTML = ''; liveAssistant = null; toolEls = {}; jobEls = {};
+      hideEmpty();
     };
 
     connect();
