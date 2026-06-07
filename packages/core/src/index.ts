@@ -138,6 +138,8 @@ export {
 export { Transcript } from "./session/transcript.js";
 export { SessionManager } from "./session/session-manager.js";
 export { FileHistory } from "./session/file-history.js";
+export { latestUndoTarget } from "./session/undo-target.js";
+export { diffLines, renderDiffPreview, type DiffLine } from "./session/simple-diff.js";
 export { MemoryManager } from "./session/memory.js";
 export type { MemoryEntry, MemoryScope } from "./session/memory.js";
 export {

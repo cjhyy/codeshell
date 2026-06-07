@@ -78,6 +78,7 @@ import {
 } from "../settings/feature-flags.js";
 import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
 import { FileHistory } from "../session/file-history.js";
+import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
 import {
   defaultSandboxConfig,
@@ -1613,6 +1614,15 @@ export class Engine {
         const args = context.data?.args as Record<string, unknown> | undefined;
         if ((toolName === "Write" || toolName === "Edit") && args?.file_path) {
           fileHistory.saveSnapshot(args.file_path as string);
+        } else if (toolName === "ApplyPatch" && typeof args?.patch === "string") {
+          // ApplyPatch mutates files too, so /undo must see them. Snapshot every
+          // existing file the patch updates or deletes (adds have no prior
+          // content). Resolve relative patch paths against the engine cwd, the
+          // same base ApplyPatch itself uses.
+          const cwd = this.config.cwd ?? process.cwd();
+          for (const target of patchBackupTargets(args.patch, cwd)) {
+            fileHistory.saveSnapshot(target);
+          }
         }
         return {};
       },

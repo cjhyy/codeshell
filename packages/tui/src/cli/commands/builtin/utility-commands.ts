@@ -40,12 +40,16 @@ export const utilityCommands: SlashCommand[] = [
 
   {
     name: "/undo",
-    description: "Revert the last file change",
-    execute: async (_arg, ctx) => {
+    description: "撤销最近一次文件修改(先预览,/undo confirm 执行)",
+    usage: "/undo [confirm]",
+    execute: async (arg, ctx) => {
       try {
-        const { FileHistory } = await import("@cjhyy/code-shell-core");
+        const { FileHistory, latestUndoTarget, renderDiffPreview } = await import(
+          "@cjhyy/code-shell-core"
+        );
         const { join } = await import("node:path");
         const { homedir } = await import("node:os");
+        const { readFileSync, existsSync } = await import("node:fs");
 
         if (!ctx.sessionId) {
           ctx.addStatus("No active session.");
@@ -60,19 +64,44 @@ export const utilityCommands: SlashCommand[] = [
         );
 
         const history = FileHistory.loadFromDir(sessionDir);
-        const tracked = history.getTrackedFiles();
-        if (tracked.length === 0) {
-          ctx.addStatus("No file changes to undo.");
+        // The most recent modification across ALL files (by snapshot timestamp),
+        // not "last tracked path" — that's the single step /undo reverts to.
+        const target = latestUndoTarget(history.getAllSnapshots());
+        if (!target) {
+          ctx.addStatus("没有可撤销的文件修改。");
           return;
         }
-        // Restore the most recently tracked file
-        const lastFile = tracked[tracked.length - 1];
-        const restored = history.restoreLatest(lastFile);
-        if (restored) {
-          ctx.addStatus(`Restored: ${lastFile}`);
-        } else {
-          ctx.addStatus("No file changes to undo.");
+
+        // Snapshot backup = the file's content BEFORE the last edit (what we'd
+        // restore). Current disk content = what we'd overwrite.
+        const backupContent = existsSync(target.backupPath)
+          ? readFileSync(target.backupPath, "utf-8")
+          : null;
+        if (backupContent === null) {
+          ctx.addStatus(`撤销失败:备份已丢失 (${target.backupPath})`);
+          return;
         }
+        const currentContent = existsSync(target.filePath)
+          ? readFileSync(target.filePath, "utf-8")
+          : "";
+
+        const confirm = (arg ?? "").trim().toLowerCase() === "confirm";
+        if (!confirm) {
+          // Preview only. Diff is current→backup, i.e. "what undo will change".
+          const preview = renderDiffPreview(currentContent, backupContent);
+          const body =
+            `**/undo 预览** — 将把以下文件还原到上次编辑前:\n\n` +
+            `\`${target.filePath}\`\n\n` +
+            (preview
+              ? "```diff\n" + preview + "\n```\n"
+              : "_(磁盘内容与备份一致,撤销无变化)_\n") +
+            `\n运行 \`/undo confirm\` 执行撤销。`;
+          ctx.addMessage(body);
+          return;
+        }
+
+        const restored = history.restoreLatest(target.filePath);
+        ctx.addStatus(restored ? `已撤销:${target.filePath}` : "撤销失败。");
       } catch (err) {
         ctx.addStatus(`Undo failed: ${(err as Error).message}`);
       }

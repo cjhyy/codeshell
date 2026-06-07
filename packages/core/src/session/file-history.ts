@@ -121,6 +121,15 @@ export class FileHistory {
     return [...new Set(this.snapshots.map((s) => s.filePath))];
   }
 
+  /**
+   * All snapshots in record (chronological) order. Used by undo to pick the
+   * single most-recent modification across every file (see latestUndoTarget).
+   * Returns a copy so callers can't mutate the internal list.
+   */
+  getAllSnapshots(): FileSnapshot[] {
+    return [...this.snapshots];
+  }
+
   private saveIndex(): void {
     try {
       const indexPath = join(this.historyDir, "index.json");
