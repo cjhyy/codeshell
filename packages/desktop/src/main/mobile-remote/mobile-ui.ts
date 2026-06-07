@@ -11,12 +11,20 @@ export function mobileRemoteHtml(): string {
       --fg: #e5e7eb; --muted: #9aa6b6; --accent: #60a5fa; --accent-ink: #06111f;
       --ok: #4ade80; --warn: #fbbf24; --err: #f87171; --danger: #fca5a5;
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; height: 100%; }
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-      background: var(--bg); color: var(--fg);
+      font-size: 16px; background: var(--bg); color: var(--fg);
+      /* 100dvh = dynamic viewport: shrinks when the on-screen keyboard opens,
+         so the composer stays visible above it (iOS Safari / Android Chrome). */
       display: flex; flex-direction: column; height: 100dvh;
+      overscroll-behavior: none;
+    }
+    /* Center + cap width on wide screens (landscape phone / tablet / desktop
+       browser); full-bleed on a normal portrait phone. */
+    @media (min-width: 680px) {
+      body { max-width: 860px; margin: 0 auto; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
     }
     /* top bar */
     header {
@@ -34,7 +42,7 @@ export function mobileRemoteHtml(): string {
     header .meta { font-size: 11px; color: var(--muted); }
     .iconbtn {
       border: 1px solid var(--border); background: transparent; color: var(--muted);
-      border-radius: 8px; padding: 5px 9px; font-size: 12px;
+      border-radius: 8px; padding: 8px 12px; font-size: 13px; min-height: 36px;
     }
     /* session bar */
     .sessionbar {
@@ -82,9 +90,10 @@ export function mobileRemoteHtml(): string {
     footer .hint { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
     footer .inputrow { display: flex; gap: 8px; align-items: flex-end; }
     textarea {
-      flex: 1; min-height: 44px; max-height: 140px; resize: none;
+      flex: 1; min-width: 0; min-height: 44px; max-height: 140px; resize: none;
       border-radius: 12px; border: 1px solid var(--border); background: var(--panel);
-      color: var(--fg); padding: 11px 12px; font-size: 14px; font-family: inherit;
+      /* 16px: iOS Safari auto-zooms the page when focusing an input <16px. */
+      color: var(--fg); padding: 11px 12px; font-size: 16px; font-family: inherit; line-height: 1.4;
     }
     footer .send { border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink); padding: 0 16px; height: 44px; font-weight: 700; }
     footer .send:disabled { opacity: .4; }

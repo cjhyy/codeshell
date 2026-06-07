@@ -137,21 +137,21 @@ export function RoomsPanel() {
                   className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background p-3 hover:bg-accent"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{r.name}</span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="min-w-0 truncate font-medium">{r.name}</span>
                       <span
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px]",
+                          "shrink-0 rounded-full px-2 py-0.5 text-[10px]",
                           danger ? "bg-status-err/15 text-status-err" : "bg-primary/15 text-primary",
                         )}
                       >
                         {danger ? "dangerous" : r.permissionMode}
                       </span>
-                      {r.open && <span className="text-[10px] text-status-ok">●运行中</span>}
+                      {r.open && <span className="shrink-0 text-[10px] text-status-ok">●运行中</span>}
                     </div>
                     <div className="break-all text-xs text-muted-foreground">{r.cwd}</div>
                   </div>
-                  <Button size="sm" variant="ghost" onClick={(e) => void closeRoom(r, e)} title="关闭房间">
+                  <Button size="sm" variant="ghost" className="shrink-0" onClick={(e) => void closeRoom(r, e)} title="关闭房间">
                     <X className="size-4" />
                   </Button>
                 </div>
@@ -167,11 +167,11 @@ export function RoomsPanel() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Button size="sm" variant="ghost" onClick={leave}>
+        <Button size="sm" variant="ghost" className="shrink-0" onClick={leave}>
           <ArrowLeft className="size-4" />
         </Button>
-        <span className="text-sm font-medium">{active.name}</span>
-        <span className="truncate text-xs text-muted-foreground">{active.cwd}</span>
+        <span className="shrink-0 text-sm font-medium">{active.name}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{active.cwd}</span>
       </div>
       <div ref={feedRef} className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
         {messages.filter((m) => m.type !== "room_created").map((m, i) => (
