@@ -1881,34 +1881,47 @@ export function App({
         />
       ) : (
         !pendingApproval && (
-          <CommandInput
-            value={input}
-            onChange={setInput}
-            onSubmit={handleSubmit}
-            commands={commandDefs}
-            placeholder={isRunning ? "Interrupt… (Ctrl+C to cancel)" : undefined}
-            disabled={dockFocusIdx !== null}
-            onArrowOut={(dir) => {
-              if (dir !== "down") return;
-              const visible = getVisibleAgents(
-                asyncAgentRegistry.getSnapshot(),
-                Date.now(),
-              );
-              if (visible.length === 0) return;
-              // Restore focus to the row we're currently viewing, so the
-              // user doesn't have to scroll back down to the agent they
-              // were just looking at. main row = idx 0, agents are 1..N.
-              if (viewMode.kind === "agent") {
-                const idx = visible.findIndex((a) => a.agentId === viewMode.agentId);
-                // Cap at MAX_VISIBLE since the dock only shows that many.
-                if (idx >= 0 && idx < MAX_VISIBLE) {
-                  setDockFocusIdx(idx + 1);
-                  return;
+          <>
+            {/* Queued-input hint (TODO 2.7): mirror desktop's "已缓存 N 条" so
+                input typed during a running turn isn't silently swallowed.
+                These flush one-by-one when the turn ends; /force jumps the
+                queue by interrupting now. */}
+            {queuedInputs.length > 0 && (
+              <Box marginLeft={2}>
+                <Text dim>
+                  {`⌛ 已缓存 ${queuedInputs.length} 条，将在本轮结束后依次发送（/force 立即打断并优先发送）`}
+                </Text>
+              </Box>
+            )}
+            <CommandInput
+              value={input}
+              onChange={setInput}
+              onSubmit={handleSubmit}
+              commands={commandDefs}
+              placeholder={isRunning ? "Interrupt… (Ctrl+C to cancel)" : undefined}
+              disabled={dockFocusIdx !== null}
+              onArrowOut={(dir) => {
+                if (dir !== "down") return;
+                const visible = getVisibleAgents(
+                  asyncAgentRegistry.getSnapshot(),
+                  Date.now(),
+                );
+                if (visible.length === 0) return;
+                // Restore focus to the row we're currently viewing, so the
+                // user doesn't have to scroll back down to the agent they
+                // were just looking at. main row = idx 0, agents are 1..N.
+                if (viewMode.kind === "agent") {
+                  const idx = visible.findIndex((a) => a.agentId === viewMode.agentId);
+                  // Cap at MAX_VISIBLE since the dock only shows that many.
+                  if (idx >= 0 && idx < MAX_VISIBLE) {
+                    setDockFocusIdx(idx + 1);
+                    return;
+                  }
                 }
-              }
-              setDockFocusIdx(0);
-            }}
-          />
+                setDockFocusIdx(0);
+              }}
+            />
+          </>
         )
       )}
 
