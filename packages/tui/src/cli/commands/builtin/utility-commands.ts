@@ -40,13 +40,12 @@ export const utilityCommands: SlashCommand[] = [
 
   {
     name: "/undo",
-    description: "撤销最近一次文件修改(先预览,/undo confirm 执行)",
-    usage: "/undo [confirm]",
+    description: "撤销文件修改:/undo 最近一次,/undo all 整会话(先预览,加 confirm 执行)",
+    usage: "/undo [all] [confirm]",
     execute: async (arg, ctx) => {
       try {
-        const { FileHistory, latestUndoTarget, renderDiffPreview } = await import(
-          "@cjhyy/code-shell-core"
-        );
+        const { FileHistory, latestUndoTarget, earliestSnapshotsPerFile, renderDiffPreview } =
+          await import("@cjhyy/code-shell-core");
         const { join } = await import("node:path");
         const { homedir } = await import("node:os");
         const { readFileSync, existsSync } = await import("node:fs");
@@ -62,18 +61,61 @@ export const utilityCommands: SlashCommand[] = [
           config.sessionStorageDir ?? join(homedir(), ".code-shell", "sessions"),
           ctx.sessionId,
         );
-
         const history = FileHistory.loadFromDir(sessionDir);
-        // The most recent modification across ALL files (by snapshot timestamp),
-        // not "last tracked path" — that's the single step /undo reverts to.
+
+        // Parse "[all] [confirm]" in any order.
+        const tokens = (arg ?? "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+        const isAll = tokens.includes("all");
+        const confirm = tokens.includes("confirm");
+
+        const readFile = (p: string): string =>
+          existsSync(p) ? readFileSync(p, "utf-8") : "";
+
+        if (isAll) {
+          // Whole session: each tracked file → its EARLIEST snapshot (content
+          // before the first AI edit this session).
+          const targets = earliestSnapshotsPerFile(history.getAllSnapshots());
+          if (targets.length === 0) {
+            ctx.addStatus("没有可撤销的文件修改。");
+            return;
+          }
+          if (!confirm) {
+            const MAX_PREVIEW = 5;
+            const shown = targets.slice(0, MAX_PREVIEW);
+            const blocks = shown.map((t) => {
+              const backup = existsSync(t.backupPath) ? readFileSync(t.backupPath, "utf-8") : "";
+              const diff = renderDiffPreview(readFile(t.filePath), backup);
+              return `\`${t.filePath}\`\n` + (diff ? "```diff\n" + diff + "\n```" : "_(无变化)_");
+            });
+            const more =
+              targets.length > MAX_PREVIEW
+                ? `\n\n…以及另外 ${targets.length - MAX_PREVIEW} 个文件。`
+                : "";
+            ctx.addMessage(
+              `**/undo all 预览** — 将把 ${targets.length} 个文件还原到本会话首次编辑前:\n\n` +
+                blocks.join("\n\n") +
+                more +
+                `\n\n运行 \`/undo all confirm\` 执行。`,
+            );
+            return;
+          }
+          const results = history.restoreAllToEarliest();
+          const failed = results.filter((r) => !r.ok);
+          ctx.addStatus(
+            failed.length === 0
+              ? `已撤销全部 ${results.length} 个文件的本会话修改。`
+              : `部分失败:${failed.length}/${results.length}(首个:${failed[0]!.filePath})`,
+          );
+          return;
+        }
+
+        // Single step: the most recent modification across ALL files (by
+        // snapshot timestamp), not "last tracked path".
         const target = latestUndoTarget(history.getAllSnapshots());
         if (!target) {
           ctx.addStatus("没有可撤销的文件修改。");
           return;
         }
-
-        // Snapshot backup = the file's content BEFORE the last edit (what we'd
-        // restore). Current disk content = what we'd overwrite.
         const backupContent = existsSync(target.backupPath)
           ? readFileSync(target.backupPath, "utf-8")
           : null;
@@ -81,25 +123,18 @@ export const utilityCommands: SlashCommand[] = [
           ctx.addStatus(`撤销失败:备份已丢失 (${target.backupPath})`);
           return;
         }
-        const currentContent = existsSync(target.filePath)
-          ? readFileSync(target.filePath, "utf-8")
-          : "";
-
-        const confirm = (arg ?? "").trim().toLowerCase() === "confirm";
         if (!confirm) {
-          // Preview only. Diff is current→backup, i.e. "what undo will change".
-          const preview = renderDiffPreview(currentContent, backupContent);
-          const body =
+          const preview = renderDiffPreview(readFile(target.filePath), backupContent);
+          ctx.addMessage(
             `**/undo 预览** — 将把以下文件还原到上次编辑前:\n\n` +
-            `\`${target.filePath}\`\n\n` +
-            (preview
-              ? "```diff\n" + preview + "\n```\n"
-              : "_(磁盘内容与备份一致,撤销无变化)_\n") +
-            `\n运行 \`/undo confirm\` 执行撤销。`;
-          ctx.addMessage(body);
+              `\`${target.filePath}\`\n\n` +
+              (preview
+                ? "```diff\n" + preview + "\n```\n"
+                : "_(磁盘内容与备份一致,撤销无变化)_\n") +
+              `\n运行 \`/undo confirm\` 执行撤销;\`/undo all\` 撤销整个会话。`,
+          );
           return;
         }
-
         const restored = history.restoreLatest(target.filePath);
         ctx.addStatus(restored ? `已撤销:${target.filePath}` : "撤销失败。");
       } catch (err) {

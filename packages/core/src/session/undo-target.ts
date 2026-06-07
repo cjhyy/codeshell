@@ -28,3 +28,22 @@ export function latestUndoTarget(snapshots: FileSnapshot[]): FileSnapshot | null
   }
   return best;
 }
+
+/**
+ * For "/undo all": each tracked file's EARLIEST snapshot — its content before
+ * the *first* AI edit this session. Restoring all of these reverts the whole
+ * session's file changes (vs. latestUndoTarget, which is the single last step).
+ *
+ * Returns one snapshot per file path, ordered by that file's first-edit time
+ * (oldest first) so a preview reads chronologically. On a same-millisecond tie
+ * for a given file, the FIRST array entry wins (earliest recorded).
+ */
+export function earliestSnapshotsPerFile(snapshots: FileSnapshot[]): FileSnapshot[] {
+  const earliest = new Map<string, FileSnapshot>();
+  for (const s of snapshots) {
+    const cur = earliest.get(s.filePath);
+    // strict `<` so the first-seen entry wins on a tie (earliest recorded).
+    if (!cur || s.timestamp < cur.timestamp) earliest.set(s.filePath, s);
+  }
+  return [...earliest.values()].sort((a, b) => a.timestamp - b.timestamp);
+}

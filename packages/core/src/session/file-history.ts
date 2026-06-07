@@ -8,6 +8,7 @@
 import { mkdirSync, existsSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
 import { join, resolve, basename, dirname } from "node:path";
 import { createHash } from "node:crypto";
+import { earliestSnapshotsPerFile } from "./undo-target.js";
 
 export interface FileSnapshot {
   filePath: string;
@@ -119,6 +120,18 @@ export class FileHistory {
    */
   getTrackedFiles(): string[] {
     return [...new Set(this.snapshots.map((s) => s.filePath))];
+  }
+
+  /**
+   * Restore EVERY tracked file to its earliest snapshot — the state before the
+   * first AI edit this session. Powers `/undo all`. Targets are computed up
+   * front (restore() appends a new snapshot, so reading them lazily mid-loop
+   * would be unstable). Returns a per-file result so a partial failure doesn't
+   * hide which files reverted.
+   */
+  restoreAllToEarliest(): Array<{ filePath: string; ok: boolean }> {
+    const targets = earliestSnapshotsPerFile(this.snapshots);
+    return targets.map((snap) => ({ filePath: snap.filePath, ok: this.restore(snap) }));
   }
 
   /**

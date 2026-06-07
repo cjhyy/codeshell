@@ -47,6 +47,30 @@ test("snapshot → edit → latestUndoTarget → restore brings content back", (
   expect(readFileSync(file, "utf-8")).toBe("original\n");
 });
 
+test("restoreAllToEarliest reverts every file to its pre-first-edit content", () => {
+  const a = join(workDir, "a.txt");
+  const b = join(workDir, "b.txt");
+  writeFileSync(a, "a-orig\n", "utf-8");
+  writeFileSync(b, "b-orig\n", "utf-8");
+
+  const fh = FileHistory.loadFromDir(sessionDir);
+  // Two rounds of edits on a (only the EARLIEST should be restored), one on b.
+  fh.saveSnapshot(a);
+  writeFileSync(a, "a-edit1\n", "utf-8");
+  fh.saveSnapshot(a);
+  writeFileSync(a, "a-edit2\n", "utf-8");
+  fh.saveSnapshot(b);
+  writeFileSync(b, "b-edit1\n", "utf-8");
+
+  const results = fh.restoreAllToEarliest();
+  expect(results.every((r) => r.ok)).toBe(true);
+  expect(results.map((r) => r.filePath).sort()).toEqual([a, b].sort());
+
+  // Both back to their ORIGINAL (pre-first-edit) content, not the intermediate.
+  expect(readFileSync(a, "utf-8")).toBe("a-orig\n");
+  expect(readFileSync(b, "utf-8")).toBe("b-orig\n");
+});
+
 test("latestUndoTarget picks the most recently edited of several files", () => {
   const a = join(workDir, "a.txt");
   const b = join(workDir, "b.txt");
