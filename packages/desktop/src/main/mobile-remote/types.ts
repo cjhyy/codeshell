@@ -28,7 +28,6 @@ export type MobileClientEvent =
   | { type: "session.create" }
   | { type: "run.stop"; sessionId?: string }
   | { type: "approval.respond"; approvalId: string; decision: "approve" | "reject"; sessionId?: string }
-  | { type: "job.stop"; jobId: string }
   // ── Rooms (resident external-agent sessions) ──────────────────────────
   | { type: "room.list" }
   | { type: "room.projects" }

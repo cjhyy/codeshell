@@ -19,13 +19,7 @@ import {
   agentNotificationBus,
   mergePluginMcpServers,
   type AutomationHandle,
-  ExternalAgentJobManager,
-  ClaudeCodeAdapter,
-  CodexAdapter,
   resolveExternalAgentConfig,
-  resolveClaudeModeForWorkspace,
-  parseExternalAgentSlash,
-  type ExternalAgentEvent,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
@@ -172,17 +166,6 @@ const mobileRemote = new RemoteHostManager({
   },
 });
 
-// External agent (Claude Code / Codex CLI) managed jobs launched from the
-// phone via /cc and /codex. Job stdout/stderr/status are mirrored to mobile
-// clients. Spawning uses argument arrays (no shell string), so dangerous args
-// can never be interpolated into a command line.
-const externalAgentJobs = new ExternalAgentJobManager(
-  { claudeCode: new ClaudeCodeAdapter(), codex: new CodexAdapter() },
-  (event: ExternalAgentEvent) => {
-    mobileRemote.broadcastRaw(JSON.stringify({ channel: "externalAgent", event }));
-  },
-);
-
 // Rooms: resident stream-json Claude Code sessions the phone can open and chat
 // with continuously (context persists for the room's lifetime). Messages are
 // persisted to disk (authoritative) and mirrored to the phone. See
@@ -205,6 +188,17 @@ const roomManager = new RoomManager({
     }
   },
 });
+
+// Idle-based room GC: rooms untouched for longer than this are reaped at
+// startup (a running room is never reaped). Replaces the cleanup the removed
+// one-shot /cc path never had.
+const ROOM_MAX_IDLE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+try {
+  const reaped = roomManager.pruneStaleRooms(ROOM_MAX_IDLE_MS);
+  if (reaped.length) console.log(`[rooms] pruned ${reaped.length} stale room(s)`);
+} catch {
+  /* GC is best-effort; never block startup */
+}
 
 /**
  * A stable session id for the mobile client when it isn't following a specific
@@ -256,13 +250,8 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
     const cwd = ctx.cwd ?? process.cwd();
-    // /cc and /codex launch external-agent managed jobs; everything else is a
-    // normal CodeShell turn routed through the existing worker run path.
-    const parsed = parseExternalAgentSlash(event.text);
-    if (parsed) {
-      await startExternalAgentJob(parsed, cwd, sessionId);
-      return;
-    }
+    // Every phone chat turn is a normal CodeShell turn routed through the worker
+    // run path. (External claude CLI is reached via Rooms, not a chat slash.)
     bridge.injectWorkerMessage(
       JSON.stringify({
         jsonrpc: "2.0",
@@ -274,10 +263,6 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
     // Tell the phone which session this turn landed in (so it can label the
     // conversation and route follow-up approvals/stops correctly).
     mobileRemote.broadcast({ type: "chat.accepted", sessionId });
-    return;
-  }
-  if (event.type === "job.stop") {
-    await externalAgentJobs.stop(event.jobId);
     return;
   }
   if (event.type === "approval.respond") {
@@ -307,75 +292,6 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
     );
     return;
   }
-}
-
-/**
- * Start a Claude Code / Codex managed job from a parsed slash command. For
- * Claude Code, the mode is resolved against externalAgents config + the
- * workspace trust allowlist: dangerous mode auto-starts ONLY inside a trusted
- * workspace with autoStart enabled; otherwise a high-risk approval card is
- * pushed to the phone and the job is NOT started until the user confirms.
- * (Approval-resume of dangerous jobs is a follow-up; v1 surfaces the gate.)
- */
-// Tracks which (sessionId|cwd) have already started a Claude Code job, so the
-// 2nd+ /cc in the same mobile session resumes the prior conversation with
-// --continue instead of spawning a context-free fresh `claude -p`. Keyed by
-// sessionId+cwd because --continue resumes the most-recent conversation in
-// that cwd.
-const claudeStartedKeys = new Set<string>();
-
-async function startExternalAgentJob(
-  parsed: ReturnType<typeof parseExternalAgentSlash> & object,
-  cwd: string,
-  sessionId: string | undefined,
-): Promise<void> {
-  const settings = ((await readSettings("user", cwd).catch(() => null)) ?? {}) as {
-    externalAgents?: Parameters<typeof resolveExternalAgentConfig>[0];
-  };
-  const cfg = resolveExternalAgentConfig(settings.externalAgents);
-
-  if (parsed.kind === "claude-code") {
-    const decision = resolveClaudeModeForWorkspace(cfg.claudeCode, cwd, parsed.mode);
-    if (decision.requiresHighRiskApproval) {
-      mobileRemote.broadcast({
-        type: "approval.request",
-        approvalId: `cc-danger-${Date.now()}`,
-        title: "启动 Claude Code(dangerous 模式)?",
-        risk: "high",
-        body:
-          `目录:${cwd}\n模式:dangerous\nargs:${decision.args.join(" ")}\n` +
-          `prompt:${parsed.prompt.slice(0, 200)}\n` +
-          `原因:${decision.reason}(非可信工作区,需明确批准)`,
-      });
-      return;
-    }
-    // 2nd+ turn in this mobile session+cwd → resume the prior claude conversation
-    // so /cc keeps context across messages (the 1st turn starts fresh).
-    const key = `${sessionId ?? "mobile"}|${cwd}`;
-    const resumeArgs = claudeStartedKeys.has(key) ? ["--continue"] : [];
-    claudeStartedKeys.add(key);
-    externalAgentJobs.start({
-      kind: "claude-code",
-      sessionId: sessionId ?? "mobile",
-      cwd,
-      prompt: parsed.prompt,
-      command: cfg.claudeCode.command,
-      mode: decision.mode,
-      args: [...resumeArgs, ...decision.args],
-    });
-    return;
-  }
-
-  // Codex: v1 always safe; command/args come from config.
-  externalAgentJobs.start({
-    kind: "codex",
-    sessionId: sessionId ?? "mobile",
-    cwd,
-    prompt: parsed.prompt,
-    command: cfg.codex.command,
-    mode: "safe",
-    args: cfg.codex.args,
-  });
 }
 
 function roomToPublic(room: {

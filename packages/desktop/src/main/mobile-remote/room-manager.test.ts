@@ -107,6 +107,47 @@ describe("RoomManager", () => {
     expect(mgr.open("nope").status).toBe("missing");
   });
 
+  test("pruneStaleRooms deletes rooms idle longer than maxAge", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let clock = 0;
+    const mgr = new RoomManager({
+      rootDir: dir,
+      now: () => clock,
+      createAgent: (_r, onEvent) => new FakeAgent(onEvent),
+      onMessage: () => {},
+    });
+    clock = 1000;
+    const old = mgr.createRoom({ cwd: "/repo/old" }); // lastActiveAt = 1000
+    clock = 5000;
+    const fresh = mgr.createRoom({ cwd: "/repo/fresh" }); // lastActiveAt = 5000
+
+    clock = 6000;
+    // maxAge 2000 → cutoff 4000: `old` (1000) is stale, `fresh` (5000) is not.
+    const removed = mgr.pruneStaleRooms(2000);
+    expect(removed).toEqual([old.id]);
+    expect(mgr.getRoom(old.id)).toBeUndefined();
+    expect(mgr.getRoom(fresh.id)).toBeDefined();
+    expect(mgr.listRooms().map((r) => r.id)).toEqual([fresh.id]);
+  });
+
+  test("pruneStaleRooms never deletes a running room even if stale", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let clock = 0;
+    const mgr = new RoomManager({
+      rootDir: dir,
+      now: () => clock,
+      createAgent: (_r, onEvent) => new FakeAgent(onEvent),
+      onMessage: () => {},
+    });
+    clock = 1000;
+    const room = mgr.createRoom({ cwd: "/repo" }); // lastActiveAt = 1000
+    mgr.open(room.id); // resident agent now running
+    clock = 100000;
+    const removed = mgr.pruneStaleRooms(1); // everything older than 99999 is stale
+    expect(removed).toEqual([]);
+    expect(mgr.getRoom(room.id)).toBeDefined();
+  });
+
   test("agent text/tool events persist with correct shape", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
     let emit!: (e: ResidentAgentEvent) => void;

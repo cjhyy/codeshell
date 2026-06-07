@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, appendFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  appendFileSync,
+  rmSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { ResidentAgentEvent } from "./resident-agent.js";
 
@@ -133,10 +141,20 @@ export class RoomManager {
   }
 
   private append(id: string, partial: Omit<RoomMessage, "seq" | "ts">): RoomMessage {
-    const msg: RoomMessage = { seq: this.nextSeq(id), ts: this.now(), ...partial };
+    const ts = this.now();
+    const msg: RoomMessage = { seq: this.nextSeq(id), ts, ...partial };
     appendFileSync(this.msgPath(id), JSON.stringify(msg) + "\n", "utf-8");
+    // Touch lastActiveAt so idle-based pruning measures real activity, not just
+    // creation time — a room chatted with daily should never be reaped.
+    this.touchLastActive(id, ts);
     this.opts.onMessage(id, msg);
     return msg;
+  }
+
+  private touchLastActive(id: string, ts: number): void {
+    const meta = this.getRoom(id);
+    if (!meta) return;
+    writeFileSync(this.metaPath(id), JSON.stringify({ ...meta, lastActiveAt: ts }, null, 2), "utf-8");
   }
 
   getMessages(id: string, sinceSeq = 0): RoomMessage[] {
@@ -212,5 +230,24 @@ export class RoomManager {
 
   isOpen(id: string): boolean {
     return this.agents.get(id)?.isRunning() ?? false;
+  }
+
+  /**
+   * Delete rooms whose last activity is older than maxAgeMs (idle-based GC,
+   * replacing the removed one-shot /cc path's lack of cleanup). A room with a
+   * currently running resident agent is NEVER reaped, regardless of age — only
+   * truly dormant rooms (whole directory) are removed. Returns the ids deleted.
+   */
+  pruneStaleRooms(maxAgeMs: number): string[] {
+    const cutoff = this.now() - maxAgeMs;
+    const removed: string[] = [];
+    for (const meta of this.listRooms()) {
+      if (meta.lastActiveAt > cutoff) continue;
+      if (this.isOpen(meta.id)) continue; // never reap a live session
+      rmSync(this.roomDir(meta.id), { recursive: true, force: true });
+      this.agents.delete(meta.id);
+      removed.push(meta.id);
+    }
+    return removed;
   }
 }

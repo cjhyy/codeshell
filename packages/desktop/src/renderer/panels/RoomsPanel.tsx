@@ -81,12 +81,9 @@ export function RoomsPanel() {
     const text = input.trim();
     if (!text || !active) return;
     setInput("");
+    // No optimistic echo: main persists the user message and pushes it back via
+    // onMessage (with its real seq). Echoing here too would double it.
     await window.codeshell.rooms.send(active.id, text);
-    // optimistic echo; the persisted user message also arrives via onMessage
-    setMessages((prev) => [
-      ...prev,
-      { seq: -Date.now(), ts: Date.now(), from: "user", type: "text", text },
-    ]);
   }
 
   // ── Room list view ────────────────────────────────────────────────────

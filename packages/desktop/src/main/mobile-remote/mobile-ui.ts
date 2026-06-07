@@ -74,12 +74,6 @@ export function mobileRemoteHtml(): string {
     .approval .reject { background: transparent; border: 1px solid var(--border); color: var(--fg); }
     .approval.high .approve { background: var(--err); color: #1a0a0a; }
     .approval .resolved { margin-top: 8px; color: var(--muted); font-size: 12px; }
-    /* job card */
-    .job { border-color: var(--accent); }
-    .job .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #14233a; color: var(--accent); }
-    .job .badge.danger { background: #3a1414; color: var(--danger); }
-    .job pre { max-height: 200px; overflow: auto; background: var(--panel2); border-radius: 8px; padding: 8px; margin: 8px 0 0; font-size: 11px; }
-    .job .stop { margin-top: 8px; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--fg); font-size: 12px; }
     /* composer */
     footer {
       border-top: 1px solid var(--border); background: var(--panel2);
@@ -149,7 +143,7 @@ export function mobileRemoteHtml(): string {
   </div>
 
   <footer>
-    <div class="hint">普通任务直接发;或用 /cc、/cc --safe、/cc --dangerous、/codex 调度外部 agent</div>
+    <div class="hint">普通任务直接发;需要常驻 Claude Code 会话(上下文持续)请用上方「房间」</div>
     <div class="inputrow">
       <textarea id="input" rows="1" placeholder="给 CodeShell 发个任务…"></textarea>
       <button id="stop" class="stop" style="display:none">停止</button>
@@ -186,7 +180,6 @@ export function mobileRemoteHtml(): string {
     // streaming assistant bubble currently being appended to (by session)
     var liveAssistant = null;
     var toolEls = {};   // toolCallId -> element
-    var jobEls = {};     // jobId -> { card, pre }
 
     function hideEmpty() { if (empty) { empty.style.display = 'none'; } }
     function scroll() { feed.scrollTop = feed.scrollHeight; }
@@ -277,39 +270,6 @@ export function mobileRemoteHtml(): string {
       el.querySelector('.reject').onclick = function () { resolve('reject'); };
     }
 
-    // ── external agent job card ────────────────────────────────────
-    function jobEvent(ev) {
-      var job = ev.job || {};
-      var id = ev.jobId || job.id;
-      if (!id) return;
-      var entry = jobEls[id];
-      if (!entry) {
-        hideEmpty();
-        var row = document.createElement('div');
-        row.className = 'row assistant';
-        var el = document.createElement('div');
-        el.className = 'card job';
-        var danger = job.mode === 'dangerous';
-        el.innerHTML =
-          '<div><span class="badge ' + (danger ? 'danger' : '') + '">' + (job.kind === 'codex' ? 'Codex' : 'Claude Code') + (danger ? ' · dangerous' : '') + '</span></div>' +
-          '<div class="k" style="margin-top:6px">' + esc(job.cwd || '') + '</div>' +
-          '<pre></pre>' +
-          '<button class="stop">停止 job</button>';
-        row.appendChild(el);
-        feed.appendChild(row);
-        entry = jobEls[id] = { card: el, pre: el.querySelector('pre') };
-        el.querySelector('.stop').onclick = function () { send({ type: 'job.stop', jobId: id }); };
-        scroll();
-      }
-      if (ev.type === 'job.output' && ev.text) {
-        entry.pre.textContent += ev.text;
-        if (entry.pre.textContent.length > 8000) entry.pre.textContent = entry.pre.textContent.slice(-8000);
-      }
-      if (ev.type === 'job.completed') { entry.pre.textContent += '\\n[job 完成]'; entry.card.querySelector('.stop').remove(); }
-      if (ev.type === 'job.failed') { entry.pre.textContent += '\\n[job 失败: ' + esc(ev.error || '') + ']'; }
-      scroll();
-    }
-
     // ── message router ─────────────────────────────────────────────
     function handle(raw) {
       var msg;
@@ -363,10 +323,7 @@ export function mobileRemoteHtml(): string {
       if (msg.type === 'room.closed') { return; }
       if (msg.type === 'room.error') { sysErr(msg.message || '房间错误'); return; }
 
-      // b) external agent job channel
-      if (msg.channel === 'externalAgent' && msg.event) { jobEvent(msg.event); return; }
-
-      // c) mirrored worker→renderer JSON-RPC lines
+      // b) mirrored worker→renderer JSON-RPC lines
       if (msg.method === 'agent/streamEvent' && msg.params && msg.params.event) {
         var ev = msg.params.event;
         if (msg.params.sessionId && msg.params.sessionId !== currentSession) {
@@ -443,10 +400,12 @@ export function mobileRemoteHtml(): string {
     function doSend() {
       if (!authed) return;
       var t = input.value.trim(); if (!t) return;
-      userMsg(t);
       if (currentRoom) {
+        // Room: don't echo locally — main persists + pushes it back via
+        // room.message (echoing here too would double the user bubble).
         send({ type: 'room.send', roomId: currentRoom.id, text: t });
       } else {
+        userMsg(t);
         send({ type: 'chat.send', text: t, sessionId: currentSession || undefined });
       }
       input.value = ''; autosize(); setRun('running');
@@ -455,7 +414,7 @@ export function mobileRemoteHtml(): string {
     stopBtn.onclick = function () { send({ type: 'run.stop', sessionId: currentSession || undefined }); setRun('idle'); };
     newSessionBtn.onclick = function () {
       send({ type: 'session.create' });
-      feed.innerHTML = ''; liveAssistant = null; toolEls = {}; jobEls = {};
+      feed.innerHTML = ''; liveAssistant = null; toolEls = {};
       hideEmpty();
     };
     logoutBtn.onclick = function () {
@@ -544,7 +503,7 @@ export function mobileRemoteHtml(): string {
     newSessionBtn.onclick = function () {
       if (currentRoom) { leaveRoom(); return; }
       send({ type: 'session.create' });
-      feed.innerHTML = ''; liveAssistant = null; toolEls = {}; jobEls = {};
+      feed.innerHTML = ''; liveAssistant = null; toolEls = {};
       hideEmpty();
     };
 
