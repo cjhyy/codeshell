@@ -189,11 +189,18 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
     const result = await this.promptFn(req);
     const scope = result.scope ?? (result.always ? "session" : "once");
 
+    // Path narrowing only rides on an APPROVE: a path-scoped deny is confusing
+    // (deny stays tool-wide). pathScope is ignored by buildProjectRule for
+    // non-file tools / when absent.
+    const ruleOpts = result.approved
+      ? { pathScope: result.pathScope, cwd: this.cwd ?? undefined }
+      : undefined;
+
     if (scope === "session" && result.always) {
-      // Narrow to the operation (Bash → head command) so the session grant is
-      // scoped, not tool-wide. A rule with no argsPattern (non-Bash tools)
-      // keeps the prior tool-granularity behavior for those tools.
-      const rule = buildProjectRule(req.toolName, req.args);
+      // Narrow to the operation (Bash → head command, file tools → path scope)
+      // so the session grant is scoped, not tool-wide. A rule with no
+      // argsPattern keeps the prior tool-granularity behavior.
+      const rule = buildProjectRule(req.toolName, req.args, ruleOpts);
       if (rule) {
         const target = result.approved ? this.sessionAllowRules : this.sessionDenyRules;
         const dup = target.some(
@@ -210,7 +217,7 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
       // Project-scope: persist a PermissionRule to settings.local.json.
       // We only persist allow rules — denies stay session-only because a
       // persisted deny is harder to recover from than a session deny.
-      const rule = buildProjectRule(req.toolName, req.args);
+      const rule = buildProjectRule(req.toolName, req.args, ruleOpts);
       if (rule && this.cwd) {
         try {
           persistProjectRule(this.cwd, rule);
@@ -259,13 +266,48 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
   }
 }
 
+/** File tools whose approvals can be narrowed to a path prefix. */
+const PATH_SCOPED_TOOLS: ReadonlySet<string> = new Set(["Write", "Edit"]);
+
+/**
+ * Build the `file_path` argsPattern that narrows a remembered file-tool grant
+ * to a path scope. Pure: takes an ALREADY-RESOLVED absolute path (the caller
+ * normalizes against cwd so `../` can't slip past the prefix) and the scope.
+ *
+ *   "file" → `^<esc(abs)>$`         only this exact file
+ *   "dir"  → `^<esc(dir(abs))>/`    this file's directory + subdirectories
+ *   "tool" → null                   no narrowing (tool-wide; legacy behavior)
+ *
+ * The dir form keeps a trailing slash so `/repo/src/` can't match a sibling
+ * like `/repo/src-secret/x.ts`. Regex metacharacters in the path are escaped.
+ */
+export function pathRuleArgsPattern(
+  absPath: string,
+  scope: "file" | "dir" | "tool",
+): { file_path: string } | null {
+  if (scope === "tool") return null;
+  if (scope === "file") return { file_path: `^${escapeRegex(absPath)}$` };
+  // dir: strip the basename, ensure a single trailing slash, anchor as prefix.
+  const slash = absPath.lastIndexOf("/");
+  const dir = slash > 0 ? absPath.slice(0, slash) : absPath;
+  return { file_path: `^${escapeRegex(dir + "/")}` };
+}
+
 /**
  * Build a PermissionRule from a single approval. Bash narrows to the head
  * command (first whitespace token) so "git status" → allow all `git ...`.
- * Other tools currently allow at tool granularity — file-level whitelists
- * could be added later by extending argsPattern.
+ *
+ * File tools (Write/Edit) narrow to a PATH scope when `opts.pathScope` is
+ * "file"/"dir": "allow Write src/foo.ts for this session" then means exactly
+ * that file (or its directory), NOT every path. Without a pathScope (or
+ * "tool"), they keep the legacy tool-wide grant. Paths are resolved against
+ * `opts.cwd` first so `../` can't widen the prefix. Other tools stay tool-wide.
  */
-function buildProjectRule(toolName: string, args: Record<string, unknown>): PermissionRule | null {
+function buildProjectRule(
+  toolName: string,
+  args: Record<string, unknown>,
+  opts?: { pathScope?: "file" | "dir" | "tool"; cwd?: string },
+): PermissionRule | null {
   if (toolName === "Bash") {
     const cmd = String(args.command ?? "").trim();
     const head = cmd.split(/\s+/)[0];
@@ -277,6 +319,28 @@ function buildProjectRule(toolName: string, args: Record<string, unknown>): Perm
       reason: `Allowed via permission prompt: ${head}`,
     };
   }
+
+  if (PATH_SCOPED_TOOLS.has(toolName) && opts?.pathScope && opts.pathScope !== "tool") {
+    const raw = String(args.file_path ?? "");
+    if (raw) {
+      // Resolve against cwd so a relative or `../`-laden path becomes the real
+      // absolute path the prefix anchors to. Lazy require keeps permission.ts
+      // free of node:path at module load (browser shim).
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const path = require("node:path") as typeof import("node:path");
+      const abs = path.resolve(opts.cwd ?? process.cwd(), raw);
+      const argsPattern = pathRuleArgsPattern(abs, opts.pathScope);
+      if (argsPattern) {
+        return {
+          tool: toolName,
+          argsPattern,
+          decision: "allow",
+          reason: `Allowed via permission prompt: ${toolName} ${opts.pathScope === "dir" ? path.dirname(abs) + "/" : abs}`,
+        };
+      }
+    }
+  }
+
   return {
     tool: toolName,
     decision: "allow",

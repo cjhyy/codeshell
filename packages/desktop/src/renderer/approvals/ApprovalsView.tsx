@@ -1,7 +1,7 @@
 import React from "react";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import { ApprovalCard } from "./ApprovalCard";
-import type { ApproveChoice } from "./approvalDecision";
+import type { ApproveChoice, ApprovePathScope } from "./approvalDecision";
 
 interface Props {
   queue: ApprovalRequestEnvelope[];
@@ -11,6 +11,7 @@ interface Props {
     decision: "approve" | "deny",
     reason?: string,
     scope?: ApproveChoice,
+    pathScope?: ApprovePathScope,
   ) => void;
 }
 
@@ -29,7 +30,7 @@ export function ApprovalsView({ queue, history, onDecide }: Props) {
               <ApprovalCard
                 key={env.requestId}
                 envelope={env}
-                onDecide={(d, r, s) => onDecide(env, d, r, s)}
+                onDecide={(d, r, s, ps) => onDecide(env, d, r, s, ps)}
               />
             ))}
           </div>

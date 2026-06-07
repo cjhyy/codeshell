@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { decisionFromChoice, APPROVE_CHOICES } from "./approvalDecision";
+import { decisionFromChoice, approveOptionsFor } from "./approvalDecision";
 
 describe("decisionFromChoice", () => {
   test("once is the legacy payload — no always, no scope", () => {
@@ -21,17 +21,55 @@ describe("decisionFromChoice", () => {
       scope: "project",
     });
   });
-});
 
-describe("APPROVE_CHOICES", () => {
-  test("lists the three scopes in order with once first", () => {
-    expect(APPROVE_CHOICES.map((c) => c.choice)).toEqual(["once", "session", "project"]);
+  test("session + dir path scope rides along", () => {
+    expect(decisionFromChoice("session", "dir")).toEqual({
+      approved: true,
+      always: true,
+      scope: "session",
+      pathScope: "dir",
+    });
   });
 
-  test("only the project choice advertises where the grant is persisted", () => {
-    const hints = APPROVE_CHOICES.filter((c) => c.hint);
-    expect(hints).toHaveLength(1);
-    expect(hints[0]!.choice).toBe("project");
-    expect(hints[0]!.hint).toContain("settings.local.json");
+  test('pathScope "tool" is omitted (it is the default)', () => {
+    expect(decisionFromChoice("session", "tool")).toEqual({
+      approved: true,
+      always: true,
+      scope: "session",
+    });
+  });
+
+  test("pathScope on a once choice is ignored", () => {
+    expect(decisionFromChoice("once", "file")).toEqual({ approved: true });
+  });
+});
+
+describe("approveOptionsFor", () => {
+  test("non-file tool → plain once/session/project, no path scopes", () => {
+    const opts = approveOptionsFor("Bash", undefined);
+    expect(opts.map((o) => o.scope)).toEqual(["once", "session", "project"]);
+    expect(opts.every((o) => o.pathScope === undefined)).toBe(true);
+  });
+
+  test("file tool with no path falls back to plain three", () => {
+    const opts = approveOptionsFor("Write", undefined);
+    expect(opts).toHaveLength(3);
+    expect(opts.every((o) => o.pathScope === undefined)).toBe(true);
+  });
+
+  test("Write with a path → once + (session,project)×(file,dir,tool)", () => {
+    const opts = approveOptionsFor("Write", "/repo/src/foo.ts");
+    expect(opts[0]!.scope).toBe("once");
+    // 1 once + 3 session + 3 project = 7 rows
+    expect(opts).toHaveLength(7);
+    const session = opts.filter((o) => o.scope === "session");
+    expect(session.map((o) => o.pathScope)).toEqual(["file", "dir", "tool"]);
+    // labels reference the basename and dir.
+    expect(session.find((o) => o.pathScope === "file")!.label).toContain("foo.ts");
+    expect(session.find((o) => o.pathScope === "dir")!.label).toContain("src/");
+  });
+
+  test("Edit is path-scoped like Write", () => {
+    expect(approveOptionsFor("Edit", "/a/b.ts")).toHaveLength(7);
   });
 });

@@ -231,15 +231,17 @@ contextBridge.exposeInMainWorld("codeshell", {
     reasonOrAnswer?: string,
     answer?: string,
     scopeArg?: "once" | "session" | "project",
+    pathScopeArg?: "file" | "dir" | "tool",
   ) => {
-    // Multi-session form: approve(sessionId, requestId, decision, reason?, answer?, scope?)
-    // Legacy form:        approve(requestId, decision, reason?, answer?, scope?)
+    // Multi-session form: approve(sessionId, requestId, decision, reason?, answer?, scope?, pathScope?)
+    // Legacy form:        approve(requestId, decision, reason?, answer?, scope?, pathScope?)
     let sessionId: string | undefined;
     let requestId: string;
     let decision: "approve" | "deny";
     let reason: string | undefined;
     let answerText: string | undefined;
     let scope: "once" | "session" | "project" | undefined;
+    let pathScope: "file" | "dir" | "tool" | undefined;
     if (
       typeof requestIdOrDecision === "string" &&
       requestIdOrDecision !== "approve" &&
@@ -252,22 +254,27 @@ contextBridge.exposeInMainWorld("codeshell", {
       reason = reasonOrAnswer;
       answerText = answer;
       scope = scopeArg;
+      pathScope = pathScopeArg;
     } else {
-      // Legacy: first arg is requestId; scope rides in the slot after answer.
+      // Legacy: first arg is requestId; scope/pathScope ride in the slots after
+      // answer (answer kept undefined by callers, so scope lands here).
       requestId = sessionIdOrRequestId;
       decision = requestIdOrDecision as "approve" | "deny";
       reason = decisionOrReason as string | undefined;
       answerText = reasonOrAnswer;
       scope = (answer as "once" | "session" | "project" | undefined) ?? scopeArg;
+      pathScope = scopeArg as "file" | "dir" | "tool" | undefined ?? pathScopeArg;
     }
     // Build the approve branch of ApprovalResult. `once` (or absent) is the
     // legacy payload — no always/scope — so the default path is unchanged; the
-    // core InteractiveApprovalBackend reads always+scope to remember the grant.
+    // core InteractiveApprovalBackend reads always+scope(+pathScope) to remember
+    // the grant.
     let approveBranch: Record<string, unknown> = { approved: true };
     if (answerText !== undefined) approveBranch.answer = answerText;
     if (scope && scope !== "once") {
       approveBranch.always = true;
       approveBranch.scope = scope;
+      if (pathScope && pathScope !== "tool") approveBranch.pathScope = pathScope;
     }
     return rpc("agent/approve", {
       sessionId,

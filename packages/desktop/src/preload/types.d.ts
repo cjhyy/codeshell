@@ -236,6 +236,7 @@ export interface CodeshellApi {
     reason?: string,
     answer?: string,
     scope?: "once" | "session" | "project",
+    pathScope?: "file" | "dir" | "tool",
   ): Promise<RpcResponse>;
   /** Legacy approve form — single-engine callers (kept for backward compat). */
   approve(
@@ -244,6 +245,7 @@ export interface CodeshellApi {
     reason?: string,
     answer?: string,
     scope?: "once" | "session" | "project",
+    pathScope?: "file" | "dir" | "tool",
   ): Promise<RpcResponse>;
   /** Destroy a chat session and free its resources. */
   closeSession(sessionId: string): Promise<RpcResponse>;

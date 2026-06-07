@@ -11,7 +11,7 @@ import { ProjectPicker } from "./chat/ProjectPicker";
 import { BranchPicker } from "./chat/BranchPicker";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
-import type { ApproveChoice } from "./approvals/approvalDecision";
+import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
 import type { AskUserMessage } from "./types";
 import type { Repo } from "./repos";
 import type { ApprovalRequestEnvelope } from "../preload/types";
@@ -65,6 +65,7 @@ interface Props {
     decision: "approve" | "deny",
     reason?: string,
     scope?: ApproveChoice,
+    pathScope?: ApprovePathScope,
   ) => void;
 
   // Composer controls

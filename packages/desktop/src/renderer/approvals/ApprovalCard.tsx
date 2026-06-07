@@ -16,7 +16,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { APPROVE_CHOICES, type ApproveChoice } from "./approvalDecision";
+import {
+  approveOptionsFor,
+  type ApproveChoice,
+  type ApprovePathScope,
+} from "./approvalDecision";
 
 const DENY_PRESETS = [
   "looks unsafe",
@@ -28,17 +32,27 @@ const DENY_PRESETS = [
 interface Props {
   envelope: ApprovalRequestEnvelope;
   /**
-   * `scope` is the approve range chosen via the split-button (once/session/
-   * project); omitted on deny. App threads it into the engine's ApprovalResult.
+   * `scope` is the approve range (once/session/project) and `pathScope` the
+   * optional path narrowing (file/dir/tool, file tools only); both omitted on
+   * deny. App threads them into the engine's ApprovalResult.
    */
-  onDecide: (decision: "approve" | "deny", reason?: string, scope?: ApproveChoice) => void;
+  onDecide: (
+    decision: "approve" | "deny",
+    reason?: string,
+    scope?: ApproveChoice,
+    pathScope?: ApprovePathScope,
+  ) => void;
 }
 
 /** Short confirmation shown once a choice is made (optimistic terminal state). */
-export function decidedLabel(d: { kind: "approve" | "deny"; scope?: ApproveChoice }): string {
+export function decidedLabel(d: {
+  kind: "approve" | "deny";
+  scope?: ApproveChoice;
+  label?: string;
+}): string {
   if (d.kind === "deny") return "已拒绝";
-  const c = APPROVE_CHOICES.find((x) => x.choice === d.scope);
-  return d.scope && d.scope !== "once" ? `已批准 · ${c?.label ?? d.scope}` : "已批准";
+  if (d.scope && d.scope !== "once") return `已批准 · ${d.label ?? d.scope}`;
+  return "已批准";
 }
 
 export function ApprovalCard({ envelope, onDecide }: Props) {
@@ -48,9 +62,11 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
   // Optimistic terminal state: set the instant the user clicks so the card
   // shows a confirmation and disables its controls immediately, regardless of
   // how long the worker takes to resume the turn and run the tool.
-  const [decided, setDecided] = useState<{ kind: "approve" | "deny"; scope?: ApproveChoice } | null>(
-    null,
-  );
+  const [decided, setDecided] = useState<{
+    kind: "approve" | "deny";
+    scope?: ApproveChoice;
+    label?: string;
+  } | null>(null);
   const argsJson = JSON.stringify(request.args ?? {});
   // Engine supplies riskLevel authoritatively; fall back to heuristic
   // only if missing (e.g. older worker versions).
@@ -58,10 +74,18 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
     ?? riskFor(request.toolName, argsJson);
   const summary = summarizeRequest(request);
 
-  const approve = (scope: ApproveChoice): void => {
+  // Path-scoped options for file tools (Write/Edit) — pulls file_path so the
+  // menu can offer "this file / this dir / all paths".
+  const filePath =
+    typeof (request.args as Record<string, unknown>)?.file_path === "string"
+      ? ((request.args as Record<string, unknown>).file_path as string)
+      : undefined;
+  const options = approveOptionsFor(request.toolName, filePath);
+
+  const approve = (scope: ApproveChoice, pathScope?: ApprovePathScope, label?: string): void => {
     if (decided) return;
-    setDecided({ kind: "approve", scope });
-    onDecide("approve", undefined, scope);
+    setDecided({ kind: "approve", scope, label });
+    onDecide("approve", undefined, scope, pathScope);
   };
   const deny = (): void => {
     if (decided) return;
@@ -122,19 +146,24 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
                   <ChevronDown size={14} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {APPROVE_CHOICES.map((c) => (
-                  <DropdownMenuItem
-                    key={c.choice}
-                    className="flex flex-col items-start gap-0"
-                    onSelect={() => approve(c.choice)}
-                  >
-                    <span>{c.label}</span>
-                    {c.hint && (
-                      <span className="text-xs text-muted-foreground">{c.hint}</span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
+              <DropdownMenuContent align="start" className="max-w-[18rem]">
+                {/* once is the main button; the menu offers the remembered
+                    (session/project) grants, expanded by path scope for file
+                    tools. */}
+                {options
+                  .filter((o) => o.scope !== "once")
+                  .map((o) => (
+                    <DropdownMenuItem
+                      key={`${o.scope}:${o.pathScope ?? "tool"}`}
+                      className="flex flex-col items-start gap-0"
+                      onSelect={() => approve(o.scope, o.pathScope, o.label)}
+                    >
+                      <span>{o.label}</span>
+                      {o.hint && (
+                        <span className="text-xs text-muted-foreground">{o.hint}</span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

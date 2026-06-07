@@ -218,12 +218,24 @@ export interface ApprovalRequest {
  */
 export type ApprovalScope = "once" | "session" | "project";
 
+/**
+ * Path granularity for a remembered file-tool grant (Write/Edit). Narrows the
+ * remembered rule so "allow Write src/foo.ts for this session" doesn't become
+ * "allow Write to ANY path".
+ *   "file" — only this exact file
+ *   "dir"  — this file's directory and its subdirectories
+ *   "tool" — every path (the legacy tool-wide behavior)
+ * Omitted → "tool" (back-compat). Ignored for non-file tools.
+ */
+export type ApprovalPathScope = "file" | "dir" | "tool";
+
 export type ApprovalResult =
   | {
       approved: true;
       permanent?: boolean;
       always?: boolean;
       scope?: ApprovalScope;
+      pathScope?: ApprovalPathScope;
       /** Used by AskUserQuestion to carry the user's free-text answer. */ answer?: string;
     }
   | { approved: false; reason?: string; always?: boolean; scope?: ApprovalScope };

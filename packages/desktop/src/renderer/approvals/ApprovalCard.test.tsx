@@ -20,9 +20,12 @@ describe("decidedLabel", () => {
     expect(decidedLabel({ kind: "approve", scope: "once" })).toBe("已批准");
     expect(decidedLabel({ kind: "approve" })).toBe("已批准");
   });
-  test("approve session/project → suffixed with the scope label", () => {
-    expect(decidedLabel({ kind: "approve", scope: "session" })).toBe("已批准 · 本会话一直允许");
-    expect(decidedLabel({ kind: "approve", scope: "project" })).toBe("已批准 · 本项目一直允许");
+  test("approve session/project → suffixed with the chosen option's label", () => {
+    expect(
+      decidedLabel({ kind: "approve", scope: "session", label: "本会话允许写 src/ 下" }),
+    ).toBe("已批准 · 本会话允许写 src/ 下");
+    // No label → falls back to the bare scope name.
+    expect(decidedLabel({ kind: "approve", scope: "project" })).toBe("已批准 · project");
   });
   test("deny → 已拒绝", () => {
     expect(decidedLabel({ kind: "deny" })).toBe("已拒绝");

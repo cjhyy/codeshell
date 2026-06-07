@@ -77,7 +77,7 @@ import {
 } from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
-import type { ApproveChoice } from "./approvals/approvalDecision";
+import type { ApproveChoice, ApprovePathScope } from "./approvals/approvalDecision";
 import { LogsView } from "./logs/LogsView";
 // Full-page Settings — driven by viewMode === 'settings_page'.
 import { SettingsPage } from "./settings/SettingsPage";
@@ -1519,18 +1519,20 @@ function App() {
     decision: "approve" | "deny",
     reason?: string,
     scope?: ApproveChoice,
+    pathScope?: ApprovePathScope,
   ): void => {
     // Multi-session: thread engine sessionId so the worker routes the
     // decision back to the right session's pendingApprovals map. `scope`
-    // (once/session/project) only rides along on approve; deny ignores it.
+    // (once/session/project) + `pathScope` (file/dir/tool, file tools) only
+    // ride along on approve; deny ignores them.
     const approveScope = decision === "approve" ? scope : undefined;
+    const approvePathScope = decision === "approve" ? pathScope : undefined;
     if (env.sessionId) {
-      // (sessionId, requestId, decision, reason, answer, scope)
-      void window.codeshell.approve(env.sessionId, env.requestId, decision, reason, undefined, approveScope);
+      // (sessionId, requestId, decision, reason, answer, scope, pathScope)
+      void window.codeshell.approve(env.sessionId, env.requestId, decision, reason, undefined, approveScope, approvePathScope);
     } else {
-      // Legacy (requestId, decision, reason, answer, scope) — answer kept
-      // undefined so scope lands in the answer slot the preload reads for it.
-      void window.codeshell.approve(env.requestId, decision, reason, undefined, approveScope);
+      // Legacy (requestId, decision, reason, answer, scope, pathScope)
+      void window.codeshell.approve(env.requestId, decision, reason, undefined, approveScope, approvePathScope);
     }
     // The card itself gives instant optimistic feedback via its own local
     // state (ApprovalCard `decided`), so the user never waits on this root-App
@@ -2141,7 +2143,7 @@ function App() {
               pendingApproval={approval}
               onApprovalDecide={
                 approval
-                  ? (decision, reason, scope) => decideEnvelope(approval, decision, reason, scope)
+                  ? (decision, reason, scope, pathScope) => decideEnvelope(approval, decision, reason, scope, pathScope)
                   : undefined
               }
               permissionMode={permissionMode}
