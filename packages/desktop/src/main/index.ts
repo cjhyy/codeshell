@@ -53,6 +53,7 @@ import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
 import { readDirectory, readFile as fsReadFile } from "./fs-service.js";
 import {
   getGitStatus,
+  getGitNumstat,
   getGitBranches,
   getGitDiff,
   switchGitBranch,
@@ -193,7 +194,12 @@ const roomManager = new RoomManager({
       onEvent,
     }),
   onMessage: (roomId, msg) => {
+    // Mirror to BOTH transports: phone (WS) and desktop renderer(s) (IPC), so
+    // a room is dual-ended — same resident CC, same messages, either side sends.
     mobileRemote.broadcast({ type: "room.message", roomId, msg });
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send("room:message", { roomId, msg });
+    }
   },
 });
 
@@ -1061,6 +1067,32 @@ ipcMain.handle("mobileRemote:status", async () => {
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => mobileDevices.revoke(id));
 
+// ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
+ipcMain.handle("rooms:list", async () => roomManager.listRooms().map(roomToPublic));
+ipcMain.handle("rooms:projects", async () => {
+  const recents = await loadRecents().catch(() => []);
+  return recents.map((r) => ({ path: r.path, name: r.name }));
+});
+ipcMain.handle(
+  "rooms:create",
+  async (
+    _e,
+    input: { name?: string; cwd: string; permissionMode?: "default" | "acceptEdits" | "bypassPermissions" },
+  ) => {
+    const permissionMode = await resolveRoomPermissionMode(input.cwd, input.permissionMode);
+    const room = roomManager.createRoom({ name: input.name, cwd: input.cwd, permissionMode });
+    return roomToPublic(room);
+  },
+);
+ipcMain.handle("rooms:open", async (_e, roomId: string) => roomManager.open(roomId));
+ipcMain.handle("rooms:close", async (_e, roomId: string) => {
+  roomManager.close(roomId);
+});
+ipcMain.handle("rooms:send", async (_e, roomId: string, text: string) => roomManager.send(roomId, text));
+ipcMain.handle("rooms:history", async (_e, roomId: string, sinceSeq?: number) =>
+  roomManager.getMessages(roomId, sinceSeq ?? 0),
+);
+
 ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string } | null> => {
   const res = await dialog.showOpenDialog({
     title: "选择项目目录",
@@ -1109,6 +1141,11 @@ ipcMain.on("browser:anchor", (e, anchor: unknown) => {
 ipcMain.handle("git:status", async (_e, cwd: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:status requires cwd");
   return getGitStatus(cwd);
+});
+
+ipcMain.handle("git:numstat", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:numstat requires cwd");
+  return getGitNumstat(cwd);
 });
 
 ipcMain.handle("git:branches", async (_e, cwd: string) => {

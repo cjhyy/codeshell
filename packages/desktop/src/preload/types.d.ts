@@ -279,6 +279,8 @@ export interface CodeshellApi {
 
   // Phase 4 — git / shell services (renderer never spawns child procs directly).
   getGitStatus(cwd: string): Promise<GitStatus>;
+  /** Per-file +/- line counts (vs HEAD) for the review tree (TODO 2.3a). */
+  getGitNumstat(cwd: string): Promise<Record<string, { added: number; removed: number }>>;
   getGitBranches(cwd: string): Promise<GitBranches>;
   switchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
   stashAndSwitchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
@@ -596,6 +598,48 @@ export interface CodeshellApi {
     >;
     revokeDevice(id: string): Promise<boolean>;
   };
+
+  /**
+   * Rooms — resident Claude Code (stream-json) sessions, dual-ended with the
+   * phone: desktop and phone drive the SAME RoomManager / process /
+   * messages.jsonl, so context is shared.
+   */
+  rooms: {
+    list(): Promise<RoomPublic[]>;
+    projects(): Promise<{ path: string; name: string }[]>;
+    create(input: {
+      name?: string;
+      cwd: string;
+      permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
+    }): Promise<RoomPublic>;
+    open(roomId: string): Promise<{ status: "running" | "missing" }>;
+    close(roomId: string): Promise<void>;
+    send(roomId: string, text: string): Promise<boolean>;
+    history(roomId: string, sinceSeq?: number): Promise<RoomMessageWire[]>;
+    onMessage(cb: (env: { roomId: string; msg: RoomMessageWire }) => void): Unsubscribe;
+  };
+}
+
+export interface RoomPublic {
+  id: string;
+  name: string;
+  cwd: string;
+  permissionMode: "default" | "acceptEdits" | "bypassPermissions";
+  createdAt: number;
+  lastActiveAt: number;
+  open: boolean;
+}
+
+export interface RoomMessageWire {
+  seq: number;
+  ts: number;
+  from: "user" | "agent" | "system";
+  type: string;
+  text?: string;
+  tool?: string;
+  summary?: string;
+  reason?: string;
+  isError?: boolean;
 }
 
 export type UpdaterStatus =

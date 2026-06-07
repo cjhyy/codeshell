@@ -320,6 +320,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickSkillDir"),
   getGitStatus: (cwd: string) => ipcRenderer.invoke("git:status", cwd),
+  /** Per-file +/- line counts for the review tree (TODO 2.3a). */
+  getGitNumstat: (cwd: string) =>
+    ipcRenderer.invoke("git:numstat", cwd) as Promise<
+      Record<string, { added: number; removed: number }>
+    >,
   getGitBranches: (cwd: string) => ipcRenderer.invoke("git:branches", cwd),
   switchGitBranch: (cwd: string, branch: string) =>
     ipcRenderer.invoke("git:switchBranch", cwd, branch),
@@ -559,5 +564,23 @@ contextBridge.exposeInMainWorld("codeshell", {
     status: () => ipcRenderer.invoke("mobileRemote:status"),
     listDevices: () => ipcRenderer.invoke("mobileRemote:listDevices"),
     revokeDevice: (id: string) => ipcRenderer.invoke("mobileRemote:revokeDevice", id),
+  },
+
+  // ── Rooms (resident Claude Code sessions; dual-ended with the phone) ──
+  rooms: {
+    list: () => ipcRenderer.invoke("rooms:list"),
+    projects: () => ipcRenderer.invoke("rooms:projects"),
+    create: (input: { name?: string; cwd: string; permissionMode?: string }) =>
+      ipcRenderer.invoke("rooms:create", input),
+    open: (roomId: string) => ipcRenderer.invoke("rooms:open", roomId),
+    close: (roomId: string) => ipcRenderer.invoke("rooms:close", roomId),
+    send: (roomId: string, text: string) => ipcRenderer.invoke("rooms:send", roomId, text),
+    history: (roomId: string, sinceSeq?: number) =>
+      ipcRenderer.invoke("rooms:history", roomId, sinceSeq),
+    onMessage: (cb: (env: { roomId: string; msg: unknown }) => void): (() => void) => {
+      const h = (_e: IpcRendererEvent, env: { roomId: string; msg: unknown }) => cb(env);
+      ipcRenderer.on("room:message", h);
+      return () => ipcRenderer.removeListener("room:message", h);
+    },
   },
 });
