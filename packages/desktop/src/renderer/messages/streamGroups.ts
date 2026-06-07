@@ -19,6 +19,7 @@
  */
 
 import type { Message, ThinkingMessage, ToolMessage } from "../types";
+import type { AgentGroup } from "./agentGroup";
 import { describeActivity } from "../topbar/liveActivity";
 
 /**
@@ -59,11 +60,24 @@ export interface TurnProcessGroup {
   isLive: boolean;
   /** Number of tool calls inside (across all level-1 groups + inline). */
   toolCount: number;
-  /** Inner items in original order — Message | ToolGroup. */
+  /** Inner items in original order — Message | ToolGroup. The foldAgentGroups
+   *  post-pass produces a widened variant (see RenderedTurnProcessGroup) that
+   *  may also hold an AgentGroup; the builder/reconciler only ever emit the
+   *  narrow form here. */
   items: Array<Message | ToolGroup>;
 }
 
-export type StreamItem = Message | ToolGroup | TurnProcessGroup;
+export type StreamItem = Message | ToolGroup | TurnProcessGroup | AgentGroup;
+
+/**
+ * A TurnProcessGroup after the foldAgentGroups post-pass: its inner items may
+ * additionally contain AgentGroups. Kept separate from the canonical
+ * TurnProcessGroup so the builder/reconciler (which never produce AgentGroups
+ * into items) stay narrowly typed. The render layer accepts this shape.
+ */
+export interface RenderedTurnProcessGroup extends Omit<TurnProcessGroup, "items"> {
+  items: Array<Message | ToolGroup | AgentGroup>;
+}
 
 /**
  * Tool names that drive the renderer's pinned task panel rather than

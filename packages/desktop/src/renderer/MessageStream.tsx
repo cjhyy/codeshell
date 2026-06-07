@@ -15,6 +15,8 @@ import { TurnProcessGroupCard } from "./messages/TurnProcessGroupCard";
 import { FilesChangedCard } from "./messages/FilesChangedCard";
 import { LiveActivityLine } from "./messages/LiveActivityLine";
 import { buildStreamItems, reconcileStreamItems, type StreamItem } from "./messages/streamGroups";
+import { foldAgentGroups } from "./messages/agentGroup";
+import { AgentGroupCard } from "./messages/AgentGroupCard";
 import { useStickToBottom } from "./chat/stickToBottom";
 import { decodeWireForDisplay } from "./chat/attachments";
 import { extractAnnotations } from "./chat/anchors";
@@ -109,7 +111,10 @@ export function MessageStream({
           const built = buildStreamItems(messages, { liveTurnActive });
           const reconciled = reconcileStreamItems(prevItemsRef.current, built);
           prevItemsRef.current = reconciled;
-          return reconciled;
+          // Post-pass: collapse runs of ≥2 sibling sub-agents into a summary
+          // card. Runs after reconcile so it reads the latest AgentMessage
+          // refs and a live agent's rollup stats stay fresh each rebuild.
+          return foldAgentGroups(reconciled);
         },
         () => ({ msgs: messages.length }),
       ),
@@ -124,6 +129,9 @@ export function MessageStream({
         }
         if (m.kind === "tool_group") {
           return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} />;
+        }
+        if (m.kind === "agent_group") {
+          return <AgentGroupCard key={m.id} group={m} />;
         }
         switch (m.kind) {
           case "tool":

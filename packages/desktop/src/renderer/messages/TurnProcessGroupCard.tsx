@@ -7,10 +7,12 @@ import { AgentMessageView } from "./AgentMessageView";
 import { ContextBoundaryView } from "./ContextBoundaryView";
 import { GoalProgressView } from "./GoalProgressView";
 import { Markdown } from "../Markdown";
-import { processGroupLabel, type TurnProcessGroup } from "./streamGroups";
+import { processGroupLabel, type RenderedTurnProcessGroup } from "./streamGroups";
+import { AgentGroupCard } from "./AgentGroupCard";
 
 interface Props {
-  group: TurnProcessGroup;
+  /** Rendered shape: inner items may include an AgentGroup (foldAgentGroups). */
+  group: RenderedTurnProcessGroup;
   turnEpoch?: number;
 }
 
@@ -89,6 +91,9 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
             }
             if (m.kind === "agent") {
               return <AgentMessageView key={m.id} message={m} />;
+            }
+            if (m.kind === "agent_group") {
+              return <AgentGroupCard key={m.id} group={m} />;
             }
             if (m.kind === "context_boundary") {
               return <ContextBoundaryView key={m.id} message={m} />;
