@@ -11,9 +11,14 @@ interface Props {
   file?: string;
   /** Optional session-scoped diff text. When present, do not ask Git. */
   diffText?: string;
+  /**
+   * Optional committed range (e.g. "HEAD~1..HEAD" or "main...HEAD"). When set,
+   * diff the range instead of the working tree (TODO 2.3a — committed/branch).
+   */
+  range?: string;
 }
 
-export function UnifiedDiffViewer({ cwd, file, diffText }: Props) {
+export function UnifiedDiffViewer({ cwd, file, diffText, range }: Props) {
   const [diff, setDiff] = useState<DiffFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,8 +31,10 @@ export function UnifiedDiffViewer({ cwd, file, diffText }: Props) {
         cancelled = true;
       };
     }
-    void window.codeshell
-      .getGitDiff(cwd, file)
+    const fetchDiff = range
+      ? window.codeshell.getGitRangeDiff(cwd, range, file)
+      : window.codeshell.getGitDiff(cwd, file);
+    void fetchDiff
       .then((raw) => {
         if (cancelled) return;
         setDiff(parseUnifiedDiff(raw));
@@ -39,7 +46,7 @@ export function UnifiedDiffViewer({ cwd, file, diffText }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [cwd, file, diffText]);
+  }, [cwd, file, diffText, range]);
 
   if (error) return <div className="diff-error">git diff failed: {error}</div>;
   if (!diff) return <div className="diff-loading">loading diff…</div>;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { filterByScope, isStaged, isUnstaged } from "./reviewScope";
+import { filterByScope, isRangeScope, isStaged, isUnstaged } from "./reviewScope";
 import type { GitStatusEntry } from "../../preload/types";
 
 const e = (code: string, path: string): GitStatusEntry => ({ code, path });
@@ -12,6 +12,19 @@ const untracked = e("??", "d.ts"); // new file, unstaged
 const stagedAdd = e("A ", "e.ts"); // newly added, staged
 
 const all = [staged, unstaged, both, untracked, stagedAdd];
+
+describe("isRangeScope", () => {
+  test("committed and branch are range scopes", () => {
+    expect(isRangeScope("committed")).toBe(true);
+    expect(isRangeScope("branch")).toBe(true);
+  });
+  test("working-tree scopes are not range scopes", () => {
+    expect(isRangeScope("turn")).toBe(false);
+    expect(isRangeScope("unstaged")).toBe(false);
+    expect(isRangeScope("staged")).toBe(false);
+    expect(isRangeScope("all")).toBe(false);
+  });
+});
 
 describe("isStaged / isUnstaged", () => {
   test("staged X-slot", () => {

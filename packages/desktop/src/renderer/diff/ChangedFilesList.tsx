@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import type { GitStatus } from "../../preload/types";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
-import { filterByScope, type ReviewScope } from "./reviewScope";
+import { filterByScope, isRangeScope, type ReviewScope } from "./reviewScope";
+import type { GitStatusEntry } from "../../preload/types";
 
 interface Props {
   cwd: string;
@@ -25,27 +26,52 @@ export function ChangedFilesList({
   refreshKey,
 }: Props) {
   const [status, setStatus] = useState<GitStatus | null>(null);
+  // Entries for committed/branch range scopes (TODO 2.3a). null until loaded.
+  const [rangeEntries, setRangeEntries] = useState<GitStatusEntry[] | null>(null);
   // Per-file +/- line counts (TODO 2.3a). Best-effort; absent → no badge.
   const [numstat, setNumstat] = useState<Record<string, { added: number; removed: number }>>({});
 
   useEffect(() => {
     let cancelled = false;
-    void window.codeshell.getGitStatus(cwd).then((s) => {
-      if (!cancelled) setStatus(s);
-    });
-    void window.codeshell.getGitNumstat?.(cwd).then((n) => {
-      if (!cancelled) setNumstat(n ?? {});
-    });
+    if (isRangeScope(scope)) {
+      // Committed/branch scopes diff a committed range, not the working tree.
+      setStatus(null);
+      void (async () => {
+        let range = "HEAD~1..HEAD";
+        if (scope === "branch") {
+          const base = await window.codeshell.getGitBranchBase?.(cwd);
+          range = base ? `${base}...HEAD` : "HEAD~1..HEAD";
+        }
+        const res = await window.codeshell.getGitRangeChanges?.(cwd, range);
+        if (cancelled) return;
+        setRangeEntries(res?.entries ?? []);
+        setNumstat(res?.numstat ?? {});
+      })();
+    } else {
+      setRangeEntries(null);
+      void window.codeshell.getGitStatus(cwd).then((s) => {
+        if (!cancelled) setStatus(s);
+      });
+      void window.codeshell.getGitNumstat?.(cwd).then((n) => {
+        if (!cancelled) setNumstat(n ?? {});
+      });
+    }
     return () => {
       cancelled = true;
     };
-  }, [cwd, refreshKey]);
+  }, [cwd, refreshKey, scope]);
 
-  if (!status) return <div className="diff-loading">loading status…</div>;
-  // Filter the working-tree status to the active scope (TODO 2.3a). For "turn"
-  // we keep only the files the turn touched, so 审查 opens on the turn's diff
-  // instead of the whole tree.
-  const entries = filterByScope(status.entries, scope, turnFiles);
+  // Range scopes (committed/branch) come pre-filtered from git; working-tree
+  // scopes are filtered locally from git status (TODO 2.3a). For "turn" we keep
+  // only the files the turn touched, so 审查 opens on the turn's diff.
+  let entries: GitStatusEntry[];
+  if (isRangeScope(scope)) {
+    if (!rangeEntries) return <div className="diff-loading">loading status…</div>;
+    entries = rangeEntries;
+  } else {
+    if (!status) return <div className="diff-loading">loading status…</div>;
+    entries = filterByScope(status.entries, scope, turnFiles);
+  }
   if (entries.length === 0) {
     return (
       <div className="diff-empty">

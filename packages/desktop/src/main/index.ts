@@ -54,8 +54,11 @@ import { readDirectory, readFile as fsReadFile } from "./fs-service.js";
 import {
   getGitStatus,
   getGitNumstat,
+  getGitRangeChanges,
+  getGitBranchBase,
   getGitBranches,
   getGitDiff,
+  getGitRangeDiff,
   switchGitBranch,
   stashAndSwitchGitBranch,
   createPermanentWorktree,
@@ -1148,6 +1151,17 @@ ipcMain.handle("git:numstat", async (_e, cwd: string) => {
   return getGitNumstat(cwd);
 });
 
+ipcMain.handle("git:rangeChanges", async (_e, cwd: string, range: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:rangeChanges requires cwd");
+  if (typeof range !== "string" || !range) throw new Error("git:rangeChanges requires range");
+  return getGitRangeChanges(cwd, range);
+});
+
+ipcMain.handle("git:branchBase", async (_e, cwd: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:branchBase requires cwd");
+  return getGitBranchBase(cwd);
+});
+
 ipcMain.handle("git:branches", async (_e, cwd: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:branches requires cwd");
   return getGitBranches(cwd);
@@ -1240,6 +1254,11 @@ ipcMain.handle("git:listWorktrees", async (_e, cwd: string) => {
 ipcMain.handle("git:diff", async (_e, cwd: string, file?: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:diff requires cwd");
   return getGitDiff(cwd, file);
+});
+
+ipcMain.handle("git:rangeDiff", async (_e, cwd: string, range: string, file?: string) => {
+  if (typeof cwd !== "string" || !cwd) throw new Error("git:rangeDiff requires cwd");
+  return getGitRangeDiff(cwd, range, file);
 });
 
 ipcMain.handle("shell:openExternal", async (_e, url: string) => {

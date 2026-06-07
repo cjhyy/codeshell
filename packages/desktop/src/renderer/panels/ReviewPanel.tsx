@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
 import { ChangedFilesList } from "../diff/ChangedFilesList";
-import { REVIEW_SCOPES, type ReviewScope } from "../diff/reviewScope";
+import { REVIEW_SCOPES, isRangeScope, type ReviewScope } from "../diff/reviewScope";
 import "../styles/diff.css";
 
 interface Props {
@@ -25,16 +25,40 @@ interface Props {
 
 /**
  * Code-review panel (TODO 2.3a). A scope selector switches what the file tree
- * shows — 本轮改动 / 未暂存 / 已暂存 / 全部未提交 — defaulting to the turn's own
- * files when opened from a card. Reuses UnifiedDiffViewer + ChangedFilesList.
- * (committed / branch / 上轮对话 ranges + a commit/push/PR action bar are a
- * later slice — see TODO 2.3a.)
+ * shows — 本轮改动 / 未暂存 / 已暂存 / 全部未提交 / 最近提交 / 分支 vs base —
+ * defaulting to the turn's own files when opened from a card. Reuses
+ * UnifiedDiffViewer + ChangedFilesList. (A commit/push/PR action bar is a later
+ * slice — see TODO 2.3a.)
  */
 export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   const hasTurnFiles = !!files && files.length > 0;
   const [scope, setScope] = useState<ReviewScope>(hasTurnFiles ? "turn" : "all");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Resolved git range for committed/branch scopes (TODO 2.3a). null = working tree.
+  const [range, setRange] = useState<string | null>(null);
+
+  // Resolve the diff range when in a committed/branch scope: "最近提交" is
+  // HEAD~1..HEAD; "分支 vs base" diffs against the base branch (main/master/
+  // upstream), falling back to the last commit if no base exists.
+  useEffect(() => {
+    let cancelled = false;
+    if (!isRangeScope(scope) || !cwd) {
+      setRange(null);
+      return;
+    }
+    if (scope === "committed") {
+      setRange("HEAD~1..HEAD");
+      return;
+    }
+    void window.codeshell.getGitBranchBase?.(cwd).then((base) => {
+      if (cancelled) return;
+      setRange(base ? `${base}...HEAD` : "HEAD~1..HEAD");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [scope, cwd, refreshKey]);
 
   // When the caller hands us a focus set (e.g. from a "files changed" card),
   // snap to its turn scope + first file. Re-runs when the set identity changes.
@@ -107,7 +131,14 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
           // file selection applies in the git-backed scopes.
           <UnifiedDiffViewer cwd={cwd} diffText={turnDiff} />
         ) : (
-          <UnifiedDiffViewer cwd={cwd} file={selectedFile ?? undefined} />
+          // For committed/branch scopes, diff the resolved range; otherwise the
+          // working tree. `range || undefined` so the range path only kicks in
+          // once resolved (TODO 2.3a).
+          <UnifiedDiffViewer
+            cwd={cwd}
+            file={selectedFile ?? undefined}
+            range={isRangeScope(scope) ? range ?? undefined : undefined}
+          />
         )}
       </div>
     </div>

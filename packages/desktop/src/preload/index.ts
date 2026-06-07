@@ -325,6 +325,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("git:numstat", cwd) as Promise<
       Record<string, { added: number; removed: number }>
     >,
+  /** Changed files + numstat for a committed range (TODO 2.3a). */
+  getGitRangeChanges: (cwd: string, range: string) =>
+    ipcRenderer.invoke("git:rangeChanges", cwd, range) as Promise<{
+      entries: { code: string; path: string }[];
+      numstat: Record<string, { added: number; removed: number }>;
+    }>,
+  /** Base branch (main/master/upstream) to diff against for branch scope (TODO 2.3a). */
+  getGitBranchBase: (cwd: string) =>
+    ipcRenderer.invoke("git:branchBase", cwd) as Promise<string>,
   getGitBranches: (cwd: string) => ipcRenderer.invoke("git:branches", cwd),
   switchGitBranch: (cwd: string, branch: string) =>
     ipcRenderer.invoke("git:switchBranch", cwd, branch),
@@ -339,6 +348,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
   getGitDiff: (cwd: string, file?: string) => ipcRenderer.invoke("git:diff", cwd, file),
+  getGitRangeDiff: (cwd: string, range: string, file?: string) =>
+    ipcRenderer.invoke("git:rangeDiff", cwd, range, file),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
   openPath: (path: string, cwd?: string) =>

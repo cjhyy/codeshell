@@ -281,6 +281,16 @@ export interface CodeshellApi {
   getGitStatus(cwd: string): Promise<GitStatus>;
   /** Per-file +/- line counts (vs HEAD) for the review tree (TODO 2.3a). */
   getGitNumstat(cwd: string): Promise<Record<string, { added: number; removed: number }>>;
+  /** Changed files + numstat for a committed range, e.g. "HEAD~1..HEAD" (TODO 2.3a). */
+  getGitRangeChanges(
+    cwd: string,
+    range: string,
+  ): Promise<{
+    entries: GitStatusEntry[];
+    numstat: Record<string, { added: number; removed: number }>;
+  }>;
+  /** Base branch to diff against for branch scope; "" if none (TODO 2.3a). */
+  getGitBranchBase(cwd: string): Promise<string>;
   getGitBranches(cwd: string): Promise<GitBranches>;
   switchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
   stashAndSwitchGitBranch(cwd: string, branch: string): Promise<GitBranches>;
@@ -299,6 +309,8 @@ export interface CodeshellApi {
   }): Promise<void>;
   /** Unified diff for the working tree (vs HEAD). file optional. */
   getGitDiff(cwd: string, file?: string): Promise<string>;
+  /** Unified diff for a committed range (e.g. "HEAD~1..HEAD"); optional file (TODO 2.3a). */
+  getGitRangeDiff(cwd: string, range: string, file?: string): Promise<string>;
 
   // ── Terminal (pty) — interactive shell panel ──────────────────────────
   /** Token unique to this window's renderer process (for window-unique ids). */

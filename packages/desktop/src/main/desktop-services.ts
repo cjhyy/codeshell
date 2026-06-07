@@ -119,6 +119,65 @@ export async function getGitNumstat(
   return out;
 }
 
+/**
+ * Changed files for a committed range (TODO 2.3a — committed/branch review
+ * scopes). `range` is a git revision range:
+ *   - "HEAD~1..HEAD"           → the last commit's files (committed scope)
+ *   - "<base>...HEAD"          → diverged-from-base files (branch scope)
+ * Returns status-like entries (porcelain X-slot letter from --name-status) +
+ * per-file numstat, so the review tree renders the same way as the working-tree
+ * scopes. Best-effort: an error (e.g. no HEAD~1 on a 1-commit repo) yields empty.
+ */
+export async function getGitRangeChanges(
+  cwd: string,
+  range: string,
+): Promise<{ entries: GitStatusEntry[]; numstat: Record<string, { added: number; removed: number }> }> {
+  const entries: GitStatusEntry[] = [];
+  const numstat: Record<string, { added: number; removed: number }> = {};
+  try {
+    const nameStatus = await gitRun(cwd, ["diff", "--name-status", range]);
+    for (const line of nameStatus.split("\n")) {
+      if (!line.trim()) continue;
+      // "<X>\t<path>" or "R100\t<old>\t<new>" for renames.
+      const parts = line.split("\t");
+      const x = parts[0]?.[0] ?? "M"; // A/M/D/R…
+      const path = (parts.length >= 3 ? parts[2] : parts[1])?.trim();
+      if (path) entries.push({ code: `${x} `, path });
+    }
+    const ns = await gitRun(cwd, ["diff", "--numstat", range]);
+    for (const line of ns.split("\n")) {
+      if (!line.trim()) continue;
+      const m = /^(\S+)\t(\S+)\t(.+)$/.exec(line);
+      if (!m) continue;
+      numstat[m[3].trim()] = {
+        added: m[1] === "-" ? 0 : parseInt(m[1], 10) || 0,
+        removed: m[2] === "-" ? 0 : parseInt(m[2], 10) || 0,
+      };
+    }
+  } catch {
+    // empty
+  }
+  return { entries, numstat };
+}
+
+/** The base branch to diff against for "branch" review scope: main/master if
+ *  present, else the upstream tracking branch, else empty (caller skips). */
+export async function getGitBranchBase(cwd: string): Promise<string> {
+  for (const cand of ["main", "master"]) {
+    try {
+      await gitRun(cwd, ["rev-parse", "--verify", `${cand}`]);
+      return cand;
+    } catch {
+      // try next
+    }
+  }
+  try {
+    return (await gitRun(cwd, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"])).trim();
+  } catch {
+    return "";
+  }
+}
+
 export async function getGitBranches(cwd: string): Promise<GitBranches> {
   // Distinguish "not a repo" from "fresh repo with no commits". The
   // abbrev-ref query fails on the latter too, so check is-inside-work-tree
@@ -357,6 +416,25 @@ export async function getGitDiff(cwd: string, file?: string | string[]): Promise
   try {
     const staged = await gitRun(cwd, [...baseArgs, "--cached", ...(file ? ["--", file] : [])]);
     return staged;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Unified diff for a committed range (e.g. "HEAD~1..HEAD" or "main...HEAD"),
+ * optionally limited to one file (TODO 2.3a — committed/branch review scopes).
+ */
+export async function getGitRangeDiff(
+  cwd: string,
+  range: string,
+  file?: string,
+): Promise<string> {
+  if (typeof range !== "string" || !range) return "";
+  const args = ["diff", "--no-color", "--unified=3", range];
+  if (file) args.push("--", file);
+  try {
+    return await gitRun(cwd, args);
   } catch {
     return "";
   }
