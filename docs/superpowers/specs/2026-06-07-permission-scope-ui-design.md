@@ -81,7 +81,16 @@ UI 把 split-button 的选择映射成 `ApproveChoice` 交给 `onDecide`;preload
 
 ## 乐观反馈(修卡顿)
 
-**先诊断后改**(systematic-debugging):`decideEnvelope` 已是 `void approve(...)`(不 await IPC)+ 同步 `setApproval`/`setApprovalQueue`/`setApprovalHistory`,所以 IPC 不阻塞、React 状态本应即时更新。怀疑真因是点击触发 App 多次 setState → 整个 MessageStream 全量重渲染产生感知卡顿,而非 IPC。**实现期先量(埋点/肉眼)再改,不盲修。**
+**诊断结论(systematic-debugging,基于代码证据,2026-06-07):**
+
+逐层排除:
+1. IPC 是 fire-and-forget(`rpc` 用 `ipcRenderer.send` 不阻塞;`decideEnvelope` `void approve(...)` 不 await)→ **不是** 卡点。
+2. 卡片清除是本地同步(App.tsx setApproval),**不**等 worker 回包 → 卡片本应秒消失。
+3. `MessageStream` 的 `buildStreamItems` useMemo 依赖 `[messages, liveTurnActive]`,**不含** approval 状态 → 批准点击**不触发**重型 stream 重建。
+4. `busy`/live 指示器只在 `turn_complete`/`error` 清除(App.tsx:1119)→ 批准后 spinner 仍在,不是"指示器消失=假死"。
+5. **剩余真因**:可见卡片整个活在 **根 App 组件**的 state 里,点击要先等巨大 App 重渲染(3 次 setState)才有视觉反馈;且"已批准"到"工具输出出现"之间卡片层无任何闭合,读作卡死。
+
+**修复(对准真因,非症状)**:把终态反馈下沉到 `ApprovalCard` **自身 local state**(`decided`)——点击瞬间卡片本地 cheap 重渲染翻到「已批准/已拒绝」终态并禁用按钮,与 App 重渲染、worker 回包完全解耦。另在 `decideEnvelope` 包 `timePhase("approval.decide")`(perf 关时零开销),将来大会话若 App 重渲染真卡,埋点会暴露,不用再猜。
 
 UI 层面无论真因如何都要做的:点击决定后,卡片**立即**切到禁用的终态(`✓ 已批准(本会话)` / `✕ 已拒绝`),按钮 disabled,避免重复点击与"没反应"错觉;实际从流里移除仍由 `pendingApproval` 清空驱动(已同步)。
 

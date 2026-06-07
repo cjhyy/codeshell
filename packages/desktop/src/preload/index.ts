@@ -230,14 +230,16 @@ contextBridge.exposeInMainWorld("codeshell", {
     decisionOrReason?: "approve" | "deny" | string,
     reasonOrAnswer?: string,
     answer?: string,
+    scopeArg?: "once" | "session" | "project",
   ) => {
-    // Multi-session form: approve(sessionId, requestId, decision, reason?, answer?)
-    // Legacy form:        approve(requestId, decision, reason?, answer?)
+    // Multi-session form: approve(sessionId, requestId, decision, reason?, answer?, scope?)
+    // Legacy form:        approve(requestId, decision, reason?, answer?, scope?)
     let sessionId: string | undefined;
     let requestId: string;
     let decision: "approve" | "deny";
     let reason: string | undefined;
     let answerText: string | undefined;
+    let scope: "once" | "session" | "project" | undefined;
     if (
       typeof requestIdOrDecision === "string" &&
       requestIdOrDecision !== "approve" &&
@@ -249,21 +251,28 @@ contextBridge.exposeInMainWorld("codeshell", {
       decision = decisionOrReason as "approve" | "deny";
       reason = reasonOrAnswer;
       answerText = answer;
+      scope = scopeArg;
     } else {
-      // Legacy: first arg is requestId
+      // Legacy: first arg is requestId; scope rides in the slot after answer.
       requestId = sessionIdOrRequestId;
       decision = requestIdOrDecision as "approve" | "deny";
       reason = decisionOrReason as string | undefined;
       answerText = reasonOrAnswer;
+      scope = (answer as "once" | "session" | "project" | undefined) ?? scopeArg;
+    }
+    // Build the approve branch of ApprovalResult. `once` (or absent) is the
+    // legacy payload — no always/scope — so the default path is unchanged; the
+    // core InteractiveApprovalBackend reads always+scope to remember the grant.
+    let approveBranch: Record<string, unknown> = { approved: true };
+    if (answerText !== undefined) approveBranch.answer = answerText;
+    if (scope && scope !== "once") {
+      approveBranch.always = true;
+      approveBranch.scope = scope;
     }
     return rpc("agent/approve", {
       sessionId,
       requestId,
-      decision: decision === "approve"
-        ? answerText !== undefined
-          ? { approved: true, answer: answerText }
-          : { approved: true }
-        : { approved: false, reason },
+      decision: decision === "approve" ? approveBranch : { approved: false, reason },
     });
   },
   closeSession: (sessionId: string) => rpc("agent/closeSession", { sessionId }),

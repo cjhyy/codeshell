@@ -224,13 +224,18 @@ export interface CodeshellApi {
     shellId: string,
   ): Promise<{ header: string; text: string }>;
   killBackgroundShell(sessionId: string, shellId: string): Promise<{ ok: boolean }>;
-  /** Multi-session form. The dual-arg legacy form is also supported at runtime. */
+  /**
+   * Multi-session form. The dual-arg legacy form is also supported at runtime.
+   * `scope` (once/session/project) on an approve threads to the engine's
+   * ApprovalResult so the grant can be remembered for the session or project.
+   */
   approve(
     sessionId: string,
     requestId: string,
     decision: "approve" | "deny",
     reason?: string,
     answer?: string,
+    scope?: "once" | "session" | "project",
   ): Promise<RpcResponse>;
   /** Legacy approve form — single-engine callers (kept for backward compat). */
   approve(
@@ -238,6 +243,7 @@ export interface CodeshellApi {
     decision: "approve" | "deny",
     reason?: string,
     answer?: string,
+    scope?: "once" | "session" | "project",
   ): Promise<RpcResponse>;
   /** Destroy a chat session and free its resources. */
   closeSession(sessionId: string): Promise<RpcResponse>;

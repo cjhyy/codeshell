@@ -77,6 +77,7 @@ import {
 } from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
 import { ApprovalsView } from "./approvals/ApprovalsView";
+import type { ApproveChoice } from "./approvals/approvalDecision";
 import { LogsView } from "./logs/LogsView";
 // Full-page Settings — driven by viewMode === 'settings_page'.
 import { SettingsPage } from "./settings/SettingsPage";
@@ -1517,25 +1518,40 @@ function App() {
     env: ApprovalRequestEnvelope,
     decision: "approve" | "deny",
     reason?: string,
+    scope?: ApproveChoice,
   ): void => {
     // Multi-session: thread engine sessionId so the worker routes the
-    // decision back to the right session's pendingApprovals map.
+    // decision back to the right session's pendingApprovals map. `scope`
+    // (once/session/project) only rides along on approve; deny ignores it.
+    const approveScope = decision === "approve" ? scope : undefined;
     if (env.sessionId) {
-      void window.codeshell.approve(env.sessionId, env.requestId, decision, reason);
+      // (sessionId, requestId, decision, reason, answer, scope)
+      void window.codeshell.approve(env.sessionId, env.requestId, decision, reason, undefined, approveScope);
     } else {
-      void window.codeshell.approve(env.requestId, decision, reason);
+      // Legacy (requestId, decision, reason, answer, scope) — answer kept
+      // undefined so scope lands in the answer slot the preload reads for it.
+      void window.codeshell.approve(env.requestId, decision, reason, undefined, approveScope);
     }
-    setApprovalQueue((q) => q.filter((e) => e.requestId !== env.requestId));
-    setApprovalHistory((h) => [
-      ...h,
-      { decision, envelope: env, reason, at: Date.now() },
-    ]);
-    setApproval((cur) => {
-      if (!cur || cur.requestId === env.requestId) {
-        const next = approvalQueue.find((e) => e.requestId !== env.requestId);
-        return next ?? null;
-      }
-      return cur;
+    // The card itself gives instant optimistic feedback via its own local
+    // state (ApprovalCard `decided`), so the user never waits on this root-App
+    // re-render. Time the synchronous state churn anyway: if a future large
+    // session makes the App re-render janky on click, perf.approval.decide will
+    // surface it (no-op when perf logging is off). See the 2026-06-07 approval-
+    // scope spec / debugging note: IPC is fire-and-forget and the stream build
+    // is memoized, so this state update is the only synchronous work on click.
+    timePhase("approval.decide", () => {
+      setApprovalQueue((q) => q.filter((e) => e.requestId !== env.requestId));
+      setApprovalHistory((h) => [
+        ...h,
+        { decision, envelope: env, reason, at: Date.now() },
+      ]);
+      setApproval((cur) => {
+        if (!cur || cur.requestId === env.requestId) {
+          const next = approvalQueue.find((e) => e.requestId !== env.requestId);
+          return next ?? null;
+        }
+        return cur;
+      });
     });
   };
 
@@ -2120,7 +2136,7 @@ function App() {
               pendingApproval={approval}
               onApprovalDecide={
                 approval
-                  ? (decision, reason) => decideEnvelope(approval, decision, reason)
+                  ? (decision, reason, scope) => decideEnvelope(approval, decision, reason, scope)
                   : undefined
               }
               permissionMode={permissionMode}

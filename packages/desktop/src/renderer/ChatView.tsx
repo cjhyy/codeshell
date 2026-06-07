@@ -11,6 +11,7 @@ import { ProjectPicker } from "./chat/ProjectPicker";
 import { BranchPicker } from "./chat/BranchPicker";
 import { AskUserMessageView } from "./messages/AskUserMessageView";
 import { ApprovalCard } from "./approvals/ApprovalCard";
+import type { ApproveChoice } from "./approvals/approvalDecision";
 import type { AskUserMessage } from "./types";
 import type { Repo } from "./repos";
 import type { ApprovalRequestEnvelope } from "../preload/types";
@@ -60,7 +61,11 @@ interface Props {
   /** Attach an image to the composer by absolute path (file-panel drag — TODO 2.1). */
   onAttachImagePath?: (absPath: string) => void;
   pendingApproval?: ApprovalRequestEnvelope | null;
-  onApprovalDecide?: (decision: "approve" | "deny", reason?: string) => void;
+  onApprovalDecide?: (
+    decision: "approve" | "deny",
+    reason?: string,
+    scope?: ApproveChoice,
+  ) => void;
 
   // Composer controls
   permissionMode: PermissionMode | null;

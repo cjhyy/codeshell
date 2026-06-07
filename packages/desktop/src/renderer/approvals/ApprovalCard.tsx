@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ChevronDown, Check, X } from "lucide-react";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import { RiskPill, riskFor } from "./RiskPill";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { APPROVE_CHOICES, type ApproveChoice } from "./approvalDecision";
 
 const DENY_PRESETS = [
   "looks unsafe",
@@ -19,19 +27,47 @@ const DENY_PRESETS = [
 
 interface Props {
   envelope: ApprovalRequestEnvelope;
-  onDecide: (decision: "approve" | "deny", reason?: string) => void;
+  /**
+   * `scope` is the approve range chosen via the split-button (once/session/
+   * project); omitted on deny. App threads it into the engine's ApprovalResult.
+   */
+  onDecide: (decision: "approve" | "deny", reason?: string, scope?: ApproveChoice) => void;
+}
+
+/** Short confirmation shown once a choice is made (optimistic terminal state). */
+export function decidedLabel(d: { kind: "approve" | "deny"; scope?: ApproveChoice }): string {
+  if (d.kind === "deny") return "已拒绝";
+  const c = APPROVE_CHOICES.find((x) => x.choice === d.scope);
+  return d.scope && d.scope !== "once" ? `已批准 · ${c?.label ?? d.scope}` : "已批准";
 }
 
 export function ApprovalCard({ envelope, onDecide }: Props) {
   const { request } = envelope;
   const [showRaw, setShowRaw] = useState(false);
   const [denyReason, setDenyReason] = useState<string>("");
+  // Optimistic terminal state: set the instant the user clicks so the card
+  // shows a confirmation and disables its controls immediately, regardless of
+  // how long the worker takes to resume the turn and run the tool.
+  const [decided, setDecided] = useState<{ kind: "approve" | "deny"; scope?: ApproveChoice } | null>(
+    null,
+  );
   const argsJson = JSON.stringify(request.args ?? {});
   // Engine supplies riskLevel authoritatively; fall back to heuristic
   // only if missing (e.g. older worker versions).
   const risk = (request.riskLevel as "low" | "medium" | "high" | undefined)
     ?? riskFor(request.toolName, argsJson);
   const summary = summarizeRequest(request);
+
+  const approve = (scope: ApproveChoice): void => {
+    if (decided) return;
+    setDecided({ kind: "approve", scope });
+    onDecide("approve", undefined, scope);
+  };
+  const deny = (): void => {
+    if (decided) return;
+    setDecided({ kind: "deny" });
+    onDecide("deny", denyReason || undefined);
+  };
 
   return (
     <div className="rounded-lg border bg-card p-3 text-card-foreground shadow-sm">
@@ -58,27 +94,66 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
         </pre>
       )}
 
-      <div className="mt-3 flex items-center gap-2">
-        <Button size="sm" onClick={() => onDecide("approve")}>批准</Button>
-        <Select value={denyReason} onValueChange={setDenyReason}>
-          <SelectTrigger className="h-8 w-[200px]">
-            <SelectValue placeholder="拒绝理由…" />
-          </SelectTrigger>
-          <SelectContent>
-            {DENY_PRESETS.map((r) => (
-              <SelectItem key={r} value={r}>{r}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-status-err"
-          onClick={() => onDecide("deny", denyReason || undefined)}
+      {decided ? (
+        <div
+          className={
+            "mt-3 flex items-center gap-1.5 text-sm " +
+            (decided.kind === "approve" ? "text-status-ok" : "text-status-err")
+          }
         >
-          拒绝
-        </Button>
-      </div>
+          {decided.kind === "approve" ? <Check size={15} /> : <X size={15} />}
+          <span>{decidedLabel(decided)}</span>
+        </div>
+      ) : (
+        <div className="mt-3 flex items-center gap-2">
+          {/* Approve split-button: main = once (the common case); ▾ opens the
+              wider session/project scopes. */}
+          <div className="flex">
+            <Button size="sm" className="rounded-r-none" onClick={() => approve("once")}>
+              批准
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  className="rounded-l-none border-l border-l-primary-foreground/20 px-1.5"
+                  aria-label="选择批准范围"
+                >
+                  <ChevronDown size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {APPROVE_CHOICES.map((c) => (
+                  <DropdownMenuItem
+                    key={c.choice}
+                    className="flex flex-col items-start gap-0"
+                    onSelect={() => approve(c.choice)}
+                  >
+                    <span>{c.label}</span>
+                    {c.hint && (
+                      <span className="text-xs text-muted-foreground">{c.hint}</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <Select value={denyReason} onValueChange={setDenyReason}>
+            <SelectTrigger className="h-8 w-[200px]">
+              <SelectValue placeholder="拒绝理由…" />
+            </SelectTrigger>
+            <SelectContent>
+              {DENY_PRESETS.map((r) => (
+                <SelectItem key={r} value={r}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" variant="ghost" className="text-status-err" onClick={deny}>
+            拒绝
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
