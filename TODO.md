@@ -23,7 +23,7 @@ LLM/Engine 五个待确认项(截断归一/resume 竞态/sandbox 缓存/SessionS
 > 会话级权限缓存、/permissions、审批 scope UI。原 TODO 的复选框严重滞后于代码;以上现已反映真实状态。
 
 **下一步建议起点**（对账后真未做,纯 code 活优先）：
-- **权限路径级前缀规则**(扩 buildProjectRule 非 Bash 工具到路径粒度 + 审批 UI 选项)——最有安全价值的真未做项。
+- ~~权限路径级前缀规则~~ ✅ 已做(beea3d9)。
 - **Shell Snapshot**(命令输出捕获/智能截断/退出码语义化;truncate-output.ts 有部分底座)。
 - **请求压缩** `enable_request_compression`(真未做)。
 - 即梦/可灵真视频适配器(需各自私有 API 文档)。
@@ -49,7 +49,7 @@ LLM/Engine 五个待确认项(截断归一/resume 竞态/sandbox 缓存/SessionS
 
 当前权限系统已有基础；剩余重点是细粒度规则、路径策略接入与用户可理解的授权体验。
 
-- [ ] 支持路径级别权限规则：如"允许写入 src/ 下的文件" —— **真未做**:`PermissionRule.argsPattern` + `ruleMatches` 底座支持任意 arg 正则,但 `buildProjectRule` 对非 Bash 工具只到工具粒度,没从审批 UI 生成路径前缀规则。需扩 buildProjectRule + 审批 UI 给"本路径/本目录"选项。**剩余真功能,见下一步候选。**
+- [x] 支持路径级别权限规则：如"允许写入 src/ 下的文件" ✅ (beea3d9) 修"批准一次=全盘文件权限"过宽漏洞。ApprovalResult 加 pathScope(file/dir/tool);pathRuleArgsPattern(dir 尾斜杠防 src 误匹配 src-secret);buildProjectRule 按 cwd resolve(防 ../ 遍历)生成 file_path 前缀规则;审批 UI(approveOptionsFor)Write/Edit 给 仅此文件/此目录/所有路径。ApplyPatch 维持 tool 粒度。spec 2026-06-07-permission-path-prefix-rules。
 - [x] 支持命令模式匹配：如"允许 `bun test`" ✅ buildProjectRule 对 Bash 收窄到 head 命令(`^git(\s|$)`),`git status` 批准 → 放行所有 `git …`。
 - [x] 会话级权限缓存：同一会话内相同操作不重复询问 ✅ InteractiveApprovalBackend 按**操作**(buildProjectRule)而非工具名 keying;修了"批准 git status 放行 rm"安全 bug。测试 permission.session-cache.test.ts。见 [[project_permission_session_cache]]。
 - [x] `/permissions` 命令查看和管理当前权限规则 ✅ `permissions-command.ts`。
