@@ -91,6 +91,14 @@ export class RoomManager {
     };
     mkdirSync(this.roomDir(id), { recursive: true });
     writeFileSync(this.metaPath(id), JSON.stringify(meta, null, 2), "utf-8");
+    // Audit anchor: the first line records how the room was opened (cwd +
+    // permission mode), so messages.jsonl is self-describing for "what could
+    // this room do" forensics.
+    this.append(id, {
+      from: "system",
+      type: "room_created",
+      text: `cwd=${meta.cwd} permission=${meta.permissionMode}`,
+    });
     return meta;
   }
 

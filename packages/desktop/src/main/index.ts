@@ -381,6 +381,33 @@ function roomToPublic(room: {
 }
 
 /**
+ * Decide a room's permission mode. A room in a TRUSTED workspace (per
+ * externalAgents.claudeCode.trustedWorkspaces, the same allowlist that governs
+ * /cc dangerous mode) gets bypassPermissions so the resident CC can actually
+ * do work without being blocked by its own default gate. Anywhere else stays
+ * "default" (CC auto-denies risky ops). An explicit mode from the phone wins,
+ * EXCEPT a non-trusted cwd cannot silently get bypassPermissions — it is
+ * downgraded to "default" (the high-risk gate). cwd normalized to ignore
+ * trailing slashes.
+ */
+async function resolveRoomPermissionMode(
+  cwd: string,
+  explicit: "default" | "acceptEdits" | "bypassPermissions" | undefined,
+): Promise<"default" | "acceptEdits" | "bypassPermissions"> {
+  const settings = ((await readSettings("user", cwd).catch(() => null)) ?? {}) as {
+    externalAgents?: Parameters<typeof resolveExternalAgentConfig>[0];
+  };
+  const cfg = resolveExternalAgentConfig(settings.externalAgents).claudeCode;
+  const norm = (p: string) => p.replace(/\/+$/, "");
+  const trusted = cfg.trustedWorkspaces.some((p) => norm(p) === norm(cwd));
+  if (explicit === "bypassPermissions") {
+    return trusted ? "bypassPermissions" : "default"; // non-trusted can't silently bypass
+  }
+  if (explicit) return explicit;
+  return trusted ? "bypassPermissions" : "default";
+}
+
+/**
  * Handle a room.* mobile event. Rooms are resident stream-json Claude Code
  * sessions; they do not go through the chat worker bridge. permissionMode for
  * a non-trusted cwd that requests bypassPermissions is downgraded to "default"
@@ -401,10 +428,11 @@ async function handleRoomEvent(event: MobileClientEvent): Promise<void> {
       return;
     }
     if (event.type === "room.create") {
+      const permissionMode = await resolveRoomPermissionMode(event.cwd, event.permissionMode);
       const room = roomManager.createRoom({
         name: event.name,
         cwd: event.cwd,
-        permissionMode: event.permissionMode,
+        permissionMode,
       });
       mobileRemote.broadcast({ type: "room.list.ok", rooms: roomManager.listRooms().map(roomToPublic) });
       mobileRemote.broadcast({ type: "room.opened", roomId: room.id, status: "missing" });

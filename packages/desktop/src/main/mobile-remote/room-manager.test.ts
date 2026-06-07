@@ -67,16 +67,18 @@ describe("RoomManager", () => {
     mgr.send(room.id, "hello");
 
     const msgs = mgr.getMessages(room.id, 0);
+    // createRoom writes a system:room_created audit anchor first.
     expect(msgs.map((m) => `${m.from}:${m.type}`)).toEqual([
+      "system:room_created",
       "user:text",
       "agent:text",
       "agent:turn_end",
     ]);
-    // seq strictly increasing
-    expect(msgs.map((m) => m.seq)).toEqual([1, 2, 3]);
-    expect(msgs[1]!.text).toBe("reply to: hello");
-    // every persisted message was pushed to the phone
-    expect(pushed.filter((p) => p.roomId === room.id)).toHaveLength(3);
+    // seq strictly increasing from 1
+    expect(msgs.map((m) => m.seq)).toEqual([1, 2, 3, 4]);
+    expect(msgs[2]!.text).toBe("reply to: hello");
+    // every persisted message was pushed to the phone (incl. the audit anchor)
+    expect(pushed.filter((p) => p.roomId === room.id)).toHaveLength(4);
   });
 
   test("getMessages(sinceSeq) returns only newer", () => {
@@ -124,7 +126,8 @@ describe("RoomManager", () => {
     mgr.open(room.id);
     emit({ type: "tool", tool: "Bash", summary: "ls" });
     emit({ type: "tool_result", summary: "out", isError: false });
-    const msgs = mgr.getMessages(room.id, 0);
+    // index 0 is the room_created audit anchor; agent events follow.
+    const msgs = mgr.getMessages(room.id, 0).filter((m) => m.type !== "room_created");
     expect(msgs[0]).toMatchObject({ from: "agent", type: "tool", tool: "Bash", summary: "ls" });
     expect(msgs[1]).toMatchObject({ from: "agent", type: "tool_result", summary: "out", isError: false });
   });
