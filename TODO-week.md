@@ -15,6 +15,44 @@
 `runtime/{spawn-common,output-clean,ring-file,background-shell}.ts` +
 `tool-system/builtin/background-shell-tools.ts`。共 6 commit 在 main。
 
+## 🚧 Beta 前清理清单
+
+> 目标:第一个 beta 不追大路线图,但不能留下"设置页看起来能配,实际不知道配到哪里/是否生效"这类半成品。
+
+- [ ] 设置页项目级 scope 入口收口:**已核实** `SettingsPage` 固定 `scope="user"`,但仍把 `activeRepoPath` 传给 Model/MCP/Environment/Agents 等 section;beta 前要明确哪些是全局、哪些先选项目再编辑,避免"看起来能配项目,实际跟随当前会话"。**决策(2026-06-08):不做设置页顶层 scope 切换;像 Hooks/Memory 一样,在需要项目维度的具体页面内先选"全局 / 某个项目",再进入编辑。**
+- [ ] 子代理设置页支持项目切换:**已核实** `AgentsSection` 只吃 `activeRepoPath`,没有像 Hooks/Memory 那样的 ProjectPicker;list/save/delete 会跟随当前主界面 repo,用户不能在设置页内切换要编辑的项目。
+- [ ] 子代理启用/禁用 scope 明确:**已核实** 子代理 tab 的开关只写 user `disabledAgents`;core 运行时支持 user denylist + project `capabilityOverrides.agents` overlay,但当前子代理 tab 没有项目级启停 UI。beta 前二选一:接项目 overlay,或明确这是全局开关。
+- [ ] 本地环境设置页支持项目切换:**已核实** `EnvironmentSection` 只跟随 `activeRepoPath`,没有项目列表;像 Hooks 一样先选项目后,再读取/保存该项目 `.code-shell/settings.json` 的 setup / cleanup / env / sandbox。
+- [ ] 本地环境设置实际生效链路接通:**已核实** `sandbox` 已进入 core Engine/Bash sandbox 链路;但 `localEnvironment.setupScripts` / `cleanupScripts` / `env` 目前只出现在 settings schema + renderer 设置页,未看到被新 session、Bash、worktree、automation 消费。beta 前要么接通,要么隐藏/标注未启用。
+- [ ] Beta smoke checklist 跑一遍并记录:desktop 新会话、模型配置、项目级设置、子代理、环境、文件编辑、审查、图片附件、后台 shell/agent、/undo。
+
+## 📱 Remote / 手机端续跑与会话接管(2026-06-08 brainstorm,两特性拆开,先一后二)
+
+> 背景核实:现在「房间(room)」和「codeshell session」是**两套互不相通的世界**。
+> - 房间 = 一个常驻外部 `claude --print` 子进程(`resident-agent.ts`),上下文只活在进程内存里,**没有 session 概念**;`messages.jsonl` 仅供手机重连回放,不参与上下文重建。进程一死(desktop 重启/崩溃/close)上下文蒸发,无 id 可找回。
+> - codeshell session = core `Engine`,上下文落 `~/.code-shell/sessions/<id>/{state.json,transcript.jsonl}`,续跑走 `engine.run(task,{sessionId})` 已内建;手机现在**碰不到**这套。
+> - 已确认 claude CLI 支持 `--session-id <uuid>` / `--resume <id>`(resume only works with `--print`,正好匹配),特性一可行。
+> - agent-bridge 里已有 `outboundTaps`,注释写明「用于 mobile remote 镜像」—— 特性二的接线点早已预留。
+
+### 特性一:给房间补续跑(A 方案,先做,小而闭环)
+
+让房间那个常驻 claude 进程跨重启续跑。**实现选择待定:首选 C**(标志位走快路径 + `--resume` 失败优雅回退新 session + 提示「上下文已丢失」,扛得住 claude session 文件被 GC)。
+
+- [ ] 房间创建时生成 uuid,存进 `room.json` 新增字段(如 `claudeSessionId` + `claudeSessionStarted`)。`room-manager.ts:85-111` 创建逻辑、`room-manager.ts:13-23` RoomMeta。
+- [ ] `ResidentAgentProcess.start()` 带上 `--session-id <uuid>`(首次)/ `--resume <uuid>`(续跑);`resident-agent.ts:106-127`(当前参数列表完全没传 session/resume)。
+- [ ] 别再把 `system`/init 行当噪音丢(`resident-agent.ts:73`)—— 若改用「抓 claude 自报 id」路线需要它;走 `--session-id` 自控 id 则可不动,二选一记清。
+- [ ] resume 失败兜底:解析错误 → 回退 `--session-id` 新建 + 通过 room 事件提示手机/desktop「上下文已丢失,已新开」。
+- [ ] `open(roomId)` 决策点接上标志位(`room-manager.ts:176-186`)。
+
+### 特性二:手机操作 codeshell 的所有 session(范围更大,特性一落地后单独 brainstorm + spec)
+
+手机不再只连「房间」,而是直接列出/打开/驱动 desktop 那套真实 codeshell session。**走 core,不碰外部 claude;续跑天然走 `engine.run({sessionId})`。**
+
+- [ ] 范围(Q2 已定 = 1+2):手机能**列出/续跑历史 session**(`listDiskSessions`)+ **新建 session**(选 cwd、选模型)。暂不要求接管「桌面正在跑着」的 session。
+- [ ] 权限(Q3 已定):审批最终手机/desktop 都要支持;**现阶段手机端 session 先强制 `acceptEdits` 档免审批**,手机审批 UI 留后。
+- [ ] 接线方向:手机 WebSocket 接到现有 session IPC 通道(`agent/run` / `subscribeSession` / `listDiskSessions` / `getSessionTranscript`),复用 `outboundTaps`(`agent-bridge.ts:124-145`)镜像事件,而非接到跑外部 claude 的房间。
+- [ ] 「房间」何去何从待定(Q4 未答):废弃 / 保留作匿名临时对话入口与 session 并存 —— 进特性二 brainstorm 时再定。
+
 **首选纯 core 活**（无需 UI 验收）：
 - 4.1 同步 Agent 超 120s 自动转后台(用户已决策做;与 7.1 长任务不阻塞同源)
 - 7.1 图片/视频生成(用户选定的下一步主攻)

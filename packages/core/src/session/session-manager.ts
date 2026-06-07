@@ -155,6 +155,32 @@ export class SessionManager {
     return existsSync(join(this.sessionsDir, sessionId));
   }
 
+  /**
+   * Cheap "what cwd is this session bound to?" probe — reads only state.json,
+   * NOT the transcript (unlike resume()). engine.run uses this to recover a
+   * resumed session's project directory when the caller omits options.cwd
+   * (e.g. a desktop host whose sidebar repo selection has drifted to null),
+   * so a project-bound session keeps loading its own agents/settings/memory
+   * instead of falling back to process.cwd(). Returns undefined for an
+   * unknown, malformed, or traversal-shaped id rather than throwing — the
+   * caller treats "no recoverable cwd" the same as "not given".
+   */
+  readCwd(sessionId: string): string | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return undefined;
+    }
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) return undefined;
+    try {
+      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      return typeof state.cwd === "string" && state.cwd.length > 0 ? state.cwd : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   resume(sessionId: string): SessionBundle {
     assertSafeSessionId(sessionId);
     const sessionDir = join(this.sessionsDir, sessionId);

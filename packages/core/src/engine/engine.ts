@@ -332,6 +332,26 @@ export function resolveChildLlm(
  *   2. user-level     ~/.code-shell/agents/*.md        (user wins on name)
  * Names in `disabledAgents` are filtered out so the LLM never sees them.
  */
+/**
+ * Resolve the working directory for a run. Precedence:
+ *   options.cwd  >  resumed session's state.cwd  >  config.cwd  >  process.cwd()
+ *
+ * The session-cwd tier is what stops a project-bound session from being
+ * resumed against the wrong directory: when a host omits options.cwd (e.g. its
+ * sidebar repo selection drifted to null), the session's own recorded cwd is
+ * recovered so the engine still loads THAT project's agents/settings/memory,
+ * not whatever process.cwd() happens to be. Pure so the precedence is testable
+ * without standing up an Engine.
+ */
+export function resolveRunCwd(args: {
+  optionCwd?: string;
+  sessionCwd?: string;
+  configCwd?: string;
+  processCwd: string;
+}): string {
+  return args.optionCwd ?? args.sessionCwd ?? args.configCwd ?? args.processCwd;
+}
+
 export function loadAgentDefinitionsForCwd(
   cwd: string,
   disabledAgents: string[] = [],
@@ -830,7 +850,21 @@ export class Engine {
       goal?: string | GoalConfig;
     },
   ): Promise<EngineResult> {
-    const cwd = options?.cwd ?? this.config.cwd ?? process.cwd();
+    // When the caller omits cwd but is resuming an existing session, recover
+    // that session's bound cwd from disk so a project-bound session keeps
+    // loading its own agents/settings/memory even if the host's UI repo
+    // selection has drifted to null. Only probe on omission — an explicit cwd
+    // always wins, and a fresh session has nothing to recover.
+    const sessionCwd =
+      options?.cwd === undefined && options?.sessionId
+        ? this.sessionManager.readCwd(options.sessionId)
+        : undefined;
+    const cwd = resolveRunCwd({
+      optionCwd: options?.cwd,
+      sessionCwd,
+      configCwd: this.config.cwd,
+      processCwd: process.cwd(),
+    });
 
     // Wrap the caller's onStream so we can intercept `task_update`
     // events emitted by TodoWrite and keep an in-engine snapshot.
