@@ -283,6 +283,13 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
  * pushed to the phone and the job is NOT started until the user confirms.
  * (Approval-resume of dangerous jobs is a follow-up; v1 surfaces the gate.)
  */
+// Tracks which (sessionId|cwd) have already started a Claude Code job, so the
+// 2nd+ /cc in the same mobile session resumes the prior conversation with
+// --continue instead of spawning a context-free fresh `claude -p`. Keyed by
+// sessionId+cwd because --continue resumes the most-recent conversation in
+// that cwd.
+const claudeStartedKeys = new Set<string>();
+
 async function startExternalAgentJob(
   parsed: ReturnType<typeof parseExternalAgentSlash> & object,
   cwd: string,
@@ -308,6 +315,11 @@ async function startExternalAgentJob(
       });
       return;
     }
+    // 2nd+ turn in this mobile session+cwd → resume the prior claude conversation
+    // so /cc keeps context across messages (the 1st turn starts fresh).
+    const key = `${sessionId ?? "mobile"}|${cwd}`;
+    const resumeArgs = claudeStartedKeys.has(key) ? ["--continue"] : [];
+    claudeStartedKeys.add(key);
     externalAgentJobs.start({
       kind: "claude-code",
       sessionId: sessionId ?? "mobile",
@@ -315,7 +327,7 @@ async function startExternalAgentJob(
       prompt: parsed.prompt,
       command: cfg.claudeCode.command,
       mode: decision.mode,
-      args: decision.args,
+      args: [...resumeArgs, ...decision.args],
     });
     return;
   }
