@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus, Maximize2, Minimize2, ServerCog } from "lucide-react";
+import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus, Maximize2, Minimize2, ServerCog, MessagesSquare } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +13,7 @@ import { BrowserPanel } from "./BrowserPanel";
 import { ReviewPanel } from "./ReviewPanel";
 import { TerminalPanel } from "./TerminalPanel";
 import { BackgroundShellPanel } from "./BackgroundShellPanel";
+import { RoomsPanel } from "./RoomsPanel";
 
 export interface OpenTab {
   id: string;
@@ -61,6 +62,7 @@ const KINDS: { kind: PanelTab; label: string; Icon: typeof FolderTree; hint?: st
   { kind: "review", label: "审查", Icon: GitCompare, hint: "⌃⇧G" },
   { kind: "terminal", label: "终端", Icon: SquareTerminal, hint: "⌃`" },
   { kind: "shells", label: "后台 Shell", Icon: ServerCog },
+  { kind: "rooms", label: "房间", Icon: MessagesSquare },
 ];
 
 const META: Record<PanelTab, { label: string; Icon: typeof FolderTree }> = {
@@ -69,6 +71,7 @@ const META: Record<PanelTab, { label: string; Icon: typeof FolderTree }> = {
   review: { label: "审查", Icon: GitCompare },
   terminal: { label: "终端", Icon: SquareTerminal },
   shells: { label: "后台 Shell", Icon: ServerCog },
+  rooms: { label: "房间", Icon: MessagesSquare },
 };
 
 /**
@@ -314,6 +317,8 @@ function PanelBody({
       return <TerminalPanel cwd={cwd} sessionId={`term:${repoId ?? "no-repo"}:${tab.id}`} />;
     case "shells":
       return <BackgroundShellPanel sessionId={engineSessionId ?? null} />;
+    case "rooms":
+      return <RoomsPanel />;
   }
 }
 
