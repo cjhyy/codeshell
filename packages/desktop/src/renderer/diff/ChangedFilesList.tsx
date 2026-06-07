@@ -25,11 +25,16 @@ export function ChangedFilesList({
   refreshKey,
 }: Props) {
   const [status, setStatus] = useState<GitStatus | null>(null);
+  // Per-file +/- line counts (TODO 2.3a). Best-effort; absent → no badge.
+  const [numstat, setNumstat] = useState<Record<string, { added: number; removed: number }>>({});
 
   useEffect(() => {
     let cancelled = false;
     void window.codeshell.getGitStatus(cwd).then((s) => {
       if (!cancelled) setStatus(s);
+    });
+    void window.codeshell.getGitNumstat?.(cwd).then((n) => {
+      if (!cancelled) setNumstat(n ?? {});
     });
     return () => {
       cancelled = true;
@@ -67,6 +72,12 @@ export function ChangedFilesList({
           >
             <span className={`changed-file-status status-${codeClass(e.code)}`}>{e.code.trim()}</span>
             <span className="changed-file-path">{e.path}</span>
+            {numstat[e.path] && (numstat[e.path].added > 0 || numstat[e.path].removed > 0) && (
+              <span className="changed-file-stat">
+                <span className="changed-file-added">+{numstat[e.path].added}</span>{" "}
+                <span className="changed-file-removed">-{numstat[e.path].removed}</span>
+              </span>
+            )}
           </button>
           {/* e.path is relative to the repo — pass cwd so open/reveal resolve it. */}
           <OpenWithMenu path={e.path} cwd={cwd} align="end">

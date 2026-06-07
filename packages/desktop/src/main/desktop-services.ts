@@ -85,6 +85,40 @@ export async function getGitStatus(cwd: string): Promise<GitStatus> {
   return { branch, entries, clean: entries.length === 0 };
 }
 
+/**
+ * Per-file added/removed line counts for the changed-files tree (TODO 2.3a).
+ * `git diff --numstat HEAD` covers both staged and unstaged changes vs HEAD in
+ * one shot; binary files report "-\t-" (we map to 0/0). Untracked files don't
+ * appear in numstat — callers fall back to no badge for those. Returns a map
+ * keyed by repo-relative path. Best-effort: an error yields an empty map.
+ */
+export async function getGitNumstat(
+  cwd: string,
+): Promise<Record<string, { added: number; removed: number }>> {
+  const out: Record<string, { added: number; removed: number }> = {};
+  let raw = "";
+  try {
+    raw = await gitRun(cwd, ["diff", "--numstat", "HEAD"]);
+  } catch {
+    // No HEAD yet (fresh repo) or not a repo — try the index-only form.
+    try {
+      raw = await gitRun(cwd, ["diff", "--numstat", "--cached"]);
+    } catch {
+      return out;
+    }
+  }
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) continue;
+    // Format: "<added>\t<removed>\t<path>"; binary → "-\t-\t<path>".
+    const m = /^(\S+)\t(\S+)\t(.+)$/.exec(line);
+    if (!m) continue;
+    const added = m[1] === "-" ? 0 : parseInt(m[1], 10) || 0;
+    const removed = m[2] === "-" ? 0 : parseInt(m[2], 10) || 0;
+    out[m[3].trim()] = { added, removed };
+  }
+  return out;
+}
+
 export async function getGitBranches(cwd: string): Promise<GitBranches> {
   // Distinguish "not a repo" from "fresh repo with no commits". The
   // abbrev-ref query fails on the latter too, so check is-inside-work-tree

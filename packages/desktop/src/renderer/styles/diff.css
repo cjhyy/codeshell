@@ -123,3 +123,12 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* +N/-N line-count badge in the review file tree (TODO 2.3a). */
+.changed-file-stat {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  font-variant-numeric: tabular-nums;
+}
+.changed-file-added { color: var(--status-ok); }
+.changed-file-removed { color: var(--status-err); }
