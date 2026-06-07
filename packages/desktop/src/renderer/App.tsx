@@ -1565,6 +1565,9 @@ function App() {
   // Files the review tab should focus, set when a chat "files changed" card
   // requests review. Cleared is fine — review falls back to the whole tree.
   const [reviewFiles, setReviewFiles] = useState<string[] | undefined>(undefined);
+  // The originating turn's diff snapshot (TODO 2.3a) — lets the review panel
+  // show what that turn changed even after the edits are committed.
+  const [reviewDiff, setReviewDiff] = useState<string | undefined>(undefined);
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
@@ -1723,8 +1726,10 @@ function App() {
   // review panel in the dock, focused on those files.
   useEffect(() => {
     const onReview = (e: Event): void => {
-      const files = (e as CustomEvent<{ files?: string[] }>).detail?.files;
+      const detail = (e as CustomEvent<{ files?: string[]; diff?: string }>).detail;
+      const files = detail?.files;
       setReviewFiles(Array.isArray(files) && files.length > 0 ? files : undefined);
+      setReviewDiff(detail?.diff || undefined);
       setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "review", open: true }));
     };
     window.addEventListener("codeshell:review-files", onReview);
@@ -2198,6 +2203,7 @@ function App() {
           requestNonce={panelRequest.nonce}
           requestKind={panelRequest.kind}
           reviewFiles={reviewFiles}
+          reviewDiff={reviewDiff}
           width={panelWidth}
           onResizeStart={beginPanelResize}
           onAttachImage={(p) => void attachImageByPath(p)}

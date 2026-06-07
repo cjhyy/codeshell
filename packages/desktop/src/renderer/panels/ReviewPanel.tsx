@@ -14,6 +14,13 @@ interface Props {
    * old bug where 审查 dropped into the whole working tree (TODO 2.3a).
    */
   files?: string[];
+  /**
+   * The turn's diff SNAPSHOT (captured when the turn ran). In "本轮改动" scope
+   * we show this instead of querying git, so a past turn's changes are still
+   * viewable AFTER they're committed — git status would no longer surface them
+   * (TODO 2.3a — "看不了之前 turn 的对比"修复).
+   */
+  turnDiff?: string;
 }
 
 /**
@@ -23,7 +30,7 @@ interface Props {
  * (committed / branch / 上轮对话 ranges + a commit/push/PR action bar are a
  * later slice — see TODO 2.3a.)
  */
-export function ReviewPanel({ cwd, files }: Props) {
+export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   const hasTurnFiles = !!files && files.length > 0;
   const [scope, setScope] = useState<ReviewScope>(hasTurnFiles ? "turn" : "all");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -94,7 +101,14 @@ export function ReviewPanel({ cwd, files }: Props) {
         </div>
       </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-auto">
-        <UnifiedDiffViewer cwd={cwd} file={selectedFile ?? undefined} />
+        {scope === "turn" && turnDiff ? (
+          // Authoritative turn-time snapshot — viewable even after the edits
+          // were committed (git would no longer show them). Whole-turn diff;
+          // file selection applies in the git-backed scopes.
+          <UnifiedDiffViewer cwd={cwd} diffText={turnDiff} />
+        ) : (
+          <UnifiedDiffViewer cwd={cwd} file={selectedFile ?? undefined} />
+        )}
       </div>
     </div>
   );

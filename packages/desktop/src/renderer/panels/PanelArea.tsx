@@ -43,6 +43,8 @@ interface Props {
   requestKind: PanelTab | null;
   /** Files for a review tab to focus (from a chat "files changed" card). */
   reviewFiles?: string[];
+  /** The originating turn's diff snapshot — survives later commits (TODO 2.3a). */
+  reviewDiff?: string;
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
   engineSessionId?: string | null;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
@@ -85,6 +87,7 @@ export function PanelArea({
   requestNonce,
   requestKind,
   reviewFiles,
+  reviewDiff,
   engineSessionId,
   width,
   onResizeStart,
@@ -251,7 +254,7 @@ export function PanelArea({
         ) : (
           tabs.map((t) => (
             <Slot key={t.id} active={t.id === activeId}>
-              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} engineSessionId={engineSessionId} onAttachImage={onAttachImage} />
+              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} engineSessionId={engineSessionId} onAttachImage={onAttachImage} />
             </Slot>
           ))
         )}
@@ -287,6 +290,7 @@ function PanelBody({
   cwd,
   repoId,
   reviewFiles,
+  reviewDiff,
   engineSessionId,
   onAttachImage,
 }: {
@@ -294,6 +298,7 @@ function PanelBody({
   cwd: string | null;
   repoId: string | null;
   reviewFiles?: string[];
+  reviewDiff?: string;
   engineSessionId?: string | null;
   onAttachImage?: (absPath: string) => void;
 }) {
@@ -303,7 +308,7 @@ function PanelBody({
     case "browser":
       return <BrowserPanel cwd={cwd} />;
     case "review":
-      return <ReviewPanel cwd={cwd} files={reviewFiles} />;
+      return <ReviewPanel cwd={cwd} files={reviewFiles} turnDiff={reviewDiff} />;
     case "terminal":
       // Per-tab session id so multiple terminals are independent shells.
       return <TerminalPanel cwd={cwd} sessionId={`term:${repoId ?? "no-repo"}:${tab.id}`} />;

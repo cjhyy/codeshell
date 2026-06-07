@@ -104,7 +104,11 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
                     if (cwd) {
                       window.dispatchEvent(
                         new CustomEvent("codeshell:review-files", {
-                          detail: { files: files.map((f) => f.path) },
+                          // Carry the turn's own diff SNAPSHOT (sessionDiffText)
+                          // so the panel can show what THIS turn changed even
+                          // after the edits are later committed — git status
+                          // alone would lose them (TODO 2.3a).
+                          detail: { files: files.map((f) => f.path), diff: sessionDiffText },
                         }),
                       );
                     } else {
