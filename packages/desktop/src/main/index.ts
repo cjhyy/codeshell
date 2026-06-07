@@ -47,7 +47,9 @@ import { dlog } from "./desktop-logger.js";
 import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
 import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
-import type { MobileClientEvent } from "./mobile-remote/types.js";
+import type { MobileClientEvent, RoomPublic } from "./mobile-remote/types.js";
+import { RoomManager } from "./mobile-remote/room-manager.js";
+import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
 import { readDirectory, readFile as fsReadFile } from "./fs-service.js";
 import {
   getGitStatus,
@@ -177,6 +179,24 @@ const externalAgentJobs = new ExternalAgentJobManager(
   },
 );
 
+// Rooms: resident stream-json Claude Code sessions the phone can open and chat
+// with continuously (context persists for the room's lifetime). Messages are
+// persisted to disk (authoritative) and mirrored to the phone. See
+// docs/.../2026-06-07-mobile-rooms-external-agent-design.md.
+const roomManager = new RoomManager({
+  rootDir: resolve(app.getPath("userData"), "mobile-remote", "rooms"),
+  createAgent: (room, onEvent) =>
+    new ResidentAgentProcess({
+      command: "claude",
+      cwd: room.cwd,
+      permissionMode: room.permissionMode,
+      onEvent,
+    }),
+  onMessage: (roomId, msg) => {
+    mobileRemote.broadcast({ type: "room.message", roomId, msg });
+  },
+});
+
 /**
  * A stable session id for the mobile client when it isn't following a specific
  * desktop session. The worker's multi-session path REQUIRES a non-empty
@@ -202,6 +222,11 @@ function ensureMobileSessionId(): string {
  * goal logic, and snapshots all apply unchanged.
  */
 async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> {
+  // ── Rooms (independent of the chat worker bridge) ─────────────────────
+  if (event.type.startsWith("room.")) {
+    await handleRoomEvent(event);
+    return;
+  }
   if (!bridge) return;
   const ctx = bridge.getLastRunContext();
   // session selection priority: explicit per-event → phone-selected → desktop's
@@ -342,6 +367,73 @@ async function startExternalAgentJob(
     mode: "safe",
     args: cfg.codex.args,
   });
+}
+
+function roomToPublic(room: {
+  id: string;
+  name: string;
+  cwd: string;
+  permissionMode: "default" | "acceptEdits" | "bypassPermissions";
+  createdAt: number;
+  lastActiveAt: number;
+}): RoomPublic {
+  return { ...room, open: roomManager.isOpen(room.id) };
+}
+
+/**
+ * Handle a room.* mobile event. Rooms are resident stream-json Claude Code
+ * sessions; they do not go through the chat worker bridge. permissionMode for
+ * a non-trusted cwd that requests bypassPermissions is downgraded to "default"
+ * here (the high-risk gate is surfaced by the UI / future approval step).
+ */
+async function handleRoomEvent(event: MobileClientEvent): Promise<void> {
+  try {
+    if (event.type === "room.list") {
+      mobileRemote.broadcast({ type: "room.list.ok", rooms: roomManager.listRooms().map(roomToPublic) });
+      return;
+    }
+    if (event.type === "room.projects") {
+      const recents = await loadRecents().catch(() => []);
+      mobileRemote.broadcast({
+        type: "room.projects.ok",
+        projects: recents.map((r) => ({ path: r.path, name: r.name })),
+      });
+      return;
+    }
+    if (event.type === "room.create") {
+      const room = roomManager.createRoom({
+        name: event.name,
+        cwd: event.cwd,
+        permissionMode: event.permissionMode,
+      });
+      mobileRemote.broadcast({ type: "room.list.ok", rooms: roomManager.listRooms().map(roomToPublic) });
+      mobileRemote.broadcast({ type: "room.opened", roomId: room.id, status: "missing" });
+      return;
+    }
+    if (event.type === "room.open") {
+      const res = roomManager.open(event.roomId);
+      mobileRemote.broadcast({ type: "room.opened", roomId: event.roomId, status: res.status });
+      return;
+    }
+    if (event.type === "room.close") {
+      roomManager.close(event.roomId);
+      mobileRemote.broadcast({ type: "room.closed", roomId: event.roomId });
+      return;
+    }
+    if (event.type === "room.history") {
+      const messages = roomManager.getMessages(event.roomId, event.sinceSeq ?? 0);
+      const latestSeq = messages.length ? messages[messages.length - 1]!.seq : (event.sinceSeq ?? 0);
+      mobileRemote.broadcast({ type: "room.history.ok", roomId: event.roomId, messages, latestSeq });
+      return;
+    }
+    if (event.type === "room.send") {
+      const ok = roomManager.send(event.roomId, event.text);
+      if (!ok) mobileRemote.broadcast({ type: "room.error", roomId: event.roomId, message: "房间未就绪或已关闭" });
+      return;
+    }
+  } catch (err) {
+    mobileRemote.broadcast({ type: "room.error", message: err instanceof Error ? err.message : String(err) });
+  }
 }
 
 async function createWindow(): Promise<BrowserWindow> {
@@ -1348,6 +1440,7 @@ app.on("before-quit", () => {
   automationHandle?.stop();
   automationHandle = null;
   ptyKillAll();
+  roomManager.closeAll();
   void mobileRemote.stop();
 });
 

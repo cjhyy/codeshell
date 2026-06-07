@@ -28,7 +28,20 @@ export type MobileClientEvent =
   | { type: "session.create" }
   | { type: "run.stop"; sessionId?: string }
   | { type: "approval.respond"; approvalId: string; decision: "approve" | "reject"; sessionId?: string }
-  | { type: "job.stop"; jobId: string };
+  | { type: "job.stop"; jobId: string }
+  // ── Rooms (resident external-agent sessions) ──────────────────────────
+  | { type: "room.list" }
+  | { type: "room.projects" }
+  | {
+      type: "room.create";
+      name?: string;
+      cwd: string;
+      permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
+    }
+  | { type: "room.open"; roomId: string }
+  | { type: "room.close"; roomId: string }
+  | { type: "room.send"; roomId: string; text: string }
+  | { type: "room.history"; roomId: string; sinceSeq?: number };
 
 export type MobileServerEvent =
   | { type: "auth.ok"; device: TrustedDevicePublic }
@@ -43,4 +56,22 @@ export type MobileServerEvent =
       risk: "low" | "medium" | "high";
       body: string;
     }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  // ── Rooms ─────────────────────────────────────────────────────────────
+  | { type: "room.list.ok"; rooms: RoomPublic[] }
+  | { type: "room.projects.ok"; projects: { path: string; name: string }[] }
+  | { type: "room.opened"; roomId: string; status: "running" | "missing" }
+  | { type: "room.message"; roomId: string; msg: unknown }
+  | { type: "room.history.ok"; roomId: string; messages: unknown[]; latestSeq: number }
+  | { type: "room.closed"; roomId: string }
+  | { type: "room.error"; roomId?: string; message: string };
+
+export interface RoomPublic {
+  id: string;
+  name: string;
+  cwd: string;
+  permissionMode: "default" | "acceptEdits" | "bypassPermissions";
+  createdAt: number;
+  lastActiveAt: number;
+  open: boolean;
+}
