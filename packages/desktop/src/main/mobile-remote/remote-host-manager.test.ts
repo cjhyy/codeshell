@@ -23,7 +23,10 @@ describe("RemoteHostManager", () => {
     expect(started.url).toStartWith("http://127.0.0.1:");
     const res = await fetch(`${started.url}/mobile`);
     expect(res.status).toBe(200);
-    expect(await res.text()).toContain("CodeShell Mobile Remote");
+    const html = await res.text();
+    // Structural markers that survive restyles (not the cosmetic <title>).
+    expect(html).toContain("<title>CodeShell Remote</title>");
+    expect(html).toContain('id="feed"');
     await host.stop();
   });
 
