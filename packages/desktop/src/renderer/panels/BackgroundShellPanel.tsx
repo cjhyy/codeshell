@@ -23,9 +23,26 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
     }
     try {
       const res = await window.codeshell.listBackgroundShells(sessionId);
-      setShells(res?.shells ?? []);
+      const next = res?.shells ?? [];
+      setShells(next);
+      // The selected shell may have vanished (worker recycled / shell finished
+      // and was reaped) — drop its now-stale selection + output so the body
+      // doesn't keep showing a frozen "exit 0" header next to an empty list.
+      // Functional updater reads the LATEST selection without adding it to this
+      // callback's deps (which would re-arm the poll interval every selection).
+      setSelected((cur) => {
+        const vanished = !!cur && !next.some((s) => s.shellId === cur);
+        if (vanished) setOutput(null);
+        return vanished ? null : cur;
+      });
       setError(null);
     } catch (e) {
+      // Don't leave stale "running" rows frozen on a failed refresh — the most
+      // common failure is the worker having recycled (its in-RAM shell registry
+      // is gone), in which case there genuinely are no shells to show. (#7)
+      setShells([]);
+      setSelected(null);
+      setOutput(null);
       setError(String(e instanceof Error ? e.message : e));
     }
   }, [sessionId]);

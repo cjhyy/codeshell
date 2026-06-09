@@ -496,7 +496,15 @@ export class BackgroundShellManager {
       didWrap: false,
       diskAvailable: false,
       child: null,
-      ring: new RingFile(join(bgShellsRoot(), rec.sessionId, `${rec.shellId}.orphan`), DISK_CAP_BYTES),
+      // Read the orphan's ALREADY-captured output from its on-disk .log (the
+      // live process in the other worker owns/writes it). Opening it read-only
+      // surfaces the real tail instead of a fresh EMPTY .orphan ring that made
+      // a recovered shell always show "(无输出)". (#7)
+      ring: new RingFile(
+        join(bgShellsRoot(), rec.sessionId, `${rec.shellId}.log`),
+        DISK_CAP_BYTES,
+        true,
+      ),
       pidfilePath,
       stdoutDec: new StringDecoder("utf-8"),
       stderrDec: new StringDecoder("utf-8"),

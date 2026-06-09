@@ -202,7 +202,7 @@ export class AgentBridge {
       // Inspect the message: an agent/run is the only one that can trigger
       // a fresh spawn. Other messages (agent/approve, agent/cancel) only
       // make sense if the worker is already alive.
-      let parsed: { method?: string; params?: { cwd?: string; sessionId?: string } } = {};
+      let parsed: { id?: number | string; method?: string; params?: { cwd?: string; sessionId?: string } } = {};
       try { parsed = JSON.parse(line); } catch { /* fall through */ }
 
       if (parsed.method === "agent/run") {
@@ -217,6 +217,18 @@ export class AgentBridge {
         // No live worker. For approve / cancel this is fine — drop.
         // For run, spawnChild above should have created one; if it
         // didn't, log and drop.
+        // BUT a read-only query like agent/backgroundShells must still get a
+        // REPLY, or the renderer's rpc() hangs the full 30s timeout and the
+        // background-shell panel freezes on stale "running" rows (the worker
+        // recycled between sessions, so the in-RAM registry is simply gone).
+        // Answer "no shells" so the panel resolves and clears. (#7)
+        if (parsed.method === "agent/backgroundShells" && parsed.id !== undefined) {
+          this.safeSend("agent:msg", JSON.stringify({
+            jsonrpc: "2.0",
+            id: parsed.id,
+            result: { shells: [] },
+          }));
+        }
         dlog("bridge", "renderer→worker.dropped", {
           reason: this.child ? "stdin destroyed" : "no child",
           method: parsed.method,

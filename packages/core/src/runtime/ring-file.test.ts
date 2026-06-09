@@ -83,4 +83,45 @@ describe("RingFile", () => {
     expect(rf.sliceFromAbsolute(0).toString()).toBe("FGHIJ");
     rf.close();
   });
+
+  // Recovered orphan shell: a second RingFile opened read-only on an existing
+  // .log must surface its captured output WITHOUT truncating the file (#7 — the
+  // old reap path opened a fresh empty ring, so an orphan always showed "(无输出)").
+  test("readonly mode loads the existing file tail and does not truncate it", () => {
+    const path = join(tmp(), "out.log");
+    const writer = new RingFile(path, 1024);
+    writer.write(Buffer.from("hello from background shell\n"));
+    writer.close();
+
+    const ro = new RingFile(path, 1024, true);
+    expect(ro.readAll()).toBe("hello from background shell\n");
+
+    // The original file is intact (not truncated by the read-only open).
+    const reopen = new RingFile(path, 1024, true);
+    expect(reopen.readAll()).toBe("hello from background shell\n");
+  });
+
+  test("readonly mode on a missing file yields empty output (no crash)", () => {
+    const ro = new RingFile(join(tmp(), "does-not-exist.log"), 1024, true);
+    expect(ro.readAll()).toBe("");
+  });
+
+  // The read-only open must NOT slurp the whole file when it exceeds the cap —
+  // it reads only the trailing capBytes (a multi-MB .log would otherwise block
+  // the worker's event loop on startup). The retained tail, didWrap, and the
+  // absolute stream length must still match a full read.
+  test("readonly mode on an over-cap file keeps only the tail but reports full length", () => {
+    const path = join(tmp(), "big.log");
+    const writer = new RingFile(path, 1_000_000); // big cap so the file isn't wrapped on write
+    writer.write(Buffer.from("0123456789ABCDE")); // 15 bytes on disk
+    writer.close();
+
+    const ro = new RingFile(path, 10, true); // tiny read cap → only the last 10 bytes
+    expect(ro.readAll()).toBe("56789ABCDE"); // trailing 10 of the 15
+    expect(ro.didWrap()).toBe(true); // file bigger than the read cap
+    expect(ro.totalWritten()).toBe(15); // logical stream length = full file size
+    // Absolute cursor math uses the full length: a cursor at byte 5 maps into
+    // the retained window correctly (window starts at abs position 5).
+    expect(ro.sliceFromAbsolute(5).toString()).toBe("56789ABCDE");
+  });
 });
