@@ -111,6 +111,41 @@ describe("foldTranscript", () => {
     expect(state.messages.filter((m) => m.kind === "files_changed")).toHaveLength(1);
   });
 
+  it("seals an orphaned sub-agent (agent_start, no agent_end) so the card isn't stuck 'working'", () => {
+    // Regression (session s-mq0xsmes-e17c5a11, agent 676UNZFU): a backgrounded
+    // sub-agent whose worker died mid-run leaves an agent_start with no
+    // agent_end in the transcript. Replay must not render it as a perpetual
+    // spinner — seal it as done-with-interrupted.
+    const items: FoldItem[] = [
+      { kind: "user", text: "do a big task" },
+      { kind: "stream", event: { type: "agent_start", agentId: "676UNZFU", description: "long task" } },
+      { kind: "stream", event: { type: "text_delta", text: "partial work", agentId: "676UNZFU" } },
+      // ...worker died here. No agent_end ever persisted.
+    ];
+    const state = foldTranscript(items);
+    const agent = state.messages.find((m) => m.kind === "agent") as
+      | { done: boolean; error?: string; text?: string }
+      | undefined;
+    expect(agent).toBeDefined();
+    expect(agent!.done).toBe(true); // not stuck working
+    expect(agent!.error).toBeTruthy(); // shows an interrupted note
+    expect(state.activeAgents).toEqual({}); // nothing left "running"
+  });
+
+  it("does NOT touch a sub-agent that completed normally (agent_start + agent_end)", () => {
+    const items: FoldItem[] = [
+      { kind: "stream", event: { type: "agent_start", agentId: "ok1", description: "task" } },
+      { kind: "stream", event: { type: "agent_end", agentId: "ok1", description: "task", text: "result" } },
+    ];
+    const state = foldTranscript(items);
+    const agent = state.messages.find((m) => m.kind === "agent") as
+      | { done: boolean; error?: string; text?: string }
+      | undefined;
+    expect(agent!.done).toBe(true);
+    expect(agent!.error).toBeUndefined(); // clean completion, no interrupted note
+    expect(agent!.text).toBe("result");
+  });
+
   it("leaves timestamps absent for legacy items that carry none", () => {
     // Transcripts written before timestamps were threaded through have no
     // per-item timestamp. We must NOT fabricate the replay-time onto them
