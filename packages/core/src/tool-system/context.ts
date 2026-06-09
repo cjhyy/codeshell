@@ -227,6 +227,16 @@ export interface ToolContext {
    * sub-agents and no-cwd contexts (same as readBuiltinOverride).
    */
   disabledBuiltins?: Set<string>;
+  /**
+   * Project-scoped extra environment variables (the user's
+   * `localEnvironment.env` KEY=VALUE pairs for this cwd). Layered on top of
+   * the shell env that the Bash tool and background shells build, so a project
+   * can inject e.g. `DATABASE_URL` / `NODE_ENV` into every command it runs.
+   * Unlike the sandbox allowlist, these bypass the deny regex — the user put
+   * them in project settings deliberately. Undefined for sub-agents and
+   * no-cwd contexts (populated from settings by Engine.buildToolContext()).
+   */
+  shellEnv?: Record<string, string>;
 }
 
 /**

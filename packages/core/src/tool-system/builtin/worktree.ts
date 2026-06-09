@@ -3,11 +3,14 @@
  */
 
 import type { ToolDefinition } from "../../types.js";
+import type { ToolContext } from "../context.js";
 import {
   createWorktree,
   removeWorktree,
   listWorktrees,
   validateWorktreeSlug,
+  selectPlatformScript,
+  runWorktreeSetup,
   type WorktreeSession,
 } from "../../git/worktree.js";
 
@@ -39,7 +42,10 @@ export const enterWorktreeToolDef: ToolDefinition = {
   },
 };
 
-export async function enterWorktreeTool(args: Record<string, unknown>): Promise<string> {
+export async function enterWorktreeTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
   const slug = args.slug as string;
   if (!slug) return "Error: slug is required";
 
@@ -56,20 +62,48 @@ export async function enterWorktreeTool(args: Record<string, unknown>): Promise<
   try {
     // Use a placeholder session ID (the agent should set this properly)
     const sessionId = args.__sessionId as string ?? `wt-${Date.now()}`;
-    const cwd = args.__cwd as string ?? process.cwd();
+    const cwd = (args.__cwd as string) ?? ctx?.cwd ?? process.cwd();
 
     _activeWorktree = createWorktree(cwd, slug, sessionId);
+
+    // Run the project's localEnvironment.setupScripts once in the new
+    // worktree root (Beta decision 2026-06-08: setup belongs to the worktree
+    // lifecycle, not the conversation). Failure warns-but-continues — a broken
+    // setup script must not strand the agent outside a worktree it just made.
+    let setupNote = "";
+    const setupScripts = ctx?.engine?.readWorktreeSetupScripts(cwd);
+    const script = selectPlatformScript(setupScripts);
+    if (script) {
+      const setup = await runWorktreeSetup(_activeWorktree.worktreePath, script, {
+        sandbox: ctx?.sandbox,
+        shellEnv: ctx?.shellEnv,
+        signal: ctx?.signal,
+      });
+      if (setup.ok) {
+        setupNote = `\n\nRan setup script (exit 0).${setup.output ? `\n${truncate(setup.output)}` : ""}`;
+      } else {
+        setupNote =
+          `\n\n⚠️ Setup script failed (exit ${setup.exitCode ?? "?"}) — continuing anyway. ` +
+          `You may need to run setup manually.${setup.output ? `\n${truncate(setup.output)}` : ""}`;
+      }
+    }
 
     return (
       `Worktree created:\n` +
       `  Path:   ${_activeWorktree.worktreePath}\n` +
       `  Branch: ${_activeWorktree.worktreeBranch}\n` +
       `  From:   ${_activeWorktree.originalBranch ?? "HEAD"}\n\n` +
-      `You are now working in an isolated copy. Changes here won't affect the main repo.`
+      `You are now working in an isolated copy. Changes here won't affect the main repo.` +
+      setupNote
     );
   } catch (err) {
     return `Error creating worktree: ${(err as Error).message}`;
   }
+}
+
+/** Keep setup output from bloating the tool result — head+tail-ish trim. */
+function truncate(s: string, max = 2000): string {
+  return s.length <= max ? s : `${s.slice(0, max)}\n…(${s.length - max} more chars)`;
 }
 
 export const exitWorktreeToolDef: ToolDefinition = {

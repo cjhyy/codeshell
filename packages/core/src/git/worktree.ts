@@ -5,6 +5,9 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, symlinkSync, readdirSync, lstatSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
+import { safeSpawnShell } from "../runtime/safe-spawn.js";
+import { buildSandboxEnv, mergeShellEnv } from "../runtime/spawn-common.js";
+import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 
 export interface WorktreeSession {
   originalCwd: string;
@@ -14,6 +17,34 @@ export interface WorktreeSession {
   originalBranch?: string;
   sessionId: string;
   createdAt: number;
+}
+
+/** Per-platform setup/cleanup scripts (a project's localEnvironment). */
+export interface PlatformScripts {
+  default?: string;
+  macos?: string;
+  linux?: string;
+  windows?: string;
+}
+
+/**
+ * Pick the setup/cleanup script for the running platform, falling back to
+ * `default`. Empty/whitespace-only scripts are treated as absent so a project
+ * can leave a platform key blank without spawning an empty shell. `platform`
+ * defaults to `process.platform` so callers usually omit it; tests pass a
+ * fixed value.
+ */
+export function selectPlatformScript(
+  scripts: PlatformScripts | undefined,
+  platform: NodeJS.Platform = process.platform,
+): string | undefined {
+  if (!scripts) return undefined;
+  const key = platform === "darwin" ? "macos" : platform === "win32" ? "windows" : "linux";
+  // A blank platform key shouldn't shadow a real `default` — fall through.
+  const platformScript = scripts[key]?.trim() ? scripts[key] : undefined;
+  const candidate = platformScript ?? scripts.default;
+  const trimmed = candidate?.trim();
+  return trimmed ? candidate : undefined;
 }
 
 /**
@@ -78,6 +109,74 @@ export function createWorktree(
     sessionId,
     createdAt: Date.now(),
   };
+}
+
+export interface WorktreeSetupResult {
+  /** True if no setup script was configured for this platform (nothing ran). */
+  skipped: boolean;
+  /** True if a script ran and exited 0. */
+  ok: boolean;
+  /** Combined stdout/stderr, for surfacing to the user on failure. */
+  output: string;
+  /** Exit code when a script ran; undefined when skipped. */
+  exitCode?: number | null;
+}
+
+/**
+ * Run a project's `localEnvironment.setupScripts` once, in the freshly-created
+ * worktree's root, right after `git worktree add`. This mirrors Codex's
+ * local-environment semantics: setup belongs to the *worktree* lifecycle, not
+ * the conversation — it runs when the isolated copy is born so e.g. `bun
+ * install` or `cp .env.example .env` happens before the agent works there.
+ *
+ * Failure is non-fatal by design (Beta decision 2026-06-08, "警告但继续"): a
+ * broken setup script shouldn't strand the agent outside a worktree it already
+ * created. The caller surfaces `output` as a warning and proceeds. cleanup
+ * scripts are intentionally NOT auto-run on exit (same decision).
+ *
+ * Reuses the same sandbox + env primitives as the Bash tool so the setup
+ * command sees the project's `localEnvironment.env` and runs under the same
+ * isolation the agent's later commands will.
+ */
+export async function runWorktreeSetup(
+  worktreePath: string,
+  script: string | undefined,
+  opts: {
+    sandbox?: SandboxBackend;
+    shellEnv?: Record<string, string>;
+    timeoutMs?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<WorktreeSetupResult> {
+  const trimmed = script?.trim();
+  if (!trimmed) return { skipped: true, ok: true, output: "" };
+
+  const shell = process.env.SHELL || "/bin/bash";
+  const backend = opts.sandbox;
+  const baseEnv = backend && backend.name !== "off" ? buildSandboxEnv() : { ...process.env };
+  const env = mergeShellEnv(baseEnv, opts.shellEnv);
+
+  const result = await safeSpawnShell(trimmed, {
+    cwd: worktreePath,
+    env,
+    timeoutMs: opts.timeoutMs ?? 120_000,
+    maxOutputBytes: 1024 * 1024,
+    sandbox: backend,
+    shell,
+    signal: opts.signal,
+  });
+
+  const parts: string[] = [];
+  if (result.stdout) parts.push(result.stdout);
+  if (result.stderr) parts.push(result.stderr);
+  const output = parts.join("\n").trim();
+
+  if (result.aborted) return { skipped: false, ok: false, output: output || "setup aborted" };
+  if (result.timedOut) return { skipped: false, ok: false, output: output || "setup timed out" };
+  if (result.spawnFailed) {
+    return { skipped: false, ok: false, output: result.error ?? "failed to spawn setup script" };
+  }
+  return { skipped: false, ok: result.exitCode === 0, output, exitCode: result.exitCode };
 }
 
 /**

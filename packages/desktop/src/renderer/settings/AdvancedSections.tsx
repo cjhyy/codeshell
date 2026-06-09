@@ -473,10 +473,54 @@ const EMPTY_SCRIPTS: Record<LocalEnvPlatform, string> = {
   windows: "",
 };
 
-export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
-  const targetScope: "user" | "project" = activeRepoPath ? "project" : scope;
-  const cwd = targetScope === "project" ? activeRepoPath ?? undefined : undefined;
-  const projectName = activeRepoPath ? pathBasename(activeRepoPath) : "未选择项目";
+/**
+ * Local environment is PROJECT-scoped (setup/cleanup scripts + env + sandbox
+ * boundary live in a specific repo's `.code-shell/settings.json`). Like 钩子,
+ * the page first shows a project list; clicking one drills into that project's
+ * environment editor. This replaces the old "silently follow activeRepoPath"
+ * behavior where the user couldn't tell (or switch) which project they edited.
+ */
+export function EnvironmentSection({ repos }: { repos: Repo[] }) {
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const selectedRepo = repos.find((r) => r.path === selectedPath) ?? null;
+
+  if (!selectedPath) {
+    return (
+      <section className="settings-section">
+        <h3 className="settings-section-title">本地环境</h3>
+        <p className="settings-section-help">
+          本地环境按项目维护(setup / cleanup 脚本、KEY=VALUE 变量、沙箱边界)。选择一个项目以查看 / 编辑。
+        </p>
+        <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
+      </section>
+    );
+  }
+
+  return (
+    <section className="settings-section">
+      <div className="mb-2 flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-muted-foreground"
+          onClick={() => setSelectedPath(null)}
+        >
+          <ArrowLeft size={14} />
+          <span>返回项目列表</span>
+        </Button>
+        <span className="truncate text-sm font-medium text-foreground">
+          {selectedRepo ? repoLabel(selectedRepo) : selectedPath}
+        </span>
+      </div>
+      <ProjectEnvEditor cwd={selectedPath} />
+    </section>
+  );
+}
+
+/** Local-environment editor for a single project (cwd is a concrete repo path). */
+function ProjectEnvEditor({ cwd }: { cwd: string }) {
+  const targetScope = "project" as const;
+  const projectName = pathBasename(cwd);
   const [name, setName] = useState(projectName);
   const [setupTab, setSetupTab] = useState<LocalEnvPlatform>("default");
   const [cleanupTab, setCleanupTab] = useState<LocalEnvPlatform>("default");
@@ -503,7 +547,7 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
     setWritableRoots(arrayText(sandbox.writableRoots));
     setDeniedReads(arrayText(sandbox.deniedReads));
   };
-  useEffect(() => { void load(); }, [targetScope, activeRepoPath]);
+  useEffect(() => { void load(); }, [cwd]);
 
   const save = async () => {
     setSaving(true);
@@ -533,22 +577,12 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
   };
 
   return (
-    <section className="settings-section env-settings-section">
-      <div className="env-settings-head">
-        <div>
-          <h3 className="settings-section-title">本地环境</h3>
-          <p className="settings-section-help">
-            保存项目的 setup / cleanup 脚本和 KEY=VALUE 变量。选择了项目时会写入当前项目的 <code>.code-shell/settings.json</code>。
-          </p>
-        </div>
-        <span className="env-settings-scope">{targetScope === "project" ? "Project" : "User"}</span>
-      </div>
-
+    <div className="env-settings-section">
       <div className="local-env-project-card">
         <Folder size={18} />
         <div>
           <strong>{projectName}</strong>
-          <span>{activeRepoPath ?? "打开一个项目后，这里会按项目保存本地环境。"}</span>
+          <span>{cwd}</span>
         </div>
       </div>
 
@@ -559,17 +593,17 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
 
       <LocalScriptEditor
         title="设置脚本"
-        help="保存用于创建工作树或准备运行环境的项目根目录脚本。"
+        help="创建新工作树（EnterWorktree）时,会在工作树根目录自动跑一次对应平台的脚本(失败只警告不阻断)。"
         activeTab={setupTab}
         onTabChange={setSetupTab}
         scripts={setupScripts}
         onScriptChange={(tab, value) => setSetupScripts((prev) => ({ ...prev, [tab]: value }))}
-        placeholder={'cd "$CODEX_WORKTREE_PATH"\npip install -r requirements.txt\nnpm install\n./run/setup.sh'}
+        placeholder={'pip install -r requirements.txt\nnpm install\n./run/setup.sh'}
       />
 
       <LocalScriptEditor
         title="清理脚本"
-        help="保存用于清理工作树或释放本地资源的项目根目录脚本。"
+        help="保存用于清理工作树或释放本地资源的脚本。注:当前不自动收尾运行,作为记录 / 手动参考。"
         activeTab={cleanupTab}
         onTabChange={setCleanupTab}
         scripts={cleanupScripts}
@@ -586,7 +620,7 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
           className="min-h-[120px] resize-y font-mono text-sm"
         />
         <span className="conn-field-hint">
-          每行一个 KEY=VALUE。MCP server 自己的环境变量仍在 MCP 服务器卡片里保存，只注入对应 server。
+          每行一个 KEY=VALUE。这些变量会注入该项目的 Bash 工具与后台 shell 执行环境(含工作树 setup 脚本)。MCP server 自己的环境变量仍在 MCP 服务器卡片里保存，只注入对应 server。
         </span>
       </label>
 
@@ -642,7 +676,7 @@ export function EnvironmentSection({ scope, activeRepoPath }: ScopedProps) {
           </span>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 

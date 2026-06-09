@@ -19,9 +19,7 @@ import { ToolExecutor } from "../tool-system/executor.js";
 import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
-import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
-import { generateImageToolDefFor } from "../tool-system/builtin/generate-image.js";
-import { generateVideoToolDefFor } from "../tool-system/builtin/generate-video.js";
+import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
@@ -1514,20 +1512,12 @@ export class Engine {
         const flag = TOOL_FEATURE_FLAGS.get(t.name);
         return flag ? isFeatureEnabled(featureFlags, flag) : true;
       })
-      .map((t) => {
-        // Dynamic descriptions: name the actually-configured providers so the
-        // model sees which backends / `provider` values are valid (TODO 7.1).
-        if (t.name === "Agent") {
-          return { ...t, description: agentToolDefWithTypes(toolCtx.agentDefinitions).description };
-        }
-        if (t.name === "GenerateImage") {
-          return { ...t, description: generateImageToolDefFor(guardCwd).description };
-        }
-        if (t.name === "GenerateVideo") {
-          return { ...t, description: generateVideoToolDefFor(guardCwd).description };
-        }
-        return t;
-      });
+      // Dynamic per-engine bits the static defs can't carry: the Agent tool's
+      // agent_type enum + listing, and the image/video provider names. See
+      // applyDynamicToolDef — forwarding only the Agent description (dropping
+      // its rebuilt inputSchema) used to strip the agent_type enum, so the
+      // model omitted agent_type and configured roles never applied.
+      .map((t) => applyDynamicToolDef(t, toolCtx.agentDefinitions, guardCwd));
 
     // In plan mode, only expose read-only/planning tools so the model won't
     // attempt writes. Shared with executor.ts's execution gate via
@@ -2667,9 +2657,54 @@ export class Engine {
     return cached;
   }
 
+  /**
+   * Read the project's `localEnvironment.env` for this cwd — the KEY=VALUE
+   * pairs the user configured in `.code-shell/settings.json`. These are
+   * layered onto the shell env of the Bash tool and background shells (see
+   * mergeShellEnv). Sub-agents and no-cwd contexts get nothing (same minimal
+   * surface as readBuiltinOverride). Reads the project scope UNMERGED so a
+   * project's env isn't diluted by user-global keys.
+   */
+  private readShellEnv(cwd?: string): Record<string, string> | undefined {
+    if (this.config.isSubAgent === true || !cwd) return undefined;
+    try {
+      const scoped = this.getSettingsManager().getForScope("project", cwd) as {
+        localEnvironment?: { env?: Record<string, string> };
+      };
+      const env = scoped.localEnvironment?.env;
+      return env && Object.keys(env).length > 0 ? env : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Read the project's `localEnvironment.setupScripts` for this cwd (the raw
+   * per-platform map). Used by EnterWorktree to run setup once in a freshly
+   * created worktree. Returns undefined for sub-agents / no cwd (same minimal
+   * surface as readShellEnv). The platform selection + run live in
+   * git/worktree.ts; this only fetches the configured scripts.
+   */
+  readWorktreeSetupScripts(cwd?: string):
+    | { default?: string; macos?: string; linux?: string; windows?: string }
+    | undefined {
+    if (this.config.isSubAgent === true || !cwd) return undefined;
+    try {
+      const scoped = this.getSettingsManager().getForScope("project", cwd) as {
+        localEnvironment?: {
+          setupScripts?: { default?: string; macos?: string; linux?: string; windows?: string };
+        };
+      };
+      return scoped.localEnvironment?.setupScripts;
+    } catch {
+      return undefined;
+    }
+  }
+
   buildToolContext(): ToolContext {
     const { disabledSkills, disabledPlugins } = this.readDisabledLists();
     return {
+      shellEnv: this.readShellEnv(this.config.cwd),
       cwd: this.config.cwd ?? process.cwd(),
       llmConfig: this.config.llm,
       modelPool: this.modelPool,
@@ -2678,6 +2713,7 @@ export class Engine {
       isSubAgent: this.config.isSubAgent === true,
       hooks: this.hooks,
       planMode: this.planMode,
+      permissionMode: this.permissionMode,
       engine: this,
       disabledSkills,
       disabledPlugins,

@@ -35,7 +35,7 @@ import {
   readFileSync,
 } from "node:fs";
 import { StringDecoder } from "node:string_decoder";
-import { resolveSpawnTarget, buildSandboxEnv, killProcessGroup, groupAlive } from "./spawn-common.js";
+import { resolveSpawnTarget, buildSandboxEnv, mergeShellEnv, killProcessGroup, groupAlive } from "./spawn-common.js";
 import { RingFile } from "./ring-file.js";
 import { cleanOutput } from "./output-clean.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
@@ -89,6 +89,13 @@ export interface SpawnBackgroundOptions {
   sessionId: string;
   shell?: string;
   sandbox?: SandboxBackend;
+  /**
+   * Project `localEnvironment.env` to layer on top of the base shell env
+   * (see mergeShellEnv). Same source as the foreground Bash tool's
+   * `ctx.shellEnv` — passed through so a background dev server sees the same
+   * project env as a one-shot command.
+   */
+  shellEnv?: Record<string, string>;
 }
 
 export type SpawnResult =
@@ -166,7 +173,9 @@ export class BackgroundShellManager {
       shell,
       sandbox: opts.sandbox,
     });
-    const env = opts.sandbox && opts.sandbox.name !== "off" ? buildSandboxEnv() : { ...process.env };
+    const baseEnv =
+      opts.sandbox && opts.sandbox.name !== "off" ? buildSandboxEnv() : { ...process.env };
+    const env = mergeShellEnv(baseEnv, opts.shellEnv);
 
     let child: ChildProcess;
     try {

@@ -251,14 +251,19 @@ export function SettingsPage({
               <GitSection />
             )}
             {active === "environment" && (
-              <EnvironmentSection scope={scope} activeRepoPath={activeRepoPath} />
+              // Local environment is project-scoped: pick a project first,
+              // then edit its setup/cleanup/env/sandbox.
+              <EnvironmentSection repos={repos} />
             )}
             {active === "mobile-remote" && <MobileRemoteSection />}
             {active === "plugins-skills" && (
               <ExtensionsPage activeRepoPath={activeRepoPath} showDiscover={false} />
             )}
             {active === "agents" && (
-              <AgentsSection activeRepoPath={activeRepoPath} />
+              // Sub-agents are project-scoped like 钩子/记忆: pick 全局 or a
+              // project first, then edit. Project mode flips a tri-state
+              // capabilityOverrides.agents overlay.
+              <AgentsSection repos={repos} />
             )}
             {active === "memory" && (
               // Memory: pick a store first (global, or a project), then view

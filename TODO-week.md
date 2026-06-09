@@ -20,11 +20,11 @@
 > 目标:第一个 beta 不追大路线图,但不能留下"设置页看起来能配,实际不知道配到哪里/是否生效"这类半成品。
 
 - [ ] 设置页项目级 scope 入口收口:**已核实** `SettingsPage` 固定 `scope="user"`,但仍把 `activeRepoPath` 传给 Model/MCP/Environment/Agents 等 section;beta 前要明确哪些是全局、哪些先选项目再编辑,避免"看起来能配项目,实际跟随当前会话"。**决策(2026-06-08):不做设置页顶层 scope 切换;像 Hooks/Memory 一样,在需要项目维度的具体页面内先选"全局 / 某个项目",再进入编辑。**
-- [ ] 子代理设置页支持项目切换:**已核实** `AgentsSection` 只吃 `activeRepoPath`,没有像 Hooks/Memory 那样的 ProjectPicker;list/save/delete 会跟随当前主界面 repo,用户不能在设置页内切换要编辑的项目。
-- [ ] 子代理启用/禁用 scope 明确:**已核实** 子代理 tab 的开关只写 user `disabledAgents`;core 运行时支持 user denylist + project `capabilityOverrides.agents` overlay,但当前子代理 tab 没有项目级启停 UI。beta 前二选一:接项目 overlay,或明确这是全局开关。
-- [ ] 本地环境设置页支持项目切换:**已核实** `EnvironmentSection` 只跟随 `activeRepoPath`,没有项目列表;像 Hooks 一样先选项目后,再读取/保存该项目 `.code-shell/settings.json` 的 setup / cleanup / env / sandbox。
-- [ ] 本地环境设置实际生效链路接通:**已核实** `sandbox` 已进入 core Engine/Bash sandbox 链路;但 `localEnvironment.setupScripts` / `cleanupScripts` / `env` 目前只出现在 settings schema + renderer 设置页,未看到被新 session、Bash、worktree、automation 消费。beta 前要么接通,要么隐藏/标注未启用。
-- [ ] Beta smoke checklist 跑一遍并记录:desktop 新会话、模型配置、项目级设置、子代理、环境、文件编辑、审查、图片附件、后台 shell/agent、/undo。
+- [x] 子代理设置页支持项目切换:✅ **已做(2026-06-09)** `AgentsSection` 改成 `{repos}`,像 Hooks/Memory 一样先 ProjectPicker(含「全局子代理」行)再进编辑;list/save/delete 绑定所选 store(全局=user / 项目=该 cwd)。
+- [x] 子代理启用/禁用 scope 明确:✅ **已做(2026-06-09)** 全局视图开关写 user `disabledAgents`(二态 Switch);项目视图每个 agent 三态下拉(继承全局 / 强制启用 / 强制禁用)写该项目 `capabilityOverrides.agents` overlay(inherit→写 null 删键,deepMerge 当删除处理)。core overlay(`effectiveDisabledList`)本就在,只补 UI 写路径。
+- [x] 本地环境设置页支持项目切换:✅ **已做(2026-06-09)** `EnvironmentSection` 改成 `{repos}`,先 ProjectPicker 再进 `ProjectEnvEditor({cwd})`;读写该项目 `.code-shell/settings.json` 的 setup/cleanup/env/sandbox。去掉原「默默跟随 activeRepoPath」。
+- [x] 本地环境设置实际生效链路接通:✅ **已做(2026-06-09)** ① **env 进工具执行环境**:`spawn-common.mergeShellEnv`(项目 env 叠在 sandbox/off 基底上,bypass deny regex——用户自填的不同信任级);`ToolContext.shellEnv` 由 `Engine.buildToolContext`(新 `readShellEnv(cwd)` 读 project scope)填;bash.ts 前台 + background-shell.ts 后台都 merge。② **setup 在新建 worktree 时跑一次**:`worktree.selectPlatformScript`(平台→default 回退,空脚本视为缺省)+ `runWorktreeSetup`(复用 safeSpawnShell+sandbox+shellEnv,**失败只警告不回滚 worktree** 按决策);`enterWorktreeTool` 读 `Engine.readWorktreeSetupScripts(cwd)` 选脚本跑,结果附在工具返回里。③ cleanup 按决策**不做**自动收尾(UI 文案已说明)。测试:spawn-common(+5)/worktree-setup(9)/engine.shell-env(4)/bash.shell-env(3);core 全量 993 pass 0 fail。
+- [~] Beta smoke checklist 跑一遍并记录:**部分(2026-06-09)** 可静态验证的全过:core 全量 993 pass、core+desktop `tsc --noEmit` 全绿、core build + renderer `vite build` 成功、env 链路有端到端测试(bash.shell-env)。**剩交互式肉眼 smoke**(新会话/模型配置/文件编辑/审查/图片附件/后台 shell/undo)需真机起 Electron 走一遍,留给你在场跑;本轮改动只触及子代理/环境设置页 + 工具 spawn env,回归面已被上述测试覆盖。
 
 ## 📱 Remote / 手机端续跑与会话接管(2026-06-08 brainstorm,两特性拆开,先一后二)
 

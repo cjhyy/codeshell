@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import type { AgentSummary, AgentDefinitionInput } from "../../preload/types";
 import { useConfirm } from "../ui/ConfirmDialog";
+import { ProjectPicker } from "./ProjectPicker";
+import { repoLabel, type Repo } from "../repos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +18,7 @@ import {
 } from "@/components/ui/select";
 
 interface Props {
-  activeRepoPath: string | null;
+  repos: Repo[];
 }
 
 // Tool names a user can grant a sub-agent. "Skill" is the on/off switch
@@ -30,10 +32,81 @@ interface ModelOption { key: string; label: string; }
 
 const INHERIT = "__inherit__";
 
-export function AgentsSection({ activeRepoPath }: Props) {
-  const cwd = activeRepoPath ?? "";
+/** Tri-state of a project's capabilityOverrides.agents[name]. */
+type Override = "on" | "off" | "inherit";
+
+/** Which store the user is editing. global = user-level; project = a repo. */
+type Target =
+  | { level: "user"; title: string }
+  | { level: "project"; cwd: string; title: string };
+
+/**
+ * Sub-agents settings. Like 钩子/记忆, the page first shows a project list
+ * (with a 全局 row): pick a store, then view/edit it.
+ *
+ *  - 全局: edit user-level agents; the per-agent switch writes the top-level
+ *    `disabledAgents` denylist (the baseline for every project).
+ *  - 项目: edit that project's agents; the per-agent control is TRI-STATE —
+ *    继承全局 / 强制启用 / 强制禁用 — written to that project's
+ *    `capabilityOverrides.agents` overlay so a project can flip a globally
+ *    enabled agent off (or vice versa) without touching the global denylist.
+ */
+export function AgentsSection({ repos }: Props) {
+  const [target, setTarget] = useState<Target | null>(null);
+
+  if (!target) {
+    return (
+      <section className="flex flex-col gap-3">
+        <h3 className="text-base font-semibold">子代理</h3>
+        <p className="text-sm text-muted-foreground">
+          选择要管理的子代理:全局子代理所有项目共享;或选择某个项目,在项目级覆盖某个子代理的启用 / 禁用。
+        </p>
+        <ProjectPicker
+          repos={repos}
+          includeGlobal
+          globalLabel="全局子代理"
+          globalHint="所有项目共享 (~/.code-shell/agents)"
+          onSelect={(path) => {
+            if (path === null) {
+              setTarget({ level: "user", title: "全局子代理" });
+            } else {
+              const repo = repos.find((r) => r.path === path);
+              setTarget({ level: "project", cwd: path, title: repo ? repoLabel(repo) : path });
+            }
+          }}
+        />
+      </section>
+    );
+  }
+
+  return (
+    <section className="flex h-full flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-muted-foreground"
+          onClick={() => setTarget(null)}
+        >
+          <ArrowLeft size={14} />
+          <span>返回项目列表</span>
+        </Button>
+        <span className="truncate text-sm font-medium text-foreground">{target.title}</span>
+      </div>
+      <AgentsEditor target={target} />
+    </section>
+  );
+}
+
+/** Agent list + editor for one store (global or a single project). */
+function AgentsEditor({ target }: { target: Target }) {
+  const isProject = target.level === "project";
+  const cwd = target.level === "project" ? target.cwd : "";
   const [agents, setAgents] = useState<AgentSummary[]>([]);
+  // Global denylist (always read — it's the baseline for project overlays too).
   const [disabled, setDisabled] = useState<string[]>([]);
+  // Project overlay: name → "on" | "off" (absent = inherit).
+  const [overrides, setOverrides] = useState<Record<string, "on" | "off">>({});
   const [models, setModels] = useState<ModelOption[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState<AgentDefinitionInput | null>(null);
@@ -45,26 +118,36 @@ export function AgentsSection({ activeRepoPath }: Props) {
     try {
       const list = await window.codeshell.listAgents(cwd);
       setAgents(list);
-      const s = (await window.codeshell.getSettings("user")) ?? {};
-      const da = (s as { disabledAgents?: unknown }).disabledAgents;
+      // Global baseline always comes from user settings.
+      const u = (await window.codeshell.getSettings("user")) ?? {};
+      const da = (u as { disabledAgents?: unknown }).disabledAgents;
       setDisabled(Array.isArray(da) ? (da as string[]) : []);
-      const ms = (s as { models?: unknown }).models;
-      const arr = Array.isArray(ms)
-        ? (ms as Array<{ key: string; label?: string }>)
-        : [];
+      const ms = (u as { models?: unknown }).models;
+      const arr = Array.isArray(ms) ? (ms as Array<{ key: string; label?: string }>) : [];
       setModels(arr.map((m) => ({ key: m.key, label: m.label || m.key })));
+      // Project overlay (unmerged project file).
+      if (isProject) {
+        const p = (await window.codeshell.getSettings("project", cwd)) ?? {};
+        const ov = (p as { capabilityOverrides?: { agents?: Record<string, unknown> } })
+          .capabilityOverrides?.agents;
+        const clean: Record<string, "on" | "off"> = {};
+        if (ov && typeof ov === "object") {
+          for (const [k, v] of Object.entries(ov)) {
+            if (v === "on" || v === "off") clean[k] = v;
+          }
+        }
+        setOverrides(clean);
+      }
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [cwd]);
+  }, [cwd, isProject]);
 
   useEffect(() => { void load(); }, [load]);
 
-  // Write scope for saveAgent/deleteAgent: project when a repo is active (so
-  // the agent lands in that project's .code-shell and load(cwd) surfaces it),
-  // else user. Mirrors load()'s read scope (listAgents(cwd)).
+  // Write scope for saveAgent/deleteAgent mirrors the read scope (listAgents(cwd)).
   const agentScope = (): { scope: "project"; cwd: string } | { scope: "user" } =>
-    activeRepoPath ? { scope: "project", cwd: activeRepoPath } : { scope: "user" };
+    isProject ? { scope: "project", cwd } : { scope: "user" };
 
   const current = useMemo(
     () => agents.find((a) => a.name === selected) ?? null,
@@ -84,14 +167,42 @@ export function AgentsSection({ activeRepoPath }: Props) {
     }
   }, [current]);
 
-  const isDisabled = (name: string) => disabled.includes(name);
+  const isGloballyDisabled = (name: string) => disabled.includes(name);
 
-  const toggleDisabled = async (name: string) => {
-    const next = isDisabled(name)
+  /** Effective tri-state for an agent in project mode. */
+  const overrideOf = (name: string): Override => overrides[name] ?? "inherit";
+
+  /** Whether the agent is effectively enabled (for the row's dimmed style). */
+  const effectiveEnabled = (name: string): boolean => {
+    if (!isProject) return !isGloballyDisabled(name);
+    const ov = overrideOf(name);
+    if (ov === "on") return true;
+    if (ov === "off") return false;
+    return !isGloballyDisabled(name);
+  };
+
+  // Global mode: flip the top-level disabledAgents denylist.
+  const toggleGlobal = async (name: string) => {
+    const next = isGloballyDisabled(name)
       ? disabled.filter((n) => n !== name)
       : [...disabled, name];
     setDisabled(next);
     await window.codeshell.updateSettings("user", { disabledAgents: next });
+    window.dispatchEvent(new Event("codeshell:settings-changed"));
+  };
+
+  // Project mode: set the tri-state overlay. "inherit" deletes the key (write
+  // null — settings-service deepMerge treats null as a delete).
+  const setOverride = async (name: string, value: Override) => {
+    const next = { ...overrides };
+    if (value === "inherit") delete next[name];
+    else next[name] = value;
+    setOverrides(next);
+    await window.codeshell.updateSettings(
+      "project",
+      { capabilityOverrides: { agents: { [name]: value === "inherit" ? null : value } } },
+      cwd,
+    );
     window.dispatchEvent(new Event("codeshell:settings-changed"));
   };
 
@@ -142,7 +253,7 @@ export function AgentsSection({ activeRepoPath }: Props) {
   };
 
   return (
-    <section className="flex h-full gap-4">
+    <div className="flex h-full gap-4">
       {/* Left: agent list */}
       <div className="flex w-72 shrink-0 flex-col gap-2">
         <Button size="sm" className="self-start gap-1.5" onClick={startNew} title="新增子代理">
@@ -150,7 +261,7 @@ export function AgentsSection({ activeRepoPath }: Props) {
         </Button>
         <ul className="space-y-1 overflow-y-auto">
           {agents.map((a) => {
-            const off = isDisabled(a.name);
+            const enabled = effectiveEnabled(a.name);
             const tag = tagFor(a);
             return (
               <li
@@ -158,16 +269,38 @@ export function AgentsSection({ activeRepoPath }: Props) {
                 className={
                   "flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm hover:bg-accent " +
                   (selected === a.name ? "bg-accent ring-1 ring-border " : "") +
-                  (off ? "opacity-50" : "")
+                  (enabled ? "" : "opacity-50")
                 }
                 onClick={() => setSelected(a.name)}
               >
-                <Switch
-                  checked={!off}
-                  onClick={(e) => e.stopPropagation()}
-                  onCheckedChange={() => void toggleDisabled(a.name)}
-                  title={off ? "已禁用（LLM 不可见）" : "已启用"}
-                />
+                {isProject ? (
+                  <Select
+                    value={overrideOf(a.name)}
+                    onValueChange={(v) => void setOverride(a.name, v as Override)}
+                  >
+                    <SelectTrigger
+                      className="h-7 w-[104px] shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`${a.name} 项目级启停`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent onClick={(e) => e.stopPropagation()}>
+                      <SelectItem value="inherit">
+                        继承{isGloballyDisabled(a.name) ? "（禁用）" : "（启用）"}
+                      </SelectItem>
+                      <SelectItem value="on">强制启用</SelectItem>
+                      <SelectItem value="off">强制禁用</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Switch
+                    checked={enabled}
+                    onClick={(e) => e.stopPropagation()}
+                    onCheckedChange={() => void toggleGlobal(a.name)}
+                    title={enabled ? "已启用" : "已禁用（LLM 不可见）"}
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{a.name}</div>
                   {a.description && (
@@ -305,6 +438,6 @@ export function AgentsSection({ activeRepoPath }: Props) {
           </div>
         )}
       </div>
-    </section>
+    </div>
   );
 }

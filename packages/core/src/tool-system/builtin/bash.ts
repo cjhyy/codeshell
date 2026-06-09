@@ -20,7 +20,7 @@ import type { ToolContext } from "../context.js";
 import { createOffBackend } from "../sandbox/off.js";
 import { safeSpawnShell } from "../../runtime/safe-spawn.js";
 import { truncateHeadTail } from "../../runtime/truncate-output.js";
-import { buildSandboxEnv } from "../../runtime/spawn-common.js";
+import { buildSandboxEnv, mergeShellEnv } from "../../runtime/spawn-common.js";
 import { backgroundShellManager } from "../../runtime/background-shell.js";
 import type { ToolDefinition } from "../../types.js";
 
@@ -74,7 +74,11 @@ export async function bashTool(
   const cwd = ctx?.cwd ?? process.cwd();
   const shell = process.env.SHELL || "/bin/bash";
   const backend = ctx?.sandbox ?? createOffBackend();
-  const env = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
+  // Project localEnvironment.env (ctx.shellEnv) layers on top of either the
+  // full passthrough (off) or the hardened allowlist (sandboxed) — see
+  // mergeShellEnv. Background mode merges the same way inside the manager.
+  const baseEnv = backend.name === "off" ? { ...process.env } : buildSandboxEnv();
+  const env = mergeShellEnv(baseEnv, ctx?.shellEnv);
 
   // Background mode: spawn a detached, long-lived process and return a
   // shell_id immediately (design §5.1). Fire-and-forget — the turn is never
@@ -163,6 +167,7 @@ function runInBackground(command: string, ctx?: ToolContext): string {
     cwd: ctx?.cwd ?? process.cwd(),
     sessionId,
     sandbox: ctx?.sandbox,
+    shellEnv: ctx?.shellEnv,
   });
   if (!r.ok) {
     return `Error: ${r.error}`;

@@ -71,6 +71,38 @@ export function buildSandboxEnv(source: NodeJS.ProcessEnv = process.env): NodeJS
   return out;
 }
 
+/**
+ * Layer a project's `localEnvironment.env` (KEY=VALUE pairs the user
+ * explicitly configured in `.code-shell/settings.json`) on top of a base
+ * shell env.
+ *
+ * Unlike {@link buildSandboxEnv}, project env values are NOT filtered through
+ * the deny regex: the user put them there deliberately (e.g. `DATABASE_URL`,
+ * a project-scoped `API_BASE`), so honoring them is the whole point. The
+ * allowlist/deny machinery exists to stop a tainted model from exfiltrating
+ * the *host's* secrets via `env | curl`; values the user typed into project
+ * settings are a different trust class.
+ *
+ * Returns the base unchanged when `projectEnv` is empty/undefined, so the
+ * caller can pass it through unconditionally with zero behavior change for
+ * projects that don't configure one. `undefined` values in `projectEnv` are
+ * skipped (they'd otherwise stringify to "undefined").
+ */
+export function mergeShellEnv(
+  base: NodeJS.ProcessEnv,
+  projectEnv: Record<string, string> | undefined,
+): NodeJS.ProcessEnv {
+  if (!projectEnv) return base;
+  const keys = Object.keys(projectEnv);
+  if (keys.length === 0) return base;
+  const out: NodeJS.ProcessEnv = { ...base };
+  for (const k of keys) {
+    const v = projectEnv[k];
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
 export interface SpawnTarget {
   file: string;
   args: string[];
