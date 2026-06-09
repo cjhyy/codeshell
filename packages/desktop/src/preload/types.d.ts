@@ -633,6 +633,10 @@ export interface CodeshellApi {
       Array<{ id: string; name: string; createdAt: number; lastSeenAt?: number; revokedAt?: number }>
     >;
     revokeDevice(id: string): Promise<boolean>;
+    removeDevice(id: string): Promise<boolean>;
+    renameDevice(id: string, name: string): Promise<boolean>;
+    onlineDevices(): Promise<string[]>;
+    onOnlineChange(cb: (ids: string[]) => void): Unsubscribe;
     // ── Public tunnel mode ──
     cloudflaredInstalled(): Promise<boolean>;
     downloadCloudflared(): Promise<boolean>;

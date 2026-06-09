@@ -588,6 +588,15 @@ contextBridge.exposeInMainWorld("codeshell", {
     status: () => ipcRenderer.invoke("mobileRemote:status"),
     listDevices: () => ipcRenderer.invoke("mobileRemote:listDevices"),
     revokeDevice: (id: string) => ipcRenderer.invoke("mobileRemote:revokeDevice", id),
+    removeDevice: (id: string) => ipcRenderer.invoke("mobileRemote:removeDevice", id),
+    renameDevice: (id: string, name: string) =>
+      ipcRenderer.invoke("mobileRemote:renameDevice", id, name),
+    onlineDevices: () => ipcRenderer.invoke("mobileRemote:onlineDevices"),
+    onOnlineChange: (cb: (ids: string[]) => void): (() => void) => {
+      const h = (_e: IpcRendererEvent, ids: string[]) => cb(ids);
+      ipcRenderer.on("mobileRemote:onlineChange", h);
+      return () => ipcRenderer.removeListener("mobileRemote:onlineChange", h);
+    },
     // ── Public tunnel mode ──
     cloudflaredInstalled: () => ipcRenderer.invoke("mobileRemote:cloudflaredInstalled"),
     downloadCloudflared: () => ipcRenderer.invoke("mobileRemote:downloadCloudflared"),

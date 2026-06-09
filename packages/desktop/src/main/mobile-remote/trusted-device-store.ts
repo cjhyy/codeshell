@@ -58,6 +58,27 @@ export class TrustedDeviceStore {
     return true;
   }
 
+  /** Hard-delete a device row entirely (no revoked zombie left behind). */
+  remove(id: string): boolean {
+    const devices = this.readAll();
+    const next = devices.filter((item) => item.id !== id);
+    if (next.length === devices.length) return false;
+    this.writeAll(next);
+    return true;
+  }
+
+  /** Rename a device's display label. Rejects blank names and unknown ids. */
+  rename(id: string, name: string): boolean {
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    const devices = this.readAll();
+    const device = devices.find((item) => item.id === id);
+    if (!device) return false;
+    device.name = trimmed;
+    this.writeAll(devices);
+    return true;
+  }
+
   private readAll(): TrustedDevice[] {
     if (!existsSync(this.filePath)) return [];
     return JSON.parse(readFileSync(this.filePath, "utf-8")) as TrustedDevice[];

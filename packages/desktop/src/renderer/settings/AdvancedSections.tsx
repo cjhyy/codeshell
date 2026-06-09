@@ -3,6 +3,7 @@ import { Folder, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
+import { usePrompt } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Switch } from "@/components/ui/switch";
@@ -1120,6 +1121,19 @@ type MobileDevice = {
   revokedAt?: number;
 };
 
+/** Compact zh relative time for the device list ("刚刚 / 3 分钟前 / 2 天前"). */
+function relativeTime(ts?: number): string {
+  if (!ts) return "从未连接";
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return "刚刚";
+  const min = Math.floor(diff / 60_000);
+  if (min < 60) return `${min} 分钟前`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} 小时前`;
+  const day = Math.floor(hr / 24);
+  return `${day} 天前`;
+}
+
 /**
  * Mobile Web Remote — start/stop a LAN HTTP/WebSocket host so a trusted phone
  * can drive CodeShell chat + approvals. Off by default; no public relay. The
@@ -1127,7 +1141,9 @@ type MobileDevice = {
  */
 export function MobileRemoteSection() {
   const confirm = useConfirm();
+  const prompt = usePrompt();
   const toast = useToast();
+  const [onlineIds, setOnlineIds] = useState<string[]>([]);
   const [status, setStatus] = useState<{
     running: boolean;
     url?: string;
@@ -1170,6 +1186,7 @@ export function MobileRemoteSection() {
     setDevices(await window.codeshell.mobileRemote.listDevices());
     setPasscodeSet((await window.codeshell.mobileRemote.passcodeStatus()).isSet);
     setCloudflaredInstalled(await window.codeshell.mobileRemote.cloudflaredInstalled());
+    setOnlineIds(await window.codeshell.mobileRemote.onlineDevices());
   }, []);
 
   useEffect(() => {
@@ -1191,9 +1208,11 @@ export function MobileRemoteSection() {
         void refresh();
       }
     });
+    const offOnline = window.codeshell.mobileRemote.onOnlineChange((ids) => setOnlineIds(ids));
     return () => {
       offProgress();
       offTunnel();
+      offOnline();
     };
   }, [refresh, toast]);
 
@@ -1264,16 +1283,53 @@ export function MobileRemoteSection() {
     }
   }
 
-  async function revoke(device: MobileDevice) {
+  async function removeDevice(device: MobileDevice) {
     const ok = await confirm({
-      title: "撤销设备",
-      message: `撤销「${device.name}」后,该手机将无法重新连接。`,
-      confirmLabel: "撤销",
+      title: "删除设备",
+      message: `删除「${device.name}」后,该手机需重新扫码配对 + 过口令才能再次连接。`,
+      confirmLabel: "删除",
       destructive: true,
     });
     if (!ok) return;
-    await window.codeshell.mobileRemote.revokeDevice(device.id);
+    await window.codeshell.mobileRemote.removeDevice(device.id);
     await refresh();
+    toast({ message: "已删除设备", variant: "success" });
+  }
+
+  async function renameDevice(device: MobileDevice) {
+    const name = await prompt({
+      title: "重命名设备",
+      message: "给这台手机起一个好认的名字。",
+      defaultValue: device.name,
+      confirmLabel: "保存",
+    });
+    if (name == null) return;
+    const ok = await window.codeshell.mobileRemote.renameDevice(device.id, name);
+    if (!ok) {
+      toast({ message: "名称无效", variant: "error" });
+      return;
+    }
+    await refresh();
+  }
+
+  async function changePasscode() {
+    const next = await prompt({
+      title: passcodeSet ? "修改访问口令" : "设置访问口令",
+      message: "口令至少 4 个字符。修改后,所有已记住口令的手机都需要重新输入。",
+      placeholder: "新的访问口令",
+      confirmLabel: "保存",
+    });
+    if (next == null) return;
+    try {
+      await window.codeshell.mobileRemote.setPasscode(next);
+      await refresh();
+      toast({ message: "访问口令已更新", variant: "success" });
+    } catch (err) {
+      toast({
+        message: err instanceof Error ? err.message : "设置口令失败",
+        variant: "error",
+      });
+    }
   }
 
   return (
@@ -1402,28 +1458,58 @@ export function MobileRemoteSection() {
         </div>
       ) : null}
       <div className="mt-4 space-y-2">
-        <h4 className="text-sm font-medium">可信设备</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">可信设备</h4>
+          {passcodeSet ? (
+            <Button type="button" variant="ghost" size="sm" onClick={() => void changePasscode()}>
+              修改访问口令
+            </Button>
+          ) : null}
+        </div>
         {devices.length === 0 ? (
           <p className="text-sm text-muted-foreground">暂无可信设备。</p>
         ) : (
-          devices.map((device) => (
-            <div key={device.id} className="flex items-center justify-between text-sm">
-              <span>
-                {device.name}
-                {device.revokedAt ? "(已撤销)" : ""}
-              </span>
-              {!device.revokedAt ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => void revoke(device)}
-                >
-                  撤销
-                </Button>
-              ) : null}
-            </div>
-          ))
+          devices.map((device) => {
+            const online = onlineIds.includes(device.id);
+            return (
+              <div
+                key={device.id}
+                className="flex items-center justify-between gap-2 text-sm rounded-md px-2 py-1.5 hover:bg-muted/50"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={cn(
+                      "inline-block h-2 w-2 rounded-full shrink-0",
+                      online ? "bg-status-ok" : "bg-status-idle",
+                    )}
+                    title={online ? "在线" : "离线"}
+                  />
+                  <span className="truncate">{device.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {online ? "在线" : relativeTime(device.lastSeenAt)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void renameDevice(device)}
+                  >
+                    重命名
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => void removeDevice(device)}
+                  >
+                    删除
+                  </Button>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </section>

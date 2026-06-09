@@ -191,6 +191,13 @@ tunnelManager.on("status", (status: string, detail?: unknown) => {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:tunnelStatus", { status, detail });
   }
 });
+// Push the live online-device set to every renderer whenever a phone connects
+// or disconnects, so the trusted-device list can show per-device online lamps.
+mobileRemote.on("online-change", (ids: string[]) => {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("mobileRemote:onlineChange", ids);
+  }
+});
 
 // Rooms: resident stream-json Claude Code sessions the phone can open and chat
 // with continuously (context persists for the room's lifetime). Messages are
@@ -1084,6 +1091,11 @@ ipcMain.handle("mobileRemote:status", async () => {
 });
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => mobileDevices.revoke(id));
+ipcMain.handle("mobileRemote:removeDevice", async (_e, id: string) => mobileDevices.remove(id));
+ipcMain.handle("mobileRemote:renameDevice", async (_e, id: string, name: string) =>
+  mobileDevices.rename(id, name),
+);
+ipcMain.handle("mobileRemote:onlineDevices", async () => mobileRemote.onlineDeviceIds());
 // ── Tunnel-specific IPC ─────────────────────────────────────────────────────
 ipcMain.handle("mobileRemote:cloudflaredInstalled", async () =>
   cloudflaredBinary.isInstalled(),

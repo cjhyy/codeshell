@@ -95,6 +95,32 @@ describe("RemoteHostManager", () => {
     await host.stop();
   });
 
+  test("tracks online devices by socket refcount and emits online-change", () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+    const events: string[][] = [];
+    host.on("online-change", (ids: string[]) => events.push([...ids].sort()));
+
+    expect(host.onlineDeviceIds()).toEqual([]);
+    host.markOnline("dev1");
+    expect(host.onlineDeviceIds()).toContain("dev1");
+    // a second socket for the same device does not double-count nor re-emit a
+    // membership change
+    host.markOnline("dev1");
+    host.markOnline("dev2");
+    host.markOffline("dev1"); // still one socket left → dev1 stays online
+    expect(host.onlineDeviceIds().sort()).toEqual(["dev1", "dev2"]);
+    host.markOffline("dev1"); // last socket gone → dev1 offline
+    expect(host.onlineDeviceIds()).toEqual(["dev2"]);
+
+    // dev1 appears then disappears; dev2 appears → at least these transitions
+    expect(events.some((e) => e.includes("dev1"))).toBe(true);
+    expect(events[events.length - 1]).toEqual(["dev2"]);
+  });
+
   test("resolveLanHost never returns loopback/link-local/VPN ranges", () => {
     const ip = resolveLanHost();
     // CI/sandbox may have no LAN interface → undefined is allowed.

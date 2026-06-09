@@ -59,4 +59,30 @@ describe("TrustedDeviceStore", () => {
     expect(second.id).not.toBe(first.id);
     expect(store.listDevices()).toHaveLength(2);
   });
+
+  test("remove() hard-deletes a device row (no zombie left in the list)", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+    const a = store.addDevice({ name: "iPhone", secretHash: "hashA" });
+    store.addDevice({ name: "iPad", secretHash: "hashB" });
+    expect(store.remove(a.id)).toBe(true);
+    expect(store.listDevices()).toHaveLength(1);
+    expect(store.listDevices()[0]?.name).toBe("iPad");
+    // removing a missing id is a no-op false
+    expect(store.remove("nope")).toBe(false);
+    // a removed device can no longer authenticate
+    expect(store.authenticate(a.id, "hashA")).toBeUndefined();
+  });
+
+  test("rename() changes a device's display name", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+    const a = store.addDevice({ name: "iPhone", secretHash: "hashA" });
+    expect(store.rename(a.id, "我的工作手机")).toBe(true);
+    expect(store.listDevices()[0]?.name).toBe("我的工作手机");
+    expect(store.rename("nope", "x")).toBe(false);
+    // blank name is rejected
+    expect(store.rename(a.id, "   ")).toBe(false);
+    expect(store.listDevices()[0]?.name).toBe("我的工作手机");
+  });
 });

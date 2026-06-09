@@ -1,5 +1,6 @@
 import { createServer, type Server } from "node:http";
 import { networkInterfaces } from "node:os";
+import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket } from "ws";
 import { mobileRemoteHtml } from "./mobile-ui.js";
 import { PairingTokenManager } from "./pairing.js";
@@ -60,19 +61,50 @@ export interface RemoteHostManagerOptions {
   onClientEvent: (event: unknown, ws: WebSocket) => void;
 }
 
-export class RemoteHostManager {
+export class RemoteHostManager extends EventEmitter {
   private server?: Server;
   private wss?: WebSocketServer;
   private started?: RemoteHostStarted;
   private pairing = new PairingTokenManager();
   /** ws → authenticated device id. A socket absent here is unauthenticated. */
   private authed = new WeakMap<WebSocket, string>();
+  /** deviceId → number of live authenticated sockets (a phone may open more
+   *  than one). A device is "online" while its count is > 0. */
+  private onlineCounts = new Map<string, number>();
   /** Public base URL (tunnel domain) used by createPairingUrl when set. */
   private publicBaseUrl?: string;
   /** Passcode gate, present only in tunnel mode. */
   private passcode?: AccessPasscode;
 
-  constructor(private readonly opts: RemoteHostManagerOptions) {}
+  constructor(private readonly opts: RemoteHostManagerOptions) {
+    super();
+  }
+
+  /** Device ids with at least one live socket right now. */
+  onlineDeviceIds(): string[] {
+    return [...this.onlineCounts.keys()];
+  }
+
+  /** Register a live socket for a device; emits `online-change` only when the
+   *  device transitions offline→online (first socket). */
+  markOnline(deviceId: string): void {
+    const prev = this.onlineCounts.get(deviceId) ?? 0;
+    this.onlineCounts.set(deviceId, prev + 1);
+    if (prev === 0) this.emit("online-change", this.onlineDeviceIds());
+  }
+
+  /** Drop a socket for a device; emits `online-change` only when its last
+   *  socket goes away (online→offline). */
+  markOffline(deviceId: string): void {
+    const prev = this.onlineCounts.get(deviceId) ?? 0;
+    if (prev <= 1) {
+      if (this.onlineCounts.delete(deviceId)) {
+        this.emit("online-change", this.onlineDeviceIds());
+      }
+    } else {
+      this.onlineCounts.set(deviceId, prev - 1);
+    }
+  }
 
   async start(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
     if (this.started) return this.started;
@@ -132,6 +164,12 @@ export class RemoteHostManager {
         // send chat/approval/run/job events (design §6.1).
         const reply = this.handleClientEvent(event);
         if (event.type === "auth.device" && reply?.type === "auth.ok") {
+          if (!this.authed.has(ws)) this.markOnline(reply.device.id);
+          this.authed.set(ws, reply.device.id);
+        }
+        // Pairing also yields a live, identified socket → count it online.
+        if (event.type === "pair.complete" && reply?.type === "pair.ok") {
+          if (!this.authed.has(ws)) this.markOnline(reply.device.id);
           this.authed.set(ws, reply.device.id);
         }
         if (reply) {
@@ -147,6 +185,8 @@ export class RemoteHostManager {
         this.opts.onClientEvent({ ...event, deviceId: this.authed.get(ws) }, ws);
       });
       ws.on("close", () => {
+        const id = this.authed.get(ws);
+        if (id) this.markOffline(id);
         this.authed.delete(ws);
       });
     });
