@@ -3,6 +3,7 @@ import { Folder, Trash2 } from "lucide-react";
 import { NO_REPO_KEY, type SessionIndex } from "../transcripts";
 import { repoLabel, type Repo } from "../repos";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
+import { useToast } from "../ui/ToastProvider";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -1126,11 +1127,23 @@ type MobileDevice = {
  */
 export function MobileRemoteSection() {
   const confirm = useConfirm();
-  const [status, setStatus] = useState<{ running: boolean; url?: string }>({ running: false });
+  const toast = useToast();
+  const [status, setStatus] = useState<{
+    running: boolean;
+    url?: string;
+    tunnelRunning?: boolean;
+  }>({ running: false });
   const [pairingUrl, setPairingUrl] = useState<string | undefined>();
   const [qrDataUrl, setQrDataUrl] = useState<string | undefined>();
   const [devices, setDevices] = useState<MobileDevice[]>([]);
   const [busy, setBusy] = useState(false);
+  // ── Public tunnel mode ──
+  const [mode, setMode] = useState<"lan" | "tunnel">("lan");
+  const [passcodeSet, setPasscodeSet] = useState(false);
+  const [passcodeInput, setPasscodeInput] = useState("");
+  const [cloudflaredInstalled, setCloudflaredInstalled] = useState(true);
+  const [downloadPct, setDownloadPct] = useState<number | null>(null);
+  const [tunnelState, setTunnelState] = useState<"connected" | "disconnected" | null>(null);
 
   // Render the pairing URL as a QR code locally (no external service — the
   // token is a secret and must never leave the machine).
@@ -1155,18 +1168,48 @@ export function MobileRemoteSection() {
   const refresh = useCallback(async () => {
     setStatus(await window.codeshell.mobileRemote.status());
     setDevices(await window.codeshell.mobileRemote.listDevices());
+    setPasscodeSet((await window.codeshell.mobileRemote.passcodeStatus()).isSet);
+    setCloudflaredInstalled(await window.codeshell.mobileRemote.cloudflaredInstalled());
   }, []);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
+  // Live download progress + tunnel status pushed from main.
+  useEffect(() => {
+    const offProgress = window.codeshell.mobileRemote.onDownloadProgress((pct) =>
+      setDownloadPct(pct),
+    );
+    const offTunnel = window.codeshell.mobileRemote.onTunnelStatus(({ status: s }) => {
+      if (s === "connected") setTunnelState("connected");
+      else if (s === "disconnected") {
+        // Address invalidated: clear the QR and prompt a re-open.
+        setTunnelState("disconnected");
+        setPairingUrl(undefined);
+        toast({ message: "公网隧道已断开,地址已失效,请重新开启", variant: "error" });
+        void refresh();
+      }
+    });
+    return () => {
+      offProgress();
+      offTunnel();
+    };
+  }, [refresh, toast]);
+
   async function start() {
     setBusy(true);
+    setTunnelState(null);
     try {
-      const res = await window.codeshell.mobileRemote.start();
+      const res = await window.codeshell.mobileRemote.start({ mode });
       setPairingUrl(res.pairingUrl);
+      if (mode === "tunnel") setTunnelState("connected");
       await refresh();
+    } catch (err) {
+      toast({
+        message: err instanceof Error ? err.message : "开启失败",
+        variant: "error",
+      });
     } finally {
       setBusy(false);
     }
@@ -1177,9 +1220,47 @@ export function MobileRemoteSection() {
     try {
       await window.codeshell.mobileRemote.stop();
       setPairingUrl(undefined);
+      setTunnelState(null);
       await refresh();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function savePasscode() {
+    if (passcodeInput.length < 4) {
+      toast({ message: "访问口令至少需要 4 个字符", variant: "error" });
+      return;
+    }
+    setBusy(true);
+    try {
+      await window.codeshell.mobileRemote.setPasscode(passcodeInput);
+      setPasscodeInput("");
+      setPasscodeSet(true);
+      toast({ message: "访问口令已保存", variant: "success" });
+    } catch (err) {
+      toast({
+        message: err instanceof Error ? err.message : "保存口令失败",
+        variant: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function downloadCloudflared() {
+    setDownloadPct(0);
+    try {
+      await window.codeshell.mobileRemote.downloadCloudflared();
+      setCloudflaredInstalled(true);
+      toast({ message: "cloudflared 已下载", variant: "success" });
+    } catch (err) {
+      toast({
+        message: err instanceof Error ? err.message : "下载失败",
+        variant: "error",
+      });
+    } finally {
+      setDownloadPct(null);
     }
   }
 
@@ -1199,11 +1280,89 @@ export function MobileRemoteSection() {
     <section className="settings-section">
       <h3 className="settings-section-title">手机遥控 (Mobile Remote)</h3>
       <p className="text-sm text-muted-foreground">
-        在局域网启动一个手机网页遥控入口,供已配对的可信手机控制聊天与权限审批。默认关闭,不暴露公网。
+        启动一个手机网页遥控入口,供已配对的可信手机控制聊天与权限审批。默认关闭。
       </p>
+
+      {/* 模式选择:局域网 / 公网(隧道) */}
+      <div className="mt-3 max-w-xs">
+        <Select
+          value={mode}
+          onChange={(v) => setMode(v as "lan" | "tunnel")}
+          disabled={busy || status.running}
+          options={[
+            { value: "lan", label: "局域网(同 Wi-Fi)" },
+            { value: "tunnel", label: "公网(Cloudflare 隧道)" },
+          ]}
+        />
+      </div>
+
+      {mode === "tunnel" ? (
+        <div className="mt-3 space-y-3 rounded-md border border-border p-3">
+          <p className="text-xs text-muted-foreground">
+            公网模式经 Cloudflare 临时隧道,手机零安装在任意网络打开网址即可遥控。必须先设置访问口令;
+            关闭 CodeShell 或停止后地址即失效,每次重开为新随机地址。
+          </p>
+
+          {/* 访问口令 */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              访问口令{passcodeSet ? "(已设置,可重设)" : "(未设置)"}
+            </label>
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                value={passcodeInput}
+                onChange={(e) => setPasscodeInput(e.target.value)}
+                placeholder={passcodeSet ? "输入新口令以重设" : "至少 4 个字符"}
+                className="max-w-xs"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void savePasscode()}
+                disabled={busy || passcodeInput.length < 4}
+              >
+                {passcodeSet ? "重设口令" : "设置口令"}
+              </Button>
+            </div>
+            {!passcodeSet ? (
+              <p className="text-xs text-status-warn">未设访问口令时无法开启公网模式。</p>
+            ) : null}
+          </div>
+
+          {/* cloudflared 下载 */}
+          {!cloudflaredInstalled ? (
+            <div className="space-y-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void downloadCloudflared()}
+                disabled={downloadPct !== null}
+              >
+                {downloadPct !== null ? `下载中… ${downloadPct}%` : "下载 cloudflared"}
+              </Button>
+              {downloadPct !== null ? (
+                <div className="h-1.5 w-full max-w-xs overflow-hidden rounded bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${downloadPct}%` }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">cloudflared 已就绪。</p>
+          )}
+        </div>
+      ) : null}
+
       <div className="flex gap-2 mt-3">
-        <Button type="button" onClick={start} disabled={busy || status.running}>
-          开启手机遥控
+        <Button
+          type="button"
+          onClick={start}
+          disabled={busy || status.running || (mode === "tunnel" && !passcodeSet)}
+        >
+          {mode === "tunnel" ? "开启公网遥控" : "开启手机遥控"}
         </Button>
         <Button type="button" variant="outline" onClick={stop} disabled={busy || !status.running}>
           关闭
@@ -1212,6 +1371,18 @@ export function MobileRemoteSection() {
       <p className="text-sm mt-2">
         {status.running ? `运行中:${status.url}` : "已关闭"}
       </p>
+      {mode === "tunnel" && tunnelState ? (
+        <p
+          className={cn(
+            "text-sm mt-1",
+            tunnelState === "connected" ? "text-status-ok" : "text-status-err",
+          )}
+        >
+          {tunnelState === "connected"
+            ? "隧道已连接"
+            : "隧道已断开 — 地址已失效,请重新开启"}
+        </p>
+      ) : null}
       {pairingUrl ? (
         <div className="mt-2">
           <p className="text-sm font-medium">配对二维码(10 分钟内有效,用手机扫码):</p>

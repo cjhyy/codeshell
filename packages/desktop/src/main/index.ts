@@ -42,6 +42,9 @@ import { dlog } from "./desktop-logger.js";
 import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
 import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
+import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
+import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
+import { AccessPasscode } from "./mobile-remote/access-passcode.js";
 import type { MobileClientEvent, RoomPublic } from "./mobile-remote/types.js";
 import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
@@ -165,6 +168,28 @@ const mobileRemote = new RemoteHostManager({
   onClientEvent: (event) => {
     void handleMobileClientEvent(event as MobileClientEvent);
   },
+});
+
+// ── Public tunnel mode (off by default) ─────────────────────────────────────
+// cloudflared binary manager, tunnel process manager, and the access passcode
+// gate. All three live under <userData>/mobile-remote/. The tunnel is never
+// auto-started; the user opts in from Settings, which routes through the
+// mobileRemote:start IPC with { mode: "tunnel" }.
+const cloudflaredBinary = new CloudflaredBinary({
+  baseDir: resolve(app.getPath("userData"), "mobile-remote"),
+});
+const tunnelManager = new TunnelManager({
+  binaryPath: () => cloudflaredBinary.binaryPath(),
+});
+const accessPasscode = new AccessPasscode({
+  filePath: resolve(app.getPath("userData"), "mobile-remote", "access.json"),
+});
+// Forward tunnel status changes to every renderer so the UI can reflect
+// connected / disconnected (address invalidated) without polling.
+tunnelManager.on("status", (status: string, detail?: unknown) => {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("mobileRemote:tunnelStatus", { status, detail });
+  }
 });
 
 // Rooms: resident stream-json Claude Code sessions the phone can open and chat
@@ -995,22 +1020,94 @@ ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
 
 // ── Mobile Web Remote ───────────────────────────────────────────────────────
-ipcMain.handle("mobileRemote:start", async () => {
-  // Bind the Mac's real LAN IP so a phone on the same Wi-Fi can reach it
-  // (falls back to localhost if no LAN interface is found). Never 0.0.0.0.
-  const started = await mobileRemote.start({ host: "lan", port: 0 });
-  const pairing = mobileRemote.createPairingUrl();
-  return { url: started.url, pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
-});
+ipcMain.handle(
+  "mobileRemote:start",
+  async (_e, opts?: { mode?: "lan" | "tunnel" }) => {
+    const mode = opts?.mode ?? "lan";
+    if (mode === "tunnel") {
+      // Public tunnel: passcode MUST be set first (UI also disables the button).
+      if (!accessPasscode.isSet()) {
+        throw new Error("请先设置访问口令,再开启公网模式");
+      }
+      // Ensure cloudflared is present (no-op if already downloaded).
+      await cloudflaredBinary.ensureBinary();
+      // Bind loopback; cloudflared connects to 127.0.0.1.
+      const started = await mobileRemote.start({
+        mode: "tunnel",
+        host: "lan",
+        port: 0,
+        passcode: accessPasscode,
+      });
+      try {
+        const { url } = await tunnelManager.start(started.port);
+        mobileRemote.setPublicBaseUrl(url);
+        const pairing = mobileRemote.createPairingUrl();
+        return {
+          url,
+          pairingUrl: pairing.url,
+          expiresAt: pairing.expiresAt,
+          mode: "tunnel" as const,
+        };
+      } catch (err) {
+        // Tunnel failed (binary error / 15s URL timeout): tear everything down
+        // and surface a friendly error so the UI returns to the off state.
+        tunnelManager.stop();
+        await mobileRemote.stop();
+        throw new Error(
+          `公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+    // LAN mode (unchanged): bind the Mac's real LAN IP so a phone on the same
+    // Wi-Fi can reach it (falls back to localhost). Never 0.0.0.0.
+    const started = await mobileRemote.start({ host: "lan", port: 0 });
+    const pairing = mobileRemote.createPairingUrl();
+    return {
+      url: started.url,
+      pairingUrl: pairing.url,
+      expiresAt: pairing.expiresAt,
+      mode: "lan" as const,
+    };
+  },
+);
 ipcMain.handle("mobileRemote:stop", async () => {
+  tunnelManager.stop();
   await mobileRemote.stop();
 });
 ipcMain.handle("mobileRemote:status", async () => {
   const status = mobileRemote.status();
-  return { running: Boolean(status), url: status?.url };
+  return {
+    running: Boolean(status),
+    url: status?.url,
+    tunnelRunning: tunnelManager.isRunning(),
+  };
 });
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
 ipcMain.handle("mobileRemote:revokeDevice", async (_e, id: string) => mobileDevices.revoke(id));
+// ── Tunnel-specific IPC ─────────────────────────────────────────────────────
+ipcMain.handle("mobileRemote:cloudflaredInstalled", async () =>
+  cloudflaredBinary.isInstalled(),
+);
+ipcMain.handle("mobileRemote:downloadCloudflared", async (e) => {
+  const sender = e.sender;
+  await cloudflaredBinary.ensureBinary((pct) => {
+    if (!sender.isDestroyed()) sender.send("mobileRemote:downloadProgress", pct);
+  });
+  return true;
+});
+ipcMain.handle("mobileRemote:passcodeStatus", async () => ({
+  isSet: accessPasscode.isSet(),
+}));
+ipcMain.handle("mobileRemote:setPasscode", async (_e, passcode: string) => {
+  if (!passcode || passcode.length < 4) {
+    throw new Error("访问口令至少需要 4 个字符");
+  }
+  accessPasscode.set(passcode);
+  return true;
+});
+ipcMain.handle("mobileRemote:tunnelStatus", async () => ({
+  running: tunnelManager.isRunning(),
+}));
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
 ipcMain.handle("rooms:list", async () => roomManager.listRooms().map(roomToPublic));
@@ -1472,6 +1569,7 @@ app.on("before-quit", () => {
   automationHandle = null;
   ptyKillAll();
   roomManager.closeAll();
+  tunnelManager.stop();
   void mobileRemote.stop();
 });
 

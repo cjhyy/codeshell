@@ -3,6 +3,7 @@ import { networkInterfaces } from "node:os";
 import { WebSocketServer, type WebSocket } from "ws";
 import { mobileRemoteHtml } from "./mobile-ui.js";
 import { PairingTokenManager } from "./pairing.js";
+import type { AccessPasscode } from "./access-passcode.js";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
 import type { MobileClientEvent, MobileServerEvent } from "./types.js";
 
@@ -38,6 +39,14 @@ export function resolveLanHost(): string | undefined {
 export interface RemoteHostStartOptions {
   host: string;
   port: number;
+  /**
+   * "lan" (default) keeps the existing LAN behaviour unchanged. "tunnel" binds
+   * 127.0.0.1 (cloudflared connects to loopback) and inserts a passcode gate in
+   * front of every HTTP route and the WS upgrade.
+   */
+  mode?: "lan" | "tunnel";
+  /** Required in tunnel mode: the public access gate. Ignored in lan mode. */
+  passcode?: AccessPasscode;
 }
 
 export interface RemoteHostStarted {
@@ -58,12 +67,22 @@ export class RemoteHostManager {
   private pairing = new PairingTokenManager();
   /** ws → authenticated device id. A socket absent here is unauthenticated. */
   private authed = new WeakMap<WebSocket, string>();
+  /** Public base URL (tunnel domain) used by createPairingUrl when set. */
+  private publicBaseUrl?: string;
+  /** Passcode gate, present only in tunnel mode. */
+  private passcode?: AccessPasscode;
 
   constructor(private readonly opts: RemoteHostManagerOptions) {}
 
   async start(options: RemoteHostStartOptions): Promise<RemoteHostStarted> {
     if (this.started) return this.started;
+    const tunnel = options.mode === "tunnel";
+    this.passcode = tunnel ? options.passcode : undefined;
+    const gate = this.passcode;
     const server = createServer((req, res) => {
+      // Tunnel mode: a passcode gate sits in front of EVERY route. The gate
+      // either allows (returns true) or writes its own 401/403 challenge.
+      if (gate && !gate.gate(req, res)) return;
       if (req.url?.startsWith("/mobile")) {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
         res.end(mobileRemoteHtml());
@@ -77,7 +96,28 @@ export class RemoteHostManager {
       res.writeHead(404);
       res.end("not found");
     });
-    this.wss = new WebSocketServer({ server, path: "/ws" });
+    // In tunnel mode we must gate the WS handshake too. `noServer` lets us run
+    // the passcode check during the HTTP `upgrade` event before completing the
+    // handshake; in lan mode behaviour is unchanged (the same path/server bind).
+    this.wss = gate
+      ? new WebSocketServer({ noServer: true })
+      : new WebSocketServer({ server, path: "/ws" });
+    if (gate) {
+      server.on("upgrade", (req, socket, head) => {
+        if (!req.url?.startsWith("/ws")) {
+          socket.destroy();
+          return;
+        }
+        if (!gate.allows(req as unknown as { url?: string; headers: Record<string, string | string[] | undefined> })) {
+          socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+        this.wss!.handleUpgrade(req, socket, head, (ws) => {
+          this.wss!.emit("connection", ws, req);
+        });
+      });
+    }
     this.wss.on("connection", (ws) => {
       ws.on("message", (raw) => {
         let event: MobileClientEvent;
@@ -114,8 +154,11 @@ export class RemoteHostManager {
     // host: "lan" → resolve the Mac's real LAN IPv4 so a phone on the same
     // Wi-Fi can reach us. We bind that concrete address (never 0.0.0.0). If no
     // LAN interface is found, fall back to the requested host (e.g. localhost).
-    const bindHost =
-      options.host === "lan" ? (resolveLanHost() ?? "127.0.0.1") : options.host;
+    const bindHost = tunnel
+      ? "127.0.0.1"
+      : options.host === "lan"
+        ? (resolveLanHost() ?? "127.0.0.1")
+        : options.host;
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
       server.listen(options.port, bindHost, () => resolve());
@@ -126,13 +169,23 @@ export class RemoteHostManager {
     return this.started;
   }
 
+  /**
+   * Override the base URL used to build pairing URLs (tunnel mode points this
+   * at the `https://*.trycloudflare.com` domain so the QR encodes the public
+   * address, not the loopback bind). Pass undefined to clear it.
+   */
+  setPublicBaseUrl(url?: string): void {
+    this.publicBaseUrl = url;
+  }
+
   createPairingUrl(): { token: string; url: string; expiresAt: number } {
     if (!this.started) throw new Error("Remote host is not running");
     const token = this.pairing.createToken();
+    const base = this.publicBaseUrl ?? this.started.url;
     return {
       token: token.value,
       expiresAt: token.expiresAt,
-      url: `${this.started.url}/mobile?pairing=${token.value}`,
+      url: `${base}/mobile?pairing=${token.value}`,
     };
   }
 
@@ -184,6 +237,8 @@ export class RemoteHostManager {
     this.wss = undefined;
     this.server = undefined;
     this.started = undefined;
+    this.publicBaseUrl = undefined;
+    this.passcode = undefined;
     if (!server) return;
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }

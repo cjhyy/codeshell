@@ -619,13 +619,30 @@ export interface CodeshellApi {
    * a one-time pairing URL. No public relay (see mobile-remote design spec).
    */
   mobileRemote: {
-    start(): Promise<{ url: string; pairingUrl: string; expiresAt: number }>;
+    start(opts?: {
+      mode?: "lan" | "tunnel";
+    }): Promise<{
+      url: string;
+      pairingUrl: string;
+      expiresAt: number;
+      mode: "lan" | "tunnel";
+    }>;
     stop(): Promise<void>;
-    status(): Promise<{ running: boolean; url?: string }>;
+    status(): Promise<{ running: boolean; url?: string; tunnelRunning?: boolean }>;
     listDevices(): Promise<
       Array<{ id: string; name: string; createdAt: number; lastSeenAt?: number; revokedAt?: number }>
     >;
     revokeDevice(id: string): Promise<boolean>;
+    // ── Public tunnel mode ──
+    cloudflaredInstalled(): Promise<boolean>;
+    downloadCloudflared(): Promise<boolean>;
+    onDownloadProgress(cb: (pct: number) => void): Unsubscribe;
+    passcodeStatus(): Promise<{ isSet: boolean }>;
+    setPasscode(passcode: string): Promise<boolean>;
+    tunnelStatus(): Promise<{ running: boolean }>;
+    onTunnelStatus(
+      cb: (s: { status: string; detail?: unknown }) => void,
+    ): Unsubscribe;
   };
 
   /**

@@ -582,11 +582,32 @@ contextBridge.exposeInMainWorld("codeshell", {
 
   // ── Mobile Web Remote (LAN phone controller; off by default) ──────────
   mobileRemote: {
-    start: () => ipcRenderer.invoke("mobileRemote:start"),
+    start: (opts?: { mode?: "lan" | "tunnel" }) =>
+      ipcRenderer.invoke("mobileRemote:start", opts),
     stop: () => ipcRenderer.invoke("mobileRemote:stop"),
     status: () => ipcRenderer.invoke("mobileRemote:status"),
     listDevices: () => ipcRenderer.invoke("mobileRemote:listDevices"),
     revokeDevice: (id: string) => ipcRenderer.invoke("mobileRemote:revokeDevice", id),
+    // ── Public tunnel mode ──
+    cloudflaredInstalled: () => ipcRenderer.invoke("mobileRemote:cloudflaredInstalled"),
+    downloadCloudflared: () => ipcRenderer.invoke("mobileRemote:downloadCloudflared"),
+    onDownloadProgress: (cb: (pct: number) => void): (() => void) => {
+      const h = (_e: IpcRendererEvent, pct: number) => cb(pct);
+      ipcRenderer.on("mobileRemote:downloadProgress", h);
+      return () => ipcRenderer.removeListener("mobileRemote:downloadProgress", h);
+    },
+    passcodeStatus: () => ipcRenderer.invoke("mobileRemote:passcodeStatus"),
+    setPasscode: (passcode: string) =>
+      ipcRenderer.invoke("mobileRemote:setPasscode", passcode),
+    tunnelStatus: () => ipcRenderer.invoke("mobileRemote:tunnelStatus"),
+    onTunnelStatus: (
+      cb: (s: { status: string; detail?: unknown }) => void,
+    ): (() => void) => {
+      const h = (_e: IpcRendererEvent, payload: { status: string; detail?: unknown }) =>
+        cb(payload);
+      ipcRenderer.on("mobileRemote:tunnelStatus", h);
+      return () => ipcRenderer.removeListener("mobileRemote:tunnelStatus", h);
+    },
   },
 
   // ── Rooms (resident Claude Code sessions; dual-ended with the phone) ──

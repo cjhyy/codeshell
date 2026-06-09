@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { RemoteHostManager, resolveLanHost } from "./remote-host-manager.js";
 import { TrustedDeviceStore } from "./trusted-device-store.js";
+import { AccessPasscode } from "./access-passcode.js";
 
 let dir: string | undefined;
 
@@ -113,6 +114,102 @@ describe("RemoteHostManager", () => {
     const started = await host.start({ host: "lan", port: 0 });
     // Either a real LAN IP, or the documented localhost fallback if none found.
     expect(started.url).toMatch(/^http:\/\/(\d{1,3}\.){3}\d{1,3}:\d+$/);
+    const res = await fetch(`${started.url}/mobile`);
+    expect(res.status).toBe(200);
+    await host.stop();
+  });
+
+  // ── Tunnel mode ───────────────────────────────────────────────────────────
+
+  test("mode 'tunnel' binds 127.0.0.1 (never a LAN address)", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    passcode.set("correct");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+    const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
+    expect(started.host).toBe("127.0.0.1");
+    expect(started.url).toStartWith("http://127.0.0.1:");
+    await host.stop();
+  });
+
+  test("tunnel mode: /mobile without a credential is gated (401)", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    passcode.set("correct");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+    const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
+    const res = await fetch(`${started.url}/mobile`);
+    expect(res.status).toBe(401);
+    await host.stop();
+  });
+
+  test("tunnel mode: correct passcode query passes the gate and serves HTML", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    passcode.set("correct");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+    const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
+    const res = await fetch(`${started.url}/mobile?passcode=correct`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('id="feed"');
+    await host.stop();
+  });
+
+  test("tunnel mode: WS upgrade without a credential is rejected", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    passcode.set("correct");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+    const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
+    const wsUrl = `${started.url.replace(/^http/, "ws")}/ws`;
+    const code = await new Promise<number>((resolve) => {
+      const ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        ws.close();
+        resolve(0); // unexpectedly opened
+      };
+      ws.onerror = () => resolve(-1);
+      ws.onclose = (e) => resolve(e.code);
+    });
+    expect(code).not.toBe(0);
+    await host.stop();
+  });
+
+  test("setPublicBaseUrl makes createPairingUrl use the tunnel domain", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
+    passcode.set("correct");
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+    await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
+    host.setPublicBaseUrl("https://foo-bar.trycloudflare.com");
+    const pairing = host.createPairingUrl();
+    expect(pairing.url).toStartWith("https://foo-bar.trycloudflare.com/mobile?pairing=");
+    await host.stop();
+  });
+
+  test("lan mode (no passcode) serves /mobile with no gate (regression)", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+    });
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
     const res = await fetch(`${started.url}/mobile`);
     expect(res.status).toBe(200);
     await host.stop();
