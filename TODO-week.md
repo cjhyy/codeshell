@@ -169,10 +169,10 @@ v0.5 既已决定「MVP 只做全局 Profile 库、不做 workspace 级独立库
 - [x] 每个 turn 后面的“编辑 / 文件变更”卡片点审查时，默认只审查该 turn 产生的文件 / diff，而不是直接落到整个工作区未提交 diff。✅ **bug 已修**:ReviewPanel 收到 turn 的 files 时默认 `scope="turn"`,文件树只列这些文件(reviewScope.filterByScope),不再落整工作区。
 - [x] 审查入口支持切换范围：本 turn、未暂存、已暂存、提交、分支、上轮对话。**已做**:本轮改动 / 未暂存 / 已暂存 / 全部未提交(porcelain XY 分流) + **Slice 2 新增 committed(HEAD~1..HEAD)/ branch(base...HEAD,base 取 main/master/upstream)**。range scope 文件树走 `getGitRangeChanges`,逐文件 diff 走 `getGitRangeDiff`(新 IPC `git:rangeChanges`/`git:rangeDiff`/`git:branchBase`)。「上轮对话」未单列(turn 快照已覆盖单轮回看)。
 - [x] 审查面板文件树按范围展示变更文件，区分 unstaged / staged。**已做**:按 scope 过滤展示,porcelain code 区分 staged(X)/unstaged(Y);**Slice 2 补增删行数徽章**(`getGitNumstat` / range 的 numstat → `+N/-N` 徽章)。
-- [~] 提供“提交或推送”“创建拉取请求”等顶部动作，但按钮状态要按当前范围和 git 状态禁用 / 启用。**Slice 3 待做(用户决策搁置 2026-06-07)**:涉及 git 写操作(commit/push)+ 调 gh 建 PR,风险比只读 diff 高;且当前仓库有并行 mobile-remote / 权限改动在动,易冲突。审查工作流(范围切换 + diff + 行数徽章)已可用,动作条是增量,等并行改动落地、确认写操作交互后再做。
+- [x] 提供“提交或推送”“创建拉取请求”等顶部动作。**Slice 3 不做(用户决策 2026-06-09):审查面板不加 commit/push/PR 动作条** —— 提交走聊天(让 AI 用 Bash 工具跑 git,天然过权限审批),不在 review 面板里另起一套绕过权限的 git 写路径,也避免 subagent 乱动 git。审查只保留"读"(范围切换 + diff + 行数徽章)。
 - [x] turn 级文件卡片与审查面板共享同一套 diff 数据来源，避免卡片显示 A、审查打开 B。✅ **修「看不了之前 turn 对比」**:card 的 `codeshell:review-files` 事件现带上该轮的 diff 快照(sessionDiffText)→ App reviewDiff → PanelArea → ReviewPanel turnDiff。本轮范围下 viewer 直接渲染这份快照(UnifiedDiffViewer diffText 短路,不查 git),所以**即使改动已被后续提交,仍能看那一轮当时改了什么**(之前只过滤 live git status,提交后就空了)。卡片内联 ReviewModal 本就用同一份 sessionDiffText,数据源一致。
 - [x] 当前缺口(原 bug):turn 卡片“审查”落到整工作区 + 看不了历史轮对比。✅ 两者均已修(默认本轮范围 + 快照查看)。committed/branch 范围切换 Slice 2 已补。
-- [~] **文件树 + 顶部动作整体对齐截图的审查工作流**:左侧按范围分组的变更文件树(unstaged/staged/committed/branch,带增删行数徽章)**✅ 已做**,顶部一排范围切换 **✅ 已做** + 提交/推送/建 PR 动作条 **(Slice 3 搁置,见上)**。审查的"读"形态已完整,剩"写"动作条。
+- [~] **文件树 + 顶部动作整体对齐截图的审查工作流**:左侧按范围分组的变更文件树(unstaged/staged/committed/branch,带增删行数徽章)**✅ 已做**,顶部一排范围切换 **✅ 已做** + 提交/推送/建 PR 动作条 **(Slice 3 不做,见上:提交走聊天)**。审查只做"读",写操作走聊天。
 > **优先级:这是真 bug 不是 nice-to-have**——用户实测「turn 卡片点审查 → 直接落到整工作区未提交 diff」是错的;应默认本 turn 范围,再给上述范围切换。需 desktop 审查面板较大改造,排 UI sprint。
 
 ### 2.4 四面板放大 / 缩小并可覆盖输入区
@@ -233,7 +233,7 @@ v0.5 既已决定「MVP 只做全局 Profile 库、不做 workspace 级独立库
 - [x] `/undo` 撤销最近一次文件修改。✅ FileHistory 快照 + latestUndoTarget(按 timestamp)。
 - [x] 撤销前显示 diff 预览并确认。✅ 两段式 /undo → /undo confirm + renderDiffPreview。
 - [x] `/undo all` 撤销当前会话所有修改。✅ (cafe9e4) 每文件回到首次编辑前(earliestSnapshotsPerFile)+ 两段式多文件预览。
-- [ ] 评估与 git 集成：stash 或 undo commit。(留后)
+- [x] 评估与 git 集成：stash 或 undo commit。**评估完(2026-06-09):保持现有 file-history 快照机制,不引入 git stash / undo-commit。** 理由:① Codex 自己没有内建可靠 undo,且 #5082 教训=undo 绝不擅动 git stage/commit 状态;现有快照恰是零 git 污染。② 用户约束「已提交的不回滚也行」天然由快照满足。③ 真正差距是覆盖面(快照不覆盖 bash 改动),但 Codex 想要的 checkpoint 也不覆盖 bash,属合理边界。结论=不做改造。
 
 ### 2.11 Shell Snapshot
 
