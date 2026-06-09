@@ -722,6 +722,11 @@ export function App({
 
         case "task_update": {
           const taskEvent = event as any;
+          // Sub-agent task_updates carry agentId (injected by the engine's
+          // childStream). Their todos belong to the sub-agent, not the main
+          // session — drop them so they don't clobber the main task view
+          // (mirrors the desktop renderer's isolation).
+          if (taskEvent.agentId) break;
           if (taskEvent.tasks) setTasks(taskEvent.tasks);
           break;
         }
