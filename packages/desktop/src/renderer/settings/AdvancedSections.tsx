@@ -489,7 +489,7 @@ export function EnvironmentSection({ repos }: { repos: Repo[] }) {
       <section className="settings-section">
         <h3 className="settings-section-title">本地环境</h3>
         <p className="settings-section-help">
-          本地环境按项目维护(setup / cleanup 脚本、KEY=VALUE 变量、沙箱边界)。选择一个项目以查看 / 编辑。
+          本地环境按项目维护(setup 脚本、KEY=VALUE 变量、沙箱边界)。选择一个项目以查看 / 编辑。
         </p>
         <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
       </section>
@@ -523,7 +523,7 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
   const projectName = pathBasename(cwd);
   const [name, setName] = useState(projectName);
   const [setupTab, setSetupTab] = useState<LocalEnvPlatform>("default");
-  const [cleanupTab, setCleanupTab] = useState<LocalEnvPlatform>("default");
+  // cleanupTab 暂时移除:清理脚本 UI 已隐藏(cleanup 未接)。恢复 UI 时一并恢复此行。
   const [setupScripts, setSetupScripts] = useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
   const [cleanupScripts, setCleanupScripts] = useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
   const [envText, setEnvText] = useState("");
@@ -601,15 +601,10 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
         placeholder={'pip install -r requirements.txt\nnpm install\n./run/setup.sh'}
       />
 
-      <LocalScriptEditor
-        title="清理脚本"
-        help="保存用于清理工作树或释放本地资源的脚本。注:当前不自动收尾运行,作为记录 / 手动参考。"
-        activeTab={cleanupTab}
-        onTabChange={setCleanupTab}
-        scripts={cleanupScripts}
-        onScriptChange={(tab, value) => setCleanupScripts((prev) => ({ ...prev, [tab]: value }))}
-        placeholder={"docker compose down --remove-orphans\nrm -rf .cache/tmp"}
-      />
+      {/* 清理脚本 UI 暂时隐藏:cleanup 当前不自动收尾运行(决策未接),展示出来会
+          误导用户以为配了就生效。state(cleanupScripts)+ 保存逻辑保留,接上 cleanup
+          功能后直接恢复这段 <LocalScriptEditor title="清理脚本" …/> 即可,不丢已存数据。
+          见 TODO-feedback.md「清理脚本(cleanup)未接但 UI 可配」。 */}
 
       <label className="settings-field local-env-vars">
         <span>变量</span>
