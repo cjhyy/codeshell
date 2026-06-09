@@ -489,7 +489,22 @@ async function createWindow(): Promise<BrowserWindow> {
           "base-uri 'none'; " +
           "frame-ancestors 'none'",
         ];
+    // This CSP describes the *app's own* renderer (origin = the Vite dev URL
+    // in dev, or file: in prod). The browser panel's <webview> guests live in
+    // the "persist:browser" partition and load arbitrary external sites — they
+    // must keep their OWN headers, or e.g. a Next.js site's self-hosted
+    // /_next/static/media/*.woff2 fonts get refused against our `font-src
+    // 'self' data:`. So scope the override to renderer-origin requests only.
+    const rendererOrigin = process.env.VITE_DEV_URL ?? "";
+    const isRendererRequest = (url: string): boolean =>
+      url.startsWith("file://") ||
+      (rendererOrigin !== "" && url.startsWith(rendererOrigin)) ||
+      url.startsWith("devtools://");
     session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+      if (!isRendererRequest(details.url)) {
+        cb({ responseHeaders: details.responseHeaders });
+        return;
+      }
       cb({
         responseHeaders: {
           ...details.responseHeaders,

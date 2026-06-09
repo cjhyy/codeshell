@@ -744,9 +744,14 @@ export function applyStreamEvent(
       // An empty error would render as a bare "Error: " block. Drop the
       // message but still clear streaming ids (the turn is over either way).
       const errText = (event.error ?? "").trim();
+      // Belt-and-braces: a user-initiated Stop can surface as an abort-flavored
+      // error event (the engine now suppresses these at the source, but other
+      // paths may not). The "你停止了本轮" turn_end line already covers a stop,
+      // so swallow abort text instead of stacking a red Error block on top.
+      const isAbort = /\b(abort|aborted|cancell?ed|interrupt)\b/i.test(errText);
       return {
         ...state,
-        messages: errText
+        messages: errText && !isAbort
           ? [...state.messages, { kind: "system", id: freshId("err"), text: `Error: ${errText}` }]
           : state.messages,
         streamingAssistantId: null,

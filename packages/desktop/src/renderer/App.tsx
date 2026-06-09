@@ -1456,7 +1456,12 @@ function App() {
   };
 
   const stop = (bucketOverride?: string): void => {
-    const bucket = bucketOverride ?? runningBucketRef.current ?? activeBucket;
+    // Guard: when wired as a click handler (onClick={stop}) React passes the
+    // MouseEvent as the first arg. Only honor a real string override; anything
+    // else falls through to the running/active bucket. Without this the event
+    // object reaches `bucket.indexOf` and throws — silently breaking Stop.
+    const override = typeof bucketOverride === "string" ? bucketOverride : undefined;
+    const bucket = override ?? runningBucketRef.current ?? activeBucket;
     const sep = bucket.indexOf("::");
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
     const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
@@ -2119,7 +2124,7 @@ function App() {
               onSend={send}
               onQueueInput={queueInput}
               onForceSend={forceSend}
-              onStop={stop}
+              onStop={() => stop()}
               busy={busy}
               queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
               queuedInputItems={queuedInputs[activeBucket] ?? []}

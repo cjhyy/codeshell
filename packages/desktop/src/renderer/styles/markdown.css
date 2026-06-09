@@ -9,11 +9,21 @@
 .md-body p {
   margin: 0 0 var(--sp-2);
 }
-.md-body ul,
+/* Tailwind's Preflight resets ul/ol to `list-style: none`, which wiped the
+   bullets AND the 1./2./3. numbers (and left `li::marker` with nothing to
+   color). Restore the markers explicitly. */
+.md-body ul {
+  margin: var(--sp-2) 0;
+  padding-left: 1.35rem;
+  list-style: disc;
+}
 .md-body ol {
   margin: var(--sp-2) 0;
   padding-left: 1.35rem;
+  list-style: decimal;
 }
+.md-body li > ul { list-style: circle; }
+.md-body li > ul ul { list-style: square; }
 .md-body li {
   margin: 0.35rem 0;
   padding-left: 0.1rem;

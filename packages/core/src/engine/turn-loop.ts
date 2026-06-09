@@ -525,6 +525,13 @@ export class TurnLoop {
             });
             return { text: finalText, reason: "prompt_too_long", messages };
           }
+        } else if (isAbortError(err) || this.config.signal?.aborted) {
+          // User pressed Stop: the in-flight model call rejected with an
+          // AbortError. This is NOT a failure — the UI already shows the
+          // "你在 Ns 后停止了" line, so emitting an error event would stack a
+          // spurious red "Error:" block on top of an intentional stop.
+          this.patchOrphanedToolUses(messages);
+          return { text: finalText, reason: "aborted_streaming", messages };
         } else {
           this.patchOrphanedToolUses(messages);
           this.config.onStream?.({ type: "error", error: formatFriendlyError(err) });
@@ -907,6 +914,12 @@ export class TurnLoop {
       // engine's post-run saveState records model_error instead of leaving
       // the session stuck at "active".
       this.patchOrphanedToolUses(messages);
+      // A user-initiated Stop also bubbles here (an AbortError thrown from the
+      // per-turn scaffolding). Treat it as a clean abort, not a model_error —
+      // no error event, so the UI shows only the "你停止了本轮" line.
+      if (isAbortError(err) || this.config.signal?.aborted) {
+        return { text: finalText, reason: "aborted_streaming", messages };
+      }
       this.currentTurnLog.error("turn.unhandled_error", {
         cat: "turn",
         error: (err as Error).message,
