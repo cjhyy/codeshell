@@ -96,8 +96,14 @@ export class FakeVideoProvider implements VideoProvider {
  * (https://queue.fal.run). model id selects the underlying model
  * (e.g. fal-ai/kling-video/v3/pro/text-to-video). When `image` is present we
  * switch a `...text-to-video` model to `...image-to-video` and send image_url,
- * so callers only need to pass an image to get i2v. jobId encodes
- * `${model}::${request_id}` since poll/download need the model to build URLs.
+ * so callers only need to pass an image to get i2v.
+ *
+ * IMPORTANT: fal's status/result URLs use a model-FAMILY prefix
+ * (`fal-ai/kling-video/requests/<id>`), NOT the full submit path
+ * (`.../v3/pro/text-to-video/requests/<id>` → HTTP 405). So we never
+ * reconstruct those URLs; we encode the `status_url` + `response_url` that
+ * submit returns into the jobId (`<status_url>|<response_url>`) and use them
+ * verbatim in poll/download. Verified against the live API 2026-06-10.
  */
 export class FalVideoProvider implements VideoProvider {
   readonly kind = "fal";
@@ -110,10 +116,11 @@ export class FalVideoProvider implements VideoProvider {
     return model;
   }
 
-  private split(jobId: string): { model: string; requestId: string } {
-    const idx = jobId.indexOf("::");
-    if (idx < 0) return { model: jobId, requestId: "" };
-    return { model: jobId.slice(0, idx), requestId: jobId.slice(idx + 2) };
+  /** jobId = `${statusUrl}|${responseUrl}` (fal returns both from submit). */
+  private split(jobId: string): { statusUrl: string; responseUrl: string } {
+    const idx = jobId.indexOf("|");
+    if (idx < 0) return { statusUrl: jobId, responseUrl: jobId };
+    return { statusUrl: jobId.slice(0, idx), responseUrl: jobId.slice(idx + 1) };
   }
 
   async submit(req: VideoSubmitRequest): Promise<VideoSubmitResult> {
@@ -132,24 +139,32 @@ export class FalVideoProvider implements VideoProvider {
         const t = await r.text().catch(() => "");
         return { ok: false, error: `fal submit failed: HTTP ${r.status} ${t}`.trim() };
       }
-      const j = (await r.json()) as { request_id?: string };
+      const j = (await r.json()) as { request_id?: string; status_url?: string; response_url?: string };
       if (!j.request_id) return { ok: false, error: "fal submit: no request_id in response" };
-      return { ok: true, jobId: `${model}::${j.request_id}` };
+      // Prefer the URLs fal hands back; fall back to family-prefix reconstruction
+      // only if they're absent (defensive — live API always returns them).
+      const statusUrl = j.status_url ?? "";
+      const responseUrl = j.response_url ?? "";
+      if (!statusUrl || !responseUrl) {
+        return { ok: false, error: "fal submit: missing status_url/response_url" };
+      }
+      return { ok: true, jobId: `${statusUrl}|${responseUrl}` };
     } catch (err) {
       return { ok: false, error: `fal submit error: ${(err as Error).message}` };
     }
   }
 
   async poll(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoPollResult> {
-    const base = req.creds.baseUrl.replace(/\/+$/, "");
-    const { model, requestId } = this.split(req.jobId);
+    const { statusUrl } = this.split(req.jobId);
     try {
-      const r = await this.fetchImpl(`${base}/${model}/requests/${requestId}/status`, {
+      const r = await this.fetchImpl(statusUrl, {
         method: "GET",
         headers: { Authorization: `Key ${req.creds.apiKey}` },
         signal: req.signal,
       });
-      if (!r.ok) {
+      // fal returns 200/202 for valid in-progress/queued states; only treat a
+      // hard client/server error (4xx except 202, 5xx) as a transport failure.
+      if (!r.ok && r.status !== 202) {
         const t = await r.text().catch(() => "");
         return { ok: false, error: `fal status failed: HTTP ${r.status} ${t}`.trim() };
       }
@@ -169,11 +184,10 @@ export class FalVideoProvider implements VideoProvider {
   }
 
   async download(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoDownloadResult> {
-    const base = req.creds.baseUrl.replace(/\/+$/, "");
-    const { model, requestId } = this.split(req.jobId);
+    const { responseUrl } = this.split(req.jobId);
     try {
       // hop 1: result JSON
-      const r = await this.fetchImpl(`${base}/${model}/requests/${requestId}/`, {
+      const r = await this.fetchImpl(responseUrl, {
         method: "GET",
         headers: { Authorization: `Key ${req.creds.apiKey}` },
         signal: req.signal,
