@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -13,21 +13,31 @@ afterEach(() => {
   dir = undefined;
 });
 
+/** A stand-in built mobile app (out/mobile) for the static server to serve. */
+const MOBILE_HTML = '<!doctype html><html><head><title>CodeShell Remote</title></head><body><div id="app"></div></body></html>';
+function mobileFixture(base: string): string {
+  const root = join(base, "mobile-app");
+  mkdirSync(root, { recursive: true });
+  writeFileSync(join(root, "index.html"), MOBILE_HTML);
+  return root;
+}
+
 describe("RemoteHostManager", () => {
   test("starts, serves mobile HTML, and stops", async () => {
     dir = mkdtempSync(join(tmpdir(), "remote-host-"));
     const host = new RemoteHostManager({
       devices: new TrustedDeviceStore(join(dir, "devices.json")),
       onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
     });
     const started = await host.start({ host: "127.0.0.1", port: 0 });
     expect(started.url).toStartWith("http://127.0.0.1:");
     const res = await fetch(`${started.url}/mobile`);
     expect(res.status).toBe(200);
     const html = await res.text();
-    // Structural markers that survive restyles (not the cosmetic <title>).
+    // Serves the built mobile app's index.html (React SPA, not inline string).
     expect(html).toContain("<title>CodeShell Remote</title>");
-    expect(html).toContain('id="feed"');
+    expect(html).toContain('id="app"');
     await host.stop();
   });
 
@@ -136,6 +146,7 @@ describe("RemoteHostManager", () => {
     const host = new RemoteHostManager({
       devices: new TrustedDeviceStore(join(dir, "devices.json")),
       onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
     });
     const started = await host.start({ host: "lan", port: 0 });
     // Either a real LAN IP, or the documented localhost fallback if none found.
@@ -182,12 +193,13 @@ describe("RemoteHostManager", () => {
     const host = new RemoteHostManager({
       devices: new TrustedDeviceStore(join(dir, "devices.json")),
       onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
     });
     const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
     const res = await fetch(`${started.url}/mobile?passcode=correct`);
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain('id="feed"');
+    expect(html).toContain('id="app"');
     await host.stop();
   });
 
@@ -234,10 +246,26 @@ describe("RemoteHostManager", () => {
     const host = new RemoteHostManager({
       devices: new TrustedDeviceStore(join(dir, "devices.json")),
       onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
     });
     const started = await host.start({ host: "127.0.0.1", port: 0 });
     const res = await fetch(`${started.url}/mobile`);
     expect(res.status).toBe(200);
+    await host.stop();
+  });
+
+  test("static serve blocks path traversal out of out/mobile", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
+    });
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    const res = await fetch(`${started.url}/mobile/../../devices.json`);
+    // The path is normalized by fetch/url, but the server's resolveSafe also
+    // rejects any escape → never leak a sibling file.
+    expect(res.status).not.toBe(200);
     await host.stop();
   });
 });
