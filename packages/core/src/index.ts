@@ -234,6 +234,7 @@ export {
   PluginInstallError,
 } from "./plugins/installer/types.js";
 export { mergePluginMcpServers } from "./plugins/installer/loadPluginMcp.js";
+export { listPluginHooks, type PluginHookEntry } from "./plugins/loadPluginHooks.js";
 export { pluginAgentDirs } from "./plugins/installer/loadPluginAgents.js";
 export {
   appendInstallEntry,

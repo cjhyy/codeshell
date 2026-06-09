@@ -18,6 +18,7 @@ import {
   defaultCronStorePath,
   agentNotificationBus,
   mergePluginMcpServers,
+  listPluginHooks,
   type AutomationHandle,
   resolveExternalAgentConfig,
 } from "@cjhyy/code-shell-core";
@@ -912,6 +913,16 @@ ipcMain.handle("mcp:listMerged", async (_e, rawBase: unknown, rawDisabledPlugins
       },
     ]),
   );
+});
+
+// Read-only list of plugin-provided hooks, for the settings 钩子 page to show
+// alongside hand-written hooks (labelled by owner plugin). Mirrors
+// mcp:listMerged's disabledPlugins handling. (#钩子设置页改造)
+ipcMain.handle("hooks:listPlugin", async (_e, rawDisabledPlugins?: unknown) => {
+  const disabledPlugins = Array.isArray(rawDisabledPlugins)
+    ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
+    : [];
+  return listPluginHooks(disabledPlugins);
 });
 
 ipcMain.handle("mcp:invalidate", async (_e, name?: string) => {

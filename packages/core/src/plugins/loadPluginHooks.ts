@@ -205,3 +205,62 @@ export function loadPluginHooks(
     }
   }
 }
+
+/** A single plugin-provided hook, surfaced read-only to the settings UI. */
+export interface PluginHookEntry {
+  /** Source plugin name (bare, no @marketplace). */
+  plugin: string;
+  /** Mapped codeshell event name. */
+  event: HookEventName;
+  /** Original CC event name as written in hooks.json (for display). */
+  rawEvent: string;
+  /** The shell command the hook runs. */
+  command: string;
+  /** Optional matcher (regex) from the hooks.json group. */
+  matcher?: string;
+  /** Whether the owning plugin is currently disabled (its hooks don't fire). */
+  disabled: boolean;
+}
+
+/**
+ * Read-only counterpart to {@link loadPluginHooks}: scan installed plugins and
+ * RETURN their command hooks (instead of registering them), so the settings
+ * "钩子" page can show plugin-provided hooks alongside the user's hand-written
+ * ones, labelled by owner plugin. `disabledPlugins` doesn't filter the list —
+ * disabled plugins are still listed but flagged `disabled:true` (so the UI can
+ * show "由 xxx 插件提供（已禁用）"); pass it so that flag is accurate.
+ */
+export function listPluginHooks(disabledPlugins: string[] = []): PluginHookEntry[] {
+  const data = readInstalledPlugins();
+  const disabledSet = new Set(disabledPlugins);
+  const out: PluginHookEntry[] = [];
+  for (const [key, entries] of Object.entries(data.plugins)) {
+    const plugin = pluginNameFromKey(key);
+    const disabled = disabledSet.has(plugin);
+    for (const entry of entries) {
+      const installPath = entry.installPath;
+      if (!installPath || !existsSync(installPath)) continue;
+      const raw = readHooksJson(installPath);
+      if (!raw?.hooks) continue;
+      for (const [eventNameRaw, groups] of Object.entries(raw.hooks)) {
+        const mapped = EVENT_NAME_MAP[eventNameRaw];
+        if (mapped === null || mapped === undefined) continue;
+        if (!Array.isArray(groups)) continue;
+        for (const group of groups) {
+          for (const cmd of group.hooks ?? []) {
+            if (cmd.type !== "command" || typeof cmd.command !== "string") continue;
+            out.push({
+              plugin,
+              event: mapped,
+              rawEvent: eventNameRaw,
+              command: cmd.command,
+              matcher: group.matcher,
+              disabled,
+            });
+          }
+        }
+      }
+    }
+  }
+  return out;
+}

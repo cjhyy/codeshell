@@ -16,7 +16,7 @@ class TestClient extends LLMClientBase {
     throw new Error("unused");
   }
   // Expose the protected retry loop + count how many times fn is invoked.
-  runRetry<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  runRetry<T>(fn: (requestSignal?: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
     return this.withRetry(fn, { signal });
   }
 }

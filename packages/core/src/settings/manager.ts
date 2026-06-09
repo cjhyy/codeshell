@@ -204,7 +204,13 @@ export class SettingsManager {
    * cache invalidation mirror saveUserSetting.
    */
   saveProjectSetting(key: string, value: unknown, cwd: string): void {
+    // projectSettingsPath throws on an empty cwd (boundary guard) — keep that.
     const path = this.projectSettingsPath(cwd);
+    // Don't resurrect a deleted project root: atomicWriteJson's recursive mkdir
+    // of <cwd>/.code-shell recreates `cwd` itself as an empty shell when cwd is
+    // gone. A non-empty cwd that no longer exists means the project was deleted
+    // — skip the write rather than recreate it.
+    if (!existsSync(cwd)) return;
     const current = this.readJsonObject(path);
     const parts = key.split(".");
     let target: Record<string, unknown> = current;

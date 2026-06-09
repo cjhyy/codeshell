@@ -67,6 +67,13 @@ export async function configTool(args: Record<string, unknown>): Promise<string>
     }
     obj[parts[parts.length - 1]] = value;
 
+    // Never resurrect a deleted project root: a recursive mkdir of
+    // <cwd>/.code-shell would recreate `cwd` itself as an empty shell when the
+    // directory has been deleted (e.g. a stale session pointing at a removed
+    // dir). If the project root is gone, the project is gone — don't write.
+    if (!existsSync(cwd)) {
+      return `Error: project directory does not exist: ${cwd}`;
+    }
     mkdirSync(join(cwd, ".code-shell"), { recursive: true });
     writeFileSync(configPath, JSON.stringify(settings, null, 2), "utf-8");
 

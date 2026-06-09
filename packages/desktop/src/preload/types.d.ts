@@ -35,6 +35,17 @@ export interface BackgroundShellInfo {
   detectedPort?: number;
 }
 
+/** A plugin-provided hook surfaced read-only to the settings 钩子 page. Mirrors
+ *  core's PluginHookEntry (renderer can't import core). */
+export interface PluginHookEntry {
+  plugin: string;
+  event: string;
+  rawEvent: string;
+  command: string;
+  matcher?: string;
+  disabled: boolean;
+}
+
 export interface ApprovalRequestEnvelope {
   /** Owning chat session — renderer routes the modal to the right tab. */
   sessionId?: string;
@@ -551,6 +562,8 @@ export interface CodeshellApi {
     base: Record<string, unknown>,
     disabledPlugins?: string[],
   ): Promise<Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>>;
+  /** Read-only list of plugin-provided hooks (for the settings 钩子 page). */
+  listPluginHooks(disabledPlugins?: string[]): Promise<PluginHookEntry[]>;
   invalidateMcpProbeCache(name?: string): Promise<void>;
   probeSearch(input: SearchProbeInput): Promise<SearchProbeResult>;
   probeImage(input: ImageProbeInput): Promise<ImageProbeResult>;

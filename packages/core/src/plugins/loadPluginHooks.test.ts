@@ -2,7 +2,7 @@ import { describe, test, expect, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadPluginHooks } from "./loadPluginHooks.js";
+import { loadPluginHooks, listPluginHooks } from "./loadPluginHooks.js";
 import { HookRegistry } from "../hooks/registry.js";
 
 /**
@@ -89,5 +89,35 @@ describe("loadPluginHooks disabledPlugins filter", () => {
     const reg = new HookRegistry();
     loadPluginHooks(reg, ["something-else"]);
     expect(reg.hasHooks("on_session_start")).toBe(true);
+  });
+});
+
+describe("listPluginHooks (read-only, for the settings UI)", () => {
+  test("returns plugin hooks with owner name + mapped event + command", () => {
+    stagePlugin("superpowers@market");
+    const list = listPluginHooks();
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      plugin: "superpowers",
+      event: "on_session_start",
+      rawEvent: "SessionStart",
+      command: "echo hi",
+      disabled: false,
+    });
+  });
+
+  test("flags entries from a disabled plugin (still listed, disabled:true)", () => {
+    stagePlugin("superpowers@market");
+    const list = listPluginHooks(["superpowers"]);
+    expect(list).toHaveLength(1); // still listed (read-only view)
+    expect(list[0]!.disabled).toBe(true);
+  });
+
+  test("does not register anything (pure read)", () => {
+    stagePlugin("superpowers@market");
+    listPluginHooks();
+    const reg = new HookRegistry();
+    // A fresh registry that never had loadPluginHooks called stays empty.
+    expect(reg.hasHooks("on_session_start")).toBe(false);
   });
 });
