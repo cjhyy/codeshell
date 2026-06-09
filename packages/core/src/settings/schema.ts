@@ -275,8 +275,27 @@ export const SettingsSchema = z
     context: z
       .object({
         maxTokens: z.number().default(200_000),
-        compactAtRatio: z.number().default(0.6),
-        summarizeAtRatio: z.number().default(0.8),
+        // 压缩阈值（占上下文窗口的比例）。窗口越大可调越高：1M 窗口的模型
+        // 把 compactAtRatio 调到 0.95 能少浪费几十万 token。三档须满足
+        // floor < compact < summarize，否则运行时会 clamp 回安全顺序。
+        compactAtRatio: z
+          .number()
+          .min(0.1)
+          .max(0.98)
+          .default(0.85)
+          .describe("达到该比例开始压缩历史（先试摘要，再退化为窗口裁剪）。默认 0.85。"),
+        summarizeAtRatio: z
+          .number()
+          .min(0.1)
+          .max(0.99)
+          .default(0.92)
+          .describe("紧急阈值：到此比例做最激进的窗口压缩。须 ≥ compactAtRatio。默认 0.92。"),
+        microcompactFloorRatio: z
+          .number()
+          .min(0.1)
+          .max(0.95)
+          .default(0.7)
+          .describe("低于该比例不做 microcompact，保留早期工具输出、保住 prompt cache 前缀。默认 0.7。"),
       })
       .default({}),
 

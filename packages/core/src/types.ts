@@ -143,6 +143,13 @@ export interface SessionState {
   status: SessionStatus;
   /** Short summary derived from the first user message */
   summary?: string;
+  /**
+   * LLM-generated one-line title (auxModel, after the first turn). Distinct from
+   * `summary` (the raw first-message fallback). Persisted so the sidebar shows
+   * it after a localStorage wipe / disk rebuild — without this it lived only in
+   * the renderer's localStorage index and was lost on reset.
+   */
+  title?: string;
   /** Persisted cost tracking state (survives process restart). */
   costState?: Record<string, unknown>;
 }
@@ -529,6 +536,7 @@ export interface Settings {
     maxTokens: number;
     compactAtRatio: number;
     summarizeAtRatio: number;
+    microcompactFloorRatio: number;
   };
   session: {
     storageDir: string;

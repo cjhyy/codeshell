@@ -22,6 +22,41 @@ export function estimateTokens(messages: Message[]): number {
   return Math.ceil(estimateMessagesTokens(messages) * (4 / 3));
 }
 
+/**
+ * Reconcile user-supplied compaction ratios into a safe ordering.
+ *
+ * The three tiers must satisfy `floor < compact < summarize` or the manager
+ * fires them in the wrong order (e.g. an emergency window-compact before the
+ * cheaper summary). Users edit these freely in settings.json, so we clamp
+ * rather than trust: summarize is pulled up to at least compact, floor is
+ * pushed down to at most compact. Absent fields are left undefined so the
+ * ContextManager keeps its own default for them.
+ */
+export function clampContextRatios(input: {
+  compactAtRatio?: number;
+  summarizeAtRatio?: number;
+  microcompactFloorRatio?: number;
+}): {
+  compactAtRatio?: number;
+  summarizeAtRatio?: number;
+  microcompactFloorRatio?: number;
+} {
+  const compact = input.compactAtRatio;
+  const summarize =
+    input.summarizeAtRatio !== undefined && compact !== undefined
+      ? Math.max(input.summarizeAtRatio, compact)
+      : input.summarizeAtRatio;
+  const floor =
+    input.microcompactFloorRatio !== undefined && compact !== undefined
+      ? Math.min(input.microcompactFloorRatio, compact)
+      : input.microcompactFloorRatio;
+  return {
+    compactAtRatio: compact,
+    summarizeAtRatio: summarize,
+    microcompactFloorRatio: floor,
+  };
+}
+
 // ─── Tool Use / Result Pair Protection ──────────────────────────────
 
 /**

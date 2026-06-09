@@ -53,7 +53,10 @@ import { pluginAgentDirs } from "../plugins/installer/loadPluginAgents.js";
 import { patchOrphanedToolUses } from "./patch-orphaned-tools.js";
 import { runShellHook, shellHookMatches } from "../hooks/shell-runner.js";
 import { ContextManager } from "../context/manager.js";
-import { estimateTokens } from "../context/compaction.js";
+import {
+  estimateTokens,
+  clampContextRatios as clampContextRatiosImpl,
+} from "../context/compaction.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "../tool-system/plan-mode-allowlist.js";
 import { PromptComposer } from "../prompt/composer.js";
 import { SessionManager, type SessionBundle } from "../session/session-manager.js";
@@ -510,6 +513,44 @@ export class Engine {
   private resolveMaxContextTokens(): number {
     const modelEntry = this.modelPool.get();
     return modelEntry?.maxContextTokens ?? this.config.maxContextTokens ?? 200_000;
+  }
+
+  /**
+   * Compaction thresholds from settings.context, clamped so they keep the
+   * required ordering floor < compact < summarize even if the user configures
+   * conflicting values (e.g. summarize below compact). Falls back to the
+   * ContextManager defaults when a field is absent.
+   */
+  private resolveContextRatios(): {
+    compactAtRatio?: number;
+    summarizeAtRatio?: number;
+    microcompactFloorRatio?: number;
+  } {
+    let ctx:
+      | {
+          compactAtRatio?: number;
+          summarizeAtRatio?: number;
+          microcompactFloorRatio?: number;
+        }
+      | undefined;
+    try {
+      // Read from SettingsManager (shared across all hosts) rather than
+      // EngineConfig, mirroring readMemoriesConfig — avoids per-host wiring
+      // drift (see memory: personalization host wiring).
+      ctx = (
+        this.getSettingsManager().get() as {
+          context?: {
+            compactAtRatio?: number;
+            summarizeAtRatio?: number;
+            microcompactFloorRatio?: number;
+          };
+        }
+      ).context;
+    } catch {
+      return {};
+    }
+    if (!ctx) return {};
+    return clampContextRatiosImpl(ctx);
   }
 
   /**
@@ -1413,6 +1454,11 @@ export class Engine {
 
     const contextManager = new ContextManager({
       maxTokens: this.resolveMaxContextTokens(),
+      // Drop undefined fields so they don't clobber ContextManager defaults
+      // (spread of `{x: undefined}` would override the default with undefined).
+      ...Object.fromEntries(
+        Object.entries(this.resolveContextRatios()).filter(([, v]) => v !== undefined),
+      ),
     });
     this.lastContextManager = contextManager;
 
@@ -1862,6 +1908,12 @@ export class Engine {
         void buildSessionTitle(auxSummaryClient, firstUserText, result.text)
           .then((title) => {
             if (title) {
+              // Persist the title so it survives a localStorage wipe / disk
+              // rebuild — it used to live only in the renderer's localStorage
+              // index. This .then resolves AFTER the saveState below (:1892), so
+              // it must save again itself rather than rely on that write.
+              session.state.title = title;
+              this.sessionManager.saveState(session.state);
               onStream({
                 type: "session_title",
                 sessionId: session.state.sessionId,
