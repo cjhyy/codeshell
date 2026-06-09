@@ -8,6 +8,21 @@ export class TrustedDeviceStore {
 
   addDevice(input: { name: string; secretHash: string }): TrustedDevicePublic {
     const devices = this.readAll();
+    // Get-or-create by secretHash. A phone's secret is stable per browser
+    // (persisted in localStorage as cs.deviceSecret), so re-scanning the QR
+    // code — which the client always prefers over re-auth when the URL carries
+    // a fresh pairing token — used to mint a BRAND-NEW device every time, piling
+    // up trusted devices unboundedly. Reuse the existing row instead, refreshing
+    // its name + lastSeenAt. (mobile-remote device accumulation)
+    const existing = devices.find(
+      (d) => d.secretHash === input.secretHash && !d.revokedAt,
+    );
+    if (existing) {
+      existing.name = input.name;
+      existing.lastSeenAt = Date.now();
+      this.writeAll(devices);
+      return this.toPublic(existing);
+    }
     const device: TrustedDevice = {
       id: randomUUID(),
       name: input.name,
