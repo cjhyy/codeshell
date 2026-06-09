@@ -306,14 +306,14 @@ function launchDetachedInstall(version: string): void {
   try {
     // Avoid `mkdirSync recursive` failures if dir exists.
     try {
-      const fs = require("node:fs") as typeof import("node:fs");
+      const fs = createRequire(import.meta.url ?? __filename)("node:fs") as typeof import("node:fs");
       fs.mkdirSync(configDir(), { recursive: true });
       fs.writeFileSync(lockPath, String(process.pid), { encoding: "utf8", flag: "wx" });
     } catch (err) {
       if (errnoCode(err) === "EEXIST") {
         // Lock held — check freshness; if stale, take over.
         try {
-          const fs = require("node:fs") as typeof import("node:fs");
+          const fs = createRequire(import.meta.url ?? __filename)("node:fs") as typeof import("node:fs");
           const s = fs.statSync(lockPath);
           if (Date.now() - s.mtimeMs < LOCK_TIMEOUT_MS) return; // fresh — back off
           fs.unlinkSync(lockPath);
@@ -329,7 +329,7 @@ function launchDetachedInstall(version: string): void {
     return;
   }
 
-  const fs = require("node:fs") as typeof import("node:fs");
+  const fs = createRequire(import.meta.url ?? __filename)("node:fs") as typeof import("node:fs");
   const logFd = fs.openSync(getUpdateLogPath(), "a");
   try {
     fs.writeSync(

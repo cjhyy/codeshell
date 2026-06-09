@@ -5,7 +5,7 @@
  * sparse-checkout, no npm/pip.
  */
 
-import { existsSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, realpathSync, rmSync, rmdirSync } from "node:fs";
 import { cp, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
@@ -366,8 +366,7 @@ export function uninstallPlugin(
     const pluginParent = join(pluginCacheRoot(), marketplaceName, pluginName);
     try {
       // rmdir succeeds only when empty; ignore failures.
-      const fs = require("node:fs") as typeof import("node:fs");
-      fs.rmdirSync(pluginParent);
+      rmdirSync(pluginParent);
     } catch {
       // not empty or doesn't exist — fine
     }

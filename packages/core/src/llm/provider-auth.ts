@@ -11,6 +11,8 @@
  * env-var + caching logic is unit-testable without spawning a shell.
  */
 
+import { createRequire } from "node:module";
+
 /** Resolve `$ENV` / `${ENV}` placeholders in a header value against `env`. */
 export function resolveHeaderValue(
   value: string,
@@ -57,8 +59,11 @@ export function resolveAuthCommand(
   const run =
     opts.runCommand ??
     ((cmd: string) => {
-      // Lazy require so the pure helpers above don't pull in child_process.
-      const { execSync } = require("node:child_process") as typeof import("node:child_process");
+      // Lazy require (via createRequire so it works in ESM bundles too) so the
+      // pure helpers above don't pull in child_process at module load.
+      const { execSync } = createRequire(import.meta.url)(
+        "node:child_process",
+      ) as typeof import("node:child_process");
       return execSync(cmd, { encoding: "utf8", timeout: 30_000 });
     });
 

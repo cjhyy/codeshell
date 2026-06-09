@@ -9,6 +9,14 @@ import type {
   ApprovalRequest,
   ApprovalResult,
 } from "../types.js";
+import { resolve as resolvePath, dirname } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  renameSync,
+} from "node:fs";
 import { logger as rootPermLogger } from "../logging/logger.js";
 
 export interface ApprovalBackend {
@@ -324,18 +332,15 @@ function buildProjectRule(
     const raw = String(args.file_path ?? "");
     if (raw) {
       // Resolve against cwd so a relative or `../`-laden path becomes the real
-      // absolute path the prefix anchors to. Lazy require keeps permission.ts
-      // free of node:path at module load (browser shim).
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const path = require("node:path") as typeof import("node:path");
-      const abs = path.resolve(opts.cwd ?? process.cwd(), raw);
+      // absolute path the prefix anchors to.
+      const abs = resolvePath(opts.cwd ?? process.cwd(), raw);
       const argsPattern = pathRuleArgsPattern(abs, opts.pathScope);
       if (argsPattern) {
         return {
           tool: toolName,
           argsPattern,
           decision: "allow",
-          reason: `Allowed via permission prompt: ${toolName} ${opts.pathScope === "dir" ? path.dirname(abs) + "/" : abs}`,
+          reason: `Allowed via permission prompt: ${toolName} ${opts.pathScope === "dir" ? dirname(abs) + "/" : abs}`,
         };
       }
     }
@@ -396,17 +401,13 @@ export function ruleMatches(
 function persistProjectRule(cwd: string, rule: PermissionRule): void {
   const dir = `${cwd}/.code-shell`;
   const file = `${dir}/settings.local.json`;
-  // Lazy node imports — keep permission.ts free of fs at module load time
-  // so it can be used in non-Node contexts (tests, browsers via shim).
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fs = require("node:fs") as typeof import("node:fs");
 
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 
   let settings: { permissions?: { rules?: PermissionRule[] } } = {};
-  if (fs.existsSync(file)) {
+  if (existsSync(file)) {
     try {
-      settings = JSON.parse(fs.readFileSync(file, "utf-8"));
+      settings = JSON.parse(readFileSync(file, "utf-8"));
     } catch {
       /* start fresh on parse error */
     }
@@ -427,8 +428,8 @@ function persistProjectRule(cwd: string, rule: PermissionRule): void {
   // Atomic write: stage to .tmp, then rename, so a crash mid-write can't
   // truncate settings.local.json and lose every saved permission grant.
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
-  fs.renameSync(tmp, file);
+  writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+  renameSync(tmp, file);
 }
 
 // Singleton interactive backend for use by the UI

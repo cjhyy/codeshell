@@ -30,7 +30,14 @@
  * Callers must consult classifyPath before honoring acceptEdits.
  */
 
-import { realpathSync } from "node:fs";
+import {
+  realpathSync,
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  renameSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve as resolvePath, sep } from "node:path";
 import type { ToolContext } from "./context.js";
@@ -142,11 +149,9 @@ function coveredBy(grants: Iterable<string>, resolved: string): boolean {
 
 function projectPathGrants(cwd: string): string[] {
   const file = `${cwd}/.code-shell/settings.local.json`;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fs = require("node:fs") as typeof import("node:fs");
-  if (!fs.existsSync(file)) return [];
+  if (!existsSync(file)) return [];
   try {
-    const s = JSON.parse(fs.readFileSync(file, "utf-8")) as {
+    const s = JSON.parse(readFileSync(file, "utf-8")) as {
       pathApprovals?: unknown;
     };
     return Array.isArray(s.pathApprovals)
@@ -192,14 +197,12 @@ function recordPathApproval(
   // project: persist to settings.local.json (atomic, idempotent).
   const dir = `${cwd}/.code-shell`;
   const file = `${dir}/settings.local.json`;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fs = require("node:fs") as typeof import("node:fs");
   try {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     let settings: { pathApprovals?: string[] } = {};
-    if (fs.existsSync(file)) {
+    if (existsSync(file)) {
       try {
-        settings = JSON.parse(fs.readFileSync(file, "utf-8"));
+        settings = JSON.parse(readFileSync(file, "utf-8"));
       } catch {
         /* start fresh on parse error */
       }
@@ -208,8 +211,8 @@ function recordPathApproval(
     if (!settings.pathApprovals.includes(prefix)) {
       settings.pathApprovals.push(prefix);
       const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
-      fs.renameSync(tmp, file);
+      writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+      renameSync(tmp, file);
     }
   } catch {
     // Persistence is best-effort; an unwritable disk must not break the op.
