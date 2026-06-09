@@ -123,6 +123,43 @@ describe("AccessPasscode", () => {
     const setCookie = res.headers["set-cookie"] ?? res.headers["Set-Cookie"];
     expect(String(setCookie)).toContain("cs_access=");
   });
+
+  test("gate: a browser GET with no credential gets an HTML passcode FORM, not bare text", () => {
+    // Regression for "auto shows 访问口令无效或缺失 with no way to enter it":
+    // a page-navigation request must receive a challenge page the user can type
+    // into, not a dead text/plain 401.
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const { req, res } = fakeReqRes({ url: "/mobile?pairing=tok123" });
+    req.headers.accept = "text/html,application/xhtml+xml";
+    expect(ap.gate(req, res)).toBe(false);
+    expect(res.statusCode).toBe(401);
+    expect(res.headers["content-type"]).toContain("text/html");
+    // a real input the user can submit
+    expect(res.body).toContain("<form");
+    expect(res.body).toContain('name="passcode"');
+    // must preserve the pairing token so submitting the passcode keeps it
+    expect(res.body).toContain("tok123");
+  });
+
+  test("gate: wrong passcode on the challenge form re-renders the form with an error", () => {
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const { req, res } = fakeReqRes({ url: "/mobile?passcode=nope" });
+    req.headers.accept = "text/html";
+    expect(ap.gate(req, res)).toBe(false);
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.body).toContain("<form");
+  });
+
+  test("gate: non-browser (no Accept html) still gets text/plain 401", () => {
+    // The WS/fetch path is not a navigation; keep the lightweight text response.
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const { req, res } = fakeReqRes({ url: "/ws" });
+    expect(ap.gate(req, res)).toBe(false);
+    expect(res.headers["content-type"]).toContain("text/plain");
+  });
 });
 
 // ── Minimal fake http req/res ──────────────────────────────────────────────
