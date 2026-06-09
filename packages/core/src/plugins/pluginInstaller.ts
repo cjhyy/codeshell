@@ -117,7 +117,7 @@ async function materializeGit(
 ): Promise<{ ok: true; sha: string } | { ok: false; error: string }> {
   await mkdir(dirname(cacheTarget), { recursive: true });
   if (existsSync(cacheTarget)) await rm(cacheTarget, { recursive: true, force: true });
-  const clone = await gitClone(url, cacheTarget, ref ? { ref } : undefined);
+  const clone = await gitClone(url, cacheTarget, { full: true, ...(ref ? { ref } : {}) });
   if (!clone.ok) return { ok: false, error: clone.error };
   const head = await gitRevParseHead(cacheTarget);
   if (!head.ok) return { ok: false, error: head.error };
@@ -133,7 +133,7 @@ async function materializeGitSubdir(
   // Clone to a tempdir, then copy the subdir over.
   const tmp = await mkdtemp(join(tmpdir(), "plugin-clone-"));
   try {
-    const clone = await gitClone(url, tmp + "/repo", ref ? { ref } : undefined);
+    const clone = await gitClone(url, tmp + "/repo", { full: true, ...(ref ? { ref } : {}) });
     if (!clone.ok) return { ok: false, error: clone.error };
     const head = await gitRevParseHead(tmp + "/repo");
     if (!head.ok) return { ok: false, error: head.error };
@@ -197,7 +197,11 @@ async function materialize(
     // present, so we ignore the result and let materializePath report a real
     // missing-path error if the subdir truly isn't there.
     if (!isAbsolute(source)) {
-      await gitSparseCheckoutAdd(marketplaceInstallLocation, source);
+      // Strip a leading "./" — in non-cone sparse mode the literal "./" prefix
+      // doesn't match repo paths (which are stored without it), so the
+      // expand would silently no-op and the tree would stay un-materialized.
+      const sparseRel = source.replace(/^\.\//, "");
+      await gitSparseCheckoutAdd(marketplaceInstallLocation, sparseRel);
     }
     const r = await materializePath(marketplaceInstallLocation, source, placeholder);
     if (!r.ok) return r;

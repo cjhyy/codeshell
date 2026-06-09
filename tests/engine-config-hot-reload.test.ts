@@ -1,8 +1,29 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Engine, diskDefaultsFrom } from "../packages/core/src/engine/engine.js";
+
+// diskDefaultsFrom merges installed-plugin MCP servers from ~/.code-shell, so
+// isolate HOME + CODE_SHELL_HOME to an empty temp dir to keep host plugins
+// (e.g. a real chrome-devtools MCP) from leaking into the asserted patch.
+let fakeHome: string;
+let savedHome: string | undefined;
+let savedCsHome: string | undefined;
+beforeAll(() => {
+  fakeHome = mkdtempSync(join(tmpdir(), "engine-config-home-"));
+  savedHome = process.env.HOME;
+  savedCsHome = process.env.CODE_SHELL_HOME;
+  process.env.HOME = fakeHome;
+  process.env.CODE_SHELL_HOME = join(fakeHome, ".code-shell");
+});
+afterAll(() => {
+  if (savedHome !== undefined) process.env.HOME = savedHome;
+  else delete process.env.HOME;
+  if (savedCsHome !== undefined) process.env.CODE_SHELL_HOME = savedCsHome;
+  else delete process.env.CODE_SHELL_HOME;
+  rmSync(fakeHome, { recursive: true, force: true });
+});
 
 function makeProject(settings: object): string {
   const cwd = mkdtempSync(join(tmpdir(), "engine-config-reload-"));
@@ -85,27 +106,24 @@ describe("Engine.refreshRuntimeConfig", () => {
     }
   });
 
-  it("connects newly-added MCP servers via the idempotent connectAll, never disconnects", async () => {
+  it("reconciles MCP servers on hot-reload (connect added + disconnect removed)", async () => {
     const cwd = makeProject({});
     try {
       const engine = newEngine(cwd);
-      const connected: Array<Record<string, unknown>> = [];
-      let disconnectCalls = 0;
-      // Inject a fake MCPManager so we can spy on connectAll without spawning.
+      const reconciled: Array<Record<string, unknown>> = [];
+      // Inject a fake MCPManager so we can spy on reconcile without spawning.
+      // refreshRuntimeConfig now drives a single idempotent reconcile() call
+      // (which internally connects added + disconnects removed servers).
       (engine as any).mcpManager = {
-        connectAll: async (servers: Record<string, unknown>) => {
-          connected.push(servers);
-        },
-        disconnectAll: async () => {
-          disconnectCalls++;
+        reconcile: async (servers: Record<string, unknown>) => {
+          reconciled.push(servers);
         },
       };
       engine.refreshRuntimeConfig({ mcpServers: { foo: { command: "x" } as any } }, 1);
-      // refreshRuntimeConfig schedules the connect asynchronously (void); give it a tick.
+      // refreshRuntimeConfig schedules the reconcile asynchronously (void); give it a tick.
       await new Promise((r) => setTimeout(r, 5));
-      expect(connected.length).toBe(1);
-      expect(connected[0]).toEqual({ foo: { command: "x" } });
-      expect(disconnectCalls).toBe(0);
+      expect(reconciled.length).toBe(1);
+      expect(reconciled[0]).toEqual({ foo: { command: "x" } });
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

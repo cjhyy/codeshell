@@ -125,7 +125,10 @@ describe("ChatSession isolation (Gate 1)", () => {
     // Cancel A after both start
     setTimeout(() => a.cancel(), 5);
 
-    await expect(pa).rejects.toThrow(/aborted/);
+    // A's in-flight turn resolves as a clean aborted result (not a rejection);
+    // B's turn is untouched and completes normally — the isolation claim.
+    const ra = await pa;
+    expect(ra.reason).toBe("aborted_streaming");
     const rb = await pb;
     expect(rb.text).toBe("done:B:y");
   });
@@ -154,10 +157,13 @@ describe("ChatSession isolation (Gate 1)", () => {
     const r2 = await a2;
     const rb = await bResult;
 
-    expect(r1.ok).toBe(false);
-    if (!r1.ok) expect(r1.error).toMatch(/aborted/);
+    // The in-flight turn resolves cleanly (aborted_streaming), not rejects.
+    expect(r1.ok).toBe(true);
+    if (r1.ok) expect(r1.value.reason).toBe("aborted_streaming");
+    // The QUEUED turn on the cancelled session still rejects with /cancelled/.
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.error).toMatch(/cancelled/);
+    // Sibling session is unaffected.
     expect(rb.ok).toBe(true);
     if (rb.ok) expect(rb.value.text).toBe("done:B:solo");
   });

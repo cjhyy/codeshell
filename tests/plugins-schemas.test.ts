@@ -110,9 +110,22 @@ describe("validateMarketplace", () => {
     if (!r.ok) expect(r.error).toContain("plugins[1]");
   });
 
-  it("rejects missing owner.name", () => {
+  it("falls back to marketplace name when owner.name is missing (Codex compat)", () => {
+    // Codex/agents-format marketplaces omit owner; the validator must not reject
+    // them, falling back owner.name → interface.displayName → marketplace name.
     const r = validateMarketplace({ name: "mkt", owner: {}, plugins: [] });
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.owner.name).toBe("mkt");
+  });
+
+  it("uses interface.displayName as owner when owner is absent", () => {
+    const r = validateMarketplace({
+      name: "mkt",
+      interface: { displayName: "Codex Marketplace" },
+      plugins: [],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.owner.name).toBe("Codex Marketplace");
   });
 
   it("rejects non-array plugins", () => {

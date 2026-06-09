@@ -29,7 +29,7 @@ export async function installPluginFromSource(
 
   const tmp = mkdtempSync(join(tmpdir(), "cs-tmp-clone-"));
   try {
-    const clone = await gitClone(parsed.url, tmp, { ref: parsed.ref });
+    const clone = await gitClone(parsed.url, tmp, { ref: parsed.ref, full: true });
     if (!clone.ok) {
       throw new PluginInstallError(`clone failed: ${clone.error}`);
     }

@@ -120,7 +120,6 @@ import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
 import { join } from "node:path";
-import { homedir } from "node:os";
 import {
   existsSync,
   mkdirSync,
@@ -357,7 +356,10 @@ export function loadAgentDefinitionsForCwd(
   disabledAgents: string[] = [],
   disabledPlugins: string[] = [],
 ): AgentDefinitionRegistry {
-  const home = homedir();
+  // userHome() (not raw homedir(), which bun caches at process start and never
+  // re-reads) so the user-agents dir honors a test's process.env.HOME override
+  // and stays consistent with the rest of the codebase's home resolution.
+  const home = userHome();
   // Increasing priority; loadFromDirs is last-dir-wins. ORDER ENCODES POLICY:
   // user (cross-project personal default, lowest) → plugins (reusable baseline)
   // → project (highest). A repo's in-tree agent therefore overrides a same-named

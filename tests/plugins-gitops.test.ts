@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -23,13 +23,15 @@ describe("gitOps", () => {
     expect(githubRepoToCloneUrl("anthropics/skills")).toBe("https://github.com/anthropics/skills.git");
   });
 
-  it("gitClone copies from a local bare repo and rev-parse HEAD works", async () => {
+  it("gitClone with full:true checks out the whole tree and rev-parse HEAD works", async () => {
     const root = mkdtempSync(join(tmpdir(), "gitops-test-"));
     try {
       const bare = join(root, "src.git");
       makeBareRepo(bare);
       const dest = join(root, "dst");
-      const r = await gitClone(bare, dest);
+      // full:true is the content-clone mode (install paths). The default sparse
+      // mode only materializes the manifest dirs, which this fixture lacks.
+      const r = await gitClone(bare, dest, { full: true });
       expect(r.ok).toBe(true);
       const head = await gitRevParseHead(dest);
       expect(head.ok).toBe(true);
@@ -38,6 +40,22 @@ describe("gitOps", () => {
       }
       // README.md is present from the source repo
       expect(readFileSync(join(dest, "README.md"), "utf-8")).toBe("hi");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("gitClone default (sparse) materializes manifest dirs but not arbitrary root files", async () => {
+    const root = mkdtempSync(join(tmpdir(), "gitops-sparse-"));
+    try {
+      const bare = join(root, "src.git");
+      makeBareRepo(bare);
+      const dest = join(root, "dst");
+      const r = await gitClone(bare, dest);
+      expect(r.ok).toBe(true);
+      // Sparse default does NOT check out README.md (not in a manifest dir),
+      // proving cheap marketplace clones don't drag in the whole tree.
+      expect(existsSync(join(dest, "README.md"))).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

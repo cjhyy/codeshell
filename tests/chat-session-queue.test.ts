@@ -44,6 +44,10 @@ describe("ChatSession", () => {
     const s = new ChatSession({ id: "s1", engine: slowEngine });
     const p = s.enqueueTurn("slow", {});
     setTimeout(() => s.cancel(), 10);
-    await expect(p).rejects.toThrow(/aborted/);
+    // A user-initiated cancel resolves the in-flight turn as a clean aborted
+    // result (reason: "aborted_streaming") rather than rejecting — so the RPC
+    // layer never surfaces a scary "Error: Request cancelled" in the UI.
+    const r = await p;
+    expect(r.reason).toBe("aborted_streaming");
   });
 });

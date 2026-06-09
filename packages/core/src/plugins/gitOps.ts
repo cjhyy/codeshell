@@ -74,11 +74,16 @@ async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise
  * (.claude-plugin and .agents/plugins). On any failure of the sparse setup we
  * fall back to checking out the full tree, so correctness never depends on
  * sparse support being present.
+ *
+ * Pass `full: true` to skip sparse entirely and check out the whole tree. This
+ * is required when the caller reads arbitrary plugin content from the clone
+ * (installing a plugin or a plugin subdir), as opposed to a marketplace where
+ * only the manifest dirs are needed up front.
  */
 export async function gitClone(
   url: string,
   destDir: string,
-  options?: { ref?: string; sparsePaths?: string[] },
+  options?: { ref?: string; sparsePaths?: string[]; full?: boolean },
 ): Promise<GitResult> {
   const sparsePaths = options?.sparsePaths ?? [".claude-plugin", ".agents/plugins"];
   const args = ["clone", "--depth", "1", "--filter=blob:none", "--no-checkout"];
@@ -86,6 +91,14 @@ export async function gitClone(
   args.push("--", url, destDir);
   const cloned = await runGit(args);
   if (!cloned.ok) return cloned;
+
+  // Full-tree clone: skip sparse setup and check out everything. Used by plugin
+  // content clones, which read files anywhere in the repo.
+  if (options?.full) {
+    const checkout = await runGit(["checkout"], destDir);
+    if (!checkout.ok) return checkout;
+    return cloned;
+  }
 
   // Restrict the working tree to the manifest dirs, then check out. Use
   // non-cone mode so nested paths like ".agents/plugins" match exactly.

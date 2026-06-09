@@ -70,12 +70,15 @@ describe("marketplaceManager", () => {
   it("addMarketplace rejects bad marketplace.json", async () => {
     const bare = makeFakeMarketplaceRepo(join(scratch, "src"), {
       name: "fixtures",
-      // missing owner
-      plugins: [],
+      owner: { name: "T" },
+      // plugins must be an array — a string is a hard validation failure.
+      // (Note: a missing owner is NO LONGER rejected — Codex compat falls back
+      // to the marketplace name; see plugins-schemas.test.ts.)
+      plugins: "not-an-array",
     });
     const r = await addMarketplace("fixtures", { source: "git", url: bare });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toContain("owner");
+    if (!r.ok) expect(r.error).toContain("plugins");
     // Cleanup: dir should have been removed.
     expect(existsSync(marketplaceDir("fixtures"))).toBe(false);
   });

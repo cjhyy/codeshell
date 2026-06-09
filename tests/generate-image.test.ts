@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { describe, it, expect, afterEach, beforeAll, afterAll } from "bun:test";
+import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -8,9 +8,27 @@ import {
 } from "../packages/core/src/tool-system/builtin/generate-image.js";
 import type { ToolContext } from "../packages/core/src/tool-system/context.js";
 
-// SettingsManager defaults to "project" scope: it reads <cwd>/.code-shell/
-// settings.json and never touches ~/.code-shell. So a temp cwd with a written
-// settings.json fully isolates these tests from the host environment.
+// resolveImageProvider loads settings with "full" scope, which merges the real
+// ~/.code-shell/settings.json. Isolate HOME + CODE_SHELL_HOME to an empty temp
+// dir so these tests never read (or fail on) the host user's settings/plugins.
+let fakeHome: string;
+let savedHome: string | undefined;
+let savedCsHome: string | undefined;
+beforeAll(() => {
+  fakeHome = mkdtempSync(join(tmpdir(), "genimg-home-"));
+  savedHome = process.env.HOME;
+  savedCsHome = process.env.CODE_SHELL_HOME;
+  process.env.HOME = fakeHome;
+  process.env.CODE_SHELL_HOME = join(fakeHome, ".code-shell");
+});
+afterAll(() => {
+  if (savedHome !== undefined) process.env.HOME = savedHome;
+  else delete process.env.HOME;
+  if (savedCsHome !== undefined) process.env.CODE_SHELL_HOME = savedCsHome;
+  else delete process.env.CODE_SHELL_HOME;
+  rmSync(fakeHome, { recursive: true, force: true });
+});
+
 function makeCwd(settings: unknown): string {
   const dir = mkdtempSync(join(tmpdir(), "genimg-"));
   mkdirSync(join(dir, ".code-shell"), { recursive: true });
@@ -64,7 +82,9 @@ describe("GenerateImage tool", () => {
     expect(capturedBody.quality).toBe("high");
     expect(capturedBody.n).toBe(1);
 
-    const match = result.match(/^Generated image saved to (.+\.png)$/);
+    // Success message now names the provider kind + model:
+    // "Generated image with openai (gpt-image-2), saved to <path>.png"
+    const match = result.match(/^Generated image with .+, saved to (.+\.png)$/);
     expect(match).not.toBeNull();
     const path = match![1];
     expect(existsSync(path)).toBe(true);
@@ -98,7 +118,9 @@ describe("GenerateImage tool", () => {
     }) as unknown as typeof fetch;
 
     const result = await generateImageTool({ prompt: "x" }, ctxFor(cwd));
-    expect(result).toContain("no OpenAI provider");
+    // The ImageProvider abstraction grew beyond OpenAI, so the message is now
+    // provider-agnostic ("no image provider available").
+    expect(result).toContain("no image provider available");
     expect(called).toBe(false); // never hit the network
   });
 
