@@ -1,4 +1,5 @@
 import * as fs from "node:fs/promises";
+import * as fsSync from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 
@@ -16,7 +17,9 @@ export async function loadRecents(): Promise<RecentProject[]> {
     const raw = await fs.readFile(FILE, "utf8");
     const parsed = JSON.parse(raw) as RecentProject[];
     if (!Array.isArray(parsed)) return [];
-    return parsed.slice(0, MAX);
+    // Self-heal: drop recents whose directory was deleted, so a removed project
+    // doesn't linger in the recent-projects menu and reappear on restart.
+    return parsed.filter((r) => r.path && fsSync.existsSync(r.path)).slice(0, MAX);
   } catch {
     return [];
   }

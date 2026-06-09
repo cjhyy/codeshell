@@ -90,9 +90,28 @@ export function mergeTranscripts(
   }
   const liveTail = live.messages.slice(lastCovered + 1);
 
+  // Final safety net: drop any message whose id already appeared earlier (disk
+  // wins, since it comes first). Tool ids are STABLE across the disk fold and
+  // the live stream (both carry the provider call_xxx), so the content-signature
+  // dedup above misses a duplicate whenever the two copies' args diverge — e.g.
+  // a live tool_use_start caught partial/empty args that were completed later via
+  // argsLive, or JSON serialization differs. That left the SAME id in both
+  // disk.messages and liveTail, which crashes TurnProcessGroupCard's key={m.id}
+  // and pins the card "stuck" (#1/#92). The kinds that legitimately get a fresh
+  // id per fold (user / files_changed / context_boundary / goal_progress) are
+  // already collapsed by the content signature, so they never collide on id
+  // here — making a blanket id-dedup safe.
+  const mergedMessages = [...disk.messages, ...liveTail];
+  const seenIds = new Set<string>();
+  const deduped = mergedMessages.filter((m) => {
+    if (seenIds.has(m.id)) return false;
+    seenIds.add(m.id);
+    return true;
+  });
+
   return {
     ...disk,
-    messages: [...disk.messages, ...liveTail],
+    messages: deduped,
     // Session metadata: prefer the live values (they reflect the most recent
     // session_started / usage_update), falling back to disk when live is unset.
     sessionId: live.sessionId ?? disk.sessionId,

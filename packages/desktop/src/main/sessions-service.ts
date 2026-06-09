@@ -144,11 +144,24 @@ export async function listDiskSessions(
     // origin are filtered out (tui shares ~/.code-shell; legacy has no origin).
     const origin = state.origin;
     if (origin !== "desktop" && origin !== "automation") continue;
+    // Skip sessions whose project root has been deleted. Listing them led the
+    // renderer's disk-rebuild to call createRepoForCwd → the deleted project
+    // reappeared in the sidebar, and any subsequent write under that cwd
+    // resurrected it on disk as an empty shell. An empty cwd (no-repo session)
+    // is intentionally NOT filtered here — the renderer handles that via
+    // isNoRepoCwd. (deleted-project resurrection)
+    const cwdStr = typeof state.cwd === "string" ? state.cwd : "";
+    if (cwdStr && !fsSync.existsSync(cwdStr)) continue;
     sessions.push({
       id,
       engineSessionId: id,
       cwd: typeof state.cwd === "string" ? state.cwd : "",
-      title: typeof state.summary === "string" && state.summary ? state.summary : id,
+      // Prefer the LLM-generated title (now persisted to state); fall back to
+      // the raw first-message summary, then the id. This lets the disk rebuild
+      // surface the real title after a localStorage wipe.
+      title:
+        (typeof state.title === "string" && state.title ? state.title : undefined) ??
+        (typeof state.summary === "string" && state.summary ? state.summary : id),
       updatedAt: mtime,
       origin,
     });

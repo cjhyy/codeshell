@@ -241,6 +241,31 @@ describe("mergeTranscripts", () => {
     expect(merged.messages.filter((m) => m.kind === "tool")).toHaveLength(1);
   });
 
+  // Regression (#1/#92 duplicate React key → stuck "update memory" card): a
+  // tool's id is STABLE across the disk fold and the live stream (both are the
+  // provider call_xxx), unlike files_changed/goal which get fresh ids. The
+  // content signature (tool|name|args) can still diverge between the two copies
+  // when the live tool_use_start carried partial/empty args (completed later via
+  // argsLive) or the JSON serialization differs. When signatures don't match,
+  // the live copy is treated as uncovered and survives in the tail while the
+  // disk copy stays in disk.messages — so the SAME id appears twice, which
+  // crashes TurnProcessGroupCard's key={m.id} and leaves the card stuck.
+  it("does not emit the same stable id twice when a tool's args drift between disk and live", () => {
+    const disk = stateOf([
+      user("d-u1", "记一下"),
+      tool("call_h5XLA", "UpdateAutomationMemory", '{"note":"final args"}'),
+    ]);
+    const live = stateOf([
+      user("l-u1", "记一下"),
+      // SAME provider call id, but the live snapshot caught partial/empty args.
+      tool("call_h5XLA", "UpdateAutomationMemory", "{}"),
+    ]);
+    const merged = mergeTranscripts(disk, live);
+    const ids = merged.messages.map((m) => m.id);
+    expect(new Set(ids).size).toBe(ids.length); // no duplicate ids
+    expect(merged.messages.filter((m) => m.id === "call_h5XLA")).toHaveLength(1);
+  });
+
   it("preserves session metadata from disk, falling back to live", () => {
     const disk = stateOf([assistant("d-a1", "x")], { sessionId: null, promptTokens: 0 });
     const live = stateOf([user("l-u1", "y")], { sessionId: "live-sess", promptTokens: 42 });

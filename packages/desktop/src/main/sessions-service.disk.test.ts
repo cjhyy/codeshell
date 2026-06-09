@@ -11,6 +11,14 @@ import { listDiskSessions } from "./sessions-service";
 function mkSession(base: string, id: string, state: Record<string, unknown>, mtime: number) {
   const dir = path.join(base, id);
   fs.mkdirSync(dir, { recursive: true });
+  // listDiskSessions now drops sessions whose cwd was deleted, so the fixture's
+  // cwd must actually exist. Materialize a real dir under the temp base and use
+  // it as the session cwd (unless the test pins its own absolute cwd).
+  if (state.cwd === undefined || state.cwd === "/p") {
+    const cwdDir = path.join(base, "cwd");
+    fs.mkdirSync(cwdDir, { recursive: true });
+    state = { ...state, cwd: cwdDir };
+  }
   const full: Record<string, unknown> = { sessionId: id, origin: "desktop", ...state };
   // Drop keys explicitly set to undefined so the JSON omits them (legacy case).
   for (const k of Object.keys(full)) if (full[k] === undefined) delete full[k];
@@ -29,7 +37,15 @@ describe("listDiskSessions", () => {
     mkSession(dir, "top-new", { cwd: "/p", summary: "新", parentSessionId: null }, 3000);
     const { sessions } = await listDiskSessions({ limit: 10 }, dir);
     expect(sessions.map((s) => s.id)).toEqual(["top-new", "top-old"]);
-    expect(sessions[0]).toMatchObject({ id: "top-new", engineSessionId: "top-new", cwd: "/p", title: "新" });
+    expect(sessions[0]).toMatchObject({ id: "top-new", engineSessionId: "top-new", title: "新" });
+  });
+
+  it("drops sessions whose cwd was deleted (deleted-project resurrection guard)", async () => {
+    mkSession(dir, "alive", { cwd: "/p", parentSessionId: null, summary: "在" }, 2000);
+    // cwd points at a path that does not exist on disk → must be filtered out.
+    mkSession(dir, "deleted", { cwd: path.join(dir, "gone-project"), parentSessionId: null, summary: "删" }, 3000);
+    const { sessions } = await listDiskSessions({ limit: 10 }, dir);
+    expect(sessions.map((s) => s.id)).toEqual(["alive"]);
   });
 
   it("filters OUT sub-agent sessions (parentSessionId is a non-empty string)", async () => {

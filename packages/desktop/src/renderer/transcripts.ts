@@ -88,6 +88,43 @@ export function repoKeyOf(repoId: string | null): string {
 export function bucketKey(repoId: string | null, sessionId: string | null): string {
   return `${repoKeyOf(repoId)}::${sessionId ?? "_none_"}`;
 }
+
+/**
+ * Per-bucket override maps (permission/goal) are keyed by bucketKey. A DRAFT has
+ * a null sessionId, so every draft in a repo collapses to the SHARED
+ * `<repo>::_none_` slot — which, left unmanaged, makes one draft's choice
+ * "粘连" onto the next 新对话 (#11). These two helpers keep that slot honest:
+ *
+ *  - migrateBucketOverride: when a draft solidifies into a real session (first
+ *    send), move its override onto the real bucket so the choice FOLLOWS the
+ *    session, and drop the shared draft slot.
+ *  - clearBucketOverride: when entering a fresh draft (新对话), drop the shared
+ *    slot so a previous draft's choice doesn't carry over.
+ *
+ * Generic over the value type so it serves both permissionOverrides and
+ * goalOverrides. Returns the SAME object reference when nothing changed, so a
+ * React setState updater can no-op cleanly.
+ */
+export function migrateBucketOverride<V>(
+  prev: Record<string, V>,
+  fromBucket: string,
+  toBucket: string,
+): Record<string, V> {
+  if (fromBucket === toBucket) return prev;
+  if (!(fromBucket in prev)) return prev;
+  const value = prev[fromBucket]!;
+  const { [fromBucket]: _drop, ...rest } = prev;
+  return { ...rest, [toBucket]: value };
+}
+
+export function clearBucketOverride<V>(
+  prev: Record<string, V>,
+  bucket: string,
+): Record<string, V> {
+  if (!(bucket in prev)) return prev;
+  const { [bucket]: _drop, ...rest } = prev;
+  return rest;
+}
 function indexKey(repoId: string | null): string {
   return `codeshell.sessionIndex.${repoKey(repoId)}`;
 }
