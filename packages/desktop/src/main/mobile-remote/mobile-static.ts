@@ -1,6 +1,6 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { join, normalize, resolve, sep, extname } from "node:path";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import { request as httpRequest, type IncomingMessage, type ServerResponse } from "node:http";
 
 /**
  * Serves the built mobile web app (out/mobile) as static assets for the
@@ -100,12 +100,9 @@ export function serveMobile(
  *  index.html + HMR client + transformed modules. We keep the same /mobile/*
  *  path so vite's base ("./") resolves consistently. */
 function proxyToDev(req: IncomingMessage, res: ServerResponse, devUrl: string): void {
-  // Lazy require so this never loads in prod packaging.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const http = require("node:http") as typeof import("node:http");
   const target = new URL(devUrl);
   const sub = mobileAssetPath(req.url ?? "/mobile");
-  const proxyReq = http.request(
+  const proxyReq = httpRequest(
     {
       hostname: target.hostname,
       port: target.port,
