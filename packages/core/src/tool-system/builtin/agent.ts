@@ -605,6 +605,12 @@ export async function agentTool(
         hooks: ctx?.hooks,
         parentSignal,
         onParentAbort,
+        // The agent_start fired in runSubAgent put the UI card into 'working'.
+        // runSubAgent's own agent_end (line ~299) only fires if spawn() RESOLVES;
+        // on failure/cancel it throws before that, so the card would hang
+        // 'working' forever. Hand the UI sink to the background completion
+        // handlers so they emit the terminal agent_end the card needs.
+        uiStream: parentStream,
       });
       return [
         `Task is taking a while (>${Math.round(autoBgMs / 1000)}s) — moved it to the background so I'm not blocked.`,
@@ -653,9 +659,18 @@ function handoffToBackground(
     hooks?: HookRegistry;
     parentSignal?: AbortSignal;
     onParentAbort: () => void;
+    /**
+     * UI sink for the terminal `agent_end` marker. The agent_start was already
+     * emitted by runSubAgent before the handoff, so the UI card is 'working';
+     * these handlers must close it out. On SUCCESS, runSubAgent's own agent_end
+     * (it shares this runPromise and reaches its success emit) already fires —
+     * so we only emit agent_end here for the failure/cancel paths, which
+     * runSubAgent never reaches (it throws before its success emit).
+     */
+    uiStream?: StreamCallback;
   },
 ): void {
-  const { agentId, name, description, agentType, sessionId, hooks } = meta;
+  const { agentId, name, description, agentType, sessionId, hooks, uiStream } = meta;
 
   // The agent outlives the spawning turn now, so parent-turn abort must NOT
   // cascade to it (same contract as an explicit background agent). Detach the
@@ -694,6 +709,10 @@ function handoffToBackground(
       void hooks?.emit("notification", { kind: "agent_completed", agentId, name, description, finalText: text });
     })
     .catch((err: Error) => {
+      // runSubAgent threw before its success agent_end, so the UI card is still
+      // 'working'. Close it out with a terminal agent_end{error} (mirrors the
+      // synchronous catch at the agentTool level).
+      safeEmit(uiStream, { type: "agent_end", agentId, name, description, error: err.message, agentType });
       if (controller.signal.aborted) {
         asyncAgentRegistry.markCancelled(agentId);
         void hooks?.emit("notification", { kind: "agent_cancelled", agentId, name, description });

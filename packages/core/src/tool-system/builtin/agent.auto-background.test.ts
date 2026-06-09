@@ -15,10 +15,14 @@ import type { SubAgentSpawner, ToolContext } from "../context.js";
 import { asyncAgentRegistry } from "./agent-registry.js";
 import { notificationQueue } from "./agent-notifications.js";
 
-function makeCtx(spawn: SubAgentSpawner["spawn"], sessionId = "s-test"): ToolContext {
+function makeCtx(
+  spawn: SubAgentSpawner["spawn"],
+  sessionId = "s-test",
+  onEvent?: (e: { type: string; agentId?: string; error?: string }) => void,
+): ToolContext {
   const spawner: SubAgentSpawner = {
     spawn,
-    parentStream: () => {},
+    parentStream: onEvent ? (e) => onEvent(e as never) : () => {},
     describe: () => ({ cwd: "/tmp", permissionMode: "acceptEdits" }),
   };
   return { subAgentSpawner: spawner, sessionId } as unknown as ToolContext;
@@ -77,6 +81,48 @@ describe("synchronous Agent auto-backgrounds past the threshold", () => {
     // No background agent left running; no notification needed.
     expect(asyncAgentRegistry.hasRunningForSession("s-test")).toBe(false);
     expect(notificationQueue.getSnapshot("s-test")).toHaveLength(0);
+  });
+
+  it("emits a UI agent_end marker when an auto-backgrounded agent later completes", async () => {
+    // Regression (session s-mq0xsmes-e17c5a11): a sync agent that auto-backgrounded
+    // emitted agent_start (so the UI card showed 'working') but, because the
+    // handoff path bypassed runSubAgent's agent_end, the card never resolved —
+    // it hung 'working' forever. The handoff completion must still emit agent_end.
+    const events: Array<{ type: string; agentId?: string; error?: string }> = [];
+    const ctx = makeCtx(
+      async () => {
+        await new Promise((r) => setTimeout(r, 200));
+        return "slow result";
+      },
+      "s-test",
+      (e) => events.push(e),
+    );
+
+    await agentTool({ description: "long task", prompt: "p" }, ctx);
+
+    // agent_start fired up front (card → working).
+    expect(events.some((e) => e.type === "agent_start")).toBe(true);
+    // After the background run completes, agent_end must arrive (card → done).
+    await until(() => events.some((e) => e.type === "agent_end"));
+    const end = events.find((e) => e.type === "agent_end")!;
+    expect(end.error).toBeUndefined();
+  });
+
+  it("emits a UI agent_end{error} marker when an auto-backgrounded agent later fails", async () => {
+    const events: Array<{ type: string; agentId?: string; error?: string }> = [];
+    const ctx = makeCtx(
+      async () => {
+        await new Promise((r) => setTimeout(r, 200));
+        throw new Error("late boom");
+      },
+      "s-test",
+      (e) => events.push(e),
+    );
+
+    await agentTool({ description: "d", prompt: "p" }, ctx);
+    await until(() => events.some((e) => e.type === "agent_end"));
+    const end = events.find((e) => e.type === "agent_end")!;
+    expect(end.error).toContain("late boom");
   });
 
   it("an auto-backgrounded agent that later fails enqueues a failed notification", async () => {
