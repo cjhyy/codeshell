@@ -39,8 +39,8 @@
 
 底座已成；剩余是路径授权的体验闭环与审计。
 
-- [ ] **B1 原工具可继续运行**：批准路径后 Read/Glob/Grep 应重试续跑。核实：`enforcePathPolicyWithApproval` 批准后只 `return null`，但工具在批准前已 return，无"批准→重试原工具"重路由，故现在 LLM 真被逼绕 Bash。需在执行包装层加 retry loop
-- [ ] **B2 审计路径授权**：记录批准来源/范围/过期/被拒原因。核实：`recordPathApproval` 只写批准前缀到 settings.local.json，零审计信息；permission.ts 的 buildProjectRule/reason 是独立体系可参考
+- [x] **B1 原工具可继续运行** —— 核实后认定**无需实现**（2026-06-10）：控制流本就正确。7 个工具(read/glob/grep/edit/write/notebook/apply-patch)统一 `const blocked = await enforcePathPolicyWithApproval(...); if (blocked) return blocked;`——审批在 enforce **内部** await 完成，批准则 return null，工具继续往下执行，从不提前 return。用户当时"点批准后报错"的真因是 ESM 裸 `require()` 抛 `require is not defined`(path-policy/permission.ts)→已修(7642c16)。原 review 误读控制流。
+- [ ] **B2 审计路径授权（暂缓 → P3，企业/受监管场景再做）**：记录批准来源/范围/过期/被拒原因。核实(2026-06-10)：路径**授权机制本身是核心安全闸、会一直用**(越界/敏感才拦，工作区内直接放行)；但「审计日志」是低频、个人本地场景几乎用不上的合规功能，性价比低，故降级暂缓。设计已就绪(单独 JSONL `path-approval-audit.jsonl` + 滚动尾部 N 条 + 接 enforcePathPolicyWithApproval 四分支)，要做时直接落。`recordPathApproval` 现只写前缀到 settings.local.json，零审计信息
 - [~] **路径策略 block 接入权限系统**：`enforcePathPolicyWithApproval` 已交互批准本次/拒绝（aa1bcd7）；本会话/特定路径范围待补（同路径级规则）。测试 path-policy-approval.test.ts
 
 > 已完成部分见底部归档：路径级前缀规则、命令模式匹配、会话级缓存、`/permissions`、scope UI、Sandbox 全套。
