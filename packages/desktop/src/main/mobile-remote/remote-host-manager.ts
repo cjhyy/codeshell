@@ -1,8 +1,10 @@
 import { createServer, type Server } from "node:http";
 import { networkInterfaces } from "node:os";
 import { EventEmitter } from "node:events";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer, type WebSocket } from "ws";
-import { mobileRemoteHtml } from "./mobile-ui.js";
+import { serveMobile } from "./mobile-static.js";
 import { PairingTokenManager } from "./pairing.js";
 import type { AccessPasscode } from "./access-passcode.js";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
@@ -59,6 +61,16 @@ export interface RemoteHostStarted {
 export interface RemoteHostManagerOptions {
   devices: TrustedDeviceStore;
   onClientEvent: (event: unknown, ws: WebSocket) => void;
+  /**
+   * Absolute path to the built mobile app (out/mobile). Defaults to the
+   * sibling of the bundled main (out/main → ../mobile). Overridable for tests.
+   */
+  mobileRootDir?: string;
+  /**
+   * Dev only: when set (from scripts/dev.ts via MOBILE_DEV_URL), /mobile/* is
+   * proxied to the mobile vite dev server for HMR instead of read from disk.
+   */
+  mobileDevUrl?: string;
 }
 
 export class RemoteHostManager extends EventEmitter {
@@ -75,9 +87,17 @@ export class RemoteHostManager extends EventEmitter {
   private publicBaseUrl?: string;
   /** Passcode gate, present only in tunnel mode. */
   private passcode?: AccessPasscode;
+  /** Where the built mobile app lives (out/mobile). */
+  private readonly mobileRootDir: string;
+  /** Dev proxy target for /mobile (HMR); undefined in prod. */
+  private readonly mobileDevUrl?: string;
 
   constructor(private readonly opts: RemoteHostManagerOptions) {
     super();
+    // Bundled main is out/main/index.mjs → mobile app is the sibling out/mobile.
+    const here = dirname(fileURLToPath(import.meta.url));
+    this.mobileRootDir = opts.mobileRootDir ?? resolve(here, "../mobile");
+    this.mobileDevUrl = opts.mobileDevUrl ?? process.env.MOBILE_DEV_URL;
   }
 
   /** Device ids with at least one live socket right now. */
@@ -116,8 +136,12 @@ export class RemoteHostManager extends EventEmitter {
       // either allows (returns true) or writes its own 401/403 challenge.
       if (gate && !gate.gate(req, res)) return;
       if (req.url?.startsWith("/mobile")) {
-        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-        res.end(mobileRemoteHtml());
+        // Serve the built React app from out/mobile (prod) or proxy to the
+        // mobile vite dev server (dev). Path-traversal-safe; see mobile-static.
+        serveMobile(req, res, {
+          rootDir: this.mobileRootDir,
+          devUrl: this.mobileDevUrl,
+        });
         return;
       }
       if (req.url === "/health") {

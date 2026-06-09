@@ -1,0 +1,126 @@
+import { createReadStream, existsSync, statSync } from "node:fs";
+import { join, normalize, resolve, sep, extname } from "node:path";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+/**
+ * Serves the built mobile web app (out/mobile) as static assets for the
+ * `/mobile` route family, replacing the old inline `mobileRemoteHtml()` string.
+ *
+ * Two modes:
+ *  - prod: read files from `out/mobile` (resolved relative to the bundled main).
+ *  - dev:  proxy to the mobile vite dev server (MOBILE_DEV_URL) for HMR.
+ *
+ * Security (design §5): only files INSIDE out/mobile are served. The request
+ * path is normalized and re-resolved; anything that escapes the root → 404.
+ * This closes the path-traversal hole the beta1 sweep fixed elsewhere.
+ */
+
+const CONTENT_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".map": "application/json; charset=utf-8",
+};
+
+/** Strip `/mobile` (and an optional trailing slash) off the request URL, drop
+ *  any query/hash, and return the asset sub-path. `/mobile` → "", `/mobile/` →
+ *  "", `/mobile/assets/x.js` → "assets/x.js". */
+export function mobileAssetPath(reqUrl: string): string {
+  const noQuery = reqUrl.split("?")[0].split("#")[0];
+  let rest = noQuery.slice("/mobile".length); // reqUrl always starts with /mobile here
+  if (rest.startsWith("/")) rest = rest.slice(1);
+  return rest;
+}
+
+/** Resolve an asset sub-path to an absolute file inside `root`, or null if it
+ *  would escape the root (traversal) or does not resolve to a regular file. An
+ *  empty sub-path resolves to index.html (SPA entry). */
+export function resolveSafe(root: string, subPath: string): string | null {
+  const rootResolved = resolve(root);
+  const rel = normalize(subPath || "index.html");
+  // Reject absolute paths and any normalized path still containing `..`.
+  if (rel.startsWith("..") || rel.includes(`..${sep}`) || rel.startsWith(sep)) {
+    return null;
+  }
+  const full = resolve(join(rootResolved, rel));
+  if (full !== rootResolved && !full.startsWith(rootResolved + sep)) return null;
+  if (!existsSync(full) || !statSync(full).isFile()) return null;
+  return full;
+}
+
+export interface MobileStaticOptions {
+  /** Absolute path to the built mobile app (out/mobile). */
+  rootDir: string;
+  /** When set, dev mode: proxy /mobile/* to this base URL instead of disk. */
+  devUrl?: string;
+}
+
+/**
+ * Handle a `/mobile`-prefixed request. Returns true if it handled the response
+ * (wrote a status), false if the caller should fall through (it never does for
+ * /mobile — callers check the prefix first, so this always handles).
+ */
+export function serveMobile(
+  req: IncomingMessage,
+  res: ServerResponse,
+  opts: MobileStaticOptions,
+): void {
+  if (opts.devUrl) {
+    proxyToDev(req, res, opts.devUrl);
+    return;
+  }
+  const sub = mobileAssetPath(req.url ?? "/mobile");
+  let file = resolveSafe(opts.rootDir, sub);
+  // SPA fallback: unknown non-asset path (no extension) → index.html.
+  if (!file && sub && !extname(sub)) {
+    file = resolveSafe(opts.rootDir, "index.html");
+  }
+  if (!file) {
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.end("not found");
+    return;
+  }
+  const type = CONTENT_TYPES[extname(file).toLowerCase()] ?? "application/octet-stream";
+  res.writeHead(200, { "content-type": type });
+  createReadStream(file).pipe(res);
+}
+
+/** Dev-only: forward the request to the mobile vite dev server. Vite serves
+ *  index.html + HMR client + transformed modules. We keep the same /mobile/*
+ *  path so vite's base ("./") resolves consistently. */
+function proxyToDev(req: IncomingMessage, res: ServerResponse, devUrl: string): void {
+  // Lazy require so this never loads in prod packaging.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const http = require("node:http") as typeof import("node:http");
+  const target = new URL(devUrl);
+  const sub = mobileAssetPath(req.url ?? "/mobile");
+  const proxyReq = http.request(
+    {
+      hostname: target.hostname,
+      port: target.port,
+      method: req.method,
+      path: "/" + sub + (req.url?.includes("?") ? "?" + req.url.split("?")[1] : ""),
+      headers: { ...req.headers, host: target.host },
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+      proxyRes.pipe(res);
+    },
+  );
+  proxyReq.on("error", () => {
+    res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
+    res.end("mobile dev server unavailable");
+  });
+  req.pipe(proxyReq);
+}
