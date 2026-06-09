@@ -1,0 +1,399 @@
+import { useCallback, useMemo, useReducer, useRef, useState } from "react";
+import type {
+  MobileServerEvent,
+  MobileSessionMeta,
+  RoomPublic,
+  PermissionMode,
+  ApprovalScope,
+  ApprovalPathScope,
+} from "@protocol";
+import {
+  reduceStream,
+  initialChatState,
+  appendUserMessage,
+  type ChatState,
+} from "@mobile/lib/streamReducer";
+import { summarizeApproval, type Risk } from "@mobile/lib/riskClassify";
+import { useRemoteSocket, type ConnStatus } from "./useRemoteSocket";
+
+export interface PendingApproval {
+  requestId: string;
+  sessionId?: string;
+  toolName: string;
+  description: string;
+  summary: string;
+  risk: Risk;
+  /** AskUser options, when this is an AskUser approval. */
+  options?: string[];
+  /** When true, the user must pick an option (no free text). */
+  optionsOnly?: boolean;
+  /** True for path-scoped tools (Read/Edit/Write/…) → show file/dir scope. */
+  pathScoped: boolean;
+}
+
+/** Top-level view the phone is showing. */
+export type View = "chat" | "sessions" | "rooms";
+
+export interface RemoteApp {
+  status: ConnStatus;
+  deviceName: string;
+  view: View;
+  setView: (v: View) => void;
+  chat: ChatState;
+  sessions: MobileSessionMeta[];
+  activeSessionId?: string;
+  rooms: RoomPublic[];
+  projects: { path: string; name: string }[];
+  activeRoom?: RoomPublic;
+  approvals: PendingApproval[];
+  permissionMode: PermissionMode;
+  logout: () => void;
+  // actions
+  sendChat: (text: string) => void;
+  stopRun: () => void;
+  selectSession: (id: string) => void;
+  newSession: () => void;
+  refreshSessions: () => void;
+  respondApproval: (
+    requestId: string,
+    decision: "approve" | "reject",
+    opts?: { reason?: string; answer?: string; scope?: ApprovalScope; pathScope?: ApprovalPathScope },
+  ) => void;
+  setPermissionMode: (mode: PermissionMode) => void;
+  extendGoal: (sessionId: string) => void;
+  // rooms
+  refreshRooms: () => void;
+  openRoom: (room: RoomPublic) => void;
+  leaveRoom: () => void;
+  createRoom: (cwd: string, name?: string) => void;
+  closeRoom: (roomId: string) => void;
+}
+
+/** Tools whose grants can be remembered with a path scope (file/dir). */
+const PATH_SCOPED = new Set([
+  "Read",
+  "Edit",
+  "Write",
+  "NotebookEdit",
+  "Glob",
+  "Grep",
+  "ApplyPatch",
+]);
+
+type ChatAction =
+  | { kind: "raw"; raw: unknown }
+  | { kind: "user"; text: string }
+  | { kind: "reset" }
+  | { kind: "replay"; events: unknown[] };
+
+function chatReducer(state: ChatState, action: ChatAction): ChatState {
+  switch (action.kind) {
+    case "raw":
+      return reduceStream(state, action.raw);
+    case "user":
+      return appendUserMessage(state, action.text);
+    case "reset":
+      return initialChatState();
+    case "replay":
+      return action.events.reduce(reduceStream, initialChatState());
+  }
+}
+
+export function useRemoteApp(): RemoteApp {
+  const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
+  const [view, setView] = useState<View>("chat");
+  const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
+  const [rooms, setRooms] = useState<RoomPublic[]>([]);
+  const [projects, setProjects] = useState<{ path: string; name: string }[]>([]);
+  const [activeRoomId, setActiveRoomId] = useState<string | undefined>();
+  const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+  const [permissionMode, setPermissionModeState] = useState<PermissionMode>("default");
+  /** Which session id the chat view is bound to (for filtering live stream). */
+  const boundSessionRef = useRef<string | undefined>(undefined);
+
+  const onServerEvent = useCallback((event: MobileServerEvent) => {
+    switch (event.type) {
+      case "auth.ok":
+        // Pull the world on connect.
+        break;
+      case "chat.accepted":
+        if (event.sessionId) {
+          setActiveSessionId(event.sessionId);
+          boundSessionRef.current = event.sessionId;
+        }
+        break;
+      case "session.list.ok":
+        setSessions(event.sessions);
+        if (event.activeSessionId) setActiveSessionId(event.activeSessionId);
+        break;
+      case "session.history.ok":
+        // Only apply if it's the session we're currently viewing.
+        if (event.sessionId === boundSessionRef.current) {
+          dispatchChat({ kind: "replay", events: event.events });
+        }
+        break;
+      case "permission.mode":
+        setPermissionModeState(event.mode);
+        break;
+      case "room.list.ok":
+        setRooms(event.rooms);
+        break;
+      case "room.projects.ok":
+        setProjects(event.projects);
+        break;
+      case "room.message":
+        if (event.roomId === activeRoomIdRef.current && event.msg) {
+          dispatchChat({ kind: "raw", raw: roomMsgToEvent(event.msg) });
+        }
+        break;
+      case "room.history.ok":
+        if (event.roomId === activeRoomIdRef.current) {
+          dispatchChat({
+            kind: "replay",
+            events: (event.messages ?? []).map(roomMsgToEvent),
+          });
+        }
+        break;
+      case "approval.request": {
+        // Legacy server-shaped approval (kept for back-compat).
+        const { summary, risk } = summarizeApproval(undefined, event.risk);
+        addApproval({
+          requestId: event.approvalId,
+          toolName: event.title,
+          description: event.body,
+          summary: event.body || summary,
+          risk,
+          pathScoped: false,
+        });
+        break;
+      }
+      default:
+        break;
+    }
+  }, []);
+
+  // activeRoomId via ref so the message handler closure sees the latest value.
+  const activeRoomIdRef = useRef<string | undefined>(undefined);
+  activeRoomIdRef.current = activeRoomId;
+
+  const addApproval = useCallback((a: PendingApproval) => {
+    setApprovals((prev) => (prev.some((p) => p.requestId === a.requestId) ? prev : [...prev, a]));
+  }, []);
+
+  const onRawLine = useCallback(
+    (raw: unknown) => {
+      const obj = raw as Record<string, unknown>;
+      // Permission requests arrive as agent/approvalRequest worker lines.
+      if (obj.method === "agent/approvalRequest" && obj.params) {
+        const params = obj.params as Record<string, unknown>;
+        const rq = params.request as
+          | { toolName?: string; description?: string; args?: Record<string, unknown>; riskLevel?: string }
+          | undefined;
+        if (rq) {
+          const { summary, risk } = summarizeApproval(rq.args, rq.riskLevel);
+          const askOptions = extractAskUserOptions(rq.args);
+          addApproval({
+            requestId: String(params.requestId),
+            sessionId: typeof params.sessionId === "string" ? params.sessionId : undefined,
+            toolName: rq.toolName ?? "操作",
+            description: rq.description ?? "",
+            summary,
+            risk,
+            options: askOptions?.options,
+            optionsOnly: askOptions?.optionsOnly,
+            pathScoped: PATH_SCOPED.has(rq.toolName ?? ""),
+          });
+        }
+        return;
+      }
+      // Everything else (agent/streamEvent) folds through the reducer, but only
+      // when it belongs to the session we're viewing (or has no session id).
+      if (obj.method === "agent/streamEvent" && obj.params) {
+        const params = obj.params as Record<string, unknown>;
+        const sid = typeof params.sessionId === "string" ? params.sessionId : undefined;
+        if (sid && boundSessionRef.current && sid !== boundSessionRef.current) return;
+        dispatchChat({ kind: "raw", raw });
+      }
+    },
+    [addApproval],
+  );
+
+  const socket = useRemoteSocket({ onServerEvent, onRawLine });
+
+  // ── actions ────────────────────────────────────────────────────────────
+  const sendChat = useCallback(
+    (text: string) => {
+      const t = text.trim();
+      if (!t) return;
+      if (activeRoomIdRef.current) {
+        socket.send({ type: "room.send", roomId: activeRoomIdRef.current, text: t });
+        dispatchChat({ kind: "user", text: t });
+      } else {
+        dispatchChat({ kind: "user", text: t });
+        socket.send({ type: "chat.send", text: t, sessionId: boundSessionRef.current });
+      }
+    },
+    [socket],
+  );
+
+  const stopRun = useCallback(() => {
+    socket.send({ type: "run.stop", sessionId: boundSessionRef.current });
+  }, [socket]);
+
+  const refreshSessions = useCallback(() => socket.send({ type: "session.list" }), [socket]);
+
+  const selectSession = useCallback(
+    (id: string) => {
+      setActiveSessionId(id);
+      boundSessionRef.current = id;
+      setActiveRoomId(undefined);
+      dispatchChat({ kind: "reset" });
+      socket.send({ type: "session.select", sessionId: id });
+      socket.send({ type: "session.history", sessionId: id });
+      setView("chat");
+    },
+    [socket],
+  );
+
+  const newSession = useCallback(() => {
+    boundSessionRef.current = undefined;
+    setActiveRoomId(undefined);
+    dispatchChat({ kind: "reset" });
+    socket.send({ type: "session.create" });
+    setView("chat");
+  }, [socket]);
+
+  const respondApproval = useCallback(
+    (
+      requestId: string,
+      decision: "approve" | "reject",
+      opts?: { reason?: string; answer?: string; scope?: ApprovalScope; pathScope?: ApprovalPathScope },
+    ) => {
+      const a = approvalsRef.current.find((p) => p.requestId === requestId);
+      socket.send({
+        type: "approval.respond",
+        approvalId: requestId,
+        decision,
+        sessionId: a?.sessionId,
+        reason: opts?.reason,
+        answer: opts?.answer,
+        scope: opts?.scope,
+        pathScope: opts?.pathScope,
+      });
+      setApprovals((prev) => prev.filter((p) => p.requestId !== requestId));
+    },
+    [socket],
+  );
+  const approvalsRef = useRef(approvals);
+  approvalsRef.current = approvals;
+
+  const setPermissionMode = useCallback(
+    (mode: PermissionMode) => {
+      setPermissionModeState(mode);
+      socket.send({ type: "permission.setMode", sessionId: boundSessionRef.current, mode });
+    },
+    [socket],
+  );
+
+  const extendGoal = useCallback(
+    (sessionId: string) => socket.send({ type: "goal.extend", sessionId, addTurns: 100 }),
+    [socket],
+  );
+
+  const refreshRooms = useCallback(() => {
+    socket.send({ type: "room.list" });
+    socket.send({ type: "room.projects" });
+  }, [socket]);
+
+  const openRoom = useCallback(
+    (room: RoomPublic) => {
+      setActiveRoomId(room.id);
+      boundSessionRef.current = undefined;
+      dispatchChat({ kind: "reset" });
+      socket.send({ type: "room.open", roomId: room.id });
+      socket.send({ type: "room.history", roomId: room.id });
+      setView("chat");
+    },
+    [socket],
+  );
+
+  const leaveRoom = useCallback(() => {
+    setActiveRoomId(undefined);
+    dispatchChat({ kind: "reset" });
+    setView("rooms");
+  }, []);
+
+  const createRoom = useCallback(
+    (cwd: string, name?: string) => socket.send({ type: "room.create", cwd, name }),
+    [socket],
+  );
+
+  const closeRoom = useCallback(
+    (roomId: string) => socket.send({ type: "room.close", roomId }),
+    [socket],
+  );
+
+  const activeRoom = useMemo(
+    () => rooms.find((r) => r.id === activeRoomId),
+    [rooms, activeRoomId],
+  );
+
+  return {
+    status: socket.status,
+    deviceName: socket.deviceName,
+    view,
+    setView,
+    chat,
+    sessions,
+    activeSessionId,
+    rooms,
+    projects,
+    activeRoom,
+    approvals,
+    permissionMode,
+    logout: socket.logout,
+    sendChat,
+    stopRun,
+    selectSession,
+    newSession,
+    refreshSessions,
+    respondApproval,
+    setPermissionMode,
+    extendGoal,
+    refreshRooms,
+    openRoom,
+    leaveRoom,
+    createRoom,
+    closeRoom,
+  };
+}
+
+/** Map a room message (from RoomManager.messages.jsonl) into a reducer event. */
+function roomMsgToEvent(msg: unknown): unknown {
+  const m = msg as Record<string, unknown>;
+  const from = m.from as string;
+  const type = m.type as string;
+  if (from === "user") return { type: "user_message", text: m.text };
+  if (type === "text_delta") return { type: "text_delta", text: m.text };
+  if (type === "tool")
+    return { type: "tool_use_start", toolCall: { id: String(m.seq ?? ""), toolName: m.tool, args: {} } };
+  if (type === "turn_end") return { type: "turn_complete", reason: m.reason ?? "completed" };
+  if (type === "agent_exit") return { type: "error", error: `agent 退出 (code ${m.code ?? "?"})` };
+  return { type: "_noop" };
+}
+
+/** Detect an AskUser-style approval and pull its option labels. */
+function extractAskUserOptions(
+  args: Record<string, unknown> | undefined,
+): { options: string[]; optionsOnly: boolean } | undefined {
+  if (!args) return undefined;
+  const opts = args.options;
+  if (Array.isArray(opts)) {
+    const labels = opts
+      .map((o) => (typeof o === "string" ? o : (o as { label?: string })?.label))
+      .filter((l): l is string => typeof l === "string");
+    if (labels.length) return { options: labels, optionsOnly: args.optionsOnly === true };
+  }
+  return undefined;
+}
