@@ -1,0 +1,37 @@
+import { describe, test, expect } from "bun:test";
+import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { __resolveVideoProviderForTests } from "./generate-video.js";
+
+function tmpWorkspaceWithSettings(settings: object): string {
+  const dir = mkdtempSync(join(tmpdir(), "fal-vid-"));
+  mkdirSync(join(dir, ".code-shell"), { recursive: true });
+  writeFileSync(join(dir, ".code-shell", "settings.json"), JSON.stringify(settings));
+  return dir;
+}
+
+describe("resolveVideoProvider reads videoGen.providers[]", () => {
+  test("resolves a fal entry from videoGen.providers[] with defaultModel", () => {
+    const cwd = tmpWorkspaceWithSettings({
+      videoGen: {
+        defaultProvider: "fal",
+        providers: [
+          { id: "fal", kind: "fal", baseUrl: "https://queue.fal.run", apiKey: "k", defaultModel: "fal-ai/kling-video/v3/pro/text-to-video" },
+        ],
+      },
+    });
+    const r = __resolveVideoProviderForTests(cwd);
+    expect(r).not.toBeNull();
+    expect(r!.kind).toBe("fal");
+    expect(r!.creds.apiKey).toBe("k");
+    expect(r!.defaultModel).toBe("fal-ai/kling-video/v3/pro/text-to-video");
+  });
+
+  test("returns null when fal entry has no apiKey", () => {
+    const cwd = tmpWorkspaceWithSettings({
+      videoGen: { providers: [{ id: "fal", kind: "fal", baseUrl: "https://queue.fal.run" }] },
+    });
+    expect(__resolveVideoProviderForTests(cwd)).toBeNull();
+  });
+});

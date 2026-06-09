@@ -8,7 +8,7 @@
  * GenerateVideo tool's background polling loop share one contract.
  */
 import { describe, test, expect } from "bun:test";
-import { FakeVideoProvider, getVideoProvider } from "./video-providers.js";
+import { FakeVideoProvider, getVideoProvider, FalVideoProvider } from "./video-providers.js";
 
 describe("VideoProvider contract (FakeVideoProvider)", () => {
   test("submit returns a jobId; poll reports running then succeeded; download returns bytes", async () => {
@@ -49,5 +49,122 @@ describe("registry", () => {
   });
   test("getVideoProvider('fake') returns the fake (test/dev) adapter", () => {
     expect(getVideoProvider("fake")?.kind).toBe("fake");
+  });
+  test("getVideoProvider('fal') returns FalVideoProvider", () => {
+    expect(getVideoProvider("fal")?.kind).toBe("fal");
+  });
+});
+
+describe("FalVideoProvider", () => {
+  const creds = { baseUrl: "https://queue.fal.run", apiKey: "k-123" };
+
+  test("submit (text-to-video): POST {baseUrl}/{model} with prompt, returns jobId=model::request_id", async () => {
+    const calls: Array<{ url: string; body: any; headers: any }> = [];
+    const fakeFetch: typeof fetch = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body), headers: init.headers });
+      return { ok: true, status: 200, json: async () => ({ request_id: "req-1" }) } as Response;
+    }) as unknown as typeof fetch;
+
+    const p = new FalVideoProvider(fakeFetch);
+    const model = "fal-ai/kling-video/v3/pro/text-to-video";
+    const res = await p.submit({ prompt: "a wave", model, creds });
+
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.jobId).toBe(`${model}::req-1`);
+    expect(calls[0].url).toBe(`https://queue.fal.run/${model}`);
+    expect(calls[0].headers.Authorization).toBe("Key k-123");
+    expect(calls[0].body).toEqual({ prompt: "a wave" });
+  });
+
+  test("submit (image-to-video): image switches t2v model to i2v and sends image_url", async () => {
+    const calls: Array<{ url: string; body: any }> = [];
+    const fakeFetch: typeof fetch = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return { ok: true, status: 200, json: async () => ({ request_id: "req-2" }) } as Response;
+    }) as unknown as typeof fetch;
+
+    const p = new FalVideoProvider(fakeFetch);
+    const res = await p.submit({
+      prompt: "zoom in",
+      model: "fal-ai/kling-video/v3/pro/text-to-video",
+      image: "https://example.com/a.png",
+      creds,
+    });
+
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.jobId).toBe("fal-ai/kling-video/v3/pro/image-to-video::req-2");
+    expect(calls[0].url).toBe("https://queue.fal.run/fal-ai/kling-video/v3/pro/image-to-video");
+    expect(calls[0].body).toEqual({ prompt: "zoom in", image_url: "https://example.com/a.png" });
+  });
+
+  test("submit non-OK → ok:false with status", async () => {
+    const fakeFetch: typeof fetch = (async () =>
+      ({ ok: false, status: 401, text: async () => "bad key" } as Response)) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const res = await p.submit({ prompt: "p", model: "m", creds });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("401");
+  });
+
+  test("poll maps fal status: IN_QUEUE/IN_PROGRESS→running, COMPLETED→succeeded", async () => {
+    const seq = ["IN_QUEUE", "IN_PROGRESS", "COMPLETED"];
+    let i = 0;
+    const urls: string[] = [];
+    const fakeFetch: typeof fetch = (async (url: string) => {
+      urls.push(url);
+      const status = seq[i++];
+      return { ok: true, status: 200, json: async () => ({ status }) } as Response;
+    }) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const jobId = "fal-ai/kling-video/v3/pro/text-to-video::req-1";
+
+    const r1 = await p.poll({ jobId, creds });
+    expect(r1.ok && r1.status).toBe("running");
+    const r2 = await p.poll({ jobId, creds });
+    expect(r2.ok && r2.status).toBe("running");
+    const r3 = await p.poll({ jobId, creds });
+    expect(r3.ok && r3.status).toBe("succeeded");
+    expect(urls[0]).toBe(
+      "https://queue.fal.run/fal-ai/kling-video/v3/pro/text-to-video/requests/req-1/status",
+    );
+  });
+
+  test("poll network error → ok:false", async () => {
+    const fakeFetch: typeof fetch = (async () => {
+      throw new Error("boom");
+    }) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const r = await p.poll({ jobId: "m::r", creds });
+    expect(r.ok).toBe(false);
+  });
+
+  test("download: hop1 result JSON → video.url, hop2 fetch bytes, ext from url", async () => {
+    const urls: string[] = [];
+    const fakeFetch: typeof fetch = (async (url: string) => {
+      urls.push(url);
+      if (url.endsWith("/requests/req-1/")) {
+        return { ok: true, status: 200, json: async () => ({ video: { url: "https://cdn.fal/v/out.mp4" } }) } as Response;
+      }
+      // hop2: video bytes
+      return { ok: true, status: 200, arrayBuffer: async () => new TextEncoder().encode("VIDEOBYTES").buffer } as Response;
+    }) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const jobId = "fal-ai/kling-video/v3/pro/text-to-video::req-1";
+    const dl = await p.download({ jobId, creds });
+    expect(dl.ok).toBe(true);
+    if (dl.ok) {
+      expect(Buffer.from(dl.bytes).toString()).toBe("VIDEOBYTES");
+      expect(dl.ext).toBe("mp4");
+    }
+    expect(urls[0]).toBe("https://queue.fal.run/fal-ai/kling-video/v3/pro/text-to-video/requests/req-1/");
+    expect(urls[1]).toBe("https://cdn.fal/v/out.mp4");
+  });
+
+  test("download: missing video.url → ok:false", async () => {
+    const fakeFetch: typeof fetch = (async () =>
+      ({ ok: true, status: 200, json: async () => ({ video: {} }) } as Response)) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const dl = await p.download({ jobId: "m::r", creds });
+    expect(dl.ok).toBe(false);
   });
 });

@@ -21,6 +21,8 @@ export interface VideoSubmitRequest {
   prompt: string;
   model: string;
   creds: VideoProviderCreds;
+  /** Optional image URL (http/https). When present, triggers image-to-video. */
+  image?: string;
   signal?: AbortSignal;
 }
 
@@ -89,9 +91,119 @@ export class FakeVideoProvider implements VideoProvider {
   }
 }
 
+/**
+ * fal.ai video adapter — submit/poll/download against the fal queue API
+ * (https://queue.fal.run). model id selects the underlying model
+ * (e.g. fal-ai/kling-video/v3/pro/text-to-video). When `image` is present we
+ * switch a `...text-to-video` model to `...image-to-video` and send image_url,
+ * so callers only need to pass an image to get i2v. jobId encodes
+ * `${model}::${request_id}` since poll/download need the model to build URLs.
+ */
+export class FalVideoProvider implements VideoProvider {
+  readonly kind = "fal";
+  constructor(private readonly fetchImpl: typeof fetch = fetch) {}
+
+  private resolveModel(model: string, image?: string): string {
+    if (image && /text-to-video$/.test(model)) {
+      return model.replace(/text-to-video$/, "image-to-video");
+    }
+    return model;
+  }
+
+  private split(jobId: string): { model: string; requestId: string } {
+    const idx = jobId.indexOf("::");
+    if (idx < 0) return { model: jobId, requestId: "" };
+    return { model: jobId.slice(0, idx), requestId: jobId.slice(idx + 2) };
+  }
+
+  async submit(req: VideoSubmitRequest): Promise<VideoSubmitResult> {
+    const base = req.creds.baseUrl.replace(/\/+$/, "");
+    const model = this.resolveModel(req.model, req.image);
+    const body: Record<string, unknown> = { prompt: req.prompt };
+    if (req.image) body.image_url = req.image;
+    try {
+      const r = await this.fetchImpl(`${base}/${model}`, {
+        method: "POST",
+        headers: { Authorization: `Key ${req.creds.apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: req.signal,
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        return { ok: false, error: `fal submit failed: HTTP ${r.status} ${t}`.trim() };
+      }
+      const j = (await r.json()) as { request_id?: string };
+      if (!j.request_id) return { ok: false, error: "fal submit: no request_id in response" };
+      return { ok: true, jobId: `${model}::${j.request_id}` };
+    } catch (err) {
+      return { ok: false, error: `fal submit error: ${(err as Error).message}` };
+    }
+  }
+
+  async poll(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoPollResult> {
+    const base = req.creds.baseUrl.replace(/\/+$/, "");
+    const { model, requestId } = this.split(req.jobId);
+    try {
+      const r = await this.fetchImpl(`${base}/${model}/requests/${requestId}/status`, {
+        method: "GET",
+        headers: { Authorization: `Key ${req.creds.apiKey}` },
+        signal: req.signal,
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        return { ok: false, error: `fal status failed: HTTP ${r.status} ${t}`.trim() };
+      }
+      const j = (await r.json()) as { status?: string; error?: unknown };
+      switch (j.status) {
+        case "IN_QUEUE":
+        case "IN_PROGRESS":
+          return { ok: true, status: "running" };
+        case "COMPLETED":
+          return { ok: true, status: "succeeded" };
+        default:
+          return { ok: true, status: "failed", error: `fal status: ${j.status ?? "unknown"}` };
+      }
+    } catch (err) {
+      return { ok: false, error: `fal poll error: ${(err as Error).message}` };
+    }
+  }
+
+  async download(req: { jobId: string; creds: VideoProviderCreds; signal?: AbortSignal }): Promise<VideoDownloadResult> {
+    const base = req.creds.baseUrl.replace(/\/+$/, "");
+    const { model, requestId } = this.split(req.jobId);
+    try {
+      // hop 1: result JSON
+      const r = await this.fetchImpl(`${base}/${model}/requests/${requestId}/`, {
+        method: "GET",
+        headers: { Authorization: `Key ${req.creds.apiKey}` },
+        signal: req.signal,
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        return { ok: false, error: `fal result failed: HTTP ${r.status} ${t}`.trim() };
+      }
+      const j = (await r.json()) as { video?: { url?: string } };
+      const videoUrl = j.video?.url;
+      if (!videoUrl) return { ok: false, error: "fal result: no video.url" };
+
+      // hop 2: video bytes
+      const vr = await this.fetchImpl(videoUrl, { method: "GET", signal: req.signal });
+      if (!vr.ok) {
+        return { ok: false, error: `fal video download failed: HTTP ${vr.status}` };
+      }
+      const buf = new Uint8Array(await vr.arrayBuffer());
+      const m = /\.([a-z0-9]{2,4})(?:\?|$)/i.exec(videoUrl);
+      const ext = m ? m[1].toLowerCase() : "mp4";
+      return { ok: true, bytes: buf, ext };
+    } catch (err) {
+      return { ok: false, error: `fal download error: ${(err as Error).message}` };
+    }
+  }
+}
+
 /** Default model per video provider kind (filled in with real adapters). */
 export const DEFAULT_VIDEO_MODEL: Record<string, string> = {
-  // seedance / kling defaults go here once their adapters land.
+  fal: "fal-ai/kling-video/v3/pro/text-to-video",
 };
 
 /**
@@ -99,10 +211,12 @@ export const DEFAULT_VIDEO_MODEL: Record<string, string> = {
  * today (test/dev). Real adapters (seedance, kling) are intentionally absent
  * until their private API contracts are confirmed — see TODO 7.1 块3.
  */
-export function getVideoProvider(kind: string, _fetchImpl: typeof fetch = fetch): VideoProvider | null {
+export function getVideoProvider(kind: string, fetchImpl: typeof fetch = fetch): VideoProvider | null {
   switch (kind) {
     case "fake":
       return new FakeVideoProvider({ succeedAfterPolls: 0 });
+    case "fal":
+      return new FalVideoProvider(fetchImpl);
     default:
       return null;
   }

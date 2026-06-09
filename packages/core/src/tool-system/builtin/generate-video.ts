@@ -29,9 +29,8 @@ import {
   type VideoProviderCreds,
 } from "./video-providers.js";
 
-/** Video provider `kind`s that have an adapter, in resolution preference.
- *  Empty until Seedance/Kling adapters land — see video-providers.ts. */
-const VIDEO_PROVIDER_KINDS: string[] = [];
+/** Video provider `kind`s that have an adapter, in resolution preference. */
+const VIDEO_PROVIDER_KINDS: string[] = ["fal"];
 
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 /** Safety cap so a stuck job's background loop can't poll forever. */
@@ -53,6 +52,7 @@ export const generateVideoToolDef: ToolDefinition = {
         description: "Video provider kind to use. Defaults to the first configured video provider.",
       },
       model: { type: "string", description: "Video model id. Defaults to the provider's default." },
+      image: { type: "string", description: "Image URL (http/https) for image-to-video. When set, an image-to-video model is used." },
     },
     required: ["prompt"],
   },
@@ -132,10 +132,28 @@ export function generateVideoToolDefFor(cwd: string): ToolDefinition {
 interface ResolvedVideoProvider {
   kind: string;
   creds: VideoProviderCreds;
+  defaultModel?: string;
 }
 
 function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoProvider | null {
   const settings = new SettingsManager(cwd, "full").get();
+  const videoGen = (settings as { videoGen?: { defaultProvider?: string; providers?: Array<{ id: string; kind: string; baseUrl: string; apiKey?: string; defaultModel?: string }> } }).videoGen;
+  if (videoGen?.providers?.length) {
+    const usable = (p: { kind: string; apiKey?: string }): boolean =>
+      !!p.apiKey && getVideoProvider(p.kind) !== null;
+    if (preferKind) {
+      const chosen = videoGen.providers.find((p) => (p.id === preferKind || p.kind === preferKind) && usable(p));
+      if (chosen) return { kind: chosen.kind, creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey! }, defaultModel: chosen.defaultModel };
+      return null;
+    }
+    const preferred = videoGen.defaultProvider
+      ? videoGen.providers.find((p) => p.id === videoGen.defaultProvider)
+      : undefined;
+    const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? videoGen.providers.find(usable);
+    if (chosen) return { kind: chosen.kind, creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey! }, defaultModel: chosen.defaultModel };
+    return null;
+  }
+  // Back-compat: scan LLM providers[] for a video-capable kind.
   const kinds = preferKind ? [preferKind] : VIDEO_PROVIDER_KINDS;
   for (const kind of kinds) {
     const provider = settings.providers.find((p) => p.kind === kind);
@@ -144,6 +162,10 @@ function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoPr
     }
   }
   return null;
+}
+
+export function __resolveVideoProviderForTests(cwd: string, preferKind?: string): ResolvedVideoProvider | null {
+  return resolveVideoProvider(cwd, preferKind);
 }
 
 export async function generateVideoTool(
@@ -158,6 +180,7 @@ export async function generateVideoTool(
   const sessionId = ctx?.sessionId;
   const preferKind = typeof args.provider === "string" && args.provider ? args.provider : undefined;
   const overrideModel = typeof args.model === "string" && args.model ? args.model : undefined;
+  const image = typeof args.image === "string" && args.image ? args.image : undefined;
   const pollIntervalMs =
     typeof args.pollIntervalMs === "number" && args.pollIntervalMs > 0
       ? args.pollIntervalMs
@@ -168,6 +191,7 @@ export async function generateVideoTool(
   let kind: string;
   let creds: VideoProviderCreds;
   let adapter: VideoProvider;
+  let defaultModel: string | undefined;
   if (injectedProvider) {
     adapter = injectedProvider;
     kind = injectedProvider.kind;
@@ -184,11 +208,12 @@ export async function generateVideoTool(
     adapter = a;
     kind = resolved.kind;
     creds = resolved.creds;
+    defaultModel = resolved.defaultModel;
   }
 
-  const model = overrideModel ?? DEFAULT_VIDEO_MODEL[kind] ?? kind;
+  const model = overrideModel ?? defaultModel ?? DEFAULT_VIDEO_MODEL[kind] ?? kind;
 
-  const submit = await adapter.submit({ prompt, model, creds, signal: ctx?.signal });
+  const submit = await adapter.submit({ prompt, model, image, creds, signal: ctx?.signal });
   if (!submit.ok) {
     return `Error submitting video job: ${submit.error}`;
   }
