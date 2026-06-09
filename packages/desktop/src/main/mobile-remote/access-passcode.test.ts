@@ -120,8 +120,15 @@ describe("AccessPasscode", () => {
     ap.set("correct");
     const { req, res } = fakeReqRes({ url: "/mobile?passcode=correct" });
     expect(ap.gate(req, res)).toBe(true);
-    const setCookie = res.headers["set-cookie"] ?? res.headers["Set-Cookie"];
-    expect(String(setCookie)).toContain("cs_access=");
+    const setCookie = String(res.headers["set-cookie"] ?? res.headers["Set-Cookie"]);
+    expect(setCookie).toContain("cs_access=");
+    // The phone reaches the page via a QR-scan launched navigation INTO
+    // trycloudflare.com — SameSite=Strict treats that as cross-site and drops
+    // the cookie, so the user is re-challenged forever. Lax sends it on
+    // top-level navigations; Secure because the tunnel is always https.
+    expect(setCookie).toContain("SameSite=Lax");
+    expect(setCookie).toContain("Secure");
+    expect(setCookie).toContain("HttpOnly");
   });
 
   test("gate: a browser GET with no credential gets an HTML passcode FORM, not bare text", () => {

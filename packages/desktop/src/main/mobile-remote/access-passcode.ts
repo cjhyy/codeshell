@@ -140,7 +140,12 @@ export class AccessPasscode {
       if (token) {
         res.setHeader(
           "Set-Cookie",
-          `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000`,
+          // SameSite=Lax (not Strict): the phone arrives via a QR-scan-launched
+          // top-level navigation into trycloudflare.com, which Strict treats as
+          // cross-site and refuses to send the cookie on — re-challenging the
+          // user every visit. Lax sends it on top-level navigations. Secure
+          // because the tunnel terminates TLS (always https).
+          `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`,
         );
         return true;
       }
