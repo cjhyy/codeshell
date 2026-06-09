@@ -112,6 +112,34 @@ function isHiddenTool(m: Message): boolean {
 }
 
 /**
+ * End-of-run bookkeeping tools: they record state (e.g. an automation's
+ * memory summary) AFTER the visible answer, so the model commonly emits
+ * "<report text> → UpdateAutomationMemory" in one turn. If such a tool
+ * counted as the turn's `lastTool`, the level-2 process card would swallow
+ * the report text that precedes it (only post-lastTool text stays inline).
+ * Excluding them from the `lastTool` anchor keeps the report visible outside
+ * the card; the tool itself still renders (it isn't hidden).
+ */
+const BOOKKEEPING_TOOL_NAMES = new Set([
+  "updateautomationmemory",
+  "update_automation_memory",
+]);
+
+/** True when an item is a tool (or tool group) consisting ONLY of
+ *  bookkeeping tools — so it shouldn't anchor the process card's tail. */
+function isBookkeepingToolish(item: Message | ToolGroup): boolean {
+  const isBk = (name: string) => BOOKKEEPING_TOOL_NAMES.has(name.toLowerCase());
+  if (item.kind === "tool") return isBk(item.toolName);
+  if (item.kind === "tool_group") {
+    return (
+      item.items.length > 0 &&
+      item.items.every((t) => t.kind === "tool" && isBk(t.toolName))
+    );
+  }
+  return false;
+}
+
+/**
  * "Transparent" message kinds — non-user-visible model output that can
  * appear between tool calls without ending a level-1 run. Assistant text
  * is deliberately NOT transparent; it is a hard break that should remain
@@ -370,10 +398,13 @@ function foldTurnProcess(
     // user bubble stays outside the card.
     out.push(items[start]!);
 
-    // Find the last tool-bearing item within (start, end).
+    // Find the last tool-bearing item within (start, end). Bookkeeping-only
+    // toolish items (e.g. a trailing UpdateAutomationMemory) are skipped so
+    // they don't anchor the card's tail and swallow the report text that
+    // precedes them — that text then stays inline after the real last tool.
     let lastTool = -1;
     for (let i = start + 1; i < end; i++) {
-      if (isToolish(items[i]!)) lastTool = i;
+      if (isToolish(items[i]!) && !isBookkeepingToolish(items[i]!)) lastTool = i;
     }
 
     if (lastTool < 0) {

@@ -122,6 +122,53 @@ describe("buildStreamItems", () => {
     if (last?.kind === "assistant") expect(last.text).toBe("总结如下。");
   });
 
+  test("a trailing bookkeeping tool (UpdateAutomationMemory) does not swallow the report text before it", () => {
+    // Real automation shape: search/fetch tools, then the report, then the
+    // end-of-run UpdateAutomationMemory bookkeeping call. The report must
+    // stay OUTSIDE the process card (visible), not folded into it.
+    const report = assistant("## 每日美股晨报\n标普500 +0.30% …");
+    const messages: Message[] = [
+      user(),
+      tool("WebSearch", 10, 20),
+      tool("WebFetch", 21, 30),
+      report,
+      tool("UpdateAutomationMemory", 31, 40),
+    ];
+
+    const items = buildStreamItems(messages);
+    // Card anchors on WebFetch (the last *real* tool); the report and the
+    // bookkeeping tool both fall after it and render inline.
+    const groups = processGroups(items);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.toolCount).toBe(2); // WebSearch + WebFetch only
+    // The report is a top-level inline item, not buried in the card.
+    const reportInline = items.some(
+      (it) => it.kind === "assistant" && it.text.startsWith("## 每日美股晨报"),
+    );
+    expect(reportInline).toBe(true);
+    // The card itself must NOT contain the report text.
+    expect(
+      groups[0]?.items.some(
+        (it) => it.kind === "assistant" && it.text.startsWith("## 每日美股晨报"),
+      ),
+    ).toBe(false);
+    // The bookkeeping tool still renders (it isn't hidden) — present somewhere.
+    const hasBookkeeping = JSON.stringify(items).includes("UpdateAutomationMemory");
+    expect(hasBookkeeping).toBe(true);
+  });
+
+  test("a turn whose ONLY tool is bookkeeping makes no process card", () => {
+    const messages: Message[] = [
+      user(),
+      assistant("报告正文。"),
+      tool("UpdateAutomationMemory", 10, 20),
+    ];
+    const items = buildStreamItems(messages);
+    expect(processGroups(items)).toHaveLength(0);
+    // Report text stays a visible top-level assistant message.
+    expect(items.some((it) => it.kind === "assistant" && it.text === "报告正文。")).toBe(true);
+  });
+
   test("inside the outer card, adjacent tools fold into a tool_group but assistant text splits them", () => {
     const messages: Message[] = [
       user(),

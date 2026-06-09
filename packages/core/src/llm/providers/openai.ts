@@ -204,9 +204,10 @@ export class OpenAIClient extends LLMClientBase {
   }
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
-    return this.withRetry(async () => {
-      // (signal passed below so an abort during retry backoff / a hung
-      // connection breaks the loop instead of running all attempts)
+    return this.withRetry(async (requestSignal) => {
+      // requestSignal = caller's cancel signal composed with a per-request
+      // hard deadline (withRetry). Hand it to the SDK so a wedged socket is
+      // torn down instead of hanging for tens of minutes.
       // Per-call reasoning wins; otherwise fall back to provider default
       // (settings.providers[].reasoning, threaded through LLMConfig).
       const reasoning = options.reasoning ?? this.config.reasoning;
@@ -228,8 +229,8 @@ export class OpenAIClient extends LLMClientBase {
       try {
         const response =
           options.stream && options.onChunk
-            ? await this.streamMessage(options, messages, tools, reasoning)
-            : await this.nonStreamMessage(options, messages, tools, reasoning);
+            ? await this.streamMessage(options, messages, tools, reasoning, requestSignal)
+            : await this.nonStreamMessage(options, messages, tools, reasoning, requestSignal);
         span.end({
           stopReason: response.stopReason,
           promptTokens: response.usage?.promptTokens,
@@ -372,6 +373,7 @@ export class OpenAIClient extends LLMClientBase {
     messages: OpenAI.ChatCompletionMessageParam[],
     tools?: OpenAI.ChatCompletionTool[],
     reasoning?: ReasoningSetting,
+    requestSignal?: AbortSignal,
   ): Promise<LLMResponse> {
     try {
       const response = await this.client.chat.completions.create(
@@ -382,7 +384,7 @@ export class OpenAIClient extends LLMClientBase {
           reasoning,
           false,
         ) as unknown as OpenAI.ChatCompletionCreateParamsNonStreaming,
-        { signal: options.signal },
+        { signal: requestSignal ?? options.signal },
       );
 
       const choice = response.choices[0];
@@ -407,7 +409,9 @@ export class OpenAIClient extends LLMClientBase {
     messages: OpenAI.ChatCompletionMessageParam[],
     tools?: OpenAI.ChatCompletionTool[],
     reasoning?: ReasoningSetting,
+    requestSignal?: AbortSignal,
   ): Promise<LLMResponse> {
+    const sdkSignal = requestSignal ?? options.signal;
     try {
       const stream = await this.client.chat.completions.create(
         this.buildRequestBody(
@@ -417,7 +421,7 @@ export class OpenAIClient extends LLMClientBase {
           reasoning,
           true,
         ) as unknown as OpenAI.ChatCompletionCreateParamsStreaming,
-        { signal: options.signal },
+        { signal: sdkSignal },
       );
 
       let text = "";
@@ -519,12 +523,13 @@ export class OpenAIClient extends LLMClientBase {
       };
 
       await runStreamWithWatchdog(stream, {
-        idleTimeoutMs: STREAM_WATCHDOG_CONFIG.enabled
-          ? STREAM_WATCHDOG_CONFIG.idleTimeoutMs
-          : undefined,
+        // Idle watchdog is now ON by default (see STREAM_WATCHDOG_CONFIG) — it
+        // catches a stream that connects then stalls mid-generation; the
+        // per-request deadline (sdkSignal) catches connect/first-byte hangs.
+        idleTimeoutMs: STREAM_WATCHDOG_CONFIG.idleTimeoutMs,
         requestId,
         onChunk: handleChunk,
-        signal: options.signal,
+        signal: sdkSignal,
       });
 
       const toolCalls: ToolCall[] = [];

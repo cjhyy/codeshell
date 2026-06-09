@@ -128,7 +128,7 @@ export class AnthropicClient extends LLMClientBase {
   }
 
   async createMessage(options: CreateMessageOptions): Promise<LLMResponse> {
-    return this.withRetry(async () => {
+    return this.withRetry(async (requestSignal) => {
       const messages = this.buildMessages(options.messages);
       const tools = options.tools ? this.convertTools(options.tools) : undefined;
 
@@ -147,8 +147,8 @@ export class AnthropicClient extends LLMClientBase {
       try {
         const response =
           options.stream && options.onChunk
-            ? await this.streamMessage(options, messages, tools)
-            : await this.nonStreamMessage(options, messages, tools);
+            ? await this.streamMessage(options, messages, tools, requestSignal)
+            : await this.nonStreamMessage(options, messages, tools, requestSignal);
         span.end({
           stopReason: response.stopReason,
           promptTokens: response.usage?.promptTokens,
@@ -168,6 +168,7 @@ export class AnthropicClient extends LLMClientBase {
     options: CreateMessageOptions,
     messages: Anthropic.MessageParam[],
     tools?: Anthropic.Tool[],
+    requestSignal?: AbortSignal,
   ): Promise<LLMResponse> {
     try {
       // Per-call reasoning wins; otherwise fall back to the provider/model
@@ -193,7 +194,7 @@ export class AnthropicClient extends LLMClientBase {
             ? { temperature: options.temperature }
             : { temperature: this.temperature }),
         },
-        { signal: options.signal },
+        { signal: requestSignal ?? options.signal },
       );
 
       const usage: TokenUsage = {
@@ -216,6 +217,7 @@ export class AnthropicClient extends LLMClientBase {
     options: CreateMessageOptions,
     messages: Anthropic.MessageParam[],
     tools?: Anthropic.Tool[],
+    requestSignal?: AbortSignal,
   ): Promise<LLMResponse> {
     try {
       const reasoning = options.reasoning ?? this.config.reasoning;
@@ -239,7 +241,7 @@ export class AnthropicClient extends LLMClientBase {
             ? { temperature: options.temperature }
             : { temperature: this.temperature }),
         },
-        { signal: options.signal },
+        { signal: requestSignal ?? options.signal },
       );
 
       let currentText = "";
@@ -258,10 +260,13 @@ export class AnthropicClient extends LLMClientBase {
         if (options.signal?.aborted) return;
         options.onChunk?.(chunk);
       };
-      if (options.signal) {
-        const sig = options.signal;
-        if (sig.aborted) stream.abort();
-        else sig.addEventListener("abort", () => stream.abort(), { once: true });
+      // Tear the SDK stream down on EITHER the user's cancel OR the per-request
+      // deadline (requestSignal composes both) — a wedged stream then aborts
+      // instead of hanging on the SDK's unreliable timeout.
+      const teardownSig = requestSignal ?? options.signal;
+      if (teardownSig) {
+        if (teardownSig.aborted) stream.abort();
+        else teardownSig.addEventListener("abort", () => stream.abort(), { once: true });
       }
 
       // Time-to-first-byte: log exactly once per stream so streaming-latency

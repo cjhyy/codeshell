@@ -89,7 +89,11 @@ export function createStreamWatchdog(opts: StreamWatchdogOptions): StreamWatchdo
 
 /** Environment-driven defaults. Read once at import time is fine — these never change inside a process. */
 export const STREAM_WATCHDOG_CONFIG = {
-  enabled: process.env.CODESHELL_ENABLE_STREAM_WATCHDOG === "1",
+  // ON by default — a streamed response that connects then stalls mid-flight
+  // would otherwise hang until the SDK's (unreliable-for-half-dead-sockets)
+  // timeout, which we observed take 15–33 min in practice. Opt OUT with
+  // CODESHELL_ENABLE_STREAM_WATCHDOG=0 (rollback knob).
+  enabled: process.env.CODESHELL_ENABLE_STREAM_WATCHDOG !== "0",
   idleTimeoutMs:
     parseInt(process.env.CODESHELL_STREAM_IDLE_TIMEOUT_MS || "", 10) || 90_000,
   retries:

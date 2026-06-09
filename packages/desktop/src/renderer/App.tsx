@@ -132,6 +132,7 @@ type Action =
       header?: string;
       options?: AskUserOption[];
       multiSelect: boolean;
+      optionsOnly?: boolean;
     }
   | { type: "ask_user_answered"; bucket: string; requestId: string; answer: string }
   | {
@@ -159,6 +160,7 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
         header: action.header,
         options: action.options,
         multiSelect: action.multiSelect,
+        optionsOnly: action.optionsOnly,
       });
       break;
     case "ask_user_answered":
@@ -1246,6 +1248,7 @@ function App() {
           "";
         const header = typeof args.header === "string" ? args.header : undefined;
         const multiSelect = args.multiSelect === true;
+        const optionsOnly = args.optionsOnly === true;
         const options =
           Array.isArray(args.options)
             ? (args.options as unknown[])
@@ -1270,6 +1273,7 @@ function App() {
           header,
           options,
           multiSelect,
+          optionsOnly,
         });
         return;
       }

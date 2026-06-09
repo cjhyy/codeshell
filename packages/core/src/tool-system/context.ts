@@ -37,6 +37,14 @@ export interface AskUserOptions {
   options?: AskUserChoice[];
   /** Allow the user to pick more than one option. Defaults to false. */
   multiSelect?: boolean;
+  /**
+   * When true, the UI must offer ONLY the given `options` — no "其它…"
+   * free-text escape hatch. Used by closed-set decisions (e.g. a path-permission
+   * 允许本次/拒绝 prompt) where the answer is interpreted by an exact label
+   * match, so a free-typed answer like "允许" would never match and silently
+   * deny. Ignored unless `options` is non-empty.
+   */
+  optionsOnly?: boolean;
 }
 
 /**
@@ -168,6 +176,13 @@ export interface ToolContext {
   /** Whether the owning Engine is currently in plan mode. Replaces the
    *  removed module-level `isInPlanMode()` singleton. */
   planMode: boolean;
+  /**
+   * The owning Engine's permission mode. Path policy reads this so that
+   * `bypassPermissions` (the user's "完全访问") skips the path-approval prompt
+   * entirely — matching the tool-permission backend and CC, where bypass
+   * skips ALL checks including path validation. Undefined → treat as
+   * "default" (always enforce). */
+  permissionMode?: string;
   /** The Engine that built this context. Lets tools call back into the engine
    *  (e.g. ctx.engine.setPlanMode(true/false)) without a module-level singleton. */
   engine: Engine;

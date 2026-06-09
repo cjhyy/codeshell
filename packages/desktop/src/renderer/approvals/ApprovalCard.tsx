@@ -81,6 +81,11 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
       ? ((request.args as Record<string, unknown>).file_path as string)
       : undefined;
   const options = approveOptionsFor(request.toolName, filePath);
+  // Promote the first "session" grant to its own visible button (the common
+  // "stop asking me this session" case); everything else (项目, path-scoped
+  // file/dir grants) folds into the 更多范围 ▾ menu. "once" is its own button.
+  const sessionOption = options.find((o) => o.scope === "session");
+  const moreOptions = options.filter((o) => o.scope !== "once" && o !== sessionOption);
 
   const approve = (scope: ApproveChoice, pathScope?: ApprovePathScope, label?: string): void => {
     if (decided) return;
@@ -129,30 +134,35 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
           <span>{decidedLabel(decided)}</span>
         </div>
       ) : (
-        <div className="mt-3 flex items-center gap-2">
-          {/* Approve split-button: main = once (the common case); ▾ opens the
-              wider session/project scopes. */}
-          <div className="flex">
-            <Button size="sm" className="rounded-r-none" onClick={() => approve("once")}>
-              批准
+        <div className="mt-3 space-y-2">
+          {/* Approve row. The two most-used scopes are explicit buttons so
+              "本会话一直允许" is visible at a glance (it used to be buried in a
+              ▾ menu). Any extra scopes — "本项目", or the file/dir path-scoped
+              grants for Write/Edit — fold into the "更多范围 ▾" menu. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => approve("once")}>
+              仅本次批准
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  className="rounded-l-none border-l border-l-primary-foreground/20 px-1.5"
-                  aria-label="选择批准范围"
-                >
-                  <ChevronDown size={14} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-w-[18rem]">
-                {/* once is the main button; the menu offers the remembered
-                    (session/project) grants, expanded by path scope for file
-                    tools. */}
-                {options
-                  .filter((o) => o.scope !== "once")
-                  .map((o) => (
+            {sessionOption && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  approve(sessionOption.scope, sessionOption.pathScope, sessionOption.label)
+                }
+              >
+                {sessionOption.label}
+              </Button>
+            )}
+            {moreOptions.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="ghost" aria-label="选择批准范围">
+                    更多范围 <ChevronDown size={14} className="ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-w-[18rem]">
+                  {moreOptions.map((o) => (
                     <DropdownMenuItem
                       key={`${o.scope}:${o.pathScope ?? "tool"}`}
                       className="flex flex-col items-start gap-0"
@@ -164,23 +174,29 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
                       )}
                     </DropdownMenuItem>
                   ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
 
-          <Select value={denyReason} onValueChange={setDenyReason}>
-            <SelectTrigger className="h-8 w-[200px]">
-              <SelectValue placeholder="拒绝理由…" />
-            </SelectTrigger>
-            <SelectContent>
-              {DENY_PRESETS.map((r) => (
-                <SelectItem key={r} value={r}>{r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="sm" variant="ghost" className="text-status-err" onClick={deny}>
-            拒绝
-          </Button>
+          {/* Deny row — clearly labelled and separated so the reason picker is
+              never mistaken for a generic "type your decision" box (it only
+              ever feeds the 拒绝 button). */}
+          <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2">
+            <Button size="sm" variant="ghost" className="text-status-err" onClick={deny}>
+              拒绝
+            </Button>
+            <Select value={denyReason} onValueChange={setDenyReason}>
+              <SelectTrigger className="h-8 w-[200px]">
+                <SelectValue placeholder="拒绝理由(可选)…" />
+              </SelectTrigger>
+              <SelectContent>
+                {DENY_PRESETS.map((r) => (
+                  <SelectItem key={r} value={r}>{r}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       )}
     </div>

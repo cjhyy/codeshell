@@ -109,6 +109,118 @@ function expandTilde(p: string): string {
   return p;
 }
 
+// ---------------------------------------------------------------------------
+// Remembered path approvals (so a project-external dir isn't re-prompted on
+// every file op). Two scopes mirror the tool-permission card's session/project:
+//   - session: in-memory, keyed by sessionId → set of approved directory
+//     prefixes. Cleared when the process ends.
+//   - project: persisted to <cwd>/.code-shell/settings.local.json under
+//     `pathApprovals` (per-developer, git-ignored), so it survives restarts.
+// A grant covers the directory of the approved path and everything beneath it,
+// so reading 5 files in one dir prompts once.
+// ---------------------------------------------------------------------------
+
+export type PathApprovalScope = "once" | "session" | "project";
+
+/** sessionId → set of approved directory prefixes (absolute, trailing sep). */
+const sessionPathGrants = new Map<string, Set<string>>();
+
+/** Normalize a directory to an absolute prefix ending in `sep` for prefix tests. */
+function dirPrefix(absPath: string): string {
+  const d = absPath.endsWith(sep) ? absPath : absPath + sep;
+  return d;
+}
+
+/** True if `resolved` sits inside any approved directory prefix in `grants`. */
+function coveredBy(grants: Iterable<string>, resolved: string): boolean {
+  const target = resolved.endsWith(sep) ? resolved : resolved + sep;
+  for (const g of grants) {
+    if (target === g || target.startsWith(g)) return true;
+  }
+  return false;
+}
+
+function projectPathGrants(cwd: string): string[] {
+  const file = `${cwd}/.code-shell/settings.local.json`;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require("node:fs") as typeof import("node:fs");
+  if (!fs.existsSync(file)) return [];
+  try {
+    const s = JSON.parse(fs.readFileSync(file, "utf-8")) as {
+      pathApprovals?: unknown;
+    };
+    return Array.isArray(s.pathApprovals)
+      ? (s.pathApprovals.filter((x) => typeof x === "string") as string[])
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Has the user already approved a directory covering `resolved`? */
+function isPathPreApproved(
+  resolved: string,
+  cwd: string,
+  sessionId?: string,
+): boolean {
+  if (sessionId) {
+    const s = sessionPathGrants.get(sessionId);
+    if (s && coveredBy(s, resolved)) return true;
+  }
+  return coveredBy(projectPathGrants(cwd), resolved);
+}
+
+/** Record a session/project grant for the DIRECTORY containing `resolved`. */
+function recordPathApproval(
+  scope: PathApprovalScope,
+  resolved: string,
+  cwd: string,
+  sessionId?: string,
+): void {
+  if (scope === "once") return;
+  const prefix = dirPrefix(dirname(resolved));
+  if (scope === "session") {
+    if (!sessionId) return;
+    let s = sessionPathGrants.get(sessionId);
+    if (!s) {
+      s = new Set();
+      sessionPathGrants.set(sessionId, s);
+    }
+    s.add(prefix);
+    return;
+  }
+  // project: persist to settings.local.json (atomic, idempotent).
+  const dir = `${cwd}/.code-shell`;
+  const file = `${dir}/settings.local.json`;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require("node:fs") as typeof import("node:fs");
+  try {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    let settings: { pathApprovals?: string[] } = {};
+    if (fs.existsSync(file)) {
+      try {
+        settings = JSON.parse(fs.readFileSync(file, "utf-8"));
+      } catch {
+        /* start fresh on parse error */
+      }
+    }
+    if (!Array.isArray(settings.pathApprovals)) settings.pathApprovals = [];
+    if (!settings.pathApprovals.includes(prefix)) {
+      settings.pathApprovals.push(prefix);
+      const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+      fs.writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+      fs.renameSync(tmp, file);
+    }
+  } catch {
+    // Persistence is best-effort; an unwritable disk must not break the op.
+  }
+}
+
+/** Test seam: clear the in-memory session grants. */
+export function _resetSessionPathGrants(): void {
+  sessionPathGrants.clear();
+}
+
 /**
  * Best-effort resolution. realpath fails when the path doesn't exist yet —
  * the common case for Write creating a new file. We walk up to the nearest
@@ -318,6 +430,13 @@ export async function enforcePathPolicyWithApproval(
   ctx?: ToolContext,
 ): Promise<string | null> {
   if (ctx?.cwd === undefined) return null;
+  // bypassPermissions ("完全访问") skips the path-approval layer entirely,
+  // matching the tool-permission backend and CC (bypass skips ALL checks,
+  // including path validation). This is what makes "完全访问" actually mean
+  // full access — previously path policy ran regardless of mode, so a user
+  // who chose full access still got prompted for project-external reads.
+  if (ctx.permissionMode === "bypassPermissions") return null;
+
   const c = classifyPath(filePath, { workspaceRoot: ctx.cwd, operation });
   if (c.decision === "allow") return null;
   if (c.decision === "deny") {
@@ -327,6 +446,10 @@ export async function enforcePathPolicyWithApproval(
     return `Error: blocked by path policy — ${c.reason}. Path: ${c.resolvedPath}. ` +
       `Plan mode does not allow file writes.`;
   }
+  // Already approved this directory (this session or persisted for the
+  // project)? Proceed without re-prompting — this is the fix for "I keep
+  // having to click allow for the same folder".
+  if (isPathPreApproved(c.resolvedPath, ctx.cwd, ctx.sessionId)) return null;
   if (!ctx.askUser) {
     return `Error: path requires approval — ${c.reason}. Path: ${c.resolvedPath}. ` +
       `No interactive approval UI is available in this run.`;
@@ -342,20 +465,45 @@ export async function enforcePathPolicyWithApproval(
     : `工具想${what}工作区外路径`;
   const header = isSensitive ? "敏感文件权限" : "路径权限";
 
+  // Scope options carry remembered grants for the directory of this path, so
+  // the same folder isn't re-prompted. Labels are matched by exact string
+  // (the ask is optionsOnly — no free-text box that could silently fail to
+  // match). 仅本次 carries no memory.
+  const grantDir = dirname(c.resolvedPath);
   const ALLOW_ONCE = "允许本次";
-  const answer = await ctx.askUser(
-    `${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`,
-    {
-      header,
-      options: [
-        { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行" },
-        { label: "拒绝", description: "阻止当前文件操作" },
-      ],
-    },
-  );
-  // Exact match, not startsWith: a future scope option (e.g. "允许本会话")
-  // would also pass a prefix test and be misread as a one-time allow.
-  if (answer.trim() === ALLOW_ONCE) return null;
+  const ALLOW_SESSION = "本目录本会话允许";
+  const ALLOW_PROJECT = "本目录本项目允许";
+  const answer = (
+    await ctx.askUser(
+      `${title}：\n${c.resolvedPath}\n\n原因：${c.reason}\n是否允许本次操作？`,
+      {
+        header,
+        options: [
+          { label: ALLOW_ONCE, description: "仅允许当前这一次文件操作继续执行" },
+          { label: ALLOW_SESSION, description: `本会话内不再询问 ${grantDir} 下的文件` },
+          {
+            label: ALLOW_PROJECT,
+            description: `永久允许 ${grantDir} 下的文件（写入 .code-shell/settings.local.json）`,
+          },
+          { label: "拒绝", description: "阻止当前文件操作" },
+        ],
+        // Closed-set decision: no free-text "其它…" box. The answer is matched
+        // against the labels below by exact string, so a typed answer must not
+        // be allowed (it could never match and would silently deny).
+        optionsOnly: true,
+      },
+    )
+  ).trim();
+
+  if (answer === ALLOW_ONCE) return null;
+  if (answer === ALLOW_SESSION) {
+    recordPathApproval("session", c.resolvedPath, ctx.cwd, ctx.sessionId);
+    return null;
+  }
+  if (answer === ALLOW_PROJECT) {
+    recordPathApproval("project", c.resolvedPath, ctx.cwd, ctx.sessionId);
+    return null;
+  }
   return `Error: path approval denied by user — ${c.reason}. Path: ${c.resolvedPath}`;
 }
 

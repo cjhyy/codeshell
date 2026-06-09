@@ -160,6 +160,10 @@ export interface AskUserMessage {
   header?: string;
   options?: AskUserOption[];
   multiSelect: boolean;
+  /** When true, only the listed options are offered — no "其它…" free-text
+   *  box. Used by closed-set permission prompts whose answer is matched by
+   *  exact label, where a typed answer would silently fail to match. */
+  optionsOnly?: boolean;
   /** Set after the user answers; chat then renders as resolved. */
   answer?: string;
 }

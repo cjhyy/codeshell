@@ -95,15 +95,20 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                 </li>
               );
             })}
-            <li
-              className={`ask-user-option ask-user-other${otherOpen ? " picked" : ""}`}
-              onClick={() => setOtherOpen((o) => !o)}
-            >
-              <div className="ask-user-option-row">
-                <span className="ask-user-option-label">其它…</span>
-              </div>
-              <div className="ask-user-option-desc">输入自定义回答</div>
-            </li>
+            {/* Closed-set prompts (optionsOnly) hide the free-text escape
+                hatch: their answer is matched by exact label, so a typed
+                answer like "允许" would never match and silently fail. */}
+            {!message.optionsOnly && (
+              <li
+                className={`ask-user-option ask-user-other${otherOpen ? " picked" : ""}`}
+                onClick={() => setOtherOpen((o) => !o)}
+              >
+                <div className="ask-user-option-row">
+                  <span className="ask-user-option-label">其它…</span>
+                </div>
+                <div className="ask-user-option-desc">输入自定义回答</div>
+              </li>
+            )}
           </ul>
           {(otherOpen || message.multiSelect) && (
             <div className="ask-user-input-row">

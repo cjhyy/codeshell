@@ -1307,6 +1307,7 @@ export class AgentServer {
       if (opts?.header !== undefined) args.header = opts.header;
       if (opts?.options !== undefined) args.options = opts.options;
       if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
+      if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
 
       this.notify(Methods.ApprovalRequest, {
         sessionId,
@@ -1349,6 +1350,7 @@ export class AgentServer {
       if (opts?.header !== undefined) args.header = opts.header;
       if (opts?.options !== undefined) args.options = opts.options;
       if (opts?.multiSelect !== undefined) args.multiSelect = opts.multiSelect;
+      if (opts?.optionsOnly !== undefined) args.optionsOnly = opts.optionsOnly;
 
       this.notify(Methods.ApprovalRequest, {
         requestId,

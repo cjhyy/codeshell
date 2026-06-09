@@ -75,8 +75,39 @@ export abstract class LLMClientBase {
     return { ...this.usage };
   }
 
+  /**
+   * Compose the caller's AbortSignal with a hard per-request deadline.
+   *
+   * The provider SDKs accept a `timeout`, but in practice it does NOT fire for
+   * a *half-dead socket* (TCP connected, keep-alives flowing, but no response
+   * bytes) — we have observed real requests hang 15–33 minutes before the SDK
+   * finally surfaced "Socket timeout". The streaming idle-watchdog only covers
+   * the gap BETWEEN chunks, not connection setup / first byte, and non-stream
+   * calls don't go through it at all. An explicit AbortSignal.timeout is the
+   * one mechanism that reliably tears such a request down.
+   *
+   * Returns a signal to hand the SDK (`{ signal }`) plus a `cleanup()` to clear
+   * the timer once the request settles. The deadline is generous (default 2×
+   * the SDK timeout, min 120s) — long enough for slow-but-alive generations,
+   * short enough that a wedged socket can't burn half an hour.
+   */
+  protected withRequestDeadline(
+    callerSignal?: AbortSignal,
+  ): { signal: AbortSignal; cleanup: () => void } {
+    const deadlineMs = Math.max(this.timeout * 2, 120_000);
+    const deadline = AbortSignal.timeout(deadlineMs);
+    // AbortSignal.any is available in Node ≥20 / Bun; combine so EITHER the
+    // user's cancel OR the deadline aborts the request.
+    const signal = callerSignal
+      ? AbortSignal.any([callerSignal, deadline])
+      : deadline;
+    // AbortSignal.timeout's timer is unref'd by the runtime; no manual clear is
+    // strictly required, but expose cleanup for symmetry / future tightening.
+    return { signal, cleanup: () => {} };
+  }
+
   protected async withRetry<T>(
-    fn: () => Promise<T>,
+    fn: (requestSignal?: AbortSignal) => Promise<T>,
     opts?: { maxAttempts?: number; signal?: AbortSignal },
   ): Promise<T> {
     const attempts = opts?.maxAttempts ?? this.retryMaxAttempts;
@@ -93,12 +124,42 @@ export abstract class LLMClientBase {
       if (signal?.aborted) {
         throw new DOMException("Request cancelled", "AbortError");
       }
+      // Per-attempt hard deadline composed with the caller's cancel signal.
+      // A half-dead socket that ignores the SDK timeout is torn down here.
+      const { signal: requestSignal, cleanup } = this.withRequestDeadline(signal);
       try {
-        return await fn();
+        return await fn(requestSignal);
       } catch (err) {
         lastError = err as Error;
 
         if (err instanceof ContextLimitError) throw err;
+
+        // Distinguish a deadline tear-down from a user cancel. When the caller
+        // did NOT abort but the request signal did, the per-request deadline
+        // fired (wedged socket). That is RETRYABLE — fall through to the normal
+        // retry/backoff path rather than the abort-no-retry guard below, since
+        // the upstream may have just recovered.
+        const deadlineFired = !signal?.aborted && requestSignal.aborted;
+        if (deadlineFired) {
+          logger.warn("llm.request_deadline", {
+            cat: "llm",
+            provider: this.provider,
+            model: this.model,
+            attempt,
+            of: attempts,
+          });
+          if (attempt < attempts) {
+            const backoff = Math.min(1000 * Math.pow(2, attempt - 1), 30_000);
+            if (await abortableSleep(backoff, signal)) {
+              throw new DOMException("Request cancelled during retry backoff", "AbortError");
+            }
+            continue;
+          }
+          throw new LLMError(
+            `request exceeded deadline (${Math.max(this.timeout * 2, 120_000)}ms) — connection wedged`,
+            this.provider,
+          );
+        }
 
         // User pressed ESC / Stop, or the run's AbortSignal fired. The SDK
         // throws APIUserAbortError (no HTTP status, so isClientError below

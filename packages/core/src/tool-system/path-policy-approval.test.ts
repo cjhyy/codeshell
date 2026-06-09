@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join } from "node:path";
-import { enforcePathPolicyWithApproval } from "./path-policy.js";
+import { enforcePathPolicyWithApproval, _resetSessionPathGrants } from "./path-policy.js";
 import type { ToolContext } from "./context.js";
 
 // TODO §5.1 — path-approval fixes:
@@ -89,6 +89,97 @@ describe("enforcePathPolicyWithApproval", () => {
     expect(res).toContain("approval denied");
     expect(cap.question).toContain("敏感文件");
     expect(cap.header).toBe("敏感文件权限");
+    cleanup();
+  });
+
+  test("bypassPermissions skips the path prompt entirely (never calls askUser)", async () => {
+    const ws = tmpWorkspace();
+    const outside = join(tmpdir(), "bypass-outside.txt");
+    let asked = false;
+    const ctx = {
+      cwd: ws,
+      permissionMode: "bypassPermissions",
+      askUser: async () => {
+        asked = true;
+        return "拒绝";
+      },
+    } as unknown as ToolContext;
+    const res = await enforcePathPolicyWithApproval(outside, "read", ctx);
+    expect(res).toBeNull();
+    expect(asked).toBe(false);
+    cleanup();
+  });
+
+  test("本目录本会话允许 → same dir not re-prompted within the session", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const dir = mkdtempSync(join(tmpdir(), "cs-grantdir-"));
+    dirs.push(dir);
+    const fileA = join(dir, "a.txt");
+    const fileB = join(dir, "b.txt");
+
+    // First file in the dir: user grants for the session.
+    let calls = 0;
+    const ctxGrant = {
+      cwd: ws,
+      sessionId: "sess-1",
+      askUser: async () => {
+        calls += 1;
+        return "本目录本会话允许";
+      },
+    } as unknown as ToolContext;
+    expect(await enforcePathPolicyWithApproval(fileA, "read", ctxGrant)).toBeNull();
+    // Second file in the SAME dir: no prompt (calls stays 1).
+    expect(await enforcePathPolicyWithApproval(fileB, "read", ctxGrant)).toBeNull();
+    expect(calls).toBe(1);
+
+    // A different session does NOT inherit the grant.
+    let asked2 = false;
+    const ctxOther = {
+      cwd: ws,
+      sessionId: "sess-2",
+      askUser: async () => {
+        asked2 = true;
+        return "拒绝";
+      },
+    } as unknown as ToolContext;
+    expect(await enforcePathPolicyWithApproval(fileA, "read", ctxOther)).toContain("denied");
+    expect(asked2).toBe(true);
+    cleanup();
+  });
+
+  test("本目录本项目允许 → persists to settings.local.json and survives a new session", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const dir = mkdtempSync(join(tmpdir(), "cs-projgrant-"));
+    dirs.push(dir);
+    const file = join(dir, "report.md");
+
+    let calls = 0;
+    const ctxGrant = {
+      cwd: ws,
+      sessionId: "sess-A",
+      askUser: async () => {
+        calls += 1;
+        return "本目录本项目允许";
+      },
+    } as unknown as ToolContext;
+    expect(await enforcePathPolicyWithApproval(file, "read", ctxGrant)).toBeNull();
+
+    // Wipe session memory → simulate a fresh session. Project grant persists.
+    _resetSessionPathGrants();
+    let asked = false;
+    const ctxFresh = {
+      cwd: ws,
+      sessionId: "sess-B",
+      askUser: async () => {
+        asked = true;
+        return "拒绝";
+      },
+    } as unknown as ToolContext;
+    expect(await enforcePathPolicyWithApproval(file, "read", ctxFresh)).toBeNull();
+    expect(asked).toBe(false); // covered by persisted project grant
+    expect(calls).toBe(1);
     cleanup();
   });
 });
