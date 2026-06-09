@@ -194,6 +194,7 @@ tunnelManager.on("status", (status: string, detail?: unknown) => {
 // Push the live online-device set to every renderer whenever a phone connects
 // or disconnects, so the trusted-device list can show per-device online lamps.
 mobileRemote.on("online-change", (ids: string[]) => {
+  dlog("main", "mobile-remote.online-change", { count: ids.length, ids });
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:onlineChange", ids);
   }
@@ -1080,6 +1081,13 @@ ipcMain.handle(
 ipcMain.handle("mobileRemote:stop", async () => {
   tunnelManager.stop();
   await mobileRemote.stop();
+});
+// Mint a fresh pairing URL on the already-running host. Lets the UI regenerate
+// the QR after a settings-page remount (pairingUrl is renderer-local state and
+// is lost on navigation) without restarting the host.
+ipcMain.handle("mobileRemote:pairingUrl", async () => {
+  const pairing = mobileRemote.createPairingUrl();
+  return { pairingUrl: pairing.url, expiresAt: pairing.expiresAt };
 });
 ipcMain.handle("mobileRemote:status", async () => {
   const status = mobileRemote.status();

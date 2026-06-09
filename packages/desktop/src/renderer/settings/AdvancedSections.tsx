@@ -1182,16 +1182,38 @@ export function MobileRemoteSection() {
   }, [pairingUrl]);
 
   const refresh = useCallback(async () => {
-    setStatus(await window.codeshell.mobileRemote.status());
+    const next = await window.codeshell.mobileRemote.status();
+    setStatus(next);
     setDevices(await window.codeshell.mobileRemote.listDevices());
     setPasscodeSet((await window.codeshell.mobileRemote.passcodeStatus()).isSet);
     setCloudflaredInstalled(await window.codeshell.mobileRemote.cloudflaredInstalled());
     setOnlineIds(await window.codeshell.mobileRemote.onlineDevices());
+    return next;
   }, []);
 
+  // Regenerate the QR on the already-running host. pairingUrl is renderer-local
+  // state lost on a settings-page remount, so after navigating back the host is
+  // still running but the QR is gone — this re-mints one without a restart.
+  const regenPairing = useCallback(async () => {
+    try {
+      const res = await window.codeshell.mobileRemote.pairingUrl();
+      setPairingUrl(res.pairingUrl);
+    } catch (err) {
+      toast({
+        message: err instanceof Error ? err.message : "生成配对二维码失败",
+        variant: "error",
+      });
+    }
+  }, [toast]);
+
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void (async () => {
+      const st = await refresh();
+      // Host still running after a remount but the QR is renderer-local state
+      // and was lost → re-mint one so the page isn't stuck with no way back.
+      if (st?.running) void regenPairing();
+    })();
+  }, [refresh, regenPairing]);
 
   // Live download progress + tunnel status pushed from main.
   useEffect(() => {
@@ -1245,6 +1267,7 @@ export function MobileRemoteSection() {
       setBusy(false);
     }
   }
+
 
   async function savePasscode() {
     if (passcodeInput.length < 4) {
@@ -1439,9 +1462,24 @@ export function MobileRemoteSection() {
             : "隧道已断开 — 地址已失效,请重新开启"}
         </p>
       ) : null}
+      {status.running && !pairingUrl ? (
+        <div className="mt-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => void regenPairing()}>
+            重新生成配对二维码
+          </Button>
+          <p className="text-xs text-muted-foreground mt-1">
+            已连接的可信手机无需二维码,直接打开网址即可;二维码仅用于配对新手机。
+          </p>
+        </div>
+      ) : null}
       {pairingUrl ? (
         <div className="mt-2">
-          <p className="text-sm font-medium">配对二维码(10 分钟内有效,用手机扫码):</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">配对二维码(10 分钟内有效,用手机扫码):</p>
+            <Button type="button" variant="ghost" size="sm" onClick={() => void regenPairing()}>
+              刷新
+            </Button>
+          </div>
           {qrDataUrl ? (
             <img
               src={qrDataUrl}

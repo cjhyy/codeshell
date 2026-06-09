@@ -585,6 +585,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     start: (opts?: { mode?: "lan" | "tunnel" }) =>
       ipcRenderer.invoke("mobileRemote:start", opts),
     stop: () => ipcRenderer.invoke("mobileRemote:stop"),
+    pairingUrl: () => ipcRenderer.invoke("mobileRemote:pairingUrl"),
     status: () => ipcRenderer.invoke("mobileRemote:status"),
     listDevices: () => ipcRenderer.invoke("mobileRemote:listDevices"),
     revokeDevice: (id: string) => ipcRenderer.invoke("mobileRemote:revokeDevice", id),

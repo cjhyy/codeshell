@@ -628,6 +628,7 @@ export interface CodeshellApi {
       mode: "lan" | "tunnel";
     }>;
     stop(): Promise<void>;
+    pairingUrl(): Promise<{ pairingUrl: string; expiresAt: number }>;
     status(): Promise<{ running: boolean; url?: string; tunnelRunning?: boolean }>;
     listDevices(): Promise<
       Array<{ id: string; name: string; createdAt: number; lastSeenAt?: number; revokedAt?: number }>
