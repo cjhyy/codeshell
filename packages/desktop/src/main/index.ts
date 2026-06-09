@@ -194,7 +194,6 @@ tunnelManager.on("status", (status: string, detail?: unknown) => {
 // Push the live online-device set to every renderer whenever a phone connects
 // or disconnects, so the trusted-device list can show per-device online lamps.
 mobileRemote.on("online-change", (ids: string[]) => {
-  dlog("main", "mobile-remote.online-change", { count: ids.length, ids });
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:onlineChange", ids);
   }
