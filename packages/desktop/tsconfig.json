@@ -5,7 +5,10 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/renderer/*"]
+      "@/*": ["src/renderer/*"],
+      "@ui/*": ["src/renderer/components/ui/*"],
+      "@protocol": ["src/main/mobile-remote/types.ts"],
+      "@mobile/*": ["src/mobile/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
