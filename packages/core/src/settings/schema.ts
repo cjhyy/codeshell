@@ -287,20 +287,51 @@ export const SettingsSchema = z
       })
       .default({}),
 
+    // The record key IS the server name at runtime (MCPManager.connectAll
+    // uses Object.entries keys; desktop's persist strips the `name` field and
+    // keys by it via stripNameFromServer). So `name` here is optional and
+    // backfilled from the key — a config keyed `{"23": {…}}` with no `name`
+    // field is valid, not a crash. The preprocess also tolerates a legacy
+    // array form (`[{name, …}]`) by re-keying it into a name → config record.
     mcpServers: z
-      .record(
-        z.object({
-          name: z.string(),
-          command: z.string().optional(),
-          args: z.array(z.string()).optional(),
-          env: z.record(z.string()).optional(),
-          url: z.string().optional(),
-          transport: z.enum(["stdio", "sse", "streamable-http", "inprocess"]).optional(),
-          headers: z.record(z.string()).optional(),
-          // Codex-style on/off switch. Absent or true → connected; only
-          // literal false disables. Filtered in MCPManager.connectAll.
-          enabled: z.boolean().optional(),
-        }),
+      .preprocess(
+        (value) => {
+          const entries: Array<[string, unknown]> = Array.isArray(value)
+            ? value
+                .filter(
+                  (v): v is Record<string, unknown> =>
+                    !!v && typeof v === "object",
+                )
+                .map((v, i) => [String(v.name ?? i), v])
+            : value && typeof value === "object"
+              ? Object.entries(value as Record<string, unknown>)
+              : [];
+          return Object.fromEntries(
+            entries.map(([key, raw]) => [
+              key,
+              raw && typeof raw === "object"
+                ? { ...raw, name: (raw as { name?: unknown }).name ?? key }
+                : raw,
+            ]),
+          );
+        },
+        z.record(
+          z.object({
+            // Always present here: the preprocess above backfills it from the
+            // record key, so a stored entry that omits `name` (the common
+            // desktop case, which strips it) still validates.
+            name: z.string(),
+            command: z.string().optional(),
+            args: z.array(z.string()).optional(),
+            env: z.record(z.string()).optional(),
+            url: z.string().optional(),
+            transport: z.enum(["stdio", "sse", "streamable-http", "inprocess"]).optional(),
+            headers: z.record(z.string()).optional(),
+            // Codex-style on/off switch. Absent or true → connected; only
+            // literal false disables. Filtered in MCPManager.connectAll.
+            enabled: z.boolean().optional(),
+          }),
+        ),
       )
       .default({}),
 
