@@ -78,3 +78,28 @@
 - **P0(必做,本轮)**:A3-A5、B1-B6、C2-C7、D1-D7、E1、E3、G2-G6、H1-H7、F1、I1-I4。
 - **P1**:E2、E4、F2。
 - **P2/评估**:C3(markdown 包体)、F3、原生 push。
+
+---
+
+## 完成状态(2026-06-10 本轮)
+
+**已做并验证(tsc + 45 mobile 单测 + renderToStaticMarkup 渲染冒烟 + 浏览器 boot 冒烟 phone/tablet 零错误 + 642 全仓测试绿):**
+- A1-A5 连接/身份(useRemoteSocket 态机 + 退出登录 + 设备名)
+- B1-B6 会话(session.list/history 协议+main+UI;进桌面会话回放;新建;当前指示)
+- C1-C2、C4-C6 聊天(user/assistant/reasoning/工具卡/子代理/错误流;运行态;停止;composer)
+- D1-D6 审批(工具/描述/摘要/风险红;允许拒绝;deny 理由;scope once/session/project;
+  pathScope file/dir/tool;AskUser 选项+自由输入+optionsOnly)— 端到端协议对齐核实
+- D7 等待态(StatusBar waiting)
+- E1 goal 横幅;E2 延长目标(按钮,默认 +100 轮);E3 子代理行(按 agentId)
+- F1 权限模式切换(default/acceptEdits/bypass + bypass 二次确认);F2 model.set 协议+main(无 UI)
+- G2-G6 房间 UI(列表/权限 badge 危险红/从项目新建/进出/历史回放/发消息/关)
+- H1-H7 布局(单列+安全区/平板 820px 两栏/顶栏/抽屉/暗色 token/空加载错误态/自动贴底)
+- I1-I4 工程(lib 单测/协议 @protocol 共享/双 tsc+build 绿/删 mobile-ui.ts 690 行)
+
+**未做(留给后续/需用户):**
+- C3 Markdown 渲染(评估包体后;现为纯文本+等宽 pre,代码可读)
+- C7 流批量(React key 稳定已是主要护栏;未测出卡顿,YAGNI)
+- E4 后台 shell 查看/kill(协议未接,P1)
+- F2 model UI / F3 planMode(P2)
+- I5 真机/平板冒烟:需用户手机+桌面 Electron 跑起来扫码实测(浏览器 boot 已冒烟,
+  WS 链路需真 main)。清单见 2026-06-06 §10.3。
