@@ -198,6 +198,10 @@ function recordPathApproval(
   const dir = `${cwd}/.code-shell`;
   const file = `${dir}/settings.local.json`;
   try {
+    // Don't resurrect a deleted project root: a recursive mkdir of
+    // <cwd>/.code-shell recreates `cwd` itself as an empty shell when cwd is
+    // gone. Persistence here is best-effort, so skip when the root is missing.
+    if (!existsSync(cwd)) return;
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     let settings: { pathApprovals?: string[] } = {};
     if (existsSync(file)) {

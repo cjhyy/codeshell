@@ -47,6 +47,15 @@ export class ChatSessionManager {
     const existing = this.sessions.get(sessionId);
     if (existing) {
       existing.lastActivityAt = Date.now();
+      // Re-apply the per-send permission mode so a pill change on an
+      // already-running session takes effect on the NEXT turn. Without this the
+      // engine kept whatever mode it was first created with — changing the pill
+      // on a resumed session was silently ignored at enforcement time (#11
+      // secondary: "档位 doesn't take effect after first send"). setPermissionMode
+      // reconfigures the live permission backend, so it's safe between turns.
+      if (slice.permissionMode && existing.engine.getPermissionMode() !== slice.permissionMode) {
+        existing.engine.setPermissionMode(slice.permissionMode);
+      }
       return existing;
     }
     if (this.sessions.size >= this.maxSessions) {
