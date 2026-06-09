@@ -17,6 +17,23 @@ interface Props {
 }
 
 /**
+ * Defense-in-depth against duplicate React keys (#1/#92): the merge/fold
+ * pipeline is meant to keep ids unique (see mergeTranscripts' id-dedup pass),
+ * but if a duplicate id ever slips through, mapping with key={m.id} throws
+ * "Encountered two children with the same key" and the card never reconciles —
+ * it sticks forever (the "update memory" card stuck across 5+ hours). Drop any
+ * later item whose id already appeared so the keys are guaranteed unique.
+ */
+function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((it) => {
+    if (seen.has(it.id)) return false;
+    seen.add(it.id);
+    return true;
+  });
+}
+
+/**
  * Codex-style "已处理 X m Y s ⌄" — wraps a whole turn from just after
  * the user message through its last tool call (lead-in + mid-run
  * narration ride inside). Only the user bubble and the post-tool final
@@ -47,22 +64,31 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
     : group.durationMs;
   const label = processGroupLabel(elapsedMs);
 
+  // An interrupted turn never collapses behind the "已处理 Xs ⌄" header — its
+  // produced content shows flat. The elapsed time + "你在 Ns 后停止了" marker is
+  // rendered separately by TurnEndMessageView (the turn_end sibling outside this
+  // group), so we deliberately drop the header here to avoid a duplicate marker.
+  const showHeader = !group.stopped;
+  const itemsVisible = group.stopped || open;
+
   return (
     <div className="px-4 py-1">
-      <button
-        type="button"
-        className={`flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground${
-          open ? " border-b border-border pb-1" : ""
-        }`}
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        <span>{label}</span>
-      </button>
-      {open && (
-        <div className="mt-1 flex flex-col gap-1">
-          {group.items.map((m) => {
+      {showHeader && (
+        <button
+          type="button"
+          className={`flex w-full items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground${
+            open ? " border-b border-border pb-1" : ""
+          }`}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+        >
+          {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          <span>{label}</span>
+        </button>
+      )}
+      {itemsVisible && (
+        <div className={showHeader ? "mt-1 flex flex-col gap-1" : "flex flex-col gap-1"}>
+          {dedupeById(group.items).map((m) => {
             if (m.kind === "tool_group") {
               return <ToolGroupCard key={m.id} group={m} turnEpoch={turnEpoch} defaultOpen />;
             }

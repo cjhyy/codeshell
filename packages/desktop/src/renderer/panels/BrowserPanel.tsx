@@ -28,6 +28,9 @@ interface PageMarker {
   anchorId: string;
   url: string;
   rect: Rect;
+  /** CSS selector of the picked element, so re-editing can re-highlight the
+   *  actual element in the guest page (rect alone drifts on scroll/reflow). */
+  selector?: string;
   label: string;
   comment: string;
 }
@@ -237,6 +240,31 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
     if (selecting) setSelecting(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
+
+  // Re-highlight the marked element in the GUEST page while its marker is being
+  // edited, so the user sees "where it was circled" (not just the dot). Injects
+  // an outline on the marker's selector; clears it when editing stops/changes.
+  // Best-effort: a selector that no longer matches (dynamic page) just no-ops.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const HL = "__cs_marker_hl__";
+    const clear = `(()=>{const e=document.querySelector('[data-${HL}]');if(e){e.style.outline=e.dataset.${HL}||'';e.removeAttribute('data-${HL}');}})()`;
+    const target = editingMarker ? markers.find((m) => m.id === editingMarker) : null;
+    if (!target?.selector) {
+      void view.executeJavaScript(clear).catch(() => {});
+      return;
+    }
+    const sel = JSON.stringify(target.selector);
+    void view
+      .executeJavaScript(
+        `(()=>{${clear};try{const el=document.querySelector(${sel});if(el){el.dataset.${HL}=el.style.outline||'';el.style.outline='2px solid #2563eb';el.scrollIntoView({block:'center'});}}catch(_){}})()`,
+      )
+      .catch(() => {});
+    return () => {
+      void view.executeJavaScript(clear).catch(() => {});
+    };
+  }, [editingMarker, markers]);
 
   // Wire webview lifecycle events for the active tab.
   useEffect(() => {
@@ -504,6 +532,7 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
                     anchorId: typeof ret === "string" ? ret : `mk-${markerSeq}`,
                     url: picked.url,
                     rect: picked.rect,
+                    selector: picked.selector,
                     label,
                     comment,
                   },

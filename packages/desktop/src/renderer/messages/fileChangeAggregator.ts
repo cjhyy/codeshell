@@ -196,21 +196,58 @@ function syntheticSnippetDiff(
   status: "modified" | "added" = "modified",
   hunkIndex?: number,
 ): string {
-  const oldLines = linesOf(oldText);
-  const newLines = linesOf(newText);
-  const oldStart = oldLines.length === 0 ? 0 : 1;
-  const newStart = newLines.length === 0 ? 0 : 1;
+  const oldLinesAll = linesOf(oldText);
+  const newLinesAll = linesOf(newText);
+
+  // Trim the common leading / trailing lines so the diff INTERLEAVES around the
+  // actual change instead of dumping the whole old block then the whole new
+  // block. A one-line edit then reads as context · -old · +new · context,
+  // matching a real unified diff. (An added file has no old side — skip.)
+  let pre = 0;
+  if (status !== "added") {
+    while (
+      pre < oldLinesAll.length &&
+      pre < newLinesAll.length &&
+      oldLinesAll[pre] === newLinesAll[pre]
+    ) {
+      pre++;
+    }
+  }
+  let post = 0;
+  if (status !== "added") {
+    while (
+      post < oldLinesAll.length - pre &&
+      post < newLinesAll.length - pre &&
+      oldLinesAll[oldLinesAll.length - 1 - post] === newLinesAll[newLinesAll.length - 1 - post]
+    ) {
+      post++;
+    }
+  }
+  const oldLines = oldLinesAll.slice(pre, oldLinesAll.length - post);
+  const newLines = newLinesAll.slice(pre, newLinesAll.length - post);
+  // Up to 3 lines of context on each side, like git's default.
+  const ctxBefore = oldLinesAll.slice(Math.max(0, pre - 3), pre);
+  const ctxAfter = oldLinesAll.slice(
+    oldLinesAll.length - post,
+    Math.min(oldLinesAll.length, oldLinesAll.length - post + 3),
+  );
+  const oldStart = oldLinesAll.length === 0 ? 0 : Math.max(1, pre - ctxBefore.length + 1);
+  const newStart = newLinesAll.length === 0 ? 0 : Math.max(1, pre - ctxBefore.length + 1);
+  const oldCount = ctxBefore.length + oldLines.length + ctxAfter.length;
+  const newCount = ctxBefore.length + newLines.length + ctxAfter.length;
   return [
     `diff --git a/${file} b/${file}`,
     ...(status === "added" ? ["new file mode 100644"] : []),
     status === "added" ? "--- /dev/null" : `--- a/${file}`,
     `+++ b/${file}`,
-    `@@ -${hunkRange(oldStart, oldLines.length)} +${hunkRange(
+    `@@ -${hunkRange(oldStart, oldCount)} +${hunkRange(
       newStart,
-      newLines.length,
+      newCount,
     )} @@${hunkIndex ? ` edit ${hunkIndex}` : ""}`,
+    ...ctxBefore.map((line) => ` ${line}`),
     ...oldLines.map((line) => `-${line}`),
     ...newLines.map((line) => `+${line}`),
+    ...ctxAfter.map((line) => ` ${line}`),
     "",
   ].join("\n");
 }

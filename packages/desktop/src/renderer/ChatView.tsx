@@ -6,6 +6,7 @@ import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
 import { GoalToggle } from "./chat/GoalToggle";
 import { ModelPill, type ModelOption } from "./chat/ModelPill";
+import { Lightbox, type LightboxItem } from "./chat/Lightbox";
 import { ContextRing } from "./chat/ContextRing";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { BranchPicker } from "./chat/BranchPicker";
@@ -163,6 +164,9 @@ export function ChatView({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  // Lightbox for staged attachment thumbnails (click to zoom). Mirrors
+  // MessageStream's gallery zoom.
+  const [zoomed, setZoomed] = useState<{ items: LightboxItem[]; index: number } | null>(null);
   const setDraft = onDraftChange;
   const setAttachments = onAttachmentsChange;
 
@@ -629,7 +633,12 @@ export function ChatView({
           */}
         <div
           className={
-            "rounded-xl border bg-card p-2 shadow-sm" +
+            // @container: the pills below switch to icon-only based on THIS
+            // card's width (panel open/close changes local width, not viewport).
+            // min-w-[300px]: stop the composer collapsing into an unusable sliver
+            // when a side panel squeezes the chat — <main> is overflow-hidden so
+            // the panel side yields instead of crushing the input. (窄屏压缩态)
+            "@container min-w-[300px] rounded-xl border bg-card p-2 shadow-sm" +
             (dragOver ? " ring-2 ring-primary/40" : "")
           }
         >
@@ -672,7 +681,18 @@ export function ChatView({
                   <img
                     src={a.dataUrl}
                     alt={a.name}
-                    className="h-9 w-9 shrink-0 rounded object-cover"
+                    className="h-9 w-9 shrink-0 cursor-pointer rounded object-cover"
+                    title={`${a.name || "图片"}（点击放大）`}
+                    onClick={() =>
+                      setZoomed({
+                        items: attachments.map((g) => ({
+                          src: g.dataUrl,
+                          alt: g.name || "图片",
+                          name: g.name || undefined,
+                        })),
+                        index: attachments.indexOf(a),
+                      })
+                    }
                   />
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate text-xs text-foreground" title={a.name}>
@@ -934,6 +954,16 @@ export function ChatView({
         )}
         </div>
       </div>
+      {zoomed && (
+        <Lightbox
+          items={zoomed.items}
+          index={zoomed.index}
+          src={zoomed.items[zoomed.index]?.src ?? ""}
+          alt={zoomed.items[zoomed.index]?.alt ?? "图片"}
+          name={zoomed.items[zoomed.index]?.name}
+          onClose={() => setZoomed(null)}
+        />
+      )}
     </div>
   );
 }

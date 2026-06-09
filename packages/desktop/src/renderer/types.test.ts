@@ -27,6 +27,22 @@ describe("appendTurnEndMessage (TODO 2.8)", () => {
     expect(ends).toHaveLength(1);
     expect((ends[0] as TurnEndMessage).elapsedMs).toBe(2000);
   });
+
+  // Interrupt-relay fix: stopping a turn must CLEAR the streaming pointers so
+  // the killed turn can't leave a stale non-null streamingAssistantId behind —
+  // otherwise the relayed (re-sent) turn never lights "正在思考…", and the
+  // cancelled turn's late abort event races to clear it after the new turn
+  // started. (missing thinking state on 打断接力)
+  test("clears streamingAssistantId/streamingThinkingId so the next turn isn't poisoned", () => {
+    const mid: MessagesReducerState = {
+      ...INITIAL_STATE,
+      streamingAssistantId: "assistant-stale",
+      streamingThinkingId: "thinking-stale",
+    };
+    const s = appendTurnEndMessage(mid, "stopped", 1000);
+    expect(s.streamingAssistantId).toBeNull();
+    expect(s.streamingThinkingId).toBeNull();
+  });
 });
 
 // ── helpers ─────────────────────────────────────────────────────────

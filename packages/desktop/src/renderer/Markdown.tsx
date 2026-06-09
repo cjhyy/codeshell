@@ -17,8 +17,44 @@
 import React, { memo, useEffect, useRef, useState } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.css";
+
+/**
+ * Sanitize schema for the raw HTML that rehype-raw now lets through. This is a
+ * SECURITY boundary: the same <Markdown> renders untrusted assistant/LLM output
+ * (and content the agent relayed from fetched web pages), so raw HTML must be
+ * scrubbed of <script>, event handlers (onerror/onclick), <iframe>, etc. We
+ * start from rehype's safe default and only widen it for the benign formatting
+ * a README uses: <img> with width/height/align, and center alignment on
+ * p/div/span. highlight.js className/style on code spans is also allowed so the
+ * later rehype-highlight pass survives sanitization.
+ */
+const SANITIZE_SCHEMA = {
+  ...defaultSchema,
+  // Allow our internal path-link scheme (remarkPathLinks rewrites file paths to
+  // `codeshell-path:` hrefs/srcs). Without this, sanitize drops the scheme and
+  // every in-answer file/image link goes dead. http(s)/data/etc. stay from the
+  // default whitelist; everything else is still scrubbed.
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), "codeshell-path"],
+    src: [...(defaultSchema.protocols?.src ?? []), "codeshell-path"],
+  },
+  attributes: {
+    ...defaultSchema.attributes,
+    img: [...(defaultSchema.attributes?.img ?? []), "width", "height", "align"],
+    p: [...(defaultSchema.attributes?.p ?? []), "align"],
+    div: [...(defaultSchema.attributes?.div ?? []), "align"],
+    span: [...(defaultSchema.attributes?.span ?? []), ["className"], ["style"]],
+    code: [...(defaultSchema.attributes?.code ?? []), ["className"]],
+    // highlight.js wraps tokens in <span class="hljs-…"> — keep class globally
+    // on the elements it touches so syntax highlighting isn't stripped.
+    "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
+  },
+};
 import { Copy } from "./ui/icons";
 import {
   remarkPathLinks,
@@ -53,7 +89,18 @@ function MarkdownImpl({ text, cwd }: Props) {
     <div className="md-body">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkPathLinks]}
-        rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+        // rehype-raw parses raw HTML embedded in markdown (e.g. a README's
+        // `<p align="center"><img …></p>`) into real hast nodes so our `img`/`a`
+        // component overrides apply to them too. rehype-sanitize IMMEDIATELY
+        // after scrubs that HTML (script/iframe/event-handlers) — required
+        // because this same renderer shows untrusted assistant/LLM output.
+        // Order: raw → sanitize → highlight (highlight adds hljs spans last, so
+        // sanitize must precede it or it'd strip the highlight classNames).
+        rehypePlugins={[
+          rehypeRaw,
+          [rehypeSanitize, SANITIZE_SCHEMA],
+          [rehypeHighlight, { detect: true, ignoreMissing: true }],
+        ]}
         urlTransform={(url) =>
           url.startsWith(CODESHELL_PATH_SCHEME) ? url : defaultUrlTransform(url)
         }
@@ -62,6 +109,15 @@ function MarkdownImpl({ text, cwd }: Props) {
             const localDecoded = src ? decodeLocalPathHref(src) : null;
             if (localDecoded && classifyPath(localDecoded.path) === "image") {
               return <InlineImageLink path={localDecoded.path} cwd={cwd} alt={alt} />;
+            }
+            // A plain local/relative image src (e.g. a README's
+            // `<img src="docs/images/x.png">` or markdown `![](docs/x.png)`)
+            // can't load via file:// (webSecurity + CSP `img-src 'self' data:`).
+            // Route it through InlineImageLink, which resolves it against cwd
+            // and loads the bytes as a data: URL. data:/http(s)/blob srcs are
+            // already loadable, so leave those as a plain <img>.
+            if (src && !/^(data:|https?:|blob:)/i.test(src)) {
+              return <InlineImageLink path={src} cwd={cwd} alt={alt} />;
             }
             return <img src={src} alt={alt} {...rest} />;
           },
@@ -184,6 +240,32 @@ function checkExists(cwd: string | null, path: string): Promise<boolean> {
  * hovering shows the full (absolute) path. Click opens it in the Files panel;
  * ⌘/Ctrl-click escapes to the OS editor.
  */
+
+/**
+ * Shared click contract for any clickable file-path in an answer: a plain click
+ * opens the internal Files panel; ⌘/Ctrl-click escapes to the OS default app.
+ * Used by PathLink and by InlineImageLink's caption/fallback so image paths
+ * follow the same rule (#13 — image-path captions used to always open the OS
+ * app because they called openPath directly with no modifier check).
+ */
+function openFileTarget(
+  e: React.MouseEvent,
+  opts: { path: string; cwd?: string | null; line?: number; isScheme?: boolean },
+): void {
+  e.preventDefault();
+  const { path, cwd, line, isScheme } = opts;
+  const toOsApp = e.metaKey || e.ctrlKey;
+  if (toOsApp) {
+    const arg = line ? `${path}:${line}` : path;
+    // Scheme links resolve relative paths in main; local links need cwd.
+    void window.codeshell.openPath(arg, isScheme ? undefined : cwd ?? undefined);
+  } else {
+    window.dispatchEvent(
+      new CustomEvent("codeshell:open-file", { detail: { path, cwd: cwd ?? null } }),
+    );
+  }
+}
+
 function PathLink({
   path,
   line,
@@ -228,21 +310,7 @@ function PathLink({
       data-path-link="true"
       className="md-file-link"
       title={tooltip}
-      onClick={(e) => {
-        e.preventDefault();
-        const toOsEditor = e.metaKey || e.ctrlKey;
-        if (toOsEditor) {
-          const arg = line ? `${path}:${line}` : path;
-          // Scheme links resolve relative paths in main; local links need cwd.
-          void window.codeshell.openPath(arg, isScheme ? undefined : cwd ?? undefined);
-        } else {
-          window.dispatchEvent(
-            new CustomEvent("codeshell:open-file", {
-              detail: { path, cwd: cwd ?? null },
-            }),
-          );
-        }
-      }}
+      onClick={(e) => openFileTarget(e, { path, cwd, line, isScheme })}
     >
       <span className="md-file-link-label">{label}</span>
     </a>
@@ -254,9 +322,10 @@ function PathLink({
  * Loads the bytes via the images:readDataUrl IPC (returns a base64 data: URL)
  * because the renderer can't use `file://` — webSecurity blocks it and the CSP
  * only allows `img-src 'self' data:`. Clicking the thumbnail opens a
- * full-screen Lightbox; the filename caption opens the file in the OS default
- * app. Until the data URL resolves (and if it fails — relative path with no
- * cwd, deleted file, non-image), it shows a clickable filename link instead.
+ * full-screen Lightbox; the filename caption opens the file in the internal
+ * Files panel (⌘/Ctrl-click → OS default app), same as a normal path link.
+ * Until the data URL resolves (and if it fails — relative path with no cwd,
+ * deleted file, non-image), it shows a clickable filename link instead.
  */
 function InlineImageLink({
   path,
@@ -311,7 +380,7 @@ function InlineImageLink({
           type="button"
           className="md-inline-image-name"
           title={path}
-          onClick={() => void window.codeshell.openPath(path, cwd ?? undefined)}
+          onClick={(e) => openFileTarget(e, { path, cwd })}
         >
           {filename}
         </button>
@@ -329,10 +398,7 @@ function InlineImageLink({
         href="#"
         data-path-link="true"
         title={path}
-        onClick={(e) => {
-          e.preventDefault();
-          void window.codeshell.openPath(path, cwd ?? undefined);
-        }}
+        onClick={(e) => openFileTarget(e, { path, cwd })}
       >
         {filename}
       </a>
@@ -353,7 +419,7 @@ function InlineImageLink({
         type="button"
         className="md-inline-image-name"
         title={path}
-        onClick={() => void window.codeshell.openPath(path, cwd ?? undefined)}
+        onClick={(e) => openFileTarget(e, { path, cwd })}
       >
         {filename}
       </button>

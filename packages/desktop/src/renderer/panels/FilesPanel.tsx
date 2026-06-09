@@ -397,6 +397,18 @@ function ImagePreview({ path }: { path: string }) {
 }
 
 /** Render a text file: markdown rendered, code syntax-highlighted, else plain. */
+/**
+ * Absolute directory of a previewed file, used as `cwd` for the Markdown
+ * renderer so relative image paths in the doc resolve. `path` may be absolute
+ * or relative to `root` (mirrors fs:readFile's `path.startsWith("/") ? path :
+ * join(root, path)`); strip the last segment to get the containing dir.
+ */
+function mdBaseDir(root: string, path: string): string {
+  const abs = path.startsWith("/") ? path : `${root.replace(/\/$/, "")}/${path}`;
+  const slash = abs.lastIndexOf("/");
+  return slash > 0 ? abs.slice(0, slash) : abs;
+}
+
 function TextPreview({ root, path, markdown }: { root: string; path: string; markdown: boolean }) {
   const [content, setContent] = useState<FileContent | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -430,9 +442,13 @@ function TextPreview({ root, path, markdown }: { root: string; path: string; mar
 
   if (markdown) {
     // Render markdown with the shared renderer (gfm + highlighted code blocks).
+    // Pass the file's OWN directory as cwd so relative image paths in the doc
+    // (e.g. a README's `docs/images/x.png`) resolve and load as data: URLs —
+    // without it the images can't load (webSecurity + CSP block file://).
+    const fileDir = mdBaseDir(root, path);
     return (
       <div className="p-4">
-        <Markdown text={content.text} />
+        <Markdown text={content.text} cwd={fileDir} />
       </div>
     );
   }

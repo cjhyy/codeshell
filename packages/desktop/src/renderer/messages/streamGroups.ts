@@ -60,6 +60,10 @@ export interface TurnProcessGroup {
   isLive: boolean;
   /** Number of tool calls inside (across all level-1 groups + inline). */
   toolCount: number;
+  /** True when this turn was interrupted (a trailing turn_end reason="stopped"
+   *  sits in the turn slice). A stopped turn should NOT collapse behind the
+   *  "已处理 Xs ⌄" header — its produced content renders flat instead. */
+  stopped?: boolean;
   /** Inner items in original order — Message | ToolGroup. The foldAgentGroups
    *  post-pass produces a widened variant (see RenderedTurnProcessGroup) that
    *  may also hold an AgentGroup; the builder/reconciler only ever emit the
@@ -226,7 +230,7 @@ function groupSignature(item: StreamItem): string {
   }
   if (item.kind === "turn_process_group") {
     const inner = item.items.map(innerItemToken).join(",");
-    return `p:${item.isLive ? 1 : 0}:${item.durationMs}:${item.toolCount}:${inner}`;
+    return `p:${item.isLive ? 1 : 0}:${item.stopped ? 1 : 0}:${item.durationMs}:${item.toolCount}:${inner}`;
   }
   return item.kind + ":" + item.id;
 }
@@ -394,6 +398,10 @@ function foldTurnProcess(
     const start = userIdxs[k]!;
     const end = k + 1 < userIdxs.length ? userIdxs[k + 1]! : items.length;
     const isLive = liveTurnActive && start === lastTurnStart && !turnHasDoneAssistant(items, start, end);
+    // A turn the user interrupted carries a trailing turn_end reason="stopped"
+    // (a flat sibling after the last tool). Such a turn must render flat, not
+    // behind the elapsed-time fold header.
+    const stopped = turnWasStopped(items, start, end);
 
     // user bubble stays outside the card.
     out.push(items[start]!);
@@ -434,6 +442,7 @@ function foldTurnProcess(
       firstToolStartedAt: firstToolStart(innerItems),
       isLive,
       toolCount: countToolsRecursive(innerItems),
+      stopped,
       items: innerItems,
     });
 
@@ -453,6 +462,20 @@ function turnHasDoneAssistant(
   for (let i = start + 1; i < end; i++) {
     const item = items[i]!;
     if (item.kind === "assistant" && item.done) return true;
+  }
+  return false;
+}
+
+/** True when the turn slice (start, end) contains a turn_end reason="stopped"
+ *  — i.e. the user interrupted this turn. */
+function turnWasStopped(
+  items: Array<Message | ToolGroup>,
+  start: number,
+  end: number,
+): boolean {
+  for (let i = start + 1; i < end; i++) {
+    const item = items[i]!;
+    if (item.kind === "turn_end" && item.reason === "stopped") return true;
   }
   return false;
 }

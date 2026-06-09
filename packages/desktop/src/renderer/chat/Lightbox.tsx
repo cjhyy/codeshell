@@ -216,15 +216,6 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
           </button>
         )}
       </div>
-      <button
-        type="button"
-        className="lightbox-close"
-        aria-label="关闭"
-        title="关闭"
-        onClick={onClose}
-      >
-        <X size={18} />
-      </button>
     </div>
   );
 }

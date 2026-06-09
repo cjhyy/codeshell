@@ -103,7 +103,6 @@
   border-radius: 6px;
   cursor: default;
 }
-.lightbox-close,
 .lightbox-icon-button {
   display: inline-flex;
   align-items: center;
@@ -114,19 +113,9 @@
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
   cursor: pointer;
-}
-.lightbox-close {
-  position: fixed;
-  top: 16px;
-  right: 20px;
-  width: 36px;
-  height: 36px;
-}
-.lightbox-icon-button {
   width: 32px;
   height: 32px;
 }
-.lightbox-close:hover,
 .lightbox-icon-button:hover {
   background: rgba(0, 0, 0, 0.75);
 }
@@ -168,15 +157,6 @@
 .lightbox-nav-next {
   right: 10px;
 }
-/* The floating bottom-right close button is redundant with the toolbar's own
-   action row (which always shows now that it carries download/reveal too), so
-   only surface it on narrow widths where the toolbar may crowd. */
-@media (max-width: 719px) {
-  .lightbox-close {
-    display: none;
-  }
-}
-
 .msg-row-assistant .md-body {
   max-width: 720px;
   color: var(--fg-primary);

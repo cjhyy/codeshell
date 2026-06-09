@@ -16,7 +16,9 @@ import {
 } from "../gitPrefs";
 import { writeSettings } from "../settingsBus";
 import { ProjectPicker } from "./ProjectPicker";
+import type { PluginHookEntry } from "../../preload/types";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 import QRCode from "qrcode";
 
@@ -305,18 +307,44 @@ export function HooksSection({ repos }: { repos: Repo[] }) {
   );
 }
 
-/** Hook list + add form for a single project (cwd is a concrete repo path). */
+/** Hook event names a user can pick for a hand-written hook. Aligned with the
+ *  events plugin hooks map to (core EVENT_NAME_MAP), plus the engine's own
+ *  lifecycle events that settings hooks can legitimately register. */
+const HOOK_EVENT_OPTIONS: { value: string; label: string }[] = [
+  { value: "pre_tool_use", label: "pre_tool_use（工具执行前）" },
+  { value: "post_tool_use", label: "post_tool_use（工具执行后）" },
+  { value: "user_prompt_submit", label: "user_prompt_submit（提交输入）" },
+  { value: "on_session_start", label: "on_session_start（会话开始）" },
+  { value: "on_session_end", label: "on_session_end（会话结束）" },
+  { value: "pre_compact", label: "pre_compact（压缩前）" },
+  { value: "notification", label: "notification（通知）" },
+];
+
+/**
+ * Hook管理页 for a single project (方案 B). Shows hand-written hooks
+ * (`<repo>/.code-shell/settings.json` → `hooks`) AND plugin-provided hooks
+ * (read-only, labelled by owner plugin). Hand-written hooks are added via an
+ * event dropdown + command input (replacing the old raw-JSON textarea) and can
+ * be deleted; plugin hooks can only be turned off by disabling the whole plugin.
+ */
 function ProjectHooksEditor({ cwd }: { cwd: string }) {
   const [hooks, setHooks] = useState<Array<Record<string, unknown>>>([]);
-  const [draft, setDraft] = useState("{\n  \"event\": \"pre_tool_use\",\n  \"command\": \"echo '{}'\"\n}");
+  const [pluginHooks, setPluginHooks] = useState<PluginHookEntry[]>([]);
+  const [event, setEvent] = useState<string>(HOOK_EVENT_OPTIONS[0]!.value);
+  const [command, setCommand] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     try {
       const s = (await window.codeshell.getSettings("project", cwd)) ?? {};
       setHooks(Array.isArray(s.hooks) ? (s.hooks as Array<Record<string, unknown>>) : []);
+      const disabledPlugins = Array.isArray(s.disabledPlugins)
+        ? (s.disabledPlugins as unknown[]).filter((x): x is string => typeof x === "string")
+        : [];
+      setPluginHooks(await window.codeshell.listPluginHooks(disabledPlugins));
     } catch {
       setHooks([]);
+      setPluginHooks([]);
     }
   };
   useEffect(() => { void load(); }, [cwd]);
@@ -328,43 +356,102 @@ function ProjectHooksEditor({ cwd }: { cwd: string }) {
 
   const add = async () => {
     setError(null);
-    try {
-      const parsed = JSON.parse(draft) as Record<string, unknown>;
-      if (!parsed.event || !parsed.command) throw new Error("需要 event 和 command");
-      await persist([...hooks, parsed]);
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+    const cmd = command.trim();
+    if (!cmd) {
+      setError("请填写命令");
+      return;
     }
+    await persist([...hooks, { event, command: cmd }]);
+    setCommand("");
   };
 
   return (
-    <>
-      {hooks.length === 0 ? (
-        <div className="approvals-empty">暂无 hook</div>
-      ) : (
-        <ul className="settings-list">
-          {hooks.map((h, i) => (
-            <li className="settings-list-row" key={i}>
-              <strong>{stringOf(h.event)}</strong>
-              <code>{stringOf(h.command)}</code>
-              <button className="session-delete" onClick={() => void persist(hooks.filter((_, n) => n !== i))}>
-                删除
-              </button>
-            </li>
-          ))}
-        </ul>
+    <div className="flex flex-col gap-4">
+      {/* Hand-written project hooks */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-foreground">项目钩子</span>
+        {hooks.length === 0 ? (
+          <div className="text-sm text-muted-foreground">暂无项目钩子</div>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {hooks.map((h, i) => (
+              <li
+                className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5"
+                key={i}
+              >
+                <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 font-mono text-xs text-accent-foreground">
+                  {stringOf(h.event)}
+                </span>
+                <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+                  {stringOf(h.command)}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-muted-foreground hover:text-status-err"
+                  onClick={() => void persist(hooks.filter((_, n) => n !== i))}
+                >
+                  删除
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Add a hand-written hook — event dropdown + command input (replaces the
+          old raw-JSON textarea). */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm text-muted-foreground">添加钩子</span>
+        <div className="flex items-end gap-2">
+          <div className="w-56 shrink-0">
+            <Select value={event} onChange={setEvent} options={HOOK_EVENT_OPTIONS} />
+          </div>
+          <Input
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder="要运行的 shell 命令，例如 echo '{}'"
+            className="font-mono text-sm"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void add();
+            }}
+          />
+          <Button variant="solid" className="w-fit shrink-0" onClick={() => void add()}>
+            添加
+          </Button>
+        </div>
+        {error && <div className="text-sm text-status-err">{error}</div>}
+      </div>
+
+      {/* Plugin-provided hooks — read-only, labelled by owner plugin. Reuses the
+          MCP page's owner-stamp pattern. Turn off by disabling the plugin. */}
+      {pluginHooks.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-foreground">插件提供的钩子</span>
+          <ul className="flex flex-col gap-1">
+            {pluginHooks.map((h, i) => (
+              <li
+                className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-2 py-1.5"
+                key={`${h.plugin}-${h.rawEvent}-${i}`}
+              >
+                <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 font-mono text-xs text-accent-foreground">
+                  {h.event}
+                </span>
+                <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+                  {h.command}
+                </code>
+                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                  由「{h.plugin}」提供{h.disabled ? "（已禁用）" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <span className="text-xs text-muted-foreground">
+            插件钩子只读;如需关闭,在「插件」页禁用对应插件(会连同其全部钩子一起停用)。
+          </span>
+        </div>
       )}
-      <textarea
-        className="settings-editor"
-        style={{ minHeight: 120 }}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-      />
-      {error && <div className="view-error">{error}</div>}
-      <Button variant="solid" className="w-fit" onClick={() => void add()}>
-        添加 hook
-      </Button>
-    </>
+    </div>
   );
 }
 
@@ -576,23 +663,26 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
     }
   };
 
+  const hint = "mt-1 text-xs text-muted-foreground";
+  const field = "flex flex-col gap-1.5";
   return (
-    <div className="env-settings-section">
-      <div className="local-env-project-card">
-        <Folder size={18} />
-        <div>
-          <strong>{projectName}</strong>
-          <span>{cwd}</span>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 p-3">
+        <Folder size={18} className="shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
+          <strong className="block text-sm font-medium text-foreground">{projectName}</strong>
+          <span className="block break-all text-sm text-muted-foreground">{cwd}</span>
         </div>
       </div>
 
-      <label className="settings-field local-env-name">
-        <span>名称</span>
+      <label className={`${field} max-w-[420px]`}>
+        <span className="text-sm text-muted-foreground">名称</span>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={projectName} />
       </label>
 
       <LocalScriptEditor
         title="设置脚本"
+        scopeLabel="仅 worktree 生效"
         help="创建新工作树（EnterWorktree）时,会在工作树根目录自动跑一次对应平台的脚本(失败只警告不阻断)。"
         activeTab={setupTab}
         onTabChange={setSetupTab}
@@ -606,67 +696,75 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
           功能后直接恢复这段 <LocalScriptEditor title="清理脚本" …/> 即可,不丢已存数据。
           见 TODO-feedback.md「清理脚本(cleanup)未接但 UI 可配」。 */}
 
-      <label className="settings-field local-env-vars">
-        <span>变量</span>
+      <label className={field}>
+        <span className="text-sm text-muted-foreground">变量（全项目生效）</span>
         <Textarea
           value={envText}
           onChange={(e) => setEnvText(e.target.value)}
           placeholder={"KEY=value\nNODE_ENV=development"}
           className="min-h-[120px] resize-y font-mono text-sm"
         />
-        <span className="conn-field-hint">
+        <span className={hint}>
           每行一个 KEY=VALUE。这些变量会注入该项目的 Bash 工具与后台 shell 执行环境(含工作树 setup 脚本)。MCP server 自己的环境变量仍在 MCP 服务器卡片里保存，只注入对应 server。
         </span>
       </label>
 
-      <details className="local-env-advanced">
-        <summary>沙箱边界（高级）</summary>
-        <p>
-          这里仍保存到 <code>sandbox</code> 字段；新对话、自动化和 Bash 工具启动时会读取它。
+      <details className="border-t border-border pt-3">
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">沙箱边界（高级）</summary>
+        <p className="my-2 text-sm leading-relaxed text-muted-foreground">
+          这里仍保存到 <code className="font-mono text-[0.95em]">sandbox</code> 字段；新对话、自动化和 Bash 工具启动时会读取它。
         </p>
-      <div className="settings-form-grid">
-        <label className="settings-field">
-          <span>Sandbox</span>
-          <Select
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: "auto", label: "auto", description: "按平台自动选择" },
-              { value: "off", label: "off", description: "关闭沙箱" },
-              { value: "seatbelt", label: "seatbelt", description: "macOS 沙箱" },
-              { value: "bwrap", label: "bwrap", description: "Linux Bubblewrap" },
-            ]}
-          />
-        </label>
-        <label className="settings-field">
-          <span>Network</span>
-          <Select
-            value={network}
-            onChange={setNetwork}
-            options={[
-              { value: "allow", label: "allow", description: "允许访问网络" },
-              { value: "deny", label: "deny", description: "拒绝网络访问" },
-            ]}
-          />
-        </label>
-        <label className="settings-field">
-          <span>Writable roots</span>
-          <textarea value={writableRoots} onChange={(e) => setWritableRoots(e.target.value)} />
-          <span className="conn-field-hint">每行一个路径，支持 ${"{workspace}"}、~。这些路径会作为命令可写范围。</span>
-        </label>
-        <label className="settings-field">
-          <span>Denied reads</span>
-          <textarea value={deniedReads} onChange={(e) => setDeniedReads(e.target.value)} />
-          <span className="conn-field-hint">每行一个路径，命令读取这些路径会被沙箱拦截。</span>
-        </label>
-      </div>
+        <div className="grid grid-cols-2 gap-4">
+          <label className={field}>
+            <span className="text-sm text-muted-foreground">Sandbox</span>
+            <Select
+              value={mode}
+              onChange={setMode}
+              options={[
+                { value: "auto", label: "auto", description: "按平台自动选择" },
+                { value: "off", label: "off", description: "关闭沙箱" },
+                { value: "seatbelt", label: "seatbelt", description: "macOS 沙箱" },
+                { value: "bwrap", label: "bwrap", description: "Linux Bubblewrap" },
+              ]}
+            />
+          </label>
+          <label className={field}>
+            <span className="text-sm text-muted-foreground">Network</span>
+            <Select
+              value={network}
+              onChange={setNetwork}
+              options={[
+                { value: "allow", label: "allow", description: "允许访问网络" },
+                { value: "deny", label: "deny", description: "拒绝网络访问" },
+              ]}
+            />
+          </label>
+          <label className={field}>
+            <span className="text-sm text-muted-foreground">Writable roots</span>
+            <Textarea
+              value={writableRoots}
+              onChange={(e) => setWritableRoots(e.target.value)}
+              className="min-h-[80px] resize-y font-mono text-sm"
+            />
+            <span className={hint}>每行一个路径，支持 ${"{workspace}"}、~。这些路径会作为命令可写范围。</span>
+          </label>
+          <label className={field}>
+            <span className="text-sm text-muted-foreground">Denied reads</span>
+            <Textarea
+              value={deniedReads}
+              onChange={(e) => setDeniedReads(e.target.value)}
+              className="min-h-[80px] resize-y font-mono text-sm"
+            />
+            <span className={hint}>每行一个路径，命令读取这些路径会被沙箱拦截。</span>
+          </label>
+        </div>
       </details>
-      <div className="env-settings-actions">
+      <div className="flex items-center gap-2">
         <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
           {saving ? "保存中..." : "保存本地环境"}
         </Button>
         {savedAt && (
-          <span className="env-settings-saved">
+          <span className="text-sm text-status-ok">
             已保存 · {new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
@@ -678,6 +776,7 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
 function LocalScriptEditor({
   title,
   help,
+  scopeLabel,
   activeTab,
   onTabChange,
   scripts,
@@ -686,6 +785,9 @@ function LocalScriptEditor({
 }: {
   title: string;
   help: string;
+  /** Optional scope badge (e.g. "仅 worktree 生效") to distinguish this from
+   *  the全项目-scoped 变量/沙箱 sections. */
+  scopeLabel?: string;
   activeTab: LocalEnvPlatform;
   onTabChange: (tab: LocalEnvPlatform) => void;
   scripts: Record<LocalEnvPlatform, string>;
@@ -693,22 +795,32 @@ function LocalScriptEditor({
   placeholder: string;
 }) {
   return (
-    <div className="local-env-script">
-      <div className="local-env-script-head">
-        <div>
-          <h4>{title}</h4>
-          <p>{help}</p>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="m-0 flex items-center gap-2 text-sm font-semibold text-foreground">
+            {title}
+            {scopeLabel && (
+              <span className="rounded-full border border-border px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                {scopeLabel}
+              </span>
+            )}
+          </h4>
+          <p className="mt-1 text-sm text-muted-foreground">{help}</p>
         </div>
-        <div className="local-env-tabs" role="tablist" aria-label={title}>
+        <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label={title}>
           {LOCAL_ENV_TABS.map((tab) => (
-            <button
+            <Button
               key={tab.id}
               type="button"
-              className={activeTab === tab.id ? "active" : ""}
+              variant="ghost"
+              size="sm"
+              aria-pressed={activeTab === tab.id}
+              className={cn(activeTab === tab.id && "bg-accent font-semibold text-foreground")}
               onClick={() => onTabChange(tab.id)}
             >
               {tab.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

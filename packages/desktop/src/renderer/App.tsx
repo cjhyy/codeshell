@@ -36,6 +36,8 @@ import {
   NO_REPO_KEY,
   bucketKey,
   repoKeyOf,
+  migrateBucketOverride,
+  clearBucketOverride,
   type SessionIndex,
   type SessionSummary,
 } from "./transcripts";
@@ -586,6 +588,17 @@ function App() {
   }, [activeBucket]);
   const state = transcripts[activeBucket] ?? fallbackState;
 
+  // The "正在思考…" live line shows whenever a turn is busy. Normally
+  // streamingAssistantId flips it on once stream_request_start arrives; but on
+  // the "打断接力" path (stop → re-send queued input) the new turn is busy with
+  // its user bubble appended BEFORE stream_request_start, and the killed turn's
+  // streaming id was cleared by turn_end. So also light up while busy with the
+  // last message being the just-sent user message — closing the gap that left
+  // the relayed turn with no thinking indicator. (interrupt-relay fix)
+  const lastMessage = state.messages[state.messages.length - 1];
+  const liveTurnActive =
+    busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user");
+
   const setBusyForKey = (key: string, val: boolean): void => {
     // Track turn-start time for the manual-stop elapsed line (TODO 2.8).
     if (val) {
@@ -682,6 +695,12 @@ function App() {
       ...prev,
       [repoKeyOf(repoId)]: setActiveSession(repoId, null),
     }));
+    // A fresh draft must start from the default permission/goal — clear the
+    // shared per-repo "_none_" draft slot so a previous draft's choice doesn't
+    // carry over (it's a single slot shared by all drafts in this repo). (#11)
+    const draftBucket = bucketKey(repoId, null);
+    setPermissionOverrides((prev) => clearBucketOverride(prev, draftBucket));
+    setGoalOverrides((prev) => clearBucketOverride(prev, draftBucket));
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
@@ -1340,9 +1359,23 @@ function App() {
   const send = (text: string): void => {
     // createSession persists to localStorage synchronously, so reading
     // it back via touchSession() right after sees the new entry.
+    const wasDraft = activeSessionId === null;
     const sid = activeSessionId ?? ensureActiveSession(activeRepoId);
     const bucket = bucketKey(activeRepoId, sid);
     const repoKey = repoKeyOf(activeRepoId);
+
+    // A draft has no sessionId, so its permission/goal overrides were keyed
+    // under the SHARED per-repo "_none_" bucket (bucketKey collapses every
+    // draft to <repo>::_none_). On the first send the draft solidifies into a
+    // real session — migrate the override onto the real bucket so the choice
+    // FOLLOWS this session, then clear the shared draft slot so it doesn't
+    // "粘连" onto the next 新对话 / other drafts in this repo (#11 per-session
+    // permission stickiness).
+    if (wasDraft && bucket !== activeBucket) {
+      const draftBucket = activeBucket;
+      setPermissionOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
+      setGoalOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
+    }
 
     // Look up any previously-bound engine sessionId for this UI session.
     // Pre-multi-session sessions on disk may have an engineSessionId that
@@ -2141,7 +2174,7 @@ function App() {
             <ChatView
               messages={state.messages}
               turnEpoch={state.turnEpoch}
-              liveTurnActive={busy && state.streamingAssistantId !== null}
+              liveTurnActive={liveTurnActive}
               onSend={send}
               onQueueInput={queueInput}
               onForceSend={forceSend}
@@ -2227,7 +2260,10 @@ function App() {
         <PanelArea
           cwd={activeRepo?.path ?? null}
           repoId={activeRepoId}
-          onClose={() => setPanelRequest((r) => ({ ...r, open: false }))}
+          // Match togglePanel's contract on close (bump nonce, clear kind) so
+          // closing via the dock's own tab-X leaves the same state as the
+          // top-bar toggle — avoids a stale `kind` lingering after close.
+          onClose={() => setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: false }))}
           requestNonce={panelRequest.nonce}
           requestKind={panelRequest.kind}
           reviewFiles={reviewFiles}

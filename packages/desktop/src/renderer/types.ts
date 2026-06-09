@@ -838,7 +838,14 @@ export function appendTurnEndMessage(
   } else {
     msgs.push(msg);
   }
-  return { ...state, messages: msgs };
+  // Clear the streaming pointers here so the interrupted turn can't leave a
+  // STALE non-null streamingAssistantId behind. On the "打断接力" path (stop →
+  // immediately re-send the queued input), the new turn must not inherit the
+  // killed turn's streaming id — and the cancelled turn's late abort
+  // turn_complete/error would otherwise race to clear it after the new turn
+  // already started, extinguishing the "正在思考…" line. (interrupt-relay
+  // missing thinking state)
+  return { ...state, messages: msgs, streamingAssistantId: null, streamingThinkingId: null };
 }
 
 export type ApprovalState = ApprovalRequestEnvelope | null;

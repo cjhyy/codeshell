@@ -230,6 +230,34 @@ describe("buildStreamItems", () => {
     expect(groups[0]!.isLive).toBe(false);
     expect(groups[0]!.durationMs).toBe(3_000);
   });
+
+  // The interrupted turn should render flat, not behind "已处理 Xs ⌄". The
+  // process group must carry stopped=true when a trailing turn_end
+  // reason="stopped" sits in the turn slice, so the card drops its fold header.
+  test("marks a turn stopped when it ends with turn_end reason=stopped", () => {
+    const turnEnd: Message = { kind: "turn_end", id: "te-1", reason: "stopped", elapsedMs: 4_000 };
+    const messages: Message[] = [
+      user("do it", 0),
+      tool("Bash", 1_000, 2_000),
+      turnEnd,
+    ];
+    const groups = processGroups(buildStreamItems(messages));
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.stopped).toBe(true);
+    // The turn_end sibling stays OUTSIDE the group (rendered by TurnEndMessageView).
+    expect(groups[0]!.items.some((it) => it.kind === "turn_end")).toBe(false);
+  });
+
+  test("a normally-completed turn is not marked stopped", () => {
+    const messages: Message[] = [
+      user("do it", 0),
+      tool("Bash", 1_000, 2_000),
+      assistant("done", { createdAt: 500, doneAt: 3_000 }),
+    ];
+    const groups = processGroups(buildStreamItems(messages));
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.stopped).toBeFalsy();
+  });
 });
 
 describe("activity labels", () => {

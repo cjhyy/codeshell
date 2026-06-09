@@ -16,9 +16,15 @@ interface Props {
    * diff the range instead of the working tree (TODO 2.3a — committed/branch).
    */
   range?: string;
+  /**
+   * Optional path filter applied to a parsed `diffText` — render only the file
+   * matching this path. Lets the turn-scope dropdown narrow the flat snapshot
+   * to one file (#5 ②). Ignored on the git-backed path (use `file` there).
+   */
+  onlyPath?: string | null;
 }
 
-export function UnifiedDiffViewer({ cwd, file, diffText, range }: Props) {
+export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath }: Props) {
   const [diff, setDiff] = useState<DiffFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,16 +56,54 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range }: Props) {
 
   if (error) return <div className="diff-error">git diff failed: {error}</div>;
   if (!diff) return <div className="diff-loading">loading diff…</div>;
-  if (diff.length === 0) {
+  const visible = onlyPath
+    ? diff.filter((f) => (f.newPath ?? f.oldPath) === onlyPath)
+    : diff;
+  if (visible.length === 0) {
     return <div className="diff-empty">no changes</div>;
   }
+  // Guard against rendering an enormous diff (e.g. a whole "branch vs base"
+  // range): a per-line <tr> table with no virtualization froze the main thread
+  // (couldn't even scroll) and leaked memory toward V8 OOM. Cap the total lines
+  // rendered; past the cap, show a notice prompting the user to pick a single
+  // file. (#5 ③ hang / ④ OOM)
+  const totalLines = visible.reduce(
+    (n, f) => n + f.hunks.reduce((m, h) => m + h.lines.length, 0),
+    0,
+  );
+  const overCap = totalLines > MAX_RENDERED_LINES;
+  const filesToRender = overCap ? capFiles(visible, MAX_RENDERED_LINES) : visible;
   return (
     <div className="diff-viewer">
-      {diff.map((f, i) => (
-        <DiffFileBlock key={i} file={f} />
+      {overCap && (
+        <div className="diff-empty px-2 py-1 text-xs text-muted-foreground">
+          差异较大（{totalLines} 行），仅显示前 {MAX_RENDERED_LINES} 行。请在左侧选择单个文件查看完整差异。
+        </div>
+      )}
+      {filesToRender.map((f) => (
+        <DiffFileBlock key={f.newPath ?? f.oldPath ?? f.hunks[0]?.header ?? ""} file={f} />
       ))}
     </div>
   );
+}
+
+/** Upper bound on rendered diff lines before we stop and ask the user to pick a
+ *  single file. A per-line table past this size blocks the main thread. */
+const MAX_RENDERED_LINES = 2000;
+
+/** Keep whole files from the front of the diff until adding the next one would
+ *  exceed the line budget. Always returns at least the first file so something
+ *  shows. */
+function capFiles(diff: DiffFile[], budget: number): DiffFile[] {
+  const out: DiffFile[] = [];
+  let used = 0;
+  for (const f of diff) {
+    const lines = f.hunks.reduce((m, h) => m + h.lines.length, 0);
+    if (out.length > 0 && used + lines > budget) break;
+    out.push(f);
+    used += lines;
+  }
+  return out;
 }
 
 function DiffFileBlock({ file }: { file: DiffFile }) {
@@ -76,7 +120,7 @@ function DiffFileBlock({ file }: { file: DiffFile }) {
         <span className="diff-file-path">{title}</span>
       </div>
       {file.hunks.map((h, i) => (
-        <div key={i} className="diff-hunk">
+        <div key={h.header || i} className="diff-hunk">
           <div className="diff-hunk-head">{h.header}</div>
           <table className="diff-table">
             <tbody>

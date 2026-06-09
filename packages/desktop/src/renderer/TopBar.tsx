@@ -80,7 +80,7 @@ function TopBarImpl({
           <IconButton
             label={panelOpen ? "关闭面板" : "打开面板"}
             onClick={onTogglePanel}
-            className={panelOpen ? "text-foreground" : undefined}
+            active={panelOpen}
           >
             <PanelRight size={14} />
           </IconButton>

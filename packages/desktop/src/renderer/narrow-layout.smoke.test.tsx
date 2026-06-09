@@ -54,11 +54,18 @@ describe("narrow layout — multi-image gallery renders fully", () => {
   });
 });
 
-describe("narrow layout — lightbox narrow-width rule present", () => {
-  test("styles.css keeps the <720px media query that declutters the toolbar", () => {
+describe("narrow layout — lightbox", () => {
+  test("lightbox image stays viewport-relative so it never exceeds a narrow screen", () => {
     const css = readFileSync(join(import.meta.dir, "styles.css"), "utf8");
-    expect(css).toContain("@media (max-width: 719px)");
-    // The lightbox image is viewport-relative so it never exceeds a narrow screen.
     expect(css).toContain("max-width: 92vw");
+  });
+
+  // The lightbox now has a SINGLE close button (the toolbar one). The old
+  // floating `.lightbox-close` (and its <720px declutter media query) were
+  // removed — they were the "两个叉" bug. Guard against the dead class coming
+  // back.
+  test("no dead .lightbox-close rule remains (single close button)", () => {
+    const css = readFileSync(join(import.meta.dir, "styles.css"), "utf8");
+    expect(css).not.toContain("lightbox-close");
   });
 });

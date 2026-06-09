@@ -186,6 +186,27 @@ describe("aggregateFileChanges", () => {
     expect(summary?.sessionDiffs[1]?.diff).toContain("+after");
   });
 
+  // #5 ①: an Edit that removes a line must surface a `del` line in the parsed
+  // diff (not just additions). The interleaving trim keeps the deletion visible.
+  test("an Edit that removes a line shows a deletion in the parsed diff", () => {
+    const msgs: Message[] = [
+      user(),
+      tool("Edit", {
+        file_path: "x.ts",
+        old_string: "keep1\ndrop-me\nkeep2",
+        new_string: "keep1\nkeep2",
+      }),
+    ];
+    const summary = aggregateFileChangeSummary(msgs);
+    const files = parseUnifiedDiff(summary!.sessionDiffs[0]!.diff);
+    const kinds = files.flatMap((f) => f.hunks.flatMap((h) => h.lines.map((l) => l.kind)));
+    expect(kinds).toContain("del");
+    const delText = files
+      .flatMap((f) => f.hunks.flatMap((h) => h.lines))
+      .find((l) => l.kind === "del");
+    expect(delText?.text).toBe("drop-me");
+  });
+
   test("returns session-scoped synthetic diffs for MultiEdit edits array", () => {
     const msgs: Message[] = [
       user(),
@@ -201,9 +222,12 @@ describe("aggregateFileChanges", () => {
     const summary = aggregateFileChangeSummary(msgs);
 
     expect(summary?.files).toEqual([{ path: "multi.ts", added: 3, removed: 2, count: 1 }]);
-    expect(summary?.sessionDiffs[0]?.diff).toContain("@@ -1 +1,2 @@ edit 1");
-    expect(summary?.sessionDiffs[0]?.diff).toContain("-one");
+    // edit 1: "one" → "one\ntwo" — the common "one" line is trimmed to context,
+    // so only "+two" is added (interleaved diff, not all-remove-then-all-add).
+    expect(summary?.sessionDiffs[0]?.diff).toContain(" one");
     expect(summary?.sessionDiffs[0]?.diff).toContain("+two");
+    expect(summary?.sessionDiffs[0]?.diff).not.toContain("-one");
+    // edit 2: "three" → "four" — a genuine replacement (no common line).
     expect(summary?.sessionDiffs[0]?.diff).toContain("@@ -1 +1 @@ edit 2");
     expect(summary?.sessionDiffs[0]?.diff).toContain("-three");
     expect(summary?.sessionDiffs[0]?.diff).toContain("+four");

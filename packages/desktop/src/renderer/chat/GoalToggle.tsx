@@ -32,7 +32,9 @@ export function GoalToggle({ enabled, onToggle, disabled }: Props) {
       onClick={() => onToggle(!enabled)}
     >
       <Target size={12} />
-      <span>Goal</span>
+      {/* Narrow composer (panel open): icon-only, hide the label. Keyed to the
+          composer card's @container width. */}
+      <span className="@max-[480px]:hidden">Goal</span>
     </button>
   );
 }
