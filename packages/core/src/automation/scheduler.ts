@@ -8,6 +8,25 @@
 import type { CronStore } from "./store.js";
 import { isCronExpression, parseCronExpression, nextCronTime } from "./cron-expr.js";
 
+/**
+ * How late a cron-expression timer may fire and still be considered "on time".
+ * A setTimeout that fires within this window of its scheduled instant runs
+ * normally; one that fires later (the host slept through the scheduled time
+ * and the timer fired on wake) is treated as a misfire — skipped and re-armed
+ * to the next occurrence. 90s comfortably clears cron's 60s granularity plus
+ * normal timer jitter, while still catching a multi-minute/hour sleep drift.
+ */
+const CRON_MISFIRE_GRACE_MS = 90_000;
+
+/**
+ * True when a cron timer fired too far past its scheduled instant to be a
+ * legitimate on-time run — i.e. the host slept through the scheduled time and
+ * the timer fired on wake. Exported for unit testing the sleep/wake guard.
+ */
+export function isCronMisfire(scheduledFor: number, now: number): boolean {
+  return now - scheduledFor > CRON_MISFIRE_GRACE_MS;
+}
+
 /** Permission tier a scheduled job runs under (Phase 5 enforces write tiers). */
 export type CronPermissionLevel = "read-only" | "workspace-write" | "full";
 
@@ -486,8 +505,20 @@ export class CronScheduler {
       return;
     }
     job.nextRun = next;
+    const scheduledFor = next;
     const delay = Math.max(0, next - Date.now());
     const timer = setTimeout(() => {
+      // Misfire guard for sleep/wake drift. A setTimeout pauses while the host
+      // sleeps, then fires the instant the machine wakes — which can be hours
+      // off the scheduled wall-clock (observed: a `0 9 * * *` job running at
+      // 06:56 because the Mac did a maintenance wake and the timer fired on
+      // resume). If we wake too far PAST the scheduled instant, this is a
+      // misfire: skip running and re-arm to the next correct occurrence rather
+      // than running at the wrong time.
+      if (isCronMisfire(scheduledFor, Date.now())) {
+        if (job.enabled) this.armCron(job);
+        return;
+      }
       void this.fire(job, () => {
         // Re-arm for the following occurrence.
         if (job.enabled) this.armCron(job);

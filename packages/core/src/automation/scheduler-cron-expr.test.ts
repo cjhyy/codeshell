@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { CronScheduler, type CronJob } from "./scheduler.js";
+import { CronScheduler, isCronMisfire, type CronJob } from "./scheduler.js";
 
 describe("CronScheduler — cron expression schedules", () => {
   test("accepts a cron expression and computes a future nextRun", () => {
@@ -54,6 +54,27 @@ describe("CronScheduler — cron expression schedules", () => {
     expect(job.schedule).toBe("5m");
     expect(job.nextRun).toBeGreaterThan(Date.now());
     sched.stopAll();
+  });
+});
+
+describe("isCronMisfire — sleep/wake drift guard", () => {
+  const at = Date.parse("2026-06-09T09:00:00Z"); // a scheduled instant
+
+  test("firing on time (within the grace window) is NOT a misfire", () => {
+    expect(isCronMisfire(at, at)).toBe(false); // exactly on time
+    expect(isCronMisfire(at, at + 1_000)).toBe(false); // 1s late — jitter
+    expect(isCronMisfire(at, at + 89_000)).toBe(false); // just under grace
+  });
+
+  test("firing far past the scheduled instant IS a misfire (the 06:56 bug)", () => {
+    expect(isCronMisfire(at, at + 91_000)).toBe(true); // just over grace
+    // Mac slept through 09:00 and woke ~2h later → timer fires at 06:56-style
+    // drift. Must be treated as a misfire (skip + re-arm), not run at 11:00.
+    expect(isCronMisfire(at, at + 2 * 60 * 60 * 1000)).toBe(true);
+  });
+
+  test("firing before the scheduled instant is never a misfire (timer can't run early on its own)", () => {
+    expect(isCronMisfire(at, at - 10_000)).toBe(false);
   });
 });
 
