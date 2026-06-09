@@ -88,15 +88,14 @@ test("watchdog path: abort mid-await breaks out promptly", async () => {
   expect(text).toBe("first");
 });
 
-test("watchdog is dormant when env flag is off and caller does not override", async () => {
-  // Explicitly ensure the env flag is off.
-  delete process.env.CODESHELL_ENABLE_STREAM_WATCHDOG;
-
+test("watchdog is dormant when explicitly opted out and caller does not override", async () => {
+  // The watchdog is ON by default now (opt-OUT after we observed half-dead
+  // sockets hang 15-33min). The fast path is taken only when the watchdog is
+  // explicitly disabled (disableWatchdog) AND no idleTimeoutMs is passed.
   const { runStreamWithWatchdog } = await import("../../packages/core/src/llm/providers/openai.js");
 
   // Generator that yields one chunk, hangs 150ms, then yields another.
-  // With the default 90s timeout the watchdog would NOT fire regardless —
-  // so we verify correctness via a spy on Promise.race to confirm the fast
+  // We verify correctness via a spy on Promise.race to confirm the fast
   // path (no race) is actually taken.
   const originalRace = Promise.race.bind(Promise);
   let raceCallCount = 0;
@@ -113,8 +112,8 @@ test("watchdog is dormant when env flag is off and caller does not override", as
       yield { choices: [{ delta: { content: "y" } }] };
     }
 
-    // Caller does NOT pass idleTimeoutMs → fast path should be selected.
-    const text = await runStreamWithWatchdog(slow() as any);
+    // Watchdog explicitly disabled + no idleTimeoutMs → fast path.
+    const text = await runStreamWithWatchdog(slow() as any, { disableWatchdog: true });
     expect(text).toBe("xy");
     // Fast path uses a plain for-await with no Promise.race.
     expect(raceCallCount).toBe(0);

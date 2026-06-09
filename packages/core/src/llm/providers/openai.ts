@@ -43,6 +43,13 @@ interface RunStreamOpts {
    * Stop ("content comes back after interrupt").
    */
   signal?: AbortSignal;
+  /**
+   * Per-call override of the watchdog. Leave undefined to follow the env
+   * default (STREAM_WATCHDOG_CONFIG.enabled). Set false to force the fast
+   * path even when the watchdog is enabled globally; passing idleTimeoutMs
+   * still re-activates it (an explicit timeout means the caller wants it).
+   */
+  disableWatchdog?: boolean;
 }
 
 /**
@@ -60,8 +67,13 @@ export async function runStreamWithWatchdog<T = any>(
   stream: AsyncIterable<T>,
   opts: RunStreamOpts = {},
 ): Promise<string> {
+  // An explicit idleTimeoutMs always activates the watchdog. Otherwise follow
+  // disableWatchdog (per-call override) if set, else the env default.
   const watchdogActive =
-    STREAM_WATCHDOG_CONFIG.enabled || opts.idleTimeoutMs !== undefined;
+    opts.idleTimeoutMs !== undefined ||
+    (opts.disableWatchdog === undefined
+      ? STREAM_WATCHDOG_CONFIG.enabled
+      : !opts.disableWatchdog);
   const idleTimeoutMs =
     opts.idleTimeoutMs ?? STREAM_WATCHDOG_CONFIG.idleTimeoutMs;
   let text = "";
