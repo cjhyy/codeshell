@@ -36,6 +36,27 @@ export function parsedArgs(m: ToolMessage): Record<string, unknown> {
   }
 }
 
+/**
+ * Per-line error classification for Bash output (A1 highlighting). Duplicated
+ * from core's `classifyBashLines` because the renderer is a thin client and
+ * cannot import @cjhyy/code-shell-core — keep the two in sync. The `STDERR:`
+ * marker starts a sticky stderr region; `Exit code: N (command failed)` and
+ * `Killed by signal: X` status lines are flagged wherever they appear. Text is
+ * returned verbatim so copy still yields the exact bytes the model saw.
+ */
+export function classifyBashLines(lines: string[]): { text: string; isError: boolean }[] {
+  let inStderr = false;
+  return lines.map((text) => {
+    if (text === "STDERR:") {
+      inStderr = true;
+      return { text, isError: true };
+    }
+    const isStatus =
+      /^Exit code: \d+ \(command failed\)$/.test(text) || /^Killed by signal: /.test(text);
+    return { text, isError: inStderr || isStatus };
+  });
+}
+
 export function formatDuration(ms?: number): string | null {
   if (typeof ms !== "number" || ms < 0) return null;
   if (ms < 1000) return `${ms}ms`;

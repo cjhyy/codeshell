@@ -481,6 +481,11 @@ export {
   MAX_LINE_WIDTH,
   TOOL_DOT_COLORS,
 } from "./utils/toolDisplay.js";
+export {
+  classifyBashLines,
+  type BashLineKind,
+  type ClassifiedBashLine,
+} from "./tool-system/builtin/bash-output-style.js";
 export { formatDuration, formatTokens } from "./utils/format.js";
 export {
   getTheme,

@@ -23,6 +23,7 @@ import {
   singleLine,
   formatBytes,
   MAX_LINE_WIDTH,
+  classifyBashLines,
 } from "@cjhyy/code-shell-core";
 import { truncate } from "../truncate.js";
 import { DiffLine, classifyDiffLine } from "./DiffLine.js";
@@ -153,7 +154,7 @@ export function ToolCallResult({
       {rendered.lines.length > 0 && (
         <Box flexDirection="column">
           {rendered.lines.map((line, i) => (
-            <DiffOrPlainRow key={i} line={clampLine(line)} />
+            <DiffOrPlainRow key={i} line={clampLine(line)} isError={rendered.errorLines?.[i]} />
           ))}
           {rendered.hiddenCount > 0 && (
             <Box>
@@ -178,6 +179,12 @@ interface RenderedOutput {
   summary: string;
   lines: string[];
   hiddenCount: number;
+  /**
+   * Optional per-line error flag, index-aligned with `lines`. Set only by the
+   * Bash branch (A1): the `STDERR:` section and `Exit code:` / `Killed by
+   * signal:` status lines render in the error color without altering the text.
+   */
+  errorLines?: boolean[];
 }
 
 /**
@@ -288,21 +295,26 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
     }
 
     case "Bash": {
-      // Bash: show output with fold/expand — this is the most important one
+      // Bash: show output with fold/expand — this is the most important one.
+      // Classify the FULL body first so the stderr region (sticky after the
+      // `STDERR:` marker) is correct even when we only show a head slice; then
+      // slice the error flags in parallel with the lines (A1 highlighting).
       if (totalLines <= 1 && rawLines[0]?.trim() === "") {
         return { summary: "(no output)", lines: [], hiddenCount: 0 };
       }
+      const errorFlags = classifyBashLines(rawLines).map((c) => c.kind === "error");
       if (expanded) {
-        return { summary: "", lines: rawLines, hiddenCount: 0 };
+        return { summary: "", lines: rawLines, hiddenCount: 0, errorLines: errorFlags };
       }
       if (totalLines <= COLLAPSED_LINES + 1) {
         // +1: if only 1 hidden line, just show it
-        return { summary: "", lines: rawLines, hiddenCount: 0 };
+        return { summary: "", lines: rawLines, hiddenCount: 0, errorLines: errorFlags };
       }
       return {
         summary: `${totalLines} lines`,
         lines: rawLines.slice(0, COLLAPSED_LINES),
         hiddenCount: totalLines - COLLAPSED_LINES,
+        errorLines: errorFlags.slice(0, COLLAPSED_LINES),
       };
     }
 
@@ -361,7 +373,19 @@ function clampLine(s: string): string {
  * Plain (non-diff) rows keep the `⎿` gutter so the result body still groups
  * visually under the `✓ ToolName` header.
  */
-function DiffOrPlainRow({ line }: { line: string }) {
+function DiffOrPlainRow({ line, isError }: { line: string; isError?: boolean }) {
+  // Bash stderr / failure status lines (A1): tint the text red, leaving the
+  // bytes untouched so copy still yields the original. Checked before diff
+  // classification — a stderr line that happens to start with `-`/`+` is an
+  // error line, not a diff line.
+  if (isError) {
+    return (
+      <Box>
+        <Text dim>{"  ⎿  "}</Text>
+        <Text color="ansi:red">{line}</Text>
+      </Box>
+    );
+  }
   const classified = classifyDiffLine(line);
   if (classified.kind === "add" || classified.kind === "remove") {
     return <DiffLine kind={classified.kind} text={classified.text} gutter={"  ⎿  "} />;

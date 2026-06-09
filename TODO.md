@@ -13,9 +13,9 @@
 **本轮开工中（2026-06-09，五项，详见各分区）：**
 - 🔧 **B1 路径授权后原工具继续运行**：批准路径后 Read/Glob/Grep 应重试续跑，避免被迫绕 Bash（核实：现真没做，工具批准后不重试）→ P0
 - ⬜ **B2 审计路径授权**：记录批准来源/范围/过期/被拒原因（核实：现零审计）→ P0
-- 🔧 **D1 `task` 加 `agentId` tag**：基础设施+desktop 隔离已做，缺 TodoWrite 传 agentId + TUI 隔离 → P5
-- ⬜ **D2 Agent 角色 settings-level 默认**：默认 general-purpose 硬编码，加 `agent.defaultType` → P5
-- 🔧 **A1 Shell Snapshot 错误高亮**：core 全做，只剩 renderer 把 STDERR 段染色 → P2
+- ✅ **D1 `task` 加 `agentId` tag**（2026-06-10 fbe6f68）：核实 TodoWrite 无需改——engine.ts:1152 childStream 已给每个子代理事件 spread agentId(含 task_update);ToolContext 无需加字段。真缺口仅 TUI App.tsx task_update case 缺隔离闸,已补 `if (taskEvent.agentId) break;` 与 desktop 对齐
+- ❌ **D2 Agent 角色 settings-level 默认**（2026-06-10 用户决策不做）：硬编码 general-purpose 兜底已够用,可配默认子代理角色对个人场景无实用价值;企业/多角色场景如真需要再议 → 取消
+- ✅ **A1 Shell Snapshot 错误高亮**（2026-06-10）：core 抽 classifyBashLines 纯分类器(STDERR: 粘性区 + Exit code/Killed by signal 状态行,文本逐字不改保复制),双端各染色:TUI ToolCall errorLines→ansi:red,desktop BashToolCard→text-status-err;两套各带测试(8+6)
 
 **其他纯 code / 收尾活：**
 - 🔧 **真视频适配器**：替换 `FakeVideoProvider`，接入 seedance/kling（待各自私有 API 文档）→ P6
@@ -90,7 +90,7 @@
 - [x] 捕获 stdout/stderr 完整输出 —— bash.ts:118-120，STDERR: 段分隔
 - [x] 智能截断：保留头尾 + 中间摘要 —— runtime/truncate-output.ts（含行边界对齐 + 巨行硬切回退），有测试
 - [x] 退出码语义化：非零→`Exit code: N (command failed)` / 信号杀→`Killed by signal: X`，截断后 prepend 永不丢 —— bash.ts:134-142
-- [ ] **错误输出高亮标注（唯一剩余）**：core 已加 `STDERR:` 前缀，缺 renderer 富样式 —— desktop ToolResultView + TUI 把 STDERR 段染错误色，不改文本、保留复制
+- [x] **错误输出高亮标注**（2026-06-10）：core 抽 `classifyBashLines`(bash-output-style.ts,STDERR: 粘性区+Exit code/Killed by signal 状态行,文本逐字不改);TUI ToolCall.tsx Bash 分支按 errorLines 染 ansi:red;desktop BashToolCard.tsx 复制一份分类器(thin-client 不能 import core)按 text-status-err 染;两端各带分类器测试。复制保真:行用 `\n` 重接,选中复制得原字节
 
 > 已完成归档：Undo/撤销系统（/undo、/undo all、diff 预览、ApplyPatch 备份）。剩 git 集成 + desktop 端入口（留后）。
 
@@ -169,8 +169,8 @@ CodeShell 作为统一控制台，通过安全授权连接远程设备/环境，
 
 ### 🔧 其他多代理增强
 
-- [ ] **D2** Agent 角色 settings-level 默认配置：定义已从用户/插件/项目三源加载，但默认类型 `general-purpose` 硬编码在 agent.ts:51；加 `settings.agent.defaultType`，优先级 参数→项目默认→用户默认→general-purpose
-- [~] **D1** `task` 加 `agentId` tag 防混入主视图：基础设施已做（task_update event 有 agentId 字段、子 agent 事件已打标、desktop 已隔离+测试）；缺 TodoWrite(task.ts) 发事件时带 agentId（ToolContext 需加字段）+ TUI 隔离（App.tsx task_update case）
+- [-] **D2** Agent 角色 settings-level 默认配置（2026-06-10 用户决策不做）：硬编码 general-purpose 兜底(agent.ts:51)对个人场景已够;可配默认子代理角色无实用价值,取消。企业/受限子代理场景如真需要:加 settings.agent.defaultType(SettingsManager.get() 已项目over用户合并)→engine 喂 ToolContext→resolveAgentTypeOverrides 按 参数→defaultType→general-purpose→首个,无效值静默退回
+- [x] **D1** `task` 加 `agentId` tag 防混入主视图（2026-06-10 fbe6f68）：基础设施全在——engine.ts:1152 childStream `{...event, agentId: req.agentId}` 已给每个子代理事件打标(含 task_update),TodoWrite/ToolContext 无需改(原 TODO 此处判断有误);desktop renderer types.ts:514 已隔离+测试。真缺口仅 TUI,补 App.tsx task_update case `if (taskEvent.agentId) break;`
 
 > 已完成归档：后台 agent 完成通知、subagent_type enum、子 agent skill 隔离、max_depth/max_threads 限制、Agent 结果汇总视图、删除 SendMessage 死代码。
 
