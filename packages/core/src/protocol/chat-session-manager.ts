@@ -53,7 +53,11 @@ export class ChatSessionManager {
       // on a resumed session was silently ignored at enforcement time (#11
       // secondary: "档位 doesn't take effect after first send"). setPermissionMode
       // reconfigures the live permission backend, so it's safe between turns.
-      if (slice.permissionMode && existing.engine.getPermissionMode() !== slice.permissionMode) {
+      if (
+        slice.permissionMode &&
+        typeof existing.engine.getPermissionMode === "function" &&
+        existing.engine.getPermissionMode() !== slice.permissionMode
+      ) {
         existing.engine.setPermissionMode(slice.permissionMode);
       }
       return existing;
