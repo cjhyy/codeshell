@@ -47,6 +47,7 @@ export interface RemoteApp {
   activeRoom?: RoomPublic;
   approvals: PendingApproval[];
   permissionMode: PermissionMode;
+  notice?: string;
   logout: () => void;
   // actions
   sendChat: (text: string) => void;
@@ -109,6 +110,14 @@ export function useRemoteApp(): RemoteApp {
   const [activeRoomId, setActiveRoomId] = useState<string | undefined>();
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [permissionMode, setPermissionModeState] = useState<PermissionMode>("default");
+  /** Transient banner message (errors, room-missing, …). Auto-clears. */
+  const [notice, setNoticeState] = useState<string | undefined>();
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const setNotice = useCallback((msg: string) => {
+    setNoticeState(msg);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNoticeState(undefined), 5000);
+  }, []);
   /** Which session id the chat view is bound to (for filtering live stream). */
   const boundSessionRef = useRef<string | undefined>(undefined);
 
@@ -154,6 +163,22 @@ export function useRemoteApp(): RemoteApp {
             events: (event.messages ?? []).map(roomMsgToEvent),
           });
         }
+        break;
+      case "room.opened":
+        if (event.status === "missing") {
+          setNotice("房间不存在或未就绪");
+          setActiveRoomId(undefined);
+        }
+        break;
+      case "room.closed":
+        // Refresh the list so the closed room's online pip clears.
+        setRooms((prev) => prev.map((r) => (r.id === event.roomId ? { ...r, open: false } : r)));
+        break;
+      case "room.error":
+        setNotice(event.message || "房间错误");
+        break;
+      case "error":
+        setNotice(event.message);
         break;
       case "approval.request": {
         // Legacy server-shaped approval (kept for back-compat).
@@ -248,6 +273,7 @@ export function useRemoteApp(): RemoteApp {
       setActiveSessionId(id);
       boundSessionRef.current = id;
       setActiveRoomId(undefined);
+      setApprovals([]);
       dispatchChat({ kind: "reset" });
       socket.send({ type: "session.select", sessionId: id });
       socket.send({ type: "session.history", sessionId: id });
@@ -259,6 +285,7 @@ export function useRemoteApp(): RemoteApp {
   const newSession = useCallback(() => {
     boundSessionRef.current = undefined;
     setActiveRoomId(undefined);
+    setApprovals([]);
     dispatchChat({ kind: "reset" });
     socket.send({ type: "session.create" });
     setView("chat");
@@ -310,6 +337,7 @@ export function useRemoteApp(): RemoteApp {
     (room: RoomPublic) => {
       setActiveRoomId(room.id);
       boundSessionRef.current = undefined;
+      setApprovals([]);
       dispatchChat({ kind: "reset" });
       socket.send({ type: "room.open", roomId: room.id });
       socket.send({ type: "room.history", roomId: room.id });
@@ -352,6 +380,7 @@ export function useRemoteApp(): RemoteApp {
     activeRoom,
     approvals,
     permissionMode,
+    notice,
     logout: socket.logout,
     sendChat,
     stopRun,

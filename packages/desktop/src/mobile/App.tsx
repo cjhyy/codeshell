@@ -53,6 +53,12 @@ export function App() {
     <div className="flex h-dvh flex-col bg-background text-foreground">
       <TopBar app={app} wide={wide} onOpenDrawer={(w) => setDrawer(w)} />
 
+      {app.notice && (
+        <div className="border-b border-status-err/40 bg-status-err/10 px-3 py-1.5 text-xs text-status-err">
+          {app.notice}
+        </div>
+      )}
+
       <div className="flex min-h-0 flex-1">
         {/* Tablet: persistent left pane. Phone: drawer overlay. */}
         {wide && (
@@ -118,8 +124,18 @@ function TopBar({
       <div className="grid size-6 shrink-0 place-items-center rounded-md bg-primary text-xs font-black text-primary-foreground">
         C
       </div>
+      {app.activeRoom && (
+        <span className="rounded-full border border-border px-1.5 text-[10px] text-muted-foreground">
+          房间
+        </span>
+      )}
       <span className="truncate text-sm font-semibold">{title}</span>
       <div className="ml-auto flex items-center gap-2">
+        {app.activeRoom && (
+          <Button size="sm" variant="ghost" onClick={app.leaveRoom}>
+            退出房间
+          </Button>
+        )}
         <StatusBar conn={app.status} run={app.chat.run} />
         {!wide && (
           <Button size="sm" variant="ghost" onClick={() => onOpenDrawer("rooms")}>
@@ -169,13 +185,35 @@ function SidePane({
       onClose={app.closeRoom}
     />
   );
-  if (which === "sessions") return sessions;
-  if (which === "rooms") return rooms;
+  const footer = (
+    <div className="flex items-center gap-2 border-t border-border px-3 py-2 text-xs text-muted-foreground">
+      <span className="truncate">{app.deviceName || "设备"}</span>
+      <Button size="sm" variant="ghost" className="ml-auto h-7" onClick={app.logout}>
+        退出登录
+      </Button>
+    </div>
+  );
+
+  if (which === "sessions")
+    return (
+      <div className="flex h-full flex-col">
+        <div className="min-h-0 flex-1">{sessions}</div>
+        {footer}
+      </div>
+    );
+  if (which === "rooms")
+    return (
+      <div className="flex h-full flex-col">
+        <div className="min-h-0 flex-1">{rooms}</div>
+        {footer}
+      </div>
+    );
   // both (tablet): split vertically.
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 overflow-hidden border-b border-border">{sessions}</div>
       <div className="min-h-0 flex-1 overflow-hidden">{rooms}</div>
+      {footer}
     </div>
   );
 }
