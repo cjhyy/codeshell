@@ -49,7 +49,7 @@
 > 来源:`docs/beta1-smoke-form.html` 表单导出。13 条 = 9 预置 + 4 自定义。**6 成功 / 6 失败 / 1 未标记**。
 > 截图存 `docs/assets/beta1-smoke/stepNN.png`。下方按失败优先排序。
 
-### 🔴 [2026-06-09] 受限权限下读 repo 外文件 → `Error: require is not defined`(beta1 阻塞)
+### 🟢 [2026-06-09] 受限权限下读 repo 外文件 → `Error: require is not defined`(beta1 阻塞)
 - **现象**(#11/#12):默认权限读 repo 外内容→报错;给了权限申请卡片、点批准后**直接报错** `Error: require is not defined`;Glob/Read 工具也连带报 `require is not defined`,只能退而用 shell。
 - **根因(已定位)**:`permission.ts:330` `require("node:path")`、`:402` `require("node:fs")`,以及 `path-policy.ts:146/196`、`permission.ts` 等共 **9 处裸 `require()`**。注释称为"浏览器 shim 做 lazy require",但 **desktop main 是 ESM bundle(`--format=esm`)**,ESM 里 `require` 未定义→审批/路径策略一走到这里就抛。与既往 RunLock ESM bug 同源(那次已用 createRequire 修,这几处漏改)。
 - **期望**:受限权限触发审批、批准后工具继续执行,不报错。
@@ -58,48 +58,63 @@
 - **日志证据**:session `s-mq6e5xim-e652e9fc`,`desktop-2026-06-09.log:11605/11607/11645` —— Glob/Read 工具返回 `error:"require is not defined"`;读 `~/.code-shell`(cwd 外)触发 path-policy 工作区外检查时炸。
 - **备注**:修了 core 全部 9 处裸 `require()` → `path-policy.ts`(2 处,顶部已 import fs,改静态 import)+ `permission.ts`(2 处,改静态 `import {resolve,dirname}`/fs)+ `updater.ts`(3 处)+ `provider-auth.ts`(1 处)+ `pluginInstaller.ts`(1 处)用 `createRequire(import.meta.url)`/已有静态 import。验证:core tsc 绿、tool-system 266 pass、grep 残余裸 require 为空。同源既往 [[project_runlock_esm_bug]]。
 
-### 🔴 [2026-06-09] 后台 shell 卡片状态不更新、输出不回流
+### 🟢 [2026-06-09] 后台 shell 卡片状态不更新、输出不回流
 - **现象**(#7):`sleep 5 && echo done` 卡片显示 `exit 0` 却又标 `status=running` + `(无输出)`;刷新也没用。
-- **根因(待查)**:卡片 exit code 已拿到(exit 0)但 `status=running` 没翻成 finished,且 stdout 未渲染。疑似增量游标/状态回写或 renderer 订阅未刷新。core 后台 shell 有完整实现(见 project_background_shell),需查 UI 回流链路。
-- **状态**:🔴 待修
+- **根因(已定位,两处叠加)**:core 后台 shell 实现本身正确(`background-shell.ts` 单测过),但**注册表是 worker 进程内存态、退出不发事件、面板只能 poll 活 worker**。
+  - **缺陷 A(深层设计)**:`background-shell.ts` 的 `this.shells` 与 `RingFile.buf` 全在 worker RAM;`child.on("exit")` **不发任何协议/流事件**,只 `notificationQueue.enqueue`(仅活跃 turn 才 drain)。worker 回收(干净退出/空闲/崩溃/重开 app 后没再 spawn)→ 整个注册表+ring 丢失。唯一恢复 `reapOrphansFromPidfiles()` 只找进程组**还活着**的、且重建为 `status:"orphaned"` + **全新空 ring**(`RingFile` 用 `"w"` 模式→`readAll()===""`→`(无输出)`),已结束的 `sleep 5 && echo done` 则连 pidfile 一起删、shell 直接消失。
+  - **缺陷 B(直接症状,最高价值)**:`agent-bridge.ts:216-225` 当无活 child 时**静默丢弃** `agent/backgroundShells` RPC(且只有 `agent/run` 才 spawn worker,开/刷面板不会复活);丢弃的 RPC 无 reply → preload `rpc()` 挂满 30s 后 reject;面板 `BackgroundShellPanel.tsx:28-30` 的 catch **只 set error、从不清 `shells`/`output`** → 上次抓到的 `running` 行 + `exit 0` header 冻在屏上,再刷新还是丢→还是 stale,即「刷新也没用」。
+- **状态**:🟢 已修(2026-06-09)
 - **截图**:`docs/assets/beta1-smoke/step07.png`
-- **备注**:与记忆 [[project_background_shell]] 「增量游标用绝对位置」相关,先查 desktop 订阅刷新。
+- **备注**:已修 = ①(缺陷B)`agent-bridge` 无 worker 时对只读的 `agent/backgroundShells` **回 `{shells:[]}` reply** 不再丢弃(`attachIpcListener`)+ 面板 `refresh` catch 清 `shells`/`selected`/`output` 防 stale 行(成功路径也清掉已消失的选中项);②(缺陷A 廉价半)`reapOrphansFromPidfiles` 重建 orphan 时把 ring 指向**已存在的 `.log`**(新增 `RingFile(path,cap,readonlyExisting=true)` 只读载入不 truncate)而非开空 `.orphan`,recovered shell 现能显真实输出。**仍搁置**(缺陷A 深层):`child.on("exit")` 推流事件让卡片不靠 3s poll 即 finished(现有 poll 已够解症状)。测试:ring-file 8 pass、bg-shell 11 pass、sessions/mobile 等绿;desktop+core tsc 绿。与记忆 [[project_background_shell]]「增量游标用绝对位置」相关。
 
-### 🔴 [2026-06-09] 审查面板:无删除/历史轮、铺开太满、分支对比卡死无法滚动
+### 🟢 [2026-06-09] 审查面板:无删除/历史轮、铺开太满、分支对比卡死无法滚动(部分,新特性搁置)
 - **现象**(#5):① 本轮改动只看到"改了什么"(绿色新增),**没有删除、没有上一轮已编辑的对比**;② diff 全部平铺,期望改成**下拉选择**切换更清爽;③ 点「分支 vs base」**卡住且无法滚动**——期望是选两个分支对比 / 按 commit 选;④ 长时间后进程 **V8 OOM**(800MB,`Mark-Compact`→`process OOM`)。
-- **状态**:🔴 待修(拆成 4 个子问题;④ OOM 可能与 #1 重复 key 渲染泄漏同源)
+- **根因(已逐项定位)**(面板 = `panels/ReviewPanel.tsx` + `diff/*`,本轮快照由 `messages/fileChangeAggregator.ts` 端内合成):
+  - **①(真 bug)本轮 diff 是按工具 args **合成**的、非真 git diff,且有损**:turn scope 直接渲 `turnDiff`(`ReviewPanel.tsx:128-132`),它来自 `fileChangeAggregator`。`Write` 分支(`:157-164`)`oldText` 写死 `""`、status `"added"` → **覆盖已存在文件也只出 `+` 行**(就是"全绿无删除");`Edit` 的 `syntheticSnippetDiff`(`:192-216`)是"全删行再全加行"无 LCS,改一字也重印整块;聚合只从**末条 user message 到末尾**走(`:231-237`),**无本轮起始基线**,跨轮累积看不到。
+  - **②(交互)平铺**:`UnifiedDiffViewer.tsx:56-62` 把每个文件 diff 全平铺;turn scope 还**完全忽略 `selectedFile`**(`ReviewPanel.tsx:128-132` 是整 blob);左侧 `ChangedFilesList` 是窄边栏按钮列非下拉。【已修:turn scope 右上加 shadcn SimpleSelect 选单文件,`UnifiedDiffViewer` 加 `onlyPath` 过滤;>1 文件才显示下拉】
+  - **③(卡死)分支 scope 把整段 `main...HEAD` 不带文件过滤渲成一张无虚拟化大表**:切 scope 时 `selectedFile` 重置 null(`:93-94`)→ `file=undefined` → `getGitRangeDiff(cwd,"main...HEAD")`(`desktop-services.ts:428-441`,上限 32MB)整段返回 → 解析成**一行一 `<tr>` + 每行 hover 评论按钮**的巨表(`UnifiedDiffViewer.tsx:78-139`,**无 react-window 虚拟化**),同步渲染阻塞主线程 = "卡死",滚动事件也处理不了 = "无法滚动"。"选两个分支/按 commit"是**新特性**(`getGitBranches` `:181` 已有可喂)。
+  - **④(OOM)面板常驻不卸 + 大 diff 无界 DOM/state**:`PanelArea.tsx:254-264` 所有面板 `display` 切换**永不 unmount** → `UnifiedDiffViewer` 的 `diff: DiffFile[]`(含每行文本)+ 每可见行的 `useState` 终身存活;`turnDiff` 随会话 join 增长存进 `App.tsx` `reviewDiff` state 反复重解析;index key(`:59`/`:79`)妨碍 GC。与 #1 dup-key **非同一处**但都加剧。
+- **状态**:🟢 部分已修(2026-06-09;①交错+删除、③④渲染上限、②下拉 已修;**「选两分支/按 commit」新特性主动搁置**)
 - **截图**:`docs/assets/beta1-smoke/step05.png`
-- **备注**:②③ 偏审查面板交互重做;④ OOM 单列,见下条 #1。
+- **备注(已修汇总,2026-06-09)**:① `syntheticSnippetDiff` 现裁掉公共前后缀行→增删**交错**(改一字读作 ctx·-old·+new·ctx,不再全删全加),删除行正常显示(新增单测:Edit 删行经 `parseUnifiedDiff` 出 `del`);③④ `UnifiedDiffViewer` 加 `MAX_RENDERED_LINES=2000` 渲染上限 + `capFiles` 按文件截断 + 超限提示「请选单文件」(解 hang/OOM,免去 32MB 整段巨表),file/hunk key 改稳定值;② turn scope 加 SimpleSelect 文件下拉 + `onlyPath` 过滤。**搁置**:真 git 基线(本轮起记 HEAD/blob SHA 走 `git diff <preTurnRef>` 才能精确对比 Write 覆盖的旧内容——`Write` args 无旧内容,纯渲染层修不彻底)、行级虚拟化(react-window;现用渲染上限替代足够解症状)、「选两分支/按 commit」新特性。desktop tsc 绿、diff/aggregator 测试全过。
 
-### 🔴 [2026-06-09] 权限档位在 session 间"粘连"被带回
+### 🟢 [2026-06-09] 权限档位在 session 间"粘连"被带回
 - **现象**(#11):默认权限的 session 读 repo 外报错→切到一个"完全编辑权限"的 session→再切回来,原 session **变成了完全编辑权限**。
-- **根因(待查)**:active 权限档疑似被当成全局态而非 per-session,切换串档。
-- **状态**:🔴 待修
-- **备注**:与 #11 的 require 报错是同一张截图里的两个独立问题,分开记。
+- **根因(已定位,非"全局态"而是"共享草稿桶")**:档位其实是 **per-bucket** 的(`App.tsx:226` `permissionOverrides: Record<bucket, mode>`,读 `:260`,写 `:1935-1946`),Pill 是受控组件无内部全局态。真凶 = `bucketKey`(`transcripts.ts:88-90`)把所有**草稿/新对话**(`activeSessionId===null`)塌缩成 `<repoKey>::_none_` 这**一个 per-repo 共享槽**,而 `permissionOverrides` **只写只读、从不清除/迁移**。在任一草稿 tab 选「完全访问」→ 写 `_none_` 槽 → 该 repo 下**每个草稿共享**且**永久**;「新对话」又把 `activeSessionId=null` → 同 `_none_` 桶 → 陈旧 `bypass` 还在,新草稿/切回来就成了完全权限。`onGoalToggle`(`:1948-1956`)开 Goal 也写 `bypass` 进 `_none_`,雪上加霜。
+- **次因(后端,顺修)**:`chat-session-manager.ts:46-61` `getOrCreate` 对**已存在** session 提前 return、**丢掉 `slice.permissionMode`** → 在已跑 session 改 Pill 再发,引擎实际档位**不更新**(停在首建时的)。
+- **状态**:🟢 已修(2026-06-09)
+- **备注**:已修 = ①(主,renderer)`send()` 首发把草稿 `_none_` 槽的 permission/goal override **迁到真 bucket** 再清掉 `_none_`(选择跟随该 session);`handleNewConversationForRepo` 进新草稿时清 `_none_` 槽(各草稿不再串档)。②(次,core)`getOrCreate` 对已存在 session return 前 `if (slice.permissionMode && 现≠新) engine.setPermissionMode` → 改 Pill 下一轮真生效(`setPermissionMode` 已会 reconfigure 活 backend)。core 已 rebuild。测试:protocol 22 pass。与 #11 require 报错是同截图两个独立问题,分开记。
 
-### 🔴 [2026-06-09] 回答里点文件路径用了系统默认应用,而非内置文件面板
+### 🟢 [2026-06-09] 回答里点文件路径用了系统默认应用,而非内置文件面板
 - **现象**(#13):点 assistant 回答里的文件路径,**自动用系统默认应用打开**,没走内置文件系统面板。
-- **状态**:🔴 待修
+- **根因(已定位,缩小到图片路径)**:普通文本路径其实**已正确**——`Markdown.tsx` 的 `PathLink`(:225-248)平点 → dispatch `codeshell:open-file` 走内置面板,⌘/Ctrl 点才 `openPath` 走 OS。真正出错的是**被判为图片的路径**(`classifyPath()==="image"`)走 `InlineImageLink` 而非 `PathLink`,其文件名 caption 与失败 fallback 链接(`:314`/`:332-335`/`:356`)**裸调 `openPath`、无修饰键判断**,平点就进系统默认 app。
+- **状态**:🟢 已修(2026-06-09)
 - **截图**:`docs/assets/beta1-smoke/step13.png`
-- **备注**:与记忆 [[project_inline_code_path_links]] 相关;期望默认走内置面板(panels),外部打开应是显式选项。
+- **备注**:已修 = 抽 `openFileTarget(e, {path,cwd,line,isScheme})` 共享 helper(平点→`codeshell:open-file` 面板 / ⌘Ctrl→`openPath` OS),`PathLink` 与 `InlineImageLink` 那 3 处裸 `openPath` 全改用它(缩略图开 lightbox 不动)。Markdown 6 测试过、tsc 绿。与记忆 [[project_inline_code_path_links]] 相关。
 
-### 🟡 [2026-06-09] 启动白屏久 + 控制台重复 key 报错 + 疑似渲染泄漏
+### 🟢 [2026-06-09] 文件面板里 README 的图片不渲染(本地相对路径 + 原始 HTML)
+- **现象**:在 app 内置文件面板预览 README,顶部 `<p align="center"><img src="docs/images/codeshell-dog-icon.png" …></p>` 的图**不显示**(图片文件确实在)。
+- **根因(已定位,两叠加)**:① `FilesPanel` 渲染 md 时 `<Markdown text=… />` **没传 cwd** → 相对图路径无法解析(且 renderer 不能走 `file://`,CSP `img-src 'self' data:`,本地图须经 `images:readDataUrl` 转 base64,见 #13/[[project_inline_code_path_links]]);② README 用的是**原始 HTML `<img>`**,而 `Markdown` 没装 `rehype-raw` → react-markdown 默认丢弃原始 HTML,`img` 组件 handler 根本不触发。
+- **状态**:🟢 已修(2026-06-09)
+- **备注**:已修 = ① `Markdown` 加 `rehype-raw`(解析原始 HTML)+ `img` handler 把**普通相对/本地 src** 也路由到 `InlineImageLink`(经 cwd 解析 + readDataUrl;`data:`/`http(s)`/`blob` 仍走普通 `<img>`);② `FilesPanel.TextPreview` 传 `cwd=该文件所在目录`(新 `mdBaseDir` helper)。**安全加固(关键)**:同一个 `<Markdown>` 也渲染**不可信的 LLM/assistant 输出**,放开原始 HTML = XSS 面 → 加 `rehype-sanitize`(order: raw→sanitize→highlight),schema 从 rehype 安全默认扩展:放行 README 用的 `img width/height/align`、`p/div/span align`、highlight.js 的 className,以及**自有 `codeshell-path:` 协议**(否则 path-link 被 sanitize 掉)。新增单测:README 原始 HTML 相对图经 InlineImageLink 渲染、远程图保持普通 `<img>`、`<script>`/`onerror`/`<iframe>` 被剥离(XSS guard)。Markdown 10 测试过、desktop 550 过、tsc+build 绿。新依赖 rehype-raw@^7 / rehype-sanitize@^6。
+
+### 🟢 [2026-06-09] 启动白屏久 + 控制台重复 key 报错 + 疑似渲染泄漏
 - **现象**(#1):启动时白屏太久;控制台刷 `Encountered two children with the same key, call_xxx`(`TurnProcessGroupCard.tsx:70`),多个 tool call 用了相同 key。
-- **根因(已定位)**:`TurnProcessGroupCard.tsx:65-70` 渲染 group.items 时 `key={m.id}`(=tool call id),但同一 group 内出现**重复 id** → React 重复 key 警告 + 重复/丢卡。
-- **状态**:🔴 待修(**从 🟡 升级**——见下条 automation session 实锤:这会导致工具卡片"一直显示"卡死,且疑似 V8 OOM 同源)
-- **备注**:治标 = key 改 `${m.id}-${index}`;治本 = 查 group.items 为何有重复 id(疑似流折叠 post-pass 把同一工具塞进 group 两次,见 [[project_stream_folding_postpass]] automation 落 turn_process_group 内需递归)。OOM(#5④)一并验。
+- **状态**:🟢 已修(2026-06-09)。治本=`mergeTranscripts` 拼好后**按稳定 id 去重**(新单测:同 id args 漂移不再双发);治标=`TurnProcessGroupCard` map 前 `dedupeById`。mergeTranscripts 15 测试过、tsc 绿。下面是根因记录↓
+- **根因(已纠正——不是流折叠 post-pass)**:折叠管线(`buildStreamItems`/`foldAdjacentTools`/`foldTurnProcess`/`foldAgentGroups`)与 live reducer(`types.ts:377-413` `tool_use_start` **已有按 id 幂等守卫**)都干净,**不会**塞两次。重复 id 来自**更前面的 session-hydrate 合并**:`App.tsx:510-514` 把 disk 折叠与 local live tail 拼成 `[...disk.messages, ...liveTail]`(`mergeTranscripts.ts:95`),**去重用内容签名 `tool|${toolName}|${args}` 而非 id**(`:30-31`)。但工具 **id 跨 disk/live 稳定**(都是 `call_xxx`),`args` 快照却会漂(live `tool_use_start` 带部分/空 args 后续靠 `argsLive` 补、JSON key 序/空白差异)→ 签名不匹配 → live 副本当未覆盖留在 `liveTail`、disk 副本也在 `disk.messages` → 同一 `call_xxx` 进 `messages` 两次 → 落进一个 `turn_process_group.items` → `TurnProcessGroupCard:70` 重复 key。正解释了"automation session 反复重开、同一 `call_h5XLA...` 横跨 5+ 小时报、卡片卡死"。
+- **备注**:治本 = `mergeTranscripts` 拼好后按**稳定 id 去重**(`const seen=new Set(); messages=messages.filter(m=>!seen.has(m.id)&&(seen.add(m.id),true))`——只有 user/files_changed/goal 等用 fresh id 的本就内容键控、不会撞 id,安全);或把 tool 签名改成有 id 时用 id。治标(防御)= `TurnProcessGroupCard`(连带 MessageStream/ToolGroupCard)map 前按 id 去重 / key 改 `${m.kind}-${idx}-${m.id}`——挡住 React 崩白屏但不消重卡,需**与治本一起**。OOM(#5④)另见审查面板,非同一处。
 
-### 🔴 [2026-06-09] automation「update memory」工具卡一直显示/不收口(= #1 同根因实锤)
+### 🟢 [2026-06-09] automation「update memory」工具卡一直显示/不收口(= #1 同根因实锤)
 - **现象**:automation 美股晨报 session(`0hgSIulvUL97CKvJ`)的 `UpdateAutomationMemory`(UI 显示"update memory")卡片**一直显示、不收口**,反复打开该 session 都在。
 - **根因(实锤)**:该工具 call id `call_h5XLA2zR6hB0XHku81IAeRCg` 在 desktop 日志里**从 00:37 到 08:50 横跨 5+ 小时反复报** `Encountered two children with the same key, call_h5XLA2zR6hB0XHku81IAeRCg`(`TurnProcessGroupCard.tsx:70`)。session 本身 01:23 已正常 `turn_complete`+`session_title`,核心流程完结;是**渲染层 key 冲突**让卡片无法稳定 reconcile→卡住/重复,看起来像"一直在 update memory"。
-- **状态**:🔴 待修(与 #1 同一处 `TurnProcessGroupCard.tsx:70`,一起修)
+- **状态**:🟢 已修(2026-06-09,与 #1 同根因一起修:mergeTranscripts id 去重 + TurnProcessGroupCard `dedupeById`)
 - **日志证据**:`desktop-2026-06-09.log` 多行(2688/13294-13311 …);`engine-2026-06-09.log:307` UpdateAutomationMemory tool.exec.end ok=true(后端成功,纯前端渲染 bug)。
 - **备注**:automation session 更易触发重复 id(每次回看 replay 重建 group);修 key 后这两条一并验。
 
-### 🟡 [2026-06-09] 图片附件:缩略图不能放大、放大后有两个叉
+### 🟢 [2026-06-09] 图片附件:缩略图不能放大、放大后有两个叉
 - **现象**(#6):输入框里的图片缩略图没法点开放大;放大(lightbox)后出现**两个关闭叉按钮**。
-- **状态**:🟡 待修(体验缺陷,非阻塞)
-- **备注**:lightbox 关闭按钮重复渲染;缩略图加点击放大。
+- **状态**:🟢 已修(2026-06-09)
+- **备注**:已修 = ① 两个叉真因 = `Lightbox` 自身渲染了两个关闭按钮(工具栏内 `:182` + 浮动 fixed `:219`)→ 删掉浮动那个 + 清理死 CSS(`.lightbox-close` 全删,含 <720px media query);② ChatView 附件缩略图加 `onClick` → 打开 `Lightbox`(gallery 走全部 attachments,与 MessageStream 一致)。narrow-layout 测试改为断言「无 .lightbox-close 残留」,desktop 551 过、tsc+build 绿。
 
 ### 🟡 [2026-06-09] Undo 是文件维度整体回滚,非按对话轮
 - **现象**(#8):一次 undo 成功;但分两轮改的内容,undo 第一轮时**直接回滚了文件**(文件维度),而非按那一轮的改动粒度。问:codex 怎么做的?
@@ -108,9 +123,11 @@
 
 ### 🟡 [2026-06-09] 右上角图标不更新
 - **现象**(#10):某操作后右上角图标没更新(状态未刷新)。
-- **状态**:🟡 待查(信息较少)
+- **核实(2026-06-09,未能复现)**:右上角只有 2 个东西——StatusBadge busy/idle 点 + 面板开关按钮。逐一查证:① busy 点的清除路径**健壮**(`App.tsx:1140` `turn_complete`/`error` 且 `!agentId` → `setBusyForKey(target,false)`,且 route-table miss 有 `runningBucketRef` 兜底 :1066-1071;子 agent 的 turn_complete 带 agentId 被正确排除,不会误清/误标),没找到 mis-key;② 面板按钮 active 态 = 直接读 `panelRequest.open`,与开关同一布尔,截图里显示正确(高亮)。截图 step10 本身是**已完成/idle**态(SKILL 轮"已处理 6m29s"已收口),看不到卡住的帧。**结论:现有证据无法确认根因,不臆测修。**
+- **附带修(确有的潜在 desync)**:dock 内部用 tab-X 关面板时 `onClose` 只 set `open:false`、**漏 bump nonce + 漏清 kind**,与 `togglePanel` 契约不一致(`App.tsx:2263`)→ 已改成与 togglePanel 一致(bump nonce + kind:null)。这条不直接对应"图标不更新"(按钮读 .open 仍正确),但是真实潜伏 desync,顺手修掉。
+- **状态**:🟡 部分处理(潜在 desync 已修;**主症状需你补:是哪个图标 + 什么操作后**才能复现定位)
 - **截图**:`docs/assets/beta1-smoke/step10.png`
-- **备注**:看截图定位是哪个图标 / 哪个状态没刷。
+- **备注**:若你能说清"点了 X 之后,右上角哪个图标该变没变",我能立刻定位。当前不瞎改 busy 逻辑(它是对的),避免引入新 bug。
 
 ### ✅ 通过项(无须处理)
 - #2 新会话对话 ✅ ｜ #3 模型切换 ✅ ｜ #4 文件编辑 ✅ ｜ #9 设置页按项目选配置 ✅
@@ -119,38 +136,38 @@
 
 ## 🧭 引导 / 打断当前轮插入新 message 的渲染问题(2026-06-09)
 
-### 🔴 [2026-06-09] 打断旧轮、插入新 user message 后,缺「正在思考」态
+### 🟢 [2026-06-09] 打断旧轮、插入新 user message 后,缺「正在思考」态
 - **现象**:引导/对话中打断当前轮(ChatView 的「打断当前轮并发送这条输入」`ChatView.tsx:875`/`:595`),插入新 user message 后,**新一轮没有显示「正在思考」**(LiveActivityLine 该出的 live 态没出)。
-- **根因(待查)**:打断→立即起新轮时,旧轮 turn_end 与新轮 live 态切换的时序;疑似新轮的 `group.isLive` / LiveActivityLine 触发条件在"打断接力"路径下没点亮。涉 `App.tsx:1491 turn_end(reason:"stopped")` 后紧接新 run 的状态。
-- **状态**:🔴 待修
-- **备注**:对照正常发送路径(有思考态)与打断接力路径(无)的状态机差异。`LiveActivityLine.tsx` + `App.tsx` turn 状态。
+- **根因(已定位)**:thinking 行 `LiveActivityLine` 只在 `liveTurnActive = busy && state.streamingAssistantId !== null`(`App.tsx:2144`)时渲染。`streamingAssistantId` 只由 `stream_request_start` 置(`types.ts:315-324`),由 `turn_complete`/`error` 清(`:740`/`:761`),**`appendUserMessage` 不碰它**。打断接力路径(`forceSend`/`guideActiveQueuedInputAt`,`App.tsx:1444-1460`)= 入队 + `stop()`;`stop()`(`:1462-1493`)`setBusyForKey(false)` + dispatch `turn_end(stopped)`,但 **`turn_end` 不清 `streamingAssistantId`**(仍是旧轮的非空 id)。随后 drain effect(`:1431-1438`)`send()` 起新轮。被取消轮的尾部 abort `turn_complete`/`error` 此时才到、把 `streamingAssistantId` 清成 null,而新轮自己的 `stream_request_start` 可能还没来 → `busy && id!==null` 为 false → 不亮思考态(且存在清/置交错的竞态)。正常发送无此问题:上一轮已干净 `turn_complete` 清了 id,无迟到事件来踩。
+- **状态**:🟢 已修(2026-06-09)
+- **备注**:已修(方案 A)= ① `appendTurnEndMessage`(types.ts,turn_end reducer 路径)清掉 `streamingAssistantId`/`streamingThinkingId`(消灭陈旧非空 id);② `App.tsx` 抽 `liveTurnActive = busy && (streamingAssistantId!==null || 末条是 user)` 传给 ChatView——接力轮一 busy 就出"正在思考…"。types/streamGroups/mergeTranscripts/MessageStream/LiveActivityLine 78 测试过、tsc 绿。`LiveActivityLine.tsx` 未动。
 
-### 🔴 [2026-06-09] session 标题不落盘 → 重开/replay 后标题没了(automation 尤其明显)
+### 🟢 [2026-06-09] session 标题不落盘 → 重开/replay 后标题没了(automation 尤其明显)
 - **现象**:automation 触发的 session 之前有标题,现在没了(session `Rm3ROU7XiwPZcrDn`)。
-- **根因(实锤)**:`engine.ts:1862-1872` 标题生成后**只 `onStream({type:"session_title"})` 发事件,从不写 `session.state.title` 也不落盘**;且 `SessionState`(`types.ts:122`)**根本没有 title 字段**。对照 12 个 session 的 state.json **全部 `title:None`**(desktop/automation/subagent 都没存)——是全局持久化缺失,非 automation 专属,只是 automation replay 回看时最明显。标题只活在事件流里 → 侧边栏当时短暂显示,重开就没。
-- **次因**:标题生成在 `.then` 异步回调里,而 `:1881` 紧接着就把 `session.state` 落盘了 → 即便想写 state 也已错过这次落盘。
-- **状态**:🔴 待修
-- **日志证据**:`desktop-2026-06-07.log:8035` session_title 事件确实发了;但 `~/.code-shell/sessions/Rm3ROU7XiwPZcrDn/state.json` title=None。
-- **备注**:修法 = ① `SessionState` 加 `title?: string`;② `buildSessionTitle().then` 里写 `session.state.title` + `saveState`(或单独 patch state.json,避免与 :1881 落盘竞争);③ 加载/replay 时回填 title 到侧边栏。关联记忆 [[project_session_title_llm]]。
+- **根因(已纠正——LLM 标题其实活在 localStorage,只是不落盘)**:`engine.ts:1847-1874` 标题生成后**只 `onStream({type:"session_title"})`**、从不写 state、不落盘;`SessionState`(`types.ts:122-148`)**无 `title` 字段**(但有 `summary?: string`,:145,承载侧边栏标签)。**纠正"全部 title:None"的误判**:冷启时 `engine.ts:1246-1253` **会**写 `state.summary = 首条 user message(截 80 字)` 并 `saveState`(实测 state.json 有 `summary`)——只是没存 **LLM 生成的标题**。LLM 标题经 `App.tsx:1096-1110` 的 `session_title` handler → `renameSessionLocal` → `saveSessionIndex` 写进**渲染端 localStorage**,所以普通刷新它**在**;但 localStorage 被清(="disk作权威源恢复"路径)或走磁盘 rebuild(`sessions-service.ts:147-151` `title: state.summary || id`)时,LLM 标题没了——因为它从没写进磁盘。`session-titles-store.ts` 只接 `sessions:rename` 给调试用的 SessionsView,**不参与**自动标题流,别在它上面修。
+- **次因**:标题生成在 `.then` 异步回调里,而 `engine.ts:1892` 紧接着就把 `session.state` 落盘了 → 即便想写 state 也已错过这次落盘,`.then` 里需**自己再 `saveState`**。
+- **状态**:🟢 已修(2026-06-09)
+- **日志证据**:`desktop-2026-06-07.log:8035` session_title 事件确实发了;state.json 有 `summary`(首条消息)但无 LLM 标题。
+- **备注**:已修 = ① `SessionState` 加 `title?: string`;② `engine.ts` 的 `buildSessionTitle().then` 里 `session.state.title = title` + **自己 `saveState`**(因 .then 在 :1892 落盘之后才 resolve);③ `sessions-service.ts` 回填改 `title: state.title || state.summary || id`(`rebuildFromDisk` 读 `s.title` 自动跟随)→ 磁盘 rebuild 也能出 LLM 标题;`App.tsx:1096` localStorage 快路径不动。core 已 rebuild;sessions/rebuild 16 测试过、core+desktop tsc 绿。关联记忆 [[project_session_title_llm]]。
 
-### 🔴 [2026-06-09] 被打断的那一轮不该显示「已处理 Xs」折叠头,应直接平铺内容
+### 🟢 [2026-06-09] 被打断的那一轮不该显示「已处理 Xs」折叠头,应直接平铺内容
 - **现象**:被打断(stopped)的那一轮,UI 仍套了 Codex 式「已处理 X m Y s ⌄」折叠头(`TurnProcessGroupCard.tsx:48`);期望**被打断的轮不折叠耗时**,直接把已产生的内容展示出来。
-- **根因(已定位)**:`TurnProcessGroupCard` 无条件给 turn_process_group 渲染耗时头(`:36-48`),没区分该轮是否被 stopped 打断。
-- **状态**:🔴 待修
-- **备注**:被打断轮(turn_end reason="stopped")应跳过 process-group 耗时头、直接平铺 items;或不把被打断轮包进 process group。与 `TurnEndMessageView.tsx`(stopped 行)配合,别两处都显示。
+- **根因(已定位+证实)**:`TurnProcessGroupCard.tsx:50-62` 无条件给 turn_process_group 渲染耗时头(`label` 由 `:48` `processGroupLabel(elapsedMs)`)。被打断时 `stop()` 先 `setBusyForKey(false)` → `liveTurnActive` 转 false → 该轮走**闭合轮折叠路径** `foldTurnProcess` 折成普通耗时组,而 `turn_end(stopped)` 作为**平级兄弟消息**落在组**外**(由 `TurnEndMessageView.tsx:18-28` 渲成"你在 Ns 后停止了")。组的数据结构(`streamGroups.ts:49-80` `TurnProcessGroup`)**没有 stopped/reason 标志**,所以它不知道该轮被打断,照样套耗时头。
+- **状态**:🟢 已修(2026-06-09)
+- **备注**:已修 = ① `streamGroups.ts` 给 `TurnProcessGroup`/`Rendered…` 加 `stopped?: boolean`;`foldTurnProcess` 用新 `turnWasStopped()` 扫该轮 slice 尾部 `reason==="stopped"` 的 `turn_end` 置 `stopped:true`,并加进 `groupSignature` 防 reconcile 复用;② `TurnProcessGroupCard` `group.stopped` 时 `showHeader=false`、直接平铺 items;③ 停止标记仍由 `TurnEndMessageView`(组外)单独出,卡片内不重复。streamGroups 19 测试过(含 2 个新 stopped 用例)、tsc 绿。
 
 ### 🟡 [2026-06-09] 输入框被面板挤压时样式崩坏,缺最小宽度 + 底部控件压缩态
 - **现象**:打开侧边面板后聊天区/输入框被挤窄,输入框还继续压缩、底部那排控件(权限选择/Goal/附件/模型)挤成一团,样式很难看。
 - **期望**:① 输入框(及其容器)有**最小固定宽度**,压到阈值就不再缩(宁可面板那侧让位/横向滚动,也别把输入区压烂);② 底部控件设计**压缩态(窄屏)样式**——例如 `PermissionPill` 窄屏时**只显示 tone 颜色 icon、隐藏文字**(组件里已有 `h-2 w-2 rounded-full` tone 圆点 `PermissionPill.tsx:128`,把它提到收起态、用 `@container`/断点隐藏 `:107` 的 `<span>{label}</span>` 即可);Goal/模型同理可降级为 icon-only。
-- **状态**:🟡 待修(beta 体验项)
-- **备注**:相关 `ChatView.tsx` 输入区容器 + `chat/PermissionPill.tsx`、`chat/GoalToggle.tsx`。优先用容器查询(`@container`)按输入区实际宽度切换,而非全局视口断点(面板开合改变的是局部宽度)。与 #2.4 面板放大/窄屏适配同源,可一起做。
+- **状态**:🟢 已修(2026-06-09)
+- **备注**:已修 = composer 卡片(`ChatView.tsx`)加 `@container min-w-[300px]`(容器查询基准 + 最小宽度,`<main>` overflow-hidden 让面板侧让位);`PermissionPill` 窄屏(`@max-[480px]`)收起 label、露 tone 圆点,`GoalToggle`/`ModelPill` 窄屏 icon-only。用 **Tailwind v4 容器查询**(`@max-[480px]:` → 编译成 `@container not (min-width:480px)`,已验证进 CSS),按 composer 实际宽度切而非视口。desktop 551 过、tsc+build 绿。
 
-### 🔴 [2026-06-09] 已删除的项目目录(resume-plugin)反复"复活"为空壳,重启又出现
+### 🟢 [2026-06-09] 已删除的项目目录(resume-plugin)反复"复活"为空壳,重启又出现
 - **现象**:用户删了 `resume-plugin` 目录(两处:`代码学习/resume-plugin`、`代码学习/writeflow/resume-plugin`),但侧边栏/项目列表反复出现,重启后磁盘上又冒出来。
-- **根因(已定位)**:目录被**重建成空壳**(`ls` 两处都是 `total 0`,只有 `.`/`..`)。元凶 = 往 `<cwd>/.code-shell/` 写东西时用了 **`mkdirSync(..., {recursive:true})`**(`config.ts:70`、刚修的 `path-policy.ts`/`permission.ts` 持久化路径也是),当 cwd(=已删的 resume-plugin)不存在时,`recursive` 会**连父目录 cwd 一起建出来**。触发点:有 2 个 `origin=desktop status=completed` 的 session cwd 指向这两个 resume-plugin 路径(`s-mpz78z97-daa57dec`/`s-mpz77jez-2de8c61b`);加载/续跑/写 settings.local.json/权限规则时 mkdir recursive 复活目录,recents.json + trust.json 里又留着路径 → 侧边栏再显示。
-- **状态**:🔴 待修
+- **根因(已定位+补全,两套独立机制)**:目录被**重建成空壳**。**机制 A(磁盘复活)**:往 `<cwd>/.code-shell/` 写时 `mkdirSync(..., {recursive:true})`,cwd(=已删 resume-plugin)不存在时 recursive **连父目录 cwd 一起建**。两处现有 `existsSync(dir)` 守卫**无效**——它判的是 `.code-shell` 而非 cwd,cwd 没了守卫为假照样 mkdir。**全部 4 个 cwd 下 mkdir 站点**:`config.ts:70`(裸,无守卫)、`path-policy.ts:201`(recordPathApproval 项目级)、`permission.ts:405`(persistProjectRule)、`settings/manager.ts:288`(saveProjectSetting via projectSettingsPath)。**机制 B(侧边栏复活,即便没磁盘写也会)**:`sessions-service.ts:105-157` 列 session **不按 `existsSync(cwd)` 过滤** → 2 个指向 resume-plugin 的 completed session 总被返回 → `rebuildFromDisk.ts:38-40` 对"删了的真目录" `isNoRepoCwd` 为假、匹配不到 repo → `createRepoForCwd`(`repos.ts:164-173`,**只查 localStorage removed 名单、无 existsSync**)塞回侧边栏。`recents.json`/`trust.json`(`recents-store.ts`/`trust-store.ts`)读时也**无 existsSync 过滤**。
+- **状态**:🟢 已修(2026-06-09)
 - **证据**:磁盘两空目录;`recents.json`/`trust.json` 均含 resume-plugin 路径;2 个 session state.cwd 指向它。
-- **备注**:修法方向 = ① 写 `<cwd>/.code-shell/` 前先判 `existsSync(cwd)`,**cwd 本身不存在就别 mkdir/别写**(目录都没了说明项目已删,不该悄悄复活);② 加载 session / 刷 recents 时过滤掉 cwd 已不存在的条目(类似 [[project_disk_authoritative_recovery]] 的 isNoRepoCwd 过滤);③ recents/trust 提供清理。关联 [[project_draft_session_autojump_bug]]、[[project_disk_authoritative_recovery]]。
+- **备注**:已修 = ①(磁盘,core)4 个站点 mkdir 前判**父 `existsSync(cwd)`**:`config.ts`(返回 "does not exist" 错误)、`path-policy.ts`/`permission.ts`(best-effort `return`)、`settings/manager.ts saveProjectSetting`(`return`,空 cwd 仍按原 boundary throw)。区分合法新项目(cwd 在→照写)与复活已删项目(cwd 没→跳过)。②(加载,desktop)`listDiskSessions` 跳过 `state.cwd` 非空且不 `existsSync` 的(main 有 fs)→ 不再喂给 `createRepoForCwd`;`loadRecents` 读时过滤不存在路径自愈。core 已 rebuild。测试:config 2 新 pass、settings 13 pass、sessions disk 含新「删 cwd 过滤」用例全过(顺修旧 fixture 用真 cwd)、core+desktop tsc 绿。**未做**:trust.json 清理(二级,getTrust 按精确路径查,悬空项无害);boot 一次性 prune(加载侧过滤已足够自愈)。关联 [[project_draft_session_autojump_bug]]、[[project_disk_authoritative_recovery]]。
 
 ### 🟡 [2026-06-09] 图片细节(imageDetail / OpenAI detail)设置是否需要优化 — 待讨论
 - **现状**:`imageDetail` 是**全局三档枚举** `low｜high｜original`(`types.ts:441`、`schema.ts:477`),仅 OpenAI 兼容路径读取(`openai.ts:731/769` → `mapImageDetailToOpenAI`),Anthropic 不读。全局默认,可被项目设置覆盖。
@@ -163,30 +180,33 @@
 - **状态**:🟡 待讨论(非 bug,产品优化方向)
 - **备注**:先定"目标用户要不要懂这个参数"——若不要,默认 auto + 折叠进高级设置即可;若要,补语义化 + provider 适用性提示。`engine.ts:741-743` 有旧 images.detail→llm.imageDetail 迁移路径,改时注意兼容。
 
-### 🔴 [2026-06-09] 手机遥控:每次扫码都新建一个 browser/房间,不复用,越积越多
-- **现象**:手机遥控里出现一堆 browser(房间);用户每用浏览器扫一次码就**新存一个**,不复用。
-- **根因(实锤)**:`mobile-remote/room-manager.ts:85 createRoom` **每次都生成全新 id**(`room_${now}_${random}` :90)、无条件 `mkdirSync`+写新 `room.json`(:100-101),**没有任何"该设备/该 cwd 已有房间就复用"的判断**。扫码入口每次都走 createRoom → 房间无限累积。存储:`~/Library/Application Support/code-shell/mobile-remote/rooms/room_*/`。
-- **状态**:🔴 待修
-- **备注**:修法方向 = ① 扫码/配对时按 **deviceId(或 cwd+设备指纹)getOrCreate**,已有则复用、只刷 `lastActiveAt`,不新建;② 房间列表 UI 给**删除/清理**入口 + 闲置房间过期回收(注意记忆 [[project_background_shell]]「idle-sweep 绝不杀」是指后台 shell,不是房间,房间可回收);③ 二维码可绑定一个稳定 room/device 标识而非每次随机。关联手机遥控特性(见 TODO-week 📱 节,虽已整体降优,但这个无限累积是 bug 不是新特性)。
+### 🟢 [2026-06-09] 手机遥控:每次扫码都新建一个 browser/(设备),不复用,越积越多
+- **现象**:手机遥控里出现一堆 browser;用户每用浏览器扫一次码就**新存一个**,不复用。
+- **根因(已纠正——是"受信设备"累积,不是"房间")**:原假设"扫码走 createRoom"**有误**。**扫码/配对从不创建房间**——`createRoom`(`room-manager.ts:85`)只由 mobile UI 里手动点项目(`mobile-ui.ts:666` 发 `room.create`)/桌面 IPC 触发,且**房间本就有 listing + 14 天 idle 回收**(`pruneStaleRooms` `:241-252`,启动时 `index.ts:195-201` 接上),不会无限累积。**真凶在设备层**:扫码 token 一次性(`pairing.ts` consume 即删),每次扫码 client 发 `pair.complete` → `remote-host-manager.ts:147-155` 调 `devices.addDevice`,而 `trusted-device-store.ts:9-20` `addDevice` **每次都 push 全新 `randomUUID()` 设备、不按 `secretHash`/name 去重** → 每次新扫 = 多一个受信设备,无限累积在 trusted-devices JSON。正常回访 client 用 localStorage 存的 `cs.deviceId`/`cs.deviceSecret` 发 `auth.device` 复用,但**重扫二维码时**(URL 带 `?pairing=`,`mobile-ui.ts:547` 无条件优先 pairing token)、或清了 localStorage/换浏览器,就又 mint 新设备且不与旧的对账。
+- **状态**:🟢 已修(2026-06-09)
+- **备注**:已修(主)= `trusted-device-store.ts` `addDevice` 改按 `secretHash` **getOrCreate**:已有非吊销同 `secretHash` 设备就复用(刷 name/lastSeenAt)而非新 UUID,重扫即复用同行,从根上止住累积。测试:device-store 加 3 个新用例(重加复用 / 不同 hash 分立 / 吊销后重配新行)全过、tsc 绿。**未做(可选优化,非阻塞)**:client(`mobile-ui.ts:547`)优先用存的 `cs.deviceId` 再 auth;设备 prune/批量清理 UI(`revoke` 已有)。**房间无需新增 GC**(已自动回收;记忆 [[project_background_shell]]「idle-sweep 绝不杀」指后台 shell,与房间无关)。
 
 ### 🟡 [2026-06-09] 浏览器圈选标注:面板与新窗口不互通 + 再编辑时选区样式不回显
 - **现象**:UI 圈选(BrowserPanel 圈选/标注)在**浏览器面板**和**浏览器新窗口**之间**不互通**——各存各的,应该互通共享;且**再次编辑标注时,没把那一块 select 的样式回显**出来(看不到之前圈在哪)。
 - **根因(已定位)**:圈选状态 `selecting/picked/markers/editingMarker` 全是 `BrowserPanel.tsx:175-182` 的**组件本地 `useState`**,纯内存、不持久化、不跨实例/跨窗口共享。新窗口(`App.tsx:1829 new-window`,各自独立 BrowserWindow/renderer)起一个全新 BrowserPanel → markers 从空开始,看不到面板里圈的;再编辑时也没有从持久层取回 marker 的选区样式重绘高亮。
-- **状态**:🟡 待修(浏览器面板增强,非阻塞)
-- **备注**:修法方向 = ① 把 markers/选区**提到可共享的持久层**(主进程或 session 级 store),两个 renderer 都订阅同一份(类似 outboundTaps 镜像);② 编辑某 marker 时,按其 `selector`/`rect` 重新注入高亮脚本(PICKER_SCRIPT 已能按 selector 描述元素),把选区样式回显;③ 注意 webview 访客页无 preload(:76 注释),跨窗口同步要走主进程中转。与 #2.3「四面板内文件用外部 app 打开」同属 BrowserPanel 增强。
+- **状态**:🟢 已修(2026-06-09);"跨窗口共享" 经用户澄清**不需要**(见下)
+- **用户澄清(2026-06-09)**:归属规则 = **同 url 回显 / 不同 url 各是各的 / 每次聊天发送后又是新的**。这正是现有行为:`visibleMarkers` 按 `m.url===active.url` 过滤(同 url 回显、不同 url 分开 ✓),`codeshell:anchors-cleared`(send 时 `clearAnchors` 派发,`ChatView` send 路径 `onClearAnchors()`)→ `setMarkers([])`(发送即清 ✓)。所以**无需主进程跨窗口大 store**——markers 是 per-轮 + per-url 的临时态,本就该各窗口/各轮独立。
+- **备注**:真正缺的只是**编辑回显**(看不到之前圈在哪),已修:`PageMarker` 加 `selector` 字段、圈选提交时一并存;编辑某 marker 时新增 effect 向 guest 页 `executeJavaScript` 按 selector `querySelector` 注入 outline 高亮 + `scrollIntoView`,关闭/切换时清除(selector 不中就 no-op 容错)。tsc+build+551 测试绿。原"跨窗口共享主进程 store"方案**作废**(与用户 per-轮语义冲突)。
 
 ### 🟢 [2026-06-09] 本地环境设置:隐藏「清理脚本(cleanup)」UI — 配了不生效会误导
 - **现象**:设置→本地环境页有「清理脚本」输入框,但 cleanup **当前不自动收尾运行**(按决策没接),配了等于白配,UI 露出来会让用户以为生效(典型「看起来能配实际没用」半成品)。
 - **状态**:🟢 已做(2026-06-09)
 - **备注**:`AdvancedSections.tsx` 注释掉「清理脚本」`<LocalScriptEditor>` 卡片 + 移除 `cleanupTab` state + 顶部说明文案去掉 "cleanup"。**保留** `cleanupScripts` state 与保存逻辑(不丢已存数据),接上 cleanup 功能后恢复那段 JSX 即可。desktop tsc 绿。← 配套 §6.5「设置页 scope 收口/避免半成品」的 beta 前清理精神。
 
-### 🟡 [2026-06-09] 钩子设置页能力太弱 + 看不到插件(superpowers)hooks — 隐藏或改造,待定
+### 🟢 [2026-06-09] 钩子设置页能力太弱 + 看不到插件(superpowers)hooks — 已按方案 B 改造
 - **现象**:设置「钩子」页好像什么都干不了;按理应该能看到插件提供的 hooks 来管理,但 superpowers 等插件的 hooks 根本看不见。
 - **核实(2026-06-09)**:
   - **手写 project hook 其实生效**(`ProjectHooksEditor` 读写 `<repo>/.code-shell/settings.json` 的 `hooks`,引擎加载 settings hooks)——所以不是"完全无效"。
   - **但页面能力极弱**:只能列出 event+command、删除、或**让用户手敲一段 `{event,command}` JSON 添加**(`AdvancedSections.tsx:329-366`),无事件类型提示/校验/可视化。
   - **核心缺口**:**插件 hooks 看不到、管不了**。core 的 `loadPluginHooks`(`engine.ts:641`)确实加载插件 hooks 且受 `disabledPlugins` 控制(关插件=关其 hooks),但钩子页**只读手写的 `s.hooks`,完全不展示插件 hooks**。superpowers 的 hooks 在后台默默生效,UI 里既看不见也只能靠"整个禁用插件"来关。
-- **状态**:🔵 已定方案 B,待用户自己改(2026-06-09 决策:不隐藏,改造成真正的 hook 管理页)
+- **状态**:🟢 已改(2026-06-09,方案 B 落地)
+- **已修汇总**:① core 新增 `listPluginHooks(disabledPlugins)` 只读函数(复用 loadPluginHooks 的扫描,返回 {plugin,event,rawEvent,command,matcher,disabled})+ index.ts export + 3 单测(返回/disabled 标记/不 register);② 新 IPC `hooks:listPlugin`(main 直接 import core,仿 mcp:listMerged)+ preload `listPluginHooks` + types `PluginHookEntry`;③ `ProjectHooksEditor` 重做:合并展示「项目钩子(手写)+ 插件钩子(只读,标"由 xxx 插件提供[/已禁用]")」,**加 hook 改 event 下拉(7 个枚举)+ command 输入框**替掉裸 JSON textarea,插件钩子只读 + 提示「在插件页禁用整插件来关」。core rebuild;core 1026 过、desktop 551 过、tsc+build 绿。**未做(可选)**:单条插件 hook 细粒度启停(需扩 core `capabilityOverrides.hooks`,本轮只做整插件级 disabledPlugins)。
+- **(原)决策**:不隐藏,改造成真正的 hook 管理页(方案 B)
 - **改造清单(B)**:
   1. **合并展示**「手写 hooks(project settings.hooks)+ 插件提供的 hooks」。插件 hooks 来源 = core `loadPluginHooks`(`engine.ts:641`,扫每个已装插件的 `hooks/hooks.json`);需新增一条 IPC 让 renderer 拿到「已加载的插件 hooks 列表 + 各自来源插件名」(core 侧 `loadPluginHooks` 已有数据,补查询接口)。
   2. **插件 hooks 只读 + 标注来源**(「由 xxx 插件提供」),复用 6.2 MCP 页的 owner 标注模式(ownerPluginOf / 只读戳 / 不可在此编辑)。
@@ -194,4 +214,13 @@
   4. **插件 hook 启停**:走 `disabledPlugins`(整插件)或更细的 capabilityOverrides;至少让用户看到「这个插件的 hook 在跑」并能关。
 - **相关文件**:`AdvancedSections.tsx`(HooksSection/ProjectHooksEditor)、core `plugins/loadPluginHooks.ts` + 一条新 IPC、`preload/index.ts`。
 - **备注**:现状钩子页只读手写 `s.hooks`、靠裸 JSON 添加,且**完全不展示插件 hooks**(superpowers 的 hook 后台生效但 UI 看不见)。核实见上。关联 [[project_settings_hooks_memory_dream]](钩子仅项目级)、[[project_extensions_ui]](6.2 MCP owner 标注模式)。
+
+### 🟡 [2026-06-09] 本地环境页(隐藏 cleanup 后)UI 再优化一下
+- **现象**:隐藏「清理脚本」后,本地环境设置页(`ProjectEnvEditor`)的布局/层次需要重新优化,且仍有不合 desktop UI 约定的旧写法。
+- **可优化点(已核实)**:
+  1. **裸 `<textarea>` 违约**:沙箱区 writableRoots(`AdvancedSections.tsx:654`)、deniedReads(`:659`)仍是原生 `<textarea>` → 按 desktop CLAUDE.md「禁止手写 textarea,用 `@/components/ui` 的 Textarea」应替换(变量框 :611 已用 Textarea,这两处漏了)。
+  2. **旧手写 CSS class**:`settings-field`/`conn-field-hint`/`local-env-name`/`local-env-vars`/`local-env-advanced`/`env-settings-actions` 等是 legacy `styles/` 手写 class → 按约定应迁 Tailwind 工具类 + 语义 token(CLAUDE.md「不新增 styles/、用 Tailwind」)。
+  3. **层次/间距**:隐藏 cleanup 后只剩「名称 / 设置脚本 / 变量 / 沙箱(高级 details)/ 保存」,几块之间间距与分组重新平衡;「设置脚本」可考虑也收进高级或加更清晰的「仅 worktree 生效」标注(与变量/沙箱的「全项目生效」区分,见上面那条关于作用域的澄清)。
+- **状态**:🟢 已修(2026-06-09)
+- **备注**:已修 = ① writableRoots/deniedReads 两处裸 `<textarea>` → `@/components/ui` `Textarea`(与变量框统一 `font-mono text-sm resize-y`);② `ProjectEnvEditor` + `LocalScriptEditor` 全部 legacy class(`env-settings-*`/`local-env-*`)→ Tailwind 工具类 + 语义 token,外层 `flex flex-col gap-4` 统一节奏,沙箱区 `grid grid-cols-2 gap-4`,tab 按钮换 shadcn `Button variant=ghost`;③「设置脚本」加 **「仅 worktree 生效」** badge、变量区标「全项目生效」区分作用域;④ 删掉 connections.css 里 0-consumer 的 `env-settings-*`/`local-env-*` 死规则(符合 [[project_desktop_shadcn]] Phase D)。**共享的 `settings-field`/`settings-form-grid` 保留**(其他设置页还在用)。desktop 551 过、tsc+build 绿。坑:删 css 时留的注释里 `*/` 误闭合注释炸了 build,已改文案。
 
