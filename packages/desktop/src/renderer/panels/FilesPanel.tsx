@@ -14,21 +14,77 @@ const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "a
 /** SVG is text but we can render it directly as an image too. */
 const SVG_EXT = "svg";
 
+/** Strip a trailing slash (but keep the root "/"). */
+function noTrailingSlash(p: string): string {
+  return p.length > 1 ? p.replace(/\/+$/, "") : p;
+}
+
+/**
+ * Resolve a path from a chat link to an absolute path inside `root`. Accepts
+ * either an already-absolute path or one relative to root. Returns null if the
+ * result escapes the workspace root — those open in the OS editor instead, since
+ * the lazy tree can only reach files under root. POSIX-only (desktop targets
+ * macOS/Linux); no `..` normalization beyond the containment check, mirroring
+ * the main-side resolveWithin guard.
+ */
+function resolveUnderRoot(root: string, path: string): string | null {
+  const r = noTrailingSlash(root);
+  const abs = path.startsWith("/") ? noTrailingSlash(path) : `${r}/${path.replace(/^\.\//, "")}`;
+  if (abs !== r && !abs.startsWith(`${r}/`)) return null;
+  if (abs.includes("/../") || abs.endsWith("/..")) return null;
+  return abs;
+}
+
+/** Every ancestor directory of `file` between `root` and the file (inclusive of
+ *  root, exclusive of the file itself) — the dirs a lazy tree must open to
+ *  reveal the file. */
+function ancestorDirs(root: string, file: string): Set<string> {
+  const r = noTrailingSlash(root);
+  const rel = noTrailingSlash(file).slice(r.length + 1); // path under root
+  const parts = rel.split("/").slice(0, -1); // drop the filename
+  const dirs = new Set<string>([r]);
+  let acc = r;
+  for (const part of parts) {
+    acc = `${acc}/${part}`;
+    dirs.add(acc);
+  }
+  return dirs;
+}
+
 interface Props {
   /** Workspace root; null when no project is active. */
   cwd: string | null;
   /** Attach an image file to the composer by absolute path (TODO 2.1). */
   onAttachImage?: (absPath: string) => void;
+  /** A chat path-link asked to reveal this file; nonce re-fires on re-click. */
+  revealFile?: { path: string; cwd: string | null; nonce: number };
 }
 
 /**
  * File-browser panel, modeled on Codex's fs RPC tree: lazy directory
  * expansion (fs:readDir per level) + a capped text preview (fs:readFile).
  */
-export function FilesPanel({ cwd, onAttachImage }: Props) {
+export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const [treeOpen, setTreeOpen] = useState(true);
+  // Set of directory paths the tree should force-open so a deep file revealed
+  // by a chat path-link is visible. Replaced each request; DirNode reads it.
+  const [revealDirs, setRevealDirs] = useState<Set<string>>(() => new Set());
+
+  // A chat answer's path link was clicked: App focused this panel and handed us
+  // the file. Resolve to an absolute path under cwd, select it, and force every
+  // ancestor directory open so the tree reveals + scrolls to it. Keyed on the
+  // nonce so re-clicking the same file re-reveals, and so a freshly-created
+  // Files tab picks up a request that fired before it mounted. Paths that escape
+  // cwd can't live in this tree — App's openPath fallback handled those.
+  useEffect(() => {
+    if (!revealFile || !cwd) return;
+    const abs = resolveUnderRoot(cwd, revealFile.path);
+    if (!abs) return;
+    setSelected(abs);
+    setRevealDirs(ancestorDirs(cwd, abs));
+  }, [revealFile?.nonce, cwd]);
 
   if (!cwd) {
     return (
@@ -51,7 +107,7 @@ export function FilesPanel({ cwd, onAttachImage }: Props) {
             />
           </div>
           <div className="min-h-0 flex-1 overflow-auto py-1">
-            <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} onAttachImage={onAttachImage} />
+            <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} onAttachImage={onAttachImage} revealDirs={revealDirs} />
           </div>
         </div>
       )}
@@ -91,6 +147,7 @@ function DirNode({
   onSelect,
   filter,
   onAttachImage,
+  revealDirs,
 }: {
   root: string;
   dir: string;
@@ -99,10 +156,31 @@ function DirNode({
   onSelect: (p: string) => void;
   filter: string;
   onAttachImage?: (absPath: string) => void;
+  /** Directories to force-open (so a chat-linked deep file is revealed). */
+  revealDirs: Set<string>;
 }) {
   const [entries, setEntries] = useState<FsEntry[] | null>(null);
   // Top level auto-expands; deeper levels expand on click.
   const [open, setOpen] = useState<Set<string>>(new Set());
+
+  // Force-open child dirs on the path to a revealed file. Merges (never closes
+  // what the user opened by hand) and re-runs whenever a new reveal request
+  // arrives — the recursion then propagates down to the target's folder.
+  useEffect(() => {
+    if (revealDirs.size === 0) return;
+    setOpen((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const d of revealDirs) {
+        // Only open dirs that are direct children of THIS node's dir.
+        if (d.startsWith(`${dir}/`) && d.slice(dir.length + 1).indexOf("/") === -1 && !next.has(d)) {
+          next.add(d);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [revealDirs, dir]);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,6 +253,7 @@ function DirNode({
                   onSelect={onSelect}
                   filter={filter}
                   onAttachImage={onAttachImage}
+                  revealDirs={revealDirs}
                 />
               )}
             </div>
@@ -182,10 +261,14 @@ function DirNode({
         }
         const fileExt = (e.name.split(".").pop() ?? "").toLowerCase();
         const isImageFile = IMAGE_EXT.has(fileExt);
+        const isSelected = selected === e.path;
         return (
           <div key={e.path} className="group/file relative flex items-center">
             <button
               type="button"
+              // Scroll the row into view when it becomes selected from a chat
+              // path-link (the user can't see a deep file otherwise).
+              ref={isSelected ? (el) => el?.scrollIntoView({ block: "nearest" }) : undefined}
               style={pad}
               // Every file row is draggable onto the composer (TODO 2.1). The
               // drag payload is the absolute path under a custom MIME so the
@@ -200,7 +283,7 @@ function DirNode({
               className={`flex w-full items-center gap-1 py-1 ${
                 isImageFile && onAttachImage ? "pr-12" : "pr-7"
               } text-left text-sm hover:bg-accent ${
-                selected === e.path ? "bg-accent text-accent-foreground" : "text-foreground"
+                isSelected ? "bg-accent text-accent-foreground" : "text-foreground"
               }`}
               onClick={() => onSelect(e.path)}
             >

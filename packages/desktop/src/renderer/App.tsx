@@ -1575,6 +1575,10 @@ function App() {
   // The originating turn's diff snapshot (TODO 2.3a) — lets the review panel
   // show what that turn changed even after the edits are committed.
   const [reviewDiff, setReviewDiff] = useState<string | undefined>(undefined);
+  // File the Files panel should select + reveal, set when a chat answer's path
+  // link is clicked. The nonce re-fires reveal even when the same file is
+  // clicked twice, and lets a freshly-created Files tab pick it up on mount.
+  const [revealFile, setRevealFile] = useState<{ path: string; cwd: string | null; nonce: number } | undefined>(undefined);
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
@@ -1694,22 +1698,6 @@ function App() {
       } else if (mod && e.key.toLowerCase() === "b") {
         e.preventDefault();
         toggleSidebar();
-      } else if (!typing && mod && e.key.toLowerCase() === "t") {
-        // ⌘T — open browser panel in the dock
-        e.preventDefault();
-        openPanel("browser");
-      } else if (!typing && mod && e.shiftKey && e.key.toLowerCase() === "e") {
-        // ⌘⇧E — file panel (⌘P is taken by session search)
-        e.preventDefault();
-        openPanel("files");
-      } else if (!typing && e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "g") {
-        // ⌃⇧G — review / diff panel
-        e.preventDefault();
-        openPanel("review");
-      } else if (!typing && e.ctrlKey && e.code === "Backquote") {
-        // ⌃` — terminal panel (physical key for layout safety)
-        e.preventDefault();
-        openPanel("terminal");
       } else if (mod && e.key >= "1" && e.key <= "9") {
         // Cmd+N — jump to Nth session under active repo.
         const n = parseInt(e.key, 10) - 1;
@@ -1741,6 +1729,35 @@ function App() {
     };
     window.addEventListener("codeshell:review-files", onReview);
     return () => window.removeEventListener("codeshell:review-files", onReview);
+  }, []);
+
+  // A chat answer link (http/https) was clicked: open it in the in-app browser
+  // panel instead of the OS browser. BrowserPanel listens for the same event to
+  // open the URL in a new tab; here we just surface the dock + browser panel.
+  useEffect(() => {
+    const onOpenUrl = (): void => {
+      setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "browser", open: true }));
+    };
+    window.addEventListener("codeshell:open-url", onOpenUrl);
+    return () => window.removeEventListener("codeshell:open-url", onOpenUrl);
+  }, []);
+
+  // A chat answer's file path link was clicked: open it in the in-app Files
+  // panel. FilesPanel listens for the same event to select + reveal the file;
+  // here we just surface the dock + files panel.
+  useEffect(() => {
+    const onOpenFile = (e: Event): void => {
+      const detail = (e as CustomEvent<{ path?: string; cwd?: string | null }>).detail;
+      if (!detail?.path) return;
+      setRevealFile((prev) => ({
+        path: detail.path!,
+        cwd: detail.cwd ?? null,
+        nonce: (prev?.nonce ?? 0) + 1,
+      }));
+      setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "files", open: true }));
+    };
+    window.addEventListener("codeshell:open-file", onOpenFile);
+    return () => window.removeEventListener("codeshell:open-file", onOpenFile);
   }, []);
 
   // A panel pinned a comment anchor (diff line / browser element / file line).
@@ -2211,6 +2228,7 @@ function App() {
           requestKind={panelRequest.kind}
           reviewFiles={reviewFiles}
           reviewDiff={reviewDiff}
+          revealFile={revealFile}
           width={panelWidth}
           onResizeStart={beginPanelResize}
           onAttachImage={(p) => void attachImageByPath(p)}

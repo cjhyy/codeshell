@@ -44,7 +44,7 @@ import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import type { MobileClientEvent, RoomPublic } from "./mobile-remote/types.js";
 import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
-import { readDirectory, readFile as fsReadFile } from "./fs-service.js";
+import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import {
   getGitStatus,
   getGitNumstat,
@@ -1253,6 +1253,11 @@ ipcMain.handle("fs:readFile", async (_e, root: string, path: string) => {
   if (typeof root !== "string" || !root) throw new Error("fs:readFile requires root");
   if (typeof path !== "string" || !path) throw new Error("fs:readFile requires path");
   return fsReadFile(root, path);
+});
+ipcMain.handle("fs:exists", async (_e, root: string, path: string) => {
+  if (typeof root !== "string" || !root) return false;
+  if (typeof path !== "string" || !path) return false;
+  return fsFileExists(root, path);
 });
 
 ipcMain.handle("settings:get", async (_e, scope: SettingsScope, cwd?: string) => {

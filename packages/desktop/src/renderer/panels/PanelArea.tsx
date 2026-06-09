@@ -46,6 +46,8 @@ interface Props {
   reviewFiles?: string[];
   /** The originating turn's diff snapshot — survives later commits (TODO 2.3a). */
   reviewDiff?: string;
+  /** File a chat path-link asked to reveal in the Files panel (nonce re-fires). */
+  revealFile?: { path: string; cwd: string | null; nonce: number };
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
   engineSessionId?: string | null;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
@@ -56,11 +58,11 @@ interface Props {
   onAttachImage?: (absPath: string) => void;
 }
 
-const KINDS: { kind: PanelTab; label: string; Icon: typeof FolderTree; hint?: string }[] = [
-  { kind: "files", label: "文件", Icon: FolderTree, hint: "⌘⇧E" },
-  { kind: "browser", label: "浏览器", Icon: Globe, hint: "⌘T" },
-  { kind: "review", label: "审查", Icon: GitCompare, hint: "⌃⇧G" },
-  { kind: "terminal", label: "终端", Icon: SquareTerminal, hint: "⌃`" },
+const KINDS: { kind: PanelTab; label: string; Icon: typeof FolderTree }[] = [
+  { kind: "files", label: "文件", Icon: FolderTree },
+  { kind: "browser", label: "浏览器", Icon: Globe },
+  { kind: "review", label: "审查", Icon: GitCompare },
+  { kind: "terminal", label: "终端", Icon: SquareTerminal },
   { kind: "shells", label: "后台 Shell", Icon: ServerCog },
   { kind: "rooms", label: "房间", Icon: MessagesSquare },
 ];
@@ -91,6 +93,7 @@ export function PanelArea({
   requestKind,
   reviewFiles,
   reviewDiff,
+  revealFile,
   engineSessionId,
   width,
   onResizeStart,
@@ -225,11 +228,10 @@ export function PanelArea({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            {KINDS.map(({ kind, label, Icon, hint }) => (
+            {KINDS.map(({ kind, label, Icon }) => (
               <DropdownMenuItem key={kind} onSelect={() => addTab(kind)}>
                 <Icon className="mr-2 h-4 w-4" />
                 <span className="flex-1">{label}</span>
-                {hint && <span className="ml-4 text-xs text-muted-foreground">{hint}</span>}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -257,7 +259,7 @@ export function PanelArea({
         ) : (
           tabs.map((t) => (
             <Slot key={t.id} active={t.id === activeId}>
-              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} engineSessionId={engineSessionId} onAttachImage={onAttachImage} />
+              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} engineSessionId={engineSessionId} onAttachImage={onAttachImage} />
             </Slot>
           ))
         )}
@@ -271,7 +273,7 @@ function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center p-6">
       <div className="grid w-full max-w-md grid-cols-2 gap-3">
-        {KINDS.map(({ kind, label, Icon, hint }) => (
+        {KINDS.map(({ kind, label, Icon }) => (
           <button
             key={kind}
             type="button"
@@ -280,7 +282,6 @@ function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
           >
             <Icon className="h-7 w-7 text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">{label}</span>
-            {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
           </button>
         ))}
       </div>
@@ -294,6 +295,7 @@ function PanelBody({
   repoId,
   reviewFiles,
   reviewDiff,
+  revealFile,
   engineSessionId,
   onAttachImage,
 }: {
@@ -302,12 +304,13 @@ function PanelBody({
   repoId: string | null;
   reviewFiles?: string[];
   reviewDiff?: string;
+  revealFile?: { path: string; cwd: string | null; nonce: number };
   engineSessionId?: string | null;
   onAttachImage?: (absPath: string) => void;
 }) {
   switch (tab.kind) {
     case "files":
-      return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} />;
+      return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} revealFile={revealFile} />;
     case "browser":
       return <BrowserPanel cwd={cwd} />;
     case "review":

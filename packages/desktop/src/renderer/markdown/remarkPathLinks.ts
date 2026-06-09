@@ -20,9 +20,12 @@
  *     the IPC layer can surface line info to editors that understand
  *     it.
  *
- * The walker only touches `text` nodes that live OUTSIDE existing
- * link / inlineCode / code blocks so we don't break syntax highlight
- * or rewrite already-clickable links.
+ * The walker touches `text` nodes that live outside existing link / fenced
+ * code blocks. For `inlineCode` (a single-backtick span) it makes ONE
+ * exception: when the whole span is exactly a path (the model's most common
+ * way of writing one, e.g. `packages/x/foo.ts`), the span itself becomes a
+ * clickable path link. Inline code that isn't a lone path — prose, a flag, a
+ * symbol — is left as a normal <code> so highlighting/formatting is untouched.
  */
 
 interface MdastNode {
@@ -81,6 +84,60 @@ const PATH_LINE_RE = new RegExp(`${QUOTED}|${BARE}`, "g");
 
 const SKIP_PARENTS = new Set(["link", "linkReference", "inlineCode", "code"]);
 
+// Whole-string path matcher for an inlineCode span. The span is already
+// delimited by the backticks, so (unlike the bare matcher) the path may contain
+// spaces and needs no surrounding boundary — we just require the entire value
+// to BE a path ending in an extension, optionally followed by :line[:col].
+// Group 1 = path, group 2 = line. A path here is EITHER:
+//   - a multi-segment path (has a "/"):  packages/x/foo.ts, /abs/a b.png
+//   - a bare filename (no "/"):          README.md, package.json, TODO.md
+// The bare-filename case is gated below by a known-extension whitelist so prose
+// like `obj.method` or `a.b` isn't mistaken for a file.
+// Matches: `packages/x/foo.ts`, `/abs/a b.png`, `src/x.ts:42`, `README.md`.
+// Doesn't: `npm run build`, `--flag`, `useState` (no "."), `obj.method` (ext
+// not whitelisted).
+const INLINE_CODE_PATH_RE = new RegExp(
+  `^((?:(?:\\/|\\.{1,2}\\/|[\\w@.-]+\\/)[^\\n:]*?|[\\w][\\w.-]*?)\\.([\\w]{1,8}))(?::(\\d+)(?::\\d+)?)?$`,
+);
+
+// Extensions that make a BARE filename (no directory) confidently a file. A
+// path WITH a "/" needs no whitelist — the separator already disambiguates it
+// from prose. Kept broad but real: code, config, docs, common assets.
+const KNOWN_FILE_EXT = new Set([
+  // code
+  "ts", "tsx", "js", "jsx", "mjs", "cjs", "json", "py", "rs", "go", "java",
+  "kt", "rb", "php", "c", "h", "cpp", "hpp", "cc", "cs", "swift", "sh", "bash",
+  "zsh", "sql", "css", "scss", "less", "html", "vue", "svelte", "lua", "dart",
+  // config / data
+  "toml", "yaml", "yml", "ini", "env", "lock", "xml", "gradle", "properties",
+  // docs
+  "md", "mdx", "markdown", "txt", "rst", "pdf",
+  // assets
+  "png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "csv", "tsv",
+]);
+
+/** If an inlineCode value is exactly one path, return {path, line}; else null. */
+function inlineCodePath(value: string): { path: string; line?: string } | null {
+  const m = INLINE_CODE_PATH_RE.exec(value.trim());
+  if (!m) return null;
+  const path = m[1]!;
+  const ext = (m[2] ?? "").toLowerCase();
+  const hasSlash = path.includes("/");
+  if (hasSlash) {
+    // Reject a domain-shaped first segment (example.com/x.html) — that's a URL,
+    // not a workspace path. Mirrors decodeLocalPathHref's guard.
+    const firstSeg = path.split("/", 1)[0] ?? "";
+    if (!path.startsWith("/") && !path.startsWith(".") && firstSeg.includes(".")) {
+      return null;
+    }
+  } else if (!KNOWN_FILE_EXT.has(ext)) {
+    // Bare filename: only link when the extension is a known file type, so
+    // `obj.method` / `a.b` / `v1.2` stay as plain code.
+    return null;
+  }
+  return { path, line: m[3] };
+}
+
 function makePathLink(pathPart: string, line: string | undefined): MdastNode {
   // Encode into a URL the markdown anchor renderer can recognise.
   const href = line
@@ -132,6 +189,15 @@ function walk(node: MdastNode, parentType: string | null): void {
       const replacement = splitTextNode(child);
       if (replacement) {
         for (const r of replacement) next.push(r);
+        continue;
+      }
+    }
+    // A backtick path span — `packages/x/foo.ts` — becomes a clickable link.
+    // (The node never recurses into walk() since inlineCode has no children.)
+    if (child.type === "inlineCode" && child.value) {
+      const hit = inlineCodePath(child.value);
+      if (hit) {
+        next.push(makePathLink(hit.path, hit.line));
         continue;
       }
     }

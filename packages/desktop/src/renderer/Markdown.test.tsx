@@ -4,15 +4,17 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Markdown } from "./Markdown";
 
 describe("Markdown", () => {
-  test("renders standard local path markdown links as clickable file links", () => {
+  test("renders a path reference as plain text until existence is confirmed", () => {
+    // Path links are now existence-gated: PathLink renders plain text and only
+    // upgrades to a clickable <a class="md-file-link"> after an async
+    // fs:exists check resolves true. renderToStaticMarkup runs no effects /
+    // IPC, so the initial render is plain text — never a dead link.
     const html = renderToStaticMarkup(
       <Markdown text="- [Foo.tsx](/Users/me/app/src/Foo.tsx:81): updated" />,
     );
 
-    expect(html).toContain('data-path-link="true"');
-    expect(html).toContain('class="md-file-link"');
     expect(html).toContain("Foo.tsx");
-    expect(html).toContain("/Users/me/app/src/Foo.tsx:81");
+    expect(html).not.toContain('data-path-link="true"');
     expect(html).not.toContain('node="[object Object]"');
   });
 
@@ -39,14 +41,17 @@ describe("Markdown", () => {
     expect(html).not.toContain("codeshell-path:");
   });
 
-  test("keeps external links as normal links while allowing internal path links", () => {
+  test("keeps external links as normal links; path text renders inline", () => {
     const html = renderToStaticMarkup(
       <Markdown text="外部 [site](https://example.com) 内部 packages/core/src/index.ts" />,
     );
 
+    // External link stays a normal anchor.
     expect(html).toContain('href="https://example.com"');
-    expect(html).toContain("codeshell-path:");
-    expect(html).toContain('data-path-link="true"');
+    // The internal path renders as text (clickability is existence-gated and
+    // resolved async — not present in a static render).
+    expect(html).toContain("packages/core/src/index.ts");
+    expect(html).not.toContain('data-path-link="true"');
   });
 
   test("long code blocks collapse with an expand toggle (TODO 2.6)", () => {

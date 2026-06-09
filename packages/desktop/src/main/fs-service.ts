@@ -89,6 +89,28 @@ export interface FileContent {
   size: number;
 }
 
+/**
+ * Does `path` (absolute or relative to `root`) resolve to an existing regular
+ * file inside the workspace root? Used to decide whether a path mentioned in an
+ * answer should render as a clickable file link. Returns false — never throws —
+ * for a missing file, a directory, or a path that escapes the root, so the
+ * renderer can treat "unknown" as "not clickable".
+ */
+export async function fileExists(root: string, path: string): Promise<boolean> {
+  try {
+    // A path from an answer link is often RELATIVE (`README.md`,
+    // `packages/x/y.ts`); resolveWithin only accepts a path already under root,
+    // so join a non-absolute path onto root first. (readDir/readFile always get
+    // absolute paths from the tree, so they never needed this.)
+    const target = path.startsWith("/") ? path : join(root, path);
+    const real = await resolveWithin(root, target);
+    const stat = await fs.stat(real);
+    return stat.isFile();
+  } catch {
+    return false;
+  }
+}
+
 export async function readFile(root: string, path: string): Promise<FileContent> {
   const real = await resolveWithin(root, path);
   path = real;

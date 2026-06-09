@@ -342,6 +342,8 @@ export interface CodeshellApi {
   readDir(root: string, dir: string): Promise<FsEntry[]>;
   /** Read a text file (capped at 2 MB; binary/oversize → text null). */
   readFileContent(root: string, path: string): Promise<FileContent>;
+  /** Does this path resolve to an existing file inside root? Never throws. */
+  fileExists(root: string, path: string): Promise<boolean>;
 
   // ── Browser popout window ─────────────────────────────────────────────
   /** Open the standalone browser window, optionally at an initial URL. */

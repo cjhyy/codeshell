@@ -81,44 +81,45 @@ function MarkdownImpl({ text, cwd }: Props) {
             if (localDecoded && classifyPath(localDecoded.path) === "image") {
               return <InlineImageLink path={localDecoded.path} cwd={cwd} />;
             }
-            const pathTarget = decoded ? formatPathTarget(decoded.path, decoded.line) : "";
-            const showPathTarget = localDecoded !== null;
+            // A path reference: render it as a file link ONLY if the file
+            // actually exists in the workspace (checked async in PathLink).
+            // Missing files fall back to plain text, so a path the model
+            // invented — or `obj.method` shaped like a path — never becomes a
+            // dead link. The link shows just the filename; hover reveals the
+            // full path.
+            if (isPathLink && decoded) {
+              return (
+                <PathLink
+                  path={decoded.path}
+                  line={decoded.line}
+                  cwd={cwd}
+                  isScheme={schemeDecoded !== null}
+                >
+                  {children}
+                </PathLink>
+              );
+            }
             return (
               <a
                 href={href}
                 {...rest}
-                {...(isPathLink ? { "data-path-link": "true" } : {})}
-                className={isPathLink ? "md-file-link" : rest.className}
-                title={isPathLink ? pathTarget : rest.title}
                 onClick={(e) => {
                   if (!href) return;
-                  e.preventDefault();
-                  if (href.startsWith(CODESHELL_PATH_SCHEME) && decoded) {
-                    const arg = decoded.line
-                      ? `${decoded.path}:${decoded.line}`
-                      : decoded.path;
-                    void window.codeshell.openPath(arg);
-                    return;
-                  }
-                  if (localDecoded) {
-                    void window.codeshell.openPath(pathTarget, cwd ?? undefined);
-                    return;
-                  }
                   if (/^https?:/i.test(href)) {
-                    void window.codeshell.openExternal(href);
+                    e.preventDefault();
+                    // Open web links in the in-app browser panel, not the OS
+                    // browser. Holding ⌘/Ctrl falls back to the external browser.
+                    if (e.metaKey || e.ctrlKey) {
+                      void window.codeshell.openExternal(href);
+                    } else {
+                      window.dispatchEvent(
+                        new CustomEvent("codeshell:open-url", { detail: { url: href } }),
+                      );
+                    }
                   }
                 }}
               >
-                {isPathLink ? (
-                  <>
-                    <span className="md-file-link-label">{children}</span>
-                    {showPathTarget && (
-                      <span className="md-file-link-target">{pathTarget}</span>
-                    )}
-                  </>
-                ) : (
-                  children
-                )}
+                {children}
               </a>
             );
           },
@@ -142,8 +143,110 @@ function MarkdownImpl({ text, cwd }: Props) {
 
 export const Markdown = memo(MarkdownImpl);
 
-function formatPathTarget(path: string, line?: number): string {
-  return line ? `${path}:${line}` : path;
+/** Last path segment — the filename we show as the link label. */
+function basename(path: string): string {
+  const parts = path.replace(/\/+$/, "").split("/");
+  return parts[parts.length - 1] || path;
+}
+
+/** Resolve a (possibly relative) path against cwd into an absolute path for the
+ *  hover tooltip. Absolute paths pass through; relative joins onto cwd. */
+function toAbsolute(path: string, cwd?: string | null): string {
+  if (path.startsWith("/")) return path;
+  if (!cwd) return path;
+  return `${cwd.replace(/\/$/, "")}/${path.replace(/^\.\//, "")}`;
+}
+
+// Existence-check cache: keyed by `${cwd}\0${path}`. A path can appear many
+// times across a transcript; this keeps repeated answers from re-hitting the
+// fs:exists IPC for the same file. Holds a Promise so concurrent mounts of the
+// same path share one in-flight check.
+const existsCache = new Map<string, Promise<boolean>>();
+function checkExists(cwd: string | null, path: string): Promise<boolean> {
+  const root = cwd ?? "";
+  const key = `${root}\0${path}`;
+  let p = existsCache.get(key);
+  if (!p) {
+    // No workspace root → can't resolve a relative path; treat absolute-only.
+    p = root || path.startsWith("/")
+      ? window.codeshell.fileExists(root || "/", path).catch(() => false)
+      : Promise.resolve(false);
+    existsCache.set(key, p);
+  }
+  return p;
+}
+
+/**
+ * A file path mentioned in an answer. We confirm the file EXISTS in the
+ * workspace before making it clickable — a path the model invented, or a
+ * dotted token shaped like a path (`obj.method`), resolves to nothing and
+ * stays plain text. When it does exist the label is just the filename;
+ * hovering shows the full (absolute) path. Click opens it in the Files panel;
+ * ⌘/Ctrl-click escapes to the OS editor.
+ */
+function PathLink({
+  path,
+  line,
+  cwd,
+  isScheme,
+  children,
+}: {
+  path: string;
+  line?: number;
+  cwd?: string | null;
+  /** True when the link came from the codeshell-path: scheme (vs a local href). */
+  isScheme: boolean;
+  children?: React.ReactNode;
+}) {
+  // null = still checking; true/false once known. While checking we render
+  // plain text (no flash of a link that might turn out dead).
+  const [exists, setExists] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setExists(null);
+    void checkExists(cwd ?? null, path).then((ok) => {
+      if (!cancelled) setExists(ok);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [path, cwd]);
+
+  // Not (yet) a known-existing file → render the original text, unstyled.
+  if (exists !== true) {
+    return <span>{children}</span>;
+  }
+
+  const abs = toAbsolute(path, cwd);
+  const tooltip = line ? `${abs}:${line}` : abs;
+  const label = basename(path);
+
+  return (
+    <a
+      href="#"
+      data-path-link="true"
+      className="md-file-link"
+      title={tooltip}
+      onClick={(e) => {
+        e.preventDefault();
+        const toOsEditor = e.metaKey || e.ctrlKey;
+        if (toOsEditor) {
+          const arg = line ? `${path}:${line}` : path;
+          // Scheme links resolve relative paths in main; local links need cwd.
+          void window.codeshell.openPath(arg, isScheme ? undefined : cwd ?? undefined);
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("codeshell:open-file", {
+              detail: { path, cwd: cwd ?? null },
+            }),
+          );
+        }
+      }}
+    >
+      <span className="md-file-link-label">{label}</span>
+    </a>
+  );
 }
 
 /**

@@ -313,6 +313,29 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
     setActiveId(tab.id);
   }, []);
 
+  // A chat answer link (http/https) was clicked: App opens/focuses this panel,
+  // and we open the URL in a new tab here. If the only tab is the blank landing,
+  // load into it rather than stacking an empty tab in front of it.
+  useEffect(() => {
+    const onOpenUrl = (e: Event): void => {
+      const url = (e as CustomEvent<{ url?: string }>).detail?.url;
+      if (!url) return;
+      const norm = normalizeUrl(url);
+      if (!norm) return;
+      setTabs((prev) => {
+        if (prev.length === 1 && prev[0].url === NEW_TAB) {
+          setActiveId(prev[0].id);
+          return [{ ...prev[0], url: norm, draft: norm }];
+        }
+        const tab = freshTab(norm);
+        setActiveId(tab.id);
+        return [...prev, tab];
+      });
+    };
+    window.addEventListener("codeshell:open-url", onOpenUrl);
+    return () => window.removeEventListener("codeshell:open-url", onOpenUrl);
+  }, []);
+
   const closeTab = useCallback(
     (id: string) => {
       setTabs((prev) => {

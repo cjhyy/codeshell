@@ -562,6 +562,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   // ── Filesystem (file-browser panel) ───────────────────────────────────
   readDir: (root: string, dir: string) => ipcRenderer.invoke("fs:readDir", root, dir),
   readFileContent: (root: string, path: string) => ipcRenderer.invoke("fs:readFile", root, path),
+  /** Does this path resolve to an existing file inside root? Never throws. */
+  fileExists: (root: string, path: string): Promise<boolean> =>
+    ipcRenderer.invoke("fs:exists", root, path),
 
   // ── Browser popout window ─────────────────────────────────────────────
   /** Open the standalone browser window, optionally at an initial URL. */
