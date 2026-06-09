@@ -318,6 +318,17 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       return { ...s, title: event.title as string | undefined };
     }
 
+    case "user_message": {
+      // History replay surfaces past user turns as a synthetic event so the
+      // same reducer rebuilds the full conversation (the live path uses
+      // appendUserMessage instead, since the phone echoes locally).
+      const [id, s2] = freshId("u");
+      return {
+        ...s2,
+        items: [...s2.items, { kind: "user", id, text: (event.text as string) ?? "" }],
+      };
+    }
+
     default:
       // Unknown / not-displayed events (session_started, usage_update,
       // context_compact, tombstone, …) are no-ops.

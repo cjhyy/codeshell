@@ -20,6 +20,12 @@ export interface PairingToken {
   expiresAt: number;
 }
 
+/** Where a remembered permission grant applies (mirrors desktop approve). */
+export type ApprovalScope = "once" | "session" | "project";
+/** Path breadth for a remembered grant (path-scoped tools only). */
+export type ApprovalPathScope = "file" | "dir" | "tool";
+export type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
+
 export type MobileClientEvent =
   | { type: "auth.device"; deviceId: string; secretHash: string }
   | { type: "pair.complete"; token: string; name: string; secretHash: string }
@@ -27,7 +33,32 @@ export type MobileClientEvent =
   | { type: "session.select"; sessionId: string }
   | { type: "session.create" }
   | { type: "run.stop"; sessionId?: string }
-  | { type: "approval.respond"; approvalId: string; decision: "approve" | "reject"; sessionId?: string }
+  // Approval — full desktop parity: deny reason, AskUser answer, remembered
+  // scope (once/session/project) + path scope (file/dir/tool).
+  | {
+      type: "approval.respond";
+      approvalId: string;
+      decision: "approve" | "reject";
+      sessionId?: string;
+      reason?: string;
+      answer?: string;
+      scope?: ApprovalScope;
+      pathScope?: ApprovalPathScope;
+    }
+  // ── Sessions: see every desktop session, open its history, drive it ──────
+  | { type: "session.list" }
+  | { type: "session.history"; sessionId: string }
+  // ── Capability controls ──────────────────────────────────────────────────
+  | { type: "permission.setMode"; sessionId?: string; mode: PermissionMode }
+  | { type: "model.set"; model: string }
+  | {
+      type: "goal.extend";
+      sessionId: string;
+      addTurns?: number;
+      addTokenBudget?: number;
+      addTimeBudgetMs?: number;
+      addStopBlocks?: number;
+    }
   // ── Rooms (resident external-agent sessions) ──────────────────────────
   | { type: "room.list" }
   | { type: "room.projects" }
@@ -56,6 +87,13 @@ export type MobileServerEvent =
       body: string;
     }
   | { type: "error"; message: string }
+  // ── Sessions ──────────────────────────────────────────────────────────
+  | { type: "session.list.ok"; sessions: MobileSessionMeta[]; activeSessionId?: string }
+  | { type: "session.history.ok"; sessionId: string; events: unknown[] }
+  // ── Capability controls ──────────────────────────────────────────────────
+  | { type: "permission.mode"; sessionId?: string; mode: PermissionMode }
+  | { type: "model.current"; model: string; available?: string[] }
+  | { type: "goal.extended"; sessionId: string; ok: boolean; message?: string }
   // ── Rooms ─────────────────────────────────────────────────────────────
   | { type: "room.list.ok"; rooms: RoomPublic[] }
   | { type: "room.projects.ok"; projects: { path: string; name: string }[] }
@@ -73,4 +111,13 @@ export interface RoomPublic {
   createdAt: number;
   lastActiveAt: number;
   open: boolean;
+}
+
+/** A desktop session the phone can see + drive (from listDiskSessions). */
+export interface MobileSessionMeta {
+  id: string;
+  title: string;
+  cwd: string;
+  updatedAt: number;
+  origin: "desktop" | "automation";
 }

@@ -48,6 +48,8 @@ import { AccessPasscode } from "./mobile-remote/access-passcode.js";
 import type { MobileClientEvent, RoomPublic } from "./mobile-remote/types.js";
 import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
+import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
+import type { PermissionMode } from "./mobile-remote/types.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import {
   getGitStatus,
@@ -243,6 +245,10 @@ try {
  */
 let mobileSessionId: string | undefined;
 let mobileSelectedSessionId: string | undefined;
+/** Phone-chosen permission mode, applied to the next mobile-initiated run.
+ *  stream-json/desktop runs can't pop per-call prompts, so the phone sets a
+ *  preset (default | acceptEdits | bypassPermissions) that rides on agent/run. */
+let mobilePermissionMode: PermissionMode = "default";
 function ensureMobileSessionId(): string {
   if (!mobileSessionId) {
     mobileSessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -285,12 +291,14 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
     const cwd = ctx.cwd ?? process.cwd();
     // Every phone chat turn is a normal CodeShell turn routed through the worker
     // run path. (External claude CLI is reached via Rooms, not a chat slash.)
+    // The phone-selected permission mode rides on the run (presets, since the
+    // desktop run path can still pop approvals which the phone answers).
     bridge.injectWorkerMessage(
       JSON.stringify({
         jsonrpc: "2.0",
         id: `mobile-run-${Date.now()}`,
         method: "agent/run",
-        params: { task: event.text, cwd, sessionId },
+        params: { task: event.text, cwd, sessionId, permissionMode: mobilePermissionMode },
       }),
     );
     // Tell the phone which session this turn landed in (so it can label the
@@ -299,17 +307,29 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
     return;
   }
   if (event.type === "approval.respond") {
+    // Build the same ApprovalResult branch the renderer's preload assembles:
+    // approve carries optional answer (AskUser) + remembered scope/pathScope;
+    // reject carries an optional reason. Decisions still go through the core
+    // permission engine — the remote host never bypasses it (design §6).
+    let decision: Record<string, unknown>;
+    if (event.decision === "approve") {
+      const branch: Record<string, unknown> = { approved: true };
+      if (event.answer !== undefined) branch.answer = event.answer;
+      if (event.scope && event.scope !== "once") {
+        branch.always = true;
+        branch.scope = event.scope;
+        if (event.pathScope && event.pathScope !== "tool") branch.pathScope = event.pathScope;
+      }
+      decision = branch;
+    } else {
+      decision = { approved: false, reason: event.reason };
+    }
     bridge.injectWorkerMessage(
       JSON.stringify({
         jsonrpc: "2.0",
         id: `mobile-approve-${Date.now()}`,
         method: "agent/approve",
-        params: {
-          sessionId: resolveSessionId(event.sessionId),
-          requestId: event.approvalId,
-          decision:
-            event.decision === "approve" ? { approved: true } : { approved: false },
-        },
+        params: { sessionId: resolveSessionId(event.sessionId), requestId: event.approvalId, decision },
       }),
     );
     return;
@@ -323,6 +343,69 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
         params: { sessionId: resolveSessionId(event.sessionId) },
       }),
     );
+    return;
+  }
+  if (event.type === "session.list") {
+    // Every desktop session the sidebar would show (top-level, existing cwd).
+    const { sessions } = await listDiskSessions({ limit: 100 });
+    mobileRemote.broadcast({
+      type: "session.list.ok",
+      sessions: sessions.map((s) => ({
+        id: s.id,
+        title: s.title,
+        cwd: s.cwd,
+        updatedAt: s.updatedAt,
+        origin: s.origin,
+      })),
+      activeSessionId: mobileSelectedSessionId ?? ctx.sessionId,
+    });
+    return;
+  }
+  if (event.type === "session.history") {
+    try {
+      const events = await buildSessionHistory(event.sessionId);
+      mobileRemote.broadcast({ type: "session.history.ok", sessionId: event.sessionId, events });
+    } catch (err) {
+      mobileRemote.broadcast({
+        type: "error",
+        message: `读取会话历史失败: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    }
+    return;
+  }
+  if (event.type === "permission.setMode") {
+    mobilePermissionMode = event.mode;
+    mobileRemote.broadcast({ type: "permission.mode", sessionId: event.sessionId, mode: event.mode });
+    return;
+  }
+  if (event.type === "model.set") {
+    bridge.injectWorkerMessage(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: `mobile-model-${Date.now()}`,
+        method: "agent/configure",
+        params: { model: event.model },
+      }),
+    );
+    mobileRemote.broadcast({ type: "model.current", model: event.model });
+    return;
+  }
+  if (event.type === "goal.extend") {
+    bridge.injectWorkerMessage(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: `mobile-goalext-${Date.now()}`,
+        method: "agent/goalExtend",
+        params: {
+          sessionId: event.sessionId,
+          addTurns: event.addTurns,
+          addTokenBudget: event.addTokenBudget,
+          addTimeBudgetMs: event.addTimeBudgetMs,
+          addStopBlocks: event.addStopBlocks,
+        },
+      }),
+    );
+    mobileRemote.broadcast({ type: "goal.extended", sessionId: event.sessionId, ok: true });
     return;
   }
 }

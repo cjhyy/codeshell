@@ -157,6 +157,28 @@ test("appendUserMessage 追加用户气泡", () => {
   expect(s.items[0]).toMatchObject({ kind: "user", text: "hello" });
 });
 
+test("user_message(history 回放)重建用户气泡", () => {
+  const s = feed([{ type: "user_message", text: "之前问的" }]);
+  expect(s.items[0]).toMatchObject({ kind: "user", text: "之前问的" });
+});
+
+test("完整 history 回放重建一轮对话", () => {
+  // 模拟 transcript 投影出的事件序列(user → stream_request_start → text →
+  // tool start/result → turn_complete)。
+  const s = feed([
+    { type: "user_message", text: "看看仓库" },
+    { type: "stream_request_start", turnNumber: 1 },
+    { type: "text_delta", text: "好的" },
+    { type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: { file_path: "package.json" } } },
+    { type: "tool_result", result: { id: "t1", result: "{...}" } },
+    { type: "turn_complete", reason: "completed" },
+  ]);
+  expect(s.items.map((i) => i.kind)).toEqual(["user", "assistant", "tool"]);
+  expect(s.run).toBe("completed");
+  expect((s.items[1] as Extract<ChatItem, { kind: "assistant" }>).text).toBe("好的");
+  expect((s.items[2] as Extract<ChatItem, { kind: "tool" }>).done).toBe(true);
+});
+
 test("ids 确定性(不依赖 Date.now/random)", () => {
   const a = feed([ev({ type: "error", error: "e" }), ev({ type: "error", error: "e" })]);
   const b = feed([ev({ type: "error", error: "e" }), ev({ type: "error", error: "e" })]);
