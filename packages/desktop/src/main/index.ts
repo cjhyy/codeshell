@@ -1215,6 +1215,7 @@ ipcMain.handle(
         await mobileRemote.stop();
         throw new Error(
           `公网隧道启动失败:${err instanceof Error ? err.message : String(err)}`,
+          { cause: err },
         );
       }
     }

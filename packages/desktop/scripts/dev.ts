@@ -15,7 +15,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { createServer as createViteServer } from "vite";
+import { build as viteBuild, createServer as createViteServer } from "vite";
 import esbuild from "esbuild";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -48,6 +48,18 @@ async function startMobileVite(): Promise<void> {
   await server.listen(MOBILE_PORT);
   // eslint-disable-next-line no-console
   console.log(`[dev] vite dev server (mobile):   ${MOBILE_URL}`);
+}
+
+/** Public tunnel mode cannot use the mobile Vite dev server: HMR websocket and
+ * @fs module URLs break through trycloudflare and leak local path-shaped module
+ * names. Build a static copy once so tunnel mode has a reliable fallback while
+ * LAN dev can still use MOBILE_DEV_URL + HMR. */
+async function buildMobileStaticFallback(): Promise<void> {
+  await viteBuild({
+    configFile: resolve(root, "vite.mobile.config.ts"),
+  });
+  // eslint-disable-next-line no-console
+  console.log("[dev] mobile static fallback built: out/mobile");
 }
 
 let electronProc: ChildProcess | null = null;
@@ -154,6 +166,7 @@ async function buildAndWatch(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  await buildMobileStaticFallback();
   await startVite();
   await startMobileVite();
   await buildAndWatch();

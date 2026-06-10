@@ -1,5 +1,6 @@
 // One-off smoke test: boot the Electron app and switch into each of the four
 // new panels (files/browser/review/terminal), asserting each mounts.
+/* global document, localStorage */
 import { _electron as electron } from "playwright";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
