@@ -1,30 +1,42 @@
 import React from "react";
+import { GenConnectionsPanel, type GenPanelConfig, type ProviderMeta } from "./GenConnectionsPanel";
 
-/**
- * Video-generation connections (TODO 7.1).
- *
- * Deliberately a placeholder for now: the core `videoGen.providers[]` schema +
- * GenerateVideo tool + VideoProvider submit/poll/download interface all exist,
- * but NO concrete adapter is wired yet (VIDEO_PROVIDER_KINDS is empty —
- * Seedance/Kling need accurate private-API endpoint+auth docs). A full
- * configure/test panel here would test against a backend that can't generate
- * video, so we show the honest state instead of a broken form. Swap this for a
- * real grid (mirroring ImageGenConnectionsPanel) once getVideoProvider() gains
- * a case.
- */
-export function VideoGenConnectionsPanel(_props: {
-  scope: "user" | "project";
-  activeRepoPath: string | null;
-}) {
-  return (
-    <div className="connections-card-grid">
-      <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-        视频生成 provider 暂未接入。核心已就绪(<code>videoGen.providers[]</code> schema、
-        GenerateVideo 工具、submit/poll/download 适配器接口),仅缺具体厂商适配器
-        (即梦 / Seedance、可灵 / Kling 等私有 API 的端点与鉴权)。拿到准确文档、
-        在 <code>getVideoProvider()</code> 加 case 后,这里会换成与「图片生成」一致的
-        配置 / 测试 / 默认 provider 面板。
-      </div>
-    </div>
-  );
+const VIDEO_PROVIDERS: ProviderMeta[] = [
+  {
+    id: "fal",
+    kind: "fal",
+    displayName: "fal.ai (Kling 等)",
+    description:
+      "通过 fal.ai 统一 API 调用 Kling/字节等视频模型。需要 fal key；模型 id 决定底层模型与文生/图生。",
+    defaultBaseUrl: "https://queue.fal.run",
+    defaultModel: "fal-ai/kling-video/v3/pro/text-to-video",
+    signupUrl: "https://fal.ai/dashboard/keys",
+  },
+  {
+    id: "jimeng",
+    kind: "jimeng",
+    displayName: "即梦 / 火山引擎",
+    description: "即梦同源视频模型。",
+    defaultBaseUrl: "",
+    defaultModel: "",
+    disabled: true,
+    comingSoonNote:
+      "即将支持。core 已预留 videoGen schema 与 submit/poll/download 接口,待接入火山引擎 AK/SK 签名适配器后开放。",
+  },
+];
+
+const VIDEO_CONFIG: GenPanelConfig = {
+  settingsKey: "videoGen",
+  providers: VIDEO_PROVIDERS,
+  showTest: false,
+  labels: {
+    testIdle: "",
+    testBusy: "",
+    testTitleConfigured: "",
+    keyHint: "保存于 ~/.code-shell/settings.json，按 scope 隔离。生成的视频较慢,提交后台轮询,完成会通知。",
+  },
+};
+
+export function VideoGenConnectionsPanel({ scope, activeRepoPath }: { scope: "user" | "project"; activeRepoPath: string | null }) {
+  return <GenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} config={VIDEO_CONFIG} />;
 }
