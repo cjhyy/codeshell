@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
+import { useToast } from "../ui/ToastProvider";
 
 interface Props {
   cwd: string;
@@ -28,6 +29,7 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const retry = () => setReloadKey((k) => k + 1);
   const confirm = useConfirm();
   const alert = useAlert();
+  const toast = useToast();
   useEffect(() => {
     let alive = true;
     setPlugins(null);
@@ -64,6 +66,26 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
       onChanged();
     } catch (e) {
       void alert({ title: "卸载失败", message: String((e as Error)?.message ?? e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+  const update = async (p: PluginSummary) => {
+    setBusy(p.installKey);
+    try {
+      const r = await window.codeshell.updatePlugin(p.name);
+      setReloadKey((k) => k + 1);
+      onChanged();
+      // The update is fetched but not hot-reloaded — prompt to reload so the
+      // running session picks up the new plugin code/skills (aligns with CC).
+      toast(
+        r.updated
+          ? { message: `已更新 “${p.name}”，重载后生效`, variant: "success" }
+          : { message: `“${p.name}”：${r.reason}` },
+      );
+    } catch (e) {
+      // Atomic in core — the old version is kept on failure.
+      void alert({ title: "更新失败", message: String((e as Error)?.message ?? e) });
     } finally {
       setBusy(null);
     }
@@ -114,6 +136,7 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => void update(p)}>更新</DropdownMenuItem>
               <DropdownMenuItem
                 className="text-status-err focus:text-status-err"
                 onSelect={() => void uninstall(p)}

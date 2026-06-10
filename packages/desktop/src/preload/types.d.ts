@@ -502,6 +502,8 @@ export interface CodeshellApi {
     pluginName: string,
     marketplaceName: string,
   ): Promise<{ ok: boolean; removedFromManifest: boolean; removedFromDisk: boolean }>;
+  /** Re-install a plugin from its recorded source (manual update). Atomic in core. */
+  updatePlugin(name: string): Promise<{ updated: boolean; reason: string }>;
   /** List known plugin marketplaces (never throws — returns [] on read error). */
   listMarketplaces(): Promise<
     Array<{

@@ -92,7 +92,7 @@ import {
   readSkillBody,
   uninstallSkill,
 } from "./skills-service.js";
-import { listPlugins, uninstallPluginEntry } from "./plugins-service.js";
+import { listPlugins, uninstallPluginEntry, updatePluginEntry } from "./plugins-service.js";
 import {
   listMarketplacesForUi,
   loadMarketplaceForUi,
@@ -910,6 +910,9 @@ ipcMain.handle(
     return uninstallPluginEntry(pluginName, marketplaceName);
   },
 );
+ipcMain.handle("plugins:update", async (_e, name: string) => {
+  return updatePluginEntry(name);
+});
 ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
 ipcMain.handle("marketplace:load", async (_e, name: string) =>
   loadMarketplaceForUi(name),

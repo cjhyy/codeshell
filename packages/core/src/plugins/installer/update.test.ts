@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -7,6 +7,14 @@ import { updatePluginByName } from "./update.js";
 import { installPluginFromPath } from "./install.js";
 import { installPluginFromSource } from "./installFromSource.js";
 import { parseSource } from "./parseSource.js";
+import { PluginInstallError } from "./types.js";
+
+/** Any leftover backup dirs (`.bak-*`) in the plugins root — must be empty after both success and failure. */
+function leftoverBaks(home: string): string[] {
+  const root = join(home, ".code-shell", "plugins");
+  if (!existsSync(root)) return [];
+  return readdirSync(root).filter((n) => n.includes(".bak-"));
+}
 
 describe("updatePluginByName", () => {
   let home: string, src: string, prev: string | undefined;
@@ -45,10 +53,36 @@ describe("updatePluginByName", () => {
     expect(r.updated).toBe(true);
   });
 
-  test("a failed reinstall throws a clear error noting the plugin was removed", async () => {
+  test("a failed reinstall is atomic: old plugin is kept, error says so", async () => {
+    const installed = join(home, ".code-shell", "plugins", "u");
+    const metaPath = join(installed, ".cs-meta.json");
+    const before = readFileSync(metaPath, "utf-8");
     // Corrupt the source so installPluginFromPath fails during the reinstall.
     writeFileSync(join(src, ".codex-plugin", "plugin.json"), "{ not valid json");
-    await expect(updatePluginByName("u", "t2", true)).rejects.toThrow(/was removed during reinstall/);
+
+    await expect(updatePluginByName("u", "t2", true)).rejects.toThrow(PluginInstallError);
+    // The OLD version must still be intact (dir + meta + converted agent file).
+    expect(existsSync(installed)).toBe(true);
+    expect(existsSync(metaPath)).toBe(true);
+    expect(readFileSync(metaPath, "utf-8")).toBe(before);
+    expect(existsSync(join(installed, "agents", "a.md"))).toBe(true);
+    // No backup dir leftover in the plugins root.
+    expect(leftoverBaks(home).length).toBe(0);
+  });
+
+  test("a failed reinstall error mentions the old version was kept (not removed)", async () => {
+    writeFileSync(join(src, ".codex-plugin", "plugin.json"), "{ not valid json");
+    await expect(updatePluginByName("u", "t2", true)).rejects.toThrow(/\bkept\b/);
+    await expect(updatePluginByName("u", "t2", true)).rejects.not.toThrow(/was removed/);
+  });
+
+  test("a successful reinstall leaves the new version and no .bak leftover", async () => {
+    writeFileSync(join(src, ".codex-plugin", "plugin.json"), JSON.stringify({ name: "u", version: "3.0.0" }));
+    const r = await updatePluginByName("u", "t2", false);
+    expect(r.updated).toBe(true);
+    const meta = JSON.parse(readFileSync(join(home, ".code-shell", "plugins", "u", ".cs-meta.json"), "utf-8"));
+    expect(meta.version).toBe("3.0.0");
+    expect(leftoverBaks(home).length).toBe(0);
   });
 });
 
@@ -93,5 +127,33 @@ describe("updatePluginByName (remote source)", () => {
     const meta = JSON.parse(readFileSync(join(home, ".code-shell", "plugins", "rem", ".cs-meta.json"), "utf-8"));
     expect(meta.source).toBe(raw);
     expect(existsSync(join(home, ".code-shell", "plugins", "rem"))).toBe(true);
+  });
+
+  test("a failed remote reinstall is atomic: old clone is restored", async () => {
+    mkdirSync(join(repo, "skills", "s"), { recursive: true });
+    writeFileSync(join(repo, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nv1");
+    const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
+    const run = (args: string[]) => execFileSync("git", args, { cwd: repo, env, stdio: "pipe" });
+    run(["init", "-q"]);
+    run(["config", "user.email", "t@t.t"]);
+    run(["config", "user.name", "t"]);
+    run(["add", "-A"]);
+    run(["commit", "-q", "-m", "init"]);
+
+    const raw = `file://${repo}`;
+    await installPluginFromSource(parseSource(raw), "rem", "t1");
+    const installed = join(home, ".code-shell", "plugins", "rem");
+    const skillBefore = readFileSync(join(installed, "skills", "s", "SKILL.md"), "utf-8");
+
+    // Destroy the repo so the re-clone fails during the reinstall.
+    rmSync(repo, { recursive: true, force: true });
+
+    await expect(updatePluginByName("rem", "t2", false)).rejects.toThrow(PluginInstallError);
+    // OLD remote install must still be intact and unchanged.
+    expect(existsSync(installed)).toBe(true);
+    expect(existsSync(join(installed, ".cs-meta.json"))).toBe(true);
+    expect(readFileSync(join(installed, "skills", "s", "SKILL.md"), "utf-8")).toBe(skillBefore);
+    const root = join(home, ".code-shell", "plugins");
+    expect(readdirSync(root).filter((n) => n.includes(".bak-")).length).toBe(0);
   });
 });

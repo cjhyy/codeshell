@@ -14,7 +14,7 @@
  * installPath has disappeared.
  */
 
-import { listInstalled, uninstallPlugin } from "@cjhyy/code-shell-core";
+import { listInstalled, uninstallPlugin, updatePluginByName, type UpdateResult } from "@cjhyy/code-shell-core";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 
@@ -139,5 +139,19 @@ export function uninstallPluginEntry(
     throw new Error("uninstallPluginEntry requires marketplaceName");
   }
   return uninstallPlugin(pluginName, marketplaceName);
+}
+
+/**
+ * Re-install a plugin from its recorded source (the manual "update" button).
+ * `name` is the bare plugin name — the same key `pluginInstallDir` uses, which
+ * is what PluginSummary.name carries. Core stamps the install timestamp; we
+ * pass `force` so a CC plugin (no version to diff) can be re-pulled on demand.
+ * The reinstall is atomic in core — a failed update keeps the old version.
+ */
+export async function updatePluginEntry(name: string): Promise<UpdateResult> {
+  if (typeof name !== "string" || !name) {
+    throw new Error("updatePluginEntry requires a plugin name");
+  }
+  return updatePluginByName(name, new Date().toISOString(), true);
 }
 
