@@ -25,6 +25,8 @@ const root = resolve(cwd, "..");
 
 const VITE_PORT = 5273;
 const VITE_URL = `http://localhost:${VITE_PORT}`;
+const MOBILE_PORT = 5373;
+const MOBILE_URL = `http://localhost:${MOBILE_PORT}`;
 
 async function startVite(): Promise<void> {
   const server = await createViteServer({
@@ -32,7 +34,18 @@ async function startVite(): Promise<void> {
   });
   await server.listen(VITE_PORT);
   // eslint-disable-next-line no-console
-  console.log(`[dev] vite dev server: ${VITE_URL}`);
+  console.log(`[dev] vite dev server (renderer): ${VITE_URL}`);
+}
+
+/** Second vite dev server for the mobile remote app (HMR on the phone).
+ *  RemoteHostManager proxies /mobile/* here when MOBILE_DEV_URL is set. */
+async function startMobileVite(): Promise<void> {
+  const server = await createViteServer({
+    configFile: resolve(root, "vite.mobile.config.ts"),
+  });
+  await server.listen(MOBILE_PORT);
+  // eslint-disable-next-line no-console
+  console.log(`[dev] vite dev server (mobile):   ${MOBILE_URL}`);
 }
 
 let electronProc: ChildProcess | null = null;
@@ -48,6 +61,9 @@ function spawnElectron(): void {
     env: {
       ...process.env,
       VITE_DEV_URL: VITE_URL,
+      // RemoteHostManager proxies /mobile/* to the mobile vite dev server for
+      // HMR; unset in prod where it reads static out/mobile.
+      MOBILE_DEV_URL: MOBILE_URL,
       // Silence Electron's "no/loose CSP" devtools warning. CSP is set
       // by main via webRequest.onHeadersReceived, which Electron's check
       // doesn't inspect — it only reads <meta http-equiv="CSP">, so a
@@ -137,6 +153,7 @@ async function buildAndWatch(): Promise<void> {
 
 async function main(): Promise<void> {
   await startVite();
+  await startMobileVite();
   await buildAndWatch();
 }
 

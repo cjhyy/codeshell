@@ -5,7 +5,10 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/renderer/*"]
+      "@/*": ["src/renderer/*"],
+      "@ui/*": ["src/renderer/components/ui/*"],
+      "@protocol": ["src/main/mobile-remote/types.ts"],
+      "@mobile/*": ["src/mobile/*"]
     },
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
@@ -20,5 +23,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/mobile"]
 }

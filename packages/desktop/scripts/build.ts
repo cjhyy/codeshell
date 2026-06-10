@@ -48,10 +48,18 @@ async function buildRenderer(): Promise<void> {
   });
 }
 
+/** The phone/iPad remote web app — a separate vite root (src/mobile → out/mobile),
+ *  served as static assets by RemoteHostManager. See vite.mobile.config.ts. */
+async function buildMobile(): Promise<void> {
+  await viteBuild({
+    configFile: resolve(root, "vite.mobile.config.ts"),
+  });
+}
+
 async function main(): Promise<void> {
-  await Promise.all([buildMain(), buildPreload(), buildRenderer()]);
+  await Promise.all([buildMain(), buildPreload(), buildRenderer(), buildMobile()]);
   // eslint-disable-next-line no-console
-  console.log("[build] all three sub-builds OK");
+  console.log("[build] all four sub-builds OK");
 }
 
 main().catch((err) => {

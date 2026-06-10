@@ -1,0 +1,29 @@
+/*
+ * Mobile remote app styles. We REUSE the renderer's Tailwind v4 token system
+ * verbatim (@import "tailwindcss" + the shadcn zinc tokens + @theme inline +
+ * the .dark variant), so the shared shadcn components (@ui/*) render with the
+ * exact same look as the desktop renderer. Dark mode is the `.dark` class on
+ * <html> (set in index.html — the phone app is always dark).
+ *
+ * Importing the renderer stylesheet (rather than copying it) keeps a single
+ * source of truth for the design tokens. The CLAUDE.md rule "do not ADD files
+ * under src/renderer/styles/" is about authoring new legacy CSS there — we only
+ * read the existing token file.
+ */
+@import "../renderer/styles/tailwind.css";
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: hsl(var(--cs-background));
+  color: hsl(var(--cs-foreground));
+  height: 100dvh;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
