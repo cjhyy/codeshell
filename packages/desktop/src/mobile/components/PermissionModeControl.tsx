@@ -23,14 +23,14 @@ export function PermissionModeControl({
     onChange(m);
   };
   return (
-    <div className="flex items-center gap-1 rounded-full border border-border bg-card p-0.5">
+    <div className="mobile-tab-strip flex items-center gap-1 rounded-full p-0.5">
       {MODES.map(([m, label]) => (
         <button
           key={m}
           type="button"
           onClick={() => pick(m)}
           className={cn(
-            "rounded-full px-2 py-0.5 text-[11px]",
+            "rounded-full px-2 py-1 text-[11px] transition-colors",
             mode === m
               ? m === "bypassPermissions"
                 ? "bg-status-err/15 text-status-err"

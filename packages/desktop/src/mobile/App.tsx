@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DoorOpen, LogOut, Menu, MessageSquare, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import { useRemoteApp } from "@mobile/hooks/useRemoteApp";
@@ -10,6 +11,7 @@ import { Composer } from "@mobile/components/Composer";
 import { SessionList } from "@mobile/components/SessionList";
 import { RoomList } from "@mobile/components/RoomList";
 import { PermissionModeControl } from "@mobile/components/PermissionModeControl";
+import { basename } from "@mobile/lib/format";
 
 const WIDE = "(min-width: 820px)";
 
@@ -45,16 +47,16 @@ export function App() {
       onDone={() => setDrawer(null)}
       // On a tablet the side pane shows both lists stacked; on phone the drawer
       // shows the one the user tapped.
-      which={wide ? "both" : drawer ?? "sessions"}
+      which={wide ? "both" : (drawer ?? "sessions")}
     />
   );
 
   return (
-    <div className="flex h-dvh flex-col bg-background text-foreground">
+    <div className="mobile-shell flex h-dvh flex-col text-foreground">
       <TopBar app={app} wide={wide} onOpenDrawer={(w) => setDrawer(w)} />
 
       {app.notice && (
-        <div className="border-b border-status-err/40 bg-status-err/10 px-3 py-1.5 text-xs text-status-err">
+        <div className="border-b border-status-err/40 bg-status-err/10 px-3 py-2 text-xs text-status-err">
           {app.notice}
         </div>
       )}
@@ -62,19 +64,22 @@ export function App() {
       <div className="flex min-h-0 flex-1">
         {/* Tablet: persistent left pane. Phone: drawer overlay. */}
         {wide && (
-          <aside className="w-72 shrink-0 border-r border-border">{sidePane}</aside>
+          <aside className="mobile-panel w-80 shrink-0 border-r border-border/70">{sidePane}</aside>
         )}
         {!wide && drawer && (
           <div className="fixed inset-0 z-20 flex">
-            <div className="w-[78%] max-w-sm bg-background shadow-xl">{sidePane}</div>
-            <div className="flex-1 bg-black/40" onClick={() => setDrawer(null)} />
+            <div className="mobile-drawer w-[82%] max-w-sm">{sidePane}</div>
+            <div
+              className="flex-1 bg-black/55 backdrop-blur-[2px]"
+              onClick={() => setDrawer(null)}
+            />
           </div>
         )}
 
-        <main className="flex min-h-0 flex-1 flex-col">
+        <main className="mobile-main flex min-h-0 flex-1 flex-col">
           <ApprovalsArea app={app} />
           {app.chat.goal && (
-            <div className="flex items-center gap-2 border-b border-border bg-card/50 px-3 py-1.5 text-xs">
+            <div className="flex items-center gap-2 border-b border-border/70 bg-card/45 px-3 py-2 text-xs">
               <span className="text-muted-foreground">{app.chat.goal}</span>
               {app.activeSessionId && (
                 <Button
@@ -111,35 +116,66 @@ function TopBar({
   onOpenDrawer: (w: "sessions" | "rooms") => void;
 }) {
   const title = app.activeRoom ? app.activeRoom.name : app.chat.title || "对话";
+  const activeSession = app.sessions.find((s) => s.id === app.activeSessionId);
+  const subtitle = app.activeRoom
+    ? basename(app.activeRoom.cwd)
+    : activeSession?.cwd
+      ? basename(activeSession.cwd)
+      : app.activeSessionId
+        ? "桌面会话"
+        : "新会话";
   return (
     <header
-      className="flex items-center gap-2 border-b border-border bg-card/80 px-3 py-2 backdrop-blur"
-      style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+      className="mobile-topbar flex items-center gap-2 px-3 py-2.5"
+      style={{ paddingTop: "max(0.625rem, env(safe-area-inset-top))" }}
     >
       {!wide && (
-        <Button size="sm" variant="ghost" onClick={() => onOpenDrawer("sessions")}>
-          ☰
+        <Button
+          aria-label="打开会话"
+          className="mobile-icon-button"
+          size="icon"
+          variant="outline"
+          onClick={() => onOpenDrawer("sessions")}
+        >
+          <Menu />
         </Button>
       )}
-      <div className="grid size-6 shrink-0 place-items-center rounded-md bg-primary text-xs font-black text-primary-foreground">
+      <div className="mobile-logo grid size-8 shrink-0 place-items-center rounded-lg text-xs font-black text-white">
         C
       </div>
-      {app.activeRoom && (
-        <span className="rounded-full border border-border px-1.5 text-[10px] text-muted-foreground">
-          房间
-        </span>
-      )}
-      <span className="truncate text-sm font-semibold">{title}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          {app.activeRoom && (
+            <span className="rounded-full border border-status-ok/35 bg-status-ok/10 px-1.5 text-[10px] font-medium text-status-ok">
+              房间
+            </span>
+          )}
+          <span className="truncate text-sm font-semibold leading-5">{title}</span>
+        </div>
+        <div className="truncate text-[11px] leading-4 text-muted-foreground">{subtitle}</div>
+      </div>
       <div className="ml-auto flex items-center gap-2">
         {app.activeRoom && (
-          <Button size="sm" variant="ghost" onClick={app.leaveRoom}>
-            退出房间
+          <Button
+            aria-label="退出房间"
+            className="mobile-icon-button"
+            size="icon"
+            variant="outline"
+            onClick={app.leaveRoom}
+          >
+            <DoorOpen />
           </Button>
         )}
         <StatusBar conn={app.status} run={app.chat.run} />
         {!wide && (
-          <Button size="sm" variant="ghost" onClick={() => onOpenDrawer("rooms")}>
-            房间
+          <Button
+            aria-label="打开房间"
+            className="mobile-icon-button"
+            size="icon"
+            variant="outline"
+            onClick={() => onOpenDrawer("rooms")}
+          >
+            <MessageSquare />
           </Button>
         )}
       </div>
@@ -186,10 +222,16 @@ function SidePane({
     />
   );
   const footer = (
-    <div className="flex items-center gap-2 border-t border-border px-3 py-2 text-xs text-muted-foreground">
+    <div className="mobile-safe-bottom flex items-center gap-2 border-t border-border/70 px-3 pt-2 text-xs text-muted-foreground">
       <span className="truncate">{app.deviceName || "设备"}</span>
-      <Button size="sm" variant="ghost" className="ml-auto h-7" onClick={app.logout}>
-        退出登录
+      <Button
+        aria-label="退出登录"
+        size="icon"
+        variant="ghost"
+        className="ml-auto size-8"
+        onClick={app.logout}
+      >
+        <LogOut />
       </Button>
     </div>
   );
@@ -211,7 +253,7 @@ function SidePane({
   // both (tablet): split vertically.
   return (
     <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 overflow-hidden border-b border-border">{sessions}</div>
+      <div className="min-h-0 flex-1 overflow-hidden border-b border-border/70">{sessions}</div>
       <div className="min-h-0 flex-1 overflow-hidden">{rooms}</div>
       {footer}
     </div>
@@ -223,14 +265,17 @@ function ApprovalsArea({ app }: { app: ReturnType<typeof useRemoteApp> }) {
     // Surface the permission-mode control in a thin strip when idle so it's
     // always reachable without an approval pending.
     return (
-      <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
-        <span className="text-[11px] text-muted-foreground">权限</span>
+      <div className="flex items-center gap-2 border-b border-border/70 bg-black/10 px-3 py-2">
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Shield className="size-3" />
+          权限
+        </span>
         <PermissionModeControl mode={app.permissionMode} onChange={app.setPermissionMode} />
       </div>
     );
   }
   return (
-    <div className={cn("flex flex-col gap-2 border-b border-border bg-background p-2")}>
+    <div className={cn("flex flex-col gap-2 border-b border-border/70 bg-black/18 p-2")}>
       {app.approvals.map((a) => (
         <ApprovalCard
           key={a.requestId}

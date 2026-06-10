@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Check, ShieldAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import { Textarea } from "@ui/textarea";
@@ -42,14 +43,15 @@ export function ApprovalCard({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card p-3 shadow-sm",
+        "mobile-glass rounded-xl p-3",
         approval.risk === "high" ? "border-status-err/60" : "border-border",
       )}
     >
       <div className="mb-2 flex items-center gap-2">
-        <span className="font-mono text-sm font-semibold text-foreground">
-          {approval.toolName}
+        <span className="grid size-7 place-items-center rounded-lg bg-status-warn/12 text-status-warn">
+          <ShieldAlert className="size-4" />
         </span>
+        <span className="font-mono text-sm font-semibold text-foreground">{approval.toolName}</span>
         <span
           className={cn(
             "rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
@@ -62,7 +64,7 @@ export function ApprovalCard({
       {approval.description && (
         <p className="mb-2 text-xs text-muted-foreground">{approval.description}</p>
       )}
-      <pre className="mb-3 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-muted/50 p-2 font-mono text-[11px] text-foreground/90">
+      <pre className="mb-3 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border/70 bg-muted/35 p-2.5 font-mono text-[11px] text-foreground/90">
         {approval.summary}
       </pre>
 
@@ -75,6 +77,7 @@ export function ApprovalCard({
                 key={opt}
                 size="sm"
                 variant="outline"
+                className="rounded-lg"
                 onClick={() => onRespond("approve", { answer: opt })}
               >
                 {opt}
@@ -96,7 +99,7 @@ export function ApprovalCard({
                 data-1p-ignore="true"
                 data-lpignore="true"
                 // text-base (16px): avoid iOS focus auto-zoom.
-                className="min-h-9 flex-1 text-base"
+                className="min-h-10 flex-1 rounded-lg text-base"
               />
               <Button
                 size="sm"
@@ -107,7 +110,12 @@ export function ApprovalCard({
               </Button>
             </div>
           )}
-          <Button size="sm" variant="ghost" onClick={() => onRespond("reject")}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="rounded-lg"
+            onClick={() => onRespond("reject")}
+          >
             取消
           </Button>
         </div>
@@ -139,7 +147,7 @@ export function ApprovalCard({
           )}
           <div className="flex gap-2">
             <Button
-              className="flex-1"
+              className="h-10 flex-1 rounded-lg"
               onClick={() =>
                 onRespond("approve", {
                   scope,
@@ -147,9 +155,15 @@ export function ApprovalCard({
                 })
               }
             >
+              <Check />
               允许
             </Button>
-            <Button className="flex-1" variant="outline" onClick={() => onRespond("reject")}>
+            <Button
+              className="h-10 flex-1 rounded-lg"
+              variant="outline"
+              onClick={() => onRespond("reject")}
+            >
+              <X />
               拒绝
             </Button>
           </div>
