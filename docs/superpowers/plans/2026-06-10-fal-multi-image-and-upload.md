@@ -262,18 +262,93 @@ Expected: PASS。
 
 ---
 
-## Task 3: 落实 fal 上传 HTTP(探测真实 API 后实现)
+## Task 3: 落实 fal 上传 HTTP(真实形态已探明)
 
 **Files:**
-- Modify: `packages/core/src/tool-system/builtin/image-uploader.ts`(uploadBytes)
+- Modify: `packages/core/src/tool-system/builtin/image-uploader.ts`(uploadBytes + 上传 host)
 - Test: `packages/core/src/tool-system/builtin/image-uploader.test.ts`
 
-> **本 Task 由主代理(非 subagent)用真 fal key 探测后落实** —— 因为 fal 上传 REST 的确切 endpoint/请求体/返回字段公开文档不全,必须实测(就像之前 video status_url 的 bug 是真机才发现的)。subagent 阶段做到 Task 2 即可;Task 3 主代理接手。
+> **fal 上传真实形态(主代理已用真 key 探测确认,2026-06-10):两步流程。**
+> 1. `POST https://rest.alpha.fal.ai/storage/upload/initiate`,header `Authorization: Key <apiKey>` + `Content-Type: application/json`,body `{ content_type, file_name }` → 返回 `{ file_url, upload_url }`
+> 2. `PUT <upload_url>`,header `Content-Type: <mime>`,body = 文件字节 → 200(注意:PUT 到 upload_url **不需要** Authorization,它是带签名的 URL)
+> 3. `file_url` 即最终公网 URL(可直接当 image_url/image_urls)
+>
+> **关键:上传 host 是 `rest.alpha.fal.ai`,与生成的 `queue.fal.run` 不同。** uploader 用固定的上传 base(不复用 video creds.baseUrl)。
 
-- [ ] **Step 1: 主代理用 fal key 探测上传**:确定 endpoint(POST 形式)、是否两步(先取 upload url 再 PUT)、鉴权 header、返回里 URL 字段名。记录真实请求/响应。
-- [ ] **Step 2: 写 uploadBytes 的 mock 测试**:按探测到的真实形态写 mock fetch 断言(上传请求 URL/header + 取回 URL)。先确认失败。
-- [ ] **Step 3: 实现 uploadBytes**:按探测结果填入真实 HTTP。
-- [ ] **Step 4: mock 测试通过 + 真机验证**:用 fal key 真上传一张本地图,拿到可访问 URL,再用该 URL 跑一条多图视频跑通。
+- [ ] **Step 1: 写 uploadBytes mock 测试**
+
+在 `image-uploader.test.ts` 追加:
+```typescript
+  test("local path → initiate + PUT, returns file_url", async () => {
+    const calls: Array<{ url: string; method: string }> = [];
+    const fakeFetch: typeof fetch = (async (url: string, init: any) => {
+      calls.push({ url, method: init?.method });
+      if (url.endsWith("/storage/upload/initiate")) {
+        return { ok: true, status: 200, json: async () => ({ file_url: "https://v3b.fal.media/files/x/out.png", upload_url: "https://v3b.fal.media/files/x/out.png?signature=sig" }) } as Response;
+      }
+      return { ok: true, status: 200 } as Response; // PUT
+    }) as unknown as typeof fetch;
+    const up = new FalStorageUploader(fakeFetch);
+    // 用一个真实存在的临时文件路径
+    const { writeFileSync, mkdtempSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const f = join(mkdtempSync(join(tmpdir(), "up-")), "a.png");
+    writeFileSync(f, Buffer.from("PNGBYTES"));
+    const r = await up.toUrl(f, { baseUrl: "https://queue.fal.run", apiKey: "k" });
+    expect(r).toEqual({ ok: true, url: "https://v3b.fal.media/files/x/out.png" });
+    expect(calls[0].url).toBe("https://rest.alpha.fal.ai/storage/upload/initiate");
+    expect(calls[0].method).toBe("POST");
+    expect(calls[1].url).toBe("https://v3b.fal.media/files/x/out.png?signature=sig");
+    expect(calls[1].method).toBe("PUT");
+  });
+```
+
+- [ ] **Step 2: 确认失败**(uploadBytes 抛 not implemented)
+
+Run: `cd packages/core && bun test src/tool-system/builtin/image-uploader.test.ts`
+
+- [ ] **Step 3: 实现 uploadBytes**
+
+替换 image-uploader.ts 里的占位 uploadBytes(在类里加上传 host 常量):
+```typescript
+  // fal upload lives on a different host than queue.fal.run.
+  private static readonly UPLOAD_BASE = "https://rest.alpha.fal.ai";
+
+  private async uploadBytes(bytes: Uint8Array, name: string, creds: UploaderCreds, signal?: AbortSignal): Promise<string> {
+    const mime = mimeFromName(name);
+    const ini = await this.fetchImpl(`${FalStorageUploader.UPLOAD_BASE}/storage/upload/initiate`, {
+      method: "POST",
+      headers: { Authorization: `Key ${creds.apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ content_type: mime, file_name: name }),
+      signal,
+    });
+    if (!ini.ok) throw new Error(`initiate failed: HTTP ${ini.status}`);
+    const { file_url, upload_url } = (await ini.json()) as { file_url?: string; upload_url?: string };
+    if (!file_url || !upload_url) throw new Error("initiate: missing file_url/upload_url");
+    const put = await this.fetchImpl(upload_url, {
+      method: "PUT",
+      headers: { "Content-Type": mime },
+      body: bytes,
+      signal,
+    });
+    if (!put.ok) throw new Error(`upload PUT failed: HTTP ${put.status}`);
+    return file_url;
+  }
+```
+并在文件顶部加一个小 mime helper:
+```typescript
+function mimeFromName(name: string): string {
+  const ext = name.toLowerCase().split(".").pop() ?? "";
+  const map: Record<string, string> = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp", gif: "image/gif" };
+  return map[ext] ?? "application/octet-stream";
+}
+```
+
+- [ ] **Step 4: mock 测试通过**
+
+Run: `cd packages/core && bun test src/tool-system/builtin/image-uploader.test.ts`
+Expected: PASS。(真机上传 + 多图生成由主代理在合并后做。)
 
 ---
 
