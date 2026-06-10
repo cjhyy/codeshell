@@ -2,21 +2,24 @@ import { test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mobileAssetPath, resolveSafe, devProxyPath } from "./mobile-static";
+import { mobileAssetPath, mobileEntryRedirect, resolveSafe } from "./mobile-static";
 
-test("devProxyPath: /mobile 映射到 vite 根,根资源原样转发", () => {
-  // 页面本身
-  expect(devProxyPath("/mobile")).toBe("/");
-  expect(devProxyPath("/mobile/")).toBe("/");
-  expect(devProxyPath("/mobile?pairing=tok")).toBe("/?pairing=tok");
-  // /mobile 子路径 → 去前缀
-  expect(devProxyPath("/mobile/assets/x.js")).toBe("/assets/x.js");
-  // vite 根资源(白屏根因)→ 原样转发,不被吞
-  expect(devProxyPath("/@vite/client")).toBe("/@vite/client");
-  expect(devProxyPath("/@react-refresh")).toBe("/@react-refresh");
-  expect(devProxyPath("/main.tsx")).toBe("/main.tsx");
-  expect(devProxyPath("/main.tsx?t=123")).toBe("/main.tsx?t=123");
-  expect(devProxyPath("/node_modules/.vite/deps/react.js")).toBe("/node_modules/.vite/deps/react.js");
+test("mobileEntryRedirect canonicalizes the bare entry to a trailing slash", () => {
+  // The pairing URL (/mobile?pairing=...) has no trailing slash → must redirect
+  // to /mobile/ so the served HTML loads its /mobile/-based assets correctly.
+  expect(mobileEntryRedirect("/mobile")).toBe("/mobile/");
+  expect(mobileEntryRedirect("/mobile?pairing=tok")).toBe("/mobile/?pairing=tok");
+  expect(mobileEntryRedirect("/mobile#frag")).toBe("/mobile/#frag");
+});
+
+test("mobileEntryRedirect leaves /mobile/ and sub-paths untouched", () => {
+  // With vite base "/mobile/", all assets (prod + vite dev HMR/module URLs) are
+  // /mobile-prefixed, so only the bare entry needs the trailing-slash redirect.
+  expect(mobileEntryRedirect("/mobile/")).toBeNull();
+  expect(mobileEntryRedirect("/mobile/?pairing=tok")).toBeNull();
+  expect(mobileEntryRedirect("/mobile/assets/app.js")).toBeNull();
+  // A sibling route that merely shares the prefix is not the mobile entry.
+  expect(mobileEntryRedirect("/mobilexyz")).toBeNull();
 });
 
 let root: string;

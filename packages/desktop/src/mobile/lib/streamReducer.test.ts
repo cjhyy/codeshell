@@ -89,7 +89,7 @@ test("turn_complete completed → run completed,封口 assistant", () => {
   ]);
   expect(s.run).toBe("completed");
   expect(asst(s).done).toBe(true);
-  expect(s.liveAssistantId).toBeUndefined();
+  expect(s.liveByAgent[""]).toBeUndefined();
 });
 
 test("turn_complete aborted → run idle(不算 error)", () => {
@@ -100,6 +100,22 @@ test("turn_complete aborted → run idle(不算 error)", () => {
 test("turn_complete model_error → run error", () => {
   const s = feed([ev({ type: "turn_complete", reason: "model_error" })]);
   expect(s.run).toBe("error");
+});
+
+test("turn_complete max_turns/goal_budget_exhausted → 正常完成,非 error", () => {
+  // Regression: budget/turn limits are EXPECTED stops, not failures.
+  expect(feed([ev({ type: "turn_complete", reason: "max_turns" })]).run).toBe("completed");
+  expect(feed([ev({ type: "turn_complete", reason: "goal_budget_exhausted" })]).run).toBe("completed");
+  expect(feed([ev({ type: "turn_complete", reason: "stop_hook_prevented" })]).run).toBe("completed");
+});
+
+test("subagent turn_complete 不翻转全局 run(父轮仍在跑)", () => {
+  const s = feed([
+    ev({ type: "stream_request_start" }), // main agent opens
+    ev({ type: "turn_complete", reason: "completed", agentId: "sub-A" }), // child finishes
+  ]);
+  // The main turn is still running; a child's completion must not mark it done.
+  expect(s.run).toBe("running");
 });
 
 test("goal_progress 更新 goal 行", () => {
@@ -127,6 +143,45 @@ test("task_update 按 agentId 隔离,不新增重复行", () => {
   const subs = s.items.filter((i) => i.kind === "subagent");
   expect(subs).toHaveLength(1);
   expect((subs[0] as Extract<ChatItem, { kind: "subagent" }>).label).toBe("任务 2/2");
+});
+
+test("task_update 无 agentId(主代理 TodoWrite)不渲染为子代理行", () => {
+  // Regression: the main agent's own todo list must NOT become a "sub-main" row.
+  const s = feed([ev({ type: "task_update", tasks: [{ status: "pending" }] })]);
+  expect(s.items.filter((i) => i.kind === "subagent")).toHaveLength(0);
+});
+
+test("task_update 空任务列表不算 completed", () => {
+  // Regression: Array.every is vacuously true on [].
+  const s = feed([ev({ type: "task_update", agentId: "sub-A", tasks: [] })]);
+  const sub = s.items.find((i) => i.kind === "subagent") as Extract<ChatItem, { kind: "subagent" }>;
+  expect(sub.status).toBe("running");
+});
+
+test("tool_use_args_delta 增量合并进 tool 的 args", () => {
+  const s = feed([
+    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Edit", args: { file_path: "a.ts" } } }),
+    ev({ type: "tool_use_args_delta", toolCallId: "t1", args: { old_string: "x" } }),
+    ev({ type: "tool_use_args_delta", toolCallId: "t1", args: { new_string: "y" } }),
+  ]);
+  expect(tool(s).args).toEqual({ file_path: "a.ts", old_string: "x", new_string: "y" });
+});
+
+test("并发子代理 text_delta 不串进主气泡(按 agentId 路由)", () => {
+  // Regression: a subagent streaming concurrently must get its own bubble.
+  const s = feed([
+    ev({ type: "stream_request_start" }), // main
+    ev({ type: "text_delta", text: "主" }),
+    ev({ type: "stream_request_start", agentId: "sub-A" }), // child opens
+    ev({ type: "text_delta", text: "子", agentId: "sub-A" }),
+    ev({ type: "text_delta", text: "线" }), // main continues
+  ]);
+  const assts = s.items.filter((i) => i.kind === "assistant") as Extract<ChatItem, { kind: "assistant" }>[];
+  expect(assts).toHaveLength(2);
+  const main = assts.find((a) => !a.agentId)!;
+  const child = assts.find((a) => a.agentId === "sub-A")!;
+  expect(main.text).toBe("主线");
+  expect(child.text).toBe("子");
 });
 
 test("error 事件追加系统错误并置 run error", () => {

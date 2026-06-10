@@ -2,29 +2,59 @@ import { test, expect } from "bun:test";
 import { roomMsgToEvent, extractAskUserOptions } from "./messageMappers";
 import { reduceStream, initialChatState } from "./streamReducer";
 
-test("roomMsgToEvent 映射各类型", () => {
-  expect(roomMsgToEvent({ from: "user", text: "hi" })).toEqual({ type: "user_message", text: "hi" });
-  expect(roomMsgToEvent({ from: "agent", type: "text_delta", text: "x" })).toEqual({ type: "text_delta", text: "x" });
-  expect(roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", seq: 3 })).toEqual({
+// These shapes MUST mirror what RoomManager actually writes (room-manager.ts
+// onAgentEvent/send): agent prose is type:"text" (NOT "text_delta"), tools carry
+// a `summary`, results are type:"tool_result", errors type:"error", and exits
+// use `reason` (NOT `code`). The previous version of this test fed an invented
+// `text_delta` shape, masking that real agent replies dropped to _noop.
+test("roomMsgToEvent 映射真实 RoomManager 形状", () => {
+  expect(roomMsgToEvent({ from: "user", type: "text", text: "hi" })).toEqual({
+    type: "user_message",
+    text: "hi",
+  });
+  expect(roomMsgToEvent({ from: "agent", type: "text", text: "好" })).toEqual({
+    type: "text_delta",
+    text: "好",
+  });
+  expect(roomMsgToEvent({ from: "agent", type: "tool", tool: "Read", summary: "读 a.ts", seq: 3 })).toEqual({
     type: "tool_use_start",
-    toolCall: { id: "3", toolName: "Read", args: {} },
+    toolCall: { id: "room-tool-3", toolName: "Read", summary: "读 a.ts" },
+  });
+  expect(roomMsgToEvent({ from: "agent", type: "tool_result", summary: "ok", isError: false })).toEqual({
+    type: "room_tool_result",
+    summary: "ok",
+    isError: false,
   });
   expect(roomMsgToEvent({ from: "agent", type: "turn_end", reason: "completed" })).toEqual({
     type: "turn_complete",
     reason: "completed",
   });
-  expect((roomMsgToEvent({ from: "system", type: "agent_exit", code: 1 }) as { type: string }).type).toBe("error");
+  expect(roomMsgToEvent({ from: "system", type: "error", text: "boom" })).toEqual({
+    type: "error",
+    error: "boom",
+  });
+  expect((roomMsgToEvent({ from: "system", type: "agent_exit", reason: "1" }) as { type: string }).type).toBe("error");
+  // The room_created audit anchor has no visible rendering.
+  expect(roomMsgToEvent({ from: "system", type: "room_created", text: "cwd=…" })).toEqual({ type: "_noop" });
 });
 
-test("房间消息经 roomMsgToEvent → reducer 重建对话", () => {
+test("房间消息经 roomMsgToEvent → reducer 重建对话(真实形状)", () => {
   const msgs = [
-    { from: "user", text: "看仓库" },
-    { from: "agent", type: "text_delta", text: "好" },
-    { from: "agent", type: "tool", tool: "Glob", seq: 2 },
-    { from: "agent", type: "turn_end", reason: "completed" },
+    { from: "system", type: "room_created", text: "cwd=/x permission=default", seq: 1 },
+    { from: "user", type: "text", text: "看仓库", seq: 2 },
+    { from: "agent", type: "text", text: "好,我来看", seq: 3 },
+    { from: "agent", type: "tool", tool: "Glob", summary: "**/*.ts", seq: 4 },
+    { from: "agent", type: "tool_result", summary: "找到 12 个文件", isError: false, seq: 5 },
+    { from: "agent", type: "turn_end", reason: "completed", seq: 6 },
   ];
   const state = msgs.map(roomMsgToEvent).reduce(reduceStream, initialChatState());
+  // The agent's reply MUST render (regression: it used to drop to _noop).
   expect(state.items.map((i) => i.kind)).toEqual(["user", "assistant", "tool"]);
+  const assistant = state.items.find((i) => i.kind === "assistant") as { text: string };
+  expect(assistant.text).toBe("好,我来看");
+  const tool = state.items.find((i) => i.kind === "tool") as { done: boolean; result?: string };
+  expect(tool.done).toBe(true);
+  expect(tool.result).toBe("找到 12 个文件");
   expect(state.run).toBe("completed");
 });
 

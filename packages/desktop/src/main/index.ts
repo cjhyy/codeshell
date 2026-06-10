@@ -280,6 +280,46 @@ function ensureMobileSessionId(st: MobileDeviceState): string {
 }
 
 /**
+ * Inject a JSON-RPC request into the worker and resolve with its ACTUAL
+ * response (result on success, or failure on a JSON-RPC error / timeout). The
+ * worker's reply flows back through subscribeOutbound (the same lines mirrored
+ * to mobile), so we correlate by request id rather than fabricating success — a
+ * model.set for an invalid model or a rejected goal.extend must NOT be reported
+ * to the phone as ok.
+ */
+function injectAndAwaitResult(
+  b: AgentBridge,
+  method: string,
+  params: Record<string, unknown>,
+): Promise<{ ok: true; result: unknown } | { ok: false; message: string }> {
+  const id = `mobile-${method.replace(/\W+/g, "-")}-${Date.now()}`;
+  return new Promise((resolveResult) => {
+    let settled = false;
+    const done = (v: { ok: true; result: unknown } | { ok: false; message: string }): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsub();
+      resolveResult(v);
+    };
+    const unsub = b.subscribeOutbound((line) => {
+      try {
+        const m = JSON.parse(line) as { id?: string; result?: unknown; error?: { message?: string } };
+        if (m.id !== id) return;
+        if (m.error) done({ ok: false, message: m.error.message ?? "worker rejected the request" });
+        else done({ ok: true, result: m.result });
+      } catch {
+        /* not JSON / not ours */
+      }
+    });
+    // Fallback: if the worker never answers (dead/slow), report failure rather
+    // than hanging — the phone keeps showing its prior state.
+    const timer = setTimeout(() => done({ ok: false, message: "worker did not respond" }), 5000);
+    b.injectWorkerMessage(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
+  });
+}
+
+/**
  * Route an authenticated mobile client event into the SAME run/permission
  * path the renderer uses, via AgentBridge.injectWorkerMessage. There is no
  * second run loop: chat/approval/cancel become the identical JSON-RPC lines
@@ -410,34 +450,32 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     return;
   }
   if (event.type === "model.set") {
-    bridge.injectWorkerMessage(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: `mobile-model-${Date.now()}`,
-        method: "agent/configure",
-        params: { model: event.model },
-      }),
-    );
-    // Model is engine-global, so this reply DOES go to all devices.
-    mobileRemote.broadcast({ type: "model.current", model: event.model });
+    // Only confirm the model AFTER the worker actually applied it; an invalid
+    // model name must not be shown as the current model. Model is engine-global,
+    // so a successful change broadcasts to all devices.
+    const res = await injectAndAwaitResult(bridge, "agent/configure", { model: event.model });
+    if (res.ok) {
+      mobileRemote.broadcast({ type: "model.current", model: event.model });
+    } else {
+      reply({ type: "error", message: `切换模型失败:${res.message}` });
+    }
     return;
   }
   if (event.type === "goal.extend") {
-    bridge.injectWorkerMessage(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        id: `mobile-goalext-${Date.now()}`,
-        method: "agent/goalExtend",
-        params: {
-          sessionId: event.sessionId,
-          addTurns: event.addTurns,
-          addTokenBudget: event.addTokenBudget,
-          addTimeBudgetMs: event.addTimeBudgetMs,
-          addStopBlocks: event.addStopBlocks,
-        },
-      }),
-    );
-    reply({ type: "goal.extended", sessionId: event.sessionId, ok: true });
+    const res = await injectAndAwaitResult(bridge, "agent/goalExtend", {
+      sessionId: event.sessionId,
+      addTurns: event.addTurns,
+      addTokenBudget: event.addTokenBudget,
+      addTimeBudgetMs: event.addTimeBudgetMs,
+      addStopBlocks: event.addStopBlocks,
+    });
+    // Report the REAL outcome (ok:false carries the worker's reason).
+    reply({
+      type: "goal.extended",
+      sessionId: event.sessionId,
+      ok: res.ok,
+      message: res.ok ? undefined : res.message,
+    });
     return;
   }
 }

@@ -43,7 +43,7 @@ describe("RemoteHostManager", () => {
     await host.stop();
   });
 
-  test("serves root-level /assets/* from out/mobile (base './' resolves there)", async () => {
+  test("serves /mobile/assets/* (vite base '/mobile/'); root /assets/* 404s", async () => {
     dir = mkdtempSync(join(tmpdir(), "remote-host-"));
     const host = new RemoteHostManager({
       devices: new TrustedDeviceStore(join(dir, "devices.json")),
@@ -51,15 +51,33 @@ describe("RemoteHostManager", () => {
       mobileRootDir: mobileFixture(dir),
     });
     const started = await host.start({ host: "127.0.0.1", port: 0 });
-    // The built index.html (served at /mobile, no trailing slash) references
-    // ./assets/x → browser resolves to ROOT /assets/x. Must be served, but
-    // traversal out of the root must be blocked.
-    const css = await fetch(`${started.url}/assets/index-ABC123.css`);
+    // With vite base "/mobile/", the built index.html references
+    // /mobile/assets/x — under the routed prefix, so it's served.
+    const css = await fetch(`${started.url}/mobile/assets/index-ABC123.css`);
     expect(css.status).toBe(200);
-    const escape = await fetch(`${started.url}/assets/../../devices.json`);
+    // ROOT-level /assets/* is NOT part of the route family → 404 (no shim).
+    const rootAsset = await fetch(`${started.url}/assets/index-ABC123.css`);
+    expect(rootAsset.status).toBe(404);
+    // Traversal out of the root is blocked.
+    const escape = await fetch(`${started.url}/mobile/assets/../../devices.json`);
     expect(escape.status).not.toBe(200);
-    const random = await fetch(`${started.url}/not-an-asset`);
-    expect(random.status).toBe(404);
+    // A sibling that merely shares the /mobile prefix is not the route family.
+    const sibling = await fetch(`${started.url}/mobilexyz`);
+    expect(sibling.status).toBe(404);
+    await host.stop();
+  });
+
+  test("bare /mobile redirects to /mobile/ (preserving query)", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const host = new RemoteHostManager({
+      devices: new TrustedDeviceStore(join(dir, "devices.json")),
+      onClientEvent: () => {},
+      mobileRootDir: mobileFixture(dir),
+    });
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    const res = await fetch(`${started.url}/mobile?pairing=tok`, { redirect: "manual" });
+    expect(res.status).toBe(308);
+    expect(res.headers.get("location")).toBe("/mobile/?pairing=tok");
     await host.stop();
   });
 

@@ -50,22 +50,47 @@ export interface ChatState {
   sessionId?: string;
   /** Per-session title pushed via session_title. */
   title?: string;
-  /** Internal: id of the assistant item currently accumulating text_delta. */
-  liveAssistantId?: string;
+  /** Internal: id of the assistant item currently accumulating text/thinking
+   *  deltas, keyed by agentId ("" = the main agent). Keying by agent keeps a
+   *  concurrently-streaming subagent's text out of the main bubble (and vice
+   *  versa) — mirrors the renderer's per-agent message routing. */
+  liveByAgent: Record<string, string>;
   /** Internal: monotonic counter for fresh ids (replaces Date.now/random,
    *  which would make replay non-deterministic). */
   seq: number;
 }
 
 export function initialChatState(): ChatState {
-  return { items: [], run: "idle", seq: 0 };
+  return { items: [], run: "idle", seq: 0, liveByAgent: {} };
 }
 
-/** A successful terminal reason; everything else that isn't an abort is error. */
+/** The agentId bucket key for an event ("" = main agent). */
+function agentKey(event: Record<string, unknown>): string {
+  return (event.agentId as string | undefined) ?? "";
+}
+
+/**
+ * Map a core TerminalReason (types.ts) to a phone run-state. Only genuine
+ * failures (prompt_too_long / model_error / image_error) are "error"; budget/
+ * turn/hook limits are EXPECTED stops and must not flash a red error on the
+ * StatusBar. Aborts (user-initiated) drop back to idle. Unknown future reasons
+ * default to "completed" rather than "error" — a stop we don't recognize is
+ * still a stop, and mislabeling it a failure is the worse default.
+ */
 function runStateForReason(reason: string): RunState {
-  if (reason === "completed") return "completed";
-  if (reason === "aborted_streaming" || reason === "aborted_tools") return "idle";
-  return "error";
+  switch (reason) {
+    case "aborted_streaming":
+    case "aborted_tools":
+      return "idle";
+    case "prompt_too_long":
+    case "model_error":
+    case "image_error":
+      return "error";
+    // "completed", "max_turns", "goal_budget_exhausted", "stop_hook_prevented",
+    // "hook_stopped", and any future/unknown terminal reason: a normal stop.
+    default:
+      return "completed";
+  }
 }
 
 /** Unwrap an incoming line into the inner StreamEvent, or null if it isn't an
@@ -107,7 +132,8 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
 
   switch (type) {
     case "stream_request_start": {
-      // Open a fresh assistant message to accumulate text into.
+      // Open a fresh assistant message (for THIS agent) to accumulate text into.
+      const key = agentKey(event);
       const [id, s2] = freshId("a");
       const item: ChatItem = {
         kind: "assistant",
@@ -117,12 +143,18 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         done: false,
         agentId: event.agentId as string | undefined,
       };
-      return { ...s2, items: [...s2.items, item], liveAssistantId: id, run: "running" };
+      return {
+        ...s2,
+        items: [...s2.items, item],
+        liveByAgent: { ...s2.liveByAgent, [key]: id },
+        run: "running",
+      };
     }
 
     case "text_delta": {
       const text = (event.text as string) ?? "";
-      const liveId = s.liveAssistantId;
+      const key = agentKey(event);
+      const liveId = s.liveByAgent[key];
       const live = liveId && s.items.find((i) => i.id === liveId && i.kind === "assistant");
       if (live) {
         return {
@@ -133,7 +165,8 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
           ),
         };
       }
-      // No open assistant (e.g. text before stream_request_start) → open one.
+      // No open assistant for this agent (e.g. text before stream_request_start)
+      // → open one scoped to this agent.
       const [id, s2] = freshId("a");
       const item: ChatItem = {
         kind: "assistant",
@@ -143,12 +176,18 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         done: false,
         agentId: event.agentId as string | undefined,
       };
-      return { ...s2, items: [...s2.items, item], liveAssistantId: id, run: "running" };
+      return {
+        ...s2,
+        items: [...s2.items, item],
+        liveByAgent: { ...s2.liveByAgent, [key]: id },
+        run: "running",
+      };
     }
 
     case "thinking_delta": {
       const text = (event.text as string) ?? "";
-      const liveId = s.liveAssistantId;
+      const key = agentKey(event);
+      const liveId = s.liveByAgent[key];
       if (liveId && s.items.some((i) => i.id === liveId && i.kind === "assistant")) {
         return {
           ...s,
@@ -169,12 +208,17 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         done: false,
         agentId: event.agentId as string | undefined,
       };
-      return { ...s2, items: [...s2.items, item], liveAssistantId: id, run: "running" };
+      return {
+        ...s2,
+        items: [...s2.items, item],
+        liveByAgent: { ...s2.liveByAgent, [key]: id },
+        run: "running",
+      };
     }
 
     case "tool_use_start": {
       const call = event.toolCall as
-        | { id: string; toolName: string; args?: Record<string, unknown> }
+        | { id: string; toolName: string; args?: Record<string, unknown>; summary?: string }
         | undefined;
       if (!call) return s;
       // Idempotent: a duplicate start for the same call id is a no-op.
@@ -184,10 +228,31 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         id: call.id,
         name: call.toolName,
         args: call.args,
+        // Room tool messages carry a human summary instead of structured args.
+        summary: call.summary,
         done: false,
         agentId: event.agentId as string | undefined,
       };
       return { ...s, run: "running", items: [...s.items, item] };
+    }
+
+    case "tool_use_args_delta": {
+      // Tool args stream incrementally (large Edit/Write/Bash payloads). Merge
+      // each delta into the matching tool item, mirroring the desktop renderer's
+      // argsLive accumulation (renderer/types.ts) — otherwise the tool card and
+      // the approval summary derived from these args would show only the partial
+      // snapshot tool_use_start carried.
+      const callId = event.toolCallId as string | undefined;
+      const delta = event.args as Record<string, unknown> | undefined;
+      if (!callId || !delta) return s;
+      return {
+        ...s,
+        items: s.items.map((i) =>
+          i.kind === "tool" && i.id === callId
+            ? { ...i, args: { ...(i.args ?? {}), ...delta } }
+            : i,
+        ),
+      };
     }
 
     case "tool_result": {
@@ -210,6 +275,25 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       };
     }
 
+    case "room_tool_result": {
+      // Room transcripts emit a coarse tool_result with no id linking it to its
+      // start; seal the most recent open tool item with the summary + error.
+      const summary = (event.summary as string) ?? "";
+      const isError = Boolean(event.isError);
+      let idx = -1;
+      for (let i = s.items.length - 1; i >= 0; i--) {
+        if (s.items[i].kind === "tool" && !(s.items[i] as Extract<ChatItem, { kind: "tool" }>).done) {
+          idx = i;
+          break;
+        }
+      }
+      if (idx === -1) return s;
+      const items = s.items.slice();
+      const tool = items[idx] as Extract<ChatItem, { kind: "tool" }>;
+      items[idx] = { ...tool, done: true, result: summary, summary: summary || tool.summary, error: isError };
+      return { ...s, items };
+    }
+
     case "tool_summary": {
       // tool_summary carries no id; attach to the last tool item.
       const summary = (event.summary as string) ?? "";
@@ -227,20 +311,29 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     }
 
     case "assistant_message": {
-      // Final assistant message for the request — seal the live one.
-      return { ...s, liveAssistantId: undefined };
+      // Final assistant message for the request — seal THIS agent's live bubble.
+      const key = agentKey(event);
+      if (!(key in s.liveByAgent)) return s;
+      const { [key]: _gone, ...rest } = s.liveByAgent;
+      return { ...s, liveByAgent: rest };
     }
 
     case "turn_complete": {
       const reason = (event.reason as string) ?? "completed";
-      return {
-        ...s,
-        liveAssistantId: undefined,
-        items: s.items.map((i) =>
-          i.kind === "assistant" && !i.done ? { ...i, done: true } : i,
-        ),
-        run: runStateForReason(reason),
-      };
+      const key = agentKey(event);
+      // Seal this agent's live bubble and mark its open assistant items done.
+      const { [key]: _gone, ...rest } = s.liveByAgent;
+      const items = s.items.map((i) =>
+        i.kind === "assistant" && !i.done && (i.agentId ?? "") === key
+          ? { ...i, done: true }
+          : i,
+      );
+      // A SUBAGENT's turn_complete (agentId present) must NOT flip the global run
+      // state — the parent turn is still running (mirrors renderer App.tsx).
+      if (event.agentId) {
+        return { ...s, liveByAgent: rest, items };
+      }
+      return { ...s, liveByAgent: rest, items, run: runStateForReason(reason) };
     }
 
     case "goal_progress": {
@@ -251,9 +344,13 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     }
 
     case "task_update": {
-      // Subagent task list. Reflect a compact status line keyed by agentId so it
-      // never clobbers the main flow (fbe6f68).
-      const agentId = (event.agentId as string) ?? "main";
+      // Only SUBAGENT task lists render as a compact status row, keyed by
+      // agentId (fbe6f68). The MAIN agent's own TodoWrite emits task_update with
+      // NO agentId (core task.ts) — like the desktop renderer (renderer/types.ts
+      // drops agentId-less task_updates from the subagent path), we must NOT turn
+      // the user's own todo list into a spurious "sub-main" child-agent row.
+      const agentId = event.agentId as string | undefined;
+      if (!agentId) return s;
       const tasks = (event.tasks as { status: string }[] | undefined) ?? [];
       const done = tasks.filter((t) => t.status === "completed").length;
       const label = `任务 ${done}/${tasks.length}`;
@@ -265,7 +362,10 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         id: `sub-${agentId}`,
         agentId,
         label,
-        status: tasks.every((t) => t.status === "completed") ? "completed" : "running",
+        // Empty list ⇒ not started, not "completed" (Array.every is vacuously
+        // true on []). Only call it completed when there is at least one task and
+        // all are done.
+        status: tasks.length > 0 && done === tasks.length ? "completed" : "running",
       };
       if (existing >= 0) {
         const items = s.items.slice();
@@ -306,7 +406,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       return {
         ...s2,
         run: "error",
-        liveAssistantId: undefined,
+        liveByAgent: {},
         items: [
           ...s2.items,
           { kind: "system_error", id, text: (event.error as string) || "运行出错" },

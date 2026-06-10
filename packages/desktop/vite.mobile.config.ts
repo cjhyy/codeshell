@@ -16,7 +16,13 @@ import { resolve } from "node:path";
  */
 export default defineConfig({
   root: resolve(__dirname, "src/mobile"),
-  base: "./",
+  // MUST be the absolute "/mobile/" prefix, NOT "./". The app is served at
+  // /mobile (the remote host only routes the /mobile prefix), so relative
+  // "./assets/*" would resolve against the document base /mobile → /assets/*,
+  // which falls outside the routed prefix and 404s (blank page). An absolute
+  // /mobile/ base makes both the built bundle and vite's dev HMR/module URLs
+  // (/mobile/@vite/client, /mobile/src/main.tsx) stay under the routed prefix.
+  base: "/mobile/",
   publicDir: false,
   server: {
     // 5273 is the renderer dev server; mobile gets its own fixed port so the

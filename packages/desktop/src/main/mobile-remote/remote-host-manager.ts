@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer, type WebSocket } from "ws";
-import { serveMobile, serveMobileRootAsset } from "./mobile-static.js";
+import { serveMobile } from "./mobile-static.js";
 import { PairingTokenManager } from "./pairing.js";
 import type { AccessPasscode } from "./access-passcode.js";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
@@ -140,29 +140,21 @@ export class RemoteHostManager extends EventEmitter {
         res.end(JSON.stringify({ ok: true }));
         return;
       }
-      // LAN DEV: vite injects ABSOLUTE-path assets (/@vite/client, /@react-refresh,
-      // /node_modules/.vite/*, /main.tsx) that the phone requests at the host
-      // root — NOT under /mobile. So in dev we proxy EVERYTHING (except /health,
-      // and /ws which is handled by the WS upgrade) to the mobile vite server.
-      // Tunnel mode is intentionally excluded: Vite's HMR websocket and @fs
-      // module URLs do not survive a public trycloudflare hop reliably, and they
-      // expose local filesystem-shaped paths. Public tunnel always serves the
-      // built static mobile app instead.
-      // PROD has no such root assets: we keep the strict /mobile-only static
-      // serve (path-traversal-safe), 404 for anything else.
-      if (this.mobileDevUrl && !tunnel) {
-        serveMobile(req, res, { rootDir: this.mobileRootDir, devUrl: this.mobileDevUrl });
+      // The mobile app is built/served with vite base "/mobile/", so ALL of its
+      // assets — and in dev, vite's HMR/module URLs — live under the /mobile
+      // prefix. A single prefix route serves prod (static out/mobile) and dev
+      // (proxy to the mobile vite server) symmetrically. Tunnel mode never
+      // proxies dev: Vite's HMR socket and @fs module URLs don't survive a
+      // public trycloudflare hop, so a public tunnel always serves the build.
+      // Match the route family exactly ("/mobile", "/mobile/…", "/mobile?…",
+      // "/mobile#…") — NOT a sibling like "/mobilexyz", which falls to 404.
+      if (req.url && /^\/mobile(?:[/?#]|$)/.test(req.url)) {
+        serveMobile(req, res, {
+          rootDir: this.mobileRootDir,
+          devUrl: tunnel ? undefined : this.mobileDevUrl,
+        });
         return;
       }
-      if (req.url?.startsWith("/mobile")) {
-        serveMobile(req, res, { rootDir: this.mobileRootDir });
-        return;
-      }
-      // The built mobile app uses base "./", so its index.html (served at
-      // /mobile, no trailing slash) references "./assets/x" which the browser
-      // resolves to ROOT "/assets/x" — not "/mobile/assets/x". Serve those
-      // root-level static assets from out/mobile too. Path-traversal-safe.
-      if (serveMobileRootAsset(req, res, this.mobileRootDir)) return;
       res.writeHead(404);
       res.end("not found");
     });

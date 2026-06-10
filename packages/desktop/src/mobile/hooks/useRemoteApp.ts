@@ -32,14 +32,9 @@ export interface PendingApproval {
   pathScoped: boolean;
 }
 
-/** Top-level view the phone is showing. */
-export type View = "chat" | "sessions" | "rooms";
-
 export interface RemoteApp {
   status: ConnStatus;
   deviceName: string;
-  view: View;
-  setView: (v: View) => void;
   chat: ChatState;
   sessions: MobileSessionMeta[];
   activeSessionId?: string;
@@ -103,7 +98,6 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
 export function useRemoteApp(): RemoteApp {
   const [chat, dispatchChat] = useReducer(chatReducer, undefined, initialChatState);
-  const [view, setView] = useState<View>("chat");
   const [sessions, setSessions] = useState<MobileSessionMeta[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
@@ -180,6 +174,14 @@ export function useRemoteApp(): RemoteApp {
         break;
       case "error":
         setNotice(event.message);
+        break;
+      case "goal.extended":
+        // Surface a real failure; success is silent (the run simply continues).
+        if (!event.ok) setNotice(event.message || "延长目标失败");
+        break;
+      case "model.current":
+        // The worker confirmed the model actually applied. (No model display in
+        // the phone UI yet; handled explicitly so it isn't a silent default.)
         break;
       case "approval.request": {
         // Legacy server-shaped approval (kept for back-compat).
@@ -290,9 +292,14 @@ export function useRemoteApp(): RemoteApp {
       const t = text.trim();
       if (!t) return;
       if (activeRoomIdRef.current) {
+        // NO optimistic echo for rooms: RoomManager persists the user line and
+        // broadcasts it back to every client (incl. us) as a `room.message`,
+        // which the reducer renders. Echoing locally too would double the
+        // bubble. The broadcast round-trips over loopback/LAN ~instantly.
         socket.send({ type: "room.send", roomId: activeRoomIdRef.current, text: t });
-        dispatchChat({ kind: "user", text: t });
       } else {
+        // Sessions don't echo the user turn back over the stream (it only
+        // resurfaces on history replay), so the local echo is required here.
         dispatchChat({ kind: "user", text: t });
         socket.send({ type: "chat.send", text: t, sessionId: boundSessionRef.current });
       }
@@ -315,7 +322,6 @@ export function useRemoteApp(): RemoteApp {
       dispatchChat({ kind: "reset" });
       socket.send({ type: "session.select", sessionId: id });
       socket.send({ type: "session.history", sessionId: id });
-      setView("chat");
     },
     [socket],
   );
@@ -326,7 +332,6 @@ export function useRemoteApp(): RemoteApp {
     setApprovals([]);
     dispatchChat({ kind: "reset" });
     socket.send({ type: "session.create" });
-    setView("chat");
   }, [socket]);
 
   const respondApproval = useCallback(
@@ -379,7 +384,6 @@ export function useRemoteApp(): RemoteApp {
       dispatchChat({ kind: "reset" });
       socket.send({ type: "room.open", roomId: room.id });
       socket.send({ type: "room.history", roomId: room.id });
-      setView("chat");
     },
     [socket],
   );
@@ -387,7 +391,6 @@ export function useRemoteApp(): RemoteApp {
   const leaveRoom = useCallback(() => {
     setActiveRoomId(undefined);
     dispatchChat({ kind: "reset" });
-    setView("rooms");
   }, []);
 
   const createRoom = useCallback(
@@ -408,8 +411,6 @@ export function useRemoteApp(): RemoteApp {
   return {
     status: socket.status,
     deviceName: socket.deviceName,
-    view,
-    setView,
     chat,
     sessions,
     activeSessionId,
