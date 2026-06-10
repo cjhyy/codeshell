@@ -61,7 +61,7 @@ Turn Loop 执行层
 
 `src/index.ts` 是 public API 聚合出口，导出面很宽，包括 Engine、protocol、tool system、run、LLM、settings、hooks、plugin、session、prompt、preset 等。
 
-一个明显小问题：`package.json` 版本是 `0.5.0-rc.1`，但 `src/index.ts` 中 `VERSION` 常量仍是 `0.5.0-rc.0`。如果外部 SDK 用户依赖 `VERSION` 做诊断或兼容判断，会拿到旧版本。
+一个明显小问题：`package.json` 版本是 `0.5.0-rc.2`，但 `src/index.ts` 中 `VERSION` 常量仍是 `0.5.0-rc.0`。如果外部 SDK 用户依赖 `VERSION` 做诊断或兼容判断，会拿到旧版本。
 
 ### 2.2 三种主要调用方式
 
@@ -1674,7 +1674,7 @@ LSP 能力可用于代码智能、诊断、符号等。
 ### 20.1 高优先级风险
 
 1. **版本常量不一致**
-   - `package.json` 是 `0.5.0-rc.1`。
+   - `package.json` 是 `0.5.0-rc.2`。
    - `src/index.ts` 的 `VERSION` 是 `0.5.0-rc.0`。
    - 影响 SDK 诊断/兼容判断。
 
