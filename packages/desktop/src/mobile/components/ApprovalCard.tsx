@@ -88,7 +88,15 @@ export function ApprovalCard({
                 value={freeText}
                 onChange={(e) => setFreeText(e.target.value)}
                 placeholder="或输入自定义回答…"
-                className="min-h-9 flex-1 text-sm"
+                name="codeshell-answer"
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                data-1p-ignore="true"
+                data-lpignore="true"
+                // text-base (16px): avoid iOS focus auto-zoom.
+                className="min-h-9 flex-1 text-base"
               />
               <Button
                 size="sm"

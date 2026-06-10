@@ -42,6 +42,18 @@ export function Composer({
         rows={1}
         disabled={disabled}
         onInput={autosize}
+        // iOS Safari hygiene: stop password/contact autofill from hijacking the
+        // box, and disable autocapitalize/autocorrect/spellcheck for a chat/code
+        // input. `name`+`data-1p-ignore`/`data-lpignore` opt out of 1Password /
+        // LastPass / iCloud Keychain heuristics.
+        name="codeshell-prompt"
+        autoComplete="off"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        data-1p-ignore="true"
+        data-lpignore="true"
+        enterKeyHint="enter"
         onKeyDown={(e) => {
           // Enter sends on wide screens (hardware keyboard); on phones the
           // virtual keyboard's return inserts a newline (use the button).
@@ -51,7 +63,9 @@ export function Composer({
           }
         }}
         placeholder={disabled ? "未连接" : "发消息…"}
-        className="max-h-40 min-h-[44px] flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-[15px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50"
+        // text-base (16px) is REQUIRED: iOS auto-zooms when a focused input's
+        // font-size is < 16px, which is the "屏幕内容变大要缩小" symptom.
+        className="max-h-40 min-h-[44px] flex-1 resize-none rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-50"
       />
       {running ? (
         <Button variant="outline" className="h-11" onClick={onStop}>

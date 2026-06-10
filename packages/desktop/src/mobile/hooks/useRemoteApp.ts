@@ -204,6 +204,18 @@ export function useRemoteApp(): RemoteApp {
   activeRoomIdRef.current = activeRoomId;
 
   const addApproval = useCallback((a: PendingApproval) => {
+    // Isolate to the bound session: an approval for some OTHER desktop session
+    // must not pop on this phone's feed. If nothing is bound yet, auto-bind to
+    // the approval's session (same first-coherent-conversation rule as streams)
+    // so the request the user sees belongs to the conversation they're driving.
+    if (activeRoomIdRef.current) return; // rooms don't surface chat approvals
+    if (a.sessionId) {
+      if (boundSessionRef.current && a.sessionId !== boundSessionRef.current) return;
+      if (!boundSessionRef.current) {
+        boundSessionRef.current = a.sessionId;
+        setActiveSessionId(a.sessionId);
+      }
+    }
     setApprovals((prev) => (prev.some((p) => p.requestId === a.requestId) ? prev : [...prev, a]));
   }, []);
 
@@ -233,13 +245,38 @@ export function useRemoteApp(): RemoteApp {
         }
         return;
       }
-      // Everything else (agent/streamEvent) folds through the reducer, but only
-      // when it belongs to the session we're viewing (or has no session id).
+      // Everything else (agent/streamEvent) folds through the reducer, but it
+      // MUST be isolated to ONE session — otherwise concurrent desktop sessions
+      // interleave their text_deltas into one garbled feed ("不是同一个会话推到
+      // 一起"). Rule:
+      //   - in a room → ignore session streams entirely (room has its own feed)
+      //   - bound to a session → only that session's events
+      //   - nothing bound yet, event has a sessionId → AUTO-BIND to it (follow
+      //     the first coherent conversation, never merge several)
+      //   - event with no sessionId while unbound → drop (can't attribute it)
       if (obj.method === "agent/streamEvent" && obj.params) {
+        if (activeRoomIdRef.current) return; // room view owns the feed
         const params = obj.params as Record<string, unknown>;
         const sid = typeof params.sessionId === "string" ? params.sessionId : undefined;
-        if (sid && boundSessionRef.current && sid !== boundSessionRef.current) return;
+        if (boundSessionRef.current) {
+          if (sid && sid !== boundSessionRef.current) return;
+        } else if (sid) {
+          // Auto-bind to the first session we see so the feed is coherent.
+          boundSessionRef.current = sid;
+          setActiveSessionId(sid);
+        } else {
+          return;
+        }
         dispatchChat({ kind: "raw", raw });
+        // A turn ending (or erroring) resolves any pending approval for this
+        // session — clear stale cards so a request the user already handled (or
+        // that the desktop answered) doesn't linger ("点了还存在").
+        const ev = (params.event as { type?: string } | undefined)?.type;
+        if (ev === "turn_complete" || ev === "error") {
+          // We only ever hold bound-session approvals, so the turn ending clears
+          // them all (the request can no longer be answered).
+          setApprovals([]);
+        }
       }
     },
     [addApproval],

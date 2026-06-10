@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@ui/button";
 import type { MobileSessionMeta } from "@protocol";
-import { relativeTime, basename } from "@mobile/lib/format";
+import { relativeTime, groupByProject } from "@mobile/lib/format";
 
-/** The list of desktop sessions the phone can open + drive. */
+/** The desktop sessions the phone can open + drive, GROUPED BY PROJECT (cwd). */
 export function SessionList({
   sessions,
   activeSessionId,
@@ -17,6 +17,7 @@ export function SessionList({
   onNew: () => void;
   onRefresh: () => void;
 }) {
+  const groups = groupByProject(sessions);
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
@@ -37,33 +38,47 @@ export function SessionList({
             还没有会话。点「新建」开一个,或在桌面端开始。
           </p>
         ) : (
-          <ul className="divide-y divide-border">
-            {sessions.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(s.id)}
-                  className={cn(
-                    "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left active:bg-accent",
-                    s.id === activeSessionId && "bg-accent",
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-foreground">{s.title}</span>
-                    {s.origin === "automation" && (
-                      <span className="rounded-full border border-border px-1.5 text-[10px] text-muted-foreground">
-                        自动
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                    <span className="truncate">{basename(s.cwd) || "无项目"}</span>
-                    <span className="ml-auto shrink-0">{relativeTime(s.updatedAt)}</span>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
+          groups.map((g) => (
+            <section key={g.cwd || "__none__"}>
+              {/* Project header — sticky so you always know which project the
+                  sessions below belong to while scrolling a long list. */}
+              <div
+                className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-card/95 px-3 py-1.5 backdrop-blur"
+                title={g.cwd}
+              >
+                <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {g.name}
+                </span>
+                <span className="text-[10px] text-muted-foreground">{g.items.length}</span>
+              </div>
+              <ul className="divide-y divide-border">
+                {g.items.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(s.id)}
+                      className={cn(
+                        "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left active:bg-accent",
+                        s.id === activeSessionId && "bg-accent",
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium text-foreground">{s.title}</span>
+                        {s.origin === "automation" && (
+                          <span className="rounded-full border border-border px-1.5 text-[10px] text-muted-foreground">
+                            自动
+                          </span>
+                        )}
+                        <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
+                          {relativeTime(s.updatedAt)}
+                        </span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
         )}
       </div>
     </div>
