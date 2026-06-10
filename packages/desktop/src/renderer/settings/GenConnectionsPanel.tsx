@@ -15,6 +15,8 @@ export interface ProviderMeta {
   defaultBaseUrl: string;
   defaultModel: string;
   signupUrl?: string;
+  /** Suggested model ids for the "默认模型" field (datalist — still free-type). */
+  modelPresets?: Array<{ value: string; label?: string }>;
   /** Placeholder card: rendered greyed-out, all inputs/buttons disabled. */
   disabled?: boolean;
   /** Coming-soon note shown on a disabled card. */
@@ -322,7 +324,17 @@ function GenCard({
             value={state.model}
             onChange={(e) => onConfigChange({ model: e.target.value.trim() })}
             placeholder={meta.defaultModel}
+            list={meta.modelPresets?.length ? `${meta.id}-model-presets` : undefined}
           />
+          {meta.modelPresets?.length ? (
+            <datalist id={`${meta.id}-model-presets`}>
+              {meta.modelPresets.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label ?? p.value}
+                </option>
+              ))}
+            </datalist>
+          ) : null}
         </label>
       </div>
 

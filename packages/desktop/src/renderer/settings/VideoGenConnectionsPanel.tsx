@@ -5,23 +5,20 @@ const VIDEO_PROVIDERS: ProviderMeta[] = [
   {
     id: "fal",
     kind: "fal",
-    displayName: "fal.ai (Kling 等)",
+    displayName: "fal.ai (Kling / 即梦 Seedance 等)",
     description:
-      "通过 fal.ai 统一 API 调用 Kling/字节等视频模型。需要 fal key；模型 id 决定底层模型与文生/图生。",
+      "通过 fal.ai 统一 API 调用 Kling、即梦(Seedance,字节同源)等视频模型。需要 fal key；" +
+      "「默认模型」决定底层模型与文生/图生(传图自动切图生)。即梦 = fal 上的 bytedance/seedance 模型,选它即可。",
     defaultBaseUrl: "https://queue.fal.run",
     defaultModel: "fal-ai/kling-video/v3/pro/text-to-video",
     signupUrl: "https://fal.ai/dashboard/keys",
-  },
-  {
-    id: "jimeng",
-    kind: "jimeng",
-    displayName: "即梦 / 火山引擎",
-    description: "即梦同源视频模型。",
-    defaultBaseUrl: "",
-    defaultModel: "",
-    disabled: true,
-    comingSoonNote:
-      "即将支持。core 已预留 videoGen schema 与 submit/poll/download 接口,待接入火山引擎 AK/SK 签名适配器后开放。",
+    // 即梦(Seedance)与 Kling 都走 fal,差别只在 model id。可选可手填。
+    modelPresets: [
+      { value: "bytedance/seedance-2.0/text-to-video", label: "即梦 Seedance 2.0 · 文生视频" },
+      { value: "bytedance/seedance-2.0/image-to-video", label: "即梦 Seedance 2.0 · 图生视频" },
+      { value: "fal-ai/kling-video/v3/pro/text-to-video", label: "Kling v3 Pro · 文生视频" },
+      { value: "fal-ai/kling-video/v3/pro/image-to-video", label: "Kling v3 Pro · 图生视频" },
+    ],
   },
 ];
 
