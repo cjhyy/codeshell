@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { ImageProbeResult } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
 import { Button } from "@/components/ui/button";
+import { SimpleSelect } from "@/components/ui/simple-select";
 
 /** Probe result shape (reused from image probe; video has no probe → unused). */
 export type ProbeResult = ImageProbeResult;
@@ -320,21 +321,20 @@ function GenCard({
         </label>
         <label className="settings-field">
           <span>默认模型</span>
-          <input
-            value={state.model}
-            onChange={(e) => onConfigChange({ model: e.target.value.trim() })}
-            placeholder={meta.defaultModel}
-            list={meta.modelPresets?.length ? `${meta.id}-model-presets` : undefined}
-          />
           {meta.modelPresets?.length ? (
-            <datalist id={`${meta.id}-model-presets`}>
-              {meta.modelPresets.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label ?? p.value}
-                </option>
-              ))}
-            </datalist>
-          ) : null}
+            <SimpleSelect
+              value={state.model}
+              onChange={(v) => onConfigChange({ model: v })}
+              placeholder="选择模型"
+              options={meta.modelPresets.map((p) => ({ value: p.value, label: p.label ?? p.value }))}
+            />
+          ) : (
+            <input
+              value={state.model}
+              onChange={(e) => onConfigChange({ model: e.target.value.trim() })}
+              placeholder={meta.defaultModel}
+            />
+          )}
         </label>
       </div>
 
