@@ -96,6 +96,36 @@ export function serveMobile(
   createReadStream(file).pipe(res);
 }
 
+/**
+ * Serve a ROOT-level static asset (no /mobile prefix) from the built app.
+ * Needed because the built index.html uses base "./" and is served at /mobile
+ * (no trailing slash), so the browser resolves "./assets/x" → "/assets/x".
+ * Only known static buckets are served (assets/, *.ico/.png/.svg/.webmanifest)
+ * — never arbitrary root paths. Returns true if it wrote a response.
+ */
+export function serveMobileRootAsset(
+  req: IncomingMessage,
+  res: ServerResponse,
+  rootDir: string,
+): boolean {
+  const url = (req.url ?? "").split("?")[0].split("#")[0];
+  // Only handle asset-shaped root requests; everything else falls through.
+  const isAsset =
+    url.startsWith("/assets/") ||
+    /\.(ico|png|jpg|jpeg|svg|webp|woff2?|ttf|webmanifest|map)$/.test(url);
+  if (!isAsset) return false;
+  const file = resolveSafe(rootDir, url.replace(/^\/+/, ""));
+  if (!file) {
+    res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    res.end("not found");
+    return true;
+  }
+  const type = CONTENT_TYPES[extname(file).toLowerCase()] ?? "application/octet-stream";
+  res.writeHead(200, { "content-type": type });
+  createReadStream(file).pipe(res);
+  return true;
+}
+
 /** Dev-only: forward the request to the mobile vite dev server. Vite injects
  *  ABSOLUTE-path assets (/@vite/client, /@react-refresh, /main.tsx,
  *  /node_modules/.vite/*) that the phone requests at the HOST ROOT, plus the

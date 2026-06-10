@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer, type WebSocket } from "ws";
-import { serveMobile } from "./mobile-static.js";
+import { serveMobile, serveMobileRootAsset } from "./mobile-static.js";
 import { PairingTokenManager } from "./pairing.js";
 import type { AccessPasscode } from "./access-passcode.js";
 import type { TrustedDeviceStore } from "./trusted-device-store.js";
@@ -140,13 +140,17 @@ export class RemoteHostManager extends EventEmitter {
         res.end(JSON.stringify({ ok: true }));
         return;
       }
-      // DEV: vite injects ABSOLUTE-path assets (/@vite/client, /@react-refresh,
+      // LAN DEV: vite injects ABSOLUTE-path assets (/@vite/client, /@react-refresh,
       // /node_modules/.vite/*, /main.tsx) that the phone requests at the host
       // root — NOT under /mobile. So in dev we proxy EVERYTHING (except /health,
       // and /ws which is handled by the WS upgrade) to the mobile vite server.
+      // Tunnel mode is intentionally excluded: Vite's HMR websocket and @fs
+      // module URLs do not survive a public trycloudflare hop reliably, and they
+      // expose local filesystem-shaped paths. Public tunnel always serves the
+      // built static mobile app instead.
       // PROD has no such root assets: we keep the strict /mobile-only static
       // serve (path-traversal-safe), 404 for anything else.
-      if (this.mobileDevUrl) {
+      if (this.mobileDevUrl && !tunnel) {
         serveMobile(req, res, { rootDir: this.mobileRootDir, devUrl: this.mobileDevUrl });
         return;
       }
@@ -154,6 +158,11 @@ export class RemoteHostManager extends EventEmitter {
         serveMobile(req, res, { rootDir: this.mobileRootDir });
         return;
       }
+      // The built mobile app uses base "./", so its index.html (served at
+      // /mobile, no trailing slash) references "./assets/x" which the browser
+      // resolves to ROOT "/assets/x" — not "/mobile/assets/x". Serve those
+      // root-level static assets from out/mobile too. Path-traversal-safe.
+      if (serveMobileRootAsset(req, res, this.mobileRootDir)) return;
       res.writeHead(404);
       res.end("not found");
     });
