@@ -123,7 +123,12 @@ function proxyToDev(req: IncomingMessage, res: ServerResponse, devUrl: string): 
       headers: { ...req.headers, host: target.host },
     },
     (proxyRes) => {
-      res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+      // Never let a phone cache the DEV page/assets. Otherwise a stale static
+      // build's HTML (hash-named assets) survives in the browser cache and its
+      // asset requests hit the vite dev server, which has no hash files → 404.
+      // no-store on every dev response keeps the phone in lockstep with vite.
+      const headers = { ...proxyRes.headers, "cache-control": "no-store" };
+      res.writeHead(proxyRes.statusCode ?? 502, headers);
       proxyRes.pipe(res);
     },
   );
