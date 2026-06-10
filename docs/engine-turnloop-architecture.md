@@ -4,7 +4,7 @@
 
 ---
 
-## 1. `src/engine/engine.ts` (590 lines)
+## 1. `src/engine/engine.ts` (2910 lines)
 
 ### Exports
 - **`EngineConfig`** (interface) — full configuration for the Engine: LLM config, cwd, max turns, permission mode, preset selection, builtin tool filtering, hooks, MCP servers, optional CostStore, etc.
@@ -52,7 +52,7 @@ The Engine is the **orchestrator**. Its `run()` method:
 
 ---
 
-## 2. `src/engine/turn-loop.ts` (515 lines)
+## 2. `src/engine/turn-loop.ts` (1103 lines)
 
 ### Exports
 - **`TurnLoopConfig`** (interface) — maxTurns, maxToolCallsPerTurn, tokenBudget, onStream, signal.
@@ -100,7 +100,7 @@ The `run()` method implements the agent loop:
 
 ---
 
-## 3. `src/engine/model-facade.ts` (164 lines)
+## 3. `src/engine/model-facade.ts` (311 lines)
 
 ### Exports
 - **`ModelFacade`** (class) — wraps LLM client with transcript recording and usage tracking.
@@ -187,7 +187,7 @@ This avoids a static import cycle and means the module is only loaded when `onSt
 
 ---
 
-## 7. `src/engine/query.ts` (159 lines)
+## 7. `src/engine/query.ts` (169 lines)
 
 ### Exports
 - **`QueryParams`** (interface) — messages, systemPrompt, tools, maxTurns, maxToolCallsPerTurn, signal, deps.
@@ -212,7 +212,7 @@ Provides a **generator-based API** on top of TurnLoop:
 
 ---
 
-## 8. `src/engine/turn-state.ts` (22 lines)
+## 8. `src/engine/turn-state.ts` (31 lines)
 
 ### Exports
 - **`TurnState`** (interface) — phase, turnNumber, modelResponse?, toolCalls?, finalText?, error?, terminalReason?.
@@ -247,7 +247,31 @@ Defines the contract for persisting session-level cost state across `run({ sessi
 
 ---
 
-## 10. `src/context/manager.ts` (311 lines)
+## 9b. `src/engine/goal.ts` (255 lines)
+
+> 2026-06-10 补:goal 模式是 2026-05 之后新增的 turn-loop 核心机制,原文未覆盖。
+
+### Exports
+- **`GoalConfig`** (interface) — 归一化的目标:objective + 可选 token / 时间 / 最大回合 / 连续 stop-block 预算。
+- **`GoalBudgetTracker`** / **`createGoalBudgetTracker()`** — 跨整个 run(非单回合)累计 token 与墙钟用量的预算跟踪器。
+- **`GoalExtension`** / **`applyGoalExtension()`** — 把 goal 决策接进 turn loop。
+- **`normalizeGoal()`** / **`resolveMaxTurns()`** / **`resolveMaxStopBlocks()`** — 配置归一与默认值解析。
+- **`recordGoalUsage()`** / **`goalBudgetExceeded()`** / **`limitProximity()`** — 记账、预算耗尽判定、临近上限提示。
+- 常量:`GOAL_DEFAULT_MAX_TURNS` / `GOAL_DEFAULT_MAX_STOP_BLOCKS` / `INTERACTIVE_DEFAULT_*` / `APPROACH_TURNS` / `APPROACH_STOP_BLOCKS`。
+
+### Key Responsibilities
+为无人值守的 agent 运行提供 run 级护栏:
+1. **预算跟踪**:累计整个 run 的 token 与时长(与 `token-budget.ts` 的“单回合”预算互补,后者管单轮)。
+2. **stop-block 上限**:防止卡住的目标无限循环——连续 N 次 on_stop 阻断后强制停止。
+3. **与 TurnLoop 集成**:goal 配置经 `ctx.data.goal` 传给 on_stop 处理器(见 `hooks/goal-stop-hook.ts`)。
+
+### Design Patterns / Gotchas
+- **run 级 vs 回合级**:`goal.ts` 累计整个 run;`token-budget.ts` 管单回合。
+- **stop-block 计数会重置**:一旦某回合未被阻断完成,计数归零——只统计**连续**阻断。
+
+---
+
+## 10. `src/context/manager.ts` (501 lines)
 
 ### Exports
 - **`ContextManagerConfig`** (interface) — maxTokens, compactAtRatio (0.6), summarizeAtRatio (0.8), maxToolResultChars (30000).
@@ -259,12 +283,13 @@ Defines the contract for persisting session-level cost state across `run({ sessi
 **Tier system**:
 | Tier | Name | Sync/Async | Strategy |
 |------|------|------------|----------|
-| 0 | Truncate | Sync | Truncate individual tool results > 30K chars |
-| 0b | Budget | Sync | Aggregate per-message tool result budget (100K chars) |
-| 1 | Microcompact | Sync | Clear old tool_result content (keep last 3 rounds) |
-| 2 | LLM Summary | Async | Generate structured summary via model call |
-| 2b | Snip Compact | Sync | Keep first N + last M, drop middle |
-| 3 | Window Compact | Sync | Keep first + last N messages |
+| 0 | truncateToolResult | Sync | Truncate individual oversized tool results |
+| 1 | microcompact | Sync | Clear old tool_result content, keep recent N rounds |
+| 2 | LLM summary | Async | Generate structured summary via model call |
+| 3 | window compact | Sync | Keep first + last N messages (sync fallback) |
+| Emergency | dropOldestRounds | Sync | Progressive API-round-based truncation for context-limit recovery |
+
+> 真源见 `compaction.ts` 头部注释;另有 `snipCompact`(保首尾、丢中间)作为 window 的较温和变体。
 
 **Two entry points**:
 - `manage(messages)` — sync path (no LLM access).
@@ -293,7 +318,7 @@ Defines the contract for persisting session-level cost state across `run({ sessi
 
 ---
 
-## 11. `src/context/compaction.ts` (420 lines)
+## 11. `src/context/compaction.ts` (752 lines)
 
 ### Exports
 - **`estimateTokens()`** — convenience wrapper adding 33% overhead padding.
