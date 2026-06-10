@@ -96,18 +96,30 @@ export function serveMobile(
   createReadStream(file).pipe(res);
 }
 
-/** Dev-only: forward the request to the mobile vite dev server. Vite serves
- *  index.html + HMR client + transformed modules. We keep the same /mobile/*
- *  path so vite's base ("./") resolves consistently. */
+/** Dev-only: forward the request to the mobile vite dev server. Vite injects
+ *  ABSOLUTE-path assets (/@vite/client, /@react-refresh, /main.tsx,
+ *  /node_modules/.vite/*) that the phone requests at the HOST ROOT, plus the
+ *  page itself at /mobile. We rewrite only the /mobile prefix → vite's root and
+ *  forward every other path verbatim, so all of vite's root assets resolve. */
+export function devProxyPath(reqUrl: string): string {
+  // Split off the query so we can rewrite just the path.
+  const qIdx = reqUrl.indexOf("?");
+  const path = qIdx === -1 ? reqUrl : reqUrl.slice(0, qIdx);
+  const query = qIdx === -1 ? "" : reqUrl.slice(qIdx);
+  if (path === "/mobile" || path === "/mobile/") return "/" + query;
+  if (path.startsWith("/mobile/")) return path.slice("/mobile".length) + query;
+  // Root-level asset (vite client/refresh/modules) — forward as-is.
+  return path + query;
+}
+
 function proxyToDev(req: IncomingMessage, res: ServerResponse, devUrl: string): void {
   const target = new URL(devUrl);
-  const sub = mobileAssetPath(req.url ?? "/mobile");
   const proxyReq = httpRequest(
     {
       hostname: target.hostname,
       port: target.port,
       method: req.method,
-      path: "/" + sub + (req.url?.includes("?") ? "?" + req.url.split("?")[1] : ""),
+      path: devProxyPath(req.url ?? "/mobile"),
       headers: { ...req.headers, host: target.host },
     },
     (proxyRes) => {

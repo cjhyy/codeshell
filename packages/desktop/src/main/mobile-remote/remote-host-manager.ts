@@ -135,18 +135,23 @@ export class RemoteHostManager extends EventEmitter {
       // Tunnel mode: a passcode gate sits in front of EVERY route. The gate
       // either allows (returns true) or writes its own 401/403 challenge.
       if (gate && !gate.gate(req, res)) return;
-      if (req.url?.startsWith("/mobile")) {
-        // Serve the built React app from out/mobile (prod) or proxy to the
-        // mobile vite dev server (dev). Path-traversal-safe; see mobile-static.
-        serveMobile(req, res, {
-          rootDir: this.mobileRootDir,
-          devUrl: this.mobileDevUrl,
-        });
-        return;
-      }
       if (req.url === "/health") {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
+        return;
+      }
+      // DEV: vite injects ABSOLUTE-path assets (/@vite/client, /@react-refresh,
+      // /node_modules/.vite/*, /main.tsx) that the phone requests at the host
+      // root — NOT under /mobile. So in dev we proxy EVERYTHING (except /health,
+      // and /ws which is handled by the WS upgrade) to the mobile vite server.
+      // PROD has no such root assets: we keep the strict /mobile-only static
+      // serve (path-traversal-safe), 404 for anything else.
+      if (this.mobileDevUrl) {
+        serveMobile(req, res, { rootDir: this.mobileRootDir, devUrl: this.mobileDevUrl });
+        return;
+      }
+      if (req.url?.startsWith("/mobile")) {
+        serveMobile(req, res, { rootDir: this.mobileRootDir });
         return;
       }
       res.writeHead(404);

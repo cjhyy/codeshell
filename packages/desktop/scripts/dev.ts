@@ -26,7 +26,9 @@ const root = resolve(cwd, "..");
 const VITE_PORT = 5273;
 const VITE_URL = `http://localhost:${VITE_PORT}`;
 const MOBILE_PORT = 5373;
-const MOBILE_URL = `http://localhost:${MOBILE_PORT}`;
+// 127.0.0.1 (not "localhost") so the main-process proxy target matches the
+// vite bind exactly — avoids IPv4/IPv6 resolution mismatch (see vite.mobile.config).
+const MOBILE_URL = `http://127.0.0.1:${MOBILE_PORT}`;
 
 async function startVite(): Promise<void> {
   const server = await createViteServer({
