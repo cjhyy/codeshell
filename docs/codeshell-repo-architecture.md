@@ -93,8 +93,8 @@ CLI
 
 ### 4.1 入口层
 
-- `src/cli/`
-- `src/bootstrap/`
+- `src/cli/`(core:agent-server 进程入口;交互 CLI 在 `packages/tui/src/cli/`)
+- `src/bootstrap/`(已移至 `packages/tui/src/bootstrap/`,不在 core)
 
 职责：
 
@@ -148,10 +148,10 @@ CLI
 - 多模型讨论与审查
 - MCP 集成
 
-### 4.5 终端交互层
+### 4.5 终端交互层(已移出 core,现位于 `packages/tui/src`)
 
-- `src/ui/`
-- `src/ink/`
+- `packages/tui/src/ui/`(React 组件层)
+- `packages/tui/src/render/`(自研类 Ink 渲染引擎,原 `src/ink/` 已不存在)
 
 职责：
 
@@ -167,8 +167,11 @@ CLI
 
 这些目录应该被视为当前真正的产品主干：
 
-- `src/cli`
-- `src/bootstrap`
+> 注:本节原把终端交互层(`ui`/`ink`/`bootstrap`)与内核混列。截至 2026-06-10 已是 monorepo:**core 包不含 UI**,以下是 `packages/core/src` 下的真实内核目录;终端外壳(`ui`/`render`/`bootstrap`)在 `packages/tui`,桌面在 `packages/desktop`。`src/ink` 已不存在(自研 Ink 渲染器现位于 `packages/tui/src/render`)。
+
+`packages/core/src`(内核):
+
+- `src/cli`(仅 agent-server-stdio/tcp 进程入口)
 - `src/engine`
 - `src/protocol`
 - `src/preset`
@@ -178,11 +181,12 @@ CLI
 - `src/settings`
 - `src/llm`
 - `src/tool-system`
-- `src/ui`
-- `src/ink`
 - `src/run`
 - `src/arena`
 - `src/skills`
+- `src/hooks`、`src/services`、`src/capability-control`、`src/automation`、`src/agent`(也属内核,原文遗漏)
+
+终端外壳已移出 core,位于 `packages/tui/src`:`bootstrap`、`cli`、`ui`、`render`(自研类 Ink 引擎)、`native-ts/yoga-layout`、`voice`。
 
 这些目录共同定义了“通用编排内核 + 终端交互外壳”。
 
@@ -190,15 +194,16 @@ CLI
 
 这些目录可以保留，但更适合被看作扩展能力，而不是产品身份本身：
 
+core 内(`packages/core/src`):
+
 - `src/remote`
 - `src/git`
-- `src/agent`
-- `src/cron`
+- `src/cron`(现为 `automation` 的向后兼容垫片)
 - `src/lsp`
 - `src/plugins`
-- `src/hooks`
-- `src/voice`
-- `src/native-ts`
+- `src/external-agents`、`src/product`、`src/review`、`src/logging`、`src/data`、`src/runtime`、`src/utils`(横切基础设施)
+
+tui 内(`packages/tui/src`,非 core):`voice`、`native-ts`。
 
 它们有价值，但不应反过来主导项目定位。
 
