@@ -131,6 +131,53 @@ describe("RemoteHostManager", () => {
     expect(events[events.length - 1]).toEqual(["dev2"]);
   });
 
+  test("sendToDevice targets only the named device's sockets (multi-device isolation)", async () => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+    // Pre-trust two devices.
+    const a = store.addDevice({ name: "A", secretHash: "sa" });
+    const b = store.addDevice({ name: "B", secretHash: "sb" });
+    const host = new RemoteHostManager({ devices: store, onClientEvent: () => {} });
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    const wsUrl = started.url.replace(/^http/, "ws") + "/ws";
+
+    // Connect two real sockets and auth each as a different device.
+    const { WebSocket: WS } = await import("ws");
+    function connectAs(deviceId: string, secret: string) {
+      return new Promise<{ sock: import("ws").WebSocket; got: unknown[] }>((res) => {
+        const sock = new WS(wsUrl);
+        const got: unknown[] = [];
+        sock.on("message", (raw) => {
+          const m = JSON.parse(String(raw));
+          if (m.type === "auth.ok") res({ sock, got });
+          else got.push(m);
+        });
+        sock.on("open", () =>
+          sock.send(JSON.stringify({ type: "auth.device", deviceId, secretHash: secret })),
+        );
+      });
+    }
+    const ca = await connectAs(a.id, "sa");
+    const cb = await connectAs(b.id, "sb");
+
+    // Send a device-specific event to A only.
+    host.sendToDevice(a.id, { type: "chat.accepted", sessionId: "sess-A" });
+    await new Promise((r) => setTimeout(r, 50));
+
+    const aGotit = ca.got.some(
+      (m) => (m as { type?: string; sessionId?: string }).sessionId === "sess-A",
+    );
+    const bGotit = cb.got.some(
+      (m) => (m as { type?: string; sessionId?: string }).sessionId === "sess-A",
+    );
+    expect(aGotit).toBe(true);
+    expect(bGotit).toBe(false); // B must NOT see A's reply
+
+    ca.sock.close();
+    cb.sock.close();
+    await host.stop();
+  });
+
   test("resolveLanHost never returns loopback/link-local/VPN ranges", () => {
     const ip = resolveLanHost();
     // CI/sandbox may have no LAN interface → undefined is allowed.

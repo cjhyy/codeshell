@@ -60,14 +60,63 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
   useEffect(() => {
     closedByUs.current = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let openWatchdog: ReturnType<typeof setTimeout> | undefined;
+
+    /** Schedule a reconnect with jittered exponential backoff. Cancels any
+     *  pending timer so a manual/event-driven reconnect can pre-empt it. */
+    const scheduleReconnect = (): void => {
+      if (closedByUs.current) return;
+      if (retryTimer) clearTimeout(retryTimer);
+      const base = Math.min(RECONNECT_BASE_MS * 2 ** retryRef.current, RECONNECT_MAX_MS);
+      // Full jitter: random in [base/2, base] avoids thundering-herd and makes
+      // a flaky network settle instead of hammering on a fixed cadence.
+      const delay = base / 2 + Math.random() * (base / 2);
+      retryRef.current += 1;
+      retryTimer = setTimeout(connect, delay);
+    };
+
+    /** Force an immediate reconnect (network back / tab visible again). */
+    const reconnectNow = (): void => {
+      if (closedByUs.current) return;
+      const ws = wsRef.current;
+      // If we already have a live, open socket, leave it alone.
+      if (ws && ws.readyState === WebSocket.OPEN) return;
+      if (retryTimer) clearTimeout(retryTimer);
+      retryRef.current = 0;
+      // Drop a half-open/connecting socket before redialing.
+      if (ws) {
+        ws.onclose = null;
+        ws.onerror = null;
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
+        wsRef.current = null;
+      }
+      connect();
+    };
 
     const connect = (): void => {
       const wsUrl = window.location.origin.replace(/^http/, "ws") + "/ws";
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
       setStatus("connecting");
+      // Watchdog: a socket stuck in CONNECTING (dead network, captive portal)
+      // never fires onclose. Force-close after 10s so backoff kicks in.
+      if (openWatchdog) clearTimeout(openWatchdog);
+      openWatchdog = setTimeout(() => {
+        if (ws.readyState === WebSocket.CONNECTING) {
+          try {
+            ws.close();
+          } catch {
+            /* ignore */
+          }
+        }
+      }, 10_000);
 
       ws.onopen = () => {
+        if (openWatchdog) clearTimeout(openWatchdog);
         retryRef.current = 0;
         const pairingToken = parsePairingToken(window.location.search);
         const secret = deviceStore.getOrCreateSecret(() => generateSecret());
@@ -127,24 +176,40 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       };
 
       ws.onclose = () => {
+        if (openWatchdog) clearTimeout(openWatchdog);
         wsRef.current = null;
         if (closedByUs.current) return;
         setStatus("offline");
-        const delay = Math.min(RECONNECT_BASE_MS * 2 ** retryRef.current, RECONNECT_MAX_MS);
-        retryRef.current += 1;
-        retryTimer = setTimeout(connect, delay);
+        scheduleReconnect();
       };
 
       ws.onerror = () => {
         // onclose handles retry; closing here makes the failure deterministic.
-        ws.close();
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
       };
     };
+
+    // Reconnect proactively when the OS reports the network is back or the tab
+    // becomes visible again (phones suspend the socket in the background — the
+    // close event often doesn't fire until the user returns).
+    const onOnline = () => reconnectNow();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") reconnectNow();
+    };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
 
     connect();
     return () => {
       closedByUs.current = true;
       if (retryTimer) clearTimeout(retryTimer);
+      if (openWatchdog) clearTimeout(openWatchdog);
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
       wsRef.current?.close();
     };
   }, []);

@@ -289,6 +289,22 @@ export class RemoteHostManager extends EventEmitter {
     this.broadcastRaw(JSON.stringify(event));
   }
 
+  /** Send a server event to ONLY the sockets belonging to one device. Used for
+   *  per-device replies (chat.accepted, session.list.ok, permission.mode, …) so
+   *  one phone's session/permission state never leaks onto another's screen.
+   *  A device with no live socket (raced a disconnect) is a silent no-op. */
+  sendToDevice(deviceId: string, event: MobileServerEvent): void {
+    const payload = JSON.stringify(event);
+    for (const client of this.wss?.clients ?? []) {
+      if (
+        client.readyState === client.OPEN &&
+        this.authed.get(client) === deviceId
+      ) {
+        client.send(payload);
+      }
+    }
+  }
+
   /** Broadcast a raw line (e.g. a mirrored worker→renderer JSON-RPC line) to
    *  every authenticated mobile socket. Unauthenticated sockets are skipped so
    *  a half-paired client never sees session output. */

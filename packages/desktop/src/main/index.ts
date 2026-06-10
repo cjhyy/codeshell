@@ -45,7 +45,7 @@ import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
 import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
 import { AccessPasscode } from "./mobile-remote/access-passcode.js";
-import type { MobileClientEvent, RoomPublic } from "./mobile-remote/types.js";
+import type { MobileClientEvent, MobileServerEvent, RoomPublic } from "./mobile-remote/types.js";
 import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
 import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
@@ -168,7 +168,10 @@ const mobileDevices = new TrustedDeviceStore(
 const mobileRemote = new RemoteHostManager({
   devices: mobileDevices,
   onClientEvent: (event) => {
-    void handleMobileClientEvent(event as MobileClientEvent);
+    // The remote host tags authenticated events with the sending device id
+    // (see remote-host-manager: { ...event, deviceId }). Thread it through so
+    // session selection / permission mode / replies are per-device.
+    void handleMobileClientEvent(event as MobileClientEvent & { deviceId?: string });
   },
 });
 
@@ -243,17 +246,37 @@ try {
  * reuse it so the phone's turns land in one coherent session. A phone that
  * explicitly selects a session (session.select) overrides this.
  */
-let mobileSessionId: string | undefined;
-let mobileSelectedSessionId: string | undefined;
-/** Phone-chosen permission mode, applied to the next mobile-initiated run.
- *  stream-json/desktop runs can't pop per-call prompts, so the phone sets a
- *  preset (default | acceptEdits | bypassPermissions) that rides on agent/run. */
-let mobilePermissionMode: PermissionMode = "default";
-function ensureMobileSessionId(): string {
-  if (!mobileSessionId) {
-    mobileSessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+/**
+ * Per-device mobile state. Each connected phone/tablet drives its OWN session
+ * selection + permission mode, so two devices never clobber each other (a
+ * shared global made device B's "select session 2" overwrite device A). Keyed
+ * by trusted-device id. The agent OUTPUT stream is still broadcast to all
+ * devices (each front-end filters to its bound session — so switching to
+ * another session and pulling its history shows the latest), but per-device
+ * REPLIES (chat.accepted / permission.mode / session.*) go only to that device.
+ */
+interface MobileDeviceState {
+  /** Lazily-minted fallback session id for this device's fresh chats. */
+  sessionId?: string;
+  /** The session this device explicitly selected (overrides everything). */
+  selectedSessionId?: string;
+  /** This device's permission-mode preset, applied to its next run. */
+  permissionMode: PermissionMode;
+}
+const mobileDeviceStates = new Map<string, MobileDeviceState>();
+function deviceState(deviceId: string): MobileDeviceState {
+  let s = mobileDeviceStates.get(deviceId);
+  if (!s) {
+    s = { permissionMode: "default" };
+    mobileDeviceStates.set(deviceId, s);
   }
-  return mobileSessionId;
+  return s;
+}
+function ensureMobileSessionId(st: MobileDeviceState): string {
+  if (!st.sessionId) {
+    st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  return st.sessionId;
 }
 
 /**
@@ -263,7 +286,7 @@ function ensureMobileSessionId(): string {
  * the renderer's preload rpc() would emit, so the core permission engine,
  * goal logic, and snapshots all apply unchanged.
  */
-async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> {
+async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: string }): Promise<void> {
   // ── Rooms (independent of the chat worker bridge) ─────────────────────
   if (event.type.startsWith("room.")) {
     await handleRoomEvent(event);
@@ -271,39 +294,46 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
   }
   if (!bridge) return;
   const ctx = bridge.getLastRunContext();
-  // session selection priority: explicit per-event → phone-selected → desktop's
-  // current run → a stable minted mobile session (never undefined for run).
+  // Per-device state: the remote host tags every authenticated event with the
+  // device id (see onClientEvent wiring). Replies that are device-specific go
+  // back to ONLY that device via sendToDevice; the agent output stream is still
+  // broadcast (each front-end filters to its bound session).
+  const deviceId = event.deviceId;
+  const st = deviceId ? deviceState(deviceId) : { permissionMode: "default" as PermissionMode };
+  const reply = (e: MobileServerEvent): void => {
+    if (deviceId) mobileRemote.sendToDevice(deviceId, e);
+    else mobileRemote.broadcast(e);
+  };
+  // session selection priority: explicit per-event → this device's selection →
+  // desktop's current run → a stable minted per-device session.
   const resolveSessionId = (explicit?: string): string =>
-    explicit ?? mobileSelectedSessionId ?? ctx.sessionId ?? ensureMobileSessionId();
+    explicit ?? st.selectedSessionId ?? ctx.sessionId ?? ensureMobileSessionId(st);
   if (event.type === "session.select") {
-    mobileSelectedSessionId = event.sessionId;
+    st.selectedSessionId = event.sessionId;
     return;
   }
   if (event.type === "session.create") {
-    // Mint a fresh mobile session and make it the active selection.
-    mobileSessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-    mobileSelectedSessionId = mobileSessionId;
-    mobileRemote.broadcast({ type: "chat.accepted", sessionId: mobileSessionId });
+    // Mint a fresh session for THIS device and make it its active selection.
+    st.sessionId = `mobile-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    st.selectedSessionId = st.sessionId;
+    reply({ type: "chat.accepted", sessionId: st.sessionId });
     return;
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
     const cwd = ctx.cwd ?? process.cwd();
     // Every phone chat turn is a normal CodeShell turn routed through the worker
-    // run path. (External claude CLI is reached via Rooms, not a chat slash.)
-    // The phone-selected permission mode rides on the run (presets, since the
-    // desktop run path can still pop approvals which the phone answers).
+    // run path. The device's permission-mode preset rides on the run.
     bridge.injectWorkerMessage(
       JSON.stringify({
         jsonrpc: "2.0",
         id: `mobile-run-${Date.now()}`,
         method: "agent/run",
-        params: { task: event.text, cwd, sessionId, permissionMode: mobilePermissionMode },
+        params: { task: event.text, cwd, sessionId, permissionMode: st.permissionMode },
       }),
     );
-    // Tell the phone which session this turn landed in (so it can label the
-    // conversation and route follow-up approvals/stops correctly).
-    mobileRemote.broadcast({ type: "chat.accepted", sessionId });
+    // Tell THIS device which session its turn landed in.
+    reply({ type: "chat.accepted", sessionId });
     return;
   }
   if (event.type === "approval.respond") {
@@ -348,7 +378,7 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
   if (event.type === "session.list") {
     // Every desktop session the sidebar would show (top-level, existing cwd).
     const { sessions } = await listDiskSessions({ limit: 100 });
-    mobileRemote.broadcast({
+    reply({
       type: "session.list.ok",
       sessions: sessions.map((s) => ({
         id: s.id,
@@ -357,16 +387,16 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
         updatedAt: s.updatedAt,
         origin: s.origin,
       })),
-      activeSessionId: mobileSelectedSessionId ?? ctx.sessionId,
+      activeSessionId: st.selectedSessionId ?? ctx.sessionId,
     });
     return;
   }
   if (event.type === "session.history") {
     try {
       const events = await buildSessionHistory(event.sessionId);
-      mobileRemote.broadcast({ type: "session.history.ok", sessionId: event.sessionId, events });
+      reply({ type: "session.history.ok", sessionId: event.sessionId, events });
     } catch (err) {
-      mobileRemote.broadcast({
+      reply({
         type: "error",
         message: `读取会话历史失败: ${err instanceof Error ? err.message : String(err)}`,
       });
@@ -374,8 +404,9 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
     return;
   }
   if (event.type === "permission.setMode") {
-    mobilePermissionMode = event.mode;
-    mobileRemote.broadcast({ type: "permission.mode", sessionId: event.sessionId, mode: event.mode });
+    // Per-device preset — does NOT affect other devices.
+    st.permissionMode = event.mode;
+    reply({ type: "permission.mode", sessionId: event.sessionId, mode: event.mode });
     return;
   }
   if (event.type === "model.set") {
@@ -387,6 +418,7 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
         params: { model: event.model },
       }),
     );
+    // Model is engine-global, so this reply DOES go to all devices.
     mobileRemote.broadcast({ type: "model.current", model: event.model });
     return;
   }
@@ -405,7 +437,7 @@ async function handleMobileClientEvent(event: MobileClientEvent): Promise<void> 
         },
       }),
     );
-    mobileRemote.broadcast({ type: "goal.extended", sessionId: event.sessionId, ok: true });
+    reply({ type: "goal.extended", sessionId: event.sessionId, ok: true });
     return;
   }
 }
