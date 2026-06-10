@@ -520,3 +520,38 @@ describe("applyStreamEvent — goal_progress markers", () => {
     if (m.kind === "goal_progress") expect(m.gaps).toBe("tests still failing");
   });
 });
+
+describe("applyStreamEvent — background_agent_completed", () => {
+  test("completed → appends a system message with the saved path", () => {
+    const ev = {
+      type: "background_agent_completed",
+      agentId: "video-1",
+      name: "video generation",
+      description: "Video generated: /p/.code-shell/generated_videos/1.mp4",
+      status: "completed",
+      finalText: "Video saved to /p/.code-shell/generated_videos/1.mp4",
+      enqueuedAt: 1,
+    } as unknown as StreamEvent;
+    const s = applyStreamEvent(INITIAL_STATE, ev);
+    const last = s.messages[s.messages.length - 1];
+    expect(last.kind).toBe("system");
+    expect((last as { text: string }).text).toContain("video generation");
+    expect((last as { text: string }).text).toContain("Video saved to /p/.code-shell/generated_videos/1.mp4");
+  });
+
+  test("failed → appends a system message with the error", () => {
+    const ev = {
+      type: "background_agent_completed",
+      agentId: "video-2",
+      name: "video generation",
+      description: "Video generation failed",
+      status: "failed",
+      error: "content policy",
+      enqueuedAt: 1,
+    } as unknown as StreamEvent;
+    const s = applyStreamEvent(INITIAL_STATE, ev);
+    const last = s.messages[s.messages.length - 1];
+    expect(last.kind).toBe("system");
+    expect((last as { text: string }).text).toContain("content policy");
+  });
+});

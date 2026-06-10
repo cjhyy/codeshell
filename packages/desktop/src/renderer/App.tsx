@@ -7,8 +7,10 @@ import { timePhase } from "./perf";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
+import { useToast } from "./ui/ToastProvider";
 import {
   applyStreamEvent,
+  bgCompletionText,
   appendUserMessage,
   appendAskUserMessage,
   markAskUserAnswered,
@@ -203,6 +205,7 @@ interface ApprovalHistoryEntry {
 }
 
 function App() {
+  const toast = useToast();
   const [transcripts, dispatch] = useReducer(reducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -1047,6 +1050,13 @@ function App() {
 
     const offStream = window.codeshell.onStreamEvent((env: StreamEventEnvelope) => {
       const event = env.event;
+      if (event.type === "background_agent_completed") {
+        toast({
+          message: bgCompletionText(event),
+          variant: event.status === "completed" ? "success" : "error",
+        });
+        // fall through: the reducer still appends the system message below.
+      }
       // Multi-session routing: every envelope carries the engine sessionId.
       // We mirror engineSessionId → bucket in a ref so stream events route to
       // the right tab even when several runs are in flight at once. Fallback
@@ -1354,7 +1364,9 @@ function App() {
       offStatus();
       offLifecycle();
     };
-  }, []);
+    // `toast` from useToast is a stable reference (memoized in ToastProvider),
+    // so listing it here does not re-register these long-lived IPC listeners.
+  }, [toast]);
 
   const send = (text: string): void => {
     // createSession persists to localStorage synchronously, so reading

@@ -289,6 +289,22 @@ function freshId(prefix: string): string {
  */
 export type MessageClock = () => number | undefined;
 
+/** Shared text for a background-task completion (video etc.) — used by the
+ *  reducer (message stream) and App.tsx (toast) so the two never drift. */
+export function bgCompletionText(event: {
+  name?: string;
+  description: string;
+  status: "completed" | "failed";
+  finalText?: string;
+  error?: string;
+}): string {
+  const who = event.name ?? "后台任务";
+  if (event.status === "completed") {
+    return `✓ ${who}完成:${event.finalText ?? event.description}`;
+  }
+  return `✗ ${who}失败:${event.error ?? event.description}`;
+}
+
 export function applyStreamEvent(
   state: MessagesReducerState,
   event: StreamEvent,
@@ -760,6 +776,16 @@ export function applyStreamEvent(
           : state.messages,
         streamingAssistantId: null,
         streamingThinkingId: null,
+      };
+    }
+
+    case "background_agent_completed": {
+      return {
+        ...state,
+        messages: [
+          ...state.messages,
+          { kind: "system", id: freshId("bg-done"), text: bgCompletionText(event) },
+        ],
       };
     }
 
