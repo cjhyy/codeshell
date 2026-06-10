@@ -2,46 +2,44 @@
 
 ## Overview
 
-The tool system at `src/tool-system/` is the extensible action framework that powers agent capabilities. It follows a **registry + executor + permission** pattern: tools are registered with schemas, execution is mediated through permission checks, and validation happens before tool invocation. MCP (Model Context Protocol) integration brings external tools into the same namespace.
+The tool system at `packages/core/src/tool-system/` is the extensible action framework that powers agent capabilities. It follows a **registry + executor + permission** pattern: tools are registered with schemas, execution is mediated through permission checks, and validation happens before tool invocation. MCP (Model Context Protocol) integration brings external tools into the same namespace.
+
+> 路径说明:本文成稿时为单包 `src/tool-system/`,现已是 monorepo,真实路径为 `packages/core/src/tool-system/`。下文正文中的 `src/tool-system/...` 均应理解为 `packages/core/src/tool-system/...`。文件树已于 2026-06-10 按现状校对。
 
 ```
-src/tool-system/
+packages/core/src/tool-system/
 ├── registry.ts              # Central tool registry
 ├── executor.ts              # Tool execution orchestrator
-├── permission.ts            # Permission engine
+├── permission.ts            # Permission engine + approval backends
+├── path-policy.ts           # 路径级安全分类 (allow/ask/deny)
+├── context.ts               # 每 Engine 实例的工具运行时服务容器
 ├── validation.ts            # Schema validation
+├── plan-mode-allowlist.ts   # plan 模式允许工具的唯一真源
+├── investigation-guard.ts   # 只读读预算护栏
+├── task-guard.ts            # TodoWrite 停滞督促护栏
 ├── mcp-manager.ts           # MCP server lifecycle manager
+├── sandbox/                 # seatbelt(mac)/bwrap(linux)/off 沙箱后端
 ├── builtin/
-│   ├── index.ts             # Barrel: all builtin tool definitions
-│   ├── read.ts              # Read file
-│   ├── write.ts             # Write file
-│   ├── edit.ts              # String-patch file editing
-│   ├── bash.ts              # Shell command execution
-│   ├── glob.ts              # File glob matching
-│   ├── grep.ts              # Regex search
-│   ├── web-search.ts        # Web search (DuckDuckGo)
-│   ├── web-fetch.ts         # Web page fetching
-│   ├── arena.ts             # Multi-model Arena
-│   ├── task.ts              # Task tracking
-│   ├── agent.ts             # Sub-agent spawning
-│   ├── ask-user.ts          # Ask user a question
-│   ├── plan.ts              # Plan mode entry/exit
-│   ├── file-cache.ts        # In-memory file state cache
-│   ├── agent-registry.ts    # Background agent lifecycle registry
-│   ├── sleep.ts             # Pause execution
-│   ├── brief.ts             # Structured markdown output
-│   ├── config.ts            # Read/write .code-shell/settings.json
-│   ├── lsp.ts               # LSP code intelligence
-│   ├── notebook-edit.ts     # Jupyter notebook cell editing
-│   ├── repl.ts              # REPL code execution
-│   ├── remote-trigger.ts    # Remote workflow triggers
-│   ├── send-message.ts      # Inter-agent messaging
-│   ├── powershell.ts        # PowerShell execution
-│   ├── cron.ts              # Scheduled recurring tasks
-│   ├── mcp-tools.ts         # MCP tool/resource access
-│   ├── tool-search.ts       # Deferred tool schema discovery
-│   ├── worktree.ts          # Git worktree isolation
-│   └── skill.ts             # Custom skill/plugin system
+│   ├── index.ts             # Barrel: all builtin tool definitions (~44 个工具)
+│   ├── read.ts / write.ts / edit.ts / notebook-edit.ts
+│   ├── apply-patch/         # V4A 多行补丁原子写子系统 (parser/applier/...)
+│   ├── glob.ts / grep.ts / file-cache.ts
+│   ├── bash.ts / powershell.ts / repl.ts / sleep.ts
+│   ├── background-shell-tools.ts  # 后台 shell 配套:bash-output/kill/list
+│   ├── bash-output-style.ts
+│   ├── web-search.ts / web-fetch.ts / remote-trigger.ts
+│   ├── generate-image.ts / image-providers.ts
+│   ├── generate-video.ts / video-providers.ts
+│   ├── view-image.ts        # 在终端/UI 展示图片
+│   ├── arena.ts / task.ts / plan.ts / brief.ts
+│   ├── agent.ts / agent-registry.ts / agent-notifications.ts
+│   ├── agent-output-file.ts / agent-transcript-translator.ts
+│   ├── ask-user.ts / complete-goal.ts          # 交互/目标完成声明
+│   ├── memory.ts            # 跨会话记忆 (list/read/save/delete 导出于此一文件)
+│   ├── config.ts / cron.ts / update-automation-memory.ts
+│   ├── mcp-tools.ts / tool-search.ts / lsp.ts / worktree.ts
+│   ├── skill.ts / skill-prompt.ts
+│   └── add-marketplace.ts   # 模型驱动的插件市场注册 (git clone)
 ```
 
 ---
@@ -463,22 +461,9 @@ src/tool-system/
 
 ---
 
-#### 18. `builtin/send-message.ts` (SendMessage)
-
-| Property | Detail |
-|---|---|
-| **Lines** | ~55 |
-
-**Exports:** `sendMessageToolDef`, `sendMessageTool(args)`
-
-**Logic:**
-- Sends a text message from one named agent to another.
-- Validates target exists and is in `running` status via `agentCoordinator`.
-- Automatically sets `from` to `args.__agentName` (the calling agent's name, injected by executor context).
-
-**Connections:**
-- Uses `agentCoordinator` from `src/agent/coordinator.ts`.
-- Designed for multi-agent workflows where agents need to pass intermediate results.
+> #### 18.(已删除)`builtin/send-message.ts` (SendMessage)
+>
+> 该工具及其依赖的 `agent/coordinator.ts` 已作为死代码删除(mailbox/agent-to-agent 消息机制不再存在)。多代理协作改由 Agent 工具的嵌套 Engine + 后台 agent 注册表承载。
 
 ---
 
