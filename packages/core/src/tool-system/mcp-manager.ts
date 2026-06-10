@@ -21,6 +21,67 @@ interface MCPConnection {
 }
 
 /**
+ * Read a required secret from `process.env` by NAME (Codex-style env-secret
+ * handling — the value is never persisted in MCP config). A referenced env var
+ * that is undefined OR empty string is treated as missing so the connection
+ * fails with a clear, actionable error naming the server, the config field,
+ * and the env var.
+ */
+export function readRequiredEnv(serverName: string, field: string, envName: string): string {
+  const v = process.env[envName];
+  if (v === undefined || v === "") {
+    throw new Error(`MCP server "${serverName}": env var "${envName}" (from ${field}) is not set`);
+  }
+  return v;
+}
+
+/**
+ * Build the spawned stdio server's environment. Priority (lowest → highest):
+ * inherited `process.env` < forwarded `envVars` (read from process.env by name)
+ * < explicit plaintext `config.env`. Returns `undefined` when neither `env`
+ * nor `envVars` is present, preserving the old "inherit nothing extra" behavior
+ * (transport gets `env: undefined`). Pure + exported for unit testing.
+ */
+export function buildStdioEnv(
+  serverName: string,
+  config: MCPServerConfig,
+): Record<string, string> | undefined {
+  if (!config.env && !config.envVars?.length) return undefined;
+  const forwarded: Record<string, string> = {};
+  for (const en of config.envVars ?? []) {
+    forwarded[en] = readRequiredEnv(serverName, "envVars", en);
+  }
+  return {
+    ...(process.env as Record<string, string>),
+    ...forwarded,
+    ...(config.env ?? {}),
+  };
+}
+
+/**
+ * Build the HTTP transport's request headers. Static `config.headers` form the
+ * base; env-sourced secrets (`bearerTokenEnvVar`, `envHeaders`) layer on top
+ * and win on conflict. Pure + exported for unit testing.
+ */
+export function buildHttpHeaders(
+  serverName: string,
+  config: MCPServerConfig,
+): Record<string, string> {
+  const headers: Record<string, string> = { ...(config.headers ?? {}) };
+  if (config.bearerTokenEnvVar) {
+    headers["Authorization"] = `Bearer ${readRequiredEnv(
+      serverName,
+      "bearerTokenEnvVar",
+      config.bearerTokenEnvVar,
+    )}`;
+  }
+  for (const [hName, envName] of Object.entries(config.envHeaders ?? {})) {
+    headers[hName] = readRequiredEnv(serverName, "envHeaders", envName);
+  }
+  return headers;
+}
+
+/**
  * Wrap raw MCP server output with an explicit untrusted-content marker
  * before it reaches the LLM. The wrapper does two things:
  *
@@ -274,14 +335,15 @@ export class MCPManager {
       transport = new StdioClientTransport({
         command: config.command,
         args: config.args,
-        env: config.env ? { ...process.env, ...config.env } as Record<string, string> : undefined,
+        env: buildStdioEnv(name, config),
       });
     } else if (transportType === "streamable-http" || transportType === "sse") {
       if (!config.url) {
         throw new Error(`MCP server "${name}": url is required for ${transportType} transport`);
       }
+      const headers = buildHttpHeaders(name, config);
       transport = new StreamableHTTPClientTransport(new URL(config.url), {
-        requestInit: config.headers ? { headers: config.headers } : undefined,
+        requestInit: Object.keys(headers).length ? { headers } : undefined,
       });
     } else {
       throw new Error(`MCP server "${name}": unsupported transport "${transportType}"`);

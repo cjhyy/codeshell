@@ -481,6 +481,22 @@ export interface MCPServerConfig {
   transport?: MCPTransport;
   headers?: Record<string, string>;
   /**
+   * (stdio) NAMES of env vars to forward from the parent process to the
+   * spawned server. The value is read from `process.env` at connect time —
+   * the secret itself is never stored in config. Explicit `env` overrides.
+   */
+  envVars?: string[];
+  /**
+   * (HTTP) NAME of an env var whose value is sent as
+   * `Authorization: Bearer <value>`. Read from `process.env` at connect time.
+   */
+  bearerTokenEnvVar?: string;
+  /**
+   * (HTTP) Map of header-name → env-var-NAME. Each header's value is read
+   * from the named env var at connect time, keeping secrets out of config.
+   */
+  envHeaders?: Record<string, string>;
+  /**
    * Toggle a server off without deleting its config (mirrors Codex's
    * `enabled` field). Absent or `true` → connected; only the literal
    * `false` disables it. Filtered in MCPManager.connectAll so the

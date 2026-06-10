@@ -346,6 +346,11 @@ export const SettingsSchema = z
             url: z.string().optional(),
             transport: z.enum(["stdio", "sse", "streamable-http", "inprocess"]).optional(),
             headers: z.record(z.string()).optional(),
+            // Codex-style env-secret handling: store env-var NAMES, read the
+            // secret from process.env at connect time (never plaintext here).
+            envVars: z.array(z.string()).optional(), // (stdio) forward these env vars
+            bearerTokenEnvVar: z.string().optional(), // (HTTP) → Authorization: Bearer <env value>
+            envHeaders: z.record(z.string()).optional(), // (HTTP) header-name → env-var-name
             // Codex-style on/off switch. Absent or true → connected; only
             // literal false disables. Filtered in MCPManager.connectAll.
             enabled: z.boolean().optional(),

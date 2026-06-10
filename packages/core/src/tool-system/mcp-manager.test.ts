@@ -1,5 +1,12 @@
 import { describe, test, expect } from "bun:test";
-import { MCPManager, buildRegisteredTool, stripInternalToolArgs } from "./mcp-manager.js";
+import {
+  MCPManager,
+  buildRegisteredTool,
+  stripInternalToolArgs,
+  readRequiredEnv,
+  buildStdioEnv,
+  buildHttpHeaders,
+} from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
 import type { MCPServerConfig } from "../types.js";
 
@@ -187,5 +194,132 @@ describe("stripInternalToolArgs", () => {
   test("returns empty args for no-argument MCP tools", () => {
     const ac = new AbortController();
     expect(stripInternalToolArgs({ __signal: ac.signal })).toEqual({});
+  });
+});
+
+/**
+ * Codex-style env-secret handling: the MCP config stores the NAME of an env
+ * var; the secret value is read from process.env at connect time so it never
+ * has to be persisted as plaintext. The env/header building is extracted into
+ * pure helpers (buildStdioEnv / buildHttpHeaders) so we can unit-test them
+ * without spawning a real transport. Always clean up process.env so tests
+ * don't leak across the suite.
+ */
+describe("readRequiredEnv", () => {
+  test("returns the value when the env var is set", () => {
+    process.env.MCP_TEST_SECRET = "s3cr3t";
+    try {
+      expect(readRequiredEnv("srv", "envVars", "MCP_TEST_SECRET")).toBe("s3cr3t");
+    } finally {
+      delete process.env.MCP_TEST_SECRET;
+    }
+  });
+
+  test("throws with the exact message format when undefined", () => {
+    delete process.env.MCP_TEST_MISSING;
+    expect(() => readRequiredEnv("srv", "envVars", "MCP_TEST_MISSING")).toThrow(
+      'MCP server "srv": env var "MCP_TEST_MISSING" (from envVars) is not set',
+    );
+  });
+
+  test("throws when the env var is an empty string", () => {
+    process.env.MCP_TEST_EMPTY = "";
+    try {
+      expect(() => readRequiredEnv("srv", "bearerTokenEnvVar", "MCP_TEST_EMPTY")).toThrow(
+        'MCP server "srv": env var "MCP_TEST_EMPTY" (from bearerTokenEnvVar) is not set',
+      );
+    } finally {
+      delete process.env.MCP_TEST_EMPTY;
+    }
+  });
+});
+
+describe("buildStdioEnv", () => {
+  test("returns undefined when neither env nor envVars present", () => {
+    expect(buildStdioEnv("srv", cfg("srv"))).toBeUndefined();
+  });
+
+  test("forwards an envVars-named var from process.env", () => {
+    process.env.MCP_FOO = "foo-value";
+    try {
+      const env = buildStdioEnv("srv", cfg("srv", { envVars: ["MCP_FOO"] }));
+      expect(env?.MCP_FOO).toBe("foo-value");
+      // process.env is still merged in as the base.
+      expect(env?.PATH).toBe(process.env.PATH);
+    } finally {
+      delete process.env.MCP_FOO;
+    }
+  });
+
+  test("explicit config.env overrides an envVars-forwarded value of the same key", () => {
+    process.env.MCP_FOO = "forwarded";
+    try {
+      const env = buildStdioEnv(
+        "srv",
+        cfg("srv", { envVars: ["MCP_FOO"], env: { MCP_FOO: "explicit" } }),
+      );
+      expect(env?.MCP_FOO).toBe("explicit");
+    } finally {
+      delete process.env.MCP_FOO;
+    }
+  });
+
+  test("throws when an envVars-named var is missing", () => {
+    delete process.env.MCP_MISSING;
+    expect(() => buildStdioEnv("srv", cfg("srv", { envVars: ["MCP_MISSING"] }))).toThrow(
+      'MCP server "srv": env var "MCP_MISSING" (from envVars) is not set',
+    );
+  });
+});
+
+describe("buildHttpHeaders", () => {
+  function httpCfg(name: string, extra: Partial<MCPServerConfig> = {}): MCPServerConfig {
+    return { name, transport: "streamable-http", url: "https://example.com", ...extra };
+  }
+
+  test("bearerTokenEnvVar → Authorization: Bearer <value>", () => {
+    process.env.MCP_TOKEN = "tok-123";
+    try {
+      const headers = buildHttpHeaders("srv", httpCfg("srv", { bearerTokenEnvVar: "MCP_TOKEN" }));
+      expect(headers.Authorization).toBe("Bearer tok-123");
+    } finally {
+      delete process.env.MCP_TOKEN;
+    }
+  });
+
+  test("envHeaders maps header name → env value", () => {
+    process.env.MCP_API_KEY = "key-xyz";
+    try {
+      const headers = buildHttpHeaders(
+        "srv",
+        httpCfg("srv", { envHeaders: { "X-Api-Key": "MCP_API_KEY" } }),
+      );
+      expect(headers["X-Api-Key"]).toBe("key-xyz");
+    } finally {
+      delete process.env.MCP_API_KEY;
+    }
+  });
+
+  test("env-sourced secrets override static headers of the same name", () => {
+    process.env.MCP_TOKEN = "from-env";
+    try {
+      const headers = buildHttpHeaders(
+        "srv",
+        httpCfg("srv", {
+          headers: { Authorization: "Bearer static" },
+          bearerTokenEnvVar: "MCP_TOKEN",
+        }),
+      );
+      expect(headers.Authorization).toBe("Bearer from-env");
+    } finally {
+      delete process.env.MCP_TOKEN;
+    }
+  });
+
+  test("missing env var → throws", () => {
+    delete process.env.MCP_MISSING;
+    expect(() =>
+      buildHttpHeaders("srv", httpCfg("srv", { envHeaders: { "X-Api-Key": "MCP_MISSING" } })),
+    ).toThrow('MCP server "srv": env var "MCP_MISSING" (from envHeaders) is not set');
   });
 });
