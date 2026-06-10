@@ -1,6 +1,6 @@
 # Code Shell — 完整架构文档
 
-> 生成日期: 2026-05-08 | 基于当前 `main` 分支 + uncommitted 改动
+> 生成日期: 2026-05-08 **(部分模块计数/路径已于 2026-06-10 按现状校对;期间发生多项模块扩展与 monorepo 路径迁移)** | 基于 `main` 分支
 
 ---
 
@@ -80,7 +80,7 @@ Code Shell 是一个**通用 Agent 编排框架**，内置 `terminal-coding` pre
 
 ### 2.1 Engine — 对话轮询引擎
 
-**位置**: `src/engine/` (9 文件, ~1,500 行)
+**位置**: `src/engine/` (19 文件, ~3,000+ 行;2026-06-10 校对)
 
 Engine 是整个 agent 运行时的核心状态机。从"用户消息"到"完成输出"的全流程编排。
 
@@ -88,15 +88,17 @@ Engine 是整个 agent 运行时的核心状态机。从"用户消息"到"完成
 
 | 文件 | 行数 | 核心职责 | 导出 |
 |------|------|----------|------|
-| `engine.ts` | ~590 | Engine 入口：组装所有组件, 会话生命周期, 权限配置, 并行初始化 | `Engine` 类 |
-| `turn-loop.ts` | ~515 | Agent 状态机：pre_check → model_call → tool_exec 循环 | `TurnLoop` 类 |
-| `model-facade.ts` | ~164 | LLM 客户端封装：transcript 记录 + usage 跟踪 + reasoning_content | `ModelFacade` 类 |
+| `engine.ts` | ~2910 | Engine 入口：组装所有组件, 会话生命周期, 权限配置, 并行初始化 | `Engine` 类 |
+| `turn-loop.ts` | ~1103 | Agent 状态机：pre_check → model_call → post_check → tool_exec → context_mgmt 循环(已含 goal 模式/reactive-threshold) | `TurnLoop` 类 |
+| `model-facade.ts` | ~311 | LLM 客户端封装：transcript 记录 + usage 跟踪 + reasoning_content | `ModelFacade` 类 |
+| `goal.ts` | ~255 | **新** 运行级目标模式与预算(token/时间/轮数/stop-block) | `GoalConfig`, `GoalBudgetTracker` |
 | `streaming-tool-queue.ts` | ~71 | 流式工具执行队列：安全工具并发, 不安全工具串行 | `StreamingToolQueue` 类 |
 | `token-budget.ts` | ~60 | 递减回报感知的 token 预算控制 | `TokenBudget` 类 |
 | `tool-summary.ts` | ~46 | 工具执行后的一行摘要生成 | `toolSummary()` |
-| `query.ts` | ~159 | AsyncGenerator API 包装 TurnLoop | `query()` 函数 |
-| `turn-state.ts` | ~22 | 单轮状态快照 | `TurnState` 类型 |
+| `query.ts` | ~169 | AsyncGenerator API 包装 TurnLoop | `query()` 函数 |
+| `turn-state.ts` | ~31 | 单轮状态快照 | `TurnState` 类型 |
 | `cost-store.ts` | ~24 | 成本持久化策略接口 | `CostStore` 接口 |
+| 其他新增 | — | `runtime.ts`, `dynamic-tool-defs.ts`, `friendly-error.ts`, `image-policy.ts`, `image-compression.ts`, `parse-task.ts`, `reactive-threshold.ts`, `patch-orphaned-tools.ts`, `session-title.ts` | — |
 
 #### engine.ts — Engine 类
 
@@ -211,17 +213,24 @@ for await (const event of query({
 
 ### 2.2 Tool System — 工具系统
 
-**位置**: `src/tool-system/` (32 文件, ~3,000+ 行)
+**位置**: `src/tool-system/` (64 文件含 builtin/sandbox/apply-patch;2026-06-10 校对)
 
-#### 核心模块 (5 文件)
+#### 核心模块 (10 文件)
 
 | 文件 | 职责 |
 |------|------|
 | `registry.ts` | 中央工具注册表, 按名称 key 存储 `ToolDefinition` |
-| `executor.ts` | 薄中介层: 查找 → 权限检查 → 验证 → 派发 |
-| `permission.ts` | 粗粒度 allow/deny/ask 决策树, 支持 preset 快捷方式 |
+| `executor.ts` | 薄中介层: 权限检查 → hook → 校验 → plan-mode 门控 → 派发 |
+| `permission.ts` | 分类器 + 多种审批后端(无头/自动/交互)+ 规则匹配 + Bash 安全分级 |
+| `path-policy.ts` | **新** 文件工具路径安全分类(符号链接/敏感路径/工作区根)→ allow/ask/deny |
+| `context.ts` | **新** 每 Engine 实例注入的工具运行时服务容器(askUser/llmConfig/modelPool/subagent) |
+| `plan-mode-allowlist.ts` | **新** plan 模式允许工具的唯一真源 |
+| `investigation-guard.ts` | **新** 只读读预算护栏(去重 Read、连续只读提醒) |
+| `task-guard.ts` | **新** TodoWrite 停滞督促护栏 |
 | `validation.ts` | 浅层 JSON Schema 验证 (required fields + type/enum) |
-| `mcp-manager.ts` | MCP 服务器生命周期管理, 懒加载工具 schema |
+| `mcp-manager.ts` | MCP 服务器生命周期管理, 懒加载工具 schema, 不可信输出防注入 |
+
+另有 `sandbox/`(seatbelt/bwrap/off)与 `builtin/apply-patch/`(V4A 补丁原子写)子目录。
 
 **工具执行链路**:
 
@@ -243,7 +252,7 @@ permissionMode: "bypassPermissions" → Bash 也自动允许
 default: 安全工具自动允许, 写操作需要确认
 ```
 
-#### 内置工具清单 (28 个)
+#### 内置工具清单 (~44 个;2026-06-10 校对,下列为部分,完整以 `builtin/` 目录为准)
 
 **文件 I/O**:
 - `read.ts` — 按行号/偏移量读取文件, 默认 2000 行
@@ -453,7 +462,9 @@ defineProduct({
 
 ### 2.5 CLI — 命令行入口
 
-**位置**: `src/cli/` (20+ 文件)
+**位置**(2026-06-10 校对,已 monorepo 分散):
+- **交互 CLI / REPL**:`packages/tui/src/cli/`(20+ 文件,bin `code-shell`、run/repl/sessions/arena/runs/plugin 子命令、斜杠命令)
+- **Agent Server 进程入口**:`packages/core/src/cli/`(`agent-server-stdio.ts` / `agent-server-tcp.ts`)
 
 #### 主要入口
 
@@ -609,17 +620,20 @@ createLLMClient(config)  ← 工厂函数
 
 ### 2.10 Protocol — 远程通信协议
 
-**位置**: `src/protocol/` (5 文件, ~500 行)
+**位置**: `src/protocol/` (11 文件;2026-06-10 校对,新增 chat-session 多会话管理层)
 
-JSON-RPC 风格 NDJSON 协议, 支持 agent-to-agent 通信和 client/serve 模式。
+JSON-RPC 风格 NDJSON 协议, 支持 agent-to-agent 通信和 client/serve 模式。代码中实际类名为 `AgentServer` / `AgentClient`。
 
 | 文件 | 职责 |
 |------|------|
-| `types.ts` | `ProtocolMessage`, `RequestMessage`, `ResponseMessage`, `StreamEvent`, `ProtocolCapabilities` |
-| `client.ts` | `ProtocolClient`: 客户端 NDJSON 通信, pending-request map, stream 订阅 |
-| `server.ts` | `ProtocolServer`: 服务端, 路由请求到处理函数, 事件订阅管理 |
-| `transport.ts` | `createStdioTransport()`, `createSSHTransport()`: 传输层抽象 |
-| `index.ts` | Re-export 桶 |
+| `types.ts` | JSON-RPC 信封、`Methods`、`ErrorCodes`、各请求/结果/通知、`StreamEvent` |
+| `client.ts` | `AgentClient`: 客户端 NDJSON 通信, pending-request map, stream 订阅 |
+| `server.ts` | `AgentServer`: 服务端, 路由 run/approve/cancel/configure/query/inject, chat-session 协调 |
+| `chat-session.ts` | **新** `ChatSession`: 每 UI tab 一个,持单 Engine + FIFO turn 队列 + AbortController |
+| `chat-session-manager.ts` | **新** `ChatSessionManager`: 按 sessionId 多会话生命周期(getOrCreate/close/idle 清扫) |
+| `transport.ts` / `tcp-transport.ts` | 进程内成对传输 + stdio NDJSON + TCP NDJSON |
+| `factories.ts` / `helpers.ts` | `createServer` / `createInProcessClient` 稳定公共工厂 |
+| `redact.ts` / `index.ts` | 协议边界脱敏 + Re-export 桶 |
 
 **消息流向**:
 
@@ -776,12 +790,12 @@ agentCoordinator.getStatus(name)           // 查询状态
 
 ### 2.16 Bootstrap — 启动引导
 
-**位置**: `src/bootstrap/` (2 文件)
+**位置**(2026-06-10 校对):`setup.ts` 现位于 `packages/tui/src/bootstrap/`,`state.ts` 现位于 `packages/core/src/state.ts`(已从 bootstrap 迁出到 core 根)。
 
 | 文件 | 职责 |
 |------|------|
-| `setup.ts` | `setup()`: 飞行前检查 (Node ≥ 18, cwd 存在, no root-with-bypass), chdir, git 检测, 后台初始化 |
-| `state.ts` | ~90 个 getter/setter: 全局状态管理 (session/model/token/line/duration/feature-flags/plan/skills/hooks/auth) |
+| `setup.ts`(tui/src/bootstrap/) | `setup()`: 飞行前检查 (Node ≥ 18, cwd 存在, no root-with-bypass), chdir, git 检测, 后台初始化 |
+| `state.ts`(core/src/) | ~90 个 getter/setter: 全局状态管理 (session/model/token/line/duration/feature-flags/plan/skills/hooks/auth) |
 
 **`state.ts` 是全局状态中枢**, 被几乎所有模块引用。分类:
 - **Session**: `getSessionId()`, `switchSession()`, `getOriginalCwd()`, `getProjectRoot()`
