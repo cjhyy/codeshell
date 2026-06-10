@@ -355,11 +355,14 @@ ToolCall
 
 ### 文件分组
 
-- 文件/搜索/编辑：`read.ts`、`grep.ts`、`glob.ts`、`write.ts`、`edit.ts`、`notebook-edit.ts`、`worktree.ts`
-- 执行环境：`bash.ts`、`powershell.ts`、`repl.ts`、`sleep.ts`
-- Web/外部：`web-fetch.ts`、`web-search.ts`、`remote-trigger.ts`、`send-message.ts`、`generate-image.ts`
-- Agent/Arena/Task：`agent.ts`、`agent-registry.ts`、`agent-notifications.ts`、`arena.ts`、`task.ts`
-- MCP/LSP/Skill/Memory/Config/Cron：`mcp-tools.ts`、`lsp.ts`、`skill.ts`、`memory.ts`、`config.ts`、`cron.ts`
+> 仅列核心文件;`builtin/` 下截至 2026-06-10 共约 44 个文件,完整以目录为准。`send-message.ts` 已随 SendMessage/agentCoordinator 死代码删除。
+
+- 文件/搜索/编辑：`read.ts`、`grep.ts`、`glob.ts`、`write.ts`、`edit.ts`、`notebook-edit.ts`、`worktree.ts`、`apply-patch/`、`view-image.ts`、`file-cache.ts`
+- 执行环境：`bash.ts`、`powershell.ts`、`repl.ts`、`sleep.ts`、`background-shell-tools.ts`
+- Web/外部：`web-fetch.ts`、`web-search.ts`、`remote-trigger.ts`、`generate-image.ts`、`generate-video.ts`、`image-providers.ts`、`video-providers.ts`
+- Agent/Arena/Task：`agent.ts`、`agent-registry.ts`、`agent-notifications.ts`、`agent-output-file.ts`、`arena.ts`、`task.ts`、`plan.ts`、`brief.ts`
+- MCP/LSP/Skill/Memory/Config/Cron：`mcp-tools.ts`、`lsp.ts`、`skill.ts`、`skill-prompt.ts`、`memory.ts`、`config.ts`、`cron.ts`、`add-marketplace.ts`
+- 交互/目标：`ask-user.ts`、`complete-goal.ts`、`tool-search.ts`、`update-automation-memory.ts`
 
 ### 入口
 
@@ -456,10 +459,10 @@ Engine.run
 
 ### 文件
 
-- `settings/schema.ts`、`settings/manager.ts`
+- `settings/schema.ts`、`settings/manager.ts`、`settings/disk-defaults.ts`、`settings/feature-flags.ts`、`settings/migrate-config.ts`、`settings/personalization.ts`
 - `prompt/composer.ts`、`instruction-scanner.ts`、`section-loader.ts`、`section-cache.ts`
-- `hooks/events.ts`、`registry.ts`、`shell-runner.ts`、`goal-stop-hook.ts`
-- `plugins/loadPluginHooks.ts`、`pluginCommandHook.ts`、`pluginInstaller.ts`、`marketplaceManager.ts`、`varRewrite.ts`
+- `hooks/events.ts`、`registry.ts`、`shell-runner.ts`、`goal-stop-hook.ts`、`hook-output.ts`、`inject.ts`
+- `plugins/loadPluginHooks.ts`、`pluginCommandHook.ts`、`pluginInstaller.ts`、`marketplaceManager.ts`、`varRewrite.ts`、`gitOps.ts`、`installedPlugins.ts`、`knownMarketplaces.ts`、`parseMarketplaceInput.ts`、`pluginCommandsLoader.ts`、`schemas.ts`、`types.ts`(另含 `installer/` 子目录)
 - `skills/scanner.ts`、`frontmatter.ts`
 
 ### 入口
