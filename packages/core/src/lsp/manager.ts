@@ -5,7 +5,8 @@
 
 import { LSPClient } from "./client.js";
 import { BUILTIN_LSP_SERVERS, type LSPServerConfig } from "./servers.js";
-import { execSync } from "node:child_process";
+import { accessSync, constants, statSync } from "node:fs";
+import { delimiter, extname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { rootUriToPath } from "./root-path.js";
 
@@ -60,7 +61,7 @@ export class LSPServerManager {
     if (!managed) return undefined;
 
     // Check if command is available
-    if (!this.isCommandAvailable(managed.config.command)) {
+    if (!isCommandAvailable(managed.config.command)) {
       managed.state = "error";
       managed.error = `${managed.config.command} not found. Install: ${managed.config.installHint}`;
       return undefined;
@@ -121,17 +122,50 @@ export class LSPServerManager {
       server.client = undefined;
     }
   }
+}
 
-  private isCommandAvailable(command: string): boolean {
-    try {
-      execSync(`which ${command} 2>/dev/null || where ${command} 2>nul`, {
-        encoding: "utf-8",
-        timeout: 5000,
-      });
-      return true;
-    } catch {
-      return false;
+export function isCommandAvailable(command: string, env: NodeJS.ProcessEnv = process.env): boolean {
+  const trimmed = command.trim();
+  if (!trimmed) return false;
+
+  const hasPathSeparator = trimmed.includes("/") || trimmed.includes("\\");
+  // A bare command with whitespace is not executable via spawn(command, args)
+  // anyway. Reject it up front so a configured command can never be interpreted
+  // as shell syntax such as `pylsp; touch /tmp/pwned`.
+  if (!hasPathSeparator && /\s/.test(trimmed)) return false;
+
+  if (hasPathSeparator) {
+    return candidateCommandNames(trimmed, env).some(isExecutableFile);
+  }
+
+  for (const dir of (env.PATH ?? "").split(delimiter)) {
+    if (!dir) continue;
+    for (const name of candidateCommandNames(trimmed, env)) {
+      if (isExecutableFile(join(dir, name))) return true;
     }
+  }
+  return false;
+}
+
+function candidateCommandNames(command: string, env: NodeJS.ProcessEnv): string[] {
+  if (process.platform !== "win32" || extname(command)) return [command];
+  const pathext = (env.PATHEXT || ".COM;.EXE;.BAT;.CMD")
+    .split(";")
+    .map((ext) => ext.trim())
+    .filter(Boolean);
+  return [command, ...pathext.map((ext) => `${command}${ext}`)];
+}
+
+function isExecutableFile(filePath: string): boolean {
+  try {
+    const st = statSync(filePath);
+    if (!st.isFile()) return false;
+    if (process.platform !== "win32") {
+      accessSync(filePath, constants.X_OK);
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 
