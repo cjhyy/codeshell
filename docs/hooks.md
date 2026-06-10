@@ -77,7 +77,8 @@ commands on the host.
 | `on_permission_check` | After classifier runs, before deciding | `toolName`, `args`, `classifierDecision` | Override the rule set's verdict via `decision`. |
 | `file_changed` | After successful Write/Edit | `toolName`, `filePath` | Trigger re-formatters, auto-tests. |
 | `post_compact` | After non-micro context compaction | `strategy`, `beforeTokens`, `afterTokens` | Remind the model "context was just compacted — re-check recent decisions". |
-| `notification` | Background sub-agent terminates | `kind` (agent_completed/failed/cancelled), `agentId`, `name`, `description`, plus `finalText` or `error` | Desktop notifications. Fire-and-forget — handler latency does not block the engine. |
+| `on_stop` | Model returns no tool calls, loop about to return reason "completed" | `goal`, `finalText`, `turnCount` | Goal mode seam: a handler returning `continueSession: true` (with `messages`) BLOCKS termination — messages injected as `<system-reminder>` and the loop runs another turn. Bounded by `maxStopBlocks` + `maxTurns`. Distinct from `HookResult.stop` (which controls the hook chain). See `goal-stop-hook.ts`. |
+| `notification` | Background sub-agent terminates | `kind` (agent_completed/agent_failed/agent_cancelled), `agentId`, `name`, `description`, plus `finalText` or `error` | Desktop notifications. Fire-and-forget — handler latency does not block the engine. |
 
 All Engine-side emits also carry `isSubAgent` in `ctx.data` so handlers can
 skip noisy injections for spawned children:
@@ -128,13 +129,15 @@ When multiple handlers fire for the same event, the registry aggregates them:
 | --- | --- |
 | `messages` | concatenated in priority order |
 | `additionalContext` | joined with `\n\n` separators |
-| `decision`, `updatedInput`, `updatedPrompt` | **last-write-wins** (lowest-priority handler that returns a value owns the override) |
+| `decision` | **strictest-wins** (`deny` > `ask` > `allow`; a later handler cannot relax an earlier `deny`). See `DECISION_RANK` / `stricterDecision` in `hooks/registry.ts`. |
+| `updatedInput`, `updatedPrompt` | **last-write-wins** (lowest-priority handler that returns a value owns the override) |
 | `data` | shallow-merged forward; later handlers see earlier handlers' edits |
 | `stop` | aborts the chain immediately, prior aggregates preserved |
 
-Because `decision` is last-write-wins, security hooks that must block an
-operation should return `stop: true` with `decision: "deny"`. Otherwise a
-lower-priority handler can override the decision later in the chain.
+Because `decision` is strictest-wins, a `deny` from any handler cannot be relaxed
+by a lower-priority handler later in the chain. Use `stop: true` only when you
+want to halt the hook chain immediately (before remaining handlers run) — it is
+not needed to make a `deny` stick.
 
 ## Shell protocol
 
