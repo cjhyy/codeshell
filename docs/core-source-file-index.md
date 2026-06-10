@@ -1,13 +1,13 @@
 # Core 逐文件源码索引
 
-- 生成时间：2026-06-02T00:16:52
+- 生成时间：2026-06-02T00:16:52（目录计数与文件数已于 2026-06-10 按现状校对更新）
 - 范围：`packages/core/src/**/*.ts`，排除 `*.test.ts`
-- 文件数：290
+- 文件数：319
 
 ## 目录
 
 - `(root)`: 9 files
-- `agent`: 3 files
+- `agent`: 2 files
 - `arena`: 48 files
 - `automation`: 7 files
 - `capability-control`: 5 files
@@ -15,10 +15,11 @@
 - `context`: 4 files
 - `cron`: 3 files
 - `data`: 3 files
-- `engine`: 16 files
+- `engine`: 19 files
+- `external-agents`: 2 files
 - `git`: 3 files
 - `hooks`: 6 files
-- `llm`: 20 files
+- `llm`: 23 files
 - `logging`: 3 files
 - `lsp`: 4 files
 - `plugins`: 26 files
@@ -27,13 +28,14 @@
 - `prompt`: 5 files
 - `protocol`: 11 files
 - `remote`: 1 files
+- `review`: 1 files
 - `run`: 15 files
-- `runtime`: 1 files
+- `runtime`: 6 files
 - `services`: 12 files
-- `session`: 4 files
-- `settings`: 2 files
+- `session`: 6 files
+- `settings`: 6 files
 - `skills`: 3 files
-- `tool-system`: 54 files
+- `tool-system`: 64 files
 - `utils`: 15 files
 
 ## 逐文件清单
@@ -3228,6 +3230,49 @@
 - 核心链路关键词：（无直接命中）
 - 风险信号关键词：path, join(
 
+
+---
+
+## 2026-06-10 校对补遗
+
+> 上面 #1–#290 的逐文件详条生成于 2026-06-02。截至 2026-06-10，core 实际非测试文件已增至 **319** 个。下面补记本次校对发现的差异;详条(SHA/导出)未逐一回填,仅列路径与实测行数,后续可重新生成。
+
+**已删除/改名(原清单仍列,现已不存在):**
+- `agent/coordinator.ts`(多代理 coordinator 死代码,随 SendMessage 一并删除)
+- `tool-system/builtin/send-message.ts`(SendMessage 工具已删)
+
+**新增但未进上面编号清单的 31 个文件:**
+- `engine/dynamic-tool-defs.ts` — 39 行
+- `engine/friendly-error.ts` — 85 行
+- `engine/goal.ts` — 255 行
+- `external-agents/config.ts` — 22 行
+- `external-agents/types.ts` — 37 行
+- `llm/capabilities/reasoning-control.ts` — 58 行
+- `llm/provider-auth.ts` — 97 行
+- `llm/reasoning-setting.ts` — 38 行
+- `review/review-prompt.ts` — 110 行
+- `runtime/background-shell.ts` — 542 行
+- `runtime/output-clean.ts` — 45 行
+- `runtime/ring-file.ts` — 188 行
+- `runtime/spawn-common.ts` — 201 行
+- `runtime/truncate-output.ts` — 60 行
+- `session/simple-diff.ts` — 87 行
+- `session/undo-target.ts` — 49 行
+- `settings/disk-defaults.ts` — 63 行
+- `settings/feature-flags.ts` — 75 行
+- `settings/migrate-config.ts` — 90 行
+- `settings/personalization.ts` — 20 行
+- `tool-system/builtin/add-marketplace.ts` — 82 行
+- `tool-system/builtin/agent-output-file.ts` — 91 行
+- `tool-system/builtin/apply-patch/backup-targets.ts` — 31 行
+- `tool-system/builtin/background-shell-tools.ts` — 126 行
+- `tool-system/builtin/bash-output-style.ts` — 50 行
+- `tool-system/builtin/complete-goal.ts` — 54 行
+- `tool-system/builtin/generate-video.ts` — 304 行
+- `tool-system/builtin/image-providers.ts` — 178 行
+- `tool-system/builtin/update-automation-memory.ts` — 69 行
+- `tool-system/builtin/video-providers.ts` — 237 行
+- `tool-system/builtin/view-image.ts` — 112 行
 
 ---
 
