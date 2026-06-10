@@ -21,8 +21,10 @@ export interface VideoSubmitRequest {
   prompt: string;
   model: string;
   creds: VideoProviderCreds;
-  /** Optional image URL (http/https). When present, triggers image-to-video. */
+  /** Single image URL (http/https) — image-to-video. Back-compat. */
   image?: string;
+  /** Multiple image URLs — ≥2 triggers reference-to-video. Takes precedence over `image`. */
+  images?: string[];
   signal?: AbortSignal;
 }
 
@@ -109,9 +111,28 @@ export class FalVideoProvider implements VideoProvider {
   readonly kind = "fal";
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
-  private resolveModel(model: string, image?: string): string {
-    if (image && /text-to-video$/.test(model)) {
-      return model.replace(/text-to-video$/, "image-to-video");
+  /** Effective image list: images[] wins; else single image; else []. */
+  private imageList(req: VideoSubmitRequest): string[] {
+    if (req.images && req.images.length) return req.images;
+    if (req.image) return [req.image];
+    return [];
+  }
+
+  /**
+   * Does this model family support reference-to-video (multi-image)? Verified
+   * 2026-06-10 against the live API: Seedance has it; Kling does NOT (routing a
+   * Kling model to `.../reference-to-video` 404s at result fetch). Keep this a
+   * conservative allowlist — only families confirmed to expose the endpoint.
+   */
+  private supportsReference(model: string): boolean {
+    return /seedance/i.test(model);
+  }
+
+  /** Route model suffix by image count: 0→text, 1→image, ≥2→reference. */
+  private resolveModel(model: string, imageCount: number): string {
+    const target = imageCount >= 2 ? "reference-to-video" : imageCount === 1 ? "image-to-video" : null;
+    if (target && /(text|image|reference)-to-video$/.test(model)) {
+      return model.replace(/(text|image|reference)-to-video$/, target);
     }
     return model;
   }
@@ -125,9 +146,20 @@ export class FalVideoProvider implements VideoProvider {
 
   async submit(req: VideoSubmitRequest): Promise<VideoSubmitResult> {
     const base = req.creds.baseUrl.replace(/\/+$/, "");
-    const model = this.resolveModel(req.model, req.image);
+    const imgs = this.imageList(req);
+    // Multi-image needs reference-to-video, which only some families expose.
+    // Routing e.g. Kling to .../reference-to-video 404s at result fetch — fail
+    // fast with a clear message instead.
+    if (imgs.length >= 2 && !this.supportsReference(req.model)) {
+      return {
+        ok: false,
+        error: `model "${req.model}" does not support multiple images (reference-to-video). Use a Seedance model for 2+ images, or pass a single image.`,
+      };
+    }
+    const model = this.resolveModel(req.model, imgs.length);
     const body: Record<string, unknown> = { prompt: req.prompt };
-    if (req.image) body.image_url = req.image;
+    if (imgs.length >= 2) body.image_urls = imgs;
+    else if (imgs.length === 1) body.image_url = imgs[0];
     try {
       const r = await this.fetchImpl(`${base}/${model}`, {
         method: "POST",

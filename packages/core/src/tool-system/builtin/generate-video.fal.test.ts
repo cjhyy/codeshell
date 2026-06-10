@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { __resolveVideoProviderForTests } from "./generate-video.js";
+import { __resolveVideoProviderForTests, __normalizeImagesForTests } from "./generate-video.js";
 
 function tmpWorkspaceWithSettings(settings: object): string {
   const dir = mkdtempSync(join(tmpdir(), "fal-vid-"));
@@ -33,5 +33,16 @@ describe("resolveVideoProvider reads videoGen.providers[]", () => {
       videoGen: { providers: [{ id: "fal", kind: "fal", baseUrl: "https://queue.fal.run" }] },
     });
     expect(__resolveVideoProviderForTests(cwd)).toBeNull();
+  });
+});
+
+describe("GenerateVideo image normalization", () => {
+  test("images[] wins; URLs pass through; >9 → error", async () => {
+    const fakeUploader = { kind: "fal", toUrl: async (p: string) => ({ ok: true as const, url: p.startsWith("http") ? p : `https://fal/${p}` }) };
+    const ok = await __normalizeImagesForTests(["https://x/a.png", "/local/b.png"], undefined, fakeUploader, { baseUrl: "x", apiKey: "k" });
+    expect(ok).toEqual({ ok: true, urls: ["https://x/a.png", "https://fal//local/b.png"] });
+
+    const tooMany = await __normalizeImagesForTests(Array.from({ length: 10 }, (_, i) => `https://x/${i}.png`), undefined, fakeUploader, { baseUrl: "x", apiKey: "k" });
+    expect(tooMany.ok).toBe(false);
   });
 });

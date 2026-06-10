@@ -28,6 +28,35 @@ import {
   type VideoProvider,
   type VideoProviderCreds,
 } from "./video-providers.js";
+import { getImageUploader, type ImageUploader, type UploaderCreds } from "./image-uploader.js";
+
+const MAX_IMAGES = 9;
+
+/**
+ * Normalize image inputs (URLs or local paths) into public URLs the provider
+ * can consume. `images[]` wins over the single `image`. Local paths are
+ * uploaded via the injected {@link ImageUploader}; URLs pass through. Caps at
+ * {@link MAX_IMAGES} (fal reference-to-video allows up to 9).
+ */
+export async function __normalizeImagesForTests(
+  images: string[] | undefined,
+  image: string | undefined,
+  uploader: ImageUploader,
+  creds: UploaderCreds,
+  signal?: AbortSignal,
+): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
+  const raw = images && images.length ? images : image ? [image] : [];
+  if (raw.length > MAX_IMAGES) {
+    return { ok: false, error: `too many images: ${raw.length} (max ${MAX_IMAGES})` };
+  }
+  const urls: string[] = [];
+  for (const item of raw) {
+    const r = await uploader.toUrl(item, creds, signal);
+    if (!r.ok) return { ok: false, error: r.error };
+    urls.push(r.url);
+  }
+  return { ok: true, urls };
+}
 
 /** Video provider `kind`s that have an adapter, in resolution preference. */
 const VIDEO_PROVIDER_KINDS: string[] = ["fal"];
@@ -53,6 +82,11 @@ export const generateVideoToolDef: ToolDefinition = {
       },
       model: { type: "string", description: "Video model id. Defaults to the provider's default." },
       image: { type: "string", description: "Image URL (http/https) for image-to-video. When set, an image-to-video model is used." },
+      images: {
+        type: "array",
+        items: { type: "string" },
+        description: "Image URLs or local file paths for image/reference-to-video. 1 image → image-to-video; 2+ → reference-to-video (max 9). Local paths are auto-uploaded. Refer to them in prompt as @Image1, @Image2.",
+      },
     },
     required: ["prompt"],
   },
@@ -181,6 +215,9 @@ export async function generateVideoTool(
   const preferKind = typeof args.provider === "string" && args.provider ? args.provider : undefined;
   const overrideModel = typeof args.model === "string" && args.model ? args.model : undefined;
   const image = typeof args.image === "string" && args.image ? args.image : undefined;
+  const imagesArg = Array.isArray(args.images)
+    ? (args.images as unknown[]).filter((x): x is string => typeof x === "string")
+    : undefined;
   const pollIntervalMs =
     typeof args.pollIntervalMs === "number" && args.pollIntervalMs > 0
       ? args.pollIntervalMs
@@ -213,7 +250,13 @@ export async function generateVideoTool(
 
   const model = overrideModel ?? defaultModel ?? DEFAULT_VIDEO_MODEL[kind] ?? kind;
 
-  const submit = await adapter.submit({ prompt, model, image, creds, signal: ctx?.signal });
+  // Normalize image inputs (local paths → uploaded URLs) before submit. The
+  // provider only ever receives URLs and routes t2v/i2v/ref2v by count.
+  const uploader = getImageUploader(kind) ?? getImageUploader("fal")!;
+  const norm = await __normalizeImagesForTests(imagesArg, image, uploader, { baseUrl: creds.baseUrl, apiKey: creds.apiKey }, ctx?.signal);
+  if (!norm.ok) return `Error: ${norm.error}`;
+
+  const submit = await adapter.submit({ prompt, model, image: undefined, images: norm.urls, creds, signal: ctx?.signal });
   if (!submit.ok) {
     return `Error submitting video job: ${submit.error}`;
   }

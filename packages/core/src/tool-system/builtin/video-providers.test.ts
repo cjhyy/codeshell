@@ -107,6 +107,60 @@ describe("FalVideoProvider", () => {
     expect(calls[0].body).toEqual({ prompt: "zoom in", image_url: "https://example.com/a.png" });
   });
 
+  test("submit with 2+ images (Seedance) → reference-to-video + image_urls array", async () => {
+    const calls: Array<{ url: string; body: any }> = [];
+    const fakeFetch: typeof fetch = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return { ok: true, status: 200, json: async () => falSubmitBody("req-ref") } as Response;
+    }) as unknown as typeof fetch;
+
+    const p = new FalVideoProvider(fakeFetch);
+    const res = await p.submit({
+      prompt: "@Image1 and @Image2 dance",
+      model: "bytedance/seedance-2.0/text-to-video",
+      images: ["https://x/a.png", "https://x/b.png"],
+      creds,
+    });
+    expect(res.ok).toBe(true);
+    expect(calls[0].url).toBe("https://queue.fal.run/bytedance/seedance-2.0/reference-to-video");
+    expect(calls[0].body).toEqual({ prompt: "@Image1 and @Image2 dance", image_urls: ["https://x/a.png", "https://x/b.png"] });
+  });
+
+  test("submit with 2+ images on a model without reference support (Kling) → ok:false", async () => {
+    // Kling has no reference-to-video endpoint (live API 404s at result fetch),
+    // so fail fast at submit instead of building a broken URL.
+    let called = false;
+    const fakeFetch: typeof fetch = (async () => { called = true; return {} as Response; }) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const res = await p.submit({
+      prompt: "two imgs",
+      model: "fal-ai/kling-video/v3/pro/text-to-video",
+      images: ["https://x/a.png", "https://x/b.png"],
+      creds,
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("does not support multiple images");
+    expect(called).toBe(false); // errored before any network call
+  });
+
+  test("submit with single-element images[] → image-to-video + image_url (singular)", async () => {
+    const calls: Array<{ url: string; body: any }> = [];
+    const fakeFetch: typeof fetch = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return { ok: true, status: 200, json: async () => falSubmitBody("req-i2v") } as Response;
+    }) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const res = await p.submit({
+      prompt: "zoom",
+      model: "fal-ai/kling-video/v3/pro/text-to-video",
+      images: ["https://x/only.png"],
+      creds,
+    });
+    expect(res.ok).toBe(true);
+    expect(calls[0].url).toBe("https://queue.fal.run/fal-ai/kling-video/v3/pro/image-to-video");
+    expect(calls[0].body).toEqual({ prompt: "zoom", image_url: "https://x/only.png" });
+  });
+
   test("submit non-OK → ok:false with status", async () => {
     const fakeFetch: typeof fetch = (async () =>
       ({ ok: false, status: 401, text: async () => "bad key" } as Response)) as unknown as typeof fetch;
