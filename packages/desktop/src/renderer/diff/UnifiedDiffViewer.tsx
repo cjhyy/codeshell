@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { MessageSquarePlus } from "lucide-react";
+import { MessageSquarePlus, ChevronRight, ChevronDown } from "lucide-react";
 import { parseUnifiedDiff, type DiffFile } from "./parseUnifiedDiff";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
@@ -110,16 +110,45 @@ function DiffFileBlock({ file }: { file: DiffFile }) {
   const title = file.newPath ?? file.oldPath ?? "(unknown)";
   // Which line is currently being commented on, keyed by "hunkIdx:lineIdx".
   const [commenting, setCommenting] = useState<string | null>(null);
+  // Collapse a file's diff by clicking its header (GitLab/GitHub style) — when
+  // many files stack in the review panel, this lets the user fold the ones
+  // they're done with instead of scrolling past a long flat list.
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Per-file +/- counts for the header (handy when collapsed).
+  let added = 0;
+  let removed = 0;
+  for (const h of file.hunks) {
+    for (const l of h.lines) {
+      if (l.kind === "add") added++;
+      else if (l.kind === "del") removed++;
+    }
+  }
 
   return (
     <div className={`diff-file diff-file-${file.status}`}>
-      <div className="diff-file-head">
+      <button
+        type="button"
+        className="diff-file-head"
+        onClick={() => setCollapsed((v) => !v)}
+        aria-expanded={!collapsed}
+        title={collapsed ? "展开" : "折叠"}
+      >
+        {collapsed ? (
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        )}
         <span className={`diff-file-status diff-file-status-${file.status}`}>
           {file.status}
         </span>
         <span className="diff-file-path">{title}</span>
-      </div>
-      {file.hunks.map((h, i) => (
+        <span className="ml-auto shrink-0 pl-2 text-xs tabular-nums">
+          <span className="text-status-ok">+{added}</span>{" "}
+          <span className="text-status-err">-{removed}</span>
+        </span>
+      </button>
+      {!collapsed && file.hunks.map((h, i) => (
         <div key={h.header || i} className="diff-hunk">
           <div className="diff-hunk-head">{h.header}</div>
           <table className="diff-table">

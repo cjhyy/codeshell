@@ -25,7 +25,15 @@
   padding: var(--sp-1) var(--sp-2);
   background: var(--bg-app);
   border-bottom: 1px solid var(--border-subtle);
+  /* It's a <button> (click to collapse) — reset native button chrome and make
+     it a full-width clickable header. */
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
 }
+.diff-file-head:hover { background: var(--bg-elevated); }
 .diff-file-status {
   font-size: var(--fz-xs);
   text-transform: uppercase;
