@@ -588,6 +588,37 @@ async function handleRoomEvent(event: MobileClientEvent): Promise<void> {
   }
 }
 
+/**
+ * Harden the browser-panel <webview> guests hosted in `win`: no node, sandboxed,
+ * isolated, web-security on, no renderer-driven popups, http(s)/about only — and
+ * pin them to the shared `persist:browser` partition (a SEPARATE session from
+ * defaultSession). The partition is what keeps the renderer-CSP `onHeadersReceived`
+ * (registered on defaultSession) from touching guest requests, so a guest site's
+ * own /_next/static/*.woff2 fonts aren't refused against our `font-src 'self'`.
+ * Must run for EVERY window that hosts a BrowserPanel (main + browser popout).
+ */
+function hardenWebviewGuests(win: BrowserWindow): void {
+  win.webContents.on("will-attach-webview", (_e, webPreferences, params) => {
+    delete (webPreferences as Record<string, unknown>).preload;
+    webPreferences.nodeIntegration = false;
+    webPreferences.nodeIntegrationInSubFrames = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+    webPreferences.webSecurity = true;
+    delete (params as Record<string, unknown>).allowpopups;
+    if (!params.partition) params.partition = "persist:browser";
+  });
+  win.webContents.on("did-attach-webview", (_e, guest) => {
+    guest.setWindowOpenHandler(({ url }) => {
+      if (/^https?:/i.test(url)) void shell.openExternal(url);
+      return { action: "deny" };
+    });
+    guest.on("will-navigate", (ev, url) => {
+      if (!/^(https?|about):/i.test(url)) ev.preventDefault();
+    });
+  });
+}
+
 async function createWindow(): Promise<BrowserWindow> {
   const ws = await loadWindowState();
 
@@ -614,33 +645,11 @@ async function createWindow(): Promise<BrowserWindow> {
     },
   });
 
-  // Harden every <webview> guest the browser panel attaches: keep node off,
-  // sandbox on, isolated context, web security on — the guest only renders
-  // remote pages and must never gain Node or escape same-origin.
-  win.webContents.on("will-attach-webview", (_e, webPreferences, params) => {
-    delete (webPreferences as Record<string, unknown>).preload;
-    webPreferences.nodeIntegration = false;
-    webPreferences.nodeIntegrationInSubFrames = false;
-    webPreferences.contextIsolation = true;
-    webPreferences.sandbox = true;
-    webPreferences.webSecurity = true;
-    // No renderer-driven popups; strip the attribute and deny window.open on
-    // the guest below. (params is a string attribute map — delete, don't set.)
-    delete (params as Record<string, unknown>).allowpopups;
-    // Persist a shared session so logins survive across tabs/restarts.
-    if (!params.partition) params.partition = "persist:browser";
-  });
-  // Gate the guest's navigation/popups once attached: deny window.open, and
-  // refuse non-web schemes (file:, etc.) — the panel is for http(s) only.
-  win.webContents.on("did-attach-webview", (_e, guest) => {
-    guest.setWindowOpenHandler(({ url }) => {
-      if (/^https?:/i.test(url)) void shell.openExternal(url);
-      return { action: "deny" };
-    });
-    guest.on("will-navigate", (ev, url) => {
-      if (!/^(https?|about):/i.test(url)) ev.preventDefault();
-    });
-  });
+  // Harden the browser-panel <webview> guests for THIS window (main + popout
+  // both host a BrowserPanel, so both need it — without it on the popout the
+  // guest fell into defaultSession and inherited our renderer CSP, refusing the
+  // site's own /_next/static fonts).
+  hardenWebviewGuests(win);
 
   if (ws.maximized) win.maximize();
 
@@ -807,6 +816,11 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
   });
   popoutParents.set(win.webContents.id, parent.id);
   win.on("closed", () => popoutParents.delete(win.webContents.id));
+
+  // Same guest hardening as the main window — the popout hosts a BrowserPanel
+  // too, so without this its <webview> guest landed in defaultSession and got
+  // our renderer CSP (refusing the site's own fonts). Pins it to persist:browser.
+  hardenWebviewGuests(win);
 
   // Diagnose a blank popout: surface load failures + the popout renderer's own
   // console errors into the main log (the popout has no DevTools by default).
