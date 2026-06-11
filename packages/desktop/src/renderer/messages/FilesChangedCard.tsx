@@ -4,6 +4,7 @@ import type { FilesChangedSummaryMessage } from "../types";
 import type { UndoFilesResult } from "../../preload/types";
 import { basename } from "../tool-cards/utils";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
+import { openFileTarget } from "../chat/openWith";
 
 interface Props {
   message: FilesChangedSummaryMessage;
@@ -149,10 +150,7 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
                   href="#"
                   className="files-changed-path"
                   title={f.path}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    void window.codeshell.openPath(f.path, cwd ?? undefined);
-                  }}
+                  onClick={(e) => openFileTarget(e, { path: f.path, cwd })}
                 >
                   {basename(f.path)}
                 </a>

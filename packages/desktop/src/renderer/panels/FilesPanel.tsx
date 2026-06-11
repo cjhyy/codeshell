@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronRight, ChevronDown, File as FileIcon, Folder, MessageSquarePlus, PanelLeftClose } from "lucide-react";
+import { ChevronRight, ChevronDown, File as FileIcon, Folder, MessageSquarePlus, PanelLeftClose, RefreshCw } from "lucide-react";
 import type { FsEntry, FileContent } from "../../preload/types";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "../Markdown";
@@ -71,6 +71,16 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
   // Set of directory paths the tree should force-open so a deep file revealed
   // by a chat path-link is visible. Replaced each request; DirNode reads it.
   const [revealDirs, setRevealDirs] = useState<Set<string>>(() => new Set());
+  // Bumped to force a re-read of the previewed file + the tree. Driven by the
+  // manual refresh button and by `codeshell:files-changed` (fired when an AI
+  // turn completes), so an edit to the open file shows without re-selecting.
+  const [reloadNonce, setReloadNonce] = useState(0);
+
+  useEffect(() => {
+    const onChanged = (): void => setReloadNonce((n) => n + 1);
+    window.addEventListener("codeshell:files-changed", onChanged);
+    return () => window.removeEventListener("codeshell:files-changed", onChanged);
+  }, []);
 
   // A chat answer's path link was clicked: App focused this panel and handed us
   // the file. Resolve to an absolute path under cwd, select it, and force every
@@ -107,7 +117,7 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
             />
           </div>
           <div className="min-h-0 flex-1 overflow-auto py-1">
-            <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} onAttachImage={onAttachImage} revealDirs={revealDirs} />
+            <DirNode root={cwd} dir={cwd} depth={0} selected={selected} onSelect={setSelected} filter={filter.trim().toLowerCase()} onAttachImage={onAttachImage} revealDirs={revealDirs} reloadNonce={reloadNonce} />
           </div>
         </div>
       )}
@@ -122,10 +132,20 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
           >
             <PanelLeftClose className={treeOpen ? "h-4 w-4" : "h-4 w-4 rotate-180"} />
           </button>
+          <div className="flex-1" />
+          <button
+            type="button"
+            aria-label="刷新"
+            title="刷新(重新读取文件与目录)"
+            className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+            onClick={() => setReloadNonce((n) => n + 1)}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
           {selected ? (
-            <FileViewer root={cwd} path={selected} />
+            <FileViewer root={cwd} path={selected} reloadNonce={reloadNonce} />
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
               <Folder className="h-7 w-7" />
@@ -148,6 +168,7 @@ function DirNode({
   filter,
   onAttachImage,
   revealDirs,
+  reloadNonce,
 }: {
   root: string;
   dir: string;
@@ -158,6 +179,8 @@ function DirNode({
   onAttachImage?: (absPath: string) => void;
   /** Directories to force-open (so a chat-linked deep file is revealed). */
   revealDirs: Set<string>;
+  /** Bumped to re-read this directory (AI added/removed files, manual refresh). */
+  reloadNonce: number;
 }) {
   const [entries, setEntries] = useState<FsEntry[] | null>(null);
   // Top level auto-expands; deeper levels expand on click.
@@ -195,7 +218,7 @@ function DirNode({
     return () => {
       cancelled = true;
     };
-  }, [root, dir]);
+  }, [root, dir, reloadNonce]);
 
   if (!entries) return <div className="px-3 py-1 text-xs text-muted-foreground">加载中…</div>;
 
@@ -254,6 +277,7 @@ function DirNode({
                   filter={filter}
                   onAttachImage={onAttachImage}
                   revealDirs={revealDirs}
+                  reloadNonce={reloadNonce}
                 />
               )}
             </div>
@@ -322,7 +346,7 @@ function DirNode({
   );
 }
 
-function FileViewer({ root, path }: { root: string; path: string }) {
+function FileViewer({ root, path, reloadNonce }: { root: string; path: string; reloadNonce: number }) {
   const ext = useMemo(() => (path.split(".").pop() ?? "").toLowerCase(), [path]);
   const name = useMemo(() => path.split("/").pop() ?? path, [path]);
   const isImage = IMAGE_EXT.has(ext) || ext === SVG_EXT;
@@ -352,11 +376,11 @@ function FileViewer({ root, path }: { root: string; path: string }) {
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {isImage ? (
-          <ImagePreview path={path} />
+          <ImagePreview path={path} reloadNonce={reloadNonce} />
         ) : (
           // Markdown in preview mode renders rich; everything else (and md in
           // source mode) uses the line-numbered, per-line-commentable view.
-          <TextPreview root={root} path={path} markdown={isMarkdown && !mdSource} />
+          <TextPreview root={root} path={path} markdown={isMarkdown && !mdSource} reloadNonce={reloadNonce} />
         )}
       </div>
     </div>
@@ -364,7 +388,7 @@ function FileViewer({ root, path }: { root: string; path: string }) {
 }
 
 /** Render an image file by reading it as a data URL through main. */
-function ImagePreview({ path }: { path: string }) {
+function ImagePreview({ path, reloadNonce }: { path: string; reloadNonce: number }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -384,7 +408,7 @@ function ImagePreview({ path }: { path: string }) {
     return () => {
       cancelled = true;
     };
-  }, [path]);
+  }, [path, reloadNonce]);
 
   if (failed) return <div className="p-4 text-sm text-muted-foreground">无法预览此图片</div>;
   if (!src) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
@@ -409,14 +433,19 @@ function mdBaseDir(root: string, path: string): string {
   return slash > 0 ? abs.slice(0, slash) : abs;
 }
 
-function TextPreview({ root, path, markdown }: { root: string; path: string; markdown: boolean }) {
+function TextPreview({ root, path, markdown, reloadNonce }: { root: string; path: string; markdown: boolean; reloadNonce: number }) {
   const [content, setContent] = useState<FileContent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Blank to "加载中…" only when the FILE changes, not on a same-file reload
+  // (turn-complete / refresh) — otherwise the preview would flash empty on
+  // every AI turn. A reload swaps content in place once the read resolves.
   useEffect(() => {
-    let cancelled = false;
     setContent(null);
     setError(null);
+  }, [root, path]);
+  useEffect(() => {
+    let cancelled = false;
     void window.codeshell
       .readFileContent(root, path)
       .then((c) => {
@@ -428,7 +457,7 @@ function TextPreview({ root, path, markdown }: { root: string; path: string; mar
     return () => {
       cancelled = true;
     };
-  }, [root, path]);
+  }, [root, path, reloadNonce]);
 
   if (error) return <div className="p-4 text-sm text-status-err">读取失败:{error}</div>;
   if (!content) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;

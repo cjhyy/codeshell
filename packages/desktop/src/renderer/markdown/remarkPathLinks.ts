@@ -77,10 +77,32 @@ const BARE =
   `(?::(\\d+)(?::\\d+)?)?` +
   `(?=$|[\\s),.;!?${CJK_CLOSE}])`;
 
-// Combined: try the quoted form first, then the bare form. Group indices:
-//   1 = quote char (backref only), 2 = quoted path, 3 = quoted :line,
-//   4 = bare path, 5 = bare :line
-const PATH_LINE_RE = new RegExp(`${QUOTED}|${BARE}`, "g");
+// Bare FILENAME form (no directory): a lone `name.ext` in prose, e.g. the
+// model writing "见 dev.ts (line 53)" instead of a full path. Unlike BARE this
+// has no "/", so it's far more ambiguous with prose (v1.2, obj.method) — it's
+// gated AFTER the match by the KNOWN_FILE_EXT whitelist in splitTextNode, the
+// same guard the inlineCode path uses. The leading boundary forbids a preceding
+// "/" or "." so we don't re-capture the tail of a path BARE already matched
+// (a/b.ts) or a dotted token (.ts of foo.ts). Accepts a `:line` or `(line N)`
+// suffix. Group 6 = filename, 7 = :line digits, 8 = (line N) digits.
+const BARE_FILENAME =
+  `(?<=^|[\\s(${CJK_OPEN}])` +
+  `([\\w@-][\\w@.-]*\\.[\\w]{1,8})` +
+  `(?::(\\d+)(?::\\d+)?|\\s*\\(line\\s+(\\d+)\\))?` +
+  `(?=$|[\\s),.;!?${CJK_CLOSE}]|\\s*\\(line\\s)`;
+
+// Combined: quoted form, then bare-with-directory, then bare filename. Group
+// indices: 1 = quote char (backref only), 2 = quoted path, 3 = quoted :line,
+// 4 = bare path, 5 = bare :line, 6 = bare filename, 7 = filename :line, 8 =
+// filename (line N).
+const PATH_LINE_RE = new RegExp(`${QUOTED}|${BARE}|${BARE_FILENAME}`, "g");
+
+/** A bare filename links only when its extension is a known file type. */
+function bareFilenameExtOk(name: string): boolean {
+  const dot = name.lastIndexOf(".");
+  if (dot < 0) return false;
+  return KNOWN_FILE_EXT.has(name.slice(dot + 1).toLowerCase());
+}
 
 const SKIP_PARENTS = new Set(["link", "linkReference", "inlineCode", "code"]);
 
@@ -163,13 +185,20 @@ function splitTextNode(node: MdastNode): MdastNode[] | null {
     if (start > lastIndex) {
       out.push({ type: "text", value: value.slice(lastIndex, start) });
     }
-    // Group 2 = quoted path (group 3 = its optional :line); group 4 = bare
-    // path (group 5 = its optional :line). Group 1 is the quote char, used
-    // only as a backreference to balance the closing quote.
+    // Group 2 = quoted path (3 = its :line); group 4 = bare path with dir (5 =
+    // its :line); group 6 = bare filename (7 = :line, 8 = "(line N)"). Group 1
+    // is the quote char, a backreference only. A bare filename links only if
+    // its extension is whitelisted — otherwise emit it back as plain text so
+    // prose like "v1.2" / "obj.method" stays untouched (and the matched span
+    // isn't silently dropped).
     if (m[2] !== undefined) {
       out.push(makePathLink(m[2], m[3]));
+    } else if (m[4] !== undefined) {
+      out.push(makePathLink(m[4], m[5]));
+    } else if (m[6] !== undefined && bareFilenameExtOk(m[6])) {
+      out.push(makePathLink(m[6], m[7] ?? m[8]));
     } else {
-      out.push(makePathLink(m[4]!, m[5]));
+      out.push({ type: "text", value: m[0]! });
     }
     lastIndex = start + matchLen;
   }

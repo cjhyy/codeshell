@@ -64,6 +64,7 @@ import {
 } from "./markdown/remarkPathLinks";
 import { classifyPath } from "./tool-cards/attachments";
 import { Lightbox } from "./chat/Lightbox";
+import { openFileTarget } from "./chat/openWith";
 import { useToast } from "./ui/ToastProvider";
 
 interface Props {
@@ -240,31 +241,6 @@ function checkExists(cwd: string | null, path: string): Promise<boolean> {
  * hovering shows the full (absolute) path. Click opens it in the Files panel;
  * ⌘/Ctrl-click escapes to the OS editor.
  */
-
-/**
- * Shared click contract for any clickable file-path in an answer: a plain click
- * opens the internal Files panel; ⌘/Ctrl-click escapes to the OS default app.
- * Used by PathLink and by InlineImageLink's caption/fallback so image paths
- * follow the same rule (#13 — image-path captions used to always open the OS
- * app because they called openPath directly with no modifier check).
- */
-function openFileTarget(
-  e: React.MouseEvent,
-  opts: { path: string; cwd?: string | null; line?: number; isScheme?: boolean },
-): void {
-  e.preventDefault();
-  const { path, cwd, line, isScheme } = opts;
-  const toOsApp = e.metaKey || e.ctrlKey;
-  if (toOsApp) {
-    const arg = line ? `${path}:${line}` : path;
-    // Scheme links resolve relative paths in main; local links need cwd.
-    void window.codeshell.openPath(arg, isScheme ? undefined : cwd ?? undefined);
-  } else {
-    window.dispatchEvent(
-      new CustomEvent("codeshell:open-file", { detail: { path, cwd: cwd ?? null } }),
-    );
-  }
-}
 
 function PathLink({
   path,

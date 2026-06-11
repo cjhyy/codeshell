@@ -131,6 +131,48 @@ describe("remarkPathLinks — CJK punctuation boundaries", () => {
   });
 });
 
+describe("remarkPathLinks — bare filename in prose (no directory)", () => {
+  it("links a bare filename with a known extension and (line N)", () => {
+    // Codex-style: the model writes a lone filename, not a full path.
+    expect(linkedPaths("见 remote-host-manager.ts (line 147)")).toEqual([
+      "remote-host-manager.ts",
+    ]);
+    expect(linkUrls("见 remote-host-manager.ts (line 147)")[0]).toContain(":147");
+  });
+
+  it("links a bare filename with a :line suffix", () => {
+    expect(linkedPaths("改了 dev.ts:53 这里")).toEqual(["dev.ts"]);
+    expect(linkUrls("改了 dev.ts:53 这里")[0]).toContain(":53");
+  });
+
+  it("links a bare filename at a CJK boundary", () => {
+    expect(linkedPaths("详见 engine.ts、还有别的")).toEqual(["engine.ts"]);
+  });
+
+  it("links common dotted-name files (vite.config.ts, package.json)", () => {
+    expect(linkedPaths("看 package.json 里")).toEqual(["package.json"]);
+    expect(linkedPaths("看 vite.config.ts 配置")).toEqual(["vite.config.ts"]);
+  });
+
+  it("does NOT link a bare token whose extension isn't a known file type", () => {
+    // Same guard as inlineCode: prose with a dot must stay plain.
+    expect(linkedPaths("调用 obj.method 然后返回")).toEqual([]);
+    expect(linkedPaths("版本 v1.2 发布")).toEqual([]);
+    expect(linkedPaths("用 Array.from 转换")).toEqual([]);
+    expect(linkedPaths("比例 16.9 很宽")).toEqual([]);
+  });
+
+  it("does NOT link a bare filename with no extension", () => {
+    expect(linkedPaths("打开 README 文件")).toEqual([]);
+  });
+
+  it("a path WITH a directory still links regardless of extension whitelist", () => {
+    // The slash already disambiguates from prose, so unknown extensions are
+    // fine when there's a directory — unchanged behavior.
+    expect(linkedPaths("see build/out.weirdext here")).toEqual(["build/out.weirdext"]);
+  });
+});
+
 describe("remarkPathLinks — inlineCode path spans", () => {
   const paths = (value: string): (string | undefined)[] =>
     inlineCodeLinkUrls(value)

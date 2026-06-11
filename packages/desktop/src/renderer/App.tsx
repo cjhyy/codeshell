@@ -1149,6 +1149,14 @@ function App() {
       // done state is handled separately in the reducer via `agent_end`.
       if ((event.type === "turn_complete" || event.type === "error") && !event.agentId) {
         setBusyForKey(target, false);
+        // A turn just finished → its file edits have landed on disk. Nudge the
+        // Files panel to re-read the file it's previewing (and refresh its
+        // tree): the panel reads a file once on select and otherwise never sees
+        // external writes, so an AI edit to the open file would show stale until
+        // re-selected. Fire-and-forget DOM event (same channel style as
+        // codeshell:open-file); FilesPanel decides whether it's viewing an
+        // affected path.
+        window.dispatchEvent(new CustomEvent("codeshell:files-changed"));
         // A turn finished in a bucket the user is NOT looking at → mark unread
         // so the sidebar shows a dot. Read the active bucket from the ref (not
         // a captured `activeBucket`): this onStreamEvent callback is registered
