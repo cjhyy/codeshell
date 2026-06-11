@@ -202,7 +202,7 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
         {file.status === "renamed" && (
           <span className="shrink-0 h-2 w-2 rounded-full bg-status-warn" title="重命名" aria-label="重命名" />
         )}
-        <span className="ml-auto shrink-0 pl-2 text-xs tabular-nums">
+        <span className="shrink-0 pl-2 text-xs tabular-nums">
           <span className="text-status-ok">+{added}</span>{" "}
           <span className="text-status-err">-{removed}</span>
         </span>

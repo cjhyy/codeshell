@@ -59,6 +59,11 @@
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
+  /* Last-resort tail clip with a visible "…" if even the JS-truncated string
+     is too wide — keeps a clean edge instead of the filename being hard-cut /
+     bleeding under the +/- and icons. The JS head-ellipsis already keeps the
+     string short, so this rarely triggers. */
+  text-overflow: ellipsis;
 }
 
 .diff-hunk { padding: var(--sp-1) 0; border-top: 1px solid var(--border-subtle); }
