@@ -17,7 +17,9 @@ function card(over: Partial<FilesChangedSummaryMessage> = {}): FilesChangedSumma
 
 describe("FilesChangedCard", () => {
   test("renders folded summary header", () => {
-    const html = renderToStaticMarkup(<FilesChangedCard message={card()} />);
+    const html = renderToStaticMarkup(
+      <FilesChangedCard message={card()} cwd={null} sessionId={null} isLatest />,
+    );
     expect(html).toContain("已编辑 1 个文件");
     expect(html).toContain("+5");
     expect(html).toContain("-2");
@@ -35,9 +37,34 @@ describe("FilesChangedCard", () => {
       totalAdded: 6,
       totalRemoved: 3,
     });
-    const html = renderToStaticMarkup(<FilesChangedCard message={m} />);
+    const html = renderToStaticMarkup(
+      <FilesChangedCard message={m} cwd={null} sessionId={null} isLatest />,
+    );
     expect(html).toContain("已编辑 3 个文件");
     expect(html).toContain("+6");
     expect(html).toContain("-3");
+  });
+
+  test("latest card with a session shows an undo button", () => {
+    const html = renderToStaticMarkup(
+      <FilesChangedCard message={card()} cwd={null} sessionId="s-1" isLatest />,
+    );
+    expect(html).toContain("撤销");
+    expect(html).not.toContain("只能从最新一轮");
+  });
+
+  test("an older card's undo is disabled with an explanatory tooltip", () => {
+    const html = renderToStaticMarkup(
+      <FilesChangedCard message={card()} cwd={null} sessionId="s-1" isLatest={false} />,
+    );
+    expect(html).toContain("只能从最新一轮开始撤销");
+    expect(html).toContain("disabled");
+  });
+
+  test("no session → no undo affordance (review/undo need session or repo)", () => {
+    const html = renderToStaticMarkup(
+      <FilesChangedCard message={card()} cwd={null} sessionId={null} isLatest />,
+    );
+    expect(html).not.toContain("撤销");
   });
 });

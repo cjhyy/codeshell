@@ -375,6 +375,10 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("images:save", src, opts) as Promise<string | null>,
   undoFiles: (cwd: string, paths: string[]) =>
     ipcRenderer.invoke("files:undo", cwd, paths),
+  turnUndoState: (sessionId: string) =>
+    ipcRenderer.invoke("files:turnUndoState", sessionId),
+  undoTurn: (sessionId: string) => ipcRenderer.invoke("files:undoTurn", sessionId),
+  redoTurn: (sessionId: string) => ipcRenderer.invoke("files:redoTurn", sessionId),
   listMemory: (level: string, scope: string, cwd?: string) =>
     ipcRenderer.invoke("memory:list", level, scope, cwd),
   readMemory: (level: string, scope: string, name: string, cwd?: string) =>

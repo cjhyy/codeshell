@@ -1,15 +1,24 @@
 import React, { memo, useEffect, useRef, useState } from "react";
-import { ChevronRight, ChevronDown, RotateCcw, Eye, X } from "lucide-react";
+import { ChevronRight, ChevronDown, RotateCcw, RotateCw, Eye, X } from "lucide-react";
 import type { FilesChangedSummaryMessage } from "../types";
-import type { UndoFilesResult } from "../../preload/types";
+import type { TurnUndoResult } from "../../preload/types";
 import { basename } from "../tool-cards/utils";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
 import { openFileTarget } from "../chat/openWith";
 
 interface Props {
   message: FilesChangedSummaryMessage;
-  /** Working directory of the owning chat. Required for review / undo. */
+  /** Working directory of the owning chat. Required for review. */
   cwd: string | null;
+  /** Engine session id — keys the turn-level undo/redo (FileHistory snapshots). */
+  sessionId: string | null;
+  /**
+   * Whether this is the most recent turn's card. Only the latest turn is
+   * interactive: snapshot undo peels newest-first, so an older card can't be
+   * undone without first undoing the newer ones. Older cards show a disabled
+   * undo with a tooltip explaining why.
+   */
+  isLatest: boolean;
 }
 
 const INITIAL_VISIBLE = 3;
@@ -18,25 +27,47 @@ const INITIAL_VISIBLE = 3;
  * Codex-style per-turn summary: "已编辑 N 个文件 +X -Y" folded by
  * default; expanding shows each file path with its +/- counts.
  *
- * Header actions (only when `cwd` is set — sessions without a repo
- * have nothing meaningful to review or undo against):
- *   - 审核 (Review) → opens a modal showing the working-tree diff
- *     scoped to this card's files.
- *   - 撤销 (Undo) → after a confirm, restores tracked files from
- *     HEAD and deletes untracked ones. Each path reports back
- *     individually so partial failures don't lose information.
+ * Header actions:
+ *   - 审核 (Review) → opens a modal showing the working-tree diff scoped to
+ *     this card's files.
+ *   - 撤销 / 重新应用 (Undo / Redo) → turn-level, via core FileHistory snapshots
+ *     (NOT git): undo reverts this turn's edits to their pre-turn state (and
+ *     deletes files the turn created); redo re-applies them. Only the LATEST
+ *     turn's card is interactive (snapshots peel newest-first). After undo the
+ *     button flips to 重新应用; redo stays available until a new user turn.
  */
-function FilesChangedCardImpl({ message, cwd }: Props) {
+function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const [confirmUndo, setConfirmUndo] = useState(false);
   const [undoStatus, setUndoStatus] = useState<string | null>(null);
+  // null = unknown / not yet queried. Reflects core's snapshot state: can this
+  // turn be undone, or was it undone and can be redone?
+  const [undone, setUndone] = useState(false);
   const clearStatusTimer = useRef<number | undefined>(undefined);
   // Clear the auto-dismiss timer on unmount so setUndoStatus doesn't fire on
   // an unmounted component.
   useEffect(() => () => window.clearTimeout(clearStatusTimer.current), []);
+
+  // Seed undo/redo state from disk for the latest card (and re-seed if it
+  // becomes latest). Only the latest card queries — older cards are inert.
+  // This restores the correct button after a refresh/replay, where the disk
+  // (FileHistory index) is the source of truth, not the ephemeral React state.
+  useEffect(() => {
+    if (!isLatest || !sessionId) return;
+    let cancelled = false;
+    void window.codeshell
+      .turnUndoState(sessionId)
+      .then((s) => {
+        if (!cancelled) setUndone(s.redoable && !s.undoable);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isLatest, sessionId]);
 
   const { files, totalAdded, totalRemoved } = message;
   const visible = showAll ? files : files.slice(0, INITIAL_VISIBLE);
@@ -44,32 +75,46 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
 
   const sessionDiffText = message.sessionDiffs?.map((d) => d.diff).join("\n");
   const canReview = files.length > 0 && (!!cwd || !!sessionDiffText);
-  const canUndo = !!cwd && files.length > 0;
+  // Undo/redo needs the session's FileHistory; only the latest turn is peelable.
+  const canUndo = !!sessionId && files.length > 0 && isLatest;
+
+  const summarize = (verb: string, results: TurnUndoResult[]): string => {
+    const failures = results.filter((r) => !r.ok);
+    return failures.length === 0
+      ? `${verb} ${results.length} 个文件`
+      : `部分失败:${failures.length}/${results.length}(${basename(failures[0]!.filePath)})`;
+  };
 
   const onUndoConfirmed = async (): Promise<void> => {
-    if (!cwd) return;
+    if (!sessionId) return;
     setConfirmUndo(false);
     setUndoing(true);
     setUndoStatus(null);
     try {
-      const results: UndoFilesResult[] = await window.codeshell.undoFiles(
-        cwd,
-        files.map((f) => f.path),
-      );
-      const failures = results.filter((r) => !r.ok);
-      if (failures.length === 0) {
-        setUndoStatus(`已撤销 ${results.length} 个文件`);
-      } else {
-        setUndoStatus(
-          `部分失败:${failures.length}/${results.length}(${failures[0]!.error ?? "unknown"})`,
-        );
-      }
+      const results = await window.codeshell.undoTurn(sessionId);
+      setUndone(true);
+      setUndoStatus(summarize("已撤销", results));
     } catch (e: unknown) {
       setUndoStatus(`撤销失败:${String(e instanceof Error ? e.message : e)}`);
     } finally {
       setUndoing(false);
-      // Auto-clear the status banner after a few seconds so the card
-      // returns to its quiet state.
+      window.clearTimeout(clearStatusTimer.current);
+      clearStatusTimer.current = window.setTimeout(() => setUndoStatus(null), 4000);
+    }
+  };
+
+  const onRedo = async (): Promise<void> => {
+    if (!sessionId) return;
+    setUndoing(true);
+    setUndoStatus(null);
+    try {
+      const results = await window.codeshell.redoTurn(sessionId);
+      setUndone(false);
+      setUndoStatus(summarize("已重新应用", results));
+    } catch (e: unknown) {
+      setUndoStatus(`重新应用失败:${String(e instanceof Error ? e.message : e)}`);
+    } finally {
+      setUndoing(false);
       window.clearTimeout(clearStatusTimer.current);
       clearStatusTimer.current = window.setTimeout(() => setUndoStatus(null), 4000);
     }
@@ -92,7 +137,7 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
               <span className="files-changed-removed">-{totalRemoved}</span>
             </span>
           </button>
-          {(canReview || canUndo) && (
+          {(canReview || canUndo || (!!sessionId && files.length > 0)) && (
             <div className="files-changed-actions">
               {canReview && (
                 <button
@@ -123,17 +168,45 @@ function FilesChangedCardImpl({ message, cwd }: Props) {
                   <span>审核</span>
                 </button>
               )}
-              {canUndo && (
+              {/* Undo / Redo toggle — only the latest turn is interactive.
+                  An older card shows a disabled undo explaining it can only
+                  peel from the newest turn. */}
+              {!!sessionId && files.length > 0 && !isLatest && (
+                <button
+                  type="button"
+                  className="files-changed-action"
+                  disabled
+                  aria-label="撤销改动(不可用)"
+                  title="只能从最新一轮开始撤销"
+                >
+                  <RotateCcw size={12} />
+                  <span>撤销</span>
+                </button>
+              )}
+              {canUndo && !undone && (
                 <button
                   type="button"
                   className="files-changed-action files-changed-action-danger"
                   onClick={() => setConfirmUndo(true)}
                   disabled={undoing}
                   aria-label="撤销改动"
-                  title="撤销(把这些文件回滚到 HEAD)"
+                  title="撤销这一轮的文件改动(回到该轮编辑前)"
                 >
                   <RotateCcw size={12} />
                   <span>{undoing ? "撤销中…" : "撤销"}</span>
+                </button>
+              )}
+              {canUndo && undone && (
+                <button
+                  type="button"
+                  className="files-changed-action"
+                  onClick={() => void onRedo()}
+                  disabled={undoing}
+                  aria-label="重新应用改动"
+                  title="重新应用这一轮的文件改动"
+                >
+                  <RotateCw size={12} />
+                  <span>{undoing ? "应用中…" : "重新应用"}</span>
                 </button>
               )}
             </div>
@@ -213,7 +286,7 @@ function ConfirmUndoModal({
           <strong>撤销 {fileCount} 个文件的改动?</strong>
         </div>
         <div className="files-changed-modal-body">
-          已跟踪的文件会回滚到 HEAD,未跟踪的新文件会从磁盘删除。此操作不可撤销。
+          这些文件会还原到该轮编辑前的内容,本轮新建的文件会被删除。撤销后可「重新应用」。
         </div>
         <div className="files-changed-modal-foot">
           <button type="button" onClick={onCancel}>

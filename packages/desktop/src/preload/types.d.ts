@@ -108,6 +108,22 @@ export interface UndoFilesResult {
   error?: string;
 }
 
+/** State of the latest turn's snapshot-based undo (files:turnUndoState). */
+export interface TurnUndoState {
+  /** The latest turn has live snapshots and can be undone. */
+  undoable: boolean;
+  /** The latest turn was undone and can be re-applied. */
+  redoable: boolean;
+  /** Files the undo/redo would touch (for the card label). */
+  fileCount: number;
+}
+
+/** Per-file outcome of a turn-level undo/redo (files:undoTurn / files:redoTurn). */
+export interface TurnUndoResult {
+  filePath: string;
+  ok: boolean;
+}
+
 export type MemoryLevel = "user" | "project";
 export type MemoryScope = "user" | "dream";
 export type MemoryType = "user" | "feedback" | "project" | "reference";
@@ -405,6 +421,15 @@ export interface CodeshellApi {
    * failures rather than aborting the batch.
    */
   undoFiles(cwd: string, paths: string[]): Promise<UndoFilesResult[]>;
+  /**
+   * Turn-level undo/redo via core FileHistory snapshots (keyed by engine
+   * sessionId, not cwd). Always acts on the latest turn internally. Used by the
+   * latest Files-Changed card: undo reverts the turn's edits to pre-turn state
+   * (and deletes files it created); redo re-applies them.
+   */
+  turnUndoState(sessionId: string): Promise<TurnUndoState>;
+  undoTurn(sessionId: string): Promise<TurnUndoResult[]>;
+  redoTurn(sessionId: string): Promise<TurnUndoResult[]>;
   /**
    * List memory entries. `cwd` is required for level="project".
    * level="user" returns entries from ~/.code-shell/memory/<scope>;

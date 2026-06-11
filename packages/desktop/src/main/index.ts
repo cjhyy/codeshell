@@ -72,6 +72,11 @@ import {
   undoFiles,
   type UndoFilesResult,
 } from "./desktop-services.js";
+import {
+  turnUndoState,
+  undoTurn,
+  redoTurn,
+} from "./file-history-service.js";
 import { readSettings, writeSettings, type SettingsScope } from "./settings-service.js";
 import {
   listMemory,
@@ -1524,6 +1529,27 @@ ipcMain.handle(
     return undoFiles(cwd, paths);
   },
 );
+
+// Turn-level undo/redo via core FileHistory snapshots (keyed by sessionId, not
+// cwd). Always operates on the latest turn internally — see file-history-service.
+ipcMain.handle("files:turnUndoState", async (_e, sessionId: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    return { undoable: false, redoable: false, fileCount: 0 };
+  }
+  return turnUndoState(sessionId);
+});
+ipcMain.handle("files:undoTurn", async (_e, sessionId: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("files:undoTurn requires sessionId");
+  }
+  return undoTurn(sessionId);
+});
+ipcMain.handle("files:redoTurn", async (_e, sessionId: string) => {
+  if (typeof sessionId !== "string" || !sessionId) {
+    throw new Error("files:redoTurn requires sessionId");
+  }
+  return redoTurn(sessionId);
+});
 
 // ── Terminal (pty) — interactive shell panel ───────────────────────────────
 // Output streams back to the requesting webContents via "pty:data"/"pty:exit".

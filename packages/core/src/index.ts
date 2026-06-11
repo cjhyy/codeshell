@@ -142,6 +142,7 @@ export {
   latestUndoTarget,
   earliestSnapshotsPerFile,
   latestTurnUndoTargets,
+  latestRedoTargets,
 } from "./session/undo-target.js";
 export { diffLines, renderDiffPreview, type DiffLine } from "./session/simple-diff.js";
 export { MemoryManager } from "./session/memory.js";
@@ -151,7 +152,7 @@ export {
   type DreamConsolidationInput,
   type DreamConsolidationResult,
 } from "./services/dream-consolidation.js";
-export type { FileSnapshot } from "./session/file-history.js";
+export type { FileSnapshot, RedoRecord } from "./session/file-history.js";
 
 // ─── Prompt ──────────────────────────────────────────────────────
 

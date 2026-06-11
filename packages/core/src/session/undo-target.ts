@@ -10,7 +10,7 @@
  * file had immediately before the last edit.
  */
 
-import type { FileSnapshot } from "./file-history.js";
+import type { FileSnapshot, RedoRecord } from "./file-history.js";
 
 /**
  * The snapshot for the most recent modification. Returns the entry with the
@@ -41,6 +41,11 @@ export function latestUndoTarget(snapshots: FileSnapshot[]): FileSnapshot | null
 export function earliestSnapshotsPerFile(snapshots: FileSnapshot[]): FileSnapshot[] {
   const earliest = new Map<string, FileSnapshot>();
   for (const s of snapshots) {
+    // Undone snapshots belong to a reverted turn: their content is no longer on
+    // disk and they are not the session baseline, so skip them — otherwise an
+    // undone (earlier) snapshot could win the baseline and `/undo all` would
+    // restore stale content.
+    if (s.undone) continue;
     const cur = earliest.get(s.filePath);
     // strict `<` so the first-seen entry wins on a tie (earliest recorded).
     if (!cur || s.timestamp < cur.timestamp) earliest.set(s.filePath, s);
@@ -72,22 +77,68 @@ export function earliestSnapshotsPerFile(snapshots: FileSnapshot[]): FileSnapsho
 export function latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[] {
   if (snapshots.length === 0) return [];
 
-  // Find the latest turn. undefined (legacy) is treated as the smallest turn so
-  // it loses to any tagged turn; a key of `-Infinity` models that ordering.
+  // Find the latest turn, SKIPPING undone turns: once a turn is undone (marked,
+  // not deleted) its snapshots stay on disk for redo but must not be re-selected
+  // by undo — so the next /undo peels the prior live turn ("onion" behaviour).
+  // undefined (legacy) is treated as the smallest turn so it loses to any tagged
+  // turn; a key of `-Infinity` models that ordering.
   const turnKey = (s: FileSnapshot): number => s.turnSeq ?? -Infinity;
   let maxTurn = -Infinity;
+  let found = false;
   for (const s of snapshots) {
+    if (s.undone) continue;
     const k = turnKey(s);
     if (k > maxTurn) maxTurn = k;
+    found = true;
   }
+  if (!found) return [];
 
-  // Within the latest turn, each file's earliest snapshot = its pre-turn state.
+  // Within the latest live turn, each file's earliest snapshot = its pre-turn
+  // state. Undone snapshots are skipped here too (defensive: they share neither
+  // the selected turn nor the baseline).
   const earliest = new Map<string, FileSnapshot>();
   for (const s of snapshots) {
+    if (s.undone) continue;
     if (turnKey(s) !== maxTurn) continue;
     const cur = earliest.get(s.filePath);
     // strict `<` so the first-seen entry wins on a same-ms tie (earliest).
     if (!cur || s.timestamp < cur.timestamp) earliest.set(s.filePath, s);
   }
   return [...earliest.values()].sort((a, b) => a.timestamp - b.timestamp);
+}
+
+/**
+ * For "/redo": the RedoRecord[] of the MOST RECENT undone turn — the turn that
+ * `redoLatestTurn` should re-apply — but ONLY when that turn is still the latest
+ * undone state (i.e. nothing newer happened since the undo). Otherwise [].
+ *
+ * Rule: let R = the greatest turnSeq present in `redoRecords` (a RedoRecord
+ * exists only for a turn that was undone and not yet redone). R is redoable iff
+ * NO snapshot belongs to a strictly newer LIVE (non-undone) turn — a fresh edit
+ * after the undo supersedes the redo and invalidates it (spec: "新轮使 redo
+ * 失效"). Created-only turns have no pre-turn snapshot, so the RedoRecord itself
+ * is the sole evidence and is honoured as long as nothing newer superseded it.
+ *
+ * Empty `redoRecords` → []. fs-free so /redo's target decision is unit-testable.
+ */
+export function latestRedoTargets(
+  redoRecords: RedoRecord[],
+  snapshots: FileSnapshot[],
+): RedoRecord[] {
+  if (redoRecords.length === 0) return [];
+
+  let maxRedoTurn = -Infinity;
+  for (const r of redoRecords) {
+    if (r.turnSeq > maxRedoTurn) maxRedoTurn = r.turnSeq;
+  }
+
+  // If any LIVE snapshot belongs to a strictly newer turn, the redo turn is no
+  // longer the latest undone state → not redoable.
+  for (const s of snapshots) {
+    if (s.undone) continue;
+    const k = s.turnSeq ?? -Infinity;
+    if (k > maxRedoTurn) return [];
+  }
+
+  return redoRecords.filter((r) => r.turnSeq === maxRedoTurn);
 }

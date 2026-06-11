@@ -35,6 +35,8 @@ import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 interface Props {
   messages: Message[];
   turnEpoch?: number;
+  /** Engine session id — lets the Files-Changed card do turn-level undo/redo. */
+  engineSessionId?: string | null;
   liveTurnActive?: boolean;
   onSend: (text: string) => void;
   onQueueInput?: (text: string) => void;
@@ -113,6 +115,7 @@ const MAX_TEXTAREA_PX = 200;
 export function ChatView({
   messages,
   turnEpoch,
+  engineSessionId,
   liveTurnActive,
   onSend,
   onQueueInput,
@@ -519,6 +522,7 @@ export function ChatView({
         <MessageStream
           messages={messages}
           turnEpoch={turnEpoch}
+          engineSessionId={engineSessionId}
           liveTurnActive={liveTurnActive}
           onAskUserAnswer={onAskUserAnswer}
           onExtendGoal={onExtendGoal}

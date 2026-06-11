@@ -58,6 +58,8 @@ interface Props {
    * boundary.
    */
   turnEpoch?: number;
+  /** Engine session id — the latest Files-Changed card uses it for turn undo/redo. */
+  engineSessionId?: string | null;
   /**
    * True while the engine is actively streaming the most recent turn
    * (= reducer.streamingAssistantId !== null). Drives the level-2
@@ -79,9 +81,21 @@ export function MessageStream({
   trailing,
   trailingKey,
   turnEpoch,
+  engineSessionId,
   liveTurnActive,
   cwd,
 }: Props) {
+  // The LAST files_changed message = the most recent turn's file edits. Only
+  // that card gets interactive undo/redo (snapshots only peel newest-first);
+  // older cards are informational. Computed from the raw message list (1:1 with
+  // completed turns — the reducer strips prior same-turn cards), not turnEpoch.
+  let lastFilesChangedId: string | null = null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].kind === "files_changed") {
+      lastFilesChangedId = messages[i].id;
+      break;
+    }
+  }
   const ref = useStickToBottom<HTMLDivElement>(
     `${messages.length}:${trailingKey ?? ""}`,
   );
@@ -227,7 +241,15 @@ export function MessageStream({
               </div>
             );
           case "files_changed":
-            return <FilesChangedCard key={m.id} message={m} cwd={cwd ?? null} />;
+            return (
+              <FilesChangedCard
+                key={m.id}
+                message={m}
+                cwd={cwd ?? null}
+                sessionId={engineSessionId ?? null}
+                isLatest={m.id === lastFilesChangedId}
+              />
+            );
           case "turn_end":
             return <TurnEndMessageView key={m.id} message={m} />;
         }

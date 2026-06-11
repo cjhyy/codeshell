@@ -1695,7 +1695,14 @@ export class Engine {
         // runs) so turn-level /undo can revert just this user message's edits.
         const turnSeq = session.state.turnSeq;
         if ((toolName === "Write" || toolName === "Edit") && args?.file_path) {
-          fileHistory.saveSnapshot(args.file_path as string, turnSeq);
+          const path = args.file_path as string;
+          // saveSnapshot returns null when the file does not exist yet — this
+          // hook runs BEFORE the tool, so a null here means the turn is CREATING
+          // the file. Record it (idempotent per turn) so /undo can delete it and
+          // /redo can recreate it.
+          if (fileHistory.saveSnapshot(path, turnSeq) === null && turnSeq !== undefined) {
+            fileHistory.recordCreated(path, turnSeq);
+          }
         } else if (toolName === "ApplyPatch" && typeof args?.patch === "string") {
           // ApplyPatch mutates files too, so /undo must see them. Snapshot every
           // existing file the patch updates or deletes (adds have no prior

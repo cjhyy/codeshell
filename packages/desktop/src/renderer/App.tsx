@@ -2194,6 +2194,7 @@ function App() {
             <ChatView
               messages={state.messages}
               turnEpoch={state.turnEpoch}
+              engineSessionId={state.sessionId}
               liveTurnActive={liveTurnActive}
               onSend={send}
               onQueueInput={queueInput}

@@ -3,13 +3,15 @@ import {
   latestUndoTarget,
   earliestSnapshotsPerFile,
   latestTurnUndoTargets,
+  latestRedoTargets,
 } from "./undo-target.js";
-import type { FileSnapshot } from "./file-history.js";
+import type { FileSnapshot, RedoRecord } from "./file-history.js";
 
 const snap = (
   filePath: string,
   timestamp: number,
   turnSeq?: number,
+  undone?: boolean,
 ): FileSnapshot => ({
   filePath,
   timestamp,
@@ -17,6 +19,18 @@ const snap = (
   hash: `${filePath}-${timestamp}`,
   size: 1,
   ...(turnSeq === undefined ? {} : { turnSeq }),
+  ...(undone === undefined ? {} : { undone }),
+});
+
+const redo = (
+  filePath: string,
+  turnSeq: number,
+  existedBefore = true,
+): RedoRecord => ({
+  filePath,
+  turnSeq,
+  backupPath: `/redo/${filePath}.${turnSeq}`,
+  existedBefore,
 });
 
 describe("latestUndoTarget", () => {
@@ -135,5 +149,84 @@ describe("latestTurnUndoTargets", () => {
     const out = latestTurnUndoTargets([legacy, tagged]);
     expect(out).toHaveLength(1);
     expect(out[0]!.filePath).toBe("new.ts");
+  });
+
+  test("skips undone turns: after turn 2 is undone, selects turn 1 (peel onion)", () => {
+    // turn 1 edits a.ts; turn 2 edits a.ts and b.ts but was undone (marked).
+    // latestTurnUndoTargets must SKIP the undone turn-2 snapshots and re-select
+    // turn 1 so a second /undo peels the prior turn.
+    const a_t1 = snap("a.ts", 100, 1);
+    const a_t2 = snap("a.ts", 250, 2, true);
+    const b_t2 = snap("b.ts", 260, 2, true);
+    const out = latestTurnUndoTargets([a_t1, a_t2, b_t2]);
+    expect(out.map((s) => s.filePath)).toEqual(["a.ts"]);
+    expect(out[0]).toBe(a_t1);
+  });
+
+  test("all turns undone → []", () => {
+    const a = snap("a.ts", 100, 1, true);
+    const b = snap("b.ts", 200, 2, true);
+    expect(latestTurnUndoTargets([a, b])).toEqual([]);
+  });
+});
+
+describe("earliestSnapshotsPerFile (skip undone)", () => {
+  test("undone snapshots are ignored when picking each file's baseline", () => {
+    // a.ts: a real undone turn-2 snapshot (300) plus a live turn-1 snapshot (100).
+    // The baseline must be 100, not the undone 300, even though both are earlier.
+    const a_live = snap("a.ts", 100, 1);
+    const a_undone = snap("a.ts", 50, 2, true); // earlier ts but undone → skip
+    const out = earliestSnapshotsPerFile([a_undone, a_live]);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toBe(a_live);
+  });
+
+  test("a file with only undone snapshots drops out entirely", () => {
+    const a = snap("a.ts", 100, 1, true);
+    const b = snap("b.ts", 200, 1);
+    const out = earliestSnapshotsPerFile([a, b]);
+    expect(out.map((s) => s.filePath)).toEqual(["b.ts"]);
+  });
+});
+
+describe("latestRedoTargets", () => {
+  test("empty inputs → []", () => {
+    expect(latestRedoTargets([], [])).toEqual([]);
+  });
+
+  test("returns the latest-turn redo records when that turn is the redoable one", () => {
+    // turn 2 was just undone (its snapshots are marked undone) → redo available.
+    const records = [redo("a.ts", 2), redo("b.ts", 2)];
+    const snaps = [snap("a.ts", 250, 2, true), snap("b.ts", 260, 2, true)];
+    const out = latestRedoTargets(records, snaps);
+    expect(out.map((r) => r.filePath).sort()).toEqual(["a.ts", "b.ts"]);
+  });
+
+  test("picks only the GREATEST turnSeq among redo records", () => {
+    const records = [redo("a.ts", 1), redo("b.ts", 2)];
+    const snaps = [snap("a.ts", 100, 1, true), snap("b.ts", 200, 2, true)];
+    const out = latestRedoTargets(records, snaps);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.filePath).toBe("b.ts");
+  });
+
+  test("a newer LIVE turn supersedes the redo turn → []", () => {
+    // After undoing turn 2, a new turn 3 edited files (live, not undone) → the
+    // redo of turn 2 is no longer the latest undone state; must be unavailable.
+    const records = [redo("a.ts", 2)];
+    const snaps = [
+      snap("a.ts", 250, 2, true), // turn 2 still marked undone
+      snap("c.ts", 400, 3), // fresh LIVE turn 3 supersedes the redo
+    ];
+    expect(latestRedoTargets(records, snaps)).toEqual([]);
+  });
+
+  test("created-only redo record (existedBefore false, no pre-turn snapshot) still returned", () => {
+    // A file created in turn 2 has NO pre-turn snapshot; the RedoRecord is the
+    // only evidence. With no newer live turn, redo must still be available.
+    const records = [redo("a.ts", 2, false)];
+    const out = latestRedoTargets(records, []);
+    expect(out).toHaveLength(1);
+    expect(out[0]!.existedBefore).toBe(false);
   });
 });
