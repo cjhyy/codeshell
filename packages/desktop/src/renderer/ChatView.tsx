@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CornerDownRight, Paperclip, Mic, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
@@ -211,23 +211,42 @@ export function ChatView({
     liveDraftStash.current = "";
   }, [activeRepoId]);
 
-  // Auto-size the composer to its content. useLayoutEffect runs before paint so
-  // the height settles without a visible flicker.
+  // Auto-size the composer to its content by measuring scrollHeight. The catch:
+  // scrollHeight is only right once the textarea is actually laid out at its
+  // final width. When the right dock opens/closes or the user switches sessions,
+  // the width reflows — and a measurement taken mid-reflow reads ~0 and collapses
+  // the box. Earlier attempts (re-running on `draft` / `engineSessionId`) failed
+  // because they re-measured at a moment the layout was STILL unstable.
   //
-  // Collapse guard: when the right dock is open and the user switches sessions,
-  // the textarea is briefly measured mid-layout (dock width reflowing), so
-  // `scrollHeight` can come back as ~0 and the resulting inline height collapses
-  // the box to a sliver — and since `draft` didn't change (both empty), nothing
-  // re-runs to fix it. We floor the computed height at one line (MIN_TEXTAREA_PX)
-  // so a bogus tiny `scrollHeight` can never collapse it; the CSS `min-h-*` on
-  // the element is the static backstop for the same reason.
-  useLayoutEffect(() => {
+  // The fix is to re-measure when the layout actually settles, not when we guess
+  // it might have. A ResizeObserver on the textarea fires whenever its box size
+  // changes — dock toggle, session-switch reflow, window resize — so the height
+  // is recomputed against the real, settled width every time. The clamp keeps it
+  // between one line and the max; the CSS `min-h-*` is a static backstop for the
+  // instant before the observer's first callback.
+  const measureComposer = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = "auto";
     const next = Math.min(Math.max(ta.scrollHeight, MIN_TEXTAREA_PX), MAX_TEXTAREA_PX);
     ta.style.height = next + "px";
-  }, [draft]);
+  }, []);
+
+  // Re-measure on content change (typing/clearing doesn't always change the
+  // box's outer size, so the observer alone wouldn't catch it).
+  useLayoutEffect(() => {
+    measureComposer();
+  }, [draft, measureComposer]);
+
+  // Re-measure on any layout change to the textarea's own box (dock open/close,
+  // session-switch reflow, window resize). Mounts once; observes the element.
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => measureComposer());
+    ro.observe(ta);
+    return () => ro.disconnect();
+  }, [measureComposer]);
 
   // Busy no longer disables the textarea: Enter queues input for the next turn.
   // It still disables side controls whose changes would be ambiguous mid-turn.
