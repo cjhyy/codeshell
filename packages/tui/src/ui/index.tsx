@@ -27,6 +27,14 @@ export interface InkReplOptions {
   maxContextTokens: number;
   sessionId?: string;
   prefill?: string;
+  /**
+   * Teardown run right before the process exits. The REPL terminates via
+   * process.exit(0) below, so any cleanup the caller queued AFTER
+   * `await startInkRepl(...)` would be unreachable — pass it here instead.
+   * Awaited so async reaping (background-shell SIGTERM→SIGKILL grace) actually
+   * finishes before exit, preventing orphaned detached dev servers.
+   */
+  onExit?: () => void | Promise<void>;
 }
 
 export async function startInkRepl(options: InkReplOptions): Promise<void> {
@@ -98,6 +106,14 @@ export async function startInkRepl(options: InkReplOptions): Promise<void> {
     clearInterval(keepAlive);
     flushHistorySync();
     instance.cleanup();
+    // Caller teardown (chatManager.closeAllAsync → reap background shells).
+    // Awaited so the kill grace completes before process.exit(0) below;
+    // best-effort — a hang here must still let the process exit.
+    try {
+      await options.onExit?.();
+    } catch (err) {
+      logger.warn("repl.onExit.failed", { error: (err as Error).message });
+    }
   }
   process.exit(0);
 }

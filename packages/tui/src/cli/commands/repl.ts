@@ -267,10 +267,11 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     maxContextTokens,
     sessionId: tuiSessionId,
     prefill: options.prefill,
+    // TUI quit — tear down sessions and reap any background shells the user
+    // started so a detached `npm run dev` doesn't outlive the CLI as an
+    // orphan (core design §6). MUST run via onExit (awaited before
+    // process.exit(0) inside startInkRepl): any code AFTER this await is
+    // unreachable because the REPL exits the process itself.
+    onExit: () => chatManager.closeAllAsync(),
   });
-
-  // TUI quit — tear down sessions and reap any background shells the user
-  // started (closeAll → backgroundShellManager.killAll), so a detached
-  // `npm run dev` doesn't outlive the CLI as an orphan (core design §6).
-  chatManager.closeAll();
 }

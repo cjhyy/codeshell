@@ -95,18 +95,31 @@ export class ChatSessionManager {
   }
 
   closeAll(): void {
+    // Fire-and-forget variant for callers that can't await (e.g. AgentServer
+    // teardown inside a sync stop path). The TUI exit path uses closeAllAsync()
+    // below so the SIGTERM→SIGKILL grace actually completes before the process
+    // exits — otherwise startInkRepl's process.exit(0) races the kill and the
+    // detached shells leak as orphans.
+    void this.closeAllAsync();
+  }
+
+  /**
+   * Await-able shutdown. Cancels every session and reaps every background
+   * shell, *waiting* for the kill grace so a caller that exits the process
+   * immediately afterward (the TUI REPL) doesn't orphan detached dev servers.
+   */
+  async closeAllAsync(): Promise<void> {
     for (const id of [...this.sessions.keys()]) this.close(id);
     // App/worker shutdown — reap every background shell so a detached
     // `npm run dev` doesn't outlive the process as an orphan holding a port
-    // (design §6 / §难点1). Fire-and-forget: shutdown shouldn't block on the
-    // SIGTERM→SIGKILL grace. NOTE: deliberately NOT in close()/sweepIdle() —
+    // (design §6 / §难点1). NOTE: deliberately NOT in close()/sweepIdle() —
     // an idle chat tab must keep its dev server alive (§6 "切走再回来 server 还在").
-    void backgroundShellManager.killAll();
+    await backgroundShellManager.killAll();
     // Background-agent output files are a debugging convenience, not durable
     // state — wipe them on shutdown so ~/.code-shell/agents doesn't grow
     // unbounded across runs. (notificationQueue, the real result path, is
     // in-memory and already gone.)
-    void clearAgentOutputFiles();
+    await clearAgentOutputFiles();
   }
 
   sessionCount(): number {

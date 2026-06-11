@@ -47,4 +47,26 @@ describe("closeAll reaps the singleton's background shells", () => {
     await until(() => backgroundShellManager.get(r.shellId)?.status === "killed");
     expect(backgroundShellManager.get(r.shellId)?.status).toBe("killed");
   });
+
+  // Regression (§5.6 #12): the TUI exit path is `await closeAllAsync()` →
+  // `process.exit(0)`. closeAllAsync MUST await the kill so the shell is
+  // already reaped when it resolves — no polling. Without this the process
+  // exited before killAll's SIGTERM→SIGKILL grace finished and detached dev
+  // servers leaked as orphans.
+  test("closeAllAsync awaits the kill — shell is dead the instant it resolves", async () => {
+    const mgr = new ChatSessionManager({ runtime: {} as never, engineFactory: () => ({}) as never });
+    const r = backgroundShellManager.spawnBackground({
+      command: "sleep 100",
+      cwd: home,
+      sessionId: "sY",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(backgroundShellManager.get(r.shellId)?.status).toBe("running");
+
+    await mgr.closeAllAsync();
+
+    // No until()/polling: the await guarantees the kill grace already ran.
+    expect(backgroundShellManager.get(r.shellId)?.status).toBe("killed");
+  });
 });
