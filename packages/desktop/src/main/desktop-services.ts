@@ -398,24 +398,39 @@ export async function cleanupStaleWorktrees(
  * limits to that path. Falls back to staged-only if working tree is
  * clean but index has changes.
  */
-export async function getGitDiff(cwd: string, file?: string | string[]): Promise<string> {
+/**
+ * Which uncommitted changes to diff:
+ *   unstaged — worktree vs index (`git diff`)
+ *   staged   — index vs HEAD (`git diff --cached`)
+ *   all      — worktree vs HEAD, staged + unstaged combined (`git diff HEAD`)
+ * The review panel's 未暂存 / 已暂存 / 全部未提交 scopes map to these. Default
+ * "all" so legacy callers get the most complete diff.
+ */
+export type GitDiffMode = "unstaged" | "staged" | "all";
+
+export async function getGitDiff(
+  cwd: string,
+  file?: string | string[],
+  mode: GitDiffMode = "all",
+): Promise<string> {
   if (Array.isArray(file)) {
-    const chunks = await Promise.all(file.map((f) => getGitDiffForFile(cwd, f)));
+    const chunks = await Promise.all(file.map((f) => getGitDiffForFile(cwd, f, mode)));
     return chunks.filter((chunk) => chunk.trim()).join("\n");
   }
-  if (file) return getGitDiffForFile(cwd, file);
+  if (file) return getGitDiffForFile(cwd, file, mode);
 
-  const baseArgs = ["diff", "--no-color", "--unified=3"];
-  const args = baseArgs;
+  const base = ["diff", "--no-color", "--unified=3"];
+  // The git args differ PER MODE — that's the whole point of the scope chips.
+  // staged → --cached (index vs HEAD); all → HEAD (worktree vs HEAD);
+  // unstaged → bare diff (worktree vs index).
+  const args =
+    mode === "staged"
+      ? [...base, "--cached"]
+      : mode === "all"
+        ? [...base, "HEAD"]
+        : base;
   try {
-    const wt = await gitRun(cwd, args);
-    if (wt.trim()) return wt;
-  } catch {
-    // fall through
-  }
-  try {
-    const staged = await gitRun(cwd, [...baseArgs, "--cached", ...(file ? ["--", file] : [])]);
-    return staged;
+    return await gitRun(cwd, args);
   } catch {
     return "";
   }
@@ -440,22 +455,28 @@ export async function getGitRangeDiff(
   }
 }
 
-async function getGitDiffForFile(cwd: string, file: string): Promise<string> {
-  const baseArgs = ["diff", "--no-color", "--unified=3"];
-  const args = [...baseArgs, "--", file];
+async function getGitDiffForFile(
+  cwd: string,
+  file: string,
+  mode: GitDiffMode = "all",
+): Promise<string> {
+  const base = ["diff", "--no-color", "--unified=3"];
+  const args =
+    mode === "staged"
+      ? [...base, "--cached", "--", file]
+      : mode === "all"
+        ? [...base, "HEAD", "--", file]
+        : [...base, "--", file];
   try {
-    const wt = await gitRun(cwd, args);
-    if (wt.trim()) return wt;
+    const out = await gitRun(cwd, args);
+    if (out.trim()) return out;
   } catch {
     // fall through
   }
-  try {
-    const staged = await gitRun(cwd, [...baseArgs, "--cached", "--", file]);
-    if (staged.trim()) return staged;
-  } catch {
-    // fall through
-  }
-  if (await isUntrackedFile(cwd, file)) {
+  // Untracked files have no diff in any mode — synthesize one so they still
+  // show (unless we're looking only at staged, where an untracked file by
+  // definition has nothing).
+  if (mode !== "staged" && (await isUntrackedFile(cwd, file))) {
     return syntheticUntrackedDiff(cwd, file);
   }
   return "";

@@ -22,9 +22,16 @@ interface Props {
    * to one file (#5 ②). Ignored on the git-backed path (use `file` there).
    */
   onlyPath?: string | null;
+  /**
+   * Which uncommitted changes to diff (working-tree scopes). unstaged →
+   * `git diff`; staged → `git diff --cached`; all → `git diff HEAD`. Without
+   * this, 未暂存/已暂存/全部 all returned the same diff. Ignored when `range`
+   * (committed/branch scope) or `diffText` (turn snapshot) is set.
+   */
+  mode?: "unstaged" | "staged" | "all";
 }
 
-export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath }: Props) {
+export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode }: Props) {
   const [diff, setDiff] = useState<DiffFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +46,7 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath }: Prop
     }
     const fetchDiff = range
       ? window.codeshell.getGitRangeDiff(cwd, range, file)
-      : window.codeshell.getGitDiff(cwd, file);
+      : window.codeshell.getGitDiff(cwd, file, mode);
     void fetchDiff
       .then((raw) => {
         if (cancelled) return;
@@ -52,7 +59,7 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath }: Prop
     return () => {
       cancelled = true;
     };
-  }, [cwd, file, diffText, range]);
+  }, [cwd, file, diffText, range, mode]);
 
   if (error) return <div className="diff-error">git diff failed: {error}</div>;
   if (!diff) return <div className="diff-loading">loading diff…</div>;

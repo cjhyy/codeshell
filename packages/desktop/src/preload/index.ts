@@ -354,7 +354,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     autoDeleteWorktrees: boolean;
     autoDeleteWorktreesGraceMins: number;
   }) => ipcRenderer.invoke("git:setPrefs", prefs),
-  getGitDiff: (cwd: string, file?: string) => ipcRenderer.invoke("git:diff", cwd, file),
+  getGitDiff: (cwd: string, file?: string, mode?: "unstaged" | "staged" | "all") =>
+    ipcRenderer.invoke("git:diff", cwd, file, mode),
   getGitRangeDiff: (cwd: string, range: string, file?: string) =>
     ipcRenderer.invoke("git:rangeDiff", cwd, range, file),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),

@@ -337,7 +337,12 @@ export interface CodeshellApi {
     autoDeleteWorktreesGraceMins: number;
   }): Promise<void>;
   /** Unified diff for the working tree (vs HEAD). file optional. */
-  getGitDiff(cwd: string, file?: string): Promise<string>;
+  getGitDiff(
+    cwd: string,
+    file?: string,
+    /** Which uncommitted changes to diff (review-panel scope). Default "all". */
+    mode?: "unstaged" | "staged" | "all",
+  ): Promise<string>;
   /** Unified diff for a committed range (e.g. "HEAD~1..HEAD"); optional file (TODO 2.3a). */
   getGitRangeDiff(cwd: string, range: string, file?: string): Promise<string>;
 

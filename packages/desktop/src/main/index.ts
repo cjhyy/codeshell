@@ -1489,10 +1489,13 @@ ipcMain.handle("git:listWorktrees", async (_e, cwd: string) => {
   return listGitWorktrees(cwd);
 });
 
-ipcMain.handle("git:diff", async (_e, cwd: string, file?: string) => {
-  if (typeof cwd !== "string" || !cwd) throw new Error("git:diff requires cwd");
-  return getGitDiff(cwd, file);
-});
+ipcMain.handle(
+  "git:diff",
+  async (_e, cwd: string, file?: string, mode?: "unstaged" | "staged" | "all") => {
+    if (typeof cwd !== "string" || !cwd) throw new Error("git:diff requires cwd");
+    return getGitDiff(cwd, file, mode);
+  },
+);
 
 ipcMain.handle("git:rangeDiff", async (_e, cwd: string, range: string, file?: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:rangeDiff requires cwd");

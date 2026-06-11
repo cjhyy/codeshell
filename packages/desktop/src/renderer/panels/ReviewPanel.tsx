@@ -146,13 +146,18 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
             diffText={turnDiff}
             onlyPath={turnFileSel === ALL_FILES ? null : turnFileSel}
           />
+        ) : isRangeScope(scope) ? (
+          // Committed/branch scopes diff the resolved git range.
+          <UnifiedDiffViewer key={`${scope}:${refreshKey}`} cwd={cwd} range={range ?? undefined} />
         ) : (
-          // Committed/branch scopes diff the resolved range; others the working
-          // tree. No file filter — all changed files stack (the viewer caps
-          // huge diffs to keep the main thread responsive).
+          // Working-tree scopes — the `mode` (= scope) picks the git command so
+          // 未暂存 / 已暂存 / 全部未提交 return DIFFERENT diffs (they used to all
+          // return the same one — getGitDiff ignored the scope). All changed
+          // files stack (the viewer caps huge diffs to stay responsive).
           <UnifiedDiffViewer
+            key={`${scope}:${refreshKey}`}
             cwd={cwd}
-            range={isRangeScope(scope) ? range ?? undefined : undefined}
+            mode={scope as "unstaged" | "staged" | "all"}
           />
         )}
       </div>
