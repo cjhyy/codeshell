@@ -22,6 +22,7 @@ export const CSMeta = z.object({
   version: z.string().optional(),
   source: z.string(),
   installedAt: z.string(),
+  commit: z.string().optional(), // remote (git) source: the HEAD SHA we installed
 });
 
 export type CSMeta = z.infer<typeof CSMeta>;

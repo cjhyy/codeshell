@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PluginSummary } from "../../main/plugins-service";
 import { resolveUninstallTarget } from "./uninstallTarget";
-import { MoreHorizontal, Loader2 } from "lucide-react";
+import { MoreHorizontal, Loader2, ArrowUpCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,10 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // installKey → has-newer-commit-upstream. Filled in asynchronously after the
+  // list renders; only remote plugins ever flip to true (core returns false for
+  // local/no-commit sources), so the badge silently no-ops for everything else.
+  const [updatable, setUpdatable] = useState<Record<string, boolean>>({});
   const retry = () => setReloadKey((k) => k + 1);
   const confirm = useConfirm();
   const alert = useAlert();
@@ -34,10 +38,27 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     let alive = true;
     setPlugins(null);
     setError(null);
+    setUpdatable({});
     window.codeshell
       .listPlugins(cwd)
       .then((d) => {
-        if (alive) setPlugins(d);
+        if (!alive) return;
+        setPlugins(d);
+        // Background, non-blocking: probe each plugin for an upstream update
+        // (network per plugin; core no-ops fast for non-remote sources). Each
+        // resolves independently so badges appear as they come back.
+        for (const p of d) {
+          window.codeshell
+            .checkPluginUpdate(p.name)
+            .then((r) => {
+              if (alive && r.updateAvailable) {
+                setUpdatable((m) => ({ ...m, [p.installKey]: true }));
+              }
+            })
+            .catch(() => {
+              /* check failure → just no badge */
+            });
+        }
       })
       .catch((e) => {
         if (alive) setError(String(e?.message ?? e));
@@ -118,6 +139,22 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
               {p.sourceLabel} · {p.skillCount} skills
             </div>
           </div>
+          {updatable[p.installKey] && (
+            <Button
+              size="icon"
+              variant="ghost"
+              title="有新版本，点击更新"
+              className="text-status-running hover:text-status-running"
+              disabled={busy === p.installKey}
+              onClick={() => void update(p)}
+            >
+              {busy === p.installKey ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUpCircle className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           <span className="text-xs text-muted-foreground">{p.marketplace ?? "本地"}</span>
           <Switch checked={isEnabled(p)} onCheckedChange={(v) => onToggle(p, v)} />
           <DropdownMenu>

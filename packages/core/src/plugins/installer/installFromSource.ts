@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { gitClone } from "../gitOps.js";
+import { gitClone, gitRevParseHead } from "../gitOps.js";
 import { installPluginFromPath } from "./install.js";
 import { pluginMetaPath } from "./paths.js";
 import { PluginInstallError, type CSMeta } from "./types.js";
@@ -46,6 +46,11 @@ export async function installPluginFromSource(
     const metaPath = pluginMetaPath(name);
     const meta = JSON.parse(readFileSync(metaPath, "utf-8")) as CSMeta;
     meta.source = parsed.raw;
+    // Record the cloned repo's HEAD sha so `checkPluginUpdate` can compare it
+    // against `git ls-remote` later. A failed rev-parse only means "can't check
+    // updates", never an install failure — so omit commit and carry on.
+    const head = await gitRevParseHead(tmp);
+    if (head.ok) meta.commit = head.stdout;
     writeFileSync(metaPath, JSON.stringify(meta, null, 2));
 
     return dir;

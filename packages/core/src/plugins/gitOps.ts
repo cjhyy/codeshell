@@ -126,6 +126,21 @@ export async function gitRevParseHead(repoDir: string): Promise<GitResult> {
   return runGit(["rev-parse", "HEAD"], repoDir);
 }
 
+/**
+ * Resolve a ref (default HEAD) on a remote git URL WITHOUT cloning — one
+ * cheap network round-trip. Returns the 40-char SHA on success.
+ */
+export async function gitLsRemote(url: string, ref?: string): Promise<GitResult> {
+  // `git ls-remote <url> <ref>` prints "<sha>\t<refname>"; take the first sha.
+  const r = await runGit(["ls-remote", url, ref ?? "HEAD"]);
+  if (!r.ok) return r;
+  const sha = r.stdout.split(/\s+/)[0] ?? "";
+  if (!/^[0-9a-f]{7,40}$/i.test(sha)) {
+    return { ok: false, error: `ls-remote: no sha for ${ref ?? "HEAD"} in: ${r.stdout.slice(0, 120)}` };
+  }
+  return { ok: true, stdout: sha };
+}
+
 export async function gitFetchAndReset(repoDir: string, ref?: string): Promise<GitResult> {
   const fetchArgs = ["fetch", "--depth", "1", "origin"];
   if (ref) fetchArgs.push(ref);

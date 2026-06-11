@@ -504,6 +504,14 @@ export interface CodeshellApi {
   ): Promise<{ ok: boolean; removedFromManifest: boolean; removedFromDisk: boolean }>;
   /** Re-install a plugin from its recorded source (manual update). Atomic in core. */
   updatePlugin(name: string): Promise<{ updated: boolean; reason: string }>;
+  /** Check if a remote plugin has a newer commit upstream (network; never throws). */
+  checkPluginUpdate(name: string): Promise<{
+    name: string;
+    updateAvailable: boolean;
+    currentCommit?: string;
+    latestCommit?: string;
+    reason?: string;
+  }>;
   /** List known plugin marketplaces (never throws — returns [] on read error). */
   listMarketplaces(): Promise<
     Array<{

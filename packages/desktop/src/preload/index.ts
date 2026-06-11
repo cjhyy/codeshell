@@ -460,6 +460,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   uninstallPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
   updatePlugin: (name: string) => ipcRenderer.invoke("plugins:update", name),
+  checkPluginUpdate: (name: string) => ipcRenderer.invoke("plugins:checkUpdate", name),
   listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
   loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),

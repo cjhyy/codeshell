@@ -14,7 +14,14 @@
  * installPath has disappeared.
  */
 
-import { listInstalled, uninstallPlugin, updatePluginByName, type UpdateResult } from "@cjhyy/code-shell-core";
+import {
+  listInstalled,
+  uninstallPlugin,
+  updatePluginByName,
+  checkPluginUpdate,
+  type UpdateResult,
+  type UpdateCheck,
+} from "@cjhyy/code-shell-core";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 
@@ -153,5 +160,23 @@ export async function updatePluginEntry(name: string): Promise<UpdateResult> {
     throw new Error("updatePluginEntry requires a plugin name");
   }
   return updatePluginByName(name, new Date().toISOString(), true);
+}
+
+/**
+ * Check whether a remote (git) plugin has a newer commit upstream. Network
+ * round-trip (git ls-remote) — the renderer calls this per-plugin in the
+ * background AFTER the list renders, so it never blocks the list. Never throws
+ * for the unknown-plugin case the renderer might race into: we return a
+ * not-available result so a stale row just shows no badge.
+ */
+export async function checkPluginUpdateEntry(name: string): Promise<UpdateCheck> {
+  if (typeof name !== "string" || !name) {
+    return { name: String(name), updateAvailable: false, reason: "missing name" };
+  }
+  try {
+    return await checkPluginUpdate(name);
+  } catch (e) {
+    return { name, updateAvailable: false, reason: String((e as Error)?.message ?? e) };
+  }
 }
 
