@@ -17,7 +17,7 @@ describe("PLAN_MODE_ALLOWED_TOOLS", () => {
   });
 
   it("includes the planning/agent tools", () => {
-    for (const t of ["EnterPlanMode", "ExitPlanMode", "AskUserQuestion", "Agent", "ToolSearch"]) {
+    for (const t of ["EnterPlanMode", "ExitPlanMode", "AskUserQuestion", "Agent", "ToolSearch", "Skill"]) {
       expect(PLAN_MODE_ALLOWED_TOOLS.has(t)).toBe(true);
     }
   });

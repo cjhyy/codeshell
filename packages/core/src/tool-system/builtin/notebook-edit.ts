@@ -5,7 +5,6 @@
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
 export const notebookEditToolDef: ToolDefinition = {
   name: "NotebookEdit",
@@ -67,12 +66,6 @@ export async function notebookEditTool(
 
   if (!filePath) return "Error: file_path is required";
   if (!filePath.endsWith(".ipynb")) return "Error: file must be a .ipynb file";
-
-  // Path policy: 'read' goes through the read-side rules (sensitive paths
-  // still ask), all other actions are writes and use the stricter rules.
-  const op = action === "read" ? "read" : "write";
-  const blocked = await enforcePathPolicyWithApproval(filePath, op, ctx);
-  if (blocked) return blocked;
 
   if (action === "read") {
     if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;

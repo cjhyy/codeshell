@@ -2,7 +2,7 @@
 
 UI-agnostic agent orchestration framework. The headless core of [`code-shell`](https://github.com/cjhyy/codeshell): turn an LLM + a tool registry + a transcript into a multi-turn agent loop, with permissions, hooks, MCP support, and pluggable approval backends.
 
-Compatible with Anthropic and OpenAI-protocol providers (Claude, DeepSeek, GPT, Gemini, Qwen, …). No terminal UI dependencies — embed it in a CLI, a web service, a Slack bot, a desktop app.
+Compatible with Anthropic and OpenAI-protocol providers (Claude, DeepSeek, GPT, Gemini, Qwen, …). No terminal UI dependencies — embed it in a CLI, a web service, a Slack bot, a desktop app. This is a Node.js runtime package, not a browser SDK.
 
 ## Install
 
@@ -12,7 +12,7 @@ npm install @cjhyy/code-shell-core
 bun add @cjhyy/code-shell-core
 ```
 
-Requires Node ≥ 20.10.
+Requires Node ≥ 20.10 and an ESM-capable runtime.
 
 ## Quickstart
 
@@ -29,8 +29,10 @@ const engine = new Engine({
     apiKey: process.env.ANTHROPIC_API_KEY!,
   },
   cwd: process.cwd(),
-  // Headless approval — "approve-all" trusts the model fully; use
-  // "approve-read-only" or a custom ApprovalBackend in production.
+  // Headless approval — "approve-all" trusts the model fully and is
+  // only appropriate for local/trusted prompts. Use "approve-read-only",
+  // explicit permissionMode/tool allowlists, or a custom ApprovalBackend
+  // in production.
   approvalBackend: new HeadlessApprovalBackend("approve-all"),
   headless: true,
 });
@@ -78,7 +80,7 @@ new Engine({
 
 ## Designing for production
 
-- **Approval backend.** `HeadlessApprovalBackend("approve-all")` is fine for trusted prompts. For untrusted input, implement `ApprovalBackend` to gate destructive tools (Write/Edit/Bash) through your own auth.
+- **Approval backend.** `HeadlessApprovalBackend("approve-all")` is fine only for local/trusted prompts. For untrusted input, explicitly set `permissionMode`, restrict tools with `enabledBuiltinTools` / `disabledBuiltinTools`, or implement `ApprovalBackend` to gate destructive tools (Write/Edit/Bash) through your own auth.
 - **Permission rules.** Pass `permissionRules` to the engine for fine-grained allow/deny per tool + args pattern. Bash commands additionally get a built-in safety classifier (dangerous commands like `rm -rf` always require explicit approval).
 - **Hooks** are the right place for audit logging, prompt rewriting, and policy enforcement.
 - **Memory.** The engine ships with an extract-memories + auto-dream pipeline that persists to `~/.code-shell/memory/`. Disable by passing a no-op `MemoryOrchestrator`, or scope to a project by setting `CODE_SHELL_HOME`.
@@ -144,11 +146,12 @@ These exports are covered by the stability promise:
 
 ### Treat as internal
 
-Anything not in the table above — including direct imports from
-`./engine/...`, `./tool-system/...`, `./session/...`, `./hooks/...`
-subpaths and APIs marked `@internal` in their docstrings — may change
-between minor versions without notice. Plan to migrate via the protocol
-surface instead of deep-importing.
+Anything not in the table above — including root-entry exports for
+product/runtime helpers and direct imports from `./engine/...`,
+`./tool-system/...`, `./session/...`, `./hooks/...` subpaths — is
+experimental/internal unless explicitly documented otherwise, and may
+change between minor versions without notice. Plan to migrate via the
+protocol surface instead of deep-importing.
 
 ## Stability
 

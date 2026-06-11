@@ -7,7 +7,6 @@ import { promisify } from "node:util";
 import { resolve, sep, isAbsolute } from "node:path";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
-import { enforcePathPolicyWithApproval } from "../path-policy.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -71,10 +70,6 @@ export async function grepTool(
       ? argPath
       : resolve(baseDir, argPath)
     : baseDir;
-  // Path policy: reading file contents under ~/.ssh, ~/.aws etc. by way
-  // of grep is the same exfiltration risk as Read. Gate the search root.
-  const blocked = await enforcePathPolicyWithApproval(searchPath, "read", ctx);
-  if (blocked) return blocked;
   const fileGlob = args.glob as string | undefined;
   const context = (args.context as number) || 0;
   const maxResults = (args.max_results as number) || 50;

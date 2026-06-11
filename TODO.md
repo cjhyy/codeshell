@@ -20,6 +20,9 @@
 **其他纯 code / 收尾活：**
 - 🔧 **真视频适配器**：替换 `FakeVideoProvider`，接入 seedance/kling（待各自私有 API 文档）→ P6
 - ⬜ **GenerateImage 结果直接展示图片**：tool result 本地 PNG 在 desktop 渲染区预览 → P2
+- ⬜ **GenerateImage 改并发**：同 turn 多张图现在是串行(实测 quality:high 1536×1024 每张 ~2.5min，6 张累加 ~15min)。根因不是管线写死串行——管线本就是混合策略(`streaming-tool-queue.ts:32-55`，`isConcurrencySafe:true` 的工具 enqueue 时立即并发启动，`false` 进 unsafeQueue for-await 串行)，是 GenerateImage 在 `builtin/index.ts:113` 被显式标了 `isConcurrencySafe:false`(隔壁 GenerateVideo 是 `true` 才快)。**唯一真实串行理由 = 文件名冲突**：`generate-image.ts:265` 用 `${Date.now()}.png`(毫秒级)，并发同 1ms 落盘会被 writeFile 静默覆盖丢图。其余顾虑(工具间依赖/共享状态/permission/abort)都已在 drain 前统一处理，不成立。**改法**：文件名换纳秒/UUID/加序号去冲突 → 把 `isConcurrencySafe` 翻 `true`，6 张图 ~15min 降到 ~3min(API 限流交给 provider 层退避，别靠执行器串行兜底) → P2
+- ⬜ **plugin/skill 更新后「重载生效」闭环**：现 plugin/skill 更新只 toast 提示用户手动重载（cd39758/22bb09e）；做成更新后真正热重载已装 plugin/skill（重扫 + 通知 running session），别再让用户手动重启 → P3。动手前先 grep 现有 plugin 扫描/热重载链路（见 [[project_config_hotreload_layer2]]）
+- ⬜ **plugin/skill「全部更新」批量入口**：PluginsTab/SkillsTab 现为逐行徽章点更新；有多个可更新时加一个「全部更新」按钮，复用 updatePlugin/updateSkill 串/并行跑 → P3
 - 🔧 会话崩溃恢复产品闭环；工具超时/可取消性一致化；友好错误消息 → P1
 - 🔧 配置系统：YAML 支持 / JSON Schema 生成 / 配置迁移机制（`/config show|set|get` 已实现）→ P4
 - 🔧 长时段断网的会话级重连（瞬时错误已被 withRetry 覆盖）→ P1

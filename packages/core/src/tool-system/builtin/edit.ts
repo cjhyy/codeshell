@@ -7,7 +7,6 @@ import { existsSync } from "node:fs";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
-import { enforcePathPolicyWithApproval } from "../path-policy.js";
 import { detectEol, toLf, applyEol } from "./eol.js";
 
 export const editToolDef: ToolDefinition = {
@@ -53,10 +52,6 @@ export async function editTool(
   if (newString === undefined) return "Error: new_string is required";
   if (oldString === newString) return "Error: old_string and new_string must be different";
   if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;
-
-  // Path policy gate before any IO.
-  const blocked = await enforcePathPolicyWithApproval(filePath, "write", ctx);
-  if (blocked) return blocked;
 
   try {
     const raw = await readFile(filePath, "utf-8");

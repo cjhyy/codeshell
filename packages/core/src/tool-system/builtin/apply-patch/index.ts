@@ -20,7 +20,6 @@ import type { ToolContext } from "../../context.js";
 import { fileCache } from "../file-cache.js";
 import { applyPatch } from "./applier.js";
 import { parsePatch } from "./parser.js";
-import { enforcePathPolicyWithApproval } from "../../path-policy.js";
 import { resolve as resolvePath } from "node:path";
 
 export const applyPatchToolDef: ToolDefinition = {
@@ -82,20 +81,6 @@ export async function applyPatchTool(
   // A4: resolve relative patch paths against the Engine's cwd, not the
   // host process cwd. See standard §S5.
   const cwd = ctx?.cwd ?? process.cwd();
-
-  // Path-policy gate every target before any IO. A multi-file patch is
-  // atomic — if *any* target is blocked the whole patch must reject so we
-  // don't end up writing some files and refusing others.
-  for (const hunk of parsed.hunks) {
-    const targets: string[] = [resolvePath(cwd, hunk.path)];
-    if (hunk.kind === "update" && hunk.movePath) {
-      targets.push(resolvePath(cwd, hunk.movePath));
-    }
-    for (const t of targets) {
-      const blocked = await enforcePathPolicyWithApproval(t, "write", ctx);
-      if (blocked) return blocked;
-    }
-  }
 
   let result;
   try {

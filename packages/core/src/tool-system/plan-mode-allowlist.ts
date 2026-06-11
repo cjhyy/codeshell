@@ -32,6 +32,10 @@ export const PLAN_MODE_ALLOWED_TOOLS: ReadonlySet<string> = new Set([
   "AskUserQuestion",
   "Agent",
   "ToolSearch",
+  // Skill: loads a skill's guidance text into context — read-only, no file
+  // writes. Planning is exactly when methodology skills (brainstorming,
+  // writing-plans, …) are most useful, so it belongs in the allow-list.
+  "Skill",
   // Task tracking (non-destructive) — both the TodoWrite and the Task* family
   "TodoWrite",
   "TaskCreate",

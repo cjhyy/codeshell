@@ -245,3 +245,24 @@
 - **状态**:🟢 已修(2026-06-09)
 - **备注**:已修 = ① writableRoots/deniedReads 两处裸 `<textarea>` → `@/components/ui` `Textarea`(与变量框统一 `font-mono text-sm resize-y`);② `ProjectEnvEditor` + `LocalScriptEditor` 全部 legacy class(`env-settings-*`/`local-env-*`)→ Tailwind 工具类 + 语义 token,外层 `flex flex-col gap-4` 统一节奏,沙箱区 `grid grid-cols-2 gap-4`,tab 按钮换 shadcn `Button variant=ghost`;③「设置脚本」加 **「仅 worktree 生效」** badge、变量区标「全项目生效」区分作用域;④ 删掉 connections.css 里 0-consumer 的 `env-settings-*`/`local-env-*` 死规则(符合 [[project_desktop_shadcn]] Phase D)。**共享的 `settings-field`/`settings-form-grid` 保留**(其他设置页还在用)。desktop 551 过、tsc+build 绿。坑:删 css 时留的注释里 `*/` 误闭合注释炸了 build,已改文案。
 
+
+### 🔴 [2026-06-12] 设置/配置页每次进入闪一下(loading)
+- **现象**:每次进设置配置页都会闪一下,看起来是先渲染了 loading 占位态、数据到位后再替换造成的视觉跳动。
+- **复现**:进入设置/配置页。
+- **期望**:进入即稳,不闪。首屏宜用已缓存的 settings 同步渲染(或骨架与真实布局同尺寸),避免空→loading→数据三段式跳动。
+- **状态**:🔴
+- **备注**:与已修的「切模型闪『保存中』」(saving 闪,78fe9c2)是**不同症状**——这里是进入页面的 loading 闪。关联记忆 [[project_settings_page_loading_flash]]、[[project_model_switch_saving_flash]]。
+
+### 🔴 [2026-06-12] 浏览器圈选体验:已选内容回显 + 编辑时高亮边框
+- **现象**:浏览器面板圈选时,(1) 当前 session 里已存的选取内容,在浏览器里**没有回显**出来——看不到选过哪些;(2) 点「编辑」某一项时,对应页面元素**没显出边框**,不知道是哪一个元素。
+- **复现**:在浏览器面板圈选若干元素后,回看 / 点编辑。
+- **期望**:同 session 已选内容在浏览器里回显(高亮 overlay);点编辑时该元素显出边框,一眼定位。
+- **状态**:🔴
+- **备注**:与 [2026-06-09]「浏览器圈选标注:面板与新窗口不互通 + 再编辑时选区样式不回显」**高度重叠**——那条标了 🟢 已修(给 `PageMarker` 加 selector + 编辑时 executeJavaScript 注入 outline),但用户此次仍反馈看不到回显/边框,**疑似未达预期或回归**,需重新验证那次修复是否真生效。注意 webview 注入脚本就绪时机坑。关联记忆 [[project_browser_selection_echo_session]]、[[project_desktop_four_panels]]。
+
+### 🔴 [2026-06-12] 插件自带 MCP 在 UI 里显示得很奇怪
+- **现象**:当插件自身捆绑了 MCP server 时,当前 UI 把它显示出来看着很奇怪(与用户单独配置的 MCP 混在一起 / 归属不清)。
+- **复现**:装一个自带 MCP 的插件,看 MCP / 扩展页。
+- **期望**:明确「这是某插件带的」语义——和独立 MCP 视觉区分,或归到插件项下分组,而非平铺混排。
+- **状态**:🔴
+- **备注**:已有过相关接线——MCP 页对插件 owner 做过标注(§6.2「MCP页插件owner标注」),这次需进一步打磨插件捆绑 MCP 的呈现。先看 desktop 现状 MCP/扩展页怎么渲染插件 owner 再定改法。MCP 名字由 record key 承载,见 [[project_mcp_name_key_contract]]。关联记忆 [[project_plugin_bundled_mcp_display]]。

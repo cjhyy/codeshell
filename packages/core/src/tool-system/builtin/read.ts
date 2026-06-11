@@ -7,7 +7,6 @@ import { existsSync } from "node:fs";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
-import { enforcePathPolicyWithApproval } from "../path-policy.js";
 import { toLf } from "./eol.js";
 
 export const readToolDef: ToolDefinition = {
@@ -41,13 +40,6 @@ export async function readTool(
 ): Promise<string> {
   const filePath = args.file_path as string;
   if (!filePath) return "Error: file_path is required";
-
-  // Path policy: in-workspace reads pass through; sensitive paths (~/.ssh,
-  // .env, etc.) and outside-workspace reads are refused with an explanatory
-  // error. existsSync check stays AFTER the policy gate — we don't want to
-  // probe sensitive paths' existence as a side-channel.
-  const blocked = await enforcePathPolicyWithApproval(filePath, "read", ctx);
-  if (blocked) return blocked;
 
   if (!existsSync(filePath)) return `Error: File not found: ${filePath}`;
 

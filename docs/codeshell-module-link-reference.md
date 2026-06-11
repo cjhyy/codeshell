@@ -24,7 +24,7 @@ codeshell 是一个 monorepo(`packages/*` workspace),分三个包:
 
 **关键设计约束(贯穿全仓):**
 - **core 与宿主之间走 `protocol/` 定义的 JSON-RPC 风格线协议**(进程内 / stdio / TCP 三种传输),`StreamEvent` 是统一的事件流类型。宿主从不直接调 `TurnLoop`,而是经 `AgentClient → Transport → AgentServer → ChatSession → Engine`。
-- **Desktop 不把 core 跑在主进程里**,而是派生一个独立 agent worker 子进程(`agent-bridge.ts` ↔ `cli/agent-server-stdio.ts`),用 stdio NDJSON 通信 —— 隔离崩溃、避免阻塞 UI。
+- **Desktop 交互式聊天不把 core 跑在主进程里**,而是派生一个独立 agent worker 子进程(`agent-bridge.ts` ↔ `cli/agent-server-stdio.ts`),用 stdio NDJSON 通信 —— 隔离崩溃、避免阻塞 UI。例外:当前 Desktop automation 生产路径在 Electron main 中创建 one-shot headless `Engine` 执行。
 - **TUI 直接在本进程内**用 `createInProcessTransport` 把 Engine 和 UI 接到一起。
 
 ---
@@ -192,7 +192,7 @@ Electron 三进程 + 手机遥控。
 终端 REPL/headless CLI + 自研类 Ink 渲染引擎。
 
 ### 3.1 启动与命令层 — `cli` + `bootstrap`(34 个)★
-**职责:** 解析 CLI 参数、初始化会话、装配 `Engine→AgentServer→AgentClient` 管线,headless 渲染 + 交互 REPL 入口 + 子命令 + 斜杠命令注册表。
+**职责:** 解析 CLI 参数、做 CLI 进程环境初始化、装配 `Engine→AgentServer→AgentClient` 管线,headless 渲染 + 交互 REPL 入口 + 子命令 + 斜杠命令注册表。
 - `cli/main.ts` — **bin 入口**(commander 装配 run/repl/sessions/arena/runs/plugin + 默认命令,preAction 调 setup)。
 - `bootstrap/setup.ts` — 会话启动初始化(日志轮转、Node 版本/cwd 校验、bypass root 安全检查、git 探测)。
 - `cli/commands/repl.ts` — **交互 REPL 入口**(装配管线 + cron 绑定 + 启动 Ink UI)。
@@ -233,7 +233,7 @@ Electron 三进程 + 手机遥控。
   → TurnLoop 状态机 (engine/turn-loop.ts)
     → ModelFacade.call() (engine/model-facade.ts)
       → createLLMClient → AnthropicClient/OpenAIClient (llm/client-factory.ts, llm/providers/*)
-      → capabilitiesFor 抹平请求形状 (llm/capabilities/index.ts)
+      → provider client 按能力层/请求形状发起实际 API 调用；Engine 也会用 capabilitiesFor 做图片能力 gate (llm/capabilities/index.ts)
     → 流式增量 → StreamEvent → onStream 回调
     → 有 tool_use? → 见链路②;否则
     → ContextManager 检查压缩 (context/manager.ts)
@@ -245,22 +245,24 @@ Electron 三进程 + 手机遥控。
 ### 链路 ② 工具调用全链路(审批 / 权限 / 沙箱)
 ```
 TurnLoop 收到 tool_use (engine/turn-loop.ts)
-  → StreamingToolQueue 排队 (engine/streaming-tool-queue.ts)
-  → ToolExecutor.execute() (tool-system/executor.ts)
-    → PermissionClassifier 分类 (tool-system/permission.ts)
-    → 文件类? → classifyPath allow/ask/deny (tool-system/path-policy.ts)
-    → HookRegistry.emit(pre_tool_use) (hooks/registry.ts)
+  → StreamingToolQueue 排队 (engine/streaming-tool-queue.ts；并发安全工具可立即执行,但当前 TurnLoop 是在完整 response 返回后 enqueue/drain,不是参数流到一半就开跑工具)
+  → ToolExecutor.executeSingle() (tool-system/executor.ts)
+    → abort / capability override / plan-mode 门控
     → validation 入参校验 (tool-system/validation.ts)
-    → plan-mode 门控 (tool-system/plan-mode-allowlist.ts)
+    → HookRegistry.emit(pre_tool_use)；可 deny / ask / rewrite args
+    → InvestigationGuard preToolCheck
+    → PermissionClassifier 分类 (tool-system/permission.ts)
+    → HookRegistry.emit(on_permission_check)，只能降权不能提权
     → 需审批? → ApprovalBackend.request()
         · 交互:askUser(ToolContext) → 宿主审批 UI
         · 无头/自动:HeadlessApprovalBackend
         · Run 内:RunApprovalBackend 挂起到 resume (run/RunApprovalBackend.ts)
-    → 批准 → 执行:
+    → on_tool_start → registry.executeTool()
         · Bash → safe-spawn + Sandbox(seatbelt/bwrap/off) (runtime/safe-spawn.ts, tool-system/sandbox/*)
-        · 文件 → read/write/edit/apply-patch (tool-system/builtin/*)
+        · 文件 → read/write/edit/apply-patch；文件工具内部再走 classifyPath allow/ask/deny (tool-system/path-policy.ts)
         · MCP 工具 → MCPManager 转发 (tool-system/mcp-manager.ts)
         · 子代理 → Agent 工具 → 嵌套 Engine (tool-system/builtin/agent.ts)
+    → on_tool_end / post_tool_use / file_changed
     → ToolResult 回 TurnLoop → 下一回合
 ```
 
@@ -299,7 +301,7 @@ electron . → main 进程 index.ts (main/index.ts)
   renderer 发消息 → window.codeshell.run() (preload rpc)
     → ipcMain 'agent:msg' → AgentBridge → worker stdin (JSON-RPC line)
     → worker 内 AgentServer → ChatSession → Engine → 进入链路①
-    → worker stdout 快照行 → parseStreamLine → SessionSnapshotStore
+    → worker stdout JSON-RPC NDJSON line → parseStreamLine 只提取 agent/streamEvent 为 snapshot append → SessionSnapshotStore
     → AgentBridge 广播 streamEvent → ipcRenderer → preload 扇出
     → renderer streamRouting → streamCoalescer → reducer → MessageStream 渲染
 ```
@@ -310,22 +312,158 @@ electron . → main 进程 index.ts (main/index.ts)
 startAutomation(deps) (automation/index.ts)
   → CronScheduler 加载任务 + 起定时器 (automation/scheduler.ts)
   → cron 表达式到点 (automation/cron-expr.ts) + 睡眠/唤醒误触防护
-  → runner:bindCronToRunManager / bindCronToEngine (automation/runner.ts)
-    → write-policy 把权限层→permissionMode+审批后端+sandbox (automation/write-policy.ts)
-    → 写类任务:write-run 建隔离 worktree → 跑 Engine → 有改动开 PR → 清理 (automation/write-run.ts)
-    → RunManager.submit() → EngineRunner → Engine.run() (run/*) → 进入链路①(无头审批)
-  → desktop:automation-host 构建桌面 RunManager+runner (desktop main/automation-host.ts)
-    → 完成 run 经 importRuns 归项目入侧边栏 (renderer/automation/importRuns.ts)
+  → runner:bindCronToEngine / bindCronToRunManager (automation/runner.ts)
+    → write-policy 把权限层→permissionMode+审批后端(+sandboxMode 策略值) (automation/write-policy.ts)
+    → 当前 Desktop 生产路径:buildDesktopAutomationRunner → one-shot headless Engine.run() (desktop main/automation-host.ts)
+    → RunManager.submit() → EngineRunner → Engine.run() 是存在的 fallback/future 路径,不是当前 Desktop main 绑定
+    → write-run 隔离 worktree/PR 路径存在,但当前 Desktop runner 不调用
+  → desktop main startAutomation({ store, runner }) 启动执行器
+    → live session 经 automationSession 归项目入侧边栏;完成/历史经 importRuns 回填 (renderer/automation/importRuns.ts)
 
 ── B. 手机/平板遥控 ──
 RemoteHostManager 起 http+ws (desktop main/mobile-remote/remote-host-manager.ts)
-  → 设备配对 pairing + trusted-device-store + access-passcode(公网隧道)
+  → 设备配对 pairing + trusted-device-store + access-passcode(公网隧道 HTTP/WS gate)
   → cloudflared tunnel(可选公网) (tunnel-manager.ts)
   → 手机端 React App 连 WS (mobile/hooks/useRemoteSocket.ts)
-    → RoomManager / ResidentAgent 常驻 claude 会话 (mobile-remote/room-manager.ts, resident-agent.ts)
-    → 事件经 WS → mobile streamReducer 折叠渲染 (mobile/lib/streamReducer.ts)
-    → 手机审批 → ApprovalCard → 经 WS 回 → 进入链路② 审批节点
+    → B1 普通手机遥控:chat/approval/cancel → handleMobileClientEvent → AgentBridge 注入同一 JSON-RPC line → worker/core → 链路①/②
+    → worker stdout raw line → mobile broadcastRaw → streamReducer 折叠渲染 (mobile/lib/streamReducer.ts)
+    → B2 Rooms:RoomManager / ResidentAgent 常驻 claude CLI 会话 (mobile-remote/room-manager.ts, resident-agent.ts)
+       · 这条不走 CodeShell worker / Engine / 链路②审批,权限由外部 Claude CLI permission-mode 处理
 ```
+
+---
+
+## 5. 源码引用与核验结论(2026-06-10)
+
+本节是对上面 5 条链路的逐文件核验结果。格式为「文档链路节点 → 真实源码锚点 → 核验结论 / 风险」。
+
+### 5.1 链路① 用户消息 → 回复(turn loop)
+
+| 节点 | 源码引用 | 核验结论 |
+|------|----------|----------|
+| UI/宿主发起 run | `packages/core/src/protocol/client.ts:106`、`packages/core/src/protocol/client.ts:134` | `AgentClient.run()` 组装 `RunParams` 后发送 `Methods.Run` JSON-RPC 请求。 |
+| Server 分派 run | `packages/core/src/protocol/server.ts:203`、`packages/core/src/protocol/server.ts:212`、`packages/core/src/protocol/server.ts:231` | `AgentServer.handleRun()` 在多会话路径中要求 `sessionId`，再通过 `ChatSessionManager.getOrCreate()` 取会话。 |
+| AskUser 绑定 | `packages/core/src/protocol/server.ts:247`、`packages/core/src/protocol/server.ts:255` | 多会话路径会给非 headless engine 绑定 `requestAskUserForSession()`，避免 AskUserQuestion 在正常桌面/TUI 会话误走 headless 分支。 |
+| FIFO turn 队列 | `packages/core/src/protocol/chat-session.ts:72`、`packages/core/src/protocol/chat-session.ts:137`、`packages/core/src/protocol/chat-session.ts:146` | `enqueueTurn()` 入队，`pump()` 串行消费，一次只让一个 `engine.run()` 活跃。 |
+| 取消语义 | `packages/core/src/protocol/chat-session.ts:80`、`packages/core/src/protocol/chat-session.ts:88`、`packages/core/src/protocol/chat-session.ts:161` | `cancel()` 依赖底层 `engine.run()` 尊重 `AbortSignal`；若底层吞掉 abort，调用方会看到成功而非取消。 |
+| Engine 组装 | `packages/core/src/engine/engine.ts:878`、`packages/core/src/engine/engine.ts:1418`、`packages/core/src/engine/engine.ts:1441`、`packages/core/src/engine/engine.ts:1455`、`packages/core/src/engine/engine.ts:1466` | `Engine.run()` 创建 LLM client、权限分类器/执行器、上下文管理器、PromptComposer 等运行时对象。 |
+| 模型与 TurnLoop | `packages/core/src/engine/engine.ts:1640`、`packages/core/src/engine/engine.ts:1723`、`packages/core/src/engine/engine.ts:1742`、`packages/core/src/engine/engine.ts:1810` | `ModelFacade` 包装 LLM client；goal 模式注册 `GoalStopHook`；最终进入 `TurnLoop.run(messages)`。 |
+| TurnLoop 主状态机 | `packages/core/src/engine/turn-loop.ts:365`、`packages/core/src/engine/turn-loop.ts:458`、`packages/core/src/engine/turn-loop.ts:500`、`packages/core/src/engine/turn-loop.ts:685` | 真实顺序是先 `contextManager.manageAsync()`，再模型调用；无工具时走 `on_stop` hook，goal 可阻止终止并继续。 |
+| Transcript 与工具消息 | `packages/core/src/engine/turn-loop.ts:775`、`packages/core/src/engine/turn-loop.ts:785`、`packages/core/src/engine/turn-loop.ts:801`、`packages/core/src/engine/turn-loop.ts:808` | 工具 use/result 在 TurnLoop 内追加到 transcript 并通过 `onStream` 发给宿主。 |
+
+**链路①风险/注意点:**
+- `ChatSession.cancel()` 的正确性明确依赖 `Engine.run()` 全链路传递 `AbortSignal`，源码注释也承认该假设；后续排查取消/停止按钮异常时应从 `chat-session.ts:80-98` 与 `turn-loop.ts:392-500` 一起看。
+- 文档原先把 `Transcript` 落盘写在链路末尾略简化；实际工具 use/result 会在 TurnLoop 中分阶段写入 transcript，session state/JSONL 也由 Engine/Session 子系统共同维护。
+
+### 5.2 链路② 工具调用 / 审批 / 沙箱
+
+| 节点 | 源码引用 | 核验结论 |
+|------|----------|----------|
+| tool_use 进入执行阶段 | `packages/core/src/engine/turn-loop.ts:765`、`packages/core/src/engine/turn-loop.ts:775`、`packages/core/src/engine/turn-loop.ts:794` | TurnLoop 把模型返回的 tool calls 转成 assistant `tool_use` blocks，再由 `StreamingToolQueue.drain()` 汇总结果。 |
+| ToolExecutor 前置门控 | `packages/core/src/tool-system/executor.ts:104`、`packages/core/src/tool-system/executor.ts:116`、`packages/core/src/tool-system/executor.ts:130`、`packages/core/src/tool-system/executor.ts:139` | 真正入口是 `executeSingle()`；先处理 abort、disabled builtin、plan-mode。 |
+| 参数校验与 pre_tool_use | `packages/core/src/tool-system/executor.ts:156`、`packages/core/src/tool-system/executor.ts:170`、`packages/core/src/tool-system/executor.ts:188` | schema 校验发生在权限分类前；`pre_tool_use` 可 deny/ask/rewrite args，rewrite 后会重新校验。 |
+| 权限分类与降权 hook | `packages/core/src/tool-system/executor.ts:257`、`packages/core/src/tool-system/executor.ts:260`、`packages/core/src/tool-system/executor.ts:272`、`packages/core/src/tool-system/executor.ts:279` | `PermissionClassifier.classify()` 后触发 `on_permission_check`；hook 不能把 ask/deny 提权到 allow，只能降权或 ask。 |
+| 审批后端 | `packages/core/src/tool-system/executor.ts:308`、`packages/core/src/tool-system/permission.ts:846`、`packages/core/src/tool-system/permission.ts:890` | ask 决策走 `PermissionClassifier.handleAsk()`，再调用注入的 `ApprovalBackend.requestApproval()`。 |
+| bypass 模式 | `packages/core/src/tool-system/permission.ts:806`、`packages/core/src/tool-system/permission.ts:859` | `bypassPermissions` 在 classify 和 handleAsk 两处都会自动放行；如果 hook 把 allow 降成 ask，handleAsk 仍会自动 allow。 |
+| acceptEdits allowlist | `packages/core/src/tool-system/permission.ts:764`、`packages/core/src/tool-system/permission.ts:835` | acceptEdits 只自动允许 `Write/Edit/ApplyPatch/NotebookEdit/TodoWrite`，不是全工具放行。 |
+| 实际执行和后置 hook | `packages/core/src/tool-system/executor.ts:322`、`packages/core/src/tool-system/executor.ts:345`、`packages/core/src/tool-system/executor.ts:384`、`packages/core/src/tool-system/executor.ts:393`、`packages/core/src/tool-system/executor.ts:417` | 通过 registry 调用工具实现；执行后触发 `on_tool_end`、`post_tool_use`，文件变更再发 `file_changed`。 |
+| 文件路径策略 | `packages/core/src/tool-system/path-policy.ts:1`、`packages/core/src/tool-system/path-policy.ts:12`、`packages/core/src/tool-system/path-policy.ts:27`、`packages/core/src/tool-system/path-policy.ts:76` | `classifyPath()` 是文件工具内部的共享安全层；敏感写 deny、外部路径 ask、workspace 非敏感 allow。 |
+
+**链路②已修正文档点:** 原文把 `PermissionClassifier → path-policy → pre_tool_use → validation` 写成主顺序；源码真实顺序是 `plan/capability gate → validation → pre_tool_use → guard → PermissionClassifier → on_permission_check → approval → execute`。文件路径策略不在通用 executor 顶层统一调用，而由文件类工具内部调用。
+
+**链路②风险/注意点:**
+- `bypassPermissions` 语义强于 hook 降权到 ask：`classify()` 直接 allow，且 `handleAsk()` 在 bypass 下也 auto allow。若期望安全 hook 能在 bypass 模式强制二次确认，需要改 `permission.ts:859-866` 或 executor 对 hook ask 的处理策略。
+- `path-policy.ts:103-109` 仍有 `CODESHELL_PATH_POLICY=off` 逃生开关；这是可逆 rollout 设计，但安全审计时应确认生产/用户环境没有误设置。
+
+### 5.3 链路③ TUI 启动与渲染
+
+| 节点 | 源码引用 | 核验结论 |
+|------|----------|----------|
+| CLI 入口 | `packages/tui/src/cli/main.ts:40`、`packages/tui/src/cli/main.ts:97`、`packages/tui/src/cli/main.ts:194` | commander 同时支持 `repl` 子命令和无 task 默认进 REPL；有 task 则走 headless `runCommand()`。 |
+| REPL 装配 core 管线 | `packages/tui/src/cli/commands/repl.ts:62`、`packages/tui/src/cli/commands/repl.ts:198`、`packages/tui/src/cli/commands/repl.ts:222`、`packages/tui/src/cli/commands/repl.ts:226`、`packages/tui/src/cli/commands/repl.ts:229` | TUI 用 `ChatSessionManager + AgentServer + createInProcessTransport + AgentClient`，不是直接从 UI 调 Engine。 |
+| TUI cron 绑定 | `packages/tui/src/cli/commands/repl.ts:237`、`packages/tui/src/cli/commands/repl.ts:239`、`packages/tui/src/cli/commands/repl.ts:251` | REPL 启动时给 cron singleton 装 store 并绑定 `bindCronToEngine()`，触发时新建 headless Engine 跑任务。 |
+| UI 启动 | `packages/tui/src/cli/commands/repl.ts:258`、`packages/tui/src/ui/index.tsx:32`、`packages/tui/src/ui/index.tsx:57` | 固定/恢复 sessionId 后调用 `startInkRepl()`，再 render `<ThemeProvider><App />`。 |
+| 自研 render root | `packages/tui/src/render/root.ts:76`、`packages/tui/src/render/root.ts:90`、`packages/tui/src/render/root.ts:107` | `render()` 保留一个 microtask 边界后创建/复用 Ink 实例。 |
+| Ink 渲染核心 | `packages/tui/src/render/ink.tsx:122`、`packages/tui/src/render/ink.tsx:131`、`packages/tui/src/render/ink.tsx:28`、`packages/tui/src/render/ink.tsx:32` | Ink 类持有 React reconciler root、DOM root、renderer、screen/cell pools，负责提交后布局/渲染/终端 diff。 |
+
+**链路③风险/注意点:**
+- `commander preAction → setup()` 已确认存在：`program.hook("preAction")` 调用 `setup()`，见 `packages/tui/src/cli/main.ts:231`。
+- `setup.ts` 实际做的是 CLI 进程环境初始化(日志、Node/cwd、安全、chdir、git 探测)，不是创建会话；文档中“会话启动初始化”应按这个理解。
+- TUI bootstrap 当前检查 Node `>=18`，但项目约束是 Node `>=20.10`，存在版本门槛不一致风险。
+- `repl.ts:231-253` 的 cron 是 TUI 进程内 singleton；Desktop worker 则禁用执行，只持久化 cron，两个宿主行为不同，文档中应区分。
+- TUI 还有 headless `run` 分支：`cli/main.ts` 有 task 时走 `runCommand()`，同样装配 `ChatSessionManager → AgentServer → AgentClient`，但使用 headless renderer 而非 `startInkRepl()`。
+
+### 5.4 链路④ Desktop 启动与三进程
+
+| 节点 | 源码引用 | 核验结论 |
+|------|----------|----------|
+| main 入口与 bridge | `packages/desktop/src/main/index.ts:1`、`packages/desktop/src/main/index.ts:156`、`packages/desktop/src/main/index.ts:759` | Electron main 是 renderer 与 agent worker 的 broker；全局 `AgentBridge` 绑定 BrowserWindow。 |
+| worker 派生 | `packages/desktop/src/main/agent-bridge.ts:43`、`packages/desktop/src/main/agent-bridge.ts:106`、`packages/desktop/src/main/agent-bridge.ts:114` | AgentBridge 用 `process.execPath + @cjhyy/code-shell-core/bin/agent-server-stdio` 派生 worker，并设置 `ELECTRON_RUN_AS_NODE=1`。 |
+| renderer→worker | `packages/desktop/src/main/agent-bridge.ts:201`、`packages/desktop/src/main/agent-bridge.ts:208`、`packages/desktop/src/main/agent-bridge.ts:239` | main 监听 `agent:msg`；只有 `agent/run` 会触发 spawn；随后原样写入 worker stdin。 |
+| worker→renderer | `packages/desktop/src/main/agent-bridge.ts:124`、`packages/desktop/src/main/agent-bridge.ts:135`、`packages/desktop/src/main/agent-bridge.ts:138`、`packages/desktop/src/main/agent-bridge.ts:139` | worker stdout 按行解析，streamEvent 写入 `SessionSnapshotStore`，再发给 renderer，并镜像给 mobile taps。 |
+| worker 内 core server | `packages/core/src/cli/agent-server-stdio.ts:91`、`packages/core/src/cli/agent-server-stdio.ts:158`、`packages/core/src/cli/agent-server-stdio.ts:232`、`packages/core/src/cli/agent-server-stdio.ts:234` | stdio worker 创建 seed Engine、EngineRuntime、ChatSessionManager，最后用 `StdioTransport` 暴露 `AgentServer`。 |
+| worker cron 只持久化 | `packages/core/src/cli/agent-server-stdio.ts:215`、`packages/core/src/cli/agent-server-stdio.ts:226`、`packages/core/src/cli/agent-server-stdio.ts:227` | worker 给 cronScheduler 设置 store，但 `setExecutionEnabled(false)`，避免与 main 进程重复执行自动化。 |
+| preload 透明桥 | `packages/desktop/src/preload/index.ts:1`、`packages/desktop/src/preload/index.ts:50`、`packages/desktop/src/preload/index.ts:149`、`packages/desktop/src/preload/index.ts:185`、`packages/desktop/src/preload/index.ts:189` | preload 负责 JSON-RPC line over IPC、监听 stream/approval/status、暴露 `window.codeshell.run()` 等 API。 |
+| renderer reducer | `packages/desktop/src/renderer/App.tsx:47`、`packages/desktop/src/renderer/App.tsx:100`、`packages/desktop/src/renderer/App.tsx:150`、`packages/desktop/src/renderer/App.tsx:176` | renderer 用 `resolveBucket` 路由事件，用 `createEventCoalescer` 合批，reducer 调 `applyStreamEvent()` 更新消息流。 |
+
+**链路④风险/注意点:**
+- `AgentBridge` 注释说 worker “after each run completes” clean exit，但实现是 `spawnChild()` 只在 `agent/run` 时启动，未读到主动在 run 完成后 kill worker 的逻辑；实际可能是 worker 长驻直到进程退出/崩溃。文档应避免写“每轮退出”。
+- `agent-bridge.ts:216-236` 对没有 live worker 的非 run 请求会 drop；只特殊处理 `agent/backgroundShells` 返回空列表。审批/取消在 worker 已退出时会丢弃，这是合理降级但属于排障点。
+
+### 5.5 链路⑤ 自动化 / 手机遥控
+
+#### A. cron 自动化
+
+| 节点 | 源码引用 | 核验结论 |
+|------|----------|----------|
+| startAutomation | `packages/core/src/automation/index.ts:43`、`packages/core/src/automation/index.ts:45`、`packages/core/src/automation/index.ts:52` | host 注入 store 与 runner/runManager，`startAutomation()` 创建 `CronScheduler` 并 load jobs。 |
+| scheduler 状态 | `packages/core/src/automation/scheduler.ts:70`、`packages/core/src/automation/scheduler.ts:73`、`packages/core/src/automation/scheduler.ts:84`、`packages/core/src/automation/scheduler.ts:163` | scheduler 管 jobs/timers/running/runningControllers；`loadJobs()` 以磁盘为 source of truth 重建内存和 timer。 |
+| 禁止重复执行 | `packages/core/src/automation/scheduler.ts:73`、`packages/core/src/automation/scheduler.ts:126` | `running` 和 `runningControllers` 防同 job 重入，并支持 abort 等待执行完全 settle。 |
+| bindCronToEngine | `packages/core/src/automation/runner.ts:56`、`packages/core/src/automation/runner.ts:58`、`packages/core/src/automation/runner.ts:66` | 每次触发先 `resolveWritePolicy()`，再把 prompt/permissionMode/approvalBackend/signal 交给 host runner。 |
+| bindCronToRunManager | `packages/core/src/automation/runner.ts:94`、`packages/core/src/automation/runner.ts:99`、`packages/core/src/automation/runner.ts:105` | RunManager 路径提交 run 并把 `lastRunId` 写回 job。 |
+| Desktop main 绑定 | `packages/desktop/src/main/index.ts:843`、`packages/desktop/src/main/index.ts:850`、`packages/desktop/src/main/index.ts:853` | 当前 Desktop main 传入的是 `runner: buildDesktopAutomationRunner(...)`，不是 `runManager`。 |
+| Desktop runner | `packages/desktop/src/main/automation-host.ts:1`、`packages/desktop/src/main/automation-host.ts:88`、`packages/desktop/src/main/automation-host.ts:105`、`packages/desktop/src/main/automation-host.ts:129`、`packages/desktop/src/main/automation-host.ts:168` | Desktop 当前生产路径是一轮一个 headless Engine；RunManager 路径在文件注释中标为 fallback/future。 |
+| live session 归属 | `packages/desktop/src/main/automation-host.ts:145`、`packages/desktop/src/main/automation-host.ts:153`、`packages/desktop/src/main/automation-host.ts:161`、`packages/desktop/src/main/automation-host.ts:164` | runner 在 `session_started` 时拿真实 sessionId，通过 `onSession` 告诉 renderer 归属 cwd/title，并用真实 sid 转发后续 stream。 |
+| RunManager fallback | `packages/core/src/automation/runner.ts:94`、`packages/core/src/automation/runner.ts:99`、`packages/core/src/run/RunManager.ts:115`、`packages/core/src/run/EngineRunner.ts:182` | RunManager/EngineRunner 路径存在，但不是当前 Desktop main 的生产绑定。 |
+
+**cron 风险/注意点:**
+- `automation-host.ts:170-188` 明确只有 engine.run 抛错且已宣布 session 时才合成 terminal error；若错误发生在 `session_started` 前，UI 可能没有 live spinner，但也不会有可归属会话。
+- 自动化 prompt 通过 `AUTOMATION_PROMPT_NOTE` 防 nested automation，同时 `disabledBuiltinTools` 禁掉 cron 工具；这是符合当前记忆里“自动化里不要再创建自动化”的约束。
+
+#### B. 手机/平板遥控
+
+| 节点 | 源码引用 | 核验结论 |
+|------|----------|----------|
+| RemoteHostManager 构造 | `packages/desktop/src/main/index.ts:160`、`packages/desktop/src/main/index.ts:168`、`packages/desktop/src/main/mobile-remote/remote-host-manager.ts:76` | mobile remote 默认不启动，由 Settings IPC 启动；server 管 HTTP static + WS。 |
+| LAN/tunnel 绑定 | `packages/desktop/src/main/mobile-remote/remote-host-manager.ts:21`、`packages/desktop/src/main/mobile-remote/remote-host-manager.ts:129`、`packages/desktop/src/main/mobile-remote/remote-host-manager.ts:227`、`packages/desktop/src/main/index.ts:1187` | LAN 绑定具体 LAN IP，不用 `0.0.0.0`；tunnel 模式绑定 `127.0.0.1` 后由 cloudflared 暴露。 |
+| 配对/鉴权 | `packages/desktop/src/main/mobile-remote/remote-host-manager.ts:183`、`packages/desktop/src/main/mobile-remote/remote-host-manager.ts:195`、`packages/desktop/src/main/mobile-remote/remote-host-manager.ts:209` | WS 收到消息先处理 auth/pair；未鉴权的非 auth 事件直接 `auth.failed`。 |
+| 手机端 socket | `packages/desktop/src/mobile/hooks/useRemoteSocket.ts:100`、`packages/desktop/src/mobile/hooks/useRemoteSocket.ts:118`、`packages/desktop/src/mobile/hooks/useRemoteSocket.ts:125`、`packages/desktop/src/mobile/hooks/useRemoteSocket.ts:173` | mobile app 连接 `/ws`，用 pairing token 或 stored device id 鉴权；raw JSON-RPC line 交给聊天 reducer。 |
+| mobile → 主 worker 路由 | `packages/desktop/src/main/index.ts:323`、`packages/desktop/src/main/index.ts:329`、`packages/desktop/src/main/index.ts:379`、`packages/desktop/src/main/index.ts:402` | 已认证 mobile 事件被转成与 preload 相同的 JSON-RPC：chat/approval/cancel 复用同一 AgentBridge/permission path。 |
+| worker → mobile 镜像 | `packages/desktop/src/main/index.ts:759`、`packages/desktop/src/main/index.ts:761`、`packages/desktop/src/main/index.ts:763`、`packages/desktop/src/main/agent-bridge.ts:139` | main 在 AgentBridge outbound tap 中把 worker stdout raw line broadcast 给手机。 |
+| mobile stream reducer | `packages/desktop/src/mobile/lib/streamReducer.ts:96`、`packages/desktop/src/mobile/lib/streamReducer.ts:118`、`packages/desktop/src/mobile/lib/streamReducer.ts:134`、`packages/desktop/src/mobile/lib/streamReducer.ts:219` | 手机端 reducer 同时支持 JSON-RPC `agent/streamEvent` envelope 和 bare event，用 agentId 隔离主 agent/subagent。 |
+| 房间 / resident agent | `packages/desktop/src/main/index.ts:207`、`packages/desktop/src/main/mobile-remote/room-manager.ts:176`、`packages/desktop/src/main/mobile-remote/room-manager.ts:212`、`packages/desktop/src/main/mobile-remote/resident-agent.ts:106`、`packages/desktop/src/main/mobile-remote/resident-agent.ts:157` | room 是独立的 Claude Code resident process，不走 CodeShell worker；RoomManager 持久化 messages.jsonl 并把用户输入写入 resident stdin。 |
+
+**mobile 风险/注意点:**
+- 文档原先把“手机审批 → ApprovalCard → 经 WS 回 → 进入链路②”写得偏 UI 化；源码真实关键是 `handleMobileClientEvent()` 把 `approval.respond` 转成 `agent/approve` JSON-RPC line，之后才进入 core 审批恢复链路。
+- room/resident-agent 是另一条外部代理链路，不等同于 CodeShell Engine/TurnLoop；文档需要明确“房间”不走链路①/②，而是 `claude --print --input-format stream-json --output-format stream-json`。
+
+### 5.6 本轮确认出的文档修正点 / 潜在 bug 清单
+
+1. **已修正:** 链路②工具执行顺序。真实顺序不是“权限分类 → path-policy → pre_tool_use → validation”，而是 `validation/pre_tool_use` 早于 `PermissionClassifier`，`path-policy` 是文件工具内部安全层。
+2. **已确认:** TUI 链路里的 `setup()` 确实由 commander `preAction` 调用，见 `packages/tui/src/cli/main.ts:231`。
+3. **风险:** `bypassPermissions` 会让 hook 降权到 ask 后仍由 `handleAsk()` 自动批准；如果产品语义希望 hook 可强制拦截 bypass，需要改权限策略。
+4. **风险:** `AgentBridge` 在无 live worker 时会 drop approve/cancel 等非 run 请求；大多数情况下合理，但排查“手机/桌面点了审批无效”时要看 worker 是否已退出。
+5. **文档澄清:** Desktop agent worker 不是 renderer 或 main 直接跑 core；真正 core server 在 `agent-server-stdio.ts` 子进程中。
+6. **文档澄清:** Desktop worker 的 cron scheduler 只持久化、不执行；真正执行在 Electron main 的 automation host。
+7. **文档澄清:** Mobile room/resident-agent 是外部 Claude Code CLI 长驻链路，不是 CodeShell Engine TurnLoop 链路。
+8. **风险:** Desktop automation 当前生产路径不是 RunManager/write-run/worktree/PR；如果读者按旧文档理解，会误以为 cron 都有 RunStore/checkpoint/resume/worktree PR 保障。
+9. **风险:** `resolveWritePolicy()` 产出 `sandboxMode` 策略值，但当前 `CronRunRequest`/Desktop runner 只传 `permissionMode` 与 `approvalBackend`；若 sandbox 需要显式传入 Engine，这会造成安全预期落差。
+10. **风险:** TUI bootstrap 的 Node 版本检查是 `>=18`，而项目约束是 Node `>=20.10`；低版本 Node 可能通过启动校验后在运行期出隐蔽错误。
+11. **风险:** TUI REPL 的 cron runner 未把 `req.signal` 传给 `cronEngine.run()`，`CronScheduler.abort(jobId)` 可能无法取消正在执行的 REPL cron run。
+12. **风险:** `startInkRepl()` 内部直接 `process.exit(0)`，使 `replCommand()` 后续 `chatManager.closeAll()` 清理路径理论上不可达；若依赖该清理释放后台资源，需要单独验证。
+13. **风险:** Mobile room 操作多处 `broadcast` 给所有已认证设备；多设备场景下可能有房间历史/操作串扰或隐私风险。
+14. **风险:** `RoomManager.nextSeq()` 每次 append 读取整个 `messages.jsonl`，长期 resident room 可能出现 O(n) 追加性能退化。
+15. **风险:** `RunApprovalBackend` 未接 hooks 时当前默认批准，属于 fail-open 风险；若 wiring 漏接，run 生命周期审批可能被绕过。
 
 ---
 

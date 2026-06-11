@@ -63,6 +63,36 @@ export interface ToolResult {
 
 export type ToolSource = "builtin" | "mcp";
 
+export type ToolPathPolicyOperation =
+  | "read"
+  | "write"
+  | {
+      /** Argument whose value decides whether this invocation reads or writes. */
+      fromArg: string;
+      /** Values that classify the operation as a read. */
+      readValues?: string[];
+      /** Values that classify the operation as a write. */
+      writeValues?: string[];
+      /** Fallback when the argument is absent or does not match either list. */
+      default: "read" | "write";
+    };
+
+export type ToolPathPolicy =
+  | {
+      kind: "arg";
+      /** Argument containing a file or directory path. */
+      arg: string;
+      operation: ToolPathPolicyOperation;
+      /** Use ctx.cwd when the argument is omitted. Useful for Glob/Grep roots. */
+      defaultToCwd?: boolean;
+    }
+  | {
+      kind: "apply_patch";
+      /** Argument containing the V4A patch text. */
+      arg: string;
+      operation: "write";
+    };
+
 export interface RegisteredTool {
   name: string;
   description: string;
@@ -72,6 +102,18 @@ export interface RegisteredTool {
   permissionDefault: PermissionDecision;
   isConcurrencySafe?: boolean;
   isReadOnly?: boolean;
+  /**
+   * Declarative file-path safety metadata. ToolExecutor enforces this before
+   * dispatching the tool, so file access cannot depend on each tool handler
+   * remembering to call path-policy manually.
+   */
+  pathPolicy?: ToolPathPolicy[];
+  /**
+   * Explicitly marks a path-looking tool as intentionally outside the file
+   * policy layer. Used by tests/audits so new file tools fail closed unless
+   * they either declare pathPolicy or document an exemption.
+   */
+  pathPolicyExempt?: boolean;
   /**
    * Override the default tool execution timeout (ms).
    * Falls back to DEFAULT_TOOL_TIMEOUT_MS (120s) if unset.

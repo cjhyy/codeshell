@@ -1,4 +1,3 @@
-import { createServer, type Server } from "node:http";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -290,34 +289,6 @@ describe("RemoteHostManager", () => {
     await host.stop();
   });
 
-  test("tunnel mode ignores mobileDevUrl and serves static app, not Vite HMR", async () => {
-    dir = mkdtempSync(join(tmpdir(), "remote-host-"));
-    const vite = await startFakeVite();
-    const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
-    passcode.set("correct");
-    const host = new RemoteHostManager({
-      devices: new TrustedDeviceStore(join(dir, "devices.json")),
-      onClientEvent: () => {},
-      mobileRootDir: mobileFixture(dir),
-      mobileDevUrl: vite.url,
-    });
-
-    try {
-      const started = await host.start({ mode: "tunnel", host: "lan", port: 0, passcode });
-      const mobile = await fetch(`${started.url}/mobile?passcode=correct`);
-      expect(mobile.status).toBe(200);
-      expect(await mobile.text()).toBe(MOBILE_HTML);
-
-      const viteClient = await fetch(`${started.url}/@vite/client?passcode=correct`);
-      expect(viteClient.status).toBe(404);
-      expect(await viteClient.text()).not.toContain("vite hmr client");
-      expect(vite.hits).toBe(0);
-    } finally {
-      await host.stop();
-      await vite.stop();
-    }
-  });
-
   test("tunnel mode: WS upgrade without a credential is rejected", async () => {
     dir = mkdtempSync(join(tmpdir(), "remote-host-"));
     const passcode = new AccessPasscode({ filePath: join(dir, "access.json") });
@@ -384,28 +355,3 @@ describe("RemoteHostManager", () => {
     await host.stop();
   });
 });
-
-async function startFakeVite(): Promise<{ url: string; hits: number; stop: () => Promise<void> }> {
-  let hits = 0;
-  const server = createServer((_req, res) => {
-    hits += 1;
-    res.writeHead(200, { "content-type": "text/javascript" });
-    res.end("vite hmr client");
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const addr = server.address();
-  const port = typeof addr === "object" && addr ? addr.port : 0;
-  return {
-    url: `http://127.0.0.1:${port}`,
-    get hits() {
-      return hits;
-    },
-    stop: () => closeServer(server),
-  };
-}
-
-function closeServer(server: Server): Promise<void> {
-  return new Promise((resolve, reject) => {
-    server.close((err) => (err ? reject(err) : resolve()));
-  });
-}

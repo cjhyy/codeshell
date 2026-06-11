@@ -3,7 +3,17 @@
  */
 
 import { setMaxListeners } from "node:events";
-import type { ToolCall, ToolResult, Message, ContentBlock, PermissionDecision } from "../types.js";
+import { resolve as resolvePath } from "node:path";
+import type {
+  ToolCall,
+  ToolResult,
+  Message,
+  ContentBlock,
+  PermissionDecision,
+  RegisteredTool,
+  ToolPathPolicy,
+  ToolPathPolicyOperation,
+} from "../types.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier } from "./permission.js";
@@ -15,6 +25,8 @@ import type { ToolContext } from "./context.js";
 import type { InvestigationGuard } from "./investigation-guard.js";
 import type { TaskGuard } from "./task-guard.js";
 import { PLAN_MODE_ALLOWED_TOOLS } from "./plan-mode-allowlist.js";
+import { enforcePathPolicyWithApproval, type PathOperation } from "./path-policy.js";
+import { parsePatch } from "./builtin/apply-patch/parser.js";
 
 type Logger = typeof rootLogger;
 
@@ -139,17 +151,23 @@ export class ToolExecutor {
     if (this.toolCtx?.planMode) {
       // Shared with engine.ts's tool-visibility filter so the set the model
       // SEES and the set the executor RUNS can't drift (they had).
-      if (!PLAN_MODE_ALLOWED_TOOLS.has(call.toolName)) {
-        if (call.toolName === "Bash" && this.isReadOnlyBashCommand(call.args)) {
-          // Read-only bash is fine
-        } else {
-          return {
-            id: call.id,
-            toolName: call.toolName,
-            error: `Plan mode: ${call.toolName} is blocked. Only read-only tools (Read, Glob, Grep, WebSearch, WebFetch, Bash read-only) are allowed. You MUST output your plan as text in the conversation instead. Do NOT retry this tool call.`,
-            isError: true,
-          };
-        }
+      // Bash is in the allow-list so the model can SEE it for read-only probing,
+      // but membership alone must NOT grant write access: a Bash command that
+      // modifies files (echo >, sed -i, mv, ...) has to be blocked here too, or it
+      // would slip past plan mode into the normal permission flow (where the user
+      // could approve it) AND leave no diff, since it never touches Write/Edit.
+      const allowed = PLAN_MODE_ALLOWED_TOOLS.has(call.toolName);
+      const bashWrite = call.toolName === "Bash" && !this.isReadOnlyBashCommand(call.args);
+      if (!allowed || bashWrite) {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error:
+            allowed && bashWrite
+              ? `Plan mode is read-only: this Bash command writes or modifies files, which is not allowed while planning. To carry it out, first call ExitPlanMode (after the user approves your plan), then run it. Do NOT retry this command in plan mode.`
+              : `Plan mode: ${call.toolName} is blocked. Only read-only tools (Read, Glob, Grep, WebSearch, WebFetch, Bash read-only) are allowed. You MUST output your plan as text in the conversation instead. Do NOT retry this tool call.`,
+          isError: true,
+        };
       }
     }
 
@@ -203,6 +221,20 @@ export class ToolExecutor {
         tool: call.toolName,
         toolCallId: call.id,
       });
+    }
+
+    // 0.65. Centralized file path policy. Tool handlers declare their file
+    // path surface on RegisteredTool.pathPolicy; the executor enforces it
+    // after hooks have had a chance to rewrite args, but before permission
+    // classification or the handler can touch the filesystem.
+    const pathPolicyError = await this.enforceDeclaredPathPolicy(toolDef, call.args);
+    if (pathPolicyError) {
+      return {
+        id: call.id,
+        toolName: call.toolName,
+        error: pathPolicyError,
+        isError: true,
+      };
     }
 
     // A1 hardening: pre_tool_use can no longer pre-approve a tool via
@@ -423,6 +455,66 @@ export class ToolExecutor {
     }
 
     return result;
+  }
+
+  private resolvePolicyOperation(
+    op: ToolPathPolicyOperation,
+    args: Record<string, unknown>,
+  ): PathOperation {
+    if (op === "read" || op === "write") return op;
+    const raw = args[op.fromArg];
+    const value = typeof raw === "string" ? raw : String(raw ?? "");
+    if (op.readValues?.includes(value)) return "read";
+    if (op.writeValues?.includes(value)) return "write";
+    return op.default;
+  }
+
+  private async enforceDeclaredPathPolicy(
+    tool: RegisteredTool | undefined,
+    args: Record<string, unknown>,
+  ): Promise<string | null> {
+    const policies = tool?.pathPolicy;
+    if (!policies?.length) return null;
+
+    for (const policy of policies) {
+      const targets = this.resolvePathPolicyTargets(policy, args);
+      if (typeof targets === "string") return targets;
+      const operation = this.resolvePolicyOperation(policy.operation, args);
+      for (const target of targets) {
+        const blocked = await enforcePathPolicyWithApproval(target, operation, this.toolCtx);
+        if (blocked) return blocked;
+      }
+    }
+    return null;
+  }
+
+  private resolvePathPolicyTargets(
+    policy: ToolPathPolicy,
+    args: Record<string, unknown>,
+  ): string[] | string {
+    if (policy.kind === "arg") {
+      const raw = args[policy.arg];
+      if (typeof raw === "string" && raw.length > 0) return [raw];
+      if (policy.defaultToCwd && this.toolCtx?.cwd) return [this.toolCtx.cwd];
+      return [];
+    }
+
+    const rawPatch = args[policy.arg];
+    if (typeof rawPatch !== "string" || rawPatch.length === 0) return [];
+    try {
+      const parsed = parsePatch(rawPatch, "lenient");
+      const cwd = this.toolCtx?.cwd ?? process.cwd();
+      const targets: string[] = [];
+      for (const hunk of parsed.hunks) {
+        targets.push(resolvePath(cwd, hunk.path));
+        if (hunk.kind === "update" && hunk.movePath) {
+          targets.push(resolvePath(cwd, hunk.movePath));
+        }
+      }
+      return targets;
+    } catch (err) {
+      return `Error: ${(err as Error).message}`;
+    }
   }
 
   private isReadOnlyBashCommand(args: Record<string, unknown>): boolean {

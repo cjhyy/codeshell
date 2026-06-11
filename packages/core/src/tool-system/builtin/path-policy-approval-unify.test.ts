@@ -9,10 +9,11 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ToolContext } from "../context.js";
-import { globTool } from "./glob.js";
-import { grepTool } from "./grep.js";
-import { notebookEditTool } from "./notebook-edit.js";
-import { applyPatchTool } from "./apply-patch/index.js";
+import { ToolExecutor } from "../executor.js";
+import { ToolRegistry } from "../registry.js";
+import { PermissionClassifier } from "../permission.js";
+import { HookRegistry } from "../../hooks/registry.js";
+import type { ToolCall } from "../../types.js";
 
 let workspace: string;
 let outside: string;
@@ -39,16 +40,34 @@ function ctxWith(answer: string): { ctx: ToolContext; asked: () => number } {
   return { ctx, asked: () => count };
 }
 
+async function execute(call: ToolCall, ctx: ToolContext): Promise<string> {
+  const registry = new ToolRegistry();
+  const executor = new ToolExecutor(
+    registry,
+    new PermissionClassifier([], "bypassPermissions"),
+    new HookRegistry(),
+  );
+  executor.setContext(ctx);
+  const result = await executor.executeSingle(call);
+  return result.error ?? result.result ?? "";
+}
+
 describe("glob routes outside-workspace ask through approval", () => {
   test("denied → refuses; approved → proceeds", async () => {
     const denied = ctxWith("拒绝");
-    const r1 = await globTool({ pattern: "*", path: outside }, denied.ctx);
+    const r1 = await execute(
+      { id: "c1", toolName: "Glob", args: { pattern: "*", path: outside } },
+      denied.ctx,
+    );
     expect(denied.asked()).toBe(1);
     expect(String(r1)).toMatch(/path approval denied|blocked by path policy/i);
 
     writeFileSync(join(outside, "hit.txt"), "x");
     const approved = ctxWith("允许本次");
-    const r2 = await globTool({ pattern: "*", path: outside }, approved.ctx);
+    const r2 = await execute(
+      { id: "c2", toolName: "Glob", args: { pattern: "*", path: outside } },
+      approved.ctx,
+    );
     expect(approved.asked()).toBe(1);
     expect(String(r2)).not.toMatch(/path approval denied/i);
   });
@@ -58,12 +77,18 @@ describe("grep routes outside-workspace ask through approval", () => {
   test("denied → refuses; approved → proceeds", async () => {
     writeFileSync(join(outside, "f.txt"), "needle here");
     const denied = ctxWith("拒绝");
-    const r1 = await grepTool({ pattern: "needle", path: outside }, denied.ctx);
+    const r1 = await execute(
+      { id: "c1", toolName: "Grep", args: { pattern: "needle", path: outside } },
+      denied.ctx,
+    );
     expect(denied.asked()).toBe(1);
     expect(String(r1)).toMatch(/path approval denied|blocked by path policy/i);
 
     const approved = ctxWith("允许本次");
-    const r2 = await grepTool({ pattern: "needle", path: outside }, approved.ctx);
+    const r2 = await execute(
+      { id: "c2", toolName: "Grep", args: { pattern: "needle", path: outside } },
+      approved.ctx,
+    );
     expect(approved.asked()).toBe(1);
     expect(String(r2)).not.toMatch(/path approval denied/i);
   });
@@ -77,8 +102,12 @@ describe("notebook-edit routes outside-workspace ask through approval", () => {
       JSON.stringify({ cells: [{ cell_type: "code", source: ["x"] }], nbformat: 4, nbformat_minor: 5, metadata: {} }),
     );
     const denied = ctxWith("拒绝");
-    const r1 = await notebookEditTool(
-      { file_path: nb, action: "replace", cell_index: 0, source: "y" },
+    const r1 = await execute(
+      {
+        id: "c1",
+        toolName: "NotebookEdit",
+        args: { file_path: nb, action: "replace", cell_index: 0, source: "y" },
+      },
       denied.ctx,
     );
     expect(denied.asked()).toBe(1);
@@ -97,7 +126,10 @@ describe("apply-patch routes outside-workspace ask through approval", () => {
 +new
 *** End Patch`;
     const denied = ctxWith("拒绝");
-    const r1 = await applyPatchTool({ patch }, denied.ctx);
+    const r1 = await execute(
+      { id: "c1", toolName: "ApplyPatch", args: { patch } },
+      denied.ctx,
+    );
     expect(denied.asked()).toBeGreaterThanOrEqual(1);
     expect(String(r1)).toMatch(/path approval denied|blocked by path policy/i);
   });
