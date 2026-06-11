@@ -175,6 +175,14 @@ export interface GitBranches {
   branches: string[];
 }
 
+/** One recent commit for the review panel's 提交 submenu. */
+export interface GitCommit {
+  hash: string;
+  shortHash: string;
+  subject: string;
+  relativeDate: string;
+}
+
 export interface WorktreeInfo {
   path: string;
   branch: string | null;
@@ -345,6 +353,8 @@ export interface CodeshellApi {
   ): Promise<string>;
   /** Unified diff for a committed range (e.g. "HEAD~1..HEAD"); optional file (TODO 2.3a). */
   getGitRangeDiff(cwd: string, range: string, file?: string): Promise<string>;
+  /** Most recent commits for the review panel's 提交 submenu. */
+  getGitRecentCommits(cwd: string, limit?: number): Promise<GitCommit[]>;
 
   // ── Terminal (pty) — interactive shell panel ──────────────────────────
   /** Token unique to this window's renderer process (for window-unique ids). */

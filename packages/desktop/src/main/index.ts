@@ -60,6 +60,7 @@ import {
   getGitBranches,
   getGitDiff,
   getGitRangeDiff,
+  getGitRecentCommits,
   switchGitBranch,
   stashAndSwitchGitBranch,
   createPermanentWorktree,
@@ -1496,6 +1497,11 @@ ipcMain.handle(
     return getGitDiff(cwd, file, mode);
   },
 );
+
+ipcMain.handle("git:recentCommits", async (_e, cwd: string, limit?: number) => {
+  if (typeof cwd !== "string" || !cwd) return [];
+  return getGitRecentCommits(cwd, typeof limit === "number" ? limit : undefined);
+});
 
 ipcMain.handle("git:rangeDiff", async (_e, cwd: string, range: string, file?: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:rangeDiff requires cwd");

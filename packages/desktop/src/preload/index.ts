@@ -358,6 +358,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("git:diff", cwd, file, mode),
   getGitRangeDiff: (cwd: string, range: string, file?: string) =>
     ipcRenderer.invoke("git:rangeDiff", cwd, range, file),
+  getGitRecentCommits: (cwd: string, limit?: number) =>
+    ipcRenderer.invoke("git:recentCommits", cwd, limit),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
   openPath: (path: string, cwd?: string) =>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { MessageSquarePlus, ChevronRight, ChevronDown } from "lucide-react";
+import { MessageSquarePlus, ChevronRight, ChevronDown, ExternalLink } from "lucide-react";
 import { parseUnifiedDiff, type DiffFile } from "./parseUnifiedDiff";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
+import { openFileTarget } from "../chat/openWith";
 
 interface Props {
   /** cwd to ask git for the diff. */
@@ -29,9 +30,15 @@ interface Props {
    * (committed/branch scope) or `diffText` (turn snapshot) is set.
    */
   mode?: "unstaged" | "staged" | "all";
+  /**
+   * Reports the total added/removed line counts across the rendered diff,
+   * whenever it (re)loads. Lets a parent (e.g. ReviewPanel) show a "+N -M"
+   * summary next to its scope selector without re-fetching the diff itself.
+   */
+  onStats?: (stats: { added: number; removed: number }) => void;
 }
 
-export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode }: Props) {
+export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, onStats }: Props) {
   const [diff, setDiff] = useState<DiffFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +68,25 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode }
     };
   }, [cwd, file, diffText, range, mode]);
 
+  // Report total +/- to the parent whenever the diff (re)loads. Computed over
+  // the full parsed diff (not the onlyPath-filtered view) so the summary
+  // reflects the whole scope. onStats is intentionally out of the deps —
+  // including an unstable callback would loop; we only re-report on diff change.
+  useEffect(() => {
+    if (!onStats || !diff) return;
+    let added = 0;
+    let removed = 0;
+    for (const f of diff) {
+      for (const h of f.hunks) {
+        for (const l of h.lines) {
+          if (l.kind === "add") added++;
+          else if (l.kind === "del") removed++;
+        }
+      }
+    }
+    onStats({ added, removed });
+  }, [diff]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (error) return <div className="diff-error">git diff failed: {error}</div>;
   if (!diff) return <div className="diff-loading">loading diff…</div>;
   const visible = onlyPath
@@ -88,7 +114,11 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode }
         </div>
       )}
       {filesToRender.map((f) => (
-        <DiffFileBlock key={f.newPath ?? f.oldPath ?? f.hunks[0]?.header ?? ""} file={f} />
+        <DiffFileBlock
+          key={f.newPath ?? f.oldPath ?? f.hunks[0]?.header ?? ""}
+          file={f}
+          cwd={cwd}
+        />
       ))}
     </div>
   );
@@ -113,7 +143,7 @@ function capFiles(diff: DiffFile[], budget: number): DiffFile[] {
   return out;
 }
 
-function DiffFileBlock({ file }: { file: DiffFile }) {
+function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
   const title = file.newPath ?? file.oldPath ?? "(unknown)";
   // Which line is currently being commented on, keyed by "hunkIdx:lineIdx".
   const [commenting, setCommenting] = useState<string | null>(null);
@@ -146,13 +176,38 @@ function DiffFileBlock({ file }: { file: DiffFile }) {
         ) : (
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         )}
-        <span className={`diff-file-status diff-file-status-${file.status}`}>
-          {file.status}
-        </span>
         <span className="diff-file-path">{title}</span>
+        {/* Status as a symbol (Codex style), not a text label: added → green
+            dot, deleted → red dash, renamed → amber dot; modified shows
+            nothing (the +/- counts already convey it). */}
+        {file.status === "added" && (
+          <span className="shrink-0 h-2 w-2 rounded-full bg-status-ok" title="新增" aria-label="新增" />
+        )}
+        {file.status === "deleted" && (
+          <span className="shrink-0 h-0.5 w-2.5 rounded bg-status-err" title="删除" aria-label="删除" />
+        )}
+        {file.status === "renamed" && (
+          <span className="shrink-0 h-2 w-2 rounded-full bg-status-warn" title="重命名" aria-label="重命名" />
+        )}
         <span className="ml-auto shrink-0 pl-2 text-xs tabular-nums">
           <span className="text-status-ok">+{added}</span>{" "}
           <span className="text-status-err">-{removed}</span>
+        </span>
+        {/* Open in the in-app file panel (⌘/Ctrl → OS), matching path links. A
+            <span role=button> (not <button>) since the header itself is a
+            <button> — nested buttons are invalid HTML. */}
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label="打开文件"
+          title="打开文件"
+          className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+          onClick={(e) => {
+            e.stopPropagation();
+            openFileTarget(e, { path: title, cwd });
+          }}
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
         </span>
       </button>
       {!collapsed && file.hunks.map((h, i) => (

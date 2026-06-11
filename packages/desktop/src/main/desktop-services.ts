@@ -455,6 +455,50 @@ export async function getGitRangeDiff(
   }
 }
 
+/** One recent commit, for the review panel's 提交 submenu. */
+export interface GitCommit {
+  hash: string;
+  /** Abbreviated hash for display. */
+  shortHash: string;
+  subject: string;
+  /** Relative author date, e.g. "2 小时前" → git's own "2 hours ago". */
+  relativeDate: string;
+}
+
+/**
+ * The most recent commits (default 20) for the 提交 submenu. Selecting one
+ * diffs `<hash>^..<hash>` (that commit's own change). Uses NUL/RS separators so
+ * subjects with any character parse cleanly.
+ */
+export async function getGitRecentCommits(cwd: string, limit = 20): Promise<GitCommit[]> {
+  const n = Math.max(1, Math.min(100, Math.floor(limit)));
+  try {
+    // %x1f = unit separator (between fields), %x1e = record separator (between commits).
+    const raw = await gitRun(cwd, [
+      "log",
+      `-${n}`,
+      "--no-color",
+      "--pretty=format:%H%x1f%h%x1f%s%x1f%ar%x1e",
+    ]);
+    return raw
+      .split("\x1e")
+      .map((rec) => rec.replace(/^\n/, ""))
+      .filter((rec) => rec.trim())
+      .map((rec) => {
+        const [hash, shortHash, subject, relativeDate] = rec.split("\x1f");
+        return {
+          hash: hash ?? "",
+          shortHash: shortHash ?? "",
+          subject: subject ?? "",
+          relativeDate: relativeDate ?? "",
+        };
+      })
+      .filter((c) => c.hash);
+  } catch {
+    return [];
+  }
+}
+
 async function getGitDiffForFile(
   cwd: string,
   file: string,
