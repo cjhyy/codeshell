@@ -158,6 +158,34 @@ describe("result names the provider/model actually used", () => {
   });
 });
 
+describe("apiKeyRef — reuse another instance's key", () => {
+  test("instance with no own key reuses the referenced instance's key", async () => {
+    writeSettings({
+      imageGen: {
+        defaultProvider: "oa2",
+        providers: [
+          { id: "oa1", kind: "openai", baseUrl: "https://oa.test/v1", apiKey: "sk-shared", defaultModel: "gpt-image-2" },
+          // oa2 has no key of its own — reuses oa1's.
+          { id: "oa2", kind: "openai", baseUrl: "https://oa.test/v1", apiKeyRef: "oa1", defaultModel: "gpt-image-2" },
+        ],
+      },
+    });
+    const out = await generateImageTool({ prompt: "p", provider: "oa2" }, ctx());
+    expect(out).toMatch(/Generated image with .+ saved to/);
+    expect(lastAuthHeader).toBe("Bearer sk-shared");
+  });
+
+  test("dangling apiKeyRef (target missing/keyless) → not usable", async () => {
+    writeSettings({
+      imageGen: {
+        providers: [{ id: "oa2", kind: "openai", baseUrl: "https://oa.test/v1", apiKeyRef: "ghost" }],
+      },
+    });
+    const out = await generateImageTool({ prompt: "p", provider: "oa2" }, ctx());
+    expect(out).toMatch(/no image provider/i);
+  });
+});
+
 describe("fallback to LLM providers[] when imageGen absent", () => {
   test("still resolves an openai LLM provider (back-compat)", async () => {
     writeSettings({

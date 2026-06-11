@@ -224,6 +224,10 @@ export const SettingsSchema = z
               apiKey: z.string().optional(),
               /** Default model for this instance when the call omits `model`. */
               defaultModel: z.string().optional(),
+              /** Catalog template this instance was created from (for paramsDoc / displayName回显). */
+              catalogId: z.string().optional(),
+              /** Reuse another instance's key: id of the instance whose apiKey to use (when apiKey is empty). */
+              apiKeyRef: z.string().optional(),
             }),
           )
           .default([]),
@@ -248,6 +252,10 @@ export const SettingsSchema = z
               baseUrl: z.string(),
               apiKey: z.string().optional(),
               defaultModel: z.string().optional(),
+              /** Catalog template this instance was created from (for paramsDoc / displayName回显). */
+              catalogId: z.string().optional(),
+              /** Reuse another instance's key: id of the instance whose apiKey to use (when apiKey is empty). */
+              apiKeyRef: z.string().optional(),
             }),
           )
           .default([]),

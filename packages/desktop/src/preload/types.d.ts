@@ -594,6 +594,7 @@ export interface CodeshellApi {
   invalidateMcpProbeCache(name?: string): Promise<void>;
   probeSearch(input: SearchProbeInput): Promise<SearchProbeResult>;
   probeImage(input: ImageProbeInput): Promise<ImageProbeResult>;
+  getModelCatalog(): Promise<CatalogEntry[]>;
   resolveModelMeta(
     models: Array<{ key: string; model?: string; providerKey?: string; maxContextTokens?: number | null }>,
     providers: Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>,
@@ -789,6 +790,22 @@ export interface ImageProbeInput {
   apiKey?: string;
   baseUrl?: string;
   model?: string;
+}
+
+/** Model catalog template (mirror of core CatalogEntry). */
+export interface CatalogEntry {
+  id: string;
+  tag: "image" | "video" | "audio";
+  adapterKind: string;
+  shape?: "generic-sync" | "fal-queue";
+  displayName: string;
+  description: string;
+  defaultBaseUrl: string;
+  defaultModel?: string;
+  modelPresets?: Array<{ value: string; label?: string }>;
+  signupUrl?: string;
+  test?: boolean;
+  paramsDoc?: string;
 }
 
 export interface ImageProbeResult {

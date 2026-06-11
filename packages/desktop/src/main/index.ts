@@ -21,6 +21,7 @@ import {
   listPluginHooks,
   type AutomationHandle,
   resolveExternalAgentConfig,
+  getMergedCatalog,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge } from "./agent-bridge.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
@@ -1153,6 +1154,8 @@ ipcMain.handle("image:probe", async (_e, raw: unknown) => {
   }
   return probeImage(r);
 });
+
+ipcMain.handle("catalog:list", async () => getMergedCatalog());
 
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
   if (!Array.isArray(models) || !Array.isArray(providers)) return [];

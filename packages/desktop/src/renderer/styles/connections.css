@@ -106,6 +106,31 @@
 }
 .conn-card.is-default { box-shadow: inset 3px 0 0 var(--accent); }
 
+/* [+ 添加] card — picks a catalog template to create a new instance. */
+.conn-card-add {
+  align-items: flex-start;
+  justify-content: center;
+  border: 1px dashed var(--border-subtle);
+}
+
+/* Per-instance id badge in the card title. */
+.conn-instance-id {
+  color: var(--fg-muted);
+  font-size: var(--fz-xs);
+  font-family: var(--font-mono, monospace);
+}
+
+/* 填新 key / 复用已有 toggle row. */
+.conn-key-mode {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-1);
+}
+.conn-link-btn.is-active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 /* Image-probe success preview thumbnail. */
 .conn-probe-image {
   margin-top: var(--sp-2);

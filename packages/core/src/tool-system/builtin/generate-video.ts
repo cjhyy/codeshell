@@ -29,6 +29,19 @@ import {
   type VideoProviderCreds,
 } from "./video-providers.js";
 import { getImageUploader, type ImageUploader, type UploaderCreds } from "./image-uploader.js";
+import { effectiveApiKey } from "./generate-image.js";
+import { getMergedCatalog, findCatalogEntry } from "../../model-catalog/index.js";
+
+/** A configured videoGen instance (subset used here). */
+interface VideoInstance {
+  id: string;
+  kind: string;
+  baseUrl: string;
+  apiKey?: string;
+  defaultModel?: string;
+  catalogId?: string;
+  apiKeyRef?: string;
+}
 
 const MAX_IMAGES = 9;
 
@@ -130,17 +143,18 @@ export function isGenerateVideoAvailable(
  */
 export function listConfiguredVideoProviders(
   cwd: string = process.cwd(),
-): Array<{ id?: string; kind: string }> {
+): Array<{ id?: string; kind: string; catalogId?: string }> {
   try {
     const settings = new SettingsManager(cwd, "full").get();
     // Canonical videoGen.providers[] first (TODO 7.1) — but only kinds that
     // have a wired adapter (VIDEO_PROVIDER_KINDS); a configured-but-unadapted
     // entry isn't usable yet.
-    const videoGen = (settings as { videoGen?: { providers?: Array<{ id: string; kind: string; apiKey?: string }> } }).videoGen;
+    const videoGen = (settings as { videoGen?: { providers?: VideoInstance[] } }).videoGen;
     if (videoGen?.providers?.length) {
-      return videoGen.providers
-        .filter((p) => !!p.apiKey && getVideoProvider(p.kind) !== null)
-        .map((p) => ({ id: p.id, kind: p.kind }));
+      const list = videoGen.providers;
+      return list
+        .filter((p) => !!effectiveApiKey(p, list) && getVideoProvider(p.kind) !== null)
+        .map((p) => ({ id: p.id, kind: p.kind, catalogId: p.catalogId }));
     }
     return settings.providers
       .filter((p) => p.apiKey && VIDEO_PROVIDER_KINDS.includes(p.kind))
@@ -154,12 +168,21 @@ export function listConfiguredVideoProviders(
 export function generateVideoToolDefFor(cwd: string): ToolDefinition {
   const providers = listConfiguredVideoProviders(cwd);
   if (providers.length === 0) return generateVideoToolDef;
-  const names = providers.map((p) => p.kind).join(", ");
+  const names = providers.map((p) => p.id ?? p.kind).join(", ");
+  const catalog = getMergedCatalog();
+  const paramLines = providers
+    .map((p) => {
+      const entry = findCatalogEntry(catalog, p.catalogId, p.kind);
+      return entry?.paramsDoc ? `  - ${p.id ?? p.kind}: ${entry.paramsDoc}` : null;
+    })
+    .filter((x): x is string => x !== null);
+  const paramsBlock = paramLines.length ? `\nParams per provider:\n${paramLines.join("\n")}` : "";
   return {
     ...generateVideoToolDef,
     description:
       generateVideoToolDef.description +
-      ` Configured provider(s): ${names}. Pass \`provider\` to pick one.`,
+      ` Configured provider(s): ${names}. Pass \`provider\` to pick one.` +
+      paramsBlock,
   };
 }
 
@@ -171,20 +194,22 @@ interface ResolvedVideoProvider {
 
 function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoProvider | null {
   const settings = new SettingsManager(cwd, "full").get();
-  const videoGen = (settings as { videoGen?: { defaultProvider?: string; providers?: Array<{ id: string; kind: string; baseUrl: string; apiKey?: string; defaultModel?: string }> } }).videoGen;
+  const videoGen = (settings as { videoGen?: { defaultProvider?: string; providers?: VideoInstance[] } }).videoGen;
   if (videoGen?.providers?.length) {
-    const usable = (p: { kind: string; apiKey?: string }): boolean =>
-      !!p.apiKey && getVideoProvider(p.kind) !== null;
+    const list = videoGen.providers;
+    const usable = (p: VideoInstance): boolean =>
+      !!effectiveApiKey(p, list) && getVideoProvider(p.kind) !== null;
+    const credsOf = (p: VideoInstance): VideoProviderCreds => ({ baseUrl: p.baseUrl, apiKey: effectiveApiKey(p, list)! });
     if (preferKind) {
-      const chosen = videoGen.providers.find((p) => (p.id === preferKind || p.kind === preferKind) && usable(p));
-      if (chosen) return { kind: chosen.kind, creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey! }, defaultModel: chosen.defaultModel };
+      const chosen = list.find((p) => (p.id === preferKind || p.kind === preferKind) && usable(p));
+      if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
       return null;
     }
     const preferred = videoGen.defaultProvider
-      ? videoGen.providers.find((p) => p.id === videoGen.defaultProvider)
+      ? list.find((p) => p.id === videoGen.defaultProvider)
       : undefined;
-    const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? videoGen.providers.find(usable);
-    if (chosen) return { kind: chosen.kind, creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey! }, defaultModel: chosen.defaultModel };
+    const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
+    if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
     return null;
   }
   // Back-compat: scan LLM providers[] for a video-capable kind.

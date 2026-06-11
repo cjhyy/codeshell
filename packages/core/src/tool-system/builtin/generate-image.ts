@@ -25,6 +25,32 @@ import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { SettingsManager } from "../../settings/manager.js";
 import { getImageProvider, DEFAULT_IMAGE_MODEL, type ImageProviderCreds } from "./image-providers.js";
+import { getMergedCatalog, findCatalogEntry } from "../../model-catalog/index.js";
+
+/** A configured imageGen/videoGen instance (subset used here). */
+interface GenInstance {
+  id: string;
+  kind: string;
+  baseUrl: string;
+  apiKey?: string;
+  defaultModel?: string;
+  catalogId?: string;
+  apiKeyRef?: string;
+}
+
+/**
+ * Effective key for an instance: its own `apiKey`, or — when empty and
+ * `apiKeyRef` is set — the key of the referenced instance in the same list
+ * (reuse-key feature). Returns undefined when neither yields a key.
+ */
+export function effectiveApiKey(inst: GenInstance, list: GenInstance[]): string | undefined {
+  if (inst.apiKey) return inst.apiKey;
+  if (inst.apiKeyRef) {
+    const ref = list.find((p) => p.id === inst.apiKeyRef);
+    if (ref?.apiKey) return ref.apiKey;
+  }
+  return undefined;
+}
 
 const DEFAULT_SIZE = "1024x1024";
 const DEFAULT_QUALITY = "auto";
@@ -99,18 +125,19 @@ function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvid
   const settings = new SettingsManager(cwd, "full").get();
 
   // 1. Canonical imageGen config.
-  const imageGen = (settings as { imageGen?: { defaultProvider?: string; providers?: Array<{ id: string; kind: string; baseUrl: string; apiKey?: string; defaultModel?: string }> } }).imageGen;
+  const imageGen = (settings as { imageGen?: { defaultProvider?: string; providers?: GenInstance[] } }).imageGen;
   if (imageGen && Array.isArray(imageGen.providers) && imageGen.providers.length > 0) {
     const list = imageGen.providers;
-    const usable = (p: { kind: string; apiKey?: string }): boolean =>
-      !!p.apiKey && getImageProvider(p.kind) !== null;
+    const usable = (p: GenInstance): boolean =>
+      !!effectiveApiKey(p, list) && getImageProvider(p.kind) !== null;
+    const credsOf = (p: GenInstance): ImageProviderCreds => ({ baseUrl: p.baseUrl, apiKey: effectiveApiKey(p, list)! });
 
     if (prefer) {
       // Explicit request — respect the user's intent. If that exact instance
       // isn't usable (no key / no adapter), DON'T silently use another one.
       const chosen = list.find((p) => p.id === prefer);
       if (chosen && usable(chosen)) {
-        return { kind: chosen.kind, creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey! }, defaultModel: chosen.defaultModel };
+        return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
       }
       return null;
     }
@@ -123,7 +150,7 @@ function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvid
       : undefined;
     const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
     if (chosen) {
-      return { kind: chosen.kind, creds: { baseUrl: chosen.baseUrl, apiKey: chosen.apiKey! }, defaultModel: chosen.defaultModel };
+      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
     }
     return null;
   }
@@ -162,14 +189,15 @@ const AVAIL_TTL_MS = 1000;
  */
 export function listConfiguredImageProviders(
   cwd: string = process.cwd(),
-): Array<{ id?: string; kind: string }> {
+): Array<{ id?: string; kind: string; catalogId?: string }> {
   try {
     const settings = new SettingsManager(cwd, "full").get();
-    const imageGen = (settings as { imageGen?: { providers?: Array<{ id: string; kind: string; apiKey?: string }> } }).imageGen;
+    const imageGen = (settings as { imageGen?: { providers?: GenInstance[] } }).imageGen;
     if (imageGen?.providers?.length) {
-      return imageGen.providers
-        .filter((p) => !!p.apiKey && getImageProvider(p.kind) !== null)
-        .map((p) => ({ id: p.id, kind: p.kind }));
+      const list = imageGen.providers;
+      return list
+        .filter((p) => !!effectiveApiKey(p, list) && getImageProvider(p.kind) !== null)
+        .map((p) => ({ id: p.id, kind: p.kind, catalogId: p.catalogId }));
     }
     return settings.providers
       .filter(
@@ -193,11 +221,22 @@ export function generateImageToolDefFor(cwd: string): ToolDefinition {
   const providers = listConfiguredImageProviders(cwd);
   if (providers.length === 0) return generateImageToolDef;
   const names = providers.map((p) => p.id ?? p.kind).join(", ");
+  // Per-instance params hints from the catalog (paramsDoc) — so the model knows
+  // what each configured model accepts (different models differ).
+  const catalog = getMergedCatalog();
+  const paramLines = providers
+    .map((p) => {
+      const entry = findCatalogEntry(catalog, p.catalogId, p.kind);
+      return entry?.paramsDoc ? `  - ${p.id ?? p.kind}: ${entry.paramsDoc}` : null;
+    })
+    .filter((x): x is string => x !== null);
+  const paramsBlock = paramLines.length ? `\nParams per provider:\n${paramLines.join("\n")}` : "";
   return {
     ...generateImageToolDef,
     description:
       generateImageToolDef.description +
-      ` Configured provider(s): ${names}. Pass \`provider\` to pick one.`,
+      ` Configured provider(s): ${names}. Pass \`provider\` to pick one.` +
+      paramsBlock,
   };
 }
 

@@ -625,6 +625,15 @@ export {
   type ImageGenerateResult,
 } from "./tool-system/builtin/image-providers.js";
 
+export {
+  BUILTIN_CATALOG,
+  getMergedCatalog,
+  loadUserCatalog,
+  userCatalogPath,
+  findCatalogEntry,
+  type CatalogEntry,
+} from "./model-catalog/index.js";
+
 // ─── Protocol (extended for TUI) ────────────────────────────────
 
 export { createInProcessClient } from "./protocol/helpers.js";
