@@ -95,6 +95,18 @@ export function SimpleSelect<V extends string = string>({
   const hasEmptyOption = !grouped && (options as SimpleSelectOption<V>[]).some((o) => o.value === "");
   const radixValue =
     value === "" ? (hasEmptyOption ? EMPTY_SENTINEL : undefined) : value;
+
+  // The trigger shows only the selected option's LABEL on a single line.
+  // Radix's default <SelectValue> mirrors the whole selected <SelectItem> body,
+  // which for description-bearing options is a two-line `flex flex-col`; inside
+  // the trigger's `[&>span]:line-clamp-1` (a -webkit-box) that rendered
+  // centered + clipped weirdly. Rendering just the label keeps the trigger a
+  // clean single left-aligned line while the dropdown keeps the 2-line items.
+  const flatOptions: SimpleSelectOption<V>[] = grouped
+    ? (options as SimpleSelectOptionGroup<V>[]).flatMap((g) => g.options)
+    : (options as SimpleSelectOption<V>[]);
+  const selectedLabel = flatOptions.find((o) => o.value === value)?.label;
+
   return (
     <Select
       value={radixValue}
@@ -102,7 +114,7 @@ export function SimpleSelect<V extends string = string>({
       disabled={disabled}
     >
       <SelectTrigger aria-label={ariaLabel} className={cn(size === "sm" && "h-8 text-xs", className)}>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder}>{selectedLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {grouped
