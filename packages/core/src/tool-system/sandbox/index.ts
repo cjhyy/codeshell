@@ -18,7 +18,7 @@
  */
 
 import { accessSync, constants, realpathSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 
 import { SandboxUnavailableError } from "../../exceptions.js";
 
@@ -154,9 +154,15 @@ function warnAutoDowngrade(): void {
 }
 
 export function defaultSandboxConfig(mode: SandboxMode = "auto"): SandboxConfig {
+  // Temp roots are writable so tool-result spillover / scratch files land
+  // somewhere. POSIX: the canonical /tmp family. Windows has no OS sandbox
+  // backend (auto → off), so writableRoots is effectively unused there, but
+  // keep it host-correct by using the platform temp dir instead of /tmp.
+  const tmpRoots =
+    process.platform === "win32" ? [tmpdir()] : ["/tmp", "/private/tmp", "/var/tmp"];
   return {
     mode,
-    writableRoots: ["${workspace}", "/tmp", "/private/tmp", "/var/tmp"],
+    writableRoots: ["${workspace}", ...tmpRoots],
     deniedReads: [
       "~/.ssh",
       "~/.aws",
