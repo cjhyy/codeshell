@@ -931,21 +931,22 @@ function extractReasoningContent(msg: Record<string, unknown>): string | undefin
 }
 
 /**
- * Map our internal image-detail enum to the OpenAI wire enum.
+ * Map our internal image-clarity enum to the OpenAI wire enum.
  *
- * OpenAI accepts only `low` / `high` / `auto`. We carry an extra
- * `original` value through settings/config to match the Codex
- * concept (preserve client-side dimensions, most expensive), but on
- * the wire it has to collapse to `high` — OpenAI's server scales
- * 2048+ images down regardless, so this is the closest faithful
- * mapping.
+ * OpenAI accepts only `low` / `high` / `auto`. Our provider-agnostic
+ * levels are low / standard / high — the real token saving happens in
+ * the renderer downscale (long-edge cap) before send, so on the wire
+ * we only need the coarse low/high distinction: low→low, while both
+ * standard and high collapse to high (OpenAI's full-tile rendering).
+ *
+ * Legacy "original" (from older settings) is treated as high.
  *
  * Returns undefined when the caller didn't set a detail at all, so
  * the OpenAI client uses its own default ("auto", equivalent to
  * "high" today).
  */
 function mapImageDetailToOpenAI(
-  detail: "low" | "high" | "original" | undefined,
+  detail: "low" | "standard" | "high" | "original" | undefined,
 ): "low" | "high" | undefined {
   if (!detail) return undefined;
   if (detail === "low") return "low";

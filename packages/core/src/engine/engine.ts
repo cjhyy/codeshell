@@ -787,12 +787,16 @@ export class Engine {
       // model is currently active and survive hot-switches. (Pre-cleanup
       // these were merged into llm.imageDetail / llm.temperature; that path
       // is gone because hot-switching now rotates llm wholesale.)
-      const imageSettings = (settings as { images?: { detail?: "low" | "high" | "original" } }).images;
+      const imageSettings = (settings as {
+        images?: { detail?: "low" | "standard" | "high" | "original" };
+      }).images;
       const modelBlock = (settings as { model?: { temperature?: number } }).model;
       const nextDefaults: ClientDefaults = { ...(this.config.clientDefaults ?? {}) };
       let defaultsChanged = false;
-      if (imageSettings?.detail && nextDefaults.imageDetail !== imageSettings.detail) {
-        nextDefaults.imageDetail = imageSettings.detail;
+      // Migrate legacy "original" → "high" (raw settings may bypass schema).
+      const detail = imageSettings?.detail === "original" ? "high" : imageSettings?.detail;
+      if (detail && nextDefaults.imageDetail !== detail) {
+        nextDefaults.imageDetail = detail;
         defaultsChanged = true;
       }
       if (

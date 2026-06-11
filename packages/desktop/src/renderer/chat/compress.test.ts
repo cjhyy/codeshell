@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { scaledDimensions, MAX_DIMENSION, TARGET_BYTES } from "./compress";
+import {
+  scaledDimensions,
+  MAX_DIMENSION,
+  TARGET_BYTES,
+  capForDetail,
+  alwaysDownsample,
+  type ImageDetail,
+} from "./compress";
 
 /**
  * Only `scaledDimensions` is unit-testable in pure Node — the rest of
@@ -45,5 +52,31 @@ describe("constants are sane defaults", () => {
   });
   test("MAX_DIMENSION is the documented 2048", () => {
     expect(MAX_DIMENSION).toBe(2048);
+  });
+});
+
+describe("capForDetail — per-clarity-level long-edge cap", () => {
+  test("low/标准/高清 map to 1024 / 1568 / 2576", () => {
+    expect(capForDetail("low")).toBe(1024);
+    expect(capForDetail("standard")).toBe(1568);
+    expect(capForDetail("high")).toBe(2576);
+  });
+  test("unknown / undefined falls back to high (no surprise downscale)", () => {
+    expect(capForDetail(undefined)).toBe(2576);
+    expect(capForDetail("garbage" as ImageDetail)).toBe(2576);
+  });
+});
+
+describe("alwaysDownsample — whether to re-encode even small images", () => {
+  // low/standard intentionally downsample EVERY image (that's how they save
+  // tokens — a 1.5MB 3000px screenshot is under the byte gate but still costs
+  // ~4784 tokens on Opus). high preserves fidelity: only compress if oversize.
+  test("low and standard always downsample", () => {
+    expect(alwaysDownsample("low")).toBe(true);
+    expect(alwaysDownsample("standard")).toBe(true);
+  });
+  test("high (and default) only compress when oversize", () => {
+    expect(alwaysDownsample("high")).toBe(false);
+    expect(alwaysDownsample(undefined)).toBe(false);
   });
 });

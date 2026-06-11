@@ -25,7 +25,7 @@ import {
   CODESHELL_PATH_DND_MIME,
   type ImageAttachment,
 } from "./chat/attachments";
-import { compressBatch } from "./chat/compress";
+import { compressBatch, type ImageDetail } from "./chat/compress";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import { detectMention } from "./chat/mention";
 import { classifyPath } from "./tool-cards/attachments";
@@ -63,6 +63,8 @@ interface Props {
   }) => void;
   /** Attach an image to the composer by absolute path (file-panel drag — TODO 2.1). */
   onAttachImagePath?: (absPath: string) => void;
+  /** Provider-agnostic image clarity; drives renderer-side downscale before send. */
+  imageDetail?: ImageDetail;
   pendingApproval?: ApprovalRequestEnvelope | null;
   onApprovalDecide?: (
     decision: "approve" | "deny",
@@ -136,6 +138,7 @@ export function ChatView({
   onAskUserAnswer,
   onExtendGoal,
   onAttachImagePath,
+  imageDetail,
   pendingApproval,
   onApprovalDecide,
   permissionMode,
@@ -347,7 +350,7 @@ export function ChatView({
       // will actually be sent. compressBatch never throws; it falls
       // back to the original if encoding fails (engine policy still
       // gates oversize bytes downstream).
-      const compressed = await compressBatch(accepted);
+      const compressed = await compressBatch(accepted, imageDetail);
       setAttachments((cur) => [...cur, ...compressed]);
     }
     if (errors.length > 0) {

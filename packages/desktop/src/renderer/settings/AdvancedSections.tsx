@@ -939,33 +939,35 @@ export function ToggleCapabilitySection({
 }
 
 /**
- * Image attachment settings — currently just the OpenAI-side
- * `detail` hint (low / high / original) so users on a tight token
- * budget can flip every image to the cheap 85-token-per-image
- * rendering without giving up image attachments entirely.
+ * Image clarity settings — a provider-agnostic level (low / standard /
+ * high) that the renderer turns into a long-edge downscale before send,
+ * so BOTH OpenAI and Claude save tokens. On the OpenAI path it also maps
+ * to the wire `detail` hint; on the Anthropic path the saving comes
+ * entirely from the renderer downscale.
  *
- * Anthropic providers ignore the field; we still surface it on the
- * user-level page because the active model can switch mid-session
- * and we'd rather have one place to control it than per-call args.
+ * We surface it on the user-level page because the active model can
+ * switch mid-session and we'd rather have one place to control it than
+ * per-call args.
  */
 export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
-  const [detail, setDetail] = useState<"low" | "high" | "original" | "">("");
+  const [detail, setDetail] = useState<"low" | "standard" | "high" | "">("");
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
     const images = objectOf(s.images);
-    const d = images.detail;
+    // Migrate legacy "original" → "high".
+    const d = images.detail === "original" ? "high" : images.detail;
     setDetail(
-      d === "low" || d === "high" || d === "original" ? d : "",
+      d === "low" || d === "standard" || d === "high" ? d : "",
     );
   };
   useEffect(() => {
     void load();
   }, [scope, activeRepoPath]);
 
-  const save = async (next: "low" | "high" | "original" | ""): Promise<void> => {
+  const save = async (next: "low" | "standard" | "high" | ""): Promise<void> => {
     setDetail(next);
     setSaving(true);
     try {
@@ -977,20 +979,19 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
     }
   };
 
-  const options: Array<{ id: "low" | "high" | "original" | ""; label: string; help: string }> = [
-    { id: "", label: "默认", help: "由 provider 决定 (OpenAI = auto)" },
-    { id: "low", label: "Low", help: "85 tokens/图 固定,最省" },
-    { id: "high", label: "High", help: "服务端切 tile,默认体验" },
-    { id: "original", label: "Original", help: "保留客户端尺寸,最贵" },
+  const options: Array<{ id: "low" | "standard" | "high" | ""; label: string; help: string }> = [
+    { id: "", label: "默认", help: "跟随默认(不降采样,保留原始清晰度)" },
+    { id: "low", label: "省钱", help: "降到 ~1024px 长边,最省 token" },
+    { id: "standard", label: "标准", help: "~1568px,清晰度/成本平衡(推荐)" },
+    { id: "high", label: "高清", help: "~2576px,最清晰、最费 token" },
   ];
 
   return (
     <section className="settings-section">
-      <h3 className="settings-section-title">图片细节 (OpenAI 路径)</h3>
+      <h3 className="settings-section-title">图片清晰度</h3>
       <p className="settings-section-help">
-        发给 OpenAI 兼容 provider 时图片的 detail 参数。
+        OpenAI 与 Claude 均生效:决定发送前的图片清晰度(越低越省 token)。
         {scope === "user" ? "全局默认,会被项目设置覆盖。" : "仅当前项目。"}
-        Anthropic 路径不读这个字段。
       </p>
       <div className="settings-option-grid">
         {options.map((o) => (

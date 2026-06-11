@@ -230,6 +230,9 @@ function App() {
   const [activeModelKey, setActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
+  // Provider-agnostic image clarity (low/standard/high) from merged settings;
+  // drives renderer-side downscale before send. Undefined = follow default.
+  const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(undefined);
   const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>({});
   /** Per-bucket Goal-mode toggle (orthogonal to permission). */
   const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>({});
@@ -1955,6 +1958,11 @@ function App() {
           ? (merged.permissions as Record<string, unknown>)
           : {};
         setDefaultPermissionMode(fromSettingsPermissionMode(merged.permissionMode ?? permissions.defaultMode));
+        // Image clarity: migrate legacy "original" → "high"; anything else
+        // unrecognized → undefined (follow default, no downscale).
+        const rawDetail = (merged.images as { detail?: string } | undefined)?.detail;
+        const d = rawDetail === "original" ? "high" : rawDetail;
+        setImageDetail(d === "low" || d === "standard" || d === "high" ? d : undefined);
         const baseOpts = candidatesFromSettings(merged);
         setModelOptions(baseOpts);
 
@@ -2273,6 +2281,7 @@ function App() {
               onAskUserAnswer={handleAskUserAnswer}
               onExtendGoal={extendGoal}
               onAttachImagePath={(p) => void attachImageByPath(p)}
+              imageDetail={imageDetail}
               pendingApproval={approval}
               onApprovalDecide={
                 approval

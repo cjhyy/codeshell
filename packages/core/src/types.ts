@@ -449,11 +449,16 @@ export interface ClientDefaults {
   /** Max retry attempts for transient errors. Default 3. */
   retryMaxAttempts?: number;
   /**
-   * OpenAI-style detail hint sent on every image_url part. Anthropic
-   * ignores this. Defaults to "high" (OpenAI's own default) when
-   * unset; "low" is 85-tokens-per-image fixed.
+   * Provider-agnostic image clarity level. Drives the renderer-side
+   * downscale (long-edge cap: low→~1024 / standard→~1568 / high→~2576)
+   * so BOTH providers save tokens before send. On the OpenAI path it
+   * also maps to the wire `detail` hint (low→low, standard/high→high);
+   * Anthropic has no such param and saves purely via the downscale.
+   * Defaults to "high" (full fidelity) when unset.
+   *
+   * Legacy "original" values from older settings are migrated to "high".
    */
-  imageDetail?: "low" | "high" | "original";
+  imageDetail?: "low" | "standard" | "high";
 }
 
 export interface LLMResponse {

@@ -52,6 +52,40 @@ export const TARGET_BYTES = 2 * 1024 * 1024;
 export const MAX_DIMENSION = 2048;
 
 /**
+ * Image clarity level (provider-agnostic). Drives the long-edge cap so the user
+ * trades fidelity for token cost. Replaces the old OpenAI-only low/high/original
+ * knob: for OpenAI the engine still maps low→low / standard,high→high; for
+ * Anthropic (no detail param — it just bills by pixels, ⌈w/28⌉×⌈h/28⌉) the
+ * SAVING comes entirely from this renderer-side downscale before send.
+ *   low      — 省钱: long edge ≤ 1024 (fewest tokens)
+ *   standard — 1568 (old-model native cap; good cost/quality)
+ *   high     — 2576 (Opus 4.7/4.8 high-res cap; full fidelity)
+ */
+export type ImageDetail = "low" | "standard" | "high";
+
+const DETAIL_CAPS: Record<ImageDetail, number> = {
+  low: 1024,
+  standard: 1568,
+  high: 2576,
+};
+
+/** Long-edge pixel cap for a clarity level. Unknown/undefined → high (no
+ *  surprise downscale of someone who never opted in). */
+export function capForDetail(detail: ImageDetail | undefined): number {
+  return (detail && DETAIL_CAPS[detail]) || DETAIL_CAPS.high;
+}
+
+/**
+ * Whether to downsample EVERY image (not just oversized ones). low/standard do
+ * — that's how they actually cut tokens (a sub-2MB but 3000px screenshot still
+ * costs ~4784 tokens on Opus). high preserves fidelity: compress only when over
+ * the byte cap, exactly like the original behaviour.
+ */
+export function alwaysDownsample(detail: ImageDetail | undefined): boolean {
+  return detail === "low" || detail === "standard";
+}
+
+/**
  * JPEG quality ladder. We try the first quality; if the result is still
  * over `TARGET_BYTES` we try the next one, and so on. Empirically two
  * steps land every screenshot we've thrown at it under the cap.
@@ -71,17 +105,26 @@ const RECOMPRESSIBLE = new Set(["image/png", "image/jpeg", "image/jpg", "image/w
  */
 export async function compressIfNeeded(
   att: ImageAttachment,
+  detail?: ImageDetail,
 ): Promise<ImageAttachment> {
-  if (att.size <= TARGET_BYTES) return att;
+  // high/default: only touch oversized images (preserve fidelity). low/standard:
+  // downsample every image to cut tokens, even when under the byte cap.
+  if (att.size <= TARGET_BYTES && !alwaysDownsample(detail)) return att;
   if (!RECOMPRESSIBLE.has(att.mime)) return att;
 
+  const cap = capForDetail(detail);
   try {
     const img = await loadImage(att.dataUrl);
     const { width, height } = scaledDimensions(
       img.naturalWidth,
       img.naturalHeight,
-      MAX_DIMENSION,
+      cap,
     );
+    // Already at/under the cap AND within bytes → nothing to gain, keep original
+    // (avoids needlessly re-encoding a small PNG of code into lossy JPEG).
+    if (width === img.naturalWidth && height === img.naturalHeight && att.size <= TARGET_BYTES) {
+      return att;
+    }
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -122,8 +165,9 @@ export async function compressIfNeeded(
  */
 export async function compressBatch(
   atts: ImageAttachment[],
+  detail?: ImageDetail,
 ): Promise<ImageAttachment[]> {
-  return Promise.all(atts.map((a) => compressIfNeeded(a)));
+  return Promise.all(atts.map((a) => compressIfNeeded(a, detail)));
 }
 
 // ---------------------------------------------------------------- internals

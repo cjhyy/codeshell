@@ -145,9 +145,9 @@
 - **现象**(#10):某操作后右上角图标没更新(状态未刷新)。
 - **核实(2026-06-09,未能复现)**:右上角只有 2 个东西——StatusBadge busy/idle 点 + 面板开关按钮。逐一查证:① busy 点的清除路径**健壮**(`App.tsx:1140` `turn_complete`/`error` 且 `!agentId` → `setBusyForKey(target,false)`,且 route-table miss 有 `runningBucketRef` 兜底 :1066-1071;子 agent 的 turn_complete 带 agentId 被正确排除,不会误清/误标),没找到 mis-key;② 面板按钮 active 态 = 直接读 `panelRequest.open`,与开关同一布尔,截图里显示正确(高亮)。截图 step10 本身是**已完成/idle**态(SKILL 轮"已处理 6m29s"已收口),看不到卡住的帧。**结论:现有证据无法确认根因,不臆测修。**
 - **附带修(确有的潜在 desync)**:dock 内部用 tab-X 关面板时 `onClose` 只 set `open:false`、**漏 bump nonce + 漏清 kind**,与 `togglePanel` 契约不一致(`App.tsx:2263`)→ 已改成与 togglePanel 一致(bump nonce + kind:null)。这条不直接对应"图标不更新"(按钮读 .open 仍正确),但是真实潜伏 desync,顺手修掉。
-- **状态**:🟡 部分处理(潜在 desync 已修;**主症状需你补:是哪个图标 + 什么操作后**才能复现定位)
+- **状态**:🟢 已结(2026-06-11 用户确认不用管了;潜在 desync 此前已修,主症状未复现亦不再追)
 - **截图**:`docs/assets/beta1-smoke/step10.png`
-- **备注**:若你能说清"点了 X 之后,右上角哪个图标该变没变",我能立刻定位。当前不瞎改 busy 逻辑(它是对的),避免引入新 bug。
+- **备注**:潜在 desync(dock tab-X 关面板漏 bump nonce/清 kind)已修。主症状无法复现,用户已确认无需继续。
 
 ### ✅ 通过项(无须处理)
 - #2 新会话对话 ✅ ｜ #3 模型切换 ✅ ｜ #4 文件编辑 ✅ ｜ #9 设置页按项目选配置 ✅
@@ -197,8 +197,9 @@
   - **B. 适用范围**:目前只 OpenAI 生效、Anthropic 忽略 → 设置页该**标注"仅 OpenAI 兼容 provider 生效"**(现说明已提,但选了 Anthropic 时该 disable/灰掉该控件,避免用户以为生效)。
   - **C. 粒度**:是否需要"按单张图/按对话"临时调,而非只有全局+项目两层?(大图偶尔要高清,平时省 token)
   - **D. 与 token/成本联动**:high detail 显著增 token;可在控件旁提示成本影响,或与 [[project_llm_retry_maxtokens_bugs]] 的 token 管理联动。
-- **状态**:🟡 待讨论(非 bug,产品优化方向)
-- **备注**:先定"目标用户要不要懂这个参数"——若不要,默认 auto + 折叠进高级设置即可;若要,补语义化 + provider 适用性提示。`engine.ts:741-743` 有旧 images.detail→llm.imageDetail 迁移路径,改时注意兼容。
+- **状态**:🟢 已修(2026-06-11,升级成 provider 无关「清晰度」+ renderer 降采样)
+- **调研(2026-06-11)**:查 Anthropic vision 文档——**Claude 没有 OpenAI 那种 detail 开关**,但按图块计 token(每 28×28px = 1 token,`⌈w/28⌉×⌈h/28⌉`),所以**发送前降分辨率能实打实省 token**(Opus 4.7/4.8 一张图最多 ~4784 token,是老模型 1568 的约 3 倍;官方明说"不需要清晰度就降采样控成本")。
+- **备注**:已修 = ① `compress.ts` 加 `ImageDetail`(low|standard|high)+ `capForDetail`(省钱 1024 / 标准 1568 / 高清 2576)+ `alwaysDownsample`(low/standard 连小图也缩,才真省 token);`compressIfNeeded/compressBatch` 收 detail。renderer 发送前 canvas 降采样——**对两家 provider 都生效**(OpenAI 仍额外传 low/high)。② 设置 UI 枚举 low/high/original → low/standard/high,语义化中文(省钱/标准/高清),删「仅 OpenAI 生效」提示。③ core 枚举迁移(types/schema/engine/openai),**四处兜底容旧 `original`→`high`**(schema z.preprocess + engine + App + openai 映射),旧 settings 不报错。Anthropic adapter 不用改(省 token 全靠 renderer 降采样)。测试:compress 11 + core provider/settings 68 + desktop 691 全过;core build + desktop tsc 绿。关联 [[project_llm_retry_maxtokens_bugs]]。
 
 ### 🟢 [2026-06-09] 手机遥控:每次扫码都新建一个 browser/(设备),不复用,越积越多
 - **现象**:手机遥控里出现一堆 browser;用户每用浏览器扫一次码就**新存一个**,不复用。

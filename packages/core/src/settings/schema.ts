@@ -494,19 +494,24 @@ export const SettingsSchema = z
 
     /**
      * Image attachment handling. Sub-fields:
-     *   - detail: OpenAI-style fidelity hint applied to every user-
-     *     attached image. "low" = 85 tokens/image fixed (cheap
-     *     thumbnail), "high" = ~768 px tiles (default), "original" =
-     *     keep client-side dimensions (most expensive). Anthropic
-     *     ignores this field today; that's fine — it just gets
-     *     dropped on the Claude path.
+     *   - detail: provider-agnostic image clarity. Drives the
+     *     renderer-side downscale (low→~1024 / standard→~1568 /
+     *     high→~2576 px long edge) so BOTH providers save tokens
+     *     before send. Legacy "original" is migrated to "high".
      *   - mcpImageTokenBudget: per-turn cap on token cost of images
      *     returned by MCP tools. Codex doesn't enforce this; CC uses
      *     25 000. Set to 0 to disable.
      */
     images: z
       .object({
-        detail: z.enum(["low", "high", "original"]).optional(),
+        detail: z
+          .preprocess(
+            // Legacy migration: old settings stored "original"; map it to
+            // "high" so existing user.json doesn't fail validation on boot.
+            (v) => (v === "original" ? "high" : v),
+            z.enum(["low", "standard", "high"]),
+          )
+          .optional(),
         mcpImageTokenBudget: z.number().int().nonnegative().optional(),
       })
       .optional(),
