@@ -16,6 +16,13 @@ export interface FileSnapshot {
   backupPath: string;
   hash: string;
   size: number;
+  /**
+   * The conversation turn (one user message = one turn) this snapshot was taken
+   * in. Powers turn-level undo (`latestTurnUndoTargets`). Optional so snapshots
+   * written before this feature still load; absent ones share the "undefined"
+   * bucket and degrade to whole-session undo.
+   */
+  turnSeq?: number;
 }
 
 export class FileHistory {
@@ -30,8 +37,12 @@ export class FileHistory {
   /**
    * Save a snapshot of a file before it is modified.
    * Returns the snapshot record, or null if the file doesn't exist.
+   *
+   * `turnSeq` tags the snapshot with the current conversation turn so a later
+   * `/undo` can revert exactly the files that turn changed (see
+   * latestTurnUndoTargets). Omit it for callers without turn context.
    */
-  saveSnapshot(filePath: string): FileSnapshot | null {
+  saveSnapshot(filePath: string, turnSeq?: number): FileSnapshot | null {
     const absPath = resolve(filePath);
     if (!existsSync(absPath)) return null;
 
@@ -39,9 +50,12 @@ export class FileHistory {
       const content = readFileSync(absPath);
       const hash = createHash("md5").update(content).digest("hex");
 
-      // Check if we already have this exact version
+      // Check if we already have this exact (path, content) for this turn. Dedup
+      // is per-turn: the same content re-snapshotted in a later turn is a real
+      // new pre-turn baseline and must be recorded, or turn-level undo would
+      // miss it. Within a turn, re-snapshotting unchanged content is a no-op.
       const existing = this.snapshots.find(
-        (s) => s.filePath === absPath && s.hash === hash,
+        (s) => s.filePath === absPath && s.hash === hash && s.turnSeq === turnSeq,
       );
       if (existing) return existing;
 
@@ -68,6 +82,7 @@ export class FileHistory {
         backupPath,
         hash,
         size: content.length,
+        ...(turnSeq === undefined ? {} : { turnSeq }),
       };
 
       this.snapshots.push(snapshot);
@@ -132,6 +147,36 @@ export class FileHistory {
   restoreAllToEarliest(): Array<{ filePath: string; ok: boolean }> {
     const targets = earliestSnapshotsPerFile(this.snapshots);
     return targets.map((snap) => ({ filePath: snap.filePath, ok: this.restore(snap) }));
+  }
+
+  /**
+   * Turn-level undo: revert every file the most recent conversation turn changed
+   * to its pre-turn state, then DROP that turn's snapshots so a subsequent
+   * `/undo` peels the previous turn (instead of re-targeting the same turn — the
+   * snapshots are never re-selectable once consumed). Powers `/undo`.
+   *
+   * `targets` are computed by the caller (latestTurnUndoTargets) up front and
+   * reused here so the preview and the restore agree on exactly what reverts.
+   * Returns a per-file result so a partial failure doesn't hide which reverted.
+   */
+  undoLatestTurn(targets: FileSnapshot[]): Array<{ filePath: string; ok: boolean }> {
+    if (targets.length === 0) return [];
+    // The turn being undone = the turnSeq shared by the targets (all from the
+    // same latest turn). Capture it before restore() appends fresh snapshots.
+    const undoneTurn = targets[0]!.turnSeq;
+    const results = targets.map((snap) => ({
+      filePath: snap.filePath,
+      ok: this.restore(snap),
+    }));
+    // Consume the turn: drop every snapshot tagged with it so the next undo
+    // moves to the prior turn. Untagged (legacy / restore-time) snapshots are
+    // left alone. If the turn was untagged (legacy history), there's no stable
+    // turn to peel — leave snapshots as-is rather than wiping the whole history.
+    if (undoneTurn !== undefined) {
+      this.snapshots = this.snapshots.filter((s) => s.turnSeq !== undoneTurn);
+      this.saveIndex();
+    }
+    return results;
   }
 
   /**

@@ -40,12 +40,16 @@ export const utilityCommands: SlashCommand[] = [
 
   {
     name: "/undo",
-    description: "撤销文件修改:/undo 最近一次,/undo all 整会话(先预览,加 confirm 执行)",
+    description: "撤销文件修改:/undo 最近一轮对话的改动,/undo all 整会话(先预览,加 confirm 执行)",
     usage: "/undo [all] [confirm]",
     execute: async (arg, ctx) => {
       try {
-        const { FileHistory, latestUndoTarget, earliestSnapshotsPerFile, renderDiffPreview } =
-          await import("@cjhyy/code-shell-core");
+        const {
+          FileHistory,
+          latestTurnUndoTargets,
+          earliestSnapshotsPerFile,
+          renderDiffPreview,
+        } = await import("@cjhyy/code-shell-core");
         const { join } = await import("node:path");
         const { homedir } = await import("node:os");
         const { readFileSync, existsSync } = await import("node:fs");
@@ -109,34 +113,44 @@ export const utilityCommands: SlashCommand[] = [
           return;
         }
 
-        // Single step: the most recent modification across ALL files (by
-        // snapshot timestamp), not "last tracked path".
-        const target = latestUndoTarget(history.getAllSnapshots());
-        if (!target) {
+        // Turn-level: revert every file the MOST RECENT conversation turn (one
+        // user message = one turn) changed, each back to its pre-turn state.
+        // Edits from earlier turns stay intact. Files re-edited within the turn
+        // still revert to the turn-start baseline (latestTurnUndoTargets picks
+        // the earliest snapshot of the latest turn per file).
+        const targets = latestTurnUndoTargets(history.getAllSnapshots());
+        if (targets.length === 0) {
           ctx.addStatus("没有可撤销的文件修改。");
           return;
         }
-        const backupContent = existsSync(target.backupPath)
-          ? readFileSync(target.backupPath, "utf-8")
-          : null;
-        if (backupContent === null) {
-          ctx.addStatus(`撤销失败:备份已丢失 (${target.backupPath})`);
-          return;
-        }
         if (!confirm) {
-          const preview = renderDiffPreview(readFile(target.filePath), backupContent);
+          const MAX_PREVIEW = 5;
+          const shown = targets.slice(0, MAX_PREVIEW);
+          const blocks = shown.map((t) => {
+            const backup = existsSync(t.backupPath) ? readFileSync(t.backupPath, "utf-8") : "";
+            const diff = renderDiffPreview(readFile(t.filePath), backup);
+            return `\`${t.filePath}\`\n` + (diff ? "```diff\n" + diff + "\n```" : "_(无变化)_");
+          });
+          const more =
+            targets.length > MAX_PREVIEW
+              ? `\n\n…以及另外 ${targets.length - MAX_PREVIEW} 个文件。`
+              : "";
+          const fileWord = targets.length > 1 ? `${targets.length} 个文件` : "1 个文件";
           ctx.addMessage(
-            `**/undo 预览** — 将把以下文件还原到上次编辑前:\n\n` +
-              `\`${target.filePath}\`\n\n` +
-              (preview
-                ? "```diff\n" + preview + "\n```\n"
-                : "_(磁盘内容与备份一致,撤销无变化)_\n") +
-              `\n运行 \`/undo confirm\` 执行撤销;\`/undo all\` 撤销整个会话。`,
+            `**/undo 预览** — 将把最近一轮对话改动的 ${fileWord}还原到该轮编辑前:\n\n` +
+              blocks.join("\n\n") +
+              more +
+              `\n\n运行 \`/undo confirm\` 执行;\`/undo all\` 撤销整个会话。`,
           );
           return;
         }
-        const restored = history.restoreLatest(target.filePath);
-        ctx.addStatus(restored ? `已撤销:${target.filePath}` : "撤销失败。");
+        const results = history.undoLatestTurn(targets);
+        const failed = results.filter((r) => !r.ok);
+        ctx.addStatus(
+          failed.length === 0
+            ? `已撤销最近一轮的 ${results.length} 个文件改动。`
+            : `部分失败:${failed.length}/${results.length}(首个:${failed[0]!.filePath})`,
+        );
       } catch (err) {
         ctx.addStatus(`Undo failed: ${(err as Error).message}`);
       }

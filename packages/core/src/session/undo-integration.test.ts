@@ -9,7 +9,7 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileHistory } from "./file-history.js";
-import { latestUndoTarget } from "./undo-target.js";
+import { latestUndoTarget, latestTurnUndoTargets } from "./undo-target.js";
 
 let root: string;
 let sessionDir: string;
@@ -89,4 +89,46 @@ test("latestUndoTarget picks the most recently edited of several files", () => {
   expect(readFileSync(b, "utf-8")).toBe("b0\n");
   // a is untouched by the single-step undo.
   expect(readFileSync(a, "utf-8")).toBe("a1\n");
+});
+
+test("turn-level /undo reverts the whole latest turn, keeps earlier turns", () => {
+  // The user's reported scenario: file A changed in turn 1, A and B both
+  // changed in turn 2. `/undo` should undo ONLY turn 2 (A→turn-2-baseline, B
+  // removed) and leave turn 1's change to A intact — then a second `/undo`
+  // would peel turn 1.
+  const a = join(workDir, "a.txt");
+  const b = join(workDir, "b.txt");
+  writeFileSync(a, "a-orig\n", "utf-8");
+
+  const fh = FileHistory.loadFromDir(sessionDir);
+
+  // --- turn 1: edit A ---
+  fh.saveSnapshot(a, 1);
+  writeFileSync(a, "a-turn1\n", "utf-8");
+
+  // --- turn 2: edit A again, and create+edit B ---
+  fh.saveSnapshot(a, 2); // pre-turn-2 baseline of A = "a-turn1"
+  writeFileSync(a, "a-turn2\n", "utf-8");
+  writeFileSync(b, "b-orig\n", "utf-8");
+  fh.saveSnapshot(b, 2);
+  writeFileSync(b, "b-turn2\n", "utf-8");
+
+  const targets = latestTurnUndoTargets(fh.getAllSnapshots());
+  expect(targets.map((t) => t.filePath).sort()).toEqual([a, b].sort());
+
+  const results = fh.undoLatestTurn(targets);
+  expect(results.every((r) => r.ok)).toBe(true);
+
+  // A reverts to its turn-2 baseline (= turn 1's result), NOT to the original.
+  expect(readFileSync(a, "utf-8")).toBe("a-turn1\n");
+  // B reverts to its turn-2 baseline ("b-orig"), the state before turn 2 edited it.
+  expect(readFileSync(b, "utf-8")).toBe("b-orig\n");
+
+  // undoLatestTurn consumed turn 2's snapshots → a second undo now peels turn 1
+  // (only A was touched in turn 1), reverting A to the original. B is untouched.
+  const targets2 = latestTurnUndoTargets(fh.getAllSnapshots());
+  expect(targets2.map((t) => t.filePath)).toEqual([a]);
+  fh.undoLatestTurn(targets2);
+  expect(readFileSync(a, "utf-8")).toBe("a-orig\n");
+  expect(readFileSync(b, "utf-8")).toBe("b-orig\n");
 });

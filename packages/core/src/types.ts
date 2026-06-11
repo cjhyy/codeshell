@@ -127,6 +127,14 @@ export interface SessionState {
   provider: string;
   tokenUsage: TokenUsage;
   turnCount: number;
+  /**
+   * Conversation-turn counter where ONE user message = one turn (incremented in
+   * engine.run before the message hits the LLM). Distinct from `turnCount`,
+   * which counts turn-loop iterations (a single user message can span many).
+   * Tags file-history snapshots so turn-level `/undo` can revert exactly what
+   * the last user message changed. Absent on legacy sessions → treated as 0.
+   */
+  turnSeq?: number;
   invokedSkills: string[];
   /**
    * Owning parent session for a sub-agent run; `null` explicitly marks a
