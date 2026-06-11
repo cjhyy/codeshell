@@ -111,6 +111,10 @@ interface Props {
 }
 
 const MAX_TEXTAREA_PX = 200;
+// One-line floor for the auto-size. A mid-layout measurement (dock reflow on
+// session switch) can report scrollHeight ~0; flooring here stops the box from
+// collapsing to a sliver. Matches the textarea's CSS min-h backstop.
+const MIN_TEXTAREA_PX = 36;
 
 export function ChatView({
   messages,
@@ -208,18 +212,22 @@ export function ChatView({
   }, [activeRepoId]);
 
   // Auto-size the composer to its content. useLayoutEffect runs before paint so
-  // the height settles without a visible flicker. We also recompute on SESSION
-  // switch (engineSessionId): switching to a session whose draft equals the
-  // current one (e.g. both empty) wouldn't change `draft`, so the effect
-  // wouldn't re-run — and a stale/over-narrow height from the switch transition
-  // (especially with the right dock open) would leave the textarea collapsed.
+  // the height settles without a visible flicker.
+  //
+  // Collapse guard: when the right dock is open and the user switches sessions,
+  // the textarea is briefly measured mid-layout (dock width reflowing), so
+  // `scrollHeight` can come back as ~0 and the resulting inline height collapses
+  // the box to a sliver — and since `draft` didn't change (both empty), nothing
+  // re-runs to fix it. We floor the computed height at one line (MIN_TEXTAREA_PX)
+  // so a bogus tiny `scrollHeight` can never collapse it; the CSS `min-h-*` on
+  // the element is the static backstop for the same reason.
   useLayoutEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = "auto";
-    const next = Math.min(ta.scrollHeight, MAX_TEXTAREA_PX);
+    const next = Math.min(Math.max(ta.scrollHeight, MIN_TEXTAREA_PX), MAX_TEXTAREA_PX);
     ta.style.height = next + "px";
-  }, [draft, engineSessionId]);
+  }, [draft]);
 
   // Busy no longer disables the textarea: Enter queues input for the next turn.
   // It still disables side controls whose changes would be ambiguous mid-turn.
@@ -817,7 +825,7 @@ export function ChatView({
               placeholder={placeholder}
               disabled={false}
               rows={1}
-              className="max-h-[200px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
+              className="max-h-[200px] min-h-[36px] w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
             />
           </div>
 
