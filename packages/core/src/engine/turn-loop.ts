@@ -814,16 +814,28 @@ export class TurnLoop {
         this.config.onStream?.({ type: "tool_result", result });
       }
 
-      // Fire-and-forget tool use summary (non-blocking)
+      // Fire-and-forget tool use summary (non-blocking). The whole chain is
+      // best-effort observability — a thrown onStream handler, a failed dynamic
+      // import, or a rejecting summarize must never surface as an unhandled
+      // rejection (Node can treat those as fatal). Swallow at the tail. (B-2)
       if (this.config.onStream) {
-        import("./tool-summary.js").then(({ generateToolUseSummary }) => {
-          if (!this.deps.model.summarize) return;
-          generateToolUseSummary(toolCalls, results, this.deps.model.summarize).then((summary) => {
-            if (summary) {
-              this.config.onStream?.({ type: "tool_summary", summary });
-            }
+        void import("./tool-summary.js")
+          .then(({ generateToolUseSummary }) => {
+            if (!this.deps.model.summarize) return;
+            return generateToolUseSummary(toolCalls, results, this.deps.model.summarize).then(
+              (summary) => {
+                if (summary) {
+                  this.config.onStream?.({ type: "tool_summary", summary });
+                }
+              },
+            );
+          })
+          .catch((err) => {
+            this.currentTurnLog.warn("tool_summary.dispatch_failed", {
+              cat: "turn",
+              error: (err as Error).message,
+            });
           });
-        });
       }
 
       messages.push({ role: "user", content: resultBlocks });

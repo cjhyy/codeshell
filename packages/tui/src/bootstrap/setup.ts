@@ -23,12 +23,19 @@ export async function setup(options: SetupOptions): Promise<void> {
   rotateLogs();
   logger.info("setup.start", { cwd, permissionMode, level: logger.getMinLevel() });
 
-  // 1. Node.js version check (require >= 18)
-  const nodeVersion = process.version.match(/^v(\d+)\./)?.[1];
-  if (!nodeVersion || parseInt(nodeVersion) < 18) {
+  // 1. Node.js version check. Must match package.json `engines` (>=20.10) and
+  // scripts/check-node.cjs — some deps use ESM import attributes
+  // (`with { type: "json" }`) that Node 16/18 don't support, so a too-lax gate
+  // here let a 18/19 runtime boot and then fail with an obscure runtime error.
+  // (§5.6 #10)
+  const m = process.version.match(/^v(\d+)\.(\d+)\./);
+  const major = m ? parseInt(m[1], 10) : 0;
+  const minor = m ? parseInt(m[2], 10) : 0;
+  if (!m || major < 20 || (major === 20 && minor < 10)) {
     console.error(
-      chalk.bold.red("Error: Code Shell requires Node.js version 18 or higher."),
+      chalk.bold.red("Error: Code Shell requires Node.js >= 20.10."),
     );
+    console.error(chalk.red(`  current: ${process.version}`));
     process.exit(1);
   }
 
