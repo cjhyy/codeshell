@@ -35,7 +35,7 @@ import {
   readFileSync,
 } from "node:fs";
 import { StringDecoder } from "node:string_decoder";
-import { resolveSpawnTarget, buildSandboxEnv, mergeShellEnv, killProcessGroup, groupAlive } from "./spawn-common.js";
+import { resolveSpawnTarget, buildSandboxEnv, mergeShellEnv, killProcessGroup, groupAlive, defaultShellBinary } from "./spawn-common.js";
 import { RingFile } from "./ring-file.js";
 import { cleanOutput } from "./output-clean.js";
 import { notificationQueue } from "../tool-system/builtin/agent-notifications.js";
@@ -167,7 +167,7 @@ export class BackgroundShellManager {
       };
     }
 
-    const shell = opts.shell ?? process.env.SHELL ?? "/bin/bash";
+    const shell = opts.shell ?? defaultShellBinary();
     const { file, args } = resolveSpawnTarget(opts.command, {
       cwd: opts.cwd,
       shell,
@@ -182,7 +182,13 @@ export class BackgroundShellManager {
       child = spawn(file, args, {
         cwd: opts.cwd,
         env,
-        detached: true, // own process group → group-level kill reaps the tree
+        // POSIX: detached → own process group so a negative-pid signal reaps
+        // the whole tree (npm → node → vite). Windows has no process groups;
+        // detached there spawns a separate console window instead, so we keep
+        // it attached and rely on `taskkill /T` (killProcessGroup's win32
+        // branch) to reap the tree. windowsHide stops a console flashing up.
+        detached: process.platform !== "win32",
+        windowsHide: true,
         stdio: ["ignore", "pipe", "pipe"],
       });
     } catch (err) {

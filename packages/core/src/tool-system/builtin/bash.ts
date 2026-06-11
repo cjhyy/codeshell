@@ -20,7 +20,7 @@ import type { ToolContext } from "../context.js";
 import { createOffBackend } from "../sandbox/off.js";
 import { safeSpawnShell } from "../../runtime/safe-spawn.js";
 import { truncateHeadTail } from "../../runtime/truncate-output.js";
-import { buildSandboxEnv, mergeShellEnv } from "../../runtime/spawn-common.js";
+import { buildSandboxEnv, mergeShellEnv, defaultShellBinary } from "../../runtime/spawn-common.js";
 import { backgroundShellManager } from "../../runtime/background-shell.js";
 import type { ToolDefinition } from "../../types.js";
 
@@ -72,7 +72,7 @@ export async function bashTool(
 
   const timeout = (args.timeout as number) || 120_000;
   const cwd = ctx?.cwd ?? process.cwd();
-  const shell = process.env.SHELL || "/bin/bash";
+  const shell = defaultShellBinary();
   const backend = ctx?.sandbox ?? createOffBackend();
   // Project localEnvironment.env (ctx.shellEnv) layers on top of either the
   // full passthrough (off) or the hardened allowlist (sandboxed) — see

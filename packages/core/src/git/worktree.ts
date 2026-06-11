@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, symlinkSync, readdirSync, lstatSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { safeSpawnShell } from "../runtime/safe-spawn.js";
-import { buildSandboxEnv, mergeShellEnv } from "../runtime/spawn-common.js";
+import { buildSandboxEnv, mergeShellEnv, defaultShellBinary } from "../runtime/spawn-common.js";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 
 export interface WorktreeSession {
@@ -151,7 +151,7 @@ export async function runWorktreeSetup(
   const trimmed = script?.trim();
   if (!trimmed) return { skipped: true, ok: true, output: "" };
 
-  const shell = process.env.SHELL || "/bin/bash";
+  const shell = defaultShellBinary();
   const backend = opts.sandbox;
   const baseEnv = backend && backend.name !== "off" ? buildSandboxEnv() : { ...process.env };
   const env = mergeShellEnv(baseEnv, opts.shellEnv);

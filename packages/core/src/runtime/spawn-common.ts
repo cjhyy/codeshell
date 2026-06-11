@@ -111,6 +111,44 @@ export interface SpawnTarget {
 }
 
 /**
+ * Resolve the shell binary + the (file, args) needed to run a free-form
+ * `command` string through it, per platform. Centralizes the POSIX-vs-Windows
+ * shell fork that was previously hardcoded as `/bin/bash` + `["-c", command]`
+ * in five places (bash.ts, safe-spawn.ts, background-shell.ts, worktree.ts):
+ *
+ *   - POSIX: `<explicit ?? $SHELL ?? /bin/bash> -c "<command>"`
+ *   - Windows: `cmd.exe /c "<command>"` (the `-c` flag does not exist on cmd;
+ *     a bare `-c` would be taken as a filename and fail). PowerShell uses
+ *     `-Command`, but cmd.exe is the safe default present on every Windows.
+ *
+ * `$SHELL` is ignored on Windows — it is virtually never set there, and when
+ * it is (e.g. a stray value from a Unix-y env) it points at a POSIX path that
+ * doesn't exist on the host. An explicit `shell` overrides everything (a user
+ * who configured `pwsh`/`bash` knows what they want).
+ */
+export function resolveShellInvocation(
+  command: string,
+  shell?: string,
+): { file: string; args: string[] } {
+  if (process.platform === "win32") {
+    const file = shell ?? process.env.ComSpec ?? "cmd.exe";
+    // PowerShell variants take -Command; cmd.exe (and cmd-like) take /c.
+    const isPwsh = /(^|[\\/])(pwsh|powershell)(\.exe)?$/i.test(file);
+    return isPwsh ? { file, args: ["-Command", command] } : { file, args: ["/c", command] };
+  }
+  const file = shell ?? process.env.SHELL ?? "/bin/bash";
+  return { file, args: ["-c", command] };
+}
+
+/** The platform's default interactive shell binary, for spawning a bare shell
+ *  (no `-c`/`/c` command). Windows → ComSpec/cmd.exe; POSIX → $SHELL/bin/bash. */
+export function defaultShellBinary(shell?: string): string {
+  if (shell) return shell;
+  if (process.platform === "win32") return process.env.ComSpec ?? "cmd.exe";
+  return process.env.SHELL ?? "/bin/bash";
+}
+
+/**
  * Resolve the actual (file, args) for a shell `command` under an optional
  * sandbox. With a sandbox, the backend decides (e.g. seatbelt →
  * `sandbox-exec -f profile shell -c command`). Without one, plain
@@ -125,7 +163,9 @@ export function resolveSpawnTarget(
     const wrapped = opts.sandbox.wrap(command, { cwd: opts.cwd, shell: opts.shell });
     return { file: wrapped.file, args: wrapped.args, cleanup: wrapped.cleanup };
   }
-  return { file: opts.shell, args: ["-c", command] };
+  // No sandbox (the `off` backend / Windows): pick the shell + command-flag
+  // form for the platform instead of assuming POSIX `-c`.
+  return resolveShellInvocation(command, opts.shell);
 }
 
 const DEFAULT_GROUP_GRACE_MS = 3000;

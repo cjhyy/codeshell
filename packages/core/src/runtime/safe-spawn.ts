@@ -37,7 +37,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
-import { resolveSpawnTarget } from "./spawn-common.js";
+import { resolveSpawnTarget, defaultShellBinary } from "./spawn-common.js";
 
 export interface SafeSpawnOptions {
   /** Process working directory. Required — callers know their cwd; SafeSpawn does not fall back to process.cwd(). */
@@ -142,7 +142,10 @@ export function safeSpawnShell(
   command: string,
   opts: SafeSpawnShellOptions,
 ): Promise<SafeSpawnResult> {
-  const shell = opts.shell ?? "/bin/bash";
+  // Don't hardcode a POSIX default here — resolveSpawnTarget →
+  // resolveShellInvocation picks the platform shell (cmd.exe on Windows,
+  // $SHELL/bin/bash on POSIX) when opts.shell is omitted.
+  const shell = opts.shell ?? defaultShellBinary();
   const { file, args, cleanup } = resolveSpawnTarget(command, {
     cwd: opts.cwd,
     shell,
