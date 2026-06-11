@@ -69,7 +69,7 @@ import { sanitizeContent, sanitizeTaskString } from "../logging/sanitize-message
 import { TurnLoop, type TurnLoopConfig } from "./turn-loop.js";
 import type { AskUserFn } from "../tool-system/builtin/ask-user.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
-import { SettingsManager, userHome, type SettingsScope } from "../settings/manager.js";
+import { SettingsManager, userHome, noRepoDir, type SettingsScope } from "../settings/manager.js";
 import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
 import {
   isFeatureEnabled,
@@ -77,7 +77,13 @@ import {
   type FeatureFlagName,
   type FeatureFlagOverrides,
 } from "../settings/feature-flags.js";
-import { effectiveDisabledList, effectiveBuiltinLists } from "../capability-control/overlay.js";
+import {
+  effectiveDisabledList,
+  effectiveBuiltinLists,
+  whitelistDisabledList,
+} from "../capability-control/overlay.js";
+import { scanSkills } from "../skills/scanner.js";
+import { readInstalledPlugins } from "../plugins/installedPlugins.js";
 import { FileHistory } from "../session/file-history.js";
 import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
@@ -2862,6 +2868,25 @@ export class Engine {
       const overrides = cwd
         ? (sm.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides | undefined)
         : undefined;
+      // no-repo "conversation" scope: INVERT skill/plugin filtering to a
+      // whitelist (default-all-off, only explicit "on" survives). Only this
+      // fixed cwd flips; every real project keeps the denylist below (zero
+      // regression). agent/mcp/builtin are NOT inverted. See
+      // docs/superpowers/specs/2026-06-11-conversation-settings-page-design.md §3.
+      if (cwd && cwd === noRepoDir()) {
+        // Full set of installed names — pass NO disabled filters so scanSkills
+        // returns every skill (incl. plugin-namespaced "<plugin>:<skill>"),
+        // then whitelist down to the explicit "on" set.
+        const allSkillNames = scanSkills(cwd).map((s) => s.name);
+        const allPluginNames = Object.keys(readInstalledPlugins().plugins).map((key) => {
+          const at = key.lastIndexOf("@");
+          return at > 0 ? key.slice(0, at) : key;
+        });
+        return {
+          disabledSkills: whitelistDisabledList(allSkillNames, overrides?.skills),
+          disabledPlugins: whitelistDisabledList(allPluginNames, overrides?.plugins),
+        };
+      }
       return {
         disabledSkills: effectiveDisabledList(settings.disabledSkills ?? [], overrides?.skills),
         disabledPlugins: effectiveDisabledList(settings.disabledPlugins ?? [], overrides?.plugins),

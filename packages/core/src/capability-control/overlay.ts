@@ -83,6 +83,35 @@ export function effectiveDisabledList(
 }
 
 /**
+ * Whitelist (opt-in) variant of {@link effectiveDisabledList}, used only for
+ * the no-repo "conversation" scope where skill/plugin default-state is INVERTED:
+ * everything is disabled UNLESS the project override bucket explicitly marks it
+ * `"on"`. This is the opposite of the normal denylist (default-enabled) model.
+ *
+ * Given the full set of installed names and an override bucket:
+ *   - a name explicitly `"on"`  → kept enabled (NOT in the returned list)
+ *   - everything else (`"off"`, inherit/absent, garbage) → disabled (in the list)
+ *
+ * The returned list is the effective disabled list to feed run-time
+ * skill/plugin filtering. Order follows `allInstalledNames`; duplicates are
+ * collapsed.
+ */
+export function whitelistDisabledList(
+  allInstalledNames: string[],
+  bucket: Record<string, CapabilityOverride> | undefined,
+): string[] {
+  const disabled: string[] = [];
+  const seen = new Set<string>();
+  for (const name of allInstalledNames) {
+    if (seen.has(name)) continue;
+    seen.add(name);
+    if (bucket?.[name] === "on") continue; // explicit allow → stays enabled
+    disabled.push(name);
+  }
+  return disabled;
+}
+
+/**
  * Fold a project builtin override bucket into the global enabled/disabled
  * builtin-tool lists, producing the lists to feed resolveBuiltinToolNames
  * (whose effective set is `preset.builtinTools ∪ enabled − disabled`).

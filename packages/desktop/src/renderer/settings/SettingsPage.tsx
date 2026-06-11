@@ -17,6 +17,7 @@ import {
   Brain,
   Layers,
   Smartphone,
+  MessageSquare,
 } from "lucide-react";
 import { ModelSection } from "./ModelSection";
 import { MemorySection } from "./MemorySection";
@@ -26,6 +27,7 @@ import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { AgentsSection } from "./AgentsSection";
 import { AppearanceSection } from "./AppearanceSection";
 import { CapabilitiesOverviewSection } from "./CapabilitiesOverviewSection";
+import { ConversationSettingsSection } from "./ConversationSettingsSection";
 import {
   ArchivedConversationsSection,
   ConnectionsSection,
@@ -54,6 +56,7 @@ type ModuleId =
   | "connections"
   | "git"
   | "environment"
+  | "conversation"
   | "mobile-remote"
   | "archived"
   | "capabilities"
@@ -109,6 +112,7 @@ const MODULE_GROUPS: ModuleGroup[] = [
       { id: "connections", label: "连接", Icon: Wifi },
       { id: "git", label: "Git", Icon: GitBranch },
       { id: "environment", label: "本地环境", Icon: Terminal },
+      { id: "conversation", label: "对话", Icon: MessageSquare },
       { id: "mobile-remote", label: "手机遥控", Icon: Smartphone },
     ],
   },
@@ -255,6 +259,7 @@ export function SettingsPage({
               // then edit its setup/cleanup/env/sandbox.
               <EnvironmentSection repos={repos} />
             )}
+            {active === "conversation" && <ConversationSettingsSection />}
             {active === "mobile-remote" && <MobileRemoteSection />}
             {active === "plugins-skills" && (
               <ExtensionsPage activeRepoPath={activeRepoPath} showDiscover={false} />

@@ -468,6 +468,13 @@ export interface CodeshellApi {
   ): Promise<{ ran: boolean; summary: string }>;
 
   // Phase 5 — settings / sessions / logs.
+  /**
+   * Authoritative no-repo conversation cwd (~/.code-shell/no-repo) resolved by
+   * main. The renderer is a thin client and must use this rather than
+   * recomputing homedir(), so the cwd it writes capabilityOverrides to matches
+   * the worker's runtime cwd byte-for-byte.
+   */
+  noRepoCwd(): Promise<string>;
   getSettings(scope: "user" | "project", cwd?: string): Promise<Record<string, unknown> | null>;
   updateSettings(scope: "user" | "project", patch: Record<string, unknown>, cwd?: string): Promise<void>;
   listSessions(): Promise<DesktopSessionSummary[]>;

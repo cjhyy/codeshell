@@ -28,6 +28,17 @@ export function userHome(): string {
   return process.env.HOME ?? homedir();
 }
 
+/**
+ * The fixed cwd used for "no-repo" pure-chat conversations (a chat not bound to
+ * any code project). Same location as desktop's `resolveNoRepoCwd`
+ * (`join(homedir(), ".code-shell", "no-repo")`), but built from {@link userHome}
+ * so tests can isolate it by overriding `$HOME`. The engine compares
+ * `config.cwd === noRepoDir()` to flip skill/plugin filtering to whitelist mode.
+ */
+export function noRepoDir(): string {
+  return join(userHome(), ".code-shell", "no-repo");
+}
+
 export type SettingsSourceName = "managed" | "user" | "project" | "local" | "flag";
 
 /**

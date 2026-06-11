@@ -34,7 +34,7 @@ import { parseSnapshotAppend } from "./parseStreamLine.js";
  * `~/.code-shell/no-repo` is created on demand and kept stable across
  * runs so the worker always lands in a contained directory.
  */
-function resolveNoRepoCwd(): string {
+export function resolveNoRepoCwd(): string {
   const dir = join(homedir(), ".code-shell", "no-repo");
   try { mkdirSync(dir, { recursive: true }); } catch { /* best-effort */ }
   return dir;

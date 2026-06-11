@@ -6,6 +6,7 @@ import {
   overrideFor,
   effectiveDisabledList,
   effectiveBuiltinLists,
+  whitelistDisabledList,
 } from "./overlay.js";
 
 describe("applyOverride matrix (spec §12.2)", () => {
@@ -81,6 +82,37 @@ describe("effectiveDisabledList", () => {
   });
   test("inherit leaves the baseline alone", () => {
     expect(effectiveDisabledList(["a"], { a: "inherit", b: "inherit" })).toEqual(["a"]);
+  });
+});
+
+describe("whitelistDisabledList (no-repo opt-in inversion)", () => {
+  test("empty bucket → everything disabled (default-all-off)", () => {
+    expect(whitelistDisabledList(["a", "b", "c"], undefined)).toEqual(["a", "b", "c"]);
+    expect(whitelistDisabledList(["a", "b"], {})).toEqual(["a", "b"]);
+  });
+  test("{a:'on'} → all but a disabled (whitelist)", () => {
+    expect(new Set(whitelistDisabledList(["a", "b", "c"], { a: "on" }))).toEqual(
+      new Set(["b", "c"]),
+    );
+  });
+  test("{a:'off'} → a is also disabled (off still counts as off)", () => {
+    expect(new Set(whitelistDisabledList(["a", "b"], { a: "off" }))).toEqual(
+      new Set(["a", "b"]),
+    );
+  });
+  test("inherit / garbage values stay disabled (only explicit 'on' allows)", () => {
+    expect(new Set(whitelistDisabledList(["a", "b"], { a: "inherit" as any, b: "junk" as any }))).toEqual(
+      new Set(["a", "b"]),
+    );
+  });
+  test("an 'on' for a name not installed is harmless (no phantom entry)", () => {
+    expect(whitelistDisabledList(["a"], { ghost: "on" })).toEqual(["a"]);
+  });
+  test("collapses duplicate installed names", () => {
+    expect(whitelistDisabledList(["a", "a", "b"], { a: "on" })).toEqual(["b"]);
+  });
+  test("empty install set → empty disabled list", () => {
+    expect(whitelistDisabledList([], { a: "on" })).toEqual([]);
   });
 });
 

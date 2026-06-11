@@ -389,6 +389,9 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("memory:delete", level, scope, name, cwd),
   runDream: (level: string, cwd?: string) =>
     ipcRenderer.invoke("memory:dream", level, cwd),
+  /** Authoritative no-repo conversation cwd (~/.code-shell/no-repo) from main.
+   *  Renderer must use this, never recompute homedir() itself. */
+  noRepoCwd: (): Promise<string> => ipcRenderer.invoke("no-repo:cwd"),
   getSettings: (scope: "user" | "project", cwd?: string) =>
     ipcRenderer.invoke("settings:get", scope, cwd),
   updateSettings: (scope: "user" | "project", patch: Record<string, unknown>, cwd?: string) =>

@@ -23,7 +23,7 @@ import {
   resolveExternalAgentConfig,
   getMergedCatalog,
 } from "@cjhyy/code-shell-core";
-import { AgentBridge } from "./agent-bridge.js";
+import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
 import {
   setAutomationScheduler,
@@ -1587,6 +1587,11 @@ ipcMain.handle("fs:exists", async (_e, root: string, path: string) => {
   if (typeof path !== "string" || !path) return false;
   return fsFileExists(root, path);
 });
+
+// Authoritative no-repo conversation cwd (~/.code-shell/no-repo). The renderer
+// is a thin client and must NOT recompute homedir() itself; it asks main so the
+// path it writes capabilityOverrides to is byte-identical to the worker cwd.
+ipcMain.handle("no-repo:cwd", async () => resolveNoRepoCwd());
 
 ipcMain.handle("settings:get", async (_e, scope: SettingsScope, cwd?: string) => {
   if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
