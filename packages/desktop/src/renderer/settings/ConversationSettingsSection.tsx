@@ -102,7 +102,7 @@ export function ConversationSettingsSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setOverride = async (cap: CapabilityDescriptor, state: "on" | "inherit") => {
+  const setOverride = async (cap: CapabilityDescriptor, state: "on" | "off" | "inherit") => {
     if (!cwd) return;
     setSavingId(cap.id);
     setError(null);
@@ -173,18 +173,24 @@ export function ConversationSettingsSection() {
   };
 
   const renderBuiltinRow = (cap: CapabilityDescriptor) => {
-    const disabled = isCwdDependentBuiltin(cap);
+    const cwdLocked = isCwdDependentBuiltin(cap);
+    const busy = savingId === cap.id || bulkBusy;
+    // Builtins default ON in the conversation scope (core does not whitelist
+    // them); the toggle writes an explicit `off` override to turn one off, and
+    // `inherit` to return it to the default-on state. So "on" = not explicitly
+    // off. cwd-dependent builtins stay locked off (no project dir in chat).
+    const on = !cwdLocked && cap.projectOverride !== "off";
     return (
       <div
         key={cap.id}
         className={cn(
           "flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2.5",
-          disabled && "opacity-60",
+          cwdLocked && "opacity-60",
         )}
       >
         <div className="min-w-0">
           <div className="truncate text-sm text-foreground">{cap.name}</div>
-          {disabled ? (
+          {cwdLocked ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Lock size={11} />
               对话无项目目录,不可用
@@ -195,11 +201,12 @@ export function ConversationSettingsSection() {
             )
           )}
         </div>
-        {disabled ? (
-          <Switch checked={false} disabled aria-label={`${cap.name}(不可用)`} />
-        ) : (
-          <span className="shrink-0 text-xs text-muted-foreground">默认开</span>
-        )}
+        <Switch
+          checked={on}
+          disabled={cwdLocked || busy}
+          aria-label={cwdLocked ? `${cap.name}(不可用)` : `${cap.name} 开关`}
+          onCheckedChange={(v) => void setOverride(cap, v ? "inherit" : "off")}
+        />
       </div>
     );
   };
@@ -274,7 +281,7 @@ export function ConversationSettingsSection() {
               <span className="text-muted-foreground/70">{builtins.length}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              内置工具保持默认开;依赖项目目录的工具在纯聊天里不可用。
+              内置工具默认开,可手动关掉不需要的;依赖项目目录的工具在纯聊天里不可用。
             </p>
             {builtins.length === 0 ? (
               <p className="text-sm text-muted-foreground">无内置工具。</p>
