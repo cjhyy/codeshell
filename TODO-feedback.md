@@ -92,6 +92,24 @@
 - **截图**:`docs/assets/beta1-smoke/step13.png`
 - **备注**:已修 = 抽 `openFileTarget(e, {path,cwd,line,isScheme})` 共享 helper(平点→`codeshell:open-file` 面板 / ⌘Ctrl→`openPath` OS),`PathLink` 与 `InlineImageLink` 那 3 处裸 `openPath` 全改用它(缩略图开 lightbox 不动)。Markdown 6 测试过、tsc 绿。与记忆 [[project_inline_code_path_links]] 相关。
 
+### 🟢 [2026-06-11] 文件改动卡片(FilesChangedCard)的文件名点击仍走系统默认应用(#13 漏网处)
+- **现象**:桌面端点「文件改动卡片」里的文件名,**自动用系统默认应用打开**,没进内置文件面板。
+- **根因**:#13 当时只修了「回答里 Markdown 路径」,但**文件改动卡片是独立的另一处**——`FilesChangedCard.tsx:154` 文件名 `onClick` **裸调 `window.codeshell.openPath`、无修饰键判断**,平点就进 OS。同 #13 一类、不同组件。
+- **状态**:🟢 已修(2026-06-11)
+- **备注**:把 #13 的 `openFileTarget` 从 `Markdown.tsx` 内部**提取到共享层 `chat/openWith.ts`**(连带新增 `openInternalPanel` 动作),`Markdown.tsx` 改 import 共享版(删本地重复定义),`FilesChangedCard` 文件名改 `onClick={(e)=>openFileTarget(e,{path,cwd})}`(平点→面板 / ⌘Ctrl→OS)。desktop tsc 绿、Markdown+pathlink 33 测试过、desktop 676 全过。关联 [[project_inline_code_path_links]]。
+
+### 🟢 [2026-06-11] 右边文件面板:AI 更新了文件,面板内容不刷新
+- **现象**:右侧文件面板打开某文件后,AI 在对话里改了这个文件,**面板还显示旧内容**(不刷新);目录新增/删除文件也不反映。
+- **根因**:`FilesPanel` 是**纯 pull、读一次、无变更信号**——`TextPreview`/`ImagePreview` 的 `readFileContent` 只在 `[root,path]` 变时跑,同一文件被外部改动无感知;`DirNode.readDir` 同理只在 `[root,dir]` 变时跑。与「后台 shell 不回流」同类病。
+- **状态**:🟢 已修(2026-06-11,按方案:挂文件改动事件 + 手动刷新按钮)
+- **备注**:已修 = ① `App.tsx` 在(agentId-less 的)`turn_complete`/`error` 处 `dispatchEvent(codeshell:files-changed)`(轮结束=文件已落盘的信号,同 `codeshell:open-file` 事件风格,纯 renderer);② `FilesPanel` 加 `reloadNonce` state,监听该事件 +1,并加**手动刷新按钮**(RefreshCw)兜底;nonce 串进 `DirNode.readDir`(目录增删反映)与 `FileViewer`→`TextPreview`/`ImagePreview` 的读取 effect deps(重读当前文件)。坑:同文件 reload 不能 blank 成「加载中…」(否则每轮闪空)→ 拆成「path 变才清空 / reload 只就地换内容」两个 effect。desktop tsc+build:renderer 绿、676 测试全过。
+
+### 🟢 [2026-06-11] 回答里「裸文件名」点不动(对齐 Codex 的路径链接)
+- **现象**:用户看 Codex 截图里正文写 `remote-host-manager.ts (line 147)`、`dev.ts (line 53)` 这种**裸文件名**就是可点蓝链接,问 codeshell 为什么没有、是不是 prompt 写的。
+- **核实(非 prompt)**:链接是 `markdown/remarkPathLinks.ts`(remark 插件,已接进 `Markdown.tsx:92` 管线、assistant 回答走 `AssistantMessageView`→`Markdown`)**自动识别路径文本**生成的,与 prompt 无关。真因=codeshell 的 `BARE` 正则**强制要求路径含 `/`**(目录),正文里的裸文件名(无目录、非反引号包裹)不认;反引号包裹的裸文件名(`` `dev.ts` ``,走 `INLINE_CODE_PATH_RE`+白名单)本就认。验证:`packages/.../x.ts:147` / `x.ts (line 147)`(带目录)✅,`remote-host-manager.ts (line 147)`(裸名)❌。
+- **状态**:🟢 已修(2026-06-11,用户选「放宽但限定白名单扩展名」)
+- **备注**:已修 = 给 `PATH_LINE_RE` 加第三个分支 `BARE_FILENAME`(`name.ext` 无目录,支持 `:line` 与 `(line N)` 两种后缀),match 后用 `bareFilenameExtOk()` 按现成 `KNOWN_FILE_EXT` 白名单过滤——`dev.ts`/`package.json`/`vite.config.ts` 认,`v1.2`/`obj.method`/`Array.from`/`README`(无扩展)不认(与 inlineCode 同一守卫);leading 边界禁前导 `/`·`.` 避免重复捕获 `a/b.ts` 的尾巴;白名单不过的 match 回吐成纯文本不静默丢弃。新增 7 个用例(链接裸名+CJK 边界+(line N)+白名单负例),Markdown/pathlink 40 过、desktop tsc+682 全过。关联 [[project_inline_code_path_links]]。
+
 ### 🟢 [2026-06-09] 文件面板里 README 的图片不渲染(本地相对路径 + 原始 HTML)
 - **现象**:在 app 内置文件面板预览 README,顶部 `<p align="center"><img src="docs/images/codeshell-dog-icon.png" …></p>` 的图**不显示**(图片文件确实在)。
 - **根因(已定位,两叠加)**:① `FilesPanel` 渲染 md 时 `<Markdown text=… />` **没传 cwd** → 相对图路径无法解析(且 renderer 不能走 `file://`,CSP `img-src 'self' data:`,本地图须经 `images:readDataUrl` 转 base64,见 #13/[[project_inline_code_path_links]]);② README 用的是**原始 HTML `<img>`**,而 `Markdown` 没装 `rehype-raw` → react-markdown 默认丢弃原始 HTML,`img` 组件 handler 根本不触发。
@@ -116,10 +134,11 @@
 - **状态**:🟢 已修(2026-06-09)
 - **备注**:已修 = ① 两个叉真因 = `Lightbox` 自身渲染了两个关闭按钮(工具栏内 `:182` + 浮动 fixed `:219`)→ 删掉浮动那个 + 清理死 CSS(`.lightbox-close` 全删,含 <720px media query);② ChatView 附件缩略图加 `onClick` → 打开 `Lightbox`(gallery 走全部 attachments,与 MessageStream 一致)。narrow-layout 测试改为断言「无 .lightbox-close 残留」,desktop 551 过、tsc+build 绿。
 
-### 🟡 [2026-06-09] Undo 是文件维度整体回滚,非按对话轮
+### 🟢 [2026-06-09→06-11] Undo 是文件维度整体回滚,非按对话轮 → 已改轮级
 - **现象**(#8):一次 undo 成功;但分两轮改的内容,undo 第一轮时**直接回滚了文件**(文件维度),而非按那一轮的改动粒度。问:codex 怎么做的?
-- **状态**:🟡 待讨论(产品决策:undo 粒度 = 文件 vs turn-diff)
-- **备注**:现状单步 undo(cc25b03)是文件级。需定 undo 语义后再改。
+- **调研(2026-06-11)**:**codex CLI 根本没有 undo** —— 它曾有实验性 `/undo`,因"用得少、设计给很多用户造成问题"被官方移除,`/rewind`/rollback 请求也被 closed as not planned,现在纯靠 git + 让模型自己撤。所以 codex **不是参考对象**。真正该对齐的是 **Claude Code / Cursor 的「按 prompt/轮」语义**(自有文件快照、不依赖 git)——而我们的 `FileHistory` 架构跟 Claude Code 同构,只差给快照打"轮"标签。
+- **状态**:🟢 已修(2026-06-11,**单步轮级**;按用户决策:redo / 连撤多轮 UI / desktop 入口 / CC 的「仅代码|仅对话|都恢复」三档 **留后**)
+- **备注**:已修 = ① `SessionState.turnSeq`(一次 user 发送 = 一轮,区别于 `turnCount` 的 turn-loop 迭代数),`engine.run` 入口两路径汇合处 +1;② `FileSnapshot.turnSeq` + `saveSnapshot(path, turnSeq?)`,`file_history_backup` hook 读 `session.state.turnSeq` 打标(dedup 改 per-turn:同内容跨轮要记新基线);③ 纯函数 `latestTurnUndoTargets`(取最大 turnSeq 那轮、每文件**轮内最早**快照→轮内重复改也回到轮始基线;`turnSeq ?? -Infinity` 让 legacy 无标快照退化成整会话不崩);④ `FileHistory.undoLatestTurn(targets)` restore 后**按 turnSeq 删掉该轮全部快照**(否则快照永不消费=连撤同一轮;**坑**:restore 会先无标 saveSnapshot 备份当前内容,所以靠删标签而非时间戳消费),下次 `/undo` 自动剥上一轮;⑤ `/undo` 默认从单文件改「撤最近一轮所有文件 + 多文件 diff 预览」,`/undo all` 不动。测试:undo-target 13 + undo-integration 5(含两轮剥离 e2e)、core 1116 全过、tui tsc 绿、core 已 rebuild。关联 [[project_undo_turn_level]]。
 
 ### 🟡 [2026-06-09] 右上角图标不更新
 - **现象**(#10):某操作后右上角图标没更新(状态未刷新)。
