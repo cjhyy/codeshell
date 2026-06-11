@@ -40,6 +40,8 @@ import {
   repoKeyOf,
   migrateBucketOverride,
   clearBucketOverride,
+  loadPanelState,
+  savePanelState,
   type SessionIndex,
   type SessionSummary,
 } from "./transcripts";
@@ -1670,6 +1672,47 @@ function App() {
   // Open the dock and request a tab of `kind` (used by hotkeys, palette, cards).
   const openPanel = (kind: PanelTab): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind, open: true }));
+
+  // Per-session panel state (open/tabs/activeId). The dock rides with the
+  // conversation: switching sessions restores that session's panels. Driven
+  // off `activeBucket` (= bucketKey(activeRepoId, activeSessionId)), which is
+  // the SINGLE derived key that changes on EVERY active-session switch — so
+  // this covers every setActiveSession path (select / new / draft / delete /
+  // automation) without instrumenting each call site.
+  //
+  // Race control. When `activeBucket` changes BOTH effects below re-run in the
+  // same pass. The restore effect runs first and queues setState for the new
+  // session's values, but those don't apply until the NEXT render — so on this
+  // pass the save effect still sees the OLD session's panel values. Writing
+  // them under the new `activeBucket` would corrupt the new session's saved
+  // state. To prevent that, the restore effect sets `skipSaveForRef` to the
+  // bucket it just restored; the save effect skips exactly one run for that
+  // bucket (the transition tick) and then resumes. After that, every change to
+  // the three panel states is the user's and gets persisted. panelWidth stays
+  // global and is NOT keyed here.
+  const skipSaveForRef = useRef<string | null>(activeBucket);
+  useEffect(() => {
+    const snap = loadPanelState<PanelTab>(activeBucket);
+    setPanelTabs(snap.tabs);
+    setPanelActiveId(snap.activeId);
+    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: snap.open }));
+    skipSaveForRef.current = activeBucket;
+    // Only re-run when the active session/repo bucket changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBucket]);
+  useEffect(() => {
+    // Eat the transition tick after a restore so we don't write the previous
+    // session's leftover values under the freshly-switched bucket.
+    if (skipSaveForRef.current === activeBucket) {
+      skipSaveForRef.current = null;
+      return;
+    }
+    savePanelState<PanelTab>(activeBucket, {
+      open: panelRequest.open,
+      tabs: panelTabs,
+      activeId: panelActiveId,
+    });
+  }, [panelTabs, panelActiveId, panelRequest.open, activeBucket]);
 
   // Dock width (px), persisted. The divider on the dock's left edge drags it.
   const PANEL_MIN = 320;

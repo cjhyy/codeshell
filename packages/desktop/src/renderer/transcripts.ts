@@ -133,6 +133,63 @@ function transcriptKey(repoId: string | null, sessionId: string): string {
 }
 
 /**
+ * Per-(repo, session) right-dock panel state (open/tabs/activeId). The dock's
+ * visibility and tab set ride with the conversation: switching sessions
+ * restores that session's panels. `panelWidth` stays global (not keyed here).
+ *
+ * Draft sessions (null sessionId) collapse to the shared `<repo>::_none_` slot
+ * via bucketKey, matching how permission/goal overrides bucket drafts.
+ */
+export interface PanelStateSnapshot<K extends string = string> {
+  open: boolean;
+  tabs: { id: string; kind: K }[];
+  activeId: string | null;
+}
+
+const EMPTY_PANEL_STATE: PanelStateSnapshot = { open: false, tabs: [], activeId: null };
+
+function panelStateKey(bucket: string): string {
+  return `codeshell.panelState.${bucket}`;
+}
+
+/** Load the saved panel state for a bucket, or a closed/empty default. */
+export function loadPanelState<K extends string = string>(bucket: string): PanelStateSnapshot<K> {
+  try {
+    if (typeof localStorage === "undefined") return { ...(EMPTY_PANEL_STATE as PanelStateSnapshot<K>) };
+    const raw = localStorage.getItem(panelStateKey(bucket));
+    if (!raw) return { ...(EMPTY_PANEL_STATE as PanelStateSnapshot<K>) };
+    const parsed = JSON.parse(raw) as Partial<PanelStateSnapshot<K>>;
+    const tabs = Array.isArray(parsed.tabs)
+      ? parsed.tabs.filter(
+          (t): t is { id: string; kind: K } =>
+            !!t && typeof t.id === "string" && typeof (t as { kind?: unknown }).kind === "string",
+        )
+      : [];
+    return {
+      open: parsed.open === true,
+      tabs,
+      activeId: typeof parsed.activeId === "string" ? parsed.activeId : null,
+    };
+  } catch {
+    return { ...(EMPTY_PANEL_STATE as PanelStateSnapshot<K>) };
+  }
+}
+
+/** Persist a bucket's panel state. Closed + empty clears the key to avoid clutter. */
+export function savePanelState<K extends string>(bucket: string, state: PanelStateSnapshot<K>): void {
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (!state.open && state.tabs.length === 0) {
+      localStorage.removeItem(panelStateKey(bucket));
+      return;
+    }
+    localStorage.setItem(panelStateKey(bucket), JSON.stringify(state));
+  } catch {
+    // localStorage may be unavailable (SSR / private mode) — best effort.
+  }
+}
+
+/**
  * One-shot wipe of legacy session data. Pre-2026-05-26 the renderer
  * could (a) hand the same `s-…` id to multiple BrowserWindows and (b)
  * route stream events to the wrong bucket, so on-disk transcripts and

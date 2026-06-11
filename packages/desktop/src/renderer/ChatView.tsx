@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CornerDownRight, Paperclip, Mic, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
@@ -207,13 +207,19 @@ export function ChatView({
     liveDraftStash.current = "";
   }, [activeRepoId]);
 
-  useEffect(() => {
+  // Auto-size the composer to its content. useLayoutEffect runs before paint so
+  // the height settles without a visible flicker. We also recompute on SESSION
+  // switch (engineSessionId): switching to a session whose draft equals the
+  // current one (e.g. both empty) wouldn't change `draft`, so the effect
+  // wouldn't re-run — and a stale/over-narrow height from the switch transition
+  // (especially with the right dock open) would leave the textarea collapsed.
+  useLayoutEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = "auto";
     const next = Math.min(ta.scrollHeight, MAX_TEXTAREA_PX);
     ta.style.height = next + "px";
-  }, [draft]);
+  }, [draft, engineSessionId]);
 
   // Busy no longer disables the textarea: Enter queues input for the next turn.
   // It still disables side controls whose changes would be ambiguous mid-turn.
