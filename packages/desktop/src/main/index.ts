@@ -123,6 +123,7 @@ import {
   installFromGithub,
   type InstallFromGithubInput,
 } from "./github-skill-service.js";
+import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
 import { initUpdater, checkForUpdate, quitAndInstall, getLastStatus } from "./updater.js";
@@ -937,6 +938,12 @@ ipcMain.handle(
     installPluginForUi(pluginName, marketplaceName),
 );
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
+ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
+  checkSkillUpdateEntry(filePath),
+);
+ipcMain.handle("skills:update", async (_e, filePath: string) =>
+  updateSkillEntry(filePath),
+);
 ipcMain.handle("files:search", async (_e, cwd: string, query: string) => {
   if (typeof cwd !== "string") throw new Error("files:search requires cwd");
   const q = typeof query === "string" ? query : "";

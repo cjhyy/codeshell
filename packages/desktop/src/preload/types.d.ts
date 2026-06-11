@@ -555,6 +555,23 @@ export interface CodeshellApi {
     name?: string,
   ): Promise<InstalledSkill>;
   uninstallSkill(filePath: string, source: "user" | "project" | "plugin"): Promise<void>;
+  /**
+   * Check if a GitHub-sourced skill has a newer commit upstream (network;
+   * never throws). Locally-installed skills resolve to updateAvailable:false.
+   */
+  checkSkillUpdate(filePath: string): Promise<{
+    filePath: string;
+    updateAvailable: boolean;
+    currentCommit?: string;
+    latestCommit?: string;
+    reason?: string;
+  }>;
+  /**
+   * One-click re-download + atomic replace of a GitHub-sourced skill (the
+   * manual "update" button). Rejects on failure (UI alerts); a failed update
+   * keeps the old version on disk.
+   */
+  updateSkill(filePath: string): Promise<{ updated: boolean; reason: string }>;
   listAgents(cwd: string): Promise<AgentSummary[]>;
   readAgentBody(filePath: string): Promise<string>;
   saveAgent(

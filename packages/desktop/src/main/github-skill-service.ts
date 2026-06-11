@@ -61,6 +61,35 @@ const USER_AGENT = "code-shell-desktop";
 const INSPECT_TIMEOUT_MS = 15_000;
 const INSTALL_TIMEOUT_MS = 60_000;
 
+/** Filename of the source-meta sidecar written next to an installed SKILL.md. */
+export const SKILL_META_FILE = ".cs-skill-meta.json";
+
+/**
+ * Source provenance recorded next to a GitHub-installed SKILL.md so the skill
+ * can be update-checked later. Locally-installed skills (plain directory) get
+ * no sidecar and are therefore not update-checkable — by design.
+ */
+export interface SkillSourceMeta {
+  kind: "github";
+  owner: string;
+  repo: string;
+  /** Concrete ref used at install (inspection.url.ref || defaultBranch). */
+  ref: string;
+  /** Path of SKILL.md (or its dir) in the repo, e.g. "skills/foo". */
+  dirInRepo: string;
+  /** Commit sha of `ref` at install time. */
+  commit: string;
+  installedAt: string;
+}
+
+export interface SkillUpdateCheck {
+  filePath: string;
+  updateAvailable: boolean;
+  currentCommit?: string;
+  latestCommit?: string;
+  reason?: string;
+}
+
 export function parseGithubUrl(raw: string): GithubUrlInfo {
   if (!raw) throw new Error("URL 不能为空");
   let url: URL;
@@ -143,6 +172,29 @@ async function getRepoTree(
     `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`,
     INSPECT_TIMEOUT_MS,
   )) as TreeResponse;
+}
+
+interface CommitResponse {
+  sha: string;
+}
+
+/**
+ * Resolve the current commit sha that `ref` points at. Uses the commits
+ * endpoint, which returns `{ sha, ... }` for the tip commit of a branch/tag
+ * (or the commit itself when ref is already a sha).
+ */
+export async function getRefCommit(
+  info: GithubUrlInfo,
+  ref: string,
+): Promise<string> {
+  const res = (await fetchJson(
+    `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}/commits/${encodeURIComponent(ref)}`,
+    INSPECT_TIMEOUT_MS,
+  )) as CommitResponse;
+  if (!res || typeof res.sha !== "string" || !res.sha) {
+    throw new Error("GitHub commits 响应缺少 sha");
+  }
+  return res.sha;
 }
 
 async function getRawFile(
@@ -265,7 +317,7 @@ export async function inspectRepo(
  * for each file. This avoids a tarball dependency and only pulls the files
  * we actually need (good when the source is a monorepo).
  */
-async function downloadSkillTree(
+export async function downloadSkillTree(
   info: GithubUrlInfo,
   ref: string,
   dirInRepo: string,
@@ -329,7 +381,226 @@ export async function installFromGithub(
     } catch {
       throw new Error(`下载结果缺少 SKILL.md：${selected.dirInRepo}`);
     }
-    return await installSkillFromDirectory(tmpRoot, scope, cwd, installName || selected.name);
+    const installed = await installSkillFromDirectory(
+      tmpRoot,
+      scope,
+      cwd,
+      installName || selected.name,
+    );
+
+    // Record source provenance so the skill is update-checkable later. A
+    // failure to resolve the commit sha must NOT fail the install — we just
+    // skip the sidecar (the skill still installs; it just won't be
+    // update-checkable).
+    try {
+      const commit = await getRefCommit(inspection.url, ref);
+      const meta: SkillSourceMeta = {
+        kind: "github",
+        owner: inspection.url.owner,
+        repo: inspection.url.repo,
+        ref,
+        dirInRepo: selected.dirInRepo,
+        commit,
+        installedAt: new Date().toISOString(),
+      };
+      await fs.writeFile(
+        path.join(path.dirname(installed.filePath), SKILL_META_FILE),
+        JSON.stringify(meta, null, 2),
+        "utf8",
+      );
+    } catch (e) {
+      dlog("main", "github-skill-meta-write-failed", {
+        name: installed.name,
+        error: (e as Error).message,
+      });
+    }
+
+    return installed;
+  } finally {
+    await fs.rm(tmpRoot, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+// ─── update check ────────────────────────────────────────────────────────────
+
+/**
+ * Check whether a GitHub-sourced skill has a newer commit upstream, WITHOUT
+ * re-downloading. Reads the `.cs-skill-meta.json` sidecar next to the given
+ * SKILL.md and compares the recorded install commit against the ref's current
+ * tip. Locally-installed skills (no sidecar), unreadable/foreign sidecars, and
+ * fetch failures all resolve to `updateAvailable: false` with an explanatory
+ * `reason` rather than throwing.
+ */
+export async function checkSkillUpdate(
+  filePath: string,
+): Promise<SkillUpdateCheck> {
+  const metaPath = path.join(path.dirname(filePath), SKILL_META_FILE);
+
+  let raw: string;
+  try {
+    raw = await fs.readFile(metaPath, "utf8");
+  } catch {
+    return { filePath, updateAvailable: false, reason: "no source metadata" };
+  }
+
+  let meta: SkillSourceMeta;
+  try {
+    meta = JSON.parse(raw) as SkillSourceMeta;
+  } catch {
+    return { filePath, updateAvailable: false, reason: "no source metadata" };
+  }
+
+  if (!meta || meta.kind !== "github") {
+    return { filePath, updateAvailable: false, reason: "not a github source" };
+  }
+
+  let latest: string;
+  try {
+    latest = await getRefCommit(
+      { owner: meta.owner, repo: meta.repo, ref: meta.ref },
+      meta.ref,
+    );
+  } catch (e) {
+    return {
+      filePath,
+      updateAvailable: false,
+      currentCommit: meta.commit,
+      reason: String((e as Error)?.message ?? e),
+    };
+  }
+
+  const updateAvailable = latest.toLowerCase() !== meta.commit.toLowerCase();
+  return {
+    filePath,
+    updateAvailable,
+    currentCommit: meta.commit,
+    latestCommit: latest,
+  };
+}
+
+// ─── update (apply) ──────────────────────────────────────────────────────────
+
+export interface SkillUpdateResult {
+  updated: boolean;
+  reason: string;
+}
+
+/**
+ * Seam for testing: the two network calls `updateSkillFromSource` makes. Tests
+ * inject canned implementations so the atomic-replace + rollback + sidecar
+ * rewrite logic can be exercised without touching the network. Production
+ * passes the real `getRefCommit` / `downloadSkillTree`.
+ */
+export interface SkillUpdateDeps {
+  getRefCommit: (info: GithubUrlInfo, ref: string) => Promise<string>;
+  downloadSkillTree: (
+    info: GithubUrlInfo,
+    ref: string,
+    dirInRepo: string,
+    destDir: string,
+  ) => Promise<void>;
+}
+
+const defaultUpdateDeps: SkillUpdateDeps = { getRefCommit, downloadSkillTree };
+
+/**
+ * Re-download a GitHub-sourced skill and atomically replace it on disk. Mirrors
+ * the plugin updater (core/plugins/installer/update.ts → reinstallAtomic): a
+ * failed update leaves the OLD skill (and its sidecar) intact.
+ *
+ * Flow:
+ *   1. Read `.cs-skill-meta.json` next to the SKILL.md. Missing / non-github →
+ *      `{ updated:false }` with a reason (no throw).
+ *   2. Resolve the ref's current tip. If it equals the recorded commit
+ *      (case-insensitive) → `{ updated:false, reason:"already up to date" }`,
+ *      skipping the download entirely.
+ *   3. Otherwise download the subtree to a fresh tmp dir, verify SKILL.md, then
+ *      atomically swap: rename the live dir to a sibling `.bak-<pid>` backup,
+ *      copy the download into place, write a fresh sidecar with the new commit.
+ *      On any failure: drop the partial dir, restore the backup, rethrow noting
+ *      the old version was kept. The tmp download dir is always removed.
+ *
+ * Async fs only (runs in the Electron main process). process.pid (not
+ * Date.now(), unavailable here) makes the backup name unique.
+ */
+export async function updateSkillFromSource(
+  filePath: string,
+  deps: SkillUpdateDeps = defaultUpdateDeps,
+): Promise<SkillUpdateResult> {
+  const dir = path.dirname(filePath);
+  const metaPath = path.join(dir, SKILL_META_FILE);
+
+  let raw: string;
+  try {
+    raw = await fs.readFile(metaPath, "utf8");
+  } catch {
+    return { updated: false, reason: "no source metadata" };
+  }
+
+  let meta: SkillSourceMeta;
+  try {
+    meta = JSON.parse(raw) as SkillSourceMeta;
+  } catch {
+    return { updated: false, reason: "no source metadata" };
+  }
+
+  if (!meta || meta.kind !== "github") {
+    return { updated: false, reason: "not a github skill" };
+  }
+
+  const info: GithubUrlInfo = { owner: meta.owner, repo: meta.repo, ref: meta.ref };
+
+  const latest = await deps.getRefCommit(info, meta.ref);
+  if (latest.toLowerCase() === meta.commit.toLowerCase()) {
+    return { updated: false, reason: "already up to date" };
+  }
+
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeshell-gh-skill-upd-"));
+  try {
+    await deps.downloadSkillTree(info, meta.ref, meta.dirInRepo, tmpRoot);
+    try {
+      await fs.access(path.join(tmpRoot, "SKILL.md"));
+    } catch {
+      throw new Error(`下载结果缺少 SKILL.md：${meta.dirInRepo}`);
+    }
+
+    const backup = `${dir}.bak-${process.pid}`;
+    await fs.rm(backup, { recursive: true, force: true });
+    await fs.rename(dir, backup);
+
+    try {
+      await fs.cp(tmpRoot, dir, {
+        recursive: true,
+        filter: (src) => !path.basename(src).startsWith(".git"),
+      });
+      const nextMeta: SkillSourceMeta = {
+        kind: "github",
+        owner: meta.owner,
+        repo: meta.repo,
+        ref: meta.ref,
+        dirInRepo: meta.dirInRepo,
+        commit: latest,
+        installedAt: new Date().toISOString(),
+      };
+      await fs.writeFile(
+        path.join(dir, SKILL_META_FILE),
+        JSON.stringify(nextMeta, null, 2),
+        "utf8",
+      );
+    } catch (err) {
+      // Roll back: drop the partial new dir, restore the backup verbatim.
+      await fs.rm(dir, { recursive: true, force: true });
+      await fs.rename(backup, dir);
+      throw new Error(
+        `更新失败，已保留(restored/kept)旧版本：${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+
+    // Success — drop the backup (best-effort).
+    await fs.rm(backup, { recursive: true, force: true });
+    return { updated: true, reason: "updated" };
   } finally {
     await fs.rm(tmpRoot, { recursive: true, force: true }).catch(() => undefined);
   }

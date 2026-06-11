@@ -468,6 +468,10 @@ contextBridge.exposeInMainWorld("codeshell", {
   installPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:install", pluginName, marketplaceName),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
+  checkSkillUpdate: (filePath: string) =>
+    ipcRenderer.invoke("skills:checkUpdate", filePath),
+  updateSkill: (filePath: string) =>
+    ipcRenderer.invoke("skills:update", filePath),
   installLocalSkill: (
     sourceDir: string,
     scope: "user" | "project",

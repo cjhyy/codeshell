@@ -3,6 +3,9 @@ import type { SkillSummary } from "../../main/skills-service";
 import { SkillDetailModal } from "./SkillDetailModal";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { ArrowUpCircle, Loader2 } from "lucide-react";
+import { useToast } from "../ui/ToastProvider";
+import { useAlert } from "../ui/DialogProvider";
 
 interface Props {
   cwd: string;
@@ -16,6 +19,13 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<SkillSummary | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // filePath → has-newer-commit-upstream. Filled in async after the list
+  // renders; only GitHub-installed skills (with a source sidecar) ever flip
+  // true, so the badge silently no-ops for local/plugin skills.
+  const [updatable, setUpdatable] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const toast = useToast();
+  const alert = useAlert();
 
   const retry = () => setReloadKey((k) => k + 1);
 
@@ -23,10 +33,26 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
     let alive = true;
     setSkills(null);
     setError(null);
+    setUpdatable({});
     window.codeshell
       .listSkills(cwd)
       .then((d) => {
-        if (alive) setSkills(d);
+        if (!alive) return;
+        setSkills(d);
+        // Background, non-blocking per-skill probe (network for github skills;
+        // fast no-op for everything else). Badges appear as checks return.
+        for (const s of d) {
+          window.codeshell
+            .checkSkillUpdate(s.filePath)
+            .then((r) => {
+              if (alive && r.updateAvailable) {
+                setUpdatable((m) => ({ ...m, [s.filePath]: true }));
+              }
+            })
+            .catch(() => {
+              /* check failure → no badge */
+            });
+        }
       })
       .catch((e) => {
         if (alive) setError(String(e?.message ?? e));
@@ -35,6 +61,24 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
       alive = false;
     };
   }, [cwd, reloadKey]);
+
+  const update = async (s: SkillSummary) => {
+    setBusy(s.filePath);
+    try {
+      const r = await window.codeshell.updateSkill(s.filePath);
+      setReloadKey((k) => k + 1);
+      toast(
+        r.updated
+          ? { message: `已更新 “${s.name}”，重载后生效`, variant: "success" }
+          : { message: `“${s.name}”：${r.reason}` },
+      );
+    } catch (e) {
+      // Atomic in main — the old version is kept on failure.
+      void alert({ title: "更新失败", message: String((e as Error)?.message ?? e) });
+    } finally {
+      setBusy(null);
+    }
+  };
 
   if (error) {
     return (
@@ -72,6 +116,25 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
                 {(s.description ?? "").split("\n")[0]}
               </div>
             </div>
+            {updatable[s.filePath] && (
+              <Button
+                size="icon"
+                variant="ghost"
+                title="有新版本，点击更新"
+                className="text-status-running hover:text-status-running"
+                disabled={busy === s.filePath}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void update(s);
+                }}
+              >
+                {busy === s.filePath ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowUpCircle className="h-4 w-4" />
+                )}
+              </Button>
+            )}
             <span className="text-xs text-muted-foreground">{s.source}</span>
             <span onClick={(e) => e.stopPropagation()}>
               <Switch checked={isEnabled(s)} onCheckedChange={(v) => onToggle(s, v)} />
