@@ -21,6 +21,7 @@
 
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { randomBytes } from "node:crypto";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { SettingsManager } from "../../settings/manager.js";
@@ -301,7 +302,11 @@ export async function generateImageTool(
   try {
     const dir = join(cwd, ".code-shell", "generated_images");
     await mkdir(dir, { recursive: true });
-    const path = join(dir, `${Date.now()}.png`);
+    // Timestamp keeps names sortable/recognizable; the random suffix prevents
+    // collisions when multiple GenerateImage calls run concurrently in one turn
+    // (Date.now() alone repeats within the same millisecond → writeFile would
+    // silently overwrite and drop an image).
+    const path = join(dir, `${Date.now()}-${randomBytes(3).toString("hex")}.png`);
     await writeFile(path, Buffer.from(result.b64, "base64"));
     // Name the provider/model actually used, so the user/agent knows which
     // image backend produced this (esp. when a default fell back to another).

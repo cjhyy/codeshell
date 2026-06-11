@@ -108,7 +108,11 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       source: "builtin",
       permissionDefault: "ask",
       isReadOnly: false,
-      isConcurrencySafe: false,
+      // Independent external I/O with no shared state — same class as WebFetch/GenerateVideo.
+      // Each call writes its own collision-free file (Date.now()+random suffix), so N images
+      // in one turn run concurrently (~3min for 6 instead of ~15min serial). Dependent chains
+      // (image → video) are forced across turns and serialize naturally via the drain barrier.
+      isConcurrencySafe: true,
       timeoutMs: 600_000, // 10min — high-quality / large image generation routinely exceeds the 120s default; give slow renders ample room while still bounding a hung request (Stop / ctx.signal cancels sooner)
     },
     execute: generateImageTool,
