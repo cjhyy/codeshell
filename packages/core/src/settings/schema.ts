@@ -527,6 +527,22 @@ export const SettingsSchema = z
       .optional(),
 
     /**
+     * Top-level environment variables injected into tool subprocesses (the
+     * Bash tool, background shells). Mirrors Claude Code's `env` field: a
+     * KEY=VALUE map that can be set globally (~/.code-shell/settings.json) and
+     * overridden per-project (.code-shell/settings.json). The canonical home
+     * for API keys (e.g. OPENAI_API_KEY) that a skill's script reads — configure
+     * once globally and every project's skills can use it.
+     *
+     * Precedence when merged into the spawn env (lowest → highest):
+     *   project localEnvironment.env  →  global env  →  project env
+     * None of these is filtered through the deny regex (see mergeShellEnv):
+     * they are values the user typed deliberately, a different trust class from
+     * the host process.env passthrough the deny machinery guards against.
+     */
+    env: z.record(z.string()).optional(),
+
+    /**
      * Project-local environment profile. Mirrors Codex's local-environment
      * shape at the settings layer: setup/cleanup scripts can be customized per
      * platform, and env values are stored as KEY=VALUE pairs. Runtime wiring is

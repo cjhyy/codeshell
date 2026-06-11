@@ -569,19 +569,82 @@ const EMPTY_SCRIPTS: Record<LocalEnvPlatform, string> = {
  * environment editor. This replaces the old "silently follow activeRepoPath"
  * behavior where the user couldn't tell (or switch) which project they edited.
  */
+/**
+ * Global environment-variable editor (top-level `env`, user scope). This is the
+ * canonical home for API keys (e.g. OPENAI_API_KEY) that a skill's script reads:
+ * configure once here and every project's Bash tool / background shells inherit
+ * it. A project's own `本地环境` env (and its top-level env) override these.
+ * Mirrors Claude Code's `env` field. Reuses parseEnvText/envTextOf so the
+ * KEY=VALUE wire format matches the project editor exactly.
+ */
+function GlobalEnvEditor() {
+  const [envText, setEnvText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const load = async () => {
+    const s = (await window.codeshell.getSettings("user")) ?? {};
+    setEnvText(envTextOf(s.env));
+  };
+  useEffect(() => { void load(); }, []);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await writeSettings("user", { env: parseEnvText(envText) });
+      setSavedAt(Date.now());
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="settings-section">
+      <h3 className="settings-section-title">全局环境变量</h3>
+      <p className="settings-section-help">
+        所有项目共享。常用于放 API key(如 <code className="font-mono text-[0.95em]">OPENAI_API_KEY</code>),配一次,所有项目的 Bash 工具、后台 shell、技能(skill)脚本都能读到。技能需要密钥时来这里配。
+      </p>
+      <label className="flex flex-col gap-1.5">
+        <Textarea
+          value={envText}
+          onChange={(e) => setEnvText(e.target.value)}
+          placeholder={"OPENAI_API_KEY=sk-...\nFAL_KEY=..."}
+          className="min-h-[120px] resize-y font-mono text-sm"
+        />
+        <span className="mt-1 text-xs text-muted-foreground">
+          每行一个 KEY=VALUE,<code className="font-mono text-[0.95em]">#</code> 开头为注释。这些值不经过密钥脱敏过滤(你显式配置的,与防止模型泄漏宿主 env 是两回事);项目级同名变量会覆盖这里。
+        </span>
+      </label>
+      <div className="mt-3 flex items-center gap-2">
+        <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
+          {saving ? "保存中..." : "保存全局变量"}
+        </Button>
+        {savedAt && (
+          <span className="text-sm text-status-ok">
+            已保存 · {new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function EnvironmentSection({ repos }: { repos: Repo[] }) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const selectedRepo = repos.find((r) => r.path === selectedPath) ?? null;
 
   if (!selectedPath) {
     return (
-      <section className="settings-section">
-        <h3 className="settings-section-title">本地环境</h3>
-        <p className="settings-section-help">
-          本地环境按项目维护(setup 脚本、KEY=VALUE 变量、沙箱边界)。选择一个项目以查看 / 编辑。
-        </p>
-        <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
-      </section>
+      <>
+        <GlobalEnvEditor />
+        <section className="settings-section">
+          <h3 className="settings-section-title">按项目维护</h3>
+          <p className="settings-section-help">
+            项目级环境(setup 脚本、KEY=VALUE 变量、沙箱边界),只对所选项目生效,可覆盖上方全局变量。选择一个项目以查看 / 编辑。
+          </p>
+          <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
+        </section>
+      </>
     );
   }
 
