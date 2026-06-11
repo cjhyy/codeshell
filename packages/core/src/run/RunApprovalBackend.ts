@@ -57,8 +57,15 @@ export class RunApprovalBackend implements ApprovalBackend {
 
   async requestApproval(request: ApprovalRequest): Promise<ApprovalResult> {
     if (!this.hooks) {
-      // No hooks wired — fall back to auto-approve (shouldn't happen in practice)
-      return { approved: true };
+      // No hooks wired — fail CLOSED. This backend is the engine's approval
+      // path for an interactive run; if a host forgot to setHooks() there is
+      // no UI to ask, so auto-approving every tool (the old behavior) silently
+      // bypassed all approval. Denying is the safe default — a misconfigured
+      // run refuses tools instead of running `rm -rf /` unattended. (§5.6 #15)
+      return {
+        approved: false,
+        reason: "run approval backend has no lifecycle hooks wired (denied fail-closed)",
+      };
     }
 
     // Notify RunManager that approval is needed
@@ -105,15 +112,31 @@ export function createRunAskUserFn(hooks: RunLifecycleHooks): {
   resolveInput: (answer: string) => boolean;
   hasPendingInput: () => boolean;
 } {
-  let pending: PendingInput | null = null;
+  let pending: (PendingInput & { reject: (e: unknown) => void }) | null = null;
+
+  const supersedePending = (): void => {
+    // A run suspends on a single input at a time (RunManager resolves via one
+    // handle). If a second ask arrives while one is still pending, the old
+    // code overwrote the slot and the first promise hung forever. Reject the
+    // prior one so its awaiter unblocks instead of leaking. (§5.6 #15)
+    if (pending) {
+      pending.reject(
+        new Error("superseded: a newer AskUser request replaced this one before it was answered"),
+      );
+      pending = null;
+    }
+  };
 
   const askUserFn: AskUserFn = async (question: string) => {
     // Notify RunManager
     await hooks.onInputNeeded(question);
 
-    // Suspend execution until user provides input
-    return new Promise<string>((resolve) => {
-      pending = { resolve, question };
+    // Suspend execution until user provides input. The supersede check runs
+    // here — AFTER the await — so it sees a `pending` set by an earlier ask
+    // whose own await already resolved, rather than racing the assignment.
+    return new Promise<string>((resolve, reject) => {
+      supersedePending();
+      pending = { resolve, reject, question };
     });
   };
 
