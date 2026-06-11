@@ -39,7 +39,7 @@ import {
   renameSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, resolve as resolvePath, sep } from "node:path";
+import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
 import type { ToolContext } from "./context.js";
 
 export type PathDecision = "allow" | "ask" | "deny";
@@ -149,6 +149,18 @@ export type PathApprovalScope = "once" | "session" | "project";
 /** sessionId → set of approved directory prefixes (absolute, trailing sep). */
 const sessionPathGrants = new Map<string, Set<string>>();
 
+/**
+ * Normalize a path for comparison. Windows file systems are case-INsensitive,
+ * so `C:\Users\Admin\.ssh` and `c:\users\admin\.ssh` are the same path — a
+ * case-sensitive `startsWith` would let a sensitive-path or workspace-boundary
+ * check be bypassed by varying case (or just fail to match a legit prefix).
+ * Lowercase on win32 only; POSIX stays exact (macOS APFS can be case-sensitive,
+ * and the existing contract is case-sensitive there).
+ */
+function normPath(p: string): string {
+  return process.platform === "win32" ? p.toLowerCase() : p;
+}
+
 /** Normalize a directory to an absolute prefix ending in `sep` for prefix tests. */
 function dirPrefix(absPath: string): string {
   const d = absPath.endsWith(sep) ? absPath : absPath + sep;
@@ -157,15 +169,16 @@ function dirPrefix(absPath: string): string {
 
 /** True if `resolved` sits inside any approved directory prefix in `grants`. */
 function coveredBy(grants: Iterable<string>, resolved: string): boolean {
-  const target = resolved.endsWith(sep) ? resolved : resolved + sep;
+  const target = normPath(resolved.endsWith(sep) ? resolved : resolved + sep);
   for (const g of grants) {
-    if (target === g || target.startsWith(g)) return true;
+    const gn = normPath(g);
+    if (target === gn || target.startsWith(gn)) return true;
   }
   return false;
 }
 
 function projectPathGrants(cwd: string): string[] {
-  const file = `${cwd}/.code-shell/settings.local.json`;
+  const file = join(cwd, ".code-shell", "settings.local.json");
   if (!existsSync(file)) return [];
   try {
     const s = JSON.parse(readFileSync(file, "utf-8")) as {
@@ -212,8 +225,8 @@ function recordPathApproval(
     return;
   }
   // project: persist to settings.local.json (atomic, idempotent).
-  const dir = `${cwd}/.code-shell`;
-  const file = `${dir}/settings.local.json`;
+  const dir = join(cwd, ".code-shell");
+  const file = join(dir, "settings.local.json");
   try {
     // Don't resurrect a deleted project root: a recursive mkdir of
     // <cwd>/.code-shell recreates `cwd` itself as an empty shell when cwd is
@@ -282,8 +295,10 @@ function safeRealpath(p: string): string {
 }
 
 function isInsideDir(child: string, parent: string): boolean {
-  const p = parent.endsWith(sep) ? parent : parent + sep;
-  return child === parent || child.startsWith(p);
+  const c = normPath(child);
+  const par = normPath(parent);
+  const p = par.endsWith(sep) ? par : par + sep;
+  return c === par || c.startsWith(p);
 }
 
 /**
