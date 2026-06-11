@@ -808,15 +808,30 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
   popoutParents.set(win.webContents.id, parent.id);
   win.on("closed", () => popoutParents.delete(win.webContents.id));
 
+  // Diagnose a blank popout: surface load failures + the popout renderer's own
+  // console errors into the main log (the popout has no DevTools by default).
+  win.webContents.on("did-fail-load", (_e, code, desc, validatedUrl) => {
+    dlog("main", "browser-popout.did-fail-load", { code, desc, validatedUrl });
+  });
+  win.webContents.on("console-message", (_e, level, message, line, sourceId) => {
+    if (level >= 2) dlog("main", "browser-popout.console", { level, message, line, sourceId });
+  });
+
   const query: Record<string, string> = { popout: "browser" };
   if (initialUrl) query.url = initialUrl;
   const devUrl = process.env.VITE_DEV_URL;
-  if (devUrl) {
-    const u = new URL(devUrl);
-    for (const [k, v] of Object.entries(query)) u.searchParams.set(k, v);
-    await win.loadURL(u.toString());
-  } else {
-    await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), { query });
+  try {
+    if (devUrl) {
+      const u = new URL(devUrl);
+      for (const [k, v] of Object.entries(query)) u.searchParams.set(k, v);
+      dlog("main", "browser-popout.loadURL", { url: u.toString() });
+      await win.loadURL(u.toString());
+    } else {
+      dlog("main", "browser-popout.loadFile", { query });
+      await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), { query });
+    }
+  } catch (e) {
+    dlog("main", "browser-popout.load-threw", { error: String(e) });
   }
 }
 
