@@ -50,10 +50,16 @@
   font-size: var(--fz-xs);
 }
 
+/* Each hunk scrolls horizontally on its own so long code lines stay on one
+   line (GitHub / GitLab style) instead of being force-wrapped into a tall
+   vertical stack — the latter was unreadable in a narrow docked panel. */
+.diff-hunk { overflow-x: auto; }
 .diff-table {
-  width: 100%;
+  /* `auto` (not fixed) so the table grows to its widest line; the hunk's
+     overflow-x then provides horizontal scroll. min-width:100% keeps short
+     diffs full-width. */
+  min-width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
 }
 .diff-line { line-height: 1.45; }
 .diff-line-add    { background: rgba(47,138,77,0.10); }
@@ -81,8 +87,10 @@
 .diff-line-del .diff-marker { color: var(--status-err); }
 .diff-text {
   padding: 0 var(--sp-2);
-  white-space: pre-wrap;
-  word-break: break-word;
+  /* No wrap — long lines extend and the hunk scrolls horizontally (see
+     .diff-hunk overflow-x). Previously pre-wrap/break-word forced every long
+     path or sentence into a tall vertical column. */
+  white-space: pre;
   color: var(--fg-primary);
 }
 

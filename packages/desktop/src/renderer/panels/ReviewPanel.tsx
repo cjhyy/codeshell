@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
-import { ChangedFilesList } from "../diff/ChangedFilesList";
 import { parseUnifiedDiff } from "../diff/parseUnifiedDiff";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import { REVIEW_SCOPES, isRangeScope, type ReviewScope } from "../diff/reviewScope";
@@ -28,16 +27,16 @@ interface Props {
 }
 
 /**
- * Code-review panel (TODO 2.3a). A scope selector switches what the file tree
- * shows — 本轮改动 / 未暂存 / 已暂存 / 全部未提交 / 最近提交 / 分支 vs base —
- * defaulting to the turn's own files when opened from a card. Reuses
- * UnifiedDiffViewer + ChangedFilesList. (A commit/push/PR action bar is a later
+ * Code-review panel (TODO 2.3a). Full-width diff (Codex/GitLab style — no left
+ * file-list sidebar). Scope chips top-left switch what's shown — 本轮改动 /
+ * 未暂存 / 已暂存 / 全部未提交 / 最近提交 / 分支 vs base — defaulting to the
+ * turn's own files when opened from a card. All changed files stack; long lines
+ * scroll horizontally (see diff.css). (A commit/push/PR action bar is a later
  * slice — see TODO 2.3a.)
  */
 export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   const hasTurnFiles = !!files && files.length > 0;
   const [scope, setScope] = useState<ReviewScope>(hasTurnFiles ? "turn" : "all");
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   // Turn-scope file filter for the dropdown (#5 ②). "" / ALL_FILES = show all.
   const [turnFileSel, setTurnFileSel] = useState<string>(ALL_FILES);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -78,10 +77,7 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   // snap to its turn scope + first file. Re-runs when the set identity changes.
   const focusKey = files?.join("\n") ?? "";
   useEffect(() => {
-    if (hasTurnFiles) {
-      setScope("turn");
-      setSelectedFile(files![0]);
-    }
+    if (hasTurnFiles) setScope("turn");
   }, [focusKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!cwd) {
@@ -93,91 +89,71 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
   }
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className="flex w-72 shrink-0 flex-col border-r border-border">
-        {/* Scope selector + refresh (TODO 2.3a). "本轮改动" only offered when a
-            turn handed us its files. */}
-        <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
-          <div className="flex min-w-0 flex-1 flex-wrap gap-1">
-            {REVIEW_SCOPES.filter((s) => s.id !== "turn" || hasTurnFiles).map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => {
-                  setScope(s.id);
-                  setSelectedFile(null);
-                }}
-                className={`rounded px-1.5 py-0.5 text-[11px] ${
-                  scope === s.id
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            title="刷新"
-            aria-label="刷新"
-            className="shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-            onClick={() => setRefreshKey((k) => k + 1)}
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
+    // No left file-list sidebar — the diff gets the full width (Codex/GitLab
+    // style). Scope chips live top-left; a file dropdown narrows the turn
+    // snapshot. Other scopes stack all changed files top-to-bottom; each hunk
+    // scrolls horizontally (see diff.css) so long lines aren't force-wrapped.
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Top bar: scope chips (top-left) + optional file dropdown + refresh. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
+        <div className="flex min-w-0 flex-wrap gap-1">
+          {REVIEW_SCOPES.filter((s) => s.id !== "turn" || hasTurnFiles).map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setScope(s.id)}
+              className={`rounded px-1.5 py-0.5 text-[11px] ${
+                scope === s.id
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/50"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
-          <ChangedFilesList
-            cwd={cwd}
-            selectedFile={selectedFile}
-            onSelectFile={setSelectedFile}
-            scope={scope}
-            turnFiles={files}
-            refreshKey={refreshKey}
+        {scope === "turn" && turnDiff && turnFilePaths.length > 1 && (
+          <SimpleSelect
+            size="sm"
+            ariaLabel="选择文件"
+            value={turnFileSel}
+            onChange={setTurnFileSel}
+            options={[
+              { value: ALL_FILES, label: `全部文件（${turnFilePaths.length}）` },
+              ...turnFilePaths.map((p) => ({ value: p, label: p })),
+            ]}
           />
-        </div>
+        )}
+        <button
+          type="button"
+          title="刷新"
+          aria-label="刷新"
+          className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+          onClick={() => setRefreshKey((k) => k + 1)}
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+        </button>
       </div>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+
+      {/* Full-width diff. */}
+      <div className="min-h-0 flex-1 overflow-auto p-2">
         {scope === "turn" && turnDiff ? (
           // Authoritative turn-time snapshot — viewable even after the edits
-          // were committed (git would no longer show them). A dropdown narrows
-          // the flat snapshot to one file instead of rendering everything at
-          // once (#5 ②).
-          <>
-            {turnFilePaths.length > 1 && (
-              <div className="shrink-0 border-b border-border px-2 py-1.5">
-                <SimpleSelect
-                  size="sm"
-                  ariaLabel="选择文件"
-                  value={turnFileSel}
-                  onChange={setTurnFileSel}
-                  options={[
-                    { value: ALL_FILES, label: `全部文件（${turnFilePaths.length}）` },
-                    ...turnFilePaths.map((p) => ({ value: p, label: p })),
-                  ]}
-                />
-              </div>
-            )}
-            <div className="min-h-0 flex-1 overflow-auto">
-              <UnifiedDiffViewer
-                cwd={cwd}
-                diffText={turnDiff}
-                onlyPath={turnFileSel === ALL_FILES ? null : turnFileSel}
-              />
-            </div>
-          </>
+          // were committed (git would no longer show them). The dropdown above
+          // narrows the flat snapshot to one file (#5 ②).
+          <UnifiedDiffViewer
+            cwd={cwd}
+            diffText={turnDiff}
+            onlyPath={turnFileSel === ALL_FILES ? null : turnFileSel}
+          />
         ) : (
-          // For committed/branch scopes, diff the resolved range; otherwise the
-          // working tree. `range || undefined` so the range path only kicks in
-          // once resolved (TODO 2.3a).
-          <div className="min-h-0 flex-1 overflow-auto">
-            <UnifiedDiffViewer
-              cwd={cwd}
-              file={selectedFile ?? undefined}
-              range={isRangeScope(scope) ? range ?? undefined : undefined}
-            />
-          </div>
+          // Committed/branch scopes diff the resolved range; others the working
+          // tree. No file filter — all changed files stack (the viewer caps
+          // huge diffs to keep the main thread responsive).
+          <UnifiedDiffViewer
+            cwd={cwd}
+            range={isRangeScope(scope) ? range ?? undefined : undefined}
+          />
         )}
       </div>
     </div>

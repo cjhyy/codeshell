@@ -77,7 +77,7 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath }: Prop
     <div className="diff-viewer">
       {overCap && (
         <div className="diff-empty px-2 py-1 text-xs text-muted-foreground">
-          差异较大（{totalLines} 行），仅显示前 {MAX_RENDERED_LINES} 行。请在左侧选择单个文件查看完整差异。
+          差异较大（{totalLines} 行），仅显示前 {MAX_RENDERED_LINES} 行。
         </div>
       )}
       {filesToRender.map((f) => (
@@ -136,14 +136,18 @@ function DiffFileBlock({ file }: { file: DiffFile }) {
                         {l.kind === "add" ? "+" : l.kind === "del" ? "-" : " "}
                       </td>
                       <td className="diff-text">
-                        <span className="inline-flex w-full items-center justify-between gap-2">
-                          <span className="min-w-0 flex-1">{l.text}</span>
-                          {/* Hover affordance: pin a comment to this line. */}
+                        {/* The line text keeps `white-space: pre` (from
+                            .diff-text) so it extends and the hunk scrolls
+                            horizontally; the comment button is positioned
+                            relative to the row, not inline, so it doesn't
+                            force-wrap or get lost off-screen on scroll. */}
+                        <span className="relative block pr-6">
+                          {l.text || " "}
                           <button
                             type="button"
                             aria-label="评论此行"
                             title="评论此行(加入输入框)"
-                            className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
+                            className="diff-comment-btn absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
                             onClick={() => setCommenting(commenting === key ? null : key)}
                           >
                             <MessageSquarePlus size={12} />
