@@ -32,4 +32,17 @@ describe("bindCronToEngine — permission tier wiring", () => {
     const decision = await captured!.approvalBackend.requestApproval({ toolName: "Write" } as never);
     expect(decision.approved).toBe(false);
   });
+
+  // §5.6 #9: the request must carry the policy's sandboxMode so the host runner
+  // can confine the run's writes/shell — previously dropped, leaving sandbox
+  // defense unwired.
+  test("request carries a sandboxMode + the abort signal for the host runner", async () => {
+    let captured: CronRunRequest | undefined;
+    const scheduler = schedulerWith("full");
+    bindCronToEngine(scheduler, async (req) => { captured = req; return { text: "", reason: "completed" }; });
+    await scheduler.runNow(scheduler.list()[0].id);
+    expect(captured!.sandboxMode).toBe("auto");
+    // §5.6 #11: signal is threaded through so CronScheduler.abort can cancel.
+    expect(captured!.signal).toBeInstanceOf(AbortSignal);
+  });
 });

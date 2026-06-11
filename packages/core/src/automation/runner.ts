@@ -19,6 +19,7 @@ import type { CronJob } from "./scheduler.js";
 import type { CronScheduler } from "./scheduler.js";
 import type { PermissionMode } from "../types.js";
 import type { ApprovalBackend } from "../tool-system/permission.js";
+import type { SandboxMode } from "../tool-system/sandbox/index.js";
 import { AUTOMATION_RUN_SOURCE } from "../run/EngineRunner.js";
 import { resolveWritePolicy } from "./write-policy.js";
 
@@ -31,6 +32,11 @@ export interface CronRunRequest {
   permissionMode: PermissionMode;
   /** Approval backend the run must install (resolved from the job's tier). */
   approvalBackend: ApprovalBackend;
+  /** Sandbox mode the run should confine writes/shell to (resolved from the
+   *  job's tier). The host runner must forward this to `Engine({ sandbox })`
+   *  so even a `full` tier can't escape the workspace — defense in depth on
+   *  top of the approval backend. */
+  sandboxMode: SandboxMode;
   /** Abort signal for the run — tripped by `CronScheduler.abort(jobId)` when
    *  the run must be cancelled mid-flight (e.g. the user deletes its session
    *  while it's still executing). Forward to `Engine.run({ signal })`. */
@@ -61,6 +67,7 @@ export function bindCronToEngine(scheduler: CronScheduler, runner: CronRunner): 
       prompt: job.prompt,
       permissionMode: policy.permissionMode,
       approvalBackend: policy.approvalBackend,
+      sandboxMode: policy.sandboxMode,
       signal,
     };
     await runner(req);

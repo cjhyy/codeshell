@@ -22,6 +22,7 @@ import {
   HeadlessApprovalBackend,
   makeUpdateAutomationMemoryTool,
   AUTOMATION_PROMPT_NOTE,
+  defaultSandboxConfig,
   type RunManager,
   type CronRunner,
   type CronRunResult,
@@ -133,6 +134,9 @@ export function buildDesktopAutomationRunner(
       // Read-only contract from bindCronToEngine — cron is unattended.
       permissionMode: req.permissionMode,
       approvalBackend: req.approvalBackend,
+      // Confine writes/shell to the workspace per the job's tier — defense in
+      // depth on top of the approval backend (§5.6 #9).
+      sandbox: defaultSandboxConfig(req.sandboxMode),
     });
 
     // Let the run persist a one-paragraph summary for the NEXT scheduled run.

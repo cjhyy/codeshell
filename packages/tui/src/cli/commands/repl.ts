@@ -18,6 +18,7 @@ import { MCPManager } from "@cjhyy/code-shell-core";
 import { CostTracker } from "@cjhyy/code-shell-core";
 import { resolveApiKey } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
+import { defaultSandboxConfig } from "@cjhyy/code-shell-core";
 import type { ClientDefaults, LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
 import { startInkRepl } from "../../ui/index.js";
 import { runInkOnboarding } from "../../ui/onboarding-runner.js";
@@ -246,9 +247,14 @@ export async function replCommand(options: ReplOptions): Promise<void> {
       // contract from cron-runtime — cron is unattended.
       permissionMode: req.permissionMode,
       approvalBackend: req.approvalBackend,
+      // Confine writes/shell to the workspace per the job's tier — defense in
+      // depth on top of the approval backend (§5.6 #9).
+      sandbox: defaultSandboxConfig(req.sandboxMode),
       headless: true,
     });
-    const result = await cronEngine.run(req.prompt, { cwd });
+    // Forward the scheduler's abort signal so CronScheduler.abort(jobId) can
+    // actually cancel an in-flight REPL cron run (§5.6 #11).
+    const result = await cronEngine.run(req.prompt, { cwd, signal: req.signal });
     return { text: result.text, reason: result.reason };
   });
 
