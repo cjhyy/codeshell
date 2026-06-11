@@ -128,19 +128,6 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
  *  single file. A per-line table past this size blocks the main thread. */
 const MAX_RENDERED_LINES = 2000;
 
-/**
- * Head-ellipsize a path for the file header: keep the last `tailSegments` path
- * segments (the filename + a couple parent dirs, the meaningful part) and drop
- * the long prefix to a leading "…/". So
- * "/Users/me/code/codeshell/packages/core/src/lsp/manager.ts" →
- * "…/src/lsp/manager.ts". Short paths are returned unchanged.
- */
-function ellipsizePathHead(path: string, tailSegments = 3): string {
-  const parts = path.split("/").filter(Boolean);
-  if (parts.length <= tailSegments) return path;
-  return "…/" + parts.slice(-tailSegments).join("/");
-}
-
 /** Keep whole files from the front of the diff until adding the next one would
  *  exceed the line budget. Always returns at least the first file so something
  *  shows. */
@@ -189,7 +176,9 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
         ) : (
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         )}
-        <span className="diff-file-path" title={title}>{ellipsizePathHead(title)}</span>
+        {/* "‎" (LRM) keeps the path reading LTR while direction:rtl clips
+            the ellipsis at the START — see .diff-file-path. */}
+        <span className="diff-file-path" title={title}>{"\u200e" + title}</span>
         {/* Status as a symbol (Codex style), not a text label: added → green
             dot, deleted → red dash, renamed → amber dot; modified shows
             nothing (the +/- counts already convey it). */}
