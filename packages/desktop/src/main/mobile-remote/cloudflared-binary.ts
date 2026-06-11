@@ -15,19 +15,35 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 /**
- * Map a Node `process.arch` to the official cloudflared macOS release URL.
+ * Map a Node `process.platform` + `process.arch` to the official cloudflared
+ * release asset URL.
  *
- * Pure + injectable so the unit test pins arm64/amd64 without touching the
- * network. Only macOS targets are emitted (the desktop app is mac-first); an
- * unknown arch falls back to amd64 which Rosetta can run.
+ *  - macOS: `cloudflared-darwin-<arch>.tgz` (a tarball with one binary).
+ *  - Windows: `cloudflared-windows-<arch>.exe` (a RAW .exe, no extraction).
+ *  - Linux: `cloudflared-linux-<arch>` (a raw binary).
+ *
+ * Pure + injectable so tests pin the URL without touching the network. Unknown
+ * arch falls back to amd64.
  */
-export function cloudflaredDownloadUrl(arch: string): string {
-  const slug = arch === "arm64" ? "darwin-arm64" : "darwin-amd64";
-  // Official "latest" release asset (a .tgz would need extraction; the raw
-  // binary asset for darwin is published as `cloudflared-<slug>.tgz`. The
-  // plain binary form historically used is `cloudflared-<slug>`. We point at
-  // the GitHub latest-download path Cloudflare documents.)
-  return `https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-${slug}.tgz`;
+export function cloudflaredDownloadUrl(
+  arch: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  const base = "https://github.com/cloudflare/cloudflared/releases/latest/download";
+  const a = arch === "arm64" ? "arm64" : "amd64";
+  if (platform === "win32") {
+    // Windows only ships amd64/386; use amd64 (arm64 Windows runs amd64 via emu).
+    return `${base}/cloudflared-windows-amd64.exe`;
+  }
+  if (platform === "linux") {
+    return `${base}/cloudflared-linux-${a}`;
+  }
+  return `${base}/cloudflared-darwin-${a}.tgz`;
+}
+
+/** True when the release asset is a tarball needing extraction (macOS only). */
+function assetIsTarball(platform: NodeJS.Platform = process.platform): boolean {
+  return platform === "darwin";
 }
 
 /** Injectable download function. Writes the fetched bytes to `dest`. */
@@ -63,15 +79,18 @@ export class CloudflaredBinary {
     this.download = opts.download ?? defaultDownload;
   }
 
-  /** `<baseDir>/bin/cloudflared`. */
+  /** `<baseDir>/bin/cloudflared` (`.exe` on Windows). */
   binaryPath(): string {
-    return join(this.baseDir, "bin", "cloudflared");
+    const name = process.platform === "win32" ? "cloudflared.exe" : "cloudflared";
+    return join(this.baseDir, "bin", name);
   }
 
-  /** True when the binary exists and has the owner-executable bit set. */
+  /** True when the binary exists (and, on POSIX, has the owner-exec bit set).
+   *  Windows has no exec bit, so existence is the only meaningful check. */
   isInstalled(): boolean {
     const p = this.binaryPath();
     if (!existsSync(p)) return false;
+    if (process.platform === "win32") return true;
     try {
       return (statSync(p).mode & 0o100) === 0o100;
     } catch {
@@ -117,6 +136,15 @@ export class CloudflaredBinary {
  * scratch is fully cleaned up.
  */
 const defaultDownload: DownloadFn = async (url, dest, onProgress) => {
+  // Windows/Linux assets are RAW binaries — stream straight to dest, no tar.
+  if (!assetIsTarball()) {
+    await httpsDownloadTo(url, dest, onProgress);
+    if (!existsSync(dest) || statSync(dest).size === 0) {
+      throw new Error("下载的 cloudflared 为空");
+    }
+    return;
+  }
+  // macOS asset is a .tgz with a single `cloudflared` binary → extract.
   const scratch = mkdtempSync(join(tmpdir(), "cloudflared-dl-"));
   const tgzPath = join(scratch, "cloudflared.tgz");
   try {

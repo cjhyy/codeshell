@@ -268,14 +268,20 @@ export function listWorktrees(cwd: string): Array<{ path: string; branch: string
 function symlinkLargeDirectories(sourceRoot: string, worktreePath: string): void {
   const largeDirs = ["node_modules", ".venv", "vendor", ".pnpm-store"];
 
+  // Windows directory symlinks need admin/Developer Mode and throw EPERM for a
+  // normal user; NTFS junctions don't and behave the same for our purpose
+  // (share node_modules into the worktree). Use "junction" on win32, "dir"
+  // elsewhere. Failure stays non-fatal — the worktree just doesn't share dirs.
+  const linkType = process.platform === "win32" ? "junction" : "dir";
   for (const dir of largeDirs) {
     const source = join(sourceRoot, dir);
     const target = join(worktreePath, dir);
     if (existsSync(source) && lstatSync(source).isDirectory() && !existsSync(target)) {
       try {
-        symlinkSync(source, target, "dir");
+        symlinkSync(source, target, linkType);
       } catch {
-        // Symlink might fail on some systems
+        // Symlink/junction might fail on some systems — non-fatal, the
+        // worktree just won't share this directory (more disk, still works).
       }
     }
   }

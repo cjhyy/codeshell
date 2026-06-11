@@ -43,11 +43,14 @@ function loadPty(): NodePty {
 
 /** Resolve the login shell, mirroring Codex: $SHELL, else /bin/zsh on darwin. */
 function resolveShell(): string {
-  const fromEnv = process.env.SHELL?.trim();
-  if (fromEnv) return fromEnv;
+  // Windows: $SHELL is a POSIX concept and virtually never set; if a stray
+  // unix value leaked in (e.g. from a Git-Bash env) it points at a path that
+  // doesn't exist on the host. Prefer COMSPEC/powershell and ignore $SHELL.
   if (process.platform === "win32") {
     return process.env.COMSPEC?.trim() || "powershell.exe";
   }
+  const fromEnv = process.env.SHELL?.trim();
+  if (fromEnv) return fromEnv;
   return process.platform === "darwin" ? "/bin/zsh" : "/bin/bash";
 }
 

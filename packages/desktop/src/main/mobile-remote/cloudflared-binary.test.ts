@@ -17,16 +17,27 @@ function freshDir(): string {
 }
 
 describe("cloudflaredDownloadUrl", () => {
-  test("arm64 → darwin-arm64 official url", () => {
-    const url = cloudflaredDownloadUrl("arm64");
+  test("darwin arm64 → darwin-arm64 tarball", () => {
+    const url = cloudflaredDownloadUrl("arm64", "darwin");
     expect(url).toContain("github.com/cloudflare/cloudflared");
-    expect(url).toContain("darwin-arm64");
+    expect(url).toContain("darwin-arm64.tgz");
   });
 
-  test("x64 → darwin-amd64 official url", () => {
-    const url = cloudflaredDownloadUrl("x64");
-    expect(url).toContain("github.com/cloudflare/cloudflared");
-    expect(url).toContain("darwin-amd64");
+  test("darwin x64 → darwin-amd64 tarball", () => {
+    const url = cloudflaredDownloadUrl("x64", "darwin");
+    expect(url).toContain("darwin-amd64.tgz");
+  });
+
+  test("win32 → windows-amd64.exe (raw binary)", () => {
+    const url = cloudflaredDownloadUrl("x64", "win32");
+    expect(url).toContain("cloudflared-windows-amd64.exe");
+    expect(url).not.toContain(".tgz");
+  });
+
+  test("linux arm64 → linux-arm64 raw binary", () => {
+    const url = cloudflaredDownloadUrl("arm64", "linux");
+    expect(url).toContain("cloudflared-linux-arm64");
+    expect(url).not.toContain(".tgz");
   });
 });
 
