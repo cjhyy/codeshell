@@ -88,16 +88,33 @@ const SENSITIVE_DIR_PATTERNS = [
  * Files that are sensitive regardless of where they live: an `.env` next to
  * the code, an `id_rsa` in a random folder, etc.
  */
+// Data/config extensions a credential FILE typically carries. Deliberately
+// excludes source-code extensions (.ts/.tsx/.js/.py/.go/.rs/…) so a code file
+// whose NAME happens to contain a secret-y word is never treated as a secret.
+const SECRET_DATA_EXT = String.raw`(json|ya?ml|txt|ini|conf|cfg|toml|xml|properties|env|key|secret)`;
+
 const SENSITIVE_FILE_PATTERNS = [
   /^\.env(\..+)?$/i, // .env, .env.local, .env.production, …
   /^id_(rsa|dsa|ecdsa|ed25519)(\.pub)?$/i,
   /\.pem$/i,
   /\.p12$/i,
   /\.pfx$/i,
-  /auth/i,
-  /token/i,
-  /credential/i,
-  /secret/i,
+  // Credential/secret ARTIFACT files: the secret word is the dominant stem AND
+  // the file carries a data/config extension (or none). This still catches
+  // credentials.json / secrets.yaml / auth.json / token.txt / api-secret.conf,
+  // but NOT source files like authController.ts, token-counter.ts,
+  // oauth-handler.ts whose code extension excludes them.
+  //
+  // Was previously bare substrings (/auth/i, /token/i, …) tested against the
+  // basename, which denied WRITES to any code file containing those words —
+  // breaking the agent's ability to edit ordinary auth/token source. See
+  // path-policy-sensitive-file.test.ts.
+  new RegExp(
+    String.raw`^[^/]*\b(secrets?|credentials?|auth|token|apikey|api[-_]?key)\b[^/]*\.${SECRET_DATA_EXT}$`,
+    "i",
+  ),
+  // Bare (extensionless) credential files: `secret`, `credentials`, `token`.
+  /^(secrets?|credentials?|token)$/i,
 ] as const;
 
 const ENV_DISABLE = "CODESHELL_PATH_POLICY";
