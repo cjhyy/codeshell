@@ -679,14 +679,9 @@ export function ChatView({
         <div
           className={
             // min-w-[300px]: stop the composer collapsing into an unusable sliver
-            // when a side panel squeezes the chat — <main> is overflow-hidden so
-            // the panel side yields instead of crushing the input. (窄屏压缩态)
-            //
-            // No `@container` here: a container-query context (even inline-size)
-            // collapsed the whole composer — textarea included — to h=0 on session
-            // switch with the dock open (proven via ancestor-height logs). It only
-            // existed to icon-ify the pills by width; that responsive省略 was
-            // dropped in favor of a composer that never collapses.
+            // when a side panel squeezes the chat. Keep this card out of the
+            // container-query tree: putting container-type on the textarea's
+            // ancestor has collapsed the composer during session/dock reflow.
             "min-w-[300px] rounded-xl border bg-card p-2 shadow-sm" +
             (dragOver ? " ring-2 ring-primary/40" : "")
           }
@@ -883,94 +878,96 @@ export function ChatView({
             </div>
           )}
 
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                aria-label="添加图片"
-                title={
-                  activeSupportsVision
-                    ? "添加图片（也支持拖拽 / 粘贴）"
-                    : "当前模型不支持图片；切换模型后即可上传"
-                }
-                onClick={() => fileInputRef.current?.click()}
-                disabled={busy}
-              >
-                <Paperclip size={14} />
-              </button>
-              <PermissionPill
-                value={permissionMode}
-                onChange={onPermissionChange}
-                disabled={controlsDisabled}
-              />
-              <GoalToggle
-                enabled={goalEnabled}
-                onToggle={onGoalToggle}
-                disabled={controlsDisabled}
-              />
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <ContextRing used={contextTokens} max={contextMax} busy={busy} />
-              <ModelPill
-                activeKey={activeModelKey}
-                options={modelOptions}
-                onSelect={onModelChange}
-                disabled={busy}
-              />
-              <button
-                type="button"
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                aria-label="语音输入"
-                title="语音输入 (尚未实现)"
-                disabled
-              >
-                <Mic size={14} />
-              </button>
-              {busy && draft.trim() && onForceSend && (
+          <div className="@container/composer-controls mt-1 min-h-8 w-full min-w-0">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-                  onClick={() => {
-                    const payload = encodeAttachmentsForWire(draft.trim(), attachments);
-                    onForceSend(payload);
-                    if (draft.trim()) setHistory(pushHistory(activeRepoId, draft.trim()));
-                    setDraft("");
-                    setAttachments([]);
-                    setAttachmentError(null);
-                  }}
-                  aria-label="引导"
-                  title="打断当前轮，并发送这条输入"
-                >
-                  <CornerDownRight size={13} />
-                  引导
-                </button>
-              )}
-              {busy && (
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
-                  onClick={onStop}
-                  aria-label="停止"
-                >
-                  <Square size={14} fill="currentColor" />
-                </button>
-              )}
-              {!busy && (
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50 disabled:opacity-50"
-                  onClick={submit}
-                  disabled={
-                    (!draft.trim() && attachments.length === 0) ||
-                    (attachments.length > 0 && !activeSupportsVision)
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  aria-label="添加图片"
+                  title={
+                    activeSupportsVision
+                      ? "添加图片（也支持拖拽 / 粘贴）"
+                      : "当前模型不支持图片；切换模型后即可上传"
                   }
-                  aria-label="发送"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={busy}
                 >
-                  <ArrowUp size={16} />
+                  <Paperclip size={14} />
                 </button>
-              )}
+                <PermissionPill
+                  value={permissionMode}
+                  onChange={onPermissionChange}
+                  disabled={controlsDisabled}
+                />
+                <GoalToggle
+                  enabled={goalEnabled}
+                  onToggle={onGoalToggle}
+                  disabled={controlsDisabled}
+                />
+              </div>
+
+              <div className="flex min-w-0 items-center justify-end gap-1.5">
+                <ContextRing used={contextTokens} max={contextMax} busy={busy} />
+                <ModelPill
+                  activeKey={activeModelKey}
+                  options={modelOptions}
+                  onSelect={onModelChange}
+                  disabled={busy}
+                />
+                <button
+                  type="button"
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  aria-label="语音输入"
+                  title="语音输入 (尚未实现)"
+                  disabled
+                >
+                  <Mic size={14} />
+                </button>
+                {busy && draft.trim() && onForceSend && (
+                  <button
+                    type="button"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                    onClick={() => {
+                      const payload = encodeAttachmentsForWire(draft.trim(), attachments);
+                      onForceSend(payload);
+                      if (draft.trim()) setHistory(pushHistory(activeRepoId, draft.trim()));
+                      setDraft("");
+                      setAttachments([]);
+                      setAttachmentError(null);
+                    }}
+                    aria-label="引导"
+                    title="打断当前轮，并发送这条输入"
+                  >
+                    <CornerDownRight size={13} />
+                    引导
+                  </button>
+                )}
+                {busy && (
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
+                    onClick={onStop}
+                    aria-label="停止"
+                  >
+                    <Square size={14} fill="currentColor" />
+                  </button>
+                )}
+                {!busy && (
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary transition-all duration-150 hover:border-primary hover:bg-primary hover:text-primary-foreground active:scale-95 disabled:scale-100 disabled:border-border disabled:bg-muted disabled:text-muted-foreground/50 disabled:opacity-50"
+                    onClick={submit}
+                    disabled={
+                      (!draft.trim() && attachments.length === 0) ||
+                      (attachments.length > 0 && !activeSupportsVision)
+                    }
+                    aria-label="发送"
+                  >
+                    <ArrowUp size={16} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           {queuedInputCount > 0 && queuedInputItems.length === 0 && (

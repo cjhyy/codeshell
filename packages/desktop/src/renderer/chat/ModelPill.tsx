@@ -55,13 +55,21 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
       <button
         ref={anchorRef}
         type="button"
-        className="cs-control inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-foreground disabled:opacity-50"
+        className="cs-control inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-foreground disabled:opacity-50"
         disabled={disabled}
+        aria-label={`当前模型：${label}`}
+        title={`当前模型：${label}`}
         onClick={() => setOpen((o) => !o)}
       >
-        <Zap size={12} className="shrink-0" />
-        <span className="truncate">{label}</span>
-        <ChevronDown size={11} className="shrink-0 opacity-60" />
+        <Zap size={12} className="shrink-0" aria-hidden="true" />
+        <span className="max-w-[12rem] truncate @max-[520px]/composer-controls:hidden">
+          {label}
+        </span>
+        <ChevronDown
+          size={11}
+          className="shrink-0 opacity-60 @max-[520px]/composer-controls:hidden"
+          aria-hidden="true"
+        />
       </button>
       {open && (
         <ul

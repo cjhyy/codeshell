@@ -21,9 +21,10 @@ export function GoalToggle({ enabled, onToggle, disabled }: Props) {
   return (
     <button
       type="button"
-      className={`composer-pill goal-toggle${enabled ? " goal-toggle-on" : ""}`}
+      className={`composer-pill goal-toggle shrink-0${enabled ? " goal-toggle-on" : ""}`}
       disabled={disabled}
       aria-pressed={enabled}
+      aria-label={enabled ? "Goal 模式已开启" : "Goal 模式已关闭"}
       title={
         enabled
           ? "Goal 模式:把这条消息当目标,跑到完成为止(危险操作仍按权限处理)"
@@ -31,8 +32,8 @@ export function GoalToggle({ enabled, onToggle, disabled }: Props) {
       }
       onClick={() => onToggle(!enabled)}
     >
-      <Target size={12} className="shrink-0" />
-      <span>Goal</span>
+      <Target size={12} className="shrink-0" aria-hidden="true" />
+      <span className="@max-[520px]/composer-controls:hidden">Goal</span>
     </button>
   );
 }

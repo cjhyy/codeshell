@@ -99,13 +99,21 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
       <button
         ref={anchorRef}
         type="button"
-        className={`cs-control inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50 ${toneText(cur.tone)} ${toneBorder(cur.tone)}`}
+        className={`cs-control inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50 ${toneText(cur.tone)} ${toneBorder(cur.tone)}`}
         disabled={disabled}
-        title="当前对话权限"
+        aria-label={`当前对话权限：${cur.label}`}
+        title={`当前对话权限：${cur.label}`}
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="truncate">{cur.label}</span>
-        <ChevronDown size={11} className="shrink-0 opacity-60" />
+        <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(cur.tone)}`} aria-hidden="true" />
+        <span className="max-w-[7rem] truncate @max-[520px]/composer-controls:hidden">
+          {cur.label}
+        </span>
+        <ChevronDown
+          size={11}
+          className="shrink-0 opacity-60 @max-[520px]/composer-controls:hidden"
+          aria-hidden="true"
+        />
       </button>
       {open && (
         <ul
