@@ -1294,6 +1294,13 @@ export class Engine {
       this.sessionManager.saveState(session.state);
     }
 
+    // Bump the conversation-turn counter: this user message starts a new turn.
+    // One user message = one turn, regardless of how many turn-loop iterations
+    // or tool calls it spans. File-history snapshots taken below are tagged
+    // with this value so `/undo` reverts exactly this turn's file changes.
+    // (Both resume and cold-start paths converge here.)
+    session.state.turnSeq = (session.state.turnSeq ?? 0) + 1;
+
     // Stamp the resolved session id for downstream logging.
     //
     // `setCurrentSid` updates the module-level fallback so any code path
@@ -1684,8 +1691,11 @@ export class Engine {
       async (context) => {
         const toolName = context.data?.toolName as string;
         const args = context.data?.args as Record<string, unknown> | undefined;
+        // Tag snapshots with the current turn (stamped above before any tool
+        // runs) so turn-level /undo can revert just this user message's edits.
+        const turnSeq = session.state.turnSeq;
         if ((toolName === "Write" || toolName === "Edit") && args?.file_path) {
-          fileHistory.saveSnapshot(args.file_path as string);
+          fileHistory.saveSnapshot(args.file_path as string, turnSeq);
         } else if (toolName === "ApplyPatch" && typeof args?.patch === "string") {
           // ApplyPatch mutates files too, so /undo must see them. Snapshot every
           // existing file the patch updates or deletes (adds have no prior
@@ -1693,7 +1703,7 @@ export class Engine {
           // same base ApplyPatch itself uses.
           const cwd = this.config.cwd ?? process.cwd();
           for (const target of patchBackupTargets(args.patch, cwd)) {
-            fileHistory.saveSnapshot(target);
+            fileHistory.saveSnapshot(target, turnSeq);
           }
         }
         return {};
@@ -1772,7 +1782,11 @@ export class Engine {
         // GOAL_DEFAULT_MAX_STOP_BLOCKS(25). The old hardcoded 8 was too tight
         // for complex goals that legitimately get re-blocked while advancing.
         maxStopBlocks: resolveMaxStopBlocks(this.config.maxStopBlocks, normalizedGoal),
-        maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 10,
+        // 25 (was 10): modern models routinely batch >10 parallel tool calls
+        // (e.g. reading a dozen files at once). At 10 the excess was silently
+        // dropped; the turn loop now also warns the model when it caps, but a
+        // higher ceiling avoids the round-trip in the common case. (B-3)
+        maxToolCallsPerTurn: this.config.maxToolCallsPerTurn ?? 25,
         onStream: options?.onStream,
         signal: options?.signal,
         // Goal mode: the active goal is surfaced to the on_stop handler via
@@ -2710,24 +2724,53 @@ export class Engine {
   }
 
   /**
-   * Read the project's `localEnvironment.env` for this cwd — the KEY=VALUE
-   * pairs the user configured in `.code-shell/settings.json`. These are
-   * layered onto the shell env of the Bash tool and background shells (see
-   * mergeShellEnv). Sub-agents and no-cwd contexts get nothing (same minimal
-   * surface as readBuiltinOverride). Reads the project scope UNMERGED so a
-   * project's env isn't diluted by user-global keys.
+   * Build the shell env layered onto the Bash tool / background shells (see
+   * mergeShellEnv). Three user-configured sources, merged lowest → highest:
+   *
+   *   1. project `localEnvironment.env`  — the per-project "local environment"
+   *      panel (DATABASE_URL etc.); the floor, so a project's own panel values
+   *      can be overridden by an explicit top-level `env`.
+   *   2. global top-level `env`          — ~/.code-shell/settings.json; the
+   *      canonical home for API keys (OPENAI_API_KEY) a skill script reads —
+   *      configure once, every project's skills get it.
+   *   3. project top-level `env`         — .code-shell/settings.json; a project
+   *      that wants to override a global key wins.
+   *
+   * Each scope is read UNMERGED so the layering here is the single source of
+   * precedence (getForScope merges nothing). Sub-agents and no-cwd contexts
+   * get nothing (same minimal surface as readBuiltinOverride). Returns
+   * undefined when no layer contributes a key, so the caller passes it through
+   * unchanged for projects that configure none.
+   *
+   * None of these is filtered through the deny regex (mergeShellEnv): the user
+   * put them there deliberately. The allowlist/deny machinery only guards the
+   * host's process.env from a tainted model exfiltrating it via `env | curl`.
    */
   private readShellEnv(cwd?: string): Record<string, string> | undefined {
     if (this.config.isSubAgent === true || !cwd) return undefined;
+    const merged: Record<string, string> = {};
+    const layer = (env: Record<string, string> | undefined): void => {
+      if (!env) return;
+      for (const [k, v] of Object.entries(env)) {
+        if (typeof v === "string") merged[k] = v;
+      }
+    };
     try {
-      const scoped = this.getSettingsManager().getForScope("project", cwd) as {
+      // The fully-merged settings already apply the scope guard (a 'project'
+      // scope never reads the host ~/.code-shell) and the user < project <
+      // local precedence — so the top-level `env` map read from here is global
+      // values overridden by project values, exactly as specified. We layer
+      // localEnvironment.env *under* it as the floor.
+      const settings = this.getSettingsManager().get() as {
+        env?: Record<string, string>;
         localEnvironment?: { env?: Record<string, string> };
       };
-      const env = scoped.localEnvironment?.env;
-      return env && Object.keys(env).length > 0 ? env : undefined;
+      layer(settings.localEnvironment?.env); // floor
+      layer(settings.env); // top-level env (global ⊕ project) wins
     } catch {
       return undefined;
     }
+    return Object.keys(merged).length > 0 ? merged : undefined;
   }
 
   /**

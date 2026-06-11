@@ -764,6 +764,12 @@ export class TurnLoop {
       // Tool execution phase
       tlog.info("turn.tool_use", { cat: "turn", tools: response.toolCalls.map((t) => t.toolName) });
       const toolCalls = response.toolCalls.slice(0, this.config.maxToolCallsPerTurn);
+      // Per-turn cap: any calls beyond maxToolCallsPerTurn are NOT executed and
+      // NOT added to the assistant message below, so the model never sees a
+      // result for them. Without a heads-up it assumes all ran (acting on
+      // tool output that never happened). Remember the dropped ones so we can
+      // inject a reminder after the executed batch's results. (B-3)
+      const droppedToolCalls = response.toolCalls.slice(this.config.maxToolCallsPerTurn);
 
       // Add assistant message with tool_use blocks to messages
       const assistantBlocks: ContentBlock[] = [];
@@ -821,6 +827,31 @@ export class TurnLoop {
       }
 
       messages.push({ role: "user", content: resultBlocks });
+
+      // B-3: tell the model which of its requested tool calls were dropped by
+      // the per-turn cap so it can re-issue them, instead of silently assuming
+      // they ran. Appended to the same user message that carries the results.
+      if (droppedToolCalls.length > 0) {
+        tlog.info("turn.tool_calls_capped", {
+          cat: "turn",
+          executed: toolCalls.length,
+          dropped: droppedToolCalls.length,
+          cap: this.config.maxToolCallsPerTurn,
+        });
+        const droppedNames = droppedToolCalls.map((t) => t.toolName).join(", ");
+        // Separate user message (not folded into the tool_result blocks) so the
+        // OpenAI converter — which lifts tool_results into standalone role:tool
+        // messages — keeps the reminder as a plain user turn after them.
+        messages.push({
+          role: "user",
+          content:
+            `<system-reminder>Only the first ${toolCalls.length} of your ${response.toolCalls.length} ` +
+            `tool calls ran this turn (per-turn limit is ${this.config.maxToolCallsPerTurn}). ` +
+            `These were NOT executed and produced no result — do NOT assume they ran: ${droppedNames}. ` +
+            `Re-issue the ones you still need in the next turn.</system-reminder>`,
+        });
+      }
+
       // Tool results just pushed; recompute ctx so the bar updates *before*
       // the next model round-trip — large tool outputs can move it sharply.
       this.emitCtxFromMessages(messages);
