@@ -47,7 +47,22 @@
 .diff-file-status-added { color: var(--status-ok); border-color: var(--status-ok); }
 .diff-file-status-deleted { color: var(--status-err); border-color: var(--status-err); }
 .diff-file-status-renamed { color: var(--status-warn); border-color: var(--status-warn); }
-.diff-file-path { color: var(--fg-primary); font-weight: 500; }
+/* Path can be very long; keep the END (filename) visible and ellipsize the
+   FRONT. `direction: rtl` makes text-overflow clip on the left; `text-align:
+   left` + isolate keep the path reading left-to-right. flex/min-width:0 let it
+   shrink inside the header instead of pushing the +/- and icons off-screen. */
+.diff-file-path {
+  color: var(--fg-primary);
+  font-weight: 500;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+  unicode-bidi: plaintext;
+}
 
 .diff-hunk { padding: var(--sp-1) 0; border-top: 1px solid var(--border-subtle); }
 .diff-hunk:first-of-type { border-top: 0; }

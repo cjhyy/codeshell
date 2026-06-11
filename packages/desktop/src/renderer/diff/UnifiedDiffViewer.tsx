@@ -176,7 +176,7 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
         ) : (
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         )}
-        <span className="diff-file-path">{title}</span>
+        <span className="diff-file-path" title={title}>{title}</span>
         {/* Status as a symbol (Codex style), not a text label: added → green
             dot, deleted → red dash, renamed → amber dot; modified shows
             nothing (the +/- counts already convey it). */}
