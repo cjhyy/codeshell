@@ -76,6 +76,34 @@ interface Tab {
 
 const NEW_TAB = "about:blank";
 
+/**
+ * The <webview> with a FROZEN `src` — set once at mount, never re-driven by
+ * React afterward. Critical: `src` is a controlled prop, but the guest page
+ * navigates itself (redirects, SPA route changes, e.g. localhost:3000 → /chat).
+ * Each such navigation fires did-navigate → the parent records it into
+ * `active.url` (for the address bar). If `src` were bound to that live value,
+ * React would re-set `src` on the next render → a SECOND navigation that aborts
+ * the in-flight one (ERR_ABORTED -3, the error in the popout). By capturing the
+ * initial url in a ref and rendering it as a constant, the guest owns its own
+ * navigation after the first load; the address bar still updates via state, and
+ * deliberate re-navigation (address bar / open-url) goes through loadURL().
+ * Mounted fresh per tab (keyed by tab id upstream), so each tab loads its own
+ * initial url exactly once.
+ */
+const WebviewHost = React.forwardRef<WebviewElement, { initialUrl: string }>(
+  function WebviewHost({ initialUrl }, ref) {
+    const frozenSrc = useRef(initialUrl).current;
+    return (
+      <webview
+        ref={ref as unknown as React.Ref<HTMLElement>}
+        src={frozenSrc}
+        partition="persist:browser"
+        style={{ width: "100%", height: "100%", display: "flex" }}
+      />
+    );
+  },
+);
+
 // Injected into the guest page (no preload available there). Highlights the
 // hovered element with an outline, and on click resolves with a compact
 // descriptor: a best-effort CSS selector, tag, trimmed text, and bounding rect.
@@ -317,16 +345,19 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
     (raw: string) => {
       const url = normalizeUrl(raw);
       if (!url) return;
-      // Single navigation driver: update the tab url, which flows into the
-      // <webview src> prop and triggers exactly one navigation. We deliberately
-      // do NOT also call view.loadURL here — driving both the controlled `src`
-      // and an imperative loadURL races two navigations and aborts one
-      // (ERR_ABORTED). If the URL is unchanged (re-enter same address), nudge
-      // via loadURL since `src` won't change.
+      // `src` is frozen at the tab's initial url (see WebviewHost), so it never
+      // re-drives navigation. In-tab navigations are imperative via loadURL.
+      // EXCEPT leaving the NEW_TAB landing: there's no <webview> mounted yet, so
+      // we must set the tab url to MOUNT WebviewHost (its frozen src loads once).
       const view = viewRef.current;
-      if (url === active.url && view) {
+      if (active.url !== NEW_TAB && view) {
+        // Already have a guest → navigate it imperatively. Keep state's
+        // active.url in sync for the address bar (did-navigate also updates it,
+        // but set eagerly so the bar reflects the typed target immediately).
+        patchTab(activeId, { draft: url });
         void view.loadURL(url).catch(() => undefined);
       } else {
+        // From the landing page: mounting WebviewHost with this url loads it.
         patchTab(activeId, { url, draft: url });
       }
     },
@@ -479,16 +510,16 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
         {active.url === NEW_TAB ? (
           <NewTabLanding onOpen={navigate} />
         ) : (
-          <webview
+          <WebviewHost
             // key per tab: one <webview> is mounted at a time, so without a
             // per-tab key React would reuse a single guest across tabs and
             // their navigation histories (canGoBack/Forward) would bleed
-            // together. Keying by tab gives each its own guest + history.
+            // together. Keying by tab gives each its own guest + history — and
+            // freezes the per-tab initial src (see WebviewHost) so the guest's
+            // own redirects don't re-drive `src` into an ERR_ABORTED race.
             key={activeId}
-            ref={viewRef as unknown as React.Ref<HTMLElement>}
-            src={active.url}
-            partition="persist:browser"
-            style={{ width: "100%", height: "100%", display: "flex" }}
+            ref={viewRef}
+            initialUrl={active.url}
           />
         )}
 
