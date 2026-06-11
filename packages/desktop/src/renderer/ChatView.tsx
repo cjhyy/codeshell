@@ -224,12 +224,15 @@ export function ChatView({
   // is recomputed against the real, settled width every time. The clamp keeps it
   // between one line and the max; the CSS `min-h-*` is a static backstop for the
   // instant before the observer's first callback.
+  // Auto-size the composer to its content. The earlier "collapse" wasn't here —
+  // the textarea always measured fine (36px); the composer BLOCK was being
+  // flex-shrunk by the message stream (see the `shrink-0` on its wrapper). This
+  // just grows the textarea with content, capped at MAX.
   const measureComposer = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = "auto";
-    const next = Math.min(Math.max(ta.scrollHeight, MIN_TEXTAREA_PX), MAX_TEXTAREA_PX);
-    ta.style.height = next + "px";
+    ta.style.height = Math.min(Math.max(ta.scrollHeight, MIN_TEXTAREA_PX), MAX_TEXTAREA_PX) + "px";
   }, []);
 
   // Re-measure on content change (typing/clearing doesn't always change the
@@ -599,7 +602,12 @@ export function ChatView({
           <div className="flex flex-col items-center">{welcomeNode}</div>
         )}
 
-        <div className={isNewChat ? "w-full max-w-2xl p-3" : "p-3"}>
+        {/* shrink-0: the composer is a flex sibling of the message stream; without
+            this it has the default flex-shrink:1 and the stream squeezes it
+            smaller on every re-layout (session switch with the dock open),
+            collapsing the input row by row. Pinning shrink to 0 keeps it at its
+            content height regardless of how tall the stream gets. */}
+        <div className={isNewChat ? "w-full max-w-2xl p-3" : "shrink-0 p-3"}>
           {queuedInputItems.length > 0 && (
             <div className="mb-2 rounded-2xl border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
               <div className="mb-1.5 flex items-center justify-between gap-2">
