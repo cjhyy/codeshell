@@ -6,9 +6,10 @@
 import { LSPClient } from "./client.js";
 import { BUILTIN_LSP_SERVERS, type LSPServerConfig } from "./servers.js";
 import { accessSync, constants, statSync } from "node:fs";
-import { delimiter, extname, join } from "node:path";
+import { delimiter, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { rootUriToPath } from "./root-path.js";
+import { commandCandidateNames } from "../utils/exec.js";
 
 type ServerState = "stopped" | "starting" | "ready" | "error";
 
@@ -148,12 +149,7 @@ export function isCommandAvailable(command: string, env: NodeJS.ProcessEnv = pro
 }
 
 function candidateCommandNames(command: string, env: NodeJS.ProcessEnv): string[] {
-  if (process.platform !== "win32" || extname(command)) return [command];
-  const pathext = (env.PATHEXT || ".COM;.EXE;.BAT;.CMD")
-    .split(";")
-    .map((ext) => ext.trim())
-    .filter(Boolean);
-  return [command, ...pathext.map((ext) => `${command}${ext}`)];
+  return commandCandidateNames(command, env);
 }
 
 function isExecutableFile(filePath: string): boolean {

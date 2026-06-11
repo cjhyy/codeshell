@@ -7,7 +7,11 @@ import { existsSync, symlinkSync, readdirSync, lstatSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { safeSpawnShell } from "../runtime/safe-spawn.js";
 import { buildSandboxEnv, mergeShellEnv, defaultShellBinary } from "../runtime/spawn-common.js";
+import { resolveExecutable } from "../utils/exec.js";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
+
+// git resolved via PATH×PATHEXT on Windows (.cmd/.exe shim); no-op on POSIX.
+const GIT_BIN = resolveExecutable("git");
 
 export interface WorktreeSession {
   originalCwd: string;
@@ -60,7 +64,7 @@ export function validateWorktreeSlug(slug: string): void {
  * Find the canonical git root (resolves worktree → main repo).
  */
 export function findGitRoot(cwd: string): string {
-  return execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf-8", timeout: 5000 }).trim();
+  return execFileSync(GIT_BIN, ["rev-parse", "--show-toplevel"], { cwd, encoding: "utf-8", timeout: 5000 }).trim();
 }
 
 /**
@@ -80,7 +84,7 @@ export function createWorktree(
   // Get current branch for later reference
   let originalBranch: string | undefined;
   try {
-    originalBranch = execFileSync("git", ["branch", "--show-current"], {
+    originalBranch = execFileSync(GIT_BIN, ["branch", "--show-current"], {
       cwd: gitRoot,
       encoding: "utf-8",
       timeout: 5000,
@@ -92,7 +96,7 @@ export function createWorktree(
   // Create the worktree. Pre-fix this used a quoted command string; the argv
   // form keeps branchName/worktreePath as literal positional arguments even
   // if a future caller bypasses validateWorktreeSlug.
-  execFileSync("git", ["worktree", "add", "-b", branchName, worktreePath], {
+  execFileSync(GIT_BIN, ["worktree", "add", "-b", branchName, worktreePath], {
     cwd: gitRoot,
     timeout: 30000,
   });
@@ -189,7 +193,7 @@ export function removeWorktree(worktreePath: string, removeBranch = false): void
     // is about to be deleted; the branch-delete must run from the main repo,
     // which outlives the worktree. Derive it from the common git dir.
     const commonDir = execFileSync(
-      "git",
+      GIT_BIN,
       ["rev-parse", "--path-format=absolute", "--git-common-dir"],
       { cwd: worktreePath, encoding: "utf-8", timeout: 5000 },
     ).trim();
@@ -201,7 +205,7 @@ export function removeWorktree(worktreePath: string, removeBranch = false): void
     let branch = "";
     if (removeBranch) {
       try {
-        branch = execFileSync("git", ["branch", "--show-current"], {
+        branch = execFileSync(GIT_BIN, ["branch", "--show-current"], {
           cwd: worktreePath,
           encoding: "utf-8",
           timeout: 5000,
@@ -211,14 +215,14 @@ export function removeWorktree(worktreePath: string, removeBranch = false): void
       }
     }
 
-    execFileSync("git", ["worktree", "remove", worktreePath, "--force"], {
+    execFileSync(GIT_BIN, ["worktree", "remove", worktreePath, "--force"], {
       cwd: mainRoot,
       timeout: 30000,
     });
 
     if (removeBranch && branch.startsWith("worktree/")) {
       try {
-        execFileSync("git", ["branch", "-D", branch], { cwd: mainRoot, timeout: 10000 });
+        execFileSync(GIT_BIN, ["branch", "-D", branch], { cwd: mainRoot, timeout: 10000 });
       } catch {
         // Branch might already be removed.
       }
@@ -232,7 +236,7 @@ export function removeWorktree(worktreePath: string, removeBranch = false): void
  * List active worktrees.
  */
 export function listWorktrees(cwd: string): Array<{ path: string; branch: string; head: string }> {
-  const raw = execFileSync("git", ["worktree", "list", "--porcelain"], {
+  const raw = execFileSync(GIT_BIN, ["worktree", "list", "--porcelain"], {
     cwd,
     encoding: "utf-8",
     timeout: 10000,

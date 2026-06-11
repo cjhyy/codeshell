@@ -10,6 +10,7 @@
 
 import { execFileSync } from "node:child_process";
 import { parseGitLog, type GitLogEntry } from "./parse-log.js";
+import { resolveExecutable } from "../utils/exec.js";
 
 export interface GitStatusEntry {
   status: string;
@@ -18,14 +19,19 @@ export interface GitStatusEntry {
 
 export type { GitLogEntry };
 
+// Resolve git/gh through PATH×PATHEXT on Windows so a .cmd/.exe shim is found
+// (bare execFile doesn't walk PATHEXT). No-op on POSIX. See utils/exec.ts.
+const GIT_BIN = resolveExecutable("git");
+const GH_BIN = resolveExecutable("gh");
+
 /** Run git with an argv array and return its trimmed stdout. */
 function git(cwd: string, args: string[], timeoutMs = 10000): string {
-  return execFileSync("git", args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
+  return execFileSync(GIT_BIN, args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
 }
 
 /** Run gh with an argv array and return its trimmed stdout. */
 function gh(cwd: string, args: string[], timeoutMs = 10000): string {
-  return execFileSync("gh", args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
+  return execFileSync(GH_BIN, args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
 }
 
 export function isGitRepo(cwd: string): boolean {
@@ -91,14 +97,14 @@ export function gitAdd(cwd: string, files: string[] = ["."]): void {
   // `--` ensures a path starting with `-` cannot be parsed as a flag.
   // Each file is its own argv token, so spaces / quotes / non-ASCII pass
   // through verbatim with no shell parsing.
-  execFileSync("git", ["add", "--", ...files], { cwd, timeout: 10000 });
+  execFileSync(GIT_BIN, ["add", "--", ...files], { cwd, timeout: 10000 });
 }
 
 export function gitCommit(cwd: string, message: string): string {
   // Pre-fix this used `JSON.stringify(message)` which only happened to be
   // safe because JSON.stringify covers most shell metacharacters — but it's
   // not real escaping. The argv form is.
-  return execFileSync("git", ["commit", "-m", message], {
+  return execFileSync(GIT_BIN, ["commit", "-m", message], {
     cwd,
     encoding: "utf-8",
     timeout: 30000,
@@ -126,12 +132,12 @@ export function gitCheckout(cwd: string, branch: string, create = false): void {
     throw new Error(`refusing branch name that starts with '-': ${branch}`);
   }
   const args = create ? ["checkout", "-b", branch] : ["checkout", branch];
-  execFileSync("git", args, { cwd, timeout: 10000 });
+  execFileSync(GIT_BIN, args, { cwd, timeout: 10000 });
 }
 
 export function ghAvailable(): boolean {
   try {
-    execFileSync("gh", ["--version"], { encoding: "utf-8", timeout: 5000 });
+    execFileSync(GH_BIN, ["--version"], { encoding: "utf-8", timeout: 5000 });
     return true;
   } catch {
     return false;

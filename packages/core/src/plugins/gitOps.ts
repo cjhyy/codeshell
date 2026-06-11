@@ -16,6 +16,7 @@
  */
 
 import { safeSpawn } from "../runtime/safe-spawn.js";
+import { resolveExecutable } from "../utils/exec.js";
 
 export type GitResult = { ok: true; stdout: string } | { ok: false; error: string };
 
@@ -43,7 +44,8 @@ export function nonInteractiveGitEnv(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv
 }
 
 async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise<GitResult> {
-  const r = await safeSpawn("git", args, {
+  // Resolve git through PATH×PATHEXT on Windows (.cmd/.exe shim); no-op on POSIX.
+  const r = await safeSpawn(resolveExecutable("git"), args, {
     cwd: cwd ?? process.cwd(),
     env: nonInteractiveGitEnv(process.env),
     timeoutMs,
