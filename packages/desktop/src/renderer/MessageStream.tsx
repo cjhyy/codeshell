@@ -98,6 +98,9 @@ export function MessageStream({
   }
   const ref = useStickToBottom<HTMLDivElement>(
     `${messages.length}:${trailingKey ?? ""}`,
+    32,
+    // Session switch → snap to bottom instantly (before paint), no scroll flash.
+    engineSessionId ?? null,
   );
   // Zoom state carries the whole sibling-image group plus the clicked index,
   // so the Lightbox can offer prev/next across the images in one message.
