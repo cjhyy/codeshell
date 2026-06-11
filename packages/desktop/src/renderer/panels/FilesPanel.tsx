@@ -9,6 +9,9 @@ import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal, Paperclip } from "lucide-react";
 import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
 
+/** localStorage key persisting whether the file tree is shown ("1") or hidden ("0"). */
+const TREE_OPEN_KEY = "codeshell.filesPanel.treeOpen";
+
 /** Image extensions we render as an inline preview (via data URL). */
 const IMAGE_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "avif"]);
 /** SVG is text but we can render it directly as an image too. */
@@ -67,7 +70,15 @@ interface Props {
 export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
-  const [treeOpen, setTreeOpen] = useState(true);
+  // Show/hide the file tree — persisted so hiding it sticks across panel
+  // switches, session changes, and app restarts (it used to reset to shown
+  // every remount). Default shown when no preference is stored.
+  const [treeOpen, setTreeOpen] = useState<boolean>(
+    () => localStorage.getItem(TREE_OPEN_KEY) !== "0",
+  );
+  useEffect(() => {
+    localStorage.setItem(TREE_OPEN_KEY, treeOpen ? "1" : "0");
+  }, [treeOpen]);
   // Set of directory paths the tree should force-open so a deep file revealed
   // by a chat path-link is visible. Replaced each request; DirNode reads it.
   const [revealDirs, setRevealDirs] = useState<Set<string>>(() => new Set());
