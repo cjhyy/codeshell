@@ -59,11 +59,9 @@ export function ModelPill({ activeKey, options, onSelect, disabled }: Props) {
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
       >
-        <Zap size={12} />
-        {/* Narrow composer (panel open): keep the Zap icon as the affordance,
-            hide the model name. Keyed to the composer card's @container width. */}
-        <span className="@max-[480px]:hidden">{label}</span>
-        <ChevronDown size={11} className="opacity-60" />
+        <Zap size={12} className="shrink-0" />
+        <span className="truncate">{label}</span>
+        <ChevronDown size={11} className="shrink-0 opacity-60" />
       </button>
       {open && (
         <ul

@@ -104,11 +104,8 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
         title="当前对话权限"
         onClick={() => setOpen((o) => !o)}
       >
-        {/* Narrow composer (panel open): collapse to a tone dot only, hide the
-            label — keyed to the composer card's @container width, not viewport. */}
-        <span className={`hidden h-2 w-2 shrink-0 rounded-full @max-[480px]:inline-block ${toneDot(cur.tone)}`} />
-        <span className="@max-[480px]:hidden">{cur.label}</span>
-        <ChevronDown size={11} className="opacity-60" />
+        <span className="truncate">{cur.label}</span>
+        <ChevronDown size={11} className="shrink-0 opacity-60" />
       </button>
       {open && (
         <ul

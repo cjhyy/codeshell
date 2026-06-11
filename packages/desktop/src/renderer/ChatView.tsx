@@ -678,12 +678,16 @@ export function ChatView({
           */}
         <div
           className={
-            // @container: the pills below switch to icon-only based on THIS
-            // card's width (panel open/close changes local width, not viewport).
             // min-w-[300px]: stop the composer collapsing into an unusable sliver
             // when a side panel squeezes the chat — <main> is overflow-hidden so
             // the panel side yields instead of crushing the input. (窄屏压缩态)
-            "@container min-w-[300px] rounded-xl border bg-card p-2 shadow-sm" +
+            //
+            // No `@container` here: a container-query context (even inline-size)
+            // collapsed the whole composer — textarea included — to h=0 on session
+            // switch with the dock open (proven via ancestor-height logs). It only
+            // existed to icon-ify the pills by width; that responsive省略 was
+            // dropped in favor of a composer that never collapses.
+            "min-w-[300px] rounded-xl border bg-card p-2 shadow-sm" +
             (dragOver ? " ring-2 ring-primary/40" : "")
           }
         >
