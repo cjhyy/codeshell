@@ -8,6 +8,7 @@ import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
 import { enforcePathPolicyWithApproval } from "../path-policy.js";
+import { toLf } from "./eol.js";
 
 export const readToolDef: ToolDefinition = {
   name: "Read",
@@ -66,7 +67,9 @@ export async function readTool(
       content = await readFile(filePath, "utf-8");
       fileCache.set(filePath, content, fileInfo.mtimeMs);
     }
-    const lines = content.split("\n");
+    // Split on LF after normalizing CRLF → LF so a Windows (CRLF) file doesn't
+    // render a trailing ^M on every line. Display-only; the file isn't written.
+    const lines = toLf(content).split("\n");
     const totalLines = lines.length;
     const offset = Math.max(1, (args.offset as number) || 1);
     const limit = (args.limit as number) || 2000;

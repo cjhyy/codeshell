@@ -17,8 +17,10 @@ export interface DiffLine {
 /** Longest-common-subsequence table → minimal -/+ line diff (Myers-equivalent
  *  result via classic LCS; fine for preview-sized files). */
 export function diffLines(from: string, to: string): DiffLine[] {
-  const a = from.split("\n");
-  const b = to.split("\n");
+  // Normalize CRLF → LF before splitting so a Windows (CRLF) snapshot vs. an
+  // LF edit doesn't render as every-line-changed in the /undo preview.
+  const a = from.replace(/\r\n/g, "\n").split("\n");
+  const b = to.replace(/\r\n/g, "\n").split("\n");
   const n = a.length;
   const m = b.length;
 

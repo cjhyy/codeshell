@@ -15,6 +15,7 @@ import { existsSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { Hunk, PlannedFileChange, UpdateFileChunk } from "./types.js";
 import { seekSequence } from "./seek-sequence.js";
+import { detectEol, toLf, applyEol } from "../eol.js";
 
 export interface ApplyPatchOptions {
   /** Working directory for resolving relative paths in the patch. */
@@ -123,8 +124,15 @@ async function planHunks(hunks: Hunk[], cwd: string): Promise<PlannedSet> {
     if (!stats) {
       throw new Error(`Failed to update file: ${sourcePath} does not exist`);
     }
-    const originalText = await readFile(sourcePath, "utf-8");
-    const newText = applyChunksToText(originalText, hunk.chunks, sourcePath);
+    const originalRaw = await readFile(sourcePath, "utf-8");
+    // CRLF handling: patch context lines are LF (the model emits LF). Match in
+    // LF space, then write back in the file's original EOL so a CRLF file isn't
+    // silently converted to LF (which would diff the whole file). originalText
+    // (LF) is what we compare; originalRaw is preserved for rollback so a
+    // restore writes back the exact bytes. See eol.ts.
+    const eol = detectEol(originalRaw);
+    const originalText = toLf(originalRaw);
+    const newText = applyEol(applyChunksToText(originalText, hunk.chunks, sourcePath), eol);
 
     if (hunk.movePath !== undefined) {
       const destPath = resolveAgainst(hunk.movePath, cwd);
@@ -133,14 +141,14 @@ async function planHunks(hunks: Hunk[], cwd: string): Promise<PlannedSet> {
         schedule(sourcePath, {
           path: sourcePath,
           newContent: newText,
-          originalContent: originalText,
+          originalContent: originalRaw,
         });
       } else {
         const destOriginal = await readIfExists(destPath);
         schedule(sourcePath, {
           path: sourcePath,
           newContent: null,
-          originalContent: originalText,
+          originalContent: originalRaw,
         });
         schedule(destPath, {
           path: destPath,
@@ -153,7 +161,7 @@ async function planHunks(hunks: Hunk[], cwd: string): Promise<PlannedSet> {
       schedule(sourcePath, {
         path: sourcePath,
         newContent: newText,
-        originalContent: originalText,
+        originalContent: originalRaw,
       });
       set.modified.push(original);
     }

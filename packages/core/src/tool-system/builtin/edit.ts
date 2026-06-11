@@ -8,6 +8,7 @@ import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { fileCache } from "./file-cache.js";
 import { enforcePathPolicyWithApproval } from "../path-policy.js";
+import { detectEol, toLf, applyEol } from "./eol.js";
 
 export const editToolDef: ToolDefinition = {
   name: "Edit",
@@ -58,34 +59,43 @@ export async function editTool(
   if (blocked) return blocked;
 
   try {
-    const content = await readFile(filePath, "utf-8");
+    const raw = await readFile(filePath, "utf-8");
 
-    if (!content.includes(oldString)) {
+    // CRLF handling: detect the file's line ending, then match/replace in LF
+    // space (the model emits LF, so a CRLF file would never match otherwise),
+    // and write back in the ORIGINAL EOL so a CRLF file stays CRLF (no whole-
+    // file diff churn). See eol.ts.
+    const eol = detectEol(raw);
+    const content = toLf(raw);
+    const oldLf = toLf(oldString);
+    const newLf = toLf(newString);
+
+    if (!content.includes(oldLf)) {
       return "Error: old_string not found in file";
     }
 
     if (!replaceAll) {
-      const firstIdx = content.indexOf(oldString);
-      const lastIdx = content.lastIndexOf(oldString);
+      const firstIdx = content.indexOf(oldLf);
+      const lastIdx = content.lastIndexOf(oldLf);
       if (firstIdx !== lastIdx) {
         return "Error: old_string is not unique in the file. Provide more context or use replace_all.";
       }
     }
 
-    const updated = replaceAll
-      ? content.split(oldString).join(newString)
-      : content.replace(oldString, newString);
+    const updatedLf = replaceAll
+      ? content.split(oldLf).join(newLf)
+      : content.replace(oldLf, newLf);
 
-    await writeFile(filePath, updated, "utf-8");
+    await writeFile(filePath, applyEol(updatedLf, eol), "utf-8");
     fileCache.invalidate(filePath);
 
     const count = replaceAll
-      ? (content.split(oldString).length - 1)
+      ? (content.split(oldLf).length - 1)
       : 1;
 
     // Generate a compact diff summary
-    const oldLines = oldString.split("\n");
-    const newLines = newString.split("\n");
+    const oldLines = oldLf.split("\n");
+    const newLines = newLf.split("\n");
     const diffSummary = generateCompactDiff(oldLines, newLines, filePath);
 
     return `Successfully edited ${filePath} (${count} replacement${count > 1 ? "s" : ""})\n${diffSummary}`;
