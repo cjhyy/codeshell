@@ -250,20 +250,28 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
     if (!view) return;
     const HL = "__cs_marker_hl__";
     const clear = `(()=>{const e=document.querySelector('[data-${HL}]');if(e){e.style.outline=e.dataset.${HL}||'';e.removeAttribute('data-${HL}');}})()`;
+    // executeJavaScript THROWS SYNCHRONOUSLY (not a rejected promise) when the
+    // <webview> isn't attached + dom-ready yet — the popout mounts with a real
+    // src so this effect can fire pre-ready, and an uncaught throw here unmounts
+    // the whole BrowserPanel (blank popout). `.catch()` only catches the async
+    // reject; wrap the call so the sync throw can't escape.
+    const exec = (code: string): void => {
+      try {
+        void view.executeJavaScript(code).catch(() => {});
+      } catch {
+        /* webview not ready yet — the highlight is best-effort, skip */
+      }
+    };
     const target = editingMarker ? markers.find((m) => m.id === editingMarker) : null;
     if (!target?.selector) {
-      void view.executeJavaScript(clear).catch(() => {});
+      exec(clear);
       return;
     }
     const sel = JSON.stringify(target.selector);
-    void view
-      .executeJavaScript(
-        `(()=>{${clear};try{const el=document.querySelector(${sel});if(el){el.dataset.${HL}=el.style.outline||'';el.style.outline='2px solid #2563eb';el.scrollIntoView({block:'center'});}}catch(_){}})()`,
-      )
-      .catch(() => {});
-    return () => {
-      void view.executeJavaScript(clear).catch(() => {});
-    };
+    exec(
+      `(()=>{${clear};try{const el=document.querySelector(${sel});if(el){el.dataset.${HL}=el.style.outline||'';el.style.outline='2px solid #2563eb';el.scrollIntoView({block:'center'});}}catch(_){}})()`,
+    );
+    return () => exec(clear);
   }, [editingMarker, markers]);
 
   // Wire webview lifecycle events for the active tab.
