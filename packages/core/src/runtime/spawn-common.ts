@@ -21,6 +21,7 @@
  * (1) and (2) here. The background manager uses all three.
  */
 
+import { spawn } from "node:child_process";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
 
 /**
@@ -168,6 +169,31 @@ export function resolveSpawnTarget(
   return resolveShellInvocation(command, opts.shell);
 }
 
+/**
+ * Terminate a single (non-detached) foreground child + its tree.
+ *
+ *  - POSIX: SIGTERM, then SIGKILL after `graceMs` if it ignored the term.
+ *    (The child is the process-group leader of its own subtree only if it was
+ *    spawned with its own group; safe-spawn's foreground children are not, so
+ *    this kills the direct child — matching the historical behavior.)
+ *  - Windows: `child.kill("SIGTERM")` is a no-op and only kills the direct
+ *    child anyway, leaving grandchildren (e.g. `npm test → node`). Use
+ *    `taskkill /T /F` on the pid to reap the whole tree. No graceful phase.
+ *
+ * Best-effort: never throws; a child that already exited is fine.
+ */
+export function killChildTree(child: { pid?: number; kill: (sig?: NodeJS.Signals) => boolean }, graceMs: number): void {
+  if (process.platform === "win32") {
+    if (typeof child.pid === "number") void killProcessTreeWindows(child.pid);
+    else try { child.kill("SIGKILL"); } catch { /* gone */ }
+    return;
+  }
+  try { child.kill("SIGTERM"); } catch { /* may already be dead */ }
+  setTimeout(() => {
+    try { child.kill("SIGKILL"); } catch { /* ignore */ }
+  }, graceMs).unref();
+}
+
 const DEFAULT_GROUP_GRACE_MS = 3000;
 
 /**
@@ -189,6 +215,15 @@ export function killProcessGroup(
   pgid: number,
   opts: { graceMs?: number } = {},
 ): Promise<void> {
+  // Windows has no process groups and no real SIGTERM. The detached leader is
+  // NOT spawned detached on win (see background-shell), so `pgid` is just the
+  // leader pid. Reap the whole tree with `taskkill /PID <pid> /T /F` — /T walks
+  // children (npm → node → vite), /F forces. This is the win32 equivalent of
+  // the negative-pid SIGKILL below; there's no graceful phase on Windows.
+  if (process.platform === "win32") {
+    return killProcessTreeWindows(pgid);
+  }
+
   const grace = opts.graceMs ?? DEFAULT_GROUP_GRACE_MS;
   return new Promise<void>((resolve) => {
     if (!groupAlive(pgid)) {
@@ -230,12 +265,41 @@ export function killProcessGroup(
  * True if any process in the group `pgid` is still alive. Signal 0 performs
  * existence/permission checks without delivering a signal; ESRCH means the
  * whole group is gone.
+ *
+ * Windows has no process groups: probe the leader pid directly (positive,
+ * Node supports signal 0 on Windows for an existence check). Children may
+ * outlive the leader, but `taskkill /T` already reaps the tree, so a
+ * leader-alive probe is the right gate for the win32 kill path.
  */
 export function groupAlive(pgid: number): boolean {
+  const target = process.platform === "win32" ? pgid : -pgid;
   try {
-    process.kill(-pgid, 0);
+    process.kill(target, 0);
     return true;
   } catch (e) {
     return (e as NodeJS.ErrnoException).code !== "ESRCH";
   }
+}
+
+/**
+ * Windows process-tree kill via `taskkill /PID <pid> /T /F`. Resolves when
+ * taskkill exits (or immediately if the pid is already gone). Best-effort:
+ * a non-zero exit (e.g. "process not found", code 128) is treated as success
+ * since the goal — the tree being gone — is met.
+ */
+function killProcessTreeWindows(pid: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn("taskkill", ["/PID", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    } catch {
+      resolve();
+      return;
+    }
+    child.on("error", () => resolve());
+    child.on("exit", () => resolve());
+  });
 }

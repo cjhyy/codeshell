@@ -34,6 +34,7 @@
 import { spawn } from "node:child_process";
 import type { HookContext, HookResult } from "../hooks/events.js";
 import { MAX_HOOK_OUTPUT_BYTES } from "../hooks/hook-output.js";
+import { killChildTree } from "../runtime/spawn-common.js";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 
@@ -143,18 +144,8 @@ export async function runPluginCommandHook(
       console.warn(
         `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} timed out after ${timeoutMs}ms`,
       );
-      try {
-        child.kill("SIGTERM");
-        setTimeout(() => {
-          try {
-            child.kill("SIGKILL");
-          } catch {
-            /* already exited */
-          }
-        }, 1000);
-      } catch {
-        /* already exited */
-      }
+      // win32: taskkill /T reaps the tree; POSIX: SIGTERM → grace → SIGKILL.
+      killChildTree(child, 1000);
       settle({});
     }, timeoutMs);
 
@@ -167,7 +158,7 @@ export async function runPluginCommandHook(
           console.warn(
             `[plugin-hook] ${spec.pluginKey} ${ctx.eventName} stdout exceeded ${MAX_HOOK_OUTPUT_BYTES} bytes — killing`,
           );
-          try { child.kill("SIGTERM"); } catch { /* already exited */ }
+          killChildTree(child, 1000);
         }
         return;
       }

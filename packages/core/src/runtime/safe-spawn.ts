@@ -37,7 +37,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { StringDecoder } from "node:string_decoder";
 import type { SandboxBackend } from "../tool-system/sandbox/index.js";
-import { resolveSpawnTarget, defaultShellBinary } from "./spawn-common.js";
+import { resolveSpawnTarget, defaultShellBinary, killChildTree } from "./spawn-common.js";
 
 export interface SafeSpawnOptions {
   /** Process working directory. Required — callers know their cwd; SafeSpawn does not fall back to process.cwd(). */
@@ -206,20 +206,17 @@ function runLifecycle({ file, args, opts, cleanup }: LifecycleArgs): Promise<Saf
 
     const timer = setTimeout(() => {
       timedOut = true;
-      try { child.kill("SIGTERM"); } catch { /* may already be dead */ }
-      setTimeout(() => {
-        try { child.kill("SIGKILL"); } catch { /* ignore */ }
-      }, TIMEOUT_SIGKILL_GRACE_MS).unref();
+      // win32: taskkill /T reaps the whole tree (a foreground `npm test`
+      // spawns node children that child.kill() alone would orphan). POSIX:
+      // SIGTERM → grace → SIGKILL. See killChildTree.
+      killChildTree(child, TIMEOUT_SIGKILL_GRACE_MS);
     }, opts.timeoutMs);
 
     let onAbort: (() => void) | undefined;
     if (opts.signal) {
       onAbort = () => {
         aborted = true;
-        try { child.kill("SIGTERM"); } catch { /* may already be dead */ }
-        setTimeout(() => {
-          try { child.kill("SIGKILL"); } catch { /* ignore */ }
-        }, abortGrace).unref();
+        killChildTree(child, abortGrace);
       };
       opts.signal.addEventListener("abort", onAbort, { once: true });
     }

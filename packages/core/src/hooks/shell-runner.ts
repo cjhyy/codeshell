@@ -33,6 +33,7 @@ import { spawn } from "node:child_process";
 import type { HookContext, HookResult } from "./events.js";
 import type { SettingsHookConfig } from "../types.js";
 import { MAX_HOOK_OUTPUT_BYTES, validateHookResult } from "./hook-output.js";
+import { killChildTree } from "../runtime/spawn-common.js";
 
 // Re-export so existing call sites that import { validateHookResult } from
 // "./shell-runner.js" (e.g. tests) keep compiling.
@@ -88,20 +89,9 @@ export async function runShellHook(
       console.warn(
         `[hooks] ${config.event} hook timed out after ${timeoutMs}ms: ${config.command}`,
       );
-      try {
-        child.kill("SIGTERM");
-        // SIGKILL fallback if the process ignores SIGTERM. Short delay so
-        // a graceful-shutdown handler in the child has a moment to flush.
-        setTimeout(() => {
-          try {
-            child.kill("SIGKILL");
-          } catch {
-            /* already exited */
-          }
-        }, 1000);
-      } catch {
-        /* already exited */
-      }
+      // win32: taskkill /T reaps the shell tree; POSIX: SIGTERM → grace →
+      // SIGKILL (a graceful handler gets a moment to flush). See killChildTree.
+      killChildTree(child, 1000);
       settle({});
     }, timeoutMs);
 
@@ -122,7 +112,7 @@ export async function runShellHook(
           console.warn(
             `[hooks] ${config.event} hook stdout exceeded ${MAX_HOOK_OUTPUT_BYTES} bytes — killing`,
           );
-          try { child.kill("SIGTERM"); } catch { /* already exited */ }
+          killChildTree(child, 1000);
         }
         return;
       }
