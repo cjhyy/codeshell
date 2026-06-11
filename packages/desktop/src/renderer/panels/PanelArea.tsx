@@ -47,7 +47,7 @@ interface Props {
   /** The originating turn's diff snapshot — survives later commits (TODO 2.3a). */
   reviewDiff?: string;
   /** File a chat path-link asked to reveal in the Files panel (nonce re-fires). */
-  revealFile?: { path: string; cwd: string | null; nonce: number };
+  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
   engineSessionId?: string | null;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
@@ -304,7 +304,7 @@ function PanelBody({
   repoId: string | null;
   reviewFiles?: string[];
   reviewDiff?: string;
-  revealFile?: { path: string; cwd: string | null; nonce: number };
+  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
   engineSessionId?: string | null;
   onAttachImage?: (absPath: string) => void;
 }) {

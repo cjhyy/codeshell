@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, ChevronDown, File as FileIcon, Folder, MessageSquarePlus, PanelLeftClose, RefreshCw } from "lucide-react";
 import type { FsEntry, FileContent } from "../../preload/types";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,7 @@ interface Props {
   /** Attach an image file to the composer by absolute path (TODO 2.1). */
   onAttachImage?: (absPath: string) => void;
   /** A chat path-link asked to reveal this file; nonce re-fires on re-click. */
-  revealFile?: { path: string; cwd: string | null; nonce: number };
+  revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
 }
 
 /**
@@ -95,12 +95,17 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
 
   // A chat answer's path link was clicked: App focused this panel and handed us
   // the file. Resolve to an absolute path under cwd, select it, and force every
-  // ancestor directory open so the tree reveals + scrolls to it. Keyed on the
-  // nonce so re-clicking the same file re-reveals, and so a freshly-created
-  // Files tab picks up a request that fired before it mounted. Paths that escape
-  // cwd can't live in this tree — App's openPath fallback handled those.
+  // ancestor directory open so the tree reveals + scrolls to it.
+  //
+  // `revealFile.consumed` (set by App after a path-link open is delivered)
+  // marks a request as already-handled. A manually opened Files tab (+ menu)
+  // mounts with the LAST path-link's revealFile lingering on the shared prop;
+  // because that request is `consumed`, the new tab ignores it and starts empty
+  // instead of jumping to the last-revealed file. A genuine path-link click
+  // sends a fresh (un-consumed) request, which still reveals — including into a
+  // brand-new tab opened by that same click.
   useEffect(() => {
-    if (!revealFile || !cwd) return;
+    if (!revealFile || revealFile.consumed || !cwd) return;
     const abs = resolveUnderRoot(cwd, revealFile.path);
     if (!abs) return;
     setSelected(abs);

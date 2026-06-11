@@ -1637,7 +1637,12 @@ function App() {
   // File the Files panel should select + reveal, set when a chat answer's path
   // link is clicked. The nonce re-fires reveal even when the same file is
   // clicked twice, and lets a freshly-created Files tab pick it up on mount.
-  const [revealFile, setRevealFile] = useState<{ path: string; cwd: string | null; nonce: number } | undefined>(undefined);
+  const [revealFile, setRevealFile] = useState<
+    { path: string; cwd: string | null; nonce: number; consumed?: boolean } | undefined
+  >(undefined);
+  // Monotonic nonce source for revealFile, in a ref so the open-file handler
+  // (registered once) doesn't close over a stale `revealFile`.
+  const revealFileNonceRef = useRef<number>(0);
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
@@ -1849,12 +1854,17 @@ function App() {
     const onOpenFile = (e: Event): void => {
       const detail = (e as CustomEvent<{ path?: string; cwd?: string | null }>).detail;
       if (!detail?.path) return;
-      setRevealFile((prev) => ({
-        path: detail.path!,
-        cwd: detail.cwd ?? null,
-        nonce: (prev?.nonce ?? 0) + 1,
-      }));
+      const nonce = (revealFileNonceRef.current ?? 0) + 1;
+      revealFileNonceRef.current = nonce;
+      // Fresh, un-consumed request — the targeted (or newly opened) Files panel
+      // reveals it. We flip `consumed` true on the next tick so the request
+      // lingers on the shared prop without making a LATER manually-opened Files
+      // tab replay it (that was the "new tab shows the old file" bug).
+      setRevealFile({ path: detail.path!, cwd: detail.cwd ?? null, nonce, consumed: false });
       setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "files", open: true }));
+      setTimeout(() => {
+        setRevealFile((prev) => (prev && prev.nonce === nonce ? { ...prev, consumed: true } : prev));
+      }, 0);
     };
     window.addEventListener("codeshell:open-file", onOpenFile);
     return () => window.removeEventListener("codeshell:open-file", onOpenFile);
