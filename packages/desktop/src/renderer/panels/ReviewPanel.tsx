@@ -94,24 +94,18 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
     // snapshot. Other scopes stack all changed files top-to-bottom; each hunk
     // scrolls horizontally (see diff.css) so long lines aren't force-wrapped.
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Top bar: scope chips (top-left) + optional file dropdown + refresh. */}
+      {/* Top bar: scope dropdown (top-left) + optional file dropdown + refresh. */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-2 py-1.5">
-        <div className="flex min-w-0 flex-wrap gap-1">
-          {REVIEW_SCOPES.filter((s) => s.id !== "turn" || hasTurnFiles).map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setScope(s.id)}
-              className={`rounded px-1.5 py-0.5 text-[11px] ${
-                scope === s.id
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/50"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
+        <SimpleSelect
+          size="sm"
+          ariaLabel="选择审查范围"
+          value={scope}
+          onChange={(v) => setScope(v as ReviewScope)}
+          options={REVIEW_SCOPES.filter((s) => s.id !== "turn" || hasTurnFiles).map((s) => ({
+            value: s.id,
+            label: s.label,
+          }))}
+        />
         {scope === "turn" && turnDiff && turnFilePaths.length > 1 && (
           <SimpleSelect
             size="sm"
