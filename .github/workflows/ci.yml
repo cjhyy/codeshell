@@ -68,3 +68,28 @@ jobs:
             tests/session-cold-start.test.ts \
             tests/tool-cwd.test.ts \
             tests/web-fetch-ssrf.test.ts
+
+  tests-windows:
+    name: tests (windows port — real win32)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: install
+        run: bun install --frozen-lockfile
+      - name: windows-port unit suites
+        # The win32 code paths (shell selection, taskkill, PATHEXT resolution,
+        # case-insensitive paths, CRLF, sandbox fail-open) are only mock-tested
+        # on the macOS/Linux dev box (process.platform is redefined). Run the
+        # SAME suites on a real Windows host so the actual branches execute.
+        run: |
+          bun test `
+            packages/core/src/runtime/shell-invocation.test.ts `
+            packages/core/src/runtime/kill-win32.test.ts `
+            packages/core/src/tool-system/path-policy-win32.test.ts `
+            packages/core/src/tool-system/builtin/crlf.test.ts `
+            packages/core/src/tool-system/sandbox/sandbox-win32.test.ts `
+            packages/core/src/utils/exec.test.ts `
+            packages/desktop/src/main/mobile-remote/cloudflared-binary.test.ts
