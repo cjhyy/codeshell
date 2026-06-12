@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   title: string;
@@ -18,25 +20,27 @@ interface Props {
 export function CollapsibleGroup({ title, subtitle, badge, defaultOpen = true, children }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={`connections-group${open ? "" : " is-collapsed"}`}>
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       <button
         type="button"
-        className="connections-group-head is-toggle"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex w-full select-none items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-accent/50",
+          open && "border-b border-border",
+        )}
       >
-        <span className="connections-group-head-left">
-          <strong>{title}</strong>
-          {subtitle && <span>{subtitle}</span>}
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <strong className="text-sm font-medium text-foreground">{title}</strong>
+          {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
         </span>
-        <span className="connections-group-head-right" style={{ display: "flex", alignItems: "center" }}>
-          {badge && <span className="connections-group-count">{badge}</span>}
-          <span className={`connections-group-chevron${open ? " is-open" : ""}`} aria-hidden>
-            {/* simple right-chevron; rotates 90° when open */}
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
+        <span className="flex shrink-0 items-center gap-2">
+          {badge && <span className="text-xs text-muted-foreground">{badge}</span>}
+          <ChevronRight
+            size={14}
+            aria-hidden
+            className={cn("text-muted-foreground transition-transform", open && "rotate-90")}
+          />
         </span>
       </button>
       {open && children}

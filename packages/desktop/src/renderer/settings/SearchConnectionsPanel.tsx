@@ -3,9 +3,22 @@ import type { SearchProbeInput, SearchProbeResult } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
 import { cacheGet, cacheSet } from "./settingsCache";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { useToast } from "../ui/ToastProvider";
+import { useConfirm } from "../ui/ConfirmDialog";
 import { CollapsibleGroup } from "./CollapsibleGroup";
 import { ImageGenConnectionsPanel } from "./ImageGenConnectionsPanel";
 import { VideoGenConnectionsPanel } from "./VideoGenConnectionsPanel";
+import {
+  ConnCard,
+  ConnCardGrid,
+  ConnCardFooter,
+  ConnFooterRight,
+  ConnField,
+  ConnProbeError,
+  SecretKeyInput,
+} from "./connUi";
 
 interface Props {
   scope: "user" | "project";
@@ -20,39 +33,38 @@ interface Props {
 export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
   return (
     <section className="settings-section">
-      <header className="connections-head">
-        <div>
-          <h3 className="settings-section-title">连接</h3>
-          <span className="connections-kicker">内置功能凭证</span>
-        </div>
-        <span className="connections-hint">
+      <header className="mb-3 flex flex-col gap-1">
+        <h3 className="settings-section-title">连接</h3>
+        <p className="max-w-[620px] text-sm leading-relaxed text-muted-foreground">
           需要 key 的内置功能（WebSearch、图片生成、视频生成…）按功能分组放在这里；每组可折叠。
-        </span>
+        </p>
       </header>
 
-      <CollapsibleGroup
-        title="WebSearch providers"
-        subtitle="默认 provider 决定代理调用 WebSearch 时使用哪一个。"
-        defaultOpen
-      >
-        <SearchProvidersGrid scope={scope} activeRepoPath={activeRepoPath} />
-      </CollapsibleGroup>
+      <div className="flex flex-col gap-3">
+        <CollapsibleGroup
+          title="WebSearch providers"
+          subtitle="默认 provider 决定代理调用 WebSearch 时使用哪一个。"
+          defaultOpen
+        >
+          <SearchProvidersGrid scope={scope} activeRepoPath={activeRepoPath} />
+        </CollapsibleGroup>
 
-      <CollapsibleGroup
-        title="图片生成 providers"
-        subtitle="默认 provider 决定 GenerateImage 用哪一个；可点「测试生图」验证连通。"
-        defaultOpen={false}
-      >
-        <ImageGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
-      </CollapsibleGroup>
+        <CollapsibleGroup
+          title="图片生成 providers"
+          subtitle="默认 provider 决定 GenerateImage 用哪一个；可点「测试生图」验证连通。"
+          defaultOpen={false}
+        >
+          <ImageGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
+        </CollapsibleGroup>
 
-      <CollapsibleGroup
-        title="视频生成 providers"
-        subtitle="GenerateVideo 的 provider 分组。适配器待接入(见组内说明)。"
-        defaultOpen={false}
-      >
-        <VideoGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
-      </CollapsibleGroup>
+        <CollapsibleGroup
+          title="视频生成 providers"
+          subtitle="GenerateVideo 的 provider 分组。适配器待接入(见组内说明)。"
+          defaultOpen={false}
+        >
+          <VideoGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
+        </CollapsibleGroup>
+      </div>
     </section>
   );
 }
@@ -156,6 +168,8 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
     },
   );
   const [loaded, setLoaded] = useState(!!seed);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const load = useCallback(async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
@@ -245,13 +259,21 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
       };
       await writeBack(next, defaultProvider);
       setByProvider(next);
+      toast({ message: "已保存" });
     } catch (err) {
       console.error("saveProvider writeBack failed", err);
+      toast({ message: "保存失败，请重试", variant: "error" });
       updateProvider(id, { saving: false });
     }
   };
 
   const clearProvider = async (id: Provider) => {
+    const ok = await confirm({
+      message: `清除「${PROVIDERS.find((p) => p.id === id)?.displayName ?? id}」的凭证？`,
+      detail: "已保存的 API key / Base URL 将被移除。",
+      destructive: true,
+    });
+    if (!ok) return;
     const next = {
       ...byProvider,
       [id]: { ...initialProviderState() },
@@ -263,6 +285,7 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
       // Don't leave the UI cleared while the persisted settings still hold the
       // old provider — log and reload from disk to resync.
       console.error("clearProvider writeBack failed", err);
+      toast({ message: "清除失败，已还原", variant: "error" });
       void load();
     }
   };
@@ -301,11 +324,15 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
   };
 
   if (!loaded) {
-    return <div className="connections-card-grid"><div className="view-loading">加载中…</div></div>;
+    return (
+      <ConnCardGrid>
+        <div className="text-sm text-muted-foreground">加载中…</div>
+      </ConnCardGrid>
+    );
   }
 
   return (
-    <div className="connections-card-grid">
+    <ConnCardGrid>
       {PROVIDERS.map((meta) => {
         const st = byProvider[meta.id];
         const isDefault = defaultProvider === meta.id;
@@ -326,7 +353,7 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
           />
         );
       })}
-    </div>
+    </ConnCardGrid>
   );
 }
 
@@ -355,120 +382,111 @@ function ConnectionCard({
   onClear,
   onSetDefault,
 }: CardProps) {
-  const statusPill = useMemo(() => {
-    if (state.testing) return <span className="conn-pill probing">测试中…</span>;
-    if (state.probe?.status === "ok") return <span className="conn-pill ok">可用</span>;
-    if (state.probe?.status === "error") return <span className="conn-pill err">连接失败</span>;
-    if (state.probe?.status === "unconfigured") return <span className="conn-pill unknown">未配置</span>;
-    if (!isConfigured) return <span className="conn-pill unknown">未配置</span>;
-    return <span className="conn-pill unknown">未测试</span>;
+  const statusBadge = useMemo(() => {
+    if (state.testing) return <Badge variant="info">测试中…</Badge>;
+    if (state.probe?.status === "ok") return <Badge variant="success">可用</Badge>;
+    if (state.probe?.status === "error") return <Badge variant="error">连接失败</Badge>;
+    if (state.probe?.status === "unconfigured" || !isConfigured) {
+      return <Badge variant="secondary">未配置</Badge>;
+    }
+    return <Badge variant="secondary">未测试</Badge>;
   }, [state.testing, state.probe, isConfigured]);
 
   return (
-    <article className={`conn-card${isDefault ? " is-default" : ""}`}>
-      <header className="conn-card-head">
-        <div className="conn-card-title">
-          <strong>{meta.displayName}</strong>
-          {isDefault && <span className="conn-default-pill">默认</span>}
-          {statusPill}
+    <ConnCard isDefault={isDefault}>
+      <header className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          <strong className="text-sm font-medium text-foreground">{meta.displayName}</strong>
+          {isDefault && <Badge variant="accent">默认</Badge>}
+          {statusBadge}
         </div>
-        <div className="conn-card-head-actions">
-          {meta.signupUrl && (
-            <button
-              className="conn-link-btn"
-              onClick={() => void window.codeshell.openExternal(meta.signupUrl!)}
-            >
-              获取 key
-            </button>
-          )}
-        </div>
+        {meta.signupUrl && (
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto shrink-0 p-0 text-xs"
+            onClick={() => void window.codeshell.openExternal(meta.signupUrl!)}
+          >
+            获取 key
+          </Button>
+        )}
       </header>
 
-      <p className="conn-card-desc">{meta.description}</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">{meta.description}</p>
 
-      <div className="settings-form-grid">
+      <div className="flex flex-col gap-2.5">
         {meta.needsKey && (
-          <label className="settings-field">
-            <span>API Key</span>
-            <div className="conn-secret-row">
-              <input
-                type={state.showKey ? "text" : "password"}
-                value={state.apiKey}
-                onChange={(e) => onConfigChange({ apiKey: e.target.value.trim() })}
-                placeholder="粘贴 API key"
-              />
-              <button
-                className="conn-secret-toggle"
-                type="button"
-                onClick={() => onUiChange({ showKey: !state.showKey })}
-              >
-                {state.showKey ? "隐藏" : "显示"}
-              </button>
-            </div>
-            <span className="conn-field-hint">
-              保存于 ~/.code-shell/settings.json，按 scope 隔离。
-            </span>
-          </label>
+          <ConnField label="API Key" hint="保存于 ~/.code-shell/settings.json，按 scope 隔离。">
+            <SecretKeyInput
+              value={state.apiKey}
+              show={state.showKey}
+              onChange={(v) => onConfigChange({ apiKey: v })}
+              onToggleShow={() => onUiChange({ showKey: !state.showKey })}
+            />
+          </ConnField>
         )}
         {meta.needsBaseUrl && (
-          <label className="settings-field">
-            <span>Base URL</span>
-            <input
+          <ConnField label="Base URL" hint="自部署 SearXNG 实例地址。">
+            <Input
               value={state.baseUrl}
               onChange={(e) => onConfigChange({ baseUrl: e.target.value.trim() })}
               placeholder="https://searxng.example.com"
+              className="font-mono text-sm"
             />
-            <span className="conn-field-hint">自部署 SearXNG 实例地址。</span>
-          </label>
+          </ConnField>
         )}
       </div>
 
       {state.probe?.status === "ok" && state.probe.sampleTitles?.length && (
-        <div className="conn-probe-ok">
-          <div className="conn-probe-title">
+        <div className="rounded-md border border-status-ok/25 bg-status-ok/5 px-2.5 py-2 text-sm">
+          <div className="mb-1 font-medium text-status-ok">
             测试成功
             {formatProbeTime(state.probe.lastProbedAt) && (
-              <span> · {formatProbeTime(state.probe.lastProbedAt)}</span>
+              <span className="font-normal text-muted-foreground">
+                {" "}· {formatProbeTime(state.probe.lastProbedAt)}
+              </span>
             )}
           </div>
-          <ul>
+          <ul className="m-0 list-disc pl-4 text-xs text-muted-foreground">
             {state.probe.sampleTitles.map((t) => (
               <li key={t}>{t}</li>
             ))}
           </ul>
         </div>
       )}
-      {state.probe?.status === "error" && (
-        <div className="conn-probe-err">{state.probe.errorMessage}</div>
-      )}
+      {state.probe?.status === "error" && <ConnProbeError message={state.probe.errorMessage} />}
 
-      <footer className="conn-card-footer">
+      <ConnCardFooter>
         <Button
           variant="default"
+          size="sm"
           onClick={onTest}
           disabled={state.testing || !isConfigured}
           title={isConfigured ? "测试搜索连接" : "请先填写凭证"}
         >
           {state.testing ? "测试中…" : "测试搜索"}
         </Button>
-        <Button
-          variant="solid"
-          onClick={onSave}
-          disabled={state.saving || !state.dirty}
-        >
+        <Button variant="solid" size="sm" onClick={onSave} disabled={state.saving || !state.dirty}>
           {state.saving ? "保存中…" : "保存"}
         </Button>
-        {isConfigured && !isDefault && (
-          <Button variant="default" onClick={onSetDefault}>
-            设为默认
-          </Button>
-        )}
-        {isConfigured && (
-          <Button variant="destructive" onClick={onClear}>
-            清除
-          </Button>
-        )}
-      </footer>
-    </article>
+        <ConnFooterRight>
+          {isConfigured && !isDefault && (
+            <Button variant="ghost" size="sm" onClick={onSetDefault}>
+              设为默认
+            </Button>
+          )}
+          {isConfigured && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-status-err"
+              onClick={onClear}
+            >
+              清除
+            </Button>
+          )}
+        </ConnFooterRight>
+      </ConnCardFooter>
+    </ConnCard>
   );
 }

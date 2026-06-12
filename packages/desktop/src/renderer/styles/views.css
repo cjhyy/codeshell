@@ -562,16 +562,6 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--sp-3);
 }
-.settings-toggle-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  width: fit-content;
-  color: var(--fg-secondary);
-  font-size: var(--fz-sm);
-}
-.settings-toggle-inline input { transform: scale(1.05); }
-
 .mcp-row {
   padding: var(--sp-1) var(--sp-2);
   background: var(--bg-elevated);

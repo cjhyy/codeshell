@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import type { ReasoningControl, ReasoningSetting } from "@cjhyy/code-shell-core";
 import { cacheGet, cacheSet } from "./settingsCache";
 
@@ -827,11 +828,10 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
             </div>
           )}
 
-          <label className="settings-toggle-inline">
-            <input
-              type="checkbox"
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <Switch
               checked={form.makeActive}
-              onChange={(e) => setForm((f) => ({ ...f, makeActive: e.target.checked }))}
+              onCheckedChange={(checked) => setForm((f) => ({ ...f, makeActive: checked }))}
             />
             <span>添加后设为当前模型</span>
           </label>

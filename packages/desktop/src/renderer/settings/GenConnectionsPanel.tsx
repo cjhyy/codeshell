@@ -3,6 +3,8 @@ import type { ImageProbeResult, CatalogEntry } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
 import { cacheGet, cacheSet } from "./settingsCache";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import {
   DropdownMenu,
@@ -13,6 +15,17 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "../ui/ToastProvider";
+import { useConfirm } from "../ui/ConfirmDialog";
+import {
+  ConnCard,
+  ConnCardGrid,
+  ConnCardFooter,
+  ConnFooterRight,
+  ConnField,
+  ConnProbeError,
+  SecretKeyInput,
+} from "./connUi";
 
 /** Probe result shape (reused from image probe; video has no probe → unused). */
 export type ProbeResult = ImageProbeResult;
@@ -93,6 +106,8 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
   const [instances, setInstances] = useState<Instance[]>(seed?.instances ?? []);
   const [defaultId, setDefaultId] = useState<string>(seed?.defaultId ?? "");
   const [loaded, setLoaded] = useState(!!seed);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   /** Catalog entries that belong to this panel's tag (the [+ 添加] menu). */
   const templates = useMemo(() => catalog.filter((e) => e.tag === catalogTag), [catalog, catalogTag]);
@@ -204,13 +219,21 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
       await writeBack(next, defaultId || id);
       setInstances(next);
       if (!defaultId) setDefaultId(id);
+      toast({ message: "已保存" });
     } catch (err) {
       console.error(`${settingsKey} save failed`, err);
+      toast({ message: "保存失败，请重试", variant: "error" });
       patch(id, { saving: false });
     }
   };
 
   const remove = async (id: string) => {
+    const ok = await confirm({
+      message: `删除连接 #${id}？`,
+      detail: "已保存的 API key 将一并移除。",
+      destructive: true,
+    });
+    if (!ok) return;
     const next = instances.filter((i) => i.id !== id);
     let nextDefault = defaultId;
     if (defaultId === id) nextDefault = next[0]?.id ?? "";
@@ -220,6 +243,7 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
       await writeBack(next, nextDefault);
     } catch (err) {
       console.error(`${settingsKey} remove failed`, err);
+      toast({ message: "删除失败，已还原", variant: "error" });
       void load();
     }
   };
@@ -249,11 +273,15 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
   };
 
   if (!loaded) {
-    return <div className="connections-card-grid"><div className="view-loading">加载中…</div></div>;
+    return (
+      <ConnCardGrid>
+        <div className="text-sm text-muted-foreground">加载中…</div>
+      </ConnCardGrid>
+    );
   }
 
   return (
-    <div className="connections-card-grid">
+    <ConnCardGrid>
       {instances.map((inst) => (
         <GenCard
           key={inst.id}
@@ -274,7 +302,7 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
       ))}
 
       {templates.length > 0 && (
-        <article className="conn-card conn-card-add">
+        <ConnCard className="items-start justify-center border-dashed bg-transparent">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="default">+ 添加模型</Button>
@@ -307,10 +335,12 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <p className="conn-card-desc">选模型即建好卡片,填(或复用) key 即用。可添加多个。</p>
-        </article>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            选模型即建好卡片,填(或复用) key 即用。可添加多个。
+          </p>
+        </ConnCard>
       )}
-    </div>
+    </ConnCardGrid>
   );
 }
 
@@ -345,54 +375,62 @@ function GenCard({
   const displayName = entry?.displayName ?? inst.kind;
   const presets = entry?.modelPresets;
 
-  const statusPill = useMemo(() => {
-    if (showTest && inst.testing) return <span className="conn-pill probing">生成测试中…</span>;
-    if (showTest && inst.probe?.status === "ok") return <span className="conn-pill ok">可用</span>;
-    if (showTest && inst.probe?.status === "error") return <span className="conn-pill err">生成失败</span>;
-    if (!isConfigured) return <span className="conn-pill unknown">未配置</span>;
-    return <span className="conn-pill unknown">已配置</span>;
+  const statusBadge = useMemo(() => {
+    if (showTest && inst.testing) return <Badge variant="info">生成测试中…</Badge>;
+    if (showTest && inst.probe?.status === "ok") return <Badge variant="success">可用</Badge>;
+    if (showTest && inst.probe?.status === "error") return <Badge variant="error">生成失败</Badge>;
+    if (!isConfigured) return <Badge variant="secondary">未配置</Badge>;
+    return <Badge variant="secondary">已配置</Badge>;
   }, [showTest, inst.testing, inst.probe, isConfigured]);
 
   return (
-    <article className={`conn-card${isDefault ? " is-default" : ""}`}>
-      <header className="conn-card-head">
-        <div className="conn-card-title">
-          <strong>{displayName}</strong>
-          <span className="conn-instance-id">#{inst.id}</span>
-          {isDefault && <span className="conn-default-pill">默认</span>}
-          {statusPill}
+    <ConnCard isDefault={isDefault}>
+      <header className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          <strong className="text-sm font-medium text-foreground">{displayName}</strong>
+          <span className="font-mono text-xs text-muted-foreground">#{inst.id}</span>
+          {isDefault && <Badge variant="accent">默认</Badge>}
+          {statusBadge}
         </div>
-        <div className="conn-card-head-actions">
-          {entry?.signupUrl && (
-            <button className="conn-link-btn" onClick={() => void window.codeshell.openExternal(entry.signupUrl!)}>
-              获取 key
-            </button>
-          )}
-        </div>
+        {entry?.signupUrl && (
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto shrink-0 p-0 text-xs"
+            onClick={() => void window.codeshell.openExternal(entry.signupUrl!)}
+          >
+            获取 key
+          </Button>
+        )}
       </header>
 
-      {entry?.description && <p className="conn-card-desc">{entry.description}</p>}
+      {entry?.description && (
+        <p className="text-xs leading-relaxed text-muted-foreground">{entry.description}</p>
+      )}
 
-      <div className="settings-form-grid">
-        <label className="settings-field">
-          <span>API Key</span>
+      <div className="flex flex-col gap-2.5">
+        <ConnField label="API Key" hint={labels.keyHint}>
           {/* 复用 toggle — only meaningful when there's another keyed instance. */}
           {reuseCandidates.length > 0 && (
-            <div className="conn-key-mode">
-              <button
+            <div className="flex gap-1">
+              <Button
                 type="button"
-                className={`conn-link-btn${!reusing ? " is-active" : ""}`}
+                variant={!reusing ? "default" : "ghost"}
+                size="sm"
+                className="h-6 px-2 text-xs"
                 onClick={() => onConfigChange({ apiKeyRef: undefined })}
               >
                 填新 key
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className={`conn-link-btn${reusing ? " is-active" : ""}`}
+                variant={reusing ? "default" : "ghost"}
+                size="sm"
+                className="h-6 px-2 text-xs"
                 onClick={() => onConfigChange({ apiKeyRef: reuseCandidates[0].id, apiKey: "" })}
               >
                 复用已有
-              </button>
+              </Button>
             </div>
           )}
           {reusing ? (
@@ -403,30 +441,23 @@ function GenCard({
               options={reuseCandidates.map((o) => ({ value: o.id, label: `#${o.id}` }))}
             />
           ) : (
-            <div className="conn-secret-row">
-              <input
-                type={inst.showKey ? "text" : "password"}
-                value={inst.apiKey}
-                onChange={(e) => onConfigChange({ apiKey: e.target.value.trim() })}
-                placeholder="粘贴 API key"
-              />
-              <button className="conn-secret-toggle" type="button" onClick={() => onUiChange({ showKey: !inst.showKey })}>
-                {inst.showKey ? "隐藏" : "显示"}
-              </button>
-            </div>
+            <SecretKeyInput
+              value={inst.apiKey}
+              show={inst.showKey}
+              onChange={(v) => onConfigChange({ apiKey: v })}
+              onToggleShow={() => onUiChange({ showKey: !inst.showKey })}
+            />
           )}
-          <span className="conn-field-hint">{labels.keyHint}</span>
-        </label>
-        <label className="settings-field">
-          <span>Base URL</span>
-          <input
+        </ConnField>
+        <ConnField label="Base URL">
+          <Input
             value={inst.baseUrl}
             onChange={(e) => onConfigChange({ baseUrl: e.target.value.trim() })}
             placeholder={entry?.defaultBaseUrl}
+            className="font-mono text-sm"
           />
-        </label>
-        <label className="settings-field">
-          <span>默认模型</span>
+        </ConnField>
+        <ConnField label="默认模型">
           {presets?.length ? (
             <SimpleSelect
               value={inst.model}
@@ -435,41 +466,61 @@ function GenCard({
               options={presets.map((p) => ({ value: p.value, label: p.label ?? p.value }))}
             />
           ) : (
-            <input
+            <Input
               value={inst.model}
               onChange={(e) => onConfigChange({ model: e.target.value.trim() })}
               placeholder={entry ? entry.defaultModel : "未匹配到模板，手动填写模型 ID"}
+              className="font-mono text-sm"
             />
           )}
-        </label>
+        </ConnField>
       </div>
 
       {showTest && inst.probe?.status === "ok" && inst.probe.previewDataUrl && (
-        <div className="conn-probe-image">
-          <div className="conn-probe-title">测试生成成功</div>
-          <img src={inst.probe.previewDataUrl} alt="probe preview" />
+        <div className="flex flex-col gap-1">
+          <div className="text-xs text-status-ok">测试生成成功</div>
+          <img
+            src={inst.probe.previewDataUrl}
+            alt="probe preview"
+            className="h-24 w-24 rounded-md border border-border object-cover"
+          />
         </div>
       )}
-      {showTest && inst.probe?.status === "error" && <div className="conn-probe-err">{inst.probe.errorMessage}</div>}
+      {showTest && inst.probe?.status === "error" && (
+        <ConnProbeError message={inst.probe.errorMessage} />
+      )}
 
-      <footer className="conn-card-footer">
+      <ConnCardFooter>
         {showTest && (
-          <Button variant="default" onClick={onTest} disabled={inst.testing || !isConfigured} title={isConfigured ? labels.testTitleConfigured : "请先填写 API key"}>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onTest}
+            disabled={inst.testing || !isConfigured}
+            title={isConfigured ? labels.testTitleConfigured : "请先填写 API key"}
+          >
             {inst.testing ? labels.testBusy : labels.testIdle}
           </Button>
         )}
-        <Button variant="solid" onClick={onSave} disabled={inst.saving || !inst.dirty}>
+        <Button variant="solid" size="sm" onClick={onSave} disabled={inst.saving || !inst.dirty}>
           {inst.saving ? "保存中…" : "保存"}
         </Button>
-        {isConfigured && !isDefault && (
-          <Button variant="default" onClick={onSetDefault}>
-            设为默认
+        <ConnFooterRight>
+          {isConfigured && !isDefault && (
+            <Button variant="ghost" size="sm" onClick={onSetDefault}>
+              设为默认
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-status-err"
+            onClick={onRemove}
+          >
+            删除
           </Button>
-        )}
-        <Button variant="destructive" onClick={onRemove}>
-          删除
-        </Button>
-      </footer>
-    </article>
+        </ConnFooterRight>
+      </ConnCardFooter>
+    </ConnCard>
   );
 }
