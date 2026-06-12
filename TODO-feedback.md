@@ -246,12 +246,11 @@
 - **备注**:已修 = ① writableRoots/deniedReads 两处裸 `<textarea>` → `@/components/ui` `Textarea`(与变量框统一 `font-mono text-sm resize-y`);② `ProjectEnvEditor` + `LocalScriptEditor` 全部 legacy class(`env-settings-*`/`local-env-*`)→ Tailwind 工具类 + 语义 token,外层 `flex flex-col gap-4` 统一节奏,沙箱区 `grid grid-cols-2 gap-4`,tab 按钮换 shadcn `Button variant=ghost`;③「设置脚本」加 **「仅 worktree 生效」** badge、变量区标「全项目生效」区分作用域;④ 删掉 connections.css 里 0-consumer 的 `env-settings-*`/`local-env-*` 死规则(符合 [[project_desktop_shadcn]] Phase D)。**共享的 `settings-field`/`settings-form-grid` 保留**(其他设置页还在用)。desktop 551 过、tsc+build 绿。坑:删 css 时留的注释里 `*/` 误闭合注释炸了 build,已改文案。
 
 
-### 🔴 [2026-06-12] 设置/配置页每次进入闪一下(loading)
+### 🟢 [2026-06-12] 设置/配置页每次进入闪一下(loading)
 - **现象**:每次进设置配置页都会闪一下,看起来是先渲染了 loading 占位态、数据到位后再替换造成的视觉跳动。
-- **复现**:进入设置/配置页。
-- **期望**:进入即稳,不闪。首屏宜用已缓存的 settings 同步渲染(或骨架与真实布局同尺寸),避免空→loading→数据三段式跳动。
-- **状态**:🔴
-- **备注**:与已修的「切模型闪『保存中』」(saving 闪,78fe9c2)是**不同症状**——这里是进入页面的 loading 闪。关联记忆 [[project_settings_page_loading_flash]]、[[project_model_switch_saving_flash]]。
+- **根因**:SettingsPage 切 tab 是条件渲染 → 子页 unmount/remount,每次重新 IPC 拉数据,期间渲染「加载中…」占位(或空列表)。
+- **状态**:🟢 已修(2026-06-12,6bab871)
+- **备注**:新增 `settings/settingsCache.ts`(module 级快照缓存):子页把最近一次成功加载的快照按 key 存入,remount 时 useState 初始化器同步 seed(不出占位)+ 后台静默刷新(stale-while-revalidate)。接入 7 个子页(GenConnections×2/SearchConnections/PluginsAndSkills/CapabilitiesOverview/ConversationSettings/Memory/Model)。每个 app 运行周期只有第一次进某页会 loading。与已修的「切模型闪『保存中』」(saving 闪,78fe9c2)是**不同症状**。关联记忆 [[project_settings_page_loading_flash]]、[[project_model_switch_saving_flash]]。
 
 ### 🔴 [2026-06-12] 浏览器圈选体验:已选内容回显 + 编辑时高亮边框
 - **现象**:浏览器面板圈选时,(1) 当前 session 里已存的选取内容,在浏览器里**没有回显**出来——看不到选过哪些;(2) 点「编辑」某一项时,对应页面元素**没显出边框**,不知道是哪一个元素。
@@ -266,3 +265,105 @@
 - **期望**:明确「这是某插件带的」语义——和独立 MCP 视觉区分,或归到插件项下分组,而非平铺混排。
 - **状态**:🔴
 - **备注**:已有过相关接线——MCP 页对插件 owner 做过标注(§6.2「MCP页插件owner标注」),这次需进一步打磨插件捆绑 MCP 的呈现。先看 desktop 现状 MCP/扩展页怎么渲染插件 owner 再定改法。MCP 名字由 record key 承载,见 [[project_mcp_name_key_contract]]。关联记忆 [[project_plugin_bundled_mcp_display]]。
+
+### 🔴 [2026-06-12] 看不到插件里到底有什么 — 需要插件详情页
+- **现象**:插件列表里一个插件只显示 `来源 · N skills`(`PluginsTab.tsx:139`),**看不到它到底包含什么**——hooks / MCP / commands / agents 都没露出,也**没有点进去看详情的入口**。
+- **复现**:扩展→插件页,看任意插件。
+- **期望**:点进插件能看到详情——列出它提供的 skills、hooks、MCP server、commands、agents 等各类内容(名称 + 数量),让用户清楚这个插件装了啥。
+- **状态**:🔴
+- **备注**:现状 `PluginSummary`(`plugins-service.ts:28`)只带 `skillCount`,**连其它能力的计数都没有**,要补 core/main 侧的内容枚举(skills 已从磁盘数;hooks 已有 `listPluginHooks`,见钩子页改造;MCP 有 owner 标注思路;commands/agents 需新扫)再做详情 UI。与 [2026-06-12]「插件自带 MCP 显示奇怪」同源(都是插件内容可见性),可一并设计:详情页里 MCP 也归到该插件名下。关联记忆 [[project_plugin_detail_view]]、[[project_plugin_bundled_mcp_display]]、[[project_extensions_ui]]。
+
+### 🔴 [2026-06-12] hooks 缺全局(user)级配置入口 + 缺单条启停开关
+- **现象/疑问**:用户问 hooks 有没有全局配置、能不能开关 hooks。
+- **核实(2026-06-12)**:
+  - **core 支持全局**:`SettingsManager` 分层合并(`manager.ts:42`,`flag>local>project>user>managed`),`user` 层 = `~/.code-shell/settings.json`,`hooks` 写全局完全能加载合并(`manager.ts:91`)。
+  - **但 desktop UI 故意只做项目级**:`HooksSection`(`AdvancedSections.tsx:270`)注释明写 "Hooks are PROJECT-scoped only … a global/user hook makes no sense",只编辑 `<repo>/.code-shell/settings.json`。与记忆 [[project_settings_hooks_memory_dream]]「钩子仅项目级」一致(当初有意决策)。
+  - **开关现状**:手写项目 hook 只能**增/删,无单条 toggle**;插件 hook 只读、只能靠**禁用整个插件**来关(`listPluginHooks` 已返回 `disabled` 字段,但单条细粒度启停未接,见钩子页改造「未做」项)。
+- **期望(待产品决策)**:① 是否给 hooks 加全局(user)级编辑入口——注释说「全局 hook 没意义」但 hook 有 `cwd`/`matcher` 字段,全局日志类 hook 讲得通,且 CC 本身支持 user 级 hooks(可重新评估这条决策);② 手写 hook 加「启用/禁用」开关(不删也能临时关);③ 插件 hook 单条启停(需扩 core `capabilityOverrides.hooks`)。
+- **状态**:🔴
+- **备注**:array 合并是「整体替换不拼接」(`manager.ts:merge`,数组走 else 分支覆盖)——若加全局层 hooks 要注意项目层会**整体覆盖**全局 hooks 数组,而非合并追加,需特别处理。关联记忆 [[project_hooks_global_and_toggle]]、[[project_settings_hooks_memory_dream]]。
+
+### 🟡 [2026-06-12] 记忆/Dream 机制疏理 + 记忆杂乱过期 — 待讨论方向
+- **疑问**:目前记忆到底怎么用的?Dream 有什么用?CC/Codex 怎么做?而且有些记忆过期了、好杂乱。
+- **核实(2026-06-12,本仓库现状)**:
+  - **存储**:全局 `~/.code-shell/memory/{user,dream}/` + 项目级 `~/.code-shell/projects/<hash>/memory/{user,dream}/`;每条一个 md(frontmatter+正文)+ `MEMORY.md` 索引。证据 `packages/core/src/session/memory.ts:73-147,225-230`。
+  - **注入**:每轮对话开头作为 `<system-reminder>` 注入(user+dream 两 scope 合并,标不同标签);可选 `settings.memories.maxAge` 按天过滤**注入**(不删文件)。证据 `prompt/composer.ts:76-94,243-250`、`session/memory.ts:44-62,239-274`。
+  - **写入**:① Desktop UI 手动增删改(MemorySave/Delete 需确认);② 每次对话结束自动 LLM 提取(≤2 条/会话,直存 user scope 不确认,legacy)。证据 `services/extract-memories.ts:14-101`、`services/memory-orchestrator.ts:77-125`。
+  - **Dream**:LLM 工具循环(8 轮/10 写预算)整理 **dream scope**(去重/合并/清理),user scope 对它**只读**;自动触发=每 5 会话且隔 ≥24h,手动=设置页「整理 Dream」按钮。证据 `services/dream-consolidation.ts:34-195`、`services/auto-dream.ts:12-89`、`desktop/.../MemorySection.tsx:266-277`。
+  - **过期/清理**:**只有注入期 age 过滤 + soft-delete 到 memory-trash**;❌无自动硬删除、❌无自动去重(仅 Dream LLM 做)、❌无后台清理。证据 `session/memory.ts:44-62,199-222`、`settings/schema.ts:418-424`。
+- **CC/Codex 对比(2026-06 核实,纠正旧认知)**:两家**都已是「静态指令文件 + 动态自动记忆」双层**,不再是纯静态靠人维护。CC = CLAUDE.md(静态,全量注入)+ Auto memory(默认开/会话内实时写/MEMORY.md 限 200 行 25KB recall/topic 按需读/**无过期无去重靠人**);Codex = AGENTS.md(静态)+ Memories(默认关/**后台异步**写/**有专门 consolidation 模型 + age/idle/数量过期参数**/redact secrets)。**本项目的 Dream(后台 LLM 整合)思路更接近 Codex 的 Memories,而非 CC**。来源 code.claude.com/docs/en/memory、developers.openai.com/codex/memories + config-reference。
+- **「杂乱过期」实测**:`~/.claude/...codeshell/memory/` 当前 **75 个文件,其中 42 个(56%)标「已修/已做/已完成」**——一多半是办完的旧事仍占索引,这是杂乱主因。(注:这是 **Claude Code 自己的** auto memory 目录,非本项目 code-shell 的记忆;但暴露的问题对两套都成立=完成态记忆只增不减。)
+- **状态**:🟡 待讨论(机制无 bug,是产品方向)
+- **可能方向(待决策)**:① 给「自动提取」的记忆也走确认/或可关(现 legacy 不确认);② 给记忆加「状态/完成」语义,Dream 或清理流程能归档/删掉「已修完」的;③ 借鉴 Codex:加 age/数量上限自动归档、secret redact;④ 借鉴 CC:MEMORY.md 索引截断 + 详情按需读,避免索引膨胀。关联记忆 [[project_memory_and_dream_overview]]、[[project_settings_hooks_memory_dream]]、[[reference_cc_codex_memory]]。
+
+### 🔴 [2026-06-12] 记忆需要「固定/置顶」层 — user scope 被自动提取淹没,有用的留不住
+- **现象/诉求**:有些记忆觉得有用,想把它**升级成固定的**;但现在 `user` scope 里**全是自动提取的**,手动写的有用记忆和自动噪音混在一起。
+- **核实(2026-06-12)**:
+  - 目前**只有 2 个 scope**:`user`(手动写 + 对话结束自动提取,**混在一起**)和 `dream`(LLM 工作区,会被自动改删)。`MemoryScope = "user" | "dream"`(`packages/core/src/session/memory.ts:35`)。
+  - **自动提取和手动写用同一个 `save()`,完全无来源标记**——frontmatter 只有 `name/description/type`(`memory.ts:126-147`),没有 origin/auto/pinned 字段。所以 user scope 里**没法区分**哪条是自动提取的噪音、哪条是你想留的。
+  - 自动提取 = 每会话结束 LLM 抽 ≤2 条直存 user scope 不确认(`services/extract-memories.ts`)。**没有「固定/pinned」这一层**。
+- **期望**:能把一条记忆「升级为固定」,使其 ① 不被自动流程/Dream 改删 ② 视觉上和自动提取的区分开 ③ 优先注入/不受 age 过滤。
+- **状态**:🔴
+- **方案选项(待决策,见备注)**。
+- **备注**:几种实现路子——**A. 加 `pinned` frontmatter 字段**(最轻:save 支持 pinned;UI 加「固定」按钮 + 列表分组「固定/自动」;注入时固定的优先且不受 maxAge);**B. 新增第三个 scope `pinned/`**(`MemoryScope` 加一项,自动提取只写 user、pinned 纯手动、Dream 对 pinned 只读,与现 user/dream 隔离一致,改动较大);**C. 给自动提取打 `origin:"auto"` 标记**(治本:让 user scope 内部能分自动 vs 手动,配合按来源过滤/批量清理)。推荐 A 或 A+C 组合(轻、直接解决「淹没」)。配合 feedback#17「记忆杂乱过期」一起设计。关联记忆 [[project_memory_pinned_layer]]、[[project_memory_and_dream_overview]]。
+
+### 🔴 [2026-06-12] 连接(connections)整块 UI 需要系统性优化 — 视觉/信息架构/交互三方面
+- **现象/诉求**:连接这一块的 UI 需要优化。用户确认三方面都要:**视觉/样式粗糙 + 信息架构混乱 + 交互体验**。
+- **核实(2026-06-12,已定位抓手)**:
+  - **结构**:连接分散在 4 个独立面板——`ModelSection.tsx`(模型)、`ImageGenConnectionsPanel.tsx`、`SearchConnectionsPanel.tsx`、`VideoGenConnectionsPanel.tsx`,公共部分在 `GenConnectionsPanel.tsx` + `CollapsibleGroup.tsx`。
+  - **视觉(shadcn 迁移漏网)**:仍在用手写 `styles/connections.css`(**299 行、52 条 `.conn-*`/`.connections-*` 规则**)+ 裸 `<button>`/`<label>`/`<input>`(`GenConnectionsPanel.tsx:256,308-379` 大量 `conn-card`/`conn-pill`/`conn-secret-toggle`/`settings-field` 等 legacy class)。违反 desktop CLAUDE.md「禁手写 textarea/CSS、用 @/components/ui + Tailwind」。是 [[project_desktop_shadcn]] Phase D 没扫到的大块。
+  - **信息架构**:4 面板卡片网格(`connections-card-grid`)、分组(`connections-group` + chevron/count)、默认项 pill(`conn-default-pill`)、key 复用(`conn-key-mode`/apiKeyRef)、探测状态(`conn-probe-*`)层次需重排。
+  - **交互**:添加/测试连接(`conn-card-add`/probing/ok/err pill)、填 key、设默认、连通性探测的流程与反馈需打磨。
+- **期望**:① 全面迁 shadcn/ui + Tailwind 语义 token,与其它已迁设置页观感统一,删 connections.css;② 重排卡片/分组/默认/key复用/探测的信息层次;③ 优化添加/测试/设默认/探测的交互与反馈。
+- **状态**:🔴
+- **备注**:范围大,建议先 brainstorm 定方向(视觉统一优先级最高、最确定)再分面板推进。模型接入是 Catalog v1(内置+user.json/多实例复用key apiKeyRef/设默认),见 [[project_model_catalog]];迁移参照 [[project_desktop_shadcn]](HSL token + simple-select)。关联记忆 [[project_connections_ui_overhaul]]。
+- **追加具体痛点(2026-06-12)**:**「添加」的两段式流程别扭**——点 `[+ 添加]` 弹 catalog 模板菜单(`templates` 按 catalogTag 过滤,`GenConnectionsPanel.tsx:84`)先选一个 provider(如 fal),创建 instance 后**再进卡片里选 model**(`inst.model`,`:108`)。用户觉得「先选 fal、再进去选模型」这种 provider→model 分两步选很奇怪。期望:合并成一步(如添加菜单直接二级展开到具体模型,或一个搜索框同时选 provider+model),减少「选了个空壳再配置」的割裂感。这是上面「交互体验」一项的最具体落点。
+- **追加 BUG(2026-06-12,真因已定位)→ 🟢 已修(2026-06-12,b020eb1)**:**老数据(Catalog v1 之前的 provider)选不了模型**。根因:旧 provider 存的没有 `catalogId`,加载时虽有 kind+tag 回退匹配(`GenConnectionsPanel.tsx:100`),但 GenCard 按 `entry=entryById(inst.catalogId)` 解析模板,catalogId 为 undefined → `entry.modelPresets` 拿不到 → 模型下拉**退化成空文本框**;且 `writeBack` 只在 catalogId 存在时才写(`:149`)→ 永不回填。**已修三处**:① core `migrate-config.ts` 注册首个真实 migration(v0→v1):imageGen/videoGen.providers[] 无 catalogId 按 `adapterKind===kind && tag` 匹配 BUILTIN_CATALOG 回填;`SettingsManager.load()` 接线 migrateConfig(框架此前 0 消费者),user+project 两层各自迁移,仅内容真变才写回(带 .bak),纯 stamp 差异不动文件;② renderer load() 采纳 fallback 匹配进 `catalogId`(下次保存即持久化);③ 未匹配模板时模型框 placeholder 提示「未匹配到模板,手动填写模型 ID」。坑:迁移生效后 generate-image 测试的精确断言要带 catalogId(367bc32)。
+
+### 🟡 [2026-06-12] codeshell 没有「创建/编写 skill」的辅助(skill-creator 类) — 待评估要不要做
+- **疑问**:现在有 skill creator 吗?CC/Codex 怎么帮写 skill?
+- **核实(2026-06-12)**:
+  - **codeshell 现状**:**能消费 skill 但不能辅助创建**。`packages/core/src/skills/frontmatter.ts:2` 明写「byte-compatible with Claude Code's frontmatterParser,so community skill repositories can be reused」+ `scanner.ts` 扫 `<base>/<name>/SKILL.md`(项目+用户级)。**没有任何「新建/脚手架/引导写 skill」的产品功能**(grep createSkill/scaffoldSkill 无)。本机层面用户用的是装在 ~/.claude 的 `document-skills:skill-creator`(Anthropic 官方,33KB SKILL.md + scripts/agents/eval-viewer)和 `superpowers:writing-skills`——那是 Claude Code 的 skill,不是 codeshell 产品自带。
+  - **CC 做法**:`skill-creator` 是**一个「用来创建 skill 的 skill」(meta-skill)**,交互式引导走 Create→Eval→Improve→Benchmark 全生命周期(问意图→访谈→draft SKILL.md→跑测试 prompt→量化 eval→迭代→优化 description 触发)。无 `/create-skill` CLI,走 meta-skill。superpowers `writing-skills` 侧重不同=TDD-for-skills「没失败测试不写 skill」+ 抗合理化加固。
+  - **Codex 做法**(纠错:Codex 现在**也有 skill**了,2025-12 起,**和 CC 共享 agentskills.io 开放标准、同 SKILL.md 格式**):内置 `$skill-creator`(6 步脚手架:理解→规划→`init_skill.py` 脚手架→编辑→`quick_validate.py` 校验→迭代)+ `$skill-installer`(从 openai/skills 目录装)。Codex 偏「脚本脚手架+校验器」,CC 偏「交互访谈+eval 循环」。
+- **状态**:🟡 待评估(非 bug,是产品方向)
+- **可能方向**:codeshell 既然已 byte-compatible 复用社区 skill,可考虑加一个**自带 skill-creator 类能力**(作为内置 skill 或 UI 引导),帮用户在 codeshell 里直接写 skill;格式天然兼容 CC/Codex/agentskills.io。关联记忆 [[reference_cc_codex_skill_creator]]、[[project_extensions_ui]]、[[project_settings_projectpicker_done]](skill 系统已实现部分)。
+
+### 🟡 [2026-06-12] 安装 plugin/skill 的本地化适配(兼容 CC + Codex)— 现状盘点 + 缺口
+- **诉求**:安装 plugin 或 skill 时怎么本地化、适配到 codeshell,如果 CC/Codex 都想兼容的话。
+- **核实(2026-06-12,已大量实现,这是「扩展」非「从零」)**:
+  - **格式识别**:`detectPluginFormat`(`installer/detectFormat.ts:5`)二元判定——有 `.codex-plugin/plugin.json` = Codex,否则 = CC。
+  - **CC 格式**:整目录原样复制(skills/agents/commands/hooks 等 CC 原生布局是 codeshell「母语」)。`install.ts:44`。
+  - **Codex 格式→已做三类转换**:① **skills 原样拷**(CC/Codex SKILL.md 同构,见 `convertSkills.ts` 注释 "isomorphic",仅校验 frontmatter);② **agents:TOML→MD**(`convertAgents.ts`/`convertCodexAgentToml`);③ **mcp→`mcp-servers.json`** 按 `<plugin>:<server>` keying(`convertMcp.ts`/`resolveCodexMcpServers`)。`install.ts:51-68`。
+  - 装后统一走 `scanInstalledPlugins`/`loadPluginHooks`/`loadPluginAgents` 等现有 loader(`install.ts:73`)。
+- **状态**:🟡 待评估缺口(主路径已通)
+- **已确认/可能缺口**:① **Codex 的 commands/prompts**(`~/.codex/prompts`、slash command)目前**未见转换**——只转了 skills/agents/mcp;CC 的 commands 已并入 skills 可直接用,Codex 的 prompts 是否要映射进来?② Codex 的 `AGENTS.md` 指令文件如何对待(codeshell 已有 AGENTS 层级注入,见记忆);③ skill 安装的独立入口(现在 skill 多随 plugin 装,单装一个 skill 仓库的路径是否顺畅);④ agentskills.io 开放标准的 `.agents/skills` 跨工具目录是否扫。建议先确认①是不是真缺口再排期。关联记忆 [[project_plugin_skill_localization]]、[[reference_cc_codex_skill_creator]]、[[project_extensions_ui]]、[[project_mcp_name_key_contract]]。
+
+### 🟡 [2026-06-12] 建官方 marketplace 源 + 预置自带 skill — 引擎已齐,只缺「官方源」
+- **诉求**:是不是需要一个官方 marketplace,用来装自带 skill,用户下载就自带?
+- **核实(2026-06-12,关键=引擎齐全只缺内容源)**:
+  - **marketplace 引擎已完整**:`marketplaceManager.ts` 能 clone github/git 仓库、读 manifest、装/删/列;**同时兼容 CC manifest(`.claude-plugin/marketplace.json`)和 Codex(`.agents/plugins/marketplace.json`)**(`resolveManifestPath` `:44-58`);市场 UI 齐(DiscoverHome/MarketList/MarketDetail/SkillsTab)。`known_marketplaces.json` 与 CC byte-compatible。
+  - **空缺**:`knownMarketplaces.ts` **无任何内置/默认官方源**——`readKnownMarketplaces` 文件不存在返回 `{}`。即引擎能用但 codeshell 自己没预置官方源,用户得手动 add marketplace。
+  - **skill 复用**:codeshell 能 byte-compatible 消费 CC skill(`skills/frontmatter.ts`),官方 skill-creator 等可直接复用(见 [[reference_cc_codex_skill_creator]])。
+- **结论**:**不需要造机制,只需 ① 建一个官方 marketplace 仓库(GitHub repo + `.claude-plugin/marketplace.json` + 自带 skill 目录,如 codeshell-official)② 在 `knownMarketplaces.ts` 加内置 seed,首启自动写进 known_marketplaces.json(类比 CC 默认带 anthropic 源)。** 用户装好即在市场看到官方 skill、一键下载。
+- **决策已定(2026-06-12)**:选 **A. 默认源 + 首启自动下载(软预装)**——不打进安装包,首次启动时后台自动拉取并安装,体验接近开箱即用但保持轻/可独立更新。三个细节决策:
+  - **范围**:首启**只自动装指定的几个核心 skill**(非全部、非只加源)。需要列一份「默认必装」清单(如 skill-creator)。
+  - **失败处理**:**静默重试、不阻塞启动**——后台拉,拉不到不报错不弹窗,下次启动再试。
+  - **更新策略**:**只首装一次,之后不动**——靠首装标记(如 first-run-installed.json / 已装即跳过)防重复;升级靠用户手动,**不自动覆盖用户改过的 skill**。
+- **实现要点**:① 建官方 marketplace 仓库(`.claude-plugin/marketplace.json` + 核心 skill 目录);② `knownMarketplaces.ts` 加内置 seed(首启写入 known_marketplaces.json);③ 首启 bootstrap:加完源后对「核心清单」逐个 install(走现有 installer,async fs 防冻 main 进程,见 178abc8);④ 持久化「首启已装」标记,幂等防重装;⑤ 静默失败 + 下次重试。注意全程在 main 进程用 async fs(参考记忆 [[project_main_sync_fs_freeze]])。
+- **状态**:🟡 待实现(决策已定)
+- **备注**:可作为「让 codeshell 有自带 skill 生态」的落地路径,把 skill-creator 复用 + plugin 本地化兼容串起来。关联记忆 [[project_official_marketplace_seed]]、[[reference_cc_codex_skill_creator]]、[[project_plugin_skill_localization]]、[[project_extensions_ui]]。
+
+### 🟢 [2026-06-12] marketplace 下载的插件不显示版本号
+- **现象**:在 marketplace 里下载/浏览插件时,**看不到版本号**。
+- **根因(两层)**:① `PluginMarketplaceEntry` 无 `version` 字段(manifest 写了也没解析);② 市场 UI 完全没渲染版本。
+- **状态**:🟢 已修(2026-06-12,5ed658c)
+- **备注**:① core `PluginMarketplaceEntry` 加 `version?` + `validatePluginEntry` 解析(**CC 的 marketplace.json 本无 version 惯例**,manifest 写了才有,缺省不显示);② marketplace-service DTO + preload 透传,`MarketDetail` 名称旁渲染 `vX.Y.Z`;③ 已装插件另显「已装 <版本>」(installed Set→Map,值=`PluginInstallEntry.version` git 短 SHA 或 local)——即便 manifest 没写版本也能看到装的是哪个 commit。**留后**:「可更新」提示(checkUpdate 走 git ls-remote 逐个网络请求,放列表会卡)。关联记忆 [[project_marketplace_version_display]]、[[project_plugin_detail_view]]、[[project_extensions_ui]]。
+
+### 🟢 [2026-06-12] MCP 鉴权失败报错不友好 + 缺配置引导
+- **现象**:远程 HTTP MCP(如 n8n 的 `synta-mcp`)鉴权失败时,只甩「鉴权失败(检查 API key / headers)」+ 一坨 stack trace(`Streamable HTTP error … -32001 Unauthorized … StreamableHTTPClientTransport.send … index.mjs:40341`)。**没告诉用户:这个 server 需要鉴权、该配哪个字段、怎么配**——不熟的人无从下手。
+- **复现**:加一个需要鉴权的 HTTP MCP,不配/配错凭证,连接 → 报这串。
+- **核实(2026-06-12,机制已查清)**:codeshell 对 HTTP MCP 有三种带凭证方式(`buildHttpHeaders`,`mcp-manager.ts:62-81`;字段见 `types.ts:537-553`):① `headers`(静态明文)② `bearerTokenEnvVar`(填**环境变量名**→ `Authorization: Bearer <env值>`)③ `envHeaders`(header名→环境变量名映射)。secret 连接时才从 `process.env` 现取(不存明文)。`-32001 Unauthorized` = 握手 `initialize`(id:0)就被服务端拒。常见真因:没配任何鉴权 / 配了 envVar 但 Electron 进程取不到该环境变量 / n8n 要的是自定义 header(如 X-N8N-API-KEY)却用了 bearerTokenEnvVar。
+- **期望**:① 鉴权失败的报错**人话化**——明说「该 server 需要鉴权,请在 MCP 配置里填 Authorization/headers」,并区分「没配凭证」vs「配了但环境变量取不到值」vs「凭证被服务端拒(401)」;② MCP 配置 UI 给**鉴权字段的引导**(bearer token / 自定义 header 怎么填、env 变量名 vs 值的区别),降低 HTTP MCP 接入门槛;③ 折叠原始 stack trace 到「详情」里,默认只显友好摘要。
+- **状态**:🟢 已修(2026-06-12,7ecde29)
+- **备注(修了三处,比预想多一处真 bug)**:① **probe 补 env 鉴权**——`mcp-probe-service` 此前只用静态 headers、完全忽略 `bearerTokenEnvVar`/`envHeaders`,配了 env 鉴权的人点「测试」必失败且报误导 401;现复用 core `buildHttpHeaders`/`buildStdioEnv`(core index 新导出),与真实连接同语义;② `humanizeError` 报错分三类:env var 未设置(带变量名+字段名+「填的是名,值连接时读」)/ 401·-32001 鉴权失败(引导去填 Headers 或 Bearer Token 环境变量)/ 403 权限不足,401|403 用 `\b` 词边界防数字误伤;③ McpEditor(HTTP)新增「Bearer Token 环境变量」+「环境变量 Headers」字段(McpServer/ProbeInput 补三字段,序列化 spread 透传),带「环境变量名 vs 值」说明,明文 Headers 加敏感提示。③(stack trace 折叠)早已有「查看详情」模态,未动。关联记忆 [[project_mcp_auth_error_ux]]、[[project_mcp_name_key_contract]]。
