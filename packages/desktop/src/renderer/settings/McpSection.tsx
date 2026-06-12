@@ -97,9 +97,12 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       const merged = await window.codeshell.listMergedMcpServers(
         settingsRecordOf(s.mcpServers),
         disabledPlugins,
-        // Fold project capabilityOverrides (能力总览 per-project on/off) in
-        // main, so pluginDisabled reflects the EFFECTIVE state for this repo.
-        cwd,
+        // pluginDisabled is a RUNTIME-effective flag, not "which settings file
+        // am I editing" — always fold the ACTIVE repo's capabilityOverrides
+        // (能力总览 project on/off), even while viewing the 用户(全局) scope.
+        // Otherwise a project-enabled plugin's MCP shows 关闭 in the global
+        // view while the session is actually connecting it (user-confusing).
+        activeRepoPath ?? undefined,
       );
       const list = mcpServersFromSettings(merged);
       setServers(list);
@@ -107,7 +110,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
-  }, [scope, cwd]);
+  }, [scope, cwd, activeRepoPath]);
 
   const runProbe = useCallback(async (list: McpServer[], force: boolean) => {
     // Disabled servers are never connected by the engine, so probing them
