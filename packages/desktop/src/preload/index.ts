@@ -607,6 +607,15 @@ contextBridge.exposeInMainWorld("codeshell", {
   },
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove: (anchorId: string) => ipcRenderer.send("browser:anchor-remove", anchorId),
+  /** From a popout: ask the owner to update an anchor's comment. */
+  sendBrowserAnchorUpdate: (update: { id: string; comment: string }) =>
+    ipcRenderer.send("browser:anchor-update", update),
+  /** In the parent: receive a popout's update request. Returns unsubscribe. */
+  onBrowserAnchorUpdateFromPopout: (cb: (update: unknown) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, update: unknown) => cb(update);
+    ipcRenderer.on("browser:anchor-update-from-popout", h);
+    return () => ipcRenderer.removeListener("browser:anchor-update-from-popout", h);
+  },
   /** In the parent: receive a popout's remove request. Returns unsubscribe. */
   onBrowserAnchorRemoveFromPopout: (cb: (anchorId: unknown) => void): (() => void) => {
     const h = (_e: IpcRendererEvent, anchorId: unknown) => cb(anchorId);

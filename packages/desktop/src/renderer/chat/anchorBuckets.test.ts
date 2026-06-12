@@ -5,6 +5,7 @@ import {
   browserAnchorsOf,
   clearAnchorBuckets,
   removeAnchorFrom,
+  updateAnchorCommentIn,
   type AnchorsByBucket,
 } from "./anchorBuckets";
 import type { Anchor } from "./anchors";
@@ -56,6 +57,16 @@ describe("anchorBuckets (session-bucketed anchors)", () => {
   test("clearAnchorBuckets is a no-op (same reference) when nothing to clear", () => {
     const s = addAnchorTo({}, "b1", mk("a"));
     expect(clearAnchorBuckets(s, ["empty1", "empty2"])).toBe(s);
+  });
+
+  test("updateAnchorCommentIn edits one anchor's comment, no-ops otherwise", () => {
+    const s = addAnchorTo(addAnchorTo({}, "b1", mk("a")), "b1", mk("b"));
+    const next = updateAnchorCommentIn(s, "b1", "a", "新评论");
+    expect(anchorsIn(next, "b1").find((x) => x.id === "a")!.comment).toBe("新评论");
+    expect(anchorsIn(next, "b1").find((x) => x.id === "b")!.comment).toBe("");
+    // Unknown id / unchanged comment → same reference (no spurious sync).
+    expect(updateAnchorCommentIn(next, "b1", "nope", "x")).toBe(next);
+    expect(updateAnchorCommentIn(next, "b1", "a", "新评论")).toBe(next);
   });
 
   test("browserAnchorsOf keeps only browser anchors WITH echo payload", () => {

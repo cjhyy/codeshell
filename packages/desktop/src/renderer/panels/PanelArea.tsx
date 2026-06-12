@@ -61,6 +61,8 @@ interface Props {
   browserAnchors?: Anchor[];
   /** Remove a browser anchor (and its composer chip) by id. */
   onRemoveBrowserAnchor?: (anchorId: string) => void;
+  /** Update a browser anchor's comment by id. */
+  onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
 }
 
 const KINDS: { kind: PanelTab; label: string; Icon: typeof FolderTree }[] = [
@@ -105,6 +107,7 @@ export function PanelArea({
   onAttachImage,
   browserAnchors,
   onRemoveBrowserAnchor,
+  onUpdateBrowserAnchor,
   tabs,
   setTabs,
   activeId,
@@ -266,7 +269,7 @@ export function PanelArea({
         ) : (
           tabs.map((t) => (
             <Slot key={t.id} active={t.id === activeId}>
-              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} />
+              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} onUpdateBrowserAnchor={onUpdateBrowserAnchor} />
             </Slot>
           ))
         )}
@@ -307,6 +310,7 @@ function PanelBody({
   onAttachImage,
   browserAnchors,
   onRemoveBrowserAnchor,
+  onUpdateBrowserAnchor,
 }: {
   tab: OpenTab;
   cwd: string | null;
@@ -318,12 +322,13 @@ function PanelBody({
   onAttachImage?: (absPath: string) => void;
   browserAnchors?: Anchor[];
   onRemoveBrowserAnchor?: (anchorId: string) => void;
+  onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
 }) {
   switch (tab.kind) {
     case "files":
       return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} revealFile={revealFile} />;
     case "browser":
-      return <BrowserPanel cwd={cwd} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} />;
+      return <BrowserPanel cwd={cwd} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} />;
     case "review":
       return <ReviewPanel cwd={cwd} files={reviewFiles} turnDiff={reviewDiff} />;
     case "terminal":

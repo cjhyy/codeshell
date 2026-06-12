@@ -1446,6 +1446,16 @@ ipcMain.on("browser:anchor-remove", (e, anchorId: unknown) => {
   }
 });
 
+// A popout asked to update an anchor's comment → forward to the owner.
+ipcMain.on("browser:anchor-update", (e, update: unknown) => {
+  const parentId = popoutParents.get(e.sender.id);
+  if (parentId === undefined) return;
+  const parent = BrowserWindow.fromId(parentId);
+  if (parent && !parent.isDestroyed()) {
+    parent.webContents.send("browser:anchor-update-from-popout", update);
+  }
+});
+
 ipcMain.handle("git:status", async (_e, cwd: string) => {
   if (typeof cwd !== "string" || !cwd) throw new Error("git:status requires cwd");
   return getGitStatus(cwd);

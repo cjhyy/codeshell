@@ -38,6 +38,7 @@ function PopoutBrowser({ initialUrl }: { initialUrl?: string }) {
         anchors={anchors}
         onAnchor={(a) => window.codeshell.sendBrowserAnchor(a)}
         onRemoveAnchor={(id) => window.codeshell.sendBrowserAnchorRemove(id)}
+        onUpdateAnchor={(id, comment) => window.codeshell.sendBrowserAnchorUpdate({ id, comment })}
       />
     </div>
   );

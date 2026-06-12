@@ -401,6 +401,10 @@ export interface CodeshellApi {
   onBrowserAnchorsState(cb: (anchors: unknown[]) => void): () => void;
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove(anchorId: string): void;
+  /** From a popout: ask the owner to update an anchor's comment. */
+  sendBrowserAnchorUpdate(update: { id: string; comment: string }): void;
+  /** In the parent: receive a popout's update request. Returns unsubscribe. */
+  onBrowserAnchorUpdateFromPopout(cb: (update: unknown) => void): () => void;
   /** In the parent: receive a popout's remove request. Returns unsubscribe. */
   onBrowserAnchorRemoveFromPopout(cb: (anchorId: unknown) => void): () => void;
 

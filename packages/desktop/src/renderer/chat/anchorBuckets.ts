@@ -11,8 +11,13 @@ import type { Anchor } from "./anchors";
 
 export type AnchorsByBucket = Record<string, Anchor[]>;
 
+// Stable empty list: `state[bucket] ?? []` would mint a NEW array identity on
+// every call, which cascades through App's useMemo/useEffect chain into a
+// sync-IPC send per render while a bucket has no annotations.
+const EMPTY: Anchor[] = [];
+
 export function anchorsIn(state: AnchorsByBucket, bucket: string): Anchor[] {
-  return state[bucket] ?? [];
+  return state[bucket] ?? EMPTY;
 }
 
 export function addAnchorTo(
@@ -32,6 +37,23 @@ export function removeAnchorFrom(
   const next = cur.filter((a) => a.id !== anchorId);
   if (next.length === cur.length) return state;
   return { ...state, [bucket]: next };
+}
+
+/** Update one anchor's comment in place (marker edit card / popout edit). */
+export function updateAnchorCommentIn(
+  state: AnchorsByBucket,
+  bucket: string,
+  anchorId: string,
+  comment: string,
+): AnchorsByBucket {
+  const cur = anchorsIn(state, bucket);
+  let touched = false;
+  const next = cur.map((a) => {
+    if (a.id !== anchorId || a.comment === comment) return a;
+    touched = true;
+    return { ...a, comment };
+  });
+  return touched ? { ...state, [bucket]: next } : state;
 }
 
 /**

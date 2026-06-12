@@ -99,6 +99,7 @@ import {
   browserAnchorsOf,
   clearAnchorBuckets,
   removeAnchorFrom,
+  updateAnchorCommentIn,
   type AnchorsByBucket,
 } from "./chat/anchorBuckets";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
@@ -1669,6 +1670,11 @@ function App() {
   const removeAnchor = (id: string): void => {
     setAnchorsByBucket((s) => removeAnchorFrom(s, activeAnchorBucketRef.current, id));
   };
+  const updateAnchorComment = (id: string, comment: string): void => {
+    setAnchorsByBucket((s) =>
+      updateAnchorCommentIn(s, activeAnchorBucketRef.current, id, comment),
+    );
+  };
   const clearAnchors = (): void => {
     // Clear the active bucket AND the repo's draft slot — see clearAnchorBuckets.
     setAnchorsByBucket((s) =>
@@ -1918,9 +1924,18 @@ function App() {
         setAnchorsByBucket((s) => removeAnchorFrom(s, activeAnchorBucketRef.current, id));
       }
     });
+    const offUpdate = window.codeshell.onBrowserAnchorUpdateFromPopout((raw) => {
+      const u = raw as { id?: string; comment?: string };
+      if (u && typeof u.id === "string" && typeof u.comment === "string") {
+        setAnchorsByBucket((s) =>
+          updateAnchorCommentIn(s, activeAnchorBucketRef.current, u.id!, u.comment!),
+        );
+      }
+    });
     return () => {
       offAdd();
       offRemove();
+      offUpdate();
     };
   }, []);
 
@@ -2388,6 +2403,7 @@ function App() {
           onAttachImage={(p) => void attachImageByPath(p)}
           browserAnchors={browserAnchors}
           onRemoveBrowserAnchor={removeAnchor}
+          onUpdateBrowserAnchor={updateAnchorComment}
           engineSessionId={resolveActiveEngineSessionId() ?? null}
           tabs={panelTabs}
           setTabs={setPanelTabs}

@@ -12,6 +12,7 @@ import {
   PictureInPicture2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -126,6 +127,8 @@ interface Props {
   onAnchor?: (a: Omit<Anchor, "id">) => string | void;
   /** Remove an anchor by id — routed to the owner (App / via IPC for popouts). */
   onRemoveAnchor?: (anchorId: string) => void;
+  /** Update an anchor's comment by id — routed like onRemoveAnchor. */
+  onUpdateAnchor?: (anchorId: string, comment: string) => void;
   /** Whether to show the "弹出独立窗口" button (hidden inside the popout itself). */
   showPopout?: boolean;
 }
@@ -135,7 +138,7 @@ interface Props {
  * persistent partition) with a self-drawn address bar, tabs, and a
  * localhost bookmark list discovered by port-probing common dev ports.
  */
-export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, showPopout = true }: Props) {
+export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true }: Props) {
   const emitAnchor = onAnchor ?? addAnchor;
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
@@ -505,6 +508,7 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
               onRemoveAnchor?.(m.anchor.id);
               setEditingMarker(null);
             }}
+            onUpdateComment={onUpdateAnchor ? (c) => onUpdateAnchor(m.anchor.id, c) : undefined}
           />
         ))}
 
@@ -570,6 +574,7 @@ function MarkerDot({
   selectorMissed,
   onOpen,
   onDelete,
+  onUpdateComment,
 }: {
   index: number;
   marker: BrowserMarker;
@@ -579,8 +584,17 @@ function MarkerDot({
   selectorMissed: boolean;
   onOpen: () => void;
   onDelete: () => void;
+  /** Save an edited comment (absent → comment is read-only). */
+  onUpdateComment?: (comment: string) => void;
 }) {
   const { rect } = marker.echo;
+  // Editable comment draft — re-seeded each time the card opens (and when the
+  // comment changes underneath us, e.g. edited in another window).
+  const [draft, setDraft] = useState(marker.anchor.comment);
+  useEffect(() => {
+    if (editing) setDraft(marker.anchor.comment);
+  }, [editing, marker.anchor.comment]);
+  const dirty = draft !== marker.anchor.comment;
   return (
     <>
       <button
@@ -614,7 +628,18 @@ function MarkerDot({
               元素未能重新定位（页面已变化），框显示的是圈选时的位置
             </div>
           )}
-          <div className="mb-2 whitespace-pre-wrap break-words text-xs text-foreground">{marker.anchor.comment}</div>
+          {onUpdateComment ? (
+            <Textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="评论…"
+              className="mb-2 min-h-14 resize-y text-xs"
+            />
+          ) : (
+            <div className="mb-2 whitespace-pre-wrap break-words text-xs text-foreground">
+              {marker.anchor.comment}
+            </div>
+          )}
           <div className="flex justify-end gap-1.5">
             <button
               type="button"
@@ -623,6 +648,16 @@ function MarkerDot({
             >
               删除
             </button>
+            {onUpdateComment && (
+              <button
+                type="button"
+                className="rounded px-2 py-0.5 text-xs hover:bg-accent disabled:opacity-50"
+                disabled={!dirty}
+                onClick={() => onUpdateComment(draft)}
+              >
+                保存
+              </button>
+            )}
             <button type="button" className="rounded px-2 py-0.5 text-xs hover:bg-accent" onClick={onOpen}>
               关闭
             </button>
