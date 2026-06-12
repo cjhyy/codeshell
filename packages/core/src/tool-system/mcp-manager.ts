@@ -82,6 +82,19 @@ export function buildHttpHeaders(
 }
 
 /**
+ * Infer the transport when the config doesn't name one: a url-only entry is
+ * HTTP, everything else stdio. This is the CC `.mcp.json` convention —
+ * plugin-bundled servers commonly write just `{ "url": "..." }`, and the old
+ * blind `?? "stdio"` default then failed them with "command is required for
+ * stdio transport" despite a perfectly good url. Pure + exported for testing.
+ */
+export function inferTransportType(
+  config: MCPServerConfig,
+): NonNullable<MCPServerConfig["transport"]> {
+  return config.transport ?? (config.url && !config.command ? "streamable-http" : "stdio");
+}
+
+/**
  * Wrap raw MCP server output with an explicit untrusted-content marker
  * before it reaches the LLM. The wrapper does two things:
  *
@@ -317,7 +330,9 @@ export class MCPManager {
       return;
     }
 
-    logger.info("mcp.connecting", { server: name, transport: config.transport ?? "stdio" });
+    const transportType = inferTransportType(config);
+
+    logger.info("mcp.connecting", { server: name, transport: transportType });
 
     const client = new Client(
       { name: "code-shell", version: "0.1.0" },
@@ -325,8 +340,6 @@ export class MCPManager {
     );
 
     let transport: StdioClientTransport | StreamableHTTPClientTransport;
-
-    const transportType = config.transport ?? "stdio";
 
     if (transportType === "stdio") {
       if (!config.command) {

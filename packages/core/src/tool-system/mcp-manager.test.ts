@@ -6,6 +6,7 @@ import {
   readRequiredEnv,
   buildStdioEnv,
   buildHttpHeaders,
+  inferTransportType,
 } from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
 import type { MCPServerConfig } from "../types.js";
@@ -321,5 +322,23 @@ describe("buildHttpHeaders", () => {
     expect(() =>
       buildHttpHeaders("srv", httpCfg("srv", { envHeaders: { "X-Api-Key": "MCP_MISSING" } })),
     ).toThrow('MCP server "srv": env var "MCP_MISSING" (from envHeaders) is not set');
+  });
+});
+
+describe("inferTransportType (url-only configs are HTTP, not stdio)", () => {
+  test("url-only (plugin .mcp.json convention) → streamable-http", () => {
+    expect(inferTransportType({ name: "s", url: "https://mcp.synta.io/mcp" })).toBe(
+      "streamable-http",
+    );
+  });
+  test("explicit transport always wins", () => {
+    expect(
+      inferTransportType({ name: "s", url: "https://x/mcp", transport: "sse" }),
+    ).toBe("sse");
+  });
+  test("command-only / command+url / neither → stdio", () => {
+    expect(inferTransportType({ name: "s", command: "npx" })).toBe("stdio");
+    expect(inferTransportType({ name: "s", command: "npx", url: "https://x" })).toBe("stdio");
+    expect(inferTransportType({ name: "s" })).toBe("stdio");
   });
 });
