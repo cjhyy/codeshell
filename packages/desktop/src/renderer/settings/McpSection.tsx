@@ -252,7 +252,15 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   return (
     <section className="settings-section">
       <header className="mcp-section-head">
-        <h3 className="settings-section-title">MCP 服务器</h3>
+        <div className="flex flex-col gap-0.5">
+          <h3 className="settings-section-title">MCP 服务器</h3>
+          {/* 生效时机(feedback): 配置改动即时 reconcile 物理连接,但正在
+              进行的对话里模型看到的工具表在下一条消息才刷新。说清楚,免得
+              「改了没反应」的错觉。 */}
+          <p className="text-xs text-muted-foreground">
+            增删 / 启停即时生效;正在进行的对话在你发送下一条消息时看到更新后的工具。
+          </p>
+        </div>
         <div className="settings-toolbar mcp-section-actions">
           <Button
             variant="default"
