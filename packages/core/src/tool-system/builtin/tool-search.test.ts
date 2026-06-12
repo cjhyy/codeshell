@@ -69,3 +69,59 @@ describe("toolSearchTool", () => {
     expect(count).toBe(2);
   });
 });
+
+describe("toolSearchTool — MCP visibility gate (worker-shared registry leak)", () => {
+  function registryWithMcp(): ToolRegistry {
+    const r = new ToolRegistry({ builtinTools: [] });
+    r.registerTool(
+      {
+        name: "mcp_chrome_chrome_list_pages",
+        description: "[chrome-devtools:chrome] list open pages",
+        inputSchema: { type: "object", properties: {} },
+        source: "mcp",
+        serverName: "chrome-devtools:chrome",
+        permissionDefault: "ask",
+      },
+      async () => "ok",
+    );
+    r.registerTool(
+      {
+        name: "mcp_mine_srv_doit",
+        description: "[mine:srv] do it",
+        inputSchema: { type: "object", properties: {} },
+        source: "mcp",
+        serverName: "mine:srv",
+        permissionDefault: "ask",
+      },
+      async () => "ok",
+    );
+    return r;
+  }
+  const gatedCtx = (r: ToolRegistry, allowed: string[]): ToolContext =>
+    ({ toolRegistry: r, allowedMcpServers: new Set(allowed) }) as unknown as ToolContext;
+
+  it("keyword search hides MCP tools from servers this session didn't enable", async () => {
+    const r = registryWithMcp();
+    const out = await toolSearchTool(
+      { query: "chrome pages doit" },
+      gatedCtx(r, ["mine:srv"]),
+    );
+    expect(out).not.toContain("mcp_chrome_chrome_list_pages");
+    expect(out).toContain("mcp_mine_srv_doit");
+  });
+
+  it("select: cannot reach a disallowed MCP tool (reports not found)", async () => {
+    const r = registryWithMcp();
+    const out = await toolSearchTool(
+      { query: "select:mcp_chrome_chrome_list_pages" },
+      gatedCtx(r, ["mine:srv"]),
+    );
+    expect(out).toContain("not found");
+  });
+
+  it("no allowedMcpServers set → no gating (legacy / sub-agent)", async () => {
+    const r = registryWithMcp();
+    const out = await toolSearchTool({ query: "chrome" }, ctx(r));
+    expect(out).toContain("mcp_chrome_chrome_list_pages");
+  });
+});

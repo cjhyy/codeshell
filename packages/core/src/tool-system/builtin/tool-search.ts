@@ -43,21 +43,39 @@ export async function toolSearchTool(
 
   const maxResults = Math.min((args.max_results as number) || 5, 20);
 
+  // The tool registry is worker-SHARED (B1): it holds MCP tools registered by
+  // every session, including servers another project enabled. ToolSearch is a
+  // side door around the per-turn toolDefs filter — without this gate it would
+  // surface (and let the model `select:` into) MCP tools from a server THIS
+  // session never enabled, which is exactly the chrome-devtools-in-writeflow
+  // leak. Mirror the engine's toolDefs visibility: keep an MCP tool only when
+  // its server is in this session's allowedMcpServers. Undefined set = no
+  // gating (sub-agents / hosts that don't populate it).
+  const visible = (tool: RegisteredTool): boolean => {
+    if (tool.source !== "mcp") return true;
+    const allowed = ctx.allowedMcpServers;
+    return !allowed || allowed.has(tool.serverName ?? "");
+  };
+
   // "select:Name1,Name2" → exact match
   if (query.startsWith("select:")) {
     const names = query.slice(7).split(",").map((n) => n.trim());
-    return matchExact(ctx.toolRegistry, names);
+    return matchExact(ctx.toolRegistry, names, visible);
   }
 
   // Keyword search
-  return searchByKeyword(ctx.toolRegistry, query, maxResults);
+  return searchByKeyword(ctx.toolRegistry, query, maxResults, visible);
 }
 
-function matchExact(registry: ToolRegistry, names: string[]): string {
+function matchExact(
+  registry: ToolRegistry,
+  names: string[],
+  visible: (t: RegisteredTool) => boolean,
+): string {
   const results: string[] = [];
   for (const name of names) {
     const tool = registry.getTool(name);
-    if (tool) {
+    if (tool && visible(tool)) {
       results.push(formatTool(tool));
     } else {
       results.push(`Tool "${name}" not found.`);
@@ -66,8 +84,13 @@ function matchExact(registry: ToolRegistry, names: string[]): string {
   return results.join("\n\n---\n\n");
 }
 
-function searchByKeyword(registry: ToolRegistry, query: string, maxResults: number): string {
-  const allTools = registry.listToolsDetailed();
+function searchByKeyword(
+  registry: ToolRegistry,
+  query: string,
+  maxResults: number,
+  visible: (t: RegisteredTool) => boolean,
+): string {
+  const allTools = registry.listToolsDetailed().filter(visible);
   const queryLower = query.toLowerCase();
   const keywords = queryLower.split(/\s+/);
 
