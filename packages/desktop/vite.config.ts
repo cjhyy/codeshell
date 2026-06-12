@@ -31,6 +31,27 @@ export default defineConfig({
     emptyOutDir: true,
   },
   plugins: [react(), tailwindcss()],
+  // Pre-bundle every installed Radix package (+ lucide) at server start.
+  // Without this, the FIRST import of a not-yet-used package mid-session
+  // (e.g. adding a new shadcn component while dev is running) triggers a
+  // re-optimize that bumps the deps-cache version — already-open windows
+  // keep requesting the old `?v=` hash and hit
+  // `504 (Outdated Optimize Dep)` until a full reload.
+  optimizeDeps: {
+    include: [
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-label",
+      "@radix-ui/react-scroll-area",
+      "@radix-ui/react-select",
+      "@radix-ui/react-separator",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-switch",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-tooltip",
+      "lucide-react",
+    ],
+  },
   resolve: {
     alias: {
       "@renderer": resolve(__dirname, "src/renderer"),
