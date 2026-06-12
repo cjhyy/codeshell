@@ -285,7 +285,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
           const owner = ownerPluginOf(s) ?? "插件";
           byPlugin.set(owner, [...(byPlugin.get(owner) ?? []), s]);
         }
-        const renderCard = (s: McpServer) => {
+        const renderCard = (s: McpServer, groupedByPlugin = false) => {
           const probe = probes[s.name];
           const loading = loadingProbe.has(s.name);
           return (
@@ -294,6 +294,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
               server={s}
               probe={probe}
               loading={loading}
+              groupedByPlugin={groupedByPlugin}
               onToggle={() => void toggleServer(s)}
               onTest={() => void testOne(s)}
               onEdit={() => setEdit({ kind: "edit", original: s.name })}
@@ -305,7 +306,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
         };
         return (
           <>
-            <div className="mcp-card-list">{userServers.map(renderCard)}</div>
+            <div className="mcp-card-list">{userServers.map((s) => renderCard(s))}</div>
             {Array.from(byPlugin.entries()).map(([owner, list]) => (
               <div key={owner} className="mt-3">
                 <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -314,7 +315,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
                     <span className="rounded bg-muted px-1 text-[10px]">插件已禁用 — 启用后生效</span>
                   )}
                 </div>
-                <div className="mcp-card-list">{list.map(renderCard)}</div>
+                <div className="mcp-card-list">{list.map((s) => renderCard(s, true))}</div>
               </div>
             ))}
           </>
@@ -349,6 +350,10 @@ interface McpCardProps {
   server: McpServer;
   probe?: McpProbeResult;
   loading: boolean;
+  /** Rendered inside a 「🧩 xxx 插件提供」 group — the group header already
+   *  names the plugin and its disabled state, so the card drops the
+   *  redundant 插件/已停用 pills and shows the BARE server name. */
+  groupedByPlugin?: boolean;
   onToggle: () => void;
   onTest: () => void;
   onEdit: () => void;
@@ -361,6 +366,7 @@ function McpCard({
   server,
   probe,
   loading,
+  groupedByPlugin = false,
   onToggle,
   onTest,
   onEdit,
@@ -376,6 +382,11 @@ function McpCard({
   const editable = isEditableMcpServer(server);
   // Owning plugin name (TODO 6.2) — see ownerPluginOf.
   const ownerPlugin = ownerPluginOf(server);
+  // Inside a plugin group the `plugin:` prefix is noise — show the bare name.
+  const displayName =
+    groupedByPlugin && ownerPlugin && server.name.startsWith(`${ownerPlugin}:`)
+      ? server.name.slice(ownerPlugin.length + 1)
+      : server.name;
 
   return (
     <article className={`mcp-card${enabled ? "" : " mcp-card-disabled"}`}>
@@ -391,11 +402,11 @@ function McpCard({
           >
             <span className="mcp-toggle-knob" />
           </button>
-          <strong>{server.name}</strong>
+          <strong title={server.name}>{displayName}</strong>
           <span className={`mcp-transport-pill mcp-transport-${transport}`}>
             {transportLabel(transport)}
           </span>
-          {server.source === "plugin" && (
+          {server.source === "plugin" && !groupedByPlugin && (
             <span
               className="mcp-transport-pill"
               title={ownerPlugin ? `由「${ownerPlugin}」插件提供，只读展示` : "由插件安装提供，只读展示"}
@@ -406,18 +417,21 @@ function McpCard({
           {enabled ? (
             <StatusPill probe={probe} loading={loading} />
           ) : (
-            <span className="mcp-status-pill unknown">已停用</span>
+            // 随插件禁用时组头已有「插件已禁用」徽标 — 卡片不再重复。
+            !server.pluginDisabled && <span className="mcp-status-pill unknown">已停用</span>
           )}
         </div>
         <div className="mcp-card-actions">
-          <button
-            className="mcp-icon-btn"
-            onClick={onTest}
-            disabled={loading || !enabled}
-            title={enabled ? "测试连接" : "已停用"}
-          >
-            {loading ? "…" : "测试"}
-          </button>
+          {!server.pluginDisabled && (
+            <button
+              className="mcp-icon-btn"
+              onClick={onTest}
+              disabled={loading || !enabled}
+              title={enabled ? "测试连接" : "已停用"}
+            >
+              {loading ? "…" : "测试"}
+            </button>
+          )}
           {editable ? (
             <>
               <button className="mcp-icon-btn" onClick={onEdit} title="编辑">
@@ -428,8 +442,11 @@ function McpCard({
               </button>
             </>
           ) : (
-            <span className="mcp-card-stamp">
-              {ownerPlugin ? `只读：由「${ownerPlugin}」插件管理` : "只读：由插件管理"}
+            <span
+              className="mcp-card-stamp"
+              title={ownerPlugin ? `由「${ownerPlugin}」插件提供;在插件页启停整个插件` : "由插件提供"}
+            >
+              {groupedByPlugin ? "只读" : ownerPlugin ? `只读：由「${ownerPlugin}」插件管理` : "只读：由插件管理"}
             </span>
           )}
         </div>
