@@ -292,8 +292,9 @@
   - **过期/清理**:**只有注入期 age 过滤 + soft-delete 到 memory-trash**;❌无自动硬删除、❌无自动去重(仅 Dream LLM 做)、❌无后台清理。证据 `session/memory.ts:44-62,199-222`、`settings/schema.ts:418-424`。
 - **CC/Codex 对比(2026-06 核实,纠正旧认知)**:两家**都已是「静态指令文件 + 动态自动记忆」双层**,不再是纯静态靠人维护。CC = CLAUDE.md(静态,全量注入)+ Auto memory(默认开/会话内实时写/MEMORY.md 限 200 行 25KB recall/topic 按需读/**无过期无去重靠人**);Codex = AGENTS.md(静态)+ Memories(默认关/**后台异步**写/**有专门 consolidation 模型 + age/idle/数量过期参数**/redact secrets)。**本项目的 Dream(后台 LLM 整合)思路更接近 Codex 的 Memories,而非 CC**。来源 code.claude.com/docs/en/memory、developers.openai.com/codex/memories + config-reference。
 - **「杂乱过期」实测**:`~/.claude/...codeshell/memory/` 当前 **75 个文件,其中 42 个(56%)标「已修/已做/已完成」**——一多半是办完的旧事仍占索引,这是杂乱主因。(注:这是 **Claude Code 自己的** auto memory 目录,非本项目 code-shell 的记忆;但暴露的问题对两套都成立=完成态记忆只增不减。)
-- **状态**:🟡 待讨论(机制无 bug,是产品方向)
-- **可能方向(待决策)**:① 给「自动提取」的记忆也走确认/或可关(现 legacy 不确认);② 给记忆加「状态/完成」语义,Dream 或清理流程能归档/删掉「已修完」的;③ 借鉴 Codex:加 age/数量上限自动归档、secret redact;④ 借鉴 CC:MEMORY.md 索引截断 + 详情按需读,避免索引膨胀。关联记忆 [[project_memory_and_dream_overview]]、[[project_settings_hooks_memory_dream]]、[[reference_cc_codex_memory]]。
+- **状态**:🟢 已修(2026-06-13 第一批,96c5a3e;自动归档/索引截断留后)
+- **已修(第一批)**:①可关 = `settings.memories.autoExtract`(false 跳过提取,总结/Dream 照跑;记忆页全局视图加 Switch);存量淹没 = 记忆页「清理自动提取(N)」批量按钮(soft-delete 全部 origin:auto 未固定,confirm 带数量);③部分 = 提取 prompt 加 secret redact 规则;② = Dream prompt 加完成态归档规则(纯「已修」无教训的删/并 changelog,有教训先折进主题条目)。**留后**:age/数量上限自动归档(现 maxAge 仍只滤注入)、MEMORY.md 索引截断+按需读、自动提取走确认流(现做成可关已覆盖主诉求)。
+- **可能方向(原记录)**:① 给「自动提取」的记忆也走确认/或可关(现 legacy 不确认);② 给记忆加「状态/完成」语义,Dream 或清理流程能归档/删掉「已修完」的;③ 借鉴 Codex:加 age/数量上限自动归档、secret redact;④ 借鉴 CC:MEMORY.md 索引截断 + 详情按需读,避免索引膨胀。关联记忆 [[project_memory_and_dream_overview]]、[[project_settings_hooks_memory_dream]]、[[reference_cc_codex_memory]]。
 
 ### 🟢 [2026-06-12] 记忆需要「固定/置顶」层 — user scope 被自动提取淹没,有用的留不住
 - **现象/诉求**:有些记忆觉得有用,想把它**升级成固定的**;但现在 `user` scope 里**全是自动提取的**,手动写的有用记忆和自动噪音混在一起。
@@ -326,8 +327,9 @@
   - **codeshell 现状**:**能消费 skill 但不能辅助创建**。`packages/core/src/skills/frontmatter.ts:2` 明写「byte-compatible with Claude Code's frontmatterParser,so community skill repositories can be reused」+ `scanner.ts` 扫 `<base>/<name>/SKILL.md`(项目+用户级)。**没有任何「新建/脚手架/引导写 skill」的产品功能**(grep createSkill/scaffoldSkill 无)。本机层面用户用的是装在 ~/.claude 的 `document-skills:skill-creator`(Anthropic 官方,33KB SKILL.md + scripts/agents/eval-viewer)和 `superpowers:writing-skills`——那是 Claude Code 的 skill,不是 codeshell 产品自带。
   - **CC 做法**:`skill-creator` 是**一个「用来创建 skill 的 skill」(meta-skill)**,交互式引导走 Create→Eval→Improve→Benchmark 全生命周期(问意图→访谈→draft SKILL.md→跑测试 prompt→量化 eval→迭代→优化 description 触发)。无 `/create-skill` CLI,走 meta-skill。superpowers `writing-skills` 侧重不同=TDD-for-skills「没失败测试不写 skill」+ 抗合理化加固。
   - **Codex 做法**(纠错:Codex 现在**也有 skill**了,2025-12 起,**和 CC 共享 agentskills.io 开放标准、同 SKILL.md 格式**):内置 `$skill-creator`(6 步脚手架:理解→规划→`init_skill.py` 脚手架→编辑→`quick_validate.py` 校验→迭代)+ `$skill-installer`(从 openai/skills 目录装)。Codex 偏「脚本脚手架+校验器」,CC 偏「交互访谈+eval 循环」。
-- **状态**:🟡 待评估(非 bug,是产品方向)
-- **可能方向**:codeshell 既然已 byte-compatible 复用社区 skill,可考虑加一个**自带 skill-creator 类能力**(作为内置 skill 或 UI 引导),帮用户在 codeshell 里直接写 skill;格式天然兼容 CC/Codex/agentskills.io。关联记忆 [[reference_cc_codex_skill_creator]]、[[project_extensions_ui]]、[[project_settings_projectpicker_done]](skill 系统已实现部分)。
+- **状态**:🟢 初版上线(2026-06-13,随 #22 官方市场落地)
+- **已做**:skill-creator v0.1 作为官方市场 **mimi-plugins** 首个插件上线(github cjhyy/mimi-plugins,commit 6d0985f)——五步引导 meta-skill(访谈意图→选位置→按模板起草→校验→触发测试),走 CC 风格交互访谈而非 Codex 脚手架;随首启软预装自动到位(见 #22)。**留后**:eval/benchmark 循环(CC skill-creator 的 Evaluate/Improve 阶段)、Codex 式 init/validate 脚本。
+- **可能方向(原记录)**:codeshell 既然已 byte-compatible 复用社区 skill,可考虑加一个**自带 skill-creator 类能力**(作为内置 skill 或 UI 引导),帮用户在 codeshell 里直接写 skill;格式天然兼容 CC/Codex/agentskills.io。关联记忆 [[reference_cc_codex_skill_creator]]、[[project_extensions_ui]]、[[project_settings_projectpicker_done]](skill 系统已实现部分)。
 
 ### 🟡 [2026-06-12] 安装 plugin/skill 的本地化适配(兼容 CC + Codex)— 现状盘点 + 缺口
 - **诉求**:安装 plugin 或 skill 时怎么本地化、适配到 codeshell,如果 CC/Codex 都想兼容的话。
@@ -351,8 +353,9 @@
   - **失败处理**:**静默重试、不阻塞启动**——后台拉,拉不到不报错不弹窗,下次启动再试。
   - **更新策略**:**只首装一次,之后不动**——靠首装标记(如 first-run-installed.json / 已装即跳过)防重复;升级靠用户手动,**不自动覆盖用户改过的 skill**。
 - **实现要点**:① 建官方 marketplace 仓库(`.claude-plugin/marketplace.json` + 核心 skill 目录);② `knownMarketplaces.ts` 加内置 seed(首启写入 known_marketplaces.json);③ 首启 bootstrap:加完源后对「核心清单」逐个 install(走现有 installer,async fs 防冻 main 进程,见 178abc8);④ 持久化「首启已装」标记,幂等防重装;⑤ 静默失败 + 下次重试。注意全程在 main 进程用 async fs(参考记忆 [[project_main_sync_fs_freeze]])。
-- **状态**:🟡 待实现(决策已定)
-- **备注**:可作为「让 codeshell 有自带 skill 生态」的落地路径,把 skill-creator 复用 + plugin 本地化兼容串起来。关联记忆 [[project_official_marketplace_seed]]、[[reference_cc_codex_skill_creator]]、[[project_plugin_skill_localization]]、[[project_extensions_ui]]。
+- **状态**:🟢 已修(2026-06-13,54afbdf;官方 repo = github cjhyy/mimi-plugins)
+- **已修汇总**:① 官方 repo 已建并推送(`.claude-plugin/marketplace.json` CC 兼容 + `plugins/skill-creator/`,见 #20);② `known-marketplaces-seed.json` 加 `mimi-plugins` 源(复用 seedDefaults 现有幂等注册,老用户下次启动补注册);③ 新增 `bootstrap-core-plugins.ts` 首启软预装(三契约全落实:只装核心清单/失败无标记静默下次重试不阻塞/装成写标记 `core_plugins_installed.json` 永不自动重装,已手动装的记 pre-existing);④ whenReady 链 seedDefaults→bootstrapCorePlugins。验证:纯函数 5 例 + 隔离 HOME 真 GitHub 端到端冒烟(clone→manifest→install→scanSkills 出 `skill-creator:skill-creator`)。
+- **备注(原)**:可作为「让 codeshell 有自带 skill 生态」的落地路径,把 skill-creator 复用 + plugin 本地化兼容串起来。关联记忆 [[project_official_marketplace_seed]]、[[reference_cc_codex_skill_creator]]、[[project_plugin_skill_localization]]、[[project_extensions_ui]]。
 
 ### 🟢 [2026-06-12] marketplace 下载的插件不显示版本号
 - **现象**:在 marketplace 里下载/浏览插件时,**看不到版本号**。
