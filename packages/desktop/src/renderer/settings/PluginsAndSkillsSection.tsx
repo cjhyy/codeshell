@@ -17,6 +17,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { cacheGet, cacheSet } from "./settingsCache";
 import type {
   GithubDetectedSkill,
   GithubRepoInspection,
@@ -125,16 +126,27 @@ type Selection =
   | { kind: "addPanel" }
   | { kind: "empty" };
 
+/** Last-loaded snapshot per cwd (settingsCache) — seeds remounts so tab
+ * switches don't flash the loading placeholder. */
+interface CustomizeSnapshot {
+  skills: SkillSummary[];
+  plugins: PluginSummary[];
+  disabled: Set<string>;
+  disabledPlugins: Set<string>;
+}
+
 function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
-  const [skills, setSkills] = useState<SkillSummary[] | null>(null);
-  const [plugins, setPlugins] = useState<PluginSummary[]>([]);
-  const [disabledSet, setDisabledSet] = useState<Set<string>>(new Set());
+  const cacheKey = `plugins-skills:${activeRepoPath ?? "/"}`;
+  const [seed] = useState(() => cacheGet<CustomizeSnapshot>(cacheKey));
+  const [skills, setSkills] = useState<SkillSummary[] | null>(seed?.skills ?? null);
+  const [plugins, setPlugins] = useState<PluginSummary[]>(seed?.plugins ?? []);
+  const [disabledSet, setDisabledSet] = useState<Set<string>>(seed?.disabled ?? new Set());
   // Bare plugin names disabled at the plugin level. Distinct from disabledSet
   // (per-skill): this is what suppresses a plugin's hooks too (e.g.
   // superpowers' SessionStart injection), since loadPluginHooks reads
   // disabledPlugins — disabledSkills alone never reaches the hook path.
   const [disabledPluginsSet, setDisabledPluginsSet] = useState<Set<string>>(
-    new Set(),
+    seed?.disabledPlugins ?? new Set(),
   );
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
@@ -159,9 +171,17 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
       setSkills(skillList);
       setPlugins(pluginList);
       const ds = settings?.disabledSkills;
-      setDisabledSet(new Set(Array.isArray(ds) ? (ds as string[]) : []));
+      const disabled = new Set(Array.isArray(ds) ? (ds as string[]) : []);
+      setDisabledSet(disabled);
       const dp = settings?.disabledPlugins;
-      setDisabledPluginsSet(new Set(Array.isArray(dp) ? (dp as string[]) : []));
+      const disabledPlugins = new Set(Array.isArray(dp) ? (dp as string[]) : []);
+      setDisabledPluginsSet(disabledPlugins);
+      cacheSet(cacheKey, {
+        skills: skillList,
+        plugins: pluginList,
+        disabled,
+        disabledPlugins,
+      } satisfies CustomizeSnapshot);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }

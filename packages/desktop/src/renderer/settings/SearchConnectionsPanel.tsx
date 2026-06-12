@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { SearchProbeInput, SearchProbeResult } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
+import { cacheGet, cacheSet } from "./settingsCache";
 import { Button } from "@/components/ui/button";
 import { CollapsibleGroup } from "./CollapsibleGroup";
 import { ImageGenConnectionsPanel } from "./ImageGenConnectionsPanel";
@@ -135,15 +136,26 @@ function formatProbeTime(iso?: string): string {
   }
 }
 
+/** Last-loaded snapshot per scope (settingsCache) — seeds remounts so tab
+ * switches don't flash the loading placeholder. */
+interface SearchSnapshot {
+  defaultProvider: Provider;
+  byProvider: Record<Provider, ProviderState>;
+}
+
 function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
-  const [defaultProvider, setDefaultProvider] = useState<Provider>("serper");
-  const [byProvider, setByProvider] = useState<Record<Provider, ProviderState>>(() => ({
-    serper: initialProviderState(),
-    tavily: initialProviderState(),
-    searxng: initialProviderState(),
-  }));
-  const [loaded, setLoaded] = useState(false);
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cacheKey = `search:${scope}:${cwd ?? ""}`;
+  const [seed] = useState(() => cacheGet<SearchSnapshot>(cacheKey));
+  const [defaultProvider, setDefaultProvider] = useState<Provider>(seed?.defaultProvider ?? "serper");
+  const [byProvider, setByProvider] = useState<Record<Provider, ProviderState>>(() =>
+    seed?.byProvider ?? {
+      serper: initialProviderState(),
+      tavily: initialProviderState(),
+      searxng: initialProviderState(),
+    },
+  );
+  const [loaded, setLoaded] = useState(!!seed);
 
   const load = useCallback(async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
@@ -174,16 +186,19 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
     }
 
     // Apply legacy fallback to whatever provider the legacy slot named.
+    let nextDefault: Provider = "serper";
     if (legacyProvider === "serper" || legacyProvider === "tavily" || legacyProvider === "searxng") {
       const cur = next[legacyProvider];
       if (!cur.apiKey && legacyKey) cur.apiKey = legacyKey;
       if (!cur.baseUrl && legacyBaseUrl) cur.baseUrl = legacyBaseUrl;
+      nextDefault = legacyProvider;
       setDefaultProvider(legacyProvider);
     }
 
     setByProvider(next);
     setLoaded(true);
-  }, [scope, cwd]);
+    cacheSet(cacheKey, { defaultProvider: nextDefault, byProvider: next } satisfies SearchSnapshot);
+  }, [scope, cwd, cacheKey]);
 
   useEffect(() => {
     void load();

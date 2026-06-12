@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { notifySettingsChanged } from "../settingsBus";
+import { cacheGet, cacheSet } from "./settingsCache";
 import { useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
 
@@ -56,8 +57,12 @@ function isCwdDependentBuiltin(cap: CapabilityDescriptor): boolean {
 
 export function ConversationSettingsSection() {
   const [cwd, setCwd] = useState<string | null>(null);
-  const [caps, setCaps] = useState<CapabilityDescriptor[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Seed from the last-loaded snapshot (settingsCache) so a remount (tab
+  // switch) renders synchronously instead of flashing "加载中".
+  const [caps, setCaps] = useState<CapabilityDescriptor[]>(
+    () => cacheGet<CapabilityDescriptor[]>("conversation-caps") ?? [],
+  );
+  const [loading, setLoading] = useState(() => cacheGet("conversation-caps") === undefined);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -73,6 +78,7 @@ export function ConversationSettingsSection() {
       const next = await window.codeshell.listCapabilities(resolved);
       if (seq !== loadSeq.current) return;
       setCaps(next);
+      cacheSet("conversation-caps", next);
     } catch (e) {
       if (seq !== loadSeq.current) return;
       setError(e instanceof Error ? e.message : String(e));

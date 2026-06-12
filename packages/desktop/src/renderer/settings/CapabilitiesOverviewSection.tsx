@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import type { Repo } from "../repos";
 import { repoLabel } from "../repos";
+import { cacheGet, cacheSet } from "./settingsCache";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
@@ -90,11 +91,15 @@ function projectStateLabel(cap: CapabilityDescriptor): string {
 
 export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) {
   const [node, setNode] = useState<ScopeNode>({ kind: "user" });
-  const [caps, setCaps] = useState<CapabilityDescriptor[]>([]);
+  // Seed from the last-loaded user-scope snapshot (settingsCache) so a
+  // remount (tab switch) renders synchronously instead of flashing "加载中".
+  const [caps, setCaps] = useState<CapabilityDescriptor[]>(
+    () => cacheGet<CapabilityDescriptor[]>("caps:") ?? [],
+  );
   // Only true before the very first list arrives. Switching scopes refreshes
   // in the background (stale-while-revalidate) so the existing list — and the
   // scroll position — stays put instead of unmounting to a "加载中" line.
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => cacheGet("caps:") === undefined);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   // Monotonic token: a slow earlier request can resolve after a newer scope
@@ -122,6 +127,7 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
       const next = await window.codeshell.listCapabilities(cwd);
       if (seq !== loadSeq.current) return; // a newer scope switch won
       setCaps(next);
+      cacheSet(`caps:${cwd}`, next);
     } catch (e) {
       if (seq !== loadSeq.current) return;
       setError(e instanceof Error ? e.message : String(e));

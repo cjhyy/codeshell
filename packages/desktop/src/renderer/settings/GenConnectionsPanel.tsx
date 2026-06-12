@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { ImageProbeResult, CatalogEntry } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
+import { cacheGet, cacheSet } from "./settingsCache";
 import { Button } from "@/components/ui/button";
 import { SimpleSelect } from "@/components/ui/simple-select";
 import {
@@ -72,13 +73,23 @@ function uniqueId(base: string, taken: Set<string>): string {
   }
 }
 
+/** Last-loaded snapshot per panel+scope (settingsCache) — seeds remounts so
+ * tab switches don't flash the loading placeholder. */
+interface GenSnapshot {
+  catalog: CatalogEntry[];
+  instances: Instance[];
+  defaultId: string;
+}
+
 export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
   const { settingsKey, catalogTag, showTest, testFn, labels } = config;
-  const [catalog, setCatalog] = useState<CatalogEntry[]>([]);
-  const [instances, setInstances] = useState<Instance[]>([]);
-  const [defaultId, setDefaultId] = useState<string>("");
-  const [loaded, setLoaded] = useState(false);
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cacheKey = `gen:${settingsKey}:${scope}:${cwd ?? ""}`;
+  const [seed] = useState(() => cacheGet<GenSnapshot>(cacheKey));
+  const [catalog, setCatalog] = useState<CatalogEntry[]>(seed?.catalog ?? []);
+  const [instances, setInstances] = useState<Instance[]>(seed?.instances ?? []);
+  const [defaultId, setDefaultId] = useState<string>(seed?.defaultId ?? "");
+  const [loaded, setLoaded] = useState(!!seed);
 
   /** Catalog entries that belong to this panel's tag (the [+ 添加] menu). */
   const templates = useMemo(() => catalog.filter((e) => e.tag === catalogTag), [catalog, catalogTag]);
@@ -122,10 +133,11 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
     );
     setInstances(filtered);
     const dp = typeof gen.defaultProvider === "string" ? gen.defaultProvider : undefined;
-    if (dp && filtered.some((i) => i.id === dp)) setDefaultId(dp);
-    else setDefaultId(filtered[0]?.id ?? "");
+    const nextDefault = dp && filtered.some((i) => i.id === dp) ? dp : filtered[0]?.id ?? "";
+    setDefaultId(nextDefault);
     setLoaded(true);
-  }, [scope, cwd, settingsKey, catalogTag]);
+    cacheSet(cacheKey, { catalog: cat, instances: filtered, defaultId: nextDefault } satisfies GenSnapshot);
+  }, [scope, cwd, settingsKey, catalogTag, cacheKey]);
 
   useEffect(() => {
     void load();

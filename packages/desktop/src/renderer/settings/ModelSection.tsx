@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Button } from "@/components/ui/button";
 import type { ReasoningControl, ReasoningSetting } from "@cjhyy/code-shell-core";
+import { cacheGet, cacheSet } from "./settingsCache";
 
 interface ModelEntry {
   key: string;
@@ -213,7 +214,14 @@ const RECOMMENDED_MODELS: Partial<Record<ProviderKind, RecommendedModel[]>> = {
  * new entry becomes active.
  */
 export function ModelSection({ scope, activeRepoPath }: Props) {
-  const [cur, setCur] = useState<Record<string, unknown> | null>(null);
+  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  const cacheKey = `model-settings:${scope}:${cwd ?? ""}`;
+  // Seed from the last-loaded snapshot (settingsCache) so a remount (tab
+  // switch) renders the provider/model lists synchronously instead of an
+  // empty flash.
+  const [cur, setCur] = useState<Record<string, unknown> | null>(
+    () => cacheGet<Record<string, unknown>>(cacheKey) ?? null,
+  );
   // Action-scoped saving indicator. One shared boolean made *every* mutation
   // (switching the active model, toggling reasoning, picking the aux model)
   // flash the bottom-of-section "保存中…" block — jarring for the common,
@@ -235,12 +243,11 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
   // imports core at runtime. `null` while a fetch is in flight.
   const [controls, setControls] = useState<Record<string, ReasoningControl | null>>({});
 
-  const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
-
   const load = async () => {
     try {
       const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
       setCur(s);
+      cacheSet(cacheKey, s);
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }

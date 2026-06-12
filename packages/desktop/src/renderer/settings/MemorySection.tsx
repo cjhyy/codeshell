@@ -19,6 +19,7 @@ import type {
   SaveMemoryInput,
 } from "../../preload/types";
 import { repoLabel, type Repo } from "../repos";
+import { cacheGet, cacheSet } from "./settingsCache";
 import { ProjectPicker } from "./ProjectPicker";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "../ui/ConfirmDialog";
@@ -117,7 +118,11 @@ export function MemorySection({ repos }: Props) {
 function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string }) {
   const confirm = useConfirm();
   const [scope, setScope] = useState<MemoryScope>("user");
-  const [entries, setEntries] = useState<RendererMemoryEntry[]>([]);
+  // Seed from the last-loaded snapshot (settingsCache) so a remount (tab
+  // switch) renders the list synchronously instead of an empty-state flash.
+  const [entries, setEntries] = useState<RendererMemoryEntry[]>(
+    () => cacheGet<RendererMemoryEntry[]>(`memory:${level}:user:${cwd ?? ""}`) ?? [],
+  );
   const [selected, setSelected] = useState<RendererMemoryEntryFull | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [draft, setDraft] = useState<SaveMemoryInput | null>(null);
@@ -132,6 +137,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     try {
       const list = await window.codeshell.listMemory(level, scope, cwd);
       setEntries(list);
+      cacheSet(`memory:${level}:${scope}:${cwd ?? ""}`, list);
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
