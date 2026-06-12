@@ -419,6 +419,11 @@ export class AgentServer {
         return;
       }
       s.pendingApprovals.delete(params.requestId);
+      // Cancel the pending timeout for THIS request (the ask path armed one).
+      // The legacy single-engine branch below already does this; without it
+      // here a decided request leaves a live timer that fires at
+      // APPROVAL_TIMEOUT_MS and churns a dead map entry.
+      this.clearApprovalTimer(params.requestId);
       resolve(params.decision);
       this.transport.send(createResponse(req.id, { ok: true }));
       return;
