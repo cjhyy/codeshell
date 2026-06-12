@@ -118,6 +118,7 @@ describe("normalizeCodexMcpFields", () => {
   });
 
   test("non-object input is returned unchanged", () => {
-    expect(normalizeCodexMcpFields("nope" as unknown as Record<string, unknown>)).toBe("nope");
+    const nonObject = "nope" as unknown as Record<string, unknown>;
+    expect(normalizeCodexMcpFields(nonObject)).toBe(nonObject);
   });
 });
