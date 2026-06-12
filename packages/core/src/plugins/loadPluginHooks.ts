@@ -137,6 +137,20 @@ function pluginNameFromKey(key: string): string {
 }
 
 /**
+ * Stable identity for ONE plugin-provided hook, used as the record key in
+ * `capabilityOverrides.pluginHooks` (per-hook project off-switch). Derived
+ * from content (`plugin:RawEvent:command`) rather than scan order so it
+ * survives plugin reinstalls and hooks.json reordering. Two entries that
+ * differ only by matcher collide — acceptable: toggling one toggles both,
+ * and identical commands on the same event are in practice the same hook.
+ */
+export function pluginHookKey(
+  hook: { plugin: string; rawEvent: string; command: string },
+): string {
+  return `${hook.plugin}:${hook.rawEvent}:${hook.command}`;
+}
+
+/**
  * Walk installed plugins and register their command hooks. Safe to call
  * multiple times — the caller is responsible for not double-registering
  * (HookRegistry has no de-dup; the engine constructor calls this exactly
@@ -148,13 +162,20 @@ function pluginNameFromKey(key: string): string {
  * also suppresses its SessionStart injection — not just its Skill-tool
  * entries. Without this, `disabledPlugins` only filtered the skill list and
  * the plugin's hooks still fired regardless.
+ *
+ * `disabledPluginHooks` is the fine-grained per-hook switch — a list of
+ * {@link pluginHookKey} keys (folded from the project's
+ * `capabilityOverrides.pluginHooks` by readDisabledLists). A matching hook
+ * is skipped while the rest of the plugin keeps working.
  */
 export function loadPluginHooks(
   registry: HookRegistry,
   disabledPlugins: string[] = [],
+  disabledPluginHooks: string[] = [],
 ): void {
   const data = readInstalledPlugins();
   const disabledSet = new Set(disabledPlugins);
+  const disabledHookSet = new Set(disabledPluginHooks);
   for (const [key, entries] of Object.entries(data.plugins)) {
     if (disabledSet.has(pluginNameFromKey(key))) continue;
     for (const entry of entries) {
@@ -176,6 +197,17 @@ export function loadPluginHooks(
           const commands = group.hooks ?? [];
           for (const cmd of commands) {
             if (cmd.type !== "command" || typeof cmd.command !== "string") {
+              continue;
+            }
+            if (
+              disabledHookSet.has(
+                pluginHookKey({
+                  plugin: pluginNameFromKey(key),
+                  rawEvent: eventNameRaw,
+                  command: cmd.command,
+                }),
+              )
+            ) {
               continue;
             }
             const commandLine = cmd.command;
@@ -220,6 +252,9 @@ export interface PluginHookEntry {
   matcher?: string;
   /** Whether the owning plugin is currently disabled (its hooks don't fire). */
   disabled: boolean;
+  /** Stable per-hook identity ({@link pluginHookKey}) — the record key the
+   *  UI writes to `capabilityOverrides.pluginHooks` to toggle just this hook. */
+  key: string;
 }
 
 /**
@@ -256,6 +291,7 @@ export function listPluginHooks(disabledPlugins: string[] = []): PluginHookEntry
               command: cmd.command,
               matcher: group.matcher,
               disabled,
+              key: pluginHookKey({ plugin, rawEvent: eventNameRaw, command: cmd.command }),
             });
           }
         }

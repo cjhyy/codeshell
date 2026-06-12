@@ -373,6 +373,32 @@ export class SettingsManager {
     for (const source of this.sources) {
       result = merge(result, source.data);
     }
+    // Top-level `hooks` is the one array that CONCATENATES across layers
+    // instead of being replaced wholesale: a user-level (global) hook and a
+    // project-level hook should BOTH run, mirroring how Claude Code merges
+    // hooks from all settings files. Order follows layer priority (user
+    // first, project after). An explicit `"hooks": null` in a layer still
+    // resets everything below it (the escape hatch merge() already gives
+    // every other key); per-entry opt-out is the `disabled` field.
+    let hooks: unknown[] | undefined;
+    let sawHooks = false;
+    for (const source of this.sources) {
+      if (!("hooks" in source.data)) continue;
+      const v = source.data.hooks;
+      if (v === null) {
+        hooks = undefined;
+        sawHooks = true;
+      } else if (Array.isArray(v)) {
+        hooks = [...(hooks ?? []), ...v];
+        sawHooks = true;
+      }
+      // Non-array garbage is left to merge()'s wholesale result so
+      // validateSettings still sees (and rejects) it unchanged.
+    }
+    if (sawHooks) {
+      if (hooks !== undefined) result.hooks = hooks;
+      else delete result.hooks;
+    }
     return result;
   }
 }

@@ -25,6 +25,14 @@ export const CapabilityOverridesSchema = z
     agents: z.record(CapabilityOverrideSchema).optional(),
     mcp: z.record(CapabilityOverrideSchema).optional(),
     builtin: z.record(CapabilityOverrideSchema).optional(),
+    /**
+     * Per-hook overlay for PLUGIN-provided hooks, keyed by
+     * `pluginHookKey()` (`<plugin>:<RawEvent>:<command>`). Finer-grained
+     * than `plugins` (which kills a whole plugin): "off" suppresses one
+     * hook for this project only. Only "off" is meaningful today — plugin
+     * hooks have no global disable list to force back "on" from.
+     */
+    pluginHooks: z.record(CapabilityOverrideSchema).optional(),
   })
   .optional();
 export type CapabilityOverrides = z.infer<typeof CapabilityOverridesSchema>;
@@ -594,6 +602,9 @@ export const SettingsSchema = z
           matcher: z.string().optional(),
           timeout_ms: z.number().int().positive().optional(),
           cwd: z.string().optional(),
+          /** Soft off-switch: the entry stays in the file (and the UI) but
+           *  registerSettingsHooks skips it. Absent = enabled. */
+          disabled: z.boolean().optional(),
         }),
       )
       .optional(),
