@@ -24,6 +24,7 @@ import { ChatSessionManager } from "../protocol/chat-session-manager.js";
 import { AgentServer } from "../protocol/server.js";
 import { listenTcp } from "../protocol/tcp-transport.js";
 import { SettingsManager } from "../settings/manager.js";
+import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
@@ -67,17 +68,22 @@ const runtime = new EngineRuntime({
 
 const chatManager = new ChatSessionManager({
   runtime,
-  engineFactory: (slice) =>
-    new Engine({
+  engineFactory: (slice) => {
+    // Fold project capabilityOverrides over the global disabledPlugins for
+    // the MCP merge (能力总览 project "on" must override global off) — same
+    // contract as the stdio host's factory.
+    const sessionCwd = slice.cwd ?? cwd;
+    const { disabledPlugins } = computeEffectiveDisabledLists(
+      new SettingsManager(sessionCwd, "full"),
+      sessionCwd,
+    );
+    return new Engine({
       llm: runtime.modelPool.resolveLLMConfig() ?? resolvedLlmConfig,
       clientDefaults: resolvedClientDefaults,
       cwd,
       runtime,
       settingsScope: "full",
-      mcpServers: mergePluginMcpServers(
-        settings.mcpServers ?? {},
-        (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
-      ),
+      mcpServers: mergePluginMcpServers(settings.mcpServers ?? {}, disabledPlugins),
       permissionMode: slice.permissionMode,
       preset: slice.preset,
       customSystemPrompt: slice.customSystemPrompt,
@@ -89,7 +95,8 @@ const chatManager = new ChatSessionManager({
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
       ...(slice.cwd ? { cwd: slice.cwd } : {}),
-    }),
+    });
+  },
   maxSessions: 16,
   idleTtlMs: 30 * 60 * 1000,
 });

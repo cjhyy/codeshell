@@ -41,6 +41,7 @@ import { SettingsManager } from "../settings/manager.js";
 import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
+import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { CostTracker } from "../cost-tracker.js";
 import { installGracefulShutdown } from "./graceful-shutdown.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
@@ -164,6 +165,17 @@ const chatManager = new ChatSessionManager({
   // pool can't resolve (no active key — shouldn't happen in practice).
   engineFactory: (slice) => {
     const live = freshSettings();
+    // Effective cwd for THIS session (the protocol slice can point a session
+    // at a different project than the worker's boot cwd).
+    const sessionCwd = slice.cwd ?? cwd;
+    // Fold project capabilityOverrides over the global disabledPlugins before
+    // the MCP merge — a plugin force-enabled in 能力总览 (project "on") must
+    // contribute its MCP servers even while globally disabled, and vice versa.
+    // Raw `live.disabledPlugins` alone ignored the project layer.
+    const { disabledPlugins } = computeEffectiveDisabledLists(
+      new SettingsManager(sessionCwd, "full"),
+      sessionCwd,
+    );
     return new Engine({
       llm: runtime.modelPool.resolveLLMConfig() ?? resolvedLlmConfig,
       // Inherit the seed engine's resolved clientDefaults so every session
@@ -185,10 +197,7 @@ const chatManager = new ChatSessionManager({
       // the first session to connect populates connections for the worker.
       // Plugin-provided MCP servers (mcp-servers.json in installed plugins)
       // are merged in here so the model can actually call them.
-      mcpServers: mergePluginMcpServers(
-        live.mcpServers ?? {},
-        (live as { disabledPlugins?: string[] }).disabledPlugins ?? [],
-      ),
+      mcpServers: mergePluginMcpServers(live.mcpServers ?? {}, disabledPlugins),
       // Per-session overrides from the protocol request; fall back to
       // settings.agent.* so the user's 个性化 settings actually apply
       // (previously slice arrived with only permissionMode+cwd, so these

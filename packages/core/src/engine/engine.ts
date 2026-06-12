@@ -84,6 +84,7 @@ import {
 } from "../capability-control/overlay.js";
 import { scanSkills } from "../skills/scanner.js";
 import { readInstalledPlugins } from "../plugins/installedPlugins.js";
+import { computeEffectiveDisabledLists } from "../capability-control/disabled-lists.js";
 import { FileHistory } from "../session/file-history.js";
 import { patchBackupTargets } from "../tool-system/builtin/apply-patch/backup-targets.js";
 import type { ToolContext, SubAgentSpawner } from "../tool-system/context.js";
@@ -592,6 +593,9 @@ export class Engine {
     }
     const entries = settings.hooks ?? [];
     for (const entry of entries) {
+      // Soft off-switch (settings hooks UI): the entry stays in the file but
+      // doesn't register. reloadHooks() re-runs this, so toggling is hot.
+      if (entry.disabled === true) continue;
       const event = entry.event as HookEventName;
       const handler: HookHandler = async (ctx) => {
         if (!shellHookMatches(entry, ctx)) return {};
@@ -685,7 +689,12 @@ export class Engine {
       // disabledPlugins suppresses a plugin's hooks too (not just its
       // Skill-tool entries) — see loadPluginHooks. readDisabledLists reads
       // the same settings the prompt composer / tool context use.
-      loadPluginHooks(this.hooks, this.readDisabledLists().disabledPlugins);
+      // disabledPluginHooks is the per-hook overlay
+      // (capabilityOverrides.pluginHooks); applied at construction, so a
+      // toggle takes effect for NEW sessions (same semantics as
+      // disabledPlugins itself).
+      const { disabledPlugins, disabledPluginHooks } = this.readDisabledLists();
+      loadPluginHooks(this.hooks, disabledPlugins, disabledPluginHooks);
     }
     // settings.hooks → shell-command wrappers. Chain order:
     // plugin (80) → shell (50) → code (default 0).
@@ -2853,51 +2862,26 @@ export class Engine {
   private readDisabledLists(): {
     disabledSkills: string[];
     disabledPlugins: string[];
+    disabledPluginHooks: string[];
   } {
     if (this.config.isSubAgent === true) {
-      return { disabledSkills: [], disabledPlugins: [] };
+      return { disabledSkills: [], disabledPlugins: [], disabledPluginHooks: [] };
     }
-    try {
-      const sm = this.getSettingsManager();
-      const settings = sm.get() as {
-        disabledSkills?: string[];
-        disabledPlugins?: string[];
-      };
-      // Fold the project capabilityOverrides over the global baseline so a
-      // project can force-enable a globally-disabled skill/plugin or vice
-      // versa. Read the project overlay UNMERGED (getForScope), not the merged
-      // get(), so tri-state inheritance survives. No cwd / no overlay → the
-      // baseline is returned unchanged (zero regression).
-      const cwd = this.config.cwd;
-      const overrides = cwd
-        ? (sm.getForScope("project", cwd).capabilityOverrides as CapabilityOverrides | undefined)
-        : undefined;
-      // no-repo "conversation" scope: INVERT skill/plugin filtering to a
-      // whitelist (default-all-off, only explicit "on" survives). Only this
-      // fixed cwd flips; every real project keeps the denylist below (zero
-      // regression). agent/mcp/builtin are NOT inverted. See
-      // docs/superpowers/specs/2026-06-11-conversation-settings-page-design.md §3.
-      if (cwd && cwd === noRepoDir()) {
-        // Full set of installed names — pass NO disabled filters so scanSkills
-        // returns every skill (incl. plugin-namespaced "<plugin>:<skill>"),
-        // then whitelist down to the explicit "on" set.
-        const allSkillNames = scanSkills(cwd).map((s) => s.name);
-        const allPluginNames = Object.keys(readInstalledPlugins().plugins).map((key) => {
-          const at = key.lastIndexOf("@");
-          return at > 0 ? key.slice(0, at) : key;
-        });
-        return {
-          disabledSkills: whitelistDisabledList(allSkillNames, overrides?.skills),
-          disabledPlugins: whitelistDisabledList(allPluginNames, overrides?.plugins),
-        };
-      }
-      return {
-        disabledSkills: effectiveDisabledList(settings.disabledSkills ?? [], overrides?.skills),
-        disabledPlugins: effectiveDisabledList(settings.disabledPlugins ?? [], overrides?.plugins),
-      };
-    } catch {
-      return { disabledSkills: [], disabledPlugins: [] };
-    }
+    // Shared folding (capability-control/disabled-lists.ts): project
+    // capabilityOverrides over the global baseline + the no-repo whitelist
+    // inversion. Extracted so the MCP merge consumers (engineFactory /
+    // diskDefaultsFrom) fold identically — see that module's doc.
+    return computeEffectiveDisabledLists(this.getSettingsManager(), this.config.cwd);
+  }
+
+  /**
+   * Public view of the folded disabled lists, for hosts that need the
+   * EFFECTIVE state (e.g. the protocol server's settings hot-reload rebuilds
+   * the plugin-MCP merge per session — a project-level "on" must override the
+   * global disabledPlugins there too).
+   */
+  getEffectiveDisabledLists(): { disabledSkills: string[]; disabledPlugins: string[] } {
+    return this.readDisabledLists();
   }
 
   /**

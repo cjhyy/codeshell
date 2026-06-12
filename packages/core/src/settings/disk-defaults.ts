@@ -45,7 +45,16 @@ export type DiskDefaultPatch = Pick<
  * config (no divergence). It reuses `personalizationFrom` for the three
  * personalization fields rather than duplicating the mapping.
  */
-export function diskDefaultsFrom(settings: ValidatedSettings): DiskDefaultPatch {
+export function diskDefaultsFrom(
+  settings: ValidatedSettings,
+  /**
+   * EFFECTIVE disabled plugins for the target session — the caller should
+   * pass `engine.getEffectiveDisabledLists().disabledPlugins` so the merge
+   * honors project capabilityOverrides (能力总览 project "on" overrides the
+   * global list). Omitted → falls back to the raw global list (legacy).
+   */
+  effectiveDisabledPlugins?: string[],
+): DiskDefaultPatch {
   const agent = settings.agent ?? {};
   return {
     preset: agent.preset,
@@ -57,7 +66,9 @@ export function diskDefaultsFrom(settings: ValidatedSettings): DiskDefaultPatch 
     // skipped, matching new-session construction.
     mcpServers: mergePluginMcpServers(
       settings.mcpServers ?? {},
-      (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
+      effectiveDisabledPlugins ??
+        (settings as { disabledPlugins?: string[] }).disabledPlugins ??
+        [],
     ),
   };
 }

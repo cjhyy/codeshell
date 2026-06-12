@@ -30,6 +30,13 @@ function makeFakeEngine(id: string) {
     setPlanMode() {},
     setPermissionMode() {},
     isHeadless: () => false,
+    // The reload path folds per-session effective disabled lists into the
+    // patch (能力总览 project on/off) — fake returns the empty baseline.
+    getEffectiveDisabledLists: () => ({
+      disabledSkills: [],
+      disabledPlugins: [],
+      disabledPluginHooks: [],
+    }),
     refreshRuntimeConfig(patch: any, version: number) {
       calls.push({ patch, version });
     },

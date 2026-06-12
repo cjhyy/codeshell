@@ -97,6 +97,9 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       const merged = await window.codeshell.listMergedMcpServers(
         settingsRecordOf(s.mcpServers),
         disabledPlugins,
+        // Fold project capabilityOverrides (能力总览 per-project on/off) in
+        // main, so pluginDisabled reflects the EFFECTIVE state for this repo.
+        cwd,
       );
       const list = mcpServersFromSettings(merged);
       setServers(list);

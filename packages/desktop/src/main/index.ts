@@ -19,6 +19,8 @@ import {
   agentNotificationBus,
   mergePluginMcpServers,
   listPluginHooks,
+  computeEffectiveDisabledLists,
+  SettingsManager,
   type AutomationHandle,
   resolveExternalAgentConfig,
   getMergedCatalog,
@@ -1145,13 +1147,20 @@ ipcMain.handle("mcp:probe", async (_e, raw: unknown, force?: boolean) => {
   return probeMcpServers(configs, { force: Boolean(force) });
 });
 
-ipcMain.handle("mcp:listMerged", async (_e, rawBase: unknown, rawDisabledPlugins?: unknown) => {
+ipcMain.handle("mcp:listMerged", async (_e, rawBase: unknown, rawDisabledPlugins?: unknown, rawCwd?: unknown) => {
   const base = rawBase && typeof rawBase === "object"
     ? (rawBase as Record<string, McpServerConfig>)
     : {};
-  const disabledPlugins = Array.isArray(rawDisabledPlugins)
+  const rawList = Array.isArray(rawDisabledPlugins)
     ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
     : [];
+  // Fold project capabilityOverrides over the renderer's raw global list when
+  // a cwd is known — the pluginDisabled flag must reflect the EFFECTIVE state
+  // (能力总览 project "on" overrides global off), matching the engine's merge.
+  const cwd = typeof rawCwd === "string" && rawCwd ? rawCwd : undefined;
+  const disabledPlugins = cwd
+    ? computeEffectiveDisabledLists(new SettingsManager(cwd, "full"), cwd).disabledPlugins
+    : rawList;
   // Merge with ALL plugins (no disabled filter): an installed plugin's MCP
   // should be VISIBLE in the settings page even while the plugin is disabled
   // (feedback: 装了就该展示,而不是打开插件才出现). The engine's own connect

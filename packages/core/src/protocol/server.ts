@@ -671,7 +671,10 @@ export class AgentServer {
         }
         const settings = this.settingsReader();
         const version = ++this.configVersion;
-        s.engine.refreshRuntimeConfig(diskDefaultsFrom(settings), version);
+        s.engine.refreshRuntimeConfig(
+          diskDefaultsFrom(settings, s.engine.getEffectiveDisabledLists().disabledPlugins),
+          version,
+        );
       }
       this.transport.send(createResponse(req.id, { ok: true }));
       return;
@@ -732,23 +735,34 @@ export class AgentServer {
         // Mirrors how reloadModels/model/planMode above act on `engine`.
         if (engine) {
           const settings = this.settingsReader();
-          engine.refreshRuntimeConfig(diskDefaultsFrom(settings), ++this.configVersion);
+          engine.refreshRuntimeConfig(
+            diskDefaultsFrom(settings, engine.getEffectiveDisabledLists().disabledPlugins),
+            ++this.configVersion,
+          );
         }
         this.transport.send(createResponse(req.id, { ok: true }));
         return;
       }
       const settings = this.settingsReader();
-      const patch = diskDefaultsFrom(settings);
-      // #6: content short-circuit. If the disk-default patch is byte-identical
-      // to the last one we broadcast, the disk config that matters to running
-      // sessions hasn't changed — skip the whole forEachSession (and the per-
-      // session reloadHooks churn it triggers). Still return ok; a genuine
-      // change differs in JSON and propagates normally.
-      const patchJson = JSON.stringify(patch);
+      // The MCP merge folds each session's PROJECT capabilityOverrides (a
+      // project-level "on" must override the global disabledPlugins), so the
+      // patch is cwd-dependent — compute it per session, not once.
+      const perSession: Array<{ apply: (version: number) => void; patch: unknown }> = [];
+      this.chatManager.forEachSession((s) => {
+        const patch = diskDefaultsFrom(
+          settings,
+          s.engine.getEffectiveDisabledLists().disabledPlugins,
+        );
+        perSession.push({ apply: (v) => s.engine.refreshRuntimeConfig(patch, v), patch });
+      });
+      // #6: content short-circuit — now keyed on ALL per-session patches, so a
+      // change visible to only one session (e.g. its project's overrides)
+      // still propagates while a true no-op skips the reloadHooks churn.
+      const patchJson = JSON.stringify(perSession.map((p) => p.patch));
       if (patchJson !== this.lastBroadcastPatch) {
         this.lastBroadcastPatch = patchJson;
         const version = ++this.configVersion;
-        this.chatManager.forEachSession((s) => s.engine.refreshRuntimeConfig(patch, version));
+        for (const p of perSession) p.apply(version);
       }
     }
 

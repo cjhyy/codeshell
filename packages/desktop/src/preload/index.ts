@@ -506,8 +506,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("skills:installFromGithub", input),
   probeMcpServers: (configs: unknown, force?: boolean) =>
     ipcRenderer.invoke("mcp:probe", configs, force),
-  listMergedMcpServers: (base: unknown, disabledPlugins?: unknown) =>
-    ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins),
+  listMergedMcpServers: (base: unknown, disabledPlugins?: unknown, cwd?: string) =>
+    ipcRenderer.invoke("mcp:listMerged", base, disabledPlugins, cwd),
   listPluginHooks: (disabledPlugins?: unknown) =>
     ipcRenderer.invoke("hooks:listPlugin", disabledPlugins),
   invalidateMcpProbeCache: (name?: string) =>

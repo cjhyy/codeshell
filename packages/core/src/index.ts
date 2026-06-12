@@ -226,6 +226,10 @@ export type {
   CapabilityControl,
 } from "./capability-control/index.js";
 export { readInstalledPlugins } from "./plugins/installedPlugins.js";
+export {
+  computeEffectiveDisabledLists,
+  type EffectiveDisabledLists,
+} from "./capability-control/disabled-lists.js";
 export type { InstalledPluginsV2 } from "./plugins/types.js";
 
 // ─── Plugin installer (CC + Codex) ───────────────────────────────
@@ -239,7 +243,7 @@ export {
   PluginInstallError,
 } from "./plugins/installer/types.js";
 export { mergePluginMcpServers } from "./plugins/installer/loadPluginMcp.js";
-export { listPluginHooks, type PluginHookEntry } from "./plugins/loadPluginHooks.js";
+export { listPluginHooks, pluginHookKey, type PluginHookEntry } from "./plugins/loadPluginHooks.js";
 export { describePluginContent, type PluginContentInventory } from "./plugins/pluginContent.js";
 export { pluginAgentDirs } from "./plugins/installer/loadPluginAgents.js";
 export {

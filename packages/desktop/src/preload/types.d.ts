@@ -35,7 +35,7 @@ export interface BackgroundShellInfo {
   detectedPort?: number;
 }
 
-/** A plugin-provided hook surfaced read-only to the settings 钩子 page. Mirrors
+/** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors
  *  core's PluginHookEntry (renderer can't import core). */
 export interface PluginHookEntry {
   plugin: string;
@@ -44,6 +44,9 @@ export interface PluginHookEntry {
   command: string;
   matcher?: string;
   disabled: boolean;
+  /** Stable per-hook identity (`plugin:RawEvent:command`) — the record key
+   *  written to `capabilityOverrides.pluginHooks` to toggle just this hook. */
+  key: string;
 }
 
 export interface ApprovalRequestEnvelope {
@@ -658,6 +661,9 @@ export interface CodeshellApi {
   listMergedMcpServers(
     base: Record<string, unknown>,
     disabledPlugins?: string[],
+    /** When set, main folds project capabilityOverrides for THIS cwd over the
+     *  global list — pluginDisabled then reflects the effective state. */
+    cwd?: string,
   ): Promise<Record<string, McpServerProbeInput & { source?: "settings" | "plugin"; editable?: boolean }>>;
   /** Read-only list of plugin-provided hooks (for the settings 钩子 page). */
   listPluginHooks(disabledPlugins?: string[]): Promise<PluginHookEntry[]>;
