@@ -9,6 +9,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 
 /** Probe result shape (reused from image probe; video has no probe → unused). */
@@ -172,7 +175,10 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
     [scope, cwd, settingsKey, entryById],
   );
 
-  const addFromTemplate = (ce: CatalogEntry) => {
+  /** One-step add (feedback: provider→model 分两步选很别扭): the add menu
+   *  expands straight to the template's model presets, so picking a model
+   *  creates a fully-configured card — no empty shell to configure after. */
+  const addFromTemplate = (ce: CatalogEntry, model?: string) => {
     const taken = new Set(instances.map((i) => i.id));
     const id = uniqueId(ce.adapterKind, taken);
     const inst: Instance = {
@@ -181,7 +187,7 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
       catalogId: ce.id,
       baseUrl: ce.defaultBaseUrl,
       apiKey: "",
-      model: ce.defaultModel ?? "",
+      model: model ?? ce.defaultModel ?? "",
       testing: false,
       saving: false,
       showKey: false,
@@ -274,14 +280,34 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
               <Button variant="default">+ 添加模型</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {templates.map((ce) => (
-                <DropdownMenuItem key={ce.id} onSelect={() => addFromTemplate(ce)}>
-                  {ce.displayName}
-                </DropdownMenuItem>
-              ))}
+              {/* Providers with model presets expand to the models directly —
+                  pick a model, get a ready card (one-step add). Providers
+                  without presets stay a single click. */}
+              {templates.map((ce) =>
+                ce.modelPresets?.length ? (
+                  <DropdownMenuSub key={ce.id}>
+                    <DropdownMenuSubTrigger>{ce.displayName}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {ce.modelPresets.map((p) => (
+                        <DropdownMenuItem
+                          key={p.value}
+                          onSelect={() => addFromTemplate(ce, p.value)}
+                        >
+                          {p.label ?? p.value}
+                          {p.value === ce.defaultModel ? "（默认）" : ""}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ) : (
+                  <DropdownMenuItem key={ce.id} onSelect={() => addFromTemplate(ce)}>
+                    {ce.displayName}
+                  </DropdownMenuItem>
+                ),
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <p className="conn-card-desc">从目录挑一个,填(或复用) key 即用。可添加多个。</p>
+          <p className="conn-card-desc">选模型即建好卡片,填(或复用) key 即用。可添加多个。</p>
         </article>
       )}
     </div>
