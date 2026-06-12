@@ -272,15 +272,15 @@
 - **状态**:🔴
 - **状态补**:🟢 已修(2026-06-12,dab58a0)。core 新增 `describePluginContent`(枚举 skills 名+描述/commands/agents/hooks/MCP,hooks·MCP 复用运行时 loader 同款扫描保证不漂移)→ IPC `plugins:detail` → `PluginDetailView`(插件行可点进,仿 MarketList→MarketDetail 模式,五类内容分区列出)。关联 [[project_plugin_detail_view]]、[[project_extensions_ui]]。
 
-### 🔴 [2026-06-12] hooks 缺全局(user)级配置入口 + 缺单条启停开关
+### 🟢 [2026-06-12] hooks 缺全局(user)级配置入口 + 缺单条启停开关
 - **现象/疑问**:用户问 hooks 有没有全局配置、能不能开关 hooks。
 - **核实(2026-06-12)**:
   - **core 支持全局**:`SettingsManager` 分层合并(`manager.ts:42`,`flag>local>project>user>managed`),`user` 层 = `~/.code-shell/settings.json`,`hooks` 写全局完全能加载合并(`manager.ts:91`)。
   - **但 desktop UI 故意只做项目级**:`HooksSection`(`AdvancedSections.tsx:270`)注释明写 "Hooks are PROJECT-scoped only … a global/user hook makes no sense",只编辑 `<repo>/.code-shell/settings.json`。与记忆 [[project_settings_hooks_memory_dream]]「钩子仅项目级」一致(当初有意决策)。
   - **开关现状**:手写项目 hook 只能**增/删,无单条 toggle**;插件 hook 只读、只能靠**禁用整个插件**来关(`listPluginHooks` 已返回 `disabled` 字段,但单条细粒度启停未接,见钩子页改造「未做」项)。
 - **期望(待产品决策)**:① 是否给 hooks 加全局(user)级编辑入口——注释说「全局 hook 没意义」但 hook 有 `cwd`/`matcher` 字段,全局日志类 hook 讲得通,且 CC 本身支持 user 级 hooks(可重新评估这条决策);② 手写 hook 加「启用/禁用」开关(不删也能临时关);③ 插件 hook 单条启停(需扩 core `capabilityOverrides.hooks`)。
-- **状态**:🔴
-- **备注**:array 合并是「整体替换不拼接」(`manager.ts:merge`,数组走 else 分支覆盖)——若加全局层 hooks 要注意项目层会**整体覆盖**全局 hooks 数组,而非合并追加,需特别处理。关联记忆 [[project_hooks_global_and_toggle]]、[[project_settings_hooks_memory_dream]]。
+- **状态**:🟢 已修(2026-06-13,①②③ 全做;core 51f1e1f + desktop b7fc195)
+- **备注(已修汇总)**:**「整体覆盖」坑就是正解入口**——core `SettingsManager.deepMerge` 给顶层 `hooks` 数组单开拼接语义(跨层 CONCAT,user 先 project 后、两层都跑,对齐 CC;显式 `"hooks": null` 仍可整体重置),其余数组照旧整体覆盖。① 钩子页 ProjectPicker 加 `includeGlobal`「全局」行(复用记忆页模式),编辑 `~/.code-shell/settings.json`;项目视图加「全局钩子(也在本项目运行)」只读区。② hooks schema 加 `disabled` 软开关 + `registerSettingsHooks` 跳过(reloadHooks 热生效),UI 行加 Switch、停用置灰。③ `capabilityOverrides.pluginHooks`(key=`pluginHookKey`=`plugin:RawEvent:command`,内容键控防重装漂移)+ `loadPluginHooks` 第三参单条跳过 + `listPluginHooks` 返回 `key`;UI 项目视图插件 hook 行加 Switch(仅本项目、新会话生效),插件整体禁用时置灰;折叠走 `computeEffectiveDisabledLists`(913a680 抽出的共享模块)。测试:manager 拼接 5 例 + loadPluginHooks 单条禁用 2 例;core 1213/desktop 718 全过。关联记忆 [[project_hooks_global_and_toggle]]、[[project_settings_hooks_memory_dream]]。
 
 ### 🟡 [2026-06-12] 记忆/Dream 机制疏理 + 记忆杂乱过期 — 待讨论方向
 - **疑问**:目前记忆到底怎么用的?Dream 有什么用?CC/Codex 怎么做?而且有些记忆过期了、好杂乱。
@@ -306,7 +306,7 @@
 - **状态补**:🟢 已修(2026-06-12,0b1dfe4,按推荐 A+C)。core `MemoryEntry` 加 `pinned`/`origin` frontmatter(仅有值才写,legacy 文件不变);固定的免 maxAge 注入过滤 + 注入排最前标 [pinned];自动提取写入打 `origin:"auto"`;UI 列表固定优先 + Pin/PinOff 按钮 + 「自动」badge,编辑保存不丢标记。Dream 无需改(user scope 本就只读)。
 - **备注**:几种实现路子——**A. 加 `pinned` frontmatter 字段**(最轻:save 支持 pinned;UI 加「固定」按钮 + 列表分组「固定/自动」;注入时固定的优先且不受 maxAge);**B. 新增第三个 scope `pinned/`**(`MemoryScope` 加一项,自动提取只写 user、pinned 纯手动、Dream 对 pinned 只读,与现 user/dream 隔离一致,改动较大);**C. 给自动提取打 `origin:"auto"` 标记**(治本:让 user scope 内部能分自动 vs 手动,配合按来源过滤/批量清理)。推荐 A 或 A+C 组合(轻、直接解决「淹没」)。配合 feedback#17「记忆杂乱过期」一起设计。关联记忆 [[project_memory_pinned_layer]]、[[project_memory_and_dream_overview]]。
 
-### 🔴 [2026-06-12] 连接(connections)整块 UI 需要系统性优化 — 视觉/信息架构/交互三方面
+### 🟢 [2026-06-12] 连接(connections)整块 UI 需要系统性优化 — 视觉/信息架构/交互三方面
 - **现象/诉求**:连接这一块的 UI 需要优化。用户确认三方面都要:**视觉/样式粗糙 + 信息架构混乱 + 交互体验**。
 - **核实(2026-06-12,已定位抓手)**:
   - **结构**:连接分散在 4 个独立面板——`ModelSection.tsx`(模型)、`ImageGenConnectionsPanel.tsx`、`SearchConnectionsPanel.tsx`、`VideoGenConnectionsPanel.tsx`,公共部分在 `GenConnectionsPanel.tsx` + `CollapsibleGroup.tsx`。
@@ -314,8 +314,8 @@
   - **信息架构**:4 面板卡片网格(`connections-card-grid`)、分组(`connections-group` + chevron/count)、默认项 pill(`conn-default-pill`)、key 复用(`conn-key-mode`/apiKeyRef)、探测状态(`conn-probe-*`)层次需重排。
   - **交互**:添加/测试连接(`conn-card-add`/probing/ok/err pill)、填 key、设默认、连通性探测的流程与反馈需打磨。
 - **期望**:① 全面迁 shadcn/ui + Tailwind 语义 token,与其它已迁设置页观感统一,删 connections.css;② 重排卡片/分组/默认/key复用/探测的信息层次;③ 优化添加/测试/设默认/探测的交互与反馈。
-- **状态**:🔴
-- **备注**:范围大,建议先 brainstorm 定方向(视觉统一优先级最高、最确定)再分面板推进。模型接入是 Catalog v1(内置+user.json/多实例复用key apiKeyRef/设默认),见 [[project_model_catalog]];迁移参照 [[project_desktop_shadcn]](HSL token + simple-select)。关联记忆 [[project_connections_ui_overhaul]]。
+- **状态**:🟢 已修(2026-06-13,42ff471;①②③ 主体完成,ModelSection 深度重排留后)
+- **备注(已修汇总)**:① **connections.css 整文件删除**(300 行 52 条规则,3 个消费者 Gen/Search/CollapsibleGroup 全迁完后核实 0 残余);新增 `settings/connUi.tsx` 共享底座(ConnCard/ConnField/SecretKeyInput/ConnProbeError/ConnCardFooter),两面板卡片同源不重复。② IA:卡片层次重排 = header(名称+#id+默认/状态 Badge,「获取 key」收右上 link)→描述→字段栈→probe 块→footer(测试/保存左、设默认/删除右下 ghost);默认卡 accent 边框 ring;1px 缝隙网格改真 gap;状态 pill 换 Badge 语义变体去 hard-coded rgba。③ 交互:保存成功/失败 toast(原静默)、删除/清除加 useConfirm(对齐弹窗统一)、key 显隐 Eye 图标钮、折叠组 chevron 换 lucide。顺手:ModelSection checkbox→Switch + settings-toggle-inline 死规则删除。**留后**:ModelSection 整页深度重排(列表式 IA、绑 Catalog v1,不在 connections.css 范围)。原备注:范围大,建议先 brainstorm 定方向(视觉统一优先级最高、最确定)再分面板推进。模型接入是 Catalog v1(内置+user.json/多实例复用key apiKeyRef/设默认),见 [[project_model_catalog]];迁移参照 [[project_desktop_shadcn]](HSL token + simple-select)。关联记忆 [[project_connections_ui_overhaul]]。
 - **追加具体痛点(2026-06-12)→ 🟢 已修(6e3b338)**:[+ 添加模型] 菜单按模板二级展开 modelPresets(标默认),点模型即建好完整卡片;无 presets 模板单击直建。原文:**「添加」的两段式流程别扭**——点 `[+ 添加]` 弹 catalog 模板菜单(`templates` 按 catalogTag 过滤,`GenConnectionsPanel.tsx:84`)先选一个 provider(如 fal),创建 instance 后**再进卡片里选 model**(`inst.model`,`:108`)。用户觉得「先选 fal、再进去选模型」这种 provider→model 分两步选很奇怪。期望:合并成一步(如添加菜单直接二级展开到具体模型,或一个搜索框同时选 provider+model),减少「选了个空壳再配置」的割裂感。这是上面「交互体验」一项的最具体落点。
 - **追加 BUG(2026-06-12,真因已定位)→ 🟢 已修(2026-06-12,b020eb1)**:**老数据(Catalog v1 之前的 provider)选不了模型**。根因:旧 provider 存的没有 `catalogId`,加载时虽有 kind+tag 回退匹配(`GenConnectionsPanel.tsx:100`),但 GenCard 按 `entry=entryById(inst.catalogId)` 解析模板,catalogId 为 undefined → `entry.modelPresets` 拿不到 → 模型下拉**退化成空文本框**;且 `writeBack` 只在 catalogId 存在时才写(`:149`)→ 永不回填。**已修三处**:① core `migrate-config.ts` 注册首个真实 migration(v0→v1):imageGen/videoGen.providers[] 无 catalogId 按 `adapterKind===kind && tag` 匹配 BUILTIN_CATALOG 回填;`SettingsManager.load()` 接线 migrateConfig(框架此前 0 消费者),user+project 两层各自迁移,仅内容真变才写回(带 .bak),纯 stamp 差异不动文件;② renderer load() 采纳 fallback 匹配进 `catalogId`(下次保存即持久化);③ 未匹配模板时模型框 placeholder 提示「未匹配到模板,手动填写模型 ID」。坑:迁移生效后 generate-image 测试的精确断言要带 catalogId(367bc32)。
 
