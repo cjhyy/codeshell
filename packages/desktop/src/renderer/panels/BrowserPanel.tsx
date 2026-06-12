@@ -23,6 +23,7 @@ import {
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
 import type { Anchor } from "../chat/anchors";
+import { PICKER_SCRIPT, type PickedElement } from "../browser/pickerScript";
 import {
   browserMarkersFrom,
   visibleMarkersOn,
@@ -39,18 +40,8 @@ interface Rect {
   height: number;
 }
 
-/** What the in-page picker returns about the clicked element. */
-interface PickedElement {
-  selector: string;
-  tag: string;
-  text: string;
-  id?: string;
-  className?: string;
-  rect: Rect;
-  /** URL of the page the element was picked on (captured at pick time, so a
-   *  later tab switch can't misattribute the anchor to another page). */
-  url: string;
-}
+// PickedElement / PICKER_SCRIPT live in browser/pickerScript.ts (selector
+// escaping + pick-time verification + positional fallback are documented there).
 
 // Electron's <webview> element. React 19's JSX doesn't know it; declare a
 // minimal typing so we can render it and call its imperative methods.
@@ -106,70 +97,6 @@ const WebviewHost = React.forwardRef<WebviewElement, { initialUrl: string }>(
   },
 );
 
-// Injected into the guest page (no preload available there). Highlights the
-// hovered element with an outline, and on click resolves with a compact
-// descriptor: a best-effort CSS selector, tag, trimmed text, and bounding rect.
-// Returns null if the user presses Escape. Runs as the completion value of
-// executeJavaScript, so the whole thing is one expression evaluating to a
-// Promise.
-const PICKER_SCRIPT = `
-(() => new Promise((resolve) => {
-  const OUTLINE = '2px solid #2563eb';
-  let last = null;
-  const restore = () => { if (last) { last.style.outline = lastOutline; last = null; } };
-  let lastOutline = '';
-  function selectorFor(el) {
-    if (el.id) return '#' + el.id;
-    let path = [];
-    let node = el;
-    while (node && node.nodeType === 1 && path.length < 4) {
-      let part = node.tagName.toLowerCase();
-      if (node.classList && node.classList.length) {
-        part += '.' + Array.from(node.classList).slice(0, 2).join('.');
-      }
-      const parent = node.parentElement;
-      if (parent) {
-        const sibs = Array.from(parent.children).filter(c => c.tagName === node.tagName);
-        if (sibs.length > 1) part += ':nth-of-type(' + (sibs.indexOf(node) + 1) + ')';
-      }
-      path.unshift(part);
-      node = node.parentElement;
-    }
-    return path.join(' > ');
-  }
-  function onMove(e) {
-    const el = e.target;
-    if (el === last) return;
-    restore();
-    last = el; lastOutline = el.style.outline; el.style.outline = OUTLINE;
-  }
-  function cleanup() {
-    restore();
-    document.removeEventListener('mousemove', onMove, true);
-    document.removeEventListener('click', onClick, true);
-    document.removeEventListener('keydown', onKey, true);
-  }
-  function onClick(e) {
-    e.preventDefault(); e.stopPropagation();
-    const el = e.target;
-    const r = el.getBoundingClientRect();
-    const info = {
-      selector: selectorFor(el),
-      tag: el.tagName.toLowerCase(),
-      text: (el.innerText || el.textContent || '').trim().slice(0, 200),
-      id: el.id || undefined,
-      className: (typeof el.className === 'string' ? el.className : '') || undefined,
-      rect: { x: r.x, y: r.y, width: r.width, height: r.height },
-    };
-    cleanup();
-    resolve(info);
-  }
-  function onKey(e) { if (e.key === 'Escape') { cleanup(); resolve(null); } }
-  document.addEventListener('mousemove', onMove, true);
-  document.addEventListener('click', onClick, true);
-  document.addEventListener('keydown', onKey, true);
-}))()
-`;
 
 let tabSeq = 0;
 function freshTab(initialUrl?: string): Tab {
@@ -565,7 +492,7 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
               onSubmit={(comment) => {
                 const label = picked.id
                   ? `${picked.tag}#${picked.id}`
-                  : picked.selector.split(" > ").pop() || picked.tag;
+                  : picked.labelHint || picked.selector.split(" > ").pop() || picked.tag;
                 // Single source of truth: emit the anchor WITH its echo payload;
                 // the dot appears when the anchor flows back via the anchors
                 // prop (App state / hub broadcast) — no local marker copy.
