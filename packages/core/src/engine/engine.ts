@@ -1516,7 +1516,7 @@ export class Engine {
       } else {
         this.mcpManager = new MCPManager(this.toolRegistry);
       }
-      await this.mcpManager.connectAll(mcpServers);
+      await this.mcpManager.connectAll(mcpServers, this);
     }
 
     // Parallelize slow initialization:
@@ -1566,6 +1566,27 @@ export class Engine {
       );
       toolCtx.disabledBuiltins = disabledBuiltins;
     }
+    // MCP tool exposure is per-SESSION even though the pool/registry are
+    // worker-shared (B1): a server connected by another project's session
+    // registers its tools into the SHARED registry, and without this filter
+    // they leaked into every session (e.g. chrome-devtools tools showing up
+    // in a project that never enabled the plugin). Keep an MCP tool only when
+    // its server is in THIS session's merged config.mcpServers — which
+    // already folds the project's capabilityOverrides. Gated on the config
+    // being present: engines without one (sub-agents, bare tests) have no
+    // MCP tools in their private registries anyway.
+    const allowedMcpServers = new Set(
+      Object.entries(this.config.mcpServers ?? {})
+        .filter(([, c]) => c.enabled !== false)
+        .map(([n]) => n),
+    );
+    toolCtx.allowedMcpServers = allowedMcpServers;
+    const mcpVisible = (toolName: string): boolean => {
+      const reg = this.toolRegistry.getTool(toolName) as
+        | { source?: string; serverName?: string }
+        | null;
+      return reg?.source !== "mcp" || allowedMcpServers.has(reg?.serverName ?? "");
+    };
     // Feature-flag visibility: a builtin mapped in TOOL_FEATURE_FLAGS is
     // hidden when its flag resolves to false (default-on flags only hide when
     // explicitly disabled, so zero regression out of the box). Read once per
@@ -1576,6 +1597,7 @@ export class Engine {
       this.toolRegistry.getToolDefinitions(),
       builtinOverride,
     )
+      .filter((t) => mcpVisible(t.name))
       .filter((t) => {
         const guard = BUILTIN_TOOL_GUARDS.get(t.name);
         return guard ? guard(guardCwd) : true;
@@ -2170,8 +2192,10 @@ export class Engine {
         runDream: async ({ systemPrompt, userPrompt, projectDir }) =>
           this.runDreamLoop({ systemPrompt, userPrompt, projectDir, llmClient, sessionId }),
         projectDir: cwd,
-        // settings.memories.maxCount caps memories accepted per extraction.
+        // settings.memories.maxCount caps memories accepted per extraction;
+        // autoExtract=false turns the extractor off (summaries/dream stay).
         maxCount: this.readMemoriesConfig()?.maxCount,
+        autoExtract: this.readMemoriesConfig()?.autoExtract,
       });
 
       await orchestrator.run(plainMessages, sessionId);
@@ -2395,7 +2419,7 @@ export class Engine {
       // that fails to connect/disconnect during hot-reload would otherwise
       // crash the host process (or be silently swallowed). Catch + log so the
       // reconcile is best-effort and the next reload can retry.
-      void this.mcpManager.reconcile(patch.mcpServers).catch((err) => {
+      void this.mcpManager.reconcile(patch.mcpServers, this).catch((err) => {
         logger.error("engine.mcp_reconcile_failed", {
           error: err instanceof Error ? err.message : String(err),
           version,
@@ -2912,16 +2936,21 @@ export class Engine {
   }
 
   /**
-   * Read settings.memories ({ maxCount, maxAge, extractionModel }). Returns
-   * undefined on any error or when absent, so the memory pipeline falls back
-   * to its built-in defaults.
+   * Read settings.memories ({ maxCount, maxAge, extractionModel, autoExtract }).
+   * Returns undefined on any error or when absent, so the memory pipeline
+   * falls back to its built-in defaults.
    */
   private readMemoriesConfig():
-    | { maxCount?: number; maxAge?: number; extractionModel?: string }
+    | { maxCount?: number; maxAge?: number; extractionModel?: string; autoExtract?: boolean }
     | undefined {
     try {
       const settings = this.getSettingsManager().get() as {
-        memories?: { maxCount?: number; maxAge?: number; extractionModel?: string };
+        memories?: {
+          maxCount?: number;
+          maxAge?: number;
+          extractionModel?: string;
+          autoExtract?: boolean;
+        };
       };
       return settings.memories;
     } catch {

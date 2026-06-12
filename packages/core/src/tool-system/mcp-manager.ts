@@ -239,6 +239,8 @@ export class MCPManager {
    * connect can be retried later.
    */
   private connecting = new Map<string, Promise<void>>();
+  /** Per-owner (engine) desired server sets — see reconcile()'s shared-pool note. */
+  private desiredByOwner = new Map<unknown, Set<string>>();
 
   constructor(private readonly toolRegistry: ToolRegistry) {
     MCPManager.instance = this;
@@ -254,7 +256,20 @@ export class MCPManager {
   /**
    * Connect to all configured MCP servers and register their tools.
    */
-  async connectAll(servers: Record<string, MCPServerConfig>): Promise<void> {
+  async connectAll(servers: Record<string, MCPServerConfig>, owner?: unknown): Promise<void> {
+    // Register this owner's desired set up front (see reconcile's shared-pool
+    // note) so a later reconcile from ANOTHER session can't disconnect servers
+    // this session connected at run start.
+    if (owner !== undefined) {
+      this.desiredByOwner.set(
+        owner,
+        new Set(
+          Object.entries(servers)
+            .filter(([, c]) => c.enabled !== false)
+            .map(([n]) => n),
+        ),
+      );
+    }
     // Codex-style toggle: skip servers explicitly disabled in settings.
     // Only the literal `false` disables — absent / true / any other value
     // stays connected, matching the schema default semantics.
@@ -282,16 +297,35 @@ export class MCPManager {
     }
   }
 
-  async reconcile(servers: Record<string, MCPServerConfig>): Promise<void> {
+  async reconcile(servers: Record<string, MCPServerConfig>, owner?: unknown): Promise<void> {
     const enabledNames = new Set(
       Object.entries(servers)
         .filter(([, config]) => config.enabled !== false)
         .map(([name]) => name),
     );
     this.desiredServerNames = enabledNames;
-    const stale = this.listServers().filter((name) => !enabledNames.has(name));
+    // Shared-pool semantics: this ONE pool serves every session in the worker,
+    // and sessions in different projects legitimately want DIFFERENT server
+    // sets (per-project capabilityOverrides). Disconnect only servers that NO
+    // registered owner wants — otherwise the per-session hot-reload patches
+    // would thrash each other's connections (last reconcile wins, killing a
+    // server another project's session is using). Owners are engines; a
+    // closed session's desires linger (no engine-teardown hook), which merely
+    // over-RETAINS idle connections — per-session tool visibility keeps
+    // correctness regardless.
+    if (owner !== undefined) this.desiredByOwner.set(owner, enabledNames);
+    const union = this.unionDesired() ?? enabledNames;
+    const stale = this.listServers().filter((name) => !union.has(name));
     await Promise.all(stale.map((name) => this.disconnect(name)));
-    await this.connectAll(servers);
+    await this.connectAll(servers, owner);
+  }
+
+  /** Union of every registered owner's desired set; null when none registered. */
+  private unionDesired(): Set<string> | null {
+    if (this.desiredByOwner.size === 0) return null;
+    const u = new Set<string>();
+    for (const names of this.desiredByOwner.values()) for (const n of names) u.add(n);
+    return u;
   }
 
   /**

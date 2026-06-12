@@ -9,6 +9,9 @@ import {
   inferTransportType,
 } from "./mcp-manager.js";
 import { ToolRegistry } from "./registry.js";
+import { ToolExecutor } from "./executor.js";
+import { PermissionClassifier } from "./permission.js";
+import { HookRegistry } from "../hooks/registry.js";
 import type { MCPServerConfig } from "../types.js";
 
 /**
@@ -340,5 +343,78 @@ describe("inferTransportType (url-only configs are HTTP, not stdio)", () => {
     expect(inferTransportType({ name: "s", command: "npx" })).toBe("stdio");
     expect(inferTransportType({ name: "s", command: "npx", url: "https://x" })).toBe("stdio");
     expect(inferTransportType({ name: "s" })).toBe("stdio");
+  });
+});
+
+describe("reconcile shared-pool union (per-session hot-reload must not thrash)", () => {
+  class PoolSpy extends MCPManager {
+    connected: string[] = [];
+    disconnected: string[] = [];
+    live: string[] = [];
+    override async connect(name: string): Promise<void> {
+      this.connected.push(name);
+      if (!this.live.includes(name)) this.live.push(name);
+    }
+    override async disconnect(name: string): Promise<void> {
+      this.disconnected.push(name);
+      this.live = this.live.filter((n) => n !== name);
+    }
+    override listServers(): string[] {
+      return [...this.live];
+    }
+  }
+  const cfg = (names: string[]): Record<string, MCPServerConfig> =>
+    Object.fromEntries(names.map((n) => [n, { name: n, url: `https://${n}/mcp` }]));
+
+  test("another owner's servers survive a narrower reconcile", async () => {
+    const pool = new PoolSpy(new ToolRegistry());
+    const a = { id: "session-a" };
+    const b = { id: "session-b" };
+    await pool.connectAll(cfg(["x", "y"]), a); // session A wants x+y
+    expect(pool.live.sort()).toEqual(["x", "y"]);
+
+    await pool.reconcile(cfg(["x"]), b); // session B only wants x
+    // y is still desired by A — must NOT be disconnected.
+    expect(pool.disconnected).toEqual([]);
+    expect(pool.live.sort()).toEqual(["x", "y"]);
+  });
+
+  test("a server NO owner wants anymore is disconnected", async () => {
+    const pool = new PoolSpy(new ToolRegistry());
+    const a = { id: "session-a" };
+    await pool.connectAll(cfg(["x", "y"]), a);
+    await pool.reconcile(cfg(["x"]), a); // A itself drops y; no other owners
+    expect(pool.disconnected).toEqual(["y"]);
+    expect(pool.live).toEqual(["x"]);
+  });
+
+  test("ownerless reconcile keeps the legacy disconnect-stale behavior", async () => {
+    const pool = new PoolSpy(new ToolRegistry());
+    await pool.connectAll(cfg(["x", "y"]));
+    await pool.reconcile(cfg(["x"]));
+    expect(pool.disconnected).toEqual(["y"]);
+  });
+});
+
+describe("executor gate: MCP tool from a server this session didn't enable", () => {
+  test("call is rejected with a no-retry error", async () => {
+    const registry = new ToolRegistry();
+    registry.registerTool({
+      name: "mcp_other_srv_doit",
+      description: "[other:srv] do it",
+      inputSchema: { type: "object", properties: {} },
+      source: "mcp",
+      serverName: "other:srv",
+      handler: async () => ({ ok: true }),
+    } as never);
+    const executor = new ToolExecutor(
+      registry,
+      new PermissionClassifier({ mode: "bypassPermissions" } as never),
+      new HookRegistry(),
+    );
+    executor.setContext({ allowedMcpServers: new Set(["mine:srv"]) } as never);
+    const result = await executor.executeSingle({ id: "c1", toolName: "mcp_other_srv_doit", args: {} } as never);
+    expect(result.isError).toBe(true);
+    expect(String(result.error)).toContain("not enabled for this project");
   });
 });

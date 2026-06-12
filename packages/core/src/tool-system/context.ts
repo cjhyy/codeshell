@@ -243,6 +243,15 @@ export interface ToolContext {
    */
   disabledBuiltins?: Set<string>;
   /**
+   * MCP servers THIS session's merged config enables (keys of
+   * config.mcpServers, enabled!==false). The pool + registry are
+   * worker-shared (B1), so tools registered by another project's session live
+   * in the same registry — the engine hides them from this session's tool
+   * list and the executor rejects calls to them via this set. Undefined =
+   * no gating (sub-agents / tests whose registries carry no MCP tools).
+   */
+  allowedMcpServers?: Set<string>;
+  /**
    * Project-scoped extra environment variables (the user's
    * `localEnvironment.env` KEY=VALUE pairs for this cwd). Layered on top of
    * the shell env that the Bash tool and background shells build, so a project

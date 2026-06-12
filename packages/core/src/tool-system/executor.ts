@@ -147,6 +147,22 @@ export class ToolExecutor {
         isError: true,
       };
     }
+    // Same gate for MCP tools: the registry is worker-shared, so it can hold
+    // tools from servers OTHER sessions enabled. Visibility filtering hides
+    // them from this session's tool list; this rejects a direct call anyway.
+    if (this.toolCtx?.allowedMcpServers) {
+      const reg = this.registry.getTool(call.toolName) as
+        | { source?: string; serverName?: string }
+        | null;
+      if (reg?.source === "mcp" && !this.toolCtx.allowedMcpServers.has(reg.serverName ?? "")) {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error: `Tool ${call.toolName} belongs to an MCP server that is not enabled for this project. Do NOT retry this tool call.`,
+          isError: true,
+        };
+      }
+    }
     // 0. Plan mode: only allow read-only tools — no file writes at all
     if (this.toolCtx?.planMode) {
       // Shared with engine.ts's tool-visibility filter so the set the model
