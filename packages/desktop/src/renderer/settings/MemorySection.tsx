@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Pin,
   PinOff,
+  Eraser,
 } from "lucide-react";
 import type {
   MemoryLevel,
@@ -24,7 +25,9 @@ import { repoLabel, type Repo } from "../repos";
 import { cacheGet, cacheSet } from "./settingsCache";
 import { ProjectPicker } from "./ProjectPicker";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useConfirm } from "../ui/ConfirmDialog";
+import { writeSettings } from "../settingsBus";
 
 interface Props {
   scope: "user" | "project";
@@ -262,6 +265,65 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
     [entries],
   );
 
+  // ---- 自动提取开关(settings.memories.autoExtract,全局 user 层) ----
+  // Only surfaced in the GLOBAL memory view: the engine reads the merged
+  // settings, so this one switch governs every project's extractor.
+  const [autoExtract, setAutoExtract] = useState(true);
+  useEffect(() => {
+    if (level !== "user") return;
+    void (async () => {
+      try {
+        const s = ((await window.codeshell.getSettings("user")) ?? {}) as {
+          memories?: { autoExtract?: boolean };
+        };
+        setAutoExtract(s.memories?.autoExtract !== false);
+      } catch {
+        /* keep default-on */
+      }
+    })();
+  }, [level]);
+  const toggleAutoExtract = async (checked: boolean): Promise<void> => {
+    setAutoExtract(checked);
+    try {
+      await writeSettings("user", { memories: { autoExtract: checked } });
+    } catch (e: unknown) {
+      setAutoExtract(!checked);
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
+
+  /** 批量清理:删掉本 scope 下所有「自动提取且未固定」的条目(soft-delete)。 */
+  const autoEntries = useMemo(
+    () => entries.filter((e) => e.origin === "auto" && !e.pinned),
+    [entries],
+  );
+  const cleanupAuto = async (): Promise<void> => {
+    if (autoEntries.length === 0) return;
+    const ok = await confirm({
+      title: "清理自动提取的记忆",
+      message: `删除 ${autoEntries.length} 条自动提取且未固定的记忆?`,
+      detail: "手动创建与已固定的不受影响;删除移到 memory-trash/,可手动恢复。",
+      confirmLabel: "清理",
+      destructive: true,
+    });
+    if (!ok) return;
+    setLoading(true);
+    setError(null);
+    try {
+      for (const e of autoEntries) {
+        await window.codeshell.deleteMemory(level, scope, e.name, cwd);
+      }
+      setSelected(null);
+      await refresh();
+      setNotice(`已清理 ${autoEntries.length} 条自动提取记忆。`);
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+      await refresh();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /** Pin/unpin = re-save with the flag flipped (content fetched on demand). */
   const togglePin = async (entry: RendererMemoryEntry): Promise<void> => {
     setError(null);
@@ -303,6 +365,27 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
           ))}
         </div>
         <div className="memory-toolbar-actions">
+          {level === "user" && scope === "user" && (
+            <label
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+              title="对话结束后用 LLM 自动提取 ≤2 条记忆存入 User scope;关掉后会话总结与 Dream 不受影响(全局生效)"
+            >
+              <Switch checked={autoExtract} onCheckedChange={(v) => void toggleAutoExtract(v)} />
+              <span>自动提取</span>
+            </label>
+          )}
+          {autoEntries.length > 0 && (
+            <button
+              type="button"
+              className="memory-action"
+              onClick={() => void cleanupAuto()}
+              disabled={loading || dreaming}
+              title="批量删除本 scope 下所有「自动提取且未固定」的记忆(移到 memory-trash/ 可恢复)"
+            >
+              <Eraser size={12} />
+              <span>清理自动提取({autoEntries.length})</span>
+            </button>
+          )}
           {scope === "dream" && (
             <button
               type="button"

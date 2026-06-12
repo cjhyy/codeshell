@@ -49,3 +49,79 @@ describe("MemoryOrchestrator extraction telemetry", () => {
     }
   });
 });
+
+describe("MemoryOrchestrator autoExtract gate (settings.memories.autoExtract)", () => {
+  it("autoExtract:false skips extraction — no save, no extraction LLM call", async () => {
+    const info = spyOn(logger, "info").mockImplementation(() => {});
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      let saves = 0;
+      const mm = {
+        loadAll: () => [],
+        save: () => {
+          saves++;
+        },
+        loadScope: () => [],
+      } as any;
+      const systemPrompts: string[] = [];
+      const orchestrator = new MemoryOrchestrator({
+        memoryManager: mm,
+        autoExtract: false,
+        callLLM: async (sysPrompt) => {
+          systemPrompts.push(sysPrompt);
+          return "[]";
+        },
+      });
+
+      const result = await orchestrator.run(
+        [{ role: "user", content: "remember this" }],
+        "s1",
+      );
+
+      expect(result.extracted).toBe(0);
+      expect(saves).toBe(0);
+      // The extraction call never happens; the session-summary step (step 2)
+      // may still call the LLM — assert none of the calls were extraction.
+      expect(
+        systemPrompts.some((p) => p.includes("memory extraction assistant")),
+      ).toBe(false);
+      const skipped = info.mock.calls.find((c) => c[0] === "memory.extraction_skipped");
+      expect(skipped).toBeDefined();
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
+  it("absent autoExtract keeps extracting (default-on)", async () => {
+    const info = spyOn(logger, "info").mockImplementation(() => {});
+    const warn = spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      let saves = 0;
+      const mm = {
+        loadAll: () => [],
+        save: () => {
+          saves++;
+        },
+        loadScope: () => [],
+      } as any;
+      const orchestrator = new MemoryOrchestrator({
+        memoryManager: mm,
+        callLLM: async () =>
+          JSON.stringify([
+            { type: "project", name: "n", description: "d", content: "c" },
+          ]),
+      });
+
+      const result = await orchestrator.run(
+        [{ role: "user", content: "remember this" }],
+        "s1",
+      );
+      expect(result.extracted).toBe(1);
+      expect(saves).toBe(1);
+    } finally {
+      info.mockRestore();
+      warn.mockRestore();
+    }
+  });
+});

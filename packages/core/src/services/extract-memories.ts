@@ -49,6 +49,7 @@ Rules:
 - Do not extract code patterns, file structures, or git history (derivable from code)
 - Do not extract ephemeral task details, progress snapshots, or in-flight work state — those belong in the conversation, not memory
 - Do not extract one-off research products (news reports, AI industry summaries, slide deck content, daily progress dumps) — they're done and not "durable, reusable information"
+- NEVER include secrets: API keys, tokens, passwords, private URLs with credentials. If the durable fact involves a credential, describe WHERE it lives (e.g. "key is in .env as FOO_KEY"), never the value itself
 - Each memory should have a clear, specific description
 
 Respond with a JSON array of objects with fields: type, name, description, content

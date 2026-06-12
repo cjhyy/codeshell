@@ -428,6 +428,10 @@ export const SettingsSchema = z
         maxCount: z.number().int().positive().optional(),
         maxAge: z.number().int().positive().optional(),
         extractionModel: z.string().optional(),
+        /** Master switch for end-of-session automatic memory extraction.
+         *  Absent/true = extract (current behavior); false = skip extraction
+         *  while keeping session summaries and Dream untouched. */
+        autoExtract: z.boolean().optional(),
       })
       .optional(),
 

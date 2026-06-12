@@ -46,6 +46,13 @@ export interface MemoryOrchestratorOptions {
    * undefined → the built-in MAX_MEMORIES_PER_EXTRACTION default.
    */
   maxCount?: number;
+  /**
+   * From settings.memories.autoExtract. `false` skips step 1 (LLM memory
+   * extraction) entirely — the user-curated store stops accumulating
+   * extractor noise — while session summaries and auto-dream keep running.
+   * Absent/true = extract (default behavior).
+   */
+  autoExtract?: boolean;
 }
 
 export interface MemoryOrchestratorResult {
@@ -75,8 +82,12 @@ export class MemoryOrchestrator {
     const startTime = Date.now();
 
     // --------------- 1. Extract durable memories ---------------
+    // settings.memories.autoExtract=false skips the extractor entirely (the
+    // curated store stops accumulating noise); summaries + dream still run.
     let extracted = 0;
-    try {
+    if (this.options.autoExtract === false) {
+      logger.info("memory.extraction_skipped", { sessionId, reason: "autoExtract=false" });
+    } else try {
       let t = Date.now();
       const existing = mm.loadAll();
       const loadMs = Date.now() - t;

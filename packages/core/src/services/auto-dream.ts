@@ -115,7 +115,8 @@ export function buildDreamSystemPrompt(): string {
     "4. Prefer fewer, higher-quality merged entries over many similar fragments.",
     "5. When an entry has versioned variants (e.g. `*-v1`, `*-v2`, `*-v3`), keep only the latest.",
     "6. Be conservative: if uncertain whether two entries are truly duplicates, leave them alone.",
-    "7. When you're done, stop calling tools and respond with a one-paragraph summary of what you changed.",
+    "7. Archive COMPLETED work: dream entries that only record a finished fix/task (\"已修\", \"已完成\", \"done\") and carry no reusable lesson should be deleted, or merged into one compact changelog-style entry — completed-state notes that only grow are the main source of clutter. Keep any durable lesson (root cause, pitfall, convention) by folding it into a topical entry first.",
+    "8. When you're done, stop calling tools and respond with a one-paragraph summary of what you changed.",
   ].join("\n");
 }
 
