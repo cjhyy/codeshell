@@ -87,11 +87,19 @@ function transportOf(cfg: McpServerConfig): "stdio" | "streamable-http" | "sse" 
 }
 
 /** Exported for unit testing (error classification). */
-export function humanizeError(raw: string): string {
+export function humanizeError(raw: string, command?: string): string {
   if (/ENOENT/.test(raw)) return "找不到命令（请确认已安装或路径正确）";
   if (/EACCES/.test(raw)) return "命令没有可执行权限";
   if (/ECONNREFUSED/.test(raw)) return "无法连接到服务（拒绝连接）";
-  if (/ETIMEDOUT|timed out/i.test(raw)) return "连接超时";
+  if (/ETIMEDOUT|timed out/i.test(raw)) {
+    // npx/uvx-style runners download the package on FIRST run, which easily
+    // blows the probe timeout; the cache makes the next run instant. Say so,
+    // instead of leaving the user staring at a bare "连接超时".
+    if (command && /\b(npx|uvx|bunx|pipx)\b/.test(command)) {
+      return "连接超时 — npx/uvx 首次运行需下载包，常超过探测超时；稍后重试通常即可";
+    }
+    return "连接超时";
+  }
   if (/ENOTFOUND/.test(raw)) return "域名解析失败";
   // Auth errors, most-specific first:
   // 1. A referenced env var is missing — core's readRequiredEnv error names
@@ -192,7 +200,7 @@ async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
     return {
       ...base,
       status: "error",
-      errorMessage: humanizeError(raw),
+      errorMessage: humanizeError(raw, cfg.command),
       errorDetail: detail,
       lastProbedAt: new Date().toISOString(),
     };

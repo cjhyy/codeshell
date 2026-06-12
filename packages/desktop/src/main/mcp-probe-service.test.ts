@@ -46,3 +46,15 @@ describe("humanizeError auth classification", () => {
     expect(msg).toBe("server exited with code 14013");
   });
 });
+
+describe("cold-start timeout hint (npx/uvx 首次下载)", () => {
+  test("timeout + npx command → 提示首次下载稍后重试", () => {
+    const msg = humanizeError("connect timed out after 8000ms", "npx -y chrome-devtools-mcp@latest");
+    expect(msg).toContain("首次运行需下载包");
+  });
+
+  test("timeout without a runner command → 普通超时文案", () => {
+    expect(humanizeError("connect timed out after 8000ms", "node server.js")).toBe("连接超时");
+    expect(humanizeError("connect timed out after 8000ms")).toBe("连接超时");
+  });
+});
