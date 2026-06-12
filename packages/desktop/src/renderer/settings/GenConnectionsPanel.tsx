@@ -290,8 +290,14 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
           isDefault={defaultId === inst.id}
           showTest={showTest}
           labels={labels}
-          // Other already-keyed instances in this panel — reuse-key candidates.
-          reuseCandidates={instances.filter((o) => o.id !== inst.id && !!o.apiKey)}
+          // Reuse-key candidates: other already-keyed instances of the SAME
+          // provider kind. A key belongs to one provider account — offering
+          // e.g. an OpenAI key to a Gemini card was wrong (it can never work);
+          // cross-kind refs saved before this filter resolve to 未配置 so the
+          // user re-enters a real key.
+          reuseCandidates={instances.filter(
+            (o) => o.id !== inst.id && o.kind === inst.kind && !!o.apiKey,
+          )}
           onConfigChange={(p) => patch(inst.id, { ...p, dirty: true, probe: undefined })}
           onUiChange={(p) => patch(inst.id, p)}
           onSave={() => void save(inst.id)}
@@ -438,7 +444,10 @@ function GenCard({
               value={inst.apiKeyRef ?? ""}
               onChange={(v) => onConfigChange({ apiKeyRef: v, apiKey: "" })}
               placeholder="选择要复用的实例"
-              options={reuseCandidates.map((o) => ({ value: o.id, label: `#${o.id}` }))}
+              options={reuseCandidates.map((o) => ({
+                value: o.id,
+                label: o.model ? `#${o.id} · ${o.model}` : `#${o.id}`,
+              }))}
             />
           ) : (
             <SecretKeyInput

@@ -130,7 +130,10 @@ function ModalHead({
 }) {
   return (
     <DialogHeader>
-      {title && <DialogTitle>{title}</DialogTitle>}
+      {/* Radix requires a DialogTitle inside every DialogContent (a11y) —
+          callers usually pass only `message`, so render it as an sr-only
+          title then: screen readers get a name, visuals stay unchanged. */}
+      <DialogTitle className={title ? undefined : "sr-only"}>{title ?? message}</DialogTitle>
       <DialogDescription className="text-foreground">{message}</DialogDescription>
       {detail && (
         <p className="text-xs text-muted-foreground">{detail}</p>
