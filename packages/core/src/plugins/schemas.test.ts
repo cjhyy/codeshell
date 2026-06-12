@@ -146,3 +146,31 @@ describe("validateMarketplace with mixed url/git-subdir/string entries", () => {
     }
   });
 });
+
+describe("plugin entry version (marketplace 版本号显示)", () => {
+  it("reads a declared version string off the manifest entry", () => {
+    const r = validateMarketplace({
+      name: "m",
+      owner: { name: "o" },
+      plugins: [{ name: "p", source: "./plugins/p", version: "1.2.3" }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value.plugins[0].version).toBe("1.2.3");
+  });
+
+  it("omits version when absent or non-string (CC manifests usually have none)", () => {
+    const r = validateMarketplace({
+      name: "m",
+      owner: { name: "o" },
+      plugins: [
+        { name: "a", source: "./plugins/a" },
+        { name: "b", source: "./plugins/b", version: 3 },
+      ],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.plugins[0].version).toBeUndefined();
+      expect(r.value.plugins[1].version).toBeUndefined();
+    }
+  });
+});

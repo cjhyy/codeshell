@@ -35,6 +35,12 @@ export interface PluginMarketplaceEntry {
   category?: string;
   source: PluginEntrySource;
   homepage?: string;
+  /**
+   * Declared version from the marketplace manifest, when the author wrote
+   * one. CC's marketplace.json has no version convention, so this is often
+   * absent — the UI hides it rather than showing a placeholder.
+   */
+  version?: string;
 }
 
 export interface PluginMarketplace {

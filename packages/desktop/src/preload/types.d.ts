@@ -581,6 +581,8 @@ export interface CodeshellApi {
       author?: string;
       category?: string;
       homepage?: string;
+      /** Declared in the manifest when present — often absent (CC has no version convention). */
+      version?: string;
     }>;
   } | null>;
   /** Parse a github repo / git url string and add it as a marketplace. */

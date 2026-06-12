@@ -47,6 +47,8 @@ export interface MarketplacePluginDTO {
   author?: string; // flattened from {name,email}
   category?: string;
   homepage?: string;
+  /** Declared in the manifest when present — CC has no version convention, so often absent. */
+  version?: string;
 }
 
 export interface MarketplaceDetailDTO {
@@ -80,6 +82,7 @@ export function loadMarketplaceForUi(name: string): MarketplaceDetailDTO | null 
       author: p.author?.name,
       category: p.category,
       homepage: p.homepage,
+      version: p.version,
     })),
   };
 }

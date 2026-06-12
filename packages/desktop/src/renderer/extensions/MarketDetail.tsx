@@ -20,7 +20,8 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
   const [reloadKey, setReloadKey] = useState(0);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const alert = useAlert();
-  const [installed, setInstalled] = useState<Set<string>>(new Set());
+  // plugin name → installed version (git short SHA or "local"); presence = installed.
+  const [installed, setInstalled] = useState<Map<string, string>>(new Map());
 
   const retry = () => setReloadKey((k) => k + 1);
 
@@ -39,12 +40,12 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
       .then(([mp, plugins]) => {
         if (!alive) return;
         // installKey is "<plugin>@<marketplace>" — pick the ones from this
-        // marketplace and seed them as installed.
-        const here = new Set<string>();
+        // marketplace and seed them as installed (with their installed version).
+        const here = new Map<string, string>();
         for (const p of plugins) {
           const at = p.installKey.lastIndexOf("@");
           if (at > 0 && p.installKey.slice(at + 1) === marketName) {
-            here.add(p.installKey.slice(0, at));
+            here.set(p.installKey.slice(0, at), p.version);
           }
         }
         setInstalled(here);
@@ -67,7 +68,9 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
         void alert({ title: "安装失败", message: res.error ?? "未知错误" });
         return;
       }
-      setInstalled((prev) => new Set(prev).add(pluginName));
+      // Version unknown until the next listPlugins round-trip — empty string
+      // marks "installed, version pending" (the chip just omits the number).
+      setInstalled((prev) => new Map(prev).set(pluginName, ""));
       onInstalled();
     } catch (e) {
       void alert({ title: "安装失败", message: String((e as Error)?.message ?? e) });
@@ -109,15 +112,29 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
           {market.plugins.map((p) => {
             const isBusy = busy.has(p.name);
             const isInstalled = installed.has(p.name);
+            const installedVersion = installed.get(p.name);
             return (
               <li key={p.name} className="flex items-center gap-3 rounded-md border p-3 text-sm">
                 <span className="text-lg">🧩</span>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{p.name}</div>
+                  <div className="flex items-baseline gap-2 truncate">
+                    <span className="truncate font-medium">{p.name}</span>
+                    {p.version && (
+                      <span className="shrink-0 text-xs text-muted-foreground">v{p.version}</span>
+                    )}
+                  </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {(p.description ?? "").split("\n")[0]}
                   </div>
                 </div>
+                {isInstalled && installedVersion && (
+                  <span
+                    className="text-xs text-muted-foreground"
+                    title="已安装的版本（git 提交或 local）"
+                  >
+                    已装 {installedVersion}
+                  </span>
+                )}
                 <span className="text-xs text-muted-foreground">
                   {p.category ?? p.author ?? ""}
                 </span>

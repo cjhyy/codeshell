@@ -138,6 +138,7 @@ export function validatePluginEntry(
       category: typeof raw.category === "string" ? raw.category : undefined,
       source: source.value,
       homepage: typeof raw.homepage === "string" ? raw.homepage : undefined,
+      version: typeof raw.version === "string" ? raw.version : undefined,
     },
   };
 }
