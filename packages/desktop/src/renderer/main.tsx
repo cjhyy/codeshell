@@ -8,6 +8,7 @@ import "./styles/index.css";
 import "./styles.css"; // legacy; removed in the final migration phase
 import { initTheme } from "./theme";
 import { BrowserPanel } from "./panels/BrowserPanel";
+import type { Anchor } from "./chat/anchors";
 
 initTheme();
 
@@ -15,21 +16,39 @@ const root = createRoot(document.getElementById("root")!);
 
 // The browser popout window loads the same renderer with `?popout=browser`. In
 // that mode we mount just a full-window browser (no sidebar/chat). Element-pick
-// anchors are sent over IPC to the parent window's composer instead of the
-// local add-anchor event.
+// anchors are sent over IPC to the parent window's composer; the annotation
+// set itself arrives back via the hub broadcast (state-down pipe), so the
+// popout echoes exactly what the main window / other popouts show — and clears
+// together with them when a message sends (圈选统一架构).
+function PopoutBrowser({ initialUrl }: { initialUrl?: string }) {
+  const [anchors, setAnchors] = React.useState<Anchor[]>([]);
+  React.useEffect(
+    () =>
+      window.codeshell.onBrowserAnchorsState((raw) => {
+        setAnchors(Array.isArray(raw) ? (raw as Anchor[]) : []);
+      }),
+    [],
+  );
+  return (
+    <div className="flex h-screen flex-col bg-background text-foreground">
+      <BrowserPanel
+        cwd={null}
+        initialUrl={initialUrl}
+        showPopout={false}
+        anchors={anchors}
+        onAnchor={(a) => window.codeshell.sendBrowserAnchor(a)}
+        onRemoveAnchor={(id) => window.codeshell.sendBrowserAnchorRemove(id)}
+      />
+    </div>
+  );
+}
+
 const params = new URLSearchParams(window.location.search);
 if (params.get("popout") === "browser") {
   const initialUrl = params.get("url") ?? undefined;
   root.render(
     <React.StrictMode>
-      <div className="flex h-screen flex-col bg-background text-foreground">
-        <BrowserPanel
-          cwd={null}
-          initialUrl={initialUrl}
-          showPopout={false}
-          onAnchor={(a) => window.codeshell.sendBrowserAnchor(a)}
-        />
-      </div>
+      <PopoutBrowser initialUrl={initialUrl} />
     </React.StrictMode>,
   );
 } else {

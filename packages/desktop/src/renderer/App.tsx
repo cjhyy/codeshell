@@ -93,6 +93,14 @@ import { CustomizeView } from "./customize/CustomizeView";
 import { PanelArea } from "./panels/PanelArea";
 import type { PanelTab } from "./view";
 import { nextAnchorId, type Anchor } from "./chat/anchors";
+import {
+  addAnchorTo,
+  anchorsIn,
+  browserAnchorsOf,
+  clearAnchorBuckets,
+  removeAnchorFrom,
+  type AnchorsByBucket,
+} from "./chat/anchorBuckets";
 import { CommandPalette, buildCommands } from "./shell/CommandPalette";
 import { SessionSearchModal } from "./shell/SessionSearchModal";
 import { SearchBar } from "./shell/SearchBar";
@@ -1649,16 +1657,23 @@ function App() {
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
-  const [anchors, setAnchors] = useState<Anchor[]>([]);
+  // Keyed by session bucket (anchorBuckets.ts) so switching sessions switches
+  // annotation sets; the browser surfaces echo the active bucket's browser
+  // anchors (synced to main → broadcast to popout windows below).
+  const [anchorsByBucket, setAnchorsByBucket] = useState<AnchorsByBucket>({});
+  const anchors = anchorsIn(anchorsByBucket, activeBucket);
+  // The add/remove event listeners register once; route through a ref so they
+  // always target the CURRENT bucket, not the one from their mount render.
+  const activeAnchorBucketRef = useRef(activeBucket);
+  activeAnchorBucketRef.current = activeBucket;
   const removeAnchor = (id: string): void => {
-    setAnchors((a) => a.filter((x) => x.id !== id));
-    window.dispatchEvent(new CustomEvent("codeshell:anchor-removed", { detail: { id } }));
+    setAnchorsByBucket((s) => removeAnchorFrom(s, activeAnchorBucketRef.current, id));
   };
   const clearAnchors = (): void => {
-    setAnchors([]);
-    // Tell panels (e.g. the browser's page markers) the anchors are gone so
-    // they can clear their in-page UI — fires after a message is sent.
-    window.dispatchEvent(new CustomEvent("codeshell:anchors-cleared"));
+    // Clear the active bucket AND the repo's draft slot — see clearAnchorBuckets.
+    setAnchorsByBucket((s) =>
+      clearAnchorBuckets(s, [activeAnchorBucketRef.current, bucketKey(activeRepoId, null)]),
+    );
   };
   // Panel-dock request: nonce + kind, in ONE state object so opening the dock
   // and choosing the kind is a single atomic update — PanelArea then mounts
@@ -1874,34 +1889,50 @@ function App() {
   }, []);
 
   // A panel pinned a comment anchor (diff line / browser element / file line).
-  // Accumulate it as a chip above the composer.
+  // Accumulate it as a chip above the composer (into the active bucket).
   useEffect(() => {
     const onAnchor = (e: Event): void => {
       const anchor = (e as CustomEvent<{ anchor?: Anchor }>).detail?.anchor;
-      if (anchor) setAnchors((prev) => [...prev, anchor]);
-    };
-    const onRemove = (e: Event): void => {
-      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
-      if (id) setAnchors((prev) => prev.filter((x) => x.id !== id));
+      if (anchor) {
+        setAnchorsByBucket((s) => addAnchorTo(s, activeAnchorBucketRef.current, anchor));
+      }
     };
     window.addEventListener("codeshell:add-anchor", onAnchor);
-    window.addEventListener("codeshell:remove-anchor-request", onRemove);
-    return () => {
-      window.removeEventListener("codeshell:add-anchor", onAnchor);
-      window.removeEventListener("codeshell:remove-anchor-request", onRemove);
-    };
+    return () => window.removeEventListener("codeshell:add-anchor", onAnchor);
   }, []);
 
   // A browser popout window pinned an element anchor; it arrives over IPC
-  // (no id assigned yet). Add it to the composer like a local one.
+  // (no id assigned yet). Add it to the composer like a local one. Removals
+  // initiated in a popout arrive the same way (by anchor id).
   useEffect(() => {
-    return window.codeshell.onBrowserAnchorFromPopout((raw) => {
+    const offAdd = window.codeshell.onBrowserAnchorFromPopout((raw) => {
       const a = raw as Omit<Anchor, "id">;
       if (a && a.kind && a.locator) {
-        setAnchors((prev) => [...prev, { ...a, id: nextAnchorId() }]);
+        setAnchorsByBucket((s) =>
+          addAnchorTo(s, activeAnchorBucketRef.current, { ...a, id: nextAnchorId() }),
+        );
       }
     });
+    const offRemove = window.codeshell.onBrowserAnchorRemoveFromPopout((id) => {
+      if (typeof id === "string" && id) {
+        setAnchorsByBucket((s) => removeAnchorFrom(s, activeAnchorBucketRef.current, id));
+      }
+    });
+    return () => {
+      offAdd();
+      offRemove();
+    };
   }, []);
+
+  // Push the active bucket's browser anchors to main, which broadcasts them to
+  // every browser popout window — the single state-down pipe that keeps all
+  // browser surfaces showing the same annotation set (and clears them all when
+  // a message sends). The main-window BrowserPanel gets the same list as a
+  // plain prop instead.
+  const browserAnchors = useMemo(() => browserAnchorsOf(anchors), [anchors]);
+  useEffect(() => {
+    window.codeshell.syncBrowserAnchors(browserAnchors);
+  }, [browserAnchors]);
 
   useEffect(() => {
     const off = window.codeshell.onMenuEvent((evt, payload) => {
@@ -2355,6 +2386,8 @@ function App() {
           width={panelWidth}
           onResizeStart={beginPanelResize}
           onAttachImage={(p) => void attachImageByPath(p)}
+          browserAnchors={browserAnchors}
+          onRemoveBrowserAnchor={removeAnchor}
           engineSessionId={resolveActiveEngineSessionId() ?? null}
           tabs={panelTabs}
           setTabs={setPanelTabs}

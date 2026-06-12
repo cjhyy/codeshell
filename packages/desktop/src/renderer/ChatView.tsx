@@ -31,6 +31,7 @@ import { detectMention } from "./chat/mention";
 import { classifyPath } from "./tool-cards/attachments";
 import { formatBytes } from "@/lib/utils";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
+import { pageAttribution } from "./browser/markerEcho";
 
 interface Props {
   messages: Message[];
@@ -701,6 +702,13 @@ export function ChatView({
                     {a.kind === "diff" ? "审查" : a.kind === "browser" ? "网页" : "文件"}
                   </span>
                   <span className="truncate font-medium text-foreground">{a.label}</span>
+                  {/* Page attribution for browser anchors — which page this was
+                      circled on (圈选统一: feedback「不知道是哪一个页面的」). */}
+                  {a.browser && (
+                    <span className="truncate text-muted-foreground">
+                      @ {pageAttribution(a.browser)}
+                    </span>
+                  )}
                   {a.comment && (
                     <span className="truncate text-muted-foreground">· {a.comment}</span>
                   )}

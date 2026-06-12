@@ -3,7 +3,7 @@
  * agent worker subprocess (stdio JSON-RPC). See agent-bridge.ts.
  */
 
-import { app, BrowserWindow, dialog, ipcMain, session, shell, Notification } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, session, shell, webContents, Notification } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, basename, extname, isAbsolute } from "node:path";
 import { readFile, lstat, writeFile } from "node:fs/promises";
@@ -844,6 +844,11 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
       dlog("main", "browser-popout.loadFile", { query });
       await win.loadFile(resolve(__dirname, "..", "renderer", "index.html"), { query });
     }
+    // Seed the freshly-loaded popout with the current anchor snapshot so it
+    // echoes annotations made before it was opened (state-down pipe).
+    if (!win.isDestroyed()) {
+      win.webContents.send("browser:anchors-state", browserAnchorsSnapshot);
+    }
   } catch (e) {
     dlog("main", "browser-popout.load-threw", { error: String(e) });
   }
@@ -1407,6 +1412,38 @@ ipcMain.on("browser:anchor", (e, anchor: unknown) => {
   if (parentId === undefined) return;
   const parent = BrowserWindow.fromId(parentId);
   if (parent && !parent.isDestroyed()) parent.webContents.send("browser:anchor-from-popout", anchor);
+});
+
+// ── Browser-anchor hub(圈选统一架构,spec 2026-06-12)─────────────────────
+// The MAIN WINDOW owns anchor state (per session bucket); it pushes the active
+// bucket's browser anchors here on every change. We keep the latest snapshot
+// and broadcast it to every popout window — and seed newly-opened popouts — so
+// all browser surfaces echo the same annotation set (and all clear together
+// when a message sends). Ops flow the other way: a popout's add/remove is
+// forwarded to its parent window, which mutates state; the loop closes via the
+// next sync. Full-state-down means a late-opened popout can never drift.
+let browserAnchorsSnapshot: unknown[] = [];
+
+function broadcastBrowserAnchors(): void {
+  for (const popoutWcId of popoutParents.keys()) {
+    const wc = webContents.fromId(popoutWcId);
+    if (wc && !wc.isDestroyed()) wc.send("browser:anchors-state", browserAnchorsSnapshot);
+  }
+}
+
+ipcMain.on("browser:anchors-sync", (_e, anchors: unknown) => {
+  browserAnchorsSnapshot = Array.isArray(anchors) ? anchors : [];
+  broadcastBrowserAnchors();
+});
+
+// A popout asked to remove an anchor → forward to the owner (parent window).
+ipcMain.on("browser:anchor-remove", (e, anchorId: unknown) => {
+  const parentId = popoutParents.get(e.sender.id);
+  if (parentId === undefined) return;
+  const parent = BrowserWindow.fromId(parentId);
+  if (parent && !parent.isDestroyed()) {
+    parent.webContents.send("browser:anchor-remove-from-popout", anchorId);
+  }
 });
 
 ipcMain.handle("git:status", async (_e, cwd: string) => {

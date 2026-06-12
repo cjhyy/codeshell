@@ -394,6 +394,15 @@ export interface CodeshellApi {
   sendBrowserAnchor(anchor: unknown): void;
   /** In the parent: receive anchors forwarded from a popout. Returns unsubscribe. */
   onBrowserAnchorFromPopout(cb: (anchor: unknown) => void): () => void;
+  // ── Browser-anchor hub(圈选统一:状态下行、操作上行)──────────────────
+  /** Main window → hub: push the active session's browser anchors on change. */
+  syncBrowserAnchors(anchors: unknown[]): void;
+  /** Popout: subscribe to the broadcast anchor state. Returns unsubscribe. */
+  onBrowserAnchorsState(cb: (anchors: unknown[]) => void): () => void;
+  /** From a popout: ask the owner (main window) to remove an anchor by id. */
+  sendBrowserAnchorRemove(anchorId: string): void;
+  /** In the parent: receive a popout's remove request. Returns unsubscribe. */
+  onBrowserAnchorRemoveFromPopout(cb: (anchorId: unknown) => void): () => void;
 
   openExternal(url: string): Promise<void>;
   revealInFinder(path: string): Promise<void>;

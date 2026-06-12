@@ -596,6 +596,23 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.on("browser:anchor-from-popout", h);
     return () => ipcRenderer.removeListener("browser:anchor-from-popout", h);
   },
+  // ── Browser-anchor hub(圈选统一:状态下行、操作上行)──────────────────
+  /** Main window → hub: push the active session's browser anchors on change. */
+  syncBrowserAnchors: (anchors: unknown[]) => ipcRenderer.send("browser:anchors-sync", anchors),
+  /** Popout: subscribe to the broadcast anchor state. Returns unsubscribe. */
+  onBrowserAnchorsState: (cb: (anchors: unknown[]) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, anchors: unknown[]) => cb(anchors);
+    ipcRenderer.on("browser:anchors-state", h);
+    return () => ipcRenderer.removeListener("browser:anchors-state", h);
+  },
+  /** From a popout: ask the owner (main window) to remove an anchor by id. */
+  sendBrowserAnchorRemove: (anchorId: string) => ipcRenderer.send("browser:anchor-remove", anchorId),
+  /** In the parent: receive a popout's remove request. Returns unsubscribe. */
+  onBrowserAnchorRemoveFromPopout: (cb: (anchorId: unknown) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, anchorId: unknown) => cb(anchorId);
+    ipcRenderer.on("browser:anchor-remove-from-popout", h);
+    return () => ipcRenderer.removeListener("browser:anchor-remove-from-popout", h);
+  },
 
   // ── Mobile Web Remote (LAN phone controller; off by default) ──────────
   mobileRemote: {

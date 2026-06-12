@@ -5,14 +5,32 @@ import {
   RotateCw,
   ExternalLink,
   Globe,
+  MapPin,
   Plus,
   X,
   MousePointerSquareDashed,
   PictureInPicture2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
+import type { Anchor } from "../chat/anchors";
+import {
+  browserMarkersFrom,
+  visibleMarkersOn,
+  groupMarkersByPage,
+  pageAttribution,
+  useMarkerEcho,
+  type BrowserMarker,
+} from "../browser/markerEcho";
 
 interface Rect {
   x: number;
@@ -20,22 +38,6 @@ interface Rect {
   width: number;
   height: number;
 }
-
-/** A saved comment marker shown as a dot over the page. */
-interface PageMarker {
-  id: string;
-  /** Composer anchor id this marker is tied to (for removal sync). */
-  anchorId: string;
-  url: string;
-  rect: Rect;
-  /** CSS selector of the picked element, so re-editing can re-highlight the
-   *  actual element in the guest page (rect alone drifts on scroll/reflow). */
-  selector?: string;
-  label: string;
-  comment: string;
-}
-
-let markerSeq = 0;
 
 /** What the in-page picker returns about the clicked element. */
 interface PickedElement {
@@ -182,11 +184,19 @@ interface Props {
   /** Initial URL to open (used by the popout window). */
   initialUrl?: string;
   /**
+   * The active session's browser anchors — the SINGLE source the page dots /
+   * highlights echo (圈选统一架构). Main-window panel: App passes its bucketed
+   * state; popout: the hub broadcast. No local marker state exists anymore.
+   */
+  anchors?: Anchor[];
+  /**
    * Where a comment anchor goes. Defaults to the in-window composer (via the
    * add-anchor event). The popout window overrides this to send over IPC to the
    * parent window's composer. Return value unused.
    */
-  onAnchor?: (a: { kind: "browser"; label: string; locator: Record<string, string>; comment: string }) => string | void;
+  onAnchor?: (a: Omit<Anchor, "id">) => string | void;
+  /** Remove an anchor by id — routed to the owner (App / via IPC for popouts). */
+  onRemoveAnchor?: (anchorId: string) => void;
   /** Whether to show the "弹出独立窗口" button (hidden inside the popout itself). */
   showPopout?: boolean;
 }
@@ -196,7 +206,7 @@ interface Props {
  * persistent partition) with a self-drawn address bar, tabs, and a
  * localhost bookmark list discovered by port-probing common dev ports.
  */
-export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props) {
+export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, showPopout = true }: Props) {
   const emitAnchor = onAnchor ?? addAnchor;
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
@@ -205,32 +215,28 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
   // Element-picking ("圈选") state.
   const [selecting, setSelecting] = useState(false);
   const [picked, setPicked] = useState<PickedElement | null>(null);
-  // Saved comment markers on the current page (kept until the message sends).
-  // Keyed list; each has the element rect (for the dot position), the comment,
-  // and the anchor id so removing the anchor removes the dot.
-  const [markers, setMarkers] = useState<PageMarker[]>([]);
-  // Which marker is open for editing (its id), if any.
+  // Which marker is open for editing (anchor id), if any. Pure UI state — the
+  // markers themselves are derived from the `anchors` prop (single source).
   const [editingMarker, setEditingMarker] = useState<string | null>(null);
 
-  // Clear page markers once the composer's anchors are cleared (message sent),
-  // and drop a single marker if its anchor chip is removed.
-  useEffect(() => {
-    const onCleared = (): void => setMarkers([]);
-    const onRemoved = (e: Event): void => {
-      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
-      if (id) setMarkers((m) => m.filter((x) => x.anchorId !== id));
-    };
-    window.addEventListener("codeshell:anchors-cleared", onCleared);
-    window.addEventListener("codeshell:anchor-removed", onRemoved);
-    return () => {
-      window.removeEventListener("codeshell:anchors-cleared", onCleared);
-      window.removeEventListener("codeshell:anchor-removed", onRemoved);
-    };
-  }, []);
-
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
+  const markers = useMemo(() => browserMarkersFrom(anchors ?? []), [anchors]);
   // Markers belong to a page; hide them when not on that URL.
-  const visibleMarkers = markers.filter((m) => m.url === active.url);
+  const visibleMarkers = useMemo(
+    () => visibleMarkersOn(markers, active.url),
+    [markers, active.url],
+  );
+
+  // The edited anchor can disappear underneath us (removed in the composer /
+  // another window, or cleared on send) — drop the editing state with it.
+  useEffect(() => {
+    if (editingMarker && !markers.some((m) => m.anchor.id === editingMarker)) {
+      setEditingMarker(null);
+    }
+  }, [editingMarker, markers]);
+
+  // Shared echo engine: edit-time outline + dom-ready replay + miss reporting.
+  const { selectorMissFor } = useMarkerEcho(viewRef, visibleMarkers, editingMarker);
 
   const patchTab = useCallback((id: string, patch: Partial<Tab>) => {
     setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -268,39 +274,6 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
     if (selecting) setSelecting(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
-
-  // Re-highlight the marked element in the GUEST page while its marker is being
-  // edited, so the user sees "where it was circled" (not just the dot). Injects
-  // an outline on the marker's selector; clears it when editing stops/changes.
-  // Best-effort: a selector that no longer matches (dynamic page) just no-ops.
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    const HL = "__cs_marker_hl__";
-    const clear = `(()=>{const e=document.querySelector('[data-${HL}]');if(e){e.style.outline=e.dataset.${HL}||'';e.removeAttribute('data-${HL}');}})()`;
-    // executeJavaScript THROWS SYNCHRONOUSLY (not a rejected promise) when the
-    // <webview> isn't attached + dom-ready yet — the popout mounts with a real
-    // src so this effect can fire pre-ready, and an uncaught throw here unmounts
-    // the whole BrowserPanel (blank popout). `.catch()` only catches the async
-    // reject; wrap the call so the sync throw can't escape.
-    const exec = (code: string): void => {
-      try {
-        void view.executeJavaScript(code).catch(() => {});
-      } catch {
-        /* webview not ready yet — the highlight is best-effort, skip */
-      }
-    };
-    const target = editingMarker ? markers.find((m) => m.id === editingMarker) : null;
-    if (!target?.selector) {
-      exec(clear);
-      return;
-    }
-    const sel = JSON.stringify(target.selector);
-    exec(
-      `(()=>{${clear};try{const el=document.querySelector(${sel});if(el){el.dataset.${HL}=el.style.outline||'';el.style.outline='2px solid #2563eb';el.scrollIntoView({block:'center'});}}catch(_){}})()`,
-    );
-    return () => exec(clear);
-  }, [editingMarker, markers]);
 
   // Wire webview lifecycle events for the active tab.
   useEffect(() => {
@@ -482,6 +455,49 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
         >
           <MousePointerSquareDashed className="h-4 w-4" />
         </IconBtn>
+        {markers.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="relative flex h-8 items-center gap-1 rounded-md px-1.5 text-muted-foreground hover:bg-accent"
+                title={`标注 ${markers.length}（本页 ${visibleMarkers.length}）`}
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="text-xs tabular-nums">{markers.length}</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-96 w-80 overflow-y-auto">
+              {groupMarkersByPage(markers).map((group, gi) => (
+                <React.Fragment key={group.url}>
+                  {gi > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+                    {group.title}
+                    {group.url === active.url ? "（本页）" : ""}
+                  </DropdownMenuLabel>
+                  {group.markers.map((m) => (
+                    <DropdownMenuItem
+                      key={m.anchor.id}
+                      onSelect={() => {
+                        // Same page: just open the marker. Another page:
+                        // navigate there first — the echo engine re-highlights
+                        // after dom-ready, and the dot appears once
+                        // active.url matches.
+                        if (group.url !== active.url) navigate(group.url);
+                        setEditingMarker(m.anchor.id);
+                      }}
+                    >
+                      <span className="truncate">
+                        <span className="font-medium">{m.anchor.label}</span>
+                        {m.anchor.comment ? ` · ${m.anchor.comment}` : ""}
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </React.Fragment>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {showPopout && (
           <IconBtn
             onClick={() => void window.codeshell.openBrowserPopout(active.url === NEW_TAB ? undefined : active.url)}
@@ -523,19 +539,18 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
           />
         )}
 
-        {/* Saved comment dots over the page. Click to edit/delete. */}
+        {/* Saved comment dots over the page (derived from the anchors prop —
+            every browser surface shows the same set). Click to edit/delete. */}
         {visibleMarkers.map((m, i) => (
           <MarkerDot
-            key={m.id}
+            key={m.anchor.id}
             index={i + 1}
             marker={m}
-            editing={editingMarker === m.id}
-            onOpen={() => setEditingMarker(editingMarker === m.id ? null : m.id)}
+            editing={editingMarker === m.anchor.id}
+            selectorMissed={selectorMissFor === m.anchor.id}
+            onOpen={() => setEditingMarker(editingMarker === m.anchor.id ? null : m.anchor.id)}
             onDelete={() => {
-              setMarkers((prev) => prev.filter((x) => x.id !== m.id));
-              window.dispatchEvent(
-                new CustomEvent("codeshell:remove-anchor-request", { detail: { id: m.anchorId } }),
-              );
+              onRemoveAnchor?.(m.anchor.id);
               setEditingMarker(null);
             }}
           />
@@ -551,7 +566,10 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
                 const label = picked.id
                   ? `${picked.tag}#${picked.id}`
                   : picked.selector.split(" > ").pop() || picked.tag;
-                const ret = emitAnchor({
+                // Single source of truth: emit the anchor WITH its echo payload;
+                // the dot appears when the anchor flows back via the anchors
+                // prop (App state / hub broadcast) — no local marker copy.
+                emitAnchor({
                   kind: "browser",
                   label,
                   locator: {
@@ -562,20 +580,13 @@ export function BrowserPanel({ initialUrl, onAnchor, showPopout = true }: Props)
                     尺寸: `${Math.round(picked.rect.width)}×${Math.round(picked.rect.height)}`,
                   },
                   comment,
-                });
-                markerSeq += 1;
-                setMarkers((prev) => [
-                  ...prev,
-                  {
-                    id: `mk-${markerSeq}`,
-                    anchorId: typeof ret === "string" ? ret : `mk-${markerSeq}`,
+                  browser: {
                     url: picked.url,
-                    rect: picked.rect,
+                    pageTitle: active.title !== "新选项卡" ? active.title : undefined,
                     selector: picked.selector,
-                    label,
-                    comment,
+                    rect: picked.rect,
                   },
-                ]);
+                });
                 setPicked(null);
               }}
             />
@@ -603,34 +614,54 @@ function MarkerDot({
   index,
   marker,
   editing,
+  selectorMissed,
   onOpen,
   onDelete,
 }: {
   index: number;
-  marker: PageMarker;
+  marker: BrowserMarker;
   editing: boolean;
+  /** The echo engine couldn't re-find the element by selector — show the
+   *  pick-time rect as an overlay box instead of (silently) nothing. */
+  selectorMissed: boolean;
   onOpen: () => void;
   onDelete: () => void;
 }) {
-  const { rect } = marker;
+  const { rect } = marker.echo;
   return (
     <>
       <button
         type="button"
         onClick={onOpen}
-        title={marker.comment}
+        title={marker.anchor.comment}
         className="group absolute z-30 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground shadow ring-2 ring-background"
         style={{ top: Math.max(2, rect.y - 8), left: Math.max(2, rect.x - 8) }}
       >
         {index}
       </button>
+      {editing && selectorMissed && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute z-20 rounded-sm border-2 border-primary/80"
+          style={{ top: rect.y, left: rect.x, width: rect.width, height: rect.height }}
+        />
+      )}
       {editing && (
         <div
           className="absolute z-40 w-72 max-w-[90%] rounded-md border border-border bg-card p-2 shadow-lg"
           style={{ top: Math.max(4, rect.y + rect.height + 6), left: Math.max(4, rect.x) }}
         >
-          <div className="mb-1 truncate text-xs font-medium text-muted-foreground">{marker.label}</div>
-          <div className="mb-2 whitespace-pre-wrap break-words text-xs text-foreground">{marker.comment}</div>
+          <div className="mb-1 truncate text-xs font-medium text-muted-foreground">{marker.anchor.label}</div>
+          <div className="mb-1 truncate text-[11px] text-muted-foreground/80">
+            {marker.echo.pageTitle ? `${marker.echo.pageTitle} · ` : ""}
+            {pageAttribution(marker.echo)}
+          </div>
+          {selectorMissed && (
+            <div className="mb-1 text-[11px] text-status-warn">
+              元素未能重新定位（页面已变化），框显示的是圈选时的位置
+            </div>
+          )}
+          <div className="mb-2 whitespace-pre-wrap break-words text-xs text-foreground">{marker.anchor.comment}</div>
           <div className="flex justify-end gap-1.5">
             <button
               type="button"

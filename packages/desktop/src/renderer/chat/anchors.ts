@@ -8,6 +8,30 @@
 
 export type AnchorKind = "diff" | "browser" | "file";
 
+/** Element box within the guest page, in page coordinates. */
+export interface AnchorRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Echo payload for browser anchors — everything the browser surfaces (panel +
+ * popout windows) need to re-display the picked element: the marker dot, the
+ * edit-time outline highlight, and the "which page is this from" label. UI
+ * only; deliberately NOT part of the wire encoding (encodeAnchorsForWire reads
+ * `locator`, which already carries url/selector as text for the model).
+ */
+export interface BrowserAnchorEcho {
+  url: string;
+  /** document.title captured at pick time (page-attribution display). */
+  pageTitle?: string;
+  /** CSS selector for re-highlighting; rect is the fallback when it misses. */
+  selector?: string;
+  rect: AnchorRect;
+}
+
 export interface Anchor {
   id: string;
   kind: AnchorKind;
@@ -20,6 +44,8 @@ export interface Anchor {
   locator: Record<string, string>;
   /** The user's note about this location. */
   comment: string;
+  /** Present iff kind === "browser": echo payload for the browser surfaces. */
+  browser?: BrowserAnchorEcho;
 }
 
 let seq = 0;
