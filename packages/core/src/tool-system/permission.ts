@@ -149,6 +149,13 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
   // the same session. We accumulate here and hand the full list to the callback.
   private savedProjectRules: PermissionRule[] = [];
   private onProjectRules: ((rules: PermissionRule[]) => void) | null = null;
+  // Serialize prompts so a burst of parallel tool calls doesn't queue N
+  // identical cards: while one ask is outstanding, later requests wait here
+  // and RE-CHECK the session rules when their turn comes — the first
+  // "本会话一直允许" answer then silently absorbs the queued duplicates.
+  // (All callers were already serialized at the UI anyway — the renderer
+  // shows one approval card at a time.)
+  private promptTurn: Promise<void> = Promise.resolve();
 
   setPromptFn(fn: (request: ApprovalRequest) => Promise<ApprovalResult>): void {
     this.promptFn = fn;
@@ -181,19 +188,48 @@ export class InteractiveApprovalBackend implements ApprovalBackend {
   }
 
   async requestApproval(req: ApprovalRequest): Promise<ApprovalResult> {
-    // Check session rules first — operation-scoped (see field doc). Deny wins
-    // over allow if both somehow match (conservative).
+    // Fast path: the operation may already be covered by a session rule.
+    const cached = this.checkSessionRules(req);
+    if (cached) return cached;
+
+    if (!this.promptFn) {
+      return { approved: false, reason: "interactive approval backend has no prompt function" };
+    }
+
+    // Serialize prompts and re-check rules when our turn comes (see promptTurn
+    // field doc): a burst of parallel tool calls all passes the fast path
+    // before the first decision lands; without the re-check the user had to
+    // answer one card per duplicate.
+    const prevTurn = this.promptTurn;
+    let release!: () => void;
+    this.promptTurn = new Promise<void>((r) => (release = r));
+    try {
+      await prevTurn;
+      const nowCached = this.checkSessionRules(req);
+      if (nowCached) return nowCached;
+      return await this.promptAndRecord(req);
+    } finally {
+      release();
+    }
+  }
+
+  /** Session-rule lookup — operation-scoped (see sessionAllowRules doc). Deny
+   *  wins over allow if both somehow match (conservative). Null = no rule. */
+  private checkSessionRules(req: ApprovalRequest): ApprovalResult | null {
     if (this.sessionDenyRules.some((r) => ruleMatches(r, req.toolName, req.args))) {
       return { approved: false };
     }
     if (this.sessionAllowRules.some((r) => ruleMatches(r, req.toolName, req.args))) {
       return { approved: true };
     }
+    return null;
+  }
 
+  /** The actual interactive ask + rule recording (runs inside the prompt turn). */
+  private async promptAndRecord(req: ApprovalRequest): Promise<ApprovalResult> {
     if (!this.promptFn) {
       return { approved: false, reason: "interactive approval backend has no prompt function" };
     }
-
     const result = await this.promptFn(req);
     const scope = result.scope ?? (result.always ? "session" : "once");
 

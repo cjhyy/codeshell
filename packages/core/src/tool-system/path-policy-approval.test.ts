@@ -183,3 +183,65 @@ describe("enforcePathPolicyWithApproval", () => {
     cleanup();
   });
 });
+
+describe("并发路径审批串行化(burst dedupe)", () => {
+  test("并行同目录请求只弹一次 — 第一次「本目录本会话允许」吸收排队的其余", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const outsideA = join(tmpdir(), "burst-dedupe-a.txt");
+    const outsideB = join(tmpdir(), "burst-dedupe-b.txt");
+    let asks = 0;
+    let resolveAsk!: (answer: string) => void;
+    const ctx = {
+      cwd: ws,
+      sessionId: "s-burst-dedupe",
+      askUser: () => {
+        asks += 1;
+        return new Promise<string>((r) => (resolveAsk = r));
+      },
+    } as unknown as ToolContext;
+
+    // Two parallel tools hit the same (not yet approved) directory.
+    const p1 = enforcePathPolicyWithApproval(outsideA, "read", ctx);
+    const p2 = enforcePathPolicyWithApproval(outsideB, "read", ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    // Only ONE card so far — the second waits its turn in the chain.
+    expect(asks).toBe(1);
+
+    resolveAsk("本目录本会话允许");
+    expect(await p1).toBeNull();
+    // The queued request re-checks grants on its turn and never prompts.
+    expect(await p2).toBeNull();
+    expect(asks).toBe(1);
+    cleanup();
+  });
+
+  test("「允许本次」不留记忆 — 排队的下一条仍然要问", async () => {
+    _resetSessionPathGrants();
+    const ws = tmpWorkspace();
+    const outsideA = join(tmpdir(), "burst-once-a.txt");
+    const outsideB = join(tmpdir(), "burst-once-b.txt");
+    const answers: Array<(a: string) => void> = [];
+    let asks = 0;
+    const ctx = {
+      cwd: ws,
+      sessionId: "s-burst-once",
+      askUser: () => {
+        asks += 1;
+        return new Promise<string>((r) => answers.push(r));
+      },
+    } as unknown as ToolContext;
+
+    const p1 = enforcePathPolicyWithApproval(outsideA, "read", ctx);
+    const p2 = enforcePathPolicyWithApproval(outsideB, "read", ctx);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(asks).toBe(1);
+    answers[0]!("允许本次"); // no memory recorded
+    expect(await p1).toBeNull();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(asks).toBe(2); // second still has to ask
+    answers[1]!("拒绝");
+    expect(await p2).toContain("denied");
+    cleanup();
+  });
+});

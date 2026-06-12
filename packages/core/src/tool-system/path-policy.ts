@@ -494,6 +494,36 @@ export async function enforcePathPolicyWithApproval(
       `No interactive approval UI is available in this run.`;
   }
 
+  // Serialize concurrent asks (per session) and RE-CHECK grants when our turn
+  // comes. Parallel tools hitting the same not-yet-approved directory all pass
+  // the pre-approved check above before the first grant lands, so each used to
+  // queue its own card — the user got a burst of identical 路径权限 prompts.
+  // Now the first "本目录允许" answer silently absorbs the queued rest.
+  const chainKey = ctx.sessionId ?? "__global__";
+  const prevTurn = askChains.get(chainKey) ?? Promise.resolve();
+  let release!: () => void;
+  askChains.set(chainKey, new Promise<void>((r) => (release = r)));
+  try {
+    await prevTurn;
+    if (isPathPreApproved(c.resolvedPath, ctx.cwd, ctx.sessionId)) return null;
+    return await promptForPathApproval(
+      c,
+      operation,
+      ctx as ToolContext & { askUser: NonNullable<ToolContext["askUser"]> },
+    );
+  } finally {
+    release();
+  }
+}
+
+/** The actual interactive ask — split out so the serialized section reads flat.
+ *  Caller has already verified ctx.askUser and ctx.cwd are present. */
+async function promptForPathApproval(
+  c: { resolvedPath: string; reason: string },
+  operation: PathOperation,
+  ctx: ToolContext & { askUser: NonNullable<ToolContext["askUser"]> },
+): Promise<string | null> {
+
   // Title by the ACTUAL reason, not always "工作区外": a sensitive file
   // (e.g. ~/.ssh, .env) can sit INSIDE the workspace, so the old fixed
   // "工作区外路径" header was misleading for sensitive-path asks.
@@ -536,15 +566,18 @@ export async function enforcePathPolicyWithApproval(
 
   if (answer === ALLOW_ONCE) return null;
   if (answer === ALLOW_SESSION) {
-    recordPathApproval("session", c.resolvedPath, ctx.cwd, ctx.sessionId);
+    recordPathApproval("session", c.resolvedPath, ctx.cwd!, ctx.sessionId);
     return null;
   }
   if (answer === ALLOW_PROJECT) {
-    recordPathApproval("project", c.resolvedPath, ctx.cwd, ctx.sessionId);
+    recordPathApproval("project", c.resolvedPath, ctx.cwd!, ctx.sessionId);
     return null;
   }
   return `Error: path approval denied by user — ${c.reason}. Path: ${c.resolvedPath}`;
 }
+
+/** Per-session prompt chains for enforcePathPolicyWithApproval (see comment there). */
+const askChains = new Map<string, Promise<void>>();
 
 /**
  * Internal: reset the "disabled warning" latch. Tests flip the env var

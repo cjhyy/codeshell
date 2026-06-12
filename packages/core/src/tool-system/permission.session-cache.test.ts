@@ -117,3 +117,59 @@ describe("session cache keys on the operation, not the tool", () => {
     expect(r2.approved).toBe(true);
   });
 });
+
+describe("并发审批串行化(burst dedupe)", () => {
+  test("并行同操作请求只 prompt 一次 — 第一次「本会话一直允许」吸收排队的其余", async () => {
+    const b = new InteractiveApprovalBackend();
+    let prompts = 0;
+    let resolvePrompt!: (r: ApprovalResult) => void;
+    b.setPromptFn(() => {
+      prompts += 1;
+      return new Promise<ApprovalResult>((r) => (resolvePrompt = r));
+    });
+    const req = {
+      toolName: "Bash",
+      args: { command: "lsof -p 1" },
+      description: "",
+      riskLevel: "medium",
+    } as ApprovalRequest;
+
+    const p1 = b.requestApproval(req);
+    const p2 = b.requestApproval({ ...req });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(prompts).toBe(1); // second waits its turn
+
+    resolvePrompt({ approved: true, always: true, scope: "session" } as ApprovalResult);
+    expect((await p1).approved).toBe(true);
+    // The queued duplicate re-checks session rules on its turn — no 2nd card.
+    expect((await p2).approved).toBe(true);
+    expect(prompts).toBe(1);
+  });
+
+  test("「仅本次」不留记忆 — 排队的下一条仍然 prompt", async () => {
+    const b = new InteractiveApprovalBackend();
+    const resolvers: Array<(r: ApprovalResult) => void> = [];
+    let prompts = 0;
+    b.setPromptFn(() => {
+      prompts += 1;
+      return new Promise<ApprovalResult>((r) => resolvers.push(r));
+    });
+    const req = {
+      toolName: "Bash",
+      args: { command: "lsof -p 2" },
+      description: "",
+      riskLevel: "medium",
+    } as ApprovalRequest;
+
+    const p1 = b.requestApproval(req);
+    const p2 = b.requestApproval({ ...req });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(prompts).toBe(1);
+    resolvers[0]!({ approved: true } as ApprovalResult); // once → no rule
+    expect((await p1).approved).toBe(true);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(prompts).toBe(2);
+    resolvers[1]!({ approved: false } as ApprovalResult);
+    expect((await p2).approved).toBe(false);
+  });
+});
