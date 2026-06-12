@@ -142,6 +142,7 @@ import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import { getTrust, setTrust, type TrustLevel } from "./trust-store.js";
 import { installAppMenu, refreshAppMenu } from "./menu.js";
 import { seedDefaults } from "./seed-defaults.js";
+import { bootstrapCorePlugins } from "./bootstrap-core-plugins.js";
 import {
   probeMcpServers,
   invalidateMcpProbeCache,
@@ -869,9 +870,11 @@ app.whenReady().then(() => {
   initUpdater();
 
   // First-run defaults: copy bundled agents + register seed marketplace
-  // sources into ~/.code-shell. best-effort, fully self-guarded — never blocks
-  // the startup chain.
-  void seedDefaults();
+  // sources into ~/.code-shell, THEN soft pre-install the core plugins
+  // (skill-creator from mimi-plugins; feedback#22 决策). Chained because the
+  // install needs the seeded marketplace registered first. best-effort,
+  // fully self-guarded — never blocks the startup chain.
+  void seedDefaults().then(() => bootstrapCorePlugins());
 
   // Automation: load the in-process scheduler (read-only jobs). Persisted
   // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
