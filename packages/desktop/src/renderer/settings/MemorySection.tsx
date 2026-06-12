@@ -9,6 +9,8 @@ import {
   Sparkles,
   Loader2,
   ArrowLeft,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import type {
   MemoryLevel,
@@ -188,6 +190,9 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
       type: selected.type,
       content: selected.content,
       cwd,
+      // Editing must not silently unpin / relabel the entry.
+      pinned: selected.pinned,
+      origin: selected.origin,
     });
   };
 
@@ -248,9 +253,38 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   };
 
   const sortedEntries = useMemo(
-    () => entries.slice().sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      entries.slice().sort((a, b) => {
+        // 固定的排最前(feedback#18),组内仍按名称稳定排序。
+        if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      }),
     [entries],
   );
+
+  /** Pin/unpin = re-save with the flag flipped (content fetched on demand). */
+  const togglePin = async (entry: RendererMemoryEntry): Promise<void> => {
+    setError(null);
+    try {
+      const full = await window.codeshell.readMemory(level, scope, entry.name, cwd);
+      if (!full) return;
+      await window.codeshell.saveMemory({
+        level,
+        scope,
+        name: full.name,
+        description: full.description,
+        type: full.type,
+        content: full.content,
+        cwd,
+        pinned: !entry.pinned,
+        origin: entry.origin, // keep provenance — pinning isn't authorship
+      });
+      await refresh();
+      if (selected?.name === entry.name) await openEntry(entry.name);
+    } catch (e: unknown) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
 
   return (
     <>
@@ -320,9 +354,27 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                 className="memory-list-item-main"
                 onClick={() => void openEntry(e.name)}
               >
+                {e.pinned && <Pin size={11} className="shrink-0 text-primary" aria-label="已固定" />}
                 <span className={`memory-type-chip memory-type-${e.type}`}>{e.type}</span>
+                {e.origin === "auto" && (
+                  <span
+                    className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
+                    title="对话结束时自动提取"
+                  >
+                    自动
+                  </span>
+                )}
                 <span className="memory-list-name">{e.name}</span>
                 <span className="memory-list-desc">{e.description}</span>
+              </button>
+              <button
+                type="button"
+                className="memory-list-delete"
+                onClick={() => void togglePin(e)}
+                aria-label={e.pinned ? "取消固定" : "固定"}
+                title={e.pinned ? "取消固定" : "固定(不被 maxAge 过滤、注入时优先)"}
+              >
+                {e.pinned ? <PinOff size={12} /> : <Pin size={12} />}
               </button>
               <button
                 type="button"
@@ -369,6 +421,14 @@ function ViewEntry({
     <div className="memory-view">
       <div className="memory-view-head">
         <strong>{entry.name}</strong>
+        {entry.pinned && (
+          <span className="flex items-center gap-0.5 rounded bg-primary/10 px-1 text-[10px] text-primary">
+            <Pin size={10} /> 固定
+          </span>
+        )}
+        {entry.origin === "auto" && (
+          <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">自动</span>
+        )}
         <span className={`memory-type-chip memory-type-${entry.type}`}>{entry.type}</span>
         <div className="memory-view-actions">
           <button type="button" className="memory-action" onClick={onEdit}>

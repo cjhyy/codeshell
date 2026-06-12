@@ -33,6 +33,8 @@ export interface RendererMemoryEntry {
   fileName: string;
   scope: MemoryScope;
   level: MemoryLevel;
+  pinned?: boolean;
+  origin?: "auto" | "manual";
 }
 
 function mm(level: MemoryLevel, scope: MemoryScope, cwd?: string): MemoryManager {
@@ -56,6 +58,8 @@ export function listMemory(
     fileName: e.fileName,
     scope: e.scope,
     level,
+    pinned: e.pinned,
+    origin: e.origin,
   }));
 }
 
@@ -76,6 +80,8 @@ export function readMemory(
     scope: e.scope,
     level,
     content: e.content,
+    pinned: e.pinned,
+    origin: e.origin,
   };
 }
 
@@ -87,6 +93,8 @@ export interface SaveMemoryInput {
   type: MemoryEntry["type"];
   content: string;
   cwd?: string;
+  pinned?: boolean;
+  origin?: "auto" | "manual";
 }
 
 export function saveMemory(input: SaveMemoryInput): string {
@@ -95,6 +103,8 @@ export function saveMemory(input: SaveMemoryInput): string {
     description: input.description,
     type: input.type,
     content: input.content,
+    pinned: input.pinned,
+    origin: input.origin,
   });
 }
 

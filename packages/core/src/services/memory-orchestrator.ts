@@ -99,6 +99,9 @@ export class MemoryOrchestrator {
           name: entry.name,
           description: entry.description,
           content: entry.content,
+          // Provenance mark (feedback#18 方案 C): extractor writes are "auto"
+          // so the UI can tell curated memories from extractor noise.
+          origin: "auto",
         });
       }
       const saveMs = Date.now() - t;

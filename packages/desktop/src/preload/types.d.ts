@@ -135,6 +135,10 @@ export interface RendererMemoryEntry {
   fileName: string;
   scope: MemoryScope;
   level: MemoryLevel;
+  /** 固定/置顶 — exempt from maxAge injection filtering, sorts first. */
+  pinned?: boolean;
+  /** "auto" = end-of-session extractor wrote it; "manual"/absent = user. */
+  origin?: "auto" | "manual";
 }
 
 export interface RendererMemoryEntryFull extends RendererMemoryEntry {
@@ -149,6 +153,8 @@ export interface SaveMemoryInput {
   type: MemoryType;
   content: string;
   cwd?: string;
+  pinned?: boolean;
+  origin?: "auto" | "manual";
 }
 
 export type AgentLifecycleEvent =

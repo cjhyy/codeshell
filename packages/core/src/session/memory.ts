@@ -43,6 +43,18 @@ export interface MemoryEntry {
   scope: MemoryScope;
   /** File mtime in epoch ms — drives maxAge filtering (TODO 8.1). 0 if unknown. */
   updatedAt?: number;
+  /**
+   * 固定/置顶 (feedback#18 方案 A): a pinned memory is exempt from maxAge
+   * injection filtering and sorts first in the injected context. UI surfaces
+   * pin/unpin; auto flows never set it.
+   */
+  pinned?: boolean;
+  /**
+   * Provenance (方案 C): "auto" = written by the end-of-session extractor,
+   * "manual" (or absent — legacy files) = written by the user/UI. Lets the
+   * UI distinguish curated memories from extractor noise.
+   */
+  origin?: "auto" | "manual";
 }
 
 /**
@@ -58,7 +70,8 @@ export function filterByAge(
 ): MemoryEntry[] {
   if (!maxAgeDays || maxAgeDays <= 0) return entries;
   const cutoff = now - maxAgeDays * 24 * 60 * 60 * 1000;
-  return entries.filter((e) => !e.updatedAt || e.updatedAt >= cutoff);
+  // Pinned memories never age out of injection — that's the point of the pin.
+  return entries.filter((e) => e.pinned || !e.updatedAt || e.updatedAt >= cutoff);
 }
 
 export interface MemoryManagerOptions {
@@ -127,11 +140,15 @@ export class MemoryManager {
     const fileName = this.slugify(entry.name) + ".md";
     const filePath = join(this.memoryDir, fileName);
 
+    // pinned/origin are written only when meaningful so legacy-shaped files
+    // stay byte-identical for unpinned manual saves.
     const content =
       `---\n` +
       `name: ${entry.name}\n` +
       `description: ${entry.description}\n` +
       `type: ${entry.type}\n` +
+      (entry.pinned ? `pinned: true\n` : "") +
+      (entry.origin ? `origin: ${entry.origin}\n` : "") +
       `---\n\n` +
       `${entry.content}\n`;
 
@@ -182,6 +199,9 @@ export class MemoryManager {
       const name = frontmatter.match(/name:\s*(.+)/)?.[1]?.trim() ?? fileName;
       const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
       const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
+      const pinned = frontmatter.match(/pinned:\s*(.+)/)?.[1]?.trim() === "true";
+      const originRaw = frontmatter.match(/origin:\s*(.+)/)?.[1]?.trim();
+      const origin = originRaw === "auto" || originRaw === "manual" ? originRaw : undefined;
       let updatedAt = 0;
       try {
         updatedAt = statSync(filePath).mtimeMs;
@@ -189,7 +209,7 @@ export class MemoryManager {
         // mtime best-effort; 0 = unknown (never filtered out by maxAge).
       }
 
-      return { name, description, type, content, fileName, scope: this.scope, updatedAt };
+      return { name, description, type, content, fileName, scope: this.scope, updatedAt, pinned, origin };
     } catch {
       return null;
     }
@@ -250,11 +270,17 @@ export class MemoryManager {
 
     if (userEntries.length === 0 && dreamEntries.length === 0) return "";
 
+    // Pinned memories lead the list so the user's hand-picked context is what
+    // the model reads first (sort is stable — unpinned keep their order).
+    const pinnedFirst = (a: MemoryEntry, b: MemoryEntry): number =>
+      Number(b.pinned ?? false) - Number(a.pinned ?? false);
+    userEntries.sort(pinnedFirst);
+
     const lines: string[] = [];
     if (userEntries.length > 0) {
       lines.push("## User memories (you own these — needs permission to modify)");
       for (const e of userEntries) {
-        lines.push(`- [${e.type}] ${e.name}: ${e.description}`);
+        lines.push(`- ${e.pinned ? "[pinned] " : ""}[${e.type}] ${e.name}: ${e.description}`);
       }
     }
     if (dreamEntries.length > 0) {
@@ -308,13 +334,16 @@ export class MemoryManager {
       const name = frontmatter.match(/name:\s*(.+)/)?.[1]?.trim() ?? fileName;
       const description = frontmatter.match(/description:\s*(.+)/)?.[1]?.trim() ?? "";
       const type = (frontmatter.match(/type:\s*(.+)/)?.[1]?.trim() ?? "project") as MemoryEntry["type"];
+      const pinned = frontmatter.match(/pinned:\s*(.+)/)?.[1]?.trim() === "true";
+      const originRaw = frontmatter.match(/origin:\s*(.+)/)?.[1]?.trim();
+      const origin = originRaw === "auto" || originRaw === "manual" ? originRaw : undefined;
       let updatedAt = 0;
       try {
         updatedAt = statSync(filePath).mtimeMs;
       } catch {
         // best-effort
       }
-      return { name, description, type, content, fileName, scope, updatedAt };
+      return { name, description, type, content, fileName, scope, updatedAt, pinned, origin };
     } catch {
       return null;
     }
