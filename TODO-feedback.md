@@ -258,19 +258,19 @@
 - **状态**:🟢 已修(2026-06-12,69774cb;spec `docs/superpowers/specs/2026-06-12-browser-marker-unified-design.md`)
 - **备注(架构级重做)**:① **Anchor 单一事实源**——删 PageMarker 平行实体,Anchor 带 browser 回显负载(url/pageTitle/selector/rect),wire 编码不动;App anchors 按 session 归桶(`anchorBuckets.ts`),切 session 切换标注集、面板重开不丢、发送清 active+draft 两桶;② **同步协议**——main 加 anchor hub(操作上行 IPC、全量状态下行广播),弹窗回显主窗口标注、新开弹窗推初始快照、发送清空全表面;删 4 个 window 事件总线改 props 直传;③ **markerEcho 共享回显引擎**——「看不到 outline」两个根因都修:dom-ready 重放(刷新/导航后高亮不再消失)+ selector 未命中不再静默 no-op(回报 miss → 回退圈选时 rect 画框 + 「页面已变化」提示);④ **页面归属**——chip 显 `@ host/path`、编辑卡片显归属页、工具栏标注总览(按页分组、点其它页标注自动导航+定位)。测试:新 10 例、desktop 706 全过、tsc+build 绿。**真机双窗口互通走查待用户验**。关联 [[project_browser_selection_echo_session]]、[[project_desktop_four_panels]]。
 
-### 🔴 [2026-06-12] 插件自带 MCP 在 UI 里显示得很奇怪
+### 🟢 [2026-06-12] 插件自带 MCP 在 UI 里显示得很奇怪
 - **现象**:当插件自身捆绑了 MCP server 时,当前 UI 把它显示出来看着很奇怪(与用户单独配置的 MCP 混在一起 / 归属不清)。
 - **复现**:装一个自带 MCP 的插件,看 MCP / 扩展页。
 - **期望**:明确「这是某插件带的」语义——和独立 MCP 视觉区分,或归到插件项下分组,而非平铺混排。
 - **状态**:🔴
-- **备注**:已有过相关接线——MCP 页对插件 owner 做过标注(§6.2「MCP页插件owner标注」),这次需进一步打磨插件捆绑 MCP 的呈现。先看 desktop 现状 MCP/扩展页怎么渲染插件 owner 再定改法。MCP 名字由 record key 承载,见 [[project_mcp_name_key_contract]]。关联记忆 [[project_plugin_bundled_mcp_display]]。
+- **状态补**:🟢 已修(2026-06-12,dab58a0)。① MCP 页插件 server 按插件**归组**(「🧩 xxx 插件提供」小节)与用户配置视觉区分;② **装了就展示**(用户追加要求):listMerged 不再按 disabledPlugins 隐藏插件 MCP,禁用插件的 server 照列、标 pluginDisabled「插件已禁用 — 启用后生效」,probe 跳过(引擎连接路径自有过滤,UI-only 安全);③ 插件详情页里 MCP 也归到插件名下。关联 [[project_mcp_name_key_contract]]、[[project_plugin_bundled_mcp_display]]。
 
-### 🔴 [2026-06-12] 看不到插件里到底有什么 — 需要插件详情页
+### 🟢 [2026-06-12] 看不到插件里到底有什么 — 需要插件详情页
 - **现象**:插件列表里一个插件只显示 `来源 · N skills`(`PluginsTab.tsx:139`),**看不到它到底包含什么**——hooks / MCP / commands / agents 都没露出,也**没有点进去看详情的入口**。
 - **复现**:扩展→插件页,看任意插件。
 - **期望**:点进插件能看到详情——列出它提供的 skills、hooks、MCP server、commands、agents 等各类内容(名称 + 数量),让用户清楚这个插件装了啥。
 - **状态**:🔴
-- **备注**:现状 `PluginSummary`(`plugins-service.ts:28`)只带 `skillCount`,**连其它能力的计数都没有**,要补 core/main 侧的内容枚举(skills 已从磁盘数;hooks 已有 `listPluginHooks`,见钩子页改造;MCP 有 owner 标注思路;commands/agents 需新扫)再做详情 UI。与 [2026-06-12]「插件自带 MCP 显示奇怪」同源(都是插件内容可见性),可一并设计:详情页里 MCP 也归到该插件名下。关联记忆 [[project_plugin_detail_view]]、[[project_plugin_bundled_mcp_display]]、[[project_extensions_ui]]。
+- **状态补**:🟢 已修(2026-06-12,dab58a0)。core 新增 `describePluginContent`(枚举 skills 名+描述/commands/agents/hooks/MCP,hooks·MCP 复用运行时 loader 同款扫描保证不漂移)→ IPC `plugins:detail` → `PluginDetailView`(插件行可点进,仿 MarketList→MarketDetail 模式,五类内容分区列出)。关联 [[project_plugin_detail_view]]、[[project_extensions_ui]]。
 
 ### 🔴 [2026-06-12] hooks 缺全局(user)级配置入口 + 缺单条启停开关
 - **现象/疑问**:用户问 hooks 有没有全局配置、能不能开关 hooks。
@@ -295,7 +295,7 @@
 - **状态**:🟡 待讨论(机制无 bug,是产品方向)
 - **可能方向(待决策)**:① 给「自动提取」的记忆也走确认/或可关(现 legacy 不确认);② 给记忆加「状态/完成」语义,Dream 或清理流程能归档/删掉「已修完」的;③ 借鉴 Codex:加 age/数量上限自动归档、secret redact;④ 借鉴 CC:MEMORY.md 索引截断 + 详情按需读,避免索引膨胀。关联记忆 [[project_memory_and_dream_overview]]、[[project_settings_hooks_memory_dream]]、[[reference_cc_codex_memory]]。
 
-### 🔴 [2026-06-12] 记忆需要「固定/置顶」层 — user scope 被自动提取淹没,有用的留不住
+### 🟢 [2026-06-12] 记忆需要「固定/置顶」层 — user scope 被自动提取淹没,有用的留不住
 - **现象/诉求**:有些记忆觉得有用,想把它**升级成固定的**;但现在 `user` scope 里**全是自动提取的**,手动写的有用记忆和自动噪音混在一起。
 - **核实(2026-06-12)**:
   - 目前**只有 2 个 scope**:`user`(手动写 + 对话结束自动提取,**混在一起**)和 `dream`(LLM 工作区,会被自动改删)。`MemoryScope = "user" | "dream"`(`packages/core/src/session/memory.ts:35`)。
@@ -303,7 +303,7 @@
   - 自动提取 = 每会话结束 LLM 抽 ≤2 条直存 user scope 不确认(`services/extract-memories.ts`)。**没有「固定/pinned」这一层**。
 - **期望**:能把一条记忆「升级为固定」,使其 ① 不被自动流程/Dream 改删 ② 视觉上和自动提取的区分开 ③ 优先注入/不受 age 过滤。
 - **状态**:🔴
-- **方案选项(待决策,见备注)**。
+- **状态补**:🟢 已修(2026-06-12,0b1dfe4,按推荐 A+C)。core `MemoryEntry` 加 `pinned`/`origin` frontmatter(仅有值才写,legacy 文件不变);固定的免 maxAge 注入过滤 + 注入排最前标 [pinned];自动提取写入打 `origin:"auto"`;UI 列表固定优先 + Pin/PinOff 按钮 + 「自动」badge,编辑保存不丢标记。Dream 无需改(user scope 本就只读)。
 - **备注**:几种实现路子——**A. 加 `pinned` frontmatter 字段**(最轻:save 支持 pinned;UI 加「固定」按钮 + 列表分组「固定/自动」;注入时固定的优先且不受 maxAge);**B. 新增第三个 scope `pinned/`**(`MemoryScope` 加一项,自动提取只写 user、pinned 纯手动、Dream 对 pinned 只读,与现 user/dream 隔离一致,改动较大);**C. 给自动提取打 `origin:"auto"` 标记**(治本:让 user scope 内部能分自动 vs 手动,配合按来源过滤/批量清理)。推荐 A 或 A+C 组合(轻、直接解决「淹没」)。配合 feedback#17「记忆杂乱过期」一起设计。关联记忆 [[project_memory_pinned_layer]]、[[project_memory_and_dream_overview]]。
 
 ### 🔴 [2026-06-12] 连接(connections)整块 UI 需要系统性优化 — 视觉/信息架构/交互三方面
@@ -316,7 +316,7 @@
 - **期望**:① 全面迁 shadcn/ui + Tailwind 语义 token,与其它已迁设置页观感统一,删 connections.css;② 重排卡片/分组/默认/key复用/探测的信息层次;③ 优化添加/测试/设默认/探测的交互与反馈。
 - **状态**:🔴
 - **备注**:范围大,建议先 brainstorm 定方向(视觉统一优先级最高、最确定)再分面板推进。模型接入是 Catalog v1(内置+user.json/多实例复用key apiKeyRef/设默认),见 [[project_model_catalog]];迁移参照 [[project_desktop_shadcn]](HSL token + simple-select)。关联记忆 [[project_connections_ui_overhaul]]。
-- **追加具体痛点(2026-06-12)**:**「添加」的两段式流程别扭**——点 `[+ 添加]` 弹 catalog 模板菜单(`templates` 按 catalogTag 过滤,`GenConnectionsPanel.tsx:84`)先选一个 provider(如 fal),创建 instance 后**再进卡片里选 model**(`inst.model`,`:108`)。用户觉得「先选 fal、再进去选模型」这种 provider→model 分两步选很奇怪。期望:合并成一步(如添加菜单直接二级展开到具体模型,或一个搜索框同时选 provider+model),减少「选了个空壳再配置」的割裂感。这是上面「交互体验」一项的最具体落点。
+- **追加具体痛点(2026-06-12)→ 🟢 已修(6e3b338)**:[+ 添加模型] 菜单按模板二级展开 modelPresets(标默认),点模型即建好完整卡片;无 presets 模板单击直建。原文:**「添加」的两段式流程别扭**——点 `[+ 添加]` 弹 catalog 模板菜单(`templates` 按 catalogTag 过滤,`GenConnectionsPanel.tsx:84`)先选一个 provider(如 fal),创建 instance 后**再进卡片里选 model**(`inst.model`,`:108`)。用户觉得「先选 fal、再进去选模型」这种 provider→model 分两步选很奇怪。期望:合并成一步(如添加菜单直接二级展开到具体模型,或一个搜索框同时选 provider+model),减少「选了个空壳再配置」的割裂感。这是上面「交互体验」一项的最具体落点。
 - **追加 BUG(2026-06-12,真因已定位)→ 🟢 已修(2026-06-12,b020eb1)**:**老数据(Catalog v1 之前的 provider)选不了模型**。根因:旧 provider 存的没有 `catalogId`,加载时虽有 kind+tag 回退匹配(`GenConnectionsPanel.tsx:100`),但 GenCard 按 `entry=entryById(inst.catalogId)` 解析模板,catalogId 为 undefined → `entry.modelPresets` 拿不到 → 模型下拉**退化成空文本框**;且 `writeBack` 只在 catalogId 存在时才写(`:149`)→ 永不回填。**已修三处**:① core `migrate-config.ts` 注册首个真实 migration(v0→v1):imageGen/videoGen.providers[] 无 catalogId 按 `adapterKind===kind && tag` 匹配 BUILTIN_CATALOG 回填;`SettingsManager.load()` 接线 migrateConfig(框架此前 0 消费者),user+project 两层各自迁移,仅内容真变才写回(带 .bak),纯 stamp 差异不动文件;② renderer load() 采纳 fallback 匹配进 `catalogId`(下次保存即持久化);③ 未匹配模板时模型框 placeholder 提示「未匹配到模板,手动填写模型 ID」。坑:迁移生效后 generate-image 测试的精确断言要带 catalogId(367bc32)。
 
 ### 🟡 [2026-06-12] codeshell 没有「创建/编写 skill」的辅助(skill-creator 类) — 待评估要不要做
