@@ -29,7 +29,6 @@ interface SidebarProps {
   activeRepoId: string | null;
   activeSessionId: string | null;
   collapsedRepos: Set<string>;
-  approvalsBadge?: number;
   /** Per-bucket status mark, keyed by the shared bucketKey(repoId, sessionId). */
   sessionStatuses?: Record<string, SessionStatus>;
   sidebarCollapsed?: boolean;
@@ -70,7 +69,6 @@ export function Sidebar({
   activeRepoId,
   activeSessionId,
   collapsedRepos,
-  approvalsBadge,
   sessionStatuses,
   sidebarCollapsed,
   onSelectRepo,
@@ -206,12 +204,15 @@ export function Sidebar({
           onClick={onOpenCustomize}
           active={viewMode === "customize"}
         />
+        {/* NOTE: this row used to carry the GLOBAL pending-approvals badge (a
+            Phase-9 IA leftover) — approvals have nothing to do with 自动化 and
+            the misplaced dot confused users. The per-session asking dot + the
+            dock icon badge (setBadgeCount) already cover location + count. */}
         <SidebarItem
           label="自动化"
           Icon={Workflow}
           onClick={onOpenAutomations}
           active={viewMode === "runs"}
-          badge={approvalsBadge}
         />
       </nav>
 

@@ -2243,7 +2243,6 @@ function App() {
           activeSessionId={activeSessionId}
           collapsedRepos={collapsedRepos}
           sidebarCollapsed={view.sidebarCollapsed}
-          approvalsBadge={approvalQueue.length}
           sessionStatuses={sessionStatusMap}
           onSelectRepo={setActiveRepoId}
           onSelectSession={handleSelectSession}
