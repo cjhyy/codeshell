@@ -38,9 +38,31 @@ export function browserMarkersFrom(anchors: Anchor[]): BrowserMarker[] {
   return out;
 }
 
-/** Markers that belong to the page currently shown (exact-URL semantics). */
+/**
+ * Normalized URL equality for "is this marker on the page currently shown".
+ * Exact string equality was too brittle: `http://x:3000` vs `http://x:3000/`
+ * (trailing slash / bare host) are the same page but compare unequal, and a
+ * marker then silently never echoed. Normalizes origin + pathname (trailing
+ * slashes stripped, bare → "/") + search + hash; falls back to raw equality
+ * for unparsable values.
+ */
+export function urlsMatch(a: string, b: string): boolean {
+  return normalizeUrlForMatch(a) === normalizeUrlForMatch(b);
+}
+
+function normalizeUrlForMatch(u: string): string {
+  try {
+    const x = new URL(u);
+    const path = x.pathname.replace(/\/+$/, "") || "/";
+    return `${x.origin}${path}${x.search}${x.hash}`;
+  } catch {
+    return u;
+  }
+}
+
+/** Markers that belong to the page currently shown (normalized-URL semantics). */
 export function visibleMarkersOn(markers: BrowserMarker[], url: string): BrowserMarker[] {
-  return markers.filter((m) => m.echo.url === url);
+  return markers.filter((m) => urlsMatch(m.echo.url, url));
 }
 
 /** Group markers by page for the annotations-overview dropdown. */

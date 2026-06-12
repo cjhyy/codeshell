@@ -4,6 +4,7 @@ import {
   visibleMarkersOn,
   groupMarkersByPage,
   pageAttribution,
+  urlsMatch,
   buildHighlightScript,
   CLEAR_HIGHLIGHT_SCRIPT,
 } from "./markerEcho";
@@ -32,6 +33,29 @@ describe("browserMarkersFrom / visibleMarkersOn", () => {
     expect(markers.map((m) => m.anchor.id)).toEqual(["a", "b"]);
     expect(visibleMarkersOn(markers, "http://x/1").map((m) => m.anchor.id)).toEqual(["a"]);
     expect(visibleMarkersOn(markers, "http://x/3")).toEqual([]);
+  });
+});
+
+describe("urlsMatch (normalized page identity)", () => {
+  test("trailing slash / bare host are the same page", () => {
+    expect(urlsMatch("http://localhost:3000", "http://localhost:3000/")).toBe(true);
+    expect(urlsMatch("http://x/a/", "http://x/a")).toBe(true);
+  });
+
+  test("different paths / hashes / queries stay distinct", () => {
+    expect(urlsMatch("http://localhost:3000", "http://localhost:3000/chat")).toBe(false);
+    expect(urlsMatch("http://x/a#1", "http://x/a#2")).toBe(false);
+    expect(urlsMatch("http://x/a?p=1", "http://x/a?p=2")).toBe(false);
+  });
+
+  test("unparsable values fall back to raw equality", () => {
+    expect(urlsMatch("not a url", "not a url")).toBe(true);
+    expect(urlsMatch("not a url", "other")).toBe(false);
+  });
+
+  test("visibleMarkersOn uses the normalized match", () => {
+    const markers = browserMarkersFrom([mk("a", "http://localhost:3000")]);
+    expect(visibleMarkersOn(markers, "http://localhost:3000/")).toHaveLength(1);
   });
 });
 

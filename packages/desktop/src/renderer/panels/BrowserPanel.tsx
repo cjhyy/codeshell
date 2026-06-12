@@ -29,6 +29,7 @@ import {
   visibleMarkersOn,
   groupMarkersByPage,
   pageAttribution,
+  urlsMatch,
   useMarkerEcho,
   type BrowserMarker,
 } from "../browser/markerEcho";
@@ -54,6 +55,7 @@ interface WebviewElement extends HTMLElement {
   reload(): void;
   loadURL(url: string): Promise<void>;
   getURL(): string;
+  getTitle?(): string;
   executeJavaScript(code: string, userGesture?: boolean): Promise<unknown>;
   insertCSS(css: string): Promise<string>;
   capturePage(rect?: Rect): Promise<{ toDataURL(): string }>;
@@ -187,7 +189,9 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
         view.executeJavaScript(PICKER_SCRIPT, true) as Promise<PickedElement | null>,
         timeout,
       ])) as (Omit<PickedElement, "url"> & { url?: string }) | null;
-      if (result) setPicked({ ...result, url: pickUrl });
+      // Prefer the picker's own location.href (authoritative) over the host's
+      // active.url bookkeeping (can be stale across guest-side redirects).
+      if (result) setPicked({ ...result, url: result.url || pickUrl });
     } catch {
       /* navigation/CSP interrupted the picker — just exit select mode */
     } finally {
@@ -202,7 +206,14 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
 
-  // Wire webview lifecycle events for the active tab.
+  // Wire webview lifecycle events for the active tab. `hasGuest` matters: a
+  // tab born on the NEW_TAB landing has NO <webview> when this effect first
+  // runs (viewRef null → bail); typing a URL mounts WebviewHost, and without
+  // hasGuest in the deps the effect never re-ran — did-navigate /
+  // page-title-updated were never attached, so a guest-side redirect (e.g.
+  // localhost:3000 → /chat) left active.url/title permanently stale (圈选
+  // 标注存了旧 URL,回显匹配不上的根因之一).
+  const hasGuest = active.url !== NEW_TAB;
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -232,6 +243,19 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
     view.addEventListener("page-title-updated", onTitle as EventListener);
     view.addEventListener("did-navigate", onNavigate as EventListener);
     view.addEventListener("did-navigate-in-page", onNavigate as EventListener);
+    // Late attach (see hasGuest above): the guest may have already navigated /
+    // titled itself before we got listeners on — sync once from the live guest
+    // so the address bar and tab title catch up.
+    try {
+      const liveUrl = view.getURL();
+      if (liveUrl && liveUrl !== NEW_TAB && liveUrl !== active.url) {
+        patchTab(activeId, { url: liveUrl, draft: liveUrl });
+      }
+      const liveTitle = view.getTitle?.();
+      if (liveTitle) patchTab(activeId, { title: liveTitle });
+    } catch {
+      /* guest not ready yet — the listeners above will catch up */
+    }
     return () => {
       view.removeEventListener("did-start-loading", onStart);
       view.removeEventListener("did-stop-loading", onStop);
@@ -239,7 +263,8 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
       view.removeEventListener("did-navigate", onNavigate as EventListener);
       view.removeEventListener("did-navigate-in-page", onNavigate as EventListener);
     };
-  }, [activeId, patchTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, hasGuest, patchTab]);
 
   const navigate = useCallback(
     (raw: string) => {
@@ -400,7 +425,7 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
                   {gi > 0 && <DropdownMenuSeparator />}
                   <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
                     {group.title}
-                    {group.url === active.url ? "（本页）" : ""}
+                    {urlsMatch(group.url, active.url) ? "（本页）" : ""}
                   </DropdownMenuLabel>
                   {group.markers.map((m) => (
                     <DropdownMenuItem
@@ -410,7 +435,7 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
                         // navigate there first — the echo engine re-highlights
                         // after dom-ready, and the dot appears once
                         // active.url matches.
-                        if (group.url !== active.url) navigate(group.url);
+                        if (!urlsMatch(group.url, active.url)) navigate(group.url);
                         setEditingMarker(m.anchor.id);
                       }}
                     >
@@ -509,7 +534,8 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, sh
                   comment,
                   browser: {
                     url: picked.url,
-                    pageTitle: active.title !== "新选项卡" ? active.title : undefined,
+                    pageTitle:
+                      picked.pageTitle ?? (active.title !== "新选项卡" ? active.title : undefined),
                     selector: picked.selector,
                     rect: picked.rect,
                   },

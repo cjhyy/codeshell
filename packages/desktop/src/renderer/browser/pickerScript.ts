@@ -27,9 +27,15 @@ export interface PickedElement {
    *  the stored `selector` may be a positional chain that reads poorly. */
   labelHint?: string;
   rect: { x: number; y: number; width: number; height: number };
-  /** URL of the page the element was picked on (captured at pick time, so a
-   *  later tab switch can't misattribute the anchor to another page). */
+  /**
+   * URL of the page the element was picked on. Reported by the picker itself
+   * (location.href) — authoritative, unlike the host panel's `active.url`
+   * bookkeeping, which can go stale when a guest-side redirect happened
+   * before navigation listeners were attached.
+   */
   url: string;
+  /** document.title at pick time (page-attribution display). */
+  pageTitle?: string;
 }
 
 // Runs as the completion value of executeJavaScript — one expression
@@ -109,6 +115,8 @@ export const PICKER_SCRIPT = `
       className: (typeof el.className === 'string' ? el.className : '') || undefined,
       labelHint: el.tagName.toLowerCase() + cls,
       rect: { x: r.x, y: r.y, width: r.width, height: r.height },
+      url: location.href,
+      pageTitle: document.title || undefined,
     };
     cleanup();
     resolve(info);
