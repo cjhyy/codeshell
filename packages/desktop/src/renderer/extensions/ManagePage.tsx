@@ -115,6 +115,19 @@ export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Pr
         {tabBtn("skills", "技能")}
         {tabBtn("mcp", "MCP")}
         {tabBtn("market", "市场")}
+        {/* Scope disclosure: these switches write the USER-level
+            disabledSkills/disabledPlugins — they affect EVERY project. Users
+            kept flipping them believing they were per-project (feedback:
+            writeflow「关闭了」却没有任何项目级文件), so say it out loud and
+            point at the real per-project path. */}
+        {tab !== "mcp" && tab !== "market" && (
+          <span
+            className="ml-1 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
+            title="此页的启停开关写入用户级全局配置,对所有项目生效。要按项目启停,请到「能力总览」选中该项目后用 继承/开/关 控件。"
+          >
+            开关全局生效
+          </span>
+        )}
         {tab !== "mcp" && tab !== "market" && (
           <input
             className="ml-2 h-8 flex-1 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
