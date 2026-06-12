@@ -872,6 +872,12 @@ export interface McpServerProbeInput {
   url?: string;
   transport?: "stdio" | "streamable-http" | "sse";
   headers?: Record<string, string>;
+  /** (stdio) NAMES of env vars forwarded from the parent process. */
+  envVars?: string[];
+  /** (HTTP) NAME of an env var sent as `Authorization: Bearer <value>`. */
+  bearerTokenEnvVar?: string;
+  /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
+  envHeaders?: Record<string, string>;
 }
 
 export interface McpProbedTool {

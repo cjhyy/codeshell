@@ -13,6 +13,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { buildHttpHeaders, buildStdioEnv } from "@cjhyy/code-shell-core";
 import { dlog } from "./desktop-logger.js";
 
 export interface McpServerConfig {
@@ -23,6 +24,12 @@ export interface McpServerConfig {
   url?: string;
   transport?: "stdio" | "streamable-http" | "sse";
   headers?: Record<string, string>;
+  /** (stdio) NAMES of env vars forwarded from the parent process. */
+  envVars?: string[];
+  /** (HTTP) NAME of an env var sent as `Authorization: Bearer <value>`. */
+  bearerTokenEnvVar?: string;
+  /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
+  envHeaders?: Record<string, string>;
 }
 
 export interface McpProbedTool {
@@ -67,6 +74,9 @@ function hashConfig(cfg: McpServerConfig): string {
     u: cfg.url,
     e: cfg.env ?? {},
     h: cfg.headers ?? {},
+    ev: cfg.envVars ?? [],
+    b: cfg.bearerTokenEnvVar ?? "",
+    eh: cfg.envHeaders ?? {},
   });
 }
 
@@ -76,13 +86,28 @@ function transportOf(cfg: McpServerConfig): "stdio" | "streamable-http" | "sse" 
   return "stdio";
 }
 
-function humanizeError(raw: string): string {
+/** Exported for unit testing (error classification). */
+export function humanizeError(raw: string): string {
   if (/ENOENT/.test(raw)) return "找不到命令（请确认已安装或路径正确）";
   if (/EACCES/.test(raw)) return "命令没有可执行权限";
   if (/ECONNREFUSED/.test(raw)) return "无法连接到服务（拒绝连接）";
   if (/ETIMEDOUT|timed out/i.test(raw)) return "连接超时";
   if (/ENOTFOUND/.test(raw)) return "域名解析失败";
-  if (/unauthorized|401|403/i.test(raw)) return "鉴权失败（检查 API key / headers）";
+  // Auth errors, most-specific first:
+  // 1. A referenced env var is missing — core's readRequiredEnv error names
+  //    the var and the config field; surface both so the fix is obvious.
+  const envMiss = /env var "([^"]+)" \(from ([^)]+)\) is not set/.exec(raw);
+  if (envMiss) {
+    return `鉴权配置错误：环境变量 ${envMiss[1]}（${envMiss[2]}）未设置或为空 — 该字段填的是环境变量名，值在连接时从系统环境读取，请先在启动环境里设置它`;
+  }
+  // 2. Credentials reached the server but were rejected (401) vs accepted
+  //    but lacking permission (403).
+  if (/unauthorized|\b401\b|-32001/i.test(raw)) {
+    return "鉴权失败（HTTP 401）— 该 server 需要鉴权：未配置时请在编辑里填 Headers 或「Bearer Token 环境变量」；已配置则检查 key 是否正确、未过期";
+  }
+  if (/forbidden|\b403\b/i.test(raw)) {
+    return "无权限（HTTP 403）— 凭证有效但权限不足，请检查该 token / key 的权限范围";
+  }
   if (/Invalid URL/i.test(raw)) return "URL 格式无效";
   // Trim to first line to keep the card readable.
   return raw.split("\n")[0].slice(0, 200);
@@ -126,17 +151,23 @@ async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
 
     if (transport === "stdio") {
       if (!cfg.command) throw new Error("stdio 缺少 command 字段");
+      // Same env semantics as the real connection (core buildStdioEnv):
+      // inherited process.env < forwarded envVars < explicit env.
       mcpTransport = new StdioClientTransport({
         command: cfg.command,
         args: cfg.args,
-        env: cfg.env
-          ? ({ ...process.env, ...cfg.env } as Record<string, string>)
-          : undefined,
+        env: buildStdioEnv(cfg.name, cfg),
       });
     } else {
       if (!cfg.url) throw new Error("远程 transport 缺少 url 字段");
+      // Same header semantics as the real connection (core buildHttpHeaders):
+      // static headers + env-sourced bearerTokenEnvVar / envHeaders. A missing
+      // env var throws here and is classified by humanizeError below — before
+      // this the probe silently ignored env-based auth and reported a
+      // misleading 401 even when the config was correct.
+      const headers = buildHttpHeaders(cfg.name, cfg);
       mcpTransport = new StreamableHTTPClientTransport(new URL(cfg.url), {
-        requestInit: cfg.headers ? { headers: cfg.headers } : undefined,
+        requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
       });
     }
 

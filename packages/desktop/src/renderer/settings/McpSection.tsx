@@ -15,6 +15,15 @@ interface McpServer {
   transport?: "stdio" | "streamable-http" | "sse";
   env?: Record<string, string>;
   headers?: Record<string, string>;
+  /** (stdio) NAMES of env vars forwarded from the parent process. */
+  envVars?: string[];
+  /**
+   * (HTTP) NAME of an env var sent as `Authorization: Bearer <value>` —
+   * the value is read from the environment at connect time, never stored.
+   */
+  bearerTokenEnvVar?: string;
+  /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
+  envHeaders?: Record<string, string>;
   /** Codex-style toggle. Absent/true = on; only false disables. */
   enabled?: boolean;
   source?: "settings" | "plugin";
@@ -110,6 +119,9 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       url: s.url,
       transport: s.transport,
       headers: s.headers,
+      envVars: s.envVars,
+      bearerTokenEnvVar: s.bearerTokenEnvVar,
+      envHeaders: s.envHeaders,
     }));
     setLoadingProbe(new Set(probeable.map((x) => x.name)));
     try {
@@ -211,6 +223,9 @@ export function McpSection({ scope, activeRepoPath }: Props) {
             url: s.url,
             transport: s.transport,
             headers: s.headers,
+            envVars: s.envVars,
+            bearerTokenEnvVar: s.bearerTokenEnvVar,
+            envHeaders: s.envHeaders,
           },
         ],
         true,
@@ -464,9 +479,13 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
   const [url, setUrl] = useState(initial?.url ?? "");
   const [envText, setEnvText] = useState(envOrHeadersToText(initial?.env));
   const [headersText, setHeadersText] = useState(envOrHeadersToText(initial?.headers, ": "));
+  const [bearerEnvVar, setBearerEnvVar] = useState(initial?.bearerTokenEnvVar ?? "");
+  const [envHeadersText, setEnvHeadersText] = useState(envOrHeadersToText(initial?.envHeaders, ": "));
   const [showAdvanced, setShowAdvanced] = useState(
     Boolean(initial?.env && Object.keys(initial.env).length) ||
-      Boolean(initial?.headers && Object.keys(initial.headers).length),
+      Boolean(initial?.headers && Object.keys(initial.headers).length) ||
+      Boolean(initial?.bearerTokenEnvVar) ||
+      Boolean(initial?.envHeaders && Object.keys(initial.envHeaders).length),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -493,9 +512,11 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
     }
     let env: Record<string, string> | undefined;
     let headers: Record<string, string> | undefined;
+    let envHeaders: Record<string, string> | undefined;
     try {
       env = parseKeyValueLines(envText);
       headers = parseKeyValueLines(headersText);
+      envHeaders = parseKeyValueLines(envHeadersText);
     } catch (e) {
       return setValidationError(`高级配置解析失败：${(e as Error).message}`);
     }
@@ -512,6 +533,8 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
         : {
             url: url.trim(),
             headers: headers && Object.keys(headers).length ? headers : undefined,
+            bearerTokenEnvVar: bearerEnvVar.trim() || undefined,
+            envHeaders: envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined,
           }),
     };
     onSave(next);
@@ -597,14 +620,43 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
             </label>
           )}
           {!isStdio && (
-            <label className="settings-field">
-              <span>Headers (Key: Value)</span>
-              <textarea
-                value={headersText}
-                onChange={(e) => setHeadersText(e.target.value)}
-                placeholder={"Authorization: Bearer ..."}
-              />
-            </label>
+            <>
+              <label className="settings-field">
+                <span>Headers (Key: Value)</span>
+                <textarea
+                  value={headersText}
+                  onChange={(e) => setHeadersText(e.target.value)}
+                  placeholder={"Authorization: Bearer ...\nX-N8N-API-KEY: ..."}
+                />
+                <span className="text-xs text-muted-foreground">
+                  明文 header，会存进配置文件 — 敏感 key 建议改用下面的环境变量方式。
+                </span>
+              </label>
+              <label className="settings-field">
+                <span>Bearer Token 环境变量</span>
+                <input
+                  value={bearerEnvVar}
+                  onChange={(e) => setBearerEnvVar(e.target.value)}
+                  placeholder="MY_MCP_TOKEN"
+                />
+                <span className="text-xs text-muted-foreground">
+                  填环境变量「名」（不是值）。连接时从系统环境读取，作为
+                  Authorization: Bearer 发送，token 不会存进配置。
+                </span>
+              </label>
+              <label className="settings-field">
+                <span>环境变量 Headers (Header: 环境变量名)</span>
+                <textarea
+                  value={envHeadersText}
+                  onChange={(e) => setEnvHeadersText(e.target.value)}
+                  placeholder={"X-N8N-API-KEY: N8N_API_KEY"}
+                />
+                <span className="text-xs text-muted-foreground">
+                  左边是 header 名，右边是环境变量「名」；适合 server 要求自定义
+                  鉴权 header（非 Bearer）的场景，值同样连接时才读取。
+                </span>
+              </label>
+            </>
           )}
         </div>
       )}

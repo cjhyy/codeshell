@@ -90,7 +90,7 @@ export type { ApprovalBackend } from "./tool-system/permission.js";
 export { BUILTIN_TOOLS } from "./tool-system/builtin/index.js";
 export type { BuiltinTool, BuiltinToolFn } from "./tool-system/builtin/index.js";
 export { makeUpdateAutomationMemoryTool } from "./tool-system/builtin/update-automation-memory.js";
-export { MCPManager } from "./tool-system/mcp-manager.js";
+export { MCPManager, buildHttpHeaders, buildStdioEnv } from "./tool-system/mcp-manager.js";
 export type { AskUserFn } from "./tool-system/builtin/ask-user.js";
 // taskManager singleton removed in the TodoWrite refactor; task state
 // lives in the transcript now. Type re-exports stay for SDK consumers
