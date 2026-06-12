@@ -101,6 +101,7 @@ import {
 } from "./skills-service.js";
 import {
   listPlugins,
+  getPluginDetail,
   uninstallPluginEntry,
   updatePluginEntry,
   checkPluginUpdateEntry,
@@ -951,6 +952,12 @@ ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
   return listPlugins(cwd);
 });
+ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
+  if (typeof installKey !== "string" || !installKey) {
+    throw new Error("plugins:detail requires installKey");
+  }
+  return getPluginDetail(installKey);
+});
 ipcMain.handle(
   "plugins:uninstall",
   async (_e, pluginName: string, marketplaceName: string) => {
@@ -1145,17 +1152,29 @@ ipcMain.handle("mcp:listMerged", async (_e, rawBase: unknown, rawDisabledPlugins
   const disabledPlugins = Array.isArray(rawDisabledPlugins)
     ? rawDisabledPlugins.filter((x): x is string => typeof x === "string")
     : [];
-  const merged = mergePluginMcpServers(base, disabledPlugins);
+  // Merge with ALL plugins (no disabled filter): an installed plugin's MCP
+  // should be VISIBLE in the settings page even while the plugin is disabled
+  // (feedback: 装了就该展示,而不是打开插件才出现). The engine's own connect
+  // path still filters disabledPlugins, so a disabled plugin's server is
+  // listed-but-inert; we mark it `pluginDisabled` for the UI.
+  const disabledSet = new Set(disabledPlugins);
+  const merged = mergePluginMcpServers(base, []);
   return Object.fromEntries(
-    Object.entries(merged).map(([name, cfg]) => [
-      name,
-      {
-        ...cfg,
+    Object.entries(merged).map(([name, cfg]) => {
+      const fromSettings = Object.prototype.hasOwnProperty.call(base, name);
+      const colon = name.indexOf(":");
+      const owner = !fromSettings && colon > 0 ? name.slice(0, colon) : undefined;
+      return [
         name,
-        source: Object.prototype.hasOwnProperty.call(base, name) ? "settings" : "plugin",
-        editable: Object.prototype.hasOwnProperty.call(base, name),
-      },
-    ]),
+        {
+          ...cfg,
+          name,
+          source: fromSettings ? "settings" : "plugin",
+          editable: fromSettings,
+          pluginDisabled: owner !== undefined && disabledSet.has(owner),
+        },
+      ];
+    }),
   );
 });
 

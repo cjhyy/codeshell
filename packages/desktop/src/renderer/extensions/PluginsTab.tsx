@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { PluginSummary } from "../../main/plugins-service";
 import { resolveUninstallTarget } from "./uninstallTarget";
-import { MoreHorizontal, Loader2, ArrowUpCircle } from "lucide-react";
+import { PluginDetailView } from "./PluginDetailView";
+import { MoreHorizontal, Loader2, ArrowUpCircle, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,8 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
   // list renders; only remote plugins ever flip to true (core returns false for
   // local/no-commit sources), so the badge silently no-ops for everything else.
   const [updatable, setUpdatable] = useState<Record<string, boolean>>({});
+  // List→detail (same pattern as MarketList→MarketDetail): selected installKey.
+  const [selected, setSelected] = useState<string | null>(null);
   const retry = () => setReloadKey((k) => k + 1);
   const confirm = useConfirm();
   const alert = useAlert();
@@ -111,6 +114,9 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
       setBusy(null);
     }
   };
+  if (selected !== null) {
+    return <PluginDetailView installKey={selected} onBack={() => setSelected(null)} />;
+  }
   if (error)
     return (
       <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
@@ -133,12 +139,20 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
       {rows.map((p) => (
         <li key={p.installKey} className="flex items-center gap-3 rounded-md border p-3 text-sm">
           <span className="text-lg">🧩</span>
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-medium">{p.name}</div>
-            <div className="truncate text-xs text-muted-foreground">
-              {p.sourceLabel} · {p.skillCount} skills
+          <button
+            type="button"
+            className="group flex min-w-0 flex-1 items-center gap-1 text-left"
+            onClick={() => setSelected(p.installKey)}
+            title="查看插件内容(skills / commands / agents / hooks / MCP)"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium group-hover:underline">{p.name}</div>
+              <div className="truncate text-xs text-muted-foreground">
+                {p.sourceLabel} · {p.skillCount} skills
+              </div>
             </div>
-          </div>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
+          </button>
           {updatable[p.installKey] && (
             <Button
               size="icon"

@@ -539,6 +539,8 @@ export interface CodeshellApi {
   cancelAutomationRun(id: string): Promise<boolean>;
   listSkills(cwd: string): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
+  /** Full content inventory for one installed plugin (详情页). */
+  getPluginDetail(installKey: string): Promise<PluginDetail | null>;
   /**
    * Unified capability view (builtin tools + MCP servers + skills + plugins)
    * via the core CapabilityService. Never throws — returns [] on error.
@@ -971,6 +973,17 @@ export interface PluginSummary {
   skillCount: number;
   /** Optional plugin description if `plugin.json` provides one. */
   description?: string;
+}
+
+/** Full inventory for the plugin detail view (plugins:detail). */
+export interface PluginDetail extends PluginSummary {
+  content: {
+    skills: { name: string; description?: string }[];
+    commands: string[];
+    agents: string[];
+    hooks: PluginHookEntry[];
+    mcpServers: string[];
+  };
 }
 
 export type AutomationPermissionLevel = "read-only" | "workspace-write" | "full";

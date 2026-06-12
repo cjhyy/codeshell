@@ -19,6 +19,8 @@ import {
   uninstallPlugin,
   updatePluginByName,
   checkPluginUpdate,
+  describePluginContent,
+  type PluginContentInventory,
   type UpdateResult,
   type UpdateCheck,
 } from "@cjhyy/code-shell-core";
@@ -122,6 +124,20 @@ export function listPlugins(_cwd: string): PluginSummary[] {
     });
   }
   return out;
+}
+
+/** Full inventory for the plugin detail view (feedback#15: 看不到插件里有啥). */
+export interface PluginDetail extends PluginSummary {
+  content: PluginContentInventory;
+}
+
+export function getPluginDetail(installKey: string): PluginDetail | null {
+  const summary = listPlugins("").find((p) => p.installKey === installKey);
+  if (!summary) return null;
+  const content = summary.installPath
+    ? describePluginContent(summary.name, summary.installPath)
+    : { skills: [], commands: [], agents: [], hooks: [], mcpServers: [] };
+  return { ...summary, content };
 }
 
 export interface UninstallPluginResult {

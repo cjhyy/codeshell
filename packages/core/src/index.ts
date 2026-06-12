@@ -240,6 +240,7 @@ export {
 } from "./plugins/installer/types.js";
 export { mergePluginMcpServers } from "./plugins/installer/loadPluginMcp.js";
 export { listPluginHooks, type PluginHookEntry } from "./plugins/loadPluginHooks.js";
+export { describePluginContent, type PluginContentInventory } from "./plugins/pluginContent.js";
 export { pluginAgentDirs } from "./plugins/installer/loadPluginAgents.js";
 export {
   appendInstallEntry,

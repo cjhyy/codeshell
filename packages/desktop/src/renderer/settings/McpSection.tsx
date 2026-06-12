@@ -28,6 +28,9 @@ interface McpServer {
   enabled?: boolean;
   source?: "settings" | "plugin";
   editable?: boolean;
+  /** Plugin server whose OWNER plugin is disabled — listed but inert
+   *  (装了就展示;引擎不会连接它,启用插件才生效). */
+  pluginDisabled?: boolean;
 }
 
 export function isEditableMcpServer(s: McpServer): boolean {
@@ -49,9 +52,9 @@ export function ownerPluginOf(s: McpServer): string | undefined {
   return i > 0 ? s.name.slice(0, i) : undefined;
 }
 
-/** A server is on unless explicitly disabled. */
+/** A server is on unless explicitly disabled (or its owner plugin is). */
 function isEnabled(s: McpServer): boolean {
-  return s.enabled !== false;
+  return s.enabled !== false && !s.pluginDisabled;
 }
 
 /**
@@ -272,8 +275,17 @@ export function McpSection({ scope, activeRepoPath }: Props) {
         </div>
       )}
 
-      <div className="mcp-card-list">
-        {servers.map((s) => {
+      {/* 归组(feedback#14):用户自己配的在前;插件捆绑的按插件分组,
+          与独立 MCP 视觉区分 — 且无论插件是否启用都列出(装了就展示)。 */}
+      {(() => {
+        const userServers = servers.filter((s) => s.source !== "plugin");
+        const pluginServers = servers.filter((s) => s.source === "plugin");
+        const byPlugin = new Map<string, McpServer[]>();
+        for (const s of pluginServers) {
+          const owner = ownerPluginOf(s) ?? "插件";
+          byPlugin.set(owner, [...(byPlugin.get(owner) ?? []), s]);
+        }
+        const renderCard = (s: McpServer) => {
           const probe = probes[s.name];
           const loading = loadingProbe.has(s.name);
           return (
@@ -290,8 +302,24 @@ export function McpSection({ scope, activeRepoPath }: Props) {
               onShowErrorDetail={() => setErrorDetailFor(probe ?? null)}
             />
           );
-        })}
-      </div>
+        };
+        return (
+          <>
+            <div className="mcp-card-list">{userServers.map(renderCard)}</div>
+            {Array.from(byPlugin.entries()).map(([owner, list]) => (
+              <div key={owner} className="mt-3">
+                <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <span>🧩 {owner} 插件提供</span>
+                  {list.every((s) => s.pluginDisabled) && (
+                    <span className="rounded bg-muted px-1 text-[10px]">插件已禁用 — 启用后生效</span>
+                  )}
+                </div>
+                <div className="mcp-card-list">{list.map(renderCard)}</div>
+              </div>
+            ))}
+          </>
+        );
+      })()}
 
       {edit.kind !== "closed" && (
         <McpEditor

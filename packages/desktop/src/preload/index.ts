@@ -457,6 +457,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   searchFiles: (cwd: string, query: string) =>
     ipcRenderer.invoke("files:search", cwd, query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),
+  /** Full content inventory for one installed plugin (详情页). */
+  getPluginDetail: (installKey: string) => ipcRenderer.invoke("plugins:detail", installKey),
   listCapabilities: (cwd: string) =>
     ipcRenderer.invoke("capabilities:list", cwd),
   setCapabilityEnabled: (
