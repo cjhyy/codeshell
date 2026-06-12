@@ -252,12 +252,11 @@
 - **状态**:🟢 已修(2026-06-12,6bab871)
 - **备注**:新增 `settings/settingsCache.ts`(module 级快照缓存):子页把最近一次成功加载的快照按 key 存入,remount 时 useState 初始化器同步 seed(不出占位)+ 后台静默刷新(stale-while-revalidate)。接入 7 个子页(GenConnections×2/SearchConnections/PluginsAndSkills/CapabilitiesOverview/ConversationSettings/Memory/Model)。每个 app 运行周期只有第一次进某页会 loading。与已修的「切模型闪『保存中』」(saving 闪,78fe9c2)是**不同症状**。关联记忆 [[project_settings_page_loading_flash]]、[[project_model_switch_saving_flash]]。
 
-### 🔴 [2026-06-12] 浏览器圈选体验:已选内容回显 + 编辑时高亮边框
-- **现象**:浏览器面板圈选时,(1) 当前 session 里已存的选取内容,在浏览器里**没有回显**出来——看不到选过哪些;(2) 点「编辑」某一项时,对应页面元素**没显出边框**,不知道是哪一个元素。
-- **复现**:在浏览器面板圈选若干元素后,回看 / 点编辑。
-- **期望**:同 session 已选内容在浏览器里回显(高亮 overlay);点编辑时该元素显出边框,一眼定位。
-- **状态**:🔴
-- **备注**:与 [2026-06-09]「浏览器圈选标注:面板与新窗口不互通 + 再编辑时选区样式不回显」**高度重叠**——那条标了 🟢 已修(给 `PageMarker` 加 selector + 编辑时 executeJavaScript 注入 outline),但用户此次仍反馈看不到回显/边框,**疑似未达预期或回归**,需重新验证那次修复是否真生效。注意 webview 注入脚本就绪时机坑。关联记忆 [[project_browser_selection_echo_session]]、[[project_desktop_four_panels]]。
+### 🟢 [2026-06-12] 浏览器圈选体验:统一架构重做(回显互通 + 编辑高亮 + 页面归属)
+- **现象**:(1) session 里已存的圈选在浏览器里没回显;(2) 编辑时元素不显边框(看不到 outline);(3) 面板与弹窗不互通;(4) 不知道标注属于哪个页面。
+- **用户决策**:统一逻辑——「一个 session 里圈选的值回显给所有浏览器表面」;生命周期保持**发送即清**;不做常驻全量高亮(只修好编辑高亮)。
+- **状态**:🟢 已修(2026-06-12,69774cb;spec `docs/superpowers/specs/2026-06-12-browser-marker-unified-design.md`)
+- **备注(架构级重做)**:① **Anchor 单一事实源**——删 PageMarker 平行实体,Anchor 带 browser 回显负载(url/pageTitle/selector/rect),wire 编码不动;App anchors 按 session 归桶(`anchorBuckets.ts`),切 session 切换标注集、面板重开不丢、发送清 active+draft 两桶;② **同步协议**——main 加 anchor hub(操作上行 IPC、全量状态下行广播),弹窗回显主窗口标注、新开弹窗推初始快照、发送清空全表面;删 4 个 window 事件总线改 props 直传;③ **markerEcho 共享回显引擎**——「看不到 outline」两个根因都修:dom-ready 重放(刷新/导航后高亮不再消失)+ selector 未命中不再静默 no-op(回报 miss → 回退圈选时 rect 画框 + 「页面已变化」提示);④ **页面归属**——chip 显 `@ host/path`、编辑卡片显归属页、工具栏标注总览(按页分组、点其它页标注自动导航+定位)。测试:新 10 例、desktop 706 全过、tsc+build 绿。**真机双窗口互通走查待用户验**。关联 [[project_browser_selection_echo_session]]、[[project_desktop_four_panels]]。
 
 ### 🔴 [2026-06-12] 插件自带 MCP 在 UI 里显示得很奇怪
 - **现象**:当插件自身捆绑了 MCP server 时,当前 UI 把它显示出来看着很奇怪(与用户单独配置的 MCP 混在一起 / 归属不清)。
