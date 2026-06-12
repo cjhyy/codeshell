@@ -16,6 +16,7 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { validateSettings, type ValidatedSettings } from "./schema.js";
 import { migrateModels } from "../migrate-models.js";
+import { migrateConfig, CONFIG_VERSION_KEY } from "./migrate-config.js";
 
 /**
  * Resolve the user's home directory. Prefers `process.env.HOME` so that
@@ -107,6 +108,19 @@ export class SettingsManager {
     // Sort by priority ascending (merge in order, later wins)
     this.sources.sort((a, b) => a.priority - b.priority);
 
+    // Version-based config migration (migrate-config.ts), applied per physical
+    // file (user + project settings.json) so the write-back lands in the file
+    // the data came from. A file is only rewritten (with a .bak) when a step
+    // actually changed its content — a version-stamp-only diff isn't worth
+    // dirtying the user's (or a repo-tracked project) file for; steps are
+    // idempotent, so re-running on unstamped files each load is fine.
+    if (readUser) {
+      this.applyConfigMigration(join(userHome(), ".code-shell", "settings.json"), "user");
+    }
+    if (readProject) {
+      this.applyConfigMigration(join(this.cwd, ".code-shell", "settings.json"), "project");
+    }
+
     // Deep merge
     const raw = this.deepMerge();
 
@@ -146,6 +160,39 @@ export class SettingsManager {
 
     this.merged = validateSettings(raw);
     return this.merged;
+  }
+
+  /**
+   * Run the version-based migrations (migrate-config.ts MIGRATIONS) against a
+   * single physical settings file. Best-effort: any read/parse/write error
+   * falls through silently and the original source data is used as-is.
+   * Writes back (with a .bak, like the models[] migration above) ONLY when a
+   * step changed actual content — the configVersion stamp alone doesn't
+   * justify touching the file. On write-back the in-memory source is updated
+   * so this load() already sees the migrated shape.
+   */
+  private applyConfigMigration(path: string, sourceName: SettingsSourceName): void {
+    if (!existsSync(path)) return;
+    try {
+      const parsed = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+      const raw = parsed as Record<string, unknown>;
+      const result = migrateConfig(raw);
+      if (!result.changed) return;
+      // Compare content with the version stamp normalized away — stamp-only
+      // changes are not persisted.
+      const stripStamp = (c: Record<string, unknown>): Record<string, unknown> => {
+        const { [CONFIG_VERSION_KEY]: _v, ...rest } = c;
+        return rest;
+      };
+      if (JSON.stringify(stripStamp(raw)) === JSON.stringify(stripStamp(result.config))) return;
+      copyFileSync(path, `${path}.bak`);
+      writeFileSync(path, JSON.stringify(result.config, null, 2), "utf-8");
+      const source = this.sources.find((s) => s.name === sourceName);
+      if (source) source.data = result.config;
+    } catch {
+      // Best-effort — fall through to normal merge/validate.
+    }
   }
 
   /**

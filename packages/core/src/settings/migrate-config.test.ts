@@ -62,11 +62,68 @@ describe("migrateConfig (framework)", () => {
 });
 
 describe("production registry", () => {
-  it("CURRENT_CONFIG_VERSION matches the highest registered step (0 today)", () => {
-    expect(CURRENT_CONFIG_VERSION).toBe(0);
+  it("CURRENT_CONFIG_VERSION matches the highest registered step (1 today)", () => {
+    expect(CURRENT_CONFIG_VERSION).toBe(1);
   });
   it("real migrateConfig stamps the current version on a bare config", () => {
     const r = migrateConfig({ providers: [] });
     expect(r.config[CONFIG_VERSION_KEY]).toBe(CURRENT_CONFIG_VERSION);
+  });
+});
+
+describe("v0→v1: backfill gen provider catalogId", () => {
+  it("backfills catalogId on legacy imageGen/videoGen providers by kind+tag", () => {
+    const r = migrateConfig({
+      imageGen: {
+        defaultProvider: "openai",
+        providers: [
+          { id: "openai", kind: "openai", baseUrl: "https://api.openai.com/v1", apiKey: "sk-x" },
+          { id: "g", kind: "google", apiKey: "k" },
+        ],
+      },
+      videoGen: { providers: [{ id: "fal", kind: "fal", apiKey: "f" }] },
+    });
+    const img = (r.config.imageGen as { providers: Array<Record<string, unknown>> }).providers;
+    expect(img[0]!.catalogId).toBe("openai-images");
+    expect(img[1]!.catalogId).toBe("google-images");
+    const vid = (r.config.videoGen as { providers: Array<Record<string, unknown>> }).providers;
+    expect(vid[0]!.catalogId).toBe("fal-video");
+    // Other fields survive untouched.
+    expect(img[0]!.apiKey).toBe("sk-x");
+    expect((r.config.imageGen as Record<string, unknown>).defaultProvider).toBe("openai");
+  });
+
+  it("leaves entries that already have a catalogId alone", () => {
+    const r = migrateConfig({
+      imageGen: { providers: [{ id: "x", kind: "openai", catalogId: "custom-id" }] },
+    });
+    const img = (r.config.imageGen as { providers: Array<Record<string, unknown>> }).providers;
+    expect(img[0]!.catalogId).toBe("custom-id");
+  });
+
+  it("leaves unmatched kinds untouched and does not invent sections", () => {
+    const r = migrateConfig({
+      imageGen: { providers: [{ id: "m", kind: "mystery", apiKey: "k" }] },
+    });
+    const img = (r.config.imageGen as { providers: Array<Record<string, unknown>> }).providers;
+    expect(img[0]!.catalogId).toBeUndefined();
+    expect(r.config.videoGen).toBeUndefined();
+  });
+
+  it("tolerates malformed gen sections", () => {
+    const cfg = { imageGen: "nope", videoGen: { providers: "also nope" } };
+    const r = migrateConfig(cfg);
+    expect(r.config.imageGen).toBe("nope");
+    expect((r.config.videoGen as Record<string, unknown>).providers).toBe("also nope");
+  });
+
+  it("video kind does not match image-tag entries (tag scoping)", () => {
+    // "openai" exists only under tag:image — a videoGen provider with that
+    // kind must NOT pick up the image catalog entry.
+    const r = migrateConfig({
+      videoGen: { providers: [{ id: "o", kind: "openai", apiKey: "k" }] },
+    });
+    const vid = (r.config.videoGen as { providers: Array<Record<string, unknown>> }).providers;
+    expect(vid[0]!.catalogId).toBeUndefined();
   });
 });

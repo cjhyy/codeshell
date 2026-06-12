@@ -166,3 +166,75 @@ describe("SettingsManager project writes", () => {
     expect(sm.getForScope("project", cwd)).toEqual({});
   });
 });
+
+/**
+ * Config-migration wiring (migrate-config.ts MIGRATIONS applied on load).
+ * Uses the real v0→v1 step: legacy imageGen/videoGen providers without a
+ * catalogId get one backfilled, persisted to the file they came from (with a
+ * .bak), and the in-memory merge sees the migrated shape immediately.
+ */
+describe("SettingsManager config migration wiring", () => {
+  let home: string;
+  let cwd: string;
+  let prevHome: string | undefined;
+
+  beforeEach(() => {
+    prevHome = process.env.HOME;
+    home = mkdtempSync(join(tmpdir(), "cs-mig-home-"));
+    cwd = mkdtempSync(join(tmpdir(), "cs-mig-cwd-"));
+    process.env.HOME = home;
+  });
+
+  afterEach(() => {
+    process.env.HOME = prevHome;
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  function seed(dir: string, data: unknown) {
+    mkdirSync(join(dir, ".code-shell"), { recursive: true });
+    writeFileSync(join(dir, ".code-shell", "settings.json"), JSON.stringify(data), "utf-8");
+  }
+
+  test("legacy user-file gen provider gets catalogId backfilled + .bak + merged view", () => {
+    seed(home, {
+      imageGen: { defaultProvider: "openai", providers: [{ id: "openai", kind: "openai", apiKey: "sk", baseUrl: "https://api.openai.com/v1" }] },
+    });
+    const merged = new SettingsManager(cwd, "full").load() as any;
+    expect(merged.imageGen.providers[0].catalogId).toBe("openai-images");
+
+    const path = join(home, ".code-shell", "settings.json");
+    const onDisk = JSON.parse(readFileSync(path, "utf-8"));
+    expect(onDisk.imageGen.providers[0].catalogId).toBe("openai-images");
+    expect(onDisk.configVersion).toBe(1);
+    expect(existsSync(`${path}.bak`)).toBe(true);
+  });
+
+  test("legacy project-file gen provider migrates too (project scope)", () => {
+    seed(cwd, { videoGen: { providers: [{ id: "fal", kind: "fal", apiKey: "f", baseUrl: "https://fal.run" }] } });
+    const merged = new SettingsManager(cwd, "project").load() as any;
+    expect(merged.videoGen.providers[0].catalogId).toBe("fal-video");
+    const onDisk = JSON.parse(readFileSync(join(cwd, ".code-shell", "settings.json"), "utf-8"));
+    expect(onDisk.videoGen.providers[0].catalogId).toBe("fal-video");
+  });
+
+  test("file with nothing to migrate is left byte-identical (no stamp-only rewrite)", () => {
+    seed(home, { disabledSkills: ["x"] });
+    const path = join(home, ".code-shell", "settings.json");
+    const before = readFileSync(path, "utf-8");
+    new SettingsManager(cwd, "full").load();
+    expect(readFileSync(path, "utf-8")).toBe(before);
+    expect(existsSync(`${path}.bak`)).toBe(false);
+  });
+
+  test("already-migrated file is not rewritten again", () => {
+    seed(home, {
+      configVersion: 1,
+      imageGen: { providers: [{ id: "openai", kind: "openai", apiKey: "sk", baseUrl: "https://api.openai.com/v1", catalogId: "openai-images" }] },
+    });
+    const path = join(home, ".code-shell", "settings.json");
+    const before = readFileSync(path, "utf-8");
+    new SettingsManager(cwd, "full").load();
+    expect(readFileSync(path, "utf-8")).toBe(before);
+  });
+});

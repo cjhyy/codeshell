@@ -101,7 +101,10 @@ export function GenConnectionsPanel({ scope, activeRepoPath, config }: Props) {
       return {
         id: String(p.id ?? p.kind ?? ""),
         kind: String(p.kind ?? ce?.adapterKind ?? ""),
-        catalogId: catId,
+        // Legacy entries (pre-Catalog v1) have no catalogId — adopt the
+        // kind+tag fallback match so the card resolves its template (model
+        // presets etc.) and the next writeBack persists the reconciliation.
+        catalogId: catId ?? ce?.id,
         baseUrl: typeof p.baseUrl === "string" && p.baseUrl ? p.baseUrl : ce?.defaultBaseUrl ?? "",
         apiKey: typeof p.apiKey === "string" ? p.apiKey : "",
         apiKeyRef: typeof p.apiKeyRef === "string" && p.apiKeyRef ? p.apiKeyRef : undefined,
@@ -397,7 +400,7 @@ function GenCard({
             <input
               value={inst.model}
               onChange={(e) => onConfigChange({ model: e.target.value.trim() })}
-              placeholder={entry?.defaultModel}
+              placeholder={entry ? entry.defaultModel : "未匹配到模板，手动填写模型 ID"}
             />
           )}
         </label>

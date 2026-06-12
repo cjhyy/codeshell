@@ -12,6 +12,8 @@
  * A file already at CURRENT is a no-op (changed:false).
  */
 
+import { BUILTIN_CATALOG } from "../model-catalog/builtin.js";
+
 export const CONFIG_VERSION_KEY = "configVersion";
 
 export interface MigrationStep {
@@ -24,12 +26,46 @@ export interface MigrationStep {
 }
 
 /**
- * Registered migrations, in ascending `from` order. EMPTY for now — the schema
- * is at version 0 and no breaking migration has shipped yet. New breaking
- * changes append a step here and bump CURRENT_CONFIG_VERSION. Example:
- *   { from: 0, to: 1, migrate: (c) => ({ ...c, renamedKey: c.oldKey }) }
+ * v0 → v1: backfill `catalogId` on imageGen/videoGen `providers[]` entries
+ * written before the model catalog existed (Catalog v1). Legacy entries only
+ * carry `kind`; the connections UI resolves its template by `catalogId`, so
+ * without it the model-preset dropdown degrades to an empty text box. The
+ * match mirrors the renderer's legacy fallback: builtin entry whose
+ * `adapterKind === kind` within the section's tag. Unmatched entries are left
+ * untouched (the UI shows a manual-input hint for those).
  */
-export const MIGRATIONS: readonly MigrationStep[] = [];
+function backfillGenCatalogIds(config: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...config };
+  for (const [key, tag] of [
+    ["imageGen", "image"],
+    ["videoGen", "video"],
+  ] as const) {
+    const gen = next[key];
+    if (!gen || typeof gen !== "object" || Array.isArray(gen)) continue;
+    const providers = (gen as Record<string, unknown>).providers;
+    if (!Array.isArray(providers)) continue;
+    let touched = false;
+    const out = providers.map((p) => {
+      if (!p || typeof p !== "object" || Array.isArray(p)) return p;
+      const rec = p as Record<string, unknown>;
+      if (typeof rec.catalogId === "string") return p;
+      const entry = BUILTIN_CATALOG.find((e) => e.adapterKind === rec.kind && e.tag === tag);
+      if (!entry) return p;
+      touched = true;
+      return { ...rec, catalogId: entry.id };
+    });
+    if (touched) next[key] = { ...(gen as Record<string, unknown>), providers: out };
+  }
+  return next;
+}
+
+/**
+ * Registered migrations, in ascending `from` order. New breaking changes
+ * append a step here; CURRENT_CONFIG_VERSION follows automatically.
+ */
+export const MIGRATIONS: readonly MigrationStep[] = [
+  { from: 0, to: 1, migrate: backfillGenCatalogIds },
+];
 
 /** The version a freshly-written config is stamped with. */
 export const CURRENT_CONFIG_VERSION = MIGRATIONS.reduce(
