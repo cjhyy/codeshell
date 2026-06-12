@@ -113,9 +113,10 @@ describe("GenerateImage availability + dynamic description (TODO 7.1)", () => {
         },
       }),
     );
+    // catalogId 由 settings 加载时的 v0→v1 迁移按 kind+tag 回填(migrate-config)。
     expect(listConfiguredImageProviders(ws)).toEqual([
-      { id: "my-oa", kind: "openai" },
-      { id: "my-gemini", kind: "google" },
+      { id: "my-oa", kind: "openai", catalogId: "openai-images" },
+      { id: "my-gemini", kind: "google", catalogId: "google-images" },
     ]);
   });
 
