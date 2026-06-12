@@ -141,7 +141,7 @@
 - **desktop 轮级 undo + redo(2026-06-11 续做)**:文件改动卡片(FilesChangedCard)原走 `git restore HEAD`(整份回 HEAD、不分轮、依赖 git)——这才是用户当初觉得"文件级"的真根源。改走 core FileHistory 轮级快照(方案 A,与 CLI 同源)。调研确认 codex/CC/Cursor 撤销都是「剥洋葱式只能从最新往旧」,无人能撤中间轮(快照固有限制),所以只最新一轮卡片可撤、旧卡片置灰提示。**core 改 undo 语义**:`undoLatestTurn` 从「删该轮快照」改「标 `undone:true` + 存 redo 素材」(删了 redo 没素材;CLI 剥洋葱靠 `latestTurnUndoTargets`/`earliestSnapshotsPerFile` **跳过 undone** 保住);新增 `latestRedoTargets`/`redoLatestTurn`/`recordCreated`(engine hook 在 saveSnapshot 返 null=本轮新建时记,**撤销删该文件、redo 重建**——用户决策);on-disk index 升 v2 `{snapshots,redoRecords,created}`、兼容 legacy 裸数组。**四层接线**:新 IPC `files:{turnUndoState,undoTurn,redoTurn}`(按 sessionId 非 cwd,内部恒操作最新轮→卡片无需传 turnSeq,绕开 renderer turnEpoch≠core turnSeq 失配)→ preload → MessageStream 算 `lastFilesChangedId` 判 `isLatest` + 喂 `engineSessionId`(App→ChatView→MessageStream→card)→ 卡片 undo↔重新应用切换,on-mount 查 turnUndoState 恢复刷新后状态。redo 有效期=撤销后一直可点直到发新消息(新 live 轮使 latestRedoTargets 返 [])。测试:core session 52 + 1134 全过、desktop 685 全过(card 新 5 例)、四层 tsc+build:renderer 绿。关联 [[project_undo_turn_level]]。
 - **备注**:已修 = ① `SessionState.turnSeq`(一次 user 发送 = 一轮,区别于 `turnCount` 的 turn-loop 迭代数),`engine.run` 入口两路径汇合处 +1;② `FileSnapshot.turnSeq` + `saveSnapshot(path, turnSeq?)`,`file_history_backup` hook 读 `session.state.turnSeq` 打标(dedup 改 per-turn:同内容跨轮要记新基线);③ 纯函数 `latestTurnUndoTargets`(取最大 turnSeq 那轮、每文件**轮内最早**快照→轮内重复改也回到轮始基线;`turnSeq ?? -Infinity` 让 legacy 无标快照退化成整会话不崩);④ `FileHistory.undoLatestTurn(targets)` restore 后**按 turnSeq 删掉该轮全部快照**(否则快照永不消费=连撤同一轮;**坑**:restore 会先无标 saveSnapshot 备份当前内容,所以靠删标签而非时间戳消费),下次 `/undo` 自动剥上一轮;⑤ `/undo` 默认从单文件改「撤最近一轮所有文件 + 多文件 diff 预览」,`/undo all` 不动。测试:undo-target 13 + undo-integration 5(含两轮剥离 e2e)、core 1116 全过、tui tsc 绿、core 已 rebuild。关联 [[project_undo_turn_level]]。
 
-### 🟡 [2026-06-09] 右上角图标不更新
+### 🟢 [2026-06-09] 右上角图标不更新
 - **现象**(#10):某操作后右上角图标没更新(状态未刷新)。
 - **核实(2026-06-09,未能复现)**:右上角只有 2 个东西——StatusBadge busy/idle 点 + 面板开关按钮。逐一查证:① busy 点的清除路径**健壮**(`App.tsx:1140` `turn_complete`/`error` 且 `!agentId` → `setBusyForKey(target,false)`,且 route-table miss 有 `runningBucketRef` 兜底 :1066-1071;子 agent 的 turn_complete 带 agentId 被正确排除,不会误清/误标),没找到 mis-key;② 面板按钮 active 态 = 直接读 `panelRequest.open`,与开关同一布尔,截图里显示正确(高亮)。截图 step10 本身是**已完成/idle**态(SKILL 轮"已处理 6m29s"已收口),看不到卡住的帧。**结论:现有证据无法确认根因,不臆测修。**
 - **附带修(确有的潜在 desync)**:dock 内部用 tab-X 关面板时 `onClose` 只 set `open:false`、**漏 bump nonce + 漏清 kind**,与 `togglePanel` 契约不一致(`App.tsx:2263`)→ 已改成与 togglePanel 一致(bump nonce + kind:null)。这条不直接对应"图标不更新"(按钮读 .open 仍正确),但是真实潜伏 desync,顺手修掉。
@@ -176,7 +176,7 @@
 - **状态**:🟢 已修(2026-06-09)
 - **备注**:已修 = ① `streamGroups.ts` 给 `TurnProcessGroup`/`Rendered…` 加 `stopped?: boolean`;`foldTurnProcess` 用新 `turnWasStopped()` 扫该轮 slice 尾部 `reason==="stopped"` 的 `turn_end` 置 `stopped:true`,并加进 `groupSignature` 防 reconcile 复用;② `TurnProcessGroupCard` `group.stopped` 时 `showHeader=false`、直接平铺 items;③ 停止标记仍由 `TurnEndMessageView`(组外)单独出,卡片内不重复。streamGroups 19 测试过(含 2 个新 stopped 用例)、tsc 绿。
 
-### 🟡 [2026-06-09] 输入框被面板挤压时样式崩坏,缺最小宽度 + 底部控件压缩态
+### 🟢 [2026-06-09] 输入框被面板挤压时样式崩坏,缺最小宽度 + 底部控件压缩态
 - **现象**:打开侧边面板后聊天区/输入框被挤窄,输入框还继续压缩、底部那排控件(权限选择/Goal/附件/模型)挤成一团,样式很难看。
 - **期望**:① 输入框(及其容器)有**最小固定宽度**,压到阈值就不再缩(宁可面板那侧让位/横向滚动,也别把输入区压烂);② 底部控件设计**压缩态(窄屏)样式**——例如 `PermissionPill` 窄屏时**只显示 tone 颜色 icon、隐藏文字**(组件里已有 `h-2 w-2 rounded-full` tone 圆点 `PermissionPill.tsx:128`,把它提到收起态、用 `@container`/断点隐藏 `:107` 的 `<span>{label}</span>` 即可);Goal/模型同理可降级为 icon-only。
 - **状态**:🟢 已修(2026-06-09)
@@ -189,7 +189,7 @@
 - **证据**:磁盘两空目录;`recents.json`/`trust.json` 均含 resume-plugin 路径;2 个 session state.cwd 指向它。
 - **备注**:已修 = ①(磁盘,core)4 个站点 mkdir 前判**父 `existsSync(cwd)`**:`config.ts`(返回 "does not exist" 错误)、`path-policy.ts`/`permission.ts`(best-effort `return`)、`settings/manager.ts saveProjectSetting`(`return`,空 cwd 仍按原 boundary throw)。区分合法新项目(cwd 在→照写)与复活已删项目(cwd 没→跳过)。②(加载,desktop)`listDiskSessions` 跳过 `state.cwd` 非空且不 `existsSync` 的(main 有 fs)→ 不再喂给 `createRepoForCwd`;`loadRecents` 读时过滤不存在路径自愈。core 已 rebuild。测试:config 2 新 pass、settings 13 pass、sessions disk 含新「删 cwd 过滤」用例全过(顺修旧 fixture 用真 cwd)、core+desktop tsc 绿。**未做**:trust.json 清理(二级,getTrust 按精确路径查,悬空项无害);boot 一次性 prune(加载侧过滤已足够自愈)。关联 [[project_draft_session_autojump_bug]]、[[project_disk_authoritative_recovery]]。
 
-### 🟡 [2026-06-09] 图片细节(imageDetail / OpenAI detail)设置是否需要优化 — 待讨论
+### 🟢 [2026-06-09] 图片细节(imageDetail / OpenAI detail)设置是否需要优化 — 待讨论
 - **现状**:`imageDetail` 是**全局三档枚举** `low｜high｜original`(`types.ts:441`、`schema.ts:477`),仅 OpenAI 兼容路径读取(`openai.ts:731/769` → `mapImageDetailToOpenAI`),Anthropic 不读。全局默认,可被项目设置覆盖。
 - **用户疑问**:这个设置是不是该优化了?
 - **可能优化方向(待定,需产品决策)**:
@@ -207,7 +207,7 @@
 - **状态**:🟢 已修(2026-06-09)
 - **备注**:已修(主)= `trusted-device-store.ts` `addDevice` 改按 `secretHash` **getOrCreate**:已有非吊销同 `secretHash` 设备就复用(刷 name/lastSeenAt)而非新 UUID,重扫即复用同行,从根上止住累积。测试:device-store 加 3 个新用例(重加复用 / 不同 hash 分立 / 吊销后重配新行)全过、tsc 绿。**未做(可选优化,非阻塞)**:client(`mobile-ui.ts:547`)优先用存的 `cs.deviceId` 再 auth;设备 prune/批量清理 UI(`revoke` 已有)。**房间无需新增 GC**(已自动回收;记忆 [[project_background_shell]]「idle-sweep 绝不杀」指后台 shell,与房间无关)。
 
-### 🟡 [2026-06-09] 浏览器圈选标注:面板与新窗口不互通 + 再编辑时选区样式不回显
+### 🟢 [2026-06-09] 浏览器圈选标注:面板与新窗口不互通 + 再编辑时选区样式不回显
 - **现象**:UI 圈选(BrowserPanel 圈选/标注)在**浏览器面板**和**浏览器新窗口**之间**不互通**——各存各的,应该互通共享;且**再次编辑标注时,没把那一块 select 的样式回显**出来(看不到之前圈在哪)。
 - **根因(已定位)**:圈选状态 `selecting/picked/markers/editingMarker` 全是 `BrowserPanel.tsx:175-182` 的**组件本地 `useState`**,纯内存、不持久化、不跨实例/跨窗口共享。新窗口(`App.tsx:1829 new-window`,各自独立 BrowserWindow/renderer)起一个全新 BrowserPanel → markers 从空开始,看不到面板里圈的;再编辑时也没有从持久层取回 marker 的选区样式重绘高亮。
 - **状态**:🟢 已修(2026-06-09);"跨窗口共享" 经用户澄清**不需要**(见下)
@@ -236,7 +236,7 @@
 - **相关文件**:`AdvancedSections.tsx`(HooksSection/ProjectHooksEditor)、core `plugins/loadPluginHooks.ts` + 一条新 IPC、`preload/index.ts`。
 - **备注**:现状钩子页只读手写 `s.hooks`、靠裸 JSON 添加,且**完全不展示插件 hooks**(superpowers 的 hook 后台生效但 UI 看不见)。核实见上。关联 [[project_settings_hooks_memory_dream]](钩子仅项目级)、[[project_extensions_ui]](6.2 MCP owner 标注模式)。
 
-### 🟡 [2026-06-09] 本地环境页(隐藏 cleanup 后)UI 再优化一下
+### 🟢 [2026-06-09] 本地环境页(隐藏 cleanup 后)UI 再优化一下
 - **现象**:隐藏「清理脚本」后,本地环境设置页(`ProjectEnvEditor`)的布局/层次需要重新优化,且仍有不合 desktop UI 约定的旧写法。
 - **可优化点(已核实)**:
   1. **裸 `<textarea>` 违约**:沙箱区 writableRoots(`AdvancedSections.tsx:654`)、deniedReads(`:659`)仍是原生 `<textarea>` → 按 desktop CLAUDE.md「禁止手写 textarea,用 `@/components/ui` 的 Textarea」应替换(变量框 :611 已用 Textarea,这两处漏了)。
