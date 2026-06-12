@@ -244,8 +244,9 @@ export function SettingsPage({
               <McpSection scope={scope} activeRepoPath={activeRepoPath} />
             )}
             {active === "hooks" && (
-              // Hooks are project-scoped only — the section shows a project
-              // list first, then drills into the chosen project's hooks.
+              // Hooks live at two levels (global user + per project; core
+              // concatenates both) — the section shows a "全局" row plus the
+              // project list, then drills into the chosen level's hooks.
               <HooksSection repos={repos} />
             )}
             {active === "connections" && (

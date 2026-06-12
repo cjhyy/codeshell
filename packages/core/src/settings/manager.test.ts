@@ -238,3 +238,86 @@ describe("SettingsManager config migration wiring", () => {
     expect(readFileSync(path, "utf-8")).toBe(before);
   });
 });
+
+/**
+ * hooks is the ONE top-level array that CONCATENATES across layers (user
+ * first, project after) instead of being replaced wholesale — a global hook
+ * and a project hook must BOTH run (feedback #16, mirrors Claude Code).
+ * `"hooks": null` in a layer still resets everything below it.
+ */
+describe("SettingsManager hooks cross-layer concat", () => {
+  let home: string;
+  let cwd: string;
+  let prevHome: string | undefined;
+
+  beforeEach(() => {
+    prevHome = process.env.HOME;
+    home = mkdtempSync(join(tmpdir(), "cs-hooks-home-"));
+    cwd = mkdtempSync(join(tmpdir(), "cs-hooks-cwd-"));
+    process.env.HOME = home;
+  });
+
+  afterEach(() => {
+    process.env.HOME = prevHome;
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  function seedFile(dir: string, file: string, data: unknown) {
+    mkdirSync(join(dir, ".code-shell"), { recursive: true });
+    writeFileSync(join(dir, ".code-shell", file), JSON.stringify(data), "utf-8");
+  }
+
+  test("user + project hooks concatenate (user first, project after)", () => {
+    seedFile(home, "settings.json", {
+      hooks: [{ event: "notification", command: "echo global" }],
+    });
+    seedFile(cwd, "settings.json", {
+      hooks: [{ event: "pre_tool_use", command: "echo project" }],
+    });
+    const merged = new SettingsManager(cwd, "full").load();
+    expect((merged.hooks ?? []).map((h) => h.command)).toEqual([
+      "echo global",
+      "echo project",
+    ]);
+  });
+
+  test("project-only hooks are unchanged (no user layer)", () => {
+    seedFile(cwd, "settings.json", {
+      hooks: [{ event: "pre_tool_use", command: "echo project" }],
+    });
+    const merged = new SettingsManager(cwd, "full").load();
+    expect((merged.hooks ?? []).map((h) => h.command)).toEqual(["echo project"]);
+  });
+
+  test('explicit "hooks": null in the project layer resets user hooks', () => {
+    seedFile(home, "settings.json", {
+      hooks: [{ event: "notification", command: "echo global" }],
+    });
+    seedFile(cwd, "settings.json", { hooks: null });
+    const merged = new SettingsManager(cwd, "full").load();
+    expect(merged.hooks ?? []).toEqual([]);
+  });
+
+  test("local layer hooks append after project hooks", () => {
+    seedFile(cwd, "settings.json", {
+      hooks: [{ event: "pre_tool_use", command: "echo project" }],
+    });
+    seedFile(cwd, "settings.local.json", {
+      hooks: [{ event: "notification", command: "echo local" }],
+    });
+    const merged = new SettingsManager(cwd, "full").load();
+    expect((merged.hooks ?? []).map((h) => h.command)).toEqual([
+      "echo project",
+      "echo local",
+    ]);
+  });
+
+  test("disabled flag survives validation (schema keeps it)", () => {
+    seedFile(home, "settings.json", {
+      hooks: [{ event: "notification", command: "echo off", disabled: true }],
+    });
+    const merged = new SettingsManager(cwd, "full").load();
+    expect(merged.hooks?.[0]?.disabled).toBe(true);
+  });
+});

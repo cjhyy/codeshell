@@ -267,23 +267,28 @@ export function ShortcutsSection() {
 }
 
 /**
- * Hooks are PROJECT-scoped only — they run shell commands on a specific repo,
- * so a global/user hook makes no sense. The page first shows a list of
- * projects (reusing the sidebar `repos`); clicking one drills into that
- * project's hooks. Hooks are read/written from `<repo>/.code-shell/settings.json`.
+ * Hooks are maintained at TWO levels — global (user, `~/.code-shell/
+ * settings.json`) and per project (`<repo>/.code-shell/settings.json`).
+ * Core's SettingsManager CONCATENATES `hooks` across layers (user first,
+ * project after), so a global hook runs in every project alongside that
+ * project's own hooks (mirrors Claude Code's user-level hooks). The page
+ * first shows a "全局" row plus the project list (reusing the sidebar
+ * `repos`); picking one drills into that level's hooks.
  */
 export function HooksSection({ repos }: { repos: Repo[] }) {
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const selectedRepo = repos.find((r) => r.path === selectedPath) ?? null;
+  // undefined = picker; null = global (user level); string = project cwd.
+  const [selected, setSelected] = useState<string | null | undefined>(undefined);
+  const selectedRepo =
+    typeof selected === "string" ? (repos.find((r) => r.path === selected) ?? null) : null;
 
-  if (!selectedPath) {
+  if (selected === undefined) {
     return (
       <section className="settings-section">
         <h3 className="settings-section-title">钩子</h3>
         <p className="settings-section-help">
-          钩子按项目维护。选择一个项目以查看 / 编辑它的钩子。
+          钩子分两层:全局钩子对所有项目生效,项目钩子只对该项目生效,两层会一起运行。
         </p>
-        <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
+        <ProjectPicker repos={repos} includeGlobal onSelect={(path) => setSelected(path)} />
       </section>
     );
   }
@@ -295,16 +300,20 @@ export function HooksSection({ repos }: { repos: Repo[] }) {
           variant="ghost"
           size="sm"
           className="h-7 gap-1 px-2 text-muted-foreground"
-          onClick={() => setSelectedPath(null)}
+          onClick={() => setSelected(undefined)}
         >
           <ArrowLeft size={14} />
-          <span>返回项目列表</span>
+          <span>返回列表</span>
         </Button>
         <span className="truncate text-sm font-medium text-foreground">
-          {selectedRepo ? repoLabel(selectedRepo) : selectedPath}
+          {selected === null
+            ? "全局(所有项目生效)"
+            : selectedRepo
+              ? repoLabel(selectedRepo)
+              : selected}
         </span>
       </div>
-      <ProjectHooksEditor cwd={selectedPath} />
+      <ProjectHooksEditor cwd={selected} />
     </section>
   );
 }
@@ -323,36 +332,55 @@ const HOOK_EVENT_OPTIONS: { value: string; label: string }[] = [
 ];
 
 /**
- * Hook管理页 for a single project (方案 B). Shows hand-written hooks
- * (`<repo>/.code-shell/settings.json` → `hooks`) AND plugin-provided hooks
- * (read-only, labelled by owner plugin). Hand-written hooks are added via an
- * event dropdown + command input (replacing the old raw-JSON textarea) and can
- * be deleted; plugin hooks can only be turned off by disabling the whole plugin.
+ * Hook 管理页 for ONE level — a project (`cwd` set) or the global user level
+ * (`cwd === null`). Shows that level's hand-written hooks (with a per-entry
+ * enable Switch — the `disabled` field, hot-reloaded by the engine) AND
+ * plugin-provided hooks. In a project, plugin hooks get a per-hook Switch
+ * too (writes `capabilityOverrides.pluginHooks[key]`, project-scoped like
+ * the rest of capability control; takes effect for new sessions); the
+ * global view lists them read-only. A project view also lists the global
+ * hooks read-only, since both layers run together.
  */
-function ProjectHooksEditor({ cwd }: { cwd: string }) {
+function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
+  const isGlobal = cwd === null;
+  const scope = isGlobal ? ("user" as const) : ("project" as const);
   const [hooks, setHooks] = useState<Array<Record<string, unknown>>>([]);
+  const [globalHooks, setGlobalHooks] = useState<Array<Record<string, unknown>>>([]);
   const [pluginHooks, setPluginHooks] = useState<PluginHookEntry[]>([]);
+  const [hookOverrides, setHookOverrides] = useState<Record<string, unknown>>({});
   const [event, setEvent] = useState<string>(HOOK_EVENT_OPTIONS[0]!.value);
   const [command, setCommand] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     try {
-      const s = (await window.codeshell.getSettings("project", cwd)) ?? {};
+      const s = (await window.codeshell.getSettings(scope, cwd ?? undefined)) ?? {};
       setHooks(Array.isArray(s.hooks) ? (s.hooks as Array<Record<string, unknown>>) : []);
       const disabledPlugins = Array.isArray(s.disabledPlugins)
         ? (s.disabledPlugins as unknown[]).filter((x): x is string => typeof x === "string")
         : [];
       setPluginHooks(await window.codeshell.listPluginHooks(disabledPlugins));
+      if (!isGlobal) {
+        const overrides = (s.capabilityOverrides as { pluginHooks?: Record<string, unknown> } | undefined)
+          ?.pluginHooks;
+        setHookOverrides(overrides && typeof overrides === "object" ? overrides : {});
+        const u = (await window.codeshell.getSettings("user")) ?? {};
+        setGlobalHooks(Array.isArray(u.hooks) ? (u.hooks as Array<Record<string, unknown>>) : []);
+      } else {
+        setHookOverrides({});
+        setGlobalHooks([]);
+      }
     } catch {
       setHooks([]);
+      setGlobalHooks([]);
       setPluginHooks([]);
+      setHookOverrides({});
     }
   };
   useEffect(() => { void load(); }, [cwd]);
 
   const persist = async (next: Array<Record<string, unknown>>) => {
-    await writeSettings("project", { hooks: next }, cwd);
+    await writeSettings(scope, { hooks: next }, cwd ?? undefined);
     setHooks(next);
   };
 
@@ -367,18 +395,94 @@ function ProjectHooksEditor({ cwd }: { cwd: string }) {
     setCommand("");
   };
 
+  /** Per-entry enable switch — `disabled: true` keeps the entry in the file
+   *  but registerSettingsHooks skips it (hot via the settings reload). */
+  const toggleOwn = (index: number, enabled: boolean) => {
+    const next = hooks.map((h, n) => {
+      if (n !== index) return h;
+      const copy = { ...h };
+      if (enabled) delete copy.disabled;
+      else copy.disabled = true;
+      return copy;
+    });
+    void persist(next);
+  };
+
+  /** Per-hook plugin switch — project-scoped capabilityOverrides.pluginHooks.
+   *  `null` deletes the key (= inherit/on); takes effect for new sessions. */
+  const togglePluginHook = async (h: PluginHookEntry, enabled: boolean) => {
+    if (isGlobal || !cwd) return;
+    await writeSettings(
+      "project",
+      { capabilityOverrides: { pluginHooks: { [h.key]: enabled ? null : "off" } } },
+      cwd,
+    );
+    setHookOverrides((prev) => {
+      const next = { ...prev };
+      if (enabled) delete next[h.key];
+      else next[h.key] = "off";
+      return next;
+    });
+  };
+
+  const ownTitle = isGlobal ? "全局钩子" : "项目钩子";
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Hand-written project hooks */}
+      {/* Hand-written hooks for THIS level */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-foreground">项目钩子</span>
+        <span className="text-sm font-medium text-foreground">{ownTitle}</span>
         {hooks.length === 0 ? (
-          <div className="text-sm text-muted-foreground">暂无项目钩子</div>
+          <div className="text-sm text-muted-foreground">暂无{ownTitle}</div>
         ) : (
           <ul className="flex flex-col gap-1">
-            {hooks.map((h, i) => (
+            {hooks.map((h, i) => {
+              const off = h.disabled === true;
+              return (
+                <li
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border border-border px-2 py-1.5",
+                    off && "opacity-60",
+                  )}
+                  key={i}
+                >
+                  <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 font-mono text-xs text-accent-foreground">
+                    {stringOf(h.event)}
+                  </span>
+                  <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+                    {stringOf(h.command)}
+                  </code>
+                  <Switch
+                    checked={!off}
+                    onCheckedChange={(checked) => toggleOwn(i, checked)}
+                    aria-label={off ? "启用钩子" : "停用钩子"}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 text-muted-foreground hover:text-status-err"
+                    onClick={() => void persist(hooks.filter((_, n) => n !== i))}
+                  >
+                    删除
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {/* In a project: the global hooks also run here — list them read-only. */}
+      {!isGlobal && globalHooks.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-foreground">全局钩子(也在本项目运行)</span>
+          <ul className="flex flex-col gap-1">
+            {globalHooks.map((h, i) => (
               <li
-                className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5"
+                className={cn(
+                  "flex items-center gap-2 rounded-md border border-border bg-muted/30 px-2 py-1.5",
+                  h.disabled === true && "opacity-60",
+                )}
                 key={i}
               >
                 <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 font-mono text-xs text-accent-foreground">
@@ -387,19 +491,15 @@ function ProjectHooksEditor({ cwd }: { cwd: string }) {
                 <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
                   {stringOf(h.command)}
                 </code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 text-muted-foreground hover:text-status-err"
-                  onClick={() => void persist(hooks.filter((_, n) => n !== i))}
-                >
-                  删除
-                </Button>
+                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                  全局{h.disabled === true ? "(已停用)" : ""}
+                </span>
               </li>
             ))}
           </ul>
-        )}
-      </div>
+          <span className="text-xs text-muted-foreground">在「全局」页编辑全局钩子。</span>
+        </div>
+      )}
 
       {/* Add a hand-written hook — event dropdown + command input (replaces the
           old raw-JSON textarea). */}
@@ -425,31 +525,49 @@ function ProjectHooksEditor({ cwd }: { cwd: string }) {
         {error && <div className="text-sm text-status-err">{error}</div>}
       </div>
 
-      {/* Plugin-provided hooks — read-only, labelled by owner plugin. Reuses the
-          MCP page's owner-stamp pattern. Turn off by disabling the plugin. */}
+      {/* Plugin-provided hooks — labelled by owner plugin (MCP page's
+          owner-stamp pattern). In a project each hook gets its own Switch
+          (capabilityOverrides.pluginHooks); the global view is read-only. */}
       {pluginHooks.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">插件提供的钩子</span>
           <ul className="flex flex-col gap-1">
-            {pluginHooks.map((h, i) => (
-              <li
-                className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-2 py-1.5"
-                key={`${h.plugin}-${h.rawEvent}-${i}`}
-              >
-                <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 font-mono text-xs text-accent-foreground">
-                  {h.event}
-                </span>
-                <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
-                  {h.command}
-                </code>
-                <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                  由「{h.plugin}」提供{h.disabled ? "（已禁用）" : ""}
-                </span>
-              </li>
-            ))}
+            {pluginHooks.map((h, i) => {
+              const overrideOff = hookOverrides[h.key] === "off";
+              const off = h.disabled || overrideOff;
+              return (
+                <li
+                  className={cn(
+                    "flex items-center gap-2 rounded-md border border-border bg-muted/30 px-2 py-1.5",
+                    off && "opacity-60",
+                  )}
+                  key={`${h.plugin}-${h.rawEvent}-${i}`}
+                >
+                  <span className="shrink-0 rounded bg-accent px-1.5 py-0.5 font-mono text-xs text-accent-foreground">
+                    {h.event}
+                  </span>
+                  <code className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+                    {h.command}
+                  </code>
+                  <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                    由「{h.plugin}」提供{h.disabled ? "（插件已禁用）" : ""}
+                  </span>
+                  {!isGlobal && (
+                    <Switch
+                      checked={!off}
+                      disabled={h.disabled}
+                      onCheckedChange={(checked) => void togglePluginHook(h, checked)}
+                      aria-label={off ? "启用此插件钩子" : "停用此插件钩子"}
+                    />
+                  )}
+                </li>
+              );
+            })}
           </ul>
           <span className="text-xs text-muted-foreground">
-            插件钩子只读;如需关闭,在「插件」页禁用对应插件(会连同其全部钩子一起停用)。
+            {isGlobal
+              ? "插件钩子在此只读;进入某个项目的钩子页可单条停用(仅对该项目生效),或在「插件」页禁用整个插件。"
+              : "单条开关仅对本项目生效、对新会话生效;整个插件可在「插件」页禁用(会连同其全部钩子停用)。"}
           </span>
         </div>
       )}

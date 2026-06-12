@@ -2,7 +2,7 @@ import { describe, test, expect, afterEach } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadPluginHooks, listPluginHooks } from "./loadPluginHooks.js";
+import { loadPluginHooks, listPluginHooks, pluginHookKey } from "./loadPluginHooks.js";
 import { HookRegistry } from "../hooks/registry.js";
 
 /**
@@ -92,6 +92,27 @@ describe("loadPluginHooks disabledPlugins filter", () => {
   });
 });
 
+describe("loadPluginHooks disabledPluginHooks (per-hook) filter", () => {
+  test("skips ONE hook by its pluginHookKey while the plugin stays enabled", () => {
+    stagePlugin("superpowers@market");
+    const reg = new HookRegistry();
+    const key = pluginHookKey({
+      plugin: "superpowers",
+      rawEvent: "SessionStart",
+      command: "echo hi",
+    });
+    loadPluginHooks(reg, [], [key]);
+    expect(reg.hasHooks("on_session_start")).toBe(false);
+  });
+
+  test("a non-matching per-hook key leaves the hook registered", () => {
+    stagePlugin("superpowers@market");
+    const reg = new HookRegistry();
+    loadPluginHooks(reg, [], ["superpowers:SessionStart:echo other"]);
+    expect(reg.hasHooks("on_session_start")).toBe(true);
+  });
+});
+
 describe("listPluginHooks (read-only, for the settings UI)", () => {
   test("returns plugin hooks with owner name + mapped event + command", () => {
     stagePlugin("superpowers@market");
@@ -103,6 +124,7 @@ describe("listPluginHooks (read-only, for the settings UI)", () => {
       rawEvent: "SessionStart",
       command: "echo hi",
       disabled: false,
+      key: "superpowers:SessionStart:echo hi",
     });
   });
 
