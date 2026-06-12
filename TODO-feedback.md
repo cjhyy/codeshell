@@ -292,8 +292,14 @@
   - **过期/清理**:**只有注入期 age 过滤 + soft-delete 到 memory-trash**;❌无自动硬删除、❌无自动去重(仅 Dream LLM 做)、❌无后台清理。证据 `session/memory.ts:44-62,199-222`、`settings/schema.ts:418-424`。
 - **CC/Codex 对比(2026-06 核实,纠正旧认知)**:两家**都已是「静态指令文件 + 动态自动记忆」双层**,不再是纯静态靠人维护。CC = CLAUDE.md(静态,全量注入)+ Auto memory(默认开/会话内实时写/MEMORY.md 限 200 行 25KB recall/topic 按需读/**无过期无去重靠人**);Codex = AGENTS.md(静态)+ Memories(默认关/**后台异步**写/**有专门 consolidation 模型 + age/idle/数量过期参数**/redact secrets)。**本项目的 Dream(后台 LLM 整合)思路更接近 Codex 的 Memories,而非 CC**。来源 code.claude.com/docs/en/memory、developers.openai.com/codex/memories + config-reference。
 - **「杂乱过期」实测**:`~/.claude/...codeshell/memory/` 当前 **75 个文件,其中 42 个(56%)标「已修/已做/已完成」**——一多半是办完的旧事仍占索引,这是杂乱主因。(注:这是 **Claude Code 自己的** auto memory 目录,非本项目 code-shell 的记忆;但暴露的问题对两套都成立=完成态记忆只增不减。)
-- **状态**:🟢 已修(2026-06-13 第一批,96c5a3e;自动归档/索引截断留后)
-- **已修(第一批)**:①可关 = `settings.memories.autoExtract`(false 跳过提取,总结/Dream 照跑;记忆页全局视图加 Switch);存量淹没 = 记忆页「清理自动提取(N)」批量按钮(soft-delete 全部 origin:auto 未固定,confirm 带数量);③部分 = 提取 prompt 加 secret redact 规则;② = Dream prompt 加完成态归档规则(纯「已修」无教训的删/并 changelog,有教训先折进主题条目)。**留后**:age/数量上限自动归档(现 maxAge 仍只滤注入)、MEMORY.md 索引截断+按需读、自动提取走确认流(现做成可关已覆盖主诉求)。
+- **状态**:🟡 第一批已修(2026-06-13,96c5a3e),**未完——用户拍板后续开记忆专项**(整体设计一轮,别零敲碎打)
+- **已修(第一批)**:①可关 = `settings.memories.autoExtract`(false 跳过提取,总结/Dream 照跑;记忆页全局视图加 Switch);存量淹没 = 记忆页「清理自动提取(N)」批量按钮(soft-delete 全部 origin:auto 未固定,confirm 带数量);③部分 = 提取 prompt 加 secret redact 规则;② = Dream prompt 加完成态归档规则(纯「已修」无教训的删/并 changelog,有教训先折进主题条目)。
+- **🔜 记忆专项(待做,先出整体设计再动手)**:第一批只是止血,记忆系统该作为一个整体重新审一遍。专项至少覆盖——
+  1. **生命周期**:记忆从写入→使用→过期→归档/删除的完整状态机;age/数量上限自动归档(现 maxAge 只滤注入不动文件)、trash 的恢复/清空 UI(现只能手动 mv)。
+  2. **完成态语义**:给记忆加状态字段(active/done/archived?),Dream/清理流程能按状态归档,不再靠 prompt 软约束。
+  3. **质量闭环**:自动提取要不要确认流(现仅可关);提取质量评估(噪音率);Dream 效果可观测(整理前后对比)。
+  4. **规模化**:MEMORY.md 索引截断 + 详情按需读(学 CC 200 行 25KB recall);注入 token 预算管理。
+  5. **对齐参照**:CC auto-memory(会话内实时写/无过期) vs Codex Memories(后台异步/consolidation 模型/age 参数),见 [[reference_cc_codex_memory]],codeshell 的 Dream 介于两者,定位要明确。
 - **可能方向(原记录)**:① 给「自动提取」的记忆也走确认/或可关(现 legacy 不确认);② 给记忆加「状态/完成」语义,Dream 或清理流程能归档/删掉「已修完」的;③ 借鉴 Codex:加 age/数量上限自动归档、secret redact;④ 借鉴 CC:MEMORY.md 索引截断 + 详情按需读,避免索引膨胀。关联记忆 [[project_memory_and_dream_overview]]、[[project_settings_hooks_memory_dream]]、[[reference_cc_codex_memory]]。
 
 ### 🟢 [2026-06-12] 记忆需要「固定/置顶」层 — user scope 被自动提取淹没,有用的留不住
