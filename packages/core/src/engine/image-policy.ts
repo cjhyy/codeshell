@@ -251,3 +251,30 @@ export function enforceImagePolicy(
 
   return { ok: true };
 }
+
+/**
+ * Collect the workspace file paths of any attached images that came from a
+ * real file (the desktop composer's path-attach flow sets ParsedImage.name to
+ * the absolute path). Pasted screenshots whose name is a bare filename, or any
+ * name that doesn't resolve to an existing file, are excluded.
+ *
+ * Pure given an `exists` predicate + `resolve` joiner, so it's unit-testable
+ * without touching the real fs. The engine passes `existsSync` and a
+ * cwd-aware joiner; downstream this surfaces the paths to the model so tools
+ * like GenerateImage(referenceImages) can use them (the path the composer
+ * already knew was otherwise dropped on the way to the LLM).
+ */
+export function collectAttachedImagePaths(
+  images: ReadonlyArray<ParsedImage>,
+  resolve: (name: string) => string,
+  exists: (absPath: string) => boolean,
+): string[] {
+  const out: string[] = [];
+  for (const img of images) {
+    const name = img.name?.trim();
+    if (!name) continue;
+    const abs = resolve(name);
+    if (exists(abs)) out.push(abs);
+  }
+  return out;
+}

@@ -118,6 +118,7 @@ import {
   enforceImagePolicy,
   byteLengthFromBase64,
   dropOversizedImages,
+  collectAttachedImagePaths,
 } from "./image-policy.js";
 import { tryCompressImages } from "./image-compression.js";
 import { buildSessionTitle } from "./session-title.js";
@@ -127,7 +128,7 @@ import type { ContentBlock } from "../types.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
-import { join } from "node:path";
+import { join, isAbsolute } from "node:path";
 import {
   existsSync,
   mkdirSync,
@@ -1227,10 +1228,30 @@ export class Engine {
     // text block (when prose is present) followed by one image block per
     // attachment — the provider-specific clients translate this to OpenAI
     // `image_url` or Anthropic `{type:image, source:base64}` downstream.
+    // When an attached image came from a workspace FILE (the desktop composer's
+    // path-attach flow sets ParsedImage.name = the absolute path), surface that
+    // path to the model as text. The image bytes still ride along for vision,
+    // but tools that operate on files — GenerateImage(referenceImages),
+    // Read, etc. — need the on-disk path, not just the pixels. Without this the
+    // path the composer already knew was silently dropped, and the model would
+    // answer "图片没落到项目文件夹，找不到路径" (the seedance 图生图 dead-end).
+    // Only names that resolve to an existing file qualify; a pasted screenshot
+    // whose name is just "screenshot.png" is not a path and is left out.
+    const attachedPaths = collectAttachedImagePaths(
+      parsedTask.images,
+      (name) => (isAbsolute(name) ? name : join(cwd, name)),
+      existsSync,
+    );
+    const pathHint =
+      attachedPaths.length > 0
+        ? `\n\n<attached-image-paths>\n${attachedPaths.join("\n")}\n</attached-image-paths>\n` +
+          `(上面附带的图片在工作区的真实路径，如需把它们作为工具输入（例如 GenerateImage 的 referenceImages、图生图参考图），直接使用这些路径。)`
+        : "";
+
     const userMessageContent: string | ContentBlock[] = parsedTask.hasImages
       ? [
-          ...(parsedTask.text
-            ? [{ type: "text" as const, text: parsedTask.text }]
+          ...(parsedTask.text || pathHint
+            ? [{ type: "text" as const, text: `${parsedTask.text}${pathHint}` }]
             : []),
           ...parsedTask.images.map((img) => ({
             type: "image" as const,
