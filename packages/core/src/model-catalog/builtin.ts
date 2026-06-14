@@ -25,7 +25,8 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     signupUrl: "https://platform.openai.com/api-keys",
     test: true,
     paramsDoc:
-      "OpenAI 图像：支持 size (1024x1024 | 1536x1024 | 1024x1536 | auto)、quality (low | medium | high | auto)。文生图,不支持图生图/参考图。",
+      "OpenAI 图像：支持 size (1024x1024 | 1536x1024 | 1024x1536 | auto)、quality (low | medium | high | auto)。" +
+      "支持图生图:传 referenceImages(工作区图片路径,最多 16 张)即按这些图编辑/再创作(走 /images/edits)。",
   },
   {
     id: "google-images",
@@ -40,7 +41,8 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     signupUrl: "https://aistudio.google.com/apikey",
     test: true,
     paramsDoc:
-      "Gemini 图像 (Nano Banana)：size 会被映射到最接近的支持比例;quality 参数对该后端无效(忽略)。文生图。",
+      "Gemini 图像 (Nano Banana)：size 会被映射到最接近的支持比例;quality 参数对该后端无效(忽略)。" +
+      "支持图生图/多图融合:传 referenceImages(工作区图片路径)作为参考图一起喂给模型。",
   },
   // ─── video ───
   {
