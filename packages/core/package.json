@@ -16,10 +16,9 @@
     "./dist/data/*.json",
     "./dist/prompt/sections/*.md"
   ],
+  "//files": "LICENSE/README intentionally omitted: npm/bun always include them in a publish regardless of this list, so the published tarball is unchanged — but listing them makes electron-builder (which follows the workspace symlink when packaging the desktop app) try to copy them from packages/core, tripping its 'file must be under <app>' guard (electron-builder#3238). dist is all the desktop bundle needs.",
   "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
+    "dist"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && mkdir -p dist/prompt/sections dist/data && cp src/prompt/sections/*.md dist/prompt/sections/ && cp src/data/*.json dist/data/",

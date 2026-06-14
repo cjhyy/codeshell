@@ -612,7 +612,7 @@ export function getTheme(themeName: ThemeName): Theme {
 }
 
 /**
- * Converts a theme color to an ANSI escape sequence for use with asciichart.
+ * Converts a theme color to an ANSI escape sequence for use in chart rendering.
  *
  * Apple Terminal doesn't handle 24-bit (true-color) escape sequences well, so
  * on that terminal we downgrade to the nearest xterm-256 color index instead.
