@@ -236,13 +236,26 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   /** Cmd+P / sidebar 搜索 — cross-project session picker (modal). */
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
-  const [activeModelKey, setActiveModelKey] = useState<string | null>(null);
+  // The GLOBAL default model — the choice that seeds *new* sessions. Lives in
+  // settings.activeKey. A per-session switch updates this default too (so the
+  // next 新对话 inherits it), but it must NOT retroactively drag existing
+  // sessions onto a different model — that's what `modelOverrides` is for.
+  const [defaultActiveModelKey, setDefaultActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
   // Provider-agnostic image clarity (low/standard/high) from merged settings;
   // drives renderer-side downscale before send. Undefined = follow default.
   const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(undefined);
   const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>({});
+  /**
+   * Per-bucket model override, keyed by the SAME bucketKey() as
+   * permission/goal overrides. A session that has switched models (or whose
+   * model was pinned at first send) lives here; everything else falls back to
+   * `defaultActiveModelKey`. This is the fix for "切换模型不应改掉旧 session
+   * 的模型": each session remembers its own model, and changing the global
+   * default never overwrites an existing bucket's entry.
+   */
+  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>({});
   /** Per-bucket Goal-mode toggle (orthogonal to permission). */
   const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>({});
   const [settingsRevision, setSettingsRevision] = useState(0);
@@ -277,6 +290,9 @@ function App() {
     sessionIndices[activeRepoKey]?.activeSessionId ?? null;
   const activeBucket = bucketKey(activeRepoId, activeSessionId);
   const permissionMode = permissionOverrides[activeBucket] ?? defaultPermissionMode;
+  // The model shown/used for the ACTIVE session: its own override if it has
+  // one, else the global default. Drafts share the per-repo "_none_" bucket.
+  const activeModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey;
   const goalEnabled = goalOverrides[activeBucket] ?? false;
   const busy = busyKeys.has(activeBucket);
   const [composerDrafts, setComposerDrafts] = useState<ComposerDraftsMap>({});
@@ -718,6 +734,9 @@ function App() {
     const draftBucket = bucketKey(repoId, null);
     setPermissionOverrides((prev) => clearBucketOverride(prev, draftBucket));
     setGoalOverrides((prev) => clearBucketOverride(prev, draftBucket));
+    // Same for model: a new draft starts on the global default, not the
+    // previous draft's per-bucket pick.
+    setModelOverrides((prev) => clearBucketOverride(prev, draftBucket));
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
@@ -1409,6 +1428,17 @@ function App() {
       const draftBucket = activeBucket;
       setPermissionOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
       setGoalOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
+      setModelOverrides((prev) => migrateBucketOverride(prev, draftBucket, bucket));
+    }
+    // Pin this session's model on its first send. Capturing the model in
+    // effect right now means a LATER change to the global default won't drag
+    // this (now-existing) session onto a different model. Only seed if the
+    // bucket has no explicit override yet — never clobber a deliberate switch.
+    if (activeModelKey && modelOverrides[bucket] === undefined) {
+      const pinned = activeModelKey;
+      setModelOverrides((prev) =>
+        prev[bucket] === undefined ? { ...prev, [bucket]: pinned } : prev,
+      );
     }
 
     // Look up any previously-bound engine sessionId for this UI session.
@@ -1459,6 +1489,18 @@ function App() {
     // Goal mode: this send's prompt IS the goal — the engine runs
     // loop-until-done. Goal text == prompt text (reuses the composer input).
     if (goalEnabled && text.trim()) opts.goal = text;
+
+    // Pin this session's engine to its per-bucket model before the turn. The
+    // engine session may have just been created fresh (resume / first send /
+    // draft where the user picked a non-default model) on the worker's current
+    // model — without this, a session pinned to model A would silently run on
+    // the worker default. configure({sessionId,model}) → requestModelSwitch
+    // applies immediately when idle, so it lands before the turn starts. Skip
+    // when the bucket has no override (it follows the default — no switch needed).
+    const bucketModel = modelOverrides[bucket] ?? modelOverrides[activeBucket];
+    if (bucketModel) {
+      void window.codeshell.configure({ sessionId: engineSessionId, model: bucketModel });
+    }
 
     void window.codeshell
       .run(text, opts)
@@ -1999,7 +2041,7 @@ function App() {
         const userS = (await window.codeshell.getSettings("user")) ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
         if (cancelled) return;
-        setActiveModelKey(resolveActiveKey(merged));
+        setDefaultActiveModelKey(resolveActiveKey(merged));
         const permissions = merged.permissions && typeof merged.permissions === "object"
           ? (merged.permissions as Record<string, unknown>)
           : {};
@@ -2117,14 +2159,39 @@ function App() {
   };
 
   const onModelChange = (opt: ModelOption): void => {
-    setActiveModelKey(opt.key);
-    // Persist the choice for next process start.
+    // 1) Pin the choice to THIS session's bucket. The pill reads
+    //    `modelOverrides[activeBucket] ?? defaultActiveModelKey`, so this is
+    //    what makes the switch local — other sessions keep their own model.
+    setModelOverrides((prev) => ({ ...prev, [activeBucket]: opt.key }));
+    // 2) Also adopt it as the global default so the NEXT 新对话 inherits it
+    //    (user-chosen semantics). This only seeds future sessions; it never
+    //    rewrites another bucket's existing override above.
+    setDefaultActiveModelKey(opt.key);
     void window.codeshell.updateSettings("user", { activeKey: opt.key });
-    // Notify the running agent worker immediately so the switch takes
-    // effect on the very next turn — without this, the worker (which
-    // reads llmConfig once at bootstrap) stays on the old model until
-    // the electron process is restarted.
-    void window.codeshell.configure({ model: opt.key });
+    // 3) Hot-switch the running worker. Scope it to THIS session's engine so
+    //    we don't swap the model under any OTHER live session. The backend
+    //    (server.ts handleConfigure) routes a sessionId'd configure to
+    //    ChatSession.requestModelSwitch (applies when idle, defers past a
+    //    running turn). For a draft (no engine session bound yet) there's
+    //    nothing live to notify — the model rides along via send()'s opts.
+    const engineId = engineSessionIdForActive();
+    if (engineId) {
+      void window.codeshell.configure({ sessionId: engineId, model: opt.key });
+    }
+  };
+
+  /**
+   * Engine sessionId of the currently-active UI session, or null for a draft
+   * (or a session that hasn't bound an engine id yet). Mirrors the lookup in
+   * send()/resume — engineSessionId falls back to the UI session id, which is
+   * the new normal (UI sessionId == engine sessionId).
+   */
+  const engineSessionIdForActive = (): string | null => {
+    if (!activeSessionId) return null;
+    const summary = sessionIndices[activeRepoKey]?.sessions.find(
+      (s) => s.id === activeSessionId,
+    );
+    return summary?.engineSessionId ?? activeSessionId;
   };
 
   const matchCount = useMemo(() => {

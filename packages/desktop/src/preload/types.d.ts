@@ -302,7 +302,16 @@ export interface CodeshellApi {
    * sessions; applied at the next turn boundary, in-flight turns untouched.
    */
   configure(params: {
+    /**
+     * When present, the configure targets ONE session's engine (per-session
+     * model/permission/plan switch) instead of the worker-global default.
+     * Routed to ChatSession.requestModelSwitch / setPermissionMode in
+     * server.ts handleConfigure.
+     */
+    sessionId?: string;
     model?: string;
+    permissionMode?: string;
+    planMode?: boolean;
     reloadModels?: boolean;
     reloadSettings?: boolean;
   }): Promise<RpcResponse>;

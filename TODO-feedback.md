@@ -22,8 +22,8 @@
 - **现象**:在一个 session 里切换模型后,之前的 session 也会显示/使用新模型;当前 session 热切换还可能不生效,因为 renderer 只发了全局 `configure({ model })`。
 - **根因(已定位)**:桌面端模型状态仍是全局态:`App.tsx` 只有一个 `activeModelKey`,所有 `ChatView` 共用;`onModelChange` 同时 `setActiveModelKey(opt.key)`、写 `settings.activeKey`、并调用不带 `sessionId` 的 `window.codeshell.configure({ model: opt.key })`。后端已经支持 `configure({ sessionId, model })` → `ChatSession.requestModelSwitch()`,但前端没接到 per-session 入口。
 - **期望**:模型选择分成「新 session/default 模型」和「旧 session 已绑定模型」。切换模型主要更新新 session 的默认选项;已经存在的旧 session 如果仍在用以前的模型,继续用以前的,不被全局切换带走。若用户在某个旧 session 内主动切模型,只影响该 session。
-- **状态**:🔴
-- **备注**:后续修复方向:renderer 保存 per-session/per-bucket model override,当前 pill 显示 `sessionModel ?? defaultActiveModelKey`;切换当前 session 时调用 `configure({ sessionId, model })`;是否写 `settings.activeKey` 应只发生在「设为默认/新 session 模型」语义下,不要把普通 session 内切换当成全局默认更新。
+- **状态**:🟢 已修(2026-06-14)
+- **修复**:renderer 加 `modelOverrides: Record<bucketKey, string>`(对齐 `permissionOverrides` 的 per-bucket 模式),`activeModelKey = modelOverrides[activeBucket] ?? defaultActiveModelKey` 派生;原全局 `activeModelKey` state 改名 `defaultActiveModelKey`(= settings.activeKey,只 seed 新 session)。`onModelChange` 三步:① 写当前 bucket override(pill 各 session 独立)② 用户拍板「session 内切换也设为默认」→ 仍写 `settings.activeKey` + `defaultActiveModelKey`(只影响**未来**新对话,绝不回写其他 bucket)③ 热切换改 **session 级** `configure({ sessionId, model })`(经 `engineSessionIdForActive()` 解析当前引擎 id)→ 后端 `handleConfigure` 早已支持 → `requestModelSwitch`(idle 立即/turn 边界延迟),不再 worker-global 带走别的 live session。另:首次 send 时按当前模型 pin 进 bucket(`migrateBucketOverride` 草稿→真实 + 旧 session 锚定,后续改默认不拖走);send() 在 run 前补一发 `configure({sessionId,model})` 兜底新建/resume 的引擎 session;新草稿 `clearBucketOverride` 不粘连。preload `configure` 签名加 `sessionId/permissionMode/planMode`(types.d.ts 同步)。设置页 ModelSection「设为默认」仍走 worker-global(属「设为默认」语义,各 session 下一轮 send 自动 re-pin 纠正)。tsc 绿 + build:renderer 绿。core 无改动。
 
 ### [2026-06-08] markdown 有序列表 1./2./3. 不显示
 - **现象**:回答里的有序列表只剩缩进的子项,序号 `1./2./3.` 和圆点都没渲染出来。
