@@ -26,7 +26,8 @@
       "out/**/*",
       "build/icon.png",
       "package.json",
-      "node_modules/node-pty/**/*"
+      "node_modules/node-pty/**/*",
+      "!node_modules/@cjhyy/code-shell-core/{LICENSE,README.md}"
     ],
     "asarUnpack": [
       "node_modules/node-pty/**/*"
