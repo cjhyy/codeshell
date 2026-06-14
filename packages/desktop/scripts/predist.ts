@@ -60,10 +60,14 @@ function main(): void {
   if (!existsSync(coreSrc)) throw new Error(`core package not found at ${coreSrc}`);
 
   // Drop whatever is currently at the target (symlink, or a stale real dir from
-  // a previous run).
+  // a previous run). On Windows a workspace link is a directory JUNCTION, and
+  // `rmSync(force)` without `recursive` throws EFAULT on it — so always pass
+  // `recursive: true`. For a junction/symlink, `recursive` removes only the
+  // link entry, never following it into the real core dir (verified: rm of a
+  // junction does not delete the target's contents).
   if (isSymlink(target)) {
-    log(`unlinking symlink -> ${safeReadlink(target)}`);
-    rmSync(target, { force: true });
+    log(`unlinking link -> ${safeReadlink(target)}`);
+    rmSync(target, { recursive: true, force: true });
   } else if (existsSync(target)) {
     log(`removing stale real dir`);
     rmSync(target, { recursive: true, force: true });

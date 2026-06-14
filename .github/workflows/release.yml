@@ -46,6 +46,17 @@ jobs:
         with:
           bun-version: "1.3.11"
 
+      # node-gyp (used to rebuild node-pty against Electron's ABI) imports
+      # Python's `distutils`, which was REMOVED from the stdlib in Python 3.12 —
+      # the version now default on the macOS/ubuntu runners. Without this the
+      # native rebuild dies with "No module named 'distutils'". Pin Python 3.11
+      # (still ships distutils) and ensure setuptools is present as a backstop.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: ensure setuptools (distutils for node-gyp)
+        run: python -m pip install --upgrade setuptools
+
       # Installs the whole workspace. The desktop package's postinstall
       # (rebuild:native) rebuilds node-pty against Electron's ABI here, on the
       # real target OS — the crux of why this is an OS matrix.
