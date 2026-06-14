@@ -52,15 +52,27 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
 
-      # Build core + tui (desktop depends on @cjhyy/code-shell-core via
-      # workspace:* and loads its dist/ at runtime — main bundles it as
-      # external, so the dist must exist).
-      - name: build core + tui
-        run: bun run build
+      # Build ONLY core — desktop depends on @cjhyy/code-shell-core via
+      # workspace:* and loads its dist/ at runtime (main keeps it external, so
+      # the dist must exist). We deliberately do NOT run the root `bun run build`
+      # (which also builds tui): the desktop app doesn't use tui, and tui's
+      # build script uses `cp -r`, which the Windows runner's cp rejects
+      # ("illegal option -- r"). Scoping to core sidesteps that and is faster.
+      - name: build core
+        run: bun run --filter '@cjhyy/code-shell-core' build
 
       # Four desktop sub-builds (main / preload / renderer / mobile) → out/.
       - name: build desktop
         run: bun run --cwd packages/desktop build
+
+      # Materialize the code-shell-core workspace symlink into a real in-tree
+      # dir BEFORE electron-builder runs (see scripts/predist.ts). We invoke it
+      # explicitly because the next step calls the electron-builder binary
+      # directly (not `bun run dist`), which would bypass the predist/prepack
+      # lifecycle hook.
+      - name: materialize workspace core (predist)
+        working-directory: packages/desktop
+        run: bun run scripts/predist.ts
 
       # electron-builder. Per-OS target comes from packages/desktop/package.json
       # build.{mac,win,linux}. `--publish never`: we attach artifacts ourselves
