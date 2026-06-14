@@ -38,10 +38,14 @@ describe("installPluginFromPath", () => {
     );
     mkdirSync(join(src, "agents"), { recursive: true });
     writeFileSync(join(src, "agents", "r.toml"), 'name = "r"\ndescription = "d"\nmodel = "flash"');
+    mkdirSync(join(src, "prompts"), { recursive: true });
+    writeFileSync(join(src, "prompts", "draftpr.md"), "---\ndescription: draft a PR\n---\nDraft $1");
     const dir = await installPluginFromPath(src, "cx", STAMP);
     const md = readFileSync(join(dir, "agents", "r.md"), "utf-8");
     expect(md).toContain("name: r");
     expect(md).toContain("model: flash");
+    // Codex prompts → CC commands/ so pluginCommandsLoader picks them up.
+    expect(existsSync(join(dir, "commands", "draftpr.md"))).toBe(true);
     const mcp = JSON.parse(readFileSync(join(dir, "mcp-servers.json"), "utf-8"));
     expect(mcp["cx:fs"]).toMatchObject({ command: "f", name: "cx:fs" });
     const meta = JSON.parse(readFileSync(join(dir, ".cs-meta.json"), "utf-8"));

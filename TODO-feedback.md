@@ -18,6 +18,13 @@
 - **备注**:
 -->
 
+### [2026-06-14] 模型切换不应改掉旧 session 的模型
+- **现象**:在一个 session 里切换模型后,之前的 session 也会显示/使用新模型;当前 session 热切换还可能不生效,因为 renderer 只发了全局 `configure({ model })`。
+- **根因(已定位)**:桌面端模型状态仍是全局态:`App.tsx` 只有一个 `activeModelKey`,所有 `ChatView` 共用;`onModelChange` 同时 `setActiveModelKey(opt.key)`、写 `settings.activeKey`、并调用不带 `sessionId` 的 `window.codeshell.configure({ model: opt.key })`。后端已经支持 `configure({ sessionId, model })` → `ChatSession.requestModelSwitch()`,但前端没接到 per-session 入口。
+- **期望**:模型选择分成「新 session/default 模型」和「旧 session 已绑定模型」。切换模型主要更新新 session 的默认选项;已经存在的旧 session 如果仍在用以前的模型,继续用以前的,不被全局切换带走。若用户在某个旧 session 内主动切模型,只影响该 session。
+- **状态**:🔴
+- **备注**:后续修复方向:renderer 保存 per-session/per-bucket model override,当前 pill 显示 `sessionModel ?? defaultActiveModelKey`;切换当前 session 时调用 `configure({ sessionId, model })`;是否写 `settings.activeKey` 应只发生在「设为默认/新 session 模型」语义下,不要把普通 session 内切换当成全局默认更新。
+
 ### [2026-06-08] markdown 有序列表 1./2./3. 不显示
 - **现象**:回答里的有序列表只剩缩进的子项,序号 `1./2./3.` 和圆点都没渲染出来。
 - **根因**:Tailwind v4 的 Preflight 把所有 `ul/ol` 重置成 `list-style: none`;`markdown.css` 只设了 padding 和 `li::marker` 颜色,从没把 `list-style-type` 加回来。
@@ -337,17 +344,18 @@
 - **已做**:skill-creator v0.1 作为官方市场 **mimi-plugins** 首个插件上线(github cjhyy/mimi-plugins,commit 6d0985f)——五步引导 meta-skill(访谈意图→选位置→按模板起草→校验→触发测试),走 CC 风格交互访谈而非 Codex 脚手架;随首启软预装自动到位(见 #22)。**留后**:eval/benchmark 循环(CC skill-creator 的 Evaluate/Improve 阶段)、Codex 式 init/validate 脚本。
 - **可能方向(原记录)**:codeshell 既然已 byte-compatible 复用社区 skill,可考虑加一个**自带 skill-creator 类能力**(作为内置 skill 或 UI 引导),帮用户在 codeshell 里直接写 skill;格式天然兼容 CC/Codex/agentskills.io。关联记忆 [[reference_cc_codex_skill_creator]]、[[project_extensions_ui]]、[[project_settings_projectpicker_done]](skill 系统已实现部分)。
 
-### 🟡 [2026-06-12] 安装 plugin/skill 的本地化适配(兼容 CC + Codex)— 现状盘点 + 缺口
+### 🟢 [2026-06-12→06-14] 安装 plugin/skill 的本地化适配(兼容 CC + Codex)— 主路径 + 真缺口(Codex 命令)已补
 - **诉求**:安装 plugin 或 skill 时怎么本地化、适配到 codeshell,如果 CC/Codex 都想兼容的话。
 - **核实(2026-06-12,已大量实现,这是「扩展」非「从零」)**:
   - **格式识别**:`detectPluginFormat`(`installer/detectFormat.ts:5`)二元判定——有 `.codex-plugin/plugin.json` = Codex,否则 = CC。
   - **CC 格式**:整目录原样复制(skills/agents/commands/hooks 等 CC 原生布局是 codeshell「母语」)。`install.ts:44`。
   - **Codex 格式→已做三类转换**:① **skills 原样拷**(CC/Codex SKILL.md 同构,见 `convertSkills.ts` 注释 "isomorphic",仅校验 frontmatter);② **agents:TOML→MD**(`convertAgents.ts`/`convertCodexAgentToml`);③ **mcp→`mcp-servers.json`** 按 `<plugin>:<server>` keying(`convertMcp.ts`/`resolveCodexMcpServers`)。`install.ts:51-68`。
   - 装后统一走 `scanInstalledPlugins`/`loadPluginHooks`/`loadPluginAgents` 等现有 loader(`install.ts:73`)。
-- **状态**:🟡 待评估缺口(主路径已通)
-- **已确认/可能缺口**:① **Codex 的 commands/prompts**(`~/.codex/prompts`、slash command)目前**未见转换**——只转了 skills/agents/mcp;CC 的 commands 已并入 skills 可直接用,Codex 的 prompts 是否要映射进来?② Codex 的 `AGENTS.md` 指令文件如何对待(codeshell 已有 AGENTS 层级注入,见记忆);③ skill 安装的独立入口(现在 skill 多随 plugin 装,单装一个 skill 仓库的路径是否顺畅);④ agentskills.io 开放标准的 `.agents/skills` 跨工具目录是否扫。建议先确认①是不是真缺口再排期。关联记忆 [[project_plugin_skill_localization]]、[[reference_cc_codex_skill_creator]]、[[project_extensions_ui]]、[[project_mcp_name_key_contract]]。
+- **状态**:🟢 已修(2026-06-14;真缺口①Codex 命令转换已补 + ③单 skill 仓库经核实本就通;②④主动判定非缺口/低价值不做)
+- **已修(2026-06-14)**:**①Codex commands/prompts 转换(真缺口)** = 新增 `installer/codex/convertCommands.ts`(`copyCodexCommands`),Codex 安装时把 `prompts/*.md`(+ 显式 `commands/*.md`)平铺进 `dest/commands/`——Codex 的 prompt 与 CC 的 slash command **同构**(都是 frontmatter+markdown、文件名=命令名),而 `pluginCommandsLoader` 本就扫 `commands/*.md`,装完即可 `/<plugin>:<name>` 调用。占位符语法差异(`$1`/`$FILE` vs CC)按 v1-inert 原样拷(对齐 `codex_` agent 字段策略);非 `.md` 忽略(Codex 同行为);文件名冲突时显式 `commands/` 胜 `prompts/`。接进 `install.ts` Codex 分支(CC 分支整目录拷已含 commands,不动)。测试:convertCommands 5 例 + install Codex 集成断言 prompt→command;installer 全 84 pass。**注:OpenAI 已弃用 custom prompts 转推 skills,此缺口真但低值,故仅做无损直拷不做占位符翻译。**
+- **核实非缺口/不做**:③**单 skill 仓库独立安装**=已通——只含 `skills/` 无 `.codex-plugin` 的 repo 走 `detectFormat`→`cc`→整目录原样拷,装后插件 loader(scanInstalledPlugins/skills 扫描)正常暴露,无需新入口;②**Codex `AGENTS.md`**=codeshell 已有 AGENTS 层级注入(见 [[project_plugin_skill_localization]]),插件内的 AGENTS.md 不是「安装时转换」问题、不做;④**`.agents/skills` 跨工具目录扫描**=低价值(agentskills.io 标准下 skills 已同构、装进插件即被扫),不主动新增扫描路径。关联记忆 [[project_plugin_skill_localization]]、[[reference_cc_codex_skill_creator]]、[[project_extensions_ui]]、[[project_mcp_name_key_contract]]。
 
-### 🟡 [2026-06-12] 建官方 marketplace 源 + 预置自带 skill — 引擎已齐,只缺「官方源」
+### 🟢 [2026-06-12] 建官方 marketplace 源 + 预置自带 skill — 引擎已齐,只缺「官方源」
 - **诉求**:是不是需要一个官方 marketplace,用来装自带 skill,用户下载就自带?
 - **核实(2026-06-12,关键=引擎齐全只缺内容源)**:
   - **marketplace 引擎已完整**:`marketplaceManager.ts` 能 clone github/git 仓库、读 manifest、装/删/列;**同时兼容 CC manifest(`.claude-plugin/marketplace.json`)和 Codex(`.agents/plugins/marketplace.json`)**(`resolveManifestPath` `:44-58`);市场 UI 齐(DiscoverHome/MarketList/MarketDetail/SkillsTab)。`known_marketplaces.json` 与 CC byte-compatible。

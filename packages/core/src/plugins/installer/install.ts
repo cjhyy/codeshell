@@ -9,6 +9,7 @@ import { CodexPluginManifest, type CSMeta, PluginInstallError } from "./types.js
 import { convertCodexAgentToml } from "./codex/convertAgents.js";
 import { resolveCodexMcpServers } from "./codex/convertMcp.js";
 import { copyCodexSkills } from "./codex/convertSkills.js";
+import { copyCodexCommands } from "./codex/convertCommands.js";
 import { appendInstallEntry, pluginInstallKey } from "../installedPlugins.js";
 
 /**
@@ -55,6 +56,8 @@ export async function installPluginFromPath(
       await copyCodexSkills(sourceDir, tmpDir);
       // agents (TOML → MD)
       await convertAgentsInto(sourceDir, tmpDir, name);
+      // prompts/ (+ commands/) → commands/ (Codex slash commands == CC commands)
+      await copyCodexCommands(sourceDir, tmpDir);
       // mcp → mcp-servers.json keyed <plugin>:<server>
       const servers = resolveCodexMcpServers(sourceDir, manifest.mcpServers);
       const keyed: Record<string, unknown> = {};
