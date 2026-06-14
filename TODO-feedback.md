@@ -384,3 +384,39 @@
 - **期望**:① 鉴权失败的报错**人话化**——明说「该 server 需要鉴权,请在 MCP 配置里填 Authorization/headers」,并区分「没配凭证」vs「配了但环境变量取不到值」vs「凭证被服务端拒(401)」;② MCP 配置 UI 给**鉴权字段的引导**(bearer token / 自定义 header 怎么填、env 变量名 vs 值的区别),降低 HTTP MCP 接入门槛;③ 折叠原始 stack trace 到「详情」里,默认只显友好摘要。
 - **状态**:🟢 已修(2026-06-12,7ecde29)
 - **备注(修了三处,比预想多一处真 bug)**:① **probe 补 env 鉴权**——`mcp-probe-service` 此前只用静态 headers、完全忽略 `bearerTokenEnvVar`/`envHeaders`,配了 env 鉴权的人点「测试」必失败且报误导 401;现复用 core `buildHttpHeaders`/`buildStdioEnv`(core index 新导出),与真实连接同语义;② `humanizeError` 报错分三类:env var 未设置(带变量名+字段名+「填的是名,值连接时读」)/ 401·-32001 鉴权失败(引导去填 Headers 或 Bearer Token 环境变量)/ 403 权限不足,401|403 用 `\b` 词边界防数字误伤;③ McpEditor(HTTP)新增「Bearer Token 环境变量」+「环境变量 Headers」字段(McpServer/ProbeInput 补三字段,序列化 spread 透传),带「环境变量名 vs 值」说明,明文 Headers 加敏感提示。③(stack trace 折叠)早已有「查看详情」模态,未动。关联记忆 [[project_mcp_auth_error_ux]]、[[project_mcp_name_key_contract]]。
+
+---
+
+## 📋 未完成项盘点(2026-06-14,核实 memory 后)
+
+> 说明:逐条比对了 git log 与当前代码,memory 里标「未提交」的(automation memory→`e4de9a2`、时间戳方案B、子代理收口→`51e6988`/`05268e4`、轮级 undo→`64d3a6f`/`4b4bb24`)**都已落地**,是过时快照。以下是**真正还没做**的(已对代码现状核实)。
+
+### ⚪️ [2026-06-14] shadcn Phase D — 删旧手写 CSS / 旧 Select 组件
+- **现状证据**:`packages/desktop/src/renderer/styles/` 仍有 **27 个 `.css`**;`main.tsx:8` 仍 `import "./styles.css"`(注释自标「removed in the final migration phase」);`ui/Select.tsx` **仍在磁盘且已 grep 确认零 import**(可直接删);`theme.ts` 仍在用 `[data-theme]`(CLAUDE.md 要求新代码用 `.dark` class)。
+- **范围**:① 删无人 import 的 `ui/Select.tsx`;② 清退 `styles/*.css`(逐个查 import 后删,仅 `main.tsx`/`Markdown.tsx`/`TerminalPanel.tsx`/`ReviewPanel.tsx`/`narrow-layout.smoke.test.tsx` 5 处还 import css);③ `theme.ts` 去 `[data-theme]` 改纯 `.dark`。
+- **性质**:纯清理,低风险;A/B/C 控件层早已迁完。关联 [[project_desktop_shadcn]]。
+- **状态**:⚪️ 留后(整洁活,随手可做)
+
+### ⚪️ [2026-06-14] 连接页 ModelSection 深度重排
+- **现状证据**:`settings/ModelSection.tsx` 仍 **1065 行**列表式 IA。
+- **背景**:连接 UI 大改(42ff471)主体已完成,这是当时主动留后的「深度重排」——绑 [[project_model_catalog]] 的 catalog/实例分离信息架构。
+- **性质**:UI 重构,需先定信息架构方案(非纯执行)。关联 [[project_connections_ui_overhaul]]。
+- **状态**:⚪️ 留后(需设计决策)
+
+### ⚪️ [2026-06-14] 手机遥控 UI 留后项 + 真机冒烟
+- **现状证据**:`packages/desktop/src/mobile/` 无 Markdown 渲染(现纯文本 + `<pre>`)。
+- **范围**:Markdown 渲染、后台 shell 查看(E4)、model UI(F2 协议已通缺 UI)、planMode;**真机冒烟需用户手机 + 桌面 Electron 扫码实测**(浏览器 boot 已验,WS 真链路要真 main)。
+- **性质**:部分需真机。关联 [[project_mobile_ui_react_rebuild]]。
+- **状态**:⚪️ 留后(部分需真机)
+
+### 🟡 [2026-06-14] Windows P8 真机冒烟 + CI 能否打 Windows 包
+- **现状**:Windows 移植 P1–P8 代码全实现已提交;CI 已有 `tests-windows` job 在**真 `windows-latest`** 上跑 win32 单元套件(shell/kill/PATHEXT/CRLF/sandbox/exec),**但没有打包步骤**。
+- **测试路径(三选一)**:① 本地 Win 机/VM:`cd packages/desktop && bun run dist` 出包,装上手点(开 session→跑 `dir`/写文件→内置终端验 node-pty→看 sandbox 是否如预期 off);② 给 CI 加 `package-windows` job(`windows-latest` + `electron-builder` + upload artifact),从 Actions 下 `.exe` 装任意 Win 机点;③ 只验代码层 → 现有 `tests-windows` 绿即够,真机项暂缓。
+- **关键认知**:**CI 打包成功 ≠ 验过**——无头环境起不了 Electron 窗口、开不了真 PTY、试不了 sandbox 降级/扫码遥控,这些只能真机点。且 node-pty 要按 Electron ABI 重编 + asarUnpack(见 [[project_desktop_four_panels]]),CI 上首次打包大概率要先调通这步。
+- **已知降级**:sandbox win=off(无隔离,用户已确认);node-pty 需 MSVC build tools(CI windows runner 自带)。
+- **性质**:真机冒烟 CI 替代不了;「CI 加 Windows 打包 job」可做(顺带验证 CI 能否打包)。关联 [[project_windows_port]]。
+- **状态**:🟡 待真机冒烟(代码已就绪)
+
+### 🟡 [2026-06-12] 记忆/Dream 机制专项(已记于上方,此处仅索引)
+- 见本文档上方同名条目:第一批已修(96c5a3e),整体设计专项待开。关联 [[project_memory_and_dream_overview]]。
+- **状态**:🟡 待开专项

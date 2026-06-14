@@ -1,0 +1,116 @@
+name: release
+
+# Tag-driven packaging. Push a vX.Y.Z (or vX.Y.Z-rc.N) tag and this builds
+# the Electron desktop app on all three native hosts, then attaches the
+# installers to a GitHub Release. Pre-release tags (containing a hyphen, e.g.
+# v0.5.0-rc.3) are published as a GitHub *prerelease* so they never become the
+# "Latest" download.
+#
+# WHY a real per-OS matrix (not cross-compile): node-pty ships no prebuilt
+# binary and must be rebuilt against the installed Electron's ABI on the SAME
+# OS it will run on (see packages/desktop/scripts/rebuild-native.ts, fired on
+# postinstall). Cross-building from Linux would ship a broken terminal panel.
+
+on:
+  push:
+    tags:
+      - "v*"
+  # Manual fallback: run from the Actions tab without tagging. Produces
+  # artifacts only (no Release) so you can smoke-test a build mid-iteration.
+  workflow_dispatch:
+
+# The Release-creating step needs write access to repo contents.
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: package (${{ matrix.os }})
+    strategy:
+      # Don't cancel the other OS builds if one fails — a red Windows build
+      # shouldn't deprive you of the mac/linux artifacts.
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: linux
+          - os: macos-latest
+            artifact: mac
+          - os: windows-latest
+            artifact: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      # Installs the whole workspace. The desktop package's postinstall
+      # (rebuild:native) rebuilds node-pty against Electron's ABI here, on the
+      # real target OS — the crux of why this is an OS matrix.
+      - name: install
+        run: bun install --frozen-lockfile
+
+      # Build core + tui (desktop depends on @cjhyy/code-shell-core via
+      # workspace:* and loads its dist/ at runtime — main bundles it as
+      # external, so the dist must exist).
+      - name: build core + tui
+        run: bun run build
+
+      # Four desktop sub-builds (main / preload / renderer / mobile) → out/.
+      - name: build desktop
+        run: bun run --cwd packages/desktop build
+
+      # electron-builder. Per-OS target comes from packages/desktop/package.json
+      # build.{mac,win,linux}. `--publish never`: we attach artifacts ourselves
+      # in the release job, so electron-builder must NOT try to publish (and a
+      # missing token never fails the build). Call the binary directly via bunx
+      # instead of `bun run dist -- …` — the `--` passthrough is version-fragile.
+      - name: package installers
+        working-directory: packages/desktop
+        run: bunx electron-builder --publish never
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeshell-${{ matrix.artifact }}
+          # electron-builder writes installers to packages/desktop/dist. Grab the
+          # distributable formats only (skip the unpacked dir, blockmaps, yml).
+          path: |
+            packages/desktop/dist/*.exe
+            packages/desktop/dist/*.dmg
+            packages/desktop/dist/*.zip
+            packages/desktop/dist/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: publish GitHub Release
+    # Only when triggered by a tag push — workflow_dispatch runs leave artifacts
+    # in the Actions tab without cutting a Release.
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Any tag with a hyphen (rc, beta, alpha) → prerelease, never "Latest".
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          name: ${{ github.ref_name }}
+          body: |
+            自动打包构建 — 用于在其他电脑(尤其 Windows)安装测试。
+
+            **安装包未签名**:
+            - Windows (.exe / nsis):SmartScreen 会拦,点「更多信息 → 仍要运行」。
+            - macOS (.dmg):提示「无法验证开发者」,右键 App → 打开 → 仍要打开。
+
+            产物按平台分目录上传。node-pty 已按各平台 Electron ABI 重编。
+          files: artifacts/**/*
+          fail_on_unmatched_files: false
