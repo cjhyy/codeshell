@@ -581,8 +581,38 @@ export function ConnectionsSection(props: ScopedProps) {
 
 export function GitSection() {
   const [prefs, setPrefs] = useState<GitPrefs>(() => loadGitPrefs());
+  // git.path: the user-configured git binary (machine-level, user scope). Lives
+  // in settings.json (not the localStorage GitPrefs) because core reads it to
+  // resolve git for marketplace clones / worktrees when a GUI launch didn't
+  // inherit PATH. null check status: undefined=unchecked, true/false=probed.
+  const [gitPath, setGitPath] = useState("");
+  const [gitOk, setGitOk] = useState<boolean | undefined>(undefined);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => { setPrefs(loadGitPrefs()); }, []);
+  useEffect(() => {
+    void (async () => {
+      const s = (await window.codeshell.getSettings("user")) ?? {};
+      setGitPath(stringOf(objectOf(s.git).path));
+    })();
+  }, []);
+
+  const { schedule: scheduleGitPath, flush: flushGitPath } = useDebouncedSave((value) =>
+    writeSettings("user", { git: { path: value } }),
+  );
+
+  const checkGit = async () => {
+    setChecking(true);
+    try {
+      flushGitPath();
+      const r = await window.codeshell.checkGit();
+      setGitOk(r.available);
+    } catch {
+      setGitOk(false);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const update = <K extends keyof GitPrefs>(key: K, value: GitPrefs[K]) => {
     setPrefs((c) => {
@@ -596,6 +626,30 @@ export function GitSection() {
   return (
     <section className="settings-section">
       <ul className="settings-row-list">
+        <GitRowShell
+          title="Git 可执行文件路径"
+          help="留空则用系统 PATH 中的 git。安装插件市场需要 git;若 GUI 启动时没继承到 PATH(Windows 常见),在此填写 git 可执行文件的绝对路径,如 C:\\Program Files\\Git\\cmd\\git.exe。"
+          control={
+            <div className="flex items-center gap-2">
+              <input
+                className="settings-git-input"
+                value={gitPath}
+                placeholder="(使用 PATH 中的 git)"
+                onChange={(e) => {
+                  setGitPath(e.target.value);
+                  setGitOk(undefined);
+                  scheduleGitPath(e.target.value);
+                }}
+                onBlur={flushGitPath}
+              />
+              <Button size="sm" variant="outline" disabled={checking} onClick={() => void checkGit()}>
+                {checking ? "检测中…" : "检测"}
+              </Button>
+              {gitOk === true && <span className="text-xs text-status-ok">✓ 可用</span>}
+              {gitOk === false && <span className="text-xs text-status-err">✗ 未找到</span>}
+            </div>
+          }
+        />
         <GitRowShell
           title="分支前缀"
           help="在 codeshell 中创建工作树时使用的分支前缀（创建后会自动追加工作树名 + 短哈希）"

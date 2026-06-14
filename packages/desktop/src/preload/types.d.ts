@@ -592,6 +592,11 @@ export interface CodeshellApi {
     latestCommit?: string;
     reason?: string;
   }>;
+  /**
+   * Is a usable git binary available (on PATH, or the configured `git.path`)?
+   * Marketplace install needs git; the UI uses this to prompt up front.
+   */
+  checkGit(): Promise<{ available: boolean }>;
   /** List known plugin marketplaces (never throws — returns [] on read error). */
   listMarketplaces(): Promise<
     Array<{

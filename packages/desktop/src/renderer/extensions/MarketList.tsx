@@ -33,8 +33,26 @@ export function MarketList({ cwd, onInstalled }: Props) {
   const alert = useAlert();
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  // Marketplace install shells out to git; probe up front so we can warn before
+  // the user hits a clone failure. null = not yet checked.
+  const [gitOk, setGitOk] = useState<boolean | null>(null);
 
   const retry = () => setReloadKey((k) => k + 1);
+
+  useEffect(() => {
+    let alive = true;
+    window.codeshell
+      .checkGit()
+      .then((r) => {
+        if (alive) setGitOk(r.available);
+      })
+      .catch(() => {
+        if (alive) setGitOk(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [reloadKey]);
 
   useEffect(() => {
     let alive = true;
@@ -108,6 +126,23 @@ export function MarketList({ cwd, onInstalled }: Props) {
     );
   if (markets === null) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
 
+  const gitBanner =
+    gitOk === false ? (
+      <div className="mb-3 rounded-md border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-foreground">
+        <span className="font-medium">未检测到 Git。</span> 安装/更新插件市场需要 Git。请从{" "}
+        <a
+          href="https://git-scm.com/downloads"
+          target="_blank"
+          rel="noreferrer"
+          className="underline"
+        >
+          git-scm.com
+        </a>{" "}
+        安装后重启;若已安装但仍提示(常见于 Windows 的 PATH 问题),可在 设置 里填写{" "}
+        <code className="rounded bg-muted px-1">git.path</code> 指向 git 可执行文件。
+      </div>
+    ) : null;
+
   const addForm = (
     <div className="mb-3 flex items-center gap-2">
       <Input
@@ -137,6 +172,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
   if (markets.length === 0)
     return (
       <>
+        {gitBanner}
         {addForm}
         <div className="p-4 text-sm text-muted-foreground">还没有添加任何市场</div>
       </>
@@ -144,6 +180,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
 
   return (
     <>
+      {gitBanner}
       {addForm}
       <ul className="space-y-1">
         {markets.map((m) => (

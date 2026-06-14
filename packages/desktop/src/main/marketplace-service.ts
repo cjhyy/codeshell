@@ -25,6 +25,23 @@ import {
   deriveMarketplaceName,
 } from "@cjhyy/code-shell-core";
 
+/**
+ * Turn core's machine-readable git errors into a friendly, actionable message.
+ * `GIT_NOT_FOUND:` is emitted by gitOps when no git binary is reachable — the
+ * most common first-run snag (git not installed, or a GUI launch that didn't
+ * inherit PATH). Anything else passes through unchanged.
+ */
+function humanizeGitError(error: string | undefined): string | undefined {
+  if (!error) return error;
+  if (error.startsWith("GIT_NOT_FOUND")) {
+    return (
+      "未找到 Git。安装插件市场需要 Git:请从 https://git-scm.com/downloads 安装后重启;" +
+      "若已安装但仍报此错(常见于 Windows 的 PATH 问题),可在 设置 → 填写 git.path 指向 git 可执行文件。"
+    );
+  }
+  return error;
+}
+
 // Local type mirrors (core does not re-export these). Keep in sync with core.
 export type MarketplaceSource =
   | { source: "github"; repo: string }
@@ -101,7 +118,7 @@ export async function addMarketplaceFromInput(
   const name = deriveMarketplaceName(source);
   const res = await addMarketplace(name, source);
   if (res.ok) return { ok: true, name: res.name };
-  return { ok: false, error: res.error };
+  return { ok: false, error: humanizeGitError(res.error) };
 }
 
 export function removeMarketplaceForUi(name: string): boolean {
@@ -122,5 +139,5 @@ export async function installPluginForUi(
     throw new Error("installPluginForUi requires marketplaceName");
   }
   const res = await installPlugin(pluginName, marketplaceName);
-  return res.ok ? { ok: true } : { ok: false, error: res.error };
+  return res.ok ? { ok: true } : { ok: false, error: humanizeGitError(res.error) };
 }

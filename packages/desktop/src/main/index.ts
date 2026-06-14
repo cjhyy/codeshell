@@ -24,6 +24,8 @@ import {
   type AutomationHandle,
   resolveExternalAgentConfig,
   getMergedCatalog,
+  setGitPathOverride,
+  isGitAvailable,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
@@ -858,6 +860,24 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
   }
 }
 
+/**
+ * Push the user's `git.path` setting (if any) into core's git resolver, so
+ * marketplace clones / worktrees use the configured binary even when a GUI
+ * launch didn't inherit the user's PATH. Re-run after settings change. Reads
+ * only the user scope — git location is a machine-level preference.
+ */
+async function applyGitPathFromSettings(): Promise<void> {
+  try {
+    const s = ((await readSettings("user").catch(() => null)) ?? {}) as {
+      git?: { path?: unknown };
+    };
+    const p = typeof s.git?.path === "string" ? s.git.path : null;
+    setGitPathOverride(p);
+  } catch {
+    setGitPathOverride(null);
+  }
+}
+
 app.whenReady().then(() => {
   if (process.platform === "darwin" && app.dock) {
     try {
@@ -873,8 +893,11 @@ app.whenReady().then(() => {
   // sources into ~/.code-shell, THEN soft pre-install the core plugins
   // (skill-creator from mimi-plugins; feedback#22 决策). Chained because the
   // install needs the seeded marketplace registered first. best-effort,
-  // fully self-guarded — never blocks the startup chain.
-  void seedDefaults().then(() => bootstrapCorePlugins());
+  // fully self-guarded — never blocks the startup chain. Apply the git.path
+  // override FIRST so the bootstrap clone honors a configured git binary.
+  void applyGitPathFromSettings()
+    .then(() => seedDefaults())
+    .then(() => bootstrapCorePlugins());
 
   // Automation: load the in-process scheduler (read-only jobs). Persisted
   // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
@@ -974,6 +997,13 @@ ipcMain.handle("plugins:update", async (_e, name: string) => {
 });
 ipcMain.handle("plugins:checkUpdate", async (_e, name: string) => {
   return checkPluginUpdateEntry(name);
+});
+// Is a usable git binary available (PATH, or the configured git.path)? The
+// marketplace UI uses this to show an "install Git" banner up front instead of
+// only after a clone fails.
+ipcMain.handle("git:check", async () => {
+  await applyGitPathFromSettings();
+  return { available: isGitAvailable() };
 });
 ipcMain.handle("marketplace:list", async () => listMarketplacesForUi());
 ipcMain.handle("marketplace:load", async (_e, name: string) =>
@@ -1718,6 +1748,8 @@ ipcMain.handle("settings:set", async (_e, scope: SettingsScope, patch: Record<st
   if (scope !== "user" && scope !== "project") throw new Error("invalid scope");
   if (!patch || typeof patch !== "object") throw new Error("patch must be object");
   await writeSettings(scope, patch, cwd);
+  // git.path may have changed — re-apply to core's git resolver immediately.
+  if ("git" in patch) void applyGitPathFromSettings();
 });
 
 const VALID_MEMORY_LEVELS = new Set<MemoryLevel>(["user", "project"]);

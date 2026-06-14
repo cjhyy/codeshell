@@ -462,6 +462,13 @@ export {
 export { env } from "./utils/env.js";
 export { default as sliceAnsi } from "./utils/sliceAnsi.js";
 export { execFileNoThrow } from "./utils/execFileNoThrow.js";
+export {
+  findExecutable,
+  resolveExecutable,
+  setGitPathOverride,
+  resolveGit,
+  isGitAvailable,
+} from "./utils/exec.js";
 export { gte } from "./utils/semver.js";
 export { logForDebugging } from "./utils/debug.js";
 export {
