@@ -1497,7 +1497,18 @@ function App() {
     // the worker default. configure({sessionId,model}) → requestModelSwitch
     // applies immediately when idle, so it lands before the turn starts. Skip
     // when the bucket has no override (it follows the default — no switch needed).
-    const bucketModel = modelOverrides[bucket] ?? modelOverrides[activeBucket];
+    // Final fallback to `activeModelKey` (= the model the UI currently shows
+    // for this session, itself defaulting to the global default). The engine
+    // session may have been created on a DIFFERENT model than the UI shows —
+    // e.g. the user changed the model from the Settings page (which only
+    // updates disk activeKey, not this renderer's per-bucket override) or the
+    // worker started on a stale pin. Without this fallback, `bucketModel`
+    // could be undefined while the engine quietly runs on its old model — the
+    // deepseek-vision rejection bug, where a "switched to gpt-5" session still
+    // ran on deepseek-v4-flash and refused the image. Always pin before the
+    // turn so the engine matches what the UI claims.
+    const bucketModel =
+      modelOverrides[bucket] ?? modelOverrides[activeBucket] ?? activeModelKey;
     if (bucketModel) {
       void window.codeshell.configure({ sessionId: engineSessionId, model: bucketModel });
     }
@@ -1518,6 +1529,25 @@ function App() {
           bucket,
           result: r as unknown as Record<string, unknown>,
         });
+        // Surface early-return failures that never produced a stream. Some
+        // RunResult reasons (image_error, model_error, prompt_too_long) are
+        // returned by the engine BEFORE any turn starts — no turn_start, no
+        // assistant_message, no turn_complete reaches the stream. Without
+        // this branch the only trace is `r.text` in the log: busy clears,
+        // nothing renders, and it reads as "卡住 / 没反应" (the deepseek-
+        // vision rejection bug). Render the engine's human-readable message
+        // as a turn_end(error) line in the stream + an error toast.
+        const result = r as { reason?: string; text?: string } | null;
+        const reason = result?.reason;
+        if (
+          reason === "image_error" ||
+          reason === "model_error" ||
+          reason === "prompt_too_long"
+        ) {
+          const detail = result?.text?.replace(/^ERROR:\s*/, "") || "本轮请求被拒绝";
+          dispatch({ type: "turn_end", bucket, reason: "error", detail });
+          toast({ message: detail, variant: "error" });
+        }
       })
       .catch((err) => {
         // Server crashed / RPC rejected / non-abort error. Without this
