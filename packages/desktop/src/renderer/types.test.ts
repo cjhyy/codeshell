@@ -4,6 +4,7 @@ import {
   INITIAL_STATE,
   applyStreamEvent,
   appendTurnEndMessage,
+  bgCompletionText,
   type AgentMessage,
   type AssistantMessage,
   type Message,
@@ -227,6 +228,36 @@ describe("applyStreamEvent — subagent isolation", () => {
     ]);
     const agent = findAgent(s, "A");
     expect(agent.text).toBe("hello world");
+    expect(agent.textBuffer).toBe("");
+  });
+
+  test("4b. clean turn_complete sweeps a still-running agent to done (#4 stuck count)", () => {
+    // Orphan: agent_start but no agent_end (dropped/raced). A cleanly completed
+    // main turn must not leave it done:false forever or the "后台 N 运行中" hint
+    // sticks.
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("text_delta", { agentId: "A", text: "partial" } as any),
+      turnComplete, // reason: "completed"
+    ]);
+    const agent = findAgent(s, "A");
+    expect(agent.done).toBe(true);
+    expect(agent.text).toBe("partial");
+    expect(agent.textBuffer).toBe("");
+    expect(agent.endedAt).toBeDefined();
+  });
+
+  test("4c. ABNORMAL turn_complete does NOT sweep (only flushes) — turn may resume", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("text_delta", { agentId: "A", text: "partial" } as any),
+      ev("turn_complete", { reason: "model_error" } as any),
+    ]);
+    const agent = findAgent(s, "A");
+    expect(agent.done).toBe(false); // not swept on a non-clean end
+    expect(agent.text).toBe("partial"); // but textBuffer still flushed
     expect(agent.textBuffer).toBe("");
   });
 
@@ -553,5 +584,31 @@ describe("applyStreamEvent — background_agent_completed", () => {
     const last = s.messages[s.messages.length - 1];
     expect(last.kind).toBe("system");
     expect((last as { text: string }).text).toContain("content policy");
+  });
+
+  test("long finalText is clipped to a one-line preview (#2 flood)", () => {
+    // A subagent that returns a multi-paragraph report must not dump the whole
+    // thing into the stream line — the full text lives in its own agent card.
+    const longText = "段落一。".repeat(200) + "\n\n第二段也很长。" + "x".repeat(500);
+    const line = bgCompletionText({
+      name: "researcher",
+      description: "deep dive",
+      status: "completed",
+      finalText: longText,
+    });
+    expect(line.length).toBeLessThan(200); // capped, not the full ~1000 chars
+    expect(line).toContain("researcher完成");
+    expect(line).toContain("…"); // ellipsis marks the clip
+    expect(line).not.toContain("\n"); // newlines collapsed → single line
+  });
+
+  test("short finalText is shown in full (no needless ellipsis)", () => {
+    const line = bgCompletionText({
+      name: "researcher",
+      description: "deep dive",
+      status: "completed",
+      finalText: "done, found 3 issues",
+    });
+    expect(line).toBe("✓ researcher完成:done, found 3 issues");
   });
 });

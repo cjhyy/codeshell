@@ -76,9 +76,9 @@ import { planDiskRebuild, type DiskSessionMeta } from "./automation/rebuildFromD
 import {
   enqueueQueuedInput,
   dequeueQueuedInput,
+  drainQueuedInput,
   clearQueuedInput,
   removeQueuedInputAt,
-  promoteQueuedInputAt,
   type QueuedInputState,
 } from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
@@ -224,6 +224,12 @@ function App() {
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
   const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
+  // Buckets mid-引导打断: the turn was cancelled and a merged re-send is about
+  // to fire on the next busy=false tick. State (not a ref) so `liveTurnActive`
+  // re-renders to stay lit across the cancel→re-send gap — without it busy
+  // briefly drops to false and the "正在思考…" indicator blinks off, leaving the
+  // user unsure anything is still working (interrupt-relay UX, decision #3).
+  const [relayingBuckets, setRelayingBuckets] = useState<Set<string>>(() => new Set());
   // Buckets that finished a turn while the user was viewing a different
   // session. Cleared when the user selects the bucket (handleSelectSession).
   // Not persisted — purely a live "did something finish off-screen" hint.
@@ -630,7 +636,10 @@ function App() {
   // the relayed turn with no thinking indicator. (interrupt-relay fix)
   const lastMessage = state.messages[state.messages.length - 1];
   const liveTurnActive =
-    busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user");
+    (busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user")) ||
+    // 引导打断 gap: turn cancelled, merged re-send pending on the next tick.
+    // Keep the indicator lit so the user sees work is still happening. (#3)
+    relayingBuckets.has(activeBucket);
 
   const setBusyForKey = (key: string, val: boolean): void => {
     // Track turn-start time for the manual-stop elapsed line (TODO 2.8).
@@ -1571,10 +1580,24 @@ function App() {
     if (busy || !activeSessionId) return;
     const queued = queuedInputs[activeBucket];
     if (!queued || queued.length === 0) return;
-    const { text, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
+    // A 引导打断 relay drains the WHOLE queue as one merged message (the user
+    // asked for everything to land at once); a natural turn-end auto-send takes
+    // just the next item. Either way clear the relay marker once we fire.
+    const isRelay = relayingBuckets.has(activeBucket);
+    const { text, state: next } = isRelay
+      ? drainQueuedInput(queuedInputs, activeBucket)
+      : dequeueQueuedInput(queuedInputs, activeBucket);
     setQueuedInputs(next);
+    if (isRelay) {
+      setRelayingBuckets((prev) => {
+        if (!prev.has(activeBucket)) return prev;
+        const n = new Set(prev);
+        n.delete(activeBucket);
+        return n;
+      });
+    }
     if (text) send(text);
-  }, [busy, activeBucket, activeSessionId, queuedInputs]);
+  }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
 
   const queueInput = (text: string): void => {
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
@@ -1582,7 +1605,8 @@ function App() {
 
   const forceSend = (text: string): void => {
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
-    stop(activeBucket);
+    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
+    stop(activeBucket, { relay: true });
   };
 
   const clearActiveQueuedInput = (): void => {
@@ -1593,17 +1617,26 @@ function App() {
     setQueuedInputs((prev) => removeQueuedInputAt(prev, activeBucket, index));
   };
 
-  const guideActiveQueuedInputAt = (index: number): void => {
-    setQueuedInputs((prev) => promoteQueuedInputAt(prev, activeBucket, index));
-    stop(activeBucket);
+  // 引导打断: interrupt the current turn and send the ENTIRE queue merged into
+  // one message. The relay marker keeps busy/liveTurnActive lit across the
+  // cancel→re-send gap (no "正在思考" flicker) and tells the useEffect above to
+  // drain everything rather than one item. (decisions #1 + #3)
+  const guideActiveQueuedInput = (): void => {
+    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
+    stop(activeBucket, { relay: true });
   };
 
-  const stop = (bucketOverride?: string): void => {
+  const stop = (bucketOverride?: string, opts?: { relay?: boolean }): void => {
     // Guard: when wired as a click handler (onClick={stop}) React passes the
     // MouseEvent as the first arg. Only honor a real string override; anything
     // else falls through to the running/active bucket. Without this the event
     // object reaches `bucket.indexOf` and throws — silently breaking Stop.
     const override = typeof bucketOverride === "string" ? bucketOverride : undefined;
+    // Relay = 引导打断: cancel the turn but DON'T draw a "你在 Ns 后停止了" line —
+    // the user isn't stopping, they're handing off to a queued re-send that
+    // fires on the next busy=false tick. The relay marker (relayingBuckets)
+    // keeps liveTurnActive lit across the gap.
+    const relay = opts?.relay === true;
     const bucket = override ?? runningBucketRef.current ?? activeBucket;
     const sep = bucket.indexOf("::");
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
@@ -1627,7 +1660,7 @@ function App() {
     const elapsedMs = startedAt !== undefined ? Date.now() - startedAt : undefined;
     setBusyForKey(bucket, false);
     if (runningBucketRef.current === bucket) runningBucketRef.current = null;
-    dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
+    if (!relay) dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
     void window.codeshell.cancel(engineSessionId);
   };
 
@@ -2408,7 +2441,7 @@ function App() {
               queuedInputItems={queuedInputs[activeBucket] ?? []}
               onClearQueuedInput={clearActiveQueuedInput}
               onRemoveQueuedInput={removeActiveQueuedInputAt}
-              onGuideQueuedInput={guideActiveQueuedInputAt}
+              onGuideQueuedInput={guideActiveQueuedInput}
               runningAgents={runningAgents}
               activeRepoId={activeRepoId}
               composerSeed={composerSeed}
