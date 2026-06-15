@@ -477,7 +477,7 @@ export function ChatView({
     pendingApproval && onApprovalDecide ? (
       <div
         ref={inlineApprovalRef}
-        className="approval-card-inline-anchor"
+        className="mx-4 my-2"
         data-request-id={pendingApproval.requestId}
       >
         <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />

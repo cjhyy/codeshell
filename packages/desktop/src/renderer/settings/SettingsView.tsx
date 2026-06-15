@@ -4,6 +4,7 @@ import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 const segBtn = (active: boolean) =>
   "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
@@ -64,23 +65,25 @@ export function SettingsView({ activeRepoPath }: Props) {
     <div className="flex h-full flex-col gap-3 p-6">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-          <button className={segBtn(scope === "user")} title="所有项目的默认配置" onClick={() => setScope("user")}>
+          <Button variant="ghost" size="sm" className={segBtn(scope === "user")} title="所有项目的默认配置" onClick={() => setScope("user")}>
             全局
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             className={segBtn(scope === "project") + (!activeRepoPath ? " opacity-50" : "")}
             disabled={!activeRepoPath}
             title={activeRepoPath ? "仅当前项目，覆盖全局默认" : "先在左侧选一个项目"}
             onClick={() => setScope("project")}
           >
             当前项目
-          </button>
+          </Button>
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
           {(["model", "permission", "mcp", "update", "json"] as Tab[]).map((t) => (
-            <button key={t} className={segBtn(tab === t)} onClick={() => setTab(t)}>
+            <Button key={t} variant="ghost" size="sm" className={segBtn(tab === t)} onClick={() => setTab(t)}>
               {tabLabel(t)}
-            </button>
+            </Button>
           ))}
         </div>
         <span className="text-xs text-muted-foreground">
@@ -108,7 +111,7 @@ export function SettingsView({ activeRepoPath }: Props) {
               </Button>
             </div>
             {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
-            <textarea
+            <Textarea
               className="min-h-[400px] w-full rounded-md border border-input bg-transparent p-3 font-mono text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               spellCheck={false}
               value={draft}

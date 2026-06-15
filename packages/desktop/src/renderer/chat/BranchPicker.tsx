@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, GitBranch } from "lucide-react";
 import type { GitBranches } from "../../preload/types";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Props {
   cwd: string | null;
@@ -134,59 +136,66 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   };
 
   return (
-    <div className="branch-picker" ref={wrapRef}>
-      <button
+    <div className="relative" ref={wrapRef}>
+      <Button
         type="button"
-        className="composer-context-pill branch-picker-trigger"
+        variant="outline"
+        size="sm"
+        className="h-8 gap-1 px-2 text-xs disabled:opacity-50"
         disabled={!canOpen}
         onClick={() => setOpen((o) => !o)}
         title={error ?? (clean === false ? "当前分支有未提交改动" : "切换 Git 分支")}
       >
         <GitBranch size={12} />
-        <span className="composer-context-pill-label branch-picker-name">{label}</span>
-        {clean === false && canOpen && <span className="composer-context-dirty-dot" />}
+        <span className="max-w-32 truncate text-xs font-medium">{label}</span>
+        {clean === false && canOpen && <span className="h-1.5 w-1.5 rounded-full bg-status-warn" />}
         <ChevronDown size={11} />
-      </button>
+      </Button>
 
       {open && (
-        <div className="branch-picker-popover">
-          {error && <div className="branch-picker-error">{error}</div>}
+        <div className="absolute bottom-full left-0 z-40 mb-2 w-72 rounded-md border bg-popover p-3 text-popover-foreground shadow-lg">
+          {error && <div className="rounded bg-status-err/10 p-2 text-xs text-status-err">{error}</div>}
           {pendingBranch ? (
-            <div className="branch-picker-confirm">
-              <div className="branch-picker-confirm-title">当前有未提交改动</div>
-              <div className="branch-picker-confirm-body">
+            <div className="rounded-md border p-3">
+              <div className="font-medium text-foreground">当前有未提交改动</div>
+              <div className="mt-1 text-xs text-muted-foreground">
                 切换到 {pendingBranch} 前需要先暂存当前改动。
               </div>
-              <div className="branch-picker-confirm-actions">
-                <button type="button" onClick={() => setPendingBranch(null)}>
+              <div className="mt-3 flex justify-end gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => setPendingBranch(null)}>
                   取消
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="primary"
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/40 text-primary hover:bg-primary/10"
                   onClick={() => {
                     void stashAndSwitch();
                   }}
                 >
                   暂存并切换
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <ul className="project-picker-list">
+            <ul className="max-h-64 overflow-y-auto py-1">
               {branches.branches.map((branch) => {
                 const active = branch === branches.current;
                 return (
                   <li
                     key={branch}
-                    className={`project-picker-item${active ? " active" : ""}`}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent",
+                      active && "bg-accent",
+                    )}
                     onClick={() => {
                       void choose(branch);
                     }}
                   >
-                    <GitBranch size={12} className="project-picker-item-icon" />
-                    <span className="project-picker-item-label">{branch}</span>
-                    {active && <Check size={12} className="project-picker-item-check" />}
+                    <GitBranch size={12} className="shrink-0 opacity-60" />
+                    <span className="flex-1 truncate">{branch}</span>
+                    {active && <Check size={12} className="text-primary" />}
                   </li>
                 );
               })}

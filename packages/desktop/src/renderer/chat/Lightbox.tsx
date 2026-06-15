@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { X, Download, Copy, FolderOpen, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "../ui/ToastProvider";
+import { Button } from "@/components/ui/button";
 
 /** Pure decision so the close behavior is unit-testable without a DOM. */
 export function shouldCloseOnKey(key: string): boolean {
@@ -138,82 +139,98 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
   };
 
   return (
-    <div className="lightbox-backdrop" onMouseDown={onClose}>
-      <div className="lightbox-shell" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="lightbox-toolbar">
-          <div className="lightbox-title" title={active.path ?? active.alt}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      onMouseDown={onClose}
+    >
+      <div
+        className="relative flex h-full w-full flex-col overflow-hidden rounded-lg border border-white/10 bg-background/95 shadow-2xl backdrop-blur"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-center gap-3 border-b border-border/70 bg-card/90 px-3 py-2">
+          <div className="min-w-0 flex-1 truncate text-sm font-medium" title={active.path ?? active.alt}>
             {active.alt}
             {hasNav && (
-              <span className="lightbox-counter"> · {safeCur + 1}/{gallery.length}</span>
+              <span className="ml-2 text-xs text-muted-foreground">{safeCur + 1}/{gallery.length}</span>
             )}
           </div>
-          <div className="lightbox-actions">
-            <button
+          <div className="flex items-center gap-1">
+            <Button
               type="button"
-              className="lightbox-icon-button"
+              size="icon"
+              variant="ghost"
               aria-label="下载"
               title="下载"
               onClick={onDownload}
             >
               <Download size={16} />
-            </button>
+            </Button>
             {active.path && (
-              <button
+              <Button
                 type="button"
-                className="lightbox-icon-button"
+                size="icon"
+                variant="ghost"
                 aria-label="复制路径"
                 title={copied ? "已复制" : "复制路径"}
                 onClick={onCopyPath}
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
-              </button>
+              </Button>
             )}
             {active.path && (
-              <button
+              <Button
                 type="button"
-                className="lightbox-icon-button"
+                size="icon"
+                variant="ghost"
                 aria-label="在文件夹中显示"
                 title="在文件夹中显示"
                 onClick={onReveal}
               >
                 <FolderOpen size={16} />
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               type="button"
-              className="lightbox-icon-button"
+              size="icon"
+              variant="ghost"
               aria-label="关闭"
               title="关闭"
               onClick={onClose}
             >
               <X size={18} />
-            </button>
+            </Button>
           </div>
         </div>
         {hasNav && (
-          <button
+          <Button
             type="button"
-            className="lightbox-nav lightbox-nav-prev"
+            className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-background/80 shadow-lg"
+            size="icon"
+            variant="outline"
             aria-label="上一张"
             title="上一张"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => navigate(-1)}
           >
             <ChevronLeft size={28} />
-          </button>
+          </Button>
         )}
-        <img className="lightbox-image" src={active.src} alt={active.alt} />
+        <div className="flex min-h-0 flex-1 items-center justify-center bg-black/40 p-4">
+          <img className="max-h-full max-w-full object-contain" src={active.src} alt={active.alt} />
+        </div>
         {hasNav && (
-          <button
+          <Button
             type="button"
-            className="lightbox-nav lightbox-nav-next"
+            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-background/80 shadow-lg"
+            size="icon"
+            variant="outline"
             aria-label="下一张"
             title="下一张"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => navigate(1)}
           >
             <ChevronRight size={28} />
-          </button>
+          </Button>
         )}
       </div>
     </div>

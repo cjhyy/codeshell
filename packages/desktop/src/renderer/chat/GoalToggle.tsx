@@ -1,5 +1,7 @@
 import React from "react";
 import { Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * Goal 模式开关 — orthogonal to the permission pill.
@@ -19,9 +21,11 @@ interface Props {
 
 export function GoalToggle({ enabled, onToggle, disabled }: Props) {
   return (
-    <button
+    <Button
       type="button"
-      className={`composer-pill goal-toggle shrink-0${enabled ? " goal-toggle-on" : ""}`}
+      variant={enabled ? "default" : "outline"}
+      size="sm"
+      className={cn("h-7 shrink-0 gap-1.5 px-2 text-xs", enabled && "shadow-sm")}
       disabled={disabled}
       aria-pressed={enabled}
       aria-label={enabled ? "Goal 模式已开启" : "Goal 模式已关闭"}
@@ -34,6 +38,6 @@ export function GoalToggle({ enabled, onToggle, disabled }: Props) {
     >
       <Target size={12} className="shrink-0" aria-hidden="true" />
       <span className="@max-[520px]/composer-controls:hidden">Goal</span>
-    </button>
+    </Button>
   );
 }

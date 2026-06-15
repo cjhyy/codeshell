@@ -10,6 +10,8 @@ import {
 } from "./ui/icons";
 import { Badge } from "./ui/Badge";
 import type { ViewMode } from "./view";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface NavBadges {
   approvals?: number;
@@ -41,20 +43,24 @@ const ITEMS: Item[] = [
 
 export function SidebarNav({ active, onSelect, badges = {} }: Props) {
   return (
-    <nav className="sidebar-nav">
+    <nav className="flex flex-col gap-1">
       {ITEMS.map(({ id, label, Icon, badge }) => {
         const count = badge ? badges[badge] ?? 0 : 0;
         return (
-          <button
+          <Button
             key={id}
-            className={`sidebar-nav-item${active === id ? " active" : ""}`}
+            variant="ghost"
+            className={cn(
+              "h-9 justify-start gap-2 px-2 text-muted-foreground",
+              active === id && "bg-accent text-foreground",
+            )}
             onClick={() => onSelect(id)}
             aria-current={active === id ? "page" : undefined}
           >
             <Icon size={14} />
-            <span className="sidebar-nav-label">{label}</span>
+            <span className="min-w-0 flex-1 truncate text-left">{label}</span>
             {count > 0 && <Badge count={count} />}
-          </button>
+          </Button>
         );
       })}
     </nav>

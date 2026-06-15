@@ -1104,7 +1104,7 @@ export function ToggleCapabilitySection({
       <p className="m-0 text-xs text-muted-foreground">{description}</p>
       <label className="flex items-center gap-2 text-sm">
         <span>{enabled ? "已启用" : "已禁用"}</span>
-        <input type="checkbox" checked={enabled} disabled={saving} onChange={(e) => void save(e.target.checked)} />
+        <Switch checked={enabled} disabled={saving} onCheckedChange={(next) => void save(next)} />
       </label>
     </section>
   );
@@ -1234,11 +1234,11 @@ export function ArchivedConversationsSection({
   };
 
   return (
-    <section className="archived-section">
-      <div className="archived-section-toolbar">
+    <section className="rounded-md border p-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <button
           type="button"
-          className="archived-clear-all"
+          className="h-8 px-3 text-xs text-status-err hover:text-status-err"
           onClick={removeAll}
           disabled={rows.length === 0}
         >
@@ -1247,23 +1247,23 @@ export function ArchivedConversationsSection({
       </div>
 
       {rows.length === 0 ? (
-        <div className="archived-empty">还没有任何归档对话。</div>
+        <div className="p-4 text-center text-sm text-muted-foreground">还没有任何归档对话。</div>
       ) : (
-        <ul className="archived-list">
+        <ul className="flex flex-col gap-2">
           {rows.map(({ repoId, project, session }) => (
-            <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`} className="archived-row">
-              <div className="archived-row-main">
-                <span className="archived-row-title">{session.title}</span>
-                <span className="archived-row-meta">
-                  <span className="archived-row-time">{formatArchivedTime(session.updatedAt)}</span>
-                  <span className="archived-row-dot">·</span>
-                  <span className="archived-row-repo">{project}</span>
+            <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`} className="flex items-center gap-3 rounded-md border p-3">
+              <div className="min-w-0 flex flex-1 flex-col">
+                <span className="truncate text-sm font-medium text-foreground">{session.title}</span>
+                <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="tabular-nums">{formatArchivedTime(session.updatedAt)}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="truncate">{project}</span>
                 </span>
               </div>
-              <div className="archived-row-actions">
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="archived-row-icon-btn"
+                  className="h-7 w-7 text-muted-foreground hover:text-status-err"
                   onClick={() => removeOne(repoId, session.id, session.title)}
                   title="永久删除"
                   aria-label="永久删除"
@@ -1272,7 +1272,7 @@ export function ArchivedConversationsSection({
                 </button>
                 <button
                   type="button"
-                  className="archived-row-link"
+                  className="h-7 px-2 text-xs"
                   onClick={() => onRestore(repoId, session.id)}
                   title="取消归档"
                 >

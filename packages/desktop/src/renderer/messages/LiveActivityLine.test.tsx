@@ -28,7 +28,7 @@ describe("LiveActivityLine", () => {
     ];
     const html = renderToStaticMarkup(<LiveActivityLine messages={msgs} running={true} />);
     expect(html).toContain("正在读取 automationMemory.ts");
-    expect(html).toContain("cs-live-shimmer");
+    expect(html).toContain("animate-pulse");
   });
 
   test("not running shows done-tense text and no shimmer class", () => {
@@ -38,12 +38,12 @@ describe("LiveActivityLine", () => {
     ];
     const html = renderToStaticMarkup(<LiveActivityLine messages={msgs} running={false} />);
     expect(html).toContain("已读取 automationMemory.ts");
-    expect(html).not.toContain("cs-live-shimmer");
+    expect(html).not.toContain("animate-pulse");
   });
 
   test("no tools yet → thinking text while running", () => {
     const html = renderToStaticMarkup(<LiveActivityLine messages={[user("u")]} running={true} />);
     expect(html).toContain("正在思考");
-    expect(html).toContain("cs-live-shimmer");
+    expect(html).toContain("animate-pulse");
   });
 });

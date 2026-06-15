@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -369,28 +370,32 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
               t.id === activeId ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"
             }`}
           >
-            <button type="button" className="flex min-w-0 items-center gap-1" onClick={() => setActiveId(t.id)}>
+            <Button type="button" variant="ghost" className="h-auto min-w-0 gap-1 p-0 hover:bg-transparent" onClick={() => setActiveId(t.id)}>
               <Globe className="h-3 w-3 shrink-0" />
               <span className="truncate">{t.title}</span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="shrink-0 opacity-0 group-hover:opacity-100"
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100"
               onClick={() => closeTab(t.id)}
               aria-label="关闭标签"
             >
               <X className="h-3 w-3" />
-            </button>
+            </Button>
           </div>
         ))}
-        <button
+        <Button
           type="button"
-          className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground"
           onClick={() => openInNewTab(NEW_TAB)}
           aria-label="新选项卡"
         >
           <Plus className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       </div>
 
       {/* Address bar */}
@@ -424,14 +429,16 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
         {markers.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
+              <Button
                 type="button"
-                className="relative flex h-8 items-center gap-1 rounded-md px-1.5 text-muted-foreground hover:bg-accent"
+                variant="ghost"
+                size="sm"
+                className="relative h-8 gap-1 px-1.5 text-muted-foreground"
                 title={`标注 ${markers.length}（本页 ${visibleMarkers.length}）`}
               >
                 <MapPin className="h-4 w-4" />
                 <span className="text-xs tabular-nums">{markers.length}</span>
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-96 w-80 overflow-y-auto">
               {groupMarkersByPage(markers).map((group, gi) => (
@@ -608,15 +615,16 @@ function MarkerDot({
   const dirty = draft !== marker.anchor.comment;
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={onOpen}
         title={marker.anchor.comment}
-        className="group absolute z-30 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground shadow ring-2 ring-background"
+        size="icon"
+        className="group absolute z-30 h-5 w-5 rounded-full text-[10px] font-semibold shadow ring-2 ring-background"
         style={{ top: Math.max(2, rect.y - 8), left: Math.max(2, rect.x - 8) }}
       >
         {index}
-      </button>
+      </Button>
       {editing && selectorMissed && (
         <div
           aria-hidden
@@ -652,26 +660,30 @@ function MarkerDot({
             </div>
           )}
           <div className="flex justify-end gap-1.5">
-            <button
+            <Button
               type="button"
-              className="rounded px-2 py-0.5 text-xs text-status-err hover:bg-accent"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-status-err"
               onClick={onDelete}
             >
               删除
-            </button>
+            </Button>
             {onUpdateComment && (
-              <button
+              <Button
                 type="button"
-                className="rounded px-2 py-0.5 text-xs hover:bg-accent disabled:opacity-50"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 disabled={!dirty}
                 onClick={() => onUpdateComment(draft)}
               >
                 保存
-              </button>
+              </Button>
             )}
-            <button type="button" className="rounded px-2 py-0.5 text-xs hover:bg-accent" onClick={onOpen}>
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onOpen}>
               关闭
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -693,19 +705,21 @@ function IconBtn({
   active?: boolean;
 }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
       title={label}
+      variant="ghost"
+      size="icon"
       className={
-        "rounded-md p-1.5 hover:bg-accent disabled:opacity-40 " +
+        "h-8 w-8 disabled:opacity-40 " +
         (active ? "bg-primary/15 text-primary" : "text-muted-foreground")
       }
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -722,11 +736,12 @@ function NewTabLanding({ onOpen }: { onOpen: (url: string) => void }) {
       ) : (
         <div className="flex flex-col gap-2">
           {ports.map((p) => (
-            <button
+            <Button
               key={p}
               type="button"
               onClick={() => onOpen(`http://localhost:${p}`)}
-              className="flex items-center gap-3 rounded-lg border border-border p-3 text-left hover:bg-accent"
+              variant="outline"
+              className="flex h-auto items-center gap-3 rounded-lg p-3 text-left"
             >
               <Globe className="h-5 w-5 text-muted-foreground" />
               <div className="min-w-0 flex-1">
@@ -734,7 +749,7 @@ function NewTabLanding({ onOpen }: { onOpen: (url: string) => void }) {
                 <div className="truncate text-xs text-muted-foreground">http://localhost:{p}</div>
               </div>
               <span className="h-2 w-2 shrink-0 rounded-full bg-status-ok" />
-            </button>
+            </Button>
           ))}
         </div>
       )}

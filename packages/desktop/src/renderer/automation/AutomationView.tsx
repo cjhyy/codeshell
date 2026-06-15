@@ -28,6 +28,7 @@ import {
   selectedProjectValue,
   cwdFromSelection,
 } from "./projectOptions";
+import { cn } from "@/lib/utils";
 
 const PERMISSION_OPTIONS = [
   { value: "read-only", label: "只读" },
@@ -330,11 +331,11 @@ export function AutomationView({
   if (!jobs) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
 
   return (
-    <div className="automation-view">
-      <div className="automation-head">
+    <div className="flex h-full flex-col gap-4 p-6">
+      <div className="flex shrink-0 items-center justify-between gap-3">
         <div>
-          <h2 className="automation-title">自动化</h2>
-          <p className="automation-subtitle">{jobs.length} 个任务</p>
+          <h2 className="text-lg font-semibold text-foreground">自动化</h2>
+          <p className="text-xs text-muted-foreground">{jobs.length} 个任务</p>
         </div>
         <Button size="sm" onClick={onCreateConversational}>
           <Plus size={14} />
@@ -343,39 +344,39 @@ export function AutomationView({
       </div>
 
       {jobs.length === 0 ? (
-        <div className="automation-empty">
+        <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
           还没有自动化任务。点击「新建自动化」,用对话告诉它你想定时做什么、何时运行 —— 不用填 cron 语法。
         </div>
       ) : (
-        <div className="automation-layout">
-          <ul className="automation-list">
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(220px,280px)_1fr] gap-4">
+          <ul className="min-h-0 overflow-y-auto rounded-md border bg-card p-1">
             {jobs.map((j) => (
               <li
                 key={j.id}
                 onClick={() => setSelected(j.id)}
-                className={
-                  "automation-job-row " +
-                  (selected === j.id ? "active" : "")
-                }
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent",
+                  selected === j.id && "bg-accent text-accent-foreground",
+                )}
               >
                 <span
-                  className={
-                    "automation-status-dot " +
-                    (j.enabled ? "enabled" : "paused")
-                  }
+                  className={cn(
+                    "h-2.5 w-2.5 shrink-0 rounded-full",
+                    j.enabled ? "bg-status-ok" : "bg-muted-foreground",
+                  )}
                 />
-                <span className="automation-job-main">
-                  <span className="automation-job-name">{j.name}</span>
-                  <span className="automation-job-meta">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{j.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
                     {j.enabled ? "活跃" : "暂停"} · {j.runCount} 次
                   </span>
                 </span>
-                <span className="automation-job-schedule">{describeSchedule(j.schedule)}</span>
+                <span className="max-w-24 shrink-0 truncate text-xs text-muted-foreground">{describeSchedule(j.schedule)}</span>
               </li>
             ))}
           </ul>
 
-          <div className="automation-detail-scroll">
+          <div className="min-h-0 overflow-y-auto">
             {detail ? (
               <AutomationDetail
                 job={detail}
@@ -401,7 +402,7 @@ export function AutomationView({
                 onOpenSession={onOpenSession}
               />
             ) : (
-              <div className="automation-empty">选择一个任务查看详情</div>
+              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">选择一个任务查看详情</div>
             )}
           </div>
         </div>
@@ -506,21 +507,22 @@ function AutomationDetail(props: {
   const tzOptions = timezoneOptions(job.timezone ?? "UTC");
 
   return (
-    <div className="automation-detail">
-      <div className="automation-detail-hero">
-        <div className="automation-detail-title">
+    <div className="flex flex-col gap-4">
+      <div className="rounded-md border bg-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
           <span
-            className={
-              "automation-status-dot " +
-              (job.enabled ? "enabled" : "paused")
-            }
+            className={cn(
+              "mt-1 h-2.5 w-2.5 shrink-0 rounded-full",
+              job.enabled ? "bg-status-ok" : "bg-muted-foreground",
+            )}
           />
-          <div>
-            <h3>{job.name}</h3>
-            <p>{describeSchedule(job.schedule)} · {job.timezone ?? "UTC"}</p>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-semibold text-foreground">{job.name}</h3>
+            <p className="text-xs text-muted-foreground">{describeSchedule(job.schedule)} · {job.timezone ?? "UTC"}</p>
           </div>
         </div>
-        <div className="automation-actions">
+        <div className="flex items-center gap-2">
           <Switch
             checked={job.enabled}
             onCheckedChange={(v) => props.onToggleEnabled(v)}
@@ -552,25 +554,26 @@ function AutomationDetail(props: {
           </Button>
         </div>
       </div>
+      </div>
 
-      <div className="automation-metrics">
-        <div>
-          <span>下次运行</span>
-          <strong>{fmtTime(job.nextRun)}</strong>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-md border bg-card p-3">
+          <span className="text-xs text-muted-foreground">下次运行</span>
+          <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.nextRun)}</strong>
         </div>
-        <div>
-          <span>上次运行</span>
-          <strong>{fmtTime(job.lastRun)}</strong>
+        <div className="rounded-md border bg-card p-3">
+          <span className="text-xs text-muted-foreground">上次运行</span>
+          <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.lastRun)}</strong>
         </div>
-        <div>
-          <span>历史 session</span>
-          <strong>{sessionCount}</strong>
+        <div className="rounded-md border bg-card p-3">
+          <span className="text-xs text-muted-foreground">历史 session</span>
+          <strong className="mt-1 block text-sm text-foreground">{sessionCount}</strong>
         </div>
       </div>
 
       {/* Prompt — edit button reveals an inline textarea (long text). */}
       {editingPrompt ? (
-        <div className="automation-panel">
+        <div className="flex flex-col gap-3 rounded-md border bg-card p-3">
           <Textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} rows={5} />
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => { setEditingPrompt(false); setPromptDraft(job.prompt); }}>
@@ -596,15 +599,15 @@ function AutomationDetail(props: {
           </div>
         </div>
       ) : (
-        <div className="automation-prompt-panel">
-          <pre>
+        <div className="flex flex-col gap-3 rounded-md border bg-card p-3">
+          <pre className="m-0 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/40 p-3 text-sm">
             {job.prompt}
           </pre>
           <Button size="sm" variant="outline" onClick={() => setEditingPrompt(true)}>编辑</Button>
         </div>
       )}
 
-      <div className="automation-panel">
+      <div className="rounded-md border bg-card p-3">
         <FieldRow label="状态">
           <Badge
             variant="outline"
@@ -748,11 +751,11 @@ function AutomationDetail(props: {
         </FieldRow>
       </div>
 
-      <div className="automation-run-history">
-        <div className="automation-section-head">
+      <div className="rounded-md border bg-card p-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h4>运行 session</h4>
-            <p>{lastSession ? `最近 ${shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt)}` : "暂无历史 session"}</p>
+            <h4 className="text-sm font-semibold text-foreground">运行 session</h4>
+            <p className="text-xs text-muted-foreground">{lastSession ? `最近 ${shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt)}` : "暂无历史 session"}</p>
           </div>
           {job.lastRunId && (
             <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
@@ -762,9 +765,9 @@ function AutomationDetail(props: {
           )}
         </div>
         {props.sessions.length === 0 ? (
-          <div className="automation-history-empty">这个任务还没有可跳转的历史 session。</div>
+          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">这个任务还没有可跳转的历史 session。</div>
         ) : (
-          <ul>
+          <ul className="space-y-1">
             {props.sessions.map(({ repoId, session, run, disk, needsImport }) => {
               // Trust the flag set at link synthesis (automationSessionLinks):
               // local-present links carry needsImport=false, disk/run-only links
@@ -775,8 +778,10 @@ function AutomationDetail(props: {
               const when = run?.updatedAt ?? session.updatedAt;
               return (
                 <li key={`${repoId ?? NO_REPO_KEY}:${session.id}`}>
-                  <button
-                    className="automation-history-row"
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-auto w-full justify-start gap-2 px-2 py-2 text-left"
                     onClick={() => {
                       if (needsImport && run) props.onOpenRunSession(run);
                       else if (disk) props.onOpenDiskSession(disk);
@@ -784,12 +789,12 @@ function AutomationDetail(props: {
                     }}
                   >
                     <Clock3 size={14} />
-                    <span className="automation-history-main">
-                      <span>{session.title}</span>
-                      <small>{shortDate(when)} · {runStatusLabel(status)}</small>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{session.title}</span>
+                      <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(status)}</small>
                     </span>
-                    <span className="automation-history-action">查看</span>
-                  </button>
+                    <span className="text-xs text-primary">查看</span>
+                  </Button>
                 </li>
               );
             })}

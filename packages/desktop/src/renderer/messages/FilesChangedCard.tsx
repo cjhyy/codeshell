@@ -5,6 +5,7 @@ import type { TurnUndoResult } from "../../preload/types";
 import { basename } from "../tool-cards/utils";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
 import { openFileTarget } from "../chat/openWith";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   message: FilesChangedSummaryMessage;
@@ -122,27 +123,30 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
 
   return (
     <>
-      <div className={`files-changed-card${open ? " open" : ""}`}>
-        <div className="files-changed-head-row">
-          <button
+      <div className={`rounded-md border bg-card p-3${open ? " open" : ""}`}>
+        <div className="flex items-center justify-between gap-2">
+          <Button
             type="button"
-            className="files-changed-head"
+            variant="ghost"
+            className="h-auto min-w-0 flex-1 justify-start gap-2 p-0 text-left hover:bg-transparent"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
           >
             {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            <span className="files-changed-label">已编辑 {files.length} 个文件</span>
-            <span className="files-changed-totals">
-              <span className="files-changed-added">+{totalAdded}</span>
-              <span className="files-changed-removed">-{totalRemoved}</span>
+            <span className="font-medium text-foreground">已编辑 {files.length} 个文件</span>
+            <span className="shrink-0 text-xs tabular-nums">
+              <span className="text-status-ok">+{totalAdded}</span>
+              <span className="text-status-err">-{totalRemoved}</span>
             </span>
-          </button>
+          </Button>
           {(canReview || canUndo || (!!sessionId && files.length > 0)) && (
-            <div className="files-changed-actions">
+            <div className="flex h-7 items-center gap-1">
               {canReview && (
-                <button
+                <Button
                   type="button"
-                  className="files-changed-action"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs"
                   onClick={() => {
                     // Open the docked review panel focused on this card's files
                     // (App listens for this). Fall back to the inline modal if
@@ -166,27 +170,31 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                 >
                   <Eye size={12} />
                   <span>审核</span>
-                </button>
+                </Button>
               )}
               {/* Undo / Redo toggle — only the latest turn is interactive.
                   An older card shows a disabled undo explaining it can only
                   peel from the newest turn. */}
               {!!sessionId && files.length > 0 && !isLatest && (
-                <button
+                <Button
                   type="button"
-                  className="files-changed-action"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs"
                   disabled
                   aria-label="撤销改动(不可用)"
                   title="只能从最新一轮开始撤销"
                 >
                   <RotateCcw size={12} />
                   <span>撤销</span>
-                </button>
+                </Button>
               )}
               {canUndo && !undone && (
-                <button
+                <Button
                   type="button"
-                  className="files-changed-action files-changed-action-danger"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs text-status-err hover:text-status-err"
                   onClick={() => setConfirmUndo(true)}
                   disabled={undoing}
                   aria-label="撤销改动"
@@ -194,12 +202,14 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                 >
                   <RotateCcw size={12} />
                   <span>{undoing ? "撤销中…" : "撤销"}</span>
-                </button>
+                </Button>
               )}
               {canUndo && undone && (
-                <button
+                <Button
                   type="button"
-                  className="files-changed-action"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs"
                   onClick={() => void onRedo()}
                   disabled={undoing}
                   aria-label="重新应用改动"
@@ -207,38 +217,40 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                 >
                   <RotateCw size={12} />
                   <span>{undoing ? "应用中…" : "重新应用"}</span>
-                </button>
+                </Button>
               )}
             </div>
           )}
         </div>
         {undoStatus && (
-          <div className="files-changed-status">{undoStatus}</div>
+          <div className="mt-2 rounded bg-muted/40 p-2 text-xs text-muted-foreground">{undoStatus}</div>
         )}
         {open && (
-          <div className="files-changed-body">
+          <div className="mt-2 flex flex-col gap-1">
             {visible.map((f) => (
-              <div key={f.path} className="files-changed-row">
+              <div key={f.path} className="flex items-center gap-2 rounded px-2 py-1 text-xs">
                 <a
                   href="#"
-                  className="files-changed-path"
+                  className="min-w-0 flex-1 truncate font-mono"
                   title={f.path}
                   onClick={(e) => openFileTarget(e, { path: f.path, cwd })}
                 >
                   {basename(f.path)}
                 </a>
-                <span className="files-changed-added">+{f.added}</span>
-                <span className="files-changed-removed">-{f.removed}</span>
+                <span className="text-status-ok">+{f.added}</span>
+                <span className="text-status-err">-{f.removed}</span>
               </div>
             ))}
             {remaining > 0 && (
-              <button
+              <Button
                 type="button"
-                className="files-changed-show-more"
+                variant="link"
+                size="sm"
+                className="mt-1 h-auto justify-start p-0 text-xs"
                 onClick={() => setShowAll(true)}
               >
                 再显示 {remaining} 个文件 ▾
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -276,29 +288,31 @@ function ConfirmUndoModal({
 }) {
   return (
     <div
-      className="files-changed-modal-scrim"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="files-changed-modal files-changed-modal-confirm">
-        <div className="files-changed-modal-head">
+      <div className="w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl max-w-md">
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <strong>撤销 {fileCount} 个文件的改动?</strong>
         </div>
-        <div className="files-changed-modal-body">
+        <div className="p-4">
           这些文件会还原到该轮编辑前的内容,本轮新建的文件会被删除。撤销后可「重新应用」。
         </div>
-        <div className="files-changed-modal-foot">
-          <button type="button" onClick={onCancel}>
+        <div className="flex justify-end gap-2 border-t px-4 py-3">
+          <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
             取消
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="files-changed-action-danger"
+            variant="ghost"
+            size="sm"
+            className="text-status-err hover:text-status-err"
             onClick={onConfirm}
           >
             确认撤销
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -322,24 +336,26 @@ function ReviewModal({
   const scopedFile = files.length === 1 ? files[0]! : undefined;
   return (
     <div
-      className="files-changed-modal-scrim"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="files-changed-modal files-changed-modal-review">
-        <div className="files-changed-modal-head">
+      <div className="w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl max-w-5xl">
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
           <strong>审核改动 — {files.length} 个文件</strong>
-          <button
+          <Button
             type="button"
-            className="files-changed-modal-close"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
             onClick={onClose}
             aria-label="close"
           >
             <X size={14} />
-          </button>
+          </Button>
         </div>
-        <div className="files-changed-modal-body files-changed-modal-body-scroll">
+        <div className="p-4 max-h-[70vh] overflow-y-auto">
           <UnifiedDiffViewer cwd={cwd} file={scopedFile} diffText={diffText} />
         </div>
       </div>

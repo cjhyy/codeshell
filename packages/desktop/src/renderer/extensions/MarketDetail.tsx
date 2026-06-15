@@ -100,9 +100,9 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
   return (
     <>
       <div className="mb-3 flex items-center gap-2">
-        <button className="text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
           ‹ 返回
-        </button>
+        </Button>
         <span className="font-semibold">{market.name}</span>
       </div>
       {market.plugins.length === 0 ? (

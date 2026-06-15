@@ -14,8 +14,8 @@ interface Props {
  */
 export function CustomizeView({ activeRepoPath }: Props) {
   return (
-    <div className="customize-view">
-      <header className="mcp-section-head">
+    <div className="flex h-full flex-col gap-3 p-6">
+      <header className="flex items-center justify-between gap-4">
         <h2 className="approvals-section-title">扩展</h2>
       </header>
       <ExtensionsPage activeRepoPath={activeRepoPath} />

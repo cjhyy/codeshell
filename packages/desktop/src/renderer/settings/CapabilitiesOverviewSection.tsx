@@ -187,42 +187,42 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
     : "设置所有项目继承的默认能力";
 
   return (
-    <section className="mb-6 flex flex-col gap-3 cap-overview">
-      <div className="cap-overview-hero">
-        <div className="cap-overview-hero-icon" aria-hidden>
+    <section className="mb-6 flex flex-col gap-3">
+      <div className="flex items-start gap-3 rounded-md border bg-card p-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary" aria-hidden>
           <Layers size={18} />
         </div>
-        <div className="cap-overview-hero-copy">
-          <div className="cap-overview-eyebrow">扩展能力</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">扩展能力</div>
           <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">能力总览</h3>
           <p className="m-0 text-xs text-muted-foreground">
             统一管理内置工具、MCP 服务器、技能、插件和子代理。先选全局默认，再为每个项目设置独立覆盖。
           </p>
         </div>
       </div>
-      {error && <p className="cap-overview-error">{error}</p>}
+      {error && <p className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</p>}
 
-      <div className="cap-overview-layout">
-        <nav className="cap-overview-scope" aria-label="能力配置范围">
+      <div className="grid min-h-[420px] grid-cols-1 gap-3 lg:grid-cols-[240px_1fr]">
+        <nav className="flex min-h-0 flex-col gap-1 rounded-md border p-2" aria-label="能力配置范围">
           <button
             type="button"
             className={cn(
-              "cap-overview-scope-item",
-              node.kind === "user" && "active",
+              "flex items-center gap-2 rounded-md border border-transparent px-2 py-2 text-left hover:bg-accent",
+              node.kind === "user" && "border-primary bg-primary/10",
             )}
             onClick={() => setNode({ kind: "user" })}
           >
-            <span className="cap-overview-scope-icon" aria-hidden>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground" aria-hidden>
               <Globe2 size={15} />
             </span>
-            <span className="cap-overview-scope-text">
-              <span className="cap-overview-scope-title">用户(全局)</span>
-              <span className="cap-overview-scope-subtitle">默认配置</span>
+            <span className="min-w-0 flex flex-col">
+              <span className="truncate text-sm font-medium text-foreground">用户(全局)</span>
+              <span className="truncate text-xs text-muted-foreground">默认配置</span>
             </span>
           </button>
-          <div className="cap-overview-scope-label">项目配置</div>
+          <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">项目配置</div>
           {repos.length === 0 && (
-            <div className="cap-overview-empty-scope">尚无项目</div>
+            <div className="px-2 py-3 text-xs text-muted-foreground">尚无项目</div>
           )}
           {repos.map((r) => {
             const label = repoLabel(r);
@@ -232,36 +232,36 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                 type="button"
                 key={r.id}
                 className={cn(
-                  "cap-overview-scope-item",
-                  active && "active",
+                  "flex items-center gap-2 rounded-md border border-transparent px-2 py-2 text-left hover:bg-accent",
+                  active && "border-primary bg-primary/10",
                 )}
                 title={r.path}
                 onClick={() => setNode({ kind: "project", repoPath: r.path, label })}
               >
-                <span className="cap-overview-scope-icon" aria-hidden>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground" aria-hidden>
                   <FolderGit2 size={15} />
                 </span>
-                <span className="cap-overview-scope-text">
-                  <span className="cap-overview-scope-title">{label}</span>
-                  <span className="cap-overview-scope-subtitle">{r.path}</span>
+                <span className="min-w-0 flex flex-col">
+                  <span className="truncate text-sm font-medium text-foreground">{label}</span>
+                  <span className="truncate text-xs text-muted-foreground">{r.path}</span>
                 </span>
               </button>
             );
           })}
         </nav>
 
-        <div className="cap-overview-main">
-          <div className="cap-overview-panel-head">
-            <div className="cap-overview-selected">
-              <span className="cap-overview-selected-icon" aria-hidden>
+        <div className="min-h-0 rounded-md border p-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground" aria-hidden>
                 {selectedProject ? <FolderGit2 size={16} /> : <Globe2 size={16} />}
               </span>
-              <span className="cap-overview-selected-copy">
+              <span className="min-w-0 flex flex-col">
                 <strong>{selectedTitle}</strong>
                 <span>{selectedSubtitle}</span>
               </span>
             </div>
-            <div className="cap-overview-stats" aria-label="能力统计">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-label="能力统计">
               <span>{summary.total} 项能力</span>
               <span>{summary.enabled} 项启用</span>
               {selectedProject && <span>{summary.overridden} 项本项目覆盖</span>}
@@ -276,21 +276,21 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
             groups.map((g) => {
               const collapsed = isGroupCollapsed(toggled, g.kind);
               return (
-              <div className="cap-overview-group" key={g.kind}>
+              <div className="border-b last:border-b-0" key={g.kind}>
                 <button
                   type="button"
-                  className="cap-overview-group-head"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent"
                   aria-expanded={!collapsed}
                   onClick={() => toggleGroup(g.kind)}
                 >
-                  <span className="cap-overview-group-chevron" aria-hidden>
+                  <span className="text-muted-foreground" aria-hidden>
                     {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                   </span>
-                  <span className="cap-overview-group-icon" aria-hidden>
+                  <span className="text-muted-foreground" aria-hidden>
                     {React.createElement(KIND_ICON[g.kind], { size: 15 })}
                   </span>
                   <span>{g.label}</span>
-                  <span className="cap-overview-group-count">{g.items.length}</span>
+                  <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{g.items.length}</span>
                 </button>
                 {!collapsed && g.items.map((cap) => {
                   const meta = capabilityMeta(cap);
@@ -298,7 +298,7 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                   // builtin has no dedicated detail tab, so its rows don't navigate.
                   const navigable = !!onNavigateToKind && cap.kind !== "builtin";
                   return (
-                    <div className="cap-overview-row" key={cap.id}>
+                    <div className="flex items-center gap-3 px-2 py-2 text-sm" key={cap.id}>
                       <span
                         className={cn(
                           "cap-overview-info",
@@ -319,11 +319,11 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                             : undefined
                         }
                       >
-                        <span className="cap-overview-name">{cap.name}</span>
+                        <span className="font-medium text-foreground">{cap.name}</span>
                         {cap.description && (
-                          <span className="cap-overview-desc">{cap.description}</span>
+                          <span className="text-xs text-muted-foreground">{cap.description}</span>
                         )}
-                        <span className="cap-overview-row-tags">
+                        <span className="flex shrink-0 flex-wrap items-center gap-1">
                           <span
                             className={cn(
                               "cap-overview-status",
@@ -338,8 +338,8 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                               {projectStateLabel(cap)}
                             </span>
                           )}
-                          {selectedProject && <span className="cap-overview-meta">{baselineLabel(cap)}</span>}
-                          {meta && <span className="cap-overview-meta">{meta}</span>}
+                          {selectedProject && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{baselineLabel(cap)}</span>}
+                          {meta && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{meta}</span>}
                         </span>
                       </span>
                       {node.kind === "user" ? (
@@ -350,7 +350,7 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                         />
                       ) : (
                         <div
-                          className="cap-overview-project-control"
+                          className="ml-auto flex items-center gap-2"
                           aria-label={`${cap.name} 项目覆盖`}
                         >
                           {(["inherit", "on", "off"] as ProjectState[]).map((state) => {

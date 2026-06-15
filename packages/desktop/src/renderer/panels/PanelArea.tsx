@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { FilesPanel } from "./FilesPanel";
 import { BrowserPanel } from "./BrowserPanel";
 import type { Anchor } from "../chat/anchors";
@@ -213,18 +214,20 @@ export function PanelArea({
                 active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50",
               )}
             >
-              <button type="button" className="flex items-center gap-1.5" onClick={() => setActiveId(t.id)}>
+              <Button type="button" variant="ghost" className="h-auto gap-1.5 p-0 hover:bg-transparent" onClick={() => setActiveId(t.id)}>
                 <Icon className="h-3.5 w-3.5" />
                 {label}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 aria-label="关闭标签"
-                className="rounded p-0.5 opacity-0 hover:bg-background/60 group-hover:opacity-100"
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 opacity-0 hover:bg-background/60 group-hover:opacity-100"
                 onClick={() => closeTab(t.id)}
               >
                 <X className="h-3 w-3" />
-              </button>
+              </Button>
             </div>
           );
         })}
@@ -232,13 +235,15 @@ export function PanelArea({
         {/* + menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
+            <Button
               type="button"
               aria-label="新建标签"
-              className="ml-0.5 shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent"
+              size="icon"
+              variant="ghost"
+              className="ml-0.5 h-7 w-7 shrink-0 text-muted-foreground"
             >
               <Plus className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             {KINDS.map(({ kind, label, Icon }) => (
@@ -251,15 +256,17 @@ export function PanelArea({
         </DropdownMenu>
 
         <div className="flex-1" />
-        <button
+        <Button
           type="button"
           onClick={() => setMaximized((v) => !v)}
           aria-label={maximized ? "还原面板" : "放大面板"}
           title={maximized ? "还原(覆盖输入区→停靠)" : "放大(覆盖输入区)"}
-          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent"
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7 shrink-0 text-muted-foreground"
         >
           {maximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </button>
+        </Button>
         {/* No close-whole-panel ✕ — close tabs to close the dock (the last tab
             closing calls onClose). Keeps one consistent "close" affordance. */}
       </div>
@@ -287,15 +294,16 @@ function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
     <div className="flex min-h-0 flex-1 items-center justify-center p-6">
       <div className="grid w-full max-w-md grid-cols-2 gap-3">
         {KINDS.map(({ kind, label, Icon }) => (
-          <button
+          <Button
             key={kind}
             type="button"
             onClick={() => onPick(kind)}
-            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-6 text-center transition-colors hover:border-primary/50 hover:bg-accent"
+            variant="outline"
+            className="flex h-auto flex-col items-center gap-2 rounded-lg bg-card px-4 py-6 text-center hover:border-primary/50"
           >
             <Icon className="h-7 w-7 text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">{label}</span>
-          </button>
+          </Button>
         ))}
       </div>
     </div>

@@ -72,18 +72,18 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
   };
 
   return (
-    <div className="settings-menu" ref={ref}>
+    <div className="relative" ref={ref}>
       <button
-        className={`sidebar-item settings-menu-trigger${open ? " active" : ""}`}
+        className={`sidebar-item${open ? " active" : ""}`}
         onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}
       >
         <SettingsIcon size={14} />
         <span className="sidebar-item-label">设置</span>
       </button>
       {open && (
-        <ul className="settings-popover">
+        <ul className="absolute bottom-full left-0 z-40 mb-2 min-w-56 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
           <li
-            className="settings-popover-item settings-popover-primary"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent font-medium text-primary"
             onClick={() => {
               setOpen(false);
               onOpenSettingsPage();
@@ -91,31 +91,31 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
           >
             <SettingsIcon size={13} />
             <span>打开设置…</span>
-            <ArrowRight size={11} className="settings-popover-chevron" />
+            <ArrowRight size={11} className="ml-auto text-muted-foreground" />
           </li>
-          <li className="settings-popover-divider" />
+          <li className="my-1 h-px bg-border" />
           <li
-            className="settings-popover-item"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
             onMouseEnter={openSubmenu}
           >
             <Globe size={13} />
             <span>切换语言</span>
-            <ChevronRight size={12} className="settings-popover-chevron" />
+            <ChevronRight size={12} className="ml-auto text-muted-foreground" />
           </li>
         </ul>
       )}
       {open && submenu && (
         <ul
-          className="settings-submenu"
+          className="absolute bottom-0 left-full z-50 ml-1 min-w-44 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
           style={{ left: submenu.left, top: submenu.top }}
         >
           {LANGUAGES.map((code) => (
             <li
               key={code}
-              className="settings-popover-item"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
               onClick={() => chooseLanguage(code)}
             >
-              <span className="settings-submenu-check">
+              <span className="ml-auto text-primary">
                 {lang === code && <Check size={12} />}
               </span>
               <span>{languageLabel(code)}</span>
