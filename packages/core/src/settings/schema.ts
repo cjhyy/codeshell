@@ -270,6 +270,45 @@ export const SettingsSchema = z
       })
       .optional(),
 
+    /**
+     * Unified instance layer (统一模型接入方案, see
+     * docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §3.3).
+     * One store for text/image/video connections, each pointing at a catalog
+     * entry (catalogId) and carrying its chosen model + key (or apiKeyRef reuse)
+     * + the param values the user picked. Replaces the legacy split of
+     * providers[]/models[]/imageGen/videoGen.
+     */
+    modelConnections: z
+      .array(
+        z.object({
+          /** User-chosen unique instance name. */
+          id: z.string(),
+          /** Catalog template this instance was created from. */
+          catalogId: z.string(),
+          tag: z.enum(["text", "image", "video"]),
+          /** Selected modelId (from the entry's modelPresets). */
+          model: z.string(),
+          baseUrl: z.string().optional(),
+          apiKey: z.string().optional(),
+          /** Reuse another instance's key: id of the instance whose apiKey to borrow. */
+          apiKeyRef: z.string().optional(),
+          /** Values the user picked for the model's params, e.g. { reasoning: "high" }. */
+          paramValues: z.record(z.string(), z.unknown()).optional(),
+        }),
+      )
+      .default([]),
+
+    /** Default instance id per tag (replaces activeKey / defaultProvider). */
+    defaults: z
+      .object({
+        text: z.string().optional(),
+        image: z.string().optional(),
+        video: z.string().optional(),
+        /** Background-task model (replaces auxModelKey). */
+        auxText: z.string().optional(),
+      })
+      .default({}),
+
     permissions: z
       .object({
         defaultMode: z
