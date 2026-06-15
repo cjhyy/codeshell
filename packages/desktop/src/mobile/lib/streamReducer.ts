@@ -336,8 +336,20 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       return { ...s, liveByAgent: rest, items, run: runStateForReason(reason) };
     }
 
+    case "goal_set": {
+      // Persistent goal established/replaced. Show the objective directly.
+      const objective = (event.objective as string | undefined) ?? "";
+      return { ...s, goal: objective ? `◎ ${objective}` : "◎ 目标" };
+    }
+
+    case "goal_cleared": {
+      return { ...s, goal: undefined };
+    }
+
     case "goal_progress": {
       const status = (event.status as string) ?? "";
+      // Goal achieved / gave up → drop the banner.
+      if (status === "met" || status === "exhausted") return { ...s, goal: undefined };
       const round = event.round as number | undefined;
       const label = round ? `目标 · 第 ${round} 轮 (${status})` : `目标 (${status})`;
       return { ...s, goal: label };

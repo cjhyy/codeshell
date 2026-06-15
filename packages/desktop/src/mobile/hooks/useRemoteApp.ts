@@ -58,6 +58,7 @@ export interface RemoteApp {
   ) => void;
   setPermissionMode: (mode: PermissionMode) => void;
   extendGoal: (sessionId: string) => void;
+  clearGoal: (sessionId: string) => void;
   // rooms
   refreshRooms: () => void;
   openRoom: (room: RoomPublic) => void;
@@ -371,6 +372,11 @@ export function useRemoteApp(): RemoteApp {
     [socket],
   );
 
+  const clearGoal = useCallback(
+    (sessionId: string) => socket.send({ type: "goal.clear", sessionId }),
+    [socket],
+  );
+
   const refreshRooms = useCallback(() => {
     socket.send({ type: "room.list" });
     socket.send({ type: "room.projects" });
@@ -429,6 +435,7 @@ export function useRemoteApp(): RemoteApp {
     respondApproval,
     setPermissionMode,
     extendGoal,
+    clearGoal,
     refreshRooms,
     openRoom,
     leaveRoom,

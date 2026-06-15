@@ -1514,7 +1514,16 @@ function App() {
     if (activeRepo) opts.cwd = activeRepo.path;
     // Goal mode: this send's prompt IS the goal — the engine runs
     // loop-until-done. Goal text == prompt text (reuses the composer input).
-    if (goalEnabled && text.trim()) opts.goal = text;
+    // Persistent goal (CC /goal): the toggle means "make THIS message a goal".
+    // Once sent, core persists it on the session and later bare sends inherit it
+    // — so we auto-disable the toggle after establishing the goal. Otherwise a
+    // toggle left on would make every follow-up REPLACE the goal with its own
+    // text (one active goal per session), which is never what the user wants.
+    // The active goal stays visible in the TopBar popover; clear it there.
+    if (goalEnabled && text.trim()) {
+      opts.goal = text;
+      setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));
+    }
 
     // Pin this session's engine to its per-bucket model before the turn. The
     // engine session may have just been created fresh (resume / first send /

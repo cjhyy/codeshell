@@ -82,14 +82,24 @@ export function App() {
             <div className="flex items-center gap-2 border-b border-border/70 bg-card/45 px-3 py-2 text-xs">
               <span className="text-muted-foreground">{app.chat.goal}</span>
               {app.activeSessionId && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto h-6"
-                  onClick={() => app.extendGoal(app.activeSessionId!)}
-                >
-                  延长目标
-                </Button>
+                <div className="ml-auto flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6"
+                    onClick={() => app.extendGoal(app.activeSessionId!)}
+                  >
+                    延长目标
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6"
+                    onClick={() => app.clearGoal(app.activeSessionId!)}
+                  >
+                    清除目标
+                  </Button>
+                </div>
               )}
             </div>
           )}

@@ -124,6 +124,21 @@ test("goal_progress 更新 goal 行", () => {
   expect(s.goal).toContain("not_met");
 });
 
+test("goal_set 显示目标,goal_cleared 清掉,met 也清", () => {
+  const set = feed([ev({ type: "goal_set", objective: "完成全部任务", replaced: false })]);
+  expect(set.goal).toContain("完成全部任务");
+  const cleared = feed([
+    ev({ type: "goal_set", objective: "x", replaced: false }),
+    ev({ type: "goal_cleared" }),
+  ]);
+  expect(cleared.goal).toBeUndefined();
+  const met = feed([
+    ev({ type: "goal_set", objective: "x", replaced: false }),
+    ev({ type: "goal_progress", status: "met", round: 3 }),
+  ]);
+  expect(met.goal).toBeUndefined();
+});
+
 test("agent_start/agent_end 维护单条 subagent 行(按 agentId)", () => {
   const s = feed([
     ev({ type: "agent_start", agentId: "sub-A", description: "查代码" }),
