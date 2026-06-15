@@ -12,6 +12,8 @@
 import {
   loadAgentDefinitionsForCwd,
   serializeAgentDefinition,
+  computeEffectiveDisabledLists,
+  SettingsManager,
   type AgentDefinition,
 } from "@cjhyy/code-shell-core";
 import { assertCodeShellMarkdownPath } from "./safe-read.js";
@@ -53,11 +55,23 @@ function agentsRootFor(opts?: { scope?: "user" | "project"; cwd?: string }): str
 }
 
 /**
- * List merged agents (project + user). Does NOT apply disabledAgents —
- * the UI shows disabled rows too (with a checkbox), so it needs them all.
+ * List merged agents (project + user + plugin). Does NOT apply disabledAgents
+ * — the UI shows disabled agent ROWS too (with a checkbox), so it needs them
+ * all. But it DOES exclude agents from plugins that are disabled in this cwd:
+ * a closed plugin isn't used in this project, so its sub-agents shouldn't
+ * clutter the list (mirrors the engine, which passes disabledPlugins too).
  */
 export function listAgents(cwd: string): AgentSummary[] {
-  const reg = loadAgentDefinitionsForCwd(cwd, []);
+  let disabledPlugins: string[] = [];
+  try {
+    disabledPlugins = computeEffectiveDisabledLists(
+      new SettingsManager(cwd || process.cwd(), "full"),
+      cwd || undefined,
+    ).disabledPlugins;
+  } catch {
+    disabledPlugins = [];
+  }
+  const reg = loadAgentDefinitionsForCwd(cwd, [], disabledPlugins);
   return reg.list().map((d) => ({
     name: d.name,
     description: d.description,
