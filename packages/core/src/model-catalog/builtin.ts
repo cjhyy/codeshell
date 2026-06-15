@@ -91,12 +91,12 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     displayName: "DeepSeek",
     description: "DeepSeek 模型。需要 DeepSeek key。",
     defaultBaseUrl: "https://api.deepseek.com/v1",
-    defaultModel: "deepseek-v4",
+    defaultModel: "deepseek-v4-flash",
     signupUrl: "https://platform.deepseek.com/api_keys",
     needsKey: true,
     modelPresets: [
-      textPreset("deepseek", "deepseek-v4", "DeepSeek V4"),
-      textPreset("deepseek", "deepseek-chat", "DeepSeek Chat"),
+      textPreset("deepseek", "deepseek-v4-flash", "DeepSeek V4 Flash"),
+      textPreset("deepseek", "deepseek-v4-pro", "DeepSeek V4 Pro"),
     ],
   },
   {
