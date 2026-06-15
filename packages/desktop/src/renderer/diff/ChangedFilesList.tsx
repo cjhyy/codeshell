@@ -4,6 +4,8 @@ import type { GitStatus } from "../../preload/types";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { filterByScope, isRangeScope, type ReviewScope } from "./reviewScope";
 import type { GitStatusEntry } from "../../preload/types";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Props {
   cwd: string;
@@ -66,55 +68,66 @@ export function ChangedFilesList({
   // only the files the turn touched, so 审查 opens on the turn's diff.
   let entries: GitStatusEntry[];
   if (isRangeScope(scope)) {
-    if (!rangeEntries) return <div className="diff-loading">loading status…</div>;
+    if (!rangeEntries) return <div className="p-3 text-sm text-muted-foreground">loading status…</div>;
     entries = rangeEntries;
   } else {
-    if (!status) return <div className="diff-loading">loading status…</div>;
+    if (!status) return <div className="p-3 text-sm text-muted-foreground">loading status…</div>;
     entries = filterByScope(status.entries, scope, turnFiles);
   }
   if (entries.length === 0) {
     return (
-      <div className="diff-empty">
+      <div className="p-3 text-sm text-muted-foreground">
         {scope === "turn" ? "本轮没有可显示的变更文件" : "此范围内没有变更"}
       </div>
     );
   }
 
   return (
-    <div className="changed-files">
-      <button
-        className={`changed-file ${selectedFile === null ? "selected" : ""}`}
+    <div className="flex flex-col gap-1">
+      <Button
+        type="button"
+        variant="ghost"
+        className={cn(
+          "h-auto justify-start gap-2 rounded-md px-2 py-1.5 text-left",
+          selectedFile === null && "bg-accent text-accent-foreground",
+        )}
         onClick={() => onSelectFile(null)}
       >
-        <span className="changed-file-status">ALL</span>
-        <span className="changed-file-path">全部({entries.length})</span>
-      </button>
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">ALL</span>
+        <span className="min-w-0 flex-1 truncate text-sm">全部({entries.length})</span>
+      </Button>
       {entries.map((e) => (
         <div key={e.path} className="group/cf relative flex items-center">
-          <button
-            className={`changed-file ${selectedFile === e.path ? "selected" : ""}`}
-            style={{ width: "100%", paddingRight: 24 }}
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              "h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 pr-7 text-left",
+              selectedFile === e.path && "bg-accent text-accent-foreground",
+            )}
             onClick={() => onSelectFile(e.path)}
           >
-            <span className={`changed-file-status status-${codeClass(e.code)}`}>{e.code.trim()}</span>
-            <span className="changed-file-path">{e.path}</span>
+            <span className={cn("shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]", codeTone(e.code))}>{e.code.trim()}</span>
+            <span className="min-w-0 flex-1 truncate text-sm">{e.path}</span>
             {numstat[e.path] && (numstat[e.path].added > 0 || numstat[e.path].removed > 0) && (
-              <span className="changed-file-stat">
-                <span className="changed-file-added">+{numstat[e.path].added}</span>{" "}
-                <span className="changed-file-removed">-{numstat[e.path].removed}</span>
+              <span className="shrink-0 text-xs tabular-nums">
+                <span className="text-status-ok">+{numstat[e.path].added}</span>{" "}
+                <span className="text-status-err">-{numstat[e.path].removed}</span>
               </span>
             )}
-          </button>
+          </Button>
           {/* e.path is relative to the repo — pass cwd so open/reveal resolve it. */}
           <OpenWithMenu path={e.path} cwd={cwd} align="end">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               title="打开方式"
               aria-label="打开方式"
-              className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/cf:opacity-100 data-[state=open]:opacity-100"
+              className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/cf:opacity-100 data-[state=open]:opacity-100"
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </OpenWithMenu>
         </div>
       ))}
@@ -122,11 +135,11 @@ export function ChangedFilesList({
   );
 }
 
-function codeClass(code: string): string {
+function codeTone(code: string): string {
   const trimmed = code.trim();
-  if (trimmed.startsWith("?")) return "untracked";
-  if (trimmed.startsWith("A")) return "added";
-  if (trimmed.startsWith("D")) return "deleted";
-  if (trimmed.startsWith("R")) return "renamed";
-  return "modified";
+  if (trimmed.startsWith("?")) return "bg-muted text-muted-foreground";
+  if (trimmed.startsWith("A")) return "bg-status-ok/10 text-status-ok";
+  if (trimmed.startsWith("D")) return "bg-status-err/10 text-status-err";
+  if (trimmed.startsWith("R")) return "bg-status-warn/10 text-status-warn";
+  return "bg-status-running/10 text-status-running";
 }

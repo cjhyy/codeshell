@@ -3,6 +3,8 @@ import { Search } from "lucide-react";
 import type { Repo } from "../repos";
 import { repoLabel } from "../repos";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -98,12 +100,13 @@ export function SessionSearchModal({
   };
 
   return (
-    <div className="ssm-backdrop" onMouseDown={onClose}>
-      <div className="ssm" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="ssm-search">
-          <Search size={14} />
-          <input
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/35 px-4 pt-[14vh]" onMouseDown={onClose}>
+      <div className="w-full max-w-xl overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 border-b px-3 py-2">
+          <Search size={14} className="text-muted-foreground" />
+          <Input
             ref={inputRef}
+            className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
             placeholder="搜索对话"
             value={filter}
             onChange={(e) => {
@@ -126,12 +129,12 @@ export function SessionSearchModal({
             }}
           />
         </div>
-        <div className="ssm-section-label">
+        <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           {filter ? "搜索结果" : "近期对话"}
         </div>
-        <ul className="ssm-list">
+        <ul className="max-h-[55vh] overflow-y-auto px-2 pb-2">
           {filtered.length === 0 && (
-            <li className="ssm-empty">没有匹配的对话</li>
+            <li className="px-2 py-6 text-center text-sm text-muted-foreground">没有匹配的对话</li>
           )}
           {filtered.map((h, i) => {
             const isActive =
@@ -141,14 +144,17 @@ export function SessionSearchModal({
             return (
               <li
                 key={`${h.repoId ?? "_"}::${h.session.id}`}
-                className={`ssm-item${i === cursor ? " cursor" : ""}`}
+                className={cn(
+                  "flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-sm",
+                  i === cursor ? "bg-accent text-accent-foreground" : "hover:bg-accent/70",
+                )}
                 onMouseEnter={() => setCursor(i)}
                 onClick={() => pick(h)}
               >
-                <span className="ssm-item-title">{h.session.title}</span>
-                <span className="ssm-item-meta">
-                  <span className="ssm-item-repo">{h.repoLabel}</span>
-                  <span className="ssm-item-time">{formatRelative(h.session.updatedAt)}</span>
+                <span className="min-w-0 truncate font-medium">{h.session.title}</span>
+                <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                  <span className="max-w-32 truncate">{h.repoLabel}</span>
+                  <span className="tabular-nums">{formatRelative(h.session.updatedAt)}</span>
                 </span>
               </li>
             );

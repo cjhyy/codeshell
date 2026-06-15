@@ -291,6 +291,20 @@ export type MessageClock = () => number | undefined;
 
 /** Shared text for a background-task completion (video etc.) — used by the
  *  reducer (message stream) and App.tsx (toast) so the two never drift. */
+/** Max chars of a background agent's finalText to inline in the completion
+ *  line. The full text already lives in the agent's own card (AgentMessage.text)
+ *  — the stream/toast line is just a "✓ done · here's the gist" pointer, not a
+ *  place to dump a multi-paragraph subagent report (that's what made completed
+ *  background agents flood the transcript). */
+const BG_COMPLETION_PREVIEW_CHARS = 160;
+
+function previewLine(text: string, max = BG_COMPLETION_PREVIEW_CHARS): string {
+  // Collapse whitespace/newlines so a long multi-line report doesn't render as
+  // a tall block, then clip to one short preview.
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max)}…` : flat;
+}
+
 export function bgCompletionText(event: {
   name?: string;
   description: string;
@@ -300,9 +314,9 @@ export function bgCompletionText(event: {
 }): string {
   const who = event.name ?? "后台任务";
   if (event.status === "completed") {
-    return `✓ ${who}完成:${event.finalText ?? event.description}`;
+    return `✓ ${who}完成:${previewLine(event.finalText ?? event.description)}`;
   }
-  return `✗ ${who}失败:${event.error ?? event.description}`;
+  return `✗ ${who}失败:${previewLine(event.error ?? event.description)}`;
 }
 
 export function applyStreamEvent(
@@ -683,18 +697,35 @@ export function applyStreamEvent(
     }
 
     case "turn_complete": {
-      // 1. Flush every active agent's textBuffer to its `text` field.
+      // 1. Flush every active agent's textBuffer to its `text` field, and on a
+      //    CLEAN completion also mark any still-running agent done. A cleanly
+      //    completed main turn means no foreground subagent is legitimately
+      //    still running — a leftover done:false agent is an orphan whose
+      //    agent_end was dropped/raced (worker died, or agent_end arrived with
+      //    no matching agent_start index). Without this sweep that orphan keeps
+      //    `runningAgents` > 0 forever, so "后台 N 个子代理运行中…" sticks after
+      //    the turn ends. (#4 stuck background count) A genuinely-backgrounded
+      //    agent reports separately via background_agent_completed.
+      const cleanSweep = event.reason === "completed";
       const msgs = state.messages.slice();
       for (const agentId of Object.keys(state.activeAgents)) {
         const idx = state.agentMessageIndex[agentId];
         if (idx === undefined) continue;
         const m = msgs[idx];
-        if (!m || m.kind !== "agent" || m.textBuffer.length === 0) continue;
-        msgs[idx] = {
-          ...m,
-          text: (m.text ?? "") + m.textBuffer,
-          textBuffer: "",
-        };
+        if (!m || m.kind !== "agent") continue;
+        const flushedText =
+          m.textBuffer.length > 0 ? (m.text ?? "") + m.textBuffer : m.text;
+        if (cleanSweep && !m.done) {
+          msgs[idx] = {
+            ...m,
+            text: flushedText,
+            textBuffer: "",
+            done: true,
+            endedAt: m.endedAt ?? now(),
+          };
+        } else if (m.textBuffer.length > 0) {
+          msgs[idx] = { ...m, text: flushedText, textBuffer: "" };
+        }
       }
 
       // 2. Finalize streaming pointers (existing behavior).

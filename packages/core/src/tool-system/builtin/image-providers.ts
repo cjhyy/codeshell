@@ -17,12 +17,29 @@ export interface ImageProviderCreds {
   apiKey: string;
 }
 
+/** A decoded reference/input image for image-to-image (edit) requests. */
+export interface InputImage {
+  /** File name hint (used as the multipart part filename). */
+  filename: string;
+  /** MIME type, e.g. "image/png" | "image/jpeg" | "image/webp". */
+  mimeType: string;
+  /** Raw bytes (NOT base64) — the tool layer decodes the workspace file. */
+  bytes: Uint8Array;
+}
+
 export interface ImageGenerateRequest {
   prompt: string;
   size: string;
   quality: string;
   model: string;
   creds: ImageProviderCreds;
+  /**
+   * Optional reference images. When present, this becomes an image-TO-image
+   * (edit) request rather than text-to-image: the provider conditions the
+   * output on these inputs (OpenAI `/images/edits`, Gemini inline_data parts).
+   * Empty/undefined = plain text-to-image.
+   */
+  inputImages?: InputImage[];
   /** Optional cancellation signal forwarded to fetch. */
   signal?: AbortSignal;
 }
@@ -47,25 +64,50 @@ export class OpenAIImageProvider implements ImageProvider {
   constructor(private readonly fetchImpl: typeof fetch = fetch) {}
 
   async generate(req: ImageGenerateRequest): Promise<ImageGenerateResult> {
-    // Trim a trailing slash so `${baseUrl}/images/generations` doesn't double up.
+    // Trim a trailing slash so `${baseUrl}/images/...` doesn't double up.
     const baseUrl = req.creds.baseUrl.replace(/\/+$/, "");
+    const hasInputs = !!req.inputImages && req.inputImages.length > 0;
     let resp: Response;
     try {
-      resp = await this.fetchImpl(`${baseUrl}/images/generations`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${req.creds.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: req.model,
-          prompt: req.prompt,
-          size: req.size,
-          quality: req.quality,
-          n: 1,
-        }),
-        signal: req.signal,
-      });
+      if (hasInputs) {
+        // Image-to-image → the EDITS endpoint, which takes multipart/form-data
+        // with one or more `image[]` parts (gpt-image accepts up to 16). Do NOT
+        // set Content-Type manually — fetch sets the multipart boundary.
+        const form = new FormData();
+        form.append("model", req.model);
+        form.append("prompt", req.prompt);
+        if (req.size && req.size !== "auto") form.append("size", req.size);
+        if (req.quality && req.quality !== "auto") form.append("quality", req.quality);
+        form.append("n", "1");
+        for (const img of req.inputImages!) {
+          // Copy into a fresh Uint8Array so the Blob gets a clean ArrayBuffer
+          // (avoids SharedArrayBuffer / offset typing issues across runtimes).
+          const buf = Uint8Array.from(img.bytes);
+          form.append("image[]", new Blob([buf], { type: img.mimeType }), img.filename);
+        }
+        resp = await this.fetchImpl(`${baseUrl}/images/edits`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${req.creds.apiKey}` },
+          body: form,
+          signal: req.signal,
+        });
+      } else {
+        resp = await this.fetchImpl(`${baseUrl}/images/generations`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${req.creds.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: req.model,
+            prompt: req.prompt,
+            size: req.size,
+            quality: req.quality,
+            n: 1,
+          }),
+          signal: req.signal,
+        });
+      }
     } catch (err) {
       return { ok: false, error: `request failed: ${(err as Error).message}` };
     }
@@ -116,6 +158,17 @@ export class GeminiImageProvider implements ImageProvider {
     const baseUrl = req.creds.baseUrl.replace(/\/+$/, "").replace(/\/openai$/, "");
     let resp: Response;
     try {
+      // Image-to-image: Gemini conditions on input images passed as additional
+      // inline_data parts alongside the text prompt (base64, no data: prefix).
+      const parts: Array<Record<string, unknown>> = [{ text: req.prompt }];
+      for (const img of req.inputImages ?? []) {
+        parts.push({
+          inline_data: {
+            mime_type: img.mimeType,
+            data: Buffer.from(img.bytes).toString("base64"),
+          },
+        });
+      }
       resp = await this.fetchImpl(`${baseUrl}/models/${req.model}:generateContent`, {
         method: "POST",
         headers: {
@@ -123,7 +176,7 @@ export class GeminiImageProvider implements ImageProvider {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: req.prompt }] }],
+          contents: [{ parts }],
           generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
         }),
         signal: req.signal,

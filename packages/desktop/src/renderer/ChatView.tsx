@@ -48,7 +48,10 @@ interface Props {
   queuedInputItems?: string[];
   onClearQueuedInput?: () => void;
   onRemoveQueuedInput?: (index: number) => void;
-  onGuideQueuedInput?: (index: number) => void;
+  /** Interrupt the current turn and send the ENTIRE queue at once (merged).
+   *  Replaces the old per-item promote — the user wants everything they queued
+   *  to land in the next turn, not one message per turn. */
+  onGuideQueuedInput?: () => void;
   /** Count of background sub-agents still running in this session. Shown as a
    *  separate "后台 N 个子代理运行中" hint even after busy clears (run_in_background
    *  resolves the main run immediately while children keep working). */
@@ -474,7 +477,7 @@ export function ChatView({
     pendingApproval && onApprovalDecide ? (
       <div
         ref={inlineApprovalRef}
-        className="approval-card-inline-anchor"
+        className="mx-4 my-2"
         data-request-id={pendingApproval.requestId}
       >
         <ApprovalCard envelope={pendingApproval} onDecide={onApprovalDecide} />
@@ -484,12 +487,15 @@ export function ChatView({
   const showStickyApproval =
     !!pendingApproval && !!onApprovalDecide && !inlineApprovalVisible;
 
-  const queuedPreviewItems = queuedInputItems.slice(0, 2).map((item) => {
+  // Show ALL queued items, not a 2-item slice — the old slice(0, 2) is what
+  // made 引导 look like it "只能打断 2 句": only the first two ever rendered a
+  // button, the rest hid behind a "+N" footer. Guide now drains the whole
+  // queue at once anyway, so the list is purely a preview of what will send.
+  const queuedPreviewItems = queuedInputItems.map((item) => {
     const decoded = decodeWireForDisplay(item);
     const text = decoded.text || (decoded.images.length > 0 ? `[图片 ×${decoded.images.length}]` : item);
     return text.length > 180 ? `${text.slice(0, 180)}...` : text;
   });
-  const queuedHiddenCount = Math.max(0, queuedInputItems.length - queuedPreviewItems.length);
 
   // Drop handlers live on the whole chat surface, not just the composer.
   // Users drag a screenshot into the window expecting it to "land" — having
@@ -620,17 +626,31 @@ export function ChatView({
                   <span>后续变更</span>
                   <span className="text-xs font-normal tabular-nums">{queuedInputItems.length}</span>
                 </div>
-                {onClearQueuedInput && (
-                  <button
-                    type="button"
-                    className="rounded-full p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                    aria-label="清除后续变更"
-                    title="清除后续变更"
-                    onClick={onClearQueuedInput}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
+                <div className="flex shrink-0 items-center gap-1">
+                  {busy && onGuideQueuedInput && (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                      aria-label="打断当前轮，并把全部后续变更合并发送"
+                      title="打断当前轮，并把全部后续变更合并成一条立即发送"
+                      onClick={onGuideQueuedInput}
+                    >
+                      <CornerDownRight size={12} />
+                      <span>全部引导</span>
+                    </button>
+                  )}
+                  {onClearQueuedInput && (
+                    <button
+                      type="button"
+                      className="rounded-full p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      aria-label="清除后续变更"
+                      title="清除后续变更"
+                      onClick={onClearQueuedInput}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col gap-1">
                 {queuedPreviewItems.map((item, i) => (
@@ -640,18 +660,6 @@ export function ChatView({
                   >
                     <div className="line-clamp-2 min-w-0 flex-1 whitespace-pre-wrap break-words">{item}</div>
                     <div className="flex shrink-0 items-center gap-1">
-                      {busy && onGuideQueuedInput && (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
-                          aria-label={`引导第 ${i + 1} 条后续变更`}
-                          title="打断当前轮，并优先发送这条后续变更"
-                          onClick={() => onGuideQueuedInput(i)}
-                        >
-                          <CornerDownRight size={12} />
-                          <span>引导</span>
-                        </button>
-                      )}
                       {onRemoveQueuedInput && (
                         <button
                           type="button"
@@ -667,11 +675,6 @@ export function ChatView({
                     </div>
                   </div>
                 ))}
-                {queuedHiddenCount > 0 && (
-                  <div className="px-1 text-xs text-muted-foreground">
-                    还有 {queuedHiddenCount} 条将在本轮结束后发送
-                  </div>
-                )}
               </div>
             </div>
           )}

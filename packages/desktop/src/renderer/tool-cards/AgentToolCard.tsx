@@ -20,35 +20,35 @@ export function AgentToolCard({ message, onSelect, selected, turnEpoch }: Props)
 
   const summary = (
     <span>
-      <span className="tool-card-name">{subagent ?? "agent"}</span>
-      {description && <span className="tool-card-desc"> — {truncate(description, 80)}</span>}
+      <span className="font-medium text-foreground">{subagent ?? "agent"}</span>
+      {description && <span className="text-muted-foreground"> — {truncate(description, 80)}</span>}
     </span>
   );
 
   const details = (
-    <div className="tool-card-detail">
+    <div className="flex flex-col gap-2">
       {subagent && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">type</span>
-          <span className="tool-card-row-val">{subagent}</span>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">type</span>
+          <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{subagent}</span>
         </div>
       )}
       {description && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">desc</span>
-          <span className="tool-card-row-val">{description}</span>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">desc</span>
+          <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{description}</span>
         </div>
       )}
       {prompt && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">prompt</span>
-          <pre className="tool-card-row-val">{truncate(prompt, 1500)}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">prompt</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{truncate(prompt, 1500)}</pre>
         </div>
       )}
       {message.result !== undefined && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">result</span>
-          <pre className="tool-card-row-val">{truncate(message.result, 1500)}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">result</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{truncate(message.result, 1500)}</pre>
         </div>
       )}
     </div>

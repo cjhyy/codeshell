@@ -47,6 +47,25 @@ export function removeQueuedInputAt(
   return next;
 }
 
+/**
+ * Drain the ENTIRE queue for a bucket as one merged string (blank-line
+ * separated), clearing the slot. Used by the 引导打断 path: the user wants
+ * everything they queued to land in the next turn at once, not be fed one
+ * message per turn (the old per-dequeue behavior left later items waiting for
+ * each prior turn to finish). Returns `{ text: null }` when empty.
+ */
+export function drainQueuedInput(
+  state: QueuedInputState,
+  bucket: string,
+): { text: string | null; state: QueuedInputState } {
+  const list = state[bucket] ?? [];
+  if (list.length === 0) return { text: null, state };
+  const merged = list.join("\n\n");
+  const next = { ...state };
+  delete next[bucket];
+  return { text: merged, state: next };
+}
+
 export function promoteQueuedInputAt(
   state: QueuedInputState,
   bucket: string,

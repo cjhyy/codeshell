@@ -25,7 +25,8 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     signupUrl: "https://platform.openai.com/api-keys",
     test: true,
     paramsDoc:
-      "OpenAI 图像：支持 size (1024x1024 | 1536x1024 | 1024x1536 | auto)、quality (low | medium | high | auto)。文生图,不支持图生图/参考图。",
+      "OpenAI 图像：支持 size (1024x1024 | 1536x1024 | 1024x1536 | auto)、quality (low | medium | high | auto)。" +
+      "支持图生图:传 referenceImages(工作区图片路径,最多 16 张)即按这些图编辑/再创作(走 /images/edits)。",
   },
   {
     id: "google-images",
@@ -40,7 +41,8 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     signupUrl: "https://aistudio.google.com/apikey",
     test: true,
     paramsDoc:
-      "Gemini 图像 (Nano Banana)：size 会被映射到最接近的支持比例;quality 参数对该后端无效(忽略)。文生图。",
+      "Gemini 图像 (Nano Banana)：size 会被映射到最接近的支持比例;quality 参数对该后端无效(忽略)。" +
+      "支持图生图/多图融合:传 referenceImages(工作区图片路径)作为参考图一起喂给模型。",
   },
   // ─── video ───
   {
@@ -63,6 +65,7 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
       { value: "fal-ai/kling-video/v3/pro/image-to-video", label: "Kling v3 Pro · 图生视频" },
     ],
     paramsDoc:
-      "fal 视频:用 model 选底层模型(文生 vs 图生)。传 image/images(本地路径自动上传)→ 用图生视频模型;1 张=图生视频,2+ 张=参考生视频(最多 9,prompt 里用 @Image1/@Image2 引用)。异步后台生成。",
+      "fal 视频:用 model 选底层模型(文生 vs 图生)。传 image/images(本地路径自动上传)→ 用图生视频模型;1 张=图生视频,2+ 张=参考生视频(最多 9,prompt 里用 @Image1/@Image2 引用)。" +
+      "续接/参考视频:传 videos(http/https URL,非本地路径;最多 3)续接已有视频,prompt 里用 @Video1/@Video2 引用(如「从 @Video1 结尾继续」);需用 Seedance 模型(走 reference-to-video,Kling 不支持)。异步后台生成。",
   },
 ];

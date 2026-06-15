@@ -367,7 +367,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   getGitRecentCommits: (cwd: string, limit?: number) =>
     ipcRenderer.invoke("git:recentCommits", cwd, limit),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
-  revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
+  revealInFinder: (path: string, cwd?: string) =>
+    ipcRenderer.invoke("shell:revealInFinder", path, cwd),
   openPath: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:openPath", path, cwd),
   /** Open a path in an external editor (Cursor/VS Code; CODE_SHELL_EDITOR override). */
@@ -479,6 +480,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
   updatePlugin: (name: string) => ipcRenderer.invoke("plugins:update", name),
   checkPluginUpdate: (name: string) => ipcRenderer.invoke("plugins:checkUpdate", name),
+  checkGit: () => ipcRenderer.invoke("git:check"),
   listMarketplaces: () => ipcRenderer.invoke("marketplace:list"),
   loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),

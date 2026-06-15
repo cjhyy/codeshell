@@ -70,4 +70,59 @@ describe("OpenAIImageProvider", () => {
     const res = await p.generate({ prompt: "p", size: "auto", quality: "auto", model: "m", creds });
     expect(res.ok).toBe(false);
   });
+
+  test("with inputImages → POSTs multipart to /images/edits, includes image[] parts", async () => {
+    const calls: Array<{ url: string; init: any }> = [];
+    const fakeFetch: typeof fetch = (async (url: string, init: any) => {
+      calls.push({ url, init });
+      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "RURJVA==" }] }) } as Response;
+    }) as unknown as typeof fetch;
+
+    const p = new OpenAIImageProvider(fakeFetch);
+    const res = await p.generate({
+      prompt: "make her smile",
+      size: "1024x1024",
+      quality: "high",
+      model: "gpt-image-2",
+      creds,
+      inputImages: [
+        { filename: "a.png", mimeType: "image/png", bytes: new Uint8Array([1, 2, 3]) },
+        { filename: "b.jpg", mimeType: "image/jpeg", bytes: new Uint8Array([4, 5]) },
+      ],
+    });
+
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.b64).toBe("RURJVA==");
+    // Edits endpoint, not generations.
+    expect(calls[0].url).toBe("https://api.example.com/v1/images/edits");
+    // multipart body (FormData) — NOT a JSON string, and no manual Content-Type
+    // (fetch sets the multipart boundary itself).
+    expect(calls[0].init.body).toBeInstanceOf(FormData);
+    expect(calls[0].init.headers["Content-Type"]).toBeUndefined();
+    expect(calls[0].init.headers.Authorization).toBe("Bearer sk-test");
+    const form = calls[0].init.body as FormData;
+    expect(form.get("prompt")).toBe("make her smile");
+    expect(form.get("model")).toBe("gpt-image-2");
+    // Two image[] parts.
+    expect(form.getAll("image[]").length).toBe(2);
+  });
+
+  test("auto size/quality are omitted from the edits form", async () => {
+    let form: FormData | null = null;
+    const fakeFetch: typeof fetch = (async (_url: string, init: any) => {
+      form = init.body as FormData;
+      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "x" }] }) } as Response;
+    }) as unknown as typeof fetch;
+    const p = new OpenAIImageProvider(fakeFetch);
+    await p.generate({
+      prompt: "p",
+      size: "auto",
+      quality: "auto",
+      model: "m",
+      creds,
+      inputImages: [{ filename: "a.png", mimeType: "image/png", bytes: new Uint8Array([1]) }],
+    });
+    expect(form!.get("size")).toBeNull();
+    expect(form!.get("quality")).toBeNull();
+  });
 });

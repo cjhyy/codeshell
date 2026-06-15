@@ -25,7 +25,11 @@ import { repoLabel, type Repo } from "../repos";
 import { cacheGet, cacheSet } from "./settingsCache";
 import { ProjectPicker } from "./ProjectPicker";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SimpleSelect } from "@/components/ui/simple-select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { writeSettings } from "../settingsBus";
 
@@ -46,6 +50,16 @@ const MEMORY_TYPES: Array<{ id: MemoryType; label: string }> = [
   { id: "project", label: "project" },
   { id: "reference", label: "reference" },
 ];
+
+function memoryTypeClassName(type: MemoryType): string {
+  return cn(
+    "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+    type === "feedback" && "bg-status-warn/10 text-status-warn",
+    type === "project" && "bg-status-running/10 text-status-running",
+    type === "reference" && "bg-muted text-muted-foreground",
+    type === "user" && "bg-primary/10 text-primary",
+  );
+}
 
 /** Which memory store the user drilled into. */
 interface Target {
@@ -70,9 +84,9 @@ export function MemorySection({ repos }: Props) {
 
   if (!target) {
     return (
-      <section className="settings-section memory-section">
-        <h3 className="settings-section-title">记忆</h3>
-        <p className="settings-section-help">
+      <section className="mb-6 flex flex-col gap-3">
+        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">记忆</h3>
+        <p className="m-0 text-xs text-muted-foreground">
           选择要查看的记忆:全局记忆所有项目共享,或选择某个项目查看它专属的记忆。
         </p>
         <ProjectPicker
@@ -98,7 +112,7 @@ export function MemorySection({ repos }: Props) {
   }
 
   return (
-    <section className="settings-section memory-section">
+    <section className="mb-6 flex flex-col gap-3">
       <div className="mb-2 flex items-center gap-2">
         <Button
           variant="ghost"
@@ -110,7 +124,7 @@ export function MemorySection({ repos }: Props) {
           <span>返回</span>
         </Button>
         <span className="truncate text-sm font-medium text-foreground">{target.title}</span>
-        <span className="memory-level-chip">
+        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
           {target.level === "project" ? "项目" : "全局"}
         </span>
       </div>
@@ -350,21 +364,23 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
 
   return (
     <>
-      <div className="memory-toolbar">
-        <div className="memory-scope-tabs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-1">
           {MEMORY_SCOPES.map((s) => (
-            <button
+            <Button
               key={s.id}
               type="button"
-              className={`logs-bucket${scope === s.id ? " active" : ""}`}
+              variant={scope === s.id ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
               title={s.help}
               onClick={() => setScope(s.id)}
             >
               {s.label}
-            </button>
+            </Button>
           ))}
         </div>
-        <div className="memory-toolbar-actions">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {level === "user" && scope === "user" && (
             <label
               className="flex items-center gap-1.5 text-xs text-muted-foreground"
@@ -375,70 +391,82 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
             </label>
           )}
           {autoEntries.length > 0 && (
-            <button
+            <Button
               type="button"
-              className="memory-action"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 px-2 text-xs"
               onClick={() => void cleanupAuto()}
               disabled={loading || dreaming}
               title="批量删除本 scope 下所有「自动提取且未固定」的记忆(移到 memory-trash/ 可恢复)"
             >
               <Eraser size={12} />
               <span>清理自动提取({autoEntries.length})</span>
-            </button>
+            </Button>
           )}
           {scope === "dream" && (
-            <button
+            <Button
               type="button"
-              className="memory-action"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 px-2 text-xs"
               onClick={() => void runDream()}
               disabled={dreaming || loading}
               title="跑一次 LLM,对 dream 记忆做去重 / 合并 / 清理"
             >
-              {dreaming ? <Loader2 size={12} className="spin" /> : <Sparkles size={12} />}
+              {dreaming ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
               <span>{dreaming ? "整理中…" : "整理 Dream"}</span>
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
-            className="memory-action"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-xs"
             onClick={() => void refresh()}
             disabled={loading || dreaming}
             title="刷新"
           >
             <RefreshCw size={12} />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="memory-action"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-xs"
             onClick={startNew}
             disabled={dreaming}
           >
             <Plus size={12} />
             <span>新建</span>
-          </button>
+          </Button>
         </div>
       </div>
 
-      {notice && <div className="memory-notice">{notice}</div>}
-      {error && <div className="memory-error">{error}</div>}
+      {notice && <div className="rounded-md bg-status-ok/10 p-2 text-sm text-status-ok">{notice}</div>}
+      {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
 
-      <div className="memory-layout">
-        <ul className="memory-list" role="list">
+      <div className="grid min-h-[420px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
+        <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2" role="list">
           {sortedEntries.length === 0 && !loading && (
-            <li className="memory-empty">该 scope 下还没有记忆。</li>
+            <li className="p-4 text-center text-sm text-muted-foreground">该 scope 下还没有记忆。</li>
           )}
           {sortedEntries.map((e) => (
             <li
               key={e.fileName}
-              className={`memory-list-item${selected?.fileName === e.fileName ? " active" : ""}`}
+              className={cn(
+                "flex items-center gap-1 rounded-md px-2 py-1.5",
+                selected?.fileName === e.fileName && "bg-accent",
+              )}
             >
-              <button
+              <Button
                 type="button"
-                className="memory-list-item-main"
+                variant="ghost"
+                className="h-auto min-w-0 flex-1 justify-start gap-2 px-0 py-0 text-left hover:bg-transparent"
                 onClick={() => void openEntry(e.name)}
               >
                 {e.pinned && <Pin size={11} className="shrink-0 text-primary" aria-label="已固定" />}
-                <span className={`memory-type-chip memory-type-${e.type}`}>{e.type}</span>
+                <span className={memoryTypeClassName(e.type)}>{e.type}</span>
                 {e.origin === "auto" && (
                   <span
                     className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
@@ -447,32 +475,36 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                     自动
                   </span>
                 )}
-                <span className="memory-list-name">{e.name}</span>
-                <span className="memory-list-desc">{e.description}</span>
-              </button>
-              <button
+                <span className="min-w-0 truncate text-sm font-medium text-foreground">{e.name}</span>
+                <span className="min-w-0 truncate text-xs text-muted-foreground">{e.description}</span>
+              </Button>
+              <Button
                 type="button"
-                className="memory-list-delete"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={() => void togglePin(e)}
                 aria-label={e.pinned ? "取消固定" : "固定"}
                 title={e.pinned ? "取消固定" : "固定(不被 maxAge 过滤、注入时优先)"}
               >
                 {e.pinned ? <PinOff size={12} /> : <Pin size={12} />}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="memory-list-delete"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-status-err"
                 onClick={() => void removeEntry(e.name)}
                 aria-label="delete"
                 title="删除"
               >
                 <Trash2 size={12} />
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
 
-        <div className="memory-detail">
+        <div className="min-h-0 rounded-md border p-3">
           {drafting && draft ? (
             <DraftEditor
               draft={draft}
@@ -483,7 +515,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
           ) : selected ? (
             <ViewEntry entry={selected} onEdit={startEdit} onClose={() => setSelected(null)} />
           ) : (
-            <div className="memory-empty">从左侧选择一条记忆查看,或点新建。</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">从左侧选择一条记忆查看,或点新建。</div>
           )}
         </div>
       </div>
@@ -501,8 +533,8 @@ function ViewEntry({
   onClose: () => void;
 }) {
   return (
-    <div className="memory-view">
-      <div className="memory-view-head">
+    <div className="flex flex-col">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <strong>{entry.name}</strong>
         {entry.pinned && (
           <span className="flex items-center gap-0.5 rounded bg-primary/10 px-1 text-[10px] text-primary">
@@ -512,24 +544,26 @@ function ViewEntry({
         {entry.origin === "auto" && (
           <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">自动</span>
         )}
-        <span className={`memory-type-chip memory-type-${entry.type}`}>{entry.type}</span>
-        <div className="memory-view-actions">
-          <button type="button" className="memory-action" onClick={onEdit}>
+        <span className={memoryTypeClassName(entry.type)}>{entry.type}</span>
+        <div className="ml-auto flex items-center gap-1">
+          <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={onEdit}>
             <Pencil size={12} />
             <span>编辑</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="memory-action"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 px-2 text-xs"
             onClick={onClose}
             aria-label="close"
           >
             <X size={12} />
-          </button>
+          </Button>
         </div>
       </div>
-      <div className="memory-view-desc">{entry.description}</div>
-      <pre className="memory-view-content">{entry.content}</pre>
+      <div className="mb-3 text-sm text-muted-foreground">{entry.description}</div>
+      <pre className="max-h-[50vh] overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap">{entry.content}</pre>
     </div>
   );
 }
@@ -546,47 +580,42 @@ function DraftEditor({
   onCancel: () => void;
 }) {
   return (
-    <div className="memory-edit">
-      <label className="memory-field">
-        <span className="memory-field-label">name</span>
-        <input
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="text-xs text-muted-foreground">name</span>
+        <Input
           type="text"
           value={draft.name}
           onChange={(e) => onChange({ ...draft, name: e.target.value })}
           placeholder="kebab-case 唯一标识"
         />
       </label>
-      <label className="memory-field">
-        <span className="memory-field-label">description</span>
-        <input
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="text-xs text-muted-foreground">description</span>
+        <Input
           type="text"
           value={draft.description}
           onChange={(e) => onChange({ ...draft, description: e.target.value })}
           placeholder="一句话摘要,会出现在索引里"
         />
       </label>
-      <label className="memory-field">
-        <span className="memory-field-label">type</span>
-        <select
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="text-xs text-muted-foreground">type</span>
+        <SimpleSelect<MemoryType>
           value={draft.type}
-          onChange={(e) => onChange({ ...draft, type: e.target.value as MemoryType })}
-        >
-          {MEMORY_TYPES.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+          onChange={(type) => onChange({ ...draft, type })}
+          options={MEMORY_TYPES.map((t) => ({ value: t.id, label: t.label }))}
+        />
       </label>
-      <label className="memory-field memory-field-content">
-        <span className="memory-field-label">content (markdown)</span>
-        <textarea
+      <label className="flex flex-col gap-1.5 text-sm md:col-span-2">
+        <span className="text-xs text-muted-foreground">content (markdown)</span>
+        <Textarea
           value={draft.content}
           rows={14}
           onChange={(e) => onChange({ ...draft, content: e.target.value })}
         />
       </label>
-      <div className="memory-edit-actions">
+      <div className="flex justify-end gap-2">
         <Button type="button" variant="default" onClick={onCancel}>
           取消
         </Button>

@@ -17,7 +17,7 @@ import type {
 import type { HookRegistry } from "../hooks/registry.js";
 import { ToolRegistry } from "./registry.js";
 import { PermissionClassifier } from "./permission.js";
-import { PermissionDeniedError } from "../exceptions.js";
+import { PermissionDeniedError, ToolNotFoundError } from "../exceptions.js";
 import { logger as rootLogger, getCurrentSid } from "../logging/logger.js";
 import { recordToolCall, recordToolResult } from "../logging/session-recorder.js";
 import { validateToolArgs } from "./validation.js";
@@ -403,6 +403,18 @@ export class ToolExecutor {
         durationMs: Date.now() - toolStartedAt,
         error: err instanceof Error ? err.stack ?? err.message : String(err),
       });
+      // A model calling a tool that isn't in the registry (hallucinated name,
+      // or a builtin missing from the active preset's whitelist) must not kill
+      // the turn. Feed it back as a normal tool error so the model can retry
+      // or pick a different tool — same path as permission denials above.
+      if (err instanceof ToolNotFoundError) {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error: `Tool not found: ${call.toolName}. It is not available in this session — do not call it again; use a different tool.`,
+          isError: true,
+        };
+      }
       throw err;
     }
     result.id = call.id;

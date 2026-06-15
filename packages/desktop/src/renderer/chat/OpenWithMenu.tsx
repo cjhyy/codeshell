@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useToast } from "../ui/ToastProvider";
 import {
   openDefault,
   revealInFolder,
@@ -31,6 +32,18 @@ interface Props extends OpenTarget {
  */
 export function OpenWithMenu({ path, cwd, children, align = "start" }: Props) {
   const target: OpenTarget = { path, cwd };
+  const toast = useToast();
+  // These file actions can fail in main (e.g. the path was deleted/renamed
+  // since the message referenced it). Surface a toast so the action never
+  // silently no-ops.
+  const run = (label: string, action: () => Promise<unknown>): void => {
+    void action().catch((e) =>
+      toast({
+        message: `${label}失败:${e instanceof Error ? e.message : String(e)}`,
+        variant: "error",
+      }),
+    );
+  };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -41,14 +54,14 @@ export function OpenWithMenu({ path, cwd, children, align = "start" }: Props) {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align}>
-        <DropdownMenuItem onSelect={() => void openDefault(target)}>
+        <DropdownMenuItem onSelect={() => run("打开", () => openDefault(target))}>
           <ExternalLink className="mr-2 h-3.5 w-3.5" /> 用系统默认应用打开
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => void openInEditor(target)}>
+        <DropdownMenuItem onSelect={() => run("用编辑器打开", () => openInEditor(target))}>
           <Code2 className="mr-2 h-3.5 w-3.5" /> 用编辑器打开
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => void revealInFolder(target)}>
+        <DropdownMenuItem onSelect={() => run("在文件夹中显示", () => revealInFolder(target))}>
           <FolderOpen className="mr-2 h-3.5 w-3.5" /> 在文件夹中显示
         </DropdownMenuItem>
       </DropdownMenuContent>

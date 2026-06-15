@@ -18,6 +18,7 @@ import {
   splitTarget,
   buildEditorInvocation,
 } from "./editor.js";
+import { resolveTargetPath } from "./paths.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -584,9 +585,27 @@ export async function openExternal(url: string): Promise<void> {
   await shell.openExternal(url);
 }
 
-export async function revealInFinder(targetPath: string): Promise<void> {
-  const normalized = path.resolve(targetPath);
-  shell.showItemInFolder(normalized);
+/**
+ * Reveal a file in Finder / Explorer WITHOUT opening it. Accepts a relative
+ * path + `cwd` and a `:line` suffix (resolved/stripped here) so the renderer's
+ * "在文件夹中显示" action no longer has to round-trip through `openPath` — which
+ * would launch the file in its default app as a side effect (#bug).
+ */
+export async function revealInFinder(
+  targetPath: string,
+  cwd?: string,
+): Promise<void> {
+  const absolute = resolveTargetPath(targetPath, cwd);
+  // showItemInFolder silently does nothing for a missing path (no window, no
+  // error), leaving the user with no feedback. Check first and throw so the
+  // renderer can surface a toast (e.g. file was deleted/renamed since the
+  // message referenced it).
+  try {
+    await fs.access(absolute);
+  } catch {
+    throw new Error(`文件不存在:${absolute}`);
+  }
+  shell.showItemInFolder(absolute);
 }
 
 /**
@@ -687,11 +706,7 @@ export async function openPath(
   targetPath: string,
   cwd?: string,
 ): Promise<string> {
-  // Strip a trailing :line[:col] suffix if present.
-  const cleaned = targetPath.replace(/:(\d+)(?::(\d+))?$/, "");
-  const absolute = path.isAbsolute(cleaned)
-    ? cleaned
-    : path.resolve(cwd ?? process.cwd(), cleaned);
+  const absolute = resolveTargetPath(targetPath, cwd);
   try {
     await fs.access(absolute);
   } catch {

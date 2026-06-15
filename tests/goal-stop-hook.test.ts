@@ -1,6 +1,7 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, beforeEach } from "bun:test";
 import { createGoalStopHook } from "../packages/core/src/hooks/goal-stop-hook.ts";
 import type { HookContext } from "../packages/core/src/hooks/events.ts";
+import { backgroundJobRegistry } from "../packages/core/src/tool-system/builtin/background-jobs.ts";
 
 function ctx(data: Record<string, unknown>): HookContext {
   return { eventName: "on_stop", data };
@@ -135,5 +136,31 @@ describe("createGoalStopHook", () => {
     const res = await hook(ctx({ goal: "   ", finalText: "done" }));
     expect(res.continueSession).toBeUndefined();
     expect(called).toBe(false);
+  });
+});
+
+describe("createGoalStopHook background-job short-circuit", () => {
+  beforeEach(() => backgroundJobRegistry.reset());
+
+  it("allows the stop WITHOUT calling the judge when the session has a running background job", async () => {
+    backgroundJobRegistry.start("video-1", "s1");
+    let called = false;
+    const llm = fakeLLM(JSON.stringify({ met: false, gaps: "video not done" }), () => {
+      called = true;
+    });
+    const hook = createGoalStopHook({ goal: "生成 2 个视频", llm, log: silentLog });
+    const res = await hook(ctx({ goal: "生成 2 个视频", sessionId: "s1", finalText: "已提交" }));
+    // Stop is allowed (no continueSession) — the engine wait-loop parks the
+    // turn until the video notification lands. The expensive judge must NOT run.
+    expect(res.continueSession).toBeUndefined();
+    expect(called).toBe(false);
+  });
+
+  it("judges normally when the running job belongs to a DIFFERENT session", async () => {
+    backgroundJobRegistry.start("video-1", "other-session");
+    const llm = fakeLLM(JSON.stringify({ met: false, gaps: "还差一个" }));
+    const hook = createGoalStopHook({ goal: "g", llm, log: silentLog });
+    const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "x" }));
+    expect(res.continueSession).toBe(true);
   });
 });

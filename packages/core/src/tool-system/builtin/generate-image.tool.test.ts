@@ -86,6 +86,52 @@ describe("GenerateImage provider/model resolution", () => {
   });
 });
 
+describe("GenerateImage referenceImages (image-to-image)", () => {
+  test("reads a workspace image and sends it as multipart to /images/edits", async () => {
+    let sawUrl = "";
+    let sawForm: FormData | null = null;
+    globalThis.fetch = (async (url: string, init: any) => {
+      sawUrl = url;
+      sawForm = init.body as FormData;
+      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "QUJD" }] }) } as Response;
+    }) as unknown as typeof fetch;
+
+    // A reference image living in the workspace (relative path).
+    writeFileSync(join(ws, "ref.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    const out = await generateImageTool(
+      { prompt: "re-imagine her", referenceImages: ["ref.png"] },
+      ctx(),
+    );
+
+    expect(out).toMatch(/from 1 reference image/);
+    expect(sawUrl).toMatch(/\/images\/edits$/);
+    expect(sawForm).toBeInstanceOf(FormData);
+    expect((sawForm as unknown as FormData).getAll("image[]").length).toBe(1);
+  });
+
+  test("a missing reference path errors clearly (no API call)", async () => {
+    let called = false;
+    globalThis.fetch = (async () => {
+      called = true;
+      return { ok: true, status: 200, json: async () => ({ data: [{ b64_json: "x" }] }) } as Response;
+    }) as unknown as typeof fetch;
+    const out = await generateImageTool(
+      { prompt: "p", referenceImages: ["does-not-exist.png"] },
+      ctx(),
+    );
+    expect(out).toMatch(/could not read reference image/);
+    expect(called).toBe(false);
+  });
+
+  test("an unsupported reference type errors clearly", async () => {
+    const out = await generateImageTool(
+      { prompt: "p", referenceImages: ["notes.txt"] },
+      ctx(),
+    );
+    expect(out).toMatch(/unsupported reference image type/);
+  });
+});
+
 describe("GenerateImage availability + dynamic description (TODO 7.1)", () => {
   test("isGenerateImageAvailable true when an image provider with a key exists", () => {
     // nowMs varied to dodge the 1s avail cache across tests sharing a cwd.

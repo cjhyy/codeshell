@@ -6,6 +6,7 @@ import {
   toolGroupActivityLabel,
   type ToolGroup,
 } from "./streamGroups";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   group: ToolGroup;
@@ -34,18 +35,19 @@ function ToolGroupCardImpl({ group, turnEpoch, defaultOpen = false }: Props) {
   const label = toolGroupActivityLabel(group);
 
   return (
-    <div className={`tool-group${open ? " open" : ""}`}>
-      <button
+    <div className="rounded-md border bg-card">
+      <Button
         type="button"
-        className="tool-group-header"
+        variant="ghost"
+        className="h-auto w-full justify-start gap-2 rounded-none px-3 py-2 text-left"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        <span className="tool-group-label">{label}</span>
-      </button>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{label}</span>
+      </Button>
       {open && (
-        <div className="tool-group-body">
+        <div className="flex flex-col gap-2 border-t p-2">
           {group.items.map((it) => {
             if (it.kind === "tool") {
               return <ToolCard key={it.id} message={it} turnEpoch={turnEpoch} />;

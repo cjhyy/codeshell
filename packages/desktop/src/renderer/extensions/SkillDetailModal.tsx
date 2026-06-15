@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Markdown } from "../Markdown";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 interface Props {
   name: string;
@@ -50,9 +52,9 @@ export function SkillDetailModal({ name, filePath, source, onClose }: Props) {
           <span className="font-semibold">{name}</span>
           <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">{source}</span>
           <span className="flex-1" />
-          <button className="text-muted-foreground hover:text-foreground" onClick={onClose} aria-label="关闭">
-            ×
-          </button>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="关闭">
+            <X size={16} />
+          </Button>
         </header>
         <div className="overflow-y-auto p-4">
           {error ? (

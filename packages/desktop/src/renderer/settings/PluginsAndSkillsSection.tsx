@@ -25,7 +25,10 @@ import type {
   SkillSummary,
 } from "../../preload/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { Markdown } from "../Markdown";
 import { writeSettings } from "../settingsBus";
@@ -36,7 +39,7 @@ interface Props {
 
 export function PluginsAndSkillsSection({ activeRepoPath }: Props) {
   return (
-    <section className="settings-section ps-section customize-host">
+    <section className="mb-6 flex flex-col gap-3">
       <CustomizePage activeRepoPath={activeRepoPath} />
     </section>
   );
@@ -263,8 +266,8 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     };
   }, [selection, skillsByName]);
 
-  if (error) return <div className="view-error">{error}</div>;
-  if (!skills) return <div className="view-loading">加载中…</div>;
+  if (error) return <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>;
+  if (!skills) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
 
   const toggleSkillDisabled = async (name: string, shouldDisable: boolean) => {
     const next = new Set(disabledSet);
@@ -363,10 +366,10 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const isAddPanelActive = selection.kind === "addPanel";
 
   return (
-    <div className="customize-three-pane">
+    <div className="grid min-h-[560px] grid-cols-1 gap-3 xl:grid-cols-[260px_320px_1fr]">
       {/* ── Left pane: plugin list ────────────────────────────────── */}
-      <aside className="customize-pane">
-        <ul className="customize-plugin-list">
+      <aside className="min-h-0 rounded-md border p-3">
+        <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto">
           {pluginRows.map((row) => {
             const isSelected =
               (selection.kind === "plugin" && selection.pluginKey === row.key) ||
@@ -376,21 +379,20 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             return (
               <li
                 key={row.key}
-                className={`customize-plugin-row${isSelected ? " is-selected" : ""}`}
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 hover:bg-accent",
+                  isSelected && "bg-accent",
+                )}
                 onClick={() => onSelectPlugin(row)}
               >
                 {!row.synthetic ? (
                   <label
-                    className="customize-plugin-row-check"
+                    className="shrink-0"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <input
-                      type="checkbox"
+                    <Switch
                       checked={groupState === "all"}
-                      ref={(el) => {
-                        if (el) el.indeterminate = groupState === "some";
-                      }}
-                      onChange={() =>
+                      onCheckedChange={() =>
                         // From "all" → disable all; from "none" or "some" → enable all.
                         // The "some → all" choice mirrors macOS Finder / Claude Code:
                         // clicking an indeterminate checkbox enables everything.
@@ -401,17 +403,17 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                   </label>
                 ) : (
                   <span
-                    className="customize-plugin-row-check"
+                    className="shrink-0"
                     aria-hidden
                     style={{ width: 16 }}
                   />
                 )}
-                <div className="customize-plugin-row-main">
-                  <span className="customize-plugin-row-name">{row.label}</span>
-                  <span className="customize-plugin-row-source">
+                <div className="min-w-0 flex flex-1 flex-col">
+                  <span className="truncate text-sm font-medium text-foreground">{row.label}</span>
+                  <span className="truncate text-xs text-muted-foreground">
                     {row.sourceLabel}
                   </span>
-                  <span className="customize-plugin-row-count">
+                  <span className="mt-1 w-fit rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                     {row.skillCount} skill{row.skillCount === 1 ? "" : "s"}
                   </span>
                 </div>
@@ -419,39 +421,43 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             );
           })}
         </ul>
-        <button
+        <Button
           type="button"
-          className={`customize-plugin-add${isAddPanelActive ? " is-active" : ""}`}
+          variant={isAddPanelActive ? "secondary" : "outline"}
+          className="mt-2 w-full justify-start"
           onClick={onSelectAddPanel}
         >
           + 添加插件
-        </button>
+        </Button>
       </aside>
 
       {/* ── Middle pane: skill list ───────────────────────────────── */}
-      <section className="customize-pane">
-        <div className="customize-toolbar">
-          <input
-            className="sessions-filter"
+      <section className="min-h-0 rounded-md border p-3">
+        <div className="mb-3 flex items-center gap-2">
+          <Input
+            className="h-9 flex-1"
             placeholder="搜索 skill"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
-          <button
-            className="approval-btn deny"
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-3 text-sm"
             onClick={() => void refresh()}
             title="刷新"
           >
             刷新
-          </button>
+          </Button>
         </div>
         {selectedPluginRow ? (
           middleSkills.length === 0 ? (
-            <div className="customize-empty">
+            <div className="p-4 text-center text-sm text-muted-foreground">
               {filter ? "没有匹配的 skill" : "该插件未提供 skill"}
             </div>
           ) : (
-            <ul className="customize-skill-list">
+            <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto">
               {middleSkills.map((s) => {
                 const isDisabled = disabledSet.has(s.name);
                 const isSelected =
@@ -459,35 +465,40 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                 return (
                   <li
                     key={s.filePath}
-                    className={`customize-skill-row${isSelected ? " is-selected" : ""}`}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 hover:bg-accent",
+                      isSelected && "bg-accent",
+                    )}
                     onClick={() => onSelectSkill(s)}
                   >
                     <label
-                      className="customize-skill-row-check"
+                      className="shrink-0"
                       onClick={(e) => e.stopPropagation()}
                       title="启用 / 禁用"
                     >
-                      <input
-                        type="checkbox"
+                      <Switch
                         checked={!isDisabled}
-                        onChange={() =>
+                        onCheckedChange={() =>
                           void toggleSkillDisabled(s.name, !isDisabled)
                         }
                       />
                     </label>
-                    <div className="customize-skill-row-main">
-                      <span className="customize-skill-row-name">
+                    <div className="min-w-0 flex flex-1 flex-col">
+                      <span className="truncate text-sm font-medium text-foreground">
                         {selectedPluginRow.synthetic ? s.name : shortNameOf(s)}
                       </span>
                       {s.description && (
-                        <span className="customize-skill-row-desc">
+                        <span className="truncate text-xs text-muted-foreground">
                           {s.description.split("\n")[0]}
                         </span>
                       )}
                     </div>
                     {s.source !== "plugin" && (
-                      <button
-                        className="customize-skill-row-kebab"
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-status-err"
                         title="卸载"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -495,7 +506,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                         }}
                       >
                         ⋯
-                      </button>
+                      </Button>
                     )}
                   </li>
                 );
@@ -503,12 +514,12 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             </ul>
           )
         ) : (
-          <div className="customize-empty">选择左侧任一插件查看其 skill</div>
+          <div className="p-4 text-center text-sm text-muted-foreground">选择左侧任一插件查看其 skill</div>
         )}
       </section>
 
       {/* ── Right pane: detail / plugin card / AddPanel ───────────── */}
-      <section className="customize-pane customize-detail">
+      <section className="min-h-0 rounded-md border p-3">
         {selection.kind === "addPanel" ? (
           <AddPanel
             activeRepoPath={activeRepoPath}
@@ -522,48 +533,57 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             const s = skillsByName.get(selection.skillName);
             if (!s) {
               return (
-                <div className="customize-empty">该 skill 不存在或已被移除</div>
+                <div className="p-4 text-center text-sm text-muted-foreground">该 skill 不存在或已被移除</div>
               );
             }
             return (
               <>
-                <header className="customize-detail-head">
-                  <span className="customize-detail-name">{s.name}</span>
+                <header className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 truncate text-sm font-semibold text-foreground">{s.name}</span>
                   <span className={`skill-source skill-source-${s.source}`}>
                     {s.source}
                   </span>
-                  <div className="customize-detail-actions">
-                    <button
-                      className="skills-row-icon-btn"
+                  <div className="ml-auto flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs"
                       onClick={() => {
                         void navigator.clipboard.writeText(s.name);
                       }}
                       title="复制 skill 名称"
                     >
                       复制名称
-                    </button>
-                    <button
-                      className="skills-row-icon-btn"
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-xs"
                       onClick={() => void window.codeshell.revealInFinder(s.filePath)}
                       title="在 Finder 中显示"
                     >
                       定位
-                    </button>
+                    </Button>
                     {s.source !== "plugin" && (
-                      <button
-                        className="skills-row-icon-btn danger"
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs text-status-err hover:text-status-err"
                         onClick={() => void uninstallOne(s)}
                         title="卸载"
                       >
                         卸载
-                      </button>
+                      </Button>
                     )}
                   </div>
-                  <span className="customize-detail-path">{s.filePath}</span>
+                  <span className="w-full truncate rounded bg-muted/40 px-2 py-1 font-mono text-xs text-muted-foreground">{s.filePath}</span>
                 </header>
-                <div className="customize-detail-body">
+                <div className="min-h-0 overflow-y-auto">
                   {skillBody === null ? (
-                    <div className="view-loading">加载中…</div>
+                    <div className="p-4 text-sm text-muted-foreground">加载中…</div>
                   ) : (
                     <Markdown text={skillBody} />
                   )}
@@ -574,7 +594,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
         ) : selection.kind === "plugin" && selectedPluginRow ? (
           <PluginInfoCard row={selectedPluginRow} />
         ) : (
-          <div className="customize-empty">
+          <div className="p-4 text-center text-sm text-muted-foreground">
             选择左侧任一插件以查看其 skill
           </div>
         )}
@@ -586,17 +606,17 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
 function PluginInfoCard({ row }: { row: PluginRow }) {
   if (row.synthetic) {
     return (
-      <div className="customize-plugin-card">
-        <header className="customize-detail-head">
-          <span className="customize-detail-name">{row.label}</span>
+      <div className="rounded-md border p-3">
+        <header className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="min-w-0 truncate text-sm font-semibold text-foreground">{row.label}</span>
         </header>
-        <div className="customize-plugin-card-row">
+        <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
           <span className="label">说明</span>
           <span className="value">
             来自 user / project 范围的本地 skill。可在中间栏单独启用或禁用。
           </span>
         </div>
-        <div className="customize-plugin-card-row">
+        <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
           <span className="label">数量</span>
           <span className="value">{row.skillCount}</span>
         </div>
@@ -606,40 +626,40 @@ function PluginInfoCard({ row }: { row: PluginRow }) {
   const p = row.summary;
   if (!p) return null;
   return (
-    <div className="customize-plugin-card">
-      <header className="customize-detail-head">
-        <span className="customize-detail-name">{p.name}</span>
+    <div className="rounded-md border p-3">
+      <header className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="min-w-0 truncate text-sm font-semibold text-foreground">{p.name}</span>
         <span className={`skill-source skill-source-plugin`}>plugin</span>
       </header>
       {p.description && (
-        <div className="customize-plugin-card-row">
+        <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
           <span className="label">描述</span>
           <span className="value">{p.description}</span>
         </div>
       )}
-      <div className="customize-plugin-card-row">
+      <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
         <span className="label">来源</span>
         <span className="value">{p.sourceLabel}</span>
       </div>
       {p.marketplace && (
-        <div className="customize-plugin-card-row">
+        <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
           <span className="label">Marketplace</span>
           <span className="value">{p.marketplace}</span>
         </div>
       )}
-      <div className="customize-plugin-card-row">
+      <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
         <span className="label">版本</span>
         <span className="value">{p.version || "(未知)"}</span>
       </div>
-      <div className="customize-plugin-card-row">
+      <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
         <span className="label">安装位置</span>
         <span className="value">{p.installPath}</span>
       </div>
-      <div className="customize-plugin-card-row">
+      <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
         <span className="label">Skill 数量</span>
         <span className="value">{p.skillCount}</span>
       </div>
-      <div className="customize-plugin-card-row">
+      <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
         <span className="label">安装时间</span>
         <span className="value">{p.installedAt}</span>
       </div>
@@ -659,20 +679,26 @@ function AddPanel({
   const [source, setSource] = useState<"github" | "local">("github");
 
   return (
-    <div className="skills-panel">
-      <div className="add-source-tabs">
-        <button
-          className={`add-source-tab${source === "github" ? " active" : ""}`}
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-1">
+        <Button
+          type="button"
+          variant={source === "github" ? "secondary" : "ghost"}
+          size="sm"
+          className="rounded-sm px-2 py-1 text-sm"
           onClick={() => setSource("github")}
         >
           从 GitHub 安装
-        </button>
-        <button
-          className={`add-source-tab${source === "local" ? " active" : ""}`}
+        </Button>
+        <Button
+          type="button"
+          variant={source === "local" ? "secondary" : "ghost"}
+          size="sm"
+          className="rounded-sm px-2 py-1 text-sm"
           onClick={() => setSource("local")}
         >
           从本地文件夹
-        </button>
+        </Button>
       </div>
 
       {source === "github" ? (
@@ -725,24 +751,24 @@ function LocalAddPanel({
   };
 
   return (
-    <div className="add-panel-body">
-      <div className="settings-option-grid">
-        <button className="settings-option-card" onClick={() => void choose()}>
-          <span className="settings-option-title">选择本地文件夹</span>
-          <span className="settings-option-desc">需要包含 SKILL.md。</span>
-        </button>
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
+        <Button type="button" variant="outline" className="h-auto flex-col items-start gap-1 p-3 text-left" onClick={() => void choose()}>
+          <span className="text-sm font-medium text-foreground">选择本地文件夹</span>
+          <span className="text-xs text-muted-foreground">需要包含 SKILL.md。</span>
+        </Button>
       </div>
 
-      <div className="settings-form-grid">
-        <label className="settings-field">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
           <span>来源文件夹</span>
-          <input value={source?.path ?? ""} readOnly placeholder="选择一个 Skill 文件夹" />
+          <Input value={source?.path ?? ""} readOnly placeholder="选择一个 Skill 文件夹" />
         </label>
-        <label className="settings-field">
+        <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
           <span>安装名称</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="skill-name" />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="skill-name" />
         </label>
-        <label className="settings-field">
+        <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
           <span>安装位置</span>
           <Select<"user" | "project">
             value={scope}
@@ -760,7 +786,7 @@ function LocalAddPanel({
         </label>
       </div>
 
-      {error && <div className="view-error">{error}</div>}
+      {error && <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>}
       <Button
         variant="solid"
         className="w-fit"
@@ -856,10 +882,10 @@ function GithubAddPanel({
   };
 
   return (
-    <div className="add-panel-body">
-      <div className="github-input-row">
-        <input
-          className="github-url-input"
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Input
+          className="h-9 flex-1"
           placeholder="https://github.com/owner/repo"
           value={url}
           onChange={(e) => {
@@ -878,74 +904,79 @@ function GithubAddPanel({
           {inspecting ? "解析中…" : "解析"}
         </Button>
       </div>
-      <p className="github-url-hint">
+      <p className="text-xs text-muted-foreground">
         支持仓库 URL，或子目录形式 <code>/tree/&lt;ref&gt;/&lt;subpath&gt;</code>。
         系统会读取仓库目录树，不会自动执行任何脚本。
       </p>
 
-      {error && <div className="view-error">{error}</div>}
+      {error && <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>}
 
       {inspection && (
-        <div className="github-preview">
-          <div className="github-preview-head">
+        <div className="rounded-md border p-3">
+          <div className="flex flex-wrap items-center gap-2">
             <strong>
               {inspection.url.owner}/{inspection.url.repo}
             </strong>
-            <span className="session-meta">
+            <span className="text-xs text-muted-foreground">
               {inspection.url.ref ?? inspection.defaultBranch}
             </span>
             {inspection.isPlugin && (
-              <span className="github-plugin-pill">检测到 plugin.json</span>
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">检测到 plugin.json</span>
             )}
           </div>
 
           {inspection.warning && (
-            <div className="github-warning">{inspection.warning}</div>
+            <div className="rounded-md bg-status-warn/10 p-2 text-sm text-status-warn">{inspection.warning}</div>
           )}
 
           {inspection.skills.length === 0 ? (
-            <div className="approvals-empty">没有可安装的 skill</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">没有可安装的 skill</div>
           ) : (
-            <div className="github-skill-list">
+            <div className="grid gap-2">
               {inspection.skills.map((s) => {
                 const isSelected = selected?.dirInRepo === s.dirInRepo;
                 return (
-                  <button
+                  <Button
+                    type="button"
+                    variant="outline"
                     key={s.dirInRepo}
-                    className={`github-skill-card${isSelected ? " is-selected" : ""}`}
+                    className={cn(
+                      "h-auto flex-col items-start p-3 text-left",
+                      isSelected && "border-primary bg-primary/10",
+                    )}
                     onClick={() => {
                       setSelected(s);
                       setInstallName(s.name);
                     }}
                   >
-                    <div className="github-skill-name">
+                    <div className="flex items-center gap-2">
                       <strong>{s.name}</strong>
                       {s.alreadyInstalled && (
-                        <span className="github-skill-installed">已安装</span>
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">已安装</span>
                       )}
                     </div>
                     {s.description && (
-                      <div className="github-skill-desc">{s.description}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{s.description}</div>
                     )}
-                    <div className="github-skill-path">{s.dirInRepo}</div>
-                  </button>
+                    <div className="mt-1 font-mono text-xs text-muted-foreground">{s.dirInRepo}</div>
+                  </Button>
                 );
               })}
             </div>
           )}
 
           {selected && (
-            <div className="github-install-block">
-              <div className="settings-form-grid">
-                <label className="settings-field">
+            <div className="mt-3 rounded-md border p-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
                   <span>安装名称</span>
-                  <input
+                  <Input
                     value={installName}
                     onChange={(e) => setInstallName(e.target.value)}
                     placeholder={selected.name}
                   />
                 </label>
-                <label className="settings-field">
+                <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
                   <span>安装位置</span>
                   <Select<"user" | "project">
                     value={scope}
@@ -963,12 +994,11 @@ function GithubAddPanel({
                 </label>
               </div>
 
-              <div className="github-trust-row">
-                <label className="github-trust-label">
-                  <input
-                    type="checkbox"
+              <div className="mt-3">
+                <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Switch
                     checked={trustAck}
-                    onChange={(e) => setTrustAck(e.target.checked)}
+                    onCheckedChange={setTrustAck}
                   />
                   <span>
                     我已确认信任 {inspection.url.owner}/{inspection.url.repo}。

@@ -67,22 +67,22 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
   };
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">默认权限</h3>
-      <p className="settings-section-help">
+    <section className="mb-6 flex flex-col gap-3">
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">默认权限</h3>
+      <p className="m-0 text-xs text-muted-foreground">
         新会话默认的权限模式；对话中输入框里的临时权限只影响当前对话。
       </p>
-      <div className="settings-option-grid">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {MODES.map((m) => (
           <button
             key={m}
-            className={`settings-option-card${mode === m ? " active" : ""}`}
+            className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent${mode === m ? " active" : ""}`}
             aria-pressed={mode === m}
             disabled={saving}
             onClick={() => void choose(m)}
           >
-            <span className="settings-option-title">{MODE_LABELS[m]}</span>
-            <span className="settings-option-desc">{MODE_DESCRIPTIONS[m]}</span>
+            <span className="text-sm font-medium text-foreground">{MODE_LABELS[m]}</span>
+            <span className="text-xs text-muted-foreground">{MODE_DESCRIPTIONS[m]}</span>
           </button>
         ))}
       </div>

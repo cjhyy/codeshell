@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 
 export interface ContextMenuItem {
   label: string;
@@ -42,14 +43,18 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
   return (
     <ul
       ref={ref}
-      className="context-menu"
+      className="fixed z-50 min-w-40 list-none rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-lg"
       style={{ top: y, left: x }}
       role="menu"
     >
       {items.map((item, i) => (
         <li
           key={i}
-          className={`context-menu-item${item.danger ? " danger" : ""}${item.disabled ? " disabled" : ""}`}
+          className={cn(
+            "flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
+            item.danger && "text-status-err",
+            item.disabled && "cursor-not-allowed text-muted-foreground hover:bg-transparent",
+          )}
           onClick={() => {
             if (item.disabled) return;
             item.onClick();

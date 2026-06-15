@@ -42,11 +42,14 @@ import {
   clearBucketOverride,
   loadPanelState,
   savePanelState,
+  loadOverrideMap,
+  saveOverrideMap,
   type SessionIndex,
   type SessionSummary,
 } from "./transcripts";
 import { titleFromWire, buildPathAttachment, type ImageAttachment } from "./chat/attachments";
 import { resolveBucket } from "./streamRouting";
+import { resolveStopBucket } from "./stopRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import { selectReplayEvents } from "./snapshotReplay";
 import type {
@@ -76,9 +79,9 @@ import { planDiskRebuild, type DiskSessionMeta } from "./automation/rebuildFromD
 import {
   enqueueQueuedInput,
   dequeueQueuedInput,
+  drainQueuedInput,
   clearQueuedInput,
   removeQueuedInputAt,
-  promoteQueuedInputAt,
   type QueuedInputState,
 } from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
@@ -224,6 +227,12 @@ function App() {
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
   const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
+  // Buckets mid-引导打断: the turn was cancelled and a merged re-send is about
+  // to fire on the next busy=false tick. State (not a ref) so `liveTurnActive`
+  // re-renders to stay lit across the cancel→re-send gap — without it busy
+  // briefly drops to false and the "正在思考…" indicator blinks off, leaving the
+  // user unsure anything is still working (interrupt-relay UX, decision #3).
+  const [relayingBuckets, setRelayingBuckets] = useState<Set<string>>(() => new Set());
   // Buckets that finished a turn while the user was viewing a different
   // session. Cleared when the user selects the bucket (handleSelectSession).
   // Not persisted — purely a live "did something finish off-screen" hint.
@@ -246,7 +255,12 @@ function App() {
   // Provider-agnostic image clarity (low/standard/high) from merged settings;
   // drives renderer-side downscale before send. Undefined = follow default.
   const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(undefined);
-  const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>({});
+  // Seed from localStorage so a refresh (F5) keeps each session's permission
+  // choice — without this the map reset to {} on remount and every session
+  // fell back to the default mode (a 完全访问 session silently reverted to 默认).
+  const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>(
+    () => loadOverrideMap<PermissionMode>("permission"),
+  );
   /**
    * Per-bucket model override, keyed by the SAME bucketKey() as
    * permission/goal overrides. A session that has switched models (or whose
@@ -255,9 +269,13 @@ function App() {
    * 的模型": each session remembers its own model, and changing the global
    * default never overwrites an existing bucket's entry.
    */
-  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>({});
+  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>(
+    () => loadOverrideMap<string>("model"),
+  );
   /** Per-bucket Goal-mode toggle (orthogonal to permission). */
-  const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>({});
+  const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>(
+    () => loadOverrideMap<boolean>("goal"),
+  );
   const [settingsRevision, setSettingsRevision] = useState(0);
   const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
   /** Transient: a run to pre-select when jumping into the runs view (e.g. from
@@ -450,6 +468,11 @@ function App() {
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
+  // Persist per-bucket overrides so they survive a refresh (see the seeded
+  // useState initializers above). Each write mirrors loadOverrideMap's namespace.
+  useEffect(() => { saveOverrideMap("permission", permissionOverrides); }, [permissionOverrides]);
+  useEffect(() => { saveOverrideMap("model", modelOverrides); }, [modelOverrides]);
+  useEffect(() => { saveOverrideMap("goal", goalOverrides); }, [goalOverrides]);
   useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
   useEffect(() => { sessionIndicesRef.current = sessionIndices; }, [sessionIndices]);
   useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
@@ -630,7 +653,10 @@ function App() {
   // the relayed turn with no thinking indicator. (interrupt-relay fix)
   const lastMessage = state.messages[state.messages.length - 1];
   const liveTurnActive =
-    busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user");
+    (busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user")) ||
+    // 引导打断 gap: turn cancelled, merged re-send pending on the next tick.
+    // Keep the indicator lit so the user sees work is still happening. (#3)
+    relayingBuckets.has(activeBucket);
 
   const setBusyForKey = (key: string, val: boolean): void => {
     // Track turn-start time for the manual-stop elapsed line (TODO 2.8).
@@ -1497,7 +1523,18 @@ function App() {
     // the worker default. configure({sessionId,model}) → requestModelSwitch
     // applies immediately when idle, so it lands before the turn starts. Skip
     // when the bucket has no override (it follows the default — no switch needed).
-    const bucketModel = modelOverrides[bucket] ?? modelOverrides[activeBucket];
+    // Final fallback to `activeModelKey` (= the model the UI currently shows
+    // for this session, itself defaulting to the global default). The engine
+    // session may have been created on a DIFFERENT model than the UI shows —
+    // e.g. the user changed the model from the Settings page (which only
+    // updates disk activeKey, not this renderer's per-bucket override) or the
+    // worker started on a stale pin. Without this fallback, `bucketModel`
+    // could be undefined while the engine quietly runs on its old model — the
+    // deepseek-vision rejection bug, where a "switched to gpt-5" session still
+    // ran on deepseek-v4-flash and refused the image. Always pin before the
+    // turn so the engine matches what the UI claims.
+    const bucketModel =
+      modelOverrides[bucket] ?? modelOverrides[activeBucket] ?? activeModelKey;
     if (bucketModel) {
       void window.codeshell.configure({ sessionId: engineSessionId, model: bucketModel });
     }
@@ -1518,6 +1555,25 @@ function App() {
           bucket,
           result: r as unknown as Record<string, unknown>,
         });
+        // Surface early-return failures that never produced a stream. Some
+        // RunResult reasons (image_error, model_error, prompt_too_long) are
+        // returned by the engine BEFORE any turn starts — no turn_start, no
+        // assistant_message, no turn_complete reaches the stream. Without
+        // this branch the only trace is `r.text` in the log: busy clears,
+        // nothing renders, and it reads as "卡住 / 没反应" (the deepseek-
+        // vision rejection bug). Render the engine's human-readable message
+        // as a turn_end(error) line in the stream + an error toast.
+        const result = r as { reason?: string; text?: string } | null;
+        const reason = result?.reason;
+        if (
+          reason === "image_error" ||
+          reason === "model_error" ||
+          reason === "prompt_too_long"
+        ) {
+          const detail = result?.text?.replace(/^ERROR:\s*/, "") || "本轮请求被拒绝";
+          dispatch({ type: "turn_end", bucket, reason: "error", detail });
+          toast({ message: detail, variant: "error" });
+        }
       })
       .catch((err) => {
         // Server crashed / RPC rejected / non-abort error. Without this
@@ -1541,10 +1597,24 @@ function App() {
     if (busy || !activeSessionId) return;
     const queued = queuedInputs[activeBucket];
     if (!queued || queued.length === 0) return;
-    const { text, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
+    // A 引导打断 relay drains the WHOLE queue as one merged message (the user
+    // asked for everything to land at once); a natural turn-end auto-send takes
+    // just the next item. Either way clear the relay marker once we fire.
+    const isRelay = relayingBuckets.has(activeBucket);
+    const { text, state: next } = isRelay
+      ? drainQueuedInput(queuedInputs, activeBucket)
+      : dequeueQueuedInput(queuedInputs, activeBucket);
     setQueuedInputs(next);
+    if (isRelay) {
+      setRelayingBuckets((prev) => {
+        if (!prev.has(activeBucket)) return prev;
+        const n = new Set(prev);
+        n.delete(activeBucket);
+        return n;
+      });
+    }
     if (text) send(text);
-  }, [busy, activeBucket, activeSessionId, queuedInputs]);
+  }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
 
   const queueInput = (text: string): void => {
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
@@ -1552,7 +1622,8 @@ function App() {
 
   const forceSend = (text: string): void => {
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
-    stop(activeBucket);
+    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
+    stop(activeBucket, { relay: true });
   };
 
   const clearActiveQueuedInput = (): void => {
@@ -1563,18 +1634,32 @@ function App() {
     setQueuedInputs((prev) => removeQueuedInputAt(prev, activeBucket, index));
   };
 
-  const guideActiveQueuedInputAt = (index: number): void => {
-    setQueuedInputs((prev) => promoteQueuedInputAt(prev, activeBucket, index));
-    stop(activeBucket);
+  // 引导打断: interrupt the current turn and send the ENTIRE queue merged into
+  // one message. The relay marker keeps busy/liveTurnActive lit across the
+  // cancel→re-send gap (no "正在思考" flicker) and tells the useEffect above to
+  // drain everything rather than one item. (decisions #1 + #3)
+  const guideActiveQueuedInput = (): void => {
+    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
+    stop(activeBucket, { relay: true });
   };
 
-  const stop = (bucketOverride?: string): void => {
+  const stop = (bucketOverride?: string, opts?: { relay?: boolean }): void => {
     // Guard: when wired as a click handler (onClick={stop}) React passes the
     // MouseEvent as the first arg. Only honor a real string override; anything
     // else falls through to the running/active bucket. Without this the event
     // object reaches `bucket.indexOf` and throws — silently breaking Stop.
     const override = typeof bucketOverride === "string" ? bucketOverride : undefined;
-    const bucket = override ?? runningBucketRef.current ?? activeBucket;
+    // Relay = 引导打断: cancel the turn but DON'T draw a "你在 Ns 后停止了" line —
+    // the user isn't stopping, they're handing off to a queued re-send that
+    // fires on the next busy=false tick. The relay marker (relayingBuckets)
+    // keeps liveTurnActive lit across the gap.
+    const relay = opts?.relay === true;
+    // The composer Stop button belongs to the VIEWED conversation (its
+    // visibility is busy=busyKeys.has(activeBucket)), so default to activeBucket
+    // — NOT the global runningBucket ref, which points at whichever conversation
+    // sent last and would abort the wrong one when two run concurrently.
+    const bucket = resolveStopBucket(override, activeBucket, runningBucketRef.current);
+    if (!bucket) return;
     const sep = bucket.indexOf("::");
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
     const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
@@ -1597,7 +1682,7 @@ function App() {
     const elapsedMs = startedAt !== undefined ? Date.now() - startedAt : undefined;
     setBusyForKey(bucket, false);
     if (runningBucketRef.current === bucket) runningBucketRef.current = null;
-    dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
+    if (!relay) dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
     void window.codeshell.cancel(engineSessionId);
   };
 
@@ -1697,6 +1782,14 @@ function App() {
   // Monotonic nonce source for revealFile, in a ref so the open-file handler
   // (registered once) doesn't close over a stale `revealFile`.
   const revealFileNonceRef = useRef<number>(0);
+  // URL the Browser panel should navigate to, set when a chat answer's http(s)
+  // link is clicked. Threaded as a prop (not relied on via a window event the
+  // panel listens for) so it survives the panel being CLOSED at click time —
+  // the panel mounts fresh and still navigates. The nonce re-fires on re-click.
+  const [openUrl, setOpenUrl] = useState<{ url: string; nonce: number } | undefined>(
+    undefined,
+  );
+  const openUrlNonceRef = useRef<number>(0);
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
@@ -1740,6 +1833,14 @@ function App() {
   // Top-bar toggle opens the dock on the card landing (kind null) / closes it.
   const togglePanel = (): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: r.open ? r.kind : null, open: !r.open }));
+  // Clear the pending open-url whenever the dock is closed. BrowserPanel is
+  // unmounted while the dock is closed, so its per-mount nonce-dedup ref resets;
+  // without clearing, manually reopening the browser later would re-consume the
+  // stale openUrl and navigate to the last chat-clicked link. The click-while-
+  // closed flow is unaffected: that sets openUrl AND opens the dock together.
+  useEffect(() => {
+    if (!panelRequest.open && openUrl) setOpenUrl(undefined);
+  }, [panelRequest.open, openUrl]);
   // Open the dock and request a tab of `kind` (used by hotkeys, palette, cards).
   const openPanel = (kind: PanelTab): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind, open: true }));
@@ -1906,7 +2007,14 @@ function App() {
   // panel instead of the OS browser. BrowserPanel listens for the same event to
   // open the URL in a new tab; here we just surface the dock + browser panel.
   useEffect(() => {
-    const onOpenUrl = (): void => {
+    const onOpenUrl = (e: Event): void => {
+      const url = (e as CustomEvent<{ url?: string }>).detail?.url;
+      if (!url) return;
+      // Carry the URL down to BrowserPanel as a prop (see openUrl state) BEFORE
+      // surfacing the panel, so a freshly-mounted panel navigates to it.
+      const nonce = (openUrlNonceRef.current ?? 0) + 1;
+      openUrlNonceRef.current = nonce;
+      setOpenUrl({ url, nonce });
       setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "browser", open: true }));
     };
     window.addEventListener("codeshell:open-url", onOpenUrl);
@@ -2167,7 +2275,20 @@ function App() {
     //    (user-chosen semantics). This only seeds future sessions; it never
     //    rewrites another bucket's existing override above.
     setDefaultActiveModelKey(opt.key);
-    void window.codeshell.updateSettings("user", { activeKey: opt.key });
+    void (async () => {
+      try {
+        const cwd = activeRepo?.path;
+        const projectS = cwd ? (await window.codeshell.getSettings("project", cwd)) ?? {} : {};
+        const userS = (await window.codeshell.getSettings("user")) ?? {};
+        const merged: Record<string, unknown> = { ...userS, ...projectS };
+        await window.codeshell.updateSettings(
+          "user",
+          activeModelSettingsPatch(merged, opt.key),
+        );
+      } catch {
+        await window.codeshell.updateSettings("user", { activeKey: opt.key });
+      }
+    })();
     // 3) Hot-switch the running worker. Scope it to THIS session's engine so
     //    we don't swap the model under any OTHER live session. The backend
     //    (server.ts handleConfigure) routes a sessionId'd configure to
@@ -2378,7 +2499,7 @@ function App() {
               queuedInputItems={queuedInputs[activeBucket] ?? []}
               onClearQueuedInput={clearActiveQueuedInput}
               onRemoveQueuedInput={removeActiveQueuedInputAt}
-              onGuideQueuedInput={guideActiveQueuedInputAt}
+              onGuideQueuedInput={guideActiveQueuedInput}
               runningAgents={runningAgents}
               activeRepoId={activeRepoId}
               composerSeed={composerSeed}
@@ -2464,6 +2585,7 @@ function App() {
           reviewFiles={reviewFiles}
           reviewDiff={reviewDiff}
           revealFile={revealFile}
+          openUrl={openUrl}
           width={panelWidth}
           onResizeStart={beginPanelResize}
           onAttachImage={(p) => void attachImageByPath(p)}
@@ -2558,6 +2680,45 @@ function resolveActiveKey(s: Record<string, unknown>): string | null {
     if (typeof m.name === "string") return m.name;
   }
   return null;
+}
+
+function activeModelSettingsPatch(
+  s: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> {
+  const rawModels = Array.isArray(s.models)
+    ? s.models.filter((m): m is Record<string, unknown> => Boolean(m && typeof m === "object"))
+    : [];
+  const rawProviders = Array.isArray(s.providers)
+    ? s.providers.filter((p): p is Record<string, unknown> => Boolean(p && typeof p === "object"))
+    : [];
+  const raw = rawModels.find((m) => {
+    const modelKey = typeof m.key === "string" ? m.key :
+      typeof m.model === "string" ? m.model : "";
+    return modelKey === key;
+  });
+  if (!raw) return { activeKey: key };
+
+  const providerKey = typeof raw.providerKey === "string" ? raw.providerKey :
+    typeof raw.provider === "string" ? raw.provider : "";
+  const provider = rawProviders.find((p) => p.key === providerKey);
+  const providerKind = typeof provider?.kind === "string" ? provider.kind : "";
+  const protocol = typeof raw.provider === "string"
+    ? raw.provider
+    : providerKind === "anthropic"
+      ? "anthropic"
+      : "openai";
+  return {
+    activeKey: key,
+    model: {
+      provider: protocol,
+      name: typeof raw.model === "string" ? raw.model : key,
+      apiKey: typeof raw.apiKey === "string" ? raw.apiKey :
+        typeof provider?.apiKey === "string" ? provider.apiKey : null,
+      baseUrl: typeof raw.baseUrl === "string" ? raw.baseUrl :
+        typeof provider?.baseUrl === "string" ? provider.baseUrl : null,
+    },
+  };
 }
 
 export { App };

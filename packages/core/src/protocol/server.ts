@@ -689,9 +689,20 @@ export class AgentServer {
     // or to any session's engine from chatManager for settings ops
     const engine = this.legacyEngine ?? this.anyEngine();
 
-    if (params.reloadModels && engine) {
+    if (params.reloadModels) {
       try {
-        engine.reloadModelPool();
+        const seen = new Set<Engine>();
+        const reload = (target: Engine | null | undefined) => {
+          if (!target || seen.has(target)) return;
+          seen.add(target);
+          target.reloadModelPool();
+        };
+        reload(this.legacyEngine);
+        reload(this.globalQueryEngine);
+        if (this.chatManager) {
+          this.chatManager.forEachSession((s) => reload(s.engine));
+        }
+        if (seen.size === 0) reload(engine);
       } catch (err) {
         this.transport.send(
           createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),

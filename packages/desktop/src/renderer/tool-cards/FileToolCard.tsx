@@ -6,6 +6,7 @@ import { classifyPath } from "./attachments";
 import { AttachmentCard } from "./AttachmentCard";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   message: ToolMessage;
@@ -37,59 +38,60 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }
 
   const summary = (
     <span>
-      <span className="tool-card-path">{truncate(path, 70)}</span>
-      {range && <span className="tool-card-desc"> {range}</span>}
+      <span className="font-mono text-foreground">{truncate(path, 70)}</span>
+      {range && <span className="text-muted-foreground"> {range}</span>}
       {variant === "write" && content !== undefined && (
-        <span className="tool-card-desc"> ({content.length}B)</span>
+        <span className="text-muted-foreground"> ({content.length}B)</span>
       )}
     </span>
   );
 
   const details = (
-    <div className="tool-card-detail">
-      <div className="tool-card-row">
-        <span className="tool-card-row-label">path</span>
-        <span className="tool-card-row-val mono">{path}</span>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">path</span>
+        <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{path}</span>
         {path && (
           <OpenWithMenu path={path} align="end">
-            <button
+            <Button
               type="button"
-              className="attachment-openwith"
+              variant="ghost"
+              size="icon"
+              className="mt-1 h-7 w-7 self-start text-muted-foreground hover:text-foreground"
               title="打开方式"
               aria-label="打开方式"
-              style={{ opacity: 1 }}
             >
               <MoreHorizontal size={14} />
-            </button>
+            </Button>
           </OpenWithMenu>
         )}
       </div>
       {variant === "edit" && (
         <>
           {oldStr !== undefined && (
-            <div className="tool-card-row">
-              <span className="tool-card-row-label">- old</span>
-              <pre className="tool-card-row-val removed">{truncate(oldStr, 800)}</pre>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">- old</span>
+              <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">{truncate(oldStr, 800)}</pre>
             </div>
           )}
           {newStr !== undefined && (
-            <div className="tool-card-row">
-              <span className="tool-card-row-label">+ new</span>
-              <pre className="tool-card-row-val added">{truncate(newStr, 800)}</pre>
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">+ new</span>
+              <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-ok/10 p-2 font-mono text-xs text-status-ok">{truncate(newStr, 800)}</pre>
             </div>
           )}
         </>
       )}
       {variant === "write" && content !== undefined && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">content</span>
-          <pre className="tool-card-row-val">{truncate(content, 800)}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">content</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{truncate(content, 800)}</pre>
         </div>
       )}
       {variant === "write" && path && writeAttachmentKind(path, message) && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">file</span>
-          <div className="attachment-list">
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">file</span>
+          <div className="flex flex-wrap gap-2">
             <AttachmentCard
               attachment={{ path, kind: writeAttachmentKind(path, message)! }}
             />
@@ -97,15 +99,15 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }
         </div>
       )}
       {message.result !== undefined && variant === "read" && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">content</span>
-          <pre className="tool-card-row-val">{truncate(message.result, 800)}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">content</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{truncate(message.result, 800)}</pre>
         </div>
       )}
       {message.error && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">error</span>
-          <pre className="tool-card-row-val err">{message.error}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">error</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">{message.error}</pre>
         </div>
       )}
     </div>

@@ -139,7 +139,7 @@ describe("FalVideoProvider", () => {
       creds,
     });
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toContain("does not support multiple images");
+    if (!res.ok) expect(res.error).toContain("does not support reference-to-video");
     expect(called).toBe(false); // errored before any network call
   });
 
@@ -159,6 +159,40 @@ describe("FalVideoProvider", () => {
     expect(res.ok).toBe(true);
     expect(calls[0].url).toBe("https://queue.fal.run/fal-ai/kling-video/v3/pro/image-to-video");
     expect(calls[0].body).toEqual({ prompt: "zoom", image_url: "https://x/only.png" });
+  });
+
+  test("submit with videos[] on Seedance → reference-to-video + video_urls (passed through verbatim)", async () => {
+    const calls: Array<{ url: string; body: any }> = [];
+    const fakeFetch: typeof fetch = (async (url: string, init: any) => {
+      calls.push({ url, body: JSON.parse(init.body) });
+      return { ok: true, status: 200, json: async () => falSubmitBody("req-ext") } as Response;
+    }) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const res = await p.submit({
+      prompt: "continue from @Video1",
+      model: "bytedance/seedance-2.0/text-to-video",
+      videos: ["https://x/prev.mp4"],
+      creds,
+    });
+    expect(res.ok).toBe(true);
+    // video forces the reference-to-video endpoint even with zero images
+    expect(calls[0].url).toBe("https://queue.fal.run/bytedance/seedance-2.0/reference-to-video");
+    expect(calls[0].body).toEqual({ prompt: "continue from @Video1", video_urls: ["https://x/prev.mp4"] });
+  });
+
+  test("submit with videos[] on Kling (no reference support) → ok:false, no network call", async () => {
+    let called = false;
+    const fakeFetch: typeof fetch = (async () => { called = true; return {} as Response; }) as unknown as typeof fetch;
+    const p = new FalVideoProvider(fakeFetch);
+    const res = await p.submit({
+      prompt: "continue",
+      model: "fal-ai/kling-video/v3/pro/text-to-video",
+      videos: ["https://x/prev.mp4"],
+      creds,
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toContain("does not support reference-to-video");
+    expect(called).toBe(false);
   });
 
   test("submit non-OK → ok:false with status", async () => {
@@ -229,6 +263,8 @@ describe("FalVideoProvider", () => {
     if (dl.ok) {
       expect(Buffer.from(dl.bytes).toString()).toBe("VIDEOBYTES");
       expect(dl.ext).toBe("mp4");
+      // fal-hosted URL surfaced for reuse in video extension
+      expect(dl.url).toBe("https://cdn.fal/v/out.mp4");
     }
     expect(urls[0]).toBe(RESPONSE_URL);
     expect(urls[1]).toBe("https://cdn.fal/v/out.mp4");

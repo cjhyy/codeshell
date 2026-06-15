@@ -4,6 +4,8 @@ import { parseUnifiedDiff, type DiffFile } from "./parseUnifiedDiff";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
 import { openFileTarget } from "../chat/openWith";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Props {
   /** cwd to ask git for the diff. */
@@ -87,13 +89,13 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
     onStats({ added, removed });
   }, [diff]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (error) return <div className="diff-error">git diff failed: {error}</div>;
-  if (!diff) return <div className="diff-loading">loading diff…</div>;
+  if (error) return <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">git diff failed: {error}</div>;
+  if (!diff) return <div className="p-3 text-sm text-muted-foreground">loading diff…</div>;
   const visible = onlyPath
     ? diff.filter((f) => (f.newPath ?? f.oldPath) === onlyPath)
     : diff;
   if (visible.length === 0) {
-    return <div className="diff-empty">no changes</div>;
+    return <div className="p-3 text-sm text-muted-foreground">no changes</div>;
   }
   // Guard against rendering an enormous diff (e.g. a whole "branch vs base"
   // range): a per-line <tr> table with no virtualization froze the main thread
@@ -107,9 +109,9 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
   const overCap = totalLines > MAX_RENDERED_LINES;
   const filesToRender = overCap ? capFiles(visible, MAX_RENDERED_LINES) : visible;
   return (
-    <div className="diff-viewer">
+    <div className="flex min-w-0 flex-col gap-3 overflow-x-auto text-sm">
       {overCap && (
-        <div className="diff-empty px-2 py-1 text-xs text-muted-foreground">
+        <div className="rounded-md bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
           差异较大（{totalLines} 行），仅显示前 {MAX_RENDERED_LINES} 行。
         </div>
       )}
@@ -163,10 +165,11 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
   }
 
   return (
-    <div className={`diff-file diff-file-${file.status}`}>
-      <button
+    <div className="overflow-hidden rounded-md border bg-card">
+      <Button
         type="button"
-        className="diff-file-head"
+        variant="ghost"
+        className="h-auto w-full justify-start gap-2 rounded-none border-b px-3 py-2 text-left"
         onClick={() => setCollapsed((v) => !v)}
         aria-expanded={!collapsed}
         title={collapsed ? "展开" : "折叠"}
@@ -178,7 +181,7 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
         )}
         {/* "‎" (LRM) keeps the path reading LTR while direction:rtl clips
             the ellipsis at the START — see .diff-file-path. */}
-        <span className="diff-file-path" title={title}>{"\u200e" + title}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-xs" title={title}>{"\u200e" + title}</span>
         {/* Status as a symbol (Codex style), not a text label: added → green
             dot, deleted → red dash, renamed → amber dot; modified shows
             nothing (the +/- counts already convey it). */}
@@ -211,24 +214,24 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
         >
           <ExternalLink className="h-3.5 w-3.5" />
         </span>
-      </button>
+      </Button>
       {!collapsed && file.hunks.map((h, i) => (
-        <div key={h.header || i} className="diff-hunk">
-          <div className="diff-hunk-head">{h.header}</div>
-          <table className="diff-table">
+        <div key={h.header || i} className="overflow-x-auto border-b last:border-b-0">
+          <div className="border-b bg-muted/40 px-3 py-1 font-mono text-xs text-muted-foreground">{h.header}</div>
+          <table className="w-full border-collapse font-mono text-xs">
             <tbody>
               {h.lines.map((l, j) => {
                 const key = `${i}:${j}`;
                 const lineNo = l.newLine ?? l.oldLine ?? null;
                 return (
                   <React.Fragment key={j}>
-                    <tr className={`diff-line diff-line-${l.kind} group`}>
-                      <td className="diff-lineno diff-lineno-old">{l.oldLine ?? ""}</td>
-                      <td className="diff-lineno diff-lineno-new">{l.newLine ?? ""}</td>
-                      <td className="diff-marker">
+                    <tr className={cn("group", lineTone(l.kind))}>
+                      <td className="w-12 select-none border-r px-2 py-0.5 text-right tabular-nums text-muted-foreground">{l.oldLine ?? ""}</td>
+                      <td className="w-12 select-none border-r px-2 py-0.5 text-right tabular-nums text-muted-foreground">{l.newLine ?? ""}</td>
+                      <td className="w-6 select-none border-r px-2 py-0.5 text-center text-muted-foreground">
                         {l.kind === "add" ? "+" : l.kind === "del" ? "-" : " "}
                       </td>
-                      <td className="diff-text">
+                      <td className="min-w-[520px] whitespace-pre px-2 py-0.5">
                         {/* The line text keeps `white-space: pre` (from
                             .diff-text) so it extends and the hunk scrolls
                             horizontally; the comment button is positioned
@@ -240,7 +243,7 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
                             type="button"
                             aria-label="评论此行"
                             title="评论此行(加入输入框)"
-                            className="diff-comment-btn absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
+                            className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
                             onClick={() => setCommenting(commenting === key ? null : key)}
                           >
                             <MessageSquarePlus size={12} />
@@ -280,4 +283,10 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
       ))}
     </div>
   );
+}
+
+function lineTone(kind: string): string {
+  if (kind === "add") return "bg-status-ok/10";
+  if (kind === "del") return "bg-status-err/10";
+  return "";
 }

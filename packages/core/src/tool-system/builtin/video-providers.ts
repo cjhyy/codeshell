@@ -25,6 +25,8 @@ export interface VideoSubmitRequest {
   image?: string;
   /** Multiple image URLs — ≥2 triggers reference-to-video. Takes precedence over `image`. */
   images?: string[];
+  /** Reference/continuation video URLs (http/https) — passed through to fal's `video_urls`. Reference them in the prompt as @Video1/@Video2. Forces reference-to-video. */
+  videos?: string[];
   signal?: AbortSignal;
 }
 
@@ -39,7 +41,7 @@ export type VideoPollResult =
   | { ok: false; error: string };
 
 export type VideoDownloadResult =
-  | { ok: true; bytes: Uint8Array; ext: string }
+  | { ok: true; bytes: Uint8Array; ext: string; url?: string }
   | { ok: false; error: string };
 
 export interface VideoProvider {
@@ -147,19 +149,25 @@ export class FalVideoProvider implements VideoProvider {
   async submit(req: VideoSubmitRequest): Promise<VideoSubmitResult> {
     const base = req.creds.baseUrl.replace(/\/+$/, "");
     const imgs = this.imageList(req);
-    // Multi-image needs reference-to-video, which only some families expose.
-    // Routing e.g. Kling to .../reference-to-video 404s at result fetch — fail
-    // fast with a clear message instead.
-    if (imgs.length >= 2 && !this.supportsReference(req.model)) {
+    const vids = req.videos ?? [];
+    // Multi-image OR any reference video needs the reference-to-video endpoint,
+    // which only some families (Seedance) expose. Routing e.g. Kling there
+    // 404s at result fetch — fail fast with a clear message instead.
+    const needsReference = imgs.length >= 2 || vids.length > 0;
+    if (needsReference && !this.supportsReference(req.model)) {
       return {
         ok: false,
-        error: `model "${req.model}" does not support multiple images (reference-to-video). Use a Seedance model for 2+ images, or pass a single image.`,
+        error: `model "${req.model}" does not support reference-to-video (multiple images or reference videos). Use a Seedance model, or pass a single image / no video.`,
       };
     }
-    const model = this.resolveModel(req.model, imgs.length);
+    // imageCount alone can't express "reference needed"; bump to 2 when a video
+    // forces the reference endpoint so resolveModel picks reference-to-video.
+    const refImageCount = needsReference ? Math.max(imgs.length, 2) : imgs.length;
+    const model = this.resolveModel(req.model, refImageCount);
     const body: Record<string, unknown> = { prompt: req.prompt };
     if (imgs.length >= 2) body.image_urls = imgs;
     else if (imgs.length === 1) body.image_url = imgs[0];
+    if (vids.length > 0) body.video_urls = vids;
     try {
       const r = await this.fetchImpl(`${base}/${model}`, {
         method: "POST",
@@ -240,7 +248,9 @@ export class FalVideoProvider implements VideoProvider {
       const buf = new Uint8Array(await vr.arrayBuffer());
       const m = /\.([a-z0-9]{2,4})(?:\?|$)/i.exec(videoUrl);
       const ext = m ? m[1].toLowerCase() : "mp4";
-      return { ok: true, bytes: buf, ext };
+      // Surface the fal-hosted URL so the model can reuse it for video extension
+      // (videos[] → video_urls) without re-uploading. Note: signed/expiring.
+      return { ok: true, bytes: buf, ext, url: videoUrl };
     } catch (err) {
       return { ok: false, error: `fal download error: ${(err as Error).message}` };
     }

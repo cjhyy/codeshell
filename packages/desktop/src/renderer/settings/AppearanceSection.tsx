@@ -17,18 +17,18 @@ export function AppearanceSection() {
   };
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">主题</h3>
-      <p className="settings-section-help">选择应用界面的显示模式。</p>
-      <div className="settings-option-grid">
+    <section className="mb-6 flex flex-col gap-3">
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">主题</h3>
+      <p className="m-0 text-xs text-muted-foreground">选择应用界面的显示模式。</p>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {THEMES.map((item) => (
           <button
             key={item.id}
-            className={`settings-option-card${theme === item.id ? " active" : ""}`}
+            className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent${theme === item.id ? " active" : ""}`}
             onClick={() => choose(item.id)}
           >
-            <span className="settings-option-title">{item.label}</span>
-            <span className="settings-option-desc">{item.description}</span>
+            <span className="text-sm font-medium text-foreground">{item.label}</span>
+            <span className="text-xs text-muted-foreground">{item.description}</span>
           </button>
         ))}
       </div>

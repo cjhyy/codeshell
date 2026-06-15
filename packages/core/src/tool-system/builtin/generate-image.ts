@@ -19,13 +19,18 @@
  * Uses the native `fetch` (codeshell does not depend on the `openai` SDK).
  */
 
-import { writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { writeFile, mkdir, readFile } from "node:fs/promises";
+import { join, isAbsolute, resolve as resolvePath, basename, extname } from "node:path";
 import { randomBytes } from "node:crypto";
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { SettingsManager } from "../../settings/manager.js";
-import { getImageProvider, DEFAULT_IMAGE_MODEL, type ImageProviderCreds } from "./image-providers.js";
+import {
+  getImageProvider,
+  DEFAULT_IMAGE_MODEL,
+  type ImageProviderCreds,
+  type InputImage,
+} from "./image-providers.js";
 import { getMergedCatalog, findCatalogEntry } from "../../model-catalog/index.js";
 
 /** A configured imageGen/videoGen instance (subset used here). */
@@ -62,7 +67,8 @@ const IMAGE_PROVIDER_KINDS = ["openai", "google"] as const;
 export const generateImageToolDef: ToolDefinition = {
   name: "GenerateImage",
   description:
-    "Generate an image from a text prompt. Saves a PNG into the workspace and returns its " +
+    "Generate an image from a text prompt, or edit/re-imagine existing image(s) by passing " +
+    "`referenceImages` (image-to-image). Saves a PNG into the workspace and returns its " +
     "absolute path; read or reference that path on later turns. Defaults to the OpenAI Images " +
     "API (gpt-image-2); requires a matching provider configured in settings. " +
     "For raster assets (photos, illustrations, mockups, textures) — not for " +
@@ -96,6 +102,15 @@ export const generateImageToolDef: ToolDefinition = {
         description:
           "Image model id (e.g. \"gpt-image-2\"). Defaults to the provider's default model. " +
           "Only specify to override.",
+      },
+      referenceImages: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Optional workspace image path(s) to use as visual references (image-to-image / " +
+          "edit). When provided, the prompt edits/re-imagines these inputs instead of " +
+          "generating from scratch — use it to keep a subject, style, or composition. " +
+          "Paths are relative to the workspace (or absolute). PNG/JPEG/WebP, up to 16.",
       },
     },
     required: ["prompt"],
@@ -257,6 +272,52 @@ export function isGenerateImageAvailable(
   return value;
 }
 
+/** Map a file extension to an image MIME type the image APIs accept. */
+const IMAGE_MIME_BY_EXT: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+};
+
+/**
+ * Read reference-image paths (workspace-relative or absolute) into decoded
+ * {@link InputImage}s for image-to-image. Returns either the loaded images or a
+ * user-facing error string (bad path, unreadable, unsupported type, too many).
+ */
+async function loadReferenceImages(
+  paths: string[],
+  cwd: string,
+): Promise<{ ok: true; images: InputImage[] } | { ok: false; error: string }> {
+  if (paths.length > 16) {
+    return { ok: false, error: `too many reference images (${paths.length}); max is 16` };
+  }
+  const images: InputImage[] = [];
+  for (const p of paths) {
+    if (typeof p !== "string" || !p.trim()) {
+      return { ok: false, error: "referenceImages entries must be non-empty path strings" };
+    }
+    const ext = extname(p).toLowerCase();
+    const mimeType = IMAGE_MIME_BY_EXT[ext];
+    if (!mimeType) {
+      return {
+        ok: false,
+        error: `unsupported reference image type "${ext || "(none)"}" for ${p}; use PNG/JPEG/WebP/GIF`,
+      };
+    }
+    const abs = isAbsolute(p) ? p : resolvePath(cwd, p);
+    let bytes: Buffer;
+    try {
+      bytes = await readFile(abs);
+    } catch (err) {
+      return { ok: false, error: `could not read reference image ${p}: ${(err as Error).message}` };
+    }
+    images.push({ filename: basename(abs), mimeType, bytes });
+  }
+  return { ok: true, images };
+}
+
 export async function generateImageTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
@@ -271,6 +332,15 @@ export async function generateImageTool(
   const overrideModel = typeof args.model === "string" && args.model ? args.model : undefined;
 
   const cwd = ctx?.cwd ?? process.cwd();
+
+  // Optional reference images → image-to-image. Resolve + decode before the
+  // provider call so a bad path fails fast with a clear message.
+  let inputImages: InputImage[] | undefined;
+  if (Array.isArray(args.referenceImages) && args.referenceImages.length > 0) {
+    const loaded = await loadReferenceImages(args.referenceImages as string[], cwd);
+    if (!loaded.ok) return `Error: ${loaded.error}`;
+    inputImages = loaded.images;
+  }
   const resolved = resolveImageProvider(cwd, preferKind);
   if (!resolved) {
     return preferKind
@@ -293,6 +363,7 @@ export async function generateImageTool(
     quality,
     model,
     creds: resolved.creds,
+    inputImages,
     signal: ctx?.signal,
   });
   if (!result.ok) {
@@ -310,7 +381,10 @@ export async function generateImageTool(
     await writeFile(path, Buffer.from(result.b64, "base64"));
     // Name the provider/model actually used, so the user/agent knows which
     // image backend produced this (esp. when a default fell back to another).
-    return `Generated image with ${resolved.kind} (${model}), saved to ${path}`;
+    const mode = inputImages?.length
+      ? ` from ${inputImages.length} reference image(s)`
+      : "";
+    return `Generated image with ${resolved.kind} (${model})${mode}, saved to ${path}`;
   } catch (err) {
     return `Error saving generated image: ${(err as Error).message}`;
   }

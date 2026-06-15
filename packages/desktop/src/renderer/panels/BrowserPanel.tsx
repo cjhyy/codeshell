@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -114,6 +115,13 @@ interface Props {
   /** Initial URL to open (used by the popout window). */
   initialUrl?: string;
   /**
+   * URL a clicked chat link asked to open, threaded as a prop (nonce re-fires
+   * on re-click). Prop-driven, NOT a window event the panel subscribes to, so
+   * it works even when the panel was CLOSED at click time: App opens the panel,
+   * this component mounts, and the effect below navigates to the pending URL.
+   */
+  openUrl?: { url: string; nonce: number };
+  /**
    * The active session's browser anchors — the SINGLE source the page dots /
    * highlights echo (圈选统一架构). Main-window panel: App passes its bucketed
    * state; popout: the hub broadcast. No local marker state exists anymore.
@@ -138,7 +146,7 @@ interface Props {
  * persistent partition) with a self-drawn address bar, tabs, and a
  * localhost bookmark list discovered by port-probing common dev ports.
  */
-export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true }: Props) {
+export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true }: Props) {
   const emitAnchor = onAnchor ?? addAnchor;
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
@@ -308,28 +316,32 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, on
     setActiveId(tab.id);
   }, []);
 
-  // A chat answer link (http/https) was clicked: App opens/focuses this panel,
-  // and we open the URL in a new tab here. If the only tab is the blank landing,
-  // load into it rather than stacking an empty tab in front of it.
+  // A chat answer link (http/https) was clicked: App surfaces this panel and
+  // hands the URL down via the `openUrl` prop (NOT a window event — that would
+  // be missed when the panel was closed at click time, since this component is
+  // unmounted then; the prop survives the mount and we navigate on it here).
+  //
+  // Open the URL in a new tab. If the only tab is the blank landing, load into
+  // it rather than stacking an empty tab in front of it. Driven by openUrl.nonce
+  // so re-clicking the same link re-fires; the ref dedupes a single nonce
+  // (incl. StrictMode's double effect and unrelated re-renders).
+  const lastOpenUrlNonce = useRef<number>(-1);
   useEffect(() => {
-    const onOpenUrl = (e: Event): void => {
-      const url = (e as CustomEvent<{ url?: string }>).detail?.url;
-      if (!url) return;
-      const norm = normalizeUrl(url);
-      if (!norm) return;
-      setTabs((prev) => {
-        if (prev.length === 1 && prev[0].url === NEW_TAB) {
-          setActiveId(prev[0].id);
-          return [{ ...prev[0], url: norm, draft: norm }];
-        }
-        const tab = freshTab(norm);
-        setActiveId(tab.id);
-        return [...prev, tab];
-      });
-    };
-    window.addEventListener("codeshell:open-url", onOpenUrl);
-    return () => window.removeEventListener("codeshell:open-url", onOpenUrl);
-  }, []);
+    if (!openUrl) return;
+    if (lastOpenUrlNonce.current === openUrl.nonce) return;
+    lastOpenUrlNonce.current = openUrl.nonce;
+    const norm = normalizeUrl(openUrl.url);
+    if (!norm) return;
+    setTabs((prev) => {
+      if (prev.length === 1 && prev[0].url === NEW_TAB) {
+        setActiveId(prev[0].id);
+        return [{ ...prev[0], url: norm, draft: norm }];
+      }
+      const tab = freshTab(norm);
+      setActiveId(tab.id);
+      return [...prev, tab];
+    });
+  }, [openUrl]);
 
   const closeTab = useCallback(
     (id: string) => {
@@ -358,28 +370,32 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, on
               t.id === activeId ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"
             }`}
           >
-            <button type="button" className="flex min-w-0 items-center gap-1" onClick={() => setActiveId(t.id)}>
+            <Button type="button" variant="ghost" className="h-auto min-w-0 gap-1 p-0 hover:bg-transparent" onClick={() => setActiveId(t.id)}>
               <Globe className="h-3 w-3 shrink-0" />
               <span className="truncate">{t.title}</span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="shrink-0 opacity-0 group-hover:opacity-100"
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100"
               onClick={() => closeTab(t.id)}
               aria-label="关闭标签"
             >
               <X className="h-3 w-3" />
-            </button>
+            </Button>
           </div>
         ))}
-        <button
+        <Button
           type="button"
-          className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground"
           onClick={() => openInNewTab(NEW_TAB)}
           aria-label="新选项卡"
         >
           <Plus className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       </div>
 
       {/* Address bar */}
@@ -413,14 +429,16 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, on
         {markers.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button
+              <Button
                 type="button"
-                className="relative flex h-8 items-center gap-1 rounded-md px-1.5 text-muted-foreground hover:bg-accent"
+                variant="ghost"
+                size="sm"
+                className="relative h-8 gap-1 px-1.5 text-muted-foreground"
                 title={`标注 ${markers.length}（本页 ${visibleMarkers.length}）`}
               >
                 <MapPin className="h-4 w-4" />
                 <span className="text-xs tabular-nums">{markers.length}</span>
-              </button>
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-96 w-80 overflow-y-auto">
               {groupMarkersByPage(markers).map((group, gi) => (
@@ -597,15 +615,16 @@ function MarkerDot({
   const dirty = draft !== marker.anchor.comment;
   return (
     <>
-      <button
+      <Button
         type="button"
         onClick={onOpen}
         title={marker.anchor.comment}
-        className="group absolute z-30 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground shadow ring-2 ring-background"
+        size="icon"
+        className="group absolute z-30 h-5 w-5 rounded-full text-[10px] font-semibold shadow ring-2 ring-background"
         style={{ top: Math.max(2, rect.y - 8), left: Math.max(2, rect.x - 8) }}
       >
         {index}
-      </button>
+      </Button>
       {editing && selectorMissed && (
         <div
           aria-hidden
@@ -641,26 +660,30 @@ function MarkerDot({
             </div>
           )}
           <div className="flex justify-end gap-1.5">
-            <button
+            <Button
               type="button"
-              className="rounded px-2 py-0.5 text-xs text-status-err hover:bg-accent"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-status-err"
               onClick={onDelete}
             >
               删除
-            </button>
+            </Button>
             {onUpdateComment && (
-              <button
+              <Button
                 type="button"
-                className="rounded px-2 py-0.5 text-xs hover:bg-accent disabled:opacity-50"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
                 disabled={!dirty}
                 onClick={() => onUpdateComment(draft)}
               >
                 保存
-              </button>
+              </Button>
             )}
-            <button type="button" className="rounded px-2 py-0.5 text-xs hover:bg-accent" onClick={onOpen}>
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onOpen}>
               关闭
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -682,19 +705,21 @@ function IconBtn({
   active?: boolean;
 }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
       title={label}
+      variant="ghost"
+      size="icon"
       className={
-        "rounded-md p-1.5 hover:bg-accent disabled:opacity-40 " +
+        "h-8 w-8 disabled:opacity-40 " +
         (active ? "bg-primary/15 text-primary" : "text-muted-foreground")
       }
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -711,11 +736,12 @@ function NewTabLanding({ onOpen }: { onOpen: (url: string) => void }) {
       ) : (
         <div className="flex flex-col gap-2">
           {ports.map((p) => (
-            <button
+            <Button
               key={p}
               type="button"
               onClick={() => onOpen(`http://localhost:${p}`)}
-              className="flex items-center gap-3 rounded-lg border border-border p-3 text-left hover:bg-accent"
+              variant="outline"
+              className="flex h-auto items-center gap-3 rounded-lg p-3 text-left"
             >
               <Globe className="h-5 w-5 text-muted-foreground" />
               <div className="min-w-0 flex-1">
@@ -723,7 +749,7 @@ function NewTabLanding({ onOpen }: { onOpen: (url: string) => void }) {
                 <div className="truncate text-xs text-muted-foreground">http://localhost:{p}</div>
               </div>
               <span className="h-2 w-2 shrink-0 rounded-full bg-status-ok" />
-            </button>
+            </Button>
           ))}
         </div>
       )}

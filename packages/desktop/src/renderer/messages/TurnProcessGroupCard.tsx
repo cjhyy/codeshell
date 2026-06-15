@@ -6,7 +6,7 @@ import { ThinkingMessageView } from "./ThinkingMessageView";
 import { AgentMessageView } from "./AgentMessageView";
 import { ContextBoundaryView } from "./ContextBoundaryView";
 import { GoalProgressView } from "./GoalProgressView";
-import { Markdown } from "../Markdown";
+import { Markdown, streamingMarkdownClassName } from "../Markdown";
 import { processGroupLabel, type RenderedTurnProcessGroup } from "./streamGroups";
 import { AgentGroupCard } from "./AgentGroupCard";
 
@@ -105,7 +105,7 @@ function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
                   {m.done ? (
                     <Markdown text={m.text} />
                   ) : (
-                    <div className="md-body md-streaming">
+                    <div className={streamingMarkdownClassName}>
                       <pre className="whitespace-pre-wrap font-sans">{m.text}</pre>
                     </div>
                   )}

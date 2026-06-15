@@ -1,6 +1,9 @@
 import React, { memo, useState } from "react";
 import type { AskUserMessage } from "../types";
 import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface Props {
   message: AskUserMessage;
@@ -28,12 +31,12 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
 
   if (message.answer !== undefined) {
     return (
-      <div className="ask-user ask-user-resolved">
-        <div className="ask-user-q">
-          {message.header && <span className="ask-user-header">{message.header}</span>}
-          <span className="ask-user-question">{message.question}</span>
+      <div className="my-2 max-w-[720px] rounded-md border bg-muted/30 p-3 text-sm">
+        <div className="mb-2 flex flex-col gap-1">
+          {message.header && <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{message.header}</span>}
+          <span className="font-medium text-foreground">{message.question}</span>
         </div>
-        <div className="ask-user-answer">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-status-ok/10 px-2 py-1 text-xs font-medium text-status-ok">
           <Check size={12} /> {message.answer}
         </div>
       </div>
@@ -55,21 +58,24 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
   };
 
   return (
-    <div className="ask-user">
-      <div className="ask-user-q">
-        {message.header && <span className="ask-user-header">{message.header}</span>}
-        <span className="ask-user-question">{message.question}</span>
+    <div className="my-2 max-w-[720px] rounded-md border bg-card p-3 text-sm shadow-sm">
+      <div className="mb-3 flex flex-col gap-1">
+        {message.header && <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{message.header}</span>}
+        <span className="font-medium text-foreground">{message.question}</span>
       </div>
 
       {hasOptions ? (
         <>
-          <ul className="ask-user-options">
+          <ul className="flex flex-col gap-2">
             {message.options!.map((o, i) => {
               const isPicked = picked.has(i);
               return (
                 <li
                   key={i}
-                  className={`ask-user-option${isPicked ? " picked" : ""}`}
+                  className={cn(
+                    "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
+                    isPicked && "border-primary bg-primary/10",
+                  )}
                   onClick={() => {
                     if (message.multiSelect) {
                       setPicked((prev) => {
@@ -83,15 +89,18 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                     }
                   }}
                 >
-                  <div className="ask-user-option-row">
+                  <div className="flex items-center gap-2">
                     {message.multiSelect && (
-                      <span className={`ask-user-check${isPicked ? " on" : ""}`}>
+                      <span className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-sm border text-primary",
+                        isPicked && "border-primary bg-primary/10",
+                      )}>
                         {isPicked ? <Check size={11} /> : null}
                       </span>
                     )}
-                    <span className="ask-user-option-label">{o.label}</span>
+                    <span className="font-medium text-foreground">{o.label}</span>
                   </div>
-                  <div className="ask-user-option-desc">{o.description}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{o.description}</div>
                 </li>
               );
             })}
@@ -100,21 +109,23 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                 answer like "允许" would never match and silently fail. */}
             {!message.optionsOnly && (
               <li
-                className={`ask-user-option ask-user-other${otherOpen ? " picked" : ""}`}
+                className={cn(
+                  "cursor-pointer rounded-md border p-2 transition-colors hover:bg-accent",
+                  otherOpen && "border-primary bg-primary/10",
+                )}
                 onClick={() => setOtherOpen((o) => !o)}
               >
-                <div className="ask-user-option-row">
-                  <span className="ask-user-option-label">其它…</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">其它…</span>
                 </div>
-                <div className="ask-user-option-desc">输入自定义回答</div>
+                <div className="mt-1 text-xs text-muted-foreground">输入自定义回答</div>
               </li>
             )}
           </ul>
           {(otherOpen || message.multiSelect) && (
-            <div className="ask-user-input-row">
+            <div className="mt-3 flex items-center gap-2">
               {otherOpen && (
-                <input
-                  className="ask-user-input"
+                <Input
                   autoFocus
                   placeholder="输入自定义回答…"
                   value={otherDraft}
@@ -128,31 +139,32 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                 />
               )}
               {message.multiSelect ? (
-                <button
-                  className="ask-user-submit"
+                <Button
+                  type="button"
+                  size="sm"
                   disabled={picked.size === 0 && !otherDraft.trim()}
                   onClick={submitMulti}
                 >
                   提交
-                </button>
+                </Button>
               ) : (
                 otherOpen && (
-                  <button
-                    className="ask-user-submit"
+                  <Button
+                    type="button"
+                    size="sm"
                     disabled={!otherDraft.trim()}
                     onClick={() => submit(otherDraft)}
                   >
                     回答
-                  </button>
+                  </Button>
                 )
               )}
             </div>
           )}
         </>
       ) : (
-        <div className="ask-user-input-row">
-          <input
-            className="ask-user-input"
+        <div className="flex items-center gap-2">
+          <Input
             autoFocus
             placeholder="输入你的回答…"
             value={draft}
@@ -164,13 +176,14 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
               }
             }}
           />
-          <button
-            className="ask-user-submit"
+          <Button
+            type="button"
+            size="sm"
             disabled={!draft.trim()}
             onClick={() => submit(draft)}
           >
             回答
-          </button>
+          </Button>
         </div>
       )}
     </div>

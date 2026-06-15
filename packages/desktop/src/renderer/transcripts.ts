@@ -89,6 +89,14 @@ export function bucketKey(repoId: string | null, sessionId: string | null): stri
   return `${repoKeyOf(repoId)}::${sessionId ?? "_none_"}`;
 }
 
+/** Suffix of the shared per-repo draft bucket (null sessionId). */
+export const DRAFT_BUCKET_SUFFIX = "::_none_";
+
+/** True for the shared per-repo draft slot (`<repo>::_none_`). */
+export function isDraftBucket(bucket: string): boolean {
+  return bucket.endsWith(DRAFT_BUCKET_SUFFIX);
+}
+
 /**
  * Per-bucket override maps (permission/goal) are keyed by bucketKey. A DRAFT has
  * a null sessionId, so every draft in a repo collapses to the SHARED
@@ -125,6 +133,62 @@ export function clearBucketOverride<V>(
   const { [bucket]: _drop, ...rest } = prev;
   return rest;
 }
+/**
+ * Per-bucket override maps (permission / model / goal) keyed by bucketKey, the
+ * whole map persisted under one namespaced localStorage key.
+ *
+ * Why persist: these maps are renderer-local React state. Left in memory only,
+ * a refresh (F5) wiped them — so a session the user had set to 完全访问 silently
+ * reverted to 默认权限 (and a per-session model reverted to the default) on
+ * refresh, because the effective value derives as `map[bucket] ?? default`.
+ * Seeding useState from localStorage on mount fixes that. Mirrors the
+ * loadPanelState/savePanelState contract above (empty clears the key).
+ */
+function overrideMapKey(namespace: string): string {
+  return `codeshell.overrides.${namespace}`;
+}
+
+/** Load a saved override map for a namespace, or {} when absent/corrupt. */
+export function loadOverrideMap<V>(namespace: string): Record<string, V> {
+  try {
+    if (typeof localStorage === "undefined") return {};
+    const raw = localStorage.getItem(overrideMapKey(namespace));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as Record<string, V>;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Persist an override map. An empty map clears the key to avoid clutter.
+ *
+ * Draft buckets (`<repo>::_none_`) are stripped before persisting: that slot is
+ * shared by every new/draft chat in a repo, so persisting a draft's choice would
+ * let it survive a refresh and silently bleed onto the NEXT new chat in that repo
+ * (it inherits 完全访问 / the picked model). Draft overrides are transient — they
+ * migrate to the real bucket on first send (migrateBucketOverride) — so they have
+ * no business in localStorage.
+ */
+export function saveOverrideMap<V>(namespace: string, map: Record<string, V>): void {
+  try {
+    if (typeof localStorage === "undefined") return;
+    const persistable: Record<string, V> = {};
+    for (const [bucket, value] of Object.entries(map)) {
+      if (!isDraftBucket(bucket)) persistable[bucket] = value;
+    }
+    if (Object.keys(persistable).length === 0) {
+      localStorage.removeItem(overrideMapKey(namespace));
+      return;
+    }
+    localStorage.setItem(overrideMapKey(namespace), JSON.stringify(persistable));
+  } catch {
+    // localStorage may be unavailable (SSR / private mode) — best effort.
+  }
+}
+
 function indexKey(repoId: string | null): string {
   return `codeshell.sessionIndex.${repoKey(repoId)}`;
 }

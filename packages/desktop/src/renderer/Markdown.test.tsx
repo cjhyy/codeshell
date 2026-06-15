@@ -26,9 +26,11 @@ describe("Markdown", () => {
       />,
     );
 
-    expect(html).toContain('class="md-inline-image"');
+    // Routed through InlineImageLink (not left as a raw relative <img>). In a
+    // static render the IPC hasn't resolved, so it shows the filename-only link
+    // placeholder; the key proof is the relative src is never emitted raw.
     expect(html).not.toContain('src="docs/architecture/images/00-framework-overview.png"');
-    expect(html).not.toContain("framework overview");
+    expect(html).toContain("00-framework-overview.png");
   });
 
   // Regression: a README's raw-HTML <img> with a relative src (the dog-icon
@@ -44,9 +46,9 @@ describe("Markdown", () => {
       />,
     );
     // The raw HTML was parsed (rehype-raw) AND the relative image was routed to
-    // InlineImageLink (md-inline-image), not left as a dead relative <img>.
-    expect(html).toContain('class="md-inline-image"');
+    // InlineImageLink, not left as a dead relative <img>.
     expect(html).not.toContain('src="docs/images/codeshell-dog-icon.png"');
+    expect(html).toContain("codeshell-dog-icon.png");
   });
 
   // SECURITY: the same renderer shows untrusted assistant/LLM output, so the
@@ -76,9 +78,10 @@ describe("Markdown", () => {
     const html = renderToStaticMarkup(
       <Markdown text={`<img src="https://example.com/logo.png" alt="logo" />`} cwd="/repo" />,
     );
-    // Remote images are already loadable — not routed through the local loader.
+    // Remote images are already loadable — rendered as a plain <img> with the
+    // original src, not routed through the local data-URL loader.
     expect(html).toContain('src="https://example.com/logo.png"');
-    expect(html).not.toContain('class="md-inline-image"');
+    expect(html).toContain("<img");
   });
 
   test("routes raw generated PNG paths through the inline image loader", () => {
@@ -86,7 +89,8 @@ describe("Markdown", () => {
       <Markdown text="生成完成：.code-shell/generated_images/example.png" cwd="/repo" />,
     );
 
-    expect(html).toContain('class="md-inline-image"');
+    // Routed through InlineImageLink (filename-only placeholder in static render),
+    // not left as a codeshell-path: link or raw text path.
     expect(html).toContain("example.png");
     expect(html).not.toContain("codeshell-path:");
   });
@@ -107,14 +111,14 @@ describe("Markdown", () => {
   test("long code blocks collapse with an expand toggle (TODO 2.6)", () => {
     const code = Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n");
     const html = renderToStaticMarkup(<Markdown text={"```ts\n" + code + "\n```"} />);
-    expect(html).toContain("md-code-collapsed");
-    expect(html).toContain("md-code-expand");
+    // Collapsed long block: capped <pre> height + an expand toggle button.
+    expect(html).toContain("max-h-96");
     expect(html).toContain("展开全部 (40 行)");
   });
 
   test("short code blocks are not collapsed", () => {
     const html = renderToStaticMarkup(<Markdown text={"```ts\nconst a = 1;\n```"} />);
-    expect(html).not.toContain("md-code-collapsed");
-    expect(html).not.toContain("md-code-expand");
+    expect(html).not.toContain("max-h-96");
+    expect(html).not.toContain("展开全部");
   });
 });

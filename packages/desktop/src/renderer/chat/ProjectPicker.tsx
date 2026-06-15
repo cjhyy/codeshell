@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Folder, FolderPlus, Search, X, Check } from "lucide-react";
 import { repoLabel, type Repo } from "../repos";
 import { useAnchoredPopover } from "./useAnchoredPopover";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   repos: Repo[];
@@ -67,17 +69,19 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
 
   return (
     <div className="relative" ref={wrapRef}>
-      <button
+      <Button
         ref={anchorRef}
         type="button"
-        className="cs-control inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-foreground disabled:opacity-50"
+        variant="outline"
+        size="sm"
+        className="cs-control h-8 gap-1.5 px-2 py-1 text-xs text-foreground disabled:opacity-50"
         disabled={disabled}
         onClick={() => setOpen((o) => !o)}
       >
         <Folder size={12} />
         <span className="max-w-[160px] truncate">{triggerLabel}</span>
         <ChevronDown size={11} className="opacity-60" />
-      </button>
+      </Button>
 
       {open && (
         <div
@@ -87,17 +91,17 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
         >
           <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
             <Search size={12} className="opacity-50" />
-            <input
+            <Input
               ref={inputRef}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="h-7 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
               placeholder="搜索项目"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
             {filter && (
-              <button className="opacity-50 hover:opacity-100" onClick={() => setFilter("")} aria-label="清除">
+              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100" onClick={() => setFilter("")} aria-label="清除">
                 <X size={12} />
-              </button>
+              </Button>
             )}
           </div>
 

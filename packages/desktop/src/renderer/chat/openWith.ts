@@ -56,10 +56,11 @@ export function openFileTarget(
 
 /** Reveal the file in Finder / Explorer. */
 export async function revealInFolder(t: OpenTarget): Promise<void> {
-  // openPath resolves the absolute path (and strips any :line); reveal that so
-  // a relative path or one with a line suffix still lands on the right file.
-  const abs = await window.codeshell.openPath(t.path, t.cwd ?? undefined);
-  await window.codeshell.revealInFinder(abs);
+  // revealInFinder resolves a relative path (against cwd) and strips any :line
+  // suffix in main, then just reveals it. Do NOT route through openPath — that
+  // would *open* the file in its default app as a side effect (the "在文件夹中显示
+  // 反而打开了文件" bug).
+  await window.codeshell.revealInFinder(t.path, t.cwd ?? undefined);
 }
 
 /**

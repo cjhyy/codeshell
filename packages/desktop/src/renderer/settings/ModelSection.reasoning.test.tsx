@@ -28,19 +28,19 @@ describe("renderReasoningControl", () => {
     expect(out).not.toContain("<input");
   });
 
-  test("toggle → a checkbox, default-driven checked state", () => {
+  test("toggle → a switch, default-driven checked state", () => {
     const out = html({ kind: "toggle", default: true });
-    expect(out).toContain('type="checkbox"');
-    expect(out).toContain("checked");
+    expect(out).toContain('role="switch"');
+    expect(out).toContain('aria-checked="true"');
     expect(out).toContain("思考");
   });
 
   test("toggle → saved {mode:off} wins over default true (unchecked)", () => {
     const out = html({ kind: "toggle", default: true }, { mode: "off" });
-    expect(out).not.toContain("checked");
+    expect(out).toContain('aria-checked="false"');
   });
 
-  test("effort → renders a Select combobox (not a checkbox/number input)", () => {
+  test("effort → renders a Select combobox (not a switch/number input)", () => {
     // The radix Select trigger is a combobox button; the chosen label lives in
     // a portal that static markup omits, so we assert the widget kind here.
     const out = html({
@@ -49,7 +49,7 @@ describe("renderReasoningControl", () => {
       default: "medium",
     });
     expect(out).toContain('role="combobox"');
-    expect(out).not.toContain('type="checkbox"');
+    expect(out).not.toContain('role="switch"');
     expect(out).not.toContain('type="number"');
   });
 

@@ -16,7 +16,7 @@
  */
 
 import { safeSpawn } from "../runtime/safe-spawn.js";
-import { resolveExecutable } from "../utils/exec.js";
+import { resolveGit, isGitAvailable } from "../utils/exec.js";
 
 export type GitResult = { ok: true; stdout: string } | { ok: false; error: string };
 
@@ -44,8 +44,19 @@ export function nonInteractiveGitEnv(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv
 }
 
 async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise<GitResult> {
-  // Resolve git through PATH×PATHEXT on Windows (.cmd/.exe shim); no-op on POSIX.
-  const r = await safeSpawn(resolveExecutable("git"), args, {
+  // Up-front check: if git isn't installed/reachable at all, return a clear,
+  // actionable error instead of a raw "spawn git ENOENT". The desktop host
+  // turns GIT_NOT_FOUND into a friendly "install Git" prompt.
+  if (!isGitAvailable()) {
+    return {
+      ok: false,
+      error:
+        "GIT_NOT_FOUND: git was not found. Install Git (https://git-scm.com/downloads) " +
+        "and restart, or set the `git.path` setting to your git binary.",
+    };
+  }
+  // Resolve git: user `git.path` override, else PATH×PATHEXT (.cmd/.exe on Win).
+  const r = await safeSpawn(resolveGit(), args, {
     cwd: cwd ?? process.cwd(),
     env: nonInteractiveGitEnv(process.env),
     timeoutMs,

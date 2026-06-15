@@ -22,6 +22,7 @@ import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
+import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
   notificationQueue,
@@ -118,6 +119,7 @@ import {
   enforceImagePolicy,
   byteLengthFromBase64,
   dropOversizedImages,
+  collectAttachedImagePaths,
 } from "./image-policy.js";
 import { tryCompressImages } from "./image-compression.js";
 import { buildSessionTitle } from "./session-title.js";
@@ -127,7 +129,7 @@ import type { ContentBlock } from "../types.js";
 import { MemoryOrchestrator } from "../services/memory-orchestrator.js";
 import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
-import { join } from "node:path";
+import { join, isAbsolute } from "node:path";
 import {
   existsSync,
   mkdirSync,
@@ -1227,10 +1229,30 @@ export class Engine {
     // text block (when prose is present) followed by one image block per
     // attachment — the provider-specific clients translate this to OpenAI
     // `image_url` or Anthropic `{type:image, source:base64}` downstream.
+    // When an attached image came from a workspace FILE (the desktop composer's
+    // path-attach flow sets ParsedImage.name = the absolute path), surface that
+    // path to the model as text. The image bytes still ride along for vision,
+    // but tools that operate on files — GenerateImage(referenceImages),
+    // Read, etc. — need the on-disk path, not just the pixels. Without this the
+    // path the composer already knew was silently dropped, and the model would
+    // answer "图片没落到项目文件夹，找不到路径" (the seedance 图生图 dead-end).
+    // Only names that resolve to an existing file qualify; a pasted screenshot
+    // whose name is just "screenshot.png" is not a path and is left out.
+    const attachedPaths = collectAttachedImagePaths(
+      parsedTask.images,
+      (name) => (isAbsolute(name) ? name : join(cwd, name)),
+      existsSync,
+    );
+    const pathHint =
+      attachedPaths.length > 0
+        ? `\n\n<attached-image-paths>\n${attachedPaths.join("\n")}\n</attached-image-paths>\n` +
+          `(上面附带的图片在工作区的真实路径，如需把它们作为工具输入（例如 GenerateImage 的 referenceImages、图生图参考图），直接使用这些路径。)`
+        : "";
+
     const userMessageContent: string | ContentBlock[] = parsedTask.hasImages
       ? [
-          ...(parsedTask.text
-            ? [{ type: "text" as const, text: parsedTask.text }]
+          ...(parsedTask.text || pathHint
+            ? [{ type: "text" as const, text: `${parsedTask.text}${pathHint}` }]
             : []),
           ...parsedTask.images.map((img) => ({
             type: "image" as const,
@@ -1885,15 +1907,33 @@ export class Engine {
       const sid = session.state.sessionId;
       const isTopLevel = this.config.isSubAgent !== true;
       if (isTopLevel) {
+        // Wait on BOTH background sub-agents AND non-agent background jobs
+        // (GenerateVideo's poll loop). Without the job arm, a video rendering
+        // in the background is invisible here, the run resolves immediately,
+        // and the goal-stop-hook forces the model to busy-loop with `sleep`
+        // waiting for it (the s-mqe0ox7n-a8d11c26 bug).
+        const stillRunning = (): boolean =>
+          asyncAgentRegistry.hasRunningForSession(sid) ||
+          backgroundJobRegistry.hasRunningForSession(sid);
         let aborted = options?.signal?.aborted === true;
-        while (!aborted && asyncAgentRegistry.hasRunningForSession(sid)) {
-          aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
-        }
-        // Drain everything that came back — including partial results when the
-        // user aborted with one agent still stuck. Nothing already returned is
-        // lost: it's injected into the transcript either way.
-        const pending = notificationQueue.drainAll(sid);
-        if (pending.length > 0) {
+        // OUTER loop: a summarize turn can itself spawn NEW background work
+        // (e.g. a goal "generate 2 videos sequentially" → after video #1's
+        // notification, the summarize turn submits video #2). Without looping
+        // back, that new job renders into the void — its notification lands
+        // with nobody to drain it and the run resolves "done" while work is in
+        // flight. So we wait → drain → summarize, then re-check; we only exit
+        // when a summarize turn produces no new background work (or on abort).
+        // turnCount keeps accumulating across summarize turns, so the
+        // turn-loop's maxTurns still bounds runaway re-summarization.
+        for (;;) {
+          while (!aborted && stillRunning()) {
+            aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
+          }
+          // Drain everything that came back — including partial results when the
+          // user aborted with one agent still stuck. Nothing already returned is
+          // lost: it's injected into the transcript either way.
+          const pending = notificationQueue.drainAll(sid);
+          if (pending.length === 0) break;
           const injected: Message = {
             role: "user",
             content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
@@ -1905,12 +1945,12 @@ export class Engine {
             // user message in this session will see these results in history.
             session.transcript.appendMessage(injected.role, injected.content);
             result = { ...result, messages: [...result.messages, injected] };
-          } else {
-            // All background agents finished: one more turn so the agent reads
-            // every result and summarizes. turnCount keeps accumulating, so
-            // maxTurns still bounds runaway re-summarization.
-            result = await turnLoop.run([...result.messages, injected]);
+            break;
           }
+          // Background work finished: one more turn so the agent reads every
+          // result and either summarizes (done) or spawns the next step (which
+          // the outer loop will then wait on).
+          result = await turnLoop.run([...result.messages, injected]);
         }
       }
     } finally {
@@ -2671,12 +2711,17 @@ export class Engine {
         settled = true;
         unsubRegistry();
         unsubQueue();
+        unsubJobs();
         signal?.removeEventListener("abort", onAbort);
         resolve(aborted);
       };
       const onAbort = () => finish(true);
       const unsubRegistry = asyncAgentRegistry.subscribe(() => finish(false));
       const unsubQueue = notificationQueue.subscribe(() => finish(false));
+      // Also wake on background JOB changes (video poll finishing) — same
+      // reasoning as the queue: the video's finish() and its enqueue() are
+      // separate steps, and waking on either keeps the loop from racing.
+      const unsubJobs = backgroundJobRegistry.subscribe(() => finish(false));
       signal?.addEventListener("abort", onAbort, { once: true });
     });
   }

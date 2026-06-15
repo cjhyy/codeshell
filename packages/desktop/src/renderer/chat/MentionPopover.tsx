@@ -17,6 +17,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Puzzle, FileText, Search } from "lucide-react";
 import type { SkillSummary, FileSearchHit } from "../../preload/types";
+import { cn } from "@/lib/utils";
 
 export type MentionItem =
   | { kind: "skill"; skill: SkillSummary }
@@ -109,18 +110,21 @@ export function MentionPopover({
   const isEmpty = items.length === 0;
 
   return (
-    <div className="mention-popover" role="listbox" aria-label="@ 引用">
+    <div className="cs-popup-surface w-80 max-w-[min(20rem,calc(100vw-24px))] rounded-md p-1" role="listbox" aria-label="@ 引用">
       {filteredSkills.length > 0 && (
-        <div className="mention-section">
-          <div className="mention-section-label">插件</div>
-          <ul className="mention-list">
+        <div className="py-1">
+          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">插件</div>
+          <ul className="space-y-0.5">
             {filteredSkills.map((s, idx) => {
               const flatIndex = idx;
               const active = flatIndex === selected;
               return (
                 <li
                   key={s.filePath}
-                  className={`mention-item${active ? " is-active" : ""}`}
+                  className={cn(
+                    "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
+                    active && "bg-accent text-accent-foreground",
+                  )}
                   role="option"
                   aria-selected={active}
                   onMouseDown={(e) => {
@@ -129,9 +133,9 @@ export function MentionPopover({
                     onPick({ kind: "skill", skill: s });
                   }}
                 >
-                  <Puzzle size={14} className="mention-item-icon" />
-                  <span className="mention-item-name">{s.name}</span>
-                  <span className="mention-item-desc">{s.description}</span>
+                  <Puzzle size={14} className="mt-0.5 text-muted-foreground" />
+                  <span className="min-w-0 truncate font-medium">{s.name}</span>
+                  <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">{s.description}</span>
                 </li>
               );
             })}
@@ -140,16 +144,19 @@ export function MentionPopover({
       )}
 
       {visibleFiles.length > 0 && (
-        <div className="mention-section">
-          <div className="mention-section-label">文件</div>
-          <ul className="mention-list">
+        <div className="py-1">
+          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">文件</div>
+          <ul className="space-y-0.5">
             {visibleFiles.map((f, idx) => {
               const flatIndex = filteredSkills.length + idx;
               const active = flatIndex === selected;
               return (
                 <li
                   key={f.path}
-                  className={`mention-item${active ? " is-active" : ""}`}
+                  className={cn(
+                    "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
+                    active && "bg-accent text-accent-foreground",
+                  )}
                   role="option"
                   aria-selected={active}
                   onMouseDown={(e) => {
@@ -157,9 +164,9 @@ export function MentionPopover({
                     onPick({ kind: "file", file: f });
                   }}
                 >
-                  <FileText size={14} className="mention-item-icon" />
-                  <span className="mention-item-name">{f.name}</span>
-                  <span className="mention-item-desc">{f.path}</span>
+                  <FileText size={14} className="mt-0.5 text-muted-foreground" />
+                  <span className="min-w-0 truncate font-medium">{f.name}</span>
+                  <span className="col-start-2 min-w-0 truncate text-xs text-muted-foreground">{f.path}</span>
                 </li>
               );
             })}
@@ -168,7 +175,7 @@ export function MentionPopover({
       )}
 
       {isEmpty && (
-        <div className="mention-empty">
+        <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
           <Search size={14} />
           <span>
             {cwd ? "未找到匹配的插件或文件" : "请先选择一个项目"}

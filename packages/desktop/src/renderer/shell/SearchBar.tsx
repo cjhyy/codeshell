@@ -1,4 +1,7 @@
 import React, { useEffect, useRef } from "react";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Props {
   open: boolean;
@@ -15,10 +18,10 @@ export function SearchBar({ open, value, onChange, onClose, matchCount }: Props)
   }, [open]);
   if (!open) return null;
   return (
-    <div className="searchbar">
-      <input
+    <div className="absolute right-3 top-3 z-20 flex items-center gap-2 rounded-md border bg-popover p-2 text-popover-foreground shadow-lg">
+      <Input
         ref={inputRef}
-        className="searchbar-input"
+        className="h-8 w-64"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
@@ -26,10 +29,10 @@ export function SearchBar({ open, value, onChange, onClose, matchCount }: Props)
         }}
         placeholder="搜索 transcript…"
       />
-      <span className="searchbar-count">{matchCount} 处</span>
-      <button className="searchbar-close" onClick={onClose} aria-label="关闭">
-        ×
-      </button>
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{matchCount} 处</span>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label="关闭">
+        <X size={14} />
+      </Button>
     </div>
   );
 }

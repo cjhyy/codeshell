@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { ViewMode, PanelTab } from "../view";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export interface PaletteCommand {
   id: string;
@@ -40,11 +42,11 @@ export function CommandPalette({ open, onClose, commands }: Props) {
   if (!open) return null;
 
   return (
-    <div className="palette-backdrop" onClick={onClose}>
-      <div className="palette" onClick={(e) => e.stopPropagation()}>
-        <input
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/35 px-4 pt-[14vh]" onClick={onClose}>
+      <div className="w-full max-w-xl overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <Input
           ref={inputRef}
-          className="palette-input"
+          className="h-11 rounded-none border-0 border-b bg-transparent px-3 shadow-none focus-visible:ring-0"
           value={filter}
           placeholder="键入命令…"
           onChange={(e) => {
@@ -70,22 +72,25 @@ export function CommandPalette({ open, onClose, commands }: Props) {
             }
           }}
         />
-        <ul className="palette-list">
+        <ul className="max-h-[55vh] overflow-y-auto p-2">
           {filtered.length === 0 ? (
-            <li className="palette-empty">没有匹配的命令</li>
+            <li className="px-2 py-6 text-center text-sm text-muted-foreground">没有匹配的命令</li>
           ) : (
             filtered.map((c, i) => (
               <li
                 key={c.id}
-                className={`palette-item${i === cursor ? " active" : ""}`}
+                className={cn(
+                  "flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-sm",
+                  i === cursor ? "bg-accent text-accent-foreground" : "hover:bg-accent/70",
+                )}
                 onMouseEnter={() => setCursor(i)}
                 onClick={() => {
                   c.run();
                   onClose();
                 }}
               >
-                <span className="palette-item-label">{c.label}</span>
-                {c.hint && <span className="palette-item-hint">{c.hint}</span>}
+                <span className="font-medium">{c.label}</span>
+                {c.hint && <span className="text-xs text-muted-foreground">{c.hint}</span>}
               </li>
             ))
           )}
