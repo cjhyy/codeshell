@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { CollapsibleGroup } from "./CollapsibleGroup";
-import { ImageGenConnectionsPanel } from "./ImageGenConnectionsPanel";
-import { VideoGenConnectionsPanel } from "./VideoGenConnectionsPanel";
+import { TextConnectionsPanel as UnifiedConnectionsPanel } from "./TextConnectionsPanel";
 import {
   ConnCard,
   ConnCardGrid,
@@ -50,19 +49,19 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
         </CollapsibleGroup>
 
         <CollapsibleGroup
-          title="图片生成 providers"
-          subtitle="默认 provider 决定 GenerateImage 用哪一个；可点「测试生图」验证连通。"
+          title="图片生成"
+          subtitle="默认连接决定 GenerateImage 用哪一个；key 存在凭证里,多连接可共用。"
           defaultOpen={false}
         >
-          <ImageGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
+          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="image" title="图片模型" />
         </CollapsibleGroup>
 
         <CollapsibleGroup
-          title="视频生成 providers"
-          subtitle="GenerateVideo 的 provider 分组。适配器待接入(见组内说明)。"
+          title="视频生成"
+          subtitle="默认连接决定 GenerateVideo 用哪一个;key 存在凭证里,多连接可共用。"
           defaultOpen={false}
         >
-          <VideoGenConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
+          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="video" title="视频模型" />
         </CollapsibleGroup>
       </div>
     </section>

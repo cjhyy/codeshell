@@ -9,6 +9,7 @@ import { describe, test, expect } from "bun:test";
 import type { CatalogEntry } from "../../preload/types";
 import {
   buildTextInstance,
+  buildInstance,
   uniqueInstanceId,
   credentialCandidates,
   credentialLabel,
@@ -64,6 +65,27 @@ describe("buildTextInstance", () => {
   test("does not inline a key on the connection", () => {
     const inst = buildTextInstance(OPENAI, "gpt-5.5", new Set());
     expect((inst as { apiKey?: string }).apiKey).toBeUndefined();
+  });
+});
+
+describe("buildInstance (any tag)", () => {
+  const IMG: CatalogEntry = {
+    id: "openai-images",
+    tag: "image",
+    adapterKind: "openai",
+    displayName: "OpenAI Images",
+    description: "x",
+    defaultBaseUrl: "https://api.openai.com/v1",
+    defaultModel: "gpt-image-2",
+  };
+  test("builds an image-tagged instance", () => {
+    const inst = buildInstance(IMG, "gpt-image-2", new Set(), "image");
+    expect(inst.tag).toBe("image");
+    expect(inst.catalogId).toBe("openai-images");
+    expect(inst.model).toBe("gpt-image-2");
+  });
+  test("buildTextInstance is the tag=text specialization", () => {
+    expect(buildTextInstance(OPENAI, "gpt-5.5", new Set()).tag).toBe("text");
   });
 });
 

@@ -39,7 +39,7 @@ import {
 } from "./connUi";
 import { ParamControls } from "./ParamControls";
 import {
-  buildTextInstance,
+  buildInstance,
   credentialCandidates,
   credentialLabel,
   uniqueInstanceId,
@@ -47,16 +47,21 @@ import {
   type Credential,
 } from "./textConnections";
 
+type ConnTag = "text" | "image" | "video";
+
 interface Props {
   scope: "user" | "project";
   activeRepoPath: string | null;
+  /** Which catalog tag this panel manages. Defaults to text. */
+  tag?: ConnTag;
+  /** Section heading. */
+  title?: string;
 }
 
-const CACHE_NS = "text-connections";
-
-export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
+export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", title }: Props) {
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
-  const cacheKey = `${CACHE_NS}:${scope}:${cwd ?? ""}`;
+  const cacheKey = `conn:${tag}:${scope}:${cwd ?? ""}`;
+  const heading = title ?? (tag === "image" ? "图片模型" : tag === "video" ? "视频模型" : "文本模型");
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -68,7 +73,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
   const [defaultId, setDefaultId] = useState<string>("");
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
 
-  const textTemplates = useMemo(() => catalog.filter((e) => e.tag === "text"), [catalog]);
+  const textTemplates = useMemo(() => catalog.filter((e) => e.tag === tag), [catalog, tag]);
   const entryById = useCallback(
     (id: string) => catalog.find((e) => e.id === id),
     [catalog],
@@ -79,13 +84,13 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
     setCatalog(cat);
     const s = ((await window.codeshell.getSettings(scope, cwd)) ?? {}) as Record<string, unknown>;
     const conns = Array.isArray(s.modelConnections) ? (s.modelConnections as ModelInstance[]) : [];
-    const text = conns.filter((c) => c.tag === "text");
-    setInstances(text);
-    cacheSet(cacheKey, text);
+    const mine = conns.filter((c) => c.tag === tag);
+    setInstances(mine);
+    cacheSet(cacheKey, mine);
     setCredentials(Array.isArray(s.credentials) ? (s.credentials as Credential[]) : []);
-    const defaults = (s.defaults ?? {}) as { text?: string };
-    setDefaultId(defaults.text ?? "");
-  }, [scope, cwd, cacheKey]);
+    const defaults = (s.defaults ?? {}) as Record<string, string | undefined>;
+    setDefaultId(defaults[tag] ?? "");
+  }, [scope, cwd, cacheKey, tag]);
 
   useEffect(() => {
     void load();
@@ -93,27 +98,27 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
 
   const persist = useCallback(
     async (next: ModelInstance[], nextCreds: Credential[], nextDefault: string) => {
-      // Merge back with non-text connections so we don't clobber image/video.
+      // Merge back with other-tag connections so we don't clobber them.
       const s = ((await window.codeshell.getSettings(scope, cwd)) ?? {}) as Record<string, unknown>;
       const all = Array.isArray(s.modelConnections) ? (s.modelConnections as ModelInstance[]) : [];
-      const nonText = all.filter((c) => c.tag !== "text");
+      const others = all.filter((c) => c.tag !== tag);
       const defaults = (s.defaults ?? {}) as Record<string, unknown>;
       await writeSettings(
         scope,
         {
           credentials: nextCreds,
-          modelConnections: [...nonText, ...next],
-          defaults: { ...defaults, text: nextDefault || undefined },
+          modelConnections: [...others, ...next],
+          defaults: { ...defaults, [tag]: nextDefault || undefined },
         },
         cwd,
       );
     },
-    [scope, cwd],
+    [scope, cwd, tag],
   );
 
   const addFromTemplate = async (entry: CatalogEntry, model?: string) => {
     const taken = new Set(instances.map((i) => i.id));
-    const inst = buildTextInstance(entry, model, taken);
+    const inst = buildInstance(entry, model, taken, tag);
     // Auto-attach to an existing credential for this provider when one exists
     // (so the user doesn't re-enter the key); else leave unset until they fill it.
     const existing = credentialCandidates(credentials, entry.id)[0];
@@ -169,7 +174,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
   return (
     <section className="mb-6 flex flex-col gap-3">
       <header className="flex items-center justify-between">
-        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">文本模型</h3>
+        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{heading}</h3>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button>
@@ -202,7 +207,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
 
       {instances.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-          还没有文本模型。点「添加模型」从模板挑一家、选模型、填 key。
+          还没有{heading}。点「添加模型」从模板挑一家、选模型、填 key。
         </div>
       ) : (
         <ConnCardGrid>

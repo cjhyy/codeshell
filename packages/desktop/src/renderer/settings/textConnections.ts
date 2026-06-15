@@ -35,11 +35,12 @@ export function uniqueInstanceId(base: string, taken: Set<string>): string {
   return `${base}-${n}`;
 }
 
-/** Build a text connection from a template + picked model, seeding param defaults. */
-export function buildTextInstance(
+/** Build a connection from a template + picked model, seeding param defaults. */
+export function buildInstance(
   entry: CatalogEntry,
   model: string | undefined,
   taken: Set<string>,
+  tag: "text" | "image" | "video",
 ): ModelInstance {
   const chosen = model ?? entry.defaultModel ?? entry.modelPresets?.[0]?.value ?? "";
   const preset = entry.modelPresets?.find((p) => p.value === chosen);
@@ -50,11 +51,20 @@ export function buildTextInstance(
   const inst: ModelInstance = {
     id: uniqueInstanceId(entry.id, taken),
     catalogId: entry.id,
-    tag: "text",
+    tag,
     model: chosen,
   };
   if (Object.keys(paramValues).length > 0) inst.paramValues = paramValues;
   return inst;
+}
+
+/** tag=text specialization of buildInstance. */
+export function buildTextInstance(
+  entry: CatalogEntry,
+  model: string | undefined,
+  taken: Set<string>,
+): ModelInstance {
+  return buildInstance(entry, model, taken, "text");
 }
 
 /**
