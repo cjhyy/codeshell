@@ -26,6 +26,23 @@
 - [x] 本地环境设置实际生效链路接通:✅ **已做(2026-06-09)** ① **env 进工具执行环境**:`spawn-common.mergeShellEnv`(项目 env 叠在 sandbox/off 基底上,bypass deny regex——用户自填的不同信任级);`ToolContext.shellEnv` 由 `Engine.buildToolContext`(新 `readShellEnv(cwd)` 读 project scope)填;bash.ts 前台 + background-shell.ts 后台都 merge。② **setup 在新建 worktree 时跑一次**:`worktree.selectPlatformScript`(平台→default 回退,空脚本视为缺省)+ `runWorktreeSetup`(复用 safeSpawnShell+sandbox+shellEnv,**失败只警告不回滚 worktree** 按决策);`enterWorktreeTool` 读 `Engine.readWorktreeSetupScripts(cwd)` 选脚本跑,结果附在工具返回里。③ cleanup 按决策**不做**自动收尾(UI 文案已说明)。测试:spawn-common(+5)/worktree-setup(9)/engine.shell-env(4)/bash.shell-env(3);core 全量 993 pass 0 fail。
 - [~] Beta smoke checklist 跑一遍并记录:**部分(2026-06-09)** 可静态验证的全过:core 全量 993 pass、core+desktop `tsc --noEmit` 全绿、core build + renderer `vite build` 成功、env 链路有端到端测试(bash.shell-env)。**剩交互式肉眼 smoke**(新会话/模型配置/文件编辑/审查/图片附件/后台 shell/undo)需真机起 Electron 走一遍,留给你在场跑;本轮改动只触及子代理/环境设置页 + 工具 spawn env,回归面已被上述测试覆盖。
 
+### Windows/mac Git 与 Shell 处理 〔已挖透 2026-06-14,待你拍板范围〕
+
+> **缘起**:从「Windows PowerShell 慢 / 小白体验 / 没装 Git 连插件都装不了」一路深挖。**核心约束(用户)**:core 是要被独立做 agent / 部署进 Docker 的通用引擎,别塞 Windows 桌面专属的用户体验逻辑。
+>
+> **行业参照(2026-06 实测带源)**:CC = Windows 优先 **Git Bash**(`bash.exe`),没装回退 `pwsh`→`powershell`(非 cmd);`CLAUDE_CODE_GIT_BASH_PATH` 覆盖;Git for Windows 现为**可选非必需**;推 Git Bash 的官方理由是**命令兼容(POSIX)非速度**;原生 Windows 不沙箱(引导 WSL2)。Codex = Windows **硬编码 PowerShell** 不探 Git Bash,另写了原生 Windows 沙箱(受限令牌+ACL,已发布);痛点=shell 语法错配 + 孤儿进程。来源:code.claude.com/docs、developers.openai.com/codex/windows、openai.com Windows sandbox 博文、多个 GitHub issue。⚠️ 本轮已**修正旧记忆** `reference_cc_codex_windows`(CC 改可选 + 理由是兼容)。
+>
+> **codeshell 现状(已 grep 实证)**:
+> - **Shell**:`runtime/spawn-common.ts:134` `resolveShellInvocation` win32→`shell ?? ComSpec ?? cmd.exe` 写死,**无 Git Bash 探测**;POSIX→`$SHELL ?? /bin/bash`。消费者全在 core(bash/safe-spawn/background-shell/worktree)。
+> - **Git/插件**:插件市场确实靠 `git clone`(gitOps.ts,blobless+sparse)。**组件二「Git 缺失友好引导」已基本实现且分层正确**:core(`utils/exec.ts` `isGitAvailable`/`resolveGit`+`git.path` 覆盖;`gitOps.ts:50` 不可用回机器码 `GIT_NOT_FOUND:`)+ host(`desktop/src/main/marketplace-service.ts:34` `humanizeGitError` 翻成中文引导+链接)。**app 文案已在 host,正是用户要的**。
+>
+> **实测(mac git 失败两形态)**:① **ENOENT**(PATH 无 git):`{code:"ENOENT",message:"spawn git ENOENT"}`,三平台通用。② **mac stub**(`/usr/bin/git` 是 xcrun 垫片,CLT 没装):**spawn 成功但 exit≠0**,stderr 含 `xcrun: error` / `not a developer tool`。`isGitAvailable()` 只查 findExecutable 会被 stub **骗过**漏判。
+
+- [ ] **缺口①(真 bug,值得修,纯 core 几行)**:mac stub 形态 B 漏判 → 全新 mac(没装 CLT)绕过友好引导,看到 `git clone ... exited 1: xcrun: error:...`。修法:`gitOps.ts runGit` 末尾对 `exitCode≠0 && /xcrun: error|not a developer tool|no developer tools/i.test(stderr)` 也归类 `GIT_NOT_FOUND`。有实测错误文本支撑。
+- [ ] **缺口②(分层洁癖,可选)**:core fallback 文案的 `git-scm.com`(gitOps.ts:54)是通用/Windows 向,mac 该 `xcode-select --install`。可让 core fallback 分平台,或删空交给 host 全权。**仅影响裸用 core 的 agent,不影响 desktop**(desktop 已被 humanizeGitError 接管)。
+- [ ] **组件一 Git Bash 探测 —— 建议不做 / 或独立立项**:真实部署是 Docker/Linux,探测对它**零价值**(win32 死分支,POSIX 不调);它服务 Windows 桌面用户,与 core 的 headless/Docker 定位冲突;**无实测痛点**(没有用户抱怨 POSIX 命令在 cmd 跑不了)。真要做应**单独按「host 注入策略」**(core 已有 summarize/runCommand 注入先例:`context/manager.ts`、`llm/provider-auth.ts`),core 默认 win32→cmd 不变,desktop 启动注入「探 Git Bash」策略,Docker 不注入保纯净。**不混进本次**。
+- 方案选项(待用户拍板):**最小(推荐)**=只修缺口① / **小**=①+② / **大**=加组件一(host 注入,独立工程)。
+
 ## 📱 Remote / 手机端续跑与会话接管 〔低优,搁置 —— 2026-06-09〕
 
 > **2026-06-09 决策**:特性一/二整体**降为低优、搁置**。当前主线是 Profile/数字人(§1.5)。
@@ -469,6 +486,19 @@ v0.5 既已决定「MVP 只做全局 Profile 库、不做 workspace 级独立库
 - [~] TUI 端 inline image 渲染：iTerm / kitty graphics protocol。**搁置(逛街批)**:TUI 渲染活,需真终端(iTerm/kitty)肉眼验收 graphics protocol。
 - [~] 看过一轮后把历史图降级成文字摘要，节省 token。**搁置(逛街批)**:需追踪"图已被看过"+生成摘要,有丢失模型仍需的图上下文风险,是判断活;现有 strip-vision.ts 仅对非视觉模型剥图(不同场景)。建议与你确认降级时机再做。
 
+### 7.5 Cookie Lease — 浏览器登录态到 CLI 工具的受控桥接 🔧
+
+> 设计文档：`docs/browser-cookie-export-design-2026-06-14.md`。
+> 核心：按域名、按任务、一次性、用户审批的 Cookie Lease，把 `persist:browser` 分区 cookie 通过 `session.cookies.get()` 读出来，写临时 Netscape cookies.txt，注入 `CODESHELL_COOKIE_FILE` env 到本次工具调用，结束后 tool runtime 三层保证清理。覆盖 curl / wget / aria2 / yt-dlp / gallery-dl / streamlink 及任意脚本语言 cookie jar。
+
+- [ ] **主进程 cookie-lease 模块**：`packages/desktop/src/main/cookie-lease.ts` — CookieLeaseManager + formatNetscapeCookies（7 字段 TAB 分隔 + #HttpOnly_ 前缀 + 键值含控制字符跳过）+ createCookieLease（按域名读 session → 写 `/tmp/codeshell-cookie-leases/`，0600）+ 三层清理（try/finally + AbortSignal 联动 + 主进程定时器 5min 硬超时 + 启动扫描残留）。
+- [ ] **IPC handler + 审批弹窗**：`packages/desktop/src/main/ipc/cookie-lease-handler.ts` — 处理 `cookie-lease:create`（触发用户审批，显示请求方 skill、目标命令、域名列表、生命周期、风险提示）+ `cookie-lease:cleanup`。审批弹窗：允许本次 / 拒绝 / 查看 cookie 域名列表；不做「始终允许」。
+- [ ] **Core 侧 lease 请求接口**：`packages/core/src/engine/cookie-lease.ts` — `requestCookieLease(domain, purpose)` 通过 IPC 请求主进程创建 lease，返回 `{ leaseId, filePath }`。
+- [ ] **Bash/spawn 工具注入 `CODESHELL_COOKIE_FILE`**：tool executor 在 lease 存在时把 `CODESHELL_COOKIE_FILE` 注入子进程 env；命令结束 try/finally 调 cleanup；cancel/abort 时先删文件再杀进程。
+- [ ] **过期检测告警**：createCookieLease 时检查 `expirationDate`，<24h 的 cookie 向用户告警（继续 / 先刷新 / 取消）。静默 webview 续期默认关闭，作为可选项。
+- [ ] **403 fallback**：yt-dlp 非零退出码 + stderr 含 HTTP Error 403 时，明确提示用户去浏览器面板刷新登录态。
+- [ ] **测试**：cookie-lease.test.ts（format 字段映射/HttpOnly/异常字符/空 cookies/过期告警）+ 三层清理测试（正常/取消/超时/崩溃残留）+ IPC mock 测试。
+
 ---
 
 ## 8. 上下文、记忆、指令与配置
@@ -495,6 +525,7 @@ instruction-scanner.ts 早已实现,补测试锁定。
 - [x] tool result 压缩：已有 Tier 0a 落盘 / 0b 硬截断 / 0c 预算 / Tier1 microcompact。
 - [~] 请求压缩：发送前压缩历史消息。**部分/基本覆盖**:Tier 2 LLM 摘要 + Tier 3 窗口截断已在发请求前(manageAsync)压缩历史消息(含普通 user/assistant,非仅 tool_result)。无独立"请求压缩"层。
 - [~] token 预算管理：根据剩余 token 动态调整策略。**故意不做(缓存理由)**:现固定阈值 compactAtRatio:0.85 触发压缩。改成"按剩余 token 动态调整力度"与 **prompt 缓存(KV cache)目标冲突**——Anthropic 缓存是前缀匹配,任何改动靠前历史的压缩都会让那轮 messages 前缀全失效(full cache miss)。最优策略是"压得狠而稀"(压一次到更低水位、之后多轮不再压、前缀稳定),动态调整易变成"温而频"→ 命中率下降、成本上升,与直觉相反。固定阈值反而对缓存友好,保持。**注**:真正提缓存命中率的高价值改动是给 messages 数组加靠后稳定位置的 cache breakpoint(现仅 system 块有 cache_control,见 anthropic.ts:186/232)——属独立优化,非本项。
+- [ ] **Automation context accounting**：把自动化运行的 context/token 成本计入产品化 TODO。每次 cron/headless run 记录 prompt tokens / completion tokens / cache hit / 历史压缩状态 / 是否读取大量文件；Triage inbox 展示单次与按 job 汇总成本；“无发现”运行优先自动归档或只保留摘要，避免低价值 transcript 长期占 sidebar 与未来上下文。目标是让 Codex-style automation 不只是“定时跑”，还要能看见并控制长期 context 成本。
 
 ### 8.4 Feature Flags 系统 🔧
 

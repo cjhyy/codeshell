@@ -9,6 +9,24 @@
 
 ## 反馈列表
 
+### [2026-06-14] 刷新页面后,完全访问的 session 退回默认权限
+- **现象**:一个明明是「完全访问(bypass)」的 session,一刷新页面就变回「默认权限」。
+- **根因(已定位)**:`permissionOverrides` 是 `App.tsx` 里 **纯内存 React state**(`useState<Record<bucket,PermissionMode>>({})`),从不落盘。effective mode 派生为 `permissionOverrides[activeBucket] ?? defaultPermissionMode`。刷新 → state 重置成 `{}` → 每个 bucket 都回退到 `defaultPermissionMode`。`modelOverrides`/`goalOverrides` 同病(同一内存态形状)——per-session 模型/Goal 刷新后也丢。
+- **状态**:🟢 已修(2026-06-14,未提交)
+- **修复(TDD)**:`transcripts.ts` 新增 `loadOverrideMap/saveOverrideMap`(对齐既有 `loadPanelState/savePanelState`:整 map 存 `codeshell.overrides.<namespace>`,空 map 清键,坏 JSON 回退 `{}`)。`App.tsx` 三个 override `useState` 改为从 localStorage seed(`() => loadOverrideMap(...)`),并各加一条 persist effect(permission/model/goal)。新测试 `overridePersistence.test.ts` 6 例(含「模拟刷新仍在」),先 RED 后 GREEN;permissionOverrides/repos 测试不回归(18 pass)。tsc 绿。core 无改动,纯 renderer。
+- **备注**:这些 override 本就是 renderer-local per-bucket UI 态,localStorage 落盘是对的归宿(引擎侧 `engine.setPermissionMode` 仍是运行时真值,但 renderer pill 显示态此前会与之脱节)。关联 [[project_path_permission_system]]、上方「模型切换改 per-session」。
+
+### [2026-06-14] agent 打开本地预览地址走外部浏览器,而非 codeshell 内置浏览器面板
+- **现象**:让 agent 起一个项目(如 React 五子棋)并预览时,它启 dev server 后用 `open http://127.0.0.1:5173` 打开地址 —— 弹出的是**系统默认浏览器(外部)**,而不是 codeshell 自带的浏览器面板。
+- **复现**:session `s-mqdf91zf-5fdddf33`(engine 日志 2026-06-14)。该 session 最后两条 Bash:`npm run dev -- --host 127.0.0.1` → `open http://127.0.0.1:5173`。`open` 是 macOS 系统命令,调用系统默认浏览器,完全绕过 codeshell。
+- **根因(已核实,缺口比初判窄)**:in-app 浏览器**通道本就齐全**——`codeshell:open-url`(带 `{url}`)事件:`App.tsx` 收到开 dock+browser 面板,`BrowserPanel.tsx:316` 收到 `loadURL(url)` 开新标签。今天**聊天回答里的 http 链接被用户点击**就走这条(`Markdown.tsx:165-175`,普通点=in-app,⌘/Ctrl 点=外部)。真正缺的是:① agent 不知道该**把预览地址作为链接打印在回答里**(那样用户一点就进内置面板),而是跑了 shell `open <url>`(直撞 OS 浏览器,完全绕过 codeshell);② 没有**全程序化**通道(工具调用)让 agent 不靠用户点击就把 URL 推进面板。
+- **第三层真因(transcript 核实)**:该 session 最后一条 assistant 正文写的是 `` `http://127.0.0.1:5173` ``——**反引号 inline code**。markdown 的 GFM autolink **不碰 inline code**(实测:反引号→`<code>`纯文本不可点;裸 URL / `[预览](url)`→`<a>` 且 onClick 走 `codeshell:open-url` 进内置面板)。所以「回答里地址点不动」纯粹是 agent 把地址用反引号包了。
+- **期望**:用户拍板「只改提示不动代码」——靠现有点击链路即可。
+- **状态**:🟢 已修(2026-06-14,未提交;只改提示)
+- **修复**:`packages/core/src/prompt/sections/coding.md` 新增「Opening URLs and local previews」小节(紧邻既有 Git/链接惯例)——① 预览地址作为**裸 URL 或 `[预览](url)` 链接**打印进回答、**别用反引号**(桌面把回答里的链接渲染成可点、在内置浏览器面板打开;反引号渲染成纯代码不可点);② **别跑 shell 打开 URL**(`open`/`xdg-open`/`start` 都会跳外部系统浏览器、绕过内置面板),起好 dev server 直接把地址作为链接告诉用户。`coding` 在默认 `terminal-coding` preset 内,section-loader 从 `dist/` 读 → **已 rebuild core**(dist 拷贝已含)。prompt/preset 测试 13 pass。一条提示同时解掉「跳外部浏览器」+「点不动」两层,内置面板承接链路本就 ready。
+- **备注**:抓手 = `codeshell:open-url` 事件链已就绪(`Markdown.tsx:165-175`→`BrowserPanel.tsx:316 loadURL`/`App.tsx` onOpenUrl)。若日后要**全程序化**(agent 不靠用户点击就推 URL 进面板),再加 main→renderer push + OpenInBrowser 工具——本次按用户决策不做。关联记忆 [[project_desktop_four_panels]](四面板含浏览器)、[[project_browser_selection_echo_session]]。
+
+
 <!-- 在下面追加。模板:
 ### [日期] 一句话标题
 - **现象**:

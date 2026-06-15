@@ -9,6 +9,8 @@ import {
 import { truncate } from "./utils";
 import type { Attachment } from "./attachments";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Props {
   attachment: Attachment;
@@ -37,10 +39,15 @@ function AttachmentCardImpl({ attachment, cwd }: Props) {
   const ext = (filename.split(".").pop() ?? "").toLowerCase();
 
   return (
-    <span className="attachment-card-wrap">
-      <button
+    <span className="relative inline-flex items-center">
+      <Button
         type="button"
-        className={`attachment-card attachment-${kind}`}
+        variant="outline"
+        size="sm"
+        className={cn(
+          "h-auto max-w-[240px] justify-start gap-2 rounded-md px-2 py-1.5 pr-7 text-left",
+          kind === "image" && "min-h-12",
+        )}
         onClick={() => {
           void window.codeshell.openPath(path, cwd ?? undefined);
         }}
@@ -49,22 +56,26 @@ function AttachmentCardImpl({ attachment, cwd }: Props) {
         {kind === "image" ? (
           <ImageThumb path={path} cwd={cwd} />
         ) : (
-          <span className="attachment-icon">{iconFor(kind)}</span>
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
+            {iconFor(kind)}
+          </span>
         )}
-        <span className="attachment-meta">
-          <span className="attachment-name">{truncate(filename, 48)}</span>
-          <span className="attachment-ext">.{ext}</span>
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate text-xs font-medium text-foreground">{truncate(filename, 48)}</span>
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">.{ext}</span>
         </span>
-      </button>
+      </Button>
       <OpenWithMenu path={path} cwd={cwd} align="start">
-        <button
+        <Button
           type="button"
-          className="attachment-openwith"
+          variant="ghost"
+          size="icon"
+          className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           title="打开方式"
           aria-label="打开方式"
         >
           <MoreHorizontal size={14} />
-        </button>
+        </Button>
       </OpenWithMenu>
     </span>
   );
@@ -129,14 +140,14 @@ function ImageThumb({
 
   if (failed || !src) {
     return (
-      <span className="attachment-icon">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground">
         <ImageIcon size={14} />
       </span>
     );
   }
   return (
     <img
-      className="attachment-thumb"
+      className="h-10 w-10 shrink-0 rounded object-cover"
       src={src}
       alt=""
       loading="lazy"

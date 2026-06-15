@@ -12,16 +12,19 @@ import { join } from "node:path";
 import { generateVideoTool, __setVideoProviderForTests } from "./generate-video.js";
 import { FakeVideoProvider } from "./video-providers.js";
 import { notificationQueue } from "./agent-notifications.js";
+import { backgroundJobRegistry } from "./background-jobs.js";
 import type { ToolContext } from "../context.js";
 
 let ws: string;
 beforeEach(() => {
   ws = mkdtempSync(join(tmpdir(), "genvid-"));
   notificationQueue.reset();
+  backgroundJobRegistry.reset();
 });
 afterEach(() => {
   rmSync(ws, { recursive: true, force: true });
   notificationQueue.reset();
+  backgroundJobRegistry.reset();
   __setVideoProviderForTests(null);
 });
 
@@ -70,5 +73,24 @@ describe("GenerateVideo", () => {
   test("missing prompt errors", async () => {
     const out = await generateVideoTool({}, ctx());
     expect(out).toMatch(/prompt is required/i);
+  });
+
+  test("registers a background job while polling, clears it on completion", async () => {
+    // Slow poll so the job is observably 'running' right after submit.
+    __setVideoProviderForTests(new FakeVideoProvider({ succeedAfterPolls: 2, bytes: "MP4DATA" }));
+    await generateVideoTool({ prompt: "p", pollIntervalMs: 30 }, ctx());
+    // Engine.run's wait-loop must see this session's job as running so it parks
+    // the turn instead of letting the goal-stop-hook force busywork.
+    expect(backgroundJobRegistry.hasRunningForSession("s-vid")).toBe(true);
+    await until(() => notificationQueue.getSnapshot("s-vid").length > 0);
+    // Cleared once the poll loop finishes — the wait-loop can now resolve.
+    expect(backgroundJobRegistry.hasRunningForSession("s-vid")).toBe(false);
+  });
+
+  test("clears the background job even when the job fails", async () => {
+    __setVideoProviderForTests(new FakeVideoProvider({ failAfterPolls: 0, failMessage: "x" }));
+    await generateVideoTool({ prompt: "p", pollIntervalMs: 10 }, ctx());
+    await until(() => notificationQueue.getSnapshot("s-vid").length > 0);
+    expect(backgroundJobRegistry.hasRunningForSession("s-vid")).toBe(false);
   });
 });

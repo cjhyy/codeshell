@@ -1,7 +1,7 @@
 import React, { useState, memo } from "react";
 import type { AgentMessage } from "../types";
 import { StatusDot } from "../ui/StatusDot";
-import { Markdown } from "../Markdown";
+import { Markdown, streamingMarkdownClassName } from "../Markdown";
 import { summarizeAgentActivity, describeActivity } from "../topbar/liveActivity";
 
 function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
@@ -65,7 +65,7 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
                 {message.done ? (
                   <Markdown text={bodyText} />
                 ) : (
-                  <div className="md-body md-streaming">
+                  <div className={streamingMarkdownClassName}>
                     <pre className="whitespace-pre-wrap font-sans">{bodyText}</pre>
                   </div>
                 )}

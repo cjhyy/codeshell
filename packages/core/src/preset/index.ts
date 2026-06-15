@@ -39,6 +39,13 @@ const GENERAL_BUILTIN_TOOLS = [
   "Glob",
   "Grep",
   "Bash",
+  // Bash(run_in_background=true) companions — without these in the preset
+  // whitelist, the registry skips them (registerBuiltins filters BUILTIN_TOOLS
+  // by the selected set), so a model that correctly calls BashOutput after
+  // launching a background shell hits "Tool not found" and the turn dies.
+  "BashOutput",
+  "KillShell",
+  "ListShells",
   "WebSearch",
   "WebFetch",
   "GenerateImage",

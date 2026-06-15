@@ -114,6 +114,13 @@ interface Props {
   /** Initial URL to open (used by the popout window). */
   initialUrl?: string;
   /**
+   * URL a clicked chat link asked to open, threaded as a prop (nonce re-fires
+   * on re-click). Prop-driven, NOT a window event the panel subscribes to, so
+   * it works even when the panel was CLOSED at click time: App opens the panel,
+   * this component mounts, and the effect below navigates to the pending URL.
+   */
+  openUrl?: { url: string; nonce: number };
+  /**
    * The active session's browser anchors — the SINGLE source the page dots /
    * highlights echo (圈选统一架构). Main-window panel: App passes its bucketed
    * state; popout: the hub broadcast. No local marker state exists anymore.
@@ -138,7 +145,7 @@ interface Props {
  * persistent partition) with a self-drawn address bar, tabs, and a
  * localhost bookmark list discovered by port-probing common dev ports.
  */
-export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true }: Props) {
+export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true }: Props) {
   const emitAnchor = onAnchor ?? addAnchor;
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
@@ -308,28 +315,32 @@ export function BrowserPanel({ initialUrl, anchors, onAnchor, onRemoveAnchor, on
     setActiveId(tab.id);
   }, []);
 
-  // A chat answer link (http/https) was clicked: App opens/focuses this panel,
-  // and we open the URL in a new tab here. If the only tab is the blank landing,
-  // load into it rather than stacking an empty tab in front of it.
+  // A chat answer link (http/https) was clicked: App surfaces this panel and
+  // hands the URL down via the `openUrl` prop (NOT a window event — that would
+  // be missed when the panel was closed at click time, since this component is
+  // unmounted then; the prop survives the mount and we navigate on it here).
+  //
+  // Open the URL in a new tab. If the only tab is the blank landing, load into
+  // it rather than stacking an empty tab in front of it. Driven by openUrl.nonce
+  // so re-clicking the same link re-fires; the ref dedupes a single nonce
+  // (incl. StrictMode's double effect and unrelated re-renders).
+  const lastOpenUrlNonce = useRef<number>(-1);
   useEffect(() => {
-    const onOpenUrl = (e: Event): void => {
-      const url = (e as CustomEvent<{ url?: string }>).detail?.url;
-      if (!url) return;
-      const norm = normalizeUrl(url);
-      if (!norm) return;
-      setTabs((prev) => {
-        if (prev.length === 1 && prev[0].url === NEW_TAB) {
-          setActiveId(prev[0].id);
-          return [{ ...prev[0], url: norm, draft: norm }];
-        }
-        const tab = freshTab(norm);
-        setActiveId(tab.id);
-        return [...prev, tab];
-      });
-    };
-    window.addEventListener("codeshell:open-url", onOpenUrl);
-    return () => window.removeEventListener("codeshell:open-url", onOpenUrl);
-  }, []);
+    if (!openUrl) return;
+    if (lastOpenUrlNonce.current === openUrl.nonce) return;
+    lastOpenUrlNonce.current = openUrl.nonce;
+    const norm = normalizeUrl(openUrl.url);
+    if (!norm) return;
+    setTabs((prev) => {
+      if (prev.length === 1 && prev[0].url === NEW_TAB) {
+        setActiveId(prev[0].id);
+        return [{ ...prev[0], url: norm, draft: norm }];
+      }
+      const tab = freshTab(norm);
+      setActiveId(tab.id);
+      return [...prev, tab];
+    });
+  }, [openUrl]);
 
   const closeTab = useCallback(
     (id: string) => {

@@ -1650,9 +1650,9 @@ ipcMain.handle("shell:openExternal", async (_e, url: string) => {
   await openExternal(url);
 });
 
-ipcMain.handle("shell:revealInFinder", async (_e, p: string) => {
+ipcMain.handle("shell:revealInFinder", async (_e, p: string, cwd?: string) => {
   if (typeof p !== "string") throw new Error("revealInFinder requires path");
-  await revealInFinder(p);
+  await revealInFinder(p, typeof cwd === "string" ? cwd : undefined);
 });
 
 ipcMain.handle("shell:openPath", async (_e, p: string, cwd?: string) => {

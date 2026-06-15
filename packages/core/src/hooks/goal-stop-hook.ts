@@ -24,6 +24,7 @@ import type { HookContext, HookResult } from "./events.js";
 import type { HookHandler } from "./registry.js";
 import type { LLMResponse } from "../types.js";
 import { normalizeGoal, type GoalConfig } from "../engine/goal.js";
+import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 
 /** Narrow LLM surface the judge needs — just a one-shot completion. */
 export interface GoalJudgeLLM {
@@ -84,6 +85,21 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     // No goal → not Goal mode → allow stop.
     if (!g) return {};
     const goal = g.objective;
+
+    // Background-work short-circuit (s-mqe0ox7n-a8d11c26 bug): if this session
+    // has a background job still running (e.g. a GenerateVideo poll loop), the
+    // goal can't possibly be met yet AND the only remaining work is to WAIT.
+    // Forcing continueSession here makes the model invent busywork (`sleep 30`,
+    // manual API polling) — the exact failure we're fixing. Allow the stop so
+    // the turn ends cleanly; Engine.run's wait-for-background loop then parks
+    // until the job's completion notification lands and runs one summarize
+    // turn, where the goal IS re-judged normally. We don't even call the judge
+    // (saves an LLM round-trip on every stop while a video renders).
+    const sessionId = ctx.data.sessionId;
+    if (typeof sessionId === "string" && backgroundJobRegistry.hasRunningForSession(sessionId)) {
+      log.info("goal_stop.waiting_on_background_job", { cat: "goal", sessionId });
+      return {};
+    }
 
     const finalText =
       typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";

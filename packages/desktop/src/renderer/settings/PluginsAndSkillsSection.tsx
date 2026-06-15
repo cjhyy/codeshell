@@ -36,7 +36,7 @@ interface Props {
 
 export function PluginsAndSkillsSection({ activeRepoPath }: Props) {
   return (
-    <section className="settings-section ps-section customize-host">
+    <section className="mb-6 flex flex-col gap-3 ps-section customize-host">
       <CustomizePage activeRepoPath={activeRepoPath} />
     </section>
   );
@@ -726,23 +726,23 @@ function LocalAddPanel({
 
   return (
     <div className="add-panel-body">
-      <div className="settings-option-grid">
-        <button className="settings-option-card" onClick={() => void choose()}>
-          <span className="settings-option-title">选择本地文件夹</span>
-          <span className="settings-option-desc">需要包含 SKILL.md。</span>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
+        <button className="flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent" onClick={() => void choose()}>
+          <span className="text-sm font-medium text-foreground">选择本地文件夹</span>
+          <span className="text-xs text-muted-foreground">需要包含 SKILL.md。</span>
         </button>
       </div>
 
-      <div className="settings-form-grid">
-        <label className="settings-field">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
           <span>来源文件夹</span>
           <input value={source?.path ?? ""} readOnly placeholder="选择一个 Skill 文件夹" />
         </label>
-        <label className="settings-field">
+        <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
           <span>安装名称</span>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="skill-name" />
         </label>
-        <label className="settings-field">
+        <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
           <span>安装位置</span>
           <Select<"user" | "project">
             value={scope}
@@ -936,8 +936,8 @@ function GithubAddPanel({
 
           {selected && (
             <div className="github-install-block">
-              <div className="settings-form-grid">
-                <label className="settings-field">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
                   <span>安装名称</span>
                   <input
                     value={installName}
@@ -945,7 +945,7 @@ function GithubAddPanel({
                     placeholder={selected.name}
                   />
                 </label>
-                <label className="settings-field">
+                <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
                   <span>安装位置</span>
                   <Select<"user" | "project">
                     value={scope}

@@ -65,6 +65,7 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
       { value: "fal-ai/kling-video/v3/pro/image-to-video", label: "Kling v3 Pro · 图生视频" },
     ],
     paramsDoc:
-      "fal 视频:用 model 选底层模型(文生 vs 图生)。传 image/images(本地路径自动上传)→ 用图生视频模型;1 张=图生视频,2+ 张=参考生视频(最多 9,prompt 里用 @Image1/@Image2 引用)。异步后台生成。",
+      "fal 视频:用 model 选底层模型(文生 vs 图生)。传 image/images(本地路径自动上传)→ 用图生视频模型;1 张=图生视频,2+ 张=参考生视频(最多 9,prompt 里用 @Image1/@Image2 引用)。" +
+      "续接/参考视频:传 videos(http/https URL,非本地路径;最多 3)续接已有视频,prompt 里用 @Video1/@Video2 引用(如「从 @Video1 结尾继续」);需用 Seedance 模型(走 reference-to-video,Kling 不支持)。异步后台生成。",
   },
 ];

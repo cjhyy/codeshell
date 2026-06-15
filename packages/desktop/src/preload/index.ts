@@ -367,7 +367,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   getGitRecentCommits: (cwd: string, limit?: number) =>
     ipcRenderer.invoke("git:recentCommits", cwd, limit),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
-  revealInFinder: (path: string) => ipcRenderer.invoke("shell:revealInFinder", path),
+  revealInFinder: (path: string, cwd?: string) =>
+    ipcRenderer.invoke("shell:revealInFinder", path, cwd),
   openPath: (path: string, cwd?: string) =>
     ipcRenderer.invoke("shell:openPath", path, cwd),
   /** Open a path in an external editor (Cursor/VS Code; CODE_SHELL_EDITOR override). */

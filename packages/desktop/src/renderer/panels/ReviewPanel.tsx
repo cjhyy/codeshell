@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { REVIEW_SCOPES, isRangeScope, type ReviewScope } from "../diff/reviewScope";
 import type { GitCommit } from "../../preload/types";
-import "../styles/diff.css";
 
 const ALL_FILES = "__all__";
 

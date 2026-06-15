@@ -427,7 +427,7 @@ export interface CodeshellApi {
   onBrowserAnchorRemoveFromPopout(cb: (anchorId: unknown) => void): () => void;
 
   openExternal(url: string): Promise<void>;
-  revealInFinder(path: string): Promise<void>;
+  revealInFinder(path: string, cwd?: string): Promise<void>;
   /**
    * Open a file with the system default app. Relative paths resolve
    * against `cwd` (defaults to the worker cwd if omitted). A trailing

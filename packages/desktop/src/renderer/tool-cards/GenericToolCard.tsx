@@ -20,24 +20,24 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Prop
     message.result,
   );
 
-  const summary = <span className="tool-card-summary-text">{oneLine}</span>;
+  const summary = <span className="text-muted-foreground">{oneLine}</span>;
 
   const details = (
-    <div className="tool-card-detail">
-      <div className="tool-card-row">
-        <span className="tool-card-row-label">args</span>
-        <pre className="tool-card-row-val">{prettyJson(message.args)}</pre>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">args</span>
+        <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{prettyJson(message.args)}</pre>
       </div>
       {message.result !== undefined && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">result</span>
-          <pre className="tool-card-row-val">{truncate(message.result, 1500)}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">result</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{truncate(message.result, 1500)}</pre>
         </div>
       )}
       {attachments.length > 0 && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">files</span>
-          <div className="attachment-list">
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">files</span>
+          <div className="flex flex-wrap gap-2">
             {attachments.map((a) => (
               <AttachmentCard key={a.path} attachment={a} />
             ))}
@@ -45,9 +45,9 @@ export function GenericToolCard({ message, onSelect, selected, turnEpoch }: Prop
         </div>
       )}
       {message.error && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">error</span>
-          <pre className="tool-card-row-val err">{message.error}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">error</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">{message.error}</pre>
         </div>
       )}
     </div>

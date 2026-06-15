@@ -3,9 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import { DialogProvider } from "./ui/DialogProvider";
 import { ToastProvider } from "./ui/ToastProvider";
-import "./styles/tailwind.css"; // shadcn/Tailwind base — imported first so legacy CSS still wins on un-migrated pages
-import "./styles/index.css";
-import "./styles.css"; // legacy; removed in the final migration phase
+import "./styles/tailwind.css";
 import { initTheme } from "./theme";
 import { BrowserPanel } from "./panels/BrowserPanel";
 import type { Anchor } from "./chat/anchors";

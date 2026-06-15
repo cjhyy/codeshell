@@ -32,9 +32,9 @@ interface Props {
  */
 export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
   return (
-    <section className="settings-section">
+    <section className="mb-6 flex flex-col gap-3">
       <header className="mb-3 flex flex-col gap-1">
-        <h3 className="settings-section-title">连接</h3>
+        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">连接</h3>
         <p className="max-w-[620px] text-sm leading-relaxed text-muted-foreground">
           需要 key 的内置功能（WebSearch、图片生成、视频生成…）按功能分组放在这里；每组可折叠。
         </p>

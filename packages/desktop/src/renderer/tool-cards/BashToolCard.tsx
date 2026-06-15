@@ -36,33 +36,33 @@ export function BashToolCard({ message, onSelect, selected, turnEpoch }: Props) 
 
   const summary = (
     <span>
-      <code className="tool-card-cmd">{truncate(command, 90)}</code>
-      {description && <span className="tool-card-desc"> — {description}</span>}
+      <code className="font-mono text-foreground">{truncate(command, 90)}</code>
+      {description && <span className="text-muted-foreground"> — {description}</span>}
     </span>
   );
 
   const details = (
-    <div className="tool-card-detail">
-      <div className="tool-card-row">
-        <span className="tool-card-row-label">command</span>
-        <pre className="tool-card-row-val">{command || "(empty)"}</pre>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">command</span>
+        <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{command || "(empty)"}</pre>
       </div>
       {cwd && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">cwd</span>
-          <span className="tool-card-row-val mono">{cwd}</span>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">cwd</span>
+          <span className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{cwd}</span>
         </div>
       )}
       {message.result !== undefined && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">stdout</span>
-          <pre className="tool-card-row-val">{renderBashOutput(message.result)}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">stdout</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-muted/40 p-2 font-mono text-xs">{renderBashOutput(message.result)}</pre>
         </div>
       )}
       {message.error && (
-        <div className="tool-card-row">
-          <span className="tool-card-row-label">error</span>
-          <pre className="tool-card-row-val err">{message.error}</pre>
+        <div className="flex flex-col gap-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted-foreground">error</span>
+          <pre className="m-0 whitespace-pre-wrap break-words rounded-sm bg-status-err/10 p-2 font-mono text-xs text-status-err">{message.error}</pre>
         </div>
       )}
     </div>

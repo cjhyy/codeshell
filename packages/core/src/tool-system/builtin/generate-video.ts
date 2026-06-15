@@ -21,6 +21,7 @@ import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
 import { SettingsManager } from "../../settings/manager.js";
 import { notificationQueue } from "./agent-notifications.js";
+import { backgroundJobRegistry } from "./background-jobs.js";
 import { logger } from "../../logging/logger.js";
 import {
   getVideoProvider,
@@ -99,6 +100,11 @@ export const generateVideoToolDef: ToolDefinition = {
         type: "array",
         items: { type: "string" },
         description: "Image URLs or local file paths for image/reference-to-video. 1 image → image-to-video; 2+ → reference-to-video (max 9). Local paths are auto-uploaded. Refer to them in prompt as @Image1, @Image2.",
+      },
+      videos: {
+        type: "array",
+        items: { type: "string" },
+        description: "Reference/continuation video URLs (http/https only — NOT local paths) for video extension. Forces reference-to-video (Seedance model required). Up to 3. Refer to them in prompt as @Video1, @Video2 (e.g. \"continue from @Video1\").",
       },
     },
     required: ["prompt"],
@@ -243,6 +249,10 @@ export async function generateVideoTool(
   const imagesArg = Array.isArray(args.images)
     ? (args.images as unknown[]).filter((x): x is string => typeof x === "string")
     : undefined;
+  // videos pass through verbatim to fal's video_urls (no upload) — http(s) only.
+  const videosArg = Array.isArray(args.videos)
+    ? (args.videos as unknown[]).filter((x): x is string => typeof x === "string")
+    : undefined;
   const pollIntervalMs =
     typeof args.pollIntervalMs === "number" && args.pollIntervalMs > 0
       ? args.pollIntervalMs
@@ -281,21 +291,31 @@ export async function generateVideoTool(
   const norm = await __normalizeImagesForTests(imagesArg, image, uploader, { baseUrl: creds.baseUrl, apiKey: creds.apiKey }, ctx?.signal);
   if (!norm.ok) return `Error: ${norm.error}`;
 
-  const submit = await adapter.submit({ prompt, model, image: undefined, images: norm.urls, creds, signal: ctx?.signal });
+  const submit = await adapter.submit({ prompt, model, image: undefined, images: norm.urls, videos: videosArg, creds, signal: ctx?.signal });
   if (!submit.ok) {
     return `Error submitting video job: ${submit.error}`;
   }
   const jobId = submit.jobId;
 
   // Background poll → download → write → notify. Fire-and-forget: never await.
-  void pollToCompletion(adapter, jobId, creds, cwd, sessionId, prompt, pollIntervalMs);
+  // Register the job so Engine.run's wait-for-background loop parks the turn
+  // until the completion notification lands — without this, the goal-stop-hook
+  // would force the model to busy-loop with `sleep` while the video renders
+  // (the s-mqe0ox7n-a8d11c26 bug). The registry is keyed by the fal jobId
+  // namespaced so two providers can't collide.
+  const jobKey = `video-${jobId}`;
+  backgroundJobRegistry.start(jobKey, sessionId ?? "");
+  void pollToCompletion(adapter, jobId, creds, cwd, sessionId, prompt, pollIntervalMs).finally(
+    () => backgroundJobRegistry.finish(jobKey),
+  );
 
   return [
     `Video generation started in the background.`,
     `job_id: ${jobId} (internal — do not show to user)`,
     `prompt: ${prompt}`,
     ``,
-    `It will be saved into .code-shell/generated_videos/ and you'll be notified automatically when it finishes. Do not sleep or poll.`,
+    `It will be saved into .code-shell/generated_videos/ and you'll be notified automatically when it finishes.`,
+    `If you have no other work right now, END YOUR TURN — the system wakes you when the video is ready. NEVER run \`sleep\` or poll the provider yourself.`,
   ].join("\n");
 }
 
@@ -337,7 +357,7 @@ async function pollToCompletion(
     await mkdir(dir, { recursive: true });
     const path = join(dir, `${Date.now()}.${dl.ext || "mp4"}`);
     await writeFile(path, dl.bytes);
-    notifyVideo(sessionId, "completed", prompt, path);
+    notifyVideo(sessionId, "completed", prompt, path, undefined, dl.url);
   } catch (err) {
     notifyVideo(sessionId, "failed", prompt, undefined, (err as Error).message);
   }
@@ -349,11 +369,17 @@ function notifyVideo(
   prompt: string,
   path?: string,
   error?: string,
+  url?: string,
 ): void {
   if (!sessionId) {
     logger.warn("video_completion_without_session", { status });
     return;
   }
+  // Include the fal-hosted URL on success so the model can pass it to a follow-up
+  // GenerateVideo `videos:[url]` to extend this clip (no re-upload). Expiring URL.
+  const extendHint = url
+    ? ` To extend this video, call GenerateVideo again with videos:["${url}"] (Seedance model). URL may expire.`
+    : "";
   notificationQueue.enqueue(
     {
       agentId: `video-${Date.now()}`,
@@ -363,7 +389,8 @@ function notifyVideo(
           ? `Video generated: ${path} (prompt: ${prompt})`
           : `Video generation failed (prompt: ${prompt})`,
       status,
-      finalText: status === "completed" ? `Video saved to ${path}` : undefined,
+      finalText:
+        status === "completed" ? `Video saved to ${path}.${extendHint}` : undefined,
       error: status === "failed" ? error : undefined,
       enqueuedAt: Date.now(),
     },

@@ -22,6 +22,7 @@ import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
+import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
   notificationQueue,
@@ -1886,7 +1887,15 @@ export class Engine {
       const isTopLevel = this.config.isSubAgent !== true;
       if (isTopLevel) {
         let aborted = options?.signal?.aborted === true;
-        while (!aborted && asyncAgentRegistry.hasRunningForSession(sid)) {
+        // Wait on BOTH background sub-agents AND non-agent background jobs
+        // (GenerateVideo's poll loop). Without the job arm, a video rendering
+        // in the background is invisible here, the run resolves immediately,
+        // and the goal-stop-hook forces the model to busy-loop with `sleep`
+        // waiting for it (the s-mqe0ox7n-a8d11c26 bug).
+        const stillRunning = (): boolean =>
+          asyncAgentRegistry.hasRunningForSession(sid) ||
+          backgroundJobRegistry.hasRunningForSession(sid);
+        while (!aborted && stillRunning()) {
           aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
         }
         // Drain everything that came back — including partial results when the
@@ -2671,12 +2680,17 @@ export class Engine {
         settled = true;
         unsubRegistry();
         unsubQueue();
+        unsubJobs();
         signal?.removeEventListener("abort", onAbort);
         resolve(aborted);
       };
       const onAbort = () => finish(true);
       const unsubRegistry = asyncAgentRegistry.subscribe(() => finish(false));
       const unsubQueue = notificationQueue.subscribe(() => finish(false));
+      // Also wake on background JOB changes (video poll finishing) — same
+      // reasoning as the queue: the video's finish() and its enqueue() are
+      // separate steps, and waking on either keeps the loop from racing.
+      const unsubJobs = backgroundJobRegistry.subscribe(() => finish(false));
       signal?.addEventListener("abort", onAbort, { once: true });
     });
   }

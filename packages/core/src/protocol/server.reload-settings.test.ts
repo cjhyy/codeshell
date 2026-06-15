@@ -24,6 +24,7 @@ function makeTransport() {
 /** Fake engine recording refreshRuntimeConfig calls (and the existing knobs). */
 function makeFakeEngine(id: string) {
   const calls: Array<{ patch: any; version: number }> = [];
+  const reloadModelCalls: string[] = [];
   const engine = {
     id,
     setAskUser() {},
@@ -40,6 +41,9 @@ function makeFakeEngine(id: string) {
     refreshRuntimeConfig(patch: any, version: number) {
       calls.push({ patch, version });
     },
+    reloadModelPool() {
+      reloadModelCalls.push(id);
+    },
     async run() {
       return {
         text: "ok",
@@ -50,7 +54,7 @@ function makeFakeEngine(id: string) {
       };
     },
   } as unknown as Engine;
-  return { engine, calls };
+  return { engine, calls, reloadModelCalls };
 }
 
 function fakeSettings(appendSystemPrompt: string): ValidatedSettings {
@@ -190,6 +194,28 @@ describe("AgentServer configure({ reloadSettings })", () => {
     // Both responses are ok.
     const oks = t.sent.filter((m: any) => m.result?.ok === true);
     expect(oks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("reloadModels refreshes every live session model pool", () => {
+    const a = makeFakeEngine("A");
+    const b = makeFakeEngine("B");
+    const chatManager = new ChatSessionManager({
+      runtime: {} as never,
+      engineFactory: () => {
+        throw new Error("factory should not be called");
+      },
+    });
+    (chatManager as any).sessions.set("A", { id: "A", engine: a.engine });
+    (chatManager as any).sessions.set("B", { id: "B", engine: b.engine });
+
+    const t = makeTransport();
+    new AgentServer({ transport: t.transport, chatManager, settingsReader: () => fakeSettings("x") });
+
+    t.deliver({ jsonrpc: "2.0", id: 1, method: "agent/configure", params: { reloadModels: true } });
+
+    expect(a.reloadModelCalls).toEqual(["A"]);
+    expect(b.reloadModelCalls).toEqual(["B"]);
+    expect(t.sent.some((m: any) => m.id === 1 && m.result?.ok === true)).toBe(true);
   });
 
   it("#6: skips the broadcast when the disk patch is byte-identical to the last", () => {

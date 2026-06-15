@@ -187,15 +187,15 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
     : "设置所有项目继承的默认能力";
 
   return (
-    <section className="settings-section cap-overview">
+    <section className="mb-6 flex flex-col gap-3 cap-overview">
       <div className="cap-overview-hero">
         <div className="cap-overview-hero-icon" aria-hidden>
           <Layers size={18} />
         </div>
         <div className="cap-overview-hero-copy">
           <div className="cap-overview-eyebrow">扩展能力</div>
-          <h3 className="settings-section-title">能力总览</h3>
-          <p className="settings-section-help">
+          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">能力总览</h3>
+          <p className="m-0 text-xs text-muted-foreground">
             统一管理内置工具、MCP 服务器、技能、插件和子代理。先选全局默认，再为每个项目设置独立覆盖。
           </p>
         </div>
@@ -268,9 +268,9 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
             </div>
           </div>
 
-          {loading && <p className="settings-section-help">加载中…</p>}
+          {loading && <p className="m-0 text-xs text-muted-foreground">加载中…</p>}
           {!loading && groups.length === 0 && (
-            <p className="settings-section-help">暂无可管理的能力。</p>
+            <p className="m-0 text-xs text-muted-foreground">暂无可管理的能力。</p>
           )}
           {!loading &&
             groups.map((g) => {

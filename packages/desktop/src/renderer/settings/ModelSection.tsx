@@ -1,15 +1,43 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, RefreshCw, Settings2, X } from "lucide-react";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import type { ReasoningControl, ReasoningSetting } from "@cjhyy/code-shell-core";
+import { useConfirm } from "../ui/ConfirmDialog";
+import { useToast } from "../ui/ToastProvider";
+import {
+  ConnCard,
+  ConnCardFooter,
+  ConnCardGrid,
+  ConnField,
+  ConnFooterRight,
+  SecretKeyInput,
+} from "./connUi";
 import { cacheGet, cacheSet } from "./settingsCache";
 
 interface ModelEntry {
   key: string;
   label: string;
   providerKey: string;
+  modelId: string;
+  protocol: string;
+  providerKind: ProviderKind;
+  baseUrl?: string;
+  apiKey?: string;
   maxContextTokens?: number;
+  maxOutputTokens?: number;
 }
 
 interface ProviderEntry {
@@ -18,6 +46,11 @@ interface ProviderEntry {
   kind: ProviderKind;
   baseUrl: string;
   apiKey?: string;
+}
+
+interface ProviderGroup {
+  provider: ProviderEntry;
+  models: ModelEntry[];
 }
 
 interface FetchedModel {
@@ -62,12 +95,35 @@ interface AddModelForm {
   makeActive: boolean;
 }
 
+interface EditModelForm {
+  originalKey: string;
+  key: string;
+  label: string;
+  providerKey: string;
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+  maxContextTokens: string;
+  maxOutputTokens: string;
+}
+
+interface EditProviderForm {
+  originalKey: string;
+  key: string;
+  label: string;
+  kind: ProviderKind;
+  baseUrl: string;
+  apiKey: string;
+  originalApiKey: string;
+}
+
 interface Props {
   scope: "user" | "project";
   activeRepoPath: string | null;
 }
 
 const NEW_PROVIDER = "__new__";
+const ORPHAN_PROVIDER = "__models_without_provider__";
 
 const KIND_ORDER: ProviderKind[] = [
   "openrouter",
@@ -206,68 +262,56 @@ const RECOMMENDED_MODELS: Partial<Record<ProviderKind, RecommendedModel[]>> = {
   ],
 };
 
-/**
- * Active model picker plus a small guided add-model form.
- *
- * Existing behavior stays intact: selecting a row writes settings.activeKey.
- * The add form writes the same settings shape the TUI onboarding flow uses:
- * providers[] + self-describing models[] + a legacy model.* mirror when the
- * new entry becomes active.
- */
 export function ModelSection({ scope, activeRepoPath }: Props) {
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
   const cacheKey = `model-settings:${scope}:${cwd ?? ""}`;
-  // Seed from the last-loaded snapshot (settingsCache) so a remount (tab
-  // switch) renders the provider/model lists synchronously instead of an
-  // empty flash.
   const [cur, setCur] = useState<Record<string, unknown> | null>(
     () => cacheGet<Record<string, unknown>>(cacheKey) ?? null,
   );
-  // Action-scoped saving indicator. One shared boolean made *every* mutation
-  // (switching the active model, toggling reasoning, picking the aux model)
-  // flash the bottom-of-section "保存中…" block — jarring for the common,
-  // near-instant model switch. We key by action id instead so only the
-  // affected control disables, and the add-model form keeps its own inline
-  // "保存中…" on its button (no global block). Mirrors CapabilitiesOverviewSection.
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [aliasTouched, setAliasTouched] = useState(false);
   const [manualModel, setManualModel] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [fetchedModels, setFetchedModels] = useState<FetchedModel[]>([]);
+  const [showAddKey, setShowAddKey] = useState(false);
   const [form, setForm] = useState<AddModelForm>(() => initialForm());
-  // Per-model reasoning descriptor, keyed by model `key`. Fetched lazily from
-  // core (reasoningControlFor) via the preload bridge — the renderer never
-  // imports core at runtime. `null` while a fetch is in flight.
+  const [editingModel, setEditingModel] = useState<EditModelForm | null>(null);
+  const [editingProvider, setEditingProvider] = useState<EditProviderForm | null>(null);
+  const [showEditModelKey, setShowEditModelKey] = useState(false);
+  const [showEditProviderKey, setShowEditProviderKey] = useState(false);
   const [controls, setControls] = useState<Record<string, ReasoningControl | null>>({});
+  const confirm = useConfirm();
+  const toast = useToast();
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
       setCur(s);
+      setLoadError(null);
       cacheSet(cacheKey, s);
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      setLoadError(String(e instanceof Error ? e.message : e));
     }
-  };
+  }, [scope, cwd, cacheKey]);
 
   useEffect(() => {
     void load();
-  }, [scope, activeRepoPath]);
+  }, [load]);
 
   const providers = useMemo(() => providersFrom(cur ?? {}), [cur]);
   const rawProviders = useMemo(() => rawProvidersFrom(cur ?? {}), [cur]);
   const rawModels = useMemo(() => rawModelsFrom(cur ?? {}), [cur]);
-  const candidates = useMemo(() => candidatesFrom(cur ?? {}), [cur]);
+  const candidates = useMemo(() => candidatesFrom(cur ?? {}, providers), [cur, providers]);
   const modelKeys = useMemo(() => new Set(candidates.map((m) => m.key)), [candidates]);
 
-  // Resolve {provider kind, model id, current reasoning setting} for each model
-  // key. Kind comes from the matching provider (by providerKey/provider); model
-  // id from the raw entry's `model`. Used both to fetch the descriptor and to
-  // read the saved value.
+  const providerGroups = useMemo(
+    () => providerGroupsFrom(providers, candidates),
+    [providers, candidates],
+  );
+
   const reasoningTargets = useMemo(() => {
     const map: Record<string, { kind: string; modelId: string; reasoning?: ReasoningSetting }> = {};
     for (const raw of rawModels) {
@@ -289,14 +333,10 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     return map;
   }, [rawModels, providers]);
 
-  // Fetch the ReasoningControl descriptor for every model via the preload
-  // bridge. Re-runs when the (kind, modelId) set changes.
   useEffect(() => {
     let cancelled = false;
     const targets = reasoningTargets;
     void (async () => {
-      // Independent per-model lookups — fetch them concurrently rather than
-      // awaiting each IPC round-trip in series (N models × ~one round-trip).
       const entries = await Promise.all(
         Object.entries(targets).map(async ([key, t]) => {
           try {
@@ -313,26 +353,16 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     };
   }, [reasoningTargets]);
 
-  const setReasoning = async (key: string, reasoning: ReasoningSetting) => {
-    setSavingId(`reasoning:${key}`);
-    setError(null);
-    setNotice(null);
-    try {
-      const nextModels = rawModels.map((m) =>
-        m.key === key || (typeof m.key !== "string" && m.model === key)
-          ? { ...m, reasoning }
-          : m,
-      );
-      await window.codeshell.updateSettings(scope, { models: nextModels }, cwd);
-      window.dispatchEvent(new Event("codeshell:settings-changed"));
-      await load();
-    } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
-    } finally {
-      setSavingId(null);
-    }
-  };
+  const activeKey =
+    typeof cur?.activeKey === "string" ? (cur.activeKey as string) :
+    cur?.model && typeof (cur.model as Record<string, unknown>).name === "string"
+      ? ((cur.model as Record<string, unknown>).name as string)
+      : "";
 
+  const auxModelKey =
+    typeof cur?.auxModelKey === "string" ? (cur.auxModelKey as string) : "";
+
+  const activeModel = candidates.find((m) => m.key === activeKey);
   const matchingProviders = providers.filter((p) => p.kind === form.kind);
   const selectedProvider =
     form.providerRef === NEW_PROVIDER
@@ -352,23 +382,31 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
       ? deriveModelAlias(form.kind, form.model, modelKeys)
       : "";
 
-  const activeKey =
-    typeof cur?.activeKey === "string" ? (cur.activeKey as string) :
-    cur?.model && typeof (cur.model as Record<string, unknown>).name === "string"
-      ? ((cur.model as Record<string, unknown>).name as string)
-      : "";
-
-  const auxModelKey =
-    typeof cur?.auxModelKey === "string" ? (cur.auxModelKey as string) : "";
+  const setReasoning = async (key: string, reasoning: ReasoningSetting) => {
+    setSavingId(`reasoning:${key}`);
+    try {
+      const nextModels = rawModels.map((m) =>
+        m.key === key || (typeof m.key !== "string" && m.model === key)
+          ? { ...m, reasoning }
+          : m,
+      );
+      await window.codeshell.updateSettings(scope, { models: nextModels }, cwd);
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
+      await load();
+      toast({ message: "思考设置已保存", variant: "success" });
+    } catch (e) {
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   const setAuxModel = async (key: string) => {
     setSavingId("aux");
-    setError(null);
-    setNotice(null);
     try {
-      // Empty string → clear the override (fall back to the active model).
-      // deepMerge treats null as "delete this key"; undefined would be
-      // dropped by JSON.stringify but null is the documented clear signal.
       await window.codeshell.updateSettings(
         scope,
         { auxModelKey: key || null },
@@ -376,9 +414,15 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
       );
       window.dispatchEvent(new Event("codeshell:settings-changed"));
       await load();
-      setNotice(key ? `后台任务模型已设为 ${key}` : "后台任务模型已跟随当前模型");
+      toast({
+        message: key ? `后台任务模型已设为 ${key}` : "后台任务模型已跟随当前模型",
+        variant: "success",
+      });
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
     } finally {
       setSavingId(null);
     }
@@ -386,11 +430,9 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
 
   const setActive = async (entry: ModelEntry) => {
     setSavingId(`active:${entry.key}`);
-    setError(null);
-    setNotice(null);
     try {
       const raw = rawModels.find((m) => m.key === entry.key);
-      const modelId = typeof raw?.model === "string" ? raw.model : entry.key;
+      const modelId = typeof raw?.model === "string" ? raw.model : entry.modelId;
       const provider = providers.find((p) => p.key === entry.providerKey);
       const protocol = typeof raw?.provider === "string"
         ? raw.provider
@@ -404,19 +446,289 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
           model: {
             provider: protocol,
             name: modelId,
-            apiKey: typeof raw?.apiKey === "string" ? raw.apiKey : provider?.apiKey,
-            baseUrl: typeof raw?.baseUrl === "string" ? raw.baseUrl : provider?.baseUrl,
+            apiKey: typeof raw?.apiKey === "string" ? raw.apiKey : provider?.apiKey ?? null,
+            baseUrl: typeof raw?.baseUrl === "string" ? raw.baseUrl : provider?.baseUrl ?? null,
           },
         },
         cwd,
       );
-      // Notify the running agent worker so the model switch takes effect
-      // on the next turn without an Electron restart.
       void window.codeshell.configure({ model: entry.key });
       window.dispatchEvent(new Event("codeshell:settings-changed"));
       await load();
+      toast({ message: `当前模型已切换到 ${entry.key}`, variant: "success" });
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const removeModel = async (entry: ModelEntry) => {
+    const ok = await confirm({
+      message: `删除模型「${entry.label}」？`,
+      detail: `本地别名 #${entry.key} 会从当前 scope 的 models[] 中移除。`,
+      destructive: true,
+    });
+    if (!ok) return;
+
+    setSavingId(`delete:${entry.key}`);
+    try {
+      const nextRawModels = rawModels.filter((m) => modelKeyOf(m) !== entry.key);
+      const remaining = candidates.filter((m) => m.key !== entry.key);
+      const patch: Record<string, unknown> = { models: nextRawModels };
+      let nextActive: ModelEntry | undefined;
+
+      if (auxModelKey === entry.key) patch.auxModelKey = null;
+      if (activeKey === entry.key) {
+        nextActive = remaining[0];
+        if (nextActive) {
+          patch.activeKey = nextActive.key;
+          patch.model = legacyModelPatch(nextActive, rawModels, providers);
+        } else {
+          patch.activeKey = null;
+          patch.model = null;
+        }
+      }
+
+      await window.codeshell.updateSettings(scope, patch, cwd);
+      if (activeKey === entry.key) {
+        if (nextActive) void window.codeshell.configure({ model: nextActive.key });
+        else void window.codeshell.configure({ reloadModels: true });
+      }
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
+      await load();
+      toast({ message: `已删除 ${entry.key}`, variant: "success" });
+    } catch (e) {
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const clearProviderKey = async (provider: ProviderEntry) => {
+    const ok = await confirm({
+      message: `清除「${provider.label ?? KIND_META[provider.kind].label}」的 API key？`,
+      detail: "会同时移除该 provider 下模型副本里的 apiKey；Base URL 和模型列表会保留。",
+      destructive: true,
+    });
+    if (!ok) return;
+
+    setSavingId(`clear-key:${provider.key}`);
+    try {
+      const nextProviders = rawProviders.map((p) =>
+        p.key === provider.key ? withoutKey(p, "apiKey") : p,
+      );
+      const nextModels = rawModels.map((m) =>
+        modelProviderKeyOf(m) === provider.key ? withoutKey(m, "apiKey") : m,
+      );
+      const patch: Record<string, unknown> = {
+        providers: nextProviders,
+        models: nextModels,
+      };
+      if (activeModel?.providerKey === provider.key) {
+        patch.model = { apiKey: null };
+      }
+      await window.codeshell.updateSettings(scope, patch, cwd);
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
+      await load();
+      toast({ message: "API key 已清除", variant: "success" });
+    } catch (e) {
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const saveEditedModel = async () => {
+    if (!editingModel) return;
+    const originalKey = editingModel.originalKey;
+    const nextKey = normalizeAlias(editingModel.key);
+    const nextModelId = editingModel.model.trim();
+    const nextProviderKey = editingModel.providerKey.trim();
+    const provider = providers.find((p) => p.key === nextProviderKey);
+    const existingKeys = new Set(candidates.filter((m) => m.key !== originalKey).map((m) => m.key));
+
+    setSavingId(`edit-model:${originalKey}`);
+    try {
+      if (!nextKey) throw new Error("先填写本地别名。");
+      if (existingKeys.has(nextKey)) throw new Error(`本地别名已存在：${nextKey}`);
+      if (!nextModelId) throw new Error("先填写 Model ID。");
+      if (!provider) throw new Error("先选择有效 provider。");
+
+      const protocol = provider.kind === "anthropic" ? "anthropic" : "openai";
+      const contextTokens = parseOptionalPositiveInt(editingModel.maxContextTokens, "Context tokens");
+      const outputTokens = parseOptionalPositiveInt(editingModel.maxOutputTokens, "Output tokens");
+      const nextModels = rawModels.map((m) => {
+        if (modelKeyOf(m) !== originalKey) return m;
+        const next: Record<string, unknown> = {
+          ...m,
+          key: nextKey,
+          label: editingModel.label.trim() || nextModelId,
+          providerKey: provider.key,
+          protocol,
+          provider: protocol,
+          model: nextModelId,
+        };
+        assignOptionalString(next, "baseUrl", editingModel.baseUrl.trim());
+        assignOptionalString(next, "apiKey", editingModel.apiKey.trim());
+        assignOptionalNumber(next, "maxContextTokens", contextTokens);
+        assignOptionalNumber(next, "maxOutputTokens", outputTokens);
+        return next;
+      });
+
+      const patch: Record<string, unknown> = { models: nextModels };
+      const activeWasEdited = activeKey === originalKey;
+      if (activeWasEdited) {
+        patch.activeKey = nextKey;
+        patch.model = legacyModelPatchByKey(nextKey, nextModels, providers);
+      }
+      if (auxModelKey === originalKey) patch.auxModelKey = nextKey;
+
+      await window.codeshell.updateSettings(scope, patch, cwd);
+      if (activeWasEdited) void window.codeshell.configure({ model: nextKey });
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
+      await load();
+      setEditingModel(null);
+      setShowEditModelKey(false);
+      toast({ message: `已保存 ${nextKey}`, variant: "success" });
+    } catch (e) {
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const saveEditedProvider = async () => {
+    if (!editingProvider) return;
+    const originalKey = editingProvider.originalKey;
+    const nextKey = normalizeAlias(editingProvider.key);
+    const nextBaseUrl = editingProvider.baseUrl.trim();
+    const nextKind = editingProvider.kind;
+    const existingKeys = new Set(providers.filter((p) => p.key !== originalKey).map((p) => p.key));
+
+    setSavingId(`edit-provider:${originalKey}`);
+    try {
+      if (!nextKey) throw new Error("先填写 provider key。");
+      if (existingKeys.has(nextKey)) throw new Error(`Provider key 已存在：${nextKey}`);
+      if (!nextBaseUrl) throw new Error("先填写 Base URL。");
+
+      const nextProviderRecords = rawProviders.map((p) => {
+        if (p.key !== originalKey) return p;
+        const next: Record<string, unknown> = {
+          ...p,
+          key: nextKey,
+          label: editingProvider.label.trim() || KIND_META[nextKind].label,
+          kind: nextKind,
+          baseUrl: nextBaseUrl,
+        };
+        assignOptionalString(next, "apiKey", editingProvider.apiKey.trim());
+        return next;
+      });
+      const nextProviders = providersFrom({ providers: nextProviderRecords });
+      const protocol = nextKind === "anthropic" ? "anthropic" : "openai";
+      // Only propagate the provider's apiKey down to its models when it actually
+      // changed in this edit. Otherwise an unrelated edit (e.g. just Base URL)
+      // would clobber a model's own distinct apiKey override with the provider
+      // key (or delete it when the provider field is blank).
+      const apiKeyChanged = editingProvider.apiKey.trim() !== editingProvider.originalApiKey.trim();
+      const nextModels = rawModels.map((m) => {
+        if (modelProviderKeyOf(m) !== originalKey) return m;
+        const next: Record<string, unknown> = {
+          ...m,
+          providerKey: nextKey,
+          protocol,
+          provider: protocol,
+          baseUrl: nextBaseUrl,
+        };
+        if (apiKeyChanged) assignOptionalString(next, "apiKey", editingProvider.apiKey.trim());
+        return next;
+      });
+
+      const patch: Record<string, unknown> = {
+        providers: nextProviderRecords,
+        models: nextModels,
+      };
+      if (activeModel?.providerKey === originalKey) {
+        patch.model = legacyModelPatchByKey(activeModel.key, nextModels, nextProviders);
+      }
+
+      await window.codeshell.updateSettings(scope, patch, cwd);
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
+      await load();
+      setEditingProvider(null);
+      setShowEditProviderKey(false);
+      toast({ message: `已保存 provider #${nextKey}`, variant: "success" });
+    } catch (e) {
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const removeProvider = async (provider: ProviderEntry, modelsForProvider: ModelEntry[]) => {
+    if (provider.key === ORPHAN_PROVIDER) return;
+    const ok = await confirm({
+      message: `删除 provider「${provider.label ?? KIND_META[provider.kind].label}」？`,
+      detail: modelsForProvider.length > 0
+        ? `会同时删除它下面的 ${modelsForProvider.length} 个模型实例。`
+        : "会从当前 scope 的 providers[] 中移除这个 provider 配置。",
+      destructive: true,
+    });
+    if (!ok) return;
+
+    setSavingId(`delete-provider:${provider.key}`);
+    try {
+      const removedKeys = new Set(modelsForProvider.map((m) => m.key));
+      const nextProviders = rawProviders.filter((p) => p.key !== provider.key);
+      const nextModels = rawModels.filter((m) => !removedKeys.has(modelKeyOf(m)));
+      const remaining = candidates.filter((m) => !removedKeys.has(m.key));
+      const nextProviderEntries = providersFrom({ providers: nextProviders });
+      const patch: Record<string, unknown> = {
+        providers: nextProviders,
+        models: nextModels,
+      };
+      let nextActive: ModelEntry | undefined;
+
+      if (removedKeys.has(auxModelKey)) patch.auxModelKey = null;
+      if (removedKeys.has(activeKey)) {
+        nextActive = remaining[0];
+        if (nextActive) {
+          patch.activeKey = nextActive.key;
+          patch.model = legacyModelPatchByKey(nextActive.key, nextModels, nextProviderEntries);
+        } else {
+          patch.activeKey = null;
+          patch.model = null;
+        }
+      }
+
+      await window.codeshell.updateSettings(scope, patch, cwd);
+      if (removedKeys.has(activeKey)) {
+        if (nextActive) void window.codeshell.configure({ model: nextActive.key });
+        else void window.codeshell.configure({ reloadModels: true });
+      }
+      window.dispatchEvent(new Event("codeshell:settings-changed"));
+      await load();
+      toast({ message: `已删除 provider #${provider.key}`, variant: "success" });
+    } catch (e) {
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
     } finally {
       setSavingId(null);
     }
@@ -432,8 +744,7 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     setFetchError(null);
     setAliasTouched(false);
     setManualModel(kind === "custom");
-    setNotice(null);
-    setError(null);
+    setShowAddKey(false);
   };
 
   const chooseProviderRef = (providerRef: string) => {
@@ -453,7 +764,6 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
   const refreshProviderModels = async () => {
     setFetchLoading(true);
     setFetchError(null);
-    setNotice(null);
     try {
       const res = await window.codeshell.listModels(
         {
@@ -477,8 +787,6 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
 
   const saveNewModel = async () => {
     setSavingId("new");
-    setError(null);
-    setNotice(null);
     try {
       const modelId = form.model.trim();
       if (!modelId) throw new Error("先填写 model id。");
@@ -543,19 +851,27 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
       }
 
       await window.codeshell.updateSettings(scope, patch, cwd);
+      if (activate) void window.codeshell.configure({ model: alias });
       window.dispatchEvent(new Event("codeshell:settings-changed"));
       await load();
-      setAdding(false);
+      setAddOpen(false);
       setFetchedModels([]);
       setFetchError(null);
       setAliasTouched(false);
+      setShowAddKey(false);
       setForm((f) => ({
         ...initialForm(f.kind),
         providerRef: selectedProvider?.key ?? providerKey ?? NEW_PROVIDER,
       }));
-      setNotice(activate ? `已添加并切换到 ${alias}` : `已添加 ${alias}`);
+      toast({
+        message: activate ? `已添加并切换到 ${alias}` : `已添加 ${alias}`,
+        variant: "success",
+      });
     } catch (e) {
-      setError(String(e instanceof Error ? e.message : e));
+      toast({
+        message: String(e instanceof Error ? e.message : e),
+        variant: "error",
+      });
     } finally {
       setSavingId(null);
     }
@@ -565,102 +881,111 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
     Boolean(effectiveBaseUrl) &&
     (!kindMeta.needsKey || Boolean(effectiveApiKey) || form.kind === "openrouter");
 
-  return (
-    <section className="settings-section">
-      <div className="model-section-head">
-        <div>
-          <h3 className="settings-section-title">Active model</h3>
-          <div className="settings-section-current">
-            <span className="settings-section-label">当前：</span>
-            <code>{activeKey || "(none)"}</code>
-          </div>
-        </div>
-        <button
-          className="approval-btn approve"
-          onClick={() => setAdding((v) => !v)}
-        >
-          {adding ? "收起" : "添加模型"}
-        </button>
-      </div>
+  const openAddDialog = () => {
+    const firstKind = providers[0]?.kind ?? "openrouter";
+    chooseKind(firstKind);
+    setAddOpen(true);
+  };
 
-      {notice && <div className="settings-section-help">{notice}</div>}
-      {candidates.length === 0 ? (
-        <div className="approvals-empty">
+  return (
+    <section className="mb-6 flex flex-col gap-3">
+      <header className="mb-3 flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">Active model</h3>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>当前</span>
+              <code className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
+                {activeKey || "(none)"}
+              </code>
+              {activeModel && (
+                <Badge variant="secondary" className="font-mono">
+                  {activeModel.providerKey}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <Button onClick={openAddDialog}>
+            <Plus />
+            添加模型
+          </Button>
+        </div>
+
+        {candidates.length > 0 && (
+          <div className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-[minmax(220px,320px)_1fr] sm:items-center">
+            <ConnField label="后台任务模型" hint="记忆提取、自动 dream 等后台调用使用此模型。">
+              <Select
+                value={auxModelKey}
+                disabled={savingId === "aux"}
+                onChange={(v) => void setAuxModel(v)}
+                placeholder="跟随当前模型"
+                options={[
+                  { value: "", label: "跟随当前模型（默认）" },
+                  ...candidates.map((m) => ({
+                    value: m.key,
+                    label: m.label,
+                    searchText: `${m.label} ${m.key} ${m.providerKey}`,
+                  })),
+                ]}
+                searchable={candidates.length > 8}
+              />
+            </ConnField>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              选个便宜快的模型处理后台任务，默认会跟随当前聊天模型。
+            </p>
+          </div>
+        )}
+      </header>
+
+      {loadError && (
+        <div className="mb-3 rounded-md border border-status-err/25 bg-status-err/5 px-3 py-2 text-sm text-status-err">
+          {loadError}
+        </div>
+      )}
+
+      {providerGroups.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
           还没有模型。点「添加模型」后选择 provider、填 API Key 和 model id。
         </div>
       ) : (
-        <ul className="model-list">
-          {candidates.map((m) => {
-            const active = m.key === activeKey;
-            const control = controls[m.key];
-            const reasoning = reasoningTargets[m.key]?.reasoning;
-            return (
-              <li
-                key={m.key}
-                className={`model-row${active ? " active" : ""}`}
-                aria-busy={savingId === `active:${m.key}`}
-                onClick={() => {
-                  if (savingId === `active:${m.key}`) return;
-                  void setActive(m);
-                }}
-              >
-                <span className="model-provider">{m.providerKey}</span>
-                <span className="model-name">{m.label}</span>
-                {m.maxContextTokens && (
-                  <span className="model-ctx">{formatTok(m.maxContextTokens)} ctx</span>
-                )}
-                {active && <span className="model-active-badge">active</span>}
-                {control && control.kind !== "none" && (
-                  <span
-                    className="model-reasoning"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {renderReasoningControl(
-                      control,
-                      reasoning,
-                      savingId === `reasoning:${m.key}`,
-                      (next) => void setReasoning(m.key, next),
-                    )}
-                  </span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {candidates.length > 0 && (
-        <div className="model-aux-block">
-          <label className="settings-field">
-            <span>后台任务模型</span>
-            <Select
-              value={auxModelKey}
-              disabled={savingId === "aux"}
-              onChange={(v) => void setAuxModel(v)}
-              placeholder="跟随当前模型"
-              options={[
-                { value: "", label: "跟随当前模型（默认）" },
-                ...candidates.map((m) => ({
-                  value: m.key,
-                  label: m.label,
-                  searchText: `${m.label} ${m.key} ${m.providerKey}`,
-                })),
-              ]}
-              searchable={candidates.length > 8}
+        <ConnCardGrid>
+          {providerGroups.map((group) => (
+            <ProviderModelCard
+              key={group.provider.key}
+              group={group}
+              activeKey={activeKey}
+              savingId={savingId}
+              controls={controls}
+              reasoningTargets={reasoningTargets}
+              onSetActive={(entry) => void setActive(entry)}
+              onSetReasoning={(key, next) => void setReasoning(key, next)}
+              onRemoveModel={(entry) => void removeModel(entry)}
+              onClearProviderKey={(provider) => void clearProviderKey(provider)}
+              onEditModel={(entry) => {
+                setEditingModel(editModelFormFromEntry(entry));
+                setShowEditModelKey(false);
+              }}
+              onEditProvider={(provider) => {
+                setEditingProvider(editProviderFormFromEntry(provider));
+                setShowEditProviderKey(false);
+              }}
+              onRemoveProvider={(provider, modelsForProvider) => void removeProvider(provider, modelsForProvider)}
             />
-          </label>
-          <div className="settings-section-help">
-            记忆提取、自动 dream 等后台调用使用此模型。选个便宜快的（如 Haiku / DeepSeek），
-            避免每轮对话都占用主模型。默认跟随当前模型。
-          </div>
-        </div>
+          ))}
+        </ConnCardGrid>
       )}
 
-      {adding && (
-        <div className="model-add-panel">
-          <div className="model-add-grid">
-            <label className="settings-field">
-              <span>Provider</span>
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>添加模型</DialogTitle>
+            <DialogDescription>
+              选择 provider、凭证和模型 ID；保存后会写入当前 scope 的 providers[] 与 models[]。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ConnField label="Provider">
               <Select<ProviderKind>
                 value={form.kind}
                 onChange={(v) => chooseKind(v)}
@@ -669,11 +994,10 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
                   label: KIND_META[kind].label,
                 }))}
               />
-            </label>
+            </ConnField>
 
             {matchingProviders.length > 0 && (
-              <label className="settings-field">
-                <span>凭证</span>
+              <ConnField label="凭证">
                 <Select
                   value={form.providerRef}
                   onChange={chooseProviderRef}
@@ -685,56 +1009,75 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
                     { value: NEW_PROVIDER, label: `新增 ${kindMeta.label} 凭证` },
                   ]}
                 />
-              </label>
+              </ConnField>
             )}
 
             {!selectedProvider && (
-              <label className="settings-field">
-                <span>Base URL</span>
-                <input
+              <ConnField label="Base URL">
+                <Input
                   value={form.baseUrl}
                   placeholder="https://api.example.com/v1"
                   onChange={(e) => setForm((f) => ({ ...f, baseUrl: e.target.value }))}
+                  className="font-mono text-sm"
                 />
-              </label>
+              </ConnField>
             )}
 
             {!selectedProvider && kindMeta.needsKey && (
-              <label className="settings-field">
-                <span>API Key</span>
-                <input
-                  type="password"
+              <ConnField label="API Key" hint="保存于当前 settings scope。">
+                <SecretKeyInput
                   value={form.apiKey}
+                  show={showAddKey}
                   placeholder={kindMeta.keyUrl ? "粘贴 API Key" : "API Key"}
-                  onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value.trim() }))}
+                  onChange={(value) => setForm((f) => ({ ...f, apiKey: value }))}
+                  onToggleShow={() => setShowAddKey((show) => !show)}
                 />
-              </label>
+              </ConnField>
             )}
           </div>
 
-          <div className="settings-toolbar">
-            <button
-              className="approval-btn deny"
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
               disabled={!canFetch || fetchLoading}
               onClick={() => void refreshProviderModels()}
               title={canFetch ? "从 provider 拉取可用模型" : "先补齐 Base URL/API Key"}
             >
+              <RefreshCw className={cn(fetchLoading && "animate-spin")} />
               {fetchLoading ? "拉取中…" : "拉取模型列表"}
-            </button>
+            </Button>
             {kindMeta.keyUrl && !selectedProvider && (
-              <button
-                className="approval-btn deny"
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
                 onClick={() => { void window.codeshell.openExternal(kindMeta.keyUrl!); }}
               >
-                获取 Key
-              </button>
+                获取 key
+              </Button>
             )}
-            {fetchError && <span className="view-error">{fetchError}</span>}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setManualModel((v) => !v);
+                if (!manualModel) setFetchedModels([]);
+              }}
+            >
+              <Settings2 />
+              {manualModel ? "使用推荐列表" : "手动填写 ID"}
+            </Button>
           </div>
 
+          {fetchError && (
+            <div className="break-all rounded-md border border-status-err/25 bg-status-err/5 px-3 py-2 text-sm text-status-err">
+              {fetchError}
+            </div>
+          )}
+
           {!manualModel && (
-            <label className="settings-field">
-              <span>模型</span>
+            <ConnField label="模型">
               <Select
                 value={form.model}
                 onChange={setModelId}
@@ -771,59 +1114,46 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
                     : []),
                 ]}
               />
-            </label>
+            </ConnField>
           )}
 
-          <div className="settings-toolbar">
-            <button
-              className="approval-btn deny"
-              onClick={() => {
-                setManualModel((v) => !v);
-                if (!manualModel) setFetchedModels([]);
-              }}
-            >
-              {manualModel ? "使用推荐列表" : "手动填写 ID"}
-            </button>
-          </div>
-
-          <div className="model-add-grid">
+          <div className="grid gap-3 sm:grid-cols-2">
             {manualModel && (
-              <label className="settings-field">
-                <span>Model ID</span>
-                <input
+              <ConnField label="Model ID">
+                <Input
                   value={form.model}
                   placeholder="例如 anthropic/claude-sonnet-4.6 或 gpt-5"
                   onChange={(e) => setModelId(e.target.value)}
+                  className="font-mono text-sm"
                 />
-              </label>
+              </ConnField>
             )}
-            <label className="settings-field">
-              <span>本地别名</span>
-              <input
+            <ConnField label="本地别名" hint="用于模型切换；保存后不可在此处改名。">
+              <Input
                 value={displayedAlias}
-                placeholder="用于切换模型，例如 openrouter-claude-sonnet"
+                placeholder="例如 openrouter-claude-sonnet"
                 onChange={(e) => {
                   setAliasTouched(true);
                   setForm((f) => ({ ...f, alias: normalizeAlias(e.target.value) }));
                 }}
+                className="font-mono text-sm"
               />
-            </label>
-            <label className="settings-field">
-              <span>显示名称</span>
-              <input
+            </ConnField>
+            <ConnField label="显示名称">
+              <Input
                 value={form.label}
                 placeholder="留空则使用 Model ID"
                 onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
               />
-            </label>
+            </ConnField>
           </div>
 
           {selectedFetched && (
-            <div className="settings-section-current">
-              <span className="settings-section-label">模型信息：</span>
-              <code>{formatTok(selectedFetched.contextLength)} ctx</code>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>模型信息</span>
+              <Badge variant="secondary">{formatTok(selectedFetched.contextLength)} ctx</Badge>
               {selectedFetched.maxOutputTokens > 0 && (
-                <code>{formatTok(selectedFetched.maxOutputTokens)} output</code>
+                <Badge variant="secondary">{formatTok(selectedFetched.maxOutputTokens)} output</Badge>
               )}
             </div>
           )}
@@ -836,12 +1166,13 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
             <span>添加后设为当前模型</span>
           </label>
 
-          <div className="settings-toolbar">
+          <DialogFooter>
             <Button
-              variant="default"
+              variant="ghost"
               disabled={savingId === "new"}
-              onClick={() => setAdding(false)}
+              onClick={() => setAddOpen(false)}
             >
+              <X />
               取消
             </Button>
             <Button
@@ -849,14 +1180,379 @@ export function ModelSection({ scope, activeRepoPath }: Props) {
               disabled={savingId === "new"}
               onClick={() => void saveNewModel()}
             >
+              <Plus />
               {savingId === "new" ? "保存中…" : "保存模型"}
             </Button>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {error && <div className="view-error">{error}</div>}
+      <Dialog
+        open={!!editingModel}
+        onOpenChange={(open) => {
+          if (!open) setEditingModel(null);
+        }}
+      >
+        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>编辑模型</DialogTitle>
+            <DialogDescription>
+              修改本地别名、显示名、Model ID、归属 provider 和模型级覆盖项。
+            </DialogDescription>
+          </DialogHeader>
+          {editingModel && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ConnField label="本地别名">
+                  <Input
+                    value={editingModel.key}
+                    onChange={(e) => setEditingModel((f) => f && { ...f, key: normalizeAlias(e.target.value) })}
+                    className="font-mono text-sm"
+                  />
+                </ConnField>
+                <ConnField label="显示名称">
+                  <Input
+                    value={editingModel.label}
+                    onChange={(e) => setEditingModel((f) => f && { ...f, label: e.target.value })}
+                    placeholder="留空则使用 Model ID"
+                  />
+                </ConnField>
+                <ConnField label="Model ID">
+                  <Input
+                    value={editingModel.model}
+                    onChange={(e) => setEditingModel((f) => f && { ...f, model: e.target.value })}
+                    className="font-mono text-sm"
+                  />
+                </ConnField>
+                <ConnField label="Provider">
+                  <Select
+                    value={editingModel.providerKey}
+                    onChange={(providerKey) => setEditingModel((f) => f && { ...f, providerKey })}
+                    options={providers.map((p) => ({
+                      value: p.key,
+                      label: `${p.label ?? KIND_META[p.kind].label} #${p.key}`,
+                    }))}
+                  />
+                </ConnField>
+                <ConnField label="Base URL override" hint="留空则使用 provider 的 Base URL。">
+                  <Input
+                    value={editingModel.baseUrl}
+                    onChange={(e) => setEditingModel((f) => f && { ...f, baseUrl: e.target.value })}
+                    className="font-mono text-sm"
+                  />
+                </ConnField>
+                <ConnField label="API Key override" hint="留空则使用 provider 的 API key。">
+                  <SecretKeyInput
+                    value={editingModel.apiKey}
+                    show={showEditModelKey}
+                    onChange={(apiKey) => setEditingModel((f) => f && { ...f, apiKey })}
+                    onToggleShow={() => setShowEditModelKey((show) => !show)}
+                  />
+                </ConnField>
+                <ConnField label="Context tokens">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editingModel.maxContextTokens}
+                    onChange={(e) => setEditingModel((f) => f && { ...f, maxContextTokens: e.target.value })}
+                    placeholder="留空自动推断"
+                  />
+                </ConnField>
+                <ConnField label="Output tokens">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editingModel.maxOutputTokens}
+                    onChange={(e) => setEditingModel((f) => f && { ...f, maxOutputTokens: e.target.value })}
+                    placeholder="留空使用 provider 默认"
+                  />
+                </ConnField>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setEditingModel(null)}>
+                  <X />
+                  取消
+                </Button>
+                <Button
+                  variant="solid"
+                  disabled={savingId === `edit-model:${editingModel.originalKey}`}
+                  onClick={() => void saveEditedModel()}
+                >
+                  {savingId === `edit-model:${editingModel.originalKey}` ? "保存中…" : "保存模型"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editingProvider}
+        onOpenChange={(open) => {
+          if (!open) setEditingProvider(null);
+        }}
+      >
+        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>编辑 provider</DialogTitle>
+            <DialogDescription>
+              修改 provider key 会同步更新引用它的模型实例。
+            </DialogDescription>
+          </DialogHeader>
+          {editingProvider && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ConnField label="Provider key">
+                  <Input
+                    value={editingProvider.key}
+                    onChange={(e) => setEditingProvider((f) => f && { ...f, key: normalizeAlias(e.target.value) })}
+                    className="font-mono text-sm"
+                  />
+                </ConnField>
+                <ConnField label="显示名称">
+                  <Input
+                    value={editingProvider.label}
+                    onChange={(e) => setEditingProvider((f) => f && { ...f, label: e.target.value })}
+                    placeholder="留空则使用 provider 类型名称"
+                  />
+                </ConnField>
+                <ConnField label="Kind">
+                  <Select<ProviderKind>
+                    value={editingProvider.kind}
+                    onChange={(kind) => setEditingProvider((f) => f && { ...f, kind })}
+                    options={KIND_ORDER.map((kind) => ({
+                      value: kind,
+                      label: KIND_META[kind].label,
+                    }))}
+                  />
+                </ConnField>
+                <ConnField label="Base URL">
+                  <Input
+                    value={editingProvider.baseUrl}
+                    onChange={(e) => setEditingProvider((f) => f && { ...f, baseUrl: e.target.value })}
+                    className="font-mono text-sm"
+                  />
+                </ConnField>
+                <ConnField label="API Key">
+                  <SecretKeyInput
+                    value={editingProvider.apiKey}
+                    show={showEditProviderKey}
+                    onChange={(apiKey) => setEditingProvider((f) => f && { ...f, apiKey })}
+                    onToggleShow={() => setShowEditProviderKey((show) => !show)}
+                  />
+                </ConnField>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setEditingProvider(null)}>
+                  <X />
+                  取消
+                </Button>
+                <Button
+                  variant="solid"
+                  disabled={savingId === `edit-provider:${editingProvider.originalKey}`}
+                  onClick={() => void saveEditedProvider()}
+                >
+                  {savingId === `edit-provider:${editingProvider.originalKey}` ? "保存中…" : "保存 provider"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
+  );
+}
+
+function ProviderModelCard({
+  group,
+  activeKey,
+  savingId,
+  controls,
+  reasoningTargets,
+  onSetActive,
+  onSetReasoning,
+  onRemoveModel,
+  onClearProviderKey,
+  onEditModel,
+  onEditProvider,
+  onRemoveProvider,
+}: {
+  group: ProviderGroup;
+  activeKey: string;
+  savingId: string | null;
+  controls: Record<string, ReasoningControl | null>;
+  reasoningTargets: Record<string, { kind: string; modelId: string; reasoning?: ReasoningSetting }>;
+  onSetActive: (entry: ModelEntry) => void;
+  onSetReasoning: (key: string, next: ReasoningSetting) => void;
+  onRemoveModel: (entry: ModelEntry) => void;
+  onClearProviderKey: (provider: ProviderEntry) => void;
+  onEditModel: (entry: ModelEntry) => void;
+  onEditProvider: (provider: ProviderEntry) => void;
+  onRemoveProvider: (provider: ProviderEntry, models: ModelEntry[]) => void;
+}) {
+  const { provider, models } = group;
+  const isActiveProvider = models.some((m) => m.key === activeKey);
+  const meta = KIND_META[provider.kind];
+  const hasStoredKey = Boolean(provider.apiKey) || models.some((m) => Boolean(m.apiKey));
+  const configured = provider.kind === "ollama" || !meta.needsKey || hasStoredKey;
+  const canClearKey = provider.key !== ORPHAN_PROVIDER && meta.needsKey && hasStoredKey;
+
+  return (
+    <ConnCard isDefault={isActiveProvider}>
+      <header className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+          <strong className="text-sm font-medium text-foreground">
+            {provider.label || meta.label}
+          </strong>
+          <span className="font-mono text-xs text-muted-foreground">#{provider.key}</span>
+          {isActiveProvider && <Badge variant="accent">当前 provider</Badge>}
+          <Badge variant={configured ? "secondary" : "warning"}>
+            {configured ? "已配置" : "缺少 key"}
+          </Badge>
+        </div>
+        {meta.keyUrl && (
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto shrink-0 p-0 text-xs"
+            onClick={() => void window.codeshell.openExternal(meta.keyUrl!)}
+          >
+            获取 key
+          </Button>
+        )}
+      </header>
+
+      <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+        <div className="break-all font-mono">{provider.baseUrl || "No base URL"}</div>
+        <div>{models.length > 0 ? `${models.length} 个模型实例` : "还没有模型实例"}</div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {models.length === 0 && (
+          <div className="rounded-md border border-dashed border-border bg-background p-3 text-sm text-muted-foreground">
+            这个 provider 没有模型。可以继续保留凭证，或直接删除 provider。
+          </div>
+        )}
+        {models.map((model) => {
+          const active = model.key === activeKey;
+          const control = controls[model.key];
+          const reasoning = reasoningTargets[model.key]?.reasoning;
+          return (
+            <div
+              key={model.key}
+              className={cn(
+                "rounded-md border border-border bg-background p-3",
+                active && "border-primary/50 ring-1 ring-primary/25",
+              )}
+            >
+              <div className="flex flex-col gap-2">
+                <div className="flex min-w-0 flex-wrap items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {model.label}
+                      </span>
+                      {active && <Badge variant="accent">active</Badge>}
+                      {model.maxContextTokens && (
+                        <Badge variant="secondary">{formatTok(model.maxContextTokens)} ctx</Badge>
+                      )}
+                      {model.maxOutputTokens && (
+                        <Badge variant="secondary">{formatTok(model.maxOutputTokens)} out</Badge>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <code className="font-mono">{model.key}</code>
+                      <span>·</span>
+                      <code className="break-all font-mono">{model.modelId}</code>
+                    </div>
+                  </div>
+                  <Button
+                    variant={active ? "secondary" : "default"}
+                    size="sm"
+                    disabled={
+                      active ||
+                      savingId === `active:${model.key}` ||
+                      savingId === `delete:${model.key}`
+                    }
+                    onClick={() => onSetActive(model)}
+                  >
+                    {savingId === `active:${model.key}` ? "切换中…" : active ? "当前" : "设为当前"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={savingId === `edit-model:${model.key}`}
+                    onClick={() => onEditModel(model)}
+                  >
+                    编辑
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-status-err"
+                    disabled={savingId === `delete:${model.key}`}
+                    onClick={() => onRemoveModel(model)}
+                  >
+                    {savingId === `delete:${model.key}` ? "删除中…" : "删除"}
+                  </Button>
+                </div>
+
+                {control && control.kind !== "none" && (
+                  <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
+                    <span className="text-xs font-medium text-muted-foreground">思考</span>
+                    {renderReasoningControl(
+                      control,
+                      reasoning,
+                      savingId === `reasoning:${model.key}`,
+                      (next) => onSetReasoning(model.key, next),
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <ConnCardFooter>
+        <Badge variant="secondary">{KIND_META[provider.kind].label}</Badge>
+        <ConnFooterRight>
+          {isActiveProvider && <Badge variant="accent">包含当前模型</Badge>}
+          {provider.key !== ORPHAN_PROVIDER && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={savingId === `edit-provider:${provider.key}`}
+              onClick={() => onEditProvider(provider)}
+            >
+              编辑
+            </Button>
+          )}
+          {canClearKey && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-status-err"
+              disabled={savingId === `clear-key:${provider.key}`}
+              onClick={() => onClearProviderKey(provider)}
+            >
+              {savingId === `clear-key:${provider.key}` ? "清除中…" : "清除 key"}
+            </Button>
+          )}
+          {provider.key !== ORPHAN_PROVIDER && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-status-err"
+              disabled={savingId === `delete-provider:${provider.key}`}
+              onClick={() => onRemoveProvider(provider, models)}
+            >
+              {savingId === `delete-provider:${provider.key}` ? "删除中…" : "删除 provider"}
+            </Button>
+          )}
+        </ConnFooterRight>
+      </ConnCardFooter>
+    </ConnCard>
   );
 }
 
@@ -874,7 +1570,36 @@ function initialForm(kind: ProviderKind = "openrouter"): AddModelForm {
   };
 }
 
-function candidatesFrom(s: Record<string, unknown>): ModelEntry[] {
+function editModelFormFromEntry(entry: ModelEntry): EditModelForm {
+  return {
+    originalKey: entry.key,
+    key: entry.key,
+    label: entry.label,
+    providerKey: entry.providerKey,
+    model: entry.modelId,
+    baseUrl: entry.baseUrl ?? "",
+    apiKey: entry.apiKey ?? "",
+    maxContextTokens: entry.maxContextTokens != null ? String(entry.maxContextTokens) : "",
+    maxOutputTokens: entry.maxOutputTokens != null ? String(entry.maxOutputTokens) : "",
+  };
+}
+
+function editProviderFormFromEntry(provider: ProviderEntry): EditProviderForm {
+  return {
+    originalKey: provider.key,
+    key: provider.key,
+    label: provider.label ?? "",
+    kind: provider.kind,
+    baseUrl: provider.baseUrl,
+    apiKey: provider.apiKey ?? "",
+    originalApiKey: provider.apiKey ?? "",
+  };
+}
+
+function candidatesFrom(
+  s: Record<string, unknown>,
+  providers: ProviderEntry[],
+): ModelEntry[] {
   const models = s.models;
   if (!Array.isArray(models)) return [];
   const out: ModelEntry[] = [];
@@ -884,16 +1609,50 @@ function candidatesFrom(s: Record<string, unknown>): ModelEntry[] {
     const key = typeof obj.key === "string" ? obj.key :
                 typeof obj.model === "string" ? obj.model : "";
     if (!key) continue;
+    const providerKey = typeof obj.providerKey === "string" ? obj.providerKey :
+                        typeof obj.provider === "string" ? obj.provider : "";
+    const provider = providers.find((p) => p.key === providerKey);
+    const modelId = typeof obj.model === "string" ? obj.model : key;
     out.push({
       key,
-      label: typeof obj.label === "string" ? obj.label :
-             typeof obj.model === "string" ? obj.model : key,
-      providerKey: typeof obj.providerKey === "string" ? obj.providerKey :
-                   typeof obj.provider === "string" ? obj.provider : "",
+      label: typeof obj.label === "string" ? obj.label : modelId,
+      providerKey,
+      modelId,
+      protocol: typeof obj.provider === "string"
+        ? obj.provider
+        : typeof obj.protocol === "string" ? obj.protocol : "",
+      providerKind: provider?.kind ?? (obj.provider === "anthropic" ? "anthropic" : "custom"),
+      baseUrl: typeof obj.baseUrl === "string" ? obj.baseUrl : provider?.baseUrl,
+      apiKey: typeof obj.apiKey === "string" ? obj.apiKey : provider?.apiKey,
       maxContextTokens: typeof obj.maxContextTokens === "number" ? obj.maxContextTokens : undefined,
+      maxOutputTokens: typeof obj.maxOutputTokens === "number" ? obj.maxOutputTokens : undefined,
     });
   }
   return out;
+}
+
+function providerGroupsFrom(
+  providers: ProviderEntry[],
+  models: ModelEntry[],
+): ProviderGroup[] {
+  const grouped = providers.map((provider) => ({
+    provider,
+    models: models.filter((m) => m.providerKey === provider.key),
+  }));
+  const known = new Set(providers.map((p) => p.key));
+  const orphans = models.filter((m) => !known.has(m.providerKey));
+  if (orphans.length > 0) {
+    grouped.push({
+      provider: {
+        key: ORPHAN_PROVIDER,
+        label: "Unlinked models",
+        kind: "custom",
+        baseUrl: "",
+      },
+      models: orphans,
+    });
+  }
+  return grouped;
 }
 
 function rawModelsFrom(s: Record<string, unknown>): Array<Record<string, unknown>> {
@@ -906,6 +1665,81 @@ function rawProvidersFrom(s: Record<string, unknown>): Array<Record<string, unkn
   return Array.isArray(s.providers)
     ? s.providers.filter((p): p is Record<string, unknown> => Boolean(p && typeof p === "object"))
     : [];
+}
+
+function modelKeyOf(model: Record<string, unknown>): string {
+  return typeof model.key === "string" ? model.key :
+         typeof model.model === "string" ? model.model : "";
+}
+
+function modelProviderKeyOf(model: Record<string, unknown>): string {
+  return typeof model.providerKey === "string" ? model.providerKey :
+         typeof model.provider === "string" ? model.provider : "";
+}
+
+function withoutKey<T extends Record<string, unknown>>(obj: T, key: string): Record<string, unknown> {
+  const { [key]: _removed, ...rest } = obj;
+  void _removed;
+  return rest;
+}
+
+function assignOptionalString(target: Record<string, unknown>, key: string, value: string): void {
+  if (value) target[key] = value;
+  else delete target[key];
+}
+
+function assignOptionalNumber(target: Record<string, unknown>, key: string, value: number | undefined): void {
+  if (value != null) target[key] = value;
+  else delete target[key];
+}
+
+function parseOptionalPositiveInt(value: string, label: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const n = Math.floor(Number(trimmed));
+  if (!Number.isFinite(n) || n <= 0) throw new Error(`${label} 必须是正整数。`);
+  return n;
+}
+
+function legacyModelPatch(
+  entry: ModelEntry,
+  rawModels: Array<Record<string, unknown>>,
+  providers: ProviderEntry[],
+): Record<string, unknown> {
+  const raw = rawModels.find((m) => modelKeyOf(m) === entry.key);
+  const provider = providers.find((p) => p.key === entry.providerKey);
+  const protocol = typeof raw?.provider === "string"
+    ? raw.provider
+    : provider?.kind === "anthropic"
+      ? "anthropic"
+      : "openai";
+  return {
+    provider: protocol,
+    name: typeof raw?.model === "string" ? raw.model : entry.modelId,
+    apiKey: typeof raw?.apiKey === "string" ? raw.apiKey : provider?.apiKey ?? null,
+    baseUrl: typeof raw?.baseUrl === "string" ? raw.baseUrl : provider?.baseUrl ?? null,
+  };
+}
+
+function legacyModelPatchByKey(
+  key: string,
+  rawModels: Array<Record<string, unknown>>,
+  providers: ProviderEntry[],
+): Record<string, unknown> {
+  const raw = rawModels.find((m) => modelKeyOf(m) === key);
+  const providerKey = raw ? modelProviderKeyOf(raw) : "";
+  const provider = providers.find((p) => p.key === providerKey);
+  const protocol = typeof raw?.provider === "string"
+    ? raw.provider
+    : provider?.kind === "anthropic"
+      ? "anthropic"
+      : "openai";
+  return {
+    provider: protocol,
+    name: typeof raw?.model === "string" ? raw.model : key,
+    apiKey: typeof raw?.apiKey === "string" ? raw.apiKey : provider?.apiKey ?? null,
+    baseUrl: typeof raw?.baseUrl === "string" ? raw.baseUrl : provider?.baseUrl ?? null,
+  };
 }
 
 function providersFrom(s: Record<string, unknown>): ProviderEntry[] {
@@ -978,7 +1812,6 @@ function formatTok(n: number): string {
   return `${n}`;
 }
 
-/** Narrow an unknown settings value to a ReasoningSetting. */
 function isReasoningSetting(v: unknown): v is ReasoningSetting {
   if (!v || typeof v !== "object") return false;
   const mode = (v as { mode?: unknown }).mode;
@@ -993,16 +1826,6 @@ const EFFORT_LABELS: Record<string, string> = {
   xhigh: "极高",
 };
 
-/**
- * Render the "思考" (reasoning) control a model's ReasoningControl describes.
- * Pure — given a control + the saved value, returns the right widget and calls
- * `onChange` with the ReasoningSetting to persist. `none` is filtered upstream.
- *
- *   toggle   → checkbox      → {mode:"on"} / {mode:"off"}
- *   effort   → dropdown      → {mode:"effort", effort}
- *   budget   → number input  → {mode:"budget", budgetTokens}
- *   adaptive → read-only tag  (no write)
- */
 export function renderReasoningControl(
   control: ReasoningControl,
   value: ReasoningSetting | undefined,
@@ -1013,28 +1836,34 @@ export function renderReasoningControl(
     case "none":
       return null;
     case "adaptive":
-      return <span className="model-reasoning-tag">自动思考(不可调)</span>;
+      return (
+        <Badge variant="secondary" className="whitespace-nowrap">
+          自动思考(不可调)
+        </Badge>
+      );
     case "toggle": {
       const on = value ? value.mode !== "off" : control.default;
       return (
-        <label className="model-reasoning-toggle" title="思考">
-          <input
-            type="checkbox"
+        <label className="flex items-center gap-2 text-xs text-foreground" title="思考">
+          <Switch
             checked={on}
             disabled={disabled}
-            onChange={(e) => onChange(e.target.checked ? { mode: "on" } : { mode: "off" })}
+            onCheckedChange={(checked) => onChange(checked ? { mode: "on" } : { mode: "off" })}
           />
           <span>思考</span>
         </label>
       );
     }
     case "effort": {
+      type EffortValue = Extract<ReasoningSetting, { mode: "effort" }>["effort"];
       const current = value && value.mode === "effort" ? value.effort : control.default;
       return (
         <Select
           value={current}
           disabled={disabled}
-          onChange={(v) => onChange({ mode: "effort", effort: v as typeof control.options[number] })}
+          size="sm"
+          className="w-[130px]"
+          onChange={(v) => onChange({ mode: "effort", effort: v as EffortValue })}
           options={control.options.map((opt) => ({
             value: opt,
             label: `思考:${EFFORT_LABELS[opt] ?? opt}`,
@@ -1045,9 +1874,9 @@ export function renderReasoningControl(
     case "budget": {
       const current = value && value.mode === "budget" ? value.budgetTokens : control.default;
       return (
-        <label className="model-reasoning-budget" title="思考预算(tokens)">
-          <span>思考预算</span>
-          <input
+        <label className="flex items-center gap-2 text-xs text-foreground" title="思考预算(tokens)">
+          <span>预算</span>
+          <Input
             type="number"
             min={control.min}
             step={1024}
@@ -1057,6 +1886,7 @@ export function renderReasoningControl(
               const n = Math.max(control.min, Math.floor(Number(e.target.value) || control.min));
               onChange({ mode: "budget", budgetTokens: n });
             }}
+            className="h-8 w-28"
           />
         </label>
       );

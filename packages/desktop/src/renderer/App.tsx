@@ -42,11 +42,14 @@ import {
   clearBucketOverride,
   loadPanelState,
   savePanelState,
+  loadOverrideMap,
+  saveOverrideMap,
   type SessionIndex,
   type SessionSummary,
 } from "./transcripts";
 import { titleFromWire, buildPathAttachment, type ImageAttachment } from "./chat/attachments";
 import { resolveBucket } from "./streamRouting";
+import { resolveStopBucket } from "./stopRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import { selectReplayEvents } from "./snapshotReplay";
 import type {
@@ -246,7 +249,12 @@ function App() {
   // Provider-agnostic image clarity (low/standard/high) from merged settings;
   // drives renderer-side downscale before send. Undefined = follow default.
   const [imageDetail, setImageDetail] = useState<"low" | "standard" | "high" | undefined>(undefined);
-  const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>({});
+  // Seed from localStorage so a refresh (F5) keeps each session's permission
+  // choice — without this the map reset to {} on remount and every session
+  // fell back to the default mode (a 完全访问 session silently reverted to 默认).
+  const [permissionOverrides, setPermissionOverrides] = useState<Record<string, PermissionMode>>(
+    () => loadOverrideMap<PermissionMode>("permission"),
+  );
   /**
    * Per-bucket model override, keyed by the SAME bucketKey() as
    * permission/goal overrides. A session that has switched models (or whose
@@ -255,9 +263,13 @@ function App() {
    * 的模型": each session remembers its own model, and changing the global
    * default never overwrites an existing bucket's entry.
    */
-  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>({});
+  const [modelOverrides, setModelOverrides] = useState<Record<string, string>>(
+    () => loadOverrideMap<string>("model"),
+  );
   /** Per-bucket Goal-mode toggle (orthogonal to permission). */
-  const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>({});
+  const [goalOverrides, setGoalOverrides] = useState<Record<string, boolean>>(
+    () => loadOverrideMap<boolean>("goal"),
+  );
   const [settingsRevision, setSettingsRevision] = useState(0);
   const [collapsedRepos, setCollapsedRepos] = useState<Set<string>>(new Set());
   /** Transient: a run to pre-select when jumping into the runs view (e.g. from
@@ -450,6 +462,11 @@ function App() {
   useEffect(() => { saveRepos(repos); }, [repos]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
+  // Persist per-bucket overrides so they survive a refresh (see the seeded
+  // useState initializers above). Each write mirrors loadOverrideMap's namespace.
+  useEffect(() => { saveOverrideMap("permission", permissionOverrides); }, [permissionOverrides]);
+  useEffect(() => { saveOverrideMap("model", modelOverrides); }, [modelOverrides]);
+  useEffect(() => { saveOverrideMap("goal", goalOverrides); }, [goalOverrides]);
   useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
   useEffect(() => { sessionIndicesRef.current = sessionIndices; }, [sessionIndices]);
   useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
@@ -1574,7 +1591,12 @@ function App() {
     // else falls through to the running/active bucket. Without this the event
     // object reaches `bucket.indexOf` and throws — silently breaking Stop.
     const override = typeof bucketOverride === "string" ? bucketOverride : undefined;
-    const bucket = override ?? runningBucketRef.current ?? activeBucket;
+    // The composer Stop button belongs to the VIEWED conversation (its
+    // visibility is busy=busyKeys.has(activeBucket)), so default to activeBucket
+    // — NOT the global runningBucket ref, which points at whichever conversation
+    // sent last and would abort the wrong one when two run concurrently.
+    const bucket = resolveStopBucket(override, activeBucket, runningBucketRef.current);
+    if (!bucket) return;
     const sep = bucket.indexOf("::");
     const uiSessionId = sep > 0 ? bucket.slice(sep + 2) : null;
     const repoKey = sep > 0 ? bucket.slice(0, sep) : null;
@@ -1697,6 +1719,14 @@ function App() {
   // Monotonic nonce source for revealFile, in a ref so the open-file handler
   // (registered once) doesn't close over a stale `revealFile`.
   const revealFileNonceRef = useRef<number>(0);
+  // URL the Browser panel should navigate to, set when a chat answer's http(s)
+  // link is clicked. Threaded as a prop (not relied on via a window event the
+  // panel listens for) so it survives the panel being CLOSED at click time —
+  // the panel mounts fresh and still navigates. The nonce re-fires on re-click.
+  const [openUrl, setOpenUrl] = useState<{ url: string; nonce: number } | undefined>(
+    undefined,
+  );
+  const openUrlNonceRef = useRef<number>(0);
   // Comment anchors pinned from the panels (diff line / browser element / file
   // line). They show as chips above the composer and ride along with the next
   // message. Panels push them via the "codeshell:add-anchor" window event.
@@ -1740,6 +1770,14 @@ function App() {
   // Top-bar toggle opens the dock on the card landing (kind null) / closes it.
   const togglePanel = (): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: r.open ? r.kind : null, open: !r.open }));
+  // Clear the pending open-url whenever the dock is closed. BrowserPanel is
+  // unmounted while the dock is closed, so its per-mount nonce-dedup ref resets;
+  // without clearing, manually reopening the browser later would re-consume the
+  // stale openUrl and navigate to the last chat-clicked link. The click-while-
+  // closed flow is unaffected: that sets openUrl AND opens the dock together.
+  useEffect(() => {
+    if (!panelRequest.open && openUrl) setOpenUrl(undefined);
+  }, [panelRequest.open, openUrl]);
   // Open the dock and request a tab of `kind` (used by hotkeys, palette, cards).
   const openPanel = (kind: PanelTab): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind, open: true }));
@@ -1906,7 +1944,14 @@ function App() {
   // panel instead of the OS browser. BrowserPanel listens for the same event to
   // open the URL in a new tab; here we just surface the dock + browser panel.
   useEffect(() => {
-    const onOpenUrl = (): void => {
+    const onOpenUrl = (e: Event): void => {
+      const url = (e as CustomEvent<{ url?: string }>).detail?.url;
+      if (!url) return;
+      // Carry the URL down to BrowserPanel as a prop (see openUrl state) BEFORE
+      // surfacing the panel, so a freshly-mounted panel navigates to it.
+      const nonce = (openUrlNonceRef.current ?? 0) + 1;
+      openUrlNonceRef.current = nonce;
+      setOpenUrl({ url, nonce });
       setPanelRequest((prev) => ({ nonce: prev.nonce + 1, kind: "browser", open: true }));
     };
     window.addEventListener("codeshell:open-url", onOpenUrl);
@@ -2167,7 +2212,20 @@ function App() {
     //    (user-chosen semantics). This only seeds future sessions; it never
     //    rewrites another bucket's existing override above.
     setDefaultActiveModelKey(opt.key);
-    void window.codeshell.updateSettings("user", { activeKey: opt.key });
+    void (async () => {
+      try {
+        const cwd = activeRepo?.path;
+        const projectS = cwd ? (await window.codeshell.getSettings("project", cwd)) ?? {} : {};
+        const userS = (await window.codeshell.getSettings("user")) ?? {};
+        const merged: Record<string, unknown> = { ...userS, ...projectS };
+        await window.codeshell.updateSettings(
+          "user",
+          activeModelSettingsPatch(merged, opt.key),
+        );
+      } catch {
+        await window.codeshell.updateSettings("user", { activeKey: opt.key });
+      }
+    })();
     // 3) Hot-switch the running worker. Scope it to THIS session's engine so
     //    we don't swap the model under any OTHER live session. The backend
     //    (server.ts handleConfigure) routes a sessionId'd configure to
@@ -2464,6 +2522,7 @@ function App() {
           reviewFiles={reviewFiles}
           reviewDiff={reviewDiff}
           revealFile={revealFile}
+          openUrl={openUrl}
           width={panelWidth}
           onResizeStart={beginPanelResize}
           onAttachImage={(p) => void attachImageByPath(p)}
@@ -2558,6 +2617,45 @@ function resolveActiveKey(s: Record<string, unknown>): string | null {
     if (typeof m.name === "string") return m.name;
   }
   return null;
+}
+
+function activeModelSettingsPatch(
+  s: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> {
+  const rawModels = Array.isArray(s.models)
+    ? s.models.filter((m): m is Record<string, unknown> => Boolean(m && typeof m === "object"))
+    : [];
+  const rawProviders = Array.isArray(s.providers)
+    ? s.providers.filter((p): p is Record<string, unknown> => Boolean(p && typeof p === "object"))
+    : [];
+  const raw = rawModels.find((m) => {
+    const modelKey = typeof m.key === "string" ? m.key :
+      typeof m.model === "string" ? m.model : "";
+    return modelKey === key;
+  });
+  if (!raw) return { activeKey: key };
+
+  const providerKey = typeof raw.providerKey === "string" ? raw.providerKey :
+    typeof raw.provider === "string" ? raw.provider : "";
+  const provider = rawProviders.find((p) => p.key === providerKey);
+  const providerKind = typeof provider?.kind === "string" ? provider.kind : "";
+  const protocol = typeof raw.provider === "string"
+    ? raw.provider
+    : providerKind === "anthropic"
+      ? "anthropic"
+      : "openai";
+  return {
+    activeKey: key,
+    model: {
+      provider: protocol,
+      name: typeof raw.model === "string" ? raw.model : key,
+      apiKey: typeof raw.apiKey === "string" ? raw.apiKey :
+        typeof provider?.apiKey === "string" ? provider.apiKey : null,
+      baseUrl: typeof raw.baseUrl === "string" ? raw.baseUrl :
+        typeof provider?.baseUrl === "string" ? provider.baseUrl : null,
+    },
+  };
 }
 
 export { App };

@@ -44,15 +44,15 @@ export function TrustGate({ repoPath, onDecide }: Props) {
   };
 
   return (
-    <div className="trust-gate-backdrop">
-      <div className="trust-gate">
-        <h2 className="trust-gate-title">信任此项目？</h2>
-        <div className="trust-gate-path">{repoPath}</div>
-        <p className="trust-gate-body">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
+      <div className="w-full max-w-lg rounded-md border bg-popover p-5 text-popover-foreground shadow-2xl">
+        <h2 className="mb-2 text-lg font-semibold">信任此项目？</h2>
+        <div className="mb-3 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">{repoPath}</div>
+        <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
           Agent 会在此目录读写文件、运行命令。只信任你确认安全的项目。
           未信任项目仍可对话，但所有写工具调用会被拒绝。
         </p>
-        <div className="trust-gate-actions">
+        <div className="flex justify-end gap-2">
           <Button
             variant="default"
             disabled={pending}

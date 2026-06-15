@@ -35,20 +35,20 @@ function LanguageBlock() {
   };
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">语言</h3>
-      <p className="settings-section-help">
+    <section className="mb-6 flex flex-col gap-3">
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">语言</h3>
+      <p className="m-0 text-xs text-muted-foreground">
         应用界面语言。实际文案翻译仍在逐步完善中。
       </p>
-      <div className="settings-option-grid">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {LANGUAGES.map((item) => (
           <button
             key={item.id}
-            className={`settings-option-card${lang === item.id ? " active" : ""}`}
+            className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent${lang === item.id ? " active" : ""}`}
             onClick={() => choose(item.id)}
           >
-            <span className="settings-option-title">{languageLabel(item.id)}</span>
-            <span className="settings-option-desc">{item.description}</span>
+            <span className="text-sm font-medium text-foreground">{languageLabel(item.id)}</span>
+            <span className="text-xs text-muted-foreground">{item.description}</span>
           </button>
         ))}
       </div>

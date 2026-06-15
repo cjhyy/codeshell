@@ -66,6 +66,8 @@ import { classifyPath } from "./tool-cards/attachments";
 import { Lightbox } from "./chat/Lightbox";
 import { openFileTarget } from "./chat/openWith";
 import { useToast } from "./ui/ToastProvider";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface Props {
   text: string;
@@ -78,6 +80,27 @@ interface Props {
   cwd?: string | null;
 }
 
+export const markdownBodyClassName =
+  "max-w-[720px] text-sm leading-relaxed text-foreground " +
+  "[&_p]:my-2 [&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-xl [&_h1]:font-semibold " +
+  "[&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-lg [&_h2]:font-semibold " +
+  "[&_h3]:mb-1.5 [&_h3]:mt-2.5 [&_h3]:text-base [&_h3]:font-semibold " +
+  "[&_h4]:mb-1 [&_h4]:mt-2 [&_h4]:font-semibold [&_ul]:my-2 [&_ol]:my-2 " +
+  "[&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-1 [&_blockquote]:my-2 " +
+  "[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 " +
+  "[&_blockquote]:text-muted-foreground [&_a]:text-primary [&_a]:underline-offset-2 " +
+  "[&_a:hover]:underline [&_code:not(pre_code)]:rounded-sm [&_code:not(pre_code)]:bg-muted " +
+  "[&_code:not(pre_code)]:px-1.5 [&_code:not(pre_code)]:py-0.5 " +
+  "[&_code:not(pre_code)]:font-mono [&_code:not(pre_code)]:text-[0.92em] " +
+  "[&_table]:my-2 [&_table]:border-collapse [&_table]:text-xs " +
+  "[&_th]:border [&_td]:border [&_th]:border-border [&_td]:border-border " +
+  "[&_th]:bg-muted [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1";
+
+export const streamingMarkdownClassName = cn(
+  markdownBodyClassName,
+  "text-muted-foreground [&_pre]:m-0 [&_pre]:whitespace-pre-wrap [&_pre]:border-0 [&_pre]:bg-transparent [&_pre]:p-0 [&_pre]:font-sans",
+);
+
 /**
  * Memoized — re-parses markdown only when `text` actually changes.
  * Without memo, every dispatch from a streaming text_delta would
@@ -87,7 +110,7 @@ interface Props {
  */
 function MarkdownImpl({ text, cwd }: Props) {
   return (
-    <div className="md-body">
+    <div className={markdownBodyClassName}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkPathLinks]}
         // rehype-raw parses raw HTML embedded in markdown (e.g. a README's
@@ -284,11 +307,11 @@ function PathLink({
     <a
       href="#"
       data-path-link="true"
-      className="md-file-link"
+      className="inline-flex max-w-full items-baseline rounded-sm px-0.5 font-mono text-primary underline-offset-2 hover:bg-primary/10 hover:underline"
       title={tooltip}
       onClick={(e) => openFileTarget(e, { path, cwd, line, isScheme })}
     >
-      <span className="md-file-link-label">{label}</span>
+      <span className="truncate">{label}</span>
     </a>
   );
 }
@@ -351,15 +374,16 @@ function InlineImageLink({
 
   if (loading) {
     return (
-      <span className="md-inline-image">
-        <button
+      <span className="my-2 inline-flex max-w-full flex-col gap-1 align-top">
+        <Button
           type="button"
-          className="md-inline-image-name"
+          variant="link"
+          className="h-auto justify-start p-0 font-mono text-xs"
           title={path}
           onClick={(e) => openFileTarget(e, { path, cwd })}
         >
           {filename}
-        </button>
+        </Button>
       </span>
     );
   }
@@ -382,23 +406,24 @@ function InlineImageLink({
   }
 
   return (
-    <span className="md-inline-image">
+    <span className="my-2 inline-flex max-w-full flex-col gap-1 align-top">
       <img
-        className="md-inline-image-thumb"
+        className="max-h-80 max-w-full cursor-zoom-in rounded-md border object-contain"
         src={src}
         alt={alt ?? filename}
         loading="lazy"
         onError={() => setFailed(true)}
         onClick={() => setZoomed(true)}
       />
-      <button
+      <Button
         type="button"
-        className="md-inline-image-name"
+        variant="link"
+        className="h-auto justify-start p-0 font-mono text-xs"
         title={path}
         onClick={(e) => openFileTarget(e, { path, cwd })}
       >
         {filename}
-      </button>
+      </Button>
       {zoomed && (
         <Lightbox
           src={src}
@@ -457,24 +482,30 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
   };
 
   return (
-    <div className="md-code">
-      <div className="md-code-head">
-        {lang && <span className="md-code-lang">{lang}</span>}
-        <button className="md-code-copy" onClick={onCopy} aria-label="copy code">
+    <div className="my-2 overflow-hidden rounded-md border bg-muted/30">
+      <div className="flex min-h-8 items-center justify-between gap-2 border-b bg-muted/50 px-2 py-1">
+        {lang && <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">{lang}</span>}
+        <Button variant="ghost" size="sm" className="ml-auto h-6 gap-1 px-2 text-xs" onClick={onCopy} aria-label="copy code">
           <Copy size={11} /> {copied ? "copied" : "copy"}
-        </button>
+        </Button>
       </div>
-      <pre ref={preRef} {...rest} className={collapsed ? "md-code-collapsed" : undefined}>
+      <pre
+        ref={preRef}
+        {...rest}
+        className={cn("overflow-x-auto p-3 text-xs", collapsed && "max-h-96 overflow-y-auto")}
+      >
         {children}
       </pre>
       {collapsible && (
-        <button
+        <Button
           type="button"
-          className="md-code-expand"
+          variant="ghost"
+          size="sm"
+          className="h-7 w-full rounded-none border-t text-xs text-muted-foreground"
           onClick={() => setExpanded((v) => !v)}
         >
           {collapsed ? `展开全部 (${lineCount} 行)` : "收起"}
-        </button>
+        </Button>
       )}
     </div>
   );

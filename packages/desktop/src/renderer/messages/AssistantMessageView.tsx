@@ -1,9 +1,10 @@
 import React, { memo, useState } from "react";
 import { Copy, Check } from "lucide-react";
-import { Markdown } from "../Markdown";
+import { Markdown, streamingMarkdownClassName } from "../Markdown";
 import { stripMarkdownToPlain } from "../markdown/stripMarkdown";
 import { formatMessageTime } from "../messages/time";
 import type { AssistantMessage } from "../types";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   message: AssistantMessage;
@@ -45,7 +46,7 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
       {message.done ? (
         <Markdown text={message.text} cwd={cwd} />
       ) : (
-        <div className="md-body md-streaming">
+        <div className={streamingMarkdownClassName}>
           <pre className="whitespace-pre-wrap font-sans">{message.text}</pre>
         </div>
       )}
@@ -63,15 +64,17 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
               </span>
             );
           })()}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
             onClick={onCopy}
             aria-label="Copy reply as plain text"
           >
             {copied ? <Check size={11} /> : <Copy size={11} />}
             <span>{copied ? "已复制" : "复制"}</span>
-          </button>
+          </Button>
         </div>
       )}
     </div>

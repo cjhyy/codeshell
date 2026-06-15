@@ -56,7 +56,7 @@ describe("narrow layout — multi-image gallery renders fully", () => {
 
 describe("narrow layout — lightbox", () => {
   test("lightbox image stays viewport-relative so it never exceeds a narrow screen", () => {
-    const css = readFileSync(join(import.meta.dir, "styles.css"), "utf8");
+    const css = readFileSync(join(import.meta.dir, "styles/tailwind.css"), "utf8");
     expect(css).toContain("max-width: 92vw");
   });
 
@@ -65,7 +65,7 @@ describe("narrow layout — lightbox", () => {
   // removed — they were the "两个叉" bug. Guard against the dead class coming
   // back.
   test("no dead .lightbox-close rule remains (single close button)", () => {
-    const css = readFileSync(join(import.meta.dir, "styles.css"), "utf8");
+    const css = readFileSync(join(import.meta.dir, "styles/tailwind.css"), "utf8");
     expect(css).not.toContain("lightbox-close");
   });
 });

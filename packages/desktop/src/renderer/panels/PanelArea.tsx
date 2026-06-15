@@ -49,6 +49,8 @@ interface Props {
   reviewDiff?: string;
   /** File a chat path-link asked to reveal in the Files panel (nonce re-fires). */
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  /** URL a chat http(s)-link asked the Browser panel to open (nonce re-fires). */
+  openUrl?: { url: string; nonce: number };
   /** Active engine sessionId — the background-shell panel queries shells by it (TODO 3.2). */
   engineSessionId?: string | null;
   /** Controlled dock width (px). The divider on the left edge resizes it. */
@@ -101,6 +103,7 @@ export function PanelArea({
   reviewFiles,
   reviewDiff,
   revealFile,
+  openUrl,
   engineSessionId,
   width,
   onResizeStart,
@@ -269,7 +272,7 @@ export function PanelArea({
         ) : (
           tabs.map((t) => (
             <Slot key={t.id} active={t.id === activeId}>
-              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} onUpdateBrowserAnchor={onUpdateBrowserAnchor} />
+              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} openUrl={openUrl} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} onUpdateBrowserAnchor={onUpdateBrowserAnchor} />
             </Slot>
           ))
         )}
@@ -306,6 +309,7 @@ function PanelBody({
   reviewFiles,
   reviewDiff,
   revealFile,
+  openUrl,
   engineSessionId,
   onAttachImage,
   browserAnchors,
@@ -318,6 +322,7 @@ function PanelBody({
   reviewFiles?: string[];
   reviewDiff?: string;
   revealFile?: { path: string; cwd: string | null; nonce: number; consumed?: boolean };
+  openUrl?: { url: string; nonce: number };
   engineSessionId?: string | null;
   onAttachImage?: (absPath: string) => void;
   browserAnchors?: Anchor[];
@@ -328,7 +333,7 @@ function PanelBody({
     case "files":
       return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} revealFile={revealFile} />;
     case "browser":
-      return <BrowserPanel cwd={cwd} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} />;
+      return <BrowserPanel cwd={cwd} openUrl={openUrl} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} />;
     case "review":
       return <ReviewPanel cwd={cwd} files={reviewFiles} turnDiff={reviewDiff} />;
     case "terminal":

@@ -252,11 +252,11 @@ export function ShortcutsSection() {
     ["Shift Enter", "输入换行"],
   ];
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">键盘快捷键</h3>
-      <div className="settings-table">
+    <section className="mb-6 flex flex-col gap-3">
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">键盘快捷键</h3>
+      <div className="rounded-md border p-2">
         {rows.map(([key, label]) => (
-          <div className="settings-table-row" key={key}>
+          <div className="grid grid-cols-[minmax(120px,0.35fr)_1fr] gap-3 border-b py-2 text-sm last:border-b-0" key={key}>
             <kbd>{key}</kbd>
             <span>{label}</span>
           </div>
@@ -283,9 +283,9 @@ export function HooksSection({ repos }: { repos: Repo[] }) {
 
   if (selected === undefined) {
     return (
-      <section className="settings-section">
-        <h3 className="settings-section-title">钩子</h3>
-        <p className="settings-section-help">
+      <section className="mb-6 flex flex-col gap-3">
+        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">钩子</h3>
+        <p className="m-0 text-xs text-muted-foreground">
           钩子分两层:全局钩子对所有项目生效,项目钩子只对该项目生效,两层会一起运行。
         </p>
         <ProjectPicker repos={repos} includeGlobal onSelect={(path) => setSelected(path)} />
@@ -294,7 +294,7 @@ export function HooksSection({ repos }: { repos: Repo[] }) {
   }
 
   return (
-    <section className="settings-section">
+    <section className="mb-6 flex flex-col gap-3">
       <div className="mb-2 flex items-center gap-2">
         <Button
           variant="ghost"
@@ -624,15 +624,15 @@ export function GitSection() {
   };
 
   return (
-    <section className="settings-section">
-      <ul className="settings-row-list">
+    <section className="mb-6 flex flex-col gap-3">
+      <ul className="flex flex-col gap-2">
         <GitRowShell
           title="Git 可执行文件路径"
           help="留空则用系统 PATH 中的 git。安装插件市场需要 git;若 GUI 启动时没继承到 PATH(Windows 常见),在此填写 git 可执行文件的绝对路径,如 C:\\Program Files\\Git\\cmd\\git.exe。"
           control={
             <div className="flex items-center gap-2">
               <input
-                className="settings-git-input"
+                className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
                 value={gitPath}
                 placeholder="(使用 PATH 中的 git)"
                 onChange={(e) => {
@@ -655,7 +655,7 @@ export function GitSection() {
           help="在 codeshell 中创建工作树时使用的分支前缀（创建后会自动追加工作树名 + 短哈希）"
           control={
             <input
-              className="settings-git-input"
+              className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
               value={prefs.branchPrefix}
               placeholder={DEFAULT_GIT_PREFS.branchPrefix}
               onChange={(e) => update("branchPrefix", e.target.value)}
@@ -676,9 +676,9 @@ export function GitSection() {
           title="清理阈值"
           help="工作树空闲多久（按目录修改时间）后被自动清理。"
           control={
-            <div className="settings-git-number">
+            <div className="flex items-center gap-2">
               <input
-                className="settings-git-input settings-git-input--number"
+                className="w-24 rounded-sm border bg-transparent px-2 py-1.5 text-sm"
                 type="number"
                 value={prefs.autoDeleteWorktreesGraceMins}
                 min={1}
@@ -689,7 +689,7 @@ export function GitSection() {
                   if (Number.isFinite(n) && n >= 1) update("autoDeleteWorktreesGraceMins", n);
                 }}
               />
-              <span className="settings-git-number-suffix">分钟</span>
+              <span className="text-xs text-muted-foreground">分钟</span>
             </div>
           }
         />
@@ -708,12 +708,12 @@ function GitRowShell({
   control: React.ReactNode;
 }) {
   return (
-    <li className="settings-git-row">
-      <div className="settings-git-row-text">
-        <div className="settings-git-row-title">{title}</div>
-        {help && <div className="settings-git-row-help">{help}</div>}
+    <li className="flex items-center justify-between gap-4 rounded-md border p-3">
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-foreground">{title}</div>
+        {help && <div className="mt-1 text-xs text-muted-foreground">{help}</div>}
       </div>
-      <div className="settings-git-row-control">{control}</div>
+      <div className="shrink-0">{control}</div>
     </li>
   );
 }
@@ -771,9 +771,9 @@ function GlobalEnvEditor() {
   };
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">全局环境变量</h3>
-      <p className="settings-section-help">
+    <section className="mb-6 flex flex-col gap-3">
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">全局环境变量</h3>
+      <p className="m-0 text-xs text-muted-foreground">
         所有项目共享。常用于放 API key(如 <code className="font-mono text-[0.95em]">OPENAI_API_KEY</code>),配一次,所有项目的 Bash 工具、后台 shell、技能(skill)脚本都能读到。技能需要密钥时来这里配。
       </p>
       <label className="flex flex-col gap-1.5">
@@ -809,9 +809,9 @@ export function EnvironmentSection({ repos }: { repos: Repo[] }) {
     return (
       <>
         <GlobalEnvEditor />
-        <section className="settings-section">
-          <h3 className="settings-section-title">按项目维护</h3>
-          <p className="settings-section-help">
+        <section className="mb-6 flex flex-col gap-3">
+          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">按项目维护</h3>
+          <p className="m-0 text-xs text-muted-foreground">
             项目级环境(setup 脚本、KEY=VALUE 变量、沙箱边界),只对所选项目生效,可覆盖上方全局变量。选择一个项目以查看 / 编辑。
           </p>
           <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
@@ -821,7 +821,7 @@ export function EnvironmentSection({ repos }: { repos: Repo[] }) {
   }
 
   return (
-    <section className="settings-section">
+    <section className="mb-6 flex flex-col gap-3">
       <div className="mb-2 flex items-center gap-2">
         <Button
           variant="ghost"
@@ -1099,10 +1099,10 @@ export function ToggleCapabilitySection({
   };
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">{title}</h3>
-      <p className="settings-section-help">{description}</p>
-      <label className="settings-toggle-row">
+    <section className="mb-6 flex flex-col gap-3">
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{title}</h3>
+      <p className="m-0 text-xs text-muted-foreground">{description}</p>
+      <label className="flex items-center gap-2 text-sm">
         <span>{enabled ? "已启用" : "已禁用"}</span>
         <input type="checkbox" checked={enabled} disabled={saving} onChange={(e) => void save(e.target.checked)} />
       </label>
@@ -1159,23 +1159,23 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
   ];
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">图片清晰度</h3>
-      <p className="settings-section-help">
+    <section className="mb-6 flex flex-col gap-3">
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">图片清晰度</h3>
+      <p className="m-0 text-xs text-muted-foreground">
         OpenAI 与 Claude 均生效:决定发送前的图片清晰度(越低越省 token)。
         {scope === "user" ? "全局默认,会被项目设置覆盖。" : "仅当前项目。"}
       </p>
-      <div className="settings-option-grid">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {options.map((o) => (
           <button
             key={o.id || "default"}
             type="button"
-            className={`settings-option-card${detail === o.id ? " active" : ""}`}
+            className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent${detail === o.id ? " active" : ""}`}
             disabled={saving}
             onClick={() => void save(o.id)}
           >
-            <span className="settings-option-title">{o.label}</span>
-            <span className="settings-option-desc">{o.help}</span>
+            <span className="text-sm font-medium text-foreground">{o.label}</span>
+            <span className="text-xs text-muted-foreground">{o.help}</span>
           </button>
         ))}
       </div>
@@ -1592,8 +1592,8 @@ export function MobileRemoteSection() {
   }
 
   return (
-    <section className="settings-section">
-      <h3 className="settings-section-title">手机遥控 (Mobile Remote)</h3>
+    <section className="mb-6 flex flex-col gap-3">
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">手机遥控 (Mobile Remote)</h3>
       <p className="text-sm text-muted-foreground">
         启动一个手机网页遥控入口,供已配对的可信手机控制聊天与权限审批。默认关闭。
       </p>

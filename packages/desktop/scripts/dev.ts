@@ -15,7 +15,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { createServer as createViteServer } from "vite";
+import { createServer as createViteServer, type ViteDevServer } from "vite";
 import esbuild from "esbuild";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,10 +33,17 @@ const MOBILE_URL = `http://127.0.0.1:${MOBILE_PORT}`;
 async function startVite(): Promise<void> {
   const server = await createViteServer({
     configFile: resolve(root, "vite.config.ts"),
+    forceOptimizeDeps: true,
   });
   await server.listen(VITE_PORT);
+  await warmRenderer(server);
   // eslint-disable-next-line no-console
   console.log(`[dev] vite dev server (renderer): ${VITE_URL}`);
+}
+
+async function warmRenderer(server: ViteDevServer): Promise<void> {
+  await server.warmupRequest("/main.tsx");
+  await server.waitForRequestsIdle();
 }
 
 /** Second vite dev server for the mobile remote app (HMR on the phone).
