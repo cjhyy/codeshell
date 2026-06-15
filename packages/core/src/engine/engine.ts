@@ -20,6 +20,8 @@ import { InvestigationGuard } from "../tool-system/investigation-guard.js";
 import { TaskGuard } from "../tool-system/task-guard.js";
 import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
+import { getMergedCatalog } from "../model-catalog/index.js";
+import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
@@ -729,8 +731,27 @@ export class Engine {
       const sm = this.getSettingsManager();
       sm.invalidate();
       const settings = sm.get();
-      if (settings.models?.length) {
-        for (const m of settings.models) {
+
+      // Unified model catalog (统一模型接入方案 §6): register text
+      // connections from settings.modelConnections[] into the pool, so the new
+      // catalog-driven instance store actually drives model selection. Runs
+      // alongside the legacy models[] path below (both coexist); a connection's
+      // instance id becomes its pool key. See
+      // docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md.
+      const connections = (settings as { modelConnections?: unknown[] }).modelConnections;
+      if (Array.isArray(connections) && connections.length) {
+        const catalog = getMergedCatalog();
+        for (const entry of modelEntriesFromConnections(
+          connections as never[],
+          catalog,
+        )) {
+          this.modelPool.register(entry);
+        }
+      }
+      const hasConnections = Array.isArray(connections) && connections.length > 0;
+
+      if (settings.models?.length || hasConnections) {
+        for (const m of settings.models ?? []) {
           this.modelPool.register({
             key: m.key,
             label: m.label,
@@ -769,23 +790,32 @@ export class Engine {
         // routed model — without this guard a role's `model: flash` is silently
         // overridden back to whatever the user has active in the foreground.
         if (this.config.isSubAgent !== true) {
+          // Active-model priority:
+          //   1. settings.defaults.text — unified catalog's current text model
+          //      (instance id == pool key). Wins so the new store drives.
+          //   2. settings.activeKey — legacy primary source of truth.
+          //   3. Match settings.model.name against models[].model — oldest path.
+          const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;
           const activeKey = (settings as { activeKey?: string }).activeKey;
-          let match: (typeof settings.models)[number] | undefined;
-          if (activeKey) {
-            match = settings.models.find((m: any) => m.key === activeKey);
+          let matchKey: string | undefined;
+          if (defaultText && this.modelPool.list().some((e) => e.key === defaultText)) {
+            matchKey = defaultText;
           }
-          if (!match) {
+          if (!matchKey && activeKey) {
+            matchKey = settings.models.find((m: any) => m.key === activeKey)?.key;
+          }
+          if (!matchKey) {
             const currentModel = this.config.llm.model;
             // OpenRouter stores entries as "provider/model-name"; the top-level
             // settings.model.name is just "model-name". Match either form.
-            match = settings.models.find(
+            matchKey = settings.models.find(
               (m: any) =>
                 m.model === currentModel ||
                 (currentModel && m.model?.endsWith(`/${currentModel}`)),
-            );
+            )?.key;
           }
-          if (match) {
-            const entry = this.modelPool.switch(match.key);
+          if (matchKey) {
+            const entry = this.modelPool.switch(matchKey);
             this.config = {
               ...this.config,
               llm: this.modelPool.toLLMConfig(entry),
