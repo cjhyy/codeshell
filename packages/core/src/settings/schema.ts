@@ -271,11 +271,30 @@ export const SettingsSchema = z
       .optional(),
 
     /**
+     * Credentials — independent key entities (统一模型接入方案 §3.3). A key
+     * lives here, not inlined on a connection, so deleting a connection never
+     * loses a key and many connections share one key by referencing the same
+     * credential id (LiteLLM credential_list model).
+     */
+    credentials: z
+      .array(
+        z.object({
+          /** User-chosen unique credential name. */
+          id: z.string(),
+          /** Catalog template this credential is for (a key belongs to one provider). */
+          catalogId: z.string(),
+          apiKey: z.string().optional(),
+          baseUrl: z.string().optional(),
+        }),
+      )
+      .default([]),
+
+    /**
      * Unified instance layer (统一模型接入方案, see
      * docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §3.3).
      * One store for text/image/video connections, each pointing at a catalog
-     * entry (catalogId) and carrying its chosen model + key (or apiKeyRef reuse)
-     * + the param values the user picked. Replaces the legacy split of
+     * entry (catalogId), a credential (credentialId), its chosen model, and the
+     * param values the user picked. Replaces the legacy split of
      * providers[]/models[]/imageGen/videoGen.
      */
     modelConnections: z
@@ -288,10 +307,10 @@ export const SettingsSchema = z
           tag: z.enum(["text", "image", "video"]),
           /** Selected modelId (from the entry's modelPresets). */
           model: z.string(),
+          /** Per-connection baseUrl override (else the credential's / catalog's). */
           baseUrl: z.string().optional(),
-          apiKey: z.string().optional(),
-          /** Reuse another instance's key: id of the instance whose apiKey to borrow. */
-          apiKeyRef: z.string().optional(),
+          /** Which credential supplies this connection's key. */
+          credentialId: z.string().optional(),
           /** Values the user picked for the model's params, e.g. { reasoning: "high" }. */
           paramValues: z.record(z.string(), z.unknown()).optional(),
         }),

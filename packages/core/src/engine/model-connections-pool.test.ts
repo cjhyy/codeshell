@@ -1,15 +1,15 @@
 /**
  * L6b engine consumption — the engine loads settings.modelConnections[] into
  * the model pool, so the unified instance store actually drives which model
- * sends requests. modelEntriesFromConnections is the pure bridge: instances +
- * catalog → ModelEntry[] (apiKeyRef dereferenced, protocol resolved, params
- * applied to the entry's reasoning fields where relevant).
+ * sends requests. modelEntriesFromConnections is the pure bridge: connections +
+ * credentials + catalog → ModelEntry[] (key from credential, protocol resolved,
+ * paramValues.reasoning mapped to the entry's reasoning field).
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §6.
  */
 import { describe, test, expect } from "bun:test";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import type { CatalogEntry } from "../model-catalog/index.js";
-import type { ModelInstance } from "../model-catalog/resolve.js";
+import type { ModelInstance, Credential } from "../model-catalog/resolve.js";
 
 const CATALOG: CatalogEntry[] = [
   {
@@ -37,12 +37,17 @@ const CATALOG: CatalogEntry[] = [
   },
 ];
 
+const CREDS: Credential[] = [
+  { id: "openai-acct", catalogId: "openai", apiKey: "sk-1" },
+  { id: "anth-acct", catalogId: "anthropic", apiKey: "sk-2" },
+];
+
 describe("modelEntriesFromConnections", () => {
-  test("maps a text instance to a ModelEntry keyed by instance id", () => {
+  test("maps a text connection to a ModelEntry keyed by instance id, key from credential", () => {
     const insts: ModelInstance[] = [
-      { id: "my-gpt5", catalogId: "openai", tag: "text", model: "gpt-5.5", apiKey: "sk-1" },
+      { id: "my-gpt5", catalogId: "openai", tag: "text", model: "gpt-5.5", credentialId: "openai-acct" },
     ];
-    const entries = modelEntriesFromConnections(insts, CATALOG);
+    const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries).toHaveLength(1);
     const e = entries[0]!;
     expect(e.key).toBe("my-gpt5");
@@ -51,83 +56,84 @@ describe("modelEntriesFromConnections", () => {
     expect(e.baseUrl).toBe("https://api.openai.com/v1");
   });
 
-  test("only text instances become model-pool entries (image/video excluded)", () => {
+  test("only text connections become model-pool entries (image/video excluded)", () => {
     const insts: ModelInstance[] = [
-      { id: "t", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k" },
-      { id: "img", catalogId: "openai-images", tag: "image", model: "gpt-image-2", apiKey: "k" },
+      { id: "t", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct" },
+      { id: "img", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "openai-acct" },
     ];
-    const entries = modelEntriesFromConnections(insts, CATALOG);
+    const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries.map((e) => e.key)).toEqual(["t"]);
   });
 
   test("protocol comes from the catalog entry (openai vs anthropic)", () => {
     const insts: ModelInstance[] = [
-      { id: "o", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k" },
-      { id: "a", catalogId: "anthropic", tag: "text", model: "claude-opus-4-7", apiKey: "k" },
+      { id: "o", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct" },
+      { id: "a", catalogId: "anthropic", tag: "text", model: "claude-opus-4-7", credentialId: "anth-acct" },
     ];
-    const entries = modelEntriesFromConnections(insts, CATALOG);
+    const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries.find((e) => e.key === "o")!.provider).toBe("openai");
     expect(entries.find((e) => e.key === "a")!.provider).toBe("anthropic");
   });
 
-  test("apiKeyRef borrows the referenced instance's key", () => {
+  test("connections sharing one credential both get its key", () => {
     const insts: ModelInstance[] = [
-      { id: "owner", catalogId: "openai", tag: "text", model: "gpt-5.5", apiKey: "sk-shared" },
-      { id: "borrow", catalogId: "openai", tag: "text", model: "gpt-4o", apiKeyRef: "owner" },
+      { id: "x", catalogId: "openai", tag: "text", model: "gpt-5.5", credentialId: "openai-acct" },
+      { id: "y", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct" },
     ];
-    const entries = modelEntriesFromConnections(insts, CATALOG);
-    expect(entries.find((e) => e.key === "borrow")!.apiKey).toBe("sk-shared");
+    const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
+    expect(entries.find((e) => e.key === "x")!.apiKey).toBe("sk-1");
+    expect(entries.find((e) => e.key === "y")!.apiKey).toBe("sk-1");
   });
 
   test("carries token limits from the matched preset", () => {
     const insts: ModelInstance[] = [
-      { id: "g", catalogId: "openai", tag: "text", model: "gpt-5.5", apiKey: "k" },
+      { id: "g", catalogId: "openai", tag: "text", model: "gpt-5.5", credentialId: "openai-acct" },
     ];
-    const e = modelEntriesFromConnections(insts, CATALOG)[0]!;
+    const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
     expect(e.maxContextTokens).toBe(400000);
     expect(e.maxOutputTokens).toBe(128000);
   });
 
   test("paramValues.reasoning enum → ModelEntry.reasoning effort", () => {
     const insts: ModelInstance[] = [
-      { id: "g", catalogId: "openai", tag: "text", model: "gpt-5.5", apiKey: "k", paramValues: { reasoning: "high" } },
+      { id: "g", catalogId: "openai", tag: "text", model: "gpt-5.5", credentialId: "openai-acct", paramValues: { reasoning: "high" } },
     ];
-    const e = modelEntriesFromConnections(insts, CATALOG)[0]!;
+    const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
     expect(e.reasoning).toEqual({ mode: "effort", effort: "high" });
   });
 
   test("paramValues.reasoning number → ModelEntry.reasoning budget", () => {
     const insts: ModelInstance[] = [
-      { id: "c", catalogId: "anthropic", tag: "text", model: "claude-opus-4-7", apiKey: "k", paramValues: { reasoning: 8192 } },
+      { id: "c", catalogId: "anthropic", tag: "text", model: "claude-opus-4-7", credentialId: "anth-acct", paramValues: { reasoning: 8192 } },
     ];
-    const e = modelEntriesFromConnections(insts, CATALOG)[0]!;
+    const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
     expect(e.reasoning).toEqual({ mode: "budget", budgetTokens: 8192 });
   });
 
   test("paramValues.reasoning boolean → ModelEntry.reasoning on/off", () => {
     const on: ModelInstance[] = [
-      { id: "d", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k", paramValues: { reasoning: true } },
+      { id: "d", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct", paramValues: { reasoning: true } },
     ];
-    expect(modelEntriesFromConnections(on, CATALOG)[0]!.reasoning).toEqual({ mode: "on" });
+    expect(modelEntriesFromConnections(on, CREDS, CATALOG)[0]!.reasoning).toEqual({ mode: "on" });
     const off: ModelInstance[] = [
-      { id: "d", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k", paramValues: { reasoning: false } },
+      { id: "d", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct", paramValues: { reasoning: false } },
     ];
-    expect(modelEntriesFromConnections(off, CATALOG)[0]!.reasoning).toEqual({ mode: "off" });
+    expect(modelEntriesFromConnections(off, CREDS, CATALOG)[0]!.reasoning).toEqual({ mode: "off" });
   });
 
   test("no paramValues → no reasoning on the entry", () => {
     const insts: ModelInstance[] = [
-      { id: "g", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k" },
+      { id: "g", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct" },
     ];
-    expect(modelEntriesFromConnections(insts, CATALOG)[0]!.reasoning).toBeUndefined();
+    expect(modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!.reasoning).toBeUndefined();
   });
 
-  test("instance with an unknown catalogId is skipped (not a crash)", () => {
+  test("connection with an unknown catalogId is skipped (not a crash)", () => {
     const insts: ModelInstance[] = [
-      { id: "ok", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k" },
-      { id: "bad", catalogId: "ghost", tag: "text", model: "m", apiKey: "k" },
+      { id: "ok", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct" },
+      { id: "bad", catalogId: "ghost", tag: "text", model: "m", credentialId: "openai-acct" },
     ];
-    const entries = modelEntriesFromConnections(insts, CATALOG);
+    const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries.map((e) => e.key)).toEqual(["ok"]);
   });
 });

@@ -741,8 +741,10 @@ export class Engine {
       const connections = (settings as { modelConnections?: unknown[] }).modelConnections;
       if (Array.isArray(connections) && connections.length) {
         const catalog = getMergedCatalog();
+        const credentials = (settings as { credentials?: unknown[] }).credentials;
         for (const entry of modelEntriesFromConnections(
           connections as never[],
+          (Array.isArray(credentials) ? credentials : []) as never[],
           catalog,
         )) {
           this.modelPool.register(entry);

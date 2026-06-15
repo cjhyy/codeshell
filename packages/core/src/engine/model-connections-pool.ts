@@ -6,12 +6,12 @@
  * resolved catalog entry + preset.
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §6.
  */
-import { resolveInstance, type ModelInstance } from "../model-catalog/resolve.js";
+import { resolveInstance, type ModelInstance, type Credential } from "../model-catalog/resolve.js";
 import type { CatalogEntry } from "../model-catalog/index.js";
 import type { ModelEntry } from "../llm/model-pool.js";
 import type { ReasoningSetting } from "../llm/reasoning-setting.js";
 
-export type { ModelInstance } from "../model-catalog/resolve.js";
+export type { ModelInstance, Credential } from "../model-catalog/resolve.js";
 
 /** Map a catalog entry's protocol to the ModelPool `provider` (LLM client). */
 function clientProvider(entry: CatalogEntry): string {
@@ -41,12 +41,13 @@ function reasoningFromParamValues(
  */
 export function modelEntriesFromConnections(
   connections: ModelInstance[],
+  credentials: Credential[],
   catalog: CatalogEntry[],
 ): ModelEntry[] {
   const out: ModelEntry[] = [];
   for (const inst of connections) {
     if (inst.tag !== "text") continue;
-    const resolved = resolveInstance(inst, connections, catalog);
+    const resolved = resolveInstance(inst, credentials, catalog);
     if (!resolved) continue;
     const { entry, preset } = resolved;
     const reasoning = reasoningFromParamValues(inst.paramValues);
