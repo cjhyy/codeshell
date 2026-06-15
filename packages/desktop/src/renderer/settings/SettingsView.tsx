@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ModelSection } from "./ModelSection";
+import { TextConnectionsPanel } from "./TextConnectionsPanel";
 import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
@@ -96,7 +97,12 @@ export function SettingsView({ activeRepoPath }: Props) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {tab === "model" && <ModelSection scope={scope} activeRepoPath={activeRepoPath} />}
+        {tab === "model" && (
+          <>
+            <TextConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
+            <ModelSection scope={scope} activeRepoPath={activeRepoPath} />
+          </>
+        )}
         {tab === "permission" && <PermissionSection scope={scope} activeRepoPath={activeRepoPath} />}
         {tab === "mcp" && <McpSection scope={scope} activeRepoPath={activeRepoPath} />}
         {tab === "update" && <UpdaterSettingsRow />}

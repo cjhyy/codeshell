@@ -20,6 +20,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { ModelSection } from "./ModelSection";
+import { TextConnectionsPanel } from "./TextConnectionsPanel";
 import { MemorySection } from "./MemorySection";
 import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
@@ -209,6 +210,7 @@ export function SettingsPage({
             )}
             {active === "config" && (
               <>
+                <TextConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />
                 <ModelSection scope={scope} activeRepoPath={activeRepoPath} />
                 <ImageSettingsSection scope={scope} activeRepoPath={activeRepoPath} />
               </>
