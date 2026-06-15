@@ -11,12 +11,10 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Drop-in adapter matching the OLD custom `ui/Select` API
+ * Drop-in adapter for the compact app-level Select API
  * (`value` / `onChange` / `options` / `placeholder` / `size` / groups /
  * per-option `description` / `disabled`) but rendered with the shadcn Select
- * underneath. Lets the large settings sections migrate off the legacy
- * black-bordered Select with a one-line import swap instead of rewriting every
- * call site. `searchable` / `searchText` are accepted but ignored (shadcn
+ * underneath. `searchable` / `searchText` are accepted but ignored (shadcn
  * Select has no built-in search; no current call site depends on it).
  */
 export interface SimpleSelectOption<V extends string = string> {

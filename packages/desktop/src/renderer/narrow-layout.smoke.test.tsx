@@ -4,8 +4,8 @@
  * A genuine pixel-level narrow-screen check needs a real browser (that's a
  * Playwright job a human runs); these are the parts we *can* guard without a
  * DOM: that the layout containers carry the responsive utility classes the
- * narrow layout depends on, that the lightbox's narrow-width media rule still
- * exists, and that a multi-image user message renders its full thumbnail
+ * narrow layout depends on, that the lightbox keeps image sizing viewport-
+ * relative, and that a multi-image user message renders its full thumbnail
  * gallery (the data path that feeds Lightbox prev/next).
  */
 import { describe, expect, test } from "bun:test";
@@ -14,6 +14,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MessageStream } from "./MessageStream";
+import { Lightbox } from "./chat/Lightbox";
 import type { Message } from "./types";
 
 // A 1x1 transparent PNG data URL — enough for decodeWireForDisplay to keep the
@@ -56,8 +57,12 @@ describe("narrow layout — multi-image gallery renders fully", () => {
 
 describe("narrow layout — lightbox", () => {
   test("lightbox image stays viewport-relative so it never exceeds a narrow screen", () => {
-    const css = readFileSync(join(import.meta.dir, "styles/tailwind.css"), "utf8");
-    expect(css).toContain("max-width: 92vw");
+    const html = renderToStaticMarkup(
+      <Lightbox src={PNG} alt="preview.png" onClose={() => {}} />,
+    );
+    expect(html).toContain("max-h-full");
+    expect(html).toContain("max-w-full");
+    expect(html).toContain("object-contain");
   });
 
   // The lightbox now has a SINGLE close button (the toolbar one). The old

@@ -199,8 +199,8 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
           <span className="text-status-err">-{removed}</span>
         </span>
         {/* Open in the in-app file panel (⌘/Ctrl → OS), matching path links. A
-            <span role=button> (not <button>) since the header itself is a
-            <button> — nested buttons are invalid HTML. */}
+            faux button span since the header itself is interactive; nested
+            interactive controls are invalid HTML. */}
         <span
           role="button"
           tabIndex={0}

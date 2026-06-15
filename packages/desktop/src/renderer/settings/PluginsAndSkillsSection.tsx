@@ -33,6 +33,16 @@ import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { Markdown } from "../Markdown";
 import { writeSettings } from "../settingsBus";
 
+function skillSourceBadgeClass(source: string): string {
+  return cn(
+    "rounded border px-1.5 py-0.5 text-[10px] font-medium",
+    source === "plugin" && "border-status-warn/40 text-status-warn",
+    source === "project" && "border-primary/40 text-primary",
+    source === "user" && "border-status-running/40 text-status-running",
+    source !== "plugin" && source !== "project" && source !== "user" && "border-border text-muted-foreground",
+  );
+}
+
 interface Props {
   activeRepoPath: string | null;
 }
@@ -540,7 +550,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
               <>
                 <header className="mb-3 flex flex-wrap items-center gap-2">
                   <span className="min-w-0 truncate text-sm font-semibold text-foreground">{s.name}</span>
-                  <span className={`skill-source skill-source-${s.source}`}>
+                  <span className={skillSourceBadgeClass(s.source)}>
                     {s.source}
                   </span>
                   <div className="ml-auto flex items-center gap-1">
@@ -629,7 +639,7 @@ function PluginInfoCard({ row }: { row: PluginRow }) {
     <div className="rounded-md border p-3">
       <header className="mb-3 flex flex-wrap items-center gap-2">
         <span className="min-w-0 truncate text-sm font-semibold text-foreground">{p.name}</span>
-        <span className={`skill-source skill-source-plugin`}>plugin</span>
+        <span className={skillSourceBadgeClass("plugin")}>plugin</span>
       </header>
       {p.description && (
         <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">

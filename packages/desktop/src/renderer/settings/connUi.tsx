@@ -1,9 +1,7 @@
 /**
  * Shared building blocks for the 连接 settings cards (WebSearch / 图片生成 /
  * 视频生成). Extracted so GenConnectionsPanel and SearchConnectionsPanel render
- * identical card chrome without duplicating Tailwind strings — part of the
- * connections shadcn migration (feedback #19) that deleted
- * styles/connections.css.
+ * identical card chrome without duplicating Tailwind strings.
  */
 import React from "react";
 import { Eye, EyeOff } from "lucide-react";

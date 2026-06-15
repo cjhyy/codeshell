@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import type { AgentSummary, AgentDefinitionInput } from "../../preload/types";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { ProjectPicker } from "./ProjectPicker";
@@ -111,6 +111,9 @@ function AgentsEditor({ target }: { target: Target }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [draft, setDraft] = useState<AgentDefinitionInput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Which groups' "disabled" sub-section is expanded (key = group id). Disabled
+  // agents are collapsed by default so they don't clutter the list.
+  const [showDisabled, setShowDisabled] = useState<Record<string, boolean>>({});
   const confirm = useConfirm();
 
   const load = useCallback(async () => {
@@ -180,6 +183,26 @@ function AgentsEditor({ target }: { target: Target }) {
     if (ov === "off") return false;
     return !isGloballyDisabled(name);
   };
+
+  // Group agents by source (项目内置 / 用户自定义 / 插件), then within each
+  // group split enabled vs disabled. Disabled ones collapse by default so a
+  // long list (esp. many plugins) stays scannable. Closed-plugin agents are
+  // already filtered out upstream by listAgents (disabledPlugins).
+  const groups = useMemo(() => {
+    const GROUP_ORDER: Array<{ id: AgentSummary["source"]; label: string }> = [
+      { id: "project", label: "项目内置" },
+      { id: "user", label: "用户自定义" },
+      { id: "plugin", label: "插件" },
+    ];
+    return GROUP_ORDER.map(({ id, label }) => {
+      const members = agents.filter((a) => a.source === id);
+      const enabled = members.filter((a) => effectiveEnabled(a.name));
+      const disabledMembers = members.filter((a) => !effectiveEnabled(a.name));
+      return { id, label, enabled, disabled: disabledMembers, total: members.length };
+    }).filter((g) => g.total > 0);
+    // effectiveEnabled depends on disabled/overrides/isProject; agents is the data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agents, disabled, overrides, isProject]);
 
   // Global mode: flip the top-level disabledAgents denylist.
   const toggleGlobal = async (name: string) => {
@@ -252,6 +275,58 @@ function AgentsEditor({ target }: { target: Target }) {
     return { label: "自定义", variant: "secondary" };
   };
 
+  const renderRow = (a: AgentSummary) => {
+    const enabled = effectiveEnabled(a.name);
+    const tag = tagFor(a);
+    return (
+      <li
+        key={a.name}
+        className={
+          "flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm hover:bg-accent " +
+          (selected === a.name ? "bg-accent ring-1 ring-border " : "") +
+          (enabled ? "" : "opacity-50")
+        }
+        onClick={() => setSelected(a.name)}
+      >
+        {isProject ? (
+          <Select
+            value={overrideOf(a.name)}
+            onValueChange={(v) => void setOverride(a.name, v as Override)}
+          >
+            <SelectTrigger
+              className="h-7 w-[104px] shrink-0"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`${a.name} 项目级启停`}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent onClick={(e) => e.stopPropagation()}>
+              <SelectItem value="inherit">
+                继承{isGloballyDisabled(a.name) ? "（禁用）" : "（启用）"}
+              </SelectItem>
+              <SelectItem value="on">强制启用</SelectItem>
+              <SelectItem value="off">强制禁用</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <Switch
+            checked={enabled}
+            onClick={(e) => e.stopPropagation()}
+            onCheckedChange={() => void toggleGlobal(a.name)}
+            title={enabled ? "已启用" : "已禁用（LLM 不可见）"}
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium">{a.name}</div>
+          {a.description && (
+            <div className="truncate text-xs text-muted-foreground">{a.description}</div>
+          )}
+        </div>
+        <Badge variant={tag.variant}>{tag.label}</Badge>
+      </li>
+    );
+  };
+
   return (
     <div className="flex h-full gap-4">
       {/* Left: agent list */}
@@ -259,59 +334,37 @@ function AgentsEditor({ target }: { target: Target }) {
         <Button size="sm" className="self-start gap-1.5" onClick={startNew} title="新增子代理">
           <Plus size={14} /> <span>新增子代理</span>
         </Button>
-        <ul className="space-y-1 overflow-y-auto">
-          {agents.map((a) => {
-            const enabled = effectiveEnabled(a.name);
-            const tag = tagFor(a);
+        <div className="space-y-3 overflow-y-auto">
+          {groups.length === 0 && (
+            <div className="px-2 py-4 text-sm text-muted-foreground">没有子代理。</div>
+          )}
+          {groups.map((g) => {
+            const open = showDisabled[g.id] ?? false;
             return (
-              <li
-                key={a.name}
-                className={
-                  "flex cursor-pointer items-center gap-2 rounded-md p-2 text-sm hover:bg-accent " +
-                  (selected === a.name ? "bg-accent ring-1 ring-border " : "") +
-                  (enabled ? "" : "opacity-50")
-                }
-                onClick={() => setSelected(a.name)}
-              >
-                {isProject ? (
-                  <Select
-                    value={overrideOf(a.name)}
-                    onValueChange={(v) => void setOverride(a.name, v as Override)}
-                  >
-                    <SelectTrigger
-                      className="h-7 w-[104px] shrink-0"
-                      onClick={(e) => e.stopPropagation()}
-                      aria-label={`${a.name} 项目级启停`}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent onClick={(e) => e.stopPropagation()}>
-                      <SelectItem value="inherit">
-                        继承{isGloballyDisabled(a.name) ? "（禁用）" : "（启用）"}
-                      </SelectItem>
-                      <SelectItem value="on">强制启用</SelectItem>
-                      <SelectItem value="off">强制禁用</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Switch
-                    checked={enabled}
-                    onClick={(e) => e.stopPropagation()}
-                    onCheckedChange={() => void toggleGlobal(a.name)}
-                    title={enabled ? "已启用" : "已禁用（LLM 不可见）"}
-                  />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{a.name}</div>
-                  {a.description && (
-                    <div className="truncate text-xs text-muted-foreground">{a.description}</div>
-                  )}
+              <div key={g.id} className="space-y-1">
+                <div className="px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {g.label} <span className="text-muted-foreground/60">({g.total})</span>
                 </div>
-                <Badge variant={tag.variant}>{tag.label}</Badge>
-              </li>
+                <ul className="space-y-1">{g.enabled.map(renderRow)}</ul>
+                {g.disabled.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
+                      onClick={() =>
+                        setShowDisabled((s) => ({ ...s, [g.id]: !open }))
+                      }
+                    >
+                      {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                      <span>已禁用 ({g.disabled.length})</span>
+                    </button>
+                    {open && <ul className="space-y-1">{g.disabled.map(renderRow)}</ul>}
+                  </>
+                )}
+              </div>
             );
           })}
-        </ul>
+        </div>
       </div>
 
       {/* Right: editor form */}

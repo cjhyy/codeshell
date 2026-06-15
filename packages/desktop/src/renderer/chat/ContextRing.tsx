@@ -37,10 +37,10 @@ export function ContextRing({ used, max, busy }: Props) {
   const offset = c * (1 - ratio);
 
   const tone =
-    !hasUsage ? "var(--fg-muted)" :
-    ratio >= 0.9 ? "var(--status-err)" :
-    ratio >= 0.7 ? "var(--status-warn)" :
-    "var(--status-ok)";
+    !hasUsage ? "hsl(var(--cs-muted-foreground))" :
+    ratio >= 0.9 ? "hsl(var(--cs-status-err))" :
+    ratio >= 0.7 ? "hsl(var(--cs-status-warn))" :
+    "hsl(var(--cs-status-ok))";
 
   const pctLabel = !hasUsage ? (busy ? "·" : "—") : `${pct}%`;
 
@@ -57,7 +57,7 @@ export function ContextRing({ used, max, busy }: Props) {
             cy={size / 2}
             r={r}
             fill="none"
-            stroke="var(--border-subtle)"
+            stroke="hsl(var(--cs-border))"
             strokeWidth={stroke}
           />
           {hasUsage && (

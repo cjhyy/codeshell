@@ -36,6 +36,7 @@ import type { Repo } from "../repos";
 import { repoLabel } from "../repos";
 import { cacheGet, cacheSet } from "./settingsCache";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   type CapabilityKind,
@@ -204,11 +205,12 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
 
       <div className="grid min-h-[420px] grid-cols-1 gap-3 lg:grid-cols-[240px_1fr]">
         <nav className="flex min-h-0 flex-col gap-1 rounded-md border p-2" aria-label="能力配置范围">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             className={cn(
-              "flex items-center gap-2 rounded-md border border-transparent px-2 py-2 text-left hover:bg-accent",
-              node.kind === "user" && "border-primary bg-primary/10",
+              "h-auto justify-start gap-2 px-2 py-2 text-left",
+              node.kind === "user" && "bg-accent text-accent-foreground",
             )}
             onClick={() => setNode({ kind: "user" })}
           >
@@ -219,7 +221,7 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
               <span className="truncate text-sm font-medium text-foreground">用户(全局)</span>
               <span className="truncate text-xs text-muted-foreground">默认配置</span>
             </span>
-          </button>
+          </Button>
           <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">项目配置</div>
           {repos.length === 0 && (
             <div className="px-2 py-3 text-xs text-muted-foreground">尚无项目</div>
@@ -228,12 +230,13 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
             const label = repoLabel(r);
             const active = node.kind === "project" && node.repoPath === r.path;
             return (
-              <button
+              <Button
                 type="button"
                 key={r.id}
+                variant="ghost"
                 className={cn(
-                  "flex items-center gap-2 rounded-md border border-transparent px-2 py-2 text-left hover:bg-accent",
-                  active && "border-primary bg-primary/10",
+                  "h-auto justify-start gap-2 px-2 py-2 text-left",
+                  active && "bg-accent text-accent-foreground",
                 )}
                 title={r.path}
                 onClick={() => setNode({ kind: "project", repoPath: r.path, label })}
@@ -245,7 +248,7 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                   <span className="truncate text-sm font-medium text-foreground">{label}</span>
                   <span className="truncate text-xs text-muted-foreground">{r.path}</span>
                 </span>
-              </button>
+              </Button>
             );
           })}
         </nav>
@@ -277,9 +280,10 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
               const collapsed = isGroupCollapsed(toggled, g.kind);
               return (
               <div className="border-b last:border-b-0" key={g.kind}>
-                <button
+                <Button
                   type="button"
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent"
+                  variant="ghost"
+                  className="h-auto w-full justify-start gap-2 px-2 py-2 text-left text-sm"
                   aria-expanded={!collapsed}
                   onClick={() => toggleGroup(g.kind)}
                 >
@@ -291,7 +295,7 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                   </span>
                   <span>{g.label}</span>
                   <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{g.items.length}</span>
-                </button>
+                </Button>
                 {!collapsed && g.items.map((cap) => {
                   const meta = capabilityMeta(cap);
                   const overridden = cap.effectiveSource === "project";
@@ -301,7 +305,7 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                     <div className="flex items-center gap-3 px-2 py-2 text-sm" key={cap.id}>
                       <span
                         className={cn(
-                          "cap-overview-info",
+                          "min-w-0 flex flex-1 flex-col gap-1",
                           navigable && "cursor-pointer hover:text-foreground",
                         )}
                         role={navigable ? "button" : undefined}
@@ -326,15 +330,15 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                         <span className="flex shrink-0 flex-wrap items-center gap-1">
                           <span
                             className={cn(
-                              "cap-overview-status",
-                              cap.enabled ? "is-enabled" : "is-disabled",
+                              "inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[10px]",
+                              cap.enabled ? "text-status-ok" : "text-muted-foreground",
                             )}
                           >
                             {cap.enabled ? <Check size={12} /> : <Circle size={12} />}
                             {effectiveLabel(cap)}
                           </span>
                           {selectedProject && (
-                            <span className={cn("cap-overview-status", overridden && "is-project")}>
+                            <span className={cn("inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground", overridden && "text-primary")}>
                               {projectStateLabel(cap)}
                             </span>
                           )}
@@ -357,20 +361,23 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                             const stateMeta = PROJECT_STATE_META[state];
                             const active = (cap.projectOverride ?? "inherit") === state;
                             return (
-                              <button
+                              <Button
                                 type="button"
                                 key={state}
+                                variant="outline"
+                                size="sm"
                                 className={cn(
-                                  "cap-overview-state-btn",
-                                  stateMeta.className,
-                                  active && "active",
+                                  "h-7 gap-1 px-2 text-xs",
+                                  state === "on" && "text-status-ok",
+                                  state === "off" && "text-status-err",
+                                  active && "bg-accent",
                                 )}
                                 disabled={savingId === cap.id}
                                 onClick={() => void onProjectState(cap, state)}
                               >
                                 <stateMeta.Icon size={13} />
                                 {stateMeta.label}
-                              </button>
+                              </Button>
                             );
                           })}
                         </div>

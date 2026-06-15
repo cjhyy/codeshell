@@ -69,6 +69,13 @@ interface Tab {
   title: string;
   /** Address-bar text (may differ from the loaded url while typing). */
   draft: string;
+  /**
+   * Set when the main frame failed to load (did-fail-load). The <webview> shows
+   * a blank page on failure, so we render our own overlay instead. Cleared on a
+   * successful (re)navigation. `code` is Chromium's net error (e.g. -102
+   * ERR_CONNECTION_REFUSED, -105 ERR_NAME_NOT_RESOLVED).
+   */
+  error?: { code: number; desc: string; url: string };
 }
 
 const NEW_TAB = "about:blank";
@@ -102,11 +109,20 @@ const WebviewHost = React.forwardRef<WebviewElement, { initialUrl: string }>(
 );
 
 
+// Tab-id generation. The counter alone is NOT collision-proof: React StrictMode
+// double-invokes the useState initializer AND setState updaters in dev, and a
+// hot-reload resets the module counter — both can mint the same `tab-N` twice
+// ("two children with the same key `tab-1`"), which makes React duplicate/omit
+// the keyed WebviewHost (blank / "点了没反应"). Mix in a per-call random suffix so
+// even a re-run of the same counter value yields a distinct id.
 let tabSeq = 0;
-function freshTab(initialUrl?: string): Tab {
+function freshTabId(): string {
   tabSeq += 1;
+  return `tab-${tabSeq}-${Math.random().toString(36).slice(2, 8)}`;
+}
+function freshTab(initialUrl?: string): Tab {
   const url = initialUrl && initialUrl !== NEW_TAB ? initialUrl : NEW_TAB;
-  return { id: `tab-${tabSeq}`, url, title: "新选项卡", draft: url === NEW_TAB ? "" : url };
+  return { id: freshTabId(), url, title: "新选项卡", draft: url === NEW_TAB ? "" : url };
 }
 
 interface Props {
@@ -217,6 +233,24 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
 
+  // Defined before the lifecycle effect below because that effect calls it (for
+  // in-guest new-tab link interception) and lists it as a dependency.
+  const openInNewTab = useCallback((url: string) => {
+    const tab = freshTab();
+    // NEW_TAB is the landing-page sentinel — never run it through normalizeUrl
+    // (which would treat the `about:` scheme as a search and send it to a
+    // search engine). Only normalize real user-supplied URLs.
+    if (url && url !== NEW_TAB) {
+      const norm = normalizeUrl(url);
+      if (norm) {
+        tab.url = norm;
+        tab.draft = norm;
+      }
+    }
+    setTabs((prev) => [...prev, tab]);
+    setActiveId(tab.id);
+  }, []);
+
   // Wire webview lifecycle events for the active tab. `hasGuest` matters: a
   // tab born on the NEW_TAB landing has NO <webview> when this effect first
   // runs (viewRef null → bail); typing a URL mounts WebviewHost, and without
@@ -246,14 +280,67 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
     };
     const onNavigate = (e: Event) => {
       const url = (e as unknown as { url: string }).url;
-      if (url && url !== NEW_TAB) patchTab(activeId, { url, draft: url });
+      // A real navigation committed → the page loaded; clear any prior error.
+      if (url && url !== NEW_TAB) patchTab(activeId, { url, draft: url, error: undefined });
       refreshNav();
+    };
+    const onFail = (e: Event) => {
+      const ev = e as unknown as {
+        errorCode: number;
+        errorDescription: string;
+        validatedURL: string;
+        isMainFrame: boolean;
+      };
+      // Only main-frame failures matter (subframe/ad failures are noise). Ignore
+      // ERR_ABORTED (-3): we deliberately abort in-flight loads on re-navigation
+      // (see WebviewHost frozen-src note), and that's not a user-facing error.
+      if (ev.isMainFrame === false || ev.errorCode === -3) return;
+      patchTab(activeId, {
+        error: { code: ev.errorCode, desc: ev.errorDescription, url: ev.validatedURL },
+      });
+      setNav((n) => ({ ...n, loading: false }));
+    };
+    // Electron <webview> has a long-standing bug where clicking a
+    // `target="_blank"` link (or window.open) fires NOTHING — no will-navigate,
+    // no setWindowOpenHandler, no navigation at all (electron/electron#30886).
+    // So we can't catch new-tab links in main. Instead inject a capturing click
+    // listener into the guest on every load: it intercepts clicks that WANT a
+    // new window (target=_blank, or ⌘/Ctrl/middle-click) and signals the URL out
+    // via console.info with a sentinel; we parse it in onConsole below and open
+    // an in-app tab. Same-tab links keep working through normal navigation.
+    const INJECT = `(() => {
+      if (window.__cs_tab_hook) return; window.__cs_tab_hook = 1;
+      document.addEventListener('click', (e) => {
+        const a = e.target && e.target.closest && e.target.closest('a[href]');
+        if (!a) return;
+        const href = a.href;
+        if (!/^https?:/i.test(href)) return;
+        const wantsNew = a.target === '_blank' || e.metaKey || e.ctrlKey || e.button === 1;
+        if (!wantsNew) return;
+        e.preventDefault(); e.stopPropagation();
+        console.info('__CS_OPEN_TAB__' + href);
+      }, true);
+    })();`;
+    const onDomReady = () => {
+      try {
+        void view.executeJavaScript(INJECT, true).catch(() => undefined);
+      } catch {
+        /* guest torn down */
+      }
+    };
+    const onConsole = (e: Event) => {
+      const msg = (e as unknown as { message?: string }).message ?? "";
+      const i = msg.indexOf("__CS_OPEN_TAB__");
+      if (i !== -1) openInNewTab(msg.slice(i + "__CS_OPEN_TAB__".length));
     };
     view.addEventListener("did-start-loading", onStart);
     view.addEventListener("did-stop-loading", onStop);
     view.addEventListener("page-title-updated", onTitle as EventListener);
     view.addEventListener("did-navigate", onNavigate as EventListener);
     view.addEventListener("did-navigate-in-page", onNavigate as EventListener);
+    view.addEventListener("did-fail-load", onFail as EventListener);
+    view.addEventListener("dom-ready", onDomReady);
+    view.addEventListener("console-message", onConsole as EventListener);
     // Late attach (see hasGuest above): the guest may have already navigated /
     // titled itself before we got listeners on — sync once from the live guest
     // so the address bar and tab title catch up.
@@ -273,9 +360,12 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
       view.removeEventListener("page-title-updated", onTitle as EventListener);
       view.removeEventListener("did-navigate", onNavigate as EventListener);
       view.removeEventListener("did-navigate-in-page", onNavigate as EventListener);
+      view.removeEventListener("did-fail-load", onFail as EventListener);
+      view.removeEventListener("dom-ready", onDomReady);
+      view.removeEventListener("console-message", onConsole as EventListener);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId, hasGuest, patchTab]);
+  }, [activeId, hasGuest, patchTab, openInNewTab]);
 
   const navigate = useCallback(
     (raw: string) => {
@@ -300,21 +390,16 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
     [activeId, active.url, patchTab],
   );
 
-  const openInNewTab = useCallback((url: string) => {
-    const tab = freshTab();
-    // NEW_TAB is the landing-page sentinel — never run it through normalizeUrl
-    // (which would treat the `about:` scheme as a search and send it to a
-    // search engine). Only normalize real user-supplied URLs.
-    if (url && url !== NEW_TAB) {
-      const norm = normalizeUrl(url);
-      if (norm) {
-        tab.url = norm;
-        tab.draft = norm;
-      }
-    }
-    setTabs((prev) => [...prev, tab]);
-    setActiveId(tab.id);
-  }, []);
+
+  // A link inside a guest page wanted a new window (target=_blank / window.open).
+  // Main denies the native popup and routes the URL here; open it as a new tab so
+  // in-page links behave like a real browser instead of doing nothing ("点了没反应").
+  useEffect(() => {
+    const off = window.codeshell.onBrowserOpenTab?.(({ url }) => {
+      if (url) openInNewTab(url);
+    });
+    return () => off?.();
+  }, [openInNewTab]);
 
   // A chat answer link (http/https) was clicked: App surfaces this panel and
   // hands the URL down via the `openUrl` prop (NOT a window event — that would
@@ -363,34 +448,39 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       {/* Tab strip */}
       <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1">
-        {tabs.map((t) => (
-          <div
-            key={t.id}
-            className={`group flex max-w-[180px] items-center gap-1 rounded-md px-2 py-1 text-xs ${
-              t.id === activeId ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"
-            }`}
-          >
-            <Button type="button" variant="ghost" className="h-auto min-w-0 gap-1 p-0 hover:bg-transparent" onClick={() => setActiveId(t.id)}>
-              <Globe className="h-3 w-3 shrink-0" />
-              <span className="truncate">{t.title}</span>
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100"
-              onClick={() => closeTab(t.id)}
-              aria-label="关闭标签"
+        {/* Tabs scroll horizontally when they overflow; the + button stays
+            pinned (shrink-0) so it's always reachable. Each tab is shrink-0 so
+            they keep their width instead of squishing into unreadable slivers. */}
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:thin]">
+          {tabs.map((t) => (
+            <div
+              key={t.id}
+              className={`group flex w-[180px] shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs ${
+                t.id === activeId ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"
+              }`}
             >
-              <X className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
+              <Button type="button" variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-1 p-0 hover:bg-transparent" onClick={() => setActiveId(t.id)}>
+                <Globe className="h-3 w-3 shrink-0" />
+                <span className="truncate">{t.title}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100"
+                onClick={() => closeTab(t.id)}
+                aria-label="关闭标签"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+        </div>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-muted-foreground"
+          className="h-7 w-7 shrink-0 text-muted-foreground"
           onClick={() => openInNewTab(NEW_TAB)}
           aria-label="新选项卡"
         >
@@ -510,6 +600,45 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
             ref={viewRef}
             initialUrl={active.url}
           />
+        )}
+
+        {/* Load-failure overlay. The <webview> renders blank on a failed load,
+            so we cover it with our own message + retry rather than leave the user
+            staring at a white panel (refused localhost dev server, DNS miss…). */}
+        {active.url !== NEW_TAB && active.error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background px-6 text-center">
+            <Globe className="h-10 w-10 text-muted-foreground/50" />
+            <div className="text-sm font-medium text-foreground">无法访问此页面</div>
+            <div className="max-w-md break-all text-xs text-muted-foreground">{active.error.url}</div>
+            <div className="text-xs text-muted-foreground">
+              {/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(active.error.url)
+                ? "本地服务器可能没有启动 —— 确认 dev server 已在运行。"
+                : "连接失败,请检查网络或地址是否正确。"}
+              <span className="ml-1 opacity-60">({active.error.desc || `错误 ${active.error.code}`})</span>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  const view = viewRef.current;
+                  const target = active.error?.url ?? active.url;
+                  patchTab(activeId, { error: undefined });
+                  if (view) void view.loadURL(target).catch(() => undefined);
+                }}
+              >
+                <RotateCw className="mr-1.5 h-3.5 w-3.5" /> 重试
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => void window.codeshell.openExternal(active.error?.url ?? active.url)}
+              >
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> 用系统浏览器打开
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Saved comment dots over the page (derived from the anchors prop —
