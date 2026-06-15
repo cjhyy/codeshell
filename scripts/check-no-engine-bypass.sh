@@ -16,7 +16,10 @@
 #   packages/tui/src/cli/commands/run.ts     — headless CLI; wraps in createInProcessClient
 #   packages/core/src/run/EngineRunner.ts    — RunManager runner; wraps in createInProcessClient
 #   packages/core/src/cli/agent-server-stdio.ts — stdio worker; wraps engines in AgentServer
-#   tests/**                                 — tests need direct Engine construction
+#   packages/core/src/cli/agent-server-tcp.ts   — TCP worker; same seed+AgentServer bootstrap as stdio
+#   packages/desktop/src/main/dream-service.ts  — desktop seed Engine for runDreamConsolidation (memory tools)
+#   packages/desktop/src/main/automation-host.ts — desktop unattended automation run (headless engine)
+#   *.test.ts / __tests__/**                 — tests need direct Engine construction
 #
 # Anything new appearing outside this list is an architecture violation.
 # If you have a legitimate new use case, add it here AND document why in
@@ -28,6 +31,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
 # Find all `new Engine(` references in package source trees that are not in the allowlist.
 # Tests are intentionally out of scope; they can construct Engine directly for unit setup.
+# Lines where the match sits inside a comment (leading `*` or `//`) are also skipped —
+# JSDoc that merely mentions `new Engine()` is documentation, not a call site.
 violations=$(
   grep -rn --include="*.ts" --include="*.tsx" "new Engine(" \
     "$repo_root/packages/core/src" \
@@ -40,6 +45,12 @@ violations=$(
   | grep -v "/packages/tui/src/cli/commands/run.ts:" \
   | grep -v "/packages/core/src/run/EngineRunner.ts:" \
   | grep -v "/packages/core/src/cli/agent-server-stdio.ts:" \
+  | grep -v "/packages/core/src/cli/agent-server-tcp.ts:" \
+  | grep -v "/packages/desktop/src/main/dream-service.ts:" \
+  | grep -v "/packages/desktop/src/main/automation-host.ts:" \
+  | grep -vE "\.test\.tsx?:" \
+  | grep -v "/__tests__/" \
+  | grep -vE ":[0-9]+:[[:space:]]*(\*|//)" \
   || true
 )
 

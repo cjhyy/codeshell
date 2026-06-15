@@ -45,7 +45,9 @@ describe("CloudflaredBinary", () => {
   test("binaryPath resolves under baseDir/bin/cloudflared", () => {
     const base = freshDir();
     const bin = new CloudflaredBinary({ baseDir: base });
-    expect(bin.binaryPath()).toBe(join(base, "bin", "cloudflared"));
+    // Windows appends `.exe`; POSIX has the bare name.
+    const exeName = process.platform === "win32" ? "cloudflared.exe" : "cloudflared";
+    expect(bin.binaryPath()).toBe(join(base, "bin", exeName));
   });
 
   test("isInstalled false when missing, true when present + executable", async () => {
@@ -98,9 +100,12 @@ describe("CloudflaredBinary", () => {
     expect(finalPath).toBe(bin.binaryPath());
     expect(existsSync(finalPath)).toBe(true);
     expect(readFileSync(finalPath, "utf-8")).toBe("binary-bytes");
-    // executable bit set (owner exec)
-    const mode = statSync(finalPath).mode;
-    expect(mode & 0o100).toBe(0o100);
+    // executable bit set (owner exec) — POSIX only; Windows has no exec bit so
+    // chmod is a no-op there and the assertion would never hold.
+    if (process.platform !== "win32") {
+      const mode = statSync(finalPath).mode;
+      expect(mode & 0o100).toBe(0o100);
+    }
     // no leftover temp file
     expect(existsSync(`${finalPath}.download`)).toBe(false);
   });
