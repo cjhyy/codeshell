@@ -818,8 +818,9 @@ async function createBrowserPopout(parent: BrowserWindow, initialUrl?: string): 
       webviewTag: true,
     },
   });
-  popoutParents.set(win.webContents.id, parent.id);
-  win.on("closed", () => popoutParents.delete(win.webContents.id));
+  const wcId = win.webContents.id;
+  popoutParents.set(wcId, parent.id);
+  win.on("closed", () => popoutParents.delete(wcId));
 
   // Same guest hardening as the main window — the popout hosts a BrowserPanel
   // too, so without this its <webview> guest landed in defaultSession and got
