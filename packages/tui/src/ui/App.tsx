@@ -62,6 +62,7 @@ import { utilityCommands } from "../cli/commands/builtin/utility-commands.js";
 import { advancedCommands } from "../cli/commands/builtin/advanced-commands.js";
 import { extraCommands } from "../cli/commands/builtin/extra-commands.js";
 import { moreCommands } from "../cli/commands/builtin/more-commands.js";
+import { goalCommand } from "../cli/commands/builtin/goal-command.js";
 import { imageCommand } from "../cli/commands/builtin/image-command.js";
 import { buildPluginSlashCommands } from "../cli/commands/builtin/plugin-commands-registration.js";
 import type { ApprovalRequest, ApprovalResult, StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
@@ -96,6 +97,7 @@ commandRegistry.registerAll(advancedCommands);
 commandRegistry.registerAll(extraCommands);
 commandRegistry.registerAll(moreCommands);
 commandRegistry.register(imageCommand);
+commandRegistry.register(goalCommand);
 commandRegistry.registerAll(buildPluginSlashCommands());
 
 // ChatEntry types and createEntry() are in ./store.ts
@@ -236,6 +238,13 @@ export function App({
   // Image attachments staged by the `/image` command, drained on next
   // submitToEngine. See `cli/commands/builtin/image-command.ts`.
   const pendingImagesRef = useRef<string[]>([]);
+  // Persistent goal (CC /goal) staged by the `/goal` command, drained on the
+  // next submitToEngine. Once set in core it persists across sends until met
+  // or cleared, so we only need to pass it on the submit that establishes it.
+  const pendingGoalRef = useRef<string | null>(null);
+  // Best-effort mirror of the session's active goal objective for /goal status.
+  // Set when /goal submits one, cleared on /goal clear or a goal_progress(met).
+  const activeGoalRef = useRef<string | null>(null);
   const [showBanner, setShowBanner] = useState(true);
   const [totalTokens, setTotalTokens] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
@@ -728,6 +737,26 @@ export function App({
           // (mirrors the desktop renderer's isolation).
           if (taskEvent.agentId) break;
           if (taskEvent.tasks) setTasks(taskEvent.tasks);
+          break;
+        }
+
+        case "goal_set": {
+          // Mirror the active goal for /goal status (objective also staged by
+          // the /goal command; this catches goals set elsewhere too).
+          const ev = event as Extract<StreamEvent, { type: "goal_set" }>;
+          activeGoalRef.current = ev.objective;
+          break;
+        }
+
+        case "goal_cleared": {
+          activeGoalRef.current = null;
+          break;
+        }
+
+        case "goal_progress": {
+          // The goal is achieved (or gave up) — drop the status mirror.
+          const ev = event as Extract<StreamEvent, { type: "goal_progress" }>;
+          if (ev.status === "met" || ev.status === "exhausted") activeGoalRef.current = null;
           break;
         }
 
@@ -1248,7 +1277,13 @@ export function App({
           pendingImagesRef.current = [];
         }
 
-        const result = await client.run(engineMessage, sessionId);
+        // Drain a staged persistent goal (/goal). Passed only on this submit;
+        // core persists it on the session for subsequent bare sends.
+        const goal = !opts.asInjection ? pendingGoalRef.current : null;
+        pendingGoalRef.current = null;
+        const result = goal
+          ? await client.run({ task: engineMessage, sessionId: sessionId ?? "", goal })
+          : await client.run(engineMessage, sessionId);
 
         // ESC / Ctrl+C took us through the optimistic-cancel path — UI is
         // already idle, history rewound. Don't append turn-duration / status
@@ -1508,6 +1543,17 @@ export function App({
           },
           list: () => pendingImagesRef.current,
         },
+        activeGoal: activeGoalRef.current,
+        submitGoal: (objective: string) => {
+          pendingGoalRef.current = objective;
+          activeGoalRef.current = objective;
+          void submitToEngine(objective, { asInjection: false });
+        },
+        clearGoal: async () => {
+          const cleared = await client.goalClear(sidRef.current);
+          activeGoalRef.current = null;
+          return cleared;
+        },
       };
       commandRegistry.dispatch(cmd, cmdCtx);
     },
@@ -1525,6 +1571,7 @@ export function App({
       openModelSelector,
       openSessionPicker,
       openModelManager,
+      submitToEngine,
     ],
   );
 

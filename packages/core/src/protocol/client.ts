@@ -174,6 +174,17 @@ export class AgentClient {
   }
 
   /**
+   * Clear a session's persisted active goal (CC `/goal clear`). Returns whether
+   * a goal was actually cleared (false = there was none).
+   */
+  async goalClear(sessionId?: string): Promise<boolean> {
+    const res = (await this.request(Methods.GoalClear, { sessionId } as Record<string, unknown>)) as
+      | { cleared?: boolean }
+      | undefined;
+    return res?.cleared === true;
+  }
+
+  /**
    * Update runtime configuration on the server.
    */
   async configure(params: ConfigureParams): Promise<Record<string, unknown>> {

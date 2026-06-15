@@ -497,6 +497,25 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     });
     return;
   }
+  if (event.type === "goal.clear") {
+    const res = await injectAndAwaitResult(bridge, "agent/goalClear", {
+      sessionId: event.sessionId,
+    });
+    // The worker's result carries { ok, cleared }; surface `cleared` so the
+    // phone can tell "there was a goal, now gone" from "nothing to clear".
+    const cleared =
+      res.ok && typeof (res.result as { cleared?: boolean } | undefined)?.cleared === "boolean"
+        ? (res.result as { cleared: boolean }).cleared
+        : undefined;
+    reply({
+      type: "goal.cleared",
+      sessionId: event.sessionId,
+      ok: res.ok,
+      cleared,
+      message: res.ok ? undefined : res.message,
+    });
+    return;
+  }
 }
 
 function roomToPublic(room: {
@@ -615,8 +634,15 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     if (!params.partition) params.partition = "persist:browser";
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
+    // A page link wanting a new window (target=_blank, window.open) used to be
+    // DENIED outright (→ kicked to the OS browser, or silently nothing — the
+    // "点了没反应"). Instead, route http(s) popups back to the renderer to open as
+    // a NEW TAB in the same browser panel, like a real browser. We still deny the
+    // native popup window itself (no second OS window); non-http(s) is dropped.
     guest.setWindowOpenHandler(({ url }) => {
-      if (/^https?:/i.test(url)) void shell.openExternal(url);
+      if (/^https?:/i.test(url) && !win.isDestroyed()) {
+        win.webContents.send("browser:open-tab", { url });
+      }
       return { action: "deny" };
     });
     guest.on("will-navigate", (ev, url) => {

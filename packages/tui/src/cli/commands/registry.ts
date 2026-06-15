@@ -32,6 +32,16 @@ export interface CommandContext {
   addMessage: (text: string) => void;
   /** Set context that will be prepended to the next user message sent to the engine. */
   setNextContext: (text: string) => void;
+  /**
+   * Set a persistent goal (CC /goal) and immediately run it: the objective is
+   * sent as the directive and stored on the session, so later bare sends keep
+   * working toward it until met or cleared. Used by the /goal command.
+   */
+  submitGoal?: (objective: string) => void;
+  /** Clear the session's active persistent goal (/goal clear). */
+  clearGoal?: () => Promise<boolean>;
+  /** The session's active goal objective, if any (for /goal status). */
+  activeGoal?: string | null;
   exit: () => void;
   // State accessors
   effort: string;

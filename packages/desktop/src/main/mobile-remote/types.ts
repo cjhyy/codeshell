@@ -59,6 +59,7 @@ export type MobileClientEvent =
       addTimeBudgetMs?: number;
       addStopBlocks?: number;
     }
+  | { type: "goal.clear"; sessionId: string }
   // ── Rooms (resident external-agent sessions) ──────────────────────────
   | { type: "room.list" }
   | { type: "room.projects" }
@@ -94,6 +95,7 @@ export type MobileServerEvent =
   | { type: "permission.mode"; sessionId?: string; mode: PermissionMode }
   | { type: "model.current"; model: string; available?: string[] }
   | { type: "goal.extended"; sessionId: string; ok: boolean; message?: string }
+  | { type: "goal.cleared"; sessionId: string; ok: boolean; cleared?: boolean; message?: string }
   // ── Rooms ─────────────────────────────────────────────────────────────
   | { type: "room.list.ok"; rooms: RoomPublic[] }
   | { type: "room.projects.ok"; projects: { path: string; name: string }[] }
