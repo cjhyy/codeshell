@@ -32,6 +32,7 @@ import {
   type InputImage,
 } from "./image-providers.js";
 import { getMergedCatalog, findCatalogEntry } from "../../model-catalog/index.js";
+import { genInstancesFromConnections } from "../../model-catalog/gen-connections.js";
 
 /** A configured imageGen/videoGen instance (subset used here). */
 interface GenInstance {
@@ -56,6 +57,33 @@ export function effectiveApiKey(inst: GenInstance, list: GenInstance[]): string 
     if (ref?.apiKey) return ref.apiKey;
   }
   return undefined;
+}
+
+/** Loose shapes read off raw settings for the unified store. */
+interface GenInstanceSource { tag?: string; [k: string]: unknown }
+interface CredentialSource { id?: string; [k: string]: unknown }
+
+/**
+ * Resolve a ResolvedImageProvider from a candidate list whose entries already
+ * carry a direct `apiKey` (the unified store dereferences credentials upfront).
+ * `prefer` selects by id (explicit → no silent fallback); else `def` then the
+ * first usable. Shared by the unified-store path.
+ */
+function resolveFromGenList(
+  list: GenInstance[],
+  prefer: string | undefined,
+  def: string | undefined,
+): ResolvedImageProvider | null {
+  const usable = (p: GenInstance): boolean => !!p.apiKey && getImageProvider(p.kind) !== null;
+  const credsOf = (p: GenInstance): ImageProviderCreds => ({ baseUrl: p.baseUrl, apiKey: p.apiKey! });
+  if (prefer) {
+    const chosen = list.find((p) => p.id === prefer);
+    if (chosen && usable(chosen)) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+    return null;
+  }
+  const preferred = def ? list.find((p) => p.id === def) : undefined;
+  const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
+  return chosen ? { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel } : null;
 }
 
 const DEFAULT_SIZE = "1024x1024";
@@ -139,6 +167,25 @@ interface ResolvedImageProvider {
  */
 function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvider | null {
   const settings = new SettingsManager(cwd, "full").get();
+
+  // 0. Unified store (统一模型接入方案): modelConnections (tag=image) +
+  // credentials. Takes precedence over the legacy imageGen.providers[] so the
+  // unified connection page drives image generation. Falls through to the
+  // legacy paths below when no image connection is configured.
+  const conns = (settings as { modelConnections?: GenInstanceSource[] }).modelConnections;
+  const creds = (settings as { credentials?: CredentialSource[] }).credentials;
+  if (Array.isArray(conns) && conns.some((c) => c.tag === "image")) {
+    const list = genInstancesFromConnections(
+      conns as never[],
+      (Array.isArray(creds) ? creds : []) as never[],
+      getMergedCatalog(),
+      "image",
+    ) as unknown as GenInstance[];
+    const def = (settings as { defaults?: { image?: string } }).defaults?.image;
+    const resolved = resolveFromGenList(list, prefer, def);
+    if (resolved) return resolved;
+    if (prefer) return null; // explicit request not usable → don't silently fall back
+  }
 
   // 1. Canonical imageGen config.
   const imageGen = (settings as { imageGen?: { defaultProvider?: string; providers?: GenInstance[] } }).imageGen;

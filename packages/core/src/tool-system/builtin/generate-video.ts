@@ -32,6 +32,7 @@ import {
 import { getImageUploader, type ImageUploader, type UploaderCreds } from "./image-uploader.js";
 import { effectiveApiKey } from "./generate-image.js";
 import { getMergedCatalog, findCatalogEntry } from "../../model-catalog/index.js";
+import { genInstancesFromConnections } from "../../model-catalog/gen-connections.js";
 
 /** A configured videoGen instance (subset used here). */
 interface VideoInstance {
@@ -200,6 +201,32 @@ interface ResolvedVideoProvider {
 
 function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoProvider | null {
   const settings = new SettingsManager(cwd, "full").get();
+
+  // 0. Unified store (统一模型接入方案): modelConnections (tag=video) +
+  // credentials, taking precedence over legacy videoGen.providers[].
+  const conns = (settings as { modelConnections?: { tag?: string }[] }).modelConnections;
+  const creds = (settings as { credentials?: unknown[] }).credentials;
+  if (Array.isArray(conns) && conns.some((c) => c.tag === "video")) {
+    const list = genInstancesFromConnections(
+      conns as never[],
+      (Array.isArray(creds) ? creds : []) as never[],
+      getMergedCatalog(),
+      "video",
+    ) as unknown as VideoInstance[];
+    const def = (settings as { defaults?: { video?: string } }).defaults?.video;
+    const usable = (p: VideoInstance): boolean => !!p.apiKey && getVideoProvider(p.kind) !== null;
+    const credsOf = (p: VideoInstance): VideoProviderCreds => ({ baseUrl: p.baseUrl, apiKey: p.apiKey! });
+    if (preferKind) {
+      const chosen = list.find((p) => (p.id === preferKind || p.kind === preferKind) && usable(p));
+      if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+      return null;
+    }
+    const preferred = def ? list.find((p) => p.id === def) : undefined;
+    const chosen = (preferred && usable(preferred) ? preferred : undefined) ?? list.find(usable);
+    if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+    if (def || preferKind) return null;
+  }
+
   const videoGen = (settings as { videoGen?: { defaultProvider?: string; providers?: VideoInstance[] } }).videoGen;
   if (videoGen?.providers?.length) {
     const list = videoGen.providers;

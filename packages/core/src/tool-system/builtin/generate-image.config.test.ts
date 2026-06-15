@@ -64,6 +64,33 @@ afterEach(() => {
 
 const ctx = (): ToolContext => ({ cwd: ws } as unknown as ToolContext);
 
+describe("unified modelConnections + credentials (image)", () => {
+  test("resolves an image connection's key from the referenced credential", async () => {
+    writeSettings({
+      credentials: [{ id: "oa-acct", catalogId: "openai-images", apiKey: "sk-unified" }],
+      modelConnections: [
+        { id: "img1", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "oa-acct" },
+      ],
+      defaults: { image: "img1" },
+    });
+    await generateImageTool({ prompt: "p" }, ctx());
+    expect(lastAuthHeader).toBe("Bearer sk-unified");
+    expect(lastBody.model).toBe("gpt-image-2");
+  });
+
+  test("two image connections share one credential's key", async () => {
+    writeSettings({
+      credentials: [{ id: "oa-acct", catalogId: "openai-images", apiKey: "sk-shared-img" }],
+      modelConnections: [
+        { id: "a", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "oa-acct" },
+        { id: "b", catalogId: "openai-images", tag: "image", model: "gpt-image-2", credentialId: "oa-acct" },
+      ],
+    });
+    await generateImageTool({ prompt: "p", provider: "b" }, ctx());
+    expect(lastAuthHeader).toBe("Bearer sk-shared-img");
+  });
+});
+
 describe("imageGen.providers[] config", () => {
   test("selects by id via the provider arg, uses that instance's defaultModel", async () => {
     writeSettings({
