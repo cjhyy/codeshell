@@ -59,18 +59,24 @@ export function getMergedCatalog(): CatalogEntry[] {
 
 /**
  * Look up a catalog entry by id (e.g. an instance's `catalogId`), falling back
- * to the first entry whose `adapterKind` matches `kindFallback` (so legacy
- * instances with no catalogId — id≡kind — still resolve a paramsDoc).
+ * to the first entry whose `adapterKind` matches `kindFallback`. Since an
+ * adapterKind (e.g. "openai") can now back both a text and an image entry,
+ * `tagFallback` disambiguates the fallback to the right group.
  */
 export function findCatalogEntry(
   catalog: CatalogEntry[],
   id: string | undefined,
   kindFallback?: string,
+  tagFallback?: CatalogEntry["tag"],
 ): CatalogEntry | undefined {
   if (id) {
     const exact = catalog.find((e) => e.id === id);
     if (exact) return exact;
   }
-  if (kindFallback) return catalog.find((e) => e.adapterKind === kindFallback);
+  if (kindFallback) {
+    return catalog.find(
+      (e) => e.adapterKind === kindFallback && (!tagFallback || e.tag === tagFallback),
+    );
+  }
   return undefined;
 }

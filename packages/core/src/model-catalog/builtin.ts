@@ -9,9 +9,128 @@
  * its adapterKind points at an already-wired adapter.
  */
 
-import type { CatalogEntry } from "./types.js";
+import type { CatalogEntry, ModelPreset } from "./types.js";
+import type { ProviderKindName } from "../llm/provider-kinds.js";
+import { paramSpecsFromCapability } from "../llm/capabilities/param-specs.js";
+
+/**
+ * Build a text model preset, projecting its params from the capability layer
+ * (rules.ts) so reasoning knobs aren't re-hand-written. `params` is omitted
+ * when the model has none, matching the "absent → no knobs" contract.
+ */
+function textPreset(kind: ProviderKindName, value: string, label?: string): ModelPreset {
+  const params = paramSpecsFromCapability(kind, value);
+  return {
+    value,
+    ...(label ? { label } : {}),
+    ...(params.length > 0 ? { params } : {}),
+  };
+}
 
 export const BUILTIN_CATALOG: CatalogEntry[] = [
+  // ─── text (LLM) ───
+  {
+    id: "openai",
+    tag: "text",
+    adapterKind: "openai",
+    protocol: "openai-compat",
+    displayName: "OpenAI",
+    description: "OpenAI chat models (GPT-5 系列、GPT-4o 等)。需要 OpenAI key。",
+    defaultBaseUrl: "https://api.openai.com/v1",
+    defaultModel: "gpt-5.5",
+    signupUrl: "https://platform.openai.com/api-keys",
+    needsKey: true,
+    modelPresets: [
+      textPreset("openai", "gpt-5.5", "GPT-5.5"),
+      textPreset("openai", "gpt-5", "GPT-5"),
+      textPreset("openai", "gpt-5-mini", "GPT-5 Mini"),
+      textPreset("openai", "gpt-4o", "GPT-4o"),
+      textPreset("openai", "o4-mini", "o4 Mini"),
+    ],
+  },
+  {
+    id: "anthropic",
+    tag: "text",
+    adapterKind: "anthropic",
+    protocol: "anthropic-style",
+    displayName: "Anthropic",
+    description: "Claude 模型(Opus / Sonnet / Haiku)。需要 Anthropic key。",
+    defaultBaseUrl: "https://api.anthropic.com/v1",
+    defaultModel: "claude-opus-4-7",
+    signupUrl: "https://console.anthropic.com/settings/keys",
+    needsKey: true,
+    modelPresets: [
+      textPreset("anthropic", "claude-opus-4-7", "Claude Opus 4.7"),
+      textPreset("anthropic", "claude-sonnet-4-6", "Claude Sonnet 4.6"),
+      textPreset("anthropic", "claude-opus-4-5", "Claude Opus 4.5"),
+      textPreset("anthropic", "claude-haiku-4-5", "Claude Haiku 4.5"),
+    ],
+  },
+  {
+    id: "openrouter",
+    tag: "text",
+    adapterKind: "openrouter",
+    protocol: "openai-compat",
+    displayName: "OpenRouter",
+    description: "通过 OpenRouter 路由多家模型;统一 reasoning 配置。需要 OpenRouter key。",
+    defaultBaseUrl: "https://openrouter.ai/api/v1",
+    defaultModel: "anthropic/claude-sonnet-4.6",
+    signupUrl: "https://openrouter.ai/keys",
+    needsKey: true,
+    modelPresets: [
+      textPreset("openrouter", "anthropic/claude-sonnet-4.6", "Claude Sonnet"),
+      textPreset("openrouter", "openai/gpt-5", "GPT-5"),
+      textPreset("openrouter", "google/gemini-2.5-pro", "Gemini 2.5 Pro"),
+    ],
+  },
+  {
+    id: "deepseek",
+    tag: "text",
+    adapterKind: "deepseek",
+    protocol: "openai-compat",
+    displayName: "DeepSeek",
+    description: "DeepSeek 模型。需要 DeepSeek key。",
+    defaultBaseUrl: "https://api.deepseek.com/v1",
+    defaultModel: "deepseek-v4",
+    signupUrl: "https://platform.deepseek.com/api_keys",
+    needsKey: true,
+    modelPresets: [
+      textPreset("deepseek", "deepseek-v4", "DeepSeek V4"),
+      textPreset("deepseek", "deepseek-chat", "DeepSeek Chat"),
+    ],
+  },
+  {
+    id: "google",
+    tag: "text",
+    adapterKind: "google",
+    protocol: "openai-compat",
+    displayName: "Google Gemini",
+    description: "Gemini 文本模型(OpenAI-compat 端点)。需要 Google key。",
+    defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    defaultModel: "gemini-2.5-pro",
+    signupUrl: "https://aistudio.google.com/apikey",
+    needsKey: true,
+    modelPresets: [
+      textPreset("google", "gemini-2.5-pro", "Gemini 2.5 Pro"),
+      textPreset("google", "gemini-2.5-flash", "Gemini 2.5 Flash"),
+    ],
+  },
+  {
+    id: "ollama",
+    tag: "text",
+    adapterKind: "ollama",
+    protocol: "openai-compat",
+    displayName: "Ollama",
+    description: "本地 Ollama 模型,无需 key。",
+    defaultBaseUrl: "http://localhost:11434/v1",
+    defaultModel: "llama3.1",
+    needsKey: false,
+    modelPresets: [
+      textPreset("ollama", "llama3.1", "Llama 3.1"),
+      textPreset("ollama", "qwen2.5-coder", "Qwen Coder"),
+      textPreset("ollama", "deepseek-r1", "DeepSeek R1"),
+    ],
+  },
   // ─── image ───
   {
     id: "openai-images",

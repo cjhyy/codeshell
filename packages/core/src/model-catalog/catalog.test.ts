@@ -78,8 +78,14 @@ describe("findCatalogEntry", () => {
     expect(e?.adapterKind).toBe("fal");
   });
   test("falls back to adapterKind when id missing (legacy instance)", () => {
-    const e = findCatalogEntry(BUILTIN_CATALOG, undefined, "openai");
+    // openai is now an adapterKind for both text and image entries; the tag
+    // fallback disambiguates so an image instance resolves the image entry.
+    const e = findCatalogEntry(BUILTIN_CATALOG, undefined, "openai", "image");
     expect(e?.id).toBe("openai-images");
+  });
+  test("adapterKind fallback without tag returns first match (any tag)", () => {
+    const e = findCatalogEntry(BUILTIN_CATALOG, undefined, "fal");
+    expect(e?.id).toBe("fal-video");
   });
   test("paramsDoc is present for built-in entries", () => {
     expect(findCatalogEntry(BUILTIN_CATALOG, "openai-images")?.paramsDoc).toBeTruthy();
