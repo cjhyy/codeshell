@@ -1,17 +1,20 @@
 /**
- * Text (LLM) connection panel — display layer of the unified model catalog
- * (L6a). Renders text-tagged catalog templates → instance cards, with params
- * driven by the model's ParamSpec[] (via ParamControls). Reads/writes
- * settings.modelConnections + settings.defaults.text.
- *
- * NOTE: not yet wired as the active model picker — the engine still consumes
- * the legacy models[]/activeKey path (switched in L6b). This panel proves the
- * catalog-driven UI works against the new instance store without touching the
- * request-sending path. See
- * docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §5.
+ * Unified connection panel (text / image / video by `tag`). Renders catalog
+ * templates → instance cards with params driven by each model's ParamSpec[]
+ * (via ParamControls). Reads/writes settings.modelConnections + credentials +
+ * defaults[tag]. The engine consumes defaults[tag] (L6b), so "设为当前" here is
+ * the active model. Card chrome mirrors ModelSection's look.
+ * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §5.
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
+
+/** Compact token count, e.g. 400000 → "400K". Mirrors ModelSection. */
+function formatTok(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return String(n);
+}
 import type { CatalogEntry } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
 import { cacheGet, cacheSet } from "./settingsCache";
@@ -219,12 +222,24 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
             const isDefault = inst.id === defaultId;
             return (
               <ConnCard key={inst.id} isDefault={isDefault}>
-                <header className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <strong className="text-sm font-medium text-foreground">
-                    {entry?.displayName ?? inst.catalogId}
-                  </strong>
-                  <span className="font-mono text-xs text-muted-foreground">#{inst.id}</span>
-                  {isDefault && <Badge variant="accent">默认</Badge>}
+                <header className="flex min-w-0 flex-col gap-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <strong className="truncate text-sm font-medium text-foreground">
+                      {entry?.displayName ?? inst.catalogId}
+                    </strong>
+                    {isDefault && <Badge variant="accent">当前</Badge>}
+                    {preset?.maxContextTokens && (
+                      <Badge variant="secondary">{formatTok(preset.maxContextTokens)} ctx</Badge>
+                    )}
+                    {preset?.maxOutputTokens && (
+                      <Badge variant="secondary">{formatTok(preset.maxOutputTokens)} out</Badge>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <code className="font-mono">#{inst.id}</code>
+                    <span>·</span>
+                    <code className="break-all font-mono">{inst.model}</code>
+                  </div>
                 </header>
 
                 <ConnField label="模型">
@@ -281,30 +296,28 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                 )}
 
                 <ConnCardFooter>
-                  <Button variant="outline" size="sm" onClick={() => void saveInstance(inst.id)}>
+                  <Button
+                    variant={isDefault ? "secondary" : "default"}
+                    size="sm"
+                    disabled={isDefault}
+                    onClick={() => {
+                      setDefaultId(inst.id);
+                      void persist(instances, credentials, inst.id);
+                    }}
+                  >
+                    {isDefault ? "当前" : "设为当前"}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => void saveInstance(inst.id)}>
                     保存
                   </Button>
                   <ConnFooterRight>
-                    {!isDefault && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setDefaultId(inst.id);
-                          void persist(instances, credentials, inst.id);
-                        }}
-                      >
-                        设为默认
-                      </Button>
-                    )}
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="sm"
                       className="text-muted-foreground hover:text-status-err"
                       onClick={() => void removeInstance(inst.id)}
-                      aria-label="删除"
                     >
-                      <Trash2 />
+                      删除
                     </Button>
                   </ConnFooterRight>
                 </ConnCardFooter>
