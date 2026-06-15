@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   enqueueQueuedInput,
   dequeueQueuedInput,
+  drainQueuedInput,
   clearQueuedInput,
   removeQueuedInputAt,
   promoteQueuedInputAt,
@@ -47,5 +48,23 @@ describe("queued input", () => {
 
     expect(next["repo:s1"]).toEqual(["three", "one", "two"]);
     expect(state["repo:s1"]).toEqual(["one", "two", "three"]);
+  });
+
+  it("drains the whole queue as one merged message and clears the slot", () => {
+    const state = { "repo:s1": ["one", "two", "three"], "repo:s2": ["keep"] };
+    const drained = drainQueuedInput(state, "repo:s1");
+
+    expect(drained.text).toBe("one\n\ntwo\n\nthree");
+    expect(drained.state["repo:s1"]).toBeUndefined();
+    // Other buckets untouched; original state not mutated.
+    expect(drained.state["repo:s2"]).toEqual(["keep"]);
+    expect(state["repo:s1"]).toEqual(["one", "two", "three"]);
+  });
+
+  it("drain on an empty bucket returns null without touching state", () => {
+    const state = { "repo:s1": ["x"] };
+    const drained = drainQueuedInput(state, "repo:empty");
+    expect(drained.text).toBeNull();
+    expect(drained.state).toBe(state);
   });
 });

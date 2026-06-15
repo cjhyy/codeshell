@@ -79,9 +79,9 @@ import { planDiskRebuild, type DiskSessionMeta } from "./automation/rebuildFromD
 import {
   enqueueQueuedInput,
   dequeueQueuedInput,
+  drainQueuedInput,
   clearQueuedInput,
   removeQueuedInputAt,
-  promoteQueuedInputAt,
   type QueuedInputState,
 } from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
@@ -227,6 +227,12 @@ function App() {
   const [lifecycle, setLifecycle] = useState<string | null>(null);
   const [busyKeys, setBusyKeys] = useState<Set<string>>(() => new Set());
   const [queuedInputs, setQueuedInputs] = useState<QueuedInputState>({});
+  // Buckets mid-引导打断: the turn was cancelled and a merged re-send is about
+  // to fire on the next busy=false tick. State (not a ref) so `liveTurnActive`
+  // re-renders to stay lit across the cancel→re-send gap — without it busy
+  // briefly drops to false and the "正在思考…" indicator blinks off, leaving the
+  // user unsure anything is still working (interrupt-relay UX, decision #3).
+  const [relayingBuckets, setRelayingBuckets] = useState<Set<string>>(() => new Set());
   // Buckets that finished a turn while the user was viewing a different
   // session. Cleared when the user selects the bucket (handleSelectSession).
   // Not persisted — purely a live "did something finish off-screen" hint.
@@ -647,7 +653,10 @@ function App() {
   // the relayed turn with no thinking indicator. (interrupt-relay fix)
   const lastMessage = state.messages[state.messages.length - 1];
   const liveTurnActive =
-    busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user");
+    (busy && (state.streamingAssistantId !== null || lastMessage?.kind === "user")) ||
+    // 引导打断 gap: turn cancelled, merged re-send pending on the next tick.
+    // Keep the indicator lit so the user sees work is still happening. (#3)
+    relayingBuckets.has(activeBucket);
 
   const setBusyForKey = (key: string, val: boolean): void => {
     // Track turn-start time for the manual-stop elapsed line (TODO 2.8).
@@ -1514,7 +1523,18 @@ function App() {
     // the worker default. configure({sessionId,model}) → requestModelSwitch
     // applies immediately when idle, so it lands before the turn starts. Skip
     // when the bucket has no override (it follows the default — no switch needed).
-    const bucketModel = modelOverrides[bucket] ?? modelOverrides[activeBucket];
+    // Final fallback to `activeModelKey` (= the model the UI currently shows
+    // for this session, itself defaulting to the global default). The engine
+    // session may have been created on a DIFFERENT model than the UI shows —
+    // e.g. the user changed the model from the Settings page (which only
+    // updates disk activeKey, not this renderer's per-bucket override) or the
+    // worker started on a stale pin. Without this fallback, `bucketModel`
+    // could be undefined while the engine quietly runs on its old model — the
+    // deepseek-vision rejection bug, where a "switched to gpt-5" session still
+    // ran on deepseek-v4-flash and refused the image. Always pin before the
+    // turn so the engine matches what the UI claims.
+    const bucketModel =
+      modelOverrides[bucket] ?? modelOverrides[activeBucket] ?? activeModelKey;
     if (bucketModel) {
       void window.codeshell.configure({ sessionId: engineSessionId, model: bucketModel });
     }
@@ -1535,6 +1555,25 @@ function App() {
           bucket,
           result: r as unknown as Record<string, unknown>,
         });
+        // Surface early-return failures that never produced a stream. Some
+        // RunResult reasons (image_error, model_error, prompt_too_long) are
+        // returned by the engine BEFORE any turn starts — no turn_start, no
+        // assistant_message, no turn_complete reaches the stream. Without
+        // this branch the only trace is `r.text` in the log: busy clears,
+        // nothing renders, and it reads as "卡住 / 没反应" (the deepseek-
+        // vision rejection bug). Render the engine's human-readable message
+        // as a turn_end(error) line in the stream + an error toast.
+        const result = r as { reason?: string; text?: string } | null;
+        const reason = result?.reason;
+        if (
+          reason === "image_error" ||
+          reason === "model_error" ||
+          reason === "prompt_too_long"
+        ) {
+          const detail = result?.text?.replace(/^ERROR:\s*/, "") || "本轮请求被拒绝";
+          dispatch({ type: "turn_end", bucket, reason: "error", detail });
+          toast({ message: detail, variant: "error" });
+        }
       })
       .catch((err) => {
         // Server crashed / RPC rejected / non-abort error. Without this
@@ -1558,10 +1597,24 @@ function App() {
     if (busy || !activeSessionId) return;
     const queued = queuedInputs[activeBucket];
     if (!queued || queued.length === 0) return;
-    const { text, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
+    // A 引导打断 relay drains the WHOLE queue as one merged message (the user
+    // asked for everything to land at once); a natural turn-end auto-send takes
+    // just the next item. Either way clear the relay marker once we fire.
+    const isRelay = relayingBuckets.has(activeBucket);
+    const { text, state: next } = isRelay
+      ? drainQueuedInput(queuedInputs, activeBucket)
+      : dequeueQueuedInput(queuedInputs, activeBucket);
     setQueuedInputs(next);
+    if (isRelay) {
+      setRelayingBuckets((prev) => {
+        if (!prev.has(activeBucket)) return prev;
+        const n = new Set(prev);
+        n.delete(activeBucket);
+        return n;
+      });
+    }
     if (text) send(text);
-  }, [busy, activeBucket, activeSessionId, queuedInputs]);
+  }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
 
   const queueInput = (text: string): void => {
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
@@ -1569,7 +1622,8 @@ function App() {
 
   const forceSend = (text: string): void => {
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
-    stop(activeBucket);
+    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
+    stop(activeBucket, { relay: true });
   };
 
   const clearActiveQueuedInput = (): void => {
@@ -1580,17 +1634,26 @@ function App() {
     setQueuedInputs((prev) => removeQueuedInputAt(prev, activeBucket, index));
   };
 
-  const guideActiveQueuedInputAt = (index: number): void => {
-    setQueuedInputs((prev) => promoteQueuedInputAt(prev, activeBucket, index));
-    stop(activeBucket);
+  // 引导打断: interrupt the current turn and send the ENTIRE queue merged into
+  // one message. The relay marker keeps busy/liveTurnActive lit across the
+  // cancel→re-send gap (no "正在思考" flicker) and tells the useEffect above to
+  // drain everything rather than one item. (decisions #1 + #3)
+  const guideActiveQueuedInput = (): void => {
+    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
+    stop(activeBucket, { relay: true });
   };
 
-  const stop = (bucketOverride?: string): void => {
+  const stop = (bucketOverride?: string, opts?: { relay?: boolean }): void => {
     // Guard: when wired as a click handler (onClick={stop}) React passes the
     // MouseEvent as the first arg. Only honor a real string override; anything
     // else falls through to the running/active bucket. Without this the event
     // object reaches `bucket.indexOf` and throws — silently breaking Stop.
     const override = typeof bucketOverride === "string" ? bucketOverride : undefined;
+    // Relay = 引导打断: cancel the turn but DON'T draw a "你在 Ns 后停止了" line —
+    // the user isn't stopping, they're handing off to a queued re-send that
+    // fires on the next busy=false tick. The relay marker (relayingBuckets)
+    // keeps liveTurnActive lit across the gap.
+    const relay = opts?.relay === true;
     // The composer Stop button belongs to the VIEWED conversation (its
     // visibility is busy=busyKeys.has(activeBucket)), so default to activeBucket
     // — NOT the global runningBucket ref, which points at whichever conversation
@@ -1619,7 +1682,7 @@ function App() {
     const elapsedMs = startedAt !== undefined ? Date.now() - startedAt : undefined;
     setBusyForKey(bucket, false);
     if (runningBucketRef.current === bucket) runningBucketRef.current = null;
-    dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
+    if (!relay) dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
     void window.codeshell.cancel(engineSessionId);
   };
 
@@ -2436,7 +2499,7 @@ function App() {
               queuedInputItems={queuedInputs[activeBucket] ?? []}
               onClearQueuedInput={clearActiveQueuedInput}
               onRemoveQueuedInput={removeActiveQueuedInputAt}
-              onGuideQueuedInput={guideActiveQueuedInputAt}
+              onGuideQueuedInput={guideActiveQueuedInput}
               runningAgents={runningAgents}
               activeRepoId={activeRepoId}
               composerSeed={composerSeed}

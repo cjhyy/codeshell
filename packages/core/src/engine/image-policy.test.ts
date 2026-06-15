@@ -3,6 +3,7 @@ import {
   byteLengthFromBase64,
   enforceImagePolicy,
   dropOversizedImages,
+  collectAttachedImagePaths,
   IMAGE_LIMITS,
 } from "./image-policy.js";
 import type { ParsedImage } from "./parse-task.js";
@@ -172,5 +173,52 @@ describe("dropOversizedImages", () => {
     const big = img(IMAGE_LIMITS.maxBytesPerImage + 1, "");
     const r = dropOversizedImages([big]);
     expect(r.placeholder).toContain("(未命名)");
+  });
+});
+
+describe("collectAttachedImagePaths", () => {
+  // resolve: absolute names pass through; bare names join to a fake cwd.
+  const resolve = (name: string) =>
+    name.startsWith("/") ? name : `/work/${name}`;
+
+  it("returns the path for a file-attached image whose name resolves to an existing file", () => {
+    const exists = (p: string) => p === "/work/refs/chen.png";
+    const out = collectAttachedImagePaths(
+      [img(10, "/work/refs/chen.png")],
+      resolve,
+      exists,
+    );
+    expect(out).toEqual(["/work/refs/chen.png"]);
+  });
+
+  it("excludes a pasted screenshot whose name is a bare filename that doesn't exist", () => {
+    const exists = (_p: string) => false; // nothing on disk
+    const out = collectAttachedImagePaths(
+      [img(10, "screenshot.png")],
+      resolve,
+      exists,
+    );
+    expect(out).toEqual([]);
+  });
+
+  it("joins a relative name against cwd before the existence check", () => {
+    const exists = (p: string) => p === "/work/a.png";
+    const out = collectAttachedImagePaths([img(10, "a.png")], resolve, exists);
+    expect(out).toEqual(["/work/a.png"]);
+  });
+
+  it("keeps only the images that exist, in order, skipping blanks", () => {
+    const exists = (p: string) => p === "/work/keep1.png" || p === "/abs/keep2.png";
+    const out = collectAttachedImagePaths(
+      [
+        img(10, "keep1.png"),
+        img(10, "gone.png"),
+        img(10, "  "), // blank name → skipped
+        img(10, "/abs/keep2.png"),
+      ],
+      resolve,
+      exists,
+    );
+    expect(out).toEqual(["/work/keep1.png", "/abs/keep2.png"]);
   });
 });
