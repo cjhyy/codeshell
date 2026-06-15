@@ -1907,7 +1907,6 @@ export class Engine {
       const sid = session.state.sessionId;
       const isTopLevel = this.config.isSubAgent !== true;
       if (isTopLevel) {
-        let aborted = options?.signal?.aborted === true;
         // Wait on BOTH background sub-agents AND non-agent background jobs
         // (GenerateVideo's poll loop). Without the job arm, a video rendering
         // in the background is invisible here, the run resolves immediately,
@@ -1916,14 +1915,25 @@ export class Engine {
         const stillRunning = (): boolean =>
           asyncAgentRegistry.hasRunningForSession(sid) ||
           backgroundJobRegistry.hasRunningForSession(sid);
-        while (!aborted && stillRunning()) {
-          aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
-        }
-        // Drain everything that came back — including partial results when the
-        // user aborted with one agent still stuck. Nothing already returned is
-        // lost: it's injected into the transcript either way.
-        const pending = notificationQueue.drainAll(sid);
-        if (pending.length > 0) {
+        let aborted = options?.signal?.aborted === true;
+        // OUTER loop: a summarize turn can itself spawn NEW background work
+        // (e.g. a goal "generate 2 videos sequentially" → after video #1's
+        // notification, the summarize turn submits video #2). Without looping
+        // back, that new job renders into the void — its notification lands
+        // with nobody to drain it and the run resolves "done" while work is in
+        // flight. So we wait → drain → summarize, then re-check; we only exit
+        // when a summarize turn produces no new background work (or on abort).
+        // turnCount keeps accumulating across summarize turns, so the
+        // turn-loop's maxTurns still bounds runaway re-summarization.
+        for (;;) {
+          while (!aborted && stillRunning()) {
+            aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
+          }
+          // Drain everything that came back — including partial results when the
+          // user aborted with one agent still stuck. Nothing already returned is
+          // lost: it's injected into the transcript either way.
+          const pending = notificationQueue.drainAll(sid);
+          if (pending.length === 0) break;
           const injected: Message = {
             role: "user",
             content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
@@ -1935,12 +1945,12 @@ export class Engine {
             // user message in this session will see these results in history.
             session.transcript.appendMessage(injected.role, injected.content);
             result = { ...result, messages: [...result.messages, injected] };
-          } else {
-            // All background agents finished: one more turn so the agent reads
-            // every result and summarizes. turnCount keeps accumulating, so
-            // maxTurns still bounds runaway re-summarization.
-            result = await turnLoop.run([...result.messages, injected]);
+            break;
           }
+          // Background work finished: one more turn so the agent reads every
+          // result and either summarizes (done) or spawns the next step (which
+          // the outer loop will then wait on).
+          result = await turnLoop.run([...result.messages, injected]);
         }
       }
     } finally {
