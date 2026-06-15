@@ -88,6 +88,40 @@ describe("modelEntriesFromConnections", () => {
     expect(e.maxOutputTokens).toBe(128000);
   });
 
+  test("paramValues.reasoning enum → ModelEntry.reasoning effort", () => {
+    const insts: ModelInstance[] = [
+      { id: "g", catalogId: "openai", tag: "text", model: "gpt-5.5", apiKey: "k", paramValues: { reasoning: "high" } },
+    ];
+    const e = modelEntriesFromConnections(insts, CATALOG)[0]!;
+    expect(e.reasoning).toEqual({ mode: "effort", effort: "high" });
+  });
+
+  test("paramValues.reasoning number → ModelEntry.reasoning budget", () => {
+    const insts: ModelInstance[] = [
+      { id: "c", catalogId: "anthropic", tag: "text", model: "claude-opus-4-7", apiKey: "k", paramValues: { reasoning: 8192 } },
+    ];
+    const e = modelEntriesFromConnections(insts, CATALOG)[0]!;
+    expect(e.reasoning).toEqual({ mode: "budget", budgetTokens: 8192 });
+  });
+
+  test("paramValues.reasoning boolean → ModelEntry.reasoning on/off", () => {
+    const on: ModelInstance[] = [
+      { id: "d", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k", paramValues: { reasoning: true } },
+    ];
+    expect(modelEntriesFromConnections(on, CATALOG)[0]!.reasoning).toEqual({ mode: "on" });
+    const off: ModelInstance[] = [
+      { id: "d", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k", paramValues: { reasoning: false } },
+    ];
+    expect(modelEntriesFromConnections(off, CATALOG)[0]!.reasoning).toEqual({ mode: "off" });
+  });
+
+  test("no paramValues → no reasoning on the entry", () => {
+    const insts: ModelInstance[] = [
+      { id: "g", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k" },
+    ];
+    expect(modelEntriesFromConnections(insts, CATALOG)[0]!.reasoning).toBeUndefined();
+  });
+
   test("instance with an unknown catalogId is skipped (not a crash)", () => {
     const insts: ModelInstance[] = [
       { id: "ok", catalogId: "openai", tag: "text", model: "gpt-4o", apiKey: "k" },
