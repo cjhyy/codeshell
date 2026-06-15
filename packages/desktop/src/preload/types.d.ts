@@ -886,17 +886,47 @@ export interface ImageProbeInput {
   model?: string;
 }
 
+/** How a param lands on the request body (mirror of core WireSpec). */
+export interface WireSpec {
+  field: string;
+}
+
+/** One generic declarative param (mirror of core ParamSpec). */
+export interface ParamSpec {
+  name: string;
+  label?: string;
+  control: "enum" | "number" | "toggle" | "text";
+  options?: string[];
+  min?: number;
+  max?: number;
+  default?: string | number | boolean;
+  doc?: string;
+  wire?: WireSpec;
+}
+
+/** A known model under an entry (mirror of core ModelPreset). */
+export interface ModelPreset {
+  value: string;
+  label?: string;
+  maxContextTokens?: number;
+  maxOutputTokens?: number;
+  supportsVision?: boolean;
+  params?: ParamSpec[];
+}
+
 /** Model catalog template (mirror of core CatalogEntry). */
 export interface CatalogEntry {
   id: string;
-  tag: "image" | "video" | "audio";
+  tag: "text" | "image" | "video" | "audio";
   adapterKind: string;
+  protocol?: "openai-compat" | "anthropic-style";
   shape?: "generic-sync" | "fal-queue";
   displayName: string;
   description: string;
   defaultBaseUrl: string;
   defaultModel?: string;
-  modelPresets?: Array<{ value: string; label?: string }>;
+  needsKey?: boolean;
+  modelPresets?: ModelPreset[];
   signupUrl?: string;
   test?: boolean;
   paramsDoc?: string;
