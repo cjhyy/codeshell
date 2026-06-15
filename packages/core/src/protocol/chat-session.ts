@@ -117,6 +117,14 @@ export class ChatSession {
   }
 
   /**
+   * Clear this session's persisted active goal (CC /goal clear). Works idle or
+   * mid-run. Returns true if a goal was actually cleared.
+   */
+  clearGoal(): boolean {
+    return this.engine.clearGoal(this.id);
+  }
+
+  /**
    * Switch this session's active model (per-session, not worker-global).
    * Applies immediately when idle; defers to the next run boundary when a
    * turn is in flight so a hot switch never mutates the model under a

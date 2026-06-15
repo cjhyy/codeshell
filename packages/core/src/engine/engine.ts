@@ -513,6 +513,12 @@ export class Engine {
    * running goal's turn/budget ceilings mid-run (TODO 3.1). Null when idle.
    */
   private activeTurnLoop: TurnLoop | null = null;
+  /**
+   * The goal-stop hook of the in-flight goal run, exposed so clearGoal() can
+   * unregister it mid-run (the closure holds the now-cleared goal and would
+   * otherwise keep re-blocking the stop). Null when no goal run is active.
+   */
+  private activeGoalHook: ReturnType<typeof createGoalStopHook> | null = null;
 
   /** Public accessor so UI/clients can read the resolved per-model window. */
   get maxContextTokens(): number {
@@ -1797,15 +1803,49 @@ export class Engine {
     // Normalize the raw goal (string | GoalConfig) once at the run boundary;
     // everything inward uses the GoalConfig. normalizeGoal() returns undefined
     // when there's effectively no goal (empty objective).
-    const normalizedGoal = normalizeGoal(options?.goal ?? this.config.goal);
+    //
+    // PERSISTENT GOAL (CC /goal style): a goal set on one send survives across
+    // later sends and manual interrupts until met or cleared. Resolution:
+    //   1. options.goal — this send explicitly sets/replaces the goal.
+    //   2. session.state.activeGoal — a goal set on an earlier send.
+    //   3. config.goal — engine-level default (rare; e.g. headless).
+    // When (1) supplies a goal that differs from the stored one we REPLACE the
+    // persisted active goal (one active goal per session) and announce it. A
+    // bare send with no options.goal inherits the stored active goal so the
+    // model keeps working toward it — that's what makes it persistent.
+    const explicitGoal = normalizeGoal(options?.goal);
+    const storedGoal = this.config.isSubAgent !== true ? session.state.activeGoal : undefined;
+    if (explicitGoal && this.config.isSubAgent !== true) {
+      const replaced = !!storedGoal && storedGoal.objective !== explicitGoal.objective;
+      session.state.activeGoal = explicitGoal;
+      this.sessionManager.saveState(session.state);
+      options?.onStream?.({
+        type: "goal_set",
+        objective: explicitGoal.objective,
+        replaced,
+      });
+    }
+    const normalizedGoal = explicitGoal ?? storedGoal ?? normalizeGoal(this.config.goal);
     let goalHookHandler: ReturnType<typeof createGoalStopHook> | null = null;
     if (normalizedGoal && this.config.isSubAgent !== true) {
       goalHookHandler = createGoalStopHook({
         goal: normalizedGoal,
         llm: llmClient,
         log: logger,
+        // Clear the persisted active goal the moment the judge says it's met,
+        // so a later bare send doesn't re-inherit a satisfied goal. The hook
+        // calls this from inside its met branch (single source of truth for
+        // "goal achieved"); engine owns the persistence side-effect.
+        onMet: () => {
+          if (session.state.activeGoal) {
+            session.state.activeGoal = undefined;
+            this.sessionManager.saveState(session.state);
+          }
+        },
       });
       this.hooks.register("on_stop", goalHookHandler, 0, "goal-stop");
+      // Expose for clearGoal() mid-run. Already guarded by isSubAgent above.
+      this.activeGoalHook = goalHookHandler;
     }
 
     // Surface compaction events to the UI so the user knows when context was trimmed.
@@ -1957,6 +1997,7 @@ export class Engine {
       // Run-scoped: drop the GoalStopHook so a later goal-less send on this
       // long-lived engine doesn't keep blocking stops.
       if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
+      if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
       if (this.activeTurnLoop === turnLoop) this.activeTurnLoop = null;
     }
     this.lastMessages = result.messages;
@@ -2478,6 +2519,34 @@ export class Engine {
    * engine.run() call for this session picks up the injected content
    * instead of a stale snapshot from the previous run.
    */
+  /**
+   * Clear a session's persisted active goal (CC `/goal clear`). Works whether
+   * the session is idle or its goal run is in flight: it wipes
+   * `state.activeGoal` (so the next bare send won't re-inherit it) and, if a
+   * goal hook is currently registered for this engine, unregisters it so an
+   * in-flight run can stop instead of being re-blocked by the now-cleared goal.
+   * Returns true if a goal was actually cleared. Idempotent — clearing a
+   * session with no active goal is a no-op returning false.
+   */
+  clearGoal(sessionId: string): boolean {
+    if (!this.sessionManager.exists(sessionId)) return false;
+    const session = this.sessionManager.resume(sessionId);
+    const had = session.state.activeGoal !== undefined;
+    if (had) {
+      session.state.activeGoal = undefined;
+      this.sessionManager.saveState(session.state);
+    }
+    // If THIS session's goal run is in flight, drop its stop hook so the
+    // current run can terminate (the closure-held goal would otherwise keep
+    // re-blocking). The run's own `finally` also unregisters; double-unregister
+    // is safe (set delete is idempotent).
+    if (this.activeGoalHook && this.lastSessionId === sessionId) {
+      this.hooks.unregister("on_stop", this.activeGoalHook);
+      this.activeGoalHook = null;
+    }
+    return had;
+  }
+
   injectContext(sessionId: string, content: string): void {
     const session = this.sessionManager.resume(sessionId);
     session.transcript.appendMessage("assistant", content);

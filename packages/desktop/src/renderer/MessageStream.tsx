@@ -170,7 +170,20 @@ export function MessageStream({
             if (!text && !annotations && images.length === 0) return null;
             return (
               <div key={m.id} className="group flex flex-col items-end px-4 py-1.5">
-                <div className="min-w-0 max-w-[80%] rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm">
+                {m.isGoal && (
+                  // Persistent-goal marker (CC /goal). This send set/advanced a goal.
+                  <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
+                    ◎ 目标
+                  </span>
+                )}
+                <div
+                  className={
+                    "min-w-0 max-w-[80%] rounded-xl border px-3 py-2 text-sm " +
+                    (m.isGoal
+                      ? "border-status-running/50 bg-status-running/10"
+                      : "border-border bg-muted/40")
+                  }
+                >
                   {annotations && <AnnotationsBlock block={annotations} />}
                   {text && (
                     <CollapsibleContent>

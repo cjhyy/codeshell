@@ -2,6 +2,8 @@
  * Core type definitions for the code-shell orchestration framework.
  */
 
+import type { GoalConfig } from "./engine/goal.js";
+
 // ─── Content & Messages ───────────────────────────────────────────
 
 export interface ContentBlock {
@@ -202,6 +204,16 @@ export interface SessionState {
   title?: string;
   /** Persisted cost tracking state (survives process restart). */
   costState?: Record<string, unknown>;
+  /**
+   * Active persistent goal (CC `/goal` style). Set once, it survives across
+   * messages AND manual interrupts until the judge says it's met or the user
+   * clears it. Absent → no active goal. When a run supplies a new goal it
+   * REPLACES this (one active goal per session). The judge's `met` verdict and
+   * `agent/goalClear` both clear it. Persisted so it survives resume/refresh;
+   * on resume the objective carries over but the run-scoped turn/token/time
+   * baselines reset (matching CC). See engine.run goal-resolution.
+   */
+  activeGoal?: GoalConfig;
 }
 
 export interface TokenUsage {
@@ -377,6 +389,13 @@ export type StreamEvent =
       nearest?: "turns" | "stopBlocks";
       agentId?: string;
     }
+  // Persistent goal lifecycle (CC /goal style). `goal_set` fires when a send
+  // establishes or REPLACES the session's active goal (`replaced` true on
+  // replace). `goal_cleared` fires on explicit clear (agent/goalClear) — the
+  // judge-met path emits goal_progress(met) instead. The UI keeps an
+  // "active goal" per session from these + goal_progress.
+  | { type: "goal_set"; objective: string; replaced: boolean }
+  | { type: "goal_cleared" }
   | { type: "error"; error: string; agentId?: string }
   | { type: "tombstone"; messageId: string }
   | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }

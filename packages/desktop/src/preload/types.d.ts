@@ -261,6 +261,8 @@ export interface CodeshellApi {
     ok: boolean;
     limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number };
   }>;
+  /** Clear a session's persisted active goal (CC /goal clear). */
+  goalClear(sessionId: string): Promise<{ ok: boolean; cleared: boolean }>;
   /** Background-shell dock panel (TODO 3.2). */
   listBackgroundShells(sessionId: string): Promise<{ shells: BackgroundShellInfo[] }>;
   backgroundShellOutput(
@@ -417,6 +419,8 @@ export interface CodeshellApi {
   syncBrowserAnchors(anchors: unknown[]): void;
   /** Popout: subscribe to the broadcast anchor state. Returns unsubscribe. */
   onBrowserAnchorsState(cb: (anchors: unknown[]) => void): () => void;
+  /** A page link wanted a new window; main routes it here to open as a new tab. */
+  onBrowserOpenTab(cb: (payload: { url: string }) => void): () => void;
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove(anchorId: string): void;
   /** From a popout: ask the owner to update an anchor's comment. */

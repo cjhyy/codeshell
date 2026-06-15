@@ -208,6 +208,9 @@ contextBridge.exposeInMainWorld("codeshell", {
       ok: boolean;
       limits: { maxTurns: number; tokenBudget?: number; timeBudgetMs?: number; maxStopBlocks: number };
     }>,
+  /** Clear a session's persisted active goal (CC /goal clear). */
+  goalClear: (sessionId: string) =>
+    rpc("agent/goalClear", { sessionId }).then(rpcResult) as Promise<{ ok: boolean; cleared: boolean }>,
   /** List a session's background shells for the dock panel (TODO 3.2). */
   listBackgroundShells: (sessionId: string) =>
     rpc("agent/backgroundShells", { sessionId, action: "list" }).then(rpcResult) as Promise<{
@@ -614,6 +617,13 @@ contextBridge.exposeInMainWorld("codeshell", {
     const h = (_e: IpcRendererEvent, anchors: unknown[]) => cb(anchors);
     ipcRenderer.on("browser:anchors-state", h);
     return () => ipcRenderer.removeListener("browser:anchors-state", h);
+  },
+  /** A page link wanted a new window (target=_blank / window.open); main routes
+   *  it here so the browser panel opens it as a new tab. Returns unsubscribe. */
+  onBrowserOpenTab: (cb: (payload: { url: string }) => void): (() => void) => {
+    const h = (_e: IpcRendererEvent, payload: { url: string }) => cb(payload);
+    ipcRenderer.on("browser:open-tab", h);
+    return () => ipcRenderer.removeListener("browser:open-tab", h);
   },
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove: (anchorId: string) => ipcRenderer.send("browser:anchor-remove", anchorId),

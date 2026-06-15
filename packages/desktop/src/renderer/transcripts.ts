@@ -351,6 +351,11 @@ export function loadTranscript(
       activeAgents: parsed.activeAgents ?? {},
       agentMessageIndex: parsed.agentMessageIndex ?? {},
       turnEpoch: parsed.turnEpoch ?? 0,
+      // Persisted so the active-goal marker + popover survive a refresh /
+      // localStorage reload (core also persists it in session state, but the
+      // goal_set event isn't replayed from the transcript). Absent on legacy
+      // saved transcripts → null.
+      activeGoal: parsed.activeGoal ?? null,
     };
   } catch {
     return INITIAL_STATE;

@@ -138,7 +138,7 @@ type ComposerDraftsMap = Record<string, ComposerDraftState>;
 const EMPTY_ATTACHMENTS: ImageAttachment[] = [];
 
 type Action =
-  | { type: "user_message"; bucket: string; text: string }
+  | { type: "user_message"; bucket: string; text: string; isGoal?: boolean }
   | { type: "stream"; bucket: string; event: StreamEvent }
   | { type: "stream_batch"; bucket: string; events: StreamEvent[] }
   | { type: "hydrate"; bucket: string; state: MessagesReducerState }
@@ -169,7 +169,7 @@ function reducer(map: TranscriptsMap, action: Action): TranscriptsMap {
   let next: MessagesReducerState;
   switch (action.type) {
     case "user_message":
-      next = appendUserMessage(current, action.text, Date.now());
+      next = appendUserMessage(current, action.text, Date.now(), action.isGoal);
       break;
     case "ask_user":
       next = appendAskUserMessage(current, {
@@ -1483,7 +1483,7 @@ function App() {
       bucket,
       engineSessionId,
     });
-    dispatch({ type: "user_message", bucket, text });
+    dispatch({ type: "user_message", bucket, text, isGoal: goalEnabled && !!text.trim() });
     setBusyForKey(bucket, true);
     runningBucketRef.current = bucket;
     // Register the route NOW so concurrent sends can each find their own
@@ -2376,6 +2376,23 @@ function App() {
     return null;
   }, [state.messages]);
 
+  // Clear the active persistent goal (CC /goal clear) for the active session.
+  // The reducer will also drop state.activeGoal on the goal_cleared event, but
+  // we don't get that event back over the stream for an idle session, so the
+  // TopBar reflects the cleared state via the engine round-trip + a local nudge
+  // isn't needed: goalClear's core path is authoritative and the next render
+  // reads the (now-absent) goal once the session reloads. For immediate UI
+  // feedback we also turn the composer goal toggle off below.
+  const handleClearGoal = (): void => {
+    const eid = engineSessionIdForActive();
+    if (!eid) return;
+    void window.codeshell.goalClear(eid).catch((e) =>
+      window.codeshell.log("goal.clear.failed", { error: String(e) }),
+    );
+    // Reflect immediately: drop the composer goal toggle for this bucket.
+    setGoalOverrides((prev) => ({ ...prev, [activeBucket]: false }));
+  };
+
   const platformClassEarly =
     typeof navigator !== "undefined" && /Mac/.test(navigator.platform)
       ? "platform-darwin"
@@ -2418,6 +2435,8 @@ function App() {
           onTogglePanel={togglePanel}
           activity={liveActivity}
           tasks={latestTasks}
+          activeGoal={state.activeGoal}
+          onClearGoal={handleClearGoal}
         />
       </div>
 

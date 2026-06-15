@@ -164,3 +164,36 @@ describe("createGoalStopHook background-job short-circuit", () => {
     expect(res.continueSession).toBe(true);
   });
 });
+
+describe("createGoalStopHook onMet callback (persistent goal clear)", () => {
+  it("calls onMet exactly when the judge returns met", async () => {
+    let mets = 0;
+    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const hook = createGoalStopHook({ goal: "g", llm, log: silentLog, onMet: () => mets++ });
+    const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "done" }));
+    expect((res.data as { goalVerdict?: { met: boolean } })?.goalVerdict?.met).toBe(true);
+    expect(mets).toBe(1);
+  });
+
+  it("does NOT call onMet when the goal is not met", async () => {
+    let mets = 0;
+    const llm = fakeLLM(JSON.stringify({ met: false, gaps: "还差" }));
+    const hook = createGoalStopHook({ goal: "g", llm, log: silentLog, onMet: () => mets++ });
+    await hook(ctx({ goal: "g", sessionId: "s1", finalText: "x" }));
+    expect(mets).toBe(0);
+  });
+
+  it("a throwing onMet does not block the met verdict", async () => {
+    const llm = fakeLLM(JSON.stringify({ met: true, gaps: "" }));
+    const hook = createGoalStopHook({
+      goal: "g",
+      llm,
+      log: silentLog,
+      onMet: () => {
+        throw new Error("boom");
+      },
+    });
+    const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "done" }));
+    expect((res.data as { goalVerdict?: { met: boolean } })?.goalVerdict?.met).toBe(true);
+  });
+});

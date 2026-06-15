@@ -23,6 +23,11 @@ interface Props {
   /** Latest TaskList snapshot. When present the popover shows the
    *  numbered task overview instead of the tool/elapsed summary. */
   tasks?: TaskListMessage | null;
+  /** The session's active persistent goal (CC /goal). When present the dot
+   *  shows a ◎ marker and the popover surfaces a Goal block + clear button. */
+  activeGoal?: { objective: string; round: number } | null;
+  /** Clear the active goal (agent/goalClear). */
+  onClearGoal?: () => void;
 }
 
 /**
@@ -46,6 +51,8 @@ function TopBarImpl({
   onTogglePanel,
   activity,
   tasks,
+  activeGoal,
+  onClearGoal,
 }: Props) {
   return (
     // The window is frameless on macOS (titleBarStyle: "hiddenInset"),
@@ -75,7 +82,13 @@ function TopBarImpl({
         {sessionTitle && <span className="truncate text-muted-foreground">{sessionTitle}</span>}
       </div>
       <div className="flex items-center gap-1">
-        <StatusBadge busy={busy} activity={activity} tasks={tasks ?? null} />
+        <StatusBadge
+          busy={busy}
+          activity={activity}
+          tasks={tasks ?? null}
+          activeGoal={activeGoal ?? null}
+          onClearGoal={onClearGoal}
+        />
         <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <IconButton
             label={panelOpen ? "关闭面板" : "打开面板"}
@@ -100,10 +113,14 @@ function StatusBadge({
   busy,
   activity,
   tasks,
+  activeGoal,
+  onClearGoal,
 }: {
   busy: boolean;
   activity?: LiveActivity;
   tasks: TaskListMessage | null;
+  activeGoal: { objective: string; round: number } | null;
+  onClearGoal?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<number | null>(null);
@@ -135,10 +152,16 @@ function StatusBadge({
       onFocus={() => setOpen(true)}
       onBlur={scheduleClose}
     >
-      <StatusDot
-        status={busy ? "running" : "idle"}
-        title={busy ? "running" : "idle"}
-      />
+      <div className="flex items-center gap-1">
+        {activeGoal && (
+          // ◎ marker: an active persistent goal exists. Hover the dot to see it.
+          <span className="text-xs text-status-running" title="有活跃目标">◎</span>
+        )}
+        <StatusDot
+          status={busy ? "running" : "idle"}
+          title={busy ? "running" : "idle"}
+        />
+      </div>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-1">
           <StatusPopover
@@ -153,6 +176,8 @@ function StatusBadge({
             }
             busy={busy}
             tasks={tasks}
+            activeGoal={activeGoal}
+            onClearGoal={onClearGoal}
           />
         </div>
       )}
@@ -188,7 +213,12 @@ function topBarPropsEqual(a: Props, b: Props): boolean {
     a.activity?.toolInFlight === b.activity?.toolInFlight &&
     a.activity?.toolCount === b.activity?.toolCount &&
     a.activity?.lastTool?.id === b.activity?.lastTool?.id &&
-    a.activity?.lastTool?.status === b.activity?.lastTool?.status
+    a.activity?.lastTool?.status === b.activity?.lastTool?.status &&
+    // Active goal drives the ◎ marker + popover Goal block, so changes must
+    // re-render. Compare by value (objective + round); the callback identity
+    // is stable enough to ignore.
+    a.activeGoal?.objective === b.activeGoal?.objective &&
+    a.activeGoal?.round === b.activeGoal?.round
   );
 }
 

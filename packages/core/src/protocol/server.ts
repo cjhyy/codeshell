@@ -188,6 +188,9 @@ export class AgentServer {
       case Methods.GoalExtend:
         this.handleGoalExtend(req);
         break;
+      case Methods.GoalClear:
+        this.handleGoalClear(req);
+        break;
       case Methods.BackgroundShells:
         this.handleBackgroundShells(req);
         break;
@@ -548,6 +551,35 @@ export class AgentServer {
       return;
     }
     this.transport.send(createResponse(req.id, { ok: true, limits: result }));
+  }
+
+  /**
+   * Clear a session's persisted active goal (CC /goal clear). Routes to the
+   * named session, falling back to the legacy single engine (mirrors
+   * handleGoalExtend / handleCancel's dual path). Returns { ok, cleared }.
+   */
+  private handleGoalClear(req: RpcRequest): void {
+    const params = (req.params ?? {}) as { sessionId?: string };
+    const session =
+      this.chatManager && typeof params.sessionId === "string"
+        ? this.chatManager.get(params.sessionId)
+        : undefined;
+    if (!session && !this.legacyEngine) {
+      this.transport.send(
+        createErrorResponse(
+          req.id,
+          ErrorCodes.SessionClosed,
+          params.sessionId ? `No such session: ${params.sessionId}` : "sessionId is required",
+        ),
+      );
+      return;
+    }
+    const cleared = session
+      ? session.clearGoal()
+      : params.sessionId
+        ? (this.legacyEngine!.clearGoal(params.sessionId) ?? false)
+        : false;
+    this.transport.send(createResponse(req.id, { ok: true, cleared }));
   }
 
   /**

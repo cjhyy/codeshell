@@ -297,6 +297,8 @@ export const Methods = {
   CloseSession: "agent/closeSession",
   /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */
   GoalExtend: "agent/goalExtend",
+  /** Clear a session's persisted active goal (CC /goal clear). */
+  GoalClear: "agent/goalClear",
   /** Query/control a session's background shells for the UI panel (TODO 3.2). */
   BackgroundShells: "agent/backgroundShells",
 

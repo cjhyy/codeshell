@@ -24,6 +24,9 @@ export interface UserMessage {
   /** Epoch ms the user sent this message. Absent on replayed/historical
    *  transcripts (FoldItem carries no timestamp) — render nothing then. */
   createdAt?: number;
+  /** True when this send established/advanced a persistent goal (CC /goal).
+   *  Drives the ◎ goal marker on the message bubble. */
+  isGoal?: boolean;
 }
 
 export interface AssistantMessage {
@@ -256,6 +259,13 @@ export interface MessagesReducerState {
    * way when a new turn finishes.
    */
   turnEpoch: number;
+  /**
+   * The session's active persistent goal (CC /goal). Set on `goal_set`,
+   * round/progress updated by `goal_progress`, cleared on `goal_cleared` or
+   * `goal_progress(met)`. Null when no goal is active. Drives the TopBar
+   * status-popover Goal block + the goal-message marker.
+   */
+  activeGoal: { objective: string; round: number } | null;
 }
 
 export const INITIAL_STATE: MessagesReducerState = {
@@ -267,6 +277,7 @@ export const INITIAL_STATE: MessagesReducerState = {
   activeAgents: {},
   agentMessageIndex: {},
   turnEpoch: 0,
+  activeGoal: null,
 };
 
 let _counter = 0;
@@ -673,7 +684,28 @@ export function applyStreamEvent(
             (m) => !(m.kind === "goal_progress" && m.status === "approaching_limit"),
           )
         : state.messages;
-      return { ...state, messages: [...base, msg] };
+      // Track the active goal's round; clear it when the goal settles
+      // (met = achieved, exhausted = gave up). not_met/approaching_limit keep
+      // it active and bump the round so the popover shows "第 N 轮".
+      const activeGoal =
+        event.status === "met" || event.status === "exhausted"
+          ? null
+          : state.activeGoal
+            ? { ...state.activeGoal, round: event.round }
+            : state.activeGoal;
+      return { ...state, messages: [...base, msg], activeGoal };
+    }
+
+    case "goal_set": {
+      // A send established or replaced the session's persistent goal.
+      return {
+        ...state,
+        activeGoal: { objective: event.objective, round: 0 },
+      };
+    }
+
+    case "goal_cleared": {
+      return { ...state, activeGoal: null };
     }
 
     case "usage_update": {
@@ -859,12 +891,14 @@ export function appendUserMessage(
   /** Epoch ms to record as the send time. Omit on transcript replay
    *  (FoldItem has no original timestamp) so we don't stamp replay-time. */
   createdAt?: number,
+  /** True when this send sets/advances a persistent goal (drives ◎ marker). */
+  isGoal?: boolean,
 ): MessagesReducerState {
   return {
     ...state,
     messages: [
       ...state.messages,
-      { kind: "user", id: freshId("user"), text, createdAt },
+      { kind: "user", id: freshId("user"), text, createdAt, isGoal },
     ],
   };
 }

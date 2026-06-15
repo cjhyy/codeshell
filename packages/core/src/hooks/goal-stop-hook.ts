@@ -49,6 +49,13 @@ export interface GoalStopHookOptions {
   log: GoalLogger;
   /** Override the goal instead of reading ctx.data.goal (mainly for tests). */
   goal?: string | GoalConfig;
+  /**
+   * Called once when the judge first returns met:true, before this handler
+   * returns. The engine uses it to clear the session's persisted activeGoal so
+   * a later bare send doesn't re-inherit a satisfied goal. Optional so tests /
+   * non-persistent callers can omit it.
+   */
+  onMet?: () => void;
 }
 
 const JUDGE_SYSTEM =
@@ -154,6 +161,14 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
 
     if (verdict.met) {
       log.info("goal_stop.met", { cat: "goal" });
+      // Clear the persisted active goal (engine side-effect) so a later bare
+      // send doesn't re-inherit a satisfied goal. Isolated so a throwing
+      // callback can't block the stop.
+      try {
+        opts.onMet?.();
+      } catch {
+        /* ignore */
+      }
       // Surface the verdict so the loop can emit a goal_progress(met) event.
       return { data: { goalVerdict: { met: true, gaps: "" } } };
     }

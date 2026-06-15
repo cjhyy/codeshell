@@ -612,3 +612,52 @@ describe("applyStreamEvent — background_agent_completed", () => {
     expect(line).toBe("✓ researcher完成:done, found 3 issues");
   });
 });
+
+describe("persistent goal lifecycle (reducer)", () => {
+  test("goal_set establishes the active goal at round 0", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_set", { objective: "完成全部任务", replaced: false } as never),
+    ]);
+    expect(s.activeGoal).toEqual({ objective: "完成全部任务", round: 0 });
+  });
+
+  test("goal_set replaces an existing active goal", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_set", { objective: "目标一", replaced: false } as never),
+      ev("goal_set", { objective: "目标二", replaced: true } as never),
+    ]);
+    expect(s.activeGoal?.objective).toBe("目标二");
+  });
+
+  test("goal_progress(not_met) bumps the round, keeps goal active", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_set", { objective: "g", replaced: false } as never),
+      ev("goal_progress", { status: "not_met", round: 2, gaps: "还差" } as never),
+    ]);
+    expect(s.activeGoal).toEqual({ objective: "g", round: 2 });
+  });
+
+  test("goal_progress(met) clears the active goal", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_set", { objective: "g", replaced: false } as never),
+      ev("goal_progress", { status: "met", round: 3 } as never),
+    ]);
+    expect(s.activeGoal).toBeNull();
+  });
+
+  test("goal_progress(exhausted) clears the active goal", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_set", { objective: "g", replaced: false } as never),
+      ev("goal_progress", { status: "exhausted", round: 5 } as never),
+    ]);
+    expect(s.activeGoal).toBeNull();
+  });
+
+  test("goal_cleared wipes the active goal", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ev("goal_set", { objective: "g", replaced: false } as never),
+      ev("goal_cleared", {} as never),
+    ]);
+    expect(s.activeGoal).toBeNull();
+  });
+});
