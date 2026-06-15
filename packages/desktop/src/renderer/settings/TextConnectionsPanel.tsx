@@ -40,9 +40,11 @@ import {
 import { ParamControls } from "./ParamControls";
 import {
   buildTextInstance,
-  reuseKeyCandidates,
-  reuseKeyLabel,
+  credentialCandidates,
+  credentialLabel,
+  uniqueInstanceId,
   type ModelInstance,
+  type Credential,
 } from "./textConnections";
 
 interface Props {
@@ -62,6 +64,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
   const [instances, setInstances] = useState<ModelInstance[]>(
     () => cacheGet<ModelInstance[]>(cacheKey) ?? [],
   );
+  const [credentials, setCredentials] = useState<Credential[]>([]);
   const [defaultId, setDefaultId] = useState<string>("");
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
 
@@ -79,6 +82,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
     const text = conns.filter((c) => c.tag === "text");
     setInstances(text);
     cacheSet(cacheKey, text);
+    setCredentials(Array.isArray(s.credentials) ? (s.credentials as Credential[]) : []);
     const defaults = (s.defaults ?? {}) as { text?: string };
     setDefaultId(defaults.text ?? "");
   }, [scope, cwd, cacheKey]);
@@ -88,7 +92,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
   }, [load]);
 
   const persist = useCallback(
-    async (next: ModelInstance[], nextDefault: string) => {
+    async (next: ModelInstance[], nextCreds: Credential[], nextDefault: string) => {
       // Merge back with non-text connections so we don't clobber image/video.
       const s = ((await window.codeshell.getSettings(scope, cwd)) ?? {}) as Record<string, unknown>;
       const all = Array.isArray(s.modelConnections) ? (s.modelConnections as ModelInstance[]) : [];
@@ -96,7 +100,11 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
       const defaults = (s.defaults ?? {}) as Record<string, unknown>;
       await writeSettings(
         scope,
-        { modelConnections: [...nonText, ...next], defaults: { ...defaults, text: nextDefault || undefined } },
+        {
+          credentials: nextCreds,
+          modelConnections: [...nonText, ...next],
+          defaults: { ...defaults, text: nextDefault || undefined },
+        },
         cwd,
       );
     },
@@ -106,20 +114,39 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
   const addFromTemplate = async (entry: CatalogEntry, model?: string) => {
     const taken = new Set(instances.map((i) => i.id));
     const inst = buildTextInstance(entry, model, taken);
+    // Auto-attach to an existing credential for this provider when one exists
+    // (so the user doesn't re-enter the key); else leave unset until they fill it.
+    const existing = credentialCandidates(credentials, entry.id)[0];
+    if (existing) inst.credentialId = existing.id;
     const next = [...instances, inst];
     const nextDefault = defaultId || inst.id;
     setInstances(next);
     setDefaultId(nextDefault);
-    await persist(next, nextDefault);
+    await persist(next, credentials, nextDefault);
     toast({ message: `已添加 ${inst.id}`, variant: "success" });
   };
 
   const patch = (id: string, p: Partial<ModelInstance>) =>
     setInstances((cur) => cur.map((i) => (i.id === id ? { ...i, ...p } : i)));
 
+  /** Set this connection's key — editing (or creating) its bound credential. */
+  const setConnectionKey = (inst: ModelInstance, apiKey: string) => {
+    let credId = inst.credentialId;
+    let nextCreds: Credential[];
+    if (credId && credentials.some((c) => c.id === credId)) {
+      nextCreds = credentials.map((c) => (c.id === credId ? { ...c, apiKey } : c));
+    } else {
+      const takenCred = new Set(credentials.map((c) => c.id));
+      credId = uniqueInstanceId(`${inst.catalogId}-key`, takenCred);
+      nextCreds = [...credentials, { id: credId, catalogId: inst.catalogId, apiKey }];
+      patch(inst.id, { credentialId: credId });
+    }
+    setCredentials(nextCreds);
+    return { credId, nextCreds };
+  };
+
   const saveInstance = async (id: string) => {
-    const next = instances;
-    await persist(next, defaultId || id);
+    await persist(instances, credentials, defaultId || id);
     if (!defaultId) setDefaultId(id);
     toast({ message: "已保存", variant: "success" });
   };
@@ -127,7 +154,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
   const removeInstance = async (id: string) => {
     const ok = await confirm({
       message: `删除连接 #${id}？`,
-      detail: "已保存的 API key 将一并移除。",
+      detail: "凭证(API key)不会被删除——它是独立的,其它连接仍可使用。",
       destructive: true,
     });
     if (!ok) return;
@@ -135,7 +162,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
     const nextDefault = defaultId === id ? next[0]?.id ?? "" : defaultId;
     setInstances(next);
     setDefaultId(nextDefault);
-    await persist(next, nextDefault);
+    await persist(next, credentials, nextDefault);
     toast({ message: `已删除 ${id}`, variant: "success" });
   };
 
@@ -182,7 +209,8 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
           {instances.map((inst) => {
             const entry = entryById(inst.catalogId);
             const preset = entry?.modelPresets?.find((p) => p.value === inst.model);
-            const candidates = reuseKeyCandidates(instances, inst);
+            const credChoices = credentialCandidates(credentials, inst.catalogId);
+            const boundCred = credentials.find((c) => c.id === inst.credentialId);
             const isDefault = inst.id === defaultId;
             return (
               <ConnCard key={inst.id} isDefault={isDefault}>
@@ -206,29 +234,35 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
                   />
                 </ConnField>
 
-                {candidates.length > 0 && !inst.apiKey ? (
-                  <ConnField label="复用已有 key">
-                    <SimpleSelect
-                      value={inst.apiKeyRef ?? ""}
-                      onChange={(v) => patch(inst.id, { apiKeyRef: v || undefined })}
-                      options={candidates.map((c) => ({
-                        value: c.id,
-                        label: reuseKeyLabel(c, entryById(c.catalogId)?.displayName),
-                      }))}
-                      placeholder="选择要复用的连接"
-                    />
-                  </ConnField>
-                ) : (
-                  entry?.needsKey !== false && (
-                    <ConnField label="API Key">
-                      <SecretKeyInput
-                        value={inst.apiKey ?? ""}
-                        show={Boolean(showKey[inst.id])}
-                        onChange={(v) => patch(inst.id, { apiKey: v, apiKeyRef: undefined })}
-                        onToggleShow={() => setShowKey((s) => ({ ...s, [inst.id]: !s[inst.id] }))}
-                      />
-                    </ConnField>
-                  )
+                {entry?.needsKey !== false && (
+                  <>
+                    {credChoices.length > 0 && (
+                      <ConnField label="凭证" hint="多个连接可共用一把 key;删连接不会删凭证。">
+                        <SimpleSelect
+                          value={inst.credentialId ?? ""}
+                          onChange={(v) => patch(inst.id, { credentialId: v || undefined })}
+                          options={[
+                            ...credChoices.map((c) => ({
+                              value: c.id,
+                              label: credentialLabel(c, entry?.displayName),
+                            })),
+                            { value: "", label: "填新 key…" },
+                          ]}
+                          placeholder="选择凭证"
+                        />
+                      </ConnField>
+                    )}
+                    {!inst.credentialId && (
+                      <ConnField label="API Key">
+                        <SecretKeyInput
+                          value={boundCred?.apiKey ?? ""}
+                          show={Boolean(showKey[inst.id])}
+                          onChange={(v) => setConnectionKey(inst, v)}
+                          onToggleShow={() => setShowKey((s) => ({ ...s, [inst.id]: !s[inst.id] }))}
+                        />
+                      </ConnField>
+                    )}
+                  </>
                 )}
 
                 {preset?.params && preset.params.length > 0 && (
@@ -252,7 +286,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
                         size="sm"
                         onClick={() => {
                           setDefaultId(inst.id);
-                          void persist(instances, inst.id);
+                          void persist(instances, credentials, inst.id);
                         }}
                       >
                         设为默认

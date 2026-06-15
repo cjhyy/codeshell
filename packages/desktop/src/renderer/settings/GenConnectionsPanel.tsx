@@ -17,7 +17,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/ConfirmDialog";
-import { reuseKeyLabel } from "./textConnections";
+
+/** Reuse-key label: which connection's key is being borrowed (name + #id +
+ *  last-4 of key), never a model name. Local to this legacy panel — it still
+ *  uses the per-instance apiKey/apiKeyRef model (not yet on credentials[]). */
+function reuseKeyLabel(inst: { id: string; apiKey?: string }, displayName?: string): string {
+  const name = displayName ? `${displayName} ` : "";
+  const suffix = inst.apiKey && inst.apiKey.length >= 4 ? ` · key ⋯${inst.apiKey.slice(-4)}` : "";
+  return `${name}#${inst.id}${suffix}`;
+}
 import {
   ConnCard,
   ConnCardGrid,

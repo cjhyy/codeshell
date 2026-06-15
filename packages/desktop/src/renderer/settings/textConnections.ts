@@ -1,10 +1,19 @@
 /**
- * Pure logic for the text connection panel (L6a). Building/identifying
- * ModelInstances and listing key-reuse candidates — no React, no window, so it
- * unit-tests cleanly. The panel component wires these to UI + settings IO.
+ * Pure logic for the text connection panel. Connections reference a Credential
+ * by id (the key lives on the credential, an independent entity) — so deleting
+ * a connection never loses a key, and many connections share one key by
+ * pointing at the same credential. No React, no window — unit-testable.
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §3.3.
  */
 import type { CatalogEntry } from "../../preload/types";
+
+/** An independent credential (mirror of core/settings credentials[]). */
+export interface Credential {
+  id: string;
+  catalogId: string;
+  apiKey?: string;
+  baseUrl?: string;
+}
 
 /** Mirror of core/settings modelConnections[] entry (renderer-side). */
 export interface ModelInstance {
@@ -13,8 +22,8 @@ export interface ModelInstance {
   tag: "text" | "image" | "video";
   model: string;
   baseUrl?: string;
-  apiKey?: string;
-  apiKeyRef?: string;
+  /** Which credential supplies this connection's key. */
+  credentialId?: string;
   paramValues?: Record<string, unknown>;
 }
 
@@ -26,7 +35,7 @@ export function uniqueInstanceId(base: string, taken: Set<string>): string {
   return `${base}-${n}`;
 }
 
-/** Build a text instance from a template + picked model, seeding param defaults. */
+/** Build a text connection from a template + picked model, seeding param defaults. */
 export function buildTextInstance(
   entry: CatalogEntry,
   model: string | undefined,
@@ -43,36 +52,25 @@ export function buildTextInstance(
     catalogId: entry.id,
     tag: "text",
     model: chosen,
-    baseUrl: entry.defaultBaseUrl,
   };
   if (Object.keys(paramValues).length > 0) inst.paramValues = paramValues;
   return inst;
 }
 
 /**
- * Label for a key-reuse candidate. Reuse borrows a *credential*, not a model —
- * so the label leads with which connection it is (display name + #id) and the
- * key's last 4 chars, never the model name (which is irrelevant and misleading).
+ * Credentials usable for a given catalogId. A key belongs to one provider
+ * account, so candidates are scoped to the same catalogId — never cross-provider.
  */
-export function reuseKeyLabel(
-  inst: { id: string; apiKey?: string },
-  displayName?: string,
-): string {
-  const name = displayName ? `${displayName} ` : "";
-  const suffix = inst.apiKey && inst.apiKey.length >= 4 ? ` · key ⋯${inst.apiKey.slice(-4)}` : "";
-  return `${name}#${inst.id}${suffix}`;
+export function credentialCandidates(credentials: Credential[], catalogId: string): Credential[] {
+  return credentials.filter((c) => c.catalogId === catalogId);
 }
 
 /**
- * Same-catalog instances that already have a key (so a new instance can reuse
- * it), excluding self. A key belongs to one provider account, so candidates are
- * scoped to the same catalogId — never cross-provider.
+ * Label for a credential in a picker. Leads with the provider name + #id and
+ * the key's last 4 chars — never a model name (a credential is not a model).
  */
-export function reuseKeyCandidates(
-  all: ModelInstance[],
-  self: { id: string; catalogId: string },
-): ModelInstance[] {
-  return all.filter(
-    (i) => i.id !== self.id && i.catalogId === self.catalogId && Boolean(i.apiKey),
-  );
+export function credentialLabel(cred: Credential, displayName?: string): string {
+  const name = displayName ? `${displayName} ` : "";
+  const suffix = cred.apiKey && cred.apiKey.length >= 4 ? ` · key ⋯${cred.apiKey.slice(-4)}` : "";
+  return `${name}#${cred.id}${suffix}`;
 }

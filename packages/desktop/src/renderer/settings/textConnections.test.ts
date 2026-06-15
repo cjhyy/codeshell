@@ -1,18 +1,19 @@
 /**
- * Pure logic for the text connection panel (L6a display layer): build a
- * ModelInstance from a catalog template + picked model, generate a unique id,
- * and list key-reuse candidates. No window / no engine. Mirrors the design's
- * "选了什么 in the instance, 能选什么 in the catalog" split.
- * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §3.3/§5.
+ * Pure logic for the text connection panel: build a ModelInstance from a
+ * catalog template + picked model, generate a unique id, and list credential
+ * candidates (a connection references a Credential by id; key lives on the
+ * credential, not the connection — so deleting a connection never loses a key).
+ * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §3.3.
  */
 import { describe, test, expect } from "bun:test";
 import type { CatalogEntry } from "../../preload/types";
 import {
   buildTextInstance,
   uniqueInstanceId,
-  reuseKeyCandidates,
-  reuseKeyLabel,
+  credentialCandidates,
+  credentialLabel,
   type ModelInstance,
+  type Credential,
 } from "./textConnections";
 
 const OPENAI: CatalogEntry = {
@@ -49,7 +50,6 @@ describe("buildTextInstance", () => {
     expect(inst.tag).toBe("text");
     expect(inst.catalogId).toBe("openai");
     expect(inst.model).toBe("gpt-5.5");
-    expect(inst.baseUrl).toBe("https://api.openai.com/v1");
   });
 
   test("seeds paramValues from the preset's param defaults", () => {
@@ -58,53 +58,40 @@ describe("buildTextInstance", () => {
   });
 
   test("falls back to entry.defaultModel when no model given", () => {
-    const inst = buildTextInstance(OPENAI, undefined, new Set());
-    expect(inst.model).toBe("gpt-5.5");
+    expect(buildTextInstance(OPENAI, undefined, new Set()).model).toBe("gpt-5.5");
+  });
+
+  test("does not inline a key on the connection", () => {
+    const inst = buildTextInstance(OPENAI, "gpt-5.5", new Set());
+    expect((inst as { apiKey?: string }).apiKey).toBeUndefined();
   });
 });
 
-describe("reuseKeyCandidates", () => {
-  const all: ModelInstance[] = [
-    { id: "openai", catalogId: "openai", tag: "text", model: "gpt-5.5", apiKey: "sk-1" },
-    { id: "openai-2", catalogId: "openai", tag: "text", model: "gpt-4o" }, // no key
-    { id: "anth", catalogId: "anthropic", tag: "text", model: "claude", apiKey: "sk-2" },
+describe("credentialCandidates", () => {
+  const creds: Credential[] = [
+    { id: "openai-acct", catalogId: "openai", apiKey: "sk-1" },
+    { id: "openai-acct-2", catalogId: "openai", apiKey: "sk-2" },
+    { id: "anth-acct", catalogId: "anthropic", apiKey: "sk-3" },
   ];
-  test("lists same-catalog instances that have a key, excluding self", () => {
-    const cands = reuseKeyCandidates(all, { id: "openai-2", catalogId: "openai" });
-    expect(cands.map((c) => c.id)).toEqual(["openai"]);
+  test("lists credentials for the same catalogId", () => {
+    const cands = credentialCandidates(creds, "openai");
+    expect(cands.map((c) => c.id)).toEqual(["openai-acct", "openai-acct-2"]);
   });
-  test("excludes other-catalog instances (a key belongs to one provider account)", () => {
-    const cands = reuseKeyCandidates(all, { id: "openai-2", catalogId: "openai" });
-    expect(cands.some((c) => c.id === "anth")).toBe(false);
+  test("excludes other-catalog credentials (a key belongs to one provider account)", () => {
+    expect(credentialCandidates(creds, "openai").some((c) => c.id === "anth-acct")).toBe(false);
   });
 });
 
-describe("reuseKeyLabel", () => {
-  test("shows the connection name + last 4 of the key (not the model)", () => {
-    const inst: ModelInstance = {
-      id: "fal",
-      catalogId: "fal-video",
-      tag: "text",
-      model: "fal-ai/kling-video/v3/pro/text-to-video",
-      apiKey: "fal-secret-key-a1b2",
-    };
-    const label = reuseKeyLabel(inst, "fal.ai (Kling)");
-    expect(label).toContain("fal.ai (Kling)");
-    expect(label).toContain("#fal");
-    expect(label).toContain("a1b2"); // last 4 of key
-    expect(label).not.toContain("kling-video"); // model name is NOT in the label
-  });
-
-  test("omits the key suffix when the instance has no direct key", () => {
-    const inst: ModelInstance = { id: "x", catalogId: "openai", tag: "text", model: "gpt-4o" };
-    const label = reuseKeyLabel(inst, "OpenAI");
+describe("credentialLabel", () => {
+  test("shows the connection/provider name + #id + last 4 of the key (not a model)", () => {
+    const cred: Credential = { id: "openai-acct", catalogId: "openai", apiKey: "sk-secret-a1b2" };
+    const label = credentialLabel(cred, "OpenAI");
     expect(label).toContain("OpenAI");
-    expect(label).toContain("#x");
-    expect(label).not.toContain("····");
+    expect(label).toContain("#openai-acct");
+    expect(label).toContain("a1b2");
   });
-
-  test("falls back to the id when no display name is given", () => {
-    const inst: ModelInstance = { id: "x", catalogId: "openai", tag: "text", model: "m", apiKey: "key-wxyz" };
-    expect(reuseKeyLabel(inst)).toContain("#x");
+  test("omits the key suffix when the credential has no key yet", () => {
+    const label = credentialLabel({ id: "c", catalogId: "openai" }, "OpenAI");
+    expect(label).not.toContain("⋯");
   });
 });
