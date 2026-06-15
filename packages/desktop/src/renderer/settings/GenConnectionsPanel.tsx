@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/ConfirmDialog";
+import { reuseKeyLabel } from "./textConnections";
 import {
   ConnCard,
   ConnCardGrid,
@@ -446,7 +447,7 @@ function GenCard({
               placeholder="选择要复用的实例"
               options={reuseCandidates.map((o) => ({
                 value: o.id,
-                label: o.model ? `#${o.id} · ${o.model}` : `#${o.id}`,
+                label: reuseKeyLabel(o, displayName),
               }))}
             />
           ) : (

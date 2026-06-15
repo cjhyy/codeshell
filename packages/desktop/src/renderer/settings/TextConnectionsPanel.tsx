@@ -41,6 +41,7 @@ import { ParamControls } from "./ParamControls";
 import {
   buildTextInstance,
   reuseKeyCandidates,
+  reuseKeyLabel,
   type ModelInstance,
 } from "./textConnections";
 
@@ -210,7 +211,10 @@ export function TextConnectionsPanel({ scope, activeRepoPath }: Props) {
                     <SimpleSelect
                       value={inst.apiKeyRef ?? ""}
                       onChange={(v) => patch(inst.id, { apiKeyRef: v || undefined })}
-                      options={candidates.map((c) => ({ value: c.id, label: `#${c.id} · ${c.model}` }))}
+                      options={candidates.map((c) => ({
+                        value: c.id,
+                        label: reuseKeyLabel(c, entryById(c.catalogId)?.displayName),
+                      }))}
                       placeholder="选择要复用的连接"
                     />
                   </ConnField>

@@ -50,6 +50,20 @@ export function buildTextInstance(
 }
 
 /**
+ * Label for a key-reuse candidate. Reuse borrows a *credential*, not a model —
+ * so the label leads with which connection it is (display name + #id) and the
+ * key's last 4 chars, never the model name (which is irrelevant and misleading).
+ */
+export function reuseKeyLabel(
+  inst: { id: string; apiKey?: string },
+  displayName?: string,
+): string {
+  const name = displayName ? `${displayName} ` : "";
+  const suffix = inst.apiKey && inst.apiKey.length >= 4 ? ` · key ⋯${inst.apiKey.slice(-4)}` : "";
+  return `${name}#${inst.id}${suffix}`;
+}
+
+/**
  * Same-catalog instances that already have a key (so a new instance can reuse
  * it), excluding self. A key belongs to one provider account, so candidates are
  * scoped to the same catalogId — never cross-provider.

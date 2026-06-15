@@ -11,6 +11,7 @@ import {
   buildTextInstance,
   uniqueInstanceId,
   reuseKeyCandidates,
+  reuseKeyLabel,
   type ModelInstance,
 } from "./textConnections";
 
@@ -75,5 +76,35 @@ describe("reuseKeyCandidates", () => {
   test("excludes other-catalog instances (a key belongs to one provider account)", () => {
     const cands = reuseKeyCandidates(all, { id: "openai-2", catalogId: "openai" });
     expect(cands.some((c) => c.id === "anth")).toBe(false);
+  });
+});
+
+describe("reuseKeyLabel", () => {
+  test("shows the connection name + last 4 of the key (not the model)", () => {
+    const inst: ModelInstance = {
+      id: "fal",
+      catalogId: "fal-video",
+      tag: "text",
+      model: "fal-ai/kling-video/v3/pro/text-to-video",
+      apiKey: "fal-secret-key-a1b2",
+    };
+    const label = reuseKeyLabel(inst, "fal.ai (Kling)");
+    expect(label).toContain("fal.ai (Kling)");
+    expect(label).toContain("#fal");
+    expect(label).toContain("a1b2"); // last 4 of key
+    expect(label).not.toContain("kling-video"); // model name is NOT in the label
+  });
+
+  test("omits the key suffix when the instance has no direct key", () => {
+    const inst: ModelInstance = { id: "x", catalogId: "openai", tag: "text", model: "gpt-4o" };
+    const label = reuseKeyLabel(inst, "OpenAI");
+    expect(label).toContain("OpenAI");
+    expect(label).toContain("#x");
+    expect(label).not.toContain("····");
+  });
+
+  test("falls back to the id when no display name is given", () => {
+    const inst: ModelInstance = { id: "x", catalogId: "openai", tag: "text", model: "m", apiKey: "key-wxyz" };
+    expect(reuseKeyLabel(inst)).toContain("#x");
   });
 });
