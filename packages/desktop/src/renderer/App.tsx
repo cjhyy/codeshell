@@ -93,6 +93,7 @@ import { SettingsPage } from "./settings/SettingsPage";
 import { RunsView } from "./runs/RunsView";
 import { AutomationView } from "./automation/AutomationView";
 import { CustomizeView } from "./customize/CustomizeView";
+import { CredentialsPage } from "./credentials/CredentialsPage";
 import { PanelArea } from "./panels/PanelArea";
 import type { PanelTab } from "./view";
 import { nextAnchorId, type Anchor } from "./chat/anchors";
@@ -2506,6 +2507,8 @@ function App() {
           <LogsView />
         ) : view.viewMode === "customize" ? (
           <CustomizeView activeRepoPath={activeRepo?.path ?? null} />
+        ) : view.viewMode === "credentials" ? (
+          <CredentialsPage activeRepoPath={activeRepo?.path ?? null} />
         ) : view.viewMode === "runs" ? (
           <RunsView initialRunId={runsInitialRunId} />
         ) : view.viewMode === "automation" ? (
