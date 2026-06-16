@@ -47,6 +47,7 @@ export function parseBrowserActionLine(line: string): ParsedBrowserAction | null
       url: a.url as string | undefined,
       dir: a.dir as "up" | "down" | undefined,
       amount: a.amount as number | undefined,
+      timeoutMs: a.timeoutMs as number | undefined,
     },
   };
 }

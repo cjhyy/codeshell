@@ -5,6 +5,9 @@ import {
   browserTypeTool,
   browserNavigateTool,
   browserScrollTool,
+  browserReadContentTool,
+  browserWaitTool,
+  browserPressEnterTool,
   isBrowserAutomationAvailable,
 } from "./browser-tools.js";
 import type { BrowserBridge } from "../browser-bridge.js";
@@ -23,6 +26,9 @@ describe("browser tools — no bridge (headless / no panel)", () => {
       await browserTypeTool({ ref: "e1", text: "x" }, ctx),
       await browserNavigateTool({ url: "https://x.com" }, ctx),
       await browserScrollTool({ direction: "down" }, ctx),
+      await browserReadContentTool({}, ctx),
+      await browserWaitTool({}, ctx),
+      await browserPressEnterTool({}, ctx),
     ]) {
       expect(out).toContain("not available");
     }
@@ -84,5 +90,34 @@ describe("browser_navigate / scroll — arg validation", () => {
     const ctx = ctxWith({ scroll: async () => ({ ok: true }) });
     expect(await browserScrollTool({ direction: "sideways" }, ctx)).toContain("must be 'up' or 'down'");
     expect(await browserScrollTool({ direction: "down" }, ctx)).toContain("Scrolled down");
+  });
+});
+
+describe("browser_read_content / wait / press_enter", () => {
+  test("read_content returns cleaned text with url/title, flags truncation", async () => {
+    const ctx = ctxWith({
+      readContent: async () => ({ ok: true, url: "https://xhs.com/p/1", title: "探店", text: "正文内容", truncated: true }),
+    });
+    const out = await browserReadContentTool({}, ctx);
+    expect(out).toContain("URL: https://xhs.com/p/1");
+    expect(out).toContain("Title: 探店");
+    expect(out).toContain("content truncated");
+    expect(out).toContain("正文内容");
+  });
+
+  test("read_content error surfaces detail", async () => {
+    const ctx = ctxWith({ readContent: async () => ({ ok: false, url: "x", text: "", detail: "no body" }) });
+    expect(await browserReadContentTool({}, ctx)).toContain("no body");
+  });
+
+  test("wait returns ready", async () => {
+    const ctx = ctxWith({ waitForLoad: async () => ({ ok: true }) });
+    expect(await browserWaitTool({ timeout_ms: 5000 }, ctx)).toContain("Page ready");
+  });
+
+  test("press_enter ok / stale", async () => {
+    expect(await browserPressEnterTool({}, ctxWith({ pressEnter: async () => ({ ok: true }) }))).toContain("Pressed Enter");
+    const stale = await browserPressEnterTool({ ref: "e9" }, ctxWith({ pressEnter: async () => ({ ok: false, staleRef: true }) }));
+    expect(stale).toContain("no longer valid");
   });
 });

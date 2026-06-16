@@ -148,6 +148,71 @@ export async function browserScrollTool(args: Record<string, unknown>, ctx?: Too
   return r.ok ? `Scrolled ${dir}` : `Error: ${r.detail ?? "scroll failed"}`;
 }
 
+// ---- browser_read_content ---------------------------------------------------
+
+export const browserReadContentToolDef: ToolDefinition = {
+  name: "browser_read_content",
+  description:
+    "Read the current page's main readable text content (for summarizing or " +
+    "extracting an article/post). Returns cleaned visible text (long pages are " +
+    "truncated — scroll + read again for more). Use this to 'scrape' a page after " +
+    "navigating to it.",
+  inputSchema: { type: "object", properties: {} },
+};
+
+export async function browserReadContentTool(_args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+  const b = bridge(ctx);
+  if (!b) return NO_BROWSER;
+  const c = await b.readContent();
+  if (!c.ok) return `Error: ${c.detail ?? "could not read page content"}`;
+  const head = `URL: ${c.url}${c.title ? `\nTitle: ${c.title}` : ""}${c.truncated ? "\n(content truncated)" : ""}`;
+  return `${head}\n\n${c.text || "(no readable text)"}`;
+}
+
+// ---- browser_wait -----------------------------------------------------------
+
+export const browserWaitToolDef: ToolDefinition = {
+  name: "browser_wait",
+  description:
+    "Wait for the page to finish loading (e.g. after a navigation or a click " +
+    "that loads new content) before snapshotting or reading. Returns when the " +
+    "page is ready or after a timeout.",
+  inputSchema: {
+    type: "object",
+    properties: { timeout_ms: { type: "number", description: "Max wait in ms (default 10000)" } },
+  },
+};
+
+export async function browserWaitTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+  const b = bridge(ctx);
+  if (!b) return NO_BROWSER;
+  const r = await b.waitForLoad(args.timeout_ms as number | undefined);
+  return r.ok ? `Page ready${r.detail ? ` (${r.detail})` : ""}` : `Error: ${r.detail ?? "wait failed"}`;
+}
+
+// ---- browser_press_enter ----------------------------------------------------
+
+export const browserPressEnterToolDef: ToolDefinition = {
+  name: "browser_press_enter",
+  description:
+    "Press Enter — typically to submit a search after browser_type into a search " +
+    "box. Optionally focus a ref first. Follow with browser_wait + browser_snapshot.",
+  inputSchema: {
+    type: "object",
+    properties: { ref: { type: "string", description: "Optional element ref to focus before Enter" } },
+  },
+};
+
+export async function browserPressEnterTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+  const b = bridge(ctx);
+  if (!b) return NO_BROWSER;
+  const r = await b.pressEnter(args.ref as string | undefined);
+  if (r.ok) return "Pressed Enter";
+  return r.staleRef
+    ? `Error: ref ${args.ref} is no longer valid (page changed). Re-run browser_snapshot.`
+    : `Error: ${r.detail ?? "press Enter failed"}`;
+}
+
 /** True when the session has a browser bridge wired (used to gate visibility). */
 export function isBrowserAutomationAvailable(ctx?: ToolContext): boolean {
   return bridge(ctx) !== undefined;

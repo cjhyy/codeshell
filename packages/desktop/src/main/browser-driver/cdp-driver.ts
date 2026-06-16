@@ -16,9 +16,11 @@
 
 import {
   flattenAxTree,
+  cleanPageText,
   type BrowserBridge,
   type BrowserSnapshot,
   type BrowserResult,
+  type BrowserContent,
   type AXNode,
 } from "@cjhyy/code-shell-core";
 
@@ -120,6 +122,67 @@ export class CdpBrowserDriver implements BrowserBridge {
     }
   }
 
+  async readContent(): Promise<BrowserContent> {
+    const info = await this.pageInfo();
+    try {
+      // document.body.innerText gives rendered, visible text (scripts/styles/
+      // hidden nodes excluded by the browser) — the cheap, reliable "扒内容".
+      const res = (await this.send("Runtime.evaluate", {
+        expression: "document.body && document.body.innerText || ''",
+        returnByValue: true,
+      })) as { result?: { value?: string } };
+      const raw = res.result?.value ?? "";
+      const { text, truncated } = cleanPageText(raw);
+      return { ok: true, url: info.url, title: info.title, text, truncated };
+    } catch (e) {
+      return { ok: false, url: info.url, title: info.title, text: "", detail: errMsg(e) };
+    }
+  }
+
+  async waitForLoad(timeoutMs = 10_000): Promise<BrowserResult> {
+    try {
+      // Poll document.readyState === 'complete'. CDP Page.loadEventFired needs
+      // event plumbing; polling readyState via Runtime.evaluate is simpler and
+      // adapter-agnostic.
+      const deadline = Date.now() + timeoutMs;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const res = (await this.send("Runtime.evaluate", {
+          expression: "document.readyState",
+          returnByValue: true,
+        })) as { result?: { value?: string } };
+        if (res.result?.value === "complete") return { ok: true };
+        if (Date.now() > deadline) return { ok: true, detail: "load wait timed out (proceeding)" };
+        await delay(150);
+      }
+    } catch (e) {
+      return { ok: false, detail: errMsg(e) };
+    }
+  }
+
+  async pressEnter(ref?: string): Promise<BrowserResult> {
+    // Focus the ref first (so Enter goes to the right field), then dispatch a
+    // real Enter key. If no ref, press Enter on whatever is focused.
+    if (ref) {
+      const c = await this.centerOf(ref);
+      if (!c) return staleOrUnknown(ref, this.refMap);
+      try {
+        await this.send("Input.dispatchMouseEvent", { type: "mousePressed", x: c.x, y: c.y, button: "left", clickCount: 1 });
+        await this.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: c.x, y: c.y, button: "left", clickCount: 1 });
+      } catch (e) {
+        return { ok: false, detail: errMsg(e) };
+      }
+    }
+    try {
+      const key = { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 };
+      await this.send("Input.dispatchKeyEvent", { type: "keyDown", ...key });
+      await this.send("Input.dispatchKeyEvent", { type: "keyUp", ...key });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, detail: errMsg(e) };
+    }
+  }
+
   async scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult> {
     const deltaY = (dir === "down" ? 1 : -1) * (amount ?? 600);
     try {
@@ -134,6 +197,10 @@ export class CdpBrowserDriver implements BrowserBridge {
 
 function avg(ns: number[]): number {
   return ns.reduce((a, b) => a + b, 0) / ns.length;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 function errMsg(e: unknown): string {

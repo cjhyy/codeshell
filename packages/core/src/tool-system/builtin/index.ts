@@ -57,6 +57,9 @@ import {
   browserClickToolDef, browserClickTool,
   browserTypeToolDef, browserTypeTool,
   browserScrollToolDef, browserScrollTool,
+  browserReadContentToolDef, browserReadContentTool,
+  browserWaitToolDef, browserWaitTool,
+  browserPressEnterToolDef, browserPressEnterTool,
 } from "./browser-tools.js";
 
 /**
@@ -668,6 +671,37 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: browserScrollTool,
+  },
+  {
+    definition: {
+      ...browserReadContentToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+    },
+    execute: browserReadContentTool,
+  },
+  {
+    definition: {
+      ...browserWaitToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+      timeoutMs: 30_000, // it internally bounds the wait, but give RPC headroom
+    },
+    execute: browserWaitTool,
+  },
+  {
+    definition: {
+      ...browserPressEnterToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: browserPressEnterTool,
   },
 ];
 

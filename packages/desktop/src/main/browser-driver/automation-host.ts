@@ -53,12 +53,13 @@ export function releaseGuest(id: number): void {
 
 /** The action shape the worker sends (args of the __browser_action__ request). */
 export interface BrowserActionRequest {
-  action: "snapshot" | "click" | "type" | "navigate" | "scroll";
+  action: "snapshot" | "click" | "type" | "navigate" | "scroll" | "readContent" | "waitForLoad" | "pressEnter";
   ref?: string;
   text?: string;
   url?: string;
   dir?: "up" | "down";
   amount?: number;
+  timeoutMs?: number;
 }
 
 /** Resolve a target webContents and approve sensitive actions. Injected so
@@ -122,6 +123,15 @@ export async function handleBrowserAction(
         break;
       case "scroll":
         result = await driver.scroll(req.dir ?? "down", req.amount);
+        break;
+      case "readContent":
+        result = await driver.readContent();
+        break;
+      case "waitForLoad":
+        result = await driver.waitForLoad(req.timeoutMs);
+        break;
+      case "pressEnter":
+        result = await driver.pressEnter(req.ref);
         break;
       default:
         result = { ok: false, detail: `unknown action: ${(req as { action: string }).action}` };

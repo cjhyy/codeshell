@@ -45,12 +45,30 @@ export interface BrowserResult {
   staleRef?: boolean;
 }
 
+/** Result of reading the page's main textual content (扒内容). */
+export interface BrowserContent {
+  ok: boolean;
+  url: string;
+  title?: string;
+  /** Extracted readable text (main content, scripts/styles/nav stripped). */
+  text: string;
+  /** True if the text was truncated to a cap. */
+  truncated?: boolean;
+  detail?: string;
+}
+
 export interface BrowserBridge {
   snapshot(): Promise<BrowserSnapshot>;
   click(ref: string): Promise<BrowserResult>;
   type(ref: string, text: string): Promise<BrowserResult>;
   navigate(url: string): Promise<BrowserResult>;
   scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult>;
+  /** Read the page's main readable text content (for summarizing / extraction). */
+  readContent(): Promise<BrowserContent>;
+  /** Wait until the page finishes loading (or a timeout). */
+  waitForLoad(timeoutMs?: number): Promise<BrowserResult>;
+  /** Press Enter on the focused element / a given ref (submit a search box). */
+  pressEnter(ref?: string): Promise<BrowserResult>;
 }
 
 /**
@@ -148,6 +166,26 @@ export function flattenAxTree(nodes: AXNode[]): {
   }
 
   return { elements, refToBackendId };
+}
+
+/** Default cap for extracted page text (chars) — keeps content within a sane
+ *  token budget; the agent can scroll + re-read for more. */
+export const CONTENT_CHAR_CAP = 12_000;
+
+/**
+ * Pure: normalize raw extracted page text — collapse runs of whitespace/blank
+ * lines, trim, and cap to `cap` chars (marking truncation). The renderer pulls
+ * raw innerText via CDP; this keeps the cleanup logic testable and consistent.
+ */
+export function cleanPageText(raw: string, cap: number = CONTENT_CHAR_CAP): { text: string; truncated: boolean } {
+  const normalized = raw
+    .replace(/\r\n?/g, "\n")
+    .replace(/[ \t\f\v]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  if (normalized.length <= cap) return { text: normalized, truncated: false };
+  return { text: normalized.slice(0, cap) + "\n…(truncated)", truncated: true };
 }
 
 /** Render a snapshot's element list as the compact text block shown to the LLM. */

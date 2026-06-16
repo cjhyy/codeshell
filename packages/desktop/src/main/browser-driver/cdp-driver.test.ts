@@ -138,3 +138,48 @@ describe("CdpBrowserDriver.navigate / scroll", () => {
     expect(calls.find((c) => c.params?.type === "mouseWheel")?.params.deltaY).toBe(-600);
   });
 });
+
+describe("CdpBrowserDriver.readContent / waitForLoad / pressEnter", () => {
+  test("readContent pulls innerText via Runtime.evaluate and cleans it", async () => {
+    const { send } = fakeCdp({
+      "Runtime.evaluate": () => ({ result: { value: "标题\n\n\n正文   多空格" } }),
+    });
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://xhs.com/p/1", title: "探店" }));
+    const c = await d.readContent();
+    expect(c.ok).toBe(true);
+    expect(c.url).toBe("https://xhs.com/p/1");
+    expect(c.text).toBe("标题\n\n正文 多空格");
+  });
+
+  test("waitForLoad resolves when readyState is complete", async () => {
+    const { send, calls } = fakeCdp({ "Runtime.evaluate": () => ({ result: { value: "complete" } }) });
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
+    const r = await d.waitForLoad(1000);
+    expect(r.ok).toBe(true);
+    expect(calls.some((c) => c.method === "Runtime.evaluate")).toBe(true);
+  });
+
+  test("pressEnter dispatches keyDown+keyUp Enter", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
+    const r = await d.pressEnter();
+    expect(r.ok).toBe(true);
+    const downs = calls.filter((c) => c.method === "Input.dispatchKeyEvent");
+    expect(downs.map((c) => c.params.type)).toEqual(["keyDown", "keyUp"]);
+    expect(downs[0]!.params.key).toBe("Enter");
+  });
+
+  test("pressEnter on a focused ref clicks it first", async () => {
+    const { send, calls } = fakeCdp({
+      "Accessibility.getFullAXTree": () => AX_TWO,
+      "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
+    });
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
+    await d.snapshot();
+    calls.length = 0;
+    const r = await d.pressEnter("e1");
+    expect(r.ok).toBe(true);
+    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(true); // focused via click
+    expect(calls.some((c) => c.method === "Input.dispatchKeyEvent")).toBe(true);
+  });
+});

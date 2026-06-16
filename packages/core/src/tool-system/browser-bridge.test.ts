@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { flattenAxTree, renderElementList, type AXNode } from "./browser-bridge.js";
+import { flattenAxTree, renderElementList, cleanPageText, type AXNode } from "./browser-bridge.js";
 
 /** Convenience to build an AXNode terse. */
 function ax(p: Partial<AXNode>): AXNode {
@@ -102,5 +102,26 @@ describe("renderElementList", () => {
 
   test("empty list → placeholder", () => {
     expect(renderElementList([])).toBe("(no interactive elements found)");
+  });
+});
+
+describe("cleanPageText", () => {
+  test("collapses whitespace and blank lines, trims", () => {
+    const raw = "  标题\n\n\n\n正文   多   空格\t\t制表  \n  \n  尾部  ";
+    // 4+ newlines → paragraph break (\n\n); a single blank line in the middle
+    // also collapses to a paragraph break; runs of spaces/tabs → one space.
+    expect(cleanPageText(raw).text).toBe("标题\n\n正文 多 空格 制表\n\n尾部");
+  });
+
+  test("caps long text and flags truncation", () => {
+    const raw = "a".repeat(100);
+    const r = cleanPageText(raw, 10);
+    expect(r.truncated).toBe(true);
+    expect(r.text.startsWith("aaaaaaaaaa")).toBe(true);
+    expect(r.text).toContain("truncated");
+  });
+
+  test("short text → not truncated", () => {
+    expect(cleanPageText("hi", 100)).toEqual({ text: "hi", truncated: false });
   });
 });
