@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpCircle, Loader2 } from "lucide-react";
 import { useToast } from "../ui/ToastProvider";
 import { useAlert } from "../ui/DialogProvider";
+import { signalHotReload, runBatchUpdate, summarizeBatch } from "./applyUpdates";
 
 interface Props {
   cwd: string;
@@ -67,14 +68,38 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
     try {
       const r = await window.codeshell.updateSkill(s.filePath);
       setReloadKey((k) => k + 1);
+      // Hot-reload: skills are disk-scanned live (next turn picks up the new
+      // SKILL.md); fire the same event plugin update uses so any hooks/MCP a
+      // skill bundle ships also re-reconcile on running sessions.
+      if (r.updated) signalHotReload();
       toast(
         r.updated
-          ? { message: `已更新 “${s.name}”，重载后生效`, variant: "success" }
+          ? { message: `已更新 “${s.name}”，已生效`, variant: "success" }
           : { message: `“${s.name}”：${r.reason}` },
       );
     } catch (e) {
       // Atomic in main — the old version is kept on failure.
       void alert({ title: "更新失败", message: String((e as Error)?.message ?? e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const updateAll = async () => {
+    const targets = (skills ?? []).filter((s) => updatable[s.filePath]);
+    if (targets.length === 0) return;
+    setBusy("__all__");
+    try {
+      const labelByPath = new Map(targets.map((s) => [s.filePath, s.name]));
+      const outcomes = await runBatchUpdate(
+        targets.map((s) => s.filePath),
+        (fp) => labelByPath.get(fp) ?? fp,
+        (fp) => window.codeshell.updateSkill(fp),
+      );
+      setReloadKey((k) => k + 1);
+      if (outcomes.some((o) => o.updated)) signalHotReload();
+      const summary = summarizeBatch(outcomes);
+      toast({ message: summary.message, variant: summary.ok ? "success" : undefined });
     } finally {
       setBusy(null);
     }
@@ -100,8 +125,28 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
   if (rows.length === 0)
     return <div className="p-4 text-sm text-muted-foreground">没有匹配的 skill</div>;
 
+  const updatableCount = rows.filter((s) => updatable[s.filePath]).length;
+
   return (
     <>
+      {updatableCount > 1 && (
+        <div className="mb-2 flex justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={busy !== null}
+            onClick={() => void updateAll()}
+          >
+            {busy === "__all__" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ArrowUpCircle className="h-3.5 w-3.5" />
+            )}
+            全部更新 ({updatableCount})
+          </Button>
+        </div>
+      )}
       <ul className="space-y-1">
         {rows.map((s) => (
           <li

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
+import { signalHotReload, runBatchUpdate, summarizeBatch } from "./applyUpdates";
 
 interface Props {
   cwd: string;
@@ -100,11 +101,12 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
       const r = await window.codeshell.updatePlugin(p.name);
       setReloadKey((k) => k + 1);
       onChanged();
-      // The update is fetched but not hot-reloaded — prompt to reload so the
-      // running session picks up the new plugin code/skills (aligns with CC).
+      // Hot-reload: skills/commands are disk-scanned live (next turn picks them
+      // up); hooks/MCP re-reconcile off this event on every running session.
+      if (r.updated) signalHotReload();
       toast(
         r.updated
-          ? { message: `已更新 “${p.name}”，重载后生效`, variant: "success" }
+          ? { message: `已更新 “${p.name}”，已生效`, variant: "success" }
           : { message: `“${p.name}”：${r.reason}` },
       );
     } catch (e) {
@@ -114,6 +116,27 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
       setBusy(null);
     }
   };
+  const updateAll = async () => {
+    const targets = (plugins ?? []).filter((p) => updatable[p.installKey]);
+    if (targets.length === 0) return;
+    setBusy("__all__");
+    try {
+      const labelByName = new Map(targets.map((p) => [p.name, p.name]));
+      const outcomes = await runBatchUpdate(
+        targets.map((p) => p.name),
+        (name) => labelByName.get(name) ?? name,
+        (name) => window.codeshell.updatePlugin(name),
+      );
+      setReloadKey((k) => k + 1);
+      onChanged();
+      if (outcomes.some((o) => o.updated)) signalHotReload();
+      const s = summarizeBatch(outcomes);
+      toast({ message: s.message, variant: s.ok ? "success" : undefined });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (selected !== null) {
     return <PluginDetailView installKey={selected} onBack={() => setSelected(null)} />;
   }
@@ -134,8 +157,28 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     : plugins;
   if (rows.length === 0)
     return <div className="p-4 text-sm text-muted-foreground">还没有安装插件</div>;
+  const updatableCount = rows.filter((p) => updatable[p.installKey]).length;
   return (
-    <ul className="space-y-1">
+    <div className="space-y-2">
+      {updatableCount > 1 && (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={busy !== null}
+            onClick={() => void updateAll()}
+          >
+            {busy === "__all__" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <ArrowUpCircle className="h-3.5 w-3.5" />
+            )}
+            全部更新 ({updatableCount})
+          </Button>
+        </div>
+      )}
+      <ul className="space-y-1">
       {rows.map((p) => (
         <li key={p.installKey} className="flex items-center gap-3 rounded-md border p-3 text-sm">
           <span className="text-lg">🧩</span>
@@ -198,6 +241,7 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
           </DropdownMenu>
         </li>
       ))}
-    </ul>
+      </ul>
+    </div>
   );
 }
