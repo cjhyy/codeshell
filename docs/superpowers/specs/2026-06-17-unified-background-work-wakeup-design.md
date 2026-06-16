@@ -89,10 +89,14 @@ maybeWakeIdleSession(sid):
 
 > 注:这一步没有完全消灭 `backgroundJobRegistry`,但把它从「驱动引擎 park 的双重身份」降级为「纯查询表供 goal 短路」。完全消灭它需要让视频 poll 也走 shell-manager 式的可查询登记,属可选进一步收敛,本设计不强制。
 
-### 两个谓词(职责分清)
+### 谓词
 
-- **`hasRunningBackgroundWork(sid)` = agent ∪ shell ∪ video** —— 供 **goal 短路**。shell 在跑(含 dev server)时也该允许 stop、不逼自旋,故含 shell。
-- **`hasRunningTerminalBackgroundWork(sid)` = agent ∪ video**(**不含 shell**)—— 供 **headless 收尾等待**(§5)。只等会结束的工作;永不退的 dev server shell 不能让 headless 永等。与旧 `stillRunning()` 从不含 shell 的语义一致(`[[project_background_shell]]` 难点5)。
+- **goal 短路**用 **`hasRunningBackgroundWork(sid)` = agent ∪ shell ∪ video**(**新增**)。任何后台工作在跑(含 dev server shell)时都该允许 stop、不逼自旋,故含全部三类。
+- **headless 收尾等待**(§5)**只等 sub-agent** —— 直接用**已有的** `asyncAgentRegistry.hasRunningForSession(sid)`,**不含 shell、不含 video**:
+  - 不含 shell:永不退的 dev server shell 不能让 headless 永等。
+  - 不含 video:视频是长渲染任务,headless 一次性 run 不该为它干等几分钟;video 完成走通知唤醒即可(headless 默认不等视频)。
+  - 只有后台 sub-agent 的 summary 是「本次 run 结果」的一部分,headless 不等齐就残缺——故只等它。
+  - 无需新建谓词,复用现成 API。
 
 ### `goal-stop-hook` 短路
 
@@ -106,9 +110,7 @@ if (sessionId && hasRunningBackgroundWork(sessionId)) return {};  // 允许 stop
 
 1. **`packages/core/src/runtime/background-shell.ts`** — 新增 `hasRunningTaskForSession(sessionId): boolean`:遍历 `this.shells`,`s.sessionId === sid && (status==="running"||status==="starting")`。(注:命名用 `...TaskForSession` 以区别 dev server 永不退——但本谓词只服务 goal 短路,dev server 在跑时 goal 短路也该允许 stop,所以**包含**所有 running shell 是正确的。)
 
-2. **新增两个谓词**(放 `tool-system/builtin/background-jobs.ts` 或新 helper):
-   - `hasRunningBackgroundWork(sid)` = agent ∪ shell ∪ video(供 goal 短路)。
-   - `hasRunningTerminalBackgroundWork(sid)` = agent ∪ video(供 headless 收尾,不含 shell)。
+2. **新增一个谓词** `hasRunningBackgroundWork(sid)` = agent ∪ shell ∪ video(供 goal 短路;放 `tool-system/builtin/background-jobs.ts` 或新 helper)。headless 收尾等待**不新建谓词**,直接用现成 `asyncAgentRegistry.hasRunningForSession(sid)`。
 
 3. **`packages/core/src/engine/engine.ts`** — 删 `stillRunning()`/`for(;;)`/`waitForBackgroundAgentChange`/相关 subscribe;top-level run 结束改为触发 run-边界 re-check(见 #5)。
 
@@ -116,7 +118,7 @@ if (sessionId && hasRunningBackgroundWork(sessionId)) return {};  // 允许 stop
 
 5. **`packages/core/src/protocol/server.ts`**:
    - **交互式路径**:`handleRunMulti` 的 `enqueueTurn(...).then(...)` 加 `.finally(() => this.maybeWakeIdleSession(sid))`(触发点 B,run 边界 re-check)。`maybeWakeIdleSession` 自身的 `enqueueTurn` 也加同样 `.finally`(链式:被唤醒的 run 结束后再 re-check,cover 顺序任务)。
-   - **headless 路径**(`session.engine.isHeadless()`):`handleRunMulti` 在返回前加「await 到谓词归零」收尾循环(§5):`do { drain+summarize 一轮 } while (hasRunningBackgroundWork(sid) || queue 非空)`,然后才把完整 `result` 作为 RPC 响应返回。这条**复用** `maybeWakeIdleSession` 的 drain/summarize 逻辑(可抽成共用的 `drainAndSummarizeOnce(sid)`),只是 headless 同步 await 到归零、交互式异步靠触发点回来。
+   - **headless 路径**(`session.engine.isHeadless()`):`handleRunMulti` 在返回前加「await 到后台 sub-agent 归零」收尾循环(§5):`do { drain+summarize 一轮 } while (asyncAgentRegistry.hasRunningForSession(sid))`,然后才把完整 `result` 作为 RPC 响应返回。**只等 sub-agent**(不等 shell/video)。这条**复用** `maybeWakeIdleSession` 的 drain/summarize 逻辑(可抽成共用的 `drainAndSummarizeOnce(sid)`),只是 headless 同步 await、交互式异步靠触发点回来。
    - bus 订阅维持现状(触发点 A),不再需要 filter agent 事件——agent 也走这条了。
 
 6. **`packages/core/src/hooks/goal-stop-hook.ts`** — 短路改用 `hasRunningBackgroundWork(sid)`。
@@ -143,10 +145,10 @@ if (sessionId && hasRunningBackgroundWork(sessionId)) return {};  // 允许 stop
 // headless-only 收尾(交互式不包这层,直接返回让 UI 接):
 do {
   唤醒/summarize 一轮(drainAll 通知 → turnLoop.run)
-} while (hasRunningTerminalBackgroundWork(sid) || notificationQueue.getSnapshot(sid).length > 0)
-return result   // 此刻 terminal 后台工作归零、队列空,result 完整
+} while (asyncAgentRegistry.hasRunningForSession(sid))
+return result   // 此刻后台 sub-agent 归零,result 含其汇总,完整
 ```
-> 用 `hasRunningTerminalBackgroundWork`(agent∪video,**不含 shell**)做等待条件:永不退的 dev server shell 不能让 headless 永等(§9)。
+> 等待条件**只看后台 sub-agent**(`asyncAgentRegistry.hasRunningForSession`):不含 shell(dev server 永不退,会让 headless 永等),不含 video(长渲染,headless 不为它干等;video 走通知唤醒)。只有 sub-agent summary 属于本次 run 结果。
 
 这与旧 `for(;;)` **逻辑等价**,但**不再是引擎里写死的特例**:它复用统一的 `hasRunningBackgroundWork` 谓词 + 同一个 drain/summarize 步骤,只是 headless 多包一层「await 到谓词归零」。旧 `for(;;)` + `stillRunning()` + `waitForBackgroundAgentChange` **可以删干净**,headless 的等待用统一谓词重新表达。
 
@@ -179,9 +181,8 @@ return result   // 此刻 terminal 后台工作归零、队列空,result 完整
 
 ## 9. 风险
 
-- **最高**:B2.2 语义变化(后台 sub-agent summary 移到后续轮)。交互式靠触发点 A/B 唤醒补上;headless 靠「await `hasRunningBackgroundWork` 归零」收尾保证 result 完整。两条都复用同一谓词 + drain/summarize,无独立 park 机制。
+- **最高**:B2.2 语义变化(后台 sub-agent summary 移到后续轮)。交互式靠触发点 A/B 唤醒补上;headless 靠「await `asyncAgentRegistry.hasRunningForSession` 归零」收尾保证 result 含 sub-agent 汇总。无独立 park 机制,复用统一 drain/summarize。
 - 删 `for(;;)` 是引擎核心控制流改动,blast radius 大;必须全套 core 测试 + run-边界 re-check 新测试 + headless await-收尾测试 + 真机冒烟。
 - run-边界 re-check 的链式 `.finally`(交互式)/ headless await 循环若实现错(漏触发 / 死循环 / 空转)会让顺序任务卡住或烧 turn;新测试钉死:交互式单发=1、顺序=2;headless 有后台 sub-agent 时 result 含汇总且不死循环。
-- headless await 循环必须有**结构性**终止保证,不能依赖配置。`hasRunningBackgroundWork`(含 shell)**不能**直接做 headless 收尾的等待条件——dev server 式永不退的 shell 会让 headless 永等。**解法**:headless 收尾只等 **terminal 类**后台工作(agent ∪ video,都会结束),**显式排除 shell**——即新增 `hasRunningTerminalBackgroundWork(sid)` = agent ∪ video(不含 shell),headless await 用它;goal 短路仍用含 shell 的 `hasRunningBackgroundWork`(shell 在跑时也该允许 stop)。这与旧 `stillRunning()` 从不含 shell 的语义一致(见 `[[project_background_shell]]` 难点5)。
-  - 注:`automation-host.ts:133` 已 `allowBackgroundShells:false`,实践中 headless 无 shell;但用「只等 terminal 类」做结构保证,不靠此配置,更稳。
-- **两个谓词,职责分清**:`hasRunningTerminalBackgroundWork`(agent∪video,供 headless 收尾等待)vs `hasRunningBackgroundWork`(agent∪video∪shell,供 goal 短路)。§3/§4 的统一谓词据此拆成两个。
+- headless await 循环的终止保证是**结构性**的:只等后台 sub-agent(`asyncAgentRegistry`,terminal),**不含 shell**(dev server 永不退会让 headless 永等)、**不含 video**(长渲染,headless 不为它干等)。不依赖 `allowBackgroundShells` 配置。
+- **谓词职责分清**:headless 收尾用现成 `asyncAgentRegistry.hasRunningForSession`(仅 sub-agent);goal 短路用新增 `hasRunningBackgroundWork`(agent∪shell∪video)。
