@@ -1,8 +1,24 @@
-import { describe, test, expect } from "bun:test";
-import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resolveVideoProviderForTests, __normalizeImagesForTests } from "./generate-video.js";
+
+// Isolate HOME so SettingsManager("full") doesn't merge the developer's real
+// ~/.code-shell (which now has modelConnections that would trigger the unified
+// resolve path and break the legacy videoGen.providers[] assertions here).
+// See memory project_test_pollutes_real_settings.
+let homeDir: string;
+const realHome = process.env.HOME;
+beforeEach(() => {
+  homeDir = mkdtempSync(join(tmpdir(), "fal-vid-home-"));
+  process.env.HOME = homeDir;
+});
+afterEach(() => {
+  rmSync(homeDir, { recursive: true, force: true });
+  if (realHome === undefined) delete process.env.HOME;
+  else process.env.HOME = realHome;
+});
 
 function tmpWorkspaceWithSettings(settings: object): string {
   const dir = mkdtempSync(join(tmpdir(), "fal-vid-"));
