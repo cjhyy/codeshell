@@ -51,6 +51,13 @@ import {
   killShellToolDef, killShellTool,
   listShellsToolDef, listShellsTool,
 } from "./background-shell-tools.js";
+import {
+  browserSnapshotToolDef, browserSnapshotTool,
+  browserNavigateToolDef, browserNavigateTool,
+  browserClickToolDef, browserClickTool,
+  browserTypeToolDef, browserTypeTool,
+  browserScrollToolDef, browserScrollTool,
+} from "./browser-tools.js";
 
 /**
  * Tool executor signature.
@@ -606,6 +613,61 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       timeoutMs: 120_000, // git clone over network
     },
     execute: addMarketplaceTool,
+  },
+  // Browser automation — drive the in-app webview via the BrowserBridge (CDP).
+  // All serial on one webview (isConcurrencySafe:false). snapshot is read-only;
+  // navigate/scroll just move the view; click/type act on the page so default
+  // to ask (sensitive-action + domain-whitelist enforcement lives in the bridge,
+  // see the MVP spec §7). Tools self-gate to unavailable when no bridge is wired.
+  {
+    definition: {
+      ...browserSnapshotToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+    },
+    execute: browserSnapshotTool,
+  },
+  {
+    definition: {
+      ...browserNavigateToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: browserNavigateTool,
+  },
+  {
+    definition: {
+      ...browserClickToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: browserClickTool,
+  },
+  {
+    definition: {
+      ...browserTypeToolDef,
+      source: "builtin",
+      permissionDefault: "ask",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: browserTypeTool,
+  },
+  {
+    definition: {
+      ...browserScrollToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: browserScrollTool,
   },
 ];
 

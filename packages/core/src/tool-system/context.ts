@@ -261,6 +261,15 @@ export interface ToolContext {
    * no-cwd contexts (populated from settings by Engine.buildToolContext()).
    */
   shellEnv?: Record<string, string>;
+  /**
+   * Browser automation bridge (browser_snapshot / click / type / navigate /
+   * scroll). The renderer implements it on top of the webview's CDP
+   * (Accessibility.getFullAXTree + Input.dispatchMouseEvent). Undefined →
+   * headless / no browser panel → the browser tools degrade with a clear error.
+   * See tool-system/browser-bridge.ts and the MVP spec
+   * docs/superpowers/specs/2026-06-16-browser-automation-mvp.md.
+   */
+  browser?: import("./browser-bridge.js").BrowserBridge;
 }
 
 /**
