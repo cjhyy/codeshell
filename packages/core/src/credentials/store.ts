@@ -1,0 +1,97 @@
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  renameSync,
+} from "node:fs";
+import { join, dirname } from "node:path";
+import { homedir } from "node:os";
+import type { Credential, CredentialStoreFile } from "./types.js";
+
+/** 测试可经 process.env.HOME 覆盖(镜像 settings/manager.ts userHome)。 */
+function userHome(): string {
+  return process.env.HOME ?? homedir();
+}
+
+export type CredentialScope = "user" | "project";
+
+export interface MaskedCredential extends Omit<Credential, "secret"> {
+  hasSecret: boolean;
+  /** 形如 `****abcd`,绝不含完整明文。 */
+  secretHint?: string;
+}
+
+const EMPTY: CredentialStoreFile = { version: 1, credentials: [] };
+
+/**
+ * 两层凭证库,镜像 SettingsManager 的 user(~/.code-shell)/ project(<cwd>/.code-shell)
+ * 双层模型。只存 token / link;cookie 不进库(见 credentials-module 设计稿)。
+ */
+export class CredentialStore {
+  constructor(private readonly cwd?: string) {}
+
+  private pathFor(scope: CredentialScope): string | undefined {
+    if (scope === "user") return join(userHome(), ".code-shell", "credentials.json");
+    if (!this.cwd) return undefined;
+    return join(this.cwd, ".code-shell", "credentials.json");
+  }
+
+  private read(scope: CredentialScope): CredentialStoreFile {
+    const p = this.pathFor(scope);
+    if (!p || !existsSync(p)) return { ...EMPTY, credentials: [] };
+    try {
+      const raw = JSON.parse(readFileSync(p, "utf8")) as Partial<CredentialStoreFile>;
+      return { version: 1, credentials: Array.isArray(raw.credentials) ? raw.credentials : [] };
+    } catch {
+      return { ...EMPTY, credentials: [] };
+    }
+  }
+
+  private write(scope: CredentialScope, file: CredentialStoreFile): void {
+    const p = this.pathFor(scope);
+    if (!p) return;
+    mkdirSync(dirname(p), { recursive: true });
+    const tmp = `${p}.${process.pid}.${String(performance.now()).replace(".", "")}.tmp`;
+    writeFileSync(tmp, JSON.stringify(file, null, 2), { mode: 0o600 });
+    renameSync(tmp, p);
+  }
+
+  /** Upsert by id within a scope. */
+  save(scope: CredentialScope, cred: Credential): void {
+    const file = this.read(scope);
+    const idx = file.credentials.findIndex((c) => c.id === cred.id);
+    if (idx >= 0) file.credentials[idx] = cred;
+    else file.credentials.push(cred);
+    this.write(scope, file);
+  }
+
+  remove(scope: CredentialScope, id: string): void {
+    const file = this.read(scope);
+    file.credentials = file.credentials.filter((c) => c.id !== id);
+    this.write(scope, file);
+  }
+
+  /** Merged list: project overrides user on same id. */
+  list(): Credential[] {
+    const byId = new Map<string, Credential>();
+    for (const c of this.read("user").credentials) byId.set(c.id, c);
+    for (const c of this.read("project").credentials) byId.set(c.id, c); // project wins
+    return [...byId.values()];
+  }
+
+  resolve(id: string): Credential | undefined {
+    return this.list().find((c) => c.id === id);
+  }
+
+  listMasked(): MaskedCredential[] {
+    return this.list().map((c) => {
+      const { secret, ...rest } = c;
+      return {
+        ...rest,
+        hasSecret: typeof secret === "string" && secret.length > 0,
+        secretHint: secret ? `****${secret.slice(-4)}` : undefined,
+      };
+    });
+  }
+}
