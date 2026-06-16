@@ -3,6 +3,8 @@ import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react
 import type { AgentSummary, AgentDefinitionInput } from "../../preload/types";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { ProjectPicker } from "./ProjectPicker";
+import { catalogModelOptions, type ModelInstance } from "./textConnections";
+import type { CatalogEntry } from "../../preload/types";
 import { repoLabel, type Repo } from "../repos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,9 +127,14 @@ function AgentsEditor({ target }: { target: Target }) {
       const u = (await window.codeshell.getSettings("user")) ?? {};
       const da = (u as { disabledAgents?: unknown }).disabledAgents;
       setDisabled(Array.isArray(da) ? (da as string[]) : []);
-      const ms = (u as { models?: unknown }).models;
-      const arr = Array.isArray(ms) ? (ms as Array<{ key: string; label?: string }>) : [];
-      setModels(arr.map((m) => ({ key: m.key, label: m.label || m.key })));
+      // Unified store: sub-agent model options come from text modelConnections
+      // (key = connection instance id = engine pool key, so resolveChildLlm
+      // resolves it). Replaces the legacy settings.models[] source.
+      const conns = Array.isArray((u as { modelConnections?: unknown }).modelConnections)
+        ? ((u as { modelConnections: ModelInstance[] }).modelConnections)
+        : [];
+      const catalog = (await window.codeshell.getModelCatalog().catch(() => [])) as CatalogEntry[];
+      setModels(catalogModelOptions(conns, catalog).map((o) => ({ key: o.key, label: o.label })));
       // Project overlay (unmerged project file).
       if (isProject) {
         const p = (await window.codeshell.getSettings("project", cwd)) ?? {};
