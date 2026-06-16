@@ -24,6 +24,7 @@ import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { resolveAuxKey } from "./aux-key.js";
 import { resolveSandboxConfig, type SettingsSandbox } from "./sandbox-config.js";
+import { sandboxCacheKey } from "./sandbox-cache-key.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
@@ -2931,7 +2932,7 @@ export class Engine {
     config: SandboxConfig,
     cwd: string,
   ): Promise<SandboxBackend> {
-    const key = `${config.mode}:${cwd}`;
+    const key = sandboxCacheKey(config, cwd);
     let cached = this.sandboxCache.get(key);
     if (!cached) {
       cached = resolveSandboxBackend(config, cwd);

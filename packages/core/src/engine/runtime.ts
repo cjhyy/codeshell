@@ -8,6 +8,7 @@ import {
   type SandboxBackend,
   type SandboxConfig,
 } from "../tool-system/sandbox/index.js";
+import { sandboxCacheKey } from "./sandbox-cache-key.js";
 
 export interface EngineRuntimeOptions {
   modelPool: ModelPool;
@@ -52,7 +53,7 @@ export class EngineRuntime {
    * violate standard §S4 fail-closed rule.
    */
   resolveSandbox(config: SandboxConfig, cwd: string): Promise<SandboxBackend> {
-    const key = `${config.mode}:${cwd}`;
+    const key = sandboxCacheKey(config, cwd);
     let cached = this.sandboxCache.get(key);
     if (!cached) {
       cached = resolveSandboxBackend(config, cwd);
