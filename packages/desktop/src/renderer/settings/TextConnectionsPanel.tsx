@@ -108,6 +108,17 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
 
   useEffect(() => {
     void load();
+    // Live refresh: the EditModelCatalog tool (or a manual settings edit) writes
+    // the catalog/settings from the worker process; App dispatches these events
+    // on turn_complete / settings save, so the panel re-pulls catalog +
+    // connections without a restart.
+    const reload = () => void load();
+    window.addEventListener("codeshell:files-changed", reload);
+    window.addEventListener("codeshell:settings-changed", reload);
+    return () => {
+      window.removeEventListener("codeshell:files-changed", reload);
+      window.removeEventListener("codeshell:settings-changed", reload);
+    };
   }, [load]);
 
   const persist = useCallback(

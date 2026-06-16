@@ -56,6 +56,6 @@ export async function editModelCatalogTool(
   const backupNote = r.backup ? ` Previous file backed up to ${r.backup}.` : "";
   return (
     `${r.action === "updated" ? "Updated" : "Added"} catalog entry "${id}" in ` +
-    `${userCatalogPath()}.${backupNote} Restart the app to see it in the connection page.`
+    `${userCatalogPath()}.${backupNote} It appears in the connection page once this turn completes.`
   );
 }
