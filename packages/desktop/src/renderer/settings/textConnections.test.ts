@@ -13,6 +13,7 @@ import {
   uniqueInstanceId,
   credentialCandidates,
   credentialLabel,
+  catalogModelOptions,
   type ModelInstance,
   type Credential,
 } from "./textConnections";
@@ -115,5 +116,40 @@ describe("credentialLabel", () => {
   test("omits the key suffix when the credential has no key yet", () => {
     const label = credentialLabel({ id: "c", catalogId: "openai" }, "OpenAI");
     expect(label).not.toContain("⋯");
+  });
+});
+
+describe("catalogModelOptions", () => {
+  const DEEPSEEK: CatalogEntry = {
+    id: "deepseek",
+    tag: "text",
+    adapterKind: "openai",
+    displayName: "DeepSeek",
+    description: "x",
+    defaultBaseUrl: "https://api.deepseek.com",
+    modelPresets: [
+      { value: "deepseek-v4-flash", label: "V4 Flash", maxContextTokens: 128000, supportsVision: true },
+    ],
+  };
+  const conns: ModelInstance[] = [
+    { id: "openai", catalogId: "openai", tag: "text", model: "gpt-5.5" },
+    { id: "deepseek", catalogId: "deepseek", tag: "text", model: "deepseek-v4-flash" },
+    { id: "fal-video", catalogId: "fal-video", tag: "video", model: "x" },
+    { id: "ghost", catalogId: "no-such", tag: "text", model: "y" },
+  ];
+
+  test("keys by instance id and chips with the catalog displayName, not catalogId", () => {
+    const opts = catalogModelOptions(conns, [OPENAI, DEEPSEEK]);
+    const openai = opts.find((o) => o.key === "openai");
+    expect(openai?.provider).toBe("OpenAI");
+    expect(openai?.label).toBe("gpt-5.5"); // OPENAI preset has no label → model id
+  });
+  test("pulls label/vision/context from the matching preset", () => {
+    const ds = catalogModelOptions(conns, [OPENAI, DEEPSEEK]).find((o) => o.key === "deepseek");
+    expect(ds).toMatchObject({ label: "V4 Flash", supportsVision: true, maxContextTokens: 128000 });
+  });
+  test("drops non-text instances and instances whose catalogId doesn't resolve", () => {
+    const keys = catalogModelOptions(conns, [OPENAI, DEEPSEEK]).map((o) => o.key);
+    expect(keys).toEqual(["openai", "deepseek"]); // no fal-video, no ghost
   });
 });

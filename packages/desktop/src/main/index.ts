@@ -630,7 +630,14 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     webPreferences.contextIsolation = true;
     webPreferences.sandbox = true;
     webPreferences.webSecurity = true;
-    delete (params as Record<string, unknown>).allowpopups;
+    // Counterintuitive but required: `setWindowOpenHandler` (below) is ONLY
+    // consulted when the guest has `allowpopups` — without it, Electron drops
+    // target=_blank / window.open BEFORE the handler runs, so our "open as a new
+    // tab" routing never fires (the "点了没反应" bug). We keep popups ENABLED here
+    // and instead return {action:"deny"} from the handler to suppress the actual
+    // OS popup window while still intercepting the URL. Not a security loosening:
+    // every popup is denied; we only read its URL to open an in-app tab.
+    (params as Record<string, unknown>).allowpopups = true;
     if (!params.partition) params.partition = "persist:browser";
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
@@ -639,6 +646,11 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     // "点了没反应"). Instead, route http(s) popups back to the renderer to open as
     // a NEW TAB in the same browser panel, like a real browser. We still deny the
     // native popup window itself (no second OS window); non-http(s) is dropped.
+    // Note: due to electron/electron#30886, this handler does NOT fire for
+    // target=_blank link clicks in a <webview>. The reliable path is the
+    // in-guest click interception injected by BrowserPanel (console sentinel →
+    // open-in-app-tab). We keep this handler for window.open() calls that DO
+    // reach it, and still deny the native popup either way.
     guest.setWindowOpenHandler(({ url }) => {
       if (/^https?:/i.test(url) && !win.isDestroyed()) {
         win.webContents.send("browser:open-tab", { url });

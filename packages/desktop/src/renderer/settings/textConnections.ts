@@ -68,6 +68,50 @@ export function buildTextInstance(
 }
 
 /**
+ * One row for the composer model dropdown, resolved from a text connection
+ * instance against the catalog. `key` is the instance id — the engine's pool
+ * keys text connections by `instance.id` (model-connections-pool.ts), and the
+ * active selection lives in `settings.defaults.text` (engine priority #1), so
+ * the picker speaks instance ids, not legacy models[] keys.
+ */
+export interface CatalogModelOption {
+  key: string;
+  label: string;
+  provider: string;
+  maxContextTokens?: number;
+  supportsVision?: boolean;
+}
+
+/**
+ * Map text `modelConnections` → picker options via the catalog. Chip text is
+ * the catalog `displayName` (not the raw catalogId); label is the matching
+ * preset's label, else the model id; vision/context come from the preset.
+ * Instances whose catalogId doesn't resolve are dropped (stale store). Mirrors
+ * the engine's modelEntriesFromConnections so the dropdown == what runs.
+ */
+export function catalogModelOptions(
+  connections: ModelInstance[],
+  catalog: CatalogEntry[],
+): CatalogModelOption[] {
+  const byId = new Map(catalog.map((e) => [e.id, e]));
+  const out: CatalogModelOption[] = [];
+  for (const inst of connections) {
+    if (inst.tag !== "text") continue;
+    const entry = byId.get(inst.catalogId);
+    if (!entry) continue;
+    const preset = entry.modelPresets?.find((p) => p.value === inst.model);
+    out.push({
+      key: inst.id,
+      label: preset?.label ?? inst.model,
+      provider: entry.displayName,
+      maxContextTokens: preset?.maxContextTokens,
+      supportsVision: preset?.supportsVision,
+    });
+  }
+  return out;
+}
+
+/**
  * Credentials usable for a given catalogId. A key belongs to one provider
  * account, so candidates are scoped to the same catalogId — never cross-provider.
  */

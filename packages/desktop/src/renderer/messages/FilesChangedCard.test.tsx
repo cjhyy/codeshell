@@ -27,6 +27,14 @@ describe("FilesChangedCard", () => {
     expect(html).not.toContain("a.ts");
   });
 
+  test("renders as an inset card instead of a flush-to-edge bar", () => {
+    const html = renderToStaticMarkup(
+      <FilesChangedCard message={card()} cwd={null} sessionId={null} isLatest />,
+    );
+    expect(html).toContain('class="px-3 py-2"');
+    expect(html).toContain("rounded-lg border bg-card p-3 shadow-sm");
+  });
+
   test("multi-file totals", () => {
     const m = card({
       files: [

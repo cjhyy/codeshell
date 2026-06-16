@@ -118,6 +118,7 @@ import {
   type PermissionMode,
 } from "./chat/PermissionPill";
 import type { ModelOption } from "./chat/ModelPill";
+import { catalogModelOptions, type ModelInstance } from "./settings/textConnections";
 
 // Bucket key for sessions without a project — re-exported from transcripts.
 // We use NO_REPO_KEY everywhere instead of a local const so the renderer
@@ -2157,6 +2158,12 @@ function App() {
         const projectS = cwd ? (await window.codeshell.getSettings("project", cwd)) ?? {} : {};
         const userS = (await window.codeshell.getSettings("user")) ?? {};
         const merged: Record<string, unknown> = { ...userS, ...projectS };
+        // Unified catalog (统一模型接入方案 §6): the composer picker lists text
+        // `modelConnections` resolved through the catalog — the same store the
+        // engine pool keys by instance id. The active selection is
+        // `defaults.text` (engine priority #1), with legacy activeKey/model.name
+        // as fallback for un-migrated configs.
+        const catalog = await window.codeshell.getModelCatalog().catch(() => []);
         if (cancelled) return;
         setDefaultActiveModelKey(resolveActiveKey(merged));
         const permissions = merged.permissions && typeof merged.permissions === "object"
@@ -2168,38 +2175,39 @@ function App() {
         const rawDetail = (merged.images as { detail?: string } | undefined)?.detail;
         const d = rawDetail === "original" ? "high" : rawDetail;
         setImageDetail(d === "low" || d === "standard" || d === "high" ? d : undefined);
-        const baseOpts = candidatesFromSettings(merged);
+        const conns = Array.isArray(merged.modelConnections)
+          ? (merged.modelConnections as ModelInstance[])
+          : [];
+        const baseOpts = catalogModelOptions(conns, catalog);
         setModelOptions(baseOpts);
 
-        // Resolve maxContextTokens for entries that didn't declare one
-        // via main-process model-meta-service (OpenRouter API → hardcoded
-        // table → fallback). Done out-of-band so the initial render
-        // doesn't wait on the network.
-        const providers = Array.isArray(merged.providers)
-          ? (merged.providers as Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>)
-          : [];
-        const rawModels = Array.isArray(merged.models)
-          ? (merged.models as Array<{
-              key: string;
-              model?: string;
-              providerKey?: string;
-              maxContextTokens?: number | null;
-            }>)
-          : [];
-        const meta = await window.codeshell.resolveModelMeta(rawModels, providers);
-        if (cancelled) return;
-        const byKey = new Map(meta.map((m) => [m.key, m]));
-        setModelOptions((prev) =>
-          prev.map((o) => {
-            const r = byKey.get(o.key);
-            if (!r) return o;
-            return {
-              ...o,
-              maxContextTokens: r.maxContextTokens,
-              supportsVision: r.supportsVision,
-            };
-          }),
+        // Backfill maxContextTokens/supportsVision for connections whose
+        // catalog preset omitted them (e.g. OpenRouter dynamic models). Resolve
+        // via the main-process model-meta-service (OpenRouter API → hardcoded
+        // table → fallback), keyed by the connection's model id. Out-of-band so
+        // the initial render doesn't wait on the network; the preset always wins.
+        const needsMeta = baseOpts.some(
+          (o) => o.maxContextTokens === undefined || o.supportsVision === undefined,
         );
+        if (needsMeta) {
+          const metaInput = conns
+            .filter((c) => c.tag === "text")
+            .map((c) => ({ key: c.id, model: c.model }));
+          const meta = await window.codeshell.resolveModelMeta(metaInput, []);
+          if (cancelled) return;
+          const byKey = new Map(meta.map((m) => [m.key, m]));
+          setModelOptions((prev) =>
+            prev.map((o) => {
+              const r = byKey.get(o.key);
+              if (!r) return o;
+              return {
+                ...o,
+                maxContextTokens: o.maxContextTokens ?? r.maxContextTokens,
+                supportsVision: o.supportsVision ?? r.supportsVision,
+              };
+            }),
+          );
+        }
       } catch {
         // ignore
       }
@@ -2285,18 +2293,17 @@ function App() {
     //    rewrites another bucket's existing override above.
     setDefaultActiveModelKey(opt.key);
     void (async () => {
-      try {
-        const cwd = activeRepo?.path;
-        const projectS = cwd ? (await window.codeshell.getSettings("project", cwd)) ?? {} : {};
-        const userS = (await window.codeshell.getSettings("user")) ?? {};
-        const merged: Record<string, unknown> = { ...userS, ...projectS };
-        await window.codeshell.updateSettings(
-          "user",
-          activeModelSettingsPatch(merged, opt.key),
-        );
-      } catch {
-        await window.codeshell.updateSettings("user", { activeKey: opt.key });
-      }
+      // Unified catalog: persist the choice as defaults.text (the engine's
+      // active-text priority #1; the value is the connection instance id ==
+      // pool key). Merge with any existing defaults so we don't clobber the
+      // image/video defaults.
+      const userS = ((await window.codeshell.getSettings("user")) ?? {}) as Record<string, unknown>;
+      const defaults = userS.defaults && typeof userS.defaults === "object"
+        ? (userS.defaults as Record<string, unknown>)
+        : {};
+      await window.codeshell.updateSettings("user", {
+        defaults: { ...defaults, text: opt.key },
+      });
     })();
     // 3) Hot-switch the running worker. Scope it to THIS session's engine so
     //    we don't swap the model under any OTHER live session. The backend
@@ -2663,90 +2670,20 @@ function App() {
   );
 }
 
-/**
- * Read top-level models[] out of merged settings.
- *
- * Code-shell's settings.json shape is:
- *   {
- *     activeKey: "deepseek-v4-pro",
- *     models: [{ key, label, providerKey, maxContextTokens, ... }],
- *     providers: [{ key, kind, label, ... }],
- *     model: { provider, name, ... }       // legacy single-model field
- *   }
- *
- * The engine picks the active model by matching activeKey against
- * models[].key. We mirror that here: read models[] for the dropdown,
- * read activeKey (or fall back to model.name) for the current pick.
- */
-function candidatesFromSettings(s: Record<string, unknown>): ModelOption[] {
-  const models = s.models;
-  if (!Array.isArray(models)) return [];
-  const out: ModelOption[] = [];
-  for (const m of models) {
-    if (!m || typeof m !== "object") continue;
-    const obj = m as Record<string, unknown>;
-    const key = typeof obj.key === "string" ? obj.key : typeof obj.model === "string" ? obj.model : "";
-    if (!key) continue;
-    const label =
-      typeof obj.label === "string" ? obj.label :
-      typeof obj.model === "string" ? obj.model : key;
-    const provider =
-      typeof obj.providerKey === "string" ? obj.providerKey :
-      typeof obj.provider === "string" ? obj.provider : "";
-    const maxContextTokens =
-      typeof obj.maxContextTokens === "number" ? obj.maxContextTokens : undefined;
-    out.push({ key, label, provider, maxContextTokens });
-  }
-  return out;
-}
-
 function resolveActiveKey(s: Record<string, unknown>): string | null {
+  // Unified catalog: defaults.text holds the active text connection's instance
+  // id — the engine's priority #1 (engine.ts) and the picker's option key.
+  const defaults = s.defaults && typeof s.defaults === "object"
+    ? (s.defaults as Record<string, unknown>)
+    : {};
+  if (typeof defaults.text === "string" && defaults.text) return defaults.text;
+  // Legacy fallbacks for un-migrated configs.
   if (typeof s.activeKey === "string" && s.activeKey) return s.activeKey;
-  // Legacy: top-level `model.name` named the model directly.
   if (s.model && typeof s.model === "object") {
     const m = s.model as Record<string, unknown>;
     if (typeof m.name === "string") return m.name;
   }
   return null;
-}
-
-function activeModelSettingsPatch(
-  s: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> {
-  const rawModels = Array.isArray(s.models)
-    ? s.models.filter((m): m is Record<string, unknown> => Boolean(m && typeof m === "object"))
-    : [];
-  const rawProviders = Array.isArray(s.providers)
-    ? s.providers.filter((p): p is Record<string, unknown> => Boolean(p && typeof p === "object"))
-    : [];
-  const raw = rawModels.find((m) => {
-    const modelKey = typeof m.key === "string" ? m.key :
-      typeof m.model === "string" ? m.model : "";
-    return modelKey === key;
-  });
-  if (!raw) return { activeKey: key };
-
-  const providerKey = typeof raw.providerKey === "string" ? raw.providerKey :
-    typeof raw.provider === "string" ? raw.provider : "";
-  const provider = rawProviders.find((p) => p.key === providerKey);
-  const providerKind = typeof provider?.kind === "string" ? provider.kind : "";
-  const protocol = typeof raw.provider === "string"
-    ? raw.provider
-    : providerKind === "anthropic"
-      ? "anthropic"
-      : "openai";
-  return {
-    activeKey: key,
-    model: {
-      provider: protocol,
-      name: typeof raw.model === "string" ? raw.model : key,
-      apiKey: typeof raw.apiKey === "string" ? raw.apiKey :
-        typeof provider?.apiKey === "string" ? provider.apiKey : null,
-      baseUrl: typeof raw.baseUrl === "string" ? raw.baseUrl :
-        typeof provider?.baseUrl === "string" ? provider.baseUrl : null,
-    },
-  };
 }
 
 export { App };

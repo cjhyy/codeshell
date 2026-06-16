@@ -71,14 +71,19 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
     setOpen(false);
   };
 
+  const triggerClass = [
+    "flex h-9 w-full items-center gap-2 rounded-md px-2 text-sm text-muted-foreground",
+    "hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+    open ? "bg-accent text-accent-foreground" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className="relative" ref={ref}>
-      <button
-        className={`sidebar-item${open ? " active" : ""}`}
-        onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}
-      >
-        <SettingsIcon size={14} />
-        <span className="sidebar-item-label">设置</span>
+      <button className={triggerClass} onClick={sidebarCollapsed ? onOpenSettingsPage : () => setOpen((o) => !o)}>
+        <SettingsIcon size={14} className="shrink-0" />
+        <span className="truncate">设置</span>
       </button>
       {open && (
         <ul className="absolute bottom-full left-0 z-40 mb-2 min-w-56 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
