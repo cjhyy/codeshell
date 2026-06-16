@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type {
   McpProbeResult,
@@ -29,6 +29,8 @@ interface McpServer {
   bearerTokenEnvVar?: string;
   /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
   envHeaders?: Record<string, string>;
+  /** (HTTP) id of a stored credential used as the Bearer token (wins over bearerTokenEnvVar). */
+  credentialRef?: string;
   /** Codex-style toggle. Absent/true = on; only false disables. */
   enabled?: boolean;
   source?: "settings" | "plugin";
@@ -136,6 +138,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       envVars: s.envVars,
       bearerTokenEnvVar: s.bearerTokenEnvVar,
       envHeaders: s.envHeaders,
+      credentialRef: s.credentialRef,
     }));
     setLoadingProbe(new Set(probeable.map((x) => x.name)));
     try {
@@ -541,14 +544,24 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
   const [envText, setEnvText] = useState(envOrHeadersToText(initial?.env));
   const [headersText, setHeadersText] = useState(envOrHeadersToText(initial?.headers, ": "));
   const [bearerEnvVar, setBearerEnvVar] = useState(initial?.bearerTokenEnvVar ?? "");
+  const [credentialRef, setCredentialRef] = useState(initial?.credentialRef ?? "");
+  const [credOptions, setCredOptions] = useState<{ value: string; label: string }[]>([]);
   const [envHeadersText, setEnvHeadersText] = useState(envOrHeadersToText(initial?.envHeaders, ": "));
   const [showAdvanced, setShowAdvanced] = useState(
     Boolean(initial?.env && Object.keys(initial.env).length) ||
       Boolean(initial?.headers && Object.keys(initial.headers).length) ||
       Boolean(initial?.bearerTokenEnvVar) ||
+      Boolean(initial?.credentialRef) ||
       Boolean(initial?.envHeaders && Object.keys(initial.envHeaders).length),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Load token/link credentials (user scope) to offer as Bearer-token sources.
+  useEffect(() => {
+    void window.codeshell.credentials.list("").then((all) =>
+      setCredOptions(all.map((c) => ({ value: c.id, label: `${c.label} (${c.id})` }))),
+    );
+  }, []);
 
   const isStdio = transport === "stdio";
   const otherNames = useMemo(
@@ -594,6 +607,7 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
         : {
             url: url.trim(),
             headers: headers && Object.keys(headers).length ? headers : undefined,
+            credentialRef: credentialRef || undefined,
             bearerTokenEnvVar: bearerEnvVar.trim() || undefined,
             envHeaders: envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined,
           }),
@@ -693,6 +707,17 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
                 />
                 <span className="text-xs text-muted-foreground">
                   明文 header，会存进配置文件 — 敏感 key 建议改用下面的环境变量方式。
+                </span>
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground">
+                <span>使用凭证（可选，优先于 Bearer 环境变量）</span>
+                <Select<string>
+                  value={credentialRef}
+                  onChange={(v) => setCredentialRef(v)}
+                  options={[{ value: "", label: "（不使用）" }, ...credOptions]}
+                />
+                <span className="text-xs text-muted-foreground">
+                  选「凭证」页里存的 token / link。连接时解析成 Authorization: Bearer，密文不进配置。
                 </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">

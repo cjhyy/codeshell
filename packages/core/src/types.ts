@@ -571,6 +571,12 @@ export interface MCPServerConfig {
    */
   envHeaders?: Record<string, string>;
   /**
+   * (HTTP) id of a stored credential (CredentialStore) to use as the Bearer
+   * token. Resolved at connect time via a resolver passed to buildHttpHeaders;
+   * the secret is never stored in the MCP config. Wins over bearerTokenEnvVar.
+   */
+  credentialRef?: string;
+  /**
    * Toggle a server off without deleting its config (mirrors Codex's
    * `enabled` field). Absent or `true` → connected; only the literal
    * `false` disables it. Filtered in MCPManager.connectAll so the

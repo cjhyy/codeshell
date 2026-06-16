@@ -1,0 +1,120 @@
+import React, { useCallback, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { useToast } from "../ui/ToastProvider";
+import { useConfirm } from "../ui/DialogProvider";
+import type { MaskedCredentialView } from "./types";
+
+/**
+ * Token / Link credential CRUD. The same form serves both (kind switches the
+ * value label + the optional appUrl field). Credentials persist user-scope via
+ * the credentials.* IPC bridge; the secret is write-only (list returns masked).
+ */
+export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" }) {
+  const toast = useToast();
+  const confirm = useConfirm();
+  const [items, setItems] = useState<MaskedCredentialView[]>([]);
+  const [id, setId] = useState("");
+  const [label, setLabel] = useState("");
+  const [secret, setSecret] = useState("");
+  const [exposeAsEnv, setExposeAsEnv] = useState("");
+  const [appUrl, setAppUrl] = useState("");
+
+  const load = useCallback(() => {
+    void window.codeshell.credentials.list(cwd).then((all) =>
+      setItems(all.filter((c) => c.type === kind)),
+    );
+  }, [cwd, kind]);
+  useEffect(load, [load]);
+
+  const save = async () => {
+    if (!id.trim() || !label.trim()) {
+      toast({ message: "id 和名称必填", variant: "error" });
+      return;
+    }
+    await window.codeshell.credentials.save(cwd, "user", {
+      id: id.trim(),
+      type: kind,
+      label: label.trim(),
+      secret: secret || undefined,
+      exposeAsEnv: exposeAsEnv.trim() || undefined,
+      meta: kind === "link" && appUrl.trim() ? { appUrl: appUrl.trim() } : undefined,
+    });
+    toast({ message: "已保存" });
+    setId("");
+    setLabel("");
+    setSecret("");
+    setExposeAsEnv("");
+    setAppUrl("");
+    load();
+  };
+
+  const del = async (cid: string) => {
+    if (!(await confirm({ message: `删除凭证 ${cid}?`, destructive: true }))) return;
+    await window.codeshell.credentials.remove(cwd, "user", cid);
+    load();
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="space-y-3 p-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label>id(引用键)</Label>
+            <Input value={id} onChange={(e) => setId(e.target.value)} placeholder="my-figma-token" />
+          </div>
+          <div className="space-y-1">
+            <Label>名称</Label>
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Figma 个人 token" />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label>{kind === "token" ? "Token 值" : "凭证(client id/secret 等)"}</Label>
+          <Input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} />
+        </div>
+        {kind === "link" && (
+          <div className="space-y-1">
+            <Label>注册地址(可选)</Label>
+            <Input value={appUrl} onChange={(e) => setAppUrl(e.target.value)} placeholder="https://..." />
+          </div>
+        )}
+        <div className="space-y-1">
+          <Label>暴露为 env 变量名(可选)</Label>
+          <Input
+            value={exposeAsEnv}
+            onChange={(e) => setExposeAsEnv(e.target.value)}
+            placeholder="FIGMA_TOKEN"
+          />
+        </div>
+        <Button onClick={() => void save()}>保存</Button>
+      </Card>
+
+      <div className="space-y-2">
+        {items.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            暂无{kind === "token" ? "凭证" : " Link"}。
+          </p>
+        )}
+        {items.map((c) => (
+          <Card key={c.id} className="flex items-center justify-between p-3">
+            <div className="min-w-0">
+              <div className="truncate font-medium">
+                {c.label} <span className="text-xs text-muted-foreground">({c.id})</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {c.hasSecret ? c.secretHint : "(无密文)"}
+                {c.exposeAsEnv ? ` · env: ${c.exposeAsEnv}` : ""}
+                {c.meta?.appUrl ? ` · ${c.meta.appUrl}` : ""}
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => void del(c.id)}>
+              删除
+            </Button>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

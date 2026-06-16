@@ -601,6 +601,17 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("fs:exists", root, path),
 
   // ── Browser popout window ─────────────────────────────────────────────
+  /** Credentials module: token/link store CRUD + cookie capture. */
+  credentials: {
+    list: (cwd: string) => ipcRenderer.invoke("credentials:list", cwd),
+    save: (cwd: string, scope: "user" | "project", cred: unknown) =>
+      ipcRenderer.invoke("credentials:save", cwd, scope, cred),
+    remove: (cwd: string, scope: "user" | "project", id: string) =>
+      ipcRenderer.invoke("credentials:remove", cwd, scope, id),
+    cookieDomains: (): Promise<string[]> => ipcRenderer.invoke("credentials:cookieDomains"),
+    cookiePreview: (domain: string): Promise<{ count: number }> =>
+      ipcRenderer.invoke("credentials:cookiePreview", domain),
+  },
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout: (initialUrl?: string) => ipcRenderer.invoke("browser:popout", initialUrl),
   /** From a popout: send an element-pick anchor back to the parent window. */

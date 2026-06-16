@@ -428,6 +428,14 @@ export {
 } from "./settings/migrate-config.js";
 export { SettingsSchema, validateSettings } from "./settings/schema.js";
 export { personalizationFrom, type PersonalizationConfig } from "./settings/personalization.js";
+export {
+  CredentialStore,
+  type CredentialScope,
+  type MaskedCredential,
+  type Credential,
+  type CredentialType,
+  type CredentialStoreFile,
+} from "./credentials/index.js";
 
 // ─── State (runtime singletons shared with TUI) ──────────────────
 

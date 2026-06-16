@@ -7,6 +7,7 @@ import {
   ScrollText,
   Settings,
   Workflow,
+  KeyRound,
 } from "./ui/icons";
 import { Badge } from "./ui/Badge";
 import type { ViewMode } from "./view";
@@ -37,6 +38,7 @@ const ITEMS: Item[] = [
   { id: "approvals", label: "审批", Icon: ShieldAlert, badge: "approvals" },
   { id: "runs", label: "运行", Icon: Activity, badge: "runs" },
   { id: "automation", label: "自动化", Icon: Workflow },
+  { id: "credentials", label: "凭证", Icon: KeyRound },
   { id: "logs", label: "日志", Icon: ScrollText },
   { id: "settings", label: "设置", Icon: Settings },
 ];

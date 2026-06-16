@@ -11,6 +11,7 @@ import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import type { MCPServerConfig, RegisteredTool } from "../types.js";
 import { ToolRegistry } from "./registry.js";
 import { logger } from "../logging/logger.js";
+import { CredentialStore } from "../credentials/index.js";
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -66,9 +67,18 @@ export function buildStdioEnv(
 export function buildHttpHeaders(
   serverName: string,
   config: MCPServerConfig,
+  resolveCredential?: (id: string) => string | undefined,
 ): Record<string, string> {
   const headers: Record<string, string> = { ...(config.headers ?? {}) };
-  if (config.bearerTokenEnvVar) {
+  if (config.credentialRef) {
+    const secret = resolveCredential?.(config.credentialRef);
+    if (secret === undefined || secret === "") {
+      throw new Error(
+        `MCP server "${serverName}": credential "${config.credentialRef}" not found or empty`,
+      );
+    }
+    headers["Authorization"] = `Bearer ${secret}`;
+  } else if (config.bearerTokenEnvVar) {
     headers["Authorization"] = `Bearer ${readRequiredEnv(
       serverName,
       "bearerTokenEnvVar",
@@ -388,7 +398,12 @@ export class MCPManager {
       if (!config.url) {
         throw new Error(`MCP server "${name}": url is required for ${transportType} transport`);
       }
-      const headers = buildHttpHeaders(name, config);
+      // credentialRef resolves against the user-scope CredentialStore. The
+      // shared MCPManager pool has no per-session cwd (see desiredByOwner note),
+      // and MCP-referenced credentials (e.g. a Figma token) are user-global by
+      // nature, so user scope is the right resolution surface here.
+      const credStore = new CredentialStore(undefined);
+      const headers = buildHttpHeaders(name, config, (id) => credStore.resolve(id)?.secret);
       transport = new StreamableHTTPClientTransport(new URL(config.url), {
         requestInit: Object.keys(headers).length ? { headers } : undefined,
       });

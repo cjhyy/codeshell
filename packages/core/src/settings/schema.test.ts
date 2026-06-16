@@ -66,4 +66,13 @@ describe("mcpServers name resilience (regression: settings died on {\"23\":{no n
     expect(Object.keys(parsed.mcpServers).sort()).toEqual(["a", "b"]);
     expect(parsed.mcpServers.a.command).toBe("x");
   });
+
+  it("preserves credentialRef through validation (binding must survive round-trip)", () => {
+    const parsed = SettingsSchema.parse({
+      mcpServers: {
+        figma: { transport: "streamable-http", url: "https://x/mcp", credentialRef: "my-figma-token" },
+      },
+    });
+    expect(parsed.mcpServers.figma.credentialRef).toBe("my-figma-token");
+  });
 });

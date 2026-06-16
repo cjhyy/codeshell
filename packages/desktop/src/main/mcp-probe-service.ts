@@ -13,7 +13,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { buildHttpHeaders, buildStdioEnv } from "@cjhyy/code-shell-core";
+import { buildHttpHeaders, buildStdioEnv, CredentialStore } from "@cjhyy/code-shell-core";
 import { dlog } from "./desktop-logger.js";
 
 export interface McpServerConfig {
@@ -30,6 +30,8 @@ export interface McpServerConfig {
   bearerTokenEnvVar?: string;
   /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
   envHeaders?: Record<string, string>;
+  /** (HTTP) id of a stored credential used as the Bearer token. */
+  credentialRef?: string;
 }
 
 export interface McpProbedTool {
@@ -173,7 +175,11 @@ async function probeOne(cfg: McpServerConfig): Promise<McpProbeResult> {
       // env var throws here and is classified by humanizeError below — before
       // this the probe silently ignored env-based auth and reported a
       // misleading 401 even when the config was correct.
-      const headers = buildHttpHeaders(cfg.name, cfg);
+      // Resolve credentialRef against the user-scope store (same surface as the
+      // real connect in core's MCPManager) so testing a credential-bound server
+      // actually sends its auth instead of a misleading 401.
+      const credStore = new CredentialStore(undefined);
+      const headers = buildHttpHeaders(cfg.name, cfg, (id) => credStore.resolve(id)?.secret);
       mcpTransport = new StreamableHTTPClientTransport(new URL(cfg.url), {
         requestInit: Object.keys(headers).length > 0 ? { headers } : undefined,
       });

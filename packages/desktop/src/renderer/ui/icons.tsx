@@ -28,4 +28,5 @@ export {
   Plus,
   Square,
   Send,
+  KeyRound,
 } from "lucide-react";

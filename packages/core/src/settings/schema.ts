@@ -425,6 +425,7 @@ export const SettingsSchema = z
             envVars: z.array(z.string()).optional(), // (stdio) forward these env vars
             bearerTokenEnvVar: z.string().optional(), // (HTTP) → Authorization: Bearer <env value>
             envHeaders: z.record(z.string()).optional(), // (HTTP) header-name → env-var-name
+            credentialRef: z.string().optional(), // (HTTP) id of a stored credential → Bearer, resolved at connect time
             // Codex-style on/off switch. Absent or true → connected; only
             // literal false disables. Filtered in MCPManager.connectAll.
             enabled: z.boolean().optional(),
