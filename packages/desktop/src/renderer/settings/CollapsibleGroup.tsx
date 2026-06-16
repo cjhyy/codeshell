@@ -27,6 +27,9 @@ export function CollapsibleGroup({ title, subtitle, badge, defaultOpen = true, c
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "flex w-full select-none items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-accent/50",
+          // No stray focus ring on mouse click; only a subtle inset ring on
+          // keyboard focus (the orange browser-default outline looked broken).
+          "outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",
           open && "border-b border-border",
         )}
       >
@@ -43,7 +46,7 @@ export function CollapsibleGroup({ title, subtitle, badge, defaultOpen = true, c
           />
         </span>
       </button>
-      {open && children}
+      {open && <div className="p-3">{children}</div>}
     </div>
   );
 }
