@@ -23,6 +23,7 @@ import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { resolveAuxKey } from "./aux-key.js";
+import { resolveSandboxConfig, type SettingsSandbox } from "./sandbox-config.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
@@ -1220,9 +1221,20 @@ export class Engine {
       },
     };
 
-    const sandboxConfig =
-      this.config.sandbox ??
-      defaultSandboxConfig(this.config.headless ? "auto" : "off");
+    // Priority: explicit config.sandbox → settings.sandbox (设置页, project-
+    // scoped) → per-run default. Reading settings here is the fix for "项目级
+    // sandbox 配了不生效" — the desktop host never passes config.sandbox.
+    let settingsSandbox: SettingsSandbox | undefined;
+    try {
+      settingsSandbox = (this.getSettingsManager().get() as { sandbox?: SettingsSandbox }).sandbox;
+    } catch {
+      settingsSandbox = undefined;
+    }
+    const sandboxConfig = resolveSandboxConfig(
+      this.config.sandbox,
+      settingsSandbox,
+      this.config.headless === true,
+    );
     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed
     // per standard §S4. resolveSandboxBackend throws when an explicit
     // mode is unavailable on this host; we let it propagate. The
