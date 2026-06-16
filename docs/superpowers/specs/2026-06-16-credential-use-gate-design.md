@@ -8,6 +8,21 @@
 > **具名 cookie 凭证**(进 CredentialStore,跟 token/link 同构)。原因:persist:browser 分区里
 > 全是逛街攒的匿名/噪声 cookie,`listCookieDomains` 根本分不清哪些是登录态。改成用户**主动按域
 > 拓取存成一条具名凭证**后:列表干净、三类凭证统一、取值不用跨进程(值已在 CredentialStore)。
+>
+> **二次修订(2026-06-17,brainstorm 中):合并「多账号 cookie」需求。** 真实场景:每天用多个
+> 小红书账号轮着拉内容,需要**同一平台存多个账号、都长期保活、按账号取用**。在本稿基础上扩两点:
+> ① cookie 凭证从「一域一条」改为**同一域可存多条具名账号**(id = 平台+账号名,不再 = 域名);
+> ② 加一个**「切换到浏览器」动作**——把某账号的 cookie 导回 `persist:browser` 覆盖当前登录态,
+> 让你在内置浏览器里以该账号身份浏览。AI 轮换走 `UseCredential`(喂工具,不切浏览器)。
+>
+> **关键决策记录(brainstorm)**:
+> - **存范围 = 按平台主域拓取(含子域),不存全量分区。** 一度想"全量存图省事",但 `persist:browser`
+>   是所有站共用一个分区,全量会把 YouTube/百度的 cookie 混进"小红书-账号A",切换时清空再灌回会
+>   连带回滚/覆盖无关站点的登录态,喂工具时还泄漏。故用 `getCookiesForDomain(domain)`(Electron
+>   后缀匹配,自动含该平台所有子域)——平台内"全量"不漏会话 cookie,跨平台隔离。
+> - **一条凭证绑一个主域(方案 X,YAGNI)。** 99% 平台单域够用;某平台登录态跨域(SSO)漏了再支持多域。
+> - **切换到浏览器先清空再灌入。** 否则残留 cookie 与导回的打架。本期只管 cookie,**不含 localStorage**
+>   (很多站把配置存 localStorage,已知局限,后续优化 —— 见 §11)。
 
 ## 1. 背景与目标
 
@@ -34,18 +49,30 @@ cookie-lease 基元(formatNetscapeCookies/getCookiesForDomain/createCookieLease 
 - 不做 cookie lease 三层清理重机制(取用时就地写临时 cookies.txt、用完删即可)。
 - 不做凭证自动刷新(cookie 过期 → UI 上「刷新」重拓一次)。
 
-## 2. cookie 形态变更:具名 cookie 凭证
+## 2. cookie 形态变更:具名 cookie 凭证(支持同域多账号)
 
 - `CredentialType` 增加 `"cookie"`(原 `"token" | "link"` → `"token" | "link" | "cookie"`)。
-- cookie 凭证的 `secret` = 序列化的 cookie jar(JSON,`ElectronCookieLike[]`);`meta.domain` 记拓取域。
-- **存**:凭证页 Cookie tab 改为:输域名(如 `xiaohongshu.com`)+ 起名 → main 从 persist:browser
-  `getCookiesForDomain(domain)`(已实现)拓该域 cookie → 经 IPC 存成一条 cookie 凭证
-  (`credentials:save` 已实现,值带 cookie jar)。**不再列全部噪声域名**。
-- **刷新**:一个「重拓」按钮,重新 getCookiesForDomain 覆盖该凭证的 jar(处理过期)。
-- **列**:Cookie tab 列已存的 cookie 凭证(label + domain + cookie 数,掩码不显值)。
+- cookie 凭证的 `secret` = 序列化的 cookie jar(JSON,`ElectronCookieLike[]`)。
+- **id ≠ 域名**(关键:支持同域多账号)。id = `${platform}__${slug(label)}`,例:
+  `xiaohongshu__accountA` / `xiaohongshu__accountB` / `youtube__main`。同一 `meta.domain` 下可有任意多条。
+  ```jsonc
+  {
+    "id": "xiaohongshu__accountA",
+    "type": "cookie",
+    "label": "账号A",
+    "meta": { "platform": "xiaohongshu", "domain": "xiaohongshu.com" },
+    "secret": "<getCookiesForDomain('xiaohongshu.com') 的 jar JSON>"
+  }
+  ```
+- **存**:凭证页 Cookie tab 改为:输**平台/域名**(如 `xiaohongshu.com`)+ **账号名**(如 `账号A`)→
+  main `getCookiesForDomain(domain)`(已实现,Electron 后缀匹配自动含所有子域)拓**该域**cookie →
+  经 IPC 存成一条 cookie 凭证。**按域拓,不存全量分区**(否则混入 YouTube/百度,见首部决策记录)。
+- **刷新/重拓**:一个「重拓」按钮,重新 `getCookiesForDomain` 覆盖该凭证的 jar(处理过期/重登后更新)。
+- **切换到浏览器(本期新增动作,见 §5.5)**:把该凭证的 jar 导回 `persist:browser` 覆盖当前登录态。
+- **列**:Cookie tab **按 platform 分组**列已存的 cookie 凭证(label + domain + cookie 数,掩码不显值)。
 
-> 跨进程只剩**存凭证那一刻**的拓取(本就在 main、UI 触发、复用 getCookiesForDomain)。
-> 取用时 cookie 值已在 CredentialStore,core 直读 —— 跟 token/link 完全一致。
+> 跨进程只剩**存/切换那一刻**的拓取/导回(本就在 main、UI 触发、复用 getCookiesForDomain)。
+> AI 取用时 cookie 值已在 CredentialStore,core 直读 —— 跟 token/link 完全一致。
 
 ## 3. 对 AI 的接口:`UseCredential`(deferred 工具)
 
@@ -87,6 +114,37 @@ cookie-lease 基元(formatNetscapeCookies/getCookiesForDomain/createCookieLease 
   凭证页给一个 Switch。
 - 拒绝/超时 → 工具返回友好错误,AI 可回退 `--cookies-from-browser` 或提示用户。
 
+## 5.5 切换到浏览器(导回覆盖)—— 多账号需求新增,**不走 AI 审批门**
+
+cookie 凭证除了"喂工具",还要能**把某账号的登录态切回内置浏览器**,让用户以该账号身份浏览。
+
+- **谁触发**:用户在 Cookie tab 手动点 cookie 凭证上的 **[切换]** 按钮。**不是 AI 触发**,因此
+  **不过 CredentialUseGate**(那道门是给 AI 取值用的)——只一个 UI 二次确认弹窗(`useConfirm`):
+  「将用『账号A』覆盖当前浏览器登录态?」。
+- **实现**(main 进程,新 IPC `credentials:restoreCookieToBrowser`):
+  ```
+  restoreCookieToBrowser(id):
+    sess = session.fromPartition("persist:browser")
+    await sess.clearStorageData({ storages: ['cookies'] })   // 先清空(决策:避免残留打架)
+    for c of store.resolve(id).jar:
+       await sess.cookies.set({ url: urlFor(c), name, value, domain, path, secure, expirationDate, ... })
+    → 广播事件通知浏览器面板刷新当前 tab = 切换成该账号身份
+  ```
+  注意:`clearStorageData({ storages: ['cookies'] })` 清的是整分区 cookie。这是有意的——"切换账号"
+  语义就是把浏览器换成该账号的干净状态。本期只清 cookie,不动 localStorage(§11 已知局限)。
+- **边界**:导回是用户对自己浏览器的操作,无敏感外泄,故只需 UI 确认,不进 core 审批后端。
+
+## 5.6 两条使用路径(回答「自动 vs 配好才能用」)
+
+| 路径 | 谁触发 | 走什么 | 门控 |
+|---|---|---|---|
+| **切换到浏览器**(人工浏览) | 用户点 [切换] | main `restoreCookieToBrowser` | 仅 UI 二次确认,**无 AI 审批** |
+| **喂工具**(AI 抓取/下载) | AI 调 `UseCredential` | core 直读 jar → 写 cookies.txt | **CredentialUseGate 三档**(默认问/会话记住/全自动) |
+
+> **LLM 轮换**走第二条:AI `UseCredential` 无参拿 list(看到 `xiaohongshu__accountA/B/C`)→ 逐个取 →
+> 各得一份 cookies.txt → 轮着喂抓取命令,**不切浏览器**。账号池/自动调度**不在本期**(YAGNI,
+> 由 AI 在任务里自行轮换;将来要"防限流自动轮换"再单独设计)。
+
 ## 6. 错误处理
 
 - 凭证不存在 / 审批拒绝 / 超时:各自明确返回。
@@ -103,16 +161,20 @@ core(`bun test src/`):
 5. CredentialStore 支持 `"cookie"` type round-trip(jar 存读)。
 
 desktop:
-6. Cookie tab 新流程:输域名+名 → 拓取(getCookiesForDomain)→ 存成 cookie 凭证;列已存项。
+6. Cookie tab 新流程:输**域名 + 账号名** → 拓取(getCookiesForDomain)→ 存成 cookie 凭证
+   (id=平台+账号名,**同域多条不覆盖**);**按 platform 分组列**已存项。
 7. settings autoApprove Switch 渲染+持久化(锁定测试)。
+8. **切换到浏览器**:点 [切换] → `useConfirm` → `restoreCookieToBrowser` 清空+灌回 → 广播刷新
+   (验证清空调用 + cookies.set 逐条调用 + 刷新事件;Electron session mock)。
 
 ## 8. 分阶段实施
 
 1. **core CredentialType 加 "cookie"** + store round-trip 测试。
 2. **core UseCredential 工具**(`core/src/credentials/use-credential-tool.ts`):无参清单/直读/cookie 就地物化 + 动态描述 + deferred 注册。
 3. **core CredentialUseGate**(`core/src/credentials/use-gate.ts`):审批+本会话记住+autoApprove 读 settings。
-4. **desktop Cookie tab 重做**:输域名+名→拓取→存凭证 + 列已存 + 重拓按钮。
-5. **desktop settings**:autoApprove 开关 UI。
+4. **desktop Cookie tab 重做**:输**域名+账号名**→拓取→存凭证(同域多条)+ **按 platform 分组列** + 重拓按钮。
+5. **desktop 切换到浏览器**:main `restoreCookieToBrowser`(IPC + preload + clearStorageData/cookies.set + 刷新广播)+ Cookie tab [切换] 按钮(useConfirm/useToast)。
+6. **desktop settings**:autoApprove 开关 UI。
 
 > 阶段 2、3 集中在 `core/src/credentials/` 下,与 core 其余部分只经 ToolDefinition/审批后端耦合,
 > 满足§1 的「可整块外移」约束。
@@ -130,3 +192,13 @@ desktop:
 - Cookie tab 从「列已登录域名 + 预览数量」改为本设计的「拓取存凭证」流程。
 - `credentials:cookieDomains` / `credentials:cookiePreview` IPC:cookiePreview 可废;
   cookieDomains 若不再用于"列噪声域名"也可废(存凭证时用 getCookiesForDomain 直接按用户输入的域拓)。
+
+## 11. 已知局限 / 未来优化(本期不做)
+
+- **localStorage 不纳入快照**:cookie 凭证只存/导回 cookie。很多站把部分登录态或配置存在
+  localStorage(用户已指出),本期切换可能对这类站不完整。后续看是否把 localStorage 一并纳入
+  快照与导回。
+- **单域绑定(方案 X)**:一条凭证只拓一个主域。登录态跨域(SSO 域)的平台可能漏 cookie;
+  发现后再支持"一条凭证多域拓取"。
+- **AI 轮换由 AI 自行调度**:不做账号池/防限流自动轮换。将来要自动轮换再单独设计。
+- **cookie 不自动刷新**:过期靠用户点「重拓」重登后覆盖 jar。
