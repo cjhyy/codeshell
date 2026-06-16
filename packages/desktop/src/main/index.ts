@@ -31,6 +31,7 @@ import {
   type CredentialScope,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
+import { registerGuest } from "./browser-driver/active-guest.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
 import {
   setAutomationScheduler,
@@ -649,6 +650,8 @@ function hardenWebviewGuests(win: BrowserWindow): void {
     if (!params.partition) params.partition = "persist:browser";
   });
   win.webContents.on("did-attach-webview", (_e, guest) => {
+    // Register as the browser-automation target (most-recent guest = active tab).
+    registerGuest(guest);
     // A page link wanting a new window (target=_blank, window.open) used to be
     // DENIED outright (→ kicked to the OS browser, or silently nothing — the
     // "点了没反应"). Instead, route http(s) popups back to the renderer to open as

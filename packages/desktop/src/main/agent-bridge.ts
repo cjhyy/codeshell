@@ -26,6 +26,10 @@ import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
 import { SessionSnapshotStore, type Snapshot } from "./SessionSnapshotStore.js";
 import { parseSnapshotAppend } from "./parseStreamLine.js";
+import { parseBrowserActionLine, buildBrowserActionReply } from "./browser-driver/intercept.js";
+import { handleBrowserAction } from "./browser-driver/automation-host.js";
+import { activeGuest } from "./browser-driver/active-guest.js";
+import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 
 /**
  * Neutral sandbox directory used when the user is in a "no project"
@@ -124,6 +128,9 @@ export class AgentBridge {
     const rl = createInterface({ input: this.child.stdout });
     rl.on("line", (line) => {
       if (!line.trim()) return;
+      // Browser automation: intercept __browser_action__ requests here (drive the
+      // webview in main, reply to the worker) and DON'T forward to the renderer.
+      if (this.maybeHandleBrowserAction(line)) return;
       let summary: Record<string, unknown> = { raw: previewLine(line) };
       try {
         const m = JSON.parse(line) as { method?: string; id?: number };
@@ -252,6 +259,38 @@ export class AgentBridge {
       }
       w.webContents.send(channel, payload);
     }
+  }
+
+  /**
+   * If `line` is a __browser_action__ request from the worker, drive the active
+   * webview here (main) and write the result back to the worker as an approve
+   * reply, returning true (caller must NOT forward to renderer). Otherwise
+   * false. Never throws — a failure still replies so the worker tool unblocks.
+   */
+  private maybeHandleBrowserAction(line: string): boolean {
+    const parsed = parseBrowserActionLine(line);
+    if (!parsed) return false;
+    void (async () => {
+      let resultJson: string;
+      try {
+        resultJson = await handleBrowserAction(parsed.request, {
+          activeGuest,
+          policy: loadBrowserAutomationPolicy,
+          // Sensitive/off-whitelist actions: surface the approval to the renderer
+          // by forwarding a normal ask request would be ideal; for MVP we
+          // conservatively auto-decline (fail-closed) — wiring an interactive
+          // approver is a follow-up. A clear refused result reaches the agent.
+          approve: undefined,
+        });
+      } catch (e) {
+        resultJson = JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });
+      }
+      const reply = buildBrowserActionReply(parsed, resultJson);
+      if (this.child?.stdin?.writable) {
+        this.child.stdin.write(reply + "\n");
+      }
+    })();
+    return true;
   }
 
   /**
