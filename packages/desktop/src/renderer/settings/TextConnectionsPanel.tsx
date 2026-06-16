@@ -6,7 +6,7 @@
  * the active model. Card chrome mirrors ModelSection's look.
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §5.
  */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 
 /** Compact token count, e.g. 400000 → "400K". Mirrors ModelSection. */
@@ -18,6 +18,7 @@ function formatTok(n: number): string {
 import type { CatalogEntry } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
 import { cacheGet, cacheSet } from "./settingsCache";
+import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SimpleSelect } from "@/components/ui/simple-select";
@@ -106,20 +107,10 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
     toast({ message: id ? `后台任务模型已设为 ${id}` : "后台任务模型已跟随当前模型", variant: "success" });
   };
 
-  useEffect(() => {
-    void load();
-    // Live refresh: the EditModelCatalog tool (or a manual settings edit) writes
-    // the catalog/settings from the worker process; App dispatches these events
-    // on turn_complete / settings save, so the panel re-pulls catalog +
-    // connections without a restart.
-    const reload = () => void load();
-    window.addEventListener("codeshell:files-changed", reload);
-    window.addEventListener("codeshell:settings-changed", reload);
-    return () => {
-      window.removeEventListener("codeshell:files-changed", reload);
-      window.removeEventListener("codeshell:settings-changed", reload);
-    };
-  }, [load]);
+  // Load on mount + on scope/tag switch (deps=[load]) + auto-refresh when
+  // catalog/settings change anywhere. Listeners live in one place — see
+  // useRefreshOnSettingsChange.
+  useRefreshOnSettingsChange(() => void load(), [load]);
 
   const persist = useCallback(
     async (next: ModelInstance[], nextCreds: Credential[], nextDefault: string) => {

@@ -25,6 +25,29 @@ export function seedValue<T>(cacheKey: string, fallback: T | undefined): T | und
   return cached !== undefined ? cached : fallback;
 }
 
+/**
+ * Run `cb` once on mount and again whenever config changes anywhere
+ * (codeshell:files-changed / settings-changed). For pages whose load pulls
+ * several pieces of state (so the single-resource useSettingsResource doesn't
+ * fit) — they keep their own load() and just subscribe to refresh here, so the
+ * listener wiring still lives in one place and can't be forgotten.
+ */
+export function useRefreshOnSettingsChange(cb: () => void, deps: unknown[] = []): void {
+  const cbRef = useRef(cb);
+  cbRef.current = cb;
+  useEffect(() => {
+    const fire = () => cbRef.current();
+    fire(); // initial load + reload when `deps` change (e.g. scope/cwd/tag switch)
+    window.addEventListener("codeshell:files-changed", fire);
+    window.addEventListener("codeshell:settings-changed", fire);
+    return () => {
+      window.removeEventListener("codeshell:files-changed", fire);
+      window.removeEventListener("codeshell:settings-changed", fire);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
 export function useSettingsResource<T>(
   cacheKey: string,
   loader: () => Promise<T>,

@@ -4,6 +4,7 @@ import type { AgentSummary, AgentDefinitionInput } from "../../preload/types";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { ProjectPicker } from "./ProjectPicker";
 import { catalogModelOptions, type ModelInstance } from "./textConnections";
+import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type { CatalogEntry } from "../../preload/types";
 import { repoLabel, type Repo } from "../repos";
 import { Button } from "@/components/ui/button";
@@ -153,19 +154,9 @@ function AgentsEditor({ target }: { target: Target }) {
     }
   }, [cwd, isProject]);
 
-  useEffect(() => {
-    void load();
-    // Live refresh: the EditModelCatalog tool / settings edits write catalog +
-    // connections from the worker; re-pull the model dropdown options so a model
-    // added/fixed elsewhere shows up here without a restart (mirrors TextConnectionsPanel).
-    const reload = () => void load();
-    window.addEventListener("codeshell:files-changed", reload);
-    window.addEventListener("codeshell:settings-changed", reload);
-    return () => {
-      window.removeEventListener("codeshell:files-changed", reload);
-      window.removeEventListener("codeshell:settings-changed", reload);
-    };
-  }, [load]);
+  // Load on mount + auto-refresh when catalog/settings change anywhere (one
+  // place wires the listeners — see useRefreshOnSettingsChange).
+  useRefreshOnSettingsChange(() => void load());
 
   // Write scope for saveAgent/deleteAgent mirrors the read scope (listAgents(cwd)).
   const agentScope = (): { scope: "project"; cwd: string } | { scope: "user" } =>

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
+import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type { SearchProbeInput, SearchProbeResult } from "../../preload/types";
 import { writeSettings } from "../settingsBus";
 import { cacheGet, cacheSet } from "./settingsCache";
@@ -50,7 +51,7 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
 
         <CollapsibleGroup
           title="图片生成"
-          subtitle="默认连接决定 GenerateImage 用哪一个；key 存在凭证里,多连接可共用。"
+          subtitle="默认连接决定 GenerateImage 用哪一个；key 存在凭证里，多连接可共用。"
           defaultOpen={false}
         >
           <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="image" title="图片模型" />
@@ -58,7 +59,7 @@ export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
 
         <CollapsibleGroup
           title="视频生成"
-          subtitle="默认连接决定 GenerateVideo 用哪一个;key 存在凭证里,多连接可共用。"
+          subtitle="默认连接决定 GenerateVideo 用哪一个；key 存在凭证里，多连接可共用。"
           defaultOpen={false}
         >
           <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="video" title="视频模型" />
@@ -213,9 +214,9 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
     cacheSet(cacheKey, { defaultProvider: nextDefault, byProvider: next } satisfies SearchSnapshot);
   }, [scope, cwd, cacheKey]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Load on mount/scope switch + auto-refresh on config change (one place wires
+  // the listeners — see useRefreshOnSettingsChange).
+  useRefreshOnSettingsChange(() => void load(), [load]);
 
   const updateProvider = (id: Provider, patch: Partial<ProviderState>) => {
     setByProvider((cur) => ({ ...cur, [id]: { ...cur[id], ...patch } }));
