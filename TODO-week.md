@@ -27,8 +27,8 @@
 >
 > **实测(mac git 失败两形态)**:① **ENOENT**(PATH 无 git):`{code:"ENOENT",message:"spawn git ENOENT"}`,三平台通用。② **mac stub**(`/usr/bin/git` 是 xcrun 垫片,CLT 没装):**spawn 成功但 exit≠0**,stderr 含 `xcrun: error` / `not a developer tool`。`isGitAvailable()` 只查 findExecutable 会被 stub **骗过**漏判。
 
-- [ ] **缺口①(真 bug,值得修,纯 core 几行)**:mac stub 形态 B 漏判 → 全新 mac(没装 CLT)绕过友好引导,看到 `git clone ... exited 1: xcrun: error:...`。修法:`gitOps.ts runGit` 末尾对 `exitCode≠0 && /xcrun: error|not a developer tool|no developer tools/i.test(stderr)` 也归类 `GIT_NOT_FOUND`。有实测错误文本支撑。
-- [ ] **缺口②(分层洁癖,可选)**:core fallback 文案的 `git-scm.com`(gitOps.ts:54)是通用/Windows 向,mac 该 `xcode-select --install`。可让 core fallback 分平台,或删空交给 host 全权。**仅影响裸用 core 的 agent,不影响 desktop**(desktop 已被 humanizeGitError 接管)。
+- [x] **缺口①(真 bug)已修(2026-06-16)**:`gitOps.ts` 加 `isMissingDeveloperToolsStderr`(xcrun: error/not a developer tool/no developer tools),runGit 命中 → 回 `GIT_NOT_FOUND`,不再泄漏 `git clone ... exited 1: xcrun: error...`。TDD 5 例。
+- [x] **缺口②(文案分平台)随①一起做**:命中 mac stub 时回 `xcode-select --install` 引导(非通用 `git-scm.com`)。
 - [ ] **组件一 Git Bash 探测 —— 建议不做 / 或独立立项**:真实部署是 Docker/Linux,探测对它**零价值**(win32 死分支,POSIX 不调);它服务 Windows 桌面用户,与 core 的 headless/Docker 定位冲突;**无实测痛点**(没有用户抱怨 POSIX 命令在 cmd 跑不了)。真要做应**单独按「host 注入策略」**(core 已有 summarize/runCommand 注入先例:`context/manager.ts`、`llm/provider-auth.ts`),core 默认 win32→cmd 不变,desktop 启动注入「探 Git Bash」策略,Docker 不注入保纯净。**不混进本次**。
 - 方案选项(待用户拍板):**最小(推荐)**=只修缺口① / **小**=①+② / **大**=加组件一(host 注入,独立工程)。
 
