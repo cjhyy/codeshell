@@ -401,6 +401,12 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
     return () => off?.();
   }, [openInNewTab]);
 
+  // Cookie 账号切换:main 导回 cookie 后广播 browser:reload,重载当前 tab 让登录态生效。
+  useEffect(() => {
+    const off = window.codeshell.onBrowserReload?.(() => viewRef.current?.reload());
+    return () => off?.();
+  }, []);
+
   // A chat answer link (http/https) was clicked: App surfaces this panel and
   // hands the URL down via the `openUrl` prop (NOT a window event — that would
   // be missed when the panel was closed at click time, since this component is

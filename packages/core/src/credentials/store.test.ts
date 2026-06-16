@@ -68,4 +68,36 @@ describe("CredentialStore", () => {
     expect(m.hasSecret).toBe(true);
     expect(m.secretHint).toMatch(/\*\*\*\*/);
   });
+
+  test("cookie credential round-trips (type + jar secret + meta)", () => {
+    const store = new CredentialStore(cwd);
+    const jar = JSON.stringify([
+      { name: "web_session", value: "abc", domain: ".xiaohongshu.com", secure: true },
+    ]);
+    store.save("user", {
+      id: "xiaohongshu__accountA",
+      type: "cookie",
+      label: "账号A",
+      secret: jar,
+      meta: { platform: "xiaohongshu", domain: "xiaohongshu.com" },
+    });
+    const c = store.resolve("xiaohongshu__accountA")!;
+    expect(c.type).toBe("cookie");
+    expect(c.meta?.platform).toBe("xiaohongshu");
+    expect(c.meta?.domain).toBe("xiaohongshu.com");
+    expect(JSON.parse(c.secret!)).toEqual([
+      { name: "web_session", value: "abc", domain: ".xiaohongshu.com", secure: true },
+    ]);
+  });
+
+  test("same domain can hold multiple named accounts (no overwrite)", () => {
+    const store = new CredentialStore(cwd);
+    const meta = { platform: "xiaohongshu", domain: "xiaohongshu.com" };
+    store.save("user", { id: "xiaohongshu__accountA", type: "cookie", label: "A", secret: "[]", meta });
+    store.save("user", { id: "xiaohongshu__accountB", type: "cookie", label: "B", secret: "[]", meta });
+    const ids = store.list().filter((c) => c.type === "cookie").map((c) => c.id);
+    expect(ids).toContain("xiaohongshu__accountA");
+    expect(ids).toContain("xiaohongshu__accountB");
+    expect(ids).toHaveLength(2);
+  });
 });

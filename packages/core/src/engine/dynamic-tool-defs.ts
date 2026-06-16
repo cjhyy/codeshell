@@ -3,6 +3,7 @@ import type { AgentDefinitionRegistry } from "../agent/agent-definition-registry
 import { agentToolDefWithTypes } from "../tool-system/builtin/agent.js";
 import { generateImageToolDefFor } from "../tool-system/builtin/generate-image.js";
 import { generateVideoToolDefFor } from "../tool-system/builtin/generate-video.js";
+import { useCredentialToolDefFor } from "../credentials/use-credential-tool.js";
 
 /**
  * Rewrite a single tool definition with the live, per-engine dynamic bits the
@@ -34,6 +35,9 @@ export function applyDynamicToolDef(
   }
   if (t.name === "GenerateVideo") {
     return { ...t, description: generateVideoToolDefFor(guardCwd).description };
+  }
+  if (t.name === "UseCredential") {
+    return { ...t, description: useCredentialToolDefFor(guardCwd).description };
   }
   return t;
 }

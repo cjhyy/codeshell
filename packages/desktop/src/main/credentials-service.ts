@@ -59,6 +59,54 @@ export async function getCookiesForDomain(domain: string): Promise<ElectronCooki
   return (await (await browserSession()).cookies.get({ domain })) as ElectronCookieLike[];
 }
 
+/**
+ * 拓取某域(含子域)的 cookie jar,供存成具名 cookie 凭证(第二期)。
+ * 返回 Electron 原始 cookie 字段(含 hostOnly/secure/expirationDate,导回浏览器要用)。
+ * **按域拓取,不取全量分区** —— 避免把别的站(YouTube/百度)混进该账号(设计稿决策)。
+ */
+export async function captureCookieJar(domain: string): Promise<ElectronCookieLike[]> {
+  const cookies = await (await browserSession()).cookies.get({ domain });
+  return cookies as ElectronCookieLike[];
+}
+
+/**
+ * 切换账号:把某账号的 cookie jar 导回 persist:browser 覆盖当前登录态(设计稿 §5.5)。
+ * 先**清空整分区 cookie**(切换语义=换成该账号的干净状态),再逐条 set。
+ * 仅 cookie,不动 localStorage(已知局限)。返回成功写入的条数。
+ */
+export async function restoreCookiesToBrowser(
+  jar: ElectronCookieLike[],
+): Promise<{ count: number }> {
+  const sess = await browserSession();
+  await sess.clearStorageData({ storages: ["cookies"] });
+  let count = 0;
+  for (const c of jar) {
+    // Electron cookies.set 需要一个 url 推断 secure/domain 上下文。
+    const host = (c.domain ?? "").replace(/^\./, "");
+    if (!host) continue;
+    const scheme = c.secure ? "https" : "http";
+    const url = `${scheme}://${host}${c.path ?? "/"}`;
+    try {
+      await sess.cookies.set({
+        url,
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path ?? "/",
+        secure: c.secure,
+        httpOnly: (c as { httpOnly?: boolean }).httpOnly,
+        expirationDate: c.expirationDate,
+        sameSite: (c as { sameSite?: "unspecified" | "no_restriction" | "lax" | "strict" })
+          .sameSite,
+      });
+      count++;
+    } catch {
+      // 个别 cookie 因 host/secure 约束 set 失败时跳过,不中断整批导回。
+    }
+  }
+  return { count };
+}
+
 /** Materialize a temporary cookies.txt for `domain`; returns its path. Caller cleans up. */
 export async function createCookieLease(
   domain: string,

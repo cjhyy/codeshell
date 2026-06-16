@@ -1,18 +1,32 @@
-/** 常驻凭证:仅 token / link。Cookie 不进库(源常驻 persist:browser 分区,用时现抓)。 */
-export type CredentialType = "token" | "link";
+/**
+ * 常驻凭证:token / link / cookie。
+ * - token/link 第一期已有;cookie 第二期改为「具名 cookie 凭证」进库
+ *   (用户主动按域拓取存,支持同域多账号),见 credential-use-gate 设计稿。
+ */
+export type CredentialType = "token" | "link" | "cookie";
 
 export interface Credential {
-  /** 引用键,kebab-case,如 "my-figma-token"。全局/项目两层内唯一。 */
+  /**
+   * 引用键,kebab-case,全局/项目两层内唯一。
+   * - token/link 如 "my-figma-token"。
+   * - cookie 为 `${platform}__${slug(label)}`,如 "xiaohongshu__accountA"
+   *   (同一域可有多条不同账号,故 id 不等于域名)。
+   */
   id: string;
   type: CredentialType;
   /** 展示名。 */
   label: string;
-  /** 密文:token 值;link 为 client id/secret 等的 JSON 字符串。UI 只显示掩码。 */
+  /**
+   * 密文(UI 只显示掩码):
+   * - token: token 值;
+   * - link: client id/secret 等的 JSON 字符串;
+   * - cookie: 序列化的 cookie jar(JSON.stringify 的 ElectronCookieLike[])。
+   */
   secret?: string;
   /** 可选:静态暴露为该 shell env 变量名(进 readShellEnv)。 */
   exposeAsEnv?: string;
-  /** link: 业务方 app 注册地址。 */
-  meta?: { appUrl?: string };
+  /** link: 业务方 app 注册地址;cookie: 拓取所用平台与主域。 */
+  meta?: { appUrl?: string; platform?: string; domain?: string };
 }
 
 export interface CredentialStoreFile {

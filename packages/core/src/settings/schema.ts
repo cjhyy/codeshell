@@ -697,6 +697,19 @@ export const SettingsSchema = z
           .optional(),
       })
       .optional(),
+
+    /**
+     * Credential-use gate (凭证模块第二期). Controls whether the AI's
+     * `UseCredential` tool prompts before handing a stored credential to a
+     * command. `autoApprove: true` skips the prompt entirely (默认关 — every
+     * use asks, or is remembered for the session). See
+     * docs/superpowers/specs/2026-06-16-credential-use-gate-design.md §5.
+     */
+    credentialUse: z
+      .object({
+        autoApprove: z.boolean().optional(),
+      })
+      .optional(),
   })
   .passthrough();
 

@@ -232,11 +232,12 @@ export interface FileContent {
 /** A stored credential (token/link) as edited in the renderer. */
 export interface CredentialView {
   id: string;
-  type: "token" | "link";
+  type: "token" | "link" | "cookie";
   label: string;
   secret?: string;
   exposeAsEnv?: string;
-  meta?: { appUrl?: string };
+  /** link: appUrl;cookie: 拓取平台与主域。 */
+  meta?: { appUrl?: string; platform?: string; domain?: string };
 }
 /** Masked credential returned to the renderer — never carries the secret value. */
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
@@ -430,6 +431,10 @@ export interface CodeshellApi {
     remove(cwd: string, scope: "user" | "project", id: string): Promise<void>;
     cookieDomains(): Promise<string[]>;
     cookiePreview(domain: string): Promise<{ count: number }>;
+    /** 按域拓取 cookie jar(组装成 cookie 凭证存库用)。 */
+    captureCookieJar(domain: string): Promise<{ jar: unknown[]; count: number }>;
+    /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
+    restoreCookieToBrowser(cwd: string, id: string): Promise<{ count: number }>;
   };
 
   // ── Browser popout window ─────────────────────────────────────────────
@@ -446,6 +451,8 @@ export interface CodeshellApi {
   onBrowserAnchorsState(cb: (anchors: unknown[]) => void): () => void;
   /** A page link wanted a new window; main routes it here to open as a new tab. */
   onBrowserOpenTab(cb: (payload: { url: string }) => void): () => void;
+  /** Cookie 账号切换后,main 广播此事件让浏览器面板重载当前 tab。 */
+  onBrowserReload(cb: () => void): () => void;
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove(anchorId: string): void;
   /** From a popout: ask the owner to update an anchor's comment. */
