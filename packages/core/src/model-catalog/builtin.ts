@@ -18,11 +18,17 @@ import { paramSpecsFromCapability } from "../llm/capabilities/param-specs.js";
  * (rules.ts) so reasoning knobs aren't re-hand-written. `params` is omitted
  * when the model has none, matching the "absent → no knobs" contract.
  */
-function textPreset(kind: ProviderKindName, value: string, label?: string): ModelPreset {
+function textPreset(
+  kind: ProviderKindName,
+  value: string,
+  label?: string,
+  ctx?: number,
+): ModelPreset {
   const params = paramSpecsFromCapability(kind, value);
   return {
     value,
     ...(label ? { label } : {}),
+    ...(ctx !== undefined ? { maxContextTokens: ctx } : {}),
     ...(params.length > 0 ? { params } : {}),
   };
 }
@@ -45,8 +51,13 @@ const OPENROUTER_REASONING: ParamSpec = {
 };
 
 /** OpenRouter preset with explicit params (no capability-layer projection). */
-function orPreset(value: string, label: string, params?: ParamSpec[]): ModelPreset {
-  return { value, label, ...(params && params.length > 0 ? { params } : {}) };
+function orPreset(value: string, label: string, params?: ParamSpec[], ctx?: number): ModelPreset {
+  return {
+    value,
+    label,
+    ...(ctx !== undefined ? { maxContextTokens: ctx } : {}),
+    ...(params && params.length > 0 ? { params } : {}),
+  };
 }
 
 export const BUILTIN_CATALOG: CatalogEntry[] = [
@@ -63,10 +74,10 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     signupUrl: "https://platform.openai.com/api-keys",
     needsKey: true,
     modelPresets: [
-      textPreset("openai", "gpt-5.5", "GPT-5.5"),
-      textPreset("openai", "gpt-5.4", "GPT-5.4"),
-      textPreset("openai", "gpt-5.4-mini", "GPT-5.4 Mini"),
-      textPreset("openai", "gpt-4o", "GPT-4o"),
+      textPreset("openai", "gpt-5.5", "GPT-5.5", 1_050_000),
+      textPreset("openai", "gpt-5.4", "GPT-5.4", 1_050_000),
+      textPreset("openai", "gpt-5.4-mini", "GPT-5.4 Mini", 400_000),
+      textPreset("openai", "gpt-4o", "GPT-4o", 128_000),
     ],
   },
   {
@@ -81,10 +92,10 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     signupUrl: "https://console.anthropic.com/settings/keys",
     needsKey: true,
     modelPresets: [
-      textPreset("anthropic", "claude-opus-4-8", "Claude Opus 4.8"),
-      textPreset("anthropic", "claude-opus-4-7", "Claude Opus 4.7"),
-      textPreset("anthropic", "claude-sonnet-4-6", "Claude Sonnet 4.6"),
-      textPreset("anthropic", "claude-haiku-4-5", "Claude Haiku 4.5"),
+      textPreset("anthropic", "claude-opus-4-8", "Claude Opus 4.8", 1_000_000),
+      textPreset("anthropic", "claude-opus-4-7", "Claude Opus 4.7", 1_000_000),
+      textPreset("anthropic", "claude-sonnet-4-6", "Claude Sonnet 4.6", 1_000_000),
+      textPreset("anthropic", "claude-haiku-4-5", "Claude Haiku 4.5", 200_000),
     ],
   },
   {
@@ -104,10 +115,10 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     // so each opts into OPENROUTER_REASONING. A non-reasoning OpenRouter model
     // added later simply omits params — no catch-all forcing reasoning on it.
     modelPresets: [
-      orPreset("~anthropic/claude-opus-latest", "Claude Opus (latest)", [OPENROUTER_REASONING]),
-      orPreset("~anthropic/claude-sonnet-latest", "Claude Sonnet (latest)", [OPENROUTER_REASONING]),
-      orPreset("~openai/gpt-latest", "GPT (latest)", [OPENROUTER_REASONING]),
-      orPreset("~google/gemini-pro-latest", "Gemini Pro (latest)", [OPENROUTER_REASONING]),
+      orPreset("~anthropic/claude-opus-latest", "Claude Opus (latest)", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("~anthropic/claude-sonnet-latest", "Claude Sonnet (latest)", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("~openai/gpt-latest", "GPT (latest)", [OPENROUTER_REASONING], 1_050_000),
+      orPreset("~google/gemini-pro-latest", "Gemini Pro (latest)", [OPENROUTER_REASONING], 1_048_576),
     ],
   },
   {
@@ -122,8 +133,8 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     signupUrl: "https://platform.deepseek.com/api_keys",
     needsKey: true,
     modelPresets: [
-      textPreset("deepseek", "deepseek-v4-flash", "DeepSeek V4 Flash"),
-      textPreset("deepseek", "deepseek-v4-pro", "DeepSeek V4 Pro"),
+      textPreset("deepseek", "deepseek-v4-flash", "DeepSeek V4 Flash", 1_000_000),
+      textPreset("deepseek", "deepseek-v4-pro", "DeepSeek V4 Pro", 1_000_000),
     ],
   },
   {
@@ -138,10 +149,10 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     signupUrl: "https://aistudio.google.com/apikey",
     needsKey: true,
     modelPresets: [
-      textPreset("google", "gemini-3.5-flash", "Gemini 3.5 Flash"),
-      textPreset("google", "gemini-3.1-flash-lite", "Gemini 3.1 Flash Lite"),
-      textPreset("google", "gemini-2.5-pro", "Gemini 2.5 Pro"),
-      textPreset("google", "gemini-2.5-flash", "Gemini 2.5 Flash"),
+      textPreset("google", "gemini-3.5-flash", "Gemini 3.5 Flash", 1_048_576),
+      textPreset("google", "gemini-3.1-flash-lite", "Gemini 3.1 Flash Lite", 1_048_576),
+      textPreset("google", "gemini-2.5-pro", "Gemini 2.5 Pro", 1_048_576),
+      textPreset("google", "gemini-2.5-flash", "Gemini 2.5 Flash", 1_048_576),
     ],
   },
   {

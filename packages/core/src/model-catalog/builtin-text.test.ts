@@ -40,6 +40,33 @@ describe("BUILTIN_CATALOG text entries", () => {
     expect(openai.needsKey).toBe(true);
   });
 
+  test("every text preset declares a real maxContextTokens (no 200k fallback)", () => {
+    // Regression: catalog connections lost their context window (全部回退 200k 兜底)
+    // because presets carried no maxContextTokens. Every shipped text model must
+    // declare its real window (verified against vendor docs 2026-06-16). Ollama is
+    // exempt — local model windows are machine/quant-dependent, left to runtime.
+    const expectedFloor = 100_000; // every current frontier model is ≥128k
+    for (const e of text) {
+      if (e.id === "ollama") continue;
+      for (const p of e.modelPresets ?? []) {
+        expect(typeof p.maxContextTokens).toBe("number");
+        expect(p.maxContextTokens!).toBeGreaterThanOrEqual(expectedFloor);
+      }
+    }
+  });
+
+  test("known model context windows match vendor docs", () => {
+    const ctxOf = (entryId: string, value: string): number | undefined =>
+      text.find((e) => e.id === entryId)?.modelPresets?.find((p) => p.value === value)?.maxContextTokens;
+    expect(ctxOf("openai", "gpt-5.5")).toBe(1_050_000);
+    expect(ctxOf("openai", "gpt-5.4-mini")).toBe(400_000);
+    expect(ctxOf("openai", "gpt-4o")).toBe(128_000);
+    expect(ctxOf("anthropic", "claude-opus-4-8")).toBe(1_000_000);
+    expect(ctxOf("anthropic", "claude-haiku-4-5")).toBe(200_000);
+    expect(ctxOf("deepseek", "deepseek-v4-pro")).toBe(1_000_000);
+    expect(ctxOf("google", "gemini-3.5-flash")).toBe(1_048_576);
+  });
+
   test("every text preset's params parse against the schema (well-formed)", () => {
     // If params were malformed, catalogEntrySchema (validated on user load) would
     // reject them; assert the built-in shape holds the same contract.
