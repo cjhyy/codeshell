@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>codeshell core — 一次对话是怎么跑起来的</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* warm technical-blueprint palette */
+    --paper:#f4f0e6;
+    --paper-2:#ece6d6;
+    --ink:#1b2330;
+    --ink-soft:#5a6273;
+    --line:#c9c0ab;
+    --line-strong:#a99f86;
+    --blue:#1f6feb;       /* sharp accent — the active signal */
+    --blue-soft:#bfd6fb;
+    --rust:#c4502a;       /* secondary warm accent — tools / side effects */
+    --rust-soft:#eecdbf;
+    --green:#3f7d4e;      /* done / safe */
+    --amber:#b9892b;      /* permission / caution */
+    --shadow: 6px 6px 0 rgba(27,35,48,.10);
+    --shadow-lift: 10px 12px 0 rgba(27,35,48,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"JetBrains Mono",ui-monospace,monospace;
+    /* blueprint grid + paper grain */
+    background-image:
+      linear-gradient(rgba(169,159,134,.18) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(169,159,134,.18) 1px,transparent 1px),
+      radial-gradient(circle at 50% 0,rgba(31,111,235,.05),transparent 60%);
+    background-size:30px 30px,30px 30px,100% 100%;
+    min-height:100vh;
+    padding:0 0 80px;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+  /* ── Masthead ───────────────────────────────── */
+  header{padding:54px 0 26px;border-bottom:2px solid var(--ink);position:relative}
+  .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--rust);font-weight:700;margin-bottom:14px}
+  h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(34px,5.4vw,62px);line-height:1.02;letter-spacing:-.015em}
+  h1 em{font-style:italic;color:var(--blue)}
+  .sub{margin-top:16px;max-width:60ch;color:var(--ink-soft);font-size:14.5px;line-height:1.7}
+  .stamp{position:absolute;top:48px;right:0;border:2px solid var(--line-strong);color:var(--line-strong);
+    font-size:11px;letter-spacing:.12em;padding:8px 12px;transform:rotate(3deg);text-align:right;line-height:1.5}
+  .stamp b{color:var(--ink);display:block;font-size:13px}
+
+  /* ── Controls ───────────────────────────────── */
+  .controls{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:30px 0 6px}
+  button.play{
+    font-family:"JetBrains Mono",monospace;font-weight:700;font-size:14px;letter-spacing:.04em;
+    background:var(--blue);color:#fff;border:2px solid var(--ink);padding:13px 26px;cursor:pointer;
+    box-shadow:var(--shadow);transition:transform .12s ease,box-shadow .12s ease;
+  }
+  button.play:hover{transform:translate(-2px,-2px);box-shadow:var(--shadow-lift)}
+  button.play:active{transform:translate(2px,2px);box-shadow:2px 2px 0 rgba(27,35,48,.12)}
+  button.play.running{background:var(--paper-2);color:var(--ink)}
+  .speeds{display:flex;gap:0;border:2px solid var(--ink);box-shadow:var(--shadow)}
+  .speeds button{font-family:inherit;font-size:12.5px;font-weight:500;background:var(--paper);color:var(--ink-soft);
+    border:none;border-right:1px solid var(--line-strong);padding:11px 14px;cursor:pointer}
+  .speeds button:last-child{border-right:none}
+  .speeds button.on{background:var(--ink);color:var(--paper)}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-left:auto;font-size:11.5px;color:var(--ink-soft)}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .dot{width:12px;height:12px;border:1.5px solid var(--ink);display:inline-block}
+  .dot.b{background:var(--blue)} .dot.r{background:var(--rust)} .dot.g{background:var(--green)} .dot.a{background:var(--amber)}
+
+  /* ── Section titles ─────────────────────────── */
+  .secttl{font-family:"Fraunces",serif;font-style:italic;font-size:22px;margin:46px 0 4px;display:flex;align-items:baseline;gap:12px}
+  .secttl .no{font-family:"JetBrains Mono";font-style:normal;font-size:12px;color:var(--rust);font-weight:700;letter-spacing:.1em}
+  .secsub{font-size:12.5px;color:var(--ink-soft);margin-bottom:22px;max-width:70ch;line-height:1.6}
+
+  /* ── Layer map ──────────────────────────────── */
+  .map{display:flex;flex-direction:column;gap:14px}
+  .layer{border:2px solid var(--ink);background:var(--paper-2);box-shadow:var(--shadow);position:relative}
+  .layer-hd{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid var(--line-strong);
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);font-weight:700}
+  .layer-hd .tag{margin-left:auto;font-size:10px;letter-spacing:.1em;color:var(--line-strong)}
+  .mods{display:flex;flex-wrap:wrap;gap:8px;padding:13px 14px}
+  .mod{font-size:12px;font-weight:500;border:1.5px solid var(--line-strong);background:var(--paper);
+    padding:7px 12px;color:var(--ink);position:relative;transition:all .25s ease;cursor:default;white-space:nowrap}
+  .mod small{color:var(--ink-soft);font-weight:400}
+  .mod:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:3px 3px 0 rgba(27,35,48,.12)}
+  /* active highlight driven by JS */
+  .mod.active{background:var(--blue);color:#fff;border-color:var(--ink);box-shadow:4px 4px 0 var(--rust);transform:translateY(-3px)}
+  .mod.active small{color:var(--blue-soft)}
+  .mod.tool.active{background:var(--rust);box-shadow:4px 4px 0 var(--blue)}
+  .mod.done.active{background:var(--green);box-shadow:4px 4px 0 var(--amber)}
+  .layer.lit{border-color:var(--blue)}
+  .layer.lit .layer-hd{color:var(--blue)}
+
+  /* ── Flow / pipeline track ──────────────────── */
+  .stage{margin-top:14px;border:2px solid var(--ink);background:var(--paper-2);box-shadow:var(--shadow);padding:26px 24px 30px}
+  .stagebar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;font-size:11.5px;color:var(--ink-soft)}
+  .stagebar .now{font-family:"Fraunces",serif;font-style:italic;font-size:18px;color:var(--ink);min-height:1.2em;transition:opacity .2s}
+  .stagebar .turnpill{border:1.5px solid var(--ink);padding:4px 10px;font-weight:700;letter-spacing:.06em;font-size:11px;background:var(--paper)}
+
+  .track{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:0;align-items:stretch}
+  .node{position:relative;text-align:center;padding:0 4px}
+  .node .box{border:2px solid var(--line-strong);background:var(--paper);padding:14px 6px;min-height:96px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:all .3s ease}
+  .node .ic{font-family:"Fraunces",serif;font-size:24px;line-height:1;color:var(--ink-soft);transition:color .3s}
+  .node .nm{font-size:12px;font-weight:700;letter-spacing:.02em}
+  .node .md{font-size:10px;color:var(--ink-soft);letter-spacing:.03em}
+  .node.on .box{border-color:var(--ink);background:var(--blue);transform:translateY(-4px);box-shadow:5px 6px 0 var(--rust)}
+  .node.on .ic,.node.on .nm,.node.on .md{color:#fff}
+  .node.on.tool .box{background:var(--rust);box-shadow:5px 6px 0 var(--blue)}
+  .node.on.done .box{background:var(--green);box-shadow:5px 6px 0 var(--amber)}
+  .node.passed .box{border-color:var(--ink);background:var(--paper)}
+  .node.passed .ic{color:var(--green)}
+  /* connector arrows between nodes */
+  .node:not(:last-child)::after{content:"";position:absolute;top:50%;right:-1px;width:2px;height:2px}
+  .arrow{position:absolute;top:calc(14px + 48px - 7px);font-size:15px;color:var(--line-strong);z-index:2;transition:color .3s,transform .3s}
+  .arrow.lit{color:var(--blue);transform:scale(1.35)}
+
+  /* the moving packet */
+  #packet{position:absolute;width:26px;height:26px;border:2px solid var(--ink);background:var(--blue);
+    box-shadow:3px 3px 0 var(--rust);z-index:30;left:0;top:0;opacity:0;
+    transition:left .55s cubic-bezier(.5,.05,.2,1),top .55s cubic-bezier(.5,.05,.2,1),background .3s,opacity .3s;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700}
+  #packet.tool{background:var(--rust);box-shadow:3px 3px 0 var(--blue)}
+  #packet.done{background:var(--green);box-shadow:3px 3px 0 var(--amber)}
+  #packet.loop{background:var(--amber);box-shadow:3px 3px 0 var(--ink)}
+
+  /* loop-back hint */
+  .loophint{text-align:center;margin-top:18px;font-size:12px;color:var(--ink-soft);min-height:1.4em}
+  .loophint b{color:var(--blue)}
+
+  /* ── Inner tool gauntlet ────────────────────── */
+  .gauntlet{margin-top:14px;border:2px dashed var(--line-strong);background:rgba(196,80,42,.05);padding:20px 22px}
+  .gauntlet h3{font-family:"Fraunces",serif;font-style:italic;font-size:16px;margin-bottom:4px;color:var(--rust)}
+  .gauntlet p{font-size:11.5px;color:var(--ink-soft);margin-bottom:16px}
+  .gates{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+  .gate{font-size:11px;font-weight:500;border:1.5px solid var(--line-strong);background:var(--paper);padding:6px 10px;transition:all .25s}
+  .gate.on{background:var(--rust);color:#fff;border-color:var(--ink);transform:translateY(-2px);box-shadow:3px 3px 0 var(--ink)}
+  .gate.perm.on{background:var(--amber)}
+  .gsep{color:var(--line-strong);font-weight:700}
+
+  /* ── Caption strip ──────────────────────────── */
+  .caption{margin-top:22px;border-left:4px solid var(--blue);background:var(--paper-2);padding:16px 20px;
+    font-size:13px;line-height:1.7;min-height:74px;box-shadow:var(--shadow)}
+  .caption .step{font-family:"Fraunces",serif;font-style:italic;color:var(--rust);font-size:13px;display:block;margin-bottom:4px;letter-spacing:.02em}
+  .caption code{background:var(--paper);border:1px solid var(--line);padding:1px 6px;font-size:12px;color:var(--ink)}
+
+  footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-size:11.5px;color:var(--ink-soft);line-height:1.8}
+  footer b{color:var(--ink)}
+  a{color:var(--blue)}
+
+  @media (max-width:780px){
+    .track{grid-template-columns:repeat(2,1fr);gap:10px}
+    .arrow{display:none}
+    #packet{display:none}
+    .legend{margin-left:0;width:100%}
+    .stamp{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">@cjhyy/code-shell-core · 引擎内部解剖</div>
+    <h1>一次对话<br>是怎么在 <em>core</em> 里跑起来的</h1>
+    <p class="sub">core 是无界面的引擎包,被 tui 与 desktop 共享。约 32 个模块、~64k 行。下面先看分层地图,再让一个数据包沿主干流水线走一遍 —— 步骤与高亮均对应真实代码路径。</p>
+    <div class="stamp">SCHEMATIC<b>core v·dissect</b>32 modules</div>
+  </header>
+
+  <div class="controls">
+    <button class="play" id="playBtn">▶ 开始演示</button>
+    <div class="speeds" id="speeds">
+      <button data-mult="1.6">慢</button>
+      <button data-mult="1" class="on">常速</button>
+      <button data-mult="0.55">快</button>
+    </div>
+    <div class="legend">
+      <span><i class="dot b"></i>当前活动信号</span>
+      <span><i class="dot r"></i>工具 / 副作用</span>
+      <span><i class="dot a"></i>权限 / 回环</span>
+      <span><i class="dot g"></i>完成 / 落盘</span>
+    </div>
+  </div>
+
+  <!-- ── LAYER MAP ──────────────────────────── -->
+  <div class="secttl"><span class="no">PART 01</span>分层模块地图</div>
+  <p class="secsub">从外到内:协议层在进程边界,engine 驱动 turn loop,每一轮真正干活的是 tool-system / llm / context,session·run 负责持久化,外圈是配置与扩展模块。演示开始后,被用到的模块会逐个点亮。</p>
+
+  <div class="map" id="map">
+    <div class="layer" data-layer="edge">
+      <div class="layer-hd">边界 · Edge<span class="tag">host ↔ engine</span></div>
+      <div class="mods">
+        <div class="mod" data-mod="protocol">protocol <small>RPC/传输</small></div>
+        <div class="mod" data-mod="remote">remote <small>手机遥控</small></div>
+        <div class="mod" data-mod="cli">cli <small>入口</small></div>
+      </div>
+    </div>
+    <div class="layer" data-layer="drive">
+      <div class="layer-hd">驱动 · Engine<span class="tag">the turn loop</span></div>
+      <div class="mods">
+        <div class="mod" data-mod="engine">engine <small>turn loop</small></div>
+        <div class="mod" data-mod="prompt">prompt <small>系统提示拼装</small></div>
+        <div class="mod" data-mod="context">context <small>窗口/压缩/截断</small></div>
+        <div class="mod" data-mod="runtime">runtime <small>共享资源</small></div>
+      </div>
+    </div>
+    <div class="layer" data-layer="work">
+      <div class="layer-hd">每轮干活 · Per-turn<span class="tag">llm + tools</span></div>
+      <div class="mods">
+        <div class="mod" data-mod="llm">llm <small>模型适配/流式</small></div>
+        <div class="mod tool" data-mod="tool-system">tool-system <small>权限/路径/执行/沙箱</small></div>
+        <div class="mod tool" data-mod="hooks">hooks <small>pre/post 钩子</small></div>
+        <div class="mod" data-mod="model-catalog">model-catalog <small>模型目录</small></div>
+        <div class="mod" data-mod="credentials">credentials <small>凭证</small></div>
+      </div>
+    </div>
+    <div class="layer" data-layer="persist">
+      <div class="layer-hd">持久化 · State<span class="tag">save / replay</span></div>
+      <div class="mods">
+        <div class="mod done" data-mod="session">session <small>transcript/fork</small></div>
+        <div class="mod done" data-mod="run">run <small>checkpoint/产物</small></div>
+        <div class="mod" data-mod="logging">logging <small>日志/span</small></div>
+      </div>
+    </div>
+    <div class="layer" data-layer="config">
+      <div class="layer-hd">配置与扩展 · Config &amp; Extend<span class="tag">围绕主干</span></div>
+      <div class="mods">
+        <div class="mod" data-mod="settings">settings <small>加载/热重载</small></div>
+        <div class="mod" data-mod="capability-control">capability-control <small>能力裁剪</small></div>
+        <div class="mod" data-mod="plugins">plugins <small>插件/技能安装</small></div>
+        <div class="mod" data-mod="skills">skills</div>
+        <div class="mod" data-mod="preset">preset</div>
+        <div class="mod" data-mod="arena">arena <small>多智能体辩论</small></div>
+        <div class="mod" data-mod="automation">automation <small>cron</small></div>
+        <div class="mod" data-mod="git">git</div>
+        <div class="mod" data-mod="lsp">lsp</div>
+        <div class="mod" data-mod="services">services</div>
+        <div class="mod" data-mod="utils">utils</div>
+        <div class="mod" data-mod="agent">agent</div>
+        <div class="mod" data-mod="external-agents">external-agents</div>
+        <div class="mod" data-mod="review">review</div>
+        <div class="mod" data-mod="product">product</div>
+        <div class="mod" data-mod="data">data</div>
+        <div class="mod" data-mod="cron">cron</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FLOW PIPELINE ──────────────────────── -->
+  <div class="secttl"><span class="no">PART 02</span>主干流水线 · 一轮 turn loop</div>
+  <p class="secsub">数据包从用户输入出发,沿 protocol → engine → prompt/context → llm → tool-system 流动。模型若要调工具,就钻进下面那条「工具闸道」,执行完回灌给 llm 再跑一轮;直到模型不再要工具,session 落盘、事件流回宿主。</p>
+
+  <div class="stage">
+    <div class="stagebar">
+      <span class="now" id="nowLabel">点击「开始演示」</span>
+      <span class="turnpill" id="turnPill">TURN 0</span>
+    </div>
+
+    <div class="track" id="track">
+      <div class="node" data-node="protocol"><div class="box"><div class="ic">⇄</div><div class="nm">protocol</div><div class="md">收到 run()</div></div></div>
+      <div class="node" data-node="engine"><div class="box"><div class="ic">◆</div><div class="nm">engine</div><div class="md">起一轮</div></div></div>
+      <div class="node" data-node="context"><div class="box"><div class="ic">▤</div><div class="nm">prompt+context</div><div class="md">拼提示/控窗口</div></div></div>
+      <div class="node" data-node="llm"><div class="box"><div class="ic">✲</div><div class="nm">llm</div><div class="md">流式生成</div></div></div>
+      <div class="node tool" data-node="tools"><div class="box"><div class="ic">⚙</div><div class="nm">tool-system</div><div class="md">跑工具</div></div></div>
+      <div class="node done" data-node="session"><div class="box"><div class="ic">▣</div><div class="nm">session</div><div class="md">落盘+回传</div></div></div>
+      <div id="packet">●</div>
+    </div>
+
+    <div class="loophint" id="loophint">&nbsp;</div>
+  </div>
+
+  <!-- ── TOOL GAUNTLET ──────────────────────── -->
+  <div class="gauntlet" id="gauntlet">
+    <h3>工具闸道 · ToolExecutor.executeSingle()</h3>
+    <p>tool-system 内部:模型的一次 tool call 要依次过这一串关卡,全过了才真正执行,然后再过一遍 post 钩子。</p>
+    <div class="gates" id="gates">
+      <span class="gate" data-gate="gates">门控 <small>能力/计划/MCP</small></span><span class="gsep">→</span>
+      <span class="gate" data-gate="validate">校验 <small>JSON schema</small></span><span class="gsep">→</span>
+      <span class="gate" data-gate="prehook">pre 钩子</span><span class="gsep">→</span>
+      <span class="gate" data-gate="path">路径策略 <small>PathPolicy</small></span><span class="gsep">→</span>
+      <span class="gate perm" data-gate="perm">权限 <small>分类/审批</small></span><span class="gsep">→</span>
+      <span class="gate" data-gate="exec">执行 <small>沙箱+超时</small></span><span class="gsep">→</span>
+      <span class="gate" data-gate="posthook">post 钩子</span>
+    </div>
+  </div>
+
+  <div class="caption" id="caption">
+    <span class="step">就绪</span>
+    点「开始演示」后,跟着高亮看一个请求如何穿过 core 的各层。每一步都对应仓库里真实的调用链。
+  </div>
+
+  <footer>
+    <b>对应源码</b> · engine/turn-loop.ts(turn loop)· protocol/server.ts(run 入口)· context/manager.ts(控窗口)· llm/client-factory.ts(模型调用)· tool-system/executor.ts(闸道)· session/session-manager.ts(落盘)。<br>
+    每个模块的「职责/文件/公开接口/怎么用/注意」详见同目录 <b>core-modules/&lt;模块&gt;.md</b>,总览见 <a href="./README.md">README.md</a>。本动画为示意,步骤经过简化但顺序与真实 dispatch 一致。
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const $  = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+
+  const packet   = $('#packet');
+  const track    = $('#track');
+  const nowLabel = $('#nowLabel');
+  const turnPill = $('#turnPill');
+  const loophint = $('#loophint');
+  const caption  = $('#caption');
+  const playBtn  = $('#playBtn');
+
+  let SPEED = 1;
+  let running = false;
+  let cancelled = false;
+
+  const sleep = ms => new Promise(r=>setTimeout(r, ms*SPEED));
+
+  // map a flow node -> the module chips that should light in the layer map
+  const nodeMods = {
+    protocol:['protocol'],
+    engine:['engine','runtime'],
+    context:['prompt','context','settings'],
+    llm:['llm','model-catalog','credentials'],
+    tools:['tool-system','hooks'],
+    session:['session','run','logging']
+  };
+
+  function clearActive(){ $$('.mod.active').forEach(m=>m.classList.remove('active')); $$('.layer.lit').forEach(l=>l.classList.remove('lit')); }
+  function litMods(node){
+    clearActive();
+    (nodeMods[node]||[]).forEach(name=>{
+      const el = document.querySelector('.mod[data-mod="'+name+'"]');
+      if(el){ el.classList.add('active'); const layer=el.closest('.layer'); if(layer) layer.classList.add('lit'); }
+    });
+  }
+
+  // position packet over the center of a node box
+  function moveTo(nodeEl, kind){
+    const tr = track.getBoundingClientRect();
+    const b  = nodeEl.querySelector('.box').getBoundingClientRect();
+    const x = b.left - tr.left + b.width/2 - 13;
+    const y = b.top  - tr.top  + b.height/2 - 13;
+    packet.style.opacity = 1;
+    packet.style.left = x+'px';
+    packet.style.top  = y+'px';
+    packet.className = ''; // reset
+    if(kind) packet.classList.add(kind);
+  }
+
+  function setCaption(step, html){
+    caption.style.opacity = 0;
+    setTimeout(()=>{ caption.innerHTML = '<span class="step">'+step+'</span>'+html; caption.style.opacity=1; }, 120);
+  }
+
+  const nodes = {
+    protocol:$('.node[data-node="protocol"]'),
+    engine:$('.node[data-node="engine"]'),
+    context:$('.node[data-node="context"]'),
+    llm:$('.node[data-node="llm"]'),
+    tools:$('.node[data-node="tools"]'),
+    session:$('.node[data-node="session"]'),
+  };
+
+  function nodeOn(key, kind){
+    Object.values(nodes).forEach(n=>n.classList.remove('on'));
+    const n = nodes[key];
+    n.classList.add('on');
+    n.classList.toggle('tool', kind==='tool');
+    n.classList.toggle('done', kind==='done');
+  }
+  function markPassed(key){ nodes[key].classList.add('passed'); nodes[key].classList.remove('on'); }
+
+  async function lightGate(g, kind){
+    const el = document.querySelector('.gate[data-gate="'+g+'"]');
+    el.classList.add('on');
+    await sleep(360);
+  }
+  function clearGates(){ $$('.gate.on').forEach(g=>g.classList.remove('on')); }
+
+  async function step(node, kind, label, step, html, hold){
+    if(cancelled) throw 'cancel';
+    nowLabel.textContent = label;
+    litMods(node==='session'?'session':Object.keys(nodes).find(k=>nodes[k]===nodes[node])||node);
+    litMods(node);
+    nodeOn(node, kind);
+    moveTo(nodes[node], kind);
+    setCaption(step, html);
+    await sleep(hold||820);
+  }
+
+  async function runDemo(){
+    // 0. reset
+    cancelled=false;
+    $$('.node').forEach(n=>n.classList.remove('on','passed','tool','done'));
+    clearActive(); clearGates();
+    loophint.innerHTML='&nbsp;';
+
+    try{
+      // ── TURN 1 ──────────────────────────────
+      turnPill.textContent='TURN 1';
+
+      await step('protocol','', '宿主发来 run("帮我改个文件")',
+        '① 进入边界 · protocol',
+        '宿主(tui/desktop)通过 <code>AgentClient.run()</code> 把任务发给 <code>AgentServer</code>,它选中对应 session 的 <code>Engine</code>,事件之后会原路 <code>onStreamEvent</code> 流回。');
+
+      markPassed('protocol');
+      await step('engine','', 'engine 起一轮 turn loop',
+        '② 驱动 · engine',
+        '<code>Engine.run()</code> 交给 <code>TurnLoop</code>:它就是 LLM调用→工具执行→再调用 的状态机,并盯着轮数/目标上限。');
+
+      markPassed('engine');
+      await step('context','', '拼系统提示 + 控上下文窗口',
+        '③ 准备一轮的输入 · prompt + context',
+        '<code>prompt</code> 拼装系统提示与个性化;<code>ContextManager</code> 在本轮压缩历史、按字节截断超长工具结果,确保不超 token 预算。');
+
+      markPassed('context');
+      await step('llm','', 'llm 流式生成 → 模型要调一个工具',
+        '④ 模型生成 · llm',
+        '<code>createLLMClient().createMessage()</code> 流式产出文本与 <code>tool_calls</code>。这一轮模型决定:先去读/写一个文件 —— 于是流向工具层。', 1000);
+
+      markPassed('llm');
+      // ── dive into tool gauntlet ─────────────
+      await step('tools','tool', '一次 tool call 进入「工具闸道」',
+        '⑤ 跑工具 · tool-system',
+        '<code>ToolExecutor.executeSingle()</code> 接到这次调用,开始过下面那串关卡 —— 全过了才真正执行。', 700);
+
+      // run the gauntlet
+      const gauntlet = [
+        ['gates',  '门控:能力 / 计划模式 / MCP 是否放行'],
+        ['validate','按 JSON schema 校验参数'],
+        ['prehook','pre_tool_use 钩子'],
+        ['path',   'PathPolicy 中央路径策略检查'],
+        ['perm',   '权限分类 + 审批(YOLO 安全分级)'],
+        ['exec',   '在 OS 沙箱里执行,带超时与 abort 级联'],
+        ['posthook','post_tool_use 钩子,归一化结果'],
+      ];
+      for(const [g,desc] of gauntlet){
+        if(cancelled) throw 'cancel';
+        const kind = g==='perm'?'perm':'';
+        nowLabel.textContent = '工具闸道 · '+desc;
+        setCaption('⑤·闸道', '<code>'+g+'</code> — '+desc);
+        await lightGate(g, kind);
+      }
+      await sleep(200);
+
+      // result flows back to llm
+      packet.classList.add('loop');
+      loophint.innerHTML = '↩ 工具结果回灌,<b>再跑一轮 LLM</b> — turn loop 的精髓:模型看到结果后继续推进';
+      nowLabel.textContent='工具结果回灌给 llm';
+      moveTo(nodes.llm,'loop');
+      litMods('llm');
+      setCaption('⑥ 回环 · loop back',
+        '工具结果作为新的输入回到 <code>llm</code>。<code>TurnLoop</code> 不退出 —— 它带着结果开始 <b>TURN 2</b>,模型据此决定下一步。');
+      clearGates();
+      $$('.node').forEach(n=>n.classList.remove('on'));
+      await sleep(1100);
+
+      // ── TURN 2: model is done ───────────────
+      turnPill.textContent='TURN 2';
+      loophint.innerHTML='&nbsp;';
+      await step('llm','', 'llm 这轮不再要工具 → 输出最终答复',
+        '⑦ 收敛 · llm',
+        '新一轮里模型已拿到工具结果,直接产出最终文本、不再调工具。<code>TurnLoop</code> 据此判定:本次任务到此结束。', 950);
+
+      markPassed('llm');
+      await step('session','done', 'session 落盘 + 事件流回宿主',
+        '⑧ 收口 · session + run',
+        '<code>SessionManager</code> 把这两轮写进 transcript(可 fork/replay),<code>run</code> 记 checkpoint;最终结果经 protocol 原路 <code>onStreamEvent</code> 回到界面。');
+
+      markPassed('session');
+      // finale
+      moveTo(nodes.session,'done');
+      nowLabel.textContent='✔ 一次对话完成';
+      loophint.innerHTML='<b>一轮 = 一次 LLM 调用(±工具)。</b> 任务跨越几轮,直到模型不再要工具或触达上限。';
+      setCaption('完成 ✔',
+        '这就是 core 的一次完整往返:<code>protocol → engine → prompt/context → llm ⇄ tool-system → session</code>。其余模块(settings/capability-control/plugins/arena…)围绕这条主干提供配置与扩展。');
+
+    }catch(e){
+      if(e!=='cancel') console.error(e);
+    }finally{
+      running=false;
+      playBtn.textContent='▶ 重新演示';
+      playBtn.classList.remove('running');
+    }
+  }
+
+  playBtn.addEventListener('click', ()=>{
+    if(running){ cancelled=true; return; }
+    running=true;
+    playBtn.textContent='⏹ 停止';
+    playBtn.classList.add('running');
+    runDemo();
+  });
+
+  // speed control
+  $('#speeds').addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    $$('#speeds button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    SPEED = parseFloat(b.dataset.mult);
+  });
+
+  // keep packet aligned if the window resizes mid-run: re-snap to whichever
+  // node is currently active rather than leaving it stranded / hidden.
+  let resizeT;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(resizeT);
+    resizeT = setTimeout(()=>{
+      const onNode = $('.node.on');
+      if(running && onNode){
+        const kind = onNode.classList.contains('tool') ? 'tool'
+                   : onNode.classList.contains('done') ? 'done' : '';
+        moveTo(onNode, kind);
+      }
+    }, 120);
+  });
+})();
+</script>
+</body>
+</html>
