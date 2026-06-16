@@ -482,6 +482,14 @@ export class AgentServer {
         return;
       }
       s.cancel();
+      // s.cancel() only aborts the engine controller + drains queued turns. The
+      // session's pendingApprovals (askUser / browser_action / tool approvals)
+      // are NOT driven by the abort signal — they only settle on a client reply
+      // or the 5-minute APPROVAL_TIMEOUT_MS. Left alone, the awaiting tool call
+      // hangs until that timeout (delaying run wind-down) and the server-side
+      // approvalTimers entry leaks. Resolve them as cancelled now and clear the
+      // matching timers, mirroring the legacy path below.
+      this.cancelSessionApprovals(s);
       this.transport.send(createResponse(req.id, { ok: true }));
       return;
     }
@@ -1580,6 +1588,26 @@ export class AgentServer {
       clearTimeout(timer);
       this.approvalTimers.delete(requestId);
     }
+  }
+
+  /**
+   * Resolve all of a chat session's pending approvals as cancelled and clear
+   * the matching server-side approval timers. Used by handleCancel's
+   * per-session path so a Stop while a tool is awaiting approval doesn't leave
+   * the tool hanging until APPROVAL_TIMEOUT_MS (and leak the timer). Each
+   * requestId in the session map has a same-keyed entry in this.approvalTimers
+   * (see requestAskUserForSession / makeBrowserBridge).
+   */
+  private cancelSessionApprovals(session: import("./chat-session.js").ChatSession): void {
+    for (const [requestId, resolve] of session.pendingApprovals) {
+      this.clearApprovalTimer(requestId);
+      try {
+        resolve({ approved: false, reason: "cancelled" });
+      } catch {
+        /* a resolver must never break cancel cleanup */
+      }
+    }
+    session.pendingApprovals.clear();
   }
 
   private clearAllApprovalTimers(): void {

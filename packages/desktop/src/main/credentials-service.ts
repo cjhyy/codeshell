@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync, rmSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 
 /** Subset of Electron's Cookie we rely on (keeps the formatter unit-testable). */
 export interface ElectronCookieLike {
@@ -65,7 +66,10 @@ export async function createCookieLease(
 ): Promise<{ filePath: string; count: number }> {
   const cookies = await getCookiesForDomain(domain);
   mkdirSync(LEASE_DIR, { recursive: true });
-  const filePath = join(LEASE_DIR, `lease-${Date.now()}-${process.pid}.txt`);
+  // randomUUID (not just Date.now()+pid): two leases created in the same
+  // millisecond would otherwise collide, so one overwrites the other's cookie
+  // file and the first cleanupLease deletes a file still in use.
+  const filePath = join(LEASE_DIR, `lease-${Date.now()}-${randomUUID()}.txt`);
   writeFileSync(filePath, formatNetscapeCookies(cookies), { mode: 0o600 });
   return { filePath, count: cookies.length };
 }

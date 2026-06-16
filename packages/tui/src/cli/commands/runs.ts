@@ -12,6 +12,7 @@
  */
 
 import { Command } from "commander";
+import { positiveIntOption } from "../parse-int-option.js";
 import { FileRunStore } from "@cjhyy/code-shell-core";
 import { RunManager } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
@@ -81,13 +82,13 @@ export function createRunsCommand(): Command {
   runs
     .command("list")
     .description("List recent runs")
-    .option("-n, --limit <n>", "Number of runs to show", "20")
+    .option("-n, --limit <n>", "Number of runs to show", positiveIntOption("--limit"), 20)
     .option("-s, --status <status>", "Filter by status (queued, running, completed, etc.)")
     .option("-t, --tag <tag>", "Filter by tag")
     .action(async (opts) => {
       const manager = createRunManager();
       const snapshots = await manager.list({
-        limit: parseInt(opts.limit),
+        limit: opts.limit as number,
         status: opts.status as RunStatus | undefined,
         tag: opts.tag,
       });
@@ -256,7 +257,7 @@ export function createRunsCommand(): Command {
     .command("events")
     .description("View run event log")
     .argument("<runId>", "Run ID")
-    .option("-n, --limit <n>", "Number of events to show", "50")
+    .option("-n, --limit <n>", "Number of events to show", positiveIntOption("--limit"), 50)
     .action(async (runId: string, opts) => {
       const manager = createRunManager();
       const events = await manager.getEvents(runId);
@@ -266,7 +267,7 @@ export function createRunsCommand(): Command {
         return;
       }
 
-      const limit = parseInt(opts.limit);
+      const limit = opts.limit as number;
       const shown = events.slice(-limit);
 
       console.log(`\n  Events for run ${runId} (showing last ${shown.length} of ${events.length}):\n`);
