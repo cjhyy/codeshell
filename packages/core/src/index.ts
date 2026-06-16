@@ -762,3 +762,17 @@ export type {
   ResolvedClaudeCodeSettings,
   ResolvedCodexSettings,
 } from "./external-agents/types.js";
+
+// ─── Browser automation bridge ───────────────────────────────────
+// Driver-agnostic contract + the pure a11y-tree flattener. The desktop host's
+// browser-driver module implements BrowserBridge on top of webContents.debugger
+// (CDP), reusing flattenAxTree. See the MVP spec
+// docs/superpowers/specs/2026-06-16-browser-automation-mvp.md.
+export { flattenAxTree, renderElementList } from "./tool-system/browser-bridge.js";
+export type {
+  BrowserBridge,
+  BrowserElement,
+  BrowserSnapshot,
+  BrowserResult,
+  AXNode,
+} from "./tool-system/browser-bridge.js";
