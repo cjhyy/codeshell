@@ -124,7 +124,11 @@ export class CronStore {
   }
 }
 
+// Reused across calls — Atomics.wait only reads slot 0, which always stays 0,
+// so a single shared buffer is safe and avoids per-call allocation in the
+// lock-retry loop.
+const SLEEP_SIGNAL = new Int32Array(new SharedArrayBuffer(4));
+
 function sleepSync(ms: number): void {
-  const signal = new Int32Array(new SharedArrayBuffer(4));
-  Atomics.wait(signal, 0, 0, ms);
+  Atomics.wait(SLEEP_SIGNAL, 0, 0, ms);
 }

@@ -6,7 +6,7 @@ import { pluginInstallDir } from "./paths.js";
 import { installPluginFromPath } from "./install.js";
 import { installPluginFromSource } from "./installFromSource.js";
 import { parseSource } from "./parseSource.js";
-import { appendInstallEntry, pluginInstallKey, readInstalledPlugins, removeInstallEntries } from "../installedPlugins.js";
+import { pluginInstallKey, readInstalledPlugins, removeInstallEntries, writeInstalledPlugins } from "../installedPlugins.js";
 import { CodexPluginManifest, CSMeta, PluginInstallError } from "./types.js";
 
 export interface UpdateResult {
@@ -54,7 +54,13 @@ async function reinstallAtomic(
     await rm(dir, { recursive: true, force: true });
     await rename(backup, dir);
     if (savedEntries) {
-      for (const entry of savedEntries) appendInstallEntry(key, entry);
+      // Restore in a single read-modify-write rather than one append per entry,
+      // which both narrows the race window against any concurrent writer and
+      // avoids re-appending onto whatever partial state doInstall() may have
+      // left for this key.
+      const data = readInstalledPlugins();
+      data.plugins[key] = savedEntries;
+      writeInstalledPlugins(data);
     }
     throw new PluginInstallError(
       `update failed; the old version of '${name}' was kept: ` +

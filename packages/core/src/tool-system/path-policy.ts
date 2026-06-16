@@ -39,6 +39,7 @@ import {
   renameSync,
 } from "node:fs";
 import { homedir } from "node:os";
+import { randomUUID } from "node:crypto";
 import { dirname, isAbsolute, join, resolve as resolvePath, sep } from "node:path";
 import type { ToolContext } from "./context.js";
 
@@ -244,7 +245,9 @@ function recordPathApproval(
     if (!Array.isArray(settings.pathApprovals)) settings.pathApprovals = [];
     if (!settings.pathApprovals.includes(prefix)) {
       settings.pathApprovals.push(prefix);
-      const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+      // randomUUID() guards against temp-name collisions between writers in
+      // the same millisecond; the rename keeps the swap atomic.
+      const tmp = `${file}.${randomUUID()}.tmp`;
       writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
       renameSync(tmp, file);
     }

@@ -235,10 +235,8 @@ export class CronScheduler {
   }
 
   private persistRunStats(job: CronJob): void {
-    if (!this.store) {
-      this.persist();
-      return;
-    }
+    // No store → nothing to persist. (persist() would also no-op here.)
+    if (!this.store) return;
     try {
       this.store.mutate((jobs) => {
         const idx = jobs.findIndex((j) => j.id === job.id);

@@ -441,6 +441,13 @@ export class TurnLoop {
             "<system-reminder>Warning: you have only 2 turns remaining before the turn limit is reached. " +
             "Start wrapping up your work and prepare a summary of what you've accomplished and what remains to be done.</system-reminder>",
         });
+      } else if (turnsRemaining === 1) {
+        messages.push({
+          role: "user",
+          content:
+            "<system-reminder>Warning: you have only 1 turn remaining before the turn limit is reached. " +
+            "Wrap up your work now — your next turn will be your last.</system-reminder>",
+        });
       } else if (turnsRemaining === 0) {
         messages.push({
           role: "user",

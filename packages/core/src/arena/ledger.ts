@@ -98,10 +98,14 @@ export class ArenaLedger {
   appendChallenge(challenge: ClaimChallenge): void {
     this.ledger.challenges.push(challenge);
 
-    // Also add to the claim's challenges array
+    // Also add to the claim's challenges array. If the claimId doesn't resolve
+    // the challenge still lives in ledger.challenges but is invisible to any
+    // code reading claim.challenges directly — surface that inconsistency.
     const claim = this.index.claimsById.get(challenge.claimId);
     if (claim) {
       claim.challenges.push(challenge);
+    } else {
+      logger.warn("arena.challenge_for_unknown_claim", { claimId: challenge.claimId });
     }
 
     this.checkGrowth();
@@ -128,6 +132,8 @@ export class ArenaLedger {
     const claim = this.index.claimsById.get(adjudication.claimId);
     if (claim) {
       claim.adjudication = adjudication;
+    } else {
+      logger.warn("arena.adjudication_for_unknown_claim", { claimId: adjudication.claimId });
     }
   }
 

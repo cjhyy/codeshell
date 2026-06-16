@@ -17,6 +17,7 @@ import {
   writeFileSync,
   renameSync,
 } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { logger as rootPermLogger } from "../logging/logger.js";
 
 export interface ApprovalBackend {
@@ -467,7 +468,9 @@ function persistProjectRule(cwd: string, rule: PermissionRule): void {
   settings.permissions.rules.push(rule);
   // Atomic write: stage to .tmp, then rename, so a crash mid-write can't
   // truncate settings.local.json and lose every saved permission grant.
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  // randomUUID() (not pid+Date.now()) guards against temp-name collisions when
+  // two writers fire within the same millisecond.
+  const tmp = `${file}.${randomUUID()}.tmp`;
   writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n", "utf-8");
   renameSync(tmp, file);
 }
@@ -665,6 +668,11 @@ function scanShellCommand(input: string): ScanResult {
   }
 
   flush();
+  // An unclosed quote means we stopped recognizing separators/metacharacters
+  // partway through (pipes, `;`, redirection inside the dangling quote were
+  // swallowed). Treat malformed shell syntax as dangerous rather than risk
+  // misclassifying it as safe.
+  if (quote !== null) dangerous = true;
   return { segments, dangerous };
 }
 

@@ -44,8 +44,9 @@ export function createInProcessTransport(): [Transport, Transport] {
       emitterA.on("message", handler);
     },
     close() {
+      // Only tear down our own incoming channel; the other side listens on
+      // emitterB and must keep working if it hasn't closed yet.
       emitterA.removeAllListeners();
-      emitterB.removeAllListeners();
     },
   };
 
@@ -58,7 +59,7 @@ export function createInProcessTransport(): [Transport, Transport] {
       emitterB.on("message", handler);
     },
     close() {
-      emitterA.removeAllListeners();
+      // Only tear down our own incoming channel; sideA listens on emitterA.
       emitterB.removeAllListeners();
     },
   };
