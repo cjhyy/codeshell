@@ -26,6 +26,9 @@ import {
   getMergedCatalog,
   setGitPathOverride,
   isGitAvailable,
+  CredentialStore,
+  type Credential,
+  type CredentialScope,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { buildDesktopAutomationRunner } from "./automation-host.js";
@@ -45,6 +48,12 @@ import {
 } from "./automation-service.js";
 import { dlog } from "./desktop-logger.js";
 import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
+import {
+  listCookieDomains,
+  createCookieLease,
+  cleanupLease,
+  sweepStaleLeases,
+} from "./credentials-service.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
 import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
@@ -927,6 +936,7 @@ app.whenReady().then(() => {
   }
   void createWindow();
   initUpdater();
+  sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
 
   // First-run defaults: copy bundled agents + register seed marketplace
   // sources into ~/.code-shell, THEN soft pre-install the core plugins
@@ -1018,6 +1028,32 @@ ipcMain.handle(
 ipcMain.handle("plugins:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("plugins:list requires cwd");
   return listPlugins(cwd);
+});
+
+// ── Credentials (token/link store + cookie capture) ──────────────────
+// cwd may be "" for no-repo contexts; project scope no-ops without a cwd.
+ipcMain.handle("credentials:list", async (_e, cwd: string) => {
+  return new CredentialStore(cwd || undefined).listMasked();
+});
+ipcMain.handle(
+  "credentials:save",
+  async (_e, cwd: string, scope: CredentialScope, cred: Credential) => {
+    new CredentialStore(cwd || undefined).save(scope, cred);
+  },
+);
+ipcMain.handle(
+  "credentials:remove",
+  async (_e, cwd: string, scope: CredentialScope, id: string) => {
+    new CredentialStore(cwd || undefined).remove(scope, id);
+  },
+);
+ipcMain.handle("credentials:cookieDomains", async () => listCookieDomains());
+ipcMain.handle("credentials:cookiePreview", async (_e, domain: string) => {
+  // Preview only: materialize a lease to count cookies, then clean it up
+  // immediately. Actual injection into a tool call is the deferred UseGate.
+  const { filePath, count } = await createCookieLease(domain);
+  cleanupLease(filePath);
+  return { count };
 });
 ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
