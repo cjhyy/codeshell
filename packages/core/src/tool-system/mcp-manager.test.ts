@@ -418,3 +418,34 @@ describe("executor gate: MCP tool from a server this session didn't enable", () 
     expect(String(result.error)).toContain("not enabled for this project");
   });
 });
+
+describe("buildHttpHeaders credentialRef", () => {
+  test("resolves credentialRef to a Bearer token via the resolver", () => {
+    const headers = buildHttpHeaders(
+      "figma",
+      { name: "figma", transport: "streamable-http", credentialRef: "my-figma-token" },
+      (id) => (id === "my-figma-token" ? "figd_secret" : undefined),
+    );
+    expect(headers["Authorization"]).toBe("Bearer figd_secret");
+  });
+
+  test("missing credential throws a friendly error", () => {
+    expect(() =>
+      buildHttpHeaders(
+        "figma",
+        { name: "figma", transport: "streamable-http", credentialRef: "nope" },
+        () => undefined,
+      ),
+    ).toThrow(/credential "nope"/);
+  });
+
+  test("no credentialRef behaves as before", () => {
+    process.env.MCP_TOKEN = "t";
+    const headers = buildHttpHeaders("s", {
+      name: "s",
+      transport: "streamable-http",
+      bearerTokenEnvVar: "MCP_TOKEN",
+    });
+    expect(headers["Authorization"]).toBe("Bearer t");
+  });
+});
