@@ -445,22 +445,24 @@ export class ContextManager {
    */
   private truncateToolResults(messages: Message[]): Message[] {
     const maxChars = this.config.maxToolResultChars;
-    let modified = false;
 
     const result = messages.map((msg) => {
       if (!Array.isArray(msg.content)) return msg;
 
+      // Per-message flag: a truncation in an earlier message must not force
+      // later, unchanged messages to be spread-copied.
+      let messageModified = false;
       const newContent = msg.content.map((block) => {
         if (block.type === "tool_result" && typeof block.content === "string") {
           if (block.content.length > maxChars) {
-            modified = true;
+            messageModified = true;
             return { ...block, content: truncateToolResult(block.content, maxChars) };
           }
         }
         return block;
       });
 
-      return modified ? { ...msg, content: newContent } : msg;
+      return messageModified ? { ...msg, content: newContent } : msg;
     });
 
     return result;

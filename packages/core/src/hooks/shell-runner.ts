@@ -101,6 +101,7 @@ export async function runShellHook(
     // its output. Stderr is also capped but treated more leniently —
     // truncated, not fatal — since stderr is just diagnostic chatter.
     let stdoutBytes = 0;
+    let stderrBytes = 0;
     let stdoutCapped = false;
     let stderrCapped = false;
     child.stdout?.on("data", (chunk: Buffer) => {
@@ -119,7 +120,10 @@ export async function runShellHook(
       stdout += chunk.toString("utf8");
     });
     child.stderr?.on("data", (chunk: Buffer) => {
-      if (stderr.length + chunk.length > MAX_HOOK_OUTPUT_BYTES) {
+      // Count raw bytes (not decoded string length) so multibyte UTF-8 output
+      // can't slip past the cap — matches the stdout accounting above.
+      stderrBytes += chunk.length;
+      if (stderrBytes > MAX_HOOK_OUTPUT_BYTES) {
         if (!stderrCapped) {
           stderrCapped = true;
           stderr += "\n…[stderr truncated]";

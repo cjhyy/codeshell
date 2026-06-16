@@ -238,7 +238,7 @@ export class SessionManager {
 
     // Copy events up to the fork point
     for (const event of events) {
-      if (event.type === "turn_boundary" && (event.data.turnNumber as number) > forkTurn) {
+      if (event.type === "turn_boundary" && ((event.data.turnNumber as number | undefined) ?? -1) > forkTurn) {
         break;
       }
       newBundle.transcript.append(event.type, event.data);

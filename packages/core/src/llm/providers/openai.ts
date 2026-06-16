@@ -498,11 +498,18 @@ export class OpenAIClient extends LLMClientBase {
           for (const tc of delta.tool_calls) {
             const idx = tc.index;
             if (!toolCallsMap.has(idx)) {
-              toolCallsMap.set(idx, { id: tc.id ?? "", name: tc.function?.name ?? "", args: "" });
-              options.onChunk?.({
-                type: "tool_use_start",
-                toolCall: { id: tc.id, toolName: tc.function?.name },
-              });
+              const id = tc.id ?? "";
+              const name = tc.function?.name ?? "";
+              toolCallsMap.set(idx, { id, name, args: "" });
+              // Only announce once we actually have an id+name; some providers
+              // stream them across deltas. Emitting undefined here violates the
+              // ToolCall contract and breaks downstream consumers.
+              if (id && name) {
+                options.onChunk?.({
+                  type: "tool_use_start",
+                  toolCall: { id, toolName: name },
+                });
+              }
             }
             const existing = toolCallsMap.get(idx)!;
             if (tc.id) existing.id = tc.id;
@@ -546,6 +553,16 @@ export class OpenAIClient extends LLMClientBase {
 
       const toolCalls: ToolCall[] = [];
       for (const [, tc] of toolCallsMap) {
+        // Drop incomplete tool calls: an empty id or name (the fallbacks set
+        // when a delta never delivered them) would become a malformed call
+        // that breaks transcript keying and tool dispatch downstream.
+        if (!tc.id || !tc.name) {
+          logger.warn("openai.incomplete_tool_call_dropped", {
+            id: tc.id || "(empty)",
+            name: tc.name || "(empty)",
+          });
+          continue;
+        }
         let args: Record<string, unknown> = {};
         try {
           args = JSON.parse(tc.args || "{}");
