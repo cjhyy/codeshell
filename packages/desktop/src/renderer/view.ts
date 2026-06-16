@@ -7,6 +7,7 @@ export type ViewMode =
   | "settings"       // legacy modal route — kept for routing back-compat
   | "settings_page"  // full-screen Settings page (new in batch E)
   | "customize"      // full-screen 扩展 (plugins + skills + MCP + market) view
+  | "credentials"    // full-screen 凭证 (cookie + token + link) view
   | "logs";
 
 /**
@@ -39,6 +40,7 @@ const VALID_MODES: ReadonlySet<ViewMode> = new Set([
   "settings",
   "settings_page",
   "customize",
+  "credentials",
   "logs",
 ]);
 
