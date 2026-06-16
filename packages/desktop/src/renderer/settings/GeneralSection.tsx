@@ -20,6 +20,7 @@ import {
   languageLabel,
   type UILanguage,
 } from "../uiLanguage";
+import { cn } from "@/lib/utils";
 
 const LANGUAGES: Array<{ id: UILanguage; description: string }> = [
   { id: "zh", description: "界面使用中文" },
@@ -44,7 +45,10 @@ function LanguageBlock() {
         {LANGUAGES.map((item) => (
           <button
             key={item.id}
-            className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent${lang === item.id ? " active" : ""}`}
+            className={cn(
+              "flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent",
+              lang === item.id && "border-primary bg-primary/10 ring-1 ring-primary/30",
+            )}
             onClick={() => choose(item.id)}
           >
             <span className="text-sm font-medium text-foreground">{languageLabel(item.id)}</span>

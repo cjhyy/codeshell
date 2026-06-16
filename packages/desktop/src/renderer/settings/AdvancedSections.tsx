@@ -1170,7 +1170,10 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
           <button
             key={o.id || "default"}
             type="button"
-            className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent${detail === o.id ? " active" : ""}`}
+            className={cn(
+              "flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60",
+              detail === o.id && "border-primary bg-primary/10 ring-1 ring-primary/30",
+            )}
             disabled={saving}
             onClick={() => void save(o.id)}
           >

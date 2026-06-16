@@ -4,6 +4,7 @@ import {
   toCorePermissionMode,
   type PermissionMode,
 } from "../chat/PermissionPill";
+import { cn } from "@/lib/utils";
 
 const MODES: PermissionMode[] = ["plan", "default", "accept_edits", "bypass"];
 const MODE_LABELS: Record<PermissionMode, string> = {
@@ -76,7 +77,10 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
         {MODES.map((m) => (
           <button
             key={m}
-            className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent${mode === m ? " active" : ""}`}
+            className={cn(
+              "flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60",
+              mode === m && "border-primary bg-primary/10 ring-1 ring-primary/30",
+            )}
             aria-pressed={mode === m}
             disabled={saving}
             onClick={() => void choose(m)}

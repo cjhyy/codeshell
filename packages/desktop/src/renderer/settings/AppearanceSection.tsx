@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { applyTheme, loadTheme, saveTheme, type Theme } from "../theme";
+import { cn } from "@/lib/utils";
 
 const THEMES: Array<{ id: Theme; label: string; description: string }> = [
   { id: "system", label: "跟随系统", description: "根据 macOS 外观自动切换" },
@@ -24,7 +25,10 @@ export function AppearanceSection() {
         {THEMES.map((item) => (
           <button
             key={item.id}
-            className={`flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent${theme === item.id ? " active" : ""}`}
+            className={cn(
+              "flex cursor-pointer flex-col items-start gap-1 rounded-md border bg-transparent p-3 text-left hover:bg-accent",
+              theme === item.id && "border-primary bg-primary/10 ring-1 ring-primary/30",
+            )}
             onClick={() => choose(item.id)}
           >
             <span className="text-sm font-medium text-foreground">{item.label}</span>
