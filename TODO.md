@@ -11,8 +11,8 @@
 > 纯 code 活优先；需人盯/多天的另列。本表是「下一步该做啥」的唯一入口，详情见对应分区。
 
 **本轮开工中（2026-06-09，五项，详见各分区）：**
-- 🔧 **B1 路径授权后原工具继续运行**：批准路径后 Read/Glob/Grep 应重试续跑，避免被迫绕 Bash（核实：现真没做，工具批准后不重试）→ P0
-- ⬜ **B2 审计路径授权**：记录批准来源/范围/过期/被拒原因（核实：现零审计）→ P0
+- ✅ **B1 路径授权后原工具继续运行**：核实后认定无需实现——控制流本就正确,「批准后报错」真因是 ESM 裸 require(已修 7642c16),见 P0 正文。
+- ⏸️ **B2 审计路径授权**（暂缓 → P3，企业/受监管场景再做）：个人本地场景性价比低,设计已就绪要做时直接落,见 P0 正文。
 - ✅ **D1 `task` 加 `agentId` tag**（2026-06-10 fbe6f68）：核实 TodoWrite 无需改——engine.ts:1152 childStream 已给每个子代理事件 spread agentId(含 task_update);ToolContext 无需加字段。真缺口仅 TUI App.tsx task_update case 缺隔离闸,已补 `if (taskEvent.agentId) break;` 与 desktop 对齐
 - ❌ **D2 Agent 角色 settings-level 默认**（2026-06-10 用户决策不做）：硬编码 general-purpose 兜底已够用,可配默认子代理角色对个人场景无实用价值;企业/多角色场景如真需要再议 → 取消
 - ✅ **A1 Shell Snapshot 错误高亮**（2026-06-10）：core 抽 classifyBashLines 纯分类器(STDERR: 粘性区 + Exit code/Killed by signal 状态行,文本逐字不改保复制),双端各染色:TUI ToolCall errorLines→ansi:red,desktop BashToolCard→text-status-err;两套各带测试(8+6)
