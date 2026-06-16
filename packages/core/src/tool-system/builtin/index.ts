@@ -6,6 +6,7 @@ import type { RegisteredTool } from "../../types.js";
 import { readToolDef, readTool } from "./read.js";
 import { writeToolDef, writeTool } from "./write.js";
 import { generateImageToolDef, generateImageTool, isGenerateImageAvailable } from "./generate-image.js";
+import { editModelCatalogToolDef, editModelCatalogTool } from "./edit-model-catalog.js";
 import { generateVideoToolDef, generateVideoTool, isGenerateVideoAvailable } from "./generate-video.js";
 import { viewImageToolDef, viewImageTool } from "./view-image.js";
 import { editToolDef, editTool } from "./edit.js";
@@ -103,6 +104,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       pathPolicy: [{ kind: "arg", arg: "file_path", operation: "write" }],
     },
     execute: writeTool,
+  },
+  {
+    definition: {
+      ...editModelCatalogToolDef,
+      source: "builtin",
+      permissionDefault: "ask", // writes user config — confirm before each write
+      isReadOnly: false,
+      isConcurrencySafe: false, // serializes writes to the single catalog file
+    },
+    execute: editModelCatalogTool,
   },
   {
     definition: {
