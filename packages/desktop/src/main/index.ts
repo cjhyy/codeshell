@@ -1493,6 +1493,22 @@ ipcMain.handle("dialog:pickSkillDir", async (): Promise<{ path: string; name: st
   return { path: selected, name: basename(selected) };
 });
 
+ipcMain.handle("dialog:pickGitBinary", async (): Promise<string | null> => {
+  const res = await dialog.showOpenDialog({
+    title: "选择 git 可执行文件",
+    properties: ["openFile"],
+    filters:
+      process.platform === "win32"
+        ? [
+            { name: "可执行文件", extensions: ["exe"] },
+            { name: "所有文件", extensions: ["*"] },
+          ]
+        : [{ name: "所有文件", extensions: ["*"] }],
+  });
+  if (res.canceled || res.filePaths.length === 0) return null;
+  return res.filePaths[0];
+});
+
 ipcMain.handle("window:new", async () => {
   await createWindow();
 });

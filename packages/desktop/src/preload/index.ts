@@ -335,6 +335,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("dialog:pickDir"),
   pickSkillDir: (): Promise<{ path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickSkillDir"),
+  pickGitBinary: (): Promise<string | null> =>
+    ipcRenderer.invoke("dialog:pickGitBinary"),
   getGitStatus: (cwd: string) => ipcRenderer.invoke("git:status", cwd),
   /** Per-file +/- line counts for the review tree (TODO 2.3a). */
   getGitNumstat: (cwd: string) =>

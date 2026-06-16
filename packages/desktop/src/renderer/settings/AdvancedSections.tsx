@@ -614,6 +614,16 @@ export function GitSection() {
     }
   };
 
+  const pickGit = async () => {
+    const picked = await window.codeshell.pickGitBinary?.();
+    if (!picked) return;
+    setGitPath(picked);
+    setGitOk(undefined);
+    await writeSettings("user", { git: { path: picked } });
+    // 选完立刻验证这个路径到底是不是能用的 git,免得用户选错文件还以为成了。
+    await checkGit();
+  };
+
   const update = <K extends keyof GitPrefs>(key: K, value: GitPrefs[K]) => {
     setPrefs((c) => {
       const next = { ...c, [key]: value };
@@ -628,7 +638,7 @@ export function GitSection() {
       <ul className="flex flex-col gap-2">
         <GitRowShell
           title="Git 可执行文件路径"
-          help="留空则用系统 PATH 中的 git。安装插件市场需要 git;若 GUI 启动时没继承到 PATH(Windows 常见),在此填写 git 可执行文件的绝对路径,如 C:\\Program Files\\Git\\cmd\\git.exe。"
+          help="留空则用系统 PATH 中的 git。安装插件市场需要 git;若 GUI 启动时没继承到 PATH(Windows 常见),点「选择…」挑出 git 可执行文件(如 C:\\Program Files\\Git\\cmd\\git.exe),或直接填写绝对路径。"
           control={
             <div className="flex items-center gap-2">
               <input
@@ -642,6 +652,9 @@ export function GitSection() {
                 }}
                 onBlur={flushGitPath}
               />
+              <Button size="sm" variant="outline" onClick={() => void pickGit()}>
+                选择…
+              </Button>
               <Button size="sm" variant="outline" disabled={checking} onClick={() => void checkGit()}>
                 {checking ? "检测中…" : "检测"}
               </Button>

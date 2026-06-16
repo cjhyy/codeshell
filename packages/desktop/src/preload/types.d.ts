@@ -333,6 +333,7 @@ export interface CodeshellApi {
   /** Show native folder picker. Resolves to null if user canceled. */
   pickDir(): Promise<{ path: string; name: string } | null>;
   pickSkillDir(): Promise<{ path: string; name: string } | null>;
+  pickGitBinary(): Promise<string | null>;
 
   // Phase 4 — git / shell services (renderer never spawns child procs directly).
   getGitStatus(cwd: string): Promise<GitStatus>;
