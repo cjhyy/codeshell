@@ -1249,6 +1249,18 @@ export class Engine {
       ? await this.runtime.resolveSandbox(sandboxConfig, cwd)
       : await this.resolveSandboxWithoutRuntime(sandboxConfig, cwd);
 
+    // Observability: surface what sandbox actually applied this run — the
+    // configured mode vs the resolved backend (auto may downgrade to off when
+    // no OS backend is available) + the network policy. Without this you can't
+    // tell whether shell commands were isolated /网络放没放. One line per run.
+    logger.info("sandbox.resolved", {
+      mode: sandboxConfig.mode,
+      backend: sandboxBackend.name,
+      isolated: sandboxBackend.name !== "off",
+      network: sandboxConfig.network,
+      cwd,
+    });
+
     // sessionId is filled in after the session bundle is resolved below
     // (the session may be cold-started or resumed). Until then this is
     // intentionally shaped as a mutable local; we treat it as immutable
