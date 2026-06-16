@@ -153,7 +153,19 @@ function AgentsEditor({ target }: { target: Target }) {
     }
   }, [cwd, isProject]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    // Live refresh: the EditModelCatalog tool / settings edits write catalog +
+    // connections from the worker; re-pull the model dropdown options so a model
+    // added/fixed elsewhere shows up here without a restart (mirrors TextConnectionsPanel).
+    const reload = () => void load();
+    window.addEventListener("codeshell:files-changed", reload);
+    window.addEventListener("codeshell:settings-changed", reload);
+    return () => {
+      window.removeEventListener("codeshell:files-changed", reload);
+      window.removeEventListener("codeshell:settings-changed", reload);
+    };
+  }, [load]);
 
   // Write scope for saveAgent/deleteAgent mirrors the read scope (listAgents(cwd)).
   const agentScope = (): { scope: "project"; cwd: string } | { scope: "user" } =>
