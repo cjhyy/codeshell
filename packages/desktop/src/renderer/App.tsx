@@ -42,6 +42,7 @@ import {
   migrateBucketOverride,
   clearBucketOverride,
   loadPanelState,
+  clearPanelState,
   savePanelState,
   loadOverrideMap,
   saveOverrideMap,
@@ -766,6 +767,15 @@ function App() {
     // Same for model: a new draft starts on the global default, not the
     // previous draft's per-bucket pick.
     setModelOverrides((prev) => clearBucketOverride(prev, draftBucket));
+    // Panels too: the draft "_none_" slot is shared by every draft in this
+    // repo, so a previous draft's open panels would otherwise carry into the
+    // fresh conversation. Wipe the persisted slot AND reset the in-memory
+    // panel state — the restore effect only re-runs when `activeBucket`
+    // changes, which it won't if we're already in the draft bucket.
+    clearPanelState(draftBucket);
+    setPanelTabs([]);
+    setPanelActiveId(null);
+    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: false }));
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 
@@ -904,6 +914,14 @@ function App() {
       ...prev,
       [repoKeyOf(repoId)]: setActiveSession(repoId, null),
     }));
+    // Reset the shared per-repo draft panel slot so a previous draft's open
+    // panels don't carry into this fresh conversation (see the longer note in
+    // handleNewConversationForRepo — same reasoning, same in-memory reset).
+    const draftBucket = bucketKey(repoId, null);
+    clearPanelState(draftBucket);
+    setPanelTabs([]);
+    setPanelActiveId(null);
+    setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: null, open: false }));
     setView((v) => ({ ...v, viewMode: "chat" }));
   };
 

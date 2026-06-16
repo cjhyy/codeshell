@@ -239,6 +239,21 @@ export function loadPanelState<K extends string = string>(bucket: string): Panel
   }
 }
 
+/**
+ * Drop a bucket's saved panel state entirely. Used when starting a fresh
+ * draft so the shared per-repo "_none_" slot doesn't carry a previous
+ * draft's panel layout into the new conversation (mirrors how permission/
+ * goal/model overrides clear the draft bucket).
+ */
+export function clearPanelState(bucket: string): void {
+  try {
+    if (typeof localStorage === "undefined") return;
+    localStorage.removeItem(panelStateKey(bucket));
+  } catch {
+    // localStorage may be unavailable (SSR / private mode) — best effort.
+  }
+}
+
 /** Persist a bucket's panel state. Closed + empty clears the key to avoid clutter. */
 export function savePanelState<K extends string>(bucket: string, state: PanelStateSnapshot<K>): void {
   try {
