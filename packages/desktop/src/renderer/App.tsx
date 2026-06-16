@@ -2500,6 +2500,7 @@ function App() {
           onOpenSearch={() => setSessionSearchOpen(true)}
           onOpenAutomations={() => setViewMode("automation")}
           onOpenCustomize={() => setViewMode("customize")}
+          onOpenCredentials={() => setViewMode("credentials")}
           onOpenSettingsPage={() => setViewMode("settings_page")}
           onRenameSession={handleRenameSession}
           onArchiveSession={handleArchiveSession}

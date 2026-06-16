@@ -4,6 +4,7 @@ import {
   Search,
   Blocks,
   Workflow,
+  KeyRound,
   Folder,
   FolderOpen,
   Plus,
@@ -47,6 +48,7 @@ interface SidebarProps {
   onOpenSearch: () => void;
   onOpenAutomations: () => void;
   onOpenCustomize: () => void;
+  onOpenCredentials: () => void;
   onOpenSettingsPage: () => void;
 
   onRenameSession: (repoId: string | null, sessionId: string, title: string) => void;
@@ -84,6 +86,7 @@ export function Sidebar({
   onOpenSearch,
   onOpenAutomations,
   onOpenCustomize,
+  onOpenCredentials,
   onOpenSettingsPage,
   onRenameSession,
   onArchiveSession,
@@ -213,6 +216,12 @@ export function Sidebar({
           Icon={Workflow}
           onClick={onOpenAutomations}
           active={viewMode === "runs"}
+        />
+        <SidebarItem
+          label="凭证"
+          Icon={KeyRound}
+          onClick={onOpenCredentials}
+          active={viewMode === "credentials"}
         />
       </nav>
 
