@@ -21,6 +21,17 @@ import { resolveGit, isGitAvailable } from "../utils/exec.js";
 export type GitResult = { ok: true; stdout: string } | { ok: false; error: string };
 
 /**
+ * On a fresh macOS without the Command Line Tools, `/usr/bin/git` is an `xcrun`
+ * stub that spawns fine (so `isGitAvailable()`'s findExecutable check is fooled)
+ * but exits non-zero with an xcrun error on stderr. Classify that as a
+ * missing-git condition so runGit returns GIT_NOT_FOUND and the host shows the
+ * friendly "install Git" guidance instead of leaking the raw xcrun error.
+ */
+export function isMissingDeveloperToolsStderr(stderr: string): boolean {
+  return /xcrun: error|not a developer tool|no developer tools/i.test(stderr);
+}
+
+/**
  * Force git to never prompt interactively. gitOps runs in headless contexts
  * (the Electron main process, the agent worker) that have no TTY, so a
  * private/auth-required clone or an unknown SSH host key would otherwise make
@@ -69,6 +80,17 @@ async function runGit(args: string[], cwd?: string, timeoutMs = 60_000): Promise
   }
   if (r.exitCode === 0) {
     return { ok: true, stdout: r.stdout.trim() };
+  }
+  // mac CLT-missing stub: git spawned but exited non-zero with an xcrun error —
+  // treat as not-installed so the host shows install guidance (not a raw error).
+  if (isMissingDeveloperToolsStderr(r.stderr)) {
+    return {
+      ok: false,
+      error:
+        "GIT_NOT_FOUND: git was not found (the macOS Command Line Tools are not installed). " +
+        "Run `xcode-select --install`, or install Git from https://git-scm.com/downloads, " +
+        "then restart — or set the `git.path` setting to your git binary.",
+    };
   }
   return {
     ok: false,
