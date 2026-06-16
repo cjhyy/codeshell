@@ -28,7 +28,7 @@
 - 🔧 长时段断网的会话级重连（瞬时错误已被 withRetry 覆盖）→ P1
 
 **需人盯 / 多天 / Roadmap：**
-- ⬜ 浏览器自动化能力（对标 WorkBuddy，见 P4）
+- 🔧 浏览器自动化能力（对标 WorkBuddy）：MVP 已实现(2026-06-17,8 工具+独立 browser-driver 模块+观察遮蔽+安全)；留后=交互审批弹窗/无人值守隐藏窗口/视觉兜底/真机 smoke → P4
 - ⬜ Markdown 渲染体验优化（desktop/TUI 一致性）→ P2
 - ⬜ 测试覆盖 / E2E / CI / 覆盖率 / 文档 → P7
 - ⬜ 性能优化（启动懒加载、流式重渲染、大文件、MCP 连接池）→ P7
@@ -102,17 +102,22 @@
 
 ## P4 — 插件、MCP 与扩展能力
 
-### ⬜ 浏览器自动化能力（Roadmap，对标腾讯 WorkBuddy / OpenClaw）
+### 🔧 浏览器自动化能力（对标腾讯 WorkBuddy / Codex browser use）— MVP 已实现
 
-让 agent 驱动真实浏览器替用户完成网页操作（登录态复用、抓取信息、填表点击），作为继文件/数据源之后的又一类工具。目前**完全未支持**。
+让 agent 驱动内置 webview 替用户完成网页操作。调研稿 `docs/browser-automation-research-2026-06-16.md`，
+技术方案 `docs/superpowers/specs/2026-06-16-browser-automation-mvp.md`。**2026-06-17 MVP 全实现**
+（commits ac3044f9..e4b23db0）：
 
-- [ ] 选型：headless Chromium via Playwright/Puppeteer，跑在本地（对齐 sandbox，数据不外发）
-- [ ] 登录态/cookie 持久化：保存浏览器 storage state（cookie + localStorage）到本地跨任务复用；2FA/验证码把控制权交还用户
-- [ ] agent 循环：观察（优先 DOM/无障碍树，截图兜底）→ 决策（click/type/scroll/navigate）→ 执行 → 回灌
-- [ ] **token 成本控制（关键，别走截图优先的回头路）**：① 状态优先用精简后的可交互元素列表，非整页 DOM/截图；② prompt 缓存固定系统提示+工具定义；③ 微决策走小模型/小上下文；④ 上下文裁剪只留摘要+最近几步；⑤ 能用确定性脚本（登录态复用）就别进模型。截图仅在 DOM 抓不到时兜底
-- [ ] 安全边界：复用 sandbox 文件/网络策略；不自动外发凭据、敏感操作需审批
-- [ ] 暴露为工具 + desktop 浏览器面板接线（仓库已有浏览器面板，见 [[project_desktop_four_panels]]）
-- 背景：2026-06-09 对话（用户问 WorkBuddy 怎么记 cookie / 是否无头浏览器代操作；澄清 token 大头在多步 agent 循环+每步塞网页状态，不在记 cookie）
+- [x] 选型：**CDP 驱动 Electron 内置 webview**（非 Playwright headless / 非 chrome-devtools-mcp / 非注入JS）——
+  零依赖、跨平台内核一致、isTrusted 真实输入。淘汰理由全链见 spec §0，Codex 反向验证。
+- [x] 登录态复用：直接用 `persist:browser` 持久分区（优于 Codex in-app 无持久化，避开 Skyvern 接管真实 Chrome 风险）；2FA/登录墙 → needsHuman 交还用户。
+- [x] agent 循环：observe（`Accessibility.getFullAXTree` → 带 ref 元素列表，非截图）→ act（ref→backendNodeId→getBoxModel→`Input.dispatchMouseEvent`）→ re-observe。
+- [x] token 控制：观察遮蔽（maskOldBrowserSnapshots 只留最新 snapshot，研究最高杠杆）+ a11y 列表非整页 DOM。
+- [x] 安全：域名白名单 + 敏感动作（卡号/支付/删除）审批，执行层兜底不交 LLM；隔离 profile。
+- [x] 工具：8 个 `browser_*`（snapshot/navigate/click/type/scroll/read_content/wait/press_enter）+ prompt 指南。
+- [x] 端到端：小红书 搜→开→扒内容→总结 e2e 测试过；core 1407 + desktop 837 全绿。
+- [ ] **留后**：敏感动作交互审批弹窗（现 fail-closed 自动拒）；无人值守隐藏 BrowserWindow（spec §9，复用同模块）；视觉兜底 SoM；真机 smoke（用户真机点验）。
+- 独立模块 `packages/desktop/src/main/browser-driver/`（可拆/可搬去隐藏窗口）。
 
 ### ⬜ Workspace 数据源绑定与作用域分配（Roadmap）
 
