@@ -11,6 +11,7 @@ import {
   estimateTokens,
   microcompact,
   dedupeFileReads,
+  maskOldBrowserSnapshots,
   snipCompact,
   windowCompact,
   truncateToolResult,
@@ -206,6 +207,16 @@ export class ContextManager {
     if (dedup.clearedCount > 0) {
       result = dedup.messages;
       logger.info("context.dedupe_file_reads", { cleared: dedup.clearedCount });
+    }
+
+    // Tier 0d': browser observation masking — keep only the latest
+    // browser_snapshot, collapse older ones (stale element lists, often large).
+    // Same always-on waste-removal class as dedupeFileReads. The research's
+    // top browser-token lever (folding old observations beats LLM summarizing).
+    const masked = maskOldBrowserSnapshots(result);
+    if (masked.maskedCount > 0) {
+      result = masked.messages;
+      logger.info("context.mask_browser_snapshots", { masked: masked.maskedCount });
     }
 
     // Tier 1: microcompact — fingerprint old whitelisted tool_results.

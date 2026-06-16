@@ -438,6 +438,53 @@ export function dedupeFileReads(messages: Message[]): DedupeFileReadsResult {
 }
 
 /**
+ * Observation masking for browser_snapshot results (the research's highest-
+ * leverage browser-token saving: a page snapshot is large and only the LATEST
+ * one matters for the next decision; older ones are stale element lists). Keep
+ * the most recent browser_snapshot result verbatim; replace every earlier one
+ * with a one-line placeholder. Deterministic — no LLM summarization needed.
+ *
+ * Mirrors dedupeFileReads but keyed on the tool name (all browser_snapshot
+ * results share one logical "stream"), not a file path.
+ */
+export function maskOldBrowserSnapshots(messages: Message[]): { messages: Message[]; maskedCount: number } {
+  const idToName = buildToolUseIdToNameMap(messages);
+  const snapResults: string[] = [];
+  for (const msg of messages) {
+    if (!Array.isArray(msg.content)) continue;
+    for (const block of msg.content) {
+      if (block.type !== "tool_result" || !block.tool_use_id) continue;
+      if (idToName.get(block.tool_use_id) !== "browser_snapshot") continue;
+      if (typeof block.content !== "string") continue;
+      if (block.content.startsWith("[Old browser snapshot collapsed")) continue;
+      snapResults.push(block.tool_use_id);
+    }
+  }
+  if (snapResults.length < 2) return { messages, maskedCount: 0 };
+
+  // Mask all but the last (newest walked-forward).
+  const maskIds = new Set(snapResults.slice(0, -1));
+  let maskedCount = 0;
+  const result = messages.map((msg) => {
+    if (!Array.isArray(msg.content)) return msg;
+    return {
+      ...msg,
+      content: msg.content.map((block) => {
+        if (block.type !== "tool_result" || !block.tool_use_id) return block;
+        if (!maskIds.has(block.tool_use_id)) return block;
+        maskedCount++;
+        return {
+          ...block,
+          content:
+            "[Old browser snapshot collapsed — superseded by a newer browser_snapshot. Re-run browser_snapshot for the current page's elements.]",
+        };
+      }),
+    };
+  });
+  return { messages: result, maskedCount };
+}
+
+/**
  * Apply aggregate per-message tool result budget.
  * When total tool_result content in a single message exceeds maxTotalChars,
  * truncates the largest results first with a notice.
