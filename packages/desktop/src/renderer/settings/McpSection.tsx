@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
+import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import type {
   McpProbeResult,
   McpServerProbeInput,
@@ -151,9 +152,8 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Load on mount + auto-refresh on config change anywhere.
+  useRefreshOnSettingsChange(() => void load(), [load]);
 
   const persist = async (next: McpServer[]) => {
     const record = Object.fromEntries(

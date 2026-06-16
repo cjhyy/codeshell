@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import {
   fromSettingsPermissionMode,
   toCorePermissionMode,
@@ -43,9 +44,8 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
     }
   };
 
-  useEffect(() => {
-    void load();
-  }, [scope, activeRepoPath]);
+  // Load on mount/scope switch + auto-refresh on config change anywhere.
+  useRefreshOnSettingsChange(() => void load(), [scope, activeRepoPath]);
 
   const choose = async (m: PermissionMode) => {
     setSaving(true);
