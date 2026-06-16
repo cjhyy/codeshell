@@ -74,6 +74,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
   );
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [defaultId, setDefaultId] = useState<string>("");
+  const [auxId, setAuxId] = useState<string>(""); // background-task model (text only)
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
 
   const textTemplates = useMemo(() => catalog.filter((e) => e.tag === tag), [catalog, tag]);
@@ -93,7 +94,17 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
     setCredentials(Array.isArray(s.credentials) ? (s.credentials as Credential[]) : []);
     const defaults = (s.defaults ?? {}) as Record<string, string | undefined>;
     setDefaultId(defaults[tag] ?? "");
+    setAuxId(defaults.auxText ?? "");
   }, [scope, cwd, cacheKey, tag]);
+
+  /** Set the background-task (aux) model = a text connection id, or clear. */
+  const setAux = async (id: string) => {
+    setAuxId(id);
+    const s = ((await window.codeshell.getSettings(scope, cwd)) ?? {}) as Record<string, unknown>;
+    const defaults = (s.defaults ?? {}) as Record<string, unknown>;
+    await writeSettings(scope, { defaults: { ...defaults, auxText: id || undefined } }, cwd);
+    toast({ message: id ? `后台任务模型已设为 ${id}` : "后台任务模型已跟随当前模型", variant: "success" });
+  };
 
   useEffect(() => {
     void load();
@@ -207,6 +218,28 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+
+      {tag === "text" && instances.length > 0 && (
+        <div className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-[minmax(220px,320px)_1fr] sm:items-center">
+          <ConnField label="后台任务模型" hint="记忆提取、自动标题等后台调用用此模型。">
+            <SimpleSelect
+              value={auxId}
+              onChange={(v) => void setAux(v)}
+              placeholder="跟随当前模型"
+              options={[
+                { value: "", label: "跟随当前模型（默认）" },
+                ...instances.map((i) => ({
+                  value: i.id,
+                  label: `${entryById(i.catalogId)?.displayName ?? i.catalogId} · ${i.model}`,
+                })),
+              ]}
+            />
+          </ConnField>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            选个便宜快的模型处理后台任务，默认跟随当前聊天模型。
+          </p>
+        </div>
+      )}
 
       {instances.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
