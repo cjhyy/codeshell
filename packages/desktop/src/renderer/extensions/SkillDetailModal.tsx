@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Markdown } from "../Markdown";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { skillBaseDir } from "./skillBaseDir";
 
 interface Props {
   name: string;
@@ -62,7 +63,7 @@ export function SkillDetailModal({ name, filePath, source, onClose }: Props) {
           ) : body === null ? (
             <div className="text-sm text-muted-foreground">加载中…</div>
           ) : (
-            <Markdown text={body} />
+            <Markdown text={body} cwd={skillBaseDir(filePath)} />
           )}
         </div>
       </div>
