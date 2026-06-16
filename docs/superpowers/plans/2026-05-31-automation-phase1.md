@@ -104,7 +104,7 @@ These keep existing importers (`tool-system/builtin/cron.ts`, `index.ts`, `tui/r
 ```ts
 /**
  * Back-compat shim. The cron scheduler moved to `automation/scheduler.ts`
- * (see docs/automation-plan-2026-05-31.md). This re-export keeps existing
+ * (see docs/archive/automation-plan-2026-05-31.md). This re-export keeps existing
  * `../cron/scheduler.js` importers working. New code should import from
  * `../automation/scheduler.js`.
  */
@@ -244,7 +244,7 @@ Expected: FAIL — `startAutomation` is not exported from `./index.js` (module n
  * Hosts (Electron main, future CLI server) load this module and inject their
  * own store + runner. The module imports nothing from Electron/Ink and makes
  * no GUI/TTY assumptions, so the same code runs in any host
- * (docs/automation-plan-2026-05-31.md, D1).
+ * (docs/archive/automation-plan-2026-05-31.md, D1).
  */
 
 import { CronScheduler } from "./scheduler.js";
@@ -534,7 +534,7 @@ Inside the existing `app.whenReady().then(() => { ... })` block, after `void cre
 ```ts
   // Automation: load the in-process scheduler (read-only jobs). Persisted
   // jobs are restored from ~/.code-shell/cron.json. Cron follows the app
-  // lifecycle by design (docs/automation-plan-2026-05-31.md, D2).
+  // lifecycle by design (docs/archive/automation-plan-2026-05-31.md, D2).
   try {
     automationHandle = startAutomation({
       store: new CronStore(defaultCronStorePath()),
