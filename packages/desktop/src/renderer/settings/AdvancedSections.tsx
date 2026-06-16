@@ -864,10 +864,6 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
   const [setupScripts, setSetupScripts] = useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
   const [cleanupScripts, setCleanupScripts] = useState<Record<LocalEnvPlatform, string>>(EMPTY_SCRIPTS);
   const [envText, setEnvText] = useState("");
-  const [mode, setMode] = useState("auto");
-  const [network, setNetwork] = useState("allow");
-  const [writableRoots, setWritableRoots] = useState("");
-  const [deniedReads, setDeniedReads] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
@@ -878,11 +874,6 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
     setSetupScripts(scriptMapOf(localEnvironment.setupScripts));
     setCleanupScripts(scriptMapOf(localEnvironment.cleanupScripts));
     setEnvText(envTextOf(localEnvironment.env));
-    const sandbox = objectOf(s.sandbox);
-    setMode(stringOf(sandbox.mode) || "auto");
-    setNetwork(stringOf(sandbox.network) || "allow");
-    setWritableRoots(arrayText(sandbox.writableRoots));
-    setDeniedReads(arrayText(sandbox.deniedReads));
   };
   useEffect(() => { void load(); }, [cwd]);
 
@@ -897,12 +888,6 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
             setupScripts,
             cleanupScripts,
             env: parseEnvText(envText),
-          },
-          sandbox: {
-            mode,
-            network,
-            writableRoots: lines(writableRoots),
-            deniedReads: lines(deniedReads),
           },
         },
         cwd,
@@ -959,56 +944,9 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
         </span>
       </label>
 
-      <details className="border-t border-border pt-3">
-        <summary className="cursor-pointer text-sm font-semibold text-foreground">沙箱边界（高级）</summary>
-        <p className="my-2 text-sm leading-relaxed text-muted-foreground">
-          这里仍保存到 <code className="font-mono text-[0.95em]">sandbox</code> 字段；新对话、自动化和 Bash 工具启动时会读取它。
-        </p>
-        <div className="grid grid-cols-2 gap-4">
-          <label className={field}>
-            <span className="text-sm text-muted-foreground">Sandbox</span>
-            <Select
-              value={mode}
-              onChange={setMode}
-              options={[
-                { value: "auto", label: "auto", description: "按平台自动选择" },
-                { value: "off", label: "off", description: "关闭沙箱" },
-                { value: "seatbelt", label: "seatbelt", description: "macOS 沙箱" },
-                { value: "bwrap", label: "bwrap", description: "Linux Bubblewrap" },
-              ]}
-            />
-          </label>
-          <label className={field}>
-            <span className="text-sm text-muted-foreground">Network</span>
-            <Select
-              value={network}
-              onChange={setNetwork}
-              options={[
-                { value: "allow", label: "allow", description: "允许访问网络" },
-                { value: "deny", label: "deny", description: "拒绝网络访问" },
-              ]}
-            />
-          </label>
-          <label className={field}>
-            <span className="text-sm text-muted-foreground">Writable roots</span>
-            <Textarea
-              value={writableRoots}
-              onChange={(e) => setWritableRoots(e.target.value)}
-              className="min-h-[80px] resize-y font-mono text-sm"
-            />
-            <span className={hint}>每行一个路径，支持 ${"{workspace}"}、~。这些路径会作为命令可写范围。</span>
-          </label>
-          <label className={field}>
-            <span className="text-sm text-muted-foreground">Denied reads</span>
-            <Textarea
-              value={deniedReads}
-              onChange={(e) => setDeniedReads(e.target.value)}
-              className="min-h-[80px] resize-y font-mono text-sm"
-            />
-            <span className={hint}>每行一个路径，命令读取这些路径会被沙箱拦截。</span>
-          </label>
-        </div>
-      </details>
+      <p className="border-t border-border pt-3 text-xs text-muted-foreground">
+        沙箱(隔离/网络)已移到独立的「沙箱」设置,可按全局或项目配置。
+      </p>
       <div className="flex items-center gap-2">
         <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
           {saving ? "保存中..." : "保存本地环境"}

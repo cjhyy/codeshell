@@ -25,6 +25,7 @@ import { McpSection } from "./McpSection";
 import { GeneralSection } from "./GeneralSection";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
 import { AgentsSection } from "./AgentsSection";
+import { SandboxSection } from "./SandboxSection";
 import { AppearanceSection } from "./AppearanceSection";
 import { CapabilitiesOverviewSection } from "./CapabilitiesOverviewSection";
 import { ConversationSettingsSection } from "./ConversationSettingsSection";
@@ -256,9 +257,12 @@ export function SettingsPage({
               <GitSection />
             )}
             {active === "environment" && (
-              // Local environment is project-scoped: pick a project first,
-              // then edit its setup/cleanup/env/sandbox.
-              <EnvironmentSection repos={repos} />
+              // Local environment is project-scoped (setup/cleanup/env). Sandbox
+              // is now a separate, global-or-project section below it.
+              <>
+                <EnvironmentSection repos={repos} />
+                <SandboxSection repos={repos} />
+              </>
             )}
             {active === "conversation" && <ConversationSettingsSection />}
             {active === "mobile-remote" && <MobileRemoteSection />}
