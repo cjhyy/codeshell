@@ -229,6 +229,21 @@ export interface FileContent {
   size: number;
 }
 
+/** A stored credential (token/link) as edited in the renderer. */
+export interface CredentialView {
+  id: string;
+  type: "token" | "link";
+  label: string;
+  secret?: string;
+  exposeAsEnv?: string;
+  meta?: { appUrl?: string };
+}
+/** Masked credential returned to the renderer — never carries the secret value. */
+export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
+  hasSecret: boolean;
+  secretHint?: string;
+}
+
 export interface CodeshellApi {
   /** Forward a structured log line to ~/.code-shell/logs/desktop-*.log via main. */
   log(msg: string, data?: Record<string, unknown>): void;
@@ -407,6 +422,15 @@ export interface CodeshellApi {
   readFileContent(root: string, path: string): Promise<FileContent>;
   /** Does this path resolve to an existing file inside root? Never throws. */
   fileExists(root: string, path: string): Promise<boolean>;
+
+  // ── Credentials module ────────────────────────────────────────────────
+  credentials: {
+    list(cwd: string): Promise<MaskedCredentialView[]>;
+    save(cwd: string, scope: "user" | "project", cred: CredentialView): Promise<void>;
+    remove(cwd: string, scope: "user" | "project", id: string): Promise<void>;
+    cookieDomains(): Promise<string[]>;
+    cookiePreview(domain: string): Promise<{ count: number }>;
+  };
 
   // ── Browser popout window ─────────────────────────────────────────────
   /** Open the standalone browser window, optionally at an initial URL. */
