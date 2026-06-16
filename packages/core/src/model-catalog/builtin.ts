@@ -73,14 +73,16 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     displayName: "OpenRouter",
     description: "通过 OpenRouter 路由多家模型;统一 reasoning 配置。需要 OpenRouter key。",
     defaultBaseUrl: "https://openrouter.ai/api/v1",
-    defaultModel: "anthropic/claude-opus-4.8",
+    defaultModel: "~anthropic/claude-opus-latest",
     signupUrl: "https://openrouter.ai/keys",
     needsKey: true,
+    // OpenRouter ~latest router aliases — auto-track the newest version so the
+    // slug never goes stale (vs. dated slugs like anthropic/claude-opus-4.8-20260528).
     modelPresets: [
-      textPreset("openrouter", "anthropic/claude-opus-4.8", "Claude Opus 4.8"),
-      textPreset("openrouter", "anthropic/claude-sonnet-4.6", "Claude Sonnet 4.6"),
-      textPreset("openrouter", "openai/gpt-5.5", "GPT-5.5"),
-      textPreset("openrouter", "google/gemini-3-pro", "Gemini 3 Pro"),
+      textPreset("openrouter", "~anthropic/claude-opus-latest", "Claude Opus (latest)"),
+      textPreset("openrouter", "~anthropic/claude-sonnet-latest", "Claude Sonnet (latest)"),
+      textPreset("openrouter", "~openai/gpt-latest", "GPT (latest)"),
+      textPreset("openrouter", "~google/gemini-pro-latest", "Gemini Pro (latest)"),
     ],
   },
   {
