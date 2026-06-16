@@ -40,9 +40,8 @@
 
 ### 🔧 权限系统增强
 
-底座已成；剩余是路径授权的体验闭环与审计。
+底座已成；剩余是路径授权的体验闭环与审计。（B1「原工具可继续运行」核实后认定无需实现——控制流本就正确，当年「批准后报错」真因是 ESM 裸 require，已修 7642c16，见底部归档。）
 
-- [x] **B1 原工具可继续运行** —— 核实后认定**无需实现**（2026-06-10）：控制流本就正确。7 个工具(read/glob/grep/edit/write/notebook/apply-patch)统一 `const blocked = await enforcePathPolicyWithApproval(...); if (blocked) return blocked;`——审批在 enforce **内部** await 完成，批准则 return null，工具继续往下执行，从不提前 return。用户当时"点批准后报错"的真因是 ESM 裸 `require()` 抛 `require is not defined`(path-policy/permission.ts)→已修(7642c16)。原 review 误读控制流。
 - [ ] **B2 审计路径授权（暂缓 → P3，企业/受监管场景再做）**：记录批准来源/范围/过期/被拒原因。核实(2026-06-10)：路径**授权机制本身是核心安全闸、会一直用**(越界/敏感才拦，工作区内直接放行)；但「审计日志」是低频、个人本地场景几乎用不上的合规功能，性价比低，故降级暂缓。设计已就绪(单独 JSONL `path-approval-audit.jsonl` + 滚动尾部 N 条 + 接 enforcePathPolicyWithApproval 四分支)，要做时直接落。`recordPathApproval` 现只写前缀到 settings.local.json，零审计信息
 - [~] **路径策略 block 接入权限系统**：`enforcePathPolicyWithApproval` 已交互批准本次/拒绝（aa1bcd7）；本会话/特定路径范围待补（同路径级规则）。测试 path-policy-approval.test.ts
 
@@ -65,13 +64,6 @@
 
 ## P2 — 交互体验与工作流效率
 
-### ✅ 运行中输入缓存 / 强制发送下一轮 —— 已完成（2026-06-09 核实）
-
-- [x] 运行中排队 + 空闲自动 flush —— desktop（queuedInput.ts + App.tsx useEffect）+ TUI（App.tsx useEffect）两端均有
-- [x] 显式"强制发送/打断并进入下一轮" —— desktop `forceSend()`（enqueue + stop）/ TUI `/force` 命令（入队 + client.cancel）
-- [x] UI 展示"已缓存 N 条/将于本轮后发送" —— desktop 传 queuedInputCount 给 ChatView / TUI "⌛ 已缓存 N 条…"提示行
-- [x] desktop + TUI 行为一致 —— FIFO 逻辑 + 自动 flush 两端对齐
-
 ### ⬜ GenerateImage 工具结果直接展示图片
 
 - [ ] 确认 tool result 的图片路径是否进入 transcript/content block
@@ -88,24 +80,11 @@
 - [ ] 明确工具结果 Markdown 结构规范，避免正文/JSON/日志混杂
 - [ ] 补渲染 smoke/demo
 
-### 🔧 Shell Snapshot —— core 全做，只剩 renderer 高亮（2026-06-09 核实）
-
-- [x] 捕获 stdout/stderr 完整输出 —— bash.ts:118-120，STDERR: 段分隔
-- [x] 智能截断：保留头尾 + 中间摘要 —— runtime/truncate-output.ts（含行边界对齐 + 巨行硬切回退），有测试
-- [x] 退出码语义化：非零→`Exit code: N (command failed)` / 信号杀→`Killed by signal: X`，截断后 prepend 永不丢 —— bash.ts:134-142
-- [x] **错误输出高亮标注**（2026-06-10）：core 抽 `classifyBashLines`(bash-output-style.ts,STDERR: 粘性区+Exit code/Killed by signal 状态行,文本逐字不改);TUI ToolCall.tsx Bash 分支按 errorLines 染 ansi:red;desktop BashToolCard.tsx 复制一份分类器(thin-client 不能 import core)按 text-status-err 染;两端各带分类器测试。复制保真:行用 `\n` 重接,选中复制得原字节
-
-> 已完成归档：Undo/撤销系统（/undo、/undo all、diff 预览、ApplyPatch 备份）。剩 git 集成 + desktop 端入口（留后）。
+> 已完成归档：Undo/撤销系统（/undo、/undo all、diff 预览、ApplyPatch 备份）。剩 git 集成 + desktop 端入口（留后）。Shell Snapshot 全套（stdout/stderr 捕获、头尾智能截断、退出码语义化、错误输出双端高亮）。运行中输入缓存 / 强制发送下一轮（desktop + TUI 两端，FIFO + 自动 flush + `/force`）。
 
 ---
 
 ## P3 — 上下文、记忆与指令系统
-
-### ✅ 跨会话记忆系统（Memories）—— 配置全接（2026-06-09 核实，原标"待接"误导）
-
-- [x] `memories.maxCount` 已接（覆盖默认 2）
-- [x] `memories.maxAge` 已接 —— readMemoriesConfig → PromptComposer → MemoryManager.buildMemoryContext → `filterByAge` 按 mtime 过滤旧记忆；测试 memory.maxage.test.ts
-- [x] `memories.extractionModel` 已接 —— engine.resolveExtractionClient：设了且在 modelPool 则优先用它提取记忆，否则回退 aux client
 
 ### 🔧 智能上下文管理
 
@@ -117,7 +96,7 @@
 > - ~~每轮主动「请求压缩」(enable_request_compression)~~ — 摘要能力已在 Tier 2，触发走压力门控即可；每轮压会逐字节改写请求前缀→击穿 Anthropic prompt cache（前缀匹配）。
 > - ~~token 预算动态调档位~~ — 同因：按剩余 token 实时下调档位/keepRecent 会变成"温而频"地改写历史前缀→缓存命中下降、成本反升。最优是"压得狠而稀"（压一次到更低水位、之后多轮前缀稳定）。现有固定 ratio 门控正是这个策略，刻意保留。
 
-> 已完成归档：文件读取去重、tool result 压缩（多 Tier）、记忆合并/注入/`/memory` 全子命令、AGENTS.md 层级指令系统。
+> 已完成归档：文件读取去重、tool result 压缩（多 Tier）、记忆合并/注入/`/memory` 全子命令、AGENTS.md 层级指令系统、跨会话记忆配置全接（maxCount/maxAge/extractionModel）。
 
 ---
 
@@ -173,9 +152,8 @@ CodeShell 作为统一控制台，通过安全授权连接远程设备/环境，
 ### 🔧 其他多代理增强
 
 - [-] **D2** Agent 角色 settings-level 默认配置（2026-06-10 用户决策不做）：硬编码 general-purpose 兜底(agent.ts:51)对个人场景已够;可配默认子代理角色无实用价值,取消。企业/受限子代理场景如真需要:加 settings.agent.defaultType(SettingsManager.get() 已项目over用户合并)→engine 喂 ToolContext→resolveAgentTypeOverrides 按 参数→defaultType→general-purpose→首个,无效值静默退回
-- [x] **D1** `task` 加 `agentId` tag 防混入主视图（2026-06-10 fbe6f68）：基础设施全在——engine.ts:1152 childStream `{...event, agentId: req.agentId}` 已给每个子代理事件打标(含 task_update),TodoWrite/ToolContext 无需改(原 TODO 此处判断有误);desktop renderer types.ts:514 已隔离+测试。真缺口仅 TUI,补 App.tsx task_update case `if (taskEvent.agentId) break;`
 
-> 已完成归档：后台 agent 完成通知、subagent_type enum、子 agent skill 隔离、max_depth/max_threads 限制、Agent 结果汇总视图、删除 SendMessage 死代码。
+> 已完成归档：后台 agent 完成通知、subagent_type enum、子 agent skill 隔离、max_depth/max_threads 限制、Agent 结果汇总视图、删除 SendMessage 死代码、D1 `task` 加 agentId tag 防混入主视图（fbe6f68）。
 
 ---
 
