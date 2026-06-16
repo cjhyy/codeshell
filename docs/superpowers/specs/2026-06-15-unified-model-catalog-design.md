@@ -196,11 +196,19 @@ resolveInstance(id):
 
 ---
 
-## 7. AI 辅助加 catalog — 本轮留口,不实现
+## 7. AI 辅助加 catalog — 本轮留口,不实现(下一期专项)
 
-用户构想:chat 里说「我要用 XX 家的图片生成模型」→ AI 搜文档 → 抽取地址/modelId/参数/paramsDoc → 写一条 catalog → 用户即可在连接页添加使用。
+用户构想:chat 里说「我要用 XX 家的模型」→ AI 搜文档 → 抽取地址/modelId/参数/paramsDoc → 写一条 catalog → 用户即可在连接页添加使用。
 
-**本轮只做底座**:catalog 数据可数据化、user.json 可被程序安全写入(校验 + 幂等)。**搜索/抽取/AI 写入工具留到下一期**。数据结构(§3)已为它设计——`ParamSpec` 是声明式、可被 AI 生成。
+**两层协作(用户拍板的形态,2026-06-16)** —— 能力与 skill 相辅相成,缺一不可:
+
+- **能力(工具)= 底层动作**:一个能把一条 `CatalogEntry` 原子、安全地写进 `~/.code-shell/model-catalog.user.json` 的工具(zod 校验、幂等去重、坏文件不破坏内置)。保证「写入可靠」。没有它,模型查到也落不了地。
+- **skill = 上层指导**:用户说「加 XX 家模型」时引导模型**怎么把这条 catalog 填对**——① 先 WebSearch 查该 provider 官方文档;② 知道**不同 provider 的细微差别**(reasoning 字段名/枚举/budget vs effort、baseUrl 规范、鉴权方式、model id 真实拼写——本轮已踩过坑:OpenRouter slug 带日期或 ~latest、DeepSeek 真型号 v4-flash/pro、OpenAI 原生 id ≠ OpenRouter slug);③ 逐项跟用户确认;④ 调能力工具写入。保证「内容查得准、问得对」。没有它,模型会瞎填。
+
+**为什么两者缺一不可**:光有工具→模型瞎填错 id/错参数(本轮我手填 catalog 就错了 DeepSeek/OpenRouter/Gemini 多处);光有 skill→查准了没可靠落点。
+
+**本轮已备好的底座**:catalog 数据已数据化(§3 `CatalogEntry`/`ParamSpec` 声明式、可被 AI 生成);`getMergedCatalog` 已读 user.json;`loadUserCatalog` 已 zod 校验+坏文件忽略。**缺口=写入工具 + skill**,下一期做。
+关联记忆 [[project_unified_model_catalog_design]]、[[reference_cc_codex_skill_creator]](skill 创建参考)。
 
 ---
 
