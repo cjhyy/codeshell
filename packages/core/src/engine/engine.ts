@@ -228,6 +228,9 @@ export interface EngineConfig {
   approvalBackend?: ApprovalBackend;
   hooks?: EngineHookConfig[];
   askUser?: AskUserFn;
+  /** Browser automation bridge (browser_* tools). Wired by the host (desktop)
+   *  after construction via setBrowserBridge. Undefined → tools degrade. */
+  browserBridge?: import("../tool-system/browser-bridge.js").BrowserBridge;
   mcpServers?: Record<string, import("../types.js").MCPServerConfig>;
   /**
    * Optional opaque store for per-session cost/usage state. When provided,
@@ -924,6 +927,16 @@ export class Engine {
    */
   setAskUser(fn: AskUserFn | undefined): void {
     this.config.askUser = fn;
+  }
+
+  /**
+   * Inject the browser automation bridge after construction (same chicken-and-egg
+   * as setAskUser: the desktop host builds the bridge — which drives a webview —
+   * after the Engine exists). Undefined → the browser_* tools degrade with a
+   * clear "no browser panel" error.
+   */
+  setBrowserBridge(bridge: import("../tool-system/browser-bridge.js").BrowserBridge | undefined): void {
+    this.config.browserBridge = bridge;
   }
 
   /**
@@ -3036,6 +3049,7 @@ export class Engine {
       modelPool: this.modelPool,
       toolRegistry: this.toolRegistry,
       askUser: this.config.askUser,
+      browser: this.config.browserBridge,
       isSubAgent: this.config.isSubAgent === true,
       hooks: this.hooks,
       planMode: this.planMode,

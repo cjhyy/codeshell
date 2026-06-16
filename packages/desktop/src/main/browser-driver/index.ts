@@ -14,3 +14,7 @@
 export { CdpBrowserDriver } from "./cdp-driver.js";
 export type { CdpSender, PageInfo } from "./cdp-driver.js";
 export { driverFor, withAttached, attachDebugger, detachDebugger } from "./electron-cdp.js";
+export { handleBrowserAction } from "./automation-host.js";
+export type { BrowserActionRequest, AutomationDeps } from "./automation-host.js";
+export { isDomainAllowed, isSensitiveAction, DEFAULT_POLICY } from "./policy.js";
+export type { BrowserAutomationPolicy } from "./policy.js";

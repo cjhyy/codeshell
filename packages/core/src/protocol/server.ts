@@ -259,6 +259,12 @@ export class AgentServer {
       session.engine.setAskUser((question, opts) =>
         this.requestAskUserForSession(session, sid, question, opts),
       );
+      // Browser automation bridge: each method routes a browser action to the
+      // client (Electron main drives the webview via CDP) over the SAME
+      // request/response channel as askUser (pendingApprovals + requestId),
+      // reusing its proven resolve/timeout/cleanup. The main-side handler
+      // replies with the action's JSON result.
+      session.engine.setBrowserBridge(this.makeBrowserBridge(session, sid));
     }
     try {
       const result = await session.enqueueTurn(params.task, {
@@ -1378,6 +1384,80 @@ export class AgentServer {
           toolName: "__ask_user__",
           args,
           description: question,
+          riskLevel: "low" as const,
+        },
+      });
+    });
+  }
+
+  /**
+   * Build a BrowserBridge whose every method routes a browser action to the
+   * client over the session's pendingApprovals channel (same as askUser). The
+   * client (Electron main) drives the webview via CDP and replies with a JSON
+   * result string we parse back into the typed result. On timeout / malformed
+   * reply we degrade to a safe error result rather than throwing.
+   */
+  private makeBrowserBridge(
+    session: import("./chat-session.js").ChatSession,
+    sessionId: string,
+  ): import("../tool-system/browser-bridge.js").BrowserBridge {
+    const call = (action: string, payload: Record<string, unknown>): Promise<any> =>
+      this.requestBrowserActionForSession(session, sessionId, action, payload);
+    return {
+      snapshot: () => call("snapshot", {}),
+      click: (ref) => call("click", { ref }),
+      type: (ref, text) => call("type", { ref, text }),
+      navigate: (url) => call("navigate", { url }),
+      scroll: (dir, amount) => call("scroll", { dir, amount }),
+    };
+  }
+
+  private requestBrowserActionForSession(
+    session: import("./chat-session.js").ChatSession,
+    sessionId: string,
+    action: string,
+    payload: Record<string, unknown>,
+  ): Promise<any> {
+    return new Promise((resolve) => {
+      const requestId = nanoid(12);
+      session.pendingApprovals.set(requestId, (decision: unknown) => {
+        this.clearApprovalTimer(requestId);
+        // Main replies with { approved:true, answer:<json string> } (reusing the
+        // ApprovalResult shape) or a raw json string. Parse → typed result.
+        let raw: string | undefined;
+        if (decision && typeof decision === "object" && "approved" in decision) {
+          const r = decision as ApprovalResult;
+          raw = r.approved ? r.answer : undefined;
+        } else if (typeof decision === "string") {
+          raw = decision;
+        }
+        if (raw === undefined) {
+          resolve({ ok: false, detail: "browser action declined or unavailable" });
+          return;
+        }
+        try {
+          resolve(JSON.parse(raw));
+        } catch {
+          resolve({ ok: false, detail: "malformed browser action result" });
+        }
+      });
+
+      const timer = setTimeout(() => {
+        if (session.pendingApprovals.has(requestId)) {
+          session.pendingApprovals.delete(requestId);
+          this.approvalTimers.delete(requestId);
+          resolve({ ok: false, detail: "browser action timed out" });
+        }
+      }, AgentServer.APPROVAL_TIMEOUT_MS);
+      this.approvalTimers.set(requestId, timer);
+
+      this.notify(Methods.ApprovalRequest, {
+        sessionId,
+        requestId,
+        request: {
+          toolName: "__browser_action__",
+          args: { action, ...payload },
+          description: `browser:${action}`,
           riskLevel: "low" as const,
         },
       });
