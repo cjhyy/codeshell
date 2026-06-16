@@ -1222,18 +1222,25 @@ export class Engine {
       },
     };
 
-    // Priority: explicit config.sandbox → settings.sandbox (设置页, project-
-    // scoped) → per-run default. Reading settings here is the fix for "项目级
-    // sandbox 配了不生效" — the desktop host never passes config.sandbox.
-    let settingsSandbox: SettingsSandbox | undefined;
+    // Priority: config.sandbox → project settings.sandbox → global → per-run
+    // default. Read UNMERGED per-scope (getForScope) so a project that wrote no
+    // sandbox genuinely follows global, rather than inheriting global's mode and
+    // looking like it set one. Fixes "项目级配了不生效" + the scope model.
+    let projectSandbox: SettingsSandbox | undefined;
+    let globalSandbox: SettingsSandbox | undefined;
     try {
-      settingsSandbox = (this.getSettingsManager().get() as { sandbox?: SettingsSandbox }).sandbox;
+      const sm = this.getSettingsManager();
+      if (this.config.isSubAgent !== true) {
+        projectSandbox = (sm.getForScope("project", cwd) as { sandbox?: SettingsSandbox }).sandbox;
+      }
+      globalSandbox = (sm.getForScope("user") as { sandbox?: SettingsSandbox }).sandbox;
     } catch {
-      settingsSandbox = undefined;
+      // settings unavailable → fall through to per-run default
     }
     const sandboxConfig = resolveSandboxConfig(
       this.config.sandbox,
-      settingsSandbox,
+      projectSandbox,
+      globalSandbox,
       this.config.headless === true,
     );
     // A2: explicit sandbox modes (seatbelt, bwrap) must fail closed

@@ -19,26 +19,35 @@ export interface SettingsSandbox {
   deniedReads?: string[];
 }
 
+/**
+ * Three-layer resolve. Priority:
+ *   1. config.sandbox — explicit host-passed.
+ *   2. project settings.sandbox (has mode) — overrides global.
+ *   3. global settings.sandbox (has mode) — what a project "follows".
+ *   4. per-run default: headless → auto, desktop/REPL → off.
+ *
+ * A layer without `mode` is "unset / 跟随上一层" — pass unmerged per-scope
+ * values so a project that wrote nothing genuinely follows global (a merged
+ * value would make every project look like it set global's mode).
+ */
 export function resolveSandboxConfig(
   configSandbox: SandboxConfig | undefined,
-  settingsSandbox: SettingsSandbox | undefined,
+  projectSandbox: SettingsSandbox | undefined,
+  globalSandbox: SettingsSandbox | undefined,
   headless: boolean,
 ): SandboxConfig {
-  // 1. Explicit host-passed config wins.
   if (configSandbox) return configSandbox;
 
-  // 2. settings.sandbox with an explicit mode — start from that mode's defaults
-  // and overlay any fields the user set.
-  if (settingsSandbox?.mode) {
-    const base = defaultSandboxConfig(settingsSandbox.mode);
+  const layer = projectSandbox?.mode ? projectSandbox : globalSandbox?.mode ? globalSandbox : undefined;
+  if (layer?.mode) {
+    const base = defaultSandboxConfig(layer.mode);
     return {
-      mode: settingsSandbox.mode,
-      network: settingsSandbox.network ?? base.network,
-      writableRoots: settingsSandbox.writableRoots ?? base.writableRoots,
-      deniedReads: settingsSandbox.deniedReads ?? base.deniedReads,
+      mode: layer.mode,
+      network: layer.network ?? base.network,
+      writableRoots: layer.writableRoots ?? base.writableRoots,
+      deniedReads: layer.deniedReads ?? base.deniedReads,
     };
   }
 
-  // 3. Per-run default.
   return defaultSandboxConfig(headless ? "auto" : "off");
 }

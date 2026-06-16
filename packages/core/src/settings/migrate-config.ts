@@ -60,11 +60,35 @@ function backfillGenCatalogIds(config: Record<string, unknown>): Record<string, 
 }
 
 /**
+ * v1 → v2: drop the sandbox config the 设置页 mis-wrote. The local-env page
+ * used to write `sandbox:{mode:"auto", network:"allow", writableRoots:[],
+ * deniedReads:[]}` (its display default) on every save — opting users into a
+ * sandbox they never chose. That exact fingerprint = not a real choice, so we
+ * remove the whole sandbox field (→ follow/off). A user who actually configured
+ * it (changed mode/network or set roots/reads) is left untouched.
+ */
+function clearMisWrittenSandboxAuto(config: Record<string, unknown>): Record<string, unknown> {
+  const sb = config.sandbox;
+  if (!sb || typeof sb !== "object" || Array.isArray(sb)) return config;
+  const s = sb as Record<string, unknown>;
+  const isMisWritten =
+    s.mode === "auto" &&
+    s.network === "allow" &&
+    Array.isArray(s.writableRoots) && s.writableRoots.length === 0 &&
+    Array.isArray(s.deniedReads) && s.deniedReads.length === 0;
+  if (!isMisWritten) return config;
+  const next = { ...config };
+  delete next.sandbox;
+  return next;
+}
+
+/**
  * Registered migrations, in ascending `from` order. New breaking changes
  * append a step here; CURRENT_CONFIG_VERSION follows automatically.
  */
 export const MIGRATIONS: readonly MigrationStep[] = [
   { from: 0, to: 1, migrate: backfillGenCatalogIds },
+  { from: 1, to: 2, migrate: clearMisWrittenSandboxAuto },
 ];
 
 /** The version a freshly-written config is stamped with. */

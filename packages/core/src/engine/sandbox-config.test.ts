@@ -11,44 +11,52 @@ import { describe, test, expect } from "bun:test";
 import { resolveSandboxConfig } from "./sandbox-config.js";
 import { defaultSandboxConfig } from "../tool-system/sandbox/index.js";
 
-describe("resolveSandboxConfig", () => {
+// Signature: resolveSandboxConfig(config, projectSandbox, globalSandbox, headless)
+// Priority: config > project(有mode) > global(有mode) > per-run default.
+describe("resolveSandboxConfig — three layers", () => {
   test("config.sandbox wins over everything", () => {
     const explicit = defaultSandboxConfig("seatbelt");
-    const r = resolveSandboxConfig(explicit, { mode: "off" }, false);
-    expect(r).toBe(explicit);
+    expect(resolveSandboxConfig(explicit, { mode: "off" }, { mode: "auto" }, false)).toBe(explicit);
   });
 
-  test("falls back to settings.sandbox.mode when config absent (the fix)", () => {
-    const r = resolveSandboxConfig(undefined, { mode: "auto" }, false);
+  test("project (has mode) overrides global", () => {
+    const r = resolveSandboxConfig(undefined, { mode: "seatbelt" }, { mode: "off" }, false);
+    expect(r.mode).toBe("seatbelt");
+  });
+
+  test("project without mode → follow global (the 跟随 case)", () => {
+    const r = resolveSandboxConfig(undefined, undefined, { mode: "auto" }, false);
     expect(r.mode).toBe("auto");
+    const r2 = resolveSandboxConfig(undefined, {}, { mode: "auto" }, false); // {} = no mode = follow
+    expect(r2.mode).toBe("auto");
   });
 
-  test("settings.sandbox carries network/writableRoots/deniedReads through", () => {
+  test("global mode + network used when project follows", () => {
+    const r = resolveSandboxConfig(undefined, undefined, { mode: "seatbelt", network: "deny" }, false);
+    expect(r.mode).toBe("seatbelt");
+    expect(r.network).toBe("deny");
+  });
+
+  test("neither project nor global set → per-run default (headless=auto, desktop=off)", () => {
+    expect(resolveSandboxConfig(undefined, undefined, undefined, true).mode).toBe("auto");
+    expect(resolveSandboxConfig(undefined, undefined, undefined, false).mode).toBe("off");
+    expect(resolveSandboxConfig(undefined, {}, {}, false).mode).toBe("off"); // both no-mode
+  });
+
+  test("the effective layer carries its network/roots/reads through", () => {
     const r = resolveSandboxConfig(
       undefined,
       { mode: "seatbelt", network: "deny", writableRoots: ["/x"], deniedReads: ["~/.ssh"] },
+      undefined,
       false,
     );
-    expect(r.mode).toBe("seatbelt");
     expect(r.network).toBe("deny");
     expect(r.writableRoots).toContain("/x");
     expect(r.deniedReads).toContain("~/.ssh");
   });
 
-  test("settings sandbox object without mode → treated as unset, use default", () => {
-    // {} (no mode) shouldn't force a mode; fall to per-run default.
-    expect(resolveSandboxConfig(undefined, {}, false).mode).toBe("off"); // desktop/REPL
-    expect(resolveSandboxConfig(undefined, {}, true).mode).toBe("auto"); // headless
-  });
-
-  test("no config, no settings → headless=auto, interactive=off", () => {
-    expect(resolveSandboxConfig(undefined, undefined, true).mode).toBe("auto");
-    expect(resolveSandboxConfig(undefined, undefined, false).mode).toBe("off");
-  });
-
-  test("settings only overrides fields it sets; rest from default for that mode", () => {
-    // mode=auto but no writableRoots → inherit default's writableRoots
-    const r = resolveSandboxConfig(undefined, { mode: "auto" }, false);
+  test("layer with mode but no other fields → inherit that mode's defaults", () => {
+    const r = resolveSandboxConfig(undefined, undefined, { mode: "auto" }, false);
     expect(r.writableRoots.length).toBeGreaterThan(0);
   });
 });

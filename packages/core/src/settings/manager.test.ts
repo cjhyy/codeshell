@@ -206,7 +206,7 @@ describe("SettingsManager config migration wiring", () => {
     const path = join(home, ".code-shell", "settings.json");
     const onDisk = JSON.parse(readFileSync(path, "utf-8"));
     expect(onDisk.imageGen.providers[0].catalogId).toBe("openai-images");
-    expect(onDisk.configVersion).toBe(1);
+    expect(onDisk.configVersion).toBe(2);
     expect(existsSync(`${path}.bak`)).toBe(true);
   });
 

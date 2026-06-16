@@ -62,8 +62,8 @@ describe("migrateConfig (framework)", () => {
 });
 
 describe("production registry", () => {
-  it("CURRENT_CONFIG_VERSION matches the highest registered step (1 today)", () => {
-    expect(CURRENT_CONFIG_VERSION).toBe(1);
+  it("CURRENT_CONFIG_VERSION matches the highest registered step (2 today)", () => {
+    expect(CURRENT_CONFIG_VERSION).toBe(2);
   });
   it("real migrateConfig stamps the current version on a bare config", () => {
     const r = migrateConfig({ providers: [] });
@@ -125,5 +125,51 @@ describe("v0→v1: backfill gen provider catalogId", () => {
     });
     const vid = (r.config.videoGen as { providers: Array<Record<string, unknown>> }).providers;
     expect(vid[0]!.catalogId).toBeUndefined();
+  });
+});
+
+describe("v1→v2: clear mis-written sandbox auto default", () => {
+  // The 设置页 used to write sandbox:{mode:auto, network:allow, writableRoots:[],
+  // deniedReads:[]} (its display default) whenever the user saved the local-env
+  // page — opting people into a sandbox they never chose. This migration removes
+  // that fingerprint so they fall back to "follow/off". A user who actually
+  // configured sandbox (changed network/roots/mode) is left untouched.
+  it("removes the mis-written auto fingerprint", () => {
+    const r = migrateConfig({
+      [CONFIG_VERSION_KEY]: 1,
+      sandbox: { mode: "auto", network: "allow", writableRoots: [], deniedReads: [] },
+    });
+    expect(r.config.sandbox).toBeUndefined();
+    expect(r.changed).toBe(true);
+  });
+
+  it("keeps a user-configured sandbox (network changed)", () => {
+    const r = migrateConfig({
+      [CONFIG_VERSION_KEY]: 1,
+      sandbox: { mode: "auto", network: "deny", writableRoots: [], deniedReads: [] },
+    });
+    expect(r.config.sandbox).toEqual({ mode: "auto", network: "deny", writableRoots: [], deniedReads: [] });
+  });
+
+  it("keeps a user-configured sandbox (explicit mode like seatbelt)", () => {
+    const r = migrateConfig({
+      [CONFIG_VERSION_KEY]: 1,
+      sandbox: { mode: "seatbelt", network: "allow", writableRoots: [], deniedReads: [] },
+    });
+    expect((r.config.sandbox as { mode: string }).mode).toBe("seatbelt");
+  });
+
+  it("keeps a sandbox with non-empty roots/reads", () => {
+    const r = migrateConfig({
+      [CONFIG_VERSION_KEY]: 1,
+      sandbox: { mode: "auto", network: "allow", writableRoots: ["/x"], deniedReads: [] },
+    });
+    expect(r.config.sandbox).toBeTruthy();
+  });
+
+  it("no sandbox field → untouched", () => {
+    const r = migrateConfig({ [CONFIG_VERSION_KEY]: 1, foo: 1 });
+    expect(r.config.sandbox).toBeUndefined();
+    expect((r.config as { foo: number }).foo).toBe(1);
   });
 });
