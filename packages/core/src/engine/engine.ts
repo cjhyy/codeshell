@@ -22,6 +22,7 @@ import { readLastTodoSnapshot } from "../tool-system/builtin/task.js";
 import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
+import { resolveAuxKey } from "./aux-key.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
 import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
@@ -2165,7 +2166,9 @@ export class Engine {
       // once per run on the post-run background path, so the cost is fine.
       const sm = this.getSettingsManager();
       sm.invalidate();
-      auxKey = (sm.get() as { auxModelKey?: string }).auxModelKey;
+      // Unified store's defaults.auxText (a connection id = pool key) wins over
+      // the legacy auxModelKey. Both resolve to a pool key below.
+      auxKey = resolveAuxKey(sm.get() as { defaults?: { auxText?: string }; auxModelKey?: string });
     } catch {
       return fallback;
     }
