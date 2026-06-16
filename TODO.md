@@ -21,8 +21,8 @@
 - 🔧 **真视频适配器**：替换 `FakeVideoProvider`，接入 seedance/kling（待各自私有 API 文档）→ P6
 - ✅ **GenerateImage 结果直接展示图片**（核实 2026-06-16 已实现）：`GenericToolCard` 已调 `detectAttachments` 从结果文本提取 .png → `AttachmentCard`/`ImageThumb` 渲缩略图(readImageDataUrl)。本次补回归测试 attachments.test.ts。
 - ✅ **GenerateImage 改并发**（核实 2026-06-16 已实现）：文件名已是 `${Date.now()}-${randomBytes(3)}.png` 去冲突 + `builtin/index.ts` 标 `isConcurrencySafe:true`,6 张图已并发。
-- ⬜ **plugin/skill 更新后「重载生效」闭环**：现 plugin/skill 更新只 toast 提示用户手动重载（cd39758/22bb09e）；做成更新后真正热重载已装 plugin/skill（重扫 + 通知 running session），别再让用户手动重启 → P3。动手前先 grep 现有 plugin 扫描/热重载链路（见 [[project_config_hotreload_layer2]]）
-- ⬜ **plugin/skill「全部更新」批量入口**：PluginsTab/SkillsTab 现为逐行徽章点更新；有多个可更新时加一个「全部更新」按钮，复用 updatePlugin/updateSkill 串/并行跑 → P3
+- ✅ **plugin/skill 更新后「重载生效」闭环**（2026-06-16 b86e7fb1）：核实 skills/commands 本就被 PromptComposer + Skill 工具按 cwd 实时 `scanSkills`(下一轮即生效),hooks/MCP 由 running session 监听 `codeshell:settings-changed`→`configure({reloadSettings})` 重 reconcile([[project_config_hotreload_layer2]])。故更新成功只需 `signalHotReload()` 复用该事件,无新 core 接线;toast 改「已生效」。
+- ✅ **plugin/skill「全部更新」批量入口**（2026-06-16 b86e7fb1）：updatable>1 时显示「全部更新 (N)」按钮,`runBatchUpdate` 串行跑+单项失败不中断+`summarizeBatch` 汇总 toast;Plugins/Skills 两 tab 共用 `applyUpdates.ts`(纯函数,6 例单测)。
 - 🔧 会话崩溃恢复产品闭环；工具超时/可取消性一致化；友好错误消息 → P1
 - 🔧 配置系统：YAML 支持 / JSON Schema 生成 / 配置迁移机制（`/config show|set|get` 已实现）→ P4
 - 🔧 长时段断网的会话级重连（瞬时错误已被 withRetry 覆盖）→ P1
