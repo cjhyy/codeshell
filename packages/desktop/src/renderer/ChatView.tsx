@@ -609,7 +609,7 @@ export function ChatView({
         }
       >
         {isNewChat && welcomeNode && (
-          <div className="flex flex-col items-center">{welcomeNode}</div>
+          <div className="mb-4 flex flex-col items-center">{welcomeNode}</div>
         )}
 
         {/* shrink-0: the composer is a flex sibling of the message stream; without

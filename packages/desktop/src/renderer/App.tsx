@@ -3,6 +3,7 @@ import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView } from "./ChatView";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+import dogIcon from "./assets/codeshell-dog-icon.png";
 import { timePhase } from "./perf";
 import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
@@ -2581,7 +2582,13 @@ function App() {
               repoClean={activeGitMeta.clean}
               welcomeNode={
                 showWelcome ? (
-                  <div className="flex flex-col items-center gap-2 text-center">
+                  <div className="flex flex-col items-center gap-4 text-center">
+                    <img
+                      src={dogIcon}
+                      alt="CodeShell"
+                      draggable={false}
+                      className="h-32 w-32 select-none rounded-2xl object-contain"
+                    />
                     <div className="text-3xl font-semibold tracking-tight text-foreground">
                       {activeRepo
                         ? `要在 ${activeRepo.name} 中构建什么?`
