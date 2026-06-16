@@ -138,6 +138,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       envVars: s.envVars,
       bearerTokenEnvVar: s.bearerTokenEnvVar,
       envHeaders: s.envHeaders,
+      credentialRef: s.credentialRef,
     }));
     setLoadingProbe(new Set(probeable.map((x) => x.name)));
     try {

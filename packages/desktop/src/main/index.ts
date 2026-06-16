@@ -50,8 +50,7 @@ import { dlog } from "./desktop-logger.js";
 import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } from "./pty-service.js";
 import {
   listCookieDomains,
-  createCookieLease,
-  cleanupLease,
+  getCookiesForDomain,
   sweepStaleLeases,
 } from "./credentials-service.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
@@ -1049,11 +1048,11 @@ ipcMain.handle(
 );
 ipcMain.handle("credentials:cookieDomains", async () => listCookieDomains());
 ipcMain.handle("credentials:cookiePreview", async (_e, domain: string) => {
-  // Preview only: materialize a lease to count cookies, then clean it up
-  // immediately. Actual injection into a tool call is the deferred UseGate.
-  const { filePath, count } = await createCookieLease(domain);
-  cleanupLease(filePath);
-  return { count };
+  // Preview only: just count the cookies in the partition. No lease file is
+  // materialized here — the actual cookies.txt is created on demand by the
+  // (deferred) UseGate when a tool call is approved.
+  const cookies = await getCookiesForDomain(domain);
+  return { count: cookies.length };
 });
 ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {

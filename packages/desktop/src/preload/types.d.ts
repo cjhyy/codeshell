@@ -980,6 +980,8 @@ export interface McpServerProbeInput {
   bearerTokenEnvVar?: string;
   /** (HTTP) header-name → env-var-NAME map, values read at connect time. */
   envHeaders?: Record<string, string>;
+  /** (HTTP) id of a stored credential used as the Bearer token. */
+  credentialRef?: string;
 }
 
 export interface McpProbedTool {
