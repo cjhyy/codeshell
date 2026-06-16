@@ -1166,6 +1166,15 @@ function App() {
       // the binding (engineSessionId == uiSessionId is the new normal, but
       // older sessions on disk may differ) and seed the routing table.
       if (event.type === "session_started") {
+        // session_started fires once at the start of every run() — including a
+        // run the renderer DIDN'T initiate, e.g. core waking an idle session
+        // when a background shell (download) finishes. The send() path already
+        // set busy (idempotent here); but a core-initiated wakeup never went
+        // through send(), so this is the only point the composer learns "a turn
+        // is now running" and shows the working spinner. turn_complete (below)
+        // clears it. (session_started carries no agentId, so it's always the
+        // top-level run, never a sub-agent.)
+        setBusyForKey(target, true);
         const sep = target.indexOf("::");
         if (sep > 0) {
           const repoKey = target.slice(0, sep);
