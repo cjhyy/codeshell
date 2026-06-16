@@ -9,7 +9,7 @@
  * its adapterKind points at an already-wired adapter.
  */
 
-import type { CatalogEntry, ModelPreset } from "./types.js";
+import type { CatalogEntry, ModelPreset, ParamSpec } from "./types.js";
 import type { ProviderKindName } from "../llm/provider-kinds.js";
 import { paramSpecsFromCapability } from "../llm/capabilities/param-specs.js";
 
@@ -25,6 +25,28 @@ function textPreset(kind: ProviderKindName, value: string, label?: string): Mode
     ...(label ? { label } : {}),
     ...(params.length > 0 ? { params } : {}),
   };
+}
+
+/**
+ * OpenRouter normalizes reasoning to a unified effort enum across providers
+ * (xhigh|high|medium|low|minimal|none). We write OpenRouter presets' params
+ * EXPLICITLY (not via paramSpecsFromCapability) because the capability layer's
+ * OpenRouter catch-all would slap reasoning onto *every* model — including ones
+ * that don't support it. A reasoning OpenRouter preset opts in by listing this.
+ */
+const OPENROUTER_REASONING: ParamSpec = {
+  name: "reasoning",
+  label: "思考强度",
+  control: "enum",
+  options: ["minimal", "low", "medium", "high", "xhigh"],
+  default: "medium",
+  doc: "Reasoning effort — how hard the model thinks before answering.",
+  wire: { field: "reasoning.effort" },
+};
+
+/** OpenRouter preset with explicit params (no capability-layer projection). */
+function orPreset(value: string, label: string, params?: ParamSpec[]): ModelPreset {
+  return { value, label, ...(params && params.length > 0 ? { params } : {}) };
 }
 
 export const BUILTIN_CATALOG: CatalogEntry[] = [
@@ -78,11 +100,14 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     needsKey: true,
     // OpenRouter ~latest router aliases — auto-track the newest version so the
     // slug never goes stale (vs. dated slugs like anthropic/claude-opus-4.8-20260528).
+    // Explicit params (not capability-projected): these 4 are reasoning models
+    // so each opts into OPENROUTER_REASONING. A non-reasoning OpenRouter model
+    // added later simply omits params — no catch-all forcing reasoning on it.
     modelPresets: [
-      textPreset("openrouter", "~anthropic/claude-opus-latest", "Claude Opus (latest)"),
-      textPreset("openrouter", "~anthropic/claude-sonnet-latest", "Claude Sonnet (latest)"),
-      textPreset("openrouter", "~openai/gpt-latest", "GPT (latest)"),
-      textPreset("openrouter", "~google/gemini-pro-latest", "Gemini Pro (latest)"),
+      orPreset("~anthropic/claude-opus-latest", "Claude Opus (latest)", [OPENROUTER_REASONING]),
+      orPreset("~anthropic/claude-sonnet-latest", "Claude Sonnet (latest)", [OPENROUTER_REASONING]),
+      orPreset("~openai/gpt-latest", "GPT (latest)", [OPENROUTER_REASONING]),
+      orPreset("~google/gemini-pro-latest", "Gemini Pro (latest)", [OPENROUTER_REASONING]),
     ],
   },
   {
