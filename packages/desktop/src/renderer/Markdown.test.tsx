@@ -121,4 +121,21 @@ describe("Markdown", () => {
     expect(html).not.toContain("max-h-96");
     expect(html).not.toContain("展开全部");
   });
+
+  // Regression: Tailwind v4's preflight resets <ul>/<ol> to `list-style: none`,
+  // so a standard markdown list ("- HTML", "1. step") rendered with no bullet
+  // or number prefix at all. The body class must restore the markers via
+  // list-disc / list-decimal (and keep them inside the indent with
+  // list-outside, matching the pl-6 padding).
+  test("restores bullet and number prefixes on markdown lists", () => {
+    const html = renderToStaticMarkup(
+      <Markdown text={"- HTML\n- CSS\n\n1. first\n2. second"} />,
+    );
+    // The body class scopes list markers onto descendant ul/ol via Tailwind
+    // arbitrary variants. Without these, preflight's `list-style: none` wins
+    // and lists render with no bullet/number prefix.
+    // `&` is HTML-escaped to `&amp;` in static markup.
+    expect(html).toContain("[&amp;_ul]:list-disc");
+    expect(html).toContain("[&amp;_ol]:list-decimal");
+  });
 });
