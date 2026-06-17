@@ -112,7 +112,7 @@ export function MentionPopover({
   const isEmpty = items.length === 0;
 
   return (
-    <div className="cs-popup-surface w-80 max-w-[min(20rem,calc(100vw-24px))] rounded-md p-1" role="listbox" aria-label={t("chat.mention.ariaLabel")}>
+    <div className="cs-popup-surface absolute bottom-full left-0 z-50 mb-2 max-h-[min(20rem,calc(100vh-120px))] w-80 max-w-[min(20rem,calc(100vw-24px))] overflow-y-auto rounded-md p-1" role="listbox" aria-label={t("chat.mention.ariaLabel")}>
       {filteredSkills.length > 0 && (
         <div className="py-1">
           <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("chat.mention.skills")}</div>

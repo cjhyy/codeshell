@@ -38,7 +38,7 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
-  const [submenu, setSubmenu] = useState<{ left: number; top: number } | null>(null);
+  const [submenu, setSubmenu] = useState<{ left: number; bottom: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -64,7 +64,12 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
 
   const openSubmenu = (e: React.MouseEvent<HTMLLIElement>): void => {
     const r = e.currentTarget.getBoundingClientRect();
-    setSubmenu({ left: r.right + 4, top: r.top - 4 });
+    // Anchor the submenu's BOTTOM to the trigger item's bottom so it grows
+    // upward — the settings menu lives in the bottom-left corner, so a
+    // downward submenu would overflow the viewport. Clamp left into the
+    // viewport in case the sidebar is wide.
+    const left = Math.min(r.right + 4, window.innerWidth - 176 - 8);
+    setSubmenu({ left: Math.max(8, left), bottom: window.innerHeight - r.bottom - 4 });
   };
 
   const chooseLanguage = (next: UILanguage): void => {
@@ -113,8 +118,8 @@ export function SettingsMenu({ onOpenSettingsPage, sidebarCollapsed }: Props) {
       )}
       {open && submenu && (
         <ul
-          className="absolute bottom-0 left-full z-50 ml-1 min-w-44 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
-          style={{ left: submenu.left, top: submenu.top }}
+          className="fixed z-50 min-w-44 rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+          style={{ left: submenu.left, bottom: submenu.bottom }}
         >
           {LANGUAGES.map((code) => (
             <li
