@@ -57,6 +57,10 @@ const GENERAL_BUILTIN_TOOLS = [
   "browser_type",
   "browser_scroll",
   "browser_read_content",
+  // Extract real link/image URLs the a11y snapshot omits (href/src). Same
+  // whitelist requirement as the other browser_* tools — without it the model
+  // calling browser_extract_links hits "Tool not found".
+  "browser_extract_links",
   "browser_wait",
   "browser_press_enter",
   "WebSearch",
@@ -96,6 +100,11 @@ const GENERAL_BUILTIN_TOOLS = [
   "MemoryRead",
   "MemorySave",
   "MemoryDelete",
+  // AI 取用已存凭证(cookie/token/link)给 yt-dlp/curl 等。必须在 preset 白名单里
+  // 否则 registerBuiltins 滤掉它 → 即使存了凭证、注册了工具,AI 列表里也没有
+  // UseCredential(用户实测「找不到这个工具」的真因)。它带 isUseCredentialAvailable
+  // guard:cwd 凭证库为空时仍自动隐藏,所以无条件列入是安全的(空库不会冒出来)。
+  "UseCredential",
 ] as const;
 
 const TERMINAL_CODING_EXTRA_TOOLS = [

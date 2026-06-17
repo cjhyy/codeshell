@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { BUILTIN_AGENT_PRESETS } from "./index.js";
-import { BUILTIN_TOOLS } from "../tool-system/builtin/index.js";
+import { BUILTIN_TOOLS, BUILTIN_TOOL_GUARDS } from "../tool-system/builtin/index.js";
 
 // Regression: the background-shell companions (BashOutput / KillShell /
 // ListShells) were registered in BUILTIN_TOOLS and described to the model, but
@@ -16,6 +16,19 @@ describe("preset builtin tool whitelist", () => {
       const unknown = preset.builtinTools.filter((n) => !registeredNames.has(n));
       expect({ preset: preset.name, unknown }).toEqual({ preset: preset.name, unknown: [] });
     }
+  });
+
+  it("every availability-gated tool is in the general preset whitelist", () => {
+    // Regression (UseCredential「找不到这个工具」): a tool with a visibility
+    // guard in BUILTIN_TOOL_GUARDS still has to be in the preset whitelist —
+    // registerBuiltins filters by the whitelist FIRST, so a gated tool that's
+    // missing from it can never appear no matter how the guard evaluates. Guard
+    // = "hide when not applicable", NOT "auto-add when applicable".
+    const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
+    const whitelisted = new Set(general.builtinTools);
+    const gated = [...BUILTIN_TOOL_GUARDS.keys()];
+    const missing = gated.filter((name) => !whitelisted.has(name));
+    expect({ preset: general.name, missing }).toEqual({ preset: general.name, missing: [] });
   });
 
   it("any preset offering Bash also offers its background-shell companions", () => {

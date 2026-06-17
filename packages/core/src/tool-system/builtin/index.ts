@@ -58,6 +58,7 @@ import {
   browserTypeToolDef, browserTypeTool,
   browserScrollToolDef, browserScrollTool,
   browserReadContentToolDef, browserReadContentTool,
+  browserExtractLinksToolDef, browserExtractLinksTool,
   browserWaitToolDef, browserWaitTool,
   browserPressEnterToolDef, browserPressEnterTool,
 } from "./browser-tools.js";
@@ -683,6 +684,16 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: browserReadContentTool,
+  },
+  {
+    definition: {
+      ...browserExtractLinksToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: false,
+    },
+    execute: browserExtractLinksTool,
   },
   {
     definition: {
