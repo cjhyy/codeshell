@@ -24,7 +24,7 @@ import type { HookContext, HookResult } from "./events.js";
 import type { HookHandler } from "./registry.js";
 import type { LLMResponse } from "../types.js";
 import { normalizeGoal, type GoalConfig } from "../engine/goal.js";
-import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
+import { listRunningBackgroundWork } from "../tool-system/builtin/background-work.js";
 
 /** Narrow LLM surface the judge needs — just a one-shot completion. */
 export interface GoalJudgeLLM {
@@ -59,13 +59,26 @@ export interface GoalStopHookOptions {
 }
 
 const JUDGE_SYSTEM =
-  "你是一个目标完成度裁判。给定一个目标和 agent 最近的输出,判断目标是否已经" +
-  "完全达成。只返回一个 JSON 对象,形如 " +
-  '{"met": true|false, "gaps": "若未达成,简述还差什么;达成则空串"}。' +
+  "你是一个目标完成度裁判。给定一个目标、agent 最近的输出,以及当前在后台运行的任务清单," +
+  "判断目标状态。只返回一个 JSON 对象,形如 " +
+  '{"met": true|false, "waiting": true|false, "gaps": "若未达成,简述还差什么;达成则空串"}。' +
+  "三态语义:" +
+  "(1) met:true —— 目标已完全达成。" +
+  "(2) waiting:true —— 目标尚未达成,但剩下唯一要做的事就是等一个【会结束的】后台任务完成" +
+  "(如下载、视频渲染、会退出的脚本),它完成后系统会自动唤醒你继续。此时应允许停下来等。" +
+  "(3) 两者皆 false —— 目标未达成,且还有你能【主动去做】的事。" +
+  "关键:【常驻服务】(如 dev server、watch、`npm run dev`/`bun run dev` 这类永不退出的进程)" +
+  "不算‘在等的任务’——它永远在跑,目标若不依赖它就照常判断达成与否,绝不要因为它而返回 waiting。" +
   "不要输出任何额外文字。宁可严格:只有确信目标已完全完成时才返回 met:true。";
 
+interface JudgeVerdict {
+  met: boolean;
+  waiting: boolean;
+  gaps: string;
+}
+
 /** Pull the first balanced JSON object out of possibly-prose text. */
-function extractJson(text: string): { met: boolean; gaps: string } | null {
+function extractJson(text: string): JudgeVerdict | null {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) return null;
@@ -76,10 +89,26 @@ function extractJson(text: string): { met: boolean; gaps: string } | null {
     const p = parsed as Record<string, unknown>;
     if (typeof p.met !== "boolean") return null;
     const gaps = typeof p.gaps === "string" ? p.gaps : "";
-    return { met: p.met, gaps };
+    const waiting = typeof p.waiting === "boolean" ? p.waiting : false;
+    return { met: p.met, waiting, gaps };
   } catch {
     return null;
   }
+}
+
+/** Render the running background tasks for the judge prompt. */
+function renderBackgroundTasks(sessionId: unknown): string {
+  if (typeof sessionId !== "string" || sessionId.length === 0) return "(无)";
+  const items = listRunningBackgroundWork(sessionId);
+  if (items.length === 0) return "(无)";
+  const kindLabel: Record<string, string> = {
+    subagent: "后台子代理",
+    job: "后台任务",
+    shell: "后台命令",
+  };
+  return items
+    .map((i) => `- [${kindLabel[i.kind] ?? i.kind}] ${i.description}`)
+    .join("\n");
 }
 
 export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
@@ -93,25 +122,19 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     if (!g) return {};
     const goal = g.objective;
 
-    // Background-work short-circuit (s-mqe0ox7n-a8d11c26 bug): if this session
-    // has a background job still running (e.g. a GenerateVideo poll loop), the
-    // goal can't possibly be met yet AND the only remaining work is to WAIT.
-    // Forcing continueSession here makes the model invent busywork (`sleep 30`,
-    // manual API polling) — the exact failure we're fixing. Allow the stop so
-    // the turn ends cleanly; Engine.run's wait-for-background loop then parks
-    // until the job's completion notification lands and runs one summarize
-    // turn, where the goal IS re-judged normally. We don't even call the judge
-    // (saves an LLM round-trip on every stop while a video renders).
+    // Background work is no longer a mechanical short-circuit. Instead we list
+    // what's running and let the judge decide (s-mqe0ox7n-a8d11c26 bug): a
+    // boolean "has background work" can't tell a finite download/render (→ wait
+    // for the wakeup, allow stop) from a never-ending dev server (→ judge the
+    // goal normally). The judge sees each task's kind + command and returns a
+    // three-state verdict; `waiting:true` allows the stop without pushing.
     const sessionId = ctx.data.sessionId;
-    if (typeof sessionId === "string" && backgroundJobRegistry.hasRunningForSession(sessionId)) {
-      log.info("goal_stop.waiting_on_background_job", { cat: "goal", sessionId });
-      return {};
-    }
+    const backgroundTasks = renderBackgroundTasks(sessionId);
 
     const finalText =
       typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";
 
-    let verdict: { met: boolean; gaps: string } | null = null;
+    let verdict: JudgeVerdict | null = null;
     try {
       const resp = await llm.createMessage({
         systemPrompt: JUDGE_SYSTEM,
@@ -121,7 +144,8 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
             content:
               `目标:\n${goal}\n\n` +
               `agent 最近的输出:\n${finalText || "(无文本输出)"}\n\n` +
-              "目标完全达成了吗?按要求只返回 JSON。",
+              `当前在后台运行的任务:\n${backgroundTasks}\n\n` +
+              "判断目标状态,按要求只返回 JSON(met / waiting / gaps)。",
           },
         ],
         stream: false,
@@ -171,6 +195,16 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
       }
       // Surface the verdict so the loop can emit a goal_progress(met) event.
       return { data: { goalVerdict: { met: true, gaps: "" } } };
+    }
+
+    // waiting: goal not met, but the only remaining work is a FINITE background
+    // task that will wake the session on completion. Allow the stop (no push) —
+    // forcing continueSession here is exactly the busy-loop bug. The completion
+    // notification wakes the idle session (server maybeWakeIdleSession) and the
+    // goal is re-judged on that woken turn.
+    if (verdict.waiting) {
+      log.info("goal_stop.waiting_on_background_task", { cat: "goal", sessionId });
+      return { data: { goalVerdict: { met: false, gaps: verdict.gaps.trim() } } };
     }
 
     log.info("goal_stop.not_met", { cat: "goal", gaps: verdict.gaps });

@@ -27,7 +27,6 @@ import { resolveSandboxConfig, type SettingsSandbox } from "./sandbox-config.js"
 import { sandboxCacheKey } from "./sandbox-cache-key.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
 import { asyncAgentRegistry } from "../tool-system/builtin/agent-registry.js";
-import { backgroundJobRegistry } from "../tool-system/builtin/background-jobs.js";
 import { backgroundShellManager } from "../runtime/background-shell.js";
 import {
   notificationQueue,
@@ -1998,45 +1997,32 @@ export class Engine {
     try {
       result = await turnLoop.run(messages);
 
-      // ── Wait for background sub-agents, then summarize ───────────────
-      // run_in_background sub-agents outlive the turn that spawned them. The
-      // main agent must not resolve while ITS OWN background agents are still
-      // working — otherwise their results land in the notification queue with
-      // nobody to drain them and the run looks "done" while work is in flight
-      // (the s-mpvf4rsj-bb6e4639 bug). We block here until none of this
-      // session's background agents are running, then drain ALL their results
-      // and feed them back as one more turn so the agent summarizes.
+      // ── Headless: drain background sub-agents before resolving ───────
+      // Unified background-work model (2026-06-17): the engine NO LONGER parks
+      // every run waiting on background work. Background work (sub-agents,
+      // video polls, shells) ends the turn, yields, and is picked up later by
+      // the server's notification-wakeup path (maybeWakeIdleSession). The
+      // INTERACTIVE path relies on that wakeup + a run-boundary re-check.
       //
-      // Top-level only: a sub-agent must never wait on grandchildren (and
-      // nested agents are disabled anyway). `signal` aborts the wait.
+      // HEADLESS is the exception: a one-shot `engine.run` whose caller takes
+      // `result.text` as THE answer (automation / SDK) has no later turn to
+      // pick up a wakeup — so it must wait, before resolving, until its own
+      // background SUB-AGENTS finish and summarize. Only sub-agents (their
+      // summary IS part of this run's result), NOT shells (a dev server never
+      // exits → would hang headless forever) and NOT video (a long render the
+      // one-shot run shouldn't block on). This replaces the old for(;;) park
+      // (s-mpvf4rsj-bb6e4639 invariant) for the headless case only.
       const sid = session.state.sessionId;
       const isTopLevel = this.config.isSubAgent !== true;
-      if (isTopLevel) {
-        // Wait on BOTH background sub-agents AND non-agent background jobs
-        // (GenerateVideo's poll loop). Without the job arm, a video rendering
-        // in the background is invisible here, the run resolves immediately,
-        // and the goal-stop-hook forces the model to busy-loop with `sleep`
-        // waiting for it (the s-mqe0ox7n-a8d11c26 bug).
-        const stillRunning = (): boolean =>
-          asyncAgentRegistry.hasRunningForSession(sid) ||
-          backgroundJobRegistry.hasRunningForSession(sid);
+      if (isTopLevel && this.isHeadless()) {
         let aborted = options?.signal?.aborted === true;
-        // OUTER loop: a summarize turn can itself spawn NEW background work
-        // (e.g. a goal "generate 2 videos sequentially" → after video #1's
-        // notification, the summarize turn submits video #2). Without looping
-        // back, that new job renders into the void — its notification lands
-        // with nobody to drain it and the run resolves "done" while work is in
-        // flight. So we wait → drain → summarize, then re-check; we only exit
-        // when a summarize turn produces no new background work (or on abort).
-        // turnCount keeps accumulating across summarize turns, so the
-        // turn-loop's maxTurns still bounds runaway re-summarization.
+        // Loop: a summarize turn can spawn a NEW background sub-agent; keep
+        // draining + summarizing until none remain. turnCount accumulates, so
+        // the turn-loop's maxTurns still bounds runaway re-summarization.
         for (;;) {
-          while (!aborted && stillRunning()) {
+          while (!aborted && asyncAgentRegistry.hasRunningForSession(sid)) {
             aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
           }
-          // Drain everything that came back — including partial results when the
-          // user aborted with one agent still stuck. Nothing already returned is
-          // lost: it's injected into the transcript either way.
           const pending = notificationQueue.drainAll(sid);
           if (pending.length === 0) break;
           const injected: Message = {
@@ -2044,17 +2030,10 @@ export class Engine {
             content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
           };
           if (aborted) {
-            // Aborted: preserve the results in context (transcript + messages)
-            // but do NOT spin up another LLM turn — the user cancelled, and a
-            // fresh turn would just be killed by the same signal. The next
-            // user message in this session will see these results in history.
             session.transcript.appendMessage(injected.role, injected.content);
             result = { ...result, messages: [...result.messages, injected] };
             break;
           }
-          // Background work finished: one more turn so the agent reads every
-          // result and either summarizes (done) or spawns the next step (which
-          // the outer loop will then wait on).
           result = await turnLoop.run([...result.messages, injected]);
         }
       }
@@ -2847,17 +2826,12 @@ export class Engine {
         settled = true;
         unsubRegistry();
         unsubQueue();
-        unsubJobs();
         signal?.removeEventListener("abort", onAbort);
         resolve(aborted);
       };
       const onAbort = () => finish(true);
       const unsubRegistry = asyncAgentRegistry.subscribe(() => finish(false));
       const unsubQueue = notificationQueue.subscribe(() => finish(false));
-      // Also wake on background JOB changes (video poll finishing) — same
-      // reasoning as the queue: the video's finish() and its enqueue() are
-      // separate steps, and waking on either keeps the loop from racing.
-      const unsubJobs = backgroundJobRegistry.subscribe(() => finish(false));
       signal?.addEventListener("abort", onAbort, { once: true });
     });
   }

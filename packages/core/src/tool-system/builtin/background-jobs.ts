@@ -19,14 +19,23 @@ function isValidSessionId(sid: unknown): sid is string {
 
 type Listener = () => void;
 
+/** A running background job, as listed for the goal judge's task overview. */
+export interface BackgroundJobEntry {
+  jobId: string;
+  sessionId: string;
+  /** Human description (e.g. "Generating video: <prompt>"); shown to the goal
+   *  judge so it can tell a finite render from a long-lived service. */
+  description: string;
+}
+
 class BackgroundJobRegistry {
-  private jobs = new Map<string, string>(); // jobId -> sessionId
+  private jobs = new Map<string, BackgroundJobEntry>(); // jobId -> entry
   private listeners = new Set<Listener>();
 
   /** Register a running job. Invalid sessionId is ignored (cannot be waited on). */
-  start(jobId: string, sessionId: string): void {
+  start(jobId: string, sessionId: string, description = ""): void {
     if (!isValidSessionId(sessionId)) return;
-    this.jobs.set(jobId, sessionId);
+    this.jobs.set(jobId, { jobId, sessionId, description });
     this.notify();
   }
 
@@ -38,13 +47,17 @@ class BackgroundJobRegistry {
     this.notify();
   }
 
-  /** True while any background job spawned by `sessionId` is still running.
-   *  Drives Engine.run's "wait for my background work before resolving". */
+  /** True while any background job spawned by `sessionId` is still running. */
   hasRunningForSession(sessionId: string): boolean {
-    for (const sid of this.jobs.values()) {
-      if (sid === sessionId) return true;
+    for (const e of this.jobs.values()) {
+      if (e.sessionId === sessionId) return true;
     }
     return false;
+  }
+
+  /** Running jobs spawned by `sessionId`. Feeds the goal judge's task list. */
+  listForSession(sessionId: string): BackgroundJobEntry[] {
+    return [...this.jobs.values()].filter((e) => e.sessionId === sessionId);
   }
 
   subscribe = (cb: Listener): (() => void) => {

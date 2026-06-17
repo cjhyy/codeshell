@@ -199,6 +199,12 @@ export class AgentServer {
     if (!this.chatManager) return;
     const session = this.chatManager.get(sessionId);
     if (!session || session.isBusy()) return;
+    // Headless / automation runs are one-shot: the caller takes result.text and
+    // is gone, so there's no consumer for a woken continuation turn. Headless
+    // already drained its background sub-agents inside engine.run before
+    // returning; any remaining queued notification (video/shell) must NOT spin
+    // an orphan turn. Only the interactive path auto-continues.
+    if (session.engine.isHeadless()) return;
     // Don't resurrect a session the user just Stopped: cancel() leaves it idle
     // (active=null) so isBusy() reads false, but auto-running a fresh turn here
     // would defeat the Stop. The flag clears the moment the user sends again.
@@ -232,6 +238,16 @@ export class AgentServer {
           sessionId,
           event: { type: "error", error: (err as Error)?.message ?? "background wakeup failed" },
         });
+      })
+      .finally(() => {
+        // Run-boundary re-check (trigger B): the woken summarize turn may have
+        // spawned NEW background work (e.g. goal "generate 2 videos" → after #1
+        // completes, this turn submits #2). When #2 finishes its notification
+        // arrives while we're idle again — but if it arrived DURING this turn
+        // (busy), trigger A skipped it. Re-checking at the run boundary drains
+        // anything that landed while busy, chaining wakeups until the queue is
+        // truly empty. Replaces the old engine for(;;) outer loop.
+        this.maybeWakeIdleSession(sessionId);
       });
   }
 
@@ -355,10 +371,19 @@ export class AgentServer {
         usage: result.usage,
       };
       this.transport.send(createResponse(req.id, runResult));
+      // Run-boundary re-check (trigger B): the session is idle now. If a
+      // background task (shell/video) completed DURING this run, its bus event
+      // fired while we were busy and trigger A skipped it — drain it now and
+      // wake a continuation turn. Interactive path only; headless already
+      // drained its sub-agents inside engine.run before returning.
+      this.maybeWakeIdleSession(sid);
     } catch (err) {
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
       );
+      // Even on a failed run the session goes idle — re-check so a background
+      // completion that landed during the failed run isn't orphaned.
+      this.maybeWakeIdleSession(sid);
     }
   }
 
