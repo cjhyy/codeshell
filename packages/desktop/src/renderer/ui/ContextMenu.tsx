@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useAnchoredPopover } from "../chat/useAnchoredPopover";
 
 export interface ContextMenuItem {
   label: string;
@@ -21,9 +22,19 @@ interface Props {
  * Closes on outside click, escape, or after any item activation. The
  * menu is portal-free — we trust the parent's z-index ladder. Items
  * with `danger` get a red text tint; disabled items are no-ops.
+ *
+ * Positioned via `useAnchoredPopover` with the cursor as a virtual
+ * anchor, so it flips left/up and clamps to the viewport near the
+ * right/bottom edges instead of overflowing.
  */
 export function ContextMenu({ x, y, items, onClose }: Props) {
   const ref = useRef<HTMLUListElement>(null);
+  const style = useAnchoredPopover(true, ref, ref, {
+    preferredSide: "bottom",
+    align: "start",
+    gap: 2,
+    point: { x, y },
+  });
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -43,8 +54,8 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
   return (
     <ul
       ref={ref}
-      className="fixed z-50 min-w-40 list-none rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-lg"
-      style={{ top: y, left: x }}
+      className="min-w-40 list-none rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-lg"
+      style={style}
       role="menu"
     >
       {items.map((item, i) => (

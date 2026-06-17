@@ -3,11 +3,24 @@ import { type CSSProperties, type RefObject, useLayoutEffect, useState } from "r
 type Side = "top" | "bottom";
 type Align = "start" | "end";
 
+/** A point in viewport coordinates — used as a zero-size virtual anchor. */
+export interface AnchorPoint {
+  x: number;
+  y: number;
+}
+
 interface Options {
   preferredSide?: Side;
   align?: Align;
   gap?: number;
   padding?: number;
+  /**
+   * Anchor to a viewport point (e.g. the mouse cursor for a right-click
+   * menu) instead of an element. When set, it overrides `anchorRef` and the
+   * ref may be `null`. The point is treated as a zero-size rect, so the
+   * popover sits to one side of it with the same flip/clamp logic.
+   */
+  point?: AnchorPoint | null;
 }
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -22,6 +35,7 @@ export function useAnchoredPopover(
     align = "start",
     gap = 6,
     padding = 10,
+    point = null,
   }: Options = {},
 ): CSSProperties {
   const [style, setStyle] = useState<CSSProperties>({ visibility: "hidden" });
@@ -35,11 +49,15 @@ export function useAnchoredPopover(
     let frame = 0;
 
     const update = (): void => {
-      const anchor = anchorRef.current;
       const popover = popoverRef.current;
-      if (!anchor || !popover) return;
+      if (!popover) return;
 
-      const anchorRect = anchor.getBoundingClientRect();
+      // A cursor point is a zero-size rect; otherwise read the element.
+      const anchorRect = point
+        ? { top: point.y, bottom: point.y, left: point.x, right: point.x }
+        : anchorRef.current?.getBoundingClientRect();
+      if (!anchorRect) return;
+
       const width = popover.offsetWidth;
       const height = popover.offsetHeight;
       const viewportW = window.innerWidth;
@@ -85,7 +103,7 @@ export function useAnchoredPopover(
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [align, anchorRef, gap, open, padding, popoverRef, preferredSide]);
+  }, [align, anchorRef, gap, open, padding, point?.x, point?.y, popoverRef, preferredSide]);
 
   return style;
 }
