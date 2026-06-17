@@ -90,11 +90,13 @@ export async function handleBrowserAction(
 
   const policy = deps.policy();
 
-  // Domain whitelist (navigate target, or the current page for other actions).
+  // Domain whitelist HARD-enforces (no approve bypass): it's opt-in — an empty
+  // allowedDomains means "allow all", so isDomainAllowed only returns false when
+  // the user explicitly configured a whitelist AND this host isn't on it. In
+  // that case the user's intent is to block, so we block outright.
   const targetUrl = req.action === "navigate" ? req.url : safeUrl(guest);
   if (targetUrl && !isDomainAllowed(targetUrl, policy)) {
-    const ok = await requestApproval(deps, `访问域名 ${hostOf(targetUrl)}(不在白名单)`);
-    if (!ok) return JSON.stringify({ ok: false, detail: `domain not allowed: ${hostOf(targetUrl)}` });
+    return JSON.stringify({ ok: false, detail: `domain not allowed by whitelist: ${hostOf(targetUrl)}` });
   }
 
   // Sensitive action approval (click/type on payment/delete/credential surfaces).

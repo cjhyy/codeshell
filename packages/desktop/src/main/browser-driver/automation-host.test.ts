@@ -79,19 +79,19 @@ describe("handleBrowserAction", () => {
     expect(JSON.parse(out)).toMatchObject({ ok: false, staleRef: true });
   });
 
-  test("domain whitelist blocks navigate to off-list host unless approved", async () => {
-    const calls: string[] = [];
+  test("domain whitelist hard-blocks navigate to off-list host (no approve bypass)", async () => {
+    let approveCalled = false;
     const d = deps({
       policy: () => ({ allowedDomains: ["xiaohongshu.com"] }),
-      approve: async (s) => {
-        calls.push(s);
-        return false; // user declines
+      approve: async () => {
+        approveCalled = true;
+        return true; // even if approve says yes, whitelist still blocks
       },
     });
     const out = await handleBrowserAction({ action: "navigate", url: "https://evil.com" }, d);
     expect(JSON.parse(out)).toMatchObject({ ok: false });
     expect(out).toContain("domain not allowed");
-    expect(calls[0]).toContain("evil.com");
+    expect(approveCalled).toBe(false); // whitelist is hard, not approve-gated
   });
 
   test("navigate to whitelisted host proceeds", async () => {

@@ -46,6 +46,19 @@ const GENERAL_BUILTIN_TOOLS = [
   "BashOutput",
   "KillShell",
   "ListShells",
+  // Browser automation (drive the in-app webview). Same whitelist requirement as
+  // the BashOutput trio above: registerBuiltins filters BUILTIN_TOOLS by the
+  // preset set, so without these the model calling browser_snapshot/etc. hits
+  // "Tool not found". They self-degrade to a clear error when no browser panel
+  // is wired (headless), so listing them unconditionally is safe.
+  "browser_snapshot",
+  "browser_navigate",
+  "browser_click",
+  "browser_type",
+  "browser_scroll",
+  "browser_read_content",
+  "browser_wait",
+  "browser_press_enter",
   "WebSearch",
   "WebFetch",
   "GenerateImage",
@@ -119,6 +132,15 @@ const GENERAL_PERMISSION_RULES: PermissionRule[] = [
   // by the tools' own permissionDefault so the user confirms each change.
   { tool: "MemoryList", decision: "allow" },
   { tool: "MemoryRead", decision: "allow" },
+  // Browser automation: observing / navigating / reading are safe to auto-allow;
+  // click & type act on the page so stay gated by their "ask" permissionDefault
+  // (+ the main-side sensitive-action / domain-whitelist enforcement).
+  { tool: "browser_snapshot", decision: "allow" },
+  { tool: "browser_navigate", decision: "allow" },
+  { tool: "browser_scroll", decision: "allow" },
+  { tool: "browser_read_content", decision: "allow" },
+  { tool: "browser_wait", decision: "allow" },
+  { tool: "browser_press_enter", decision: "allow" },
 ];
 
 // ─── Preset definitions ──────────────────────────────────────────

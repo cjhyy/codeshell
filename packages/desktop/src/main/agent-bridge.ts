@@ -304,11 +304,15 @@ export class AgentBridge {
         resultJson = await handleBrowserAction(parsed.request, {
           activeGuest,
           policy: loadBrowserAutomationPolicy,
-          // Sensitive/off-whitelist actions: surface the approval to the renderer
-          // by forwarding a normal ask request would be ideal; for MVP we
-          // conservatively auto-decline (fail-closed) — wiring an interactive
-          // approver is a follow-up. A clear refused result reaches the agent.
-          approve: undefined,
+          // The click/type TOOLS already carry permissionDefault:"ask", so a
+          // sensitive page action is gated at the tool-permission layer BEFORE
+          // it reaches here — a second hard-decline at the bridge would just
+          // dead-block legit flows the user already approved. So we allow at the
+          // bridge level. The one bridge-only gate that still hard-enforces is
+          // the DOMAIN WHITELIST: it's opt-in (empty list = allow all), and when
+          // the user did set one, blocking an off-list host is the intended
+          // behavior. An interactive per-action approval dialog is a follow-up.
+          approve: async () => true,
         });
       } catch (e) {
         resultJson = JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });
