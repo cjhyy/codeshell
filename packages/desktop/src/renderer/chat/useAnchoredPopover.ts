@@ -40,6 +40,11 @@ export function useAnchoredPopover(
 ): CSSProperties {
   const [style, setStyle] = useState<CSSProperties>({ visibility: "hidden" });
 
+  // Collapse the optional point into a single stable dep so the deps array
+  // length never changes between renders (callers that omit `point` would
+  // otherwise flip the array size and trip React's hook-inputs check).
+  const pointKey = point ? `${point.x},${point.y}` : "";
+
   useLayoutEffect(() => {
     if (!open) {
       setStyle({ visibility: "hidden" });
@@ -103,7 +108,7 @@ export function useAnchoredPopover(
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [align, anchorRef, gap, open, padding, point?.x, point?.y, popoverRef, preferredSide]);
+  }, [align, anchorRef, gap, open, padding, pointKey, popoverRef, preferredSide]);
 
   return style;
 }
