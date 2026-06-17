@@ -33,50 +33,58 @@ function humanize(raw: string): string {
   return raw.split("\n")[0].slice(0, 200);
 }
 
-async function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
-  let timeout: NodeJS.Timeout | undefined;
+/**
+ * Run `fn` with an AbortSignal that fires after `ms`. Unlike a bare
+ * Promise.race, the signal is threaded into fetch so a timeout actually aborts
+ * the in-flight request — otherwise the socket leaks until the server replies.
+ */
+async function withTimeout<T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await Promise.race<T>([
-      p,
-      new Promise<T>((_resolve, reject) => {
-        timeout = setTimeout(
-          () => reject(new Error(`${label} timed out after ${ms}ms`)),
-          ms,
-        );
-      }),
-    ]);
+    return await fn(ctrl.signal);
+  } catch (err) {
+    // Surface the timeout as a friendly message rather than a raw AbortError.
+    if (ctrl.signal.aborted) throw new Error(`${label} timed out after ${ms}ms`);
+    throw err;
   } finally {
-    if (timeout) clearTimeout(timeout);
+    clearTimeout(timeout);
   }
 }
 
-async function probeSerper(apiKey: string): Promise<string[]> {
+async function probeSerper(apiKey: string, signal: AbortSignal): Promise<string[]> {
   const res = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
     body: JSON.stringify({ q: PROBE_QUERY, num: 3 }),
+    signal,
   });
   if (!res.ok) throw new Error(`Serper ${res.status} ${res.statusText}`);
   const data = (await res.json()) as { organic?: Array<{ title?: string }> };
   return (data.organic ?? []).map((r) => r.title ?? "").filter(Boolean).slice(0, 3);
 }
 
-async function probeTavily(apiKey: string): Promise<string[]> {
+async function probeTavily(apiKey: string, signal: AbortSignal): Promise<string[]> {
   const res = await fetch("https://api.tavily.com/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ api_key: apiKey, query: PROBE_QUERY, max_results: 3, include_answer: false }),
+    signal,
   });
   if (!res.ok) throw new Error(`Tavily ${res.status} ${res.statusText}`);
   const data = (await res.json()) as { results?: Array<{ title?: string }> };
   return (data.results ?? []).map((r) => r.title ?? "").filter(Boolean).slice(0, 3);
 }
 
-async function probeSearxng(baseUrl: string): Promise<string[]> {
+async function probeSearxng(baseUrl: string, signal: AbortSignal): Promise<string[]> {
   const url = new URL("/search", baseUrl);
   url.searchParams.set("q", PROBE_QUERY);
   url.searchParams.set("format", "json");
-  const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+  const res = await fetch(url.toString(), { headers: { Accept: "application/json" }, signal });
   if (!res.ok) throw new Error(`SearXNG ${res.status} ${res.statusText}`);
   const data = (await res.json()) as { results?: Array<{ title?: string }> };
   return (data.results ?? []).map((r) => r.title ?? "").filter(Boolean).slice(0, 3);
@@ -94,11 +102,11 @@ export async function probeSearch(input: SearchProbeInput): Promise<SearchProbeR
   try {
     let titles: string[];
     if (input.provider === "serper") {
-      titles = await withTimeout(probeSerper(input.apiKey!), PROBE_TIMEOUT_MS, "Serper probe");
+      titles = await withTimeout((s) => probeSerper(input.apiKey!, s), PROBE_TIMEOUT_MS, "Serper probe");
     } else if (input.provider === "tavily") {
-      titles = await withTimeout(probeTavily(input.apiKey!), PROBE_TIMEOUT_MS, "Tavily probe");
+      titles = await withTimeout((s) => probeTavily(input.apiKey!, s), PROBE_TIMEOUT_MS, "Tavily probe");
     } else {
-      titles = await withTimeout(probeSearxng(input.baseUrl!), PROBE_TIMEOUT_MS, "SearXNG probe");
+      titles = await withTimeout((s) => probeSearxng(input.baseUrl!, s), PROBE_TIMEOUT_MS, "SearXNG probe");
     }
     return {
       status: "ok",

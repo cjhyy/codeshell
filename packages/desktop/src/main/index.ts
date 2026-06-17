@@ -321,12 +321,15 @@ function ensureMobileSessionId(st: MobileDeviceState): string {
  * model.set for an invalid model or a rejected goal.extend must NOT be reported
  * to the phone as ok.
  */
+// Monotonic suffix so two requests for the same method in the same millisecond
+// get distinct ids (Date.now() alone collides under concurrency → reply串台).
+let mobileRequestSeq = 0;
 function injectAndAwaitResult(
   b: AgentBridge,
   method: string,
   params: Record<string, unknown>,
 ): Promise<{ ok: true; result: unknown } | { ok: false; message: string }> {
-  const id = `mobile-${method.replace(/\W+/g, "-")}-${Date.now()}`;
+  const id = `mobile-${method.replace(/\W+/g, "-")}-${Date.now()}-${mobileRequestSeq++}`;
   return new Promise((resolveResult) => {
     let settled = false;
     const done = (v: { ok: true; result: unknown } | { ok: false; message: string }): void => {

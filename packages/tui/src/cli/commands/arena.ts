@@ -40,17 +40,37 @@ export interface ArenaRunOptions {
 }
 
 /**
+ * Pre-parsed arena invocation — the CLI already has structured flags from
+ * commander, so it passes this instead of re-stringifying into `arg` (which
+ * collapses whitespace in the topic and lets a topic inject `--models`).
+ */
+export interface ArenaInvocation {
+  topic: string;
+  models?: string;
+  /** Raw mode string (validated in normalizeInvocation). */
+  mode?: string;
+  base?: string;
+  head?: string;
+}
+
+/**
  * Run arena from CLI `code-shell arena "topic"` or REPL `/arena topic`.
+ *
+ * `arg` is either a raw REPL string (`--models … topic`) that gets parsed for
+ * flags, or an already-structured {@link ArenaInvocation} from the CLI — the
+ * CLI path avoids re-splitting a string so topics with spaces survive intact
+ * and can't smuggle flag tokens.
  *
  * When `opts.output` is provided, all output goes through that sink
  * (for REPL integration via ctx.addStatus). Otherwise prints to stdout.
  */
 export async function runArenaReview(
-  arg: string,
+  arg: string | ArenaInvocation,
   engineConfig: EngineConfig,
   opts?: ArenaRunOptions,
 ): Promise<ArenaResultV2 | undefined> {
-  const { models: modelsFlag, mode: explicitMode, base, head, topic } = parseFlags(arg);
+  const { models: modelsFlag, mode: explicitMode, base, head, topic } =
+    typeof arg === "string" ? parseFlags(arg) : normalizeInvocation(arg);
   const out: OutputSink = opts?.output ?? ((text) => console.log(text));
 
   if (!topic) {
@@ -259,6 +279,36 @@ function resolveParticipants(
 // ─── Arg Parsing ─────────────────────────────────────────────────
 
 const VALID_MODES: ArenaMode[] = ["review", "discussion", "planning"];
+
+/**
+ * Normalize an already-structured CLI invocation. Unlike parseFlags it does
+ * NOT tokenize the topic, so spaces survive and a topic can't be parsed as
+ * flags. Mode is validated the same way (unknown → warn + ignore).
+ */
+function normalizeInvocation(inv: ArenaInvocation): {
+  models?: string;
+  mode?: ArenaMode;
+  base?: string;
+  head?: string;
+  topic: string;
+} {
+  let mode: ArenaMode | undefined;
+  if (inv.mode) {
+    const val = String(inv.mode).toLowerCase() as ArenaMode;
+    if (VALID_MODES.includes(val)) {
+      mode = val;
+    } else {
+      console.log(chalk.yellow(`  Unknown mode "${val}", valid: ${VALID_MODES.join(", ")}`));
+    }
+  }
+  return {
+    models: inv.models,
+    mode,
+    base: inv.base,
+    head: inv.head,
+    topic: inv.topic.trim(),
+  };
+}
 
 function parseFlags(arg: string): {
   models?: string;

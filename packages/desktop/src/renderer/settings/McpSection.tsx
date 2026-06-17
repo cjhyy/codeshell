@@ -144,7 +144,12 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       envHeaders: s.envHeaders,
       credentialRef: s.credentialRef,
     }));
-    setLoadingProbe(new Set(probeable.map((x) => x.name)));
+    const probingNames = probeable.map((x) => x.name);
+    setLoadingProbe((prev) => {
+      const next = new Set(prev);
+      for (const n of probingNames) next.add(n);
+      return next;
+    });
     try {
       const results = await window.codeshell.probeMcpServers(inputs, force);
       setProbes((prev) => {
@@ -155,7 +160,13 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     } finally {
-      setLoadingProbe(new Set());
+      // Only clear the names this run set — a concurrent testOne() owns its
+      // own entry and must not be wiped here.
+      setLoadingProbe((prev) => {
+        const next = new Set(prev);
+        for (const n of probingNames) next.delete(n);
+        return next;
+      });
     }
   }, []);
 

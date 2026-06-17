@@ -150,10 +150,7 @@ addCommonOptions(
       console.error("Error: No API key provided.");
       process.exit(1);
     }
-    let arg = topic;
-    if (opts.models) arg = `--models ${opts.models} ${arg}`;
-    if (opts.mode) arg = `--mode ${opts.mode} ${arg}`;
-    await runArenaReview(arg, {
+    await runArenaReview({ topic, models: opts.models, mode: opts.mode }, {
       llm: {
         provider: resolved.provider ?? settings.model.provider ?? "openai",
         model: resolved.model ?? settings.model.name ?? "anthropic/claude-opus-4-6",

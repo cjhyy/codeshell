@@ -319,13 +319,26 @@ export class RemoteHostManager extends EventEmitter {
 
   async stop(): Promise<void> {
     const server = this.server;
+    // Forcibly drop live WS sockets first. wss.close() alone waits for clients
+    // to disconnect, so a phone left connected would hang stop() indefinitely.
+    // terminate() severs each immediately.
+    for (const client of this.wss?.clients ?? []) {
+      client.terminate();
+    }
     this.wss?.close();
     this.wss = undefined;
     this.server = undefined;
     this.started = undefined;
     this.publicBaseUrl = undefined;
     this.passcode = undefined;
+    // Drop online bookkeeping directly (no per-device offline events — the whole
+    // host is going away). authed is a WeakMap and clears with its sockets.
+    this.onlineCounts.clear();
     if (!server) return;
+    // server.close() only stops accepting new connections and waits for live
+    // ones to end — a lingering upgraded/keep-alive socket keeps its callback
+    // from ever firing. Destroy any remaining connections so close() resolves.
+    server.closeAllConnections?.();
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 
