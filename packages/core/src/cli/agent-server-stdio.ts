@@ -37,7 +37,7 @@ import type { EngineConfigSlice } from "../protocol/chat-session-manager.js";
 import type { ValidatedSettings } from "../settings/schema.js";
 import { AgentServer } from "../protocol/server.js";
 import { StdioTransport } from "../protocol/transport.js";
-import { SettingsManager } from "../settings/manager.js";
+import { SettingsManager, noRepoDir } from "../settings/manager.js";
 import { personalizationFrom } from "../settings/personalization.js";
 import { MCPManager } from "../tool-system/mcp-manager.js";
 import { mergePluginMcpServers } from "../plugins/installer/loadPluginMcp.js";
@@ -63,6 +63,23 @@ export function resolveSessionAgentConfig(
     customSystemPrompt: slice.customSystemPrompt ?? settings.agent.customSystemPrompt,
     appendSystemPrompt: slice.appendSystemPrompt ?? settings.agent.appendSystemPrompt,
   };
+}
+
+/**
+ * Resolve a session's effective cwd. A protocol slice with an explicit cwd
+ * points the session at that project; a slice WITHOUT a cwd is a no-repo
+ * "纯聊天" session (the renderer omits cwd when no project is selected) and must
+ * land in the no-repo sandbox (~/.code-shell/no-repo) — NOT the worker's boot
+ * cwd.
+ *
+ * Why not the boot cwd: this stdio worker is long-lived and reused across
+ * sessions/projects, so its boot cwd is whatever project first spawned it.
+ * Inheriting it for a no-repo chat would (a) silently run the chat against a
+ * stale, unrelated project's files and (b) defeat the no-repo skill/plugin
+ * whitelist inversion (which only fires when cwd === noRepoDir).
+ */
+export function resolveSessionCwd(slice: EngineConfigSlice): string {
+  return slice.cwd ?? noRepoDir();
 }
 
 // ─── Read base config from environment / settings ─────────────────
@@ -165,9 +182,10 @@ const chatManager = new ChatSessionManager({
   // pool can't resolve (no active key — shouldn't happen in practice).
   engineFactory: (slice) => {
     const live = freshSettings();
-    // Effective cwd for THIS session (the protocol slice can point a session
-    // at a different project than the worker's boot cwd).
-    const sessionCwd = slice.cwd ?? cwd;
+    // Effective cwd for THIS session: explicit slice.cwd → that project; absent
+    // → the no-repo sandbox (NOT the worker's stale boot cwd). See
+    // resolveSessionCwd for the full rationale.
+    const sessionCwd = resolveSessionCwd(slice);
     // Fold project capabilityOverrides over the global disabledPlugins before
     // the MCP merge — a plugin force-enabled in 能力总览 (project "on") must
     // contribute its MCP servers even while globally disabled, and vice versa.
@@ -182,7 +200,10 @@ const chatManager = new ChatSessionManager({
       // engine sees the user's temperature/imageDetail without each factory
       // call re-running populateModelPoolFromSettings.
       clientDefaults: resolvedClientDefaults,
-      cwd,
+      // sessionCwd resolves slice.cwd → no-repo sandbox (never the stale boot
+      // cwd). The slice.cwd spread below is now redundant with this but kept
+      // for clarity / explicitness.
+      cwd: sessionCwd,
       runtime,
       // This stdio worker exists only to serve the desktop app, so every
       // session it creates is a desktop-origin session.
@@ -213,7 +234,7 @@ const chatManager = new ChatSessionManager({
       ...personalizationFrom(live.agent),
       maxTurns: slice.maxTurns,
       maxContextTokens: slice.maxContextTokens,
-      ...(slice.cwd ? { cwd: slice.cwd } : {}),
+      // cwd already set to sessionCwd above (slice.cwd → no-repo fallback).
     });
   },
   maxSessions: 16,

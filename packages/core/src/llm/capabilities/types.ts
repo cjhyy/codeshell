@@ -48,6 +48,16 @@ export type ReasoningShape =
       kind: "openai-effort";
       disabledEffort?: ReasoningEffort | "none";
       supportedEfforts?: ReasoningEffort[];
+      /**
+       * gpt-5.5+ rejects `reasoning_effort` whenever `tools` are also present on
+       * `/v1/chat/completions` ("Function tools with reasoning_effort are not
+       * supported … Please use /v1/responses instead"), 400-ing the request.
+       * When set, the OpenAI client OMITS `reasoning_effort` on any tool-bearing
+       * request up-front — so we never eat the 400 + retry on every tool turn.
+       * The reactive `_dropReasoningEffort` sticky still covers any variant we
+       * haven't tagged here.
+       */
+      noEffortWithTools?: boolean;
     }
   /** Anthropic Claude 4.x ≤ 4.5 — `{thinking: {type: "enabled", budget_tokens: N}}`. */
   | { kind: "anthropic-budget"; minBudgetTokens: number }

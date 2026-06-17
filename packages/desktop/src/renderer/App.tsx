@@ -375,6 +375,14 @@ function App() {
   const engineToBucketRef = useRef<Map<string, string>>(new Map());
   const activeBucketRef = useRef(activeBucket);
   /**
+   * The no-repo sandbox cwd (~/.code-shell/no-repo), fetched once from main.
+   * A no-repo "纯聊天" send must pass THIS explicitly as cwd — if we omit cwd,
+   * the long-lived worker (reused across projects) defaults to whatever project
+   * first spawned it, silently running the chat against an unrelated repo AND
+   * defeating the no-repo skill/plugin whitelist (which keys on cwd===noRepoDir).
+   */
+  const noRepoCwdRef = useRef<string | null>(null);
+  /**
    * Mirror of `sessionIndices` for the mount-time stream listener (which
    * closes over stale state). Lets resolveBucket reverse-look-up an engine
    * sessionId in the on-disk indices when the in-memory route table missed —
@@ -478,6 +486,10 @@ function App() {
   useEffect(() => { saveOverrideMap("model", modelOverrides); }, [modelOverrides]);
   useEffect(() => { saveOverrideMap("goal", goalOverrides); }, [goalOverrides]);
   useEffect(() => { activeBucketRef.current = activeBucket; }, [activeBucket]);
+  // Fetch the no-repo sandbox cwd once; a no-repo send passes it explicitly.
+  useEffect(() => {
+    window.codeshell.noRepoCwd().then((p) => { noRepoCwdRef.current = p; }).catch(() => {});
+  }, []);
   useEffect(() => { sessionIndicesRef.current = sessionIndices; }, [sessionIndices]);
   useEffect(() => { permissionModeRef.current = permissionMode; }, [permissionMode]);
   useEffect(() => {
@@ -1541,7 +1553,13 @@ function App() {
     if (permissionMode !== null) {
       opts.permissionMode = toCorePermissionMode(permissionMode);
     }
+    // Pass cwd explicitly in BOTH cases: a real repo → its path; no-repo chat →
+    // the no-repo sandbox. Never leave cwd undefined — the long-lived worker
+    // would otherwise default to a stale project (see noRepoCwdRef). Falls back
+    // to undefined only if the one-time fetch hasn't resolved yet, in which case
+    // the core-side stdio worker still defaults to noRepoDir() (defense #2).
     if (activeRepo) opts.cwd = activeRepo.path;
+    else if (noRepoCwdRef.current) opts.cwd = noRepoCwdRef.current;
     // Goal mode: this send's prompt IS the goal — the engine runs
     // loop-until-done. Goal text == prompt text (reuses the composer input).
     // Persistent goal (CC /goal): the toggle means "make THIS message a goal".

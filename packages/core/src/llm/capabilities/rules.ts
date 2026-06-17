@@ -46,6 +46,10 @@ export const RULES: ReadonlyArray<CapabilityRule> = [
         kind: "openai-effort",
         disabledEffort: "none",
         supportedEfforts: ["low", "medium", "high", "xhigh"], // no "minimal"; adds "xhigh"
+        // gpt-5.5 400s when `reasoning_effort` rides alongside `tools` on
+        // /v1/chat/completions — drop the field up-front on tool turns instead
+        // of eating the 400 + 1s-backoff retry on every tool-using turn.
+        noEffortWithTools: true,
       },
       echoReasoning: "optional",
       // 400s on `max_tokens is too large: ... at most 128000`. Clamp here so a

@@ -303,6 +303,16 @@ export class OpenAIClient extends LLMClientBase {
     // when the setting says "thinking on" but carries no explicit effort
     // ({mode:"on"}).
     const reasoningBody: Record<string, unknown> = {};
+    // gpt-5.5+ 400s when `reasoning_effort` rides alongside `tools` on
+    // /v1/chat/completions. If the capability flags that combo AND this request
+    // carries tools, suppress the field up-front (same effect as the reactive
+    // _dropReasoningEffort sticky, but BEFORE the first failed request — so we
+    // never burn a 400 + 1s-backoff retry on every tool-using turn).
+    const suppressEffort =
+      this._dropReasoningEffort ||
+      (cap.reasoning.kind === "openai-effort" &&
+        cap.reasoning.noEffortWithTools === true &&
+        !!tools?.length);
     if (reasoning && reasoning.mode !== "off") {
       switch (cap.reasoning.kind) {
         case "deepseek-thinking":
@@ -315,10 +325,11 @@ export class OpenAIClient extends LLMClientBase {
           // Mistral magistral, Groq reasoning models — `reasoning_effort`.
           // Send the user's real level; {mode:"on"} (no level) → "medium".
           //
-          // Skip entirely once the endpoint has told us `reasoning_effort` is
-          // incompatible with `tools` here (see _dropReasoningEffort) — sending
-          // it again would just re-trigger the same 400.
-          if (!this._dropReasoningEffort) {
+          // Skip when the endpoint has told us (reactive _dropReasoningEffort)
+          // OR the capability tells us up-front (noEffortWithTools) that
+          // `reasoning_effort` is incompatible with `tools` here — sending it
+          // would just trigger the "use /v1/responses" 400.
+          if (!suppressEffort) {
             reasoningBody.reasoning_effort =
               reasoning.mode === "effort" ? reasoning.effort : "medium";
           }
@@ -343,8 +354,9 @@ export class OpenAIClient extends LLMClientBase {
           break;
         case "openai-effort":
           // The capability's `disabledEffort` (defaults "minimal"; xAI "low",
-          // Mistral "none"). Skip if the endpoint already rejected the field.
-          if (!this._dropReasoningEffort) {
+          // Mistral "none"). Skip if the endpoint already rejected the field
+          // OR the capability says it's incompatible with tools here.
+          if (!suppressEffort) {
             reasoningBody.reasoning_effort = cap.reasoning.disabledEffort ?? "minimal";
           }
           break;
