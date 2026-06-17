@@ -1,6 +1,7 @@
 /**
- * Dev orchestrator — runs three concurrent things:
+ * Dev orchestrator — runs four concurrent things:
  *
+ *   0. @cjhyy/code-shell-core: built once up-front, then `tsc --watch`
  *   1. vite dev server on http://localhost:5273 (renderer with HMR)
  *   2. esbuild watch on src/main/index.ts → out/main/index.cjs
  *   3. esbuild watch on src/preload/index.ts → out/preload/index.cjs
@@ -10,18 +11,29 @@
  * changes we restart electron (preload changes require renderer reload
  * — done via vite HMR client refresh on preload).
  *
- * Intentionally no concurrently/chokidar dep — esbuild's watch API and
- * vite's programmatic API give us everything.
+ * core is bundled as `external` by main's esbuild, so the bundle imports
+ * core's *built* dist at runtime. We build core once before launching
+ * (otherwise a stale dist from an old build crashes main on an import the
+ * source has since added/renamed — the classic EXTRACT_LINK_CAP failure),
+ * then watch core's dist and restart electron when it rebuilds.
+ *
+ * Intentionally no concurrently/chokidar dep — esbuild's watch API,
+ * vite's programmatic API, and node fs.watch give us everything.
  */
 
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
 import esbuild from "esbuild";
+import { watch } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const cwd = dirname(fileURLToPath(import.meta.url));
 const root = resolve(cwd, "..");
+// repo root (…/codeshell): packages/desktop/scripts → desktop → packages → root
+const repoRoot = resolve(root, "..", "..");
+const coreDir = resolve(repoRoot, "packages/core");
+const coreDist = resolve(coreDir, "dist/index.js");
 
 const VITE_PORT = 5273;
 const VITE_URL = `http://localhost:${VITE_PORT}`;
@@ -86,7 +98,50 @@ function spawnElectron(): void {
   electronProc.on("exit", (code) => {
     // eslint-disable-next-line no-console
     console.log(`[dev] electron exited (${code}); quitting orchestrator`);
+    coreWatchProc?.kill("SIGTERM");
     process.exit(code ?? 0);
+  });
+}
+
+let coreWatchProc: ChildProcess | null = null;
+
+/**
+ * Build core once (synchronously, so a stale dist never reaches main), then
+ * start `core dev` (tsc --watch) and restart electron whenever core's dist
+ * is rewritten. Returns after the initial build so the rest of the
+ * orchestrator only ever sees fresh core output.
+ */
+function startCoreWatch(): void {
+  // eslint-disable-next-line no-console
+  console.log("[dev] building @cjhyy/code-shell-core (once)…");
+  const built = spawnSync("bun", ["run", "build"], {
+    cwd: coreDir,
+    stdio: "inherit",
+  });
+  if (built.status !== 0) {
+    // eslint-disable-next-line no-console
+    console.error("[dev] core build failed; aborting");
+    process.exit(built.status ?? 1);
+  }
+
+  // tsc --watch keeps dist in sync with core source edits.
+  coreWatchProc = spawn("bun", ["run", "dev"], {
+    cwd: coreDir,
+    stdio: "inherit",
+  });
+
+  // core is `external` in main's bundle → main imports the built dist at
+  // runtime. A dist rewrite means electron must reload it; restart it.
+  // Debounced because tsc emits many files per recompile.
+  let restartTimer: ReturnType<typeof setTimeout> | null = null;
+  watch(resolve(coreDir, "dist"), { recursive: true }, () => {
+    if (!electronProc) return; // not launched yet — initial build handles it
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => {
+      // eslint-disable-next-line no-console
+      console.log("[dev] core rebuilt → restarting electron");
+      spawnElectron();
+    }, 150);
   });
 }
 
@@ -161,6 +216,7 @@ async function buildAndWatch(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  startCoreWatch();
   await startVite();
   await startMobileVite();
   await buildAndWatch();

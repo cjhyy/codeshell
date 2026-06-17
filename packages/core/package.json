@@ -21,7 +21,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/prompt/sections dist/data && cp src/prompt/sections/*.md dist/prompt/sections/ && cp src/data/*.json dist/data/",
+    "build": "tsc -p tsconfig.json && bun run copy-assets",
+    "copy-assets": "mkdir -p dist/prompt/sections dist/data && cp src/prompt/sections/*.md dist/prompt/sections/ && cp src/data/*.json dist/data/",
+    "dev": "bun run copy-assets && tsc -p tsconfig.json --watch --preserveWatchOutput",
     "clean": "rm -rf dist"
   },
   "dependencies": {
