@@ -47,6 +47,16 @@ const automationSessionListeners: Array<
   (meta: { sessionId: string; cwd: string; title: string; prompt: string; cronJobId: string }) => void
 > = [];
 
+// Browser automation may need to OPEN the panel before it can drive it (the
+// agent asked to use the browser but no panel/tab is open yet). Main sends
+// `browser:open-url`; we re-dispatch the renderer's existing `codeshell:open-url`
+// window event, which opens the dock + browser panel and navigates to the URL —
+// the same path a clicked chat link uses. did-attach-webview then registers the
+// guest so the automation host has a target.
+ipcRenderer.on("browser:open-url", (_e: IpcRendererEvent, payload: { url?: string }) => {
+  window.dispatchEvent(new CustomEvent("codeshell:open-url", { detail: { url: payload?.url } }));
+});
+
 ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
   let msg: Record<string, unknown>;
   try {

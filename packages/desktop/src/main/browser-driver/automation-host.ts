@@ -72,6 +72,13 @@ export interface AutomationDeps {
   /** Ask the user to approve a sensitive/off-whitelist action. Resolves true to
    *  proceed. Undefined → no approver wired → sensitive actions are refused. */
   approve?: (summary: string) => Promise<boolean>;
+  /**
+   * Open the browser panel (and optionally navigate to `url`) when no guest is
+   * active yet, then resolve once a guest attaches (or reject/false on timeout).
+   * Lets the agent START browsing without the user manually opening the panel.
+   * Undefined → cannot auto-open (older host) → "no active panel" error as before.
+   */
+  openPanel?: (url?: string) => Promise<boolean>;
 }
 
 /**
@@ -83,9 +90,27 @@ export async function handleBrowserAction(
   req: BrowserActionRequest,
   deps: AutomationDeps,
 ): Promise<string> {
-  const guest = deps.activeGuest();
+  let guest = deps.activeGuest();
   if (!guest || guest.isDestroyed()) {
-    return JSON.stringify({ ok: false, detail: "no active browser panel/tab" });
+    // No panel/tab yet — try to auto-open it (so the agent can start browsing
+    // without the user manually opening the panel). For a navigate we pass the
+    // target URL so the panel lands there directly; other actions open a blank
+    // panel the agent can then navigate.
+    if (deps.openPanel) {
+      const opened = await deps.openPanel(req.action === "navigate" ? req.url : undefined).catch(() => false);
+      if (opened) guest = deps.activeGuest();
+    }
+    if (!guest || guest.isDestroyed()) {
+      return JSON.stringify({
+        ok: false,
+        detail: "no active browser panel — open the browser panel in the desktop app (or use browser_navigate to open one)",
+      });
+    }
+    // If we just opened the panel via a navigate, the URL is already loading;
+    // skip the redundant navigate below by returning early on success.
+    if (req.action === "navigate") {
+      return JSON.stringify({ ok: true, detail: "opened browser panel and navigated" });
+    }
   }
 
   const policy = deps.policy();

@@ -313,6 +313,7 @@ export class AgentBridge {
           // the user did set one, blocking an off-list host is the intended
           // behavior. An interactive per-action approval dialog is a follow-up.
           approve: async () => true,
+          openPanel: (url) => this.openBrowserPanel(url),
         });
       } catch (e) {
         resultJson = JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });
@@ -323,6 +324,29 @@ export class AgentBridge {
       }
     })();
     return true;
+  }
+
+  /**
+   * Open the in-app browser panel (and navigate to `url` if given) on behalf of
+   * the agent when no panel/tab is open yet, then wait for the <webview> guest
+   * to attach. Sends `browser:open-url` to the first live window (the renderer
+   * re-dispatches it as the same `codeshell:open-url` event a clicked chat link
+   * uses → opens dock + browser panel + navigates). Polls activeGuest() until a
+   * guest registers (did-attach-webview) or a ~6s timeout. Returns whether a
+   * guest became available.
+   */
+  private async openBrowserPanel(url?: string): Promise<boolean> {
+    const win = [...this.windows].find((w) => !w.isDestroyed());
+    if (!win) return false;
+    // A blank panel needs *some* URL to attach a <webview>; default to about:blank.
+    win.webContents.send("browser:open-url", { url: url ?? "about:blank" });
+    const deadline = Date.now() + 6000;
+    while (Date.now() < deadline) {
+      const g = activeGuest();
+      if (g && !g.isDestroyed()) return true;
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    return !!activeGuest();
   }
 
   /**

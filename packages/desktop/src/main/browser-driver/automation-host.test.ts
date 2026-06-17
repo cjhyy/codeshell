@@ -50,10 +50,46 @@ function deps(over: Partial<AutomationDeps> = {}): AutomationDeps {
 }
 
 describe("handleBrowserAction", () => {
-  test("no active guest → safe error", async () => {
+  test("no active guest, no openPanel → safe error", async () => {
     const out = await handleBrowserAction({ action: "snapshot" }, deps({ activeGuest: () => null }));
     expect(JSON.parse(out)).toMatchObject({ ok: false });
     expect(out).toContain("no active browser");
+  });
+
+  test("no guest but openPanel succeeds → auto-opens panel then proceeds", async () => {
+    let opened = false;
+    const guest = fakeGuest({ cdp: { "Accessibility.getFullAXTree": () => AX } });
+    const out = await handleBrowserAction(
+      { action: "snapshot" },
+      deps({
+        activeGuest: () => (opened ? guest : null), // null until openPanel runs
+        openPanel: async () => {
+          opened = true;
+          return true;
+        },
+      }),
+    );
+    const r = JSON.parse(out);
+    expect(r.elements).toHaveLength(2); // snapshot ran after auto-open
+  });
+
+  test("navigate with no guest → opens panel at the URL, returns ok early", async () => {
+    let opened = false;
+    const guest = fakeGuest({});
+    let openedUrl: string | undefined;
+    const out = await handleBrowserAction(
+      { action: "navigate", url: "https://www.xiaohongshu.com/" },
+      deps({
+        activeGuest: () => (opened ? guest : null),
+        openPanel: async (u) => {
+          opened = true;
+          openedUrl = u;
+          return true;
+        },
+      }),
+    );
+    expect(JSON.parse(out)).toMatchObject({ ok: true });
+    expect(openedUrl).toBe("https://www.xiaohongshu.com/"); // panel opened at target
   });
 
   test("snapshot drives the guest and returns elements", async () => {

@@ -50,7 +50,9 @@ export async function browserSnapshotTool(_args: Record<string, unknown>, ctx?: 
 
 export const browserNavigateToolDef: ToolDefinition = {
   name: "browser_navigate",
-  description: "Navigate the browser panel to a URL. Follow with browser_snapshot to see the page.",
+  description:
+    "Navigate the browser panel to a URL (opens the panel automatically if none " +
+    "is open). Then call browser_wait + browser_snapshot to see the page.",
   inputSchema: {
     type: "object",
     properties: { url: { type: "string", description: "Absolute URL to open" } },
