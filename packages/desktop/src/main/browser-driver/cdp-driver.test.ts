@@ -183,3 +183,44 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressEnter", () => {
     expect(calls.some((c) => c.method === "Input.dispatchKeyEvent")).toBe(true);
   });
 });
+
+describe("CdpBrowserDriver.extractLinks", () => {
+  test("runs in-page JS via Runtime.evaluate, returns links/images + url/title", async () => {
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({
+        result: {
+          value: {
+            links: [{ text: "笔记", url: "https://xhs.com/p/1" }],
+            images: [{ url: "https://cdn.xhs.com/a.jpg", alt: "封面" }],
+            truncated: false,
+          },
+        },
+      }),
+    });
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://xhs.com/explore", title: "发现" }));
+    const r = await d.extractLinks();
+    expect(r.ok).toBe(true);
+    expect(r.url).toBe("https://xhs.com/explore");
+    expect(r.title).toBe("发现");
+    expect(r.links).toEqual([{ text: "笔记", url: "https://xhs.com/p/1" }]);
+    expect(r.images).toEqual([{ url: "https://cdn.xhs.com/a.jpg", alt: "封面" }]);
+    // It used Runtime.evaluate with returnByValue (one DOM pass, not the a11y tree).
+    const ev = calls.find((c) => c.method === "Runtime.evaluate");
+    expect(ev?.params?.returnByValue).toBe(true);
+    expect(String(ev?.params?.expression)).toContain("a[href]");
+  });
+
+  test("CDP error → ok:false with detail, never throws", async () => {
+    const { send } = fakeCdp({
+      "Runtime.evaluate": () => {
+        throw new Error("eval blew up");
+      },
+    });
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
+    const r = await d.extractLinks();
+    expect(r.ok).toBe(false);
+    expect(r.detail).toContain("eval blew up");
+    expect(r.links).toEqual([]);
+    expect(r.images).toEqual([]);
+  });
+});

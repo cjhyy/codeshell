@@ -6,6 +6,7 @@ import {
   browserNavigateTool,
   browserScrollTool,
   browserReadContentTool,
+  browserExtractLinksTool,
   browserWaitTool,
   browserPressEnterTool,
   isBrowserAutomationAvailable,
@@ -27,6 +28,7 @@ describe("browser tools — no bridge (headless / no panel)", () => {
       await browserNavigateTool({ url: "https://x.com" }, ctx),
       await browserScrollTool({ direction: "down" }, ctx),
       await browserReadContentTool({}, ctx),
+      await browserExtractLinksTool({}, ctx),
       await browserWaitTool({}, ctx),
       await browserPressEnterTool({}, ctx),
     ]) {
@@ -108,6 +110,42 @@ describe("browser_read_content / wait / press_enter", () => {
   test("read_content error surfaces detail", async () => {
     const ctx = ctxWith({ readContent: async () => ({ ok: false, url: "x", text: "", detail: "no body" }) });
     expect(await browserReadContentTool({}, ctx)).toContain("no body");
+  });
+
+  test("extract_links renders links + images with url/title, flags truncation", async () => {
+    const ctx = ctxWith({
+      extractLinks: async () => ({
+        ok: true,
+        url: "https://xhs.com/explore",
+        title: "发现",
+        links: [
+          { text: "探店笔记", url: "https://xhs.com/p/1" },
+          { text: "", url: "https://xhs.com/p/2" },
+        ],
+        images: [{ url: "https://cdn.xhs.com/a.jpg", alt: "封面" }],
+        truncated: true,
+      }),
+    });
+    const out = await browserExtractLinksTool({}, ctx);
+    expect(out).toContain("URL: https://xhs.com/explore");
+    expect(out).toContain("探店笔记 → https://xhs.com/p/1");
+    expect(out).toContain("https://xhs.com/p/2"); // empty-text link still listed
+    expect(out).toContain("封面 → https://cdn.xhs.com/a.jpg");
+    expect(out).toContain("truncated");
+  });
+
+  test("extract_links empty page → (none); error surfaces detail", async () => {
+    const empty = await browserExtractLinksTool(
+      {},
+      ctxWith({ extractLinks: async () => ({ ok: true, url: "u", links: [], images: [] }) }),
+    );
+    expect(empty).toContain("Links: (none)");
+    expect(empty).toContain("Images: (none)");
+    const err = await browserExtractLinksTool(
+      {},
+      ctxWith({ extractLinks: async () => ({ ok: false, url: "u", links: [], images: [], detail: "boom" }) }),
+    );
+    expect(err).toContain("boom");
   });
 
   test("wait returns ready", async () => {

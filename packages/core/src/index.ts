@@ -781,12 +781,22 @@ export type {
 // browser-driver module implements BrowserBridge on top of webContents.debugger
 // (CDP), reusing flattenAxTree. See the MVP spec
 // docs/superpowers/specs/2026-06-16-browser-automation-mvp.md.
-export { flattenAxTree, renderElementList, cleanPageText, CONTENT_CHAR_CAP } from "./tool-system/browser-bridge.js";
+export {
+  flattenAxTree,
+  renderElementList,
+  cleanPageText,
+  CONTENT_CHAR_CAP,
+  buildExtractLinksScript,
+  EXTRACT_LINK_CAP,
+} from "./tool-system/browser-bridge.js";
 export type {
   BrowserBridge,
   BrowserElement,
   BrowserSnapshot,
   BrowserResult,
   BrowserContent,
+  BrowserExtract,
+  BrowserLink,
+  BrowserImage,
   AXNode,
 } from "./tool-system/browser-bridge.js";

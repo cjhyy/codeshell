@@ -17,10 +17,15 @@
 import {
   flattenAxTree,
   cleanPageText,
+  buildExtractLinksScript,
+  EXTRACT_LINK_CAP,
   type BrowserBridge,
   type BrowserSnapshot,
   type BrowserResult,
   type BrowserContent,
+  type BrowserExtract,
+  type BrowserLink,
+  type BrowserImage,
   type AXNode,
 } from "@cjhyy/code-shell-core";
 
@@ -136,6 +141,30 @@ export class CdpBrowserDriver implements BrowserBridge {
       return { ok: true, url: info.url, title: info.title, text, truncated };
     } catch (e) {
       return { ok: false, url: info.url, title: info.title, text: "", detail: errMsg(e) };
+    }
+  }
+
+  async extractLinks(): Promise<BrowserExtract> {
+    const info = await this.pageInfo();
+    try {
+      // One Runtime.evaluate over the DOM: .href/.src are already absolute
+      // (resolved against the page base). The a11y snapshot omits these; this
+      // is the explicit "give me the actual URLs" path.
+      const res = (await this.send("Runtime.evaluate", {
+        expression: buildExtractLinksScript(EXTRACT_LINK_CAP),
+        returnByValue: true,
+      })) as { result?: { value?: { links?: BrowserLink[]; images?: BrowserImage[]; truncated?: boolean } } };
+      const v = res.result?.value;
+      return {
+        ok: true,
+        url: info.url,
+        title: info.title,
+        links: v?.links ?? [],
+        images: v?.images ?? [],
+        truncated: v?.truncated ?? false,
+      };
+    } catch (e) {
+      return { ok: false, url: info.url, title: info.title, links: [], images: [], detail: errMsg(e) };
     }
   }
 

@@ -53,7 +53,7 @@ export function releaseGuest(id: number): void {
 
 /** The action shape the worker sends (args of the __browser_action__ request). */
 export interface BrowserActionRequest {
-  action: "snapshot" | "click" | "type" | "navigate" | "scroll" | "readContent" | "waitForLoad" | "pressEnter";
+  action: "snapshot" | "click" | "type" | "navigate" | "scroll" | "readContent" | "extractLinks" | "waitForLoad" | "pressEnter";
   ref?: string;
   text?: string;
   url?: string;
@@ -153,6 +153,9 @@ export async function handleBrowserAction(
         break;
       case "readContent":
         result = await driver.readContent();
+        break;
+      case "extractLinks":
+        result = await driver.extractLinks();
         break;
       case "waitForLoad":
         result = await driver.waitForLoad(req.timeoutMs);

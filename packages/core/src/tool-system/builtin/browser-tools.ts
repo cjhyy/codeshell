@@ -171,6 +171,37 @@ export async function browserReadContentTool(_args: Record<string, unknown>, ctx
   return `${head}\n\n${c.text || "(no readable text)"}`;
 }
 
+// ---- browser_extract_links --------------------------------------------------
+
+export const browserExtractLinksToolDef: ToolDefinition = {
+  name: "browser_extract_links",
+  description:
+    "Extract the actual URLs on the current page: hyperlink targets (a href) and " +
+    "image sources (img src). browser_snapshot deliberately omits href/src for " +
+    "token economy — use THIS when you need the real addresses, e.g. to collect " +
+    "article/post links, or to find a video/image URL to hand to a downloader " +
+    "(yt-dlp/curl) via Bash. Returns deduped absolute URLs (capped; narrow the " +
+    "page and re-extract if truncated).",
+  inputSchema: { type: "object", properties: {} },
+};
+
+export async function browserExtractLinksTool(_args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+  const b = bridge(ctx);
+  if (!b) return NO_BROWSER;
+  const r = await b.extractLinks();
+  if (!r.ok) return `Error: ${r.detail ?? "could not extract links"}`;
+  const head = `URL: ${r.url}${r.title ? `\nTitle: ${r.title}` : ""}${r.truncated ? "\n(truncated — page had more; narrow it and re-extract)" : ""}`;
+  const links =
+    r.links.length > 0
+      ? "Links:\n" + r.links.map((l) => `- ${l.text ? `${l.text} → ` : ""}${l.url}`).join("\n")
+      : "Links: (none)";
+  const images =
+    r.images.length > 0
+      ? "Images:\n" + r.images.map((im) => `- ${im.alt ? `${im.alt} → ` : ""}${im.url}`).join("\n")
+      : "Images: (none)";
+  return `${head}\n\n${links}\n\n${images}`;
+}
+
 // ---- browser_wait -----------------------------------------------------------
 
 export const browserWaitToolDef: ToolDefinition = {

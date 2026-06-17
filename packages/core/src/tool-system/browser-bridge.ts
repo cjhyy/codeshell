@@ -57,6 +57,39 @@ export interface BrowserContent {
   detail?: string;
 }
 
+/** One hyperlink extracted from the page (a[href]). */
+export interface BrowserLink {
+  /** Visible link text (trimmed, may be empty for icon-only links). */
+  text: string;
+  /** Absolute URL (href resolved against the page). */
+  url: string;
+}
+
+/** One image extracted from the page (img[src]). */
+export interface BrowserImage {
+  /** Absolute image URL (src resolved against the page). */
+  url: string;
+  /** alt text if present (helps the agent know what the image is). */
+  alt?: string;
+}
+
+/**
+ * Result of extracting the page's link/image URLs (扒链接/图片地址).
+ * The a11y snapshot deliberately omits href/src (token economy); this is the
+ * explicit opt-in for "I need the actual URLs" — e.g. collect article links,
+ * find a video/image source to hand to yt-dlp/curl.
+ */
+export interface BrowserExtract {
+  ok: boolean;
+  url: string;
+  title?: string;
+  links: BrowserLink[];
+  images: BrowserImage[];
+  /** True if either list was capped (page had more) — narrow the page first. */
+  truncated?: boolean;
+  detail?: string;
+}
+
 export interface BrowserBridge {
   snapshot(): Promise<BrowserSnapshot>;
   click(ref: string): Promise<BrowserResult>;
@@ -65,6 +98,8 @@ export interface BrowserBridge {
   scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult>;
   /** Read the page's main readable text content (for summarizing / extraction). */
   readContent(): Promise<BrowserContent>;
+  /** Extract the page's hyperlink + image URLs (href/src the a11y tree omits). */
+  extractLinks(): Promise<BrowserExtract>;
   /** Wait until the page finishes loading (or a timeout). */
   waitForLoad(timeoutMs?: number): Promise<BrowserResult>;
   /** Press Enter on the focused element / a given ref (submit a search box). */
@@ -171,6 +206,48 @@ export function flattenAxTree(nodes: AXNode[]): {
 /** Default cap for extracted page text (chars) — keeps content within a sane
  *  token budget; the agent can scroll + re-read for more. */
 export const CONTENT_CHAR_CAP = 12_000;
+
+/** Cap for extracted links/images per call — keeps the result token-bounded;
+ *  a busy page can have thousands of <a>/<img>. The agent narrows the page
+ *  (navigate/scroll) and re-extracts for more. */
+export const EXTRACT_LINK_CAP = 200;
+
+/**
+ * In-page JS (string) that collects deduped, absolute link + image URLs and
+ * returns them as a JSON-serializable object. Run via CDP Runtime.evaluate with
+ * returnByValue. Kept here (not in the renderer) so the extraction contract is
+ * defined alongside its types and is unit-testable. `cap` bounds each list;
+ * `truncated` is set when either hit the cap.
+ *
+ * - Links: <a href> with a real navigable href (skips javascript:/empty/#-only).
+ * - Images: <img src> (skips empty/data: noise beyond a length sanity bound is
+ *   left to the page; data URLs are dropped — they're inline, not fetchable URLs).
+ * - URLs are absolute (the DOM's .href/.src already resolve against the base).
+ */
+export function buildExtractLinksScript(cap = EXTRACT_LINK_CAP): string {
+  return `(function(){
+    var cap=${cap};
+    var links=[],images=[],lt=false,it=false,seenL={},seenI={};
+    var as=document.querySelectorAll('a[href]');
+    for(var i=0;i<as.length;i++){
+      var a=as[i],u=a.href;
+      if(!u||u.indexOf('javascript:')===0||u==='#'||u.charAt(u.length-1)==='#'&&u.indexOf('#')===u.length-1)continue;
+      if(seenL[u])continue;seenL[u]=1;
+      if(links.length>=cap){lt=true;break;}
+      links.push({text:(a.textContent||'').trim().slice(0,200),url:u});
+    }
+    var ims=document.querySelectorAll('img[src]');
+    for(var j=0;j<ims.length;j++){
+      var im=ims[j],s=im.src;
+      if(!s||s.indexOf('data:')===0)continue;
+      if(seenI[s])continue;seenI[s]=1;
+      if(images.length>=cap){it=true;break;}
+      var o={url:s};var alt=(im.getAttribute('alt')||'').trim();if(alt)o.alt=alt.slice(0,200);
+      images.push(o);
+    }
+    return {links:links,images:images,truncated:lt||it};
+  })()`;
+}
 
 /**
  * Pure: normalize raw extracted page text — collapse runs of whitespace/blank

@@ -1531,6 +1531,7 @@ export class AgentServer {
       navigate: (url) => call("navigate", { url }),
       scroll: (dir, amount) => call("scroll", { dir, amount }),
       readContent: () => call("readContent", {}),
+      extractLinks: () => call("extractLinks", {}),
       waitForLoad: (timeoutMs) => call("waitForLoad", { timeoutMs }),
       pressEnter: (ref) => call("pressEnter", { ref }),
     };
