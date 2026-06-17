@@ -11,6 +11,7 @@ import {
   Wifi,
   GitBranch,
   Terminal,
+  ShieldCheck,
   Archive,
   Puzzle,
   Bot,
@@ -59,6 +60,7 @@ type ModuleId =
   | "connections"
   | "git"
   | "environment"
+  | "sandbox"
   | "conversation"
   | "mobile-remote"
   | "archived"
@@ -116,6 +118,7 @@ function buildModuleGroups(t: TFunction): ModuleGroup[] {
         { id: "connections", label: t("settingsX.page.connections"), Icon: Wifi },
         { id: "git", label: "Git", Icon: GitBranch },
         { id: "environment", label: t("settingsX.page.environment"), Icon: Terminal },
+        { id: "sandbox", label: t("settingsX.page.sandbox"), Icon: ShieldCheck },
         { id: "conversation", label: t("settingsX.page.conversation"), Icon: MessageSquare },
         { id: "mobile-remote", label: t("settingsX.page.mobileRemote"), Icon: Smartphone },
       ],
@@ -262,12 +265,13 @@ export function SettingsPage({
               <GitSection />
             )}
             {active === "environment" && (
-              // Local environment is project-scoped (setup/cleanup/env). Sandbox
-              // is now a separate, global-or-project section below it.
-              <>
-                <EnvironmentSection repos={repos} />
-                <SandboxSection repos={repos} />
-              </>
+              // Local environment is project-scoped (setup/cleanup/env).
+              <EnvironmentSection repos={repos} />
+            )}
+            {active === "sandbox" && (
+              // Sandbox (isolation + network) is its own tab — global default
+              // plus per-project overrides via the drill-in picker.
+              <SandboxSection repos={repos} />
             )}
             {active === "conversation" && <ConversationSettingsSection />}
             {active === "mobile-remote" && <MobileRemoteSection />}

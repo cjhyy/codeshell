@@ -36,6 +36,14 @@ export interface SandboxBackend {
   /** Resolved backend name — "off" means no sandboxing. */
   name: "off" | "seatbelt" | "bwrap";
   /**
+   * Network policy that applied for this run. Not part of the backend's
+   * isolation mechanism — the Engine stamps it onto the resolved backend
+   * (it owns the resolved SandboxConfig) so tools can surface "网络 deny"
+   * on their result without threading the whole config through ToolContext.
+   * Absent on "off" (no policy enforced).
+   */
+  network?: SandboxNetworkPolicy;
+  /**
    * Decide the binary + argv that should actually be spawned to run `command`
    * under this sandbox. The shell still interprets `command`; we only swap
    * the outer process.

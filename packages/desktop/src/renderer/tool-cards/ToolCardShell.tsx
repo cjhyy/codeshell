@@ -10,6 +10,8 @@ interface Props {
   summary: React.ReactNode;
   /** Optional rich detail when the card is expanded inline. */
   details?: React.ReactNode;
+  /** Optional chip rendered on the head row (e.g. sandbox status). */
+  headerBadge?: React.ReactNode;
   onSelect?: (m: ToolMessage) => void;
   selected?: boolean;
   /**
@@ -24,6 +26,7 @@ export function ToolCardShell({
   message,
   summary,
   details,
+  headerBadge,
   onSelect,
   selected,
   turnEpoch,
@@ -63,6 +66,7 @@ export function ToolCardShell({
         <StatusDot status={status} title={message.status} />
         <span className="font-medium">{message.toolName}</span>
         <span className="min-w-0 flex-1 truncate text-muted-foreground">{summary}</span>
+        {headerBadge}
         {duration && <span className="shrink-0 text-xs text-muted-foreground">{duration}</span>}
         {message.status === "failed" && (
           <span className="shrink-0 rounded border border-status-err/40 px-1.5 text-xs text-status-err">error</span>

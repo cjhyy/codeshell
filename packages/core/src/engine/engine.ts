@@ -1289,7 +1289,14 @@ export class Engine {
       ...this.buildToolContext(),
       subAgentSpawner,
       agentDefinitions: this.getAgentDefinitions(cwd),
-      sandbox: sandboxBackend,
+      // Stamp the resolved network policy onto the backend the tools see so
+      // Bash can surface "网络 deny" on its result. Shallow-copy (don't mutate
+      // the cached backend) — `wrap`/`hintForBlockedOutput` are plain function
+      // properties and survive the spread. Off keeps network undefined.
+      sandbox:
+        sandboxBackend.name === "off"
+          ? sandboxBackend
+          : { ...sandboxBackend, network: sandboxConfig.network },
       cwd,
       // TodoWrite reads this to push task_update events independently
       // of its return value, so the UI's pinned task panel refreshes

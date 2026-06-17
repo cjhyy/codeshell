@@ -13,13 +13,17 @@ function ctx(extra: Partial<ToolContext>): ToolContext {
   return { cwd: process.cwd(), ...extra } as ToolContext;
 }
 
+function text(out: string | { result: string }): string {
+  return typeof out === "string" ? out : out.result;
+}
+
 describe("Bash honors ctx.shellEnv (localEnvironment.env)", () => {
   test("off backend: project env var is visible to the command", async () => {
     const out = await bashTool(
       { command: "echo env=$CODESHELL_TEST_VAR" },
       ctx({ sandbox: createOffBackend(), shellEnv: { CODESHELL_TEST_VAR: "hello-off" } }),
     );
-    expect(out).toContain("env=hello-off");
+    expect(text(out)).toContain("env=hello-off");
   });
 
   test("no shellEnv: var is empty (zero regression for projects without env)", async () => {
@@ -27,8 +31,8 @@ describe("Bash honors ctx.shellEnv (localEnvironment.env)", () => {
       { command: "echo env=$CODESHELL_TEST_VAR" },
       ctx({ sandbox: createOffBackend() }),
     );
-    expect(out).toContain("env=");
-    expect(out).not.toContain("hello");
+    expect(text(out)).toContain("env=");
+    expect(text(out)).not.toContain("hello");
   });
 
   test("project env can override an inherited value", async () => {
@@ -36,6 +40,23 @@ describe("Bash honors ctx.shellEnv (localEnvironment.env)", () => {
       { command: "echo node=$NODE_ENV" },
       ctx({ sandbox: createOffBackend(), shellEnv: { NODE_ENV: "production" } }),
     );
-    expect(out).toContain("node=production");
+    expect(text(out)).toContain("node=production");
+  });
+
+  test("off backend: result carries sandbox mark { backend: 'off' } (UI 显示未隔离)", async () => {
+    const out = await bashTool({ command: "echo hi" }, ctx({ sandbox: createOffBackend() }));
+    if (typeof out === "string") throw new Error("expected object return");
+    expect(out.sandbox).toEqual({ backend: "off" });
+  });
+
+  test("backend with network: result carries { backend, network } (UI 显示隔离+网络)", async () => {
+    const fakeBackend = {
+      name: "seatbelt" as const,
+      network: "deny" as const,
+      wrap: (command: string, o: { cwd: string; shell: string }) => ({ file: o.shell, args: ["-c", command] }),
+    };
+    const out = await bashTool({ command: "echo hi" }, ctx({ sandbox: fakeBackend }));
+    if (typeof out === "string") throw new Error("expected object return");
+    expect(out.sandbox).toEqual({ backend: "seatbelt", network: "deny" });
   });
 });

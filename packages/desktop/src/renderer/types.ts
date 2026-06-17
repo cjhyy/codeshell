@@ -64,6 +64,15 @@ export interface ToolMessage {
   durationMs?: number;
   /** Optional natural-language summary emitted via `tool_summary`. */
   summary?: string;
+  /**
+   * Sandbox info for tools that executed under it (Bash / background shell /
+   * worktree). `backend: "off"` is set explicitly so the card shows「未隔离」
+   * rather than nothing. Undefined for tools that don't touch the sandbox.
+   */
+  sandbox?: {
+    backend: "off" | "seatbelt" | "bwrap";
+    network?: "allow" | "deny";
+  };
 }
 
 export interface TaskListMessage {
@@ -516,6 +525,7 @@ export function applyStreamEvent(
           ...t,
           result: event.result.result,
           error: event.result.error,
+          sandbox: event.result.sandbox,
           status: failed ? "failed" : "succeeded",
           endedAt: end,
           durationMs: Math.max(0, end - t.startedAt),

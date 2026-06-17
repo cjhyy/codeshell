@@ -22,7 +22,15 @@ import { safeSpawnShell } from "../../runtime/safe-spawn.js";
 import { truncateHeadTail } from "../../runtime/truncate-output.js";
 import { buildSandboxEnv, mergeShellEnv, defaultShellBinary } from "../../runtime/spawn-common.js";
 import { backgroundShellManager } from "../../runtime/background-shell.js";
-import type { ToolDefinition } from "../../types.js";
+import type { ToolDefinition, ToolResult } from "../../types.js";
+import type { SandboxBackend } from "../sandbox/index.js";
+
+/** UI 标记:这次 Bash 走没走沙箱 + 网络策略。off 也带(显式标「未隔离」)。 */
+function sandboxMark(backend: SandboxBackend): NonNullable<ToolResult["sandbox"]> {
+  return backend.name === "off"
+    ? { backend: "off" }
+    : { backend: backend.name, network: backend.network };
+}
 
 export const bashToolDef: ToolDefinition = {
   name: "Bash",
@@ -71,7 +79,7 @@ const MAX_BUFFER = 10 * 1024 * 1024;
 export async function bashTool(
   args: Record<string, unknown>,
   ctx?: ToolContext,
-): Promise<string> {
+): Promise<string | { result: string; sandbox: ToolResult["sandbox"] }> {
   const command = args.command as string;
   if (!command) return "Error: command is required";
 
@@ -79,6 +87,10 @@ export async function bashTool(
   const cwd = ctx?.cwd ?? process.cwd();
   const shell = defaultShellBinary();
   const backend = ctx?.sandbox ?? createOffBackend();
+  const sandbox = sandboxMark(backend);
+  // Tag every textual return below with the sandbox mark so the UI badge
+  // shows up whether the command succeeded, failed, timed out, or aborted.
+  const mark = (result: string) => ({ result, sandbox });
   // Project localEnvironment.env (ctx.shellEnv) layers on top of either the
   // full passthrough (off) or the hardened allowlist (sandboxed) — see
   // mergeShellEnv. Background mode merges the same way inside the manager.
@@ -90,7 +102,7 @@ export async function bashTool(
   // blocked, and Engine.run's wait-for-background loop never waits on it
   // (§难点5: that loop only looks at asyncAgentRegistry).
   if (args.run_in_background === true) {
-    return runInBackground(command, ctx);
+    return mark(runInBackground(command, ctx));
   }
 
   // A6: lifecycle (spawn, kill cascade, IO drain, byte cap, abort/timeout)
@@ -111,13 +123,13 @@ export async function bashTool(
   });
 
   if (result.aborted) {
-    return wasAbortedBeforeStart ? "Bash aborted before starting." : "Bash aborted by signal.";
+    return mark(wasAbortedBeforeStart ? "Bash aborted before starting." : "Bash aborted by signal.");
   }
   if (result.timedOut) {
-    return `Command timed out after ${timeout}ms`;
+    return mark(`Command timed out after ${timeout}ms`);
   }
   if (result.spawnFailed) {
-    return `Failed to spawn command: ${result.error ?? "unknown error"}`;
+    return mark(`Failed to spawn command: ${result.error ?? "unknown error"}`);
   }
 
   let body = "";
@@ -149,7 +161,7 @@ export async function bashTool(
   const hint = backend.hintForBlockedOutput?.(result.stderr);
   if (hint) output += hint;
 
-  return output;
+  return mark(output);
 }
 
 /**

@@ -146,11 +146,17 @@ export class ToolRegistry {
       if (typeof result === "string") {
         return { id, toolName: name, result };
       }
+      // 结构化返回:图片块(view_image)或沙箱标记(Bash 等)。两者互斥,
+      // 各取所有,缺的字段为 undefined。
+      const contentBlocks =
+        "contentBlocks" in result ? result.contentBlocks : undefined;
+      const sandbox = "sandbox" in result ? result.sandbox : undefined;
       return {
         id,
         toolName: name,
-        result: result.result ?? "(image)",
-        contentBlocks: result.contentBlocks,
+        result: result.result ?? (contentBlocks ? "(image)" : ""),
+        contentBlocks,
+        sandbox,
       };
     } catch (err) {
       clearTimeout(timerId);

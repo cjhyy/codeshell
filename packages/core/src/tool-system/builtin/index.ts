@@ -79,11 +79,13 @@ import { CredentialStore } from "../../credentials/store.js";
  * 内置工具返回值:大多数返回纯文本字符串。需要回传图片(或其它结构化
  * 内容块)的工具(view_image)可改为返回 `{ contentBlocks }`;此时
  * registry 会把它放进 ToolResult.contentBlocks。可选的 `result` 字段是给
- * transcript / 摘要用的纯文本镜像。
+ * transcript / 摘要用的纯文本镜像。沙箱执行类工具(Bash 等)可返回
+ * `{ result, sandbox }`,registry 把 sandbox 透传到 ToolResult.sandbox 供 UI 显示。
  */
 export type BuiltinToolResult =
   | string
-  | { contentBlocks: import("../../types.js").ContentBlock[]; result?: string };
+  | { contentBlocks: import("../../types.js").ContentBlock[]; result?: string }
+  | { result: string; sandbox: import("../../types.js").ToolResult["sandbox"] };
 
 export type BuiltinToolFn = (
   args: Record<string, unknown>,

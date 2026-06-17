@@ -1,6 +1,7 @@
 import React from "react";
 import type { ToolMessage } from "../types";
 import { ToolCardShell } from "./ToolCardShell";
+import { SandboxBadge } from "./SandboxBadge";
 import { classifyBashLines, parsedArgs, truncate } from "./utils";
 
 interface Props {
@@ -73,6 +74,7 @@ export function BashToolCard({ message, onSelect, selected, turnEpoch }: Props) 
       message={message}
       summary={summary}
       details={details}
+      headerBadge={message.sandbox && <SandboxBadge sandbox={message.sandbox} />}
       onSelect={onSelect}
       selected={selected}
       turnEpoch={turnEpoch}

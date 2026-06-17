@@ -1,14 +1,17 @@
 /**
  * SandboxSection — sandbox (isolation + network) config, scoped global or per
- * project. Split out of the local-environment editor so it's decoupled from
- * env (which used to save sandbox together, mis-writing a default 'auto' the
- * user never chose). Model (see 2026-06-16-sandbox-scope-model-design.md):
+ * project. Drill-in IA (matches 本地环境/钩子/记忆/子代理): a list shows a
+ * 全局 row plus each project; selecting one opens its editor with a ← back
+ * button. Split out of the local-environment editor so it's decoupled from env
+ * (which used to save sandbox together, mis-writing a default 'auto' the user
+ * never chose). Model (see 2026-06-16-sandbox-scope-model-design.md):
  *   - global default = off (don't write sandbox = off).
  *   - project "跟随全局" = don't write the project's sandbox field.
  *   - project/global with a mode = that applies (engine resolves
  *     config > project > global > default).
  */
 import React, { useCallback, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { SimpleSelect as Select } from "@/components/ui/simple-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -35,12 +38,74 @@ function lines(s: string): string[] {
 
 export function SandboxSection({ repos }: { repos: Repo[] }) {
   const { t } = useT();
-  // selectedPath: null = global (user scope); a repo path = that project.
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const isGlobal = selectedPath === null;
-  const scope = isGlobal ? "user" : "project";
-  const cwd = isGlobal ? undefined : selectedPath;
+  // selectedPath: undefined = list view; null = global (user scope); a repo
+  // path = that project. Distinguishing undefined from null is what makes the
+  // 全局 row a real selection (drill-in) instead of the default.
+  const [selectedPath, setSelectedPath] = useState<string | null | undefined>(undefined);
+  const selectedRepo = selectedPath ? repos.find((r) => r.path === selectedPath) ?? null : null;
 
+  // List view: 全局 + per-project picker. Same shape as EnvironmentSection.
+  if (selectedPath === undefined) {
+    return (
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.sandbox.title")}</h3>
+          <p className="text-sm text-muted-foreground">{t("settingsX.sandbox.desc")}</p>
+        </div>
+        <ProjectPicker
+          repos={repos}
+          includeGlobal
+          globalHint={t("settingsX.sandbox.globalHint")}
+          onSelect={(path) => setSelectedPath(path)}
+        />
+      </section>
+    );
+  }
+
+  // Editor view: a chosen scope (全局 or a project). Keyed so switching scope
+  // remounts the editor and its form state reloads cleanly.
+  const isGlobal = selectedPath === null;
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-muted-foreground"
+          onClick={() => setSelectedPath(undefined)}
+        >
+          <ArrowLeft size={14} />
+          <span>{t("settingsX.sandbox.backToList")}</span>
+        </Button>
+        <span className="truncate text-sm font-medium text-foreground">
+          {isGlobal
+            ? t("settingsX.sandbox.scopeGlobal")
+            : selectedRepo
+              ? repoLabel(selectedRepo)
+              : selectedPath}
+        </span>
+      </div>
+      <SandboxEditor
+        key={selectedPath ?? "__global__"}
+        scope={isGlobal ? "user" : "project"}
+        cwd={isGlobal ? undefined : selectedPath}
+        isGlobal={isGlobal}
+      />
+    </section>
+  );
+}
+
+/** Editor for a single scope. Remounted per scope (key) so state is per-scope. */
+function SandboxEditor({
+  scope,
+  cwd,
+  isGlobal,
+}: {
+  scope: "user" | "project";
+  cwd: string | undefined;
+  isGlobal: boolean;
+}) {
+  const { t } = useT();
   const [mode, setMode] = useState<string>(isGlobal ? "off" : FOLLOW);
   const [network, setNetwork] = useState("allow");
   const [writableRoots, setWritableRoots] = useState("");
@@ -79,9 +144,9 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
     }
   };
 
-  const selectedRepo = repos.find((r) => r.path === selectedPath);
   const field = "flex flex-col gap-1.5";
   const hint = "mt-1 text-xs text-muted-foreground";
+  const showDetail = mode !== FOLLOW && mode !== "off";
   const modeOptions = [
     ...(isGlobal ? [] : [{ value: FOLLOW, label: t("settingsX.sandbox.follow"), description: t("settingsX.sandbox.followDesc") }]),
     { value: "off", label: "off", description: t("settingsX.sandbox.offDesc") },
@@ -91,33 +156,13 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
   ];
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.sandbox.title")}</h3>
-        <p className="text-sm text-muted-foreground">
-          {t("settingsX.sandbox.desc")}
-        </p>
-      </div>
-
-      <ProjectPicker
-        repos={repos}
-        includeGlobal
-        onSelect={(path) => setSelectedPath(path)}
-      />
-
-      <div className="rounded-md border border-border bg-muted/40 p-2 text-sm text-muted-foreground">
-        {t("settingsX.sandbox.editing")}
-        {isGlobal
-          ? t("settingsX.sandbox.editingGlobal")
-          : t("settingsX.sandbox.editingProject", { name: selectedRepo ? repoLabel(selectedRepo) : selectedPath ?? "" })}
-      </div>
-
+    <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4">
         <label className={field}>
           <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.mode")}</span>
           <Select value={mode} onChange={setMode} options={modeOptions} />
         </label>
-        {mode !== FOLLOW && mode !== "off" && (
+        {showDetail && (
           <label className={field}>
             <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.network")}</span>
             <Select
@@ -130,7 +175,7 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
             />
           </label>
         )}
-        {mode !== FOLLOW && mode !== "off" && (
+        {showDetail && (
           <>
             <label className={field}>
               <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.writableRoots")}</span>
@@ -164,6 +209,6 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
           </span>
         )}
       </div>
-    </section>
+    </div>
   );
 }

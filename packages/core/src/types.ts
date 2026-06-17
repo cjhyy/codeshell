@@ -61,6 +61,19 @@ export interface ToolResult {
   contentBlocks?: ContentBlock[];
   error?: string;
   isError?: boolean;
+  /**
+   * Set by tools that execute under the sandbox (Bash / background shell /
+   * worktree) so the UI can show whether THIS call was isolated. `backend`
+   * "off" means the command ran un-sandboxed (we surface it explicitly so the
+   * user sees "未隔离" rather than guessing from an absent badge); "seatbelt"
+   * / "bwrap" mean OS-level isolation applied. `network` is the policy that
+   * was in force (absent when off). Tools that don't touch the sandbox leave
+   * this undefined and the UI renders no badge.
+   */
+  sandbox?: {
+    backend: "off" | "seatbelt" | "bwrap";
+    network?: "allow" | "deny";
+  };
 }
 
 export type ToolSource = "builtin" | "mcp";

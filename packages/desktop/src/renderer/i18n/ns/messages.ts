@@ -110,6 +110,16 @@ export const messagesNs = {
       tool: {
         openWith: "打开方式",
       },
+      // sandbox badge on shell tool cards
+      sandbox: {
+        off: "未隔离",
+        offTitle: "本次命令未经过沙箱(未隔离),可访问整个系统",
+        onTitle: "本次命令在沙箱中执行:{backend}{network}",
+        net: {
+          allow: "网络放行",
+          deny: "网络禁止",
+        },
+      },
       // message timestamp prefix
       time: {
         yesterday: "昨天 {clock}",
@@ -216,6 +226,15 @@ export const messagesNs = {
       },
       tool: {
         openWith: "Open with",
+      },
+      sandbox: {
+        off: "unsandboxed",
+        offTitle: "This command ran outside the sandbox — full system access",
+        onTitle: "Ran in sandbox: {backend}{network}",
+        net: {
+          allow: "network on",
+          deny: "network off",
+        },
       },
       time: {
         yesterday: "Yesterday {clock}",

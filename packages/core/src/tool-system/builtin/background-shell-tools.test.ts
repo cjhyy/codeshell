@@ -9,6 +9,10 @@ import {
   listShellsTool,
 } from "./background-shell-tools.js";
 import { bashTool } from "./bash.js";
+
+function text(out: string | { result: string }): string {
+  return typeof out === "string" ? out : out.result;
+}
 import type { ToolContext } from "../context.js";
 import { notificationQueue } from "./agent-notifications.js";
 
@@ -50,22 +54,22 @@ describe("Bash run_in_background", () => {
       { command: "sleep 100", run_in_background: true },
       ctx(),
     );
-    expect(typeof out).toBe("string");
-    expect(out as string).toContain("shell_id:");
-    expect(out as string).toMatch(/bg_/);
+    expect(text(out)).toBeTypeOf("string");
+    expect(text(out)).toContain("shell_id:");
+    expect(text(out)).toMatch(/bg_/);
     expect(mgr.listForSession("sessA")).toHaveLength(1);
   });
 
   test("automation context rejects run_in_background", async () => {
     const c = { ...ctx(), allowBackgroundShells: false } as unknown as ToolContext;
     const out = await bashTool({ command: "sleep 100", run_in_background: true }, c);
-    expect(out as string).toMatch(/not available|disabled|automation/i);
+    expect(text(out)).toMatch(/not available|disabled|automation/i);
     expect(mgr.listForSession("sessA")).toHaveLength(0);
   });
 
   test("normal foreground bash still works (no run_in_background)", async () => {
     const out = await bashTool({ command: "echo hello" }, ctx());
-    expect(out as string).toContain("hello");
+    expect(text(out)).toContain("hello");
   });
 });
 
@@ -75,20 +79,20 @@ describe("BashOutput tool", () => {
     if (!r.ok) throw new Error("spawn");
     await until(() => (mgr.readOutputRaw(r.shellId) ?? "").includes("hi"));
     const out = await bashOutputTool({ shell_id: r.shellId }, ctx());
-    expect(out as string).toContain("hi");
-    expect(out as string).toContain(r.shellId);
+    expect(text(out)).toContain("hi");
+    expect(text(out)).toContain(r.shellId);
   });
 
   test("unknown shell_id → error string", async () => {
     const out = await bashOutputTool({ shell_id: "bg_none" }, ctx());
-    expect(out as string).toMatch(/Unknown shell_id/);
+    expect(text(out)).toMatch(/Unknown shell_id/);
   });
 
   test("cross-session shell_id is not readable", async () => {
     const r = mgr.spawnBackground({ command: "sleep 1", cwd: home, sessionId: "other" });
     if (!r.ok) throw new Error("spawn");
     const out = await bashOutputTool({ shell_id: r.shellId }, ctx("sessA"));
-    expect(out as string).toMatch(/Unknown shell_id/);
+    expect(text(out)).toMatch(/Unknown shell_id/);
   });
 });
 
@@ -97,7 +101,7 @@ describe("KillShell tool", () => {
     const r = mgr.spawnBackground({ command: "sleep 100", cwd: home, sessionId: "sessA" });
     if (!r.ok) throw new Error("spawn");
     const out = await killShellTool({ shell_id: r.shellId }, ctx());
-    expect(out as string).toMatch(/killed|terminated|already/i);
+    expect(text(out)).toMatch(/killed|terminated|already/i);
     await until(() => mgr.get(r.shellId)?.status === "killed");
   });
 });
@@ -112,12 +116,12 @@ describe("ListShells tool", () => {
     if (!r.ok) throw new Error("spawn");
     await until(() => mgr.get(r.shellId)?.detectedPort === 3000);
     const out = await listShellsTool({}, ctx());
-    expect(out as string).toContain(r.shellId);
-    expect(out as string).toContain("3000");
+    expect(text(out)).toContain(r.shellId);
+    expect(text(out)).toContain("3000");
   });
 
   test("empty when no shells", async () => {
     const out = await listShellsTool({}, ctx());
-    expect(out as string).toMatch(/no background shells|none/i);
+    expect(text(out)).toMatch(/no background shells|none/i);
   });
 });

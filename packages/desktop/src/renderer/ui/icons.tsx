@@ -15,6 +15,8 @@ export {
   Settings,
   ListChecks,
   ShieldAlert,
+  ShieldCheck,
+  ShieldOff,
   Activity,
   Plug,
   ScrollText,
