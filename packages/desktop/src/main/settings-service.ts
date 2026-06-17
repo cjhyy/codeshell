@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { randomUUID } from "node:crypto";
+import { lock } from "@cjhyy/code-shell-core";
 
 export type SettingsScope = "user" | "project";
 
@@ -55,11 +56,30 @@ export async function readSettings(
   }
 }
 
-// Per-path serialization: writeSettings is a read-modify-write, so concurrent
-// settings:set calls (rapid toggle flips, or set racing a worker write) would
-// otherwise lose updates or interleave temp files. Chain writes for the same
-// file behind a promise so each one reads the previous one's result.
+// Concurrency for writeSettings (a read-modify-write) is guarded at TWO levels:
+//
+//   1. writeChains — per-path promise chain. Serializes writes WITHIN this
+//      process (rapid toggle flips, multiple BrowserWindows of one Electron
+//      main). Cheap, in-memory; also means same-process writes never contend
+//      for the OS lock below.
+//
+//   2. lock(dir) — cross-process advisory file lock (proper-lockfile, the same
+//      one CronStore uses for cron.json). This is what stops the agent WORKER
+//      process — or a second Electron instance — from doing its own RMW between
+//      our read and our rename and silently dropping our update. The lock is on
+//      the .code-shell DIRECTORY (it always exists after mkdir; settings.json
+//      may not), matching CronStore.
+//
+// Advisory = only writers that take this lock are mutually exclusive, so
+// writeSettings MUST be the only path that writes settings.json. Do not bypass.
 const writeChains = new Map<string, Promise<void>>();
+
+// stale: a holder that crashes (kill -9 / power loss) must not wedge writes
+// forever; 10s ≫ any real settings write, so it won't be falsely reclaimed.
+// retries: settings writes want "don't lose my change" over "fail fast", so
+// wait through a brief contention window with backoff rather than erroring.
+const LOCK_STALE_MS = 10_000;
+const LOCK_RETRIES = { retries: 10, factor: 1.5, minTimeout: 20, maxTimeout: 500 };
 
 export async function writeSettings(
   scope: SettingsScope,
@@ -73,14 +93,19 @@ export async function writeSettings(
   const next = prev.catch(() => {}).then(async () => {
     const dir = path.dirname(p);
     await fs.mkdir(dir, { recursive: true });
-    const current = (await readSettings(scope, cwd)) ?? {};
-    const merged = deepMerge(current, patch);
-    // Unique temp name so a concurrent writer for the same file (e.g. the
-    // worker process) can't clobber our half-written temp and produce corrupt
-    // JSON after rename.
-    const tmp = p + "." + randomUUID() + ".tmp";
-    await fs.writeFile(tmp, JSON.stringify(merged, null, 2) + "\n", "utf8");
-    await fs.rename(tmp, p);
+    // Cross-process lock around the whole RMW. Lock the dir, not the file.
+    const release = await lock(dir, { stale: LOCK_STALE_MS, retries: LOCK_RETRIES });
+    try {
+      const current = (await readSettings(scope, cwd)) ?? {};
+      const merged = deepMerge(current, patch);
+      // Unique temp name so a concurrent writer for the same file can't clobber
+      // our half-written temp and produce corrupt JSON after rename.
+      const tmp = p + "." + randomUUID() + ".tmp";
+      await fs.writeFile(tmp, JSON.stringify(merged, null, 2) + "\n", "utf8");
+      await fs.rename(tmp, p);
+    } finally {
+      await release();
+    }
   });
   writeChains.set(p, next);
   try {
