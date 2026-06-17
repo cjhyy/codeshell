@@ -3,6 +3,13 @@ import { MarketDetail } from "./MarketDetail";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
 
@@ -247,27 +254,34 @@ export function MarketList({ cwd, onInstalled }: Props) {
               </Badge>
             )}
             <span className="text-xs text-muted-foreground">{m.source.source}</span>
-            <button
-              className="px-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
-              title={t("ext.market.refreshTip")}
-              disabled={refreshing.has(m.name)}
-              onClick={(e) => {
-                e.stopPropagation();
-                void refresh(m.name);
-              }}
-            >
-              <span className={refreshing.has(m.name) ? "inline-block animate-spin" : ""}>↻</span>
-            </button>
-            <button
-              className="px-1 text-muted-foreground hover:text-foreground"
-              title={t("ext.market.removeTip")}
-              onClick={(e) => {
-                e.stopPropagation();
-                void remove(m.name);
-              }}
-            >
-              ⋯
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="px-1 text-muted-foreground hover:text-foreground"
+                  title={t("ext.market.actionsTip")}
+                  // The row itself opens the detail on click — keep the menu
+                  // trigger from bubbling so opening the menu doesn't navigate.
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className={refreshing.has(m.name) ? "inline-block animate-spin" : ""}>⋯</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem
+                  disabled={refreshing.has(m.name)}
+                  onSelect={() => void refresh(m.name)}
+                >
+                  {t("ext.market.refreshAction")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-status-err focus:text-status-err"
+                  onSelect={() => void remove(m.name)}
+                >
+                  {t("ext.market.removeAction")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span className="text-muted-foreground">›</span>
           </li>
         ))}
