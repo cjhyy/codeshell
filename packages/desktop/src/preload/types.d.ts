@@ -680,6 +680,8 @@ export interface CodeshellApi {
   addMarketplace(input: string): Promise<{ ok: boolean; name?: string; error?: string }>;
   /** Remove a marketplace by name. Returns true if it existed. */
   removeMarketplace(name: string): Promise<boolean>;
+  /** Re-pull a known marketplace from its source (git fetch + reset). */
+  refreshMarketplace(name: string): Promise<{ ok: boolean; error?: string }>;
   /** Install a plugin from a marketplace. */
   installPlugin(
     pluginName: string,

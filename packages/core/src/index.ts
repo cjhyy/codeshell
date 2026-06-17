@@ -700,6 +700,7 @@ export {
 } from "./plugins/pluginInstaller.js";
 export {
   addMarketplace,
+  refreshMarketplace,
   removeMarketplace,
   listMarketplaces,
   loadMarketplace,

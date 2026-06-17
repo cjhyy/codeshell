@@ -50,6 +50,9 @@ export function MarketList({ cwd, onInstalled }: Props) {
   const alert = useAlert();
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  // Marketplaces currently being re-pulled (git fetch) — disables their refresh
+  // button + shows a spinner so a slow clone doesn't look stuck.
+  const [refreshing, setRefreshing] = useState<Set<string>>(new Set());
   // Marketplace install shells out to git; probe up front so we can warn before
   // the user hits a clone failure. null = not yet checked.
   const [gitOk, setGitOk] = useState<boolean | null>(null);
@@ -121,6 +124,26 @@ export function MarketList({ cwd, onInstalled }: Props) {
       retry();
     } catch (e) {
       void alert({ title: t("ext.market.removeFailedTitle"), message: String((e as Error)?.message ?? e) });
+    }
+  };
+
+  const refresh = async (name: string) => {
+    setRefreshing((prev) => new Set(prev).add(name));
+    try {
+      const res = await window.codeshell.refreshMarketplace(name);
+      if (!res.ok) {
+        void alert({ title: t("ext.market.refreshFailedTitle"), message: res.error ?? t("ext.market.unknownError") });
+        return;
+      }
+      retry(); // re-read the (now-updated) manifest
+    } catch (e) {
+      void alert({ title: t("ext.market.refreshFailedTitle"), message: String((e as Error)?.message ?? e) });
+    } finally {
+      setRefreshing((prev) => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
     }
   };
 
@@ -224,6 +247,17 @@ export function MarketList({ cwd, onInstalled }: Props) {
               </Badge>
             )}
             <span className="text-xs text-muted-foreground">{m.source.source}</span>
+            <button
+              className="px-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+              title={t("ext.market.refreshTip")}
+              disabled={refreshing.has(m.name)}
+              onClick={(e) => {
+                e.stopPropagation();
+                void refresh(m.name);
+              }}
+            >
+              <span className={refreshing.has(m.name) ? "inline-block animate-spin" : ""}>↻</span>
+            </button>
             <button
               className="px-1 text-muted-foreground hover:text-foreground"
               title={t("ext.market.removeTip")}

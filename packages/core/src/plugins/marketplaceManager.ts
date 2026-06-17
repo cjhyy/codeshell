@@ -150,6 +150,21 @@ export async function addMarketplace(
 }
 
 /**
+ * Refreshes a known marketplace: re-pulls its source so the cached
+ * marketplace.json reflects upstream (new plugins, version bumps). Reuses
+ * addMarketplace's same-source path (git fetch + reset). Returns an error if
+ * the marketplace isn't known.
+ */
+export async function refreshMarketplace(name: string): Promise<AddMarketplaceResult> {
+  const known = readKnownMarketplaces();
+  const entry = known[name];
+  if (!entry) {
+    return { ok: false, error: `Unknown marketplace: ${name}` };
+  }
+  return addMarketplace(name, entry.source);
+}
+
+/**
  * Removes a marketplace: deletes the cached clone and the manifest entry.
  * Returns whether anything was actually removed.
  */

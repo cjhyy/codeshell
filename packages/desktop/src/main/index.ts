@@ -129,6 +129,7 @@ import {
   loadMarketplaceForUi,
   addMarketplaceFromInput,
   removeMarketplaceForUi,
+  refreshMarketplaceForUi,
   installPluginForUi,
 } from "./marketplace-service.js";
 import {
@@ -1133,6 +1134,9 @@ ipcMain.handle("marketplace:add", async (_e, input: string) =>
 );
 ipcMain.handle("marketplace:remove", async (_e, name: string) =>
   removeMarketplaceForUi(name),
+);
+ipcMain.handle("marketplace:refresh", async (_e, name: string) =>
+  refreshMarketplaceForUi(name),
 );
 ipcMain.handle(
   "plugins:install",

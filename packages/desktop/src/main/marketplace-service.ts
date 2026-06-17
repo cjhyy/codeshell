@@ -19,6 +19,7 @@ import {
   listMarketplaces,
   loadMarketplace,
   addMarketplace,
+  refreshMarketplace,
   removeMarketplace,
   installPlugin,
   parseMarketplaceInput,
@@ -126,6 +127,18 @@ export function removeMarketplaceForUi(name: string): boolean {
     throw new Error("removeMarketplaceForUi requires name");
   }
   return removeMarketplace(name);
+}
+
+/** Re-pull a known marketplace from its source (git fetch + reset). */
+export async function refreshMarketplaceForUi(
+  name: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (typeof name !== "string" || !name) {
+    throw new Error("refreshMarketplaceForUi requires name");
+  }
+  const res = await refreshMarketplace(name);
+  if (res.ok) return { ok: true };
+  return { ok: false, error: humanizeGitError(res.error) };
 }
 
 export async function installPluginForUi(

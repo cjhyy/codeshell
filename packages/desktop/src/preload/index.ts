@@ -500,6 +500,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   loadMarketplace: (name: string) => ipcRenderer.invoke("marketplace:load", name),
   addMarketplace: (input: string) => ipcRenderer.invoke("marketplace:add", input),
   removeMarketplace: (name: string) => ipcRenderer.invoke("marketplace:remove", name),
+  refreshMarketplace: (name: string): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke("marketplace:refresh", name),
   installPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:install", pluginName, marketplaceName),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),

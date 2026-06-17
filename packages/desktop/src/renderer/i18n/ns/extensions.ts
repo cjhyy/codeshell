@@ -42,6 +42,8 @@ export const extensions = {
         removeLabel: "移除",
         removeFailedTitle: "移除失败",
         removeTip: "移除市场",
+        refreshTip: "刷新市场(拉取上游最新)",
+        refreshFailedTitle: "刷新失败",
         gitMissingBold: "未检测到 Git。",
         gitMissingPrefix: "安装/更新插件市场需要 Git。请从 ",
         gitMissingSuffix:
@@ -229,6 +231,8 @@ export const extensions = {
         removeLabel: "Remove",
         removeFailedTitle: "Failed to remove",
         removeTip: "Remove marketplace",
+        refreshTip: "Refresh marketplace (pull latest from upstream)",
+        refreshFailedTitle: "Failed to refresh",
         gitMissingBold: "Git not detected.",
         gitMissingPrefix: "Installing/updating plugin marketplaces requires Git. Install it from ",
         gitMissingSuffix:
