@@ -154,22 +154,24 @@ export class AgentServer {
     // B2.2 — forward background sub-agent completion events through the
     // protocol so Desktop / SDK / remote AgentClients see them too. The
     // bus is fed from `NotificationQueue.enqueue`, so this single
-    // subscription covers every enqueue site (today: only agent.ts). The
-    // bus now guarantees a real sessionId (no more legacy-bucket coercion
-    // to ""), so we forward whatever sid it hands us.
+    // subscription covers every enqueue site — background sub-agents
+    // (agent.ts), background shells (background-shell.ts), and video/job
+    // polls (background-jobs.ts). The bus now guarantees a real sessionId
+    // (no more legacy-bucket coercion to ""), so we forward whatever sid it
+    // hands us.
     this.bgAgentBusUnsubscribe = agentNotificationBus.subscribe((sessionId, event) => {
       this.notify(Methods.StreamEvent, { sessionId, event });
       // Background work that finishes while the session is IDLE (a
-      // run_in_background Bash like a download — the engine already resolved
-      // `engine.done`, so its wait-loop never parks on it) would otherwise leave
-      // its completion sitting in the queue until the user manually sends. Wake
-      // the session with one run carrying the notification so the model reads
-      // "download complete" and continues on its own (the persisted goal is
-      // judged that turn). Background sub-agents don't trip this: they keep the
-      // engine parked in the wait-loop, so the session is still busy here and
-      // the idle guard skips them — their results drain at the run boundary as
-      // before. A never-exiting dev server emits no completion, so it never
-      // wakes anything (no task/service classification needed).
+      // run_in_background Bash like a download, a background sub-agent, or a
+      // video poll — the engine no longer parks on any of them) would otherwise
+      // leave its completion sitting in the queue until the user manually sends.
+      // Wake the session with one run carrying the notification so the model
+      // reads "download complete" and continues on its own (the persisted goal
+      // is judged that turn). If the work finishes while a run is still in
+      // flight, the idle guard below skips it and the run-boundary re-check
+      // (trigger B) drains it at end-of-turn instead. A never-exiting dev server
+      // emits no completion, so it never wakes anything (no task/service
+      // classification needed).
       this.maybeWakeIdleSession(sessionId);
     });
 
@@ -194,6 +196,17 @@ export class AgentServer {
    *   also merges a burst of near-simultaneous completions into one wakeup:
    *   the first drains all currently-pending items; subsequent bus events for
    *   the same session find it busy (or find an empty queue) and no-op.
+   *
+   * INVARIANT (the burst-merge correctness depends on it): the merge only
+   * holds because (a) the bus fans out to subscribers SYNCHRONOUSLY, and (b)
+   * `enqueueTurn` sets the session's `active` (→ isBusy()===true) SYNCHRONOUSLY
+   * before its first await. So when bus events #2..N arrive — still on the same
+   * synchronous fan-out as #1 — they already see the session as busy and no-op.
+   * If either path is ever made async (e.g. an await is added inside
+   * enqueueTurn before `active` is set, or the bus starts deferring delivery),
+   * this degrades into N concurrent wakeups for N completions. Keep both
+   * synchronous, or replace this comment's assumption with an explicit
+   * "wakeup in flight" guard flag.
    */
   private maybeWakeIdleSession(sessionId: string): void {
     if (!this.chatManager) return;

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw, Square, Terminal } from "lucide-react";
 import type { BackgroundShellInfo } from "../../preload/types";
 
@@ -12,6 +12,12 @@ import type { BackgroundShellInfo } from "../../preload/types";
 export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }) {
   const [shells, setShells] = useState<BackgroundShellInfo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  // Mirror of `selected` for the poll tick, so reading the current selection
+  // doesn't force the interval to re-arm on every selection change.
+  const selectedRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
   const [output, setOutput] = useState<{ header: string; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,26 +53,56 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
     }
   }, [sessionId]);
 
-  // Initial load + light poll while any shell is running (cheap list call).
+  // Always load once on mount / session change.
   useEffect(() => {
     void refresh();
-    const t = setInterval(() => void refresh(), 3000);
-    return () => clearInterval(t);
   }, [refresh]);
 
-  const viewOutput = async (shellId: string) => {
-    if (!sessionId) return;
+  const fetchOutput = useCallback(
+    async (shellId: string, withSpinner: boolean) => {
+      if (!sessionId) return;
+      if (withSpinner) setLoading(true);
+      try {
+        const res = await window.codeshell.backgroundShellOutput(sessionId, shellId);
+        setOutput(res);
+      } catch (e) {
+        // Only surface the error if the user explicitly opened it; a silent
+        // poll refresh shouldn't clobber a good view with an error string.
+        if (withSpinner) {
+          setOutput({ header: "", text: `读取输出失败：${String(e instanceof Error ? e.message : e)}` });
+        }
+      } finally {
+        if (withSpinner) setLoading(false);
+      }
+    },
+    [sessionId],
+  );
+
+  const viewOutput = (shellId: string) => {
     setSelected(shellId);
-    setLoading(true);
-    try {
-      const res = await window.codeshell.backgroundShellOutput(sessionId, shellId);
-      setOutput(res);
-    } catch (e) {
-      setOutput({ header: "", text: `读取输出失败：${String(e instanceof Error ? e.message : e)}` });
-    } finally {
-      setLoading(false);
-    }
+    void fetchOutput(shellId, true);
   };
+
+  const anyRunning = shells.some((s) => s.status === "running");
+
+  // Light 3s poll, but only while there's a running shell AND the tab is
+  // visible — a finished list never changes, and a hidden tab (PanelArea keeps
+  // all tabs mounted via CSS) shouldn't keep polling. A running shell with an
+  // open output view also gets its output re-pulled so live jobs (e.g. a
+  // download's progress bar) actually move instead of showing a frozen tail.
+  useEffect(() => {
+    if (!anyRunning) return;
+    const tick = (): void => {
+      if (document.visibilityState !== "visible") return;
+      void refresh();
+      const cur = selectedRef.current;
+      if (cur && shells.some((s) => s.shellId === cur && s.status === "running")) {
+        void fetchOutput(cur, false);
+      }
+    };
+    const t = setInterval(tick, 3000);
+    return () => clearInterval(t);
+  }, [anyRunning, refresh, fetchOutput, shells]);
 
   const kill = async (shellId: string) => {
     if (!sessionId) return;
@@ -135,6 +171,14 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                       :{s.detectedPort}
                     </span>
                   )}
+                  {s.totalBytes != null && s.totalBytes > 0 && (
+                    <span
+                      className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums"
+                      title="已产出输出量"
+                    >
+                      {formatBytes(s.totalBytes)}
+                    </span>
+                  )}
                   <span className="shrink-0 text-[10px] text-muted-foreground">
                     {s.status === "running"
                       ? "运行中"
@@ -179,6 +223,13 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
       )}
     </div>
   );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 function StatusDot({ status }: { status: BackgroundShellInfo["status"] }) {

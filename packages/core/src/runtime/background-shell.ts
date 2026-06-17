@@ -79,6 +79,10 @@ export interface BgShell {
   /** Absolute stream position (RingFile.totalWritten) already returned to the
    *  agent. Absolute — not window-relative — so it survives ring wraparound. */
   agentReadOffset: number;
+  /** Total bytes the shell has written so far (monotonic, survives ring
+   *  wraparound). Lets the UI show live progress for long jobs like downloads
+   *  ("↑ 1.1 GB") even though the panel doesn't parse the output itself. */
+  totalBytes: number;
   didWrap: boolean;
   diskAvailable: boolean;
 }
@@ -110,7 +114,9 @@ export type KillResult =
   | { ok: true; alreadyExited?: boolean; status: BgShellStatus }
   | { ok: false; error: string };
 
-interface InternalShell extends BgShell {
+// `totalBytes` is a derived public-snapshot field (computed from `ring` in
+// toPublic), so the internal record omits it rather than storing a stale copy.
+interface InternalShell extends Omit<BgShell, "totalBytes"> {
   child: ChildProcess | null;
   ring: RingFile;
   pidfilePath: string;
@@ -309,9 +315,15 @@ export class BackgroundShellManager {
     notificationQueue.enqueue(
       {
         agentId: sh.shellId,
-        name: "background shell",
+        // English description is the agent-facing wakeup text. The UI ignores
+        // it for the toast and uses workKind + command to build a localized
+        // label (see bgCompletionText in desktop renderer types.ts). No `name`
+        // so legacy UIs fall back to their own default rather than showing the
+        // English "background shell" brand string.
         description: `Background shell exited (${exitDesc}): ${sh.command}`,
         status: ok ? "completed" : "failed",
+        workKind: "shell",
+        command: sh.command,
         error: ok ? undefined : `Background shell ${sh.shellId} exited with ${exitDesc}. Use BashOutput("${sh.shellId}") to inspect.`,
         enqueuedAt: Date.now(),
       },
@@ -538,6 +550,7 @@ export class BackgroundShellManager {
       signal: s.signal,
       detectedPort: s.detectedPort,
       agentReadOffset: s.agentReadOffset,
+      totalBytes: s.ring.totalWritten(),
       didWrap: s.didWrap,
       diskAvailable: s.diskAvailable,
     };

@@ -427,6 +427,15 @@ export type StreamEvent =
       name?: string;
       description: string;
       status: "completed" | "failed";
+      /**
+       * What kind of background work this was. Lets UIs localize the
+       * completion toast (e.g. a shell shows "命令完成" not the raw English
+       * description, which is written for the agent's wakeup notification).
+       * Absent for legacy sub-agent notifications (treated as "agent").
+       */
+      workKind?: "agent" | "shell" | "video";
+      /** For workKind === "shell": the command that ran (for a friendly label). */
+      command?: string;
       /** Final assistant text (status === "completed" only). */
       finalText?: string;
       /** Error message (status === "failed" only). */

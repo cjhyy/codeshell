@@ -320,9 +320,20 @@ export function bgCompletionText(event: {
   name?: string;
   description: string;
   status: "completed" | "failed";
+  workKind?: "agent" | "shell" | "video";
+  command?: string;
   finalText?: string;
   error?: string;
 }): string {
+  // For background shells, the `description` is English wakeup text meant for
+  // the agent ("Background shell exited (exit 0): yt-dlp …"). Don't surface
+  // that raw in the toast — build a localized label from the command instead.
+  if (event.workKind === "shell") {
+    const label = event.command ? previewLine(event.command) : "后台命令";
+    return event.status === "completed"
+      ? `✓ 后台命令完成:${label}`
+      : `✗ 后台命令失败:${label}`;
+  }
   const who = event.name ?? "后台任务";
   if (event.status === "completed") {
     return `✓ ${who}完成:${previewLine(event.finalText ?? event.description)}`;

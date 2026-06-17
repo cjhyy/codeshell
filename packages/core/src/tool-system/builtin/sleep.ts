@@ -7,8 +7,9 @@ import type { ToolDefinition } from "../../types.js";
 export const sleepToolDef: ToolDefinition = {
   name: "Sleep",
   description:
-    "Pause execution for a specified number of seconds. " +
-    "Useful for polling workflows or waiting for external processes. " +
+    "Pause execution for a brief, deterministic wait (e.g. letting a just-started service settle for a few seconds). " +
+    "Do NOT use Sleep to poll for or wait on background work (background shells, async sub-agents, video generation): " +
+    "the system wakes you automatically when that work completes — just end your turn instead of looping Sleep. " +
     "Maximum duration is 300 seconds (5 minutes).",
   inputSchema: {
     type: "object",
