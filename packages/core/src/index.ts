@@ -427,6 +427,7 @@ export {
   type MigrationStep,
 } from "./settings/migrate-config.js";
 export { SettingsSchema, validateSettings } from "./settings/schema.js";
+export { settingsJsonSchema, writeSettingsSchemaFile } from "./settings/schema-export.js";
 export { personalizationFrom, type PersonalizationConfig } from "./settings/personalization.js";
 export {
   CredentialStore,

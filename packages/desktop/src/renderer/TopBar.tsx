@@ -5,6 +5,7 @@ import { PanelLeft, PanelRight } from "./ui/icons";
 import { StatusPopover } from "./topbar/StatusPopover";
 import type { LiveActivity } from "./topbar/liveActivity";
 import type { TaskListMessage } from "./types";
+import { useT } from "./i18n";
 
 interface Props {
   repoName: string | null;
@@ -54,6 +55,7 @@ function TopBarImpl({
   activeGoal,
   onClearGoal,
 }: Props) {
+  const { t } = useT();
   return (
     // The window is frameless on macOS (titleBarStyle: "hiddenInset"),
     // so the only thing that lets the user drag it is a
@@ -69,7 +71,7 @@ function TopBarImpl({
         <span className="w-[68px] shrink-0" aria-hidden="true" />
         <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <IconButton
-            label={sidebarCollapsed ? "展开侧栏" : "折叠侧栏"}
+            label={sidebarCollapsed ? t("topbar.expandSidebar") : t("topbar.collapseSidebar")}
             onClick={onToggleSidebar}
           >
             <PanelLeft size={14} />
@@ -91,7 +93,7 @@ function TopBarImpl({
         />
         <span style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <IconButton
-            label={panelOpen ? "关闭面板" : "打开面板"}
+            label={panelOpen ? t("topbar.closePanel") : t("topbar.openPanel")}
             onClick={onTogglePanel}
             active={panelOpen}
           >
@@ -122,6 +124,7 @@ function StatusBadge({
   activeGoal: { objective: string; round: number } | null;
   onClearGoal?: () => void;
 }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<number | null>(null);
   const cancelClose = (): void => {
@@ -155,7 +158,7 @@ function StatusBadge({
       <div className="flex items-center gap-1">
         {activeGoal && (
           // ◎ marker: an active persistent goal exists. Hover the dot to see it.
-          <span className="text-xs text-status-running" title="有活跃目标">◎</span>
+          <span className="text-xs text-status-running" title={t("topbar.hasActiveGoal")}>◎</span>
         )}
         <StatusDot
           status={busy ? "running" : "idle"}

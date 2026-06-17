@@ -23,6 +23,7 @@ import type { ViewMode } from "./view";
 import { repoLabel, sortRepos, type Repo } from "./repos";
 import { NO_REPO_KEY, bucketKey, type SessionIndex, type SessionSummary } from "./transcripts";
 import type { SessionStatus } from "./sessionStatus";
+import { useT } from "./i18n";
 
 interface SidebarProps {
   repos: Repo[];
@@ -94,6 +95,7 @@ export function Sidebar({
   activeRepoPath,
   viewMode,
 }: SidebarProps) {
+  const { t } = useT();
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const closeMenu = (): void => setMenu(null);
   const confirm = useConfirm();
@@ -108,48 +110,51 @@ export function Sidebar({
 
   const repoMenu = (repo: Repo): ContextMenuItem[] => [
     {
-      label: repo.pinned ? "取消置顶" : "置顶项目",
+      label: repo.pinned ? t("sidebar.unpinProject") : t("sidebar.pinProject"),
       onClick: () => onPinRepo(repo.id, !repo.pinned),
     },
     {
-      label: "在「访达」中打开",
+      label: t("sidebar.revealInFinder"),
       onClick: () => { void window.codeshell.revealInFinder(repo.path); },
     },
     {
-      label: "重命名项目…",
+      label: t("sidebar.renameProject"),
       onClick: () => {
         void prompt({
-          title: "重命名项目",
-          message: "项目显示名称",
+          title: t("sidebar.renameProjectTitle"),
+          message: t("sidebar.renameProjectMessage"),
           defaultValue: repoLabel(repo),
-        }).then((t) => {
-          if (t !== null && t.trim()) onRenameRepo(repo.id, t.trim());
+        }).then((next) => {
+          if (next !== null && next.trim()) onRenameRepo(repo.id, next.trim());
         });
       },
     },
     {
-      label: "归档对话",
+      label: t("sidebar.archiveConversations"),
       onClick: () => {
         const live = sessions[repo.id]?.sessions.filter((s) => !s.archived).length ?? 0;
         if (live === 0) return;
         void confirm({
-          title: "归档项目对话",
-          message: `归档「${truncateTitle(repoLabel(repo), 24)}」下所有 ${live} 条未归档会话？`,
-          confirmLabel: "归档",
+          title: t("sidebar.archiveConversationsTitle"),
+          message: t("sidebar.archiveConversationsMessage", {
+            name: truncateTitle(repoLabel(repo), 24),
+            count: live,
+          }),
+          confirmLabel: t("common.archive"),
         }).then((ok) => {
           if (ok) onArchiveAllSessions(repo.id);
         });
       },
     },
     {
-      label: "移除",
+      label: t("sidebar.removeProject"),
       danger: true,
       onClick: () => {
         void confirm({
-          title: "从侧栏移除项目",
-          message: `确定从侧栏移除「${truncateTitle(repoLabel(repo), 24)}」吗？`,
-          detail: "本地会话保留 — 重新添加同一目录可恢复。",
-          confirmLabel: "移除",
+          title: t("sidebar.removeProjectTitle"),
+          message: t("sidebar.removeProjectMessage", { name: truncateTitle(repoLabel(repo), 24) }),
+          detail: t("sidebar.removeProjectDetail"),
+          confirmLabel: t("common.remove"),
           destructive: true,
         }).then((ok) => {
           if (ok) onRemoveRepo(repo.id);
@@ -160,34 +165,34 @@ export function Sidebar({
 
   const sessionMenu = (repoId: string | null, s: SessionSummary): ContextMenuItem[] => [
     {
-      label: "重命名…",
+      label: t("sidebar.renameSession"),
       onClick: () => {
         void prompt({
-          title: "重命名会话",
-          message: "会话标题",
+          title: t("sidebar.renameSessionTitle"),
+          message: t("sidebar.renameSessionMessage"),
           defaultValue: s.title,
-        }).then((t) => {
-          if (t !== null && t.trim()) onRenameSession(repoId, s.id, t.trim());
+        }).then((next) => {
+          if (next !== null && next.trim()) onRenameSession(repoId, s.id, next.trim());
         });
       },
     },
     {
-      label: "复制 session ID",
+      label: t("sidebar.copySessionId"),
       onClick: () => {
         void navigator.clipboard.writeText(s.id);
       },
     },
     s.archived
-      ? { label: "恢复", onClick: () => onArchiveSession(repoId, s.id, false) }
-      : { label: "归档", onClick: () => onArchiveSession(repoId, s.id, true) },
+      ? { label: t("common.restore"), onClick: () => onArchiveSession(repoId, s.id, false) }
+      : { label: t("common.archive"), onClick: () => onArchiveSession(repoId, s.id, true) },
     {
-      label: "删除",
+      label: t("sidebar.deleteSession"),
       danger: true,
       onClick: () => {
         void confirm({
-          title: "删除会话",
-          message: `确定删除会话「${truncateTitle(s.title, 28)}」吗？`,
-          confirmLabel: "删除",
+          title: t("sidebar.deleteSessionTitle"),
+          message: t("sidebar.deleteSessionMessage", { name: truncateTitle(s.title, 28) }),
+          confirmLabel: t("common.delete"),
           destructive: true,
         }).then((ok) => {
           if (ok) onDeleteSession(repoId, s.id);
@@ -199,10 +204,10 @@ export function Sidebar({
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card/40">
       <nav className="flex flex-col gap-0.5 p-2">
-        <SidebarItem label="新对话" Icon={MessageSquare} onClick={onNewConversation} active={false} />
-        <SidebarItem label="搜索" Icon={Search} onClick={onOpenSearch} active={false} />
+        <SidebarItem label={t("sidebar.newConversation")} Icon={MessageSquare} onClick={onNewConversation} active={false} />
+        <SidebarItem label={t("sidebar.search")} Icon={Search} onClick={onOpenSearch} active={false} />
         <SidebarItem
-          label="扩展"
+          label={t("sidebar.extensions")}
           Icon={Blocks}
           onClick={onOpenCustomize}
           active={viewMode === "customize"}
@@ -212,13 +217,13 @@ export function Sidebar({
             the misplaced dot confused users. The per-session asking dot + the
             dock icon badge (setBadgeCount) already cover location + count. */}
         <SidebarItem
-          label="自动化"
+          label={t("sidebar.automation")}
           Icon={Workflow}
           onClick={onOpenAutomations}
           active={viewMode === "runs"}
         />
         <SidebarItem
-          label="凭证"
+          label={t("sidebar.credentials")}
           Icon={KeyRound}
           onClick={onOpenCredentials}
           active={viewMode === "credentials"}
@@ -227,13 +232,13 @@ export function Sidebar({
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between px-3 py-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">项目</span>
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("sidebar.projects")}</span>
           <button
             type="button"
             className="text-muted-foreground hover:text-foreground"
             onClick={onAddRepo}
-            aria-label="添加项目"
-            title="添加项目"
+            aria-label={t("sidebar.addProject")}
+            title={t("sidebar.addProject")}
           >
             <Plus size={16} strokeWidth={2.25} />
           </button>
@@ -241,7 +246,7 @@ export function Sidebar({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2">
           {orderedRepos.length === 0 && noRepoSessions.length === 0 && (
-            <div className="px-2 py-3 text-xs text-muted-foreground">点 + 添加你的第一个 repo</div>
+            <div className="px-2 py-3 text-xs text-muted-foreground">{t("sidebar.emptyHint")}</div>
           )}
           {orderedRepos.map((repo) => (
             <ProjectGroup
@@ -364,6 +369,7 @@ function ProjectGroup({
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
   onArchiveSession: (sid: string) => void;
 }) {
+  const { t } = useT();
   const [showMore, setShowMore] = useState(false);
 
   const all = index?.sessions ?? [];
@@ -394,12 +400,12 @@ function ProjectGroup({
           <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
         )}
         <span className="flex-1 truncate font-medium">{repoLabel(repo)}</span>
-        {repo.pinned && <span className="text-primary" title="已置顶">·</span>}
+        {repo.pinned && <span className="text-primary" title={t("sidebar.pinned")}>·</span>}
         <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
           <button
             className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
-            aria-label="更多"
-            title="更多"
+            aria-label={t("common.more")}
+            title={t("common.more")}
             onClick={(e) => {
               e.stopPropagation();
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -410,8 +416,8 @@ function ProjectGroup({
           </button>
           <button
             className="rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
-            aria-label={`在 ${repoLabel(repo)} 中开始新对话`}
-            title={`在 ${repoLabel(repo)} 中开始新对话`}
+            aria-label={t("sidebar.newChatIn", { name: repoLabel(repo) })}
+            title={t("sidebar.newChatIn", { name: repoLabel(repo) })}
             onClick={(e) => {
               e.stopPropagation();
               onNewChat();
@@ -444,7 +450,7 @@ function ProjectGroup({
                   className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-accent/60"
                   onClick={() => setShowMore(true)}
                 >
-                  <span>展开显示</span>
+                  <span>{t("common.expand")}</span>
                   <span className="text-muted-foreground">{hiddenLiveCount}</span>
                 </li>
               )}
@@ -476,10 +482,11 @@ function NoRepoSection({
   onSessionContextMenu: (e: React.MouseEvent, s: SessionSummary) => void;
   onArchiveSession: (sid: string) => void;
 }) {
+  const { t } = useT();
   if (sessions.length === 0) return null;
   return (
     <div className="mt-2">
-      <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">对话</div>
+      <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("sidebar.conversations")}</div>
       <ul className="space-y-0.5">
         {sessions.map((s) => (
           <SessionRow
@@ -518,6 +525,7 @@ function SessionRow({
   onContextMenu: (e: React.MouseEvent) => void;
   onArchive?: () => void;
 }) {
+  const { t } = useT();
   const [confirming, setConfirming] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -561,24 +569,24 @@ function SessionRow({
       title={s.title}
     >
       {s.source === "automation" && (
-        <Clock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label="自动化" />
+        <Clock className="h-3 w-3 shrink-0 text-muted-foreground" aria-label={t("sidebar.automationLabel")} />
       )}
       <span className="flex-1 truncate">{s.title}</span>
       {status === "running" ? (
         <Loader2
           className="h-3 w-3 shrink-0 animate-spin text-status-running"
-          aria-label="运行中"
+          aria-label={t("sidebar.sessionRunning")}
         />
       ) : status === "asking" ? (
         <span
           className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
-          aria-label="待输入"
+          aria-label={t("sidebar.sessionAsking")}
           role="img"
         />
       ) : status === "unread" ? (
         <span
           className="h-2 w-2 shrink-0 rounded-full bg-primary"
-          aria-label="未读"
+          aria-label={t("sidebar.sessionUnread")}
           role="img"
         />
       ) : null}
@@ -587,10 +595,10 @@ function SessionRow({
           <button
             className="rounded px-1.5 text-xs text-status-err hover:bg-background"
             onClick={fireArchive}
-            aria-label="确认归档"
-            title="确认归档"
+            aria-label={t("sidebar.confirmArchive")}
+            title={t("sidebar.confirmArchive")}
           >
-            确认
+            {t("common.confirm")}
           </button>
         ) : (
           <>
@@ -607,8 +615,8 @@ function SessionRow({
               <button
                 className="absolute right-0 rounded bg-accent p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100"
                 onClick={armConfirm}
-                aria-label="归档"
-                title="归档"
+                aria-label={t("common.archive")}
+                title={t("common.archive")}
               >
                 <Archive size={12} />
               </button>
