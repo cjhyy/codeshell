@@ -27,7 +27,7 @@
 - ✅ **配置系统：YAML 支持 / JSON Schema 生成 / 配置迁移**（2026-06-17 完成）：YAML 读(写仍 JSON)+`schema-export.ts`(`zod-to-json-schema`)+迁移机制核实早已存在。详见 P4。
 - ✅ **压缩阈值可配**（核实 2026-06-17 已完成,非进行中）：三 ratio 早已进 settings.context.*。详见 P3。
 - ✅ **路径策略 block 接入权限系统**（核实 2026-06-17 已完成）：四分支(本次/拒绝/本会话/本项目)全有,10 例测试。详见 P0。
-- 🔧 **desktop 多语言 i18n**（2026-06-17 基础设施+核心 chrome 完成）：自建轻量 i18n(零新依赖)+TopBar/Sidebar/General 接入;留后=其余~1050 处文案增量搬迁+mobile。详见 P2。
+- ✅ **desktop 多语言 i18n**（2026-06-17 全量完成 ~94%）：自建轻量 i18n(零新依赖,8 区域命名空间)+~950 处文案抽进字典+~80 组件接 useT();留后=真漏网~5 处展示标签+"新对话"哨兵常量化+mobile(149 处)。详见 P2。
 - 🔧 长时段断网的会话级重连（瞬时错误已被 withRetry 覆盖）→ P1
 
 **需人盯 / 多天 / Roadmap：**
@@ -67,13 +67,14 @@
 
 ## P2 — 交互体验与工作流效率
 
-### 🔧 desktop 多语言 i18n（中/英）— 2026-06-17 基础设施 + 核心 chrome 完成
+### ✅ desktop 多语言 i18n（中/英）— 2026-06-17 全量完成（~94%）
 
 自建轻量 i18n（**不引 react-i18next**，遵 desktop thin-client/最小依赖约定）。复用已有 `uiLanguage.ts`（localStorage `codeshell.uiLanguage` + `codeshell:language-changed` 事件）。
 
-- [x] 基础设施：`renderer/i18n/`——`dict.ts`（嵌套 `{zh,en}`,zh 为事实源,en partial 缺项自动回退;从 zh 推导 type-safe `TranslationKey`）/`translate.ts`（纯函数:命中→回退zh→回退key本身+`{name}`插值,8 测试）/`I18nProvider.tsx`（Context+`useT()`,监听语言事件重渲染）/`index.ts`。`main.tsx` 套最外层。
-- [x] 核心 chrome 接入（53 key×2 语言）：`TopBar`（侧栏/面板/活跃目标）、`Sidebar`（导航/分组头/右键菜单/会话状态/对话框）、`settings/GeneralSection`（语言区块）。
-- [ ] **留后(增量)**：其余 ~1050 处散落文案逐步搬进 `dict.ts` 并改 `t()`；mobile(149 处,独立 app)单独接同套 i18n；宿主接线 `writeSettingsSchemaFile` 顺带可在启动写 schema。
+- [x] 基础设施：`renderer/i18n/`——`translate.ts`（纯函数:命中→回退zh→回退key本身+`{name}`插值）/`I18nProvider.tsx`（`useT()`,监听语言事件重渲染）。字典拆 `i18n/ns/*.ts` 按区域命名空间(core/chat/msg/panels/settingsX/ext/auto/misc),`dict.ts` 浅 spread 聚合,`TranslationKey` 从合并 zh 树推导(type-safe)。`main.tsx` 套最外层。
+- [x] 全量文案：~950 处硬编码中文抽进字典(zh+en),~80 组件接 `useT()`,纯 .ts 模块用 `translate(loadUILanguage(),key)` 兜底。tsc 0 错/i18n 11 测试绿/build 成功。
+- [x] **故意保留(非漏网)**：数据契约/wire payload(`anchors.ts` KIND_LABEL、`locator` 键 网址/选择器/文件/行号——发给模型的序列化契约,翻了破坏往返);session title 哨兵 `"新对话"`(用作默认值+相等比较,需改常量+显示层翻译,留后);注释。
+- [ ] **留后(增量)**：真漏网约 5 处纯展示标签(`capabilitiesOverview` LABEL/`STANDALONE_LABEL "本地"`/`NEW_TAB_TITLE`);`"新对话"` 哨兵改常量化;mobile(149 处,独立 app)单独接同套 i18n;宿主在启动调 `writeSettingsSchemaFile` 写 schema。
 
 ### ⬜ GenerateImage 工具结果直接展示图片
 
