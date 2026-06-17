@@ -4,6 +4,7 @@ import {
   loginAndCaptureCookies,
   hostnameOf,
   injectionScript,
+  extractConsoleMessage,
   SENTINEL_SAVE,
   SENTINEL_CANCEL,
 } from "./index.js";
@@ -62,6 +63,18 @@ describe("hostnameOf / injectionScript", () => {
   });
 });
 
+describe("extractConsoleMessage (Electron signature compat)", () => {
+  test("Electron ≥33: (event, {message})", () => {
+    expect(extractConsoleMessage([{}, { message: SENTINEL_SAVE, versionId: 0 }])).toBe(SENTINEL_SAVE);
+  });
+  test("Electron <33: (event, level, message)", () => {
+    expect(extractConsoleMessage([{}, 0, SENTINEL_SAVE])).toBe(SENTINEL_SAVE);
+  });
+  test("no message → empty string", () => {
+    expect(extractConsoleMessage([{}, 0])).toBe("");
+  });
+});
+
 describe("loginAndCaptureCookies", () => {
   test("invalid url → error, no window opened", async () => {
     let opened = false;
@@ -91,9 +104,9 @@ describe("loginAndCaptureCookies", () => {
         },
       },
     );
-    // drive the save sentinel
+    // drive the save sentinel using the Electron ≥33 signature (event, {message})
     await Promise.resolve();
-    fake.wc.emit("console-message", {}, 0, SENTINEL_SAVE);
+    fake.wc.emit("console-message", {}, { message: SENTINEL_SAVE, versionId: 0 });
     const r = await p;
     expect(r.ok).toBe(true);
     if (r.ok) {
