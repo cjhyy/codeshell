@@ -21,6 +21,7 @@ import React, {
 } from "react";
 import { Check, AlertTriangle, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 import {
   initialToastState,
   addToast,
@@ -123,6 +124,7 @@ function ToastCard({
   onDismiss: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useT();
   return (
     <div
       className={cn(
@@ -132,7 +134,7 @@ function ToastCard({
       )}
       onClick={onDismiss}
       role="button"
-      title="点击关闭"
+      title={t("misc.toast.dismiss")}
     >
       <span className="mt-0.5 shrink-0">{VARIANT_ICON[variant]}</span>
       <span className="min-w-0 flex-1 break-words">{children}</span>

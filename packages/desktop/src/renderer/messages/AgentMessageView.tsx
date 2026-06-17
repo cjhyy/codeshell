@@ -3,8 +3,10 @@ import type { AgentMessage } from "../types";
 import { StatusDot } from "../ui/StatusDot";
 import { Markdown, streamingMarkdownClassName } from "../Markdown";
 import { summarizeAgentActivity, describeActivity } from "../topbar/liveActivity";
+import { useT } from "../i18n/I18nProvider";
 
 function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
+  const { t } = useT();
   const [expanded, setExpanded] = useState(false);
   const status = message.error ? "err" : message.done ? "ok" : "running";
 
@@ -32,7 +34,7 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
           disabled={!hasBody}
         >
           <StatusDot status={status} />
-          <span className="font-medium">{message.name ?? "agent"}</span>
+          <span className="font-medium">{message.name ?? t("msg.agent.fallbackName")}</span>
           {message.agentType && (
             <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {message.agentType}
@@ -46,7 +48,7 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
             </span>
           ) : message.toolCount > 0 ? (
             <span className="shrink-0 text-xs text-muted-foreground">
-              {message.toolCount} tools
+              {t("msg.agent.toolCount", { count: message.toolCount })}
             </span>
           ) : null}
           {hasBody && (

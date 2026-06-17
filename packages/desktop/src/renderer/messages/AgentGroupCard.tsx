@@ -4,6 +4,7 @@ import type { AgentGroup } from "./agentGroup";
 import { summarizeAgentGroup } from "./agentGroup";
 import { AgentMessageView } from "./AgentMessageView";
 import { formatDuration } from "../tool-cards/utils";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * Summary card for a fan-out of ≥2 sibling sub-agents (see agentGroup.ts).
@@ -13,6 +14,7 @@ import { formatDuration } from "../tool-cards/utils";
  * once all have settled (noise reduction).
  */
 function AgentGroupCardImpl({ group }: { group: AgentGroup }) {
+  const { t } = useT();
   const stats = summarizeAgentGroup(group.agents);
   const anyRunning = stats.running > 0;
   const [open, setOpen] = useState(anyRunning);
@@ -29,7 +31,7 @@ function AgentGroupCardImpl({ group }: { group: AgentGroup }) {
           aria-expanded={open}
         >
           <Users size={14} className="shrink-0 text-muted-foreground" />
-          <span className="font-medium">{stats.total} 个子代理</span>
+          <span className="font-medium">{t("msg.agentGroup.count", { count: stats.total })}</span>
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             {stats.succeeded > 0 && (
               <span className="flex items-center gap-0.5 text-status-ok">
@@ -43,11 +45,15 @@ function AgentGroupCardImpl({ group }: { group: AgentGroup }) {
                 {stats.failed}
               </span>
             )}
-            {anyRunning && <span className="text-status-running">{stats.running} 运行中</span>}
+            {anyRunning && (
+              <span className="text-status-running">
+                {t("msg.agentGroup.running", { count: stats.running })}
+              </span>
+            )}
           </span>
           <span className="min-w-0 flex-1" />
           <span className="shrink-0 text-xs text-muted-foreground">
-            {stats.toolTotal} tools
+            {t("msg.agentGroup.toolCount", { count: stats.toolTotal })}
             {!anyRunning && dur ? ` · ${dur}` : ""}
           </span>
           <span className="shrink-0 text-muted-foreground">{open ? "▾" : "▸"}</span>

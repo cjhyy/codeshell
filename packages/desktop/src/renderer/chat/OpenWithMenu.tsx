@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useToast } from "../ui/ToastProvider";
+import { useT } from "../i18n/I18nProvider";
 import {
   openDefault,
   revealInFolder,
@@ -33,13 +34,17 @@ interface Props extends OpenTarget {
 export function OpenWithMenu({ path, cwd, children, align = "start" }: Props) {
   const target: OpenTarget = { path, cwd };
   const toast = useToast();
+  const { t } = useT();
   // These file actions can fail in main (e.g. the path was deleted/renamed
   // since the message referenced it). Surface a toast so the action never
   // silently no-ops.
   const run = (label: string, action: () => Promise<unknown>): void => {
     void action().catch((e) =>
       toast({
-        message: `${label}失败:${e instanceof Error ? e.message : String(e)}`,
+        message: t("chat.openWith.actionFailed", {
+          label,
+          message: e instanceof Error ? e.message : String(e),
+        }),
         variant: "error",
       }),
     );
@@ -48,21 +53,21 @@ export function OpenWithMenu({ path, cwd, children, align = "start" }: Props) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {children ?? (
-          <Button size="icon" variant="ghost" title="打开方式" aria-label="打开方式">
+          <Button size="icon" variant="ghost" title={t("chat.openWith.trigger")} aria-label={t("chat.openWith.trigger")}>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align}>
-        <DropdownMenuItem onSelect={() => run("打开", () => openDefault(target))}>
-          <ExternalLink className="mr-2 h-3.5 w-3.5" /> 用系统默认应用打开
+        <DropdownMenuItem onSelect={() => run(t("chat.openWith.actionOpen"), () => openDefault(target))}>
+          <ExternalLink className="mr-2 h-3.5 w-3.5" /> {t("chat.openWith.openDefault")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => run("用编辑器打开", () => openInEditor(target))}>
-          <Code2 className="mr-2 h-3.5 w-3.5" /> 用编辑器打开
+        <DropdownMenuItem onSelect={() => run(t("chat.openWith.actionEditor"), () => openInEditor(target))}>
+          <Code2 className="mr-2 h-3.5 w-3.5" /> {t("chat.openWith.openInEditor")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => run("在文件夹中显示", () => revealInFolder(target))}>
-          <FolderOpen className="mr-2 h-3.5 w-3.5" /> 在文件夹中显示
+        <DropdownMenuItem onSelect={() => run(t("chat.openWith.actionReveal"), () => revealInFolder(target))}>
+          <FolderOpen className="mr-2 h-3.5 w-3.5" /> {t("chat.openWith.revealInFolder")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

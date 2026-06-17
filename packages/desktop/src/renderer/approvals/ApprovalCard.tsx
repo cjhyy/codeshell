@@ -21,6 +21,9 @@ import {
   type ApproveChoice,
   type ApprovePathScope,
 } from "./approvalDecision";
+import { useT } from "../i18n/I18nProvider";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
 
 const DENY_PRESETS = [
   "looks unsafe",
@@ -50,12 +53,15 @@ export function decidedLabel(d: {
   scope?: ApproveChoice;
   label?: string;
 }): string {
-  if (d.kind === "deny") return "已拒绝";
-  if (d.scope && d.scope !== "once") return `已批准 · ${d.label ?? d.scope}`;
-  return "已批准";
+  const lang = loadUILanguage();
+  if (d.kind === "deny") return translate(lang, "auto.approvalCard.denied");
+  if (d.scope && d.scope !== "once")
+    return translate(lang, "auto.approvalCard.approvedScope", { label: d.label ?? d.scope });
+  return translate(lang, "auto.approvalCard.approved");
 }
 
 export function ApprovalCard({ envelope, onDecide }: Props) {
+  const { t } = useT();
   const { request } = envelope;
   const [showRaw, setShowRaw] = useState(false);
   const [denyReason, setDenyReason] = useState<string>("");
@@ -115,7 +121,7 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
         className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
         onClick={() => setShowRaw((s) => !s)}
       >
-        {showRaw ? "hide raw args" : "show raw args"}
+        {showRaw ? t("auto.approvalCard.hideRaw") : t("auto.approvalCard.showRaw")}
       </button>
       {showRaw && (
         <pre className="mt-1 overflow-x-auto rounded-md bg-muted/40 p-2 text-xs">
@@ -141,7 +147,7 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
               grants for Write/Edit — fold into the "更多范围 ▾" menu. */}
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" onClick={() => approve("once")}>
-              仅本次批准
+              {t("auto.approvalCard.approveOnce")}
             </Button>
             {sessionOption && (
               <Button
@@ -157,8 +163,8 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
             {moreOptions.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="ghost" aria-label="选择批准范围">
-                    更多范围 <ChevronDown size={14} className="ml-1" />
+                  <Button size="sm" variant="ghost" aria-label={t("auto.approvalCard.selectScope")}>
+                    {t("auto.approvalCard.moreScope")} <ChevronDown size={14} className="ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="max-w-[18rem]">
@@ -184,11 +190,11 @@ export function ApprovalCard({ envelope, onDecide }: Props) {
               ever feeds the 拒绝 button). */}
           <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2">
             <Button size="sm" variant="ghost" className="text-status-err" onClick={deny}>
-              拒绝
+              {t("auto.approvalCard.deny")}
             </Button>
             <Select value={denyReason} onValueChange={setDenyReason}>
               <SelectTrigger className="h-8 w-[200px]">
-                <SelectValue placeholder="拒绝理由(可选)…" />
+                <SelectValue placeholder={t("auto.approvalCard.denyReasonPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {DENY_PRESETS.map((r) => (

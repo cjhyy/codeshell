@@ -51,6 +51,18 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
  */
 export function useT(): I18nContextValue {
   const ctx = React.useContext(I18nContext);
-  if (!ctx) throw new Error("useT must be used within an <I18nProvider>");
+  // Fallback when rendered outside a provider (e.g. unit tests that mount a
+  // single card via renderToStaticMarkup, or any stray render before the
+  // provider mounts): translate against the stored / default language directly
+  // so components stay usable instead of throwing.
+  if (!ctx) {
+    let lang: UILanguage = "zh";
+    try {
+      lang = loadUILanguage();
+    } catch {
+      // No localStorage (e.g. SSR-style unit test) — default to Chinese.
+    }
+    return { lang, t: (key, params) => translate(lang, key, params) };
+  }
   return ctx;
 }

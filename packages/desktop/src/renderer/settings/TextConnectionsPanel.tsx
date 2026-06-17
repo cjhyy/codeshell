@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
+import { useT } from "../i18n/I18nProvider";
 import {
   ConnCard,
   ConnCardGrid,
@@ -65,7 +66,14 @@ interface Props {
 export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", title }: Props) {
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
   const cacheKey = `conn:${tag}:${scope}:${cwd ?? ""}`;
-  const heading = title ?? (tag === "image" ? "图片模型" : tag === "video" ? "视频模型" : "文本模型");
+  const { t } = useT();
+  const heading =
+    title ??
+    (tag === "image"
+      ? t("settingsX.textConn.headingImage")
+      : tag === "video"
+        ? t("settingsX.textConn.headingVideo")
+        : t("settingsX.textConn.headingText"));
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -104,7 +112,12 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
     const s = ((await window.codeshell.getSettings(scope, cwd)) ?? {}) as Record<string, unknown>;
     const defaults = (s.defaults ?? {}) as Record<string, unknown>;
     await writeSettings(scope, { defaults: { ...defaults, auxText: id || undefined } }, cwd);
-    toast({ message: id ? `后台任务模型已设为 ${id}` : "后台任务模型已跟随当前模型", variant: "success" });
+    toast({
+      message: id
+        ? t("settingsX.textConn.toastAuxSet", { id })
+        : t("settingsX.textConn.toastAuxFollow"),
+      variant: "success",
+    });
   };
 
   // Load on mount + on scope/tag switch (deps=[load]) + auto-refresh when
@@ -144,7 +157,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
     setInstances(next);
     setDefaultId(nextDefault);
     await persist(next, credentials, nextDefault);
-    toast({ message: `已添加 ${inst.id}`, variant: "success" });
+    toast({ message: t("settingsX.textConn.toastAdded", { id: inst.id }), variant: "success" });
   };
 
   const patch = (id: string, p: Partial<ModelInstance>) =>
@@ -169,13 +182,13 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
   const saveInstance = async (id: string) => {
     await persist(instances, credentials, defaultId || id);
     if (!defaultId) setDefaultId(id);
-    toast({ message: "已保存", variant: "success" });
+    toast({ message: t("settingsX.textConn.toastSaved"), variant: "success" });
   };
 
   const removeInstance = async (id: string) => {
     const ok = await confirm({
-      message: `删除连接 #${id}？`,
-      detail: "凭证(API key)不会被删除——它是独立的,其它连接仍可使用。",
+      message: t("settingsX.textConn.confirmRemoveMsg", { id }),
+      detail: t("settingsX.textConn.confirmRemoveDetail"),
       destructive: true,
     });
     if (!ok) return;
@@ -184,7 +197,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
     setInstances(next);
     setDefaultId(nextDefault);
     await persist(next, credentials, nextDefault);
-    toast({ message: `已删除 ${id}`, variant: "success" });
+    toast({ message: t("settingsX.textConn.toastRemoved", { id }), variant: "success" });
   };
 
   return (
@@ -195,7 +208,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
           <DropdownMenuTrigger asChild>
             <Button>
               <Plus />
-              添加模型
+              {t("settingsX.textConn.addModel")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -223,13 +236,16 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
 
       {tag === "text" && instances.length > 0 && (
         <div className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-[minmax(220px,320px)_1fr] sm:items-center">
-          <ConnField label="后台任务模型" hint="记忆提取、自动标题等后台调用用此模型。">
+          <ConnField
+            label={t("settingsX.textConn.auxLabel")}
+            hint={t("settingsX.textConn.auxHint")}
+          >
             <SimpleSelect
               value={auxId}
               onChange={(v) => void setAux(v)}
-              placeholder="跟随当前模型"
+              placeholder={t("settingsX.textConn.followCurrent")}
               options={[
-                { value: "", label: "跟随当前模型（默认）" },
+                { value: "", label: t("settingsX.textConn.followCurrentDefault") },
                 ...instances.map((i) => ({
                   value: i.id,
                   label: `${entryById(i.catalogId)?.displayName ?? i.catalogId} · ${i.model}`,
@@ -238,14 +254,14 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
             />
           </ConnField>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            选个便宜快的模型处理后台任务，默认跟随当前聊天模型。
+            {t("settingsX.textConn.auxDesc")}
           </p>
         </div>
       )}
 
       {instances.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-          还没有{heading}。点「添加模型」从模板挑一家、选模型、填 key。
+          {t("settingsX.textConn.emptyHint", { heading })}
         </div>
       ) : (
         <ConnCardGrid>
@@ -262,7 +278,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                     <strong className="truncate text-sm font-medium text-foreground">
                       {entry?.displayName ?? inst.catalogId}
                     </strong>
-                    {isDefault && <Badge variant="accent">当前</Badge>}
+                    {isDefault && <Badge variant="accent">{t("settingsX.textConn.current")}</Badge>}
                     {preset?.maxContextTokens && (
                       <Badge variant="secondary">{formatTok(preset.maxContextTokens)} ctx</Badge>
                     )}
@@ -277,7 +293,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                   </div>
                 </header>
 
-                <ConnField label="模型">
+                <ConnField label={t("settingsX.textConn.fieldModel")}>
                   <SimpleSelect
                     value={inst.model}
                     onChange={(v) => patch(inst.id, { model: v })}
@@ -285,14 +301,17 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                       value: p.value,
                       label: p.label ?? p.value,
                     }))}
-                    placeholder={inst.model || "选择模型"}
+                    placeholder={inst.model || t("settingsX.textConn.pickModel")}
                   />
                 </ConnField>
 
                 {entry?.needsKey !== false && (
                   <>
                     {credChoices.length > 0 && (
-                      <ConnField label="凭证" hint="多个连接可共用一把 key;删连接不会删凭证。">
+                      <ConnField
+                        label={t("settingsX.textConn.fieldCredential")}
+                        hint={t("settingsX.textConn.credentialHint")}
+                      >
                         <SimpleSelect
                           value={inst.credentialId ?? ""}
                           onChange={(v) => patch(inst.id, { credentialId: v || undefined })}
@@ -301,9 +320,9 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                               value: c.id,
                               label: credentialLabel(c, entry?.displayName),
                             })),
-                            { value: "", label: "填新 key…" },
+                            { value: "", label: t("settingsX.textConn.newKey") },
                           ]}
-                          placeholder="选择凭证"
+                          placeholder={t("settingsX.textConn.pickCredential")}
                         />
                       </ConnField>
                     )}
@@ -340,10 +359,12 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                       void persist(instances, credentials, inst.id);
                     }}
                   >
-                    {isDefault ? "当前" : "设为当前"}
+                    {isDefault
+                      ? t("settingsX.textConn.current")
+                      : t("settingsX.textConn.setCurrent")}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => void saveInstance(inst.id)}>
-                    保存
+                    {t("settingsX.textConn.save")}
                   </Button>
                   <ConnFooterRight>
                     <Button
@@ -352,7 +373,7 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                       className="text-muted-foreground hover:text-status-err"
                       onClick={() => void removeInstance(inst.id)}
                     >
-                      删除
+                      {t("settingsX.textConn.delete")}
                     </Button>
                   </ConnFooterRight>
                 </ConnCardFooter>

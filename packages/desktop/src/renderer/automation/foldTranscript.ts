@@ -5,6 +5,8 @@
  */
 import { applyStreamEvent, appendUserMessage, INITIAL_STATE, type MessagesReducerState } from "../types";
 import type { FoldItem } from "../../preload/types";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
 
 export function foldTranscript(items: FoldItem[]): MessagesReducerState {
   let state = INITIAL_STATE;
@@ -49,7 +51,7 @@ function sealOrphanedAgents(state: MessagesReducerState): MessagesReducerState {
         done: true,
         text: flushed,
         textBuffer: "",
-        error: m.error ?? "代理未收到完成事件(进程可能已重启或中断)",
+        error: m.error ?? translate(loadUILanguage(), "auto.transcript.agentInterrupted"),
       };
     }
     return m;

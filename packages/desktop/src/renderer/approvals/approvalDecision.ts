@@ -15,6 +15,9 @@
  * payload — the default path stays a no-op regression-wise.
  */
 
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
+
 export type ApproveChoice = "once" | "session" | "project";
 export type ApprovalScope = "once" | "session" | "project";
 export type ApprovePathScope = "file" | "dir" | "tool";
@@ -69,16 +72,17 @@ function dirName(p: string): string {
  * can narrow the grant ("this file" / "this dir" / "all paths").
  */
 export function approveOptionsFor(toolName: string, filePath?: string): ApproveOption[] {
-  const once: ApproveOption = { scope: "once", label: "仅本次" };
+  const lang = loadUILanguage();
+  const once: ApproveOption = { scope: "once", label: translate(lang, "auto.approveOption.once") };
 
   if (!PATH_SCOPED_TOOLS.has(toolName) || !filePath) {
     return [
       once,
-      { scope: "session", label: "本会话一直允许" },
+      { scope: "session", label: translate(lang, "auto.approveOption.session") },
       {
         scope: "project",
-        label: "本项目一直允许",
-        hint: "写入 .code-shell/settings.local.json",
+        label: translate(lang, "auto.approveOption.project"),
+        hint: translate(lang, "auto.approveOption.projectHint"),
       },
     ];
   }
@@ -86,17 +90,18 @@ export function approveOptionsFor(toolName: string, filePath?: string): ApproveO
   const base = baseName(filePath);
   const dir = dirName(filePath);
   const rows: ApproveOption[] = [once];
-  for (const [scope, word] of [
-    ["session", "本会话"],
-    ["project", "本项目"],
+  for (const [scope, wordKey] of [
+    ["session", "auto.approveOption.sessionWord"],
+    ["project", "auto.approveOption.projectWord"],
   ] as const) {
-    rows.push({ scope, pathScope: "file", label: `${word}允许写 ${base}` });
-    rows.push({ scope, pathScope: "dir", label: `${word}允许写 ${dir} 下`, });
+    const word = translate(lang, wordKey);
+    rows.push({ scope, pathScope: "file", label: translate(lang, "auto.approveOption.writeFile", { word, base }) });
+    rows.push({ scope, pathScope: "dir", label: translate(lang, "auto.approveOption.writeDir", { word, dir }) });
     rows.push({
       scope,
       pathScope: "tool",
-      label: `${word}允许 ${toolName}（所有路径）`,
-      hint: scope === "project" ? "写入 settings.local.json" : undefined,
+      label: translate(lang, "auto.approveOption.writeTool", { word, tool: toolName }),
+      hint: scope === "project" ? translate(lang, "auto.approveOption.toolHint") : undefined,
     });
   }
   return rows;

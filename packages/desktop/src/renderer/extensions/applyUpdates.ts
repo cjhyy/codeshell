@@ -56,17 +56,27 @@ export async function runBatchUpdate(
   return outcomes;
 }
 
-/** Summarize batch outcomes into a single toast message. */
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
+
+/**
+ * Summarize batch outcomes into a single toast message.
+ *
+ * Non-React module — resolves its user-visible text via `translate()` against
+ * the currently saved UI language (the toast fires once at call time, so a
+ * one-shot snapshot of the language is fine here).
+ */
 export function summarizeBatch(outcomes: UpdateOutcome[]): { message: string; ok: boolean } {
+  const lang = loadUILanguage();
   const updated = outcomes.filter((o) => o.updated);
   const failed = outcomes.filter((o) => o.error);
   const noop = outcomes.filter((o) => !o.updated && !o.error);
   const parts: string[] = [];
-  if (updated.length) parts.push(`已更新 ${updated.length} 个`);
-  if (noop.length) parts.push(`${noop.length} 个已是最新`);
-  if (failed.length) parts.push(`${failed.length} 个失败`);
+  if (updated.length) parts.push(translate(lang, "ext.batch.updatedN", { count: updated.length }));
+  if (noop.length) parts.push(translate(lang, "ext.batch.upToDateN", { count: noop.length }));
+  if (failed.length) parts.push(translate(lang, "ext.batch.failedN", { count: failed.length }));
   return {
-    message: parts.length ? parts.join("，") : "没有可更新项",
+    message: parts.length ? parts.join("，") : translate(lang, "ext.batch.nothingToUpdate"),
     ok: failed.length === 0,
   };
 }

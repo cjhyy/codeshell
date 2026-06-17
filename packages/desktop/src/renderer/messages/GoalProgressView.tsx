@@ -2,6 +2,7 @@ import React, { memo, useState } from "react";
 import { CircleDot, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GoalProgressMessage } from "../types";
+import { useT } from "../i18n/I18nProvider";
 
 /** Options the "再续" button passes up — mirrors core's GoalExtension. */
 export interface GoalExtendOpts {
@@ -36,6 +37,7 @@ function GoalProgressViewImpl({
   /** Extend the running goal (TODO 3.1). opts target the nearest ceiling. */
   onExtend?: (opts: GoalExtendOpts) => void;
 }) {
+  const { t } = useT();
   const { status, round, gaps } = message;
   // One-shot disable after clicking. Each marker is a fresh component (fresh
   // id), and the reducer replaces/prunes this marker once the run advances, so
@@ -47,10 +49,19 @@ function GoalProgressViewImpl({
   // closest (`nearest`): the stop-block cap (the common case) or maxTurns.
   if (status === "approaching_limit") {
     const byStopBlocks = message.nearest === "stopBlocks";
-    const label = byStopBlocks ? `再续 ${EXTEND_STOP_BLOCKS} 次` : `再续 ${EXTEND_TURNS} 轮`;
+    const label = byStopBlocks
+      ? t("msg.goal.extendTimes", { count: EXTEND_STOP_BLOCKS })
+      : t("msg.goal.extendTurns", { count: EXTEND_TURNS });
     const remaining = byStopBlocks ? message.stopBlocksRemaining : message.turnsRemaining;
-    const unit = byStopBlocks ? "次" : "轮";
-    const headline = byStopBlocks ? "目标接近续跑上限" : "目标接近轮次上限";
+    const headline = byStopBlocks
+      ? t("msg.goal.approachingStopLimit")
+      : t("msg.goal.approachingTurnLimit");
+    const remainingText =
+      remaining != null
+        ? byStopBlocks
+          ? t("msg.goal.remainingTimes", { count: remaining })
+          : t("msg.goal.remainingTurns", { count: remaining })
+        : "";
     // Always bump turns a little too, so a stop-block extend doesn't later hit
     // maxTurns; the streak reset makes the extra harmless.
     const opts: GoalExtendOpts = byStopBlocks
@@ -61,11 +72,11 @@ function GoalProgressViewImpl({
         <Clock size={12} className="shrink-0" />
         <span className="shrink-0">
           {headline}
-          {remaining != null ? ` · 还剩 ${remaining} ${unit}` : ""}
+          {remainingText}
         </span>
         {onExtend &&
           (clicked ? (
-            <span className="text-muted-foreground">— 已{label}</span>
+            <span className="text-muted-foreground">{t("msg.goal.extended", { label })}</span>
           ) : (
             <Button
               variant="outline"
@@ -87,7 +98,7 @@ function GoalProgressViewImpl({
     return (
       <div className="flex items-center gap-1.5 px-4 py-1 text-xs text-status-ok">
         <CheckCircle2 size={12} />
-        <span>目标已达成 · 共 {round} 轮</span>
+        <span>{t("msg.goal.metRounds", { count: round })}</span>
       </div>
     );
   }
@@ -96,7 +107,7 @@ function GoalProgressViewImpl({
     return (
       <div className="flex items-center gap-1.5 px-4 py-1 text-xs text-status-warn">
         <AlertTriangle size={12} />
-        <span>目标续跑已达上限({round} 轮) · 已停下</span>
+        <span>{t("msg.goal.exhausted", { count: round })}</span>
       </div>
     );
   }
@@ -105,11 +116,11 @@ function GoalProgressViewImpl({
   return (
     <div className="flex items-center gap-1.5 px-4 py-1 text-xs text-muted-foreground">
       <CircleDot size={12} className="shrink-0" />
-      <span className="shrink-0">目标未达成 · 第 {round} 轮</span>
+      <span className="shrink-0">{t("msg.goal.notMetRound", { count: round })}</span>
       {gaps ? (
-        <span className="truncate text-muted-foreground/80">— 还差:{gaps}</span>
+        <span className="truncate text-muted-foreground/80">{t("msg.goal.gap", { gaps })}</span>
       ) : (
-        <span className="text-muted-foreground/80">— 继续推进</span>
+        <span className="text-muted-foreground/80">{t("msg.goal.keepGoing")}</span>
       )}
     </div>
   );

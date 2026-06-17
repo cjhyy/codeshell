@@ -4,6 +4,7 @@ import { repoLabel, type Repo } from "../repos";
 import { useAnchoredPopover } from "./useAnchoredPopover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   repos: Repo[];
@@ -26,6 +27,7 @@ interface Props {
  * Mirrors the project-switcher reference screenshot.
  */
 export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabled }: Props) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,7 +63,7 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
   }, [repos, filter]);
 
   const active = repos.find((r) => r.id === activeRepoId) ?? null;
-  const triggerLabel = active ? repoLabel(active) : "不使用项目";
+  const triggerLabel = active ? repoLabel(active) : t("chat.project.none");
 
   const itemCls = (active: boolean) =>
     "cs-menu-item flex cursor-pointer gap-2 px-2 py-1.5 text-sm " +
@@ -94,12 +96,12 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
             <Input
               ref={inputRef}
               className="h-7 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-              placeholder="搜索项目"
+              placeholder={t("chat.project.searchPlaceholder")}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
             {filter && (
-              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100" onClick={() => setFilter("")} aria-label="清除">
+              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 hover:opacity-100" onClick={() => setFilter("")} aria-label={t("chat.project.clearAria")}>
                 <X size={12} />
               </Button>
             )}
@@ -107,7 +109,7 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
 
           <ul className="max-h-64 overflow-y-auto py-1">
             {filtered.length === 0 && (
-              <li className="px-2 py-1.5 text-sm text-muted-foreground">没有匹配项目</li>
+              <li className="px-2 py-1.5 text-sm text-muted-foreground">{t("chat.project.noMatch")}</li>
             )}
             {filtered.map((r) => {
               const isActive = r.id === activeRepoId;
@@ -130,14 +132,14 @@ export function ProjectPicker({ repos, activeRepoId, onSelect, onAddRepo, disabl
           <ul className="py-1">
             <li className={itemCls(false)} onClick={() => { onAddRepo(); setOpen(false); }}>
               <FolderPlus size={12} className="opacity-60" />
-              <span className="flex-1 truncate">添加新项目</span>
+              <span className="flex-1 truncate">{t("chat.project.addNew")}</span>
             </li>
             <li
               className={itemCls(activeRepoId === null)}
               onClick={() => { onSelect(null); setOpen(false); }}
             >
               <Folder size={12} className="opacity-60" />
-              <span className="flex-1 truncate">不使用项目</span>
+              <span className="flex-1 truncate">{t("chat.project.none")}</span>
               {activeRepoId === null && <Check size={12} className="text-primary" />}
             </li>
           </ul>

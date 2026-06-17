@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { RefreshCw, Square, Terminal } from "lucide-react";
 import type { BackgroundShellInfo } from "../../preload/types";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * Background-shell dock panel (TODO 3.2 二期). Lists the current session's
@@ -10,6 +11,7 @@ import type { BackgroundShellInfo } from "../../preload/types";
  * keeps them out of context; the agent pulls via BashOutput).
  */
 export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }) {
+  const { t } = useT();
   const [shells, setShells] = useState<BackgroundShellInfo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [output, setOutput] = useState<{ header: string; text: string } | null>(null);
@@ -62,7 +64,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
       const res = await window.codeshell.backgroundShellOutput(sessionId, shellId);
       setOutput(res);
     } catch (e) {
-      setOutput({ header: "", text: `读取输出失败：${String(e instanceof Error ? e.message : e)}` });
+      setOutput({ header: "", text: t("panels.shells.readOutputFailed", { error: String(e instanceof Error ? e.message : e) }) });
     } finally {
       setLoading(false);
     }
@@ -81,7 +83,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
   if (!sessionId) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
-        当前会话还没启动(发一条消息后才有后台 shell)
+        {t("panels.shells.notStarted")}
       </div>
     );
   }
@@ -90,12 +92,12 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center justify-between border-b border-border px-2 py-1.5">
         <span className="text-xs font-medium text-muted-foreground">
-          后台 Shell（{shells.length}）
+          {t("panels.shells.title", { count: shells.length })}
         </span>
         <button
           type="button"
-          title="刷新"
-          aria-label="刷新"
+          title={t("panels.common.refresh")}
+          aria-label={t("panels.common.refresh")}
           className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
           onClick={() => void refresh()}
         >
@@ -108,8 +110,8 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
       {shells.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-muted-foreground">
           <Terminal className="h-6 w-6" />
-          <div className="text-xs">没有后台命令</div>
-          <div className="text-[11px]">Bash(run_in_background) 启动的命令会出现在这里</div>
+          <div className="text-xs">{t("panels.shells.none")}</div>
+          <div className="text-[11px]">{t("panels.shells.noneHint")}</div>
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto">
@@ -137,16 +139,16 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                   )}
                   <span className="shrink-0 text-[10px] text-muted-foreground">
                     {s.status === "running"
-                      ? "运行中"
+                      ? t("panels.shells.running")
                       : s.signal
-                        ? `signal ${s.signal}`
-                        : `exit ${s.exitCode ?? "?"}`}
+                        ? t("panels.shells.signal", { signal: s.signal })
+                        : t("panels.shells.exit", { code: s.exitCode ?? "?" })}
                   </span>
                   {s.status === "running" && (
                     <button
                       type="button"
-                      title="停止"
-                      aria-label="停止"
+                      title={t("panels.common.stop")}
+                      aria-label={t("panels.common.stop")}
                       className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-background hover:text-status-err"
                       onClick={() => void kill(s.shellId)}
                     >
@@ -157,7 +159,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                 {selected === s.shellId && (
                   <div className="bg-background px-2 py-1">
                     {loading ? (
-                      <div className="text-[11px] text-muted-foreground">读取中…</div>
+                      <div className="text-[11px] text-muted-foreground">{t("panels.shells.readingOutput")}</div>
                     ) : (
                       <>
                         {output?.header && (
@@ -166,7 +168,7 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
                           </div>
                         )}
                         <pre className="m-0 max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] text-foreground">
-                          {output?.text || "(无输出)"}
+                          {output?.text || t("panels.shells.noOutput")}
                         </pre>
                       </>
                     )}

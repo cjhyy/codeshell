@@ -6,6 +6,7 @@ import { basename } from "../tool-cards/utils";
 import { UnifiedDiffViewer } from "../diff/UnifiedDiffViewer";
 import { openFileTarget } from "../chat/openWith";
 import { Button } from "@/components/ui/button";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 
 interface Props {
   message: FilesChangedSummaryMessage;
@@ -38,6 +39,7 @@ const INITIAL_VISIBLE = 3;
  *     button flips to 重新应用; redo stays available until a new user turn.
  */
 function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -79,11 +81,18 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
   // Undo/redo needs the session's FileHistory; only the latest turn is peelable.
   const canUndo = !!sessionId && files.length > 0 && isLatest;
 
-  const summarize = (verb: string, results: TurnUndoResult[]): string => {
+  const summarize = (kind: "undo" | "redo", results: TurnUndoResult[]): string => {
     const failures = results.filter((r) => !r.ok);
-    return failures.length === 0
-      ? `${verb} ${results.length} 个文件`
-      : `部分失败:${failures.length}/${results.length}(${basename(failures[0]!.filePath)})`;
+    if (failures.length > 0) {
+      return t("msg.files.partialFailure", {
+        failed: failures.length,
+        total: results.length,
+        name: basename(failures[0]!.filePath),
+      });
+    }
+    return kind === "undo"
+      ? t("msg.files.undoneFiles", { count: results.length })
+      : t("msg.files.redoneFiles", { count: results.length });
   };
 
   const onUndoConfirmed = async (): Promise<void> => {
@@ -94,9 +103,9 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
     try {
       const results = await window.codeshell.undoTurn(sessionId);
       setUndone(true);
-      setUndoStatus(summarize("已撤销", results));
+      setUndoStatus(summarize("undo", results));
     } catch (e: unknown) {
-      setUndoStatus(`撤销失败:${String(e instanceof Error ? e.message : e)}`);
+      setUndoStatus(t("msg.files.undoFailed", { error: String(e instanceof Error ? e.message : e) }));
     } finally {
       setUndoing(false);
       window.clearTimeout(clearStatusTimer.current);
@@ -111,9 +120,9 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
     try {
       const results = await window.codeshell.redoTurn(sessionId);
       setUndone(false);
-      setUndoStatus(summarize("已重新应用", results));
+      setUndoStatus(summarize("redo", results));
     } catch (e: unknown) {
-      setUndoStatus(`重新应用失败:${String(e instanceof Error ? e.message : e)}`);
+      setUndoStatus(t("msg.files.redoFailed", { error: String(e instanceof Error ? e.message : e) }));
     } finally {
       setUndoing(false);
       window.clearTimeout(clearStatusTimer.current);
@@ -134,7 +143,7 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
             aria-expanded={open}
           >
             {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            <span className="font-medium text-foreground">已编辑 {files.length} 个文件</span>
+            <span className="font-medium text-foreground">{t("msg.files.editedCount", { count: files.length })}</span>
             <span className="shrink-0 text-xs tabular-nums">
               <span className="text-status-ok">+{totalAdded}</span>
               <span className="text-status-err">-{totalRemoved}</span>
@@ -166,11 +175,11 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                       setReviewOpen(true);
                     }
                   }}
-                  aria-label="审核改动"
-                  title="审核(在面板中查看 diff)"
+                  aria-label={t("msg.files.reviewAria")}
+                  title={t("msg.files.reviewTitle")}
                 >
                   <Eye size={12} />
-                  <span>审核</span>
+                  <span>{t("msg.files.review")}</span>
                 </Button>
               )}
               {/* Undo / Redo toggle — only the latest turn is interactive.
@@ -183,11 +192,11 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                   size="sm"
                   className="h-7 gap-1 px-2 text-xs"
                   disabled
-                  aria-label="撤销改动(不可用)"
-                  title="只能从最新一轮开始撤销"
+                  aria-label={t("msg.files.undoDisabledAria")}
+                  title={t("msg.files.undoDisabledTitle")}
                 >
                   <RotateCcw size={12} />
-                  <span>撤销</span>
+                  <span>{t("msg.files.undo")}</span>
                 </Button>
               )}
               {canUndo && !undone && (
@@ -198,11 +207,11 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                   className="h-7 gap-1 px-2 text-xs text-status-err hover:text-status-err"
                   onClick={() => setConfirmUndo(true)}
                   disabled={undoing}
-                  aria-label="撤销改动"
-                  title="撤销这一轮的文件改动(回到该轮编辑前)"
+                  aria-label={t("msg.files.undoAria")}
+                  title={t("msg.files.undoTitle")}
                 >
                   <RotateCcw size={12} />
-                  <span>{undoing ? "撤销中…" : "撤销"}</span>
+                  <span>{undoing ? t("msg.files.undoing") : t("msg.files.undo")}</span>
                 </Button>
               )}
               {canUndo && undone && (
@@ -213,11 +222,11 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                   className="h-7 gap-1 px-2 text-xs"
                   onClick={() => void onRedo()}
                   disabled={undoing}
-                  aria-label="重新应用改动"
-                  title="重新应用这一轮的文件改动"
+                  aria-label={t("msg.files.redoAria")}
+                  title={t("msg.files.redoTitle")}
                 >
                   <RotateCw size={12} />
-                  <span>{undoing ? "应用中…" : "重新应用"}</span>
+                  <span>{undoing ? t("msg.files.redoing") : t("msg.files.redo")}</span>
                 </Button>
               )}
             </div>
@@ -250,7 +259,7 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
                 className="mt-1 h-auto justify-start p-0 text-xs"
                 onClick={() => setShowAll(true)}
               >
-                再显示 {remaining} 个文件 ▾
+                {t("msg.files.showMore", { count: remaining })}
               </Button>
             )}
           </div>
@@ -288,6 +297,7 @@ function ConfirmUndoModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useT();
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
@@ -297,14 +307,14 @@ function ConfirmUndoModal({
     >
       <div className="w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl max-w-md">
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-          <strong>撤销 {fileCount} 个文件的改动?</strong>
+          <strong>{t("msg.files.confirmTitle", { count: fileCount })}</strong>
         </div>
         <div className="p-4">
-          这些文件会还原到该轮编辑前的内容,本轮新建的文件会被删除。撤销后可「重新应用」。
+          {t("msg.files.confirmBody")}
         </div>
         <div className="flex justify-end gap-2 border-t px-4 py-3">
           <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-            取消
+            {t("msg.files.cancel")}
           </Button>
           <Button
             type="button"
@@ -313,7 +323,7 @@ function ConfirmUndoModal({
             className="text-status-err hover:text-status-err"
             onClick={onConfirm}
           >
-            确认撤销
+            {t("msg.files.confirmUndo")}
           </Button>
         </div>
       </div>
@@ -332,6 +342,7 @@ function ReviewModal({
   diffText?: string;
   onClose: () => void;
 }) {
+  const { t } = useT();
   // When the card carries session-scoped diffs, render those directly
   // instead of asking Git for the whole worktree. The scopedFile fallback
   // keeps older persisted messages working.
@@ -345,14 +356,14 @@ function ReviewModal({
     >
       <div className="w-full overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-2xl max-w-5xl">
         <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-          <strong>审核改动 — {files.length} 个文件</strong>
+          <strong>{t("msg.files.reviewModalTitle", { count: files.length })}</strong>
           <Button
             type="button"
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
             onClick={onClose}
-            aria-label="close"
+            aria-label={t("msg.files.close")}
           >
             <X size={14} />
           </Button>

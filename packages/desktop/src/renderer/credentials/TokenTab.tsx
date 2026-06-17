@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/DialogProvider";
+import { useT } from "../i18n/I18nProvider";
 import type { MaskedCredentialView } from "./types";
 
 /**
@@ -13,6 +14,7 @@ import type { MaskedCredentialView } from "./types";
  * the credentials.* IPC bridge; the secret is write-only (list returns masked).
  */
 export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" }) {
+  const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
   const [items, setItems] = useState<MaskedCredentialView[]>([]);
@@ -31,7 +33,7 @@ export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" })
 
   const save = async () => {
     if (!id.trim() || !label.trim()) {
-      toast({ message: "id 和名称必填", variant: "error" });
+      toast({ message: t("ext.token.idRequired"), variant: "error" });
       return;
     }
     await window.codeshell.credentials.save(cwd, "user", {
@@ -42,7 +44,7 @@ export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" })
       exposeAsEnv: exposeAsEnv.trim() || undefined,
       meta: kind === "link" && appUrl.trim() ? { appUrl: appUrl.trim() } : undefined,
     });
-    toast({ message: "已保存" });
+    toast({ message: t("ext.token.saved") });
     setId("");
     setLabel("");
     setSecret("");
@@ -52,7 +54,7 @@ export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" })
   };
 
   const del = async (cid: string) => {
-    if (!(await confirm({ message: `删除凭证 ${cid}?`, destructive: true }))) return;
+    if (!(await confirm({ message: t("ext.token.deleteConfirm", { id: cid }), destructive: true }))) return;
     await window.codeshell.credentials.remove(cwd, "user", cid);
     load();
   };
@@ -62,39 +64,39 @@ export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" })
       <Card className="space-y-3 p-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label>id(引用键)</Label>
-            <Input value={id} onChange={(e) => setId(e.target.value)} placeholder="my-figma-token" />
+            <Label>{t("ext.token.idLabel")}</Label>
+            <Input value={id} onChange={(e) => setId(e.target.value)} placeholder={t("ext.token.idPlaceholder")} />
           </div>
           <div className="space-y-1">
-            <Label>名称</Label>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Figma 个人 token" />
+            <Label>{t("ext.token.nameLabel")}</Label>
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t("ext.token.namePlaceholder")} />
           </div>
         </div>
         <div className="space-y-1">
-          <Label>{kind === "token" ? "Token 值" : "凭证(client id/secret 等)"}</Label>
+          <Label>{kind === "token" ? t("ext.token.tokenValueLabel") : t("ext.token.linkValueLabel")}</Label>
           <Input type="password" value={secret} onChange={(e) => setSecret(e.target.value)} />
         </div>
         {kind === "link" && (
           <div className="space-y-1">
-            <Label>注册地址(可选)</Label>
+            <Label>{t("ext.token.appUrlLabel")}</Label>
             <Input value={appUrl} onChange={(e) => setAppUrl(e.target.value)} placeholder="https://..." />
           </div>
         )}
         <div className="space-y-1">
-          <Label>暴露为 env 变量名(可选)</Label>
+          <Label>{t("ext.token.exposeEnvLabel")}</Label>
           <Input
             value={exposeAsEnv}
             onChange={(e) => setExposeAsEnv(e.target.value)}
             placeholder="FIGMA_TOKEN"
           />
         </div>
-        <Button onClick={() => void save()}>保存</Button>
+        <Button onClick={() => void save()}>{t("ext.token.save")}</Button>
       </Card>
 
       <div className="space-y-2">
         {items.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            暂无{kind === "token" ? "凭证" : " Link"}。
+            {kind === "token" ? t("ext.token.emptyTokens") : t("ext.token.emptyLinks")}
           </p>
         )}
         {items.map((c) => (
@@ -104,13 +106,13 @@ export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" })
                 {c.label} <span className="text-xs text-muted-foreground">({c.id})</span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {c.hasSecret ? c.secretHint : "(无密文)"}
+                {c.hasSecret ? c.secretHint : t("ext.token.noSecret")}
                 {c.exposeAsEnv ? ` · env: ${c.exposeAsEnv}` : ""}
                 {c.meta?.appUrl ? ` · ${c.meta.appUrl}` : ""}
               </div>
             </div>
             <Button variant="ghost" size="sm" onClick={() => void del(c.id)}>
-              删除
+              {t("ext.token.delete")}
             </Button>
           </Card>
         ))}

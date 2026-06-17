@@ -8,6 +8,8 @@
 import type { StreamEvent, TaskInfo } from "@cjhyy/code-shell-core";
 import type { ApprovalRequestEnvelope } from "../preload/types";
 import { aggregateFileChangeSummary } from "./messages/fileChangeAggregator";
+import { translate } from "./i18n/translate";
+import { loadUILanguage } from "./uiLanguage";
 
 export type ToolStatus =
   | "queued"
@@ -323,11 +325,18 @@ export function bgCompletionText(event: {
   finalText?: string;
   error?: string;
 }): string {
-  const who = event.name ?? "后台任务";
+  const lang = loadUILanguage();
+  const who = event.name ?? translate(lang, "misc.bgTask.defaultName");
   if (event.status === "completed") {
-    return `✓ ${who}完成:${previewLine(event.finalText ?? event.description)}`;
+    return translate(lang, "misc.bgTask.completed", {
+      name: who,
+      preview: previewLine(event.finalText ?? event.description),
+    });
   }
-  return `✗ ${who}失败:${previewLine(event.error ?? event.description)}`;
+  return translate(lang, "misc.bgTask.failed", {
+    name: who,
+    preview: previewLine(event.error ?? event.description),
+  });
 }
 
 export function applyStreamEvent(

@@ -5,6 +5,9 @@ import { repoLabel } from "../repos";
 import { NO_REPO_KEY, type SessionIndex, type SessionSummary } from "../transcripts";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
 
 interface Props {
   open: boolean;
@@ -43,6 +46,7 @@ export function SessionSearchModal({
   activeRepoId,
   onPick,
 }: Props) {
+  const { t } = useT();
   const [filter, setFilter] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -69,13 +73,13 @@ export function SessionSearchModal({
     if (noRepoIdx) {
       for (const s of noRepoIdx.sessions) {
         if (s.archived) continue;
-        out.push({ repoId: null, repoLabel: "对话", session: s });
+        out.push({ repoId: null, repoLabel: t("panels.search.noRepoLabel"), session: s });
       }
     }
     // Default sort: most-recently-updated first.
     out.sort((a, b) => b.session.updatedAt - a.session.updatedAt);
     return out;
-  }, [repos, sessions]);
+  }, [repos, sessions, t]);
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -107,7 +111,7 @@ export function SessionSearchModal({
           <Input
             ref={inputRef}
             className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-            placeholder="搜索对话"
+            placeholder={t("panels.search.placeholder")}
             value={filter}
             onChange={(e) => {
               setFilter(e.target.value);
@@ -130,11 +134,11 @@ export function SessionSearchModal({
           />
         </div>
         <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {filter ? "搜索结果" : "近期对话"}
+          {filter ? t("panels.search.results") : t("panels.search.recent")}
         </div>
         <ul className="max-h-[55vh] overflow-y-auto px-2 pb-2">
           {filtered.length === 0 && (
-            <li className="px-2 py-6 text-center text-sm text-muted-foreground">没有匹配的对话</li>
+            <li className="px-2 py-6 text-center text-sm text-muted-foreground">{t("panels.search.noMatch")}</li>
           )}
           {filtered.map((h, i) => {
             const isActive =
@@ -166,17 +170,19 @@ export function SessionSearchModal({
 }
 
 function formatRelative(ts: number): string {
+  // Module-level helper (no hook): translate against the stored language.
+  const lang = loadUILanguage();
   const delta = Date.now() - ts;
   const sec = Math.floor(delta / 1000);
-  if (sec < 60) return `${sec}秒`;
+  if (sec < 60) return translate(lang, "panels.search.sec", { n: sec });
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}分`;
+  if (min < 60) return translate(lang, "panels.search.min", { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}小时`;
+  if (hr < 24) return translate(lang, "panels.search.hour", { n: hr });
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day}天`;
+  if (day < 30) return translate(lang, "panels.search.day", { n: day });
   const month = Math.floor(day / 30);
-  if (month < 12) return `${month}月`;
+  if (month < 12) return translate(lang, "panels.search.month", { n: month });
   const year = Math.floor(day / 365);
-  return `${year}年`;
+  return translate(lang, "panels.search.year", { n: year });
 }

@@ -12,6 +12,8 @@
 
 import type { Message, ToolMessage } from "../types";
 import { parsedArgs, basename, truncate } from "../tool-cards/utils";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
 
 export interface LiveActivity {
   /** Name of the most recent in-flight tool, or the last completed
@@ -108,8 +110,10 @@ export function summarizeAgentActivity(toolCalls: ToolMessage[]): LiveActivity {
  * same source the tool cards use, no new backend signal needed.
  */
 export function describeActivity(activity: LiveActivity): string {
+  const lang = loadUILanguage();
+  const tr = (key: string): string => translate(lang, key);
   const t = activity.lastTool;
-  if (!t) return "正在思考…";
+  if (!t) return tr("misc.activity.thinking");
   const a = parsedArgs(t);
   const running = t.status === "running";
   const str = (v: unknown): string => (typeof v === "string" ? v : "");
@@ -149,19 +153,19 @@ export function describeActivity(activity: LiveActivity): string {
   }
 
   const verbs: Record<string, [string, string]> = {
-    Bash: ["正在运行", "已运行"],
-    Edit: ["正在编辑", "已编辑"],
-    Write: ["正在写入", "已写入"],
-    Read: ["正在读取", "已读取"],
-    NotebookEdit: ["正在编辑", "已编辑"],
-    Grep: ["正在搜索", "已搜索"],
-    Glob: ["正在查找", "已查找"],
-    Skill: ["正在调用技能", "已调用技能"],
-    Agent: ["正在派发子代理", "已派发子代理"],
-    WebFetch: ["正在抓取", "已抓取"],
-    WebSearch: ["正在搜索", "已搜索"],
+    Bash: [tr("misc.activity.running"), tr("misc.activity.ranPast")],
+    Edit: [tr("misc.activity.editing"), tr("misc.activity.editedPast")],
+    Write: [tr("misc.activity.writing"), tr("misc.activity.wrotePast")],
+    Read: [tr("misc.activity.reading"), tr("misc.activity.readPast")],
+    NotebookEdit: [tr("misc.activity.editing"), tr("misc.activity.editedPast")],
+    Grep: [tr("misc.activity.searching"), tr("misc.activity.searchedPast")],
+    Glob: [tr("misc.activity.finding"), tr("misc.activity.foundPast")],
+    Skill: [tr("misc.activity.callingSkill"), tr("misc.activity.calledSkill")],
+    Agent: [tr("misc.activity.dispatchingAgent"), tr("misc.activity.dispatchedAgent")],
+    WebFetch: [tr("misc.activity.fetching"), tr("misc.activity.fetchedPast")],
+    WebSearch: [tr("misc.activity.searching"), tr("misc.activity.searchedPast")],
   };
-  const [presentVerb, pastVerb] = verbs[t.toolName] ?? ["正在运行", "已运行"];
+  const [presentVerb, pastVerb] = verbs[t.toolName] ?? [tr("misc.activity.running"), tr("misc.activity.ranPast")];
   const verb = running ? presentVerb : pastVerb;
 
   const label = detail ? `${verb} ${truncate(detail.replace(/\s+/g, " ").trim(), 64)}` : `${verb} ${t.toolName}`;

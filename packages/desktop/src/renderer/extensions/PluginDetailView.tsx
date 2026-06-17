@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { PluginDetail } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TerminalSquare, Bot, Webhook, Plug } from "lucide-react";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * Plugin detail (feedback#15: 插件列表只显 "N skills",看不到里面有啥) —
@@ -16,6 +17,7 @@ export function PluginDetailView({
   installKey: string;
   onBack: () => void;
 }) {
+  const { t } = useT();
   const [detail, setDetail] = useState<PluginDetail | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,19 +44,19 @@ export function PluginDetailView({
   if (error)
     return (
       <div className="p-4 text-sm text-muted-foreground">
-        加载失败：{error}
+        {t("ext.common.loadFailed", { error })}
         <Button size="sm" variant="outline" className="ml-2" onClick={onBack}>
-          返回
+          {t("ext.common.back")}
         </Button>
       </div>
     );
-  if (!loaded) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  if (!loaded) return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
   if (!detail)
     return (
       <div className="p-4 text-sm text-muted-foreground">
-        找不到该插件（可能已被卸载）。
+        {t("ext.pluginDetail.notFound")}
         <Button size="sm" variant="outline" className="ml-2" onClick={onBack}>
-          返回
+          {t("ext.common.back")}
         </Button>
       </div>
     );
@@ -75,7 +77,7 @@ export function PluginDetailView({
           className="text-sm text-muted-foreground hover:text-foreground"
           onClick={onBack}
         >
-          ‹ 返回
+          ‹ {t("ext.common.back")}
         </button>
         <span className="text-lg">🧩</span>
         <span className="font-semibold">{detail.name}</span>
@@ -88,12 +90,12 @@ export function PluginDetailView({
       )}
       {total === 0 && (
         <div className="rounded-md border p-3 text-sm text-muted-foreground">
-          这个插件没有可枚举的内容（skills / commands / agents / hooks / MCP 均为空）。
+          {t("ext.pluginDetail.empty")}
         </div>
       )}
 
       {content.skills.length > 0 && (
-        <Section icon={<Sparkles className="h-3.5 w-3.5" />} title={`Skills（${content.skills.length}）`}>
+        <Section icon={<Sparkles className="h-3.5 w-3.5" />} title={t("ext.pluginDetail.skillsTitle", { count: content.skills.length })}>
           {content.skills.map((s) => (
             <li key={s.name} className="flex items-baseline gap-2">
               <span className="shrink-0 font-mono text-xs">{s.name}</span>
@@ -108,7 +110,7 @@ export function PluginDetailView({
       {content.commands.length > 0 && (
         <Section
           icon={<TerminalSquare className="h-3.5 w-3.5" />}
-          title={`Commands（${content.commands.length}）`}
+          title={t("ext.pluginDetail.commandsTitle", { count: content.commands.length })}
         >
           {content.commands.map((c) => (
             <li key={c} className="font-mono text-xs">/{c}</li>
@@ -117,7 +119,7 @@ export function PluginDetailView({
       )}
 
       {content.agents.length > 0 && (
-        <Section icon={<Bot className="h-3.5 w-3.5" />} title={`Agents（${content.agents.length}）`}>
+        <Section icon={<Bot className="h-3.5 w-3.5" />} title={t("ext.pluginDetail.agentsTitle", { count: content.agents.length })}>
           {content.agents.map((a) => (
             <li key={a} className="font-mono text-xs">{a}</li>
           ))}
@@ -125,7 +127,7 @@ export function PluginDetailView({
       )}
 
       {content.hooks.length > 0 && (
-        <Section icon={<Webhook className="h-3.5 w-3.5" />} title={`Hooks（${content.hooks.length}）`}>
+        <Section icon={<Webhook className="h-3.5 w-3.5" />} title={t("ext.pluginDetail.hooksTitle", { count: content.hooks.length })}>
           {content.hooks.map((h, i) => (
             <li key={`${h.rawEvent}-${i}`} className="flex items-baseline gap-2">
               <span className="shrink-0 rounded bg-muted px-1 font-mono text-[10px]">{h.rawEvent}</span>
@@ -136,12 +138,12 @@ export function PluginDetailView({
       )}
 
       {content.mcpServers.length > 0 && (
-        <Section icon={<Plug className="h-3.5 w-3.5" />} title={`MCP servers（${content.mcpServers.length}）`}>
+        <Section icon={<Plug className="h-3.5 w-3.5" />} title={t("ext.pluginDetail.mcpTitle", { count: content.mcpServers.length })}>
           {content.mcpServers.map((m) => (
             <li key={m} className="flex items-baseline gap-2">
               <span className="font-mono text-xs">{m}</span>
               <span className="text-[10px] text-muted-foreground">
-                在 MCP 设置页显示为 {detail.name}:{m}
+                {t("ext.pluginDetail.mcpDisplayAs", { name: detail.name, server: m })}
               </span>
             </li>
           ))}

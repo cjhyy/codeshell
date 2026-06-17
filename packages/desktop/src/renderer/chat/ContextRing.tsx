@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   used: number;
@@ -21,6 +22,7 @@ interface Props {
 const FALLBACK_MAX = 200_000;
 
 export function ContextRing({ used, max, busy }: Props) {
+  const { t } = useT();
   const [hover, setHover] = useState(false);
 
   const hasDeclaredMax = typeof max === "number" && max > 0;
@@ -82,27 +84,27 @@ export function ContextRing({ used, max, busy }: Props) {
         <div className="absolute bottom-full right-0 z-50 mb-1 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md">
           {!hasUsage ? (
             <div className="text-sm">
-              {busy ? "已发送，等待引擎统计…" : "新会话，尚未消耗上下文"}
+              {busy ? t("chat.contextRing.waitingEngine") : t("chat.contextRing.newSession")}
               <div className="mt-1 text-xs text-muted-foreground">
-                上限 {formatTok(safeMax)}
-                {!hasDeclaredMax && " (默认，模型未声明)"}
+                {t("chat.contextRing.max", { value: formatTok(safeMax) })}
+                {!hasDeclaredMax && t("chat.contextRing.maxDefaultNote")}
               </div>
             </div>
           ) : (
             <>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">已用</span>
+                <span className="text-muted-foreground">{t("chat.contextRing.used")}</span>
                 <span>{formatTok(used)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">剩余</span>
+                <span className="text-muted-foreground">{t("chat.contextRing.remaining")}</span>
                 <span>{formatTok(remaining)}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">上限</span>
+                <span className="text-muted-foreground">{t("chat.contextRing.maxLabel")}</span>
                 <span>
                   {formatTok(safeMax)}
-                  {!hasDeclaredMax && <span className="text-muted-foreground"> 默认</span>}
+                  {!hasDeclaredMax && <span className="text-muted-foreground">{t("chat.contextRing.defaultSuffix")}</span>}
                 </span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
@@ -110,7 +112,7 @@ export function ContextRing({ used, max, busy }: Props) {
               </div>
               {!hasDeclaredMax && (
                 <div className="mt-2 text-xs text-muted-foreground">
-                  当前模型未在 settings.json 声明 maxContextTokens，使用 200k 作为默认。
+                  {t("chat.contextRing.fallbackNote")}
                 </div>
               )}
             </>

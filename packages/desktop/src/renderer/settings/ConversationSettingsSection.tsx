@@ -26,6 +26,7 @@ import { notifySettingsChanged } from "../settingsBus";
 import { cacheGet, cacheSet } from "./settingsCache";
 import { useConfirm } from "../ui/DialogProvider";
 import { useToast } from "../ui/ToastProvider";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * builtin 工具里"对话无项目目录就没意义"的那批,置灰禁用(设计稿 §4)。
@@ -68,6 +69,7 @@ export function ConversationSettingsSection() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const confirm = useConfirm();
   const toast = useToast();
+  const { t } = useT();
   // Monotonic token so a slow earlier load can't clobber a newer one.
   const loadSeq = useRef(0);
 
@@ -133,9 +135,9 @@ export function ConversationSettingsSection() {
   const onCloseAll = async () => {
     if (!cwd || enabledOptIns.length === 0) return;
     const ok = await confirm({
-      title: "全部关闭",
-      message: `将关闭 ${enabledOptIns.length} 项已开启的技能 / 插件,纯聊天回到默认全关状态。`,
-      confirmLabel: "全部关闭",
+      title: t("settingsX.conversation.confirmCloseAllTitle"),
+      message: t("settingsX.conversation.confirmCloseAllMsg", { count: enabledOptIns.length }),
+      confirmLabel: t("settingsX.conversation.closeAll"),
     });
     if (!ok) return;
     setBulkBusy(true);
@@ -146,7 +148,7 @@ export function ConversationSettingsSection() {
       }
       notifySettingsChanged();
       await reload(cwd);
-      toast({ message: "已全部关闭,纯聊天对话回到默认全关。", variant: "success" });
+      toast({ message: t("settingsX.conversation.closedToast"), variant: "success" });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -171,7 +173,7 @@ export function ConversationSettingsSection() {
         <Switch
           checked={on}
           disabled={busy}
-          aria-label={`${cap.name} 开关`}
+          aria-label={t("settingsX.conversation.switchAria", { name: cap.name })}
           onCheckedChange={(v) => void setOverride(cap, v ? "on" : "inherit")}
         />
       </div>
@@ -199,7 +201,7 @@ export function ConversationSettingsSection() {
           {cwdLocked ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Lock size={11} />
-              对话无项目目录,不可用
+              {t("settingsX.conversation.cwdLocked")}
             </div>
           ) : (
             cap.description && (
@@ -210,7 +212,11 @@ export function ConversationSettingsSection() {
         <Switch
           checked={on}
           disabled={cwdLocked || busy}
-          aria-label={cwdLocked ? `${cap.name}(不可用)` : `${cap.name} 开关`}
+          aria-label={
+            cwdLocked
+              ? t("settingsX.conversation.unavailableAria", { name: cap.name })
+              : t("settingsX.conversation.switchAria", { name: cap.name })
+          }
           onCheckedChange={(v) => void setOverride(cap, v ? "inherit" : "off")}
         />
       </div>
@@ -227,22 +233,29 @@ export function ConversationSettingsSection() {
           <MessageSquare size={18} />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-foreground">对话能力</h3>
+          <h3 className="text-sm font-semibold text-foreground">
+            {t("settingsX.conversation.title")}
+          </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            以下设置只影响<strong className="font-medium text-foreground">无项目的纯聊天对话</strong>
-            (不绑代码目录)。技能和插件默认全部关闭,按需手动开启;对新对话生效。
+            {t("settingsX.conversation.descPrefix")}
+            <strong className="font-medium text-foreground">
+              {t("settingsX.conversation.descStrong")}
+            </strong>
+            {t("settingsX.conversation.descSuffix")}
           </p>
         </div>
       </div>
 
       {error && <p className="text-sm text-status-err">{error}</p>}
-      {loading && <p className="text-sm text-muted-foreground">加载中…</p>}
+      {loading && (
+        <p className="text-sm text-muted-foreground">{t("settingsX.conversation.loading")}</p>
+      )}
 
       {!loading && (
         <>
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              已开启 {enabledOptIns.length} 项技能 / 插件
+              {t("settingsX.conversation.enabledCount", { count: enabledOptIns.length })}
             </p>
             <Button
               variant="outline"
@@ -250,18 +263,20 @@ export function ConversationSettingsSection() {
               disabled={bulkBusy || enabledOptIns.length === 0}
               onClick={() => void onCloseAll()}
             >
-              全部关闭
+              {t("settingsX.conversation.closeAll")}
             </Button>
           </div>
 
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <Sparkles size={13} />
-              技能
+              {t("settingsX.conversation.skills")}
               <span className="text-muted-foreground/70">{skills.length}</span>
             </div>
             {skills.length === 0 ? (
-              <p className="text-sm text-muted-foreground">尚无已安装的技能。</p>
+              <p className="text-sm text-muted-foreground">
+                {t("settingsX.conversation.noSkills")}
+              </p>
             ) : (
               skills.map(renderOptInRow)
             )}
@@ -270,11 +285,13 @@ export function ConversationSettingsSection() {
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <Puzzle size={13} />
-              插件
+              {t("settingsX.conversation.plugins")}
               <span className="text-muted-foreground/70">{plugins.length}</span>
             </div>
             {plugins.length === 0 ? (
-              <p className="text-sm text-muted-foreground">尚无已安装的插件。</p>
+              <p className="text-sm text-muted-foreground">
+                {t("settingsX.conversation.noPlugins")}
+              </p>
             ) : (
               plugins.map(renderOptInRow)
             )}
@@ -283,14 +300,16 @@ export function ConversationSettingsSection() {
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <Wrench size={13} />
-              内置工具
+              {t("settingsX.conversation.builtins")}
               <span className="text-muted-foreground/70">{builtins.length}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              内置工具默认开,可手动关掉不需要的;依赖项目目录的工具在纯聊天里不可用。
+              {t("settingsX.conversation.builtinHint")}
             </p>
             {builtins.length === 0 ? (
-              <p className="text-sm text-muted-foreground">无内置工具。</p>
+              <p className="text-sm text-muted-foreground">
+                {t("settingsX.conversation.noBuiltins")}
+              </p>
             ) : (
               builtins.map(renderBuiltinRow)
             )}

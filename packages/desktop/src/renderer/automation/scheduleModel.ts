@@ -12,6 +12,9 @@
  * with dayOfWeek 0=Sunday.
  */
 
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
+
 export type Schedule =
   | { kind: "daily"; time: string }
   | { kind: "weekdays"; time: string }
@@ -19,7 +22,26 @@ export type Schedule =
   | { kind: "hourly"; everyHours: number }
   | { kind: "custom"; raw: string };
 
-export const WEEKDAY_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const WEEKDAY_KEYS = [
+  "auto.weekday.sun",
+  "auto.weekday.mon",
+  "auto.weekday.tue",
+  "auto.weekday.wed",
+  "auto.weekday.thu",
+  "auto.weekday.fri",
+  "auto.weekday.sat",
+] as const;
+
+/** Localized weekday labels (Sun..Sat), resolved against the active UI language. */
+export function weekdayLabels(): string[] {
+  const lang = loadUILanguage();
+  return WEEKDAY_KEYS.map((k) => translate(lang, k));
+}
+
+/** Single weekday label by index (0=Sunday). */
+export function weekdayLabel(i: number): string {
+  return translate(loadUILanguage(), WEEKDAY_KEYS[i] ?? WEEKDAY_KEYS[0]);
+}
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
@@ -101,16 +123,22 @@ export function buildSchedule(s: Schedule): string {
 
 /** Short human-readable label for a stored schedule (sidebar / summary). */
 export function describeSchedule(raw: string): string {
+  const lang = loadUILanguage();
   const s = parseSchedule(raw);
   switch (s.kind) {
     case "daily":
-      return `每天 ${s.time}`;
+      return translate(lang, "auto.schedule.daily", { time: s.time });
     case "weekdays":
-      return `工作日 ${s.time}`;
+      return translate(lang, "auto.schedule.weekdays", { time: s.time });
     case "weekly":
-      return `每${WEEKDAY_LABELS[s.weekday]} ${s.time}`;
+      return translate(lang, "auto.schedule.weekly", {
+        weekday: weekdayLabel(s.weekday),
+        time: s.time,
+      });
     case "hourly":
-      return s.everyHours === 1 ? "每小时" : `每 ${s.everyHours} 小时`;
+      return s.everyHours === 1
+        ? translate(lang, "auto.schedule.hourly")
+        : translate(lang, "auto.schedule.hourlyN", { hours: s.everyHours });
     case "custom":
       return s.raw;
   }

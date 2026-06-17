@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   cwd: string;
@@ -18,12 +19,15 @@ const FORMAT_BADGE: Record<
   Marketplace["format"],
   { label: string; variant: "accent" | "info" | "success" }
 > = {
+  // "universal" label is translated at render via t("ext.market.formatUniversal");
+  // Claude Code / Codex are proper names kept as-is.
   "claude-code": { label: "Claude Code", variant: "accent" },
   codex: { label: "Codex", variant: "info" },
-  universal: { label: "通用", variant: "success" },
+  universal: { label: "", variant: "success" },
 };
 
 export function MarketList({ cwd, onInstalled }: Props) {
+  const { t } = useT();
   const [markets, setMarkets] = useState<Marketplace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -79,7 +83,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
     try {
       const res = await window.codeshell.addMarketplace(value);
       if (!res.ok) {
-        setAddError(res.error ?? "添加失败");
+        setAddError(res.error ?? t("ext.market.addFailed"));
         return;
       }
       setInput("");
@@ -93,9 +97,9 @@ export function MarketList({ cwd, onInstalled }: Props) {
 
   const remove = async (name: string) => {
     const ok = await confirm({
-      title: "移除市场",
-      message: `确定移除市场 “${name}”？`,
-      confirmLabel: "移除",
+      title: t("ext.market.removeTitle"),
+      message: t("ext.market.removeConfirm", { name }),
+      confirmLabel: t("ext.market.removeLabel"),
       destructive: true,
     });
     if (!ok) return;
@@ -103,7 +107,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
       await window.codeshell.removeMarketplace(name);
       retry();
     } catch (e) {
-      void alert({ title: "移除失败", message: String((e as Error)?.message ?? e) });
+      void alert({ title: t("ext.market.removeFailedTitle"), message: String((e as Error)?.message ?? e) });
     }
   };
 
@@ -121,15 +125,15 @@ export function MarketList({ cwd, onInstalled }: Props) {
   if (error)
     return (
       <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-        加载失败：{error} <Button size="sm" variant="outline" onClick={retry}>重试</Button>
+        {t("ext.common.loadFailed", { error })} <Button size="sm" variant="outline" onClick={retry}>{t("ext.common.retry")}</Button>
       </div>
     );
-  if (markets === null) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  if (markets === null) return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
 
   const gitBanner =
     gitOk === false ? (
       <div className="mb-3 rounded-md border border-status-warn/40 bg-status-warn/10 px-3 py-2 text-xs text-foreground">
-        <span className="font-medium">未检测到 Git。</span> 安装/更新插件市场需要 Git。请从{" "}
+        <span className="font-medium">{t("ext.market.gitMissingBold")}</span> {t("ext.market.gitMissingPrefix")}
         <a
           href="https://git-scm.com/downloads"
           target="_blank"
@@ -137,9 +141,9 @@ export function MarketList({ cwd, onInstalled }: Props) {
           className="underline"
         >
           git-scm.com
-        </a>{" "}
-        安装后重启;若已安装但仍提示(常见于 Windows 的 PATH 问题),可在 设置 里填写{" "}
-        <code className="rounded bg-muted px-1">git.path</code> 指向 git 可执行文件。
+        </a>
+        {t("ext.market.gitMissingSuffix")}
+        <code className="rounded bg-muted px-1">git.path</code>{t("ext.market.gitMissingTail")}
       </div>
     ) : null;
 
@@ -147,7 +151,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
     <div className="mb-3 flex items-center gap-2">
       <Input
         className="h-8 max-w-xs"
-        placeholder="owner/repo 或 git URL"
+        placeholder={t("ext.market.addPlaceholder")}
         value={input}
         onChange={(e) => {
           setInput(e.target.value);
@@ -163,7 +167,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
         disabled={adding || input.trim().length === 0}
         onClick={() => void add()}
       >
-        {adding ? "添加中…" : "添加"}
+        {adding ? t("ext.market.adding") : t("ext.market.add")}
       </Button>
       {addError && <span className="text-xs text-status-err">{addError}</span>}
     </div>
@@ -174,7 +178,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
       <>
         {gitBanner}
         {addForm}
-        <div className="p-4 text-sm text-muted-foreground">还没有添加任何市场</div>
+        <div className="p-4 text-sm text-muted-foreground">{t("ext.market.empty")}</div>
       </>
     );
 
@@ -193,18 +197,18 @@ export function MarketList({ cwd, onInstalled }: Props) {
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium">{m.name}</div>
               <div className="truncate text-xs text-muted-foreground">
-                {m.pluginCount >= 0 ? `${m.pluginCount} 个可安装插件` : "清单无效"}
+                {m.pluginCount >= 0 ? t("ext.market.pluginCount", { count: m.pluginCount }) : t("ext.market.manifestInvalid")}
               </div>
             </div>
             {m.format && (
               <Badge variant={FORMAT_BADGE[m.format].variant} className="shrink-0">
-                {FORMAT_BADGE[m.format].label}
+                {m.format === "universal" ? t("ext.market.formatUniversal") : FORMAT_BADGE[m.format].label}
               </Badge>
             )}
             <span className="text-xs text-muted-foreground">{m.source.source}</span>
             <button
               className="px-1 text-muted-foreground hover:text-foreground"
-              title="移除市场"
+              title={t("ext.market.removeTip")}
               onClick={(e) => {
                 e.stopPropagation();
                 void remove(m.name);

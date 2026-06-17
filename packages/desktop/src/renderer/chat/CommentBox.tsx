@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   /** Shown above the input so the user knows what they're commenting on. */
@@ -15,6 +16,7 @@ interface Props {
  * Esc or 取消 dismisses.
  */
 export function CommentBox({ title, onSubmit, onCancel }: Props) {
+  const { t } = useT();
   const [value, setValue] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -30,7 +32,7 @@ export function CommentBox({ title, onSubmit, onCancel }: Props) {
     <div className="my-1 rounded-md border border-border bg-card p-2 shadow-sm">
       <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <MessageSquarePlus className="h-3.5 w-3.5" />
-        本地评论 · {title}
+        {t("chat.comment.localComment", { title })}
       </div>
       <textarea
         ref={ref}
@@ -45,15 +47,15 @@ export function CommentBox({ title, onSubmit, onCancel }: Props) {
             submit();
           }
         }}
-        placeholder="写下要让模型处理的内容…"
+        placeholder={t("chat.comment.placeholder")}
         className="h-16 w-full resize-none rounded border border-border bg-background p-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
       />
       <div className="mt-1 flex justify-end gap-1.5">
         <Button size="sm" variant="ghost" onClick={onCancel}>
-          取消
+          {t("chat.comment.cancel")}
         </Button>
         <Button size="sm" onClick={submit} disabled={!value.trim()}>
-          添加到输入框
+          {t("chat.comment.add")}
         </Button>
       </div>
     </div>

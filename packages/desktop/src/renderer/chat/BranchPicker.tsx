@@ -3,6 +3,7 @@ import { Check, ChevronDown, GitBranch } from "lucide-react";
 import type { GitBranches } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   cwd: string | null;
@@ -13,6 +14,7 @@ interface Props {
 type LoadState = "idle" | "loading" | "ready" | "unavailable" | "error";
 
 export function BranchPicker({ cwd, clean, disabled }: Props) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<LoadState>("idle");
   const [branches, setBranches] = useState<GitBranches>({ isRepo: false, current: null, branches: [] });
@@ -42,7 +44,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       .catch((err: unknown) => {
         if (cancelled) return;
         setBranches({ isRepo: false, current: null, branches: [] });
-        setError(err instanceof Error ? err.message : "无法读取分支");
+        setError(err instanceof Error ? err.message : t("chat.branch.readFailed"));
         setState("error");
       });
 
@@ -72,12 +74,12 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
 
   const canOpen = !disabled && state === "ready";
   const label = (() => {
-    if (!cwd) return "No branch";
-    if (state === "loading") return "Loading branch…";
-    if (state === "error") return "非 Git 项目";
-    if (!branches.isRepo) return "非 Git 项目";
-    if (branches.branches.length === 0) return "无本地分支";
-    return branches.current ?? "detached HEAD";
+    if (!cwd) return t("chat.branch.noBranch");
+    if (state === "loading") return t("chat.branch.loading");
+    if (state === "error") return t("chat.branch.notGit");
+    if (!branches.isRepo) return t("chat.branch.notGit");
+    if (branches.branches.length === 0) return t("chat.branch.noLocalBranches");
+    return branches.current ?? t("chat.branch.detached");
   })();
 
   const switchClean = async (branch: string): Promise<void> => {
@@ -93,7 +95,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       setOpen(false);
     } catch (err) {
       setBranches(previous);
-      setError(err instanceof Error ? err.message : "切换分支失败");
+      setError(err instanceof Error ? err.message : t("chat.branch.switchFailed"));
       setState("ready");
     }
   };
@@ -111,7 +113,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       setOpen(false);
     } catch (err) {
       setBranches(previous);
-      setError(err instanceof Error ? err.message : "暂存并切换失败");
+      setError(err instanceof Error ? err.message : t("chat.branch.stashFailed"));
       setState("ready");
     }
   };
@@ -130,7 +132,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       }
       await switchClean(branch);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "切换分支失败");
+      setError(err instanceof Error ? err.message : t("chat.branch.switchFailed"));
       setState("ready");
     }
   };
@@ -144,7 +146,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
         className="h-8 gap-1 px-2 text-xs disabled:opacity-50"
         disabled={!canOpen}
         onClick={() => setOpen((o) => !o)}
-        title={error ?? (clean === false ? "当前分支有未提交改动" : "切换 Git 分支")}
+        title={error ?? (clean === false ? t("chat.branch.dirtyTitle") : t("chat.branch.switchTitle"))}
       >
         <GitBranch size={12} />
         <span className="max-w-32 truncate text-xs font-medium">{label}</span>
@@ -157,13 +159,13 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
           {error && <div className="rounded bg-status-err/10 p-2 text-xs text-status-err">{error}</div>}
           {pendingBranch ? (
             <div className="rounded-md border p-3">
-              <div className="font-medium text-foreground">当前有未提交改动</div>
+              <div className="font-medium text-foreground">{t("chat.branch.dirtyHeading")}</div>
               <div className="mt-1 text-xs text-muted-foreground">
-                切换到 {pendingBranch} 前需要先暂存当前改动。
+                {t("chat.branch.stashNeeded", { branch: pendingBranch })}
               </div>
               <div className="mt-3 flex justify-end gap-2">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setPendingBranch(null)}>
-                  取消
+                  {t("chat.branch.cancel")}
                 </Button>
                 <Button
                   type="button"
@@ -174,7 +176,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
                     void stashAndSwitch();
                   }}
                 >
-                  暂存并切换
+                  {t("chat.branch.stashAndSwitch")}
                 </Button>
               </div>
             </div>

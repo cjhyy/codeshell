@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   repoPath: string | null;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export function TrustGate({ repoPath, onDecide }: Props) {
+  const { t } = useT();
   const [pending, setPending] = useState(false);
   const [unknown, setUnknown] = useState(false);
 
@@ -46,11 +48,10 @@ export function TrustGate({ repoPath, onDecide }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4">
       <div className="w-full max-w-lg rounded-md border bg-popover p-5 text-popover-foreground shadow-2xl">
-        <h2 className="mb-2 text-lg font-semibold">信任此项目？</h2>
+        <h2 className="mb-2 text-lg font-semibold">{t("auto.trust.title")}</h2>
         <div className="mb-3 break-all rounded-md bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">{repoPath}</div>
         <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
-          Agent 会在此目录读写文件、运行命令。只信任你确认安全的项目。
-          未信任项目仍可对话，但所有写工具调用会被拒绝。
+          {t("auto.trust.body")}
         </p>
         <div className="flex justify-end gap-2">
           <Button
@@ -58,14 +59,14 @@ export function TrustGate({ repoPath, onDecide }: Props) {
             disabled={pending}
             onClick={() => void decide("untrusted")}
           >
-            仅查看（拒绝写工具）
+            {t("auto.trust.viewOnly")}
           </Button>
           <Button
             variant="solid"
             disabled={pending}
             onClick={() => void decide("trusted")}
           >
-            信任并继续
+            {t("auto.trust.trustContinue")}
           </Button>
         </div>
       </div>

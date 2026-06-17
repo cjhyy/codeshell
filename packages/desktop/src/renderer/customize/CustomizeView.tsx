@@ -1,5 +1,6 @@
 import React from "react";
 import { ExtensionsPage } from "../extensions/ExtensionsPage";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   activeRepoPath: string | null;
@@ -13,10 +14,11 @@ interface Props {
  * plugin/skill/MCP management — this is just a second door to it.
  */
 export function CustomizeView({ activeRepoPath }: Props) {
+  const { t } = useT();
   return (
     <div className="flex h-full flex-col gap-3 p-6">
       <header className="flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-foreground">扩展</h2>
+        <h2 className="text-lg font-semibold text-foreground">{t("auto.customize.title")}</h2>
       </header>
       <ExtensionsPage activeRepoPath={activeRepoPath} />
     </div>

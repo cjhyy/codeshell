@@ -16,6 +16,7 @@ import { ProjectPicker } from "./ProjectPicker";
 import { repoLabel, type Repo } from "../repos";
 import { writeSettings } from "../settingsBus";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
+import { useT } from "../i18n/I18nProvider";
 
 const FOLLOW = "__follow__"; // project-only: don't write sandbox → follow global
 
@@ -33,6 +34,7 @@ function lines(s: string): string[] {
 }
 
 export function SandboxSection({ repos }: { repos: Repo[] }) {
+  const { t } = useT();
   // selectedPath: null = global (user scope); a repo path = that project.
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const isGlobal = selectedPath === null;
@@ -81,19 +83,19 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
   const field = "flex flex-col gap-1.5";
   const hint = "mt-1 text-xs text-muted-foreground";
   const modeOptions = [
-    ...(isGlobal ? [] : [{ value: FOLLOW, label: "跟随全局", description: "用全局沙箱设置（默认）" }]),
-    { value: "off", label: "off", description: "关闭沙箱（不隔离）" },
-    { value: "auto", label: "auto", description: "按平台自动选择（macOS Seatbelt / Linux bwrap）" },
-    { value: "seatbelt", label: "seatbelt", description: "macOS 沙箱" },
-    { value: "bwrap", label: "bwrap", description: "Linux Bubblewrap" },
+    ...(isGlobal ? [] : [{ value: FOLLOW, label: t("settingsX.sandbox.follow"), description: t("settingsX.sandbox.followDesc") }]),
+    { value: "off", label: "off", description: t("settingsX.sandbox.offDesc") },
+    { value: "auto", label: "auto", description: t("settingsX.sandbox.autoDesc") },
+    { value: "seatbelt", label: "seatbelt", description: t("settingsX.sandbox.seatbeltDesc") },
+    { value: "bwrap", label: "bwrap", description: t("settingsX.sandbox.bwrapDesc") },
   ];
 
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">沙箱</h3>
+        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.sandbox.title")}</h3>
         <p className="text-sm text-muted-foreground">
-          Shell 命令的 OS 级隔离与网络策略。全局默认关闭；项目可单独配置或跟随全局。
+          {t("settingsX.sandbox.desc")}
         </p>
       </div>
 
@@ -104,23 +106,26 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
       />
 
       <div className="rounded-md border border-border bg-muted/40 p-2 text-sm text-muted-foreground">
-        当前编辑：{isGlobal ? "全局（所有项目默认）" : `项目 · ${selectedRepo ? repoLabel(selectedRepo) : selectedPath}`}
+        {t("settingsX.sandbox.editing")}
+        {isGlobal
+          ? t("settingsX.sandbox.editingGlobal")
+          : t("settingsX.sandbox.editingProject", { name: selectedRepo ? repoLabel(selectedRepo) : selectedPath ?? "" })}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <label className={field}>
-          <span className="text-sm text-muted-foreground">模式</span>
+          <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.mode")}</span>
           <Select value={mode} onChange={setMode} options={modeOptions} />
         </label>
         {mode !== FOLLOW && mode !== "off" && (
           <label className={field}>
-            <span className="text-sm text-muted-foreground">网络</span>
+            <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.network")}</span>
             <Select
               value={network}
               onChange={setNetwork}
               options={[
-                { value: "allow", label: "allow", description: "允许访问网络" },
-                { value: "deny", label: "deny", description: "拒绝网络访问" },
+                { value: "allow", label: "allow", description: t("settingsX.sandbox.networkAllow") },
+                { value: "deny", label: "deny", description: t("settingsX.sandbox.networkDeny") },
               ]}
             />
           </label>
@@ -128,22 +133,22 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
         {mode !== FOLLOW && mode !== "off" && (
           <>
             <label className={field}>
-              <span className="text-sm text-muted-foreground">可写路径</span>
+              <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.writableRoots")}</span>
               <Textarea
                 value={writableRoots}
                 onChange={(e) => setWritableRoots(e.target.value)}
                 className="min-h-[80px] resize-y font-mono text-sm"
               />
-              <span className={hint}>每行一个，支持 ${"{workspace}"}、~。命令可写范围。</span>
+              <span className={hint}>{t("settingsX.sandbox.writableRootsHint")}</span>
             </label>
             <label className={field}>
-              <span className="text-sm text-muted-foreground">禁读路径</span>
+              <span className="text-sm text-muted-foreground">{t("settingsX.sandbox.deniedReads")}</span>
               <Textarea
                 value={deniedReads}
                 onChange={(e) => setDeniedReads(e.target.value)}
                 className="min-h-[80px] resize-y font-mono text-sm"
               />
-              <span className={hint}>每行一个，读取这些路径会被沙箱拦截。</span>
+              <span className={hint}>{t("settingsX.sandbox.deniedReadsHint")}</span>
             </label>
           </>
         )}
@@ -151,11 +156,11 @@ export function SandboxSection({ repos }: { repos: Repo[] }) {
 
       <div className="flex items-center gap-2">
         <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
-          {saving ? "保存中..." : "保存沙箱设置"}
+          {saving ? t("settingsX.sandbox.saving") : t("settingsX.sandbox.saveBtn")}
         </Button>
         {savedAt && (
           <span className="text-sm text-status-ok">
-            已保存 · {new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+            {t("settingsX.sandbox.savedAt", { time: new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) })}
           </span>
         )}
       </div>

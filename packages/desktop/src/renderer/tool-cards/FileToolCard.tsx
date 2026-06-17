@@ -7,6 +7,7 @@ import { AttachmentCard } from "./AttachmentCard";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   message: ToolMessage;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }: Props) {
+  const { t } = useT();
   const a = parsedArgs(message);
   const path =
     (typeof a.file_path === "string" && a.file_path) ||
@@ -58,8 +60,8 @@ export function FileToolCard({ message, onSelect, selected, variant, turnEpoch }
               variant="ghost"
               size="icon"
               className="mt-1 h-7 w-7 self-start text-muted-foreground hover:text-foreground"
-              title="打开方式"
-              aria-label="打开方式"
+              title={t("msg.tool.openWith")}
+              aria-label={t("msg.tool.openWith")}
             >
               <MoreHorizontal size={14} />
             </Button>

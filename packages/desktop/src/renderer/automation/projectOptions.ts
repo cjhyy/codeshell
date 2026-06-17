@@ -29,11 +29,15 @@ export interface ProjectOption {
 }
 
 import { isNoRepoCwd } from "./pathMatch";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
 
 /** Sentinel value for the "无项目" option (shadcn Select disallows ""). */
 export const NO_PROJECT_VALUE = "__no_project__";
 
-const NO_PROJECT_LABEL = "无项目(对话)";
+function noProjectLabel(): string {
+  return translate(loadUILanguage(), "auto.projectOptions.noProject");
+}
 
 function repoLabel(repo: ProjectRepo): string {
   return repo.displayName?.trim() || repo.name;
@@ -50,7 +54,7 @@ export function buildProjectOptions(
   repos: ProjectRepo[],
   currentCwd: string | null | undefined,
 ): ProjectOption[] {
-  const out: ProjectOption[] = [{ value: NO_PROJECT_VALUE, label: NO_PROJECT_LABEL }];
+  const out: ProjectOption[] = [{ value: NO_PROJECT_VALUE, label: noProjectLabel() }];
   const seen = new Set<string>();
   for (const repo of repos) {
     if (!repo.path || seen.has(repo.path)) continue;

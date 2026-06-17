@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useT } from "../i18n/I18nProvider";
 import {
   initialDialogState,
   enqueue,
@@ -149,20 +150,21 @@ function ConfirmModal({
   options: ConfirmDialogOptions;
   onResult: (ok: boolean) => void;
 }) {
+  const { t } = useT();
   return (
     <Dialog open onOpenChange={(o) => !o && onResult(false)}>
       <DialogContent className="max-w-sm" onEscapeKeyDown={() => onResult(false)}>
         <ModalHead title={options.title} message={options.message} detail={options.detail} />
         <DialogFooter>
           <Button variant="outline" onClick={() => onResult(false)}>
-            {options.cancelLabel ?? "取消"}
+            {options.cancelLabel ?? t("misc.dialog.cancel")}
           </Button>
           <Button
             variant={options.destructive ? "destructive" : "solid"}
             onClick={() => onResult(true)}
             autoFocus
           >
-            {options.confirmLabel ?? "确定"}
+            {options.confirmLabel ?? t("misc.dialog.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -177,13 +179,14 @@ function AlertModal({
   options: AlertDialogOptions;
   onClose: () => void;
 }) {
+  const { t } = useT();
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm" onEscapeKeyDown={() => onClose()}>
         <ModalHead title={options.title} message={options.message} detail={options.detail} />
         <DialogFooter>
           <Button variant="solid" onClick={onClose} autoFocus>
-            {options.okLabel ?? "知道了"}
+            {options.okLabel ?? t("misc.dialog.ok")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -198,6 +201,7 @@ function PromptModal({
   options: PromptDialogOptions;
   onResult: (value: string | null) => void;
 }) {
+  const { t } = useT();
   const [value, setValue] = useState(options.defaultValue ?? "");
   const inputRef = useRef<HTMLInputElement>(null);
   // Select the prefilled text on open so editing/replacing is one keystroke.
@@ -226,10 +230,10 @@ function PromptModal({
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => onResult(null)}>
-            {options.cancelLabel ?? "取消"}
+            {options.cancelLabel ?? t("misc.dialog.cancel")}
           </Button>
           <Button variant="solid" onClick={submit}>
-            {options.confirmLabel ?? "确定"}
+            {options.confirmLabel ?? t("misc.dialog.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

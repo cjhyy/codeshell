@@ -24,6 +24,7 @@ import { AnnotationsBlock } from "./messages/AnnotationsBlock";
 import { formatMessageTime } from "./messages/time";
 import { Lightbox } from "./chat/Lightbox";
 import { timePhase } from "./perf";
+import { useT } from "./i18n/I18nProvider";
 
 // Stable fallback so memoized AskUserMessageView siblings don't see a
 // fresh onAnswer prop on every render.
@@ -85,6 +86,7 @@ export function MessageStream({
   liveTurnActive,
   cwd,
 }: Props) {
+  const { t } = useT();
   // The LAST files_changed message = the most recent turn's file edits. Only
   // that card gets interactive undo/redo (snapshots only peel newest-first);
   // older cards are informational. Computed from the raw message list (1:1 with
@@ -173,7 +175,7 @@ export function MessageStream({
                 {m.isGoal && (
                   // Persistent-goal marker (CC /goal). This send set/advanced a goal.
                   <span className="mb-0.5 flex items-center gap-1 px-1 text-[11px] font-medium text-status-running">
-                    ◎ 目标
+                    ◎ {t("msg.user.goal")}
                   </span>
                 )}
                 <div

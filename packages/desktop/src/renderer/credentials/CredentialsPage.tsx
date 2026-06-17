@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { TokenTab } from "./TokenTab";
 import { LinkTab } from "./LinkTab";
 import { CookieTab } from "./CookieTab";
+import { useT } from "../i18n/I18nProvider";
 
 type TabKey = "cookie" | "token" | "link";
 
 /** Full-screen 凭证 page: Cookie / Permission Token / Link (mirrors ManagePage tabs). */
 export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | null }) {
+  const { t } = useT();
   const [tab, setTab] = useState<TabKey>("cookie");
   const cwd = activeRepoPath ?? "";
 
@@ -25,14 +27,14 @@ export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | n
 
   return (
     <div className="h-full overflow-y-auto p-6">
-      <h2 className="mb-1 text-lg font-semibold">凭证</h2>
+      <h2 className="mb-1 text-lg font-semibold">{t("ext.credentials.pageTitle")}</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Cookie 登录态桥接、Permission Token、业务方 Link 凭证。
+        {t("ext.credentials.pageSubtitle")}
       </p>
       <div className="mb-4 flex items-center gap-1">
-        {tabBtn("cookie", "Cookie")}
-        {tabBtn("token", "Permission Token")}
-        {tabBtn("link", "Link")}
+        {tabBtn("cookie", t("ext.credentials.tabCookie"))}
+        {tabBtn("token", t("ext.credentials.tabToken"))}
+        {tabBtn("link", t("ext.credentials.tabLink"))}
       </div>
       {tab === "cookie" && <CookieTab />}
       {tab === "token" && <TokenTab cwd={cwd} kind="token" />}

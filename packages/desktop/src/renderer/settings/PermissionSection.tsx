@@ -6,20 +6,9 @@ import {
   type PermissionMode,
 } from "../chat/PermissionPill";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 const MODES: PermissionMode[] = ["plan", "default", "accept_edits", "bypass"];
-const MODE_LABELS: Record<PermissionMode, string> = {
-  plan: "计划模式",
-  default: "默认权限",
-  accept_edits: "接受编辑",
-  bypass: "完全访问权限",
-};
-const MODE_DESCRIPTIONS: Record<PermissionMode, string> = {
-  plan: "只读分析，不改动任何文件",
-  default: "执行前对写入和命令逐项请求授权",
-  accept_edits: "自动批准文件编辑，命令仍需确认",
-  bypass: "完全访问，不再请求授权（高风险）",
-};
 
 interface Props {
   scope: "user" | "project";
@@ -27,6 +16,19 @@ interface Props {
 }
 
 export function PermissionSection({ scope, activeRepoPath }: Props) {
+  const { t } = useT();
+  const MODE_LABELS: Record<PermissionMode, string> = {
+    plan: t("settingsX.permission.planLabel"),
+    default: t("settingsX.permission.defaultLabel"),
+    accept_edits: t("settingsX.permission.acceptEditsLabel"),
+    bypass: t("settingsX.permission.bypassLabel"),
+  };
+  const MODE_DESCRIPTIONS: Record<PermissionMode, string> = {
+    plan: t("settingsX.permission.planDesc"),
+    default: t("settingsX.permission.defaultDesc"),
+    accept_edits: t("settingsX.permission.acceptEditsDesc"),
+    bypass: t("settingsX.permission.bypassDesc"),
+  };
   const [mode, setMode] = useState<PermissionMode | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -69,9 +71,9 @@ export function PermissionSection({ scope, activeRepoPath }: Props) {
 
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">默认权限</h3>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.permission.title")}</h3>
       <p className="m-0 text-xs text-muted-foreground">
-        新会话默认的权限模式；对话中输入框里的临时权限只影响当前对话。
+        {t("settingsX.permission.desc")}
       </p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {MODES.map((m) => (

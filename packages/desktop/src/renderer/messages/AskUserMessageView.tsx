@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   message: AskUserMessage;
@@ -24,6 +25,7 @@ interface Props {
  * multiSelect we join selected labels with ", ".
  */
 function AskUserMessageViewImpl({ message, onAnswer }: Props) {
+  const { t } = useT();
   const [draft, setDraft] = useState("");
   const [otherOpen, setOtherOpen] = useState(false);
   const [otherDraft, setOtherDraft] = useState("");
@@ -116,9 +118,9 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                 onClick={() => setOtherOpen((o) => !o)}
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">其它…</span>
+                  <span className="font-medium text-foreground">{t("msg.ask.other")}</span>
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">输入自定义回答</div>
+                <div className="mt-1 text-xs text-muted-foreground">{t("msg.ask.otherDesc")}</div>
               </li>
             )}
           </ul>
@@ -127,7 +129,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
               {otherOpen && (
                 <Input
                   autoFocus
-                  placeholder="输入自定义回答…"
+                  placeholder={t("msg.ask.otherPlaceholder")}
                   value={otherDraft}
                   onChange={(e) => setOtherDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -145,7 +147,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                   disabled={picked.size === 0 && !otherDraft.trim()}
                   onClick={submitMulti}
                 >
-                  提交
+                  {t("msg.ask.submit")}
                 </Button>
               ) : (
                 otherOpen && (
@@ -155,7 +157,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
                     disabled={!otherDraft.trim()}
                     onClick={() => submit(otherDraft)}
                   >
-                    回答
+                    {t("msg.ask.answer")}
                   </Button>
                 )
               )}
@@ -166,7 +168,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
         <div className="flex items-center gap-2">
           <Input
             autoFocus
-            placeholder="输入你的回答…"
+            placeholder={t("msg.ask.answerPlaceholder")}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -182,7 +184,7 @@ function AskUserMessageViewImpl({ message, onAnswer }: Props) {
             disabled={!draft.trim()}
             onClick={() => submit(draft)}
           >
-            回答
+            {t("msg.ask.answer")}
           </Button>
         </div>
       )}

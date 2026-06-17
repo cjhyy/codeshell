@@ -21,6 +21,22 @@
 import type { Message, ThinkingMessage, ToolMessage } from "../types";
 import type { AgentGroup } from "./agentGroup";
 import { describeActivity } from "../topbar/liveActivity";
+import { translate } from "../i18n/translate";
+import type { UILanguage } from "../uiLanguage";
+
+/**
+ * Active UI language, read without `loadUILanguage` so the pure label helpers
+ * here stay usable from the unit tests (which run outside the DOM, with no
+ * `localStorage`). Defaults to Chinese when the storage isn't available.
+ */
+function activeLang(): UILanguage {
+  try {
+    const raw = globalThis.localStorage?.getItem("codeshell.uiLanguage");
+    return raw === "en" ? "en" : "zh";
+  } catch {
+    return "zh";
+  }
+}
 
 /**
  * Inner item of a level-1 tool group. Beyond the tool calls themselves
@@ -577,7 +593,7 @@ function turnSpanMs(turnItems: Array<Message | ToolGroup>): number {
 // ── Header labels ─────────────────────────────────────────────────────
 
 export function toolGroupLabel(count: number): string {
-  return `已处理 ${count} 条命令`;
+  return translate(activeLang(), "msg.process.toolGroupCommands", { count });
 }
 
 function latestToolInToolGroup(group: ToolGroup): ToolMessage | null {
@@ -619,11 +635,14 @@ export function processGroupActivityLabel(group: TurnProcessGroup): string {
 }
 
 export function processGroupLabel(durationMs: number): string {
+  const lang = activeLang();
   const totalSec = Math.max(0, Math.floor(durationMs / 1000));
-  if (totalSec < 60) return `已处理 ${totalSec}s`;
+  if (totalSec < 60) return translate(lang, "msg.process.elapsedSec", { sec: totalSec });
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
-  return s === 0 ? `已处理 ${m}m` : `已处理 ${m}m ${s}s`;
+  return s === 0
+    ? translate(lang, "msg.process.elapsedMin", { min: m })
+    : translate(lang, "msg.process.elapsedMinSec", { min: m, sec: s });
 }
 
 /** Count tool calls inside a level-1 group (excludes transparent items). */

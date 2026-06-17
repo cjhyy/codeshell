@@ -7,6 +7,12 @@
  */
 
 import { extractAnnotations } from "./anchors";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
+
+/** Resolve a chat.* key against the active UI language (this module is React-free). */
+const tr = (key: string, params?: Record<string, string | number>): string =>
+  translate(loadUILanguage(), key, params);
 
 export interface ImageAttachment {
   /** Local id for keying/removing in the UI. */
@@ -79,21 +85,30 @@ export async function buildAttachments(
     if (accepted.length + existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {
       errors.push({
         kind: "too-many",
-        message: `最多 ${ATTACHMENT_LIMITS.maxImagesPerMessage} 张图片，已忽略「${file.name || "未命名"}」`,
+        message: tr("chat.attachment.tooMany", {
+          max: ATTACHMENT_LIMITS.maxImagesPerMessage,
+          name: file.name || tr("chat.attachment.unnamed"),
+        }),
       });
       continue;
     }
     if (!ATTACHMENT_LIMITS.allowedMimes.has(file.type)) {
       errors.push({
         kind: "wrong-type",
-        message: `不支持的文件类型：${file.type || "未知"}（${file.name || "未命名"}）`,
+        message: tr("chat.attachment.wrongType", {
+          type: file.type || tr("chat.attachment.unknownType"),
+          name: file.name || tr("chat.attachment.unnamed"),
+        }),
       });
       continue;
     }
     if (file.size > ATTACHMENT_LIMITS.maxBytesPerImage) {
       errors.push({
         kind: "too-large",
-        message: `「${file.name || "未命名"}」超过 ${ATTACHMENT_LIMITS.maxBytesPerImage / 1024 / 1024} MB`,
+        message: tr("chat.attachment.tooLarge", {
+          name: file.name || tr("chat.attachment.unnamed"),
+          mb: ATTACHMENT_LIMITS.maxBytesPerImage / 1024 / 1024,
+        }),
       });
       continue;
     }
@@ -109,7 +124,10 @@ export async function buildAttachments(
     } catch (e) {
       errors.push({
         kind: "read-failed",
-        message: `读取失败：${file.name || "未命名"} (${(e as Error).message})`,
+        message: tr("chat.attachment.readFailed", {
+          name: file.name || tr("chat.attachment.unnamed"),
+          message: (e as Error).message,
+        }),
       });
     }
   }
@@ -144,21 +162,27 @@ export function buildPathAttachment(
 ): { attachment?: ImageAttachment; error?: AttachmentError } {
   if (existing.length >= ATTACHMENT_LIMITS.maxImagesPerMessage) {
     return {
-      error: { kind: "too-many", message: `最多 ${ATTACHMENT_LIMITS.maxImagesPerMessage} 张图片` },
+      error: {
+        kind: "too-many",
+        message: tr("chat.attachment.tooManySimple", { max: ATTACHMENT_LIMITS.maxImagesPerMessage }),
+      },
     };
   }
   const meta = parseDataUrlMeta(dataUrl);
   if (!meta) {
-    return { error: { kind: "read-failed", message: `读取失败：${absPath}` } };
+    return { error: { kind: "read-failed", message: tr("chat.attachment.readFailedPath", { path: absPath }) } };
   }
   if (!ATTACHMENT_LIMITS.allowedMimes.has(meta.mime)) {
-    return { error: { kind: "wrong-type", message: `不支持的文件类型：${meta.mime}` } };
+    return { error: { kind: "wrong-type", message: tr("chat.attachment.wrongTypeSimple", { mime: meta.mime }) } };
   }
   if (meta.size > ATTACHMENT_LIMITS.maxBytesPerImage) {
     return {
       error: {
         kind: "too-large",
-        message: `「${absPath}」超过 ${ATTACHMENT_LIMITS.maxBytesPerImage / 1024 / 1024} MB`,
+        message: tr("chat.attachment.tooLargePath", {
+          path: absPath,
+          mb: ATTACHMENT_LIMITS.maxBytesPerImage / 1024 / 1024,
+        }),
       },
     };
   }
@@ -226,8 +250,8 @@ export function titleFromWire(wire: string): string {
   // sidebar with raw `<codeshell-annotations>` XML.
   const prose = extractAnnotations(text).text;
   if (prose) return prose;
-  if (images.length > 1) return `[图片 ×${images.length}]`;
-  if (images.length === 1) return "[图片]";
+  if (images.length > 1) return tr("chat.attachment.imagesTitle", { count: images.length });
+  if (images.length === 1) return tr("chat.attachment.imageTitle");
   return prose;
 }
 

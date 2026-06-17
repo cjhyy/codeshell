@@ -1,6 +1,7 @@
 import React from "react";
 import type { LiveActivity } from "./liveActivity";
 import type { TaskListMessage } from "../types";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   /** Kept for prop compatibility with TopBar; the popover no longer renders a
@@ -26,6 +27,7 @@ interface Props {
  * idle/running placeholder.
  */
 export function StatusPopover({ busy, tasks, activeGoal, onClearGoal }: Props) {
+  const { t } = useT();
   const markerColor = (s: string) =>
     s === "completed" ? "text-status-ok" : s === "in_progress" ? "text-status-running" : "text-muted-foreground";
 
@@ -47,7 +49,7 @@ export function StatusPopover({ busy, tasks, activeGoal, onClearGoal }: Props) {
   // inline in the stream, so there's nothing tool-by-tool to surface here.
   return (
     <div className="w-[140px] rounded-md border bg-popover p-2.5 text-center text-sm text-muted-foreground shadow-lg">
-      {busy ? "运行中…" : "空闲"}
+      {busy ? t("misc.status.running") : t("misc.status.idle")}
     </div>
   );
 }
@@ -59,22 +61,23 @@ function GoalBlock({
   goal: { objective: string; round: number };
   onClear?: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="mb-2 border-b border-border pb-2">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs uppercase tracking-wide text-status-running">◎ Goal</span>
+        <span className="text-xs uppercase tracking-wide text-status-running">◎ {t("misc.status.goal")}</span>
         <div className="flex items-center gap-2">
           {goal.round > 0 && (
-            <span className="font-mono text-xs text-muted-foreground">第 {goal.round} 轮</span>
+            <span className="font-mono text-xs text-muted-foreground">{t("misc.status.round", { round: goal.round })}</span>
           )}
           {onClear && (
             <button
               type="button"
               onClick={onClear}
               className="rounded px-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-              title="清除目标"
+              title={t("misc.status.clearGoal")}
             >
-              清除
+              {t("misc.status.clear")}
             </button>
           )}
         </div>
@@ -93,21 +96,22 @@ function TaskBlock({
   tasks: TaskListMessage;
   markerColor: (s: string) => string;
 }) {
-  const done = tasks.tasks.filter((t) => t.status === "completed").length;
+  const { t } = useT();
+  const done = tasks.tasks.filter((task) => task.status === "completed").length;
   const total = tasks.tasks.length;
   return (
     <>
       <div className="mb-1.5 flex items-center justify-between border-b border-border pb-1.5">
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">Tasks</span>
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">{t("misc.status.tasks")}</span>
         <span className="font-mono text-xs text-muted-foreground">{done}/{total}</span>
       </div>
       <ol className="flex max-h-60 flex-col gap-0.5 overflow-y-auto">
-        {tasks.tasks.map((t, i) => (
-          <li key={t.id} className="grid grid-cols-[auto_auto_1fr] items-baseline gap-1.5 text-xs">
+        {tasks.tasks.map((task, i) => (
+          <li key={task.id} className="grid grid-cols-[auto_auto_1fr] items-baseline gap-1.5 text-xs">
             <span className="min-w-[1.6em] text-right font-mono text-muted-foreground">{i + 1}.</span>
-            <span className={"w-4 text-center font-mono " + markerColor(t.status)}>{markerFor(t.status)}</span>
-            <span className={"truncate " + (t.status === "completed" ? "text-muted-foreground line-through" : "")}>
-              {t.status === "in_progress" && t.activeForm ? t.activeForm : t.subject}
+            <span className={"w-4 text-center font-mono " + markerColor(task.status)}>{markerFor(task.status)}</span>
+            <span className={"truncate " + (task.status === "completed" ? "text-muted-foreground line-through" : "")}>
+              {task.status === "in_progress" && task.activeForm ? task.activeForm : task.subject}
             </span>
           </li>
         ))}

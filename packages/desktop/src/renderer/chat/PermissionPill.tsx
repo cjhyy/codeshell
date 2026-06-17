@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useAnchoredPopover } from "./useAnchoredPopover";
+import { useT } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/dict";
 
 export type PermissionMode = "plan" | "default" | "accept_edits" | "bypass";
 export type CorePermissionMode =
@@ -11,13 +13,13 @@ export type CorePermissionMode =
 
 const MODES: Array<{
   id: PermissionMode;
-  label: string;
+  labelKey: TranslationKey;
   tone: "ok" | "warn" | "err";
 }> = [
-  { id: "plan", label: "计划模式", tone: "ok" },
-  { id: "default", label: "默认权限", tone: "ok" },
-  { id: "accept_edits", label: "接受编辑", tone: "warn" },
-  { id: "bypass", label: "完全访问权限", tone: "err" },
+  { id: "plan", labelKey: "chat.permission.plan", tone: "ok" },
+  { id: "default", labelKey: "chat.permission.default", tone: "ok" },
+  { id: "accept_edits", labelKey: "chat.permission.acceptEdits", tone: "warn" },
+  { id: "bypass", labelKey: "chat.permission.bypass", tone: "err" },
 ];
 
 export function toCorePermissionMode(mode: PermissionMode): CorePermissionMode {
@@ -66,6 +68,7 @@ interface Props {
 }
 
 export function PermissionPill({ value, onChange, disabled }: Props) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -101,13 +104,13 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
         type="button"
         className={`cs-control inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium disabled:opacity-50 ${toneText(cur.tone)} ${toneBorder(cur.tone)}`}
         disabled={disabled}
-        aria-label={`当前对话权限：${cur.label}`}
-        title={`当前对话权限：${cur.label}`}
+        aria-label={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
+        title={t("chat.permission.currentLabel", { label: t(cur.labelKey) })}
         onClick={() => setOpen((o) => !o)}
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(cur.tone)}`} aria-hidden="true" />
         <span className="max-w-[7rem] truncate @max-[520px]/composer-controls:hidden">
-          {cur.label}
+          {t(cur.labelKey)}
         </span>
         <ChevronDown
           size={11}
@@ -134,7 +137,7 @@ export function PermissionPill({ value, onChange, disabled }: Props) {
               }}
             >
               <span className={`h-2 w-2 shrink-0 rounded-full ${toneDot(m.tone)}`} />
-              <span className="font-medium">{m.label}</span>
+              <span className="font-medium">{t(m.labelKey)}</span>
             </li>
           ))}
         </ul>

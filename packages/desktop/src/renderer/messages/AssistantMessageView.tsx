@@ -5,6 +5,7 @@ import { stripMarkdownToPlain } from "../markdown/stripMarkdown";
 import { formatMessageTime } from "../messages/time";
 import type { AssistantMessage } from "../types";
 import { Button } from "@/components/ui/button";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   message: AssistantMessage;
@@ -24,6 +25,7 @@ interface Props {
  * re-render entirely during a long session.
  */
 function AssistantMessageViewImpl({ message, cwd }: Props) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   // Nothing to draw without text — this view renders only `message.text`
   // (tool calls are separate ToolMessages). A streaming assistant starts
@@ -70,10 +72,10 @@ function AssistantMessageViewImpl({ message, cwd }: Props) {
             size="sm"
             className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
             onClick={onCopy}
-            aria-label="Copy reply as plain text"
+            aria-label={t("msg.assistant.copyAria")}
           >
             {copied ? <Check size={11} /> : <Copy size={11} />}
-            <span>{copied ? "已复制" : "复制"}</span>
+            <span>{copied ? t("msg.assistant.copied") : t("msg.assistant.copy")}</span>
           </Button>
         </div>
       )}

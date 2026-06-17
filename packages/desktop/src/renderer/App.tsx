@@ -9,6 +9,7 @@ import { summarizeLiveActivity } from "./topbar/liveActivity";
 // InspectorPanel removed — tool details now live inline in the chat
 // stream's expandable tool cards (no dedicated detail pane).
 import { useToast } from "./ui/ToastProvider";
+import { useT } from "./i18n/I18nProvider";
 import {
   applyStreamEvent,
   bgCompletionText,
@@ -224,6 +225,7 @@ interface ApprovalHistoryEntry {
 
 function App() {
   const toast = useToast();
+  const { t } = useT();
   const [transcripts, dispatch] = useReducer(reducer, {} as TranscriptsMap);
   const [approval, setApproval] = useState<ApprovalState>(null);
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestEnvelope[]>([]);
@@ -1600,7 +1602,7 @@ function App() {
           reason === "model_error" ||
           reason === "prompt_too_long"
         ) {
-          const detail = result?.text?.replace(/^ERROR:\s*/, "") || "本轮请求被拒绝";
+          const detail = result?.text?.replace(/^ERROR:\s*/, "") || t("misc.app.requestRejected");
           dispatch({ type: "turn_end", bucket, reason: "error", detail });
           toast({ message: detail, variant: "error" });
         }
@@ -1961,9 +1963,7 @@ function App() {
       ...prev,
       [repoKeyOf(repoId)]: setActiveSession(repoId, null),
     }));
-    setComposerSeed(
-      "我想设置一个自动化。先简要说明自动化如何运作,然后问我几个问题,以了解我希望它做什么、以及何时运行(包括时区)。明确后用 CronCreate 工具帮我创建。",
-    );
+    setComposerSeed(t("misc.app.automationSeed"));
     setComposerSeedNonce((n) => n + 1);
     setViewMode("chat");
   };
@@ -2245,7 +2245,9 @@ function App() {
     if (prevBusyRef.current && !busy && document.hidden) {
       void window.codeshell.notify({
         title: "code-shell",
-        body: activeRepo ? `${activeRepo.name} — 完成` : "agent 已完成",
+        body: activeRepo
+          ? t("misc.app.notifyDone", { name: activeRepo.name })
+          : t("misc.app.notifyAgentDone"),
       });
     }
     prevBusyRef.current = busy;
@@ -2613,12 +2615,12 @@ function App() {
                     />
                     <div className="text-3xl font-semibold tracking-tight text-foreground">
                       {activeRepo
-                        ? `要在 ${activeRepo.name} 中构建什么?`
-                        : `开始一个无项目对话`}
+                        ? t("misc.app.welcomeTitleRepo", { name: activeRepo.name })
+                        : t("misc.app.welcomeTitleNoRepo")}
                     </div>
                     {!activeRepo && (
                       <div className="text-sm text-muted-foreground">
-                        在下方选择一个项目，或直接在「不使用项目」模式开始
+                        {t("misc.app.welcomeHintNoRepo")}
                       </div>
                     )}
                   </div>

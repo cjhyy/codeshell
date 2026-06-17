@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "../i18n/I18nProvider";
 
 type Bucket = "ui-ink" | "engine" | "desktop";
 const BUCKETS: Bucket[] = ["desktop", "engine", "ui-ink"];
 
 export function LogsView() {
+  const { t } = useT();
   const [bucket, setBucket] = useState<Bucket>("desktop");
   const [lines, setLines] = useState<string[] | null>(null);
   const [filter, setFilter] = useState("");
@@ -45,17 +47,17 @@ export function LogsView() {
         </div>
         <input
           className="h-8 max-w-xs flex-1 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          placeholder="grep…"
+          placeholder={t("auto.logs.grepPlaceholder")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <Button size="sm" variant="outline" onClick={() => void refresh()}>刷新</Button>
+        <Button size="sm" variant="outline" onClick={() => void refresh()}>{t("auto.logs.refresh")}</Button>
       </div>
       <pre className="min-h-0 flex-1 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs">
         {filtered === null
-          ? "loading…"
+          ? t("auto.logs.loading")
           : filtered.length === 0
-            ? "(no lines)"
+            ? t("auto.logs.noLines")
             : filtered.join("\n")}
       </pre>
     </div>

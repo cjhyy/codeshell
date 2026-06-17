@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { TabKey } from "./ManagePage";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   cwd: string;
@@ -20,6 +21,7 @@ interface Counts {
  * blocking the whole page.
  */
 export function DiscoverHome({ cwd, onOpenManage }: Props) {
+  const { t } = useT();
   const [counts, setCounts] = useState<Counts | null>(null);
   const [search, setSearch] = useState("");
 
@@ -46,23 +48,23 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
   };
 
   const stats: { key: TabKey; label: string; icon: string; value: number | null }[] = [
-    { key: "plugins", label: "插件", icon: "🧩", value: counts?.plugins ?? null },
-    { key: "skills", label: "技能", icon: "📄", value: counts?.skills ?? null },
-    { key: "mcp", label: "MCP", icon: "🔌", value: counts?.mcp ?? null },
+    { key: "plugins", label: t("ext.discover.plugins"), icon: "🧩", value: counts?.plugins ?? null },
+    { key: "skills", label: t("ext.discover.skills"), icon: "📄", value: counts?.skills ?? null },
+    { key: "mcp", label: t("ext.discover.mcp"), icon: "🔌", value: counts?.mcp ?? null },
   ];
 
   return (
     <div className="mx-auto max-w-2xl py-10">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">让 codeshell 按你的方式工作</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("ext.discover.title")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          管理插件、技能与 MCP 服务，或从市场添加更多能力
+          {t("ext.discover.subtitle")}
         </p>
         <div className="relative mx-auto mt-5 max-w-md">
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true">🔍</span>
           <input
             className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            placeholder="搜索技能、插件…"
+            placeholder={t("ext.discover.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={onSearchKeyDown}
@@ -88,7 +90,7 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
         >
           <span className="text-2xl" aria-hidden="true">🛒</span>
           <span className="text-lg font-semibold">+</span>
-          <span className="text-xs text-muted-foreground">市场</span>
+          <span className="text-xs text-muted-foreground">{t("ext.discover.market")}</span>
         </button>
       </div>
     </div>

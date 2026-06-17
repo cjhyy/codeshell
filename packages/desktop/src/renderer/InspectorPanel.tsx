@@ -6,6 +6,7 @@ import type { ToolMessage } from "./types";
 import { prettyJson, formatDuration } from "./tool-cards/utils";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "./i18n/I18nProvider";
 
 interface Props {
   collapsed: boolean;
@@ -14,12 +15,13 @@ interface Props {
 }
 
 export function InspectorPanel({ collapsed, onToggle, selectedTool }: Props) {
+  const { t } = useT();
   if (collapsed) return null;
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col border-l bg-card/40">
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-semibold">详情</span>
-        <IconButton label="折叠详情" onClick={onToggle}>
+        <span className="text-sm font-semibold">{t("panels.inspector.title")}</span>
+        <IconButton label={t("panels.inspector.collapse")} onClick={onToggle}>
           <PanelRight size={14} />
         </IconButton>
       </div>
@@ -28,9 +30,9 @@ export function InspectorPanel({ collapsed, onToggle, selectedTool }: Props) {
           <ToolInspector tool={selectedTool} />
         ) : (
           <div className="rounded-md border border-dashed p-4 text-sm">
-            <div className="font-medium text-foreground">未选中</div>
+            <div className="font-medium text-foreground">{t("panels.inspector.none")}</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              在左侧点击一条工具卡片来查看完整详情
+              {t("panels.inspector.noneHint")}
             </div>
           </div>
         )}
@@ -81,6 +83,7 @@ function ToolInspector({ tool }: { tool: ToolMessage }) {
 }
 
 function Section({ label, body, error }: { label: string; body: string; error?: boolean }) {
+  const { t } = useT();
   const [showAll, setShowAll] = useState(false);
   const LIMIT = 4000;
   const tooLong = body.length > LIMIT;
@@ -103,7 +106,7 @@ function Section({ label, body, error }: { label: string; body: string; error?: 
       <pre className={cn("m-0 whitespace-pre-wrap break-words rounded-md bg-muted/40 p-2 font-mono text-xs", error && "text-status-err")}>{visible}</pre>
       {tooLong && (
         <Button variant="link" size="sm" className="mt-1 h-auto justify-start p-0 text-xs" onClick={() => setShowAll((s) => !s)}>
-          {showAll ? "show less" : `show all (${body.length.toLocaleString()} chars)`}
+          {showAll ? t("panels.inspector.showLess") : t("panels.inspector.showAll", { count: body.length.toLocaleString() })}
         </Button>
       )}
     </div>

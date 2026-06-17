@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "../ui/ToastProvider";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * Cookie登录态桥接入口。Cookie 不存进凭证库 —— 登录态本就常驻 persist:browser
@@ -10,6 +11,7 @@ import { useToast } from "../ui/ToastProvider";
  * 提供「在浏览器打开登陆」入口 + 预览可桥接的 cookie 数量。
  */
 export function CookieTab() {
+  const { t } = useT();
   const toast = useToast();
   const [domains, setDomains] = useState<string[]>([]);
   const [url, setUrl] = useState("");
@@ -19,15 +21,14 @@ export function CookieTab() {
 
   const preview = async (domain: string) => {
     const { count } = await window.codeshell.credentials.cookiePreview(domain);
-    toast({ message: `${domain}: ${count} 个 cookie 可桥接` });
+    toast({ message: t("ext.cookie.previewToast", { domain, count }) });
   };
 
   return (
     <div className="space-y-4">
       <Card className="space-y-3 p-4">
         <p className="text-sm text-muted-foreground">
-          在内置浏览器登陆目标站点,登录态会留在浏览器分区(登一次能用很久,过期才需重登)。AI
-          用 yt-dlp / curl 等需要 cookie 时会弹审批,经允许后临时桥接,不长期存储 cookie 明文。
+          {t("ext.cookie.intro")}
         </p>
         <div className="flex gap-2">
           <Input
@@ -41,26 +42,26 @@ export function CookieTab() {
               void window.codeshell.openBrowserPopout(url.trim());
             }}
           >
-            在浏览器打开登陆
+            {t("ext.cookie.openLogin")}
           </Button>
         </div>
       </Card>
 
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">已有登录态的域名</h3>
+        <h3 className="text-sm font-medium">{t("ext.cookie.domainsTitle")}</h3>
         <Button variant="ghost" size="sm" onClick={load}>
-          刷新
+          {t("ext.cookie.refresh")}
         </Button>
       </div>
       <div className="space-y-2">
         {domains.length === 0 && (
-          <p className="text-sm text-muted-foreground">浏览器分区暂无 cookie。先登陆一个站点。</p>
+          <p className="text-sm text-muted-foreground">{t("ext.cookie.emptyDomains")}</p>
         )}
         {domains.map((d) => (
           <Card key={d} className="flex items-center justify-between p-3">
             <span className="truncate font-mono text-sm">{d}</span>
             <Button variant="ghost" size="sm" onClick={() => void preview(d)}>
-              预览数量
+              {t("ext.cookie.previewCount")}
             </Button>
           </Card>
         ))}
