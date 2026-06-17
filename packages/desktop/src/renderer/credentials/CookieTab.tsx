@@ -24,7 +24,6 @@ export function CookieTab({ cwd }: { cwd: string }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [items, setItems] = useState<MaskedCredentialView[]>([]);
-  const [domain, setDomain] = useState("");
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -52,9 +51,9 @@ export function CookieTab({ cwd }: { cwd: string }) {
   };
 
   const capture = async () => {
-    const d = normalizeDomain(domain);
+    const d = normalizeDomain(url.replace(/^https?:\/\//, ""));
     if (!d || !label.trim()) {
-      toast({ message: "域名和账号名必填", variant: "error" });
+      toast({ message: "请填平台域名(地址栏)和账号名", variant: "error" });
       return;
     }
     setBusy(true);
@@ -76,6 +75,53 @@ export function CookieTab({ cwd }: { cwd: string }) {
         meta: { platform, domain: d },
       });
       toast({ message: `已保存「${label.trim()}」(${count} 个 cookie)` });
+      setLabel("");
+      load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * 弹窗登录(推荐,Google/YouTube 也能登):开独立登录窗 → 用户登录点保存 → 读 cookie。
+   * 登录态校验没过给软提示;账号名优先用抓到的用户名,抓不到回退到表单里填的账号名。
+   */
+  const loginCapture = async () => {
+    const raw = url.trim();
+    if (!raw) {
+      toast({ message: "请先填登录页 URL(或平台域名)", variant: "error" });
+      return;
+    }
+    const fullUrl = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const d = normalizeDomain(raw.replace(/^https?:\/\//, ""));
+    const platform = platformOf(d);
+    setBusy(true);
+    try {
+      const res = await window.codeshell.credentials.loginCapture({ url: fullUrl, platform });
+      if (!res.ok) {
+        if (!res.cancelled) toast({ message: res.error ?? "登录未完成", variant: "error" });
+        return;
+      }
+      // 账号名:抓到的用户名 > 表单填的 > 占位
+      const accountName = res.suggestedLabel || label.trim() || "账号";
+      if (!res.loginCheck.ok) {
+        const miss = res.loginCheck.missing?.length ? `(缺 ${res.loginCheck.missing.join(", ")})` : "";
+        const proceed = await confirm({
+          title: "似乎未登录成功",
+          message: `没检测到 ${res.domain} 的登录态${miss},仍要保存吗?`,
+          detail: "可能是没真正登录,或该站的登录特征未被识别。保存后若 AI 用着报错,回来「重拓」即可。",
+          confirmLabel: "仍然保存",
+        });
+        if (!proceed) return;
+      }
+      await window.codeshell.credentials.save(cwd, "user", {
+        id: buildId(platform, accountName),
+        type: "cookie",
+        label: accountName,
+        secret: JSON.stringify(res.jar),
+        meta: { platform, domain: res.domain },
+      });
+      toast({ message: `已保存「${accountName}」(${res.jar.length} 个 cookie)` });
       setLabel("");
       load();
     } finally {
@@ -147,34 +193,40 @@ export function CookieTab({ cwd }: { cwd: string }) {
     <div className="space-y-4">
       <Card className="space-y-3 p-4">
         <p className="text-sm text-muted-foreground">
-          先在内置浏览器登录目标账号,再在这里按平台域名把当前登录态存成一个具名账号。同一平台可存多个账号,
-          随时「切换」回浏览器以该账号身份浏览;AI 抓取/下载时按账号取用(会弹审批)。
+          填登录页地址 → 弹出独立登录窗(Google/YouTube 等内置浏览器登不上的站也能登)→ 登录后点窗口里的
+          「我已登录,保存」→ 自动存成一个具名账号(用完即焚的无痕会话,识别到用户名会自动命名)。
+          同一平台可存多个账号,随时「切换」回浏览器;AI 抓取/下载按账号取用(会弹审批)。
         </p>
-        <div className="flex gap-2">
-          <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.xiaohongshu.com" />
-          <Button
-            variant="secondary"
-            onClick={() => {
-              if (!url.trim()) return;
-              void window.codeshell.openBrowserPopout(url.trim());
-            }}
-          >
-            打开浏览器登录
-          </Button>
-        </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label>平台域名</Label>
-            <Input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="xiaohongshu.com" />
+            <Label>登录页地址 / 平台域名</Label>
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://www.youtube.com"
+            />
           </div>
           <div className="space-y-1">
-            <Label>账号名</Label>
+            <Label>账号名(可留空,自动识别)</Label>
             <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="账号A" />
           </div>
         </div>
-        <Button disabled={busy} onClick={() => void capture()}>
-          {busy ? "处理中…" : "保存当前登录态"}
-        </Button>
+        <div className="flex gap-2">
+          <Button disabled={busy} onClick={() => void loginCapture()}>
+            {busy ? "处理中…" : "弹窗登录并保存"}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={() => void capture()}
+            title="从内置浏览器分区拓取(适合已在内置浏览器登录过的站,如小红书)"
+          >
+            从内置浏览器拓取
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          已在内置浏览器登录过(如小红书)→ 填平台域名后用「从内置浏览器拓取」即可,无需弹窗。
+        </p>
       </Card>
 
       <div className="space-y-3">

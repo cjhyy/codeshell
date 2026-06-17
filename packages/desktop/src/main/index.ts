@@ -58,6 +58,7 @@ import {
   sweepStaleLeases,
   type ElectronCookieLike,
 } from "./credentials-service.js";
+import { loginAndCaptureCookies } from "./credentials-login/index.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
 import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
 import { CloudflaredBinary } from "./mobile-remote/cloudflared-binary.js";
@@ -1088,6 +1089,15 @@ ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id:
     if (!w.isDestroyed()) w.webContents.send("browser:reload");
   }
   return { count };
+});
+// 第二期+:独立窗口登录抓 cookie(解决内置 webview 登不上 Google/YouTube)。
+// 开临时分区登录窗 → 用户点保存 → 读 cookie + 用户名 + 校验 → 关窗销毁分区。
+// 只产出 jar/建议名/校验,存凭证由渲染层走 credentials:save。
+ipcMain.handle("credentials:loginCapture", async (_e, req: { url: string; platform?: string }) => {
+  if (!req || typeof req.url !== "string" || !req.url.trim()) {
+    throw new Error("credentials:loginCapture requires a url");
+  }
+  return loginAndCaptureCookies({ url: req.url.trim(), platform: req.platform });
 });
 ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {

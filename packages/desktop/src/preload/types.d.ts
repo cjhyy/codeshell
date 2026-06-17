@@ -435,6 +435,20 @@ export interface CodeshellApi {
     captureCookieJar(domain: string): Promise<{ jar: unknown[]; count: number }>;
     /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
     restoreCookieToBrowser(cwd: string, id: string): Promise<{ count: number }>;
+    /** 独立窗口登录抓 cookie(登 Google/YouTube 用)。 */
+    loginCapture(req: {
+      url: string;
+      platform?: string;
+    }): Promise<
+      | {
+          ok: true;
+          jar: unknown[];
+          domain: string;
+          suggestedLabel?: string;
+          loginCheck: { ok: boolean; missing?: string[] };
+        }
+      | { ok: false; cancelled?: boolean; error?: string }
+    >;
   };
 
   // ── Browser popout window ─────────────────────────────────────────────

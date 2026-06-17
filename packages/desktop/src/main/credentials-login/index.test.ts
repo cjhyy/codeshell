@@ -1,0 +1,151 @@
+import { describe, test, expect } from "bun:test";
+import { EventEmitter } from "node:events";
+import {
+  loginAndCaptureCookies,
+  hostnameOf,
+  injectionScript,
+  SENTINEL_SAVE,
+  SENTINEL_CANCEL,
+} from "./index.js";
+import type { ElectronCookieLike } from "../credentials-service.js";
+import type { BrowserHostHandle } from "../browser-host/index.js";
+
+/** Fake handle whose webContents is an EventEmitter we can drive in tests. */
+function makeFakeHandle(opts: {
+  cookies: ElectronCookieLike[];
+  username?: string;
+}): { handle: BrowserHostHandle; wc: EventEmitter; closed: () => void; closeCalls: () => number } {
+  const wc = new EventEmitter();
+  let closeCount = 0;
+  let onClosedCb: (() => void) | undefined;
+  const handle: BrowserHostHandle = {
+    webContents: wc as unknown as Electron.WebContents,
+    loadURL: async () => {},
+    executeJavaScript: async <T,>(code: string) => {
+      // username script returns the configured username; injection returns undefined
+      if (code.includes("avatar-btn") || code.includes("UserName") || code.includes("uname")) {
+        return opts.username as unknown as T;
+      }
+      return undefined as unknown as T;
+    },
+    getCookies: async () => opts.cookies,
+    close: () => {
+      closeCount++;
+    },
+    onClosed: (cb) => {
+      onClosedCb = cb;
+    },
+  };
+  return {
+    handle,
+    wc,
+    closed: () => onClosedCb?.(),
+    closeCalls: () => closeCount,
+  };
+}
+
+const ytLoggedIn: ElectronCookieLike[] = [
+  { name: "LOGIN_INFO", value: "x".repeat(20), domain: ".youtube.com" },
+  { name: "SID", value: "x".repeat(20), domain: ".youtube.com" },
+  { name: "HSID", value: "x".repeat(20), domain: ".youtube.com" },
+];
+
+describe("hostnameOf / injectionScript", () => {
+  test("hostnameOf parses, returns '' on garbage", () => {
+    expect(hostnameOf("https://www.youtube.com/feed")).toBe("www.youtube.com");
+    expect(hostnameOf("not a url")).toBe("");
+  });
+  test("injectionScript embeds both sentinels", () => {
+    const s = injectionScript();
+    expect(s).toContain(SENTINEL_SAVE);
+    expect(s).toContain(SENTINEL_CANCEL);
+  });
+});
+
+describe("loginAndCaptureCookies", () => {
+  test("invalid url → error, no window opened", async () => {
+    let opened = false;
+    const r = await loginAndCaptureCookies(
+      { url: "garbage" },
+      {
+        open: async () => {
+          opened = true;
+          throw new Error("should not open");
+        },
+        destroy: async () => {},
+      },
+    );
+    expect(r.ok).toBe(false);
+    expect(opened).toBe(false);
+  });
+
+  test("SAVE sentinel → captures cookies + username + loginCheck, closes & destroys partition", async () => {
+    const fake = makeFakeHandle({ cookies: ytLoggedIn, username: "Alice" });
+    let destroyed: string | undefined;
+    const p = loginAndCaptureCookies(
+      { url: "https://www.youtube.com", platform: "youtube" },
+      {
+        open: async () => fake.handle,
+        destroy: async (part) => {
+          destroyed = part;
+        },
+      },
+    );
+    // drive the save sentinel
+    await Promise.resolve();
+    fake.wc.emit("console-message", {}, 0, SENTINEL_SAVE);
+    const r = await p;
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.domain).toBe("www.youtube.com");
+      expect(r.jar.map((c) => c.name)).toContain("LOGIN_INFO");
+      expect(r.suggestedLabel).toBe("Alice");
+      expect(r.loginCheck.ok).toBe(true);
+    }
+    expect(fake.closeCalls()).toBe(1);
+    expect(destroyed).toMatch(/^persist:login-/);
+  });
+
+  test("guest-only cookies → ok=true result but loginCheck.ok=false (soft warn)", async () => {
+    const guest: ElectronCookieLike[] = [
+      { name: "VISITOR_INFO1_LIVE", value: "x".repeat(20), domain: ".youtube.com" },
+      { name: "PREF", value: "x".repeat(20), domain: ".youtube.com" },
+    ];
+    const fake = makeFakeHandle({ cookies: guest });
+    const p = loginAndCaptureCookies(
+      { url: "https://www.youtube.com" },
+      { open: async () => fake.handle, destroy: async () => {} },
+    );
+    await Promise.resolve();
+    fake.wc.emit("console-message", {}, 0, SENTINEL_SAVE);
+    const r = await p;
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.loginCheck.ok).toBe(false);
+  });
+
+  test("CANCEL sentinel → cancelled, destroys partition, no capture", async () => {
+    const fake = makeFakeHandle({ cookies: ytLoggedIn });
+    let destroyed = false;
+    const p = loginAndCaptureCookies(
+      { url: "https://www.youtube.com" },
+      { open: async () => fake.handle, destroy: async () => { destroyed = true; } },
+    );
+    await Promise.resolve();
+    fake.wc.emit("console-message", {}, 0, SENTINEL_CANCEL);
+    const r = await p;
+    expect(r).toEqual({ ok: false, cancelled: true });
+    expect(destroyed).toBe(true);
+  });
+
+  test("user closes window → cancelled", async () => {
+    const fake = makeFakeHandle({ cookies: ytLoggedIn });
+    const p = loginAndCaptureCookies(
+      { url: "https://www.youtube.com" },
+      { open: async () => fake.handle, destroy: async () => {} },
+    );
+    await Promise.resolve();
+    fake.closed();
+    const r = await p;
+    expect(r).toEqual({ ok: false, cancelled: true });
+  });
+});
