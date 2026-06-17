@@ -325,13 +325,15 @@ export async function generateVideoTool(
   const jobId = submit.jobId;
 
   // Background poll → download → write → notify. Fire-and-forget: never await.
-  // Register the job so Engine.run's wait-for-background loop parks the turn
-  // until the completion notification lands — without this, the goal-stop-hook
-  // would force the model to busy-loop with `sleep` while the video renders
-  // (the s-mqe0ox7n-a8d11c26 bug). The registry is keyed by the fal jobId
-  // namespaced so two providers can't collide.
+  // Register the job so it shows up in the goal judge's background-task list
+  // (so the judge can tell "waiting on a finite render" from "nothing left to
+  // do" — the s-mqe0ox7n-a8d11c26 busy-loop bug). The video does NOT park the
+  // engine anymore; its completion notification wakes the idle session (server
+  // maybeWakeIdleSession). The registry is keyed by the fal jobId namespaced so
+  // two providers can't collide.
   const jobKey = `video-${jobId}`;
-  backgroundJobRegistry.start(jobKey, sessionId ?? "");
+  const promptPreview = prompt.length > 80 ? `${prompt.slice(0, 80)}…` : prompt;
+  backgroundJobRegistry.start(jobKey, sessionId ?? "", `生成视频中:${promptPreview}`);
   void pollToCompletion(adapter, jobId, creds, cwd, sessionId, prompt, pollIntervalMs).finally(
     () => backgroundJobRegistry.finish(jobKey),
   );

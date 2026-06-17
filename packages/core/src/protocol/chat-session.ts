@@ -62,6 +62,15 @@ export class ChatSession {
    * the cancelled first run popped "Error: Request cancelled".
    */
   private cancelledActive = false;
+  /**
+   * Sticky flag: the user cancelled (Stop) and has not started a new turn
+   * since. cancel() leaves the session idle (active=null), so isBusy() can't
+   * distinguish "naturally idle" from "user just stopped me". A background-job
+   * completion that lands in this window must NOT auto-resume the session —
+   * that would defeat the Stop. Cleared the moment a real turn is enqueued
+   * (the user is engaging again) so normal wakeups resume working afterward.
+   */
+  private cancelledSinceLastTurn = false;
 
   constructor(opts: ChatSessionOptions) {
     this.id = opts.id;
@@ -71,10 +80,24 @@ export class ChatSession {
 
   enqueueTurn(task: string, opts: TurnOpts): Promise<EngineResult> {
     this.lastActivityAt = Date.now();
+    // The user (or a wakeup the guard already let through) is starting a turn —
+    // clear the post-Stop suppression so future background-job completions
+    // wake the session again.
+    this.cancelledSinceLastTurn = false;
     return new Promise((resolve, reject) => {
       this.queue.push({ task, opts, resolve, reject });
       this.pump();
     });
+  }
+
+  /**
+   * True when the user hit Stop and hasn't started a new turn since. The server
+   * consults this before auto-waking an idle session on a background-job
+   * completion, so a download finishing right after Stop doesn't restart the
+   * agent the user just halted.
+   */
+  wasCancelledSinceLastTurn(): boolean {
+    return this.cancelledSinceLastTurn;
   }
 
   /**
@@ -89,6 +112,8 @@ export class ChatSession {
     // Mark the in-flight turn as user-cancelled so pump()'s catch resolves it
     // as a clean aborted result rather than rejecting (→ UI Error).
     if (this.active) this.cancelledActive = true;
+    // Suppress auto-wakeup until the user engages again (see the field doc).
+    this.cancelledSinceLastTurn = true;
     this.controller?.abort();
     // Drain queued turns as cancelled
     const drained = this.queue.splice(0);
