@@ -26,6 +26,19 @@ const FORMAT_BADGE: Record<
   universal: { label: "", variant: "success" },
 };
 
+// The official codeshell marketplace is cjhyy/mimi-plugins (github repo or its
+// git URL form). Detected from the source rather than the local marketplace
+// name so a renamed/re-added copy still gets the badge.
+function isOfficialMarketplace(source: Marketplace["source"]): boolean {
+  const ref =
+    source.source === "github"
+      ? source.repo
+      : source.source === "git"
+        ? source.url
+        : "";
+  return /(^|[/:])cjhyy\/mimi-plugins(\.git)?$/i.test(ref ?? "");
+}
+
 export function MarketList({ cwd, onInstalled }: Props) {
   const { t } = useT();
   const [markets, setMarkets] = useState<Marketplace[] | null>(null);
@@ -200,6 +213,11 @@ export function MarketList({ cwd, onInstalled }: Props) {
                 {m.pluginCount >= 0 ? t("ext.market.pluginCount", { count: m.pluginCount }) : t("ext.market.manifestInvalid")}
               </div>
             </div>
+            {isOfficialMarketplace(m.source) && (
+              <Badge variant="success" className="shrink-0" title={t("ext.market.officialTip")}>
+                {t("ext.market.official")}
+              </Badge>
+            )}
             {m.format && (
               <Badge variant={FORMAT_BADGE[m.format].variant} className="shrink-0">
                 {m.format === "universal" ? t("ext.market.formatUniversal") : FORMAT_BADGE[m.format].label}

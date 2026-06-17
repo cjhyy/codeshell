@@ -31,6 +31,8 @@ export const extensions = {
       },
       market: {
         formatUniversal: "通用",
+        official: "官方",
+        officialTip: "codeshell 官方插件市场",
         addPlaceholder: "owner/repo 或 git URL",
         adding: "添加中…",
         add: "添加",
@@ -216,6 +218,8 @@ export const extensions = {
       },
       market: {
         formatUniversal: "Universal",
+        official: "Official",
+        officialTip: "codeshell official plugin marketplace",
         addPlaceholder: "owner/repo or git URL",
         adding: "Adding…",
         add: "Add",
