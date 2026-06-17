@@ -47,7 +47,12 @@ export async function installPluginFromPath(
       // here; awaiting it yields the event loop so the Electron main process
       // keeps answering IPC (no UI freeze during install).
       await cp(sourceDir, tmpDir, { recursive: true });
-      meta = { name, format: "cc", source: sourceDir, installedAt };
+      // Read the declared version from .claude-plugin/plugin.json so the
+      // install record (and the UI's "installed version" chip) shows e.g.
+      // "v0.1.0" instead of falling back to the literal "local". Best-effort:
+      // CC plugins commonly omit version, and the file may be absent/malformed.
+      const version = await readCcPluginVersion(sourceDir);
+      meta = { name, format: "cc", version, source: sourceDir, installedAt };
     } else {
       const manifest = CodexPluginManifest.parse(
         JSON.parse(await readFile(join(sourceDir, ".codex-plugin", "plugin.json"), "utf-8")),
@@ -87,6 +92,22 @@ export async function installPluginFromPath(
   } catch (err) {
     await rm(tmpDir, { recursive: true, force: true });
     throw err;
+  }
+}
+
+/**
+ * Best-effort read of a CC plugin's declared version from
+ * <sourceDir>/.claude-plugin/plugin.json. Returns undefined when the file is
+ * absent, unparseable, or has no string `version` — the caller then records the
+ * install without a version (UI shows the source tag instead of a number).
+ */
+async function readCcPluginVersion(sourceDir: string): Promise<string | undefined> {
+  try {
+    const raw = await readFile(join(sourceDir, ".claude-plugin", "plugin.json"), "utf-8");
+    const v = (JSON.parse(raw) as { version?: unknown }).version;
+    return typeof v === "string" && v.length > 0 ? v : undefined;
+  } catch {
+    return undefined;
   }
 }
 

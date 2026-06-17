@@ -30,6 +30,30 @@ describe("installPluginFromPath", () => {
     expect(meta).toMatchObject({ name: "ccplug", format: "cc", source: src, installedAt: STAMP });
   });
 
+  test("CC plugin: records the version from .claude-plugin/plugin.json (not 'local')", async () => {
+    mkdirSync(join(src, ".claude-plugin"), { recursive: true });
+    writeFileSync(
+      join(src, ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "verplug", version: "0.1.0", description: "d" }),
+    );
+    mkdirSync(join(src, "skills", "s"), { recursive: true });
+    writeFileSync(join(src, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
+    await installPluginFromPath(src, "verplug", STAMP);
+    const installed = readInstalledPlugins();
+    const entry = installed.plugins["verplug@local"]?.[0];
+    expect(entry?.version).toBe("0.1.0");
+  });
+
+  test("CC plugin without a manifest version records no version (falls back to source tag)", async () => {
+    mkdirSync(join(src, "skills", "s"), { recursive: true });
+    writeFileSync(join(src, "skills", "s", "SKILL.md"), "---\nname: s\ndescription: d\n---\nb");
+    await installPluginFromPath(src, "noverplug", STAMP);
+    const installed = readInstalledPlugins();
+    const entry = installed.plugins["noverplug@local"]?.[0];
+    // appendInstallEntry falls back to "local" when meta.version is undefined.
+    expect(entry?.version).toBe("local");
+  });
+
   test("installs a Codex plugin: converts agent + writes mcp-servers.json + codex meta", async () => {
     mkdirSync(join(src, ".codex-plugin"), { recursive: true });
     writeFileSync(
