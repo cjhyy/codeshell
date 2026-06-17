@@ -1875,8 +1875,11 @@ export class Engine {
     // Goal mode: register a GoalStopHook for the lifetime of THIS run so the
     // turn loop keeps going until the session model judges the goal met.
     // Registered per-run (and cleared in `finally`) so a later goal-less
-    // send doesn't inherit a stale goal. The judge reuses `llmClient` — the
-    // same model this session is talking to (per design).
+    // send doesn't inherit a stale goal. The judge runs on `auxSummaryClient`
+    // — the same cheap aux model used for summarize/compaction — not the
+    // (potentially expensive) session model: "is this goal met?" is a classic
+    // aux-tier task, and a goal run can invoke the judge up to maxStopBlocks
+    // times.
     // Normalize the raw goal (string | GoalConfig) once at the run boundary;
     // everything inward uses the GoalConfig. normalizeGoal() returns undefined
     // when there's effectively no goal (empty objective).
@@ -1907,7 +1910,7 @@ export class Engine {
     if (normalizedGoal && this.config.isSubAgent !== true) {
       goalHookHandler = createGoalStopHook({
         goal: normalizedGoal,
-        llm: llmClient,
+        llm: auxSummaryClient,
         log: logger,
         // Clear the persisted active goal the moment the judge says it's met,
         // so a later bare send doesn't re-inherit a satisfied goal. The hook

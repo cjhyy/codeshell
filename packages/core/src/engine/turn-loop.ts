@@ -308,6 +308,10 @@ export class TurnLoop {
       ...data,
       isSubAgent: this.deps.isSubAgent === true,
       sessionId: this.deps.sessionId,
+      // The run's abort signal, so handlers that make their own LLM calls
+      // (e.g. the Goal stop-judge) can be cut short when the user hits Stop
+      // mid-call instead of blocking until the sub-call returns.
+      signal: this.config.signal,
     });
   }
 

@@ -33,6 +33,9 @@ export interface BackgroundShellInfo {
   exitCode: number | null;
   signal: string | null;
   detectedPort?: number;
+  /** Total bytes written so far (monotonic). Shown as live progress for
+   *  long jobs like downloads. May be absent from older core builds. */
+  totalBytes?: number;
 }
 
 /** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors

@@ -33,6 +33,10 @@ export type NotificationItem = {
   name?: string;
   description: string;
   status: "completed" | "failed";
+  /** What kind of background work this was (lets UIs localize the toast). */
+  workKind?: "agent" | "shell" | "video";
+  /** For workKind === "shell": the command that ran. */
+  command?: string;
   /** Final assistant text (completed only). */
   finalText?: string;
   /** Error message (failed only). */
@@ -198,6 +202,8 @@ export function notificationItemToStreamEvent(
     enqueuedAt: item.enqueuedAt,
   };
   if (item.name !== undefined) event.name = item.name;
+  if (item.workKind !== undefined) event.workKind = item.workKind;
+  if (item.command !== undefined) event.command = item.command;
   if (item.finalText !== undefined) event.finalText = item.finalText;
   if (item.error !== undefined) event.error = item.error;
   return event;

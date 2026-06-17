@@ -21,6 +21,13 @@ export interface BackgroundWorkItem {
   kind: BackgroundWorkKind;
   /** Human description for the judge (sub-agent task / video prompt / shell command). */
   description: string;
+  /**
+   * For kind === "shell": a port the shell is listening on, if detected. A
+   * listening port is a strong signal the shell is a long-lived service (dev
+   * server) rather than a finite task — fed to the judge so it doesn't mistake
+   * `make serve` / an opaquely-named server script for something to "wait on".
+   */
+  detectedPort?: number;
 }
 
 /** List every still-running background work item spawned by `sessionId`. */
@@ -42,7 +49,11 @@ export function listRunningBackgroundWork(sessionId: string): BackgroundWorkItem
 
   for (const s of backgroundShellManager.listForSession(sessionId)) {
     if (s.status === "running" || s.status === "starting") {
-      items.push({ kind: "shell", description: s.command });
+      items.push({
+        kind: "shell",
+        description: s.command,
+        ...(s.detectedPort != null ? { detectedPort: s.detectedPort } : {}),
+      });
     }
   }
 

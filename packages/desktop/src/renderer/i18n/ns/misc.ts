@@ -84,6 +84,7 @@ export const misc = {
       },
       bgTask: {
         defaultName: "后台任务",
+        shellName: "后台命令",
         completed: "✓ {name}完成:{preview}",
         failed: "✗ {name}失败:{preview}",
       },
@@ -173,6 +174,7 @@ export const misc = {
       },
       bgTask: {
         defaultName: "Background task",
+        shellName: "Background command",
         completed: "✓ {name} done: {preview}",
         failed: "✗ {name} failed: {preview}",
       },

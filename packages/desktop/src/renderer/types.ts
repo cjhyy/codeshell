@@ -322,20 +322,34 @@ export function bgCompletionText(event: {
   name?: string;
   description: string;
   status: "completed" | "failed";
+  workKind?: "agent" | "shell" | "video";
+  command?: string;
   finalText?: string;
   error?: string;
 }): string {
   const lang = loadUILanguage();
-  const who = event.name ?? translate(lang, "misc.bgTask.defaultName");
+  // For background shells, `description` is English wakeup text meant for the
+  // agent ("Background shell exited (exit 0): yt-dlp …"). Don't surface that raw
+  // in the toast — use a localized name + the command as the preview instead.
+  const isShell = event.workKind === "shell";
+  const who = isShell
+    ? translate(lang, "misc.bgTask.shellName")
+    : (event.name ?? translate(lang, "misc.bgTask.defaultName"));
+  const completedPreview = isShell
+    ? previewLine(event.command ?? event.description)
+    : previewLine(event.finalText ?? event.description);
+  const failedPreview = isShell
+    ? previewLine(event.command ?? event.description)
+    : previewLine(event.error ?? event.description);
   if (event.status === "completed") {
     return translate(lang, "misc.bgTask.completed", {
       name: who,
-      preview: previewLine(event.finalText ?? event.description),
+      preview: completedPreview,
     });
   }
   return translate(lang, "misc.bgTask.failed", {
     name: who,
-    preview: previewLine(event.error ?? event.description),
+    preview: failedPreview,
   });
 }
 

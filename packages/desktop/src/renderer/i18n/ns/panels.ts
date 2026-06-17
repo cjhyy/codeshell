@@ -43,6 +43,7 @@ export const panels = {
         readingOutput: "读取中…",
         noOutput: "(无输出)",
         readOutputFailed: "读取输出失败：{error}",
+        outputSize: "已产出输出量",
       },
       terminal: {
         title: "终端",
@@ -226,6 +227,7 @@ export const panels = {
         readingOutput: "Loading…",
         noOutput: "(no output)",
         readOutputFailed: "Failed to read output: {error}",
+        outputSize: "Total output produced",
       },
       terminal: {
         title: "Terminal",
