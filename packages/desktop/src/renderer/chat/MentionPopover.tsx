@@ -18,6 +18,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Puzzle, FileText, Search } from "lucide-react";
 import type { SkillSummary, FileSearchHit } from "../../preload/types";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 export type MentionItem =
   | { kind: "skill"; skill: SkillSummary }
@@ -43,6 +44,7 @@ export function MentionPopover({
   onPick,
   onItemsChange,
 }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [files, setFiles] = useState<FileSearchHit[]>([]);
 
@@ -110,10 +112,10 @@ export function MentionPopover({
   const isEmpty = items.length === 0;
 
   return (
-    <div className="cs-popup-surface w-80 max-w-[min(20rem,calc(100vw-24px))] rounded-md p-1" role="listbox" aria-label="@ 引用">
+    <div className="cs-popup-surface w-80 max-w-[min(20rem,calc(100vw-24px))] rounded-md p-1" role="listbox" aria-label={t("chat.mention.ariaLabel")}>
       {filteredSkills.length > 0 && (
         <div className="py-1">
-          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">插件</div>
+          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("chat.mention.skills")}</div>
           <ul className="space-y-0.5">
             {filteredSkills.map((s, idx) => {
               const flatIndex = idx;
@@ -145,7 +147,7 @@ export function MentionPopover({
 
       {visibleFiles.length > 0 && (
         <div className="py-1">
-          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">文件</div>
+          <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("chat.mention.files")}</div>
           <ul className="space-y-0.5">
             {visibleFiles.map((f, idx) => {
               const flatIndex = filteredSkills.length + idx;
@@ -178,7 +180,7 @@ export function MentionPopover({
         <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
           <Search size={14} />
           <span>
-            {cwd ? "未找到匹配的插件或文件" : "请先选择一个项目"}
+            {cwd ? t("chat.mention.noMatch") : t("chat.mention.selectProjectFirst")}
           </span>
         </div>
       )}

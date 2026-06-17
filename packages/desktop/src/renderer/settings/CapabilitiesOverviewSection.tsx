@@ -40,10 +40,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   type CapabilityKind,
-  capabilityMeta,
   groupCapabilities,
   isGroupCollapsed,
 } from "./capabilitiesOverview";
+import { useT } from "../i18n/I18nProvider";
+import type { TFunction } from "../i18n/I18nProvider";
 
 type ScopeNode = { kind: "user" } | { kind: "project"; repoPath: string; label: string };
 type ProjectState = "inherit" | "on" | "off";
@@ -67,30 +68,55 @@ const KIND_ICON: Record<CapabilityKind, LucideIcon> = {
   builtin: Wrench,
 };
 
-const PROJECT_STATE_META: Record<
-  ProjectState,
-  { label: string; Icon: LucideIcon; className: string }
-> = {
-  inherit: { label: "继承", Icon: RotateCcw, className: "is-inherit" },
-  on: { label: "启用", Icon: Check, className: "is-on" },
-  off: { label: "停用", Icon: X, className: "is-off" },
+const PROJECT_STATE_ICON: Record<ProjectState, LucideIcon> = {
+  inherit: RotateCcw,
+  on: Check,
+  off: X,
 };
 
-function effectiveLabel(cap: CapabilityDescriptor): string {
-  return cap.enabled ? "当前启用" : "当前停用";
+const KIND_LABEL_KEY: Record<CapabilityKind, string> = {
+  mcp: "settingsX.capOverview.groupMcp",
+  skill: "settingsX.capOverview.groupSkill",
+  plugin: "settingsX.capOverview.groupPlugin",
+  agent: "settingsX.capOverview.groupAgent",
+  builtin: "settingsX.capOverview.groupBuiltin",
+};
+
+function kindLabel(t: TFunction, kind: CapabilityKind): string {
+  return t(KIND_LABEL_KEY[kind] as Parameters<TFunction>[0]);
 }
 
-function baselineLabel(cap: CapabilityDescriptor): string {
-  return (cap.globalEnabled ?? cap.enabled) ? "全局默认启用" : "全局默认停用";
+function metaText(t: TFunction, cap: CapabilityDescriptor): string {
+  const parts: string[] = [];
+  const count = cap.origin?.toolCount;
+  if (typeof count === "number") parts.push(t("settingsX.capOverview.toolCount", { count }));
+  if (cap.origin?.isReadOnly) parts.push(t("settingsX.capOverview.readOnly"));
+  return parts.join(" · ");
 }
 
-function projectStateLabel(cap: CapabilityDescriptor): string {
-  if (cap.projectOverride === "on") return "本项目启用";
-  if (cap.projectOverride === "off") return "本项目停用";
-  return "继承全局";
+function effectiveLabel(t: TFunction, cap: CapabilityDescriptor): string {
+  return cap.enabled ? t("settingsX.capOverview.effectiveOn") : t("settingsX.capOverview.effectiveOff");
+}
+
+function baselineLabel(t: TFunction, cap: CapabilityDescriptor): string {
+  return (cap.globalEnabled ?? cap.enabled)
+    ? t("settingsX.capOverview.baselineOn")
+    : t("settingsX.capOverview.baselineOff");
+}
+
+function projectStateLabel(t: TFunction, cap: CapabilityDescriptor): string {
+  if (cap.projectOverride === "on") return t("settingsX.capOverview.projectOn");
+  if (cap.projectOverride === "off") return t("settingsX.capOverview.projectOff");
+  return t("settingsX.capOverview.projectInherit");
 }
 
 export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) {
+  const { t } = useT();
+  const PROJECT_STATE_LABEL: Record<ProjectState, string> = {
+    inherit: t("settingsX.capOverview.inherit"),
+    on: t("settingsX.capOverview.on"),
+    off: t("settingsX.capOverview.off"),
+  };
   const [node, setNode] = useState<ScopeNode>({ kind: "user" });
   // Seed from the last-loaded user-scope snapshot (settingsCache) so a
   // remount (tab switch) renders synchronously instead of flashing "加载中".
@@ -182,10 +208,10 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
     const overridden = caps.filter((c) => c.effectiveSource === "project").length;
     return { total: caps.length, enabled, overridden };
   }, [caps]);
-  const selectedTitle = selectedProject ? node.label : "用户(全局)";
+  const selectedTitle = selectedProject ? node.label : t("settingsX.capOverview.userGlobal");
   const selectedSubtitle = selectedProject
-    ? "为这个项目单独覆盖 MCP、技能和插件"
-    : "设置所有项目继承的默认能力";
+    ? t("settingsX.capOverview.selectedProjectSubtitle")
+    : t("settingsX.capOverview.selectedUserSubtitle");
 
   return (
     <section className="mb-6 flex flex-col gap-3">
@@ -194,17 +220,17 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
           <Layers size={18} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">扩展能力</div>
-          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">能力总览</h3>
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("settingsX.capOverview.header")}</div>
+          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.capOverview.title")}</h3>
           <p className="m-0 text-xs text-muted-foreground">
-            统一管理内置工具、MCP 服务器、技能、插件和子代理。先选全局默认，再为每个项目设置独立覆盖。
+            {t("settingsX.capOverview.desc")}
           </p>
         </div>
       </div>
       {error && <p className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</p>}
 
       <div className="grid min-h-[420px] grid-cols-1 gap-3 lg:grid-cols-[240px_1fr]">
-        <nav className="flex min-h-0 flex-col gap-1 rounded-md border p-2" aria-label="能力配置范围">
+        <nav className="flex min-h-0 flex-col gap-1 rounded-md border p-2" aria-label={t("settingsX.capOverview.scopeAria")}>
           <Button
             type="button"
             variant="ghost"
@@ -218,13 +244,13 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
               <Globe2 size={15} />
             </span>
             <span className="min-w-0 flex flex-col">
-              <span className="truncate text-sm font-medium text-foreground">用户(全局)</span>
-              <span className="truncate text-xs text-muted-foreground">默认配置</span>
+              <span className="truncate text-sm font-medium text-foreground">{t("settingsX.capOverview.userGlobal")}</span>
+              <span className="truncate text-xs text-muted-foreground">{t("settingsX.capOverview.defaultConfig")}</span>
             </span>
           </Button>
-          <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">项目配置</div>
+          <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("settingsX.capOverview.projectConfig")}</div>
           {repos.length === 0 && (
-            <div className="px-2 py-3 text-xs text-muted-foreground">尚无项目</div>
+            <div className="px-2 py-3 text-xs text-muted-foreground">{t("settingsX.capOverview.noProjects")}</div>
           )}
           {repos.map((r) => {
             const label = repoLabel(r);
@@ -264,16 +290,16 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                 <span>{selectedSubtitle}</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-label="能力统计">
-              <span>{summary.total} 项能力</span>
-              <span>{summary.enabled} 项启用</span>
-              {selectedProject && <span>{summary.overridden} 项本项目覆盖</span>}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground" aria-label={t("settingsX.capOverview.statsAria")}>
+              <span>{t("settingsX.capOverview.statTotal", { count: summary.total })}</span>
+              <span>{t("settingsX.capOverview.statEnabled", { count: summary.enabled })}</span>
+              {selectedProject && <span>{t("settingsX.capOverview.statOverridden", { count: summary.overridden })}</span>}
             </div>
           </div>
 
-          {loading && <p className="m-0 text-xs text-muted-foreground">加载中…</p>}
+          {loading && <p className="m-0 text-xs text-muted-foreground">{t("settingsX.capOverview.loading")}</p>}
           {!loading && groups.length === 0 && (
-            <p className="m-0 text-xs text-muted-foreground">暂无可管理的能力。</p>
+            <p className="m-0 text-xs text-muted-foreground">{t("settingsX.capOverview.none")}</p>
           )}
           {!loading &&
             groups.map((g) => {
@@ -293,11 +319,11 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                   <span className="text-muted-foreground" aria-hidden>
                     {React.createElement(KIND_ICON[g.kind], { size: 15 })}
                   </span>
-                  <span>{g.label}</span>
+                  <span>{kindLabel(t, g.kind)}</span>
                   <span className="ml-auto rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{g.items.length}</span>
                 </Button>
                 {!collapsed && g.items.map((cap) => {
-                  const meta = capabilityMeta(cap);
+                  const meta = metaText(t, cap);
                   const overridden = cap.effectiveSource === "project";
                   // builtin has no dedicated detail tab, so its rows don't navigate.
                   const navigable = !!onNavigateToKind && cap.kind !== "builtin";
@@ -310,7 +336,7 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                         )}
                         role={navigable ? "button" : undefined}
                         tabIndex={navigable ? 0 : undefined}
-                        title={navigable ? `打开${g.label}详情` : undefined}
+                        title={navigable ? t("settingsX.capOverview.openDetail", { label: kindLabel(t, g.kind) }) : undefined}
                         onClick={navigable ? () => onNavigateToKind?.(cap.kind) : undefined}
                         onKeyDown={
                           navigable
@@ -335,14 +361,14 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                             )}
                           >
                             {cap.enabled ? <Check size={12} /> : <Circle size={12} />}
-                            {effectiveLabel(cap)}
+                            {effectiveLabel(t, cap)}
                           </span>
                           {selectedProject && (
                             <span className={cn("inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground", overridden && "text-primary")}>
-                              {projectStateLabel(cap)}
+                              {projectStateLabel(t, cap)}
                             </span>
                           )}
-                          {selectedProject && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{baselineLabel(cap)}</span>}
+                          {selectedProject && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{baselineLabel(t, cap)}</span>}
                           {meta && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{meta}</span>}
                         </span>
                       </span>
@@ -355,10 +381,10 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                       ) : (
                         <div
                           className="ml-auto flex items-center gap-2"
-                          aria-label={`${cap.name} 项目覆盖`}
+                          aria-label={t("settingsX.capOverview.projectOverrideAria", { name: cap.name })}
                         >
                           {(["inherit", "on", "off"] as ProjectState[]).map((state) => {
-                            const stateMeta = PROJECT_STATE_META[state];
+                            const StateIcon = PROJECT_STATE_ICON[state];
                             const active = (cap.projectOverride ?? "inherit") === state;
                             return (
                               <Button
@@ -375,8 +401,8 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
                                 disabled={savingId === cap.id}
                                 onClick={() => void onProjectState(cap, state)}
                               >
-                                <stateMeta.Icon size={13} />
-                                {stateMeta.label}
+                                <StateIcon size={13} />
+                                {PROJECT_STATE_LABEL[state]}
                               </Button>
                             );
                           })}

@@ -134,13 +134,22 @@ export async function loginAndCaptureCookies(
       resolve(result);
     };
 
-    // 注入浮窗(载入完成后)。不吞错 —— 注入失败(常见 CSP 挡)记日志,便于诊断。
-    handle.webContents.on("did-finish-load", () => {
-      dlog("main", "login.did_finish_load", { domain: targetDomain });
+    // 注入浮窗。注入脚本自带幂等守卫(同 id 已存在则跳过),所以可重复注入。
+    const inject = (whence: string) => {
       handle
         .executeJavaScript(injectionScript())
-        .then(() => dlog("main", "login.inject_ok", { domain: targetDomain }))
-        .catch((e) => dlog("main", "login.inject_failed", { domain: targetDomain, error: String(e) }));
+        .then(() => dlog("main", "login.inject_ok", { domain: targetDomain, whence }))
+        .catch((e) =>
+          dlog("main", "login.inject_failed", { domain: targetDomain, whence, error: String(e) }),
+        );
+    };
+    // 立即注入一次:openBrowserHost 已 await 完初始 loadURL,初始 did-finish-load 早已过,
+    // 单靠下面的监听对 SPA(初始 load 后靠 XHR 完成登录、无整页导航)永不触发 → 浮窗永不出现。
+    inject("initial");
+    // 后续整页导航(多步登录跳转)后重注入。不吞错 —— 失败(常见 CSP 挡)记日志便于诊断。
+    handle.webContents.on("did-finish-load", () => {
+      dlog("main", "login.did_finish_load", { domain: targetDomain });
+      inject("did-finish-load");
     });
 
     // 渲染/加载崩溃兜底。
@@ -168,24 +177,32 @@ export async function loginAndCaptureCookies(
         return;
       }
       if (message.includes(SENTINEL_SAVE)) {
+        // 整段包 try/catch:getCookies / evaluateLoginState 任一抛错都不能让 finish 漏掉,
+        // 否则外层 Promise 永不 resolve,渲染层按钮卡死在「处理中…」。
         void (async () => {
-          const all = await handle.getCookies(targetDomain);
-          // 仅目标域(BrowserHost.getCookies 已按域过滤,这里再保险按主机后缀过滤一次)。
-          const jar = all.filter((c) => {
-            const d = (c.domain ?? "").replace(/^\./, "");
-            return d === targetDomain || targetDomain.endsWith("." + d) || targetDomain.includes(d);
-          });
-          let suggestedLabel: string | undefined;
-          const script = usernameScriptFor(targetDomain);
-          if (script) {
-            try {
-              suggestedLabel = sanitizeUsername(await handle.executeJavaScript(script));
-            } catch {
-              /* 抓用户名失败不阻塞 */
+          try {
+            const all = await handle.getCookies(targetDomain);
+            // 仅目标域(BrowserHost.getCookies 已按域过滤,这里再保险按主机后缀过滤一次)。
+            // 只用「相等 / 后缀」匹配,不用 includes(否则 cookie 域 x.com 会误中目标 myx.com)。
+            const jar = all.filter((c) => {
+              const d = (c.domain ?? "").replace(/^\./, "");
+              return d === targetDomain || targetDomain.endsWith("." + d);
+            });
+            let suggestedLabel: string | undefined;
+            const script = usernameScriptFor(targetDomain);
+            if (script) {
+              try {
+                suggestedLabel = sanitizeUsername(await handle.executeJavaScript(script));
+              } catch {
+                /* 抓用户名失败不阻塞 */
+              }
             }
+            const loginCheck = evaluateLoginState(jar, targetDomain);
+            await finish({ ok: true, jar, domain: targetDomain, suggestedLabel, loginCheck });
+          } catch (e) {
+            dlog("main", "login.save_failed", { domain: targetDomain, error: String(e) });
+            await finish({ ok: false, error: `读取 cookie 失败: ${String(e)}` });
           }
-          const loginCheck = evaluateLoginState(jar, targetDomain);
-          await finish({ ok: true, jar, domain: targetDomain, suggestedLabel, loginCheck });
         })();
       }
     });

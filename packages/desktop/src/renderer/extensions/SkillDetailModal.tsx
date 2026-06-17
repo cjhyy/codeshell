@@ -3,6 +3,7 @@ import { Markdown } from "../Markdown";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { skillBaseDir } from "./skillBaseDir";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   name: string;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function SkillDetailModal({ name, filePath, source, onClose }: Props) {
+  const { t } = useT();
   const [body, setBody] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,15 +55,15 @@ export function SkillDetailModal({ name, filePath, source, onClose }: Props) {
           <span className="font-semibold">{name}</span>
           <span className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">{source}</span>
           <span className="flex-1" />
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="关闭">
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label={t("ext.skillDetail.close")}>
             <X size={16} />
           </Button>
         </header>
         <div className="overflow-y-auto p-4">
           {error ? (
-            <div className="text-sm text-muted-foreground">读取失败：{error}</div>
+            <div className="text-sm text-muted-foreground">{t("ext.skillDetail.readFailed", { error })}</div>
           ) : body === null ? (
-            <div className="text-sm text-muted-foreground">加载中…</div>
+            <div className="text-sm text-muted-foreground">{t("ext.common.loading")}</div>
           ) : (
             <Markdown text={body} cwd={skillBaseDir(filePath)} />
           )}

@@ -2,6 +2,7 @@ import React from "react";
 import { Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * Goal 模式开关 — orthogonal to the permission pill.
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function GoalToggle({ enabled, onToggle, disabled }: Props) {
+  const { t } = useT();
   return (
     <Button
       type="button"
@@ -28,12 +30,8 @@ export function GoalToggle({ enabled, onToggle, disabled }: Props) {
       className={cn("h-7 shrink-0 gap-1.5 px-2 text-xs", enabled && "shadow-sm")}
       disabled={disabled}
       aria-pressed={enabled}
-      aria-label={enabled ? "Goal 模式已开启" : "Goal 模式已关闭"}
-      title={
-        enabled
-          ? "Goal 模式:把这条消息当目标,跑到完成为止(危险操作仍按权限处理)"
-          : "Goal 模式(关):点亮后设目标,agent 跑到完成为止"
-      }
+      aria-label={enabled ? t("chat.goal.on") : t("chat.goal.off")}
+      title={enabled ? t("chat.goal.onTitle") : t("chat.goal.offTitle")}
       onClick={() => onToggle(!enabled)}
     >
       <Target size={12} className="shrink-0" aria-hidden="true" />

@@ -23,6 +23,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 import QRCode from "qrcode";
+import { useT } from "../i18n/I18nProvider";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
 
 interface ScopedProps {
   scope: "user" | "project";
@@ -92,6 +95,7 @@ function useDebouncedSave(
  */
 export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
   const [instructions, setInstructions] = useState("");
+  const { t } = useT();
 
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
@@ -110,16 +114,18 @@ export function PersonalizationSection({ scope, activeRepoPath }: ScopedProps) {
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h3 className="text-sm font-medium text-foreground">自定义指令</h3>
+        <h3 className="text-sm font-medium text-foreground">
+          {t("settingsX.adv.personalizationTitle")}
+        </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          为 CodeShell 提供额外的说明和上下文,会附加到每次对话的系统提示中。
+          {t("settingsX.adv.personalizationDesc")}
         </p>
       </div>
       <Textarea
         value={instructions}
         onChange={(e) => { setInstructions(e.target.value); schedule(e.target.value); }}
         onBlur={flush}
-        placeholder="添加自定义指令…"
+        placeholder={t("settingsX.adv.personalizationPlaceholder")}
         className="min-h-[260px] resize-y leading-relaxed"
       />
     </section>
@@ -143,6 +149,7 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
   const profileRef = useRef("");
   languageRef.current = language;
   profileRef.current = profile;
+  const { t } = useT();
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const { schedule, flush } = useDebouncedSave(() =>
@@ -164,22 +171,24 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h3 className="text-sm font-medium text-foreground">个性化</h3>
+        <h3 className="text-sm font-medium text-foreground">
+          {t("settingsX.adv.responsePrefsTitle")}
+        </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          回复语言与称呼会作为稳定偏好注入每次对话(主对话与子代理均生效)。
+          {t("settingsX.adv.responsePrefsDesc")}
         </p>
       </div>
       <Input
         value={language}
         onChange={(e) => { setLanguage(e.target.value); schedule(e.target.value); }}
         onBlur={flush}
-        placeholder="回复语言,如:始终用简体中文"
+        placeholder={t("settingsX.adv.responseLangPlaceholder")}
       />
       <Textarea
         value={profile}
         onChange={(e) => { setProfile(e.target.value); schedule(e.target.value); }}
         onBlur={flush}
-        placeholder="称呼 / 画像,如:叫我 maki,后端工程师"
+        placeholder={t("settingsX.adv.userProfilePlaceholder")}
         className="min-h-[120px] resize-y leading-relaxed"
       />
     </section>
@@ -197,6 +206,7 @@ export function ResponsePrefsSection({ scope, activeRepoPath }: ScopedProps) {
 export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) {
   const [compatClaude, setCompatClaude] = useState(true);
   const [compatCodex, setCompatCodex] = useState(true);
+  const { t } = useT();
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
@@ -219,20 +229,18 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h3 className="text-sm font-medium text-foreground">指令文件</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          始终读取 CODESHELL.md。可选地兼容读取其他工具的指令文件。
-        </p>
+        <h3 className="text-sm font-medium text-foreground">{t("settingsX.adv.instrFilesTitle")}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{t("settingsX.adv.instrFilesDesc")}</p>
       </div>
       <label className="flex items-center justify-between gap-3 text-sm text-foreground">
-        <span>兼容 Claude(CLAUDE.md)</span>
+        <span>{t("settingsX.adv.compatClaude")}</span>
         <Switch
           checked={compatClaude}
           onCheckedChange={(v) => { setCompatClaude(v); persist(v, compatCodex); }}
         />
       </label>
       <label className="flex items-center justify-between gap-3 text-sm text-foreground">
-        <span>兼容 Codex(AGENTS.md)</span>
+        <span>{t("settingsX.adv.compatCodex")}</span>
         <Switch
           checked={compatCodex}
           onCheckedChange={(v) => { setCompatCodex(v); persist(compatClaude, v); }}
@@ -243,17 +251,18 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
 }
 
 export function ShortcutsSection() {
+  const { t } = useT();
   const rows = [
-    ["⌘K", "打开命令面板"],
-    ["⌘F", "搜索当前对话"],
-    ["⌘P", "搜索全部 session"],
-    ["⌘⇧N", "新窗口"],
-    ["Enter", "发送消息"],
-    ["Shift Enter", "输入换行"],
+    ["⌘K", t("settingsX.adv.scCommandPalette")],
+    ["⌘F", t("settingsX.adv.scSearchConv")],
+    ["⌘P", t("settingsX.adv.scSearchAll")],
+    ["⌘⇧N", t("settingsX.adv.scNewWindow")],
+    ["Enter", t("settingsX.adv.scSend")],
+    ["Shift Enter", t("settingsX.adv.scNewline")],
   ];
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">键盘快捷键</h3>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.adv.shortcutsTitle")}</h3>
       <div className="rounded-md border p-2">
         {rows.map(([key, label]) => (
           <div className="grid grid-cols-[minmax(120px,0.35fr)_1fr] gap-3 border-b py-2 text-sm last:border-b-0" key={key}>
@@ -278,16 +287,17 @@ export function ShortcutsSection() {
 export function HooksSection({ repos }: { repos: Repo[] }) {
   // undefined = picker; null = global (user level); string = project cwd.
   const [selected, setSelected] = useState<string | null | undefined>(undefined);
+  const { t } = useT();
   const selectedRepo =
     typeof selected === "string" ? (repos.find((r) => r.path === selected) ?? null) : null;
 
   if (selected === undefined) {
     return (
       <section className="mb-6 flex flex-col gap-3">
-        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">钩子</h3>
-        <p className="m-0 text-xs text-muted-foreground">
-          钩子分两层:全局钩子对所有项目生效,项目钩子只对该项目生效,两层会一起运行。
-        </p>
+        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+          {t("settingsX.adv.hooksTitle")}
+        </h3>
+        <p className="m-0 text-xs text-muted-foreground">{t("settingsX.adv.hooksDesc")}</p>
         <ProjectPicker repos={repos} includeGlobal onSelect={(path) => setSelected(path)} />
       </section>
     );
@@ -303,11 +313,11 @@ export function HooksSection({ repos }: { repos: Repo[] }) {
           onClick={() => setSelected(undefined)}
         >
           <ArrowLeft size={14} />
-          <span>返回列表</span>
+          <span>{t("settingsX.adv.backToList")}</span>
         </Button>
         <span className="truncate text-sm font-medium text-foreground">
           {selected === null
-            ? "全局(所有项目生效)"
+            ? t("settingsX.adv.globalAllProjects")
             : selectedRepo
               ? repoLabel(selectedRepo)
               : selected}
@@ -321,14 +331,14 @@ export function HooksSection({ repos }: { repos: Repo[] }) {
 /** Hook event names a user can pick for a hand-written hook. Aligned with the
  *  events plugin hooks map to (core EVENT_NAME_MAP), plus the engine's own
  *  lifecycle events that settings hooks can legitimately register. */
-const HOOK_EVENT_OPTIONS: { value: string; label: string }[] = [
-  { value: "pre_tool_use", label: "pre_tool_use（工具执行前）" },
-  { value: "post_tool_use", label: "post_tool_use（工具执行后）" },
-  { value: "user_prompt_submit", label: "user_prompt_submit（提交输入）" },
-  { value: "on_session_start", label: "on_session_start（会话开始）" },
-  { value: "on_session_end", label: "on_session_end（会话结束）" },
-  { value: "pre_compact", label: "pre_compact（压缩前）" },
-  { value: "notification", label: "notification（通知）" },
+const HOOK_EVENT_OPTIONS: { value: string; labelKey: string }[] = [
+  { value: "pre_tool_use", labelKey: "settingsX.adv.hookEvtPreTool" },
+  { value: "post_tool_use", labelKey: "settingsX.adv.hookEvtPostTool" },
+  { value: "user_prompt_submit", labelKey: "settingsX.adv.hookEvtPrompt" },
+  { value: "on_session_start", labelKey: "settingsX.adv.hookEvtSessStart" },
+  { value: "on_session_end", labelKey: "settingsX.adv.hookEvtSessEnd" },
+  { value: "pre_compact", labelKey: "settingsX.adv.hookEvtPreCompact" },
+  { value: "notification", labelKey: "settingsX.adv.hookEvtNotification" },
 ];
 
 /**
@@ -351,6 +361,11 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
   const [event, setEvent] = useState<string>(HOOK_EVENT_OPTIONS[0]!.value);
   const [command, setCommand] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { t } = useT();
+  const hookEventOptions = HOOK_EVENT_OPTIONS.map((o) => ({
+    value: o.value,
+    label: t(o.labelKey as Parameters<typeof t>[0]),
+  }));
 
   const load = async () => {
     try {
@@ -388,7 +403,7 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
     setError(null);
     const cmd = command.trim();
     if (!cmd) {
-      setError("请填写命令");
+      setError(t("settingsX.adv.fillCommand"));
       return;
     }
     await persist([...hooks, { event, command: cmd }]);
@@ -425,7 +440,7 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
     });
   };
 
-  const ownTitle = isGlobal ? "全局钩子" : "项目钩子";
+  const ownTitle = isGlobal ? t("settingsX.adv.globalHooks") : t("settingsX.adv.projectHooks");
 
   return (
     <div className="flex flex-col gap-4">
@@ -433,7 +448,9 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-foreground">{ownTitle}</span>
         {hooks.length === 0 ? (
-          <div className="text-sm text-muted-foreground">暂无{ownTitle}</div>
+          <div className="text-sm text-muted-foreground">
+            {t("settingsX.adv.noHooks", { title: ownTitle })}
+          </div>
         ) : (
           <ul className="flex flex-col gap-1">
             {hooks.map((h, i) => {
@@ -455,7 +472,7 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
                   <Switch
                     checked={!off}
                     onCheckedChange={(checked) => toggleOwn(i, checked)}
-                    aria-label={off ? "启用钩子" : "停用钩子"}
+                    aria-label={off ? t("settingsX.adv.enableHook") : t("settingsX.adv.disableHook")}
                   />
                   <Button
                     variant="ghost"
@@ -463,7 +480,7 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
                     className="shrink-0 text-muted-foreground hover:text-status-err"
                     onClick={() => void persist(hooks.filter((_, n) => n !== i))}
                   >
-                    删除
+                    {t("settingsX.adv.delete")}
                   </Button>
                 </li>
               );
@@ -475,7 +492,9 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
       {/* In a project: the global hooks also run here — list them read-only. */}
       {!isGlobal && globalHooks.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">全局钩子(也在本项目运行)</span>
+          <span className="text-sm font-medium text-foreground">
+            {t("settingsX.adv.globalHooksAlsoRun")}
+          </span>
           <ul className="flex flex-col gap-1">
             {globalHooks.map((h, i) => (
               <li
@@ -492,34 +511,38 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
                   {stringOf(h.command)}
                 </code>
                 <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                  全局{h.disabled === true ? "(已停用)" : ""}
+                  {h.disabled === true
+                    ? t("settingsX.adv.globalDisabledBadge")
+                    : t("settingsX.adv.globalBadge")}
                 </span>
               </li>
             ))}
           </ul>
-          <span className="text-xs text-muted-foreground">在「全局」页编辑全局钩子。</span>
+          <span className="text-xs text-muted-foreground">
+            {t("settingsX.adv.editGlobalHooksHint")}
+          </span>
         </div>
       )}
 
       {/* Add a hand-written hook — event dropdown + command input (replaces the
           old raw-JSON textarea). */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm text-muted-foreground">添加钩子</span>
+        <span className="text-sm text-muted-foreground">{t("settingsX.adv.addHook")}</span>
         <div className="flex items-end gap-2">
           <div className="w-56 shrink-0">
-            <Select value={event} onChange={setEvent} options={HOOK_EVENT_OPTIONS} />
+            <Select value={event} onChange={setEvent} options={hookEventOptions} />
           </div>
           <Input
             value={command}
             onChange={(e) => setCommand(e.target.value)}
-            placeholder="要运行的 shell 命令，例如 echo '{}'"
+            placeholder={t("settingsX.adv.hookCmdPlaceholder")}
             className="font-mono text-sm"
             onKeyDown={(e) => {
               if (e.key === "Enter") void add();
             }}
           />
           <Button variant="solid" className="w-fit shrink-0" onClick={() => void add()}>
-            添加
+            {t("settingsX.adv.add")}
           </Button>
         </div>
         {error && <div className="text-sm text-status-err">{error}</div>}
@@ -530,7 +553,9 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
           (capabilityOverrides.pluginHooks); the global view is read-only. */}
       {pluginHooks.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">插件提供的钩子</span>
+          <span className="text-sm font-medium text-foreground">
+            {t("settingsX.adv.pluginProvidedHooks")}
+          </span>
           <ul className="flex flex-col gap-1">
             {pluginHooks.map((h, i) => {
               const overrideOff = hookOverrides[h.key] === "off";
@@ -550,14 +575,19 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
                     {h.command}
                   </code>
                   <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                    由「{h.plugin}」提供{h.disabled ? "（插件已禁用）" : ""}
+                    {t("settingsX.adv.providedByPluginShort", { plugin: h.plugin })}
+                    {h.disabled ? t("settingsX.adv.pluginDisabledSuffix") : ""}
                   </span>
                   {!isGlobal && (
                     <Switch
                       checked={!off}
                       disabled={h.disabled}
                       onCheckedChange={(checked) => void togglePluginHook(h, checked)}
-                      aria-label={off ? "启用此插件钩子" : "停用此插件钩子"}
+                      aria-label={
+                        off
+                          ? t("settingsX.adv.enablePluginHook")
+                          : t("settingsX.adv.disablePluginHook")
+                      }
                     />
                   )}
                 </li>
@@ -566,8 +596,8 @@ function ProjectHooksEditor({ cwd }: { cwd: string | null }) {
           </ul>
           <span className="text-xs text-muted-foreground">
             {isGlobal
-              ? "插件钩子在此只读;进入某个项目的钩子页可单条停用(仅对该项目生效),或在「插件」页禁用整个插件。"
-              : "单条开关仅对本项目生效、对新会话生效;整个插件可在「插件」页禁用(会连同其全部钩子停用)。"}
+              ? t("settingsX.adv.pluginHookGlobalHint")
+              : t("settingsX.adv.pluginHookProjectHint")}
           </span>
         </div>
       )}
@@ -588,6 +618,7 @@ export function GitSection() {
   const [gitPath, setGitPath] = useState("");
   const [gitOk, setGitOk] = useState<boolean | undefined>(undefined);
   const [checking, setChecking] = useState(false);
+  const { t } = useT();
 
   useEffect(() => { setPrefs(loadGitPrefs()); }, []);
   useEffect(() => {
@@ -637,14 +668,14 @@ export function GitSection() {
     <section className="mb-6 flex flex-col gap-3">
       <ul className="flex flex-col gap-2">
         <GitRowShell
-          title="Git 可执行文件路径"
-          help="留空则用系统 PATH 中的 git。安装插件市场需要 git;若 GUI 启动时没继承到 PATH(Windows 常见),点「选择…」挑出 git 可执行文件(如 C:\\Program Files\\Git\\cmd\\git.exe),或直接填写绝对路径。"
+          title={t("settingsX.adv.gitPathTitle")}
+          help={t("settingsX.adv.gitPathHelp")}
           control={
             <div className="flex items-center gap-2">
               <input
                 className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
                 value={gitPath}
-                placeholder="(使用 PATH 中的 git)"
+                placeholder={t("settingsX.adv.gitPathPlaceholder")}
                 onChange={(e) => {
                   setGitPath(e.target.value);
                   setGitOk(undefined);
@@ -653,19 +684,19 @@ export function GitSection() {
                 onBlur={flushGitPath}
               />
               <Button size="sm" variant="outline" onClick={() => void pickGit()}>
-                选择…
+                {t("settingsX.adv.pick")}
               </Button>
               <Button size="sm" variant="outline" disabled={checking} onClick={() => void checkGit()}>
-                {checking ? "检测中…" : "检测"}
+                {checking ? t("settingsX.adv.checking") : t("settingsX.adv.check")}
               </Button>
-              {gitOk === true && <span className="text-xs text-status-ok">✓ 可用</span>}
-              {gitOk === false && <span className="text-xs text-status-err">✗ 未找到</span>}
+              {gitOk === true && <span className="text-xs text-status-ok">{t("settingsX.adv.gitAvailable")}</span>}
+              {gitOk === false && <span className="text-xs text-status-err">{t("settingsX.adv.gitNotFound")}</span>}
             </div>
           }
         />
         <GitRowShell
-          title="分支前缀"
-          help="在 codeshell 中创建工作树时使用的分支前缀（创建后会自动追加工作树名 + 短哈希）"
+          title={t("settingsX.adv.branchPrefixTitle")}
+          help={t("settingsX.adv.branchPrefixHelp")}
           control={
             <input
               className="rounded-sm border bg-transparent px-2 py-1.5 text-sm"
@@ -676,8 +707,8 @@ export function GitSection() {
           }
         />
         <GitRowShell
-          title="自动清理过期工作树"
-          help="启动 codeshell 时检查 .worktrees/ 目录，删除超过下方时长未修改的工作树（包含其本地分支）。"
+          title={t("settingsX.adv.autoDeleteTitle")}
+          help={t("settingsX.adv.autoDeleteHelp")}
           control={
             <Switch
               checked={prefs.autoDeleteWorktrees}
@@ -686,8 +717,8 @@ export function GitSection() {
           }
         />
         <GitRowShell
-          title="清理阈值"
-          help="工作树空闲多久（按目录修改时间）后被自动清理。"
+          title={t("settingsX.adv.graceTitle")}
+          help={t("settingsX.adv.graceHelp")}
           control={
             <div className="flex items-center gap-2">
               <input
@@ -702,7 +733,7 @@ export function GitSection() {
                   if (Number.isFinite(n) && n >= 1) update("autoDeleteWorktreesGraceMins", n);
                 }}
               />
-              <span className="text-xs text-muted-foreground">分钟</span>
+              <span className="text-xs text-muted-foreground">{t("settingsX.adv.minutes")}</span>
             </div>
           }
         />
@@ -766,6 +797,7 @@ function GlobalEnvEditor() {
   const [envText, setEnvText] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const { t } = useT();
 
   const load = async () => {
     const s = (await window.codeshell.getSettings("user")) ?? {};
@@ -785,10 +817,10 @@ function GlobalEnvEditor() {
 
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">全局环境变量</h3>
-      <p className="m-0 text-xs text-muted-foreground">
-        所有项目共享。常用于放 API key(如 <code className="font-mono text-[0.95em]">OPENAI_API_KEY</code>),配一次,所有项目的 Bash 工具、后台 shell、技能(skill)脚本都能读到。技能需要密钥时来这里配。
-      </p>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+        {t("settingsX.adv.globalEnvTitle")}
+      </h3>
+      <p className="m-0 text-xs text-muted-foreground">{t("settingsX.adv.globalEnvDesc")}</p>
       <label className="flex flex-col gap-1.5">
         <Textarea
           value={envText}
@@ -797,16 +829,18 @@ function GlobalEnvEditor() {
           className="min-h-[120px] resize-y font-mono text-sm"
         />
         <span className="mt-1 text-xs text-muted-foreground">
-          每行一个 KEY=VALUE,<code className="font-mono text-[0.95em]">#</code> 开头为注释。这些值不经过密钥脱敏过滤(你显式配置的,与防止模型泄漏宿主 env 是两回事);项目级同名变量会覆盖这里。
+          {t("settingsX.adv.globalEnvHint")}
         </span>
       </label>
       <div className="mt-3 flex items-center gap-2">
         <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
-          {saving ? "保存中..." : "保存全局变量"}
+          {saving ? t("settingsX.adv.saving") : t("settingsX.adv.saveGlobalEnv")}
         </Button>
         {savedAt && (
           <span className="text-sm text-status-ok">
-            已保存 · {new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+            {t("settingsX.adv.savedAt", {
+              time: new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+            })}
           </span>
         )}
       </div>
@@ -816,6 +850,7 @@ function GlobalEnvEditor() {
 
 export function EnvironmentSection({ repos }: { repos: Repo[] }) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const { t } = useT();
   const selectedRepo = repos.find((r) => r.path === selectedPath) ?? null;
 
   if (!selectedPath) {
@@ -823,10 +858,10 @@ export function EnvironmentSection({ repos }: { repos: Repo[] }) {
       <>
         <GlobalEnvEditor />
         <section className="mb-6 flex flex-col gap-3">
-          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">按项目维护</h3>
-          <p className="m-0 text-xs text-muted-foreground">
-            项目级环境(setup 脚本、KEY=VALUE 变量、沙箱边界),只对所选项目生效,可覆盖上方全局变量。选择一个项目以查看 / 编辑。
-          </p>
+          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+            {t("settingsX.adv.perProjectTitle")}
+          </h3>
+          <p className="m-0 text-xs text-muted-foreground">{t("settingsX.adv.perProjectDesc")}</p>
           <ProjectPicker repos={repos} onSelect={(path) => setSelectedPath(path)} />
         </section>
       </>
@@ -843,7 +878,7 @@ export function EnvironmentSection({ repos }: { repos: Repo[] }) {
           onClick={() => setSelectedPath(null)}
         >
           <ArrowLeft size={14} />
-          <span>返回项目列表</span>
+          <span>{t("settingsX.adv.backToProjectList")}</span>
         </Button>
         <span className="truncate text-sm font-medium text-foreground">
           {selectedRepo ? repoLabel(selectedRepo) : selectedPath}
@@ -866,6 +901,7 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
   const [envText, setEnvText] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const { t } = useT();
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(targetScope, cwd)) ?? {};
@@ -911,14 +947,14 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
       </div>
 
       <label className={`${field} max-w-[420px]`}>
-        <span className="text-sm text-muted-foreground">名称</span>
+        <span className="text-sm text-muted-foreground">{t("settingsX.adv.fieldName")}</span>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={projectName} />
       </label>
 
       <LocalScriptEditor
-        title="设置脚本"
-        scopeLabel="仅 worktree 生效"
-        help="创建新工作树（EnterWorktree）时,会在工作树根目录自动跑一次对应平台的脚本(失败只警告不阻断)。"
+        title={t("settingsX.adv.setupScriptTitle")}
+        scopeLabel={t("settingsX.adv.worktreeOnly")}
+        help={t("settingsX.adv.setupScriptHelp")}
         activeTab={setupTab}
         onTabChange={setSetupTab}
         scripts={setupScripts}
@@ -932,28 +968,28 @@ function ProjectEnvEditor({ cwd }: { cwd: string }) {
           见 TODO-feedback.md「清理脚本(cleanup)未接但 UI 可配」。 */}
 
       <label className={field}>
-        <span className="text-sm text-muted-foreground">变量（全项目生效）</span>
+        <span className="text-sm text-muted-foreground">{t("settingsX.adv.varsAllProject")}</span>
         <Textarea
           value={envText}
           onChange={(e) => setEnvText(e.target.value)}
           placeholder={"KEY=value\nNODE_ENV=development"}
           className="min-h-[120px] resize-y font-mono text-sm"
         />
-        <span className={hint}>
-          每行一个 KEY=VALUE。这些变量会注入该项目的 Bash 工具与后台 shell 执行环境(含工作树 setup 脚本)。MCP server 自己的环境变量仍在 MCP 服务器卡片里保存，只注入对应 server。
-        </span>
+        <span className={hint}>{t("settingsX.adv.varsHint")}</span>
       </label>
 
       <p className="border-t border-border pt-3 text-xs text-muted-foreground">
-        沙箱(隔离/网络)已移到独立的「沙箱」设置,可按全局或项目配置。
+        {t("settingsX.adv.sandboxMovedHint")}
       </p>
       <div className="flex items-center gap-2">
         <Button variant="solid" className="w-fit" onClick={() => void save()} disabled={saving}>
-          {saving ? "保存中..." : "保存本地环境"}
+          {saving ? t("settingsX.adv.saving") : t("settingsX.adv.saveLocalEnv")}
         </Button>
         {savedAt && (
           <span className="text-sm text-status-ok">
-            已保存 · {new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+            {t("settingsX.adv.savedAt", {
+              time: new Date(savedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
+            })}
           </span>
         )}
       </div>
@@ -982,6 +1018,7 @@ function LocalScriptEditor({
   onScriptChange: (tab: LocalEnvPlatform, value: string) => void;
   placeholder: string;
 }) {
+  const { t } = useT();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-end justify-between gap-3">
@@ -1007,7 +1044,7 @@ function LocalScriptEditor({
               className={cn(activeTab === tab.id && "bg-accent font-semibold text-foreground")}
               onClick={() => onTabChange(tab.id)}
             >
-              {tab.label}
+              {tab.id === "default" ? t("settingsX.adv.localEnvDefault") : tab.label}
             </Button>
           ))}
         </div>
@@ -1031,6 +1068,7 @@ export function ToggleCapabilitySection({
 }: ScopedProps & { settingKey: "browser" | "computer"; title: string; description: string }) {
   const [enabled, setEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { t } = useT();
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
@@ -1054,7 +1092,7 @@ export function ToggleCapabilitySection({
       <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{title}</h3>
       <p className="m-0 text-xs text-muted-foreground">{description}</p>
       <label className="flex items-center gap-2 text-sm">
-        <span>{enabled ? "已启用" : "已禁用"}</span>
+        <span>{enabled ? t("settingsX.adv.enabled") : t("settingsX.adv.disabled")}</span>
         <Switch checked={enabled} disabled={saving} onCheckedChange={(next) => void save(next)} />
       </label>
     </section>
@@ -1076,6 +1114,7 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
   const [detail, setDetail] = useState<"low" | "standard" | "high" | "">("");
   const [saving, setSaving] = useState(false);
+  const { t } = useT();
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
@@ -1103,18 +1142,22 @@ export function ImageSettingsSection({ scope, activeRepoPath }: ScopedProps) {
   };
 
   const options: Array<{ id: "low" | "standard" | "high" | ""; label: string; help: string }> = [
-    { id: "", label: "默认", help: "跟随默认(不降采样,保留原始清晰度)" },
-    { id: "low", label: "省钱", help: "降到 ~1024px 长边,最省 token" },
-    { id: "standard", label: "标准", help: "~1568px,清晰度/成本平衡(推荐)" },
-    { id: "high", label: "高清", help: "~2576px,最清晰、最费 token" },
+    { id: "", label: t("settingsX.adv.imgDefault"), help: t("settingsX.adv.imgDefaultHelp") },
+    { id: "low", label: t("settingsX.adv.imgLow"), help: t("settingsX.adv.imgLowHelp") },
+    { id: "standard", label: t("settingsX.adv.imgStandard"), help: t("settingsX.adv.imgStandardHelp") },
+    { id: "high", label: t("settingsX.adv.imgHigh"), help: t("settingsX.adv.imgHighHelp") },
   ];
 
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">图片清晰度</h3>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+        {t("settingsX.adv.imageClarityTitle")}
+      </h3>
       <p className="m-0 text-xs text-muted-foreground">
-        OpenAI 与 Claude 均生效:决定发送前的图片清晰度(越低越省 token)。
-        {scope === "user" ? "全局默认,会被项目设置覆盖。" : "仅当前项目。"}
+        {t("settingsX.adv.imageClarityDesc")}
+        {scope === "user"
+          ? t("settingsX.adv.imageClarityDescGlobal")
+          : t("settingsX.adv.imageClarityDescProject")}
       </p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {options.map((o) => (
@@ -1148,25 +1191,28 @@ export function ArchivedConversationsSection({
   onRestore: (repoId: string | null, sessionId: string) => void;
   onDelete: (repoId: string | null, sessionId: string) => void;
 }) {
+  const { t } = useT();
   const rows = useMemo(() => {
     const repoMap = new Map(repos.map((r) => [r.id, repoLabel(r)]));
     return Object.entries(sessionIndices).flatMap(([key, idx]) => {
       const repoId = key === NO_REPO_KEY ? null : key;
-      const project = repoId ? repoMap.get(repoId) ?? "未知项目" : "无项目对话";
+      const project = repoId
+        ? repoMap.get(repoId) ?? t("settingsX.adv.unknownProject")
+        : t("settingsX.adv.noRepoConv");
       return idx.sessions
         .filter((s) => s.archived)
         .map((s) => ({ repoId, project, session: s }));
     }).sort((a, b) => b.session.updatedAt - a.session.updatedAt);
-  }, [repos, sessionIndices]);
+  }, [repos, sessionIndices, t]);
 
   const confirm = useConfirm();
 
   const removeOne = (repoId: string | null, sessionId: string, title: string): void => {
     void confirm({
-      title: "永久删除",
-      message: `永久删除「${truncateTitle(title, 28)}」？`,
-      detail: "此操作不可撤销。",
-      confirmLabel: "删除",
+      title: t("settingsX.adv.confirmDeleteTitle"),
+      message: t("settingsX.adv.confirmDeleteMsg", { title: truncateTitle(title, 28) }),
+      detail: t("settingsX.adv.irreversible"),
+      confirmLabel: t("settingsX.adv.delete"),
       destructive: true,
     }).then((ok) => {
       if (ok) onDelete(repoId, sessionId);
@@ -1176,10 +1222,10 @@ export function ArchivedConversationsSection({
   const removeAll = (): void => {
     if (rows.length === 0) return;
     void confirm({
-      title: "永久清空归档",
-      message: `永久删除全部 ${rows.length} 条已归档对话？`,
-      detail: "此操作不可撤销。",
-      confirmLabel: "全部删除",
+      title: t("settingsX.adv.confirmClearAllTitle"),
+      message: t("settingsX.adv.confirmClearAllMsg", { count: rows.length }),
+      detail: t("settingsX.adv.irreversible"),
+      confirmLabel: t("settingsX.adv.deleteAll"),
       destructive: true,
     }).then((ok) => {
       if (!ok) return;
@@ -1196,12 +1242,14 @@ export function ArchivedConversationsSection({
           onClick={removeAll}
           disabled={rows.length === 0}
         >
-          全部删除
+          {t("settingsX.adv.deleteAll")}
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <div className="p-4 text-center text-sm text-muted-foreground">还没有任何归档对话。</div>
+        <div className="p-4 text-center text-sm text-muted-foreground">
+          {t("settingsX.adv.noArchived")}
+        </div>
       ) : (
         <ul className="flex flex-col gap-2">
           {rows.map(({ repoId, project, session }) => (
@@ -1219,8 +1267,8 @@ export function ArchivedConversationsSection({
                   type="button"
                   className="h-7 w-7 text-muted-foreground hover:text-status-err"
                   onClick={() => removeOne(repoId, session.id, session.title)}
-                  title="永久删除"
-                  aria-label="永久删除"
+                  title={t("settingsX.adv.permDelete")}
+                  aria-label={t("settingsX.adv.permDelete")}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -1228,9 +1276,9 @@ export function ArchivedConversationsSection({
                   type="button"
                   className="h-7 px-2 text-xs"
                   onClick={() => onRestore(repoId, session.id)}
-                  title="取消归档"
+                  title={t("settingsX.adv.unarchive")}
                 >
-                  取消归档
+                  {t("settingsX.adv.unarchive")}
                 </button>
               </div>
             </li>
@@ -1248,7 +1296,7 @@ function formatArchivedTime(ts: number): string {
   const day = d.getDate();
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}年${m}月${day}日，${hh}:${mm}`;
+  return translate(loadUILanguage(), "settingsX.adv.archivedTime", { yyyy, m, day, hh, mm });
 }
 
 function objectOf(value: unknown): Record<string, unknown> {
@@ -1313,15 +1361,16 @@ type MobileDevice = {
 
 /** Compact zh relative time for the device list ("刚刚 / 3 分钟前 / 2 天前"). */
 function relativeTime(ts?: number): string {
-  if (!ts) return "从未连接";
+  const lang = loadUILanguage();
+  if (!ts) return translate(lang, "settingsX.adv.neverConnected");
   const diff = Date.now() - ts;
-  if (diff < 60_000) return "刚刚";
+  if (diff < 60_000) return translate(lang, "settingsX.adv.justNow");
   const min = Math.floor(diff / 60_000);
-  if (min < 60) return `${min} 分钟前`;
+  if (min < 60) return translate(lang, "settingsX.adv.minutesAgo", { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
+  if (hr < 24) return translate(lang, "settingsX.adv.hoursAgo", { n: hr });
   const day = Math.floor(hr / 24);
-  return `${day} 天前`;
+  return translate(lang, "settingsX.adv.daysAgo", { n: day });
 }
 
 /**
@@ -1333,6 +1382,7 @@ export function MobileRemoteSection() {
   const confirm = useConfirm();
   const prompt = usePrompt();
   const toast = useToast();
+  const { t } = useT();
   const [onlineIds, setOnlineIds] = useState<string[]>([]);
   const [status, setStatus] = useState<{
     running: boolean;
@@ -1390,11 +1440,11 @@ export function MobileRemoteSection() {
       setPairingUrl(res.pairingUrl);
     } catch (err) {
       toast({
-        message: err instanceof Error ? err.message : "生成配对二维码失败",
+        message: err instanceof Error ? err.message : t("settingsX.adv.genQrFailed"),
         variant: "error",
       });
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => {
     void (async () => {
@@ -1416,7 +1466,7 @@ export function MobileRemoteSection() {
         // Address invalidated: clear the QR and prompt a re-open.
         setTunnelState("disconnected");
         setPairingUrl(undefined);
-        toast({ message: "公网隧道已断开,地址已失效,请重新开启", variant: "error" });
+        toast({ message: t("settingsX.adv.tunnelDisconnectedToast"), variant: "error" });
         void refresh();
       }
     });
@@ -1426,7 +1476,7 @@ export function MobileRemoteSection() {
       offTunnel();
       offOnline();
     };
-  }, [refresh, toast]);
+  }, [refresh, toast, t]);
 
   async function start() {
     setBusy(true);
@@ -1438,7 +1488,7 @@ export function MobileRemoteSection() {
       await refresh();
     } catch (err) {
       toast({
-        message: err instanceof Error ? err.message : "开启失败",
+        message: err instanceof Error ? err.message : t("settingsX.adv.startFailed"),
         variant: "error",
       });
     } finally {
@@ -1461,7 +1511,7 @@ export function MobileRemoteSection() {
 
   async function savePasscode() {
     if (passcodeInput.length < 4) {
-      toast({ message: "访问口令至少需要 4 个字符", variant: "error" });
+      toast({ message: t("settingsX.adv.passcodeMin"), variant: "error" });
       return;
     }
     setBusy(true);
@@ -1469,10 +1519,10 @@ export function MobileRemoteSection() {
       await window.codeshell.mobileRemote.setPasscode(passcodeInput);
       setPasscodeInput("");
       setPasscodeSet(true);
-      toast({ message: "访问口令已保存", variant: "success" });
+      toast({ message: t("settingsX.adv.passcodeSaved"), variant: "success" });
     } catch (err) {
       toast({
-        message: err instanceof Error ? err.message : "保存口令失败",
+        message: err instanceof Error ? err.message : t("settingsX.adv.savePasscodeFailed"),
         variant: "error",
       });
     } finally {
@@ -1485,10 +1535,10 @@ export function MobileRemoteSection() {
     try {
       await window.codeshell.mobileRemote.downloadCloudflared();
       setCloudflaredInstalled(true);
-      toast({ message: "cloudflared 已下载", variant: "success" });
+      toast({ message: t("settingsX.adv.cloudflaredDownloaded"), variant: "success" });
     } catch (err) {
       toast({
-        message: err instanceof Error ? err.message : "下载失败",
+        message: err instanceof Error ? err.message : t("settingsX.adv.downloadFailed"),
         variant: "error",
       });
     } finally {
@@ -1498,28 +1548,28 @@ export function MobileRemoteSection() {
 
   async function removeDevice(device: MobileDevice) {
     const ok = await confirm({
-      title: "删除设备",
-      message: `删除「${device.name}」后,该手机需重新扫码配对 + 过口令才能再次连接。`,
-      confirmLabel: "删除",
+      title: t("settingsX.adv.deleteDeviceTitle"),
+      message: t("settingsX.adv.deleteDeviceMsg", { name: device.name }),
+      confirmLabel: t("settingsX.adv.delete"),
       destructive: true,
     });
     if (!ok) return;
     await window.codeshell.mobileRemote.removeDevice(device.id);
     await refresh();
-    toast({ message: "已删除设备", variant: "success" });
+    toast({ message: t("settingsX.adv.deviceDeleted"), variant: "success" });
   }
 
   async function renameDevice(device: MobileDevice) {
     const name = await prompt({
-      title: "重命名设备",
-      message: "给这台手机起一个好认的名字。",
+      title: t("settingsX.adv.renameDeviceTitle"),
+      message: t("settingsX.adv.renameDeviceMsg"),
       defaultValue: device.name,
-      confirmLabel: "保存",
+      confirmLabel: t("settingsX.adv.save"),
     });
     if (name == null) return;
     const ok = await window.codeshell.mobileRemote.renameDevice(device.id, name);
     if (!ok) {
-      toast({ message: "名称无效", variant: "error" });
+      toast({ message: t("settingsX.adv.nameInvalid"), variant: "error" });
       return;
     }
     await refresh();
@@ -1527,19 +1577,19 @@ export function MobileRemoteSection() {
 
   async function changePasscode() {
     const next = await prompt({
-      title: passcodeSet ? "修改访问口令" : "设置访问口令",
-      message: "口令至少 4 个字符。修改后,所有已记住口令的手机都需要重新输入。",
-      placeholder: "新的访问口令",
-      confirmLabel: "保存",
+      title: passcodeSet ? t("settingsX.adv.changePasscodeTitle") : t("settingsX.adv.setPasscodeTitle"),
+      message: t("settingsX.adv.changePasscodeMsg"),
+      placeholder: t("settingsX.adv.newPasscodePlaceholder"),
+      confirmLabel: t("settingsX.adv.save"),
     });
     if (next == null) return;
     try {
       await window.codeshell.mobileRemote.setPasscode(next);
       await refresh();
-      toast({ message: "访问口令已更新", variant: "success" });
+      toast({ message: t("settingsX.adv.passcodeUpdated"), variant: "success" });
     } catch (err) {
       toast({
-        message: err instanceof Error ? err.message : "设置口令失败",
+        message: err instanceof Error ? err.message : t("settingsX.adv.setPasscodeFailed"),
         variant: "error",
       });
     }
@@ -1547,10 +1597,8 @@ export function MobileRemoteSection() {
 
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">手机遥控 (Mobile Remote)</h3>
-      <p className="text-sm text-muted-foreground">
-        启动一个手机网页遥控入口,供已配对的可信手机控制聊天与权限审批。默认关闭。
-      </p>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settingsX.adv.mobileTitle")}</h3>
+      <p className="text-sm text-muted-foreground">{t("settingsX.adv.mobileDesc")}</p>
 
       {/* 模式选择:局域网 / 公网(隧道) */}
       <div className="mt-3 max-w-xs">
@@ -1559,30 +1607,33 @@ export function MobileRemoteSection() {
           onChange={(v) => setMode(v as "lan" | "tunnel")}
           disabled={busy || status.running}
           options={[
-            { value: "lan", label: "局域网(同 Wi-Fi)" },
-            { value: "tunnel", label: "公网(Cloudflare 隧道)" },
+            { value: "lan", label: t("settingsX.adv.modeLan") },
+            { value: "tunnel", label: t("settingsX.adv.modeTunnel") },
           ]}
         />
       </div>
 
       {mode === "tunnel" ? (
         <div className="mt-3 space-y-3 rounded-md border border-border p-3">
-          <p className="text-xs text-muted-foreground">
-            公网模式经 Cloudflare 临时隧道,手机零安装在任意网络打开网址即可遥控。必须先设置访问口令;
-            关闭 CodeShell 或停止后地址即失效,每次重开为新随机地址。
-          </p>
+          <p className="text-xs text-muted-foreground">{t("settingsX.adv.tunnelDesc")}</p>
 
           {/* 访问口令 */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
-              访问口令{passcodeSet ? "(已设置,可重设)" : "(未设置)"}
+              {passcodeSet
+                ? t("settingsX.adv.passcodeLabelSet")
+                : t("settingsX.adv.passcodeLabelUnset")}
             </label>
             <div className="flex gap-2">
               <Input
                 type="password"
                 value={passcodeInput}
                 onChange={(e) => setPasscodeInput(e.target.value)}
-                placeholder={passcodeSet ? "输入新口令以重设" : "至少 4 个字符"}
+                placeholder={
+                  passcodeSet
+                    ? t("settingsX.adv.passcodePlaceholderReset")
+                    : t("settingsX.adv.passcodePlaceholderNew")
+                }
                 className="max-w-xs"
               />
               <Button
@@ -1591,11 +1642,11 @@ export function MobileRemoteSection() {
                 onClick={() => void savePasscode()}
                 disabled={busy || passcodeInput.length < 4}
               >
-                {passcodeSet ? "重设口令" : "设置口令"}
+                {passcodeSet ? t("settingsX.adv.resetPasscode") : t("settingsX.adv.setPasscode")}
               </Button>
             </div>
             {!passcodeSet ? (
-              <p className="text-xs text-status-warn">未设访问口令时无法开启公网模式。</p>
+              <p className="text-xs text-status-warn">{t("settingsX.adv.passcodeRequiredWarn")}</p>
             ) : null}
           </div>
 
@@ -1608,7 +1659,9 @@ export function MobileRemoteSection() {
                 onClick={() => void downloadCloudflared()}
                 disabled={downloadPct !== null}
               >
-                {downloadPct !== null ? `下载中… ${downloadPct}%` : "下载 cloudflared"}
+                {downloadPct !== null
+                  ? t("settingsX.adv.downloadingPct", { pct: downloadPct })
+                  : t("settingsX.adv.downloadCloudflared")}
               </Button>
               {downloadPct !== null ? (
                 <div className="h-1.5 w-full max-w-xs overflow-hidden rounded bg-muted">
@@ -1620,7 +1673,7 @@ export function MobileRemoteSection() {
               ) : null}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">cloudflared 已就绪。</p>
+            <p className="text-xs text-muted-foreground">{t("settingsX.adv.cloudflaredReady")}</p>
           )}
         </div>
       ) : null}
@@ -1631,14 +1684,16 @@ export function MobileRemoteSection() {
           onClick={start}
           disabled={busy || status.running || (mode === "tunnel" && !passcodeSet)}
         >
-          {mode === "tunnel" ? "开启公网遥控" : "开启手机遥控"}
+          {mode === "tunnel" ? t("settingsX.adv.startTunnel") : t("settingsX.adv.startMobile")}
         </Button>
         <Button type="button" variant="outline" onClick={stop} disabled={busy || !status.running}>
-          关闭
+          {t("settingsX.adv.stop")}
         </Button>
       </div>
       <p className="text-sm mt-2">
-        {status.running ? `运行中:${status.url}` : "已关闭"}
+        {status.running
+          ? t("settingsX.adv.runningAt", { url: status.url ?? "" })
+          : t("settingsX.adv.stopped")}
       </p>
       {mode === "tunnel" && tunnelState ? (
         <p
@@ -1648,38 +1703,36 @@ export function MobileRemoteSection() {
           )}
         >
           {tunnelState === "connected"
-            ? "隧道已连接"
-            : "隧道已断开 — 地址已失效,请重新开启"}
+            ? t("settingsX.adv.tunnelConnected")
+            : t("settingsX.adv.tunnelDisconnected")}
         </p>
       ) : null}
       {status.running && !pairingUrl ? (
         <div className="mt-2">
           <Button type="button" variant="outline" size="sm" onClick={() => void regenPairing()}>
-            重新生成配对二维码
+            {t("settingsX.adv.regenQr")}
           </Button>
-          <p className="text-xs text-muted-foreground mt-1">
-            已连接的可信手机无需二维码,直接打开网址即可;二维码仅用于配对新手机。
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">{t("settingsX.adv.regenQrHint")}</p>
         </div>
       ) : null}
       {pairingUrl ? (
         <div className="mt-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">配对二维码(10 分钟内有效,用手机扫码):</p>
+            <p className="text-sm font-medium">{t("settingsX.adv.pairingQrLabel")}</p>
             <Button type="button" variant="ghost" size="sm" onClick={() => void regenPairing()}>
-              刷新
+              {t("settingsX.adv.refresh")}
             </Button>
           </div>
           {qrDataUrl ? (
             <img
               src={qrDataUrl}
-              alt="配对二维码"
+              alt={t("settingsX.adv.pairingQrAlt")}
               className="mt-2 rounded-md bg-white p-2"
               width={220}
               height={220}
             />
           ) : null}
-          <p className="text-xs text-muted-foreground mt-2">或手动在手机浏览器打开:</p>
+          <p className="text-xs text-muted-foreground mt-2">{t("settingsX.adv.orOpenManually")}</p>
           <pre className="text-xs whitespace-pre-wrap break-all bg-muted rounded-md p-2 mt-1">
             {pairingUrl}
           </pre>
@@ -1687,15 +1740,15 @@ export function MobileRemoteSection() {
       ) : null}
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">可信设备</h4>
+          <h4 className="text-sm font-medium">{t("settingsX.adv.trustedDevices")}</h4>
           {passcodeSet ? (
             <Button type="button" variant="ghost" size="sm" onClick={() => void changePasscode()}>
-              修改访问口令
+              {t("settingsX.adv.changePasscode")}
             </Button>
           ) : null}
         </div>
         {devices.length === 0 ? (
-          <p className="text-sm text-muted-foreground">暂无可信设备。</p>
+          <p className="text-sm text-muted-foreground">{t("settingsX.adv.noTrustedDevices")}</p>
         ) : (
           devices.map((device) => {
             const online = onlineIds.includes(device.id);
@@ -1710,11 +1763,11 @@ export function MobileRemoteSection() {
                       "inline-block h-2 w-2 rounded-full shrink-0",
                       online ? "bg-status-ok" : "bg-status-idle",
                     )}
-                    title={online ? "在线" : "离线"}
+                    title={online ? t("settingsX.adv.online") : t("settingsX.adv.offline")}
                   />
                   <span className="truncate">{device.name}</span>
                   <span className="text-xs text-muted-foreground shrink-0">
-                    {online ? "在线" : relativeTime(device.lastSeenAt)}
+                    {online ? t("settingsX.adv.online") : relativeTime(device.lastSeenAt)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
@@ -1724,7 +1777,7 @@ export function MobileRemoteSection() {
                     size="sm"
                     onClick={() => void renameDevice(device)}
                   >
-                    重命名
+                    {t("settingsX.adv.rename")}
                   </Button>
                   <Button
                     type="button"
@@ -1732,7 +1785,7 @@ export function MobileRemoteSection() {
                     size="sm"
                     onClick={() => void removeDevice(device)}
                   >
-                    删除
+                    {t("settingsX.adv.delete")}
                   </Button>
                 </div>
               </div>

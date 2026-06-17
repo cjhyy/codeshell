@@ -22,6 +22,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useT } from "../i18n/I18nProvider";
 import { CommentBox } from "../chat/CommentBox";
 import { addAnchor } from "../chat/addAnchor";
 import type { Anchor } from "../chat/anchors";
@@ -79,6 +80,8 @@ interface Tab {
 }
 
 const NEW_TAB = "about:blank";
+/** Sentinel title for a freshly-minted tab; compared by identity and translated at render time. */
+const NEW_TAB_TITLE = "新选项卡";
 
 /**
  * The <webview> with a FROZEN `src` — set once at mount, never re-driven by
@@ -122,7 +125,7 @@ function freshTabId(): string {
 }
 function freshTab(initialUrl?: string): Tab {
   const url = initialUrl && initialUrl !== NEW_TAB ? initialUrl : NEW_TAB;
-  return { id: freshTabId(), url, title: "新选项卡", draft: url === NEW_TAB ? "" : url };
+  return { id: freshTabId(), url, title: NEW_TAB_TITLE, draft: url === NEW_TAB ? "" : url };
 }
 
 interface Props {
@@ -163,6 +166,7 @@ interface Props {
  * localhost bookmark list discovered by port-probing common dev ports.
  */
 export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true }: Props) {
+  const { t } = useT();
   const emitAnchor = onAnchor ?? addAnchor;
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
   const [activeId, setActiveId] = useState<string>(() => tabs[0].id);
@@ -458,24 +462,24 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
             pinned (shrink-0) so it's always reachable. Each tab is shrink-0 so
             they keep their width instead of squishing into unreadable slivers. */}
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:thin]">
-          {tabs.map((t) => (
+          {tabs.map((tab) => (
             <div
-              key={t.id}
+              key={tab.id}
               className={`group flex w-[180px] shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs ${
-                t.id === activeId ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"
+                tab.id === activeId ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"
               }`}
             >
-              <Button type="button" variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-1 p-0 hover:bg-transparent" onClick={() => setActiveId(t.id)}>
+              <Button type="button" variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-1 p-0 hover:bg-transparent" onClick={() => setActiveId(tab.id)}>
                 <Globe className="h-3 w-3 shrink-0" />
-                <span className="truncate">{t.title}</span>
+                <span className="truncate">{tab.title === NEW_TAB_TITLE ? t("panels.browser.newTab") : tab.title}</span>
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100"
-                onClick={() => closeTab(t.id)}
-                aria-label="关闭标签"
+                onClick={() => closeTab(tab.id)}
+                aria-label={t("panels.common.closeTab")}
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -488,7 +492,7 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
           size="icon"
           className="h-7 w-7 shrink-0 text-muted-foreground"
           onClick={() => openInNewTab(NEW_TAB)}
-          aria-label="新选项卡"
+          aria-label={t("panels.browser.newTab")}
         >
           <Plus className="h-3.5 w-3.5" />
         </Button>
@@ -496,13 +500,13 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
 
       {/* Address bar */}
       <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
-        <IconBtn disabled={!nav.canGoBack} onClick={() => viewRef.current?.goBack()} label="后退">
+        <IconBtn disabled={!nav.canGoBack} onClick={() => viewRef.current?.goBack()} label={t("panels.browser.back")}>
           <ArrowLeft className="h-4 w-4" />
         </IconBtn>
-        <IconBtn disabled={!nav.canGoForward} onClick={() => viewRef.current?.goForward()} label="前进">
+        <IconBtn disabled={!nav.canGoForward} onClick={() => viewRef.current?.goForward()} label={t("panels.browser.forward")}>
           <ArrowRight className="h-4 w-4" />
         </IconBtn>
-        <IconBtn onClick={() => viewRef.current?.reload()} label="刷新">
+        <IconBtn onClick={() => viewRef.current?.reload()} label={t("panels.browser.refresh")}>
           <RotateCw className={`h-4 w-4 ${nav.loading ? "animate-spin" : ""}`} />
         </IconBtn>
         <Input
@@ -511,13 +515,13 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
           onKeyDown={(e) => {
             if (e.key === "Enter") navigate(active.draft);
           }}
-          placeholder="输入 URL"
+          placeholder={t("panels.browser.addressPlaceholder")}
           className="h-8 flex-1"
         />
         <IconBtn
           onClick={() => void startPicking()}
           disabled={active.url === NEW_TAB || selecting}
-          label={selecting ? "点选页面元素…" : "圈选元素(加入输入框)"}
+          label={selecting ? t("panels.browser.picking") : t("panels.browser.pickElement")}
           active={selecting}
         >
           <MousePointerSquareDashed className="h-4 w-4" />
@@ -530,7 +534,7 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
                 variant="ghost"
                 size="sm"
                 className="relative h-8 gap-1 px-1.5 text-muted-foreground"
-                title={`标注 ${markers.length}（本页 ${visibleMarkers.length}）`}
+                title={t("panels.browser.markers", { total: markers.length, visible: visibleMarkers.length })}
               >
                 <MapPin className="h-4 w-4" />
                 <span className="text-xs tabular-nums">{markers.length}</span>
@@ -542,7 +546,7 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
                   {gi > 0 && <DropdownMenuSeparator />}
                   <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
                     {group.title}
-                    {urlsMatch(group.url, active.url) ? "（本页）" : ""}
+                    {urlsMatch(group.url, active.url) ? t("panels.browser.onThisPage") : ""}
                   </DropdownMenuLabel>
                   {group.markers.map((m) => (
                     <DropdownMenuItem
@@ -570,14 +574,14 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
         {showPopout && (
           <IconBtn
             onClick={() => void window.codeshell.openBrowserPopout(active.url === NEW_TAB ? undefined : active.url)}
-            label="弹出独立窗口"
+            label={t("panels.browser.popout")}
           >
             <PictureInPicture2 className="h-4 w-4" />
           </IconBtn>
         )}
         <IconBtn
           onClick={() => active.url !== NEW_TAB && void window.codeshell.openExternal(active.url)}
-          label="在外部打开"
+          label={t("panels.browser.openExternal")}
         >
           <ExternalLink className="h-4 w-4" />
         </IconBtn>
@@ -585,7 +589,7 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
 
       {selecting && (
         <div className="shrink-0 border-b border-border bg-primary/10 px-3 py-1 text-xs text-foreground">
-          点选页面上的元素以添加评论 · Esc 取消
+          {t("panels.browser.pickHint")}
         </div>
       )}
 
@@ -614,13 +618,13 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
         {active.url !== NEW_TAB && active.error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background px-6 text-center">
             <Globe className="h-10 w-10 text-muted-foreground/50" />
-            <div className="text-sm font-medium text-foreground">无法访问此页面</div>
+            <div className="text-sm font-medium text-foreground">{t("panels.browser.cannotAccess")}</div>
             <div className="max-w-md break-all text-xs text-muted-foreground">{active.error.url}</div>
             <div className="text-xs text-muted-foreground">
               {/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(active.error.url)
-                ? "本地服务器可能没有启动 —— 确认 dev server 已在运行。"
-                : "连接失败,请检查网络或地址是否正确。"}
-              <span className="ml-1 opacity-60">({active.error.desc || `错误 ${active.error.code}`})</span>
+                ? t("panels.browser.localhostDown")
+                : t("panels.browser.connectionFailed")}
+              <span className="ml-1 opacity-60">({active.error.desc || t("panels.browser.errorCode", { code: active.error.code })})</span>
             </div>
             <div className="mt-1 flex items-center gap-2">
               <Button
@@ -633,7 +637,7 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
                   if (view) void view.loadURL(target).catch(() => undefined);
                 }}
               >
-                <RotateCw className="mr-1.5 h-3.5 w-3.5" /> 重试
+                <RotateCw className="mr-1.5 h-3.5 w-3.5" /> {t("panels.common.retry")}
               </Button>
               <Button
                 type="button"
@@ -641,7 +645,7 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
                 variant="ghost"
                 onClick={() => void window.codeshell.openExternal(active.error?.url ?? active.url)}
               >
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> 用系统浏览器打开
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> {t("panels.browser.openWithSystemBrowser")}
               </Button>
             </div>
           </div>
@@ -692,7 +696,7 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
                   browser: {
                     url: picked.url,
                     pageTitle:
-                      picked.pageTitle ?? (active.title !== "新选项卡" ? active.title : undefined),
+                      picked.pageTitle ?? (active.title !== NEW_TAB_TITLE ? active.title : undefined),
                     selector: picked.selector,
                     rect: picked.rect,
                   },
@@ -740,6 +744,7 @@ function MarkerDot({
   /** Save an edited comment (absent → comment is read-only). */
   onUpdateComment?: (comment: string) => void;
 }) {
+  const { t } = useT();
   const { rect } = marker.echo;
   // Editable comment draft — re-seeded each time the card opens (and when the
   // comment changes underneath us, e.g. edited in another window).
@@ -779,14 +784,14 @@ function MarkerDot({
           </div>
           {selectorMissed && (
             <div className="mb-1 text-[11px] text-status-warn">
-              元素未能重新定位（页面已变化），框显示的是圈选时的位置
+              {t("panels.browser.selectorMissed")}
             </div>
           )}
           {onUpdateComment ? (
             <Textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="评论…"
+              placeholder={t("panels.browser.commentPlaceholder")}
               className="mb-2 min-h-14 resize-y text-xs"
             />
           ) : (
@@ -802,7 +807,7 @@ function MarkerDot({
               className="h-7 px-2 text-xs text-status-err"
               onClick={onDelete}
             >
-              删除
+              {t("panels.common.delete")}
             </Button>
             {onUpdateComment && (
               <Button
@@ -813,11 +818,11 @@ function MarkerDot({
                 disabled={!dirty}
                 onClick={() => onUpdateComment(draft)}
               >
-                保存
+                {t("panels.common.save")}
               </Button>
             )}
             <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onOpen}>
-              关闭
+              {t("panels.common.close")}
             </Button>
           </div>
         </div>
@@ -860,14 +865,15 @@ function IconBtn({
 
 /** New-tab landing: discovered localhost dev servers as quick-open cards. */
 function NewTabLanding({ onOpen }: { onOpen: (url: string) => void }) {
+  const { t } = useT();
   const ports = useLocalhostPorts();
   return (
     <div className="h-full overflow-auto p-6">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">本地</span>
+        <span className="text-sm font-medium text-muted-foreground">{t("panels.browser.local")}</span>
       </div>
       {ports.length === 0 ? (
-        <div className="text-sm text-muted-foreground">未发现正在运行的本地服务</div>
+        <div className="text-sm text-muted-foreground">{t("panels.browser.noLocalServers")}</div>
       ) : (
         <div className="flex flex-col gap-2">
           {ports.map((p) => (

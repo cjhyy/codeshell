@@ -21,13 +21,16 @@ import {
   type UILanguage,
 } from "../uiLanguage";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n";
+import type { TranslationKey } from "../i18n";
 
-const LANGUAGES: Array<{ id: UILanguage; description: string }> = [
-  { id: "zh", description: "界面使用中文" },
-  { id: "en", description: "Use English for the interface" },
+const LANGUAGES: Array<{ id: UILanguage; descriptionKey: TranslationKey }> = [
+  { id: "zh", descriptionKey: "settings.general.langZhDescription" },
+  { id: "en", descriptionKey: "settings.general.langEnDescription" },
 ];
 
 function LanguageBlock() {
+  const { t } = useT();
   const [lang, setLang] = useState<UILanguage>(() => loadUILanguage());
 
   const choose = (next: UILanguage): void => {
@@ -37,9 +40,9 @@ function LanguageBlock() {
 
   return (
     <section className="mb-6 flex flex-col gap-3">
-      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">语言</h3>
+      <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">{t("settings.general.languageTitle")}</h3>
       <p className="m-0 text-xs text-muted-foreground">
-        应用界面语言。实际文案翻译仍在逐步完善中。
+        {t("settings.general.languageDescription")}
       </p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         {LANGUAGES.map((item) => (
@@ -52,7 +55,7 @@ function LanguageBlock() {
             onClick={() => choose(item.id)}
           >
             <span className="text-sm font-medium text-foreground">{languageLabel(item.id)}</span>
-            <span className="text-xs text-muted-foreground">{item.description}</span>
+            <span className="text-xs text-muted-foreground">{t(item.descriptionKey)}</span>
           </button>
         ))}
       </div>

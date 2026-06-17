@@ -4,6 +4,7 @@ import type { RoomPublic, RoomMessageWire } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 
 /**
  * Rooms panel — resident Claude Code (stream-json) sessions, dual-ended with
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
  * in-room conversation (history + live stream + composer).
  */
 export function RoomsPanel() {
+  const { t } = useT();
   const [rooms, setRooms] = useState<RoomPublic[]>([]);
   const [projects, setProjects] = useState<{ path: string; name: string }[]>([]);
   const [creating, setCreating] = useState(false);
@@ -91,21 +93,21 @@ export function RoomsPanel() {
     return (
       <div className="flex h-full min-h-0 flex-col">
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-          <span className="text-sm font-medium">房间 · 常驻 Claude Code</span>
+          <span className="text-sm font-medium">{t("panels.rooms.listTitle")}</span>
           <span className="flex-1" />
-          <Button size="sm" variant="ghost" onClick={refreshRooms} title="刷新">
+          <Button size="sm" variant="ghost" onClick={refreshRooms} title={t("panels.common.refresh")}>
             <RefreshCw className="size-4" />
           </Button>
           <Button size="sm" onClick={startCreate}>
-            <Plus className="size-4" /> 新建
+            <Plus className="size-4" /> {t("panels.common.create")}
           </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
           {creating && (
             <div className="rounded-lg border border-border p-3">
-              <p className="mb-2 text-xs text-muted-foreground">选择项目目录(常驻 CC 在此干活):</p>
+              <p className="mb-2 text-xs text-muted-foreground">{t("panels.rooms.pickProject")}</p>
               {projects.length === 0 ? (
-                <p className="text-sm text-muted-foreground">无最近项目。先在桌面打开一个项目。</p>
+                <p className="text-sm text-muted-foreground">{t("panels.rooms.noProjects")}</p>
               ) : (
                 <div className="space-y-1">
                   {projects.map((p) => (
@@ -121,12 +123,12 @@ export function RoomsPanel() {
                 </div>
               )}
               <Button size="sm" variant="ghost" className="mt-2" onClick={() => setCreating(false)}>
-                取消
+                {t("panels.common.cancel")}
               </Button>
             </div>
           )}
           {rooms.length === 0 && !creating ? (
-            <p className="p-4 text-center text-sm text-muted-foreground">还没有房间,点「新建」</p>
+            <p className="p-4 text-center text-sm text-muted-foreground">{t("panels.rooms.empty")}</p>
           ) : (
             rooms.map((r) => {
               const danger = r.permissionMode === "bypassPermissions";
@@ -145,13 +147,13 @@ export function RoomsPanel() {
                           danger ? "bg-status-err/15 text-status-err" : "bg-primary/15 text-primary",
                         )}
                       >
-                        {danger ? "dangerous" : r.permissionMode}
+                        {danger ? t("panels.rooms.dangerous") : r.permissionMode}
                       </span>
-                      {r.open && <span className="shrink-0 text-[10px] text-status-ok">●运行中</span>}
+                      {r.open && <span className="shrink-0 text-[10px] text-status-ok">{t("panels.rooms.running")}</span>}
                     </div>
                     <div className="break-all text-xs text-muted-foreground">{r.cwd}</div>
                   </div>
-                  <Button size="sm" variant="ghost" className="shrink-0" onClick={(e) => void closeRoom(r, e)} title="关闭房间">
+                  <Button size="sm" variant="ghost" className="shrink-0" onClick={(e) => void closeRoom(r, e)} title={t("panels.rooms.closeRoom")}>
                     <X className="size-4" />
                   </Button>
                 </div>
@@ -175,7 +177,7 @@ export function RoomsPanel() {
       </div>
       <div ref={feedRef} className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
         {messages.filter((m) => m.type !== "room_created").map((m, i) => (
-          <RoomMsg key={`${m.seq}-${i}`} m={m} />
+          <RoomMsg key={`${m.seq}-${i}`} m={m} t={t} />
         ))}
       </div>
       <div className="flex items-end gap-2 border-t border-border p-2">
@@ -188,7 +190,7 @@ export function RoomsPanel() {
               void send();
             }
           }}
-          placeholder={`在房间「${active.name}」里跟 Claude Code 对话…`}
+          placeholder={t("panels.rooms.composerPlaceholder", { name: active.name })}
           className="max-h-32 min-h-9 flex-1 resize-none"
           rows={1}
         />
@@ -200,7 +202,7 @@ export function RoomsPanel() {
   );
 }
 
-function RoomMsg({ m }: { m: RoomMessageWire }) {
+function RoomMsg({ m, t }: { m: RoomMessageWire; t: TFunction }) {
   if (m.from === "user" && m.type === "text") {
     return (
       <div className="flex justify-end">
@@ -222,7 +224,7 @@ function RoomMsg({ m }: { m: RoomMessageWire }) {
   if (m.from === "agent" && m.type === "tool") {
     return (
       <div className="rounded-md border border-border bg-background p-2 text-xs">
-        <span className="text-primary">工具 · {m.tool}</span>
+        <span className="text-primary">{t("panels.rooms.tool", { tool: m.tool ?? "" })}</span>
         {m.summary && <div className="mt-1 font-mono break-all text-muted-foreground">{m.summary}</div>}
       </div>
     );
@@ -235,10 +237,10 @@ function RoomMsg({ m }: { m: RoomMessageWire }) {
     );
   }
   if (m.type === "error") {
-    return <div className="text-xs italic text-status-err">{m.text || "错误"}</div>;
+    return <div className="text-xs italic text-status-err">{m.text || t("panels.rooms.error")}</div>;
   }
   if (m.type === "agent_exit") {
-    return <div className="text-xs italic text-muted-foreground">常驻 CC 已退出</div>;
+    return <div className="text-xs italic text-muted-foreground">{t("panels.rooms.agentExited")}</div>;
   }
   return null; // turn_end and others: no bubble
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   open: boolean;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function SearchBar({ open, value, onChange, onClose, matchCount }: Props) {
+  const { t } = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 0);
@@ -27,10 +29,10 @@ export function SearchBar({ open, value, onChange, onClose, matchCount }: Props)
         onKeyDown={(e) => {
           if (e.key === "Escape") onClose();
         }}
-        placeholder="搜索 transcript…"
+        placeholder={t("chat.search.placeholder")}
       />
-      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{matchCount} 处</span>
-      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label="关闭">
+      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{t("chat.search.matches", { count: matchCount })}</span>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} aria-label={t("chat.search.close")}>
         <X size={14} />
       </Button>
     </div>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpCircle, Loader2 } from "lucide-react";
 import { useToast } from "../ui/ToastProvider";
 import { useAlert } from "../ui/DialogProvider";
+import { useT } from "../i18n/I18nProvider";
 import { signalHotReload, runBatchUpdate, summarizeBatch } from "./applyUpdates";
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
+  const { t } = useT();
   const [skills, setSkills] = useState<SkillSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<SkillSummary | null>(null);
@@ -74,12 +76,12 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
       if (r.updated) signalHotReload();
       toast(
         r.updated
-          ? { message: `已更新 “${s.name}”，已生效`, variant: "success" }
-          : { message: `“${s.name}”：${r.reason}` },
+          ? { message: t("ext.skills.updatedToast", { name: s.name }), variant: "success" }
+          : { message: t("ext.skills.updateNoopToast", { name: s.name, reason: r.reason ?? "" }) },
       );
     } catch (e) {
       // Atomic in main — the old version is kept on failure.
-      void alert({ title: "更新失败", message: String((e as Error)?.message ?? e) });
+      void alert({ title: t("ext.skills.updateFailedTitle"), message: String((e as Error)?.message ?? e) });
     } finally {
       setBusy(null);
     }
@@ -108,11 +110,11 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
   if (error) {
     return (
       <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-        加载失败：{error} <Button size="sm" variant="outline" onClick={retry}>重试</Button>
+        {t("ext.common.loadFailed", { error })} <Button size="sm" variant="outline" onClick={retry}>{t("ext.common.retry")}</Button>
       </div>
     );
   }
-  if (skills === null) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  if (skills === null) return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
 
   const q = query.trim().toLowerCase();
   const rows = q
@@ -123,7 +125,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
       )
     : skills;
   if (rows.length === 0)
-    return <div className="p-4 text-sm text-muted-foreground">没有匹配的 skill</div>;
+    return <div className="p-4 text-sm text-muted-foreground">{t("ext.skills.noMatch")}</div>;
 
   const updatableCount = rows.filter((s) => updatable[s.filePath]).length;
 
@@ -143,7 +145,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
             ) : (
               <ArrowUpCircle className="h-3.5 w-3.5" />
             )}
-            全部更新 ({updatableCount})
+            {t("ext.skills.updateAll", { count: updatableCount })}
           </Button>
         </div>
       )}
@@ -165,7 +167,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
               <Button
                 size="icon"
                 variant="ghost"
-                title="有新版本，点击更新"
+                title={t("ext.skills.hasUpdateTip")}
                 className="text-status-running hover:text-status-running"
                 disabled={busy === s.filePath}
                 onClick={(e) => {

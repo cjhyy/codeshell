@@ -3,12 +3,14 @@ import type { DesktopSessionSummary } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatBytes } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   onNewSession?: () => void;
 }
 
 export function SessionsView({ onNewSession }: Props) {
+  const { t } = useT();
   const [sessions, setSessions] = useState<DesktopSessionSummary[] | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState("");
@@ -33,8 +35,8 @@ export function SessionsView({ onNewSession }: Props) {
     void refresh();
   }, []);
 
-  if (error) return <div className="p-6 text-sm text-status-err">无法读取会话: {error}</div>;
-  if (!sessions) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
+  if (error) return <div className="p-6 text-sm text-status-err">{t("auto.sessions.readError", { error })}</div>;
+  if (!sessions) return <div className="p-6 text-sm text-muted-foreground">{t("auto.sessions.loading")}</div>;
 
   const filtered = filter
     ? sessions.filter(
@@ -66,16 +68,16 @@ export function SessionsView({ onNewSession }: Props) {
       <div className="flex items-center gap-2">
         <Input
           className="h-8 max-w-xs"
-          placeholder="搜索会话 id 或标题…"
+          placeholder={t("auto.sessions.searchPlaceholder")}
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
         <span className="flex-1" />
-        <Button size="sm" onClick={onNewSession}>新会话</Button>
-        <Button size="sm" variant="outline" onClick={() => void refresh()}>刷新</Button>
+        <Button size="sm" onClick={onNewSession}>{t("auto.sessions.newSession")}</Button>
+        <Button size="sm" variant="outline" onClick={() => void refresh()}>{t("auto.sessions.refresh")}</Button>
       </div>
       {filtered.length === 0 ? (
-        <div className="p-3 text-sm text-muted-foreground">暂无匹配的会话</div>
+        <div className="p-3 text-sm text-muted-foreground">{t("auto.sessions.noMatch")}</div>
       ) : (
         <ul className="space-y-1 overflow-y-auto">
           {filtered.map((s) => {
@@ -94,7 +96,7 @@ export function SessionsView({ onNewSession }: Props) {
                       else if (e.key === "Escape") { setEditing(null); setEditDraft(""); }
                     }}
                     onBlur={() => void commitEdit()}
-                    placeholder="会话标题"
+                    placeholder={t("auto.sessions.titlePlaceholder")}
                   />
                 ) : (
                   <>
@@ -108,7 +110,7 @@ export function SessionsView({ onNewSession }: Props) {
                         <span className="font-mono text-xs">{s.id}</span>
                       )}
                     </span>
-                    <Button size="sm" variant="ghost" onClick={() => startEdit(s)}>重命名</Button>
+                    <Button size="sm" variant="ghost" onClick={() => startEdit(s)}>{t("auto.sessions.rename")}</Button>
                   </>
                 )}
                 <span className="text-xs text-muted-foreground">{formatBytes(s.size)}</span>
@@ -126,7 +128,7 @@ export function SessionsView({ onNewSession }: Props) {
                     void refresh();
                   }}
                 >
-                  删除
+                  {t("auto.sessions.delete")}
                 </Button>
               </li>
             );

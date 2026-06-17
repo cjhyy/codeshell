@@ -11,6 +11,7 @@ import type { Attachment } from "./attachments";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   attachment: Attachment;
@@ -34,6 +35,7 @@ interface Props {
  * generic icon if the read fails.
  */
 function AttachmentCardImpl({ attachment, cwd }: Props) {
+  const { t } = useT();
   const { path, kind } = attachment;
   const filename = path.split("/").pop() ?? path;
   const ext = (filename.split(".").pop() ?? "").toLowerCase();
@@ -71,8 +73,8 @@ function AttachmentCardImpl({ attachment, cwd }: Props) {
           variant="ghost"
           size="icon"
           className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          title="打开方式"
-          aria-label="打开方式"
+          title={t("msg.tool.openWith")}
+          aria-label={t("msg.tool.openWith")}
         >
           <MoreHorizontal size={14} />
         </Button>

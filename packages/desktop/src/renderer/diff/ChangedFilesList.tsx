@@ -6,6 +6,7 @@ import { filterByScope, isRangeScope, type ReviewScope } from "./reviewScope";
 import type { GitStatusEntry } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   cwd: string;
@@ -27,6 +28,7 @@ export function ChangedFilesList({
   turnFiles,
   refreshKey,
 }: Props) {
+  const { t } = useT();
   const [status, setStatus] = useState<GitStatus | null>(null);
   // Entries for committed/branch range scopes (TODO 2.3a). null until loaded.
   const [rangeEntries, setRangeEntries] = useState<GitStatusEntry[] | null>(null);
@@ -68,16 +70,16 @@ export function ChangedFilesList({
   // only the files the turn touched, so 审查 opens on the turn's diff.
   let entries: GitStatusEntry[];
   if (isRangeScope(scope)) {
-    if (!rangeEntries) return <div className="p-3 text-sm text-muted-foreground">loading status…</div>;
+    if (!rangeEntries) return <div className="p-3 text-sm text-muted-foreground">{t("panels.changedFiles.loadingStatus")}</div>;
     entries = rangeEntries;
   } else {
-    if (!status) return <div className="p-3 text-sm text-muted-foreground">loading status…</div>;
+    if (!status) return <div className="p-3 text-sm text-muted-foreground">{t("panels.changedFiles.loadingStatus")}</div>;
     entries = filterByScope(status.entries, scope, turnFiles);
   }
   if (entries.length === 0) {
     return (
       <div className="p-3 text-sm text-muted-foreground">
-        {scope === "turn" ? "本轮没有可显示的变更文件" : "此范围内没有变更"}
+        {scope === "turn" ? t("panels.changedFiles.turnNoChanges") : t("panels.changedFiles.scopeNoChanges")}
       </div>
     );
   }
@@ -94,7 +96,7 @@ export function ChangedFilesList({
         onClick={() => onSelectFile(null)}
       >
         <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">ALL</span>
-        <span className="min-w-0 flex-1 truncate text-sm">全部({entries.length})</span>
+        <span className="min-w-0 flex-1 truncate text-sm">{t("panels.changedFiles.all", { count: entries.length })}</span>
       </Button>
       {entries.map((e) => (
         <div key={e.path} className="group/cf relative flex items-center">
@@ -122,8 +124,8 @@ export function ChangedFilesList({
               type="button"
               variant="ghost"
               size="icon"
-              title="打开方式"
-              aria-label="打开方式"
+              title={t("panels.common.openWith")}
+              aria-label={t("panels.common.openWith")}
               className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/cf:opacity-100 data-[state=open]:opacity-100"
             >
               <MoreHorizontal className="h-3.5 w-3.5" />

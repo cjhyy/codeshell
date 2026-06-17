@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   /** Collapsed max height in px. Content taller than this is clamped + toggled. */
@@ -20,6 +21,7 @@ interface Props {
  * accurate overflow decision.
  */
 export function CollapsibleContent({ maxHeight = 320, className, children }: Props) {
+  const { t } = useT();
   const innerRef = useRef<HTMLDivElement>(null);
   const [overflows, setOverflows] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -62,11 +64,11 @@ export function CollapsibleContent({ maxHeight = 320, className, children }: Pro
         >
           {expanded ? (
             <>
-              <ChevronUp size={12} /> 收起
+              <ChevronUp size={12} /> {t("msg.collapsible.collapse")}
             </>
           ) : (
             <>
-              <ChevronDown size={12} /> 展开
+              <ChevronDown size={12} /> {t("msg.collapsible.expand")}
             </>
           )}
         </button>

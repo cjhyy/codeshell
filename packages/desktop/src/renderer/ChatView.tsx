@@ -32,6 +32,7 @@ import { classifyPath } from "./tool-cards/attachments";
 import { formatBytes } from "@/lib/utils";
 import { encodeAnchorsForWire, type Anchor } from "./chat/anchors";
 import { pageAttribution } from "./browser/markerEcho";
+import { useT } from "./i18n/I18nProvider";
 
 interface Props {
   messages: Message[];
@@ -170,6 +171,7 @@ export function ChatView({
   onRemoveAnchor,
   onClearAnchors,
 }: Props) {
+  const { t } = useT();
   const [history, setHistory] = useState<string[]>(() => loadHistory(activeRepoId));
   const [historyCursor, setHistoryCursor] = useState(-1);
   const liveDraftStash = useRef<string>("");
@@ -262,8 +264,8 @@ export function ChatView({
   // It still disables side controls whose changes would be ambiguous mid-turn.
   const controlsDisabled = busy;
   const placeholder = busy
-    ? "要求后续变更"
-    : "可向 agent 询问任何事。输入 @ 使用插件或提及文件";
+    ? t("chat.composer.placeholderBusy")
+    : t("chat.composer.placeholderIdle");
 
   const closeMention = (): void => {
     setMention(null);
@@ -324,9 +326,7 @@ export function ChatView({
     // them. The UI shows an inline banner with options (switch model /
     // remove images) so this branch is just a safety net.
     if (hasImages && !activeSupportsVision) {
-      setAttachmentError(
-        "当前模型不支持图片输入。请切换到支持视觉的模型，或先移除图片。",
-      );
+      setAttachmentError(t("chat.composer.visionUnsupportedSend"));
       return;
     }
     // Anchors (diff/browser/file comments) are prepended as a structured block
@@ -493,7 +493,7 @@ export function ChatView({
   // queue at once anyway, so the list is purely a preview of what will send.
   const queuedPreviewItems = queuedInputItems.map((item) => {
     const decoded = decodeWireForDisplay(item);
-    const text = decoded.text || (decoded.images.length > 0 ? `[图片 ×${decoded.images.length}]` : item);
+    const text = decoded.text || (decoded.images.length > 0 ? t("chat.composer.imagesPlaceholder", { count: decoded.images.length }) : item);
     return text.length > 180 ? `${text.slice(0, 180)}...` : text;
   });
 
@@ -623,7 +623,7 @@ export function ChatView({
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
                   <CornerDownRight size={14} />
-                  <span>后续变更</span>
+                  <span>{t("chat.queue.heading")}</span>
                   <span className="text-xs font-normal tabular-nums">{queuedInputItems.length}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
@@ -631,20 +631,20 @@ export function ChatView({
                     <button
                       type="button"
                       className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-                      aria-label="打断当前轮，并把全部后续变更合并发送"
-                      title="打断当前轮，并把全部后续变更合并成一条立即发送"
+                      aria-label={t("chat.queue.guideAllAria")}
+                      title={t("chat.queue.guideAllTitle")}
                       onClick={onGuideQueuedInput}
                     >
                       <CornerDownRight size={12} />
-                      <span>全部引导</span>
+                      <span>{t("chat.queue.guideAll")}</span>
                     </button>
                   )}
                   {onClearQueuedInput && (
                     <button
                       type="button"
                       className="rounded-full p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                      aria-label="清除后续变更"
-                      title="清除后续变更"
+                      aria-label={t("chat.queue.clearAria")}
+                      title={t("chat.queue.clearTitle")}
                       onClick={onClearQueuedInput}
                     >
                       <Trash2 size={14} />
@@ -664,12 +664,12 @@ export function ChatView({
                         <button
                           type="button"
                           className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-muted-foreground hover:bg-background hover:text-foreground"
-                          aria-label={`删除第 ${i + 1} 条后续变更`}
-                          title="删除"
+                          aria-label={t("chat.queue.removeItemAria", { index: i + 1 })}
+                          title={t("chat.queue.removeItemTitle")}
                           onClick={() => onRemoveQueuedInput(i)}
                         >
                           <Trash2 size={12} />
-                          <span>删除</span>
+                          <span>{t("chat.queue.removeItem")}</span>
                         </button>
                       )}
                     </div>
@@ -702,7 +702,7 @@ export function ChatView({
                   title={`${a.comment}\n${Object.entries(a.locator).map(([k, v]) => `${k}: ${v}`).join("\n")}`}
                 >
                   <span className="shrink-0 text-muted-foreground">
-                    {a.kind === "diff" ? "审查" : a.kind === "browser" ? "网页" : "文件"}
+                    {a.kind === "diff" ? t("chat.anchors.diff") : a.kind === "browser" ? t("chat.anchors.browser") : t("chat.anchors.file")}
                   </span>
                   <span className="truncate font-medium text-foreground">{a.label}</span>
                   {/* Page attribution for browser anchors — which page this was
@@ -718,7 +718,7 @@ export function ChatView({
                   <button
                     type="button"
                     className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:bg-background"
-                    aria-label="移除标注"
+                    aria-label={t("chat.anchors.removeAria")}
                     onClick={() => onRemoveAnchor?.(a.id)}
                   >
                     <X size={11} />
@@ -740,12 +740,12 @@ export function ChatView({
                     src={a.dataUrl}
                     alt={a.name}
                     className="h-9 w-9 shrink-0 cursor-pointer rounded object-cover"
-                    title={`${a.name || "图片"}（点击放大）`}
+                    title={t("chat.composer.imageClickToZoom", { name: a.name || t("chat.composer.imageFallbackName") })}
                     onClick={() =>
                       setZoomed({
                         items: attachments.map((g) => ({
                           src: g.dataUrl,
-                          alt: g.name || "图片",
+                          alt: g.name || t("chat.composer.imageFallbackName"),
                           name: g.name || undefined,
                         })),
                         index: attachments.indexOf(a),
@@ -754,7 +754,7 @@ export function ChatView({
                   />
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate text-xs text-foreground" title={a.name}>
-                      {a.name || "图片"}
+                      {a.name || t("chat.composer.imageFallbackName")}
                     </span>
                     <span className="text-[10px] tabular-nums text-muted-foreground">
                       {formatBytes(a.size)}
@@ -763,7 +763,7 @@ export function ChatView({
                   <button
                     type="button"
                     className="absolute right-1 top-1 rounded-full bg-background/80 p-0.5 text-muted-foreground hover:text-foreground"
-                    aria-label={`移除 ${a.name}`}
+                    aria-label={t("chat.composer.removeImageAria", { name: a.name })}
                     onClick={() => removeAttachment(a.id)}
                   >
                     <X size={11} />
@@ -775,11 +775,11 @@ export function ChatView({
 
           {attachments.length > 0 && !activeSupportsVision && (
             <div className="mb-2 flex flex-col gap-1 rounded-md bg-status-warn/10 p-2 text-xs text-status-warn">
-              <strong>当前模型不支持图片</strong>
+              <strong>{t("chat.composer.visionUnsupportedTitle")}</strong>
               <span>
                 {activeModel
-                  ? `${activeModel.label} 没有视觉能力。请切换到支持图片的模型，或先移除图片。`
-                  : "当前模型未知，请先选择一个支持图片的模型。"}
+                  ? t("chat.composer.visionUnsupportedWithModel", { label: activeModel.label })
+                  : t("chat.composer.visionUnsupportedUnknown")}
               </span>
               <button
                 type="button"
@@ -789,7 +789,7 @@ export function ChatView({
                   setAttachmentError(null);
                 }}
               >
-                移除所有图片
+                {t("chat.composer.removeAllImages")}
               </button>
             </div>
           )}
@@ -888,7 +888,7 @@ export function ChatView({
             // without the whole line looking like a blue link (TODO 2.7).
             <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-status-running" />
-              <span>后台 {runningAgents} 个子代理运行中…</span>
+              <span>{t("chat.composer.runningAgents", { count: runningAgents })}</span>
             </div>
           )}
 
@@ -898,11 +898,11 @@ export function ChatView({
                 <button
                   type="button"
                   className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                  aria-label="添加图片"
+                  aria-label={t("chat.composer.addImage")}
                   title={
                     activeSupportsVision
-                      ? "添加图片（也支持拖拽 / 粘贴）"
-                      : "当前模型不支持图片；切换模型后即可上传"
+                      ? t("chat.composer.addImageTitle")
+                      : t("chat.composer.addImageDisabledTitle")
                   }
                   onClick={() => fileInputRef.current?.click()}
                   disabled={busy}
@@ -932,8 +932,8 @@ export function ChatView({
                 <button
                   type="button"
                   className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                  aria-label="语音输入"
-                  title="语音输入 (尚未实现)"
+                  aria-label={t("chat.composer.voiceInput")}
+                  title={t("chat.composer.voiceInputTitle")}
                   disabled
                 >
                   <Mic size={14} />
@@ -950,11 +950,11 @@ export function ChatView({
                       setAttachments([]);
                       setAttachmentError(null);
                     }}
-                    aria-label="引导"
-                    title="打断当前轮，并发送这条输入"
+                    aria-label={t("chat.composer.guideAria")}
+                    title={t("chat.composer.guideTitle")}
                   >
                     <CornerDownRight size={13} />
-                    引导
+                    {t("chat.composer.guide")}
                   </button>
                 )}
                 {busy && (
@@ -962,7 +962,7 @@ export function ChatView({
                     type="button"
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-status-err/30 bg-status-err/10 text-status-err transition-all duration-150 hover:border-status-err hover:bg-status-err hover:text-white active:scale-95"
                     onClick={onStop}
-                    aria-label="停止"
+                    aria-label={t("chat.composer.stop")}
                   >
                     <Square size={14} fill="currentColor" />
                   </button>
@@ -976,7 +976,7 @@ export function ChatView({
                       (!draft.trim() && attachments.length === 0) ||
                       (attachments.length > 0 && !activeSupportsVision)
                     }
-                    aria-label="发送"
+                    aria-label={t("chat.composer.send")}
                   >
                     <ArrowUp size={16} />
                   </button>
@@ -986,7 +986,7 @@ export function ChatView({
           </div>
           {queuedInputCount > 0 && queuedInputItems.length === 0 && (
             <div className="mt-1 text-xs text-muted-foreground">
-              已缓存 {queuedInputCount} 条，将在本轮结束后发送
+              {t("chat.composer.cachedHint", { count: queuedInputCount })}
             </div>
           )}
         </div>
@@ -1005,9 +1005,9 @@ export function ChatView({
               onAddRepo={onAddRepo}
               disabled={busy}
             />
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground" title="在本机当前工作区运行">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground" title={t("chat.localModeTitle")}>
               <Monitor size={12} />
-              <span>本地模式</span>
+              <span>{t("chat.localMode")}</span>
             </span>
             <BranchPicker cwd={activeRepoPath} clean={repoClean} disabled={busy} />
           </div>
@@ -1019,7 +1019,7 @@ export function ChatView({
           items={zoomed.items}
           index={zoomed.index}
           src={zoomed.items[zoomed.index]?.src ?? ""}
-          alt={zoomed.items[zoomed.index]?.alt ?? "图片"}
+          alt={zoomed.items[zoomed.index]?.alt ?? t("chat.composer.imageFallbackName")}
           name={zoomed.items[zoomed.index]?.name}
           onClose={() => setZoomed(null)}
         />

@@ -11,6 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useConfirm, truncateTitle } from "../ui/ConfirmDialog";
+import { useT } from "../i18n/I18nProvider";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
 
 interface McpServer {
   name: string;
@@ -91,6 +94,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
   const [toolsViewer, setToolsViewer] = useState<McpProbeResult | null>(null);
   const [errorDetailFor, setErrorDetailFor] = useState<McpProbeResult | null>(null);
   const confirm = useConfirm();
+  const { t } = useT();
 
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
@@ -169,9 +173,9 @@ export function McpSection({ scope, activeRepoPath }: Props) {
 
   const removeServer = async (name: string) => {
     const ok = await confirm({
-      title: "移除 MCP 服务器",
-      message: `确认移除「${truncateTitle(name)}」？下次启动 engine 时生效；要恢复需要重新添加。`,
-      confirmLabel: "移除",
+      title: t("settingsX.mcp.confirmRemoveTitle"),
+      message: t("settingsX.mcp.confirmRemoveMsg", { name: truncateTitle(name) }),
+      confirmLabel: t("settingsX.mcp.remove"),
       destructive: true,
     });
     if (!ok) return;
@@ -260,13 +264,13 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     <section className="mb-6 flex flex-col gap-3">
       <header className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-0.5">
-          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">MCP 服务器</h3>
+          <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+            {t("settingsX.mcp.title")}
+          </h3>
           {/* 生效时机(feedback): 配置改动即时 reconcile 物理连接,但正在
               进行的对话里模型看到的工具表在下一条消息才刷新。说清楚,免得
               「改了没反应」的错觉。 */}
-          <p className="text-xs text-muted-foreground">
-            增删 / 启停即时生效;正在进行的对话在你发送下一条消息时看到更新后的工具。
-          </p>
+          <p className="text-xs text-muted-foreground">{t("settingsX.mcp.desc")}</p>
         </div>
         <div className="flex items-center gap-2 ">
           <Button
@@ -274,13 +278,13 @@ export function McpSection({ scope, activeRepoPath }: Props) {
             onClick={() => void runProbe(servers, true)}
             disabled={servers.length === 0 || loadingProbe.size > 0}
           >
-            {loadingProbe.size > 0 ? "测试中…" : "全部测试"}
+            {loadingProbe.size > 0 ? t("settingsX.mcp.testing") : t("settingsX.mcp.testAll")}
           </Button>
           <Button
             variant="solid"
             onClick={() => setEdit({ kind: "new" })}
           >
-            添加服务器
+            {t("settingsX.mcp.addServer")}
           </Button>
         </div>
       </header>
@@ -289,10 +293,8 @@ export function McpSection({ scope, activeRepoPath }: Props) {
 
       {servers.length === 0 && edit.kind === "closed" && (
         <div className="rounded-md border border-dashed p-4 text-sm">
-          <div className="font-medium text-foreground">还没有 MCP 服务器</div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            MCP 服务器为代理提供额外工具。点击「添加服务器」开始配置。
-          </div>
+          <div className="font-medium text-foreground">{t("settingsX.mcp.emptyTitle")}</div>
+          <div className="mt-1 text-sm text-muted-foreground">{t("settingsX.mcp.emptyDesc")}</div>
         </div>
       )}
 
@@ -303,7 +305,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
         const pluginServers = servers.filter((s) => s.source === "plugin");
         const byPlugin = new Map<string, McpServer[]>();
         for (const s of pluginServers) {
-          const owner = ownerPluginOf(s) ?? "插件";
+          const owner = ownerPluginOf(s) ?? t("settingsX.mcp.defaultPluginName");
           byPlugin.set(owner, [...(byPlugin.get(owner) ?? []), s]);
         }
         const renderCard = (s: McpServer, groupedByPlugin = false) => {
@@ -331,9 +333,11 @@ export function McpSection({ scope, activeRepoPath }: Props) {
             {Array.from(byPlugin.entries()).map(([owner, list]) => (
               <div key={owner} className="mt-3">
                 <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                  <span>🧩 {owner} 插件提供</span>
+                  <span>{t("settingsX.mcp.providedByPlugin", { owner })}</span>
                   {list.every((s) => s.pluginDisabled) && (
-                    <span className="rounded bg-muted px-1 text-[10px]">插件已禁用 — 启用后生效</span>
+                    <span className="rounded bg-muted px-1 text-[10px]">
+                      {t("settingsX.mcp.pluginDisabledBadge")}
+                    </span>
                   )}
                 </div>
                 <div className="grid gap-2">{list.map((s) => renderCard(s, true))}</div>
@@ -395,6 +399,7 @@ function McpCard({
   onViewTools,
   onShowErrorDetail,
 }: McpCardProps) {
+  const { t } = useT();
   const transport = server.transport ?? (server.url ? "streamable-http" : "stdio");
   const target = server.command
     ? [server.command, ...(server.args ?? [])].join(" ")
@@ -417,7 +422,13 @@ function McpCard({
             checked={enabled}
             onCheckedChange={editable ? onToggle : undefined}
             disabled={!editable}
-            title={editable ? (enabled ? "停用此服务器" : "启用此服务器") : "由插件管理，不能在这里启停"}
+            title={
+              editable
+                ? enabled
+                  ? t("settingsX.mcp.disableThis")
+                  : t("settingsX.mcp.enableThis")
+                : t("settingsX.mcp.pluginManagedNoToggle")
+            }
           />
           <strong title={server.name}>{displayName}</strong>
           <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -426,16 +437,20 @@ function McpCard({
           {server.source === "plugin" && !groupedByPlugin && (
             <span
               className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-              title={ownerPlugin ? `由「${ownerPlugin}」插件提供，只读展示` : "由插件安装提供，只读展示"}
+              title={
+                ownerPlugin
+                  ? t("settingsX.mcp.pluginProvidedReadonly", { owner: ownerPlugin })
+                  : t("settingsX.mcp.pluginInstalledReadonly")
+              }
             >
-              {ownerPlugin ? `插件: ${ownerPlugin}` : "plugin"}
+              {ownerPlugin ? t("settingsX.mcp.pluginPrefix", { owner: ownerPlugin }) : "plugin"}
             </span>
           )}
           {enabled ? (
             <StatusPill probe={probe} loading={loading} />
           ) : (
             // 随插件禁用时组头已有「插件已禁用」徽标 — 卡片不再重复。
-            !server.pluginDisabled && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">已停用</span>
+            !server.pluginDisabled && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.disabled")}</span>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -446,26 +461,34 @@ function McpCard({
               size="sm"
               onClick={onTest}
               disabled={loading || !enabled}
-              title={enabled ? "测试连接" : "已停用"}
+              title={enabled ? t("settingsX.mcp.testConn") : t("settingsX.mcp.disabled")}
             >
-              {loading ? "…" : "测试"}
+              {loading ? "…" : t("settingsX.mcp.test")}
             </Button>
           )}
           {editable ? (
             <>
-              <Button type="button" variant="ghost" size="sm" onClick={onEdit} title="编辑">
-                编辑
+              <Button type="button" variant="ghost" size="sm" onClick={onEdit} title={t("settingsX.mcp.edit")}>
+                {t("settingsX.mcp.edit")}
               </Button>
-              <Button type="button" variant="ghost" size="sm" className="text-status-err hover:text-status-err" onClick={onRemove} title="删除">
-                删除
+              <Button type="button" variant="ghost" size="sm" className="text-status-err hover:text-status-err" onClick={onRemove} title={t("settingsX.mcp.delete")}>
+                {t("settingsX.mcp.delete")}
               </Button>
             </>
           ) : (
             <span
               className="text-xs text-muted-foreground"
-              title={ownerPlugin ? `由「${ownerPlugin}」插件提供;在插件页启停整个插件` : "由插件提供"}
+              title={
+                ownerPlugin
+                  ? t("settingsX.mcp.pluginManagedHint", { owner: ownerPlugin })
+                  : t("settingsX.mcp.pluginProvidedHint")
+              }
             >
-              {groupedByPlugin ? "只读" : ownerPlugin ? `只读：由「${ownerPlugin}」插件管理` : "只读：由插件管理"}
+              {groupedByPlugin
+                ? t("settingsX.mcp.readOnly")
+                : ownerPlugin
+                  ? t("settingsX.mcp.readOnlyPluginManaged", { owner: ownerPlugin })
+                  : t("settingsX.mcp.readOnlyPlugin")}
             </span>
           )}
         </div>
@@ -488,14 +511,14 @@ function McpCard({
             <span className="text-status-err">{probe.errorMessage}</span>
             {probe.errorDetail && (
               <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={onShowErrorDetail}>
-                查看详情
+                {t("settingsX.mcp.viewDetail")}
               </Button>
             )}
           </div>
         )}
         {probe?.lastProbedAt && (
           <span className="text-xs text-muted-foreground" title={probe.lastProbedAt}>
-            上次测试：{formatRelativeTime(probe.lastProbedAt)}
+            {t("settingsX.mcp.lastTested", { time: formatRelativeTime(probe.lastProbedAt) })}
           </span>
         )}
       </div>
@@ -504,11 +527,12 @@ function McpCard({
 }
 
 function StatusPill({ probe, loading }: { probe?: McpProbeResult; loading: boolean }) {
-  if (loading) return <span className="rounded bg-status-running/10 px-1.5 py-0.5 text-[10px] font-medium text-status-running">连接中…</span>;
-  if (!probe) return <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">未测试</span>;
-  if (probe.status === "ok") return <span className="rounded bg-status-ok/10 px-1.5 py-0.5 text-[10px] font-medium text-status-ok">已连接</span>;
-  if (probe.status === "error") return <span className="rounded bg-status-err/10 px-1.5 py-0.5 text-[10px] font-medium text-status-err">连接失败</span>;
-  return <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">未知</span>;
+  const { t } = useT();
+  if (loading) return <span className="rounded bg-status-running/10 px-1.5 py-0.5 text-[10px] font-medium text-status-running">{t("settingsX.mcp.connecting")}</span>;
+  if (!probe) return <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.untested")}</span>;
+  if (probe.status === "ok") return <span className="rounded bg-status-ok/10 px-1.5 py-0.5 text-[10px] font-medium text-status-ok">{t("settingsX.mcp.connected")}</span>;
+  if (probe.status === "error") return <span className="rounded bg-status-err/10 px-1.5 py-0.5 text-[10px] font-medium text-status-err">{t("settingsX.mcp.connFailed")}</span>;
+  return <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{t("settingsX.mcp.unknown")}</span>;
 }
 
 function transportLabel(t: "stdio" | "streamable-http" | "sse"): string {
@@ -518,11 +542,12 @@ function transportLabel(t: "stdio" | "streamable-http" | "sse"): string {
 }
 
 function formatRelativeTime(iso: string): string {
+  const lang = loadUILanguage();
   const ms = Date.now() - new Date(iso).getTime();
-  if (ms < 30_000) return "刚刚";
-  if (ms < 60_000) return `${Math.floor(ms / 1000)} 秒前`;
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)} 分钟前`;
-  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)} 小时前`;
+  if (ms < 30_000) return translate(lang, "settingsX.mcp.justNow");
+  if (ms < 60_000) return translate(lang, "settingsX.mcp.secondsAgo", { n: Math.floor(ms / 1000) });
+  if (ms < 3_600_000) return translate(lang, "settingsX.mcp.minutesAgo", { n: Math.floor(ms / 60_000) });
+  if (ms < 86_400_000) return translate(lang, "settingsX.mcp.hoursAgo", { n: Math.floor(ms / 3_600_000) });
   return new Date(iso).toLocaleString();
 }
 
@@ -555,6 +580,7 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
       Boolean(initial?.envHeaders && Object.keys(initial.envHeaders).length),
   );
   const [validationError, setValidationError] = useState<string | null>(null);
+  const { t } = useT();
 
   // Load token/link credentials (user scope) to offer as Bearer-token sources.
   useEffect(() => {
@@ -571,17 +597,17 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
 
   const submit = () => {
     const trimmedName = name.trim();
-    if (!trimmedName) return setValidationError("name 不能为空");
+    if (!trimmedName) return setValidationError(t("settingsX.mcp.nameEmpty"));
     if (otherNames.includes(trimmedName))
-      return setValidationError("name 与其他服务器重复");
+      return setValidationError(t("settingsX.mcp.nameDuplicate"));
     if (isStdio) {
-      if (!command.trim()) return setValidationError("stdio 需要 command");
+      if (!command.trim()) return setValidationError(t("settingsX.mcp.stdioNeedsCommand"));
     } else {
-      if (!url.trim()) return setValidationError(`${transport} 需要 url`);
+      if (!url.trim()) return setValidationError(t("settingsX.mcp.needsUrl", { transport }));
       try {
         new URL(url.trim());
       } catch {
-        return setValidationError("url 格式无效");
+        return setValidationError(t("settingsX.mcp.urlInvalid"));
       }
     }
     let env: Record<string, string> | undefined;
@@ -592,7 +618,9 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
       headers = parseKeyValueLines(headersText);
       envHeaders = parseKeyValueLines(envHeadersText);
     } catch (e) {
-      return setValidationError(`高级配置解析失败：${(e as Error).message}`);
+      return setValidationError(
+        t("settingsX.mcp.advParseFailed", { message: (e as Error).message }),
+      );
     }
 
     const next: McpServer = {
@@ -618,13 +646,15 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
   return (
     <div className="rounded-md border bg-card p-4">
       <header className="mb-4 flex items-center justify-between gap-3">
-        <strong>{initial ? `编辑 ${initial.name}` : "添加 MCP 服务器"}</strong>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>关闭</Button>
+        <strong>
+          {initial ? t("settingsX.mcp.editTitle", { name: initial.name }) : t("settingsX.mcp.addTitle")}
+        </strong>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>{t("settingsX.mcp.close")}</Button>
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-          <span>名称</span>
+          <span>{t("settingsX.mcp.fieldName")}</span>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -637,9 +667,9 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
             value={transport}
             onChange={(v) => setTransport(v)}
             options={[
-              { value: "stdio", label: "stdio", description: "通过子进程通信（npx / 本地命令）" },
-              { value: "streamable-http", label: "HTTP", description: "远程 HTTP 流" },
-              { value: "sse", label: "SSE", description: "远程 Server-Sent Events" },
+              { value: "stdio", label: "stdio", description: t("settingsX.mcp.transportStdioDesc") },
+              { value: "streamable-http", label: "HTTP", description: t("settingsX.mcp.transportHttpDesc") },
+              { value: "sse", label: "SSE", description: t("settingsX.mcp.transportSseDesc") },
             ]}
           />
         </label>
@@ -681,14 +711,14 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
         type="button"
         onClick={() => setShowAdvanced((v) => !v)}
       >
-        {showAdvanced ? "▾ 高级" : "▸ 高级"}
+        {showAdvanced ? `▾ ${t("settingsX.mcp.advanced")}` : `▸ ${t("settingsX.mcp.advanced")}`}
       </Button>
 
       {showAdvanced && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 ">
           {isStdio && (
             <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-              <span>环境变量 (KEY=VALUE)</span>
+              <span>{t("settingsX.mcp.envVarsLabel")}</span>
               <Textarea
                 value={envText}
                 onChange={(e) => setEnvText(e.target.value)}
@@ -699,49 +729,47 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
           {!isStdio && (
             <>
               <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                <span>Headers (Key: Value)</span>
+                <span>{t("settingsX.mcp.headersLabel")}</span>
                 <Textarea
                   value={headersText}
                   onChange={(e) => setHeadersText(e.target.value)}
                   placeholder={"Authorization: Bearer ...\nX-N8N-API-KEY: ..."}
                 />
                 <span className="text-xs text-muted-foreground">
-                  明文 header，会存进配置文件 — 敏感 key 建议改用下面的环境变量方式。
+                  {t("settingsX.mcp.headersHint")}
                 </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground">
-                <span>使用凭证（可选，优先于 Bearer 环境变量）</span>
+                <span>{t("settingsX.mcp.useCredential")}</span>
                 <Select<string>
                   value={credentialRef}
                   onChange={(v) => setCredentialRef(v)}
-                  options={[{ value: "", label: "（不使用）" }, ...credOptions]}
+                  options={[{ value: "", label: t("settingsX.mcp.credNone") }, ...credOptions]}
                 />
                 <span className="text-xs text-muted-foreground">
-                  选「凭证」页里存的 token / link。连接时解析成 Authorization: Bearer，密文不进配置。
+                  {t("settingsX.mcp.useCredentialHint")}
                 </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                <span>Bearer Token 环境变量</span>
+                <span>{t("settingsX.mcp.bearerEnvVarLabel")}</span>
                 <Input
                   value={bearerEnvVar}
                   onChange={(e) => setBearerEnvVar(e.target.value)}
                   placeholder="MY_MCP_TOKEN"
                 />
                 <span className="text-xs text-muted-foreground">
-                  填环境变量「名」（不是值）。连接时从系统环境读取，作为
-                  Authorization: Bearer 发送，token 不会存进配置。
+                  {t("settingsX.mcp.bearerEnvVarHint")}
                 </span>
               </label>
               <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                <span>环境变量 Headers (Header: 环境变量名)</span>
+                <span>{t("settingsX.mcp.envHeadersLabel")}</span>
                 <Textarea
                   value={envHeadersText}
                   onChange={(e) => setEnvHeadersText(e.target.value)}
                   placeholder={"X-N8N-API-KEY: N8N_API_KEY"}
                 />
                 <span className="text-xs text-muted-foreground">
-                  左边是 header 名，右边是环境变量「名」；适合 server 要求自定义
-                  鉴权 header（非 Bearer）的场景，值同样连接时才读取。
+                  {t("settingsX.mcp.envHeadersHint")}
                 </span>
               </label>
             </>
@@ -752,9 +780,9 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
       {validationError && <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{validationError}</div>}
 
       <div className="flex items-center gap-2">
-        <Button variant="default" onClick={onCancel}>取消</Button>
+        <Button variant="default" onClick={onCancel}>{t("settingsX.mcp.cancel")}</Button>
         <Button variant="solid" onClick={submit}>
-          {initial ? "保存" : "添加"}
+          {initial ? t("settingsX.mcp.save") : t("settingsX.mcp.add")}
         </Button>
       </div>
     </div>
@@ -767,26 +795,27 @@ interface ToolsViewerProps {
 }
 
 function ToolsViewer({ probe, onClose }: ToolsViewerProps) {
+  const { t } = useT();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={onClose}>
       <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <header className="mb-3 flex items-center justify-between gap-3">
-          <strong>{probe.name} — tools ({probe.tools?.length ?? 0})</strong>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>关闭</Button>
+          <strong>{t("settingsX.mcp.toolsHeader", { name: probe.name, count: probe.tools?.length ?? 0 })}</strong>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>{t("settingsX.mcp.close")}</Button>
         </header>
         {probe.tools && probe.tools.length > 0 ? (
           <ul className="flex flex-col gap-2">
-            {probe.tools.map((t) => (
-              <li key={t.name} className="rounded-md border p-2">
-                <code className="font-mono text-xs text-foreground">{t.name}</code>
-                {t.description && (
-                  <span className="mt-1 block text-xs text-muted-foreground">{t.description}</span>
+            {probe.tools.map((tool) => (
+              <li key={tool.name} className="rounded-md border p-2">
+                <code className="font-mono text-xs text-foreground">{tool.name}</code>
+                {tool.description && (
+                  <span className="mt-1 block text-xs text-muted-foreground">{tool.description}</span>
                 )}
               </li>
             ))}
           </ul>
         ) : (
-          <div className="p-4 text-center text-sm text-muted-foreground">服务器未返回任何 tool</div>
+          <div className="p-4 text-center text-sm text-muted-foreground">{t("settingsX.mcp.noToolReturned")}</div>
         )}
       </div>
     </div>
@@ -794,12 +823,13 @@ function ToolsViewer({ probe, onClose }: ToolsViewerProps) {
 }
 
 function ErrorDetailViewer({ probe, onClose }: { probe: McpProbeResult; onClose: () => void }) {
+  const { t } = useT();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" onClick={onClose}>
       <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <header className="mb-3 flex items-center justify-between gap-3">
-          <strong>{probe.name} — 错误详情</strong>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>关闭</Button>
+          <strong>{t("settingsX.mcp.errorDetailHeader", { name: probe.name })}</strong>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>{t("settingsX.mcp.close")}</Button>
         </header>
         <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{probe.errorMessage}</div>
         <pre className="mt-2 max-h-96 overflow-auto rounded-md bg-muted/40 p-3 font-mono text-xs">{probe.errorDetail}</pre>
@@ -864,10 +894,10 @@ function parseKeyValueLines(text: string): Record<string, string> {
     const colon = line.indexOf(":");
     const equals = line.indexOf("=");
     const idx = equals >= 0 && (colon < 0 || equals < colon) ? equals : colon;
-    if (idx < 0) throw new Error(`无法解析：${line}`);
+    if (idx < 0) throw new Error(translate(loadUILanguage(), "settingsX.mcp.parseFailedLine", { line }));
     const k = line.slice(0, idx).trim();
     const v = line.slice(idx + 1).trim();
-    if (!k) throw new Error(`空 key：${line}`);
+    if (!k) throw new Error(translate(loadUILanguage(), "settingsX.mcp.emptyKeyLine", { line }));
     out[k] = v;
   }
   return out;

@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronRight, FolderGit2, Globe } from "lucide-react";
 import { repoLabel, type Repo } from "../repos";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * A list of projects (repos) the user can click to drill into. Used by the
@@ -15,9 +16,9 @@ import { cn } from "@/lib/utils";
 export function ProjectPicker({
   repos,
   includeGlobal = false,
-  globalLabel = "全局",
+  globalLabel,
   globalHint,
-  emptyHint = "还没有添加任何项目。在主界面侧边栏添加项目后,这里就能选择。",
+  emptyHint,
   onSelect,
 }: {
   repos: Repo[];
@@ -27,6 +28,9 @@ export function ProjectPicker({
   emptyHint?: string;
   onSelect: (path: string | null) => void;
 }) {
+  const { t } = useT();
+  const resolvedGlobalLabel = globalLabel ?? t("settingsX.projectPicker.global");
+  const resolvedEmptyHint = emptyHint ?? t("settingsX.projectPicker.empty");
   const ordered = React.useMemo(
     () =>
       repos
@@ -43,14 +47,14 @@ export function ProjectPicker({
       {includeGlobal && (
         <Row
           icon={<Globe size={15} />}
-          title={globalLabel}
+          title={resolvedGlobalLabel}
           hint={globalHint}
           onClick={() => onSelect(null)}
         />
       )}
       {ordered.length === 0 && !includeGlobal ? (
         <li className="rounded-md border border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-          {emptyHint}
+          {resolvedEmptyHint}
         </li>
       ) : (
         ordered.map((repo) => (

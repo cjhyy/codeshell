@@ -38,7 +38,8 @@ export interface LoginCheck {
 function matchPattern(domain: string): { required: string[] } | undefined {
   const d = domain.replace(/^\./, "").toLowerCase();
   for (const [pat, cfg] of Object.entries(LOGIN_COOKIE_PATTERNS)) {
-    if (d === pat || d.endsWith("." + pat) || d.includes(pat)) return cfg;
+    // 只用相等 / 后缀匹配,不用 includes(否则 x.com.attacker.net 会误中 x.com 表)。
+    if (d === pat || d.endsWith("." + pat)) return cfg;
   }
   return undefined;
 }
@@ -106,15 +107,19 @@ export const USERNAME_SCRIPTS: Record<string, string> = {
 export function usernameScriptFor(domain: string): string | undefined {
   const d = domain.replace(/^\./, "").toLowerCase();
   for (const [pat, script] of Object.entries(USERNAME_SCRIPTS)) {
-    if (d === pat || d.endsWith("." + pat) || d.includes(pat)) return script;
+    // 只用相等 / 后缀匹配,不用 includes(同 matchPattern,防 x.com.attacker.net 误中)。
+    if (d === pat || d.endsWith("." + pat)) return script;
   }
   return undefined;
 }
 
-/** 清洗抓到的用户名:非空字符串才采纳,trim,限长。 */
+/** 清洗抓到的用户名:剥控制字符、折叠空白、trim、限长;非空字符串才采纳。 */
 export function sanitizeUsername(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
-  const s = raw.trim();
+  // 先把空白(含 \t\n\r)折叠成单空格,再剥剩余的非空白控制字符 —— 顺序很关键:
+  // \t\n\r 既是控制字符又是空白,先剥控制字符会把 "Alice\tWang" 粘成 "AliceWang"。
+  // eslint-disable-next-line no-control-regex
+  const s = raw.replace(/\s+/g, " ").replace(/[\x00-\x1f\x7f]/g, "").trim();
   if (!s || s.length > 60) return undefined;
   return s;
 }

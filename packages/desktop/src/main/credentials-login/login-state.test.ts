@@ -72,11 +72,27 @@ describe("usernameScriptFor / sanitizeUsername", () => {
     expect(usernameScriptFor("xiaohongshu.com")).toBeUndefined();
   });
 
+  test("domain spoof does NOT match a known pattern (no substring match)", () => {
+    // Regression: matchPattern/usernameScriptFor used d.includes(pat), so
+    // x.com.attacker.net mapped to the x.com table. Suffix-only now.
+    expect(usernameScriptFor("x.com.attacker.net")).toBeUndefined();
+    expect(usernameScriptFor("notx.com")).toBeUndefined();
+    expect(evaluateLoginState([], "x.com.attacker.net")).toEqual({ ok: false });
+    // genuine x.com + subdomain still match.
+    expect(usernameScriptFor("x.com")).toContain("UserName");
+    expect(usernameScriptFor("mobile.x.com")).toContain("UserName");
+  });
+
   test("sanitizeUsername: trims valid; rejects empty/non-string/too-long", () => {
     expect(sanitizeUsername("  Alice  ")).toBe("Alice");
     expect(sanitizeUsername("")).toBeUndefined();
     expect(sanitizeUsername(null)).toBeUndefined();
     expect(sanitizeUsername(123)).toBeUndefined();
     expect(sanitizeUsername("x".repeat(61))).toBeUndefined();
+  });
+
+  test("sanitizeUsername: strips control chars and collapses whitespace", () => {
+    expect(sanitizeUsername("\n  Alice\tWang \r\n")).toBe("Alice Wang");
+    expect(sanitizeUsername("Bob\u0000\u0007")).toBe("Bob");
   });
 });

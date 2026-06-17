@@ -6,6 +6,7 @@ import { addAnchor } from "../chat/addAnchor";
 import { openFileTarget } from "../chat/openWith";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   /** cwd to ask git for the diff. */
@@ -41,6 +42,7 @@ interface Props {
 }
 
 export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, onStats }: Props) {
+  const { t } = useT();
   const [diff, setDiff] = useState<DiffFile[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,13 +91,13 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
     onStats({ added, removed });
   }, [diff]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (error) return <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">git diff failed: {error}</div>;
-  if (!diff) return <div className="p-3 text-sm text-muted-foreground">loading diff…</div>;
+  if (error) return <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{t("panels.diff.gitDiffFailed", { error })}</div>;
+  if (!diff) return <div className="p-3 text-sm text-muted-foreground">{t("panels.diff.loadingDiff")}</div>;
   const visible = onlyPath
     ? diff.filter((f) => (f.newPath ?? f.oldPath) === onlyPath)
     : diff;
   if (visible.length === 0) {
-    return <div className="p-3 text-sm text-muted-foreground">no changes</div>;
+    return <div className="p-3 text-sm text-muted-foreground">{t("panels.diff.noChanges")}</div>;
   }
   // Guard against rendering an enormous diff (e.g. a whole "branch vs base"
   // range): a per-line <tr> table with no virtualization froze the main thread
@@ -112,7 +114,7 @@ export function UnifiedDiffViewer({ cwd, file, diffText, range, onlyPath, mode, 
     <div className="flex min-w-0 flex-col gap-3 overflow-x-auto text-sm">
       {overCap && (
         <div className="rounded-md bg-muted/40 px-2 py-1 text-xs text-muted-foreground">
-          差异较大（{totalLines} 行），仅显示前 {MAX_RENDERED_LINES} 行。
+          {t("panels.diff.largeDiff", { total: totalLines, max: MAX_RENDERED_LINES })}
         </div>
       )}
       {filesToRender.map((f) => (
@@ -146,7 +148,8 @@ function capFiles(diff: DiffFile[], budget: number): DiffFile[] {
 }
 
 function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
-  const title = file.newPath ?? file.oldPath ?? "(unknown)";
+  const { t } = useT();
+  const title = file.newPath ?? file.oldPath ?? t("panels.diff.unknownFile");
   // Which line is currently being commented on, keyed by "hunkIdx:lineIdx".
   const [commenting, setCommenting] = useState<string | null>(null);
   // Collapse a file's diff by clicking its header (GitLab/GitHub style) — when
@@ -172,7 +175,7 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
         className="h-auto w-full justify-start gap-2 rounded-none border-b px-3 py-2 text-left"
         onClick={() => setCollapsed((v) => !v)}
         aria-expanded={!collapsed}
-        title={collapsed ? "展开" : "折叠"}
+        title={collapsed ? t("panels.diff.expand") : t("panels.diff.collapse")}
       >
         {collapsed ? (
           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -186,13 +189,13 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
             dot, deleted → red dash, renamed → amber dot; modified shows
             nothing (the +/- counts already convey it). */}
         {file.status === "added" && (
-          <span className="shrink-0 h-2 w-2 rounded-full bg-status-ok" title="新增" aria-label="新增" />
+          <span className="shrink-0 h-2 w-2 rounded-full bg-status-ok" title={t("panels.diff.added")} aria-label={t("panels.diff.added")} />
         )}
         {file.status === "deleted" && (
-          <span className="shrink-0 h-0.5 w-2.5 rounded bg-status-err" title="删除" aria-label="删除" />
+          <span className="shrink-0 h-0.5 w-2.5 rounded bg-status-err" title={t("panels.diff.deleted")} aria-label={t("panels.diff.deleted")} />
         )}
         {file.status === "renamed" && (
-          <span className="shrink-0 h-2 w-2 rounded-full bg-status-warn" title="重命名" aria-label="重命名" />
+          <span className="shrink-0 h-2 w-2 rounded-full bg-status-warn" title={t("panels.diff.renamed")} aria-label={t("panels.diff.renamed")} />
         )}
         <span className="shrink-0 pl-2 text-xs tabular-nums">
           <span className="text-status-ok">+{added}</span>{" "}
@@ -204,8 +207,8 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
         <span
           role="button"
           tabIndex={0}
-          aria-label="打开文件"
-          title="打开文件"
+          aria-label={t("panels.diff.openFile")}
+          title={t("panels.diff.openFile")}
           className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
           onClick={(e) => {
             e.stopPropagation();
@@ -241,8 +244,8 @@ function DiffFileBlock({ file, cwd }: { file: DiffFile; cwd: string }) {
                           {l.text || " "}
                           <button
                             type="button"
-                            aria-label="评论此行"
-                            title="评论此行(加入输入框)"
+                            aria-label={t("panels.diff.commentThisLine")}
+                            title={t("panels.diff.commentThisLineTitle")}
                             className="absolute right-0 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100"
                             onClick={() => setCommenting(commenting === key ? null : key)}
                           >

@@ -12,8 +12,9 @@ import {
   renameSync,
   copyFileSync,
 } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, extname } from "node:path";
 import { homedir } from "node:os";
+import { parse as parseYaml } from "yaml";
 import { validateSettings, type ValidatedSettings } from "./schema.js";
 import { migrateModels } from "../migrate-models.js";
 import { migrateConfig, CONFIG_VERSION_KEY } from "./migrate-config.js";
@@ -292,7 +293,13 @@ export class SettingsManager {
    */
   deleteProjectSetting(key: string, cwd: string): void {
     const path = this.projectSettingsPath(cwd);
-    if (!existsSync(path)) return;
+    // Must be YAML-aware, symmetric with saveProjectSetting: a project with only
+    // settings.yaml has no .json, so the old `existsSync(path)` guard returned
+    // here and the override survived (read/merge ARE yaml-aware → UI shows
+    // "inherited" but the key still applies). readJsonObject resolves the sibling
+    // YAML; the cleaned object is written back as JSON (JSON is the write-back
+    // format and wins over YAML, exactly as save does).
+    if (!resolveConfigPath(path)) return;
     const current = this.readJsonObject(path);
     const parts = key.split(".");
     let target: Record<string, unknown> | undefined = current;
@@ -336,16 +343,11 @@ export class SettingsManager {
   }
 
   private readJsonObject(path: string): Record<string, unknown> {
-    if (!existsSync(path)) return {};
-    try {
-      const parsed = JSON.parse(readFileSync(path, "utf-8"));
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed as Record<string, unknown>;
-      }
-    } catch {
-      // Corrupt file — overwrite rather than crash.
-    }
-    return {};
+    // Resolve to a sibling .yaml/.yml when the .json layer is absent so
+    // scope views (getForScope) see hand-written YAML too. JSON still wins.
+    const resolved = resolveConfigPath(path);
+    if (!resolved) return {};
+    return parseConfigFile(resolved) ?? {};
   }
 
   private atomicWriteJson(path: string, data: Record<string, unknown>): void {
@@ -356,16 +358,13 @@ export class SettingsManager {
   }
 
   private loadJsonFile(path: string, name: SettingsSourceName, priority: number): void {
-    if (!existsSync(path)) return;
-    try {
-      const content = readFileSync(path, "utf-8");
-      const data = JSON.parse(content);
-      if (typeof data === "object" && data !== null) {
-        this.sources.push({ name, priority, data });
-      }
-    } catch {
-      // Skip invalid files
-    }
+    // `path` is the canonical .json path for this layer. When it's absent but
+    // a sibling settings.yaml/.yml exists, read the YAML instead (JSON wins
+    // when both exist — JSON is the write-back format, YAML is hand-written).
+    const resolved = resolveConfigPath(path);
+    if (!resolved) return;
+    const data = parseConfigFile(resolved);
+    if (data) this.sources.push({ name, priority, data });
   }
 
   private deepMerge(): Record<string, unknown> {
@@ -401,6 +400,45 @@ export class SettingsManager {
     }
     return result;
   }
+}
+
+/**
+ * Parse a config file by extension: .yaml/.yml go through the YAML parser,
+ * everything else through JSON.parse. Mirrors the loader's existing
+ * "corrupt file never crashes — silently skip" contract: on any read/parse
+ * error, or a non-object top-level value, returns null. The caller decides
+ * what an absent/empty layer means.
+ */
+function parseConfigFile(path: string): Record<string, unknown> | null {
+  if (!existsSync(path)) return null;
+  try {
+    const content = readFileSync(path, "utf-8");
+    const ext = extname(path).toLowerCase();
+    const parsed = ext === ".yaml" || ext === ".yml" ? parseYaml(content) : JSON.parse(content);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Corrupt file — skip rather than crash.
+  }
+  return null;
+}
+
+/**
+ * Given the JSON path for a settings layer (e.g. .../settings.json or
+ * .../settings.local.json), return the path that should actually be read:
+ * the .json file if it exists, otherwise a sibling .yaml/.yml if present.
+ * JSON is the write-back format and wins when both exist; YAML is a
+ * hand-written read-only alternative. Returns null when no layer file exists.
+ */
+function resolveConfigPath(jsonPath: string): string | null {
+  if (existsSync(jsonPath)) return jsonPath;
+  const base = jsonPath.replace(/\.json$/, "");
+  for (const ext of [".yaml", ".yml"]) {
+    const candidate = `${base}${ext}`;
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
 }
 
 function merge(

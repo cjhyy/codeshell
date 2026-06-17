@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { X, Download, Copy, FolderOpen, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "../ui/ToastProvider";
 import { Button } from "@/components/ui/button";
+import { useT } from "../i18n/I18nProvider";
 
 /** Pure decision so the close behavior is unit-testable without a DOM. */
 export function shouldCloseOnKey(key: string): boolean {
@@ -73,6 +74,7 @@ export interface LightboxProps {
  * `items` gallery, Left/Right arrows and on-screen chevrons cycle through it.
  */
 export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: LightboxProps) {
+  const { t } = useT();
   const [copied, setCopied] = useState(false);
   const toast = useToast();
 
@@ -117,16 +119,16 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
       (saved) => {
         // saveImage resolves to the saved path (or null/undefined if the user
         // cancelled the save dialog) — only confirm on a real save.
-        if (saved) toast({ message: "图片已保存", variant: "success" });
+        if (saved) toast({ message: t("chat.lightbox.imageSaved"), variant: "success" });
       },
-      () => toast({ message: "保存失败", variant: "error" }),
+      () => toast({ message: t("chat.lightbox.saveFailed"), variant: "error" }),
     );
   };
   const onCopyPath = (): void => {
     if (!active.path) return;
     void navigator.clipboard.writeText(active.path);
     setCopied(true);
-    toast({ message: "已复制路径", variant: "success" });
+    toast({ message: t("chat.lightbox.pathCopied"), variant: "success" });
     window.setTimeout(() => setCopied(false), 1500);
   };
   const onReveal = (): void => {
@@ -159,8 +161,8 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
               type="button"
               size="icon"
               variant="ghost"
-              aria-label="下载"
-              title="下载"
+              aria-label={t("chat.lightbox.download")}
+              title={t("chat.lightbox.download")}
               onClick={onDownload}
             >
               <Download size={16} />
@@ -170,8 +172,8 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
                 type="button"
                 size="icon"
                 variant="ghost"
-                aria-label="复制路径"
-                title={copied ? "已复制" : "复制路径"}
+                aria-label={t("chat.lightbox.copyPath")}
+                title={copied ? t("chat.lightbox.copied") : t("chat.lightbox.copyPath")}
                 onClick={onCopyPath}
               >
                 {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -182,8 +184,8 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
                 type="button"
                 size="icon"
                 variant="ghost"
-                aria-label="在文件夹中显示"
-                title="在文件夹中显示"
+                aria-label={t("chat.lightbox.reveal")}
+                title={t("chat.lightbox.reveal")}
                 onClick={onReveal}
               >
                 <FolderOpen size={16} />
@@ -193,8 +195,8 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
               type="button"
               size="icon"
               variant="ghost"
-              aria-label="关闭"
-              title="关闭"
+              aria-label={t("chat.lightbox.close")}
+              title={t("chat.lightbox.close")}
               onClick={onClose}
             >
               <X size={18} />
@@ -207,8 +209,8 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
             className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-background/80 shadow-lg"
             size="icon"
             variant="outline"
-            aria-label="上一张"
-            title="上一张"
+            aria-label={t("chat.lightbox.prev")}
+            title={t("chat.lightbox.prev")}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => navigate(-1)}
           >
@@ -224,8 +226,8 @@ export function Lightbox({ src, alt, onClose, path, cwd, name, items, index }: L
             className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-background/80 shadow-lg"
             size="icon"
             variant="outline"
-            aria-label="下一张"
-            title="下一张"
+            aria-label={t("chat.lightbox.next")}
+            title={t("chat.lightbox.next")}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={() => navigate(1)}
           >

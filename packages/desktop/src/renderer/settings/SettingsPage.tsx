@@ -45,6 +45,8 @@ import {
 } from "./AdvancedSections";
 import type { Repo } from "../repos";
 import type { SessionIndex } from "../transcripts";
+import { useT } from "../i18n/I18nProvider";
+import type { TFunction } from "../i18n/I18nProvider";
 
 type ModuleId =
   | "general"
@@ -86,47 +88,47 @@ interface ModuleGroup {
  * surfaces (each section's own UI) are unchanged — this is the
  * information-architecture half of the alignment.
  */
-const MODULE_GROUPS: ModuleGroup[] = [
-  {
-    title: "",
-    modules: [
-      { id: "general", label: "常规", Icon: SettingsIcon },
-      { id: "appearance", label: "外观", Icon: Sun },
-      { id: "config", label: "配置", Icon: Sliders },
-      { id: "personalization", label: "个性化", Icon: User },
-      { id: "shortcuts", label: "键盘快捷键", Icon: Keyboard },
-    ],
-  },
-  {
-    title: "扩展能力",
-    modules: [
-      { id: "capabilities", label: "能力总览", Icon: Layers },
-      { id: "mcp", label: "MCP 服务器", Icon: Plug },
-      { id: "plugins-skills", label: "扩展", Icon: Puzzle },
-      { id: "agents", label: "子代理", Icon: Bot },
-      { id: "hooks", label: "钩子", Icon: Webhook },
-    ],
-  },
-  {
-    title: "环境与连接",
-    modules: [
-      { id: "connections", label: "连接", Icon: Wifi },
-      { id: "git", label: "Git", Icon: GitBranch },
-      { id: "environment", label: "本地环境", Icon: Terminal },
-      { id: "conversation", label: "对话", Icon: MessageSquare },
-      { id: "mobile-remote", label: "手机遥控", Icon: Smartphone },
-    ],
-  },
-  {
-    title: "数据",
-    modules: [
-      { id: "memory", label: "记忆", Icon: Brain },
-      { id: "archived", label: "已归档对话", Icon: Archive },
-    ],
-  },
-];
-
-const MODULES: Module[] = MODULE_GROUPS.flatMap((g) => g.modules);
+function buildModuleGroups(t: TFunction): ModuleGroup[] {
+  return [
+    {
+      title: "",
+      modules: [
+        { id: "general", label: t("settingsX.page.general"), Icon: SettingsIcon },
+        { id: "appearance", label: t("settingsX.page.appearance"), Icon: Sun },
+        { id: "config", label: t("settingsX.page.config"), Icon: Sliders },
+        { id: "personalization", label: t("settingsX.page.personalization"), Icon: User },
+        { id: "shortcuts", label: t("settingsX.page.shortcuts"), Icon: Keyboard },
+      ],
+    },
+    {
+      title: t("settingsX.page.groupExtend"),
+      modules: [
+        { id: "capabilities", label: t("settingsX.page.capabilities"), Icon: Layers },
+        { id: "mcp", label: t("settingsX.page.mcp"), Icon: Plug },
+        { id: "plugins-skills", label: t("settingsX.page.plugins"), Icon: Puzzle },
+        { id: "agents", label: t("settingsX.page.agents"), Icon: Bot },
+        { id: "hooks", label: t("settingsX.page.hooks"), Icon: Webhook },
+      ],
+    },
+    {
+      title: t("settingsX.page.groupEnvConn"),
+      modules: [
+        { id: "connections", label: t("settingsX.page.connections"), Icon: Wifi },
+        { id: "git", label: "Git", Icon: GitBranch },
+        { id: "environment", label: t("settingsX.page.environment"), Icon: Terminal },
+        { id: "conversation", label: t("settingsX.page.conversation"), Icon: MessageSquare },
+        { id: "mobile-remote", label: t("settingsX.page.mobileRemote"), Icon: Smartphone },
+      ],
+    },
+    {
+      title: t("settingsX.page.groupData"),
+      modules: [
+        { id: "memory", label: t("settingsX.page.memory"), Icon: Brain },
+        { id: "archived", label: t("settingsX.page.archived"), Icon: Archive },
+      ],
+    },
+  ];
+}
 
 interface Props {
   activeRepoPath: string | null;
@@ -153,6 +155,9 @@ export function SettingsPage({
   onDeleteArchivedSession,
   onBack,
 }: Props) {
+  const { t } = useT();
+  const MODULE_GROUPS = buildModuleGroups(t);
+  const MODULES: Module[] = MODULE_GROUPS.flatMap((g) => g.modules);
   const [active, setActive] = useState<ModuleId>("general");
   // All settings are global (user scope). Per-project overrides are not
   // supported in the UI; sections still take a `scope`/`activeRepoPath`
@@ -168,7 +173,7 @@ export function SettingsPage({
             onClick={onBack}
           >
             <ArrowLeft size={14} />
-            <span>返回应用</span>
+            <span>{t("settingsX.page.back")}</span>
           </button>
           {MODULE_GROUPS.map((group) => (
             <div key={group.title || "_top"} className="mb-3">

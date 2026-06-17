@@ -17,13 +17,16 @@ import type { GitStatusEntry } from "../../preload/types";
  */
 export type ReviewScope = "turn" | "unstaged" | "staged" | "all" | "committed" | "branch";
 
-export const REVIEW_SCOPES: { id: ReviewScope; label: string }[] = [
-  { id: "turn", label: "本轮改动" },
-  { id: "unstaged", label: "未暂存" },
-  { id: "staged", label: "已暂存" },
-  { id: "all", label: "全部未提交" },
-  { id: "committed", label: "最近提交" },
-  { id: "branch", label: "分支 vs base" },
+// Scope ids only — display labels live in the i18n dict
+// (`panels.review.scopes.<id>`) and are resolved at the call site (ReviewPanel),
+// since this is a React-free module with no access to the `t()` hook.
+export const REVIEW_SCOPES: { id: ReviewScope }[] = [
+  { id: "turn" },
+  { id: "unstaged" },
+  { id: "staged" },
+  { id: "all" },
+  { id: "committed" },
+  { id: "branch" },
 ];
 
 /** True for scopes sourced from a committed git range (not the working tree). */

@@ -16,6 +16,7 @@ import { ReviewPanel } from "./ReviewPanel";
 import { TerminalPanel } from "./TerminalPanel";
 import { BackgroundShellPanel } from "./BackgroundShellPanel";
 import { RoomsPanel } from "./RoomsPanel";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 
 export interface OpenTab {
   id: string;
@@ -68,23 +69,28 @@ interface Props {
   onUpdateBrowserAnchor?: (anchorId: string, comment: string) => void;
 }
 
-const KINDS: { kind: PanelTab; label: string; Icon: typeof FolderTree }[] = [
-  { kind: "files", label: "文件", Icon: FolderTree },
-  { kind: "browser", label: "浏览器", Icon: Globe },
-  { kind: "review", label: "审查", Icon: GitCompare },
-  { kind: "terminal", label: "终端", Icon: SquareTerminal },
-  { kind: "shells", label: "后台 Shell", Icon: ServerCog },
-  { kind: "rooms", label: "房间", Icon: MessagesSquare },
+const KINDS: { kind: PanelTab; Icon: typeof FolderTree }[] = [
+  { kind: "files", Icon: FolderTree },
+  { kind: "browser", Icon: Globe },
+  { kind: "review", Icon: GitCompare },
+  { kind: "terminal", Icon: SquareTerminal },
+  { kind: "shells", Icon: ServerCog },
+  { kind: "rooms", Icon: MessagesSquare },
 ];
 
-const META: Record<PanelTab, { label: string; Icon: typeof FolderTree }> = {
-  files: { label: "文件", Icon: FolderTree },
-  browser: { label: "浏览器", Icon: Globe },
-  review: { label: "审查", Icon: GitCompare },
-  terminal: { label: "终端", Icon: SquareTerminal },
-  shells: { label: "后台 Shell", Icon: ServerCog },
-  rooms: { label: "房间", Icon: MessagesSquare },
+const META: Record<PanelTab, { Icon: typeof FolderTree }> = {
+  files: { Icon: FolderTree },
+  browser: { Icon: Globe },
+  review: { Icon: GitCompare },
+  terminal: { Icon: SquareTerminal },
+  shells: { Icon: ServerCog },
+  rooms: { Icon: MessagesSquare },
 };
+
+/** Translated label for a panel kind. */
+function kindLabel(t: TFunction, kind: PanelTab): string {
+  return t(`panels.kinds.${kind}`);
+}
 
 /**
  * The right-side panel dock with Codex-style dynamic tabs: a strip of open
@@ -117,6 +123,7 @@ export function PanelArea({
   activeId,
   setActiveId,
 }: Props) {
+  const { t } = useT();
   // Module-level id counter (not a per-mount ref) so ids stay unique across a
   // dock close→reopen — tabs live in App now and outlive this component.
   const mkId = (kind: PanelTab): string => `${kind}-${(panelTabSeq += 1)}`;
@@ -193,7 +200,7 @@ export function PanelArea({
         <div
           role="separator"
           aria-orientation="vertical"
-          aria-label="调整面板宽度"
+          aria-label={t("panels.area.resizeWidth")}
           onMouseDown={(e) => {
             e.preventDefault();
             onResizeStart(e.clientX, width);
@@ -203,28 +210,29 @@ export function PanelArea({
       )}
       {/* Tab strip */}
       <div className="flex shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-1.5 py-1">
-        {tabs.map((t) => {
-          const { label, Icon } = META[t.kind];
-          const active = t.id === activeId;
+        {tabs.map((tab) => {
+          const { Icon } = META[tab.kind];
+          const label = kindLabel(t, tab.kind);
+          const active = tab.id === activeId;
           return (
             <div
-              key={t.id}
+              key={tab.id}
               className={cn(
                 "group flex shrink-0 items-center gap-1.5 rounded-md py-1 pl-2.5 pr-1.5 text-xs font-medium transition-colors",
                 active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50",
               )}
             >
-              <Button type="button" variant="ghost" className="h-auto gap-1.5 p-0 hover:bg-transparent" onClick={() => setActiveId(t.id)}>
+              <Button type="button" variant="ghost" className="h-auto gap-1.5 p-0 hover:bg-transparent" onClick={() => setActiveId(tab.id)}>
                 <Icon className="h-3.5 w-3.5" />
                 {label}
               </Button>
               <Button
                 type="button"
-                aria-label="关闭标签"
+                aria-label={t("panels.common.closeTab")}
                 variant="ghost"
                 size="icon"
                 className="h-5 w-5 opacity-0 hover:bg-background/60 group-hover:opacity-100"
-                onClick={() => closeTab(t.id)}
+                onClick={() => closeTab(tab.id)}
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -237,7 +245,7 @@ export function PanelArea({
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
-              aria-label="新建标签"
+              aria-label={t("panels.area.newTab")}
               size="icon"
               variant="ghost"
               className="ml-0.5 h-7 w-7 shrink-0 text-muted-foreground"
@@ -246,10 +254,10 @@ export function PanelArea({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            {KINDS.map(({ kind, label, Icon }) => (
+            {KINDS.map(({ kind, Icon }) => (
               <DropdownMenuItem key={kind} onSelect={() => addTab(kind)}>
                 <Icon className="mr-2 h-4 w-4" />
-                <span className="flex-1">{label}</span>
+                <span className="flex-1">{kindLabel(t, kind)}</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -259,8 +267,8 @@ export function PanelArea({
         <Button
           type="button"
           onClick={() => setMaximized((v) => !v)}
-          aria-label={maximized ? "还原面板" : "放大面板"}
-          title={maximized ? "还原(覆盖输入区→停靠)" : "放大(覆盖输入区)"}
+          aria-label={maximized ? t("panels.area.restore") : t("panels.area.maximize")}
+          title={maximized ? t("panels.area.restoreTitle") : t("panels.area.maximizeTitle")}
           size="icon"
           variant="ghost"
           className="h-7 w-7 shrink-0 text-muted-foreground"
@@ -290,10 +298,11 @@ export function PanelArea({
 
 /** Empty-dock landing: a card grid to open one of the four panels. */
 function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
+  const { t } = useT();
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center p-6">
       <div className="grid w-full max-w-md grid-cols-2 gap-3">
-        {KINDS.map(({ kind, label, Icon }) => (
+        {KINDS.map(({ kind, Icon }) => (
           <Button
             key={kind}
             type="button"
@@ -302,7 +311,7 @@ function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
             className="flex h-auto flex-col items-center gap-2 rounded-lg bg-card px-4 py-6 text-center hover:border-primary/50"
           >
             <Icon className="h-7 w-7 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">{label}</span>
+            <span className="text-sm font-medium text-foreground">{kindLabel(t, kind)}</span>
           </Button>
         ))}
       </div>

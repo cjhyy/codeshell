@@ -5,6 +5,7 @@ import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useT } from "../i18n/I18nProvider";
 
 const segBtn = (active: boolean) =>
   "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
@@ -18,6 +19,16 @@ interface Props {
 }
 
 export function SettingsView({ activeRepoPath }: Props) {
+  const { t } = useT();
+  const tabLabel = (tb: Tab): string => {
+    switch (tb) {
+      case "model": return t("settingsX.view.tabModel");
+      case "permission": return t("settingsX.view.tabPermission");
+      case "mcp": return "MCP";
+      case "update": return t("settingsX.view.tabUpdate");
+      case "json": return "JSON";
+    }
+  };
   const [scope, setScope] = useState<Scope>("user");
   const [tab, setTab] = useState<Tab>("model");
   const [draft, setDraft] = useState<string>("");
@@ -65,18 +76,18 @@ export function SettingsView({ activeRepoPath }: Props) {
     <div className="flex h-full flex-col gap-3 p-6">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-          <Button variant="ghost" size="sm" className={segBtn(scope === "user")} title="所有项目的默认配置" onClick={() => setScope("user")}>
-            全局
+          <Button variant="ghost" size="sm" className={segBtn(scope === "user")} title={t("settingsX.view.globalTitle")} onClick={() => setScope("user")}>
+            {t("settingsX.view.global")}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             className={segBtn(scope === "project") + (!activeRepoPath ? " opacity-50" : "")}
             disabled={!activeRepoPath}
-            title={activeRepoPath ? "仅当前项目，覆盖全局默认" : "先在左侧选一个项目"}
+            title={activeRepoPath ? t("settingsX.view.currentProjectTitle") : t("settingsX.view.pickProjectFirst")}
             onClick={() => setScope("project")}
           >
-            当前项目
+            {t("settingsX.view.currentProject")}
           </Button>
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
@@ -88,7 +99,7 @@ export function SettingsView({ activeRepoPath }: Props) {
         </div>
         <span className="text-xs text-muted-foreground">
           {scope === "project" && !activeRepoPath
-            ? "(选一个项目)"
+            ? t("settingsX.view.pickAProject")
             : scope === "user"
               ? "~/.code-shell/settings.json"
               : `${activeRepoPath}/.code-shell/settings.json`}
@@ -104,10 +115,10 @@ export function SettingsView({ activeRepoPath }: Props) {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={saving}>
-                Reload
+                {t("settingsX.view.reload")}
               </Button>
               <Button size="sm" disabled={!dirty || saving} onClick={() => void save()}>
-                {saving ? "保存中…" : "Save"}
+                {saving ? t("settingsX.view.saving") : t("settingsX.view.save")}
               </Button>
             </div>
             {error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
@@ -122,14 +133,4 @@ export function SettingsView({ activeRepoPath }: Props) {
       </div>
     </div>
   );
-}
-
-function tabLabel(t: Tab): string {
-  switch (t) {
-    case "model": return "模型";
-    case "permission": return "权限";
-    case "mcp": return "MCP";
-    case "update": return "更新";
-    case "json": return "JSON";
-  }
 }

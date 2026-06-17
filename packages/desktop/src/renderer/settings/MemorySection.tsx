@@ -32,6 +32,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { writeSettings } from "../settingsBus";
+import { useT } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/dict";
 
 interface Props {
   scope: "user" | "project";
@@ -39,9 +41,9 @@ interface Props {
   repos: Repo[];
 }
 
-const MEMORY_SCOPES: Array<{ id: MemoryScope; label: string; help: string }> = [
-  { id: "user", label: "User", help: "用户手动维护的记忆条目" },
-  { id: "dream", label: "Dream", help: "自动整理工作区(可清理)" },
+const MEMORY_SCOPES: Array<{ id: MemoryScope; label: string; helpKey: TranslationKey }> = [
+  { id: "user", label: "User", helpKey: "settingsX.memory.scopeUserHelp" },
+  { id: "dream", label: "Dream", helpKey: "settingsX.memory.scopeDreamHelp" },
 ];
 
 const MEMORY_TYPES: Array<{ id: MemoryType; label: string }> = [
@@ -81,22 +83,23 @@ interface Target {
  */
 export function MemorySection({ repos }: Props) {
   const [target, setTarget] = useState<Target | null>(null);
+  const { t } = useT();
 
   if (!target) {
     return (
       <section className="mb-6 flex flex-col gap-3">
-        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">记忆</h3>
-        <p className="m-0 text-xs text-muted-foreground">
-          选择要查看的记忆:全局记忆所有项目共享,或选择某个项目查看它专属的记忆。
-        </p>
+        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+          {t("settingsX.memory.title")}
+        </h3>
+        <p className="m-0 text-xs text-muted-foreground">{t("settingsX.memory.pickDesc")}</p>
         <ProjectPicker
           repos={repos}
           includeGlobal
-          globalLabel="全局记忆"
-          globalHint="所有项目共享 (~/.code-shell/memory)"
+          globalLabel={t("settingsX.memory.globalLabel")}
+          globalHint={t("settingsX.memory.globalHint")}
           onSelect={(path) => {
             if (path === null) {
-              setTarget({ level: "user", title: "全局记忆" });
+              setTarget({ level: "user", title: t("settingsX.memory.globalLabel") });
             } else {
               const repo = repos.find((r) => r.path === path);
               setTarget({
@@ -121,11 +124,13 @@ export function MemorySection({ repos }: Props) {
           onClick={() => setTarget(null)}
         >
           <ArrowLeft size={14} />
-          <span>返回</span>
+          <span>{t("settingsX.memory.back")}</span>
         </Button>
         <span className="truncate text-sm font-medium text-foreground">{target.title}</span>
         <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          {target.level === "project" ? "项目" : "全局"}
+          {target.level === "project"
+            ? t("settingsX.memory.levelProject")
+            : t("settingsX.memory.levelGlobal")}
         </span>
       </div>
       <ProjectMemoryView level={target.level} cwd={target.cwd} />
@@ -136,6 +141,7 @@ export function MemorySection({ repos }: Props) {
 /** Entry list + editor + Dream button for one memory store (level + cwd). */
 function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string }) {
   const confirm = useConfirm();
+  const { t } = useT();
   const [scope, setScope] = useState<MemoryScope>("user");
   // Seed from the last-loaded snapshot (settingsCache) so a remount (tab
   // switch) renders the list synchronously instead of an empty-state flash.
@@ -216,7 +222,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   const saveDraft = async (): Promise<void> => {
     if (!draft) return;
     if (!draft.name.trim()) {
-      setError("name 不能为空");
+      setError(t("settingsX.memory.nameRequired"));
       return;
     }
     setError(null);
@@ -232,10 +238,10 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
 
   const removeEntry = async (name: string): Promise<void> => {
     const ok = await confirm({
-      title: "删除记忆",
-      message: `删除记忆「${name}」?`,
-      detail: "会移到 memory-trash/,可手动恢复。",
-      confirmLabel: "删除",
+      title: t("settingsX.memory.confirmDeleteTitle"),
+      message: t("settingsX.memory.confirmDeleteMsg", { name }),
+      detail: t("settingsX.memory.confirmDeleteDetail"),
+      confirmLabel: t("settingsX.memory.delete"),
       destructive: true,
     });
     if (!ok) return;
@@ -257,10 +263,10 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
       await refresh();
       setNotice(
         result.summary?.trim()
-          ? `整理完成:${result.summary.trim()}`
+          ? t("settingsX.memory.dreamDoneSummary", { summary: result.summary.trim() })
           : result.ran
-            ? "整理完成。"
-            : "未执行(缺少记忆工具)。",
+            ? t("settingsX.memory.dreamDone")
+            : t("settingsX.memory.dreamSkipped"),
       );
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
@@ -314,10 +320,10 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
   const cleanupAuto = async (): Promise<void> => {
     if (autoEntries.length === 0) return;
     const ok = await confirm({
-      title: "清理自动提取的记忆",
-      message: `删除 ${autoEntries.length} 条自动提取且未固定的记忆?`,
-      detail: "手动创建与已固定的不受影响;删除移到 memory-trash/,可手动恢复。",
-      confirmLabel: "清理",
+      title: t("settingsX.memory.confirmCleanupTitle"),
+      message: t("settingsX.memory.confirmCleanupMsg", { count: autoEntries.length }),
+      detail: t("settingsX.memory.confirmCleanupDetail"),
+      confirmLabel: t("settingsX.memory.cleanup"),
       destructive: true,
     });
     if (!ok) return;
@@ -329,7 +335,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
       }
       setSelected(null);
       await refresh();
-      setNotice(`已清理 ${autoEntries.length} 条自动提取记忆。`);
+      setNotice(t("settingsX.memory.cleanupDone", { count: autoEntries.length }));
     } catch (e: unknown) {
       setError(String(e instanceof Error ? e.message : e));
       await refresh();
@@ -373,7 +379,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
               variant={scope === s.id ? "secondary" : "ghost"}
               size="sm"
               className="h-7 px-2 text-xs"
-              title={s.help}
+              title={t(s.helpKey)}
               onClick={() => setScope(s.id)}
             >
               {s.label}
@@ -384,10 +390,10 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
           {level === "user" && scope === "user" && (
             <label
               className="flex items-center gap-1.5 text-xs text-muted-foreground"
-              title="对话结束后用 LLM 自动提取 ≤2 条记忆存入 User scope;关掉后会话总结与 Dream 不受影响(全局生效)"
+              title={t("settingsX.memory.autoExtractTitle")}
             >
               <Switch checked={autoExtract} onCheckedChange={(v) => void toggleAutoExtract(v)} />
-              <span>自动提取</span>
+              <span>{t("settingsX.memory.autoExtract")}</span>
             </label>
           )}
           {autoEntries.length > 0 && (
@@ -398,10 +404,10 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
               className="h-8 gap-1 px-2 text-xs"
               onClick={() => void cleanupAuto()}
               disabled={loading || dreaming}
-              title="批量删除本 scope 下所有「自动提取且未固定」的记忆(移到 memory-trash/ 可恢复)"
+              title={t("settingsX.memory.cleanupTitle")}
             >
               <Eraser size={12} />
-              <span>清理自动提取({autoEntries.length})</span>
+              <span>{t("settingsX.memory.cleanupAuto", { count: autoEntries.length })}</span>
             </Button>
           )}
           {scope === "dream" && (
@@ -412,10 +418,10 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
               className="h-8 gap-1 px-2 text-xs"
               onClick={() => void runDream()}
               disabled={dreaming || loading}
-              title="跑一次 LLM,对 dream 记忆做去重 / 合并 / 清理"
+              title={t("settingsX.memory.dreamTitle")}
             >
               {dreaming ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-              <span>{dreaming ? "整理中…" : "整理 Dream"}</span>
+              <span>{dreaming ? t("settingsX.memory.dreaming") : t("settingsX.memory.dreamBtn")}</span>
             </Button>
           )}
           <Button
@@ -425,7 +431,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
             className="h-8 gap-1 px-2 text-xs"
             onClick={() => void refresh()}
             disabled={loading || dreaming}
-            title="刷新"
+            title={t("settingsX.memory.refresh")}
           >
             <RefreshCw size={12} />
           </Button>
@@ -438,7 +444,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
             disabled={dreaming}
           >
             <Plus size={12} />
-            <span>新建</span>
+            <span>{t("settingsX.memory.newBtn")}</span>
           </Button>
         </div>
       </div>
@@ -449,7 +455,9 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
       <div className="grid min-h-[420px] grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,0.42fr)_1fr]">
         <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-md border p-2" role="list">
           {sortedEntries.length === 0 && !loading && (
-            <li className="p-4 text-center text-sm text-muted-foreground">该 scope 下还没有记忆。</li>
+            <li className="p-4 text-center text-sm text-muted-foreground">
+              {t("settingsX.memory.emptyScope")}
+            </li>
           )}
           {sortedEntries.map((e) => (
             <li
@@ -465,14 +473,20 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                 className="h-auto min-w-0 flex-1 justify-start gap-2 px-0 py-0 text-left hover:bg-transparent"
                 onClick={() => void openEntry(e.name)}
               >
-                {e.pinned && <Pin size={11} className="shrink-0 text-primary" aria-label="已固定" />}
+                {e.pinned && (
+                  <Pin
+                    size={11}
+                    className="shrink-0 text-primary"
+                    aria-label={t("settingsX.memory.pinned")}
+                  />
+                )}
                 <span className={memoryTypeClassName(e.type)}>{e.type}</span>
                 {e.origin === "auto" && (
                   <span
                     className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground"
-                    title="对话结束时自动提取"
+                    title={t("settingsX.memory.autoBadgeTitle")}
                   >
-                    自动
+                    {t("settingsX.memory.autoBadge")}
                   </span>
                 )}
                 <span className="min-w-0 truncate text-sm font-medium text-foreground">{e.name}</span>
@@ -484,8 +498,8 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={() => void togglePin(e)}
-                aria-label={e.pinned ? "取消固定" : "固定"}
-                title={e.pinned ? "取消固定" : "固定(不被 maxAge 过滤、注入时优先)"}
+                aria-label={e.pinned ? t("settingsX.memory.unpin") : t("settingsX.memory.pin")}
+                title={e.pinned ? t("settingsX.memory.unpin") : t("settingsX.memory.pinTitle")}
               >
                 {e.pinned ? <PinOff size={12} /> : <Pin size={12} />}
               </Button>
@@ -496,7 +510,7 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
                 className="h-7 w-7 text-muted-foreground hover:text-status-err"
                 onClick={() => void removeEntry(e.name)}
                 aria-label="delete"
-                title="删除"
+                title={t("settingsX.memory.deleteTitle")}
               >
                 <Trash2 size={12} />
               </Button>
@@ -515,7 +529,9 @@ function ProjectMemoryView({ level, cwd }: { level: MemoryLevel; cwd?: string })
           ) : selected ? (
             <ViewEntry entry={selected} onEdit={startEdit} onClose={() => setSelected(null)} />
           ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">从左侧选择一条记忆查看,或点新建。</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              {t("settingsX.memory.emptyDetail")}
+            </div>
           )}
         </div>
       </div>
@@ -532,23 +548,26 @@ function ViewEntry({
   onEdit: () => void;
   onClose: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="flex flex-col">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <strong>{entry.name}</strong>
         {entry.pinned && (
           <span className="flex items-center gap-0.5 rounded bg-primary/10 px-1 text-[10px] text-primary">
-            <Pin size={10} /> 固定
+            <Pin size={10} /> {t("settingsX.memory.pinned")}
           </span>
         )}
         {entry.origin === "auto" && (
-          <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">自动</span>
+          <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
+            {t("settingsX.memory.autoBadge")}
+          </span>
         )}
         <span className={memoryTypeClassName(entry.type)}>{entry.type}</span>
         <div className="ml-auto flex items-center gap-1">
           <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs" onClick={onEdit}>
             <Pencil size={12} />
-            <span>编辑</span>
+            <span>{t("settingsX.memory.edit")}</span>
           </Button>
           <Button
             type="button"
@@ -579,6 +598,7 @@ function DraftEditor({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       <label className="flex flex-col gap-1.5 text-sm">
@@ -587,7 +607,7 @@ function DraftEditor({
           type="text"
           value={draft.name}
           onChange={(e) => onChange({ ...draft, name: e.target.value })}
-          placeholder="kebab-case 唯一标识"
+          placeholder={t("settingsX.memory.nameHint")}
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
@@ -596,7 +616,7 @@ function DraftEditor({
           type="text"
           value={draft.description}
           onChange={(e) => onChange({ ...draft, description: e.target.value })}
-          placeholder="一句话摘要,会出现在索引里"
+          placeholder={t("settingsX.memory.descHint")}
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm">
@@ -604,7 +624,7 @@ function DraftEditor({
         <SimpleSelect<MemoryType>
           value={draft.type}
           onChange={(type) => onChange({ ...draft, type })}
-          options={MEMORY_TYPES.map((t) => ({ value: t.id, label: t.label }))}
+          options={MEMORY_TYPES.map((mt) => ({ value: mt.id, label: mt.label }))}
         />
       </label>
       <label className="flex flex-col gap-1.5 text-sm md:col-span-2">
@@ -617,11 +637,11 @@ function DraftEditor({
       </label>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="default" onClick={onCancel}>
-          取消
+          {t("settingsX.memory.cancel")}
         </Button>
         <Button type="button" variant="solid" onClick={onSave}>
           <Save size={12} />
-          <span>保存</span>
+          <span>{t("settingsX.memory.save")}</span>
         </Button>
       </div>
     </div>

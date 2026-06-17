@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 
 const STATUS_TONES: Record<string, string> = {
   queued: "bg-status-idle",
@@ -21,6 +22,7 @@ const STATUS_TONES: Record<string, string> = {
 };
 
 export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}) {
+  const { t } = useT();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [selected, setSelected] = useState<string | null>(initialRunId ?? null);
   const [detail, setDetail] = useState<RunDetail | null>(null);
@@ -59,7 +61,7 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
   }, [selected]);
 
   if (error) return <div className="p-6 text-sm text-status-err">{error}</div>;
-  if (!runs) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
+  if (!runs) return <div className="p-6 text-sm text-muted-foreground">{t("auto.runs.loading")}</div>;
 
   const filtered = filter === "all" ? runs : runs.filter((r) => r.status === filter);
 
@@ -69,20 +71,20 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="h-8 w-[180px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部</SelectItem>
+            <SelectItem value="all">{t("auto.runs.filterAll")}</SelectItem>
             {Object.keys(STATUS_TONES).map((s) => (
               <SelectItem key={s} value={s}>{s}</SelectItem>
             ))}
           </SelectContent>
         </Select>
         <span className="flex-1" />
-        <Button size="sm" variant="outline" onClick={() => void refresh()}>刷新</Button>
+        <Button size="sm" variant="outline" onClick={() => void refresh()}>{t("auto.runs.refresh")}</Button>
       </div>
 
       <div className="flex min-h-0 flex-1 gap-6">
         <ul className="w-80 shrink-0 space-y-1 overflow-y-auto">
           {filtered.length === 0 ? (
-            <li className="p-3 text-sm text-muted-foreground">没有匹配的 run</li>
+            <li className="p-3 text-sm text-muted-foreground">{t("auto.runs.noMatch")}</li>
           ) : (
             filtered.map((r) => (
               <li
@@ -97,15 +99,15 @@ export function RunsView({ initialRunId }: { initialRunId?: string | null } = {}
                   className={"h-2 w-2 shrink-0 rounded-full " + (STATUS_TONES[r.status] ?? "bg-status-idle")}
                   title={r.status}
                 />
-                <span className="flex-1 truncate">{r.objective || "(no objective)"}</span>
+                <span className="flex-1 truncate">{r.objective || t("auto.runs.noObjective")}</span>
                 <span className="text-xs text-muted-foreground">{new Date(r.updatedAt).toLocaleString()}</span>
               </li>
             ))
           )}
         </ul>
         <div className="min-w-0 flex-1 overflow-y-auto">
-          {detail ? <RunDetailView detail={detail} /> : (
-            <div className="p-6 text-sm text-muted-foreground">选一个 run 查看详情</div>
+          {detail ? <RunDetailView detail={detail} t={t} /> : (
+            <div className="p-6 text-sm text-muted-foreground">{t("auto.runs.selectRun")}</div>
           )}
         </div>
       </div>
@@ -124,7 +126,7 @@ function Section({ title, count, children }: { title: string; count?: number; ch
   );
 }
 
-function RunDetailView({ detail }: { detail: RunDetail }) {
+function RunDetailView({ detail, t }: { detail: RunDetail; t: TFunction }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -140,11 +142,11 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
       </div>
       {detail.error && <div className="rounded-md bg-status-err/10 p-2 text-sm text-status-err">{detail.error}</div>}
       {detail.summary && (
-        <Section title="摘要"><div className="text-sm">{detail.summary}</div></Section>
+        <Section title={t("auto.runs.summary")}><div className="text-sm">{detail.summary}</div></Section>
       )}
-      <Section title="检查点" count={detail.checkpoints.length}>
+      <Section title={t("auto.runs.checkpoints")} count={detail.checkpoints.length}>
         {detail.checkpoints.length === 0 ? (
-          <div className="text-sm text-muted-foreground">暂无</div>
+          <div className="text-sm text-muted-foreground">{t("auto.runs.none")}</div>
         ) : (
           <ul className="space-y-2">
             {detail.checkpoints.map((c) => (
@@ -154,24 +156,24 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
                   <span className="text-xs text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
                 </div>
                 <div>{c.summary}</div>
-                {c.nextAction && <div className="mt-1 text-xs text-muted-foreground">下一步:{c.nextAction}</div>}
+                {c.nextAction && <div className="mt-1 text-xs text-muted-foreground">{t("auto.runs.nextStep", { action: c.nextAction })}</div>}
               </li>
             ))}
           </ul>
         )}
       </Section>
-      <Section title="产物" count={detail.artifacts.length}>
+      <Section title={t("auto.runs.artifacts")} count={detail.artifacts.length}>
         {detail.artifacts.length === 0 ? (
-          <div className="text-sm text-muted-foreground">暂无</div>
+          <div className="text-sm text-muted-foreground">{t("auto.runs.none")}</div>
         ) : (
           <ul className="space-y-1 text-sm">
             {detail.artifacts.map((a) => (<li key={a}><code className="font-mono">{a}</code></li>))}
           </ul>
         )}
       </Section>
-      <Section title="事件" count={detail.events.length}>
+      <Section title={t("auto.runs.events")} count={detail.events.length}>
         {detail.events.length === 0 ? (
-          <div className="text-sm text-muted-foreground">暂无</div>
+          <div className="text-sm text-muted-foreground">{t("auto.runs.none")}</div>
         ) : (
           <ul className="space-y-1">
             {detail.events.slice().reverse().map((e) => (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "../ui/DialogProvider";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   cwd: string;
@@ -14,6 +15,7 @@ type Marketplace = Awaited<
 >;
 
 export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
+  const { t } = useT();
   const [market, setMarket] = useState<Marketplace | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
     try {
       const res = await window.codeshell.installPlugin(pluginName, marketName);
       if (!res.ok) {
-        void alert({ title: "安装失败", message: res.error ?? "未知错误" });
+        void alert({ title: t("ext.market.installFailedTitle"), message: res.error ?? t("ext.market.unknownError") });
         return;
       }
       // Version unknown until the next listPlugins round-trip — empty string
@@ -73,7 +75,7 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
       setInstalled((prev) => new Map(prev).set(pluginName, ""));
       onInstalled();
     } catch (e) {
-      void alert({ title: "安装失败", message: String((e as Error)?.message ?? e) });
+      void alert({ title: t("ext.market.installFailedTitle"), message: String((e as Error)?.message ?? e) });
     } finally {
       setBusy((prev) => {
         const next = new Set(prev);
@@ -86,14 +88,14 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
   if (error)
     return (
       <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-        加载失败：{error} <Button size="sm" variant="outline" onClick={retry}>重试</Button>
+        {t("ext.common.loadFailed", { error })} <Button size="sm" variant="outline" onClick={retry}>{t("ext.common.retry")}</Button>
       </div>
     );
-  if (!loaded) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  if (!loaded) return <div className="p-4 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
   if (market === null)
     return (
       <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-        市场清单读取失败 <Button size="sm" variant="outline" onClick={retry}>重试</Button>
+        {t("ext.market.manifestLoadFailed")} <Button size="sm" variant="outline" onClick={retry}>{t("ext.common.retry")}</Button>
       </div>
     );
 
@@ -101,12 +103,12 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
     <>
       <div className="mb-3 flex items-center gap-2">
         <Button variant="ghost" size="sm" className="h-7 px-2 text-sm text-muted-foreground hover:text-foreground" onClick={onBack}>
-          ‹ 返回
+          ‹ {t("ext.common.back")}
         </Button>
         <span className="font-semibold">{market.name}</span>
       </div>
       {market.plugins.length === 0 ? (
-        <div className="p-4 text-sm text-muted-foreground">该市场没有可安装的插件</div>
+        <div className="p-4 text-sm text-muted-foreground">{t("ext.market.noPlugins")}</div>
       ) : (
         <ul className="space-y-1">
           {market.plugins.map((p) => {
@@ -130,9 +132,9 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
                 {isInstalled && installedVersion && (
                   <span
                     className="text-xs text-muted-foreground"
-                    title="已安装的版本（git 提交或 local）"
+                    title={t("ext.market.installedVersionTip")}
                   >
-                    已装 {installedVersion}
+                    {t("ext.market.installedVersion", { version: installedVersion })}
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground">
@@ -143,7 +145,7 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
                   disabled={isBusy || isInstalled}
                   onClick={() => void install(p.name)}
                 >
-                  {isInstalled ? "已安装" : isBusy ? "安装中…" : "安装"}
+                  {isInstalled ? t("ext.market.installed") : isBusy ? t("ext.market.installing") : t("ext.market.install")}
                 </Button>
               </li>
             );

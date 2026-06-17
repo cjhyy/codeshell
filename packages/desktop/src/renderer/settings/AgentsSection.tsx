@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   repos: Repo[];
@@ -56,22 +57,21 @@ type Target =
  */
 export function AgentsSection({ repos }: Props) {
   const [target, setTarget] = useState<Target | null>(null);
+  const { t } = useT();
 
   if (!target) {
     return (
       <section className="flex flex-col gap-3">
-        <h3 className="text-base font-semibold">子代理</h3>
-        <p className="text-sm text-muted-foreground">
-          选择要管理的子代理:全局子代理所有项目共享;或选择某个项目,在项目级覆盖某个子代理的启用 / 禁用。
-        </p>
+        <h3 className="text-base font-semibold">{t("settingsX.agents.title")}</h3>
+        <p className="text-sm text-muted-foreground">{t("settingsX.agents.pickDesc")}</p>
         <ProjectPicker
           repos={repos}
           includeGlobal
-          globalLabel="全局子代理"
-          globalHint="所有项目共享 (~/.code-shell/agents)"
+          globalLabel={t("settingsX.agents.globalLabel")}
+          globalHint={t("settingsX.agents.globalHint")}
           onSelect={(path) => {
             if (path === null) {
-              setTarget({ level: "user", title: "全局子代理" });
+              setTarget({ level: "user", title: t("settingsX.agents.globalLabel") });
             } else {
               const repo = repos.find((r) => r.path === path);
               setTarget({ level: "project", cwd: path, title: repo ? repoLabel(repo) : path });
@@ -92,7 +92,7 @@ export function AgentsSection({ repos }: Props) {
           onClick={() => setTarget(null)}
         >
           <ArrowLeft size={14} />
-          <span>返回项目列表</span>
+          <span>{t("settingsX.agents.backToList")}</span>
         </Button>
         <span className="truncate text-sm font-medium text-foreground">{target.title}</span>
       </div>
@@ -118,6 +118,7 @@ function AgentsEditor({ target }: { target: Target }) {
   // agents are collapsed by default so they don't clutter the list.
   const [showDisabled, setShowDisabled] = useState<Record<string, boolean>>({});
   const confirm = useConfirm();
+  const { t } = useT();
 
   const load = useCallback(async () => {
     setError(null);
@@ -200,9 +201,9 @@ function AgentsEditor({ target }: { target: Target }) {
   // already filtered out upstream by listAgents (disabledPlugins).
   const groups = useMemo(() => {
     const GROUP_ORDER: Array<{ id: AgentSummary["source"]; label: string }> = [
-      { id: "project", label: "项目内置" },
-      { id: "user", label: "用户自定义" },
-      { id: "plugin", label: "插件" },
+      { id: "project", label: t("settingsX.agents.groupProject") },
+      { id: "user", label: t("settingsX.agents.groupUser") },
+      { id: "plugin", label: t("settingsX.agents.groupPlugin") },
     ];
     return GROUP_ORDER.map(({ id, label }) => {
       const members = agents.filter((a) => a.source === id);
@@ -258,10 +259,10 @@ function AgentsEditor({ target }: { target: Target }) {
 
   const remove = async (a: AgentSummary) => {
     const ok = await confirm({
-      title: `删除子代理 ${a.name}？`,
+      title: t("settingsX.agents.confirmDeleteTitle", { name: a.name }),
       message: a.override
-        ? "这会删除你的覆盖文件，恢复为内置定义。"
-        : "这会删除该自定义子代理。",
+        ? t("settingsX.agents.confirmDeleteOverride")
+        : t("settingsX.agents.confirmDeleteCustom"),
     });
     if (!ok) return;
     try {
@@ -280,9 +281,10 @@ function AgentsEditor({ target }: { target: Target }) {
   const isNew = draft !== null && current === null;
 
   const tagFor = (a: AgentSummary): { label: string; variant: "secondary" | "default" | "outline" } => {
-    if (a.source === "project" && !a.override) return { label: "内置", variant: "outline" };
-    if (a.override) return { label: "已覆盖", variant: "default" };
-    return { label: "自定义", variant: "secondary" };
+    if (a.source === "project" && !a.override)
+      return { label: t("settingsX.agents.tagBuiltin"), variant: "outline" };
+    if (a.override) return { label: t("settingsX.agents.tagOverridden"), variant: "default" };
+    return { label: t("settingsX.agents.tagCustom"), variant: "secondary" };
   };
 
   const renderRow = (a: AgentSummary) => {
@@ -306,16 +308,18 @@ function AgentsEditor({ target }: { target: Target }) {
             <SelectTrigger
               className="h-7 w-[104px] shrink-0"
               onClick={(e) => e.stopPropagation()}
-              aria-label={`${a.name} 项目级启停`}
+              aria-label={t("settingsX.agents.projectLevelToggleAria", { name: a.name })}
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent onClick={(e) => e.stopPropagation()}>
               <SelectItem value="inherit">
-                继承{isGloballyDisabled(a.name) ? "（禁用）" : "（启用）"}
+                {isGloballyDisabled(a.name)
+                  ? t("settingsX.agents.inheritDisabled")
+                  : t("settingsX.agents.inheritEnabled")}
               </SelectItem>
-              <SelectItem value="on">强制启用</SelectItem>
-              <SelectItem value="off">强制禁用</SelectItem>
+              <SelectItem value="on">{t("settingsX.agents.forceOn")}</SelectItem>
+              <SelectItem value="off">{t("settingsX.agents.forceOff")}</SelectItem>
             </SelectContent>
           </Select>
         ) : (
@@ -323,7 +327,7 @@ function AgentsEditor({ target }: { target: Target }) {
             checked={enabled}
             onClick={(e) => e.stopPropagation()}
             onCheckedChange={() => void toggleGlobal(a.name)}
-            title={enabled ? "已启用" : "已禁用（LLM 不可见）"}
+            title={enabled ? t("settingsX.agents.enabled") : t("settingsX.agents.disabledHidden")}
           />
         )}
         <div className="min-w-0 flex-1">
@@ -341,12 +345,19 @@ function AgentsEditor({ target }: { target: Target }) {
     <div className="flex h-full gap-4">
       {/* Left: agent list */}
       <div className="flex w-72 shrink-0 flex-col gap-2">
-        <Button size="sm" className="self-start gap-1.5" onClick={startNew} title="新增子代理">
-          <Plus size={14} /> <span>新增子代理</span>
+        <Button
+          size="sm"
+          className="self-start gap-1.5"
+          onClick={startNew}
+          title={t("settingsX.agents.newAgent")}
+        >
+          <Plus size={14} /> <span>{t("settingsX.agents.newAgent")}</span>
         </Button>
         <div className="space-y-3 overflow-y-auto">
           {groups.length === 0 && (
-            <div className="px-2 py-4 text-sm text-muted-foreground">没有子代理。</div>
+            <div className="px-2 py-4 text-sm text-muted-foreground">
+              {t("settingsX.agents.noAgents")}
+            </div>
           )}
           {groups.map((g) => {
             const open = showDisabled[g.id] ?? false;
@@ -366,7 +377,7 @@ function AgentsEditor({ target }: { target: Target }) {
                       }
                     >
                       {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                      <span>已禁用 ({g.disabled.length})</span>
+                      <span>{t("settingsX.agents.disabledCount", { count: g.disabled.length })}</span>
                     </button>
                     {open && <ul className="space-y-1">{g.disabled.map(renderRow)}</ul>}
                   </>
@@ -382,28 +393,32 @@ function AgentsEditor({ target }: { target: Target }) {
         {error && <div className="mb-2 rounded-md bg-status-err/10 p-2 text-sm text-status-err">{error}</div>}
         {!draft ? (
           <div className="p-6">
-            <div className="font-medium">没有选中子代理</div>
+            <div className="font-medium">{t("settingsX.agents.noneSelected")}</div>
             <div className="mt-1 text-sm text-muted-foreground">
-              选择左侧一个子代理查看与编辑，或点「新增子代理」创建一个新的。
+              {t("settingsX.agents.noneSelectedHint")}
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             <header className="flex items-center gap-2">
-              <h3 className="text-base font-semibold">{isNew ? "新增子代理" : draft.name || "子代理"}</h3>
+              <h3 className="text-base font-semibold">
+                {isNew
+                  ? t("settingsX.agents.newAgent")
+                  : draft.name || t("settingsX.agents.editorAgent")}
+              </h3>
               {!isNew && current && (
                 <Badge variant={tagFor(current).variant}>{tagFor(current).label}</Badge>
               )}
             </header>
             {nameLocked && (
               <p className="text-xs text-muted-foreground">
-                内置子代理保留原名；保存时会在用户级生成同名覆盖文件，不会修改项目仓库里的原文件。
+                {t("settingsX.agents.nameLockedHint")}
               </p>
             )}
 
             <div className="grid grid-cols-2 gap-4">
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-muted-foreground">名称</span>
+                <span className="text-muted-foreground">{t("settingsX.agents.fieldName")}</span>
                 <Input
                   type="text"
                   value={draft.name}
@@ -413,7 +428,9 @@ function AgentsEditor({ target }: { target: Target }) {
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-muted-foreground">描述（LLM 选择该角色时看到的一句话）</span>
+                <span className="text-muted-foreground">
+                  {t("settingsX.agents.fieldDescription")}
+                </span>
                 <Input
                   type="text"
                   value={draft.description}
@@ -422,14 +439,18 @@ function AgentsEditor({ target }: { target: Target }) {
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-muted-foreground">模型</span>
+                <span className="text-muted-foreground">{t("settingsX.agents.fieldModel")}</span>
                 <Select
                   value={draft.model ?? INHERIT}
                   onValueChange={(v) => setDraft({ ...draft, model: v === INHERIT ? undefined : v })}
                 >
-                  <SelectTrigger aria-label="子代理使用的模型"><SelectValue /></SelectTrigger>
+                  <SelectTrigger aria-label={t("settingsX.agents.modelAria")}>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={INHERIT}>跟随父模型（继承）</SelectItem>
+                    <SelectItem value={INHERIT}>
+                      {t("settingsX.agents.inheritParentModel")}
+                    </SelectItem>
                     {models.map((m) => (
                       <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>
                     ))}
@@ -437,12 +458,12 @@ function AgentsEditor({ target }: { target: Target }) {
                 </Select>
               </label>
               <label className="flex flex-col gap-1.5 text-sm">
-                <span className="text-muted-foreground">最大轮数</span>
+                <span className="text-muted-foreground">{t("settingsX.agents.fieldMaxTurns")}</span>
                 <Input
                   type="number"
                   min={1}
                   value={draft.maxTurns ?? ""}
-                  placeholder="留空 = 调用方决定"
+                  placeholder={t("settingsX.agents.maxTurnsPlaceholder")}
                   onChange={(e) =>
                     setDraft({ ...draft, maxTurns: e.target.value === "" ? undefined : Number(e.target.value) })
                   }
@@ -452,26 +473,27 @@ function AgentsEditor({ target }: { target: Target }) {
 
             <div className="flex flex-col gap-1.5 text-sm">
               <span className="text-muted-foreground">
-                工具白名单 <em className="not-italic text-xs">不勾任何 = 继承父级全集</em>
+                {t("settingsX.agents.toolWhitelist")}{" "}
+                <em className="not-italic text-xs">{t("settingsX.agents.toolWhitelistHint")}</em>
               </span>
               <div className="grid grid-cols-3 gap-2">
-                {TOOL_CHOICES.map((t) => {
-                  const checked = (draft.tools ?? []).includes(t);
+                {TOOL_CHOICES.map((tool) => {
+                  const checked = (draft.tools ?? []).includes(tool);
                   return (
-                    <label key={t} className="flex items-center gap-2 text-sm">
+                    <label key={tool} className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
                         className="accent-primary"
                         checked={checked}
                         onChange={() => {
                           const cur = new Set(draft.tools ?? []);
-                          if (checked) cur.delete(t);
-                          else cur.add(t);
+                          if (checked) cur.delete(tool);
+                          else cur.add(tool);
                           const arr = [...cur];
                           setDraft({ ...draft, tools: arr.length ? arr : undefined });
                         }}
                       />
-                      <span>{t}</span>
+                      <span>{tool}</span>
                     </label>
                   );
                 })}
@@ -479,7 +501,7 @@ function AgentsEditor({ target }: { target: Target }) {
             </div>
 
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className="text-muted-foreground">系统提示词（角色的 system prompt）</span>
+              <span className="text-muted-foreground">{t("settingsX.agents.systemPrompt")}</span>
               <Textarea
                 value={draft.systemPrompt}
                 rows={12}
@@ -492,11 +514,11 @@ function AgentsEditor({ target }: { target: Target }) {
             <div className="flex items-center gap-2">
               {deletable && (
                 <Button variant="ghost" className="gap-1.5 text-status-err" onClick={() => current && void remove(current)}>
-                  <Trash2 size={13} /> <span>删除</span>
+                  <Trash2 size={13} /> <span>{t("settingsX.agents.delete")}</span>
                 </Button>
               )}
               <span className="flex-1" />
-              <Button onClick={() => void save()}>保存</Button>
+              <Button onClick={() => void save()}>{t("settingsX.agents.save")}</Button>
             </div>
           </div>
         )}

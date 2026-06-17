@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { REVIEW_SCOPES, isRangeScope, type ReviewScope } from "../diff/reviewScope";
 import type { GitCommit } from "../../preload/types";
+import { useT } from "../i18n/I18nProvider";
 
 const ALL_FILES = "__all__";
 
@@ -44,6 +45,8 @@ interface Props {
  * slice — see TODO 2.3a.)
  */
 export function ReviewPanel({ cwd, files, turnDiff }: Props) {
+  const { t } = useT();
+  const scopeLabel = (id: ReviewScope): string => t(`panels.review.scopes.${id}`);
   const hasTurnFiles = !!files && files.length > 0;
   const [scope, setScope] = useState<ReviewScope>(hasTurnFiles ? "turn" : "all");
   // Turn-scope file filter for the dropdown (#5 ②). "" / ALL_FILES = show all.
@@ -113,13 +116,13 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
     scope === "committed"
       ? selectedCommit
         ? selectedCommit.subject
-        : "最近提交"
-      : (REVIEW_SCOPES.find((s) => s.id === scope)?.label ?? "审查范围");
+        : t("panels.review.recentCommit")
+      : (REVIEW_SCOPES.find((s) => s.id === scope) ? scopeLabel(scope) : t("panels.review.scopeFallback"));
 
   if (!cwd) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
-        请先选择一个项目
+        {t("panels.common.selectProjectFirst")}
       </div>
     );
   }
@@ -137,7 +140,7 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label="选择审查范围"
+              aria-label={t("panels.review.selectScope")}
               className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 text-xs hover:bg-accent"
             >
               <span className="max-w-[180px] truncate">{triggerLabel}</span>
@@ -154,7 +157,7 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
                     setSelectedCommit(null);
                   }}
                 >
-                  <span className="flex-1">{s.label}</span>
+                  <span className="flex-1">{scopeLabel(s.id)}</span>
                   {scope === s.id && <Check className="h-3.5 w-3.5" />}
                 </DropdownMenuItem>
               ),
@@ -162,14 +165,14 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
             {/* 提交 ›: hover to list recent commits (Codex style). */}
             <DropdownMenuSub onOpenChange={(open) => open && loadCommits()}>
               <DropdownMenuSubTrigger>
-                <span className="flex-1">提交</span>
+                <span className="flex-1">{t("panels.review.commits")}</span>
                 {scope === "committed" && <Check className="mr-1 h-3.5 w-3.5" />}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="max-h-[60vh] max-w-[360px] overflow-auto">
                 {commits === null ? (
-                  <DropdownMenuItem disabled>加载中…</DropdownMenuItem>
+                  <DropdownMenuItem disabled>{t("panels.common.loading")}</DropdownMenuItem>
                 ) : commits.length === 0 ? (
-                  <DropdownMenuItem disabled>没有提交</DropdownMenuItem>
+                  <DropdownMenuItem disabled>{t("panels.review.noCommits")}</DropdownMenuItem>
                 ) : (
                   commits.map((c) => (
                     <DropdownMenuItem
@@ -200,19 +203,19 @@ export function ReviewPanel({ cwd, files, turnDiff }: Props) {
         {scope === "turn" && turnDiff && turnFilePaths.length > 1 && (
           <SimpleSelect
             size="sm"
-            ariaLabel="选择文件"
+            ariaLabel={t("panels.review.selectFile")}
             value={turnFileSel}
             onChange={setTurnFileSel}
             options={[
-              { value: ALL_FILES, label: `全部文件（${turnFilePaths.length}）` },
+              { value: ALL_FILES, label: t("panels.review.allFiles", { count: turnFilePaths.length }) },
               ...turnFilePaths.map((p) => ({ value: p, label: p })),
             ]}
           />
         )}
         <button
           type="button"
-          title="刷新"
-          aria-label="刷新"
+          title={t("panels.common.refresh")}
+          aria-label={t("panels.common.refresh")}
           className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
           onClick={() => setRefreshKey((k) => k + 1)}
         >

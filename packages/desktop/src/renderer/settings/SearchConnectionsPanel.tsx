@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/ConfirmDialog";
+import { useT } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/dict";
 import { CollapsibleGroup } from "./CollapsibleGroup";
 import { TextConnectionsPanel as UnifiedConnectionsPanel } from "./TextConnectionsPanel";
 import {
@@ -31,38 +33,41 @@ interface Props {
  * used to be un-collapsible, now all groups fold.
  */
 export function ConnectionsPanel({ scope, activeRepoPath }: Props) {
+  const { t } = useT();
   return (
     <section className="mb-6 flex flex-col gap-3">
       <header className="mb-3 flex flex-col gap-1">
-        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">连接</h3>
+        <h3 className="m-0 text-[0.95rem] font-semibold text-foreground">
+          {t("settingsX.searchConn.title")}
+        </h3>
         <p className="max-w-[620px] text-sm leading-relaxed text-muted-foreground">
-          需要 key 的内置功能（WebSearch、图片生成、视频生成…）按功能分组放在这里；每组可折叠。
+          {t("settingsX.searchConn.desc")}
         </p>
       </header>
 
       <div className="flex flex-col gap-3">
         <CollapsibleGroup
-          title="WebSearch providers"
-          subtitle="默认 provider 决定代理调用 WebSearch 时使用哪一个。"
+          title={t("settingsX.searchConn.groupWebSearch")}
+          subtitle={t("settingsX.searchConn.groupWebSearchSub")}
           defaultOpen
         >
           <SearchProvidersGrid scope={scope} activeRepoPath={activeRepoPath} />
         </CollapsibleGroup>
 
         <CollapsibleGroup
-          title="图片生成"
-          subtitle="默认连接决定 GenerateImage 用哪一个；key 存在凭证里，多连接可共用。"
+          title={t("settingsX.searchConn.groupImage")}
+          subtitle={t("settingsX.searchConn.groupImageSub")}
           defaultOpen={false}
         >
-          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="image" title="图片模型" />
+          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="image" />
         </CollapsibleGroup>
 
         <CollapsibleGroup
-          title="视频生成"
-          subtitle="默认连接决定 GenerateVideo 用哪一个；key 存在凭证里，多连接可共用。"
+          title={t("settingsX.searchConn.groupVideo")}
+          subtitle={t("settingsX.searchConn.groupVideoSub")}
           defaultOpen={false}
         >
-          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="video" title="视频模型" />
+          <UnifiedConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} tag="video" />
         </CollapsibleGroup>
       </div>
     </section>
@@ -74,7 +79,8 @@ type Provider = "serper" | "tavily" | "searxng";
 interface ProviderMeta {
   id: Provider;
   displayName: string;
-  description: string;
+  /** i18n key for the provider's one-line description. */
+  descKey: TranslationKey;
   needsKey: boolean;
   needsBaseUrl: boolean;
   signupUrl?: string;
@@ -84,7 +90,7 @@ const PROVIDERS: ProviderMeta[] = [
   {
     id: "serper",
     displayName: "Google Web Search (Serper)",
-    description: "Google 搜索结果代理，最常用。需要在 serper.dev 申请 API key。",
+    descKey: "settingsX.searchConn.descSerper",
     needsKey: true,
     needsBaseUrl: false,
     signupUrl: "https://serper.dev",
@@ -92,15 +98,15 @@ const PROVIDERS: ProviderMeta[] = [
   {
     id: "tavily",
     displayName: "Tavily AI Search",
-    description: "针对 AI 工作流优化的搜索接口，免费额度较友好。",
+    descKey: "settingsX.searchConn.descTavily",
     needsKey: true,
     needsBaseUrl: false,
     signupUrl: "https://tavily.com",
   },
   {
     id: "searxng",
-    displayName: "SearXNG（自建）",
-    description: "开源元搜索引擎，自部署。提供 Base URL 即可，不需要 API key。",
+    displayName: "SearXNG",
+    descKey: "settingsX.searchConn.descSearxng",
     needsKey: false,
     needsBaseUrl: true,
   },
@@ -170,6 +176,7 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
   const [loaded, setLoaded] = useState(!!seed);
   const toast = useToast();
   const confirm = useConfirm();
+  const { t } = useT();
 
   const load = useCallback(async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
@@ -259,18 +266,20 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
       };
       await writeBack(next, defaultProvider);
       setByProvider(next);
-      toast({ message: "已保存" });
+      toast({ message: t("settingsX.searchConn.toastSaved") });
     } catch (err) {
       console.error("saveProvider writeBack failed", err);
-      toast({ message: "保存失败，请重试", variant: "error" });
+      toast({ message: t("settingsX.searchConn.toastSaveFailed"), variant: "error" });
       updateProvider(id, { saving: false });
     }
   };
 
   const clearProvider = async (id: Provider) => {
     const ok = await confirm({
-      message: `清除「${PROVIDERS.find((p) => p.id === id)?.displayName ?? id}」的凭证？`,
-      detail: "已保存的 API key / Base URL 将被移除。",
+      message: t("settingsX.searchConn.confirmClearMsg", {
+        name: PROVIDERS.find((p) => p.id === id)?.displayName ?? id,
+      }),
+      detail: t("settingsX.searchConn.confirmClearDetail"),
       destructive: true,
     });
     if (!ok) return;
@@ -285,7 +294,7 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
       // Don't leave the UI cleared while the persisted settings still hold the
       // old provider — log and reload from disk to resync.
       console.error("clearProvider writeBack failed", err);
-      toast({ message: "清除失败，已还原", variant: "error" });
+      toast({ message: t("settingsX.searchConn.toastClearFailed"), variant: "error" });
       void load();
     }
   };
@@ -326,7 +335,7 @@ function SearchProvidersGrid({ scope, activeRepoPath }: Props) {
   if (!loaded) {
     return (
       <ConnCardGrid>
-        <div className="text-sm text-muted-foreground">加载中…</div>
+        <div className="text-sm text-muted-foreground">{t("settingsX.searchConn.loading")}</div>
       </ConnCardGrid>
     );
   }
@@ -382,22 +391,25 @@ function ConnectionCard({
   onClear,
   onSetDefault,
 }: CardProps) {
+  const { t } = useT();
   const statusBadge = useMemo(() => {
-    if (state.testing) return <Badge variant="info">测试中…</Badge>;
-    if (state.probe?.status === "ok") return <Badge variant="success">可用</Badge>;
-    if (state.probe?.status === "error") return <Badge variant="error">连接失败</Badge>;
+    if (state.testing) return <Badge variant="info">{t("settingsX.searchConn.statusTesting")}</Badge>;
+    if (state.probe?.status === "ok")
+      return <Badge variant="success">{t("settingsX.searchConn.statusOk")}</Badge>;
+    if (state.probe?.status === "error")
+      return <Badge variant="error">{t("settingsX.searchConn.statusError")}</Badge>;
     if (state.probe?.status === "unconfigured" || !isConfigured) {
-      return <Badge variant="secondary">未配置</Badge>;
+      return <Badge variant="secondary">{t("settingsX.searchConn.statusUnconfigured")}</Badge>;
     }
-    return <Badge variant="secondary">未测试</Badge>;
-  }, [state.testing, state.probe, isConfigured]);
+    return <Badge variant="secondary">{t("settingsX.searchConn.statusUntested")}</Badge>;
+  }, [state.testing, state.probe, isConfigured, t]);
 
   return (
     <ConnCard isDefault={isDefault}>
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           <strong className="text-sm font-medium text-foreground">{meta.displayName}</strong>
-          {isDefault && <Badge variant="accent">默认</Badge>}
+          {isDefault && <Badge variant="accent">{t("settingsX.searchConn.default")}</Badge>}
           {statusBadge}
         </div>
         {meta.signupUrl && (
@@ -407,16 +419,16 @@ function ConnectionCard({
             className="h-auto shrink-0 p-0 text-xs"
             onClick={() => void window.codeshell.openExternal(meta.signupUrl!)}
           >
-            获取 key
+            {t("settingsX.searchConn.getKey")}
           </Button>
         )}
       </header>
 
-      <p className="text-xs leading-relaxed text-muted-foreground">{meta.description}</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">{t(meta.descKey)}</p>
 
       <div className="flex flex-col gap-2.5">
         {meta.needsKey && (
-          <ConnField label="API Key" hint="保存于 ~/.code-shell/settings.json，按 scope 隔离。">
+          <ConnField label="API Key" hint={t("settingsX.searchConn.apiKeyHint")}>
             <SecretKeyInput
               value={state.apiKey}
               show={state.showKey}
@@ -426,7 +438,7 @@ function ConnectionCard({
           </ConnField>
         )}
         {meta.needsBaseUrl && (
-          <ConnField label="Base URL" hint="自部署 SearXNG 实例地址。">
+          <ConnField label="Base URL" hint={t("settingsX.searchConn.baseUrlHint")}>
             <Input
               value={state.baseUrl}
               onChange={(e) => onConfigChange({ baseUrl: e.target.value.trim() })}
@@ -440,7 +452,7 @@ function ConnectionCard({
       {state.probe?.status === "ok" && state.probe.sampleTitles?.length && (
         <div className="rounded-md border border-status-ok/25 bg-status-ok/5 px-2.5 py-2 text-sm">
           <div className="mb-1 font-medium text-status-ok">
-            测试成功
+            {t("settingsX.searchConn.testSuccess")}
             {formatProbeTime(state.probe.lastProbedAt) && (
               <span className="font-normal text-muted-foreground">
                 {" "}· {formatProbeTime(state.probe.lastProbedAt)}
@@ -448,8 +460,8 @@ function ConnectionCard({
             )}
           </div>
           <ul className="m-0 list-disc pl-4 text-xs text-muted-foreground">
-            {state.probe.sampleTitles.map((t) => (
-              <li key={t}>{t}</li>
+            {state.probe.sampleTitles.map((title) => (
+              <li key={title}>{title}</li>
             ))}
           </ul>
         </div>
@@ -462,17 +474,23 @@ function ConnectionCard({
           size="sm"
           onClick={onTest}
           disabled={state.testing || !isConfigured}
-          title={isConfigured ? "测试搜索连接" : "请先填写凭证"}
+          title={
+            isConfigured
+              ? t("settingsX.searchConn.testConnTitle")
+              : t("settingsX.searchConn.fillCredsFirst")
+          }
         >
-          {state.testing ? "测试中…" : "测试搜索"}
+          {state.testing
+            ? t("settingsX.searchConn.statusTesting")
+            : t("settingsX.searchConn.testSearch")}
         </Button>
         <Button variant="solid" size="sm" onClick={onSave} disabled={state.saving || !state.dirty}>
-          {state.saving ? "保存中…" : "保存"}
+          {state.saving ? t("settingsX.searchConn.saving") : t("settingsX.searchConn.save")}
         </Button>
         <ConnFooterRight>
           {isConfigured && !isDefault && (
             <Button variant="ghost" size="sm" onClick={onSetDefault}>
-              设为默认
+              {t("settingsX.searchConn.setDefault")}
             </Button>
           )}
           {isConfigured && (
@@ -482,7 +500,7 @@ function ConnectionCard({
               className="text-muted-foreground hover:text-status-err"
               onClick={onClear}
             >
-              清除
+              {t("settingsX.searchConn.clear")}
             </Button>
           )}
         </ConnFooterRight>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DiscoverHome } from "./DiscoverHome";
 import { ManagePage, type TabKey } from "./ManagePage";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   activeRepoPath: string | null;
@@ -24,6 +25,7 @@ type View =
  * showDiscover=false it renders the management page directly.
  */
 export function ExtensionsPage({ activeRepoPath, showDiscover = true }: Props) {
+  const { t } = useT();
   const cwd = activeRepoPath ?? "/";
   const [view, setView] = useState<View>({ mode: "home" });
 
@@ -48,7 +50,7 @@ export function ExtensionsPage({ activeRepoPath, showDiscover = true }: Props) {
             className="mb-3 text-sm text-muted-foreground hover:text-foreground"
             onClick={() => setView({ mode: "home" })}
           >
-            ‹ 返回
+            ‹ {t("ext.common.back")}
           </button>
           <ManagePage
             cwd={cwd}

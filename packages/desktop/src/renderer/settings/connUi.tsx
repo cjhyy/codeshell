@@ -8,6 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
 
 /** Responsive grid the connection cards sit in (inside a CollapsibleGroup). */
 export function ConnCardGrid({ children }: { children: React.ReactNode }) {
@@ -66,7 +67,7 @@ export function SecretKeyInput({
   show,
   onChange,
   onToggleShow,
-  placeholder = "粘贴 API key",
+  placeholder,
 }: {
   value: string;
   show: boolean;
@@ -74,13 +75,15 @@ export function SecretKeyInput({
   onToggleShow: () => void;
   placeholder?: string;
 }) {
+  const { t } = useT();
+  const resolvedPlaceholder = placeholder ?? t("settingsX.conn.pasteApiKey");
   return (
     <div className="flex gap-1.5">
       <Input
         type={show ? "text" : "password"}
         value={value}
         onChange={(e) => onChange(e.target.value.trim())}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         className="min-w-0 flex-1 font-mono text-sm"
       />
       <Button
@@ -89,7 +92,7 @@ export function SecretKeyInput({
         size="icon"
         className="shrink-0 text-muted-foreground"
         onClick={onToggleShow}
-        aria-label={show ? "隐藏 key" : "显示 key"}
+        aria-label={show ? t("settingsX.conn.hideKey") : t("settingsX.conn.showKey")}
       >
         {show ? <EyeOff /> : <Eye />}
       </Button>

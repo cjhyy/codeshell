@@ -101,7 +101,11 @@ export async function openBrowserHost(opts: BrowserHostOpenOptions): Promise<Bro
   });
   win.webContents.setWindowOpenHandler(({ url }) => {
     // 登录流程里偶有跳第三方授权页用 window.open;允许导航在本窗发生,但不开新 OS 窗。
-    if (/^https?:/i.test(url) && !win.isDestroyed()) void win.loadURL(url);
+    // loadURL 不触发 will-navigate,这里得自己走同一道防外链门(否则 window.open 能把顶层
+    // 导到任意站点,绕过 shouldBlockNavigation)。ERR_ABORTED(被后续导航打断)吞掉。
+    if (!shouldBlockNavigation(url) && !win.isDestroyed()) {
+      win.loadURL(url).catch(() => {});
+    }
     return { action: "deny" };
   });
 
@@ -117,7 +121,13 @@ export async function openBrowserHost(opts: BrowserHostOpenOptions): Promise<Bro
   }
 
   if (opts.userAgent) win.webContents.setUserAgent(opts.userAgent);
-  await win.loadURL(opts.url);
+  // 不能裸 await:登录页常在初始导航里就客户端重定向(location.href / meta-refresh),
+  // 会让 loadURL 以 ERR_ABORTED reject。这属正常,吞掉别让 openBrowserHost 抛错关窗;
+  // 真正的加载失败由 did-fail-load(onFailLoad)上报。
+  await win.loadURL(opts.url).catch((e: unknown) => {
+    const msg = String((e as { message?: unknown })?.message ?? e);
+    if (!/ERR_ABORTED|-3\b/.test(msg)) throw e;
+  });
 
   const sess = session.fromPartition(opts.partition);
   return {

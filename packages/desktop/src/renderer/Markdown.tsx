@@ -66,6 +66,7 @@ import { classifyPath } from "./tool-cards/attachments";
 import { Lightbox } from "./chat/Lightbox";
 import { openFileTarget } from "./chat/openWith";
 import { useToast } from "./ui/ToastProvider";
+import { useT } from "./i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -452,6 +453,7 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
   const [expanded, setExpanded] = useState(false);
   const copyTimer = useRef<number | undefined>(undefined);
   const toast = useToast();
+  const { t } = useT();
 
   // Clear the "copied" reset timer on unmount so it doesn't fire setCopied on
   // an unmounted component (React warning / leak).
@@ -480,7 +482,7 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
     const text = preRef.current?.textContent ?? "";
     void navigator.clipboard.writeText(text);
     setCopied(true);
-    toast({ message: "已复制代码", variant: "success" });
+    toast({ message: t("msg.markdown.copyCode"), variant: "success" });
     window.clearTimeout(copyTimer.current);
     copyTimer.current = window.setTimeout(() => setCopied(false), 1500);
   };
@@ -489,8 +491,8 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
     <div className="my-2 overflow-hidden rounded-md border bg-muted/30">
       <div className="flex min-h-8 items-center justify-between gap-2 border-b bg-muted/50 px-2 py-1">
         {lang && <span className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground">{lang}</span>}
-        <Button variant="ghost" size="sm" className="ml-auto h-6 gap-1 px-2 text-xs" onClick={onCopy} aria-label="copy code">
-          <Copy size={11} /> {copied ? "copied" : "copy"}
+        <Button variant="ghost" size="sm" className="ml-auto h-6 gap-1 px-2 text-xs" onClick={onCopy} aria-label={t("msg.markdown.copyCodeAria")}>
+          <Copy size={11} /> {copied ? t("msg.markdown.copied") : t("msg.markdown.copy")}
         </Button>
       </div>
       <pre
@@ -508,7 +510,7 @@ function CodeBlock({ children, ...rest }: React.HTMLAttributes<HTMLPreElement>) 
           className="h-7 w-full rounded-none border-t text-xs text-muted-foreground"
           onClick={() => setExpanded((v) => !v)}
         >
-          {collapsed ? `展开全部 (${lineCount} 行)` : "收起"}
+          {collapsed ? t("msg.markdown.expandAll", { count: lineCount }) : t("msg.markdown.collapse")}
         </Button>
       )}
     </div>

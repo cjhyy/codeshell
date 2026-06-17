@@ -24,7 +24,10 @@
 - ✅ **plugin/skill 更新后「重载生效」闭环**（2026-06-16 b86e7fb1）：核实 skills/commands 本就被 PromptComposer + Skill 工具按 cwd 实时 `scanSkills`(下一轮即生效),hooks/MCP 由 running session 监听 `codeshell:settings-changed`→`configure({reloadSettings})` 重 reconcile([[project_config_hotreload_layer2]])。故更新成功只需 `signalHotReload()` 复用该事件,无新 core 接线;toast 改「已生效」。
 - ✅ **plugin/skill「全部更新」批量入口**（2026-06-16 b86e7fb1）：updatable>1 时显示「全部更新 (N)」按钮,`runBatchUpdate` 串行跑+单项失败不中断+`summarizeBatch` 汇总 toast;Plugins/Skills 两 tab 共用 `applyUpdates.ts`(纯函数,6 例单测)。
 - 🔧 会话崩溃恢复产品闭环；工具超时/可取消性一致化；友好错误消息 → P1
-- 🔧 配置系统：YAML 支持 / JSON Schema 生成 / 配置迁移机制（`/config show|set|get` 已实现）→ P4
+- ✅ **配置系统：YAML 支持 / JSON Schema 生成 / 配置迁移**（2026-06-17 完成）：YAML 读(写仍 JSON)+`schema-export.ts`(`zod-to-json-schema`)+迁移机制核实早已存在。详见 P4。
+- ✅ **压缩阈值可配**（核实 2026-06-17 已完成,非进行中）：三 ratio 早已进 settings.context.*。详见 P3。
+- ✅ **路径策略 block 接入权限系统**（核实 2026-06-17 已完成）：四分支(本次/拒绝/本会话/本项目)全有,10 例测试。详见 P0。
+- ✅ **desktop 多语言 i18n**（2026-06-17 全量完成 ~94%）：自建轻量 i18n(零新依赖,8 区域命名空间)+~950 处文案抽进字典+~80 组件接 useT();留后=真漏网~5 处展示标签+"新对话"哨兵常量化+mobile(149 处)。详见 P2。
 - 🔧 长时段断网的会话级重连（瞬时错误已被 withRetry 覆盖）→ P1
 
 **需人盯 / 多天 / Roadmap：**
@@ -43,7 +46,7 @@
 底座已成；剩余是路径授权的体验闭环与审计。（B1「原工具可继续运行」核实后认定无需实现——控制流本就正确，当年「批准后报错」真因是 ESM 裸 require，已修 7642c16，见底部归档。）
 
 - [ ] **B2 审计路径授权（暂缓 → P3，企业/受监管场景再做）**：记录批准来源/范围/过期/被拒原因。核实(2026-06-10)：路径**授权机制本身是核心安全闸、会一直用**(越界/敏感才拦，工作区内直接放行)；但「审计日志」是低频、个人本地场景几乎用不上的合规功能，性价比低，故降级暂缓。设计已就绪(单独 JSONL `path-approval-audit.jsonl` + 滚动尾部 N 条 + 接 enforcePathPolicyWithApproval 四分支)，要做时直接落。`recordPathApproval` 现只写前缀到 settings.local.json，零审计信息
-- [~] **路径策略 block 接入权限系统**：`enforcePathPolicyWithApproval` 已交互批准本次/拒绝（aa1bcd7）；本会话/特定路径范围待补（同路径级规则）。测试 path-policy-approval.test.ts
+- [x] **路径策略 block 接入权限系统**（核实 2026-06-17 已完成）：`enforcePathPolicyWithApproval` 四分支全实现——本次(`ALLOW_ONCE`,无记忆)/拒绝/**本会话**(`sessionPathGrants` Map,50b8c269)/**本项目**(写 `.code-shell/settings.local.json` 的 `pathApprovals`)。`recordPathApproval` + 并发 `askChains` 序列化 re-check 齐全。path-policy-approval.test.ts 10 例。「特定路径 file/dir 粒度」是设计上**故意合并为目录前缀**(批准 dir 即覆盖其下),不做。
 
 > 已完成部分见底部归档：路径级前缀规则、命令模式匹配、会话级缓存、`/permissions`、scope UI、Sandbox 全套。
 
@@ -63,6 +66,15 @@
 ---
 
 ## P2 — 交互体验与工作流效率
+
+### ✅ desktop 多语言 i18n（中/英）— 2026-06-17 全量完成（~94%）
+
+自建轻量 i18n（**不引 react-i18next**，遵 desktop thin-client/最小依赖约定）。复用已有 `uiLanguage.ts`（localStorage `codeshell.uiLanguage` + `codeshell:language-changed` 事件）。
+
+- [x] 基础设施：`renderer/i18n/`——`translate.ts`（纯函数:命中→回退zh→回退key本身+`{name}`插值）/`I18nProvider.tsx`（`useT()`,监听语言事件重渲染）。字典拆 `i18n/ns/*.ts` 按区域命名空间(core/chat/msg/panels/settingsX/ext/auto/misc),`dict.ts` 浅 spread 聚合,`TranslationKey` 从合并 zh 树推导(type-safe)。`main.tsx` 套最外层。
+- [x] 全量文案：~950 处硬编码中文抽进字典(zh+en),~80 组件接 `useT()`,纯 .ts 模块用 `translate(loadUILanguage(),key)` 兜底。tsc 0 错/i18n 11 测试绿/build 成功。
+- [x] **故意保留(非漏网)**：数据契约/wire payload(`anchors.ts` KIND_LABEL、`locator` 键 网址/选择器/文件/行号——发给模型的序列化契约,翻了破坏往返);session title 哨兵 `"新对话"`(用作默认值+相等比较,需改常量+显示层翻译,留后);注释。
+- [ ] **留后(增量)**：真漏网约 5 处纯展示标签(`capabilitiesOverview` LABEL/`STANDALONE_LABEL "本地"`/`NEW_TAB_TITLE`);`"新对话"` 哨兵改常量化;mobile(149 处,独立 app)单独接同套 i18n;宿主在启动调 `writeSettingsSchemaFile` 写 schema。
 
 ### ⬜ GenerateImage 工具结果直接展示图片
 
@@ -90,7 +102,7 @@
 
 3 级 compaction（含 LLM 摘要 Tier 2 + 锚定滚动摘要）已实现。
 
-- [~] **压缩阈值可配**：把 compaction 的 `compactAtRatio`(0.85)/`summarizeAtRatio`(0.92)/`microcompactFloorRatio`(0.7) 抽到 settings，用户按模型窗口自调。进行中。
+- [x] **压缩阈值可配**（核实 2026-06-17 已完成）：三 ratio 全进 `settings.context.*`（schema.ts 带 min/max/`.describe()`），`Engine.resolveContextRatios()` 读取注入 + `clampContextRatios()` 运行时保序（floor<compact<summarize），`compaction.ratios.test.ts` 测试齐全。`DEFAULT_CONFIG` 仅作后备。
 
 > **不做（两项同因）**：
 > - ~~每轮主动「请求压缩」(enable_request_compression)~~ — 摘要能力已在 Tier 2，触发走压力门控即可；每轮压会逐字节改写请求前缀→击穿 Anthropic prompt cache（前缀匹配）。
@@ -130,12 +142,12 @@
 - [ ] 工具调用检查 workspace scope，避免跨项目读取
 - [ ] 管理 UI/命令 + 授权审计（来源/更新时间/失效撤销）
 
-### 🔧 配置系统完善
+### ✅ 配置系统完善 — 2026-06-17 完成
 
-- [ ] 支持 YAML 配置（目前是 JSON；现有 yaml 解析仅用于 skill/agent frontmatter，非配置系统）
-- [ ] 配置 JSON Schema 生成（IDE 自动补全）
-- [ ] 配置迁移机制：版本升级时自动迁移旧配置
-- 注：`/config show|set|get` 已实现（core-commands.ts），原 TODO 标「未做」属漂移；交互式 TUI 表单编辑仍可后续增强
+- [x] **支持 YAML 配置**：`manager.ts` 抽 `parseConfigFile`（按扩展名分派 .yaml/.yml→yaml 库 / 其它→JSON.parse）+ `resolveConfigPath`（同目录 settings.json 不存在则回退 settings.yaml/.yml；JSON 与 YAML 并存时 JSON 优先，因 JSON 是写回格式）。`loadJsonFile` 与 `readJsonObject` 全走此路，四层(managed/user/project/local)一致生效。**写入仍只出 JSON**（写 YAML 会丢注释、冲突原子写）。yaml-config.test.ts 6 例。
+- [x] **配置 JSON Schema 生成**：新增 `schema-export.ts`——`settingsJsonSchema()`（`zodToJsonSchema(SettingsSchema)`）+ `writeSettingsSchemaFile(dir)`（原子写 `settings.schema.json`）。已 barrel 导出。新增依赖 `zod-to-json-schema`。无 `load()` 副作用,宿主接线（启动时写 `~/.code-shell/settings.schema.json` + 在 settings.json 加 `"$schema"`）留后。schema-export.test.ts。
+- [x] **配置迁移机制**（核实已存在）：`migrate-config.ts` 已有版本化迁移框架（`CONFIG_VERSION_KEY`/`MIGRATIONS`/v0→v1/v1→v2/`.bak` 备份），`manager.applyConfigMigration` 按层应用，migrate-config.test.ts 覆盖。原 TODO 标「未做」属漂移。
+- 注：`/config show|set|get` 已实现；交互式 TUI 表单编辑仍可后续增强
 
 > 已完成归档：插件 MCP 加载/禁用链路、MCP 管理页插件 owner 标注、Feature Flags 系统底座 + `/features`。
 

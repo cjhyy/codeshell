@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import type { UpdaterStatus } from "../../preload/types";
 import { Button } from "@/components/ui/button";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 
 export function UpdaterBanner() {
+  const { t } = useT();
   const [status, setStatus] = useState<UpdaterStatus>({ kind: "idle" });
   const [dismissed, setDismissed] = useState(false);
 
@@ -19,12 +21,12 @@ export function UpdaterBanner() {
   if (status.kind === "downloaded") {
     return (
       <div className="flex items-center gap-3 border-b border-border bg-primary/10 px-4 py-2 text-sm">
-        <span className="flex-1">新版本 {status.version} 已下载完成。</span>
-        <Button size="sm" onClick={() => void window.codeshell.installUpdate()}>重启并安装</Button>
+        <span className="flex-1">{t("misc.updater.downloaded", { version: status.version })}</span>
+        <Button size="sm" onClick={() => void window.codeshell.installUpdate()}>{t("misc.updater.restartInstall")}</Button>
         <button
           className="text-muted-foreground hover:text-foreground"
           onClick={() => setDismissed(true)}
-          aria-label="关闭"
+          aria-label={t("misc.updater.close")}
         >
           ×
         </button>
@@ -35,7 +37,7 @@ export function UpdaterBanner() {
   if (status.kind === "downloading") {
     return (
       <div className="border-b border-border bg-muted px-4 py-2 text-sm text-muted-foreground">
-        正在下载新版本… {status.percent}%
+        {t("misc.updater.downloading", { percent: status.percent })}
       </div>
     );
   }
@@ -43,7 +45,7 @@ export function UpdaterBanner() {
   if (status.kind === "available") {
     return (
       <div className="border-b border-border bg-muted px-4 py-2 text-sm text-muted-foreground">
-        发现新版本 {status.version}，正在下载…
+        {t("misc.updater.available", { version: status.version })}
       </div>
     );
   }
@@ -53,6 +55,7 @@ export function UpdaterBanner() {
 
 /** Inline status row for the Settings view. */
 export function UpdaterSettingsRow() {
+  const { t } = useT();
   const [status, setStatus] = useState<UpdaterStatus>({ kind: "idle" });
 
   useEffect(() => {
@@ -62,36 +65,34 @@ export function UpdaterSettingsRow() {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold">自动更新</h3>
+      <h3 className="text-sm font-semibold">{t("misc.updater.autoUpdate")}</h3>
       <div className="text-sm">
-        <span className="text-muted-foreground">状态：</span>
-        <span>{describeStatus(status)}</span>
+        <span className="text-muted-foreground">{t("misc.updater.statusLabel")}</span>
+        <span>{describeStatus(status, t)}</span>
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="outline" onClick={() => void window.codeshell.checkForUpdate()}>
-          检查更新
+          {t("misc.updater.checkUpdate")}
         </Button>
         {status.kind === "downloaded" && (
-          <Button size="sm" onClick={() => void window.codeshell.installUpdate()}>重启并安装</Button>
+          <Button size="sm" onClick={() => void window.codeshell.installUpdate()}>{t("misc.updater.restartInstall")}</Button>
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        生产构建启动后 30 秒自动检查一次，之后每 6 小时再检查。
-        update feed URL 通过环境变量 <code className="font-mono">CODESHELL_UPDATE_FEED</code>
-        配置；若未设置，则使用 electron-builder 注入的 publish 配置。
+        {t("misc.updater.feedHint")}
       </p>
     </section>
   );
 }
 
-function describeStatus(s: UpdaterStatus): string {
+function describeStatus(s: UpdaterStatus, t: TFunction): string {
   switch (s.kind) {
-    case "idle": return "尚未检查";
-    case "checking": return "正在检查…";
-    case "available": return `发现新版本 ${s.version}`;
-    case "not-available": return `已是最新 (${s.version})`;
-    case "downloading": return `下载中 ${s.percent}%`;
-    case "downloaded": return `新版本 ${s.version} 已下载`;
-    case "error": return `失败：${s.message}`;
+    case "idle": return t("misc.updater.statusIdle");
+    case "checking": return t("misc.updater.statusChecking");
+    case "available": return t("misc.updater.statusAvailable", { version: s.version });
+    case "not-available": return t("misc.updater.statusNotAvailable", { version: s.version });
+    case "downloading": return t("misc.updater.statusDownloading", { percent: s.percent });
+    case "downloaded": return t("misc.updater.statusDownloaded", { version: s.version });
+    case "error": return t("misc.updater.statusError", { message: s.message });
   }
 }

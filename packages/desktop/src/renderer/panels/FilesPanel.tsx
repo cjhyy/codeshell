@@ -8,6 +8,7 @@ import { addAnchor } from "../chat/addAnchor";
 import { OpenWithMenu } from "../chat/OpenWithMenu";
 import { MoreHorizontal, Paperclip } from "lucide-react";
 import { CODESHELL_PATH_DND_MIME } from "../chat/attachments";
+import { useT, type TFunction } from "../i18n/I18nProvider";
 
 /** localStorage key persisting whether the file tree is shown ("1") or hidden ("0"). */
 const TREE_OPEN_KEY = "codeshell.filesPanel.treeOpen";
@@ -68,6 +69,7 @@ interface Props {
  * expansion (fs:readDir per level) + a capped text preview (fs:readFile).
  */
 export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
+  const { t } = useT();
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   // Show/hide the file tree — persisted so hiding it sticks across panel
@@ -115,7 +117,7 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
   if (!cwd) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
-        请先选择一个项目
+        {t("panels.common.selectProjectFirst")}
       </div>
     );
   }
@@ -128,7 +130,7 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
             <Input
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              placeholder="筛选文件…"
+              placeholder={t("panels.files.filterPlaceholder")}
               className="h-8"
             />
           </div>
@@ -141,8 +143,8 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
         <div className="flex shrink-0 items-center border-b border-border px-1 py-1">
           <button
             type="button"
-            aria-label={treeOpen ? "隐藏文件树" : "显示文件树"}
-            title={treeOpen ? "隐藏文件树" : "显示文件树"}
+            aria-label={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
+            title={treeOpen ? t("panels.files.hideTree") : t("panels.files.showTree")}
             className="rounded-md p-1 text-muted-foreground hover:bg-accent"
             onClick={() => setTreeOpen((v) => !v)}
           >
@@ -151,8 +153,8 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
           <div className="flex-1" />
           <button
             type="button"
-            aria-label="刷新"
-            title="刷新(重新读取文件与目录)"
+            aria-label={t("panels.common.refresh")}
+            title={t("panels.files.refreshTitle")}
             className="rounded-md p-1 text-muted-foreground hover:bg-accent"
             onClick={() => setReloadNonce((n) => n + 1)}
           >
@@ -165,8 +167,8 @@ export function FilesPanel({ cwd, onAttachImage, revealFile }: Props) {
           ) : (
             <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
               <Folder className="h-7 w-7" />
-              <div className="text-sm font-medium text-foreground">打开文件</div>
-              <div className="text-xs">从工作区目录树中选择文件</div>
+              <div className="text-sm font-medium text-foreground">{t("panels.files.openFile")}</div>
+              <div className="text-xs">{t("panels.files.openFileHint")}</div>
             </div>
           )}
         </div>
@@ -198,6 +200,7 @@ function DirNode({
   /** Bumped to re-read this directory (AI added/removed files, manual refresh). */
   reloadNonce: number;
 }) {
+  const { t } = useT();
   const [entries, setEntries] = useState<FsEntry[] | null>(null);
   // Top level auto-expands; deeper levels expand on click.
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -236,7 +239,7 @@ function DirNode({
     };
   }, [root, dir, reloadNonce]);
 
-  if (!entries) return <div className="px-3 py-1 text-xs text-muted-foreground">加载中…</div>;
+  if (!entries) return <div className="px-3 py-1 text-xs text-muted-foreground">{t("panels.common.loading")}</div>;
 
   // When filtering, match by name on BOTH files and directories. We can't do
   // ancestor-aware filtering with lazy per-level loads, so a directory only
@@ -336,8 +339,8 @@ function DirNode({
             {isImageFile && onAttachImage && (
               <button
                 type="button"
-                title="添加到输入框"
-                aria-label="添加到输入框"
+                title={t("panels.files.addToComposer")}
+                aria-label={t("panels.files.addToComposer")}
                 className="absolute right-7 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100"
                 onClick={() => onAttachImage(e.path)}
               >
@@ -348,8 +351,8 @@ function DirNode({
             <OpenWithMenu path={e.path} cwd={root} align="end">
               <button
                 type="button"
-                title="打开方式"
-                aria-label="打开方式"
+                title={t("panels.common.openWith")}
+                aria-label={t("panels.common.openWith")}
                 className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground opacity-0 hover:bg-background hover:text-foreground group-hover/file:opacity-100 data-[state=open]:opacity-100"
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />
@@ -363,6 +366,7 @@ function DirNode({
 }
 
 function FileViewer({ root, path, reloadNonce }: { root: string; path: string; reloadNonce: number }) {
+  const { t } = useT();
   const ext = useMemo(() => (path.split(".").pop() ?? "").toLowerCase(), [path]);
   const name = useMemo(() => path.split("/").pop() ?? path, [path]);
   const isImage = IMAGE_EXT.has(ext) || ext === SVG_EXT;
@@ -384,9 +388,9 @@ function FileViewer({ root, path, reloadNonce }: { root: string; path: string; r
             type="button"
             className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
             onClick={() => setMdSource((v) => !v)}
-            title={mdSource ? "切换到预览" : "切换到源码(可逐行评论)"}
+            title={mdSource ? t("panels.files.previewToggleToPreview") : t("panels.files.previewToggleToSource")}
           >
-            {mdSource ? "预览" : "源码"}
+            {mdSource ? t("panels.files.preview") : t("panels.files.source")}
           </button>
         )}
       </div>
@@ -405,6 +409,7 @@ function FileViewer({ root, path, reloadNonce }: { root: string; path: string; r
 
 /** Render an image file by reading it as a data URL through main. */
 function ImagePreview({ path, reloadNonce }: { path: string; reloadNonce: number }) {
+  const { t } = useT();
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -426,8 +431,8 @@ function ImagePreview({ path, reloadNonce }: { path: string; reloadNonce: number
     };
   }, [path, reloadNonce]);
 
-  if (failed) return <div className="p-4 text-sm text-muted-foreground">无法预览此图片</div>;
-  if (!src) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  if (failed) return <div className="p-4 text-sm text-muted-foreground">{t("panels.files.cannotPreviewImage")}</div>;
+  if (!src) return <div className="p-4 text-sm text-muted-foreground">{t("panels.common.loading")}</div>;
   return (
     <div className="flex h-full items-center justify-center p-4">
       {/* checkerboard-free neutral bg; image scaled to fit */}
@@ -450,6 +455,7 @@ function mdBaseDir(root: string, path: string): string {
 }
 
 function TextPreview({ root, path, markdown, reloadNonce }: { root: string; path: string; markdown: boolean; reloadNonce: number }) {
+  const { t } = useT();
   const [content, setContent] = useState<FileContent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -475,12 +481,12 @@ function TextPreview({ root, path, markdown, reloadNonce }: { root: string; path
     };
   }, [root, path, reloadNonce]);
 
-  if (error) return <div className="p-4 text-sm text-status-err">读取失败:{error}</div>;
-  if (!content) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  if (error) return <div className="p-4 text-sm text-status-err">{t("panels.files.readFailed", { error })}</div>;
+  if (!content) return <div className="p-4 text-sm text-muted-foreground">{t("panels.common.loading")}</div>;
   if (content.text === null) {
     return (
       <div className="p-4 text-sm text-muted-foreground">
-        {content.reason === "too-large" ? "文件过大,无法预览" : "二进制文件,无法预览"}
+        {content.reason === "too-large" ? t("panels.files.tooLarge") : t("panels.files.binary")}
       </div>
     );
   }
@@ -505,6 +511,7 @@ function TextPreview({ root, path, markdown, reloadNonce }: { root: string; path
 
 /** Line-numbered code view; hover a line to pin a comment anchor (file:line). */
 function CodeWithComments({ path, text }: { path: string; text: string }) {
+  const { t } = useT();
   const lines = useMemo(() => text.replace(/\n$/, "").split("\n"), [text]);
   const [commenting, setCommenting] = useState<number | null>(null);
   const name = path.split("/").pop() ?? path;
@@ -522,8 +529,8 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
                   near-invisible right-side icon. */}
               <button
                 type="button"
-                aria-label="评论此行"
-                title="评论此行(加入输入框)"
+                aria-label={t("panels.files.commentThisLine")}
+                title={t("panels.files.commentThisLineTitle")}
                 className={`shrink-0 mt-px flex h-4 w-4 items-center justify-center rounded bg-primary text-primary-foreground transition-opacity hover:bg-primary/90 ${
                   commenting === no ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                 }`}

@@ -5,6 +5,7 @@ import type {
 } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useT } from "../i18n/I18nProvider";
 
 interface McpServer {
   name: string;
@@ -24,6 +25,7 @@ function isEnabled(s: McpServer): boolean {
 }
 
 export function McpView() {
+  const { t } = useT();
   const [servers, setServers] = useState<McpServer[] | null>(null);
   const [probes, setProbes] = useState<Record<string, McpProbeResult>>({});
   const [busy, setBusy] = useState(false);
@@ -78,13 +80,13 @@ export function McpView() {
   }, [load]);
 
   if (error) return <div className="p-6 text-sm text-status-err">{error}</div>;
-  if (!servers) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
+  if (!servers) return <div className="p-6 text-sm text-muted-foreground">{t("ext.common.loading")}</div>;
 
   return (
     <div className="flex flex-col gap-3 p-6">
       <header className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
-          MCP 服务器 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{servers.length}</span>
+          {t("ext.mcp.serversTitle")} <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{servers.length}</span>
         </h2>
         <Button
           size="sm"
@@ -92,14 +94,14 @@ export function McpView() {
           onClick={() => void probe(servers.filter(isEnabled), true)}
           disabled={servers.filter(isEnabled).length === 0 || busy}
         >
-          {busy ? "测试中…" : "重新测试"}
+          {busy ? t("ext.mcp.retesting") : t("ext.mcp.retest")}
         </Button>
       </header>
 
       {servers.length === 0 ? (
         <div className="p-6">
-          <div className="font-medium">没有配置的 MCP 服务器</div>
-          <div className="mt-1 text-sm text-muted-foreground">到「设置 → MCP 服务器」添加。</div>
+          <div className="font-medium">{t("ext.mcp.emptyTitle")}</div>
+          <div className="mt-1 text-sm text-muted-foreground">{t("ext.mcp.emptyHint")}</div>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -124,11 +126,11 @@ export function McpView() {
                     {enabled ? (
                       <StatusPill probe={p} loading={busy && !p} />
                     ) : (
-                      <span className="text-xs text-muted-foreground">已停用</span>
+                      <span className="text-xs text-muted-foreground">{t("ext.mcp.disabled")}</span>
                     )}
                   </div>
                   {p?.status === "ok" && (
-                    <span className="text-xs text-muted-foreground">{p.toolCount ?? 0} tools</span>
+                    <span className="text-xs text-muted-foreground">{t("ext.mcp.tools", { count: p.toolCount ?? 0 })}</span>
                   )}
                 </div>
                 {target && (
@@ -149,12 +151,13 @@ export function McpView() {
 }
 
 function StatusPill({ probe, loading }: { probe?: McpProbeResult; loading: boolean }) {
+  const { t } = useT();
   const base = "text-xs font-medium";
-  if (loading || probe?.status === "probing") return <span className={`${base} text-status-running`}>连接中…</span>;
-  if (!probe) return <span className={`${base} text-muted-foreground`}>未测试</span>;
-  if (probe.status === "ok") return <span className={`${base} text-status-ok`}>已连接</span>;
-  if (probe.status === "error") return <span className={`${base} text-status-err`}>连接失败</span>;
-  return <span className={`${base} text-muted-foreground`}>未知</span>;
+  if (loading || probe?.status === "probing") return <span className={`${base} text-status-running`}>{t("ext.mcp.connecting")}</span>;
+  if (!probe) return <span className={`${base} text-muted-foreground`}>{t("ext.mcp.untested")}</span>;
+  if (probe.status === "ok") return <span className={`${base} text-status-ok`}>{t("ext.mcp.connected")}</span>;
+  if (probe.status === "error") return <span className={`${base} text-status-err`}>{t("ext.mcp.connectFailed")}</span>;
+  return <span className={`${base} text-muted-foreground`}>{t("ext.mcp.unknown")}</span>;
 }
 
 function parseServers(value: unknown): McpServer[] {

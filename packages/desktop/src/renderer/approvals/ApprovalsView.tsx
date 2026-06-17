@@ -2,6 +2,7 @@ import React from "react";
 import type { ApprovalRequestEnvelope } from "../../preload/types";
 import { ApprovalCard } from "./ApprovalCard";
 import type { ApproveChoice, ApprovePathScope } from "./approvalDecision";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   queue: ApprovalRequestEnvelope[];
@@ -16,14 +17,15 @@ interface Props {
 }
 
 export function ApprovalsView({ queue, history, onDecide }: Props) {
+  const { t } = useT();
   return (
     <div className="flex flex-col gap-6 p-6">
       <section>
         <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-          待批准 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{queue.length}</span>
+          {t("auto.approvals.pending")} <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{queue.length}</span>
         </h2>
         {queue.length === 0 ? (
-          <div className="text-sm text-muted-foreground">没有待处理的工具调用</div>
+          <div className="text-sm text-muted-foreground">{t("auto.approvals.noPending")}</div>
         ) : (
           <div className="flex flex-col gap-2">
             {queue.map((env) => (
@@ -39,10 +41,10 @@ export function ApprovalsView({ queue, history, onDecide }: Props) {
 
       <section>
         <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-          历史 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{history.length}</span>
+          {t("auto.approvals.history")} <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{history.length}</span>
         </h2>
         {history.length === 0 ? (
-          <div className="text-sm text-muted-foreground">暂无记录</div>
+          <div className="text-sm text-muted-foreground">{t("auto.approvals.noHistory")}</div>
         ) : (
           <ul className="space-y-1">
             {history.slice().reverse().slice(0, 50).map((h, i) => (

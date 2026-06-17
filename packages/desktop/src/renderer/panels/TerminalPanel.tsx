@@ -3,6 +3,7 @@ import { Terminal, type ILink, type ILinkProvider, type IBufferLine } from "@xte
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import { findTerminalLinks, splitPathAndLine } from "./terminalLinks";
+import { useT } from "../i18n/I18nProvider";
 
 interface Props {
   /** Working directory for the shell. */
@@ -17,6 +18,12 @@ interface Props {
  * a ResizeObserver keeps the pty's cols/rows in sync via FitAddon.
  */
 export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
+  const { t } = useT();
+  // Capture in a ref so the xterm-building effect (keyed on sessionId only) can
+  // read the latest translator without re-running on a language switch (which
+  // would tear down xterm and lose scrollback).
+  const tRef = useRef(t);
+  tRef.current = t;
   const hostRef = useRef<HTMLDivElement | null>(null);
   // Window-unique session id: two windows on the same repo must not share (and
   // thereby hijack) one pty. windowToken is this renderer process's pid.
@@ -63,7 +70,7 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
     });
     const offExit = window.codeshell.onPtyExit((msg) => {
       if (msg.sessionId === sessionId) {
-        term.write(`\r\n\x1b[2m[进程已退出 (code ${msg.exitCode})]\x1b[0m\r\n`);
+        term.write(`\r\n\x1b[2m${tRef.current("panels.terminal.processExited", { code: msg.exitCode })}\x1b[0m\r\n`);
       }
     });
 
@@ -103,7 +110,7 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-        <span className="text-sm font-medium text-foreground">终端</span>
+        <span className="text-sm font-medium text-foreground">{t("panels.terminal.title")}</span>
         <span className="truncate text-xs text-muted-foreground">{cwd ?? "~"}</span>
       </div>
       <div ref={hostRef} className="min-h-0 flex-1 overflow-hidden p-2" />

@@ -13,6 +13,7 @@ import { Badge } from "./ui/Badge";
 import type { ViewMode } from "./view";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "./i18n/I18nProvider";
 
 interface NavBadges {
   approvals?: number;
@@ -25,28 +26,40 @@ interface Props {
   badges?: NavBadges;
 }
 
+/** ViewModes that appear in the nav (each has a `misc.nav.<id>` dict key). */
+type NavId =
+  | "chat"
+  | "sessions"
+  | "approvals"
+  | "runs"
+  | "automation"
+  | "credentials"
+  | "logs"
+  | "settings";
+
 interface Item {
-  id: ViewMode;
-  label: string;
+  id: NavId;
   Icon: React.ComponentType<{ size?: number }>;
   badge?: keyof NavBadges;
 }
 
 const ITEMS: Item[] = [
-  { id: "chat", label: "对话", Icon: MessageSquare },
-  { id: "sessions", label: "会话", Icon: ListChecks },
-  { id: "approvals", label: "审批", Icon: ShieldAlert, badge: "approvals" },
-  { id: "runs", label: "运行", Icon: Activity, badge: "runs" },
-  { id: "automation", label: "自动化", Icon: Workflow },
-  { id: "credentials", label: "凭证", Icon: KeyRound },
-  { id: "logs", label: "日志", Icon: ScrollText },
-  { id: "settings", label: "设置", Icon: Settings },
+  { id: "chat", Icon: MessageSquare },
+  { id: "sessions", Icon: ListChecks },
+  { id: "approvals", Icon: ShieldAlert, badge: "approvals" },
+  { id: "runs", Icon: Activity, badge: "runs" },
+  { id: "automation", Icon: Workflow },
+  { id: "credentials", Icon: KeyRound },
+  { id: "logs", Icon: ScrollText },
+  { id: "settings", Icon: Settings },
 ];
 
 export function SidebarNav({ active, onSelect, badges = {} }: Props) {
+  const { t } = useT();
   return (
     <nav className="flex flex-col gap-1">
-      {ITEMS.map(({ id, label, Icon, badge }) => {
+      {ITEMS.map(({ id, Icon, badge }) => {
+        const label = t(`misc.nav.${id}`);
         const count = badge ? badges[badge] ?? 0 : 0;
         return (
           <Button

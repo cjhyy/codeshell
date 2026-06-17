@@ -18,7 +18,7 @@ import {
   parseSchedule,
   buildSchedule,
   describeSchedule,
-  WEEKDAY_LABELS,
+  weekdayLabels,
   type Schedule,
 } from "./scheduleModel";
 import type { DiskSessionMeta } from "./rebuildFromDisk";
@@ -29,21 +29,23 @@ import {
   cwdFromSelection,
 } from "./projectOptions";
 import { cn } from "@/lib/utils";
+import { useT, type TFunction } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/dict";
 
-const PERMISSION_OPTIONS = [
-  { value: "read-only", label: "只读" },
-  { value: "workspace-write", label: "可写工作区" },
-  { value: "full", label: "完全(可提 PR)" },
+const PERMISSION_OPTIONS: { value: string; labelKey: TranslationKey }[] = [
+  { value: "read-only", labelKey: "auto.permission.readOnly" },
+  { value: "workspace-write", labelKey: "auto.permission.workspaceWrite" },
+  { value: "full", labelKey: "auto.permission.full" },
 ];
 
 // Cadence types for the "pick a cadence → pick a time" frequency control. The
 // raw cron string is derived from this + a time/weekday via scheduleModel.
-const CADENCE_OPTIONS: { value: Schedule["kind"]; label: string }[] = [
-  { value: "daily", label: "每天" },
-  { value: "weekdays", label: "工作日" },
-  { value: "weekly", label: "每周" },
-  { value: "hourly", label: "按小时" },
-  { value: "custom", label: "自定义 cron…" },
+const CADENCE_OPTIONS: { value: Schedule["kind"]; labelKey: TranslationKey }[] = [
+  { value: "daily", labelKey: "auto.cadence.daily" },
+  { value: "weekdays", labelKey: "auto.cadence.weekdays" },
+  { value: "weekly", labelKey: "auto.cadence.weekly" },
+  { value: "hourly", labelKey: "auto.cadence.hourly" },
+  { value: "custom", labelKey: "auto.cadence.custom" },
 ];
 
 const HOURLY_OPTIONS = [1, 2, 3, 4, 6, 8, 12];
@@ -114,18 +116,18 @@ function shortDate(ms: number): string {
   });
 }
 
-function runStatusLabel(status?: string): string {
+function runStatusLabel(t: TFunction, status?: string): string {
   switch (status) {
     case "completed":
-      return "完成";
+      return t("auto.runStatus.completed");
     case "running":
-      return "运行中";
+      return t("auto.runStatus.running");
     case "failed":
-      return "失败";
+      return t("auto.runStatus.failed");
     case "cancelled":
-      return "已取消";
+      return t("auto.runStatus.cancelled");
     case "queued":
-      return "排队中";
+      return t("auto.runStatus.queued");
     default:
       return status || "session";
   }
@@ -266,6 +268,7 @@ export function AutomationView({
   sessionIndices: Record<string, SessionIndex>;
   repos: Repo[];
 }) {
+  const { t } = useT();
   const [jobs, setJobs] = useState<AutomationSummary[] | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [diskSessions, setDiskSessions] = useState<DiskSessionMeta[]>([]);
@@ -323,29 +326,29 @@ export function AutomationView({
       <div className="flex flex-col items-start gap-3 p-6 text-sm text-status-err">
         {error}
         <Button variant="outline" size="sm" onClick={() => { setError(null); void refresh(); }}>
-          重试
+          {t("auto.view.retry")}
         </Button>
       </div>
     );
   }
-  if (!jobs) return <div className="p-6 text-sm text-muted-foreground">加载中…</div>;
+  if (!jobs) return <div className="p-6 text-sm text-muted-foreground">{t("auto.view.loading")}</div>;
 
   return (
     <div className="flex h-full flex-col gap-4 p-6">
       <div className="flex shrink-0 items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">自动化</h2>
-          <p className="text-xs text-muted-foreground">{jobs.length} 个任务</p>
+          <h2 className="text-lg font-semibold text-foreground">{t("auto.view.title")}</h2>
+          <p className="text-xs text-muted-foreground">{t("auto.view.jobCount", { count: jobs.length })}</p>
         </div>
         <Button size="sm" onClick={onCreateConversational}>
           <Plus size={14} />
-          新建自动化
+          {t("auto.view.create")}
         </Button>
       </div>
 
       {jobs.length === 0 ? (
         <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">
-          还没有自动化任务。点击「新建自动化」,用对话告诉它你想定时做什么、何时运行 —— 不用填 cron 语法。
+          {t("auto.view.empty")}
         </div>
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(220px,280px)_1fr] gap-4">
@@ -368,7 +371,7 @@ export function AutomationView({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{j.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {j.enabled ? "活跃" : "暂停"} · {j.runCount} 次
+                    {j.enabled ? t("auto.view.active") : t("auto.view.paused")} · {t("auto.view.runCount", { count: j.runCount })}
                   </span>
                 </span>
                 <span className="max-w-24 shrink-0 truncate text-xs text-muted-foreground">{describeSchedule(j.schedule)}</span>
@@ -379,6 +382,7 @@ export function AutomationView({
           <div className="min-h-0 overflow-y-auto">
             {detail ? (
               <AutomationDetail
+                t={t}
                 job={detail}
                 repos={repos}
                 sessions={automationSessionLinks(detail, sessionIndices, runs, diskSessions)}
@@ -402,7 +406,7 @@ export function AutomationView({
                 onOpenSession={onOpenSession}
               />
             ) : (
-              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">选择一个任务查看详情</div>
+              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground">{t("auto.view.selectJob")}</div>
             )}
           </div>
         </div>
@@ -421,6 +425,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 function AutomationDetail(props: {
+  t: TFunction;
   job: AutomationSummary;
   repos: Repo[];
   onToggleEnabled: (next: boolean) => void;
@@ -444,7 +449,7 @@ function AutomationDetail(props: {
   onOpenDiskSession: (session: DiskSessionMeta) => void;
   onOpenSession: (repoId: string | null, sessionId: string) => void;
 }) {
-  const { job } = props;
+  const { job, t } = props;
   const sessionCount = props.sessions.length;
   const lastSession = props.sessions[0];
 
@@ -527,18 +532,18 @@ function AutomationDetail(props: {
             checked={job.enabled}
             onCheckedChange={(v) => props.onToggleEnabled(v)}
             disabled={props.toggleBusy}
-            aria-label={job.enabled ? "已启用" : "已暂停"}
+            aria-label={job.enabled ? t("auto.detail.enabled") : t("auto.detail.pausedAria")}
           />
           <Button size="sm" onClick={props.onRunNow} disabled={props.runNowBusy}>
             {props.runNowBusy ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                运行中…
+                {t("auto.detail.running")}
               </>
             ) : (
               <>
                 <Play size={14} />
-                立即运行
+                {t("auto.detail.runNow")}
               </>
             )}
           </Button>
@@ -548,7 +553,7 @@ function AutomationDetail(props: {
             className="text-status-err"
             onClick={props.onDelete}
             disabled={props.deleteBusy}
-            aria-label="删除自动化"
+            aria-label={t("auto.detail.delete")}
           >
             <Trash2 size={14} />
           </Button>
@@ -558,15 +563,15 @@ function AutomationDetail(props: {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-md border bg-card p-3">
-          <span className="text-xs text-muted-foreground">下次运行</span>
+          <span className="text-xs text-muted-foreground">{t("auto.detail.nextRun")}</span>
           <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.nextRun)}</strong>
         </div>
         <div className="rounded-md border bg-card p-3">
-          <span className="text-xs text-muted-foreground">上次运行</span>
+          <span className="text-xs text-muted-foreground">{t("auto.detail.lastRun")}</span>
           <strong className="mt-1 block text-sm text-foreground">{fmtTime(job.lastRun)}</strong>
         </div>
         <div className="rounded-md border bg-card p-3">
-          <span className="text-xs text-muted-foreground">历史 session</span>
+          <span className="text-xs text-muted-foreground">{t("auto.detail.historySession")}</span>
           <strong className="mt-1 block text-sm text-foreground">{sessionCount}</strong>
         </div>
       </div>
@@ -577,7 +582,7 @@ function AutomationDetail(props: {
           <Textarea value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} rows={5} />
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="outline" onClick={() => { setEditingPrompt(false); setPromptDraft(job.prompt); }}>
-              取消
+              {t("auto.detail.cancel")}
             </Button>
             <Button
               size="sm"
@@ -590,10 +595,10 @@ function AutomationDetail(props: {
               {props.saveBusy ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  保存中…
+                  {t("auto.detail.saving")}
                 </>
               ) : (
-                "保存"
+                t("auto.detail.save")
               )}
             </Button>
           </div>
@@ -603,12 +608,12 @@ function AutomationDetail(props: {
           <pre className="m-0 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/40 p-3 text-sm">
             {job.prompt}
           </pre>
-          <Button size="sm" variant="outline" onClick={() => setEditingPrompt(true)}>编辑</Button>
+          <Button size="sm" variant="outline" onClick={() => setEditingPrompt(true)}>{t("auto.detail.edit")}</Button>
         </div>
       )}
 
       <div className="rounded-md border bg-card p-3">
-        <FieldRow label="状态">
+        <FieldRow label={t("auto.detail.status")}>
           <Badge
             variant="outline"
             className={
@@ -617,18 +622,18 @@ function AutomationDetail(props: {
                 : undefined
             }
           >
-            {job.enabled ? "活跃" : "已暂停"}
+            {job.enabled ? t("auto.detail.statusActive") : t("auto.detail.statusPaused")}
           </Badge>
         </FieldRow>
 
-        <FieldRow label="频率">
+        <FieldRow label={t("auto.detail.frequency")}>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {/* Step 1: cadence type. */}
             <Select value={sched.kind} onValueChange={(v) => onCadenceChange(v as Schedule["kind"])}>
               <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {CADENCE_OPTIONS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -643,8 +648,8 @@ function AutomationDetail(props: {
               >
                 <SelectTrigger className="h-8 w-[96px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {WEEKDAY_LABELS.map((label, i) => (
-                    <SelectItem key={i} value={String(i)}>{`周${label.slice(1)}`}</SelectItem>
+                  {weekdayLabels().map((label, i) => (
+                    <SelectItem key={i} value={String(i)}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -669,7 +674,7 @@ function AutomationDetail(props: {
                 <SelectTrigger className="h-8 w-[120px]"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {HOURLY_OPTIONS.map((h) => (
-                    <SelectItem key={h} value={String(h)}>{`每 ${h} 小时`}</SelectItem>
+                    <SelectItem key={h} value={String(h)}>{t("auto.cadence.everyHours", { hours: h })}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -679,7 +684,7 @@ function AutomationDetail(props: {
               <Input
                 className="h-8 w-[180px] font-mono"
                 value={customDraft}
-                placeholder="0 9 * * 1-5 或 1h"
+                placeholder={t("auto.detail.cronPlaceholder")}
                 onChange={(e) => setCustomDraft(e.target.value)}
                 onBlur={applyCustomSchedule}
                 onKeyDown={(e) => { if (e.key === "Enter") applyCustomSchedule(); }}
@@ -688,7 +693,7 @@ function AutomationDetail(props: {
           </div>
         </FieldRow>
 
-        <FieldRow label="时区">
+        <FieldRow label={t("auto.detail.timezone")}>
           <Select
             value={job.timezone ?? "UTC"}
             onValueChange={(v) => { if (v !== job.timezone) props.onSave({ timezone: v }); }}
@@ -702,7 +707,7 @@ function AutomationDetail(props: {
           </Select>
         </FieldRow>
 
-        <FieldRow label="权限">
+        <FieldRow label={t("auto.detail.permission")}>
           <Select
             value={job.permissionLevel ?? "read-only"}
             onValueChange={(v) => {
@@ -714,16 +719,16 @@ function AutomationDetail(props: {
             <SelectTrigger className="h-8 w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {PERMISSION_OPTIONS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                <SelectItem key={p.value} value={p.value}>{t(p.labelKey)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </FieldRow>
 
-        <FieldRow label="下次运行">{fmtTime(job.nextRun)}</FieldRow>
-        <FieldRow label="上次运行">{fmtTime(job.lastRun)}</FieldRow>
-        <FieldRow label="运行次数">{job.runCount}</FieldRow>
-        <FieldRow label="项目">
+        <FieldRow label={t("auto.detail.nextRun")}>{fmtTime(job.nextRun)}</FieldRow>
+        <FieldRow label={t("auto.detail.lastRun")}>{fmtTime(job.lastRun)}</FieldRow>
+        <FieldRow label={t("auto.detail.runTimes")}>{job.runCount}</FieldRow>
+        <FieldRow label={t("auto.detail.project")}>
           <Select
             value={selectedProjectValue(job.cwd)}
             onValueChange={(v) => {
@@ -739,11 +744,11 @@ function AutomationDetail(props: {
             </SelectContent>
           </Select>
         </FieldRow>
-        <FieldRow label="最近运行">
+        <FieldRow label={t("auto.detail.recentRun")}>
           {job.lastRunId ? (
             <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
               <History size={14} />
-              查看
+              {t("auto.detail.recentRunView")}
             </Button>
           ) : (
             "—"
@@ -754,18 +759,18 @@ function AutomationDetail(props: {
       <div className="rounded-md border bg-card p-3">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h4 className="text-sm font-semibold text-foreground">运行 session</h4>
-            <p className="text-xs text-muted-foreground">{lastSession ? `最近 ${shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt)}` : "暂无历史 session"}</p>
+            <h4 className="text-sm font-semibold text-foreground">{t("auto.detail.runSession")}</h4>
+            <p className="text-xs text-muted-foreground">{lastSession ? t("auto.detail.recentAt", { when: shortDate(lastSession.run?.updatedAt ?? lastSession.session.updatedAt) }) : t("auto.detail.noSession")}</p>
           </div>
           {job.lastRunId && (
             <Button size="sm" variant="outline" onClick={() => props.onViewRun(job.lastRunId!)}>
               <History size={14} />
-              运行详情
+              {t("auto.detail.runDetail")}
             </Button>
           )}
         </div>
         {props.sessions.length === 0 ? (
-          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">这个任务还没有可跳转的历史 session。</div>
+          <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{t("auto.detail.noJumpableSession")}</div>
         ) : (
           <ul className="space-y-1">
             {props.sessions.map(({ repoId, session, run, disk, needsImport }) => {
@@ -791,9 +796,9 @@ function AutomationDetail(props: {
                     <Clock3 size={14} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{session.title}</span>
-                      <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(status)}</small>
+                      <small className="block truncate text-xs text-muted-foreground">{shortDate(when)} · {runStatusLabel(t, status)}</small>
                     </span>
-                    <span className="text-xs text-primary">查看</span>
+                    <span className="text-xs text-primary">{t("auto.detail.sessionView")}</span>
                   </Button>
                 </li>
               );

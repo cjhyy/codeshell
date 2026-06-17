@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { ViewMode, PanelTab } from "../view";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useT } from "../i18n/I18nProvider";
+import { translate } from "../i18n/translate";
+import { loadUILanguage } from "../uiLanguage";
 
 export interface PaletteCommand {
   id: string;
@@ -17,6 +20,7 @@ interface Props {
 }
 
 export function CommandPalette({ open, onClose, commands }: Props) {
+  const { t } = useT();
   const [filter, setFilter] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -48,7 +52,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
           ref={inputRef}
           className="h-11 rounded-none border-0 border-b bg-transparent px-3 shadow-none focus-visible:ring-0"
           value={filter}
-          placeholder="键入命令…"
+          placeholder={t("panels.palette.typeCommand")}
           onChange={(e) => {
             setFilter(e.target.value);
             setCursor(0);
@@ -74,7 +78,7 @@ export function CommandPalette({ open, onClose, commands }: Props) {
         />
         <ul className="max-h-[55vh] overflow-y-auto p-2">
           {filtered.length === 0 ? (
-            <li className="px-2 py-6 text-center text-sm text-muted-foreground">没有匹配的命令</li>
+            <li className="px-2 py-6 text-center text-sm text-muted-foreground">{t("panels.palette.noMatch")}</li>
           ) : (
             filtered.map((c, i) => (
               <li
@@ -110,25 +114,30 @@ export function buildCommands(opts: {
   openSearch: () => void;
 }): PaletteCommand[] {
   const { setViewMode, openPanel, toggleSidebar, toggleInspector, clearTranscript, openSearch } = opts;
+  // buildCommands is a plain function called inline from App's render (no hook
+  // access here). Translate against the active stored language so labels follow
+  // the language switch on the next render.
+  const lang = loadUILanguage();
+  const tt = (key: string) => translate(lang, key);
   return [
-    { id: "go.chat", label: "打开 对话", run: () => setViewMode("chat") },
-    { id: "go.files", label: "打开 文件", hint: "Cmd+Shift+E", run: () => openPanel("files") },
-    { id: "go.browser", label: "打开 浏览器", hint: "Cmd+T", run: () => openPanel("browser") },
-    { id: "go.review", label: "打开 审查", hint: "Ctrl+Shift+G", run: () => openPanel("review") },
-    { id: "go.terminal", label: "打开 终端", hint: "Ctrl+`", run: () => openPanel("terminal") },
-    { id: "go.sessions", label: "打开 会话", run: () => setViewMode("sessions") },
-    { id: "go.approvals", label: "打开 审批", run: () => setViewMode("approvals") },
-    { id: "go.runs", label: "打开 运行", run: () => setViewMode("runs") },
-    { id: "go.extensions", label: "打开 扩展", run: () => setViewMode("customize") },
-    { id: "go.logs", label: "打开 日志", run: () => setViewMode("logs") },
+    { id: "go.chat", label: tt("panels.palette.openChat"), run: () => setViewMode("chat") },
+    { id: "go.files", label: tt("panels.palette.openFiles"), hint: "Cmd+Shift+E", run: () => openPanel("files") },
+    { id: "go.browser", label: tt("panels.palette.openBrowser"), hint: "Cmd+T", run: () => openPanel("browser") },
+    { id: "go.review", label: tt("panels.palette.openReview"), hint: "Ctrl+Shift+G", run: () => openPanel("review") },
+    { id: "go.terminal", label: tt("panels.palette.openTerminal"), hint: "Ctrl+`", run: () => openPanel("terminal") },
+    { id: "go.sessions", label: tt("panels.palette.openSessions"), run: () => setViewMode("sessions") },
+    { id: "go.approvals", label: tt("panels.palette.openApprovals"), run: () => setViewMode("approvals") },
+    { id: "go.runs", label: tt("panels.palette.openRuns"), run: () => setViewMode("runs") },
+    { id: "go.extensions", label: tt("panels.palette.openExtensions"), run: () => setViewMode("customize") },
+    { id: "go.logs", label: tt("panels.palette.openLogs"), run: () => setViewMode("logs") },
     // 设置改为左下角上拉菜单 — 不再由 viewMode 驱动，所以不放进 palette。
-    { id: "toggle.sidebar", label: "切换 侧栏", hint: "Cmd+B", run: toggleSidebar },
-    { id: "toggle.inspector", label: "切换 详情", hint: "Cmd+I", run: toggleInspector },
-    { id: "transcript.clear", label: "清空当前 transcript", run: clearTranscript },
-    { id: "search.open", label: "搜索当前 transcript", hint: "Cmd+F", run: openSearch },
+    { id: "toggle.sidebar", label: tt("panels.palette.toggleSidebar"), hint: "Cmd+B", run: toggleSidebar },
+    { id: "toggle.inspector", label: tt("panels.palette.toggleInspector"), hint: "Cmd+I", run: toggleInspector },
+    { id: "transcript.clear", label: tt("panels.palette.clearTranscript"), run: clearTranscript },
+    { id: "search.open", label: tt("panels.palette.searchTranscript"), hint: "Cmd+F", run: openSearch },
     {
       id: "window.new",
-      label: "新窗口",
+      label: tt("panels.palette.newWindow"),
       hint: "Cmd+Shift+N",
       run: () => {
         void window.codeshell.newWindow();

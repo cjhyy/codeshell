@@ -11,6 +11,28 @@
  * replayed / historical transcripts (FoldItem carries no original timestamp).
  */
 
+import { translate } from "../i18n/translate";
+import type { UILanguage } from "../uiLanguage";
+
+/**
+ * Read the active UI language without importing loadUILanguage directly:
+ * this module is exercised by a unit test that runs outside the DOM (no
+ * `localStorage`), so guard the access and default to Chinese there.
+ */
+function activeLang(): UILanguage {
+  try {
+    const raw = globalThis.localStorage?.getItem("codeshell.uiLanguage");
+    return raw === "en" ? "en" : "zh";
+  } catch {
+    return "zh";
+  }
+}
+
+/** date-fns-free locale tag for Intl, derived from the UI language. */
+function localeTag(lang: UILanguage): string {
+  return lang === "en" ? "en-US" : "zh-CN";
+}
+
 function isFiniteMs(ms?: number): ms is number {
   return typeof ms === "number" && Number.isFinite(ms);
 }
@@ -65,13 +87,16 @@ export function formatMessageTime(ms?: number, now: number = Date.now()): string
   const weekStart = startOfWeekMonday(nowDate);
   const tsDayStart = startOfDay(d);
 
+  const lang = activeLang();
+  const locale = localeTag(lang);
+
   if (tsDayStart >= todayStart) return clock; // today (and any same-day future)
-  if (tsDayStart >= yesterdayStart) return `昨天 ${clock}`;
+  if (tsDayStart >= yesterdayStart) return translate(lang, "msg.time.yesterday", { clock });
   if (tsDayStart >= weekStart) {
-    const weekday = d.toLocaleDateString("zh-CN", { weekday: "long" });
+    const weekday = d.toLocaleDateString(locale, { weekday: "long" });
     return `${weekday} ${clock}`;
   }
-  const date = d.toLocaleDateString("zh-CN", {
+  const date = d.toLocaleDateString(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

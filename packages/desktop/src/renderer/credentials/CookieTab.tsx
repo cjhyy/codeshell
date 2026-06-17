@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm } from "../ui/DialogProvider";
 import type { MaskedCredentialView } from "./types";
+import { useT } from "../i18n/I18nProvider";
 
 /**
  * Cookie 账号凭证(凭证模块第二期)。
@@ -21,6 +22,7 @@ import type { MaskedCredentialView } from "./types";
  * AI 抓取/下载(yt-dlp 等)经 UseCredential 工具按凭证 id 取用(走审批门),不在此页。
  */
 export function CookieTab({ cwd }: { cwd: string }) {
+  const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
   const [items, setItems] = useState<MaskedCredentialView[]>([]);
@@ -53,7 +55,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
   const capture = async () => {
     const d = normalizeDomain(url.replace(/^https?:\/\//, ""));
     if (!d || !label.trim()) {
-      toast({ message: "请填平台域名(地址栏)和账号名", variant: "error" });
+      toast({ message: t("ext.cookie.needDomainAndAccount"), variant: "error" });
       return;
     }
     setBusy(true);
@@ -61,7 +63,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
       const { jar, count } = await window.codeshell.credentials.captureCookieJar(d);
       if (count === 0) {
         toast({
-          message: `${d} 暂无 cookie。请先在内置浏览器登录该账号,再回来拓取。`,
+          message: t("ext.cookie.noCookieYet", { domain: d }),
           variant: "error",
         });
         return;
@@ -74,7 +76,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
         secret: JSON.stringify(jar),
         meta: { platform, domain: d },
       });
-      toast({ message: `已保存「${label.trim()}」(${count} 个 cookie)` });
+      toast({ message: t("ext.cookie.savedToast", { label: label.trim(), count }) });
       setLabel("");
       load();
     } finally {
@@ -89,7 +91,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
   const loginCapture = async () => {
     const raw = url.trim();
     if (!raw) {
-      toast({ message: "请先填登录页 URL(或平台域名)", variant: "error" });
+      toast({ message: t("ext.cookie.needLoginUrl"), variant: "error" });
       return;
     }
     const fullUrl = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
@@ -99,18 +101,26 @@ export function CookieTab({ cwd }: { cwd: string }) {
     try {
       const res = await window.codeshell.credentials.loginCapture({ url: fullUrl, platform });
       if (!res.ok) {
-        if (!res.cancelled) toast({ message: res.error ?? "登录未完成", variant: "error" });
+        if (!res.cancelled)
+          toast({ message: res.error ?? t("ext.cookie.loginNotDone"), variant: "error" });
+        return;
+      }
+      // 0 cookie 硬拒:不让用户存空/无效凭证(对齐设计 §7 + 内置浏览器拓取路径的 count===0 硬停)。
+      if (res.jar.length === 0) {
+        toast({ message: t("ext.cookie.emptyJarAfterLogin", { domain: res.domain }), variant: "error" });
         return;
       }
       // 账号名:抓到的用户名 > 表单填的 > 占位
-      const accountName = res.suggestedLabel || label.trim() || "账号";
+      const accountName = res.suggestedLabel || label.trim() || t("ext.cookie.defaultAccountName");
       if (!res.loginCheck.ok) {
-        const miss = res.loginCheck.missing?.length ? `(缺 ${res.loginCheck.missing.join(", ")})` : "";
+        const miss = res.loginCheck.missing?.length
+          ? t("ext.cookie.notLoggedInMissing", { missing: res.loginCheck.missing.join(", ") })
+          : "";
         const proceed = await confirm({
-          title: "似乎未登录成功",
-          message: `没检测到 ${res.domain} 的登录态${miss},仍要保存吗?`,
-          detail: "可能是没真正登录,或该站的登录特征未被识别。保存后若 AI 用着报错,回来「重拓」即可。",
-          confirmLabel: "仍然保存",
+          title: t("ext.cookie.notLoggedInTitle"),
+          message: t("ext.cookie.notLoggedInMessage", { domain: res.domain, miss }),
+          detail: t("ext.cookie.notLoggedInDetail"),
+          confirmLabel: t("ext.cookie.notLoggedInConfirm"),
         });
         if (!proceed) return;
       }
@@ -121,7 +131,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
         secret: JSON.stringify(res.jar),
         meta: { platform, domain: res.domain },
       });
-      toast({ message: `已保存「${accountName}」(${res.jar.length} 个 cookie)` });
+      toast({ message: t("ext.cookie.savedToast", { label: accountName, count: res.jar.length }) });
       setLabel("");
       load();
     } finally {
@@ -132,14 +142,14 @@ export function CookieTab({ cwd }: { cwd: string }) {
   const repull = async (c: MaskedCredentialView) => {
     const d = c.meta?.domain;
     if (!d) {
-      toast({ message: "该凭证缺少域名信息,无法重拓", variant: "error" });
+      toast({ message: t("ext.cookie.repullNoDomain"), variant: "error" });
       return;
     }
     setBusy(true);
     try {
       const { jar, count } = await window.codeshell.credentials.captureCookieJar(d);
       if (count === 0) {
-        toast({ message: `${d} 当前无 cookie,请先在浏览器重新登录`, variant: "error" });
+        toast({ message: t("ext.cookie.repullNoCookie", { domain: d }), variant: "error" });
         return;
       }
       await window.codeshell.credentials.save(cwd, "user", {
@@ -149,7 +159,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
         secret: JSON.stringify(jar),
         meta: { platform: c.meta?.platform, domain: d },
       });
-      toast({ message: `已重拓「${c.label}」(${count} 个 cookie)` });
+      toast({ message: t("ext.cookie.repulledToast", { label: c.label, count }) });
       load();
     } finally {
       setBusy(false);
@@ -158,25 +168,26 @@ export function CookieTab({ cwd }: { cwd: string }) {
 
   const switchTo = async (c: MaskedCredentialView) => {
     const ok = await confirm({
-      title: "切换账号",
-      message: `将用「${c.label}」覆盖当前浏览器登录态?`,
-      detail: "当前浏览器分区的 cookie 会被清空并替换成该账号的登录态(仅 cookie,不含其他本地存储)。",
-      confirmLabel: "切换",
+      title: t("ext.cookie.switchTitle"),
+      message: t("ext.cookie.switchMessage", { label: c.label }),
+      detail: t("ext.cookie.switchDetail"),
+      confirmLabel: t("ext.cookie.switchConfirm"),
     });
     if (!ok) return;
     setBusy(true);
     try {
       const { count } = await window.codeshell.credentials.restoreCookieToBrowser(cwd, c.id);
-      toast({ message: `已切换到「${c.label}」(导回 ${count} 个 cookie),浏览器已刷新` });
+      toast({ message: t("ext.cookie.switchedToast", { label: c.label, count }) });
     } catch (e) {
-      toast({ message: `切换失败: ${String(e)}`, variant: "error" });
+      toast({ message: t("ext.cookie.switchFailed", { error: String(e) }), variant: "error" });
     } finally {
       setBusy(false);
     }
   };
 
   const del = async (c: MaskedCredentialView) => {
-    if (!(await confirm({ message: `删除账号凭证「${c.label}」?`, destructive: true }))) return;
+    if (!(await confirm({ message: t("ext.cookie.deleteConfirm", { label: c.label }), destructive: true })))
+      return;
     await window.codeshell.credentials.remove(cwd, "user", c.id);
     load();
   };
@@ -184,7 +195,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
   // 按 platform 分组
   const groups = new Map<string, MaskedCredentialView[]>();
   for (const c of items) {
-    const p = c.meta?.platform ?? c.meta?.domain ?? "其他";
+    const p = c.meta?.platform ?? c.meta?.domain ?? t("ext.cookie.otherGroup");
     if (!groups.has(p)) groups.set(p, []);
     groups.get(p)!.push(c);
   }
@@ -192,48 +203,44 @@ export function CookieTab({ cwd }: { cwd: string }) {
   return (
     <div className="space-y-4">
       <Card className="space-y-3 p-4">
-        <p className="text-sm text-muted-foreground">
-          填登录页地址 → 弹出独立登录窗(Google/YouTube 等内置浏览器登不上的站也能登)→ 登录后点窗口里的
-          「我已登录,保存」→ 自动存成一个具名账号(用完即焚的无痕会话,识别到用户名会自动命名)。
-          同一平台可存多个账号,随时「切换」回浏览器;AI 抓取/下载按账号取用(会弹审批)。
-        </p>
+        <p className="text-sm text-muted-foreground">{t("ext.cookie.intro")}</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label>登录页地址 / 平台域名</Label>
+            <Label>{t("ext.cookie.urlLabel")}</Label>
             <Input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://www.youtube.com"
+              placeholder={t("ext.cookie.urlPlaceholder")}
             />
           </div>
           <div className="space-y-1">
-            <Label>账号名(可留空,自动识别)</Label>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="账号A" />
+            <Label>{t("ext.cookie.accountLabel")}</Label>
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={t("ext.cookie.accountPlaceholder")}
+            />
           </div>
         </div>
         <div className="flex gap-2">
           <Button disabled={busy} onClick={() => void loginCapture()}>
-            {busy ? "处理中…" : "弹窗登录并保存"}
+            {busy ? t("ext.cookie.processing") : t("ext.cookie.loginAndSave")}
           </Button>
           <Button
             variant="secondary"
             disabled={busy}
             onClick={() => void capture()}
-            title="从内置浏览器分区拓取(适合已在内置浏览器登录过的站,如小红书)"
+            title={t("ext.cookie.captureFromBrowserTitle")}
           >
-            从内置浏览器拓取
+            {t("ext.cookie.captureFromBrowser")}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          已在内置浏览器登录过(如小红书)→ 填平台域名后用「从内置浏览器拓取」即可,无需弹窗。
-        </p>
+        <p className="text-xs text-muted-foreground">{t("ext.cookie.captureHint")}</p>
       </Card>
 
       <div className="space-y-3">
         {items.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            暂无账号凭证。登录一个账号后,在上方填平台域名 + 账号名保存。
-          </p>
+          <p className="text-sm text-muted-foreground">{t("ext.cookie.emptyAccounts")}</p>
         )}
         {[...groups.entries()].map(([platform, accounts]) => (
           <div key={platform} className="space-y-2">
@@ -242,19 +249,17 @@ export function CookieTab({ cwd }: { cwd: string }) {
               <Card key={c.id} className="flex items-center justify-between p-3">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{c.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {c.meta?.domain ?? c.id}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{c.meta?.domain ?? c.id}</div>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <Button variant="secondary" size="sm" disabled={busy} onClick={() => void switchTo(c)}>
-                    切换
+                    {t("ext.cookie.actionSwitch")}
                   </Button>
                   <Button variant="ghost" size="sm" disabled={busy} onClick={() => void repull(c)}>
-                    重拓
+                    {t("ext.cookie.actionRepull")}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => void del(c)}>
-                    删除
+                    {t("ext.cookie.actionDelete")}
                   </Button>
                 </div>
               </Card>

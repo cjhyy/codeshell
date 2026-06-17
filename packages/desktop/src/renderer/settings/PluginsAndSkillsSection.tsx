@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { Markdown } from "../Markdown";
 import { writeSettings } from "../settingsBus";
+import { useT } from "../i18n/I18nProvider";
 
 function skillSourceBadgeClass(source: string): string {
   return cn(
@@ -58,7 +59,10 @@ export function PluginsAndSkillsSection({ activeRepoPath }: Props) {
 // ─── Local synthetic bucket ──────────────────────────────────────────
 
 const STANDALONE_NAMESPACE = "__standalone__";
-const STANDALONE_LABEL = "本地";
+// 合成「本地」桶的 label/sourceLabel 仅占位 —— 渲染处对 synthetic 行一律走
+// t("settingsX.plugins.localLabel/localSource"),这两个字段从不直接显示。
+// 留空串而非中文字面量,避免被误当成需要翻译的真文案(亦防 CJK 字面量泄漏)。
+const STANDALONE_LABEL = "";
 
 function shortNameOf(s: SkillSummary): string {
   const idx = s.name.indexOf(":");
@@ -109,7 +113,7 @@ function buildPluginRows(
     rows.push({
       key: STANDALONE_NAMESPACE,
       label: STANDALONE_LABEL,
-      sourceLabel: "本地",
+      sourceLabel: "", // 占位;synthetic 行渲染走 t(),见 STANDALONE_LABEL 注释。
       skillCount: localSkills.length,
       synthetic: true,
     });
@@ -171,6 +175,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const skillBodyForRef = useRef<string | null>(null);
   const confirm = useConfirm();
   const alert = useAlert();
+  const { t } = useT();
 
   const cwd = activeRepoPath ?? "/";
 
@@ -266,7 +271,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
         }
       } catch (e) {
         if (!cancelled) {
-          setSkillBody(`# 读取失败\n\n${String(e instanceof Error ? e.message : e)}`);
+          setSkillBody(`# ${t("settingsX.plugins.readFailed")}\n\n${String(e instanceof Error ? e.message : e)}`);
           skillBodyForRef.current = s.filePath;
         }
       }
@@ -274,10 +279,11 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
     return () => {
       cancelled = true;
     };
-  }, [selection, skillsByName]);
+  }, [selection, skillsByName, t]);
 
   if (error) return <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>;
-  if (!skills) return <div className="p-4 text-sm text-muted-foreground">加载中…</div>;
+  if (!skills)
+    return <div className="p-4 text-sm text-muted-foreground">{t("settingsX.plugins.loading")}</div>;
 
   const toggleSkillDisabled = async (name: string, shouldDisable: boolean) => {
     const next = new Set(disabledSet);
@@ -341,17 +347,17 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const uninstallOne = async (s: SkillSummary) => {
     if (s.source === "plugin") {
       await confirm({
-        title: "无法卸载 plugin skill",
-        message: `「${s.name}」来自插件，无法在此处卸载。可以使用「禁用」隐藏它，或移除对应插件。`,
-        confirmLabel: "知道了",
+        title: t("settingsX.plugins.cannotUninstallPluginTitle"),
+        message: t("settingsX.plugins.cannotUninstallPluginMsg", { name: s.name }),
+        confirmLabel: t("settingsX.plugins.gotIt"),
       });
       return;
     }
     const ok = await confirm({
-      title: "卸载 skill",
-      message: `确认卸载「${s.name}」？这会删除磁盘上的文件夹。`,
+      title: t("settingsX.plugins.uninstallSkillTitle"),
+      message: t("settingsX.plugins.uninstallSkillMsg", { name: s.name }),
       detail: s.filePath,
-      confirmLabel: "卸载",
+      confirmLabel: t("settingsX.plugins.uninstallConfirm"),
       destructive: true,
     });
     if (!ok) return;
@@ -363,7 +369,10 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
       }
       await refresh();
     } catch (e) {
-      void alert({ title: "卸载失败", message: String(e instanceof Error ? e.message : e) });
+      void alert({
+        title: t("settingsX.plugins.uninstallFailed"),
+        message: String(e instanceof Error ? e.message : e),
+      });
     }
   };
 
@@ -408,7 +417,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                         // clicking an indeterminate checkbox enables everything.
                         void togglePluginGroup(row.key, groupState === "all")
                       }
-                      title="启用 / 禁用整个插件（级联到下属 skill）"
+                      title={t("settingsX.plugins.toggleGroupTitle")}
                     />
                   </label>
                 ) : (
@@ -419,9 +428,11 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                   />
                 )}
                 <div className="min-w-0 flex flex-1 flex-col">
-                  <span className="truncate text-sm font-medium text-foreground">{row.label}</span>
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {row.synthetic ? t("settingsX.plugins.localLabel") : row.label}
+                  </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {row.sourceLabel}
+                    {row.synthetic ? t("settingsX.plugins.localSource") : row.sourceLabel}
                   </span>
                   <span className="mt-1 w-fit rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                     {row.skillCount} skill{row.skillCount === 1 ? "" : "s"}
@@ -437,7 +448,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
           className="mt-2 w-full justify-start"
           onClick={onSelectAddPanel}
         >
-          + 添加插件
+          {t("settingsX.plugins.addPlugin")}
         </Button>
       </aside>
 
@@ -446,7 +457,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
         <div className="mb-3 flex items-center gap-2">
           <Input
             className="h-9 flex-1"
-            placeholder="搜索 skill"
+            placeholder={t("settingsX.plugins.searchSkill")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
@@ -456,15 +467,17 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             size="sm"
             className="h-8 px-3 text-sm"
             onClick={() => void refresh()}
-            title="刷新"
+            title={t("settingsX.plugins.refresh")}
           >
-            刷新
+            {t("settingsX.plugins.refresh")}
           </Button>
         </div>
         {selectedPluginRow ? (
           middleSkills.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              {filter ? "没有匹配的 skill" : "该插件未提供 skill"}
+              {filter
+                ? t("settingsX.plugins.noMatch")
+                : t("settingsX.plugins.noSkillInPlugin")}
             </div>
           ) : (
             <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto">
@@ -484,7 +497,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                     <label
                       className="shrink-0"
                       onClick={(e) => e.stopPropagation()}
-                      title="启用 / 禁用"
+                      title={t("settingsX.plugins.toggleSkillTitle")}
                     >
                       <Switch
                         checked={!isDisabled}
@@ -509,7 +522,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-status-err"
-                        title="卸载"
+                        title={t("settingsX.plugins.uninstallTitle")}
                         onClick={(e) => {
                           e.stopPropagation();
                           void uninstallOne(s);
@@ -524,7 +537,9 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             </ul>
           )
         ) : (
-          <div className="p-4 text-center text-sm text-muted-foreground">选择左侧任一插件查看其 skill</div>
+          <div className="p-4 text-center text-sm text-muted-foreground">
+            {t("settingsX.plugins.selectPluginHint")}
+          </div>
         )}
       </section>
 
@@ -543,7 +558,9 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             const s = skillsByName.get(selection.skillName);
             if (!s) {
               return (
-                <div className="p-4 text-center text-sm text-muted-foreground">该 skill 不存在或已被移除</div>
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  {t("settingsX.plugins.skillGone")}
+                </div>
               );
             }
             return (
@@ -562,9 +579,9 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                       onClick={() => {
                         void navigator.clipboard.writeText(s.name);
                       }}
-                      title="复制 skill 名称"
+                      title={t("settingsX.plugins.copyNameTitle")}
                     >
-                      复制名称
+                      {t("settingsX.plugins.copyName")}
                     </Button>
                     <Button
                       type="button"
@@ -572,9 +589,9 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                       size="sm"
                       className="h-8 px-2 text-xs"
                       onClick={() => void window.codeshell.revealInFinder(s.filePath)}
-                      title="在 Finder 中显示"
+                      title={t("settingsX.plugins.revealTitle")}
                     >
-                      定位
+                      {t("settingsX.plugins.reveal")}
                     </Button>
                     {s.source !== "plugin" && (
                       <Button
@@ -583,9 +600,9 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                         size="sm"
                         className="h-8 px-2 text-xs text-status-err hover:text-status-err"
                         onClick={() => void uninstallOne(s)}
-                        title="卸载"
+                        title={t("settingsX.plugins.uninstallTitle")}
                       >
-                        卸载
+                        {t("settingsX.plugins.uninstall")}
                       </Button>
                     )}
                   </div>
@@ -593,7 +610,9 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
                 </header>
                 <div className="min-h-0 overflow-y-auto">
                   {skillBody === null ? (
-                    <div className="p-4 text-sm text-muted-foreground">加载中…</div>
+                    <div className="p-4 text-sm text-muted-foreground">
+                      {t("settingsX.plugins.loading")}
+                    </div>
                   ) : (
                     <Markdown text={skillBody} />
                   )}
@@ -605,7 +624,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
           <PluginInfoCard row={selectedPluginRow} />
         ) : (
           <div className="p-4 text-center text-sm text-muted-foreground">
-            选择左侧任一插件以查看其 skill
+            {t("settingsX.plugins.selectPluginHint2")}
           </div>
         )}
       </section>
@@ -614,20 +633,21 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
 }
 
 function PluginInfoCard({ row }: { row: PluginRow }) {
+  const { t } = useT();
   if (row.synthetic) {
     return (
       <div className="rounded-md border p-3">
         <header className="mb-3 flex flex-wrap items-center gap-2">
-          <span className="min-w-0 truncate text-sm font-semibold text-foreground">{row.label}</span>
+          <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+            {t("settingsX.plugins.localLabel")}
+          </span>
         </header>
         <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
-          <span className="label">说明</span>
-          <span className="value">
-            来自 user / project 范围的本地 skill。可在中间栏单独启用或禁用。
-          </span>
+          <span className="label">{t("settingsX.plugins.infoDesc")}</span>
+          <span className="value">{t("settingsX.plugins.infoLocalDesc")}</span>
         </div>
         <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
-          <span className="label">数量</span>
+          <span className="label">{t("settingsX.plugins.infoCount")}</span>
           <span className="value">{row.skillCount}</span>
         </div>
       </div>
@@ -643,12 +663,12 @@ function PluginInfoCard({ row }: { row: PluginRow }) {
       </header>
       {p.description && (
         <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
-          <span className="label">描述</span>
+          <span className="label">{t("settingsX.plugins.infoDescription")}</span>
           <span className="value">{p.description}</span>
         </div>
       )}
       <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
-        <span className="label">来源</span>
+        <span className="label">{t("settingsX.plugins.infoSource")}</span>
         <span className="value">{p.sourceLabel}</span>
       </div>
       {p.marketplace && (
@@ -658,19 +678,19 @@ function PluginInfoCard({ row }: { row: PluginRow }) {
         </div>
       )}
       <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
-        <span className="label">版本</span>
-        <span className="value">{p.version || "(未知)"}</span>
+        <span className="label">{t("settingsX.plugins.infoVersion")}</span>
+        <span className="value">{p.version || t("settingsX.plugins.versionUnknown")}</span>
       </div>
       <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
-        <span className="label">安装位置</span>
+        <span className="label">{t("settingsX.plugins.infoInstallPath")}</span>
         <span className="value">{p.installPath}</span>
       </div>
       <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
-        <span className="label">Skill 数量</span>
+        <span className="label">{t("settingsX.plugins.infoSkillCount")}</span>
         <span className="value">{p.skillCount}</span>
       </div>
       <div className="grid grid-cols-[100px_1fr] gap-3 border-b py-2 text-sm last:border-b-0 [&_.label]:text-muted-foreground [&_.value]:min-w-0 [&_.value]:break-words">
-        <span className="label">安装时间</span>
+        <span className="label">{t("settingsX.plugins.infoInstalledAt")}</span>
         <span className="value">{p.installedAt}</span>
       </div>
     </div>
@@ -687,6 +707,7 @@ function AddPanel({
   onInstalled: () => void;
 }) {
   const [source, setSource] = useState<"github" | "local">("github");
+  const { t } = useT();
 
   return (
     <div className="flex flex-col gap-3">
@@ -698,7 +719,7 @@ function AddPanel({
           className="rounded-sm px-2 py-1 text-sm"
           onClick={() => setSource("github")}
         >
-          从 GitHub 安装
+          {t("settingsX.plugins.installFromGithub")}
         </Button>
         <Button
           type="button"
@@ -707,7 +728,7 @@ function AddPanel({
           className="rounded-sm px-2 py-1 text-sm"
           onClick={() => setSource("local")}
         >
-          从本地文件夹
+          {t("settingsX.plugins.installFromLocal")}
         </Button>
       </div>
 
@@ -732,6 +753,7 @@ function LocalAddPanel({
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useT();
 
   const choose = async () => {
     const picked = await window.codeshell.pickSkillDir();
@@ -764,31 +786,43 @@ function LocalAddPanel({
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
         <Button type="button" variant="outline" className="h-auto flex-col items-start gap-1 p-3 text-left" onClick={() => void choose()}>
-          <span className="text-sm font-medium text-foreground">选择本地文件夹</span>
-          <span className="text-xs text-muted-foreground">需要包含 SKILL.md。</span>
+          <span className="text-sm font-medium text-foreground">
+            {t("settingsX.plugins.pickLocalFolder")}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {t("settingsX.plugins.needsSkillMd")}
+          </span>
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-          <span>来源文件夹</span>
-          <Input value={source?.path ?? ""} readOnly placeholder="选择一个 Skill 文件夹" />
+          <span>{t("settingsX.plugins.sourceFolder")}</span>
+          <Input
+            value={source?.path ?? ""}
+            readOnly
+            placeholder={t("settingsX.plugins.pickSkillFolder")}
+          />
         </label>
         <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-          <span>安装名称</span>
+          <span>{t("settingsX.plugins.installName")}</span>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="skill-name" />
         </label>
         <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-          <span>安装位置</span>
+          <span>{t("settingsX.plugins.installLocation")}</span>
           <Select<"user" | "project">
             value={scope}
             onChange={(v) => setScope(v)}
             options={[
-              { value: "user", label: "全局", description: "对所有项目可用" },
+              {
+                value: "user",
+                label: t("settingsX.plugins.scopeGlobal"),
+                description: t("settingsX.plugins.scopeGlobalDesc"),
+              },
               {
                 value: "project",
-                label: "当前项目",
-                description: activeRepoPath ?? "未选中项目",
+                label: t("settingsX.plugins.scopeCurrentProject"),
+                description: activeRepoPath ?? t("settingsX.plugins.noProjectSelected"),
                 disabled: !activeRepoPath,
               },
             ]}
@@ -803,7 +837,7 @@ function LocalAddPanel({
         disabled={!source || saving || (scope === "project" && !activeRepoPath)}
         onClick={() => void install()}
       >
-        {saving ? "安装中..." : "安装 Skill"}
+        {saving ? t("settingsX.plugins.installing") : t("settingsX.plugins.installSkill")}
       </Button>
     </div>
   );
@@ -826,6 +860,7 @@ function GithubAddPanel({
   const [error, setError] = useState<string | null>(null);
   const [trustAck, setTrustAck] = useState(false);
   const confirm = useConfirm();
+  const { t } = useT();
 
   const reset = () => {
     setInspection(null);
@@ -862,15 +897,15 @@ function GithubAddPanel({
     if (!inspection || !selected) return;
     if (selected.alreadyInstalled) {
       const ok = await confirm({
-        title: "已存在同名 skill",
-        message: `「${selected.name}」似乎已经安装。重新安装会因目录冲突而失败，先卸载旧版本再继续。`,
-        confirmLabel: "知道了",
+        title: t("settingsX.plugins.existSameNameTitle"),
+        message: t("settingsX.plugins.existSameNameMsg", { name: selected.name }),
+        confirmLabel: t("settingsX.plugins.gotIt"),
       });
       if (!ok) return;
       return;
     }
     if (!trustAck) {
-      setError("请先确认信任来源");
+      setError(t("settingsX.plugins.confirmTrustFirst"));
       return;
     }
     setInstalling(true);
@@ -896,7 +931,7 @@ function GithubAddPanel({
       <div className="flex items-center gap-2">
         <Input
           className="h-9 flex-1"
-          placeholder="https://github.com/owner/repo"
+          placeholder={t("settingsX.plugins.ghPlaceholder")}
           value={url}
           onChange={(e) => {
             setUrl(e.target.value);
@@ -911,12 +946,12 @@ function GithubAddPanel({
           disabled={!url.trim() || inspecting}
           onClick={() => void inspect()}
         >
-          {inspecting ? "解析中…" : "解析"}
+          {inspecting ? t("settingsX.plugins.parsing") : t("settingsX.plugins.parse")}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        支持仓库 URL，或子目录形式 <code>/tree/&lt;ref&gt;/&lt;subpath&gt;</code>。
-        系统会读取仓库目录树，不会自动执行任何脚本。
+        {t("settingsX.plugins.ghHelp")} <code>/tree/&lt;ref&gt;/&lt;subpath&gt;</code>
+        {t("settingsX.plugins.ghHelpSuffix")}
       </p>
 
       {error && <div className="rounded-md bg-status-err/10 p-3 text-sm text-status-err">{error}</div>}
@@ -931,7 +966,7 @@ function GithubAddPanel({
               {inspection.url.ref ?? inspection.defaultBranch}
             </span>
             {inspection.isPlugin && (
-              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">检测到 plugin.json</span>
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{t("settingsX.plugins.detectedPlugin")}</span>
             )}
           </div>
 
@@ -940,7 +975,7 @@ function GithubAddPanel({
           )}
 
           {inspection.skills.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">没有可安装的 skill</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">{t("settingsX.plugins.noInstallableSkill")}</div>
           ) : (
             <div className="grid gap-2">
               {inspection.skills.map((s) => {
@@ -962,7 +997,7 @@ function GithubAddPanel({
                     <div className="flex items-center gap-2">
                       <strong>{s.name}</strong>
                       {s.alreadyInstalled && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">已安装</span>
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{t("settingsX.plugins.installed")}</span>
                       )}
                     </div>
                     {s.description && (
@@ -979,7 +1014,7 @@ function GithubAddPanel({
             <div className="mt-3 rounded-md border p-3">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                  <span>安装名称</span>
+                  <span>{t("settingsX.plugins.installName")}</span>
                   <Input
                     value={installName}
                     onChange={(e) => setInstallName(e.target.value)}
@@ -987,16 +1022,16 @@ function GithubAddPanel({
                   />
                 </label>
                 <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
-                  <span>安装位置</span>
+                  <span>{t("settingsX.plugins.installLocation")}</span>
                   <Select<"user" | "project">
                     value={scope}
                     onChange={setScope}
                     options={[
-                      { value: "user", label: "全局" },
+                      { value: "user", label: t("settingsX.plugins.scopeGlobal") },
                       {
                         value: "project",
-                        label: "当前项目",
-                        description: activeRepoPath ?? "未选中项目",
+                        label: t("settingsX.plugins.scopeCurrentProject"),
+                        description: activeRepoPath ?? t("settingsX.plugins.noProjectSelected"),
                         disabled: !activeRepoPath,
                       },
                     ]}
@@ -1011,8 +1046,9 @@ function GithubAddPanel({
                     onCheckedChange={setTrustAck}
                   />
                   <span>
-                    我已确认信任 {inspection.url.owner}/{inspection.url.repo}。
-                    远程仓库的内容会被复制到本地 skills 目录，但不会被自动执行。
+                    {t("settingsX.plugins.trustAckMsg", {
+                      repo: `${inspection.url.owner}/${inspection.url.repo}`,
+                    })}
                   </span>
                 </label>
               </div>
@@ -1029,10 +1065,12 @@ function GithubAddPanel({
                 onClick={() => void install()}
               >
                 {installing
-                  ? "安装中…"
+                  ? t("settingsX.plugins.installingShort")
                   : selected.alreadyInstalled
-                    ? "已安装"
-                    : `安装「${installName || selected.name}」`}
+                    ? t("settingsX.plugins.installed")
+                    : t("settingsX.plugins.installNamed", {
+                        name: installName || selected.name,
+                      })}
               </Button>
             </div>
           )}
