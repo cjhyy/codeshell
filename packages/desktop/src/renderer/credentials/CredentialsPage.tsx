@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Switch } from "@/components/ui/switch";
 import { TokenTab } from "./TokenTab";
 import { LinkTab } from "./LinkTab";
 import { CookieTab } from "./CookieTab";
@@ -9,6 +10,21 @@ type TabKey = "cookie" | "token" | "link";
 export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const [tab, setTab] = useState<TabKey>("cookie");
   const cwd = activeRepoPath ?? "";
+
+  // 凭证取用全自动开关(credentialUse.autoApprove,user 级)。开了 AI 用 UseCredential
+  // 取凭证不再弹审批。默认关 —— 每次取用都问(或本会话记住)。
+  const [autoApprove, setAutoApprove] = useState(false);
+  useEffect(() => {
+    void window.codeshell.getSettings("user").then((s) => {
+      const v = (s as { credentialUse?: { autoApprove?: boolean } } | null)?.credentialUse
+        ?.autoApprove;
+      setAutoApprove(v === true);
+    });
+  }, []);
+  const toggleAutoApprove = (next: boolean) => {
+    setAutoApprove(next);
+    void window.codeshell.updateSettings("user", { credentialUse: { autoApprove: next } });
+  };
 
   const tabBtn = (key: TabKey, label: string) => (
     <button
@@ -29,12 +45,18 @@ export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | n
       <p className="mb-4 text-sm text-muted-foreground">
         Cookie 登录态桥接、Permission Token、业务方 Link 凭证。
       </p>
-      <div className="mb-4 flex items-center gap-1">
-        {tabBtn("cookie", "Cookie")}
-        {tabBtn("token", "Permission Token")}
-        {tabBtn("link", "Link")}
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          {tabBtn("cookie", "Cookie")}
+          {tabBtn("token", "Permission Token")}
+          {tabBtn("link", "Link")}
+        </div>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Switch checked={autoApprove} onCheckedChange={toggleAutoApprove} />
+          AI 取用凭证免审批
+        </label>
       </div>
-      {tab === "cookie" && <CookieTab />}
+      {tab === "cookie" && <CookieTab cwd={cwd} />}
       {tab === "token" && <TokenTab cwd={cwd} kind="token" />}
       {tab === "link" && <LinkTab cwd={cwd} />}
     </div>

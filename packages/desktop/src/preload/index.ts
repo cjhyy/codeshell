@@ -611,6 +611,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     cookieDomains: (): Promise<string[]> => ipcRenderer.invoke("credentials:cookieDomains"),
     cookiePreview: (domain: string): Promise<{ count: number }> =>
       ipcRenderer.invoke("credentials:cookiePreview", domain),
+    /** 按域拓取 cookie jar(组装成 cookie 凭证用)。 */
+    captureCookieJar: (domain: string): Promise<{ jar: unknown[]; count: number }> =>
+      ipcRenderer.invoke("credentials:captureCookieJar", domain),
+    /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
+    restoreCookieToBrowser: (cwd: string, id: string): Promise<{ count: number }> =>
+      ipcRenderer.invoke("credentials:restoreCookieToBrowser", cwd, id),
   },
   /** Open the standalone browser window, optionally at an initial URL. */
   openBrowserPopout: (initialUrl?: string) => ipcRenderer.invoke("browser:popout", initialUrl),
@@ -637,6 +643,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     const h = (_e: IpcRendererEvent, payload: { url: string }) => cb(payload);
     ipcRenderer.on("browser:open-tab", h);
     return () => ipcRenderer.removeListener("browser:open-tab", h);
+  },
+  /** Cookie 账号切换后,main 广播此事件让浏览器面板重载当前 tab。Returns unsubscribe. */
+  onBrowserReload: (cb: () => void): (() => void) => {
+    const h = () => cb();
+    ipcRenderer.on("browser:reload", h);
+    return () => ipcRenderer.removeListener("browser:reload", h);
   },
   /** From a popout: ask the owner (main window) to remove an anchor by id. */
   sendBrowserAnchorRemove: (anchorId: string) => ipcRenderer.send("browser:anchor-remove", anchorId),

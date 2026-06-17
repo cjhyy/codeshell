@@ -61,6 +61,8 @@ import {
   browserWaitToolDef, browserWaitTool,
   browserPressEnterToolDef, browserPressEnterTool,
 } from "./browser-tools.js";
+import { useCredentialToolDef, useCredentialTool } from "../../credentials/use-credential-tool.js";
+import { CredentialStore } from "../../credentials/store.js";
 
 /**
  * Tool executor signature.
@@ -703,6 +705,20 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     },
     execute: browserPressEnterTool,
   },
+  // ─── Credentials: AI 取用已存凭证(token/link/cookie) ──────────
+  // permissionDefault:"allow" —— 取用审批由工具内部的 CredentialUseGate 负责
+  // (默认问/本会话记住/全自动),不走工具级权限层,避免双重弹窗。
+  // 读取凭证库本身不写文件(cookie 物化成临时 cookies.txt 是用完即弃的副产物)。
+  {
+    definition: {
+      ...useCredentialToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+    },
+    execute: useCredentialTool,
+  },
 ];
 
 /**
@@ -715,4 +731,18 @@ export const BUILTIN_TOOL_GUARDS: Map<string, (cwd: string) => boolean> = new Ma
   [webSearchToolDef.name, isWebSearchAvailable],
   [generateImageToolDef.name, isGenerateImageAvailable],
   [generateVideoToolDef.name, isGenerateVideoAvailable],
+  // UseCredential is hidden until at least one credential exists — keeps it out
+  // of the tool list (and the context) for the common no-credentials case,
+  // matching the spec's "quiet when empty" intent (true ToolSearch-deferral for
+  // builtins isn't wired in the engine).
+  [useCredentialToolDef.name, isUseCredentialAvailable],
 ]);
+
+/** UseCredential is available when the cwd's CredentialStore has ≥1 credential. */
+export function isUseCredentialAvailable(cwd: string): boolean {
+  try {
+    return new CredentialStore(cwd).listMasked().length > 0;
+  } catch {
+    return false;
+  }
+}

@@ -435,6 +435,12 @@ export {
   type Credential,
   type CredentialType,
   type CredentialStoreFile,
+  formatNetscapeCookies,
+  parseCookieJar,
+  type CookieLike,
+  useCredentialToolDef,
+  useCredentialToolDefFor,
+  sweepStaleCredentialCookies,
 } from "./credentials/index.js";
 
 // ─── State (runtime singletons shared with TUI) ──────────────────

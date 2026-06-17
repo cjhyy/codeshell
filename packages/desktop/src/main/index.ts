@@ -29,6 +29,7 @@ import {
   CredentialStore,
   type Credential,
   type CredentialScope,
+  sweepStaleCredentialCookies,
 } from "@cjhyy/code-shell-core";
 import { AgentBridge, resolveNoRepoCwd } from "./agent-bridge.js";
 import { registerGuest } from "./browser-driver/active-guest.js";
@@ -52,7 +53,10 @@ import { ptyStart, ptyWrite, ptyResize, ptyKill, ptyKillAll, ptyReapDestroyed } 
 import {
   listCookieDomains,
   getCookiesForDomain,
+  captureCookieJar,
+  restoreCookiesToBrowser,
   sweepStaleLeases,
+  type ElectronCookieLike,
 } from "./credentials-service.js";
 import { RemoteHostManager } from "./mobile-remote/remote-host-manager.js";
 import { TrustedDeviceStore } from "./mobile-remote/trusted-device-store.js";
@@ -939,6 +943,7 @@ app.whenReady().then(() => {
   void createWindow();
   initUpdater();
   sweepStaleLeases(); // clear any cookie-lease temp files left by a prior crash
+  sweepStaleCredentialCookies(); // clear UseCredential temp cookies.txt left by a prior crash
 
   // First-run defaults: copy bundled agents + register seed marketplace
   // sources into ~/.code-shell, THEN soft pre-install the core plugins
@@ -1056,6 +1061,33 @@ ipcMain.handle("credentials:cookiePreview", async (_e, domain: string) => {
   // (deferred) UseGate when a tool call is approved.
   const cookies = await getCookiesForDomain(domain);
   return { count: cookies.length };
+});
+// 第二期:按域拓取 cookie jar(renderer 拿去组装成 cookie 凭证存进 CredentialStore)。
+ipcMain.handle("credentials:captureCookieJar", async (_e, domain: string) => {
+  if (typeof domain !== "string" || !domain.trim()) {
+    throw new Error("credentials:captureCookieJar requires a domain");
+  }
+  const jar = await captureCookieJar(domain.trim());
+  return { jar, count: jar.length };
+});
+// 第二期:切换账号 — 把某条 cookie 凭证的 jar 导回 persist:browser 覆盖当前登录态,
+// 然后广播 browser:reload 让浏览器面板刷新成该账号身份。
+ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id: string) => {
+  if (typeof id !== "string" || !id) throw new Error("credentials:restoreCookieToBrowser requires id");
+  const cred = new CredentialStore(cwd || undefined).resolve(id);
+  if (!cred || cred.type !== "cookie") throw new Error(`无 cookie 凭证: "${id}"`);
+  let jar: ElectronCookieLike[] = [];
+  try {
+    const parsed = JSON.parse(cred.secret ?? "[]");
+    if (Array.isArray(parsed)) jar = parsed as ElectronCookieLike[];
+  } catch {
+    throw new Error(`凭证「${cred.label}」的 cookie 数据损坏`);
+  }
+  const { count } = await restoreCookiesToBrowser(jar);
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("browser:reload");
+  }
+  return { count };
 });
 ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
