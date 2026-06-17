@@ -484,6 +484,11 @@ export {
   isGitAvailable,
 } from "./utils/exec.js";
 export { gte } from "./utils/semver.js";
+// Cross-process file lock (proper-lockfile via createRequire, ESM-safe). Used by
+// RunLock / CronStore internally; exported so other writers of shared files
+// (e.g. desktop settings-service writing the same settings.json as the worker)
+// can take the same advisory lock.
+export { lock, lockSync, unlock, check } from "./utils/lockfile.js";
 export { logForDebugging } from "./utils/debug.js";
 export {
   isEnvTruthy,
