@@ -45,10 +45,15 @@ export const bashToolDef: ToolDefinition = {
       run_in_background: {
         type: "boolean",
         description:
-          "Run the command as a long-lived background process (e.g. a dev server like `npm run dev`). " +
-          "Returns immediately with a shell_id instead of waiting for the command to finish. " +
-          "Use BashOutput(shell_id) to read its output, KillShell(shell_id) to stop it, ListShells() to enumerate. " +
-          "The process is killed when the session/app exits. Do NOT use for one-shot commands — only for processes you expect to keep running.",
+          "Run the command in the background instead of blocking. Use for BOTH long-lived services " +
+          "(a dev server like `npm run dev`) AND slow one-shot tasks that would otherwise block for a " +
+          "long time (a download, a long build/test run). Returns immediately with a shell_id. " +
+          "When the command FINISHES you are automatically notified and woken to continue — so do NOT " +
+          "sleep, poll, or repeatedly BashOutput to wait for it. Just end your turn (or do other work); " +
+          "the system wakes you on completion. Use BashOutput(shell_id) only to check on a still-running " +
+          "process on demand, KillShell(shell_id) to stop one, ListShells() to enumerate. The process is " +
+          "killed when the session/app exits. (A never-exiting service like a dev server simply never " +
+          "fires that completion wakeup — that's expected.)",
       },
     },
     required: ["command"],

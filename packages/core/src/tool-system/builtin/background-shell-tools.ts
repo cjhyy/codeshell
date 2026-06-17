@@ -26,7 +26,10 @@ export const bashOutputToolDef: ToolDefinition = {
   name: "BashOutput",
   description:
     "Read output from a background shell started via Bash(run_in_background=true). " +
-    "Returns new output since your last read (incremental by default). ANSI colors and progress bars are stripped.",
+    "Returns new output since your last read (incremental by default). ANSI colors and progress bars are stripped. " +
+    "Use this only for an on-demand peek at a STILL-RUNNING process — you do NOT need to poll it to wait for " +
+    "completion: when the background command finishes you are automatically woken with the result, so end your " +
+    "turn instead of looping Sleep + BashOutput.",
   inputSchema: {
     type: "object",
     properties: {
