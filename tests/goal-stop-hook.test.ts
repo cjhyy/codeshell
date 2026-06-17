@@ -190,6 +190,16 @@ describe("createGoalStopHook three-state verdict (waiting)", () => {
     const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "x" }));
     expect(res.continueSession).toBe(true);
   });
+
+  it("ignores waiting:true when NO background work is actually running (anti-hallucination guard)", async () => {
+    // No backgroundJobRegistry.start — nothing is running. A judge that returns
+    // waiting:true here would, if honored, silently abandon the goal (nothing
+    // ever wakes the session). The guard falls through to continueSession.
+    const llm = fakeLLM(JSON.stringify({ met: false, waiting: true, gaps: "等一个不存在的任务" }));
+    const hook = createGoalStopHook({ goal: "g", llm, log: silentLog });
+    const res = await hook(ctx({ goal: "g", sessionId: "s1", finalText: "x" }));
+    expect(res.continueSession).toBe(true);
+  });
 });
 
 describe("createGoalStopHook onMet callback (persistent goal clear)", () => {

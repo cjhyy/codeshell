@@ -97,9 +97,7 @@ function extractJson(text: string): JudgeVerdict | null {
 }
 
 /** Render the running background tasks for the judge prompt. */
-function renderBackgroundTasks(sessionId: unknown): string {
-  if (typeof sessionId !== "string" || sessionId.length === 0) return "(无)";
-  const items = listRunningBackgroundWork(sessionId);
+function renderBackgroundTasks(items: { kind: string; description: string }[]): string {
   if (items.length === 0) return "(无)";
   const kindLabel: Record<string, string> = {
     subagent: "后台子代理",
@@ -129,7 +127,11 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     // goal normally). The judge sees each task's kind + command and returns a
     // three-state verdict; `waiting:true` allows the stop without pushing.
     const sessionId = ctx.data.sessionId;
-    const backgroundTasks = renderBackgroundTasks(sessionId);
+    const runningWork =
+      typeof sessionId === "string" && sessionId.length > 0
+        ? listRunningBackgroundWork(sessionId)
+        : [];
+    const backgroundTasks = renderBackgroundTasks(runningWork);
 
     const finalText =
       typeof ctx.data.finalText === "string" ? ctx.data.finalText : "";
@@ -202,9 +204,18 @@ export function createGoalStopHook(opts: GoalStopHookOptions): HookHandler {
     // forcing continueSession here is exactly the busy-loop bug. The completion
     // notification wakes the idle session (server maybeWakeIdleSession) and the
     // goal is re-judged on that woken turn.
-    if (verdict.waiting) {
+    //
+    // GUARD: only honor `waiting` when real background work is actually running.
+    // If the judge hallucinates waiting:true with an empty task list, allowing
+    // the stop would silently abandon the goal — NOTHING would ever wake the
+    // session (no notification to drain). So a baseless `waiting` falls through
+    // to not_met (continueSession), where the model is nudged to keep working.
+    if (verdict.waiting && runningWork.length > 0) {
       log.info("goal_stop.waiting_on_background_task", { cat: "goal", sessionId });
       return { data: { goalVerdict: { met: false, gaps: verdict.gaps.trim() } } };
+    }
+    if (verdict.waiting) {
+      log.warn("goal_stop.waiting_without_background_work", { cat: "goal", sessionId });
     }
 
     log.info("goal_stop.not_met", { cat: "goal", gaps: verdict.gaps });
