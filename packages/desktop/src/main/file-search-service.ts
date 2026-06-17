@@ -35,6 +35,8 @@ function normalize(p: string): string {
   return sep === "\\" ? p.replace(/\\/g, "/") : p;
 }
 
+const GIT_LS_TIMEOUT_MS = 5_000;
+
 async function listViaGit(cwd: string): Promise<string[] | null> {
   return new Promise((resolve) => {
     const proc = spawn("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
@@ -42,14 +44,27 @@ async function listViaGit(cwd: string): Promise<string[] | null> {
       windowsHide: true,
     });
     let out = "";
-    let err = "";
+    let settled = false;
+    const done = (value: string[] | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    // Without a timeout a hung git (huge repo, FS stall, credential prompt)
+    // would leave this Promise pending forever — the @-mention search hangs and
+    // the git process leaks. Kill it and fall back to the directory walk.
+    const timer = setTimeout(() => {
+      proc.kill();
+      done(null);
+    }, GIT_LS_TIMEOUT_MS);
     proc.stdout.on("data", (b: Buffer) => { out += b.toString("utf8"); });
-    proc.stderr.on("data", (b: Buffer) => { err += b.toString("utf8"); });
-    proc.on("error", () => resolve(null));
+    proc.stderr.on("data", () => { /* drained to avoid backpressure */ });
+    proc.on("error", () => done(null));
     proc.on("close", (code) => {
-      if (code !== 0) { resolve(null); return; }
+      if (code !== 0) { done(null); return; }
       const lines = out.split("\n").map((l) => l.trim()).filter(Boolean);
-      resolve(lines);
+      done(lines);
     });
   });
 }

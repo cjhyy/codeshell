@@ -90,6 +90,9 @@ function handleNormalMode(char: string, key: string, text: string, s: VimState):
       return { state: s, text, consumed: true };
     case "o":
       s.mode = "insert";
+      // Move the cursor onto the newly opened line (vim semantics), not left
+      // stranded at the old position.
+      s.cursor = text.length + 1;
       return { state: s, text: text + "\n", consumed: true };
     case "v":
       s.mode = "visual";
@@ -141,6 +144,10 @@ function handleNormalMode(char: string, key: string, text: string, s: VimState):
       return { state: s, text, consumed: true };
     case "p":
       text = text.slice(0, s.cursor + 1) + s.register + text.slice(s.cursor + 1);
+      // vim leaves the cursor on the last pasted char; advance and clamp.
+      if (s.register.length > 0) {
+        s.cursor = Math.max(0, Math.min(s.cursor + s.register.length, text.length - 1));
+      }
       return { state: s, text, consumed: true };
     case "u":
       // Undo not supported in simple mode
@@ -218,7 +225,9 @@ function nextWordStart(text: string, pos: number): number {
   let i = pos + 1;
   while (i < text.length && /\w/.test(text[i])) i++;
   while (i < text.length && /\W/.test(text[i])) i++;
-  return Math.min(i, text.length - 1);
+  // max(0, …) so empty text (length-1 === -1) clamps to 0, not -1 — same
+  // out-of-bounds guard already applied to 'l'/'$'/'x'.
+  return Math.max(0, Math.min(i, text.length - 1));
 }
 
 function prevWordStart(text: string, pos: number): number {
@@ -232,5 +241,6 @@ function nextWordEnd(text: string, pos: number): number {
   let i = pos + 1;
   while (i < text.length && /\W/.test(text[i])) i++;
   while (i < text.length && /\w/.test(text[i])) i++;
-  return Math.min(i - 1, text.length - 1);
+  // max(0, …) so empty text (length-1 === -1) clamps to 0, not -1.
+  return Math.max(0, Math.min(i - 1, text.length - 1));
 }

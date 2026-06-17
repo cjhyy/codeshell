@@ -131,6 +131,17 @@ export async function listDiskSessions(
 
   const start = opts.cursor ? Number(opts.cursor) : 0;
   const sessions: DiskSessionMeta[] = [];
+  // Cache cwd existence across the loop — many sessions share one project root,
+  // and we must not re-stat it per session (nor block on a sync existsSync,
+  // which the async-throughout rewrite above was meant to eliminate).
+  const cwdExists = new Map<string, boolean>();
+  const pathExists = async (cwdStr: string): Promise<boolean> => {
+    const cached = cwdExists.get(cwdStr);
+    if (cached !== undefined) return cached;
+    const ok = await fs.access(cwdStr).then(() => true).catch(() => false);
+    cwdExists.set(cwdStr, ok);
+    return ok;
+  };
   let i = start;
   for (; i < dirs.length && sessions.length < opts.limit; i++) {
     const { id, mtime } = dirs[i]!;
@@ -151,7 +162,7 @@ export async function listDiskSessions(
     // is intentionally NOT filtered here — the renderer handles that via
     // isNoRepoCwd. (deleted-project resurrection)
     const cwdStr = typeof state.cwd === "string" ? state.cwd : "";
-    if (cwdStr && !fsSync.existsSync(cwdStr)) continue;
+    if (cwdStr && !(await pathExists(cwdStr))) continue;
     sessions.push({
       id,
       engineSessionId: id,

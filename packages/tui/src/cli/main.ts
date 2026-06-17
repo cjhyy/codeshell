@@ -49,7 +49,11 @@ program
 function addCommonOptions(cmd: Command): Command {
   return cmd
     .option("-m, --model <model>", "Model name (e.g. anthropic/claude-opus-4-6)")
-    .option("-p, --provider <provider>", "LLM provider (anthropic, openai)", "openai")
+    // No default here: a hard "openai" default would make opts.provider always
+    // truthy, so the `options.provider ?? settings.model.provider` fallback in
+    // repl.ts/run.ts could never reach the user's configured provider. The
+    // "openai" last-resort default lives at the tail of those ?? chains.
+    .option("-p, --provider <provider>", "LLM provider (anthropic, openai)")
     .option("--preset <preset>", "Agent preset (general, terminal-coding)")
     .option("--base-url <url>", "LLM API base URL (e.g. https://openrouter.ai/api/v1)")
     .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")
@@ -180,7 +184,9 @@ program.addCommand(createPluginCommand());
 program
   .argument("[task]", "Task to execute (or omit for REPL mode)")
   .option("-m, --model <model>", "Model name (e.g. anthropic/claude-opus-4-6)")
-  .option("-p, --provider <provider>", "LLM provider (anthropic, openai)", "openai")
+  // No "openai" default — see addCommonOptions: the default would shadow the
+  // user's settings.model.provider via the ?? fallback in repl.ts/run.ts.
+  .option("-p, --provider <provider>", "LLM provider (anthropic, openai)")
   .option("--preset <preset>", "Agent preset (general, terminal-coding)")
   .option("--base-url <url>", "LLM API base URL (e.g. https://openrouter.ai/api/v1)")
   .option("--api-key <key>", "API key (or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY env var)")

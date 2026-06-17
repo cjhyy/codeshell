@@ -115,15 +115,27 @@ export class AgentBridge {
       requestedCwd: cwd,
       restartCount: this.restartCount,
     });
-    this.child = spawn(process.execPath, [agentEntry], {
-      cwd: workerCwd,
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", CODESHELL_AGENT_STDIO: "1" },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    try {
+      this.child = spawn(process.execPath, [agentEntry], {
+        cwd: workerCwd,
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", CODESHELL_AGENT_STDIO: "1" },
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+    } catch (e) {
+      // spawn() can throw synchronously (e.g. invalid execPath). Don't let it
+      // bubble out of the ipcMain listener / injectWorkerMessage uncaught —
+      // declare give-up so preload rejects the pending run instead of hanging.
+      dlog("bridge", "spawn.throw", { error: String(e) });
+      this.child = null;
+      this.safeSend("agent:lifecycle", { type: "gave_up" });
+      return;
+    }
     dlog("bridge", "spawn.ok", { pid: this.child.pid, cwd: workerCwd, requestedCwd: cwd });
     if (!this.child.stdout || !this.child.stdin || !this.child.stderr) {
       dlog("bridge", "spawn.error", { reason: "stdio not piped" });
-      throw new Error("AgentBridge: child stdio not piped");
+      this.child = null;
+      this.safeSend("agent:lifecycle", { type: "gave_up" });
+      return;
     }
     const rl = createInterface({ input: this.child.stdout });
     rl.on("line", (line) => {
@@ -155,6 +167,22 @@ export class AgentBridge {
       const text = chunk.toString();
       dlog("agent", "stderr", { text: previewLine(text, 800) });
       process.stderr.write(`[agent] ${text}`);
+    });
+    // A failed spawn (ENOENT/EACCES/EAGAIN/process-limit) emits 'error' and
+    // NO 'exit'. Without this listener Node throws it as an uncaught exception
+    // (can crash main), and — worse — neither path below fires, so the
+    // renderer's run() (timeout disabled) never settles and the UI hangs busy
+    // forever. Treat a spawn error like a give-up crash so preload rejects the
+    // pending run.
+    this.child.on("error", (err) => {
+      dlog("bridge", "child.error", { error: String(err) });
+      try {
+        rl.close();
+      } catch { /* ignore */ }
+      this.child = null;
+      this.outbox = [];
+      this.snapshots.onWorkerExit();
+      this.safeSend("agent:lifecycle", { type: "gave_up" });
     });
     this.child.on("exit", (code, signal) => {
       // Close the readline interface bound to the dead child's stdout so it
