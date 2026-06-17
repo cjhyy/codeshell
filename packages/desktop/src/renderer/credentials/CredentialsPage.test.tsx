@@ -21,7 +21,7 @@ describe("CredentialsPage", () => {
     expect(html).toContain("Permission Token");
     expect(html).toContain("Link");
     // Cookie tab's capture form proves it's the default-rendered tab.
-    expect(html).toContain("保存当前登录态");
+    expect(html).toContain("弹窗登录并保存");
     expect(html).toContain("AI 取用凭证免审批");
   });
 });
