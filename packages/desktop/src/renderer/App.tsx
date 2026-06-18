@@ -1708,11 +1708,12 @@ function App() {
     // else falls through to the running/active bucket. Without this the event
     // object reaches `bucket.indexOf` and throws — silently breaking Stop.
     const override = typeof bucketOverride === "string" ? bucketOverride : undefined;
-    // Relay = 引导打断: cancel the turn but DON'T draw a "你在 Ns 后停止了" line —
-    // the user isn't stopping, they're handing off to a queued re-send that
-    // fires on the next busy=false tick. The relay marker (relayingBuckets)
-    // keeps liveTurnActive lit across the gap.
-    const relay = opts?.relay === true;
+    // opts.relay = 引导打断 (handoff to a queued re-send). We still draw the
+    // "你在 Ns 后停止了" marker for it now (gives elapsed + keeps the killed turn's
+    // content un-collapsed); the relayingBuckets marker set by the caller keeps
+    // liveTurnActive lit across the cancel→re-send gap. (relay no longer changes
+    // the turn_end dispatch — kept in the signature for call-site clarity.)
+    void opts;
     // The composer Stop button belongs to the VIEWED conversation (its
     // visibility is busy=busyKeys.has(activeBucket)), so default to activeBucket
     // — NOT the global runningBucket ref, which points at whichever conversation
@@ -1741,7 +1742,14 @@ function App() {
     const elapsedMs = startedAt !== undefined ? Date.now() - startedAt : undefined;
     setBusyForKey(bucket, false);
     if (runningBucketRef.current === bucket) runningBucketRef.current = null;
-    if (!relay) dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
+    // Always mark the interrupted turn — even on the relay (引导接力) path. The
+    // "你在 Ns 后停止了" line gives the elapsed time AND tags the turn as stopped,
+    // which makes its TurnProcessGroup show its produced content flat (stopped →
+    // itemsVisible) instead of collapsing behind the fold header. relay still
+    // re-sends the queued input on the next busy=false tick; the turn_end just
+    // closes out the killed turn (and clears the streaming pointers, which the
+    // relay handoff needs anyway — see appendTurnEndMessage).
+    dispatch({ type: "turn_end", bucket, reason: "stopped", elapsedMs });
     void window.codeshell.cancel(engineSessionId);
   };
 
