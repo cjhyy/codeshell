@@ -178,6 +178,46 @@ describe("browser_act", () => {
   test("unknown action errors", async () => {
     expect(await browserActTool({ action: "teleport" }, ctxWith({}))).toContain("unknown action");
   });
+
+  test("list_tabs renders open tabs with active marker", async () => {
+    const ctx = ctxWith({
+      listTabs: async () => [
+        { tabId: "1", url: "https://a.com", title: "A", active: false },
+        { tabId: "2", url: "https://b.com", title: "B", active: true },
+      ],
+    });
+    const out = await browserActTool({ action: "list_tabs" }, ctx);
+    expect(out).toContain("[1]");
+    expect(out).toContain("[2] (active)");
+    expect(out).toContain("https://b.com");
+  });
+
+  test("switch_tab requires tabId / reports success", async () => {
+    const ctx = ctxWith({ switchTab: async () => ({ ok: true }) });
+    expect(await browserActTool({ action: "switch_tab" }, ctx)).toContain("tabId is required");
+    expect(await browserActTool({ action: "switch_tab", tabId: "3" }, ctx)).toContain("Switched to tab 3");
+  });
+
+  test("tabId on a normal action switches first, then acts", async () => {
+    const order: string[] = [];
+    const ctx = ctxWith({
+      switchTab: async (id) => { order.push(`switch:${id}`); return { ok: true }; },
+      click: async () => { order.push("click"); return { ok: true }; },
+    });
+    await browserActTool({ action: "click", ref: "e1", tabId: "5" }, ctx);
+    expect(order).toEqual(["switch:5", "click"]);
+  });
+
+  test("tabId switch failure aborts the action", async () => {
+    let clicked = false;
+    const ctx = ctxWith({
+      switchTab: async () => ({ ok: false, detail: "not found" }),
+      click: async () => { clicked = true; return { ok: true }; },
+    });
+    const out = await browserActTool({ action: "click", ref: "e1", tabId: "9" }, ctx);
+    expect(out).toContain("could not switch to tab 9");
+    expect(clicked).toBe(false);
+  });
 });
 
 describe("browser_navigate", () => {

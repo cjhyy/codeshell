@@ -150,6 +150,20 @@ export interface BrowserBridge {
    * chart" — when the a11y tree isn't enough.
    */
   screenshot(ref?: string): Promise<BrowserImageData>;
+  /** List the open browser tabs (the agent picks one to drive via switchTab). */
+  listTabs(): Promise<BrowserTab[]>;
+  /** Make a tab the active automation target (subsequent actions drive it). */
+  switchTab(tabId: string): Promise<BrowserResult>;
+}
+
+/** One open browser tab, as the agent sees it. */
+export interface BrowserTab {
+  /** Stable id (the desktop webContents id, as a string). */
+  tabId: string;
+  url: string;
+  title: string;
+  /** True for the tab automation currently drives. */
+  active: boolean;
 }
 
 /**

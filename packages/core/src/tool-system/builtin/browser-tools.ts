@@ -186,13 +186,16 @@ export const browserActToolDef: ToolDefinition = {
     "- hover {ref}: hover to reveal menus/tooltips.\n" +
     "- scroll {direction: up|down, amount?}: scroll the page, then re-observe.\n" +
     "- wait {timeout_ms?}: wait for the page to finish loading before observing.\n" +
-    "Re-observe after navigation/page changes (refs go stale).",
+    "- list_tabs: list open browser tabs (tabId, url, title, which is active).\n" +
+    "- switch_tab {tabId}: make another tab the active one that actions drive.\n" +
+    "Pass tabId on any action to target a specific tab (switches to it first). " +
+    "Re-observe after navigation/page/tab changes (refs go stale per tab).",
   inputSchema: {
     type: "object",
     properties: {
       action: {
         type: "string",
-        enum: ["click", "type", "select", "press_key", "hover", "scroll", "wait"],
+        enum: ["click", "type", "select", "press_key", "hover", "scroll", "wait", "list_tabs", "switch_tab"],
         description: "The interaction to perform",
       },
       ref: { type: "string", description: "Element ref (eN) — click/type/select/hover/press_key" },
@@ -202,6 +205,7 @@ export const browserActToolDef: ToolDefinition = {
       direction: { type: "string", enum: ["up", "down"], description: "Scroll direction — scroll" },
       amount: { type: "number", description: "Pixels to scroll (default one viewport) — scroll" },
       timeout_ms: { type: "number", description: "Max wait in ms (default 10000) — wait" },
+      tabId: { type: "string", description: "Target tab — required for switch_tab; optional on others (switches first)" },
     },
     required: ["action"],
   },
@@ -212,8 +216,28 @@ export async function browserActTool(args: Record<string, unknown>, ctx?: ToolCo
   if (!b) return NO_BROWSER;
   const action = args.action as string;
   const ref = args.ref as string | undefined;
+  const tabId = args.tabId as string | undefined;
+
+  // Optional tabId on a non-tab action → switch to that tab first, then act.
+  if (tabId && action !== "switch_tab" && action !== "list_tabs") {
+    const sw = await b.switchTab(tabId);
+    if (!sw.ok) return `Error: could not switch to tab ${tabId} — ${sw.detail ?? "not found"}`;
+  }
 
   switch (action) {
+    case "list_tabs": {
+      const tabs = await b.listTabs();
+      if (tabs.length === 0) return "(no open browser tabs)";
+      return (
+        "Open tabs:\n" +
+        tabs.map((t) => `- [${t.tabId}]${t.active ? " (active)" : ""} ${t.title || "(untitled)"} — ${t.url || "(blank)"}`).join("\n")
+      );
+    }
+    case "switch_tab": {
+      if (!tabId) return "Error: tabId is required for switch_tab (see list_tabs)";
+      const r = await b.switchTab(tabId);
+      return r.ok ? `Switched to tab ${tabId} — re-observe to see it` : `Error: ${r.detail ?? "switch failed"}`;
+    }
     case "click": {
       if (!ref) return "Error: ref is required for click";
       const r = await b.click(ref);

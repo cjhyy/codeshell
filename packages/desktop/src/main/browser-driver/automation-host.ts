@@ -66,7 +66,9 @@ export interface BrowserActionRequest {
     | "selectOption"
     | "pressKey"
     | "fetchImages"
-    | "screenshot";
+    | "screenshot"
+    | "listTabs"
+    | "switchTab";
   ref?: string;
   text?: string;
   url?: string;
@@ -79,6 +81,8 @@ export interface BrowserActionRequest {
   key?: string;
   /** fetchImages: image refs (img1/vid1…) to fetch pixels for. */
   refs?: string[];
+  /** switchTab: target tab id (webContents id string). */
+  tabId?: string;
 }
 
 /** Resolve a target webContents and approve sensitive actions. Injected so
@@ -98,6 +102,10 @@ export interface AutomationDeps {
    * Undefined → cannot auto-open (older host) → "no active panel" error as before.
    */
   openPanel?: (url?: string) => Promise<boolean>;
+  /** List open browser tabs (for the agent's list_tabs). */
+  listTabs?: () => Array<{ tabId: string; url: string; title: string; active: boolean }>;
+  /** Make a tab the active automation target (for switch_tab). Returns true if found. */
+  switchTab?: (tabId: string) => boolean;
 }
 
 /**
@@ -109,6 +117,16 @@ export async function handleBrowserAction(
   req: BrowserActionRequest,
   deps: AutomationDeps,
 ): Promise<string> {
+  // Tab management is panel-global (operates on the guest registry, not a single
+  // guest's driver) — handle it before resolving an active guest / driver.
+  if (req.action === "listTabs") {
+    return JSON.stringify(deps.listTabs ? deps.listTabs() : []);
+  }
+  if (req.action === "switchTab") {
+    const ok = deps.switchTab && req.tabId ? deps.switchTab(req.tabId) : false;
+    return JSON.stringify(ok ? { ok: true } : { ok: false, detail: `tab ${req.tabId ?? "?"} not found` });
+  }
+
   let guest = deps.activeGuest();
   if (!guest || guest.isDestroyed()) {
     // No panel/tab yet — try to auto-open it (so the agent can start browsing

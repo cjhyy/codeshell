@@ -1538,6 +1538,8 @@ export class AgentServer {
       pressKey: (key, ref) => call("pressKey", { key, ref }),
       fetchImages: (refs) => call("fetchImages", { refs }),
       screenshot: (ref) => call("screenshot", { ref }),
+      listTabs: () => call("listTabs", {}),
+      switchTab: (tabId) => call("switchTab", { tabId }),
     };
   }
 

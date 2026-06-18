@@ -127,6 +127,17 @@ export class CdpBrowserDriver implements BrowserBridge {
     return out;
   }
 
+  // Tab management is panel-global (handled in automation-host via the guest
+  // registry, NOT a per-guest driver). These satisfy BrowserBridge but are never
+  // invoked on the driver — the host intercepts listTabs/switchTab first.
+  async listTabs(): Promise<import("@cjhyy/code-shell-core").BrowserTab[]> {
+    return [];
+  }
+
+  async switchTab(_tabId: string): Promise<BrowserResult> {
+    return { ok: false, detail: "switchTab is handled at the panel level, not the driver" };
+  }
+
   async screenshot(ref?: string): Promise<BrowserImageData> {
     // vision ref is an a11y element ref (eN) → resolve to backendNodeId for a
     // region capture; no ref → viewport screenshot.
