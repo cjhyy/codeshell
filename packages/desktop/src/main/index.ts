@@ -1068,7 +1068,13 @@ ipcMain.handle(
     cwd: string,
     scope: CredentialScope,
     id: string,
-    fields: { label?: string; exposeAsEnv?: string; autoUseByAI?: boolean; meta?: unknown },
+    fields: {
+      label?: string;
+      exposeAsEnv?: string;
+      autoUseByAI?: boolean;
+      autoInjectByAI?: boolean;
+      meta?: unknown;
+    },
   ) => {
     if (typeof id !== "string" || !id) throw new Error("credentials:patchMeta requires id");
     new CredentialStore(cwd || undefined).patch(scope, id, fields as never);

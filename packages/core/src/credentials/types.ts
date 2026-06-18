@@ -28,8 +28,15 @@ export interface Credential {
   /**
    * 逐条「AI 可自动取用」开关:为 true 时该凭证免过审批门(等价于对它单独开了
    * 全局 credentialUse.autoApprove)。默认 false / 缺省 = 走全局开关 + 审批门。
+   * 管的是「AI 取 cookie 文件走 HTTP 请求」(UseCredential)。
    */
   autoUseByAI?: boolean;
+  /**
+   * 逐条「AI 可自动注入浏览器」开关(仅 cookie):为 true 时 AI 调「注入浏览器」工具
+   * (把该 cookie 灌进内置浏览器以登录态打开页面)免审批。默认 false = 弹审批。
+   * 与 autoUseByAI 分开 —— 注入浏览器改的是浏览器登录态,比只读取用风险更高。
+   */
+  autoInjectByAI?: boolean;
   /**
    * link: 业务方 app 注册地址;cookie: 拓取所用平台与主域 + 抓取范围。
    * scope="all" 表示该 jar 是整分区全量抓的(切换时整包导回);缺省/"domain" = 仅该域。

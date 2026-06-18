@@ -4,8 +4,10 @@ export interface CredentialView {
   label: string;
   secret?: string;
   exposeAsEnv?: string;
-  /** 逐条「AI 可自动取用」开关(免审批门)。 */
+  /** 逐条「AI 可自动取用」开关(取 cookie 文件走 HTTP,免审批门)。 */
   autoUseByAI?: boolean;
+  /** 逐条「AI 可自动注入浏览器」开关(把 cookie 灌进内置浏览器,免审批门)。 */
+  autoInjectByAI?: boolean;
   meta?: { appUrl?: string; platform?: string; domain?: string; scope?: "domain" | "all" };
 }
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {

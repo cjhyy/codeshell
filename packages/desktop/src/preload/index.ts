@@ -625,7 +625,13 @@ contextBridge.exposeInMainWorld("codeshell", {
       cwd: string,
       scope: "user" | "project",
       id: string,
-      fields: { label?: string; exposeAsEnv?: string; autoUseByAI?: boolean; meta?: unknown },
+      fields: {
+        label?: string;
+        exposeAsEnv?: string;
+        autoUseByAI?: boolean;
+        autoInjectByAI?: boolean;
+        meta?: unknown;
+      },
     ) => ipcRenderer.invoke("credentials:patchMeta", cwd, scope, id, fields),
     cookieDomains: (): Promise<string[]> => ipcRenderer.invoke("credentials:cookieDomains"),
     cookiePreview: (domain: string): Promise<{ count: number }> =>

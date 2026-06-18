@@ -74,7 +74,9 @@ export class CredentialStore {
   patch(
     scope: CredentialScope,
     id: string,
-    fields: Partial<Pick<Credential, "label" | "exposeAsEnv" | "autoUseByAI" | "meta">>,
+    fields: Partial<
+      Pick<Credential, "label" | "exposeAsEnv" | "autoUseByAI" | "autoInjectByAI" | "meta">
+    >,
   ): void {
     const file = this.read(scope);
     const idx = file.credentials.findIndex((c) => c.id === id);

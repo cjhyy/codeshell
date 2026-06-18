@@ -202,6 +202,9 @@ export const extensions = {
         aiAutoUse: "AI 可自动取用",
         aiAutoUseOnToast: "「{label}」已设为 AI 可自动取用(免审批)",
         aiAutoUseOffToast: "「{label}」已恢复取用前审批",
+        aiAutoInject: "AI 可自动注入浏览器",
+        aiAutoInjectOnToast: "「{label}」已设为 AI 可自动注入浏览器(免审批)",
+        aiAutoInjectOffToast: "「{label}」已恢复注入前审批",
       },
       link: {
         intro:
@@ -423,6 +426,9 @@ export const extensions = {
         aiAutoUse: "AI may use automatically",
         aiAutoUseOnToast: "\"{label}\" set to auto-use by AI (no approval)",
         aiAutoUseOffToast: "\"{label}\" restored to approval before use",
+        aiAutoInject: "AI may inject into browser",
+        aiAutoInjectOnToast: "\"{label}\" set to auto-inject into browser by AI (no approval)",
+        aiAutoInjectOffToast: "\"{label}\" restored to approval before inject",
       },
       link: {
         intro:

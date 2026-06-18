@@ -209,6 +209,22 @@ export function CookieTab({ cwd }: { cwd: string }) {
     }
   };
 
+  /** 逐条「AI 可自动注入浏览器」开关:写回凭证 autoInjectByAI。 */
+  const toggleAiInject = async (c: MaskedCredentialView, next: boolean) => {
+    setBusy(true);
+    try {
+      await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { autoInjectByAI: next });
+      load();
+      toast({
+        message: next
+          ? t("ext.cookie.aiAutoInjectOnToast", { label: c.label })
+          : t("ext.cookie.aiAutoInjectOffToast", { label: c.label }),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const del = async (c: MaskedCredentialView) => {
     if (!(await confirm({ message: t("ext.cookie.deleteConfirm", { label: c.label }), destructive: true })))
       return;
@@ -299,14 +315,24 @@ export function CookieTab({ cwd }: { cwd: string }) {
                     </Button>
                   </div>
                 </div>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Switch
-                    checked={c.autoUseByAI === true}
-                    disabled={busy}
-                    onCheckedChange={(next) => void toggleAiUse(c, next)}
-                  />
-                  {t("ext.cookie.aiAutoUse")}
-                </label>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch
+                      checked={c.autoUseByAI === true}
+                      disabled={busy}
+                      onCheckedChange={(next) => void toggleAiUse(c, next)}
+                    />
+                    {t("ext.cookie.aiAutoUse")}
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch
+                      checked={c.autoInjectByAI === true}
+                      disabled={busy}
+                      onCheckedChange={(next) => void toggleAiInject(c, next)}
+                    />
+                    {t("ext.cookie.aiAutoInject")}
+                  </label>
+                </div>
               </Card>
             ))}
           </div>
