@@ -1533,7 +1533,9 @@ export class AgentServer {
       readContent: () => call("readContent", {}),
       extractLinks: () => call("extractLinks", {}),
       waitForLoad: (timeoutMs) => call("waitForLoad", { timeoutMs }),
-      pressEnter: (ref) => call("pressEnter", { ref }),
+      hover: (ref) => call("hover", { ref }),
+      selectOption: (ref, value) => call("selectOption", { ref, value }),
+      pressKey: (key, ref) => call("pressKey", { key, ref }),
     };
   }
 

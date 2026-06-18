@@ -8,6 +8,8 @@
  */
 
 export { CdpActionsDriver, CONTENT_CHAR_CAP, EXTRACT_LINK_CAP, buildExtractScript, cleanPageText } from "./driver.js";
+export { planKeySequence, keyInfo, normalizeKey, MODIFIER_BITS } from "./keymap.js";
+export type { KeyInfo, KeyEvent } from "./keymap.js";
 export type { CdpSender, PageInfo } from "./sender.js";
 export type {
   AXNode,

@@ -98,7 +98,7 @@ describe("E2E: 小红书 搜索→打开→扒内容", () => {
 
     // 2. type the query + press Enter (→ results page)
     expect((await act({ action: "type", ref: searchBox.ref, text: "citywalk" })).ok).toBe(true);
-    expect((await act({ action: "pressEnter", ref: searchBox.ref })).ok).toBe(true);
+    expect((await act({ action: "pressKey", key: "Enter", ref: searchBox.ref })).ok).toBe(true);
 
     // 3. wait + snapshot results → pick the first article link
     expect((await act({ action: "waitForLoad" })).ok).toBe(true);

@@ -88,16 +88,27 @@ export class CdpBrowserDriver implements BrowserBridge {
     return this.inner.waitForLoad(timeoutMs);
   }
 
-  async pressEnter(ref?: string): Promise<BrowserResult> {
-    // Phase 1 keeps pressEnter (Phase 2 generalizes to pressKey). Focus the ref
-    // first (so Enter goes to the right field), then dispatch a real Enter key.
+  async hover(ref: string): Promise<BrowserResult> {
+    const id = this.backendId(ref);
+    if (id === undefined) return unknownRef(ref);
+    return this.inner.hoverNode(id);
+  }
+
+  async selectOption(ref: string, value: string): Promise<BrowserResult> {
+    const id = this.backendId(ref);
+    if (id === undefined) return unknownRef(ref);
+    return this.inner.selectOptionNode(id, value);
+  }
+
+  async pressKey(key: string, ref?: string): Promise<BrowserResult> {
+    // Focus the ref first (so the key lands on the right field), then dispatch.
     if (ref) {
       const id = this.backendId(ref);
       if (id === undefined) return unknownRef(ref);
       const focused = await this.inner.focusNode(id);
       if (!focused.ok) return focused;
     }
-    return this.inner.pressEnter();
+    return this.inner.pressKey(key);
   }
 
   scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult> {

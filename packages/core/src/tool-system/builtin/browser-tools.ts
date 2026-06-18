@@ -239,7 +239,8 @@ export const browserPressEnterToolDef: ToolDefinition = {
 export async function browserPressEnterTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
   const b = bridge(ctx);
   if (!b) return NO_BROWSER;
-  const r = await b.pressEnter(args.ref as string | undefined);
+  // pressEnter generalized to pressKey (Phase 2); this legacy tool always Enter.
+  const r = await b.pressKey("Enter", args.ref as string | undefined);
   if (r.ok) return "Pressed Enter";
   return r.staleRef
     ? `Error: ref ${args.ref} is no longer valid (page changed). Re-run browser_snapshot.`

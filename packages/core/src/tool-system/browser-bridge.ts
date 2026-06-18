@@ -102,8 +102,20 @@ export interface BrowserBridge {
   extractLinks(): Promise<BrowserExtract>;
   /** Wait until the page finishes loading (or a timeout). */
   waitForLoad(timeoutMs?: number): Promise<BrowserResult>;
-  /** Press Enter on the focused element / a given ref (submit a search box). */
-  pressEnter(ref?: string): Promise<BrowserResult>;
+  /** Hover over an element by ref (reveal hover-dependent menus/tooltips). */
+  hover(ref: string): Promise<BrowserResult>;
+  /**
+   * Select an option in a native <select> by ref. `value` matches an option's
+   * value or visible text. Custom <div> dropdowns are NOT this — click to expand
+   * them and click the option from the next snapshot.
+   */
+  selectOption(ref: string, value: string): Promise<BrowserResult>;
+  /**
+   * Press a key (or combination) on the focused element / a given ref. `key` is
+   * a key name ("Enter", "Tab", "Escape", "ArrowDown") or a combination
+   * ("Control+a"). Focuses `ref` first if given (so the key lands there).
+   */
+  pressKey(key: string, ref?: string): Promise<BrowserResult>;
 }
 
 /**

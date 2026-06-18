@@ -153,9 +153,9 @@ describe("browser_read_content / wait / press_enter", () => {
     expect(await browserWaitTool({ timeout_ms: 5000 }, ctx)).toContain("Page ready");
   });
 
-  test("press_enter ok / stale", async () => {
-    expect(await browserPressEnterTool({}, ctxWith({ pressEnter: async () => ({ ok: true }) }))).toContain("Pressed Enter");
-    const stale = await browserPressEnterTool({ ref: "e9" }, ctxWith({ pressEnter: async () => ({ ok: false, staleRef: true }) }));
+  test("press_enter ok / stale (now routes through pressKey)", async () => {
+    expect(await browserPressEnterTool({}, ctxWith({ pressKey: async () => ({ ok: true }) }))).toContain("Pressed Enter");
+    const stale = await browserPressEnterTool({ ref: "e9" }, ctxWith({ pressKey: async () => ({ ok: false, staleRef: true }) }));
     expect(stale).toContain("no longer valid");
   });
 });

@@ -81,17 +81,6 @@ describe("CdpActionsDriver.typeNode", () => {
   });
 });
 
-describe("CdpActionsDriver.pressEnter", () => {
-  test("dispatches keyDown + keyUp Enter", async () => {
-    const { send, calls } = fakeCdp();
-    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
-    await d.pressEnter();
-    const keys = calls.filter((c) => c.method === "Input.dispatchKeyEvent");
-    expect(keys.map((k) => k.params?.type)).toEqual(["keyDown", "keyUp"]);
-    expect(keys[0]?.params?.key).toBe("Enter");
-  });
-});
-
 describe("CdpActionsDriver.scroll", () => {
   test("dispatches mouseWheel with signed deltaY", async () => {
     const { send, calls } = fakeCdp();
@@ -101,6 +90,60 @@ describe("CdpActionsDriver.scroll", () => {
     calls.length = 0;
     await d.scroll("up");
     expect(calls[0]?.params).toMatchObject({ type: "mouseWheel", deltaY: -600 });
+  });
+});
+
+describe("CdpActionsDriver.hoverNode", () => {
+  test("moves mouse to center without pressing", async () => {
+    const { send, calls } = fakeCdp({ "DOM.getBoxModel": () => BOX });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.hoverNode(9);
+    expect(r.ok).toBe(true);
+    const moves = calls.filter((c) => c.method === "Input.dispatchMouseEvent");
+    expect(moves.map((m) => m.params?.type)).toEqual(["mouseMoved"]);
+  });
+});
+
+describe("CdpActionsDriver.pressKey", () => {
+  test("dispatches the planned sequence for a combination", async () => {
+    const { send, calls } = fakeCdp();
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.pressKey("Control+a");
+    expect(r.ok).toBe(true);
+    const keys = calls.filter((c) => c.method === "Input.dispatchKeyEvent");
+    expect(keys.map((k) => `${k.params?.type}:${k.params?.key}`)).toEqual([
+      "keyDown:Control",
+      "keyDown:a",
+      "keyUp:a",
+      "keyUp:Control",
+    ]);
+  });
+});
+
+describe("CdpActionsDriver.selectOptionNode", () => {
+  test("calls JS setter on the select node and reports the match", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.resolveNode": () => ({ object: { objectId: "sel-1" } }),
+      "Runtime.callFunctionOn": () => ({ result: { value: { ok: true, matched: "中国" } } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.selectOptionNode(30, "中国");
+    expect(r.ok).toBe(true);
+    expect(r.detail).toContain("中国");
+    const fn = calls.find((c) => c.method === "Runtime.callFunctionOn");
+    expect(fn?.params?.objectId).toBe("sel-1");
+    expect(fn?.params?.arguments).toEqual([{ value: "中国" }]);
+  });
+
+  test("returns available options on no match", async () => {
+    const { send } = fakeCdp({
+      "DOM.resolveNode": () => ({ object: { objectId: "sel-1" } }),
+      "Runtime.callFunctionOn": () => ({ result: { value: { ok: false, options: ["中国", "美国"] } } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.selectOptionNode(30, "火星");
+    expect(r.ok).toBe(false);
+    expect(r.detail).toContain("中国 / 美国");
   });
 });
 

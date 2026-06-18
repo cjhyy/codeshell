@@ -19,6 +19,7 @@
 
 import type { CdpSender, PageInfo } from "./sender.js";
 import type { RawSnapshot, CdpActionResult, CdpContentResult, CdpExtractResult } from "./types.js";
+import { planKeySequence } from "./keymap.js";
 
 /** Default cap for extracted page text (chars). */
 export const CONTENT_CHAR_CAP = 12_000;
@@ -132,14 +133,62 @@ export class CdpActionsDriver {
     }
   }
 
-  /** Press the Enter key on the focused element. Phase 2 generalizes this to a
-   *  full pressKey(key) with a key map; Phase 1 keeps just Enter (was pressEnter). */
-  async pressEnter(): Promise<CdpActionResult> {
+  /** Hover over a node (reveal hover-dependent UI). Moves the mouse to its
+   *  center without pressing. */
+  async hoverNode(backendNodeId: number): Promise<CdpActionResult> {
+    const c = await this.centerOf(backendNodeId);
+    if (!c) return { ok: false, detail: "element has no layout box", staleRef: true };
     try {
-      const key = { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 };
-      await this.send("Input.dispatchKeyEvent", { type: "keyDown", ...key });
-      await this.send("Input.dispatchKeyEvent", { type: "keyUp", ...key });
+      await this.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: c.x, y: c.y });
       return { ok: true };
+    } catch (e) {
+      return { ok: false, detail: errMsg(e) };
+    }
+  }
+
+  /**
+   * Press a key (or combination) on the focused element. `spec` is a key name
+   * ("Enter", "Tab", "Escape", "ArrowDown") or a combination ("Control+a",
+   * "Meta+Shift+z"). The key map + sequence planning live in keymap.ts.
+   */
+  async pressKey(spec: string): Promise<CdpActionResult> {
+    const seq = planKeySequence(spec);
+    if (seq.length === 0) return { ok: false, detail: `empty key spec: ${spec}` };
+    try {
+      for (const ev of seq) {
+        const { type, ...rest } = ev;
+        await this.send("Input.dispatchKeyEvent", { type, ...rest });
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, detail: errMsg(e) };
+    }
+  }
+
+  /**
+   * Select an option in a native <select> by setting its value via JS (matching
+   * by option value first, then visible text) and dispatching input+change so
+   * page frameworks react. On NO match, returns ok:false with the available
+   * option labels in `detail` so the agent can re-pick (the "按需查 option" path
+   * — we never bloat snapshots with option lists). Custom <div> dropdowns are
+   * NOT handled here — those expand into real elements the agent clicks.
+   */
+  async selectOptionNode(backendNodeId: number, value: string): Promise<CdpActionResult> {
+    try {
+      const { object } = (await this.send("DOM.resolveNode", { backendNodeId })) as {
+        object?: { objectId?: string };
+      };
+      if (!object?.objectId) return { ok: false, detail: "select element not resolvable", staleRef: true };
+      const res = (await this.send("Runtime.callFunctionOn", {
+        objectId: object.objectId,
+        functionDeclaration: SELECT_OPTION_FN,
+        arguments: [{ value }],
+        returnByValue: true,
+      })) as { result?: { value?: { ok?: boolean; matched?: string; options?: string[] } } };
+      const v = res.result?.value;
+      if (v?.ok) return { ok: true, detail: v.matched ? `selected "${v.matched}"` : undefined };
+      const opts = (v?.options ?? []).slice(0, 50).join(" / ");
+      return { ok: false, detail: `no option matched "${value}". available: ${opts || "(none — not a native <select>?)"}` };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
     }
@@ -274,6 +323,41 @@ export function buildExtractScript(cap = EXTRACT_LINK_CAP): string {
     return {links:links,images:images,videos:videos,truncated:lt||it||vt};
   })()`;
 }
+
+/**
+ * In-page function (runs on the <select> node via Runtime.callFunctionOn) that
+ * sets the selected option by value-then-text match and fires input+change.
+ * Returns {ok, matched?, options?} — options listed only on miss (for re-pick).
+ */
+const SELECT_OPTION_FN = `function(arg){
+  var want = (arg && arg.value != null) ? String(arg.value) : '';
+  if (!this || this.tagName !== 'SELECT' || !this.options) {
+    return { ok:false, options:[] };
+  }
+  var opts = this.options, labels = [];
+  var wantLc = want.toLowerCase();
+  var hit = -1;
+  for (var i=0;i<opts.length;i++){
+    var o=opts[i], txt=(o.textContent||'').trim();
+    labels.push(txt);
+    if (hit===-1 && o.value === want) hit=i;            // exact value match first
+  }
+  if (hit===-1){
+    for (var j=0;j<opts.length;j++){                    // then exact text
+      if ((opts[j].textContent||'').trim() === want){ hit=j; break; }
+    }
+  }
+  if (hit===-1){
+    for (var k=0;k<opts.length;k++){                    // then case-insensitive text contains
+      if ((opts[k].textContent||'').trim().toLowerCase().indexOf(wantLc) !== -1){ hit=k; break; }
+    }
+  }
+  if (hit===-1) return { ok:false, options:labels };
+  this.selectedIndex = hit;
+  this.dispatchEvent(new Event('input', { bubbles:true }));
+  this.dispatchEvent(new Event('change', { bubbles:true }));
+  return { ok:true, matched:(opts[hit].textContent||'').trim() };
+}`;
 
 /** Pure: normalize raw extracted page text. Ported verbatim from core's
  *  cleanPageText so readContent behavior is byte-identical post-extraction. */

@@ -53,13 +53,28 @@ export function releaseGuest(id: number): void {
 
 /** The action shape the worker sends (args of the __browser_action__ request). */
 export interface BrowserActionRequest {
-  action: "snapshot" | "click" | "type" | "navigate" | "scroll" | "readContent" | "extractLinks" | "waitForLoad" | "pressEnter";
+  action:
+    | "snapshot"
+    | "click"
+    | "type"
+    | "navigate"
+    | "scroll"
+    | "readContent"
+    | "extractLinks"
+    | "waitForLoad"
+    | "hover"
+    | "selectOption"
+    | "pressKey";
   ref?: string;
   text?: string;
   url?: string;
   dir?: "up" | "down";
   amount?: number;
   timeoutMs?: number;
+  /** selectOption: option value/text to choose. */
+  value?: string;
+  /** pressKey: key name or combination ("Enter", "Tab", "Control+a"). */
+  key?: string;
 }
 
 /** Resolve a target webContents and approve sensitive actions. Injected so
@@ -160,8 +175,14 @@ export async function handleBrowserAction(
       case "waitForLoad":
         result = await driver.waitForLoad(req.timeoutMs);
         break;
-      case "pressEnter":
-        result = await driver.pressEnter(req.ref);
+      case "hover":
+        result = await driver.hover(req.ref ?? "");
+        break;
+      case "selectOption":
+        result = await driver.selectOption(req.ref ?? "", req.value ?? "");
+        break;
+      case "pressKey":
+        result = await driver.pressKey(req.key ?? "Enter", req.ref);
         break;
       default:
         result = { ok: false, detail: `unknown action: ${(req as { action: string }).action}` };
