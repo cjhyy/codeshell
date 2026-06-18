@@ -90,10 +90,12 @@ export function buildSessionMemoryPrompt(
 
 ${text.slice(0, 30000)}
 
-Respond with JSON:
+Respond with ONLY a single JSON object — no markdown code fence, no text before
+or after. Keep every value on one line (escape any newline as \\n) and escape
+any double quote inside a string as \\". Shape:
 {
   "summary": "One paragraph summarizing what was discussed and accomplished",
-  "keyTopics": ["topic1", "topic2", ...],
-  "decisions": ["decision1", "decision2", ...]
+  "keyTopics": ["topic1", "topic2"],
+  "decisions": ["decision1", "decision2"]
 }`;
 }

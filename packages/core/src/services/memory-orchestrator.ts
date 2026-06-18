@@ -16,6 +16,7 @@
 import { MemoryManager } from "../session/memory.js";
 import { buildExtractionPrompt, parseExtractionResponse } from "./extract-memories.js";
 import { saveSessionMemory, buildSessionMemoryPrompt } from "./session-memory.js";
+import { extractJSON } from "../arena/strategies/utils.js";
 import { shouldAutoDream, recordSession, recordDreamComplete, buildDreamSystemPrompt, buildDreamUserPrompt } from "./auto-dream.js";
 import { logger } from "../logging/logger.js";
 
@@ -147,9 +148,21 @@ export class MemoryOrchestrator {
           "You are a session summariser. Output only valid JSON.",
           smPrompt,
         );
-        const jsonMatch = smResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+        // LLM 摘要常带 markdown 围栏 / 围栏外解释文字 / 末尾逗号 → 裸 JSON.parse 易碎。
+        // 复用 arena 的 extractJSON(剥围栏 + 花括号配平,识别字符串/转义)拿到候选,
+        // 解析失败再修一次常见错误(末尾逗号),都不行才放弃(走 catch,该 session 无摘要)。
+        const candidate = extractJSON(smResponse);
+        let parsed: { summary?: unknown; keyTopics?: unknown; decisions?: unknown } | null = null;
+        try {
+          parsed = JSON.parse(candidate);
+        } catch {
+          try {
+            parsed = JSON.parse(candidate.replace(/,(\s*[}\]])/g, "$1"));
+          } catch {
+            parsed = null;
+          }
+        }
+        if (parsed) {
           saveSessionMemory({
             sessionId,
             summary: String(parsed.summary ?? "").slice(0, 1000),

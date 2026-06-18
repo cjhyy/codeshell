@@ -1,4 +1,7 @@
 import { describe, it, expect, spyOn } from "bun:test";
+import { rmSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import { MemoryOrchestrator } from "./memory-orchestrator.js";
 import { logger } from "../logging/logger.js";
 
@@ -48,6 +51,61 @@ describe("MemoryOrchestrator extraction telemetry", () => {
       warn.mockRestore();
     }
   });
+});
+
+describe("MemoryOrchestrator session-summary JSON robustness", () => {
+  // The session-summary step (step 2) used to do a naive
+  // `smResponse.match(/\{[\s\S]*\}/)` + bare JSON.parse, so any LLM reply with a
+  // markdown fence / trailing comma / surrounding prose blew up into a
+  // `memory.session_memory_failed` warn and the summary was silently lost
+  // (observed in session s-mqhh533p). These cases must now parse cleanly.
+  const FRAGILE_RESPONSES: Record<string, string> = {
+    "markdown fence":
+      '```json\n{"summary":"did stuff","keyTopics":["a","b"],"decisions":["x"]}\n```',
+    "trailing comma":
+      '{"summary":"did stuff","keyTopics":["a","b",],"decisions":["x",]}',
+    "prose around object":
+      'Here is the summary:\n{"summary":"did stuff","keyTopics":["a"],"decisions":[]}\nHope that helps!',
+  };
+
+  for (const [name, reply] of Object.entries(FRAGILE_RESPONSES)) {
+    it(`parses a ${name} reply without logging session_memory_failed`, async () => {
+      const info = spyOn(logger, "info").mockImplementation(() => {});
+      const warn = spyOn(logger, "warn").mockImplementation(() => {});
+      try {
+        // Extraction step gets valid []; only the summary step sees the fragile
+        // reply. Distinguish by the system prompt (summariser vs extractor).
+        const orchestrator = new MemoryOrchestrator({
+          memoryManager: fakeMemoryManager(),
+          callLLM: async (sysPrompt) =>
+            sysPrompt.includes("session summariser") ? reply : "[]",
+        });
+        // ≥3 non-system messages so the summary step actually runs.
+        await orchestrator.run(
+          [
+            { role: "user", content: "a" },
+            { role: "assistant", content: "b" },
+            { role: "user", content: "c" },
+          ],
+          "s-fragile",
+        );
+        const failed = warn.mock.calls.find((c) => c[0] === "memory.session_memory_failed");
+        expect(failed).toBeUndefined();
+      } finally {
+        info.mockRestore();
+        warn.mockRestore();
+        // saveSessionMemory writes ~/.code-shell/session-memories/<id>.json on a
+        // successful parse — clean up so the test doesn't pollute real disk.
+        try {
+          rmSync(join(homedir(), ".code-shell", "session-memories", "s-fragile.json"), {
+            force: true,
+          });
+        } catch {
+          /* best-effort */
+        }
+      }
+    });
+  }
 });
 
 describe("MemoryOrchestrator autoExtract gate (settings.memories.autoExtract)", () => {
