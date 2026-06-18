@@ -73,6 +73,12 @@ export interface BrowserImage {
   alt?: string;
 }
 
+/** One video extracted from the page (<video src> / <source src>). */
+export interface BrowserVideo {
+  /** Absolute video URL (src resolved against the page). */
+  url: string;
+}
+
 /**
  * Result of extracting the page's link/image URLs (扒链接/图片地址).
  * The a11y snapshot deliberately omits href/src (token economy); this is the
@@ -85,7 +91,9 @@ export interface BrowserExtract {
   title?: string;
   links: BrowserLink[];
   images: BrowserImage[];
-  /** True if either list was capped (page had more) — narrow the page first. */
+  /** Video/source URLs found on the page (a downloader like yt-dlp can fetch). */
+  videos: BrowserVideo[];
+  /** True if any list was capped (page had more) — narrow the page first. */
   truncated?: boolean;
   detail?: string;
 }

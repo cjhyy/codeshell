@@ -46,23 +46,14 @@ const GENERAL_BUILTIN_TOOLS = [
   "BashOutput",
   "KillShell",
   "ListShells",
-  // Browser automation (drive the in-app webview). Same whitelist requirement as
-  // the BashOutput trio above: registerBuiltins filters BUILTIN_TOOLS by the
-  // preset set, so without these the model calling browser_snapshot/etc. hits
-  // "Tool not found". They self-degrade to a clear error when no browser panel
-  // is wired (headless), so listing them unconditionally is safe.
-  "browser_snapshot",
+  // Browser automation (drive the in-app webview) — 3 semantic tools. Same
+  // whitelist requirement as the BashOutput trio above: registerBuiltins filters
+  // BUILTIN_TOOLS by the preset set, so without these the model calling
+  // browser_observe/etc. hits "Tool not found". They self-degrade to a clear
+  // error when no browser panel is wired (headless), so listing is safe.
+  "browser_observe",
+  "browser_act",
   "browser_navigate",
-  "browser_click",
-  "browser_type",
-  "browser_scroll",
-  "browser_read_content",
-  // Extract real link/image URLs the a11y snapshot omits (href/src). Same
-  // whitelist requirement as the other browser_* tools — without it the model
-  // calling browser_extract_links hits "Tool not found".
-  "browser_extract_links",
-  "browser_wait",
-  "browser_press_enter",
   "WebSearch",
   "WebFetch",
   "GenerateImage",
@@ -141,15 +132,20 @@ const GENERAL_PERMISSION_RULES: PermissionRule[] = [
   // by the tools' own permissionDefault so the user confirms each change.
   { tool: "MemoryList", decision: "allow" },
   { tool: "MemoryRead", decision: "allow" },
-  // Browser automation: observing / navigating / reading are safe to auto-allow;
-  // click & type act on the page so stay gated by their "ask" permissionDefault
-  // (+ the main-side sensitive-action / domain-whitelist enforcement).
-  { tool: "browser_snapshot", decision: "allow" },
+  // Browser automation (3 semantic tools). Rules are first-match-wins, ordered
+  // by specificity — so the action-gating rule for browser_act MUST come first:
+  // click/type/select mutate the page/form → "ask"; all other actions (hover/
+  // scroll/wait/press_key/list_tabs/switch_tab) fall through to browser_act's
+  // tool-level "allow". observe (read-only) and navigate auto-allow.
+  // (Main-side sensitive-action + domain-whitelist enforcement also applies.)
+  {
+    tool: "browser_act",
+    argsPattern: { action: "^(click|type|select)$" },
+    decision: "ask",
+    reason: "browser_act click/type/select mutate the page",
+  },
+  { tool: "browser_observe", decision: "allow" },
   { tool: "browser_navigate", decision: "allow" },
-  { tool: "browser_scroll", decision: "allow" },
-  { tool: "browser_read_content", decision: "allow" },
-  { tool: "browser_wait", decision: "allow" },
-  { tool: "browser_press_enter", decision: "allow" },
 ];
 
 // ─── Preset definitions ──────────────────────────────────────────
