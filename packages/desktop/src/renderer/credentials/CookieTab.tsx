@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { SimpleSelect } from "@/components/ui/simple-select";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "../ui/ToastProvider";
 import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import type { MaskedCredentialView } from "./types";
@@ -322,15 +323,22 @@ export function CookieTab({ cwd }: { cwd: string }) {
             </div>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={busy} onClick={() => void loginCapture()}>
-            {busy ? t("ext.cookie.processing") : t("ext.cookie.loginAndSave")}
-          </Button>
+        <Button disabled={busy} onClick={() => void loginCapture()}>
+          {busy ? t("ext.cookie.processing") : t("ext.cookie.loginAndSave")}
+        </Button>
+
+        <Separator className="my-1" />
+
+        {/* 第二条独立路径:从内置浏览器面板全量拓取,和弹窗登录不是一回事,单列出来防歧义。 */}
+        <div className="space-y-2">
+          <div>
+            <p className="text-sm font-medium">{t("ext.cookie.browserSectionTitle")}</p>
+            <p className="text-xs text-muted-foreground">{t("ext.cookie.captureFromBrowserTitle")}</p>
+          </div>
           <Button
             variant="secondary"
             disabled={busy}
             onClick={() => void captureFromBrowser()}
-            title={t("ext.cookie.captureFromBrowserTitle")}
           >
             {t("ext.cookie.captureFromBrowser")}
           </Button>
