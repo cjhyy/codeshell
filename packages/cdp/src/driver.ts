@@ -224,52 +224,54 @@ export class CdpActionsDriver {
 
   /**
    * Capture a screenshot (viewport, or a backendNode's box if given) as JPEG,
-   * downscaled to maxDim via an in-page canvas pass. Used for vision mode and as
-   * the CORS-taint fallback for fetchImageData (a <video> frame is just a
-   * screenshot of the element box).
+   * downscaled to maxDim NATIVELY by CDP via clip.scale — no in-page canvas
+   * round-trip (that pathologically stalls on heavy pages: injecting a multi-MB
+   * base64 string into a busy JS context + decode took 20-30s on 小红书). CDP
+   * scales server-side, so this is fast regardless of page weight. Used for
+   * vision mode and as the CORS-taint fallback for fetchImageData (a <video>
+   * frame is just a screenshot of the element box).
    */
   async screenshot(backendNodeId?: number, maxDim = MAX_IMAGE_DIM): Promise<CdpImageData> {
     try {
-      let clip: { x: number; y: number; width: number; height: number; scale: number } | undefined;
+      // Region to capture (CSS px) + the native scale that fits it into maxDim.
+      let region: { x: number; y: number; width: number; height: number };
       if (backendNodeId !== undefined) {
         const { model } = (await this.send("DOM.getBoxModel", { backendNodeId })) as {
-          model?: { content: number[]; width: number; height: number };
+          model?: { content: number[] };
         };
-        if (model?.content && model.content.length >= 8) {
-          const xs = [model.content[0]!, model.content[2]!, model.content[4]!, model.content[6]!];
-          const ys = [model.content[1]!, model.content[3]!, model.content[5]!, model.content[7]!];
-          const x = Math.min(...xs), y = Math.min(...ys);
-          clip = { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y, scale: 1 };
+        if (!model?.content || model.content.length < 8) {
+          return { ok: false, detail: "element has no layout box", staleRef: true };
         }
+        const xs = [model.content[0]!, model.content[2]!, model.content[4]!, model.content[6]!];
+        const ys = [model.content[1]!, model.content[3]!, model.content[5]!, model.content[7]!];
+        const x = Math.min(...xs), y = Math.min(...ys);
+        region = { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
+      } else {
+        const { layoutViewport } = (await this.send("Page.getLayoutMetrics")) as {
+          layoutViewport?: { clientWidth?: number; clientHeight?: number };
+        };
+        region = {
+          x: 0,
+          y: 0,
+          width: layoutViewport?.clientWidth || 1280,
+          height: layoutViewport?.clientHeight || 800,
+        };
       }
+      if (region.width < 1 || region.height < 1) {
+        return { ok: false, detail: "capture region is empty" };
+      }
+      // scale ≤ 1 so the larger dimension lands at ~maxDim — CDP does the resize.
+      const scale = Math.min(1, maxDim / Math.max(region.width, region.height));
       const shot = (await this.send("Page.captureScreenshot", {
         format: "jpeg",
         quality: 80,
         captureBeyondViewport: false,
-        ...(clip ? { clip } : {}),
+        clip: { ...region, scale },
       })) as { data?: string };
       if (!shot.data) return { ok: false, detail: "screenshot returned no data" };
-      // Downscale via an in-page canvas (no native image lib in main).
-      const resized = await this.downscaleDataUrl(`data:image/jpeg;base64,${shot.data}`, maxDim);
-      return resized ?? { ok: true, base64: shot.data, mediaType: "image/jpeg" };
+      return { ok: true, base64: shot.data, mediaType: "image/jpeg" };
     } catch (e) {
       return { ok: false, detail: errMsg(e) };
-    }
-  }
-
-  /** Downscale a dataURL to maxDim using a page canvas; null if the page can't. */
-  private async downscaleDataUrl(dataUrl: string, maxDim: number): Promise<CdpImageData | null> {
-    try {
-      const res = (await this.send("Runtime.evaluate", {
-        expression: `(${DOWNSCALE_FN})(${JSON.stringify(dataUrl)}, ${maxDim})`,
-        returnByValue: true,
-        awaitPromise: true,
-      })) as { result?: { value?: { ok?: boolean; dataUrl?: string } } };
-      const v = res.result?.value;
-      if (!v?.ok || !v.dataUrl) return null;
-      return parseDataUrl(v.dataUrl);
-    } catch {
-      return null;
     }
   }
 
@@ -408,22 +410,6 @@ const FETCH_IMAGE_BY_REF_FN = `async function(ref, maxDim){
   } catch (e) {
     return { ok:false, detail: (e && e.message) || String(e) };
   }
-}`;
-
-/** In-page: load a dataURL into an Image, draw downscaled to maxDim, re-encode. */
-const DOWNSCALE_FN = `async function(dataUrl, maxDim){
-  try {
-    var img = new Image();
-    await new Promise(function(res, rej){ img.onload = res; img.onerror = rej; img.src = dataUrl; });
-    var srcW = img.naturalWidth, srcH = img.naturalHeight;
-    if (!srcW || !srcH) return { ok:false };
-    if (Math.max(srcW, srcH) <= maxDim) return { ok:true, dataUrl: dataUrl };
-    var scale = maxDim / Math.max(srcW, srcH);
-    var w = Math.round(srcW * scale), h = Math.round(srcH * scale);
-    var c = document.createElement('canvas'); c.width = w; c.height = h;
-    c.getContext('2d').drawImage(img, 0, 0, w, h);
-    return { ok:true, dataUrl: c.toDataURL('image/jpeg', 0.85) };
-  } catch (e) { return { ok:false }; }
 }`;
 
 /**

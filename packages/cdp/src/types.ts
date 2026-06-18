@@ -85,5 +85,7 @@ export interface CdpImageData {
   mediaType?: string;
   /** ref the image came from (img1/vid1…), echoed back for labeling. */
   ref?: string;
+  /** True when a ref/node no longer resolves (DOM changed → re-observe). */
+  staleRef?: boolean;
   detail?: string;
 }

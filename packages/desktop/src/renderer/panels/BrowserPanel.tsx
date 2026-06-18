@@ -1,4 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  type CSSProperties,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -711,13 +720,66 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
   );
 }
 
+/**
+ * Position a popover near a webview-viewport `rect`, with real collision
+ * detection against the panel container (the popover's `offsetParent`, i.e.
+ * the `relative overflow-hidden` content box): prefer below the element, flip
+ * above when there's no room, and clamp on all four edges so a `w-72` box near
+ * the right/bottom edge stays fully visible instead of overflowing the panel.
+ */
+function useRectPopoverStyle(rect: Rect, ref: RefObject<HTMLElement | null>): CSSProperties {
+  const [style, setStyle] = useState<CSSProperties>({ visibility: "hidden" });
+  const { x, y, width, height } = rect;
+
+  useLayoutEffect(() => {
+    let frame = 0;
+    const update = (): void => {
+      const el = ref.current;
+      const parent = el?.offsetParent as HTMLElement | null;
+      if (!el || !parent) return;
+
+      const pad = 4;
+      const gap = 6;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const maxW = parent.clientWidth;
+      const maxH = parent.clientHeight;
+
+      // Prefer below the rect; flip above when it would overflow the bottom and
+      // there's more room above.
+      const belowTop = y + height + gap;
+      const aboveTop = y - h - gap;
+      const top =
+        belowTop + h + pad > maxH && aboveTop >= pad
+          ? clampPos(aboveTop, h, maxH, pad)
+          : clampPos(belowTop, h, maxH, pad);
+      const left = clampPos(x, w, maxW, pad);
+
+      setStyle({ top, left, visibility: "visible" });
+    };
+    update();
+    frame = window.requestAnimationFrame(update);
+    window.addEventListener("resize", update);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", update);
+    };
+  }, [x, y, width, height, ref]);
+
+  return style;
+}
+
+/** Clamp a start coordinate so a `size`-long box stays within `[pad, max-pad]`. */
+function clampPos(start: number, size: number, max: number, pad: number): number {
+  return Math.min(Math.max(start, pad), Math.max(pad, max - size - pad));
+}
+
 /** Position children near a webview-viewport rect, clamped into view. */
 function FloatingAt({ rect, children }: { rect: Rect; children: React.ReactNode }) {
-  // Place just below the element; clamp so it doesn't overflow the panel.
-  const top = Math.max(4, Math.min(rect.y + rect.height + 6, 9999));
-  const left = Math.max(4, rect.x);
+  const ref = useRef<HTMLDivElement>(null);
+  const style = useRectPopoverStyle(rect, ref);
   return (
-    <div className="absolute z-30 w-72 max-w-[90%]" style={{ top, left }}>
+    <div ref={ref} className="absolute z-30 w-72 max-w-[90%]" style={style}>
       {children}
     </div>
   );
@@ -744,15 +806,7 @@ function MarkerDot({
   /** Save an edited comment (absent → comment is read-only). */
   onUpdateComment?: (comment: string) => void;
 }) {
-  const { t } = useT();
   const { rect } = marker.echo;
-  // Editable comment draft — re-seeded each time the card opens (and when the
-  // comment changes underneath us, e.g. edited in another window).
-  const [draft, setDraft] = useState(marker.anchor.comment);
-  useEffect(() => {
-    if (editing) setDraft(marker.anchor.comment);
-  }, [editing, marker.anchor.comment]);
-  const dirty = draft !== marker.anchor.comment;
   return (
     <>
       <Button
@@ -773,61 +827,101 @@ function MarkerDot({
         />
       )}
       {editing && (
-        <div
-          className="absolute z-40 w-72 max-w-[90%] rounded-md border border-border bg-card p-2 shadow-lg"
-          style={{ top: Math.max(4, rect.y + rect.height + 6), left: Math.max(4, rect.x) }}
-        >
-          <div className="mb-1 truncate text-xs font-medium text-muted-foreground">{marker.anchor.label}</div>
-          <div className="mb-1 truncate text-[11px] text-muted-foreground/80">
-            {marker.echo.pageTitle ? `${marker.echo.pageTitle} · ` : ""}
-            {pageAttribution(marker.echo)}
-          </div>
-          {selectorMissed && (
-            <div className="mb-1 text-[11px] text-status-warn">
-              {t("panels.browser.selectorMissed")}
-            </div>
-          )}
-          {onUpdateComment ? (
-            <Textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={t("panels.browser.commentPlaceholder")}
-              className="mb-2 min-h-14 resize-y text-xs"
-            />
-          ) : (
-            <div className="mb-2 whitespace-pre-wrap break-words text-xs text-foreground">
-              {marker.anchor.comment}
-            </div>
-          )}
-          <div className="flex justify-end gap-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-status-err"
-              onClick={onDelete}
-            >
-              {t("panels.common.delete")}
-            </Button>
-            {onUpdateComment && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                disabled={!dirty}
-                onClick={() => onUpdateComment(draft)}
-              >
-                {t("panels.common.save")}
-              </Button>
-            )}
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onOpen}>
-              {t("panels.common.close")}
-            </Button>
-          </div>
-        </div>
+        <MarkerEditCard
+          marker={marker}
+          selectorMissed={selectorMissed}
+          onClose={onOpen}
+          onDelete={onDelete}
+          onUpdateComment={onUpdateComment}
+        />
       )}
     </>
+  );
+}
+
+/**
+ * The editable popover card for a saved marker. Lives in its own component so
+ * the collision-aware positioning hook runs unconditionally (the card is
+ * mounted only while editing).
+ */
+function MarkerEditCard({
+  marker,
+  selectorMissed,
+  onClose,
+  onDelete,
+  onUpdateComment,
+}: {
+  marker: BrowserMarker;
+  selectorMissed: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+  onUpdateComment?: (comment: string) => void;
+}) {
+  const { t } = useT();
+  // Editable comment draft — seeded on open (and re-seeded when the comment
+  // changes underneath us, e.g. edited in another window).
+  const [draft, setDraft] = useState(marker.anchor.comment);
+  useEffect(() => {
+    setDraft(marker.anchor.comment);
+  }, [marker.anchor.comment]);
+  const dirty = draft !== marker.anchor.comment;
+  const ref = useRef<HTMLDivElement>(null);
+  const style = useRectPopoverStyle(marker.echo.rect, ref);
+  return (
+    <div
+      ref={ref}
+      className="absolute z-40 w-72 max-w-[90%] rounded-md border border-border bg-card p-2 shadow-lg"
+      style={style}
+    >
+      <div className="mb-1 truncate text-xs font-medium text-muted-foreground">{marker.anchor.label}</div>
+      <div className="mb-1 truncate text-[11px] text-muted-foreground/80">
+        {marker.echo.pageTitle ? `${marker.echo.pageTitle} · ` : ""}
+        {pageAttribution(marker.echo)}
+      </div>
+      {selectorMissed && (
+        <div className="mb-1 text-[11px] text-status-warn">
+          {t("panels.browser.selectorMissed")}
+        </div>
+      )}
+      {onUpdateComment ? (
+        <Textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={t("panels.browser.commentPlaceholder")}
+          className="mb-2 min-h-14 resize-y text-xs"
+        />
+      ) : (
+        <div className="mb-2 whitespace-pre-wrap break-words text-xs text-foreground">
+          {marker.anchor.comment}
+        </div>
+      )}
+      <div className="flex justify-end gap-1.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-status-err"
+          onClick={onDelete}
+        >
+          {t("panels.common.delete")}
+        </Button>
+        {onUpdateComment && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            disabled={!dirty}
+            onClick={() => onUpdateComment(draft)}
+          >
+            {t("panels.common.save")}
+          </Button>
+        )}
+        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onClose}>
+          {t("panels.common.close")}
+        </Button>
+      </div>
+    </div>
   );
 }
 

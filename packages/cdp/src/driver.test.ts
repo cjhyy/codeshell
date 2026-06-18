@@ -185,29 +185,39 @@ describe("CdpActionsDriver.fetchImageData", () => {
 });
 
 describe("CdpActionsDriver.screenshot", () => {
-  test("captures jpeg and returns base64 (no downscale path)", async () => {
+  test("viewport: scales natively via clip.scale, no page round-trip", async () => {
     const { send, calls } = fakeCdp({
+      "Page.getLayoutMetrics": () => ({ layoutViewport: { clientWidth: 3136, clientHeight: 800 } }),
       "Page.captureScreenshot": () => ({ data: "QUJD" }),
-      // downscale returns null path → keep original
-      "Runtime.evaluate": () => ({ result: { value: { ok: false } } }),
     });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     const r = await d.screenshot();
     expect(r).toMatchObject({ ok: true, mediaType: "image/jpeg", base64: "QUJD" });
     const shot = calls.find((c) => c.method === "Page.captureScreenshot");
     expect(shot?.params?.format).toBe("jpeg");
+    // 3136px wide → scale 1568/3136 = 0.5; CDP resizes server-side
+    expect(shot?.params?.clip).toMatchObject({ x: 0, y: 0, width: 3136, height: 800, scale: 0.5 });
+    // CRITICAL: no Runtime.evaluate (the old in-page canvas downscale that stalled)
+    expect(calls.some((c) => c.method === "Runtime.evaluate")).toBe(false);
   });
 
-  test("uses element box as clip when a backendNodeId is given", async () => {
+  test("element box: clips to the box and scale 1 when within maxDim", async () => {
     const { send, calls } = fakeCdp({
-      "DOM.getBoxModel": () => ({ model: { content: [10, 20, 110, 20, 110, 70, 10, 70], width: 100, height: 50 } }),
+      "DOM.getBoxModel": () => ({ model: { content: [10, 20, 110, 20, 110, 70, 10, 70] } }),
       "Page.captureScreenshot": () => ({ data: "QUJD" }),
-      "Runtime.evaluate": () => ({ result: { value: { ok: false } } }),
     });
     const d = new CdpActionsDriver(send, () => ({ url: "u" }));
     await d.screenshot(42);
     const shot = calls.find((c) => c.method === "Page.captureScreenshot");
-    expect(shot?.params?.clip).toMatchObject({ x: 10, y: 20, width: 100, height: 50 });
+    expect(shot?.params?.clip).toMatchObject({ x: 10, y: 20, width: 100, height: 50, scale: 1 });
+  });
+
+  test("element with no box → stale error", async () => {
+    const { send } = fakeCdp({ "DOM.getBoxModel": () => ({ model: null }) });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.screenshot(7);
+    expect(r.ok).toBe(false);
+    expect(r.staleRef).toBe(true);
   });
 });
 
