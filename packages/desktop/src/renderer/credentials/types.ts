@@ -8,7 +8,13 @@ export interface CredentialView {
   autoUseByAI?: boolean;
   /** 逐条「AI 可自动注入浏览器」开关(把 cookie 灌进内置浏览器,免审批门)。 */
   autoInjectByAI?: boolean;
-  meta?: { appUrl?: string; platform?: string; domain?: string; scope?: "domain" | "all" };
+  meta?: {
+    appUrl?: string;
+    platform?: string;
+    domain?: string;
+    scope?: "domain" | "all";
+    switchMode?: "clear" | "merge";
+  };
 }
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
   hasSecret: boolean;

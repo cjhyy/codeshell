@@ -1114,7 +1114,7 @@ ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id:
   } catch {
     throw new Error(`凭证「${cred.label}」的 cookie 数据损坏`);
   }
-  const { count } = await restoreCookiesToBrowser(jar);
+  const { count } = await restoreCookiesToBrowser(jar, cred.meta?.switchMode === "merge" ? "merge" : "clear");
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("browser:reload");
   }

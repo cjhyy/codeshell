@@ -38,10 +38,18 @@ export interface Credential {
    */
   autoInjectByAI?: boolean;
   /**
-   * link: 业务方 app 注册地址;cookie: 拓取所用平台与主域 + 抓取范围。
-   * scope="all" 表示该 jar 是整分区全量抓的(切换时整包导回);缺省/"domain" = 仅该域。
+   * link: 业务方 app 注册地址;cookie: 拓取所用平台与主域 + 抓取范围 + 切换策略。
+   * - scope="all" 表示该 jar 是整分区全量抓的(切换时整包导回);缺省/"domain" = 仅该域。
+   * - switchMode 决定「切换」时怎么写回浏览器:"clear"(默认)先清空整分区再注入(干净换号);
+   *   "merge" 只覆盖同名 cookie、保留分区里其他站(不踢掉别的登录态)。
    */
-  meta?: { appUrl?: string; platform?: string; domain?: string; scope?: "domain" | "all" };
+  meta?: {
+    appUrl?: string;
+    platform?: string;
+    domain?: string;
+    scope?: "domain" | "all";
+    switchMode?: "clear" | "merge";
+  };
 }
 
 export interface CredentialStoreFile {

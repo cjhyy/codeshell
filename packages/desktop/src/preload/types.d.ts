@@ -243,8 +243,14 @@ export interface CredentialView {
   autoUseByAI?: boolean;
   /** 逐条「AI 可自动注入浏览器」开关(把 cookie 灌进内置浏览器,免审批门)。 */
   autoInjectByAI?: boolean;
-  /** link: appUrl;cookie: 拓取平台与主域 + 抓取范围(all=全量分区)。 */
-  meta?: { appUrl?: string; platform?: string; domain?: string; scope?: "domain" | "all" };
+  /** link: appUrl;cookie: 拓取平台与主域 + 抓取范围(all=全量分区)+ 切换策略。 */
+  meta?: {
+    appUrl?: string;
+    platform?: string;
+    domain?: string;
+    scope?: "domain" | "all";
+    switchMode?: "clear" | "merge";
+  };
 }
 /** Masked credential returned to the renderer — never carries the secret value. */
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
@@ -446,7 +452,13 @@ export interface CodeshellApi {
         exposeAsEnv?: string;
         autoUseByAI?: boolean;
         autoInjectByAI?: boolean;
-        meta?: { appUrl?: string; platform?: string; domain?: string; scope?: "domain" | "all" };
+        meta?: {
+          appUrl?: string;
+          platform?: string;
+          domain?: string;
+          scope?: "domain" | "all";
+          switchMode?: "clear" | "merge";
+        };
       },
     ): Promise<void>;
     cookieDomains(): Promise<string[]>;

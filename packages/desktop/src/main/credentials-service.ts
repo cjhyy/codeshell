@@ -83,14 +83,16 @@ export async function captureAllCookies(): Promise<ElectronCookieLike[]> {
 
 /**
  * 切换账号:把某账号的 cookie jar 导回 persist:browser 覆盖当前登录态(设计稿 §5.5)。
- * 先**清空整分区 cookie**(切换语义=换成该账号的干净状态),再逐条 set。
+ * mode="clear"(默认)先**清空整分区 cookie**(干净换号),再逐条 set;
+ * mode="merge" 跳过清空,只逐条 set(覆盖同名、保留分区里其他站的登录态)。
  * 仅 cookie,不动 localStorage(已知局限)。返回成功写入的条数。
  */
 export async function restoreCookiesToBrowser(
   jar: ElectronCookieLike[],
+  mode: "clear" | "merge" = "clear",
 ): Promise<{ count: number }> {
   const sess = await browserSession();
-  await sess.clearStorageData({ storages: ["cookies"] });
+  if (mode !== "merge") await sess.clearStorageData({ storages: ["cookies"] });
   let count = 0;
   for (const c of jar) {
     // Electron cookies.set 需要一个 url 推断 secure/domain 上下文。

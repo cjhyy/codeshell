@@ -365,7 +365,10 @@ export class AgentBridge {
           if (jar.length === 0) {
             resultJson = JSON.stringify({ ok: false, error: `凭证「${cred.label}」cookie 为空或损坏` });
           } else {
-            const { count } = await restoreCookiesToBrowser(jar);
+            const { count } = await restoreCookiesToBrowser(
+              jar,
+              cred.meta?.switchMode === "merge" ? "merge" : "clear",
+            );
             for (const w of BrowserWindow.getAllWindows()) {
               if (!w.isDestroyed()) w.webContents.send("browser:reload");
             }

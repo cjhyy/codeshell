@@ -11,21 +11,45 @@ import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import type { MaskedCredentialView } from "./types";
 import { useT } from "../i18n/I18nProvider";
 
-type Scope = "domain" | "all";
+type SwitchMode = "clear" | "merge";
+
+const URL_HISTORY_KEY = "codeshell:cookieLoginUrlHistory";
+const URL_HISTORY_MAX = 10;
+
+/** 读登录 URL 输入历史(localStorage,去重,最近优先)。坏数据兜底空数组。 */
+function readUrlHistory(): string[] {
+  try {
+    const raw = localStorage.getItem(URL_HISTORY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** 把一条 URL 推到历史最前(去重),截到上限。返回新列表。 */
+function pushUrlHistory(url: string): string[] {
+  const u = url.trim();
+  if (!u) return readUrlHistory();
+  const next = [u, ...readUrlHistory().filter((x) => x !== u)].slice(0, URL_HISTORY_MAX);
+  try {
+    localStorage.setItem(URL_HISTORY_KEY, JSON.stringify(next));
+  } catch {
+    /* best-effort */
+  }
+  return next;
+}
 
 /**
- * Cookie 账号凭证 —— 唯一抓取路径是「弹窗登录」(开独立无痕窗现登,抓完即焚)。
+ * Cookie 账号凭证。两条抓取路径:
+ *  1. 弹窗登录(主路径):开**全新隔离无痕窗**(persist:login-<uuid>,登完即焚),用户现登 →
+ *     抓该窗口**全量** cookie。因 session 干净,无需配域名/范围。只填登录地址(免 https,
+ *     输过的地址以标签复用)。
+ *  2. 从内置浏览器全量拓取:把你平时用的内置浏览器面板(persist:browser)里**所有**已登录
+ *     cookie 整包存成一条凭证(适合已在面板登过的站)。
  *
- * 三块:
- *  1. 登录抓取:填登录页地址 + 抓取范围(仅当前域 / 整个会话全量),点「弹窗登录并保存」。
- *     全量用于登录态跨域、按域抓不全的站(如小红书)。
- *  2. 账号卡片:每张可切换 / 编辑(重命名)/ 重新登录 / 删除,带逐条「AI 可自动取用」开关。
- *  3. 切换语义=先清空整分区 cookie 再整包导回(干净换号,见后端 restoreCookiesToBrowser)。
- *
- * (注:旧「从内置浏览器拓取」入口已删 —— 它读的是 codeshell 内置浏览器分区、需先在那登一遍,
- *  不如弹窗登录一步到位;重新登录也走同一条弹窗路径。)
- *
- * AI 抓取/下载经 UseCredential 工具按凭证 id 取用,逐条开关或全局总闸决定是否免审批。
+ * 账号卡片:切换 / 编辑(重命名)/ 重新登录 / 删除;逐条「AI 可自动取用」「AI 可自动注入浏览器」
+ * 开关 + 逐条「切换策略」(清空再注入 / 只覆盖同名)。
  */
 export function CookieTab({ cwd }: { cwd: string }) {
   const { t } = useT();
@@ -33,10 +57,9 @@ export function CookieTab({ cwd }: { cwd: string }) {
   const confirm = useConfirm();
   const prompt = usePrompt();
   const [items, setItems] = useState<MaskedCredentialView[]>([]);
-  const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
-  const [scope, setScope] = useState<Scope>("domain");
   const [busy, setBusy] = useState(false);
+  const [urlHistory, setUrlHistory] = useState<string[]>(() => readUrlHistory());
 
   const load = useCallback(() => {
     void window.codeshell.credentials.list(cwd).then((all) =>
@@ -51,7 +74,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
     return `${platform}__${slug || "account"}`;
   };
 
-  /** 主域:从用户输入里取 eTLD+1 的「站点名」当 platform(去 www. / 端口 / 路径)。 */
+  /** 主域:从用户输入里取「站点名」当 platform(去协议 / www. / 端口 / 路径)。 */
   const normalizeDomain = (raw: string): string =>
     raw.trim().replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0].split(":")[0];
 
@@ -61,58 +84,42 @@ export function CookieTab({ cwd }: { cwd: string }) {
   };
 
   /**
-   * 弹窗登录抓 cookie(唯一抓取路径)。开独立登录窗 → 用户登录点保存 → 读 cookie。
-   * fixed 传入时为「重新登录」既有凭证(沿用其域 / 范围 / id,不改名);否则是新建。
-   * 返回是否成功(供调用方决定 toast / 清表单)。
+   * 弹窗登录抓 cookie(主路径)。开全新隔离窗 → 用户登录点保存 → 抓**全量** cookie。
+   * 因 session 干净,直接 fullCapture 不配域;不做登录态校验(全量 jar 跨域,按域判会误报)。
+   * fixed 传入时为「重新登录」既有凭证(沿用 id / 不改名)。
    */
   const runLogin = async (opts: {
     rawUrl: string;
-    scope: Scope;
-    fixed?: { id: string; label: string; autoUseByAI?: boolean };
+    fixed?: { id: string; label: string; autoUseByAI?: boolean; autoInjectByAI?: boolean; switchMode?: SwitchMode };
   }): Promise<boolean> => {
     const raw = opts.rawUrl.trim();
     if (!raw) {
       toast({ message: t("ext.cookie.needLoginUrl"), variant: "error" });
       return false;
     }
+    // 免 https:没带协议自动补 https://。
     const fullUrl = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-    const d = normalizeDomain(raw.replace(/^https?:\/\//, ""));
+    const d = normalizeDomain(raw);
     const platform = platformOf(d);
-    const isAll = opts.scope === "all";
     setBusy(true);
     try {
       const res = await window.codeshell.credentials.loginCapture({
         url: fullUrl,
         platform,
-        fullCapture: isAll,
+        fullCapture: true,
       });
       if (!res.ok) {
         if (!res.cancelled)
           toast({ message: res.error ?? t("ext.cookie.loginNotDone"), variant: "error" });
         return false;
       }
-      // 0 cookie 硬拒:不让用户存空/无效凭证。
       if (res.jar.length === 0) {
         toast({ message: t("ext.cookie.emptyJarAfterLogin", { domain: res.domain }), variant: "error" });
         return false;
       }
-      // 全量模式不做登录态校验(jar 跨域,evaluateLoginState 按目标域判会误报)。
-      if (!isAll && !res.loginCheck.ok) {
-        const miss = res.loginCheck.missing?.length
-          ? t("ext.cookie.notLoggedInMissing", { missing: res.loginCheck.missing.join(", ") })
-          : "";
-        const proceed = await confirm({
-          title: t("ext.cookie.notLoggedInTitle"),
-          message: t("ext.cookie.notLoggedInMessage", { domain: res.domain, miss }),
-          detail: t("ext.cookie.notLoggedInDetail"),
-          confirmLabel: t("ext.cookie.notLoggedInConfirm"),
-        });
-        if (!proceed) return false;
-      }
-      // 重新登录:沿用原 id / label / AI 开关;新建:抓到的用户名 > 表单填的 > 占位。
       const accountName = opts.fixed
         ? opts.fixed.label
-        : res.suggestedLabel || label.trim() || t("ext.cookie.defaultAccountName");
+        : res.suggestedLabel || t("ext.cookie.defaultAccountName");
       const id = opts.fixed ? opts.fixed.id : buildId(platform, accountName);
       await window.codeshell.credentials.save(cwd, "user", {
         id,
@@ -120,14 +127,15 @@ export function CookieTab({ cwd }: { cwd: string }) {
         label: accountName,
         secret: JSON.stringify(res.jar),
         autoUseByAI: opts.fixed?.autoUseByAI,
-        meta: { platform, domain: res.domain, scope: opts.scope },
+        autoInjectByAI: opts.fixed?.autoInjectByAI,
+        meta: { platform, domain: res.domain, scope: "all", switchMode: opts.fixed?.switchMode ?? "clear" },
       });
-      const msgKey = opts.fixed
-        ? "ext.cookie.repulledToast"
-        : isAll
-          ? "ext.cookie.capturedAllToast"
-          : "ext.cookie.savedToast";
-      toast({ message: t(msgKey, { label: accountName, count: res.jar.length }) });
+      toast({
+        message: t(opts.fixed ? "ext.cookie.repulledToast" : "ext.cookie.capturedAllToast", {
+          label: accountName,
+          count: res.jar.length,
+        }),
+      });
       load();
       return true;
     } finally {
@@ -135,13 +143,47 @@ export function CookieTab({ cwd }: { cwd: string }) {
     }
   };
 
-  /** 顶部表单:新建账号(弹窗登录)。 */
+  /** 顶部表单:新建账号(弹窗登录)。成功则记输入历史 + 清表单。 */
   const loginCapture = async () => {
-    const ok = await runLogin({ rawUrl: url, scope });
-    if (ok) setLabel("");
+    const raw = url.trim();
+    const ok = await runLogin({ rawUrl: raw });
+    if (ok) {
+      setUrlHistory(pushUrlHistory(raw));
+      setUrl("");
+    }
   };
 
-  /** 卡片「重新登录」:用原凭证的域 + 范围重新弹窗登录,刷新过期 cookie。 */
+  /** 从内置浏览器面板(persist:browser)全量拓取已登录 cookie，存成一条凭证。 */
+  const captureFromBrowser = async () => {
+    const name = await prompt({
+      title: t("ext.cookie.captureBrowserTitle"),
+      message: t("ext.cookie.captureBrowserMessage"),
+      defaultValue: "",
+    });
+    if (name === null) return;
+    const accountName = name.trim() || t("ext.cookie.defaultAccountName");
+    setBusy(true);
+    try {
+      const { jar, count } = await window.codeshell.credentials.captureAllCookies();
+      if (count === 0) {
+        toast({ message: t("ext.cookie.noCookieAtAll"), variant: "error" });
+        return;
+      }
+      await window.codeshell.credentials.save(cwd, "user", {
+        id: buildId("browser", accountName),
+        type: "cookie",
+        label: accountName,
+        secret: JSON.stringify(jar),
+        meta: { platform: "browser", scope: "all", switchMode: "clear" },
+      });
+      toast({ message: t("ext.cookie.capturedAllToast", { label: accountName, count }) });
+      load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** 卡片「重新登录」:用原凭证的域重新弹窗登录,刷新过期 cookie(沿用其策略/开关)。 */
   const relogin = async (c: MaskedCredentialView) => {
     const d = c.meta?.domain;
     if (!d) {
@@ -150,16 +192,22 @@ export function CookieTab({ cwd }: { cwd: string }) {
     }
     await runLogin({
       rawUrl: d,
-      scope: c.meta?.scope === "all" ? "all" : "domain",
-      fixed: { id: c.id, label: c.label, autoUseByAI: c.autoUseByAI },
+      fixed: {
+        id: c.id,
+        label: c.label,
+        autoUseByAI: c.autoUseByAI,
+        autoInjectByAI: c.autoInjectByAI,
+        switchMode: c.meta?.switchMode,
+      },
     });
   };
 
   const switchTo = async (c: MaskedCredentialView) => {
+    const merge = c.meta?.switchMode === "merge";
     const ok = await confirm({
       title: t("ext.cookie.switchTitle"),
       message: t("ext.cookie.switchMessage", { label: c.label }),
-      detail: t("ext.cookie.switchDetail"),
+      detail: merge ? t("ext.cookie.switchDetailMerge") : t("ext.cookie.switchDetailClear"),
       confirmLabel: t("ext.cookie.switchConfirm"),
     });
     if (!ok) return;
@@ -174,7 +222,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
     }
   };
 
-  /** 编辑:重命名账号(id 不变,只改展示 label —— 切换/取用都按 id,改名安全)。 */
+  /** 编辑:重命名账号(id 不变,只改展示 label)。 */
   const rename = async (c: MaskedCredentialView) => {
     const next = await prompt({
       title: t("ext.cookie.renameTitle"),
@@ -193,37 +241,41 @@ export function CookieTab({ cwd }: { cwd: string }) {
     }
   };
 
-  /** 逐条「AI 可自动取用」开关:写回凭证 autoUseByAI(只改元数据,保留 secret)。 */
-  const toggleAiUse = async (c: MaskedCredentialView, next: boolean) => {
+  /** 逐条 meta 开关/选择写回(只改元数据,保留 secret)。 */
+  const patch = async (
+    c: MaskedCredentialView,
+    fields: { autoUseByAI?: boolean; autoInjectByAI?: boolean; meta?: MaskedCredentialView["meta"] },
+    toastMsg?: string,
+  ) => {
     setBusy(true);
     try {
-      await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { autoUseByAI: next });
+      await window.codeshell.credentials.patchMeta(cwd, "user", c.id, fields);
       load();
-      toast({
-        message: next
-          ? t("ext.cookie.aiAutoUseOnToast", { label: c.label })
-          : t("ext.cookie.aiAutoUseOffToast", { label: c.label }),
-      });
+      if (toastMsg) toast({ message: toastMsg });
     } finally {
       setBusy(false);
     }
   };
 
-  /** 逐条「AI 可自动注入浏览器」开关:写回凭证 autoInjectByAI。 */
-  const toggleAiInject = async (c: MaskedCredentialView, next: boolean) => {
-    setBusy(true);
-    try {
-      await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { autoInjectByAI: next });
-      load();
-      toast({
-        message: next
-          ? t("ext.cookie.aiAutoInjectOnToast", { label: c.label })
-          : t("ext.cookie.aiAutoInjectOffToast", { label: c.label }),
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
+  const toggleAiUse = (c: MaskedCredentialView, next: boolean) =>
+    void patch(
+      c,
+      { autoUseByAI: next },
+      next ? t("ext.cookie.aiAutoUseOnToast", { label: c.label }) : t("ext.cookie.aiAutoUseOffToast", { label: c.label }),
+    );
+
+  const toggleAiInject = (c: MaskedCredentialView, next: boolean) =>
+    void patch(
+      c,
+      { autoInjectByAI: next },
+      next
+        ? t("ext.cookie.aiAutoInjectOnToast", { label: c.label })
+        : t("ext.cookie.aiAutoInjectOffToast", { label: c.label }),
+    );
+
+  /** 切换策略:写回 meta.switchMode(保留其余 meta 字段)。 */
+  const setSwitchMode = (c: MaskedCredentialView, mode: SwitchMode) =>
+    void patch(c, { meta: { ...c.meta, switchMode: mode } });
 
   const del = async (c: MaskedCredentialView) => {
     if (!(await confirm({ message: t("ext.cookie.deleteConfirm", { label: c.label }), destructive: true })))
@@ -244,39 +296,45 @@ export function CookieTab({ cwd }: { cwd: string }) {
     <div className="space-y-4">
       <Card className="space-y-3 p-4">
         <p className="text-sm text-muted-foreground">{t("ext.cookie.intro")}</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label>{t("ext.cookie.urlLabel")}</Label>
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder={t("ext.cookie.urlPlaceholder")}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label>{t("ext.cookie.accountLabel")}</Label>
-            <Input
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder={t("ext.cookie.accountPlaceholder")}
-            />
-          </div>
-        </div>
         <div className="space-y-1">
-          <Label>{t("ext.cookie.scopeLabel")}</Label>
-          <SimpleSelect
-            value={scope}
-            onChange={(v) => setScope(v as Scope)}
-            options={[
-              { value: "domain", label: t("ext.cookie.scopeDomain"), description: t("ext.cookie.scopeDomainDesc") },
-              { value: "all", label: t("ext.cookie.scopeAll"), description: t("ext.cookie.scopeAllDesc") },
-            ]}
-            size="sm"
+          <Label>{t("ext.cookie.urlLabel")}</Label>
+          <Input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder={t("ext.cookie.urlPlaceholder")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !busy) void loginCapture();
+            }}
           />
+          {urlHistory.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {urlHistory.map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                  onClick={() => setUrl(h)}
+                  title={t("ext.cookie.historyChipTip")}
+                >
+                  {h}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <Button disabled={busy} onClick={() => void loginCapture()}>
-          {busy ? t("ext.cookie.processing") : t("ext.cookie.loginAndSave")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={busy} onClick={() => void loginCapture()}>
+            {busy ? t("ext.cookie.processing") : t("ext.cookie.loginAndSave")}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={() => void captureFromBrowser()}
+            title={t("ext.cookie.captureFromBrowserTitle")}
+          >
+            {t("ext.cookie.captureFromBrowser")}
+          </Button>
+        </div>
       </Card>
 
       <div className="space-y-3">
@@ -320,7 +378,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
                     <Switch
                       checked={c.autoUseByAI === true}
                       disabled={busy}
-                      onCheckedChange={(next) => void toggleAiUse(c, next)}
+                      onCheckedChange={(next) => toggleAiUse(c, next)}
                     />
                     {t("ext.cookie.aiAutoUse")}
                   </label>
@@ -328,9 +386,21 @@ export function CookieTab({ cwd }: { cwd: string }) {
                     <Switch
                       checked={c.autoInjectByAI === true}
                       disabled={busy}
-                      onCheckedChange={(next) => void toggleAiInject(c, next)}
+                      onCheckedChange={(next) => toggleAiInject(c, next)}
                     />
                     {t("ext.cookie.aiAutoInject")}
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {t("ext.cookie.switchModeLabel")}
+                    <SimpleSelect
+                      value={c.meta?.switchMode === "merge" ? "merge" : "clear"}
+                      onChange={(v) => setSwitchMode(c, v as SwitchMode)}
+                      options={[
+                        { value: "clear", label: t("ext.cookie.switchModeClear") },
+                        { value: "merge", label: t("ext.cookie.switchModeMerge") },
+                      ]}
+                      size="sm"
+                    />
                   </label>
                 </div>
               </Card>
