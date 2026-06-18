@@ -211,6 +211,38 @@ describe("CdpBrowserDriver.readContent / waitForLoad / pressKey / select / hover
     const moves = calls.filter((c) => c.method === "Input.dispatchMouseEvent");
     expect(moves.map((m) => m.params.type)).toEqual(["mouseMoved"]);
   });
+
+  test("fetchImages returns base64 per ref (in-page fetch)", async () => {
+    const { send } = fakeCdp({
+      "Runtime.evaluate": () => ({ result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } } }),
+    });
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
+    const out = await d.fetchImages(["img1", "img2"]);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ ok: true, base64: "QUJD", mediaType: "image/jpeg", ref: "img1" });
+  });
+
+  test("screenshot of a ref resolves backendId then captures", async () => {
+    const { send, calls } = fakeCdp({
+      "Accessibility.getFullAXTree": () => AX_TWO,
+      "DOM.getBoxModel": (p) => BOX(p.backendNodeId),
+      "Page.captureScreenshot": () => ({ data: "QUJD" }),
+      "Runtime.evaluate": () => ({ result: { value: { ok: false } } }),
+    });
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
+    await d.snapshot();
+    const r = await d.screenshot("e1");
+    expect(r).toMatchObject({ ok: true, base64: "QUJD", mediaType: "image/jpeg" });
+    expect(calls.some((c) => c.method === "Page.captureScreenshot")).toBe(true);
+  });
+
+  test("screenshot of unknown ref errors", async () => {
+    const { send } = fakeCdp({});
+    const d = new CdpBrowserDriver(send, () => ({ url: "https://x.com" }));
+    const r = await d.screenshot("e99");
+    expect(r.ok).toBe(false);
+    expect(r.detail).toContain("unknown ref");
+  });
 });
 
 describe("CdpBrowserDriver.extractLinks", () => {

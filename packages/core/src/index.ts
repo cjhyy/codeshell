@@ -798,5 +798,7 @@ export type {
   BrowserExtract,
   BrowserLink,
   BrowserImage,
+  BrowserVideo,
+  BrowserImageData,
   AXNode,
 } from "./tool-system/browser-bridge.js";

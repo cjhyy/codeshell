@@ -64,7 +64,9 @@ export interface BrowserActionRequest {
     | "waitForLoad"
     | "hover"
     | "selectOption"
-    | "pressKey";
+    | "pressKey"
+    | "fetchImages"
+    | "screenshot";
   ref?: string;
   text?: string;
   url?: string;
@@ -75,6 +77,8 @@ export interface BrowserActionRequest {
   value?: string;
   /** pressKey: key name or combination ("Enter", "Tab", "Control+a"). */
   key?: string;
+  /** fetchImages: image refs (img1/vid1…) to fetch pixels for. */
+  refs?: string[];
 }
 
 /** Resolve a target webContents and approve sensitive actions. Injected so
@@ -183,6 +187,12 @@ export async function handleBrowserAction(
         break;
       case "pressKey":
         result = await driver.pressKey(req.key ?? "Enter", req.ref);
+        break;
+      case "fetchImages":
+        result = await driver.fetchImages(req.refs ?? []);
+        break;
+      case "screenshot":
+        result = await driver.screenshot(req.ref);
         break;
       default:
         result = { ok: false, detail: `unknown action: ${(req as { action: string }).action}` };

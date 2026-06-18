@@ -148,13 +148,66 @@ describe("CdpActionsDriver.selectOptionNode", () => {
 });
 
 describe("buildExtractScript", () => {
-  test("includes link, image, and video collection", () => {
+  test("includes link, image, and video collection + ref tagging", () => {
     const s = buildExtractScript(50);
     expect(s).toContain("a[href]");
     expect(s).toContain("img[src]");
     expect(s).toContain("querySelectorAll('video')");
     expect(s).toContain("source[src]");
+    expect(s).toContain("data-cs-ref");
     expect(s).toContain("var cap=50");
+  });
+});
+
+describe("CdpActionsDriver.fetchImageData", () => {
+  test("runs in-page fetch+canvas and returns parsed base64", async () => {
+    const { send, calls } = fakeCdp({
+      "Runtime.evaluate": () => ({ result: { value: { ok: true, dataUrl: "data:image/jpeg;base64,QUJD" } } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.fetchImageData("img3");
+    expect(r).toMatchObject({ ok: true, mediaType: "image/jpeg", base64: "QUJD", ref: "img3" });
+    // the in-page expression must reference the ref by data-cs-ref
+    const ev = calls.find((c) => c.method === "Runtime.evaluate");
+    expect(ev?.params?.expression).toContain("img3");
+    expect(ev?.params?.awaitPromise).toBe(true);
+  });
+
+  test("reports missing ref", async () => {
+    const { send } = fakeCdp({
+      "Runtime.evaluate": () => ({ result: { value: { ok: false, missing: true } } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.fetchImageData("img9");
+    expect(r.ok).toBe(false);
+    expect(r.detail).toContain("not found");
+  });
+});
+
+describe("CdpActionsDriver.screenshot", () => {
+  test("captures jpeg and returns base64 (no downscale path)", async () => {
+    const { send, calls } = fakeCdp({
+      "Page.captureScreenshot": () => ({ data: "QUJD" }),
+      // downscale returns null path → keep original
+      "Runtime.evaluate": () => ({ result: { value: { ok: false } } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    const r = await d.screenshot();
+    expect(r).toMatchObject({ ok: true, mediaType: "image/jpeg", base64: "QUJD" });
+    const shot = calls.find((c) => c.method === "Page.captureScreenshot");
+    expect(shot?.params?.format).toBe("jpeg");
+  });
+
+  test("uses element box as clip when a backendNodeId is given", async () => {
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({ model: { content: [10, 20, 110, 20, 110, 70, 10, 70], width: 100, height: 50 } }),
+      "Page.captureScreenshot": () => ({ data: "QUJD" }),
+      "Runtime.evaluate": () => ({ result: { value: { ok: false } } }),
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+    await d.screenshot(42);
+    const shot = calls.find((c) => c.method === "Page.captureScreenshot");
+    expect(shot?.params?.clip).toMatchObject({ x: 10, y: 20, width: 100, height: 50 });
   });
 });
 

@@ -75,3 +75,15 @@ export interface CdpExtractResult {
   truncated?: boolean;
   detail?: string;
 }
+
+/** A captured image's raw bytes, ready to become a vision ContentBlock. */
+export interface CdpImageData {
+  ok: boolean;
+  /** base64 (no data: prefix). */
+  base64?: string;
+  /** e.g. "image/jpeg" | "image/png". */
+  mediaType?: string;
+  /** ref the image came from (img1/vid1…), echoed back for labeling. */
+  ref?: string;
+  detail?: string;
+}

@@ -71,6 +71,8 @@ export interface BrowserImage {
   url: string;
   /** alt text if present (helps the agent know what the image is). */
   alt?: string;
+  /** Per-extract ref (imgN) — pass to browser_observe(image) to see its pixels. */
+  ref?: string;
 }
 
 /** One video extracted from the page (<video src> / <source src>). */
@@ -95,6 +97,18 @@ export interface BrowserExtract {
   videos: BrowserVideo[];
   /** True if any list was capped (page had more) — narrow the page first. */
   truncated?: boolean;
+  detail?: string;
+}
+
+/** A captured image's bytes, ready to become a vision ContentBlock. */
+export interface BrowserImageData {
+  ok: boolean;
+  /** base64 (no data: prefix). */
+  base64?: string;
+  /** "image/jpeg" | "image/png" | … */
+  mediaType?: string;
+  /** ref the image came from (so the tool can label which image is which). */
+  ref?: string;
   detail?: string;
 }
 
@@ -124,6 +138,18 @@ export interface BrowserBridge {
    * ("Control+a"). Focuses `ref` first if given (so the key lands there).
    */
   pressKey(key: string, ref?: string): Promise<BrowserResult>;
+  /**
+   * Fetch the real pixels of page images by ref (e.g. 小红书 笔记配图) so a
+   * vision model can SEE their content. Fetched in-page (carries the page's
+   * cookies → beats hotlink protection). One result per requested ref.
+   */
+  fetchImages(refs: string[]): Promise<BrowserImageData[]>;
+  /**
+   * Screenshot the viewport, or a single element's box if `ref` given (a
+   * <video> ref → its current frame). For "see the rendered layout / canvas /
+   * chart" — when the a11y tree isn't enough.
+   */
+  screenshot(ref?: string): Promise<BrowserImageData>;
 }
 
 /**

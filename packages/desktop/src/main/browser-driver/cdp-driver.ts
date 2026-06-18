@@ -27,6 +27,7 @@ import {
   type BrowserResult,
   type BrowserContent,
   type BrowserExtract,
+  type BrowserImageData,
   type AXNode,
 } from "@cjhyy/code-shell-core";
 
@@ -113,6 +114,29 @@ export class CdpBrowserDriver implements BrowserBridge {
 
   scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult> {
     return this.inner.scroll(dir, amount);
+  }
+
+  async fetchImages(refs: string[]): Promise<BrowserImageData[]> {
+    // image refs (img1/vid1…) come from the last extract's data-cs-ref tags, not
+    // the a11y refMap — the package resolves them in-page by that attribute.
+    const out: BrowserImageData[] = [];
+    for (const ref of refs) {
+      const r = await this.inner.fetchImageData(ref);
+      out.push({ ok: r.ok, base64: r.base64, mediaType: r.mediaType, ref: r.ref ?? ref, detail: r.detail });
+    }
+    return out;
+  }
+
+  async screenshot(ref?: string): Promise<BrowserImageData> {
+    // vision ref is an a11y element ref (eN) → resolve to backendNodeId for a
+    // region capture; no ref → viewport screenshot.
+    let backendId: number | undefined;
+    if (ref) {
+      backendId = this.backendId(ref);
+      if (backendId === undefined) return { ok: false, detail: `unknown ref ${ref}` };
+    }
+    const r = await this.inner.screenshot(backendId);
+    return { ok: r.ok, base64: r.base64, mediaType: r.mediaType, detail: r.detail };
   }
 }
 

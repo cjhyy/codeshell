@@ -1536,6 +1536,8 @@ export class AgentServer {
       hover: (ref) => call("hover", { ref }),
       selectOption: (ref, value) => call("selectOption", { ref, value }),
       pressKey: (key, ref) => call("pressKey", { key, ref }),
+      fetchImages: (refs) => call("fetchImages", { refs }),
+      screenshot: (ref) => call("screenshot", { ref }),
     };
   }
 

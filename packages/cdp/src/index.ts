@@ -7,7 +7,7 @@
  * Node/Bun (raw CDP WebSocket), or any host that can send one CDP command.
  */
 
-export { CdpActionsDriver, CONTENT_CHAR_CAP, EXTRACT_LINK_CAP, buildExtractScript, cleanPageText } from "./driver.js";
+export { CdpActionsDriver, CONTENT_CHAR_CAP, EXTRACT_LINK_CAP, MAX_IMAGE_DIM, buildExtractScript, cleanPageText } from "./driver.js";
 export { planKeySequence, keyInfo, normalizeKey, MODIFIER_BITS } from "./keymap.js";
 export type { KeyInfo, KeyEvent } from "./keymap.js";
 export type { CdpSender, PageInfo } from "./sender.js";
@@ -20,4 +20,5 @@ export type {
   CdpImage,
   CdpVideo,
   CdpExtractResult,
+  CdpImageData,
 } from "./types.js";

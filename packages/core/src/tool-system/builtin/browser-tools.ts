@@ -23,7 +23,12 @@
 
 import type { ToolDefinition } from "../../types.js";
 import type { ToolContext } from "../context.js";
+import type { BuiltinToolResult } from "./index.js";
+import type { BrowserImageData } from "../browser-bridge.js";
 import { renderElementList } from "../browser-bridge.js";
+import { capabilitiesFor } from "../../llm/capabilities/index.js";
+import type { ProviderKindName } from "../../llm/provider-kinds.js";
+import type { ContentBlock } from "../../types.js";
 
 const NO_BROWSER =
   "Error: browser automation is not available (no browser panel in this session). " +
@@ -50,20 +55,45 @@ export const browserObserveToolDef: ToolDefinition = {
     "- read: the page's main readable text (for summarizing/scraping an article/post; " +
     "long pages truncate — scroll + read again).\n" +
     "- extract: the real URLs on the page (hyperlink hrefs, image srcs, video srcs) " +
-    "that snapshot omits — e.g. to collect links or find a media URL for a downloader.",
+    "that snapshot omits — each image/video is tagged [ref=imgN/vidN] for image mode.\n" +
+    "- image: SEE the actual pixels of page images (refs from extract, e.g. img3) — for " +
+    "reading what a photo/product image/小红书 笔记配图 actually shows. Fetched in-page so " +
+    "it works behind hotlink protection. A vidN ref grabs the video's current frame.\n" +
+    "- vision: screenshot the rendered page (or one element via ref) — for layout/canvas/" +
+    "charts the a11y tree can't convey. Use sparingly (images cost tokens; snapshot first).",
   inputSchema: {
     type: "object",
     properties: {
       mode: {
         type: "string",
-        enum: ["snapshot", "read", "extract"],
+        enum: ["snapshot", "read", "extract", "image", "vision"],
         description: "What to observe (default: snapshot)",
       },
+      refs: {
+        type: "array",
+        items: { type: "string" },
+        description: "image mode: image refs (imgN/vidN from extract) to see, one or more",
+      },
+      ref: { type: "string", description: "vision mode (optional): screenshot just this element's region" },
     },
   },
 };
 
-export async function browserObserveTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {
+/** Vision gate: only show images to a vision-capable model. Mirrors view_image —
+ *  no vision → never read pixels into context (your rule: 不支持就不给看). */
+function modelSupportsVision(ctx?: ToolContext): boolean {
+  if (!ctx?.llmConfig) return false;
+  const kind = (ctx.llmConfig.providerKind ?? ctx.llmConfig.provider) as ProviderKindName;
+  return capabilitiesFor(kind, ctx.llmConfig.model).supportsVision;
+}
+
+/** Wrap captured image data into a vision ContentBlock (or null if not usable). */
+function toImageBlock(d: BrowserImageData): ContentBlock | null {
+  if (!d.ok || !d.base64 || !d.mediaType) return null;
+  return { type: "image", source: { type: "base64", media_type: d.mediaType, data: d.base64 } };
+}
+
+export async function browserObserveTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<BuiltinToolResult> {
   const b = bridge(ctx);
   if (!b) return NO_BROWSER;
   const mode = (args.mode as string) || "snapshot";
@@ -92,7 +122,8 @@ export async function browserObserveTool(args: Record<string, unknown>, ctx?: To
           : "Links: (none)";
       const images =
         r.images.length > 0
-          ? "Images:\n" + r.images.map((im) => `- ${im.alt ? `${im.alt} → ` : ""}${im.url}`).join("\n")
+          ? "Images (use the ref with browser_observe(image) to SEE one):\n" +
+            r.images.map((im) => `- [${im.ref ?? "?"}] ${im.alt ? `${im.alt} → ` : ""}${im.url}`).join("\n")
           : "Images: (none)";
       const videos =
         r.videos && r.videos.length > 0
@@ -100,8 +131,40 @@ export async function browserObserveTool(args: Record<string, unknown>, ctx?: To
           : "Videos: (none)";
       return `${head}\n\n${links}\n\n${images}\n\n${videos}`;
     }
+    case "image": {
+      // Vision gate: don't fetch pixels for a non-vision model (your rule).
+      if (!modelSupportsVision(ctx)) {
+        return "[图片未加载 —— 当前模型不支持视觉输入,已跳过。切换到 vision 模型后再用 browser_observe(image)。]";
+      }
+      const refs = Array.isArray(args.refs) ? (args.refs as string[]) : [];
+      if (refs.length === 0) return "Error: refs is required for image mode (image refs from browser_observe(extract), e.g. img3)";
+      const datas = await b.fetchImages(refs);
+      const blocks: ContentBlock[] = [];
+      const notes: string[] = [];
+      for (const d of datas) {
+        const block = toImageBlock(d);
+        if (block) {
+          blocks.push(block);
+          notes.push(`${d.ref ?? "?"}: loaded`);
+        } else {
+          notes.push(`${d.ref ?? "?"}: ${d.detail ?? "could not load"}`);
+        }
+      }
+      if (blocks.length === 0) return `Error: no images loaded — ${notes.join("; ")}`;
+      return { contentBlocks: blocks, result: `[loaded ${blocks.length} image(s): ${notes.join("; ")}]` };
+    }
+    case "vision": {
+      if (!modelSupportsVision(ctx)) {
+        return "[截图未加载 —— 当前模型不支持视觉输入,已跳过。切换到 vision 模型后再用 browser_observe(vision)。]";
+      }
+      const ref = args.ref as string | undefined;
+      const d = await b.screenshot(ref);
+      const block = toImageBlock(d);
+      if (!block) return `Error: ${d.detail ?? "screenshot failed"}`;
+      return { contentBlocks: [block], result: `[screenshot loaded${ref ? ` of ${ref}` : ""}]` };
+    }
     default:
-      return `Error: unknown observe mode "${mode}" (use snapshot | read | extract)`;
+      return `Error: unknown observe mode "${mode}" (use snapshot | read | extract | image | vision)`;
   }
 }
 

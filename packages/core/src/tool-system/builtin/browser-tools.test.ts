@@ -12,6 +12,14 @@ function ctxWith(bridge?: Partial<BrowserBridge>): ToolContext {
   return { browser: bridge as BrowserBridge | undefined } as unknown as ToolContext;
 }
 
+/** ctx whose model is vision-capable (Anthropic claude) so image/vision modes run. */
+function ctxVision(bridge?: Partial<BrowserBridge>): ToolContext {
+  return {
+    browser: bridge as BrowserBridge | undefined,
+    llmConfig: { provider: "anthropic", providerKind: "anthropic", model: "claude-sonnet-4-6" },
+  } as unknown as ToolContext;
+}
+
 describe("browser tools — no bridge (headless / no panel)", () => {
   test("every tool degrades with a clear error, never throws", async () => {
     const ctx = ctxWith(undefined);
@@ -80,6 +88,50 @@ describe("browser_observe", () => {
   test("unknown mode errors", async () => {
     const ctx = ctxWith({ snapshot: async () => ({ url: "u", elements: [] }) });
     expect(await browserObserveTool({ mode: "bogus" }, ctx)).toContain("unknown observe mode");
+  });
+
+  test("image: non-vision model is refused, never fetches pixels", async () => {
+    let fetched = false;
+    const ctx = ctxWith({ fetchImages: async () => { fetched = true; return []; } }); // no llmConfig → non-vision
+    const out = await browserObserveTool({ mode: "image", refs: ["img1"] }, ctx);
+    expect(out).toContain("不支持视觉");
+    expect(fetched).toBe(false); // gate prevents fetching
+  });
+
+  test("image: vision model returns image content blocks", async () => {
+    const ctx = ctxVision({
+      fetchImages: async (refs) => refs.map((ref) => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg", ref })),
+    });
+    const out = await browserObserveTool({ mode: "image", refs: ["img1", "img2"] }, ctx);
+    expect(typeof out).toBe("object");
+    if (typeof out === "object") {
+      expect(out.contentBlocks).toHaveLength(2);
+      expect(out.contentBlocks[0]).toMatchObject({ type: "image", source: { type: "base64", media_type: "image/jpeg" } });
+    }
+  });
+
+  test("image: requires refs", async () => {
+    const ctx = ctxVision({ fetchImages: async () => [] });
+    expect(await browserObserveTool({ mode: "image" }, ctx)).toContain("refs is required");
+  });
+
+  test("image: all-fail reports details", async () => {
+    const ctx = ctxVision({ fetchImages: async () => [{ ok: false, ref: "img1", detail: "fetch 403" }] });
+    const out = await browserObserveTool({ mode: "image", refs: ["img1"] }, ctx);
+    expect(out).toContain("no images loaded");
+    expect(out).toContain("403");
+  });
+
+  test("vision: non-vision model refused", async () => {
+    const ctx = ctxWith({ screenshot: async () => ({ ok: true, base64: "x", mediaType: "image/jpeg" }) });
+    expect(await browserObserveTool({ mode: "vision" }, ctx)).toContain("不支持视觉");
+  });
+
+  test("vision: vision model returns a screenshot block", async () => {
+    const ctx = ctxVision({ screenshot: async () => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg" }) });
+    const out = await browserObserveTool({ mode: "vision" }, ctx);
+    expect(typeof out).toBe("object");
+    if (typeof out === "object") expect(out.contentBlocks[0]).toMatchObject({ type: "image" });
   });
 });
 
