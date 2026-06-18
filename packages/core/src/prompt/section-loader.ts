@@ -16,6 +16,7 @@ const BUILTIN_SECTIONS: Record<string, string> = {
   base: readSectionFile("base"),
   orchestration: readSectionFile("orchestration"),
   coding: readSectionFile("coding"),
+  browser: readSectionFile("browser"),
   tone: readSectionFile("tone"),
 };
 

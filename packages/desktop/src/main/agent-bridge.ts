@@ -35,7 +35,7 @@ import {
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
 import { CredentialStore } from "@cjhyy/code-shell-core";
 import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
-import { activeGuest } from "./browser-driver/active-guest.js";
+import { activeGuest, listGuests, focusGuest } from "./browser-driver/active-guest.js";
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 
 /**
@@ -324,6 +324,8 @@ export class AgentBridge {
           // behavior. An interactive per-action approval dialog is a follow-up.
           approve: async () => true,
           openPanel: (url) => this.openBrowserPanel(url),
+          listTabs: listGuests,
+          switchTab: focusGuest,
         });
       } catch (e) {
         resultJson = JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });

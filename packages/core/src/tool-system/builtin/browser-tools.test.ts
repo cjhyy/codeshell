@@ -1,14 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
-  browserSnapshotTool,
-  browserClickTool,
-  browserTypeTool,
+  browserObserveTool,
+  browserActTool,
   browserNavigateTool,
-  browserScrollTool,
-  browserReadContentTool,
-  browserExtractLinksTool,
-  browserWaitTool,
-  browserPressEnterTool,
   isBrowserAutomationAvailable,
 } from "./browser-tools.js";
 import type { BrowserBridge } from "../browser-bridge.js";
@@ -18,19 +12,29 @@ function ctxWith(bridge?: Partial<BrowserBridge>): ToolContext {
   return { browser: bridge as BrowserBridge | undefined } as unknown as ToolContext;
 }
 
+/** ctx whose model is vision-capable (Anthropic claude) so image/vision modes run. */
+function ctxVision(bridge?: Partial<BrowserBridge>): ToolContext {
+  return {
+    browser: bridge as BrowserBridge | undefined,
+    llmConfig: { provider: "anthropic", providerKind: "anthropic", model: "claude-sonnet-4-6" },
+  } as unknown as ToolContext;
+}
+
 describe("browser tools — no bridge (headless / no panel)", () => {
   test("every tool degrades with a clear error, never throws", async () => {
     const ctx = ctxWith(undefined);
     for (const out of [
-      await browserSnapshotTool({}, ctx),
-      await browserClickTool({ ref: "e1" }, ctx),
-      await browserTypeTool({ ref: "e1", text: "x" }, ctx),
+      await browserObserveTool({}, ctx),
+      await browserObserveTool({ mode: "read" }, ctx),
+      await browserObserveTool({ mode: "extract" }, ctx),
+      await browserActTool({ action: "click", ref: "e1" }, ctx),
+      await browserActTool({ action: "type", ref: "e1", text: "x" }, ctx),
+      await browserActTool({ action: "select", ref: "e1", value: "a" }, ctx),
+      await browserActTool({ action: "press_key", key: "Enter" }, ctx),
+      await browserActTool({ action: "hover", ref: "e1" }, ctx),
+      await browserActTool({ action: "scroll", direction: "down" }, ctx),
+      await browserActTool({ action: "wait" }, ctx),
       await browserNavigateTool({ url: "https://x.com" }, ctx),
-      await browserScrollTool({ direction: "down" }, ctx),
-      await browserReadContentTool({}, ctx),
-      await browserExtractLinksTool({}, ctx),
-      await browserWaitTool({}, ctx),
-      await browserPressEnterTool({}, ctx),
     ]) {
       expect(out).toContain("not available");
     }
@@ -38,8 +42,8 @@ describe("browser tools — no bridge (headless / no panel)", () => {
   });
 });
 
-describe("browser_snapshot", () => {
-  test("renders url/title + element list; surfaces needsHuman", async () => {
+describe("browser_observe", () => {
+  test("snapshot renders url/title + element list; surfaces needsHuman", async () => {
     const ctx = ctxWith({
       snapshot: async () => ({
         url: "https://shop.example/login",
@@ -51,111 +55,175 @@ describe("browser_snapshot", () => {
         needsHuman: "login required",
       }),
     });
-    const out = await browserSnapshotTool({}, ctx);
-    expect(out).toContain("URL: https://shop.example/login");
-    expect(out).toContain("Title: 登录");
-    expect(out).toContain("[ref=e1] textbox");
+    const out = await browserObserveTool({}, ctx); // default mode = snapshot
+    expect(out).toContain("https://shop.example/login");
+    expect(out).toContain("e1");
     expect(out).toContain("[sensitive]");
     expect(out).toContain("login required");
   });
+
+  test("read returns cleaned page text", async () => {
+    const ctx = ctxWith({
+      readContent: async () => ({ ok: true, url: "u", title: "t", text: "article body", truncated: false }),
+    });
+    expect(await browserObserveTool({ mode: "read" }, ctx)).toContain("article body");
+  });
+
+  test("extract lists links/images/videos", async () => {
+    const ctx = ctxWith({
+      extractLinks: async () => ({
+        ok: true,
+        url: "u",
+        links: [{ text: "home", url: "https://x/home" }],
+        images: [{ url: "https://x/a.png", alt: "a" }],
+        videos: [{ url: "https://x/v.mp4" }],
+      }),
+    });
+    const out = await browserObserveTool({ mode: "extract" }, ctx);
+    expect(out).toContain("https://x/home");
+    expect(out).toContain("https://x/a.png");
+    expect(out).toContain("https://x/v.mp4");
+  });
+
+  test("unknown mode errors", async () => {
+    const ctx = ctxWith({ snapshot: async () => ({ url: "u", elements: [] }) });
+    expect(await browserObserveTool({ mode: "bogus" }, ctx)).toContain("unknown observe mode");
+  });
+
+  test("image: non-vision model is refused, never fetches pixels", async () => {
+    let fetched = false;
+    const ctx = ctxWith({ fetchImages: async () => { fetched = true; return []; } }); // no llmConfig → non-vision
+    const out = await browserObserveTool({ mode: "image", refs: ["img1"] }, ctx);
+    expect(out).toContain("不支持视觉");
+    expect(fetched).toBe(false); // gate prevents fetching
+  });
+
+  test("image: vision model returns image content blocks", async () => {
+    const ctx = ctxVision({
+      fetchImages: async (refs) => refs.map((ref) => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg", ref })),
+    });
+    const out = await browserObserveTool({ mode: "image", refs: ["img1", "img2"] }, ctx);
+    expect(typeof out).toBe("object");
+    if (typeof out === "object") {
+      expect(out.contentBlocks).toHaveLength(2);
+      expect(out.contentBlocks[0]).toMatchObject({ type: "image", source: { type: "base64", media_type: "image/jpeg" } });
+    }
+  });
+
+  test("image: requires refs", async () => {
+    const ctx = ctxVision({ fetchImages: async () => [] });
+    expect(await browserObserveTool({ mode: "image" }, ctx)).toContain("refs is required");
+  });
+
+  test("image: all-fail reports details", async () => {
+    const ctx = ctxVision({ fetchImages: async () => [{ ok: false, ref: "img1", detail: "fetch 403" }] });
+    const out = await browserObserveTool({ mode: "image", refs: ["img1"] }, ctx);
+    expect(out).toContain("no images loaded");
+    expect(out).toContain("403");
+  });
+
+  test("vision: non-vision model refused", async () => {
+    const ctx = ctxWith({ screenshot: async () => ({ ok: true, base64: "x", mediaType: "image/jpeg" }) });
+    expect(await browserObserveTool({ mode: "vision" }, ctx)).toContain("不支持视觉");
+  });
+
+  test("vision: vision model returns a screenshot block", async () => {
+    const ctx = ctxVision({ screenshot: async () => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg" }) });
+    const out = await browserObserveTool({ mode: "vision" }, ctx);
+    expect(typeof out).toBe("object");
+    if (typeof out === "object") expect(out.contentBlocks[0]).toMatchObject({ type: "image" });
+  });
 });
 
-describe("browser_click / type — happy + stale ref", () => {
-  test("click ok", async () => {
-    const ctx = ctxWith({ click: async () => ({ ok: true }) });
-    expect(await browserClickTool({ ref: "e3" }, ctx)).toContain("Clicked e3");
+describe("browser_act", () => {
+  test("click ok / stale", async () => {
+    expect(await browserActTool({ action: "click", ref: "e3" }, ctxWith({ click: async () => ({ ok: true }) }))).toContain("Clicked e3");
+    const stale = await browserActTool({ action: "click", ref: "e9" }, ctxWith({ click: async () => ({ ok: false, staleRef: true }) }));
+    expect(stale).toContain("no longer valid");
   });
 
-  test("click stale ref → tells agent to re-snapshot", async () => {
-    const ctx = ctxWith({ click: async () => ({ ok: false, staleRef: true }) });
-    const out = await browserClickTool({ ref: "e9" }, ctx);
-    expect(out).toContain("no longer valid");
-    expect(out).toContain("browser_snapshot");
-  });
-
-  test("type requires ref and text", async () => {
+  test("type validates ref + text", async () => {
     const ctx = ctxWith({ type: async () => ({ ok: true }) });
-    expect(await browserTypeTool({ text: "hi" }, ctx)).toContain("ref is required");
-    expect(await browserTypeTool({ ref: "e1" }, ctx)).toContain("text is required");
-    expect(await browserTypeTool({ ref: "e1", text: "hi" }, ctx)).toContain("Typed into e1");
+    expect(await browserActTool({ action: "type", text: "hi" }, ctx)).toContain("ref is required");
+    expect(await browserActTool({ action: "type", ref: "e1" }, ctx)).toContain("text is required");
+    expect(await browserActTool({ action: "type", ref: "e1", text: "hi" }, ctx)).toContain("Typed into e1");
   });
-});
 
-describe("browser_navigate / scroll — arg validation", () => {
-  test("navigate requires url", async () => {
-    const ctx = ctxWith({ navigate: async () => ({ ok: true }) });
-    expect(await browserNavigateTool({}, ctx)).toContain("url is required");
-    expect(await browserNavigateTool({ url: "https://a.com" }, ctx)).toContain("Navigated to");
+  test("select reports match / passes value", async () => {
+    const ctx = ctxWith({ selectOption: async (_ref, v) => ({ ok: true, detail: `selected "${v}"` }) });
+    expect(await browserActTool({ action: "select", ref: "e1", value: "中国" }, ctx)).toContain("中国");
+  });
+
+  test("press_key defaults to Enter", async () => {
+    let got = "";
+    const ctx = ctxWith({ pressKey: async (k) => { got = k; return { ok: true }; } });
+    expect(await browserActTool({ action: "press_key" }, ctx)).toContain("Pressed Enter");
+    expect(got).toBe("Enter");
+  });
+
+  test("hover ok", async () => {
+    expect(await browserActTool({ action: "hover", ref: "e2" }, ctxWith({ hover: async () => ({ ok: true }) }))).toContain("Hovered e2");
   });
 
   test("scroll validates direction", async () => {
     const ctx = ctxWith({ scroll: async () => ({ ok: true }) });
-    expect(await browserScrollTool({ direction: "sideways" }, ctx)).toContain("must be 'up' or 'down'");
-    expect(await browserScrollTool({ direction: "down" }, ctx)).toContain("Scrolled down");
+    expect(await browserActTool({ action: "scroll", direction: "sideways" }, ctx)).toContain("must be 'up' or 'down'");
+    expect(await browserActTool({ action: "scroll", direction: "down" }, ctx)).toContain("Scrolled down");
+  });
+
+  test("wait ready", async () => {
+    expect(await browserActTool({ action: "wait", timeout_ms: 5000 }, ctxWith({ waitForLoad: async () => ({ ok: true }) }))).toContain("Page ready");
+  });
+
+  test("unknown action errors", async () => {
+    expect(await browserActTool({ action: "teleport" }, ctxWith({}))).toContain("unknown action");
+  });
+
+  test("list_tabs renders open tabs with active marker", async () => {
+    const ctx = ctxWith({
+      listTabs: async () => [
+        { tabId: "1", url: "https://a.com", title: "A", active: false },
+        { tabId: "2", url: "https://b.com", title: "B", active: true },
+      ],
+    });
+    const out = await browserActTool({ action: "list_tabs" }, ctx);
+    expect(out).toContain("[1]");
+    expect(out).toContain("[2] (active)");
+    expect(out).toContain("https://b.com");
+  });
+
+  test("switch_tab requires tabId / reports success", async () => {
+    const ctx = ctxWith({ switchTab: async () => ({ ok: true }) });
+    expect(await browserActTool({ action: "switch_tab" }, ctx)).toContain("tabId is required");
+    expect(await browserActTool({ action: "switch_tab", tabId: "3" }, ctx)).toContain("Switched to tab 3");
+  });
+
+  test("tabId on a normal action switches first, then acts", async () => {
+    const order: string[] = [];
+    const ctx = ctxWith({
+      switchTab: async (id) => { order.push(`switch:${id}`); return { ok: true }; },
+      click: async () => { order.push("click"); return { ok: true }; },
+    });
+    await browserActTool({ action: "click", ref: "e1", tabId: "5" }, ctx);
+    expect(order).toEqual(["switch:5", "click"]);
+  });
+
+  test("tabId switch failure aborts the action", async () => {
+    let clicked = false;
+    const ctx = ctxWith({
+      switchTab: async () => ({ ok: false, detail: "not found" }),
+      click: async () => { clicked = true; return { ok: true }; },
+    });
+    const out = await browserActTool({ action: "click", ref: "e1", tabId: "9" }, ctx);
+    expect(out).toContain("could not switch to tab 9");
+    expect(clicked).toBe(false);
   });
 });
 
-describe("browser_read_content / wait / press_enter", () => {
-  test("read_content returns cleaned text with url/title, flags truncation", async () => {
-    const ctx = ctxWith({
-      readContent: async () => ({ ok: true, url: "https://xhs.com/p/1", title: "探店", text: "正文内容", truncated: true }),
-    });
-    const out = await browserReadContentTool({}, ctx);
-    expect(out).toContain("URL: https://xhs.com/p/1");
-    expect(out).toContain("Title: 探店");
-    expect(out).toContain("content truncated");
-    expect(out).toContain("正文内容");
-  });
-
-  test("read_content error surfaces detail", async () => {
-    const ctx = ctxWith({ readContent: async () => ({ ok: false, url: "x", text: "", detail: "no body" }) });
-    expect(await browserReadContentTool({}, ctx)).toContain("no body");
-  });
-
-  test("extract_links renders links + images with url/title, flags truncation", async () => {
-    const ctx = ctxWith({
-      extractLinks: async () => ({
-        ok: true,
-        url: "https://xhs.com/explore",
-        title: "发现",
-        links: [
-          { text: "探店笔记", url: "https://xhs.com/p/1" },
-          { text: "", url: "https://xhs.com/p/2" },
-        ],
-        images: [{ url: "https://cdn.xhs.com/a.jpg", alt: "封面" }],
-        truncated: true,
-      }),
-    });
-    const out = await browserExtractLinksTool({}, ctx);
-    expect(out).toContain("URL: https://xhs.com/explore");
-    expect(out).toContain("探店笔记 → https://xhs.com/p/1");
-    expect(out).toContain("https://xhs.com/p/2"); // empty-text link still listed
-    expect(out).toContain("封面 → https://cdn.xhs.com/a.jpg");
-    expect(out).toContain("truncated");
-  });
-
-  test("extract_links empty page → (none); error surfaces detail", async () => {
-    const empty = await browserExtractLinksTool(
-      {},
-      ctxWith({ extractLinks: async () => ({ ok: true, url: "u", links: [], images: [] }) }),
-    );
-    expect(empty).toContain("Links: (none)");
-    expect(empty).toContain("Images: (none)");
-    const err = await browserExtractLinksTool(
-      {},
-      ctxWith({ extractLinks: async () => ({ ok: false, url: "u", links: [], images: [], detail: "boom" }) }),
-    );
-    expect(err).toContain("boom");
-  });
-
-  test("wait returns ready", async () => {
-    const ctx = ctxWith({ waitForLoad: async () => ({ ok: true }) });
-    expect(await browserWaitTool({ timeout_ms: 5000 }, ctx)).toContain("Page ready");
-  });
-
-  test("press_enter ok / stale", async () => {
-    expect(await browserPressEnterTool({}, ctxWith({ pressEnter: async () => ({ ok: true }) }))).toContain("Pressed Enter");
-    const stale = await browserPressEnterTool({ ref: "e9" }, ctxWith({ pressEnter: async () => ({ ok: false, staleRef: true }) }));
-    expect(stale).toContain("no longer valid");
+describe("browser_navigate", () => {
+  test("navigates / requires url", async () => {
+    const ctx = ctxWith({ navigate: async () => ({ ok: true }) });
+    expect(await browserNavigateTool({}, ctx)).toContain("url is required");
+    expect(await browserNavigateTool({ url: "https://x.com" }, ctx)).toContain("Navigated to");
   });
 });

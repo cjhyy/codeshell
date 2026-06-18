@@ -52,15 +52,9 @@ import {
   listShellsToolDef, listShellsTool,
 } from "./background-shell-tools.js";
 import {
-  browserSnapshotToolDef, browserSnapshotTool,
+  browserObserveToolDef, browserObserveTool,
+  browserActToolDef, browserActTool,
   browserNavigateToolDef, browserNavigateTool,
-  browserClickToolDef, browserClickTool,
-  browserTypeToolDef, browserTypeTool,
-  browserScrollToolDef, browserScrollTool,
-  browserReadContentToolDef, browserReadContentTool,
-  browserExtractLinksToolDef, browserExtractLinksTool,
-  browserWaitToolDef, browserWaitTool,
-  browserPressEnterToolDef, browserPressEnterTool,
 } from "./browser-tools.js";
 import { useCredentialToolDef, useCredentialTool } from "../../credentials/use-credential-tool.js";
 import {
@@ -627,20 +621,35 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     },
     execute: addMarketplaceTool,
   },
-  // Browser automation — drive the in-app webview via the BrowserBridge (CDP).
-  // All serial on one webview (isConcurrencySafe:false). snapshot is read-only;
-  // navigate/scroll just move the view; click/type act on the page so default
-  // to ask (sensitive-action + domain-whitelist enforcement lives in the bridge,
-  // see the MVP spec §7). Tools self-gate to unavailable when no bridge is wired.
+  // Browser automation — 3 semantic tools driving the in-app webview via the
+  // BrowserBridge (CDP). All serial on one webview (isConcurrencySafe:false).
+  // browser_observe is read-only. browser_act is permissionDefault "allow"; its
+  // sensitive actions (click/type/select) are escalated to "ask" by a preset
+  // PermissionRule keyed on argsPattern { action } (see preset/index.ts §4.6) —
+  // so one tool carries per-action gating. Sensitive-action + domain-whitelist
+  // enforcement also lives main-side in the bridge. Tools self-gate to
+  // unavailable when no bridge is wired (headless).
   {
     definition: {
-      ...browserSnapshotToolDef,
+      ...browserObserveToolDef,
       source: "builtin",
       permissionDefault: "allow",
       isReadOnly: true,
       isConcurrencySafe: false,
+      timeoutMs: 30_000, // wait/observe can sit through a load; RPC headroom
     },
-    execute: browserSnapshotTool,
+    execute: browserObserveTool,
+  },
+  {
+    definition: {
+      ...browserActToolDef,
+      source: "builtin",
+      permissionDefault: "allow", // per-action gating via preset rule (argsPattern.action)
+      isReadOnly: false,
+      isConcurrencySafe: false,
+      timeoutMs: 30_000, // the wait action internally bounds; give RPC headroom
+    },
+    execute: browserActTool,
   },
   {
     definition: {
@@ -651,77 +660,6 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: browserNavigateTool,
-  },
-  {
-    definition: {
-      ...browserClickToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: browserClickTool,
-  },
-  {
-    definition: {
-      ...browserTypeToolDef,
-      source: "builtin",
-      permissionDefault: "ask",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: browserTypeTool,
-  },
-  {
-    definition: {
-      ...browserScrollToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: browserScrollTool,
-  },
-  {
-    definition: {
-      ...browserReadContentToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: true,
-      isConcurrencySafe: false,
-    },
-    execute: browserReadContentTool,
-  },
-  {
-    definition: {
-      ...browserExtractLinksToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: true,
-      isConcurrencySafe: false,
-    },
-    execute: browserExtractLinksTool,
-  },
-  {
-    definition: {
-      ...browserWaitToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: true,
-      isConcurrencySafe: false,
-      timeoutMs: 30_000, // it internally bounds the wait, but give RPC headroom
-    },
-    execute: browserWaitTool,
-  },
-  {
-    definition: {
-      ...browserPressEnterToolDef,
-      source: "builtin",
-      permissionDefault: "allow",
-      isReadOnly: false,
-      isConcurrencySafe: false,
-    },
-    execute: browserPressEnterTool,
   },
   // ─── Credentials: AI 取用已存凭证(token/link/cookie) ──────────
   // permissionDefault:"allow" —— 取用审批由工具内部的 CredentialUseGate 负责

@@ -437,24 +437,45 @@ export function dedupeFileReads(messages: Message[]): DedupeFileReadsResult {
   return { messages: result, clearedCount };
 }
 
+/** Build id → true for tool_use blocks that are a browser snapshot observation,
+ *  i.e. `browser_observe` with mode "snapshot" (the default when mode omitted).
+ *  Only snapshots produce large, supersede-able element lists worth masking. */
+function buildSnapshotObserveIdSet(messages: Message[]): Set<string> {
+  const ids = new Set<string>();
+  for (const msg of messages) {
+    if (!Array.isArray(msg.content)) continue;
+    for (const block of msg.content) {
+      if (block.type !== "tool_use" || !block.id || block.name !== "browser_observe") continue;
+      const mode = (block.input as { mode?: string } | undefined)?.mode;
+      if (mode === undefined || mode === "snapshot") ids.add(block.id);
+    }
+  }
+  return ids;
+}
+
+const OLD_SNAPSHOT_PLACEHOLDER =
+  "[Old browser snapshot collapsed — superseded by a newer browser_observe(snapshot). " +
+  "Re-run browser_observe for the current page's elements.]";
+
 /**
- * Observation masking for browser_snapshot results (the research's highest-
- * leverage browser-token saving: a page snapshot is large and only the LATEST
- * one matters for the next decision; older ones are stale element lists). Keep
- * the most recent browser_snapshot result verbatim; replace every earlier one
- * with a one-line placeholder. Deterministic — no LLM summarization needed.
+ * Observation masking for browser_observe(snapshot) results (the research's
+ * highest-leverage browser-token saving: a page snapshot is large and only the
+ * LATEST one matters for the next decision; older ones are stale element lists).
+ * Keep the most recent snapshot result verbatim; replace every earlier one with
+ * a one-line placeholder. Deterministic — no LLM summarization needed.
  *
- * Mirrors dedupeFileReads but keyed on the tool name (all browser_snapshot
- * results share one logical "stream"), not a file path.
+ * Keyed on the snapshot OBSERVATION (browser_observe with mode snapshot) — read/
+ * extract observations and act results are left untouched. Renamed from
+ * maskOldBrowserSnapshots when the 9 browser_* tools collapsed into 3.
  */
-export function maskOldBrowserSnapshots(messages: Message[]): { messages: Message[]; maskedCount: number } {
-  const idToName = buildToolUseIdToNameMap(messages);
+export function maskOldObservations(messages: Message[]): { messages: Message[]; maskedCount: number } {
+  const snapshotIds = buildSnapshotObserveIdSet(messages);
   const snapResults: string[] = [];
   for (const msg of messages) {
     if (!Array.isArray(msg.content)) continue;
     for (const block of msg.content) {
       if (block.type !== "tool_result" || !block.tool_use_id) continue;
-      if (idToName.get(block.tool_use_id) !== "browser_snapshot") continue;
+      if (!snapshotIds.has(block.tool_use_id)) continue;
       if (typeof block.content !== "string") continue;
       if (block.content.startsWith("[Old browser snapshot collapsed")) continue;
       snapResults.push(block.tool_use_id);
@@ -473,11 +494,7 @@ export function maskOldBrowserSnapshots(messages: Message[]): { messages: Messag
         if (block.type !== "tool_result" || !block.tool_use_id) return block;
         if (!maskIds.has(block.tool_use_id)) return block;
         maskedCount++;
-        return {
-          ...block,
-          content:
-            "[Old browser snapshot collapsed — superseded by a newer browser_snapshot. Re-run browser_snapshot for the current page's elements.]",
-        };
+        return { ...block, content: OLD_SNAPSHOT_PLACEHOLDER };
       }),
     };
   });

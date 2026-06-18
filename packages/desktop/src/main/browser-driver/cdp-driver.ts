@@ -1,252 +1,164 @@
 /**
- * CdpBrowserDriver — drives a single browser target over the Chrome DevTools
- * Protocol to implement core's BrowserBridge. Self-contained: depends only on a
- * `CdpSender` (send one CDP command, get the result) + core's pure helpers. It
- * knows NOTHING about Electron <webview>, React, or any UI — so the same module
- * can later drive a hidden BrowserWindow (unattended runs) or be extracted into
- * its own package. The Electron glue (webContents.debugger → CdpSender) lives in
- * a separate thin adapter (electron-cdp.ts).
+ * CdpBrowserDriver — desktop GLUE between core's BrowserBridge contract and the
+ * environment-agnostic CDP action layer (@cjhyy/code-shell-cdp).
  *
- * Spec: docs/superpowers/specs/2026-06-16-browser-automation-mvp.md §1–§3.
+ * The actual CDP command sequences live in the package's CdpActionsDriver. This
+ * glue owns the two things that carry product/security policy and therefore stay
+ * out of the transport package:
+ *   1. a11y flattening — turn the package's RAW AX nodes into core's ref-tagged
+ *      BrowserElement[] via core's flattenAxTree (which roles count, sensitive
+ *      masking, ref assignment).
+ *   2. the ref→backendDOMNodeId map — held here so click/type (separate worker
+ *      calls) resolve a ref from the latest snapshot. The package is
+ *      ref-stateless (its action methods take a backendNodeId directly).
  *
- * observe: Accessibility.getFullAXTree → flattenAxTree (core, pure).
- * act: ref → backendDOMNodeId → DOM.getBoxModel center → Input.dispatchMouseEvent
- *      (real, isTrusted=true input — not synthetic JS events).
+ * Spec: docs/superpowers/specs/2026-06-18-browser-module-redesign-design.md §4.2.
  */
 
 import {
+  CdpActionsDriver,
+  type CdpSender as PkgCdpSender,
+  type PageInfo,
+} from "@cjhyy/code-shell-cdp";
+import {
   flattenAxTree,
-  cleanPageText,
-  buildExtractLinksScript,
-  EXTRACT_LINK_CAP,
   type BrowserBridge,
   type BrowserSnapshot,
   type BrowserResult,
   type BrowserContent,
   type BrowserExtract,
-  type BrowserLink,
-  type BrowserImage,
+  type BrowserImageData,
   type AXNode,
 } from "@cjhyy/code-shell-core";
 
-/** Send one CDP command, resolve its result. Throws on protocol error. */
-export type CdpSender = (method: string, params?: Record<string, unknown>) => Promise<any>;
-
-/** What the driver needs to know about the current page, supplied by the adapter
- *  (the adapter knows the webContents' URL/title; the driver stays UI-agnostic). */
-export interface PageInfo {
-  url: string;
-  title?: string;
-}
+/** Send one CDP command, resolve its result. Throws on protocol error.
+ *  (Structurally the package's CdpSender; re-exported for the Electron adapter.) */
+export type CdpSender = PkgCdpSender;
+export type { PageInfo };
 
 export class CdpBrowserDriver implements BrowserBridge {
-  private enabled = false;
+  private readonly inner: CdpActionsDriver;
   /** ref (e1,e2,…) → backendDOMNodeId from the latest snapshot. Cleared each snapshot. */
   private refMap: Record<string, number> = {};
 
-  constructor(
-    private readonly send: CdpSender,
-    private readonly pageInfo: () => Promise<PageInfo> | PageInfo,
-  ) {}
-
-  /** Accessibility/DOM domains must be enabled once before tree/box queries. */
-  private async ensureEnabled(): Promise<void> {
-    if (this.enabled) return;
-    await this.send("DOM.enable");
-    await this.send("Accessibility.enable");
-    this.enabled = true;
+  constructor(send: CdpSender, pageInfo: () => Promise<PageInfo> | PageInfo) {
+    this.inner = new CdpActionsDriver(send, pageInfo);
   }
 
   async snapshot(): Promise<BrowserSnapshot> {
-    await this.ensureEnabled();
-    const info = await this.pageInfo();
-    const { nodes } = (await this.send("Accessibility.getFullAXTree")) as { nodes: AXNode[] };
-    const { elements, refToBackendId } = flattenAxTree(nodes ?? []);
+    const raw = await this.inner.snapshot();
+    const { elements, refToBackendId } = flattenAxTree((raw.nodes ?? []) as AXNode[]);
     this.refMap = refToBackendId;
-    const needsHuman = detectLoginWall(info.url, elements);
-    return { url: info.url, title: info.title, elements, ...(needsHuman ? { needsHuman } : {}) };
+    const needsHuman = detectLoginWall(raw.url, elements);
+    return { url: raw.url, title: raw.title, elements, ...(needsHuman ? { needsHuman } : {}) };
   }
 
-  /** Resolve a ref to its element's viewport-center coordinates, or null if the
-   *  ref is unknown / the node no longer has a box (DOM changed → stale). */
-  private async centerOf(ref: string): Promise<{ x: number; y: number } | null> {
-    const backendNodeId = this.refMap[ref];
-    if (backendNodeId === undefined) return null;
-    try {
-      await this.send("DOM.scrollIntoViewIfNeeded", { backendNodeId }).catch(() => undefined);
-      const { model } = (await this.send("DOM.getBoxModel", { backendNodeId })) as {
-        model?: { content: number[] };
-      };
-      if (!model?.content || model.content.length < 8) return null;
-      // content quad: [x1,y1, x2,y2, x3,y3, x4,y4] → center
-      const xs = [model.content[0]!, model.content[2]!, model.content[4]!, model.content[6]!];
-      const ys = [model.content[1]!, model.content[3]!, model.content[5]!, model.content[7]!];
-      return { x: avg(xs), y: avg(ys) };
-    } catch {
-      return null; // node detached / no box → treat as stale
-    }
+  /** Resolve a ref to its backendDOMNodeId; undefined if unknown (caller re-snapshots). */
+  private backendId(ref: string): number | undefined {
+    return this.refMap[ref];
   }
 
   async click(ref: string): Promise<BrowserResult> {
-    const c = await this.centerOf(ref);
-    if (!c) return staleOrUnknown(ref, this.refMap);
-    try {
-      await this.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: c.x, y: c.y });
-      const base = { x: c.x, y: c.y, button: "left", clickCount: 1 };
-      await this.send("Input.dispatchMouseEvent", { type: "mousePressed", ...base });
-      await this.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...base });
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, detail: errMsg(e) };
-    }
+    const id = this.backendId(ref);
+    if (id === undefined) return unknownRef(ref);
+    return this.inner.clickNode(id);
   }
 
   async type(ref: string, text: string): Promise<BrowserResult> {
-    const c = await this.centerOf(ref);
-    if (!c) return staleOrUnknown(ref, this.refMap);
-    try {
-      // focus by clicking, then insert real text
-      await this.send("Input.dispatchMouseEvent", { type: "mousePressed", x: c.x, y: c.y, button: "left", clickCount: 1 });
-      await this.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: c.x, y: c.y, button: "left", clickCount: 1 });
-      await this.send("Input.insertText", { text });
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, detail: errMsg(e) };
-    }
+    const id = this.backendId(ref);
+    if (id === undefined) return unknownRef(ref);
+    return this.inner.typeNode(id, text);
   }
 
   async navigate(url: string): Promise<BrowserResult> {
-    try {
-      await this.send("Page.navigate", { url });
-      // A navigation invalidates every ref from the previous page.
-      this.refMap = {};
-      this.enabled = false; // domains may need re-enabling after cross-doc nav
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, detail: errMsg(e) };
-    }
+    const r = await this.inner.navigate(url);
+    // A navigation invalidates every ref from the previous page.
+    this.refMap = {};
+    return r;
   }
 
-  async readContent(): Promise<BrowserContent> {
-    const info = await this.pageInfo();
-    try {
-      // document.body.innerText gives rendered, visible text (scripts/styles/
-      // hidden nodes excluded by the browser) — the cheap, reliable "扒内容".
-      const res = (await this.send("Runtime.evaluate", {
-        expression: "document.body && document.body.innerText || ''",
-        returnByValue: true,
-      })) as { result?: { value?: string } };
-      const raw = res.result?.value ?? "";
-      const { text, truncated } = cleanPageText(raw);
-      return { ok: true, url: info.url, title: info.title, text, truncated };
-    } catch (e) {
-      return { ok: false, url: info.url, title: info.title, text: "", detail: errMsg(e) };
-    }
+  readContent(): Promise<BrowserContent> {
+    return this.inner.readContent();
   }
 
-  async extractLinks(): Promise<BrowserExtract> {
-    const info = await this.pageInfo();
-    try {
-      // One Runtime.evaluate over the DOM: .href/.src are already absolute
-      // (resolved against the page base). The a11y snapshot omits these; this
-      // is the explicit "give me the actual URLs" path.
-      const res = (await this.send("Runtime.evaluate", {
-        expression: buildExtractLinksScript(EXTRACT_LINK_CAP),
-        returnByValue: true,
-      })) as { result?: { value?: { links?: BrowserLink[]; images?: BrowserImage[]; truncated?: boolean } } };
-      const v = res.result?.value;
-      return {
-        ok: true,
-        url: info.url,
-        title: info.title,
-        links: v?.links ?? [],
-        images: v?.images ?? [],
-        truncated: v?.truncated ?? false,
-      };
-    } catch (e) {
-      return { ok: false, url: info.url, title: info.title, links: [], images: [], detail: errMsg(e) };
-    }
+  extractLinks(): Promise<BrowserExtract> {
+    return this.inner.extractLinks();
   }
 
-  async waitForLoad(timeoutMs = 10_000): Promise<BrowserResult> {
-    try {
-      // Poll document.readyState === 'complete'. CDP Page.loadEventFired needs
-      // event plumbing; polling readyState via Runtime.evaluate is simpler and
-      // adapter-agnostic.
-      const deadline = Date.now() + timeoutMs;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const res = (await this.send("Runtime.evaluate", {
-          expression: "document.readyState",
-          returnByValue: true,
-        })) as { result?: { value?: string } };
-        if (res.result?.value === "complete") return { ok: true };
-        if (Date.now() > deadline) return { ok: true, detail: "load wait timed out (proceeding)" };
-        await delay(150);
-      }
-    } catch (e) {
-      return { ok: false, detail: errMsg(e) };
-    }
+  waitForLoad(timeoutMs?: number): Promise<BrowserResult> {
+    return this.inner.waitForLoad(timeoutMs);
   }
 
-  async pressEnter(ref?: string): Promise<BrowserResult> {
-    // Focus the ref first (so Enter goes to the right field), then dispatch a
-    // real Enter key. If no ref, press Enter on whatever is focused.
+  async hover(ref: string): Promise<BrowserResult> {
+    const id = this.backendId(ref);
+    if (id === undefined) return unknownRef(ref);
+    return this.inner.hoverNode(id);
+  }
+
+  async selectOption(ref: string, value: string): Promise<BrowserResult> {
+    const id = this.backendId(ref);
+    if (id === undefined) return unknownRef(ref);
+    return this.inner.selectOptionNode(id, value);
+  }
+
+  async pressKey(key: string, ref?: string): Promise<BrowserResult> {
+    // Focus the ref first (so the key lands on the right field), then dispatch.
     if (ref) {
-      const c = await this.centerOf(ref);
-      if (!c) return staleOrUnknown(ref, this.refMap);
-      try {
-        await this.send("Input.dispatchMouseEvent", { type: "mousePressed", x: c.x, y: c.y, button: "left", clickCount: 1 });
-        await this.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: c.x, y: c.y, button: "left", clickCount: 1 });
-      } catch (e) {
-        return { ok: false, detail: errMsg(e) };
-      }
+      const id = this.backendId(ref);
+      if (id === undefined) return unknownRef(ref);
+      const focused = await this.inner.focusNode(id);
+      if (!focused.ok) return focused;
     }
-    try {
-      const key = { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 };
-      await this.send("Input.dispatchKeyEvent", { type: "keyDown", ...key });
-      await this.send("Input.dispatchKeyEvent", { type: "keyUp", ...key });
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, detail: errMsg(e) };
-    }
+    return this.inner.pressKey(key);
   }
 
-  async scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult> {
-    const deltaY = (dir === "down" ? 1 : -1) * (amount ?? 600);
-    try {
-      // wheel at viewport origin; coordinates 0,0 are fine for page scroll
-      await this.send("Input.dispatchMouseEvent", { type: "mouseWheel", x: 0, y: 0, deltaX: 0, deltaY });
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, detail: errMsg(e) };
+  scroll(dir: "up" | "down", amount?: number): Promise<BrowserResult> {
+    return this.inner.scroll(dir, amount);
+  }
+
+  async fetchImages(refs: string[]): Promise<BrowserImageData[]> {
+    // image refs (img1/vid1…) come from the last extract's data-cs-ref tags, not
+    // the a11y refMap — the package resolves them in-page by that attribute.
+    const out: BrowserImageData[] = [];
+    for (const ref of refs) {
+      const r = await this.inner.fetchImageData(ref);
+      out.push({ ok: r.ok, base64: r.base64, mediaType: r.mediaType, ref: r.ref ?? ref, detail: r.detail });
     }
+    return out;
+  }
+
+  // Tab management is panel-global (handled in automation-host via the guest
+  // registry, NOT a per-guest driver). These satisfy BrowserBridge but are never
+  // invoked on the driver — the host intercepts listTabs/switchTab first.
+  async listTabs(): Promise<import("@cjhyy/code-shell-core").BrowserTab[]> {
+    return [];
+  }
+
+  async switchTab(_tabId: string): Promise<BrowserResult> {
+    return { ok: false, detail: "switchTab is handled at the panel level, not the driver" };
+  }
+
+  async screenshot(ref?: string): Promise<BrowserImageData> {
+    // vision ref is an a11y element ref (eN) → resolve to backendNodeId for a
+    // region capture; no ref → viewport screenshot.
+    let backendId: number | undefined;
+    if (ref) {
+      backendId = this.backendId(ref);
+      if (backendId === undefined) return { ok: false, detail: `unknown ref ${ref}` };
+    }
+    const r = await this.inner.screenshot(backendId);
+    return { ok: r.ok, base64: r.base64, mediaType: r.mediaType, detail: r.detail };
   }
 }
 
-function avg(ns: number[]): number {
-  return ns.reduce((a, b) => a + b, 0) / ns.length;
+/** A ref we never had → unknown; ask the agent to re-snapshot. */
+function unknownRef(ref: string): BrowserResult {
+  return { ok: false, detail: `unknown ref ${ref}`, staleRef: true };
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
-/** A ref we never had → unknown; a ref we had but lost its box → stale. Both ask
- *  the agent to re-snapshot, but distinguish for clearer messaging. */
-function staleOrUnknown(ref: string, refMap: Record<string, number>): BrowserResult {
-  return refMap[ref] === undefined
-    ? { ok: false, detail: `unknown ref ${ref}`, staleRef: true }
-    : { ok: false, detail: `ref ${ref} no longer has a layout box`, staleRef: true };
-}
-
-/** Heuristic: a page that is essentially a login form (password field present,
- *  few elements) likely needs the human to sign in. Conservative — only fires
- *  when a sensitive (password) field is present. */
+/** Heuristic: a page that is essentially a login form (password field present)
+ *  likely needs the human to sign in. Conservative — only fires on a sensitive
+ *  (password) field. */
 function detectLoginWall(_url: string, elements: BrowserSnapshot["elements"]): string | undefined {
   const hasPassword = elements.some((e) => e.sensitive);
   return hasPassword ? "this page requires sign-in" : undefined;

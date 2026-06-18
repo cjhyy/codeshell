@@ -1,0 +1,41 @@
+{
+  "name": "@cjhyy/code-shell-cdp",
+  "version": "0.5.0-rc.2",
+  "description": "Environment-agnostic CDP browser action layer — drive a browser target (click/type/select/press_key/hover/scroll + raw observe) through an injected CDP sender. No Playwright, no launcher, no agent loop. Zero runtime dependencies.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=20.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cjhyy/codeshell.git",
+    "directory": "packages/cdp"
+  },
+  "license": "MIT",
+  "keywords": [
+    "cdp",
+    "chrome-devtools-protocol",
+    "browser-automation",
+    "browser-agent",
+    "headless"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

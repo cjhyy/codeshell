@@ -6,7 +6,21 @@ import {
   groupCapabilities,
   isCollapsedByDefault,
   isGroupCollapsed,
+  foldBrowserGroup,
+  BROWSER_GROUP_ID,
 } from "./capabilitiesOverview";
+
+function browserCaps(over: Partial<CapabilityDescriptor> = {}): CapabilityDescriptor[] {
+  return ["browser_observe", "browser_act", "browser_navigate"].map((n) => ({
+    id: `builtin:${n}`,
+    kind: "builtin" as const,
+    name: n,
+    description: "",
+    enabled: true,
+    control: { settingsKey: "agent.disabledBuiltinTools", mode: "denylist", token: n },
+    ...over,
+  }));
+}
 
 function cap(over: Partial<CapabilityDescriptor>): CapabilityDescriptor {
   return {
@@ -19,6 +33,39 @@ function cap(over: Partial<CapabilityDescriptor>): CapabilityDescriptor {
     ...over,
   };
 }
+
+describe("foldBrowserGroup", () => {
+  test("enabled only when all three tools are on", () => {
+    expect(foldBrowserGroup(browserCaps({ enabled: true }))!.enabled).toBe(true);
+    const mixed = browserCaps();
+    mixed[1]!.enabled = false;
+    expect(foldBrowserGroup(mixed)!.enabled).toBe(false);
+  });
+  test("shared projectOverride only when all agree", () => {
+    expect(foldBrowserGroup(browserCaps({ projectOverride: "off" }))!.projectOverride).toBe("off");
+    const mixed = browserCaps({ projectOverride: "off" });
+    mixed[0]!.projectOverride = "on";
+    expect(foldBrowserGroup(mixed)!.projectOverride).toBeUndefined();
+  });
+  test("empty input → null", () => {
+    expect(foldBrowserGroup([])).toBeNull();
+  });
+});
+
+describe("groupCapabilities browser fold", () => {
+  test("collapses the three browser tools into one synthetic row", () => {
+    const groups = groupCapabilities([
+      cap({ id: "builtin:Read", kind: "builtin", name: "Read" }),
+      ...browserCaps(),
+    ]);
+    const builtin = groups.find((g) => g.kind === "builtin")!;
+    const ids = builtin.items.map((c) => c.id);
+    expect(ids).toContain(BROWSER_GROUP_ID); // one folded row
+    expect(ids).toContain("builtin:Read"); // non-browser tool stays
+    expect(ids).not.toContain("builtin:browser_observe"); // raw tools hidden
+    expect(builtin.items.length).toBe(2); // folded + Read
+  });
+});
 
 describe("groupCapabilities", () => {
   test("buckets by kind in fixed order, agent before builtin (last)", () => {

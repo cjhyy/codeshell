@@ -49,6 +49,30 @@ function deps(over: Partial<AutomationDeps> = {}): AutomationDeps {
   };
 }
 
+describe("handleBrowserAction tabs", () => {
+  test("listTabs returns the registry's tabs without needing an active guest", async () => {
+    const tabs = [{ tabId: "1", url: "https://a", title: "A", active: true }];
+    const out = await handleBrowserAction(
+      { action: "listTabs" },
+      deps({ activeGuest: () => null, listTabs: () => tabs }),
+    );
+    expect(JSON.parse(out)).toEqual(tabs);
+  });
+
+  test("switchTab routes to deps.switchTab (found / not found)", async () => {
+    const okOut = await handleBrowserAction(
+      { action: "switchTab", tabId: "2" },
+      deps({ activeGuest: () => null, switchTab: (id) => id === "2" }),
+    );
+    expect(JSON.parse(okOut)).toMatchObject({ ok: true });
+    const missOut = await handleBrowserAction(
+      { action: "switchTab", tabId: "9" },
+      deps({ activeGuest: () => null, switchTab: () => false }),
+    );
+    expect(JSON.parse(missOut)).toMatchObject({ ok: false });
+  });
+});
+
 describe("handleBrowserAction", () => {
   test("no active guest, no openPanel → safe error", async () => {
     const out = await handleBrowserAction({ action: "snapshot" }, deps({ activeGuest: () => null }));

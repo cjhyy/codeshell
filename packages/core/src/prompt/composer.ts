@@ -184,12 +184,23 @@ export class PromptComposer {
       });
     }
 
-    // Behavioral instructions — loaded from preset's section files
+    // Behavioral instructions — loaded from preset's section files. Pass the
+    // turn's effective tool names so tool-gated sections (e.g. "browser") drop
+    // when their tools are disabled: browser capability = tools + instructions
+    // as one on/off unit.
+    const activeToolNames = tools.map((t) => t.name);
     sections.push({
       name: "behavior",
+      // cacheBreak: this section's content varies by activeToolNames (tool-gated
+      // sections like "browser" drop when their tools are off). The cache is
+      // keyed by section NAME only, so without cacheBreak a reused composer could
+      // serve a stale behavior block across an on/off change. Recompute always —
+      // it's a cheap string join, and it makes the browser on/off unit correct
+      // regardless of composer lifetime.
+      cacheBreak: true,
       compute: () => {
         const preset = this.options.preset ?? resolveAgentPreset();
-        return buildPresetSystemPrompt(preset);
+        return buildPresetSystemPrompt(preset, activeToolNames);
       },
     });
 
