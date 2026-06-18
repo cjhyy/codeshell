@@ -134,6 +134,12 @@ export interface InjectParams {
   content: string;
 }
 
+/** Steer an in-flight run: queue a user message for the next turn-loop step. */
+export interface SteerParams {
+  sessionId: string;
+  text: string;
+}
+
 /** Update runtime configuration. */
 export interface ConfigureParams {
   /** When present, configure that specific chat session. Otherwise worker-global. */
@@ -293,6 +299,8 @@ export const Methods = {
   Query: "agent/query",
   /** Inject context into transcript without triggering LLM. */
   Inject: "agent/inject",
+  /** Steer an in-flight run: queue a user message spliced at the next step (不打断). */
+  Steer: "agent/steer",
   /** Close (destroy) a session. */
   CloseSession: "agent/closeSession",
   /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */

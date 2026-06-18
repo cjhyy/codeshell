@@ -23,6 +23,7 @@ import {
   type ConfigureParams,
   type QueryParams,
   type InjectParams,
+  type SteerParams,
   Methods,
   ErrorCodes,
   createResponse,
@@ -285,6 +286,9 @@ export class AgentServer {
         break;
       case Methods.Inject:
         this.handleInject(req);
+        break;
+      case Methods.Steer:
+        this.handleSteer(req);
         break;
       case Methods.CloseSession:
         this.handleCloseSession(req);
@@ -1428,6 +1432,38 @@ export class AgentServer {
     }
     try {
       this.legacyEngine!.injectContext(params.sessionId, params.content);
+      this.transport.send(createResponse(req.id, { ok: true }));
+    } catch (err) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+      );
+    }
+  }
+
+  // ─── Steer ──────────────────────────────────────────────────────
+  // Queue a user message into the in-flight run's turn loop (不打断). Unlike
+  // Inject (appends an assistant context msg for the NEXT run), Steer feeds a
+  // user message to the CURRENT run's next step. No abort, no LLM trigger by
+  // itself — the running loop picks it up at its next step boundary.
+  private handleSteer(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as SteerParams;
+    if (!params.text || !params.sessionId) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "text and sessionId required"),
+      );
+      return;
+    }
+    const engine = this.chatManager
+      ? this.chatManager.get(params.sessionId)?.engine
+      : this.legacyEngine;
+    if (!engine) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.SessionClosed, `No such session: ${params.sessionId}`),
+      );
+      return;
+    }
+    try {
+      engine.enqueueSteer(params.sessionId, params.text);
       this.transport.send(createResponse(req.id, { ok: true }));
     } catch (err) {
       this.transport.send(
