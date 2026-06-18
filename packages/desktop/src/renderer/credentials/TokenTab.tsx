@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "../ui/ToastProvider";
-import { useConfirm } from "../ui/DialogProvider";
+import { useConfirm, usePrompt } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
 import type { MaskedCredentialView } from "./types";
 
@@ -17,7 +18,9 @@ export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" })
   const { t } = useT();
   const toast = useToast();
   const confirm = useConfirm();
+  const prompt = usePrompt();
   const [items, setItems] = useState<MaskedCredentialView[]>([]);
+  const [busy, setBusy] = useState(false);
   const [id, setId] = useState("");
   const [label, setLabel] = useState("");
   const [secret, setSecret] = useState("");
@@ -57,6 +60,57 @@ export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" })
     if (!(await confirm({ message: t("ext.token.deleteConfirm", { id: cid }), destructive: true }))) return;
     await window.codeshell.credentials.remove(cwd, "user", cid);
     load();
+  };
+
+  /** 逐条「AI 可自动取用」开关:写回 autoUseByAI(只改元数据,保留 secret)。 */
+  const toggleAiUse = async (c: MaskedCredentialView, next: boolean) => {
+    setBusy(true);
+    try {
+      await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { autoUseByAI: next });
+      load();
+      toast({
+        message: next
+          ? t("ext.token.aiAutoUseOnToast", { label: c.label })
+          : t("ext.token.aiAutoUseOffToast", { label: c.label }),
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * 逐条「暴露为环境变量」开关:开 → 问变量名(默认按 id 推导大写下划线)写回 exposeAsEnv;
+   * 关 → 清空 exposeAsEnv(传 ""，patchMeta 写入空串即不再注入)。
+   */
+  const toggleExposeEnv = async (c: MaskedCredentialView, next: boolean) => {
+    if (next) {
+      const suggested = c.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const name = await prompt({
+        title: t("ext.token.exposeEnvTitle"),
+        message: t("ext.token.exposeEnvMessage"),
+        defaultValue: suggested,
+      });
+      if (name === null) return;
+      const v = name.trim();
+      if (!v) return;
+      setBusy(true);
+      try {
+        await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { exposeAsEnv: v });
+        load();
+        toast({ message: t("ext.token.exposeEnvOnToast", { name: v }) });
+      } finally {
+        setBusy(false);
+      }
+    } else {
+      setBusy(true);
+      try {
+        await window.codeshell.credentials.patchMeta(cwd, "user", c.id, { exposeAsEnv: "" });
+        load();
+        toast({ message: t("ext.token.exposeEnvOffToast", { label: c.label }) });
+      } finally {
+        setBusy(false);
+      }
+    }
   };
 
   return (
@@ -100,20 +154,40 @@ export function TokenTab({ cwd, kind }: { cwd: string; kind: "token" | "link" })
           </p>
         )}
         {items.map((c) => (
-          <Card key={c.id} className="flex items-center justify-between p-3">
-            <div className="min-w-0">
-              <div className="truncate font-medium">
-                {c.label} <span className="text-xs text-muted-foreground">({c.id})</span>
+          <Card key={c.id} className="space-y-2 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="truncate font-medium">
+                  {c.label} <span className="text-xs text-muted-foreground">({c.id})</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {c.hasSecret ? c.secretHint : t("ext.token.noSecret")}
+                  {c.exposeAsEnv ? ` · env: ${c.exposeAsEnv}` : ""}
+                  {c.meta?.appUrl ? ` · ${c.meta.appUrl}` : ""}
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {c.hasSecret ? c.secretHint : t("ext.token.noSecret")}
-                {c.exposeAsEnv ? ` · env: ${c.exposeAsEnv}` : ""}
-                {c.meta?.appUrl ? ` · ${c.meta.appUrl}` : ""}
-              </div>
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => void del(c.id)}>
+                {t("ext.token.delete")}
+              </Button>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => void del(c.id)}>
-              {t("ext.token.delete")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <label className="flex items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
+                <Switch
+                  checked={c.autoUseByAI === true}
+                  disabled={busy}
+                  onCheckedChange={(next) => void toggleAiUse(c, next)}
+                />
+                {t("ext.token.aiAutoUse")}
+              </label>
+              <label className="flex items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
+                <Switch
+                  checked={!!c.exposeAsEnv}
+                  disabled={busy}
+                  onCheckedChange={(next) => void toggleExposeEnv(c, next)}
+                />
+                {t("ext.token.exposeEnvToggle")}
+              </label>
+            </div>
           </Card>
         ))}
       </div>

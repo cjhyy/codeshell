@@ -147,6 +147,14 @@ export const extensions = {
         emptyLinks: "暂无 Link。",
         noSecret: "(无密文)",
         delete: "删除",
+        aiAutoUse: "AI 可自动取用",
+        aiAutoUseOnToast: "「{label}」已设为 AI 可自动取用(免审批)",
+        aiAutoUseOffToast: "「{label}」已恢复取用前审批",
+        exposeEnvToggle: "暴露为环境变量",
+        exposeEnvTitle: "暴露为环境变量",
+        exposeEnvMessage: "环境变量名(注入 shell)",
+        exposeEnvOnToast: "已暴露为环境变量 {name}",
+        exposeEnvOffToast: "「{label}」已取消暴露为环境变量",
       },
       cookie: {
         intro:
@@ -379,6 +387,14 @@ export const extensions = {
         emptyLinks: "No Link yet.",
         noSecret: "(no secret)",
         delete: "Delete",
+        aiAutoUse: "AI may use automatically",
+        aiAutoUseOnToast: "\"{label}\" set to auto-use by AI (no approval)",
+        aiAutoUseOffToast: "\"{label}\" restored to approval before use",
+        exposeEnvToggle: "Expose as env var",
+        exposeEnvTitle: "Expose as environment variable",
+        exposeEnvMessage: "Env variable name (injected into shell)",
+        exposeEnvOnToast: "Exposed as env var {name}",
+        exposeEnvOffToast: "\"{label}\" no longer exposed as env var",
       },
       cookie: {
         intro:

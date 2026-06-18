@@ -358,7 +358,10 @@ export function CookieTab({ cwd }: { cwd: string }) {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate font-medium">{c.label}</span>
-                      {c.meta?.scope === "all" && (
+                      {/* 「全量/混合」徽章只标从内置浏览器分区拓的(platform=browser,真混多站)。
+                          弹窗登录虽也 scope=all,但用的是全新隔离 session、抓出来只是该站自己的
+                          子域,实际很干净,不标徽章免误导。 */}
+                      {c.meta?.scope === "all" && c.meta?.platform === "browser" && (
                         <Badge variant="info" className="shrink-0">
                           {t("ext.cookie.scopeBadgeAll")}
                         </Badge>
@@ -398,7 +401,7 @@ export function CookieTab({ cwd }: { cwd: string }) {
                     />
                     {t("ext.cookie.aiAutoInject")}
                   </label>
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <label className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
                     {t("ext.cookie.switchModeLabel")}
                     <SimpleSelect
                       value={c.meta?.switchMode === "merge" ? "merge" : "clear"}
