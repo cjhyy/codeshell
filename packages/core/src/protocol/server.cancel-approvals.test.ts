@@ -40,6 +40,7 @@ function makeAskingEngine() {
     },
     setPlanMode() {},
     setBrowserBridge() {},
+    setInjectCredential() {},
     isHeadless: () => false,
     async run(): Promise<EngineResult> {
       // Ask the client something; the client never replies, so this hangs until
