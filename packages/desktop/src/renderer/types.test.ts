@@ -12,6 +12,21 @@ import {
   type TurnEndMessage,
 } from "./types";
 
+describe("steer_injected → user bubble (引导不打断注入)", () => {
+  test("appends the steered text as a user message in the feed", () => {
+    const s = applyStreamEvent(INITIAL_STATE, {
+      type: "steer_injected",
+      text: "顺便也看看收藏页",
+    } as StreamEvent);
+    const last = s.messages[s.messages.length - 1];
+    expect(last.kind).toBe("user");
+    expect((last as { text: string }).text).toBe("顺便也看看收藏页");
+    // It must NOT open/close an assistant streaming message — steering only
+    // adds a user bubble; the running turn keeps its own assistant message.
+    expect(s.streamingAssistantId).toBe(INITIAL_STATE.streamingAssistantId);
+  });
+});
+
 describe("appendTurnEndMessage (TODO 2.8)", () => {
   test("appends a turn_end marker with reason + elapsed", () => {
     const s = appendTurnEndMessage(INITIAL_STATE, "stopped", 18_000);

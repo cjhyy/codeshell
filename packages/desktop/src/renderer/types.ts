@@ -397,6 +397,14 @@ export function applyStreamEvent(
       };
     }
 
+    case "steer_injected": {
+      // 引导(不打断): the host queued this user message and the engine spliced
+      // it into the running turn at a step boundary. Render it as a user bubble
+      // in the feed so the injected guidance is visible inline (it really did
+      // join the conversation — it's persisted to the transcript core-side).
+      return appendUserMessage(state, event.text, now());
+    }
+
     case "text_delta": {
       // Subagent text never enters the main feed — it accumulates in the
       // owning AgentMessage's textBuffer and is flushed to `text` on

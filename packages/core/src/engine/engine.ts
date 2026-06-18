@@ -518,6 +518,15 @@ export class Engine {
    * LLM response arrives.
    */
   private ctxOverheadBySid = new Map<string, number>();
+  /**
+   * Step-gap steering queue (per sessionId, in-memory). Host pushes user
+   * messages here via enqueueSteer while a run is in flight; the turn loop
+   * drains it at each step boundary and splices them into the next LLM request
+   * WITHOUT aborting (the 不打断 path, vs cancel+resend). Pure memory, forgotten
+   * on process exit — same model as the credential session-allow set, so
+   * multiple Engines don't interfere and it stays cleanly extractable.
+   */
+  private steerQueueBySid = new Map<string, string[]>();
   private activePermission: PermissionClassifier | undefined;
   /**
    * The TurnLoop of the in-flight run(), exposed so extendGoalRun() can bump a
@@ -940,6 +949,30 @@ export class Engine {
    */
   setBrowserBridge(bridge: import("../tool-system/browser-bridge.js").BrowserBridge | undefined): void {
     this.config.browserBridge = bridge;
+  }
+
+  /**
+   * Queue a user message to be spliced into the in-flight run for `sessionId`
+   * at the next turn-loop step boundary — the 不打断 steering path (vs cancel +
+   * resend). General-purpose: any host path (UI 引导, future agent coordination,
+   * external triggers) can call it. If no run is active for the session the
+   * message simply waits in the queue and is consumed when that session next
+   * runs (rare race; host normally only steers while busy). No-op on blank text.
+   */
+  enqueueSteer(sessionId: string, text: string): void {
+    const t = text?.trim();
+    if (!sessionId || !t) return;
+    const q = this.steerQueueBySid.get(sessionId) ?? [];
+    q.push(t);
+    this.steerQueueBySid.set(sessionId, q);
+  }
+
+  /** Drain + clear the steer queue for a session (turn loop consumes per step). */
+  private consumeSteer(sessionId: string): string[] {
+    const q = this.steerQueueBySid.get(sessionId);
+    if (!q || q.length === 0) return [];
+    this.steerQueueBySid.set(sessionId, []);
+    return q;
   }
 
   /** Wire the cookie→browser injection callback (InjectCredential tool). Same
@@ -1974,6 +2007,7 @@ export class Engine {
           pendingCompactInfo = null;
           return info;
         },
+        consumeSteer: () => this.consumeSteer(sid),
         ctxOverheadStore: {
           get: (s) => this.ctxOverheadBySid.get(s) ?? 0,
           set: (s, n) => {

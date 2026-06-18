@@ -279,6 +279,9 @@ export interface CodeshellApi {
   ): Promise<RpcResponse>;
   /** Cancel a session's running turn. sessionId optional for legacy callers. */
   cancel(sessionId?: string): Promise<RpcResponse>;
+  /** Steer an in-flight run: queue a user message spliced at the next turn-loop
+   *  step (不打断, for 引导). Waits for the next run if none is active. */
+  steer(sessionId: string, text: string): Promise<RpcResponse>;
   /**
    * Extend a running goal's turn / budget ceilings mid-run (TODO 3.1). Returns
    * the resulting effective limits; rejects if there's no active run.

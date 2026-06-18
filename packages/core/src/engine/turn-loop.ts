@@ -109,6 +109,15 @@ export interface TurnLoopDeps {
     before: number;
     after: number;
   } | null;
+  /**
+   * Reads/clears any user messages queued for THIS session via the steering
+   * channel (Engine.enqueueSteer) while a run is in flight. Consumed at the top
+   * of each turn so the messages join the next LLM request WITHOUT aborting the
+   * current run — the "不打断、步间隙注入" path (vs the relay abort+resend).
+   * Returns [] when nothing is queued. Wired by Engine; absent in standalone
+   * tests (turn loop tolerates undefined).
+   */
+  consumeSteer?: () => string[];
 }
 
 export interface TurnLoopResult {
@@ -405,6 +414,19 @@ export class TurnLoop {
       // aborted check short-circuits before re-entering the streaming loop.)
       if (this.config.signal?.aborted) {
         return { text: finalText, reason: "aborted_streaming", messages };
+      }
+
+      // Step-gap steering: messages the host queued via Engine.enqueueSteer
+      // while the previous step was running. Splice them in as user messages so
+      // they join THIS step's request — no abort, no lost in-flight work. Same
+      // loop-top user-push pattern as turnStartInjection / turn-limit warnings
+      // below. Push to transcript too so they persist + survive resume.
+      const steered = this.deps.consumeSteer?.() ?? [];
+      for (const text of steered) {
+        if (!text) continue;
+        messages.push({ role: "user", content: text });
+        this.deps.transcript.appendMessage("user", text);
+        this.config.onStream?.({ type: "steer_injected", text });
       }
 
       const state = initialTurnState(this.turnCount);

@@ -372,6 +372,10 @@ export type StreamEvent =
   // — absent on failure / when aux model unavailable.
   | { type: "session_title"; sessionId: string; title: string }
   | { type: "stream_request_start"; turnNumber: number; agentId?: string }
+  // A host-queued user message was spliced into the running turn at the
+  // turn-loop step boundary (Engine.enqueueSteer / 引导不打断注入). The client
+  // uses this to flip a queued "待注入" chip to "已注入".
+  | { type: "steer_injected"; text: string }
   | { type: "text_delta"; text: string; tokens?: number; agentId?: string }
   | { type: "tool_use_start"; toolCall: ToolCall; agentId?: string }
   | {

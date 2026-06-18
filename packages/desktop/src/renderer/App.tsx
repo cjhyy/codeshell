@@ -1693,13 +1693,24 @@ function App() {
     setQueuedInputs((prev) => removeQueuedInputAt(prev, activeBucket, index));
   };
 
-  // 引导打断: interrupt the current turn and send the ENTIRE queue merged into
-  // one message. The relay marker keeps busy/liveTurnActive lit across the
-  // cancel→re-send gap (no "正在思考" flicker) and tells the useEffect above to
-  // drain everything rather than one item. (decisions #1 + #3)
+  // 引导(默认,不打断): hand the WHOLE queued draft to the running turn via the
+  // steer channel. The engine splices it in as a user message at its next
+  // turn-loop step boundary — no abort, no lost in-flight work, the model sees
+  // it on the very next step. (vs forceSend below, which aborts + resends.)
+  // Falls back to the relay-abort path only if we can't resolve the engine
+  // session id (no live run to steer) — then it behaves like the old guide.
   const guideActiveQueuedInput = (): void => {
-    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
-    stop(activeBucket, { relay: true });
+    const engineSessionId = resolveActiveEngineSessionId();
+    const { text, state: next } = drainQueuedInput(queuedInputs, activeBucket);
+    if (!text) return;
+    if (!engineSessionId) {
+      // No live run to steer into — fall back to abort+resend (old behavior).
+      setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
+      stop(activeBucket, { relay: true });
+      return;
+    }
+    setQueuedInputs(next);
+    void window.codeshell.steer(engineSessionId, text);
   };
 
   const stop = (bucketOverride?: string, opts?: { relay?: boolean }): void => {

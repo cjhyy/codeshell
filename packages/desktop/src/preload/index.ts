@@ -207,6 +207,13 @@ contextBridge.exposeInMainWorld("codeshell", {
    */
   cancel: (sessionId?: string) => rpc("agent/cancel", { sessionId }),
   /**
+   * Steer an in-flight run: queue a user message that the running turn loop
+   * splices into its NEXT step — 不打断 (vs cancel, which aborts). For 引导 (gentle
+   * guidance mid-run). No-op-ish if the session has no active run (message waits
+   * for its next run).
+   */
+  steer: (sessionId: string, text: string) => rpc("agent/steer", { sessionId, text }),
+  /**
    * Extend a running goal's turn / budget ceilings mid-run (TODO 3.1). Returns
    * the resulting effective limits, or throws if there's no active run.
    */
