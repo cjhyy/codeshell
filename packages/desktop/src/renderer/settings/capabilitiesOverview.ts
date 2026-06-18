@@ -37,19 +37,66 @@ export interface CapabilityGroup {
 }
 
 /**
+ * The browser capability is THREE builtin tools (observe/act/navigate) that
+ * always move together — turning the panel on/off should flip all three (and,
+ * in core, the browser prompt section follows the tools). We fold them into one
+ * synthetic "浏览器" row in the overview; its toggle fans out to all three real
+ * descriptors. The synthetic id is recognized by the component to expand back.
+ */
+export const BROWSER_TOOL_IDS = ["builtin:browser_observe", "builtin:browser_act", "builtin:browser_navigate"];
+export const BROWSER_GROUP_ID = "builtin:__browser__";
+
+/** True if this descriptor is one of the browser tools we fold. */
+export function isBrowserTool(cap: CapabilityDescriptor): boolean {
+  return cap.kind === "builtin" && BROWSER_TOOL_IDS.includes(cap.id);
+}
+
+/**
+ * Collapse the browser tool descriptors into one synthetic descriptor. enabled
+ * = ALL three on; projectOverride = the shared override iff all three agree,
+ * else undefined (mixed → shows as 继承-ish / no single state). Pure +
+ * unit-testable; the component fans a toggle back out via BROWSER_TOOL_IDS.
+ */
+export function foldBrowserGroup(browserTools: CapabilityDescriptor[]): CapabilityDescriptor | null {
+  if (browserTools.length === 0) return null;
+  const allOn = browserTools.every((c) => c.enabled);
+  const overrides = new Set(browserTools.map((c) => c.projectOverride ?? "inherit"));
+  const sharedOverride = overrides.size === 1 ? browserTools[0]!.projectOverride : undefined;
+  const allBaselineOn = browserTools.every((c) => (c.globalEnabled ?? c.enabled));
+  return {
+    id: BROWSER_GROUP_ID,
+    kind: "builtin",
+    name: "浏览器自动化",
+    description: "browser_observe / browser_act / browser_navigate —— 看网页、操作、看图、多 tab(整组开关)",
+    enabled: allOn,
+    control: browserTools[0]!.control, // unused for the synthetic row (component fans out)
+    globalEnabled: allBaselineOn,
+    projectOverride: sharedOverride,
+    effectiveSource: browserTools[0]!.effectiveSource,
+  };
+}
+
+/**
  * Bucket descriptors by kind in the fixed display order, dropping empty
  * groups so the UI doesn't render headers for kinds with no items.
  * Within a group the original order is preserved (the service already
- * returns a stable, name-sorted projection).
+ * returns a stable, name-sorted projection). The three browser builtin tools
+ * are folded into one synthetic "浏览器" row (see foldBrowserGroup).
  */
 export function groupCapabilities(
   caps: CapabilityDescriptor[],
 ): CapabilityGroup[] {
-  return CAPABILITY_GROUP_ORDER.map((kind) => ({
-    kind,
-    label: CAPABILITY_GROUP_LABEL[kind],
-    items: caps.filter((c) => c.kind === kind),
-  })).filter((g) => g.items.length > 0);
+  const browserTools = caps.filter(isBrowserTool);
+  const folded = foldBrowserGroup(browserTools);
+  return CAPABILITY_GROUP_ORDER.map((kind) => {
+    if (kind !== "builtin") {
+      return { kind, label: CAPABILITY_GROUP_LABEL[kind], items: caps.filter((c) => c.kind === kind) };
+    }
+    // builtin group: non-browser tools as-is, plus the single folded browser row.
+    const others = caps.filter((c) => c.kind === "builtin" && !isBrowserTool(c));
+    const items = folded ? [folded, ...others] : others;
+    return { kind, label: CAPABILITY_GROUP_LABEL[kind], items };
+  }).filter((g) => g.items.length > 0);
 }
 
 /** A group whose rows are collapsed by default (only builtin, for now). */

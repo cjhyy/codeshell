@@ -184,12 +184,16 @@ export class PromptComposer {
       });
     }
 
-    // Behavioral instructions — loaded from preset's section files
+    // Behavioral instructions — loaded from preset's section files. Pass the
+    // turn's effective tool names so tool-gated sections (e.g. "browser") drop
+    // when their tools are disabled: browser capability = tools + instructions
+    // as one on/off unit.
+    const activeToolNames = tools.map((t) => t.name);
     sections.push({
       name: "behavior",
       compute: () => {
         const preset = this.options.preset ?? resolveAgentPreset();
-        return buildPresetSystemPrompt(preset);
+        return buildPresetSystemPrompt(preset, activeToolNames);
       },
     });
 

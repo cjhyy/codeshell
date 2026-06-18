@@ -42,6 +42,8 @@ import {
   type CapabilityKind,
   groupCapabilities,
   isGroupCollapsed,
+  BROWSER_GROUP_ID,
+  BROWSER_TOOL_IDS,
 } from "./capabilitiesOverview";
 import { useT } from "../i18n/I18nProvider";
 import type { TFunction } from "../i18n/I18nProvider";
@@ -169,13 +171,22 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cwd]);
 
+  // The synthetic 浏览器 row fans a single toggle out to its three real tool
+  // ids; a normal row targets just its own id.
+  const idsFor = (cap: CapabilityDescriptor): string[] =>
+    cap.id === BROWSER_GROUP_ID ? BROWSER_TOOL_IDS : [cap.id];
+
   const onUserToggle = async (cap: CapabilityDescriptor, next: boolean) => {
+    const ids = idsFor(cap);
+    const idSet = new Set(ids);
     const prev = caps;
-    setCaps((cs) => cs.map((c) => (c.id === cap.id ? { ...c, enabled: next } : c)));
+    setCaps((cs) => cs.map((c) => (idSet.has(c.id) ? { ...c, enabled: next } : c)));
     setSavingId(cap.id);
     setError(null);
     try {
-      await window.codeshell.setCapabilityEnabled("", cap.id, next, { scope: "user" });
+      for (const id of ids) {
+        await window.codeshell.setCapabilityEnabled("", id, next, { scope: "user" });
+      }
     } catch (e) {
       setCaps(prev);
       setError(e instanceof Error ? e.message : String(e));
@@ -191,7 +202,9 @@ export function CapabilitiesOverviewSection({ repos, onNavigateToKind }: Props) 
     setSavingId(cap.id);
     setError(null);
     try {
-      await window.codeshell.setCapabilityOverride(cwd, cap.id, state);
+      for (const id of idsFor(cap)) {
+        await window.codeshell.setCapabilityOverride(cwd, id, state);
+      }
       // Re-fetch so the row's effective value / source reflects the new overlay.
       await load();
     } catch (e) {
