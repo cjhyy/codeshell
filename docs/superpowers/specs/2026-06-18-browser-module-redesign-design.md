@@ -161,12 +161,32 @@ desktop ──→ @cjhyy/code-shell-core  （感知纯函数 flattenAxTree + Bro
 
 | 动作 | browser-use 做法 | 本设计 |
 |---|---|---|
-| **select** | 点 option 子节点（依赖能拿到 option backendId） | **改用 JS 设值**：`Runtime.callFunctionOn` 在 `<select>` 节点上设 `.value` 匹配 option（按 value 或可见文本），dispatch `input`+`change`。理由：AX 快照不暴露 option 子节点，JS 设值法只需 `<select>` 自身 backendId（ref 体系已有），干净可靠。 |
+| **select** | 点 option 子节点（依赖能拿到 option backendId） | **JS 设值 + 按需查 option**，见下方专节。 |
 | **press_key** | 完整 key map + 修饰键位掩码（Alt=1/Ctrl=2/Meta=4/Shift=8）+ 组合键序列 | 翻译 `actor/utils.py` key map 进 `keymap.ts`；`pressKey(key, ref?)` 取代 `pressEnter`，Enter 只是其中一个 key。组合键如 `Control+a`：拆分→修饰键 keyDown→主键 keyDown→主键 keyUp→修饰键 keyUp。 |
 | **hover** | scrollIntoView → 算 quad 中心 → `Input.dispatchMouseEvent type=mouseMoved` | 同。复用现有 `centerOf(ref)`，只发 mouseMoved（不 press）。 |
 | **click（加固）** | scrollIntoView → quad 中心 → mouseMoved+Pressed+Released → 失败回退 JS `.click()` → 遮挡检测 | 现有已有三连+coords。**本轮加**：JS `.click()` 回退（geometry 失败时）。遮挡检测留待后续（非必须）。 |
 | **type（保持）** | 逐字符 keyDown→char→keyUp | 现有用 `Input.insertText`，够用，**不改**。 |
 | **scroll（保持）** | `Input.synthesizeScrollGesture` | 现有用 mouseWheel，够用，本轮**不改**（升级留后）。 |
+
+#### select 专节：两种下拉，两条路
+
+下拉框在网页里其实是**两种不同的东西**，`select_option` 动作**只为原生 `<select>` 而生**：
+
+| | 原生 `<select>` | "假下拉"（`<div>`/`<li>` 仿的，如 Ant/shadcn/Material） |
+|---|---|---|
+| 本质 | 真 HTML 元素，浏览器画 option 菜单（OS 原生 UI） | 一堆 div，自己画样式 |
+| option 在快照里？ | **否**——未展开时浏览器不渲染进 DOM/AX 树，CDP 拿不到稳定 backendId/盒子 | 展开后是真 `<div role="option">`，**自动出现在下次 `browser_observe(snapshot)`** |
+| 选中方式 | `select_option`（本动作） | **不归本动作**：AI 走 `click` 展开 → `observe` → `click` 选项 |
+
+所以 `select_option` 专门处理**原生 `<select>`**，假下拉用现成的 click 流程，无需本动作。
+
+**`select_option(ref, value)` 内部逻辑（按需查 option）**：
+
+1. **先 JS 设值选中**：`Runtime.callFunctionOn` 在 `<select>` 节点（ref→backendId，已有）上，遍历其 `options`，按 **value 精确匹配 → 失败再按可见文本匹配**，命中则设 `selectedIndex` 并 dispatch `input`+`change`（让页面 JS 框架感知）。
+2. **选不中才查 option**：若无匹配，**一次性** `Runtime.callFunctionOn` 取该 `<select>` 的全部 option `{value, text}` 列表，作为错误详情返回给 AI（"未找到匹配项；可选：中国/美国/日本"），让 AI 重选。
+3. **不污染快照**：option 列表只在 select 动作内部、选不中时按需查一次，**不塞进每次 `snapshot`**——避免每次快照对每个 select 多轮 DOM 往返、避免 option 多的下拉撑大快照。
+
+> 为何不"塞进快照"：拿到 option 只为"让 AI 看见选项"，而选中无论如何都走 JS 设值；AI 多数时候按文本就能选（"选中国"→ `value:"中国"`），真选不中时按需查即可，ROI 远高于每次快照全量塞 option。
 
 ### 4.4 全档多 tab
 
