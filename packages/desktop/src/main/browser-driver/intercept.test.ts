@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { parseBrowserActionLine, buildBrowserActionReply } from "./intercept";
+import {
+  parseBrowserActionLine,
+  buildBrowserActionReply,
+  parseCredentialActionLine,
+  buildCredentialActionReply,
+} from "./intercept";
 
 const browserActionLine = (args: Record<string, unknown>, requestId = "rq1", sessionId = "s1") =>
   JSON.stringify({
@@ -50,5 +55,50 @@ describe("buildBrowserActionReply", () => {
     expect(reply.params.requestId).toBe("rq1");
     expect(reply.params.decision).toEqual({ approved: true, answer: '{"ok":true}' });
     expect(typeof reply.id).toBe("number");
+  });
+});
+
+const credActionLine = (args: Record<string, unknown>, requestId = "rq2", sessionId = "s2") =>
+  JSON.stringify({
+    jsonrpc: "2.0",
+    method: "agent/approvalRequest",
+    params: { sessionId, requestId, request: { toolName: "__credential_action__", args } },
+  });
+
+describe("parseCredentialActionLine", () => {
+  test("parses an injectCookie credential action", () => {
+    const p = parseCredentialActionLine(
+      credActionLine({ action: "injectCookie", credentialId: "xiaohongshu__account" }),
+    );
+    expect(p).toEqual({
+      sessionId: "s2",
+      requestId: "rq2",
+      action: "injectCookie",
+      credentialId: "xiaohongshu__account",
+    });
+  });
+
+  test("returns null for a browser action (not credential)", () => {
+    const line = JSON.stringify({
+      method: "agent/approvalRequest",
+      params: { requestId: "x", request: { toolName: "__browser_action__", args: { action: "click" } } },
+    });
+    expect(parseCredentialActionLine(line)).toBeNull();
+  });
+
+  test("returns null when credentialId or action missing, or malformed", () => {
+    expect(parseCredentialActionLine(credActionLine({ action: "injectCookie" }))).toBeNull();
+    expect(parseCredentialActionLine(credActionLine({ credentialId: "id" }))).toBeNull();
+    expect(parseCredentialActionLine("not json")).toBeNull();
+  });
+});
+
+describe("buildCredentialActionReply", () => {
+  test("wraps the result json in an agent/approve resolving the requestId", () => {
+    const parsed = { sessionId: "s2", requestId: "rq2", action: "injectCookie", credentialId: "id" };
+    const reply = JSON.parse(buildCredentialActionReply(parsed, '{"ok":true,"count":3}'));
+    expect(reply.method).toBe("agent/approve");
+    expect(reply.params.requestId).toBe("rq2");
+    expect(reply.params.decision).toEqual({ approved: true, answer: '{"ok":true,"count":3}' });
   });
 });

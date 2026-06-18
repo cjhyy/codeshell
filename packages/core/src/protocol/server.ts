@@ -369,6 +369,11 @@ export class AgentServer {
       // reusing its proven resolve/timeout/cleanup. The main-side handler
       // replies with the action's JSON result.
       session.engine.setBrowserBridge(this.makeBrowserBridge(session, sid));
+      // Cookie→browser injection (InjectCredential tool): same cross-process
+      // channel; main restores the cookie jar into the built-in browser.
+      session.engine.setInjectCredential((credentialId) =>
+        this.requestCredentialInjectForSession(session, sid, credentialId),
+      );
     }
     try {
       const result = await session.enqueueTurn(params.task, {
@@ -1583,6 +1588,61 @@ export class AgentServer {
           toolName: "__browser_action__",
           args: { action, ...payload },
           description: `browser:${action}`,
+          riskLevel: "low" as const,
+        },
+      });
+    });
+  }
+
+  /**
+   * Ask the client (Electron main) to inject a cookie credential into the
+   * built-in browser. Same pendingApprovals channel as browser actions; main
+   * calls restoreCookiesToBrowser and replies with a JSON result string we
+   * parse into { ok, count?, error? }. Degrades to ok:false on timeout/malformed.
+   */
+  private requestCredentialInjectForSession(
+    session: import("./chat-session.js").ChatSession,
+    sessionId: string,
+    credentialId: string,
+  ): Promise<{ ok: boolean; count?: number; error?: string }> {
+    return new Promise((resolve) => {
+      const requestId = nanoid(12);
+      session.pendingApprovals.set(requestId, (decision: unknown) => {
+        this.clearApprovalTimer(requestId);
+        let raw: string | undefined;
+        if (decision && typeof decision === "object" && "approved" in decision) {
+          const r = decision as ApprovalResult;
+          raw = r.approved ? r.answer : undefined;
+        } else if (typeof decision === "string") {
+          raw = decision;
+        }
+        if (raw === undefined) {
+          resolve({ ok: false, error: "credential inject declined or unavailable" });
+          return;
+        }
+        try {
+          resolve(JSON.parse(raw));
+        } catch {
+          resolve({ ok: false, error: "malformed credential inject result" });
+        }
+      });
+
+      const timer = setTimeout(() => {
+        if (session.pendingApprovals.has(requestId)) {
+          session.pendingApprovals.delete(requestId);
+          this.approvalTimers.delete(requestId);
+          resolve({ ok: false, error: "credential inject timed out" });
+        }
+      }, AgentServer.APPROVAL_TIMEOUT_MS);
+      this.approvalTimers.set(requestId, timer);
+
+      this.notify(Methods.ApprovalRequest, {
+        sessionId,
+        requestId,
+        request: {
+          toolName: "__credential_action__",
+          args: { action: "injectCookie", credentialId },
+          description: `credential:inject:${credentialId}`,
           riskLevel: "low" as const,
         },
       });

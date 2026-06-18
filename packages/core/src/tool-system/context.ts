@@ -270,7 +270,21 @@ export interface ToolContext {
    * docs/superpowers/specs/2026-06-16-browser-automation-mvp.md.
    */
   browser?: import("./browser-bridge.js").BrowserBridge;
+  /**
+   * Inject a stored cookie credential into the built-in browser (restore its
+   * login state so the AI can drive the page as that account). The host
+   * (desktop main) implements it on top of `restoreCookiesToBrowser`. Undefined
+   * → headless / no browser → the InjectCredential tool degrades with a clear
+   * error. Mirrors the askUser cross-process callback shape. The credentialId
+   * names a `type:"cookie"` credential; result counts cookies written.
+   */
+  injectCredentialToBrowser?: InjectCredentialFn;
 }
+
+/** Inject a cookie credential into the built-in browser (host-implemented). */
+export type InjectCredentialFn = (
+  credentialId: string,
+) => Promise<{ ok: boolean; count?: number; error?: string }>;
 
 /**
  * Per-Engine container that produces a fresh ToolContext on demand.

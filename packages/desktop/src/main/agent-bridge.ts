@@ -26,8 +26,15 @@ import { BrowserWindow, ipcMain } from "electron";
 import { dlog } from "./desktop-logger.js";
 import { SessionSnapshotStore, type Snapshot } from "./SessionSnapshotStore.js";
 import { parseSnapshotAppend } from "./parseStreamLine.js";
-import { parseBrowserActionLine, buildBrowserActionReply } from "./browser-driver/intercept.js";
+import {
+  parseBrowserActionLine,
+  buildBrowserActionReply,
+  parseCredentialActionLine,
+  buildCredentialActionReply,
+} from "./browser-driver/intercept.js";
 import { handleBrowserAction } from "./browser-driver/automation-host.js";
+import { CredentialStore } from "@cjhyy/code-shell-core";
+import { restoreCookiesToBrowser, type ElectronCookieLike } from "./credentials-service.js";
 import { activeGuest } from "./browser-driver/active-guest.js";
 import { loadBrowserAutomationPolicy } from "./browser-driver/load-policy.js";
 
@@ -143,6 +150,9 @@ export class AgentBridge {
       // Browser automation: intercept __browser_action__ requests here (drive the
       // webview in main, reply to the worker) and DON'T forward to the renderer.
       if (this.maybeHandleBrowserAction(line)) return;
+      // InjectCredential: intercept __credential_action__ (restore a cookie
+      // credential into the built-in browser) here; DON'T forward to renderer.
+      if (this.maybeHandleCredentialAction(line)) return;
       let summary: Record<string, unknown> = { raw: previewLine(line) };
       try {
         const m = JSON.parse(line) as { method?: string; id?: number };
@@ -319,6 +329,53 @@ export class AgentBridge {
         resultJson = JSON.stringify({ ok: false, detail: e instanceof Error ? e.message : String(e) });
       }
       const reply = buildBrowserActionReply(parsed, resultJson);
+      if (this.child?.stdin?.writable) {
+        this.child.stdin.write(reply + "\n");
+      }
+    })();
+    return true;
+  }
+
+  /**
+   * If `line` is a __credential_action__ request (InjectCredential tool), restore
+   * the named cookie credential's jar into the built-in browser here (main) and
+   * reply to the worker. Returns true (caller must NOT forward to renderer).
+   * Never throws — a failure still replies so the worker tool unblocks.
+   * The AI-side approval gate already ran in the worker tool; this just executes.
+   */
+  private maybeHandleCredentialAction(line: string): boolean {
+    const parsed = parseCredentialActionLine(line);
+    if (!parsed) return false;
+    void (async () => {
+      let resultJson: string;
+      try {
+        const cred = new CredentialStore(this.lastRunContext.cwd || undefined).resolve(
+          parsed.credentialId,
+        );
+        if (!cred || cred.type !== "cookie") {
+          resultJson = JSON.stringify({ ok: false, error: `无 cookie 凭证: "${parsed.credentialId}"` });
+        } else {
+          let jar: ElectronCookieLike[] = [];
+          try {
+            const arr = JSON.parse(cred.secret ?? "[]");
+            if (Array.isArray(arr)) jar = arr as ElectronCookieLike[];
+          } catch {
+            jar = [];
+          }
+          if (jar.length === 0) {
+            resultJson = JSON.stringify({ ok: false, error: `凭证「${cred.label}」cookie 为空或损坏` });
+          } else {
+            const { count } = await restoreCookiesToBrowser(jar);
+            for (const w of BrowserWindow.getAllWindows()) {
+              if (!w.isDestroyed()) w.webContents.send("browser:reload");
+            }
+            resultJson = JSON.stringify({ ok: true, count });
+          }
+        }
+      } catch (e) {
+        resultJson = JSON.stringify({ ok: false, error: e instanceof Error ? e.message : String(e) });
+      }
+      const reply = buildCredentialActionReply(parsed, resultJson);
       if (this.child?.stdin?.writable) {
         this.child.stdin.write(reply + "\n");
       }

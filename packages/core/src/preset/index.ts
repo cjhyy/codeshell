@@ -105,6 +105,9 @@ const GENERAL_BUILTIN_TOOLS = [
   // UseCredential(用户实测「找不到这个工具」的真因)。它带 isUseCredentialAvailable
   // guard:cwd 凭证库为空时仍自动隐藏,所以无条件列入是安全的(空库不会冒出来)。
   "UseCredential",
+  // 同理:把 cookie 凭证注入内置浏览器(恢复登录态后用 browser_* 工具)。带
+  // isInjectCredentialAvailable guard(无 cookie 凭证时自动隐藏),无条件列入安全。
+  "InjectCredential",
 ] as const;
 
 const TERMINAL_CODING_EXTRA_TOOLS = [

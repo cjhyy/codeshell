@@ -63,6 +63,11 @@ import {
   browserPressEnterToolDef, browserPressEnterTool,
 } from "./browser-tools.js";
 import { useCredentialToolDef, useCredentialTool } from "../../credentials/use-credential-tool.js";
+import {
+  injectCredentialToolDef,
+  injectCredentialTool,
+  isInjectCredentialAvailable,
+} from "../../credentials/inject-credential-tool.js";
 import { CredentialStore } from "../../credentials/store.js";
 
 /**
@@ -732,6 +737,19 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
     },
     execute: useCredentialTool,
   },
+  // InjectCredential:把 cookie 凭证注入内置浏览器(恢复登录态)。审批由工具内部
+  // CredentialUseGate 负责(逐条 autoInjectByAI),故 permissionDefault:"allow"。
+  // 改浏览器登录态有副作用 → 非 read-only。
+  {
+    definition: {
+      ...injectCredentialToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: false,
+      isConcurrencySafe: false,
+    },
+    execute: injectCredentialTool,
+  },
 ];
 
 /**
@@ -749,6 +767,9 @@ export const BUILTIN_TOOL_GUARDS: Map<string, (cwd: string) => boolean> = new Ma
   // matching the spec's "quiet when empty" intent (true ToolSearch-deferral for
   // builtins isn't wired in the engine).
   [useCredentialToolDef.name, isUseCredentialAvailable],
+  // InjectCredential hidden until ≥1 cookie credential exists (browser injection
+  // is cookie-only). Also degrades at call time if no browser bridge is wired.
+  [injectCredentialToolDef.name, isInjectCredentialAvailable],
 ]);
 
 /** UseCredential is available when the cwd's CredentialStore has ≥1 credential. */

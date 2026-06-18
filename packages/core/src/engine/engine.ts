@@ -230,6 +230,10 @@ export interface EngineConfig {
   /** Browser automation bridge (browser_* tools). Wired by the host (desktop)
    *  after construction via setBrowserBridge. Undefined → tools degrade. */
   browserBridge?: import("../tool-system/browser-bridge.js").BrowserBridge;
+  /** Inject a cookie credential into the built-in browser (InjectCredential
+   *  tool). Wired by the host after construction via setInjectCredential.
+   *  Undefined → the tool degrades with a clear "no browser" error. */
+  injectCredentialToBrowser?: import("../tool-system/context.js").InjectCredentialFn;
   mcpServers?: Record<string, import("../types.js").MCPServerConfig>;
   /**
    * Optional opaque store for per-session cost/usage state. When provided,
@@ -936,6 +940,14 @@ export class Engine {
    */
   setBrowserBridge(bridge: import("../tool-system/browser-bridge.js").BrowserBridge | undefined): void {
     this.config.browserBridge = bridge;
+  }
+
+  /** Wire the cookie→browser injection callback (InjectCredential tool). Same
+   *  post-construction injection model as setBrowserBridge. */
+  setInjectCredential(
+    fn: import("../tool-system/context.js").InjectCredentialFn | undefined,
+  ): void {
+    this.config.injectCredentialToBrowser = fn;
   }
 
   /**
@@ -3034,6 +3046,7 @@ export class Engine {
       toolRegistry: this.toolRegistry,
       askUser: this.config.askUser,
       browser: this.config.browserBridge,
+      injectCredentialToBrowser: this.config.injectCredentialToBrowser,
       isSubAgent: this.config.isSubAgent === true,
       hooks: this.hooks,
       planMode: this.planMode,

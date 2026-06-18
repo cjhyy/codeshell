@@ -80,3 +80,61 @@ function replyId(): number {
   n = (n + 1) % 1_000_000;
   return 900_000_000 + n;
 }
+
+// ── __credential_action__ (InjectCredential tool) ─────────────────────────
+// Same worker→main approval-request channel as browser actions, but the action
+// is "injectCookie" (restore a cookie credential's jar into the built-in
+// browser). Kept here next to the browser-action parser so the agent-bridge
+// glue stays a thin call and parsing is unit-tested.
+
+export interface ParsedCredentialAction {
+  sessionId?: string;
+  requestId: string;
+  /** Currently only "injectCookie". */
+  action: string;
+  credentialId: string;
+}
+
+/**
+ * If `line` is a __credential_action__ approval request, return its parsed
+ * shape; otherwise null. Tolerates malformed JSON.
+ */
+export function parseCredentialActionLine(line: string): ParsedCredentialAction | null {
+  let msg: any;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (!msg || msg.method !== "agent/approvalRequest") return null;
+  const p = msg.params;
+  if (!p || typeof p.requestId !== "string") return null;
+  const r = p.request;
+  if (!r || r.toolName !== "__credential_action__" || !r.args) return null;
+  const a = r.args as Record<string, unknown>;
+  if (typeof a.action !== "string" || typeof a.credentialId !== "string") return null;
+  return {
+    sessionId: typeof p.sessionId === "string" ? p.sessionId : undefined,
+    requestId: p.requestId,
+    action: a.action,
+    credentialId: a.credentialId,
+  };
+}
+
+/** Build the `agent/approve` reply that resolves a credential action's
+ *  requestId with its JSON result string (same ApprovalResult shape). */
+export function buildCredentialActionReply(
+  parsed: ParsedCredentialAction,
+  resultJson: string,
+): string {
+  return JSON.stringify({
+    jsonrpc: "2.0",
+    id: replyId(),
+    method: "agent/approve",
+    params: {
+      sessionId: parsed.sessionId,
+      requestId: parsed.requestId,
+      decision: { approved: true, answer: resultJson },
+    },
+  });
+}
