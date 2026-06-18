@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Cookie, KeyRound, Link2, type LucideIcon } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { TokenTab } from "./TokenTab";
 import { LinkTab } from "./LinkTab";
 import { CookieTab } from "./CookieTab";
@@ -14,20 +13,8 @@ export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | n
   const [tab, setTab] = useState<TabKey>("cookie");
   const cwd = activeRepoPath ?? "";
 
-  // 凭证取用全自动开关(credentialUse.autoApprove,user 级)。开了 AI 用 UseCredential
-  // 取凭证不再弹审批。默认关 —— 每次取用都问(或本会话记住)。
-  const [autoApprove, setAutoApprove] = useState(false);
-  useEffect(() => {
-    void window.codeshell.getSettings("user").then((s) => {
-      const v = (s as { credentialUse?: { autoApprove?: boolean } } | null)?.credentialUse
-        ?.autoApprove;
-      setAutoApprove(v === true);
-    });
-  }, []);
-  const toggleAutoApprove = (next: boolean) => {
-    setAutoApprove(next);
-    void window.codeshell.updateSettings("user", { credentialUse: { autoApprove: next } });
-  };
+  // 凭证取用免审批改为**逐条**(每条凭证 autoUseByAI 开关,见 CookieTab)。全局总闸
+  // credentialUse.autoApprove 后端仍生效(use-gate 读它),只是 UI 不再暴露。
 
   const tabBtn = (key: TabKey, label: string, Icon: LucideIcon) => (
     <button
@@ -49,16 +36,10 @@ export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | n
       <p className="mb-4 text-sm text-muted-foreground">
         {t("ext.credentials.pageSubtitle")}
       </p>
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          {tabBtn("cookie", t("ext.credentials.tabCookie"), Cookie)}
-          {tabBtn("token", t("ext.credentials.tabToken"), KeyRound)}
-          {tabBtn("link", t("ext.credentials.tabLink"), Link2)}
-        </div>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Switch checked={autoApprove} onCheckedChange={toggleAutoApprove} />
-          {t("ext.credentials.autoApprove")}
-        </label>
+      <div className="mb-4 flex items-center gap-1">
+        {tabBtn("cookie", t("ext.credentials.tabCookie"), Cookie)}
+        {tabBtn("token", t("ext.credentials.tabToken"), KeyRound)}
+        {tabBtn("link", t("ext.credentials.tabLink"), Link2)}
       </div>
       {tab === "cookie" && <CookieTab cwd={cwd} />}
       {tab === "token" && <TokenTab cwd={cwd} kind="token" />}
