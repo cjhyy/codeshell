@@ -239,8 +239,10 @@ export interface CredentialView {
   label: string;
   secret?: string;
   exposeAsEnv?: string;
-  /** link: appUrl;cookie: 拓取平台与主域。 */
-  meta?: { appUrl?: string; platform?: string; domain?: string };
+  /** 逐条「AI 可自动取用」开关(免审批门)。 */
+  autoUseByAI?: boolean;
+  /** link: appUrl;cookie: 拓取平台与主域 + 抓取范围(all=全量分区)。 */
+  meta?: { appUrl?: string; platform?: string; domain?: string; scope?: "domain" | "all" };
 }
 /** Masked credential returned to the renderer — never carries the secret value. */
 export interface MaskedCredentialView extends Omit<CredentialView, "secret"> {
@@ -432,16 +434,31 @@ export interface CodeshellApi {
     list(cwd: string): Promise<MaskedCredentialView[]>;
     save(cwd: string, scope: "user" | "project", cred: CredentialView): Promise<void>;
     remove(cwd: string, scope: "user" | "project", id: string): Promise<void>;
+    /** 只改元数据(label/autoUseByAI/meta),保留 secret —— 编辑/AI 开关用。 */
+    patchMeta(
+      cwd: string,
+      scope: "user" | "project",
+      id: string,
+      fields: {
+        label?: string;
+        exposeAsEnv?: string;
+        autoUseByAI?: boolean;
+        meta?: { appUrl?: string; platform?: string; domain?: string; scope?: "domain" | "all" };
+      },
+    ): Promise<void>;
     cookieDomains(): Promise<string[]>;
     cookiePreview(domain: string): Promise<{ count: number }>;
     /** 按域拓取 cookie jar(组装成 cookie 凭证存库用)。 */
     captureCookieJar(domain: string): Promise<{ jar: unknown[]; count: number }>;
+    /** 全量拓取 persist:browser 分区所有 cookie(按域抓不全的站用)。 */
+    captureAllCookies(): Promise<{ jar: unknown[]; count: number }>;
     /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
     restoreCookieToBrowser(cwd: string, id: string): Promise<{ count: number }>;
-    /** 独立窗口登录抓 cookie(登 Google/YouTube 用)。 */
+    /** 独立窗口登录抓 cookie(登 Google/YouTube 用)。fullCapture=全量模式。 */
     loginCapture(req: {
       url: string;
       platform?: string;
+      fullCapture?: boolean;
     }): Promise<
       | {
           ok: true;

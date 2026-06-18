@@ -35,6 +35,12 @@ export interface LoginCaptureRequest {
   url: string;
   /** 平台名(凭证分组用;可选,渲染层也会从域名推断)。 */
   platform?: string;
+  /**
+   * 全量模式:抓登录窗口分区里的**所有** cookie(不按目标域过滤)。
+   * 用于登录态分散在多个域 / 子域、按主域抓会漏的站(如小红书)。
+   * 默认 false(只抓目标域,jar 干净)。
+   */
+  fullCapture?: boolean;
 }
 
 export type LoginCaptureResult =
@@ -181,13 +187,17 @@ export async function loginAndCaptureCookies(
         // 否则外层 Promise 永不 resolve,渲染层按钮卡死在「处理中…」。
         void (async () => {
           try {
-            const all = await handle.getCookies(targetDomain);
-            // 仅目标域(BrowserHost.getCookies 已按域过滤,这里再保险按主机后缀过滤一次)。
-            // 只用「相等 / 后缀」匹配,不用 includes(否则 cookie 域 x.com 会误中目标 myx.com)。
-            const jar = all.filter((c) => {
-              const d = (c.domain ?? "").replace(/^\./, "");
-              return d === targetDomain || targetDomain.endsWith("." + d);
-            });
+            // 全量模式:抓分区里所有 cookie,不按域过滤(小红书等跨域登录态)。
+            // 默认模式:只抓目标域。BrowserHost.getCookies(undefined) 取全量,
+            // getCookies(domain) 已按域过滤,这里再保险按主机后缀过滤一次。
+            // 后缀过滤只用「相等 / 后缀」,不用 includes(否则 cookie 域 x.com 会误中 myx.com)。
+            const all = await handle.getCookies(req.fullCapture ? undefined : targetDomain);
+            const jar = req.fullCapture
+              ? all
+              : all.filter((c) => {
+                  const d = (c.domain ?? "").replace(/^\./, "");
+                  return d === targetDomain || targetDomain.endsWith("." + d);
+                });
             let suggestedLabel: string | undefined;
             const script = usernameScriptFor(targetDomain);
             if (script) {

@@ -38,8 +38,10 @@ export type CredentialAskFn = (
 ) => Promise<string>;
 
 export interface CredentialUseGateDeps {
-  /** settings `credentialUse.autoApprove`。 */
+  /** settings `credentialUse.autoApprove`(全局总闸)。 */
   autoApprove: boolean;
+  /** 该凭证自身的逐条「AI 可自动取用」标志(Credential.autoUseByAI);命中即放行。 */
+  credentialAutoUse?: boolean;
   /** 本会话 allow 集(内存,可变;gate 命中「本会话记住」时写入)。 */
   sessionAllow: SessionCredentialAllow;
   /** 审批问询(undefined → 无 UI,headless 直接拒)。 */
@@ -57,8 +59,8 @@ export async function credentialUseGate(
   req: CredentialUseRequest,
   deps: CredentialUseGateDeps,
 ): Promise<CredentialUseDecision> {
-  // 1. 全自动
-  if (deps.autoApprove) return { allowed: true };
+  // 1. 全自动(全局总闸,或该凭证逐条开了「AI 可自动取用」)
+  if (deps.autoApprove || deps.credentialAutoUse) return { allowed: true };
   // 2. 本会话记住
   if (deps.sessionAllow.has(req.id)) return { allowed: true };
   // 3. 默认弹审批

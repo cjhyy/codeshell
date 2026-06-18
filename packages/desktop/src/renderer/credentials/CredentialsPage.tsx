@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Cookie, KeyRound, Link2, type LucideIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TokenTab } from "./TokenTab";
 import { LinkTab } from "./LinkTab";
@@ -28,15 +29,16 @@ export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | n
     void window.codeshell.updateSettings("user", { credentialUse: { autoApprove: next } });
   };
 
-  const tabBtn = (key: TabKey, label: string) => (
+  const tabBtn = (key: TabKey, label: string, Icon: LucideIcon) => (
     <button
       key={key}
       className={
-        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+        "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
         (tab === key ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60")
       }
       onClick={() => setTab(key)}
     >
+      <Icon className="size-4" />
       {label}
     </button>
   );
@@ -49,9 +51,9 @@ export function CredentialsPage({ activeRepoPath }: { activeRepoPath: string | n
       </p>
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
-          {tabBtn("cookie", t("ext.credentials.tabCookie"))}
-          {tabBtn("token", t("ext.credentials.tabToken"))}
-          {tabBtn("link", t("ext.credentials.tabLink"))}
+          {tabBtn("cookie", t("ext.credentials.tabCookie"), Cookie)}
+          {tabBtn("token", t("ext.credentials.tabToken"), KeyRound)}
+          {tabBtn("link", t("ext.credentials.tabLink"), Link2)}
         </div>
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <Switch checked={autoApprove} onCheckedChange={toggleAutoApprove} />

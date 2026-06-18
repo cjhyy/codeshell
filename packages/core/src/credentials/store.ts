@@ -66,6 +66,23 @@ export class CredentialStore {
     this.write(scope, file);
   }
 
+  /**
+   * 只改元数据(label / exposeAsEnv / autoUseByAI / meta),保留 secret 原样。
+   * 给 UI「编辑/开关」用 —— 渲染层拿不到明文 secret,故不能走 save(会清空)。
+   * id 不存在则 no-op。
+   */
+  patch(
+    scope: CredentialScope,
+    id: string,
+    fields: Partial<Pick<Credential, "label" | "exposeAsEnv" | "autoUseByAI" | "meta">>,
+  ): void {
+    const file = this.read(scope);
+    const idx = file.credentials.findIndex((c) => c.id === id);
+    if (idx < 0) return;
+    file.credentials[idx] = { ...file.credentials[idx], ...fields };
+    this.write(scope, file);
+  }
+
   remove(scope: CredentialScope, id: string): void {
     const file = this.read(scope);
     file.credentials = file.credentials.filter((c) => c.id !== id);

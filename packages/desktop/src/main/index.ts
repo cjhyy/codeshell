@@ -54,6 +54,7 @@ import {
   listCookieDomains,
   getCookiesForDomain,
   captureCookieJar,
+  captureAllCookies,
   restoreCookiesToBrowser,
   sweepStaleLeases,
   type ElectronCookieLike,
@@ -1059,6 +1060,20 @@ ipcMain.handle(
     new CredentialStore(cwd || undefined).remove(scope, id);
   },
 );
+// 只改元数据(label/autoUseByAI/meta),保留 secret —— UI 的编辑/AI 开关用,避免清空 jar。
+ipcMain.handle(
+  "credentials:patchMeta",
+  async (
+    _e,
+    cwd: string,
+    scope: CredentialScope,
+    id: string,
+    fields: { label?: string; exposeAsEnv?: string; autoUseByAI?: boolean; meta?: unknown },
+  ) => {
+    if (typeof id !== "string" || !id) throw new Error("credentials:patchMeta requires id");
+    new CredentialStore(cwd || undefined).patch(scope, id, fields as never);
+  },
+);
 ipcMain.handle("credentials:cookieDomains", async () => listCookieDomains());
 ipcMain.handle("credentials:cookiePreview", async (_e, domain: string) => {
   // Preview only: just count the cookies in the partition. No lease file is
@@ -1073,6 +1088,11 @@ ipcMain.handle("credentials:captureCookieJar", async (_e, domain: string) => {
     throw new Error("credentials:captureCookieJar requires a domain");
   }
   const jar = await captureCookieJar(domain.trim());
+  return { jar, count: jar.length };
+});
+// 第二期+:全量拓取 persist:browser 分区所有 cookie(不按域过滤),用于按域抓不全的站。
+ipcMain.handle("credentials:captureAllCookies", async () => {
+  const jar = await captureAllCookies();
   return { jar, count: jar.length };
 });
 // 第二期:切换账号 — 把某条 cookie 凭证的 jar 导回 persist:browser 覆盖当前登录态,
@@ -1097,12 +1117,19 @@ ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id:
 // 第二期+:独立窗口登录抓 cookie(解决内置 webview 登不上 Google/YouTube)。
 // 开临时分区登录窗 → 用户点保存 → 读 cookie + 用户名 + 校验 → 关窗销毁分区。
 // 只产出 jar/建议名/校验,存凭证由渲染层走 credentials:save。
-ipcMain.handle("credentials:loginCapture", async (_e, req: { url: string; platform?: string }) => {
-  if (!req || typeof req.url !== "string" || !req.url.trim()) {
-    throw new Error("credentials:loginCapture requires a url");
-  }
-  return loginAndCaptureCookies({ url: req.url.trim(), platform: req.platform });
-});
+ipcMain.handle(
+  "credentials:loginCapture",
+  async (_e, req: { url: string; platform?: string; fullCapture?: boolean }) => {
+    if (!req || typeof req.url !== "string" || !req.url.trim()) {
+      throw new Error("credentials:loginCapture requires a url");
+    }
+    return loginAndCaptureCookies({
+      url: req.url.trim(),
+      platform: req.platform,
+      fullCapture: req.fullCapture === true,
+    });
+  },
+);
 ipcMain.handle("plugins:detail", async (_e, installKey: string) => {
   if (typeof installKey !== "string" || !installKey) {
     throw new Error("plugins:detail requires installKey");

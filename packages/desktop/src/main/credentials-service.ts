@@ -71,6 +71,17 @@ export async function captureCookieJar(domain: string): Promise<ElectronCookieLi
 }
 
 /**
+ * 拓取 persist:browser 分区的**全量** cookie(不按域过滤)。
+ * 用于「按域拓不全」的站(如小红书登录态分散在多个域 / 子域,按主域抓会漏)——
+ * 把整个分区的 cookie 整包存成一条凭证,切换时整包导回。
+ * 代价:jar 里会混入其他站的 cookie(用户主动选「全量」时接受)。
+ */
+export async function captureAllCookies(): Promise<ElectronCookieLike[]> {
+  const cookies = await (await browserSession()).cookies.get({});
+  return cookies as ElectronCookieLike[];
+}
+
+/**
  * 切换账号:把某账号的 cookie jar 导回 persist:browser 覆盖当前登录态(设计稿 §5.5)。
  * 先**清空整分区 cookie**(切换语义=换成该账号的干净状态),再逐条 set。
  * 仅 cookie,不动 localStorage(已知局限)。返回成功写入的条数。

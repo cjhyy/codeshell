@@ -25,8 +25,16 @@ export interface Credential {
   secret?: string;
   /** 可选:静态暴露为该 shell env 变量名(进 readShellEnv)。 */
   exposeAsEnv?: string;
-  /** link: 业务方 app 注册地址;cookie: 拓取所用平台与主域。 */
-  meta?: { appUrl?: string; platform?: string; domain?: string };
+  /**
+   * 逐条「AI 可自动取用」开关:为 true 时该凭证免过审批门(等价于对它单独开了
+   * 全局 credentialUse.autoApprove)。默认 false / 缺省 = 走全局开关 + 审批门。
+   */
+  autoUseByAI?: boolean;
+  /**
+   * link: 业务方 app 注册地址;cookie: 拓取所用平台与主域 + 抓取范围。
+   * scope="all" 表示该 jar 是整分区全量抓的(切换时整包导回);缺省/"domain" = 仅该域。
+   */
+  meta?: { appUrl?: string; platform?: string; domain?: string; scope?: "domain" | "all" };
 }
 
 export interface CredentialStoreFile {

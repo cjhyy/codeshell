@@ -620,12 +620,22 @@ contextBridge.exposeInMainWorld("codeshell", {
       ipcRenderer.invoke("credentials:save", cwd, scope, cred),
     remove: (cwd: string, scope: "user" | "project", id: string) =>
       ipcRenderer.invoke("credentials:remove", cwd, scope, id),
+    /** 只改元数据(label/autoUseByAI/meta),保留 secret —— 编辑/AI 开关用。 */
+    patchMeta: (
+      cwd: string,
+      scope: "user" | "project",
+      id: string,
+      fields: { label?: string; exposeAsEnv?: string; autoUseByAI?: boolean; meta?: unknown },
+    ) => ipcRenderer.invoke("credentials:patchMeta", cwd, scope, id, fields),
     cookieDomains: (): Promise<string[]> => ipcRenderer.invoke("credentials:cookieDomains"),
     cookiePreview: (domain: string): Promise<{ count: number }> =>
       ipcRenderer.invoke("credentials:cookiePreview", domain),
     /** 按域拓取 cookie jar(组装成 cookie 凭证用)。 */
     captureCookieJar: (domain: string): Promise<{ jar: unknown[]; count: number }> =>
       ipcRenderer.invoke("credentials:captureCookieJar", domain),
+    /** 全量拓取 persist:browser 分区所有 cookie(按域抓不全的站用)。 */
+    captureAllCookies: (): Promise<{ jar: unknown[]; count: number }> =>
+      ipcRenderer.invoke("credentials:captureAllCookies"),
     /** 切换账号:把某 cookie 凭证导回浏览器覆盖当前登录态。 */
     restoreCookieToBrowser: (cwd: string, id: string): Promise<{ count: number }> =>
       ipcRenderer.invoke("credentials:restoreCookieToBrowser", cwd, id),
@@ -633,6 +643,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     loginCapture: (req: {
       url: string;
       platform?: string;
+      fullCapture?: boolean;
     }): Promise<
       | { ok: true; jar: unknown[]; domain: string; suggestedLabel?: string; loginCheck: { ok: boolean; missing?: string[] } }
       | { ok: false; cancelled?: boolean; error?: string }

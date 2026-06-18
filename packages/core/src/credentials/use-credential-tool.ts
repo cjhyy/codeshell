@@ -151,7 +151,12 @@ export async function useCredentialTool(
     : undefined;
   const decision = await credentialUseGate(
     { id: cred.id, label: cred.label, purpose },
-    { autoApprove: readAutoApprove(cwd), sessionAllow: sessionAllowFor(ctx), ask },
+    {
+      autoApprove: readAutoApprove(cwd),
+      credentialAutoUse: cred.autoUseByAI === true,
+      sessionAllow: sessionAllowFor(ctx),
+      ask,
+    },
   );
   if (!decision.allowed) {
     const msg =
