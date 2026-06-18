@@ -17,13 +17,15 @@
 ## 2. 目标
 
 1. **工具收敛**：9 个 → 3 个语义工具（`browser_observe` / `browser_act` / `browser_navigate`）。
-2. **动作补齐**：照 browser-use 的 CDP 序列补 `select_option` / `press_key`（取代 `press_enter`）/ `hover`；`screenshot/vision` 留接口、本轮不实现（单独一轮）。
+2. **动作补齐**：照 browser-use 的 CDP 序列补 `select_option` / `press_key`（取代 `press_enter`）/ `hover`。
 3. **抽独立包**：CDP 动作层抽成 `@cjhyy/code-shell-cdp`，注入式 `CdpSender`、环境无关、任何 runtime 可用。
 4. **全档多 tab**：`browser_*` 动作支持可选 `tabId`，AI 可 `list_tabs` / `switch_tab` / 直接对任意 tab 操作。
+5. **看到页面图片内容（核心能力，本轮做）**：让 AI **看懂页面上某张真实图片画了什么**（如小红书笔记配图、商品图）——拿原始像素喂多模态模型，而非截图。详见 §4.7。
+6. **截图 vision（本轮做）**：截当前视口 / 某 ref 区域 / 视频当前帧，喂模型。详见 §4.7。
 
 ### 非目标（本轮不做，明确记录）
 
-- **vision/screenshot 实现**：留接口（`browser_observe` 预留 `mode: "vision"`），实现单独一轮（要碰 renderer 画框）。
+- **视频整段理解**（转录 / 抽多帧）：browser 只拿视频 URL + 截当前帧；理解整段甩给已有 media skill（yt-dlp）+ Bash。
 - **drag / 容器内滚动 / 右键双击**：低频，留待后续。
 - **结构化 schema 抽取**（Stagehand `extract()` 风格）：`browser_observe` 的 read/extract 先保持现有纯文本/链接形态。
 
@@ -73,16 +75,20 @@ browser_navigate — 导航。url（高频、语义独立，单列）
 
 ```jsonc
 {
-  "mode": "snapshot" | "read" | "extract",   // 默认 snapshot
+  "mode": "snapshot" | "read" | "extract" | "image" | "vision",   // 默认 snapshot
+  "refs": ["string"],                  // image 模式：要看的图片 ref 列表（一次多张）
+  "ref": "string",                     // vision 模式可选：只截某元素区域，省略则截视口
   "tabId": "string (可选，默认活跃 tab)"
 }
 ```
 
-- `snapshot` → 现 `browser_snapshot`（a11y 元素列表 + refs）。**vision 留位**：未来加 `mode: "vision"`，本轮 schema 不暴露。
-- `read` → 现 `browser_read_content`
-- `extract` → 现 `browser_extract_links`
+- `snapshot` → 现 `browser_snapshot`（a11y 元素列表 + refs）。
+- `read` → 现 `browser_read_content`（正文文本）
+- `extract` → 现 `browser_extract_links`（链接 + 图片 + 视频 URL；**本轮扩展加 `<video>`/`<source>` src**）。**图片项分配 ref**（img1/img2…），供 `image` 模式点名。
+- `image` → **看图片内容（核心）**：抓 `refs` 指定图片的**原始像素**喂多模态模型。详见 §4.7。
+- `vision` → 截图：截视口 / `ref` 区域 / 视频当前帧，喂模型。详见 §4.7。
 
-权限：`allow`（只读）。
+权限：`allow`（只读）。`image`/`vision` 产出 image 块，过现有图片策略门（≤6 张、6MB/轮）。
 
 #### `browser_act`
 
@@ -224,6 +230,53 @@ desktop ──→ @cjhyy/code-shell-core  （感知纯函数 flattenAxTree + Bro
 
 **compaction 同步**：`maskOldBrowserSnapshots` → 改名 `maskOldObservations`，识别逻辑从 `name === "browser_snapshot"` 改为 `name === "browser_observe" && args.mode === "snapshot"`（或在结果里带 marker）。按 tabId 分组 mask。**must-fix，否则 token 漏涨**。
 
+### 4.7 页面图片 / 视频获取（核心能力）
+
+驱动场景：**小红书笔记配图、商品图、图表**——AI 要**看懂页面上某张真实图片画了什么**，而非看屏幕排版。
+
+**关键认知：模型侧管道已全通，唯一缺的是"从页面取像素"这一段。**
+代码测绘确认：`ContentBlock` 已支持 `image` 块（`source:{base64,media_type}`）；引擎已会把 image 块拼进消息（`engine.ts:1342`）；非 vision 模型自动剥离（`stripVisionFromHistory`）；图片策略门齐全（2MB/张、6MB/轮、≤6 张，`image-policy.ts`）；`view_image` 已打通"本地文件→image 块"。所以本节**零模型侧改动**，只接"页面像素→image 块"。
+
+**三个 mode，三种需求（成本/精度递进）**：
+
+| mode | 看到什么 | 怎么取 | 小红书场景 |
+|---|---|---|---|
+| `extract` | 图片 URL + alt + 视频 URL | 已有 `buildExtractLinksScript`，扩展加 `<video>/<source>` src | ❌ 只知道有图，看不到 |
+| **`image`** | **某张图的真实内容**（原始像素喂模型） | **页面内 fetch + canvas → dataURL** | ✅ **主路**：看懂配图/商品图画了什么 |
+| `vision` | 屏幕截图（渲染样子 / canvas / 视频帧） | `Page.captureScreenshot`（视口或 ref 区域） | 看排版 / 图表 / 视频当前帧 |
+
+#### `image` 模式实现（核心，防盗链是关键）
+
+```jsonc
+browser_observe({ mode: "image", refs: ["img3", "img7"] })   // 一次多张
+```
+
+1. **图片分配 ref**：`extract`（及 `snapshot` 里的 `img` 元素）给每张图分配 ref（img1/img2…）+ 记录其 src。AI 从列表点名要看哪张。
+2. **页面内 fetch（绕防盗链）**：在**页面自己的上下文**里执行 `fetch(img.src) → blob → canvas → toDataURL`。
+   - **为何不在 main 进程 curl**：小红书等站图片有**防盗链 / 需 cookie / referer 校验**，main 进程直接拉会 403。在页面上下文 fetch 才带得上该页 session（与"独立窗口登录抓 cookie"一脉相承）。
+   - canvas 转 dataURL 顺带跨域兜底：若图片 CORS 受限导致 canvas 污染（toDataURL 抛错），回退到"截该 img 元素区域"（走 vision 路径），保证总能拿到像素。
+3. **过现有图片管道**：dataURL → 复用 `compress.ts` 同款降采样（降到 1568px，Claude 上限）→ 过 `image-policy.ts` 策略门 → `ContentBlock` image 块。
+4. **一次多张**：`refs` 数组。超出策略门（>6 张 / >6MB）自动截断 + 提示 AI 分批（复用 `dropOversizedImages` 的提示机制）。
+
+#### `vision` 模式实现
+
+```jsonc
+browser_observe({ mode: "vision" })            // 截视口
+browser_observe({ mode: "vision", ref: "e5" }) // 截某元素区域（含 <video> → 截当前帧）
+```
+
+- `Page.captureScreenshot`（`format:jpeg`，省体积）；给 ref 时按 `DOM.getBoxModel` 算 `clip`。
+- 截视频帧 = 截 `<video>` 元素区域（视频流不可直接喂模型，截帧当图看）。
+- 同样过 compress 降采样 + 策略门 + image 块。
+
+#### 默认不自动截图 / 不自动取图（token 纪律）
+
+图片 token 贵（[roboflow](https://blog.roboflow.com/image-token-cost-vlm/)：1024² ≈ 1300 token，4K 5000+；[swfte](https://www.swfte.com/cheapest/vision)：Claude 1568px 截断）。**`snapshot`（a11y 文本）永远是默认主力**；`image`/`vision` 仅在 AI 明确要"看图/看渲染"时按需调。这守住 token 经济（与 `project_image_clarity` 一致）。
+
+#### 视频边界（明确）
+
+browser 工具对视频**只做两件**：① `extract` 拿 `<video>/<source>` URL；② `vision` 截当前帧。**整段理解（转录 / 抽多帧）不进 browser 工具**，甩给已有 media skill（yt-dlp）+ Bash——避免与后台下载机制（`project_background_shell`）职责重叠、撑爆模块边界。
+
 ## 5. 向后兼容
 
 - **不保留旧 9 工具名**：直接替换。理由：工具名是 LLM-facing，旧 transcript 重放不依赖工具存在（replay 只读历史 tool_result，不重新执行）。preset 白名单 / 权限规则全量替换为 3 个新名。
@@ -236,7 +289,8 @@ desktop ──→ @cjhyy/code-shell-core  （感知纯函数 flattenAxTree + Bro
 - **keymap 单测**：覆盖 Enter/Tab/Escape/方向键/F 键/组合键的 code/vk 映射。
 - **compaction 单测**：更新 `mask-browser-snapshots.test.ts` → 新工具名 + 多 tab 分组 mask。
 - **权限单测**：`browser_act` action 级分档（click→ask、scroll→allow）。
-- **真机冒烟**（必须，按 memory 规矩"测新功能必在对应 worktree 跑 app"）：在 worktree 跑 desktop，真实页面验证 select 原生下拉、press_key Tab/Enter、hover 菜单、多 tab list/switch。
+- **图片/视频单测**：`extract` 收集 `<video>` src；`image` 模式的页面内 fetch+canvas 脚本（mock）；超策略门截断提示。
+- **真机冒烟**（必须，按 memory 规矩"测新功能必在对应 worktree 跑 app"）：在 worktree 跑 desktop，真实页面验证 select 原生下拉、press_key Tab/Enter、hover 菜单、多 tab list/switch、**小红书图片 image 模式（看懂配图内容、防盗链绕过）、vision 截图/截视频帧**。
 
 ## 7. 改动落点清单
 
@@ -252,14 +306,19 @@ desktop ──→ @cjhyy/code-shell-core  （感知纯函数 flattenAxTree + Bro
 | 8 | `packages/core/.../builtin/index.ts` | 注册 3 工具 + action 级权限分流 |
 | 9 | `packages/core/.../preset/index.ts` | 白名单 + 权限规则换 3 名 |
 | 10 | `packages/core/.../context/compaction.ts` | `maskOldObservations` 改名 + 新识别逻辑 + 按 tab 分组 |
-| 11 | `packages/core/.../protocol/server.ts` | `makeBrowserBridge` 适配新接口 |
-| 12 | core/desktop 各 rebuild | core 改动后 desktop dist 依赖须 rebuild core |
+| 11 | `packages/core/.../protocol/server.ts` | `makeBrowserBridge` 适配新接口（含 image/vision、tabId） |
+| 12 | `packages/core/.../browser-bridge.ts` | `buildExtractLinksScript` 扩展加 `<video>/<source>`；图片分配 ref；新增 `fetchImages(refs)` / `screenshot(ref?)` 接口方法 |
+| 13 | `packages/desktop/.../cdp-driver.ts` | 实现 `image`（页面内 fetch+canvas）/ `vision`（captureScreenshot）；复用 renderer compress 同款降采样逻辑（抽到可共享处或在 main 侧用 sharp/canvas 等价实现） |
+| 14 | core/desktop 各 rebuild | core 改动后 desktop dist 依赖须 rebuild core |
+
+> **compress 复用注意**：现有 `compress.ts` 在 **renderer**（用浏览器 canvas）。`image`/`vision` 在 **main 进程**产出像素，main 无 DOM canvas。两种处理：①截图前用 CDP 在页面内做 canvas 降采样（`image` 模式本就在页面 fetch+canvas，顺带 resize）；②main 侧用 `sharp`/`jimp`（`image-policy.ts` 已有 jimp 兜底先例）。优先 ①（vision 截图除外，截图后在 main resize，走 ②）。
 
 ## 8. 实施顺序（建议分阶段，每阶段可验证）
 
 1. **抽包**：建 `@cjhyy/code-shell-cdp`，把现有动作平移进去（行为不变），desktop 改为消费它。先不加新动作。验证：现有 browser 工具行为不变。
 2. **补动作**：包内加 `select` / `pressKey`（取代 pressEnter）/ `hover` + keymap。core 接口同步。验证：单测 + 真机。
 3. **工具收敛**：9 → 3 语义工具，compaction 改名同步，preset 同步，action 级权限。验证：单测 + 真机。
-4. **多 tab**：core 接口加 tabId + listTabs/switchTab，desktop 路由 + listGuests。验证：真机多 tab。
+4. **图片/视频获取**：`extract` 扩展视频 URL；`image` 模式（页面 fetch+canvas+防盗链）；`vision` 模式（截图/截帧）；接现有 image 管道 + compress 降采样。验证：小红书真机看图。
+5. **多 tab**：core 接口加 tabId + listTabs/switchTab，desktop 路由 + listGuests。验证：真机多 tab。
 
-每阶段独立成 commit，便于回滚。
+每阶段独立成 commit，便于回滚。阶段 4（看图）对你优先级最高，可考虑提前到阶段 2 之后。
