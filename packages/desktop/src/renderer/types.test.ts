@@ -175,6 +175,45 @@ describe("applyStreamEvent — tool_use_start idempotency", () => {
     expect(tools[0]!.id).toBe("call_dup");
   });
 
+  // Screenshot echo: a tool_result carrying image contentBlocks (browser_observe
+  // vision/image, view_image) must surface them on the ToolMessage so the card
+  // can render thumbnails — they used to be dropped at this conversion step.
+  test("tool_result image contentBlocks are surfaced on the ToolMessage", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("tool_use_start", {
+        toolCall: { id: "shot1", toolName: "browser_observe", args: { mode: "vision" } },
+      } as any),
+      ev("tool_result", {
+        result: {
+          id: "shot1",
+          toolName: "browser_observe",
+          result: "[screenshot loaded]",
+          contentBlocks: [
+            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: "QUJD" } },
+          ],
+        },
+      } as any),
+    ]);
+    const tool = s.messages.find((m) => m.kind === "tool" && m.id === "shot1");
+    if (!tool || tool.kind !== "tool") throw new Error("no tool msg");
+    expect(tool.images).toEqual([{ mediaType: "image/jpeg", data: "QUJD" }]);
+    expect(tool.status).toBe("succeeded");
+  });
+
+  test("tool_result without image blocks leaves images undefined", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("tool_use_start", {
+        toolCall: { id: "r1", toolName: "Read", args: { file: "x" } },
+      } as any),
+      ev("tool_result", { result: { id: "r1", toolName: "Read", result: "ok" } } as any),
+    ]);
+    const tool = s.messages.find((m) => m.kind === "tool" && m.id === "r1");
+    if (!tool || tool.kind !== "tool") throw new Error("no tool msg");
+    expect(tool.images).toBeUndefined();
+  });
+
   test("duplicate agent tool_use_start does not append a second toolCall", () => {
     const dup = ev("tool_use_start", {
       agentId: "A",
