@@ -59,6 +59,7 @@ describe("appendTurnEndMessage (TODO 2.8)", () => {
     expect(s.streamingAssistantId).toBeNull();
     expect(s.streamingThinkingId).toBeNull();
   });
+
 });
 
 // ── helpers ─────────────────────────────────────────────────────────

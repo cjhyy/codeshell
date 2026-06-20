@@ -3,7 +3,7 @@
  * into a MessagesReducerState by reusing the SAME reducer the live stream
  * uses. This keeps message-folding logic single-sourced in types.ts.
  */
-import { applyStreamEvent, appendUserMessage, INITIAL_STATE, type MessagesReducerState } from "../types";
+import { applyStreamEvent, appendUserMessage, appendTurnEndMessage, INITIAL_STATE, type MessagesReducerState } from "../types";
 import type { FoldItem } from "../../preload/types";
 import { translate } from "../i18n/translate";
 import { loadUILanguage } from "../uiLanguage";
@@ -18,9 +18,16 @@ export function foldTranscript(items: FoldItem[]): MessagesReducerState {
     // returns undefined so we leave the stamps absent rather than fabricate the
     // replay-time — never stamp "now" onto history.
     const replayClock = () => item.timestamp;
-    state = item.kind === "user"
-      ? appendUserMessage(state, item.text, item.timestamp)
-      : applyStreamEvent(state, item.event, replayClock);
+    if (item.kind === "user") {
+      state = appendUserMessage(state, item.text, item.timestamp);
+    } else if (item.kind === "turn_stopped") {
+      // Rebuild the user-interrupt marker so the stopped turn renders flat
+      // (turnWasStopped finds this turn_end → no fold header). No elapsed on
+      // replay; the marker's presence is what un-folds the turn.
+      state = appendTurnEndMessage(state, "stopped");
+    } else {
+      state = applyStreamEvent(state, item.event, replayClock);
+    }
   }
   return sealOrphanedAgents(state);
 }

@@ -150,6 +150,11 @@ export type TranscriptEventType =
   | "session_meta"
   | "turn_boundary"
   | "goal_progress"
+  // User interrupted the in-flight turn (pressed Stop). Persisted so a resume
+  // can rebuild the renderer's "stopped" marker — without it the interrupted
+  // turn loses its stopped flag on reload and wrongly folds behind the
+  // "已处理 Xs ⌄" process-card header.
+  | "turn_stopped"
   | "error";
 
 export interface TranscriptEvent {

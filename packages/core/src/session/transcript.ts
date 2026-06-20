@@ -53,6 +53,19 @@ export class Transcript {
     return this.append("turn_boundary", { turnNumber: this.currentTurn });
   }
 
+  /**
+   * Mark the in-flight turn as user-interrupted (Stop). Persisted so a resume
+   * rebuilds the renderer's "stopped" marker (foldTranscript) — otherwise the
+   * interrupted turn folds behind the process-card header on reload.
+   * Idempotent: a no-op if the last event is already a turn_stopped (the loop
+   * can hit more than one abort return for a single Stop).
+   */
+  appendTurnStopped(): TranscriptEvent | undefined {
+    const last = this.events[this.events.length - 1];
+    if (last && last.type === "turn_stopped") return undefined;
+    return this.append("turn_stopped", {});
+  }
+
   appendSummary(
     summary: string,
     compactedRange: { fromTurn: number; toTurn: number; eventCount: number },

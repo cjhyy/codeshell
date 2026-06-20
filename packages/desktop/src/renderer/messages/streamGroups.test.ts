@@ -85,6 +85,44 @@ function processGroups(items: ReturnType<typeof buildStreamItems>): TurnProcessG
   return items.filter((item): item is TurnProcessGroup => item.kind === "turn_process_group");
 }
 
+function turnEnd(reason: "stopped" | "timeout" | "error" = "stopped"): Message {
+  return { kind: "turn_end", id: freshId("turn-end"), reason };
+}
+
+describe("buildStreamItems — interrupted turn (stopped)", () => {
+  // Screenshot bug: user interrupts a long turn (tools), then continues with a
+  // new message. The FIRST (interrupted) turn must be marked stopped so it
+  // renders flat, not behind the "已处理 Xs ⌄" fold header.
+  test("an interrupted-then-continued turn keeps stopped=true", () => {
+    const messages: Message[] = [
+      user("do a long thing"),
+      assistant("working…"),
+      tool("Read", 1, 5),
+      tool("Bash", 6, 9),
+      turnEnd("stopped"), // user pressed Stop here
+      user("actually just use the browser"), // continued in a new turn
+      assistant("ok"),
+      tool("browser_navigate", 20, 25),
+    ];
+    const items = buildStreamItems(messages);
+    const groups = processGroups(items);
+    // The interrupted turn's group is the first one; it must be stopped.
+    expect(groups.length).toBeGreaterThanOrEqual(1);
+    expect(groups[0]!.stopped).toBe(true);
+  });
+
+  test("turn_end stopped at the very tail (last turn) still marks that turn", () => {
+    const messages: Message[] = [
+      user("q"),
+      assistant("a"),
+      tool("Read", 1, 5),
+      turnEnd("stopped"),
+    ];
+    const groups = processGroups(buildStreamItems(messages));
+    expect(groups[0]!.stopped).toBe(true);
+  });
+});
+
 describe("buildStreamItems", () => {
   test("wraps the whole turn (lead + middle text + tools) into one process card, but leaves the final summary outside", () => {
     const lead = assistant("我先查一下。");
