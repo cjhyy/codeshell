@@ -23,5 +23,14 @@ export function parseSnapshotAppend(line: string): SnapshotAppend | null {
   const sessionId = m.params?.sessionId;
   if (typeof sessionId !== "string" || !sessionId) return null;
   if (m.params?.event === undefined) return null;
+  // steer_injected is a LIVE-only marker. The engine already persisted the
+  // steered text as a `user` message in the transcript, so a resume rebuilds
+  // that bubble from the transcript. If we ALSO snapshotted the event, resume
+  // would replay it through applyStreamEvent → appendUserMessage and the SAME
+  // steered message would render twice (the s-mqjl1uap double-bubble bug). Keep
+  // it out of the snapshot: live shows one bubble (from the event), resume shows
+  // one (from the transcript) — never both.
+  const evType = (m.params.event as { type?: unknown } | null)?.type;
+  if (evType === "steer_injected") return null;
   return { sessionId, event: m.params.event };
 }
