@@ -53,4 +53,17 @@ describe("parseSnapshotAppend", () => {
   it("returns null for malformed JSON instead of throwing", () => {
     expect(parseSnapshotAppend("{not json")).toBeNull();
   });
+
+  it("excludes steer_injected (live-only marker; transcript already has the user msg)", () => {
+    // If snapshotted, a resume would replay it AND rebuild the same user msg
+    // from the transcript → the steered message renders twice (s-mqjl1uap bug).
+    expect(
+      parseSnapshotAppend(
+        line({
+          method: "agent/streamEvent",
+          params: { sessionId: "s1", event: { type: "steer_injected", text: "也看收藏" } },
+        }),
+      ),
+    ).toBeNull();
+  });
 });
