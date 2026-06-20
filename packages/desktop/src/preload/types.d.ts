@@ -14,7 +14,11 @@ import type {
 /** One step in replaying a persisted transcript into renderer state. */
 export type FoldItem =
   | { kind: "stream"; event: StreamEvent; timestamp?: number }
-  | { kind: "user"; text: string; timestamp?: number };
+  | { kind: "user"; text: string; timestamp?: number }
+  // User interrupted this turn (Stop). Rebuilt from the core transcript's
+  // `turn_stopped` event so resume restores the "你停止了本轮" marker; without
+  // it the interrupted turn folds behind the process-card header on reload.
+  | { kind: "turn_stopped"; timestamp?: number };
 
 /**
  * The wire envelope the agent server sends for tool approvals. The

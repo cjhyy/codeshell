@@ -482,7 +482,7 @@ function turnHasDoneAssistant(
   return false;
 }
 
-/** True when the turn slice (start, end) contains a turn_end reason="stopped"
+/** True when the turn slice [start+1, end) contains a turn_end reason="stopped"
  *  — i.e. the user interrupted this turn. */
 function turnWasStopped(
   items: Array<Message | ToolGroup>,

@@ -45,10 +45,12 @@ function dedupeById<T extends { id: string }>(items: T[]): T[] {
 function TurnProcessGroupCardImpl({ group, turnEpoch }: Props) {
   const [open, setOpen] = useState(group.isLive);
 
-  // Force-collapse on turn boundary, but only for already-closed groups.
+  // Force-collapse on turn boundary, but only for already-closed groups — and
+  // never for an interrupted (stopped) turn, which must keep its produced
+  // content visible (it has no fold header at all; see showHeader below).
   useEffect(() => {
-    if (turnEpoch !== undefined && !group.isLive) setOpen(false);
-  }, [turnEpoch, group.isLive]);
+    if (turnEpoch !== undefined && !group.isLive && !group.stopped) setOpen(false);
+  }, [turnEpoch, group.isLive, group.stopped]);
 
   // Codex-style "已处理 X m Y s" header. Live turn: tick every 1s from the
   // first tool's start so the elapsed time counts up (group.durationMs is 0

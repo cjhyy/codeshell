@@ -132,6 +132,12 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
       case "error":
         items.push({ kind: "stream", event: { type: "error", error: String(d.error ?? "error") }, timestamp: ts });
         break;
+      case "turn_stopped":
+        // User interrupted this turn — rebuild the renderer's stop marker so
+        // the interrupted turn renders flat (not folded). No elapsed on replay
+        // (the in-memory live one had it; the marker alone keeps it unfolded).
+        items.push({ kind: "turn_stopped", timestamp: ts });
+        break;
       case "goal_progress":
         items.push({
           kind: "stream",

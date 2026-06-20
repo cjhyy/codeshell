@@ -309,6 +309,20 @@ export class TurnLoop {
    * `decision` / `stop`. Use this instead of `deps.hooks.emit` directly so
    * every emit carries the same context envelope.
    */
+  /**
+   * Persist a turn_stopped marker on a user Stop so a resume can rebuild the
+   * renderer's "你在 Ns 后停止了" line (the in-memory turn_end is lost on reload,
+   * which makes the interrupted turn fold behind the process-card header).
+   * Skipped for sub-agents — their signal.aborted is usually a parent abort,
+   * not a user Stop, and sub-agent turns aren't shown as interruptible. The
+   * underlying append is idempotent, so calling this at several abort returns
+   * for one Stop still writes a single marker.
+   */
+  private markStopped(): void {
+    if (this.deps.isSubAgent === true) return;
+    this.deps.transcript.appendTurnStopped();
+  }
+
   private async emitHook(
     event: HookEventName,
     data: Record<string, unknown> = {},
@@ -413,6 +427,7 @@ export class TurnLoop {
       // boundary between turns. (Mirrors Claude Code's query.ts, where the
       // aborted check short-circuits before re-entering the streaming loop.)
       if (this.config.signal?.aborted) {
+        this.markStopped();
         return { text: finalText, reason: "aborted_streaming", messages };
       }
 
@@ -495,6 +510,7 @@ export class TurnLoop {
       // proceeding into the (expensive) main model call. Belt to the loop-top
       // brace: this catches an abort that landed *inside* context management.
       if (this.config.signal?.aborted) {
+        this.markStopped();
         return { text: finalText, reason: "aborted_streaming", messages };
       }
       // No pre-llm ctx emit here: the messages-only estimate would be ~16k
@@ -563,7 +579,11 @@ export class TurnLoop {
           // AbortError. This is NOT a failure — the UI already shows the
           // "你在 Ns 后停止了" line, so emitting an error event would stack a
           // spurious red "Error:" block on top of an intentional stop.
+          // Persist a turn_stopped marker so a resume can rebuild that line
+          // (the renderer's turn_end is in-memory only; without this the
+          // interrupted turn folds behind the process-card header on reload).
           this.patchOrphanedToolUses(messages);
+          this.markStopped();
           return { text: finalText, reason: "aborted_streaming", messages };
         } else {
           this.patchOrphanedToolUses(messages);
@@ -667,6 +687,7 @@ export class TurnLoop {
 
       // Aborted?
       if (this.config.signal?.aborted) {
+        this.markStopped();
         return { text: finalText, reason: "aborted_streaming", messages };
       }
 
@@ -994,6 +1015,7 @@ export class TurnLoop {
       // per-turn scaffolding). Treat it as a clean abort, not a model_error —
       // no error event, so the UI shows only the "你停止了本轮" line.
       if (isAbortError(err) || this.config.signal?.aborted) {
+        this.markStopped();
         return { text: finalText, reason: "aborted_streaming", messages };
       }
       this.currentTurnLog.error("turn.unhandled_error", {

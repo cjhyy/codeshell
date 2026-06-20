@@ -37,6 +37,33 @@ describe("foldTranscript", () => {
     expect(foldTranscript([]).messages).toEqual([]);
   });
 
+  it("rebuilds a turn_end stopped marker from a turn_stopped FoldItem (resume un-fold)", () => {
+    // Resume bug: the renderer's turn_end is in-memory only, so an interrupted
+    // turn folds behind the process-card header on reload. The core transcript
+    // now persists a turn_stopped event → reader emits {kind:"turn_stopped"} →
+    // foldTranscript rebuilds the turn_end so the turn renders flat again.
+    const items: FoldItem[] = [
+      { kind: "user", text: "do a long thing" },
+      { kind: "stream", event: { type: "stream_request_start", turnNumber: 0 } },
+      { kind: "stream", event: { type: "tool_use_start", toolCall: { id: "t1", toolName: "Bash", args: {} } } },
+      { kind: "stream", event: { type: "tool_result", result: { id: "t1", toolName: "Bash", result: "x" } } },
+      { kind: "turn_stopped" },
+    ];
+    const state = foldTranscript(items);
+    const end = state.messages.find((m) => m.kind === "turn_end");
+    expect(end).toBeDefined();
+    expect((end as { reason: string }).reason).toBe("stopped");
+  });
+
+  it("transcriptToFoldItems maps a turn_stopped transcript event to a turn_stopped FoldItem", () => {
+    const jsonl = [
+      JSON.stringify({ id: "a", type: "message", timestamp: 1, turnNumber: 0, data: { role: "user", content: "go" } }),
+      JSON.stringify({ id: "b", type: "turn_stopped", timestamp: 2, turnNumber: 0, data: {} }),
+    ].join("\n");
+    const items = transcriptToFoldItems(jsonl);
+    expect(items.some((it) => it.kind === "turn_stopped")).toBe(true);
+  });
+
   it("stamps the ORIGINAL persisted timestamps so elapsed is real", () => {
     // The FoldItems carry the real wall-clock each event was persisted at.
     // Replay must reflect those (asked-at / answered-at), NOT the current
