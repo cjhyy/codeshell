@@ -50,6 +50,14 @@ export interface ThinkingMessage {
   agentId?: string;
 }
 
+/** A base64 image returned in a tool result (browser_observe vision/image,
+ *  view_image). Minimal renderer-local shape — we only need to render it. */
+export interface ToolImageBlock {
+  mediaType: string;
+  /** base64 (no data: prefix). */
+  data: string;
+}
+
 export interface ToolMessage {
   kind: "tool";
   id: string;
@@ -57,6 +65,8 @@ export interface ToolMessage {
   args: string; // serialized JSON snapshot at tool_use_start
   argsLive?: Record<string, unknown>; // updates while tool_use_args_delta streams
   result?: string;
+  /** Image blocks the tool returned (screenshots etc.) — rendered as thumbnails. */
+  images?: ToolImageBlock[];
   error?: string;
   status: ToolStatus;
   startedAt: number;
@@ -525,6 +535,14 @@ export function applyStreamEvent(
       // persisted end time; a missing stamp falls back to the tool's own
       // startedAt (→ 0ms span) rather than the replay clock.
       const endedAt = now() ?? undefined;
+      // Surface any image blocks the tool returned (browser_observe vision/image,
+      // view_image) so the card can show them — core streams them in the result
+      // but the UI dropped them before this. Map to the minimal local shape.
+      const images: ToolImageBlock[] | undefined = (event.result.contentBlocks ?? [])
+        .filter((b): b is typeof b & { source: { media_type: string; data: string } } =>
+          b.type === "image" && b.source?.type === "base64" && typeof b.source.data === "string",
+        )
+        .map((b) => ({ mediaType: b.source.media_type, data: b.source.data }));
       const patch = (t: ToolMessage): ToolMessage => {
         const failed =
           event.result.error !== undefined || event.result.isError === true;
@@ -532,6 +550,7 @@ export function applyStreamEvent(
         return {
           ...t,
           result: event.result.result,
+          images: images && images.length > 0 ? images : t.images,
           error: event.result.error,
           sandbox: event.result.sandbox,
           status: failed ? "failed" : "succeeded",
