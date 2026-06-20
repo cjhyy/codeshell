@@ -155,10 +155,23 @@ function StatusBadge({
       onFocus={() => setOpen(true)}
       onBlur={scheduleClose}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         {activeGoal && (
           // ◎ marker: an active persistent goal exists. Hover the dot to see it.
           <span className="text-xs text-status-running" title={t("topbar.hasActiveGoal")}>◎</span>
+        )}
+        {/* Persistent task indicator: TodoWrite tasks used to be visible ONLY on
+            hover (the popover), so users kept missing them. Show a compact
+            done/total chip inline whenever tasks exist — hover still opens the
+            full list. Hidden when there are no tasks. */}
+        {tasks && tasks.tasks.length > 0 && (
+          <span
+            className="flex items-center gap-0.5 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+            title={t("topbar.tasksTip")}
+          >
+            <span className="text-status-ok">☑</span>
+            {tasks.tasks.filter((tk) => tk.status === "completed").length}/{tasks.tasks.length}
+          </span>
         )}
         <StatusDot
           status={busy ? "running" : "idle"}

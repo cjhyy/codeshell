@@ -35,6 +35,7 @@ export const core = {
       openPanel: "打开面板",
       closePanel: "关闭面板",
       hasActiveGoal: "有活跃目标",
+      tasksTip: "任务进度(已完成/总数)——悬停看清单",
     },
     sidebar: {
       newConversation: "新对话",
@@ -109,6 +110,7 @@ export const core = {
       openPanel: "Open panel",
       closePanel: "Close panel",
       hasActiveGoal: "Active goal",
+      tasksTip: "Task progress (done/total) — hover for the list",
     },
     sidebar: {
       newConversation: "New chat",
