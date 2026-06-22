@@ -48,6 +48,7 @@ import { backgroundShellManager } from "../runtime/background-shell.js";
 import { logger } from "../logging/logger.js";
 import { cronScheduler } from "../automation/scheduler.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
+import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 
 /**
  * Resolve per-session agent config: protocol slice overrides win, else fall
@@ -96,13 +97,21 @@ const settings = settingsManager.get();
 // temperature/imageDetail/timeout/retryMaxAttempts are ClientDefaults, derived
 // inside Engine.populateModelPoolFromSettings from settings.model.temperature
 // and settings.images.detail.
-const llmConfig = {
-  provider: settings.model.provider,
-  model: settings.model.name,
-  apiKey: settings.model.apiKey ?? "",
-  baseUrl: settings.model.baseUrl,
-  maxTokens: settings.model.maxTokens,
-};
+const seedLlm = resolveLLMConfigForTag(
+  settings,
+  "text",
+  (settings as { defaults?: { text?: string } }).defaults?.text,
+);
+if (!seedLlm) {
+  console.error(
+    `[agent-server] 没有可用的文本模型连接(defaults.text=${
+      (settings as { defaults?: { text?: string } }).defaults?.text ?? "未设置"
+    })。` +
+    `请在「连接」页添加并填写凭证。`,
+  );
+  process.exit(1);
+}
+const llmConfig = seedLlm;
 
 // ─── Step 1: seed engine — populates model pool from settings ─────
 
