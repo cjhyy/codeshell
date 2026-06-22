@@ -8,6 +8,7 @@
  */
 import { describe, test, expect } from "bun:test";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
+import { validateSettings } from "../settings/schema.js";
 import type { CatalogEntry } from "../model-catalog/index.js";
 import type { ModelInstance, Credential } from "../model-catalog/resolve.js";
 
@@ -126,6 +127,24 @@ describe("modelEntriesFromConnections", () => {
       { id: "g", catalogId: "openai", tag: "text", model: "gpt-4o", credentialId: "openai-acct" },
     ];
     expect(modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!.reasoning).toBeUndefined();
+  });
+
+  test("paramValues.reasoning UNKNOWN effort round-trips AND survives validateSettings (boot path)", () => {
+    // The exact boot-crash: a connection picked an effort level the schema didn't
+    // know ("xhigh"/"max"); the mapped reasoning then flows through the settings
+    // models[] bridge into validateSettings at boot. Map must preserve it verbatim
+    // and validateSettings must accept it (effort is free-form, catalog-driven).
+    for (const effort of ["xhigh", "max"]) {
+      const insts: ModelInstance[] = [
+        { id: "g", catalogId: "openai", tag: "text", model: "gpt-5.5", credentialId: "openai-acct", paramValues: { reasoning: effort } },
+      ];
+      const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;
+      expect(e.reasoning).toEqual({ mode: "effort", effort });
+      // The bridged reasoning carried on a settings models[] entry must validate.
+      expect(() =>
+        validateSettings({ models: [{ key: e.key, model: e.model, reasoning: e.reasoning }] }),
+      ).not.toThrow();
+    }
   });
 
   test("connection with an unknown catalogId is skipped (not a crash)", () => {
