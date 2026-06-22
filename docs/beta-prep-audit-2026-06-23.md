@@ -196,6 +196,21 @@
 
 ---
 
+## 附A:bug-scan 进度(2026-06-23 第一轮,对抗式 review + 验证)
+
+三路并行只读 review(cookie capture/inject · plugin 覆盖原子性 · model catalog),逐条对抗验证后:
+
+**已修(真 bug,验证 + 测试 + 提交)**
+- cookie 抓取域围栏裸公共后缀漏配:`d="co"` 经 `target.endsWith(".co")` 误中 `github.com`。抽 `cookieDomainMatches`(要求 d 含点)+6 测(commit fc6f0409)。纵深防御,非活漏洞。
+- `restoreCookieToBrowser` 非数组 secret 静默清空登出:合法 JSON 非数组过 try/catch → clear 模式清光 cookie 不灌回。改非数组也判损坏(commit a906d8f7)。
+
+**审过判定非 bug(留档,避免重复挖)**
+- `reinstallAtomic`(update.ts):设计正确——先 rename live→backup 再装,失败回滚 dir+manifest 条目,「失败保留旧版」契约成立。`.cs-meta.json` 写失败触发的是**完整回滚到旧版**,非丢条目。
+- `pluginInstaller.ts:236-238` materialize 的 rm→cp「崩溃窗口」:finalDir 按内容 SHA 命名,崩后重试同 SHA 自愈;manifest 条目只在 cp 成功返回后才追加,无孤儿条目。
+- plugin manifest 非原子读改写竞态:仅同进程并发不同插件安装才触发;bootstrap 是 for-await 串行,UI 不并发,非 beta 可达(与 settings 跨进程同类「已接受」限制)。
+
+**待复核**:model catalog resolve/merge(id 碰撞 builtin vs user 谁胜、corrupt 用户档降级)—— 第二个 review agent 复跑中。
+
 ## 附:晚上「一遍遍找问题」循环建议方向(token 耗尽前反复跑)
 
 1. **代码正确性 bug 扫**(core + desktop):对抗式 review 找空指针/竞态/边界/错误吞没,逐个对抗验证后再记。重点新代码:catalog 写入、cookie capture/inject、plugin 覆盖升级原子性、mobile-remote 鉴权。
