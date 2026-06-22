@@ -6,8 +6,6 @@ import type { LLMClientBase } from "../llm/client-base.js";
 import type { Message, ToolDefinition, LLMResponse, StreamCallback } from "../types.js";
 import { Transcript } from "../session/transcript.js";
 import { logger, getCurrentSid } from "../logging/logger.js";
-import { ContextLimitError } from "../exceptions.js";
-import { isAbortError } from "../llm/client-base.js";
 import {
   recordLLMError,
   recordLLMRequest,
@@ -23,64 +21,10 @@ function nextReqId(): string {
 }
 
 export class ModelFacade {
-  /**
-   * Fallback clients tried in order when the primary fails with a terminal
-   * (non-retryable, non-context, non-abort) error (TODO 7.2). Empty by default.
-   */
-  private readonly fallbacks: LLMClientBase[];
-
   constructor(
     private readonly client: LLMClientBase,
     private readonly transcript: Transcript,
-    fallbacks: LLMClientBase[] = [],
-  ) {
-    this.fallbacks = fallbacks;
-  }
-
-  /**
-   * Should we try a fallback model for this error? No for cancellation
-   * (user intent), context-limit (a different model won't have more room for
-   * THIS prompt — that's the context manager's job), and retryable transient
-   * errors (the client's own withRetry already handled those before throwing).
-   * Everything else (auth failures, 5xx after retries, model-unavailable) is a
-   * candidate for switching models.
-   */
-  private shouldFallback(err: unknown): boolean {
-    if (this.fallbacks.length === 0) return false;
-    if (err instanceof ContextLimitError) return false;
-    if (isAbortError(err)) return false;
-    return true;
-  }
-
-  /**
-   * Run `fn` against the primary client; on a terminal error, retry it against
-   * each fallback client in order. Returns the first success; if every client
-   * fails, throws the LAST error (most likely the most informative).
-   */
-  private async withModelFallback(
-    fn: (client: LLMClientBase) => Promise<LLMResponse>,
-  ): Promise<LLMResponse> {
-    try {
-      return await fn(this.client);
-    } catch (primaryErr) {
-      if (!this.shouldFallback(primaryErr)) throw primaryErr;
-      let lastErr = primaryErr;
-      for (const fb of this.fallbacks) {
-        logger.warn("llm.model_fallback", {
-          from: this.client.model ?? "?",
-          to: fb.model ?? "?",
-          error: (primaryErr as Error)?.message,
-        });
-        try {
-          return await fn(fb);
-        } catch (fbErr) {
-          if (isAbortError(fbErr)) throw fbErr;
-          lastErr = fbErr;
-        }
-      }
-      throw lastErr;
-    }
-  }
+  ) {}
 
   async call(
     systemPrompt: string,
@@ -112,38 +56,36 @@ export class ModelFacade {
 
     let response: LLMResponse;
     try {
-      response = await this.withModelFallback((client) =>
-        client.createMessage({
-          systemPrompt,
-          messages,
-          tools,
-          stream: true,
-          onChunk: (chunk) => {
-            if (!onStream) return;
-            if (chunk.type === "text" && chunk.text) {
-              onStream({ type: "text_delta", text: chunk.text, tokens: chunk.tokens });
-            } else if (chunk.type === "tool_use_start" && chunk.toolCall) {
-              // Forward tool_use_start immediately so the UI can show progress
-              // while JSON args are still streaming
-              onStream({
-                type: "tool_use_start",
-                toolCall: {
-                  id: chunk.toolCall.id ?? "",
-                  toolName: chunk.toolCall.toolName ?? "",
-                  args: chunk.toolCall.args ?? {},
-                },
-              });
-            } else if (chunk.type === "tool_use_delta" && chunk.toolCall?.id) {
-              onStream({
-                type: "tool_use_args_delta",
-                toolCallId: chunk.toolCall.id,
+      response = await this.client.createMessage({
+        systemPrompt,
+        messages,
+        tools,
+        stream: true,
+        onChunk: (chunk) => {
+          if (!onStream) return;
+          if (chunk.type === "text" && chunk.text) {
+            onStream({ type: "text_delta", text: chunk.text, tokens: chunk.tokens });
+          } else if (chunk.type === "tool_use_start" && chunk.toolCall) {
+            // Forward tool_use_start immediately so the UI can show progress
+            // while JSON args are still streaming
+            onStream({
+              type: "tool_use_start",
+              toolCall: {
+                id: chunk.toolCall.id ?? "",
+                toolName: chunk.toolCall.toolName ?? "",
                 args: chunk.toolCall.args ?? {},
-              });
-            }
-          },
-          signal,
-        }),
-      );
+              },
+            });
+          } else if (chunk.type === "tool_use_delta" && chunk.toolCall?.id) {
+            onStream({
+              type: "tool_use_args_delta",
+              toolCallId: chunk.toolCall.id,
+              args: chunk.toolCall.args ?? {},
+            });
+          }
+        },
+        signal,
+      });
     } catch (err) {
       recordLLMError(sid, reqId, err, Date.now() - startMs);
       throw err;
@@ -207,15 +149,13 @@ export class ModelFacade {
 
     let response: LLMResponse;
     try {
-      response = await this.withModelFallback((client) =>
-        client.createMessage({
-          systemPrompt,
-          messages,
-          tools,
-          stream: false,
-          signal,
-        }),
-      );
+      response = await this.client.createMessage({
+        systemPrompt,
+        messages,
+        tools,
+        stream: false,
+        signal,
+      });
     } catch (err) {
       recordLLMError(sid, reqId, err, Date.now() - startMs);
       throw err;
