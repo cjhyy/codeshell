@@ -25,6 +25,7 @@ import {
   writeInstalledPlugins,
 } from "./installedPlugins.js";
 import { rewritePluginVars } from "./varRewrite.js";
+import { pruneDisabledSettingsForPlugin } from "./installer/pruneDisabled.js";
 import type {
   PluginEntrySource,
   PluginInstallEntry,
@@ -372,6 +373,9 @@ export function uninstallPlugin(
     }
   }
   const removedFromManifest = removeInstallEntries(key);
+  // Clear orphaned disable flags (disabledSkills "name:skill" /
+  // disabledPlugins "name") so a removed plugin leaves no dangling entries.
+  pruneDisabledSettingsForPlugin(pluginName);
   return { ok: removedFromManifest || removedFromDisk, removedFromManifest, removedFromDisk };
 }
 
