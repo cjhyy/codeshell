@@ -28,6 +28,17 @@ const TRANSCRIPT_MSG_CAP = 500;
 /** Bucket key for sessions that have no associated repo. */
 export const NO_REPO_KEY = "__no_repo__";
 
+/**
+ * Placeholder title a session wears until auto-titled from the first user
+ * prompt. Used BOTH as the stored default and as the "still unnamed?" test in
+ * `touchSession`, so it must be a single stable constant — never a translated
+ * string, or a UI-language switch would break the equality check and leave the
+ * title stuck. When the sidebar gains i18n, translate this at the render site
+ * only (compare against this constant, display via `t()`). The value is kept
+ * as the legacy "新对话" literal so existing stored sessions still match.
+ */
+export const DEFAULT_SESSION_TITLE = "新对话";
+
 export interface SessionSummary {
   /** Local UI session id (NOT the engine session id; see `engineSessionId`). */
   id: string;
@@ -419,7 +430,7 @@ export function createSession(
   const now = Date.now();
   const summary: SessionSummary = {
     id,
-    title: title?.trim() ? title.trim() : "新对话",
+    title: title?.trim() ? title.trim() : DEFAULT_SESSION_TITLE,
     createdAt: now,
     updatedAt: now,
   };
@@ -570,7 +581,7 @@ export function touchSession(
       const out: SessionSummary = { ...s, updatedAt: now };
       // Auto-title from first user prompt if the session is still
       // wearing the default placeholder.
-      if (firstUserText && s.title === "新对话") {
+      if (firstUserText && s.title === DEFAULT_SESSION_TITLE) {
         out.title = firstUserText.slice(0, 60);
       }
       return out;
