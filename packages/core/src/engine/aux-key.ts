@@ -1,16 +1,12 @@
 /**
- * resolveAuxKey — pick the pool key for the background/aux client. The unified
- * store's settings.defaults.auxText (a connection id, which is also the pool
- * key) wins; the legacy settings.auxModelKey is the fallback. Empty strings are
- * treated as unset. See docs/.../2026-06-15-unified-model-catalog-design.md §6.
+ * resolveAuxKey — pick the pool key for the background/aux client. Reads the
+ * unified store's settings.defaults.auxText (a connection id, also the pool
+ * key). Empty strings are treated as unset. (legacy settings.auxModelKey 已删除)
  */
 export function resolveAuxKey(settings: {
   defaults?: { auxText?: string };
-  auxModelKey?: string;
 }): string | undefined {
   const unified = settings.defaults?.auxText;
   if (unified) return unified;
-  const legacy = settings.auxModelKey;
-  if (legacy) return legacy;
   return undefined;
 }
