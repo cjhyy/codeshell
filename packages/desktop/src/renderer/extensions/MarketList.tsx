@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
+import { notifySettingsChanged } from "../settingsBus";
 
 interface Props {
   cwd: string;
@@ -60,6 +61,8 @@ export function MarketList({ cwd, onInstalled }: Props) {
   // Marketplaces currently being re-pulled (git fetch) — disables their refresh
   // button + shows a spinner so a slow clone doesn't look stuck.
   const [refreshing, setRefreshing] = useState<Set<string>>(new Set());
+  const [localBusy, setLocalBusy] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   // Marketplace install shells out to git; probe up front so we can warn before
   // the user hits a clone failure. null = not yet checked.
   const [gitOk, setGitOk] = useState<boolean | null>(null);
@@ -115,6 +118,32 @@ export function MarketList({ cwd, onInstalled }: Props) {
       setAddError(String((e as Error)?.message ?? e));
     } finally {
       setAdding(false);
+    }
+  };
+
+  const installLocal = async (kind: "dir" | "zip") => {
+    setLocalError(null);
+    const picked = await window.codeshell.pickPluginSource(kind);
+    if (!picked) return;
+    setLocalBusy(true);
+    try {
+      const res = await window.codeshell.installLocalPlugin({ kind: picked.kind, path: picked.path });
+      if (!res.ok) {
+        setLocalError(res.error ?? t("ext.market.localInstallFailed"));
+        return;
+      }
+      // Hot-reload hooks into running sessions; skills come via the scanner's
+      // per-turn mtime key. onInstalled refreshes any installed-plugin views.
+      notifySettingsChanged();
+      onInstalled();
+      void alert({
+        title: t("ext.market.localInstalledTitle"),
+        message: t("ext.market.localInstalledMsg", { name: res.name }),
+      });
+    } catch (e) {
+      setLocalError(String((e as Error)?.message ?? e));
+    } finally {
+      setLocalBusy(false);
     }
   };
 
@@ -216,11 +245,36 @@ export function MarketList({ cwd, onInstalled }: Props) {
     </div>
   );
 
+  const localInstall = (
+    <div className="mb-3 flex flex-wrap items-center gap-2">
+      <span className="text-xs text-muted-foreground">{t("ext.market.localLabel")}</span>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={localBusy}
+        onClick={() => void installLocal("dir")}
+      >
+        {t("ext.market.localFromDir")}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={localBusy}
+        onClick={() => void installLocal("zip")}
+      >
+        {t("ext.market.localFromZip")}
+      </Button>
+      {localBusy && <span className="text-xs text-muted-foreground">{t("ext.market.localInstalling")}</span>}
+      {localError && <span className="text-xs text-status-err">{localError}</span>}
+    </div>
+  );
+
   if (markets.length === 0)
     return (
       <>
         {gitBanner}
         {addForm}
+        {localInstall}
         <div className="p-4 text-sm text-muted-foreground">{t("ext.market.empty")}</div>
       </>
     );
@@ -229,6 +283,7 @@ export function MarketList({ cwd, onInstalled }: Props) {
     <>
       {gitBanner}
       {addForm}
+      {localInstall}
       <ul className="space-y-1">
         {markets.map((m) => (
           <li

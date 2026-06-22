@@ -132,6 +132,7 @@ import {
   removeMarketplaceForUi,
   refreshMarketplaceForUi,
   installPluginForUi,
+  installLocalPluginForUi,
 } from "./marketplace-service.js";
 import {
   listCapabilities,
@@ -1179,6 +1180,11 @@ ipcMain.handle(
   async (_e, pluginName: string, marketplaceName: string) =>
     installPluginForUi(pluginName, marketplaceName),
 );
+ipcMain.handle(
+  "plugins:installLocal",
+  async (_e, input: { kind: "dir" | "zip"; path: string }) =>
+    installLocalPluginForUi(input),
+);
 ipcMain.handle("skills:read", async (_e, filePath: string) => readSkillBody(filePath));
 ipcMain.handle("skills:checkUpdate", async (_e, filePath: string) =>
   checkSkillUpdateEntry(filePath),
@@ -1612,6 +1618,29 @@ ipcMain.handle("dialog:pickSkillDir", async (): Promise<{ path: string; name: st
   const selected = res.filePaths[0];
   return { path: selected, name: basename(selected) };
 });
+
+ipcMain.handle(
+  "dialog:pickPluginSource",
+  async (
+    _e,
+    kind: "dir" | "zip",
+  ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> => {
+    const res =
+      kind === "zip"
+        ? await dialog.showOpenDialog({
+            title: "选择插件压缩包",
+            properties: ["openFile"],
+            filters: [{ name: "Zip 压缩包", extensions: ["zip"] }],
+          })
+        : await dialog.showOpenDialog({
+            title: "选择插件文件夹",
+            properties: ["openDirectory"],
+          });
+    if (res.canceled || res.filePaths.length === 0) return null;
+    const selected = res.filePaths[0];
+    return { kind, path: selected, name: basename(selected) };
+  },
+);
 
 ipcMain.handle("dialog:pickGitBinary", async (): Promise<string | null> => {
   const res = await dialog.showOpenDialog({

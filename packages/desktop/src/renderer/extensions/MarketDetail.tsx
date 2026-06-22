@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAlert } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
+import { notifySettingsChanged } from "../settingsBus";
 
 interface Props {
   cwd: string;
@@ -73,6 +74,10 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
       // Version unknown until the next listPlugins round-trip — empty string
       // marks "installed, version pending" (the chip just omits the number).
       setInstalled((prev) => new Map(prev).set(pluginName, ""));
+      // Hot-reload plugin hooks into already-running sessions (App.tsx →
+      // configure({reloadSettings}) → worker reloadHooks). Skills come for free
+      // via the scanner's per-turn mtime cache key; hooks need this nudge.
+      notifySettingsChanged();
       onInstalled();
     } catch (e) {
       void alert({ title: t("ext.market.installFailedTitle"), message: String((e as Error)?.message ?? e) });

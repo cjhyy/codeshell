@@ -511,6 +511,14 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("marketplace:refresh", name),
   installPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:install", pluginName, marketplaceName),
+  pickPluginSource: (
+    kind: "dir" | "zip",
+  ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> =>
+    ipcRenderer.invoke("dialog:pickPluginSource", kind),
+  installLocalPlugin: (
+    input: { kind: "dir" | "zip"; path: string },
+  ): Promise<{ ok: true; name: string } | { ok: false; error?: string }> =>
+    ipcRenderer.invoke("plugins:installLocal", input),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
   checkSkillUpdate: (filePath: string) =>
     ipcRenderer.invoke("skills:checkUpdate", filePath),

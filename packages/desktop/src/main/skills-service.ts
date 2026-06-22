@@ -10,7 +10,7 @@
  * here mirrors core's SkillDefinition so we keep them in lockstep.
  */
 
-import { scanSkills, type SkillDefinition } from "@cjhyy/code-shell-core";
+import { scanSkills, invalidateSkillCache, type SkillDefinition } from "@cjhyy/code-shell-core";
 import { assertCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
@@ -108,6 +108,10 @@ export async function installSkillFromDirectory(
     recursive: true,
     filter: (src) => !path.basename(src).startsWith(".git"),
   });
+
+  // The dir-mtime cache key (core scanner) busts on the new child, but clear
+  // explicitly too so main's own listSkills() reflects the install immediately.
+  invalidateSkillCache();
 
   return {
     name,

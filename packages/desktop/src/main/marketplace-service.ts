@@ -22,8 +22,10 @@ import {
   refreshMarketplace,
   removeMarketplace,
   installPlugin,
+  installLocalPlugin,
   parseMarketplaceInput,
   deriveMarketplaceName,
+  invalidateSkillCache,
 } from "@cjhyy/code-shell-core";
 
 /**
@@ -152,5 +154,34 @@ export async function installPluginForUi(
     throw new Error("installPluginForUi requires marketplaceName");
   }
   const res = await installPlugin(pluginName, marketplaceName);
+  if (res.ok) {
+    // A freshly-installed plugin may ship skills; bust the scanner cache so the
+    // running session's next turn sees them without a restart. The renderer
+    // additionally dispatches "codeshell:settings-changed" to reload plugin
+    // hooks across active sessions.
+    invalidateSkillCache();
+  }
   return res.ok ? { ok: true } : { ok: false, error: humanizeGitError(res.error) };
+}
+
+/**
+ * Install a plugin from a local directory or a .zip archive (global scope —
+ * plugins are not project-scoped). Main owns Date.now (core scripts cannot use
+ * it), so we stamp installedAt here. On success bust the skill cache like the
+ * marketplace path; the renderer fires "codeshell:settings-changed" to hot-load
+ * any hooks the plugin ships.
+ */
+export async function installLocalPluginForUi(
+  input: { kind: "dir" | "zip"; path: string },
+): Promise<{ ok: true; name: string } | { ok: false; error?: string }> {
+  if (!input || (input.kind !== "dir" && input.kind !== "zip") || typeof input.path !== "string" || !input.path) {
+    throw new Error("installLocalPluginForUi requires { kind: 'dir'|'zip', path }");
+  }
+  try {
+    const { name } = await installLocalPlugin(input, new Date().toISOString());
+    invalidateSkillCache();
+    return { ok: true, name };
+  } catch (e) {
+    return { ok: false, error: humanizeGitError(String(e instanceof Error ? e.message : e)) };
+  }
 }

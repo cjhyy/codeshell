@@ -31,7 +31,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useConfirm, useAlert } from "../ui/DialogProvider";
 import { Markdown } from "../Markdown";
-import { writeSettings } from "../settingsBus";
+import { writeSettings, notifySettingsChanged } from "../settingsBus";
 import { useT } from "../i18n/I18nProvider";
 
 function skillSourceBadgeClass(source: string): string {
@@ -550,6 +550,10 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
             activeRepoPath={activeRepoPath}
             onInstalled={() => {
               void refresh();
+              // Make the just-installed skill live in running sessions without
+              // a restart: scanner picks it up via the per-turn mtime cache key,
+              // and this nudge reloads any plugin hooks too.
+              notifySettingsChanged();
               setSelection({ kind: "empty" });
             }}
           />

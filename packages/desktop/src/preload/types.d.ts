@@ -726,6 +726,14 @@ export interface CodeshellApi {
     pluginName: string,
     marketplaceName: string,
   ): Promise<{ ok: boolean; error?: string }>;
+  /** Open a native picker for a local plugin source (a directory or a .zip). */
+  pickPluginSource(
+    kind: "dir" | "zip",
+  ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null>;
+  /** Install a plugin from a local directory or .zip (global scope). */
+  installLocalPlugin(
+    input: { kind: "dir" | "zip"; path: string },
+  ): Promise<{ ok: true; name: string } | { ok: false; error?: string }>;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
   searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
   readSkillBody(filePath: string): Promise<string>;
