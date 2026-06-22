@@ -59,7 +59,9 @@ type InjectResult =
 /** 内存会话 allow 集(每 Engine 一份,与 UseCredential 分开:注入是独立动作)。 */
 const injectSessionAllowByEngine = new Map<string, SessionCredentialAllow>();
 function sessionAllowFor(ctx?: ToolContext): SessionCredentialAllow {
-  const key = ctx?.sessionId ?? "__nosession__";
+  // 同 UseCredential:无 sessionId 时绝不共享全局桶,返回一次性 Set,避免跨上下文串台。
+  if (!ctx?.sessionId) return new Set();
+  const key = ctx.sessionId;
   let set = injectSessionAllowByEngine.get(key);
   if (!set) {
     set = new Set();

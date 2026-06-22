@@ -15,6 +15,7 @@
 import { writeFileSync, existsSync, readdirSync, statSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
 import type { ToolDefinition } from "../types.js";
 import type { ToolContext } from "../tool-system/context.js";
 import { CredentialStore } from "./store.js";
@@ -107,7 +108,12 @@ export function sweepStaleCredentialCookies(now = Date.now()): void {
 /** 内存会话 allow 集:每个 Engine 一份(从 ctx.sessionId 键)。纯内存,关进程即忘。 */
 const sessionAllowByEngine = new Map<string, SessionCredentialAllow>();
 function sessionAllowFor(ctx?: ToolContext): SessionCredentialAllow {
-  const key = ctx?.sessionId ?? "__nosession__";
+  // 无 sessionId(headless / 临时 ToolContext / 某些子代理)绝不能共享一个
+  // 全局 "__nosession__" 桶 —— 否则一个上下文里「本会话记住」的批准会被
+  // 任意其它无 sessionId 的上下文复用,造成跨会话凭证串台。这种情况下返回
+  // 一个一次性 Set(不入 map):取用本身正常,但「记住」对它失效,每次重新过门。
+  if (!ctx?.sessionId) return new Set();
+  const key = ctx.sessionId;
   let set = sessionAllowByEngine.get(key);
   if (!set) {
     set = new Set();
@@ -181,7 +187,12 @@ export async function useCredentialTool(
         error: `凭证「${cred.label}」的 cookie 为空或已失效,请在凭证页对该账号点「重拓」(重新登录后重新拓取)。`,
       });
     }
-    const file = join(tmpdir(), `${COOKIE_FILE_PREFIX}${safe(cred.id)}-${process.pid}.txt`);
+    // Unique per write: id + pid alone collides when two concurrent UseCredential
+    // calls (the tool is concurrency-safe) materialize the same credential in the
+    // same process — the second write would clobber the first and a caller could
+    // read another account's cookies. A random component makes each file distinct.
+    // Prefix is unchanged so the 30-min startup sweep still matches & cleans them.
+    const file = join(tmpdir(), `${COOKIE_FILE_PREFIX}${safe(cred.id)}-${process.pid}-${randomUUID()}.txt`);
     try {
       writeFileSync(file, formatNetscapeCookies(jar), { mode: 0o600 });
     } catch (e) {

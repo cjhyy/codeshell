@@ -11,8 +11,8 @@
 // for the chunk-replacement phase (compute_replacements, apply_replacements).
 
 import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { existsSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { Hunk, PlannedFileChange, UpdateFileChunk } from "./types.js";
 import { seekSequence } from "./seek-sequence.js";
 import { detectEol, toLf, applyEol } from "../eol.js";
@@ -309,8 +309,58 @@ async function writeChange(change: PlannedFileChange): Promise<void> {
 
 // ─── helpers ──────────────────────────────────────────────────────
 
+/**
+ * Resolve a patch-relative (or absolute) path against cwd, then HARD-ENFORCE
+ * that the result stays inside cwd.
+ *
+ * This is the applier's own containment guard, independent of the executor-level
+ * pathPolicy. apply-patch is reachable with the path gate bypassed (e.g.
+ * bypassPermissions, or a direct call), so the last line of defense lives here.
+ *
+ * Containment is checked against the REAL paths: we realpath cwd and walk the
+ * target up to its nearest existing ancestor and realpath that. This defeats a
+ * symlink planted inside cwd that points outside — a plain string `resolve()`
+ * would look contained while the write follows the link out.
+ */
 function resolveAgainst(p: string, cwd: string): string {
-  return isAbsolute(p) ? p : resolve(cwd, p);
+  const resolved = isAbsolute(p) ? p : resolve(cwd, p);
+  const realCwd = nearestRealPath(cwd);
+  const realTarget = nearestRealPath(resolved);
+  if (!isInside(realTarget, realCwd)) {
+    throw new Error(
+      `Refusing to apply patch outside the working directory: "${p}" resolves to "${realTarget}", which escapes "${realCwd}".`,
+    );
+  }
+  return resolved;
+}
+
+/**
+ * Realpath the nearest existing ancestor of `abs`, then re-attach the
+ * not-yet-existing trailing segments. Mirrors path-policy.safeRealpath so
+ * symlinked ancestors are resolved even when the leaf doesn't exist yet.
+ */
+function nearestRealPath(abs: string): string {
+  let candidate = abs;
+  const segments: string[] = [];
+  for (let i = 0; i < 64; i++) {
+    try {
+      const real = realpathSync(candidate);
+      if (segments.length === 0) return real;
+      return resolve(real, ...segments.reverse());
+    } catch {
+      const parent = dirname(candidate);
+      if (parent === candidate) return abs;
+      segments.push(candidate.slice(parent.length + (parent.endsWith(sep) ? 0 : 1)));
+      candidate = parent;
+    }
+  }
+  return abs;
+}
+
+function isInside(child: string, parent: string): boolean {
+  if (child === parent) return true;
+  const p = parent.endsWith(sep) ? parent : parent + sep;
+  return child.startsWith(p);
 }
 
 async function safeStat(path: string) {
