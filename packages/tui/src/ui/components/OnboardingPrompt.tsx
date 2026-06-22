@@ -103,25 +103,16 @@ export function OnboardingPrompt({
     };
 
     appendOnboardingResult({
-      activeKey: active.key,
-      activeMirror: {
-        provider: onboardingResult.provider,
-        model: onboardingResult.model,
-        apiKey: onboardingResult.apiKey,
-        baseUrl: onboardingResult.baseUrl,
-      },
-      addedProvider: result.addedProvider
-        ? {
-            key: result.addedProvider.key,
-            label: result.addedProvider.label,
-            kind: result.addedProvider.kind,
-            baseUrl: result.addedProvider.baseUrl,
-            apiKey: result.addedProvider.apiKey,
-            protocol: result.addedProvider.protocol,
-            modelsPath: result.addedProvider.modelsPath,
-          }
-        : undefined,
-      addedModels: result.addedModels,
+      models: result.addedModels.map((m) => ({
+        instanceId: m.key,
+        // provider kind → catalogId mapping happens in core; prefer the
+        // explicit added-provider kind, fall back to the model's own provider.
+        kind: result.addedProvider?.kind ?? m.provider,
+        model: m.model,
+        apiKey: m.apiKey,
+        baseUrl: m.baseUrl,
+      })),
+      activeId: result.activeModelKey ?? result.addedModels[0]?.key ?? "",
     });
 
     if (picks.size >= 2) {

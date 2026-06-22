@@ -171,6 +171,17 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
       textPreset("ollama", "deepseek-r1", "DeepSeek R1"),
     ],
   },
+  {
+    id: "custom",
+    tag: "text",
+    adapterKind: "openai",
+    protocol: "openai-compat",
+    displayName: "Custom (OpenAI-compatible)",
+    description: "任意 OpenAI 兼容端点;baseUrl/model 由连接自带。",
+    defaultBaseUrl: "",
+    needsKey: true,
+    modelPresets: [],
+  },
   // ─── image ───
   {
     id: "openai-images",
