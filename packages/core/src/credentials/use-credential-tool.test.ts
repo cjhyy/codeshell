@@ -131,4 +131,74 @@ describe("UseCredential tool", () => {
     const d = useCredentialToolDefFor(cwd).description;
     expect(d).toContain("figma (token)");
   });
+
+  test("two cookie materializations of the same credential get distinct files (no clobber)", async () => {
+    const jar = JSON.stringify([
+      { name: "web_session", value: "abc", domain: ".xiaohongshu.com", secure: true, path: "/" },
+    ]);
+    new CredentialStore(cwd).save("user", {
+      id: "xhs__accountA",
+      type: "cookie",
+      label: "账号A",
+      secret: jar,
+      meta: { platform: "xhs", domain: "xiaohongshu.com" },
+    });
+    const a = parse(await useCredentialTool({ id: "xhs__accountA" }, ctxWith(cwd, "允许本次")));
+    const b = parse(await useCredentialTool({ id: "xhs__accountA" }, ctxWith(cwd, "允许本次")));
+    expect(a.kind).toBe("cookie");
+    expect(b.kind).toBe("cookie");
+    // Same credential + same pid must NOT collide on one path.
+    expect(a.cookiesFile).not.toBe(b.cookiesFile);
+    expect(existsSync(a.cookiesFile as string)).toBe(true);
+    expect(existsSync(b.cookiesFile as string)).toBe(true);
+    rmSync(a.cookiesFile as string, { force: true });
+    rmSync(b.cookiesFile as string, { force: true });
+  });
+});
+
+describe("UseCredential session-allow isolation (no sessionId must not share)", () => {
+  let home: string;
+  let cwd: string;
+  let prevHome: string | undefined;
+
+  beforeEach(() => {
+    prevHome = process.env.HOME;
+    home = mkdtempSync(join(tmpdir(), "cs-uc-iso-home-"));
+    cwd = mkdtempSync(join(tmpdir(), "cs-uc-iso-cwd-"));
+    process.env.HOME = home;
+    __resetCredentialSessionAllowForTests();
+  });
+  afterEach(() => {
+    process.env.HOME = prevHome;
+    rmSync(home, { recursive: true, force: true });
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  // ctx with NO sessionId, and an ask that records how many times it was asked
+  // and returns "本会话都允许" (session-remember) each time.
+  function ctxNoSession(asks: { n: number }): ToolContext {
+    return {
+      cwd,
+      askUser: async () => {
+        asks.n++;
+        return "本会话都允许";
+      },
+    } as unknown as ToolContext;
+  }
+
+  test("session-remember in one no-session context does NOT auto-approve a later no-session context", async () => {
+    new CredentialStore(cwd).save("user", { id: "figma", type: "token", label: "Figma", secret: "tok-123" });
+
+    const asks = { n: 0 };
+    // First no-session call: user picks "本会话都允许".
+    const out1 = parse(await useCredentialTool({ id: "figma" }, ctxNoSession(asks)));
+    expect(out1).toEqual({ kind: "value", value: "tok-123" });
+    expect(asks.n).toBe(1);
+
+    // Second independent no-session call MUST be asked again — the prior
+    // approval must NOT leak across contexts via a shared "__nosession__" bucket.
+    const out2 = parse(await useCredentialTool({ id: "figma" }, ctxNoSession(asks)));
+    expect(out2).toEqual({ kind: "value", value: "tok-123" });
+    expect(asks.n).toBe(2);
+  });
 });
