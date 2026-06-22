@@ -14,6 +14,17 @@ describe("resolveUninstallTarget", () => {
     ).toEqual({ uninstallable: true, kind: "local", pluginName: "mimi-video" });
   });
 
+  // Regression: listPlugins splits "mimi-video@local" → marketplace === "local"
+  // (a truthy string, NOT null). The old `!p.marketplace` check let this fall
+  // through to the marketplace path, which deleted the cache dir and left the
+  // real ~/.code-shell/plugins/mimi-video intact — so uninstall appeared to do
+  // nothing and reinstall reported "already installed".
+  it("routes marketplace==='local' to the local path (the real runtime value)", () => {
+    expect(
+      resolveUninstallTarget({ name: "mimi-video", installKey: "mimi-video@local", marketplace: "local" }),
+    ).toEqual({ uninstallable: true, kind: "local", pluginName: "mimi-video" });
+  });
+
   it("resolves a local plugin whose installKey is the bare name", () => {
     expect(
       resolveUninstallTarget({ name: "mine", installKey: "mine", marketplace: null }),

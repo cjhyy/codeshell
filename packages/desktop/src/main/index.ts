@@ -1652,7 +1652,12 @@ ipcMain.handle(
           });
     if (res.canceled || res.filePaths.length === 0) return null;
     const selected = res.filePaths[0];
-    return { kind, path: selected, name: basename(selected) };
+    // For a zip, strip the ".zip" extension so the derived name matches the
+    // installed plugin name (e.g. "mimi-video-0.2.0.zip" → "mimi-video-0.2.0").
+    // The picker name is only a hint for the UI's same-name pre-check; core
+    // still derives the authoritative name from the plugin manifest at install.
+    const name = kind === "zip" ? basename(selected, extname(selected)) : basename(selected);
+    return { kind, path: selected, name };
   },
 );
 

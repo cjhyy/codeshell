@@ -17,14 +17,18 @@ export type UninstallTarget =
  * marketplaceName) — both halves come from splitting the install key
  * `name@marketplace`.
  *
- * Plugins installed locally or via direct GitHub have `marketplace === null`.
- * Their install key is `name@local` (or just the bare name), and core's
- * uninstallPluginByName(name) handles them — so they ARE uninstallable, just
- * via a different path (kind: "local").
+ * Plugins installed locally carry the marketplace tag "local" — their install
+ * key is `name@local`, so listPlugins splits it to marketplace === "local"
+ * (NOT null). A bare name with no "@" is also local. core's
+ * uninstallPluginByName(name) removes the real ~/.code-shell/plugins/<name> dir
+ * (kind: "local"). The earlier `!p.marketplace` check missed the "local" string
+ * — truthy — so it wrongly routed to the marketplace path, whose uninstall
+ * targets the cache dir and left the real local dir intact (the "uninstall did
+ * nothing, reinstall says already-installed" bug).
  */
 export function resolveUninstallTarget(p: UninstallablePlugin): UninstallTarget {
   const at = p.installKey.lastIndexOf("@");
-  if (!p.marketplace) {
+  if (!p.marketplace || p.marketplace === "local") {
     // `name@local` → strip the suffix; otherwise the key is the bare name.
     const pluginName = at > 0 ? p.installKey.slice(0, at) : p.installKey;
     return { uninstallable: true, kind: "local", pluginName };
