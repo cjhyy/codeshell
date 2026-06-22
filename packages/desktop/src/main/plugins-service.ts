@@ -17,6 +17,7 @@
 import {
   listInstalled,
   uninstallPlugin,
+  uninstallPluginByName,
   updatePluginByName,
   checkPluginUpdate,
   describePluginContent,
@@ -162,6 +163,20 @@ export function uninstallPluginEntry(
     throw new Error("uninstallPluginEntry requires marketplaceName");
   }
   return uninstallPlugin(pluginName, marketplaceName);
+}
+
+/**
+ * Uninstall a locally-installed (or direct-GitHub) plugin — these have no
+ * marketplace key, so core's uninstallPluginByName(name) removes the plugin
+ * dir + its `name@local` manifest entry. `name` is the bare plugin name the
+ * renderer derives from the install key (see resolveUninstallTarget).
+ * Throws on bad input so the IPC layer surfaces a clear error.
+ */
+export function uninstallLocalPluginEntry(name: string): void {
+  if (typeof name !== "string" || !name) {
+    throw new Error("uninstallLocalPluginEntry requires a plugin name");
+  }
+  uninstallPluginByName(name);
 }
 
 /**

@@ -98,7 +98,11 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     if (!ok) return;
     setBusy(p.installKey);
     try {
-      await window.codeshell.uninstallPlugin(target.pluginName, target.marketplaceName);
+      if (target.kind === "local") {
+        await window.codeshell.uninstallLocalPlugin(target.pluginName);
+      } else {
+        await window.codeshell.uninstallPlugin(target.pluginName, target.marketplaceName);
+      }
       setReloadKey((k) => k + 1);
       onChanged();
     } catch (e) {
