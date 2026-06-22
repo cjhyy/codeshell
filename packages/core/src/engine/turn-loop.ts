@@ -1158,44 +1158,57 @@ export class TurnLoop {
    * Prevents model confusion on the next turn.
    */
   private patchOrphanedToolUses(messages: Message[]): void {
-    // Find the last assistant message with tool_use blocks
-    for (let i = messages.length - 1; i >= 0; i--) {
+    // Pre-compute every answered tool_use id across the WHOLE array, then scan
+    // forward and patch EVERY assistant message with a gap — not just the most
+    // recent one. The old version scanned backward and returned at the first
+    // all-answered assistant message, so when several earlier turns each left
+    // orphaned tool_uses (multi-turn API failures) only the latest got patched
+    // and the rest stayed unpaired → a 400 on the next call / on resume.
+    const answeredIds = new Set<string>();
+    for (const msg of messages) {
+      if (!Array.isArray(msg.content)) continue;
+      for (const block of msg.content) {
+        if (block.type === "tool_result" && block.tool_use_id) {
+          answeredIds.add(block.tool_use_id);
+        }
+      }
+    }
+
+    let totalPatched = 0;
+    for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
       if (msg.role !== "assistant" || !Array.isArray(msg.content)) continue;
 
-      const toolUseIds: string[] = [];
+      const orphanedIds: string[] = [];
       for (const block of msg.content) {
-        if (block.type === "tool_use" && block.id) toolUseIds.push(block.id);
-      }
-      if (toolUseIds.length === 0) continue;
-
-      // Check if all tool_use IDs have corresponding tool_results
-      const answeredIds = new Set<string>();
-      for (let j = i + 1; j < messages.length; j++) {
-        const rm = messages[j];
-        if (!Array.isArray(rm.content)) continue;
-        for (const block of rm.content) {
-          if (block.type === "tool_result" && block.tool_use_id) {
-            answeredIds.add(block.tool_use_id);
-          }
+        if (block.type === "tool_use" && block.id && !answeredIds.has(block.id)) {
+          orphanedIds.push(block.id);
         }
       }
+      if (orphanedIds.length === 0) continue;
 
-      const orphanedIds = toolUseIds.filter((id) => !answeredIds.has(id));
-      if (orphanedIds.length === 0) return;
-
-      // Inject synthetic error results
+      // Synthetic error results, spliced in RIGHT AFTER the offending assistant
+      // message (not appended to the end) so each tool_use is paired in place.
+      // is_error must be set: the Anthropic provider only emits is_error when
+      // the flag is present, otherwise the model reads the cancellation as plain
+      // text output and assumes the tool succeeded.
       const errorBlocks: ContentBlock[] = orphanedIds.map((id) => ({
         type: "tool_result" as const,
         tool_use_id: id,
         content: "Error: Tool execution was cancelled because the previous API call failed.",
+        is_error: true,
       }));
-      messages.push({ role: "user", content: errorBlocks });
+      messages.splice(i + 1, 0, { role: "user", content: errorBlocks });
+      for (const id of orphanedIds) answeredIds.add(id);
+      totalPatched += orphanedIds.length;
+      i += 1; // skip the message we just spliced in
+    }
+
+    if (totalPatched > 0) {
       this.currentTurnLog.warn("turn.patched_orphaned_tool_uses", {
         cat: "turn",
-        count: orphanedIds.length,
+        count: totalPatched,
       });
-      return; // Only patch the most recent orphaned set
     }
   }
 }

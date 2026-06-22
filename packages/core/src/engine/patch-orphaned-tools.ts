@@ -92,6 +92,9 @@ export function patchOrphanedToolUses(messages: Message[]): PatchOrphanedSummary
       type: "tool_result" as const,
       tool_use_id: id,
       content: SYNTHETIC_ERROR_TEXT,
+      // Flag as an error so the Anthropic provider marks it is_error; otherwise
+      // the model reads the synthetic result as a successful tool output.
+      is_error: true,
     }));
     messages.splice(i + 1, 0, { role: "user", content: errorBlocks });
 

@@ -1884,38 +1884,38 @@ export class Engine {
     );
     const fileHistory = FileHistory.loadFromDir(sessionDir);
 
-    this.hooks.register(
-      "on_tool_start",
-      async (context) => {
-        const toolName = context.data?.toolName as string;
-        const args = context.data?.args as Record<string, unknown> | undefined;
-        // Tag snapshots with the current turn (stamped above before any tool
-        // runs) so turn-level /undo can revert just this user message's edits.
-        const turnSeq = session.state.turnSeq;
-        if ((toolName === "Write" || toolName === "Edit") && args?.file_path) {
-          const path = args.file_path as string;
-          // saveSnapshot returns null when the file does not exist yet — this
-          // hook runs BEFORE the tool, so a null here means the turn is CREATING
-          // the file. Record it (idempotent per turn) so /undo can delete it and
-          // /redo can recreate it.
-          if (fileHistory.saveSnapshot(path, turnSeq) === null && turnSeq !== undefined) {
-            fileHistory.recordCreated(path, turnSeq);
-          }
-        } else if (toolName === "ApplyPatch" && typeof args?.patch === "string") {
-          // ApplyPatch mutates files too, so /undo must see them. Snapshot every
-          // existing file the patch updates or deletes (adds have no prior
-          // content). Resolve relative patch paths against the engine cwd, the
-          // same base ApplyPatch itself uses.
-          const cwd = this.config.cwd ?? process.cwd();
-          for (const target of patchBackupTargets(args.patch, cwd)) {
-            fileHistory.saveSnapshot(target, turnSeq);
-          }
+    // Keep a reference so we can unregister in the finally below. Registering an
+    // anonymous handler every run() leaks: unregister matches by handler
+    // identity, so without a stored reference each run stacks another identical
+    // on_tool_start handler that fires (and re-snapshots) on every tool forever.
+    const fileHistoryHandler: HookHandler = async (context) => {
+      const toolName = context.data?.toolName as string;
+      const args = context.data?.args as Record<string, unknown> | undefined;
+      // Tag snapshots with the current turn (stamped above before any tool
+      // runs) so turn-level /undo can revert just this user message's edits.
+      const turnSeq = session.state.turnSeq;
+      if ((toolName === "Write" || toolName === "Edit") && args?.file_path) {
+        const path = args.file_path as string;
+        // saveSnapshot returns null when the file does not exist yet — this
+        // hook runs BEFORE the tool, so a null here means the turn is CREATING
+        // the file. Record it (idempotent per turn) so /undo can delete it and
+        // /redo can recreate it.
+        if (fileHistory.saveSnapshot(path, turnSeq) === null && turnSeq !== undefined) {
+          fileHistory.recordCreated(path, turnSeq);
         }
-        return {};
-      },
-      100,
-      "file_history_backup",
-    );
+      } else if (toolName === "ApplyPatch" && typeof args?.patch === "string") {
+        // ApplyPatch mutates files too, so /undo must see them. Snapshot every
+        // existing file the patch updates or deletes (adds have no prior
+        // content). Resolve relative patch paths against the engine cwd, the
+        // same base ApplyPatch itself uses.
+        const cwd = this.config.cwd ?? process.cwd();
+        for (const target of patchBackupTargets(args.patch, cwd)) {
+          fileHistory.saveSnapshot(target, turnSeq);
+        }
+      }
+      return {};
+    };
+    this.hooks.register("on_tool_start", fileHistoryHandler, 100, "file_history_backup");
 
     // Hook: agent start
     await this.emitHook("on_agent_start", {
@@ -2092,8 +2092,26 @@ export class Engine {
           while (!aborted && asyncAgentRegistry.hasRunningForSession(sid)) {
             aborted = await this.waitForBackgroundAgentChange(sid, options?.signal);
           }
-          const pending = notificationQueue.drainAll(sid);
-          if (pending.length === 0) break;
+          let pending = notificationQueue.drainAll(sid);
+          if (aborted && pending.length === 0) {
+            // Abort race: an agent calls markCompleted (registry notify) and only
+            // THEN enqueue (queue notify) as two separate statements. If the abort
+            // fired before that agent's completion `.then` ran, the while above
+            // exited on `aborted`, this drainAll caught nothing, and a naive
+            // `break` here would drop the agent's output. Give still-settling
+            // agents a bounded window to finish enqueuing, then drain once more.
+            // Each wait is timeout-bounded so a genuinely stuck (never-completing)
+            // agent can't hang abort cleanup forever — we'd rather lose nothing in
+            // the common case and not hang in the pathological one.
+            for (let i = 0; i < 20 && asyncAgentRegistry.hasRunningForSession(sid); i++) {
+              const changed = await this.waitForBackgroundAgentChangeOrTimeout(sid, 25);
+              if (!changed) break; // timed out with no state change → stop waiting
+            }
+            pending = notificationQueue.drainAll(sid);
+            if (pending.length === 0) break;
+          } else if (pending.length === 0) {
+            break;
+          }
           const injected: Message = {
             role: "user",
             content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
@@ -2112,6 +2130,9 @@ export class Engine {
       if (goalHookHandler) this.hooks.unregister("on_stop", goalHookHandler);
       if (this.activeGoalHook === goalHookHandler) this.activeGoalHook = null;
       if (this.activeTurnLoop === turnLoop) this.activeTurnLoop = null;
+      // Run-scoped too: this handler is re-registered every run(), so it must be
+      // dropped here or it stacks duplicates that re-snapshot on every tool.
+      this.hooks.unregister("on_tool_start", fileHistoryHandler);
     }
     this.lastMessages = result.messages;
     this.compactedMessagesBySession.set(
@@ -2902,6 +2923,33 @@ export class Engine {
       const unsubRegistry = asyncAgentRegistry.subscribe(() => finish(false));
       const unsubQueue = notificationQueue.subscribe(() => finish(false));
       signal?.addEventListener("abort", onAbort, { once: true });
+    });
+  }
+
+  /**
+   * Like waitForBackgroundAgentChange but with no abort signal and a hard
+   * timeout. Resolves `true` on a registry/queue change, `false` if `timeoutMs`
+   * elapses first. Used only by the headless abort-drain cleanup, where we want
+   * to catch a completing agent's just-about-to-enqueue notification without
+   * risking a permanent hang on an agent that never completes.
+   */
+  private waitForBackgroundAgentChangeOrTimeout(
+    _sessionId: string,
+    timeoutMs: number,
+  ): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finish = (changed: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubRegistry();
+        unsubQueue();
+        resolve(changed);
+      };
+      const timer = setTimeout(() => finish(false), timeoutMs);
+      const unsubRegistry = asyncAgentRegistry.subscribe(() => finish(true));
+      const unsubQueue = notificationQueue.subscribe(() => finish(true));
     });
   }
 
