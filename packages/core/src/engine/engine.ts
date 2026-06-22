@@ -2408,10 +2408,10 @@ export class Engine {
    * Switch the active model by pool key. Takes effect on the next run() call.
    * Returns the new model entry.
    *
-   * Persists settings.activeKey (and a legacy settings.model.* mirror) so the
+   * Persists settings.defaults.text (= the connection id / pool key) so the
    * next process startup defaults to the same model — without this, switches
    * only live in memory and every restart reverts to the previously persisted
-   * activeKey.
+   * defaults.text.
    */
   switchModel(key: string): ModelEntry {
     const entry = this.modelPool.switch(key);
@@ -2420,20 +2420,19 @@ export class Engine {
     // this.config.clientDefaults and survive the switch untouched.
     const nextLlm = this.modelPool.toLLMConfig(entry);
     this.config = { ...this.config, llm: nextLlm };
-    this.persistActiveModel(entry, nextLlm);
+    this.persistActiveModel(entry);
     return entry;
   }
 
   /**
    * Write the active model selection to ~/.code-shell/settings.json.
    *
-   * We mirror into the legacy settings.model.* block (provider/name/apiKey/
-   * baseUrl) because boot paths in cli/main.ts, repl.ts, run.ts still read it.
-   * The mirror uses resolved llm values (not raw entry.*) so credentials that
-   * live on settings.providers[] flow through correctly — entry.apiKey is
-   * undefined when the entry resolves via providerCatalog.
+   * Persists settings.defaults.text = entry.key (the connection id == pool
+   * key). That is the single field the boot path reads to restore the active
+   * text model on the next startup (see ctor: settings.defaults.text → pool
+   * switch). No legacy activeKey/model.* mirror is written.
    */
-  private persistActiveModel(entry: ModelEntry, llm: LLMConfig): void {
+  private persistActiveModel(entry: ModelEntry): void {
     try {
       // userHome() (not raw homedir()) so a test that sets process.env.HOME to
       // a tmpdir gets its writes isolated too — the SettingsManager reader
@@ -2453,20 +2452,13 @@ export class Engine {
         }
       }
 
-      const prevModel =
-        typeof existing.model === "object" && existing.model
-          ? (existing.model as Record<string, unknown>)
+      const prevDefaults =
+        typeof existing.defaults === "object" && existing.defaults
+          ? (existing.defaults as Record<string, unknown>)
           : {};
       const updated: Record<string, unknown> = {
         ...existing,
-        activeKey: entry.key,
-        model: {
-          ...prevModel,
-          provider: llm.provider,
-          name: entry.model,
-          apiKey: llm.apiKey,
-          baseUrl: llm.baseUrl,
-        },
+        defaults: { ...prevDefaults, text: entry.key },
       };
 
       // mode 0o600: this writes model.apiKey (plaintext) into settings.json, so
