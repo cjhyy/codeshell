@@ -5,9 +5,14 @@ import {
   hostnameOf,
   injectionScript,
   extractConsoleMessage,
+  tokensFor,
   SENTINEL_SAVE,
   SENTINEL_CANCEL,
 } from "./index.js";
+
+/** Fixed nonce + its derived tokens, shared by the driven-login tests. */
+const NONCE = "test-nonce-1234";
+const TOK = tokensFor(NONCE);
 import type { ElectronCookieLike } from "../credentials-service.js";
 import type { BrowserHostHandle } from "../browser-host/index.js";
 
@@ -56,10 +61,17 @@ describe("hostnameOf / injectionScript", () => {
     expect(hostnameOf("https://www.youtube.com/feed")).toBe("www.youtube.com");
     expect(hostnameOf("not a url")).toBe("");
   });
-  test("injectionScript embeds both sentinels", () => {
-    const s = injectionScript();
-    expect(s).toContain(SENTINEL_SAVE);
-    expect(s).toContain(SENTINEL_CANCEL);
+  test("injectionScript embeds the nonce-bound tokens, not bare prefixes", () => {
+    const s = injectionScript(NONCE);
+    expect(s).toContain(TOK.save);
+    expect(s).toContain(TOK.cancel);
+    // The buttons print the full prefix:nonce token (the bare prefix appears
+    // only as part of that token, never standalone with a non-nonce suffix).
+    expect(s).toContain(`${SENTINEL_SAVE}:${NONCE}`);
+    expect(s).toContain(`${SENTINEL_CANCEL}:${NONCE}`);
+  });
+  test("a different window mints different tokens", () => {
+    expect(tokensFor("a").save).not.toBe(tokensFor("b").save);
   });
 });
 
@@ -99,6 +111,7 @@ describe("loginAndCaptureCookies", () => {
       { url: "https://www.youtube.com", platform: "youtube" },
       {
         open: async () => fake.handle,
+        nonce: NONCE,
         destroy: async (part) => {
           destroyed = part;
         },
@@ -106,7 +119,7 @@ describe("loginAndCaptureCookies", () => {
     );
     // drive the save sentinel using the Electron ≥33 signature (event, {message})
     await Promise.resolve();
-    fake.wc.emit("console-message", {}, { message: SENTINEL_SAVE, versionId: 0 });
+    fake.wc.emit("console-message", {}, { message: TOK.save, versionId: 0 });
     const r = await p;
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -127,10 +140,10 @@ describe("loginAndCaptureCookies", () => {
     const fake = makeFakeHandle({ cookies: guest });
     const p = loginAndCaptureCookies(
       { url: "https://www.youtube.com" },
-      { open: async () => fake.handle, destroy: async () => {} },
+      { open: async () => fake.handle, nonce: NONCE, destroy: async () => {} },
     );
     await Promise.resolve();
-    fake.wc.emit("console-message", {}, 0, SENTINEL_SAVE);
+    fake.wc.emit("console-message", {}, 0, TOK.save);
     const r = await p;
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.loginCheck.ok).toBe(false);
@@ -141,10 +154,10 @@ describe("loginAndCaptureCookies", () => {
     let destroyed = false;
     const p = loginAndCaptureCookies(
       { url: "https://www.youtube.com" },
-      { open: async () => fake.handle, destroy: async () => { destroyed = true; } },
+      { open: async () => fake.handle, nonce: NONCE, destroy: async () => { destroyed = true; } },
     );
     await Promise.resolve();
-    fake.wc.emit("console-message", {}, 0, SENTINEL_CANCEL);
+    fake.wc.emit("console-message", {}, 0, TOK.cancel);
     const r = await p;
     expect(r).toEqual({ ok: false, cancelled: true });
     expect(destroyed).toBe(true);
@@ -160,5 +173,24 @@ describe("loginAndCaptureCookies", () => {
     fake.closed();
     const r = await p;
     expect(r).toEqual({ ok: false, cancelled: true });
+  });
+
+  test("page forging a BARE prefix (no nonce) cannot trigger save/cancel", async () => {
+    const fake = makeFakeHandle({ cookies: ytLoggedIn });
+    let destroyed = false;
+    const p = loginAndCaptureCookies(
+      { url: "https://www.youtube.com" },
+      { open: async () => fake.handle, nonce: NONCE, destroy: async () => { destroyed = true; } },
+    );
+    await Promise.resolve();
+    // The page's own JS knows the public prefix but NOT this window's nonce.
+    fake.wc.emit("console-message", {}, { message: SENTINEL_SAVE, versionId: 0 });
+    fake.wc.emit("console-message", {}, { message: SENTINEL_CANCEL, versionId: 0 });
+    fake.wc.emit("console-message", {}, { message: `${SENTINEL_SAVE}:wrong-nonce`, versionId: 0 });
+    // None of those should settle the promise. The genuine token does.
+    expect(destroyed).toBe(false);
+    fake.wc.emit("console-message", {}, { message: TOK.save, versionId: 0 });
+    const r = await p;
+    expect(r.ok).toBe(true);
   });
 });

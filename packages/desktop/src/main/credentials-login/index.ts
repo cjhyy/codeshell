@@ -27,8 +27,20 @@ import {
 } from "./login-state.js";
 import { dlog } from "../desktop-logger.js";
 
+/**
+ * Stable PREFIXES for the two control signals. The full token a button prints
+ * is `<PREFIX>:<nonce>` where the nonce is a one-time high-entropy value minted
+ * per login window (see `loginAndCaptureCookies`). The prefix alone is public
+ * and guessable; the nonce is NOT — so the page's own JS cannot forge a click
+ * by printing a known constant. We match on the full prefix+nonce token.
+ */
 export const SENTINEL_SAVE = "__CODESHELL_LOGIN_SAVE__";
 export const SENTINEL_CANCEL = "__CODESHELL_LOGIN_CANCEL__";
+
+/** The two full tokens the injected buttons print for a given per-window nonce. */
+export function tokensFor(nonce: string): { save: string; cancel: string } {
+  return { save: `${SENTINEL_SAVE}:${nonce}`, cancel: `${SENTINEL_CANCEL}:${nonce}` };
+}
 
 export interface LoginCaptureRequest {
   /** 登录页 URL(如 https://www.youtube.com)。 */
@@ -53,8 +65,12 @@ export type LoginCaptureResult =
     }
   | { ok: false; cancelled?: boolean; error?: string };
 
-/** 浮窗注入脚本:提示条 + 两个按钮,点击打印 console 哨兵(main 侧监听)。 */
-export function injectionScript(): string {
+/**
+ * 浮窗注入脚本:提示条 + 两个按钮,点击打印**带 nonce 的** console 哨兵(main 侧监听)。
+ * `nonce` 是 per-window 一次性高熵值 —— 页面自身 JS 不知道它,无法伪造点击。
+ */
+export function injectionScript(nonce: string): string {
+  const { save: saveToken, cancel: cancelToken } = tokensFor(nonce);
   return `(function(){
     if(document.getElementById('__cs_login_bar__'))return;
     var bar=document.createElement('div');
@@ -63,10 +79,10 @@ export function injectionScript(): string {
     var txt=document.createElement('span');txt.textContent='登录成功后点「保存」';
     var save=document.createElement('button');save.textContent='我已登录,保存';
     save.style.cssText='background:#22c55e;color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit;';
-    save.onclick=function(){console.log('${SENTINEL_SAVE}');};
+    save.onclick=function(){console.log(${JSON.stringify(saveToken)});};
     var cancel=document.createElement('button');cancel.textContent='取消';
     cancel.style.cssText='background:transparent;color:#cbd5e1;border:1px solid #475569;border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit;';
-    cancel.onclick=function(){console.log('${SENTINEL_CANCEL}');};
+    cancel.onclick=function(){console.log(${JSON.stringify(cancelToken)});};
     bar.appendChild(txt);bar.appendChild(save);bar.appendChild(cancel);
     document.body.appendChild(bar);
   })();`;
@@ -106,13 +122,22 @@ export function hostnameOf(url: string): string {
  */
 export async function loginAndCaptureCookies(
   req: LoginCaptureRequest,
-  deps: { open?: typeof openBrowserHost; destroy?: typeof destroyPartitionCookies } = {},
+  deps: {
+    open?: typeof openBrowserHost;
+    destroy?: typeof destroyPartitionCookies;
+    /** Override the per-window nonce (tests only); production mints a random one. */
+    nonce?: string;
+  } = {},
 ): Promise<LoginCaptureResult> {
   const targetDomain = hostnameOf(req.url);
   if (!targetDomain) return { ok: false, error: "无效的 URL" };
 
   const open = deps.open ?? openBrowserHost;
   const destroy = deps.destroy ?? destroyPartitionCookies;
+  // Per-window one-time secret: the page cannot guess it, so it cannot forge a
+  // save/cancel click by printing a known constant to the console.
+  const nonce = deps.nonce ?? randomUUID();
+  const { save: saveToken, cancel: cancelToken } = tokensFor(nonce);
   const partition = `persist:login-${randomUUID()}`;
 
   let handle: BrowserHostHandle;
@@ -143,7 +168,7 @@ export async function loginAndCaptureCookies(
     // 注入浮窗。注入脚本自带幂等守卫(同 id 已存在则跳过),所以可重复注入。
     const inject = (whence: string) => {
       handle
-        .executeJavaScript(injectionScript())
+        .executeJavaScript(injectionScript(nonce))
         .then(() => dlog("main", "login.inject_ok", { domain: targetDomain, whence }))
         .catch((e) =>
           dlog("main", "login.inject_failed", { domain: targetDomain, whence, error: String(e) }),
@@ -174,15 +199,17 @@ export async function loginAndCaptureCookies(
       (...callbackArgs: unknown[]) => {
       const message = extractConsoleMessage(callbackArgs);
       if (!message) return;
-      // 诊断:只记我们关心的哨兵(避免刷屏);若哨兵收不到 = 注入或 console 通道被挡。
-      if (message.includes("__CODESHELL_LOGIN")) {
+      // 诊断:只记带本窗口 nonce 的哨兵(避免刷屏 + 不记页面伪造的裸前缀);
+      // 若哨兵收不到 = 注入或 console 通道被挡。匹配必须带 nonce —— 仅凭公开前缀
+      // (页面可自行 console.log)不算数,否则等于退回可伪造的旧设计。
+      if (message.includes(saveToken) || message.includes(cancelToken)) {
         dlog("main", "login.sentinel", { message: message.slice(0, 60) });
       }
-      if (message.includes(SENTINEL_CANCEL)) {
+      if (message.includes(cancelToken)) {
         void finish({ ok: false, cancelled: true });
         return;
       }
-      if (message.includes(SENTINEL_SAVE)) {
+      if (message.includes(saveToken)) {
         // 整段包 try/catch:getCookies / evaluateLoginState 任一抛错都不能让 finish 漏掉,
         // 否则外层 Promise 永不 resolve,渲染层按钮卡死在「处理中…」。
         void (async () => {
