@@ -47,7 +47,7 @@ describe("UseCredential tool", () => {
     store.save("user", { id: "figma", type: "token", label: "Figma", secret: "secretval" });
     const out = parse(await useCredentialTool({}, ctxWith(cwd, "允许本次")));
     expect(out.kind).toBe("list");
-    const creds = out.credentials as { id: string; type: string }[];
+    const creds = out.credentials as { id: string; label: string; type: string }[];
     expect(creds).toEqual([{ id: "figma", label: "Figma", type: "token" }]);
     expect(JSON.stringify(out)).not.toContain("secretval");
   });

@@ -104,7 +104,7 @@ describe("browser_observe", () => {
     });
     const out = await browserObserveTool({ mode: "image", refs: ["img1", "img2"] }, ctx);
     expect(typeof out).toBe("object");
-    if (typeof out === "object") {
+    if (typeof out === "object" && "contentBlocks" in out) {
       expect(out.contentBlocks).toHaveLength(2);
       expect(out.contentBlocks[0]).toMatchObject({ type: "image", source: { type: "base64", media_type: "image/jpeg" } });
     }
@@ -131,7 +131,7 @@ describe("browser_observe", () => {
     const ctx = ctxVision({ screenshot: async () => ({ ok: true, base64: "QUJD", mediaType: "image/jpeg" }) });
     const out = await browserObserveTool({ mode: "vision" }, ctx);
     expect(typeof out).toBe("object");
-    if (typeof out === "object") expect(out.contentBlocks[0]).toMatchObject({ type: "image" });
+    if (typeof out === "object" && "contentBlocks" in out) expect(out.contentBlocks[0]).toMatchObject({ type: "image" });
   });
 });
 

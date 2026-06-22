@@ -64,7 +64,8 @@ describe("CredentialStore", () => {
     store.save("user", { id: "tok-a", type: "token", label: "A", secret: "supersecretvalue" });
     const masked = store.listMasked();
     const m = masked.find((c) => c.id === "tok-a")!;
-    expect(m.secret).toBeUndefined();
+    // MaskedCredential omits `secret` at the type level; assert it's also absent at runtime.
+    expect((m as unknown as Record<string, unknown>).secret).toBeUndefined();
     expect(m.hasSecret).toBe(true);
     expect(m.secretHint).toMatch(/\*\*\*\*/);
   });
