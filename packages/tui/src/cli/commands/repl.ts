@@ -162,6 +162,7 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     mcpServers: mergePluginMcpServers(
       settings.mcpServers ?? {},
       (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
+      settings.mcpServerOverrides ?? {},
     ),
     approvalBackend: getInteractiveApprovalBackend(),
     // Host terminal entrypoint: read the full disk hierarchy (incl. user

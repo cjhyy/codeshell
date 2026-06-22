@@ -69,6 +69,7 @@ export function diskDefaultsFrom(
       effectiveDisabledPlugins ??
         (settings as { disabledPlugins?: string[] }).disabledPlugins ??
         [],
+      settings.mcpServerOverrides ?? {},
     ),
   };
 }

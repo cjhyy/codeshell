@@ -1,11 +1,36 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readInstalledPlugins } from "../installedPlugins.js";
-import type { MCPServerConfig } from "../../types.js";
+import type { MCPServerConfig, MCPServerOverride } from "../../types.js";
 
 function pluginNameFromKey(key: string): string {
   const at = key.lastIndexOf("@");
   return at > 0 ? key.slice(0, at) : key;
+}
+
+/**
+ * Layer a user override's supplement fields onto a plugin server config.
+ *
+ * Only env/credential fields are picked — command/args/url/transport are
+ * deliberately NOT carried, because those are the plugin's identity and must
+ * keep coming from the plugin manifest so a plugin update can change them
+ * without the user being stuck on a stale shadow copy. This explicit pick is
+ * defense-in-depth on top of the schema's `.strict()`, so a hand-edited
+ * settings file can never smuggle those fields in.
+ */
+function applyOverride(
+  pluginConfig: MCPServerConfig,
+  override: MCPServerOverride | undefined,
+): MCPServerConfig {
+  if (!override) return pluginConfig;
+  const supplement: MCPServerOverride = {};
+  if (override.env !== undefined) supplement.env = override.env;
+  if (override.envVars !== undefined) supplement.envVars = override.envVars;
+  if (override.credentialRef !== undefined) supplement.credentialRef = override.credentialRef;
+  if (override.bearerTokenEnvVar !== undefined)
+    supplement.bearerTokenEnvVar = override.bearerTokenEnvVar;
+  if (override.envHeaders !== undefined) supplement.envHeaders = override.envHeaders;
+  return { ...pluginConfig, ...supplement };
 }
 
 /**
@@ -55,10 +80,18 @@ function readPluginMcp(installPath: string, pluginName: string): Record<string, 
  * Merge each registered plugin's MCP servers into a copy of `base`.
  * Plugin keys are `<plugin>:<server>`. A key already present in `base`
  * (user-configured) is NOT overwritten. Disabled plugins are skipped.
+ *
+ * `overrides` lets the user *supplement* a plugin server's env/credential
+ * fields without editing the plugin's manifest: for a plugin-sourced server,
+ * the override's {@link OVERRIDE_FIELDS} are layered on top (override wins),
+ * while command/args/url/transport stay from the plugin. Overrides do NOT
+ * apply to user-added (base) servers — those are edited via `mcpServers`
+ * directly — and an override for an unknown/disabled server has no effect.
  */
 export function mergePluginMcpServers(
   base: Record<string, MCPServerConfig>,
   disabledPlugins: string[] = [],
+  overrides: Record<string, MCPServerOverride> = {},
 ): Record<string, MCPServerConfig> {
   const disabled = new Set(disabledPlugins);
   const merged: Record<string, MCPServerConfig> = { ...base };
@@ -70,7 +103,7 @@ export function mergePluginMcpServers(
       const servers = readPluginMcp(entry.installPath, pluginName);
       for (const [k, cfg] of Object.entries(servers)) {
         if (k in merged) continue; // user / earlier wins
-        merged[k] = cfg;
+        merged[k] = applyOverride(cfg, overrides[k]);
       }
     }
   }

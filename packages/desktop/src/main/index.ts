@@ -1369,7 +1369,14 @@ ipcMain.handle("mcp:listMerged", async (_e, rawBase: unknown, rawDisabledPlugins
   // path still filters disabledPlugins, so a disabled plugin's server is
   // listed-but-inert; we mark it `pluginDisabled` for the UI.
   const disabledSet = new Set(disabledPlugins);
-  const merged = mergePluginMcpServers(base, []);
+  // Plugin-MCP overrides live globally (user scope), independent of the active
+  // settings scope — read them here and let the merge layer them onto plugin
+  // servers so the listed env/credential reflects the EFFECTIVE connect config.
+  const userSettings = ((await readSettings("user").catch(() => null)) ?? {}) as {
+    mcpServerOverrides?: Record<string, McpServerConfig>;
+  };
+  const overrides = (userSettings.mcpServerOverrides ?? {}) as Record<string, McpServerConfig>;
+  const merged = mergePluginMcpServers(base, [], overrides);
   return Object.fromEntries(
     Object.entries(merged).map(([name, cfg]) => {
       const fromSettings = Object.prototype.hasOwnProperty.call(base, name);
@@ -1383,6 +1390,9 @@ ipcMain.handle("mcp:listMerged", async (_e, rawBase: unknown, rawDisabledPlugins
           source: fromSettings ? "settings" : "plugin",
           editable: fromSettings,
           pluginDisabled: owner !== undefined && disabledSet.has(owner),
+          // Flag a plugin server that currently carries a user override so the
+          // UI can badge it. (User-added servers never use the override layer.)
+          hasOverride: !fromSettings && Object.prototype.hasOwnProperty.call(overrides, name),
         },
       ];
     }),
