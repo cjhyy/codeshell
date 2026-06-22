@@ -67,7 +67,8 @@
 
 > 总体:VCS 卫生干净、Electron renderer 加固正确、「无 phone-home」属实。真正的风险面是**磁盘上的明文密钥/cookie**。
 
-### 2.1 🔴 R-1:`settings.json` 内 API key 明文 + **世界可读**权限
+### 2.1 ✅ R-1 已止血(commit 8065530a,2026-06-23):`settings.json` 内 API key 明文 + **世界可读**权限
+**已修**:manager.ts(saveUserSetting/atomicWriteJson)tmp 写带 `{mode:0o600}` 再 rename;onboarding.ts 四处带 mode + 直写路径补 chmodSync;+3 测验证落 0o600 且收紧预存松权限文件。理想态 safeStorage 加密仍留 §5 发后。下面为原始记录:
 - 写入点**没传 `mode`**:`packages/core/src/settings/manager.ts:253` 与 `:356`(`writeFileSync(tmp, …, "utf-8")`),`packages/core/src/onboarding.ts:601`。
 - schema 允许裸 `apiKey`:`packages/core/src/settings/schema.ts:102,128,174,232,261,286,539,551,564`。
 - 暴露:OpenAI/Anthropic/GLM 等计费 key,明文存 `~/.code-shell/settings.json` 与 `<cwd>/.code-shell/settings.json`,默认 umask 常为 `0o644`(其他本地用户 / iCloud/Dropbox/TimeMachine 备份可读)。
@@ -209,7 +210,9 @@
 - `pluginInstaller.ts:236-238` materialize 的 rm→cp「崩溃窗口」:finalDir 按内容 SHA 命名,崩后重试同 SHA 自愈;manifest 条目只在 cp 成功返回后才追加,无孤儿条目。
 - plugin manifest 非原子读改写竞态:仅同进程并发不同插件安装才触发;bootstrap 是 for-await 串行,UI 不并发,非 beta 可达(与 settings 跨进程同类「已接受」限制)。
 
-**待复核**:model catalog resolve/merge(id 碰撞 builtin vs user 谁胜、corrupt 用户档降级)—— 第二个 review agent 复跑中。
+**model catalog resolve/merge ✅ 复核完毕(干净)**:无真 bug。catalogId 不解析→undefined 且 caller `if(!resolved)continue`;credentialId 不存在→optional chaining 安全;corrupt 用户档→try/catch+safeParse 降级到 [] 不污染 builtin;baseUrl 回退链末端是 schema 必填的 defaultBaseUrl 不会 null;upsert/merge 按 id Map 去重,user 覆盖 builtin 恰一次无碰撞 bug。
+
+**R-1 已止血**:settings.json 写入 0o600(见 §2.1,commit 8065530a)。
 
 ## 附:晚上「一遍遍找问题」循环建议方向(token 耗尽前反复跑)
 
