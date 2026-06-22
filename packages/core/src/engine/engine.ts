@@ -107,7 +107,6 @@ import {
 } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
-import { ProviderCatalog } from "../llm/provider-catalog.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import {
   detectProviderFromApiKey,
@@ -752,10 +751,9 @@ export class Engine {
       const settings = sm.get();
 
       // Unified model catalog (统一模型接入方案 §6): register text
-      // connections from settings.modelConnections[] into the pool, so the new
-      // catalog-driven instance store actually drives model selection. Runs
-      // alongside the legacy models[] path below (both coexist); a connection's
-      // instance id becomes its pool key. See
+      // connections from settings.modelConnections[] into the pool — the
+      // catalog-driven instance store is the sole source of model selection.
+      // A connection's instance id becomes its pool key. See
       // docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md.
       const connections = (settings as { modelConnections?: unknown[] }).modelConnections;
       if (Array.isArray(connections) && connections.length) {
@@ -771,69 +769,27 @@ export class Engine {
       }
       const hasConnections = Array.isArray(connections) && connections.length > 0;
 
-      if (settings.models?.length || hasConnections) {
-        for (const m of settings.models ?? []) {
-          this.modelPool.register({
-            key: m.key,
-            label: m.label,
-            provider: m.provider ?? "",
-            model: m.model,
-            baseUrl: m.baseUrl,
-            apiKey: m.apiKey,
-            maxOutputTokens: m.maxOutputTokens,
-            maxContextTokens: m.maxContextTokens,
-            providerKey: m.providerKey,
-            authCommand: (m as { authCommand?: string }).authCommand,
-            httpHeaders: (m as { httpHeaders?: Record<string, string> }).httpHeaders,
-            serviceTier: (m as { serviceTier?: string }).serviceTier,
-            reasoningSummary: (m as { reasoningSummary?: string }).reasoningSummary,
-          });
-        }
-        // Build catalog from settings.providers[] and attach to the pool
-        // so model entries can resolve baseUrl/apiKey from their provider.
-        if (settings.providers?.length) {
-          this.modelPool.setProviderCatalog(
-            new ProviderCatalog(settings.providers as never),
-          );
-        }
+      if (hasConnections) {
         this.modelPool.setCacheDir(defaultCacheDir());
         this.modelPool.reloadCachedContextWindows();
-        // Resolve active entry. Priority:
-        //   1. settings.activeKey — primary source of truth (new shape).
-        //   2. Match settings.model.name against models[].model — legacy
-        //      pre-activeKey configs and the migration path.
-        // We then switch the pool and write the resolved entry's credentials
-        // into config.llm, so the first run() uses the right endpoint instead
-        // of whatever env-derived fallback repl.ts seeded earlier.
-        // Sub-agents skip the activeKey resync: their llm is chosen by the
-        // parent's resolveChildLlm (per-role model routing). activeKey is the
-        // *user's* current UI model selection and must not clobber a child's
-        // routed model — without this guard a role's `model: flash` is silently
-        // overridden back to whatever the user has active in the foreground.
+        // Resolve the active entry from settings.defaults.text, then switch the
+        // pool and write the resolved entry's credentials into config.llm, so the
+        // first run() uses the right endpoint instead of whatever env-derived
+        // fallback repl.ts seeded earlier.
+        // Sub-agents skip this resync: their llm is chosen by the parent's
+        // resolveChildLlm (per-role model routing). defaults.text is the *user's*
+        // current UI model selection and must not clobber a child's routed model —
+        // without this guard a role's `model: flash` is silently overridden back
+        // to whatever the user has active in the foreground.
         if (this.config.isSubAgent !== true) {
-          // Active-model priority:
-          //   1. settings.defaults.text — unified catalog's current text model
-          //      (instance id == pool key). Wins so the new store drives.
-          //   2. settings.activeKey — legacy primary source of truth.
-          //   3. Match settings.model.name against models[].model — oldest path.
           const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;
-          const activeKey = (settings as { activeKey?: string }).activeKey;
+          // 统一 catalog only:defaults.text 命中则用;否则回退首个已注册连接,
+          // 避免选未配置模型时静默沿用空种子(旧 bug:抛误导性 OPENAI_API_KEY missing)。
           let matchKey: string | undefined;
           if (defaultText && this.modelPool.list().some((e) => e.key === defaultText)) {
             matchKey = defaultText;
-          }
-          if (!matchKey && activeKey) {
-            matchKey = settings.models.find((m: any) => m.key === activeKey)?.key;
-          }
-          if (!matchKey) {
-            const currentModel = this.config.llm.model;
-            // OpenRouter stores entries as "provider/model-name"; the top-level
-            // settings.model.name is just "model-name". Match either form.
-            matchKey = settings.models.find(
-              (m: any) =>
-                m.model === currentModel ||
-                (currentModel && m.model?.endsWith(`/${currentModel}`)),
-            )?.key;
+          } else {
+            matchKey = this.modelPool.list()[0]?.key;
           }
           if (matchKey) {
             const entry = this.modelPool.switch(matchKey);
