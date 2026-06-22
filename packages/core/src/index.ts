@@ -59,6 +59,7 @@ export {
 export { Engine, loadAgentDefinitionsForCwd } from "./engine/engine.js";
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/engine.js";
 export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
+export { resolveAuxKey } from "./engine/aux-key.js";
 export {
   parseAgentDefinition,
   serializeAgentDefinition,
