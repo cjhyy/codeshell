@@ -173,7 +173,11 @@ export async function installPluginForUi(
  */
 export async function installLocalPluginForUi(
   input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
-): Promise<{ ok: true; name: string } | { ok: false; error?: string }> {
+): Promise<
+  | { ok: true; name: string }
+  | { ok: false; alreadyInstalled: true; name: string }
+  | { ok: false; error?: string }
+> {
   if (!input || (input.kind !== "dir" && input.kind !== "zip") || typeof input.path !== "string" || !input.path) {
     throw new Error("installLocalPluginForUi requires { kind: 'dir'|'zip', path }");
   }
@@ -187,6 +191,16 @@ export async function installLocalPluginForUi(
     invalidateSkillCache();
     return { ok: true, name };
   } catch (e) {
-    return { ok: false, error: humanizeGitError(String(e instanceof Error ? e.message : e)) };
+    const raw = String(e instanceof Error ? e.message : e);
+    // Distinguish the same-name conflict so the UI can offer an overwrite using
+    // the AUTHORITATIVE plugin name. core derives the real name (from the
+    // plugin manifest, after extracting a zip) and bakes it into the error
+    // "plugin '<name>' already installed", so we extract it here rather than
+    // relying on the picker's filename-derived guess.
+    const m = raw.match(/plugin '(.+?)' already installed/);
+    if (m) {
+      return { ok: false, alreadyInstalled: true, name: m[1] };
+    }
+    return { ok: false, error: humanizeGitError(raw) };
   }
 }

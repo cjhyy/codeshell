@@ -157,33 +157,22 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     const picked = await window.codeshell.pickPluginSource(kind);
     if (!picked) return;
 
-    // Detect a same-name install up front so we can ask before overwriting. The
-    // picker's derived name may differ from core's normalized install name, so
-    // we also fall back to catching the "already installed" error below.
-    const pickedName = (picked.name ?? "").trim().toLowerCase();
-    const sameName = (plugins ?? []).some((p) => p.name.toLowerCase() === pickedName);
-    if (sameName) {
-      const ok = await confirm({
-        title: t("ext.plugins.overwriteTitle"),
-        message: t("ext.plugins.overwriteConfirm", { name: picked.name }),
-        confirmLabel: t("ext.plugins.overwriteConfirmLabel"),
-      });
-      if (!ok) return;
-    }
-
     setLocalBusy(kind);
     try {
+      // Install optimistically. core derives the AUTHORITATIVE plugin name from
+      // the manifest (after extracting a zip), so we don't pre-guess the name
+      // from the picker's filename. On a same-name collision core returns
+      // { alreadyInstalled, name } — we then confirm an overwrite using that
+      // real name and retry. (The picker filename can differ from the manifest
+      // name, e.g. "mimi-video-0.2.0.zip" vs plugin "mimi-video".)
       let res = await window.codeshell.installLocalPlugin({
         kind: picked.kind,
         path: picked.path,
-        overwrite: sameName,
       });
-      // Fallback: pre-check missed the collision (name normalization differs) —
-      // ask, then retry with overwrite.
-      if (!res.ok && !sameName && /already installed/i.test(res.error ?? "")) {
+      if (!res.ok && "alreadyInstalled" in res && res.alreadyInstalled) {
         const ok = await confirm({
           title: t("ext.plugins.overwriteTitle"),
-          message: t("ext.plugins.overwriteConfirm", { name: picked.name }),
+          message: t("ext.plugins.overwriteConfirm", { name: res.name }),
           confirmLabel: t("ext.plugins.overwriteConfirmLabel"),
         });
         if (!ok) return;
@@ -194,7 +183,9 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
         });
       }
       if (!res.ok) {
-        setLocalError(res.error ?? t("ext.plugins.localInstallFailed"));
+        setLocalError(
+          ("error" in res ? res.error : undefined) ?? t("ext.plugins.localInstallFailed"),
+        );
         return;
       }
       // Hot-reload hooks/MCP into running sessions. Skills and commands are

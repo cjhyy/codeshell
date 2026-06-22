@@ -519,8 +519,11 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("dialog:pickPluginSource", kind),
   installLocalPlugin: (
     input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
-  ): Promise<{ ok: true; name: string } | { ok: false; error?: string }> =>
-    ipcRenderer.invoke("plugins:installLocal", input),
+  ): Promise<
+    | { ok: true; name: string }
+    | { ok: false; alreadyInstalled: true; name: string }
+    | { ok: false; error?: string }
+  > => ipcRenderer.invoke("plugins:installLocal", input),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),
   checkSkillUpdate: (filePath: string) =>
     ipcRenderer.invoke("skills:checkUpdate", filePath),

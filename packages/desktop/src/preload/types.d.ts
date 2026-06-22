@@ -733,13 +733,18 @@ export interface CodeshellApi {
     kind: "dir" | "zip",
   ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null>;
   /**
-   * Install a plugin from a local directory or .zip (global scope). Set
-   * `overwrite` to replace an already-installed plugin of the same name instead
-   * of failing with "already installed".
+   * Install a plugin from a local directory or .zip (global scope). On a
+   * same-name collision, resolves to { ok:false, alreadyInstalled:true, name }
+   * carrying the AUTHORITATIVE plugin name (from the manifest) — the UI confirms
+   * an overwrite and retries with `overwrite: true`.
    */
   installLocalPlugin(
     input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
-  ): Promise<{ ok: true; name: string } | { ok: false; error?: string }>;
+  ): Promise<
+    | { ok: true; name: string }
+    | { ok: false; alreadyInstalled: true; name: string }
+    | { ok: false; error?: string }
+  >;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
   searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
   readSkillBody(filePath: string): Promise<string>;
