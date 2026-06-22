@@ -16,8 +16,8 @@ import { positiveIntOption } from "../parse-int-option.js";
 import { FileRunStore } from "@cjhyy/code-shell-core";
 import { RunManager } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
-import { resolveApiKey } from "@cjhyy/code-shell-core";
-import type { LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
+import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
+import type { PermissionMode } from "@cjhyy/code-shell-core";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import type { RunStatus } from "@cjhyy/code-shell-core";
 
@@ -27,23 +27,16 @@ function createRunManager(): RunManager {
   const cwd = process.cwd();
   const settings = new SettingsManager(cwd).get();
 
-  const apiKey = resolveApiKey(undefined, settings.model.apiKey);
-
-  const llm: LLMConfig = {
-    provider: settings.model.provider ?? "openai",
-    model: settings.model.name ?? "anthropic/claude-opus-4-6",
-    apiKey,
-    baseUrl: settings.model.baseUrl ?? "https://openrouter.ai/api/v1",
-    maxTokens: settings.model.maxTokens ?? 8192,
-  };
+  const llm = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
+  if (!llm) throw new Error("没有可用的文本模型连接(runs)。请在「连接」页配置。");
 
   const store = new FileRunStore();
   return new RunManager({
     store,
     executor: {
       llm,
-      // temperature is a ClientDefaults knob now (no longer on LLMConfig).
-      clientDefaults: { temperature: settings.model.temperature },
+      // temperature is a ClientDefaults knob now; the executor's engine derives
+      // it from the unified catalog — no explicit pass needed.
       maxTurns: 30,
       maxContextTokens: settings.context.maxTokens,
       sessionStorageDir: settings.session.storageDir,

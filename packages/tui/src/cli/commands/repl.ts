@@ -16,7 +16,7 @@ import { SettingsManager } from "@cjhyy/code-shell-core";
 import { personalizationFrom } from "@cjhyy/code-shell-core";
 import { MCPManager } from "@cjhyy/code-shell-core";
 import { CostTracker } from "@cjhyy/code-shell-core";
-import { resolveApiKey } from "@cjhyy/code-shell-core";
+import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { defaultSandboxConfig } from "@cjhyy/code-shell-core";
 import type { ClientDefaults, LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
@@ -68,26 +68,26 @@ export async function replCommand(options: ReplOptions): Promise<void> {
   const settingsManager = new SettingsManager(cwd, "full");
   let settings = settingsManager.get();
 
-  // Resolve API key.
+  // Resolve API key / auth.
   //
   // Onboarding gate: env vars alone are NOT enough to skip onboarding —
-  // saved settings (model/models[]/providers[]) must be present. Otherwise
-  // `/logout` looks like a no-op whenever the user has a provider env var
-  // set (very common: OPENROUTER_API_KEY, ANTHROPIC_API_KEY). The wizard
-  // itself surfaces detected env keys (OnboardingPrompt.detectEnvKeys) so
-  // the user can opt-in to using them — not have them silently chosen.
+  // a saved unified-catalog config (credentials[]/modelConnections[]) must
+  // be present. Otherwise `/logout` looks like a no-op whenever the user
+  // has a provider env var set (very common: OPENROUTER_API_KEY,
+  // ANTHROPIC_API_KEY). The wizard itself surfaces detected env keys
+  // (OnboardingPrompt.detectEnvKeys) so the user can opt-in to using them —
+  // not have them silently chosen.
   const hasSavedAuth =
     !!options.apiKey ||
-    !!settings.model?.apiKey ||
-    (Array.isArray(settings.models) && settings.models.some((m) => m?.apiKey)) ||
-    (Array.isArray(settings.providers) && settings.providers.some((p) => p?.apiKey));
-  let apiKey = hasSavedAuth ? resolveApiKey(options.apiKey, settings.model.apiKey) : undefined;
+    (Array.isArray((settings as any).credentials) && (settings as any).credentials.some((c: any) => c?.apiKey)) ||
+    (Array.isArray((settings as any).modelConnections) && (settings as any).modelConnections.length > 0);
+  let apiKey = options.apiKey;
 
-  let model = options.model ?? settings.model.name;
-  let provider = options.provider ?? settings.model.provider;
-  let baseUrl = options.baseUrl ?? settings.model.baseUrl;
+  let model = options.model;
+  let provider = options.provider;
+  let baseUrl = options.baseUrl;
 
-  if (!apiKey) {
+  if (!hasSavedAuth) {
     if (!process.stdin.isTTY) {
       console.error(
         chalk.red(
@@ -113,31 +113,31 @@ export async function replCommand(options: ReplOptions): Promise<void> {
     settings = settingsManager.get();
   }
 
-  model = model ?? "anthropic/claude-opus-4-6";
   provider = provider ?? "openai";
   baseUrl = baseUrl ?? "https://openrouter.ai/api/v1";
   const effort: EffortLevel = options.effort ?? "high";
   const effortConfig = getEffortConfig(effort);
   const maxTurns = options.maxTurns ?? 100;
 
-  const llmConfig: LLMConfig = {
+  // Resolve from the unified catalog (modelConnections[]/credentials[]/defaults).
+  // The onboarding-wizard fallback covers the just-onboarded case where the
+  // resolver hasn't picked up a freshly-written connection yet.
+  const resolved = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
+  const llmConfig: LLMConfig = resolved ?? {
     provider,
-    model,
+    model: model ?? "anthropic/claude-opus-4-6",
     apiKey,
     baseUrl,
-    // Priority: user-configured settings.model.maxTokens > effort preset > 8192.
-    // Previously this was `effortConfig.maxTokens ?? settings.model.maxTokens`,
-    // which silently ignored the user's setting because effortConfig is always
-    // populated.
-    maxTokens: settings.model.maxTokens ?? effortConfig.maxTokens ?? 8192,
+    maxTokens: effortConfig.maxTokens ?? 8192,
   };
+  model = llmConfig.model;
 
   // Temperature is a cross-model runtime knob (ClientDefaults), no longer part
   // of LLMConfig. The effort flag's temperature is a CLI override that
   // settings.json doesn't know about, so thread it explicitly into every
-  // engine; falls back to settings.model.temperature, then 0.3.
+  // engine; falls back to 0.3.
   const clientDefaults: ClientDefaults = {
-    temperature: effortConfig.temperature ?? settings.model.temperature ?? 0.3,
+    temperature: effortConfig.temperature ?? 0.3,
   };
 
   const permissionMode = (options.permissionMode ?? "acceptEdits") as PermissionMode;
