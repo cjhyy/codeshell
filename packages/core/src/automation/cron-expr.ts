@@ -19,6 +19,16 @@ export interface ParsedCron {
   daysOfMonth: Set<number>;
   months: Set<number>; // 1-12
   daysOfWeek: Set<number>; // 0-6, 0=Sunday
+  /**
+   * Whether the dayOfMonth / dayOfWeek FIELD was restricted (anything other
+   * than a bare "*"). Vixie-cron semantics: when BOTH day fields are
+   * restricted, a tick matches if EITHER matches (OR); when only one is
+   * restricted, the "*" one is ignored and the restricted one governs. We
+   * can't recover this from the value Set alone ("*" and an explicit full
+   * range both expand to the full set), so we capture it at parse time.
+   */
+  domRestricted: boolean;
+  dowRestricted: boolean;
 }
 
 interface FieldSpec {
@@ -92,6 +102,10 @@ export function parseCronExpression(expr: string): ParsedCron {
     daysOfMonth: parseField(parts[2], SPECS[2]),
     months: parseField(parts[3], SPECS[3]),
     daysOfWeek: parseField(parts[4], SPECS[4]),
+    // A bare "*" is unrestricted; anything else (a number, range, list, or even
+    // "*/n") restricts the field for the OR rule below.
+    domRestricted: parts[2].trim() !== "*",
+    dowRestricted: parts[4].trim() !== "*",
   };
 }
 
@@ -151,13 +165,20 @@ function wallClockInZone(ms: number, timeZone: string): WallClock {
 }
 
 function matches(cron: ParsedCron, wc: WallClock): boolean {
-  return (
-    cron.minutes.has(wc.minute) &&
-    cron.hours.has(wc.hour) &&
-    cron.daysOfMonth.has(wc.dayOfMonth) &&
-    cron.months.has(wc.month) &&
-    cron.daysOfWeek.has(wc.dayOfWeek)
-  );
+  if (!cron.minutes.has(wc.minute)) return false;
+  if (!cron.hours.has(wc.hour)) return false;
+  if (!cron.months.has(wc.month)) return false;
+
+  // Day-of-month vs day-of-week per Vixie/POSIX cron:
+  //   - both restricted → match if EITHER matches (OR)
+  //   - only one restricted → that one governs (the "*" one is ignored)
+  //   - neither restricted → matches every day
+  const domHit = cron.daysOfMonth.has(wc.dayOfMonth);
+  const dowHit = cron.daysOfWeek.has(wc.dayOfWeek);
+  if (cron.domRestricted && cron.dowRestricted) return domHit || dowHit;
+  if (cron.domRestricted) return domHit;
+  if (cron.dowRestricted) return dowHit;
+  return true;
 }
 
 const MINUTE_MS = 60_000;

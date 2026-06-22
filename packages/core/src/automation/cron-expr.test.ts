@@ -88,3 +88,43 @@ describe("nextCronTime — timezone-aware next trigger", () => {
     expect(next).toBeGreaterThan(exactly9);
   });
 });
+
+describe("dayOfMonth + dayOfWeek — Vixie/POSIX OR semantics", () => {
+  // 2026-01: Jan 1 is a Thursday; the first Monday is Jan 5; Jan 15 is a Thursday.
+  const refJan1 = Date.UTC(2026, 0, 1, 0, 0, 0);
+
+  test("both restricted → fires on EITHER the day-of-month OR the day-of-week (Monday comes first)", () => {
+    // "0 9 15 * 1" = 09:00 on the 15th OR on any Monday. From Jan 1, the first
+    // Monday (Jan 5) must win — NOT "the 15th that is also a Monday" (the old
+    // AND bug would skip Jan 5 and Jan 15 entirely).
+    const next = nextCronTime(parseCronExpression("0 9 15 * 1"), "UTC", refJan1);
+    expect(next).toBe(Date.UTC(2026, 0, 5, 9, 0, 0)); // Mon Jan 5
+  });
+
+  test("both restricted → fires on the 15th when it precedes the next matching weekday", () => {
+    // Reference just after Mon Jan 5: next match is the 15th (Thu), which beats
+    // the following Monday (Jan 12 is earlier though) — so pick a ref after Jan 12.
+    const afterJan12 = Date.UTC(2026, 0, 13, 0, 0, 0);
+    const next = nextCronTime(parseCronExpression("0 9 15 * 1"), "UTC", afterJan12);
+    expect(next).toBe(Date.UTC(2026, 0, 15, 9, 0, 0)); // the 15th (OR branch)
+  });
+
+  test("only day-of-month restricted (dow=*) → dow is ignored", () => {
+    const next = nextCronTime(parseCronExpression("0 9 15 * *"), "UTC", refJan1);
+    expect(next).toBe(Date.UTC(2026, 0, 15, 9, 0, 0));
+  });
+
+  test("only day-of-week restricted (dom=*) → dom is ignored", () => {
+    const next = nextCronTime(parseCronExpression("0 9 * * 1"), "UTC", refJan1);
+    expect(next).toBe(Date.UTC(2026, 0, 5, 9, 0, 0)); // first Monday
+  });
+
+  test("parser records which day fields are restricted", () => {
+    const both = parseCronExpression("0 9 15 * 1");
+    expect(both.domRestricted).toBe(true);
+    expect(both.dowRestricted).toBe(true);
+    const neither = parseCronExpression("0 9 * * *");
+    expect(neither.domRestricted).toBe(false);
+    expect(neither.dowRestricted).toBe(false);
+  });
+});
