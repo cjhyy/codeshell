@@ -34,12 +34,12 @@ function buildWorkerEngine(activeModel: string): { engine: Engine; pool: ModelPo
   return { engine, pool };
 }
 
-/** Stub the engine's settings reader so we control auxModelKey deterministically. */
-function stubAuxModelKey(engine: Engine, auxModelKey: string | undefined): void {
+/** Stub the engine's settings reader so we control the aux model key deterministically. */
+function stubAuxKey(engine: Engine, auxText: string | undefined): void {
   (engine as any).getSettingsManager = () => ({
     invalidate() {},
     get() {
-      return { auxModelKey };
+      return { defaults: { auxText } };
     },
   });
 }
@@ -49,7 +49,7 @@ describe("resolveAuxClient de-dups against config.llm.model (runtime/worker path
     // Worker session: active model is model-a, built with a runtime, NEVER
     // switchModel'd. auxModelKey="A-key" whose entry.model === "model-a".
     const { engine } = buildWorkerEngine("model-a");
-    stubAuxModelKey(engine, "A-key");
+    stubAuxKey(engine, "A-key");
     const fallback = await createLLMClient(
       { provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" },
     );
@@ -60,7 +60,7 @@ describe("resolveAuxClient de-dups against config.llm.model (runtime/worker path
 
   it("builds a separate client when aux model's entry differs from the active model", async () => {
     const { engine } = buildWorkerEngine("model-a");
-    stubAuxModelKey(engine, "B-key"); // entry.model === "model-b" ≠ "model-a"
+    stubAuxKey(engine, "B-key"); // entry.model === "model-b" ≠ "model-a"
     const fallback = await createLLMClient(
       { provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" },
     );
@@ -77,7 +77,7 @@ describe("resolveAuxClient de-dups against config.llm.model (runtime/worker path
     pool.switch("B-key");
     expect(pool.getActiveKey()).toBe("B-key");
 
-    stubAuxModelKey(engine, "A-key");
+    stubAuxKey(engine, "A-key");
     const fallback = await createLLMClient(
       { provider: "openai", model: "model-a", apiKey: "x", baseUrl: "http://localhost" },
     );
@@ -114,7 +114,7 @@ describe("resolveAuxClient de-dups on full LLM identity, not just model name", (
       { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxTokens: 1000 },
       pool,
     );
-    stubAuxModelKey(engine, "aux");
+    stubAuxKey(engine, "aux");
     const fallback = await createLLMClient(
       { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxTokens: 1000 },
     );
@@ -132,7 +132,7 @@ describe("resolveAuxClient de-dups on full LLM identity, not just model name", (
       { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://primary" },
       pool,
     );
-    stubAuxModelKey(engine, "aux");
+    stubAuxKey(engine, "aux");
     const fallback = await createLLMClient(
       { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://primary" },
     );
@@ -150,7 +150,7 @@ describe("resolveAuxClient de-dups on full LLM identity, not just model name", (
       { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxTokens: 2000 },
       pool,
     );
-    stubAuxModelKey(engine, "aux");
+    stubAuxKey(engine, "aux");
     const fallback = await createLLMClient(
       { provider: "openai", model: "shared", apiKey: "x", baseUrl: "http://localhost", maxTokens: 2000 },
     );
