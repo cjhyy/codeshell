@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { CornerDownRight, Paperclip, Mic, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
+import { CornerDownRight, Paperclip, MicOff, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
 import { MessageStream } from "./MessageStream";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
@@ -929,15 +929,26 @@ export function ChatView({
                   onSelect={onModelChange}
                   disabled={busy}
                 />
-                <button
-                  type="button"
-                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-                  aria-label={t("chat.composer.voiceInput")}
-                  title={t("chat.composer.voiceInputTitle")}
-                  disabled
-                >
-                  <Mic size={14} />
-                </button>
+                {/* 语音输入:STT 尚未实现。用 MicOff(带斜杠)+ 红色描边,视觉上明确"已关闭",
+                    并用自绘 tooltip(group-hover)解释,因为 disabled 的原生 title 不会触发。
+                    实现后换回 Mic 图标、去掉 voice-off 样式、接上 onClick 即可。 */}
+                <span className="group relative inline-flex shrink-0">
+                  <button
+                    type="button"
+                    className="inline-flex items-center rounded-md border border-status-err/60 p-1.5 text-status-err/70 hover:bg-accent disabled:cursor-not-allowed"
+                    aria-label={t("chat.composer.voiceInput")}
+                    aria-disabled
+                    disabled
+                  >
+                    <MicOff size={14} />
+                  </button>
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 shadow-md ring-1 ring-border transition-opacity group-hover:opacity-100"
+                  >
+                    {t("chat.composer.voiceInputTitle")}
+                  </span>
+                </span>
                 {busy && draft.trim() && onForceSend && (
                   <button
                     type="button"
