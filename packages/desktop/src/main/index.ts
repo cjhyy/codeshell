@@ -1112,7 +1112,11 @@ ipcMain.handle("credentials:restoreCookieToBrowser", async (_e, cwd: string, id:
   let jar: ElectronCookieLike[] = [];
   try {
     const parsed = JSON.parse(cred.secret ?? "[]");
-    if (Array.isArray(parsed)) jar = parsed as ElectronCookieLike[];
+    // A non-array (valid JSON but wrong shape) is corrupt too: silently falling
+    // through to an empty jar would CLEAR the browser's cookies (clear mode) and
+    // restore nothing — i.e. log the user out with no error. Treat it as corrupt.
+    if (!Array.isArray(parsed)) throw new Error("not an array");
+    jar = parsed as ElectronCookieLike[];
   } catch {
     throw new Error(`凭证「${cred.label}」的 cookie 数据损坏`);
   }
