@@ -21,6 +21,7 @@ import { PluginsTab } from "./PluginsTab";
 import { SkillsTab } from "./SkillsTab";
 import { useT } from "../i18n/I18nProvider";
 import type { SkillSummary } from "../../main/skills-service";
+import { FileText, Plug, Puzzle, Search, ShoppingCart, type LucideIcon } from "lucide-react";
 
 // Replicated from PluginsAndSkillsSection (helper is not exported there).
 // A plugin skill's namespace is the part of its name before the first ":".
@@ -98,25 +99,28 @@ export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Pr
     });
   };
 
-  const tabBtn = (key: TabKey, label: string) => (
+  const tabBtn = (key: TabKey, label: string, Icon: LucideIcon) => (
     <button
       className={
-        "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
         (tab === key ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60")
       }
       onClick={() => setTab(key)}
     >
+      <Icon className="h-4 w-4" aria-hidden="true" />
       {label}
     </button>
   );
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-1">
-        {tabBtn("plugins", t("ext.manage.tabPlugins"))}
-        {tabBtn("skills", t("ext.manage.tabSkills"))}
-        {tabBtn("mcp", t("ext.manage.tabMcp"))}
-        {tabBtn("market", t("ext.manage.tabMarket"))}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border bg-muted/20 p-1">
+          {tabBtn("plugins", t("ext.manage.tabPlugins"), Puzzle)}
+          {tabBtn("skills", t("ext.manage.tabSkills"), FileText)}
+          {tabBtn("mcp", t("ext.manage.tabMcp"), Plug)}
+          {tabBtn("market", t("ext.manage.tabMarket"), ShoppingCart)}
+        </div>
         {/* Scope disclosure: these switches write the USER-level
             disabledSkills/disabledPlugins — they affect EVERY project. Users
             kept flipping them believing they were per-project (feedback:
@@ -131,12 +135,18 @@ export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Pr
           </span>
         )}
         {tab !== "mcp" && tab !== "market" && (
-          <input
-            className="ml-2 h-8 flex-1 rounded-md border border-input bg-transparent px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            placeholder={t("ext.manage.searchPlaceholder")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <div className="relative min-w-[220px] flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <input
+              className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
+              placeholder={t("ext.manage.searchPlaceholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
         )}
       </div>
       {tab === "plugins" && (

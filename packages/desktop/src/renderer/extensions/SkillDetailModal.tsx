@@ -48,7 +48,7 @@ export function SkillDetailModal({ name, filePath, source, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-xl border bg-background shadow-lg"
+        className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-lg border bg-background shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center gap-2 border-b border-border px-4 py-3">

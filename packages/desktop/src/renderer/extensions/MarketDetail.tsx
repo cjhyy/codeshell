@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAlert } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
 import { notifySettingsChanged } from "../settingsBus";
+import { Puzzle } from "lucide-react";
 
 interface Props {
   cwd: string;
@@ -121,8 +122,10 @@ export function MarketDetail({ cwd, marketName, onBack, onInstalled }: Props) {
             const isInstalled = installed.has(p.name);
             const installedVersion = installed.get(p.name);
             return (
-              <li key={p.name} className="flex items-center gap-3 rounded-md border p-3 text-sm">
-                <span className="text-lg">🧩</span>
+              <li key={p.name} className="flex items-center gap-3 rounded-lg border bg-card p-3 text-sm">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
+                  <Puzzle className="h-4 w-4" aria-hidden="true" />
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2 truncate">
                     <span className="truncate font-medium">{p.name}</span>

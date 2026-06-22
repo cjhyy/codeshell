@@ -3,7 +3,8 @@ import type { SkillSummary } from "../../main/skills-service";
 import { SkillDetailModal } from "./SkillDetailModal";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { ArrowUpCircle, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowUpCircle, FileText, Loader2, Plug, type LucideIcon } from "lucide-react";
 import { useToast } from "../ui/ToastProvider";
 import { useAlert } from "../ui/DialogProvider";
 import { useT } from "../i18n/I18nProvider";
@@ -14,6 +15,17 @@ interface Props {
   query: string;
   isEnabled: (s: SkillSummary) => boolean;
   onToggle: (s: SkillSummary, next: boolean) => void;
+}
+
+function skillNamespace(name: string): string | null {
+  const idx = name.indexOf(":");
+  return idx > 0 ? name.slice(0, idx) : null;
+}
+
+function displaySkillName(s: SkillSummary): string {
+  if (s.source !== "plugin") return s.name;
+  const namespace = skillNamespace(s.name);
+  return namespace ? s.name.slice(namespace.length + 1) : s.name;
 }
 
 export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
@@ -128,6 +140,103 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
     return <div className="p-4 text-sm text-muted-foreground">{t("ext.skills.noMatch")}</div>;
 
   const updatableCount = rows.filter((s) => updatable[s.filePath]).length;
+  const standaloneRows = rows
+    .filter((s) => s.source !== "plugin")
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const pluginGroups = new Map<string, SkillSummary[]>();
+  for (const s of rows.filter((skill) => skill.source === "plugin")) {
+    const owner = skillNamespace(s.name) ?? t("ext.skills.unknownPlugin");
+    const list = pluginGroups.get(owner) ?? [];
+    list.push(s);
+    pluginGroups.set(owner, list);
+  }
+  const pluginGroupEntries = [...pluginGroups.entries()]
+    .map(([owner, list]) => [
+      owner,
+      list.sort((a, b) => displaySkillName(a).localeCompare(displaySkillName(b))),
+    ] as const)
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  const sourceLabel = (s: SkillSummary) => {
+    if (s.source === "project") return t("ext.skills.sourceProject");
+    if (s.source === "user") return t("ext.skills.sourceUser");
+    return t("ext.skills.sourcePlugin");
+  };
+
+  const renderSectionHeader = (
+    Icon: LucideIcon,
+    title: string,
+    description: string,
+    count: number,
+  ) => (
+    <div className="flex flex-wrap items-center gap-2 px-1">
+      <span className="flex h-8 w-8 items-center justify-center rounded-md border bg-background text-muted-foreground">
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium text-foreground">{title}</div>
+        <div className="text-xs text-muted-foreground">{description}</div>
+      </div>
+      <Badge variant="secondary">{count}</Badge>
+    </div>
+  );
+
+  const renderSkillRow = (s: SkillSummary) => {
+    const isPluginSkill = s.source === "plugin";
+    const owner = isPluginSkill ? skillNamespace(s.name) : null;
+    return (
+      <li
+        key={s.filePath}
+        className="flex cursor-pointer items-center gap-3 rounded-lg border bg-card p-3 text-sm hover:bg-accent/50"
+        onClick={() => setOpen(s)}
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
+          {isPluginSkill ? (
+            <Plug className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <FileText className="h-4 w-4" aria-hidden="true" />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="truncate font-medium">{displaySkillName(s)}</div>
+            {isPluginSkill ? (
+              <Badge variant="info" className="shrink-0">{owner ?? t("ext.skills.unknownPlugin")}</Badge>
+            ) : (
+              <Badge variant={s.source === "project" ? "accent" : "secondary"} className="shrink-0">
+                {sourceLabel(s)}
+              </Badge>
+            )}
+          </div>
+          <div className="truncate text-xs text-muted-foreground">
+            {(s.description ?? "").split("\n")[0]}
+          </div>
+        </div>
+        {updatable[s.filePath] && (
+          <Button
+            size="icon"
+            variant="ghost"
+            title={t("ext.skills.hasUpdateTip")}
+            className="text-status-running hover:text-status-running"
+            disabled={busy === s.filePath}
+            onClick={(e) => {
+              e.stopPropagation();
+              void update(s);
+            }}
+          >
+            {busy === s.filePath ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ArrowUpCircle className="h-4 w-4" />
+            )}
+          </Button>
+        )}
+        <span onClick={(e) => e.stopPropagation()}>
+          <Switch checked={isEnabled(s)} onCheckedChange={(v) => onToggle(s, v)} />
+        </span>
+      </li>
+    );
+  };
 
   return (
     <>
@@ -149,46 +258,46 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
           </Button>
         </div>
       )}
-      <ul className="space-y-1">
-        {rows.map((s) => (
-          <li
-            key={s.filePath}
-            className="flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm hover:bg-accent"
-            onClick={() => setOpen(s)}
-          >
-            <span className="text-lg">📄</span>
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium">{s.name}</div>
-              <div className="truncate text-xs text-muted-foreground">
-                {(s.description ?? "").split("\n")[0]}
-              </div>
-            </div>
-            {updatable[s.filePath] && (
-              <Button
-                size="icon"
-                variant="ghost"
-                title={t("ext.skills.hasUpdateTip")}
-                className="text-status-running hover:text-status-running"
-                disabled={busy === s.filePath}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void update(s);
-                }}
-              >
-                {busy === s.filePath ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowUpCircle className="h-4 w-4" />
-                )}
-              </Button>
+      <div className="space-y-5">
+        {standaloneRows.length > 0 && (
+          <section className="space-y-2">
+            {renderSectionHeader(
+              FileText,
+              t("ext.skills.standaloneTitle"),
+              t("ext.skills.standaloneDesc"),
+              standaloneRows.length,
             )}
-            <span className="text-xs text-muted-foreground">{s.source}</span>
-            <span onClick={(e) => e.stopPropagation()}>
-              <Switch checked={isEnabled(s)} onCheckedChange={(v) => onToggle(s, v)} />
-            </span>
-          </li>
-        ))}
-      </ul>
+            <ul className="space-y-1">
+              {standaloneRows.map(renderSkillRow)}
+            </ul>
+          </section>
+        )}
+        {pluginGroupEntries.length > 0 && (
+          <section className="space-y-2">
+            {renderSectionHeader(
+              Plug,
+              t("ext.skills.pluginTitle"),
+              t("ext.skills.pluginDesc"),
+              rows.length - standaloneRows.length,
+            )}
+            <div className="space-y-3">
+              {pluginGroupEntries.map(([owner, list]) => (
+                <div key={owner} className="space-y-1">
+                  <div className="flex items-center gap-2 px-1">
+                    <Badge variant="info">{owner}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {t("ext.skills.groupSkillCount", { count: list.length })}
+                    </span>
+                  </div>
+                  <ul className="space-y-1">
+                    {list.map(renderSkillRow)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
       {open && (
         <SkillDetailModal
           name={open.name}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PluginDetail } from "../../preload/types";
 import { Button } from "@/components/ui/button";
-import { Sparkles, TerminalSquare, Bot, Webhook, Plug } from "lucide-react";
+import { Sparkles, TerminalSquare, Bot, Webhook, Plug, Puzzle } from "lucide-react";
 import { useT } from "../i18n/I18nProvider";
 
 /**
@@ -79,7 +79,9 @@ export function PluginDetailView({
         >
           ‹ {t("ext.common.back")}
         </button>
-        <span className="text-lg">🧩</span>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground">
+          <Puzzle className="h-4 w-4" aria-hidden="true" />
+        </span>
         <span className="font-semibold">{detail.name}</span>
         <span className="text-xs text-muted-foreground">
           {detail.version} · {detail.sourceLabel}

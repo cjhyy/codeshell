@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import type { TabKey } from "./ManagePage";
 import { useT } from "../i18n/I18nProvider";
+import {
+  ArrowRight,
+  FileText,
+  Plug,
+  Puzzle,
+  Search,
+  ShoppingCart,
+  type LucideIcon,
+} from "lucide-react";
 
 interface Props {
   cwd: string;
@@ -47,23 +56,57 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
     if (e.key === "Enter") onOpenManage("skills", search.trim() || undefined);
   };
 
-  const stats: { key: TabKey; label: string; icon: string; value: number | null }[] = [
-    { key: "plugins", label: t("ext.discover.plugins"), icon: "🧩", value: counts?.plugins ?? null },
-    { key: "skills", label: t("ext.discover.skills"), icon: "📄", value: counts?.skills ?? null },
-    { key: "mcp", label: t("ext.discover.mcp"), icon: "🔌", value: counts?.mcp ?? null },
+  const stats: {
+    key: TabKey;
+    label: string;
+    description: string;
+    icon: LucideIcon;
+    value: number | null;
+  }[] = [
+    {
+      key: "plugins",
+      label: t("ext.discover.plugins"),
+      description: t("ext.discover.pluginsDesc"),
+      icon: Puzzle,
+      value: counts?.plugins ?? null,
+    },
+    {
+      key: "skills",
+      label: t("ext.discover.skills"),
+      description: t("ext.discover.skillsDesc"),
+      icon: FileText,
+      value: counts?.skills ?? null,
+    },
+    {
+      key: "mcp",
+      label: t("ext.discover.mcp"),
+      description: t("ext.discover.mcpDesc"),
+      icon: Plug,
+      value: counts?.mcp ?? null,
+    },
+    {
+      key: "market",
+      label: t("ext.discover.market"),
+      description: t("ext.discover.marketDesc"),
+      icon: ShoppingCart,
+      value: null,
+    },
   ];
 
   return (
-    <div className="mx-auto max-w-2xl py-10">
+    <div className="mx-auto max-w-4xl py-8">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("ext.discover.title")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <h1 className="text-3xl font-semibold tracking-tight">{t("ext.discover.title")}</h1>
+        <p className="mx-auto mt-2 max-w-2xl text-sm text-muted-foreground">
           {t("ext.discover.subtitle")}
         </p>
-        <div className="relative mx-auto mt-5 max-w-md">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true">🔍</span>
+        <div className="relative mx-auto mt-6 max-w-xl">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <input
-            className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
             placeholder={t("ext.discover.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -72,26 +115,31 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-4 gap-3">
-        {stats.map((s) => (
+      <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
           <button
             key={s.key}
-            className="flex flex-col items-center gap-1 rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent"
+            className="group flex min-h-[118px] items-start gap-3 rounded-lg border bg-card p-4 text-left text-card-foreground shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/15"
             onClick={() => onOpenManage(s.key)}
           >
-            <span className="text-2xl" aria-hidden="true">{s.icon}</span>
-            <span className="text-lg font-semibold">{s.value === null ? "—" : s.value}</span>
-            <span className="text-xs text-muted-foreground">{s.label}</span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground group-hover:text-primary">
+              <Icon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2">
+                <span className="truncate text-sm font-medium text-foreground">{s.label}</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </span>
+              <span className="mt-1 block text-2xl font-semibold leading-none text-foreground">
+                {s.value === null ? "+" : s.value}
+              </span>
+              <span className="mt-2 block text-xs leading-5 text-muted-foreground">{s.description}</span>
+            </span>
           </button>
-        ))}
-        <button
-          className="flex flex-col items-center gap-1 rounded-xl border border-dashed bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent"
-          onClick={() => onOpenManage("market")}
-        >
-          <span className="text-2xl" aria-hidden="true">🛒</span>
-          <span className="text-lg font-semibold">+</span>
-          <span className="text-xs text-muted-foreground">{t("ext.discover.market")}</span>
-        </button>
+          );
+        })}
       </div>
     </div>
   );
