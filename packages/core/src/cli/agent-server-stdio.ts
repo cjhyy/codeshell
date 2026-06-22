@@ -218,7 +218,11 @@ const chatManager = new ChatSessionManager({
       // the first session to connect populates connections for the worker.
       // Plugin-provided MCP servers (mcp-servers.json in installed plugins)
       // are merged in here so the model can actually call them.
-      mcpServers: mergePluginMcpServers(live.mcpServers ?? {}, disabledPlugins),
+      mcpServers: mergePluginMcpServers(
+        live.mcpServers ?? {},
+        disabledPlugins,
+        live.mcpServerOverrides ?? {},
+      ),
       // Per-session overrides from the protocol request; fall back to
       // settings.agent.* so the user's 个性化 settings actually apply
       // (previously slice arrived with only permissionMode+cwd, so these

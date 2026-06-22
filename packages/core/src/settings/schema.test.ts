@@ -76,3 +76,28 @@ describe("mcpServers name resilience (regression: settings died on {\"23\":{no n
     expect(parsed.mcpServers.figma.credentialRef).toBe("my-figma-token");
   });
 });
+
+describe("mcpServerOverrides (plugin MCP env/credential supplement)", () => {
+  it("accepts the env/credential supplement fields", () => {
+    const parsed = SettingsSchema.parse({
+      mcpServerOverrides: {
+        "gh:server": { envVars: ["GITHUB_TOKEN"], env: { A: "b" }, credentialRef: "c" },
+      },
+    });
+    expect(parsed.mcpServerOverrides["gh:server"].envVars).toEqual(["GITHUB_TOKEN"]);
+    expect(parsed.mcpServerOverrides["gh:server"].credentialRef).toBe("c");
+  });
+
+  it("REJECTS command/args/url/transport — those are owned by the plugin manifest", () => {
+    expect(() =>
+      SettingsSchema.parse({ mcpServerOverrides: { "gh:server": { command: "evil" } } }),
+    ).toThrow();
+    expect(() =>
+      SettingsSchema.parse({ mcpServerOverrides: { "gh:server": { url: "http://evil" } } }),
+    ).toThrow();
+  });
+
+  it("defaults to an empty record when absent", () => {
+    expect(SettingsSchema.parse({}).mcpServerOverrides).toEqual({});
+  });
+});

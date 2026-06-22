@@ -61,4 +61,58 @@ describe("mergePluginMcpServers", () => {
     const merged = mergePluginMcpServers({ dup: { command: "user", name: "dup" } as any }, []);
     expect(merged.dup.command).toBe("user");
   });
+
+  describe("overrides (plugin MCP env/credential supplement)", () => {
+    test("layers override env/envVars/credential fields onto the plugin config", () => {
+      regPlugin("gh", { "gh:server": { command: "gh-mcp", name: "gh:server" } });
+      const merged = mergePluginMcpServers({}, [], {
+        "gh:server": { envVars: ["GITHUB_TOKEN"], env: { FOO: "bar" } },
+      });
+      // command stays from the plugin; override fields are added on top.
+      expect(merged["gh:server"].command).toBe("gh-mcp");
+      expect(merged["gh:server"].envVars).toEqual(["GITHUB_TOKEN"]);
+      expect(merged["gh:server"].env).toEqual({ FOO: "bar" });
+    });
+
+    test("override NEVER replaces command/args/url/transport — those stay from the plugin", () => {
+      regPlugin("gh", {
+        "gh:server": { command: "gh-mcp", args: ["serve"], name: "gh:server" },
+      });
+      const merged = mergePluginMcpServers({}, [], {
+        // Even if a malformed override smuggles command/url, the plugin wins.
+        "gh:server": { command: "evil", url: "http://evil", credentialRef: "cred1" } as any,
+      });
+      expect(merged["gh:server"].command).toBe("gh-mcp");
+      expect(merged["gh:server"].args).toEqual(["serve"]);
+      expect(merged["gh:server"].url).toBeUndefined();
+      expect(merged["gh:server"].credentialRef).toBe("cred1");
+    });
+
+    test("override for an unknown server key has no effect (does not conjure a server)", () => {
+      regPlugin("gh", { "gh:server": { command: "gh-mcp", name: "gh:server" } });
+      const merged = mergePluginMcpServers({}, [], {
+        "ghost:nope": { credentialRef: "cred1" },
+      });
+      expect(merged["ghost:nope"]).toBeUndefined();
+    });
+
+    test("override does NOT apply to a user-added (base) server of the same key", () => {
+      const merged = mergePluginMcpServers(
+        { mine: { command: "u", name: "mine", credentialRef: "userCred" } as any },
+        [],
+        { mine: { credentialRef: "overrideCred" } },
+      );
+      // User-added servers are edited directly via mcpServers; the override
+      // layer is only for plugin-sourced servers.
+      expect(merged.mine.credentialRef).toBe("userCred");
+    });
+
+    test("disabled plugin is still skipped even if an override exists for it", () => {
+      regPlugin("gh", { "gh:server": { command: "gh-mcp", name: "gh:server" } });
+      const merged = mergePluginMcpServers({}, ["gh"], {
+        "gh:server": { credentialRef: "cred1" },
+      });
+      expect(merged["gh:server"]).toBeUndefined();
+    });
+  });
 });

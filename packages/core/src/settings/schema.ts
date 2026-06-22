@@ -435,6 +435,27 @@ export const SettingsSchema = z
       .default({}),
 
     /**
+     * User supplements for PLUGIN-provided MCP servers, keyed by the server's
+     * `<plugin>:<server>` name. Layered onto the plugin config at merge time
+     * (mergePluginMcpServers). Only env/credential fields are accepted —
+     * command/args/url/transport are intentionally absent and `.strict()`
+     * rejects them, so a plugin update is never shadowed by a stale copy.
+     */
+    mcpServerOverrides: z
+      .record(
+        z
+          .object({
+            env: z.record(z.string()).optional(),
+            envVars: z.array(z.string()).optional(),
+            credentialRef: z.string().optional(),
+            bearerTokenEnvVar: z.string().optional(),
+            envHeaders: z.record(z.string()).optional(),
+          })
+          .strict(),
+      )
+      .default({}),
+
+    /**
      * Skill names hidden from the LLM. Names include the full
      * "<plugin>:<skill>" prefix for plugin skills. Filtered at the
      * scanner so PromptComposer's skills listing and the skill builtin

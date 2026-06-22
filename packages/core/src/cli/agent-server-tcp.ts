@@ -83,7 +83,11 @@ const chatManager = new ChatSessionManager({
       cwd,
       runtime,
       settingsScope: "full",
-      mcpServers: mergePluginMcpServers(settings.mcpServers ?? {}, disabledPlugins),
+      mcpServers: mergePluginMcpServers(
+        settings.mcpServers ?? {},
+        disabledPlugins,
+        settings.mcpServerOverrides ?? {},
+      ),
       permissionMode: slice.permissionMode,
       preset: slice.preset,
       customSystemPrompt: slice.customSystemPrompt,

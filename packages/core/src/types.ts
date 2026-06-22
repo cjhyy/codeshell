@@ -617,6 +617,22 @@ export interface MCPServerConfig {
   enabled?: boolean;
 }
 
+/**
+ * User-supplied supplement for a PLUGIN-provided MCP server, keyed by the
+ * server's `<plugin>:<server>` name. Stored globally under
+ * `settings.mcpServerOverrides` and layered onto the plugin's config at merge
+ * time (see mergePluginMcpServers). Only env/credential fields are allowed —
+ * command/args/url/transport stay owned by the plugin manifest so a plugin
+ * update is never shadowed by a stale user copy.
+ */
+export interface MCPServerOverride {
+  env?: Record<string, string>;
+  envVars?: string[];
+  credentialRef?: string;
+  bearerTokenEnvVar?: string;
+  envHeaders?: Record<string, string>;
+}
+
 // ─── Settings ─────────────────────────────────────────────────────
 
 /**

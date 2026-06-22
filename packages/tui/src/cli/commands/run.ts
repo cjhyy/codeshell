@@ -201,6 +201,7 @@ export async function runCommand(options: RunOptions): Promise<void> {
     mcpServers: mergePluginMcpServers(
       settings.mcpServers ?? {},
       (settings as { disabledPlugins?: string[] }).disabledPlugins ?? [],
+      settings.mcpServerOverrides ?? {},
     ),
     headless: true,
     sandbox: sandboxConfig,

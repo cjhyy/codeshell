@@ -41,7 +41,20 @@ interface McpServer {
   /** Plugin server whose OWNER plugin is disabled — listed but inert
    *  (装了就展示;引擎不会连接它,启用插件才生效). */
   pluginDisabled?: boolean;
+  /** Plugin server that currently carries a user env/credential override
+   *  (settings.mcpServerOverrides). UI-only flag from mcp:listMerged. */
+  hasOverride?: boolean;
 }
+
+/** Fields a user may supplement onto a plugin MCP server (mirror of core
+ *  MCPServerOverride). command/args/url/transport are intentionally absent. */
+const MCP_OVERRIDE_FIELDS = [
+  "env",
+  "envVars",
+  "credentialRef",
+  "bearerTokenEnvVar",
+  "envHeaders",
+] as const;
 
 export function isEditableMcpServer(s: McpServer): boolean {
   return s.editable !== false && s.source !== "plugin";
@@ -83,7 +96,10 @@ interface Props {
 type EditState =
   | { kind: "closed" }
   | { kind: "new" }
-  | { kind: "edit"; original: string };
+  | { kind: "edit"; original: string }
+  // Supplement a PLUGIN server's env/credential — identity fields locked,
+  // saved to the global mcpServerOverrides layer (not mcpServers).
+  | { kind: "override"; original: string };
 
 export function McpSection({ scope, activeRepoPath }: Props) {
   const [servers, setServers] = useState<McpServer[]>([]);
@@ -241,6 +257,30 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     void runProbe(updated, true);
   };
 
+  // Save (or clear) the env/credential supplement for a PLUGIN server. Always
+  // writes the GLOBAL mcpServerOverrides layer — never mcpServers — so the
+  // plugin's command/url stay owned by the manifest and survive updates.
+  const saveOverride = async (name: string, next: McpServer) => {
+    const supplement: Record<string, unknown> = {};
+    let any = false;
+    for (const f of MCP_OVERRIDE_FIELDS) {
+      const v = next[f];
+      const present = v !== undefined && !(Array.isArray(v) && v.length === 0);
+      // settings deepMerge: a present field overwrites, a `null` deletes the
+      // stale one. Send every field so a CLEARED field is actually removed
+      // (a plain absent key would leave the old value behind).
+      supplement[f] = present ? v : null;
+      if (present) any = true;
+    }
+    // No fields left → drop the whole override entry (null deletes the key).
+    const value = any ? supplement : null;
+    await window.codeshell.updateSettings("user", { mcpServerOverrides: { [name]: value } }, undefined);
+    await window.codeshell.invalidateMcpProbeCache(name);
+    setEdit({ kind: "closed" });
+    broadcastSettingsChanged();
+    await load();
+  };
+
   const testOne = async (s: McpServer) => {
     setLoadingProbe((prev) => new Set(prev).add(s.name));
     try {
@@ -333,6 +373,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
               onToggle={() => void toggleServer(s)}
               onTest={() => void testOne(s)}
               onEdit={() => setEdit({ kind: "edit", original: s.name })}
+              onOverride={() => setEdit({ kind: "override", original: s.name })}
               onRemove={() => void removeServer(s.name)}
               onViewTools={() => setToolsViewer(probe ?? null)}
               onShowErrorDetail={() => setErrorDetailFor(probe ?? null)}
@@ -362,10 +403,17 @@ export function McpSection({ scope, activeRepoPath }: Props) {
       {edit.kind !== "closed" && (
         <McpEditor
           existingNames={servers.map((s) => s.name)}
-          initial={edit.kind === "edit" ? servers.find((s) => s.name === edit.original) ?? null : null}
+          initial={
+            edit.kind === "edit" || edit.kind === "override"
+              ? servers.find((s) => s.name === edit.original) ?? null
+              : null
+          }
+          mode={edit.kind === "override" ? "override" : "full"}
           onCancel={() => setEdit({ kind: "closed" })}
           onSave={(next) =>
-            void saveEdit(next, edit.kind === "edit" ? edit.original : undefined)
+            edit.kind === "override"
+              ? void saveOverride(edit.original, next)
+              : void saveEdit(next, edit.kind === "edit" ? edit.original : undefined)
           }
         />
       )}
@@ -394,6 +442,8 @@ interface McpCardProps {
   onToggle: () => void;
   onTest: () => void;
   onEdit: () => void;
+  /** Open the env/credential supplement editor (plugin servers only). */
+  onOverride: () => void;
   onRemove: () => void;
   onViewTools: () => void;
   onShowErrorDetail: () => void;
@@ -407,6 +457,7 @@ function McpCard({
   onToggle,
   onTest,
   onEdit,
+  onOverride,
   onRemove,
   onViewTools,
   onShowErrorDetail,
@@ -458,6 +509,14 @@ function McpCard({
               {ownerPlugin ? t("settingsX.mcp.pluginPrefix", { owner: ownerPlugin }) : "plugin"}
             </span>
           )}
+          {server.hasOverride && (
+            <span
+              className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+              title={t("settingsX.mcp.overrideBadgeTitle")}
+            >
+              {t("settingsX.mcp.overrideBadge")}
+            </span>
+          )}
           {enabled ? (
             <StatusPill probe={probe} loading={loading} />
           ) : (
@@ -488,20 +547,37 @@ function McpCard({
               </Button>
             </>
           ) : (
-            <span
-              className="text-xs text-muted-foreground"
-              title={
-                ownerPlugin
-                  ? t("settingsX.mcp.pluginManagedHint", { owner: ownerPlugin })
-                  : t("settingsX.mcp.pluginProvidedHint")
-              }
-            >
-              {groupedByPlugin
-                ? t("settingsX.mcp.readOnly")
-                : ownerPlugin
-                  ? t("settingsX.mcp.readOnlyPluginManaged", { owner: ownerPlugin })
-                  : t("settingsX.mcp.readOnlyPlugin")}
-            </span>
+            <>
+              {/* Plugin servers stay read-only for command/url, but the user may
+                  supplement env/credential — those save to the global override
+                  layer and survive plugin updates. Hidden while the owner
+                  plugin is disabled (the server is inert anyway). */}
+              {!server.pluginDisabled && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onOverride}
+                  title={t("settingsX.mcp.supplementCredTitle")}
+                >
+                  {t("settingsX.mcp.supplementCred")}
+                </Button>
+              )}
+              <span
+                className="text-xs text-muted-foreground"
+                title={
+                  ownerPlugin
+                    ? t("settingsX.mcp.pluginManagedHint", { owner: ownerPlugin })
+                    : t("settingsX.mcp.pluginProvidedHint")
+                }
+              >
+                {groupedByPlugin
+                  ? t("settingsX.mcp.readOnly")
+                  : ownerPlugin
+                    ? t("settingsX.mcp.readOnlyPluginManaged", { owner: ownerPlugin })
+                    : t("settingsX.mcp.readOnlyPlugin")}
+              </span>
+            </>
           )}
         </div>
       </div>
@@ -566,11 +642,15 @@ function formatRelativeTime(iso: string): string {
 interface EditorProps {
   initial: McpServer | null;
   existingNames: string[];
+  /** "override" locks identity fields (name/transport/command/args/url) and
+   *  only lets the user supplement env/credential for a plugin server. */
+  mode?: "full" | "override";
   onCancel: () => void;
   onSave: (next: McpServer) => void;
 }
 
-function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
+function McpEditor({ initial, existingNames, mode = "full", onCancel, onSave }: EditorProps) {
+  const isOverride = mode === "override";
   const [transport, setTransport] = useState<"stdio" | "streamable-http" | "sse">(
     initial?.transport ?? (initial?.url ? "streamable-http" : "stdio"),
   );
@@ -586,7 +666,9 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
   const [credOptions, setCredOptions] = useState<{ value: string; label: string }[]>([]);
   const [envHeadersText, setEnvHeadersText] = useState(envOrHeadersToText(initial?.envHeaders, ": "));
   const [showAdvanced, setShowAdvanced] = useState(
-    Boolean(initial?.env && Object.keys(initial.env).length) ||
+    // Override mode IS the env/credential editor — always start expanded.
+    isOverride ||
+      Boolean(initial?.env && Object.keys(initial.env).length) ||
       Boolean(initial?.envVars && initial.envVars.length) ||
       Boolean(initial?.headers && Object.keys(initial.headers).length) ||
       Boolean(initial?.bearerTokenEnvVar) ||
@@ -611,17 +693,21 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
 
   const submit = () => {
     const trimmedName = name.trim();
-    if (!trimmedName) return setValidationError(t("settingsX.mcp.nameEmpty"));
-    if (otherNames.includes(trimmedName))
-      return setValidationError(t("settingsX.mcp.nameDuplicate"));
-    if (isStdio) {
-      if (!command.trim()) return setValidationError(t("settingsX.mcp.stdioNeedsCommand"));
-    } else {
-      if (!url.trim()) return setValidationError(t("settingsX.mcp.needsUrl", { transport }));
-      try {
-        new URL(url.trim());
-      } catch {
-        return setValidationError(t("settingsX.mcp.urlInvalid"));
+    // Override mode locks identity fields, so skip their validation — the user
+    // only supplies env/credential supplements for an existing plugin server.
+    if (!isOverride) {
+      if (!trimmedName) return setValidationError(t("settingsX.mcp.nameEmpty"));
+      if (otherNames.includes(trimmedName))
+        return setValidationError(t("settingsX.mcp.nameDuplicate"));
+      if (isStdio) {
+        if (!command.trim()) return setValidationError(t("settingsX.mcp.stdioNeedsCommand"));
+      } else {
+        if (!url.trim()) return setValidationError(t("settingsX.mcp.needsUrl", { transport }));
+        try {
+          new URL(url.trim());
+        } catch {
+          return setValidationError(t("settingsX.mcp.urlInvalid"));
+        }
       }
     }
     let env: Record<string, string> | undefined;
@@ -639,24 +725,42 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
       );
     }
 
-    const next: McpServer = {
-      name: trimmedName,
-      transport,
-      ...(isStdio
-        ? {
-            command: command.trim(),
-            args: args.trim() ? splitArgs(args.trim()) : undefined,
-            env: env && Object.keys(env).length ? env : undefined,
-            envVars: envVars && envVars.length ? envVars : undefined,
-          }
-        : {
-            url: url.trim(),
-            headers: headers && Object.keys(headers).length ? headers : undefined,
-            credentialRef: credentialRef || undefined,
-            bearerTokenEnvVar: bearerEnvVar.trim() || undefined,
-            envHeaders: envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined,
-          }),
-    };
+    // Override mode emits ONLY the supplement fields — saveOverride writes them
+    // to the global mcpServerOverrides layer; command/url stay owned by the
+    // plugin. We still key by the (locked) original name + transport.
+    const next: McpServer = isOverride
+      ? {
+          name: trimmedName,
+          transport,
+          ...(isStdio
+            ? {
+                env: env && Object.keys(env).length ? env : undefined,
+                envVars: envVars && envVars.length ? envVars : undefined,
+              }
+            : {
+                credentialRef: credentialRef || undefined,
+                bearerTokenEnvVar: bearerEnvVar.trim() || undefined,
+                envHeaders: envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined,
+              }),
+        }
+      : {
+          name: trimmedName,
+          transport,
+          ...(isStdio
+            ? {
+                command: command.trim(),
+                args: args.trim() ? splitArgs(args.trim()) : undefined,
+                env: env && Object.keys(env).length ? env : undefined,
+                envVars: envVars && envVars.length ? envVars : undefined,
+              }
+            : {
+                url: url.trim(),
+                headers: headers && Object.keys(headers).length ? headers : undefined,
+                credentialRef: credentialRef || undefined,
+                bearerTokenEnvVar: bearerEnvVar.trim() || undefined,
+                envHeaders: envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined,
+              }),
+        };
     onSave(next);
   };
 
@@ -664,10 +768,20 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
     <div className="rounded-md border bg-card p-4">
       <header className="mb-4 flex items-center justify-between gap-3">
         <strong>
-          {initial ? t("settingsX.mcp.editTitle", { name: initial.name }) : t("settingsX.mcp.addTitle")}
+          {isOverride
+            ? t("settingsX.mcp.overrideTitle", { name: initial?.name ?? "" })
+            : initial
+              ? t("settingsX.mcp.editTitle", { name: initial.name })
+              : t("settingsX.mcp.addTitle")}
         </strong>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>{t("settingsX.mcp.close")}</Button>
       </header>
+
+      {isOverride && (
+        <p className="mb-4 rounded-md bg-muted/50 p-2.5 text-xs text-muted-foreground">
+          {t("settingsX.mcp.overrideNote")}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
@@ -676,6 +790,7 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="my-server"
+            disabled={isOverride}
           />
         </label>
         <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
@@ -683,6 +798,7 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
           <Select<"stdio" | "streamable-http" | "sse">
             value={transport}
             onChange={(v) => setTransport(v)}
+            disabled={isOverride}
             options={[
               { value: "stdio", label: "stdio", description: t("settingsX.mcp.transportStdioDesc") },
               { value: "streamable-http", label: "HTTP", description: t("settingsX.mcp.transportHttpDesc") },
