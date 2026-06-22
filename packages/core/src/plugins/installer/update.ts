@@ -27,7 +27,7 @@ export interface UpdateResult {
  * event loop with sync fs. process.pid (not Date.now(), unavailable here) makes
  * the backup name unique.
  */
-async function reinstallAtomic(
+export async function reinstallAtomic(
   name: string,
   source: string,
   doInstall: () => Promise<unknown>,

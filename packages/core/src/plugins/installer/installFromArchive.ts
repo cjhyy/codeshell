@@ -4,7 +4,44 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { extractZip } from "./unzip.js";
 import { installPluginFromPath } from "./install.js";
+import { reinstallAtomic } from "./update.js";
+import { pluginInstallDir } from "./paths.js";
 import { PluginInstallError } from "./types.js";
+
+/** Options for the unified local-install entry. */
+export interface InstallLocalOptions {
+  /**
+   * When the target name is already installed, replace it instead of throwing
+   * "already installed". The replace is atomic (rename-backup + rollback via
+   * {@link reinstallAtomic}), so a failed overwrite keeps the old version and
+   * its registration intact. Unlike a manual uninstall+install, this preserves
+   * the user's disable flags in settings (an upgrade is not a removal).
+   */
+  overwrite?: boolean;
+}
+
+/**
+ * Install `root` as plugin `name`, atomically replacing an already-installed
+ * plugin of the same name when `overwrite` is set. When no same-name plugin
+ * exists this is a plain install (overwrite is a no-op). `root` must stay valid
+ * for the duration of the call (zip callers keep their extracted temp dir alive
+ * until this resolves).
+ */
+async function installRootMaybeOverwrite(
+  root: string,
+  resolvedName: string,
+  installedAt: string,
+  overwrite: boolean,
+): Promise<string> {
+  const finalDir = pluginInstallDir(resolvedName);
+  if (overwrite && existsSync(finalDir)) {
+    await reinstallAtomic(resolvedName, root, () =>
+      installPluginFromPath(root, resolvedName, installedAt),
+    );
+    return finalDir;
+  }
+  return installPluginFromPath(root, resolvedName, installedAt);
+}
 
 /**
  * Install a local plugin from a .zip archive.
@@ -22,6 +59,7 @@ export async function installPluginFromArchive(
   zipPath: string,
   installedAt: string,
   name?: string,
+  options?: InstallLocalOptions,
 ): Promise<{ dir: string; name: string }> {
   if (!existsSync(zipPath) || !statSync(zipPath).isFile()) {
     throw new PluginInstallError(`archive is not a file: ${zipPath}`);
@@ -31,7 +69,14 @@ export async function installPluginFromArchive(
     await extractZip(zipPath, tmp);
     const root = await findPluginRoot(tmp);
     const resolvedName = normalizePluginName(name ?? (await deriveName(root)));
-    const dir = await installPluginFromPath(root, resolvedName, installedAt);
+    // Overwrite (when set) runs inside this try so the extracted `root` is still
+    // present while reinstallAtomic installs from it; the finally removes tmp.
+    const dir = await installRootMaybeOverwrite(
+      root,
+      resolvedName,
+      installedAt,
+      options?.overwrite ?? false,
+    );
     return { dir, name: resolvedName };
   } finally {
     await rm(tmp, { recursive: true, force: true });
@@ -51,16 +96,22 @@ export async function installLocalPlugin(
   input: { kind: "dir" | "zip"; path: string },
   installedAt: string,
   name?: string,
+  options?: InstallLocalOptions,
 ): Promise<{ dir: string; name: string }> {
   if (input.kind === "zip") {
-    return installPluginFromArchive(input.path, installedAt, name);
+    return installPluginFromArchive(input.path, installedAt, name, options);
   }
   if (!existsSync(input.path) || !statSync(input.path).isDirectory()) {
     throw new PluginInstallError(`source is not a directory: ${input.path}`);
   }
   const root = await findPluginRoot(input.path);
   const resolvedName = normalizePluginName(name ?? (await deriveName(root)));
-  const dir = await installPluginFromPath(root, resolvedName, installedAt);
+  const dir = await installRootMaybeOverwrite(
+    root,
+    resolvedName,
+    installedAt,
+    options?.overwrite ?? false,
+  );
   return { dir, name: resolvedName };
 }
 
