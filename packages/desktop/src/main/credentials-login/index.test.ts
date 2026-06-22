@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import {
   loginAndCaptureCookies,
   hostnameOf,
+  cookieDomainMatches,
   injectionScript,
   extractConsoleMessage,
   tokensFor,
@@ -192,5 +193,41 @@ describe("loginAndCaptureCookies", () => {
     fake.wc.emit("console-message", {}, { message: TOK.save, versionId: 0 });
     const r = await p;
     expect(r.ok).toBe(true);
+  });
+});
+
+describe("cookieDomainMatches (capture domain fence)", () => {
+  test("exact host match", () => {
+    expect(cookieDomainMatches("github.com", "github.com")).toBe(true);
+    expect(cookieDomainMatches(".github.com", "github.com")).toBe(true);
+  });
+
+  test("registrable parent matches a subdomain target", () => {
+    // cookie set for .github.com applies to api.github.com
+    expect(cookieDomainMatches(".github.com", "api.github.com")).toBe(true);
+  });
+
+  test("REJECTS a bare public-suffix label matching an unrelated host", () => {
+    // the bug: "github.com".endsWith(".co") was true → would capture a .co cookie
+    expect(cookieDomainMatches(".co", "github.com")).toBe(false);
+    expect(cookieDomainMatches("com", "github.com")).toBe(false);
+    expect(cookieDomainMatches(".uk", "bbc.co.uk")).toBe(false);
+  });
+
+  test("rejects an unrelated sibling domain", () => {
+    expect(cookieDomainMatches("evil.com", "github.com")).toBe(false);
+    // substring-but-not-suffix must not match (myx.com vs x.com)
+    expect(cookieDomainMatches("x.com", "myx.com")).toBe(false);
+  });
+
+  test("empty / missing cookie domain never matches", () => {
+    expect(cookieDomainMatches(undefined, "github.com")).toBe(false);
+    expect(cookieDomainMatches("", "github.com")).toBe(false);
+    expect(cookieDomainMatches(".", "github.com")).toBe(false);
+  });
+
+  test("real multi-label parent still works (co.uk style)", () => {
+    expect(cookieDomainMatches(".bbc.co.uk", "www.bbc.co.uk")).toBe(true);
+    expect(cookieDomainMatches("bbc.co.uk", "bbc.co.uk")).toBe(true);
   });
 });
