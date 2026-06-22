@@ -6,7 +6,8 @@
  * here (those go through the user's own Edit, by design).
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §7.
  */
-import { readFileSync, writeFileSync, existsSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { catalogEntrySchema, userCatalogFileSchema, type CatalogEntry } from "./types.js";
 import { upsertCatalogEntry } from "./upsert.js";
 
@@ -54,6 +55,14 @@ export function saveCatalogEntry(
 
   const action: "added" | "updated" = current.some((e) => e.id === valid.id) ? "updated" : "added";
   const next = upsertCatalogEntry(current, valid);
+  // Ensure the parent dir exists — a first-ever catalog write on a machine
+  // whose ~/.code-shell hasn't been created yet would otherwise throw ENOENT
+  // (the agent-facing tool wants a clean {ok:false} or a real write, not a crash).
+  try {
+    mkdirSync(dirname(opts.path), { recursive: true });
+  } catch (e) {
+    return { ok: false, error: `could not create catalog directory: ${e instanceof Error ? e.message : String(e)}`, backup };
+  }
   writeFileSync(opts.path, JSON.stringify(next, null, 2));
   return { ok: true, action, backup };
 }

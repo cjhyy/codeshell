@@ -63,6 +63,16 @@ describe("saveCatalogEntry", () => {
     expect(existsSync(file)).toBe(false);
   });
 
+  test("creates a missing parent directory instead of crashing (first-ever write)", () => {
+    // A machine whose ~/.code-shell does not yet exist: the write must succeed,
+    // not throw ENOENT (regression — saveCatalogEntry used to writeFileSync raw).
+    const nested = join(dir, "no", "such", "dir", "model-catalog.user.json");
+    const r = saveCatalogEntry(ENTRY, { path: nested, stamp: "T6" });
+    expect(r.ok).toBe(true);
+    expect(existsSync(nested)).toBe(true);
+    expect(JSON.parse(readFileSync(nested, "utf-8"))[0].id).toBe("my-prov");
+  });
+
   test("preserves other entries when upserting", () => {
     const other = { ...ENTRY, id: "other" };
     writeFileSync(file, JSON.stringify([other]));
