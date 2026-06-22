@@ -1779,12 +1779,13 @@ export class Engine {
       ? allToolDefs.filter((t) => PLAN_MODE_ALLOWED_TOOLS.has(t.name))
       : allToolDefs;
 
-    const [llmClient, systemPrompt, systemContext] = await Promise.all([
+    const [llmClient, fullSystemPrompt, dynamicContextMsg] = await Promise.all([
       llmClientPromise,
+      // System prompt is now the STABLE prefix only — skills + git status moved
+      // out to a trailing per-turn message so they no longer bust the cache.
       promptComposer.buildSystemPrompt(toolDefs),
-      promptComposer.buildSystemContext(),
+      promptComposer.buildDynamicContextMessage(),
     ]);
-    const fullSystemPrompt = [systemPrompt, systemContext].filter(Boolean).join("\n\n");
 
     // Prepend userContext (CLAUDE.md) as first message (sync, fast)
     const userContextMsg = promptComposer.buildUserContextMessage();
@@ -1804,6 +1805,13 @@ export class Engine {
       // the reminder immediately before it so the model reads: CLAUDE.md →
       // reminder → user request.
       messages.splice(messages.length - 1, 0, lifecycleReminder);
+    }
+
+    // Volatile context (skills + git status) goes at the very END — after the
+    // user task — so it sits past the conversation's cache breakpoint. A change
+    // here (new skill, edited file) never invalidates the cached history prefix.
+    if (dynamicContextMsg) {
+      messages.push(dynamicContextMsg);
     }
     this.lastSessionId = session.state.sessionId;
     this.lastMessages = messages;

@@ -135,6 +135,36 @@ export class PromptComposer {
     return gitStatus;
   }
 
+  /**
+   * Per-turn dynamic context, delivered as a trailing <system-reminder> user
+   * message rather than baked into the system prefix.
+   *
+   * Holds the two things that change *within* a session — the skills listing
+   * (changes when a skill is installed/disabled) and the git-status snapshot
+   * (changes whenever the working tree changes). Keeping them out of the
+   * system prompt means installing a skill or editing a file no longer
+   * invalidates the cached system prefix. Placed at the END of the messages
+   * array (after the user task) so it sits past the conversation's cache
+   * breakpoint — a change here never re-bills the history prefix.
+   */
+  async buildDynamicContextMessage(): Promise<Message | null> {
+    const skills = scanSkills(this.options.cwd, {
+      disabledSkills: this.options.disabledSkills,
+      disabledPlugins: this.options.disabledPlugins,
+      skillAllowlist: this.options.skillAllowlist,
+    });
+    const skillsListing = buildSkillListing(skills);
+    const gitStatus = await this.buildSystemContext();
+
+    const parts = [skillsListing, gitStatus].filter(Boolean);
+    if (parts.length === 0) return null;
+
+    return {
+      role: "user",
+      content: `<system-reminder>\n${parts.join("\n\n")}\n</system-reminder>`,
+    };
+  }
+
   invalidateCache(sectionName?: string): void {
     this.sectionCache.invalidate(sectionName);
     if (!sectionName) {
@@ -204,18 +234,12 @@ export class PromptComposer {
       },
     });
 
-    // Skills listing
-    sections.push({
-      name: "skills",
-      compute: () => {
-        const skills = scanSkills(this.options.cwd, {
-          disabledSkills: this.options.disabledSkills,
-          disabledPlugins: this.options.disabledPlugins,
-          skillAllowlist: this.options.skillAllowlist,
-        });
-        return buildSkillListing(skills);
-      },
-    });
+    // Skills listing is intentionally NOT a system section: it changes when a
+    // skill is installed/disabled, which would invalidate the whole cached
+    // system prefix on every change. It rides in the per-turn dynamic-context
+    // message instead (buildDynamicContextMessage). Same reasoning keeps the
+    // git-status snapshot out of the system prefix — see buildSystemContext's
+    // callers.
 
     // Append system prompt
     if (this.options.appendSystemPrompt) {
