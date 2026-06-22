@@ -234,7 +234,10 @@ function readCookie(cookieHeader: string | string[] | undefined, name: string): 
 
 function readPasscodeParam(req: GateRequest): string | undefined {
   // Header takes precedence (used by the WS/fetch path), then ?passcode= query.
-  const headerVal = req.headers["x-access-passcode"];
+  // Node represents duplicate headers as string[]; handle that like readCookie
+  // does (take the first value) instead of silently falling through to query.
+  const rawHeader = req.headers["x-access-passcode"];
+  const headerVal = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
   if (typeof headerVal === "string" && headerVal) return headerVal;
   if (!req.url) return undefined;
   const qIdx = req.url.indexOf("?");

@@ -126,7 +126,10 @@ export async function createCookieLease(
   domain: string,
 ): Promise<{ filePath: string; count: number }> {
   const cookies = await getCookiesForDomain(domain);
-  mkdirSync(LEASE_DIR, { recursive: true });
+  // 0o700: lease files hold live session cookies (0o600). The dir lives under a
+  // shared /tmp, so make it owner-only too — co-located users shouldn't even
+  // enumerate the lease filenames. (audit Y-4)
+  mkdirSync(LEASE_DIR, { recursive: true, mode: 0o700 });
   // randomUUID (not just Date.now()+pid): two leases created in the same
   // millisecond would otherwise collide, so one overwrites the other's cookie
   // file and the first cleanupLease deletes a file still in use.

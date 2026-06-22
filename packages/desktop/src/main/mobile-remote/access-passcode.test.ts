@@ -131,6 +131,22 @@ describe("AccessPasscode", () => {
     expect(setCookie).toContain("HttpOnly");
   });
 
+  test("gate: a correct passcode in the x-access-passcode header allows", () => {
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const { req, res } = fakeReqRes({ passcodeHeader: "correct" });
+    expect(ap.gate(req, res)).toBe(true);
+  });
+
+  test("gate: a correct passcode in a DUPLICATED (array) header still allows", () => {
+    // Node represents duplicate headers as string[]; readCookie handled arrays
+    // but readPasscodeParam used to reject them and fall through → spurious 401.
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const { req, res } = fakeReqRes({ passcodeHeader: ["correct", "other"] });
+    expect(ap.gate(req, res)).toBe(true);
+  });
+
   test("gate: a browser GET with no credential gets an HTML passcode FORM, not bare text", () => {
     // Regression for "auto shows 访问口令无效或缺失 with no way to enter it":
     // a page-navigation request must receive a challenge page the user can type
@@ -172,7 +188,7 @@ describe("AccessPasscode", () => {
 // ── Minimal fake http req/res ──────────────────────────────────────────────
 interface FakeReq {
   url?: string;
-  headers: Record<string, string | undefined>;
+  headers: Record<string, string | string[] | undefined>;
 }
 interface FakeRes {
   statusCode?: number;
@@ -184,13 +200,16 @@ interface FakeRes {
   end(chunk?: string): void;
 }
 
-function fakeReqRes(opts: { url?: string; cookie?: string }): {
+function fakeReqRes(opts: { url?: string; cookie?: string; passcodeHeader?: string | string[] }): {
   req: FakeReq;
   res: FakeRes;
 } {
+  const headers: Record<string, string | string[] | undefined> = {};
+  if (opts.cookie) headers.cookie = opts.cookie;
+  if (opts.passcodeHeader !== undefined) headers["x-access-passcode"] = opts.passcodeHeader;
   const req: FakeReq = {
     url: opts.url ?? "/mobile",
-    headers: opts.cookie ? { cookie: opts.cookie } : {},
+    headers,
   };
   const res: FakeRes = {
     headers: {},
