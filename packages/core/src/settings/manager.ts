@@ -248,9 +248,11 @@ export class SettingsManager {
 
     mkdirSync(dirname(path), { recursive: true });
     // Atomic write: stage to .tmp, then rename, so a concurrent read can't
-    // catch a half-written file.
+    // catch a half-written file. mode 0o600 — settings.json can hold plaintext
+    // API keys, so it must be owner-only like credentials.json (store.ts:56),
+    // not world-readable (default umask leaves 0o644 otherwise).
     const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
-    writeFileSync(tmp, JSON.stringify(current, null, 2), "utf-8");
+    writeFileSync(tmp, JSON.stringify(current, null, 2), { encoding: "utf-8", mode: 0o600 });
     renameSync(tmp, path);
 
     this.invalidate();
@@ -352,8 +354,10 @@ export class SettingsManager {
 
   private atomicWriteJson(path: string, data: Record<string, unknown>): void {
     mkdirSync(dirname(path), { recursive: true });
+    // mode 0o600: settings.json may hold plaintext API keys — owner-only, see
+    // saveUserSetting above and credentials/store.ts.
     const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
-    writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
+    writeFileSync(tmp, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 0o600 });
     renameSync(tmp, path);
   }
 

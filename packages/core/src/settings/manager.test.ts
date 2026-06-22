@@ -6,6 +6,8 @@ import {
   rmSync,
   existsSync,
   readFileSync,
+  statSync,
+  chmodSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -128,6 +130,31 @@ describe("SettingsManager project writes", () => {
     const sm = new SettingsManager(cwd, "project");
     sm.saveProjectSetting("capabilityOverrides.mcp.playwright", "off", cwd);
     expect(existsSync(join(cwd, ".code-shell", "settings.json"))).toBe(true);
+  });
+
+  test("saveProjectSetting writes the file owner-only (0o600) — no plaintext key world-readable", () => {
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveProjectSetting("providers", [{ key: "p", kind: "openai", baseUrl: "x", apiKey: "sk-secret" }], cwd);
+    const mode = statSync(join(cwd, ".code-shell", "settings.json")).mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
+  test("saveProjectSetting tightens a pre-existing world-readable file to 0o600", () => {
+    // Seed a loose file first (simulates a settings.json written before the fix).
+    mkdirSync(join(cwd, ".code-shell"), { recursive: true });
+    const f = join(cwd, ".code-shell", "settings.json");
+    writeFileSync(f, "{}", { mode: 0o644 });
+    chmodSync(f, 0o644);
+    const sm = new SettingsManager(cwd, "project");
+    sm.saveProjectSetting("capabilityOverrides.skills.helper", "on", cwd);
+    expect((statSync(f).mode & 0o777)).toBe(0o600);
+  });
+
+  test("saveUserSetting writes the user settings.json owner-only (0o600)", () => {
+    const sm = new SettingsManager(cwd, "full");
+    sm.saveUserSetting("providers", [{ key: "p", kind: "openai", baseUrl: "x", apiKey: "sk-secret" }]);
+    const mode = statSync(join(home, ".code-shell", "settings.json")).mode & 0o777;
+    expect(mode).toBe(0o600);
   });
 
   test("deleteProjectSetting removes the leaf key (inherit)", () => {

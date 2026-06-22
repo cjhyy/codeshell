@@ -5,7 +5,7 @@
  * pure(-ish) helpers it consumes, so there's a single input stack.
  */
 
-import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, rmSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { userHome } from "./settings/manager.js";
 import { getOpenRouterModels } from "./data/openrouter-models.js";
@@ -598,7 +598,9 @@ export function saveSettings(result: OnboardingResult, providerDef?: ProviderDef
     updated.models = [...otherProvider, ...newEntries];
   }
 
-  writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", "utf-8");
+  writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
+  // mode arg only applies on create; tighten an already-existing file too.
+  try { chmodSync(file, 0o600); } catch { /* best-effort */ }
 }
 
 /**
@@ -694,14 +696,15 @@ export function appendOnboardingResult(opts: {
   };
 
   // Atomic write: tmp file in the same dir, then rename (atomic on POSIX).
+  // mode 0o600 — settings.json holds plaintext API keys, must be owner-only.
   const tmp = `${file}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(updated, null, 2) + "\n", "utf-8");
+  writeFileSync(tmp, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
   try {
     renameSync(tmp, file);
   } catch {
     // Fallback: best-effort direct write if rename fails (e.g. cross-device),
     // then remove the orphaned temp file the failed rename left behind.
-    writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", "utf-8");
+    writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
     rmSync(tmp, { force: true });
   }
 }
@@ -722,6 +725,7 @@ export function saveArenaSettingsByKeys(keys: string[]): void {
     arena: { participants: keys },
   };
 
-  writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", "utf-8");
+  writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
+  try { chmodSync(file, 0o600); } catch { /* best-effort */ }
 }
 
