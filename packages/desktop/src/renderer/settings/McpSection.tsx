@@ -257,6 +257,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
             envVars: s.envVars,
             bearerTokenEnvVar: s.bearerTokenEnvVar,
             envHeaders: s.envHeaders,
+            credentialRef: s.credentialRef,
           },
         ],
         true,
@@ -578,6 +579,7 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
   const [args, setArgs] = useState((initial?.args ?? []).join(" "));
   const [url, setUrl] = useState(initial?.url ?? "");
   const [envText, setEnvText] = useState(envOrHeadersToText(initial?.env));
+  const [forwardEnvVarsText, setForwardEnvVarsText] = useState(envNamesToText(initial?.envVars));
   const [headersText, setHeadersText] = useState(envOrHeadersToText(initial?.headers, ": "));
   const [bearerEnvVar, setBearerEnvVar] = useState(initial?.bearerTokenEnvVar ?? "");
   const [credentialRef, setCredentialRef] = useState(initial?.credentialRef ?? "");
@@ -585,6 +587,7 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
   const [envHeadersText, setEnvHeadersText] = useState(envOrHeadersToText(initial?.envHeaders, ": "));
   const [showAdvanced, setShowAdvanced] = useState(
     Boolean(initial?.env && Object.keys(initial.env).length) ||
+      Boolean(initial?.envVars && initial.envVars.length) ||
       Boolean(initial?.headers && Object.keys(initial.headers).length) ||
       Boolean(initial?.bearerTokenEnvVar) ||
       Boolean(initial?.credentialRef) ||
@@ -622,10 +625,12 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
       }
     }
     let env: Record<string, string> | undefined;
+    let envVars: string[] | undefined;
     let headers: Record<string, string> | undefined;
     let envHeaders: Record<string, string> | undefined;
     try {
       env = parseKeyValueLines(envText);
+      envVars = parseEnvNames(forwardEnvVarsText);
       headers = parseKeyValueLines(headersText);
       envHeaders = parseKeyValueLines(envHeadersText);
     } catch (e) {
@@ -642,6 +647,7 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
             command: command.trim(),
             args: args.trim() ? splitArgs(args.trim()) : undefined,
             env: env && Object.keys(env).length ? env : undefined,
+            envVars: envVars && envVars.length ? envVars : undefined,
           }
         : {
             url: url.trim(),
@@ -735,6 +741,22 @@ function McpEditor({ initial, existingNames, onCancel, onSave }: EditorProps) {
                 onChange={(e) => setEnvText(e.target.value)}
                 placeholder={"FOO=bar\nBAZ=qux"}
               />
+              <span className="text-xs text-muted-foreground">
+                {t("settingsX.mcp.envVarsHint")}
+              </span>
+            </label>
+          )}
+          {isStdio && (
+            <label className="flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5">
+              <span>{t("settingsX.mcp.forwardEnvVarsLabel")}</span>
+              <Textarea
+                value={forwardEnvVarsText}
+                onChange={(e) => setForwardEnvVarsText(e.target.value)}
+                placeholder={"GITHUB_TOKEN\nFIGMA_TOKEN"}
+              />
+              <span className="text-xs text-muted-foreground">
+                {t("settingsX.mcp.forwardEnvVarsHint")}
+              </span>
             </label>
           )}
           {!isStdio && (
@@ -897,6 +919,10 @@ function envOrHeadersToText(
     .join("\n");
 }
 
+function envNamesToText(names: string[] | undefined): string {
+  return names?.join("\n") ?? "";
+}
+
 function parseKeyValueLines(text: string): Record<string, string> {
   const out: Record<string, string> = {};
   for (const raw of text.split("\n")) {
@@ -910,6 +936,26 @@ function parseKeyValueLines(text: string): Record<string, string> {
     const v = line.slice(idx + 1).trim();
     if (!k) throw new Error(translate(loadUILanguage(), "settingsX.mcp.emptyKeyLine", { line }));
     out[k] = v;
+  }
+  return out;
+}
+
+function parseEnvNames(text: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    if (line.includes("=") || line.includes(":")) {
+      throw new Error(translate(loadUILanguage(), "settingsX.mcp.envNameOnlyLine", { line }));
+    }
+    if (/\s/.test(line)) {
+      throw new Error(translate(loadUILanguage(), "settingsX.mcp.envNameNoWhitespaceLine", { line }));
+    }
+    if (!seen.has(line)) {
+      out.push(line);
+      seen.add(line);
+    }
   }
   return out;
 }

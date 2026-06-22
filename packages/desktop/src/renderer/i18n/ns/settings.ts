@@ -435,7 +435,11 @@ export const settingsNs = {
         transportHttpDesc: "远程 HTTP 流",
         transportSseDesc: "远程 Server-Sent Events",
         advanced: "高级",
-        envVarsLabel: "环境变量 (KEY=VALUE)",
+        envVarsLabel: "明文环境变量 (KEY=VALUE)",
+        envVarsHint: "会直接存进配置文件。敏感 token 建议用下面的「转发系统环境变量」。",
+        forwardEnvVarsLabel: "转发系统环境变量",
+        forwardEnvVarsHint:
+          "每行一个环境变量名,例如 GITHUB_TOKEN。只保存变量名,连接时从当前进程环境读取并注入给这个 stdio MCP。",
         headersLabel: "Headers (Key: Value)",
         headersHint: "明文 header，会存进配置文件 — 敏感 key 建议改用下面的环境变量方式。",
         useCredential: "使用凭证（可选，优先于 Bearer 环境变量）",
@@ -455,6 +459,8 @@ export const settingsNs = {
         errorDetailHeader: "{name} — 错误详情",
         parseFailedLine: "无法解析：{line}",
         emptyKeyLine: "空 key：{line}",
+        envNameOnlyLine: "这里只能填写环境变量名,不能写 KEY=VALUE：{line}",
+        envNameNoWhitespaceLine: "环境变量名不能包含空格：{line}",
       },
       adv: {
         personalizationTitle: "自定义指令",
@@ -1073,7 +1079,11 @@ export const settingsNs = {
         transportHttpDesc: "Remote HTTP stream",
         transportSseDesc: "Remote Server-Sent Events",
         advanced: "Advanced",
-        envVarsLabel: "Environment variables (KEY=VALUE)",
+        envVarsLabel: "Plain environment variables (KEY=VALUE)",
+        envVarsHint: "Stored directly in the config file. For sensitive tokens, prefer forwarding system env vars below.",
+        forwardEnvVarsLabel: "Forward system env vars",
+        forwardEnvVarsHint:
+          "One env var name per line, e.g. GITHUB_TOKEN. Only names are stored; values are read from the current process environment and injected into this stdio MCP at connect time.",
         headersLabel: "Headers (Key: Value)",
         headersHint: "Plaintext headers, stored in the config file — for sensitive keys prefer the environment-variable approach below.",
         useCredential: "Use credential (optional, takes priority over the Bearer env var)",
@@ -1093,6 +1103,8 @@ export const settingsNs = {
         errorDetailHeader: "{name} — error details",
         parseFailedLine: "Cannot parse: {line}",
         emptyKeyLine: "Empty key: {line}",
+        envNameOnlyLine: "Only env var names are allowed here, not KEY=VALUE: {line}",
+        envNameNoWhitespaceLine: "Env var names cannot contain whitespace: {line}",
       },
       adv: {
         personalizationTitle: "Custom instructions",
