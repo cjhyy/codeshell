@@ -72,6 +72,7 @@ function makeDeps(
     appendToolResult() {},
     appendTurnBoundary() {},
     appendMessage() {},
+    appendTurnStopped() {},
   } as unknown as TurnLoopDeps["transcript"];
 
   const toolExecutor = {
