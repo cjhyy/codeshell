@@ -99,6 +99,11 @@ const GENERAL_BUILTIN_TOOLS = [
   // 同理:把 cookie 凭证注入内置浏览器(恢复登录态后用 browser_* 工具)。带
   // isInjectCredentialAvailable guard(无 cookie 凭证时自动隐藏),无条件列入安全。
   "InjectCredential",
+  // AI 增/改模型 catalog(写 ~/.code-shell/model-catalog.user.json)。同 BashOutput/
+  // UseCredential 一样的 whitelist 要求:registerBuiltins 按 preset 集过滤 BUILTIN_TOOLS,
+  // 名单里没有它 → 即使工具已注册,AI 列表里也没有 → 用户实测「找不到这个工具」。
+  // permissionDefault: "ask",列入只是让 AI 看得到,调用仍走审批,无条件列入安全。
+  "EditModelCatalog",
 ] as const;
 
 const TERMINAL_CODING_EXTRA_TOOLS = [

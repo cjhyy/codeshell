@@ -31,6 +31,14 @@ describe("preset builtin tool whitelist", () => {
     expect({ preset: general.name, missing }).toEqual({ preset: general.name, missing: [] });
   });
 
+  it("the general preset offers EditModelCatalog (AI 加模型入口)", () => {
+    // Regression (用户实测「找不到这个工具」第三次复发,同 BashOutput/UseCredential):
+    // EditModelCatalog 在 BUILTIN_TOOLS 注册了,但漏进 preset 白名单 → registerBuiltins
+    // 滤掉 → AI 想加 catalog 时调不到。这条钉死它在 general preset 里可见。
+    const general = BUILTIN_AGENT_PRESETS.general ?? Object.values(BUILTIN_AGENT_PRESETS)[0]!;
+    expect(general.builtinTools).toContain("EditModelCatalog");
+  });
+
   it("any preset offering Bash also offers its background-shell companions", () => {
     // If Bash(run_in_background=true) is available, BashOutput/KillShell/ListShells
     // must be too — otherwise the model can launch a background shell it can never
