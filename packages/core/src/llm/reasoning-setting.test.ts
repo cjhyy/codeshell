@@ -18,8 +18,18 @@ describe("ReasoningSettingSchema", () => {
   test("rejects unknown mode", () => {
     expect(() => ReasoningSettingSchema.parse({ mode: "nope" })).toThrow();
   });
-  test("rejects effort without a valid level", () => {
-    expect(() => ReasoningSettingSchema.parse({ mode: "effort", effort: "ultra" })).toThrow();
+  test("accepts any non-empty effort string (free-form, catalog-driven)", () => {
+    // effort is NOT a closed enum — a model's real ladder is declared by its
+    // catalog ParamSpec and drifts over time ("xhigh", "max", future levels).
+    // The schema validates shape, not value; pinning to an enum took the app
+    // down on boot when an unknown level flowed through the models[] bridge.
+    for (const effort of ["max", "ultra", "none"]) {
+      expect(ReasoningSettingSchema.parse({ mode: "effort", effort })).toEqual({ mode: "effort", effort });
+    }
+  });
+  test("still rejects effort mode with an empty/missing level (shape check kept)", () => {
+    expect(() => ReasoningSettingSchema.parse({ mode: "effort", effort: "" })).toThrow();
+    expect(() => ReasoningSettingSchema.parse({ mode: "effort" })).toThrow();
   });
   test("accepts xhigh effort", () => {
     expect(ReasoningSettingSchema.parse({ mode: "effort", effort: "xhigh" })).toEqual({
