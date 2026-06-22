@@ -3,6 +3,7 @@ import { Check, ChevronDown, GitBranch } from "lucide-react";
 import type { GitBranches } from "../../preload/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
@@ -21,6 +22,16 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pendingBranch, setPendingBranch] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  // Anchored to the viewport with flip + four-edge clamp so the 288px menu can't
+  // spill off-screen when the picker sits near a viewport edge (was
+  // `absolute bottom-full left-0`).
+  const popoverStyle = useAnchoredPopover(open, anchorRef, popoverRef, {
+    preferredSide: "top",
+    align: "start",
+    gap: 8,
+  });
 
   useEffect(() => {
     if (!cwd) {
@@ -140,6 +151,7 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
   return (
     <div className="relative" ref={wrapRef}>
       <Button
+        ref={anchorRef}
         type="button"
         variant="outline"
         size="sm"
@@ -155,7 +167,11 @@ export function BranchPicker({ cwd, clean, disabled }: Props) {
       </Button>
 
       {open && (
-        <div className="absolute bottom-full left-0 z-40 mb-2 w-72 rounded-md border bg-popover p-3 text-popover-foreground shadow-lg">
+        <div
+          ref={popoverRef}
+          style={popoverStyle}
+          className="w-72 rounded-md border bg-popover p-3 text-popover-foreground shadow-lg"
+        >
           {error && <div className="rounded bg-status-err/10 p-2 text-xs text-status-err">{error}</div>}
           {pendingBranch ? (
             <div className="rounded-md border p-3">

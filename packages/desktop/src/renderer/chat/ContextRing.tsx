@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { useAnchoredPopover } from "./useAnchoredPopover";
 import { useT } from "../i18n/I18nProvider";
 
 interface Props {
@@ -24,6 +25,15 @@ const FALLBACK_MAX = 200_000;
 export function ContextRing({ used, max, busy }: Props) {
   const { t } = useT();
   const [hover, setHover] = useState(false);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  // Anchored to the viewport with flip + four-edge clamp so the card can't spill
+  // off-screen when the TopBar narrows (was `absolute bottom-full right-0`).
+  const popoverStyle = useAnchoredPopover(hover, anchorRef, popoverRef, {
+    preferredSide: "top",
+    align: "end",
+    gap: 4,
+  });
 
   const hasDeclaredMax = typeof max === "number" && max > 0;
   const safeMax = hasDeclaredMax ? (max as number) : FALLBACK_MAX;
@@ -48,6 +58,7 @@ export function ContextRing({ used, max, busy }: Props) {
 
   return (
     <div
+      ref={anchorRef}
       className={"relative inline-flex items-center gap-1" + (busy ? " animate-pulse" : "")}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -81,7 +92,11 @@ export function ContextRing({ used, max, busy }: Props) {
       <span className="text-xs font-medium" style={{ color: tone }}>{pctLabel}</span>
 
       {hover && (
-        <div className="absolute bottom-full right-0 z-50 mb-1 w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md">
+        <div
+          ref={popoverRef}
+          style={popoverStyle}
+          className="w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md"
+        >
           {!hasUsage ? (
             <div className="text-sm">
               {busy ? t("chat.contextRing.waitingEngine") : t("chat.contextRing.newSession")}
