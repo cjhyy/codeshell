@@ -201,9 +201,31 @@ function installedPluginsMtime(): string {
   }
 }
 
+/**
+ * mtime of each local skills base dir (project + user). A directory's mtime
+ * changes when a child entry is added/removed, so installing a new skill into
+ * `<cwd>/.code-shell/skills` or `~/.code-shell/skills` busts the cache on the
+ * next scan — the just-installed skill becomes visible to the running session
+ * without a restart. (Editing an existing skill's *contents* does not bump the
+ * dir mtime; install paths additionally call invalidateSkillCache() to cover
+ * that, so this is the passive half of a two-part guard.)
+ */
+function skillsDirsMtime(cwd: string): string {
+  return bases(cwd)
+    .map((b) => {
+      try {
+        return statSync(b.dir).mtimeMs.toString();
+      } catch {
+        return "0";
+      }
+    })
+    .join("|");
+}
+
 const memoized = memoize(
   scanOnce,
-  (cwd: string) => `${cwd}\0${userHome()}\0${installedPluginsMtime()}`,
+  (cwd: string) =>
+    `${cwd}\0${userHome()}\0${installedPluginsMtime()}\0${skillsDirsMtime(cwd)}`,
 );
 
 /**
