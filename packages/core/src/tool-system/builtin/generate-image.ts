@@ -218,11 +218,15 @@ function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvid
     return null;
   }
 
-  // 2. Back-compat: resolve from LLM providers[] by kind.
+  // 2. Back-compat: resolve from legacy LLM providers[] by kind. The field was
+  // dropped from the schema; un-migrated settings.json still carry it via the
+  // schema's .passthrough(), so read it through an inline cast.
+  const legacyProviders =
+    (settings as { providers?: Array<{ kind: string; baseUrl: string; apiKey?: string }> }).providers ?? [];
   const kinds = prefer ? [prefer] : [...IMAGE_PROVIDER_KINDS];
   for (const kind of kinds) {
     if (!prefer && !IMAGE_PROVIDER_KINDS.includes(kind as (typeof IMAGE_PROVIDER_KINDS)[number])) continue;
-    const provider = settings.providers.find((p) => p.kind === kind);
+    const provider = legacyProviders.find((p) => p.kind === kind);
     if (provider && provider.apiKey) {
       return { kind, creds: { baseUrl: provider.baseUrl, apiKey: provider.apiKey } };
     }
@@ -262,7 +266,11 @@ export function listConfiguredImageProviders(
         .filter((p) => !!effectiveApiKey(p, list) && getImageProvider(p.kind) !== null)
         .map((p) => ({ id: p.id, kind: p.kind, catalogId: p.catalogId }));
     }
-    return settings.providers
+    // Legacy LLM providers[] back-compat (field dropped from schema; read via
+    // .passthrough() with an inline cast).
+    const legacyProviders =
+      (settings as { providers?: Array<{ kind: string; apiKey?: string }> }).providers ?? [];
+    return legacyProviders
       .filter(
         (p) =>
           p.apiKey &&

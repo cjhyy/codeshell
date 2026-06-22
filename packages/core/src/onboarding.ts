@@ -320,87 +320,20 @@ export function resolveApiKey(
   return undefined;
 }
 
-/**
- * Look up a previously-persisted API key for a given provider in
- * ~/.code-shell/settings.json. Matches by baseUrl (each ProviderDef.baseUrl
- * is unique, while `provider` is a generic kind like "openai" shared across
- * multiple endpoints).
- *
- * Returns the first match found in: settings.models[] (preferred — newer),
- * then settings.model (legacy top-level). undefined when nothing matches.
- */
-export function findSavedKeyForProvider(
-  provider: ProviderDef,
-): { apiKey: string; baseUrl: string } | undefined {
-  const file = join(userHome(), ".code-shell", "settings.json");
-  if (!existsSync(file)) return undefined;
-  let data: any;
-  try {
-    data = JSON.parse(readFileSync(file, "utf-8"));
-  } catch {
-    return undefined;
-  }
-
-  if (Array.isArray(data?.models)) {
-    for (const m of data.models) {
-      if (m?.apiKey && m?.baseUrl === provider.baseUrl) {
-        return { apiKey: String(m.apiKey), baseUrl: String(m.baseUrl) };
-      }
-    }
-  }
-
-  if (data?.model?.apiKey && data?.model?.baseUrl === provider.baseUrl) {
-    return {
-      apiKey: String(data.model.apiKey),
-      baseUrl: String(data.model.baseUrl),
-    };
-  }
-
-  return undefined;
-}
-
-/**
- * Return the list of model IDs previously saved under this provider
- * (matched by baseUrl). Used by the onboarding wizard to pre-populate the
- * "model pool" step with the user's prior choices instead of resetting to
- * just the provider's first model.
- */
-export function loadSavedModelsForProvider(provider: ProviderDef): string[] {
-  const file = join(userHome(), ".code-shell", "settings.json");
-  if (!existsSync(file)) return [];
-  let data: any;
-  try {
-    data = JSON.parse(readFileSync(file, "utf-8"));
-  } catch {
-    return [];
-  }
-  if (!Array.isArray(data?.models)) return [];
-  const out: string[] = [];
-  for (const m of data.models) {
-    if (m?.baseUrl === provider.baseUrl && typeof m?.model === "string") {
-      out.push(m.model);
-    }
-  }
-  return out;
-}
-
 export function hasApiKey(): boolean {
   // Env variables alone are NOT enough to skip onboarding — they're surfaced
   // as a one-click option on the provider page instead. We only skip when the
-  // user has explicitly persisted a config. Checks all three locations the
-  // wizard might write to: top-level model.apiKey (legacy), models[].apiKey
-  // (per-pool-entry), providers[].apiKey (per-provider — what the current
-  // ProviderModelFlow actually writes). Missing any one of these made
-  // /logout look like a no-op when the others still held credentials.
+  // user has explicitly persisted a config. Unified catalog: a credential with
+  // an apiKey, or any configured modelConnection, counts as "set up". The
+  // legacy model.apiKey / models[] / providers[] locations were removed.
   // Reads ~/.code-shell/ only — ~/.claude/ compat was dropped because Claude
   // Code's settings schema diverges and merging broke boot.
   const p = join(userHome(), ".code-shell", "settings.json");
   if (existsSync(p)) {
     try {
       const data = JSON.parse(readFileSync(p, "utf-8"));
-      if (data?.model?.apiKey) return true;
-      if (Array.isArray(data?.models) && data.models.some((m: any) => m?.apiKey)) return true;
-      if (Array.isArray(data?.providers) && data.providers.some((p: any) => p?.apiKey)) return true;
+      if (Array.isArray(data?.credentials) && data.credentials.some((c: any) => c?.apiKey)) return true;
+      if (Array.isArray(data?.modelConnections) && data.modelConnections.length > 0) return true;
     } catch { /* ignore */ }
   }
   return false;
@@ -564,48 +497,6 @@ export function modelDisplayName(model: string): string {
   if (base.startsWith("gpt-")) return `GPT-${parts.slice(1).join("-")}`;
   if (base.startsWith("gemini-")) return `Gemini ${parts.slice(1).join("-")}`;
   return base.charAt(0).toUpperCase() + base.slice(1);
-}
-
-export function saveSettings(result: OnboardingResult, providerDef?: ProviderDef, poolModels?: string[]): void {
-  const dir = join(userHome(), ".code-shell");
-  const file = join(dir, "settings.json");
-  mkdirSync(dir, { recursive: true });
-
-  let existing: Record<string, unknown> = {};
-  if (existsSync(file)) {
-    try { existing = JSON.parse(readFileSync(file, "utf-8")); } catch {}
-  }
-
-  const updated: Record<string, unknown> = {
-    ...existing,
-    model: {
-      ...(typeof existing.model === "object" ? existing.model : {}),
-      provider: result.provider,
-      name: result.model,
-      apiKey: result.apiKey,
-      baseUrl: result.baseUrl,
-    },
-  };
-
-  // Merge model pool: keep entries from other providers (matched by baseUrl)
-  // and replace just the current provider's slice. A naive overwrite would
-  // wipe out every other provider's models every time the wizard runs.
-  if (providerDef && poolModels && poolModels.length > 0) {
-    const newEntries = buildModelPool(providerDef, result.apiKey).filter((e) =>
-      new Set(poolModels).has(e.model),
-    );
-    const existingModels = Array.isArray((existing as any).models)
-      ? ((existing as any).models as Array<Record<string, unknown>>)
-      : [];
-    const otherProvider = existingModels.filter(
-      (e) => e?.baseUrl !== providerDef.baseUrl,
-    );
-    updated.models = [...otherProvider, ...newEntries];
-  }
-
-  writeFileSync(file, JSON.stringify(updated, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
-  // mode arg only applies on create; tighten an already-existing file too.
-  try { chmodSync(file, 0o600); } catch { /* best-effort */ }
 }
 
 /**

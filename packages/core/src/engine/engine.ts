@@ -740,7 +740,7 @@ export class Engine {
   }
 
   /**
-   * Load models[] / providers[] from settings into the active ModelPool and
+   * Load modelConnections[] from settings into the active ModelPool and
    * resync this.config.llm with the matching entry. Called from the ctor and
    * from reloadModelPool() (e.g. after onboarding writes new entries to disk).
    */
@@ -800,9 +800,10 @@ export class Engine {
           }
         }
       } else if (this.config.llm.apiKey) {
-        // Auto-populate pool from the configured API key when models[] is empty.
-        // This lets users who only set model.apiKey (without models[]) still
-        // use /model to switch between the provider's available models.
+        // Auto-populate pool from the configured API key when no
+        // modelConnections[] are configured. This lets users who only have an
+        // env/seed API key still use /model to switch between the provider's
+        // available models.
         this.autoPopulatePool(this.config.llm.apiKey, this.config.llm.baseUrl);
       }
 
@@ -840,7 +841,7 @@ export class Engine {
 
   /**
    * Re-read settings and refresh the model pool. Used after onboarding /login
-   * writes new providers[] / models[] to disk so the running engine picks them
+   * writes new modelConnections[] to disk so the running engine picks them
    * up without a process restart. Existing pool entries are kept (re-registering
    * the same key overwrites them), so callers don't need to clear first.
    */
@@ -855,7 +856,7 @@ export class Engine {
   }
 
   /**
-   * Auto-populate the model pool when settings.models[] is empty but
+   * Auto-populate the model pool when no modelConnections[] are configured but
    * the user has configured an API key. Detects the provider from the
    * key prefix / baseUrl and registers all its known models.
    */
@@ -2227,8 +2228,8 @@ export class Engine {
    */
   /**
    * Resolve the LLM client for background/auxiliary work (memory extraction,
-   * auto-dream). When settings.auxModelKey names a valid pool model, build (and
-   * cache) a dedicated client for it so per-turn book-keeping runs on a cheap
+   * auto-dream). When settings.defaults.auxText names a valid pool model, build
+   * (and cache) a dedicated client for it so per-turn book-keeping runs on a cheap
    * fast model instead of the expensive primary. Falls back to `fallback` (the
    * active run's client) when unset, unknown, or on any build failure — aux
    * work is best-effort and must never break a run.
@@ -2243,9 +2244,9 @@ export class Engine {
       // once per run on the post-run background path, so the cost is fine.
       const sm = this.getSettingsManager();
       sm.invalidate();
-      // Unified store's defaults.auxText (a connection id = pool key) wins over
-      // the legacy auxModelKey. Both resolve to a pool key below.
-      auxKey = resolveAuxKey(sm.get() as { defaults?: { auxText?: string }; auxModelKey?: string });
+      // Unified store's defaults.auxText (a connection id = pool key) selects
+      // the aux model; resolveAuxKey returns it (or undefined).
+      auxKey = resolveAuxKey(sm.get() as { defaults?: { auxText?: string } });
     } catch {
       return fallback;
     }

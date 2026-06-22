@@ -10,7 +10,7 @@ import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { resolveTaskFromArgOrStdin } from "./input/read-stdin.js";
 import { setup } from "../bootstrap/setup.js";
-import { costTracker, installCostTracking, hasApiKey, getCurrentVersion } from "@cjhyy/code-shell-core";
+import { costTracker, installCostTracking, getCurrentVersion } from "@cjhyy/code-shell-core";
 import { CHALK_COLORIZER } from "../utils/colorizer.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import type { SessionStatus } from "@cjhyy/code-shell-core";

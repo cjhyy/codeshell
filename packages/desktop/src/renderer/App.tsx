@@ -252,9 +252,10 @@ function App() {
   /** Cmd+P / sidebar 搜索 — cross-project session picker (modal). */
   const [sessionSearchOpen, setSessionSearchOpen] = useState(false);
   // The GLOBAL default model — the choice that seeds *new* sessions. Lives in
-  // settings.activeKey. A per-session switch updates this default too (so the
-  // next 新对话 inherits it), but it must NOT retroactively drag existing
-  // sessions onto a different model — that's what `modelOverrides` is for.
+  // settings.defaults.text (unified catalog). A per-session switch updates this
+  // default too (so the next 新对话 inherits it), but it must NOT retroactively
+  // drag existing sessions onto a different model — that's what `modelOverrides`
+  // is for.
   const [defaultActiveModelKey, setDefaultActiveModelKey] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [defaultPermissionMode, setDefaultPermissionMode] = useState<PermissionMode | null>(null);
@@ -2754,12 +2755,6 @@ function resolveActiveKey(s: Record<string, unknown>): string | null {
     ? (s.defaults as Record<string, unknown>)
     : {};
   if (typeof defaults.text === "string" && defaults.text) return defaults.text;
-  // Legacy fallbacks for un-migrated configs.
-  if (typeof s.activeKey === "string" && s.activeKey) return s.activeKey;
-  if (s.model && typeof s.model === "object") {
-    const m = s.model as Record<string, unknown>;
-    if (typeof m.name === "string") return m.name;
-  }
   return null;
 }
 

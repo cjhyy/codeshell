@@ -95,8 +95,8 @@ const settings = settingsManager.get();
 
 // LLMConfig is pure model identity now — only the bare identity fields go here.
 // temperature/imageDetail/timeout/retryMaxAttempts are ClientDefaults, derived
-// inside Engine.populateModelPoolFromSettings from settings.model.temperature
-// and settings.images.detail.
+// inside Engine.populateModelPoolFromSettings (temperature is a ClientDefaults
+// knob; imageDetail from settings.images.detail).
 const seedLlm = resolveLLMConfigForTag(
   settings,
   "text",
@@ -129,7 +129,7 @@ const toolRegistry = seedEngine.getToolRegistry();
 
 // Capture the seed engine's resolved llmConfig + clientDefaults
 // (post-populateModelPoolFromSettings). Session engines inherit defaults so
-// settings.model.temperature / images.detail apply uniformly without each
+// the temperature ClientDefault / images.detail apply uniformly without each
 // factory call re-reading settings.
 const resolvedLlmConfig = seedEngine.getConfig().llm;
 const resolvedClientDefaults = seedEngine.getConfig().clientDefaults;
