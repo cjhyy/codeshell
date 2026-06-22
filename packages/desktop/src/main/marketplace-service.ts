@@ -172,13 +172,18 @@ export async function installPluginForUi(
  * any hooks the plugin ships.
  */
 export async function installLocalPluginForUi(
-  input: { kind: "dir" | "zip"; path: string },
+  input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
 ): Promise<{ ok: true; name: string } | { ok: false; error?: string }> {
   if (!input || (input.kind !== "dir" && input.kind !== "zip") || typeof input.path !== "string" || !input.path) {
     throw new Error("installLocalPluginForUi requires { kind: 'dir'|'zip', path }");
   }
   try {
-    const { name } = await installLocalPlugin(input, new Date().toISOString());
+    const { name } = await installLocalPlugin(
+      { kind: input.kind, path: input.path },
+      new Date().toISOString(),
+      undefined,
+      { overwrite: input.overwrite === true },
+    );
     invalidateSkillCache();
     return { ok: true, name };
   } catch (e) {

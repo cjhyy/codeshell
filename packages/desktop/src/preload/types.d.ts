@@ -732,9 +732,13 @@ export interface CodeshellApi {
   pickPluginSource(
     kind: "dir" | "zip",
   ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null>;
-  /** Install a plugin from a local directory or .zip (global scope). */
+  /**
+   * Install a plugin from a local directory or .zip (global scope). Set
+   * `overwrite` to replace an already-installed plugin of the same name instead
+   * of failing with "already installed".
+   */
   installLocalPlugin(
-    input: { kind: "dir" | "zip"; path: string },
+    input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
   ): Promise<{ ok: true; name: string } | { ok: false; error?: string }>;
   /** Fuzzy file search rooted at `cwd` for the @-mention popover. */
   searchFiles(cwd: string, query: string): Promise<FileSearchHit[]>;
