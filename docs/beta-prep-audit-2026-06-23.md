@@ -214,6 +214,12 @@
 
 **R-1 已止血**:settings.json 写入 0o600(见 §2.1,commit 8065530a)。
 
+**bug-scan 第二轮(mobile-remote review,b9915a0f)**
+- 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
+- 修(顺手 Y-4):cookie lease 目录 `/tmp` 下收紧 0o700。
+- 判非 bug:tunnel 锁定仅内存、重启清零——远程攻击者无重启受害 app 途径,持久化反伤正常用户,属已知可接受。
+- 其余已知项(LAN 无鉴权/secretHash 明文 ===/devices.json 无 mode)维持 audit §2.4 取舍不变。
+
 ## 附:晚上「一遍遍找问题」循环建议方向(token 耗尽前反复跑)
 
 1. **代码正确性 bug 扫**(core + desktop):对抗式 review 找空指针/竞态/边界/错误吞没,逐个对抗验证后再记。重点新代码:catalog 写入、cookie capture/inject、plugin 覆盖升级原子性、mobile-remote 鉴权。
