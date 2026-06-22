@@ -98,7 +98,11 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     if (!ok) return;
     setBusy(p.installKey);
     try {
-      await window.codeshell.uninstallPlugin(target.pluginName, target.marketplaceName);
+      if (target.kind === "local") {
+        await window.codeshell.uninstallLocalPlugin(target.pluginName);
+      } else {
+        await window.codeshell.uninstallPlugin(target.pluginName, target.marketplaceName);
+      }
       setReloadKey((k) => k + 1);
       onChanged();
     } catch (e) {
@@ -152,9 +156,43 @@ export function PluginsTab({ cwd, query, isEnabled, onToggle, onChanged }: Props
     setLocalError(null);
     const picked = await window.codeshell.pickPluginSource(kind);
     if (!picked) return;
+
+    // Detect a same-name install up front so we can ask before overwriting. The
+    // picker's derived name may differ from core's normalized install name, so
+    // we also fall back to catching the "already installed" error below.
+    const pickedName = (picked.name ?? "").trim().toLowerCase();
+    const sameName = (plugins ?? []).some((p) => p.name.toLowerCase() === pickedName);
+    if (sameName) {
+      const ok = await confirm({
+        title: t("ext.plugins.overwriteTitle"),
+        message: t("ext.plugins.overwriteConfirm", { name: picked.name }),
+        confirmLabel: t("ext.plugins.overwriteConfirmLabel"),
+      });
+      if (!ok) return;
+    }
+
     setLocalBusy(kind);
     try {
-      const res = await window.codeshell.installLocalPlugin({ kind: picked.kind, path: picked.path });
+      let res = await window.codeshell.installLocalPlugin({
+        kind: picked.kind,
+        path: picked.path,
+        overwrite: sameName,
+      });
+      // Fallback: pre-check missed the collision (name normalization differs) —
+      // ask, then retry with overwrite.
+      if (!res.ok && !sameName && /already installed/i.test(res.error ?? "")) {
+        const ok = await confirm({
+          title: t("ext.plugins.overwriteTitle"),
+          message: t("ext.plugins.overwriteConfirm", { name: picked.name }),
+          confirmLabel: t("ext.plugins.overwriteConfirmLabel"),
+        });
+        if (!ok) return;
+        res = await window.codeshell.installLocalPlugin({
+          kind: picked.kind,
+          path: picked.path,
+          overwrite: true,
+        });
+      }
       if (!res.ok) {
         setLocalError(res.error ?? t("ext.plugins.localInstallFailed"));
         return;

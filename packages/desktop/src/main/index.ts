@@ -122,6 +122,7 @@ import {
   listPlugins,
   getPluginDetail,
   uninstallPluginEntry,
+  uninstallLocalPluginEntry,
   updatePluginEntry,
   checkPluginUpdateEntry,
 } from "./plugins-service.js";
@@ -1149,6 +1150,9 @@ ipcMain.handle(
     return uninstallPluginEntry(pluginName, marketplaceName);
   },
 );
+ipcMain.handle("plugins:uninstallLocal", async (_e, name: string) => {
+  return uninstallLocalPluginEntry(name);
+});
 ipcMain.handle("plugins:update", async (_e, name: string) => {
   return updatePluginEntry(name);
 });

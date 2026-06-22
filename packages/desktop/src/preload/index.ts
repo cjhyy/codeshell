@@ -500,6 +500,8 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("capabilities:setOverride", cwd, id, state),
   uninstallPlugin: (pluginName: string, marketplaceName: string) =>
     ipcRenderer.invoke("plugins:uninstall", pluginName, marketplaceName),
+  uninstallLocalPlugin: (name: string) =>
+    ipcRenderer.invoke("plugins:uninstallLocal", name),
   updatePlugin: (name: string) => ipcRenderer.invoke("plugins:update", name),
   checkPluginUpdate: (name: string) => ipcRenderer.invoke("plugins:checkUpdate", name),
   checkGit: () => ipcRenderer.invoke("git:check"),
@@ -516,7 +518,7 @@ contextBridge.exposeInMainWorld("codeshell", {
   ): Promise<{ kind: "dir" | "zip"; path: string; name: string } | null> =>
     ipcRenderer.invoke("dialog:pickPluginSource", kind),
   installLocalPlugin: (
-    input: { kind: "dir" | "zip"; path: string },
+    input: { kind: "dir" | "zip"; path: string; overwrite?: boolean },
   ): Promise<{ ok: true; name: string } | { ok: false; error?: string }> =>
     ipcRenderer.invoke("plugins:installLocal", input),
   readSkillBody: (filePath: string) => ipcRenderer.invoke("skills:read", filePath),

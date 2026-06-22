@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -51,6 +51,43 @@ describe("installLocalPlugin (dir)", () => {
   test("rejects a dir with no recognizable plugin", async () => {
     writeFileSync(join(src, "random.txt"), "hi");
     await expect(installLocalPlugin({ kind: "dir", path: src }, STAMP)).rejects.toThrow(/no plugin found/);
+  });
+
+  test("installLocalPlugin overwrite reinstalls an already-installed plugin", async () => {
+    const writeSource = (version: string, marker: string) => {
+      mkdirSync(join(src, ".claude-plugin"), { recursive: true });
+      writeFileSync(
+        join(src, ".claude-plugin", "plugin.json"),
+        JSON.stringify({ name: "upgrade-me", version }),
+      );
+      mkdirSync(join(src, "skills", "s"), { recursive: true });
+      writeFileSync(join(src, "skills", "s", "SKILL.md"), `---\nname: s\ndescription: d\n---\n${marker}`);
+    };
+
+    // Install v1.
+    writeSource("0.1.0", "v1-body");
+    const first = await installLocalPlugin({ kind: "dir", path: src }, STAMP);
+    expect(first.name).toBe("upgrade-me");
+
+    // Bump the source to v2 with new content.
+    writeSource("0.2.0", "v2-body");
+
+    // Without overwrite → hard error (already installed).
+    await expect(
+      installLocalPlugin({ kind: "dir", path: src }, STAMP),
+    ).rejects.toThrow(/already installed/);
+
+    // With overwrite → succeeds and replaces with the new version + content.
+    const second = await installLocalPlugin({ kind: "dir", path: src }, STAMP, undefined, {
+      overwrite: true,
+    });
+    expect(second.name).toBe("upgrade-me");
+
+    const meta = JSON.parse(readFileSync(join(second.dir, ".cs-meta.json"), "utf-8")) as {
+      version?: string;
+    };
+    expect(meta.version).toBe("0.2.0");
+    expect(readFileSync(join(second.dir, "skills", "s", "SKILL.md"), "utf-8")).toContain("v2-body");
   });
 });
 

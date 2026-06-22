@@ -89,6 +89,9 @@ export const extensions = {
         localFromZip: "从压缩包",
         localInstallFailed: "安装失败",
         localInstalledToast: "插件「{name}」已安装到本地",
+        overwriteTitle: "覆盖升级?",
+        overwriteConfirm: "已安装同名插件「{name}」。继续将覆盖升级为本次导入的版本。",
+        overwriteConfirmLabel: "覆盖升级",
       },
       skills: {
         noMatch: "没有匹配的 skill",
@@ -348,6 +351,9 @@ export const extensions = {
         localFromZip: "From archive",
         localInstallFailed: "Install failed",
         localInstalledToast: "Plugin \"{name}\" installed locally",
+        overwriteTitle: "Overwrite & upgrade?",
+        overwriteConfirm: "A plugin named \"{name}\" is already installed. Continuing will overwrite it with the imported version.",
+        overwriteConfirmLabel: "Overwrite",
       },
       skills: {
         noMatch: "No matching skill",
