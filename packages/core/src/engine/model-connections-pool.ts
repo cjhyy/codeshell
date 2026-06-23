@@ -56,6 +56,7 @@ export function modelEntriesFromConnections(
       provider: clientProvider(entry),
       model: resolved.model,
       baseUrl: resolved.baseUrl,
+      needsKey: resolved.needsKey,
       ...(resolved.apiKey !== undefined ? { apiKey: resolved.apiKey } : {}),
       ...(preset?.maxContextTokens !== undefined ? { maxContextTokens: preset.maxContextTokens } : {}),
       ...(preset?.maxOutputTokens !== undefined ? { maxOutputTokens: preset.maxOutputTokens } : {}),

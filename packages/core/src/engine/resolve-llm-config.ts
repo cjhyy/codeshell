@@ -52,6 +52,21 @@ export function resolveLLMConfigForTag(
     );
   }
 
+  // The picked connection's catalog template needs a key but none resolved
+  // (credentialId missing/points at a deleted credential). Returning null here
+  // routes to the caller's existing clean "没有可用的文本模型连接 … 请在「连接」
+  // 页添加并填写凭证" message + exit, instead of silently building a config with
+  // apiKey:undefined that only fails later as a cryptic provider 401. In
+  // CONTRACT: this fn's null already means "no USABLE connection for this tag".
+  // resolveInstance's no-crash (apiKey:undefined) behavior is untouched — this
+  // gate is one layer up where usability is decided.
+  if (pick.needsKey !== false && !pick.apiKey) {
+    console.warn(
+      `[resolveLLMConfigForTag] 连接 "${pick.key}" 需要密钥但未解析到凭证(credentialId 缺失或指向已删凭证)— 视为该 tag 无可用连接。`,
+    );
+    return null;
+  }
+
   // 临时 pool 复用 toLLMConfig 的全部映射逻辑(reasoning/headers/providerKind 等)。
   const pool = new ModelPool([]);
   pool.register(pick);

@@ -56,6 +56,10 @@ export interface ModelEntry {
   model: string;
   baseUrl?: string;
   apiKey?: string;
+  /** Whether the catalog template requires a key (default true; false = local/
+   *  no-auth provider). Used by resolveLLMConfigForTag to reject a key-needing
+   *  connection that has no resolved key with a clear error rather than a 401. */
+  needsKey?: boolean;
   maxOutputTokens?: number;
   /** Per-model context window size. Falls back to config.maxContextTokens → 200_000. */
   maxContextTokens?: number;

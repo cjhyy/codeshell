@@ -34,6 +34,11 @@ export interface ResolvedInstance {
   adapterKind: string;
   baseUrl: string;
   apiKey?: string;
+  /** Whether the catalog template requires a key (false = local/no-auth provider).
+   *  Surfaced so higher layers can tell "needs a key but has none" (a misconfig
+   *  worth a clear error) from "legitimately keyless". resolveInstance itself
+   *  still NEVER throws on a missing key — that no-crash contract is unchanged. */
+  needsKey: boolean;
   preset?: ModelPreset;
   model: string;
   paramValues: Record<string, unknown>;
@@ -62,6 +67,7 @@ export function resolveInstance(
     adapterKind: entry.adapterKind,
     baseUrl: inst.baseUrl ?? cred?.baseUrl ?? entry.defaultBaseUrl,
     apiKey: cred?.apiKey,
+    needsKey: entry.needsKey !== false, // default-true: only an explicit false is keyless
     preset,
     model: inst.model,
     paramValues: inst.paramValues ?? {},
