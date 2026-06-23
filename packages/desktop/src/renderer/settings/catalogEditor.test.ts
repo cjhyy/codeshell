@@ -19,8 +19,9 @@ describe("catalogEditor", () => {
     expect(deleteAction("user-override-of-builtin")).toBe("reset");
     expect(deleteAction("builtin")).toBe("none");
   });
-  it("validateEntry catches missing required fields", () => {
-    expect(validateEntry(blankCatalogEntry("text")).length).toBeGreaterThan(0);
+  it("validateEntry returns missing field-name tokens", () => {
+    // blank entry has adapterKind "openai" already → only id/displayName/baseUrl missing
+    expect(validateEntry(blankCatalogEntry("text"))).toEqual(["id", "displayName", "defaultBaseUrl"]);
     const ok = { ...blankCatalogEntry("text"), id: "x", displayName: "X", defaultBaseUrl: "https://u/v1" };
     expect(validateEntry(ok)).toEqual([]);
   });

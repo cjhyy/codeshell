@@ -44,12 +44,17 @@ export function deleteAction(origin: CatalogEntryOrigin): "delete" | "reset" | "
   return "none";
 }
 
-/** Required-field check for instant UI feedback (zod runs server-side on save). */
+/**
+ * Required-field check for instant UI feedback (zod runs server-side on save).
+ * Returns the *field name tokens* of the missing fields (not human strings) so
+ * the calling component can map them to localized labels via t() — this module
+ * stays pure and i18n-free (no circular dep on the renderer's t).
+ */
 export function validateEntry(e: CatalogEntry): string[] {
-  const errs: string[] = [];
-  if (!e.id?.trim()) errs.push("id 必填");
-  if (!e.displayName?.trim()) errs.push("显示名必填");
-  if (!e.defaultBaseUrl?.trim()) errs.push("baseUrl 必填");
-  if (!e.adapterKind?.trim()) errs.push("adapterKind 必填");
-  return errs;
+  const missing: string[] = [];
+  if (!e.id?.trim()) missing.push("id");
+  if (!e.displayName?.trim()) missing.push("displayName");
+  if (!e.defaultBaseUrl?.trim()) missing.push("defaultBaseUrl");
+  if (!e.adapterKind?.trim()) missing.push("adapterKind");
+  return missing;
 }

@@ -17,6 +17,7 @@ import { SimpleSelect } from "@/components/ui/simple-select";
 import { useConfirm } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/ToastProvider";
 import { useT } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/dict";
 import { useRefreshOnSettingsChange } from "./useSettingsResource";
 import { ConnCard, ConnField, ConnCardFooter, ConnFooterRight } from "./connUi";
 import {
@@ -88,9 +89,18 @@ export function ModelCatalogPanel(_props: Props) {
 
   const save = async () => {
     if (!draft) return;
-    const errs = validateEntry(draft);
-    if (errs.length > 0) {
-      toast({ message: `${t("settingsX.catalog.validationFailed")}: ${errs.join("、")}`, variant: "error" });
+    const missing = validateEntry(draft);
+    if (missing.length > 0) {
+      // validateEntry returns field-name tokens; map to localized labels here
+      // (catalogEditor is pure / i18n-free). Separator stays locale-neutral.
+      const fieldKey: Record<string, TranslationKey> = {
+        id: "settingsX.catalog.fieldId",
+        displayName: "settingsX.catalog.fieldDisplayName",
+        defaultBaseUrl: "settingsX.catalog.fieldDefaultBaseUrl",
+        adapterKind: "settingsX.catalog.fieldAdapterKind",
+      };
+      const labels = missing.map((f) => (fieldKey[f] ? t(fieldKey[f]) : f)).join(", ");
+      toast({ message: `${t("settingsX.catalog.validationFailed")}: ${labels}`, variant: "error" });
       return;
     }
     const r = await window.codeshell.saveCatalogEntry(draft);
