@@ -239,7 +239,9 @@
 
 - 复核 session disk 恢复(sessions-service.ts):三道过滤正确——`"parentSessionId" in state` 用键存在区分 legacy(非真值)、`parentSessionId` 真值滤子代理、origin 仅 desktop/automation、删项目 cwd 不存在则跳(no-repo 空 cwd 故意不滤);title 回退 `??` 用法正确(LHS 空串→undefined→落 summary/id,非 `??` 吞假值 bug);pathExists 缓存避重复 stat。12 测过,干净。
 
-**bug-scan 小结**:共对抗式审 ~18 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
+- 复核 mergeTranscripts 去重(renderer/automation):两遍——内容签名定 lastCovered 取真 tail(fresh-id-per-fold 的 user/files_changed/context_boundary/goal_progress 按内容塌)+ seenIds 兜底防稳定 id 碰撞(tool 同 id 但 args 分歧)致 React key 崩。每个旧 bug 都编码成注释。88 测过。残留:同文本 user 消息靠 disk-authoritative 取舍(内容 keying 固有歧义),非 beta bug。
+
+**bug-scan 小结**:共对抗式审 ~19 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
 
 **bug-scan 第二轮(mobile-remote review,b9915a0f)**
 - 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
