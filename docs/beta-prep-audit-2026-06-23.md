@@ -258,6 +258,7 @@
 | transcript JSONL 持久化/load | 干净(per-line parse 隔离:torn 末行/坏行 try/catch 跳过不崩;load 后 repairToolResultPairs 双向修:孤儿 tool_use 合成 error result、孤儿 tool_result 滤除→序列对 LLM 始终合法);与 compaction 配对 + replay seal 构成「中断会话残留处理」三件套一致;54 测 |
 | **跨切**:全仓 `process.kill`/负 pid | 4 点:killProcessGroup(已加守卫 95591130)+ resident-agent.stop(已加守卫 0a728764)+ lsp child.kill() 无 pid 安全 + Heartbeat process.kill(pid,0) signal-0 仅探测不投信号安全。2 个负 pid 点现都有 `>1` 守卫。 |
 | **跨切**:全仓 `JSON.parse(readFileSync)` | 启动/易损路径全有 try/catch 降级:installedPlugins/loadPluginHooks/loadPluginMcp/list.ts(逐项 skip)均「corrupt→empty/null/skip」+ 显式「must not break startup」注释;install-time 的经 install 编排 `{ok:false}` 不崩。纪律统一。 |
+| **跨切**:全仓 `Number()`/`parseInt` | 干净:watchdog/sleep 用 `\|\|default`(NaN→默认);port 检测有 `1..65535` 范围 check 挡 NaN;LSP content-length 是 `(\d+)` 正则保证非 NaN;theme/format 操作正则数字组。无 silent-NaN-into-logic。 |
 
 ### 2.5) 修复完整性复审(查「只修一半」)
 
