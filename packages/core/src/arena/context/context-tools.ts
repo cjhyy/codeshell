@@ -7,7 +7,7 @@
  * repository boundary to prevent path traversal.
  */
 
-import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve, join } from "node:path";
 import { isWithinRoot } from "./within-root.js";
@@ -124,7 +124,25 @@ export function executeContextTool(tc: ToolCall): string {
  */
 function validatePath(filePath: string): string | null {
   const resolved = resolve(filePath);
-  return isWithinRoot(REPO_ROOT, resolved) ? resolved : null;
+  // Realpath both sides so a symlink planted inside the repo that points OUTSIDE
+  // can't pass a lexical containment check (isWithinRoot assumes resolved input
+  // and won't catch a link escape on its own). Matches fs-service's discipline.
+  // Reads are read-only, but a contained-looking symlink would still leak an
+  // out-of-repo file into arena context. Fall back to the lexical check when the
+  // target doesn't exist yet (a read of a missing file fails downstream anyway).
+  let realRoot: string;
+  try {
+    realRoot = realpathSync(REPO_ROOT);
+  } catch {
+    realRoot = REPO_ROOT;
+  }
+  let realTarget: string;
+  try {
+    realTarget = realpathSync(resolved);
+  } catch {
+    return isWithinRoot(realRoot, resolved) ? resolved : null;
+  }
+  return isWithinRoot(realRoot, realTarget) ? realTarget : null;
 }
 
 function executeReadFile(args: Record<string, unknown>): string {
