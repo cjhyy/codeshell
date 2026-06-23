@@ -238,6 +238,8 @@
 |---|---|---|---|
 | 🔴 安全 | 会话权限缓存按 head 收窄被链式命令绕过:`git status && rm -rf /` 借 `git status` 授权静默放行整条 | ruleMatches 对 Bash 收窄规则复用 scanShellCommand,dangerous/多段/**含管道**则拒匹配重问(**修两次**:首版漏管道) | d241ec08 + d4c9dcb9 |
 | 🔴 安全 | settings.json 明文 key 世界可读(0o644)·**三个写入点** | manager + onboarding 收紧 0o600;深扫又补漏掉的 engine.persistActiveModel | 8065530a + e56825d6 |
+| 🔴 **安全 RCE** | `gitLsRemote` 无 `--`→用户加的 marketplace/plugin git URL 形如 `--upload-pack=<cmd>` 被 git 当 flag → **执行任意命令(RCE)**;用于插件/市场更新检查 | `["ls-remote","--",url,ref]`;**TDD 铁证**(revert 后 git 真 touch sentinel) | fd72c31e |
+| 🟡 安全 | 同 git arg-injection:sparse-checkout×2 / fetch ref 缺 `--`(非 RCE,arg-confusion) | 全加 `--`(实测三子命令接受) | 62d62e40 |
 | 🟡 安全 | cookie 抓取域围栏裸公共后缀漏配:`d="co"` 误中 `github.com` | 抽 cookieDomainMatches(要求 d 含点),+6 测 | fc6f0409 |
 | 🟡 安全 | `restoreCookieToBrowser` 非数组 secret 静默清空登出 | 非数组也判损坏抛错 | a906d8f7 |
 | 🟡 安全 | passcode 头数组(重复头)不认致正确口令误 401 | readPasscodeParam 取首值,+2 测;顺收紧 cookie lease 目录 0o700(Y-4) | b9915a0f |
