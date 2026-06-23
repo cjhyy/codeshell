@@ -121,11 +121,12 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 - **建议**:加 `turn-loop-state-machine.test.ts`,mock `ModelFacade`/`ToolExecutor`,跑 5-turn 场景(context 回滚 / hook block / goal 完成 / abort),只测状态流不测输出质量。
 - **工作量**:中。
 
-### 4.4 [中] 关键路径 JSON 读取静默吞错
+### 4.4 [中] 🟡 部分 — 关键路径 JSON 读取静默吞错
 - **证据**:67 处 `JSON.parse(readFileSync())`(去掉 25 处测试文件后),其中 onboarding/settings 层有 **3-4 处真静默失败**(如 `findSavedKeyForProvider:334` 对损坏文件返回 undefined,误导调用方)。多数 plugin/marketplace installer 实际有 `CSMeta.parse()` 或显式 throw,不算静默。
 - **影响**:损坏配置在 onboarding 关键路径上被静默吞掉,无诊断信号;且无损坏 JSON 的测试覆盖。
 - **建议**:抽 `safeReadJson(path, defaultValue?)`,**聚焦 10-15 个 settings/onboarding 关键实例**(不要机械重构全部 67 处),统一 `logger.debug` 落日志 + 补损坏文件测试。给真·intentional 的空 catch 加 `/* intentional: X */` 注释(`openai.ts:569`、`session-memory.ts:59`、`engine.ts:2132`)。
 - **工作量**:小。
+- **🟡 处置(commit b07c2670,2026-06-24)**:零风险部分已做——给三处 intentional 空 catch 加 `/* intentional */` 注释(openai.ts ×2 = LLM 畸形 tool-call JSON 回退空 args;session-memory.ts = 跳过损坏记忆文件;engine.ts:2132 那处已不存在,例子过时)。**`safeReadJson` 抽取(改 settings load 错误语义,敏感路径)留用户在场做**——夜循环附A矩阵已判全仓 JSON.parse 零未守卫源,边际价值低、不值得自主 reshape settings 路径。
 
 ### 4.5 [低] image/video provider 工厂偏离 LLM 工厂模式
 - **证据**:`image-providers.ts:222-231`、`video-providers.ts:270-279` 用 switch(openai/google;fake/fal),而 LLM 用 `registerProvider`/`PROVIDER_REGISTRY`。
