@@ -249,3 +249,17 @@ describe("unknown shell errors", () => {
     expect(k.ok).toBe(false);
   });
 });
+
+describe("spawnBackground sessionId safety", () => {
+  test("refuses a path-traversal sessionId (no write outside bg-shells root)", () => {
+    for (const sid of ["../escape", "a/b", "..", "", "x\\y"]) {
+      const r = mgr.spawnBackground({ command: "echo hi", cwd: home, sessionId: sid });
+      expect(r.ok, `sessionId ${JSON.stringify(sid)} must be refused`).toBe(false);
+    }
+  });
+
+  test("accepts a normal nanoid-style sessionId", () => {
+    const r = mgr.spawnBackground({ command: "true", cwd: home, sessionId: "s-mqe0ox7n-a8d11c26" });
+    expect(r.ok).toBe(true);
+  });
+});

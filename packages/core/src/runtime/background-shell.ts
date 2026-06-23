@@ -162,6 +162,15 @@ export class BackgroundShellManager {
   private shells = new Map<string, InternalShell>();
 
   spawnBackground(opts: SpawnBackgroundOptions): SpawnResult {
+    // Defense-in-depth: sessionId becomes a directory under bgShellsRoot()
+    // (`join(root, sessionId)`, below). It's engine-generated/validated today,
+    // but a `..`/separator/empty id would write the shell log + record OUTSIDE
+    // the bg-shells root — refuse rather than trust the caller. Mirrors
+    // SessionManager.assertSafeSessionId without importing across the layer.
+    const sid = opts.sessionId;
+    if (typeof sid !== "string" || sid.length === 0 || sid.includes("..") || sid.includes("/") || sid.includes("\\")) {
+      return { ok: false, error: `invalid sessionId for background shell` };
+    }
     // Per-session soft cap (fork-bomb guard, §7).
     const live = [...this.shells.values()].filter(
       (s) => s.sessionId === opts.sessionId && (s.status === "running" || s.status === "starting"),
