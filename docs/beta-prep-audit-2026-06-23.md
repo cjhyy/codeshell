@@ -299,6 +299,7 @@
 | cron 调度睡眠唤醒(**解决旧 memory 未修项**) | 干净:`isCronMisfire` 90s grace——醒来 timer 超 90s 过点=misfire→跳过+重 arm 到下个正确 occurrence,不补跑(project_automation_kkg28 的「06:56 乱跑」**已修**);nextRun forward-recompute 不 catch-up。74 automation 测含 06:56 回归 |
 | automation memory 写入(per-task memory.md) | 干净:核心 UpdateAutomationMemory 调注入 sink 不自 try/catch,但 executor(executor.ts:392)是**通用错误边界**——sink 抛(磁盘满/EACCES)被 catch→记 failed tool result 喂回模型「must not kill the turn」,run 不崩。8 测 |
 | session disk 恢复 / draft 处理 | 干净:renderer loadSessionIndex 用 `activeSessionId !== undefined`(非 `??`)——持久 null=合法 draft 保留,仅 legacy 缺字段才落 sessions[0](project_draft_session_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |
+| agent-definition 加载/解析 | 干净:parseAgentDefinition 对畸形(缺 frontmatter/坏 YAML/缺 name/desc)抛结构化错,但 loadFromDirs **per-file try/catch→warning+continue**(一个坏 role 不崩全部/不阻 agent 列表);disabled-after-merge 使 user override disabled plugin role 正确;override/shadowedSources 精度;send_input +6 改未破坏隔离。15 测 |
 | **send_input 续接(用户新 merge 特性,read-only review)** | resume 解析正确(registry→on-disk→clean error)+**重 resolve tool/skill scope 防 restricted role 续接时夺回全工具集**(安全要点已处理)+role-removed 降级 bare continuation;transcript-translator switch+default 不崩、display-only;namespacePluginSkills 已namespaced 不双前缀(已测 agent.resolve-type:78)。**1 个真发现**:缺「agent 在 running」并发守卫(§2.4.5,已标注给用户,未擅改) |
 
 ### 2.4.5) 🟡 给用户的发现:send_input 续接缺「agent 在跑」并发守卫(你刚 merge 的特性)
