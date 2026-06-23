@@ -226,7 +226,9 @@
 - 复核 seatbelt 沙箱:`(deny default)` + 读广允后显式 deny 敏感目录 + 写仅 workspace/writableRoots + realpathSync 防 /tmp→/private/tmp symlink 漏 + `cat <secret>` 集成测试验真拦截,干净。小记:`quote()` 仅转义 `"` 未转义 `)`/换行,但 writableRoots 是用户自配(可信输入,只会放松自己沙箱),非威胁模型内 bug。
 - 复核记忆注入 filterByAge:pinned/未知 mtime/`updatedAt>=cutoff` 三条保留,边界 `>=` 正确无 off-by-one;user/dream 双路一致过滤;dream 不按 pinned 排序属设计(pin 是 user 概念)。「完成态只增不减」是生命周期设计 gap(已归记忆专项),非注入 bug。
 
-**bug-scan 小结**:共对抗式审 ~10 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入)。**仅 1 个真安全 bug(权限链式命令绕过,已修)**;其余 verified sound 或属已知设计取舍。安全关键路径整体扎实。
+- 复核 session run 并发/锁(ChatSession.pump/enqueueTurn):`active` 锁在首个 await 前**同步**置位(pump 顶部 `if(active)return`),并发 enqueue 只入队不双跑;finally 清锁后 drain 队列串行化;server 层 isBusy()/Overloaded 再加一道。单线程事件循环下 race-free,干净。
+
+**bug-scan 小结**:共对抗式审 ~13 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
 
 **bug-scan 第二轮(mobile-remote review,b9915a0f)**
 - 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
