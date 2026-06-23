@@ -379,8 +379,11 @@ export type StreamEvent =
   | { type: "stream_request_start"; turnNumber: number; agentId?: string }
   // A host-queued user message was spliced into the running turn at the
   // turn-loop step boundary (Engine.enqueueSteer / 引导不打断注入). The client
-  // uses this to flip a queued "待注入" chip to "已注入".
-  | { type: "steer_injected"; text: string }
+  // uses this to flip a queued "待注入" chip to "已注入". `id` echoes the host's
+  // queue-entry id so it can remove exactly that pending draft from its panel
+  // (insert-time and bubble-display are decoupled — the panel item lives until
+  // THIS event confirms the engine actually consumed it).
+  | { type: "steer_injected"; text: string; id?: string }
   | { type: "text_delta"; text: string; tokens?: number; agentId?: string }
   | { type: "tool_use_start"; toolCall: ToolCall; agentId?: string }
   | {

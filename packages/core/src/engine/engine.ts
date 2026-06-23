@@ -23,6 +23,12 @@ import { applyDynamicToolDef } from "./dynamic-tool-defs.js";
 import { getMergedCatalog } from "../model-catalog/index.js";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { resolveAuxKey } from "./aux-key.js";
+import {
+  enqueueSteerItem,
+  consumeSteerItems,
+  removeSteerItem,
+  type SteerItem,
+} from "./steer-queue.js";
 import { resolveSandboxConfig, type SettingsSandbox } from "./sandbox-config.js";
 import { sandboxCacheKey } from "./sandbox-cache-key.js";
 import { BUILTIN_TOOL_GUARDS, type BuiltinToolFn } from "../tool-system/builtin/index.js";
@@ -526,7 +532,7 @@ export class Engine {
    * on process exit — same model as the credential session-allow set, so
    * multiple Engines don't interfere and it stays cleanly extractable.
    */
-  private steerQueueBySid = new Map<string, string[]>();
+  private steerQueueBySid = new Map<string, SteerItem[]>();
   private activePermission: PermissionClassifier | undefined;
   /**
    * The TurnLoop of the in-flight run(), exposed so extendGoalRun() can bump a
@@ -916,21 +922,40 @@ export class Engine {
    * external triggers) can call it. If no run is active for the session the
    * message simply waits in the queue and is consumed when that session next
    * runs (rare race; host normally only steers while busy). No-op on blank text.
+   *
+   * `id` is the host's stable queue-entry id. It rides through to the
+   * `steer_injected` event (so the host can match the injected bubble back to
+   * the queued draft) and is the handle `unsteer` uses to revoke a still-pending
+   * entry. A blank id is tolerated but means the entry can't be revoked.
    */
-  enqueueSteer(sessionId: string, text: string): void {
-    const t = text?.trim();
-    if (!sessionId || !t) return;
+  enqueueSteer(sessionId: string, text: string, id = ""): void {
+    if (!sessionId) return;
     const q = this.steerQueueBySid.get(sessionId) ?? [];
-    q.push(t);
-    this.steerQueueBySid.set(sessionId, q);
+    const next = enqueueSteerItem(q, id || `steer-${q.length}`, text);
+    if (next === q) return; // blank text dropped
+    this.steerQueueBySid.set(sessionId, next);
+  }
+
+  /**
+   * Revoke a still-pending steer entry (the 撤回 path). Returns true if it was
+   * removed, false if it was already consumed by the turn loop (can't take it
+   * back — it has been spliced into the run).
+   */
+  unsteer(sessionId: string, id: string): boolean {
+    const q = this.steerQueueBySid.get(sessionId);
+    if (!q || q.length === 0) return false;
+    const { list, removed } = removeSteerItem(q, id);
+    if (removed) this.steerQueueBySid.set(sessionId, list);
+    return removed;
   }
 
   /** Drain + clear the steer queue for a session (turn loop consumes per step). */
-  private consumeSteer(sessionId: string): string[] {
+  private consumeSteer(sessionId: string): SteerItem[] {
     const q = this.steerQueueBySid.get(sessionId);
     if (!q || q.length === 0) return [];
-    this.steerQueueBySid.set(sessionId, []);
-    return q;
+    const { drained, rest } = consumeSteerItems(q);
+    this.steerQueueBySid.set(sessionId, rest);
+    return drained;
   }
 
   /** Wire the cookie→browser injection callback (InjectCredential tool). Same

@@ -212,7 +212,14 @@ contextBridge.exposeInMainWorld("codeshell", {
    * guidance mid-run). No-op-ish if the session has no active run (message waits
    * for its next run).
    */
-  steer: (sessionId: string, text: string) => rpc("agent/steer", { sessionId, text }),
+  steer: (sessionId: string, text: string, id?: string) =>
+    rpc("agent/steer", { sessionId, text, id }),
+  /**
+   * Revoke a still-pending steer entry by id (撤回). Returns { removed } —
+   * false means the turn loop already consumed it (can't take it back; it will
+   * arrive as a user bubble). For the queue panel's per-item delete button.
+   */
+  unsteer: (sessionId: string, id: string) => rpc("agent/unsteer", { sessionId, id }),
   /**
    * Extend a running goal's turn / budget ceilings mid-run (TODO 3.1). Returns
    * the resulting effective limits, or throws if there's no active run.

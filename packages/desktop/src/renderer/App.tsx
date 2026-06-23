@@ -84,7 +84,7 @@ import {
   dequeueQueuedInput,
   drainQueuedInput,
   clearQueuedInput,
-  removeQueuedInputAt,
+  removeQueuedInputById,
   type QueuedInputState,
 } from "./queuedInput";
 import { loadView, saveView, type ViewState, type ViewMode } from "./view";
@@ -363,6 +363,16 @@ function App() {
    * an empty sessionId for very legacy engines).
    */
   const runningBucketRef = useRef<string | null>(null);
+  // Steer entry ids already handed to the engine (so the busy auto-steer effect
+  // sends each queued draft exactly once even though it re-fires on every queue
+  // change). The item stays VISIBLE in the panel until the engine's
+  // steer_injected event confirms it — only then is it removed and shown as a
+  // user bubble (insert-time and display-time are decoupled). Cleared per id on
+  // confirmation / removal so the set can't grow unbounded.
+  const steeredIdsRef = useRef<Set<string>>(new Set());
+  // Monotonic fallback counter for queued-draft ids when crypto.randomUUID is
+  // unavailable (older webview). crypto path is the norm.
+  const queuedSeqRef = useRef<number>(0);
   /**
    * Per-bucket timestamp of when the current turn went busy, so a manual Stop
    * can show "你在 Ns 后停止了" (TODO 2.8). Set when busy flips true, read+cleared
@@ -1183,6 +1193,17 @@ function App() {
         engineToBucketRef.current.set(env.sessionId, target);
       }
 
+      // steer_injected: the engine just spliced a queued draft into the running
+      // turn. Now (and only now) remove it from the panel — the coalescer will
+      // also feed this event to the reducer, which renders it as a user bubble.
+      // This is the insert-time ↔ display-time decoupling: the item was visible
+      // and revocable until this confirmation arrived.
+      if (event.type === "steer_injected" && event.id) {
+        const id = event.id;
+        steeredIdsRef.current.delete(id);
+        setQueuedInputs((prev) => removeQueuedInputById(prev, target, id));
+      }
+
       const noisy =
         event.type === "text_delta" ||
         event.type === "tool_use_args_delta" ||
@@ -1654,64 +1675,116 @@ function App() {
   };
 
   useEffect(() => {
-    if (busy || !activeSessionId) return;
+    if (!activeSessionId) return;
     const queued = queuedInputs[activeBucket];
     if (!queued || queued.length === 0) return;
-    // A 引导打断 relay drains the WHOLE queue as one merged message (the user
-    // asked for everything to land at once); a natural turn-end auto-send takes
-    // just the next item. Either way clear the relay marker once we fire.
+
+    if (busy) {
+      // A relay (打断重发) was requested for this bucket: don't steer — the abort
+      // is in flight and the !busy branch will drain+re-send once it lands.
+      if (relayingBuckets.has(activeBucket)) return;
+      // Step-gap steering (默认, 不打断): hand each not-yet-sent queued draft to
+      // the engine, which splices it into the running turn at its NEXT step
+      // boundary. The item STAYS in the panel (visible + revocable) — it's only
+      // removed when the engine's steer_injected event confirms it, at which
+      // point it renders as a user bubble. Send each id exactly once.
+      const engineSessionId = resolveActiveEngineSessionId();
+      if (!engineSessionId) return; // run starting up; re-fires once it resolves
+      for (const item of queued) {
+        if (steeredIdsRef.current.has(item.id)) continue;
+        steeredIdsRef.current.add(item.id);
+        void window.codeshell.steer(engineSessionId, item.text, item.id);
+      }
+      return;
+    }
+
+    // !busy: no live run. Either a 引导打断 relay handoff (drain the WHOLE queue
+    // as one merged re-send) or a leftover queue typed while idle (take the next
+    // item). Clear the relay marker once we fire.
     const isRelay = relayingBuckets.has(activeBucket);
-    const { text, state: next } = isRelay
-      ? drainQueuedInput(queuedInputs, activeBucket)
-      : dequeueQueuedInput(queuedInputs, activeBucket);
-    setQueuedInputs(next);
     if (isRelay) {
+      const { text, ids, state: next } = drainQueuedInput(queuedInputs, activeBucket);
+      ids.forEach((id) => steeredIdsRef.current.delete(id));
+      setQueuedInputs(next);
       setRelayingBuckets((prev) => {
         if (!prev.has(activeBucket)) return prev;
         const n = new Set(prev);
         n.delete(activeBucket);
         return n;
       });
+      if (text) send(text);
+      return;
     }
-    if (text) send(text);
+    const { item, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
+    if (item) steeredIdsRef.current.delete(item.id);
+    setQueuedInputs(next);
+    if (item?.text) send(item.text);
   }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
 
+  const newQueuedId = (): string =>
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `q-${queuedSeqRef.current++}`;
+
   const queueInput = (text: string): void => {
-    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
+    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, newQueuedId(), text));
   };
 
   const forceSend = (text: string): void => {
-    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, text));
+    setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, newQueuedId(), text));
     setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
     stop(activeBucket, { relay: true });
   };
 
   const clearActiveQueuedInput = (): void => {
+    const ids = (queuedInputs[activeBucket] ?? []).map((i) => i.id);
     setQueuedInputs((prev) => clearQueuedInput(prev, activeBucket));
+    const engineSessionId = resolveActiveEngineSessionId();
+    ids.forEach((id) => {
+      steeredIdsRef.current.delete(id);
+      // Best-effort revoke any that were already steered; consumed ones are a
+      // no-op (removed=false) and will still arrive as bubbles.
+      if (engineSessionId) void window.codeshell.unsteer(engineSessionId, id);
+    });
   };
 
   const removeActiveQueuedInputAt = (index: number): void => {
-    setQueuedInputs((prev) => removeQueuedInputAt(prev, activeBucket, index));
-  };
-
-  // 引导(默认,不打断): hand the WHOLE queued draft to the running turn via the
-  // steer channel. The engine splices it in as a user message at its next
-  // turn-loop step boundary — no abort, no lost in-flight work, the model sees
-  // it on the very next step. (vs forceSend below, which aborts + resends.)
-  // Falls back to the relay-abort path only if we can't resolve the engine
-  // session id (no live run to steer) — then it behaves like the old guide.
-  const guideActiveQueuedInput = (): void => {
+    const item = (queuedInputs[activeBucket] ?? [])[index];
+    if (!item) return;
+    const bucket = activeBucket;
+    // Drop BY ID, not index — the queue may shift between click and the async
+    // unsteer reply (another item could inject/remove meanwhile).
+    const drop = (): void => {
+      steeredIdsRef.current.delete(item.id);
+      setQueuedInputs((prev) => removeQueuedInputById(prev, bucket, item.id));
+    };
     const engineSessionId = resolveActiveEngineSessionId();
-    const { text, state: next } = drainQueuedInput(queuedInputs, activeBucket);
-    if (!text) return;
-    if (!engineSessionId) {
-      // No live run to steer into — fall back to abort+resend (old behavior).
-      setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
-      stop(activeBucket, { relay: true });
+    if (!engineSessionId || !steeredIdsRef.current.has(item.id)) {
+      // Never steered (idle queue) — safe to drop immediately.
+      drop();
       return;
     }
-    setQueuedInputs(next);
-    void window.codeshell.steer(engineSessionId, text);
+    // Already steered: ask the engine to revoke. If it was already consumed
+    // (removed === false) leave the panel entry — its steer_injected event will
+    // turn it into a bubble shortly (静默, no error). rpc() resolves the whole
+    // {id, result} envelope, so the flag is at .result.removed.
+    void window.codeshell.unsteer(engineSessionId, item.id).then((res) => {
+      const removed = (res as { result?: { removed?: boolean } })?.result?.removed;
+      if (removed !== false) drop();
+    });
+  };
+
+  // 全部引导(打断重发): abort the current turn and re-send the WHOLE queued draft
+  // merged into one message. Same relay-abort semantics as forceSend — the
+  // queue stays put; the !busy auto-send effect drains it as a relay re-send
+  // once the abort lands. (Non-interrupting step-boundary injection is now the
+  // QUEUE's default — see the auto-send effect — so this button is the explicit
+  // INTERRUPT entry, matching the composer 引导 button.)
+  const guideActiveQueuedInput = (): void => {
+    const queued = queuedInputs[activeBucket];
+    if (!queued || queued.length === 0) return;
+    setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
+    stop(activeBucket, { relay: true });
   };
 
   const stop = (bucketOverride?: string, opts?: { relay?: boolean }): void => {
@@ -2609,7 +2682,7 @@ function App() {
               onStop={() => stop()}
               busy={busy}
               queuedInputCount={queuedInputs[activeBucket]?.length ?? 0}
-              queuedInputItems={queuedInputs[activeBucket] ?? []}
+              queuedInputItems={(queuedInputs[activeBucket] ?? []).map((i) => i.text)}
               onClearQueuedInput={clearActiveQueuedInput}
               onRemoveQueuedInput={removeActiveQueuedInputAt}
               onGuideQueuedInput={guideActiveQueuedInput}
