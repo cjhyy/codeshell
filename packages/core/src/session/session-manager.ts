@@ -124,7 +124,12 @@ export class SessionManager {
       ...(origin ? { origin } : {}),
     };
 
-    writeFileSync(join(sessionDir, "state.json"), JSON.stringify(state, null, 2), "utf-8");
+    // Atomic write (tmp+rename) like saveState, so a crash during this one-time
+    // create can't leave a torn state.json that resume() then fails to parse.
+    const stateTarget = join(sessionDir, "state.json");
+    const stateTmp = `${stateTarget}.${process.pid}.${Date.now()}.create.tmp`;
+    writeFileSync(stateTmp, JSON.stringify(state, null, 2), "utf-8");
+    renameSync(stateTmp, stateTarget);
 
     const transcript = new Transcript(join(sessionDir, "transcript.jsonl"));
     transcript.append("session_meta", {
@@ -193,7 +198,17 @@ export class SessionManager {
       throw new SessionError(`Session state file not found: ${sessionId}`);
     }
 
-    const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    let state: SessionState;
+    try {
+      state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+    } catch (err) {
+      // A corrupt state.json (external tampering, disk corruption, or a crash
+      // during the one-time create() write) must surface as a clean SessionError
+      // — not a raw SyntaxError that escapes callers expecting SessionError.
+      throw new SessionError(
+        `Session state is corrupt for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
     const transcriptFile = join(sessionDir, "transcript.jsonl");
     const transcript = Transcript.loadFromFile(transcriptFile);
 
