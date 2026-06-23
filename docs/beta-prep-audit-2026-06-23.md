@@ -251,7 +251,9 @@
 
 - 复核 stream 折叠 + agent-group post-pass(renderer/messages):foldAgentGroups 正确递归进 turn_process_group.items(flush 在组边界前调,不跨界拼 run);≥2 才成组(单 agent 留原样);两处渲染(MessageStream + TurnProcessGroupCard)都补了 agent_group case(记忆点名的「两处 switch 都要补」已满足)。81 测过,干净。
 
-**bug-scan 小结(已饱和)**:共对抗式审 ~24 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
+- 复核 replay seal(foldTranscript.sealOrphanedAgents):replay 后仍 `done:false` 的 agent = 孤儿(worker 崩没落 agent_end),封口为 done+interrupted 并清 activeAgents,flush textBuffer 不丢内容;**仅在 getSessionTranscript 的 disk-rebuild 路径调用,绝不碰 live 流**(故不会误封正在跑的活 agent)。selectReplayEvents 游标按 seq>appliedSeq 选,无 gap 无重复。11 测过(含孤儿 seal 用例),干净。
+
+**bug-scan 小结(已饱和)**:共对抗式审 ~25 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
 
 **bug-scan 第二轮(mobile-remote review,b9915a0f)**
 - 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
