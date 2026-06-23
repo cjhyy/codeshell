@@ -40,7 +40,7 @@
 
 | 项 | 结果 | 说明 |
 |---|---|---|
-| core 单测 | ✅ **1584 pass / 0 fail**(270 文件) | 夜循环 +新增测试,全绿 |
+| core 单测 | 🟡 **~1602 pass**(273 文件) | 隔离全绿;⚠️**全量套件下 1 个 flaky**(sleep abort-listener-leak,非确定·产品代码正确·非夜循环引入)——见 §2.4.6 |
 | desktop 单测 | ✅ **923 pass / 0 fail** | 全绿 |
 | tui 单测 | ✅ **81 pass / 0 fail** | 全绿 |
 | desktop typecheck | ✅ **0 error** | 干净 |
