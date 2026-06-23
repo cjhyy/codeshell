@@ -102,11 +102,12 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 
 ## 4. 其它架构问题(按优先级)
 
-### 4.1 [中] 工具元数据无注册期校验,`pathPolicy` 拼错会静默放行
+### 4.1 [中] ✅ 已做 — 工具元数据无注册期校验,`pathPolicy` 拼错会静默放行
 - **证据**:`registry.ts:52-57` `registerTool` 接受 `RegisteredTool` 但不校验 `pathPolicy.arg` 是否匹配 `inputSchema` 字段;`executor.ts:519-527` 若 `args[policy.arg]` 因拼错为 `undefined`,返回空 targets,循环不执行,**返回 null(无报错),工具无防护运行**。`path-policy-metadata.test.ts` 也只测「有 path 字段的工具声明了 pathPolicy」,不测「pathPolicy.arg 真的存在于 schema」。
 - **影响**:一个 typo(如 `arg:"pat"` 而非 `"path"`)会让该工具静默绕过路径权限层,无任何预警,只能靠人审。这是个真实的**安全静默失败**面。
 - **建议**:加 `validateToolMetadata(tool)`,在 registry 构造或测试期校验每个 `pathPolicy.arg ∈ inputSchema.properties`,drift 即 fail。
 - **工作量**:小。
+- **✅ 处置(commit d01462b9,2026-06-24)**:新增 `tool-system/validate-tool-metadata.ts`(findToolMetadataIssues/validateToolMetadata/collectToolMetadataIssues),registry 在 registerBuiltins 循环 + registerTool 入口都调它→typo 注册期抛错。MCP 工具经 buildRegisteredTool 从不设 pathPolicy→validator 对其 no-op(不影响 MCP 注册)。+7 测含「每个 shipped builtin metadata 一致」审计(确认现有 builtin 零 typo)。
 
 ### 4.2 [中] MCP 工具注册无结构校验
 - **证据**:`mcp-manager.ts:221-232` 把 MCP server 返回的工具直接 wrap 成 `RegisteredTool`,不校验 `inputSchema`、不声明 `pathPolicy`。
