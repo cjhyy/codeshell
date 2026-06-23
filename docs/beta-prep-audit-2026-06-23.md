@@ -11,7 +11,7 @@
 >
 > **覆盖**:~37 子系统 + 7 跨切模式(process.kill / JSON.parse / Number / match-deref / floating-promise / IPC-cast / effect-订阅)对抗式审,逐条溯源验证(含多个「以为可达、溯源证伪」)。详见**附A 覆盖矩阵**。最关键结论:唯一不可信边界 mobile-remote WS 证实健壮。
 >
-> **状态**:core 1584 / desktop 923 / tui 81 全绿 · core+desktop tsc 0 err · core build 0 · 工作树净 · dist 与 src 一致(tui 跑 fresh dist 绿)。
+> **状态**:core ~1602 / desktop 924 / tui 81 · core+desktop tsc 0 err · core build 0 · 工作树净 · dist 与 src 一致。⚠️ **全量 core `bun test` 有 1 个 flaky 测试**(sleep abort-listener-leak,非确定·隔离稳过·产品代码正确·非我引入)——间歇 CI 红,详见 §2.4.6,建议你修测试时序断言。
 >
 > **本轮 fix commit 速查(13 个,供 push 前逐一 review)**:
 > `fc6f0409` cookie 域围栏 · `a906d8f7` 非数组 secret · `8065530a` R-1 0o600(manager+onboarding) · `b9915a0f` passcode 数组头+lease 0o700 · `d241ec08`+`d4c9dcb9` 权限链式绕过(+管道) · `9119ef0f` 记忆 redact · `e56825d6` R-1 第三写入点 engine · `95591130` killProcessGroup pgid 守卫 · `0a728764` resident-agent pid · `d423319d` resume 损坏 state.json · `c6e9b3a7` token-counter catch · `5ac51235` typecheck 收口(你 merge 的 send_input 带来的红) · `358efbb0` saveCatalogEntry mkdirSync(在 §3 提交里)。其余为 test 补全 + 文档。
@@ -303,6 +303,14 @@
 | session disk 恢复 / draft 处理 | 干净:renderer loadSessionIndex 用 `activeSessionId !== undefined`(非 `??`)——持久 null=合法 draft 保留,仅 legacy 缺字段才落 sessions[0](project_draft_session_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |
 | agent-definition 加载/解析 | 干净:parseAgentDefinition 对畸形(缺 frontmatter/坏 YAML/缺 name/desc)抛结构化错,但 loadFromDirs **per-file try/catch→warning+continue**(一个坏 role 不崩全部/不阻 agent 列表);disabled-after-merge 使 user override disabled plugin role 正确;override/shadowedSources 精度;send_input +6 改未破坏隔离。15 测 |
 | **send_input 续接(用户新 merge 特性,read-only review)** | resume 解析正确(registry→on-disk→clean error)+**重 resolve tool/skill scope 防 restricted role 续接时夺回全工具集**(安全要点已处理)+role-removed 降级 bare continuation;transcript-translator switch+default 不崩、display-only;namespacePluginSkills 已namespaced 不双前缀(已测 agent.resolve-type:78)。**1 个真发现**:缺「agent 在 running」并发守卫(§2.4.5,已标注给用户,未擅改) |
+
+### 2.4.6) 🟡 给用户的发现:sleep.test 的 abort-listener-leak 测试在全量套件下 flaky
+
+> 全量 `bun test`(core)下 `sleepTool abort-listener cleanup > does not leak abort listeners across normal completions` **非确定性失败**(连跑三次:1 fail / 2 fail / 0 fail);**隔离单跑稳过**(3 pass)。非本 session 引入(未碰 sleep.*)。
+- **产品代码正确**:`sleep.ts` 正常完成时 timer 回调先 `removeEventListener("abort",onAbort)` 再 resolve,abort 路径 `{once:true}` 自摘——**不泄漏**。
+- **flaky 根因**:测试用 `getEventListeners(ac.signal,"abort").length` 比较 before/after。该 API 是 node inspector/util 系,在 bun 全量套件并发/GC 下计数有时序噪声;`for` 循环内连续 await 短 sleep,某次清理微任务与计数读取的相对时序在高负载下不稳。
+- **影响**:间歇 CI 红(非产品 bug)。**建议(你定)**:循环后加一个 `await Promise.resolve()`/微任务让清理 settle,或改断言为「不单调增长」而非精确相等,或标 `.skip` 待 bun 端核实。我没擅改(是别人的测试 + bun getEventListeners 行为需你确认)。
+- ⚠️ **核实坑**:`bun run typecheck` / 隔离测试都不会暴露——只有**全量 core `bun test`** 偶发。CI 若跑全量会间歇红。
 
 ### 2.4.5) 🟡 给用户的发现:send_input 续接缺「agent 在跑」并发守卫(你刚 merge 的特性)
 
