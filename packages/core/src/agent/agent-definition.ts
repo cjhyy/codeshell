@@ -23,6 +23,14 @@ export interface AgentDefinition {
   systemPrompt: string;
   /** Where this def was loaded from. Runtime-only; never serialized. */
   source?: "project" | "user" | "plugin";
+  /**
+   * Owning plugin name when source === "plugin" (e.g. "mimi-video"). Runtime-
+   * only; never serialized. Used to namespace this agent's bare skill
+   * allowlist into `<pluginName>:<skill>` at spawn time, since a plugin's
+   * frontmatter references its own skills by bare name (CC convention) but
+   * the scanner registers them namespaced. Undefined for project/user agents.
+   */
+  pluginName?: string;
   /** Absolute path of the file it came from. Runtime-only. */
   filePath?: string;
   /** True when this def shadows a same-named def from a lower-priority dir. */

@@ -42,6 +42,12 @@ export interface AsyncAgentEntry {
    *  not every concurrent session's. Undefined only for legacy/ad-hoc callers
    *  outside Engine.run. */
   sessionId?: string;
+  /** The sub-agent's OWN child session id (distinct from the parent
+   *  `sessionId` above). AgentSendInput resumes this to continue the agent
+   *  with full transcript replay. With the agent_id===childSid convention
+   *  this equals `agentId`, but it is stored explicitly so the contract is
+   *  not coupled to that identity. Undefined for legacy entries. */
+  childSessionId?: string;
   status: AsyncAgentStatus;
   startedAt: number;
   finishedAt?: number;

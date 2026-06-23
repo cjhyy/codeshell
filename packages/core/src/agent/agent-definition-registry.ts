@@ -5,6 +5,9 @@ import { parseAgentDefinition, type AgentDefinition } from "./agent-definition.j
 export interface AgentSourceDir {
   dir: string;
   source: "project" | "user" | "plugin";
+  /** For source === "plugin": the owning plugin name, carried onto each def
+   *  so the spawn layer can namespace bare skill allowlists. */
+  pluginName?: string;
 }
 
 /**
@@ -36,7 +39,7 @@ export class AgentDefinitionRegistry {
   ): AgentDefinitionRegistry {
     const reg = new AgentDefinitionRegistry();
 
-    for (const { dir, source } of dirs) {
+    for (const { dir, source, pluginName } of dirs) {
       if (!existsSync(dir) || !statSync(dir).isDirectory()) continue;
       for (const entry of readdirSync(dir).sort()) {
         if (!entry.endsWith(".md")) continue;
@@ -45,6 +48,7 @@ export class AgentDefinitionRegistry {
           if (!statSync(full).isFile()) continue;
           const def = parseAgentDefinition(readFileSync(full, "utf8"), entry);
           def.source = source;
+          if (pluginName) def.pluginName = pluginName;
           def.filePath = full;
           // A later dir overriding an earlier one. Carry forward the shadowed
           // sources (the prev def's own source + anything it already shadowed)

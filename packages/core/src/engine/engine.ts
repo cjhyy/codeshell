@@ -400,7 +400,7 @@ export function loadAgentDefinitionsForCwd(
   );
 }
 
-const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel"];
+const NESTED_AGENT_TOOLS = ["Agent", "AgentStatus", "AgentCancel", "AgentSendInput"];
 
 /**
  * #7: apply a project's per-turn builtin capability override to a tool list.
@@ -1274,9 +1274,23 @@ export class Engine {
         // child.run() establishes its own runWithSid scope internally, so
         // child log lines route to the child's sid and parent's ALS
         // binding is unaffected when control returns here.
-        const result = await child.run(req.prompt, { signal: req.signal, onStream: childStream });
-        return result.text;
+        //
+        // agent_id === childSid: cold-start the child UNDER its agentId as the
+        // session id (run() shape (2): a fresh sid the host wants materialized),
+        // so the session persists at sessions/<agentId>/ and AgentSendInput can
+        // later resume it by agentId with no extra id→sid mapping. When
+        // resumeSessionId is set we resume that existing session instead —
+        // run() detects the on-disk session and replays its full transcript
+        // (the CC continuation model; see AgentSendInput).
+        const childSessionId = req.resumeSessionId ?? req.agentId;
+        const result = await child.run(req.prompt, {
+          signal: req.signal,
+          onStream: childStream,
+          sessionId: childSessionId,
+        });
+        return { text: result.text, sessionId: result.sessionId };
       },
+      sessionExists: (sessionId: string) => this.sessionManager.exists(sessionId),
     };
 
     // Priority: config.sandbox → project settings.sandbox → global → per-run

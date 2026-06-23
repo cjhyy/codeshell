@@ -3,14 +3,18 @@ import { agentTool } from "./agent.js";
 import type { StreamEvent } from "../../types.js";
 import type { SubAgentSpawner, ToolContext } from "../context.js";
 
-/** Capture stream events emitted to the parent UI during a sub-agent run. */
-function makeCtx(spawn: SubAgentSpawner["spawn"]): {
+/**
+ * Capture stream events emitted to the parent UI during a sub-agent run.
+ * `spawnText` returns the agent's text (or throws); we wrap it into the
+ * `{ text, sessionId }` shape spawn() now returns (sessionId === agentId).
+ */
+function makeCtx(spawnText: (req: { agentId: string; prompt: string }) => Promise<string>): {
   ctx: ToolContext;
   events: StreamEvent[];
 } {
   const events: StreamEvent[] = [];
   const spawner: SubAgentSpawner = {
-    spawn,
+    spawn: async (req) => ({ text: await spawnText(req), sessionId: req.resumeSessionId ?? req.agentId }),
     parentStream: (e) => {
       events.push(e);
     },
