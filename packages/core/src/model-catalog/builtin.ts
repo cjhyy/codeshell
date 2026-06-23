@@ -50,6 +50,68 @@ const OPENROUTER_REASONING: ParamSpec = {
   wire: { field: "reasoning.effort" },
 };
 
+/**
+ * Zhipu GLM params (OpenAI-compatible endpoint, but with GLM-specific wire
+ * fields). Promoted from the user catalog after live-verifying glm-5.2 / 5.1 /
+ * 5 / 5-turbo / 4.7 / 4.6 against open.bigmodel.cn (2026-06-23). Written
+ * explicitly because the capability layer has no GLM rules.
+ */
+const ZHIPU_PARAMS: ParamSpec[] = [
+  {
+    name: "reasoning_effort",
+    label: "推理强度",
+    control: "enum",
+    options: ["max", "xhigh", "high", "medium", "low", "minimal", "none"],
+    default: "max",
+    doc: "控制模型推理程度；thinking 开启时生效。GLM-5.2 支持，none/minimal 放弃思考，low/medium 映射为 high，xhigh 映射为 max。",
+    wire: { field: "reasoning_effort" },
+  },
+  {
+    name: "thinking_type",
+    label: "思维链",
+    control: "enum",
+    options: ["enabled", "disabled"],
+    default: "enabled",
+    doc: "控制是否开启思维链；GLM-5.2 开启后为强制思考。",
+    wire: { field: "thinking.type" },
+  },
+  {
+    name: "temperature",
+    label: "Temperature",
+    control: "number",
+    min: 0,
+    max: 1,
+    default: 1,
+    doc: "采样温度，控制输出随机性，范围 0.0 到 1.0。",
+    wire: { field: "temperature" },
+  },
+  {
+    name: "top_p",
+    label: "Top P",
+    control: "number",
+    min: 0.01,
+    max: 1,
+    default: 0.95,
+    doc: "核采样参数，范围 0.01 到 1.0；官方建议不要与 temperature 同时调整。",
+    wire: { field: "top_p" },
+  },
+  {
+    name: "max_tokens",
+    label: "最大输出 Tokens",
+    control: "number",
+    min: 1,
+    max: 131072,
+    default: 4096,
+    doc: "模型输出最大 token 数量，GLM-5.2 最大 131072。",
+    wire: { field: "max_tokens" },
+  },
+];
+
+/** Zhipu GLM preset — shared ZHIPU_PARAMS, with per-model context window. */
+function glmPreset(value: string, label: string, ctx: number): ModelPreset {
+  return { value, label, maxContextTokens: ctx, params: ZHIPU_PARAMS };
+}
+
 /** OpenRouter preset with explicit params (no capability-layer projection). */
 function orPreset(value: string, label: string, params?: ParamSpec[], ctx?: number): ModelPreset {
   return {
@@ -73,11 +135,19 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     defaultModel: "gpt-5.5",
     signupUrl: "https://platform.openai.com/api-keys",
     needsKey: true,
+    // Verified live (2026-06-23) against this account's key: gpt-5.5 / 5.4 /
+    // 5.4-mini returned text; o4-mini reachable; o3 reachable (slow). New OpenAI
+    // models reject `max_tokens` — must use `max_completion_tokens` (handled by
+    // the client). gpt-5.5-pro is 404 on /chat/completions (not a chat model).
     modelPresets: [
       textPreset("openai", "gpt-5.5", "GPT-5.5", 1_050_000),
       textPreset("openai", "gpt-5.4", "GPT-5.4", 1_050_000),
       textPreset("openai", "gpt-5.4-mini", "GPT-5.4 Mini", 400_000),
+      textPreset("openai", "gpt-5.4-nano", "GPT-5.4 Nano", 400_000),
+      textPreset("openai", "o4-mini", "o4-mini", 200_000),
+      textPreset("openai", "o3", "o3", 200_000),
       textPreset("openai", "gpt-4o", "GPT-4o", 128_000),
+      textPreset("openai", "gpt-4o-mini", "GPT-4o mini", 128_000),
     ],
   },
   {
@@ -111,14 +181,22 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     needsKey: true,
     // OpenRouter ~latest router aliases — auto-track the newest version so the
     // slug never goes stale (vs. dated slugs like anthropic/claude-opus-4.8-20260528).
-    // Explicit params (not capability-projected): these 4 are reasoning models
-    // so each opts into OPENROUTER_REASONING. A non-reasoning OpenRouter model
-    // added later simply omits params — no catch-all forcing reasoning on it.
+    // Explicit params (not capability-projected): reasoning models opt into
+    // OPENROUTER_REASONING; non-reasoning ones omit params — no catch-all forcing
+    // reasoning onto a model that doesn't support it.
+    // All slugs verified live (2026-06-23) via this account's OpenRouter key:
+    // every entry below returned a successful chat completion. reasoning/tools
+    // support read from OpenRouter's /models supported_parameters: deepseek-chat
+    // (V3) and llama-4-maverick are NOT reasoning models, so they carry no params.
     modelPresets: [
       orPreset("~anthropic/claude-opus-latest", "Claude Opus (latest)", [OPENROUTER_REASONING], 1_000_000),
       orPreset("~anthropic/claude-sonnet-latest", "Claude Sonnet (latest)", [OPENROUTER_REASONING], 1_000_000),
       orPreset("~openai/gpt-latest", "GPT (latest)", [OPENROUTER_REASONING], 1_050_000),
       orPreset("~google/gemini-pro-latest", "Gemini Pro (latest)", [OPENROUTER_REASONING], 1_048_576),
+      orPreset("qwen/qwen3.7-max", "Qwen3.7 Max", [OPENROUTER_REASONING], 1_000_000),
+      orPreset("z-ai/glm-5.2", "GLM 5.2 (Z.ai)", [OPENROUTER_REASONING], 1_048_576),
+      orPreset("deepseek/deepseek-chat", "DeepSeek V3", undefined, 131_072),
+      orPreset("meta-llama/llama-4-maverick", "Llama 4 Maverick", undefined, 1_048_576),
     ],
   },
   {
@@ -135,6 +213,28 @@ export const BUILTIN_CATALOG: CatalogEntry[] = [
     modelPresets: [
       textPreset("deepseek", "deepseek-v4-flash", "DeepSeek V4 Flash", 1_000_000),
       textPreset("deepseek", "deepseek-v4-pro", "DeepSeek V4 Pro", 1_000_000),
+    ],
+  },
+  {
+    id: "zhipu",
+    tag: "text",
+    adapterKind: "openai",
+    protocol: "openai-compat",
+    displayName: "Zhipu GLM",
+    description: "智谱 GLM 系列(OpenAI 兼容端点)。适合 Coding Agent 与长上下文任务。需要智谱 key。",
+    defaultBaseUrl: "https://open.bigmodel.cn/api/paas/v4",
+    defaultModel: "glm-5.2",
+    signupUrl: "https://open.bigmodel.cn/",
+    needsKey: true,
+    // All slugs verified live (2026-06-23) against open.bigmodel.cn: glm-5.2 /
+    // 5.1 / 5 / 5-turbo / 4.7 / 4.6 each returned a successful chat completion.
+    modelPresets: [
+      glmPreset("glm-5.2", "GLM-5.2", 1_000_000),
+      glmPreset("glm-5.1", "GLM-5.1", 1_000_000),
+      glmPreset("glm-5", "GLM-5", 1_000_000),
+      glmPreset("glm-5-turbo", "GLM-5 Turbo", 1_000_000),
+      glmPreset("glm-4.7", "GLM-4.7", 200_000),
+      glmPreset("glm-4.6", "GLM-4.6", 200_000),
     ],
   },
   {
