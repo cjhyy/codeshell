@@ -247,6 +247,7 @@
 | 🟠 健壮 | resident-agent.stop 负 pid kill 漏 pid=1(同 killProcessGroup 类,pid 非磁盘往返仅理论可达) | 统一加 `>1` 守卫,≤1 回退 child.kill | 0a728764 |
 | 🟠 健壮 | resume() 损坏 state.json 抛裸 SyntaxError(逃过只 catch SessionError 的调用方→session 打不开);state.json 唯一非原子写在 create() | resume 读包 try/catch→SessionError;create() 改 tmp+rename | d423319d |
 | 🟢 健壮(低危) | token-counter 编码器 import 无 `.catch`→corrupt 安装时 unhandled rejection(本意是 chars/4 fallback) | 补 `.catch(()=>{})` 让静默 fallback 成立 | c6e9b3a7 |
+| 🟢 健壮(低危) | Read 负 `limit`(LLM misbehave)经 `\|\|2000` 漏过→`slice(start,start-N)` 负 end=「all but last N」静默返回错窗口 | `rawLimit>0?rawLimit:2000` 把 0/负/NaN 回默认;TDD 回归 | 496112f2 |
 
 ### 2) 覆盖矩阵(~25 子系统对抗式审过,结论=干净/已修;括注追过并证伪的假设)
 
