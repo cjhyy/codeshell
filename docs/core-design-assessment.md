@@ -115,11 +115,12 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 - **建议**:加 `validateToolDefinition()` 做纵深防御,对 MCP 文件类工具要求 `pathPolicy` 声明或显式 `pathPolicyExempt`。
 - **工作量**:小。
 
-### 4.3 [中] turn-loop 状态机缺集成测试
+### 4.3 [中] 🟡 部分 — turn-loop 状态机缺集成测试
 - **证据**:`turn-loop.test.ts` 仅 36 行(类型契约);abort/continuation/error 三个集成测试稀疏(~4-6KB),**无**测试覆盖 `stopBlockCount` 循环、context-compaction-hook 顺序、goal-budget 耗尽时机。
 - **影响**:turn 边界行为/context 压缩时机/hook 顺序的回归只能被用户发现。注意:这是**覆盖债**而非潜伏崩溃——goal 模式已在生产稳定,budget 算术有 `goal.test.ts`(216 行)单测,abort/异常安全有覆盖。
 - **建议**:加 `turn-loop-state-machine.test.ts`,mock `ModelFacade`/`ToolExecutor`,跑 5-turn 场景(context 回滚 / hook block / goal 完成 / abort),只测状态流不测输出质量。
 - **工作量**:中。
+- **🟡 处置(commit 767e373e,2026-06-24)**:补 `turn-loop-max-turns.test.ts`(沿用既有 makeDeps 范式)钉 maxTurns 上限路径=之前唯一没覆盖的主退出分支:触顶后做 1 次无工具 summary call、返 reason "max_turns"、turns-remaining 警告注入、早停不触顶。其余建议项已被现有测试分摊:goal-budget=`goal.test.ts`(216 行)·compaction 时机=`reactive-threshold.test.ts`·abort=`turn-loop-abort.test.ts`·tool-cap=`turn-loop-tool-cap.test.ts`。turn-loop 现 8 文件 18 测。剩 stopBlockCount 多轮 goal-reblock 序列的纯状态测可后续补(goal 模式生产稳定·低优先)。
 
 ### 4.4 [中] 🟡 部分 — 关键路径 JSON 读取静默吞错
 - **证据**:67 处 `JSON.parse(readFileSync())`(去掉 25 处测试文件后),其中 onboarding/settings 层有 **3-4 处真静默失败**(如 `findSavedKeyForProvider:334` 对损坏文件返回 undefined,误导调用方)。多数 plugin/marketplace installer 实际有 `CSMeta.parse()` 或显式 throw,不算静默。
