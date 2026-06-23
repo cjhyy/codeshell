@@ -245,6 +245,7 @@
 | mcp-manager reconcile/connect | 干净(在途握手合并不泄漏·共享池只摘无 owner 想要的;并发 race 不可达) |
 | stream 折叠 + agent-group post-pass | 干净(递归进 turn_process_group·两处渲染都补 agent_group case) |
 | replay orphan-agent seal | 干净(仅 disk-rebuild 路径调·flush 不丢内容,不误封活 agent) |
+| WebFetch SSRF | 干净(每跳 manual-redirect 重验 host+DNS→IP 块表·IPv4/IPv6/云元数据全覆盖·跨域剥凭证·hop 限);TOCTOU/DNS-rebind 残留**已在 a3 设计文档显式记为 out-of-scope** + 缓解理由,非疏漏;10 测) |
 
 ### 3) 总评
 
