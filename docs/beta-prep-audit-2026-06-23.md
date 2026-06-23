@@ -13,7 +13,9 @@
 > | 4 | `read.ts:67-74` | 🔵 cosmetic | 夜循环自留的 4 行重复注释块 | 删一份 |
 >
 > **结论**:这 4 条**全是本批 diff 自己引入的回归**,无 pre-existing。#1 是真泄漏(push 前必修,已修)。RCE/killProcessGroup/权限绕过等夜循环已修项,review 复核**未发现新洞**。verify 阶段还**证伪了若干**(workflow 默认 refuted,只留有具体触发路径的)。
-> **现状**:core **1615 pass / 0 fail** · tsc 0 · build 0 · 工作树净。flaky sleep 测本轮通过(仍 🟡,见 §2.4.6)。
+>
+> **第二轮 review(未覆盖域)**:接着对矩阵标注的「未深入域」=**renderer React 状态机 + tui 命令路径**跑了第二个 workflow(4 域 20 agent),确认 **10 个真问题(0 误报)**,**修其中 8 个**(2 HIGH 状态/异步 race·1 HIGH 乐观无回滚·3 MEDIUM·2 LOW;commit `516c29c8`):App.tsx 审批队列 stale-closure(batched setState 读旧 queue)/RoomsPanel 进房 history 覆盖 mid-load 到达的消息丢失/双开关并发写 clobber/乐观翻转无回滚 desync/TextConn 设为当前无回滚/maxTurns NaN 持久化/BackgroundShell 轮询 interval 抖动/FilesPanel `key={i}`。留 1 个 LOW(App 未读点 flicker·幂等无丢数据·需 UX 拍板)未改。**详见 §1c**。
+> **现状**:core **1615 pass / 0 fail** · desktop **935** · tui **81** · 三包 tsc 0 · renderer vite build 0 · 工作树净。flaky sleep 测仍 🟡(见 §2.4.6)。
 >
 > **下一轮循环接着先做什么**(优先级序)——见本段末「▶ 下一步」。
 >
@@ -47,7 +49,7 @@
 > 1. **真机冒烟 §1.2/1.3** —— cookie 登录全链路是唯一没真机验过的核心新功能(自动化测试碰不到 BrowserWindow/session)。这是 push 前最高价值动作,**只能你在场跑 app**;我可以陪跑、读日志、即时修。
 > 2. 若暂不真机:**§4 文档清理**(陈旧 docs 标注/归档,纯文本可直接 main)+ **附A 矩阵补本次 review 的 5 个 review 域行**(可委托 subagent)。
 > 3. **§1.4 打包验证**(`bun run dist` 三平台产物可跑)。
-> 4. 仍要继续找 bug 的话:**未覆盖域** = renderer React 组件(本次 review 5 域里 desktop-renderer 偏 IPC/main,UI 状态机基本没碰)+ tui 命令路径。可再开一个 workflow 专扫这两块。
+> 4. 仍要继续找 bug 的话:renderer 状态机 + tui 已扫(§1c,8 修)。**剩余未深扫域** = 各 panel 的非状态渲染细节 + **mobile renderer(手机端 UI)**。可再开 workflow 专扫 mobile。
 > 5. **send_input 并发守卫(§2.4.5)** —— 这条是你的 in-flight 特性,等你拍 UX 我再动。
 >
 > ---
@@ -299,6 +301,24 @@
 | 🟡 健壮 | `save-entry.ts:66` writeFileSync 裸调(上面 mkdirSync 已包 try 这行没)→IO 错抛穿 `{ok:false}` 形状 + 丢 backup 名 | 包 try-catch 返 `{ok:false,error,backup}` + 写失败回归测 | f5d23525 |
 | 🔵 卫生 | `read.ts:67-74` 夜循环自留的 4 行重复注释块 | 删一份 | f5d23525 |
 
+### 1c) Workflow Review 第二轮:未覆盖域(renderer 状态机 + tui),2026-06-23 v2,全已修
+
+> 方法:对矩阵此前标注「未深入」的两域跑第二个 workflow `review-renderer-tui`(4 域 20 agent:App 中枢状态/settings 表单/panels/tui 命令 → 逐条 verify)。确认 **10 真问题 0 误报**,修 8(commit `516c29c8`),留 1 LOW 待 UX。
+
+| 严重度 | 文件:行 | 问题(触发 → 错果) | 修法 |
+|---|---|---|---|
+| 🔴 race | `App.tsx:1834` decideEnvelope | setApproval updater 里读 render 作用域旧 `approvalQueue`(setApprovalQueue 批处理未提交)→多审批排队批准首个时「下一个」可能显示已决策的/跳过 | 先算 `remaining` 一次,setApprovalQueue + setApproval 都用它 |
+| 🔴 race | `RoomsPanel.tsx enter()` | `setMessages([])`→await open/history→`setMessages(history)`,await 期间 onMessage 到的消息被 history 覆盖丢失 | enterToken ref 防 stale load 覆盖 + 按 seq 合并 history 与已到 live(去重排序) |
+| 🔴 乐观无回滚 | `AdvancedSections.tsx` ToggleCapability `save()` | `setEnabled(next)` 后 writeSettings 失败仅清 saving 不还原+无提示→UI 显 enabled 盘上没变(remount 才还原) | catch 还原 prev + error toast(新 i18n `toggleSaveFailed`) |
+| 🔴 并发写 | `AdvancedSections.tsx` InstructionFiles 双开关 | 各开关读对方旧闭包值 persist;快速双切两异步写 race,旧写后落盖掉新写→一个开关静默回退 | pairRef 镜像最新双值 + writeChain 串行化写 |
+| 🟡 乐观无回滚 | `TextConnectionsPanel.tsx:357` 设为当前 | `setDefaultId` 乐观+`persist` 无 catch→失败时 UI 新默认盘上旧 | await+catch 还原+toast(新 i18n `setCurrentFailed`) |
+| 🟡 NaN 持久化 | `AgentsSection.tsx:468` maxTurns | `Number("abc")=NaN`(typeof number)存进 saveAgent | `Number.isFinite` 守卫(对齐 GitSection graceMins) |
+| 🟡 timer 抖动 | `BackgroundShellPanel.tsx:100-112` | 3s 轮询 interval deps 含 refresh/fetchOutput/shells→切 session/切语言/列表更新都重建 interval→live 输出停滞达 ~6s | ref 镜像三者,interval 仅随 `anyRunning` 翻转重建(沿用本组件 selectedRef 范式) |
+| 🔵 key | `FilesPanel.tsx:524` 行 key | `key={i}` 数组下标(仅靠 remount 当前安全)→若改成行内增删 commenting 态错行 | `key={no}`(行号稳定) |
+| ⚪️ 留 | `App.tsx`(1269/801)未读点 flicker | 两 setUnreadBuckets 幂等无丢数据,仅 off-screen 完成时未读点闪一下 | **未改**:纯观感·需 UX 拍板(debounce 窗口) |
+
+**教训(写进记忆)**:renderer 真 bug 集中在 **①乐观 setState 后 await 失败无回滚**(全仓多处一个模式:先翻 UI 再异步写,catch 不还原)+ **②effect 把每渲染重建的 callback/数组列进 deps 致 interval/订阅抖动**(范式=把"读最新值"的东西塞 ref,deps 只留真正该重启的触发量)+ **③乐观 state 读旧闭包/批处理未提交值**。下一轮若再扫 renderer 优先按这三模式 grep。
+
 ### 2) 覆盖矩阵(~25 子系统对抗式审过,结论=干净/已修;括注追过并证伪的假设)
 
 | 子系统 | 结论 |
@@ -357,7 +377,8 @@
 | cron 调度睡眠唤醒(**解决旧 memory 未修项**) | 干净:`isCronMisfire` 90s grace——醒来 timer 超 90s 过点=misfire→跳过+重 arm 到下个正确 occurrence,不补跑(project_automation_kkg28 的「06:56 乱跑」**已修**);nextRun forward-recompute 不 catch-up。74 automation 测含 06:56 回归 |
 | automation memory 写入(per-task memory.md) | 干净:核心 UpdateAutomationMemory 调注入 sink 不自 try/catch,但 executor(executor.ts:392)是**通用错误边界**——sink 抛(磁盘满/EACCES)被 catch→记 failed tool result 喂回模型「must not kill the turn」,run 不崩。8 测 |
 | session disk 恢复 / draft 处理 | 干净:renderer loadSessionIndex 用 `activeSessionId !== undefined`(非 `??`)——持久 null=合法 draft 保留,仅 legacy 缺字段才落 sessions[0](project_draft_session_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |
-| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。**未深入域(留下一轮)**:renderer React UI 状态机(本域偏 IPC/main)+ tui 命令交互路径。 |
+| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |
+| **v2 第二轮:未覆盖域**(renderer 状态机 + tui,4 域 20 agent) | 此前标注的未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。**至此 renderer + tui 不再是盲区**;仍未单独深扫=各 panel 的非状态渲染细节 + mobile renderer(手机端 UI)。 |
 | model-catalog resolveInstance + 默认选择 | 干净(亲核,补 agent review):baseUrl 回退 `inst??cred??entry.defaultBaseUrl`(末项 schema 必填恒非空)·cred 缺→apiKey undefined→client resolveApiKey 兜底·entry 缺→null caller skip·paramValues??{};**stale `defaults.text`(指向已删连接)经 `pool.list().some(key===defaultText)` 存在性检查才用**→否则落 activeKey→model-name 三级 graceful 回退,不破池。68 测 |
 | goal-stop-hook 判定(goal 裁判) | 干净:每个误判边沿 fail-toward-progress——judge throw/unparseable→continueSession(P0 不静默停);`met:true`→允许停+onMet(隔离 try/catch)+不缓存 met;`waiting && runningWork>0`→允许停(finite bg 会唤醒)缓存非met;**`waiting` 但任务列表空→落 not_met**(防 judge 幻觉 waiting 搁置 goal——无人唤醒);无限循环 backstop 委托 maxStopBlocks+budget(非本 hook)。bg 任务喂判官分辨 finite-render vs dev-server(busy-loop bug 已修)。10 测 |
 | context token-budget / 压缩触发 | 干净:估算是启发式(char/token ratio,CJK 0.3 cliff 可能 under-count)**但系统不依赖它精确**——proactive 在 0.85 ratio 触发(~15% headroom)+ **reactive 真错兜底**:API ContextLimitError→turn-loop 3 次 dropOldestRounds 递进重试+recordActualUsage 校准(turn-loop:555-576)。**追了 CJK-cliff under-estimate→被两层兜底吸收**,非 bug。21 测+recovery 有测 |
