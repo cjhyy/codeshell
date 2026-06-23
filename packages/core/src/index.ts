@@ -452,6 +452,7 @@ export {
 } from "./credentials/index.js";
 
 // ─── State (runtime singletons shared with TUI) ──────────────────
+/** @internal Shared with the in-repo TUI/desktop hosts; not stable SDK surface. */
 
 export {
   getSessionId,
@@ -470,6 +471,7 @@ export {
 } from "./state.js";
 
 // ─── Utils (shared primitives used by TUI) ───────────────────────
+/** @internal Shared primitives for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
 export {
   getGraphemeSegmenter,
@@ -539,6 +541,7 @@ export {
 export { resolveThemeSetting, type SystemTheme } from "./utils/systemTheme.js";
 
 // ─── Logging (extended) ──────────────────────────────────────────
+/** @internal Host-lifecycle logging hooks for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
 export { rotateLogs } from "./logging/logger.js";
 export { recordUIEvent } from "./logging/session-recorder.js";
@@ -597,6 +600,12 @@ export {
 } from "./review/review-prompt.js";
 
 // ─── Tool-system (extended for TUI) ─────────────────────────────
+/**
+ * @internal Exports below are consumed by the in-repo TUI/desktop hosts, not
+ * part of the stable `@cjhyy/code-shell-core` SDK surface. They may change or
+ * move to a `/tui` subpath without a major bump. External SDK users: prefer the
+ * primary Engine/Protocol API above.
+ */
 
 export { getInteractiveApprovalBackend } from "./tool-system/permission.js";
 export {
@@ -677,6 +686,7 @@ export {
 } from "./model-catalog/index.js";
 
 // ─── Protocol (extended for TUI) ────────────────────────────────
+/** @internal Extended protocol surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
 export { createInProcessClient } from "./protocol/helpers.js";
 // Note: agent-server-stdio.ts is a self-running entry point in the multi-session
@@ -686,6 +696,7 @@ export { createInProcessClient } from "./protocol/helpers.js";
 export type { ProtocolModelEntry } from "./protocol/types.js";
 
 // ─── Arena (extended for TUI) ───────────────────────────────────
+/** @internal Extended Arena surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
 export {
   formatArenaResult,
@@ -720,6 +731,7 @@ export {
 } from "./plugins/pluginCommandsLoader.js";
 
 // ─── LLM (extended for TUI) ─────────────────────────────────────
+/** @internal Extended LLM surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
 export {
   type CachedModel,
@@ -759,6 +771,7 @@ export {
 } from "./data/openrouter-sync.js";
 
 // ─── Types (extended for TUI) ────────────────────────────────────
+/** @internal Extended type surface for the in-repo TUI/desktop hosts; not stable SDK surface. */
 
 export type {
   ApprovalRequest,

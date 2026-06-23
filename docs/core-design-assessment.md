@@ -150,11 +150,12 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 - **建议**:要么 TCP 的 engineFactory 也 `settingsManager.load()` 重读;要么在代码注释里写清「TCP 的 MCP 编辑需重启」,别让它成为意外。
 - **工作量**:小。
 
-### 4.9 [低] index.ts 混合 core API 与 TUI-only 导出,无层级标记
+### 4.9 [低] ✅ 已做 — index.ts 混合 core API 与 TUI-only 导出,无层级标记
 - **证据**:`index.ts` 有 `─── Tool-system (extended for TUI)`、`─── Arena (extended for TUI)` 等段落与 core 导出混排;`update-automation-memory.js` 这类内部工具工厂被公开导出。
 - **影响**:SDK 消费者分不清哪些是稳定 core API、哪些是会随 UI 变的 TUI 工具。
 - **建议**:给 TUI-only 导出加 `@internal`/`@unstable` JSDoc,或拆 `@code-shell/core/tui` 子入口。
 - **工作量**:小。
+- **✅ 处置(2026-06-23)**:采纳 `@internal` JSDoc 方案。给六个 TUI banner 段(Tool-system / Protocol / Arena / LLM / Types / Logging-extended)+ State / Utils 段加段级 `@internal` 注释,声明非稳定 SDK 面、可能移到 `/tui` 子入口。纯注释、tsc 0。拆子入口(更彻底)留后续若要正式发 SDK 时做。
 
 ---
 
@@ -183,7 +184,7 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 
 **收益**:零代码、立刻生效、把「默认落点 = 再加个 builtin + 再 hardcode 一张表」的惯性掐断。这是对你那句焦虑最直接的答复——**先有准则,再谈搬家。**
 
-同时顺手做两件 5 分钟的事:删 `envUtils.ts` 的 Ant 内部探测(`isRunningOnHomespace`/`USER_TYPE='ant'`);给 `index.ts` 的 TUI-only 段落加 `@internal`。
+同时顺手做两件 5 分钟的事:~~删 `envUtils.ts` 的 Ant 内部探测(`isRunningOnHomespace`/`USER_TYPE='ant'`)~~ **✅ 已做(commit e4ae4e51,2026-06-23):删 core 两函数 + index.ts re-export + tui 两处 `USER_TYPE==='ant'` 门(fullscreen/osc tab-status,均对外部用户走 false 分支,改显式 false 保行为)**;~~给 `index.ts` 的 TUI-only 段落加 `@internal`~~ **✅ 已做(同批,2026-06-23):给 index.ts 六个「extended for TUI / shared with TUI / used by TUI」banner 段(Tool-system/Protocol/Arena/LLM/Types/Logging-extended + State/Utils)加 `@internal` JSDoc,声明非稳定 SDK 面、可能移到 /tui 子入口。纯文档注释,tsc 0。**
 
 ### Phase 1 —— 把目录数据外移(1-2 周,中等工作量,高收益)
 
