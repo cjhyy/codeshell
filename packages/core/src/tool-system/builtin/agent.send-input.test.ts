@@ -186,6 +186,28 @@ describe("AgentSendInput — subagent continuation via transcript replay", () =>
     expect(last.skillAllowlist).toEqual([]);
   });
 
+  it("refuses to resume an agent that is still running (concurrent-write guard)", async () => {
+    // If the agent is still running (e.g. it auto-moved to the background and
+    // hasn't finished), resuming would build a SECOND child Engine that resumes
+    // the SAME on-disk session and appends to the SAME transcript concurrently —
+    // sub-agents have no per-session `active` lock, so the two writers interleave
+    // and can corrupt the child transcript. Reject instead of spawning.
+    const { spawner, reqs } = makeSpawner({ existing: new Set(["agent-run"]) });
+    asyncAgentRegistry.register({
+      agentId: "agent-run",
+      description: "long task",
+      childSessionId: "agent-run",
+      status: "running",
+      startedAt: 0,
+      abort: () => {},
+    });
+    const ctx = makeCtx(spawner);
+    const out = await agentSendInputTool({ agent_id: "agent-run", prompt: "more" }, ctx);
+    expect(out).toMatch(/still running/i);
+    // Crucially, it must NOT have spawned a concurrent resume.
+    expect(reqs).toHaveLength(0);
+  });
+
   it("cascades parent abort to the resumed sub-agent", async () => {
     const { spawner, reqs } = makeSpawner();
     const ctx = makeCtx(spawner);

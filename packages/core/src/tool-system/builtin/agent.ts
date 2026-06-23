@@ -1077,6 +1077,21 @@ export async function agentSendInputTool(
     );
   }
 
+  // Concurrency guard: a sub-agent that's still running (e.g. it auto-moved to
+  // the background and hasn't finished) owns its child session. Resuming now
+  // would build a SECOND child Engine that resumes the SAME session and appends
+  // to the SAME transcript concurrently — sub-agents have no per-session
+  // `active` lock (the protocol layer's serialization only covers top-level
+  // sessions), so the two writers interleave and can corrupt the transcript.
+  // Refuse until it finishes (or is cancelled).
+  if (entry?.status === "running") {
+    return (
+      `Error: sub-agent "${agentId}" is still running. ` +
+      `Wait for it to finish (poll with AgentStatus), or cancel it with ` +
+      `AgentCancel, before sending it more input.`
+    );
+  }
+
   const name = entry?.name;
   const description = entry?.description ?? "sub-agent continuation";
   // Reconstruct the role's overrides from the recorded agentType. The child
