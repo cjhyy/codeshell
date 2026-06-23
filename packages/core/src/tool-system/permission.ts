@@ -407,6 +407,19 @@ export function ruleMatches(
 ): boolean {
   if (rule.tool !== toolName && rule.tool !== "*") return false;
   if (!rule.argsPattern) return true;
+  // A Bash allow-rule is narrowed to a HEAD command (e.g. `^git(\s|$)`), but a
+  // raw regex test would let a chained command smuggle a dangerous tail past a
+  // grant for its head: `git status && rm -rf /` starts with `git `, so the
+  // grant for `git status` would otherwise auto-allow the whole thing. A
+  // head-narrowed grant must only cover a SINGLE, non-dangerous command — if the
+  // candidate chains (`&&`/`||`/`;`/pipe) or uses substitution/redirection,
+  // refuse the match so it re-prompts. (We only gate narrowed Bash grants; a
+  // tool-wide `*`/no-pattern rule, or an explicit user `argsPattern`, is the
+  // user's own choice and untouched.)
+  if (toolName === "Bash" && rule.tool === "Bash" && rule.argsPattern.command) {
+    const scan = scanShellCommand(String(args.command ?? ""));
+    if (scan.dangerous || scan.segments.length > 1) return false;
+  }
   for (const [key, pattern] of Object.entries(rule.argsPattern)) {
     const argVal = String(args[key] ?? "");
     if (pattern instanceof RegExp) {

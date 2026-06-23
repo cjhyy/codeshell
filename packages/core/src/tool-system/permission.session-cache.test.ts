@@ -66,6 +66,35 @@ describe("session cache keys on the operation, not the tool", () => {
     expect(r3.approved).toBe(false);
   });
 
+  test("a chained command (`git status && rm -rf /`) does NOT ride the `git` session grant", async () => {
+    // The narrowing keys on the HEAD token (`git`), but a compound command can
+    // smuggle a dangerous tail past it: the cached allow rule `^git(\s|$)` would
+    // regex-match the whole "git status && rm -rf /" string. The session cache
+    // must re-prompt when the command chains beyond the approved head.
+    const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
+    const r1 = await b.requestApproval({
+      toolName: "Bash",
+      args: { command: "git status" },
+      description: "",
+      riskLevel: "low",
+    });
+    expect(r1.approved).toBe(true);
+
+    let prompted = false;
+    b.setPromptFn(async () => {
+      prompted = true;
+      return { approved: false } as ApprovalResult;
+    });
+    const r2 = await b.requestApproval({
+      toolName: "Bash",
+      args: { command: "git status && rm -rf /" },
+      description: "",
+      riskLevel: "high",
+    });
+    expect(prompted).toBe(true); // must re-prompt, not silently allow
+    expect(r2.approved).toBe(false);
+  });
+
   test("non-Bash tools still cache at tool granularity for the session", async () => {
     const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
     const r1 = await b.requestApproval({
