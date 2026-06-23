@@ -191,14 +191,16 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 
 同时顺手做两件 5 分钟的事:~~删 `envUtils.ts` 的 Ant 内部探测(`isRunningOnHomespace`/`USER_TYPE='ant'`)~~ **✅ 已做(commit e4ae4e51,2026-06-23):删 core 两函数 + index.ts re-export + tui 两处 `USER_TYPE==='ant'` 门(fullscreen/osc tab-status,均对外部用户走 false 分支,改显式 false 保行为)**;~~给 `index.ts` 的 TUI-only 段落加 `@internal`~~ **✅ 已做(同批,2026-06-23):给 index.ts 六个「extended for TUI / shared with TUI / used by TUI」banner 段(Tool-system/Protocol/Arena/LLM/Types/Logging-extended + State/Utils)加 `@internal` JSDoc,声明非稳定 SDK 面、可能移到 /tui 子入口。纯文档注释,tsc 0。**
 
-### Phase 1 —— 把目录数据外移(1-2 周,中等工作量,高收益)
+### Phase 1 —— 把目录数据外移(1-2 周,中等工作量,高收益)🟢 数据侧基本完成(2026-06-24)
+
+> **进度**:item 2(model 元数据)/ 3(Vertex)/ 4(provider 目录 + 中文文案)全 ✅;item 1 数据部分 ✅(定价表),只剩它的「X 天未更新时间戳 UI」=跨 desktop feature 留用户。所有目录数据现统一在 `data/model-metadata.json`(loader `data/model-metadata.ts`)。下面保留原始清单存档。
 
 把所有 hardcoded 目录收敛到 **model catalog data 层**(复用已有的 `model-catalog/` + `model-catalog.user.json` 机制):
 
 1. `cost-tracker.ts` 定价表 → catalog data + 时间戳(UI 可提示「定价数据已 X 天未更新」)。**🟡 数据部分已做(commit 61e092dc,2026-06-24):MODEL_PRICING(47 条)+ DEFAULT_PRICING 外移到 `data/model-metadata.json` 的 `pricing`/`pricingDefault`,loader 用 pricingFromPair 派生 cacheRead/cacheWrite;核实零值漂移(原显式 Anthropic cache 价=启发式结果,其余本就 pricing() 在 load 时算同 float);+5 测。「X 天未更新时间戳 UI」是跨 desktop 的 feature,仍未做、留用户。**
-2. ~~`onboarding.ts` 的 `KNOWN_MAX_OUTPUT`/`KNOWN_CONTEXT_WINDOWS`/`OPENROUTER_VENDORS` → catalog data,core 只读。~~ **✅ 已做(commit 37601014,2026-06-24):外移到 `data/model-metadata.json` + `data/model-metadata.ts` 加载器(复用 static-catalogs.ts createRequire 范式,非 model-catalog.user.json——这三张是内部默认表非用户可配,放 src/data 更贴),onboarding.ts 改 import 行为不变,build copy-assets 自动随包,+4 回归测。**
+2. ~~`onboarding.ts` 的 `KNOWN_MAX_OUTPUT`/`KNOWN_CONTEXT_WINDOWS`/`OPENROUTER_VENDORS` → catalog data,core 只读。~~ **✅ 已做(commit 37601014,2026-06-24):外移到 `data/model-metadata.json` + `data/model-metadata.ts` 加载器(复用 static-catalogs.ts createRequire 范式,非 model-catalog.user.json——这三张是内部默认表非用户可配,放 src/data 更贴),onboarding.ts 改 import 行为不变,build copy-assets 自动随包,+4 回归测。** **顺带把整个 `PROVIDERS` provider 目录也外移(commit 0b4efc4d):8 provider 的 id/baseUrl/keyUrl/models/中文 name 全进 json,ProviderDef 类型移到 loader,onboarding 顶部 re-export 保 import 源不变,+1 测。**
 3. ~~`envUtils.ts` 的 `VERTEX_REGION_OVERRIDES` → 与模型元数据放一起。~~ **✅ 已做(commit f0ca990a,2026-06-24):并进 `model-metadata.json` 的 `vertexRegionOverrides`,envUtils 改 import,getVertexRegionForModel 不动,+2 测(含顺序不变量)。**
-4. onboarding 中文文案 → data 文件(为未来 i18n 留口,不现在做 i18n)。**(未做)**
+4. ~~onboarding 中文文案 → data 文件(为未来 i18n 留口,不现在做 i18n)。~~ **✅ 已做(随 commit 0b4efc4d):PROVIDERS 外移时其中文 `name` 文案一并进 `data/model-metadata.json`。其余 onboarding 散落提示文案若要全量 i18n 是另一独立工作,非本项必需。**
 
 **收益**:更新模型/定价**不再需要发 core**;`generate-image`/`generate-video` 可以顺势接上已存在的 `applyParams(inst.paramValues, preset.params)`,消掉 image/video 与 LLM 的抽象不一致。
 **前置**:这步把 §4.5 的 image/video registry 问题也一并解决(catalog 驱动后 switch 自然消失)。
