@@ -263,6 +263,7 @@
 | **跨切**:`match(...)[1]` 解引用 | 干净:无 unguarded(一律先赋值再 null-check)。 |
 | **跨切**:floating promise(`.then` 无 `.catch`) | 扫出 1 修(token-counter c6e9b3a7);mcp-connect 两参 .then(reject)、agent 背景尾随 .catch、title-gen .catch 均安全。 |
 | **跨切**:IPC/cast 边界(`as T` 后用) | 干净:**桌面 renderer→main**(可信)按风险校验——破坏/建文件 op 验 typeof,只读/coercion-safe 的轻校验,符合信任模型;**mobile-remote WS**(唯一不可信边界)`JSON.parse(...) as MobileClientEvent` 健壮——malformed→caught、缺字段经 Map.get/find 安全返「无效」、auth-gated 未授权只能 pair/auth(均 undefined-safe),不能崩 main 或绕 auth。79 mobile-remote 测 |
+| **跨切**:renderer effect IPC 订阅泄漏 | 干净:每个 `window.codeshell.on*` 要么 `const off=...` 在 cleanup 调、要么 effect 直接 `return on*(...)` 当 cleanup(main.tsx PopoutBrowser);无未退订订阅。219 useEffect 中订阅类全有 cleanup。 |
 
 ### 2.5) 修复完整性复审(查「只修一半」)
 
