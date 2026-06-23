@@ -294,6 +294,7 @@
 | RunLock / lockfile | 干净(proper-lockfile stale 60s 自动回收崩溃残留锁·`retries:0` 快失败不阻塞·missing_target vs locked 区分失败因·never-throws;lockfile.ts 用 `createRequire(import.meta.url)` 修 ESM「require not defined」致「Run now does nothing」+ 懒加载避 graceful-fs 8ms 进 startup,project_runlock_esm_bug 已修)。29 测 |
 | model-fetcher 外部 /models 解析 | 干净(never-throws 契约:全管道在 try/catch→`errorResult({models:[],error})`;per-kind 解析 `?? []` 容缺/错 shape;provider 返回 garbage JSON 不崩,降级空列表)。外部 IO 防御到位,无专测但 degrade-to-empty 非崩溃面 |
 | capability 折叠(skills/plugins/agents/hooks) | 干净(memory「易漏 readDisabledAgents 折叠」已处理:agents 有独立 readDisabledAgents 镜像 readDisabledLists,getAgentDefinitions 应用它+缓存键含 disabled 列表;四类共用 effectiveDisabledList 三态:on=re-enable/off=disable/inherit=keep;全 try/catch→[] 不throw)。58 测 |
+| cron 调度睡眠唤醒(**解决旧 memory 未修项**) | 干净:`isCronMisfire` 90s grace——醒来 timer 超 90s 过点=misfire→跳过+重 arm 到下个正确 occurrence,不补跑(project_automation_kkg28 的「06:56 乱跑」**已修**);nextRun forward-recompute 不 catch-up。74 automation 测含 06:56 回归 |
 
 ### 2.5) 修复完整性复审(查「只修一半」)
 
