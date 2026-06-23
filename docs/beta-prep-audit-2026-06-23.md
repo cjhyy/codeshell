@@ -288,6 +288,17 @@
 | 🟡 安全(纵深·低危) | arena validatePath 用 lexical resolve(全仓唯一无 realpath 的 path-containment)→仓内 symlink 指外可过检查读到 repo 外文件(arena read-only,info-disclosure) | realpath 双侧再 isWithinRoot(对齐 fs-service/path-policy/apply-patch) | 94204a3c |
 | 🟢 健壮(低危·跨切 5 处) | 同 footgun 全仓:web-fetch `max_length`(slice 静默错内容,**同 Read 严重度**)/ web-search `num_results` / tool-search `max_results`(slice 静默错结果集)/ repl·powershell `timeout`(`??` 不挡负→即时杀) | 统一 `rawX>0?rawX:default`;web-fetch +回归测 | 167e8950 |
 
+### 1b) Workflow Review 又确认的回归(2026-06-23 v2,全 diff 复核,全已修)
+
+> 方法:对全部未推 diff(`origin/main..HEAD`)跑多 agent workflow `review-unpushed-diff`(5 域 fan-out review → 逐条独立 verify → 综合,10 agent)。下列 4 条**全是本批 diff 自己引入的回归**,无 pre-existing。
+
+| 严重度 | 问题 | 修复 | commit |
+|---|---|---|---|
+| 🔴 安全 | **R-1 sweep 又漏第四处**:`pruneDisabled.ts:75`(插件卸载触发的 settings.json 重写)漏 `mode:0o600`→manager 刚锁的明文 key 文件被 prune 落回 0o644 世界可读 | tmp 创建即带 `{encoding,mode:0o600}`(tmp 即最终文件,chmod 有竞态窗)+ 集成测断言 | f5d23525 |
+| 🟡 安全(纵深·实低) | `context-tools.ts:143` 目标不存在的 fallback 拿 `realRoot`(real)比 `resolved`(lexical)混模式→REPO_ROOT 走 symlink 时误拒合法路径(fail-safe 方向·只读·缺失文件下游本就失败) | 解析父目录 realpath 再拼 leaf 两侧同模式;父也缺则 lexical-vs-lexical | f5d23525 |
+| 🟡 健壮 | `save-entry.ts:66` writeFileSync 裸调(上面 mkdirSync 已包 try 这行没)→IO 错抛穿 `{ok:false}` 形状 + 丢 backup 名 | 包 try-catch 返 `{ok:false,error,backup}` + 写失败回归测 | f5d23525 |
+| 🔵 卫生 | `read.ts:67-74` 夜循环自留的 4 行重复注释块 | 删一份 | f5d23525 |
+
 ### 2) 覆盖矩阵(~25 子系统对抗式审过,结论=干净/已修;括注追过并证伪的假设)
 
 | 子系统 | 结论 |
@@ -346,6 +357,7 @@
 | cron 调度睡眠唤醒(**解决旧 memory 未修项**) | 干净:`isCronMisfire` 90s grace——醒来 timer 超 90s 过点=misfire→跳过+重 arm 到下个正确 occurrence,不补跑(project_automation_kkg28 的「06:56 乱跑」**已修**);nextRun forward-recompute 不 catch-up。74 automation 测含 06:56 回归 |
 | automation memory 写入(per-task memory.md) | 干净:核心 UpdateAutomationMemory 调注入 sink 不自 try/catch,但 executor(executor.ts:392)是**通用错误边界**——sink 抛(磁盘满/EACCES)被 catch→记 failed tool result 喂回模型「must not kill the turn」,run 不崩。8 测 |
 | session disk 恢复 / draft 处理 | 干净:renderer loadSessionIndex 用 `activeSessionId !== undefined`(非 `??`)——持久 null=合法 draft 保留,仅 legacy 缺字段才落 sessions[0](project_draft_session_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |
+| **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。**未深入域(留下一轮)**:renderer React UI 状态机(本域偏 IPC/main)+ tui 命令交互路径。 |
 | model-catalog resolveInstance + 默认选择 | 干净(亲核,补 agent review):baseUrl 回退 `inst??cred??entry.defaultBaseUrl`(末项 schema 必填恒非空)·cred 缺→apiKey undefined→client resolveApiKey 兜底·entry 缺→null caller skip·paramValues??{};**stale `defaults.text`(指向已删连接)经 `pool.list().some(key===defaultText)` 存在性检查才用**→否则落 activeKey→model-name 三级 graceful 回退,不破池。68 测 |
 | goal-stop-hook 判定(goal 裁判) | 干净:每个误判边沿 fail-toward-progress——judge throw/unparseable→continueSession(P0 不静默停);`met:true`→允许停+onMet(隔离 try/catch)+不缓存 met;`waiting && runningWork>0`→允许停(finite bg 会唤醒)缓存非met;**`waiting` 但任务列表空→落 not_met**(防 judge 幻觉 waiting 搁置 goal——无人唤醒);无限循环 backstop 委托 maxStopBlocks+budget(非本 hook)。bg 任务喂判官分辨 finite-render vs dev-server(busy-loop bug 已修)。10 测 |
 | context token-budget / 压缩触发 | 干净:估算是启发式(char/token ratio,CJK 0.3 cliff 可能 under-count)**但系统不依赖它精确**——proactive 在 0.85 ratio 触发(~15% headroom)+ **reactive 真错兜底**:API ContextLimitError→turn-loop 3 次 dropOldestRounds 递进重试+recordActualUsage 校准(turn-loop:555-576)。**追了 CJK-cliff under-estimate→被两层兜底吸收**,非 bug。21 测+recovery 有测 |
