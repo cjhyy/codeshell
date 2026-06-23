@@ -738,8 +738,10 @@ export class AgentServer {
   private handleGoalGet(req: RpcRequest): void {
     const params = (req.params ?? {}) as { sessionId?: string };
     if (typeof params.sessionId !== "string" || !params.sessionId) {
+      // Missing/empty param is InvalidParams, not SessionClosed (no session was
+      // ever named) — matches handleSteer/handleUnsteer/handleBackgroundShells.
       this.transport.send(
-        createErrorResponse(req.id, ErrorCodes.SessionClosed, "sessionId is required"),
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "sessionId is required"),
       );
       return;
     }

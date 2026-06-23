@@ -41,6 +41,16 @@ export function resolveLLMConfigForTag(
     (defaultId && entries.find((e) => e.key === defaultId)) ||
     entries[0];
   if (!pick) return null;
+  // 用户显式选了 default/preferred 但它解析不到(连接的 catalogId 被删 →
+  // modelEntriesFromConnections 静默过滤掉)→ 这里 find 落空、悄悄回退到 entries[0]
+  // 是「换了个模型还不告诉你」。不改回退行为(有可用连接就用),但出一条 warn 让
+  // 静默替换可见(否则用户以为还在用选的那个)。
+  const wanted = preferredInstanceId ?? defaultId;
+  if (wanted && pick.key !== wanted) {
+    console.warn(
+      `[resolveLLMConfigForTag] 偏好/默认连接 "${wanted}" 解析不到(catalogId 可能已删)— 回退到 "${pick.key}"。`,
+    );
+  }
 
   // 临时 pool 复用 toLLMConfig 的全部映射逻辑(reasoning/headers/providerKind 等)。
   const pool = new ModelPool([]);

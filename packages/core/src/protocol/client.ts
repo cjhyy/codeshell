@@ -198,6 +198,30 @@ export class AgentClient {
   }
 
   /**
+   * Steer an in-flight run: queue a user message spliced in at the next
+   * turn-loop step (不打断 — does not abort the current step). `id` is a stable
+   * host-side handle that rides through to the steer_injected event and lets
+   * unsteer() revoke a still-pending entry. Mirrors the server's handleSteer +
+   * the desktop preload's steer(); without it the SDK can't reach the method
+   * (request() is private) — the protocol was asymmetric after the steer merge.
+   */
+  async steer(sessionId: string, text: string, id?: string): Promise<void> {
+    await this.request(Methods.Steer, { sessionId, text, id } as Record<string, unknown>);
+  }
+
+  /**
+   * Revoke a still-pending steer entry by id (before the loop consumes it).
+   * Returns false when the loop already consumed it (not an error — it will
+   * arrive as a normal user bubble).
+   */
+  async unsteer(sessionId: string, id: string): Promise<boolean> {
+    const res = (await this.request(Methods.Unsteer, { sessionId, id } as Record<string, unknown>)) as
+      | { removed?: boolean }
+      | undefined;
+    return res?.removed === true;
+  }
+
+  /**
    * Update runtime configuration on the server.
    */
   async configure(params: ConfigureParams): Promise<Record<string, unknown>> {
