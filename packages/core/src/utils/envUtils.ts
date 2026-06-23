@@ -109,16 +109,6 @@ export function shouldMaintainProjectWorkingDir(): boolean {
 }
 
 /**
- * Check if running on Homespace (ant-internal cloud environment).
- */
-export function isRunningOnHomespace(): boolean {
-  return (
-    process.env.USER_TYPE === 'ant' &&
-    isEnvTruthy(process.env.COO_RUNNING_ON_HOMESPACE)
-  );
-}
-
-/**
  * Model prefix → env var for Vertex region overrides.
  */
 const VERTEX_REGION_OVERRIDES: ReadonlyArray<[string, string]> = [
@@ -150,10 +140,3 @@ export function getVertexRegionForModel(
   return getDefaultVertexRegion();
 }
 
-/**
- * Stub: Check if running inside a protected namespace.
- * Always returns false in Code Shell (Anthropic-internal feature).
- */
-export function isInProtectedNamespace(): boolean {
-  return false;
-}

@@ -505,11 +505,9 @@ export {
   isBareMode,
   parseEnvVars,
   shouldMaintainProjectWorkingDir,
-  isRunningOnHomespace,
   getAWSRegion,
   getDefaultVertexRegion,
   getVertexRegionForModel,
-  isInProtectedNamespace,
 } from "./utils/envUtils.js";
 export {
   startCapturingEarlyInput,
