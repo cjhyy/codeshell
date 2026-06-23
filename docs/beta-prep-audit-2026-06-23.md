@@ -163,8 +163,11 @@
 - `docs/architecture/render-scroll-checklist.md` / `render-terminal-matrix.md`(任务式,多半已完成)
 
 ### 4.3 重复簇(合并取最新一份为准)
-- **Browser**(5 份):以 `docs/superpowers/specs/2026-06-18-browser-module-redesign-design.md` 为权威;把 `browser-tool-experience-improvements-2026-06-20.md` 合进去;`2026-06-16` research 留作 rationale。
-- **Model Catalog**(3 份):留 `2026-06-15-unified-model-catalog-design.md`;归档 `2026-06-11-model-catalog-design.md`。**注意还有本仓最新的 `5f1cf56d`「删 legacy 模型存储·全量切 catalog」设计稿**,应作为该簇的最新落地稿对齐。
+
+> ⚠️ **执行说明(2026-06-23 复核)**:这几簇都是「把一份正文合并进另一份」= 实质内容编辑(读两份判段落并入 + 改交叉引用),非机械清理;且多数权威稿被**源码注释引用**(动路径留断链)。低价值、易引入内容失真,**留用户在场时人工合并**,本轮不自动做。下面磁盘现状已校正。
+
+- **Browser**(实际顶层 docs/ 为:`browser-automation-research-2026-06-16.md`、`browser-cookie-export-design-2026-06-14.md`;权威稿 `superpowers/specs/2026-06-18-browser-module-redesign-design.md` **被源码引用 2 处不可动**)。审计原列的 `browser-tool-experience-improvements-2026-06-20.md` 在顶层 docs/ 未找到——清单与磁盘有出入,合并前须先核对实际文件。
+- **Model Catalog**(3 份):留 `2026-06-15-unified-model-catalog-design.md`。⚠️**原建议「归档 2026-06-11」已撤销**:经 grep,`2026-06-11-model-catalog-design.md` 仍被 `packages/core/src/model-catalog/builtin.ts`、`types.ts` 的源码注释 + 06-15 设计稿引用,归档会留断链——保留为活 rationale。**注意还有本仓最新的 `5f1cf56d`「删 legacy 模型存储·全量切 catalog」设计稿**,应作为该簇的最新落地稿对齐。
 - **Architecture Review**(3 份):留 `core-design-assessment.md`(2026-06-17)为主 + `architecture/19-core-chain-review-beta.md`(2026-06-12)为辅;归档 `architecture/15-…`(2026-05-31)。
 - **Credentials**(spec + 1211 行 plan):若都还在推进,把 plan 关键段并进 spec。
 
