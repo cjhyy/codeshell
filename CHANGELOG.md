@@ -28,6 +28,68 @@ breaking.
   tools). Their `model` is left unset so they reuse the parent model — set
   `model:` in the frontmatter to route a role to a specific pool key.
 
+#### Unified model catalog + `EditModelCatalog`
+
+- A single catalog drives text/image/video model connections (one template per
+  vendor, parameters declared in the catalog drive both the UI controls and the
+  tool description). Built-in entries ship in core; user entries live in
+  `~/.code-shell/model-catalog.user.json`. The connections page supports
+  multiple instances and credential reuse (`apiKeyRef`) with a per-tag default.
+- New `EditModelCatalog` builtin tool lets the agent add/update a user catalog
+  entry and echoes a structured summary (every param's options/default) so you
+  can verify it against the provider's official docs.
+- Reasoning `effort` is now a free-form, catalog-driven string (e.g. `xhigh`,
+  `max`) instead of a closed enum, so a model gaining a new level no longer
+  crashes the app on boot.
+
+#### Browser automation + built-in browser panel
+
+- CDP-driven automation of the built-in browser (no Playwright/JS-injection):
+  semantic `browser_observe` / `browser_act` / `browser_navigate` tools, image
+  & vision observation, multi-tab support, and link/image URL extraction. The
+  whole capability is a single toggle — turning it off removes both the tools
+  and their prompt text. Stale snapshots are folded to save tokens.
+- The agent can open the browser panel itself; selections echo back into tool
+  cards; screenshots echo to the stream as clickable thumbnails.
+
+#### Credentials: cookie login, multi-account, inject
+
+- Standalone login window captures session cookies for sites the embedded
+  webview can't log into (Google/YouTube/etc.), stored as cookie credentials.
+- Same-domain multi-account cookie credentials with a `UseCredential` tool
+  (materializes a temporary Netscape `cookies.txt` for HTTP scraping) and a new
+  `InjectCredential` tool (restores cookies into the built-in browser). Both are
+  gated by a three-tier approval, with per-credential auto-use/auto-inject opt-in.
+
+#### Plugins / MCP / extensions
+
+- Local plugin install from a directory or `.zip`, with same-name **overwrite
+  upgrade** (using the authoritative manifest name) and **uninstall** that also
+  prunes orphaned `disabled` entries from settings.
+- Plugin-bundled MCP servers accept a user supplement layer (extra
+  credentials / env vars / forwarded system env) without touching the plugin
+  manifest. Extensions page unifies icons and surfaces a marketplace "refresh"
+  (git fetch) action and an "official" badge.
+
+#### Desktop & engine
+
+- Full Chinese/English i18n of the desktop renderer; YAML config read support
+  and JSON-Schema export.
+- Step-gap **steering**: guidance injects between turn steps without
+  interrupting the current turn by default.
+- A single notification-driven wake path unifies background video / shell /
+  sub-agent completion (replaces engine busy-loops).
+- Dedicated sandbox settings tab + per-tool-card sandbox badge.
+
+### Security
+
+- `settings.json` (which may hold plaintext API keys) is now written
+  owner-only (`0o600`), matching `credentials.json`; pre-existing
+  world-readable files are tightened on the next write.
+- Cookie capture filters by a proper registrable-domain match, so a bare
+  public-suffix cookie domain (e.g. `.co`) can no longer be captured for an
+  unrelated host. Cookie lease files live in an owner-only (`0o700`) directory.
+
 ## [0.5.0-rc.0] - 2026-05-23
 
 > ⚠️ Breaking. The repo is now a monorepo with three published packages.
