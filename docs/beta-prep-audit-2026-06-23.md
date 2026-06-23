@@ -243,7 +243,9 @@
 
 - 复核 context compaction 的 tool 配对保留(adjustIndexToPreserveAPIInvariants):收 kept range 内 tool_result 的 tool_use_id → 反查并把 startIndex 前扩到含其 tool_use,避免压缩切断配对致 API 400。**追了一个理论 cascade**(前扩新纳入的中间 user 消息若含引用更早 tool_use 的 tool_result,单遍不再 re-scan)——但经 grep turn-loop 确认:引擎每个 tool_use 的 tool_result 必在紧邻的下一条 user 消息(还有 dangling tool_use 合成兜底),**非邻配对不存在**,故单遍正确。⚠️**耦合注记**:此函数正确性依赖 turn-loop「tool_result 紧邻 tool_use」不变量;若将来改成延迟 tool result,需把它改成 re-scan 循环。21 测过。
 
-**bug-scan 小结**:共对抗式审 ~20 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
+- 复核 truncate-output(大输出 head+tail 截断):保留含错误的尾部 + 行边界吸附 + omitted 记账正确 + head/tail 由 `cap<len` 守卫保证不重叠;UTF-16 代理对中切是 cosmetic 非崩溃。6 测过,干净。
+
+**bug-scan 小结(已饱和)**:共对抗式审 ~21 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
 
 **bug-scan 第二轮(mobile-remote review,b9915a0f)**
 - 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
