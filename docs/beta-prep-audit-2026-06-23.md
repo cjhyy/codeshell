@@ -158,7 +158,7 @@
 - `docs/architecture/03-module-map.md`(被 `codeshell-module-link-reference.md` 取代)
 - `docs/architecture/11-render-tui-capability-plan.md` / `12-mac-visual-client-research.md`(决策已定/已实现)
 - `docs/architecture/15-current-review-and-bug-inventory.md`(2026-05-31 pre-beta 快照,bug 多已修)
-- `docs/core-doc-audit-manifest.md`(被 core-complete-review 取代)
+- ~~`docs/core-doc-audit-manifest.md`~~ ✅ 已归档 → `docs/archive/core-doc-audit-manifest-2026-06-02.md`(被 core-complete-review 取代)
 - `docs/research-cc-vs-codex-image-handling.md`(对比已冻结)
 - `docs/architecture/render-scroll-checklist.md` / `render-terminal-matrix.md`(任务式,多半已完成)
 
