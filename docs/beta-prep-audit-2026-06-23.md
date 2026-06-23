@@ -247,7 +247,9 @@
 
 - 复核 hooks registry/reload:register/unregister 按 handler 引用身份(无包装→reloadHooks 精准摘除不泄漏,反复 reload 不翻倍);emit 合并 decision 走 stricterDecision(deny>ask>allow,杜绝后置 handler 放relax前置 deny 的安全要点)+ stop 终止链 + 每 handler error 隔离 + disabled 软开关热生效。17 测过,干净。
 
-**bug-scan 小结(已饱和)**:共对抗式审 ~22 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
+- 复核 mcp-manager reconcile/connect(共享池 + 并发热重载):connect 按 name 合并在途握手(connecting map + `.finally` 清,无重复握手/泄漏);disconnect 只摘 union 中无 owner 想要的(防跨 session 互踢)。**追了并发 reconcile race**:A 在 B 注册 desire 前算 union 可能不含 y→疑似误断 y,但 y 此刻必未连接(stale 过滤 listServers),不可达。33 测过,干净。
+
+**bug-scan 小结(已饱和)**:共对抗式审 ~23 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
 
 **bug-scan 第二轮(mobile-remote review,b9915a0f)**
 - 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
