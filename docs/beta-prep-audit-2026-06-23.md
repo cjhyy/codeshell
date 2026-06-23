@@ -68,7 +68,7 @@
 > 总体:VCS 卫生干净、Electron renderer 加固正确、「无 phone-home」属实。真正的风险面是**磁盘上的明文密钥/cookie**。
 
 ### 2.1 ✅ R-1 已止血(commit 8065530a,2026-06-23):`settings.json` 内 API key 明文 + **世界可读**权限
-**已修**:manager.ts(saveUserSetting/atomicWriteJson)tmp 写带 `{mode:0o600}` 再 rename;onboarding.ts 四处带 mode + 直写路径补 chmodSync;+3 测验证落 0o600 且收紧预存松权限文件。理想态 safeStorage 加密仍留 §5 发后。下面为原始记录:
+**已修**(三个写入点全覆盖):manager.ts(saveUserSetting/atomicWriteJson,8065530a)+ onboarding.ts 四处(8065530a)+ **engine.ts persistActiveModel(e56825d6,切模型时写 model.apiKey,R-1 首轮漏扫的第三处)**;均 tmp 带 `{mode:0o600}` + chmodSync 收紧预存文件;+4 测。理想态 safeStorage 加密仍留 §5 发后。下面为原始记录:
 - 写入点**没传 `mode`**:`packages/core/src/settings/manager.ts:253` 与 `:356`(`writeFileSync(tmp, …, "utf-8")`),`packages/core/src/onboarding.ts:601`。
 - schema 允许裸 `apiKey`:`packages/core/src/settings/schema.ts:102,128,174,232,261,286,539,551,564`。
 - 暴露:OpenAI/Anthropic/GLM 等计费 key,明文存 `~/.code-shell/settings.json` 与 `<cwd>/.code-shell/settings.json`,默认 umask 常为 `0o644`(其他本地用户 / iCloud/Dropbox/TimeMachine 备份可读)。
@@ -209,7 +209,7 @@
 | 严重度 | 问题 | 修复 | commit |
 |---|---|---|---|
 | 🔴 安全 | 会话权限缓存按 head 收窄被链式命令绕过:`git status && rm -rf /` 借 `git status` 授权静默放行整条 | ruleMatches 对 Bash 收窄规则复用 scanShellCommand,dangerous/多段/**含管道**则拒匹配重问(**修两次**:首版漏管道) | d241ec08 + d4c9dcb9 |
-| 🔴 安全 | settings.json 明文 key 世界可读(0o644) | 写入收紧 0o600(R-1,见 §2.1) | 8065530a |
+| 🔴 安全 | settings.json 明文 key 世界可读(0o644)·**三个写入点** | manager + onboarding 收紧 0o600;深扫又补漏掉的 engine.persistActiveModel | 8065530a + e56825d6 |
 | 🟡 安全 | cookie 抓取域围栏裸公共后缀漏配:`d="co"` 误中 `github.com` | 抽 cookieDomainMatches(要求 d 含点),+6 测 | fc6f0409 |
 | 🟡 安全 | `restoreCookieToBrowser` 非数组 secret 静默清空登出 | 非数组也判损坏抛错 | a906d8f7 |
 | 🟡 安全 | passcode 头数组(重复头)不认致正确口令误 401 | readPasscodeParam 取首值,+2 测;顺收紧 cookie lease 目录 0o700(Y-4) | b9915a0f |
