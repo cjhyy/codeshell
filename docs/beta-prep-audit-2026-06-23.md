@@ -1,5 +1,24 @@
 # Beta 发布前审计 + 行动清单(2026-06-23)
 
+> ## 🔬 Workflow Review 交接(2026-06-23 v2,**最新·回来先读这段**)
+>
+> 用户拍板:对**全部未推 diff(`origin/main..HEAD`,当时 153 commit / 121 文件 / +5264-810)整体**跑一次多 agent 对抗式 review。
+> **workflow**(`review-unpushed-diff`,10 agent:按 5 域 fan-out review → 逐条 finding 独立 verify → 综合)。确认 **4 个回归**,我**全修+回归测+revert-verify**,已 commit `f5d23525`。
+>
+> | # | 文件:行 | 严重度 | 问题 | 修法 |
+> |---|---|---|---|---|
+> | 1 | `pruneDisabled.ts:75` | 🔴 high | settings.json 漏 `mode:0o600` —— **同一 diff 刚把 manager.ts 锁成 owner-only,但 prune 重写又落回 0o644 世界可读**(明文 API key 泄漏) | tmp 创建即带 0o600(tmp 即最终文件,chmod 有竞态窗)+ 集成测断言 |
+> | 2 | `context-tools.ts:143` | 🟡 high→实低 | realpath-vs-lexical 混比:目标不存在的 fallback 拿 `realRoot`(real)比 `resolved`(lexical),REPO_ROOT 走 symlink 时**误拒合法路径**(fail-safe 方向·只读·缺失文件下游本就失败,故实际影响低) | 解析父目录 realpath 再拼 leaf,两侧同模式;父也缺则 lexical-vs-lexical |
+> | 3 | `save-entry.ts:66` | 🟡 med | `writeFileSync` 裸调(上面 mkdirSync 已包 try,这行没)→ IO 错抛穿 `{ok:false}` 形状 + 丢 backup 名 | 包 try-catch 返 `{ok:false,error,backup}` + 写失败回归测 |
+> | 4 | `read.ts:67-74` | 🔵 cosmetic | 夜循环自留的 4 行重复注释块 | 删一份 |
+>
+> **结论**:这 4 条**全是本批 diff 自己引入的回归**,无 pre-existing。#1 是真泄漏(push 前必修,已修)。RCE/killProcessGroup/权限绕过等夜循环已修项,review 复核**未发现新洞**。verify 阶段还**证伪了若干**(workflow 默认 refuted,只留有具体触发路径的)。
+> **现状**:core **1615 pass / 0 fail** · tsc 0 · build 0 · 工作树净。flaky sleep 测本轮通过(仍 🟡,见 §2.4.6)。
+>
+> **下一轮循环接着先做什么**(优先级序)——见本段末「▶ 下一步」。
+>
+> ---
+
 > ## 🌙 夜循环交接(2026-06-23,回来先读这段)
 >
 > 一整轮自主 bug-scan + 修复 + 文档整理。**~151 commit 全在本地 main,均未 push**(push 是你的决定,我没动)。~61 子系统 + 17 跨切模式对抗式审,真问题 ~28 个全修+回归测(下面列最重的;完整覆盖见**附A 矩阵**,完整 fix 列表 `git log --grep="^fix"`)。
@@ -21,7 +40,15 @@
 >
 > **🟡 给你的一个发现(没擅自改)**:你 session 期间 merge 的 `send_input 续接`(a0b55219)resume 路径**缺「agent 仍在 running」并发守卫**——背景 agent 没跑完时再 send_input 会让两个 Engine 交错写同一 child transcript。我只修了它的 typecheck 红,逻辑没动(UX 该你定)。详见 §2.4.5。
 >
-> **等你定的**:① push 这 ~98 commit;② §1.2/1.3 真机冒烟(cookie 登录全链路是唯一没真机验的核心新功能);③ §1.4 全量打包;④ R-2 cookie safeStorage 加密(改凭证格式,该开 worktree 你在场做);⑤ send_input 并发守卫(§2.4.5)。
+> **等你定的**:① push 这批 commit(现 169 ahead);② §1.2/1.3 真机冒烟(cookie 登录全链路是唯一没真机验的核心新功能);③ §1.4 全量打包;④ R-2 cookie safeStorage 加密(改凭证格式,该开 worktree 你在场做);⑤ send_input 并发守卫(§2.4.5)。
+>
+> ### ▶ 下一步(你说回来继续循环,接着先做这个)
+> bug-scan 已两轮(夜循环穷举 + 本次 workflow 全 diff 复核),代码侧收益递减。**下一轮循环建议从「验证 / 收尾」而非「再找 bug」切入**,序:
+> 1. **真机冒烟 §1.2/1.3** —— cookie 登录全链路是唯一没真机验过的核心新功能(自动化测试碰不到 BrowserWindow/session)。这是 push 前最高价值动作,**只能你在场跑 app**;我可以陪跑、读日志、即时修。
+> 2. 若暂不真机:**§4 文档清理**(陈旧 docs 标注/归档,纯文本可直接 main)+ **附A 矩阵补本次 review 的 5 个 review 域行**(可委托 subagent)。
+> 3. **§1.4 打包验证**(`bun run dist` 三平台产物可跑)。
+> 4. 仍要继续找 bug 的话:**未覆盖域** = renderer React 组件(本次 review 5 域里 desktop-renderer 偏 IPC/main,UI 状态机基本没碰)+ tui 命令路径。可再开一个 workflow 专扫这两块。
+> 5. **send_input 并发守卫(§2.4.5)** —— 这条是你的 in-flight 特性,等你拍 UX 我再动。
 >
 > ---
 
