@@ -25,6 +25,7 @@ import { formatArenaResultForSession } from "@cjhyy/code-shell-core";
 import type { ArenaMode, ArenaParticipant, ArenaResultV2 } from "@cjhyy/code-shell-core";
 import { MODEL_PRESETS, getMaxOutputTokens } from "@cjhyy/code-shell-core";
 import { ModelPool, type ModelEntry } from "@cjhyy/code-shell-core";
+import { getMergedCatalog, modelEntriesFromConnections } from "@cjhyy/code-shell-core";
 import type { EngineConfig } from "@cjhyy/code-shell-core";
 import type { LLMConfig } from "@cjhyy/code-shell-core";
 
@@ -129,23 +130,23 @@ export async function runArenaReview(
 // ─── Model Resolution ────────────────────────────────────────────
 
 /**
- * Build a ModelPool from settings.models for arena participant resolution.
+ * Build a ModelPool from the unified catalog (settings.modelConnections[] +
+ * credentials) for arena participant resolution. Each text connection's
+ * instance id becomes its pool key — same bridge the engine uses.
  */
-function buildModelPool(engineConfig: EngineConfig): ModelPool {
+function buildModelPool(_engineConfig: EngineConfig): ModelPool {
   const pool = new ModelPool();
   try {
     const settings = new SettingsManager(process.cwd()).get();
-    if (settings.models?.length) {
-      for (const m of settings.models) {
-        pool.register({
-          key: m.key,
-          label: m.label,
-          provider: m.provider ?? "",
-          model: m.model,
-          baseUrl: m.baseUrl ?? engineConfig.llm.baseUrl,
-          apiKey: m.apiKey ?? engineConfig.llm.apiKey,
-          maxOutputTokens: m.maxOutputTokens,
-        });
+    const connections = (settings as { modelConnections?: unknown[] }).modelConnections;
+    const credentials = (settings as { credentials?: unknown[] }).credentials;
+    if (Array.isArray(connections) && connections.length) {
+      for (const entry of modelEntriesFromConnections(
+        connections as never[],
+        (Array.isArray(credentials) ? credentials : []) as never[],
+        getMergedCatalog(),
+      )) {
+        pool.register(entry);
       }
     }
   } catch { /* no settings */ }

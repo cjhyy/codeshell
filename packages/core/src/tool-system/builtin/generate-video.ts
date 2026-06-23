@@ -163,7 +163,11 @@ export function listConfiguredVideoProviders(
         .filter((p) => !!effectiveApiKey(p, list) && getVideoProvider(p.kind) !== null)
         .map((p) => ({ id: p.id, kind: p.kind, catalogId: p.catalogId }));
     }
-    return settings.providers
+    // Legacy LLM providers[] back-compat (field dropped from schema; read via
+    // .passthrough() with an inline cast).
+    const legacyProviders =
+      (settings as { providers?: Array<{ kind: string; apiKey?: string }> }).providers ?? [];
+    return legacyProviders
       .filter((p) => p.apiKey && VIDEO_PROVIDER_KINDS.includes(p.kind))
       .map((p) => ({ kind: p.kind }));
   } catch {
@@ -245,10 +249,14 @@ function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoPr
     if (chosen) return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
     return null;
   }
-  // Back-compat: scan LLM providers[] for a video-capable kind.
+  // Back-compat: scan legacy LLM providers[] for a video-capable kind. The
+  // field was dropped from the schema; un-migrated settings.json still carry it
+  // via .passthrough(), so read it through an inline cast.
+  const legacyProviders =
+    (settings as { providers?: Array<{ kind: string; baseUrl: string; apiKey?: string }> }).providers ?? [];
   const kinds = preferKind ? [preferKind] : VIDEO_PROVIDER_KINDS;
   for (const kind of kinds) {
-    const provider = settings.providers.find((p) => p.kind === kind);
+    const provider = legacyProviders.find((p) => p.kind === kind);
     if (provider && provider.apiKey) {
       return { kind, creds: { baseUrl: provider.baseUrl, apiKey: provider.apiKey } };
     }

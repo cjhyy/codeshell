@@ -58,6 +58,8 @@ export {
 
 export { Engine, loadAgentDefinitionsForCwd } from "./engine/engine.js";
 export type { EngineConfig, EngineHookConfig, EngineResult } from "./engine/engine.js";
+export { resolveLLMConfigForTag } from "./engine/resolve-llm-config.js";
+export { resolveAuxKey } from "./engine/aux-key.js";
 export {
   parseAgentDefinition,
   serializeAgentDefinition,
@@ -80,6 +82,7 @@ export { createLLMClient, registerProvider } from "./llm/client-factory.js";
 export { AnthropicClient } from "./llm/providers/anthropic.js";
 export { OpenAIClient } from "./llm/providers/openai.js";
 export { ModelPool, type ModelEntry } from "./llm/model-pool.js";
+export { modelEntriesFromConnections } from "./engine/model-connections-pool.js";
 
 // ─── Tools ───────────────────────────────────────────────────────
 

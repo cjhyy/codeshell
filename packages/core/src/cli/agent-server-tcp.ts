@@ -33,6 +33,7 @@ import { HeadlessApprovalBackend } from "../tool-system/permission.js";
 import { createRunManager } from "../run/factory.js";
 import { startAutomation } from "../automation/index.js";
 import { CronStore, defaultCronStorePath } from "../automation/store.js";
+import { resolveLLMConfigForTag } from "../engine/resolve-llm-config.js";
 
 const cwd = process.env.AGENT_CWD ?? process.cwd();
 const port = Number(process.env.AGENT_TCP_PORT ?? "4321");
@@ -41,13 +42,21 @@ const host = process.env.AGENT_TCP_HOST ?? "127.0.0.1";
 const settingsManager = new SettingsManager(cwd, "full");
 const settings = settingsManager.get();
 
-const llmConfig = {
-  provider: settings.model.provider,
-  model: settings.model.name,
-  apiKey: settings.model.apiKey ?? "",
-  baseUrl: settings.model.baseUrl,
-  maxTokens: settings.model.maxTokens,
-};
+const seedLlm = resolveLLMConfigForTag(
+  settings,
+  "text",
+  (settings as { defaults?: { text?: string } }).defaults?.text,
+);
+if (!seedLlm) {
+  console.error(
+    `[agent-server] 没有可用的文本模型连接(defaults.text=${
+      (settings as { defaults?: { text?: string } }).defaults?.text ?? "未设置"
+    })。` +
+    `请在「连接」页添加并填写凭证。`,
+  );
+  process.exit(1);
+}
+const llmConfig = seedLlm;
 
 // ── Shared runtime (same bootstrap as stdio) ─────────────────────
 const seedEngine = new Engine({ llm: llmConfig, cwd, settingsScope: "full" });

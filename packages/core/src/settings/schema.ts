@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { ReasoningSettingSchema } from "../llm/reasoning-setting.js";
 
 /**
  * Tri-state project capability overlay. Lives in PROJECT settings only and
@@ -59,34 +58,6 @@ export const SettingsSchema = z
       .default({}),
 
     /**
-     * Primary source of truth for the active model is settings.activeKey
-     * (points at models[].key). settings.model is a derived mirror of that
-     * entry kept in sync for legacy boot paths (cli/main.ts, repl.ts, etc.)
-     * which read provider/name/apiKey/baseUrl directly. Writers must update
-     * both — appendOnboardingResult does this in one shot.
-     */
-    activeKey: z.string().optional(),
-
-    /**
-     * Auxiliary-task model — points at a models[].key. Background, non-user-
-     * facing LLM calls (memory extraction, the auto-dream loop) use this model
-     * instead of the active one, so per-turn book-keeping doesn't burn the
-     * expensive primary model. Pick something fast/cheap (e.g. a Haiku or
-     * DeepSeek key). When unset, those calls fall back to the active model
-     * (legacy behavior). An invalid/missing key also falls back to active.
-     */
-    auxModelKey: z.string().optional(),
-
-    /**
-     * Fallback models — ordered list of models[].key tried, in order, when the
-     * active model's request fails with a non-retryable error after exhausting
-     * its own retries (TODO 7.2). Each fallback is attempted once per turn-level
-     * LLM call. Invalid/missing keys are skipped. Empty (default) = no
-     * fallback, the error propagates as today.
-     */
-    fallbackModelKeys: z.array(z.string()).default([]),
-
-    /**
      * Toggle background auto-update. When true (default), code-shell checks
      * npm for newer versions and — if the npm global prefix is writable —
      * installs the update in the background on process exit so the next
@@ -94,119 +65,6 @@ export const SettingsSchema = z
      * Can also be disabled via env var `DISABLE_AUTOUPDATER=1`.
      */
     autoUpdates: z.boolean().default(true),
-
-    model: z
-      .object({
-        provider: z.string().default("openai"),
-        name: z.string().default("anthropic/claude-opus-4-6"),
-        apiKey: z.string().optional(),
-        baseUrl: z.string().default("https://openrouter.ai/api/v1"),
-        temperature: z.number().min(0).max(2).default(0.3),
-        maxTokens: z.number().default(8192),
-      })
-      .default({}),
-
-    providers: z
-      .array(
-        z.object({
-          key: z.string(),
-          label: z.string().optional(),
-          kind: z.enum([
-            "openai",
-            "anthropic",
-            "deepseek",
-            "zai",
-            "xai",
-            "mistral",
-            "groq",
-            "google",
-            "openrouter",
-            "ollama",
-            "custom",
-          ]),
-          baseUrl: z.string(),
-          apiKey: z.string().optional(),
-          /**
-           * Shell command that prints an auth token to stdout (TODO 7.2). Used
-           * when the token is short-lived / vended by an external tool (e.g.
-           * `gcloud auth print-access-token`, an `aws ... | jq -r .token`). Runs
-           * at client-build time; the trimmed stdout becomes the bearer token.
-           * `apiKey` wins if both are set.
-           */
-          authCommand: z.string().optional(),
-          /**
-           * Extra HTTP headers sent on every request to this provider (TODO
-           * 7.2). A value of the form `$ENV_VAR` is resolved from the
-           * environment at request time, so secrets need not live in settings.
-           */
-          httpHeaders: z.record(z.string(), z.string()).optional(),
-          protocol: z.enum(["openai-compat", "anthropic-style"]).optional(),
-          modelsPath: z.string().optional(),
-          /**
-           * Default reasoning/thinking setting for this provider's models.
-           * Rich shape: {mode:"off"|"on"} | {mode:"effort",effort} |
-           * {mode:"budget",budgetTokens}. Per-model `reasoning` wins.
-           */
-          reasoning: ReasoningSettingSchema.optional(),
-        }),
-      )
-      .default([]),
-
-    models: z
-      .array(
-        z
-          .object({
-            key: z.string(),
-            label: z.string().optional(),
-            providerKey: z.string().optional(),
-            model: z.string(),
-            maxOutputTokens: z.number().optional(),
-            maxContextTokens: z.number().optional(),
-            /**
-             * Which LLM client to use ("openai" or "anthropic"). New name —
-             * the legacy field is `provider`, which we still accept and
-             * fold into `protocol` below so old configs keep working.
-             * NOT the brand/vendor — that's providerKey above.
-             */
-            protocol: z.string().optional(),
-            provider: z.string().optional(),
-            baseUrl: z.string().optional(),
-            apiKey: z.string().optional(),
-            /** Per-model external token command; overrides provider-level. (TODO 7.2) */
-            authCommand: z.string().optional(),
-            /** Per-model extra HTTP headers; merged over provider-level. (TODO 7.2) */
-            httpHeaders: z.record(z.string(), z.string()).optional(),
-            /**
-             * OpenAI `service_tier` request param ("auto" | "default" |
-             * "flex" | "priority"). Passed through to the request body. (TODO 7.2)
-             */
-            serviceTier: z.string().optional(),
-            /**
-             * OpenAI reasoning `summary` control ("auto" | "concise" |
-             * "detailed"). Requests a reasoning summary from o-series models. (TODO 7.2)
-             */
-            reasoningSummary: z.string().optional(),
-            /**
-             * Per-model reasoning override. Wins over the provider-level
-             * `reasoning` setting (settings.providers[].reasoning). Use this
-             * when different models under the same provider need different
-             * defaults — e.g. one model off (faster) and another on.
-             */
-            reasoning: ReasoningSettingSchema.optional(),
-          })
-          .transform((m) => {
-            // Normalize: prefer `protocol`; fall back to legacy `provider`.
-            // We keep `provider` populated as a mirror because engine code
-            // and a few downstream readers still query it directly.
-            const effective = m.protocol ?? m.provider;
-            return {
-              ...m,
-              protocol: effective,
-              provider: effective,
-            };
-          }),
-      )
-      .default([]),
 
     /**
      * Image generation is a general capability, decoupled from LLM providers

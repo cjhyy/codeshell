@@ -107,7 +107,6 @@ import {
 } from "../preset/index.js";
 import { ModelPool, type ModelEntry } from "../llm/model-pool.js";
 import { AgentDefinitionRegistry } from "../agent/agent-definition-registry.js";
-import { ProviderCatalog } from "../llm/provider-catalog.js";
 import { defaultCacheDir } from "../llm/model-cache.js";
 import {
   detectProviderFromApiKey,
@@ -741,7 +740,7 @@ export class Engine {
   }
 
   /**
-   * Load models[] / providers[] from settings into the active ModelPool and
+   * Load modelConnections[] from settings into the active ModelPool and
    * resync this.config.llm with the matching entry. Called from the ctor and
    * from reloadModelPool() (e.g. after onboarding writes new entries to disk).
    */
@@ -752,10 +751,9 @@ export class Engine {
       const settings = sm.get();
 
       // Unified model catalog (统一模型接入方案 §6): register text
-      // connections from settings.modelConnections[] into the pool, so the new
-      // catalog-driven instance store actually drives model selection. Runs
-      // alongside the legacy models[] path below (both coexist); a connection's
-      // instance id becomes its pool key. See
+      // connections from settings.modelConnections[] into the pool — the
+      // catalog-driven instance store is the sole source of model selection.
+      // A connection's instance id becomes its pool key. See
       // docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md.
       const connections = (settings as { modelConnections?: unknown[] }).modelConnections;
       if (Array.isArray(connections) && connections.length) {
@@ -771,69 +769,27 @@ export class Engine {
       }
       const hasConnections = Array.isArray(connections) && connections.length > 0;
 
-      if (settings.models?.length || hasConnections) {
-        for (const m of settings.models ?? []) {
-          this.modelPool.register({
-            key: m.key,
-            label: m.label,
-            provider: m.provider ?? "",
-            model: m.model,
-            baseUrl: m.baseUrl,
-            apiKey: m.apiKey,
-            maxOutputTokens: m.maxOutputTokens,
-            maxContextTokens: m.maxContextTokens,
-            providerKey: m.providerKey,
-            authCommand: (m as { authCommand?: string }).authCommand,
-            httpHeaders: (m as { httpHeaders?: Record<string, string> }).httpHeaders,
-            serviceTier: (m as { serviceTier?: string }).serviceTier,
-            reasoningSummary: (m as { reasoningSummary?: string }).reasoningSummary,
-          });
-        }
-        // Build catalog from settings.providers[] and attach to the pool
-        // so model entries can resolve baseUrl/apiKey from their provider.
-        if (settings.providers?.length) {
-          this.modelPool.setProviderCatalog(
-            new ProviderCatalog(settings.providers as never),
-          );
-        }
+      if (hasConnections) {
         this.modelPool.setCacheDir(defaultCacheDir());
         this.modelPool.reloadCachedContextWindows();
-        // Resolve active entry. Priority:
-        //   1. settings.activeKey — primary source of truth (new shape).
-        //   2. Match settings.model.name against models[].model — legacy
-        //      pre-activeKey configs and the migration path.
-        // We then switch the pool and write the resolved entry's credentials
-        // into config.llm, so the first run() uses the right endpoint instead
-        // of whatever env-derived fallback repl.ts seeded earlier.
-        // Sub-agents skip the activeKey resync: their llm is chosen by the
-        // parent's resolveChildLlm (per-role model routing). activeKey is the
-        // *user's* current UI model selection and must not clobber a child's
-        // routed model — without this guard a role's `model: flash` is silently
-        // overridden back to whatever the user has active in the foreground.
+        // Resolve the active entry from settings.defaults.text, then switch the
+        // pool and write the resolved entry's credentials into config.llm, so the
+        // first run() uses the right endpoint instead of whatever env-derived
+        // fallback repl.ts seeded earlier.
+        // Sub-agents skip this resync: their llm is chosen by the parent's
+        // resolveChildLlm (per-role model routing). defaults.text is the *user's*
+        // current UI model selection and must not clobber a child's routed model —
+        // without this guard a role's `model: flash` is silently overridden back
+        // to whatever the user has active in the foreground.
         if (this.config.isSubAgent !== true) {
-          // Active-model priority:
-          //   1. settings.defaults.text — unified catalog's current text model
-          //      (instance id == pool key). Wins so the new store drives.
-          //   2. settings.activeKey — legacy primary source of truth.
-          //   3. Match settings.model.name against models[].model — oldest path.
           const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;
-          const activeKey = (settings as { activeKey?: string }).activeKey;
+          // 统一 catalog only:defaults.text 命中则用;否则回退首个已注册连接,
+          // 避免选未配置模型时静默沿用空种子(旧 bug:抛误导性 OPENAI_API_KEY missing)。
           let matchKey: string | undefined;
           if (defaultText && this.modelPool.list().some((e) => e.key === defaultText)) {
             matchKey = defaultText;
-          }
-          if (!matchKey && activeKey) {
-            matchKey = settings.models.find((m: any) => m.key === activeKey)?.key;
-          }
-          if (!matchKey) {
-            const currentModel = this.config.llm.model;
-            // OpenRouter stores entries as "provider/model-name"; the top-level
-            // settings.model.name is just "model-name". Match either form.
-            matchKey = settings.models.find(
-              (m: any) =>
-                m.model === currentModel ||
-                (currentModel && m.model?.endsWith(`/${currentModel}`)),
-            )?.key;
+          } else {
+            matchKey = this.modelPool.list()[0]?.key;
           }
           if (matchKey) {
             const entry = this.modelPool.switch(matchKey);
@@ -844,9 +800,10 @@ export class Engine {
           }
         }
       } else if (this.config.llm.apiKey) {
-        // Auto-populate pool from the configured API key when models[] is empty.
-        // This lets users who only set model.apiKey (without models[]) still
-        // use /model to switch between the provider's available models.
+        // Auto-populate pool from the configured API key when no
+        // modelConnections[] are configured. This lets users who only have an
+        // env/seed API key still use /model to switch between the provider's
+        // available models.
         this.autoPopulatePool(this.config.llm.apiKey, this.config.llm.baseUrl);
       }
 
@@ -884,7 +841,7 @@ export class Engine {
 
   /**
    * Re-read settings and refresh the model pool. Used after onboarding /login
-   * writes new providers[] / models[] to disk so the running engine picks them
+   * writes new modelConnections[] to disk so the running engine picks them
    * up without a process restart. Existing pool entries are kept (re-registering
    * the same key overwrites them), so callers don't need to clear first.
    */
@@ -899,7 +856,7 @@ export class Engine {
   }
 
   /**
-   * Auto-populate the model pool when settings.models[] is empty but
+   * Auto-populate the model pool when no modelConnections[] are configured but
    * the user has configured an API key. Detects the provider from the
    * key prefix / baseUrl and registers all its known models.
    */
@@ -1861,11 +1818,8 @@ export class Engine {
       return summaryResponse.text;
     });
 
-    // Create components (requires resolved llmClient). Build fallback clients
-    // (TODO 7.2) from settings.fallbackModelKeys so a terminal failure on the
-    // primary model retries against a backup before surfacing to the user.
-    const fallbackClients = await this.resolveFallbackClients();
-    const modelFacade = new ModelFacade(llmClient, session.transcript, fallbackClients);
+    // Create components (requires resolved llmClient).
+    const modelFacade = new ModelFacade(llmClient, session.transcript);
 
     // Wire getOutputTokens for token budget tracking
     modelFacade.getOutputTokens = () => {
@@ -2274,8 +2228,8 @@ export class Engine {
    */
   /**
    * Resolve the LLM client for background/auxiliary work (memory extraction,
-   * auto-dream). When settings.auxModelKey names a valid pool model, build (and
-   * cache) a dedicated client for it so per-turn book-keeping runs on a cheap
+   * auto-dream). When settings.defaults.auxText names a valid pool model, build
+   * (and cache) a dedicated client for it so per-turn book-keeping runs on a cheap
    * fast model instead of the expensive primary. Falls back to `fallback` (the
    * active run's client) when unset, unknown, or on any build failure — aux
    * work is best-effort and must never break a run.
@@ -2290,9 +2244,9 @@ export class Engine {
       // once per run on the post-run background path, so the cost is fine.
       const sm = this.getSettingsManager();
       sm.invalidate();
-      // Unified store's defaults.auxText (a connection id = pool key) wins over
-      // the legacy auxModelKey. Both resolve to a pool key below.
-      auxKey = resolveAuxKey(sm.get() as { defaults?: { auxText?: string }; auxModelKey?: string });
+      // Unified store's defaults.auxText (a connection id = pool key) selects
+      // the aux model; resolveAuxKey returns it (or undefined).
+      auxKey = resolveAuxKey(sm.get() as { defaults?: { auxText?: string } });
     } catch {
       return fallback;
     }
@@ -2335,47 +2289,6 @@ export class Engine {
       });
       return fallback;
     }
-  }
-
-  /**
-   * Build the ordered list of fallback LLM clients from
-   * settings.fallbackModelKeys (TODO 7.2). Each key that resolves to a pool
-   * model (and isn't identical to the active model) becomes a client tried, in
-   * order, when the primary fails terminally. Build failures and unknown keys
-   * are skipped with a warning — fallback is best-effort and must never break a
-   * run's construction.
-   */
-  private async resolveFallbackClients(): Promise<
-    Array<Awaited<ReturnType<typeof createLLMClient>>>
-  > {
-    let keys: string[] = [];
-    try {
-      const sm = this.getSettingsManager();
-      keys = (sm.get() as { fallbackModelKeys?: string[] }).fallbackModelKeys ?? [];
-    } catch {
-      return [];
-    }
-    if (!keys.length) return [];
-    const clients: Array<Awaited<ReturnType<typeof createLLMClient>>> = [];
-    for (const key of keys) {
-      const entry = this.modelPool.get(key);
-      if (!entry) {
-        logger.warn("engine.fallback_model_missing", { key });
-        continue;
-      }
-      const llm = this.modelPool.toLLMConfig(entry);
-      // Skip a fallback identical to the active model — it'd just fail again.
-      if (sameLlmIdentity(llm, this.config.llm)) continue;
-      try {
-        clients.push(await createLLMClient(llm, this.config.clientDefaults));
-      } catch (err) {
-        logger.warn("engine.fallback_model_build_failed", {
-          key,
-          error: (err as Error).message,
-        });
-      }
-    }
-    return clients;
   }
 
   private async runMemoryPipeline(
@@ -2495,10 +2408,10 @@ export class Engine {
    * Switch the active model by pool key. Takes effect on the next run() call.
    * Returns the new model entry.
    *
-   * Persists settings.activeKey (and a legacy settings.model.* mirror) so the
+   * Persists settings.defaults.text (= the connection id / pool key) so the
    * next process startup defaults to the same model — without this, switches
    * only live in memory and every restart reverts to the previously persisted
-   * activeKey.
+   * defaults.text.
    */
   switchModel(key: string): ModelEntry {
     const entry = this.modelPool.switch(key);
@@ -2507,20 +2420,19 @@ export class Engine {
     // this.config.clientDefaults and survive the switch untouched.
     const nextLlm = this.modelPool.toLLMConfig(entry);
     this.config = { ...this.config, llm: nextLlm };
-    this.persistActiveModel(entry, nextLlm);
+    this.persistActiveModel(entry);
     return entry;
   }
 
   /**
    * Write the active model selection to ~/.code-shell/settings.json.
    *
-   * We mirror into the legacy settings.model.* block (provider/name/apiKey/
-   * baseUrl) because boot paths in cli/main.ts, repl.ts, run.ts still read it.
-   * The mirror uses resolved llm values (not raw entry.*) so credentials that
-   * live on settings.providers[] flow through correctly — entry.apiKey is
-   * undefined when the entry resolves via providerCatalog.
+   * Persists settings.defaults.text = entry.key (the connection id == pool
+   * key). That is the single field the boot path reads to restore the active
+   * text model on the next startup (see ctor: settings.defaults.text → pool
+   * switch). No legacy activeKey/model.* mirror is written.
    */
-  private persistActiveModel(entry: ModelEntry, llm: LLMConfig): void {
+  private persistActiveModel(entry: ModelEntry): void {
     try {
       // userHome() (not raw homedir()) so a test that sets process.env.HOME to
       // a tmpdir gets its writes isolated too — the SettingsManager reader
@@ -2540,20 +2452,13 @@ export class Engine {
         }
       }
 
-      const prevModel =
-        typeof existing.model === "object" && existing.model
-          ? (existing.model as Record<string, unknown>)
+      const prevDefaults =
+        typeof existing.defaults === "object" && existing.defaults
+          ? (existing.defaults as Record<string, unknown>)
           : {};
       const updated: Record<string, unknown> = {
         ...existing,
-        activeKey: entry.key,
-        model: {
-          ...prevModel,
-          provider: llm.provider,
-          name: entry.model,
-          apiKey: llm.apiKey,
-          baseUrl: llm.baseUrl,
-        },
+        defaults: { ...prevDefaults, text: entry.key },
       };
 
       // mode 0o600: this writes model.apiKey (plaintext) into settings.json, so

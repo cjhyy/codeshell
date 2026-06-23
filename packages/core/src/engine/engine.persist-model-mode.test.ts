@@ -23,15 +23,21 @@ describe("persistActiveModel writes settings.json owner-only (0o600)", () => {
     prevCsHome = process.env.CODE_SHELL_HOME;
     process.env.HOME = home;
     process.env.CODE_SHELL_HOME = home;
-    // Seed a user settings.json with two text models so switchModel resolves.
+    // Seed a user settings.json with two text connections (unified catalog
+    // shape) so switchModel resolves. Legacy models[]/activeKey were removed —
+    // the pool now loads from modelConnections[] + credentials[].
     mkdirSync(join(home, ".code-shell"), { recursive: true });
     writeFileSync(
       join(home, ".code-shell", "settings.json"),
       JSON.stringify({
-        models: [
-          { key: "m1", provider: "openai", model: "gpt-5", apiKey: "sk-one", baseUrl: "https://a/v1" },
-          { key: "m2", provider: "openai", model: "gpt-4o", apiKey: "sk-two", baseUrl: "https://b/v1" },
+        credentials: [
+          { id: "ds-key", catalogId: "deepseek", apiKey: "sk-one", baseUrl: "https://api.deepseek.com/v1" },
         ],
+        modelConnections: [
+          { id: "m1", catalogId: "deepseek", tag: "text", model: "deepseek-v4-flash", credentialId: "ds-key" },
+          { id: "m2", catalogId: "deepseek", tag: "text", model: "deepseek-v4-pro", credentialId: "ds-key" },
+        ],
+        defaults: { text: "m1" },
       }),
     );
   });
@@ -45,15 +51,18 @@ describe("persistActiveModel writes settings.json owner-only (0o600)", () => {
   });
 
   it("the file is 0o600 after a model switch, and the key round-trips", () => {
-    // cwd:home so the SettingsManager reads the seeded models[] into the pool
-    // (a cwd-less Engine doesn't register user-scope models[] — separate behavior).
+    // cwd:home so the SettingsManager reads the seeded modelConnections[] into
+    // the pool (a cwd-less Engine doesn't register user-scope connections —
+    // separate behavior).
     const engine = new Engine({ llm: baseLlm, cwd: home });
     engine.switchModel("m2");
     const file = join(home, ".code-shell", "settings.json");
     const mode = statSync(file).mode & 0o777;
     expect(mode).toBe(0o600);
-    // sanity: the switch actually persisted the active key
+    // sanity: the switch persisted the active key into the unified defaults.text
+    // (legacy activeKey is gone).
     const saved = JSON.parse(readFileSync(file, "utf-8"));
-    expect(saved.activeKey).toBe("m2");
+    expect(saved.defaults.text).toBe("m2");
+    expect(saved.activeKey).toBeUndefined();
   });
 });

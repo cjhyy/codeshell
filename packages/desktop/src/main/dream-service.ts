@@ -22,6 +22,8 @@ import {
   SettingsManager,
   createLLMClient,
   runDreamConsolidation,
+  resolveLLMConfigForTag,
+  resolveAuxKey,
 } from "@cjhyy/code-shell-core";
 import { dlog } from "./desktop-logger.js";
 
@@ -58,17 +60,16 @@ export async function runDream(level: DreamLevel, cwd?: string): Promise<DreamRe
   // ─── Seed Engine — same bootstrap the agent worker uses ───────────
   // Read settings to derive the seed llm config, exactly like
   // cli/agent-server-stdio.ts. Engine's constructor then calls
-  // populateModelPoolFromSettings() which resolves the active model from
-  // settings.models[]/activeKey (overwriting this seed) and builds the tool
-  // registry. "full" scope so we read the user's ~/.code-shell config too.
+  // populateModelPoolFromSettings() which resolves the active model from the
+  // unified catalog (modelConnections[] / defaults.text, overwriting this seed)
+  // and builds the tool registry. "full" scope so we read the user's
+  // ~/.code-shell config too.
   const settings = new SettingsManager(seedCwd, "full").get();
-  const llmConfig = {
-    provider: settings.model.provider,
-    model: settings.model.name,
-    apiKey: settings.model.apiKey ?? "",
-    baseUrl: settings.model.baseUrl,
-    maxTokens: settings.model.maxTokens,
-  };
+  const auxId = resolveAuxKey(settings);
+  const llmConfig =
+    resolveLLMConfigForTag(settings, "text", auxId) ??
+    resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
+  if (!llmConfig) throw new Error("Dream:没有可用的文本模型连接。");
   const seedEngine = new Engine({
     llm: llmConfig,
     cwd: seedCwd,

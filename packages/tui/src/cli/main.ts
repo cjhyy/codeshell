@@ -10,7 +10,7 @@ import { runCommand } from "./commands/run.js";
 import { replCommand } from "./commands/repl.js";
 import { resolveTaskFromArgOrStdin } from "./input/read-stdin.js";
 import { setup } from "../bootstrap/setup.js";
-import { costTracker, installCostTracking, hasApiKey, resolveApiKey, getCurrentVersion } from "@cjhyy/code-shell-core";
+import { costTracker, installCostTracking, getCurrentVersion } from "@cjhyy/code-shell-core";
 import { CHALK_COLORIZER } from "../utils/colorizer.js";
 import type { AgentPresetName } from "@cjhyy/code-shell-core";
 import type { SessionStatus } from "@cjhyy/code-shell-core";
@@ -141,22 +141,17 @@ addCommonOptions(
     .option("--mode <mode>", "Arena mode: review, discussion, or planning (auto-detected if omitted)"),
 )
   .action(async (topic: string, opts) => {
-    const resolved = resolveOpts(opts);
     const { runArenaReview } = await import("./commands/arena.js");
-    const { SettingsManager } = await import("@cjhyy/code-shell-core");
+    const { SettingsManager, resolveLLMConfigForTag } = await import("@cjhyy/code-shell-core");
     const settings = new SettingsManager(process.cwd()).get();
-    const apiKey = resolveApiKey(resolved.apiKey, settings.model.apiKey);
-    if (!apiKey) {
-      console.error("Error: No API key provided.");
+    const llm = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
+    if (!llm) {
+      console.error("Error: 没有可用的文本模型连接。");
       process.exit(1);
     }
+    // TODO(arena): participants 改按 modelConnections.id 解析,本次不迁
     await runArenaReview({ topic, models: opts.models, mode: opts.mode }, {
-      llm: {
-        provider: resolved.provider ?? settings.model.provider ?? "openai",
-        model: resolved.model ?? settings.model.name ?? "anthropic/claude-opus-4-6",
-        apiKey,
-        baseUrl: resolved.baseUrl ?? settings.model.baseUrl ?? "https://openrouter.ai/api/v1",
-      },
+      llm,
       clientDefaults: { temperature: 0.3 },
     });
   });

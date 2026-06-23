@@ -32,7 +32,7 @@ const RULES: Rule[] = [
     test: /\b(429|rate.?limit|too many requests)\b/i,
     message: () => "Rate limited by the provider.",
     suggestion:
-      "Wait a moment and retry, lower request frequency, or switch to a model with more headroom (fallbackModelKeys).",
+      "Wait a moment and retry, lower request frequency, or switch to a model with more headroom.",
   },
   {
     test: /\b(timed? ?out|etimedout|esockettimedout|deadline)\b/i,
@@ -60,7 +60,7 @@ const RULES: Rule[] = [
     test: /\b(500|502|503|504|overloaded|server error|service unavailable)\b/i,
     message: () => "The provider had a server-side error.",
     suggestion:
-      "This is usually transient — retry shortly, or switch models (fallbackModelKeys) if it persists.",
+      "This is usually transient — retry shortly, or switch models if it persists.",
   },
 ];
 

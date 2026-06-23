@@ -18,7 +18,7 @@ import { MCPManager } from "@cjhyy/code-shell-core";
 import { CostTracker } from "@cjhyy/code-shell-core";
 import { SettingsManager } from "@cjhyy/code-shell-core";
 import { personalizationFrom } from "@cjhyy/code-shell-core";
-import { resolveApiKey } from "@cjhyy/code-shell-core";
+import { resolveLLMConfigForTag } from "@cjhyy/code-shell-core";
 import { costTracker } from "@cjhyy/code-shell-core";
 import { createRenderer, type OutputFormat } from "../output/renderer.js";
 import type { LLMConfig, PermissionMode } from "@cjhyy/code-shell-core";
@@ -30,70 +30,6 @@ import {
   buildNotificationSummary,
 } from "@cjhyy/code-shell-core";
 import { drainBackgroundNotifications } from "./drain-notifications.js";
-
-/**
- * Shape of a settings.models[] entry. Mirrors the zod schema in
- * src/settings/schema.ts:73 — declared inline here because the Settings
- * interface in src/types.ts predates the multi-model rollout and doesn't
- * expose this field yet.
- */
-type ModelPoolEntry = {
-  key: string;
-  providerKey?: string;
-  provider?: string;
-  model: string;
-  baseUrl?: string;
-  apiKey?: string;
-  maxOutputTokens?: number;
-  maxContextTokens?: number;
-};
-
-/**
- * Resolve the active model[] entry using settings.activeKey, with a name-
- * match fallback (matches Engine.populateModelPoolFromSettings). Returns
- * undefined when settings.models[] is empty or the active key doesn't
- * resolve — callers fall back to the legacy settings.model.* mirror.
- *
- * Takes `unknown` because the Settings interface in src/types.ts predates
- * the multi-model rollout (no activeKey/models/providers fields), while
- * the runtime zod schema does have them. Casting locally avoids polluting
- * the canonical type until that gap is fixed.
- */
-function findActiveModelEntry(settings: unknown): ModelPoolEntry | undefined {
-  const s = settings as {
-    activeKey?: string;
-    models?: ModelPoolEntry[];
-    model?: { name?: string };
-  };
-  if (!s.models?.length) return undefined;
-  if (s.activeKey) {
-    const hit = s.models.find((m) => m.key === s.activeKey);
-    if (hit) return hit;
-  }
-  // Legacy match: settings.model.name against models[].model. Mirrors the
-  // engine-side fallback for pre-activeKey configs.
-  const legacyName = s.model?.name;
-  if (legacyName) {
-    return s.models.find(
-      (m) => m.model === legacyName || m.model?.endsWith(`/${legacyName}`),
-    );
-  }
-  return undefined;
-}
-
-/**
- * Look up an API key on settings.providers[<providerKey>]. Used when a
- * models[] entry has no inline apiKey because credentials live on the
- * provider record (the ProviderCatalog pattern).
- */
-function findProviderApiKey(
-  settings: unknown,
-  providerKey: string | undefined,
-): string | undefined {
-  if (!providerKey) return undefined;
-  const s = settings as { providers?: Array<{ key: string; apiKey?: string }> };
-  return s.providers?.find((p) => p.key === providerKey)?.apiKey;
-}
 
 export interface RunOptions {
   task: string;
@@ -137,50 +73,33 @@ export async function runCommand(options: RunOptions): Promise<void> {
   const settingsManager = new SettingsManager(cwd, "full");
   const settings = settingsManager.get();
 
-  // Resolve API key. Headless used to only consult settings.model.apiKey
-  // (legacy mirror), which gave a false-negative when the user's key lives
-  // only on settings.models[<active>].apiKey or settings.providers[].apiKey
-  // — those are written by the newer ProviderModelFlow but not always
-  // mirrored. Engine reconciles all three at startup; mirror that priority
-  // here so the pre-Engine bail-out doesn't reject a valid config.
-  const activeModelEntry = findActiveModelEntry(settings);
-  const fallbackApiKey =
-    settings.model?.apiKey ??
-    activeModelEntry?.apiKey ??
-    findProviderApiKey(settings, activeModelEntry?.providerKey);
-  const apiKey = resolveApiKey(options.apiKey, fallbackApiKey);
-
-  if (!apiKey) {
-    console.error(
-      "Error: No API key provided. Use --api-key, set OPENROUTER_API_KEY env var, or add to settings.",
-    );
+  // Resolve the text model from the unified catalog
+  // (modelConnections[]/credentials[]/defaults). The seed Engine re-resolves
+  // from the same catalog, so this is the bootstrap config + the pre-Engine
+  // bail-out gate.
+  const resolved = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
+  if (!resolved && !options.apiKey) {
+    console.error("Error: 没有可用的文本模型连接。请在「连接」页添加,或用 --api-key/--model 指定。");
     process.exit(1);
   }
-
-  // Build LLM config. Note: Engine.populateModelPoolFromSettings will
-  // re-resolve via settings.activeKey and overwrite these fields with the
-  // active pool entry, so this is just the bootstrap fallback for users
-  // who only have legacy settings.model.* populated.
-  const llmConfig: LLMConfig = {
-    provider:
-      options.provider ?? activeModelEntry?.provider ?? settings.model?.provider ?? "openai",
-    model:
-      options.model ??
-      activeModelEntry?.model ??
-      settings.model?.name ??
-      "anthropic/claude-opus-4-6",
-    apiKey,
-    baseUrl:
-      options.baseUrl ??
-      activeModelEntry?.baseUrl ??
-      settings.model?.baseUrl ??
-      "https://openrouter.ai/api/v1",
-    maxTokens: activeModelEntry?.maxOutputTokens ?? settings.model?.maxTokens ?? 8192,
+  const llmConfig: LLMConfig = resolved ?? {
+    provider: options.provider ?? "openai",
+    model: options.model ?? "anthropic/claude-opus-4-6",
+    apiKey: options.apiKey!,
+    baseUrl: options.baseUrl ?? "https://openrouter.ai/api/v1",
+    maxTokens: 8192,
   };
-  // temperature is a ClientDefaults knob now; the seed Engine reads
-  // settings.model.temperature into clientDefaults via
-  // populateModelPoolFromSettings (settingsScope "full"), and session engines
-  // inherit it from the seed's resolved config — no explicit pass needed here.
+  // CLI flag overrides still apply on top of a resolved connection, so
+  // `--model X` / `--provider X` / `--base-url X` work even when a catalog
+  // connection resolves.
+  if (resolved) {
+    if (options.provider) llmConfig.provider = options.provider;
+    if (options.model) llmConfig.model = options.model;
+    if (options.baseUrl) llmConfig.baseUrl = options.baseUrl;
+  }
+  // temperature is a ClientDefaults knob now; the seed Engine derives it from
+  // the unified catalog and session engines inherit it from the seed's
+  // resolved config — no explicit pass needed here.
 
   const sandboxConfig = mergeSandboxConfig(settings.sandbox, "auto");
 

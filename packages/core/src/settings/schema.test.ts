@@ -77,61 +77,6 @@ describe("mcpServers name resilience (regression: settings died on {\"23\":{no n
   });
 });
 
-describe("validateSettings · reasoning effort (regression: boot crashed on unknown effort)", () => {
-  // The real crash: a connection's paramValues.reasoning ("xhigh" / "max")
-  // flowed through the legacy models[]/providers[] bridge into validateSettings,
-  // which previously pinned effort to a closed enum and threw on boot. effort is
-  // now a free-form string (catalog-driven); validateSettings must accept any
-  // non-empty level on BOTH the provider- and model-level reasoning fields.
-
-  it("accepts a known effort on a provider's reasoning", () => {
-    expect(() =>
-      validateSettings({
-        providers: [
-          { key: "oai", kind: "openai", baseUrl: "https://api.openai.com/v1", reasoning: { mode: "effort", effort: "high" } },
-        ],
-      }),
-    ).not.toThrow();
-  });
-
-  it("accepts an UNKNOWN effort on a provider's reasoning (the boot-crash level)", () => {
-    // "xhigh" / "max" are levels models gained over time and are not in
-    // REASONING_EFFORTS — these must NOT throw.
-    for (const effort of ["xhigh", "max"]) {
-      expect(() =>
-        validateSettings({
-          providers: [
-            { key: "oai", kind: "openai", baseUrl: "https://api.openai.com/v1", reasoning: { mode: "effort", effort } },
-          ],
-        }),
-      ).not.toThrow();
-    }
-  });
-
-  it("accepts an unknown effort on a per-model reasoning override too", () => {
-    const parsed = validateSettings({
-      models: [
-        { key: "m1", model: "gpt-5.5", reasoning: { mode: "effort", effort: "max" } },
-      ],
-    });
-    expect(parsed.models[0].reasoning).toEqual({ mode: "effort", effort: "max" });
-  });
-
-  it("still rejects a malformed reasoning SHAPE (empty effort / wrong mode)", () => {
-    // The schema validates shape, not value: empty effort and bogus mode must fail.
-    expect(() =>
-      validateSettings({
-        providers: [{ key: "oai", kind: "openai", baseUrl: "x", reasoning: { mode: "effort", effort: "" } }],
-      }),
-    ).toThrow();
-    expect(() =>
-      validateSettings({
-        providers: [{ key: "oai", kind: "openai", baseUrl: "x", reasoning: { mode: "bogus" } }],
-      }),
-    ).toThrow();
-  });
-});
-
 describe("mcpServerOverrides (plugin MCP env/credential supplement)", () => {
   it("accepts the env/credential supplement fields", () => {
     const parsed = SettingsSchema.parse({

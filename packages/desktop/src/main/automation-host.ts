@@ -23,6 +23,7 @@ import {
   makeUpdateAutomationMemoryTool,
   AUTOMATION_PROMPT_NOTE,
   defaultSandboxConfig,
+  resolveLLMConfigForTag,
   type RunManager,
   type CronRunner,
   type CronRunResult,
@@ -36,14 +37,10 @@ import { AUTOMATION_DISABLED_TOOLS } from "./automationToolset.js";
  */
 export function buildDesktopRunManager(): RunManager {
   const settings = new SettingsManager(process.cwd(), "full").get();
+  const llm = resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
+  if (!llm) throw new Error("自动化:没有可用的文本模型连接,请在「连接」页配置。");
   return createRunManager({
-    llm: {
-      provider: settings.model.provider,
-      model: settings.model.name,
-      apiKey: settings.model.apiKey ?? "",
-      baseUrl: settings.model.baseUrl,
-      maxTokens: settings.model.maxTokens,
-    },
+    llm,
     cwd: process.cwd(),
     // Read-only contract: unattended runs auto-approve reads, deny writes.
     // permissionMode "default" so the classifier doesn't add acceptEdits
@@ -93,6 +90,8 @@ export function buildDesktopAutomationRunner(
   return async (req): Promise<CronRunResult> => {
     const jobCwd = req.job.cwd ?? process.cwd();
     const settings = new SettingsManager(jobCwd, "full").get();
+    const llm = resolveLLMConfigForTag(settings, "text", (settings as { defaults?: { text?: string } }).defaults?.text);
+    if (!llm) throw new Error("自动化任务:没有可用的文本模型连接。");
     // Task-level cross-run memory: prior run summaries the job left for itself.
     // This is system-level context (notes from earlier runs), NOT something the
     // user typed — so it rides appendSystemPrompt, not the user prompt. Folding
@@ -104,13 +103,7 @@ export function buildDesktopAutomationRunner(
       : AUTOMATION_PROMPT_NOTE;
 
     const engine = new Engine({
-      llm: {
-        provider: settings.model.provider,
-        model: settings.model.name,
-        apiKey: settings.model.apiKey ?? "",
-        baseUrl: settings.model.baseUrl,
-        maxTokens: settings.model.maxTokens,
-      },
+      llm,
       cwd: jobCwd,
       settingsScope: "full",
       headless: true,

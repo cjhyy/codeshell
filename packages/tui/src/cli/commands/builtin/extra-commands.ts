@@ -28,8 +28,31 @@ export const extraCommands: SlashCommand[] = [
             settings = JSON.parse(readFileSync(settingsFile, "utf-8"));
           } catch {}
         }
-        if (!settings.model) settings.model = {};
-        settings.model.apiKey = key;
+
+        // Unified store: the active text model is settings.defaults.text (a
+        // connection id). Route the key into that connection's credential —
+        // settings.model.apiKey is dead (nothing reads it anymore).
+        const activeConnId = settings.defaults?.text;
+        const connections: any[] = Array.isArray(settings.modelConnections)
+          ? settings.modelConnections
+          : [];
+        const conn = connections.find((c) => c?.id === activeConnId);
+        const credentials: any[] = Array.isArray(settings.credentials)
+          ? settings.credentials
+          : [];
+        const cred = conn?.credentialId
+          ? credentials.find((c) => c?.id === conn.credentialId)
+          : undefined;
+
+        if (!cred) {
+          ctx.addStatus(
+            "No active model connection to attach the key to. " +
+              "Add a connection first via /login (onboarding) or the desktop Connections page, then re-run /login <key>.",
+          );
+          return;
+        }
+
+        cred.apiKey = key;
         writeFileSync(settingsFile, JSON.stringify(settings, null, 2), "utf-8");
         // Hot-reload the model pool so the new key takes effect without a
         // restart — matches the onboarding flow's behavior.
