@@ -1,5 +1,26 @@
 # Beta 发布前审计 + 行动清单(2026-06-23)
 
+> ## 🔁 自主循环交接(2026-06-24,**最新·回来先读这段**)
+>
+> 用户开 `/goal` 循环「按文档推进」。这一轮做的是**「我能独立做、不需你在场」**的收尾项(真机冒烟/打包/push/R-2 加密仍等你)。本轮 **6 commit 在 main**(累计领先 origin **208**,仍未 push):
+>
+> | commit | 做了什么 | 验证 |
+> |---|---|---|
+> | `2f83a6c1`(你 merge) | **P1 通用参数下发完成**:extraBody 字段 + applyParams 接线 + openai 注入 + needsKey 贯通(凭证缺失早报错非 401) | — |
+> | `6514e764` | 修 P1 merge 后的 typecheck 红(`client.steer.test` RpcMessage→RpcRequest 收窄) | tsc 0,3 测绿 |
+> | `f7dac9b1` | **send_input running 并发守卫**(§2.4.5 采纳最小止血:running 则拒绝) | TDD,11 测绿 |
+> | `e4ae4e51` | **删 Ant 内部探测**(core-design Phase0 §3.2:isRunningOnHomespace/isInProtectedNamespace/USER_TYPE='ant' 全删,行为保留) | tsc 0,core+tui 测绿 |
+> | `2e85101b` | **index.ts TUI-only 段加 @internal**(Phase0 §4.9) | tsc 0 |
+> | `accc8d29` | CHANGELOG [Unreleased] 补参数下发/needsKey/git--/超时 + Fixed 段(§4.5) | 纯文档 |
+>
+> **§2.4.5 send_input 守卫 → 已修**(下面那段「没擅自改」的发现已落地为最小止血;更丰富 UX 排队/interrupt-resume 仍可选)。**core-design Phase0 三件 → 全做完**(边界契约文档此前已有 + 删 Ant 探测 + @internal)。
+>
+> **现状**:工作树净 · typecheck 0 · core/tui 测试绿 · 领先 origin **208** 未 push。
+>
+> **仍等你(不变)**:① push;② §1.2/1.3 真机冒烟(cookie 登录全链路);③ §1.4 打包;④ R-2 cookie safeStorage 加密(开 worktree 你在场)。代码侧能独立做的高价值收尾已基本清空,**真正剩的是端到端真机验证 + 发布动作**。
+>
+> ---
+
 > ## 🔬 Workflow Review 交接(2026-06-23 v2,**最新·回来先读这段**)
 >
 > 用户拍板:对**全部未推 diff(`origin/main..HEAD`,当时 153 commit / 121 文件 / +5264-810)整体**跑一次多 agent 对抗式 review。
