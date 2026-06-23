@@ -51,6 +51,15 @@ describe("readTool", () => {
     expect(out).toContain("10 lines total, showing 3-4");
   });
 
+  it("clamps a negative limit to a normal read (no all-but-last-N slice)", async () => {
+    // A misbehaving caller passing limit:-5 must NOT get lines.slice(0, -5)
+    // (= all but the last 5). Limit floors to >=1 → a normal read from offset.
+    const p = fresh(Array.from({ length: 10 }, (_, i) => `line${i + 1}`).join("\n"));
+    const out = await readTool({ file_path: p, offset: 1, limit: -5 }, ctx());
+    expect(out).toContain("1\tline1");
+    expect(out).toContain("10\tline10"); // last line present, NOT dropped
+  });
+
   it("renders an empty file as a single empty numbered line", async () => {
     // "" splits to [""] → one (empty) line; the tool numbers it "1\t".
     const p = fresh("");
