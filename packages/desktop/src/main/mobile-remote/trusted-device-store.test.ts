@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -84,5 +84,13 @@ describe("TrustedDeviceStore", () => {
     // blank name is rejected
     expect(store.rename(a.id, "   ")).toBe(false);
     expect(store.listDevices()[0]?.name).toBe("我的工作手机");
+  });
+
+  test("devices.json is written owner-only (0o600) — it holds the device secretHash", () => {
+    dir = mkdtempSync(join(tmpdir(), "mobile-devices-mode-"));
+    const file = join(dir, "devices.json");
+    const store = new TrustedDeviceStore(file);
+    store.addDevice({ name: "phone", secretHash: "sekret" });
+    expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 });

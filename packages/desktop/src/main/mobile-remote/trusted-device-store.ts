@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { TrustedDevice, TrustedDevicePublic } from "./types.js";
@@ -86,7 +86,12 @@ export class TrustedDeviceStore {
 
   private writeAll(devices: TrustedDevice[]): void {
     mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(devices, null, 2), "utf-8");
+    // 0o600: devices.json holds each device's secretHash (its bearer credential).
+    // Owner-only, same hardening as settings.json/credentials.json/cookie leases.
+    // (Y-3 partial: this closes the world-readable file; the non-timing-safe `===`
+    // compare stays in the §2.4 mobile-remote-hardening bucket for the user.)
+    writeFileSync(this.filePath, JSON.stringify(devices, null, 2), { encoding: "utf-8", mode: 0o600 });
+    try { chmodSync(this.filePath, 0o600); } catch { /* best-effort: tighten an existing file */ }
   }
 
   private toPublic(device: TrustedDevice): TrustedDevicePublic {
