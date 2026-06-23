@@ -116,7 +116,7 @@ describeMaybe("send_input continuation — REAL LLM memory recall", () => {
     // Extract the agent_id the Agent tool reported (internal trailer) — but with
     // BG_MS=0 sync path returns the text directly; agent_id===childSid is the
     // session it wrote. The registry holds the mapping.
-    const running = asyncAgentRegistry.snapshot;
+    const running = asyncAgentRegistry.getSnapshot();
     const agentId = running[running.length - 1]?.agentId;
     expect(agentId).toBeTruthy();
     expect(typeof spawnRes).toBe("string");
