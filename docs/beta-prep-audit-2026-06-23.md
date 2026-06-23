@@ -288,6 +288,7 @@
 | arena 证据并发收集 | 干净:runProviderWithTimeout 总 resolve 不 reject(race[work,timeout]+try/catch→`[]`+warn),故 `Promise.all` 不被单个失败/超时拖垮;cleanup 清 timer(修过 spurious-timeout)+ 摘 abort 监听;timer.unref 不挂活进程;abort→全 pending 解 `[]`。20 测 |
 | cost-tracker 算账 | 干净(显示用·uncachedInput `Math.max(0,...)` 防负值 double-bill·lookupPricing 必返 DEFAULT 兜底);无负成本/NaN。无专测但已守且非关键路径 |
 | arena digest-builder 大小 | 干净(**追了「N packets 求和无界→超 context」**:经查 buildDigest 不拷全 ledger,只收 `relevantClaimIds` 引用的 packets(claim.evidencePacketIds),按轮聚焦;per-field slice(2000)+excerpts.slice(3);ledger 增长有 WARN_PACKETS backstop)。病态单 claim 引数千 packet 仅理论,非 beta bug |
+| RunLock / lockfile | 干净(proper-lockfile stale 60s 自动回收崩溃残留锁·`retries:0` 快失败不阻塞·missing_target vs locked 区分失败因·never-throws;lockfile.ts 用 `createRequire(import.meta.url)` 修 ESM「require not defined」致「Run now does nothing」+ 懒加载避 graceful-fs 8ms 进 startup,project_runlock_esm_bug 已修)。29 测 |
 
 ### 2.5) 修复完整性复审(查「只修一半」)
 
