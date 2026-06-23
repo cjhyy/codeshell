@@ -227,7 +227,18 @@ function readCookie(cookieHeader: string | string[] | undefined, name: string): 
   for (const part of header.split(/;\s*/)) {
     const eq = part.indexOf("=");
     if (eq <= 0) continue;
-    if (part.slice(0, eq) === name) return decodeURIComponent(part.slice(eq + 1));
+    if (part.slice(0, eq) === name) {
+      const raw = part.slice(eq + 1);
+      // The Cookie header is attacker-controlled on the mobile-remote boundary.
+      // decodeURIComponent THROWS URIError on a malformed %-sequence (e.g.
+      // `cs_access=%ZZ`); unguarded it escapes gate() and crashes the request
+      // handler (DoS). Fall back to the raw value like browsers do for bad cookies.
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
+    }
   }
   return undefined;
 }

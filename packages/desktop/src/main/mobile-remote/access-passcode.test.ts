@@ -115,6 +115,17 @@ describe("AccessPasscode", () => {
     expect(res.ended).toBe(true);
   });
 
+  test("gate: a malformed %-sequence in the Cookie header does NOT throw (DoS guard)", () => {
+    // Attacker-controlled Cookie on the mobile-remote boundary: `%ZZ` is an
+    // invalid percent-escape → decodeURIComponent throws URIError. gate() must
+    // tolerate it (treat as a non-matching token), not crash the request handler.
+    const ap = new AccessPasscode({ filePath: freshFile() });
+    ap.set("correct");
+    const { req, res } = fakeReqRes({ cookie: "cs_access=%ZZ" });
+    expect(() => ap.gate(req, res)).not.toThrow();
+    expect(ap.gate(req, res)).toBe(false); // bad token → challenged, not allowed
+  });
+
   test("gate: a correct passcode passed as query issues a Set-Cookie and allows", () => {
     const ap = new AccessPasscode({ filePath: freshFile() });
     ap.set("correct");
