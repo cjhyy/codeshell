@@ -9,7 +9,7 @@
 
 import { readFileSync, existsSync, readdirSync, statSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { resolve, join } from "node:path";
+import { resolve, join, dirname, basename } from "node:path";
 import { isWithinRoot } from "./within-root.js";
 import type { ToolDefinition, ToolCall } from "../../types.js";
 
@@ -140,7 +140,20 @@ function validatePath(filePath: string): string | null {
   try {
     realTarget = realpathSync(resolved);
   } catch {
-    return isWithinRoot(realRoot, resolved) ? resolved : null;
+    // Target doesn't exist yet. Compare REAL-vs-REAL by resolving the existing
+    // parent dir's realpath and rejoining the missing leaf — comparing realRoot
+    // (a real path) against a lexical `resolved` would false-reject valid files
+    // whenever REPO_ROOT (or any ancestor) is reached through a symlink.
+    let realParent: string;
+    try {
+      realParent = realpathSync(dirname(resolved));
+    } catch {
+      // Parent missing too — no realpath available; fall back to lexical-vs-lexical
+      // so both operands share the same (unresolved) mode.
+      return isWithinRoot(resolve(REPO_ROOT), resolved) ? resolved : null;
+    }
+    const candidate = join(realParent, basename(resolved));
+    return isWithinRoot(realRoot, candidate) ? candidate : null;
   }
   return isWithinRoot(realRoot, realTarget) ? realTarget : null;
 }

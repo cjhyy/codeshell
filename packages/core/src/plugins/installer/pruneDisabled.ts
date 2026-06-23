@@ -72,7 +72,11 @@ export function pruneDisabledSettingsForPlugin(pluginName: string): void {
     if (!changed) return;
     mkdirSync(dirname(path), { recursive: true });
     const tmp = `${path}.${process.pid}.${Date.now()}.tmp`;
-    writeFileSync(tmp, JSON.stringify(pruned, null, 2), "utf-8");
+    // mode 0o600 — settings.json can hold plaintext API keys, so the pruned
+    // rewrite must stay owner-only (matching settings/manager.ts), not fall back
+    // to the umask default 0o644 (world-readable). The tmp IS the final file
+    // after renameSync, so the mode must be set at create time, not via chmod.
+    writeFileSync(tmp, JSON.stringify(pruned, null, 2), { encoding: "utf-8", mode: 0o600 });
     renameSync(tmp, path);
   } catch {
     // best-effort cleanup — never fail the uninstall over settings IO

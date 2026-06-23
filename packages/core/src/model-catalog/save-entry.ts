@@ -63,6 +63,13 @@ export function saveCatalogEntry(
   } catch (e) {
     return { ok: false, error: `could not create catalog directory: ${e instanceof Error ? e.message : String(e)}`, backup };
   }
-  writeFileSync(opts.path, JSON.stringify(next, null, 2));
+  try {
+    writeFileSync(opts.path, JSON.stringify(next, null, 2));
+  } catch (e) {
+    // IO error (perms / disk full / bad path): return a clean {ok:false} with the
+    // backup filename preserved, never let the throw escape past the tool's
+    // expected result shape (the original file is intact — we only upsert-wrote).
+    return { ok: false, error: `could not write catalog: ${e instanceof Error ? e.message : String(e)}`, backup };
+  }
   return { ok: true, action, backup };
 }

@@ -68,10 +68,6 @@ export async function readTool(
     // to the default page size — NOT through to `lines.slice(start, start+limit)`
     // with a NEGATIVE end, which JS reads as "all but the last N" and would
     // silently return the wrong window. `|| 2000` only caught 0/NaN, not negatives.
-    // A non-positive limit (a misbehaving caller passing 0 / -5 / NaN) falls back
-    // to the default page size — NOT through to `lines.slice(start, start+limit)`
-    // with a NEGATIVE end, which JS reads as "all but the last N" and would
-    // silently return the wrong window. `|| 2000` only caught 0/NaN, not negatives.
     const rawLimit = args.limit as number;
     const limit = typeof rawLimit === "number" && rawLimit > 0 ? rawLimit : 2000;
     const end = Math.min(totalLines, offset - 1 + limit);

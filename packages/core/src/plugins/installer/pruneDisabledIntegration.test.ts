@@ -5,6 +5,7 @@ import {
   writeFileSync,
   readFileSync,
   rmSync,
+  statSync,
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -61,6 +62,12 @@ describe("uninstall prunes orphaned settings entries", () => {
     const s = readSettings(home);
     expect(s.disabledSkills).toEqual(["keep:other"]);
     expect(s.disabledPlugins).toEqual(["keep"]);
+
+    // settings.json can hold plaintext API keys — the pruned rewrite must stay
+    // owner-only (0o600), not fall back to the umask default (0o644).
+    if (process.platform !== "win32") {
+      expect(statSync(settingsPath(home)).mode & 0o777).toBe(0o600);
+    }
   });
 
   test("uninstallPlugin (marketplace) removes the plugin's disable entries", () => {

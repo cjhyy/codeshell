@@ -5,7 +5,7 @@
  * ~/.code-shell. See docs/.../2026-06-15-unified-model-catalog-design.md §7.
  */
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { saveCatalogEntry } from "./save-entry.js";
@@ -79,6 +79,19 @@ describe("saveCatalogEntry", () => {
     saveCatalogEntry(ENTRY, { path: file, stamp: "T6" });
     const arr = JSON.parse(readFileSync(file, "utf-8"));
     expect(arr.map((e: { id: string }) => e.id).sort()).toEqual(["my-prov", "other"]);
+  });
+
+  test("returns {ok:false} (not a throw) when the write fails, preserving the backup name", () => {
+    // The write target is itself a directory → writeFileSync throws EISDIR. The
+    // tool's caller expects a clean {ok:false, error}; an uncaught throw would
+    // crash past the result shape and drop the backup filename (regression).
+    const asDir = join(dir, "model-catalog.user.json");
+    mkdirSync(asDir, { recursive: true });
+    // seed a sibling file the backup step can copy so `backup` is populated
+    // (the target-as-dir means existsSync(path) is true → backup is attempted).
+    const r = saveCatalogEntry(ENTRY, { path: asDir, stamp: "TW" });
+    expect(r.ok).toBe(false);
+    expect(typeof r.error).toBe("string");
   });
 
   test("a corrupt existing file is backed up, not silently lost", () => {
