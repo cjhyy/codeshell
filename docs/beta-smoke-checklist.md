@@ -13,6 +13,12 @@
 - [ ] 用一个默认 agent 跑一次
 - [ ] 让模型生成一张图(GenerateImage 可用)
 - [ ] 关掉重开 → 上一会话能恢复
+- [ ] **cookie 登录全链路**(唯一没真机验过的核心新功能,audit §1.3):
+  开独立登录窗登 YouTube → 点「保存」→ 凭证页出现该账号 → 切到另一账号 →
+  让 AI `UseCredential`/`InjectCredential` 取用 → 浏览器面板以该账号身份可见登录态。
+  关联 `project_browser_login_window`。
+
+> 注:core / desktop 两包 `tsc --noEmit` 现均 0 error(2026-06-23 收口;旧文档曾误记 core 干净实则 9 红,已修)。CI 卡 typecheck 不再是阻塞。
 
 ## B. npm 包冒烟
 
@@ -35,6 +41,7 @@
 ## D. 已知限制(测试版)
 - mac 未做正式签名/公证 → 首次需右键打开
 - 无崩溃自动上报 → 请口头反馈
+- 凭证落盘:`settings.json` 的 API key 与 `credentials.json` 的 cookie 现为明文(文件已收紧 0o600,owner-only),尚未上 OS keychain / safeStorage 加密(roadmap §5 R-2,发后做)。
 
 ## E. 发布执行记录(最终 = 0.5.0-rc.2)
 
