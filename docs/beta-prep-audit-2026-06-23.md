@@ -1,5 +1,15 @@
 # Beta 发布前审计 + 行动清单(2026-06-23)
 
+> ## ✅ Push 前检查(2026-06-24 07:01,**回来先读这段**)
+>
+> 7 点开工先做了 **push 就绪预检**(只读·不触敏感路径)。**领先 origin/main 246 commit**(`391295ed`→`aae1abbe`):133 docs / 47 fix / 28 feat / 16 test / 13 refactor / 6 merge。
+> - **基线绿**:core **1689**/0 · desktop **961**/0 · tui 69/0 · tsc 0 · 工作树净(仅用户自己的 brainstorm scratch + plan doc 未追踪)。
+> - **密钥卫生干净**:待 push diff 无真 key 值(`sk-`/`AIza`/`ghp_` 形状扫描零命中,仅有 `sk-or-` 这种 provider 前缀常量)· 无新追踪 `.env`/`.code-shell/`/`dist/` · `.env` 仍 gitignore。
+> - `credentials-*` 文件改动是 cookie-login 功能代码/测试,非泄密。
+> **结论:从密钥/卫生角度这 246 commit 可安全 push。push 本身仍是你的决定(我不自动 push)。** 桌面主流程冒烟(§1.2)需你在场跑 app。
+>
+> ---
+>
 > ## 🔁 自主循环交接(2026-06-24,**最新·回来先读这段**)
 >
 > 用户开 `/goal` 循环「按文档推进」。这几轮做的是**「我能独立做、不需你在场」**的收尾项(桌面主流程冒烟/打包/push 仍等你;R-2 加密用户已决定暂缓)。**~20 commit 在 main**(累计领先 origin **229**,仍未 push):
