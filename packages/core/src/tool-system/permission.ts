@@ -412,13 +412,21 @@ export function ruleMatches(
   // grant for its head: `git status && rm -rf /` starts with `git `, so the
   // grant for `git status` would otherwise auto-allow the whole thing. A
   // head-narrowed grant must only cover a SINGLE, non-dangerous command — if the
-  // candidate chains (`&&`/`||`/`;`/pipe) or uses substitution/redirection,
-  // refuse the match so it re-prompts. (We only gate narrowed Bash grants; a
-  // tool-wide `*`/no-pattern rule, or an explicit user `argsPattern`, is the
-  // user's own choice and untouched.)
+  // candidate chains (`&&`/`||`/`;`), pipes (`| sh`), or uses substitution/
+  // redirection, refuse the match so it re-prompts. (We only gate narrowed Bash
+  // grants; a tool-wide `*`/no-pattern rule, or an explicit user `argsPattern`,
+  // is the user's own choice and untouched.)
   if (toolName === "Bash" && rule.tool === "Bash" && rule.argsPattern.command) {
-    const scan = scanShellCommand(String(args.command ?? ""));
-    if (scan.dangerous || scan.segments.length > 1) return false;
+    const cmd = String(args.command ?? "");
+    const scan = scanShellCommand(cmd);
+    // scanShellCommand flags `;`/`&&`/`||`/substitution/redirection (multi-segment
+    // or dangerous), but a single pipe stays IN-segment (it's per-segment data
+    // flow, not a statement boundary) — so `git log | sh` is one non-dangerous
+    // segment. A head grant must not cover a pipe either: reject any segment
+    // carrying an (unquoted-enough) pipe so pipe-to-shell can't ride the grant.
+    if (scan.dangerous || scan.segments.length > 1 || scan.segments.some((s) => s.includes("|"))) {
+      return false;
+    }
   }
   for (const [key, pattern] of Object.entries(rule.argsPattern)) {
     const argVal = String(args[key] ?? "");

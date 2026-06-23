@@ -95,6 +95,52 @@ describe("session cache keys on the operation, not the tool", () => {
     expect(r2.approved).toBe(false);
   });
 
+  test("the chained-grant bypass is closed for every shell operator class", async () => {
+    // Lock down the whole class so a future refactor of ruleMatches can't
+    // silently reopen any single operator. Each smuggles a dangerous tail past
+    // a `git`-headed grant; all must re-prompt rather than ride it.
+    const smuggles = [
+      "git status; rm -rf /", // sequencing
+      "git status || rm -rf /", // or-chain
+      "git log | sh", // pipe-to-shell
+      "git log $(rm -rf /)", // command substitution
+      "git log `rm -rf /`", // backtick substitution
+      "git status > /etc/hosts", // redirect to a sensitive path
+    ];
+    for (const command of smuggles) {
+      const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
+      await b.requestApproval({ toolName: "Bash", args: { command: "git status" }, description: "", riskLevel: "low" });
+      let prompted = false;
+      b.setPromptFn(async () => {
+        prompted = true;
+        return { approved: false } as ApprovalResult;
+      });
+      const r = await b.requestApproval({ toolName: "Bash", args: { command }, description: "", riskLevel: "high" });
+      expect(prompted, `must re-prompt for: ${command}`).toBe(true);
+      expect(r.approved, `must NOT auto-allow: ${command}`).toBe(false);
+    }
+  });
+
+  test("a benign single command with the same head still rides the grant (no over-blocking)", async () => {
+    // The fix must not break the legitimate session-cache win: another simple
+    // `git ...` (flags only, no chaining) stays auto-allowed.
+    const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
+    await b.requestApproval({ toolName: "Bash", args: { command: "git status" }, description: "", riskLevel: "low" });
+    let prompted = false;
+    b.setPromptFn(async () => {
+      prompted = true;
+      return { approved: false } as ApprovalResult;
+    });
+    const r = await b.requestApproval({
+      toolName: "Bash",
+      args: { command: "git diff --stat HEAD~1" },
+      description: "",
+      riskLevel: "low",
+    });
+    expect(prompted).toBe(false);
+    expect(r.approved).toBe(true);
+  });
+
   test("non-Bash tools still cache at tool granularity for the session", async () => {
     const { b } = backendWithAnswer({ approved: true, always: true, scope: "session" } as ApprovalResult);
     const r1 = await b.requestApproval({
