@@ -200,66 +200,55 @@
 
 ---
 
-## 附A:bug-scan 进度(2026-06-23 第一轮,对抗式 review + 验证)
+## 附A:bug-scan 结果(2026-06-23 夜循环,对抗式 review + 逐条溯源验证)
 
-三路并行只读 review(cookie capture/inject · plugin 覆盖原子性 · model catalog),逐条对抗验证后:
+> 方法:先 3 路并行只读 review,再亲自读关键路径;每个可疑点都构造具体 race/cascade/bypass 假设并溯源证实或证伪;真问题先写失败测试(TDD)再修。
 
-**已修(真 bug,验证 + 测试 + 提交)**
-- cookie 抓取域围栏裸公共后缀漏配:`d="co"` 经 `target.endsWith(".co")` 误中 `github.com`。抽 `cookieDomainMatches`(要求 d 含点)+6 测(commit fc6f0409)。纵深防御,非活漏洞。
-- `restoreCookieToBrowser` 非数组 secret 静默清空登出:合法 JSON 非数组过 try/catch → clear 模式清光 cookie 不灌回。改非数组也判损坏(commit a906d8f7)。
+### 1) 已修真问题(全部带回归测试 + 已提交 main)
 
-**审过判定非 bug(留档,避免重复挖)**
-- `reinstallAtomic`(update.ts):设计正确——先 rename live→backup 再装,失败回滚 dir+manifest 条目,「失败保留旧版」契约成立。`.cs-meta.json` 写失败触发的是**完整回滚到旧版**,非丢条目。
-- `pluginInstaller.ts:236-238` materialize 的 rm→cp「崩溃窗口」:finalDir 按内容 SHA 命名,崩后重试同 SHA 自愈;manifest 条目只在 cp 成功返回后才追加,无孤儿条目。
-- plugin manifest 非原子读改写竞态:仅同进程并发不同插件安装才触发;bootstrap 是 for-await 串行,UI 不并发,非 beta 可达(与 settings 跨进程同类「已接受」限制)。
+| 严重度 | 问题 | 修复 | commit |
+|---|---|---|---|
+| 🔴 安全 | 会话权限缓存按 head 收窄被链式命令绕过:`git status && rm -rf /` 借 `git status` 授权静默放行整条 | ruleMatches 对 Bash 收窄规则复用 scanShellCommand,dangerous/多段/**含管道**则拒匹配重问(**修两次**:首版漏管道) | d241ec08 + d4c9dcb9 |
+| 🔴 安全 | settings.json 明文 key 世界可读(0o644) | 写入收紧 0o600(R-1,见 §2.1) | 8065530a |
+| 🟡 安全 | cookie 抓取域围栏裸公共后缀漏配:`d="co"` 误中 `github.com` | 抽 cookieDomainMatches(要求 d 含点),+6 测 | fc6f0409 |
+| 🟡 安全 | `restoreCookieToBrowser` 非数组 secret 静默清空登出 | 非数组也判损坏抛错 | a906d8f7 |
+| 🟡 安全 | passcode 头数组(重复头)不认致正确口令误 401 | readPasscodeParam 取首值,+2 测;顺收紧 cookie lease 目录 0o700(Y-4) | b9915a0f |
+| 🟡 卫生 | 记忆自动提取直接落盘,密钥仅靠 prompt 防护 | 落盘前过 redactSecrets(擦 Bearer/URL);残留:裸 prose key 仍靠 prompt(已诚实标注) | 9119ef0f |
+| 🟠 健壮 | saveCatalogEntry 缺父目录崩 ENOENT | 写前 mkdirSync | 358efbb0 |
 
-**model catalog resolve/merge ✅ 复核完毕(干净)**:无真 bug。catalogId 不解析→undefined 且 caller `if(!resolved)continue`;credentialId 不存在→optional chaining 安全;corrupt 用户档→try/catch+safeParse 降级到 [] 不污染 builtin;baseUrl 回退链末端是 schema 必填的 defaultBaseUrl 不会 null;upsert/merge 按 id Map 去重,user 覆盖 builtin 恰一次无碰撞 bug。
+### 2) 覆盖矩阵(~25 子系统对抗式审过,结论=干净/已修;括注追过并证伪的假设)
 
-**R-1 已止血**:settings.json 写入 0o600(见 §2.1,commit 8065530a)。
+| 子系统 | 结论 |
+|---|---|
+| cookie capture/inject · 多账号切换 | 修 2(见上)+ 余干净 |
+| plugin 安装/覆盖升级/卸载原子性 | 干净(reinstallAtomic 回滚正确·materialize 崩溃自愈·manifest 竞态非 beta 可达) |
+| model catalog resolve/merge | 干净(id Map 去重 user 覆盖 builtin 恰一次·corrupt 档降级不污染) |
+| mobile-remote 鉴权 | 修 1(passcode 头)+ 已知项维持 §2.4 取舍 |
+| permission session-cache | 修 1(链式绕过,见上) |
+| path-policy | 干净(锚定正则·coveredBy 补 sep;小 gap=命名凭证 `.bak` 不判敏感) |
+| bash-classifier | 干净(每段 min 安全度·管道每段须独立 safe-read·默认 unsafe) |
+| automation write-policy | 干净(三档 + 未知回退最安全,全 fail-closed) |
+| config 热重载(refreshRuntimeConfig) | 干净(version 单调·全量快照 patch·tool-set 变更只 warn·reconcile catch-log) |
+| turn-loop abort | 干净(signal 检查在 while 顶部,project_subagent_abort_leak 已修) |
+| stream/render parse | 干净(parseSnapshotAppend try/catch + steer 去重·readline 缓冲半行) |
+| seatbelt 沙箱 | 干净(deny default·realpath 防 symlink·cat 集成测;小记 quote 未转义 `)`/换行,但 writableRoots 可信自配) |
+| 记忆注入 filterByAge | 干净(边界 `>=` 无 off-by-one·双路一致) |
+| session run 并发锁 | 干净(active 锁首 await 前同步置位·队列串行·server isBusy 双保险,race-free) |
+| background job 生命周期 + wait-loop | 干净(.finally 配对无泄漏·abort-aware + 超时有界,绝不无界 park) |
+| LLM retry/clamp | 干净(isClientError 读双处 status·clampMaxTokens 三分支;408/cap≤0 学术性边角) |
+| ApplyPatch 原子性 | **范本级**(dry-run + 逆序快照回滚 + realpath 防逃逸;比 Codex 参考更严;14 测) |
+| session disk 恢复 | 干净(三道过滤正确·title `??` 无吞假值·pathExists 缓存) |
+| mergeTranscripts 去重 | 干净(内容签名 + seenIds 兜底,旧 bug 编码成注释;88 测) |
+| context compaction tool 配对 | 干净(单遍正确,**依赖 turn-loop「result 紧邻 use」不变量**——改延迟 result 须改 re-scan 循环) |
+| truncate-output | 干净(保留错误尾部·行吸附·不重叠) |
+| hooks registry/reload | 干净(身份制 register/unregister 不泄漏·stricterDecision 杜绝放松前置 deny) |
+| mcp-manager reconcile/connect | 干净(在途握手合并不泄漏·共享池只摘无 owner 想要的;并发 race 不可达) |
+| stream 折叠 + agent-group post-pass | 干净(递归进 turn_process_group·两处渲染都补 agent_group case) |
+| replay orphan-agent seal | 干净(仅 disk-rebuild 路径调·flush 不丢内容,不误封活 agent) |
 
-**bug-scan 第三轮(亲自读权限路径,d241ec08)🔴 真安全 bug**
-- 会话权限缓存:Bash allow 规则按 head 收窄成 `^git(\s|$)`,但 ruleMatches 只 regex.test 整条命令 → `git status && rm -rf /` 借 `git status` 的会话授权静默放行整条(含 rm)。修=ruleMatches 对 Bash 收窄规则复用 scanShellCommand,dangerous 或 >1 段则拒绝匹配强制重问。TDD 验证 + 421 tool-system 全绿。
-- 顺审 path-policy.ts:历史的子串误杀(/auth/ /token/)已修为锚定正则 + coveredBy 两侧补 sep 防工作区边界子串,确认干净;唯一小 gap=命名凭证文件的 `.bak` 备份不被判敏感(非 beta bug,留记)。
-- 复核 classifyBashCommand/classifySegment:取每段 min 安全度 + 管道每段须独立 safe-read(防 `echo secret | nc` 外泄)+ 默认 unsafe fail-closed,干净。
-- 复核 engine.refreshRuntimeConfig(配置热重载):version 单调去陈旧 + diskDefaultsFrom 是**全量快照 patch**(非稀疏 delta,undefined=settings 里确实没有,正确清除非误清)+ preset tool-set 变更只 warn 不半应用 + MCP reconcile catch-log 不崩,干净。turn-loop abort 检查已在 while 循环顶部(project_subagent_abort_leak 已修)。
-- 复核 stream/render:parseSnapshotAppend 纯 + try/catch + steer_injected 去重(防双气泡);上游 readline.createInterface 正确缓冲跨块半行,干净。
-- 复核 seatbelt 沙箱:`(deny default)` + 读广允后显式 deny 敏感目录 + 写仅 workspace/writableRoots + realpathSync 防 /tmp→/private/tmp symlink 漏 + `cat <secret>` 集成测试验真拦截,干净。小记:`quote()` 仅转义 `"` 未转义 `)`/换行,但 writableRoots 是用户自配(可信输入,只会放松自己沙箱),非威胁模型内 bug。
-- 复核记忆注入 filterByAge:pinned/未知 mtime/`updatedAt>=cutoff` 三条保留,边界 `>=` 正确无 off-by-one;user/dream 双路一致过滤;dream 不按 pinned 排序属设计(pin 是 user 概念)。「完成态只增不减」是生命周期设计 gap(已归记忆专项),非注入 bug。
+### 3) 总评
 
-- 复核 session run 并发/锁(ChatSession.pump/enqueueTurn):`active` 锁在首个 await 前**同步**置位(pump 顶部 `if(active)return`),并发 enqueue 只入队不双跑;finally 清锁后 drain 队列串行化;server 层 isBusy()/Overloaded 再加一道。单线程事件循环下 race-free,干净。
-
-**bug-scan 第四轮(记忆自动提取,9119ef0f)🟡 防御纵深修**
-- auto-extract 的记忆 description/content 直接落盘(origin:auto 无用户复核),「不含密钥」只是 extraction prompt 指示非保证。修=落盘前过与日志同源的 redactSecrets(擦 Bearer token / URL 凭证)。残留:裸 prose 里的 key 不被 pattern-match,仍靠 prompt(测试已诚实标注)。TDD 验证。
-
-- 复核 background job 生命周期 + engine wait-loop:`backgroundJobRegistry.start` 由 GenerateVideo 的 `pollToCompletion(...).finally(()=>finish)` 配对(成功/失败/异常都清,无泄漏);headless drain 的 sub-agent wait 是 abort-aware 的 while + 超时有界的 abort-race 清理(20×25ms,无变化即停),绝不无界 park;video 不 park 此 loop(走 goal-hook 短路)。干净。
-
-- 复核 LLM retry/clamp:`isClientError` 读 top-level + 埋进 `details.status` 双处(Bug A status burial 已修),429 排除走限流;`clampMaxTokens` undefined/无cap/Math.min 三分支正确(Bug B bleed 已修)。小记:408 被当不可重试(LLM provider 罕用 408,学术性);cap≤0 会 clamp 到 0(catalog 数据错,非本函数职责)。干净。
-
-- 复核 ApplyPatch 原子性(applier.ts):Phase1 全 hunk 内存 dry-run(任一失败 throw 不写盘)+ Phase2 commit 记 `committed[]`、失败按逆序从 plan 时快照回滚(避 TOCTOU)+ resolveAgainst realpath 双侧防 symlink 逃逸(path-gate bypass 下最后防线)+ 重复路径/CRLF 保留。比所改编的 Codex 参考实现更严(后者留半改)。范本级,干净。小记:回滚本身 best-effort(磁盘满时回滚也可能失败,吞错只抛原错)——经典难题,取舍合理。14 测过。
-
-- 复核 session disk 恢复(sessions-service.ts):三道过滤正确——`"parentSessionId" in state` 用键存在区分 legacy(非真值)、`parentSessionId` 真值滤子代理、origin 仅 desktop/automation、删项目 cwd 不存在则跳(no-repo 空 cwd 故意不滤);title 回退 `??` 用法正确(LHS 空串→undefined→落 summary/id,非 `??` 吞假值 bug);pathExists 缓存避重复 stat。12 测过,干净。
-
-- 复核 mergeTranscripts 去重(renderer/automation):两遍——内容签名定 lastCovered 取真 tail(fresh-id-per-fold 的 user/files_changed/context_boundary/goal_progress 按内容塌)+ seenIds 兜底防稳定 id 碰撞(tool 同 id 但 args 分歧)致 React key 崩。每个旧 bug 都编码成注释。88 测过。残留:同文本 user 消息靠 disk-authoritative 取舍(内容 keying 固有歧义),非 beta bug。
-
-- 复核 context compaction 的 tool 配对保留(adjustIndexToPreserveAPIInvariants):收 kept range 内 tool_result 的 tool_use_id → 反查并把 startIndex 前扩到含其 tool_use,避免压缩切断配对致 API 400。**追了一个理论 cascade**(前扩新纳入的中间 user 消息若含引用更早 tool_use 的 tool_result,单遍不再 re-scan)——但经 grep turn-loop 确认:引擎每个 tool_use 的 tool_result 必在紧邻的下一条 user 消息(还有 dangling tool_use 合成兜底),**非邻配对不存在**,故单遍正确。⚠️**耦合注记**:此函数正确性依赖 turn-loop「tool_result 紧邻 tool_use」不变量;若将来改成延迟 tool result,需把它改成 re-scan 循环。21 测过。
-
-- 复核 truncate-output(大输出 head+tail 截断):保留含错误的尾部 + 行边界吸附 + omitted 记账正确 + head/tail 由 `cap<len` 守卫保证不重叠;UTF-16 代理对中切是 cosmetic 非崩溃。6 测过,干净。
-
-- 复核 hooks registry/reload:register/unregister 按 handler 引用身份(无包装→reloadHooks 精准摘除不泄漏,反复 reload 不翻倍);emit 合并 decision 走 stricterDecision(deny>ask>allow,杜绝后置 handler 放relax前置 deny 的安全要点)+ stop 终止链 + 每 handler error 隔离 + disabled 软开关热生效。17 测过,干净。
-
-- 复核 mcp-manager reconcile/connect(共享池 + 并发热重载):connect 按 name 合并在途握手(connecting map + `.finally` 清,无重复握手/泄漏);disconnect 只摘 union 中无 owner 想要的(防跨 session 互踢)。**追了并发 reconcile race**:A 在 B 注册 desire 前算 union 可能不含 y→疑似误断 y,但 y 此刻必未连接(stale 过滤 listServers),不可达。33 测过,干净。
-
-- 复核 stream 折叠 + agent-group post-pass(renderer/messages):foldAgentGroups 正确递归进 turn_process_group.items(flush 在组边界前调,不跨界拼 run);≥2 才成组(单 agent 留原样);两处渲染(MessageStream + TurnProcessGroupCard)都补了 agent_group case(记忆点名的「两处 switch 都要补」已满足)。81 测过,干净。
-
-- 复核 replay seal(foldTranscript.sealOrphanedAgents):replay 后仍 `done:false` 的 agent = 孤儿(worker 崩没落 agent_end),封口为 done+interrupted 并清 activeAgents,flush textBuffer 不丢内容;**仅在 getSessionTranscript 的 disk-rebuild 路径调用,绝不碰 live 流**(故不会误封正在跑的活 agent)。selectReplayEvents 游标按 seq>appliedSeq 选,无 gap 无重复。11 测过(含孤儿 seal 用例),干净。
-
-**bug-scan 小结(已饱和)**:共对抗式审 ~25 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
-
-**bug-scan 第二轮(mobile-remote review,b9915a0f)**
-- 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
-- 修(顺手 Y-4):cookie lease 目录 `/tmp` 下收紧 0o700。
-- 判非 bug:tunnel 锁定仅内存、重启清零——远程攻击者无重启受害 app 途径,持久化反伤正常用户,属已知可接受。
-- 其余已知项(LAN 无鉴权/secretHash 明文 ===/devices.json 无 mode)维持 audit §2.4 取舍不变。
+仅 1 个 🔴 真安全 bug(权限链式命令绕过,已修两次补全);其余真问题均为安全卫生/健壮性纵深修。安全 / 并发 / 文件事务 / IO 恢复关键路径**整体扎实**,且关键不变量(stricterDecision / clampMaxTokens / isClientError / unregister 身份)**均已有专门回归测试**。后续连续子系统持续返回干净 = 覆盖面饱和信号。
 
 ## 附:晚上「一遍遍找问题」循环建议方向(token 耗尽前反复跑)
 
