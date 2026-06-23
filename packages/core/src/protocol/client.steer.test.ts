@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { AgentClient } from "./client.js";
 import { createInProcessTransport } from "./transport.js";
-import { isRequest, createResponse, Methods, type RpcMessage } from "./types.js";
+import { isRequest, createResponse, Methods, type RpcRequest } from "./types.js";
 
 /**
  * Regression: the steer refactor (commit 3d48a9e8) added server handleSteer /
@@ -13,7 +13,7 @@ import { isRequest, createResponse, Methods, type RpcMessage } from "./types.js"
 describe("AgentClient.steer / unsteer", () => {
   function setup() {
     const [clientSide, serverSide] = createInProcessTransport();
-    const seen: RpcMessage[] = [];
+    const seen: RpcRequest[] = [];
     // Minimal fake server: echo back the expected response shape per method.
     serverSide.onMessage((m) => {
       if (!isRequest(m)) return;
