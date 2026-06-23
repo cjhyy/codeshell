@@ -14,8 +14,9 @@
 >
 > **结论**:这 4 条**全是本批 diff 自己引入的回归**,无 pre-existing。#1 是真泄漏(push 前必修,已修)。RCE/killProcessGroup/权限绕过等夜循环已修项,review 复核**未发现新洞**。verify 阶段还**证伪了若干**(workflow 默认 refuted,只留有具体触发路径的)。
 >
-> **第二轮 review(未覆盖域)**:接着对矩阵标注的「未深入域」=**renderer React 状态机 + tui 命令路径**跑了第二个 workflow(4 域 20 agent),确认 **10 个真问题(0 误报)**,**修其中 8 个**(2 HIGH 状态/异步 race·1 HIGH 乐观无回滚·3 MEDIUM·2 LOW;commit `516c29c8`):App.tsx 审批队列 stale-closure(batched setState 读旧 queue)/RoomsPanel 进房 history 覆盖 mid-load 到达的消息丢失/双开关并发写 clobber/乐观翻转无回滚 desync/TextConn 设为当前无回滚/maxTurns NaN 持久化/BackgroundShell 轮询 interval 抖动/FilesPanel `key={i}`。留 1 个 LOW(App 未读点 flicker·幂等无丢数据·需 UX 拍板)未改。**详见 §1c**。
-> **现状**:core **1615 pass / 0 fail** · desktop **935** · tui **81** · 三包 tsc 0 · renderer vite build 0 · 工作树净。flaky sleep 测仍 🟡(见 §2.4.6)。
+> **第二轮 review(未覆盖域)**:对「未深入域」=**desktop renderer React 状态机 + tui 命令路径**跑第二个 workflow(4 域 20 agent),确认 **10 真问题(0 误报)修 8**(commit `516c29c8`):审批队列 stale-closure/RoomsPanel history 覆盖 mid-load 消息/双开关并发写 clobber/乐观翻转无回滚/TextConn 无回滚/maxTurns NaN/BackgroundShell interval 抖动/FilesPanel key。留 1 LOW(flicker)。**详见 §1c**。
+> **第三轮 review(手机端)**:对最后盲区 **`src/mobile`(手机远程控制 app)** 跑第三个 workflow(4 域 17 agent),确认 **8 真问题(0 误报)全修**(commit `7bc9ed1d`):reducer assistant_message 不封口/tool_result 乱序丢/socket cleanup 不清 handler/storage setItem 配额崩白屏/审批双提交/Composer 重复发/riskClassify 未知值 fail-safe high。**详见 §1d**。**至此 renderer 三层(desktop/panels/mobile)全扫过,无剩余 renderer 盲区。**
+> **现状**:core **1615 pass / 0 fail** · desktop **951** · tui **81** · 三包 tsc 0 · desktop+mobile vite build 0 · 工作树净(用户新增的 model-adapter 评估 doc 未动)。flaky sleep 测仍 🟡(见 §2.4.6)。
 >
 > **下一轮循环接着先做什么**(优先级序)——见本段末「▶ 下一步」。
 >
@@ -49,7 +50,7 @@
 > 1. **真机冒烟 §1.2/1.3** —— cookie 登录全链路是唯一没真机验过的核心新功能(自动化测试碰不到 BrowserWindow/session)。这是 push 前最高价值动作,**只能你在场跑 app**;我可以陪跑、读日志、即时修。
 > 2. 若暂不真机:**§4 文档清理**(陈旧 docs 标注/归档,纯文本可直接 main)+ **附A 矩阵补本次 review 的 5 个 review 域行**(可委托 subagent)。
 > 3. **§1.4 打包验证**(`bun run dist` 三平台产物可跑)。
-> 4. 仍要继续找 bug 的话:renderer 状态机 + tui 已扫(§1c,8 修)。**剩余未深扫域** = 各 panel 的非状态渲染细节 + **mobile renderer(手机端 UI)**。可再开 workflow 专扫 mobile。
+> 4. **代码静态审已饱和**:三轮 review 覆盖 全 diff(§1b)+ desktop 状态机/tui(§1c,8 修)+ mobile(§1d,8 修),renderer 三层 + tui 无剩余盲区。**不建议再开找-bug workflow**——继续扫只会捞到 LOW/观感项,收益递减。真正剩下的是**端到端真机冒烟**(静态审到不了的:实际 BrowserWindow 登录、手机配对全链路、打包产物启动)。
 > 5. **send_input 并发守卫(§2.4.5)** —— 这条是你的 in-flight 特性,等你拍 UX 我再动。
 >
 > ---
@@ -319,6 +320,22 @@
 
 **教训(写进记忆)**:renderer 真 bug 集中在 **①乐观 setState 后 await 失败无回滚**(全仓多处一个模式:先翻 UI 再异步写,catch 不还原)+ **②effect 把每渲染重建的 callback/数组列进 deps 致 interval/订阅抖动**(范式=把"读最新值"的东西塞 ref,deps 只留真正该重启的触发量)+ **③乐观 state 读旧闭包/批处理未提交值**。下一轮若再扫 renderer 优先按这三模式 grep。
 
+### 1d) Workflow Review 第三轮:手机端 renderer(src/mobile),2026-06-23 v2,全已修
+
+> 方法:对最后一个未深扫 renderer 盲区=`src/mobile`(手机远程控制 React app)跑第三个 workflow `review-mobile-renderer`(4 域 17 agent:stream reducer / socket hooks / credential+storage / UI 组件 → 逐条 verify)。确认 **8 真问题 0 误报,全修**(commit `7bc9ed1d`)。
+
+| 严重度 | 文件:行 | 问题(触发 → 错果) | 修法 |
+|---|---|---|---|
+| 🔴 状态机 | `streamReducer.ts assistant_message` | 只摘 liveByAgent 不标 assistant item `done`→turn_complete 延迟/丢时气泡光标 ▋ 永转 | 镜像 turn_complete 的 item seal(run 仍归 turn_complete)+回归测 |
+| 🔴 状态机 | `streamReducer.ts tool_result` | result 早于 tool_use_start 到达(WS 乱序)→map 无匹配静默丢→工具卡卡 done:false 无结果 | 加 `orphanResults` 缓冲,start 落地回填+乱序回归测 |
+| 🔴 stale-closure | `useRemoteSocket.ts:207` cleanup | close() 但 onmessage/onopen(无 closedByUs 守卫)卸载后仍 setState→warning+闭包泄漏 | 卸载前 null 四个 handler(对齐 reconnectNow) |
+| 🔴 unguarded-IO | `storage.ts:23/35` setItem | 配额超限(iOS/安卓 ~5MB)在 ws.onopen 抛→握手不发白屏无重试 | 抽 `safeSet` 吞写失败仍返内存值 |
+| 🔴 乐观无回滚 | `ApprovalCard`/`useRemoteApp respondApproval` | 按钮无 disabled,快速双击发两条 approval.respond→破坏 approve-once | 源头 respondApproval dedup(ref 没了 no-op)+同步更新 ref |
+| 🔴 乐观无回滚 | `Composer.tsx` 发送 | running 仅 reducer 收 stream_request_start 才 true,之间窗口双击发重 | 本地 pending(发后禁用至 running 到/5s 超时) |
+| 🟡 安全向 | `riskClassify.ts:33` 未知 risk | 服务端发 "critical"/"" 等未知值静默显示成中风险→可能诱导批准(core 权限仍权威,只是 badge 误导) | fail-safe:已知透传·未指定→medium·**未知非空→high**+改测试 |
+
+**模式归类**:Composer/ApprovalCard = ①乐观无回滚;socket cleanup = ③stale-closure;reducer 两条 = 状态机完整性缺口(假设事件严格有序/必达,无 fallback);storage = 裸 unguarded-IO。**至此三轮 review:全 diff + desktop 状态机/tui + mobile,renderer 三层(desktop/panels/mobile)全扫过,无剩余 renderer 盲区**。
+
 ### 2) 覆盖矩阵(~25 子系统对抗式审过,结论=干净/已修;括注追过并证伪的假设)
 
 | 子系统 | 结论 |
@@ -378,7 +395,8 @@
 | automation memory 写入(per-task memory.md) | 干净:核心 UpdateAutomationMemory 调注入 sink 不自 try/catch,但 executor(executor.ts:392)是**通用错误边界**——sink 抛(磁盘满/EACCES)被 catch→记 failed tool result 喂回模型「must not kill the turn」,run 不崩。8 测 |
 | session disk 恢复 / draft 处理 | 干净:renderer loadSessionIndex 用 `activeSessionId !== undefined`(非 `??`)——持久 null=合法 draft 保留,仅 legacy 缺字段才落 sessions[0](project_draft_session_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |
 | **v2 全 diff workflow review**(2026-06-23,`origin/main..HEAD` 5264+/810-,5 域 10 agent) | 5 域=① security/process/path(git/kill/containment/decode/0o600/timing-safe)② tools/external-IO(数值 footgun/timeout-signal/cache)③ engine/session/context/agent(settings 写/resume/redact/token-counter/send_input)④ catalog/settings/plugins(effort schema/saveCatalog/install-uninstall-update/legacy-removal)⑤ desktop/renderer/preload(cookie/IPC/loadSessionIndex/preload bridge)。**确认 4 回归全修(见 §1b),夜循环已修项复核无新洞,verify 阶段证伪若干**。 |
-| **v2 第二轮:未覆盖域**(renderer 状态机 + tui,4 域 20 agent) | 此前标注的未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。**至此 renderer + tui 不再是盲区**;仍未单独深扫=各 panel 的非状态渲染细节 + mobile renderer(手机端 UI)。 |
+| **v2 第二轮:未覆盖域**(desktop renderer 状态机 + tui,4 域 20 agent) | 此前未深入域**已扫**:App 中枢状态机 / settings 表单 / panels / tui 命令路径。确认 **10 真问题 0 误报,修 8**(见 §1c),留 1 LOW(flicker·需 UX)。 |
+| **v2 第三轮:手机端**(src/mobile,4 域 17 agent) | 最后 renderer 盲区**已扫**:stream reducer / socket hooks / credential+storage / 手机 UI 组件。确认 **8 真问题 0 误报,全修**(见 §1d)。**至此 renderer 三层(desktop/panels/mobile)+ tui 全扫,无剩余 renderer/tui 盲区**;真正剩下的只有 core 之外的端到端**真机冒烟**(代码静态审已饱和)。 |
 | model-catalog resolveInstance + 默认选择 | 干净(亲核,补 agent review):baseUrl 回退 `inst??cred??entry.defaultBaseUrl`(末项 schema 必填恒非空)·cred 缺→apiKey undefined→client resolveApiKey 兜底·entry 缺→null caller skip·paramValues??{};**stale `defaults.text`(指向已删连接)经 `pool.list().some(key===defaultText)` 存在性检查才用**→否则落 activeKey→model-name 三级 graceful 回退,不破池。68 测 |
 | goal-stop-hook 判定(goal 裁判) | 干净:每个误判边沿 fail-toward-progress——judge throw/unparseable→continueSession(P0 不静默停);`met:true`→允许停+onMet(隔离 try/catch)+不缓存 met;`waiting && runningWork>0`→允许停(finite bg 会唤醒)缓存非met;**`waiting` 但任务列表空→落 not_met**(防 judge 幻觉 waiting 搁置 goal——无人唤醒);无限循环 backstop 委托 maxStopBlocks+budget(非本 hook)。bg 任务喂判官分辨 finite-render vs dev-server(busy-loop bug 已修)。10 测 |
 | context token-budget / 压缩触发 | 干净:估算是启发式(char/token ratio,CJK 0.3 cliff 可能 under-count)**但系统不依赖它精确**——proactive 在 0.85 ratio 触发(~15% headroom)+ **reactive 真错兜底**:API ContextLimitError→turn-loop 3 次 dropOldestRounds 递进重试+recordActualUsage 校准(turn-loop:555-576)。**追了 CJK-cliff under-estimate→被两层兜底吸收**,非 bug。21 测+recovery 有测 |
