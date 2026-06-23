@@ -53,6 +53,44 @@ describe("MemoryOrchestrator extraction telemetry", () => {
   });
 });
 
+describe("MemoryOrchestrator redacts secrets before persisting an auto-extracted memory", () => {
+  // The extraction prompt TELLS the model not to include secrets, but a prompt
+  // is not a guarantee — an auto-extracted memory is written to disk with no
+  // user review (origin:auto). Defense-in-depth: run description/content through
+  // the same redactSecrets the logging path uses, so a leaked key never persists.
+  it("strips a Bearer token / URL credential the model wrongly put in a memory", async () => {
+    const saved: Array<{ description: string; content: string }> = [];
+    const mm = {
+      loadAll: () => [],
+      loadScope: () => [],
+      save: (e: { description: string; content: string }) => saved.push(e),
+    } as any;
+    const orchestrator = new MemoryOrchestrator({
+      memoryManager: mm,
+      callLLM: async () =>
+        JSON.stringify([
+          {
+            type: "reference",
+            name: "api-access",
+            description: "Fetch via https://api.acme.com/v1/data?api_key=SUPERSECRETVALUE123",
+            content: "Authorization: Bearer sk-proj-ABCDEF1234567890ABCDEF1234567890",
+          },
+        ]),
+    });
+
+    await orchestrator.run([{ role: "user", content: "save my access" }], "s-secret");
+
+    expect(saved).toHaveLength(1);
+    const all = saved[0]!.description + " " + saved[0]!.content;
+    // Bearer tokens and URL credential query params are scrubbed before persist
+    // (same redactSecrets the logging path uses). NOTE: a bare key sitting in
+    // free prose is NOT pattern-matched — that residual still relies on the
+    // extraction prompt's "never include secrets" instruction.
+    expect(all).not.toContain("sk-proj-ABCDEF1234567890ABCDEF1234567890");
+    expect(all).not.toContain("SUPERSECRETVALUE123");
+  });
+});
+
 describe("MemoryOrchestrator session-summary JSON robustness", () => {
   // The session-summary step (step 2) used to do a naive
   // `smResponse.match(/\{[\s\S]*\}/)` + bare JSON.parse, so any LLM reply with a

@@ -17,6 +17,7 @@ import { MemoryManager } from "../session/memory.js";
 import { buildExtractionPrompt, parseExtractionResponse } from "./extract-memories.js";
 import { saveSessionMemory, buildSessionMemoryPrompt } from "./session-memory.js";
 import { extractJSON } from "../arena/strategies/utils.js";
+import { redactSecrets } from "../logging/sanitize-messages.js";
 import { shouldAutoDream, recordSession, recordDreamComplete, buildDreamSystemPrompt, buildDreamUserPrompt } from "./auto-dream.js";
 import { logger } from "../logging/logger.js";
 
@@ -109,8 +110,12 @@ export class MemoryOrchestrator {
         mm.save({
           type: entry.type,
           name: entry.name,
-          description: entry.description,
-          content: entry.content,
+          // Defense-in-depth: the extraction prompt forbids secrets, but a prompt
+          // is not a guarantee. An auto-extracted memory is persisted with no user
+          // review, so run the model-authored strings through the same
+          // redactSecrets the logging path uses — a leaked key never lands on disk.
+          description: redactSecrets(entry.description),
+          content: redactSecrets(entry.content),
           // Provenance mark (feedback#18 方案 C): extractor writes are "auto"
           // so the UI can tell curated memories from extractor noise.
           origin: "auto",
