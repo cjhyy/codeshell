@@ -4,80 +4,16 @@
 
 import { NOOP_COLORIZER, type Colorizer } from "./colorizer.js";
 import { findOpenRouterModel } from "./data/openrouter-models.js";
+import {
+  MODEL_PRICING,
+  DEFAULT_PRICING,
+  type ModelPricing,
+} from "./data/model-metadata.js";
 
-// Pricing per 1M tokens (USD) — common models via OpenRouter/direct
-// cacheRead = price for cached input tokens (typically 90% cheaper than input)
-// cacheWrite = price for cache creation tokens (typically 25% more than input)
-interface ModelPricing {
-  input: number;
-  output: number;
-  cacheRead: number;
-  cacheWrite: number;
-}
-
-function pricing(input: number, output: number): ModelPricing {
-  // Default cache pricing: read = 10% of input, write = 125% of input
-  return { input, output, cacheRead: input * 0.1, cacheWrite: input * 1.25 };
-}
-
-const MODEL_PRICING: Record<string, ModelPricing> = {
-  // Anthropic (per 1M tokens, USD)
-  "claude-opus-4.6": { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
-  "claude-opus-4-6": { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 }, // alias
-  "claude-opus-4.5": { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
-  "claude-opus-4.1": { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
-  "claude-opus-4": { input: 15, output: 75, cacheRead: 1.5, cacheWrite: 18.75 },
-  "claude-sonnet-4.6": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-  "claude-sonnet-4-6": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 }, // alias
-  "claude-sonnet-4.5": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-  "claude-sonnet-4": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-  "claude-3.7-sonnet": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-  "claude-3-7-sonnet": { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-  "claude-3.5-haiku": { input: 0.8, output: 4, cacheRead: 0.08, cacheWrite: 1 },
-  "claude-haiku-4.5": { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 },
-  "claude-haiku-4-5": { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 }, // alias
-  // OpenAI
-  "gpt-5.4": pricing(5, 20),
-  "gpt-5.4-mini": pricing(1.5, 6),
-  "gpt-5.4-pro": pricing(10, 40),
-  "gpt-5": pricing(5, 20),
-  "gpt-4o": pricing(2.5, 10),
-  "gpt-4o-mini": pricing(0.15, 0.6),
-  "gpt-4.1": pricing(2, 8),
-  "gpt-4.1-mini": pricing(0.4, 1.6),
-  "o4-mini": pricing(1.1, 4.4),
-  "o3": pricing(10, 40),
-  "o3-mini": pricing(1.1, 4.4),
-  // Google
-  "gemini-2.5-pro": pricing(1.25, 10),
-  "gemini-2.5-pro-preview": pricing(1.25, 10),
-  "gemini-2.5-flash": pricing(0.15, 0.6),
-  "gemini-3.1-pro-preview": pricing(2, 10),
-  "gemini-3-flash-preview": pricing(0.15, 0.6),
-  "gemini-2.0-flash": pricing(0.1, 0.4),
-  // DeepSeek
-  "deepseek-v4-flash": pricing(0.126, 0.252),
-  "deepseek-v4-pro": pricing(0.5, 2),
-  "deepseek-v3.2": pricing(0.14, 0.28),
-  "deepseek-chat": pricing(0.14, 0.28),
-  "deepseek-r1": pricing(0.55, 2.19),
-  "deepseek-reasoner": pricing(0.55, 2.19),
-  // Qwen
-  "qwen3-coder": pricing(0.3, 0.6),
-  "qwen3-235b-a22b": pricing(0.3, 1.2),
-  "qwen3-30b-a3b": pricing(0.1, 0.3),
-  "qwen3-max": pricing(0.5, 2),
-  // Meta
-  "llama-4-maverick": pricing(0.2, 0.8),
-  "llama-4-scout": pricing(0.15, 0.4),
-  // Mistral
-  "devstral-medium": pricing(0.5, 1.5),
-  "mistral-large": pricing(2, 6),
-  "devstral-small": pricing(0.1, 0.3),
-};
-
-// Default fallback pricing
-const DEFAULT_PRICING: ModelPricing = pricing(3, 15);
+// Pricing per 1M tokens (USD). The MODEL_PRICING table + DEFAULT_PRICING now
+// live in data/model-metadata.json (loaded by data/model-metadata.ts) so a
+// price change is a data edit, not a code change. cacheRead/cacheWrite are
+// derived there: read = 10% of input, write = 125% of input.
 
 /** Build a ModelPricing from an OpenRouter snapshot entry. */
 function openRouterPricing(hit: { inputPricePerMillion: number; outputPricePerMillion: number }): {

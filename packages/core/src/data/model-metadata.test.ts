@@ -4,6 +4,8 @@ import {
   KNOWN_CONTEXT_WINDOWS,
   OPENROUTER_VENDORS,
   VERTEX_REGION_OVERRIDES,
+  MODEL_PRICING,
+  DEFAULT_PRICING,
 } from "./model-metadata.js";
 import { resolveMaxOutput, resolveContextWindow } from "../onboarding.js";
 import { getVertexRegionForModel } from "../utils/envUtils.js";
@@ -75,5 +77,51 @@ describe("model-metadata data layer", () => {
     // An id known to neither table nor a plausible snapshot id → undefined
     // (so callers can use `?? default`).
     expect(resolveMaxOutput("totally-unknown-model-xyz")).toBeUndefined();
+  });
+
+  it("MODEL_PRICING values + derived cache prices match the pre-extraction table", () => {
+    // Anthropic: the pre-extraction entries had EXPLICIT cacheRead/cacheWrite;
+    // the derived heuristic reproduces them (input/output exact, cache close-to
+    // to absorb float representation — the prior explicit values WERE the
+    // heuristic result, e.g. opus 15→1.5/18.75, sonnet 3→0.3/3.75).
+    const opus = MODEL_PRICING["claude-opus-4-6"]!;
+    expect([opus.input, opus.output]).toEqual([15, 75]);
+    expect(opus.cacheRead).toBeCloseTo(1.5, 10);
+    expect(opus.cacheWrite).toBeCloseTo(18.75, 10);
+    const sonnet = MODEL_PRICING["claude-sonnet-4-6"]!;
+    expect([sonnet.input, sonnet.output]).toEqual([3, 15]);
+    expect(sonnet.cacheRead).toBeCloseTo(0.3, 10);
+    expect(sonnet.cacheWrite).toBeCloseTo(3.75, 10);
+    const haiku = MODEL_PRICING["claude-3.5-haiku"]!;
+    expect([haiku.input, haiku.output]).toEqual([0.8, 4]);
+    expect(haiku.cacheRead).toBeCloseTo(0.08, 10);
+    expect(haiku.cacheWrite).toBeCloseTo(1, 10);
+    // pricing()-derived entries (OpenAI/DeepSeek/etc.). input/output are exact;
+    // cacheRead/cacheWrite are float-derived (input*0.1 / input*1.25) — same as
+    // the old pricing() helper, so use close-to (the old code produced these
+    // exact floats too, e.g. 3*0.1 === 0.30000000000000004).
+    expect(MODEL_PRICING["gpt-5"]!.input).toBe(5);
+    expect(MODEL_PRICING["gpt-5"]!.output).toBe(20);
+    expect(MODEL_PRICING["gpt-5"]!.cacheRead).toBeCloseTo(0.5, 10);
+    expect(MODEL_PRICING["gpt-5"]!.cacheWrite).toBeCloseTo(6.25, 10);
+    expect(MODEL_PRICING["o4-mini"]!.input).toBe(1.1);
+    expect(MODEL_PRICING["deepseek-v4-flash"]!.input).toBe(0.126);
+    expect(MODEL_PRICING["deepseek-v4-flash"]!.output).toBe(0.252);
+    expect(MODEL_PRICING["deepseek-v4-flash"]!.cacheRead).toBeCloseTo(0.0126, 10);
+  });
+
+  it("DEFAULT_PRICING is the [3,15] fallback with derived cache prices", () => {
+    expect(DEFAULT_PRICING.input).toBe(3);
+    expect(DEFAULT_PRICING.output).toBe(15);
+    expect(DEFAULT_PRICING.cacheRead).toBeCloseTo(0.3, 10);
+    expect(DEFAULT_PRICING.cacheWrite).toBeCloseTo(3.75, 10);
+  });
+
+  it("derived cache prices follow the read=10% / write=125% heuristic for every entry", () => {
+    for (const [id, p] of Object.entries(MODEL_PRICING)) {
+      expect(p.cacheRead).toBeCloseTo(p.input * 0.1, 10);
+      expect(p.cacheWrite).toBeCloseTo(p.input * 1.25, 10);
+      expect(id).toBeTruthy();
+    }
   });
 });
