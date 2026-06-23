@@ -18,11 +18,15 @@
 
 | 项 | 结果 | 说明 |
 |---|---|---|
-| core 单测 | ✅ **1536 pass / 0 fail**(265 文件,22.8s) | 旧文档写 1445,数量已涨,全绿 |
+| core 单测 | ✅ **1584 pass / 0 fail**(270 文件) | 夜循环 +新增测试,全绿 |
+| desktop 单测 | ✅ **923 pass / 0 fail** | 全绿 |
+| tui 单测 | ✅ **81 pass / 0 fail** | 全绿 |
 | desktop typecheck | ✅ **0 error** | 干净 |
 | **core typecheck (`tsc --noEmit`)** | ✅ **0 error**(2026-06-23 收口,commit e4dd534e) | 旧的 9 error 已修;见 §1.1 |
-| 工作树未提交改动 | reasoning-effort 放开 + EditModelCatalog 加白名单 | boot-crash 级修复,触及的测试 pass;**你说稍后自己提交** |
-| 领先 origin/main | **17 个 commit 未 push**(旧文档写 13,已漂移) | 见 §1.4 |
+| core build | ✅ **exit 0** | dist 生成正常,gitignored |
+| 工作树未提交改动 | ✅ 干净 | 所有夜循环工作均已 commit |
+| 领先 origin/main | **~84 个 commit 未 push**(夜循环大量审计/修复) | 见 §1.4;push 仍待用户决定 |
+| **夜循环成果(2026-06-23)** | 9 类真 bug 全修+回归测;~36 子系统+7 跨切模式对抗式审 | 见附A 覆盖矩阵 |
 | 已发布 | `0.5.0-rc.2`(npm 三包 + mac dmg/zip,均验证可用) | 见 `docs/beta-smoke-checklist.md` E 节 |
 | VCS secret 卫生 | ✅ 干净(`.env` 从未提交,无硬编码 key) | 见 §5 |
 | 日志脱敏 | ✅ 中心写入路径统一 `redactSecrets` | 见 §5 |
