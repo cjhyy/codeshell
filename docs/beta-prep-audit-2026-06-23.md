@@ -2,21 +2,22 @@
 
 > ## 🌙 夜循环交接(2026-06-23,回来先读这段)
 >
-> 一整轮自主 bug-scan + 修复 + 文档整理。**~85 commit 全在本地 main,均未 push**(push 是你的决定,我没动)。
+> 一整轮自主 bug-scan + 修复 + 文档整理。**~151 commit 全在本地 main,均未 push**(push 是你的决定,我没动)。~61 子系统 + 17 跨切模式对抗式审,真问题 ~28 个全修+回归测(下面列最重的;完整覆盖见**附A 矩阵**,完整 fix 列表 `git log --grep="^fix"`)。
 >
 > **🔴🔴 最重:一个真 RCE** —— `gitLsRemote`(插件/市场更新检查)缺 git `--` 分隔符,用户加的 git URL 形如 `--upload-pack=<cmd>` 被 git 当 flag **执行任意命令**。TDD 实证(revert `--` 后 git 真 `touch` 了 sentinel 文件)。已修 fd72c31e + 同纪律全仓 git 调用加 `--`(62d62e40)。
 >
 > **修了 ~15+ 类真 bug(全带回归测,TDD)**——其余最重的:
 > - 🔴 `killProcessGroup`/`groupAlive` 无 pgid 守卫:pgid=0/1 时 `kill(-0)` 杀自身进程组、`kill(-1)` 杀你所有进程;pgid 从 orphan 记录磁盘读回可触发。**TDD 铁证:移守卫跑测试真把 test runner 自己 SIGKILL 了(退码 144)**。已修 95591130 + 顺修 resident-agent 同类 0a728764。
 > - 🔴 权限会话缓存按 head 收窄被链式命令绕过:批准 `git status` 后 `git status && rm -rf /` 静默放行整条。修在共享 `ruleMatches`(覆盖 session-cache + 持久 project 规则两消费者)d241ec08,首版漏管道 d4c9dcb9 补全。
-> - 其余:R-1 settings.json 0o600(**三个写入点,首轮漏第三处 engine,已补** e56825d6)、cookie 域围栏裸公共后缀、restoreCookie 非数组 secret 静默登出、记忆自动提取漏 redact、saveCatalogEntry 缺父目录崩、resume 损坏 state.json 抛裸 SyntaxError、token-counter 编码器 import 漏 catch。
+> - 🟡 **WebSearch 无超时永挂**:三 provider fetch 既无 timeout 也无 signal → hung provider 无限阻塞 turn、Stop 取消不了(681444c0,20s+signal)。
+> - 其余安全/卫生/健壮(全带回归测,见下方 fix 速查):R-1 三写入点· readCookie DoS· cookie 域围栏· 非数组 secret 登出· 记忆漏 redact· devices.json/lease 0o600· arena validatePath realpath· bg-shell sessionId 遍历守卫· parseDataUrl 契约· saveCatalogEntry 崩· resume 裸 SyntaxError· token-counter catch· 非正数值参数 footgun 族(7 处)· MCP/web-fetch 接 abort signal。
 >
-> **覆盖**:~37 子系统 + 7 跨切模式(process.kill / JSON.parse / Number / match-deref / floating-promise / IPC-cast / effect-订阅)对抗式审,逐条溯源验证(含多个「以为可达、溯源证伪」)。详见**附A 覆盖矩阵**。最关键结论:唯一不可信边界 mobile-remote WS 证实健壮。
+> **覆盖**:~61 子系统 + 17 跨切模式对抗式审(git 注入· process.kill· slice/timeout footgun· decodeURIComponent· URL/RegExp/JSON.parse 全源· path-containment realpath· join 校验· 外部调用 timeout+signal· IPC 暴露…),~十二处「以为可达、溯源证伪」。**安全攻击面穷尽 + 三路径纪律收口**(git `--`/containment realpath/join 校验)。唯一不可信边界 mobile-remote WS 证实健壮。详见**附A 矩阵**。
 >
-> **状态**:core ~1602 / desktop 924 / tui 81 · core+desktop tsc 0 err · core build 0 · 工作树净 · dist 与 src 一致。⚠️ **全量 core `bun test` 有 1 个 flaky 测试**(sleep abort-listener-leak,非确定·隔离稳过·产品代码正确·非我引入)——间歇 CI 红,详见 §2.4.6,建议你修测试时序断言。
+> **状态**:core 1615 / desktop 935 / tui 81 · 两包 tsc 0 err · core build 0 · 工作树净 · dist 与 src 一致。⚠️ **全量 core `bun test` 有 1 个 flaky**(sleep abort-listener-leak,非确定·隔离稳过·产品代码正确·非我引入)——间歇 CI 红,§2.4.6,建议改测试时序断言。
 >
-> **本轮 fix commit 速查(13 个,供 push 前逐一 review)**:
-> `fc6f0409` cookie 域围栏 · `a906d8f7` 非数组 secret · `8065530a` R-1 0o600(manager+onboarding) · `b9915a0f` passcode 数组头+lease 0o700 · `d241ec08`+`d4c9dcb9` 权限链式绕过(+管道) · `9119ef0f` 记忆 redact · `e56825d6` R-1 第三写入点 engine · `95591130` killProcessGroup pgid 守卫 · `0a728764` resident-agent pid · `d423319d` resume 损坏 state.json · `c6e9b3a7` token-counter catch · `5ac51235` typecheck 收口(你 merge 的 send_input 带来的红) · `358efbb0` saveCatalogEntry mkdirSync(在 §3 提交里)。其余为 test 补全 + 文档。
+> **fix commit 速查(push 前 review;完整 `git log --grep="^fix" 8fad4c67..`)**:
+> 🔴 `fd72c31e`+`62d62e40` git RCE+arg-injection · `95591130`+`0a728764` killProcessGroup/resident-agent pid · `d241ec08`+`d4c9dcb9` 权限链式绕过 · `8065530a`+`e56825d6` R-1 0o600 三写入点 · `d2f5e449` readCookie DoS · `681444c0` WebSearch 永挂 · 其余安全/卫生/footgun:`fc6f0409 a906d8f7 b9915a0f 9119ef0f 94204a3c b6b28d4f ce06ebb2 496112f2 49945300 167e8950 72d7c264 ef178236 d423319d c6e9b3a7 358efbb0 5ac51235`。余为 test 补全 + 文档。
 >
 > **🟡 给你的一个发现(没擅自改)**:你 session 期间 merge 的 `send_input 续接`(a0b55219)resume 路径**缺「agent 仍在 running」并发守卫**——背景 agent 没跑完时再 send_input 会让两个 Engine 交错写同一 child transcript。我只修了它的 typecheck 红,逻辑没动(UX 该你定)。详见 §2.4.5。
 >
