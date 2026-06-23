@@ -26,6 +26,8 @@ interface ModelMetadata {
   knownMaxOutput: Record<string, number>;
   knownContextWindows: Record<string, number>;
   openRouterVendors: OpenRouterVendor[];
+  /** [model-id-prefix, env-var-name] — first prefix match wins; order matters. */
+  vertexRegionOverrides: Array<[string, string]>;
 }
 
 const METADATA = requireJson("./model-metadata.json") as ModelMetadata;
@@ -41,3 +43,11 @@ export const KNOWN_CONTEXT_WINDOWS: Record<string, number> = METADATA.knownConte
  * onboarding picker. Order matters — first vendors appear first.
  */
 export const OPENROUTER_VENDORS: readonly OpenRouterVendor[] = METADATA.openRouterVendors;
+
+/**
+ * Model-id prefix → env var holding a Vertex region override. First matching
+ * prefix wins (order matters); the resolver reads `process.env[name]` and falls
+ * back to the default region when unset. Consumed by envUtils.getVertexRegionForModel.
+ */
+export const VERTEX_REGION_OVERRIDES: ReadonlyArray<readonly [string, string]> =
+  METADATA.vertexRegionOverrides;

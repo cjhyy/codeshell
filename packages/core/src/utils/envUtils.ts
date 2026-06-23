@@ -4,6 +4,7 @@
 
 import { homedir } from 'os'
 import { join } from 'path'
+import { VERTEX_REGION_OVERRIDES } from '../data/model-metadata.js'
 
 // Memoize cache for getClaudeConfigHomeDir
 let _configHomeDirCache: string | null = null;
@@ -108,20 +109,8 @@ export function shouldMaintainProjectWorkingDir(): boolean {
   return isEnvTruthy(process.env.CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR);
 }
 
-/**
- * Model prefix → env var for Vertex region overrides.
- */
-const VERTEX_REGION_OVERRIDES: ReadonlyArray<[string, string]> = [
-  ['claude-haiku-4-5', 'VERTEX_REGION_CLAUDE_HAIKU_4_5'],
-  ['claude-3-5-haiku', 'VERTEX_REGION_CLAUDE_3_5_HAIKU'],
-  ['claude-3-5-sonnet', 'VERTEX_REGION_CLAUDE_3_5_SONNET'],
-  ['claude-3-7-sonnet', 'VERTEX_REGION_CLAUDE_3_7_SONNET'],
-  ['claude-opus-4-1', 'VERTEX_REGION_CLAUDE_4_1_OPUS'],
-  ['claude-opus-4', 'VERTEX_REGION_CLAUDE_4_0_OPUS'],
-  ['claude-sonnet-4-6', 'VERTEX_REGION_CLAUDE_4_6_SONNET'],
-  ['claude-sonnet-4-5', 'VERTEX_REGION_CLAUDE_4_5_SONNET'],
-  ['claude-sonnet-4', 'VERTEX_REGION_CLAUDE_4_0_SONNET'],
-];
+// VERTEX_REGION_OVERRIDES now lives in data/model-metadata.json (imported above)
+// so adding a model's region env var is a data edit, not a code change.
 
 /**
  * Get the Vertex AI region for a specific model.
