@@ -60,3 +60,36 @@ describe("path-scoped rule matching (ruleMatches regression)", () => {
     expect(ruleMatches(fileRule, "Write", { file_path: "/r/src/bar.ts" })).toBe(false);
   });
 });
+
+describe("ruleMatches Bash head-narrowing guard (shared by Classifier + session cache)", () => {
+  // The Bash allow-rule `^git(\s|$)` is the same whether it came from a persisted
+  // PROJECT rule (PermissionClassifier.matchesRule) or an in-session grant
+  // (InteractiveApprovalBackend). Because both delegate to ruleMatches, testing
+  // it here locks the chained-command/pipe guard at its shared source — a future
+  // refactor of either consumer can't silently reopen the bypass.
+  const gitRule: PermissionRule = {
+    tool: "Bash",
+    argsPattern: { command: "^git(\\s|$)" },
+    decision: "allow",
+    reason: "test",
+  };
+
+  test("a benign single git command matches (no over-blocking)", () => {
+    expect(ruleMatches(gitRule, "Bash", { command: "git status" })).toBe(true);
+    expect(ruleMatches(gitRule, "Bash", { command: "git diff --stat" })).toBe(true);
+  });
+
+  test("chained / piped / substituted commands do NOT match (no smuggling past the head)", () => {
+    for (const command of [
+      "git status && rm -rf /",
+      "git status; rm -rf /",
+      "git status || rm -rf /",
+      "git log | sh",
+      "git log $(rm -rf /)",
+      "git log `rm -rf /`",
+      "git status > /etc/hosts",
+    ]) {
+      expect(ruleMatches(gitRule, "Bash", { command }), command).toBe(false);
+    }
+  });
+});
