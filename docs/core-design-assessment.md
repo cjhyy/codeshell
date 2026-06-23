@@ -190,10 +190,10 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 
 把所有 hardcoded 目录收敛到 **model catalog data 层**(复用已有的 `model-catalog/` + `model-catalog.user.json` 机制):
 
-1. `cost-tracker.ts` 定价表 → catalog data + 时间戳(UI 可提示「定价数据已 X 天未更新」)。
-2. `onboarding.ts` 的 `KNOWN_MAX_OUTPUT`/`KNOWN_CONTEXT_WINDOWS`/`OPENROUTER_VENDORS` → catalog data,core 只读。
-3. `envUtils.ts` 的 `VERTEX_REGION_OVERRIDES` → 与模型元数据放一起。
-4. onboarding 中文文案 → data 文件(为未来 i18n 留口,不现在做 i18n)。
+1. `cost-tracker.ts` 定价表 → catalog data + 时间戳(UI 可提示「定价数据已 X 天未更新」)。**(未做)**
+2. ~~`onboarding.ts` 的 `KNOWN_MAX_OUTPUT`/`KNOWN_CONTEXT_WINDOWS`/`OPENROUTER_VENDORS` → catalog data,core 只读。~~ **✅ 已做(commit 37601014,2026-06-24):外移到 `data/model-metadata.json` + `data/model-metadata.ts` 加载器(复用 static-catalogs.ts createRequire 范式,非 model-catalog.user.json——这三张是内部默认表非用户可配,放 src/data 更贴),onboarding.ts 改 import 行为不变,build copy-assets 自动随包,+4 回归测。**
+3. ~~`envUtils.ts` 的 `VERTEX_REGION_OVERRIDES` → 与模型元数据放一起。~~ **✅ 已做(commit f0ca990a,2026-06-24):并进 `model-metadata.json` 的 `vertexRegionOverrides`,envUtils 改 import,getVertexRegionForModel 不动,+2 测(含顺序不变量)。**
+4. onboarding 中文文案 → data 文件(为未来 i18n 留口,不现在做 i18n)。**(未做)**
 
 **收益**:更新模型/定价**不再需要发 core**;`generate-image`/`generate-video` 可以顺势接上已存在的 `applyParams(inst.paramValues, preset.params)`,消掉 image/video 与 LLM 的抽象不一致。
 **前置**:这步把 §4.5 的 image/video registry 问题也一并解决(catalog 驱动后 switch 自然消失)。
