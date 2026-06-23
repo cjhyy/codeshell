@@ -80,3 +80,19 @@ export function findCatalogEntry(
   }
   return undefined;
 }
+
+export type CatalogEntryOrigin = "builtin" | "user" | "user-override-of-builtin";
+
+/**
+ * Per-id provenance of the merged catalog: pure built-in, pure user-added, or a
+ * user override of a built-in. Lets the editor UI show 编辑/删除/重置 correctly
+ * (only an override can be "reset"; only a user-only entry can be truly deleted).
+ */
+export function catalogEntryOrigins(): Record<string, CatalogEntryOrigin> {
+  const builtinIds = new Set(BUILTIN_CATALOG.map((e) => e.id));
+  const userIds = new Set(loadUserCatalog().map((e) => e.id));
+  const out: Record<string, CatalogEntryOrigin> = {};
+  for (const id of builtinIds) out[id] = userIds.has(id) ? "user-override-of-builtin" : "builtin";
+  for (const id of userIds) if (!builtinIds.has(id)) out[id] = "user";
+  return out;
+}
