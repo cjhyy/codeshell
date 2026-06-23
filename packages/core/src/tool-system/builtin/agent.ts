@@ -13,6 +13,7 @@ import type { AgentDefinitionRegistry } from "../../agent/agent-definition-regis
 import type { AgentDefinition } from "../../agent/agent-definition.js";
 import type { HookRegistry } from "../../hooks/registry.js";
 import { asyncAgentRegistry, MAX_BACKGROUND_AGENTS } from "./agent-registry.js";
+import { ensureAgentHeartbeat } from "./agent-heartbeat.js";
 import { writeAgentOutputFile } from "./agent-output-file.js";
 import { createTranscriptTranslator } from "./agent-transcript-translator.js";
 import { notificationQueue } from "./agent-notifications.js";
@@ -422,6 +423,9 @@ export async function agentTool(
       abort: () => controller.abort(),
     });
 
+    // B: liveness heartbeat for this explicit background agent too.
+    ensureAgentHeartbeat();
+
     // Translate this background agent's per-event stream into ChatEntry-
     // shaped rows inside its own transcript. The dock detail view reuses
     // App.renderEntry which only understands ChatEntry types — storing
@@ -821,6 +825,18 @@ function handoffToBackground(
     startedAt: Date.now(),
     abort: () => controller.abort(),
   });
+
+  // Tell the UI this agent is now running in the BACKGROUND (still working,
+  // just detached from the parent turn). Without this the card's only signals
+  // are agent_start (looks foreground) and the eventual agent_end — so during
+  // the handoff→completion gap turn_complete's done-sweep marks it done and the
+  // card collapses / shows no "running". (A: background-agent-visibility)
+  safeEmit(uiStream, { type: "agent_backgrounded", agentId, name, description, agentType });
+
+  // B: keep a liveness heartbeat going while this (and any sibling) background
+  // agent runs, so the UI shows "alive" even through long LLM-request silence.
+  // Idempotent; self-stops when no agent remains.
+  ensureAgentHeartbeat();
 
   runPromise
     .then((text) => {

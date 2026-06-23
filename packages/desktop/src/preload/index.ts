@@ -451,6 +451,12 @@ contextBridge.exposeInMainWorld("codeshell", {
     ipcRenderer.invoke("sessions:transcript", sessionId),
   listDiskSessions: (opts?: { limit?: number; cursor?: string }) =>
     ipcRenderer.invoke("sessions:listDisk", opts ?? {}),
+  /** Sub-agents of `parentSessionId` that look interrupted (stuck + stale) —
+   *  shown on reopen so an unfinished background sub-agent doesn't vanish. */
+  listInterruptedSubagents: (parentSessionId: string) =>
+    ipcRenderer.invoke("sessions:interruptedSubagents", parentSessionId) as Promise<
+      { id: string; description: string; updatedAt: number }[]
+    >,
   /**
    * Re-subscribe to a session's main-held event snapshot after a remount.
    * Returns events past `sinceSeq` plus the next cursor, so the renderer can

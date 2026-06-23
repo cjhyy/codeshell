@@ -10,6 +10,16 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
   const [expanded, setExpanded] = useState(false);
   const status = message.error ? "err" : message.done ? "ok" : "running";
 
+  // Running in the background (detached past the auto-bg threshold) — surfaced
+  // explicitly so the gap after the parent turn ends no longer looks idle. A
+  // backgrounded agent whose heartbeat went stale (>90s = 3× the 30s ping) is
+  // flagged "可能失联".
+  const isBackgrounded = !!message.backgrounded && !message.done;
+  const lostContact =
+    isBackgrounded &&
+    message.lastHeartbeat !== undefined &&
+    Date.now() - message.lastHeartbeat > 90_000;
+
   // What the subagent is doing right now (Codex-style verb + arg), derived
   // from its own toolCalls. Shown live in the header while running — that's
   // the signal the user wants ("正在读取 schema.ts"), not a tool-card dump.
@@ -38,6 +48,18 @@ function AgentMessageViewImpl({ message }: { message: AgentMessage }) {
           {message.agentType && (
             <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {message.agentType}
+            </span>
+          )}
+          {isBackgrounded && (
+            <span
+              className={
+                "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium " +
+                (lostContact
+                  ? "bg-status-warn/15 text-status-warn"
+                  : "bg-status-running/15 text-status-running")
+              }
+            >
+              {lostContact ? t("msg.agent.mayBeLost") : t("msg.agent.backgrounded")}
             </span>
           )}
           <span className="min-w-0 flex-1 truncate text-muted-foreground">{message.description}</span>

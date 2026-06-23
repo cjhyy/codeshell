@@ -181,3 +181,93 @@ export async function listDiskSessions(
 }
 
 export { getSessionTranscript } from "./transcript-reader.js";
+
+/** A sub-agent session that appears to have been INTERRUPTED (C). */
+export interface InterruptedSubagent {
+  id: string; // == sub-agent session id (== agentId)
+  /** Human-readable task hint — the sub-agent's persisted `summary` (its
+   *  Handoff Packet / first-message head), falling back to the id. */
+  description: string;
+  /** Last on-disk activity (state.json mtime) — when it stalled. */
+  updatedAt: number;
+}
+
+/**
+ * Statuses that should NOT be surfaced as "interrupted":
+ *  - completed: finished the work cleanly.
+ *  - cancelled: the user deliberately stopped it (not a surprise to flag).
+ * Everything else — stuck "active" (crash/kill mid-flight), or an error end
+ * (failed / model_error / aborted_streaming) — means the work didn't finish, so
+ * it's worth telling the user on reopen. The staleness gate still applies so a
+ * genuinely still-running "active" agent isn't mislabeled. Observed real
+ * statuses on disk: completed (clean), active (stuck), model_error,
+ * aborted_streaming. (validated against ~/.code-shell/sessions)
+ */
+const NOT_INTERRUPTED_STATUSES = new Set(["completed", "cancelled"]);
+
+/**
+ * List sub-agents of `parentSessionId` that look INTERRUPTED — shown when a
+ * session is reopened so the user sees "上次有个子代理没跑完" instead of it
+ * silently vanishing (C: background-agent visibility).
+ *
+ * Interrupted ≡ a sub-agent session (origin "subagent" + parentSessionId ===
+ * parent) whose status is non-terminal (stuck at "active") AND whose state.json
+ * has gone stale (mtime older than `staleMs`). Staleness is the liveness gate:
+ * a still-running agent keeps writing (transcript/state) so its mtime stays
+ * fresh; a crashed/killed one (no graceful shutdown to mark it terminal) stops.
+ * The threshold must exceed the LLM-long-request silence (~8min observed), so
+ * the default is generous (10min): a genuinely-running agent is never mislabeled
+ * interrupted; the cost is a freshly-died one isn't flagged until the threshold
+ * passes — fine, since reopen is usually minutes later.
+ *
+ * Read-only: no resume, no new messages. Recovery = the user re-asks the
+ * orchestrator, which re-spawns and reads the on-disk artifacts.
+ */
+export async function listInterruptedSubagents(
+  parentSessionId: string,
+  baseDir: string = SESSIONS_DIR,
+  opts: { staleMs?: number; now?: number } = {},
+): Promise<InterruptedSubagent[]> {
+  if (!parentSessionId) return [];
+  const staleMs = opts.staleMs ?? 10 * 60_000; // 10min — covers LLM long-request silence
+  const now = opts.now ?? Date.now();
+
+  let entries: fsSync.Dirent[];
+  try {
+    entries = await fs.readdir(baseDir, { withFileTypes: true });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw e;
+  }
+
+  const out: InterruptedSubagent[] = [];
+  for (const e of entries) {
+    if (!e.isDirectory() || !SAFE_ID.test(e.name)) continue;
+    const stateFile = path.join(baseDir, e.name, "state.json");
+    let state: Record<string, unknown>;
+    let mtimeMs: number;
+    try {
+      const [raw, st] = await Promise.all([
+        fs.readFile(stateFile, "utf8"),
+        fs.stat(stateFile),
+      ]);
+      state = JSON.parse(raw);
+      mtimeMs = st.mtimeMs;
+    } catch {
+      continue; // unreadable / missing → skip
+    }
+    if (state.parentSessionId !== parentSessionId) continue; // not a child of this session
+    const status = typeof state.status === "string" ? state.status : "active";
+    if (NOT_INTERRUPTED_STATUSES.has(status)) continue; // clean finish / user-cancelled → skip
+    if (now - mtimeMs < staleMs) continue; // still fresh → may be running, don't flag
+
+    const summary = typeof state.summary === "string" ? state.summary.trim() : "";
+    out.push({
+      id: e.name,
+      description: summary || e.name,
+      updatedAt: mtimeMs,
+    });
+  }
+  out.sort((a, b) => b.updatedAt - a.updatedAt); // newest-stalled first
+  return out;
+}

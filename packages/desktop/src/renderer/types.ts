@@ -101,6 +101,14 @@ export interface AgentMessage {
   agentType?: string;
   description: string;
   done: boolean;
+  /** True once the agent crossed the auto-background threshold and detached
+   *  (StreamEvent agent_backgrounded). Still running, just no longer blocking
+   *  the parent turn — so turn_complete's done-sweep must skip it, and the card
+   *  shows "转后台 · 运行中". Implicitly irrelevant once done flips true. */
+  backgrounded?: boolean;
+  /** Epoch ms of the last agent_heartbeat covering this agent (B). Lets the
+   *  card flag "可能失联" when a backgrounded agent stops pinging. */
+  lastHeartbeat?: number;
   text?: string;
   error?: string;
   startedAt: number;
@@ -668,6 +676,36 @@ export function applyStreamEvent(
       };
     }
 
+    case "agent_backgrounded": {
+      // The sync agent crossed the auto-background threshold and detached. Mark
+      // it `backgrounded` (still running, NOT done) so the card renders
+      // "转后台 · 运行中" and turn_complete's done-sweep skips it. No-op if the
+      // agent already finished (a racing agent_end won the terminal state).
+      const idx = state.agentMessageIndex[event.agentId];
+      if (idx === undefined) return state;
+      const m = state.messages[idx];
+      if (!m || m.kind !== "agent" || m.done) return state;
+      const msgs = state.messages.slice();
+      msgs[idx] = { ...m, backgrounded: true };
+      return { ...state, messages: msgs };
+    }
+
+    case "agent_heartbeat": {
+      // B: liveness ping. Stamp lastHeartbeat on every still-running agent the
+      // worker reports, so the card can flag "可能失联" when pings stop.
+      const ids = new Set(event.agentIds);
+      if (ids.size === 0) return state;
+      let changed = false;
+      const msgs = state.messages.map((m) => {
+        if (m.kind === "agent" && !m.done && ids.has(m.id)) {
+          changed = true;
+          return { ...m, lastHeartbeat: event.ts };
+        }
+        return m;
+      });
+      return changed ? { ...state, messages: msgs } : state;
+    }
+
     case "agent_end": {
       const endedAt = Date.now();
       const { [event.agentId]: _omit, ...rest } = state.activeAgents;
@@ -807,7 +845,12 @@ export function applyStreamEvent(
         if (!m || m.kind !== "agent") continue;
         const flushedText =
           m.textBuffer.length > 0 ? (m.text ?? "") + m.textBuffer : m.text;
-        if (cleanSweep && !m.done) {
+        if (cleanSweep && !m.done && !m.backgrounded) {
+          // Sweep only true ORPHANS (agent_start, no agent_end, agent_end
+          // dropped/raced). A `backgrounded` agent is legitimately still running
+          // after the parent turn ends — it reports done later via agent_end /
+          // background_agent_completed — so it must NOT be swept here (else the
+          // card collapses + loses its "running" state). Still flush its buffer.
           msgs[idx] = {
             ...m,
             text: flushedText,

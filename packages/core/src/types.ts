@@ -426,7 +426,28 @@ export type StreamEvent =
   | { type: "task_update"; tasks: TaskInfo[]; agentId?: string }
   | { type: "thinking_delta"; text: string; agentId?: string }
   | { type: "agent_start"; agentId: string; name?: string; description: string; agentType?: string }
+  | {
+      // A sync sub-agent crossed the auto-background threshold and was detached
+      // (handoffToBackground): still RUNNING, just no longer blocking the parent
+      // turn. The UI uses this to render "转后台 · 运行中" and to keep the agent out
+      // of turn_complete's done-sweep (it's not an orphan). Distinct from
+      // agent_start (foreground running) and agent_end (finished).
+      type: "agent_backgrounded";
+      agentId: string;
+      name?: string;
+      description: string;
+      agentType?: string;
+    }
   | { type: "agent_end"; agentId: string; name?: string; description: string; text?: string; error?: string; agentType?: string }
+  | {
+      // Periodic liveness ping for backgrounded agents (B). The worker emits
+      // every ~30s with the agentIds still running, so the UI knows they're
+      // alive (vs stuck/dead) even during long LLM requests where no other
+      // event fires.
+      type: "agent_heartbeat";
+      agentIds: string[];
+      ts: number;
+    }
   | { type: "tool_summary"; summary: string }
   | {
       type: "context_compact";

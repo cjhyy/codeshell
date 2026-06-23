@@ -21,6 +21,14 @@ export const messagesNs = {
       agent: {
         fallbackName: "agent",
         toolCount: "{count} tools",
+        backgrounded: "转后台 · 运行中",
+        mayBeLost: "可能失联",
+      },
+      // reopen banner: sub-agents that were interrupted (crashed/app-killed)
+      interruptedAgents: {
+        title: "{count} 个子代理上次未跑完",
+        hint: "上次会话中断,以下子代理未完成。直接告诉我「继续 …」即可重做对应阶段。",
+        dismiss: "知道了",
       },
       // agent fan-out group card
       agentGroup: {
@@ -143,6 +151,13 @@ export const messagesNs = {
       agent: {
         fallbackName: "agent",
         toolCount: "{count} tools",
+        backgrounded: "Backgrounded · running",
+        mayBeLost: "may be lost",
+      },
+      interruptedAgents: {
+        title: "{count} sub-agent(s) didn't finish last time",
+        hint: "The previous session was interrupted; these sub-agents didn't finish. Just tell me “continue …” to redo the relevant stage.",
+        dismiss: "Got it",
       },
       agentGroup: {
         count: "{count} sub-agents",
