@@ -83,7 +83,12 @@ export async function bashTool(
   const command = args.command as string;
   if (!command) return "Error: command is required";
 
-  const timeout = (args.timeout as number) || 120_000;
+  // A non-positive timeout (caller passing 0 / -5 / NaN) falls back to the
+  // default. `|| 120_000` only caught 0/NaN; a negative slipped through to
+  // setTimeout (clamped to 0 → near-instant kill → confusing "timed out after
+  // -5ms"). Treat non-positive as "use default" so the command actually runs.
+  const rawTimeout = args.timeout as number;
+  const timeout = typeof rawTimeout === "number" && rawTimeout > 0 ? rawTimeout : 120_000;
   const cwd = ctx?.cwd ?? process.cwd();
   const shell = defaultShellBinary();
   const backend = ctx?.sandbox ?? createOffBackend();
