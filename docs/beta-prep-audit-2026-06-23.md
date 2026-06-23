@@ -1,5 +1,22 @@
 # Beta 发布前审计 + 行动清单(2026-06-23)
 
+> ## 🌙 夜循环交接(2026-06-23,回来先读这段)
+>
+> 一整轮自主 bug-scan + 修复 + 文档整理。**~85 commit 全在本地 main,均未 push**(push 是你的决定,我没动)。
+>
+> **修了 9 类真 bug(全带回归测,TDD)**——最重的两个:
+> - 🔴 `killProcessGroup`/`groupAlive` 无 pgid 守卫:pgid=0/1 时 `kill(-0)` 杀自身进程组、`kill(-1)` 杀你所有进程;pgid 从 orphan 记录磁盘读回可触发。**TDD 铁证:移守卫跑测试真把 test runner 自己 SIGKILL 了(退码 144)**。已修 95591130 + 顺修 resident-agent 同类 0a728764。
+> - 🔴 权限会话缓存按 head 收窄被链式命令绕过:批准 `git status` 后 `git status && rm -rf /` 静默放行整条。修在共享 `ruleMatches`(覆盖 session-cache + 持久 project 规则两消费者)d241ec08,首版漏管道 d4c9dcb9 补全。
+> - 其余:R-1 settings.json 0o600(**三个写入点,首轮漏第三处 engine,已补** e56825d6)、cookie 域围栏裸公共后缀、restoreCookie 非数组 secret 静默登出、记忆自动提取漏 redact、saveCatalogEntry 缺父目录崩、resume 损坏 state.json 抛裸 SyntaxError、token-counter 编码器 import 漏 catch。
+>
+> **覆盖**:~37 子系统 + 7 跨切模式(process.kill / JSON.parse / Number / match-deref / floating-promise / IPC-cast / effect-订阅)对抗式审,逐条溯源验证(含多个「以为可达、溯源证伪」)。详见**附A 覆盖矩阵**。最关键结论:唯一不可信边界 mobile-remote WS 证实健壮。
+>
+> **状态**:core 1584 / desktop 923 / tui 81 全绿 · core+desktop tsc 0 err · core build 0 · 工作树净 · dist 与 src 一致(tui 跑 fresh dist 绿)。
+>
+> **等你定的**:① push 这 ~85 commit;② §1.2/1.3 真机冒烟(cookie 登录全链路是唯一没真机验的核心新功能);③ §1.4 全量打包;④ R-2 cookie safeStorage 加密(改凭证格式,该开 worktree 你在场做)。
+>
+> ---
+
 > 本文档是「发 beta 前」的一次性全量审计产出,供**新开 session 按节执行**。
 > 每条都带具体文件路径 / 行号 / 验证方式,可直接动手。
 > 来源:本机实跑(typecheck/test)+ 三路并行只读审计(docs 陈旧度 / 安全暴露 / 测试缺口)+ 关键项亲自复核。
