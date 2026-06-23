@@ -6,6 +6,22 @@ import type { CatalogEntry } from "../../preload/types";
 
 export type CatalogEntryOrigin = "builtin" | "user" | "user-override-of-builtin";
 
+/** Adapter kinds the engine knows about (mirror of core's switch). adapterKind
+ *  stays typed `string` on CatalogEntry — this list only seeds the dropdown. */
+export const ADAPTER_KINDS = [
+  "openai",
+  "anthropic",
+  "deepseek",
+  "zai",
+  "xai",
+  "mistral",
+  "groq",
+  "google",
+  "openrouter",
+  "ollama",
+  "custom",
+] as const;
+
 /** Fresh minimal entry for "新建 provider". id/displayName/baseUrl filled by user. */
 export function blankCatalogEntry(tag: CatalogEntry["tag"]): CatalogEntry {
   return {
