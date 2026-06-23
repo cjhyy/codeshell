@@ -41,6 +41,13 @@ breaking.
 - Reasoning `effort` is now a free-form, catalog-driven string (e.g. `xhigh`,
   `max`) instead of a closed enum, so a model gaining a new level no longer
   crashes the app on boot.
+- **Generic parameter pass-through**: catalog-declared params (beyond reasoning)
+  flow into the request body via `extraBody`, filtered per-provider against
+  `rejectedParams` — so a vendor-specific knob can be exposed in the UI and sent
+  on the wire without a code change.
+- Connections that require an API key but have no credential now surface a clear
+  "credential not configured" error at resolve time instead of an opaque 401
+  when the first message is sent.
 
 #### Browser automation + built-in browser panel
 
@@ -89,6 +96,19 @@ breaking.
 - Cookie capture filters by a proper registrable-domain match, so a bare
   public-suffix cookie domain (e.g. `.co`) can no longer be captured for an
   unrelated host. Cookie lease files live in an owner-only (`0o700`) directory.
+- Plugin/marketplace update checks pass a git `--` separator on every
+  `ls-remote`/`fetch`/`sparse-checkout`, closing an argument-injection vector
+  where a crafted git URL could be treated as a git flag.
+- `WebSearch` and `web-fetch` now carry a request timeout and honor the user's
+  Stop signal, so a hung provider can no longer block a turn indefinitely.
+
+### Fixed
+
+- Step-gap steering no longer leaves a duplicate user bubble: a queued
+  steer entry that is interrupted (or that survives into the next turn) is
+  withdrawn before the message is re-sent.
+- `AgentSendInput` refuses to resume a sub-agent that is still running,
+  preventing two engines from writing the same child transcript concurrently.
 
 ## [0.5.0-rc.0] - 2026-05-23
 
