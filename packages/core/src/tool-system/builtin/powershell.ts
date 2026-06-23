@@ -37,7 +37,10 @@ export async function powershellTool(
   ctx?: ToolContext,
 ): Promise<string> {
   const command = args.command as string;
-  const timeout = (args.timeout as number) ?? 120_000;
+  // `??` only catches null/undefined — a non-positive timeout (0/-5) would slip
+  // through to setTimeout (clamped to 0 → near-instant kill). Floor to default.
+  const rawTimeout = args.timeout as number;
+  const timeout = typeof rawTimeout === "number" && rawTimeout > 0 ? rawTimeout : 120_000;
 
   if (!command.trim()) {
     return "Error: command is required.";

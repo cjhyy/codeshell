@@ -89,6 +89,16 @@ describe("webFetchTool — successful fetch", () => {
     expect(out.length).toBeLessThan(400);
   });
 
+  it("a negative max_length does NOT silently return all-but-last-N (floors to default)", async () => {
+    // Regression: max_length:-5 used to hit text.slice(0, -5) = drop the last 5
+    // chars + a misleading "truncated" suffix. Non-positive must floor to default.
+    const body = "abcdefghij"; // 10 chars, well under default → returned whole
+    stubFetch({ contentType: "text/plain", body });
+    const out = await webFetchTool({ url: "https://example.com/", max_length: -5 });
+    expect(out).toBe(body); // whole body, last chars NOT dropped
+    expect(out).not.toContain("truncated");
+  });
+
   it("surfaces an HTTP error status", async () => {
     stubFetch({ status: 404, statusText: "Not Found" });
     expect(await webFetchTool({ url: "https://example.com/missing" })).toContain("HTTP 404");

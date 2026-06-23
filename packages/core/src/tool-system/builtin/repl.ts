@@ -44,7 +44,10 @@ export async function replTool(
 ): Promise<string> {
   const language = args.language as string;
   const code = args.code as string;
-  const timeout = (args.timeout as number) ?? 30_000;
+  // `??` only catches null/undefined — a non-positive timeout (0/-5) would slip
+  // through to setTimeout (clamped to 0 → near-instant kill). Floor to default.
+  const rawTimeout = args.timeout as number;
+  const timeout = typeof rawTimeout === "number" && rawTimeout > 0 ? rawTimeout : 30_000;
   // A4: child process runs in the Engine's cwd, not the host process cwd.
   const cwd = ctx?.cwd ?? process.cwd();
 

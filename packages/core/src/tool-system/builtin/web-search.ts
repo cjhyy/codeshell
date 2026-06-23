@@ -145,7 +145,11 @@ export async function webSearchTool(
   const query = args.query as string;
   if (!query) return "Error: query is required";
 
-  const numResults = Math.min((args.num_results as number) || 10, 20);
+  // Floor to default on non-positive: a negative num_results would reach
+  // `results.slice(0, num)` with a negative end (= all but the last N), silently
+  // returning the wrong result set. `|| 10` only caught 0/NaN, not negatives.
+  const rawNum = args.num_results as number;
+  const numResults = Math.min(typeof rawNum === "number" && rawNum > 0 ? rawNum : 10, 20);
   // Use the run's cwd (e.g. an automation job's project dir) so per-project
   // settings resolve correctly; falls back to process.cwd() when absent.
   const config = resolveSearchConfig(ctx?.cwd);

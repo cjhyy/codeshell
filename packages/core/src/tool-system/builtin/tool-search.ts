@@ -41,7 +41,11 @@ export async function toolSearchTool(
   if (!query) return "Error: query is required";
   if (!ctx?.toolRegistry) return "Error: ToolSearch is not configured (no registry in ctx)";
 
-  const maxResults = Math.min((args.max_results as number) || 5, 20);
+  // Floor to default on non-positive: a negative max_results would reach
+  // `.slice(0, maxResults)` with a negative end (= all but the last N), silently
+  // returning the wrong tool set. `|| 5` only caught 0/NaN, not negatives.
+  const rawMax = args.max_results as number;
+  const maxResults = Math.min(typeof rawMax === "number" && rawMax > 0 ? rawMax : 5, 20);
 
   // The tool registry is worker-SHARED (B1): it holds MCP tools registered by
   // every session, including servers another project enabled. ToolSearch is a

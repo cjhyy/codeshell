@@ -194,7 +194,15 @@ export async function webFetchTool(args: Record<string, unknown>): Promise<strin
     return `Error: invalid URL "${url}"`;
   }
 
-  const maxLength = Math.min((args.max_length as number) || DEFAULT_MAX, MAX_OUTPUT);
+  // A non-positive max_length must NOT reach `text.slice(0, maxLength)` below
+  // with a negative end — JS reads that as "all but the last N", silently
+  // returning the WRONG bytes (+ a misleading "truncated" suffix). `|| DEFAULT`
+  // only caught 0/NaN, not negatives. Floor to the default page size first.
+  const rawMaxLength = args.max_length as number;
+  const maxLength = Math.min(
+    typeof rawMaxLength === "number" && rawMaxLength > 0 ? rawMaxLength : DEFAULT_MAX,
+    MAX_OUTPUT,
+  );
   const rawHeaders = (args.headers as Record<string, string>) ?? {};
   const baseHeaders: Record<string, string> = {
     "User-Agent": "Mozilla/5.0 (compatible; code-shell/0.1; +https://github.com/nicepkg/code-shell)",
