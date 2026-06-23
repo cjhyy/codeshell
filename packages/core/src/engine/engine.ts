@@ -135,6 +135,7 @@ import { runDreamConsolidation } from "../services/dream-consolidation.js";
 import { EngineRuntime } from "./runtime.js";
 import { join, isAbsolute } from "node:path";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -2541,14 +2542,19 @@ export class Engine {
         },
       };
 
+      // mode 0o600: this writes model.apiKey (plaintext) into settings.json, so
+      // it must be owner-only — same R-1 hardening as SettingsManager/onboarding.
+      // (Third settings.json writer; the R-1 sweep initially missed this one.)
       const tmp = `${file}.${process.pid}.tmp`;
       const payload = JSON.stringify(updated, null, 2) + "\n";
-      writeFileSync(tmp, payload, "utf-8");
+      writeFileSync(tmp, payload, { encoding: "utf-8", mode: 0o600 });
       try {
         renameSync(tmp, file);
       } catch {
-        writeFileSync(file, payload, "utf-8");
+        writeFileSync(file, payload, { encoding: "utf-8", mode: 0o600 });
       }
+      // mode arg only applies on create; tighten an already-existing file too.
+      try { chmodSync(file, 0o600); } catch { /* best-effort */ }
     } catch (err) {
       logger.warn(
         `persistActiveModel failed: ${(err as Error).message}`,
