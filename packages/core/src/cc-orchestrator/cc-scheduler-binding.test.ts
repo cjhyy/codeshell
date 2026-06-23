@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CronScheduler } from "../automation/scheduler.js";
 import { CCTaskStore } from "./cc-task-store.js";
-import { runCCTask } from "./cc-scheduler-binding.js";
+import { runCCTask, makeCCAwareExecutor } from "./cc-scheduler-binding.js";
 
 function tmpStore() { return new CCTaskStore(join(mkdtempSync(join(tmpdir(), "ccsb-")), "t.json")); }
 
@@ -47,5 +47,24 @@ describe("runCCTask", () => {
     const judge = async () => ({ action: "stop" as const, reason: "goal met" });
     await runCCTask({ jobId: created.id, prompt: "next", cwd: "/x", store, runner, judge, scheduler });
     expect(scheduler.get(created.id)?.enabled).toBe(false);
+  });
+});
+
+describe("makeCCAwareExecutor", () => {
+  it("routes CC jobs (has meta) to the CC runner, others to the fallback", async () => {
+    const store = tmpStore();
+    store.set("ccjob", { kind: "once", continuation: "always-fresh" });
+    let ccRan = false, fallbackRan = false;
+    const exec = makeCCAwareExecutor({
+      store,
+      runner: async () => { ccRan = true; return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] }; },
+      judge: async () => ({ action: "stop", reason: "" }),
+      scheduler: new CronScheduler(),
+      fallback: async () => { fallbackRan = true; },
+    });
+    await exec({ id: "ccjob", name: "", schedule: "1h", prompt: "p", enabled: true, runCount: 0, createdAt: 0, cwd: "/x" } as any, new AbortController().signal);
+    expect(ccRan).toBe(true); expect(fallbackRan).toBe(false);
+    await exec({ id: "other", name: "", schedule: "1h", prompt: "p", enabled: true, runCount: 0, createdAt: 0 } as any, new AbortController().signal);
+    expect(fallbackRan).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import type { CronScheduler } from "../automation/scheduler.js";
+import type { CronScheduler, CronJob } from "../automation/scheduler.js";
 import type { CCTaskStore, CCTaskMeta } from "./cc-task-store.js";
 import type { JudgeDecision, JudgeInput } from "./relevance-judge.js";
 import type { AgentRunResult } from "./external-agent-driver.js";
@@ -45,4 +45,33 @@ export async function runCCTask(deps: RunCCTaskDeps): Promise<void> {
     store.patch(jobId, { sessionId: undefined, handoffSummary: decision.handoffSummary });
   }
   // continue-same: keep sessionId as written in step 4
+}
+
+export interface CCExecutorDeps {
+  store: CCTaskStore;
+  runner: CCRunner;
+  judge: CCJudge;
+  scheduler: CronScheduler;
+  /** Original automation executor for non-CC jobs (e.g. RunManager path). */
+  fallback: (job: CronJob, signal: AbortSignal) => Promise<void>;
+}
+
+/** Build a scheduler executor that routes jobs with CC metadata to runCCTask,
+ *  and everything else to the existing automation fallback. */
+export function makeCCAwareExecutor(deps: CCExecutorDeps) {
+  return async (job: CronJob, signal: AbortSignal): Promise<void> => {
+    if (deps.store.get(job.id)) {
+      await runCCTask({
+        jobId: job.id,
+        prompt: job.prompt,
+        cwd: job.cwd ?? process.cwd(),
+        store: deps.store,
+        runner: deps.runner,
+        judge: deps.judge,
+        scheduler: deps.scheduler,
+      });
+      return;
+    }
+    await deps.fallback(job, signal);
+  };
 }
