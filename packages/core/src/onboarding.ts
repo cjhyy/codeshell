@@ -274,9 +274,12 @@ export function detectProviderFromApiKey(
 
 export async function validateApiKey(baseUrl: string, apiKey: string): Promise<boolean> {
   try {
+    // 10s timeout so a hung/slow provider doesn't block the onboarding wizard
+    // until the OS socket timeout — AbortError is caught below → "let it pass".
     if (baseUrl.includes("openrouter")) {
       const res = await fetch("https://openrouter.ai/api/v1/auth/key", {
         headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10_000),
       });
       const data = await res.json() as any;
       return !data.error;
@@ -284,6 +287,7 @@ export async function validateApiKey(baseUrl: string, apiKey: string): Promise<b
     const url = baseUrl.replace(/\/$/, "") + "/models";
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10_000),
     });
     return res.status !== 401 && res.status !== 403;
   } catch {

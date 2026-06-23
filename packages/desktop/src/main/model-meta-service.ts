@@ -86,6 +86,9 @@ async function fetchOpenRouterModels(p: ProviderCfg): Promise<void> {
   try {
     const res = await fetch(`${p.baseUrl ?? "https://openrouter.ai/api/v1"}/models`, {
       headers: p.apiKey ? { Authorization: `Bearer ${p.apiKey}` } : {},
+      // 10s timeout — best-effort metadata enrichment must not hang on a slow
+      // provider; the catch below degrades gracefully (cache stays empty).
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return;
     const json = (await res.json()) as { data?: Array<{
