@@ -80,6 +80,8 @@ export interface ModelEntry {
    * provider need different defaults — e.g. one model off but another on.
    */
   reasoning?: import("./reasoning-setting.js").ReasoningSetting;
+  /** Catalog-driven extra request-body fields (wire-mapped paramValues). */
+  extraBody?: Record<string, unknown>;
 }
 
 // ─── Built-in context windows ────────────────────────────────────
@@ -294,6 +296,9 @@ export class ModelPool {
       // Carry the catalog kind through so the capability layer can pick
       // per-(kind, model) request-shape rules.
       ...(fromCat?.kind ? { providerKind: fromCat.kind } : {}),
+      ...(entry.extraBody && Object.keys(entry.extraBody).length > 0
+        ? { extraBody: entry.extraBody }
+        : {}),
     };
   }
 

@@ -24,3 +24,20 @@ describe("ModelPool.toLLMConfig maxTokens", () => {
     expect(cfg.maxTokens).toBe(128000);
   });
 });
+
+describe("ModelPool.toLLMConfig extraBody passthrough", () => {
+  it("carries entry.extraBody into LLMConfig", () => {
+    const pool = new ModelPool([]);
+    const entry = { key: "k", provider: "openai", model: "m", apiKey: "x", baseUrl: "u", extraBody: { temperature: 0.7, top_p: 0.9 } };
+    pool.register(entry as never);
+    const cfg = pool.toLLMConfig(entry as never);
+    expect(cfg.extraBody).toEqual({ temperature: 0.7, top_p: 0.9 });
+  });
+  it("omits extraBody when entry has none", () => {
+    const pool = new ModelPool([]);
+    const entry = { key: "k2", provider: "openai", model: "m", apiKey: "x", baseUrl: "u" };
+    pool.register(entry as never);
+    const cfg = pool.toLLMConfig(entry as never);
+    expect(cfg.extraBody).toBeUndefined();
+  });
+});
