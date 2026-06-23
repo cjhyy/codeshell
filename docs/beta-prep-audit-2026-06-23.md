@@ -2,7 +2,7 @@
 
 > ## 🔁 自主循环交接(2026-06-24,**最新·回来先读这段**)
 >
-> 用户开 `/goal` 循环「按文档推进」。这一轮做的是**「我能独立做、不需你在场」**的收尾项(真机冒烟/打包/push/R-2 加密仍等你)。本轮 **6 commit 在 main**(累计领先 origin **208**,仍未 push):
+> 用户开 `/goal` 循环「按文档推进」。这几轮做的是**「我能独立做、不需你在场」**的收尾项(桌面主流程冒烟/打包/push 仍等你;R-2 加密用户已决定暂缓)。**~20 commit 在 main**(累计领先 origin **229**,仍未 push):
 >
 > | commit | 做了什么 | 验证 |
 > |---|---|---|
@@ -18,13 +18,17 @@
 > | `d01462b9` | **§4.1 validateToolMetadata**(注册期校验 pathPolicy.arg∈schema,防路径权限静默绕过·安全) | TDD,+7 测含 builtin 审计 |
 > | `b07c2670` | §4.4 三处 intentional 空 catch 加说明注释(openai×2/session-memory) | 纯注释 |
 > | `4f0901ef` | §4.8 TCP host settings 读取点注释(热读差异=设计非bug) | 纯注释 |
-> | (d89924b2/a1c211ed/546e4b59/3a9dad88) | assessment 文档标进度(§4.1/4.4部分/4.7已超越/4.8) | 纯文档 |
+> | `767e373e` | **§4.3 turn-loop maxTurns 上限集成测试**(之前唯一没覆盖的主退出分支) | TDD,+3 测 |
+> | `efe3ae7f` | **cookie 登录全链路真机冒烟 ✅**(用户验 5.1-5.4 无问题)——audit §1.3「唯一没真机验过」消除 | 真机 |
+> | `dc59ff35` | **core 边界契约写进 `packages/core/CONTRIBUTING.md`**(用户重申「core 保持独立」→固化为 review checkpoint) | 纯文档 |
+> | `61e092dc` | **Phase1:定价表 MODEL_PRICING/DEFAULT 外移 data 层**(零值漂移·worktree→rebase→FF main) | TDD,+5 测 |
+> | (多笔 docs) | assessment 标进度(§4.1/4.3/4.4/4.7/4.8 + Phase1 三项) | 纯文档 |
 >
-> **§2.4.5 send_input 守卫 → 已修**(最小止血)。**core-design Phase0 → 全做完**;**Phase1 → 过半**(model 元数据 + Vertex 外移 done;剩定价表+中文文案,定价表带时间戳UI=跨desktop留你)。**§4.x 安全/卫生:§4.1 做(安全)·§4.4 部分(intentional 注释,safeReadJson 留你)·§4.7 经核实已被 legacy 删除超越·§4.8 注释·§4.9 做**。
+> **§2.4.5 send_input 守卫 → 已修**。**core-design Phase0 → 全做完**(含边界契约 CONTRIBUTING.md);**Phase1 → 近完**(三张表全外移到 data/model-metadata.json:model 元数据+Vertex+定价;只剩 onboarding 中文文案 item4 + 定价时间戳UI=跨desktop);**§4.x:4.1 做(安全)·4.3 部分(maxTurns 测试)·4.4 部分(注释)·4.7 已超越·4.8 注释·4.9 做**。**R-2 cookie 加密 → 用户决定暂缓维持 0o600**(读 secret 在 core 进程但 safeStorage 钥匙在 desktop main·core 是 RUN_AS_NODE 子进程拿不到·加密会让取用/注入坏·见记忆 r2_cookie_encryption_deferred)。
 >
-> **剩的全是「需你」或「需判断」**:§4.2 MCP validateToolDefinition(需启发式判「文件类」MCP工具·doc 自评设计选择非bug·有误伤风险不自主做)·§4.3 turn-loop 集成测试(已有7文件716行覆盖·[低]·新增需深懂harness易脆)·§4.5 image/video registry(等第4个provider)·§4.6 审批审计log(新feature需你定)·定价表外移(带时间戳UI跨desktop)。
+> **剩的全是「需你」或「需判断」**:① 桌面主流程冒烟 §1.2 + 打包 §1.4 + push(只能你)②§4.2 MCP validateToolDefinition(需启发式·doc 自评设计选择非bug·有误伤风险)③§4.5 image/video registry(等第4provider)④§4.6 审批审计log(新feature)⑤定价时间戳UI/onboarding 中文文案(跨 desktop/i18n·低价值)。
 >
-> **现状**:工作树净 · typecheck 0 · core 1658/desktop 958/tui 69 全绿 · 领先 origin **220** 未 push。
+> **现状**:工作树净(除用户自己的 brainstorm scratch + plan doc)· typecheck 0 · core 1664/desktop 958/tui 69 全绿 · 领先 origin **229** 未 push。
 >
 > **仍等你(不变)**:① push;② §1.2/1.3 真机冒烟(cookie 登录全链路);③ §1.4 打包;④ R-2 cookie safeStorage 加密(开 worktree 你在场)。代码侧能独立做的高价值收尾已基本清空,**真正剩的是端到端真机验证 + 发布动作**。
 >
