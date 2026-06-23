@@ -215,6 +215,15 @@ export function killProcessGroup(
   pgid: number,
   opts: { graceMs?: number } = {},
 ): Promise<void> {
+  // Safety: a pgid of 0/1 (or non-integer) must NEVER reach process.kill —
+  // `process.kill(-0)` targets the caller's OWN group and `process.kill(-1)`
+  // signals EVERY process the user can reach (catastrophic self-kill). Live
+  // pgids are real detached-child pids (>1), but pgid is also persisted in
+  // orphan records and read back from disk, so a corrupt/tampered record could
+  // surface 0/1 here. Refuse rather than fire a group signal at a bogus target.
+  if (!Number.isInteger(pgid) || pgid <= 1) {
+    return Promise.resolve();
+  }
   // Windows has no process groups and no real SIGTERM. The detached leader is
   // NOT spawned detached on win (see background-shell), so `pgid` is just the
   // leader pid. Reap the whole tree with `taskkill /PID <pid> /T /F` — /T walks
@@ -272,6 +281,10 @@ export function killProcessGroup(
  * leader-alive probe is the right gate for the win32 kill path.
  */
 export function groupAlive(pgid: number): boolean {
+  // Same 0/1 guard as killProcessGroup: `process.kill(-0, 0)` probes the
+  // caller's own group (a false "alive"), and -1 is the all-processes target.
+  // A bogus pgid means "no such group" → not alive.
+  if (!Number.isInteger(pgid) || pgid <= 1) return false;
   const target = process.platform === "win32" ? pgid : -pgid;
   try {
     process.kill(target, 0);

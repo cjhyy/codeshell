@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { spawn } from "node:child_process";
-import { resolveSpawnTarget, killProcessGroup, buildSandboxEnv, mergeShellEnv, ENV_DENY_REGEX } from "./spawn-common.js";
+import { resolveSpawnTarget, killProcessGroup, groupAlive, buildSandboxEnv, mergeShellEnv, ENV_DENY_REGEX } from "./spawn-common.js";
 import { createOffBackend } from "../tool-system/sandbox/off.js";
 
 describe("resolveSpawnTarget", () => {
@@ -118,5 +118,18 @@ describe("killProcessGroup", () => {
     // Should not throw even though the group is already gone.
     await killProcessGroup(pid, { graceMs: 100 });
     expect(true).toBe(true);
+  });
+
+  test("REFUSES a bogus pgid (0/1/negative/NaN) — never signals the caller's own group or -1", async () => {
+    // The catastrophe guard: process.kill(-0) hits our OWN group, kill(-1) hits
+    // EVERY process. A corrupt orphan record could surface 0/1; these must no-op.
+    // We assert by side effect: this test process must survive all of them.
+    for (const bogus of [0, 1, -5, NaN, 1.5]) {
+      await killProcessGroup(bogus, { graceMs: 50 }); // must resolve, not signal
+      expect(groupAlive(bogus)).toBe(false); // bogus pgid is never "alive"
+    }
+    // If a real signal had been fired at our own group, the runner would be dead;
+    // reaching here proves the guard held.
+    expect(process.pid).toBeGreaterThan(1);
   });
 });
