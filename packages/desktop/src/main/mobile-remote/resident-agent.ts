@@ -168,7 +168,14 @@ export class ResidentAgentProcess {
   stop(): void {
     const child = this.child;
     this.child = undefined;
-    if (!child?.pid) return;
+    // Guard pid > 1: process.kill(-1) would SIGTERM every process the user can
+    // reach, and -0 the caller's own group. `!child?.pid` already catches
+    // undefined/0; the `> 1` also rules out the (theoretical) pid-1 case so this
+    // negative-pid group kill is consistent with killProcessGroup's guard.
+    if (!child?.pid || child.pid <= 1) {
+      child?.kill("SIGTERM");
+      return;
+    }
     try {
       process.kill(-child.pid, "SIGTERM");
     } catch {
