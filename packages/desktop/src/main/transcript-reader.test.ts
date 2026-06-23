@@ -153,4 +153,66 @@ describe("getSessionTranscript", () => {
     fs.writeFileSync(path.join(sdir, "transcript.jsonl"), line("message", { role: "user", content: "yo" }) + "\n");
     expect(await getSessionTranscript("sess-9", dir)).toEqual([{ kind: "user", text: "yo", timestamp: 1 }]);
   });
+
+  // ── replay-subagent-cards: rebuild sub-agent cards from "subagent" anchors ──
+  function writeSub(id: string, status: string, assistantText: string) {
+    const sd = path.join(dir, id);
+    fs.mkdirSync(sd, { recursive: true });
+    fs.writeFileSync(path.join(sd, "state.json"), JSON.stringify({ sessionId: id, status }));
+    fs.writeFileSync(
+      path.join(sd, "transcript.jsonl"),
+      line("message", { role: "assistant", content: assistantText }) + "\n",
+    );
+  }
+
+  function evTypes(items: { kind: string; event?: { type: string } }[]): string[] {
+    return items.filter((i) => i.kind === "stream").map((i) => i.event!.type);
+  }
+
+  it("rebuilds a COMPLETED sub-agent into a done card with its output", async () => {
+    const parent = path.join(dir, "p1");
+    fs.mkdirSync(parent, { recursive: true });
+    fs.writeFileSync(
+      path.join(parent, "transcript.jsonl"),
+      line("subagent", { agentId: "childA", description: "分析 ep01" }) + "\n",
+    );
+    writeSub("childA", "completed", "导演分析完成,已写入 01-director-analysis.md");
+
+    const items = await getSessionTranscript("p1", dir);
+    expect(evTypes(items)).toEqual(["agent_start", "text_delta", "agent_end"]);
+    const end = items.find((i) => i.kind === "stream" && (i as { event: { type: string } }).event.type === "agent_end") as
+      | { event: { error?: string; text?: string } }
+      | undefined;
+    expect(end!.event.error).toBeUndefined(); // completed → no error
+    expect(end!.event.text).toContain("01-director-analysis.md");
+  });
+
+  it("rebuilds an INTERRUPTED (stuck active) sub-agent into an interrupted card", async () => {
+    const parent = path.join(dir, "p2");
+    fs.mkdirSync(parent, { recursive: true });
+    fs.writeFileSync(
+      path.join(parent, "transcript.jsonl"),
+      line("subagent", { agentId: "childB", description: "复审 ep01" }) + "\n",
+    );
+    writeSub("childB", "active", "做了一半"); // active = never wrapped up
+
+    const items = await getSessionTranscript("p2", dir);
+    const end = items.find((i) => i.kind === "stream" && (i as { event: { type: string } }).event.type === "agent_end") as
+      | { event: { error?: string } }
+      | undefined;
+    expect(end).toBeDefined();
+    expect(end!.event.error).toContain("中断"); // interrupted → error marker
+  });
+
+  it("leaves a bare agent_start (running) when the sub-agent session is gone", async () => {
+    const parent = path.join(dir, "p3");
+    fs.mkdirSync(parent, { recursive: true });
+    fs.writeFileSync(
+      path.join(parent, "transcript.jsonl"),
+      line("subagent", { agentId: "ghostX", description: "d" }) + "\n",
+    );
+    // no sessions/ghostX → can't enrich
+    const items = await getSessionTranscript("p3", dir);
+    expect(evTypes(items)).toEqual(["agent_start"]); // bare → card shows running
+  });
 });

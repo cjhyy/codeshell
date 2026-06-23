@@ -108,7 +108,7 @@ import {
 } from "./memory-service.js";
 import { runDream } from "./dream-service.js";
 import type { MemoryScope } from "@cjhyy/code-shell-core";
-import { listSessions, deleteSession, getSessionTranscript, listDiskSessions, listInterruptedSubagents } from "./sessions-service.js";
+import { listSessions, deleteSession, getSessionTranscript, listDiskSessions } from "./sessions-service.js";
 import { getSessionEvents } from "./rawTranscript.js";
 import { listTitles, setTitle } from "./session-titles-store.js";
 import { tailLog, type LogBucket } from "./logs-service.js";
@@ -2090,10 +2090,6 @@ ipcMain.handle("sessions:listDisk", async (_e, opts: { limit?: number; cursor?: 
 ipcMain.handle("sessions:rawEvents", async (_e, sessionId: string, sinceId?: string) => {
   if (typeof sessionId !== "string") throw new Error("sessionId required");
   return getSessionEvents(sessionId, typeof sinceId === "string" ? sinceId : undefined);
-});
-ipcMain.handle("sessions:interruptedSubagents", async (_e, parentSessionId: string) => {
-  if (typeof parentSessionId !== "string" || !parentSessionId) return [];
-  return listInterruptedSubagents(parentSessionId);
 });
 ipcMain.handle("runs:delete", async (_e, runId: string) => {
   if (typeof runId !== "string") throw new Error("runId required");

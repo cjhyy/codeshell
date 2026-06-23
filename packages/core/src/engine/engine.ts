@@ -1179,6 +1179,21 @@ export class Engine {
         permissionMode: this.config.permissionMode ?? "acceptEdits",
       }),
       spawn: async (req) => {
+        // Anchor this sub-agent in the PARENT transcript at spawn time — before
+        // it runs, so it's recorded whether it later completes, is interrupted,
+        // or still runs. Replay reads these anchors to rebuild sub-agent cards
+        // from sessions/<agentId>/ (agentId === childSid); without it a
+        // backgrounded sub-agent leaves no parent-transcript trace and vanishes
+        // on reopen. Only on a fresh spawn (not a resume/continuation, which
+        // already has its anchor). Guarded so a transcript hiccup never breaks
+        // the spawn.
+        if (!req.resumeSessionId) {
+          try {
+            session.transcript.appendSubagent(req.agentId, undefined, req.description);
+          } catch {
+            /* anchor is best-effort; never block the spawn */
+          }
+        }
         // No nested agents. Strip Agent / AgentStatus / AgentCancel from the
         // child's tool pool so the LLM can't spawn grandchildren — matches
         // Claude Code's ALL_AGENT_DISALLOWED_TOOLS approach. Without this
