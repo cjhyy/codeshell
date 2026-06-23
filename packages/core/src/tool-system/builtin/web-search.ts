@@ -158,14 +158,22 @@ export async function webSearchTool(
     return "Error: No search provider configured. Open desktop 设置 → 连接 to add credentials, or set SERPER_API_KEY / TAVILY_API_KEY / SEARXNG_URL.";
   }
 
+  // A search provider's fetch had NO timeout and NO abort wiring — a hung/slow
+  // provider blocked the tool indefinitely and a user Stop couldn't cancel it.
+  // Give every provider call a 20s timeout, combined with the run's abort
+  // signal (registry injects __signal) so Stop is prompt.
+  const userSignal = args.__signal as AbortSignal | undefined;
+  const timeoutSignal = AbortSignal.timeout(20_000);
+  const signal = userSignal ? AbortSignal.any([userSignal, timeoutSignal]) : timeoutSignal;
+
   try {
     let results: SearchResult[];
     if (config.provider === "serper" && config.apiKey) {
-      results = await searchSerper(query, numResults, config.apiKey);
+      results = await searchSerper(query, numResults, config.apiKey, signal);
     } else if (config.provider === "tavily" && config.apiKey) {
-      results = await searchTavily(query, numResults, config.apiKey);
+      results = await searchTavily(query, numResults, config.apiKey, signal);
     } else if (config.provider === "searxng" && config.baseUrl) {
-      results = await searchSearXNG(query, numResults, config.baseUrl);
+      results = await searchSearXNG(query, numResults, config.baseUrl, signal);
     } else {
       return `Error: provider "${config.provider}" missing ${config.provider === "searxng" ? "base URL" : "API key"}`;
     }
@@ -180,7 +188,7 @@ export async function webSearchTool(
   }
 }
 
-async function searchSerper(query: string, num: number, apiKey: string): Promise<SearchResult[]> {
+async function searchSerper(query: string, num: number, apiKey: string, signal?: AbortSignal): Promise<SearchResult[]> {
   const res = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: {
@@ -188,6 +196,7 @@ async function searchSerper(query: string, num: number, apiKey: string): Promise
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ q: query, num }),
+    signal,
   });
 
   if (!res.ok) throw new Error(`Serper API error: ${res.status} ${res.statusText}`);
@@ -203,7 +212,7 @@ async function searchSerper(query: string, num: number, apiKey: string): Promise
   }));
 }
 
-async function searchTavily(query: string, num: number, apiKey: string): Promise<SearchResult[]> {
+async function searchTavily(query: string, num: number, apiKey: string, signal?: AbortSignal): Promise<SearchResult[]> {
   const res = await fetch("https://api.tavily.com/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -213,6 +222,7 @@ async function searchTavily(query: string, num: number, apiKey: string): Promise
       max_results: num,
       include_answer: false,
     }),
+    signal,
   });
 
   if (!res.ok) throw new Error(`Tavily API error: ${res.status} ${res.statusText}`);
@@ -228,7 +238,7 @@ async function searchTavily(query: string, num: number, apiKey: string): Promise
   }));
 }
 
-async function searchSearXNG(query: string, num: number, baseUrl: string): Promise<SearchResult[]> {
+async function searchSearXNG(query: string, num: number, baseUrl: string, signal?: AbortSignal): Promise<SearchResult[]> {
   const url = new URL("/search", baseUrl);
   url.searchParams.set("q", query);
   url.searchParams.set("format", "json");
@@ -236,6 +246,7 @@ async function searchSearXNG(query: string, num: number, baseUrl: string): Promi
 
   const res = await fetch(url.toString(), {
     headers: { Accept: "application/json" },
+    signal,
   });
 
   if (!res.ok) throw new Error(`SearXNG error: ${res.status} ${res.statusText}`);
