@@ -570,6 +570,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   probeSearch: (input: unknown) => ipcRenderer.invoke("search:probe", input),
   probeImage: (input: unknown) => ipcRenderer.invoke("image:probe", input),
   getModelCatalog: () => ipcRenderer.invoke("catalog:list"),
+  saveCatalogEntry: (entry: unknown) => ipcRenderer.invoke("catalog:save", entry),
+  deleteCatalogEntry: (id: string) => ipcRenderer.invoke("catalog:delete", id),
+  getCatalogOrigins: () => ipcRenderer.invoke("catalog:origins"),
   resolveModelMeta: (models: unknown, providers: unknown) =>
     ipcRenderer.invoke("models:resolve-meta", models, providers),
   reasoningControl: (kind: string, model: string) =>

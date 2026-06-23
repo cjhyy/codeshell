@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { TextConnectionsPanel } from "./TextConnectionsPanel";
+import { ModelCatalogPanel } from "./ModelCatalogPanel";
 import { PermissionSection } from "./PermissionSection";
 import { McpSection } from "./McpSection";
 import { UpdaterSettingsRow } from "../updater/UpdaterBanner";
@@ -12,7 +13,7 @@ const segBtn = (active: boolean) =>
   (active ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60");
 
 type Scope = "user" | "project";
-type Tab = "model" | "permission" | "mcp" | "update" | "json";
+type Tab = "model" | "catalog" | "permission" | "mcp" | "update" | "json";
 
 interface Props {
   activeRepoPath: string | null;
@@ -23,6 +24,7 @@ export function SettingsView({ activeRepoPath }: Props) {
   const tabLabel = (tb: Tab): string => {
     switch (tb) {
       case "model": return t("settingsX.view.tabModel");
+      case "catalog": return t("settingsX.view.tabCatalog");
       case "permission": return t("settingsX.view.tabPermission");
       case "mcp": return "MCP";
       case "update": return t("settingsX.view.tabUpdate");
@@ -91,7 +93,7 @@ export function SettingsView({ activeRepoPath }: Props) {
           </Button>
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-          {(["model", "permission", "mcp", "update", "json"] as Tab[]).map((t) => (
+          {(["model", "catalog", "permission", "mcp", "update", "json"] as Tab[]).map((t) => (
             <Button key={t} variant="ghost" size="sm" className={segBtn(tab === t)} onClick={() => setTab(t)}>
               {tabLabel(t)}
             </Button>
@@ -108,6 +110,7 @@ export function SettingsView({ activeRepoPath }: Props) {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === "model" && <TextConnectionsPanel scope={scope} activeRepoPath={activeRepoPath} />}
+        {tab === "catalog" && <ModelCatalogPanel scope={scope} activeRepoPath={activeRepoPath} />}
         {tab === "permission" && <PermissionSection scope={scope} activeRepoPath={activeRepoPath} />}
         {tab === "mcp" && <McpSection scope={scope} activeRepoPath={activeRepoPath} />}
         {tab === "update" && <UpdaterSettingsRow />}

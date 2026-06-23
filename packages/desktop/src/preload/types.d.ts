@@ -810,6 +810,9 @@ export interface CodeshellApi {
   probeSearch(input: SearchProbeInput): Promise<SearchProbeResult>;
   probeImage(input: ImageProbeInput): Promise<ImageProbeResult>;
   getModelCatalog(): Promise<CatalogEntry[]>;
+  saveCatalogEntry: (entry: unknown) => Promise<{ ok: boolean; action?: "added" | "updated"; error?: string; backup?: string }>;
+  deleteCatalogEntry: (id: string) => Promise<{ ok: boolean; removed: boolean; error?: string; backup?: string }>;
+  getCatalogOrigins: () => Promise<Record<string, "builtin" | "user" | "user-override-of-builtin">>;
   resolveModelMeta(
     models: Array<{ key: string; model?: string; providerKey?: string; maxContextTokens?: number | null }>,
     providers: Array<{ key?: string; kind?: string; baseUrl?: string; apiKey?: string }>,
