@@ -6,6 +6,7 @@ import type { RegisteredTool, ToolDefinition, ToolResult } from "../types.js";
 import { ConfigError, ToolNotFoundError, ToolExecutionError, ToolTimeoutError } from "../exceptions.js";
 import { BUILTIN_TOOLS, type BuiltinToolFn } from "./builtin/index.js";
 import type { ToolContext } from "./context.js";
+import { validateToolMetadata } from "./validate-tool-metadata.js";
 
 /**
  * Default execution timeout for any tool that does not declare its own
@@ -44,12 +45,16 @@ export class ToolRegistry {
       if (selectedNames && !selectedNames.has(tool.definition.name)) {
         continue;
       }
+      // Fail loud on pathPolicy.arg drift rather than silently disabling path
+      // protection (assessment §4.1).
+      validateToolMetadata(tool.definition);
       this.tools.set(tool.definition.name, tool.definition);
       this.builtinExecutors.set(tool.definition.name, tool.execute);
     }
   }
 
   registerTool(tool: RegisteredTool, executor?: BuiltinToolFn): void {
+    validateToolMetadata(tool);
     this.tools.set(tool.name, tool);
     if (executor) {
       this.builtinExecutors.set(tool.name, executor);
