@@ -185,6 +185,19 @@ export class AgentClient {
   }
 
   /**
+   * Read a session's persisted active goal objective, or null when there's
+   * none. The host calls this on session load to re-surface the goal block +
+   * Cancel button after a reload (a persistent goal isn't replayed from the
+   * transcript, so the live stream never re-announces it).
+   */
+  async goalGet(sessionId: string): Promise<string | null> {
+    const res = (await this.request(Methods.GoalGet, { sessionId } as Record<string, unknown>)) as
+      | { goal?: string | null }
+      | undefined;
+    return res?.goal ?? null;
+  }
+
+  /**
    * Update runtime configuration on the server.
    */
   async configure(params: ConfigureParams): Promise<Record<string, unknown>> {

@@ -2614,6 +2614,19 @@ export class Engine {
    * instead of a stale snapshot from the previous run.
    */
   /**
+   * Read a session's persisted active goal WITHOUT resuming it (cheap — reads
+   * only state.json via SessionManager.readActiveGoal). The desktop host calls
+   * this on session load to re-surface the goal block + its Cancel button: a
+   * persistent goal lives only in state.activeGoal and is never replayed from
+   * the transcript, so after a reload of an aborted goal run the UI would
+   * otherwise show nothing (the "goal 还在但页面不显示、取消不了" bug). Returns
+   * undefined when the session is unknown or has no active goal.
+   */
+  getGoal(sessionId: string): GoalConfig | undefined {
+    return this.sessionManager.readActiveGoal(sessionId);
+  }
+
+  /**
    * Clear a session's persisted active goal (CC `/goal clear`). Works whether
    * the session is idle or its goal run is in flight: it wipes
    * `state.activeGoal` (so the next bare send won't re-inherit it) and, if a

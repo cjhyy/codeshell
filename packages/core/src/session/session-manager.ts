@@ -186,6 +186,33 @@ export class SessionManager {
     }
   }
 
+  /**
+   * Cheap "does this session have a persisted goal?" probe — reads only
+   * state.json, NOT the transcript (like readCwd). A persistent goal lives ONLY
+   * in state.activeGoal; it is never appended to the transcript as an event, so
+   * a session rebuilt from disk (e.g. localStorage wiped) can't recover the
+   * goal from its messages. The desktop host calls this on session load to
+   * re-surface the active-goal block + its Cancel button, which would otherwise
+   * be invisible (and thus uncancellable) after a reload of an aborted goal
+   * run. Returns undefined for an unknown / malformed / traversal-shaped id, or
+   * a session with no active goal — never throws.
+   */
+  readActiveGoal(sessionId: string): import("../engine/goal.js").GoalConfig | undefined {
+    try {
+      assertSafeSessionId(sessionId);
+    } catch {
+      return undefined;
+    }
+    const stateFile = join(this.sessionsDir, sessionId, "state.json");
+    if (!existsSync(stateFile)) return undefined;
+    try {
+      const state = JSON.parse(readFileSync(stateFile, "utf-8")) as SessionState;
+      return state.activeGoal;
+    } catch {
+      return undefined;
+    }
+  }
+
   resume(sessionId: string): SessionBundle {
     assertSafeSessionId(sessionId);
     const sessionDir = join(this.sessionsDir, sessionId);

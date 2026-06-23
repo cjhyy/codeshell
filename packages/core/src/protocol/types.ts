@@ -318,6 +318,8 @@ export const Methods = {
   GoalExtend: "agent/goalExtend",
   /** Clear a session's persisted active goal (CC /goal clear). */
   GoalClear: "agent/goalClear",
+  /** Read a session's persisted active goal, to re-surface it on session load. */
+  GoalGet: "agent/goalGet",
   /** Query/control a session's background shells for the UI panel (TODO 3.2). */
   BackgroundShells: "agent/backgroundShells",
 

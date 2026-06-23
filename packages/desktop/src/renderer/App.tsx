@@ -638,6 +638,29 @@ function App() {
         }
       }
       if (!cancelled) dispatch({ type: "hydrate", bucket, state });
+      // Re-surface a persistent goal on load. A goal lives only in the engine's
+      // state.json (state.activeGoal) and is NEVER replayed from the transcript,
+      // so a session rebuilt from disk (localStorage wiped, or an aborted goal
+      // run reloaded) hydrates with activeGoal === null — the goal block + its
+      // Cancel button vanish even though the goal is still active on disk (the
+      // "goal 还在但页面不显示、取消不了" bug). Ask the engine for the persisted
+      // goal and, only when the hydrated state didn't already carry one (so we
+      // never clobber a localStorage-preserved goal or its round), inject a
+      // synthetic goal_set through the same reducer path the live event uses.
+      if (engineId && !cancelled && state.activeGoal === null) {
+        try {
+          const { goal } = await window.codeshell.goalGet(engineId);
+          if (goal && !cancelled) {
+            dispatch({
+              type: "stream",
+              bucket,
+              event: { type: "goal_set", objective: goal, replaced: false } as StreamEvent,
+            });
+          }
+        } catch {
+          // goalGet unavailable (no bridge / unknown session) — leave as-is.
+        }
+      }
     })();
     return () => {
       cancelled = true;

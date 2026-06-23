@@ -303,6 +303,9 @@ export class AgentServer {
       case Methods.GoalClear:
         this.handleGoalClear(req);
         break;
+      case Methods.GoalGet:
+        this.handleGoalGet(req);
+        break;
       case Methods.BackgroundShells:
         this.handleBackgroundShells(req);
         break;
@@ -720,6 +723,36 @@ export class AgentServer {
         ? (this.legacyEngine!.clearGoal(params.sessionId) ?? false)
         : false;
     this.transport.send(createResponse(req.id, { ok: true, cleared }));
+  }
+
+  /**
+   * Read a session's persisted active goal so the host can re-surface the goal
+   * block + Cancel button on session load. A persistent goal lives only in
+   * state.activeGoal and is never replayed from the transcript, so a reloaded
+   * (or disk-rebuilt) session has no other way to learn it. Reads disk-only —
+   * works whether or not the session is live in chatManager (the bug case is an
+   * aborted/reloaded session that is NOT live). Returns { ok, goal } where goal
+   * is the objective string, or null when there's no goal / unknown session.
+   * Never errors on "no goal" — null is the normal "nothing to show" answer.
+   */
+  private handleGoalGet(req: RpcRequest): void {
+    const params = (req.params ?? {}) as { sessionId?: string };
+    if (typeof params.sessionId !== "string" || !params.sessionId) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.SessionClosed, "sessionId is required"),
+      );
+      return;
+    }
+    // Prefer the live session, else read straight off disk via the legacy
+    // engine — the goal we want to recover belongs to a session that is, by
+    // definition of this bug, usually NOT currently active.
+    const live = this.chatManager ? this.chatManager.get(params.sessionId) : undefined;
+    const goal = live
+      ? live.getGoal()
+      : (this.legacyEngine?.getGoal(params.sessionId) ?? undefined);
+    this.transport.send(
+      createResponse(req.id, { ok: true, goal: goal ? goal.objective : null }),
+    );
   }
 
   /**

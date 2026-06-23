@@ -142,6 +142,15 @@ export class ChatSession {
   }
 
   /**
+   * Read this session's persisted active goal (state.activeGoal), or undefined
+   * when none. Cheap — reads only state.json. The host calls this on session
+   * load to re-surface the goal block + Cancel button after a reload.
+   */
+  getGoal(): import("../engine/goal.js").GoalConfig | undefined {
+    return this.engine.getGoal(this.id);
+  }
+
+  /**
    * Clear this session's persisted active goal (CC /goal clear). Works idle or
    * mid-run. Returns true if a goal was actually cleared.
    */

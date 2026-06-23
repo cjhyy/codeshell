@@ -235,6 +235,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   /** Clear a session's persisted active goal (CC /goal clear). */
   goalClear: (sessionId: string) =>
     rpc("agent/goalClear", { sessionId }).then(rpcResult) as Promise<{ ok: boolean; cleared: boolean }>,
+  /** Read a session's persisted active goal objective (null when none). */
+  goalGet: (sessionId: string) =>
+    rpc("agent/goalGet", { sessionId }).then(rpcResult) as Promise<{ ok: boolean; goal: string | null }>,
   /** List a session's background shells for the dock panel (TODO 3.2). */
   listBackgroundShells: (sessionId: string) =>
     rpc("agent/backgroundShells", { sessionId, action: "list" }).then(rpcResult) as Promise<{

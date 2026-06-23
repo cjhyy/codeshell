@@ -304,6 +304,13 @@ export interface CodeshellApi {
   }>;
   /** Clear a session's persisted active goal (CC /goal clear). */
   goalClear(sessionId: string): Promise<{ ok: boolean; cleared: boolean }>;
+  /**
+   * Read a session's persisted active goal objective (or null when none), so
+   * the goal block + Cancel button can be re-surfaced on session load — a
+   * persistent goal isn't replayed from the transcript, so a reloaded session
+   * would otherwise show nothing.
+   */
+  goalGet(sessionId: string): Promise<{ ok: boolean; goal: string | null }>;
   /** Background-shell dock panel (TODO 3.2). */
   listBackgroundShells(sessionId: string): Promise<{ shells: BackgroundShellInfo[] }>;
   backgroundShellOutput(
