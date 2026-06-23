@@ -295,6 +295,7 @@
 | model-fetcher 外部 /models 解析 | 干净(never-throws 契约:全管道在 try/catch→`errorResult({models:[],error})`;per-kind 解析 `?? []` 容缺/错 shape;provider 返回 garbage JSON 不崩,降级空列表)。外部 IO 防御到位,无专测但 degrade-to-empty 非崩溃面 |
 | capability 折叠(skills/plugins/agents/hooks) | 干净(memory「易漏 readDisabledAgents 折叠」已处理:agents 有独立 readDisabledAgents 镜像 readDisabledLists,getAgentDefinitions 应用它+缓存键含 disabled 列表;四类共用 effectiveDisabledList 三态:on=re-enable/off=disable/inherit=keep;全 try/catch→[] 不throw)。58 测 |
 | cron 调度睡眠唤醒(**解决旧 memory 未修项**) | 干净:`isCronMisfire` 90s grace——醒来 timer 超 90s 过点=misfire→跳过+重 arm 到下个正确 occurrence,不补跑(project_automation_kkg28 的「06:56 乱跑」**已修**);nextRun forward-recompute 不 catch-up。74 automation 测含 06:56 回归 |
+| automation memory 写入(per-task memory.md) | 干净:核心 UpdateAutomationMemory 调注入 sink 不自 try/catch,但 executor(executor.ts:392)是**通用错误边界**——sink 抛(磁盘满/EACCES)被 catch→记 failed tool result 喂回模型「must not kill the turn」,run 不崩。8 测 |
 
 ### 2.5) 修复完整性复审(查「只修一半」)
 
