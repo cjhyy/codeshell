@@ -231,7 +231,9 @@
 **bug-scan 第四轮(记忆自动提取,9119ef0f)🟡 防御纵深修**
 - auto-extract 的记忆 description/content 直接落盘(origin:auto 无用户复核),「不含密钥」只是 extraction prompt 指示非保证。修=落盘前过与日志同源的 redactSecrets(擦 Bearer token / URL 凭证)。残留:裸 prose 里的 key 不被 pattern-match,仍靠 prompt(测试已诚实标注)。TDD 验证。
 
-**bug-scan 小结**:共对抗式审 ~14 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
+- 复核 background job 生命周期 + engine wait-loop:`backgroundJobRegistry.start` 由 GenerateVideo 的 `pollToCompletion(...).finally(()=>finish)` 配对(成功/失败/异常都清,无泄漏);headless drain 的 sub-agent wait 是 abort-aware 的 while + 超时有界的 abort-race 清理(20×25ms,无变化即停),绝不无界 park;video 不 park 此 loop(走 goal-hook 短路)。干净。
+
+**bug-scan 小结**:共对抗式审 ~15 子系统(cookie capture/inject · plugin 原子性 · model catalog · mobile-remote 鉴权 · permission/path-policy/bash-classifier · automation write-policy · config 热重载 · turn-loop abort · stream/render · seatbelt 沙箱 · 记忆注入 · session run 并发锁)。**仅 1 个真安全 bug(权限链式命令绕过,修了两次:首版漏管道,d241ec08→d4c9dcb9 补全)**;其余 verified sound 或属已知设计取舍。安全/并发关键路径整体扎实。
 
 **bug-scan 第二轮(mobile-remote review,b9915a0f)**
 - 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
