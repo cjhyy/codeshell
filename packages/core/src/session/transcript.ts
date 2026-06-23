@@ -48,6 +48,13 @@ export class Transcript {
     return this.append("tool_result", { toolCallId, toolName, result, error });
   }
 
+  /** Anchor for a spawned sub-agent (see TranscriptEventType "subagent").
+   *  Written at spawn time so replay can rebuild the sub-agent's card from
+   *  sessions/<agentId>/ — agentId === the sub-agent's session id. */
+  appendSubagent(agentId: string, name: string | undefined, description: string): TranscriptEvent {
+    return this.append("subagent", { agentId, name, description });
+  }
+
   appendTurnBoundary(): TranscriptEvent {
     this.currentTurn++;
     return this.append("turn_boundary", { turnNumber: this.currentTurn });

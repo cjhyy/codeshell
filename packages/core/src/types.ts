@@ -148,6 +148,13 @@ export type TranscriptEventType =
   | "file_history"
   | "plan_operation"
   | "session_meta"
+  // A sub-agent was spawned this turn. Written at spawn time (regardless of
+  // whether it later completes, is interrupted, or still runs) so replay can
+  // rebuild its card by reading sessions/<agentId>/ — without it a backgrounded
+  // sub-agent leaves no trace in the parent transcript and vanishes on reopen.
+  // data = { agentId, name, description }; agentId === the sub-agent's session
+  // id (agent_id===childSid), the key to fetch that session's state + result.
+  | "subagent"
   | "turn_boundary"
   | "goal_progress"
   // User interrupted the in-flight turn (pressed Stop). Persisted so a resume

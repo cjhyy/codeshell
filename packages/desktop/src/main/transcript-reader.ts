@@ -176,6 +176,26 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           timestamp: ts,
         });
         break;
+      case "subagent": {
+        // Sub-agent spawn anchor → rebuild its card. We emit agent_start here
+        // (sync, from the anchor); the async getSessionTranscript post-pass
+        // reads sessions/<agentId>/ for status + result and appends the
+        // matching agent_end / agent_backgrounded. agentId === childSid.
+        const agentId = String(d.agentId ?? "");
+        if (agentId) {
+          items.push({
+            kind: "stream",
+            event: {
+              type: "agent_start",
+              agentId,
+              ...(typeof d.name === "string" ? { name: d.name } : {}),
+              description: String(d.description ?? ""),
+            },
+            timestamp: ts,
+          });
+        }
+        break;
+      }
       case "turn_boundary":
         items.push({ kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: ts });
         break;
@@ -230,9 +250,82 @@ export async function getSessionTranscript(
   const file = path.join(baseDir, sessionId, "transcript.jsonl");
   try {
     const jsonl = await fs.readFile(file, "utf8");
-    return transcriptToFoldItems(jsonl);
+    const items = transcriptToFoldItems(jsonl);
+    return await enrichSubagentCards(items, baseDir);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw e;
   }
+}
+
+/** Statuses that mean the sub-agent finished/ended (terminal). Anything else
+ *  (stuck "active") means it never wrapped up → render as interrupted. */
+const SUBAGENT_DONE_STATUSES = new Set(["completed", "failed", "cancelled", "model_error", "aborted_streaming"]);
+
+/**
+ * Expand each replayed sub-agent `agent_start` (from a "subagent" anchor) into a
+ * full card by reading the sub-agent's own session (sessions/<agentId>/):
+ *   - its final output  = last assistant message in its transcript → text_delta
+ *   - terminal status   → agent_end (done) — completed shows ✓, others ✗
+ *   - stuck "active"     → agent_end{error:"中断"} so the card reads interrupted,
+ *                          not a forever-spinning "running"
+ * agentId === the sub-agent's session id (agent_id===childSid). Best-effort: a
+ * missing/unreadable sub-agent session just leaves the bare agent_start (card
+ * shows running) rather than failing the whole transcript.
+ */
+async function enrichSubagentCards(items: FoldItem[], baseDir: string): Promise<FoldItem[]> {
+  const out: FoldItem[] = [];
+  for (const item of items) {
+    out.push(item);
+    if (item.kind !== "stream" || item.event.type !== "agent_start") continue;
+    const agentId = item.event.agentId;
+    if (!agentId || !SAFE_ID.test(agentId)) continue;
+
+    let status = "active";
+    let resultText = "";
+    try {
+      const state = JSON.parse(
+        await fs.readFile(path.join(baseDir, agentId, "state.json"), "utf8"),
+      ) as { status?: string };
+      status = typeof state.status === "string" ? state.status : "active";
+    } catch {
+      continue; // no sub-agent session on disk → leave bare agent_start
+    }
+    try {
+      const subJsonl = await fs.readFile(path.join(baseDir, agentId, "transcript.jsonl"), "utf8");
+      // Last assistant message in the sub-agent's own transcript = its output.
+      for (const raw of subJsonl.split("\n")) {
+        const line = raw.trim();
+        if (!line) continue;
+        let ev: TranscriptEvent;
+        try { ev = JSON.parse(line) as TranscriptEvent; } catch { continue; }
+        if (ev.type === "message" && (ev.data as { role?: string })?.role === "assistant") {
+          resultText = textOf((ev.data as { content?: unknown }).content);
+        }
+      }
+    } catch {
+      /* no transcript → empty result, still mark terminal/interrupted below */
+    }
+
+    const ts = item.timestamp;
+    if (resultText) {
+      out.push({ kind: "stream", event: { type: "text_delta", text: resultText, agentId }, timestamp: ts });
+    }
+    if (SUBAGENT_DONE_STATUSES.has(status)) {
+      out.push({
+        kind: "stream",
+        event: { type: "agent_end", agentId, description: item.event.description, text: resultText || undefined },
+        timestamp: ts,
+      });
+    } else {
+      // Stuck "active" — never wrapped up → interrupted. agent_end{error} so the
+      // card resolves to a failed/interrupted state, not an eternal spinner.
+      out.push({
+        kind: "stream",
+        event: { type: "agent_end", agentId, description: item.event.description, error: "上次会话中断,未完成" },
+        timestamp: ts,
+      });
+    }
+  }
+  return out;
 }
