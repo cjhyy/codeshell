@@ -138,4 +138,31 @@ describe("synchronous Agent auto-backgrounds past the threshold", () => {
     expect(notif.status).toBe("failed");
     expect(notif.error).toContain("late boom");
   });
+
+  it("emits agent_backgrounded when a sync agent hands off (so the UI can show 转后台·运行中)", async () => {
+    // A (feature): the handoff moment must tell the UI "this agent is now
+    // running in the background", distinct from agent_start (foreground) and
+    // agent_end (done). Without it, turn_complete's cleanSweep marks the still-
+    // running agent done and the card collapses / shows no "running".
+    const events: Array<{ type: string; agentId?: string }> = [];
+    const ctx = makeCtx(
+      async () => {
+        await new Promise((r) => setTimeout(r, 200));
+        return "slow result";
+      },
+      "s-test",
+      (e) => events.push(e),
+    );
+
+    await agentTool({ description: "long task", prompt: "p" }, ctx);
+
+    const bg = events.find((e) => e.type === "agent_backgrounded");
+    expect(bg).toBeDefined();
+    expect(bg!.agentId).toBeTruthy();
+    // Ordering: agent_start (foreground working) → agent_backgrounded (handoff).
+    const iStart = events.findIndex((e) => e.type === "agent_start");
+    const iBg = events.findIndex((e) => e.type === "agent_backgrounded");
+    expect(iStart).toBeGreaterThanOrEqual(0);
+    expect(iBg).toBeGreaterThan(iStart);
+  });
 });

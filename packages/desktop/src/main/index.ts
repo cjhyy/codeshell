@@ -995,6 +995,9 @@ app.whenReady().then(() => {
     // notifications when the app isn't focused, so unattended jobs are visible.
     agentNotificationBus.subscribe((_sessionId, event) => {
       try {
+        // The bus now also carries agent_heartbeat (liveness pings) — only a
+        // background-agent COMPLETION should raise a desktop notification.
+        if (event.type !== "background_agent_completed") return;
         if (BrowserWindow.getFocusedWindow()) return; // user is watching; skip
         const ok = event.status === "completed";
         new Notification({

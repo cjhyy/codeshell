@@ -21,6 +21,8 @@ export const messagesNs = {
       agent: {
         fallbackName: "agent",
         toolCount: "{count} tools",
+        backgrounded: "转后台 · 运行中",
+        mayBeLost: "可能失联",
       },
       // agent fan-out group card
       agentGroup: {
@@ -143,6 +145,8 @@ export const messagesNs = {
       agent: {
         fallbackName: "agent",
         toolCount: "{count} tools",
+        backgrounded: "Backgrounded · running",
+        mayBeLost: "may be lost",
       },
       agentGroup: {
         count: "{count} sub-agents",

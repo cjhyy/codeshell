@@ -1,4 +1,4 @@
-import type { BackgroundAgentCompletedEvent } from "../../types.js";
+import type { BackgroundAgentCompletedEvent, StreamEvent } from "../../types.js";
 import { logger } from "../../logging/logger.js";
 
 /**
@@ -148,21 +148,21 @@ export const notificationQueue = new NotificationQueue();
 // poison fan-out to the others (same isolation rule as
 // NotificationQueue.notify).
 
-type BusHandler = (
-  sessionId: string,
-  event: BackgroundAgentCompletedEvent,
-) => void;
+// Widened from BackgroundAgentCompletedEvent to StreamEvent: the bus now also
+// carries `agent_heartbeat` (B). The server subscriber forwards whatever it
+// gets to the client via Methods.StreamEvent generically, so any StreamEvent is
+// safe to fan out here.
+type BusHandler = (sessionId: string, event: StreamEvent) => void;
 
 class AgentNotificationBus {
   private handlers = new Set<BusHandler>();
 
-  publish(sessionId: string, event: BackgroundAgentCompletedEvent): void {
+  publish(sessionId: string, event: StreamEvent): void {
     if (!isValidSessionId(sessionId)) {
       // Mirrors NotificationQueue.enqueue — refuse undefined / "" so the
       // server-side subscriber never has to defend against it.
       logger.warn("agent_notification_bus.invalid_session_id", {
-        agentId: event.agentId,
-        status: event.status,
+        eventType: event.type,
         sessionIdType: typeof sessionId,
       });
       return;

@@ -316,6 +316,45 @@ describe("applyStreamEvent — subagent isolation", () => {
     expect(agent.textBuffer).toBe("");
   });
 
+  test("4d. agent_backgrounded marks the agent backgrounded (still running, not done)", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("agent_backgrounded", { agentId: "A", name: "Sub", description: "doing work" } as any),
+    ]);
+    const agent = findAgent(s, "A");
+    expect(agent.done).toBe(false);
+    expect(agent.backgrounded).toBe(true);
+  });
+
+  test("4e. clean turn_complete does NOT sweep a BACKGROUNDED agent to done", () => {
+    // The handoff→completion gap: a clean main turn_complete must leave a
+    // backgrounded agent still running (it reports done later via agent_end /
+    // background_agent_completed). Without this it collapses + shows no running.
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("agent_backgrounded", { agentId: "A", name: "Sub", description: "doing work" } as any),
+      turnComplete, // reason: "completed"
+    ]);
+    const agent = findAgent(s, "A");
+    expect(agent.done).toBe(false); // backgrounded ≠ orphan; not swept
+    expect(agent.backgrounded).toBe(true);
+  });
+
+  test("4f. agent_end on a backgrounded agent resolves it to done", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("agent_backgrounded", { agentId: "A", name: "Sub", description: "doing work" } as any),
+      turnComplete,
+      ev("agent_end", { agentId: "A", text: "final" } as any),
+    ]);
+    const agent = findAgent(s, "A");
+    expect(agent.done).toBe(true);
+    expect(agent.text).toBe("final");
+  });
+
   test("5. text_delta for unknown agentId is dropped (state unchanged)", () => {
     const before = dispatch(INITIAL_STATE, [...mainTurn()]);
     const after = applyStreamEvent(
