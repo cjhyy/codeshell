@@ -170,7 +170,7 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 
 ### Phase 0 —— 止血(本周,~半天,纯文档+流程)
 
-**写下并采纳一条「什么该进 core」契约。** 放在 `packages/core/CONTRIBUTING.md`(或 `index.ts` 顶部),内容就是下面这张表,并约定:**任何 core PR 在 review 时先问这三句话。**
+**写下并采纳一条「什么该进 core」契约。** 放在 `packages/core/CONTRIBUTING.md`(或 `index.ts` 顶部),内容就是下面这张表,并约定:**任何 core PR 在 review 时先问这三句话。** **✅ 已落地(commit 见下,2026-06-24):写进 `packages/core/CONTRIBUTING.md`(用户重申「core 保持独立」后固化为可见 review checkpoint,不再只躺审计文档)。**
 
 > **CodeShell core 边界契约**
 > core 只装 **机制(mechanism)**,不装 **策略与目录(policy & catalog)**。
