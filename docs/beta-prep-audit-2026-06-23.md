@@ -250,6 +250,7 @@
 | desktop fs IPC 沙箱(只读) | 干净(lexical `..` 拒 + realpath 双侧 containment 防 symlink 逃逸;只读三 API 故 target 必存在→realpath 必跑足;不存在叶的 lexical 兜底仅写路径才危险而本服务无写;目录列举逐项 realpath 跳越界 symlink + 2MB 上限 + SKIP);7 测含 escape 用例) |
 | askUser 跨进程审批通道 | 干净(requestId 配对·5min 超时 backstop·cancel 显式 resolve pending+清 timer 防挂死/泄漏·per-resolver try/catch;worker 死经 agent-bridge error/exit→lifecycle 事件→preload 拒 pending 不挂 UI);36 protocol 测 |
 | generate-image/video 参数+凭证 | 干净(prompt required+trim+清晰错;apiKeyRef **单跳**故循环/链不会死循环·dangling ref fail-safe 不可用;prefer 命中走显式无静默 fallback);两工具 25 测含 dangling-ref 用例 |
+| background-shell 增量读 + 生命周期 | 干净(agentReadOffset 绝对游标 survives 环绕;sliceFromAbsolute 双 clamp 防驱逐数据负 subarray,落后读者优雅降级取窗口起点不崩;读后游标跳 totalWritten 无 lag/重读,同步无交织丢字节;kill 仅显式 killSession/killAll,无 idle-sweep 杀,dev server 不被收割);22 测含 orphan-recovery |
 
 ### 2.5) 修复完整性复审(查「只修一半」)
 
