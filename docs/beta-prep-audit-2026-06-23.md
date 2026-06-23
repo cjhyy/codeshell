@@ -16,11 +16,15 @@
 > | `37601014` | **Phase1:model 元数据外移 data 层**(KNOWN_MAX_OUTPUT/CONTEXT_WINDOWS/OPENROUTER_VENDORS→`data/model-metadata.json`+loader,worktree→FF main) | TDD,+4 测,build 0 |
 > | `f0ca990a` | **Phase1:VERTEX_REGION_OVERRIDES 外移**(并进同 json) | TDD,+2 测含顺序不变量 |
 > | `d01462b9` | **§4.1 validateToolMetadata**(注册期校验 pathPolicy.arg∈schema,防路径权限静默绕过·安全) | TDD,+7 测含 builtin 审计 |
-> | (d89924b2/a1c211ed) | assessment 文档标 Phase1/§4.1 进度 | 纯文档 |
+> | `b07c2670` | §4.4 三处 intentional 空 catch 加说明注释(openai×2/session-memory) | 纯注释 |
+> | `4f0901ef` | §4.8 TCP host settings 读取点注释(热读差异=设计非bug) | 纯注释 |
+> | (d89924b2/a1c211ed/546e4b59/3a9dad88) | assessment 文档标进度(§4.1/4.4部分/4.7已超越/4.8) | 纯文档 |
 >
-> **§2.4.5 send_input 守卫 → 已修**(最小止血)。**core-design Phase0 → 全做完**;**Phase1 → 过半**(model 元数据 + Vertex 外移 done;剩定价表+中文文案,定价表带时间戳UI=跨desktop留你);**§4.1 安全项 → 做完**。
+> **§2.4.5 send_input 守卫 → 已修**(最小止血)。**core-design Phase0 → 全做完**;**Phase1 → 过半**(model 元数据 + Vertex 外移 done;剩定价表+中文文案,定价表带时间戳UI=跨desktop留你)。**§4.x 安全/卫生:§4.1 做(安全)·§4.4 部分(intentional 注释,safeReadJson 留你)·§4.7 经核实已被 legacy 删除超越·§4.8 注释·§4.9 做**。
 >
-> **现状**:工作树净 · typecheck 0 · core 1658 测绿 · 领先 origin **215** 未 push。
+> **剩的全是「需你」或「需判断」**:§4.2 MCP validateToolDefinition(需启发式判「文件类」MCP工具·doc 自评设计选择非bug·有误伤风险不自主做)·§4.3 turn-loop 集成测试(已有7文件716行覆盖·[低]·新增需深懂harness易脆)·§4.5 image/video registry(等第4个provider)·§4.6 审批审计log(新feature需你定)·定价表外移(带时间戳UI跨desktop)。
+>
+> **现状**:工作树净 · typecheck 0 · core 1658/desktop 958/tui 69 全绿 · 领先 origin **220** 未 push。
 >
 > **仍等你(不变)**:① push;② §1.2/1.3 真机冒烟(cookie 登录全链路);③ §1.4 打包;④ R-2 cookie safeStorage 加密(开 worktree 你在场)。代码侧能独立做的高价值收尾已基本清空,**真正剩的是端到端真机验证 + 发布动作**。
 >
