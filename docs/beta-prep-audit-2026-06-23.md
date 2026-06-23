@@ -13,7 +13,10 @@
 >
 > **状态**:core 1584 / desktop 923 / tui 81 全绿 · core+desktop tsc 0 err · core build 0 · 工作树净 · dist 与 src 一致(tui 跑 fresh dist 绿)。
 >
-> **等你定的**:① push 这 ~85 commit;② §1.2/1.3 真机冒烟(cookie 登录全链路是唯一没真机验的核心新功能);③ §1.4 全量打包;④ R-2 cookie safeStorage 加密(改凭证格式,该开 worktree 你在场做)。
+> **本轮 fix commit 速查(13 个,供 push 前逐一 review)**:
+> `fc6f0409` cookie 域围栏 · `a906d8f7` 非数组 secret · `8065530a` R-1 0o600(manager+onboarding) · `b9915a0f` passcode 数组头+lease 0o700 · `d241ec08`+`d4c9dcb9` 权限链式绕过(+管道) · `9119ef0f` 记忆 redact · `e56825d6` R-1 第三写入点 engine · `95591130` killProcessGroup pgid 守卫 · `0a728764` resident-agent pid · `d423319d` resume 损坏 state.json · `c6e9b3a7` token-counter catch · `5ac51235` typecheck 收口(你 merge 的 send_input 带来的红) · `358efbb0` saveCatalogEntry mkdirSync(在 §3 提交里)。其余为 test 补全 + 文档。
+>
+> **等你定的**:① push 这 ~92 commit;② §1.2/1.3 真机冒烟(cookie 登录全链路是唯一没真机验的核心新功能);③ §1.4 全量打包;④ R-2 cookie safeStorage 加密(改凭证格式,该开 worktree 你在场做)。
 >
 > ---
 
