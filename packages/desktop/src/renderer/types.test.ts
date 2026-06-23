@@ -342,7 +342,7 @@ describe("applyStreamEvent — subagent isolation", () => {
     expect(agent.backgrounded).toBe(true);
   });
 
-  test("4f. agent_end on a backgrounded agent resolves it to done", () => {
+  test("4f. agent_end on a backgrounded agent resolves it to done (clears backgrounded)", () => {
     const s = dispatch(INITIAL_STATE, [
       ...mainTurn(),
       startAgent("A"),
@@ -352,7 +352,33 @@ describe("applyStreamEvent — subagent isolation", () => {
     ]);
     const agent = findAgent(s, "A");
     expect(agent.done).toBe(true);
+    expect(agent.backgrounded).toBe(false);
     expect(agent.text).toBe("final");
+  });
+
+  test("4g. background_agent_completed resolves a backgrounded agent's card to done (not 可能失联)", () => {
+    // Regression (s-mqqkkbpg): a backgrounded sub-agent that finishes via
+    // background_agent_completed (the success handoff path) must close its card.
+    // Before the fix that branch only added a system line, leaving the card
+    // {backgrounded:true, done:false} → heartbeats stop → card shows "可能失联"
+    // even though it completed.
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("agent_backgrounded", { agentId: "A", name: "Sub", description: "doing work" } as any),
+      turnComplete,
+      ev("background_agent_completed", {
+        agentId: "A",
+        name: "Sub",
+        description: "doing work",
+        status: "completed",
+        finalText: "done result",
+      } as any),
+    ]);
+    const agent = findAgent(s, "A");
+    expect(agent.done).toBe(true);       // card closed
+    expect(agent.backgrounded).toBe(false); // → isBackgrounded false → no "可能失联"
+    expect(agent.text).toBe("done result");
   });
 
   test("5. text_delta for unknown agentId is dropped (state unchanged)", () => {

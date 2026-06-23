@@ -728,6 +728,7 @@ export function applyStreamEvent(
             msgs[idx] = {
               ...m,
               done: true,
+              backgrounded: false, // resolved → clear the "转后台·运行中" flag
               text: event.text ?? flushed,
               textBuffer: "",
               error: event.error,
@@ -946,10 +947,35 @@ export function applyStreamEvent(
     }
 
     case "background_agent_completed": {
+      // A backgrounded sub-agent finished. Besides the system "✓ done" line,
+      // RESOLVE its card to done — otherwise it stays {backgrounded:true,
+      // done:false}, and once heartbeats stop (it's finished) the card wrongly
+      // shows "可能失联" (bug: 转后台完成的卡全失联). The success handoff path in
+      // core emits this event (not always a UI agent_end), so this is the
+      // reliable place to close the card. Carries agentId → locate the card.
+      const msgs = state.messages.slice();
+      const agentId = (event as { agentId?: string }).agentId;
+      if (agentId) {
+        const idx = state.agentMessageIndex[agentId];
+        if (idx !== undefined) {
+          const m = msgs[idx];
+          if (m && m.kind === "agent" && !m.done) {
+            const isFail = (event as { status?: string }).status === "failed";
+            msgs[idx] = {
+              ...m,
+              done: true,
+              backgrounded: false,
+              text: (event as { finalText?: string }).finalText ?? m.text,
+              error: isFail ? (event as { error?: string }).error ?? m.error : m.error,
+              endedAt: m.endedAt ?? now(),
+            };
+          }
+        }
+      }
       return {
         ...state,
         messages: [
-          ...state.messages,
+          ...msgs,
           { kind: "system", id: freshId("bg-done"), text: bgCompletionText(event) },
         ],
       };
