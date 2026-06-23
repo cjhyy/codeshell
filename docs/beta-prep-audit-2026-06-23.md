@@ -311,6 +311,7 @@
 - **flaky 根因**:测试用 `getEventListeners(ac.signal,"abort").length` 比较 before/after。该 API 是 node inspector/util 系,在 bun 全量套件并发/GC 下计数有时序噪声;`for` 循环内连续 await 短 sleep,某次清理微任务与计数读取的相对时序在高负载下不稳。
 - **影响**:间歇 CI 红(非产品 bug)。**建议(你定)**:循环后加一个 `await Promise.resolve()`/微任务让清理 settle,或改断言为「不单调增长」而非精确相等,或标 `.skip` 待 bun 端核实。我没擅改(是别人的测试 + bun getEventListeners 行为需你确认)。
 - ⚠️ **核实坑**:`bun run typecheck` / 隔离测试都不会暴露——只有**全量 core `bun test`** 偶发。CI 若跑全量会间歇红。
+- **同类潜在风险(grep 全仓后)**:`apply-patch/cache-invalidate.test.ts:51` `expect(fileCache.size).toBe(0)` 是**同一脆弱模式**(共享单例 `fileCache` 精确计数;并发测试若 `.set` 一项会 flake)。未观察到它实际 flaky,但建议改 `expect(fileCache.has(abs)).toBe(false)`——更准确测「绝对键被删」(正是该测试注释的本意),且免疫其他条目。其余 `.size).toBe`(pendingApprovals/cron/FileRunStore/mergeTranscripts 等)都是**本地对象**确定性,无此风险。
 
 ### 2.4.5) 🟡 给用户的发现:send_input 续接缺「agent 在跑」并发守卫(你刚 merge 的特性)
 
