@@ -137,7 +137,10 @@ export async function gitClone(
 
   // Restrict the working tree to the manifest dirs, then check out. Use
   // non-cone mode so nested paths like ".agents/plugins" match exactly.
-  const init = await runGit(["sparse-checkout", "set", "--no-cone", ...sparsePaths], destDir);
+  // `--` before the manifest-derived paths: a malicious manifest path shaped
+  // like `--stdin`/`--cone` would otherwise be parsed as a sparse-checkout flag
+  // (arg-injection). No RCE flag here as in ls-remote, but match the discipline.
+  const init = await runGit(["sparse-checkout", "set", "--no-cone", "--", ...sparsePaths], destDir);
   if (!init.ok) {
     // Sparse unsupported/failed — fall back to a normal full checkout so the
     // manifest is still present.
@@ -154,7 +157,7 @@ export async function gitClone(
  * harmlessly and the caller proceeds (the files are already present).
  */
 export async function gitSparseCheckoutAdd(repoDir: string, relPath: string): Promise<GitResult> {
-  return runGit(["sparse-checkout", "add", relPath], repoDir);
+  return runGit(["sparse-checkout", "add", "--", relPath], repoDir);
 }
 
 export async function gitRevParseHead(repoDir: string): Promise<GitResult> {
@@ -182,7 +185,9 @@ export async function gitLsRemote(url: string, ref?: string): Promise<GitResult>
 
 export async function gitFetchAndReset(repoDir: string, ref?: string): Promise<GitResult> {
   const fetchArgs = ["fetch", "--depth", "1", "origin"];
-  if (ref) fetchArgs.push(ref);
+  // `--` before a (possibly user/manifest-derived) ref so a flag-shaped ref
+  // can't be parsed as a git fetch option. Consistent with clone/ls-remote.
+  if (ref) fetchArgs.push("--", ref);
   const fetch = await runGit(fetchArgs, repoDir);
   if (!fetch.ok) return fetch;
   return runGit(["reset", "--hard", ref ? `origin/${ref}` : "FETCH_HEAD"], repoDir);
