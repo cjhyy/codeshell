@@ -1753,7 +1753,23 @@ function App() {
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, newQueuedId(), text));
   };
 
+  // Before a relay (打断重发) aborts + re-sends the queue as a fresh run, revoke
+  // every queued draft that was ALREADY auto-steered into the engine. Otherwise
+  // the leftover steer entries survive the abort and get consumed by the new
+  // run → the same text lands twice (one relay re-send + one steer_injected).
+  // This is the queue↔relay seam: cancel() does not clear steerQueueBySid.
+  const revokeSteeredForRelay = (): void => {
+    const engineSessionId = resolveActiveEngineSessionId();
+    if (!engineSessionId) return;
+    for (const item of queuedInputs[activeBucket] ?? []) {
+      if (!steeredIdsRef.current.has(item.id)) continue;
+      void window.codeshell.unsteer(engineSessionId, item.id);
+      steeredIdsRef.current.delete(item.id);
+    }
+  };
+
   const forceSend = (text: string): void => {
+    revokeSteeredForRelay();
     setQueuedInputs((prev) => enqueueQueuedInput(prev, activeBucket, newQueuedId(), text));
     setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
     stop(activeBucket, { relay: true });
@@ -1806,6 +1822,7 @@ function App() {
   const guideActiveQueuedInput = (): void => {
     const queued = queuedInputs[activeBucket];
     if (!queued || queued.length === 0) return;
+    revokeSteeredForRelay();
     setRelayingBuckets((prev) => new Set(prev).add(activeBucket));
     stop(activeBucket, { relay: true });
   };
