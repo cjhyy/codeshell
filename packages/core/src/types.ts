@@ -555,6 +555,12 @@ export interface LLMConfig {
    * ("openai" or "anthropic") that picks which client class to use.
    */
   providerKind?: string;
+  /**
+   * Catalog-driven extra request-body fields (temperature/top_p/thinking etc),
+   * already wire-mapped from the connection's paramValues. Merged into the
+   * request body, each key filtered by the model's rejectedParams.
+   */
+  extraBody?: Record<string, unknown>;
 }
 
 /**
