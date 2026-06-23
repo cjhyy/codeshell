@@ -40,6 +40,11 @@ const port = Number(process.env.AGENT_TCP_PORT ?? "4321");
 const host = process.env.AGENT_TCP_HOST ?? "127.0.0.1";
 
 const settingsManager = new SettingsManager(cwd, "full");
+// Read once at startup and reuse for every session (see engineFactory below).
+// This is intentional for the TCP host: it's a headless long-running server,
+// so config changes — including `mcpServers` — take effect on restart, not
+// mid-session. (The stdio host re-reads per session via freshSettings(); the
+// difference is by design, not a bug. Assessment §4.8.)
 const settings = settingsManager.get();
 
 const seedLlm = resolveLLMConfigForTag(

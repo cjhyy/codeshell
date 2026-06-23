@@ -147,11 +147,12 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 - **工作量**:中。
 - **✅ 处置(2026-06-24 核实)**:本项**已被「删除 legacy 模型存储」(merge b1037789)整体解决**——那次直接删掉了 `settings.model` / `activeKey` 这套 legacy 单数字段+镜像,全量切统一 catalog(`modelConnections` + `defaults.<tag>`)。schema 里残留的 `model: z.string()`(167/395)是 connection 对象内部「这条连接用哪个模型」的字段,非顶层双源镜像。双源同步问题不复存在,无需再加同步测试。
 
-### 4.8 [低] TCP host 的 MCP 配置不随会话热读(多宿主一致性裂缝)
+### 4.8 [低] ✅ 已做(注释) — TCP host 的 MCP 配置不随会话热读(多宿主一致性裂缝)
 - **证据**:`agent-server-tcp.ts:42` 启动时读一次 `settings.mcpServers`,每会话复用;`agent-server-stdio.ts:167` 每会话 `freshSettings()` 重读。用户中途改 `mcpServers`,TCP 看到陈旧、stdio 看到新鲜。
 - **判定**:TCP 是 headless 长跑服务器,config 改动本就期望重启生效——属**有意设计**,非 bug。
 - **建议**:要么 TCP 的 engineFactory 也 `settingsManager.load()` 重读;要么在代码注释里写清「TCP 的 MCP 编辑需重启」,别让它成为意外。
 - **工作量**:小。
+- **✅ 处置(2026-06-24)**:采纳注释方案(本就是有意设计,非 bug)——在 `agent-server-tcp.ts:43` 的 settings 读取点写清「startup 读一次全会话复用,mcpServers 等改动重启生效;stdio 每会话 freshSettings 重读,差异是设计非 bug」。不改行为。
 
 ### 4.9 [低] ✅ 已做 — index.ts 混合 core API 与 TUI-only 导出,无层级标记
 - **证据**:`index.ts` 有 `─── Tool-system (extended for TUI)`、`─── Arena (extended for TUI)` 等段落与 core 导出混排;`update-automation-memory.js` 这类内部工具工厂被公开导出。
