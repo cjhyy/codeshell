@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -36,5 +36,15 @@ describe("gitLsRemote", () => {
   test("a bogus url returns ok:false", async () => {
     const r = await gitLsRemote(`file://${repo}-does-not-exist`);
     expect(r.ok).toBe(false);
+  });
+
+  test("SECURITY: a `--upload-pack=<cmd>`-shaped url does NOT execute the command", async () => {
+    // Without the `--` end-of-options separator, git parses this URL as the
+    // --upload-pack flag and RUNS the command (RCE). The sentinel file must NOT
+    // appear — git must treat the whole thing as a (bogus) positional URL.
+    const sentinel = join(repo, "pwned");
+    const r = await gitLsRemote(`--upload-pack=touch ${sentinel}`);
+    expect(r.ok).toBe(false); // bogus url → clean failure
+    expect(existsSync(sentinel)).toBe(false); // command did NOT run
   });
 });

@@ -167,7 +167,11 @@ export async function gitRevParseHead(repoDir: string): Promise<GitResult> {
  */
 export async function gitLsRemote(url: string, ref?: string): Promise<GitResult> {
   // `git ls-remote <url> <ref>` prints "<sha>\t<refname>"; take the first sha.
-  const r = await runGit(["ls-remote", url, ref ?? "HEAD"]);
+  // SECURITY: the `--` end-of-options separator is REQUIRED before a
+  // user-controlled `url`. Without it a marketplace/plugin URL shaped like
+  // `--upload-pack=<cmd>` is parsed as a git flag and git EXECUTES <cmd> (RCE).
+  // gitClone already does this (`-- url destDir`); ls-remote must match.
+  const r = await runGit(["ls-remote", "--", url, ref ?? "HEAD"]);
   if (!r.ok) return r;
   const sha = r.stdout.split(/\s+/)[0] ?? "";
   if (!/^[0-9a-f]{7,40}$/i.test(sha)) {
