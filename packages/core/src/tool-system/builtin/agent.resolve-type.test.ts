@@ -42,3 +42,74 @@ describe("resolveAgentTypeOverrides — falls back to a configured agent", () =>
     expect(resolveAgentTypeOverrides(undefined, undefined)).toEqual({});
   });
 });
+
+// A plugin-bundled agent's frontmatter references its own skills by BARE name
+// (CC convention: `skills: director-skill`), but the scanner registers plugin
+// skills under their namespaced name (`mimi-video:director-skill`). Without
+// namespacing the allowlist here, the bare name never matches and the
+// sub-agent reports the skill "not found". So for a plugin-source agent we
+// rewrite each bare skill name to `<pluginName>:<skill>`.
+describe("resolveAgentTypeOverrides — plugin skill allowlist namespacing", () => {
+  function pluginRole(skills: string[]): AgentDefinitionRegistry {
+    const reg = new AgentDefinitionRegistry();
+    // @ts-expect-error — test helper pokes a plugin-source definition in
+    reg.defs.set("director", {
+      name: "director",
+      description: "director role",
+      systemPrompt: "x",
+      source: "plugin",
+      pluginName: "mimi-video",
+      skills,
+    });
+    return reg;
+  }
+
+  it("namespaces bare skill names for a plugin-source agent", () => {
+    const ov = resolveAgentTypeOverrides(
+      "director",
+      pluginRole(["director-skill", "compliance-review-skill"]),
+    );
+    expect(ov.skillAllowlist).toEqual([
+      "mimi-video:director-skill",
+      "mimi-video:compliance-review-skill",
+    ]);
+  });
+
+  it("leaves an already-namespaced skill name untouched", () => {
+    const ov = resolveAgentTypeOverrides("director", pluginRole(["mimi-video:director-skill"]));
+    expect(ov.skillAllowlist).toEqual(["mimi-video:director-skill"]);
+  });
+
+  it("preserves an empty allowlist (no skills, not inherit-all)", () => {
+    const ov = resolveAgentTypeOverrides("director", pluginRole([]));
+    expect(ov.skillAllowlist).toEqual([]);
+  });
+
+  it("does NOT namespace skills for a non-plugin (project/user) agent", () => {
+    const reg = new AgentDefinitionRegistry();
+    // @ts-expect-error — project-source agent, bare skills must stay bare
+    reg.defs.set("director", {
+      name: "director",
+      description: "d",
+      systemPrompt: "x",
+      source: "project",
+      skills: ["director-skill"],
+    });
+    const ov = resolveAgentTypeOverrides("director", reg);
+    expect(ov.skillAllowlist).toEqual(["director-skill"]);
+  });
+
+  it("leaves skills undefined (inherit full pool) untouched", () => {
+    const reg = new AgentDefinitionRegistry();
+    // @ts-expect-error — plugin agent with no skills field
+    reg.defs.set("director", {
+      name: "director",
+      description: "d",
+      systemPrompt: "x",
+      source: "plugin",
+      pluginName: "mimi-video",
+    });
+    const ov = resolveAgentTypeOverrides("director", reg);
+    expect(ov.skillAllowlist).toBeUndefined();
+  });
+});

@@ -10,6 +10,7 @@
 import type { ToolDefinition, StreamCallback } from "../../types.js";
 import type { ToolContext, SubAgentSpawner } from "../context.js";
 import type { AgentDefinitionRegistry } from "../../agent/agent-definition-registry.js";
+import type { AgentDefinition } from "../../agent/agent-definition.js";
 import type { HookRegistry } from "../../hooks/registry.js";
 import { asyncAgentRegistry, MAX_BACKGROUND_AGENTS } from "./agent-registry.js";
 import { writeAgentOutputFile } from "./agent-output-file.js";
@@ -84,9 +85,34 @@ export function resolveAgentTypeOverrides(
     model: def.model,
     maxTurns: def.maxTurns,
     toolAllowlist: def.tools,
-    skillAllowlist: def.skills,
+    skillAllowlist: namespacePluginSkills(def.skills, def.source, def.pluginName),
     appendSystemPrompt: def.systemPrompt,
   };
+}
+
+/**
+ * A plugin-bundled agent's frontmatter lists its own skills by BARE name
+ * (`skills: director-skill`), matching Claude Code's convention where a
+ * plugin agent references same-plugin skills unqualified. But the skill
+ * scanner registers plugin skills under their NAMESPACED name
+ * (`mimi-video:director-skill`), and the allowlist filter is an exact match —
+ * so a bare entry never matches and the sub-agent reports the skill "not
+ * found", forcing it to fall back to reading SKILL.md by hand.
+ *
+ * Bridge the two conventions: for a plugin-source agent, rewrite each bare
+ * skill name to `<pluginName>:<skill>`. Names that already carry a namespace
+ * (contain ":") are left untouched, so an agent may still reference another
+ * plugin's skill explicitly. undefined (inherit full pool) and [] (no skills)
+ * pass through unchanged. Non-plugin agents are never rewritten.
+ */
+export function namespacePluginSkills(
+  skills: string[] | undefined,
+  source: AgentDefinition["source"],
+  pluginName: string | undefined,
+): string[] | undefined {
+  if (skills === undefined) return undefined;
+  if (source !== "plugin" || !pluginName) return skills;
+  return skills.map((s) => (s.includes(":") ? s : `${pluginName}:${s}`));
 }
 
 /**
@@ -243,6 +269,21 @@ export const agentToolDef: ToolDefinition = {
 };
 
 /**
+ * Auto-background threshold (ms): a synchronous agent still running after this
+ * long is detached into the background (not killed) so the main turn isn't
+ * blocked for up to the 30min tool cap (TODO 4.1). Default 120s, matching
+ * Claude Code; overridable via CODE_SHELL_AGENT_BG_MS for tests. The agent
+ * keeps running on the same signal — we just stop awaiting it inline and let it
+ * notify on finish. Shared by the first-spawn (agentTool) and continuation
+ * (agentSendInputTool) paths.
+ */
+function resolveAutoBgMs(): number {
+  const raw = process.env.CODE_SHELL_AGENT_BG_MS;
+  const n = raw !== undefined ? Number(raw) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n : 120_000;
+}
+
+/**
  * Build and run a sub-agent. Returns the produced text or throws.
  * Used by both the synchronous and background paths.
  */
@@ -265,6 +306,9 @@ async function runSubAgent(
     skillAllowlist?: string[];
     appendSystemPrompt?: string;
     readOnlySession?: boolean;
+    /** Resume an existing child session (transcript replay) instead of cold
+     *  start. Set by AgentSendInput; undefined for a first spawn. */
+    resumeSessionId?: string;
     /** Engine HookRegistry for lifecycle events. Undefined → no hooks. */
     hooks?: HookRegistry;
   },
@@ -294,7 +338,7 @@ async function runSubAgent(
   // that no longer exists. The child Engine is a fresh instance; plan-mode
   // isolation between parent and child is enforced via separate Engine
   // instances (finalized in T6).
-  const text = await spawner.spawn({ ...opts, streamOverride });
+  const { text } = await spawner.spawn({ ...opts, streamOverride });
   const finalText = text || `Agent completed but produced no text output.`;
   safeEmit(startEndSink, { type: "agent_end", agentId, name, description, text: finalText, agentType });
   emitSubAgentHook(opts.hooks, "subagent_finish", { agentId, description, text: finalText });
@@ -352,16 +396,7 @@ export async function agentTool(
   const agentId = nanoid(8);
   const parentStream = spawner.parentStream;
 
-  // Auto-background threshold: a synchronous agent still running after this
-  // long is detached into the background (not killed) so the main turn isn't
-  // blocked for up to the 30min tool cap (TODO 4.1). Default 120s, matching
-  // Claude Code; overridable via env for tests. The agent keeps running on the
-  // same signal — we just stop awaiting it inline and let it notify on finish.
-  const autoBgMs = (() => {
-    const raw = process.env.CODE_SHELL_AGENT_BG_MS;
-    const n = raw !== undefined ? Number(raw) : NaN;
-    return Number.isFinite(n) && n >= 0 ? n : 120_000;
-  })();
+  const autoBgMs = resolveAutoBgMs();
 
   // ─── Background path ───────────────────────────────────────────
   // Register the agent, kick off execution detached from the current turn,
@@ -532,19 +567,105 @@ export async function agentTool(
   }
 
   // ─── Synchronous path (with auto-background handoff) ────────────
-  // No wall-clock timeout on the sub-agent lifecycle — that matches Claude
-  // Code / Codex, where a sub-agent (Task) is bounded by maxTurns + per-tool
-  // timeouts (Bash etc. carry their own) + parent/user abort, NOT by a global
-  // countdown that kills legitimate heavy work mid-task. The old
-  // runWithTimeout(5min) both (a) murdered a "read 40 files" agent at 5:00 and
-  // (b) raced with the normal completion path: the timeout aborted the child,
-  // the catch emitted agent_end{error}, AND the aborted child still let
-  // runSubAgent reach its line-280 agent_end{text} — two agent_end events for
-  // one agent, the later text one overwriting the error so a timed-out agent
-  // rendered as "done". Dropping the timeout removes the race entirely: a
-  // genuine spawn error throws BEFORE the success emit, so only the catch
-  // fires; a clean run emits agent_end{text} exactly once. (fix:
-  // subagent-timeout-double-agent-end)
+  return runSyncSubAgent({
+    spawner,
+    agentId,
+    name,
+    description,
+    prompt,
+    maxTurns,
+    overrides,
+    autoBgMs,
+    parentSignal,
+    parentStream,
+    ctx,
+  });
+}
+
+/**
+ * Record a finished SYNCHRONOUS sub-agent in the registry so AgentSendInput's
+ * fast path can later find it — its agentType (for role-scope re-resolution on
+ * resume) and dock label. Background agents already register on spawn; sync
+ * agents historically didn't (they returned text and were forgotten), which
+ * left continuation unable to recover the role's tool/skill constraints.
+ *
+ * This is a SILENT entry: status already `completed`, no notification enqueued,
+ * so it doesn't flash a dock card or wake the parent. It's pure lookup state.
+ * Keyed by agentId === childSid, so it agrees with the on-disk session that the
+ * cross-restart disk-probe finds. Skipped when the agent moved to the
+ * background (that path registers its own live entry) or was aborted.
+ */
+function recordCompletedSyncAgent(opts: {
+  agentId: string;
+  name?: string;
+  agentType?: string;
+  description: string;
+  parentSessionId?: string;
+}): void {
+  // Don't clobber a live/handed-off entry of the same id.
+  if (asyncAgentRegistry.get(opts.agentId)) return;
+  const now = Date.now();
+  asyncAgentRegistry.register({
+    agentId: opts.agentId,
+    name: opts.name,
+    agentType: opts.agentType,
+    description: opts.description,
+    sessionId: opts.parentSessionId,
+    // agent_id === childSid: the resumable session lives at sessions/<agentId>/.
+    childSessionId: opts.agentId,
+    status: "completed",
+    startedAt: now,
+    finishedAt: now,
+    // No fade window / no notification: this entry exists only so
+    // AgentSendInput can resolve the role on continuation, not to render.
+    abort: () => {},
+  });
+}
+
+/**
+ * The synchronous sub-agent run path, shared by `agentTool` (first spawn) and
+ * `agentSendInputTool` (resume/continuation). Races the run against the
+ * auto-background timer and hands off to the background registry if it runs
+ * long. `resumeSessionId`, when set, resumes an existing child session
+ * (transcript replay) instead of cold-starting.
+ *
+ * No wall-clock timeout on the lifecycle — matches Claude Code / Codex, where a
+ * sub-agent is bounded by maxTurns + per-tool timeouts + parent/user abort, NOT
+ * a global countdown that kills legitimate heavy work mid-task. (The old
+ * runWithTimeout(5min) murdered slow agents AND raced the completion path into
+ * a double agent_end; dropping it removed the race — fix
+ * subagent-timeout-double-agent-end.)
+ */
+async function runSyncSubAgent(args: {
+  spawner: SubAgentSpawner;
+  agentId: string;
+  name?: string;
+  description: string;
+  prompt: string;
+  maxTurns: number;
+  overrides: AgentTypeOverrides;
+  autoBgMs: number;
+  parentSignal?: AbortSignal;
+  parentStream?: StreamCallback;
+  ctx?: ToolContext;
+  /** Resume an existing child session (continuation) instead of cold start. */
+  resumeSessionId?: string;
+}): Promise<string> {
+  const {
+    spawner,
+    agentId,
+    name,
+    description,
+    prompt,
+    maxTurns,
+    overrides,
+    autoBgMs,
+    parentSignal,
+    parentStream,
+    ctx,
+    resumeSessionId,
+  } = args;
+
   const syncController = new AbortController();
   const onParentAbort = () => syncController.abort();
   parentSignal?.addEventListener("abort", onParentAbort, { once: true });
@@ -569,6 +690,7 @@ export async function agentTool(
     skillAllowlist: overrides.skillAllowlist,
     appendSystemPrompt: overrides.appendSystemPrompt,
     readOnlySession: overrides.resolvedType === "researcher" || overrides.resolvedType === "explorer",
+    resumeSessionId,
     hooks: ctx?.hooks,
     signal: syncController.signal,
   });
@@ -623,8 +745,20 @@ export async function agentTool(
       ].join("\n");
     }
 
-    // Agent finished within the threshold.
-    if (winner.ok) return winner.text;
+    // Agent finished within the threshold. Record a silent completed entry so
+    // AgentSendInput can continue this sub-agent (recover its role scope). Both
+    // a first spawn and a resume land here; re-registering a resumed id is a
+    // no-op (recordCompletedSyncAgent skips when an entry already exists).
+    if (winner.ok) {
+      recordCompletedSyncAgent({
+        agentId,
+        name,
+        agentType: overrides.resolvedType,
+        description,
+        parentSessionId: ctx?.sessionId,
+      });
+      return winner.text;
+    }
     throw winner.err;
   } catch (err) {
     emitSubAgentHook(ctx?.hooks, "subagent_error", { agentId, description, error: (err as Error).message });
@@ -845,4 +979,125 @@ export async function agentCancelTool(args: Record<string, unknown>): Promise<st
   return ok
     ? `Agent ${agentId} cancelled.`
     : `Failed to cancel agent ${agentId}.`;
+}
+
+// ─── AgentSendInput — continue a previously-spawned sub-agent ────
+
+export const agentSendInputToolDef: ToolDefinition = {
+  name: "AgentSendInput",
+  description:
+    "Continue a sub-agent you previously launched with Agent — send it a follow-up " +
+    "instruction that it answers WITH FULL MEMORY of its earlier work (its prior " +
+    "messages, tool calls, and results). Use this instead of spawning a fresh agent " +
+    "with a re-pasted context dump: it resumes the same conversation by replaying the " +
+    "agent's saved transcript, so nothing is lost and you don't re-send what it already " +
+    "knows.\n\n" +
+    "Typical use: you got a partial result or a review verdict from a sub-agent, and now " +
+    "you want it to revise / answer a follow-up / act on feedback. Pass only the " +
+    "incremental instruction.\n\n" +
+    "Pass the agent_id the Agent tool returned. Works for both synchronous and background " +
+    "agents, and even after a process restart (the transcript is persisted on disk). " +
+    "Returns the agent's new reply, synchronously (a long continuation auto-moves to the " +
+    "background and notifies you on completion, like Agent does).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      agent_id: {
+        type: "string",
+        description: "The agent_id returned by a prior Agent(...) call.",
+      },
+      prompt: {
+        type: "string",
+        description:
+          "The follow-up instruction. The agent already remembers its earlier work — " +
+          "send only what's new (feedback, the next step, a question).",
+      },
+    },
+    required: ["agent_id", "prompt"],
+  },
+};
+
+export async function agentSendInputTool(
+  args: Record<string, unknown>,
+  ctx?: ToolContext,
+): Promise<string> {
+  const agentId = (args.agent_id as string | undefined)?.trim();
+  const prompt = args.prompt as string | undefined;
+
+  if (!agentId) return "Error: agent_id is required.";
+  if (!prompt) return "Error: prompt is required.";
+
+  if (!ctx?.subAgentSpawner) {
+    return "Error: Agent tool is not configured (no subAgentSpawner in ctx).";
+  }
+  // Same flat-hierarchy rule as Agent: a sub-agent cannot continue (or spawn)
+  // another sub-agent. Layered with the NESTED_AGENT_TOOLS strip in engine.ts.
+  if (ctx.isSubAgent === true) {
+    return "Error: nested agents are not supported. Sub-agents cannot send input to other sub-agents. Complete the task directly using your available tools.";
+  }
+  const spawner = ctx.subAgentSpawner;
+
+  const parentSignal = args.__signal as AbortSignal | undefined;
+  if (parentSignal?.aborted) {
+    return "Agent aborted before resuming.";
+  }
+
+  // Resolve the child session to resume. With the agent_id===childSid
+  // convention the child session is stored at sessions/<agent_id>/, so the
+  // agent_id IS the resume target. Confirm it's resumable:
+  //   1. in-memory registry (fast path, same process) — gives us the recorded
+  //      childSessionId (== agentId) and the dock label/agentType;
+  //   2. on-disk probe (cross-restart) — the registry is gone but the session
+  //      transcript persists.
+  // Both miss → the agent never existed or was cleaned up.
+  const entry = asyncAgentRegistry.get(agentId);
+  const resumeSessionId = entry?.childSessionId ?? agentId;
+  const onDisk = spawner.sessionExists?.(resumeSessionId) ?? false;
+  if (!entry && !onDisk) {
+    return (
+      `Error: no resumable sub-agent with agent_id "${agentId}". ` +
+      `It may never have run or its session was cleaned up. ` +
+      `Re-spawn with Agent(...) and a complete task description.`
+    );
+  }
+
+  const name = entry?.name;
+  const description = entry?.description ?? "sub-agent continuation";
+  // Reconstruct the role's overrides from the recorded agentType. The child
+  // Engine is built FRESH on every spawn (engine.ts spawn closure) — resuming a
+  // session replays its transcript but the new Engine's tool/skill SCOPE comes
+  // from req.toolAllowlist / req.skillAllowlist, NOT from the persisted session.
+  // So if we didn't re-resolve these, a restricted role (e.g. a read-only
+  // reviewer) would silently regain the parent's full tool set on continuation.
+  // Re-resolving from agentType keeps the resumed turn under the same
+  // tool/skill/model constraints as the original spawn. An ephemeral agent
+  // (no agentType) resolves to empty overrides → inherits parent scope, same as
+  // its first turn did.
+  let overrides: AgentTypeOverrides;
+  try {
+    overrides = resolveAgentTypeOverrides(entry?.agentType, ctx?.agentDefinitions);
+  } catch {
+    // Role no longer exists (renamed/removed since spawn). Fall back to a bare
+    // continuation rather than refusing — the transcript still carries the
+    // role's system prompt, and replaying it is more useful than an error.
+    overrides = { resolvedType: entry?.agentType };
+  }
+
+  const maxTurns = overrides.maxTurns ?? 15;
+  const autoBgMs = resolveAutoBgMs();
+
+  return runSyncSubAgent({
+    spawner,
+    agentId,
+    name,
+    description,
+    prompt,
+    maxTurns,
+    overrides,
+    autoBgMs,
+    parentSignal,
+    parentStream: spawner.parentStream,
+    ctx,
+    resumeSessionId,
+  });
 }

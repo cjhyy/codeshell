@@ -16,12 +16,13 @@ import { asyncAgentRegistry } from "./agent-registry.js";
 import { notificationQueue } from "./agent-notifications.js";
 
 function makeCtx(
-  spawn: SubAgentSpawner["spawn"],
+  spawnText: (req: { agentId: string; prompt: string }) => Promise<string>,
   sessionId = "s-test",
   onEvent?: (e: { type: string; agentId?: string; error?: string }) => void,
 ): ToolContext {
   const spawner: SubAgentSpawner = {
-    spawn,
+    // Wrap the text-returning mock into spawn()'s { text, sessionId } shape.
+    spawn: async (req) => ({ text: await spawnText(req), sessionId: req.resumeSessionId ?? req.agentId }),
     parentStream: onEvent ? (e) => onEvent(e as never) : () => {},
     describe: () => ({ cwd: "/tmp", permissionMode: "acceptEdits" }),
   };

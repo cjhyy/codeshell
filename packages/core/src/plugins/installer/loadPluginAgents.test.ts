@@ -23,7 +23,11 @@ describe("pluginAgentDirs", () => {
     appendInstallEntry(pluginInstallKey("p1", "local"), {
       scope: "user", installPath: p, version: "1", installedAt: "t", lastUpdated: "t",
     });
-    expect(pluginAgentDirs([])).toEqual([{ dir: join(p, "agents"), source: "plugin" }]);
+    // pluginName is carried so a plugin agent's bare skill allowlist can be
+    // namespaced (`director-skill` → `p1:director-skill`) at spawn time.
+    expect(pluginAgentDirs([])).toEqual([
+      { dir: join(p, "agents"), source: "plugin", pluginName: "p1" },
+    ]);
     expect(pluginAgentDirs(["p1"])).toEqual([]);
   });
 

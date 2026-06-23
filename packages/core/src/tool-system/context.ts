@@ -102,11 +102,32 @@ export interface SubAgentSpawnRequest {
   appendSystemPrompt?: string;
   /** True for read-only reviewer/researcher children; tunes investigation guard reminders. */
   readOnlySession?: boolean;
+  /**
+   * Resume an existing child session instead of cold-starting a new one.
+   * When set, the child Engine runs with `sessionId: resumeSessionId`, which
+   * loads that session's full transcript (all prior tool calls + results) and
+   * appends this turn's prompt — i.e. transcript replay, the CC model. When
+   * omitted, the child cold-starts under its own `agentId` as the session id
+   * (so `agentId === childSid`, enabling later resume with no extra mapping).
+   * See AgentSendInput in builtin/agent.ts.
+   */
+  resumeSessionId?: string;
 }
 
 export interface SubAgentSpawner {
-  /** Run a sub-agent synchronously and return its text output. */
-  spawn(req: SubAgentSpawnRequest): Promise<string>;
+  /**
+   * Run a sub-agent synchronously. Returns its text output and the child's
+   * session id. The session id equals the request's `agentId` on a cold start
+   * (or `resumeSessionId` when resuming), so the parent can address follow-up
+   * input at the same session via AgentSendInput (transcript replay).
+   */
+  spawn(req: SubAgentSpawnRequest): Promise<{ text: string; sessionId: string }>;
+  /**
+   * Whether a child session id exists on disk. Lets AgentSendInput resume an
+   * agent across a process restart (when the in-memory registry is empty but
+   * the session transcript is still persisted). Optional for legacy callers.
+   */
+  sessionExists?(sessionId: string): boolean;
   /** Stream callback to forward sub-agent events back to the parent UI. */
   parentStream?: StreamCallback;
   /** Static config used to describe what the spawned engine looks like. */

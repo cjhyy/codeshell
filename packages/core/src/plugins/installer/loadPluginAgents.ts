@@ -14,10 +14,14 @@ export function pluginAgentDirs(disabledPlugins: string[] = []): AgentSourceDir[
   const out: AgentSourceDir[] = [];
   const data = readInstalledPlugins();
   for (const [key, entries] of Object.entries(data.plugins)) {
-    if (disabled.has(pluginNameFromKey(key))) continue;
+    const pluginName = pluginNameFromKey(key);
+    if (disabled.has(pluginName)) continue;
     for (const entry of entries) {
       const dir = join(entry.installPath, "agents");
-      if (existsSync(dir)) out.push({ dir, source: "plugin" });
+      // Carry pluginName so a plugin agent's bare skill allowlist
+      // (`director-skill`) can be namespaced to `<pluginName>:director-skill`
+      // at spawn time — see resolveAgentTypeOverrides.
+      if (existsSync(dir)) out.push({ dir, source: "plugin", pluginName });
     }
   }
   return out;

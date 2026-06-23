@@ -21,6 +21,7 @@ import {
   agentToolDef, agentTool,
   agentStatusToolDef, agentStatusTool,
   agentCancelToolDef, agentCancelTool,
+  agentSendInputToolDef, agentSendInputTool,
 } from "./agent.js";
 import { enterPlanModeToolDef, enterPlanModeTool, exitPlanModeToolDef, exitPlanModeTool } from "./plan.js";
 import { toolSearchToolDef, toolSearchTool } from "./tool-search.js";
@@ -314,6 +315,17 @@ export const BUILTIN_TOOLS: BuiltinTool[] = [
       isConcurrencySafe: false,
     },
     execute: agentCancelTool,
+  },
+  {
+    definition: {
+      ...agentSendInputToolDef,
+      source: "builtin",
+      permissionDefault: "allow",
+      isReadOnly: true,
+      isConcurrencySafe: true,
+      timeoutMs: 1_800_000, // 30min — a continuation may execute many tool calls, like Agent
+    },
+    execute: agentSendInputTool,
   },
   {
     definition: {

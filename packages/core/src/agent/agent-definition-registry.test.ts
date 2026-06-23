@@ -72,6 +72,28 @@ describe("AgentDefinitionRegistry.loadFromDirs", () => {
     expect(reg.get("solo")!.shadowedSources).toBeUndefined();
   });
 
+  it("carries pluginName from the source dir onto the def (plugin source)", () => {
+    // A plugin agent must know its plugin so the spawn layer can namespace
+    // its bare skill allowlist (`director-skill` → `mimi-video:director-skill`).
+    writeAgent(projectDir, "director");
+    const reg = AgentDefinitionRegistry.loadFromDirs(
+      [{ dir: projectDir, source: "plugin", pluginName: "mimi-video" }],
+      [],
+    );
+    const def = reg.get("director")!;
+    expect(def.source).toBe("plugin");
+    expect(def.pluginName).toBe("mimi-video");
+  });
+
+  it("leaves pluginName undefined for project/user sources", () => {
+    writeAgent(projectDir, "solo");
+    const reg = AgentDefinitionRegistry.loadFromDirs(
+      [{ dir: projectDir, source: "project" }],
+      [],
+    );
+    expect(reg.get("solo")!.pluginName).toBeUndefined();
+  });
+
   it("disabledAgents filters a role out of list() and get()", () => {
     writeAgent(projectDir, "researcher");
     writeAgent(projectDir, "explorer");
