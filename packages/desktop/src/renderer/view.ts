@@ -15,7 +15,7 @@ export type ViewMode =
  * a Codex-style dock on the right: a tab strip switches between these panels,
  * and a top-bar button toggles the whole area open/closed.
  */
-export type PanelTab = "files" | "browser" | "review" | "terminal" | "shells" | "rooms";
+export type PanelTab = "files" | "browser" | "review" | "terminal" | "shells" | "rooms" | "ccRoom";
 
 const KEY = "codeshell.view";
 

@@ -23,6 +23,7 @@ export const panels = {
         terminal: "终端",
         shells: "后台 Shell",
         rooms: "房间",
+        ccRoom: "Claude Code",
       },
       area: {
         resizeWidth: "调整面板宽度",
@@ -207,6 +208,7 @@ export const panels = {
         terminal: "Terminal",
         shells: "Background Shells",
         rooms: "Rooms",
+        ccRoom: "Claude Code",
       },
       area: {
         resizeWidth: "Resize panel width",
