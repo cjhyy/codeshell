@@ -220,6 +220,60 @@ describe("remarkPathLinks — inlineCode path spans", () => {
   });
 });
 
+describe("remarkPathLinks — CJK characters inside the path itself", () => {
+  it("links a bare path with a CJK directory segment", () => {
+    // The user's whole workspace lives under a Chinese directory. With ASCII
+    // \w the matcher resynced after the CJK segment and dropped the prefix, so
+    // the path never linked and inline image thumbnails couldn't load.
+    expect(linkedPaths("路径 /Users/me/个人学习/代码学习/proj/a.png 完成")).toEqual([
+      "/Users/me/个人学习/代码学习/proj/a.png",
+    ]);
+  });
+
+  it("links a bare path with a CJK basename", () => {
+    expect(linkedPaths("见 outputs/ep01/assets/img/ep01-char-萧炎.png 这张")).toEqual([
+      "outputs/ep01/assets/img/ep01-char-萧炎.png",
+    ]);
+  });
+
+  it("links a CJK basename at a CJK punctuation boundary", () => {
+    expect(linkedPaths("见 outputs/ep01/assets/img/ep01-char-萧炎.png。")).toEqual([
+      "outputs/ep01/assets/img/ep01-char-萧炎.png",
+    ]);
+  });
+
+  it("links a CJK path inside an inlineCode span", () => {
+    const paths = inlineCodeLinkUrls("outputs/ep01/assets/img/ep01-char-萧炎.png")
+      .filter((u) => u.startsWith(CODESHELL_PATH_SCHEME))
+      .map((u) => decodePathHref(u)?.path);
+    expect(paths).toEqual(["outputs/ep01/assets/img/ep01-char-萧炎.png"]);
+  });
+
+  it("links an absolute CJK inlineCode path (GenerateImage echo)", () => {
+    const paths = inlineCodeLinkUrls(
+      "/Users/admin/个人学习/代码学习/mimi/.code-shell/generated_images/1782-57adaf.png",
+    )
+      .filter((u) => u.startsWith(CODESHELL_PATH_SCHEME))
+      .map((u) => decodePathHref(u)?.path);
+    expect(paths).toEqual([
+      "/Users/admin/个人学习/代码学习/mimi/.code-shell/generated_images/1782-57adaf.png",
+    ]);
+  });
+
+  it("links a bare CJK filename in an inlineCode span", () => {
+    const paths = inlineCodeLinkUrls("萧炎.png")
+      .filter((u) => u.startsWith(CODESHELL_PATH_SCHEME))
+      .map((u) => decodePathHref(u)?.path);
+    expect(paths).toEqual(["萧炎.png"]);
+  });
+
+  it("decodeLocalPathHref keeps a CJK markdown href", () => {
+    expect(
+      decodeLocalPathHref("outputs/ep01/assets/img/ep01-char-萧炎.png"),
+    ).toEqual({ path: "outputs/ep01/assets/img/ep01-char-萧炎.png" });
+  });
+});
+
 describe("decodeLocalPathHref", () => {
   it("decodes absolute markdown hrefs with line numbers", () => {
     expect(decodeLocalPathHref("/Users/me/app/src/Foo.tsx:81")).toEqual({

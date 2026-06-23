@@ -37,7 +37,16 @@ export function classifyPath(p: string): AttachmentKind {
 // Match an absolute / relative file path with an extension. Same
 // shape as the Markdown remarkPathLinks matcher but standalone here
 // because we run against tool result strings, not MDAST.
-const PATH_RE = /((?:\/|\.{1,2}\/|[\w@.-]+\/)?[\w./@+\-]+\.[\w]{1,8})/g;
+//
+// A path segment is `[\p{L}\p{N}_./@+-]` — letters/numbers via Unicode
+// properties (NOT `\w`, which is ASCII-only and would resync at the first CJK
+// char, dropping a `/Users/.../个人学习/代码学习/` prefix and yielding a wrong,
+// non-existent absolute path — the "图片打不开" bug). `u` flag enables \p{}.
+const SEG = "[\\p{L}\\p{N}_@.+-]";
+const PATH_RE = new RegExp(
+  `((?:/|\\.{1,2}/|${SEG}+/)?(?:${SEG}|/)+\\.[\\p{L}\\p{N}]{1,8})`,
+  "gu",
+);
 
 /**
  * Pull attachment paths out of one tool message.

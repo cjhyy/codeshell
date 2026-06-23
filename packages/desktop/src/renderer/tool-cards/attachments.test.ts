@@ -54,4 +54,19 @@ describe("detectAttachments", () => {
       { path: "/a/z.png", kind: "image" },
     ]);
   });
+
+  test("keeps the full path when segments contain non-ASCII (CJK) characters", () => {
+    // A workspace under a Chinese path: `\w` is ASCII-only, so a naive matcher
+    // resyncs at the next ASCII `/`-run and drops the `/Users/.../个人学习/代码学习/`
+    // prefix — yielding a wrong, non-existent absolute path. The thumbnail then
+    // can't load. The full path must survive.
+    const result =
+      "Generated image with openai (gpt-image-2), saved to /Users/me/个人学习/代码学习/proj/.code-shell/generated_images/1782-57adaf.png";
+    expect(detectAttachments("GenerateImage", "{}", result)).toEqual([
+      {
+        path: "/Users/me/个人学习/代码学习/proj/.code-shell/generated_images/1782-57adaf.png",
+        kind: "image",
+      },
+    ]);
+  });
 });

@@ -48,6 +48,15 @@ interface MdastNode {
 const CJK_OPEN = "：:，,、（(「『【《“";
 const CJK_CLOSE = "：，、）)」』】》”。；！？";
 
+// A single path-name character. Uses Unicode letter/number properties
+// (\p{L}\p{N}) instead of ASCII-only \w so a path with CJK segments —
+// /Users/me/个人学习/代码学习/proj/a.png or .../ep01-char-萧炎.png — matches
+// whole. With plain \w the matcher resynced after the first CJK char and
+// dropped the prefix, yielding a wrong/non-existent path (the "图片打不开"
+// bug). Every regex that embeds this must carry the `u` flag for \p{} to work.
+// `_@.+-` are the ASCII path punctuation we already allowed.
+const PATH_CHAR = "[\\p{L}\\p{N}_@.+-]";
+
 // Shared leading-boundary lookbehind: a path may sit at line start or be
 // preceded by whitespace / an opening delimiter (ASCII or CJK). Both the
 // quoted and bare forms use it so neither links a path glued to the middle of
@@ -73,7 +82,7 @@ const QUOTED =
 // spaces (no reliable boundary), which is why the quoted form exists.
 const BARE =
   LEAD +
-  `((?:\\/|\\.{1,2}\\/|[\\w@.-]+\\/)[\\w./@+\\-]+\\.[\\w]{1,8})` +
+  `((?:\\/|\\.{1,2}\\/|${PATH_CHAR}+\\/)(?:${PATH_CHAR}|\\/)+\\.[\\w]{1,8})` +
   `(?::(\\d+)(?::\\d+)?)?` +
   `(?=$|[\\s),.;!?${CJK_CLOSE}])`;
 
@@ -85,9 +94,12 @@ const BARE =
 // "/" or "." so we don't re-capture the tail of a path BARE already matched
 // (a/b.ts) or a dotted token (.ts of foo.ts). Accepts a `:line` or `(line N)`
 // suffix. Group 6 = filename, 7 = :line digits, 8 = (line N) digits.
+// Leading filename char: like PATH_CHAR but without a leading "." (so we don't
+// re-capture the ".ts" tail of a path BARE already matched).
+const FNAME_LEAD = "[\\p{L}\\p{N}_@-]";
 const BARE_FILENAME =
   `(?<=^|[\\s(${CJK_OPEN}])` +
-  `([\\w@-][\\w@.-]*\\.[\\w]{1,8})` +
+  `(${FNAME_LEAD}${PATH_CHAR}*\\.[\\w]{1,8})` +
   `(?::(\\d+)(?::\\d+)?|\\s*\\(line\\s+(\\d+)\\))?` +
   `(?=$|[\\s),.;!?${CJK_CLOSE}]|\\s*\\(line\\s)`;
 
@@ -95,7 +107,7 @@ const BARE_FILENAME =
 // indices: 1 = quote char (backref only), 2 = quoted path, 3 = quoted :line,
 // 4 = bare path, 5 = bare :line, 6 = bare filename, 7 = filename :line, 8 =
 // filename (line N).
-const PATH_LINE_RE = new RegExp(`${QUOTED}|${BARE}|${BARE_FILENAME}`, "g");
+const PATH_LINE_RE = new RegExp(`${QUOTED}|${BARE}|${BARE_FILENAME}`, "gu");
 
 /** A bare filename links only when its extension is a known file type. */
 function bareFilenameExtOk(name: string): boolean {
@@ -119,7 +131,8 @@ const SKIP_PARENTS = new Set(["link", "linkReference", "inlineCode", "code"]);
 // Doesn't: `npm run build`, `--flag`, `useState` (no "."), `obj.method` (ext
 // not whitelisted).
 const INLINE_CODE_PATH_RE = new RegExp(
-  `^((?:(?:\\/|\\.{1,2}\\/|[\\w@.-]+\\/)[^\\n:]*?|[\\w][\\w.-]*?)\\.([\\w]{1,8}))(?::(\\d+)(?::\\d+)?)?$`,
+  `^((?:(?:\\/|\\.{1,2}\\/|${PATH_CHAR}+\\/)[^\\n:]*?|${FNAME_LEAD}${PATH_CHAR}*?)\\.([\\w]{1,8}))(?::(\\d+)(?::\\d+)?)?$`,
+  "u",
 );
 
 // Extensions that make a BARE filename (no directory) confidently a file. A
@@ -308,7 +321,9 @@ export function decodeLocalPathHref(
   // not a path under the workspace. Without this, `example.com/x.html` and
   // `//cdn/x.js` got linked as local files that openPath can't resolve.
   const firstSeg = pathPart.split("/", 1)[0] ?? "";
-  const bareLocal = /^[\w@.-]+\//.test(pathPart) && !firstSeg.includes(".");
+  // \p{L}\p{N} (not ASCII \w) so a CJK first segment counts as a local dir.
+  const bareLocal =
+    /^[\p{L}\p{N}_@.-]+\//u.test(pathPart) && !firstSeg.includes(".");
   const looksLocal = isExplicitLocal || bareLocal;
 
   const hasExtension = /\.[\w]{1,12}$/.test(pathPart);
