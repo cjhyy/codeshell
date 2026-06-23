@@ -43,11 +43,14 @@ describe("applyPatch invalidates the file cache by absolute path", () => {
     const out = await applyPatchTool({ patch }, ctx);
     expect(out).toContain("applied");
 
-    // The absolute-keyed entry must be REMOVED from the cache map. We assert on
-    // size, not get(): get() also self-heals via mtime, which would mask a
-    // missing manual invalidation. invalidate(abs) deletes the key (size→0);
-    // invalidate(relative) would miss the absolute key (size stays 1).
+    // The absolute-keyed entry must be REMOVED from the cache map. We assert
+    // `has(abs)` (the specific key), NOT `get()` — get() self-heals via mtime,
+    // which would mask a missing manual invalidation. We also avoid asserting
+    // `size===0`: fileCache is a shared module singleton, so a concurrent test
+    // touching it would flake an exact-count assertion. has(abs)===false tests
+    // exactly the contract (this key was invalidated) and is concurrency-safe.
+    // invalidate(abs) deletes the key; invalidate(relative) would miss it.
     expect(resolve(dir, "f.txt")).toBe(abs); // sanity: same file
-    expect(fileCache.size).toBe(0);
+    expect(fileCache.has(abs)).toBe(false);
   });
 });

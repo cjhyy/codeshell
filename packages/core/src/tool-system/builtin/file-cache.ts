@@ -40,6 +40,15 @@ class FileStateCache {
     this.cache.clear();
   }
 
+  /**
+   * True if a cache entry for `filePath` is currently held. Pure key-presence
+   * check — does NOT stat/self-heal like `get()`, so a test can assert a manual
+   * `invalidate()` actually removed the key without the mtime path masking it.
+   */
+  has(filePath: string): boolean {
+    return this.cache.has(filePath);
+  }
+
   get size(): number {
     return this.cache.size;
   }
