@@ -24,10 +24,17 @@ async function getEncoder(): Promise<EncodeFn> {
 let encoderSync: EncodeFn | null = null;
 
 // Kick off the import so synchronous callers can use it on the next tick.
-// First call still falls back to a length estimate.
-void getEncoder().then((fn) => {
-  encoderSync = fn;
-});
+// First call still falls back to a length estimate. The .catch keeps a failed
+// import (corrupt node_modules / packaging error) from becoming an unhandled
+// rejection — the chars/4 fallback below IS the intended degradation, so a
+// load failure should stay silent, not surface as a process-level warning/crash.
+void getEncoder()
+  .then((fn) => {
+    encoderSync = fn;
+  })
+  .catch(() => {
+    /* encoder unavailable — count() falls back to the length estimate */
+  });
 
 /**
  * Count tokens in `text`. Synchronous. If the encoder isn't loaded yet,
