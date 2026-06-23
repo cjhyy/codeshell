@@ -682,6 +682,9 @@ export {
   loadUserCatalog,
   userCatalogPath,
   findCatalogEntry,
+  saveCatalogEntry,
+  deleteUserCatalogEntry,
+  catalogEntryOrigins,
   type CatalogEntry,
 } from "./model-catalog/index.js";
 

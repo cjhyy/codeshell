@@ -18,6 +18,7 @@ import { userCatalogFileSchema, type CatalogEntry } from "./types.js";
 
 export type { CatalogEntry } from "./types.js";
 export { BUILTIN_CATALOG } from "./builtin.js";
+export { saveCatalogEntry, deleteUserCatalogEntry } from "./save-entry.js";
 
 /** Path to the user catalog file (source B). */
 export function userCatalogPath(): string {

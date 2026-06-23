@@ -24,6 +24,10 @@ import {
   type AutomationHandle,
   resolveExternalAgentConfig,
   getMergedCatalog,
+  saveCatalogEntry,
+  deleteUserCatalogEntry,
+  userCatalogPath,
+  catalogEntryOrigins,
   setGitPathOverride,
   isGitAvailable,
   CredentialStore,
@@ -1443,6 +1447,12 @@ ipcMain.handle("image:probe", async (_e, raw: unknown) => {
 });
 
 ipcMain.handle("catalog:list", async () => getMergedCatalog());
+
+ipcMain.handle("catalog:save", async (_e, entry: unknown) =>
+  saveCatalogEntry(entry, { path: userCatalogPath(), stamp: String(Date.now()) }));
+ipcMain.handle("catalog:delete", async (_e, id: string) =>
+  deleteUserCatalogEntry(id, { path: userCatalogPath(), stamp: String(Date.now()) }));
+ipcMain.handle("catalog:origins", async () => catalogEntryOrigins());
 
 ipcMain.handle("models:resolve-meta", async (_e, models: unknown, providers: unknown) => {
   if (!Array.isArray(models) || !Array.isArray(providers)) return [];
