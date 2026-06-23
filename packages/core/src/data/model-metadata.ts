@@ -30,6 +30,30 @@ export interface ModelPricing {
   cacheWrite: number;
 }
 
+/**
+ * Onboarding provider catalog entry. Pure data — the onboarding flow's logic
+ * (key validation, model registration, env detection) lives in onboarding.ts
+ * and consumes this shape. Lives here so the catalog is a data edit.
+ */
+export interface ProviderDef {
+  id: string;
+  name: string;
+  envKey: string;
+  provider: string;
+  baseUrl: string;
+  keyUrl: string;
+  keyPrefix: string;
+  /**
+   * The catalog of model IDs to register for this provider. The first entry
+   * doubles as the zero-config default — auto-activated when the user boots
+   * with just an env key (no onboarding). Users override in the wizard or via
+   * `/model`.
+   */
+  models: string[];
+  /** When true, skip API key prompt (e.g. local providers like Ollama). */
+  noKey?: boolean;
+}
+
 interface ModelMetadata {
   knownMaxOutput: Record<string, number>;
   knownContextWindows: Record<string, number>;
@@ -39,6 +63,7 @@ interface ModelMetadata {
   /** model-id → [inputPerM, outputPerM]; cache prices derived (see pricingFromPair). */
   pricing: Record<string, [number, number]>;
   pricingDefault: [number, number];
+  providers: ProviderDef[];
 }
 
 const METADATA = requireJson("./model-metadata.json") as ModelMetadata;
@@ -85,3 +110,10 @@ export const MODEL_PRICING: Record<string, ModelPricing> = Object.fromEntries(
 
 /** Fallback pricing for models absent from MODEL_PRICING and the snapshot. */
 export const DEFAULT_PRICING: ModelPricing = pricingFromPair(METADATA.pricingDefault);
+
+/**
+ * Onboarding provider catalog. First entry (openrouter) doubles as the
+ * zero-config default; each entry's models[0] is that provider's default pick.
+ * Consumed by onboarding.ts (key validation / model registration / env detect).
+ */
+export const PROVIDERS: readonly ProviderDef[] = METADATA.providers;

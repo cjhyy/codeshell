@@ -6,6 +6,7 @@ import {
   VERTEX_REGION_OVERRIDES,
   MODEL_PRICING,
   DEFAULT_PRICING,
+  PROVIDERS,
 } from "./model-metadata.js";
 import { resolveMaxOutput, resolveContextWindow } from "../onboarding.js";
 import { getVertexRegionForModel } from "../utils/envUtils.js";
@@ -123,5 +124,30 @@ describe("model-metadata data layer", () => {
       expect(p.cacheWrite).toBeCloseTo(p.input * 1.25, 10);
       expect(id).toBeTruthy();
     }
+  });
+
+  it("loads the onboarding provider catalog with the zero-config default first", () => {
+    expect(PROVIDERS.map((p) => p.id)).toEqual([
+      "openrouter",
+      "anthropic",
+      "openai",
+      "deepseek",
+      "zai",
+      "gemini",
+      "ollama",
+      "custom",
+    ]);
+    // openrouter is the zero-config default; models[0] is the default pick.
+    const or = PROVIDERS[0]!;
+    expect(or.id).toBe("openrouter");
+    expect(or.provider).toBe("openai");
+    expect(or.baseUrl).toBe("https://openrouter.ai/api/v1");
+    expect(or.keyPrefix).toBe("sk-or-");
+    expect(or.models[0]).toBe("anthropic/claude-sonnet-4.6");
+    // Anthropic uses the native adapter kind.
+    expect(PROVIDERS.find((p) => p.id === "anthropic")!.provider).toBe("anthropic");
+    // Local providers (ollama) skip the key prompt; custom has empty models.
+    expect(PROVIDERS.find((p) => p.id === "ollama")!.noKey).toBe(true);
+    expect(PROVIDERS.find((p) => p.id === "custom")!.models).toEqual([]);
   });
 });

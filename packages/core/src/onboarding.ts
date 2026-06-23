@@ -13,7 +13,12 @@ import {
   KNOWN_MAX_OUTPUT,
   KNOWN_CONTEXT_WINDOWS,
   OPENROUTER_VENDORS,
+  PROVIDERS,
+  type ProviderDef,
 } from "./data/model-metadata.js";
+// Re-exported so existing importers (and tests) can keep importing from
+// onboarding; the catalog data itself now lives in data/model-metadata.json.
+export { PROVIDERS, type ProviderDef };
 import { sanitizeApiKey } from "./llm/api-key-sanitize.js";
 import { getMergedCatalog } from "./model-catalog/index.js";
 
@@ -31,135 +36,8 @@ export interface OnboardingResult {
   baseUrl: string;
 }
 
-export interface ProviderDef {
-  id: string;
-  name: string;
-  envKey: string;
-  provider: string;
-  baseUrl: string;
-  keyUrl: string;
-  keyPrefix: string;
-  /**
-   * The catalog of model IDs to register for this provider. The first
-   * entry doubles as the zero-config default — auto-activated when the
-   * user boots with just an env key (no onboarding). Users override by
-   * picking in the wizard or running `/model`.
-   */
-  models: string[];
-  /** When true, skip API key prompt (e.g. local providers like Ollama). */
-  noKey?: boolean;
-}
-
-export const PROVIDERS: ProviderDef[] = [
-  {
-    id: "openrouter",
-    name: "OpenRouter (推荐 — 支持所有模型)",
-    envKey: "OPENROUTER_API_KEY",
-    provider: "openai",
-    baseUrl: "https://openrouter.ai/api/v1",
-    keyUrl: "https://openrouter.ai/keys",
-    keyPrefix: "sk-or-",
-    // First entry is the zero-config default (auto-activated when the
-    // user starts with only an env key, no onboarding). Sonnet beats Opus
-    // here because it's ~5x cheaper and a safer pick for someone who
-    // hasn't picked yet — Opus stays one slot away for anyone who wants it.
-    models: [
-      "anthropic/claude-sonnet-4.6",
-      "anthropic/claude-opus-4.7",
-      "anthropic/claude-haiku-4.5",
-      "openai/gpt-5",
-      "openai/gpt-5-mini",
-      "openai/gpt-4o",
-      "openai/o4-mini",
-      "openai/o3",
-      "google/gemini-2.5-pro",
-      "google/gemini-2.5-flash",
-      "deepseek/deepseek-chat",
-      "deepseek/deepseek-reasoner",
-      "qwen/qwen3-coder",
-      "meta-llama/llama-4-maverick",
-    ],
-  },
-  {
-    id: "anthropic",
-    name: "Anthropic (直连 Claude API)",
-    envKey: "ANTHROPIC_API_KEY",
-    provider: "anthropic",
-    baseUrl: "https://api.anthropic.com",
-    keyUrl: "https://console.anthropic.com/settings/keys",
-    keyPrefix: "sk-ant-",
-    models: [
-      "claude-sonnet-4-6",
-      "claude-opus-4-7",
-      "claude-haiku-4-5",
-    ],
-  },
-  {
-    id: "openai",
-    name: "OpenAI",
-    envKey: "OPENAI_API_KEY",
-    provider: "openai",
-    baseUrl: "https://api.openai.com/v1",
-    keyUrl: "https://platform.openai.com/api-keys",
-    keyPrefix: "sk-",
-    models: ["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "o4-mini", "o3"],
-  },
-  {
-    id: "deepseek",
-    name: "DeepSeek (官方直连)",
-    envKey: "DEEPSEEK_API_KEY",
-    provider: "openai",
-    baseUrl: "https://api.deepseek.com/v1",
-    keyUrl: "https://platform.deepseek.com/api_keys",
-    keyPrefix: "sk-",
-    models: ["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-chat"],
-  },
-  {
-    id: "zai",
-    name: "Z.AI (GLM 官方)",
-    envKey: "ZAI_API_KEY",
-    provider: "openai",
-    baseUrl: "https://api.z.ai/api/paas/v4",
-    keyUrl: "https://z.ai/manage-apikey/apikey-list",
-    keyPrefix: "",
-    models: ["glm-5.1", "glm-4.6", "glm-4.5-air"],
-  },
-  {
-    id: "gemini",
-    name: "Google Gemini (官方直连)",
-    envKey: "GEMINI_API_KEY",
-    provider: "openai",
-    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-    keyUrl: "https://aistudio.google.com/apikey",
-    keyPrefix: "",
-    models: [
-      "gemini-2.5-pro",
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-    ],
-  },
-  {
-    id: "ollama",
-    name: "Ollama (本地，无需 Key)",
-    envKey: "",
-    provider: "openai",
-    baseUrl: "http://localhost:11434/v1",
-    keyUrl: "https://ollama.com/library",
-    keyPrefix: "",
-    models: ["llama3.1", "qwen2.5-coder", "deepseek-r1", "mistral", "gemma3"],
-    noKey: true,
-  },
-  {
-    id: "custom",
-    name: "自定义 (任何 OpenAI 兼容 API)",
-    envKey: "",
-    provider: "openai",
-    baseUrl: "",
-    keyUrl: "",
-    keyPrefix: "",
-    models: [],
-  },
-];
+// ProviderDef 类型 + PROVIDERS 目录已外移到 data/model-metadata.json
+// (loader: data/model-metadata.ts),并在文件顶部 re-export。core 只读目录数据。
 
 // ─── Dynamic model list (OpenRouter snapshot) ────────────────────
 
