@@ -254,6 +254,8 @@
 | 🟢 健壮(低危) | token-counter 编码器 import 无 `.catch`→corrupt 安装时 unhandled rejection(本意是 chars/4 fallback) | 补 `.catch(()=>{})` 让静默 fallback 成立 | c6e9b3a7 |
 | 🟢 健壮(低危) | Read 负 `limit`(LLM misbehave)经 `\|\|2000` 漏过→`slice(start,start-N)` 负 end=「all but last N」静默返回错窗口 | `rawLimit>0?rawLimit:2000` 把 0/负/NaN 回默认;TDD 回归 | 496112f2 |
 | 🟢 健壮(低危) | MCP callTool 没传 abort signal→慢/卡 MCP 工具下 Stop 要等 SDK 默认超时才生效 | mcpToolExecute 透传 `__signal`→client.callTool({signal});错误隔离+SDK 超时本就有 | ef178236 |
+| 🟡 健壮 | **WebSearch 三 provider fetch 既无 timeout 也无 signal→hung provider 无限挂、Stop 取消不了** | 20s timeout + `AbortSignal.any([userSignal,timeout])` 透传 | 681444c0 |
+| 🟢 健壮(低危) | web-fetch 只 timeout(30s)不接 user signal→Stop 要等满 30s | `AbortSignal.any([userSignal,timeout])` 合并,与 WebSearch 一致 | 72d7c264 |
 | 🟢 健壮(低危) | Bash 负 `timeout` 经 `\|\|120_000` 漏过→setTimeout(-5)被 clamp 到 0→命令近即时被杀(混乱「timed out after -5ms」) | `rawTimeout>0?rawTimeout:120_000` 回默认 | 49945300 |
 | 🟡 安全(纵深·低危) | arena validatePath 用 lexical resolve(全仓唯一无 realpath 的 path-containment)→仓内 symlink 指外可过检查读到 repo 外文件(arena read-only,info-disclosure) | realpath 双侧再 isWithinRoot(对齐 fs-service/path-policy/apply-patch) | 94204a3c |
 | 🟢 健壮(低危·跨切 5 处) | 同 footgun 全仓:web-fetch `max_length`(slice 静默错内容,**同 Read 严重度**)/ web-search `num_results` / tool-search `max_results`(slice 静默错结果集)/ repl·powershell `timeout`(`??` 不挡负→即时杀) | 统一 `rawX>0?rawX:default`;web-fetch +回归测 | 167e8950 |
