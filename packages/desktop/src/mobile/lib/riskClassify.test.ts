@@ -18,9 +18,15 @@ test("无已知字段 → JSON 兜底", () => {
   expect(summarizeApproval(undefined).summary).toBe("{}");
 });
 
-test("risk 兜底 medium,显式 low/high 保留", () => {
+test("risk: 显式 low/medium/high 保留;未指定兜底 medium;未知值 fail-safe high", () => {
   expect(summarizeApproval({}, "high").risk).toBe("high");
   expect(summarizeApproval({}, "low").risk).toBe("low");
+  expect(summarizeApproval({}, "medium").risk).toBe("medium");
+  // unspecified → historical neutral default
   expect(summarizeApproval({}).risk).toBe("medium");
-  expect(summarizeApproval({}, "weird").risk).toBe("medium");
+  expect(summarizeApproval({}, "").risk).toBe("medium");
+  // unrecognized non-empty value (corrupted/malicious server) must NOT silently
+  // downgrade to medium — fail safe to high so the badge can't under-state risk.
+  expect(summarizeApproval({}, "weird").risk).toBe("high");
+  expect(summarizeApproval({}, "critical").risk).toBe("high");
 });

@@ -65,6 +65,28 @@ test("tool_result 带 isError → error 标记", () => {
   expect(tool(s).result).toBe("boom");
 });
 
+test("tool_result 在 tool_use_start 之前到达(乱序)→ 不丢,start 落地时回填", () => {
+  // WebSocket reordering/buffering can deliver tool_result before tool_use_start.
+  const s = feed([
+    ev({ type: "tool_result", result: { id: "t1", result: "ok" } }),
+    ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: { file_path: "x" } } }),
+  ]);
+  expect(tool(s).name).toBe("Read");
+  expect(tool(s).done).toBe(true); // not stuck open
+  expect(tool(s).result).toBe("ok"); // orphan result applied, not lost
+});
+
+test("assistant_message 即封口 done(不必等 turn_complete)", () => {
+  // If turn_complete is delayed/dropped, the bubble must still stop streaming.
+  const s = feed([
+    ev({ type: "stream_request_start", turnNumber: 1 }),
+    ev({ type: "text_delta", text: "done." }),
+    ev({ type: "assistant_message", text: "done." }),
+  ]);
+  expect(asst(s).text).toBe("done.");
+  expect(asst(s).done).toBe(true); // sealed without turn_complete
+});
+
 test("重复 tool_use_start 幂等", () => {
   const s = feed([
     ev({ type: "tool_use_start", toolCall: { id: "t1", toolName: "Read", args: {} } }),

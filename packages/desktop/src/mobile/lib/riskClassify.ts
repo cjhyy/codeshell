@@ -30,6 +30,19 @@ export function summarizeApproval(
     }
   }
   if (!summary) summary = JSON.stringify(args ?? {});
-  const r: Risk = risk === "low" || risk === "high" ? risk : "medium";
+  // Normalize the server-supplied risk. The three known levels pass through;
+  // anything else (absent → fall through to medium default; but an UNKNOWN
+  // non-empty value like "critical" from a corrupted/malicious server) must NOT
+  // silently downgrade to medium — fail SAFE to "high" so the badge can't
+  // under-state a dangerous op and nudge an approve. The core permission engine
+  // is still authoritative; this only governs the user-visible badge.
+  let r: Risk;
+  if (risk === "low" || risk === "medium" || risk === "high") {
+    r = risk;
+  } else if (risk === undefined || risk === "") {
+    r = "medium"; // unspecified → the historical neutral default
+  } else {
+    r = "high"; // unrecognized non-empty value → fail safe (don't under-state)
+  }
   return { summary, risk: r };
 }

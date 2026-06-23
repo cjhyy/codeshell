@@ -342,6 +342,10 @@ export function useRemoteApp(): RemoteApp {
       opts?: { reason?: string; answer?: string; scope?: ApprovalScope; pathScope?: ApprovalPathScope },
     ) => {
       const a = approvalsRef.current.find((p) => p.requestId === requestId);
+      // Dedup at the source: if this approval is already gone from the ref it was
+      // already responded to (rapid double-tap before setApprovals flushes / the
+      // card unmounts). Sending again would violate the approve-once invariant.
+      if (!a) return;
       socket.send({
         type: "approval.respond",
         approvalId: requestId,
@@ -352,6 +356,9 @@ export function useRemoteApp(): RemoteApp {
         scope: opts?.scope,
         pathScope: opts?.pathScope,
       });
+      // Update the ref synchronously too so a second tap in the same tick (before
+      // the async setApprovals commits) sees it gone and no-ops above.
+      approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== requestId);
       setApprovals((prev) => prev.filter((p) => p.requestId !== requestId));
     },
     [socket],

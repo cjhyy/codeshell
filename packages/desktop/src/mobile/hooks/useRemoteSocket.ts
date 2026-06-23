@@ -210,7 +210,23 @@ export function useRemoteSocket(handlers: RemoteSocketHandlers): RemoteSocket {
       if (openWatchdog) clearTimeout(openWatchdog);
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
-      wsRef.current?.close();
+      // Null ALL handlers before close: onmessage/onopen call setState without the
+      // closedByUs guard the close/error paths have, so an event landing in the
+      // close window would setState on the unmounted component. (Mirrors the
+      // reconnectNow teardown above, which already nulls handlers.)
+      const ws = wsRef.current;
+      if (ws) {
+        ws.onmessage = null;
+        ws.onopen = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        try {
+          ws.close();
+        } catch {
+          /* ignore */
+        }
+        wsRef.current = null;
+      }
     };
   }, []);
 

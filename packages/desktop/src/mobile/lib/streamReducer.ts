@@ -58,6 +58,10 @@ export interface ChatState {
   /** Internal: monotonic counter for fresh ids (replaces Date.now/random,
    *  which would make replay non-deterministic). */
   seq: number;
+  /** Internal: tool_result events that arrived BEFORE their tool_use_start
+   *  (WebSocket reordering / buffering). Keyed by tool id; applied when the
+   *  matching tool_use_start lands so the result isn't silently lost. */
+  orphanResults?: Record<string, { result: string; error: boolean }>;
 }
 
 export function initialChatState(): ChatState {
@@ -223,6 +227,9 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       if (!call) return s;
       // Idempotent: a duplicate start for the same call id is a no-op.
       if (s.items.some((i) => i.kind === "tool" && i.id === call.id)) return s;
+      // A tool_result may have arrived BEFORE this start (out-of-order); apply
+      // the buffered orphan now so the card isn't stuck open with no result.
+      const orphan = s.orphanResults?.[call.id];
       const item: ChatItem = {
         kind: "tool",
         id: call.id,
@@ -230,10 +237,17 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         args: call.args,
         // Room tool messages carry a human summary instead of structured args.
         summary: call.summary,
-        done: false,
+        done: orphan ? true : false,
+        result: orphan?.result,
+        error: orphan?.error,
         agentId: event.agentId as string | undefined,
       };
-      return { ...s, run: "running", items: [...s.items, item] };
+      let orphanResults = s.orphanResults;
+      if (orphan) {
+        const { [call.id]: _used, ...restOrphans } = s.orphanResults!;
+        orphanResults = Object.keys(restOrphans).length > 0 ? restOrphans : undefined;
+      }
+      return { ...s, run: "running", items: [...s.items, item], orphanResults };
     }
 
     case "tool_use_args_delta": {
@@ -260,6 +274,22 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         | { id: string; result?: string; error?: string; isError?: boolean }
         | undefined;
       if (!result) return s;
+      const matched = s.items.some((i) => i.kind === "tool" && i.id === result.id);
+      if (!matched) {
+        // tool_result arrived before its tool_use_start (out-of-order) — buffer it
+        // so tool_use_start can apply it, instead of silently dropping (which would
+        // leave the card stuck done:false with no result).
+        return {
+          ...s,
+          orphanResults: {
+            ...(s.orphanResults ?? {}),
+            [result.id]: {
+              result: result.result ?? result.error ?? "",
+              error: Boolean(result.isError || result.error),
+            },
+          },
+        };
+      }
       return {
         ...s,
         items: s.items.map((i) =>
@@ -311,11 +341,21 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
     }
 
     case "assistant_message": {
-      // Final assistant message for the request — seal THIS agent's live bubble.
+      // Final assistant message for the request — seal THIS agent's live bubble
+      // AND mark its open assistant items done. Without the latter, a finalized
+      // message keeps rendering the streaming cursor (▋) until turn_complete
+      // arrives; if turn_complete is delayed/dropped (network drop, buffering) it
+      // never clears. Mirror turn_complete's item seal (desktop types.ts does the
+      // same). run-state is left to turn_complete.
       const key = agentKey(event);
       if (!(key in s.liveByAgent)) return s;
       const { [key]: _gone, ...rest } = s.liveByAgent;
-      return { ...s, liveByAgent: rest };
+      const items = s.items.map((i) =>
+        i.kind === "assistant" && !i.done && (i.agentId ?? "") === key
+          ? { ...i, done: true }
+          : i,
+      );
+      return { ...s, liveByAgent: rest, items };
     }
 
     case "turn_complete": {

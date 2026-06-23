@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SendHorizonal, Square } from "lucide-react";
 import { Button } from "@ui/button";
 
@@ -15,6 +15,21 @@ export function Composer({
   onStop: () => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  // `running` only flips true once the reducer processes stream_request_start —
+  // there's a window after a send where the optimistic echo is already in the
+  // chat but the button is still SEND-enabled, so a fast second tap would queue
+  // a duplicate. `pending` closes that window locally until `running` arrives
+  // (or a short safety timeout, in case the run rejects before starting).
+  const [pending, setPending] = useState(false);
+  useEffect(() => {
+    if (!pending) return;
+    if (running) {
+      setPending(false);
+      return;
+    }
+    const t = setTimeout(() => setPending(false), 5000);
+    return () => clearTimeout(t);
+  }, [pending, running]);
 
   const autosize = () => {
     const el = ref.current;
@@ -24,11 +39,13 @@ export function Composer({
   };
 
   const submit = () => {
+    if (pending) return; // guard against double-submit before `running` lands
     const el = ref.current;
     if (!el) return;
     const t = el.value.trim();
     if (!t) return;
     onSend(t);
+    setPending(true);
     el.value = "";
     autosize();
   };
@@ -71,7 +88,7 @@ export function Composer({
           停止
         </Button>
       ) : (
-        <Button className="h-[46px] rounded-xl px-3" disabled={disabled} onClick={submit}>
+        <Button className="h-[46px] rounded-xl px-3" disabled={disabled || pending} onClick={submit}>
           <SendHorizonal />
           发送
         </Button>
