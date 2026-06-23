@@ -4,7 +4,9 @@
 >
 > 一整轮自主 bug-scan + 修复 + 文档整理。**~85 commit 全在本地 main,均未 push**(push 是你的决定,我没动)。
 >
-> **修了 9 类真 bug(全带回归测,TDD)**——最重的两个:
+> **🔴🔴 最重:一个真 RCE** —— `gitLsRemote`(插件/市场更新检查)缺 git `--` 分隔符,用户加的 git URL 形如 `--upload-pack=<cmd>` 被 git 当 flag **执行任意命令**。TDD 实证(revert `--` 后 git 真 `touch` 了 sentinel 文件)。已修 fd72c31e + 同纪律全仓 git 调用加 `--`(62d62e40)。
+>
+> **修了 ~15+ 类真 bug(全带回归测,TDD)**——其余最重的:
 > - 🔴 `killProcessGroup`/`groupAlive` 无 pgid 守卫:pgid=0/1 时 `kill(-0)` 杀自身进程组、`kill(-1)` 杀你所有进程;pgid 从 orphan 记录磁盘读回可触发。**TDD 铁证:移守卫跑测试真把 test runner 自己 SIGKILL 了(退码 144)**。已修 95591130 + 顺修 resident-agent 同类 0a728764。
 > - 🔴 权限会话缓存按 head 收窄被链式命令绕过:批准 `git status` 后 `git status && rm -rf /` 静默放行整条。修在共享 `ruleMatches`(覆盖 session-cache + 持久 project 规则两消费者)d241ec08,首版漏管道 d4c9dcb9 补全。
 > - 其余:R-1 settings.json 0o600(**三个写入点,首轮漏第三处 engine,已补** e56825d6)、cookie 域围栏裸公共后缀、restoreCookie 非数组 secret 静默登出、记忆自动提取漏 redact、saveCatalogEntry 缺父目录崩、resume 损坏 state.json 抛裸 SyntaxError、token-counter 编码器 import 漏 catch。
