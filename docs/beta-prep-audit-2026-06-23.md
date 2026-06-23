@@ -16,7 +16,9 @@
 > **本轮 fix commit 速查(13 个,供 push 前逐一 review)**:
 > `fc6f0409` cookie 域围栏 · `a906d8f7` 非数组 secret · `8065530a` R-1 0o600(manager+onboarding) · `b9915a0f` passcode 数组头+lease 0o700 · `d241ec08`+`d4c9dcb9` 权限链式绕过(+管道) · `9119ef0f` 记忆 redact · `e56825d6` R-1 第三写入点 engine · `95591130` killProcessGroup pgid 守卫 · `0a728764` resident-agent pid · `d423319d` resume 损坏 state.json · `c6e9b3a7` token-counter catch · `5ac51235` typecheck 收口(你 merge 的 send_input 带来的红) · `358efbb0` saveCatalogEntry mkdirSync(在 §3 提交里)。其余为 test 补全 + 文档。
 >
-> **等你定的**:① push 这 ~92 commit;② §1.2/1.3 真机冒烟(cookie 登录全链路是唯一没真机验的核心新功能);③ §1.4 全量打包;④ R-2 cookie safeStorage 加密(改凭证格式,该开 worktree 你在场做)。
+> **🟡 给你的一个发现(没擅自改)**:你 session 期间 merge 的 `send_input 续接`(a0b55219)resume 路径**缺「agent 仍在 running」并发守卫**——背景 agent 没跑完时再 send_input 会让两个 Engine 交错写同一 child transcript。我只修了它的 typecheck 红,逻辑没动(UX 该你定)。详见 §2.4.5。
+>
+> **等你定的**:① push 这 ~98 commit;② §1.2/1.3 真机冒烟(cookie 登录全链路是唯一没真机验的核心新功能);③ §1.4 全量打包;④ R-2 cookie safeStorage 加密(改凭证格式,该开 worktree 你在场做);⑤ send_input 并发守卫(§2.4.5)。
 >
 > ---
 
@@ -297,6 +299,16 @@
 | cron 调度睡眠唤醒(**解决旧 memory 未修项**) | 干净:`isCronMisfire` 90s grace——醒来 timer 超 90s 过点=misfire→跳过+重 arm 到下个正确 occurrence,不补跑(project_automation_kkg28 的「06:56 乱跑」**已修**);nextRun forward-recompute 不 catch-up。74 automation 测含 06:56 回归 |
 | automation memory 写入(per-task memory.md) | 干净:核心 UpdateAutomationMemory 调注入 sink 不自 try/catch,但 executor(executor.ts:392)是**通用错误边界**——sink 抛(磁盘满/EACCES)被 catch→记 failed tool result 喂回模型「must not kill the turn」,run 不崩。8 测 |
 | session disk 恢复 / draft 处理 | 干净:renderer loadSessionIndex 用 `activeSessionId !== undefined`(非 `??`)——持久 null=合法 draft 保留,仅 legacy 缺字段才落 sessions[0](project_draft_session_autojump_bug 已修+注释);解析全 try/catch→empty。配 main sessions-service 三过滤(前已审)+disk 权威源,「清 localStorage 不丢数据」端到端 sound。923 desktop 测 |
+
+### 2.4.5) 🟡 给用户的发现:send_input 续接缺「agent 在跑」并发守卫(你刚 merge 的特性)
+
+> 你 session 期间 merge 的 `send_input 续接`(commit a0b55219)—— 我只修了它的 typecheck 红(私有 snapshot,5ac51235),**没动它的逻辑**(你在迭代中,UX 该怎样由你定)。复核时发现一个并发缺口,留给你判:
+
+- **位置**:`agent.ts` 的 send_input resume 路径(~1045-1062)只检查 session **存在**(registry `entry` 或 on-disk),**不检查 `entry.status === "running"`**。
+- **场景**:一个 sub-agent 已转后台仍在 `running`,父 LLM 又 `send_input(sameAgentId)` → 第二次 resume 建**全新 child Engine** 调 `child.run(sessionId=同一childSid)`,两个 Engine 各自 `sessionManager.resume` + 往**同一 transcript 追加**。sub-agent 是独立 spawned Engine,**没有 ChatSession 那层 per-session `active` 锁**(protocol 层的串行化只覆盖顶层会话,不覆盖 sub-agent),故两次 resume 可交错写同一 child transcript → 可能损坏/交错。
+- **可达性**:父在背景 agent 没跑完时主动 send_input 即触发,plausible。
+- **建议**(你定):resume 前若 `entry?.status === "running"` → 拒绝(「该 agent 仍在运行,等它完成或先 stop」)/ 排队 / 或 interrupt-then-resume。最小止血是拒绝。
+- 非我擅自改的原因:这是你在迭代的特性,UX 语义该你拍板;我只标注。
 
 ### 2.5) 修复完整性复审(查「只修一半」)
 
