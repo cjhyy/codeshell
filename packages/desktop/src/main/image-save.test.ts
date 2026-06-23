@@ -21,6 +21,13 @@ describe("parseDataUrl", () => {
     expect(parseDataUrl("https://example.com/a.png")).toBeNull();
     expect(parseDataUrl("/abs/path.png")).toBeNull();
   });
+
+  test("returns null (does NOT throw) on a malformed %-escape in a non-base64 data URL", () => {
+    // `%ZZ` is an invalid percent-escape → decodeURIComponent throws URIError.
+    // The fn's contract is null-on-failure; it must not let that escape.
+    expect(() => parseDataUrl("data:text/plain,%ZZ")).not.toThrow();
+    expect(parseDataUrl("data:text/plain,%ZZ")).toBeNull();
+  });
 });
 
 describe("extForMime", () => {

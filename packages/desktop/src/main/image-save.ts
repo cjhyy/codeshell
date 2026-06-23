@@ -24,9 +24,15 @@ export function parseDataUrl(src: string): ParsedDataUrl | null {
   const mime = m[1] || "application/octet-stream";
   const isBase64 = Boolean(m[2]);
   const data = m[3] ?? "";
-  const buffer = isBase64
-    ? Buffer.from(data, "base64")
-    : Buffer.from(decodeURIComponent(data), "utf8");
+  // A non-base64 data URL with a malformed %-sequence (e.g. `data:text/plain,%ZZ`)
+  // makes decodeURIComponent throw URIError. This fn's contract is "return null
+  // on failure so the caller falls back" — honor it instead of throwing out.
+  let buffer: Buffer;
+  try {
+    buffer = isBase64 ? Buffer.from(data, "base64") : Buffer.from(decodeURIComponent(data), "utf8");
+  } catch {
+    return null;
+  }
   return { mime, buffer };
 }
 
