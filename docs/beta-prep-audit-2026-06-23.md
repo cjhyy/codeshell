@@ -248,6 +248,8 @@
 | 🟠 健壮 | resume() 损坏 state.json 抛裸 SyntaxError(逃过只 catch SessionError 的调用方→session 打不开);state.json 唯一非原子写在 create() | resume 读包 try/catch→SessionError;create() 改 tmp+rename | d423319d |
 | 🟢 健壮(低危) | token-counter 编码器 import 无 `.catch`→corrupt 安装时 unhandled rejection(本意是 chars/4 fallback) | 补 `.catch(()=>{})` 让静默 fallback 成立 | c6e9b3a7 |
 | 🟢 健壮(低危) | Read 负 `limit`(LLM misbehave)经 `\|\|2000` 漏过→`slice(start,start-N)` 负 end=「all but last N」静默返回错窗口 | `rawLimit>0?rawLimit:2000` 把 0/负/NaN 回默认;TDD 回归 | 496112f2 |
+| 🟢 健壮(低危) | Bash 负 `timeout` 经 `\|\|120_000` 漏过→setTimeout(-5)被 clamp 到 0→命令近即时被杀(混乱「timed out after -5ms」) | `rawTimeout>0?rawTimeout:120_000` 回默认 | 49945300 |
+| 🟢 健壮(低危·跨切 5 处) | 同 footgun 全仓:web-fetch `max_length`(slice 静默错内容,**同 Read 严重度**)/ web-search `num_results` / tool-search `max_results`(slice 静默错结果集)/ repl·powershell `timeout`(`??` 不挡负→即时杀) | 统一 `rawX>0?rawX:default`;web-fetch +回归测 | 167e8950 |
 
 ### 2) 覆盖矩阵(~25 子系统对抗式审过,结论=干净/已修;括注追过并证伪的假设)
 
