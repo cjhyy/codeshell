@@ -247,6 +247,7 @@
 | replay orphan-agent seal | 干净(仅 disk-rebuild 路径调·flush 不丢内容,不误封活 agent) |
 | WebFetch SSRF | 干净(每跳 manual-redirect 重验 host+DNS→IP 块表·IPv4/IPv6/云元数据全覆盖·跨域剥凭证·hop 限);TOCTOU/DNS-rebind 残留**已在 a3 设计文档显式记为 out-of-scope** + 缓解理由,非疏漏;10 测) |
 | provider-auth / 首用 apiKey | 干净(explicit>authCommand>env;空串经 `if(config.apiKey)` 当缺失不传 `""`;全缺→SDK 快速清晰报错非中途 401;baseUrl 交 SDK 归一不双斜杠);12 测 |
+| desktop fs IPC 沙箱(只读) | 干净(lexical `..` 拒 + realpath 双侧 containment 防 symlink 逃逸;只读三 API 故 target 必存在→realpath 必跑足;不存在叶的 lexical 兜底仅写路径才危险而本服务无写;目录列举逐项 realpath 跳越界 symlink + 2MB 上限 + SKIP);7 测含 escape 用例) |
 
 ### 3) 总评
 
