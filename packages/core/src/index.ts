@@ -647,6 +647,8 @@ export {
   type RunWriteJobInput,
   type RunWriteJobResult,
 } from "./automation/index.js";
+// CC orchestrator (external claude-cli rooms + CC-aware scheduling).
+export * from "./cc-orchestrator/index.js";
 export {
   asyncAgentRegistry,
   type AsyncAgentEntry,

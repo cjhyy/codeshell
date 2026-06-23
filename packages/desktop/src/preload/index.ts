@@ -777,4 +777,12 @@ contextBridge.exposeInMainWorld("codeshell", {
       return () => ipcRenderer.removeListener("room:message", h);
     },
   },
+
+  // ── CC rooms (external `claude` CLI orchestration) ──
+  ccRoom: {
+    probe: (force?: boolean) => ipcRenderer.invoke("ccRoom:probe", force),
+    listSessions: (cwd: string) => ipcRenderer.invoke("ccRoom:listSessions", cwd),
+    listTasks: () => ipcRenderer.invoke("ccRoom:listTasks"),
+    deleteTask: (jobId: string) => ipcRenderer.invoke("ccRoom:deleteTask", jobId),
+  },
 });
