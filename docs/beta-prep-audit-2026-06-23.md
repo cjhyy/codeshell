@@ -252,6 +252,7 @@
 | generate-image/video 参数+凭证 | 干净(prompt required+trim+清晰错;apiKeyRef **单跳**故循环/链不会死循环·dangling ref fail-safe 不可用;prefer 命中走显式无静默 fallback);两工具 25 测含 dangling-ref 用例 |
 | background-shell 增量读 + 生命周期 | 干净(agentReadOffset 绝对游标 survives 环绕;sliceFromAbsolute 双 clamp 防驱逐数据负 subarray,落后读者优雅降级取窗口起点不崩;读后游标跳 totalWritten 无 lag/重读,同步无交织丢字节;kill 仅显式 killSession/killAll,无 idle-sweep 杀,dev server 不被收割);22 测含 orphan-recovery |
 | ApplyPatch V4A 解析器(LLM 输入面) | 干净(畸形输入全抛结构化 PatchParseError·caller try/catch 转 `Error:`·循环全由 length 界定;parseUpdateChunk 非抛返回必 `consumed≥1`→外层 while 必进不死循环);14 测 |
+| transcript JSONL 持久化/load | 干净(per-line parse 隔离:torn 末行/坏行 try/catch 跳过不崩;load 后 repairToolResultPairs 双向修:孤儿 tool_use 合成 error result、孤儿 tool_result 滤除→序列对 LLM 始终合法);与 compaction 配对 + replay seal 构成「中断会话残留处理」三件套一致;54 测 |
 
 ### 2.5) 修复完整性复审(查「只修一半」)
 
