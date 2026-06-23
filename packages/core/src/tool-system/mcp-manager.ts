@@ -553,12 +553,24 @@ export class MCPManager {
   /**
    * Call a tool on a specific MCP server.
    */
-  async callTool(serverName: string, toolName: string, args: Record<string, unknown>): Promise<unknown> {
+  async callTool(
+    serverName: string,
+    toolName: string,
+    args: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<unknown> {
     const conn = this.connections.get(serverName);
     if (!conn) {
       throw new Error(`MCP server "${serverName}" is not connected.`);
     }
-    const result = await conn.client.callTool({ name: toolName, arguments: stripInternalToolArgs(args) });
+    // Forward the run's abort signal so a user Stop cancels an in-flight MCP
+    // call promptly instead of blocking until the SDK's default request timeout.
+    // (The SDK still enforces its default timeout when no signal is provided.)
+    const result = await conn.client.callTool(
+      { name: toolName, arguments: stripInternalToolArgs(args) },
+      undefined,
+      signal ? { signal } : undefined,
+    );
     const parts: string[] = [];
     if (Array.isArray(result.content)) {
       for (const item of result.content) {

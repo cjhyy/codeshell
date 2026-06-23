@@ -34,11 +34,14 @@ export async function mcpToolExecute(args: Record<string, unknown>): Promise<str
   const server = args.server as string;
   const tool = args.tool as string;
   const toolArgs = (args.arguments as Record<string, unknown>) ?? {};
+  // Forward the run's abort signal (registry injects __signal) so Stop cancels
+  // an in-flight MCP call instead of waiting out the SDK's default timeout.
+  const signal = args.__signal as AbortSignal | undefined;
 
   try {
     const { MCPManager } = await import("../mcp-manager.js");
     const manager = MCPManager.getInstance();
-    const result = await manager.callTool(server, tool, toolArgs);
+    const result = await manager.callTool(server, tool, toolArgs, signal);
     return typeof result === "string" ? result : JSON.stringify(result, null, 2);
   } catch (err) {
     return `MCP tool error: ${(err as Error).message}`;
