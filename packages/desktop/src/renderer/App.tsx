@@ -1739,9 +1739,24 @@ function App() {
       return;
     }
     const { item, state: next } = dequeueQueuedInput(queuedInputs, activeBucket);
-    if (item) steeredIdsRef.current.delete(item.id);
+    if (!item) {
+      setQueuedInputs(next);
+      return;
+    }
+    // The turn ended (busy→false). If this entry was already auto-steered into
+    // the engine but the turn finished BEFORE consuming it (no steer_injected),
+    // the entry is stranded in steerQueueBySid and would be eaten by the next
+    // run — re-sending it here as a fresh run would then double (one send +
+    // one leftover steer_injected). Revoke the stale steer first, so this
+    // send() is the single source. (cancel/turn-end does NOT clear the steer
+    // queue — same seam as the relay path's revokeSteeredForRelay.)
+    if (steeredIdsRef.current.has(item.id)) {
+      const engineSessionId = resolveActiveEngineSessionId();
+      if (engineSessionId) void window.codeshell.unsteer(engineSessionId, item.id);
+      steeredIdsRef.current.delete(item.id);
+    }
     setQueuedInputs(next);
-    if (item?.text) send(item.text);
+    if (item.text) send(item.text);
   }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
 
   const newQueuedId = (): string =>
