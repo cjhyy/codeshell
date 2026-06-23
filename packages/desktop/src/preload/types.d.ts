@@ -627,6 +627,11 @@ export interface CodeshellApi {
     sessions: Array<{ id: string; engineSessionId: string; cwd: string; title: string; updatedAt: number; origin: "desktop" | "automation" }>;
     nextCursor: string | null;
   }>;
+  /** Sub-agents of a parent session that look interrupted (stuck + stale) —
+   *  shown on reopen so an unfinished background sub-agent doesn't vanish. */
+  listInterruptedSubagents(
+    parentSessionId: string,
+  ): Promise<Array<{ id: string; description: string; updatedAt: number }>>;
   subscribeSession(sessionId: string, sinceSeq?: number): Promise<SessionSnapshot>;
   getSessionRawEvents(sessionId: string, sinceId?: string): Promise<RawTranscriptEvent[]>;
   deleteRun(runId: string): Promise<void>;

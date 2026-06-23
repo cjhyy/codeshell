@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CornerDownRight, Paperclip, Mic, ArrowUp, Square, Monitor, Trash2, X } from "lucide-react";
 import { MessageStream } from "./MessageStream";
+import { InterruptedSubagentsBanner } from "./messages/InterruptedSubagentsBanner";
 import type { Message } from "./types";
 import { loadHistory, pushHistory } from "./promptHistory";
 import { PermissionPill, type PermissionMode } from "./chat/PermissionPill";
@@ -564,6 +565,9 @@ export function ChatView({
         eat the vertical space and push the welcome + composer to the bottom.
         The welcome block below owns the flex-1 and centers itself instead.
       */}
+      {!isNewChat && (
+        <InterruptedSubagentsBanner engineSessionId={engineSessionId} />
+      )}
       {!isNewChat && (
         <MessageStream
           messages={messages}

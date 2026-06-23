@@ -1,6 +1,10 @@
 # 后台子代理可见性 / 可靠性 / 可恢复 设计稿（A/B/C 三阶段）
 
-状态：设计稿待审 · 2026-06-23 · worktree `subagent-skill-plugin-namespace`
+状态：A+B+C 全部已实现 · 2026-06-23 · worktree `subagent-skill-plugin-namespace`
+
+- **A**（转后台运行中状态 + 折叠驱动）：已实现，commit 31babc5d。
+- **B**（agent 心跳 30s）：已实现，commit 31babc5d。
+- **C**（重开显示中断子代理，只读不续跑）：已实现。用户拍板砍掉一键续跑（mimi-video 文件驱动，re-spawn 读文件更自然，且避免重复卡）。实现 = desktop `listInterruptedSubagents`（按 parentSessionId + status≠completed/cancelled + mtime stale 判中断，纯读 state.json，不碰 transcript replay）+ 重开 banner。core 未动。NOT_INTERRUPTED 语义对真实磁盘数据校验过（completed/cancelled 排除；active/model_error/aborted_streaming 在 stale 时标记）。
 
 ## 背景：三个真实问题（已从 s-mqqa4nio 日志诊断）
 
