@@ -72,6 +72,64 @@ describe("transcriptToFoldItems", () => {
     expect(items[1]).toEqual({ kind: "stream", event: { type: "goal_progress", status: "met", round: 2 }, timestamp: 1 });
   });
 
+  it("reconstructs the task panel from a TodoWrite tool_use (so todos survive a disk reload)", () => {
+    // A persistent todo list lives only as the args.todos snapshot on the
+    // TodoWrite tool_use event — it is NOT re-emitted on a plain session
+    // reopen (engine only replays it inside run()). So when the renderer
+    // rebuilds from the disk transcript, the TodoWrite tool_use must ALSO
+    // yield a synthetic task_update or the task panel comes back empty.
+    const jsonl = line("tool_use", {
+      toolName: "TodoWrite",
+      toolCallId: "tc1",
+      args: {
+        todos: [
+          { content: "写代码", status: "completed", activeForm: "写代码中" },
+          { content: "跑测试", status: "in_progress", activeForm: "跑测试中" },
+        ],
+      },
+    });
+    const items = transcriptToFoldItems(jsonl);
+    // The tool card itself still replays (matches live behavior — TodoWrite
+    // emits both a tool_use_start and a task_update).
+    expect(items[0]).toEqual({
+      kind: "stream",
+      event: {
+        type: "tool_use_start",
+        toolCall: { id: "tc1", toolName: "TodoWrite", args: { todos: [
+          { content: "写代码", status: "completed", activeForm: "写代码中" },
+          { content: "跑测试", status: "in_progress", activeForm: "跑测试中" },
+        ] } },
+      },
+      timestamp: 1,
+    });
+    // …followed by the reconstructed task panel (position-based ids, content→subject).
+    expect(items[1]).toEqual({
+      kind: "stream",
+      event: {
+        type: "task_update",
+        tasks: [
+          { id: "1", subject: "写代码", activeForm: "写代码中", status: "completed" },
+          { id: "2", subject: "跑测试", activeForm: "跑测试中", status: "in_progress" },
+        ],
+      },
+      timestamp: 1,
+    });
+  });
+
+  it("a TodoWrite where everything is completed clears the panel (all-done → empty)", () => {
+    const jsonl = line("tool_use", {
+      toolName: "TodoWrite",
+      toolCallId: "tc2",
+      args: { todos: [{ content: "done", status: "completed", activeForm: "doing" }] },
+    });
+    const items = transcriptToFoldItems(jsonl);
+    expect(items[1]).toEqual({
+      kind: "stream",
+      event: { type: "task_update", tasks: [] },
+      timestamp: 1,
+    });
+  });
+
   it("uses the event's turn number for assistant stream_request_start", () => {
     const t1 = JSON.stringify({ id: "x", type: "message", timestamp: 1, turnNumber: 1, data: { role: "assistant", content: "second" } });
     const items = transcriptToFoldItems(t1);

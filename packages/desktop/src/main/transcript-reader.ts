@@ -28,6 +28,45 @@ interface ContentBlockLike {
   text?: string;
 }
 
+type TodoStatus = "pending" | "in_progress" | "completed";
+interface TaskInfoLike {
+  id: string;
+  subject: string;
+  activeForm: string;
+  status: TodoStatus;
+}
+
+/**
+ * Convert a TodoWrite tool_use's `args.todos` into the TaskInfo[] the renderer's
+ * task_update reducer expects, or null when the args carry no valid todo array.
+ * Mirrors core's task.ts (parseTodos → toTaskInfos + the "all items completed ⇒
+ * clear the panel" rule) so a disk-rebuilt session restores the SAME panel the
+ * live tool would have shown. Kept as a local copy — main can't import core
+ * runtime values, only types.
+ */
+function todosToTasks(args: Record<string, unknown>): TaskInfoLike[] | null {
+  const raw = args.todos;
+  if (!Array.isArray(raw)) return null;
+  const parsed: { content: string; status: TodoStatus; activeForm: string }[] = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object") continue;
+    const o = r as Record<string, unknown>;
+    if (typeof o.content !== "string") continue;
+    const status = o.status;
+    if (status !== "pending" && status !== "in_progress" && status !== "completed") continue;
+    const activeForm = typeof o.activeForm === "string" ? o.activeForm : o.content;
+    parsed.push({ content: o.content, status, activeForm });
+  }
+  const allDone = parsed.length > 0 && parsed.every((t) => t.status === "completed");
+  if (allDone) return [];
+  return parsed.map((t, i) => ({
+    id: String(i + 1),
+    subject: t.content,
+    activeForm: t.activeForm,
+    status: t.status,
+  }));
+}
+
 function textOf(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
@@ -93,7 +132,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
         }
         break;
       }
-      case "tool_use":
+      case "tool_use": {
         items.push({
           kind: "stream",
           event: {
@@ -106,7 +145,21 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
           },
           timestamp: ts,
         });
+        // A TodoWrite call carries the canonical todo snapshot in its args. The
+        // engine only re-emits it as a task_update inside run() (i.e. on the
+        // NEXT send), so a plain session reopen / disk rebuild would otherwise
+        // show an empty task panel even though the todos are right here. Mirror
+        // the live tool: also emit a synthetic task_update so the pinned panel
+        // re-hydrates from disk. (Same conversion as core's task.ts —
+        // parse → position-based ids → "all done ⇒ clear".)
+        if (String(d.toolName ?? "") === "TodoWrite") {
+          const tasks = todosToTasks((d.args ?? {}) as Record<string, unknown>);
+          if (tasks) {
+            items.push({ kind: "stream", event: { type: "task_update", tasks }, timestamp: ts });
+          }
+        }
         break;
+      }
       case "tool_result":
         items.push({
           kind: "stream",
