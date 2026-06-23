@@ -334,7 +334,22 @@
 | 🔴 乐观无回滚 | `Composer.tsx` 发送 | running 仅 reducer 收 stream_request_start 才 true,之间窗口双击发重 | 本地 pending(发后禁用至 running 到/5s 超时) |
 | 🟡 安全向 | `riskClassify.ts:33` 未知 risk | 服务端发 "critical"/"" 等未知值静默显示成中风险→可能诱导批准(core 权限仍权威,只是 badge 误导) | fail-safe:已知透传·未指定→medium·**未知非空→high**+改测试 |
 
-**模式归类**:Composer/ApprovalCard = ①乐观无回滚;socket cleanup = ③stale-closure;reducer 两条 = 状态机完整性缺口(假设事件严格有序/必达,无 fallback);storage = 裸 unguarded-IO。**至此三轮 review:全 diff + desktop 状态机/tui + mobile,renderer 三层(desktop/panels/mobile)全扫过,无剩余 renderer 盲区**。
+**模式归类**:Composer/ApprovalCard = ①乐观无回滚;socket cleanup = ③stale-closure;reducer 两条 = 状态机完整性缺口(假设事件严格有序/必达,无 fallback);storage = 裸 unguarded-IO。
+
+### 1e) Workflow Review 第四轮:合并进来的引擎/协议代码,2026-06-23 v2
+
+> **起因**:我一度说「renderer 全扫无盲区」,但那只对**合并前**基线成立。用户 session 期间又 merge 了 5 个 worktree(删 legacy 模型存储 / steer / send_input / 插件 MCP 覆盖层 / installer),未推 diff 从 67 涨到 **104 个生产文件**——多出 ~37 个前三轮没审的 core 代码。第四个 workflow `review-merged-core`(4 域 13 agent)专审最高危的引擎/协议子集,确认 **8 真问题**,但**我没全修**——逐条按设计意图复核后,只修可确定项,证伪 1 个,留 4 个不擅改用户设计决策。
+
+| 处置 | 文件:行 | 问题 | 结论 |
+|---|---|---|---|
+| ✅修 | `protocol/client.ts` | 缺 steer()/unsteer()(server+preload 有,SDK client 漏·request() 私有调不到)→协议不对称 | 补两方法+对称性测(commit 见下) |
+| ✅修 | `protocol/server.ts:742` handleGoalGet | sessionId 缺失返 SessionClosed 语义错 | 改 InvalidParams |
+| ✅修 | `resolve-llm-config.ts:39` | default/preferred 连接(catalogId 被删)被静默过滤→悄悄回退 entries[0]「换模型不告诉你」 | 不改回退行为,加 warn 让静默替换可见 |
+| ❌证伪 | `generate-video.ts:345` pollToCompletion | review 说该接 ctx.signal abort | **没改**:ctx.signal 是「整轮」信号,而该 poll 是 fire-and-forget 故意活过本轮(注释明示不 park 引擎·靠通知唤醒)→接 turn-signal 会让每个视频在轮结束瞬间被杀**破坏功能**;15min MAX_POLL_MS 是设计寿命上限非泄漏 |
+| 🟡留用户 | `resolve.ts:55-64` + `:47` | 缺失/被删 credential 返 `apiKey: undefined`(text 路径无 `!!apiKey` 守卫·image/video 有) | **没改**:有测试明示「missing credential 不崩是故意的」,request 时有清晰 auth 错,fail-safe 方向·UX 质量非崩溃/安全;改成抛错违背你的 no-crash 设计契约 |
+| 🟡留用户 | `generate-image.ts:53` | apiKeyRef 只单级查找,链式(a→b→c)返 undefined 静默失败 | **没改**:低概率·属上面同族凭证 UX;要不要支持链该你定 |
+
+**给你的判断点**:credential 解析族(上面两条 🟡)是**你删 legacy 时的设计选择**(解析期不校验凭证存在、缺失返 undefined、request 期才报错)。我尊重这个决定没擅改。**若你想要更早的清晰错误**(连接页就提示「凭证未配置」而非等发消息撞 401),我可以在 `resolveLLMConfigForTag` 加一道 needsKey 校验——一句话我就做。
 
 ### 2) 覆盖矩阵(~25 子系统对抗式审过,结论=干净/已修;括注追过并证伪的假设)
 
