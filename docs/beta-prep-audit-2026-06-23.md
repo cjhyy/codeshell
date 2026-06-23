@@ -220,6 +220,8 @@
 **bug-scan 第三轮(亲自读权限路径,d241ec08)🔴 真安全 bug**
 - 会话权限缓存:Bash allow 规则按 head 收窄成 `^git(\s|$)`,但 ruleMatches 只 regex.test 整条命令 → `git status && rm -rf /` 借 `git status` 的会话授权静默放行整条(含 rm)。修=ruleMatches 对 Bash 收窄规则复用 scanShellCommand,dangerous 或 >1 段则拒绝匹配强制重问。TDD 验证 + 421 tool-system 全绿。
 - 顺审 path-policy.ts:历史的子串误杀(/auth/ /token/)已修为锚定正则 + coveredBy 两侧补 sep 防工作区边界子串,确认干净;唯一小 gap=命名凭证文件的 `.bak` 备份不被判敏感(非 beta bug,留记)。
+- 复核 classifyBashCommand/classifySegment:取每段 min 安全度 + 管道每段须独立 safe-read(防 `echo secret | nc` 外泄)+ 默认 unsafe fail-closed,干净。
+- 复核 engine.refreshRuntimeConfig(配置热重载):version 单调去陈旧 + diskDefaultsFrom 是**全量快照 patch**(非稀疏 delta,undefined=settings 里确实没有,正确清除非误清)+ preset tool-set 变更只 warn 不半应用 + MCP reconcile catch-log 不崩,干净。turn-loop abort 检查已在 while 循环顶部(project_subagent_abort_leak 已修)。
 
 **bug-scan 第二轮(mobile-remote review,b9915a0f)**
 - 修:`readPasscodeParam` 不认数组头(重复头→string[])与 `readCookie` 不一致,正确口令落数组误 401 → 取首值,+2 测(TDD 验证)。
