@@ -116,7 +116,7 @@
 
 ### 2.4 🟡 Y-2/Y-3/Y-4:mobile-remote(默认关,开了才咬人)
 - Y-2:LAN 模式 `/health` 与 `/mobile/*` SPA 无鉴权下发;LAN WS `auth.device` 路径**无暴力破解锁定**(锁定只覆盖 tunnel 模式 `access-passcode.ts`)。`remote-host-manager.ts:129-182,195-215`。
-- Y-3:设备 `secretHash` 实为明文 bearer token(**没 hash**,与记忆 `secretHash不hash` 一致),`===` 比较非 `timingSafeEqual`,`devices.json` 无 `mode`。`trusted-device-store.ts:17-19,41-50,87-89`。
+- Y-3:设备 `secretHash` 实为明文 bearer token(**没 hash**,与记忆 `secretHash不hash` 一致),`===` 比较非 `timingSafeEqual`,~~`devices.json` 无 `mode`~~。`trusted-device-store.ts:17-19,41-50,87-89`。**✅ devices.json 0o600 已修(4419d366)**;剩 `===`→timingSafeEqual + secretHash 真 hash 留本桶给用户(开放给更多人前)。
 - Y-4:cookie lease 明文经 `/tmp`(`credentials-service.ts:124-135`),文件 `0o600` 但 lease 目录 `mkdirSync` 无 mode。
 - beta 取舍:这些**默认关**,给熟人的 beta 可 ship-as-is + release notes 注明;开放给更多人前再硬化。
 
