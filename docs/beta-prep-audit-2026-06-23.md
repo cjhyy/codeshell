@@ -218,6 +218,7 @@
 | 🟠 健壮(灾难性 if 触发) | killProcessGroup/groupAlive 无 pgid 守卫:pgid=0→`kill(-0)` 杀自身进程组、=1→`kill(-1)` 杀用户所有进程;pgid 从 orphan 记录读回,损坏记录可触发 | 入口加 `!isInteger\|\|<=1` 守卫 no-op;TDD 铁证(移守卫测试 SIGKILL runner,退码 144) | 95591130 |
 | 🟠 健壮 | resident-agent.stop 负 pid kill 漏 pid=1(同 killProcessGroup 类,pid 非磁盘往返仅理论可达) | 统一加 `>1` 守卫,≤1 回退 child.kill | 0a728764 |
 | 🟠 健壮 | resume() 损坏 state.json 抛裸 SyntaxError(逃过只 catch SessionError 的调用方→session 打不开);state.json 唯一非原子写在 create() | resume 读包 try/catch→SessionError;create() 改 tmp+rename | d423319d |
+| 🟢 健壮(低危) | token-counter 编码器 import 无 `.catch`→corrupt 安装时 unhandled rejection(本意是 chars/4 fallback) | 补 `.catch(()=>{})` 让静默 fallback 成立 | c6e9b3a7 |
 
 ### 2) 覆盖矩阵(~25 子系统对抗式审过,结论=干净/已修;括注追过并证伪的假设)
 
