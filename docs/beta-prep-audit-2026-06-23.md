@@ -249,6 +249,13 @@
 | provider-auth / 首用 apiKey | 干净(explicit>authCommand>env;空串经 `if(config.apiKey)` 当缺失不传 `""`;全缺→SDK 快速清晰报错非中途 401;baseUrl 交 SDK 归一不双斜杠);12 测 |
 | desktop fs IPC 沙箱(只读) | 干净(lexical `..` 拒 + realpath 双侧 containment 防 symlink 逃逸;只读三 API 故 target 必存在→realpath 必跑足;不存在叶的 lexical 兜底仅写路径才危险而本服务无写;目录列举逐项 realpath 跳越界 symlink + 2MB 上限 + SKIP);7 测含 escape 用例) |
 
+### 2.5) 修复完整性复审(查「只修一半」)
+
+回头审本 session 各修复是否所有同类路径都覆盖:
+- **R-1 0o600**:❌ 首轮漏一处 → 已补 engine.persistActiveModel(e56825d6)。settings.json 共 3 个写入点,现全覆盖(见 §2.1 / 记忆 settings-json-three-writers)。
+- **cookie 域围栏 cookieDomainMatches**:✅ 完整。全仓仅 `credentials-login/index.ts:241` 一处做手动域过滤(已用安全 matcher);capture/service 其余路径全走 Electron 原生 `cookies.get({domain})`,无 `endsWith` 字符串匹配。
+- **非数组 secret 守卫**:✅ 完整。3 个 parse-secret 消费点:index.ts(已修抛错)/ cookie-jar.ts 共享 parser(非数组→`[]`,非破坏性 OK)/ agent-bridge.ts(非数组→jar=[]→`length===0` 在破坏性 restore **前**显式报错,已安全)。唯一会「空 jar 直灌 clear 清空登出」的就是已修的 index.ts。
+
 ### 3) 总评
 
 仅 1 个 🔴 真安全 bug(权限链式命令绕过,已修两次补全);其余真问题均为安全卫生/健壮性纵深修。安全 / 并发 / 文件事务 / IO 恢复关键路径**整体扎实**,且关键不变量(stricterDecision / clampMaxTokens / isClientError / unregister 身份)**均已有专门回归测试**。后续连续子系统持续返回干净 = 覆盖面饱和信号。
