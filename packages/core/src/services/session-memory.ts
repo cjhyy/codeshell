@@ -56,7 +56,10 @@ export function listSessionMemories(limit = 50): SessionMemoryEntry[] {
     if (!file.endsWith(".json")) continue;
     try {
       entries.push(JSON.parse(readFileSync(join(MEMORY_DIR, file), "utf-8")));
-    } catch {}
+    } catch {
+      /* intentional: skip a corrupt/torn memory file rather than failing the
+         whole listing — one bad entry must not hide all the others. */
+    }
   }
   return sortSessionMemoriesByRecency(entries).slice(0, limit);
 }

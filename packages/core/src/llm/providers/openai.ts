@@ -590,7 +590,11 @@ export class OpenAIClient extends LLMClientBase {
         let args: Record<string, unknown> = {};
         try {
           args = JSON.parse(tc.args || "{}");
-        } catch {}
+        } catch {
+          /* intentional: model emitted malformed tool-call JSON — fall back to
+             empty args rather than crashing the stream; the tool layer reports
+             the resulting validation error back to the model. */
+        }
         toolCalls.push({ id: tc.id, toolName: tc.name, args });
       }
 
@@ -623,7 +627,11 @@ export class OpenAIClient extends LLMClientBase {
         let args: Record<string, unknown> = {};
         try {
           args = JSON.parse(tc.function.arguments || "{}");
-        } catch {}
+        } catch {
+          /* intentional: model emitted malformed tool-call JSON — fall back to
+             empty args rather than crashing; the tool layer reports the
+             resulting validation error back to the model. */
+        }
         toolCalls.push({
           id: tc.id,
           toolName: tc.function.name,
