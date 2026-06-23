@@ -219,6 +219,8 @@
 ---
 
 ## 6. ⚪️ beta1 延后(release notes 签字接受,非 bug)
+
+> 复核(2026-06-23,防「标延后实已做」):抽查两条 code 级声明仍准确——`schema-export.ts` 的 `settingsJsonSchema`/`writeSettingsSchemaFile` 仅 index.ts:434 re-export,**无实际 caller**(确属未接线);`browser-host/index.ts:19` 只有 `kind:"window"`,**webview 变体未预留**(确属 phase-2)。§6 可信。
 - browser-login 硬化:console 哨兵已换 per-window nonce(9eaefd86 已修);`persist:login-*` 分区只清 cookie 残留 localStorage/IDB/SW;BrowserHost phase-2 `kind:'webview'` 类型未预留。
 - JSON-Schema 导出未接线(`schema-export.ts` 无 caller)。
 - i18n 增量收尾;mobile(~149 处)单独接同套 i18n。
