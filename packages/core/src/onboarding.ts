@@ -9,6 +9,11 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync, rmSync,
 import { join } from "node:path";
 import { userHome } from "./settings/manager.js";
 import { getOpenRouterModels } from "./data/openrouter-models.js";
+import {
+  KNOWN_MAX_OUTPUT,
+  KNOWN_CONTEXT_WINDOWS,
+  OPENROUTER_VENDORS,
+} from "./data/model-metadata.js";
 import { sanitizeApiKey } from "./llm/api-key-sanitize.js";
 import { getMergedCatalog } from "./model-catalog/index.js";
 
@@ -157,22 +162,6 @@ export const PROVIDERS: ProviderDef[] = [
 ];
 
 // ─── Dynamic model list (OpenRouter snapshot) ────────────────────
-
-/**
- * Curated vendors and how many of their newest models to surface in the
- * onboarding picker. Order matters — first vendors appear first.
- * Tweak this if a new vendor becomes worth exposing in the picker.
- */
-const OPENROUTER_VENDORS: Array<{ prefix: string; take: number }> = [
-  { prefix: "anthropic/", take: 4 },
-  { prefix: "openai/", take: 5 },
-  { prefix: "google/", take: 3 },
-  { prefix: "deepseek/", take: 3 },
-  { prefix: "x-ai/", take: 2 },
-  { prefix: "qwen/", take: 2 },
-  { prefix: "meta-llama/", take: 2 },
-  { prefix: "mistralai/", take: 1 },
-];
 
 /**
  * Build the OpenRouter model picker list from the bundled snapshot.
@@ -341,56 +330,8 @@ export function hasApiKey(): boolean {
 
 
 // ─── Model pool helpers ───────────────────────────────────────────
-
-/** Known max output tokens for common models. */
-const KNOWN_MAX_OUTPUT: Record<string, number> = {
-  "anthropic/claude-opus-4.7": 32000,
-  "anthropic/claude-opus-4-7": 32000,
-  "claude-opus-4-7": 32000,
-  "anthropic/claude-sonnet-4.6": 16000,
-  "anthropic/claude-sonnet-4-6": 16000,
-  "claude-sonnet-4-6": 16000,
-  "anthropic/claude-haiku-4.5": 8192,
-  "anthropic/claude-haiku-4-5": 8192,
-  "claude-haiku-4-5": 8192,
-  "openai/gpt-5": 32000,
-  "openai/gpt-5-mini": 32000,
-  "openai/gpt-5-nano": 16000,
-  "gpt-5": 32000,
-  "gpt-5-mini": 32000,
-  "gpt-5-nano": 16000,
-  "openai/gpt-4o": 16384,
-  "gpt-4o": 16384,
-  "openai/o4-mini": 100000,
-  "o4-mini": 100000,
-  "openai/o3": 100000,
-  "o3": 100000,
-  "google/gemini-2.5-pro": 65536,
-  "google/gemini-2.5-flash": 65536,
-  "gemini-2.5-pro": 65536,
-  "gemini-2.5-flash": 65536,
-  "gemini-2.0-flash": 8192,
-  "deepseek/deepseek-v3.2": 8192,
-  "deepseek/deepseek-r1": 8192,
-  "deepseek-v4-flash": 8192,
-  "deepseek-v4-pro": 65536,
-  "deepseek-chat": 8192,
-  "qwen/qwen3-coder": 16384,
-  "meta-llama/llama-4-maverick": 32000,
-};
-
-/**
- * Known context window sizes for direct-provider models (not routed through OpenRouter).
- * These are the models whose IDs don't include a "vendor/" prefix.
- */
-const KNOWN_CONTEXT_WINDOWS: Record<string, number> = {
-  "deepseek-v4-pro": 1_000_000,
-  "deepseek-v4-flash": 1_000_000,
-  "deepseek-chat": 1_000_000,
-  "deepseek/deepseek-chat": 1_000_000,
-  "deepseek/deepseek-v4-pro": 1_000_000,
-  "deepseek/deepseek-v4-flash": 1_000_000,
-};
+// KNOWN_MAX_OUTPUT / KNOWN_CONTEXT_WINDOWS now live in data/model-metadata.json
+// (imported above) so they can be updated without a code change.
 
 /**
  * Resolve a model's max-output-token budget. Lookup order:
