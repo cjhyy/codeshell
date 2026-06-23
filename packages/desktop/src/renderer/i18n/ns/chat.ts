@@ -24,7 +24,7 @@ export const chat = {
         stop: "停止",
         send: "发送",
         runningAgents: "后台 {count} 个子代理运行中…",
-        cachedHint: "已缓存 {count} 条，将在本轮结束后发送",
+        cachedHint: "已排队 {count} 条，将在下一步插入当前轮",
         imagesPlaceholder: "[图片 ×{count}]",
       },
       queue: {
@@ -180,7 +180,7 @@ export const chat = {
         stop: "Stop",
         send: "Send",
         runningAgents: "{count} sub-agent(s) running in the background…",
-        cachedHint: "{count} message(s) cached; will send after this turn ends",
+        cachedHint: "{count} message(s) queued; will be inserted into the current turn at the next step",
         imagesPlaceholder: "[Images ×{count}]",
       },
       queue: {

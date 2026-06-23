@@ -13,6 +13,7 @@ import type {
   ToolResult,
 } from "../types.js";
 import type { TurnState } from "./turn-state.js";
+import type { SteerItem } from "./steer-queue.js";
 import { initialTurnState, newTurnId } from "./turn-state.js";
 import { ModelFacade } from "./model-facade.js";
 import { formatFriendlyError } from "./friendly-error.js";
@@ -117,7 +118,7 @@ export interface TurnLoopDeps {
    * Returns [] when nothing is queued. Wired by Engine; absent in standalone
    * tests (turn loop tolerates undefined).
    */
-  consumeSteer?: () => string[];
+  consumeSteer?: () => SteerItem[];
 }
 
 export interface TurnLoopResult {
@@ -437,11 +438,11 @@ export class TurnLoop {
       // loop-top user-push pattern as turnStartInjection / turn-limit warnings
       // below. Push to transcript too so they persist + survive resume.
       const steered = this.deps.consumeSteer?.() ?? [];
-      for (const text of steered) {
+      for (const { id, text } of steered) {
         if (!text) continue;
         messages.push({ role: "user", content: text });
         this.deps.transcript.appendMessage("user", text);
-        this.config.onStream?.({ type: "steer_injected", text });
+        this.config.onStream?.({ type: "steer_injected", text, id });
       }
 
       const state = initialTurnState(this.turnCount);

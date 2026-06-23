@@ -24,6 +24,7 @@ import {
   type QueryParams,
   type InjectParams,
   type SteerParams,
+  type UnsteerParams,
   Methods,
   ErrorCodes,
   createResponse,
@@ -289,6 +290,9 @@ export class AgentServer {
         break;
       case Methods.Steer:
         this.handleSteer(req);
+        break;
+      case Methods.Unsteer:
+        this.handleUnsteer(req);
         break;
       case Methods.CloseSession:
         this.handleCloseSession(req);
@@ -1463,8 +1467,37 @@ export class AgentServer {
       return;
     }
     try {
-      engine.enqueueSteer(params.sessionId, params.text);
+      engine.enqueueSteer(params.sessionId, params.text, params.id);
       this.transport.send(createResponse(req.id, { ok: true }));
+    } catch (err) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),
+      );
+    }
+  }
+
+  private handleUnsteer(req: RpcRequest): void {
+    const params = (req.params ?? {}) as unknown as UnsteerParams;
+    if (!params.id || !params.sessionId) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.InvalidParams, "id and sessionId required"),
+      );
+      return;
+    }
+    const engine = this.chatManager
+      ? this.chatManager.get(params.sessionId)?.engine
+      : this.legacyEngine;
+    if (!engine) {
+      this.transport.send(
+        createErrorResponse(req.id, ErrorCodes.SessionClosed, `No such session: ${params.sessionId}`),
+      );
+      return;
+    }
+    try {
+      // removed=false means the loop already consumed it — not an error, the
+      // host just learns it couldn't be revoked (it will arrive as a bubble).
+      const removed = engine.unsteer(params.sessionId, params.id);
+      this.transport.send(createResponse(req.id, { ok: true, removed }));
     } catch (err) {
       this.transport.send(
         createErrorResponse(req.id, ErrorCodes.InternalError, (err as Error).message),

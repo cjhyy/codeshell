@@ -1,29 +1,45 @@
-export type QueuedInputState = Record<string, string[]>;
+/**
+ * Queued composer drafts, per conversation bucket. Each entry carries a stable
+ * `id` so the renderer can decouple "queued (visible, revocable)" from
+ * "injected into the run (now a user bubble)": an item lives in the panel until
+ * the engine's `steer_injected` event echoes its id back (removeQueuedInputById),
+ * and the per-item delete button revokes it by id via the unsteer RPC.
+ *
+ * Pure + side-effect-free. `id` is supplied by the caller (so this stays
+ * deterministic and unit-testable — no clock/random inside).
+ */
+export interface QueuedItem {
+  id: string;
+  text: string;
+}
+
+export type QueuedInputState = Record<string, QueuedItem[]>;
 
 export function enqueueQueuedInput(
   state: QueuedInputState,
   bucket: string,
+  id: string,
   text: string,
 ): QueuedInputState {
   const trimmed = text.trim();
-  if (!trimmed) return state;
+  if (!trimmed || !id) return state;
   return {
     ...state,
-    [bucket]: [...(state[bucket] ?? []), trimmed],
+    [bucket]: [...(state[bucket] ?? []), { id, text: trimmed }],
   };
 }
 
 export function dequeueQueuedInput(
   state: QueuedInputState,
   bucket: string,
-): { text: string | null; state: QueuedInputState } {
+): { item: QueuedItem | null; state: QueuedInputState } {
   const list = state[bucket] ?? [];
-  if (list.length === 0) return { text: null, state };
-  const [text, ...rest] = list;
+  if (list.length === 0) return { item: null, state };
+  const [item, ...rest] = list;
   const next = { ...state };
   if (rest.length === 0) delete next[bucket];
   else next[bucket] = rest;
-  return { text: text ?? null, state: next };
+  return { item: item ?? null, state: next };
 }
 
 export function clearQueuedInput(state: QueuedInputState, bucket: string): QueuedInputState {
@@ -33,14 +49,39 @@ export function clearQueuedInput(state: QueuedInputState, bucket: string): Queue
   return next;
 }
 
+/**
+ * Remove the entry at `index`. Returns the new state and the removed item (so
+ * the caller can unsteer it by id). `removed` is null if the index is invalid.
+ */
 export function removeQueuedInputAt(
   state: QueuedInputState,
   bucket: string,
   index: number,
+): { state: QueuedInputState; removed: QueuedItem | null } {
+  const list = state[bucket] ?? [];
+  if (!Number.isInteger(index) || index < 0 || index >= list.length) {
+    return { state, removed: null };
+  }
+  const removed = list[index] ?? null;
+  const rest = list.filter((_item, i) => i !== index);
+  const next = { ...state };
+  if (rest.length === 0) delete next[bucket];
+  else next[bucket] = rest;
+  return { state: next, removed };
+}
+
+/**
+ * Remove the entry with `id` (used when the engine confirms it was injected via
+ * the steer_injected event). No-op if absent (e.g. the user already deleted it).
+ */
+export function removeQueuedInputById(
+  state: QueuedInputState,
+  bucket: string,
+  id: string,
 ): QueuedInputState {
   const list = state[bucket] ?? [];
-  if (!Number.isInteger(index) || index < 0 || index >= list.length) return state;
-  const rest = list.filter((_item, i) => i !== index);
+  const rest = list.filter((item) => item.id !== id);
+  if (rest.length === list.length) return state;
   const next = { ...state };
   if (rest.length === 0) delete next[bucket];
   else next[bucket] = rest;
@@ -49,21 +90,22 @@ export function removeQueuedInputAt(
 
 /**
  * Drain the ENTIRE queue for a bucket as one merged string (blank-line
- * separated), clearing the slot. Used by the 引导打断 path: the user wants
- * everything they queued to land in the next turn at once, not be fed one
- * message per turn (the old per-dequeue behavior left later items waiting for
- * each prior turn to finish). Returns `{ text: null }` when empty.
+ * separated), clearing the slot. Used by the 打断重发 path (全部引导 / forceSend):
+ * everything queued lands in the next turn at once. Returns the merged text,
+ * the ids that were drained, and the new state. `{ text: null, ids: [] }` when
+ * empty.
  */
 export function drainQueuedInput(
   state: QueuedInputState,
   bucket: string,
-): { text: string | null; state: QueuedInputState } {
+): { text: string | null; ids: string[]; state: QueuedInputState } {
   const list = state[bucket] ?? [];
-  if (list.length === 0) return { text: null, state };
-  const merged = list.join("\n\n");
+  if (list.length === 0) return { text: null, ids: [], state };
+  const merged = list.map((item) => item.text).join("\n\n");
+  const ids = list.map((item) => item.id);
   const next = { ...state };
   delete next[bucket];
-  return { text: merged, state: next };
+  return { text: merged, ids, state: next };
 }
 
 export function promoteQueuedInputAt(

@@ -138,6 +138,15 @@ export interface InjectParams {
 export interface SteerParams {
   sessionId: string;
   text: string;
+  /** Stable host-side id for this queued draft. Rides through to the
+   *  steer_injected event and is the handle Unsteer uses to revoke it. */
+  id?: string;
+}
+
+/** Revoke a still-pending steer entry by id (before the loop consumes it). */
+export interface UnsteerParams {
+  sessionId: string;
+  id: string;
 }
 
 /** Update runtime configuration. */
@@ -301,6 +310,8 @@ export const Methods = {
   Inject: "agent/inject",
   /** Steer an in-flight run: queue a user message spliced at the next step (不打断). */
   Steer: "agent/steer",
+  /** Revoke a still-pending steer entry by id (撤回, before the loop consumes it). */
+  Unsteer: "agent/unsteer",
   /** Close (destroy) a session. */
   CloseSession: "agent/closeSession",
   /** Extend a running goal's turn/budget ceilings mid-run (TODO 3.1). */
