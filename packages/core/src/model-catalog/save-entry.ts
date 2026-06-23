@@ -73,3 +73,41 @@ export function saveCatalogEntry(
   }
   return { ok: true, action, backup };
 }
+
+export interface DeleteCatalogResult {
+  ok: boolean;
+  removed: boolean;
+  error?: string;
+  backup?: string;
+}
+
+/**
+ * Remove the entry with `id` from the user catalog file. Mirrors saveCatalogEntry's
+ * backup + atomic-write safety. removed:false means the id wasn't in the user file
+ * (a pristine built-in entry, or simply absent). The built-in catalog is code,
+ * untouched — deleting a user override just lets getMergedCatalog fall back to the
+ * built-in version ("reset" semantics).
+ */
+export function deleteUserCatalogEntry(
+  id: string,
+  opts: { path: string; stamp: string },
+): DeleteCatalogResult {
+  if (!existsSync(opts.path)) return { ok: true, removed: false };
+  let backup: string | undefined = `${opts.path}.bak-${opts.stamp}`;
+  try { copyFileSync(opts.path, backup); } catch { backup = undefined; }
+  let current: CatalogEntry[] = [];
+  try {
+    const raw = JSON.parse(readFileSync(opts.path, "utf-8"));
+    const safe = userCatalogFileSchema.safeParse(raw);
+    current = safe.success ? safe.data : [];
+  } catch { current = []; }
+  const next = current.filter((e) => e.id !== id);
+  const removed = next.length !== current.length;
+  if (!removed) return { ok: true, removed: false, backup };
+  try {
+    writeFileSync(opts.path, JSON.stringify(next, null, 2));
+  } catch (e) {
+    return { ok: false, removed: false, error: `could not write catalog: ${e instanceof Error ? e.message : String(e)}`, backup };
+  }
+  return { ok: true, removed: true, backup };
+}

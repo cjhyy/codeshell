@@ -8,7 +8,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { saveCatalogEntry } from "./save-entry.js";
+import { saveCatalogEntry, deleteUserCatalogEntry } from "./save-entry.js";
 
 let dir: string;
 let file: string;
@@ -102,5 +102,47 @@ describe("saveCatalogEntry", () => {
     const baks = readdirSync(dir).filter((f) => f.includes(".bak"));
     expect(baks.length).toBeGreaterThan(0);
     expect(readFileSync(join(dir, baks[0]!), "utf-8")).toBe("{ not json");
+  });
+});
+
+describe("deleteUserCatalogEntry", () => {
+  let dir2: string;
+  let path: string;
+  beforeEach(() => {
+    dir2 = mkdtempSync(join(tmpdir(), "cat-del-"));
+    path = join(dir2, "model-catalog.user.json");
+  });
+  afterEach(() => rmSync(dir2, { recursive: true, force: true }));
+
+  test("removes an existing entry and reports removed:true", () => {
+    writeFileSync(path, JSON.stringify([
+      { id: "a", tag: "text", adapterKind: "openai", displayName: "A", description: "", defaultBaseUrl: "u" },
+      { id: "b", tag: "text", adapterKind: "openai", displayName: "B", description: "", defaultBaseUrl: "u" },
+    ]));
+    const r = deleteUserCatalogEntry("a", { path, stamp: "t1" });
+    expect(r.ok).toBe(true);
+    expect(r.removed).toBe(true);
+    const left = JSON.parse(readFileSync(path, "utf-8"));
+    expect(left.map((e: any) => e.id)).toEqual(["b"]);
+  });
+
+  test("reports removed:false when id absent (no-op)", () => {
+    writeFileSync(path, JSON.stringify([{ id: "a", tag: "text", adapterKind: "openai", displayName: "A", description: "", defaultBaseUrl: "u" }]));
+    const r = deleteUserCatalogEntry("nope", { path, stamp: "t2" });
+    expect(r.ok).toBe(true);
+    expect(r.removed).toBe(false);
+  });
+
+  test("reports removed:false when file absent", () => {
+    const r = deleteUserCatalogEntry("a", { path: join(dir2, "missing.json"), stamp: "t3" });
+    expect(r.ok).toBe(true);
+    expect(r.removed).toBe(false);
+  });
+
+  test("backs up before writing", () => {
+    writeFileSync(path, JSON.stringify([{ id: "a", tag: "text", adapterKind: "openai", displayName: "A", description: "", defaultBaseUrl: "u" }]));
+    const r = deleteUserCatalogEntry("a", { path, stamp: "t4" });
+    expect(r.backup).toBe(`${path}.bak-t4`);
+    expect(existsSync(r.backup!)).toBe(true);
   });
 });
