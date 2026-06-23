@@ -87,12 +87,14 @@
 > 排查锚点:core `engine/steer-queue.ts`、`engine.ts` `enqueueSteer/unsteer/consumeSteer` + `turn-loop.ts` 步间消费点;renderer `App.tsx` `steeredIdsRef`/auto-send useEffect/`steer_injected→removeQueuedInputById`、`queuedInput.ts`。⚠️坑:preload `rpc()` resolve 整个 `{id,result}` 信封,unsteer 的 removed 在 `.result.removed` 不是 `.data`。
 > 关联:`project_steer_inject_channel`。
 
-## 5. Cookie 登录全链路(audit §1.3,唯一没真机验过的核心新功能;commit `997c9183` 未 push)
+## 5. Cookie 登录全链路 ✅ 真机已验(用户 2026-06-24,audit §1.3 的「唯一没真机验过的核心新功能」已消除)
 
-- [ ] **5.1** 开独立登录窗登 YouTube → 点「保存」→ 凭证页出现该账号。
-- [ ] **5.2** 切到另一账号(同域多账号)→ 让 AI `UseCredential`/`InjectCredential` 取用 → 浏览器面板以该账号身份可见登录态。
-- [ ] **5.3**(小红书路线)登录小红书 → 拓取 → 切换 → AI 取用全链路。
-- [ ] **5.4** 逐条「AI 可自动取用 / 自动注入」开关改动后需重启 app 才生效(新 preload/main IPC)——确认重启后生效。
+- [x] **5.1** 开独立登录窗登 YouTube → 点「保存」→ 凭证页出现该账号。
+- [x] **5.2** 切到另一账号(同域多账号)→ 让 AI `UseCredential`/`InjectCredential` 取用 → 浏览器面板以该账号身份可见登录态。
+- [x] **5.3**(小红书路线)登录小红书 → 拓取 → 切换 → AI 取用全链路。
+- [x] **5.4** 逐条「AI 可自动取用 / 自动注入」开关改动后需重启 app 才生效(新 preload/main IPC)——确认重启后生效。
+
+> ✅ 全 4 项用户 2026-06-24 真机验过,无问题。
 
 关联:`project_browser_login_window`、`project_multi_account_cookie_creds`。
 
