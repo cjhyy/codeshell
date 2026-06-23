@@ -7,6 +7,7 @@
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §6.
  */
 import { resolveInstance, type ModelInstance, type Credential } from "../model-catalog/resolve.js";
+import { applyParams } from "../model-catalog/params.js";
 import type { CatalogEntry } from "../model-catalog/index.js";
 import type { ModelEntry } from "../llm/model-pool.js";
 import type { ReasoningSetting } from "../llm/reasoning-setting.js";
@@ -51,6 +52,12 @@ export function modelEntriesFromConnections(
     if (!resolved) continue;
     const { entry, preset } = resolved;
     const reasoning = reasoningFromParamValues(inst.paramValues);
+    // Generic param passthrough: map the connection's paramValues to request-body
+    // fields via each ParamSpec's wire.field. Exclude `reasoning` — it rides the
+    // dedicated entry.reasoning path (per-model dynamic translation in the client);
+    // emitting it here too would double-send it.
+    const passthroughParams = (preset?.params ?? []).filter((p) => p.name !== "reasoning");
+    const extraBody = applyParams(inst.paramValues ?? {}, passthroughParams);
     const e: ModelEntry = {
       key: inst.id,
       provider: clientProvider(entry),
@@ -61,6 +68,7 @@ export function modelEntriesFromConnections(
       ...(preset?.maxContextTokens !== undefined ? { maxContextTokens: preset.maxContextTokens } : {}),
       ...(preset?.maxOutputTokens !== undefined ? { maxOutputTokens: preset.maxOutputTokens } : {}),
       ...(reasoning !== undefined ? { reasoning } : {}),
+      ...(Object.keys(extraBody).length > 0 ? { extraBody } : {}),
     };
     out.push(e);
   }

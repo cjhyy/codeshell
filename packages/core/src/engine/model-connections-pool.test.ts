@@ -6,7 +6,7 @@
  * paramValues.reasoning mapped to the entry's reasoning field).
  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §6.
  */
-import { describe, test, expect } from "bun:test";
+import { describe, test, it, expect } from "bun:test";
 import { modelEntriesFromConnections } from "./model-connections-pool.js";
 import { validateSettings } from "../settings/schema.js";
 import type { CatalogEntry } from "../model-catalog/index.js";
@@ -154,5 +154,33 @@ describe("modelEntriesFromConnections", () => {
     ];
     const entries = modelEntriesFromConnections(insts, CREDS, CATALOG);
     expect(entries.map((e) => e.key)).toEqual(["ok"]);
+  });
+});
+
+const catalogP1 = [{
+  id: "zhipu-p1", tag: "text", adapterKind: "openai", protocol: "openai-compat",
+  defaultBaseUrl: "https://open.bigmodel.cn/api/paas/v4", defaultModel: "glm-5.2",
+  modelPresets: [{ value: "glm-5.2", label: "GLM-5.2", params: [
+    { name: "reasoning", control: "enum", wire: { field: "reasoning_effort" } },
+    { name: "thinking_type", control: "enum", wire: { field: "thinking.type" } },
+    { name: "temperature", control: "number", wire: { field: "temperature" } },
+    { name: "top_p", control: "number", wire: { field: "top_p" } },
+  ] }],
+}] as never;
+const credsP1 = [{ id: "z-key", catalogId: "zhipu-p1", apiKey: "k", baseUrl: "https://open.bigmodel.cn/api/paas/v4" }] as never;
+
+describe("modelEntriesFromConnections flows non-reasoning params to extraBody", () => {
+  it("maps paramValues to extraBody via wire.field; reasoning stays separate", () => {
+    const conns = [{ id: "z", catalogId: "zhipu-p1", tag: "text", model: "glm-5.2", credentialId: "z-key",
+      paramValues: { reasoning: "high", thinking_type: "enabled", temperature: 1, top_p: 0.95 } }] as never;
+    const [e] = modelEntriesFromConnections(conns, credsP1, catalogP1);
+    expect(e.reasoning).toEqual({ mode: "effort", effort: "high" });
+    expect(e.extraBody).toEqual({ thinking: { type: "enabled" }, temperature: 1, top_p: 0.95 });
+    expect((e.extraBody as any)?.reasoning_effort).toBeUndefined();
+  });
+  it("no params → no extraBody", () => {
+    const conns = [{ id: "z2", catalogId: "zhipu-p1", tag: "text", model: "glm-5.2", credentialId: "z-key" }] as never;
+    const [e] = modelEntriesFromConnections(conns, credsP1, catalogP1);
+    expect(e.extraBody).toBeUndefined();
   });
 });
