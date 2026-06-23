@@ -141,10 +141,11 @@ Arena 是最大例子。它**架构上是干净的**(只 import `core/llm`、`co
 - **建议**:可选加 `~/.code-shell/approval-log.jsonl` + 未来 `show approvals` 命令(args 含凭证时 hash)。优先级低。
 - **工作量**:中。
 
-### 4.7 [低] settings 双源(`settings.model` vs `settings.providers`)
+### 4.7 [低] ✅ 已被超越 — settings 双源(`settings.model` vs `settings.providers`)
 - **证据**:`settings/schema.ts` 同时维护 `settings.model` 与 `settings.providers[]`,`manager.ts:63-66` 注释承认是 legacy 兼容镜像。
 - **建议**:加测试断言两者每次 mutation 后同步;未来主版本删 `settings.model`。现在不急。
 - **工作量**:中。
+- **✅ 处置(2026-06-24 核实)**:本项**已被「删除 legacy 模型存储」(merge b1037789)整体解决**——那次直接删掉了 `settings.model` / `activeKey` 这套 legacy 单数字段+镜像,全量切统一 catalog(`modelConnections` + `defaults.<tag>`)。schema 里残留的 `model: z.string()`(167/395)是 connection 对象内部「这条连接用哪个模型」的字段,非顶层双源镜像。双源同步问题不复存在,无需再加同步测试。
 
 ### 4.8 [低] TCP host 的 MCP 配置不随会话热读(多宿主一致性裂缝)
 - **证据**:`agent-server-tcp.ts:42` 启动时读一次 `settings.mcpServers`,每会话复用;`agent-server-stdio.ts:167` 每会话 `freshSettings()` 重读。用户中途改 `mcpServers`,TCP 看到陈旧、stdio 看到新鲜。
