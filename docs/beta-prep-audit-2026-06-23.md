@@ -241,6 +241,7 @@
 | 🟡 安全 | cookie 抓取域围栏裸公共后缀漏配:`d="co"` 误中 `github.com` | 抽 cookieDomainMatches(要求 d 含点),+6 测 | fc6f0409 |
 | 🟡 安全 | `restoreCookieToBrowser` 非数组 secret 静默清空登出 | 非数组也判损坏抛错 | a906d8f7 |
 | 🟡 安全 | passcode 头数组(重复头)不认致正确口令误 401 | readPasscodeParam 取首值,+2 测;顺收紧 cookie lease 目录 0o700(Y-4) | b9915a0f |
+| 🟡 安全(DoS·不可信边界) | readCookie 对 attacker-controlled Cookie 头 decodeURIComponent 无 try/catch:`cs_access=%ZZ`→URIError 逃过 gate()→崩请求处理器 | decode 包 try/catch 回退 raw(同浏览器);TDD 验证 | d2f5e449 |
 | 🟡 卫生 | 记忆自动提取直接落盘,密钥仅靠 prompt 防护 | 落盘前过 redactSecrets(擦 Bearer/URL);残留:裸 prose key 仍靠 prompt(已诚实标注) | 9119ef0f |
 | 🟠 健壮 | saveCatalogEntry 缺父目录崩 ENOENT | 写前 mkdirSync | 358efbb0 |
 | 🟠 健壮(灾难性 if 触发) | killProcessGroup/groupAlive 无 pgid 守卫:pgid=0→`kill(-0)` 杀自身进程组、=1→`kill(-1)` 杀用户所有进程;pgid 从 orphan 记录读回,损坏记录可触发 | 入口加 `!isInteger\|\|<=1` 守卫 no-op;TDD 铁证(移守卫测试 SIGKILL runner,退码 144) | 95591130 |
