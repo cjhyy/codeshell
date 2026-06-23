@@ -379,11 +379,23 @@ export class OpenAIClient extends LLMClientBase {
         this.config.reasoningSummary;
     }
 
+    // Catalog-driven passthrough params (temperature/top_p/thinking etc, already
+    // wire-mapped from the connection's paramValues by applyParams). Filter each
+    // key by rejectedParams so we never send a field the model rejects (same
+    // contract as `sampling` above — e.g. temperature to gpt-5).
+    const extra: Record<string, unknown> = {};
+    const rejected = cap.rejectedParams as ReadonlySet<string>;
+    for (const [k, v] of Object.entries(this.config.extraBody ?? {})) {
+      if (rejected.has(k)) continue;
+      extra[k] = v;
+    }
+
     return {
       model: this.model,
       messages,
       ...tokenLimit,
       ...sampling,
+      ...extra,
       ...reasoningBody,
       // service_tier (TODO 7.2): passed through verbatim when configured.
       ...(this.config.serviceTier ? { service_tier: this.config.serviceTier } : {}),
