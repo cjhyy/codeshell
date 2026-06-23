@@ -355,8 +355,17 @@ export function TextConnectionsPanel({ scope, activeRepoPath, tag = "text", titl
                     size="sm"
                     disabled={isDefault}
                     onClick={() => {
-                      setDefaultId(inst.id);
-                      void persist(instances, credentials, inst.id);
+                      const prevDefault = defaultId;
+                      setDefaultId(inst.id); // optimistic
+                      void persist(instances, credentials, inst.id).catch((e) => {
+                        // Revert + surface; otherwise the UI shows the new default
+                        // while disk keeps the old one (silent desync until refresh).
+                        setDefaultId(prevDefault);
+                        toast({
+                          message: `${t("settingsX.textConn.setCurrentFailed")}: ${e instanceof Error ? e.message : String(e)}`,
+                          variant: "error",
+                        });
+                      });
                     }}
                   >
                     {isDefault

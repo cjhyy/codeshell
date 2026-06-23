@@ -208,23 +208,33 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
   const [compatCodex, setCompatCodex] = useState(true);
   const { t } = useT();
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
+  // Mirror latest state so a toggle persists the up-to-date value of BOTH flags,
+  // never a stale closure capture. writeChain serializes the fire-and-forget
+  // writes so a slower earlier write can't land after — and clobber — a later one.
+  const pairRef = useRef({ claude: true, codex: true });
+  const writeChain = useRef<Promise<unknown>>(Promise.resolve());
 
   const load = async () => {
     const s = (await window.codeshell.getSettings(scope, cwd)) ?? {};
     const agent = objectOf(s.agent);
     const instr = objectOf(agent.instructions);
-    setCompatClaude(instr.compatClaude !== false);
-    setCompatCodex(instr.compatCodex !== false);
+    const claude = instr.compatClaude !== false;
+    const codex = instr.compatCodex !== false;
+    pairRef.current = { claude, codex };
+    setCompatClaude(claude);
+    setCompatCodex(codex);
   };
   useEffect(() => { void load(); }, [scope, activeRepoPath]);
 
-  // Switches persist instantly on toggle.
-  const persist = (claude: boolean, codex: boolean) =>
-    void writeSettings(
-      scope,
-      { agent: { instructions: { compatClaude: claude, compatCodex: codex } } },
-      cwd,
-    );
+  // Switches persist instantly on toggle. `next` carries the full just-computed
+  // pair (from pairRef, always current); writes are chained to enforce order.
+  const persist = (claude: boolean, codex: boolean) => {
+    pairRef.current = { claude, codex };
+    writeChain.current = writeChain.current
+      .catch(() => {})
+      .then(() => writeSettings(scope, { agent: { instructions: { compatClaude: claude, compatCodex: codex } } }, cwd));
+    void writeChain.current;
+  };
 
   return (
     <section className="flex flex-col gap-3">
@@ -236,14 +246,14 @@ export function InstructionFilesSection({ scope, activeRepoPath }: ScopedProps) 
         <span>{t("settingsX.adv.compatClaude")}</span>
         <Switch
           checked={compatClaude}
-          onCheckedChange={(v) => { setCompatClaude(v); persist(v, compatCodex); }}
+          onCheckedChange={(v) => { setCompatClaude(v); persist(v, pairRef.current.codex); }}
         />
       </label>
       <label className="flex items-center justify-between gap-3 text-sm text-foreground">
         <span>{t("settingsX.adv.compatCodex")}</span>
         <Switch
           checked={compatCodex}
-          onCheckedChange={(v) => { setCompatCodex(v); persist(compatClaude, v); }}
+          onCheckedChange={(v) => { setCompatCodex(v); persist(pairRef.current.claude, v); }}
         />
       </label>
     </section>
@@ -1069,6 +1079,7 @@ export function ToggleCapabilitySection({
   const [enabled, setEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const { t } = useT();
+  const toast = useToast();
   const cwd = scope === "project" ? activeRepoPath ?? undefined : undefined;
 
   const load = async () => {
@@ -1078,10 +1089,16 @@ export function ToggleCapabilitySection({
   useEffect(() => { void load(); }, [scope, activeRepoPath, settingKey]);
 
   const save = async (next: boolean) => {
-    setEnabled(next);
+    const prev = enabled;
+    setEnabled(next); // optimistic
     setSaving(true);
     try {
       await writeSettings(scope, { [settingKey]: { enabled: next } }, cwd);
+    } catch (e) {
+      // Write failed — revert the optimistic flip and surface it, otherwise the
+      // toggle reads "enabled" while disk stays unchanged (silent desync until remount).
+      setEnabled(prev);
+      toast({ message: `${t("settingsX.adv.toggleSaveFailed")}: ${e instanceof Error ? e.message : String(e)}`, variant: "error" });
     } finally {
       setSaving(false);
     }

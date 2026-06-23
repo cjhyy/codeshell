@@ -464,9 +464,13 @@ function AgentsEditor({ target }: { target: Target }) {
                   min={1}
                   value={draft.maxTurns ?? ""}
                   placeholder={t("settingsX.agents.maxTurnsPlaceholder")}
-                  onChange={(e) =>
-                    setDraft({ ...draft, maxTurns: e.target.value === "" ? undefined : Number(e.target.value) })
-                  }
+                  onChange={(e) => {
+                    // Number("abc") === NaN (typeof "number"), which would persist
+                    // to saveAgent and corrupt the config — keep undefined unless the
+                    // input parses to a finite number (mirrors GitSection's graceMins).
+                    const n = Number(e.target.value);
+                    setDraft({ ...draft, maxTurns: e.target.value === "" || !Number.isFinite(n) ? undefined : n });
+                  }}
                 />
               </label>
             </div>

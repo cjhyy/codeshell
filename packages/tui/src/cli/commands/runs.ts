@@ -28,7 +28,14 @@ function createRunManager(): RunManager {
   const settings = new SettingsManager(cwd).get();
 
   const llm = resolveLLMConfigForTag(settings, "text", (settings as any).defaults?.text);
-  if (!llm) throw new Error("没有可用的文本模型连接(runs)。请在「连接」页配置。");
+  if (!llm) {
+    // Every `runs` subcommand's first act is createRunManager(); a missing text
+    // connection is a config state, not a crash — print the clean guidance and
+    // exit 1 (mirrors plugin.ts's clean-exit convention) instead of throwing a
+    // raw stack trace up through the generic reportFatal handler.
+    console.error("没有可用的文本模型连接(runs)。请在「连接」页配置。");
+    process.exit(1);
+  }
 
   const store = new FileRunStore();
   return new RunManager({

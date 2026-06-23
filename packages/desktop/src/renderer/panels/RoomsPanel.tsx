@@ -23,6 +23,10 @@ export function RoomsPanel() {
   const [input, setInput] = useState("");
   const seqRef = useRef(0);
   const feedRef = useRef<HTMLDivElement>(null);
+  // Monotonic token bumped on every enter()/leave(); a history load that resolves
+  // after the room changed (or another enter started) is dropped instead of
+  // clobbering the now-current feed.
+  const enterTokenRef = useRef(0);
 
   const refreshRooms = useCallback(async () => {
     setRooms(await window.codeshell.rooms.list());
@@ -59,16 +63,29 @@ export function RoomsPanel() {
   }
 
   async function enter(room: RoomPublic) {
+    const token = ++enterTokenRef.current;
     setActive(room);
     setMessages([]);
     seqRef.current = 0;
     await window.codeshell.rooms.open(room.id);
     const history = await window.codeshell.rooms.history(room.id, 0);
-    setMessages(history);
-    if (history.length) seqRef.current = history[history.length - 1]!.seq;
+    // A newer enter()/leave() happened during the await → this load is stale, drop it.
+    if (enterTokenRef.current !== token) return;
+    // Messages may have arrived via onMessage while history was loading. Merge by
+    // seq (history is authoritative for what it covers; keep any live message with a
+    // higher seq) so a mid-load push isn't overwritten and lost from the feed.
+    setMessages((live) => {
+      const bySeq = new Map<number, RoomMessageWire>();
+      for (const m of history) bySeq.set(m.seq, m);
+      for (const m of live) if (!bySeq.has(m.seq)) bySeq.set(m.seq, m);
+      return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
+    });
+    const maxSeq = Math.max(seqRef.current, ...history.map((m) => m.seq), 0);
+    seqRef.current = maxSeq;
   }
 
   function leave() {
+    enterTokenRef.current++;
     setActive(null);
     setMessages([]);
   }

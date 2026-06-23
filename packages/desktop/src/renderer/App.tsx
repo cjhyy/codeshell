@@ -1824,15 +1824,21 @@ function App() {
     // scope spec / debugging note: IPC is fire-and-forget and the stream build
     // is memoized, so this state update is the only synchronous work on click.
     timePhase("approval.decide", () => {
-      setApprovalQueue((q) => q.filter((e) => e.requestId !== env.requestId));
+      // Compute the post-decision queue ONCE here. Reading `approvalQueue` from
+      // render scope inside the setApproval updater would see the STALE pre-filter
+      // value (the setApprovalQueue update above is batched and not yet committed),
+      // so with multiple queued approvals the "next" lookup could surface an
+      // already-decided one or skip the next. Derive both updates from this single
+      // filtered list instead.
+      const remaining = approvalQueue.filter((e) => e.requestId !== env.requestId);
+      setApprovalQueue(remaining);
       setApprovalHistory((h) => [
         ...h,
         { decision, envelope: env, reason, at: Date.now() },
       ]);
       setApproval((cur) => {
         if (!cur || cur.requestId === env.requestId) {
-          const next = approvalQueue.find((e) => e.requestId !== env.requestId);
-          return next ?? null;
+          return remaining[0] ?? null;
         }
         return cur;
       });

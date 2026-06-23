@@ -521,7 +521,10 @@ function CodeWithComments({ path, text }: { path: string; text: string }) {
       {lines.map((line, i) => {
         const no = i + 1;
         return (
-          <div key={i}>
+          // Key on the line number (stable within a file) rather than the array
+          // index, so `commenting` state can't follow the wrong row if line list
+          // composition ever changes without a full remount.
+          <div key={no}>
             <div className="group flex items-start gap-1 px-1 hover:bg-accent/40">
               {/* Gutter comment button (left): a clear blue + that appears on
                   row hover, GitHub-style. Click pins this line + your comment

@@ -92,6 +92,19 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
 
   const anyRunning = shells.some((s) => s.status === "running");
 
+  // Mirror the latest shells + callbacks into refs so the poll interval below can
+  // read them without listing them as effect deps. Otherwise `refresh`(dep
+  // [sessionId]), `fetchOutput`(dep [sessionId, t]) and `shells` change on every
+  // session switch / locale change / list update, tearing down and re-arming the
+  // 3s interval — which stalls live output for up to ~6s. The interval should
+  // re-arm ONLY when `anyRunning` flips.
+  const shellsRef = useRef(shells);
+  const refreshRef = useRef(refresh);
+  const fetchOutputRef = useRef(fetchOutput);
+  useEffect(() => { shellsRef.current = shells; }, [shells]);
+  useEffect(() => { refreshRef.current = refresh; }, [refresh]);
+  useEffect(() => { fetchOutputRef.current = fetchOutput; }, [fetchOutput]);
+
   // Light 3s poll, but only while there's a running shell AND the tab is
   // visible — a finished list never changes, and a hidden tab (PanelArea keeps
   // all tabs mounted via CSS) shouldn't keep polling. A running shell with an
@@ -101,15 +114,15 @@ export function BackgroundShellPanel({ sessionId }: { sessionId: string | null }
     if (!anyRunning) return;
     const tick = (): void => {
       if (document.visibilityState !== "visible") return;
-      void refresh();
+      void refreshRef.current();
       const cur = selectedRef.current;
-      if (cur && shells.some((s) => s.shellId === cur && s.status === "running")) {
-        void fetchOutput(cur, false);
+      if (cur && shellsRef.current.some((s) => s.shellId === cur && s.status === "running")) {
+        void fetchOutputRef.current(cur, false);
       }
     };
     const timer = setInterval(tick, 3000);
     return () => clearInterval(timer);
-  }, [anyRunning, refresh, fetchOutput, shells]);
+  }, [anyRunning]);
 
   const kill = async (shellId: string) => {
     if (!sessionId) return;
