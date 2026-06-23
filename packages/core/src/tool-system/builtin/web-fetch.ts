@@ -219,7 +219,12 @@ export async function webFetchTool(args: Record<string, unknown>): Promise<strin
   // host, and DNS-resolved IPs against the block lists. fetch() runs
   // with redirect: "manual" so the runtime cannot silently follow a
   // redirect into private/loopback/metadata space.
+  // Combine the 30s fetch timeout with the run's abort signal (registry injects
+  // __signal) so a user Stop cancels an in-flight fetch promptly, not only on
+  // the 30s timeout. Timeout alone was the previous behavior.
   const timeoutSignal = AbortSignal.timeout(30_000);
+  const userSignal = args.__signal as AbortSignal | undefined;
+  const fetchSignal = userSignal ? AbortSignal.any([userSignal, timeoutSignal]) : timeoutSignal;
   let currentUrl = parsed;
   let currentHeaders = { ...baseHeaders };
   const originalOrigin = parsed;
@@ -235,7 +240,7 @@ export async function webFetchTool(args: Record<string, unknown>): Promise<strin
       const res = await fetch(currentUrl, {
         headers: currentHeaders,
         redirect: "manual",
-        signal: timeoutSignal,
+        signal: fetchSignal,
       });
 
       // Not a redirect: return body (or HTTP error).
