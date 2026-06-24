@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
 import { delimiter } from "node:path";
+import { CC_COST_GUARD_PROMPT } from "@cjhyy/code-shell-core";
 
 /**
  * Normalized event emitted from a resident stream-json claude process. The
@@ -162,6 +163,11 @@ export class ResidentAgentProcess {
       "stream-json",
       "--permission-prompt-tool",
       "stdio",
+      // Soft cost-guard: a room keeps the Workflow tool (a human is present to
+      // approve), but we ask CC to surface intent before fanning out a fleet of
+      // agents, so an expensive Workflow doesn't kick off unprompted.
+      "--append-system-prompt",
+      CC_COST_GUARD_PROMPT,
     ];
     if (this.opts.resumeSessionId) {
       args.push("--resume", this.opts.resumeSessionId);
