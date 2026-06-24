@@ -39,6 +39,8 @@ const pending = new Map<number, { resolve: (resp: unknown) => void; reject: (err
 // and `{ sessionId, requestId, request }` for approval requests.
 const streamListeners: Array<(env: { sessionId: string; event: unknown }) => void> = [];
 const approvalListeners: Array<(env: unknown) => void> = [];
+const approvalResolvedListeners: Array<(env: unknown) => void> = [];
+const mobilePermissionModeListeners: Array<(env: unknown) => void> = [];
 const statusListeners: Array<(evt: unknown) => void> = [];
 const lifecycleListeners: Array<(evt: unknown) => void> = [];
 // Live automation session announcements: `{ sessionId, cwd, title }`, fired
@@ -111,6 +113,10 @@ ipcRenderer.on("agent:msg", (_e: IpcRendererEvent, line: string) => {
     // `{ sessionId, requestId, request }` envelope. requestId lets the
     // renderer echo the decision back via approve(sessionId, requestId, ...).
     approvalListeners.forEach((cb) => cb(params));
+  } else if (method === "agent/approvalResolved") {
+    approvalResolvedListeners.forEach((cb) => cb(params));
+  } else if (method === "agent/mobilePermissionMode") {
+    mobilePermissionModeListeners.forEach((cb) => cb(params));
   } else if (method === "agent/status") {
     statusListeners.forEach((cb) => cb(params));
   }
@@ -362,6 +368,20 @@ contextBridge.exposeInMainWorld("codeshell", {
     return () => {
       const i = approvalListeners.indexOf(cb);
       if (i >= 0) approvalListeners.splice(i, 1);
+    };
+  },
+  onApprovalResolved: (cb: (req: unknown) => void): (() => void) => {
+    approvalResolvedListeners.push(cb);
+    return () => {
+      const i = approvalResolvedListeners.indexOf(cb);
+      if (i >= 0) approvalResolvedListeners.splice(i, 1);
+    };
+  },
+  onMobilePermissionMode: (cb: (req: unknown) => void): (() => void) => {
+    mobilePermissionModeListeners.push(cb);
+    return () => {
+      const i = mobilePermissionModeListeners.indexOf(cb);
+      if (i >= 0) mobilePermissionModeListeners.splice(i, 1);
     };
   },
   onStatus: (cb: (evt: unknown) => void): (() => void) => {
@@ -799,6 +819,10 @@ contextBridge.exposeInMainWorld("codeshell", {
     },
     updateProjects: (projects: Array<{ path: string; name: string; addedAt?: number; pinned?: boolean }>) =>
       ipcRenderer.invoke("mobileRemote:updateProjects", projects),
+    updatePermissionModes: (entries: Array<{ sessionId: string; mode: string }>) =>
+      ipcRenderer.invoke("mobileRemote:updatePermissionModes", entries),
+    notifyApprovalResolved: (input: { requestId: string; sessionId?: string; approved?: boolean }) =>
+      ipcRenderer.invoke("mobileRemote:approvalResolved", input),
   },
 
   // ── Rooms (resident Claude Code sessions; dual-ended with the phone) ──

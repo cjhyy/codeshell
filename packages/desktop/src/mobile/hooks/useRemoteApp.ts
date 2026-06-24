@@ -106,6 +106,8 @@ export function useRemoteApp(): RemoteApp {
   const [projects, setProjects] = useState<MobileProjectMeta[]>([]);
   const [activeRoomId, setActiveRoomId] = useState<string | undefined>();
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+  const approvalsRef = useRef(approvals);
+  approvalsRef.current = approvals;
   const [permissionMode, setPermissionModeState] = useState<PermissionMode>("default");
   /** Transient banner message (errors, room-missing, …). Auto-clears. */
   const [notice, setNoticeState] = useState<string | undefined>();
@@ -140,7 +142,13 @@ export function useRemoteApp(): RemoteApp {
         }
         break;
       case "permission.mode":
-        setPermissionModeState(event.mode);
+        if (!event.sessionId || !boundSessionRef.current || event.sessionId === boundSessionRef.current) {
+          setPermissionModeState(event.mode);
+        }
+        break;
+      case "approval.resolved":
+        approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== event.approvalId);
+        setApprovals((prev) => prev.filter((p) => p.requestId !== event.approvalId));
         break;
       case "room.list.ok":
         setRooms(event.rooms);
@@ -364,9 +372,6 @@ export function useRemoteApp(): RemoteApp {
     },
     [socket],
   );
-  const approvalsRef = useRef(approvals);
-  approvalsRef.current = approvals;
-
   const setPermissionMode = useCallback(
     (mode: PermissionMode) => {
       setPermissionModeState(mode);

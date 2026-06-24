@@ -67,6 +67,25 @@ export interface ApprovalRequestEnvelope {
   request: ApprovalRequest;
 }
 
+export interface ApprovalResolvedEnvelope {
+  /** Owning engine session when known. */
+  sessionId?: string;
+  requestId: string;
+  approved?: boolean;
+}
+
+export type MobilePermissionMode = "default" | "acceptEdits" | "bypassPermissions";
+
+export interface MobilePermissionModeEnvelope {
+  sessionId: string;
+  mode: MobilePermissionMode;
+}
+
+export interface MobilePermissionModeSnapshotEntry {
+  sessionId: string;
+  mode: MobilePermissionMode;
+}
+
 /**
  * Multi-session stream envelope. The renderer routes by sessionId; a missing
  * sessionId (legacy single-engine path) routes to the active session.
@@ -388,6 +407,8 @@ export interface CodeshellApi {
     cb: (meta: { sessionId: string; cwd: string; title: string; prompt: string }) => void,
   ): Unsubscribe;
   onApprovalRequest(cb: (env: ApprovalRequestEnvelope) => void): Unsubscribe;
+  onApprovalResolved(cb: (env: ApprovalResolvedEnvelope) => void): Unsubscribe;
+  onMobilePermissionMode(cb: (env: MobilePermissionModeEnvelope) => void): Unsubscribe;
   onStatus(cb: (evt: AgentStatusEvent) => void): Unsubscribe;
   onAgentLifecycle(cb: (evt: AgentLifecycleEvent) => void): Unsubscribe;
   /** Show native folder picker. Resolves to null if user canceled. */
@@ -908,6 +929,8 @@ export interface CodeshellApi {
       cb: (s: { status: string; detail?: unknown }) => void,
     ): Unsubscribe;
     updateProjects(projects: MobileProjectMeta[]): Promise<boolean>;
+    updatePermissionModes(entries: MobilePermissionModeSnapshotEntry[]): Promise<boolean>;
+    notifyApprovalResolved(input: ApprovalResolvedEnvelope): Promise<boolean>;
   };
 
   /**

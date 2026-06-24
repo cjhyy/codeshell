@@ -26,6 +26,11 @@ export type ApprovalScope = "once" | "session" | "project";
 export type ApprovalPathScope = "file" | "dir" | "tool";
 export type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
+export interface MobilePermissionModeSnapshotEntry {
+  sessionId: string;
+  mode: PermissionMode;
+}
+
 export interface MobileProjectMeta {
   path: string;
   name: string;
@@ -93,6 +98,12 @@ export type MobileServerEvent =
       title: string;
       risk: "low" | "medium" | "high";
       body: string;
+    }
+  | {
+      type: "approval.resolved";
+      approvalId: string;
+      sessionId?: string;
+      approved?: boolean;
     }
   | { type: "error"; message: string }
   // ── Sessions ──────────────────────────────────────────────────────────

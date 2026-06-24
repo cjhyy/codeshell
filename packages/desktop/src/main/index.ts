@@ -82,15 +82,16 @@ import { TunnelManager } from "./mobile-remote/tunnel-manager.js";
 import { AccessPasscode } from "./mobile-remote/access-passcode.js";
 import type {
   MobileClientEvent,
+  MobilePermissionModeSnapshotEntry,
   MobileProjectMeta,
   MobileServerEvent,
+  PermissionMode,
   RoomPublic,
 } from "./mobile-remote/types.js";
 import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
 import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
-import type { PermissionMode } from "./mobile-remote/types.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
 import {
   getGitStatus,
@@ -366,7 +367,7 @@ try {
  */
 /**
  * Per-device mobile state. Each connected phone/tablet drives its OWN session
- * selection + permission mode, so two devices never clobber each other (a
+ * selection, so two devices never clobber each other (a
  * shared global made device B's "select session 2" overwrite device A). Keyed
  * by trusted-device id. The agent OUTPUT stream is still broadcast to all
  * devices (each front-end filters to its bound session — so switching to
@@ -380,11 +381,12 @@ interface MobileDeviceState {
   selectedSessionId?: string;
   /** The cwd bound to the selected or freshly-created mobile session. */
   selectedCwd?: string | null;
-  /** This device's explicit permission-mode preset, applied to its next run. */
+  /** Preset chosen before this device has a concrete session; promoted later. */
   permissionMode?: PermissionMode;
 }
 const mobileDeviceStates = new Map<string, MobileDeviceState>();
 const mobileSessionCwds = new Map<string, string | null>();
+const mobilePermissionModes = new Map<string, PermissionMode>();
 function deviceState(deviceId: string): MobileDeviceState {
   let s = mobileDeviceStates.get(deviceId);
   if (!s) {
@@ -423,6 +425,72 @@ async function lookupDiskSessionCwd(sessionId: string): Promise<string | null | 
 function effectiveMobileRunCwd(st: MobileDeviceState, ctxCwd?: string): string {
   if (st.selectedCwd === null) return resolveNoRepoCwd();
   return st.selectedCwd || ctxCwd || process.cwd();
+}
+
+function normalizePermissionMode(raw: unknown): PermissionMode | null {
+  return raw === "default" || raw === "acceptEdits" || raw === "bypassPermissions"
+    ? raw
+    : null;
+}
+
+function normalizePermissionModeSnapshot(raw: unknown): MobilePermissionModeSnapshotEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const out: MobilePermissionModeSnapshotEntry[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    const row = item as { sessionId?: unknown; mode?: unknown } | null;
+    const sessionId = typeof row?.sessionId === "string" ? row.sessionId : "";
+    const mode = normalizePermissionMode(row?.mode);
+    if (!sessionId || !mode || seen.has(sessionId)) continue;
+    seen.add(sessionId);
+    out.push({ sessionId, mode });
+  }
+  return out;
+}
+
+function sendMobilePermissionMode(deviceId: string | undefined, sessionId: string): void {
+  const event: MobileServerEvent = {
+    type: "permission.mode",
+    sessionId,
+    mode: mobilePermissionModes.get(sessionId) ?? "default",
+  };
+  if (deviceId) mobileRemote.sendToDevice(deviceId, event);
+  else mobileRemote.broadcast(event);
+}
+
+function sendSelectedMobilePermissionModes(): void {
+  for (const [deviceId, st] of mobileDeviceStates) {
+    const sessionId = st.selectedSessionId ?? st.sessionId;
+    if (sessionId) sendMobilePermissionMode(deviceId, sessionId);
+  }
+}
+
+function broadcastDesktopPermissionMode(params: { sessionId: string; mode: PermissionMode }): void {
+  const line = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "agent/mobilePermissionMode",
+    params,
+  });
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("agent:msg", line);
+  }
+}
+
+function broadcastApprovalResolved(params: { requestId: string; sessionId?: string; approved?: boolean }): void {
+  const line = JSON.stringify({
+    jsonrpc: "2.0",
+    method: "agent/approvalResolved",
+    params,
+  });
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send("agent:msg", line);
+  }
+  mobileRemote.broadcast({
+    type: "approval.resolved",
+    approvalId: params.requestId,
+    ...(params.sessionId ? { sessionId: params.sessionId } : {}),
+    ...(params.approved !== undefined ? { approved: params.approved } : {}),
+  });
 }
 
 /**
@@ -501,6 +569,14 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     st.selectedSessionId = event.sessionId;
     const cwd = await lookupDiskSessionCwd(event.sessionId);
     if (cwd !== undefined) st.selectedCwd = cwd;
+    if (deviceId) sendMobilePermissionMode(deviceId, event.sessionId);
+    else {
+      reply({
+        type: "permission.mode",
+        sessionId: event.sessionId,
+        mode: mobilePermissionModes.get(event.sessionId) ?? "default",
+      });
+    }
     return;
   }
   if (event.type === "session.create") {
@@ -513,13 +589,26 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
       st.selectedCwd = ctx.cwd ?? process.cwd();
     }
     mobileSessionCwds.set(st.sessionId, st.selectedCwd);
+    if (st.permissionMode) mobilePermissionModes.set(st.sessionId, st.permissionMode);
     reply({ type: "chat.accepted", sessionId: st.sessionId });
+    if (deviceId) sendMobilePermissionMode(deviceId, st.sessionId);
+    else {
+      reply({
+        type: "permission.mode",
+        sessionId: st.sessionId,
+        mode: mobilePermissionModes.get(st.sessionId) ?? "default",
+      });
+    }
     return;
   }
   if (event.type === "chat.send") {
     const sessionId = resolveSessionId(event.sessionId);
     const cwd = effectiveMobileRunCwd(st, ctx.cwd);
     mobileSessionCwds.set(sessionId, st.selectedCwd ?? cwd);
+    if (st.permissionMode && !mobilePermissionModes.has(sessionId)) {
+      mobilePermissionModes.set(sessionId, st.permissionMode);
+    }
+    const permissionMode = mobilePermissionModes.get(sessionId);
     broadcastMobileSession({
       sessionId,
       cwd,
@@ -537,7 +626,7 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
           task: event.text,
           cwd,
           sessionId,
-          ...(st.permissionMode ? { permissionMode: st.permissionMode } : {}),
+          ...(permissionMode ? { permissionMode } : {}),
         },
       }),
     );
@@ -563,14 +652,20 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     } else {
       decision = { approved: false, reason: event.reason };
     }
+    const sessionId = resolveSessionId(event.sessionId);
     bridge.injectWorkerMessage(
       JSON.stringify({
         jsonrpc: "2.0",
         id: `mobile-approve-${Date.now()}`,
         method: "agent/approve",
-        params: { sessionId: resolveSessionId(event.sessionId), requestId: event.approvalId, decision },
+        params: { sessionId, requestId: event.approvalId, decision },
       }),
     );
+    broadcastApprovalResolved({
+      requestId: event.approvalId,
+      sessionId,
+      approved: event.decision === "approve",
+    });
     return;
   }
   if (event.type === "run.stop") {
@@ -588,6 +683,7 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     // Every desktop session the sidebar would show (top-level, existing cwd).
     const { sessions } = await listDiskSessions({ limit: 100 });
     for (const s of sessions) mobileSessionCwds.set(s.id, s.cwd || null);
+    const activeSessionId = st.selectedSessionId ?? ctx.sessionId;
     reply({
       type: "session.list.ok",
       sessions: sessions.map((s) => ({
@@ -597,8 +693,18 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
         updatedAt: s.updatedAt,
         origin: s.origin,
       })),
-      activeSessionId: st.selectedSessionId ?? ctx.sessionId,
+      activeSessionId,
     });
+    if (activeSessionId) {
+      if (deviceId) sendMobilePermissionMode(deviceId, activeSessionId);
+      else {
+        reply({
+          type: "permission.mode",
+          sessionId: activeSessionId,
+          mode: mobilePermissionModes.get(activeSessionId) ?? "default",
+        });
+      }
+    }
     return;
   }
   if (event.type === "session.history") {
@@ -614,9 +720,17 @@ async function handleMobileClientEvent(event: MobileClientEvent & { deviceId?: s
     return;
   }
   if (event.type === "permission.setMode") {
-    // Per-device preset — does NOT affect other devices.
-    st.permissionMode = event.mode;
-    reply({ type: "permission.mode", sessionId: event.sessionId, mode: event.mode });
+    const sessionId = event.sessionId ?? st.selectedSessionId;
+    if (sessionId) {
+      mobilePermissionModes.set(sessionId, event.mode);
+      sendSelectedMobilePermissionModes();
+      broadcastDesktopPermissionMode({ sessionId, mode: event.mode });
+    } else {
+      // No session is bound yet; keep this as the preset for the next mobile
+      // session this device creates, then promote it into the session map.
+      st.permissionMode = event.mode;
+      reply({ type: "permission.mode", mode: event.mode });
+    }
     return;
   }
   if (event.type === "model.set") {
@@ -1798,6 +1912,26 @@ ipcMain.handle("mobileRemote:updateProjects", async (_e, projects: unknown) => {
   await sendMobileProjectList();
   return true;
 });
+ipcMain.handle("mobileRemote:updatePermissionModes", async (_e, entries: unknown) => {
+  const next = normalizePermissionModeSnapshot(entries);
+  mobilePermissionModes.clear();
+  for (const entry of next) mobilePermissionModes.set(entry.sessionId, entry.mode);
+  sendSelectedMobilePermissionModes();
+  return true;
+});
+ipcMain.handle(
+  "mobileRemote:approvalResolved",
+  async (_e, input: { requestId?: unknown; sessionId?: unknown; approved?: unknown }) => {
+    const requestId = typeof input?.requestId === "string" ? input.requestId : "";
+    if (!requestId) return false;
+    broadcastApprovalResolved({
+      requestId,
+      sessionId: typeof input?.sessionId === "string" ? input.sessionId : undefined,
+      approved: typeof input?.approved === "boolean" ? input.approved : undefined,
+    });
+    return true;
+  },
+);
 
 // ── Rooms (desktop side; same RoomManager the phone uses → dual-ended) ──────
 ipcMain.handle("rooms:list", async () => roomManager.listRooms().map(roomToPublic));

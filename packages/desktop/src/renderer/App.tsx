@@ -58,6 +58,10 @@ import { selectReplayEvents } from "./snapshotReplay";
 import type {
   AgentLifecycleEvent,
   ApprovalRequestEnvelope,
+  ApprovalResolvedEnvelope,
+  MobilePermissionMode,
+  MobilePermissionModeEnvelope,
+  MobilePermissionModeSnapshotEntry,
   RunSummary,
   StreamEventEnvelope,
 } from "../preload/types";
@@ -132,6 +136,32 @@ import { catalogModelOptions, type ModelInstance } from "./settings/textConnecti
 // imported from transcripts (the single source of truth) so App's map build
 // can't drift from Sidebar's row lookup.
 const GLOBAL_KEY = NO_REPO_KEY;
+
+function toMobilePermissionMode(mode: PermissionMode | null | undefined): MobilePermissionMode | null {
+  switch (mode) {
+    case "accept_edits":
+      return "acceptEdits";
+    case "bypass":
+      return "bypassPermissions";
+    case "default":
+    case "plan":
+      return "default";
+    default:
+      return null;
+  }
+}
+
+function fromMobilePermissionMode(mode: MobilePermissionMode): PermissionMode {
+  switch (mode) {
+    case "acceptEdits":
+      return "accept_edits";
+    case "bypassPermissions":
+      return "bypass";
+    case "default":
+    default:
+      return "default";
+  }
+}
 
 type TranscriptsMap = Record<string, MessagesReducerState>;
 
@@ -427,6 +457,7 @@ function App() {
   const permissionForBucketRef = useRef<(bucket: string) => PermissionMode | null>(
     () => null,
   );
+  const defaultPermissionModeRef = useRef<PermissionMode | null>(null);
   const activeRepo = repos.find((r) => r.id === activeRepoId) ?? null;
   const [activeGitMeta, setActiveGitMeta] = useState<{
     branch: string | null;
@@ -503,6 +534,28 @@ function App() {
       })),
     );
   }, [repos]);
+  useEffect(() => {
+    const entries: MobilePermissionModeSnapshotEntry[] = [];
+    const seen = new Set<string>();
+    const add = (sessionId: string | undefined, mode: MobilePermissionMode): void => {
+      if (!sessionId || seen.has(sessionId)) return;
+      seen.add(sessionId);
+      entries.push({ sessionId, mode });
+    };
+    for (const [repoKey, index] of Object.entries(sessionIndices)) {
+      const repoId = repoKey === GLOBAL_KEY ? null : repoKey;
+      for (const s of index.sessions) {
+        const bucket = bucketKey(repoId, s.id);
+        const mode = toMobilePermissionMode(permissionOverrides[bucket] ?? defaultPermissionMode);
+        if (!mode) continue;
+        add(s.engineSessionId ?? s.id, mode);
+        add(s.id, mode);
+      }
+    }
+    void window.codeshell.mobileRemote.updatePermissionModes(entries).catch((err) =>
+      window.codeshell.log("mobile.permissionModes.update.failed", { error: String(err) }),
+    );
+  }, [sessionIndices, permissionOverrides, defaultPermissionMode]);
   useEffect(() => { saveActiveRepoId(activeRepoId); }, [activeRepoId]);
   useEffect(() => { saveView(view); }, [view]);
   // Persist per-bucket overrides so they survive a refresh (see the seeded
@@ -520,6 +573,7 @@ function App() {
   useEffect(() => {
     permissionForBucketRef.current = (bucket: string): PermissionMode | null =>
       permissionOverrides[bucket] ?? defaultPermissionMode;
+    defaultPermissionModeRef.current = defaultPermissionMode;
   }, [permissionOverrides, defaultPermissionMode]);
 
   useEffect(() => {
@@ -1554,11 +1608,59 @@ function App() {
         } else {
           void window.codeshell.approve(env.requestId, "approve");
         }
+        void window.codeshell.mobileRemote.notifyApprovalResolved({
+          requestId: env.requestId,
+          sessionId: env.sessionId,
+          approved: true,
+        });
         return;
       }
       setApprovalQueue((q) => [...q, env]);
       setApproval((cur) => cur ?? env);
     });
+    const offApprovalResolved = window.codeshell.onApprovalResolved((env: ApprovalResolvedEnvelope) => {
+      if (!env.requestId) return;
+      setApprovalQueue((prev) => {
+        const remaining = prev.filter((e) => e.requestId !== env.requestId);
+        setApproval((cur) => {
+          if (!cur || cur.requestId === env.requestId) return remaining[0] ?? null;
+          return cur;
+        });
+        return remaining;
+      });
+    });
+    const offMobilePermissionMode = window.codeshell.onMobilePermissionMode(
+      (env: MobilePermissionModeEnvelope) => {
+        if (!env.sessionId) return;
+        const bucketFromRoute =
+          engineToBucketRef.current.get(env.sessionId) ||
+          resolveBucket(
+            env.sessionId,
+            engineToBucketRef.current,
+            sessionIndicesRef.current,
+            runningBucketRef.current,
+          );
+        let bucket = bucketFromRoute;
+        if (!bucket) {
+          for (const [repoKey, index] of Object.entries(sessionIndicesRef.current)) {
+            const summary = index.sessions.find((s) => s.id === env.sessionId);
+            if (summary) {
+              bucket = bucketKey(repoKey === GLOBAL_KEY ? null : repoKey, summary.id);
+              break;
+            }
+          }
+        }
+        if (!bucket) return;
+        const mode = fromMobilePermissionMode(env.mode);
+        setPermissionOverrides((prev) => {
+          if (mode === defaultPermissionModeRef.current) {
+            const { [bucket]: _removed, ...rest } = prev;
+            return rest;
+          }
+          return { ...prev, [bucket]: mode };
+        });
+      },
+    );
     const offStatus = window.codeshell.onStatus((evt) => {
       window.codeshell.log("status", evt as Record<string, unknown>);
     });
@@ -1594,6 +1696,8 @@ function App() {
       offAutomationSession();
       offMobileSession();
       offApproval();
+      offApprovalResolved();
+      offMobilePermissionMode();
       offStatus();
       offLifecycle();
     };
@@ -2021,6 +2125,11 @@ function App() {
       // Legacy (requestId, decision, reason, answer, scope, pathScope)
       void window.codeshell.approve(env.requestId, decision, reason, undefined, approveScope, approvePathScope);
     }
+    void window.codeshell.mobileRemote.notifyApprovalResolved({
+      requestId: env.requestId,
+      sessionId: env.sessionId,
+      approved: decision === "approve",
+    });
     // The card itself gives instant optimistic feedback via its own local
     // state (ApprovalCard `decided`), so the user never waits on this root-App
     // re-render. Time the synchronous state churn anyway: if a future large
