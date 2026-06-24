@@ -1,6 +1,27 @@
 # Beta 发布前审计 + 行动清单(2026-06-23)
 
-> ## 🔬 第五轮 workflow review:夜里 merge 的增量代码(2026-06-24 07:xx,**最新·回来先读这段**)
+> ## 📄 文档收尾 + 基线复验交接(2026-06-25 02:38–03:0x,**最新·回来先读这段**)
+>
+> 用户开 `/goal` 循环「按本文档方向推进 beta 前准备」。这轮做的全是**「我能独立做、不需用户在场」**的收尾(真机冒烟/打包/push 仍只能用户)。**6 commit 在 main**(其中 1 个 `722b3642` 是用户自己 02:27 提交的面板 feature,非本轮我做),累计领先 origin **321**,仍未 push。
+>
+> **A. 文档准确性收尾(本文档列项 + 顺手发现,纯文档可直接 main):**
+> | commit | 做了什么 |
+> |---|---|
+> | `53712fa5` | (上一会话)重写根 README 反映当前产品(desktop 头牌 + 真实功能集);删不存在的 subpath 入口声明 |
+> | `ce0631bc` | **§4.1 删 7 份过时文档**(electron-codex-ui×2/goal×2/dream/shadcn-migration/composer-ctx,全 grep 确认零活引用)+ **§2.3 Y-1 勘误**(updater 已是 autoDownload=false,无 silent install)+ **§4.5 CHANGELOG/smoke 勘误**(本轮特性早已补全,仅精确化 JSON-Schema-export 措辞 + cookie-login 标已真机验) |
+> | `894c4a40` | **roadmap 顶部加现状勘误横幅**——多项已实现但表里仍标 ❌/未做(项目指令全局化/TodoWrite/Slash/Plugin/turn-undo/Memory/图片/Electron App 全已落地),逐项 grep 源码确认,指向 feature-inventory.md 为权威;不动方向规划 |
+> | `12a5b6c8` | **§1.4 补打包配置静态核实**——predist 钩子/build 资源全在;**⚠️真发现**:mac block 无 identity 配置 + dist 脚本没设 `CSC_IDENTITY_AUTO_DISCOVERY`→ 配了 Apple 证书的机器直跑会自动尝试签名。**未签名 beta 必须 `CSC_IDENTITY_AUTO_DISCOVERY=false bun run dist`** |
+> | `25eb9a94` | architecture/README reading-order 无 desktop 专章(已是头牌),Notes 加诚实指引→ feature-inventory.md;标「desktop 架构专章」为已知文档缺口 |
+>
+> **B. §4.2 归档 → 全量 grep 后改判保留**:候选(03-module-map/11/12/15/render-scroll/render-terminal/research-cc-vs-codex)全被架构 reading-order 索引、源码注释(research-cc-vs-codex 被 mcp-manager+image-policy 引)、superpowers 树引用。归档需重写索引编号树 + 改 6+ 交叉引用,**断链风险 > 收益**,与 §4.3 同处置留用户人工定。
+>
+> **C. 基线复验(verification-before-completion)**:发现 `722b3642`(用户 02:27 的面板保活/浏览器空闲淘汰/统一后台面板 feature)夹在我的 commit 链里,**亲自全量复验**叠加后基线:core+tui tsc **0** · desktop tsc **0** · core protocol **46 绿**(含新 backgroundwork) · desktop **983 绿** · 工作树净。确认那个未参与的 feature commit 不是隐患。
+>
+> **本轮结论**:本文档明确列的「我能独立做」项已清空(§4.1 删、§2.3/§4.5 勘误、§1.4 静态核实);§4.2 评估后保留。**剩的全是只能用户做的**:① §1.2/1.3 真机冒烟(打包后逐项走 A 节冒烟;cookie-login 已验过一次)② §1.4 打包(记得带 `CSC_IDENTITY_AUTO_DISCOVERY=false`)③ push 321 commit。代码静态审三轮已饱和,不建议再找 bug。
+>
+> ---
+>
+> ## 🔬 第五轮 workflow review:夜里 merge 的增量代码(2026-06-24 07:xx,回来先读这段)
 >
 > 对**上轮 review(1830a0a2)之后新合进来、还没 review 的代码**跑 workflow `review-unpushed-incremental`(4 域 fan-out review → 逐条独立对抗 verify,21 agent):manual catalog editor / desktop transcript-reader+sessions / P1 参数下发 / misc core-tui。**确认 7 / 证伪 10**。逐条按 receiving-code-review 纪律复核后:**修 3,判 4 不值/证伪**。
 >
