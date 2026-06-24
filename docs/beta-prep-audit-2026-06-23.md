@@ -1,8 +1,22 @@
 # Beta 发布前审计 + 行动清单(2026-06-23)
 
-> ## 📄 文档收尾 + 基线复验交接(2026-06-25 02:38–03:0x,**最新·回来先读这段**)
+> ## 📄 文档收尾 + 基线复验交接(2026-06-25 02:38–起,**最新·回来先读这段**)
 >
-> 用户开 `/goal` 循环「按本文档方向推进 beta 前准备」。这轮做的全是**「我能独立做、不需用户在场」**的收尾(真机冒烟/打包/push 仍只能用户)。**6 commit 在 main**(其中 1 个 `722b3642` 是用户自己 02:27 提交的面板 feature,非本轮我做),累计领先 origin **321**,仍未 push。
+> 用户开 `/goal` 循环「按本文档方向推进 beta 前准备,做满 3 小时」。这轮做的全是**「我能独立做、不需用户在场」**的收尾(真机冒烟/打包/push 仍只能用户)。**14 文档 commit 在 main**(另 1 个 `722b3642` 是用户自己 02:27 提交的面板 feature,非本轮我做),累计领先 origin **329**,仍未 push。**全程纯文档,无代码改动,基线全量复验绿。**
+>
+> **续(D)文档准确性核查(4 批 Explore subagent + 亲自复核,~19 份文档,按 receiving-code-review 纪律甄别误报):**
+> - `7de8708c` 修 3 份面向读者文档真错误:`hooks.md`(import 包名 `code-shell`→`@cjhyy/code-shell`;kill-switch 表用了不存在的 `strictSkills`/`CODESHELL_STRICT_SKILLS`→改真机制 `disabledPlugins/disabledPluginHooks/disabledSkills`)、`CODESHELL.md`(Build&Test 块 pre-monorepo:`dev` 指向不存在的 `src/cli/main.ts`)、`smoke-checklist-cc-orchestrator.md`(`ScheduleRoomTask` 已删→`CronCreate(once)`)。
+> - `39f33358` 修 2 份设计稿「已实现」状态撒谎:`background-agent-visibility-design`(状态行写 C 已实现=`listInterruptedSubagents`,但该函数已被 `a28fc54c` 删除+锚点机制取代)、`terminal-browser-feature`(开发期快照,4 面板早实现+架构演进 PanelTab)。
+> - `45b4479c`/`81e4181d` browser-tool/cookie-export/browser-automation 状态与实现落点勘误(P1①截图回显/P2⑤vision缩放已实现;cookie lease 真落点在 `credentials/` 走 `UseCredential` 非 `CODESHELL_COOKIE_FILE`;工具名 snapshot/click→observe/act 演进)。
+> - `bfc5cca3` `feature-inventory` 加时效声明(06-17 快照+55 feat,列未收录的统一后台面板等)。`2136fd8d` `roadmap` 速览表 Code Shell 列就地勘误(IDE/Slash/Undo/Memory 4 处 ❌→✅)。
+> - `7708d67d` 标 §5「审查面板 turn 级范围(真 bug)」**已修**(TODO 2.3a 链:`611c1fa4`/`42e78ccd`/`3f8f61fc`/`62df7f58`,`diff/reviewScope.ts`)+ §4.5 标已完成。
+> - **核查准确未改**:`mobile-remote-smoke`/`electron-image-input-design`/`arena-architecture-analysis`/4 份设计稿(steer-inject/send-input/local-install/local-plugin-upgrade,佐证 CHANGELOG 宣传特性真接线)/`subagent-visibility-smoke-checklist`(待办清单)。按纪律判定不改:arena cross-review 拆分提案/ArenaRoadmapPhaseDetail 未导出(代码组织非文档错)。
+> - **自我验证**:本轮文档引用的 7 个 commit hash 全部 `git cat-file -e` 确认存在且 subject 一致。
+> - 收益递减:`core-*`/`architecture-*`(2026-06-16 自动生成·KEEP 权威)再扫多为行号漂移,不建议继续扫。
+>
+> ---
+>
+> **(以下为前半段 A/B/C,做到第 6 commit 时所写,保留)**
 >
 > **A. 文档准确性收尾(本文档列项 + 顺手发现,纯文档可直接 main):**
 > | commit | 做了什么 |
