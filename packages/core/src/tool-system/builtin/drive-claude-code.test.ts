@@ -70,6 +70,10 @@ describe("DriveClaudeCode background completion delivery", () => {
     expect(items.length).toBe(1);
     expect(items[0].status).toBe("completed");
     expect(items[0].finalText).toContain("S&P up 1.2%");
+    // The cc session id is recorded so the result is recoverable from disk
+    // (~/.claude/projects/.../<ccSessionId>.jsonl) even if the notification is
+    // lost — and so the user gets a real session id, not just an opaque jobId.
+    expect(items[0].ccSessionId).toBe("CC9");
   });
 
   it("enqueues a failed notification with the error when the cc run errors", async () => {

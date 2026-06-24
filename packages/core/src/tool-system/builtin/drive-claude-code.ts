@@ -71,8 +71,8 @@ export function makeDriveClaudeCodeTool(runner: Runner = defaultRunner) {
           // path — enqueue lands in the same notificationQueue the wakeup drains.
           notificationQueue.enqueue(
             r.isError
-              ? { agentId: jobId, description: `DriveClaudeCode: ${label}`, status: "failed", workKind: "cc", error: r.finalText || "(no output)", enqueuedAt: Date.now() }
-              : { agentId: jobId, description: `DriveClaudeCode: ${label}`, status: "completed", workKind: "cc", finalText: r.finalText, enqueuedAt: Date.now() },
+              ? { agentId: jobId, description: `DriveClaudeCode: ${label}`, status: "failed", workKind: "cc", error: r.finalText || "(no output)", ccSessionId: r.sessionId || undefined, enqueuedAt: Date.now() }
+              : { agentId: jobId, description: `DriveClaudeCode: ${label}`, status: "completed", workKind: "cc", finalText: r.finalText, ccSessionId: r.sessionId || undefined, enqueuedAt: Date.now() },
             sessionId,
           );
         })
