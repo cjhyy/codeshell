@@ -51,7 +51,7 @@ export function ManagePage({ cwd, activeRepoPath, initialTab, initialQuery }: Pr
 
   const refresh = async () => {
     const [skillList, settings] = await Promise.all([
-      window.codeshell.listSkills(cwd),
+      window.codeshell.listSkills(cwd, { includeDisabled: true }),
       window.codeshell.getSettings("user"),
     ]);
     setSkills(skillList);

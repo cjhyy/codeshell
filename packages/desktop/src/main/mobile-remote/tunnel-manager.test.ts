@@ -42,6 +42,19 @@ function makeManager(
   });
 }
 
+async function waitFor(
+  predicate: () => boolean,
+  timeoutMs = 200,
+  intervalMs = 5,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  throw new Error("timed out waiting for condition");
+}
+
 describe("TunnelManager", () => {
   test("extracts the trycloudflare URL from stderr and resolves", async () => {
     const child = new FakeChild();
@@ -110,6 +123,38 @@ describe("TunnelManager", () => {
     // an unsolicited exit (crash) → disconnected
     child.emit("exit", 1, null);
     expect(statuses).toContain("disconnected");
+  });
+
+  test("emits disconnected when runtime readiness is lost, then connected when it recovers", async () => {
+    const child = new FakeChild();
+    let ready = true;
+    const mgr = new TunnelManager({
+      binaryPath: () => "/fake/cloudflared",
+      spawn: () => child as unknown as import("node:child_process").ChildProcess,
+      timeoutMs: 50,
+      checkReady: async () => ready,
+      readyTimeoutMs: 60,
+      readyIntervalMs: 5,
+      healthCheckIntervalMs: 5,
+      healthFailureThreshold: 2,
+    });
+    const statuses: string[] = [];
+    mgr.on("status", (s: string) => statuses.push(s));
+
+    const promise = mgr.start(12345);
+    child.stderr.emit("data", Buffer.from("https://steady-tunnel.trycloudflare.com\n"));
+    await promise;
+    expect(mgr.isConnected()).toBe(true);
+
+    ready = false;
+    await waitFor(() => statuses.includes("disconnected"));
+    expect(mgr.isConnected()).toBe(false);
+
+    ready = true;
+    await waitFor(() => statuses.filter((s) => s === "connected").length >= 2);
+    expect(mgr.isConnected()).toBe(true);
+
+    mgr.stop();
   });
 
   test("stop kills the child and suppresses the disconnected event", async () => {

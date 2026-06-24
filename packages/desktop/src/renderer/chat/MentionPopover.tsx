@@ -19,6 +19,7 @@ import { Puzzle, FileText, Search } from "lucide-react";
 import type { SkillSummary, FileSearchHit } from "../../preload/types";
 import { cn } from "@/lib/utils";
 import { useT } from "../i18n/I18nProvider";
+import { filterMentionSkills } from "./mention";
 
 export type MentionItem =
   | { kind: "skill"; skill: SkillSummary }
@@ -47,6 +48,7 @@ export function MentionPopover({
   const { t } = useT();
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [files, setFiles] = useState<FileSearchHit[]>([]);
+  const activeOptionRef = useRef<HTMLLIElement | null>(null);
 
   // Skills list: loaded once per cwd. Stable across keystrokes; we
   // filter renderer-side so the @-prefix typing is instant.
@@ -74,18 +76,10 @@ export function MentionPopover({
     return () => { cancelled = true; clearTimeout(handle); };
   }, [cwd, query]);
 
-  // Filter skills client-side by the query — name + description match.
+  // Filter skills client-side by insertable identity, not description text.
   // Limit to the first 8 so long lists don't push files off-screen.
   const filteredSkills = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const matches = q
-      ? skills.filter(
-          (s) =>
-            s.name.toLowerCase().includes(q) ||
-            s.description.toLowerCase().includes(q),
-        )
-      : skills;
-    return matches.slice(0, 8);
+    return filterMentionSkills(skills, query, 8);
   }, [skills, query]);
 
   // Files: search service already capped + sorted; show top 12 here.
@@ -109,6 +103,10 @@ export function MentionPopover({
     onItemsChange(items);
   }, [items, onItemsChange]);
 
+  useEffect(() => {
+    activeOptionRef.current?.scrollIntoView({ block: "nearest" });
+  }, [selected, items]);
+
   const isEmpty = items.length === 0;
 
   return (
@@ -123,6 +121,7 @@ export function MentionPopover({
               return (
                 <li
                   key={s.filePath}
+                  ref={active ? activeOptionRef : undefined}
                   className={cn(
                     "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
                     active && "bg-accent text-accent-foreground",
@@ -155,6 +154,7 @@ export function MentionPopover({
               return (
                 <li
                   key={f.path}
+                  ref={active ? activeOptionRef : undefined}
                   className={cn(
                     "grid cursor-pointer grid-cols-[auto_1fr] gap-x-2 rounded-md px-2 py-1.5 text-sm",
                     active && "bg-accent text-accent-foreground",

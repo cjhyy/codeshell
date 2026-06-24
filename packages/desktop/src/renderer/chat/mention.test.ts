@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { detectMention } from "./mention";
+import { detectMention, filterMentionSkills } from "./mention";
 
 describe("detectMention", () => {
   test("returns null with no @", () => {
@@ -34,5 +34,30 @@ describe("detectMention", () => {
   test("respects 80-char lookback cap", () => {
     const longTail = "x".repeat(85);
     expect(detectMention(`@${longTail}`, 1 + longTail.length)).toBeNull();
+  });
+});
+
+describe("filterMentionSkills", () => {
+  test("matches skill name but not description/comment text", () => {
+    const skills = [
+      {
+        name: "browser",
+        description: "contains only the comment-only word",
+        source: "user" as const,
+        filePath: "/skills/browser/SKILL.md",
+      },
+      {
+        name: "comment-helper",
+        description: "plain helper",
+        source: "user" as const,
+        filePath: "/skills/comment-helper/SKILL.md",
+      },
+    ];
+
+    expect(filterMentionSkills(skills, "browser").map((s) => s.name)).toEqual(["browser"]);
+    expect(filterMentionSkills(skills, "comment-only").map((s) => s.name)).toEqual([]);
+    expect(filterMentionSkills(skills, "comment-helper").map((s) => s.name)).toEqual([
+      "comment-helper",
+    ]);
   });
 });

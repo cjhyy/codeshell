@@ -532,7 +532,8 @@ contextBridge.exposeInMainWorld("codeshell", {
   resumeAutomation: (id: string) => ipcRenderer.invoke("automation:resume", id),
   runAutomationNow: (id: string) => ipcRenderer.invoke("automation:runNow", id),
   cancelAutomationRun: (id: string) => ipcRenderer.invoke("automation:cancelRun", id),
-  listSkills: (cwd: string) => ipcRenderer.invoke("skills:list", cwd),
+  listSkills: (cwd: string, opts?: { includeDisabled?: boolean }) =>
+    ipcRenderer.invoke("skills:list", cwd, opts),
   searchFiles: (cwd: string, query: string) =>
     ipcRenderer.invoke("files:search", cwd, query),
   listPlugins: (cwd: string) => ipcRenderer.invoke("plugins:list", cwd),

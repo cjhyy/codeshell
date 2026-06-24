@@ -56,6 +56,7 @@ export interface RemoteHostStarted {
   host: string;
   port: number;
   url: string;
+  mode: "lan" | "tunnel";
 }
 
 export interface RemoteHostManagerOptions {
@@ -235,7 +236,12 @@ export class RemoteHostManager extends EventEmitter {
     });
     const addr = server.address();
     const port = typeof addr === "object" && addr ? addr.port : options.port;
-    this.started = { host: bindHost, port, url: `http://${bindHost}:${port}` };
+    this.started = {
+      host: bindHost,
+      port,
+      url: `http://${bindHost}:${port}`,
+      mode: tunnel ? "tunnel" : "lan",
+    };
     return this.started;
   }
 

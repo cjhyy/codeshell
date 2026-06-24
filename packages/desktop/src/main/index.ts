@@ -290,6 +290,9 @@ const accessPasscode = new AccessPasscode({
 // Forward tunnel status changes to every renderer so the UI can reflect
 // connected / disconnected (address invalidated) without polling.
 tunnelManager.on("status", (status: string, detail?: unknown) => {
+  if (status === "connected" && typeof detail === "string") {
+    mobileRemote.setPublicBaseUrl(detail);
+  }
   for (const w of BrowserWindow.getAllWindows()) {
     if (!w.isDestroyed()) w.webContents.send("mobileRemote:tunnelStatus", { status, detail });
   }
@@ -1331,7 +1334,11 @@ app.whenReady().then(() => {
   setInterval(() => void sweepStaleWorktrees("interval"), 60 * 60_000);
 });
 
-ipcMain.handle("skills:list", async (_e, cwd: string) => listSkills(cwd));
+ipcMain.handle(
+  "skills:list",
+  async (_e, cwd: string, opts?: { includeDisabled?: boolean }) =>
+    listSkills(cwd, { includeDisabled: opts?.includeDisabled === true }),
+);
 ipcMain.handle("capabilities:list", async (_e, cwd: string) => {
   if (typeof cwd !== "string") throw new Error("capabilities:list requires cwd");
   return listCapabilities(cwd);
@@ -1873,7 +1880,9 @@ ipcMain.handle("mobileRemote:status", async () => {
   return {
     running: Boolean(status),
     url: status?.url,
+    mode: status?.mode,
     tunnelRunning: tunnelManager.isRunning(),
+    tunnelConnected: tunnelManager.isConnected(),
   };
 });
 ipcMain.handle("mobileRemote:listDevices", async () => mobileDevices.listDevices());
@@ -1906,6 +1915,7 @@ ipcMain.handle("mobileRemote:setPasscode", async (_e, passcode: string) => {
 });
 ipcMain.handle("mobileRemote:tunnelStatus", async () => ({
   running: tunnelManager.isRunning(),
+  connected: tunnelManager.isConnected(),
 }));
 ipcMain.handle("mobileRemote:updateProjects", async (_e, projects: unknown) => {
   mobileProjects = normalizeMobileProjects(projects);

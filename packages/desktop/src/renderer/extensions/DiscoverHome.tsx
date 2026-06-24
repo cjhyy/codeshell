@@ -39,7 +39,10 @@ export function DiscoverHome({ cwd, onOpenManage }: Props) {
     setCounts(null);
     Promise.all([
       window.codeshell.listPlugins(cwd).then((d) => d.length).catch(() => 0),
-      window.codeshell.listSkills(cwd).then((d) => d.length).catch(() => 0),
+      window.codeshell
+        .listSkills(cwd, { includeDisabled: true })
+        .then((d) => d.length)
+        .catch(() => 0),
       // MCP 数量要算「插件捆绑 + 用户自配」的合并结果 —— 多数人 MCP 都来自
       // 插件(superpowers/playwright 等),只数用户全局 mcpServers 会恒为 0。
       // 复用设置页同一条 listMergedMcpServers 折叠路径(见 McpSection.load)。

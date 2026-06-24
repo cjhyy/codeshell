@@ -182,7 +182,7 @@ function CustomizePage({ activeRepoPath }: { activeRepoPath: string | null }) {
   const refresh = async () => {
     try {
       const [skillList, pluginList, settings] = await Promise.all([
-        window.codeshell.listSkills(cwd),
+        window.codeshell.listSkills(cwd, { includeDisabled: true }),
         window.codeshell.listPlugins(cwd),
         window.codeshell.getSettings("user"),
       ]);
@@ -881,7 +881,9 @@ function GithubAddPanel({
     setSelected(null);
     try {
       // Pass existing installed names so the preview can flag conflicts.
-      const installed = await window.codeshell.listSkills(activeRepoPath ?? "/");
+      const installed = await window.codeshell.listSkills(activeRepoPath ?? "/", {
+        includeDisabled: true,
+      });
       const names = installed.map((s) => s.name);
       const result = await window.codeshell.inspectGithubSkill(url.trim(), names);
       setInspection(result);

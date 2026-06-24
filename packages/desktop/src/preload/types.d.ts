@@ -686,7 +686,7 @@ export interface CodeshellApi {
   /** Abort the in-flight run of cron job `id`, if any. Returns false when no
    *  run is in flight. Used by session delete to stop a still-running run. */
   cancelAutomationRun(id: string): Promise<boolean>;
-  listSkills(cwd: string): Promise<SkillSummary[]>;
+  listSkills(cwd: string, opts?: { includeDisabled?: boolean }): Promise<SkillSummary[]>;
   listPlugins(cwd: string): Promise<PluginSummary[]>;
   /** Full content inventory for one installed plugin (详情页). */
   getPluginDetail(installKey: string): Promise<PluginDetail | null>;
@@ -909,7 +909,13 @@ export interface CodeshellApi {
     }>;
     stop(): Promise<void>;
     pairingUrl(): Promise<{ pairingUrl: string; expiresAt: number }>;
-    status(): Promise<{ running: boolean; url?: string; tunnelRunning?: boolean }>;
+    status(): Promise<{
+      running: boolean;
+      url?: string;
+      mode?: "lan" | "tunnel";
+      tunnelRunning?: boolean;
+      tunnelConnected?: boolean;
+    }>;
     listDevices(): Promise<
       Array<{ id: string; name: string; createdAt: number; lastSeenAt?: number; revokedAt?: number }>
     >;
@@ -924,7 +930,7 @@ export interface CodeshellApi {
     onDownloadProgress(cb: (pct: number) => void): Unsubscribe;
     passcodeStatus(): Promise<{ isSet: boolean }>;
     setPasscode(passcode: string): Promise<boolean>;
-    tunnelStatus(): Promise<{ running: boolean }>;
+    tunnelStatus(): Promise<{ running: boolean; connected: boolean }>;
     onTunnelStatus(
       cb: (s: { status: string; detail?: unknown }) => void,
     ): Unsubscribe;

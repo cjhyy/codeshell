@@ -6,6 +6,8 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_READY_TIMEOUT_MS = 20_000;
 const DEFAULT_READY_INTERVAL_MS = 500;
 const DEFAULT_METRICS_PORT = 20741;
+const DEFAULT_HEALTH_CHECK_INTERVAL_MS = 5_000;
+const DEFAULT_HEALTH_FAILURE_THRESHOLD = 3;
 
 export type TunnelStatus = "connected" | "disconnected" | "error";
 
@@ -46,6 +48,10 @@ export interface TunnelManagerOptions {
   readyTimeoutMs?: number;
   /** Poll interval while waiting for readiness. Default 500ms. */
   readyIntervalMs?: number;
+  /** Poll interval after connect; set <= 0 to disable runtime health checks. */
+  healthCheckIntervalMs?: number;
+  /** Consecutive failed readiness probes before reporting a disconnect. */
+  healthFailureThreshold?: number;
 }
 
 /**
@@ -65,9 +71,16 @@ export class TunnelManager extends EventEmitter {
   private readonly checkReady: CheckReadyFn;
   private readonly readyTimeoutMs: number;
   private readonly readyIntervalMs: number;
+  private readonly healthCheckIntervalMs: number;
+  private readonly healthFailureThreshold: number;
   private child?: ChildProcess;
   private stopping = false;
   private connected = false;
+  private currentUrl?: string;
+  private healthTimer?: ReturnType<typeof setInterval>;
+  private healthCheckInFlight = false;
+  private healthGeneration = 0;
+  private consecutiveHealthFailures = 0;
 
   constructor(opts: TunnelManagerOptions) {
     super();
@@ -78,6 +91,11 @@ export class TunnelManager extends EventEmitter {
     this.checkReady = opts.checkReady ?? defaultCheckReady;
     this.readyTimeoutMs = opts.readyTimeoutMs ?? DEFAULT_READY_TIMEOUT_MS;
     this.readyIntervalMs = opts.readyIntervalMs ?? DEFAULT_READY_INTERVAL_MS;
+    this.healthCheckIntervalMs = opts.healthCheckIntervalMs ?? DEFAULT_HEALTH_CHECK_INTERVAL_MS;
+    this.healthFailureThreshold = Math.max(
+      1,
+      opts.healthFailureThreshold ?? DEFAULT_HEALTH_FAILURE_THRESHOLD,
+    );
   }
 
   start(port: number): Promise<{ url: string }> {
@@ -86,6 +104,8 @@ export class TunnelManager extends EventEmitter {
     }
     this.stopping = false;
     this.connected = false;
+    this.currentUrl = undefined;
+    this.stopHealthMonitor();
     const child = this.spawn(this.getBinaryPath(), [
       "tunnel",
       "--no-autoupdate",
@@ -113,6 +133,9 @@ export class TunnelManager extends EventEmitter {
         this.stopping = true;
         child.kill("SIGTERM");
         this.child = undefined;
+        this.connected = false;
+        this.currentUrl = undefined;
+        this.stopHealthMonitor();
         reject(err);
       };
 
@@ -136,7 +159,9 @@ export class TunnelManager extends EventEmitter {
             if (settled) return;
             settled = true;
             this.connected = true;
+            this.currentUrl = url;
             this.emit("status", "connected", url);
+            this.startHealthMonitor();
             resolve({ url });
           })
           .catch((err: Error) => finishReject(err));
@@ -150,6 +175,9 @@ export class TunnelManager extends EventEmitter {
           settled = true;
           clearTimeout(timer);
           this.child = undefined;
+          this.connected = false;
+          this.currentUrl = undefined;
+          this.stopHealthMonitor();
           this.emit("status", "error", err);
           reject(err);
         } else if (!this.stopping) {
@@ -158,9 +186,13 @@ export class TunnelManager extends EventEmitter {
       });
 
       child.on("exit", (code, signal) => {
+        const wasConnected = this.connected;
         this.child = undefined;
+        this.connected = false;
+        this.currentUrl = undefined;
+        this.stopHealthMonitor();
         if (this.stopping) return;
-        if (this.connected) {
+        if (wasConnected) {
           this.emit("status", "disconnected", { code, signal });
         } else if (!settled) {
           settled = true;
@@ -189,10 +221,71 @@ export class TunnelManager extends EventEmitter {
     }
   }
 
+  private startHealthMonitor(): void {
+    this.stopHealthMonitor();
+    if (this.healthCheckIntervalMs <= 0) return;
+    this.consecutiveHealthFailures = 0;
+    const generation = ++this.healthGeneration;
+    const timer = setInterval(() => {
+      void this.pollHealth(generation);
+    }, this.healthCheckIntervalMs);
+    (timer as { unref?: () => void }).unref?.();
+    this.healthTimer = timer;
+  }
+
+  private stopHealthMonitor(): void {
+    if (this.healthTimer) clearInterval(this.healthTimer);
+    this.healthTimer = undefined;
+    this.healthGeneration += 1;
+    this.healthCheckInFlight = false;
+    this.consecutiveHealthFailures = 0;
+  }
+
+  private async pollHealth(generation: number): Promise<void> {
+    if (
+      generation !== this.healthGeneration ||
+      this.healthCheckInFlight ||
+      !this.child ||
+      this.stopping
+    ) {
+      return;
+    }
+    this.healthCheckInFlight = true;
+    try {
+      const ready = await this.checkReady(this.metricsPort);
+      if (generation !== this.healthGeneration || !this.child || this.stopping) return;
+      if (ready) {
+        this.consecutiveHealthFailures = 0;
+        if (!this.connected) {
+          this.connected = true;
+          this.emit("status", "connected", this.currentUrl);
+        }
+        return;
+      }
+      this.consecutiveHealthFailures += 1;
+      if (this.connected && this.consecutiveHealthFailures >= this.healthFailureThreshold) {
+        this.connected = false;
+        this.emit("status", "disconnected", {
+          reason: "ready-check-failed",
+          consecutiveFailures: this.consecutiveHealthFailures,
+        });
+      }
+    } catch (err) {
+      if (generation !== this.healthGeneration || !this.child || this.stopping) return;
+      this.emit("status", "error", err);
+    } finally {
+      if (generation === this.healthGeneration) {
+        this.healthCheckInFlight = false;
+      }
+    }
+  }
+
   /** Kill the cloudflared child (SIGTERM) and suppress the disconnect event. */
   stop(): void {
     this.stopping = true;
     this.connected = false;
+    this.currentUrl = undefined;
+    this.stopHealthMonitor();
     const child = this.child;
     this.child = undefined;
     child?.kill("SIGTERM");
@@ -200,5 +293,9 @@ export class TunnelManager extends EventEmitter {
 
   isRunning(): boolean {
     return Boolean(this.child);
+  }
+
+  isConnected(): boolean {
+    return this.connected;
   }
 }

@@ -50,7 +50,7 @@ export function SkillsTab({ cwd, query, isEnabled, onToggle }: Props) {
     setError(null);
     setUpdatable({});
     window.codeshell
-      .listSkills(cwd)
+      .listSkills(cwd, { includeDisabled: true })
       .then((d) => {
         if (!alive) return;
         setSkills(d);

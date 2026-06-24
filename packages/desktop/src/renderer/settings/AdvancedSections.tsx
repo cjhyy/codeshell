@@ -32,6 +32,27 @@ interface ScopedProps {
   activeRepoPath: string | null;
 }
 
+type MobileRemoteMode = "lan" | "tunnel";
+
+const MOBILE_REMOTE_MODE_KEY = "codeshell.mobileRemote.mode";
+
+export function loadMobileRemoteMode(): MobileRemoteMode {
+  try {
+    const raw = globalThis.localStorage?.getItem(MOBILE_REMOTE_MODE_KEY);
+    return raw === "tunnel" ? "tunnel" : "lan";
+  } catch {
+    return "lan";
+  }
+}
+
+function saveMobileRemoteMode(mode: MobileRemoteMode): void {
+  try {
+    globalThis.localStorage?.setItem(MOBILE_REMOTE_MODE_KEY, mode);
+  } catch {
+    // Best-effort UI preference; private mode/tests may reject storage access.
+  }
+}
+
 /**
  * Auto-save hook for free-text settings fields.
  *
@@ -1404,19 +1425,26 @@ export function MobileRemoteSection() {
   const [status, setStatus] = useState<{
     running: boolean;
     url?: string;
+    mode?: MobileRemoteMode;
     tunnelRunning?: boolean;
+    tunnelConnected?: boolean;
   }>({ running: false });
   const [pairingUrl, setPairingUrl] = useState<string | undefined>();
   const [qrDataUrl, setQrDataUrl] = useState<string | undefined>();
   const [devices, setDevices] = useState<MobileDevice[]>([]);
   const [busy, setBusy] = useState(false);
   // ── Public tunnel mode ──
-  const [mode, setMode] = useState<"lan" | "tunnel">("lan");
+  const [mode, setModeState] = useState<MobileRemoteMode>(() => loadMobileRemoteMode());
   const [passcodeSet, setPasscodeSet] = useState(false);
   const [passcodeInput, setPasscodeInput] = useState("");
   const [cloudflaredInstalled, setCloudflaredInstalled] = useState(true);
   const [downloadPct, setDownloadPct] = useState<number | null>(null);
   const [tunnelState, setTunnelState] = useState<"connected" | "disconnected" | null>(null);
+
+  const setMode = useCallback((next: MobileRemoteMode) => {
+    setModeState(next);
+    saveMobileRemoteMode(next);
+  }, []);
 
   // Render the pairing URL as a QR code locally (no external service — the
   // token is a secret and must never leave the machine).
@@ -1441,12 +1469,20 @@ export function MobileRemoteSection() {
   const refresh = useCallback(async () => {
     const next = await window.codeshell.mobileRemote.status();
     setStatus(next);
+    if (next.running && next.mode) {
+      setMode(next.mode);
+    }
+    if (next.running && next.mode === "tunnel") {
+      setTunnelState(next.tunnelConnected ? "connected" : "disconnected");
+    } else if (!next.running || next.mode === "lan") {
+      setTunnelState(null);
+    }
     setDevices(await window.codeshell.mobileRemote.listDevices());
     setPasscodeSet((await window.codeshell.mobileRemote.passcodeStatus()).isSet);
     setCloudflaredInstalled(await window.codeshell.mobileRemote.cloudflaredInstalled());
     setOnlineIds(await window.codeshell.mobileRemote.onlineDevices());
     return next;
-  }, []);
+  }, [setMode]);
 
   // Regenerate the QR on the already-running host. pairingUrl is renderer-local
   // state lost on a settings-page remount, so after navigating back the host is
@@ -1468,7 +1504,7 @@ export function MobileRemoteSection() {
       const st = await refresh();
       // Host still running after a remount but the QR is renderer-local state
       // and was lost → re-mint one so the page isn't stuck with no way back.
-      if (st?.running) void regenPairing();
+      if (st?.running && (st.mode !== "tunnel" || st.tunnelConnected)) void regenPairing();
     })();
   }, [refresh, regenPairing]);
 
@@ -1478,8 +1514,11 @@ export function MobileRemoteSection() {
       setDownloadPct(pct),
     );
     const offTunnel = window.codeshell.mobileRemote.onTunnelStatus(({ status: s }) => {
-      if (s === "connected") setTunnelState("connected");
-      else if (s === "disconnected") {
+      if (s === "connected") {
+        setTunnelState("connected");
+        void refresh();
+        if (!pairingUrl) void regenPairing();
+      } else if (s === "disconnected") {
         // Address invalidated: clear the QR and prompt a re-open.
         setTunnelState("disconnected");
         setPairingUrl(undefined);
@@ -1493,7 +1532,7 @@ export function MobileRemoteSection() {
       offTunnel();
       offOnline();
     };
-  }, [refresh, toast, t]);
+  }, [pairingUrl, refresh, regenPairing, toast, t]);
 
   async function start() {
     setBusy(true);
@@ -1621,7 +1660,7 @@ export function MobileRemoteSection() {
       <div className="mt-3 max-w-xs">
         <Select
           value={mode}
-          onChange={(v) => setMode(v as "lan" | "tunnel")}
+          onChange={(v) => setMode(v === "tunnel" ? "tunnel" : "lan")}
           disabled={busy || status.running}
           options={[
             { value: "lan", label: t("settingsX.adv.modeLan") },

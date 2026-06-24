@@ -17,6 +17,12 @@ export interface MentionRange {
   query: string;
 }
 
+export interface MentionSkillSearchItem {
+  name: string;
+  filePath?: string;
+  description?: string;
+}
+
 export function detectMention(text: string, caret: number): MentionRange | null {
   if (caret <= 0) return null;
   for (let i = caret - 1; i >= 0 && caret - i <= 80; i--) {
@@ -31,4 +37,20 @@ export function detectMention(text: string, caret: number): MentionRange | null 
     if (/\s/.test(ch)) return null;
   }
   return null;
+}
+
+export function filterMentionSkills<T extends MentionSkillSearchItem>(
+  skills: T[],
+  query: string,
+  limit = 8,
+): T[] {
+  const q = query.trim().toLowerCase();
+  const matches = q
+    ? skills.filter((s) => {
+        const name = s.name.toLowerCase();
+        const filePath = (s.filePath ?? "").toLowerCase();
+        return name.includes(q) || filePath.includes(q);
+      })
+    : skills;
+  return matches.slice(0, limit);
 }

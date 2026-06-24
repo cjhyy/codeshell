@@ -10,7 +10,13 @@
  * here mirrors core's SkillDefinition so we keep them in lockstep.
  */
 
-import { scanSkills, invalidateSkillCache, type SkillDefinition } from "@cjhyy/code-shell-core";
+import {
+  SettingsManager,
+  computeEffectiveDisabledLists,
+  scanSkills,
+  invalidateSkillCache,
+  type SkillDefinition,
+} from "@cjhyy/code-shell-core";
 import { assertCodeShellMarkdownPath } from "./safe-read.js";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
@@ -29,10 +35,24 @@ export interface InstalledSkill {
   filePath: string;
 }
 
-export function listSkills(cwd: string): SkillSummary[] {
+export function listSkills(
+  cwd: string,
+  opts?: { includeDisabled?: boolean },
+): SkillSummary[] {
   let defs: SkillDefinition[];
   try {
-    defs = scanSkills(cwd);
+    if (opts?.includeDisabled) {
+      defs = scanSkills(cwd);
+    } else {
+      const disabled = computeEffectiveDisabledLists(
+        new SettingsManager(cwd, "full"),
+        cwd,
+      );
+      defs = scanSkills(cwd, {
+        disabledSkills: disabled.disabledSkills,
+        disabledPlugins: disabled.disabledPlugins,
+      });
+    }
   } catch {
     return [];
   }
