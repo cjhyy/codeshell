@@ -339,9 +339,9 @@
 ### 4.4 留作权威(KEEP,~60 份高信噪)
 `architecture/0[1-2,4-9].md`、`core-deep-dive.md`、`core-complete-review.md`、`codeshell-full-architecture.md`、`codeshell-module-link-reference.md`、`codeshell-repo-architecture.md`、`core-modules/*.md`(33,2026-06-16 自动生成)、`feature-inventory.md`、`core-design-assessment.md`、`articles/harness-agent-series/*`、`hooks.md`、`beta-smoke-checklist.md`、`mobile-remote-smoke.md`、本文件。
 
-### 4.5 需补全的文档
-- `CHANGELOG.md` 的 `[Unreleased]` 段:把本轮新特性(插件 MCP 凭证覆盖层 / 本地插件覆盖升级+卸载 / 模型 Catalog + EditModelCatalog / browser-login cookie / 多账号凭证)整理进去,发版时定版本号。
-- `docs/beta-smoke-checklist.md`:把「core typecheck 干净」那条勘误(现 §1.1 红),并补 cookie-login 全链路冒烟项。
+### 4.5 ✅ 需补全的文档(2026-06-25 核查:均已完成,仅剩发版动作)
+- ~~`CHANGELOG.md` 的 `[Unreleased]` 段~~ ✅ **本轮特性早已补全**(2026-06-25 逐个 grep 确认宣传的 agent_type/MAX_BACKGROUND_AGENTS/subagent 生命周期事件/apiKeyRef/rejectedParams/InjectCredential/installFromArchive/disabledPluginHooks 全真接线;插件 MCP 覆盖层/本地升级卸载/Catalog+EditModelCatalog/cookie/多账号 全在)。**仅剩"发版时定版本号"= 你的发布决策。**
+- ~~`docs/beta-smoke-checklist.md`~~ ✅ typecheck 勘误已做 + cookie-login 冒烟项已补且标已真机验。
 
 ---
 
@@ -351,7 +351,7 @@
 - 🔴 **记忆系统专项**(已拍板:先整体设计再动手)。生命周期状态机 / 完成态语义字段 / 自动提取确认流 / MEMORY.md 索引截断按需读 / 注入 token 预算。关联 `project_memory_and_dream_overview`。
 - 🟡 **at-rest 加密**(把 §2.1/§2.2 从「一行 chmod 止血」升级为 `safeStorage` 全量加密)。
 - 🟡 **会话可靠性闭环**:长断网会话级重连、崩溃后 UI 提示/一键恢复、工具超时可取消一致化、友好错误。
-- 🟡 **审查面板 turn 级范围**(真 bug):turn 卡片点审查应默认本 turn 范围,现落整工作区 diff。
+- ✅ ~~**审查面板 turn 级范围**(真 bug):turn 卡片点审查应默认本 turn 范围,现落整工作区 diff。~~ **已修(2026-06-25 核查,属「标待办实已做」)**:TODO 2.3a 整条修复链已落地——`diff/reviewScope.ts`(`ReviewScope = "turn"|"unstaged"|"staged"|"all"|"committed"|"branch"`,turn 卡片打开默认 `"turn"` 范围)+ `ReviewPanel.turnDiff` 快照(提交后仍可看历史轮对比)。commit 链:`611c1fa4`(turn 卡片默认本轮范围)/`42e78ccd`(本轮 diff 快照)/`3f8f61fc`(最近提交·分支范围)/`62df7f58`(范围切下拉)。reviewScope.ts 注释明确"that was the bug"。
 - 🟡 **真视频适配器**:替换 `FakeVideoProvider`,接 seedance/kling(待私有 API 文档)。
 - 🟡 **Windows P8 真机冒烟**(若 beta 只发 mac 可整体延后)。
 
