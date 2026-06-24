@@ -1,7 +1,7 @@
 # Browser Tool 体验优化 — 痛点清单与方案
 
 **日期**: 2026-06-20
-**状态**: 待拍板（清单 + 方向，尚未实现）
+**状态**: 清单 + 方向。**部分已实现**（2026-06-25 核查）：**P1-① 截图回显已做**（`tool-cards/GenericToolCard.tsx` 渲染 `message.images` 缩略图 + `chat/Lightbox.tsx` 放大）、**P2-⑤ vision 服务端缩放已修**（commit `ea016759`/`clip.scale`）。其余（P1-②个人页 snapshot / P1-③导航绕路 / P3 文案）仍待拍板/未做。
 **关联**: `docs/superpowers/specs/2026-06-18-browser-module-redesign-design.md`（浏览器模块重设计，已合 main）
 **证据来源**: 真机 session `s-mqjl1uap-db34630c`（任务「中间收藏2个文章」，小红书 cwd `~/codeshell/rednote`）的 transcript：`~/.code-shell/sessions/s-mqjl1uap-db34630c/transcript.jsonl`
 
@@ -25,7 +25,9 @@
 
 ## 1. 痛点清单（带证据 / 根因 / 修法 / 优先级）
 
-### 🔴 P1-① 截图不回显到 UI 流 ★用户点名要修
+### ✅ P1-① 截图不回显到 UI 流 ★用户点名要修 —— 已实现（2026-06-25 核查）
+
+> **已落地**：`packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx:23-57` 渲染 tool 返回的 `message.images`（browser_observe vision/image、view_image）为 `screenshot` 缩略图区,点击经 `chat/Lightbox.tsx` 放大。下面是当初的设计记录,保留作 rationale。
 
 - **证据**：transcript 里 `browser_observe(vision)` 结果只有一行 `"[screenshot loaded]"`；renderer `chat/` 下**没有渲染 tool-result image 块的代码**（现有 `<img>`/Lightbox 只服务用户上传的附件）。
 - **根因**：vision/image 截图作为 image ContentBlock 进了**模型上下文**（模型看得到），但 renderer 没把它画进工具卡片 → 用户看不到 AI 截了什么，无法判断"截对没"，调试盲区。
