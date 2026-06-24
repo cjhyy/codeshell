@@ -80,8 +80,10 @@ breaking.
 
 #### Desktop & engine
 
-- Full Chinese/English i18n of the desktop renderer; YAML config read support
-  and JSON-Schema export.
+- Full Chinese/English i18n of the desktop renderer; YAML config read support.
+- SDK-only `settingsJsonSchema()` / `writeSettingsSchemaFile()` exports for
+  embedders that want to generate a JSON-Schema for `settings.json` (not wired
+  into the desktop/CLI UI — call it explicitly from a host).
 - Step-gap **steering**: guidance injects between turn steps without
   interrupting the current turn by default.
 - A single notification-driven wake path unifies background video / shell /

@@ -209,11 +209,20 @@
 - 已做对的:文件 `0o600`(owner-only)。仍 🔴 因:可重放的活 session token 明文存储,挡不住同用户恶意软件 / 用户级备份云同步。CC、Codex 这类数据走 OS keychain。
 - 修:落盘前用 `safeStorage.encryptString` 加密 `secret` 字段。
 
-### 2.3 🟡 Y-1:auto-updater 配置为自动下载+自动安装(潜伏 silent install)
+### 2.3 ✅ Y-1 已消解(2026-06-25 静态复核):auto-updater 无 silent-install 风险
+**两道防线均已就位,beta 可安全打包:**
+1. **代码策略已改为「仅检查+通知」**:`updater.ts:78-79` 现为 `autoUpdater.autoDownload = false` + `autoUpdater.autoInstallOnAppQuit = false`(附注释「no silent background download, no install-on-quit」)。**审计原文说的 `autoDownload=true`/`autoInstallOnAppQuit=true` 已被某轮改掉**——属「标待办实已做」(`project_todo_items_often_predone`)。下载/安装均改为用户手动触发(`downloadUpdate`/`quitAndInstall`)。
+2. **打包不注入 feed**:`packages/desktop/package.json` 的 `build` block **无 `publish` 块**(全仓 `grep '"publish"'` 零命中),无独立 `electron-builder.*` 配置文件,`CODESHELL_UPDATE_FEED` 默认未设 → 打包产物 `checkForUpdate()` 空转无网络出口,与「无 phone-home」一致。
+
+即便日后配了 feed,因 autoDownload/autoInstall 皆 false,最坏也只是「检查到新版→通知用户」,不会静默下载安装。**§1.4 push 前需静态确认的发布关键项,已确认通过。**
+
+<details><summary>原始记录(2026-06-23,已过时)</summary>
+
 - `packages/desktop/src/main/index.ts:952`(`initUpdater()`);`packages/desktop/src/main/updater.ts:103-104`:启动 30s 后 + 每 6h 检查,`autoDownload=true` + `autoInstallOnAppQuit=true`。
 - **今天休眠**:仅 `app.isPackaged` 才跑,且 `package.json` 无 `publish` 块、无 `CODESHELL_UPDATE_FEED`,`checkForUpdate()` 空转无网络请求 —— 与「无 phone-home」一致。
 - 🟡 原因:一旦发布配了 feed,每次启动就会静默联网下载安装。给熟人的 beta 出现「未提示的后台安装」很意外。
 - 修:确认 release electron-builder 配置不注入 `publish`;或把自动检查收进用户开关、beta 关掉 `autoInstallOnAppQuit`。**这是唯一需静态外确认的项(取决于 CI/release 的 electron-builder profile)。**
+</details>
 
 ### 2.4 🟡 Y-2/Y-3/Y-4:mobile-remote(默认关,开了才咬人)
 - Y-2:LAN 模式 `/health` 与 `/mobile/*` SPA 无鉴权下发;LAN WS `auth.device` 路径**无暴力破解锁定**(锁定只覆盖 tunnel 模式 `access-passcode.ts`)。`remote-host-manager.ts:129-182,195-215`。
@@ -273,21 +282,24 @@
 > 顶层 `docs/` 实为 **36 个 .md**(审计 agent 报的 264 含整棵 superpowers/specs+plans 树)。
 > 动手原则:**删/归档前先 grep 代码确认特性是否已落地**,别凭日期推断。
 
-### 4.1 建议立即删(无 beta 价值)
-- `docs/archive/electron-codex-ui-*.md`(3,Codex 对比快照,实现已在码)
-- `docs/archive/goal-*.md`(2,被 `plans/2026-06-07-goal-continuation-redesign.md` 取代)
-- `docs/archive/dream-cross-level-promotion-*.md`(不在 roadmap)
-- `docs/archive/ai-*-news*.md`(2,过期资讯剪报)
-- `docs/desktop-shadcn-migration-status.md`(实现细节,非 beta 文档)
-- `docs/composer-container-query-context.md`(技术札记)
+### 4.1 ✅ 已删(2026-06-25,均先 grep 确认无活引用)
+- ~~`docs/archive/electron-codex-ui-*.md`~~ ✅ 删 2 个实存(gap-analysis + review-feedback;实现已在码,gap 的唯一引用是 full-design spec 行 4 的**已断链**路径,顺手清理为说明文字)。审计原写「3」与磁盘不符。
+- ~~`docs/archive/goal-*.md`~~ ✅ 删 2 个(`goal-mode-redesign-2026-06-02` + `goal-background-wait-and-seedance-skills-design-2026-06-15`,零引用)。**注意 `persistent-goal-design-2026-06-15.md` 也以 goal 结尾但是权威设计稿,未动。**
+- ~~`docs/archive/dream-cross-level-promotion-*.md`~~ ✅ 删(零引用,不在 roadmap)
+- ~~`docs/archive/ai-*-news*.md`(2)~~ —— 磁盘**不存在**该文件,审计清单与磁盘出入,无需处理。
+- ~~`docs/desktop-shadcn-migration-status.md`~~ ✅ 删(仅本审计文档自引用)
+- ~~`docs/composer-container-query-context.md`~~ ✅ 删(仅本审计文档自引用)
 
-### 4.2 建议归档(移进 archive/,先 grep 确认已实现)
-- `docs/architecture/03-module-map.md`(被 `codeshell-module-link-reference.md` 取代)
-- `docs/architecture/11-render-tui-capability-plan.md` / `12-mac-visual-client-research.md`(决策已定/已实现)
-- `docs/architecture/15-current-review-and-bug-inventory.md`(2026-05-31 pre-beta 快照,bug 多已修)
+### 4.2 ⏸️ 评估后保留(2026-06-25 全量 grep 引用后改判:归档收益 < 断链风险)
+
+> **执行复核(2026-06-25)**:逐个 grep 全仓引用后,这批**不宜机械归档**——下面每条都被「架构阅读路径索引」(`architecture/README.md` 的编号 reading-order 表)和/或源码注释、superpowers 设计树引用。归档需重写索引编号表 + 同步改 6+ 处交叉引用,属实质编辑、易留断链,且 `architecture/README.md:69` 已明示「旧 docs 仍作 history 有用」。**与 §4.3 同处置:留用户在场时人工决定,本轮不自动做。** 磁盘现状与引用面已校正如下。
+
+- `docs/architecture/03-module-map.md` —— 是 `architecture/README.md` reading-order **#3**,且行内已自注「Historical…use document 0」;被 `10-architecture-diagrams.md` 引用。**保留**(索引条目,已标历史)。
+- `docs/architecture/11-render-tui-capability-plan.md` / `12-mac-visual-client-research.md` —— reading-order **#11/#12**,且**根 `README.md`(本会话刚重写)+ `packages/tui/src/render/README.md` + superpowers plan/spec** 均引用。归档=多处断链。**保留**。
+- `docs/architecture/15-current-review-and-bug-inventory.md` —— reading-order **#15**,被 `04`/`16`/`18` + superpowers plan 引用。**保留**(历史 bug 基线,仍被多稿援引)。
 - ~~`docs/core-doc-audit-manifest.md`~~ ✅ 已归档 → `docs/archive/core-doc-audit-manifest-2026-06-02.md`(被 core-complete-review 取代)
-- `docs/research-cc-vs-codex-image-handling.md`(对比已冻结)
-- `docs/architecture/render-scroll-checklist.md` / `render-terminal-matrix.md`(任务式,多半已完成)
+- `docs/research-cc-vs-codex-image-handling.md` —— **被源码注释引用**(`packages/core/src/tool-system/mcp-manager.ts`、`engine/image-policy.ts`)。**绝不动**(动路径=源码断链,同 §4.3 model-catalog 教训)。
+- `docs/architecture/render-scroll-checklist.md` / `render-terminal-matrix.md` —— 互相引用 + 被 `11-…` + superpowers plan/spec 引用。**保留**。
 
 ### 4.3 重复簇(合并取最新一份为准)
 

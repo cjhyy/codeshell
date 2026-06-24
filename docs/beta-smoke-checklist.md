@@ -13,12 +13,12 @@
 - [ ] 用一个默认 agent 跑一次
 - [ ] 让模型生成一张图(GenerateImage 可用)
 - [ ] 关掉重开 → 上一会话能恢复
-- [ ] **cookie 登录全链路**(唯一没真机验过的核心新功能,audit §1.3):
+- [x] **cookie 登录全链路**(audit §1.3)—— ✅ 已真机验过(2026-06-24,commit `efe3ae7f`,§5.1-5.4 无问题):
   开独立登录窗登 YouTube → 点「保存」→ 凭证页出现该账号 → 切到另一账号 →
   让 AI `UseCredential`/`InjectCredential` 取用 → 浏览器面板以该账号身份可见登录态。
-  关联 `project_browser_login_window`。
+  关联 `project_browser_login_window`。**A 节其余项仍需打包后逐项真机走一遍。**
 
-> 注:core / desktop 两包 `tsc --noEmit` 现均 0 error(2026-06-23 收口;旧文档曾误记 core 干净实则 9 红,已修)。CI 卡 typecheck 不再是阻塞。
+> 注:core / desktop 两包 `tsc --noEmit` 现均 0 error(2026-06-23 收口;旧文档曾误记 core 干净实则 9 红,已修;2026-06-25 再次复核两包 tsc 仍 0)。CI 卡 typecheck 不再是阻塞。
 
 ## B. npm 包冒烟
 

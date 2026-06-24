@@ -1,7 +1,7 @@
 # Electron Codex UI — Full Build Design
 
 > Date: 2026-05-24
-> Source gap analysis: `docs/electron-codex-ui-gap-analysis-2026-05-24.md`
+> Source gap analysis: 已实现并于 2026-06-25 归档清理删除(实现已在码内,见 docs/feature-inventory.md)
 > Scope: implement the complete roadmap (Phase 1-5) and full P0/P1/P2 checklists from the gap analysis. This spec covers every section of that document.
 
 ## 1. Goal
