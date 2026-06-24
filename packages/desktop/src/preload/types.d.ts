@@ -9,6 +9,10 @@ import type {
   ApprovalRequest,
   CapabilityDescriptor,
   ReasoningControl,
+  CronJob,
+  CCTaskMeta,
+  CCAvailability,
+  DiscoveredSession,
 } from "@cjhyy/code-shell-core";
 
 /** One step in replaying a persisted transcript into renderer state. */
@@ -914,6 +918,17 @@ export interface CodeshellApi {
     send(roomId: string, text: string): Promise<boolean>;
     history(roomId: string, sinceSeq?: number): Promise<RoomMessageWire[]>;
     onMessage(cb: (env: { roomId: string; msg: RoomMessageWire }) => void): Unsubscribe;
+  };
+
+  /**
+   * CC rooms — orchestration of the external `claude` CLI (probe availability,
+   * discover its on-disk sessions, list/delete CC-backed scheduled tasks).
+   */
+  ccRoom: {
+    probe(force?: boolean): Promise<CCAvailability>;
+    listSessions(cwd: string): Promise<DiscoveredSession[]>;
+    listTasks(): Promise<{ job: CronJob; meta: CCTaskMeta | undefined }[]>;
+    deleteTask(jobId: string): Promise<boolean>;
   };
 }
 

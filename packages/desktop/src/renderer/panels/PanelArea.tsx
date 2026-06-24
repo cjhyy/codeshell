@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus, Maximize2, Minimize2, ServerCog, MessagesSquare } from "lucide-react";
+import { FolderTree, Globe, GitCompare, SquareTerminal, X, Plus, Maximize2, Minimize2, ServerCog, MessagesSquare, Bot } from "lucide-react";
 import type { PanelTab } from "../view";
 import { cn } from "@/lib/utils";
 import {
@@ -16,6 +16,7 @@ import { ReviewPanel } from "./ReviewPanel";
 import { TerminalPanel } from "./TerminalPanel";
 import { BackgroundShellPanel } from "./BackgroundShellPanel";
 import { RoomsPanel } from "./RoomsPanel";
+import { CCRoomView } from "../cc-room/CCRoomView";
 import { useT, type TFunction } from "../i18n/I18nProvider";
 
 export interface OpenTab {
@@ -76,6 +77,7 @@ const KINDS: { kind: PanelTab; Icon: typeof FolderTree }[] = [
   { kind: "terminal", Icon: SquareTerminal },
   { kind: "shells", Icon: ServerCog },
   { kind: "rooms", Icon: MessagesSquare },
+  { kind: "ccRoom", Icon: Bot },
 ];
 
 const META: Record<PanelTab, { Icon: typeof FolderTree }> = {
@@ -85,6 +87,7 @@ const META: Record<PanelTab, { Icon: typeof FolderTree }> = {
   terminal: { Icon: SquareTerminal },
   shells: { Icon: ServerCog },
   rooms: { Icon: MessagesSquare },
+  ccRoom: { Icon: Bot },
 };
 
 /** Translated label for a panel kind. */
@@ -360,6 +363,8 @@ function PanelBody({
       return <BackgroundShellPanel sessionId={engineSessionId ?? null} />;
     case "rooms":
       return <RoomsPanel />;
+    case "ccRoom":
+      return <CCRoomView cwd={cwd} />;
   }
 }
 
