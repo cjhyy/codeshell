@@ -60,4 +60,22 @@ describe("CronCreate tool — conversational config", () => {
     const out = await cronListTool({});
     expect(out).toContain("daily");
   });
+
+  test("once:true 透传到 scheduler 并区分返回文案", async () => {
+    const out = await cronCreateTool({ name: "remind", schedule: "10m", prompt: "p", once: true });
+    const job = cronScheduler.list().find((j) => j.name === "remind");
+    expect(job?.once).toBe(true);
+    expect(out).toContain("一次"); // 一次性任务文案
+  });
+
+  test("不传 once 时 job.once 不为 true(循环语义)", async () => {
+    await cronCreateTool({ name: "loop", schedule: "10m", prompt: "p" });
+    const job = cronScheduler.list().find((j) => j.name === "loop");
+    expect(job?.once).not.toBe(true);
+  });
+
+  test("schema 暴露 once 供模型填写", () => {
+    const props = (cronCreateToolDef.inputSchema as { properties: Record<string, unknown> }).properties;
+    expect(props.once).toBeDefined();
+  });
 });

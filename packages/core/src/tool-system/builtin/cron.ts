@@ -43,6 +43,14 @@ export const cronCreateToolDef: ToolDefinition = {
           "What the job may do: 'read-only' (monitoring; default), 'workspace-write' (edit files), " +
           "'full' (edit + run git/gh to open PRs). Use the least privilege the task needs.",
       },
+      once: {
+        type: "boolean",
+        description:
+          "true = one-shot: run once at the scheduled time, then auto-delete (for 'in N minutes / " +
+          "at <time>, do X once' reminders or tasks). Default false = recurring per `schedule`. " +
+          "A one-shot still uses `schedule` for its time: interval '10m' = 10 minutes from now; " +
+          "cron '0 7 25 6 *' = once at 07:00 on June 25.",
+      },
     },
     required: ["name", "schedule", "prompt"],
   },
@@ -55,6 +63,7 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
   if (!name || !schedule || !prompt) return "Error: name, schedule, and prompt are required";
   const timezone = typeof args.timezone === "string" ? args.timezone : undefined;
   const cwd = typeof args.cwd === "string" ? args.cwd : undefined;
+  const once = args.once === true;
   const permissionLevel =
     args.permissionLevel === "read-only" ||
     args.permissionLevel === "workspace-write" ||
@@ -67,12 +76,16 @@ export async function cronCreateTool(args: Record<string, unknown>): Promise<str
       ...(timezone !== undefined ? { timezone } : {}),
       ...(cwd !== undefined ? { cwd } : {}),
       ...(permissionLevel !== undefined ? { permissionLevel } : {}),
+      ...(once ? { once: true } : {}),
     });
   } catch (err) {
     return `Error: ${err instanceof Error ? err.message : String(err)}`;
   }
   const tz = job.timezone ? ` (${job.timezone})` : "";
   const next = job.nextRun ? new Date(job.nextRun).toLocaleString() : "n/a";
+  if (job.once) {
+    return `一次性任务 #${job.id} "${job.name}" 已创建。将于 ${next}${tz} 执行一次后自动删除。`;
+  }
   return `Cron job #${job.id} "${job.name}" created. Schedule: ${job.schedule}${tz}. Next run: ${next}.`;
 }
 
