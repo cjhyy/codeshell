@@ -1,5 +1,29 @@
 import { describe, expect, it, test } from "bun:test";
-import { parseStreamJsonLine } from "./resident-agent.js";
+import { parseStreamJsonLine, buildControlResponse } from "./resident-agent.js";
+
+describe("buildControlResponse", () => {
+  // The stdio control protocol's Zod schema requires `updatedInput` to be a
+  // record on the allow branch — omitting it makes claude reject the whole
+  // control_response (ZodError invalid_union) and the tool silently fails.
+  it("allow WITHOUT updatedInput is defaulted to an empty record (never undefined)", () => {
+    const resp = buildControlResponse("req1", { behavior: "allow" });
+    expect(resp.response.request_id).toBe("req1");
+    expect(resp.response.response).toEqual({ behavior: "allow", updatedInput: {} });
+  });
+  it("allow WITH updatedInput preserves it", () => {
+    const resp = buildControlResponse("req2", { behavior: "allow", updatedInput: { file_path: "/a.txt" } });
+    expect(resp.response.response).toEqual({ behavior: "allow", updatedInput: { file_path: "/a.txt" } });
+  });
+  it("deny is passed through unchanged (no updatedInput injected)", () => {
+    const resp = buildControlResponse("req3", { behavior: "deny", message: "no" });
+    expect(resp.response.response).toEqual({ behavior: "deny", message: "no" });
+  });
+  it("wraps in the control_response envelope claude expects", () => {
+    const resp = buildControlResponse("r", { behavior: "allow", updatedInput: {} });
+    expect(resp.type).toBe("control_response");
+    expect(resp.response.subtype).toBe("success");
+  });
+});
 
 describe("parseStreamJsonLine", () => {
   test("ignores system / init / hook / rate-limit noise", () => {

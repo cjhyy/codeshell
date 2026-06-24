@@ -24,6 +24,33 @@ export type ResidentAgentEvent =
       description?: string;
     };
 
+/** A decision for a tool-approval (`can_use_tool`) control request. */
+export type ControlDecision =
+  | { behavior: "allow"; updatedInput?: unknown }
+  | { behavior: "deny"; message: string };
+
+/**
+ * Build the `control_response` envelope claude expects on stdin for a
+ * `can_use_tool` prompt. Pure + exported so the wire shape is unit-testable.
+ *
+ * Critically: the stdio control protocol's Zod schema requires `updatedInput`
+ * to be a RECORD on the allow branch — an allow decision that omits it makes
+ * claude reject the whole response (ZodError invalid_union) and the tool
+ * silently fails. So we default a missing `updatedInput` to `{}` here, at the
+ * single choke point where every decision becomes wire bytes, regardless of
+ * which caller (renderer, phone, future code) produced it.
+ */
+export function buildControlResponse(requestId: string, decision: ControlDecision) {
+  const normalized: ControlDecision =
+    decision.behavior === "allow"
+      ? { behavior: "allow", updatedInput: decision.updatedInput ?? {} }
+      : decision;
+  return {
+    type: "control_response",
+    response: { subtype: "success", request_id: requestId, response: normalized },
+  };
+}
+
 const TOOL_SUMMARY_KEYS = ["command", "file_path", "path", "url", "pattern", "query"];
 
 function argsSummary(input: Record<string, unknown> | undefined): string {
@@ -188,16 +215,9 @@ export class ResidentAgentProcess {
   }
 
   /** Reply to a `control_request` (can_use_tool) approval prompt over stdin. */
-  respondControl(
-    requestId: string,
-    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
-  ): void {
+  respondControl(requestId: string, decision: ControlDecision): void {
     if (!this.child?.stdin || this.child.stdin.destroyed) return;
-    const resp = {
-      type: "control_response",
-      response: { subtype: "success", request_id: requestId, response: decision },
-    };
-    this.child.stdin.write(JSON.stringify(resp) + "\n");
+    this.child.stdin.write(JSON.stringify(buildControlResponse(requestId, decision)) + "\n");
   }
 
   isRunning(): boolean {
