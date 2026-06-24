@@ -170,7 +170,7 @@ import {
 import { checkSkillUpdateEntry, updateSkillEntry } from "./skill-update-entry.js";
 import { resolveModelMeta } from "./model-meta-service.js";
 import { listRuns, getRun, deleteRunDir } from "./runs-service.js";
-import { initUpdater, checkForUpdate, quitAndInstall, getLastStatus } from "./updater.js";
+import { initUpdater, checkForUpdate, downloadUpdate, quitAndInstall, getLastStatus } from "./updater.js";
 import { loadRecents, pushRecent } from "./recents-store.js";
 import { loadWindowState, saveWindowState } from "./window-state-store.js";
 import { getTrust, setTrust, type TrustLevel } from "./trust-store.js";
@@ -1561,6 +1561,7 @@ ipcMain.handle("models:list", async (_e, rawProvider: unknown, refresh?: boolean
 });
 
 ipcMain.handle("updater:check", async () => checkForUpdate());
+ipcMain.handle("updater:download", async () => downloadUpdate());
 ipcMain.handle("updater:install", async () => quitAndInstall());
 ipcMain.handle("updater:status", async () => getLastStatus());
 

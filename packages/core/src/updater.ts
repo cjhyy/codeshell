@@ -34,6 +34,7 @@ import { dirname, join, resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { resolveShellInvocation } from "./runtime/spawn-common.js";
 import { gt } from "./utils/semver.js";
 
 const execFileAsync = promisify(execFile);
@@ -341,14 +342,24 @@ function launchDetachedInstall(version: string): void {
   }
 
   // Wrap install + lock cleanup in a tiny shell so the lock file is removed
-  // even if npm fails. `-c` style runs as a single child, detached from us.
-  const cmd = [
-    `npm install -g ${PACKAGE_NAME}@${shellEscape(version)}`,
-    `; rm -f ${shellEscape(lockPath)}`,
-  ].join(" ");
+  // even if npm fails. Cross-platform: POSIX sequences with `; rm -f`, Windows
+  // cmd.exe with `& del /f /q` (no `sh`/`rm` there). resolveShellInvocation
+  // picks the shell binary + flag (/c vs -c) per platform.
+  const isWin = process.platform === "win32";
+  // cmd.exe doesn't understand POSIX single-quote escaping. version is a semver
+  // from npm (no shell metachars) so it needs no quoting on cmd; the lock path
+  // gets double quotes (cmd-native). POSIX keeps shellEscape on both.
+  const installPkg = isWin
+    ? `npm install -g ${PACKAGE_NAME}@${version}`
+    : `npm install -g ${PACKAGE_NAME}@${shellEscape(version)}`;
+  const cleanup = isWin
+    ? `& del /f /q "${lockPath}"`
+    : `; rm -f ${shellEscape(lockPath)}`;
+  const cmd = `${installPkg} ${cleanup}`;
+  const { file: shellFile, args: shellArgs } = resolveShellInvocation(cmd);
 
   try {
-    const child = spawn("sh", ["-c", cmd], {
+    const child = spawn(shellFile, shellArgs, {
       detached: true,
       stdio: ["ignore", logFd, logFd],
       cwd: homedir(),

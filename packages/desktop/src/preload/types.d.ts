@@ -859,6 +859,7 @@ export interface CodeshellApi {
   onMenuEvent(cb: (event: string, payload?: unknown) => void): Unsubscribe;
   newWindow(): Promise<void>;
   checkForUpdate(): Promise<void>;
+  downloadUpdate(): Promise<void>;
   installUpdate(): Promise<void>;
   getUpdaterStatus(): Promise<UpdaterStatus>;
   onUpdaterStatus(cb: (status: UpdaterStatus) => void): Unsubscribe;
