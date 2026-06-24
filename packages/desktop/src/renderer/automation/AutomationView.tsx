@@ -374,7 +374,13 @@ export function AutomationView({
                     {j.enabled ? t("auto.view.active") : t("auto.view.paused")} · {t("auto.view.runCount", { count: j.runCount })}
                   </span>
                 </span>
-                <span className="max-w-24 shrink-0 truncate text-xs text-muted-foreground">{describeSchedule(j.schedule)}</span>
+                <span className="max-w-24 shrink-0 truncate text-xs text-muted-foreground">
+                  {j.once
+                    ? j.nextRun
+                      ? t("auto.schedule.onceAt", { time: new Date(j.nextRun).toLocaleString() })
+                      : t("auto.schedule.once")
+                    : describeSchedule(j.schedule)}
+                </span>
               </li>
             ))}
           </ul>

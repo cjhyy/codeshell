@@ -1264,6 +1264,7 @@ export interface AutomationSummary {
   runCount: number;
   createdAt: number;
   lastRunId: string | null;
+  once: boolean;
 }
 
 export interface CreateAutomationInput {

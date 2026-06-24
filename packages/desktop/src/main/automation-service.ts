@@ -23,6 +23,8 @@ export interface AutomationSummary {
   runCount: number;
   createdAt: number;
   lastRunId: string | null;
+  /** True = one-shot job: runs once then auto-deletes (CronCreate once:true). */
+  once: boolean;
 }
 
 export interface CreateAutomationInput {
@@ -56,6 +58,7 @@ function toSummary(job: CronJob): AutomationSummary {
     runCount: job.runCount,
     createdAt: job.createdAt,
     lastRunId: job.lastRunId ?? null,
+    once: job.once === true,
   };
 }
 

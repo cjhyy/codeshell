@@ -77,6 +77,8 @@ export const automation = {
         weekly: "每{weekday} {time}",
         hourly: "每小时",
         hourlyN: "每 {hours} 小时",
+        once: "一次性",
+        onceAt: "一次性 · {time}",
       },
       weekday: {
         sun: "周日",
@@ -246,6 +248,8 @@ export const automation = {
         weekly: "Every {weekday} {time}",
         hourly: "Hourly",
         hourlyN: "Every {hours} hours",
+        once: "One-time",
+        onceAt: "One-time · {time}",
       },
       weekday: {
         sun: "Sun",
