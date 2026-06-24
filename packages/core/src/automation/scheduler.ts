@@ -48,6 +48,9 @@ export interface CronJob {
   permissionLevel?: CronPermissionLevel;
   /** RunStore run id of the most recent execution (Phase 2 RunManager path). */
   lastRunId?: string;
+  /** True = one-shot: delete the job after its first real execution so it never
+   *  fires again (e.g. "in 10 minutes, do X once"). */
+  once?: boolean;
 }
 
 /** Optional metadata accepted by create(). */
@@ -55,6 +58,7 @@ export interface CreateJobOptions {
   cwd?: string;
   timezone?: string;
   permissionLevel?: CronPermissionLevel;
+  once?: boolean;
 }
 
 /** Fields editable via update(). Any omitted field is left unchanged. */
@@ -275,6 +279,7 @@ export class CronScheduler {
           ...(opts?.cwd !== undefined ? { cwd: opts.cwd } : {}),
           ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
           ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
+          ...(opts?.once === true ? { once: true } : {}),
         };
         this.refreshNextRunForDisplay(job);
         return { jobs: [...jobs, job], result: job };
@@ -295,6 +300,7 @@ export class CronScheduler {
       ...(opts?.cwd !== undefined ? { cwd: opts.cwd } : {}),
       ...(opts?.timezone !== undefined ? { timezone: opts.timezone } : {}),
       ...(opts?.permissionLevel !== undefined ? { permissionLevel: opts.permissionLevel } : {}),
+      ...(opts?.once === true ? { once: true } : {}),
     };
 
     this.jobs.set(id, job);
@@ -518,8 +524,10 @@ export class CronScheduler {
         return;
       }
       void this.fire(job, () => {
-        // Re-arm for the following occurrence.
-        if (job.enabled) this.armCron(job);
+        // Re-arm for the following occurrence — but only if the job still
+        // exists. A one-shot (once) job deletes itself in fire()'s finally,
+        // so this closure must not resurrect it via a stale reference.
+        if (job.enabled && this.jobs.has(job.id)) this.armCron(job);
       });
     }, delay);
     this.timers.set(job.id, timer);
@@ -570,6 +578,10 @@ export class CronScheduler {
       this.persistRunStats(job);
       this.running.delete(job.id);
       this.runningControllers.delete(job.id);
+      // One-shot: delete after its first execution so it never fires again.
+      // Done after persistRunStats so the final stats write can't race the
+      // removal; delete() clears the timer + removes from store/in-memory.
+      if (job.once) this.delete(job.id);
       // Unblock any abort() awaiting this run's teardown.
       resolveDone();
     }
