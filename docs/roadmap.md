@@ -4,6 +4,25 @@
 
 ---
 
+> ## ⚠️ 现状勘误（2026-06-25，发 beta 前核查）
+>
+> 本 roadmap 的「当前架构基线」表、各 Phase 的「当前状态」和文末「三款标杆速览」表写于早期，**多项已落地但表里仍标"❌/低/缺失/未做"**。下方方向规划（Phase 1–6 的目标）保留作产品方向参考，但**事实现状以 [`docs/feature-inventory.md`](feature-inventory.md)（149 项盘点）为权威**。已 grep 源码确认、与表内标注不符的项：
+>
+> | roadmap 标注 | 实际现状（已实现） | 证据 |
+> |---|---|---|
+> | Phase 0.1 项目指令文件全局化 | ✅ 已做 | `packages/core/src/prompt/instruction-scanner.ts`（CLAUDE/AGENTS/CODESHELL 层级发现注入） |
+> | Phase 0.2 `TodoWrite`/`TodoRead` | ✅ 已做 | preset 内置工具；冒烟清单 §2 任务面板 |
+> | Phase 3.3 / 速览表 Slash Commands「❌」 | ✅ 已做 | tui 完整 slash 命令系统 + 自动补全 + 用法提示 |
+> | Phase 3.4 Plugin 系统 | ✅ 大量已做 | `packages/core/src/plugins/`（本地安装/zip/升级/卸载 + 市场 + CC/Codex 格式适配） |
+> | Phase 4.2 / 速览表 Checkpoint/Undo「❌」 | ✅ turn 级 undo 已做 | `feature-flags.ts` + 一次 user 发送=一轮的快照/回滚 |
+> | Phase 6.1 / 速览表 Long-term Memory「❌」 | ✅ 已做 | 记忆 + Dream 整理（`~/.code-shell/{user,dream}`，每轮注入） |
+> | Phase 6.3 Multimodal / 速览表 | ✅ 图片输入已做 | `engine/image-policy.ts`；desktop 图片附件上传/拖拽/粘贴 |
+> | 速览表 IDE 集成「TUI 为主」 | ⚠️ 已有完整 **Electron 桌面 App** | `packages/desktop`（VS Code/JetBrains 扩展仍未做） |
+>
+> 仍准确未做的代表项：`List` 工具（Glob/Grep 已覆盖）、`codeshell serve` HTTP 模式 + 多语言 SDK（Phase 2）、LSP 深度集成（Phase 3.1，现为基础）、DAG Topology Agent（Phase 4.1）、企业级（Phase 5）。
+
+---
+
 ## 当前架构基线
 
 | 能力域 | 成熟度 | 对标说明 |
