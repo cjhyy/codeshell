@@ -185,6 +185,11 @@
 - `bun run build` + `cd packages/desktop && bun run dist`(electron-builder,未签名,`CSC_IDENTITY_AUTO_DISCOVERY=false`),确认 main 进程 / node-pty ABI / asarUnpack 没崩(老坑 `project_desktop_four_panels`)。
 - `git push` 这 **17** 个 commit 到 origin/main(先把 §1.1 修复 + 你的工作树改动一并落地)。
 
+> **✅ 打包配置静态核实(2026-06-25)** —— dist 前置项已逐个核实就位,降低真机打包踩坑:
+> - `predist`/`prepack` 钩子会在 `dist`/`pack` 前自动跑(npm 生命周期),物化 core workspace symlink → 真目录(解 electron-builder LICENSE 越界守卫,脚本含完整 WHY)。
+> - `build` block 引用的资源全在:`node_modules/node-pty`(asarUnpack)、`build/icon.icns`+`icon.png`、extraResources `../../examples/agents`(4 seed 角色)+`resources/known-marketplaces-seed.json`、`out/`(build 产物)。
+> - **⚠️ 打包命令务必带 env**:`mac` block **无** `identity`/`notarize`/`hardenedRuntime` 配置,而 `dist` 脚本本身**没设** `CSC_IDENTITY_AUTO_DISCOVERY`(electron-builder 默认 `true`)→ 在配了 Apple 证书的机器上直跑 `bun run dist` 会**自动尝试签名**(可能失败/产意外签名产物)。**未签名 beta 必须**:`CSC_IDENTITY_AUTO_DISCOVERY=false bun run dist`。是否改成进 dist 脚本默认禁用属发布决策,留你定(没擅改脚本)。
+
 ### 1.5 npm 包(若本轮要发)
 **必用 `bun publish --tag rc` 不是 `npm publish`**(workspace:* 解析);**发后必真跑一次 bin**(`code-shell --version`),别只看 publish 打印(rc.1 装得上跑不起来的教训)。当前已是 rc.2,若要再发须 bump。
 
