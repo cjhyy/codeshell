@@ -18,8 +18,8 @@
     "code-shell": "./dist/cli/main.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && cp -r src/cli/commands/builtin/init/templates dist/cli/commands/builtin/init/",
-    "clean": "rm -rf dist"
+    "build": "tsc -p tsconfig.json && node ../../scripts/copy-assets.mjs dist/cli/commands/builtin/init src/cli/commands/builtin/init/templates",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@cjhyy/code-shell-core": "workspace:*",
