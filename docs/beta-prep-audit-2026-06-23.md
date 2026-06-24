@@ -1,5 +1,23 @@
 # Beta 发布前审计 + 行动清单(2026-06-23)
 
+> ## 🔬 第五轮 workflow review:夜里 merge 的增量代码(2026-06-24 07:xx,**最新·回来先读这段**)
+>
+> 对**上轮 review(1830a0a2)之后新合进来、还没 review 的代码**跑 workflow `review-unpushed-incremental`(4 域 fan-out review → 逐条独立对抗 verify,21 agent):manual catalog editor / desktop transcript-reader+sessions / P1 参数下发 / misc core-tui。**确认 7 / 证伪 10**。逐条按 receiving-code-review 纪律复核后:**修 3,判 4 不值/证伪**。
+>
+> | # | 严重 | 处置 | 说明 |
+> |---|---|---|---|
+> | #4 | HIGH | ✅修 `89557bb6` | `openai.ts` buildRequestBody:`...sampling,...extra` 顺序让静态 catalog extraBody 覆盖 per-request temperature(反了)。加 deepMergeInto + 温度拆 default/override 层 |
+> | #5 | HIGH | ✅修 `89557bb6` | 同处:extra 与 reasoningBody 共享嵌套 key(thinking/reasoning,catalog wire 到 .type/.effort)浅 spread 整体替换丢字段→深合并 |
+> | #1 | HIGH | ✅修 `7ed19e13` | `ModelCatalogPanel`:编辑现有条目 id 可改但删除用原 entry.id→删错;save 按 draft.id 写=静默建重复。修=编辑现有条目锁 id 字段(disabled) |
+> | #7 | HIGH | ❌证伪(复核) | send_input「on-disk 但 registry 无 entry 绕过 running 守卫」——但那正是**跨重启 resume**合法路径(有专门测试),重启后旧进程已死无并发写者,守卫正确只针对同进程 running。改它会破坏跨重启续接 |
+> | #6 | HIGH | ❌证伪(惯例) | model-metadata.json requireJson 无 try/catch——但**全部** bundled data loader(static-catalogs/openrouter-models)都这样,信任打包资产,损坏=装坏了崩在 load 是对的信号。一致非 bug |
+> | #2 | LOW | ⏸️不修 | transcript-reader 无 default case warn 未知 event——但裸 default 会对一堆「已知但有意忽略」的非可视事件误报噪声;要做对需维护已知忽略类型表,corrupt-only 诊断价值低 |
+> | #3 | LOW | ⏸️不修 | 重复 turn_boundary 丢 turn_complete——corrupt/手改 transcript 才可达(core 正常每轮一个 boundary);改状态机有动正常路径风险,价值低 |
+>
+> **结论**:3 个真 HIGH 全修(2 个在你 merge 的 P1 参数下发里、1 个在 catalog 编辑器),带回归测/desktop tsc。其余 4 条按纪律复核为证伪或低价值不擅改。**core 1689→(+测)· desktop 961/0 · 两包 tsc 0 · 工作树净**。push 仍待你。
+>
+> ---
+>
 > ## ✅ Push 前检查(2026-06-24 07:01,**回来先读这段**)
 >
 > 7 点开工先做了 **push 就绪预检**(只读·不触敏感路径)。**领先 origin/main 246 commit**(`391295ed`→`aae1abbe`):133 docs / 47 fix / 28 feat / 16 test / 13 refactor / 6 merge。
