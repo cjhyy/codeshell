@@ -163,6 +163,30 @@ describe("RoomManager", () => {
     expect(a.roomId).not.toBe(b.roomId);
   });
 
+  test("openForSession reusing a room with a CHANGED mode restarts the agent under the new mode", () => {
+    const { mgr, agents } = makeManager();
+    const r1 = mgr.openForSession("cc-X", "/tmp/p", "default");
+    expect(agents).toHaveLength(1);
+    expect(agents[0].running).toBe(true);
+    expect(mgr.getRoom(r1.roomId)?.permissionMode).toBe("default");
+    // reopen the SAME session but with bypassPermissions — must persist the new
+    // mode AND restart the resident process (permissionMode is a spawn-time CLI
+    // arg, so the old default-mode process must be killed and respawned).
+    const r2 = mgr.openForSession("cc-X", "/tmp/p", "bypassPermissions");
+    expect(r2.roomId).toBe(r1.roomId);
+    expect(mgr.getRoom(r1.roomId)?.permissionMode).toBe("bypassPermissions");
+    expect(agents[0].running).toBe(false); // old agent stopped
+    expect(agents).toHaveLength(2); // a fresh agent was spawned
+    expect(agents[1].running).toBe(true);
+  });
+
+  test("openForSession reusing a room with the SAME mode does NOT restart the agent", () => {
+    const { mgr, agents } = makeManager();
+    mgr.openForSession("cc-Y", "/tmp/p", "default");
+    mgr.openForSession("cc-Y", "/tmp/p", "default");
+    expect(agents).toHaveLength(1); // reused, no respawn
+  });
+
   test("approval_request event persists an approval message and forwards to onApprovalRequest", () => {
     dir = mkdtempSync(join(tmpdir(), "rooms-"));
     let emit!: (e: ResidentAgentEvent) => void;
@@ -187,6 +211,34 @@ describe("RoomManager", () => {
     expect(msgs).toHaveLength(1);
     expect(msgs[0]).toMatchObject({ from: "agent", type: "approval", tool: "Bash", summary: "run ls" });
     expect(forwarded).toEqual([{ roomId: room.id, requestId: "req-1" }]);
+  });
+
+  test("interactive-input tools (AskUserQuestion/Skill) auto-allow, never prompt for approval", () => {
+    dir = mkdtempSync(join(tmpdir(), "rooms-"));
+    let emit!: (e: ResidentAgentEvent) => void;
+    const forwarded: string[] = [];
+    const controls: { requestId: string; decision: unknown }[] = [];
+    const mgr = new RoomManager({
+      rootDir: dir,
+      now: (() => { let c = 1; return () => c++; })(),
+      createAgent: (_r, onEvent) => {
+        emit = onEvent;
+        return {
+          start() {}, send: () => true, isRunning: () => true, stop() {},
+          respondControl: (requestId, decision) => controls.push({ requestId, decision }),
+        };
+      },
+      onMessage: () => {},
+      onApprovalRequest: (_roomId, req) => forwarded.push(req.requestId),
+    });
+    const room = mgr.createRoom({ cwd: "/repo" });
+    mgr.open(room.id);
+    emit({ type: "approval_request", requestId: "ask-1", toolName: "AskUserQuestion", input: { questions: [] }, description: "" });
+    // NOT forwarded to the approval UI (no allow/deny card)…
+    expect(forwarded).toEqual([]);
+    // …and auto-allowed via respondControl so claude proceeds (then degrades to
+    // asking in-conversation). updatedInput echoes the original input.
+    expect(controls).toEqual([{ requestId: "ask-1", decision: { behavior: "allow", updatedInput: { questions: [] } } }]);
   });
 
   test("respondApproval routes the decision to the room's agent.respondControl", () => {

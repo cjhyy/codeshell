@@ -12,6 +12,15 @@ import type { ResidentAgentEvent } from "./resident-agent.js";
 
 export type RoomPermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
+/**
+ * Tools whose `can_use_tool` control request is a request for a STRUCTURED host
+ * response (not a permission gate). A plain allow/deny can't satisfy them and
+ * they emit the request regardless of permission mode, so we auto-allow them
+ * rather than show a dead-end approval card. claude then degrades gracefully
+ * (e.g. AskUserQuestion asks in-conversation).
+ */
+const INTERACTIVE_INPUT_TOOLS = new Set(["AskUserQuestion", "Skill"]);
+
 export interface RoomMeta {
   id: string;
   name: string;
@@ -195,6 +204,15 @@ export class RoomManager {
       : undefined;
     const meta =
       existing ?? this.createRoom({ cwd, permissionMode: mode, claudeSessionId: claudeSessionId || undefined });
+    // permissionMode is a spawn-time CLI arg (--permission-mode), so it can't be
+    // changed on a live process. If the caller reopens an existing room under a
+    // DIFFERENT mode, persist the new mode and restart the resident agent;
+    // otherwise reopening keeps the running process and the picked mode would be
+    // silently ignored (the "bypassPermissions still prompts" bug).
+    if (existing && existing.permissionMode !== mode) {
+      writeFileSync(this.metaPath(meta.id), JSON.stringify({ ...meta, permissionMode: mode }, null, 2), "utf-8");
+      this.close(meta.id); // stop the old-mode process so open() respawns fresh
+    }
     this.open(meta.id);
     return { roomId: meta.id };
   }
@@ -245,6 +263,17 @@ export class RoomManager {
         this.append(id, { from: "system", type: "error", text: event.error });
         break;
       case "approval_request":
+        // Some tools route through can_use_tool not for permission but to
+        // request a structured host response (AskUserQuestion wants the user's
+        // choice; Skill its args). A plain allow/deny card can't satisfy those —
+        // approving without an answer makes claude report "did not answer". They
+        // also emit a control_request even under bypassPermissions. So auto-allow
+        // them here (claude then degrades to asking in-conversation) instead of
+        // surfacing a dead-end approval card.
+        if (INTERACTIVE_INPUT_TOOLS.has(event.toolName)) {
+          this.agents.get(id)?.respondControl?.(event.requestId, { behavior: "allow", updatedInput: event.input });
+          break;
+        }
         this.append(id, { from: "agent", type: "approval", tool: event.toolName, summary: event.description ?? "" });
         this.opts.onApprovalRequest?.(id, event);
         break;
