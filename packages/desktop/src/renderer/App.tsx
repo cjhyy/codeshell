@@ -2232,11 +2232,12 @@ function App() {
   // Top-bar toggle opens the dock on the card landing (kind null) / closes it.
   const togglePanel = (): void =>
     setPanelRequest((r) => ({ nonce: r.nonce + 1, kind: r.open ? r.kind : null, open: !r.open }));
-  // Clear the pending open-url whenever the dock is closed. BrowserPanel is
-  // unmounted while the dock is closed, so its per-mount nonce-dedup ref resets;
-  // without clearing, manually reopening the browser later would re-consume the
-  // stale openUrl and navigate to the last chat-clicked link. The click-while-
-  // closed flow is unaffected: that sets openUrl AND opens the dock together.
+  // Clear the pending open-url whenever the dock is closed. BrowserPanel now
+  // stays mounted across a close (so its per-mount nonce-dedup ref does NOT
+  // reset), but clearing on close is still correct: it leaves no stale openUrl
+  // lingering for a future re-open to re-consume, and is a no-op once the panel
+  // has already navigated. The click-while-closed flow is unaffected: that sets
+  // openUrl AND opens the dock together (the nonce bump re-fires navigation).
   useEffect(() => {
     if (!panelRequest.open && openUrl) setOpenUrl(undefined);
   }, [panelRequest.open, openUrl]);
@@ -3005,8 +3006,16 @@ function App() {
         />
       </main>
 
-      {panelRequest.open && (
+      {/* PanelArea stays MOUNTED across close→reopen (hidden via display:none
+          when !open) so the browser <webview> and terminal pty survive a dock
+          close — reopening lands on the same live page instead of reloading
+          from scratch (matches Codex). Closing only hides; the webview process
+          is reclaimed by BrowserPanel's own idle-eviction after a few minutes.
+          We still gate on having tabs so an empty dock doesn't mount stray
+          panel bodies before the user has opened anything. */}
+      {(panelRequest.open || panelTabs.length > 0) && (
         <PanelArea
+          hidden={!panelRequest.open}
           cwd={activeRepo?.path ?? null}
           repoId={activeRepoId}
           // Match togglePanel's contract on close (bump nonce, clear kind) so

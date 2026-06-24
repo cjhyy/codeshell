@@ -29,6 +29,12 @@ let panelTabSeq = 0;
 interface Props {
   cwd: string | null;
   repoId: string | null;
+  /**
+   * When true the whole dock is collapsed via display:none — kept mounted (so
+   * the browser <webview> / terminal pty survive a close→reopen) but removed
+   * from the flex row so it occupies no width while hidden.
+   */
+  hidden?: boolean;
   /** Called when the dock should close (last tab closed). */
   onClose: () => void;
   /** Controlled open tabs (owned by App so they survive a close→reopen). */
@@ -104,6 +110,7 @@ function kindLabel(t: TFunction, kind: PanelTab): string {
 export function PanelArea({
   cwd,
   repoId,
+  hidden = false,
   onClose,
   requestNonce,
   requestKind,
@@ -193,7 +200,11 @@ export function PanelArea({
           ? "absolute inset-0 z-30 shrink"
           : "shrink-0 border-l border-border",
       )}
-      style={maximized ? undefined : { width }}
+      // display:none when hidden so the dock keeps its full subtree mounted
+      // (webview/pty survive a close) yet drops out of the flex row entirely —
+      // no leftover width, border, or pointer target while closed.
+      style={hidden ? { display: "none" } : maximized ? undefined : { width }}
+      aria-hidden={hidden || undefined}
     >
       {/* Drag handle on the left edge to resize the dock — hidden when maximized. */}
       {!maximized && (
@@ -287,7 +298,10 @@ export function PanelArea({
         ) : (
           tabs.map((t) => (
             <Slot key={t.id} active={t.id === activeId}>
-              <PanelBody tab={t} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} openUrl={openUrl} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} onUpdateBrowserAnchor={onUpdateBrowserAnchor} />
+              {/* A panel body is truly on-screen only when the dock is open AND
+                  it's the active tab. BrowserPanel uses this to idle-evict its
+                  <webview> after it's been off-screen a while. */}
+              <PanelBody tab={t} visible={!hidden && t.id === activeId} cwd={cwd} repoId={repoId} reviewFiles={reviewFiles} reviewDiff={reviewDiff} revealFile={revealFile} openUrl={openUrl} engineSessionId={engineSessionId} onAttachImage={onAttachImage} browserAnchors={browserAnchors} onRemoveBrowserAnchor={onRemoveBrowserAnchor} onUpdateBrowserAnchor={onUpdateBrowserAnchor} />
             </Slot>
           ))
         )}
@@ -321,6 +335,7 @@ function PanelLanding({ onPick }: { onPick: (k: PanelTab) => void }) {
 
 function PanelBody({
   tab,
+  visible,
   cwd,
   repoId,
   reviewFiles,
@@ -334,6 +349,7 @@ function PanelBody({
   onUpdateBrowserAnchor,
 }: {
   tab: OpenTab;
+  visible: boolean;
   cwd: string | null;
   repoId: string | null;
   reviewFiles?: string[];
@@ -350,7 +366,7 @@ function PanelBody({
     case "files":
       return <FilesPanel cwd={cwd} onAttachImage={onAttachImage} revealFile={revealFile} />;
     case "browser":
-      return <BrowserPanel cwd={cwd} openUrl={openUrl} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} />;
+      return <BrowserPanel cwd={cwd} visible={visible} openUrl={openUrl} anchors={browserAnchors} onRemoveAnchor={onRemoveBrowserAnchor} onUpdateAnchor={onUpdateBrowserAnchor} />;
     case "review":
       return <ReviewPanel cwd={cwd} files={reviewFiles} turnDiff={reviewDiff} />;
     case "terminal":

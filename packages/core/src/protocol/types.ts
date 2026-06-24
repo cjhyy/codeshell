@@ -322,6 +322,10 @@ export const Methods = {
   GoalGet: "agent/goalGet",
   /** Query/control a session's background shells for the UI panel (TODO 3.2). */
   BackgroundShells: "agent/backgroundShells",
+  /** Unified listing of a session's background work (shells + sub-agents + jobs)
+   *  for the desktop background panel. Output/kill of a shell still goes through
+   *  BackgroundShells by shellId; this is list-only across all three kinds. */
+  BackgroundWork: "agent/backgroundWork",
 
   // Server → Client (notifications, no id)
   StreamEvent: "agent/streamEvent",

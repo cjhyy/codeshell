@@ -11,9 +11,9 @@
  * a boolean can't distinguish a finite download from a never-ending dev server,
  * but the judge — given each task's kind + command — can.
  */
-import { asyncAgentRegistry } from "./agent-registry.js";
+import { asyncAgentRegistry, type AsyncAgentStatus } from "./agent-registry.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
-import { backgroundShellManager } from "../../runtime/background-shell.js";
+import { backgroundShellManager, type BgShell } from "../../runtime/background-shell.js";
 
 export type BackgroundWorkKind = "subagent" | "job" | "shell";
 
@@ -58,4 +58,76 @@ export function listRunningBackgroundWork(sessionId: string): BackgroundWorkItem
   }
 
   return items;
+}
+
+// ─── UI-oriented listing ──────────────────────────────────────────────────
+//
+// `listRunningBackgroundWork` above is intentionally lossy — it exists to give
+// the goal judge a flat "what's still running" description list. The desktop
+// background panel needs richer, addressable rows (ids, status, timing) so it
+// can group by kind, show finished items briefly, and drive per-item actions.
+// This second listing serves that, leaving the judge contract untouched.
+
+/** One background-work row for the desktop panel, discriminated by `kind`. */
+export type BackgroundWorkEntry =
+  | {
+      kind: "shell";
+      /** Full shell snapshot — the panel already renders this shape (output/kill
+       *  still go through the dedicated agent/backgroundShells RPC by shellId). */
+      shell: BgShell;
+    }
+  | {
+      kind: "subagent";
+      agentId: string;
+      name?: string;
+      agentType?: string;
+      description: string;
+      status: AsyncAgentStatus;
+      startedAt: number;
+      finishedAt?: number;
+    }
+  | {
+      kind: "job";
+      jobId: string;
+      description: string;
+    };
+
+/**
+ * Every background-work item spawned by `sessionId`, with per-kind detail, for
+ * the desktop panel. Includes finished sub-agents that are still within their
+ * fade window (so a just-completed agent doesn't vanish before the user sees
+ * it); shells carry their own terminal status and the panel decides how long to
+ * keep them. Jobs are only ever present while running (the registry drops them
+ * on finish).
+ */
+export function listBackgroundWorkForUI(sessionId: string): BackgroundWorkEntry[] {
+  const entries: BackgroundWorkEntry[] = [];
+
+  for (const s of backgroundShellManager.listForSession(sessionId)) {
+    entries.push({ kind: "shell", shell: s });
+  }
+
+  const now = Date.now();
+  for (const a of asyncAgentRegistry.listForSession(sessionId)) {
+    // Keep running agents, plus finished ones still inside their fade window so
+    // a completion is briefly visible. (finishedFadeAt = finishedAt + 30s.)
+    const fresh = a.status === "running" || (a.finishedFadeAt != null && a.finishedFadeAt > now);
+    if (!fresh) continue;
+    entries.push({
+      kind: "subagent",
+      agentId: a.agentId,
+      name: a.name,
+      agentType: a.agentType,
+      description: a.description,
+      status: a.status,
+      startedAt: a.startedAt,
+      finishedAt: a.finishedAt,
+    });
+  }
+
+  for (const j of backgroundJobRegistry.listForSession(sessionId)) {
+    entries.push({ kind: "job", jobId: j.jobId, description: j.description });
+  }
+
+  return entries;
 }

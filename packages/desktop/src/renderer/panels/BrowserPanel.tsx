@@ -167,14 +167,32 @@ interface Props {
   onUpdateAnchor?: (anchorId: string, comment: string) => void;
   /** Whether to show the "弹出独立窗口" button (hidden inside the popout itself). */
   showPopout?: boolean;
+  /**
+   * Whether this panel is actually on-screen (dock open AND its tab active).
+   * The dock keeps the panel MOUNTED while closed so the <webview> survives a
+   * quick close→reopen; but a webview that's been off-screen for a while is
+   * just a stranded renderer process eating memory. When `visible` stays false
+   * past IDLE_EVICT_MS we unmount the guest (freeing the process) and reload
+   * its url on the next show — same trade as Chrome's tab discarding. Defaults
+   * to true (popout window / older callers are always considered visible).
+   */
+  visible?: boolean;
 }
+
+/**
+ * How long a browser panel may sit hidden before we evict its <webview> to
+ * reclaim the renderer process. ~5 min mirrors Chrome's Memory Saver default:
+ * long enough that a quick close→reopen keeps the live page, short enough that
+ * a forgotten tab doesn't strand a process. Re-show reloads the url.
+ */
+const IDLE_EVICT_MS = 5 * 60 * 1000;
 
 /**
  * Built-in browser, modeled on Codex: Electron <webview> (own process +
  * persistent partition) with a self-drawn address bar, tabs, and a
  * localhost bookmark list discovered by port-probing common dev ports.
  */
-export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true }: Props) {
+export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveAnchor, onUpdateAnchor, showPopout = true, visible = true }: Props) {
   const { t } = useT();
   const emitAnchor = onAnchor ?? addAnchor;
   const [tabs, setTabs] = useState<Tab[]>(() => [freshTab(initialUrl)]);
@@ -187,6 +205,23 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
   // Which marker is open for editing (anchor id), if any. Pure UI state — the
   // markers themselves are derived from the `anchors` prop (single source).
   const [editingMarker, setEditingMarker] = useState<string | null>(null);
+  // Idle-eviction: true once the panel has been hidden past IDLE_EVICT_MS. While
+  // evicted the <webview> is unmounted (its renderer process freed); becoming
+  // visible again clears this and remounts WebviewHost, reloading the tab url.
+  const [evicted, setEvicted] = useState(false);
+
+  // Arm the idle-evict timer whenever the panel goes hidden; cancel + un-evict
+  // the moment it's shown again. A visible panel is never evicted. Re-running on
+  // `visible` flips means a quick close→reopen (< 5 min) clears the pending
+  // timer before it fires, so the live page is preserved.
+  useEffect(() => {
+    if (visible) {
+      setEvicted(false);
+      return;
+    }
+    const timer = setTimeout(() => setEvicted(true), IDLE_EVICT_MS);
+    return () => clearTimeout(timer);
+  }, [visible]);
 
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
   const markers = useMemo(() => browserMarkersFrom(anchors ?? []), [anchors]);
@@ -605,7 +640,13 @@ export function BrowserPanel({ initialUrl, openUrl, anchors, onAnchor, onRemoveA
       {/* Content: webview or the new-tab landing (localhost bookmarks). The
           element-pick comment box + saved markers float over the page. */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {active.url === NEW_TAB ? (
+        {evicted ? (
+          // Hidden past the idle window: the guest process was reclaimed. This
+          // placeholder renders only while off-screen, so the user never sees
+          // it — becoming visible clears `evicted` and remounts the webview,
+          // which reloads `active.url` from its frozen src.
+          <div className="flex min-h-0 flex-1 items-center justify-center" aria-hidden />
+        ) : active.url === NEW_TAB ? (
           <NewTabLanding onOpen={navigate} />
         ) : (
           <WebviewHost

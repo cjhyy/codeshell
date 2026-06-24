@@ -274,6 +274,15 @@ export class AgentBridge {
             result: { shells: [] },
           }));
         }
+        // Same reasoning for the unified background-work query: answer "nothing
+        // running" so the panel resolves instead of hanging the rpc() timeout.
+        if (parsed.method === "agent/backgroundWork" && parsed.id !== undefined) {
+          this.safeSend("agent:msg", JSON.stringify({
+            jsonrpc: "2.0",
+            id: parsed.id,
+            result: { items: [] },
+          }));
+        }
         dlog("bridge", "renderer→worker.dropped", {
           reason: this.child ? "stdin destroyed" : "no child",
           method: parsed.method,

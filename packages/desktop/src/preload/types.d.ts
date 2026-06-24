@@ -44,6 +44,22 @@ export interface BackgroundShellInfo {
   totalBytes?: number;
 }
 
+/** One unified background-work row for the background panel. Discriminated by
+ *  `kind`; mirrors core BackgroundWorkEntry (shells + sub-agents + jobs). */
+export type BackgroundWorkInfo =
+  | { kind: "shell"; shell: BackgroundShellInfo }
+  | {
+      kind: "subagent";
+      agentId: string;
+      name?: string;
+      agentType?: string;
+      description: string;
+      status: "running" | "completed" | "failed" | "cancelled";
+      startedAt: number;
+      finishedAt?: number;
+    }
+  | { kind: "job"; jobId: string; description: string };
+
 /** A plugin-provided hook surfaced to the settings 钩子 page. Mirrors
  *  core's PluginHookEntry (renderer can't import core). */
 export interface PluginHookEntry {
@@ -339,6 +355,8 @@ export interface CodeshellApi {
     shellId: string,
   ): Promise<{ header: string; text: string }>;
   killBackgroundShell(sessionId: string, shellId: string): Promise<{ ok: boolean }>;
+  /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
+  listBackgroundWork(sessionId: string): Promise<{ items: BackgroundWorkInfo[] }>;
   /**
    * Multi-session form. The dual-arg legacy form is also supported at runtime.
    * `scope` (once/session/project) on an approve threads to the engine's

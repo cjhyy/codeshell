@@ -33,6 +33,22 @@ export interface BackgroundShellInfo {
   detectedPort?: number;
 }
 
+/** One unified background-work row for the background panel. Discriminated by
+ *  `kind`; mirrors core BackgroundWorkEntry. Renderer-local (no core import). */
+export type BackgroundWorkInfo =
+  | { kind: "shell"; shell: BackgroundShellInfo }
+  | {
+      kind: "subagent";
+      agentId: string;
+      name?: string;
+      agentType?: string;
+      description: string;
+      status: "running" | "completed" | "failed" | "cancelled";
+      startedAt: number;
+      finishedAt?: number;
+    }
+  | { kind: "job"; jobId: string; description: string };
+
 let nextRpcId = 1;
 const pending = new Map<number, { resolve: (resp: unknown) => void; reject: (err: Error) => void }>();
 // Multi-session: callbacks receive `{ sessionId, event }` for stream events
@@ -270,6 +286,11 @@ contextBridge.exposeInMainWorld("codeshell", {
   killBackgroundShell: (sessionId: string, shellId: string) =>
     rpc("agent/backgroundShells", { sessionId, action: "kill", shellId }).then(rpcResult) as Promise<{
       ok: boolean;
+    }>,
+  /** Unified background-work listing for the panel: shells + sub-agents + jobs. */
+  listBackgroundWork: (sessionId: string) =>
+    rpc("agent/backgroundWork", { sessionId }).then(rpcResult) as Promise<{
+      items: BackgroundWorkInfo[];
     }>,
   approve: (
     sessionIdOrRequestId: string,
