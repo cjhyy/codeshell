@@ -1,5 +1,7 @@
 # codeshell 功能清单（desktop / tui）
 
+> **⏱ 时效（2026-06-25 标注）**：本清单是 **2026-06-17 快照**，之后又合入 **~55 个 feat commit**，部分新能力尚未盘点进来。已知**未收录/已演进**的代表项：**统一后台面板**（按 shell/子代理/任务分组 + 实时刷新,core RPC `agent/backgroundWork`,commit `722b3642`,取代旧的只列 shell 的 BackgroundShellPanel）、**面板关闭保活 + 浏览器 5min 空闲淘汰**（PanelArea 常驻挂载 + display 隐藏,`722b3642`）。需要某子系统的**确切现状**时以**实际代码**为准;本清单作"功能广度总览"仍是最全的单一来源。
+>
 > 由多 agent review 自动盘点生成（2026-06-17）。三块分列：
 > **Desktop 主进程**（Electron main，IPC 服务层）、**Desktop UI**（渲染进程，用户可见交互）、**TUI/CLI**（`code-shell` 终端）。
 > 每项含：功能、做什么、入口（文件:行 + 触发点）、怎么使用。行号为盘点时快照，可能随代码演进漂移。
