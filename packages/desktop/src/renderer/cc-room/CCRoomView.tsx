@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { CCConversationView } from "./CCConversationView";
 
 /**
  * CC Room — lists this project's Claude Code (external `claude` CLI) sessions
@@ -35,6 +43,20 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
   const [avail, setAvail] = useState<Availability | null>(null);
   const [sessions, setSessions] = useState<DiscoveredSession[]>([]);
   const [tasks, setTasks] = useState<CCTaskRow[]>([]);
+  const [conv, setConv] = useState<{ roomId: string; sessionId: string; mode: string } | null>(
+    null,
+  );
+  const [picking, setPicking] = useState<{ sessionId: string } | null>(null);
+
+  const openWithMode = useCallback(
+    async (mode: "default" | "acceptEdits" | "bypassPermissions") => {
+      if (!cwd || !picking) return;
+      const { roomId } = await window.codeshell.ccRoom.openSession(picking.sessionId, cwd, mode);
+      setConv({ roomId, sessionId: picking.sessionId, mode });
+      setPicking(null);
+    },
+    [cwd, picking],
+  );
 
   const refresh = useCallback(() => {
     if (cwd) {
@@ -79,6 +101,19 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
     );
   }
 
+  // A conversation is open — render it in place of the list.
+  if (conv) {
+    return (
+      <CCConversationView
+        roomId={conv.roomId}
+        cwd={cwd}
+        sessionId={conv.sessionId}
+        mode={conv.mode}
+        onBack={() => setConv(null)}
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
       <div className="flex items-center justify-between gap-2">
@@ -89,11 +124,9 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
         <Button
           size="sm"
           className="shrink-0"
-          title="新开 session（后续迭代接入对话视图）"
-          onClick={() => {
-            // Placeholder: a full conversation view is a later iteration.
-            console.log("[CCRoom] 新开 session requested for", cwd);
-          }}
+          disabled={!cwd}
+          title="新开 session"
+          onClick={() => setPicking({ sessionId: "" })}
         >
           新开 session
         </Button>
@@ -108,10 +141,7 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
             <Card
               key={s.sessionId}
               className="flex cursor-pointer items-center justify-between gap-3 p-3 hover:bg-accent"
-              onClick={() => {
-                // Placeholder: opening a session is a later iteration.
-                console.log("[CCRoom] open session", s.sessionId);
-              }}
+              onClick={() => setPicking({ sessionId: s.sessionId })}
             >
               <div className="min-w-0">
                 <div className="truncate font-medium">{s.firstMessage || "(无消息)"}</div>
@@ -154,6 +184,27 @@ export function CCRoomView({ cwd }: { cwd: string | null }) {
           ))
         )}
       </section>
+
+      <Dialog open={picking !== null} onOpenChange={(o) => !o && setPicking(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>选择权限模式</DialogTitle>
+            <DialogDescription>
+              default = 工具调用需你逐个批准；acceptEdits = 自动接受编辑；bypassPermissions =
+              全自动放行（谨慎）。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => void openWithMode("default")}>default</Button>
+            <Button variant="outline" onClick={() => void openWithMode("acceptEdits")}>
+              acceptEdits
+            </Button>
+            <Button variant="outline" onClick={() => void openWithMode("bypassPermissions")}>
+              bypassPermissions
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

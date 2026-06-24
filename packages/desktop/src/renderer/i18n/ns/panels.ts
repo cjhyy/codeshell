@@ -22,7 +22,6 @@ export const panels = {
         review: "审查",
         terminal: "终端",
         shells: "后台 Shell",
-        rooms: "房间",
         ccRoom: "Claude Code",
       },
       area: {
@@ -207,7 +206,6 @@ export const panels = {
         review: "Review",
         terminal: "Terminal",
         shells: "Background Shells",
-        rooms: "Rooms",
         ccRoom: "Claude Code",
       },
       area: {

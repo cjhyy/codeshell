@@ -803,5 +803,44 @@ contextBridge.exposeInMainWorld("codeshell", {
     listSessions: (cwd: string) => ipcRenderer.invoke("ccRoom:listSessions", cwd),
     listTasks: () => ipcRenderer.invoke("ccRoom:listTasks"),
     deleteTask: (jobId: string) => ipcRenderer.invoke("ccRoom:deleteTask", jobId),
+    openSession: (claudeSessionId: string, cwd: string, mode: string) =>
+      ipcRenderer.invoke("ccRoom:openSession", claudeSessionId, cwd, mode),
+    send: (roomId: string, text: string) => ipcRenderer.invoke("ccRoom:send", roomId, text),
+    respondApproval: (roomId: string, requestId: string, decision: unknown) =>
+      ipcRenderer.invoke("ccRoom:respondApproval", roomId, requestId, decision),
+    roomHistory: (roomId: string, sinceSeq?: number) =>
+      ipcRenderer.invoke("ccRoom:roomHistory", roomId, sinceSeq),
+    readHistory: (cwd: string, sessionId: string, limit: number) =>
+      ipcRenderer.invoke("ccRoom:readHistory", cwd, sessionId, limit),
+    closeSession: (roomId: string) => ipcRenderer.invoke("ccRoom:closeSession", roomId),
+    onRoomMessage: (cb: (env: { roomId: string; msg: unknown }) => void): (() => void) => {
+      const h = (_e: IpcRendererEvent, env: { roomId: string; msg: unknown }) => cb(env);
+      ipcRenderer.on("room:message", h);
+      return () => ipcRenderer.removeListener("room:message", h);
+    },
+    onApprovalRequest: (
+      cb: (req: {
+        roomId: string;
+        requestId: string;
+        toolName: string;
+        displayName?: string;
+        input: unknown;
+        description?: string;
+      }) => void,
+    ): (() => void) => {
+      const h = (
+        _e: IpcRendererEvent,
+        req: {
+          roomId: string;
+          requestId: string;
+          toolName: string;
+          displayName?: string;
+          input: unknown;
+          description?: string;
+        },
+      ) => cb(req);
+      ipcRenderer.on("ccRoom:approvalRequest", h);
+      return () => ipcRenderer.removeListener("ccRoom:approvalRequest", h);
+    },
   },
 });

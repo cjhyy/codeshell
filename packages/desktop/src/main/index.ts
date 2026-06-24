@@ -41,6 +41,7 @@ import {
   claudeAdapter,
   probeClaudeCli,
   discoverSessions,
+  readRecentHistory,
   resolveWritePolicy,
   type CronJob,
   type CronRunRequest,
@@ -82,6 +83,7 @@ import { AccessPasscode } from "./mobile-remote/access-passcode.js";
 import type { MobileClientEvent, MobileServerEvent, RoomPublic } from "./mobile-remote/types.js";
 import { RoomManager } from "./mobile-remote/room-manager.js";
 import { ResidentAgentProcess } from "./mobile-remote/resident-agent.js";
+import { ApprovalBridge } from "./cc-room/approval-bridge.js";
 import { buildSessionHistory } from "./mobile-remote/mobile-history.js";
 import type { PermissionMode } from "./mobile-remote/types.js";
 import { readDirectory, readFile as fsReadFile, fileExists as fsFileExists } from "./fs-service.js";
@@ -259,6 +261,16 @@ mobileRemote.on("online-change", (ids: string[]) => {
 // with continuously (context persists for the room's lifetime). Messages are
 // persisted to disk (authoritative) and mirrored to the phone. See
 // docs/.../2026-06-07-mobile-rooms-external-agent-design.md.
+const approvalBridge = new ApprovalBridge({
+  onPush: (roomId, req) => {
+    // Push the approval request to the renderer(s) (and phone via WS) so a user
+    // can allow/deny. Mirrors the room:message dual-transport pattern.
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.send("ccRoom:approvalRequest", { roomId, ...req });
+    }
+    mobileRemote.broadcast({ type: "ccRoom.approvalRequest", roomId, req });
+  },
+});
 const roomManager = new RoomManager({
   rootDir: resolve(app.getPath("userData"), "mobile-remote", "rooms"),
   createAgent: (room, onEvent) =>
@@ -266,6 +278,7 @@ const roomManager = new RoomManager({
       command: "claude",
       cwd: room.cwd,
       permissionMode: room.permissionMode,
+      resumeSessionId: room.claudeSessionId,
       onEvent,
     }),
   onMessage: (roomId, msg) => {
@@ -275,6 +288,16 @@ const roomManager = new RoomManager({
     for (const w of BrowserWindow.getAllWindows()) {
       if (!w.isDestroyed()) w.webContents.send("room:message", { roomId, msg });
     }
+  },
+  onApprovalRequest: (roomId, ev) => {
+    void approvalBridge
+      .request(roomId, ev.requestId, {
+        toolName: ev.toolName,
+        displayName: ev.displayName,
+        input: ev.input,
+        description: ev.description,
+      })
+      .then((decision) => roomManager.respondApproval(roomId, ev.requestId, decision));
   },
 });
 
@@ -1708,6 +1731,28 @@ ipcMain.handle("ccRoom:deleteTask", async (_e, jobId: string) => {
   new CCTaskStore().delete(jobId);
   return true;
 });
+ipcMain.handle(
+  "ccRoom:openSession",
+  async (_e, claudeSessionId: string, cwd: string, mode: "default" | "acceptEdits" | "bypassPermissions") =>
+    roomManager.openForSession(claudeSessionId, cwd, mode),
+);
+ipcMain.handle("ccRoom:send", async (_e, roomId: string, text: string) => roomManager.send(roomId, text));
+ipcMain.handle(
+  "ccRoom:respondApproval",
+  async (
+    _e,
+    roomId: string,
+    requestId: string,
+    decision: { behavior: "allow"; updatedInput?: unknown } | { behavior: "deny"; message: string },
+  ) => approvalBridge.respond(roomId, requestId, decision),
+);
+ipcMain.handle("ccRoom:roomHistory", async (_e, roomId: string, sinceSeq?: number) =>
+  roomManager.getMessages(roomId, sinceSeq ?? 0),
+);
+ipcMain.handle("ccRoom:readHistory", async (_e, cwd: string, sessionId: string, limit: number) =>
+  readRecentHistory(cwd, sessionId, limit),
+);
+ipcMain.handle("ccRoom:closeSession", async (_e, roomId: string) => roomManager.close(roomId));
 
 ipcMain.handle("dialog:pickDir", async (e): Promise<{ path: string; name: string } | null> => {
   const res = await dialog.showOpenDialog({
