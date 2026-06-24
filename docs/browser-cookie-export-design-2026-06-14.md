@@ -227,6 +227,12 @@ return { leaseId: lease.id, filePath: lease.filePath };
 
 ### 8.3 代码位置
 
+> **⚠️ 实现落点与本提案不同（2026-06-25 核查）**：本节是设计**提案**的文件布局,功能已落地但**实际代码位置/机制与下方提案不符**,照此寻码会扑空。**真实落点**:
+> - core 侧:`packages/core/src/credentials/`（`cookie-jar.ts`、`use-credential-tool.ts`(物化临时 `cookies.txt`,见 `COOKIE_FILE_PREFIX`/30min sweep)、`use-gate.ts` 三档门）。
+> - desktop 主进程:`packages/desktop/src/main/credentials-service.ts`(`createCookieLease`/`cleanupLease` 等**函数**,非 `CookieLeaseManager` 类)。
+> - **机制差异**:最终走 **`UseCredential` 工具**按域物化 Netscape `cookies.txt` 供 CLI 消费(关联记忆 `project_multi_account_cookie_creds`),**不是**约定 env `CODESHELL_COOKIE_FILE` 注入(该 env 全仓未实现)。无独立 `cookie-lease.ts`。
+> 下方原提案布局仅留作设计 rationale。
+
 - **`packages/desktop/src/main/cookie-lease.ts`** — CookieLeaseManager + formatNetscapeCookies + createCookieLease + 三层清理
 - **`packages/desktop/src/main/ipc/cookie-lease-handler.ts`** — IPC handler：创建、审批弹窗、清理
 - **`packages/core/src/engine/cookie-lease.ts`** — core 侧 lease 请求接口

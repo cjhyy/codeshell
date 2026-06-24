@@ -3,6 +3,8 @@
 > 2026-06-16。背景:TODO P4「浏览器自动化(对标 WorkBuddy)」立项前的架构调研。
 > 方法:deep-research 工作流(25 源 / 114 声明 / 对抗核验后 21 条确认,3 票制)。
 > 关联:[[project_desktop_four_panels]](已有浏览器面板)、`docs/browser-cookie-export-design-2026-06-14.md`(Cookie Lease)。
+>
+> **⚠️ 实现演进(2026-06-25 核查)**:本文是**立项前调研 + 落地建议**,非已实现现状。功能**已落地**,但 §2「MVP 路线」里设想的细粒度工具名(`browser_snapshot`/`browser_click`/`browser_type`/`browser_scroll`)最终**合并为 3 个语义工具**:`browser_observe`(观察/截图)、`browser_act`(click/type/select/scroll/hover/press_key… 按 action 分派)、`browser_navigate`(`packages/core/src/tool-system/builtin/browser-tools.ts`)。现行工具集以代码 + `feature-inventory.md` 为准。
 
 ---
 
