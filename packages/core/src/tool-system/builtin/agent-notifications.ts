@@ -34,7 +34,7 @@ export type NotificationItem = {
   description: string;
   status: "completed" | "failed";
   /** What kind of background work this was (lets UIs localize the toast). */
-  workKind?: "agent" | "shell" | "video";
+  workKind?: "agent" | "shell" | "video" | "cc";
   /** For workKind === "shell": the command that ran. */
   command?: string;
   /** Final assistant text (completed only). */

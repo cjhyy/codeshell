@@ -486,7 +486,7 @@ export type StreamEvent =
        * description, which is written for the agent's wakeup notification).
        * Absent for legacy sub-agent notifications (treated as "agent").
        */
-      workKind?: "agent" | "shell" | "video";
+      workKind?: "agent" | "shell" | "video" | "cc";
       /** For workKind === "shell": the command that ran (for a friendly label). */
       command?: string;
       /** Final assistant text (status === "completed" only). */

@@ -1,31 +1,47 @@
 import { describe, it, expect } from "bun:test";
 import { driveClaudeCodeToolDef, makeDriveClaudeCodeTool } from "./drive-claude-code.js";
 import { backgroundJobRegistry } from "./background-jobs.js";
+import { notificationQueue } from "./agent-notifications.js";
 import { makeDriveClaudeCodeTool as mkBg } from "./drive-claude-code.js";
 
 describe("DriveClaudeCode tool", () => {
-  it("has a name and an inputSchema with prompt", () => {
+  it("has a name and an inputSchema with prompt + background", () => {
     expect(driveClaudeCodeToolDef.name).toBe("DriveClaudeCode");
     expect((driveClaudeCodeToolDef.inputSchema as any).properties.prompt).toBeDefined();
+    expect((driveClaudeCodeToolDef.inputSchema as any).properties.background).toBeDefined();
   });
-  it("runs one turn and reports sessionId + finalText", async () => {
-    const tool = makeDriveClaudeCodeTool(async (o) => ({ sessionId: "S7", finalText: "did it", isError: false, exitCode: 0, lines: [] }));
-    const out = await tool({ prompt: "go", cwd: "/x" });
+
+  // CC tasks are typically long (minutes → hours), so the tool runs in the
+  // BACKGROUND by default: it returns immediately and the result is delivered
+  // on completion via a wakeup notification. A caller wanting the answer inline
+  // for a quick task passes background:false.
+  it("defaults to background: returns immediately, registers a job, does NOT block", async () => {
+    backgroundJobRegistry.reset?.();
+    let resolveRun!: (r: any) => void;
+    const runner = () => new Promise<any>((res) => { resolveRun = res; });
+    const tool = mkBg(runner as any);
+    const out = await tool({ prompt: "long research", cwd: "/x" }, { cwd: "/x", sessionId: "S-DEF" } as any);
+    expect(out).toContain("后台");
+    expect(backgroundJobRegistry.hasRunningForSession("S-DEF")).toBe(true);
+    resolveRun({ sessionId: "CC1", finalText: "done", isError: false, exitCode: 0, lines: [] });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(backgroundJobRegistry.hasRunningForSession("S-DEF")).toBe(false);
+  });
+
+  it("background:false runs in the foreground and returns the result inline", async () => {
+    const tool = makeDriveClaudeCodeTool(async () => ({ sessionId: "S7", finalText: "did it", isError: false, exitCode: 0, lines: [] }));
+    const out = await tool({ prompt: "go", cwd: "/x", background: false } as any);
     expect(out).toContain("S7");
     expect(out).toContain("did it");
   });
 
   it("defaults to bypassPermissions so headless tools (WebSearch/WebFetch/Write) aren't blocked", async () => {
-    // headless `claude -p` has no interactive approval loop here (no
-    // --permission-prompt-tool), so under "default" a tool needing approval
-    // (e.g. WebSearch) silently can't run — the agent "loses網". DriveClaudeCode
-    // is a fire-one-turn delegation with nobody watching, so it auto-runs.
     let seen: string | undefined;
     const tool = makeDriveClaudeCodeTool(async (o) => {
       seen = o.permissionMode;
       return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
     });
-    await tool({ prompt: "search the web", cwd: "/x" });
+    await tool({ prompt: "search the web", cwd: "/x", background: false } as any);
     expect(seen).toBe("bypassPermissions");
   });
 
@@ -35,22 +51,38 @@ describe("DriveClaudeCode tool", () => {
       seen = o.permissionMode;
       return { sessionId: "S", finalText: "", isError: false, exitCode: 0, lines: [] };
     });
-    await tool({ prompt: "edit code", cwd: "/x", permissionMode: "default" });
+    await tool({ prompt: "edit code", cwd: "/x", background: false, permissionMode: "default" } as any);
     expect(seen).toBe("default");
   });
 });
 
-describe("DriveClaudeCode background mode", () => {
-  it("registers a background job and finishes it on completion", async () => {
+describe("DriveClaudeCode background completion delivery", () => {
+  it("enqueues a completion notification carrying cc's finalText so the woken agent sees the answer", async () => {
     backgroundJobRegistry.reset?.();
+    notificationQueue.drainAll("S-NOTIFY"); // clear bucket
     let resolveRun!: (r: any) => void;
     const runner = () => new Promise<any>((res) => { resolveRun = res; });
     const tool = mkBg(runner as any);
-    const out = await tool({ prompt: "long job", cwd: "/x", background: true }, { cwd: "/x", sessionId: "SESS" } as any);
-    expect(out).toContain("后台");
-    expect(backgroundJobRegistry.hasRunningForSession("SESS")).toBe(true);
-    resolveRun({ sessionId: "S8", finalText: "done", isError: false, exitCode: 0, lines: [] });
+    await tool({ prompt: "check markets", cwd: "/x" }, { cwd: "/x", sessionId: "S-NOTIFY" } as any);
+    resolveRun({ sessionId: "CC9", finalText: "S&P up 1.2%", isError: false, exitCode: 0, lines: [] });
     await new Promise((r) => setTimeout(r, 20));
-    expect(backgroundJobRegistry.hasRunningForSession("SESS")).toBe(false);
+    const items = notificationQueue.drainAll("S-NOTIFY");
+    expect(items.length).toBe(1);
+    expect(items[0].status).toBe("completed");
+    expect(items[0].finalText).toContain("S&P up 1.2%");
+  });
+
+  it("enqueues a failed notification with the error when the cc run errors", async () => {
+    backgroundJobRegistry.reset?.();
+    notificationQueue.drainAll("S-ERR");
+    let resolveRun!: (r: any) => void;
+    const runner = () => new Promise<any>((res) => { resolveRun = res; });
+    const tool = mkBg(runner as any);
+    await tool({ prompt: "do x", cwd: "/x" }, { cwd: "/x", sessionId: "S-ERR" } as any);
+    resolveRun({ sessionId: "CCE", finalText: "boom", isError: true, exitCode: 1, lines: [] });
+    await new Promise((r) => setTimeout(r, 20));
+    const items = notificationQueue.drainAll("S-ERR");
+    expect(items.length).toBe(1);
+    expect(items[0].status).toBe("failed");
   });
 });
