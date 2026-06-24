@@ -83,7 +83,12 @@ export function CCConversationView({
     void window.codeshell.ccRoom.respondApproval(
       roomId,
       req.requestId,
-      allow ? { behavior: "allow" } : { behavior: "deny", message: "denied by user" },
+      // The stdio control protocol requires updatedInput (a record) on allow;
+      // echo back the original, unmodified tool input. (resident-agent's
+      // buildControlResponse also defaults a missing one to {} as a safety net.)
+      allow
+        ? { behavior: "allow", updatedInput: (req.input as Record<string, unknown>) ?? {} }
+        : { behavior: "deny", message: "denied by user" },
     );
     setPending((p) => p.filter((r) => r.requestId !== req.requestId));
   };
