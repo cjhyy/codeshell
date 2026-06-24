@@ -254,6 +254,7 @@ export function McpSection({ scope, activeRepoPath }: Props) {
     }
     await window.codeshell.invalidateMcpProbeCache(next.name);
     setEdit({ kind: "closed" });
+    broadcastSettingsChanged();
     void runProbe(updated, true);
   };
 
