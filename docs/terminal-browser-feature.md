@@ -1,5 +1,7 @@
 # 文件 / 浏览器 / 审查 / 终端 四面板 — 进度记录
 
+> **⚠️ 历史开发记录（2026-06-05 研究快照,2026-06-25 标注）**:本文档是这 4 个面板**开发期间**的进度记录 + Codex 逆向研究稿。**4 个面板均已实现**（关联记忆 `project_desktop_four_panels`),且面板机制后来已从单一 `ViewMode` 全屏切换**演进为 dock 标签 `PanelTab`**（`renderer/view.ts` 的 `PanelTab = "files"|"browser"|"review"|"terminal"|"shells"|"ccRoom"`;见 `App.tsx` 的常驻挂载 + display 隐藏,commit `722b3642`)。**下文「架构事实」「现状/方案」均为开发当时快照,行号/`ViewMode` 接入描述已过时;现行 desktop 面板架构以实际代码 + `feature-inventory.md` 为准。** 留作设计 rationale 与逆向研究参考。
+
 > 分支:`worktree-feat+terminal-browser`(从 `main` @ `63a1943` 切出)
 > 范围:在 Electron desktop 端为用户新增 4 个可见面板。入口卡片共 5 个功能,**「侧边聊天」已有,其余 4 个全部要做**。
 

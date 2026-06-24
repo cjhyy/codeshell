@@ -1,10 +1,18 @@
 # 后台子代理可见性 / 可靠性 / 可恢复 设计稿（A/B/C 三阶段）
 
-状态：A+B+C 全部已实现 · 2026-06-23 · worktree `subagent-skill-plugin-namespace`
+状态：A+B 已实现；**C 的实现已被「锚点机制」整体取代**（2026-06-23 · 见下方 ⚠️）
 
 - **A**（转后台运行中状态 + 折叠驱动）：已实现，commit 31babc5d。
 - **B**（agent 心跳 30s）：已实现，commit 31babc5d。
-- **C**（重开显示中断子代理，只读不续跑）：已实现。用户拍板砍掉一键续跑（mimi-video 文件驱动，re-spawn 读文件更自然，且避免重复卡）。实现 = desktop `listInterruptedSubagents`（按 parentSessionId + status≠completed/cancelled + mtime stale 判中断，纯读 state.json，不碰 transcript replay）+ 重开 banner。core 未动。NOT_INTERRUPTED 语义对真实磁盘数据校验过（completed/cancelled 排除；active/model_error/aborted_streaming 在 stale 时标记）。
+- **C**（重开显示中断子代理，只读不续跑）：~~原实现 = desktop `listInterruptedSubagents` + 重开 banner~~ —— **⚠️ 此实现已于 commit `a28fc54c` 整体删除并被「锚点机制」取代,本节以下 C 段描述均为过时旧方案,仅留作 rationale。**
+
+> **⚠️ C 的现行实现（2026-06-23,commit `a28fc54c`「回放重建子代理卡(锚点机制) + 删中断 banner」）**:
+> 旧的扫盘 banner（突兀/续不了/靠扫盘猜 parent/把子代理结果糊成用户 XML 气泡）已删,换成**回放里把子代理重建成真正的子代理卡**（完成的带完整产出、中断的标未完成）。
+> - **core**:`TranscriptEventType` 加 `"subagent"`;`Transcript.appendSubagent`;engine spawn 闭包在子代理**启动时**（非 resume）往父 session transcript 写锚点 `{agentId,description}`（spawn 即写 → 完成/中断/在跑都有锚点;`agentId===childSid`）。
+> - **desktop transcript-reader**:读 subagent 锚点 → 重建 `agent_start`;`getSessionTranscript` 异步 enrich 读 `sessions/<agentId>/` 的 `state.status` + 该子代理 transcript 末条 assistant message(=产出)→ 完成态发 `agent_end`(带产出)、卡 active 发 `agent_end{error:中断}`、无 session 留裸 `agent_start`(running)。
+> - **已删**:`InterruptedSubagentsBanner` + `listInterruptedSubagents` + 其 IPC/preload/types/i18n（全仓已无 `listInterruptedSubagents`）。不兼容无锚点的旧 session（可接受）。关联记忆 `project_subagent_card_stuck_working`。
+>
+> 用户当初拍板砍掉一键续跑（mimi-video 文件驱动,re-spawn 读文件更自然,避免重复卡）这一决策仍成立;变的是"如何在重开后显示中断子代理"的实现路径（banner → 锚点回放）。
 
 ## 背景：三个真实问题（已从 s-mqqa4nio 日志诊断）
 
