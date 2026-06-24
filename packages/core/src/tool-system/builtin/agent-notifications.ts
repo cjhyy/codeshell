@@ -39,6 +39,11 @@ export type NotificationItem = {
   command?: string;
   /** Final assistant text (completed only). */
   finalText?: string;
+  /** For workKind === "cc": the external claude session id this drove, so the
+   *  result is recoverable from ~/.claude/projects/.../<ccSessionId>.jsonl even
+   *  if this notification is lost, and the user sees a real session id (not just
+   *  an opaque background jobId). */
+  ccSessionId?: string;
   /** Error message (failed only). */
   error?: string;
   enqueuedAt: number;
@@ -236,7 +241,10 @@ export function buildNotificationMessage(items: readonly NotificationItem[]): st
   const agents = items
     .map((item) => {
       const nameAttr = item.name ? ` name="${escapeXmlAttr(item.name)}"` : "";
-      const opening = `  <agent id="${escapeXmlAttr(item.agentId)}"${nameAttr} status="${item.status}">`;
+      // For DriveClaudeCode jobs, expose the real claude session id so the model
+      // can cite it / recover the full result from disk if needed.
+      const ccAttr = item.ccSessionId ? ` ccSessionId="${escapeXmlAttr(item.ccSessionId)}"` : "";
+      const opening = `  <agent id="${escapeXmlAttr(item.agentId)}"${nameAttr} status="${item.status}"${ccAttr}>`;
       const desc = `    <description>${escapeXmlText(item.description)}</description>`;
       const body =
         item.status === "completed"

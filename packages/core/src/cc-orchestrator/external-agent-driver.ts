@@ -38,7 +38,12 @@ export function runAgentOnce(
     const child = spawn(opts.command, args, {
       cwd: opts.cwd,
       env: { ...process.env, PATH: pathWithCommonBins() },
-      detached: true,
+      // NOT detached: this child is owned by the (long-lived) worker that reads
+      // its stdout. Detaching orphaned it across a worker/app restart — the
+      // reader promise then never resolved and the completion notification never
+      // fired (the "后台任务没返回" bug). Bound to the worker, it lives or dies
+      // with the process that's actually listening for its result.
+      detached: false,
       stdio: ["ignore", "pipe", "pipe"], // close stdin (verified: avoids 3s wait)
     });
     const lines: string[] = [];
@@ -46,10 +51,11 @@ export function runAgentOnce(
       const rl = createInterface({ input: child.stdout });
       rl.on("line", (line) => lines.push(line));
     }
+    // Not detached → no own process group, so kill the child directly (a
+    // negative-pid group kill would target the worker's group). claude has no
+    // long-lived child tree of its own here, so a direct SIGTERM is sufficient.
     const onAbort = () => {
-      if (child.pid && child.pid > 1) {
-        try { process.kill(-child.pid, "SIGTERM"); } catch { child.kill("SIGTERM"); }
-      } else child.kill("SIGTERM");
+      try { child.kill("SIGTERM"); } catch { /* already gone */ }
     };
     signal?.addEventListener("abort", onAbort, { once: true });
     child.on("error", (err) => {
