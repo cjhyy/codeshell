@@ -2,16 +2,26 @@ import { describe, it, expect } from "bun:test";
 import { claudeAdapter } from "./agent-adapter.js";
 
 describe("claudeAdapter.buildArgs", () => {
-  it("always includes -p, stream-json, --verbose, and disallows Task", () => {
+  it("includes core headless flags + permission mode", () => {
     const args = claudeAdapter.buildArgs({ prompt: "hi", permissionMode: "default", cwd: "/x" });
-    expect(args).toEqual([
-      "-p", "hi", "--output-format", "stream-json", "--verbose",
-      // Task (sub-agent / workflow) is the token-burn culprit when driving CC
-      // unattended — disallow it so a driven CC can't recursively fan out
-      // workflows. Always present, regardless of permission mode.
-      "--disallowedTools", "Task",
-      "--permission-mode", "default",
-    ]);
+    expect(args.slice(0, 5)).toEqual(["-p", "hi", "--output-format", "stream-json", "--verbose"]);
+    expect(args).toContain("--permission-mode");
+    expect(args[args.indexOf("--permission-mode") + 1]).toBe("default");
+  });
+  it("hard-disallows Workflow (the token-burn culprit), NOT Task", () => {
+    // Workflow fans out a fleet of agents — the real token sink. A single Task
+    // (one sub-agent) is cheap, so it stays allowed. (Earlier we mistakenly
+    // disallowed Task; corrected here.)
+    const args = claudeAdapter.buildArgs({ prompt: "hi", permissionMode: "bypassPermissions", cwd: "/x" });
+    expect(args).toContain("--disallowedTools");
+    expect(args[args.indexOf("--disallowedTools") + 1]).toBe("Workflow");
+    expect(args).not.toContain("Task");
+  });
+  it("appends a system prompt asking CC to check before running a Workflow", () => {
+    const args = claudeAdapter.buildArgs({ prompt: "hi", permissionMode: "default", cwd: "/x" });
+    expect(args).toContain("--append-system-prompt");
+    const injected = args[args.indexOf("--append-system-prompt") + 1];
+    expect(injected.toLowerCase()).toContain("workflow");
   });
   it("adds --resume <id> when resumeSessionId present", () => {
     const args = claudeAdapter.buildArgs({ prompt: "go", resumeSessionId: "S1", permissionMode: "bypassPermissions", cwd: "/x" });
