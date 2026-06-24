@@ -9,7 +9,7 @@ without forking the codebase.
 **1. SDK / code-level** (in-process):
 
 ```ts
-import { Engine } from "code-shell";
+import { Engine } from "@cjhyy/code-shell";
 
 const engine = new Engine({
   llm: { provider: "openai", model: "gpt-4o", apiKey: "..." },
@@ -225,12 +225,17 @@ the chain.
 
 ## Toggle / kill-switch
 
-The built-in superpowers injector has two off switches:
+The superpowers injector is contributed by the **superpowers plugin's
+`SessionStart` hook** (it ships pre-installed), surfaced via the
+`on_session_start` hook in `Engine.run()`. Turn it off through the standard
+plugin/skill disable lists in `settings.json` (global baseline + per-project
+overlay) — there is no dedicated `strictSkills` field or env var:
 
 | Surface | Behavior |
 | --- | --- |
-| `preset.strictSkills` (in `src/preset/index.ts`) | Disable the injector for a preset. Built-in presets default to `true`. |
-| `CODESHELL_STRICT_SKILLS=0` env | Force off at runtime, re-evaluated on every emit. |
+| `settings.disabledPlugins: ["superpowers"]` | Coarse total switch: a disabled plugin contributes **no** hooks, so its `SessionStart` injection is suppressed too — not just its Skill-tool entries (`packages/core/src/plugins/loadPluginHooks.ts`). |
+| `settings.disabledPluginHooks` | Fine-grained per-hook switch: suppress just the injection hook while keeping the plugin's skills usable. |
+| `settings.disabledSkills` | Hides individual skills from the Skill tool without disabling the whole plugin. |
 
 Shell hooks are unconditionally on whenever `settings.hooks` is present —
 edit `settings.json` to disable. Sub-agents skip shell hooks entirely

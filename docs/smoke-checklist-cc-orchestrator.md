@@ -22,8 +22,8 @@
 - [ ] **列 session**:CC 房间面板列出本项目(cwd)下所有 claude session,首条消息/消息数/时间正确;中文路径项目也能列出(encodeCwd 已对中文路径验证)。
 - [ ] **DriveClaudeCode 工具(前台)**:普通对话里说"用 cc 跑一下 X" → 真的 spawn `claude -p` 跑一轮、返回 finalText + sessionId(已有集成测试真机返回 PONG)。
 - [ ] **resume 续接**:`DriveClaudeCode` 传 `resumeSessionId` → 上下文延续(claude 记得上一轮)。
-- [ ] **ScheduleRoomTask 一次性**:"2 分钟后用 cc 做 Y" → 任务落进 `~/.code-shell/cron.json`,2 分钟后桌面 automation scheduler 真的触发(不是 sleep 假装);跑完任务 disabled。
-- [ ] **ScheduleRoomTask loop**:"每 1 分钟检查 X" kind=loop → 每分钟触发一轮;面板"定时任务"区可见、可删除。
+- [ ] **CronCreate 一次性(`once:true`)**:"2 分钟后用 cc 做 Y" → 任务落进 `~/.code-shell/cron.json`(`once:true`),2 分钟后桌面 automation scheduler 真的触发(不是 sleep 假装);fire 后自删(one-shot)。(`ScheduleRoomTask` 已删,定时统一走 `CronCreate`,见 commit `f6ebed3f`;CC 侧无时间,所有定时在 codeshell 层。)
+- [ ] **CronCreate 循环(`schedule`)**:"每 1 分钟检查 X" → 每分钟触发一轮。(注:CC 房间面板的"定时任务"区已下架,commit `3d33aa19`;查看/删除走通用 automation 视图,非房间面板。)
 - [ ] **continuation 策略**:always-fresh 每轮新 session(sessionId 变化);always-resume 续同一 session。
 - [ ] **后台模式**:`DriveClaudeCode background:true` → 立即返回 jobId,进 backgroundJobRegistry;完成时通知唤醒空闲引擎(不 sleep 轮询);引擎 wait-loop 期间不催模型 sleep。
 - [ ] **睡眠唤醒**:定时任务过点 >90s(合盖再开)→ misfire 跳过、re-arm 到下个 occurrence,不补跑(复用 CronScheduler 现有 misfire guard)。

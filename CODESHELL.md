@@ -5,12 +5,13 @@ This file provides guidance to Code Shell when working with code in this reposit
 ## Build & Test
 
 ```bash
-bun run build          # sync-models → tsup → tsc declarations
-bun run dev            # CODE_SHELL_DEV=1 bun run src/cli/main.ts
+bun run build          # core build → tui build → build-meta (3-package monorepo)
+bun run dev            # = dev:desktop (launches the Electron app)
+bun run dev:tui        # TUI in dev: CODE_SHELL_DEV=1 bun run packages/tui/src/cli/main.ts
 bun test               # bun test runner (not vitest/jest)
 bun test -- -t 'name'  # run a single test by pattern
-bun run typecheck      # tsc --noEmit
-bun run lint           # eslint src/
+bun run typecheck      # tsc --noEmit (core + tui; desktop has its own — see packages/desktop)
+bun run lint           # eslint packages/
 ```
 
 ## Code Style
