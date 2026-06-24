@@ -28,6 +28,24 @@ describe("transcriptToFoldItems", () => {
     expect(items[5]).toEqual({ kind: "stream", event: { type: "turn_complete", reason: "completed" }, timestamp: 1 });
   });
 
+  it("skips a synthetic injected user message (background-wakeup system-reminder)", () => {
+    // Background-job completion notifications are submitted as a `role:user`
+    // turn (the model must see them as a user message), but they are NOT the
+    // real user's input — live, the renderer never shows them as a user
+    // bubble, only the assistant's reply. The engine persists them with
+    // `injected:true`; the reader must drop them on replay so a disk rebuild
+    // matches live (no phantom user bubble like "10分钟到了，打开小红书").
+    const jsonl = [
+      line("message", { role: "user", content: "真正的用户问题" }),
+      line("message", { role: "user", content: "<system-reminder>\n后台任务完成\n</system-reminder>", injected: true }),
+      line("message", { role: "assistant", content: "好的" }),
+    ].join("\n");
+    const items = transcriptToFoldItems(jsonl);
+    const userItems = items.filter((i) => i.kind === "user");
+    // Only the REAL user message survives as a bubble; the injected one is gone.
+    expect(userItems).toEqual([{ kind: "user", text: "真正的用户问题", timestamp: 1 }]);
+  });
+
   it("maps tool_use + tool_result", () => {
     const jsonl = [
       line("tool_use", { toolName: "Bash", toolCallId: "tc1", args: { command: "ls" } }),

@@ -46,3 +46,29 @@ describe("Transcript.appendSubagent", () => {
     expect(events[0]!.data.name).toBeUndefined();
   });
 });
+
+/**
+ * `injected` marks a synthetic system-reminder turn (a background-job
+ * completion notification submitted as role:"user") so the disk reader skips
+ * rendering it as a user bubble on replay. A plain user/steering message must
+ * NOT carry the flag.
+ */
+describe("Transcript.appendMessage injected flag", () => {
+  let dir: string;
+  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), "cs-tr-")); });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  it("persists injected:true only when opts.injected is set", () => {
+    const file = join(dir, "transcript.jsonl");
+    const t = new Transcript(file);
+    t.appendMessage("user", "真正的用户输入");
+    t.appendMessage("user", "<system-reminder>\n后台任务完成\n</system-reminder>", { injected: true });
+
+    const reloaded = Transcript.loadFromFile(file);
+    const msgs = reloaded.getEvents("message");
+    expect(msgs).toHaveLength(2);
+    // Real user input: no injected key at all (not even injected:false).
+    expect(msgs[0]!.data.injected).toBeUndefined();
+    expect(msgs[1]!.data.injected).toBe(true);
+  });
+});

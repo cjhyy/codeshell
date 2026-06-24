@@ -991,6 +991,15 @@ export class Engine {
        * string or a full GoalConfig; normalized once at the run boundary.
        */
       goal?: string | GoalConfig;
+      /**
+       * Marks this turn's task as a SYNTHETIC system-reminder injection (e.g. a
+       * background-job completion notification the server re-injects to wake an
+       * idle session) rather than the user's own input. The task is still sent
+       * to the model as a `role:"user"` message, but it is persisted with an
+       * `injected` flag so the disk reader skips rendering it as a user bubble
+       * on replay (matching the live UI, which shows only the assistant reply).
+       */
+      injected?: boolean;
     },
   ): Promise<EngineResult> {
     // When the caller omits cwd but is resuming an existing session, recover
@@ -1452,7 +1461,7 @@ export class Engine {
       // Append new user message
       const userMsg: Message = { role: "user", content: userMessageContent };
       messages.push(userMsg);
-      session.transcript.appendMessage("user", userMessageContent);
+      session.transcript.appendMessage("user", userMessageContent, { injected: options?.injected === true });
       // Flush "active" status to disk immediately. resume() set it in memory
       // (session-manager.ts), but without this write the on-disk state.json
       // still shows the previous run's terminal reason — so any external
@@ -2134,7 +2143,9 @@ export class Engine {
             content: `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`,
           };
           if (aborted) {
-            session.transcript.appendMessage(injected.role, injected.content);
+            // Mark injected: a synthetic notification, not the user's own input —
+            // the disk reader drops it on replay so no phantom user bubble.
+            session.transcript.appendMessage(injected.role, injected.content, { injected: true });
             result = { ...result, messages: [...result.messages, injected] };
             break;
           }

@@ -229,6 +229,10 @@ export class AgentServer {
     const task = `<system-reminder>\n${buildNotificationMessage(pending)}\n</system-reminder>`;
     void session
       .enqueueTurn(task, {
+        // Synthetic notification, not the user's own input: persisted with an
+        // `injected` flag so a disk rebuild doesn't render it as a phantom user
+        // bubble (the live UI shows only the woken assistant's reply).
+        injected: true,
         onStream: (event: StreamEvent) =>
           this.notify(Methods.StreamEvent, { sessionId, event }),
       })

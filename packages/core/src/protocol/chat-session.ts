@@ -16,6 +16,10 @@ export interface TurnOpts {
   /** Goal mode for this turn — forwarded to engine.run (loop-until-done).
    *  String objective or full GoalConfig (objective + optional budgets). */
   goal?: string | import("../engine/goal.js").GoalConfig;
+  /** Marks this turn as a synthetic system-reminder injection (background-job
+   *  completion notification) rather than the user's own input — persisted so
+   *  the disk reader skips it as a user bubble on replay. See Engine.run. */
+  injected?: boolean;
 }
 
 interface QueuedTurn {
@@ -191,6 +195,7 @@ export class ChatSession {
         signal: this.controller.signal,
         onStream,
         goal: next.opts.goal,
+        injected: next.opts.injected,
       });
       this.lastActivityAt = Date.now();
       next.resolve(result);

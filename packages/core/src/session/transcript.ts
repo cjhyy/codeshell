@@ -36,8 +36,26 @@ export class Transcript {
     return event;
   }
 
-  appendMessage(role: string, content: string | ContentBlock[]): TranscriptEvent {
-    return this.append("message", { role, content });
+  /**
+   * Append a chat message to the transcript.
+   *
+   * `injected` marks a synthetic system-reminder turn (e.g. a background-job
+   * completion notification) that is submitted to the model as `role:"user"`
+   * but is NOT the user's own input. The disk reader uses this flag to skip
+   * rendering it as a user bubble on replay (matching the live UI, which never
+   * shows it as a bubble — only the assistant's reply). Real user input and
+   * step-gap steering messages are left unmarked so they render normally.
+   */
+  appendMessage(
+    role: string,
+    content: string | ContentBlock[],
+    opts?: { injected?: boolean },
+  ): TranscriptEvent {
+    return this.append("message", {
+      role,
+      content,
+      ...(opts?.injected ? { injected: true } : {}),
+    });
   }
 
   appendToolUse(toolName: string, toolCallId: string, args: Record<string, unknown>): TranscriptEvent {

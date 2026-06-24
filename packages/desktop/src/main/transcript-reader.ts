@@ -120,6 +120,15 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
       case "message": {
         const role = String(d.role ?? "");
         if (role === "user") {
+          // Synthetic system-reminder turns (background-job completion
+          // notifications) are persisted as `role:user` so the model sees them
+          // as a user message, but they are NOT the user's own input. Live they
+          // never render as a user bubble — only the assistant's reply shows —
+          // so a disk rebuild must drop them too, or the feed sprouts a phantom
+          // bubble like "10分钟到了，打开小红书". The engine marks them
+          // `injected:true` (steering messages are real user input and are NOT
+          // marked, so they correctly survive as bubbles). See engine.ts run().
+          if (d.injected === true) break;
           items.push({ kind: "user", text: textOf(d.content), timestamp: ts });
         } else if (role === "assistant") {
           items.push({ kind: "stream", event: { type: "stream_request_start", turnNumber: ev.turnNumber }, timestamp: ts });
