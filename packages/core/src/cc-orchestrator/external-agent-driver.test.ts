@@ -29,4 +29,32 @@ describe("runAgentOnce（真机集成,无 CLI 自动跳过）", () => {
     expect(r.sessionId.length).toBeGreaterThan(0);
     expect(r.finalText.toUpperCase()).toContain("PONG");
   }, 90_000);
+
+  // The load-bearing guarantee behind "靠一个 session id 串起整件事": passing a
+  // prior run's sessionId as resumeSessionId must make `claude --resume <id>`
+  // continue the SAME conversation, so CC actually remembers earlier context.
+  // Without this, multi-step chaining (task A done → resume its session for the
+  // related next step) silently loses context. Skips when claude isn't installed.
+  it("resume continues the SAME session with prior context (CC remembers)", async () => {
+    const avail = await probeCli("claude");
+    if (!avail.available) { console.log("claude 未安装,跳过集成测试"); return; }
+    // Turn 1: have CC memorize a distinctive token.
+    const first = await runAgentOnce(adp, {
+      command: "claude",
+      prompt: "Remember this exact codeword for later: ZEBRA42. Reply with only: OK",
+      permissionMode: "bypassPermissions",
+      cwd: process.cwd(),
+    });
+    expect(first.sessionId.length).toBeGreaterThan(0);
+    // Turn 2: resume that session and ask for the codeword — without re-stating it.
+    const second = await runAgentOnce(adp, {
+      command: "claude",
+      prompt: "What was the exact codeword I asked you to remember? Reply with only that word.",
+      resumeSessionId: first.sessionId,
+      permissionMode: "bypassPermissions",
+      cwd: process.cwd(),
+    });
+    // Same conversation → CC recalls the token from turn 1's context.
+    expect(second.finalText.toUpperCase()).toContain("ZEBRA42");
+  }, 120_000);
 });
