@@ -46,8 +46,8 @@ CC `/loop` 的做法印证此方向(claude-code-guide 调研):CC 的 `/loop` 是
 1. **彻底走 A:删整条 CC 执行链。** 不保留「CC 类型的 job」这个概念。所有 cron job 走**同一条**
    headless Engine 路径;要驱动 CC 就在 prompt 里写「用 DriveClaudeCode 干 X」,由那轮引擎自己调。
    删:`ScheduleRoomTask` 工具 + `CCTaskStore` + `runCCTask` + `makeCCAwareExecutor`(及其裁判占位)。
-2. **无人值守审批:默认 bypass。** cron 跑的那轮 headless Engine 调 `DriveClaudeCode`(及其它工具)
-   不能卡在审批上没人点。通过新增一个 permission 档实现「该轮放行」(见下「无人值守审批」一节)。
+2. **无人值守审批:无需定时层改动。** `DriveClaudeCode` 已默认 `bypassPermissions`(`4f1327c8`),
+   不卡审批;定时层不加 bypass 标记/permissionMode,模型靠 prompt 表达即可(见上「无人值守审批」一节)。
 
 三个 CC 专属概念的归宿:
 
@@ -62,10 +62,24 @@ CC `/loop` 的做法印证此方向(claude-code-guide 调研):CC 的 `/loop` 是
 1. 给 `CronCreate` 补「一次性」一档(`once: true`),成为完整通用定时工具(interval / cron / 一次性)。
 2. 删除 `ScheduleRoomTask` 工具、`CCTaskStore`、`runCCTask` / `makeCCAwareExecutor` 整条 CC 执行链。
 3. desktop 主进程改回**只装通用 automation executor**(原 `automationFallback` 那条);移除 CC-aware 包裹。
-4. 无人值守时让定时任务能驱动 CC:新增 permission 档(默认对定时 CC 任务 bypass),写策略接入。
-5. preset 白名单/注释清理 + `DriveClaudeCode` 描述修正 + 测试相应反转/删除。
+4. preset 白名单/注释清理 + `DriveClaudeCode` 描述修正 + 测试相应反转/删除。
 
-**非目标:** `/loop` skill;self-pace 唤醒;真 aux 裁判;UI 改动;`CronScheduler` 核心算法改动。
+**非目标:** `/loop` skill;self-pace 唤醒;真 aux 裁判;UI 改动;`CronScheduler` 核心算法改动;
+**无人值守审批改动(已无需做,见下)**。
+
+### 无人值守审批 —— 已解决,本轮不动(用户核实)
+
+原担心:cron fire → 跑一轮 headless Engine → 这轮调 `DriveClaudeCode`(及其驱动的 CC)会卡审批。
+核实代码后结论:**无需任何定时层改动**。
+
+- **内层**(DriveClaudeCode 驱动的外部 claude CLI 自己的工具审批):已由 `4f1327c8`(已合 main)
+  解决 —— `DriveClaudeCode` 默认 `bypassPermissions`,联网/工具不再被挡。
+- **外层**(那轮 headless Engine 调 `DriveClaudeCode` 工具本身):由 prompt 表达即可。模型在
+  `CronCreate` 的 prompt 里写「用 DriveClaudeCode 干 X」,工具自身已 bypass;automation 路径的
+  工具放行由 `resolveWritePolicy` 既有三档处理。
+- **不给 `CronCreate` 加 bypass 标记 / permissionMode 参数**(用户拍板):定时层啥都不懂、prompt 即一切;
+  把 permissionMode 漏回定时层会重新引入 CC 特殊性,与去耦合方向相悖。`permission.ts:873`
+  已保证 `bypassPermissions` mode override 一切,无需新档。
 
 ## 设计
 
@@ -108,31 +122,13 @@ CC `/loop` 的做法印证此方向(claude-code-guide 调研):CC 的 `/loop` 是
 
 这样 cron job 一律跑 headless Engine 一轮;驱动 CC 由那轮引擎调 `DriveClaudeCode` 完成。
 
-### 4. 无人值守审批:默认 bypass(`automation/write-policy.ts`)
-
-问题:headless Engine 那轮调 `DriveClaudeCode`(`permissionDefault:"ask"`)及其驱动的 CC,
-在现有 tier 后端下会被 deny(它不在 READ_ONLY/WRITE 白名单)。用户决策「默认 bypass」。
-
-落地(取最小、最不污染既有 tier 语义的方式):
-- 新增一个权限档 **`"unattended-full"`**(或复用 `CronPermissionLevel` 扩一档,命名实现时定),
-  其 `approvalBackend` 对**所有工具**返回 `{approved:true}`,`permissionMode` 设为 `"bypassPermissions"`,
-  使引擎分类器与后端一致放行。
-- `CronCreate` 的 `permissionLevel` 暴露该档(描述注明:无人值守、放行一切,谨慎使用)。
-- **驱动 CC 的定时任务默认走该档**:当用户意图是「定时让 CC 干活」时,AI 应选此档(写进 `CronCreate`
-  描述的指引);普通监控/读取任务仍默认 `read-only`。
-- 既有 `read-only / workspace-write / full` 三档语义**不变**(回归保护)。
-- 安全注记:bypass 仅用于用户显式要求的无人值守 CC 驱动;沙箱(`sandboxMode:"auto"`)对写入仍生效。
-
-> 备选(实现时如更简单可选):把 `DriveClaudeCode` 加入 `ALWAYS_APPROVED_TOOLS` 式豁免 +
-> 让该轮 permissionMode 为 bypass。两者等价,取改动更小者。决策点记在实现计划里。
-
-### 5. preset 调整(`preset/index.ts`)
+### 4. preset 调整(`preset/index.ts`)
 
 - `BUILTIN_TOOLS` 移除 `"ScheduleRoomTask"`。
 - cc-orchestrator 注释改为只提 `DriveClaudeCode`;说明定时统一走 `CronCreate`。
 - `CronCreate / CronList / CronDelete` 保持在白名单;`CronList` 的 `allow` 决策保留。
 
-### 6. `DriveClaudeCode` 描述修正(`builtin/drive-claude-code.ts`)
+### 5. `DriveClaudeCode` 描述修正(`builtin/drive-claude-code.ts`)
 
 `"...use ScheduleRoomTask instead (never sleep)."` →
 `"...use CronCreate instead (never sleep). A scheduled CronCreate job runs one codeshell turn whose prompt can instruct it to call DriveClaudeCode; to continue a prior CC session across runs, have that turn pass the sessionId this tool returned as resumeSessionId."`
@@ -143,10 +139,10 @@ CC `/loop` 的做法印证此方向(claude-code-guide 调研):CC 的 `/loop` 是
 用户:「每 30 分钟用 CC 看看有没有新 issue,有就处理,直到清空」
   ↓
 引擎调 CronCreate(name, schedule="30m", once=false,
-                  permissionLevel="unattended-full",
                   prompt="用 DriveClaudeCode 检查并处理新 issue;/goal issue 清空")
   ↓
-cronScheduler 每 30m fire → 跑一轮 headless Engine(bypass 审批,喂该 prompt)
+cronScheduler 每 30m fire → 跑一轮 headless Engine(喂该 prompt;
+                  DriveClaudeCode 自身已 bypass,不卡审批)
   ↓
 那轮引擎自行:调 DriveClaudeCode(prompt, cwd[, resumeSessionId=上轮id])
             + 用已有 /goal 机制判断是否达成、是否继续
@@ -158,8 +154,6 @@ cronScheduler 每 30m fire → 跑一轮 headless Engine(bypass 审批,喂该 pr
 
 - **scheduler**(TDD 新增):一次性 interval / 一次性 cron 各 fire 一次后从 `list()` 消失、timer 不再触发;循环不回归。
 - **cron 工具**:`CronCreate({once:true})` 透传;返回文案含「执行一次后删除」。
-- **write-policy**(TDD 新增):`unattended-full` 档对任意工具(含 `DriveClaudeCode` / `Bash`)approved=true、
-  permissionMode=bypassPermissions;`read-only / workspace-write / full` 三档行为不回归。
 - **preset**:`general.builtinTools` **不含** `ScheduleRoomTask`(原断言反转);仍含
   `DriveClaudeCode / CronCreate / CronList / CronDelete`。
 - **删除回归**:删 `cc-task-store` / `cc-scheduler-binding` 后,`bun test` 两包全绿、无悬空 import;
@@ -170,20 +164,17 @@ cronScheduler 每 30m fire → 跑一轮 headless Engine(bypass 审批,喂该 pr
 - **一次性 cron re-arm 自删时序**:唯一算法风险,TDD 锁死(见 1a)。
 - **删执行链的连带面**:`cc-scheduler-binding` / `relevance-judge` / desktop 装配三处必须同删,
   漏一处则 tsc 报悬空 import —— 用 tsc 当守卫。
-- **bypass 的安全面**:新档放行一切,仅供用户显式的无人值守 CC 驱动;默认档仍是 `read-only`,
-  AI 不得对普通监控任务选 bypass(写进描述约束)。沙箱对写入仍生效。
 - **desktop 有自己的 tsc/build**(见 `packages/desktop/CLAUDE.md`),改 `main/index.ts` 后必在
   desktop 包内单独跑 `bunx tsc --noEmit`。
 
 ## 实现顺序(给 writing-plans 的种子)
 
 1. scheduler 加 `once`(TDD:先写一次性 interval/cron 失败测试 → 实现 → 绿)。
-2. write-policy 加 `unattended-full` 档(TDD)。
-3. `CronCreate` 暴露 `once` + `permissionLevel` 新档 + 文案。
-4. 删整条 CC 执行链(工具 / store / binding / 顶层 export),tsc 当守卫扫悬空引用。
-5. desktop `main/index.ts`:删 CC-aware 块,回退到默认 automation executor。
-6. preset 白名单/注释 + `DriveClaudeCode` 描述 + 测试反转/删除。
-7. 全量 `bun test`(core + desktop)+ `tsc`(含 desktop 包内)收口。
+2. `CronCreate` 暴露 `once` + 文案。
+3. 删整条 CC 执行链(工具 / store / binding / 顶层 export),tsc 当守卫扫悬空引用。
+4. desktop `main/index.ts`:删 CC-aware 块,回退到默认 automation executor。
+5. preset 白名单/注释 + `DriveClaudeCode` 描述 + 测试反转/删除。
+6. 全量 `bun test`(core + desktop)+ `tsc`(含 desktop 包内)收口。
 
 实现走 worktree(用户规矩:打工走 worktree 别动 main),完成后 rebase 本地 main → FF 合并。
 真机冒烟(定一个一次性 CC 任务、定一个循环 CC 任务)留用户。
