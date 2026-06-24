@@ -28,6 +28,11 @@ export const claudeAdapter: AgentAdapter = {
     // -p (print/headless) + stream-json REQUIRES --verbose (verified).
     const args = ["-p", opts.prompt, "--output-format", "stream-json", "--verbose"];
     if (opts.resumeSessionId) args.push("--resume", opts.resumeSessionId);
+    // Disallow Task: when we drive CC unattended (esp. bypassPermissions), CC's
+    // Task tool can recursively spawn sub-agents / workflows — the token-burn
+    // culprit (user: "自动了 2 个 workflow token 就烧没了"). Disabling the tool
+    // outright is cleaner than an approval round-trip we don't have on this path.
+    args.push("--disallowedTools", "Task");
     args.push("--permission-mode", opts.permissionMode);
     return args;
   },
